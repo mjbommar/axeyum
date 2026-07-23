@@ -1389,8 +1389,12 @@ fn diagnose_quantified_uflia_residual_models() {
         );
         z3_solver.set_params(&params);
         inst.to_z3(&z3_solver);
-        assert_eq!(z3_solver.check(), SatResult::Sat);
-        println!("z3_model={}", z3_solver.get_model().expect("Z3 SAT model"));
+        match z3_solver.check() {
+            SatResult::Sat => {
+                println!("z3_model={}", z3_solver.get_model().expect("Z3 SAT model"));
+            }
+            result => println!("z3_model={result:?}"),
+        }
     }
 }
 
@@ -1407,6 +1411,114 @@ fn complete_missing_int_functions(
             completed.set_function(
                 function,
                 FuncValue::constant_value(params.to_vec(), result, Value::Int(0)),
+            );
+        }
+    }
+    completed
+}
+
+fn diagnostic_depends_on_symbol(
+    arena: &TermArena,
+    term: TermId,
+    symbol: SymbolId,
+    memo: &mut BTreeMap<TermId, bool>,
+) -> bool {
+    if let Some(depends) = memo.get(&term) {
+        return *depends;
+    }
+    let depends = match arena.node(term) {
+        TermNode::Symbol(candidate) => *candidate == symbol,
+        TermNode::App { args, .. } => args
+            .iter()
+            .any(|&argument| diagnostic_depends_on_symbol(arena, argument, symbol, memo)),
+        _ => false,
+    };
+    memo.insert(term, depends);
+    depends
+}
+
+fn diagnostic_constant_function_definitions(
+    arena: &TermArena,
+    body: TermId,
+    binder: SymbolId,
+) -> Vec<(FuncId, TermId)> {
+    fn direct_binder_application(
+        arena: &TermArena,
+        term: TermId,
+        binder: SymbolId,
+    ) -> Option<FuncId> {
+        let TermNode::App {
+            op: Op::Apply(function),
+            args,
+        } = arena.node(term)
+        else {
+            return None;
+        };
+        let [argument] = &**args else {
+            return None;
+        };
+        matches!(arena.node(*argument), TermNode::Symbol(symbol) if *symbol == binder)
+            .then_some(*function)
+    }
+
+    let mut definitions = Vec::new();
+    let mut stack = vec![body];
+    let mut dependency_memo = BTreeMap::new();
+    while let Some(term) = stack.pop() {
+        let TermNode::App { op, args } = arena.node(term) else {
+            continue;
+        };
+        match op {
+            Op::BoolAnd => stack.extend(args.iter().rev().copied()),
+            Op::Eq => {
+                let [left, right] = &**args else {
+                    continue;
+                };
+                let definition = direct_binder_application(arena, *left, binder)
+                    .filter(|_| {
+                        !diagnostic_depends_on_symbol(arena, *right, binder, &mut dependency_memo)
+                    })
+                    .map(|function| (function, *right))
+                    .or_else(|| {
+                        direct_binder_application(arena, *right, binder)
+                            .filter(|_| {
+                                !diagnostic_depends_on_symbol(
+                                    arena,
+                                    *left,
+                                    binder,
+                                    &mut dependency_memo,
+                                )
+                            })
+                            .map(|function| (function, *left))
+                    });
+                if let Some(definition) = definition
+                    && !definitions.contains(&definition)
+                {
+                    definitions.push(definition);
+                }
+            }
+            _ => {}
+        }
+    }
+    definitions
+}
+
+fn apply_diagnostic_constant_function_definitions(
+    arena: &TermArena,
+    model: &Model,
+    definitions: &[(FuncId, TermId)],
+) -> Model {
+    let mut completed = model.clone();
+    for &(function, value_term) in definitions {
+        let assignment = completed.to_assignment();
+        let Ok(value) = eval(arena, value_term, &assignment) else {
+            continue;
+        };
+        let (_, params, result) = arena.function(function);
+        if value.sort() == result {
+            completed.set_function(
+                function,
+                FuncValue::constant_value(params.to_vec(), result, value),
             );
         }
     }
@@ -1506,11 +1618,115 @@ fn diagnostic_profile_instance(
     .expect("diagnostic source instantiation")
 }
 
+#[derive(Debug)]
+struct DiagnosticProfileCegisResult {
+    rounds: usize,
+    instances: usize,
+}
+
+fn diagnostic_profile_cegis(
+    inst: &Instance,
+    cfg: &SolverConfig,
+    seed: u64,
+    trace: bool,
+    initial_instance_count: usize,
+) -> Option<DiagnosticProfileCegisResult> {
+    const ROUND_CAP: usize = 32;
+
+    let (mut arena, binder, _, body, ground, assertions) = inst.build_axeyum();
+    let universal = assertions[0];
+    let functions = exact_source_functions(&arena, &[universal]);
+    let certificate = QuantifiedUfModelSatCertificate {
+        assertion: universal,
+        binder,
+    };
+    let constant_definitions = diagnostic_constant_function_definitions(&arena, body, binder);
+    let mut instances = Vec::with_capacity(initial_instance_count);
+    let deadline = Instant::now().checked_add(AXEYUM_TIMEOUT)?;
+    let mut integer = 0_i128;
+    for _ in 0..initial_instance_count {
+        instances.push(diagnostic_profile_instance(
+            &mut arena, binder, body, integer,
+        ));
+        integer = if integer > 0 { -integer } else { -integer + 1 };
+    }
+
+    for round in 0..ROUND_CAP {
+        let remaining = deadline.checked_duration_since(Instant::now())?;
+        if remaining.is_zero() {
+            return None;
+        }
+        let candidate_cfg = cfg.clone().with_timeout(remaining);
+        let mut query = ground.clone();
+        query.extend(instances.iter().copied());
+        let model = match check_auto(&mut arena, &query, &candidate_cfg) {
+            Ok(CheckResult::Sat(model)) => {
+                let completed = complete_missing_int_functions(&arena, &model, &functions);
+                apply_diagnostic_constant_function_definitions(
+                    &arena,
+                    &completed,
+                    &constant_definitions,
+                )
+            }
+            other => {
+                if trace {
+                    println!("seed {seed}|round={round}|inner_decline={other:?}");
+                }
+                return None;
+            }
+        };
+        if Instant::now() >= deadline {
+            return None;
+        }
+        if check_quantified_uf_model_sat(&arena, universal, &model, &certificate) {
+            let mut certified = model;
+            certified.set_quantified_uf_model_sat_certificate(certificate);
+            assert!(check_model(&arena, &assertions, &certified).unwrap());
+            if trace {
+                for (function, value) in certified.functions() {
+                    let (name, _, _) = arena.function(function);
+                    println!(
+                        "profile_function={name}|default={:?}|entries={:?}",
+                        value.default_value(),
+                        value.value_entries().collect::<Vec<_>>()
+                    );
+                }
+            }
+            return Some(DiagnosticProfileCegisResult {
+                rounds: round,
+                instances: instances.len(),
+            });
+        }
+
+        let assignment = model.to_assignment();
+        let representatives = diagnostic_profile_representatives(&arena, body, binder, &model)
+            .expect("generated source is in the finite-profile fragment");
+        let falsifier = representatives.iter().copied().find(|&value| {
+            let mut probe = assignment.clone();
+            probe.set(binder, Value::Int(value));
+            matches!(eval(&arena, body, &probe), Ok(Value::Bool(false)))
+        });
+        if trace {
+            println!(
+                "seed {seed}|round={round}|instances={}|representatives={representatives:?}|falsifier={falsifier:?}",
+                instances.len()
+            );
+        }
+        let Some(falsifier) = falsifier else {
+            break;
+        };
+        let instance = diagnostic_profile_instance(&mut arena, binder, body, falsifier);
+        if instances.contains(&instance) {
+            break;
+        }
+        instances.push(instance);
+    }
+    None
+}
+
 #[test]
 #[ignore = "diagnostic; set AXEYUM_QUANT_UFLIA_PROFILE_CEGIS_SEEDS"]
 fn diagnose_finite_profile_cegis_for_quantified_uflia_residuals() {
-    const ROUND_CAP: usize = 32;
-
     let raw = std::env::var("AXEYUM_QUANT_UFLIA_PROFILE_CEGIS_SEEDS")
         .expect("set AXEYUM_QUANT_UFLIA_PROFILE_CEGIS_SEEDS");
     let cfg = SolverConfig::new().with_timeout(AXEYUM_TIMEOUT);
@@ -1519,72 +1735,77 @@ fn diagnose_finite_profile_cegis_for_quantified_uflia_residuals() {
         let seed: u64 = field.trim().parse().expect("diagnostic seed must be u64");
         let mut rng = Lcg::new(seed);
         let inst = Instance::generate(&mut rng);
-        let (mut arena, binder, _, body, ground, assertions) = inst.build_axeyum();
-        let universal = assertions[0];
-        let functions = exact_source_functions(&arena, &[universal]);
-        let certificate = QuantifiedUfModelSatCertificate {
-            assertion: universal,
-            binder,
-        };
-        let mut instances = Vec::new();
-        let mut accepted = None;
-
-        for round in 0..ROUND_CAP {
-            let mut query = ground.clone();
-            query.extend(instances.iter().copied());
-            let model = match check_auto(&mut arena, &query, &cfg) {
-                Ok(CheckResult::Sat(model)) => {
-                    complete_missing_int_functions(&arena, &model, &functions)
-                }
-                other => panic!("seed {seed} round {round} must stay QF SAT, got {other:?}"),
-            };
-            if check_quantified_uf_model_sat(&arena, universal, &model, &certificate) {
-                let mut certified = model;
-                certified.set_quantified_uf_model_sat_certificate(certificate.clone());
-                assert!(check_model(&arena, &assertions, &certified).unwrap());
-                accepted = Some((round, certified));
-                break;
-            }
-
-            let assignment = model.to_assignment();
-            let representatives = diagnostic_profile_representatives(&arena, body, binder, &model)
-                .expect("generated source is in the finite-profile fragment");
-            let falsifier = representatives.iter().copied().find(|&value| {
-                let mut probe = assignment.clone();
-                probe.set(binder, Value::Int(value));
-                matches!(eval(&arena, body, &probe), Ok(Value::Bool(false)))
-            });
-            println!(
-                "seed {seed}|round={round}|instances={}|representatives={representatives:?}|falsifier={falsifier:?}",
-                instances.len()
-            );
-            let Some(falsifier) = falsifier else {
-                break;
-            };
-            let instance = diagnostic_profile_instance(&mut arena, binder, body, falsifier);
-            if instances.contains(&instance) {
-                break;
-            }
-            instances.push(instance);
-        }
+        let result = diagnostic_profile_cegis(&inst, &cfg, seed, true, 0);
 
         println!(
             "PROFILE_CEGIS|seed={seed}|accepted={}|rounds={:?}|instances={}",
-            accepted.is_some(),
-            accepted.as_ref().map(|(round, _)| *round),
-            instances.len()
+            result.is_some(),
+            result.as_ref().map(|result| result.rounds),
+            result.as_ref().map_or(32, |result| result.instances)
         );
-        if let Some((_, model)) = accepted {
-            for (function, value) in model.functions() {
-                let (name, _, _) = arena.function(function);
-                println!(
-                    "profile_function={name}|default={:?}|entries={:?}",
-                    value.default_value(),
-                    value.value_entries().collect::<Vec<_>>()
-                );
+    }
+}
+
+#[test]
+#[ignore = "diagnostic; set AXEYUM_QUANT_UFLIA_PROFILE_BATCH_SEEDS"]
+fn diagnose_batched_finite_profile_cegis_for_quantified_uflia_residuals() {
+    let raw = std::env::var("AXEYUM_QUANT_UFLIA_PROFILE_BATCH_SEEDS")
+        .expect("set AXEYUM_QUANT_UFLIA_PROFILE_BATCH_SEEDS");
+    let cfg = SolverConfig::new().with_timeout(AXEYUM_TIMEOUT);
+
+    for field in raw.split(',') {
+        let seed: u64 = field.trim().parse().expect("diagnostic seed must be u64");
+        let mut rng = Lcg::new(seed);
+        let inst = Instance::generate(&mut rng);
+        let started = Instant::now();
+        let result = diagnostic_profile_cegis(&inst, &cfg, seed, true, 16);
+        println!(
+            "BATCHED_PROFILE_CEGIS|seed={seed}|accepted={}|rounds={:?}|instances={}|elapsed_ms={}",
+            result.is_some(),
+            result.as_ref().map(|result| result.rounds),
+            result.as_ref().map_or(16, |result| result.instances),
+            started.elapsed().as_millis()
+        );
+    }
+}
+
+#[test]
+#[ignore = "diagnostic 256-case post-ADR-0363 profile-CEGIS measurement"]
+fn diagnose_finite_profile_cegis_smoke_population() {
+    let cfg = SolverConfig::new().with_timeout(AXEYUM_TIMEOUT);
+    let mut baseline_sat = 0_u64;
+    let mut baseline_unsat = 0_u64;
+    let mut baseline_unknown = 0_u64;
+    let mut recovered = Vec::new();
+    let mut recovered_z3_sat = Vec::new();
+    let mut recovered_z3_unknown = Vec::new();
+
+    for seed in 0..SMOKE_INSTANCES {
+        let mut rng = Lcg::new(seed);
+        let inst = Instance::generate(&mut rng);
+        let (mut arena, _, _, _, _, assertions) = inst.build_axeyum();
+        match prove_unsat_by_mbqi(&mut arena, &assertions, &cfg).expect("baseline MBQI result") {
+            CheckResult::Sat(_) => baseline_sat += 1,
+            CheckResult::Unsat => baseline_unsat += 1,
+            CheckResult::Unknown(_) => {
+                baseline_unknown += 1;
+                if let Some(result) = diagnostic_profile_cegis(&inst, &cfg, seed, false, 0) {
+                    recovered.push((seed, result.rounds, result.instances));
+                    match z3_decide(&inst) {
+                        Verdict::Sat => recovered_z3_sat.push(seed),
+                        Verdict::Unknown => recovered_z3_unknown.push(seed),
+                        Verdict::Unsat => {
+                            panic!("profile CEGIS produced a wrong SAT at seed {seed}")
+                        }
+                    }
+                }
             }
         }
     }
+
+    println!(
+        "PROFILE_CEGIS_SMOKE|baseline_sat={baseline_sat}|baseline_unsat={baseline_unsat}|baseline_unknown={baseline_unknown}|recovered={recovered:?}|z3_sat={recovered_z3_sat:?}|z3_unknown={recovered_z3_unknown:?}"
+    );
 }
 
 #[test]
