@@ -4987,14 +4987,35 @@ fn mbp_for_sort(
     }
 }
 
+fn certify_mbqi_candidate(
+    arena: &TermArena,
+    assertions: &[TermId],
+    universal_assertions: &[TermId],
+    model: &Model,
+) -> Result<Option<Model>, SolverError> {
+    let Some(certificates) =
+        crate::mbqi_model_finder::certify_all_universals(arena, universal_assertions, model)
+    else {
+        return Ok(None);
+    };
+    let mut certified_model = model.clone();
+    for certificate in certificates {
+        certified_model.set_quantified_uf_model_sat_certificate(certificate);
+    }
+    crate::check_model(arena, assertions, &certified_model)
+        .map(|accepted| accepted.then_some(certified_model))
+}
+
 /// Model-based quantifier instantiation (MBQI): a refutation loop for top-level
 /// universals over infinite domains. Each round decides `ground ∧ instances`; on
-/// a `sat` candidate, every universal `∀x. body` is checked against the model at
-/// the values the model assigns (its candidate instantiation set), and any
+/// a `sat` candidate, every single-binder universal `∀x. body` is checked against
+/// the model at the values the model assigns (its candidate instantiation set), and any
 /// instance the model **falsifies** — a consequence of the universal that the
 /// model violates — is added, blocking that model. `unsat` of the augmented
 /// (still-implied) query transfers soundly; if no universal can be refined the
-/// result is `unknown` (an infinite `∀` cannot be confirmed `sat` here).
+/// result is `unknown`. A leading multi-binder block gets one SAT-only finite-
+/// profile candidate attempt before this loop and otherwise falls back to
+/// E-matching.
 ///
 /// # Errors
 ///
@@ -5005,24 +5026,42 @@ pub fn prove_unsat_by_mbqi(
     assertions: &[TermId],
     config: &SolverConfig,
 ) -> Result<CheckResult, SolverError> {
-    // Split into ground assertions and top-level universals `(bound_var, body)`.
-    // This loop only handles single-variable universals with quantifier-free
-    // bodies: a quantified body (multi-variable `forall`) or a quantifier in a
-    // ground position (existential, nested) is outside its scope, so the whole
-    // query defers to the trigger-based fallback (which instantiates uniformly).
+    // Split into ground assertions and top-level universal prefixes. The
+    // refutation loop below remains single-binder. Multi-binder prefixes get a
+    // separately checked SAT-only candidate attempt, then defer to E-matching.
     let mut ground: Vec<TermId> = Vec::new();
     let mut universals: Vec<(axeyum_ir::SymbolId, TermId)> = Vec::new();
     let mut universal_assertions: Vec<TermId> = Vec::new();
+    let mut has_multi_binder_prefix = false;
     for &a in assertions {
-        if let TermNode::App {
-            op: Op::Forall(sym),
-            args,
-        } = arena.node(a)
-        {
-            if has_quantifier(arena, &[args[0]]) {
+        if matches!(
+            arena.node(a),
+            TermNode::App {
+                op: Op::Forall(_),
+                ..
+            }
+        ) {
+            let mut prefix = Vec::new();
+            let mut matrix = a;
+            while let TermNode::App {
+                op: Op::Forall(sym),
+                args,
+            } = arena.node(matrix)
+            {
+                let [body] = &**args else {
+                    return prove_unsat_by_ematching(arena, assertions, config);
+                };
+                prefix.push(*sym);
+                matrix = *body;
+            }
+            if has_quantifier(arena, &[matrix]) {
                 return prove_unsat_by_ematching(arena, assertions, config);
             }
-            universals.push((*sym, args[0]));
+            if prefix.len() == 1 {
+                universals.push((prefix[0], matrix));
+            } else {
+                has_multi_binder_prefix = true;
+            }
             universal_assertions.push(a);
         } else if has_quantifier(arena, &[a]) {
             return prove_unsat_by_ematching(arena, assertions, config);
@@ -5030,8 +5069,23 @@ pub fn prove_unsat_by_mbqi(
             ground.push(a);
         }
     }
-    if universals.is_empty() {
+    if universal_assertions.is_empty() {
         // No top-level universal to instantiate; defer to the trigger fallback.
+        return prove_unsat_by_ematching(arena, assertions, config);
+    }
+
+    if has_multi_binder_prefix {
+        match check_auto(arena, &ground, config)? {
+            CheckResult::Sat(model) => {
+                if let Some(model) =
+                    certify_mbqi_candidate(arena, assertions, &universal_assertions, &model)?
+                {
+                    return Ok(CheckResult::Sat(model));
+                }
+            }
+            CheckResult::Unsat => return Ok(CheckResult::Unsat),
+            CheckResult::Unknown(_) => {}
+        }
         return prove_unsat_by_ematching(arena, assertions, config);
     }
     let err = |e: axeyum_ir::IrError| SolverError::Backend(e.to_string());
@@ -5053,7 +5107,7 @@ pub fn prove_unsat_by_mbqi(
         query.extend(instances.iter().copied());
         // The query is now quantifier-free (ground + instances).
         let result = check_auto(arena, &query, config)?;
-        let CheckResult::Sat(mut model) = result else {
+        let CheckResult::Sat(model) = result else {
             // `unsat` (sound — instances are implied) or `unknown` transfers.
             return Ok(result);
         };
@@ -5067,15 +5121,10 @@ pub fn prove_unsat_by_mbqi(
         // turns this loop's `unknown` into `sat`; a decline (`false`) leaves the
         // refutation logic below byte-identical, so the `unsat`/`unknown`
         // directions are unchanged.
-        if let Some(certificates) =
-            crate::mbqi_model_finder::certify_all_universals(arena, &universal_assertions, &model)
+        if let Some(model) =
+            certify_mbqi_candidate(arena, assertions, &universal_assertions, &model)?
         {
-            for certificate in certificates {
-                model.set_quantified_uf_model_sat_certificate(certificate);
-            }
-            if crate::check_model(arena, assertions, &model)? {
-                return Ok(CheckResult::Sat(model));
-            }
+            return Ok(CheckResult::Sat(model));
         }
         let assignment = model.to_assignment();
         // Candidate instantiation values: the distinct values the model assigns,
