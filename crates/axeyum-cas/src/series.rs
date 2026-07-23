@@ -30,6 +30,8 @@
 //!   vanishes at the origin (`tan` via the `sin/cos` power-series quotient), and
 //!   `ln`, `sqrt` of an argument equal to `1` at the origin (e.g. `ln(1 + a*x)`,
 //!   `sqrt(1 + x)`), computed from their exact `Maclaurin` coefficients;
+//! - integer-order cylindrical and modified Bessel functions `J_n` and `I_n` of
+//!   an argument that vanishes at the origin;
 //! - sums, products (truncated `Cauchy` product), powers, and quotients built
 //!   from the above.
 //!
@@ -482,10 +484,10 @@ fn coeffs_of(expr: &CasExpr, var: &str, order: usize) -> Option<Series> {
 
 /// The series of an elementary head applied to a supported argument.
 ///
-/// The additive heads `exp`, `sin`, `cos`, `atan` require the argument to vanish
-/// at the origin (`arg(0) = 0`); `ln` and `sqrt` require it to equal `1` there
-/// (`arg(0) = 1`), matching `ln(1 + …)` / `sqrt(1 + …)`. Every other shape,
-/// including `tan`, declines to `None`.
+/// The additive heads `exp`, `sin`, `cos`, `atan`, `J_n`, and `I_n` require the
+/// argument to vanish at the origin (`arg(0) = 0`); `ln` and `sqrt` require it to
+/// equal `1` there (`arg(0) = 1`), matching `ln(1 + …)` / `sqrt(1 + …)`.
+/// Every other shape declines to `None`.
 fn unary_series(func: UnaryFunc, arg: &CasExpr, var: &str, order: usize) -> Option<Series> {
     let argument = coeffs_of(arg, var, order)?;
     let constant_term = argument.coeffs[0];
@@ -502,6 +504,10 @@ fn unary_series(func: UnaryFunc, arg: &CasExpr, var: &str, order: usize) -> Opti
             .and_then(|inner| compose(&inner, arcsine_coeff)),
         UnaryFunc::Asinh => require_vanishing(&argument, constant_term)
             .and_then(|inner| compose(&inner, arcsinh_coeff)),
+        UnaryFunc::BesselJ(n) => require_vanishing(&argument, constant_term)
+            .and_then(|inner| compose(&inner, |degree| bessel_coeff(n, false, degree))),
+        UnaryFunc::BesselI(n) => require_vanishing(&argument, constant_term)
+            .and_then(|inner| compose(&inner, |degree| bessel_coeff(n, true, degree))),
         UnaryFunc::Ln => require_unit(argument, constant_term)
             .and_then(|inner| compose(&inner, log_one_plus_coeff)),
         UnaryFunc::Sqrt => {
@@ -535,8 +541,6 @@ fn unary_series(func: UnaryFunc, arg: &CasExpr, var: &str, order: usize) -> Opti
         | UnaryFunc::Chi
         | UnaryFunc::FresnelS
         | UnaryFunc::FresnelC
-        | UnaryFunc::BesselJ(_)
-        | UnaryFunc::BesselI(_)
         // acos = π/2 − asin has an irrational (π/2) constant term; acosh is
         // undefined at 0 (|x|<1) — neither has a rational Maclaurin series.
         | UnaryFunc::Acos
@@ -618,6 +622,45 @@ fn with_alternating_sign(parity: usize, magnitude: Rational) -> Option<Rational>
         Some(magnitude)
     } else {
         magnitude.checked_neg()
+    }
+}
+
+/// The degree-`d` `Maclaurin` coefficient of the non-negative integer-order
+/// Bessel functions `J_n` and `I_n`:
+///
+/// `J_n(x) = Σ_k (-1)^k (x/2)^(n+2k) / (k! (n+k)!)`,
+/// `I_n(x) = Σ_k        (x/2)^(n+2k) / (k! (n+k)!)`.
+///
+/// The nonzero coefficients are built from the checked recurrence
+/// `c_0 = 1 / (2^n n!)` and `c_k = c_(k-1) / (4k(n+k))`; `J_n` additionally
+/// alternates the sign. The valuation check happens before either loop, so an
+/// order larger than the requested degree returns exact zero in constant time.
+fn bessel_coeff(order: u32, modified: bool, degree: usize) -> Option<Rational> {
+    let order = usize::try_from(order).ok()?;
+    if degree < order || !(degree - order).is_multiple_of(2) {
+        return Some(Rational::zero());
+    }
+
+    let mut magnitude = Rational::integer(1);
+    for step in 1..=order {
+        let divisor = i128::try_from(step).ok()?.checked_mul(2)?;
+        magnitude = magnitude.checked_div(Rational::integer(divisor))?;
+    }
+
+    let radial_degree = (degree - order) / 2;
+    for step in 1..=radial_degree {
+        let order_plus_step = order.checked_add(step)?;
+        let divisor = i128::try_from(step)
+            .ok()?
+            .checked_mul(i128::try_from(order_plus_step).ok()?)?
+            .checked_mul(4)?;
+        magnitude = magnitude.checked_div(Rational::integer(divisor))?;
+    }
+
+    if modified {
+        Some(magnitude)
+    } else {
+        with_alternating_sign(radial_degree, magnitude)
     }
 }
 
@@ -969,6 +1012,204 @@ mod tests {
         let expected =
             var() - CasExpr::rat(1, 3) * var().pow(3) + CasExpr::rat(1, 5) * var().pow(5);
         assert_matches(&result, &expected);
+    }
+
+    #[test]
+    fn integer_order_bessel_maclaurin_fixtures() {
+        // DLMF 10.2.E2 / 10.25.E2, independently cross-checked against SymPy.
+        assert_eq!(
+            coeffs(&var().bessel_j(0), 8),
+            vec![
+                Rational::integer(1),
+                Rational::zero(),
+                Rational::new(-1, 4),
+                Rational::zero(),
+                Rational::new(1, 64),
+                Rational::zero(),
+                Rational::new(-1, 2_304),
+                Rational::zero(),
+                Rational::new(1, 147_456),
+            ]
+        );
+        assert_eq!(
+            coeffs(&var().bessel_j(1), 9),
+            vec![
+                Rational::zero(),
+                Rational::new(1, 2),
+                Rational::zero(),
+                Rational::new(-1, 16),
+                Rational::zero(),
+                Rational::new(1, 384),
+                Rational::zero(),
+                Rational::new(-1, 18_432),
+                Rational::zero(),
+                Rational::new(1, 1_474_560),
+            ]
+        );
+        assert_eq!(
+            coeffs(&var().bessel_j(2), 8),
+            vec![
+                Rational::zero(),
+                Rational::zero(),
+                Rational::new(1, 8),
+                Rational::zero(),
+                Rational::new(-1, 96),
+                Rational::zero(),
+                Rational::new(1, 3_072),
+                Rational::zero(),
+                Rational::new(-1, 184_320),
+            ]
+        );
+        assert_eq!(
+            coeffs(&var().bessel_i(0), 8),
+            vec![
+                Rational::integer(1),
+                Rational::zero(),
+                Rational::new(1, 4),
+                Rational::zero(),
+                Rational::new(1, 64),
+                Rational::zero(),
+                Rational::new(1, 2_304),
+                Rational::zero(),
+                Rational::new(1, 147_456),
+            ]
+        );
+        assert_eq!(
+            coeffs(&var().bessel_i(1), 9),
+            vec![
+                Rational::zero(),
+                Rational::new(1, 2),
+                Rational::zero(),
+                Rational::new(1, 16),
+                Rational::zero(),
+                Rational::new(1, 384),
+                Rational::zero(),
+                Rational::new(1, 18_432),
+                Rational::zero(),
+                Rational::new(1, 1_474_560),
+            ]
+        );
+        assert_eq!(
+            coeffs(&var().bessel_i(2), 8),
+            vec![
+                Rational::zero(),
+                Rational::zero(),
+                Rational::new(1, 8),
+                Rational::zero(),
+                Rational::new(1, 96),
+                Rational::zero(),
+                Rational::new(1, 3_072),
+                Rational::zero(),
+                Rational::new(1, 184_320),
+            ]
+        );
+    }
+
+    #[test]
+    fn bessel_series_composition_and_differential_equations() {
+        // Composition must retain inner scaling and nonlinear terms exactly.
+        assert_eq!(
+            coeffs(&(CasExpr::int(2) * var()).bessel_j(0), 8),
+            vec![
+                Rational::integer(1),
+                Rational::zero(),
+                Rational::integer(-1),
+                Rational::zero(),
+                Rational::new(1, 4),
+                Rational::zero(),
+                Rational::new(-1, 36),
+                Rational::zero(),
+                Rational::new(1, 576),
+            ]
+        );
+        assert_eq!(
+            coeffs(&(var() + var().pow(2)).bessel_i(1), 6),
+            vec![
+                Rational::zero(),
+                Rational::new(1, 2),
+                Rational::new(1, 2),
+                Rational::new(1, 16),
+                Rational::new(3, 16),
+                Rational::new(73, 384),
+                Rational::new(29, 384),
+            ]
+        );
+
+        // Independently check every computed coefficient against the defining ODEs:
+        // x²y'' + xy' + (x²−n²)y = 0 for J_n and
+        // x²y'' + xy' − (x²+n²)y = 0 for I_n.
+        for modified in [false, true] {
+            for order in 0_u32..=16 {
+                let expr = if modified {
+                    var().bessel_i(order)
+                } else {
+                    var().bessel_j(order)
+                };
+                let coefficients = coeffs(&expr, 24);
+                let order = i128::from(order);
+                for degree in 0..=24 {
+                    let degree_i128 = i128::try_from(degree).expect("small fixture degree");
+                    let factor = degree_i128 * degree_i128 - order * order;
+                    let current = coefficients[degree]
+                        .checked_mul(Rational::integer(factor))
+                        .expect("small exact ODE coefficient");
+                    let prior = degree
+                        .checked_sub(2)
+                        .map_or(Rational::zero(), |index| coefficients[index]);
+                    let expected = if modified {
+                        prior
+                    } else {
+                        prior.checked_neg().expect("small exact ODE coefficient")
+                    };
+                    assert_eq!(
+                        current, expected,
+                        "Bessel ODE mismatch: modified={modified}, order={order}, degree={degree}"
+                    );
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn bessel_series_limits_and_checked_boundaries() {
+        use crate::{LimitPoint, limit};
+
+        // J_n(x)/x^n and I_n(x)/x^n both approach 1/(2^n n!) at zero.
+        for order in 0_u32..=8 {
+            let denominator = var().pow(order);
+            let expected = CasExpr::Const(
+                bessel_coeff(order, false, usize::try_from(order).expect("small order"))
+                    .expect("small exact leading coefficient"),
+            );
+            for numerator in [var().bessel_j(order), var().bessel_i(order)] {
+                let actual = limit(
+                    &(numerator / denominator.clone()),
+                    "x",
+                    LimitPoint::Finite(Rational::zero()),
+                )
+                .expect("removable Bessel limit");
+                assert_matches(&actual, &expected);
+            }
+        }
+
+        // The first unrepresentable exact coefficient declines instead of wrapping.
+        assert!(series(&var().bessel_j(0), "x", 32).is_some());
+        assert!(series(&var().bessel_j(0), "x", 34).is_none());
+        assert!(series(&var().bessel_i(0), "x", 32).is_some());
+        assert!(series(&var().bessel_i(0), "x", 34).is_none());
+        assert!(series(&var().bessel_j(1), "x", 33).is_some());
+        assert!(series(&var().bessel_j(1), "x", 35).is_none());
+
+        // Orders beyond the requested truncation are identically zero to that degree
+        // and must not trigger an order-sized loop.
+        let huge_j = series(&var().bessel_j(u32::MAX), "x", 8).expect("zero truncation");
+        let huge_i = series(&var().bessel_i(u32::MAX), "x", 8).expect("zero truncation");
+        assert_matches(&huge_j, &CasExpr::zero());
+        assert_matches(&huge_i, &CasExpr::zero());
+
+        // This rational Maclaurin path intentionally requires a vanishing argument.
+        assert!(series(&(CasExpr::int(1) + var()).bessel_j(0), "x", 8).is_none());
+        assert!(series(&CasExpr::var("y").bessel_i(1), "x", 8).is_none());
     }
 
     #[test]
