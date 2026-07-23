@@ -340,6 +340,15 @@ Start at the root [`PLAN.md`](../../PLAN.md) (map + standing rules) and
   cases while keeping 3,670 generated-wrapper residuals. Exact dependency
   closure, native outcomes, pairs, and parity credit remain `not-run` or zero;
   M2 and M3 remain mandatory.
+- [`TL0.6.4 M2 source-first plan`](lean-u2-native-surface-classification-tl0.6.4-m2-plan-2026-07-23.md),
+  [`accepted bounded M2.0 result`](lean-u2-native-surface-classification-tl0.6.4-m2.0-result-2026-07-23.md),
+  [`authority`](lean-u2-native-dependency-v1.json), and generated
+  [Markdown](generated/lean-u2-native-dependency.md)/
+  [JSON](generated/lean-u2-native-dependency.json) — freeze the typed graph,
+  assurance, resolver, provider-variant, selection, and case contract for all
+  3,723 U2 cases and 408,374 factored case/variant occurrences. M2.0 is
+  process-free and non-crediting: providers are unbound, all nodes/edges/
+  closures remain empty or `not-run`, and M2.1-M2.7 plus M3 remain mandatory.
 - [`lean-compatibility-v1.json`](lean-compatibility-v1.json) and generated
   [`Lean compatibility matrix`](generated/lean-compatibility.md) — TL0.2's
   executable eight-field assurance contract, K0-K6 profile gates, registered

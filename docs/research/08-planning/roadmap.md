@@ -41,6 +41,13 @@ Last updated: 2026-07-22
 > maps that terminal contract into dependency-ordered R0-R10 phases, reconciles
 > the committed/diagnostic/official-selection SMT-LIB evidence layers, and
 > preserves the distinction between pinned v4.30 parity and maintained parity.
+> TL0.6.4 now has accepted M0 harness-floor and M1 tracked-content authorities
+> for all 3,723 U2 cases. Accepted M2.0 additionally freezes the typed
+> dependency/provider contract across 111 official variants and 408,374
+> factored case/variant occurrences, but its node/edge lists are empty and all
+> resolvers, providers, closures, native outcomes, pairs, and parity credit
+> remain unbound, `not-run`, or zero. M2.1-M2.7 exact closure and M3 review are
+> still required; schema scale is not behavioral coverage.
 > Its
 > [completion audit](../../../docs/plan/lean-system-roadmap-completion-audit-2026-07-21.md)
 > verifies every named environment gap and the current Axeyum/Lean/mathlib

@@ -33,7 +33,7 @@ Current machine-derived state:
 | U0-U9 | 0 complete authorities | a complete executable denominator for any terminal population |
 | A0-A11 | 0 complete axes | end-to-end native behavior on any complete required population |
 | G1-G10 | 0 satisfied terminal gates | any terminal parity claim |
-| U2 official execution/classification | 8 consumed processes, 66 official outcomes, 65 passes / 1 failure over **65 unique cases**; execution M1 derives 5 exact memberships and 289 physical shards, one locally complete; TL0.6.4 M0 gives all 3,723 cases a harness floor and classification M1 inspects 7,004 tracked files / 90,909 spans | the 3,678/3,723-case parents, all 111 full attempts, exact dependency-reviewed classification, an official provider, an Axeyum outcome, a pair, or performance |
+| U2 official execution/classification | 8 consumed processes, 66 official outcomes, 65 passes / 1 failure over **65 unique cases**; execution M1 derives 5 exact memberships and 289 physical shards, one locally complete; TL0.6.4 M0 gives all 3,723 cases a harness floor, M1 inspects 7,004 tracked files / 90,909 spans, and M2.0 freezes an empty typed graph across 408,374 factored case/variant occurrences | the 3,678/3,723-case parents, all 111 full attempts, any resolved dependency node/edge/closure, exact dependency-reviewed classification, an official provider, an Axeyum outcome, a pair, or performance |
 
 The accepted
 [`R3 result`](lean-u2-official-execution-tl0.6.3-m0-r3-result-2026-07-22.md)
@@ -171,6 +171,15 @@ over all 3,723 case projections. It is still source-only: 3,670 cases retain a
 generated-wrapper residual, all exact dependency closures/native outcomes are
 `not-run`, and pairs/parity remain zero. M2 and M3 remain open.
 
+The accepted
+[M2.0 result](lean-u2-native-surface-classification-tl0.6.4-m2.0-result-2026-07-23.md)
+now freezes the typed dependency/provider schema for all 3,723 cases, eight
+selection sets, 111 official variants, and 408,374 factored case/variant
+occurrences. It is deliberately an empty graph: providers are unbound,
+resolver milestones and case closures are `not-run`, node/edge lists are
+empty, no external process ran, and native/pair/parity credit remains zero.
+M2.1-M2.7 exact closure and M3 review remain open.
+
 ## 2. What the SMT-LIB comparison actually says
 
 The solver program supplies a mature measurement warning for Lean parity:
@@ -260,7 +269,8 @@ dependency chain:
 
 - R1 expands official U2 execution. TL0.6.4 M0 supplies every case's
   conservative harness floor and accepted M1 supplies the complete tracked-
-  source census; M2 still must derive exact dependency closure before M3 review.
+  source census. Accepted M2.0 supplies only the typed empty-graph/provider
+  contract; M2.1-M2.7 must still derive exact closure before M3 review.
 - R0 keeps identities, completion rules, pair schemas, and dashboards ready so
   new capabilities become auditable evidence rather than anecdotes.
 - R7 and R10 preregister editor, adversarial, platform, package, and migration
@@ -277,10 +287,12 @@ execution, and content/dependency-complete U2 classification.
    never rerun either to manufacture coverage.
 2. Select and preregister the next fresh deterministic child shard, preserving
    exact unique-case accounting and the one-process/no-retry discipline.
-3. Retain accepted TL0.6.4 M1's 7,004-file/3,723-case source census as
-   provisional evidence; do not reinterpret lexical signals as reachability.
-4. Complete TL0.6.4 M2 exact module, generated-artifact, runtime, library, FFI,
-   request, and project dependency closures; do not infer FFI absence from M0.
+3. Retain accepted TL0.6.4 M1's 7,004-file/3,723-case source census and M2.0's
+   typed empty-graph/provider contract as provisional evidence; do not
+   reinterpret lexical signals, schema rows, or variant counts as reachability.
+4. Execute TL0.6.4 M2.1-M2.7 exact header, module, generated-artifact, runtime,
+   library, FFI, request, and project dependency closures; do not infer FFI
+   absence from M0 or closure from M2.0.
 5. Review all rows under M3 and accept TL0.6.4 only when no provisional field,
    unknown surface, or silent official-Lean delegation remains.
 6. Repair and attest the remote official-Lean executable identity across

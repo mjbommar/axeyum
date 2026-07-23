@@ -148,6 +148,10 @@
           "detail": "Source-first M2.0-M2.7 program for exact header, source/artifact, generated-runner, Lake/project, runtime/FFI, editor/RPC, and variant-merge dependency closure."
         },
         {
+          "path": "docs/plan/lean-u2-native-surface-classification-tl0.6.4-m2.0-result-2026-07-23.md",
+          "detail": "Accepted bounded M2.0 result with source-first checkpoint history, exact denominators and seals, empty-graph/provider boundary, validation, nonclaims, and M2.1-M2.7 handoff."
+        },
+        {
           "path": "docs/plan/lean-u2-official-execution-tl0.6.3-m2-shard-0001-plan-2026-07-22.md",
           "detail": "Pushed immutable source-first execution plan for the lowest-ordinal 64-case shard with no historical observation; no harness discovery or test process has run."
         },

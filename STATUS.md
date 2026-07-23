@@ -383,6 +383,20 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-23 — TL0.6.4 M2.0 accepts the typed U2 dependency/provider
+  contract without claiming dependency closure or Lean parity.** The
+  [source-first program](docs/plan/lean-u2-native-surface-classification-tl0.6.4-m2-plan-2026-07-23.md),
+  [bounded result](docs/plan/lean-u2-native-surface-classification-tl0.6.4-m2.0-result-2026-07-23.md),
+  [authority](docs/plan/lean-u2-native-dependency-v1.json), and generated
+  [summary](docs/plan/generated/lean-u2-native-dependency.md) freeze 11 node
+  classes, 31 edge classes, nine evidence states, seven resolver milestones,
+  eight selection sets, 111 official variants, and 408,374 factored
+  case/variant occurrences over all 3,723 cases. The graph is intentionally
+  empty: providers are unbound, every resolver/closure is `not-run`, no process
+  ran, and all native/pair/parity credit remains zero. Next: preregister and
+  implement M2.1 exact header-import evidence before any broad `--deps-json`
+  run, alongside a fresh official shard.
+
 - **2026-07-23 — TL0.6.4 M1 accepts the full tracked U2 content census without
   claiming dependency closure, native support, or Lean parity.** The
   [source-first plan](docs/plan/lean-u2-native-surface-classification-tl0.6.4-m1-plan-2026-07-23.md),
@@ -8063,6 +8077,7 @@ plan is built and committed on the current branch:
 |---|---|---|
 | P3.6p | `Prop` large-elimination soundness incident | **DONE / contained (ADR-0165, `d26ad887`, `a10c8cde`, `de249d48`)** — exact Lean syntactic-subsingleton test; restricted motive universe and arity for other potentially-`Prop` families; complete exploit inverted; positive/negative/exact-index/polymorphic/generated-matrix coverage; pinned mandatory real-Lean flat-inductive/iota CI gate; downstream `Or.rec`/`Exists.rec` reconstruction aligned and the complete 4 GiB serialized `just check` gate green. Full recursive-indexed `Acc` remains an honest pre-existing fragment deferral, not a soundness exception |
 | P3.6 / TL2.12 | Recursive indexed/reflexive induction hypotheses | **DONE (ADR-0353 accepted)** — one `Pi telescope, motive indices (field args)` rule covers direct, indexed, higher-order, and combined native fields. M0-M3 freeze the streams, close fourteen native rows/twelve mutation classes/768 recursive profiles, and complete both construct targets with exact recursor comparison. M4 confirms pinned Lean and Axeyum computations twice at `MiniNat.succ MiniNat.zero` and `True`; the generated matrix has four admitted, two computation-checked, and two declined rows. M5 closes every bounded gate. Mutual groups followed in TL2.13; a later audit separates TL2.14 kernel nested elimination from TL4.9/TL4.10 source elaboration. |
+| P3.6 / TL0.6.4 | U2 native-surface classification | **WIP — M0/M1/M2.0 accepted.** M0 supplies the 3,723-case harness floor; M1 supplies the complete 7,004-file content census; M2.0 freezes the empty typed dependency/provider graph across 111 official variants and 408,374 factored case/variant occurrences. All resolver closures, native outcomes, pairs, and parity credit remain not-run or zero. Next: separately preregistered M2.1-M2.7 exact closure, then M3 complete-row review. |
 | P3.6 / TL2.13 | Mutual inductive groups | **DONE (ADR-0354 accepted)** — M0 freezes the exact source, two byte-identical official streams, semantic/wire-order contract, and no-product boundary. M1-M4 land ordered representation, native complete-group semantics across 18 public rows, the byte-identical 720-case grammar, exact official import/computation, and 22 rejecting importer/publication mutation classes while retaining the 768/840 controls. M5 adds the history-preserving assurance overlay (5 admitted, 3 computation-checked, 1 current decline), removes the obsolete live decline, and closes every bounded gate. |
 | P3.6 / TL2.14 | Nested-inductive kernel elimination | **DONE (ADR-0355 accepted after containing-commit publication)** — M0 freezes three explicit computations and 114,596 bytes / 2,022 records without product observation. M1 establishes typed non-admission. M2 implements native fixed-point expansion/restoration and exact `.rec_N` publication. M3 repeats the exact 640-case grammar twice at digest `a20fe056c9443a37`, observes exact dependency/iota surfaces, and closes 16 transactional mutations plus the bounded integrity amendment. M4 derives auxiliary identity from checked motives, imports the construct plus all three frozen computation streams twice at 22/34/34/34 declarations and zero axioms, and closes 20 wire/publication classes plus order non-authority. M5 checks the registered 3/3/5-successor normal forms twice, appends the history-preserving current assurance overlay (7 rows / 6 admitted / 4 computation-checked / 0 current declines), and removes only the obsolete live nested decline. M6 closes exits 1--11 and every non-publication component of exit 12; the containing commit's push/ref equality completes the decision. Complete suites and exact 640/720/768/840 and well-founded 35/0 controls pass. Native source elaboration remains TL4.9/TL4.10. |
 | P4.1d | Retained warm array relations | **DONE, literal relation slice (ADR-0089)** — projection-owned positive equality merges before function construction; exact private diff witnesses cover top-level disequality across supported structural parents. Scope/core/filter/replay, Bool/BV256, exact depth, 192 clean comparisons, 816 solver units, 77 symexec tests, and complete EVM gates pass; EVM has no whole-array relation case, so no timing claim |
@@ -8118,6 +8133,14 @@ plan is built and committed on the current branch:
 | P5.5 | External target, measured | **DONE (bounded v1, ADR-0323--0338):** authenticated Tock capture plus eight rechecked dual-DRAT proofs and six replayed controls, UNKNOWN=0, DISAGREE=0. Query time 12.700 s; fresh outer wall 50.745 s; peak RSS 1,256,496 KiB; zero OOM deltas. The committed case study compares exact target validation, universal coverage, trust, effort, artifact boundaries, and limits. No Tock bug was found, so no upstream issue is applicable. This is not a speed or whole-kernel claim. |
 
 ## Changelog
+
+- **2026-07-23 — Accepted TL0.6.4 M2.0's process-free typed dependency
+  contract.** Eleven node classes, 31 edge classes, nine evidence states,
+  seven resolvers, eight selection sets, 111 unbound official variants, 3,723
+  not-run case closures, and 408,374 factored case/variant occurrences validate
+  under 12 focused tests and the terminal scoreboard. Nodes, edges, external
+  processes, native outcomes, pairs, and parity credit remain zero; TL0.6.4
+  stays PARTIAL pending M2.1-M2.7 and M3.
 
 - **2026-07-23 — Accepted TL0.6.4 M1's 7,004-file/3,723-case tracked-content
   census.** The authority retains 90,909 exact/candidate spans, 94 support

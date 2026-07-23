@@ -544,6 +544,18 @@ reachability, implementation, execution, or agreement. All exact dependency
 closures and native outcomes remain `not-run`; pairs and terminal credit remain
 zero. M2 exact closure and M3 complete-row review are still required.
 
+M2.0 has since accepted the offline
+[typed dependency/provider contract](lean-u2-native-surface-classification-tl0.6.4-m2.0-result-2026-07-23.md),
+[canonical authority](lean-u2-native-dependency-v1.json), and generated
+[summary](generated/lean-u2-native-dependency.md). It registers eleven node
+classes, 31 edge classes, nine evidence states, seven resolver milestones,
+eight exact selection sets, 111 official variants, and all 3,723 case rows.
+Selection factoring represents 408,374 case/variant occurrences without
+duplicating case graphs. This is not closure: every provider is unbound, every
+resolver and case closure is `not-run`, the node and edge lists are empty, no
+external process ran, and all native/pair/performance/terminal credit remains
+zero. M2.1-M2.7 must populate exact variant-owned graphs before M3 review.
+
 ## 8. Layer-specific equivalence
 
 One byte-comparison rule cannot cover the entire system:
@@ -645,8 +657,9 @@ Before another broad implementation claim:
 
 1. retain the R3 singleton and accepted R6 shard as immutable history; execute
    only fresh source-first child shards with unique-case accounting;
-2. retain accepted TL0.6.4 M1 as source-only evidence; complete M2 exact
-   module/generated/runtime/FFI/request/project closures and M3 full-row review;
+2. retain accepted TL0.6.4 M1 as source-only evidence and M2.0 as an empty
+   typed graph/provider contract; execute M2.1-M2.7 exact module/generated/
+   runtime/FFI/request/project closures and M3 full-row review;
 3. repair and attest the remote official-Lean executable identity from changed
    working directories, retaining provider, duration, RSS, and axiom evidence;
 4. form the first native official/Axeyum semantic pair only after its complete

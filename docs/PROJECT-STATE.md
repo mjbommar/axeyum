@@ -301,6 +301,15 @@ Again, there are distinct targets:
   FFI case surfaces and 3,670 generated-wrapper residuals without treating
   either as reachability or native support. Exact dependency closure and every
   native outcome remain `not-run`; pairs and parity remain zero pending M2/M3.
+  The accepted
+  [M2.0 result](plan/lean-u2-native-surface-classification-tl0.6.4-m2.0-result-2026-07-23.md)
+  now freezes an eleven-node-class, 31-edge-class, nine-evidence-state graph
+  contract across eight selection sets, 111 official variants, and 408,374
+  factored case/variant occurrences. It remains an empty contract: all
+  providers are unbound, all seven resolvers and 3,723 closures are `not-run`,
+  node/edge lists and external-process counts are zero, and no native, pair,
+  performance, population, axis, gate, or parity credit is added. M2.1-M2.7
+  exact closure and M3 complete-row review remain required.
   The subsequent
   [TL0.7.1 contract](plan/lean-execution-evidence-tl0.7.1-2026-07-22.md)
   defines explicit 4/8 GiB local lanes, twelve typed termination classes, and

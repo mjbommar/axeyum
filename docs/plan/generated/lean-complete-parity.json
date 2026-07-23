@@ -48,7 +48,7 @@
     },
     {
       "path": "docs/plan/lean-complete-parity-v1.json",
-      "sha256": "73aecff0059dfc58d756960c42543efc91a8cc22dafb56e945f1a3d86e28b68a"
+      "sha256": "41febc9c394d6a26f1a2a235ab5e04bd2f941bc0e9cb1817a4bba01b19a3839e"
     },
     {
       "path": "docs/plan/lean-execution-acceptance-tl0.7.4-2026-07-22.md",
@@ -101,6 +101,10 @@
     {
       "path": "docs/plan/lean-u2-native-surface-classification-tl0.6.4-m2-plan-2026-07-23.md",
       "sha256": "a03fccc1beb59b075eab798e3f5b2f4e92b403d947bc13c95b2920714777ced5"
+    },
+    {
+      "path": "docs/plan/lean-u2-native-surface-classification-tl0.6.4-m2.0-result-2026-07-23.md",
+      "sha256": "e82f8b26ad9c19c38c5011cf90d096c6244a1bce237599b5a8ab1d62103d5c25"
     },
     {
       "path": "docs/plan/lean-u2-native-surface-classification-v1.json",
@@ -288,11 +292,11 @@
     },
     {
       "path": "docs/plan/lean4-complete-parity-contract-2026-07-22.md",
-      "sha256": "23df318d8d6732adfe584e4028843955128c3d43fb37ddccbf1855641b58e41f"
+      "sha256": "df0040bb1b5769db72523651cae888fc1e5adf111b0a021c721c2c5afebbd66c"
     },
     {
       "path": "docs/plan/lean4-complete-parity-roadmap-2026-07-22.md",
-      "sha256": "084d7cc638bc58240322d45f7e71cba993b5d55164b06ec381491ab9069e248c"
+      "sha256": "3c4ae78da4319b2d0453970273bc4969486fe30f7f5f9e0fb8188b7193620c9b"
     },
     {
       "path": "scripts/gen-lean-complete-parity.py",
@@ -1483,6 +1487,10 @@
         {
           "path": "docs/plan/lean-u2-native-surface-classification-tl0.6.4-m2-plan-2026-07-23.md",
           "detail": "Source-first M2.0-M2.7 program for exact header, source/artifact, generated-runner, Lake/project, runtime/FFI, editor/RPC, and variant-merge dependency closure."
+        },
+        {
+          "path": "docs/plan/lean-u2-native-surface-classification-tl0.6.4-m2.0-result-2026-07-23.md",
+          "detail": "Accepted bounded M2.0 result with source-first checkpoint history, exact denominators and seals, empty-graph/provider boundary, validation, nonclaims, and M2.1-M2.7 handoff."
         },
         {
           "path": "docs/plan/lean-u2-official-execution-tl0.6.3-m2-shard-0001-plan-2026-07-22.md",
