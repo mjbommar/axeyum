@@ -1432,8 +1432,8 @@ def execute_resumable(
     return complete
 
 
-def export_legacy_raw(run_dir: Path, destination: Path) -> None:
-    """Export current raw scoring JSON only from a complete, sidecar-valid run."""
+def legacy_raw_bytes(run_dir: Path) -> bytes:
+    """Return deterministic legacy scoring JSON for a complete valid run."""
 
     validate_bundle_directory(run_dir, require_output_sidecars=True)
     bundle = load_bundle(run_dir)
@@ -1461,8 +1461,13 @@ def export_legacy_raw(run_dir: Path, destination: Path) -> None:
                 "num_named_assertions": source["num_named_assertions"],
             }
         }
-    data = json.dumps(raw, indent=2).encode("utf-8")
-    atomic_install_bytes(destination.parent, destination.name, data)
+    return json.dumps(raw, indent=2).encode("utf-8")
+
+
+def export_legacy_raw(run_dir: Path, destination: Path) -> None:
+    """Export current raw scoring JSON only from a complete, sidecar-valid run."""
+
+    atomic_install_bytes(destination.parent, destination.name, legacy_raw_bytes(run_dir))
 
 
 __all__ = [
