@@ -383,6 +383,23 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-22 — certified weighted order-one Bessel antiderivatives.** The
+  measured `u²J₁(u)` / `u²I₁(u)` gap now closes for rational-affine `u` and
+  variable-free outer factors through candidates `u²J₂(u)/slope` and
+  `u²I₂(u)/slope`, followed by the unchanged full differentiate-and-zero-test
+  certificate. A descending, division-free recurrence reducer handles only
+  target orders two and three, rewrites only exact argument multiples, and
+  introduces only lower orders, so it adds neither a `1/u` seam nor an
+  unbounded recurrence search. Rational scales, shifts, reflection, symbolic
+  factors, recurrence identities, derivative replay, and definite FTC pass;
+  mismatched/lower/higher weights, order-two integrands, nonlinear arguments,
+  symbolic slopes, and reciprocal overflow decline. The thermally managed
+  550-unit/147-doctest suite passed (1446.42 s for units), with workspace
+  warning-denied Clippy (2m49s), stable/nightly rustdoc, WASM, links, and
+  whitespace green. Next: resume broad probing; higher weighted Bessel orders,
+  weighted transforms, asymptotics, improper `J₀`, and quadratic inverse Z
+  remain unclaimed or measured gaps.
+
 - **2026-07-22 — certified additive radical-bearing inverse Laplace closure.**
   Wave seven measured same/distinct-radical and rational-plus-Bessel sums as a
   bounded gap while nonzero-center Bessel series and Fourier/ODE controls stayed
@@ -395,9 +412,7 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   case also fixed the zero-pole basis from unreplayable `exp(0t)` to exact one;
   a rational-cancellation control freezes the prior route. The thermally managed
   549-unit/147-doctest suite passed (1392.88 s for units), with workspace Clippy,
-  stable/nightly rustdoc, WASM, links, and whitespace green. Next: resume broad
-  probing; weighted Bessel transforms/integrals, asymptotics, improper `J₀`,
-  and quadratic inverse Z remain measured gaps.
+  stable/nightly rustdoc, WASM, links, and whitespace green.
 
 - **2026-07-22 — exact order-two Bessel inverse Laplace pairs.** The sixth
   timeout-bounded cross-area probe selected unit/shifted `J₂` and `I₂` inverse
@@ -8025,6 +8040,10 @@ plan is built and committed on the current branch:
   R1/R2 history, a new run/evidence root, universal 512 MiB Lean runtime stacks
   from pinned source semantics, and the measured tiered artifact store. It
   authorizes one process only after separately pushed implementation gates.
+- **2026-07-22 — Added certified weighted order-one Bessel antiderivatives.**
+  Bounded division-free order-two/three recurrence reduction closes rational-
+  affine `u²J₁(u)` / `u²I₁(u)` through the unchanged differentiate-and-check
+  gate, bringing CAS to 550 units and 147 doctests.
 - **2026-07-22 — Added certified additive Bessel inverse Laplace closure.** A
   square-root-guarded per-summand route plus independent whole-sum round trip,
   fail-closed unsupported-term controls, and the zero-pole `1/s→1` repair bring
