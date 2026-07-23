@@ -9027,9 +9027,10 @@ coverage never regresses):
 2. **Deepen the quantified sat direction** (Gap 2): MBQI model-finding for the
    almost-uninterpreted fragment
    ([P2.6 T2.6.5](docs/plan/track-2-theories/P2.6-quantifiers.md)) — the
-   refutation side exists, and ADR-0357 now makes the narrow one-binder
-   `Int`/`Real` UF model slice pass canonical original-query replay. Multi-binder
-   finite profiles and general model repair remain the next capability work;
+   refutation side exists, and accepted ADR-0357 now makes the narrow one-binder
+   `Int`/`Real` UF model slice pass canonical original-query replay. Implement
+   bounded multi-binder Cartesian finite profiles next; general model repair
+   remains later capability work;
    MAM/trigger-inference (T2.6.1/2) follow as throughput.
 3. **Bank the CDCL(T) spine** (Gap 3): the default-dispatch ADR for the
    built-but-opt-in `CdclT` routes, then port arrays-lazy

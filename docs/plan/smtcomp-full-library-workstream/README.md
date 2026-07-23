@@ -351,5 +351,5 @@ NAS (shared, corpus read-only in practice):
    branch for the integration owner.
 
 *Owner: SMT-COMP measurement/full-library lane. Next measurement milestone: a
-tiny S5 admission fixture; active engineering milestone: checked quantified-UF
-functionality, not another large run.*
+tiny S5 admission fixture; active engineering milestone: bounded multi-binder
+checked quantified-UF functionality, not another large run.*
