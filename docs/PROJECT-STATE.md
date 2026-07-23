@@ -307,7 +307,10 @@ Again, there are distinct targets:
   [acceptance plan](plan/lean-execution-acceptance-tl0.7.4-plan-2026-07-22.md)
   freezes one pinned-Lean compile preflight and one exact official-export
   control, both empty-selection and structurally unable to receive U2/parity
-  credit, before either process runs.
+  credit. Attempt 001's 4 GiB compile failed before `.olean` creation because
+  Lean's default task-stack reservation exhausted address space; the exporter
+  did not run. The [R1 plan](plan/lean-execution-acceptance-tl0.7.4-r1-plan-2026-07-22.md)
+  preregisters exact `-s524288` and terminal-before-artifact retention.
 
 See the source-backed [kernel gap audit](prover-track/research/06-kernel-gap-analysis.md)
 and [proof reconstruction plan](plan/track-3-proof-lean/P3.7-lean-reconstruction.md),

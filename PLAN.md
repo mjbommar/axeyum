@@ -456,8 +456,12 @@ state.
 > stopped before compilation, and the supported one-thread-environment build
 > produced a 206,915,024-byte executable with SHA-256 `8e763913...4449` from a
 > still-clean source tree. A published amendment corrects a 62-character flat
-> source digest transcription to its actual 64-character SHA-256. No compile or
-> export control has run. The pair cannot create a U2/Axeyum outcome,
+> source digest transcription to its actual 64-character SHA-256. Attempt 001's
+> 4 GiB compile then failed closed: Lean's default 1 GiB task stacks caused a
+> third stack mapping to return `ENOMEM`; no `.olean`, completion, or exporter
+> process followed. A source-first R1 plan now freezes `-s524288` after a
+> no-credit task-stack matrix and requires terminal-before-artifact failure
+> retention. No R1 control has run. The controls cannot create a U2/Axeyum outcome,
 > denominator, paired/performance row, or parity credit.
 > The runtime-derived
 > TL0.4 ledger now freezes **65** prelude assumptions (real 30, integer 34,
