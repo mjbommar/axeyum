@@ -13,15 +13,15 @@ elsewhere in `docs/plan/`). Read this file first when resuming.
   [multi-agent operations guide](../contributor-guide/multi-agent-operations.md):
   work only in the dedicated CAS worktree on an `agent/cas/*` branch, push that
   branch, and leave `main` to the integration owner. The current increment is
-  `agent/cas/gap-probe-wave-six`, based on integration parent `adf91650`, with
-  implementation commit `2a4179a0` (integrated by `fbb1c4c5`); do not rebase it
+  `agent/cas/gap-probe-wave-seven`, based on integration parent `bbfae1d9`, with
+  implementation commit `099b6da3` (integrated by `f5934d8f`); do not rebase it
   onto `main` ahead of the integration owner.
-- **Tests:** `548` unit + `147` doctests, **all green**, warning-denied workspace
+- **Tests:** `549` unit + `147` doctests, **all green**, warning-denied workspace
   all-target/all-feature Clippy-clean, strict stable/nightly rustdoc-green,
   wasm-green, links-green, and whitespace-clean.
 - **Source of truth for capabilities:** `docs/research/10-cas/README.md`
   (capability table) and `docs/research/10-cas/diary.md` (chronological entries;
-  latest is **Entry 37af4**). Keep both in sync when landing features.
+  latest is **Entry 37af5**). Keep both in sync when landing features.
 - **Method that works:** empirical **gap-probing** (below). It found every recent
   feature *and* a serious infinite-hang regression.
 
@@ -424,9 +424,28 @@ orders `0..=255`), and Stirling-composed raw moments (regressed for orders
   round-trip matrix.
 - Positive/negative integer and half frequencies, three shifts, both families,
   and an outer scale pass. Odd order-one and even order-two parity are frozen;
-  order three and the earlier malformed/irrational/multiple-root/zero-frequency
-  boundaries decline. No public head, operator, backend, evidence format, or
-  logic fragment changed, so no ADR is required.
+  order three and the malformed/irrational/zero-frequency boundaries decline.
+  No public head, operator, backend, evidence format, or logic fragment changed,
+  so no ADR is required.
+
+**Certified additive radical-bearing inverse Laplace closure**
+- Wave seven measured same-radical, distinct-radical, and rational-plus-Bessel
+  inverse sums as clean declines. Nonzero-center Bessel series and the Fourier/
+  ODE controls were already green; weighted Bessel transforms/integrals,
+  asymptotics, improper `J₀`, and quadratic inverse Z remain larger gaps.
+- The additive inverse route activates only for expressions containing a square
+  root, recursively processes strict children, requires every summand to pass
+  its existing inverse certificate, and independently forward-transforms plus
+  zero-tests the complete sum. Ordinary rational sums retain their established
+  whole-expression path.
+- Same/distinct Bessel families and frequencies, nested sums, a shifted/scaled
+  order-two term plus rational pole, and `1/s+J₀` pass. A supported term plus
+  order three or irrational frequency makes the whole sum decline. The mixed
+  case exposed and fixed the zero-pole basis `exp(0t)→1`; a rational-cancellation
+  control freezes the old whole-expression route.
+- DLMF 1.14.17 supplies the integral definition from which linearity follows.
+  No public head, operator, backend, evidence format, or logic fragment changed,
+  so no ADR is required.
 
 ---
 
@@ -754,9 +773,9 @@ esac
 export AXEYUM_CAS_TMP
 trap 'find "$AXEYUM_CAS_TMP" -depth -delete' EXIT
 git rev-parse --abbrev-ref HEAD        # → agent/cas/...
-git merge-base --is-ancestor 2a4179a0 HEAD
+git merge-base --is-ancestor 099b6da3 HEAD
 CARGO_BUILD_JOBS=1 TMPDIR="$AXEYUM_CAS_TMP" cargo test -p axeyum-cas --jobs 1
-# → 548 unit + 147 doctests green
+# → 549 unit + 147 doctests green
 ```
 Then: read `docs/research/10-cas/diary.md` tail for the latest context, and pick
 up from §6 or resume the gap-probing loop. Push the green owned topic branch;
