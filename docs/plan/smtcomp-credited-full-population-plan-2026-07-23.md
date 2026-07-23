@@ -1,7 +1,8 @@
 # SMT-COMP credited full-population execution plan
 
 Status: preregistered design; F1/F2 process-free mechanisms and publication
-fixtures integrated; live F2, F3, and F4 not yet accepted
+fixtures integrated; F3 coordinator fixture implemented on the SMT topic; live
+F2, F3, and F4 not yet accepted
 Date: 2026-07-23
 Selection authority: [accepted S4 result](smtcomp-official-selection-final-s4-2026-07-22.md)
 Harness admission: [S5 result](smtcomp-harness-admission-s5-result-2026-07-23.md)
@@ -208,7 +209,8 @@ Before live preparation, tiny fixtures must prove:
 - the 96-shard, 48-allocation, 16-wave partition and all 96 different-host
   retries;
 - per-host concurrency, worker, CPU, memory, swap, and PID caps;
-- deterministic wave checkpoints and restart skipping;
+- deterministic per-shard wave checkpoints, exact retry closure, immutable
+  persistence, and restart skipping;
 - no launch after an unclosed, failed, or lost allocation;
 - clean signal pause without an orphan or next-wave launch;
 - thermal sensor/source/threshold/hysteresis mutation rejection;
@@ -221,9 +223,12 @@ Before live preparation, tiny fixtures must prove:
 
 The process-free
 [publication fixture](smtcomp-credited-full-publication-fixture-2026-07-23.md)
-implements the remaining external-cell and same-population comparison boundary.
-It does not provide a live F2 preparation, construct F3 execution authority, or
-claim F4 results.
+implements the external-cell and same-population comparison boundary. The
+[execution-coordinator fixture](smtcomp-credited-full-execution-coordinator-fixture-2026-07-23.md)
+now replays preparation, all 16 per-shard checkpoints and allocation terminals,
+E1/E2/E3 completion, result sidecars, selection rows, and prior-cell safety
+before deriving authority. Neither fixture provides live F2/F3 evidence or
+claims F4 results.
 
 ## Milestones and authorization
 

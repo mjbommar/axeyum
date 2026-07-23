@@ -27,6 +27,7 @@ REQUIRED_GATE_COMMANDS = (
 DEFAULT_REQUIRED_PATHS = (
     "docs/plan/smtcomp-credited-full-population-f1-result-2026-07-23.md",
     "docs/plan/smtcomp-credited-full-population-plan-2026-07-23.md",
+    "docs/plan/smtcomp-credited-full-execution-coordinator-fixture-2026-07-23.md",
     "docs/plan/smtcomp-credited-full-preparation-f2-implementation-2026-07-23.md",
     "docs/plan/smtcomp-credited-full-publication-fixture-2026-07-23.md",
     "scripts/check-smtcomp-resume.sh",

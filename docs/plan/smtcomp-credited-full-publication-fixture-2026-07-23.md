@@ -82,13 +82,14 @@ bench/CAS formatting drift. This increment did not edit those files.
 
 ## Remaining execution boundary
 
-This fixture does not make F2, F3, or F4 complete. Before a real cell result can
-publish, the F3 coordinator still must validate the exact live preparation,
-all 16 checkpoint records and underlying allocation terminals, the final
-resource and multi-host completions, every v2 record and output sidecar, and the
-45,905-row selection. Only then may it construct the execution authority
-consumed here. The complete three-cell comparison remains impossible until all
-three sequential cells have safe external results.
+This fixture does not make F2, F3, or F4 complete. The subsequent
+[execution-coordinator fixture](smtcomp-credited-full-execution-coordinator-fixture-2026-07-23.md)
+now implements process-free replay of the exact preparation, all 16 checkpoint
+records and underlying allocation terminals, final resource and multi-host
+completions, every v2 record and output sidecar, and the selection. A real cell
+still needs those checks over the actual 45,905-row evidence. The complete
+three-cell comparison remains impossible until all three sequential cells have
+safe external results.
 
 These source/result bytes are integrated. No live action is authorized until
 the exact current `origin/main` passes both readiness gates and an exact F2
