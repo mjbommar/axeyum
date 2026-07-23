@@ -24,6 +24,12 @@ from p0_prepare import (  # noqa: E402
     run_sentinels,
     validate_preparation,
 )
+from p0_execute import (  # noqa: E402
+    ADMISSION_PATH,
+    adjudicate_cell,
+    require_integrated_admission,
+    validate_cell_launch,
+)
 from resume_contract import ContractError, canonical_bytes, digest  # noqa: E402
 from resume_fs import read_canonical_json  # noqa: E402
 from resume_runner import sha256_file, toolchain_identity_sha256  # noqa: E402
@@ -135,6 +141,55 @@ def _observations(shared: Path) -> list[dict]:
 
 
 class P0PrepareTests(unittest.TestCase):
+    def test_integrated_admission_requires_exact_origin_main_bytes(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            result = root / ADMISSION_PATH
+            result.parent.mkdir(parents=True)
+            result.write_bytes(b"accepted result\n")
+            with mock.patch(
+                "p0_execute.subprocess.check_output",
+                side_effect=[b"", b"different result\n"],
+            ):
+                with self.assertRaisesRegex(ContractError, "different P0-S1"):
+                    require_integrated_admission(root)
+            with mock.patch(
+                "p0_execute.subprocess.check_output",
+                side_effect=[b"", result.read_bytes()],
+            ):
+                require_integrated_admission(root)
+
+    def test_adjudication_finds_known_and_cross_solver_conflicts(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            cells = []
+            for solver_id in ("axeyum", "cvc5", "bitwuzla"):
+                run_root = root / solver_id
+                (run_root / "records").mkdir(parents=True)
+                (run_root / "run-manifest.json").write_bytes(
+                    canonical_bytes({"identity_sha256": solver_id * 8})
+                )
+                cells.append({"solver_id": solver_id, "attempt_root": str(run_root)})
+            shared = {
+                "benchmark_id": "QF_FP/fixture/conflict.smt2",
+                "benchmark_sha256": "b" * 64,
+                "expected_status": "sat",
+            }
+            (root / "axeyum" / "records" / "ax.json").write_bytes(
+                canonical_bytes({**shared, "result_key": "ax", "reported_status": "sat", "termination_class": "completed"})
+            )
+            (root / "cvc5" / "records" / "cv.json").write_bytes(
+                canonical_bytes({**shared, "result_key": "cv", "reported_status": "unsat", "termination_class": "completed"})
+            )
+            result = adjudicate_cell(
+                completion={"cells": cells},
+                cell_id="cvc5",
+                run_dir=root / "cvc5",
+            )
+            self.assertFalse(result["safe_to_continue"])
+            self.assertEqual(len(result["known_status_contradictions"]), 1)
+            self.assertEqual(len(result["cross_solver_disagreements"]), 1)
+
     def test_wrong_fp_sentinel_stops_preparation(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -214,6 +269,24 @@ class P0PrepareTests(unittest.TestCase):
                     require_clean=False,
                 )
                 completion = validate_preparation(attempt)
+
+                _completion, _plan, run_dir, commands = validate_cell_launch(
+                    repository_root=ROOT,
+                    preparation_root=attempt,
+                    cell_id="axeyum",
+                    acknowledged_completion_sha256=_sha(attempt / "complete.json"),
+                    require_integrated=False,
+                )
+                self.assertEqual(run_dir, attempt / "cells" / "axeyum")
+                self.assertEqual(sorted(commands), ["initial-0", "initial-1", "initial-2"])
+                with self.assertRaisesRegex(ContractError, "prior P0 cell is incomplete"):
+                    validate_cell_launch(
+                        repository_root=ROOT,
+                        preparation_root=attempt,
+                        cell_id="cvc5",
+                        acknowledged_completion_sha256=_sha(attempt / "complete.json"),
+                        require_integrated=False,
+                    )
 
             self.assertEqual(completion["status"], "prepared-no-launch")
             self.assertFalse(completion["launch_authorized"])

@@ -642,7 +642,9 @@ def prepare_p0(
     return attempt
 
 
-def validate_preparation(attempt: Path) -> dict[str, Any]:
+def validate_preparation(
+    attempt: Path, *, require_empty: bool = True
+) -> dict[str, Any]:
     completion = read_canonical_json(attempt / "complete.json")
     if completion.get("schema") != PREPARATION_SCHEMA:
         raise ContractError("P0 preparation schema mismatch")
@@ -665,10 +667,11 @@ def validate_preparation(attempt: Path) -> dict[str, Any]:
             or sha256_file(path) != row["sha256"]
         ):
             raise ContractError(f"P0 preparation artifact drift: {row['path']}")
-    for cell in completion.get("cells", []):
-        run_root = Path(cell["attempt_root"])
-        if any((run_root / "records").iterdir()):
-            raise ContractError("P0 preparation unexpectedly contains solver records")
+    if require_empty:
+        for cell in completion.get("cells", []):
+            run_root = Path(cell["attempt_root"])
+            if any((run_root / "records").iterdir()):
+                raise ContractError("P0 preparation unexpectedly contains solver records")
     return completion
 
 
