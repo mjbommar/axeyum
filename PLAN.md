@@ -569,8 +569,11 @@ state.
 > [R3 implementation checkpoint](docs/plan/lean-u2-official-execution-tl0.6.3-m2-r3-attempt-002-implementation-2026-07-23.md)
 > records pushed commit `d47dacc6`, 6/6 focused and 264 aggregate Lean tests,
 > the successful harmless direct-runtime stack probe, and still no selected
-> harness/discovery/process. Next perform exact clean/tracking/remote/root/hash
-> preflight, then invoke attempt 002 at most once;
+> harness/discovery/process. Exact preflight passed at pushed revision
+> `0a4d5daa`, then attempt 002 ran once. The
+> [R3 result](docs/plan/lean-u2-official-execution-tl0.6.3-m2-r3-attempt-002-result-2026-07-23.md)
+> retains a 3,600,038 ms watchdog timeout, reaped group, 17 files / 4,908,035
+> bytes, no JUnit/completion, and zero M2 credit. R3 is consumed with no retry;
 > then form native pairs. Do not rerun
 > the singleton for population credit. The
 > [complete-parity execution roadmap](docs/plan/lean4-complete-parity-roadmap-2026-07-22.md)

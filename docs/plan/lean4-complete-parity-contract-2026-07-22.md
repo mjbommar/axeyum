@@ -488,9 +488,14 @@ records commit `d47dacc6`, the exact stack-aware runner and tiered store, 6/6
 focused and 264 aggregate Lean tests, and a harmless released-Lean probe that
 observed `524288` without constructing the selected harness. Final clean,
 tracking, remote, root, and hash preflight remains before the one allowed
-invocation. Until a valid R3 completion exists, M2 still contributes zero case or
-shard credit and all parent/provider/Axeyum/pair/performance/parity counters
-remain zero.
+invocation. That preflight subsequently passed at revision `0a4d5daa`, and R3
+ran once. The accepted
+[R3 result](lean-u2-official-execution-tl0.6.3-m2-r3-attempt-002-result-2026-07-23.md)
+retains a 3,600,038 ms wall timeout after seven diagnostic CTest passes and a
+dedicated-thread-creation/channel-deadlock symptom. The group was reaped; the
+17-file evidence root has no JUnit, cases, post, projection, or completion.
+R3 is consumed with no retry and zero M2 case/shard credit. All
+parent/provider/Axeyum/pair/performance/parity counters remain zero.
 
 ## 8. Layer-specific equivalence
 

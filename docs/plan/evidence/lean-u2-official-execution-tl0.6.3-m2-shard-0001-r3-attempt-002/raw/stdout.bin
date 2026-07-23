@@ -1,0 +1,16 @@
+Test project /home/mjbommar/.cache/axeyum-tl063-m2-r3-0a4d5daa/harness
+      Start  1: compile/uint_fold.lean
+ 1/64 Test  #1: compile/uint_fold.lean .........................   Passed    0.78 sec
+      Start  2: compile/unreachable.lean
+ 2/64 Test  #2: compile/unreachable.lean .......................   Passed    0.68 sec
+      Start  3: compile/uset.lean
+ 3/64 Test  #3: compile/uset.lean ..............................   Passed    0.78 sec
+      Start  4: compile/utf8Path.lean
+ 4/64 Test  #4: compile/utf8Path.lean ..........................   Passed    0.71 sec
+      Start  5: compile/wait_dedicated.lean
+ 5/64 Test  #5: compile/wait_dedicated.lean ....................   Passed    1.04 sec
+      Start  6: compile_bench/binarytrees.lean
+ 6/64 Test  #6: compile_bench/binarytrees.lean .................   Passed    2.16 sec
+      Start  7: compile_bench/binarytrees.st.lean
+ 7/64 Test  #7: compile_bench/binarytrees.st.lean ..............   Passed    1.90 sec
+      Start  8: compile_bench/channel.lean

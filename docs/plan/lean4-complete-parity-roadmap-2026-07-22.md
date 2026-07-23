@@ -93,7 +93,13 @@ harness, discovery, or process exists at preregistration. The pushed
 now records commit `d47dacc6`, the exact runner/store, 6/6 focused and 264
 aggregate Lean tests, and a harmless direct-runtime stack probe. No selected
 harness, discovery, or process exists at the checkpoint; final external
-preflight precedes the one permitted invocation.
+preflight precedes the one permitted invocation. Preflight subsequently passed
+at `0a4d5daa`, and attempt 002 ran once. The accepted
+[`R3 result`](lean-u2-official-execution-tl0.6.3-m2-r3-attempt-002-result-2026-07-23.md)
+retains a 3,600,038 ms watchdog timeout: seven CTest rows printed pass, then
+`compile_bench/channel.lean` failed dedicated-thread creation and deadlocked.
+The group was reaped, but no JUnit/case/post/projection/completion exists; R3 is
+consumed and grants zero M2 credit.
 
 ## 2. What the SMT-LIB comparison actually says
 
@@ -203,10 +209,10 @@ execution/classification.
 3. Repair and attest the remote official-Lean executable identity across changed
    working directories, then retain the first true remote 71/71 result without
    converting it into native parity credit.
-4. From the pushed M2 R3 implementation checkpoint, perform exact clean,
-   tracking, remote, root, source/toolchain, history, and hash preflight; then
-   run its exact fresh 64-case shard at most once through the qualified TL0.7
-   path and publish complete/incomplete/invalid outcomes separately.
+4. Preserve the consumed M2 R3 timeout and its zero-credit boundary. Before
+   another official process, preregister a new attempt that explicitly chooses
+   among a smaller universal stack, a larger address-space lane, or
+   family-aware isolation/timeout; do not retry or reinterpret R3.
 5. Classify every executed U2 case into kernel/import, parser/macro,
    elaborator/declaration, tactic/meta, module/Lake, server, runtime/compiler,
    FFI, or adversarial dependency ownership.

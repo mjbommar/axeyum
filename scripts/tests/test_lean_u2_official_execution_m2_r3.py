@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import copy
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -231,6 +232,42 @@ class LeanU2OfficialExecutionM2R3Tests(unittest.TestCase):
         )
         self.assertEqual(help_result.returncode, 0, help_result.stderr.decode())
         self.assertIn(b"run-r3", help_result.stdout)
+
+    def test_retained_timeout_is_incomplete_tamper_sensitive_and_zero_credit(self) -> None:
+        result = R3.validate_incomplete_evidence(R3.DEFAULT_EVIDENCE_ROOT)
+        self.assertEqual(result["terminal"]["class"], "wall-timeout")
+        self.assertEqual(result["files"], 17)
+        self.assertEqual(result["bytes"], 4_908_035)
+        self.assertEqual(result["official_outcomes"], 0)
+        self.assertEqual(result["parity_credit"], 0)
+        with tempfile.TemporaryDirectory(prefix="axeyum-r3-incomplete-test-") as temporary:
+            root = Path(temporary) / "evidence"
+            shutil.copytree(R3.DEFAULT_EVIDENCE_ROOT, root)
+            stdout = root / "raw/stdout.bin"
+            stdout.chmod(0o644)
+            stdout.write_bytes(stdout.read_bytes() + b"tamper")
+            stdout.chmod(0o444)
+            with self.assertRaisesRegex(R3.R3Error, "terminal.*drift"):
+                R3.validate_incomplete_evidence(root)
+
+        authority = BASE.load_json(
+            ROOT
+            / "docs/plan/lean-u2-official-execution-tl0.6.3-m2-r3-"
+            "attempt-002-result-v1.json"
+        )
+        self.assertTrue(BASE.valid_seal(authority, authority["schema"]))
+        self.assertEqual(authority["status"], "invalid-wall-timeout")
+        self.assertEqual(authority["retained_evidence"]["files"], result["files"])
+        self.assertEqual(authority["retained_evidence"]["bytes"], result["bytes"])
+        self.assertEqual(
+            authority["retained_evidence"]["manifest_sha256"],
+            result["manifest_sha256"],
+        )
+        self.assertEqual(
+            authority["terminal"]["record_sha256"],
+            result["terminal"]["record_sha256"],
+        )
+        self.assertTrue(all(value == 0 for value in authority["credits"].values()))
 
 
 if __name__ == "__main__":

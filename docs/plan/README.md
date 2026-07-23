@@ -252,6 +252,10 @@ Start at the root [`PLAN.md`](../../PLAN.md) (map + standing rules) and
   pushed implementation checkpoint for the stack-aware runner, 124/67/56/1
   tiered store, exact harmless runtime probe, focused/aggregate gates, and
   still-unconsumed selected attempt.
+- [`lean-u2-official-execution-tl0.6.3-m2-r3-attempt-002-result-v1.json`](lean-u2-official-execution-tl0.6.3-m2-r3-attempt-002-result-v1.json) and
+  [`result`](lean-u2-official-execution-tl0.6.3-m2-r3-attempt-002-result-2026-07-23.md) —
+  retained one-hour channel deadlock timeout: group reaped, 17 immutable files,
+  no JUnit/completion, zero M2 outcome/parity credit, and no retry.
 - [`lean-compatibility-v1.json`](lean-compatibility-v1.json) and generated
   [`Lean compatibility matrix`](generated/lean-compatibility.md) — TL0.2's
   executable eight-field assurance contract, K0-K6 profile gates, registered

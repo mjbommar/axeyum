@@ -838,6 +838,155 @@ def validate_complete_evidence(root: Path) -> dict[str, Any]:
         return completion
 
 
+def validate_incomplete_evidence(root: Path) -> dict[str, Any]:
+    """Validate an immutable terminal failure that stopped before JUnit credit."""
+    validate_history()
+    forbidden = {
+        "raw/junit.xml",
+        "junit.json",
+        "post.json",
+        "projection.json",
+        "completion.json",
+    }
+    forbidden.update(OLD_STORE.case_path(i) for i in range(M2.SHARD_CASE_COUNT))
+    present_forbidden = sorted(path for path in forbidden if (root / path).exists())
+    if present_forbidden:
+        raise R3Error(f"R3 incomplete evidence gained {present_forbidden[0]}")
+    expected_paths = {
+        "source.json",
+        "toolchain.json",
+        "tools.json",
+        "platform.json",
+        "lane.json",
+        "run.json",
+        "shard.json",
+        "harness.json",
+        "discovery.json",
+        "spec.json",
+        "prelaunch.json",
+        "terminal.json",
+        "artifacts/with_stage1_test_env.sh",
+        "artifacts/CTestTestfile.cmake",
+        "raw/discovery.json",
+        "raw/stdout.bin",
+        "raw/stderr.bin",
+    }
+    inventory = OLD_STORE.accepted_inventory(root, include_completion=False)
+    if {row["path"] for row in inventory} != expected_paths:
+        raise R3Error("R3 incomplete evidence namespace drift")
+    with r3_bindings():
+        spec = _load(root, "spec.json")
+        source = _load(root, "source.json")
+        toolchain = _load(root, "toolchain.json")
+        tools = _load(root, "tools.json")
+        platform = _load(root, "platform.json")
+        lane = _load(root, "lane.json")
+        run = _load(root, "run.json")
+        shard = _load(root, "shard.json")
+        harness = _load(root, "harness.json")
+        discovery = _load(root, "discovery.json")
+        prelaunch = _load(root, "prelaunch.json")
+        terminal = _load(root, "terminal.json")
+        raw_discovery = (root / "raw/discovery.json").read_bytes()
+        stdout = (root / "raw/stdout.bin").read_bytes()
+        stderr = (root / "raw/stderr.bin").read_bytes()
+        failures = [
+            *validate_spec(spec),
+            *OLD_RUN.validate_selected_source(source),
+            *TOOLCHAIN.validate_toolchain_record(toolchain),
+            *BASE.validate_local_tools(tools),
+            *OLD_RUN.validate_platform_record(platform),
+            *OLD_RUN.validate_lane_record(lane),
+            *OLD_RUN.validate_shard_record(shard),
+            *OLD_RUN.validate_discovery_record(
+                discovery, spec=spec, harness=harness, raw=raw_discovery
+            ),
+            *OLD_RUN.validate_run_record(
+                run,
+                spec=spec,
+                source=source,
+                toolchain=toolchain,
+                tools=tools,
+                platform=platform,
+                lane=lane,
+                shard=shard,
+                harness=harness,
+                discovery=discovery,
+            ),
+            *OLD_RUN.validate_prelaunch_record(
+                prelaunch, spec=spec, run=run, shard=shard
+            ),
+            *OLD_RUN.validate_terminal_record(
+                terminal,
+                prelaunch=prelaunch,
+                stdout=stdout,
+                stderr=stderr,
+                require_eligible=False,
+            ),
+        ]
+        expected_events = [
+            "prelaunch-record-installed",
+            "rlimit-as-installed",
+            "wall-timeout-observed",
+            "process-group-sigterm-sent",
+            "direct-child-reaped",
+            "process-group-no-live-members-observed",
+        ]
+        process = terminal.get("process", {})
+        if (
+            terminal.get("class") != "wall-timeout"
+            or terminal.get("exit_code") is not None
+            or terminal.get("signal") != 15
+            or terminal.get("events") != expected_events
+            or process.get("watchdog_fired") is not True
+            or process.get("sigterm_sent") is not True
+            or process.get("sigkill_sent") is not False
+            or process.get("direct_child_reaped") is not True
+            or process.get("live_non_zombie_pids_after_cleanup") != []
+            or terminal.get("wall_time", {}).get("value", 0) < M2.WALL_TIMEOUT_MS
+        ):
+            failures.append("R3 incomplete timeout or cleanup drift")
+        try:
+            payload = json.loads(raw_discovery)
+            expected_harness = build_harness_record(
+                source_root=Path(spec["source_root"]),
+                toolchain_root=Path(spec["toolchain_root"]),
+                harness_root=Path(spec["harness_build"]),
+                discovery_payload=payload,
+            )
+            expected_wrapper = render_environment_wrapper(
+                Path(spec["source_root"]), Path(spec["toolchain_root"])
+            )
+            expected_ctest = M2.render_ctest_file(
+                source_root=Path(spec["source_root"]),
+                toolchain_root=Path(spec["toolchain_root"]),
+                harness_root=Path(spec["harness_build"]),
+            )
+        except (KeyError, TypeError, json.JSONDecodeError, M2.M2ContractError, R3Error) as error:
+            failures.append(f"R3 incomplete harness cannot be reconstructed: {error}")
+        else:
+            if harness != expected_harness:
+                failures.append("R3 incomplete harness semantic drift")
+            if (root / OLD_STORE.FIXED_ARTIFACT_PATHS[0]).read_bytes() != expected_wrapper:
+                failures.append("R3 incomplete wrapper semantic drift")
+            if (root / OLD_STORE.FIXED_ARTIFACT_PATHS[1]).read_bytes() != expected_ctest:
+                failures.append("R3 incomplete CTest semantic drift")
+        if failures:
+            raise R3Error("; ".join(failures))
+    return {
+        "terminal": terminal,
+        "inventory": inventory,
+        "files": len(inventory),
+        "bytes": sum(row["bytes"] for row in inventory),
+        "manifest_sha256": BASE.domain_digest(
+            "axeyum-lean-u2-official-execution-m2-r3-incomplete-evidence-v1",
+            R2_DIAGNOSTIC.portable_manifest(root),
+        ),
+        "official_outcomes": 0,
+        "parity_credit": 0,
+    }
+
+
 def run_r3(args: argparse.Namespace) -> None:
     validate_offline_contract()
     validate_revision_preflight(args.implementation_revision)
@@ -1002,6 +1151,10 @@ def main() -> int:
     run.add_argument("--evidence-root", type=Path, default=DEFAULT_EVIDENCE_ROOT)
     validate = commands.add_parser("validate")
     validate.add_argument("--evidence-root", type=Path, default=DEFAULT_EVIDENCE_ROOT)
+    incomplete = commands.add_parser("validate-incomplete")
+    incomplete.add_argument(
+        "--evidence-root", type=Path, default=DEFAULT_EVIDENCE_ROOT
+    )
     args = parser.parse_args()
     try:
         if args.command == "offline-check":
@@ -1026,6 +1179,14 @@ def main() -> int:
                 "LEAN_U2_M2_R3_EVIDENCE_VALID|"
                 f"completion={completion['record_sha256']}|cases=64|"
                 "parent_complete=false|parity=0"
+            )
+        elif args.command == "validate-incomplete":
+            result = validate_incomplete_evidence(args.evidence_root)
+            print(
+                "LEAN_U2_M2_R3_INCOMPLETE_VALID|"
+                f"terminal={result['terminal']['record_sha256']}|"
+                f"class={result['terminal']['class']}|files={result['files']}|"
+                f"bytes={result['bytes']}|outcomes=0|parity=0"
             )
         else:  # pragma: no cover
             raise AssertionError(args.command)

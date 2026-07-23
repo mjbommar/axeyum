@@ -4,7 +4,7 @@
   "source_identities": [
     {
       "path": ".github/workflows/ci.yml",
-      "sha256": "a8d88cfbe8698f37265c441cf5d567546606dd3e6af07bf3f888e7e8dbb3a992"
+      "sha256": "86aa2d5499fdf4e6da1163008999b1035397cb7bc2ce84a0ab494a2d952b9fcd"
     },
     {
       "path": "docs/plan/generated/lean-execution-evidence.md",
@@ -36,7 +36,7 @@
     },
     {
       "path": "docs/plan/lean-complete-parity-v1.json",
-      "sha256": "4a3ad587f1b8a8b62f4eb565008724d1231974d25506f59f81c834465110e144"
+      "sha256": "1b8597ef79525a07feb45d9d1ba10a6f671e76bcbfe36160201cb087e6219e3d"
     },
     {
       "path": "docs/plan/lean-execution-acceptance-tl0.7.4-2026-07-22.md",
@@ -68,7 +68,7 @@
     },
     {
       "path": "docs/plan/lean-system-implementation-plan-2026-07-21.md",
-      "sha256": "98c16d4f10333f18a3f125f0286c291471fc95d0e244da880eb287241271c24f"
+      "sha256": "2e606e08a58f906570a001a8128f8ac75b86dba5b9c7f19580462f753715b273"
     },
     {
       "path": "docs/plan/lean-u2-official-child-shards-v1.json",
@@ -167,6 +167,14 @@
       "sha256": "c2aea0d4ae6c6affeed5a7d865f6e466bbb795efaa17361d3e5349d3c04ce961"
     },
     {
+      "path": "docs/plan/lean-u2-official-execution-tl0.6.3-m2-r3-attempt-002-result-2026-07-23.md",
+      "sha256": "f6a1e5fa1b9ab5a4b8bfe248ec6d6153abc89dd7aa892ad409dd445941692f8b"
+    },
+    {
+      "path": "docs/plan/lean-u2-official-execution-tl0.6.3-m2-r3-attempt-002-result-v1.json",
+      "sha256": "13ac5126e964aa997504dc3e8da06524849fbe91015cfff53e8ed026c4f8eae2"
+    },
+    {
       "path": "docs/plan/lean-u2-official-execution-tl0.6.3-m2-shard-0001-plan-2026-07-22.md",
       "sha256": "4cef4ba9c57820f5bff82e4cfdfdc524b3d0d54665a947cf2b27560767ec81dd"
     },
@@ -176,15 +184,15 @@
     },
     {
       "path": "docs/plan/lean4-complete-parity-contract-2026-07-22.md",
-      "sha256": "49c174eeb90d885cc99774584cca182c909116d2386cd92a6bb675fbab9e0c55"
+      "sha256": "52b84f517242a5e509a6b4d195274d160515f99dd690868824db120d87296d6a"
     },
     {
       "path": "docs/plan/lean4-complete-parity-roadmap-2026-07-22.md",
-      "sha256": "62b0a97f1fd4b32002352c3e7e0cb58e96ce7f91d55d2302aedb647906019814"
+      "sha256": "830fcf12787976974291ba58abab19866195aa07d13f8b5b74526768a902df66"
     },
     {
       "path": "scripts/gen-lean-complete-parity.py",
-      "sha256": "08a6e31c018b21ef51f008531a911b07307ecfc83bf0975040477597a11cc20a"
+      "sha256": "cd219854116aa8493046e10c628d18b74a92a1ee6c2e958ac9f82a04d5842810"
     },
     {
       "path": "scripts/gen-lean-execution-evidence.py",
@@ -228,7 +236,7 @@
     },
     {
       "path": "scripts/lean_u2_official_execution_m2_r3.py",
-      "sha256": "7f65466ad7197918c574ed3c40f74c60cb3f867e67151f178663dbdd806c341f"
+      "sha256": "617fbe051aeaa05b3408d060ed86b9efb5e229c594d33a14afa6fa9269e35771"
     },
     {
       "path": "scripts/lean_u2_official_execution_m2_run.py",
@@ -248,7 +256,7 @@
     },
     {
       "path": "scripts/tests/test_lean_complete_parity.py",
-      "sha256": "0c151c72f48984866c536ec5e04a064998e07724f13318ddbc13d2bb27b55a44"
+      "sha256": "472a3ba7d9995d569d5351c4ca2666e5859793643c632a52008dda0b4ca3a340"
     },
     {
       "path": "scripts/tests/test_lean_execution_acceptance.py",
@@ -288,7 +296,7 @@
     },
     {
       "path": "scripts/tests/test_lean_u2_official_execution_m2_r3.py",
-      "sha256": "8b02728ee34122ff04565ebd1fcb2517c3123a316f231e6d9d194e15d163c44b"
+      "sha256": "451c91b6d1d70d924b4cdafbc65c139387ec5469ad064f58c6e9461cf8aa05b2"
     },
     {
       "path": "scripts/tests/test_lean_u2_official_execution_m2_run.py",
@@ -772,6 +780,15 @@
         "selected_processes": 0,
         "outcomes": 0,
         "parity": 0
+      },
+      "r3_incomplete": {
+        "terminal_class": "wall-timeout",
+        "terminal_sha256": "c228a80ef0dec5204a2cd1d9478faef8273f778bf36c12c6d2fbd31262b7c6f6",
+        "files": 17,
+        "bytes": 4908035,
+        "manifest_sha256": "bc128116c467b95f31502a83223c2e44f953bf5defe21cd08cb52f2a5aa95db8",
+        "official_outcomes": 0,
+        "parity_credit": 0
       }
     },
     "implementation_tasks": {
@@ -924,6 +941,14 @@
           "detail": "Pushed stack-aware one-shot runner, tiered completion store, six focused tests, exact harmless direct-runtime probe, and zero selected execution at checkpoint."
         },
         {
+          "path": "docs/plan/lean-u2-official-execution-tl0.6.3-m2-r3-attempt-002-result-v1.json",
+          "detail": "Sealed invalid-wall-timeout authority for consumed attempt 002, reaped process group, 17 retained files, no JUnit/completion, and zero credit."
+        },
+        {
+          "path": "docs/plan/lean-u2-official-execution-tl0.6.3-m2-r3-attempt-002-result-2026-07-23.md",
+          "detail": "Bounded result and thread-creation/channel-deadlock diagnosis with explicit non-claims and no retry."
+        },
+        {
           "path": "docs/plan/lean-execution-evidence-v1.json",
           "detail": "TL0.7.1 contract authority for explicit resource lanes, typed terminations, immutable run/attempt/case/artifact/completion records, and zero real outcomes."
         },
@@ -992,7 +1017,7 @@
           "detail": "Pinned tests tree inventory and the required CTest/test-pile derivation rule."
         }
       ],
-      "residual": "Current credited execution coverage remains two decided official outcomes for one unique case from a 3,678-case parent, with zero Axeyum outcomes or pairs. There are five consumed process attempts: four M0 attempts plus one invalid M2 R1 attempt. M1 partitions all eight official selections into five exact ordered memberships and 289 physical child shards, but every derived shard and all 111 official attempts remain incomplete. M2 R1 retained exact 64-row JUnit with 30 passes and 34 failures, but family-blind docparse artifact closure stopped before post/projection/completion. Completion-last policy therefore grants zero M2 case or shard credit. R2 then completed a zero-process diagnostic append that binds all 124 generated rows, retains 67 outcome/log payloads, keeps 56 large reproducible intermediates metadata-only, and leaves credit unchanged. The source-first R3 attempt-002 plan and pushed implementation now freeze new run/work/evidence roots, universal LEAN_STACK_SIZE_KB=524288, the unchanged 64-case resource lane, the tiered family-specific store, and a one-shot runner. Six focused and 264 aggregate Lean tests plus a harmless direct-runtime probe pass, but no selected R3 harness, discovery, or process exists. Perform exact clean/remote/root/hash preflight, then invoke its fresh shard at most once. Then classify native surfaces and run matched Axeyum cases. Scheduling metadata, diagnostic rows, and retries do not increase population coverage."
+      "residual": "Current credited execution coverage remains two decided official outcomes for one unique case from a 3,678-case parent, with zero Axeyum outcomes or pairs. There are six consumed process attempts: four M0 attempts, invalid M2 R1, and timeout M2 R3. M1 partitions all eight official selections into five exact ordered memberships and 289 physical child shards, but every derived shard and all 111 official attempts remain incomplete. M2 R1 retained exact 64-row JUnit with 30 passes and 34 failures, but family-blind docparse artifact closure stopped before post/projection/completion. Completion-last policy therefore grants zero M2 case or shard credit. R2 then completed a zero-process diagnostic append that binds all 124 generated rows, retains 67 outcome/log payloads, keeps 56 large reproducible intermediates metadata-only, and leaves credit unchanged. M2 R3 exported LEAN_STACK_SIZE_KB=524288 and ran attempt 002 once. CTest printed seven diagnostic passes, then compile_bench/channel.lean failed dedicated-thread creation and deadlocked; the one-hour watchdog reaped the group. The retained 17-file root has no JUnit, cases, post, projection, or completion, so R3 adds zero outcome or shard credit and cannot retry. Publish and preserve this failure before any new source-first resource or isolation plan. Then classify native surfaces and run matched Axeyum cases. Scheduling metadata, diagnostic rows, and retries do not increase population coverage."
     },
     {
       "id": "U3",
