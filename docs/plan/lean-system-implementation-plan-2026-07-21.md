@@ -230,7 +230,10 @@ roots and conditional failure-log semantics; do not promote or rerun R5. The
 [R6 plan](lean-u2-official-execution-tl0.6.3-m2-r6-attempt-004-plan-2026-07-23.md)
 now does so: attempt 004/sequence 4, run v5, fresh control/work/evidence roots,
 the unchanged 32 GiB/512 MiB lane, and a JUnit-selected 123-row all-pass versus
-124-row any-failure closure. Implementation and execution remain open.
+124-row any-failure closure. The separately pushed
+[R6 implementation checkpoint](lean-u2-official-execution-tl0.6.3-m2-r6-attempt-004-implementation-2026-07-23.md)
+binds both branches and inversion mutations with no implicit execution. A fresh
+control and the single selected attempt remain open.
 
 L0 exits when status is generated from evidence rather than hand-copied prose.
 

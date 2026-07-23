@@ -131,7 +131,11 @@ the source-first
 now freezes fresh roots and one selected process on the unchanged qualified
 lane. It selects the 123-row all-pass or 124-row any-failure artifact shape
 only after exact JUnit validation. Next implement/test/push R6 and a fresh
-completion-grade control; no selected process is yet authorized.
+completion-grade control; no selected process is yet authorized. The separate
+[`R6 implementation checkpoint`](lean-u2-official-execution-tl0.6.3-m2-r6-attempt-004-implementation-2026-07-23.md)
+is now pushed at `ff2406b1`, with both branches and inversion mutations tested.
+Next publish that checkpoint and run one fresh control from the resulting clean
+remote-equal revision.
 
 ## 2. What the SMT-LIB comparison actually says
 

@@ -621,8 +621,12 @@ state.
 > [R6 attempt-004 plan](docs/plan/lean-u2-official-execution-tl0.6.3-m2-r6-attempt-004-plan-2026-07-23.md)
 > now freezes fresh roots, the unchanged qualified 32 GiB/512 MiB lane, a
 > JUnit-selected 123-row all-pass versus 124-row any-failure closure, one
-> selected process, and no retry. Next implement/test/push R6 and its
-> documentation checkpoint before any control or selected execution;
+> selected process, and no retry. The
+> [R6 implementation checkpoint](docs/plan/lean-u2-official-execution-tl0.6.3-m2-r6-attempt-004-implementation-2026-07-23.md)
+> records clean pushed `ff2406b1`, exact history/spec/control bindings, both
+> conditional branches and inversion mutations, nine focused tests, and zero
+> implicit execution. Next push this documentation checkpoint, revalidate clean
+> remote equality, and run one stack probe plus one completion-grade control;
 > then form native pairs. Do not rerun
 > the singleton for population credit. The
 > [complete-parity execution roadmap](docs/plan/lean4-complete-parity-roadmap-2026-07-22.md)
