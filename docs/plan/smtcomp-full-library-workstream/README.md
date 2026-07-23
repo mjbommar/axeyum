@@ -316,10 +316,12 @@ gate.
    restart paths, including fresh liveness/evidence validation when replaying an
    existing authority record. Released runner evidence must also exactly account
    every shard-assigned key as missing under the complete terminal contract. The
-   71-test portable gate passes with one live-host skip. Mandatory cgroup and
-   live multi-host E3 gates are also clean on `aeca9b53`; the live gate passes
-   71 tests without skips. No Bitwuzla credit is claimed, and no recovery
-   mutation may occur before exact integration.
+   real frozen session retains a valid failed resource terminal; `2365b8cd`
+   corrects the earlier absent-terminal model by validating and binding its file
+   and record hashes plus matching worker exit code. Twenty-eight focused tests
+   and the 72-test portable/cgroup/live gates pass; live E3 has no skips. No
+   Bitwuzla credit is claimed, and no recovery mutation may occur before exact
+   integration.
 3. **Credited full population.** Only then execute Axeyum, cvc5, and Bitwuzla on
    the same versioned selection; publish the per-logic inventory and regenerate
    the coverage-weighted parity matrix without combining incompatible regimes.

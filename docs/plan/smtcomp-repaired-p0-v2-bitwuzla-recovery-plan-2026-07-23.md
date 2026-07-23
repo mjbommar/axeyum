@@ -69,6 +69,11 @@ Its zero-record runner terminal file SHA-256 is
 Its resource session is `p0-bitwuzla-initial-1-f49561551140`, whose preflight
 record SHA-256 is
 `5b641f004abb26a6e2a538b7c021df81c95657ede00bc4a2e45b2e2c6083f713`.
+That session also has a valid failed resource terminal with worker exit codes
+`[2]`: file SHA-256
+`e39e1e5cc665315b6b3bb6f96a80ea57303510255c8a858c544a233431a4ae43`
+and record SHA-256
+`6e7cf1b693c26fa6651de86f2c66e9c0c86086b4635291092d202c5e9d213df5`.
 
 Completed shard files are:
 
@@ -109,6 +114,7 @@ separate fail-closed recovery evidence variant that binds:
 
 - plan, run, failed allocation, retry allocation, resource session, and shard;
 - failed outer terminal file/record identity;
+- failed resource terminal file/record identity and matching worker exit code;
 - failed inner runner terminal file/identity and zero durable shard records;
 - exact remote liveness observation;
 - the assertion that the shard lease is absent; and
@@ -158,9 +164,9 @@ The bounded implementation:
 - scopes startup orphan recovery to the current shard's exact assigned result
   filenames, leaving every foreign or malformed temporary untouched;
 - adds `axeyum.smtcomp-host-released-recovery.v1`, which binds the failed outer
-  allocation terminal, zero-record inner runner terminal, absent lease, dead
-  process observation, and exact different-host retry without fabricating stale
-  lease quarantine;
+  allocation terminal, failed resource terminal, zero-record inner runner
+  terminal, absent lease, dead process observation, and exact different-host
+  retry without fabricating stale lease quarantine;
 - preserves and continues to validate the existing stale-lease recovery schema;
 - adds a Bitwuzla-only `--recover-failed-allocation initial-1` coordinator mode
   with every frozen live hash above hard-pinned;
@@ -189,20 +195,21 @@ Current gates:
 python3 -m unittest \
   scripts.tests.test_smtcomp_resume_fs \
   scripts.tests.test_smtcomp_multi_host \
+  scripts.tests.test_smtcomp_resource_enforcement \
   scripts.tests.test_smtcomp_p0_prepare
-  23 tests, OK
+  28 tests, OK
 
 ./scripts/check-smtcomp-resume.sh
-  71 tests, OK, one live-host skip
+  72 tests, OK, one live-host skip
 
 AXEYUM_REQUIRE_SMTCOMP_CGROUP=1 ./scripts/check-smtcomp-resume.sh
-  71 tests, OK, one live-host skip
+  72 tests, OK, one live-host skip
 
 AXEYUM_REQUIRE_SMTCOMP_MULTIHOST=1 ./scripts/check-smtcomp-resume.sh
-  71 tests, OK, no skips
-  evidence=/nas3/data/axeyum/harness/e3-gate/live-1784833294438172715-aeca9b53277a
-  control=c12d25372266e26859b4de63ccd87d220edc77db0fe4f875bd88b23816e6ce96
-  loss=5afe1e45b4c8015b0c5a0a6f11d66371e4038011c70686418ff1232e91f22b13
+  72 tests, OK, no skips
+  evidence=/nas3/data/axeyum/harness/e3-gate/live-1784833784220517354-2365b8cd82a7
+  control=c3d67b815250a03e2c6ff2fbdf2603efb729acfdf05bd3426c7320ac41a81c36
+  loss=ea1ee4db10455e3d6d1f2a2e2c27f5074fd8e9814e9f62917972a4dc4986c4ea
 
 ./scripts/check-links.sh
   passed
