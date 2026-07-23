@@ -495,6 +495,21 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   runner or process exists yet.** The source-first
 - **2026-07-22 — TL0.6.3 M2's pure 64-case execution contract is implemented
   and pushed; no live runner or process exists yet.** The source-first
+- **2026-07-22 — the complete post-ADR-0359 Z3-SAT remainder now justifies
+  proposed ADR-0360 free-Int completion.** Accepted ADR-0359 raised checked SAT
+  from 111 to 178 with zero disagreements under the complete branch gate. The
+  differential now retains all 39 remaining ordinary-incomplete/Z3-SAT seeds.
+  Fixing their one/two ground scalars to one Z3 model closes 23; a pure-Rust
+  production-shaped pool from the Axeyum ground model, exact source literals,
+  zero, and checked neighbors closes 33 under 16-value/256-tuple caps after only
+  180 candidate queries. Every diagnostic SAT replays. Seeds 30, 32, 70, 122,
+  182, and 242 remain Unknown. Proposed ADR-0360 permits temporary scalar
+  equalities only as untrusted QF candidate hints; fixing-UNSAT never transfers,
+  and only the existing source-bound finite-profile certificate plus canonical
+  exact-original-query replay may return SAT. Next: implement that bounded
+  one/two-free-Int search, then rerun the frozen 39-seed and 256-case gates
+  before acceptance.
+
 - **2026-07-22 — TL0.6.3 M2's runner is pushed; its first invocation stopped
   during source preflight before any harness, discovery, or process.** The source-first
   [plan](docs/plan/lean-u2-official-execution-tl0.6.3-m2-shard-0001-plan-2026-07-22.md)
