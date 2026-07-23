@@ -4,7 +4,7 @@
   "source_identities": [
     {
       "path": ".github/workflows/ci.yml",
-      "sha256": "9b0c78686ddef2de36be57aaa6e815855cf2ae19f2b7f0d48e60838d72671b17"
+      "sha256": "406b5d18d6c531e4289df1b7e2ed3e0930c2b51a5cf08bd81aff7998a2e487bd"
     },
     {
       "path": "docs/plan/generated/lean-execution-evidence.md",
@@ -212,7 +212,7 @@
     },
     {
       "path": "scripts/gen-lean-complete-parity.py",
-      "sha256": "ca10b6ed8eaa71b916c26aa8a3cd11be6948cc66daab3b4252cf7ce58041a3a4"
+      "sha256": "c97598f5b186ac31b6e1c8e033b039e6a59504b9051fdd4e165d8d75584a7d89"
     },
     {
       "path": "scripts/gen-lean-execution-evidence.py",
@@ -267,6 +267,10 @@
       "sha256": "5dca1de2b0f5d64be0884b8a39e0c53dc746697a535f06c8597187d106ed2c93"
     },
     {
+      "path": "scripts/lean_u2_official_execution_m2_r5_diagnostic.py",
+      "sha256": "6f5c085d276ec9661c276a0bc1704a31ef6b6358df93c8b255a7e26ebd4bd29f"
+    },
+    {
       "path": "scripts/lean_u2_official_execution_m2_run.py",
       "sha256": "5763298bb33c97baacc0c29d6cc67a8df2ece796f7ea182c59957f5be59eb593"
     },
@@ -284,7 +288,7 @@
     },
     {
       "path": "scripts/tests/test_lean_complete_parity.py",
-      "sha256": "d376a5ea2a0e8d6e256760fa3fc78feafa761e7b1f29da2559914e5ff4dfab6a"
+      "sha256": "478d48e6abb7dad0e4eff8e501024964c6a3f2a1eb510a433c0057741dfab257"
     },
     {
       "path": "scripts/tests/test_lean_execution_acceptance.py",
@@ -333,6 +337,10 @@
     {
       "path": "scripts/tests/test_lean_u2_official_execution_m2_r5.py",
       "sha256": "2fc563be5ff494065004bf9182ecd5f74a5e430f63a273f8784a5176f00d27e0"
+    },
+    {
+      "path": "scripts/tests/test_lean_u2_official_execution_m2_r5_diagnostic.py",
+      "sha256": "73a7967ded220e05b4e1972b3c624046fc14f1f8e132ecb2a6e931a714d2cca4"
     },
     {
       "path": "scripts/tests/test_lean_u2_official_execution_m2_run.py",
@@ -833,6 +841,13 @@
         "controls": 0,
         "outcomes": 0,
         "parity": 0
+      },
+      "r5_diagnostic": {
+        "state": "incomplete-selected-attempt",
+        "selected_attempt_consumed": true,
+        "diagnostic_junit_rows": 64,
+        "official_outcomes": 0,
+        "parity_credit": 0
       },
       "r3_incomplete": {
         "terminal_class": "wall-timeout",

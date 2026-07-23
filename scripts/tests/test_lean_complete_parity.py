@@ -202,6 +202,13 @@ class LeanCompleteParityTests(unittest.TestCase):
             "scripts/tests/test_lean_u2_official_execution_m2_r5.py", source_paths
         )
         self.assertIn(
+            "scripts/lean_u2_official_execution_m2_r5_diagnostic.py", source_paths
+        )
+        self.assertIn(
+            "scripts/tests/test_lean_u2_official_execution_m2_r5_diagnostic.py",
+            source_paths,
+        )
+        self.assertIn(
             "docs/plan/lean-u2-official-execution-tl0.6.3-m2-r1-result-v1.json",
             source_paths,
         )
@@ -221,7 +228,7 @@ class LeanCompleteParityTests(unittest.TestCase):
             population["residual"],
         )
         self.assertIn(
-            "Completion-last policy therefore grants zero M2 case or shard credit",
+            "The frozen 83-file root has all case records but no post/projection/completion",
             population["residual"],
         )
 
