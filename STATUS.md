@@ -732,8 +732,13 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   [R6 attempt-004 plan](docs/plan/lean-u2-official-execution-tl0.6.3-m2-r6-attempt-004-plan-2026-07-23.md)
   now freezes fresh roots, the unchanged qualified 32 GiB/512 MiB lane, a
   JUnit-selected 123-row all-pass versus 124-row any-failure closure, one
-  selected process, and no retry. Next implement/test/push R6 and its
-  documentation checkpoint; no control or selected process is yet authorized.
+  selected process, and no retry. The
+  [R6 implementation checkpoint](docs/plan/lean-u2-official-execution-tl0.6.3-m2-r6-attempt-004-implementation-2026-07-23.md)
+  records clean pushed `ff2406b1`, exact history/spec/control bindings, both
+  conditional branches and inversion mutations, nine focused tests, and zero
+  implicit execution. Next push this checkpoint, verify clean remote equality,
+  and run one stack probe plus one completion-grade control. No selected
+  process is yet authorized.
 
 - **2026-07-22 — TL0.6.3 M1 derives complete deterministic U2 child-shard
   scheduling with zero new outcomes or parity credit.** The source-first
@@ -8045,6 +8050,12 @@ plan is built and committed on the current branch:
 | P5.5 | External target, measured | **DONE (bounded v1, ADR-0323--0338):** authenticated Tock capture plus eight rechecked dual-DRAT proofs and six replayed controls, UNKNOWN=0, DISAGREE=0. Query time 12.700 s; fresh outer wall 50.745 s; peak RSS 1,256,496 KiB; zero OOM deltas. The committed case study compares exact target validation, universal coverage, trust, effort, artifact boundaries, and limits. No Tock bug was found, so no upstream issue is applicable. This is not a speed or whole-kernel claim. |
 
 ## Changelog
+
+- **2026-07-23 — Implemented and pushed R6 without running its control.** Commit
+  `ff2406b1` adds fresh attempt-004 identities and a JUnit-selected 123/66 or
+  124/67 closure, preserves the qualified resource/shard/command/store, and
+  passes nine focused conditional/tamper/context tests. No R6 control,
+  discovery, or selected process exists.
 
 - **2026-07-23 — Preregistered R6 attempt 004 with conditional CTest-log
   semantics.** The new plan preserves the qualified 32 GiB/512 MiB lane and

@@ -36,7 +36,7 @@
     },
     {
       "path": "docs/plan/lean-complete-parity-v1.json",
-      "sha256": "0e732003fccd8d1031ea59be1fd018490adb5096ed3306b12bf803e9c41bf86a"
+      "sha256": "e5123dbcda46cb1c0fac25f55e6b2e1a4cdb53cc8379fa36518b52746135f919"
     },
     {
       "path": "docs/plan/lean-execution-acceptance-tl0.7.4-2026-07-22.md",
@@ -68,7 +68,7 @@
     },
     {
       "path": "docs/plan/lean-system-implementation-plan-2026-07-21.md",
-      "sha256": "ef5c5258449ca9363d8a395d7226a2a1626599f6cd51c0ca071deacbeff51c9d"
+      "sha256": "b737bbacc4353fd8ddc13b91933f5f968f596a7a34b78cf2a9094beecd7bd5be"
     },
     {
       "path": "docs/plan/lean-u2-official-child-shards-v1.json",
@@ -203,6 +203,10 @@
       "sha256": "25d102e6ead0d43ad69f3eb3e5064281e20fb86368ba2be4f0b49168869eeab2"
     },
     {
+      "path": "docs/plan/lean-u2-official-execution-tl0.6.3-m2-r6-attempt-004-implementation-2026-07-23.md",
+      "sha256": "b2d056feccaa0de18cfa00867cc224177f9b20180c4acad20c7e3915f3b344c0"
+    },
+    {
       "path": "docs/plan/lean-u2-official-execution-tl0.6.3-m2-r6-attempt-004-plan-2026-07-23.md",
       "sha256": "80d6f4875dcd11a90c79940f4b460bd3ede25f67139f22565f79dd64d8b33754"
     },
@@ -220,7 +224,7 @@
     },
     {
       "path": "docs/plan/lean4-complete-parity-roadmap-2026-07-22.md",
-      "sha256": "282e584f06c5b2eb6e82a35b5f8523c25d221bb00861430ce7595d43cde111db"
+      "sha256": "d0d150d81248892d162c150d26c92df709307c6af9433d9245216527e63ba0d7"
     },
     {
       "path": "scripts/gen-lean-complete-parity.py",
@@ -1079,6 +1083,10 @@
           "detail": "Preregistered fresh attempt 004 on the unchanged qualified 32 GiB/512 MiB lane, with JUnit-selected conditional LastTestsFailed.log semantics, one selected process, and no retry."
         },
         {
+          "path": "docs/plan/lean-u2-official-execution-tl0.6.3-m2-r6-attempt-004-implementation-2026-07-23.md",
+          "detail": "Pushed R6 implementation with exact R5 closure binding, fresh control/run identities, tested 123/66 all-pass and 124/67 any-failure branches, and zero implicit execution."
+        },
+        {
           "path": "docs/plan/lean-execution-evidence-v1.json",
           "detail": "TL0.7.1 contract authority for explicit resource lanes, typed terminations, immutable run/attempt/case/artifact/completion records, and zero real outcomes."
         },
@@ -1147,7 +1155,7 @@
           "detail": "Pinned tests tree inventory and the required CTest/test-pile derivation rule."
         }
       ],
-      "residual": "Current credited execution coverage remains two decided official outcomes for one unique case from a 3,678-case parent, with zero Axeyum outcomes or pairs. There are seven consumed selected process attempts: four M0 attempts, invalid M2 R1, timeout M2 R3, and invalid M2 R5. M1 partitions all eight official selections into five exact ordered memberships and 289 physical child shards, but every derived shard and all 111 official attempts remain incomplete. M2 R1 retained exact 64-row JUnit with 30 passes and 34 failures, but family-blind docparse artifact closure stopped before post/projection/completion. R2 completed its zero-process diagnostic append with unchanged credit. M2 R3 exported LEAN_STACK_SIZE_KB=524288, printed seven diagnostic passes, then timed out after channel thread-creation failure; its 17-file root has no JUnit/cases/completion and zero credit. R4's 16 GiB nine-task control failed before selected discovery, leaving attempt 003 unconsumed. R5's completion-grade 32 GiB control passed, and selected attempt 003 then exited cleanly with exact 64/64 JUnit passes. Fail-closed post capture nevertheless rejected the absent all-pass LastTestsFailed.log: 123 generated paths versus 124 preregistered. Its completed zero-process diagnostic closure binds 68 appended files, including 66 retained payloads, 56 metadata rows, conditional-log absence, and invalid zero-credit completion. R5 remains zero-outcome and cannot retry. Attempt 004 is preregistered with fresh roots, the unchanged qualified resource lane, and JUnit-selected conditional failure-log semantics; implementation, a fresh control, and its one selected execution remain open. Then classify native surfaces and run matched Axeyum cases. Scheduling metadata, controls, diagnostic rows, and retries do not increase population coverage."
+      "residual": "Current credited execution coverage remains two decided official outcomes for one unique case from a 3,678-case parent, with zero Axeyum outcomes or pairs. There are seven consumed selected process attempts: four M0 attempts, invalid M2 R1, timeout M2 R3, and invalid M2 R5. M1 partitions all eight official selections into five exact ordered memberships and 289 physical child shards, but every derived shard and all 111 official attempts remain incomplete. M2 R1 retained exact 64-row JUnit with 30 passes and 34 failures, but family-blind docparse artifact closure stopped before post/projection/completion. R2 completed its zero-process diagnostic append with unchanged credit. M2 R3 exported LEAN_STACK_SIZE_KB=524288, printed seven diagnostic passes, then timed out after channel thread-creation failure; its 17-file root has no JUnit/cases/completion and zero credit. R4's 16 GiB nine-task control failed before selected discovery, leaving attempt 003 unconsumed. R5's completion-grade 32 GiB control passed, and selected attempt 003 then exited cleanly with exact 64/64 JUnit passes. Fail-closed post capture nevertheless rejected the absent all-pass LastTestsFailed.log: 123 generated paths versus 124 preregistered. Its completed zero-process diagnostic closure binds 68 appended files, including 66 retained payloads, 56 metadata rows, conditional-log absence, and invalid zero-credit completion. R5 remains zero-outcome and cannot retry. Attempt 004 and its implementation are pushed with fresh roots, the unchanged qualified resource lane, and JUnit-selected conditional failure-log semantics; a fresh control and its one selected execution remain open. Then classify native surfaces and run matched Axeyum cases. Scheduling metadata, controls, diagnostic rows, and retries do not increase population coverage."
     },
     {
       "id": "U3",

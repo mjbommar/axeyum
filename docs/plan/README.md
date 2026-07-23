@@ -296,6 +296,10 @@ Start at the root [`PLAN.md`](../../PLAN.md) (map + standing rules) and
   source-first fresh attempt 004 preserving the qualified 32 GiB/512 MiB lane
   while making failure-log presence an exact post-JUnit conditional and
   retaining one selected process/no retry.
+- [`lean-u2-official-execution-tl0.6.3-m2-r6-attempt-004-implementation-2026-07-23.md`](lean-u2-official-execution-tl0.6.3-m2-r6-attempt-004-implementation-2026-07-23.md) —
+  pushed R6 implementation with exact R5 history binding, fresh control/run
+  identities, both conditional artifact branches and inversion mutations,
+  nine focused tests, and zero implicit execution.
 - [`lean-compatibility-v1.json`](lean-compatibility-v1.json) and generated
   [`Lean compatibility matrix`](generated/lean-compatibility.md) — TL0.2's
   executable eight-field assurance contract, K0-K6 profile gates, registered
