@@ -4,7 +4,7 @@
   "source_identities": [
     {
       "path": ".github/workflows/ci.yml",
-      "sha256": "1f722bd18bda365b7fae7a7b7e064230ab5debb2d8eb5902b1bd001193d1946b"
+      "sha256": "9b0c78686ddef2de36be57aaa6e815855cf2ae19f2b7f0d48e60838d72671b17"
     },
     {
       "path": "docs/plan/generated/lean-execution-evidence.md",
@@ -204,7 +204,7 @@
     },
     {
       "path": "scripts/gen-lean-complete-parity.py",
-      "sha256": "5bccd0cf9c28677507bc538f7634509013f977ff39cfa58b9abdc470f99494b5"
+      "sha256": "ca10b6ed8eaa71b916c26aa8a3cd11be6948cc66daab3b4252cf7ce58041a3a4"
     },
     {
       "path": "scripts/gen-lean-execution-evidence.py",
@@ -255,6 +255,10 @@
       "sha256": "7f425a24c69d0f234d750cc5b8fd9e5d08ab0d0ead0136f133d6168634016a55"
     },
     {
+      "path": "scripts/lean_u2_official_execution_m2_r5.py",
+      "sha256": "5dca1de2b0f5d64be0884b8a39e0c53dc746697a535f06c8597187d106ed2c93"
+    },
+    {
       "path": "scripts/lean_u2_official_execution_m2_run.py",
       "sha256": "5763298bb33c97baacc0c29d6cc67a8df2ece796f7ea182c59957f5be59eb593"
     },
@@ -272,7 +276,7 @@
     },
     {
       "path": "scripts/tests/test_lean_complete_parity.py",
-      "sha256": "a9d90c894930b4c915be801955f7ee5798a48db4f260d428197703e250a98943"
+      "sha256": "d376a5ea2a0e8d6e256760fa3fc78feafa761e7b1f29da2559914e5ff4dfab6a"
     },
     {
       "path": "scripts/tests/test_lean_execution_acceptance.py",
@@ -317,6 +321,10 @@
     {
       "path": "scripts/tests/test_lean_u2_official_execution_m2_r4.py",
       "sha256": "a00401dd569296b1ca3cc01fd98199262bcb18c90a069c20d094255294b73435"
+    },
+    {
+      "path": "scripts/tests/test_lean_u2_official_execution_m2_r5.py",
+      "sha256": "2fc563be5ff494065004bf9182ecd5f74a5e430f63a273f8784a5176f00d27e0"
     },
     {
       "path": "scripts/tests/test_lean_u2_official_execution_m2_run.py",
@@ -806,6 +814,15 @@
         "generated": 124,
         "memory_limit_bytes": 17179869184,
         "selected_processes": 0,
+        "outcomes": 0,
+        "parity": 0
+      },
+      "r5": {
+        "cases": 64,
+        "generated": 124,
+        "memory_limit_bytes": 34359738368,
+        "selected_processes": 0,
+        "controls": 0,
         "outcomes": 0,
         "parity": 0
       },

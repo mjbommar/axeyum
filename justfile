@@ -142,6 +142,8 @@ parity-docs:
     python3 scripts/lean_u2_official_execution_m2_r3.py validate-incomplete
     python3 -m unittest scripts.tests.test_lean_u2_official_execution_m2_r4
     python3 scripts/lean_u2_official_execution_m2_r4.py offline-check
+    python3 -m unittest scripts.tests.test_lean_u2_official_execution_m2_r5
+    python3 scripts/lean_u2_official_execution_m2_r5.py offline-check
     python3 -m unittest scripts.tests.test_lean_complete_parity
     python3 -m unittest scripts.tests.test_lean_official_construct_matrix
     python3 scripts/check-lean-official-construct-matrix.py --check
