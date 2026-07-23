@@ -48,10 +48,13 @@ class LeanCompleteParityTests(unittest.TestCase):
             }
         ]
 
-    def paired_execution(self, state: str, digest_byte: str) -> dict:
+    def paired_execution(
+        self, state: str, digest_byte: str, result_class: str = "success"
+    ) -> dict:
         value = digest_byte * 64
         execution = {
             "record_state": state,
+            "result_class": result_class if state == "complete" else None,
             "executable_sha256": value,
             "configuration_sha256": value,
             "command_sha256": value,
@@ -82,6 +85,10 @@ class LeanCompleteParityTests(unittest.TestCase):
         outcome: str = "agree-success",
         official_state: str = "complete",
         axeyum_state: str = "complete",
+        official_result: str = "success",
+        axeyum_result: str = "success",
+        official_normalized: str | None = "2" * 64,
+        axeyum_normalized: str | None = "2" * 64,
     ) -> dict:
         cell = {
             "id": "bounded-probe",
@@ -93,8 +100,10 @@ class LeanCompleteParityTests(unittest.TestCase):
             "source_sha256": "c" * 64,
             "dependency_sha256": "d" * 64,
             "source_family": "probe",
-            "official": self.paired_execution(official_state, "a"),
-            "axeyum": self.paired_execution(axeyum_state, "b"),
+            "official": self.paired_execution(
+                official_state, "a", official_result
+            ),
+            "axeyum": self.paired_execution(axeyum_state, "b", axeyum_result),
             "comparison": {},
             "cell_sha256": None,
         }
@@ -105,6 +114,12 @@ class LeanCompleteParityTests(unittest.TestCase):
             "contract_sha256": "f" * 64,
             "official_record_sha256": cell["official"]["record_sha256"],
             "axeyum_record_sha256": cell["axeyum"]["record_sha256"],
+            "official_normalized_sha256": (
+                official_normalized if official_state == "complete" else None
+            ),
+            "axeyum_normalized_sha256": (
+                axeyum_normalized if axeyum_state == "complete" else None
+            ),
             "result_sha256": None,
             "completed": True,
             "evidence": self.retained_evidence(),
@@ -113,6 +128,24 @@ class LeanCompleteParityTests(unittest.TestCase):
         cell["comparison"] = comparison
         cell["cell_sha256"] = GEN.paired_cell_digest(cell)
         return cell
+
+    def reseal_pair(self, cell: dict) -> None:
+        cell["official"]["record_sha256"] = GEN.paired_execution_digest(
+            cell["official"]
+        )
+        cell["axeyum"]["record_sha256"] = GEN.paired_execution_digest(
+            cell["axeyum"]
+        )
+        comparison = cell["comparison"]
+        comparison["official_record_sha256"] = cell["official"]["record_sha256"]
+        comparison["axeyum_record_sha256"] = cell["axeyum"]["record_sha256"]
+        comparison["result_sha256"] = GEN.paired_comparison_digest(comparison)
+        cell["cell_sha256"] = GEN.paired_cell_digest(cell)
+        if self.data.get("paired_cells"):
+            authority = self.paired_authority(cell["population"])
+            authority["expected_cell_seals_sha256"] = (
+                GEN.paired_cell_seals_digest([cell])
+            )
 
     def register_bounded_pair(self, cell: dict) -> None:
         self.data["paired_cells"] = [cell]
@@ -1086,9 +1119,12 @@ class LeanCompleteParityTests(unittest.TestCase):
         self.assertIn("command_sha256", GEN.PAIRED_EXECUTION_FIELDS)
         self.assertIn("attempt_id", GEN.PAIRED_EXECUTION_FIELDS)
         self.assertIn("record_sha256", GEN.PAIRED_EXECUTION_FIELDS)
+        self.assertIn("result_class", GEN.PAIRED_EXECUTION_FIELDS)
         self.assertIn("cell_sha256", GEN.PAIRED_CELL_FIELDS)
         self.assertIn("official_record_sha256", GEN.PAIRED_COMPARISON_FIELDS)
         self.assertIn("axeyum_record_sha256", GEN.PAIRED_COMPARISON_FIELDS)
+        self.assertIn("official_normalized_sha256", GEN.PAIRED_COMPARISON_FIELDS)
+        self.assertIn("axeyum_normalized_sha256", GEN.PAIRED_COMPARISON_FIELDS)
         self.assertIn("completed", GEN.PAIRED_COMPARISON_FIELDS)
         self.data["outcome_classes"][-1] = "other"
         self.assertTrue(any("outcome_classes/order" in failure for failure in self.failures()))
@@ -1187,7 +1223,7 @@ class LeanCompleteParityTests(unittest.TestCase):
         )
         self.assertTrue(
             any(
-                "agree-success requires two complete executions" in failure
+                "must equal derived 'not-run'" in failure
                 for failure in self.failures()
             )
         )
@@ -1195,13 +1231,117 @@ class LeanCompleteParityTests(unittest.TestCase):
         self.data = GEN.load_manifest()
         self.register_bounded_pair(self.paired_cell(outcome="not-run"))
         self.assertTrue(
-            any("not-run requires an absent side" in failure for failure in self.failures())
+            any(
+                "must equal derived 'agree-success'" in failure
+                for failure in self.failures()
+            )
         )
 
         self.data = GEN.load_manifest()
         self.register_bounded_pair(self.paired_cell(outcome="invalid-run"))
         self.assertTrue(
-            any("invalid-run requires an invalid side" in failure for failure in self.failures())
+            any(
+                "must equal derived 'agree-success'" in failure
+                for failure in self.failures()
+            )
+        )
+
+    def test_all_paired_outcomes_are_derived(self) -> None:
+        rows = (
+            ("agree-success", {}),
+            (
+                "agree-reject",
+                {"official_result": "reject", "axeyum_result": "reject"},
+            ),
+            (
+                "official-only",
+                {
+                    "official_result": "success",
+                    "axeyum_result": "decline",
+                    "axeyum_normalized": None,
+                },
+            ),
+            (
+                "axeyum-only",
+                {"official_result": "reject", "axeyum_result": "success"},
+            ),
+            (
+                "semantic-mismatch",
+                {"axeyum_normalized": "3" * 64},
+            ),
+            (
+                "unadjudicated",
+                {"axeyum_normalized": None},
+            ),
+            (
+                "not-run",
+                {"axeyum_state": "not-run", "axeyum_normalized": None},
+            ),
+            (
+                "invalid-run",
+                {"axeyum_state": "invalid", "axeyum_normalized": None},
+            ),
+        )
+        for outcome, arguments in rows:
+            with self.subTest(outcome=outcome):
+                self.data = GEN.load_manifest()
+                self.register_bounded_pair(
+                    self.paired_cell(outcome=outcome, **arguments)
+                )
+                self.assertEqual(self.failures(), [])
+
+    def test_resealed_semantic_mutations_reject_stale_outcome(self) -> None:
+        cell = self.paired_cell()
+        self.register_bounded_pair(cell)
+        cell["comparison"]["axeyum_normalized_sha256"] = "3" * 64
+        self.reseal_pair(cell)
+        self.assertTrue(
+            any(
+                "must equal derived 'semantic-mismatch'" in failure
+                for failure in self.failures()
+            )
+        )
+
+        self.data = GEN.load_manifest()
+        cell = self.paired_cell()
+        self.register_bounded_pair(cell)
+        cell["axeyum"]["result_class"] = "decline"
+        self.reseal_pair(cell)
+        self.assertTrue(
+            any(
+                "must equal derived 'official-only'" in failure
+                for failure in self.failures()
+            )
+        )
+
+        self.data = GEN.load_manifest()
+        cell = self.paired_cell()
+        self.register_bounded_pair(cell)
+        cell["comparison"]["axeyum_normalized_sha256"] = None
+        self.reseal_pair(cell)
+        self.assertTrue(
+            any(
+                "must equal derived 'unadjudicated'" in failure
+                for failure in self.failures()
+            )
+        )
+
+    def test_noncomplete_side_rejects_result_and_normalized_identity(self) -> None:
+        cell = self.paired_cell(
+            outcome="not-run",
+            axeyum_state="not-run",
+            axeyum_normalized=None,
+        )
+        self.register_bounded_pair(cell)
+        cell["axeyum"]["result_class"] = "success"
+        cell["comparison"]["axeyum_normalized_sha256"] = "3" * 64
+        self.reseal_pair(cell)
+        failures = self.failures()
+        self.assertTrue(
+            any("non-complete execution requires null result_class" in failure for failure in failures)
+        )
+        self.assertTrue(
+            any("non-complete axeyum side requires null" in failure for failure in failures)
         )
 
     def test_paired_authority_blocks_subset_and_digest_vacuity(self) -> None:

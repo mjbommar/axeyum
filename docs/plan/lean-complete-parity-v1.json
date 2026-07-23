@@ -201,11 +201,15 @@
         },
         {
           "path": "docs/plan/lean-u2-matched-execution-tl0.6.5-plan-2026-07-23.md",
-          "detail": "Preregistered TL0.6.5 matched-execution semantics: distinct case/execution-slot/comparison-obligation denominators, independent sealed official and Axeyum execution records, typed absent/invalid states, a comparison that cites both side seals, exact pair-population count/ID/cell-seal authorities, non-vacuous G3 derivation, and zero execution or credit before complete accepted TL0.6.3/TL0.6.4 parents."
+          "detail": "Preregistered TL0.6.5 matched-execution semantics: distinct case/execution-slot/comparison-obligation denominators, independent sealed official and Axeyum execution records with typed result classes, typed absent/invalid states, a comparison that cites both side seals and normalized-observable identities, exact pair-population count/ID/cell-seal authorities, derived non-vacuous G3 outcomes, and zero execution or credit before complete accepted TL0.6.3/TL0.6.4 parents."
         },
         {
           "path": "docs/plan/lean-u2-matched-execution-tl0.6.5-content-seals-r1-result-2026-07-23.md",
           "detail": "Accepted bounded TL0.6.5 R1 schema correction: versioned deterministic execution, comparison, cell, and population cell-seal digests are recomputed with mutation teeth; all native outcomes, paired cells, complete pair authorities, gates, and parity credit remain zero."
+        },
+        {
+          "path": "docs/plan/lean-u2-matched-execution-tl0.6.5-outcome-derivation-r2-plan-2026-07-23.md",
+          "detail": "Preregistered TL0.6.5 R2 schema correction: complete side records project typed success/reject/decline/timeout/resource/failure classes, comparisons bind separate canonical normalized identities, and all eight comparison outcomes are derived rather than trusted; this authorizes no process or credit."
         },
         {
           "path": "docs/plan/lean-complete-parity-worktree-portability-r1-result-2026-07-23.md",

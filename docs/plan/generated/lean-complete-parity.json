@@ -52,7 +52,7 @@
     },
     {
       "path": "docs/plan/lean-complete-parity-v1.json",
-      "sha256": "7cb223b5a18924f40d5a33d263316b37024728d90c6834a539c2d3c950551697"
+      "sha256": "245e6b8864e099a91b571fe1267f5806770e2fc8eaa1c03cad138fbb80f728a6"
     },
     {
       "path": "docs/plan/lean-complete-parity-worktree-portability-r1-result-2026-07-23.md",
@@ -95,8 +95,12 @@
       "sha256": "4e51df229d2425f8e4ed1846d75d4428e7e461cb0788f75d57ea779676757f18"
     },
     {
+      "path": "docs/plan/lean-u2-matched-execution-tl0.6.5-outcome-derivation-r2-plan-2026-07-23.md",
+      "sha256": "5bcbc34f3d11828132a04266ba6d01ac3be101771d2d4e5bc84b37b5ca0c4293"
+    },
+    {
       "path": "docs/plan/lean-u2-matched-execution-tl0.6.5-plan-2026-07-23.md",
-      "sha256": "591f50a291d2d50e4b6b42085e1da1d7d573b95aa4ba0efe412edd73b3e6f4ce"
+      "sha256": "51fc8dbb42211b329e4e3197e27cae4a2e22a207cd20aa421eff43f9019326c3"
     },
     {
       "path": "docs/plan/lean-u2-native-dependency-tl0.6.4-m2.1-plan-2026-07-23.md",
@@ -352,7 +356,7 @@
     },
     {
       "path": "docs/plan/lean4-complete-parity-contract-2026-07-22.md",
-      "sha256": "25c97bd7672be08735b67083502a32a02da260f2cac9eeb0eec4c015f54f1a2a"
+      "sha256": "ebd713ee2c3d08940331df6cd0f6eedde8330d044cb9656776acff181a38e58b"
     },
     {
       "path": "docs/plan/lean4-complete-parity-roadmap-2026-07-22.md",
@@ -360,7 +364,7 @@
     },
     {
       "path": "scripts/gen-lean-complete-parity.py",
-      "sha256": "6954bffa78d537e0e3e651a0edcf58d11d547a4542c28b371e6b9eb1d932fc17"
+      "sha256": "6961cf93ac5df4be70c3ae6fc8a447a121775413f246a9183fe162828aee6c8d"
     },
     {
       "path": "scripts/gen-lean-execution-evidence.py",
@@ -464,7 +468,7 @@
     },
     {
       "path": "scripts/tests/test_lean_complete_parity.py",
-      "sha256": "1bbaecc87d053cdb6ef7bd110c3f1bde11bec45af775f1b1cfb7c96b23935907"
+      "sha256": "7def5319205ce3b24db115eef67dd756176c166c1db978381fa32bf74eed11c3"
     },
     {
       "path": "scripts/tests/test_lean_execution_acceptance.py",
@@ -1671,11 +1675,15 @@
         },
         {
           "path": "docs/plan/lean-u2-matched-execution-tl0.6.5-plan-2026-07-23.md",
-          "detail": "Preregistered TL0.6.5 matched-execution semantics: distinct case/execution-slot/comparison-obligation denominators, independent sealed official and Axeyum execution records, typed absent/invalid states, a comparison that cites both side seals, exact pair-population count/ID/cell-seal authorities, non-vacuous G3 derivation, and zero execution or credit before complete accepted TL0.6.3/TL0.6.4 parents."
+          "detail": "Preregistered TL0.6.5 matched-execution semantics: distinct case/execution-slot/comparison-obligation denominators, independent sealed official and Axeyum execution records with typed result classes, typed absent/invalid states, a comparison that cites both side seals and normalized-observable identities, exact pair-population count/ID/cell-seal authorities, derived non-vacuous G3 outcomes, and zero execution or credit before complete accepted TL0.6.3/TL0.6.4 parents."
         },
         {
           "path": "docs/plan/lean-u2-matched-execution-tl0.6.5-content-seals-r1-result-2026-07-23.md",
           "detail": "Accepted bounded TL0.6.5 R1 schema correction: versioned deterministic execution, comparison, cell, and population cell-seal digests are recomputed with mutation teeth; all native outcomes, paired cells, complete pair authorities, gates, and parity credit remain zero."
+        },
+        {
+          "path": "docs/plan/lean-u2-matched-execution-tl0.6.5-outcome-derivation-r2-plan-2026-07-23.md",
+          "detail": "Preregistered TL0.6.5 R2 schema correction: complete side records project typed success/reject/decline/timeout/resource/failure classes, comparisons bind separate canonical normalized identities, and all eight comparison outcomes are derived rather than trusted; this authorizes no process or credit."
         },
         {
           "path": "docs/plan/lean-complete-parity-worktree-portability-r1-result-2026-07-23.md",
@@ -2330,15 +2338,18 @@
         "platform_id",
         "record_sha256",
         "record_state",
-        "resource_envelope_sha256"
+        "resource_envelope_sha256",
+        "result_class"
       ],
       "comparison": [
+        "axeyum_normalized_sha256",
         "axeyum_record_sha256",
         "completed",
         "contract_sha256",
         "evidence",
         "normalization_id",
         "normalization_sha256",
+        "official_normalized_sha256",
         "official_record_sha256",
         "outcome",
         "result_sha256"

@@ -149,6 +149,7 @@ PAIRED_CELL_FIELDS = {
 }
 PAIRED_EXECUTION_FIELDS = {
     "record_state",
+    "result_class",
     "executable_sha256",
     "configuration_sha256",
     "command_sha256",
@@ -167,6 +168,14 @@ PAIRED_EXECUTION_FIELDS = {
     "record_sha256",
 }
 PAIRED_EXECUTION_STATES = {"complete", "not-run", "invalid"}
+PAIRED_EXECUTION_RESULT_CLASSES = {
+    "success",
+    "reject",
+    "decline",
+    "timeout",
+    "resource-exhaustion",
+    "failure",
+}
 PAIRED_COMPARISON_FIELDS = {
     "outcome",
     "normalization_id",
@@ -174,6 +183,8 @@ PAIRED_COMPARISON_FIELDS = {
     "contract_sha256",
     "official_record_sha256",
     "axeyum_record_sha256",
+    "official_normalized_sha256",
+    "axeyum_normalized_sha256",
     "result_sha256",
     "completed",
     "evidence",
@@ -471,16 +482,20 @@ def paired_cell_seals_digest(cells: list[dict[str, Any]]) -> str:
 
 def validate_paired_execution(
     owner: str, execution: Any, failures: list[str]
-) -> str | None:
+) -> tuple[str | None, str | None]:
     if not isinstance(execution, dict):
         failures.append(f"{owner}: execution record must be an object")
-        return None
+        return None, None
     if set(execution) != PAIRED_EXECUTION_FIELDS:
         failures.append(f"{owner}: execution record fields must be exact")
     state = execution.get("record_state")
     if state not in PAIRED_EXECUTION_STATES:
         failures.append(f"{owner}: invalid execution record_state {state!r}")
         state = None
+    result_class = execution.get("result_class")
+    if result_class is not None and result_class not in PAIRED_EXECUTION_RESULT_CLASSES:
+        failures.append(f"{owner}: invalid execution result_class {result_class!r}")
+        result_class = None
 
     digest_fields = (
         "executable_sha256",
@@ -514,13 +529,63 @@ def validate_paired_execution(
         for field in digest_fields + string_fields + metric_fields:
             if execution.get(field) is None:
                 failures.append(f"{owner}: complete execution requires {field}")
+        if result_class is None:
+            failures.append(f"{owner}: complete execution requires result_class")
+    elif execution.get("result_class") is not None:
+        failures.append(f"{owner}: non-complete execution requires null result_class")
     validate_evidence(owner, execution.get("evidence"), failures, required=True)
     record_sha256 = execution.get("record_sha256")
     if not HEX64.fullmatch(str(record_sha256 or "")):
         failures.append(f"{owner}: record_sha256 must be lowercase 64-hex")
     elif paired_execution_digest(execution) != record_sha256:
         failures.append(f"{owner}: record_sha256 must match canonical execution")
-    return state
+    return state, result_class
+
+
+def derive_paired_outcome(
+    official_state: str | None,
+    axeyum_state: str | None,
+    official_result: str | None,
+    axeyum_result: str | None,
+    official_normalized: str | None,
+    axeyum_normalized: str | None,
+) -> str | None:
+    if "invalid" in {official_state, axeyum_state}:
+        return "invalid-run"
+    if "not-run" in {official_state, axeyum_state}:
+        return "not-run"
+    if {official_state, axeyum_state} != {"complete"}:
+        return None
+    if (
+        official_result not in PAIRED_EXECUTION_RESULT_CLASSES
+        or axeyum_result not in PAIRED_EXECUTION_RESULT_CLASSES
+    ):
+        return None
+
+    normalized_available = (
+        official_normalized is not None and axeyum_normalized is not None
+    )
+    if official_result == axeyum_result == "success":
+        if not normalized_available:
+            return "unadjudicated"
+        return (
+            "agree-success"
+            if official_normalized == axeyum_normalized
+            else "semantic-mismatch"
+        )
+    if official_result == axeyum_result == "reject":
+        if not normalized_available:
+            return "unadjudicated"
+        return (
+            "agree-reject"
+            if official_normalized == axeyum_normalized
+            else "semantic-mismatch"
+        )
+    if official_result == "success":
+        return "official-only"
+    if official_result == "reject" and axeyum_result == "success":
+        return "axeyum-only"
+    return "unadjudicated"
 
 
 def validate_paired_comparison(
@@ -530,6 +595,8 @@ def validate_paired_comparison(
     axeyum: Any,
     official_state: str | None,
     axeyum_state: str | None,
+    official_result: str | None,
+    axeyum_result: str | None,
     failures: list[str],
 ) -> str | None:
     if not isinstance(comparison, dict):
@@ -553,6 +620,19 @@ def validate_paired_comparison(
     ):
         if not HEX64.fullmatch(str(comparison.get(field, ""))):
             failures.append(f"{owner}: {field} must be lowercase 64-hex")
+    normalized: dict[str, str | None] = {}
+    for side, state in (
+        ("official", official_state),
+        ("axeyum", axeyum_state),
+    ):
+        field = f"{side}_normalized_sha256"
+        value = comparison.get(field)
+        if value is not None and not HEX64.fullmatch(str(value)):
+            failures.append(f"{owner}: {field} must be null or lowercase 64-hex")
+            value = None
+        if state != "complete" and comparison.get(field) is not None:
+            failures.append(f"{owner}: non-complete {side} side requires null {field}")
+        normalized[side] = value
     if isinstance(official, dict) and (
         comparison.get("official_record_sha256") != official.get("record_sha256")
     ):
@@ -570,17 +650,18 @@ def validate_paired_comparison(
         failures.append(f"{owner}: comparison must be completed")
     validate_evidence(owner, comparison.get("evidence"), failures, required=True)
 
-    states = {official_state, axeyum_state}
-    if outcome == "not-run":
-        if "not-run" not in states or "invalid" in states:
-            failures.append(
-                f"{owner}: not-run requires an absent side and no invalid side"
-            )
-    elif outcome == "invalid-run":
-        if "invalid" not in states:
-            failures.append(f"{owner}: invalid-run requires an invalid side")
-    elif outcome is not None and states != {"complete"}:
-        failures.append(f"{owner}: {outcome} requires two complete executions")
+    derived_outcome = derive_paired_outcome(
+        official_state,
+        axeyum_state,
+        official_result,
+        axeyum_result,
+        normalized["official"],
+        normalized["axeyum"],
+    )
+    if outcome is not None and derived_outcome is not None and outcome != derived_outcome:
+        failures.append(
+            f"{owner}: outcome {outcome!r} must equal derived {derived_outcome!r}"
+        )
     return outcome
 
 
@@ -619,10 +700,10 @@ def validate_paired_cells(data: dict[str, Any], failures: list[str]) -> list[dic
         ):
             if not isinstance(cell.get(field), str) or not cell[field].strip():
                 failures.append(f"{cell_id}: non-empty {field} is required")
-        official_state = validate_paired_execution(
+        official_state, official_result = validate_paired_execution(
             cell_id + ".official", cell.get("official"), failures
         )
-        axeyum_state = validate_paired_execution(
+        axeyum_state, axeyum_result = validate_paired_execution(
             cell_id + ".axeyum", cell.get("axeyum"), failures
         )
         validate_paired_comparison(
@@ -632,6 +713,8 @@ def validate_paired_cells(data: dict[str, Any], failures: list[str]) -> list[dic
             cell.get("axeyum"),
             official_state,
             axeyum_state,
+            official_result,
+            axeyum_result,
             failures,
         )
         cell_sha256 = cell.get("cell_sha256")
