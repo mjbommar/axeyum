@@ -463,16 +463,20 @@ state.
 > were reaped. The [final result](docs/plan/lean-execution-acceptance-tl0.7.4-2026-07-22.md)
 > retains the failed attempt plus both completed controls as 67 files / 142,523
 > bytes. The controls create no U2/Axeyum outcome, denominator, paired/
-> performance row, or parity credit. TL0.7 is complete; source-first TL0.6.3
-> official execution is next. TL0.6.3 M0 now has a published
+> performance row, or parity credit. TL0.7 is complete. TL0.6.3 M0 has a published
 > [source-first plan](docs/plan/lean-u2-official-execution-tl0.6.3-m0-plan-2026-07-22.md)
 > for the exact `compile/534.lean` case: a one-case child shard of the
 > release-tag Linux-release cell's 3,678-case `-E foreign` selection. It
 > registers a distinct 8 GiB/one-worker local CTest lane and immutable
-> source/toolchain/JUnit/case/completion evidence. No M0 harness or test has
-> run; even a valid pass can create only one local official-case outcome, not
-> parent-profile, provider, Axeyum, pairing, performance, axis, gate, or parity
-> credit.
+> source/toolchain/JUnit/case/completion evidence. [Attempt 001](docs/plan/lean-u2-official-execution-tl0.6.3-m0-attempt-001-2026-07-22.md)
+> retained terminal/JUnit evidence but stopped without a case/completion:
+> `LEAN_NUM_THREADS=1` did not constrain Lean's command-line shell, whose
+> native default was 24 workers with 1 GiB task stacks, and CTest wrote three
+> undeclared preset logs. The [R1 plan](docs/plan/lean-u2-official-execution-tl0.6.3-m0-r1-plan-2026-07-22.md)
+> freezes explicit official-test-array `-j1`, corrected resource fields, and
+> the CTest log set before any retry. Attempt 001 has zero outcomes; even a
+> valid R1 pass can create only one local official-case outcome, not parent-
+> profile, provider, Axeyum, pairing, performance, axis, gate, or parity credit.
 > The runtime-derived
 > TL0.4 ledger now freezes **65** prelude assumptions (real 30, integer 34,
 > string 1) by canonical type digest before dependent native elaborator, Lake,

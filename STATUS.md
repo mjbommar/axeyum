@@ -383,16 +383,23 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
-- **2026-07-22 — TL0.6.3 M0 is source-first preregistered; no official U2 test
-  has run.** The [M0 plan](docs/plan/lean-u2-official-execution-tl0.6.3-m0-plan-2026-07-22.md)
+- **2026-07-22 — TL0.6.3 M0 attempt 001 failed closed; R1 is source-first
+  preregistered.** The [M0 plan](docs/plan/lean-u2-official-execution-tl0.6.3-m0-plan-2026-07-22.md)
   selects only `compile/534.lean` from the exact release-tag Linux-release
   cell's 3,678-case `-E foreign` selection. It freezes official commit/tree,
   context/cell/attempt/selection/case identities, released Lean/leanc and full
-  toolchain closure, a separate 8 GiB/one-worker local CTest lane, exact
-  discovery/JUnit/case/completion records, mutation gates, and stop conditions.
-  The child shard cannot complete the parent official profile or claim its
-  provider. A valid pass can add only one local official-case outcome; Axeyum,
-  pairing, performance, population, axis, gate, and parity credit remain zero.
+  toolchain closure, a separate 8 GiB local CTest lane, exact discovery/JUnit/
+  case/completion records, mutation gates, and stop conditions. [Attempt 001](docs/plan/lean-u2-official-execution-tl0.6.3-m0-attempt-001-2026-07-22.md)
+  exited 8 after Lean failed to create a thread: the environment variable did
+  not constrain the command-line shell's 24-worker native default. Terminal,
+  raw, JUnit, toolchain, and CTest-log evidence is retained across 18 files /
+  4,757,134 bytes, but no post/case/completion exists and all credit is zero.
+  The [R1 plan](docs/plan/lean-u2-official-execution-tl0.6.3-m0-r1-plan-2026-07-22.md)
+  freezes `TEST_LEAN_ARGS=(-j1)`, `TEST_LEANI_ARGS=(-j1)`, corrected worker
+  evidence, and declared preset logs. No R1 process has run. The child shard
+  cannot complete the parent/provider; even a valid pass adds only one local
+  official outcome while Axeyum, pairs, performance, axes, gates, and parity
+  remain zero.
 
 - **2026-07-22 — TL0.7.4 closes the real local execution controls without U2,
   Axeyum, pairing, performance, or parity credit.** The

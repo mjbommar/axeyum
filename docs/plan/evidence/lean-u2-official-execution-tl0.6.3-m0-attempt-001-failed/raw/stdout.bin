@@ -1,0 +1,15 @@
+Test project /home/mjbommar/.cache/axeyum-tl063-m0-bc59fda5/harness
+    Start 1: compile/534.lean
+1/1 Test #1: compile/534.lean .................***Failed    0.31 sec
+Compiling and executing lean file
+libc++abi: terminating due to uncaught exception of type lean::exception: failed to create thread
+run_test.sh: line 31: 3859141 Aborted                    (core dumped) lean --c="$1.c" "${TEST_LEAN_ARGS[@]}" "$1"
+TEST FAILED: Failed to compile 534.lean into 534.lean.c
+
+
+0% tests passed, 1 tests failed out of 1
+
+Total Test time (real) =   0.32 sec
+
+The following tests FAILED:
+	  1 - compile/534.lean (Failed)
