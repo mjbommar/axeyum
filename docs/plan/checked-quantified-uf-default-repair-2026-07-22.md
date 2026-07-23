@@ -1,6 +1,6 @@
 # Checked quantified-UF default repair
 
-Status: implementation complete; final branch-wide acceptance pending
+Status: complete; ADR-0359 accepted
 Date: 2026-07-22
 Decision: [ADR-0359](../research/09-decisions/adr-0359-preregister-checked-quantified-uf-default-repair.md)
 Implementation: `79a8dd21`
@@ -45,6 +45,27 @@ claim a complete quantifier procedure.
   replays, and zero Axeyum errors.
 - Solver all-target/all-feature Clippy is warning-free.
 
-ADR acceptance remains withheld until solver/workspace tests, strict rustdoc,
-foundational resources, parity, links, SMT-COMP recovery, and the QF_BV profile
-complete on the containing branch.
+## Final gates
+
+The containing branch passed:
+
+- 898 solver library tests, 69 evidence tests, 15 instantiation tests, and 21
+  MBQI integration tests;
+- the 256-case direct-Z3 repair differential in 77.16 seconds and the broader
+  UFLIA differential in 420.71 seconds, both with zero disagreements;
+- workspace tests and doctests with the two separately registered CAS moment-
+  family stress tests excluded from this solver acceptance run;
+- workspace all-target/all-feature Clippy with warnings denied and strict
+  workspace rustdoc;
+- 137 foundational concept rows and 174 example packs;
+- parity documentation with 680 compared decisions and zero disagreements,
+  links, and whitespace;
+- the QF_BV profile; and
+- 52 SMT-COMP recovery tests with one environment-dependent skip, plus the
+  scoring, selection-authority, and resume-contract gates.
+
+Workspace tests rewrote five timing-sensitive frontier JSON files. Inspection
+showed only fresh timing/frontier sampling from the test run; those generated
+measurements were restored to the committed baseline and are not part of this
+functionality result. ADR-0359 is accepted for only the bounded default-repair
+surface described above.
