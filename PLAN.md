@@ -9279,6 +9279,18 @@ coverage never regresses):
    while branch-wide gates remain open, and classify one distinct bounded
    mechanism for the three residual seeds next without cap growth or evidence
    widening.
+   That classification is now frozen under proposed ADR-0364. A SAT-only
+   single-Int-binder completion loop runs after every established route declines,
+   under only the original deadline's remaining time. Exact source equalities
+   `f(binder) = ground_term` may propose a total constant function, and the
+   existing finite-profile checker supplies one falsifying representative per
+   refinement round; neither is evidence. Two repeated 256-case measurements
+   identically recover seeds 122, 175, 182, and independently certified
+   Z3-timeout seed 226 at 1/0/1/2 rounds, projecting exactly 219 SAT, 24 UNSAT,
+   13 Unknown, and 219/219 replay. The blind 16-instance alternative is measured
+   bad: it overfits seeds 175/182 and reaches exhaustion/timeout. Implement only
+   ADR-0364's 32-round/32-instance fail-closed boundary next, with no fresh
+   timeout, non-SAT transfer, checker widening, or arbitrary entry rewrite.
 3. **Bank the CDCL(T) spine** (Gap 3): the default-dispatch ADR for the
    built-but-opt-in `CdclT` routes, then port arrays-lazy
    ([P2.2](docs/plan/track-2-theories/P2.2-arrays-lazy.md)) onto it — the
