@@ -75,7 +75,20 @@ These facts are regenerated from existing manifests. They are scoped evidence, n
 
 ## Paired terminal cells
 
-Registered terminal cells: **0**. The selected construct matrix remains bounded evidence until complete population identity, paired official/Axeyum execution, normalization, and source/dependency identity are registered.
+Expected / registered terminal cells: **0 / 0**. The selected construct matrix remains bounded evidence until complete population identity, paired official/Axeyum execution, normalization, and source/dependency identity are registered.
+
+| Population | Authority state | Expected cells | ID digest | Evidence | Residual |
+|---|---|---:|---|---|---|
+| `U0` | `not_registered` | 0 | `—` | - | No complete toolchain/bootstrap comparison-obligation authority is registered. |
+| `U1` | `not_registered` | 0 | `—` | - | No complete kernel/core comparison-obligation authority is registered. |
+| `U2` | `not_registered` | 0 | `—` | - | TL0.6.5 has no accepted TL0.6.3/TL0.6.4 parents or derived official/native comparison-obligation authority. |
+| `U3` | `not_registered` | 0 | `—` | - | No complete core-library comparison-obligation authority is registered. |
+| `U4` | `not_registered` | 0 | `—` | - | No complete Lake/project comparison-obligation authority is registered. |
+| `U5` | `not_registered` | 0 | `—` | - | No complete server/editor comparison-obligation authority is registered. |
+| `U6` | `not_registered` | 0 | `—` | - | No complete runtime/compiler comparison-obligation authority is registered. |
+| `U7` | `not_registered` | 0 | `—` | - | No complete mathlib comparison-obligation authority is registered. |
+| `U8` | `not_registered` | 0 | `—` | - | No complete adversarial/security comparison-obligation authority is registered. |
+| `U9` | `not_registered` | 0 | `—` | - | No complete platform/release comparison-obligation authority is registered. |
 
 | Outcome | Count |
 |---|---:|
@@ -107,7 +120,8 @@ Registered terminal cells: **0**. The selected construct matrix remains bounded 
 
 - An incomplete population cannot publish terminal raw/normalized denominators or a terminal content digest.
 - A complete axis cannot depend on an incomplete population.
-- A terminal paired cell requires exact source and dependency digests, normalization, source family, executable/configuration, command, environment, platform, resource, attempt, completion, outcome, assurance, diagnostics, timing, RSS, artifact-size, and both evidence sides.
+- A terminal paired cell requires common member/profile/source/dependency identity, separate official and Axeyum execution records, and a completed normalization/comparison record with retained evidence.
+- G3 additionally requires complete count-and-ID authorities for every U0-U9 paired population; a nonempty all-agree subset cannot satisfy it.
 - G1-G3 are derived from population, axis, and paired-cell states; they cannot be hand-promoted.
 - The terminal claim switch must exactly match all ten gate states.
 - A satisfied terminal gate must retain evidence.

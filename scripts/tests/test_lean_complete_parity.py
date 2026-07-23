@@ -32,6 +32,91 @@ class LeanCompleteParityTests(unittest.TestCase):
     def gate(self, gate_id: str) -> dict:
         return next(item for item in self.data["terminal_gates"] if item["id"] == gate_id)
 
+    def paired_authority(self, population_id: str) -> dict:
+        return next(
+            item
+            for item in self.data["paired_population_authorities"]
+            if item["population"] == population_id
+        )
+
+    @staticmethod
+    def retained_evidence() -> list[dict[str, str]]:
+        return [
+            {
+                "path": "docs/plan/lean4-complete-parity-contract-2026-07-22.md",
+                "detail": "Synthetic schema control only.",
+            }
+        ]
+
+    def paired_execution(self, state: str, digest_byte: str) -> dict:
+        value = digest_byte * 64
+        execution = {
+            "record_state": state,
+            "executable_sha256": value,
+            "configuration_sha256": value,
+            "command_sha256": value,
+            "environment_sha256": value,
+            "platform_id": "linux-x86-64-control",
+            "resource_envelope_sha256": value,
+            "attempt_id": f"attempt-{digest_byte}",
+            "completion_sha256": value,
+            "outcome_sha256": value,
+            "assurance_sha256": value,
+            "diagnostics_sha256": value,
+            "duration_ms": 1,
+            "peak_rss_kib": 1,
+            "artifact_bytes": 1,
+            "evidence": self.retained_evidence(),
+        }
+        if state != "complete":
+            for field in execution:
+                if field not in {"record_state", "evidence"}:
+                    execution[field] = None
+        return execution
+
+    def paired_cell(
+        self,
+        *,
+        outcome: str = "agree-success",
+        official_state: str = "complete",
+        axeyum_state: str = "complete",
+    ) -> dict:
+        return {
+            "id": "bounded-probe",
+            "population": "U1",
+            "population_member_id": "kernel-probe",
+            "profile_id": "linux-control",
+            "axis": "A1",
+            "layer": "kernel-admission",
+            "source_sha256": "c" * 64,
+            "dependency_sha256": "d" * 64,
+            "source_family": "probe",
+            "official": self.paired_execution(official_state, "a"),
+            "axeyum": self.paired_execution(axeyum_state, "b"),
+            "comparison": {
+                "outcome": outcome,
+                "normalization_id": "kernel-expression-v1",
+                "normalization_sha256": "e" * 64,
+                "contract_sha256": "f" * 64,
+                "result_sha256": "1" * 64,
+                "completed": True,
+                "evidence": self.retained_evidence(),
+            },
+        }
+
+    def register_bounded_pair(self, cell: dict) -> None:
+        self.data["paired_cells"] = [cell]
+        authority = self.paired_authority(cell["population"])
+        authority.update(
+            {
+                "state": "bounded_profile",
+                "expected_cells": 1,
+                "expected_ids_sha256": GEN.paired_id_digest([cell["id"]]),
+                "evidence": self.retained_evidence(),
+                "residual": "Synthetic bounded schema control; no terminal credit.",
+            }
+        )
+
     def failures(self) -> list[str]:
         return GEN.validate_manifest(self.data)
 
@@ -583,7 +668,7 @@ class LeanCompleteParityTests(unittest.TestCase):
         self.assertEqual(first, second)
         markdown = GEN.render_markdown(first)
         self.assertIn("complete Lean 4.30 parity not established", markdown)
-        self.assertIn("Registered terminal cells: **0**", markdown)
+        self.assertIn("Expected / registered terminal cells: **0 / 0**", markdown)
         self.assertFalse(first["terminal"]["ready"])
         self.assertEqual(first["bounded_snapshot"]["axiom_ledger"]["rows"], 65)
         self.assertEqual(
@@ -982,39 +1067,92 @@ class LeanCompleteParityTests(unittest.TestCase):
         )
 
     def test_paired_taxonomy_and_cells_require_exact_identity(self) -> None:
-        self.assertIn("command_sha256", GEN.PAIRED_CELL_FIELDS)
-        self.assertIn("environment_sha256", GEN.PAIRED_CELL_FIELDS)
-        self.assertIn("resource_envelope_sha256", GEN.PAIRED_CELL_FIELDS)
-        self.assertIn("attempt_id", GEN.PAIRED_CELL_FIELDS)
-        self.assertIn("completed", GEN.PAIRED_CELL_FIELDS)
+        self.assertEqual(
+            {"official", "axeyum", "comparison"} & GEN.PAIRED_CELL_FIELDS,
+            {"official", "axeyum", "comparison"},
+        )
+        self.assertNotIn("command_sha256", GEN.PAIRED_CELL_FIELDS)
+        self.assertIn("command_sha256", GEN.PAIRED_EXECUTION_FIELDS)
+        self.assertIn("attempt_id", GEN.PAIRED_EXECUTION_FIELDS)
+        self.assertIn("completed", GEN.PAIRED_COMPARISON_FIELDS)
         self.data["outcome_classes"][-1] = "other"
         self.assertTrue(any("outcome_classes/order" in failure for failure in self.failures()))
 
         self.data = GEN.load_manifest()
-        self.data["paired_cells"] = [
-            {
-                "id": "bounded-probe",
-                "population": "U1",
-                "axis": "A1",
-                "outcome": "agree-success",
-                "source_sha256": "bad",
-                "dependency_sha256": "bad",
-                "source_family": "probe",
-                "normalization": "kernel expression normalization v1",
-                "official_evidence": [],
-                "axeyum_evidence": [],
-            }
-        ]
+        cell = self.paired_cell()
+        cell["source_sha256"] = "bad"
+        cell["dependency_sha256"] = "bad"
+        cell["official"]["evidence"] = []
+        self.register_bounded_pair(cell)
         failures = self.failures()
         self.assertTrue(any("source_sha256 must be" in failure for failure in failures))
         self.assertTrue(any("dependency_sha256 must be" in failure for failure in failures))
         self.assertTrue(
             any(
-                "official_evidence: retained evidence" in failure
+                "bounded-probe.official: retained evidence" in failure
                 for failure in failures
             )
         )
-        self.assertTrue(any("G3: state disagrees" in failure for failure in failures))
+
+    def test_valid_bounded_pair_has_independent_execution_records(self) -> None:
+        cell = self.paired_cell()
+        self.register_bounded_pair(cell)
+        self.assertEqual(self.failures(), [])
+        self.assertNotEqual(
+            cell["official"]["command_sha256"], cell["axeyum"]["command_sha256"]
+        )
+
+        cell["official"]["command_sha256"] = None
+        self.assertTrue(
+            any(
+                "complete execution requires command_sha256" in failure
+                for failure in self.failures()
+            )
+        )
+
+    def test_paired_outcome_requires_coherent_side_states(self) -> None:
+        self.register_bounded_pair(
+            self.paired_cell(axeyum_state="not-run", outcome="agree-success")
+        )
+        self.assertTrue(
+            any(
+                "agree-success requires two complete executions" in failure
+                for failure in self.failures()
+            )
+        )
+
+        self.data = GEN.load_manifest()
+        self.register_bounded_pair(self.paired_cell(outcome="not-run"))
+        self.assertTrue(
+            any("not-run requires an absent side" in failure for failure in self.failures())
+        )
+
+        self.data = GEN.load_manifest()
+        self.register_bounded_pair(self.paired_cell(outcome="invalid-run"))
+        self.assertTrue(
+            any("invalid-run requires an invalid side" in failure for failure in self.failures())
+        )
+
+    def test_paired_authority_blocks_subset_and_digest_vacuity(self) -> None:
+        self.register_bounded_pair(self.paired_cell())
+        self.gate("G3")["state"] = "satisfied"
+        self.gate("G3")["evidence"] = self.retained_evidence()
+        self.assertTrue(
+            any(
+                "G3: state disagrees with derived registry evidence" in failure
+                for failure in self.failures()
+            )
+        )
+
+        self.data = GEN.load_manifest()
+        self.register_bounded_pair(self.paired_cell())
+        self.paired_authority("U1")["expected_ids_sha256"] = "0" * 64
+        self.assertTrue(
+            any(
+                "registered cell ID digest must match authority" in failure
+                for failure in self.failures()
+            )
+        )
 
     def test_claim_detector_rejects_affirmative_claims_only(self) -> None:
         self.assertEqual(

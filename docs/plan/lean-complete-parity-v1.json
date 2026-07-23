@@ -641,6 +641,88 @@
       "residual": "No full install/package/offline/platform/migration matrix currently earns parity credit."
     }
   ],
+  "paired_population_authorities": [
+    {
+      "population": "U0",
+      "state": "not_registered",
+      "expected_cells": 0,
+      "expected_ids_sha256": null,
+      "evidence": [],
+      "residual": "No complete toolchain/bootstrap comparison-obligation authority is registered."
+    },
+    {
+      "population": "U1",
+      "state": "not_registered",
+      "expected_cells": 0,
+      "expected_ids_sha256": null,
+      "evidence": [],
+      "residual": "No complete kernel/core comparison-obligation authority is registered."
+    },
+    {
+      "population": "U2",
+      "state": "not_registered",
+      "expected_cells": 0,
+      "expected_ids_sha256": null,
+      "evidence": [],
+      "residual": "TL0.6.5 has no accepted TL0.6.3/TL0.6.4 parents or derived official/native comparison-obligation authority."
+    },
+    {
+      "population": "U3",
+      "state": "not_registered",
+      "expected_cells": 0,
+      "expected_ids_sha256": null,
+      "evidence": [],
+      "residual": "No complete core-library comparison-obligation authority is registered."
+    },
+    {
+      "population": "U4",
+      "state": "not_registered",
+      "expected_cells": 0,
+      "expected_ids_sha256": null,
+      "evidence": [],
+      "residual": "No complete Lake/project comparison-obligation authority is registered."
+    },
+    {
+      "population": "U5",
+      "state": "not_registered",
+      "expected_cells": 0,
+      "expected_ids_sha256": null,
+      "evidence": [],
+      "residual": "No complete server/editor comparison-obligation authority is registered."
+    },
+    {
+      "population": "U6",
+      "state": "not_registered",
+      "expected_cells": 0,
+      "expected_ids_sha256": null,
+      "evidence": [],
+      "residual": "No complete runtime/compiler comparison-obligation authority is registered."
+    },
+    {
+      "population": "U7",
+      "state": "not_registered",
+      "expected_cells": 0,
+      "expected_ids_sha256": null,
+      "evidence": [],
+      "residual": "No complete mathlib comparison-obligation authority is registered."
+    },
+    {
+      "population": "U8",
+      "state": "not_registered",
+      "expected_cells": 0,
+      "expected_ids_sha256": null,
+      "evidence": [],
+      "residual": "No complete adversarial/security comparison-obligation authority is registered."
+    },
+    {
+      "population": "U9",
+      "state": "not_registered",
+      "expected_cells": 0,
+      "expected_ids_sha256": null,
+      "evidence": [],
+      "residual": "No complete platform/release comparison-obligation authority is registered."
+    }
+  ],
   "outcome_classes": [
     "agree-success",
     "agree-reject",

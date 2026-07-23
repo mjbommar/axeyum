@@ -52,7 +52,7 @@
     },
     {
       "path": "docs/plan/lean-complete-parity-v1.json",
-      "sha256": "ba967a8ed8178259203062286aff4a146b176d92c67652ba24af2428d64e25cf"
+      "sha256": "881a0d622cf242720d92fbec819fee5008c4cd0ab81bab6491219fe2ae668ce4"
     },
     {
       "path": "docs/plan/lean-complete-parity-worktree-portability-r1-result-2026-07-23.md",
@@ -352,7 +352,7 @@
     },
     {
       "path": "scripts/gen-lean-complete-parity.py",
-      "sha256": "86db13879f0bb5de753900643ec575e09e14628278959500f9379b56f96f964c"
+      "sha256": "7867a44a0b9a1a512a101cf60325b48691089fd6d865a9a8676cae9f0f757250"
     },
     {
       "path": "scripts/gen-lean-execution-evidence.py",
@@ -456,7 +456,7 @@
     },
     {
       "path": "scripts/tests/test_lean_complete_parity.py",
-      "sha256": "3b817a5d47f14f1455b0cf5b97fadd03c881afe73ec46774c49841c1e8594bbd"
+      "sha256": "e11d9ec4ace9f3c6ca1e3fb356edd322e0baa674e5ec2e255385554c5009af13"
     },
     {
       "path": "scripts/tests/test_lean_execution_acceptance.py",
@@ -2181,42 +2181,139 @@
       "residual": "No full install/package/offline/platform/migration matrix currently earns parity credit."
     }
   ],
+  "paired_population_authorities": [
+    {
+      "population": "U0",
+      "state": "not_registered",
+      "expected_cells": 0,
+      "expected_ids_sha256": null,
+      "evidence": [],
+      "residual": "No complete toolchain/bootstrap comparison-obligation authority is registered."
+    },
+    {
+      "population": "U1",
+      "state": "not_registered",
+      "expected_cells": 0,
+      "expected_ids_sha256": null,
+      "evidence": [],
+      "residual": "No complete kernel/core comparison-obligation authority is registered."
+    },
+    {
+      "population": "U2",
+      "state": "not_registered",
+      "expected_cells": 0,
+      "expected_ids_sha256": null,
+      "evidence": [],
+      "residual": "TL0.6.5 has no accepted TL0.6.3/TL0.6.4 parents or derived official/native comparison-obligation authority."
+    },
+    {
+      "population": "U3",
+      "state": "not_registered",
+      "expected_cells": 0,
+      "expected_ids_sha256": null,
+      "evidence": [],
+      "residual": "No complete core-library comparison-obligation authority is registered."
+    },
+    {
+      "population": "U4",
+      "state": "not_registered",
+      "expected_cells": 0,
+      "expected_ids_sha256": null,
+      "evidence": [],
+      "residual": "No complete Lake/project comparison-obligation authority is registered."
+    },
+    {
+      "population": "U5",
+      "state": "not_registered",
+      "expected_cells": 0,
+      "expected_ids_sha256": null,
+      "evidence": [],
+      "residual": "No complete server/editor comparison-obligation authority is registered."
+    },
+    {
+      "population": "U6",
+      "state": "not_registered",
+      "expected_cells": 0,
+      "expected_ids_sha256": null,
+      "evidence": [],
+      "residual": "No complete runtime/compiler comparison-obligation authority is registered."
+    },
+    {
+      "population": "U7",
+      "state": "not_registered",
+      "expected_cells": 0,
+      "expected_ids_sha256": null,
+      "evidence": [],
+      "residual": "No complete mathlib comparison-obligation authority is registered."
+    },
+    {
+      "population": "U8",
+      "state": "not_registered",
+      "expected_cells": 0,
+      "expected_ids_sha256": null,
+      "evidence": [],
+      "residual": "No complete adversarial/security comparison-obligation authority is registered."
+    },
+    {
+      "population": "U9",
+      "state": "not_registered",
+      "expected_cells": 0,
+      "expected_ids_sha256": null,
+      "evidence": [],
+      "residual": "No complete platform/release comparison-obligation authority is registered."
+    }
+  ],
   "paired_summary": {
     "registered_cells": 0,
-    "required_fields": [
-      "attempt_id",
-      "axeyum_artifact_bytes",
-      "axeyum_assurance_sha256",
-      "axeyum_configuration_sha256",
-      "axeyum_duration_ms",
-      "axeyum_evidence",
-      "axeyum_executable_sha256",
-      "axeyum_outcome_sha256",
-      "axeyum_peak_rss_kib",
-      "axis",
-      "command_sha256",
-      "completed",
-      "dependency_sha256",
-      "diagnostics_sha256",
-      "environment_sha256",
-      "id",
-      "layer",
-      "normalization",
-      "official_artifact_bytes",
-      "official_assurance_sha256",
-      "official_configuration_sha256",
-      "official_duration_ms",
-      "official_evidence",
-      "official_executable_sha256",
-      "official_outcome_sha256",
-      "official_peak_rss_kib",
-      "outcome",
-      "platform_id",
-      "population",
-      "resource_envelope_sha256",
-      "source_family",
-      "source_sha256"
-    ],
+    "expected_cells": 0,
+    "authority_state_counts": {
+      "complete_authority": 0,
+      "bounded_profile": 0,
+      "not_registered": 10
+    },
+    "required_fields": {
+      "cell": [
+        "axeyum",
+        "axis",
+        "comparison",
+        "dependency_sha256",
+        "id",
+        "layer",
+        "official",
+        "population",
+        "population_member_id",
+        "profile_id",
+        "source_family",
+        "source_sha256"
+      ],
+      "execution": [
+        "artifact_bytes",
+        "assurance_sha256",
+        "attempt_id",
+        "command_sha256",
+        "completion_sha256",
+        "configuration_sha256",
+        "diagnostics_sha256",
+        "duration_ms",
+        "environment_sha256",
+        "evidence",
+        "executable_sha256",
+        "outcome_sha256",
+        "peak_rss_kib",
+        "platform_id",
+        "record_state",
+        "resource_envelope_sha256"
+      ],
+      "comparison": [
+        "completed",
+        "contract_sha256",
+        "evidence",
+        "normalization_id",
+        "normalization_sha256",
+        "outcome",
+        "result_sha256"
+      ]
+    },
     "outcome_counts": {
       "agree-success": 0,
       "agree-reject": 0,

@@ -118,39 +118,60 @@ OUTCOME_CLASSES = (
     "invalid-run",
 )
 PARITY_OUTCOMES = {"agree-success", "agree-reject"}
+PAIRED_AUTHORITY_STATES = {
+    "not_registered",
+    "bounded_profile",
+    "complete_authority",
+}
+PAIRED_AUTHORITY_FIELDS = {
+    "population",
+    "state",
+    "expected_cells",
+    "expected_ids_sha256",
+    "evidence",
+    "residual",
+}
 PAIRED_CELL_FIELDS = {
     "id",
     "population",
+    "population_member_id",
+    "profile_id",
     "axis",
     "layer",
-    "outcome",
     "source_sha256",
     "dependency_sha256",
     "source_family",
-    "normalization",
-    "official_executable_sha256",
-    "official_configuration_sha256",
-    "axeyum_executable_sha256",
-    "axeyum_configuration_sha256",
+    "official",
+    "axeyum",
+    "comparison",
+}
+PAIRED_EXECUTION_FIELDS = {
+    "record_state",
+    "executable_sha256",
+    "configuration_sha256",
     "command_sha256",
     "environment_sha256",
     "platform_id",
     "resource_envelope_sha256",
     "attempt_id",
-    "completed",
-    "official_outcome_sha256",
-    "axeyum_outcome_sha256",
-    "official_assurance_sha256",
-    "axeyum_assurance_sha256",
+    "completion_sha256",
+    "outcome_sha256",
+    "assurance_sha256",
     "diagnostics_sha256",
-    "official_duration_ms",
-    "axeyum_duration_ms",
-    "official_peak_rss_kib",
-    "axeyum_peak_rss_kib",
-    "official_artifact_bytes",
-    "axeyum_artifact_bytes",
-    "official_evidence",
-    "axeyum_evidence",
+    "duration_ms",
+    "peak_rss_kib",
+    "artifact_bytes",
+    "evidence",
+}
+PAIRED_EXECUTION_STATES = {"complete", "not-run", "invalid"}
+PAIRED_COMPARISON_FIELDS = {
+    "outcome",
+    "normalization_id",
+    "normalization_sha256",
+    "contract_sha256",
+    "result_sha256",
+    "completed",
+    "evidence",
 }
 HEX40 = re.compile(r"^[0-9a-f]{40}$")
 HEX64 = re.compile(r"^[0-9a-f]{64}$")
@@ -382,6 +403,104 @@ def validate_axes(
     return result
 
 
+def paired_id_digest(ids: list[str]) -> str:
+    digest = hashlib.sha256()
+    digest.update(b"axeyum-lean-paired-cell-ids-v1\0")
+    for cell_id in sorted(ids):
+        digest.update(cell_id.encode("utf-8"))
+        digest.update(b"\0")
+    return digest.hexdigest()
+
+
+def validate_paired_execution(
+    owner: str, execution: Any, failures: list[str]
+) -> str | None:
+    if not isinstance(execution, dict):
+        failures.append(f"{owner}: execution record must be an object")
+        return None
+    if set(execution) != PAIRED_EXECUTION_FIELDS:
+        failures.append(f"{owner}: execution record fields must be exact")
+    state = execution.get("record_state")
+    if state not in PAIRED_EXECUTION_STATES:
+        failures.append(f"{owner}: invalid execution record_state {state!r}")
+        state = None
+
+    digest_fields = (
+        "executable_sha256",
+        "configuration_sha256",
+        "command_sha256",
+        "environment_sha256",
+        "resource_envelope_sha256",
+        "completion_sha256",
+        "outcome_sha256",
+        "assurance_sha256",
+        "diagnostics_sha256",
+    )
+    string_fields = ("platform_id", "attempt_id")
+    metric_fields = ("duration_ms", "peak_rss_kib", "artifact_bytes")
+    for field in digest_fields:
+        value = execution.get(field)
+        if value is not None and not HEX64.fullmatch(str(value)):
+            failures.append(f"{owner}: {field} must be null or lowercase 64-hex")
+    for field in string_fields:
+        value = execution.get(field)
+        if value is not None and (not isinstance(value, str) or not value.strip()):
+            failures.append(f"{owner}: {field} must be null or a non-empty string")
+    for field in metric_fields:
+        value = execution.get(field)
+        if value is not None and (
+            not isinstance(value, int) or isinstance(value, bool) or value < 0
+        ):
+            failures.append(f"{owner}: {field} must be null or a non-negative integer")
+
+    if state == "complete":
+        for field in digest_fields + string_fields + metric_fields:
+            if execution.get(field) is None:
+                failures.append(f"{owner}: complete execution requires {field}")
+    validate_evidence(owner, execution.get("evidence"), failures, required=True)
+    return state
+
+
+def validate_paired_comparison(
+    owner: str,
+    comparison: Any,
+    official_state: str | None,
+    axeyum_state: str | None,
+    failures: list[str],
+) -> str | None:
+    if not isinstance(comparison, dict):
+        failures.append(f"{owner}: comparison record must be an object")
+        return None
+    if set(comparison) != PAIRED_COMPARISON_FIELDS:
+        failures.append(f"{owner}: comparison record fields must be exact")
+    outcome = comparison.get("outcome")
+    if outcome not in OUTCOME_CLASSES:
+        failures.append(f"{owner}: invalid comparison outcome {outcome!r}")
+        outcome = None
+    normalization_id = comparison.get("normalization_id")
+    if not isinstance(normalization_id, str) or not normalization_id.strip():
+        failures.append(f"{owner}: non-empty normalization_id is required")
+    for field in ("normalization_sha256", "contract_sha256", "result_sha256"):
+        if not HEX64.fullmatch(str(comparison.get(field, ""))):
+            failures.append(f"{owner}: {field} must be lowercase 64-hex")
+    if comparison.get("completed") is not True:
+        failures.append(f"{owner}: comparison must be completed")
+    validate_evidence(owner, comparison.get("evidence"), failures, required=True)
+
+    states = {official_state, axeyum_state}
+    if outcome == "not-run":
+        if "not-run" not in states or "invalid" in states:
+            failures.append(
+                f"{owner}: not-run requires an absent side and no invalid side"
+            )
+    elif outcome == "invalid-run":
+        if "invalid" not in states:
+            failures.append(f"{owner}: invalid-run requires an invalid side")
+    elif outcome is not None and states != {"complete"}:
+        failures.append(f"{owner}: {outcome} requires two complete executions")
+    return outcome
+
+
 def validate_paired_cells(data: dict[str, Any], failures: list[str]) -> list[dict[str, Any]]:
     outcomes = data.get("outcome_classes")
     if (tuple(outcomes) if isinstance(outcomes, list) else None) != OUTCOME_CLASSES:
@@ -406,56 +525,126 @@ def validate_paired_cells(data: dict[str, Any], failures: list[str]) -> list[dic
             failures.append(f"{cell_id}: invalid population")
         if cell.get("axis") not in AXIS_IDS:
             failures.append(f"{cell_id}: invalid axis")
-        if cell.get("outcome") not in OUTCOME_CLASSES:
-            failures.append(f"{cell_id}: invalid outcome")
-        digest_fields = (
-            "source_sha256",
-            "dependency_sha256",
-            "official_executable_sha256",
-            "official_configuration_sha256",
-            "axeyum_executable_sha256",
-            "axeyum_configuration_sha256",
-            "command_sha256",
-            "environment_sha256",
-            "resource_envelope_sha256",
-            "official_outcome_sha256",
-            "axeyum_outcome_sha256",
-            "official_assurance_sha256",
-            "axeyum_assurance_sha256",
-            "diagnostics_sha256",
-        )
-        for field in digest_fields:
+        for field in ("source_sha256", "dependency_sha256"):
             if not HEX64.fullmatch(str(cell.get(field, ""))):
                 failures.append(f"{cell_id}: {field} must be lowercase 64-hex")
         for field in (
             "layer",
             "source_family",
-            "normalization",
-            "platform_id",
-            "attempt_id",
+            "population_member_id",
+            "profile_id",
         ):
             if not isinstance(cell.get(field), str) or not cell[field].strip():
                 failures.append(f"{cell_id}: non-empty {field} is required")
-        if cell.get("completed") is not True:
-            failures.append(f"{cell_id}: terminal paired cell must be completed")
-        for field in (
-            "official_duration_ms",
-            "axeyum_duration_ms",
-            "official_peak_rss_kib",
-            "axeyum_peak_rss_kib",
-            "official_artifact_bytes",
-            "axeyum_artifact_bytes",
-        ):
-            value = cell.get(field)
-            if not isinstance(value, int) or isinstance(value, bool) or value < 0:
-                failures.append(f"{cell_id}: {field} must be a non-negative integer")
-        for field in ("official_evidence", "axeyum_evidence"):
-            validate_evidence(cell_id + "." + field, cell.get(field), failures, required=True)
+        official_state = validate_paired_execution(
+            cell_id + ".official", cell.get("official"), failures
+        )
+        axeyum_state = validate_paired_execution(
+            cell_id + ".axeyum", cell.get("axeyum"), failures
+        )
+        validate_paired_comparison(
+            cell_id + ".comparison",
+            cell.get("comparison"),
+            official_state,
+            axeyum_state,
+            failures,
+        )
     return cells
 
 
+def validate_paired_authorities(
+    data: dict[str, Any], cells: list[dict[str, Any]], failures: list[str]
+) -> dict[str, dict[str, Any]]:
+    authorities = data.get("paired_population_authorities")
+    if not isinstance(authorities, list):
+        failures.append("paired_population_authorities must be a list")
+        return {}
+    ids = tuple(
+        authority.get("population")
+        for authority in authorities
+        if isinstance(authority, dict)
+    )
+    if ids != POPULATION_IDS:
+        failures.append(
+            f"paired population authority ids/order must be {POPULATION_IDS!r}"
+        )
+    result: dict[str, dict[str, Any]] = {}
+    for authority in authorities:
+        if not isinstance(authority, dict):
+            failures.append("every paired population authority must be an object")
+            continue
+        population = str(authority.get("population", "<unknown>"))
+        if set(authority) != PAIRED_AUTHORITY_FIELDS:
+            failures.append(f"{population}: paired authority fields must be exact")
+        if population not in POPULATION_IDS:
+            failures.append(f"{population}: invalid paired authority population")
+            continue
+        result[population] = authority
+        state = authority.get("state")
+        if state not in PAIRED_AUTHORITY_STATES:
+            failures.append(f"{population}: invalid paired authority state {state!r}")
+        expected = authority.get("expected_cells")
+        if not isinstance(expected, int) or isinstance(expected, bool) or expected < 0:
+            failures.append(
+                f"{population}: expected_cells must be a non-negative integer"
+            )
+            expected = -1
+        expected_digest = authority.get("expected_ids_sha256")
+        if expected == 0:
+            if expected_digest is not None:
+                failures.append(
+                    f"{population}: zero expected cells require a null ID digest"
+                )
+        elif not HEX64.fullmatch(str(expected_digest or "")):
+            failures.append(
+                f"{population}: nonzero expected cells require a lowercase 64-hex ID digest"
+            )
+        residual = authority.get("residual")
+        if not isinstance(residual, str) or not residual.strip():
+            failures.append(f"{population}: non-empty paired authority residual is required")
+        validate_evidence(
+            population + ".paired-authority",
+            authority.get("evidence"),
+            failures,
+            required=state in {"bounded_profile", "complete_authority"},
+        )
+
+        population_cells = [
+            cell
+            for cell in cells
+            if isinstance(cell, dict) and cell.get("population") == population
+        ]
+        population_ids = [str(cell.get("id")) for cell in population_cells]
+        if state == "not_registered":
+            if expected != 0 or expected_digest is not None or population_cells:
+                failures.append(
+                    f"{population}: not_registered authority must have zero cells and no digest"
+                )
+            if authority.get("evidence"):
+                failures.append(
+                    f"{population}: not_registered authority cannot carry evidence"
+                )
+        elif state in {"bounded_profile", "complete_authority"}:
+            if expected <= 0:
+                failures.append(
+                    f"{population}: registered paired authority requires positive expected_cells"
+                )
+            if len(population_cells) != expected:
+                failures.append(
+                    f"{population}: registered cell count must equal expected_cells"
+                )
+            if population_ids and paired_id_digest(population_ids) != expected_digest:
+                failures.append(
+                    f"{population}: registered cell ID digest must match authority"
+                )
+    return result
+
+
 def derived_gate_states(
-    populations: dict[str, Any], axes: dict[str, Any], cells: list[dict[str, Any]]
+    populations: dict[str, Any],
+    axes: dict[str, Any],
+    paired_authorities: dict[str, dict[str, Any]],
+    cells: list[dict[str, Any]],
 ) -> dict[str, bool]:
     complete_populations = bool(populations) and all(
         item.get("state") == "complete_authority" for item in populations.values()
@@ -463,8 +652,14 @@ def derived_gate_states(
     complete_axes = bool(axes) and all(
         item.get("state") == "complete" for item in axes.values()
     )
-    paired_agreement = bool(cells) and all(
-        cell.get("outcome") in PARITY_OUTCOMES for cell in cells
+    complete_paired_authorities = bool(paired_authorities) and all(
+        authority.get("state") == "complete_authority"
+        for authority in paired_authorities.values()
+    )
+    paired_agreement = complete_paired_authorities and bool(cells) and all(
+        isinstance(cell.get("comparison"), dict)
+        and cell["comparison"].get("outcome") in PARITY_OUTCOMES
+        for cell in cells
     )
     return {"G1": complete_populations, "G2": complete_axes, "G3": paired_agreement}
 
@@ -473,6 +668,7 @@ def validate_gates(
     data: dict[str, Any],
     populations: dict[str, Any],
     axes: dict[str, Any],
+    paired_authorities: dict[str, dict[str, Any]],
     cells: list[dict[str, Any]],
     failures: list[str],
 ) -> bool:
@@ -483,7 +679,7 @@ def validate_gates(
     ids = tuple(gate.get("id") for gate in gates if isinstance(gate, dict))
     if ids != GATE_IDS:
         failures.append(f"terminal gate ids/order must be {GATE_IDS!r}")
-    derived = derived_gate_states(populations, axes, cells)
+    derived = derived_gate_states(populations, axes, paired_authorities, cells)
     for gate in gates:
         if not isinstance(gate, dict):
             failures.append("every terminal gate must be an object")
@@ -571,7 +767,10 @@ def validate_manifest(data: dict[str, Any]) -> list[str]:
     populations = validate_populations(data, failures)
     axes = validate_axes(data, populations, failures)
     cells = validate_paired_cells(data, failures)
-    terminal_ready = validate_gates(data, populations, axes, cells, failures)
+    paired_authorities = validate_paired_authorities(data, cells, failures)
+    terminal_ready = validate_gates(
+        data, populations, axes, paired_authorities, cells, failures
+    )
     validate_claim_surfaces(data, terminal_ready, failures)
     return failures
 
@@ -1078,19 +1277,31 @@ def report_source_paths(data: dict[str, Any]) -> list[Path]:
         / "test_lean_u2_official_execution_m2_r6_result.py",
         ROOT / "docs/plan/lean-u2-official-execution-tl0.6.3-m2-r6-v1.json",
     }
-    for collection in (data["populations"], data["axes"], data["terminal_gates"]):
+    for collection in (
+        data["populations"],
+        data["paired_population_authorities"],
+        data["axes"],
+        data["terminal_gates"],
+    ):
         for item in collection:
             paths.update(ROOT / evidence["path"] for evidence in item["evidence"])
     for cell in data["paired_cells"]:
-        for field in ("official_evidence", "axeyum_evidence"):
-            paths.update(ROOT / evidence["path"] for evidence in cell[field])
+        for field in ("official", "axeyum", "comparison"):
+            paths.update(
+                ROOT / evidence["path"] for evidence in cell[field]["evidence"]
+            )
     return sorted(paths, key=relative)
 
 
 def build_report(data: dict[str, Any]) -> dict[str, Any]:
     population_counts = Counter(item["state"] for item in data["populations"])
     axis_counts = Counter(item["state"] for item in data["axes"])
-    outcome_counts = Counter(cell["outcome"] for cell in data["paired_cells"])
+    paired_authority_counts = Counter(
+        item["state"] for item in data["paired_population_authorities"]
+    )
+    outcome_counts = Counter(
+        cell["comparison"]["outcome"] for cell in data["paired_cells"]
+    )
     terminal_ready = all(gate["state"] == "satisfied" for gate in data["terminal_gates"])
     source_paths = report_source_paths(data)
     return {
@@ -1140,13 +1351,33 @@ def build_report(data: dict[str, Any]) -> dict[str, Any]:
             },
         },
         "axes": data["axes"],
+        "paired_population_authorities": data["paired_population_authorities"],
         "paired_summary": {
             "registered_cells": len(data["paired_cells"]),
-            "required_fields": sorted(PAIRED_CELL_FIELDS),
+            "expected_cells": sum(
+                item["expected_cells"]
+                for item in data["paired_population_authorities"]
+            ),
+            "authority_state_counts": {
+                state: paired_authority_counts[state]
+                for state in (
+                    "complete_authority",
+                    "bounded_profile",
+                    "not_registered",
+                )
+            },
+            "required_fields": {
+                "cell": sorted(PAIRED_CELL_FIELDS),
+                "execution": sorted(PAIRED_EXECUTION_FIELDS),
+                "comparison": sorted(PAIRED_COMPARISON_FIELDS),
+            },
             "outcome_counts": {
                 outcome: outcome_counts[outcome] for outcome in OUTCOME_CLASSES
             },
-            "terminal_population_registered": bool(data["paired_cells"]),
+            "terminal_population_registered": all(
+                item["state"] == "complete_authority"
+                for item in data["paired_population_authorities"]
+            ),
         },
         "paired_cells": data["paired_cells"],
         "terminal_gates": data["terminal_gates"],
@@ -1418,10 +1649,26 @@ def render_markdown(report: dict[str, Any]) -> str:
             "",
             "## Paired terminal cells",
             "",
-            f"Registered terminal cells: **{paired['registered_cells']}**. "
+            f"Expected / registered terminal cells: **{paired['expected_cells']} / "
+            f"{paired['registered_cells']}**. "
             "The selected construct matrix remains bounded evidence until complete "
             "population identity, paired official/Axeyum execution, normalization, "
             "and source/dependency identity are registered.",
+            "",
+            "| Population | Authority state | Expected cells | ID digest | Evidence | Residual |",
+            "|---|---|---:|---|---|---|",
+        ]
+    )
+    for authority in report["paired_population_authorities"]:
+        digest = authority["expected_ids_sha256"] or "—"
+        lines.append(
+            f"| `{authority['population']}` | `{authority['state']}` | "
+            f"{authority['expected_cells']} | `{digest}` | "
+            f"{evidence_links(authority['evidence'])} | "
+            f"{md_escape(authority['residual'])} |"
+        )
+    lines.extend(
+        [
             "",
             "| Outcome | Count |",
             "|---|---:|",
@@ -1451,11 +1698,11 @@ def render_markdown(report: dict[str, Any]) -> str:
             "- An incomplete population cannot publish terminal raw/normalized "
             "denominators or a terminal content digest.",
             "- A complete axis cannot depend on an incomplete population.",
-            "- A terminal paired cell requires exact source and dependency digests, "
-            "normalization, source family, executable/configuration, command, "
-            "environment, platform, resource, attempt, completion, outcome, "
-            "assurance, diagnostics, timing, RSS, artifact-size, and both evidence "
-            "sides.",
+            "- A terminal paired cell requires common member/profile/source/dependency "
+            "identity, separate official and Axeyum execution records, and a completed "
+            "normalization/comparison record with retained evidence.",
+            "- G3 additionally requires complete count-and-ID authorities for every "
+            "U0-U9 paired population; a nonempty all-agree subset cannot satisfy it.",
             "- G1-G3 are derived from population, axis, and paired-cell states; they "
             "cannot be hand-promoted.",
             "- The terminal claim switch must exactly match all ten gate states.",
