@@ -579,9 +579,10 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   original-query replay. Seed 122 declines at 289 combinations; seeds 175 and
   182 exhaust their bounded products. The production boundary runs once on the
   outer initial candidate, only after ADR-0362 and ADR-0360 decline, and leaves
-  ordinary MBQI/E-matching/ADR-0361 unchanged on failure. Next: implement the
-  exact boundary and gate the preregistered 233/233 agreement, 215/215 SAT
-  replay expectation.
+  ordinary MBQI/E-matching/ADR-0361 unchanged on failure. Two prototype runs
+  hold 215/215 SAT replay and vary only between 232 and 233 joint agreements as
+  Z3 records ten versus nine independent timeouts. Next: implement the exact
+  boundary with a 232 joint floor and exact semantic counts.
 - **2026-07-23 — ADR-0362's guarded fixed-query MBQI level is implemented and
   passes its solver gates.** The
   nine-seed post-ADR-0361 classification checks 45 bounded candidates and finds

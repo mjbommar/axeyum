@@ -72,10 +72,14 @@ The placement preserves every established decision before spending work on the
 new mechanism. On decline, ordinary MBQI, E-matching, and ADR-0361 continue
 unchanged under the caller's shared deadline.
 
-The preregistered frozen expectation is 233 jointly decided agreements, 215
-Axeyum SAT, 24 Axeyum UNSAT, 17 Axeyum Unknown, 215/215 SAT replay, and zero
-error or disagreement. The residual ordinary Z3-SAT Unknowns should be exactly
-`122, 175, 182`.
+Two exact production-path prototype runs agree on 215 Axeyum SAT, 24 Axeyum
+UNSAT, 17 Axeyum Unknown, 215/215 SAT replay, zero errors/disagreements, and the
+same three ordinary Z3-SAT residuals. They report 232 and 233 jointly decided
+agreements because the independent two-second Z3 call times out on ten versus
+nine seeds. The frozen gate therefore requires at least 232 jointly decided
+agreements plus the exact Axeyum/replay/residual invariants; it does not turn
+oracle timeout scheduling into a solver-capability claim. The residual ordinary
+Z3-SAT Unknowns must be exactly `122, 175, 182`.
 
 ## Reproduction
 
