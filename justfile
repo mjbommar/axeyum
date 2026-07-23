@@ -135,6 +135,8 @@ parity-docs:
     python3 scripts/lean_u2_official_execution_m2_store.py --check
     python3 -m unittest scripts.tests.test_lean_u2_official_execution_m2_run
     python3 scripts/lean_u2_official_execution_m2_run.py offline-check
+    python3 -m unittest scripts.tests.test_lean_u2_official_execution_m2_r2
+    python3 scripts/lean_u2_official_execution_m2_r2.py offline-check
     python3 -m unittest scripts.tests.test_lean_complete_parity
     python3 -m unittest scripts.tests.test_lean_official_construct_matrix
     python3 scripts/check-lean-official-construct-matrix.py --check
