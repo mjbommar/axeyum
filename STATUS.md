@@ -388,6 +388,20 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-22 — exact arbitrary-order Bessel Maclaurin series and zero
+  limits.** The existing `series` compute path now composes every nonnegative
+  integer-order `Jₙ` and `Iₙ` whose argument vanishes at the origin, using the
+  checked recurrence `c₀=1/(2ⁿn!)`, `cₖ=cₖ₋₁/(4k(n+k))` and alternating signs
+  for `Jₙ`. The valuation check runs before order-dependent work, so
+  `u32::MAX` at a small truncation returns exact zero promptly; coefficients
+  beyond the public checked-`i128` rational domain decline. DLMF/SymPy fixtures,
+  nonlinear composition, both defining ODEs through order 16 / degree 24, and
+  public zero limits through order 8 pass. The full 544-unit/147-doctest suite
+  passed (923.30 s for units), together with warning-denied workspace Clippy,
+  strict stable/nightly rustdoc, WASM, links, and whitespace checks. Next:
+  implement the measured direct Bessel antiderivative pairs through the normal
+  differentiate-and-check certificate.
+
 - **2026-07-22 — exact order-one Bessel inverse Laplace pairs.** A fifth broad,
   timeout-bounded probe found that rational-trigonometric Fourier cases and
   representative Gaussian/rational integrating-factor ODEs already succeed,
@@ -8012,6 +8026,11 @@ plan is built and committed on the current branch:
 | P5.5 | External target, measured | **DONE (bounded v1, ADR-0323--0338):** authenticated Tock capture plus eight rechecked dual-DRAT proofs and six replayed controls, UNKNOWN=0, DISAGREE=0. Query time 12.700 s; fresh outer wall 50.745 s; peak RSS 1,256,496 KiB; zero OOM deltas. The committed case study compares exact target validation, universal coverage, trust, effort, artifact boundaries, and limits. No Tock bug was found, so no upstream issue is applicable. This is not a speed or whole-kernel claim. |
 
 ## Changelog
+
+- **2026-07-22 — Added exact arbitrary-order Bessel Maclaurin series and zero
+  limits.** Checked `Jₙ`/`Iₙ` coefficient recurrences, independent fixtures and
+  ODE replay, public removable limits, and explicit overflow/order boundaries
+  bring the CAS surface to 544 unit tests and 147 doctests.
 
 - **2026-07-22 — Added exact order-one Bessel inverse Laplace pairs.** Exact
   rational-scale/shift `J₁` and `I₁` transforms now invert through a structural
