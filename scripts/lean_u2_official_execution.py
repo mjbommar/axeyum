@@ -123,6 +123,7 @@ REPOSITORY_INPUTS = {
 
 CURRENT_REPOSITORY_INPUT_OVERRIDES = {
     "scripts/lean_execution_process.py": "b2f90c46928afad352fbf95390c5e54858ce792b5d20677f1ba25978375f7948",
+    "scripts/lean_execution_store.py": "31798c7a37018f58b4dda99fcc9478c550d37844a93acad48c1e86016c0d2513",
 }
 
 HISTORICAL_RESULT_GENERATOR_INPUTS = (

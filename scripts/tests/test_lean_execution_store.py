@@ -380,6 +380,36 @@ class LeanExecutionStoreContractTests(unittest.TestCase):
                 ),
                 [],
             )
+            relocated = copy.deepcopy(process)
+            relocated_root = Path("/var/tmp/independent-axeyum-worktree")
+            relocated["command"][1] = str(
+                relocated_root / STORE.WORKER.relative_to(STORE.ROOT)
+            )
+            relocated["command_sha256"] = STORE.digest(relocated["command"])
+            relocated["environment"]["PYTHONPATH"] = str(
+                relocated_root / STORE.SMTCOMP.relative_to(STORE.ROOT)
+            )
+            relocated["environment_sha256"] = STORE.digest(relocated["environment"])
+            self.assertEqual(
+                STORE.validate_process_evidence(
+                    relocated,
+                    target_path=target,
+                    phase=phase,
+                    evidence_directory=evidence,
+                ),
+                [],
+            )
+            relocated["environment"]["PYTHONPATH"] = str(STORE.SMTCOMP)
+            relocated["environment_sha256"] = STORE.digest(relocated["environment"])
+            self.assertIn(
+                "kill cell environment drift",
+                STORE.validate_process_evidence(
+                    relocated,
+                    target_path=target,
+                    phase=phase,
+                    evidence_directory=evidence,
+                ),
+            )
             changed = copy.deepcopy(process)
             changed["command"][1] = "/usr/bin/lean"
             changed["command_sha256"] = STORE.digest(changed["command"])
