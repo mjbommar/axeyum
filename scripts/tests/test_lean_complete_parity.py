@@ -74,6 +74,11 @@ class LeanCompleteParityTests(unittest.TestCase):
         self.assertEqual(m2["store"]["case_records"], 64)
         self.assertTrue(m2["runner"]["run_command_exposed"])
         self.assertFalse(m2["runner"]["live_execution_observed"])
+        self.assertEqual(m2["r3_incomplete"]["terminal_class"], "wall-timeout")
+        self.assertEqual(m2["r3_incomplete"]["files"], 17)
+        self.assertEqual(m2["r3_incomplete"]["bytes"], 4_908_035)
+        self.assertEqual(m2["r3_incomplete"]["official_outcomes"], 0)
+        self.assertEqual(m2["r3_incomplete"]["parity_credit"], 0)
         self.assertEqual(u2["outcomes"]["paired_registered"], 0)
         u2_ci = first["bounded_snapshot"]["u2_ci_profile_authority"]
         self.assertEqual(u2_ci["derivation"]["contexts"], 17)

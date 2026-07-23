@@ -626,7 +626,11 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   The [implementation checkpoint](docs/plan/lean-u2-official-execution-tl0.6.3-m2-r3-attempt-002-implementation-2026-07-23.md)
   records pushed commit `d47dacc6`, 6/6 focused and 264 aggregate Lean tests,
   an exact harmless released-Lean stack probe, and no selected harness,
-  discovery, or process. Next run final external preflight, then invoke once.
+  discovery, or process. Exact preflight then passed at `0a4d5daa` and attempt
+  002 ran once. The [R3 result](docs/plan/lean-u2-official-execution-tl0.6.3-m2-r3-attempt-002-result-2026-07-23.md)
+  retains a 3,600,038 ms wall timeout after seven diagnostic passes and a
+  channel thread-creation/deadlock symptom: 17 files / 4,908,035 bytes, group
+  reaped, no JUnit/cases/completion, zero M2 credit, and no retry.
 
 - **2026-07-22 — TL0.6.3 M1 derives complete deterministic U2 child-shard
   scheduling with zero new outcomes or parity credit.** The source-first
@@ -7938,6 +7942,11 @@ plan is built and committed on the current branch:
 | P5.5 | External target, measured | **DONE (bounded v1, ADR-0323--0338):** authenticated Tock capture plus eight rechecked dual-DRAT proofs and six replayed controls, UNKNOWN=0, DISAGREE=0. Query time 12.700 s; fresh outer wall 50.745 s; peak RSS 1,256,496 KiB; zero OOM deltas. The committed case study compares exact target validation, universal coverage, trust, effort, artifact boundaries, and limits. No Tock bug was found, so no upstream issue is applicable. This is not a speed or whole-kernel claim. |
 
 ## Changelog
+
+- **2026-07-23 — Retained M2 R3 attempt-002's wall timeout.** Exact preflight
+  passed at `0a4d5daa`; the channel benchmark then failed dedicated-thread
+  creation and deadlocked. The one-hour watchdog reaped the group and retained
+  17 files with no JUnit/completion or M2 credit. R3 is consumed.
 
 - **2026-07-23 — Published the M2 R3 attempt-002 runner.** Commit `d47dacc6`
   adds the exact stack-aware spec/wrapper, family-specific tiered evidence

@@ -201,8 +201,10 @@ Current TL0.6.3 handoff: the separately pushed
 [M2 R3 implementation checkpoint](lean-u2-official-execution-tl0.6.3-m2-r3-attempt-002-implementation-2026-07-23.md)
 records commit `d47dacc6`, six focused and 264 aggregate Lean tests, the exact
 harmless 512 MiB direct-runtime stack probe, and no selected R3 execution.
-Final clean/remote/root/hash preflight now precedes the one permitted
-attempt-002 invocation.
+Final clean/remote/root/hash preflight passed at `0a4d5daa`, then attempt 002
+ran once. Its [R3 result](lean-u2-official-execution-tl0.6.3-m2-r3-attempt-002-result-2026-07-23.md)
+retains a reaped one-hour channel deadlock timeout, 17 files, no
+JUnit/completion, zero M2 credit, and no retry.
 
 L0 exits when status is generated from evidence rather than hand-copied prose.
 
@@ -552,9 +554,12 @@ parallel lane:
     completed its zero-process tiered diagnostic append. Pushed commit
     `d47dacc6` now implements and validates the source-first M2 R3 attempt-002
     runner and tiered store without selected execution. **NEXT:** perform the
-    exact external clean/remote/root/hash preflight, then invoke its fresh
-    64-case shard at most once under universal
-    `LEAN_STACK_SIZE_KB=524288`. Classify completed native dependencies and
+    exact external clean/remote/root/hash preflight. It passed at `0a4d5daa`,
+    but the one allowed process timed out after the channel benchmark failed
+    dedicated-thread creation and deadlocked. The group was reaped with no
+    JUnit/completion or M2 credit. **NEXT:** publish/preserve that consumed R3
+    failure, then preregister any new resource/isolation attempt. Classify
+    completed native dependencies and
     form the first official/Axeyum pair. Do not rerun the singleton for coverage
     or promote an official-only pass into parity credit. Continue U0-U9
     authorities and A0-A11 paired scoreboards through the
