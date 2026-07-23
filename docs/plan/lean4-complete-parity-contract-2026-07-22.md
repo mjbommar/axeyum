@@ -427,6 +427,17 @@ complete the parent official profile, claim its provider, create an Axeyum
 outcome or pair, publish performance evidence, or advance any complete
 population, axis, or terminal gate.
 
+The source-first [M1 shard plan](lean-u2-official-execution-tl0.6.3-m1-shard-plan-2026-07-22.md)
+and accepted [result](lean-u2-official-execution-tl0.6.3-m1-shard-result-2026-07-22.md)
+now derive a complete scheduling projection without executing a test. The
+[machine authority](lean-u2-official-child-shards-v1.json) factors the eight
+selection identities into five exact ordered memberships and partitions them
+into 289 contiguous physical shards capped at 64 cases: 461
+selection-expanded and 6,451 attempt-expanded shard occurrences. All 111
+attempt bindings and every new shard remain `not-run`. The historical M0 case
+is annotation only, so this derivation changes no U2 outcome, pair,
+performance, population, axis, gate, or parity credit.
+
 ## 8. Layer-specific equivalence
 
 One byte-comparison rule cannot cover the entire system:

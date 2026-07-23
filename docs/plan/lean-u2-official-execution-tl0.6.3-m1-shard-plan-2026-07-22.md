@@ -36,7 +36,7 @@ ordinal zero, any individual shard, and any prefix of the order may not be used
 to estimate a pass, failure, support, performance, or parity rate.
 
 This is an evidence-only projection under
-[ADR-0345](../research/09-decisions/ADR-0345-versioned-lean-export-import-boundary.md):
+[ADR-0345](../research/09-decisions/adr-0345-preregister-lean-system-interoperability.md):
 it strengthens identity and fail-closed accounting without changing the Lean
 wire format, importer, kernel, supported construct set, or public solver
 surface. No new ADR is required for this preregistered derivation.

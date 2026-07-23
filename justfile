@@ -114,6 +114,8 @@ parity-docs:
     python3 scripts/gen-lean-u2-test-authority.py --check
     python3 -m unittest scripts.tests.test_lean_u2_official_ci_profiles
     python3 scripts/gen-lean-u2-official-ci-profiles.py --check
+    python3 -m unittest scripts.tests.test_lean_u2_official_child_shards
+    python3 scripts/gen-lean-u2-official-child-shards.py --check
     python3 -m unittest scripts.tests.test_lean_execution_evidence
     python3 scripts/gen-lean-execution-evidence.py --check
     python3 -m unittest scripts.tests.test_lean_execution_process

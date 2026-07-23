@@ -493,8 +493,18 @@ state.
 > retains four process attempts, two incomplete attempts, one failed and one
 > passed official outcome for one unique case. Coverage remains 1/3,678, with
 > zero provider, Axeyum, pairing, performance, axis, gate, or parity credit.
-> Next derive fresh child shards and form native pairs; do not rerun the
-> singleton for population credit. The
+> The source-first
+> [M1 plan](docs/plan/lean-u2-official-execution-tl0.6.3-m1-shard-plan-2026-07-22.md)
+> was committed and pushed before derivation. Its accepted
+> [result](docs/plan/lean-u2-official-execution-tl0.6.3-m1-shard-result-2026-07-22.md),
+> [authority](docs/plan/lean-u2-official-child-shards-v1.json), and generated
+> [summary](docs/plan/generated/lean-u2-official-child-shards.md) now factor all
+> eight selection identities into five exact ordered memberships and 289
+> physical shards capped at 64 cases: 461 selection-expanded and 6,451
+> attempt-expanded occurrences. Every new shard and all 111 official attempts
+> remain `not-run`; the M0 singleton is historical annotation only. Next
+> preregister and execute fresh derived shards, then form native pairs; do not
+> rerun the singleton for population credit. The
 > [complete-parity execution roadmap](docs/plan/lean4-complete-parity-roadmap-2026-07-22.md)
 > now reconciles this U2 boundary with the SMT-LIB evidence layers and the
 > dependency-ordered R0-R10 path to all U0-U9/A0-A11/G1-G10 exits.

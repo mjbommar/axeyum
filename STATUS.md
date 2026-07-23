@@ -383,6 +383,26 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-22 — TL0.6.3 M1 derives complete deterministic U2 child-shard
+  scheduling with zero new outcomes or parity credit.** The source-first
+  [plan](docs/plan/lean-u2-official-execution-tl0.6.3-m1-shard-plan-2026-07-22.md)
+  was committed and pushed at `26f4378a` before derivation. The accepted
+  [result](docs/plan/lean-u2-official-execution-tl0.6.3-m1-shard-result-2026-07-22.md),
+  [authority](docs/plan/lean-u2-official-child-shards-v1.json), and generated
+  [summary](docs/plan/generated/lean-u2-official-child-shards.md) validate all
+  3,723 registered cases, eight selection identities, and 111 official attempt
+  identities against the frozen U2/profile/R3 authorities. Exact ordered-list
+  equality yields five memberships containing 18,277 factored case
+  occurrences; contiguous slices capped at 64 produce 289 physical, 461
+  selection-expanded, and 6,451 attempt-expanded shard occurrences. Nine
+  focused tests cover deterministic regeneration, complete order/offset/bound
+  closure, exact deduplication, attempt binding, historical annotation, frozen
+  inputs, and resealed semantic mutations. All new shards and all 111 attempts
+  remain `not-run`. The prior `compile/534.lean` pass/failure is annotation
+  only; provider, Axeyum, pair, performance, population, axis, gate, and parity
+  credit remain zero. Next: preregister an execution slice over named derived
+  shards and retain complete/incomplete/invalid results separately.
+
 - **2026-07-22 — TL0.6.3 M0 retains one passed and one failed official outcome
   for one unique local case; complete Lean parity remains uncredited.** The [M0 plan](docs/plan/lean-u2-official-execution-tl0.6.3-m0-plan-2026-07-22.md)
   selects only `compile/534.lean` from the exact release-tag Linux-release
@@ -7673,6 +7693,16 @@ plan is built and committed on the current branch:
 | P5.5 | External target, measured | **DONE (bounded v1, ADR-0323--0338):** authenticated Tock capture plus eight rechecked dual-DRAT proofs and six replayed controls, UNKNOWN=0, DISAGREE=0. Query time 12.700 s; fresh outer wall 50.745 s; peak RSS 1,256,496 KiB; zero OOM deltas. The committed case study compares exact target validation, universal coverage, trust, effort, artifact boundaries, and limits. No Tock bug was found, so no upstream issue is applicable. This is not a speed or whole-kernel claim. |
 
 ## Changelog
+
+- **2026-07-22 — Completed TL0.6.3 M1's non-executed U2 child-shard
+  derivation.** A separately pushed preregistration freezes exact ordered-list
+  factoring and contiguous 64-case partitions. The accepted authority derives
+  five memberships, 289 physical shards, 461 selection-expanded and 6,451
+  attempt-expanded occurrences from all eight selections and 111 attempts.
+  Nine focused tests reject parent/input drift, partition/order/bound errors,
+  binding errors, invented outcomes, historical-credit promotion, and terminal
+  claims. Every shard and attempt remains `not-run`, so no U2 execution,
+  native pair, performance, population, axis, gate, or parity credit advances.
 
 - **2026-07-22 — Completed TL0.7.1's contract-only Lean execution authority.**
   Two explicit local lanes, twelve evidence-gated termination classes, seven

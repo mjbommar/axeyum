@@ -33,7 +33,7 @@ Current machine-derived state:
 | U0-U9 | 0 complete authorities | a complete executable denominator for any terminal population |
 | A0-A11 | 0 complete axes | end-to-end native behavior on any complete required population |
 | G1-G10 | 0 satisfied terminal gates | any terminal parity claim |
-| U2 official execution | 4 processes, 2 official outcomes, 1 pass and 1 failure for **one unique case** | the 3,678-case parent, an official provider, an Axeyum outcome, a pair, or performance |
+| U2 official execution | 4 processes, 2 official outcomes, 1 pass and 1 failure for **one unique case**; M1 separately derives 5 exact memberships and 289 not-run physical shards | the 3,678/3,723-case parents, an official provider, an Axeyum outcome, a pair, or performance |
 
 The accepted
 [`R3 result`](lean-u2-official-execution-tl0.6.3-m0-r3-result-2026-07-22.md)
@@ -41,6 +41,14 @@ is useful because it qualifies one real local official-case path. Its unique
 coverage is 1/3,678, not 2/3,678: the pass and earlier failure are outcomes for
 the same case. There are still zero native Axeyum U2 outcomes and zero paired
 cells.
+
+The accepted
+[`M1 shard result`](lean-u2-official-execution-tl0.6.3-m1-shard-result-2026-07-22.md)
+closes immediate action 2's scheduling derivation only: eight official
+selections reduce to five exact ordered memberships and 289 bounded physical
+shards. The 461 selection-expanded and 6,451 attempt-expanded occurrences are
+reference multiplicities, not completed executions. All 111 attempts remain
+`not-run`, and no derived shard or ordered prefix is a representative sample.
 
 ## 2. What the SMT-LIB comparison actually says
 
@@ -144,9 +152,9 @@ execution/classification.
 ## 6. Immediate next ten actions
 
 1. Treat the R3 singleton as closed; never rerun it to manufacture coverage.
-2. Derive the next deterministic U2 child shards from the registered 3,678-case
-   parent and active workflow profiles, with unique case accounting and exact
-   source/dependency identities.
+2. Treat the accepted five-membership/289-shard M1 derivation as scheduling
+   metadata only; preserve its exact order, unique-case accounting, and
+   zero-outcome boundary.
 3. Repair and attest the remote official-Lean executable identity across changed
    working directories, then retain the first true remote 71/71 result without
    converting it into native parity credit.

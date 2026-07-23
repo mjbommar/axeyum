@@ -4,11 +4,15 @@
   "source_identities": [
     {
       "path": ".github/workflows/ci.yml",
-      "sha256": "20a0e8a96e39a97bb41b68f64f9469dbc715eb6ae7ac19dd43d8ff381cae7a32"
+      "sha256": "c009daa68a0d74ceec4541988d0fbc70225c3744caa3036027c72a767ac5b53e"
     },
     {
       "path": "docs/plan/generated/lean-execution-evidence.md",
       "sha256": "502cd3514e753108d4af9b487925f58161bf92eb29631899bb5befa92a82d2ca"
+    },
+    {
+      "path": "docs/plan/generated/lean-u2-official-child-shards.md",
+      "sha256": "a2df322aa1622c7b1049867793ab8cbc449ad576fed6eecb45a79d696c45ea95"
     },
     {
       "path": "docs/plan/generated/lean-u2-official-ci-profiles.md",
@@ -32,7 +36,7 @@
     },
     {
       "path": "docs/plan/lean-complete-parity-v1.json",
-      "sha256": "a5725c34df595d7c26e88b8a15bcdfa840ddc7be63ad634f772c1e02501fa9f4"
+      "sha256": "acc11cfbffe7d2911bb73c66d6347ed6c0606d69ef0fa2360d9c890c2ec9f4dc"
     },
     {
       "path": "docs/plan/lean-execution-acceptance-tl0.7.4-2026-07-22.md",
@@ -64,7 +68,11 @@
     },
     {
       "path": "docs/plan/lean-system-implementation-plan-2026-07-21.md",
-      "sha256": "7450ba0d9ac3c4d022cc07c7202bcfbab8f54674899e9e7c27044d1d4fc0de37"
+      "sha256": "473931507e06201548a5bfefc1f503efb5251e274174d9b7c72df03d9e8c92ea"
+    },
+    {
+      "path": "docs/plan/lean-u2-official-child-shards-v1.json",
+      "sha256": "6a2ec0b3edd353f3deb76e805052d5d2465ed1c9dd59cf221b0d175d0ce5e3e9"
     },
     {
       "path": "docs/plan/lean-u2-official-ci-profiles-tl0.6.2-2026-07-22.md",
@@ -111,24 +119,36 @@
       "sha256": "61c7bb015dee1cb767b6c460a08f2c4416a62f1c41e040c817fd5b0d6ea24f8d"
     },
     {
+      "path": "docs/plan/lean-u2-official-execution-tl0.6.3-m1-shard-plan-2026-07-22.md",
+      "sha256": "012b4b31572b99967a34122092fb2568deecf51502504e91f0115f731cd5ce3f"
+    },
+    {
+      "path": "docs/plan/lean-u2-official-execution-tl0.6.3-m1-shard-result-2026-07-22.md",
+      "sha256": "d477d50c04b4cd20ac8bf927b44d93f7b2b3bbe0b020b821d73e72de2a498381"
+    },
+    {
       "path": "docs/plan/lean-u2-test-authority-v1.json",
       "sha256": "d7446e7965bac100ac6b5c607cbb7c87b5b80063fc23b3ec998fff2736d5d18e"
     },
     {
       "path": "docs/plan/lean4-complete-parity-contract-2026-07-22.md",
-      "sha256": "6db2a9a0fff4ff8ecc367a9fd4e35b8ea6bf516d095ff3d09031c50bb4133c46"
+      "sha256": "c3a416ab52fdb9fc1107714e1ec3bb2209a2e0fda54ce7eaeee47a2e8add4d6c"
     },
     {
       "path": "docs/plan/lean4-complete-parity-roadmap-2026-07-22.md",
-      "sha256": "2745d469e4419501ba381ef4459702894e879d063ac36038c5b2100b4109edcd"
+      "sha256": "e574e8f1b73bda73cff58edc8b4f7e1561edd58179fff77b9de8d0dc721aecd3"
     },
     {
       "path": "scripts/gen-lean-complete-parity.py",
-      "sha256": "f8692b1bcf6d99ba8ef58789ebbf7bdca6f55141e033b895b130cc4efd528c82"
+      "sha256": "f8abd3a2d86b135a7a3c195cbec4eba9e3d68eeae3b66dee560009bba48b3c1f"
     },
     {
       "path": "scripts/gen-lean-execution-evidence.py",
       "sha256": "025f935111b83e1a3bbc78af50a4ad5671baa370bda02fe94756481e54f55418"
+    },
+    {
+      "path": "scripts/gen-lean-u2-official-child-shards.py",
+      "sha256": "e1f6bb869fe5fb6ec740589d6e3b0f514e6efbc5604b0010bdd9dd44e10434a3"
     },
     {
       "path": "scripts/gen-lean-u2-official-ci-profiles.py",
@@ -164,7 +184,7 @@
     },
     {
       "path": "scripts/tests/test_lean_complete_parity.py",
-      "sha256": "6046133bd0f81e08ff5e1f1e1cf8e1900bd31925c94f14b6d65a21f0e52bba4d"
+      "sha256": "f73b7edc96a114c01461cc02db4520de40f1d14a70fc4a05eaaffe0611241fb1"
     },
     {
       "path": "scripts/tests/test_lean_execution_acceptance.py",
@@ -181,6 +201,10 @@
     {
       "path": "scripts/tests/test_lean_execution_store.py",
       "sha256": "1ef995ace9fccd59af05640c5b256782b9183e9c9665101df99127a24b65d72f"
+    },
+    {
+      "path": "scripts/tests/test_lean_u2_official_child_shards.py",
+      "sha256": "f402ec4c885344900c090e69a0ad3a585f3df595b721632be880067b85a83d65"
     },
     {
       "path": "scripts/tests/test_lean_u2_official_ci_profiles.py",
@@ -440,6 +464,58 @@
         "state": "not-run"
       }
     },
+    "u2_child_shard_authority": {
+      "scope": "official-u2-child-shard-derivation-not-execution-or-parity",
+      "status": "complete-derivation-not-run",
+      "policy": {
+        "method": "exact-membership-deduplication-plus-contiguous-bounded-partition",
+        "max_cases_per_shard": 64,
+        "preserve_parent_order": true,
+        "deduplicate_exact_ordered_membership_only": true,
+        "representative_sample": false,
+        "canonical_json": "UTF-8; sorted keys; compact separators; no NaN/infinity",
+        "digest_construction": "ASCII domain + NUL + canonical JSON bytes"
+      },
+      "summary": {
+        "registration_cases": 3723,
+        "selection_sets": 8,
+        "official_attempts": 111,
+        "distinct_membership_plans": 5,
+        "distinct_membership_case_occurrences": 18277,
+        "physical_child_shards": 289,
+        "selection_expanded_shard_occurrences": 461,
+        "attempt_expanded_shard_occurrences": 6451,
+        "selected_case_union": 3723,
+        "selected_case_union_sha256": "21e9bc117f0bedb7e80cd2f87ac8cb7d5032af4a946d6666f4298e531b1e5369",
+        "historical_unique_observed_cases": 1,
+        "outcomes_observed_by_m1": 0
+      },
+      "claims": {
+        "parent_memberships_partitioned": true,
+        "selection_bindings_complete": true,
+        "attempt_bindings_complete": true,
+        "historical_observation_annotated": true,
+        "official_execution_complete": false,
+        "official_provider_reproduced": false,
+        "axeyum_observed": false,
+        "matched_pair_formed": false,
+        "performance_measured": false,
+        "lean_parity_established": false
+      },
+      "credits": {
+        "official_executed_attempts": 0,
+        "official_completed_cases": 0,
+        "official_profile_completions": 0,
+        "official_provider_completions": 0,
+        "axeyum_outcomes": 0,
+        "paired_cells": 0,
+        "performance_rows": 0,
+        "complete_populations": 0,
+        "complete_axes": 0,
+        "satisfied_gates": 0,
+        "parity_credit": 0
+      }
+    },
     "execution_evidence_authority": {
       "scope": "execution-evidence-contract-only-no-process-or-parity-outcome",
       "lane_policies": 2,
@@ -670,6 +746,22 @@
           "detail": "TL0.6.2 result, reproduction commands, exact corrections, assurance boundary, and TL0.6.3 handoff."
         },
         {
+          "path": "docs/plan/lean-u2-official-execution-tl0.6.3-m1-shard-plan-2026-07-22.md",
+          "detail": "Source-first M1 partition policy: exact ordered-membership deduplication, contiguous shards capped at 64 cases, closure/mutation rules, and zero execution or parity credit."
+        },
+        {
+          "path": "docs/plan/lean-u2-official-child-shards-v1.json",
+          "detail": "Machine-checked M1 scheduling authority: five exact ordered memberships, 289 physical shards, 461 selection-expanded and 6,451 attempt-expanded shard occurrences, with all 111 attempts not run."
+        },
+        {
+          "path": "docs/plan/generated/lean-u2-official-child-shards.md",
+          "detail": "Generated bounded child-shard summary and historical-singleton non-credit boundary."
+        },
+        {
+          "path": "docs/plan/lean-u2-official-execution-tl0.6.3-m1-shard-result-2026-07-22.md",
+          "detail": "Accepted M1 derivation result, exact source and output identities, mutation validation, explicit non-claims, and next execution handoff."
+        },
+        {
           "path": "docs/plan/lean-execution-evidence-v1.json",
           "detail": "TL0.7.1 contract authority for explicit resource lanes, typed terminations, immutable run/attempt/case/artifact/completion records, and zero real outcomes."
         },
@@ -738,7 +830,7 @@
           "detail": "Pinned tests tree inventory and the required CTest/test-pile derivation rule."
         }
       ],
-      "residual": "Current execution coverage is four process attempts and two decided official outcomes for one unique case from a 3,678-case parent: one environment-induced failure and one pass, with zero Axeyum outcomes or pairs. Attempt 003 stopped before runner import and adds no outcome. One unique official case is not complete U2 authority. Derive fresh child shards from every official profile with exact executable/environment/resource/attempt/case/completion evidence, classify native surfaces, and run matched Axeyum cases; retries of the singleton do not increase population coverage."
+      "residual": "Current execution coverage is four process attempts and two decided official outcomes for one unique case from a 3,678-case parent: one environment-induced failure and one pass, with zero Axeyum outcomes or pairs. Attempt 003 stopped before runner import and adds no outcome. M1 now partitions all eight official selections into five exact ordered memberships and 289 physical child shards, but every new shard and all 111 official attempts remain not run. Preregister and execute fresh child shards with exact executable/environment/resource/attempt/case/completion evidence, classify native surfaces, and run matched Axeyum cases; scheduling metadata and singleton retries do not increase population coverage."
     },
     {
       "id": "U3",
