@@ -102,3 +102,22 @@ The expected frozen differential moves from 227 to 228 jointly decided cases
 and from 209 to 210 checked SAT models. The other eight residual cases remain
 separate. The mechanism adds bounded search depth, not proof power: the same
 finite-profile checker and exact original-query replay remain authoritative.
+
+## Implementation evidence
+
+Commit `f380d1b3` implements the decision with a private guarded entry and one
+first-value helper. The inner invocation passes `false`, making retry depth
+structurally one; its timeout is the outer remaining deadline. Only inner SAT
+that passes canonical replay on the unfixed assertions can return. Focused
+controls cover disabled retry, fixed-query SAT, unfixed replay, exact seed 111 at
+`-5`, and rejection of inner UNSAT/Unknown.
+
+The frozen production differential passes at 228/228 jointly decided
+agreements, 210 Axeyum SAT, 24 Axeyum UNSAT, 22 Axeyum Unknown, 210/210 SAT
+replay, and zero error/disagreement. Seeds 23, 231, and 145 remain checked SAT;
+the ordinary Z3-SAT residual is exactly
+`30, 32, 70, 122, 150, 175, 182, 242`. Solver Clippy, strict rustdoc, and one
+uninterrupted CI-mode full package run pass, including 904 library tests, every
+non-ignored integration test, and two doctests. The decision remains proposed
+pending the unchanged cross-lane Lean parity attribution blocker recorded in
+the workstream status.

@@ -570,7 +570,8 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   runner or process exists yet.** The source-first
 - **2026-07-22 — TL0.6.3 M2's pure 64-case execution contract is implemented
   and pushed; no live runner or process exists yet.** The source-first
-- **2026-07-23 — ADR-0362 preregisters one guarded fixed-query MBQI level.** The
+- **2026-07-23 — ADR-0362's guarded fixed-query MBQI level is implemented and
+  passes its solver gates.** The
   nine-seed post-ADR-0361 classification checks 45 bounded candidates and finds
   exactly one replay-clean model: seed 111 at the first ordered value, `-5`,
   from an 11-value pool over one relevant source `Int`. Proposed ADR-0362 reuses
@@ -581,9 +582,15 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   deadline. The final boundary invokes the one inner pass immediately after
   initial certification fails, then continues every established route on
   decline. Its prototype reaches 228/228 agreement and 210/210 SAT replay with
-  seed 145 preserved. Multi-value or two-symbol recursion, larger pools, and
-  general UF synthesis remain excluded. Next: commit the final ordering, then
-  publish the implementation and focused controls.
+  seed 145 preserved. Commit `f380d1b3` implements the guarded private entry,
+  exact unfixed replay, and non-transfer of inner UNSAT/Unknown. Focused tests,
+  solver Clippy, strict rustdoc, and one uninterrupted CI-mode full package run
+  pass: 904 library tests, every non-ignored integration test, and two doctests.
+  Multi-value or two-symbol recursion, larger pools, and general UF synthesis
+  remain excluded. ADR-0362 stays proposed only because the unchanged
+  Lean-owned `exit-zero-4g` parity attribution drift blocks the branch aggregate.
+  Next: publish this checkpoint, then classify one distinct bounded mechanism
+  for the eight residual seeds.
 - **2026-07-23 — ADR-0361 evaluated-scalar completion is implemented; its
   semantic gate is green and branch acceptance remains pending.** Commit
   `471738aa` preserves the established
@@ -600,9 +607,9 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   complementary workspace, Clippy, strict rustdoc, resource, profile, recovery,
   reflection, benchmark, public QF_BV, rules, and link gates pass. A non-CI
   solver aggregate reproducibly misses the hardware-relative LIA frontier
-  ratchet; CI mode clears it but has one late load-sensitive word/Int test that
-  passes in isolation and as a complete 14-test binary. The rebased Lean parity
-  gate remains red only after its preceding sub-gates, at retained
+  ratchet. A fresh uninterrupted CI-mode full package run clears the earlier
+  word/Int transient and passes its complete 14-test binary. The rebased Lean
+  parity gate remains red only after its preceding sub-gates, at retained
   `exit-zero-4g` run/spec attribution drift. ADR-0361 remains proposed. Next:
   commit and publish this bounded implementation checkpoint, then preregister
   the next distinct mechanism for the nine residual seeds without widening

@@ -1,6 +1,6 @@
 # Quantified-UFLIA one-level fixed-MBQI measurement
 
-Status: measured; preimplementation ordering corrected
+Status: implemented; semantic and solver-package gates green
 Date: 2026-07-23
 Owner: solver/engine lane in `agent/smtcomp/full-library-resume`
 
@@ -70,6 +70,35 @@ The corrected prototype passes the frozen 256-case production gate at exactly
 Unknown, 210/210 SAT replay, and zero error or disagreement. The remaining
 ordinary Z3-SAT Unknowns are exactly
 `30, 32, 70, 122, 150, 175, 182, 242`; seed 145 remains checked SAT.
+
+## Implementation evidence
+
+Commit `f380d1b3` introduces a private MBQI entry with an explicit
+`allow_one_level_fixed_retry` guard. The public entry enables it; the single
+inner invocation disables it. The helper admits exactly one relevant source
+`Int`, selects only the first ordered evaluated value, derives the inner timeout
+from the caller's deadline, and passes only inner SAT through canonical replay
+against the exact unfixed assertion sequence. Inner UNSAT and Unknown return no
+candidate.
+
+Focused tests prove that the disabled-retry path remains Unknown, the same query
+fixed at `-5` is SAT with retry disabled, the public one-level path returns the
+replay-clean model, and non-SAT inner results never transfer. The exact generated
+seed-111 fixture also checks `y1 = -5`; seeds 23/231 and the prior seed-145 SAT
+remain green.
+
+The strengthened 256-case differential requires at least 228 jointly decided
+cases and requires every Axeyum SAT result to replay. It passes at 228/228
+agreement and 210/210 SAT replay with zero errors/disagreements. Warning-denied
+solver Clippy, warning-denied solver rustdoc, and one uninterrupted `CI=1` full
+solver-package invocation pass: 904 library tests, every non-ignored integration
+test, and two doctests. The documented CI frontier mode passes, and the prior
+load-sensitive word/Int observation does not recur; its complete 14-test binary
+passes in 4.04 seconds during the aggregate.
+
+ADR-0362 remains proposed only because the branch-wide `just parity-docs` gate
+still inherits the separately recorded Lean-owned retained `exit-zero-4g`
+run/spec attribution drift. No Lean evidence is rewritten in this lane.
 
 The expected frozen result is 228 jointly decided agreements, 210 Axeyum SAT,
 24 Axeyum UNSAT, 22 Axeyum Unknown, 210/210 SAT replay, and zero error or

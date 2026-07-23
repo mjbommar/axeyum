@@ -9233,9 +9233,9 @@ coverage never regresses):
    complementary workspace, lint, documentation, resource, profile, recovery,
    reflection, benchmark, public QF_BV, rules, and link gates pass. Keep
    ADR-0361 proposed: the non-CI solver aggregate reproducibly misses only its
-   hardware-relative LIA frontier ratchet; CI mode clears that ratchet but has
-   one late load-sensitive word/Int test that passes in isolation and as a
-   complete test binary; and the rebased Lean parity gate still rejects
+   hardware-relative LIA frontier ratchet. A fresh uninterrupted CI-mode run
+   clears the earlier load-sensitive word/Int transient and passes the complete
+   package. The rebased Lean parity gate still rejects
    retained `exit-zero-4g` evidence for run/spec attribution drift. Do not
    rewrite Lean-owned evidence here. Next, commit and publish this bounded
    implementation checkpoint, then measure one separately preregistered
@@ -9248,9 +9248,16 @@ coverage never regresses):
    placement: run the one inner pass immediately after initial certification
    fails, then continue ADR-0360, ordinary MBQI, E-matching, and ADR-0361
    unchanged if it declines. The prototype reaches 228/228 agreement and
-   210/210 SAT replay with seed 145 preserved. Seed 111 succeeds on the first
-   candidate (`-5`); the other eight seeds receive no credit. Implement only
-   this one-level, one-candidate boundary next.
+   210/210 SAT replay with seed 145 preserved. Commit `f380d1b3` now implements
+   that exact guarded boundary. Focused depth/non-transfer/replay tests, solver
+   Clippy, strict rustdoc, and one uninterrupted CI-mode full solver-package run
+   pass, including 904 library tests and every non-ignored integration test.
+   Seed 111 succeeds on the first candidate (`-5`); the other eight seeds
+   receive no credit. Keep ADR-0362 proposed until the unchanged Lean-owned
+   `exit-zero-4g` parity attribution drift is repaired outside this lane. Next:
+   publish the implementation checkpoint, then classify one distinct bounded
+   mechanism for the eight residual seeds without cap growth or evidence
+   widening.
 3. **Bank the CDCL(T) spine** (Gap 3): the default-dispatch ADR for the
    built-but-opt-in `CdclT` routes, then port arrays-lazy
    ([P2.2](docs/plan/track-2-theories/P2.2-arrays-lazy.md)) onto it — the
