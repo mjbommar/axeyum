@@ -413,3 +413,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [0356](adr-0356-preregister-official-smtcomp-selection-identity.md) | Content-addressed official SMT-COMP selection production plus independent eligibility and corpus-byte audit | accepted |
 | [0357](adr-0357-preregister-checked-finite-profile-quantified-uf-models.md) | Preregister source-bound finite-profile certificates for the existing almost-uninterpreted MBQI SAT fragment | accepted |
 | [0358](adr-0358-preregister-multi-binder-finite-profile-quantified-uf-models.md) | Preregister bounded Cartesian finite-profile certificates for leading multi-binder quantified-UF models | accepted |
+| [0359](adr-0359-preregister-checked-quantified-uf-default-repair.md) | Preregister bounded checked default-only model repair for quantified Int/Real-result UFs | proposed |

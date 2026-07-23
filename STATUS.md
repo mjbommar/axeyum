@@ -771,6 +771,16 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   the topic branch, then measure the remaining satisfiable unknowns before
   proposing any separately checked model-repair increment.
 
+- **2026-07-22 — quantified-UFLIA Unknowns are now oracle-adjudicated and
+  ADR-0359 preregisters the next real SAT capability.** The 256-case direct-Z3
+  smoke reports 121 Axeyum Unknowns: 105 Z3 SAT, 11 Z3 UNSAT, and five Z3
+  Unknown. The dominant ordinary-incomplete bucket alone contains 96 Z3-SAT
+  cases; only nine Z3-SAT cases are in the resource bucket. Deterministic seed
+  diagnostics reproduce missing or incompatible total UF defaults while
+  preserving ground points. Next: implement bounded default-only repair under
+  ADR-0359, with the existing finite-profile checker and canonical source replay
+  remaining the sole SAT acceptance boundary.
+
 - **2026-07-22 — ADR-0356 S4 official selection identity is complete; S5 is
   deliberately not blocking solver functionality.** The accepted root
   `/nas3/data/axeyum/harness/official-selection-2026-sq/accepted-322adaa78396bf42d4660d12582e6db1cf2166a765bb912fdfb179975a9c9698`
