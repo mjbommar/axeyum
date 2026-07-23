@@ -240,6 +240,14 @@ semantic results derive `semantic-mismatch`; missing normalized identity
 derives `unadjudicated`. Directional outcomes derive from the typed side-result
 classes, never from a hand-entered comparison label.
 
+The subsequent
+[R3 normalization-contract plan](lean-u2-matched-execution-tl0.6.5-normalization-r3-plan-2026-07-23.md)
+preregisters the remaining offline M1 boundary: nine content-bound layer
+contracts, exact allowlisted canonical projection, and semantic/ignored-field
+mutation controls. It does not claim the future raw-to-selected-field adapters
+or semantic canonicalizers are implemented, and it does not consume either
+missing execution/classification parent.
+
 An Axeyum timeout, resource exhaustion, or supported decline is a completed
 typed Axeyum execution and can therefore produce `official-only`. Total absence
 of launch/completion is `not-run`. Inconsistent pins, artifacts, or attempt
