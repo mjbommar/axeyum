@@ -1,0 +1,296 @@
+{
+  "schema": "axeyum-lean-u2-native-surface-classification-report-v1",
+  "generated_from": "docs/plan/lean-u2-native-surface-classification-v1.json",
+  "generated_from_sha256": "89b29bc6820d1d948d5cd4defdd28eb59ddb55a5924a3cf770c0b21282959959",
+  "target": {
+    "repository": "https://github.com/leanprover/lean4.git",
+    "version": "4.30.0",
+    "tag": "v4.30.0",
+    "commit": "d024af099ca4bf2c86f649261ebf59565dc8c622"
+  },
+  "status": "complete-harness-floor-content-and-dependencies-not-run",
+  "scope": "full-u2-native-surface-harness-floor-not-support-or-parity",
+  "summary": {
+    "registration_cases": 3723,
+    "profile_case_occurrences": {
+      "default": 3678,
+      "full-lake": 3723
+    },
+    "family_counts": {
+      "bench": 1,
+      "compile": 60,
+      "compile_bench": 24,
+      "doc-examples": 8,
+      "docparse": 197,
+      "elab": 2854,
+      "elab_bench": 40,
+      "elab_fail": 316,
+      "lake": 52,
+      "lint": 1,
+      "misc": 5,
+      "misc_dir": 2,
+      "pkg": 27,
+      "server": 4,
+      "server_interactive": 132
+    },
+    "kind_counts": {
+      "directory": 31,
+      "lake-directory": 52,
+      "lint": 1,
+      "pile": 3639
+    },
+    "family_kind_counts": {
+      "bench/directory": 1,
+      "compile/pile": 60,
+      "compile_bench/pile": 24,
+      "doc-examples/directory": 1,
+      "doc-examples/pile": 7,
+      "docparse/pile": 197,
+      "elab/pile": 2854,
+      "elab_bench/pile": 40,
+      "elab_fail/pile": 316,
+      "lake/lake-directory": 52,
+      "lint/lint": 1,
+      "misc/pile": 5,
+      "misc_dir/directory": 2,
+      "pkg/directory": 27,
+      "server/pile": 4,
+      "server_interactive/pile": 132
+    },
+    "direct_surface_counts": {
+      "adversarial": 316,
+      "compiler-runtime": 282,
+      "editor-rpc": 137,
+      "elaborator": 3217,
+      "modules-lake": 81,
+      "parser-macro": 197,
+      "tactic-meta": 2,
+      "toolchain-cli": 6
+    },
+    "closure_surface_counts": {
+      "adversarial": 316,
+      "compiler-runtime": 282,
+      "editor-rpc": 137,
+      "elaborator": 3717,
+      "kernel-import": 3717,
+      "modules-lake": 217,
+      "parser-macro": 3717,
+      "tactic-meta": 2,
+      "toolchain-cli": 6
+    },
+    "direct_surface_occurrences": 4238,
+    "closure_surface_occurrences": 12111,
+    "classification_state_counts": {
+      "harness-floor": 3723
+    },
+    "content_refinement_counts": {
+      "not-run": 3723
+    },
+    "module_dependency_closure_counts": {
+      "not-run": 3723
+    },
+    "native_outcome_counts": {
+      "not-run": 3723
+    },
+    "family_rules_used": 14,
+    "case_overrides_used": 3
+  },
+  "surface_registry": [
+    {
+      "id": "kernel-import",
+      "description": "checked core declarations, reductions, imports, and serialization",
+      "owner_tasks": [
+        "TL1",
+        "TL2"
+      ],
+      "axes": [
+        "A1",
+        "A2",
+        "A9"
+      ],
+      "dependencies": [],
+      "capability_state": "partial",
+      "decline_code": "native-surface/kernel-import",
+      "record_sha256": "63311b26b28823304c308b9abb5dcd4cb25c81225e0ab9141e3990e10f0ee674"
+    },
+    {
+      "id": "parser-macro",
+      "description": "source parsing, syntax extensions, and macro expansion",
+      "owner_tasks": [
+        "TL6"
+      ],
+      "axes": [
+        "A3"
+      ],
+      "dependencies": [],
+      "capability_state": "not-implemented-native",
+      "decline_code": "native-surface/parser-macro",
+      "record_sha256": "a5abbda992628484e090ad5e47441f030c597a57891af2f942b4241c3e5f33a1"
+    },
+    {
+      "id": "elaborator",
+      "description": "elaboration, unification, commands, and diagnostics",
+      "owner_tasks": [
+        "TL4"
+      ],
+      "axes": [
+        "A4"
+      ],
+      "dependencies": [
+        "parser-macro",
+        "kernel-import"
+      ],
+      "capability_state": "not-implemented-native",
+      "decline_code": "native-surface/elaborator",
+      "record_sha256": "1758241165ba860d525f04f3e74bb50d0d7a52af653be29d60d479c627c5cd69"
+    },
+    {
+      "id": "tactic-meta",
+      "description": "goals, tactics, metaprograms, and generated proof terms",
+      "owner_tasks": [
+        "TL5",
+        "TL9.11"
+      ],
+      "axes": [
+        "A5",
+        "A9"
+      ],
+      "dependencies": [
+        "elaborator"
+      ],
+      "capability_state": "not-implemented-native",
+      "decline_code": "native-surface/tactic-meta",
+      "record_sha256": "828a4bd00935cf3a77ffb3e8c1c99ec1667883476c2ce2ec46edeb4968b98d9f"
+    },
+    {
+      "id": "modules-lake",
+      "description": "modules, artifacts, packages, dependency caches, and Lake",
+      "owner_tasks": [
+        "TL7"
+      ],
+      "axes": [
+        "A2",
+        "A6",
+        "A11"
+      ],
+      "dependencies": [
+        "elaborator"
+      ],
+      "capability_state": "not-implemented-native",
+      "decline_code": "native-surface/modules-lake",
+      "record_sha256": "b2a446a3e4a09902b8560f771055fb3a3d0db394510a36ac969b012436e0c737"
+    },
+    {
+      "id": "editor-rpc",
+      "description": "server snapshots, LSP and RPC requests, cancellation, and stale-state behavior",
+      "owner_tasks": [
+        "TL8"
+      ],
+      "axes": [
+        "A7"
+      ],
+      "dependencies": [
+        "modules-lake",
+        "elaborator"
+      ],
+      "capability_state": "not-implemented-native",
+      "decline_code": "native-surface/editor-rpc",
+      "record_sha256": "0702d67d715e00a1e655120e486216717632d9a16581a4e068be8ceaee82c3e1"
+    },
+    {
+      "id": "compiler-runtime",
+      "description": "evaluation, code generation, linking, execution, and effects",
+      "owner_tasks": [
+        "TL9"
+      ],
+      "axes": [
+        "A8",
+        "A11"
+      ],
+      "dependencies": [
+        "elaborator"
+      ],
+      "capability_state": "not-implemented-native",
+      "decline_code": "native-surface/compiler-runtime",
+      "record_sha256": "dc43b54bf81b12c4636a78e1f5e2980d3c5b1b600805b45f57d6adf9131f8af5"
+    },
+    {
+      "id": "ffi",
+      "description": "extern declarations, ABI linkage, and native library interaction",
+      "owner_tasks": [
+        "TL9.10"
+      ],
+      "axes": [
+        "A8",
+        "A11"
+      ],
+      "dependencies": [
+        "compiler-runtime"
+      ],
+      "capability_state": "not-implemented-native",
+      "decline_code": "native-surface/ffi",
+      "record_sha256": "88a757d4cc2c16eb670fd0f0f9bcbd4cf38ed2da591c388cf6fbd697324fda0c"
+    },
+    {
+      "id": "toolchain-cli",
+      "description": "native command, installation, and packaging workflow behavior",
+      "owner_tasks": [
+        "TL0",
+        "TL7",
+        "TL9",
+        "TL10"
+      ],
+      "axes": [
+        "A11"
+      ],
+      "dependencies": [],
+      "capability_state": "not-implemented-native",
+      "decline_code": "native-surface/toolchain-cli",
+      "record_sha256": "28b0d3bccdd9da70409e6af598a9e27aee40fdd510bc03be8fba16a3e77726ac"
+    },
+    {
+      "id": "adversarial",
+      "description": "expected rejection, malformed input, resource, or stale-state dimension",
+      "owner_tasks": [
+        "U8",
+        "component-owner"
+      ],
+      "axes": [
+        "A0-A11-as-applicable"
+      ],
+      "dependencies": [],
+      "capability_state": "partial-cross-cutting",
+      "decline_code": "native-surface/adversarial",
+      "record_sha256": "4321f6a4e4c1fffde28bd99a532d288df63f9ce795fb31126bb78c4cd3492a74"
+    }
+  ],
+  "claims": {
+    "all_registration_cases_have_harness_floor": true,
+    "family_kind_population_closed": true,
+    "surface_dependency_closure_derived": true,
+    "pinned_content_refined": false,
+    "module_dependency_closure_complete": false,
+    "native_execution_observed": false,
+    "matched_pair_formed": false,
+    "performance_measured": false,
+    "u2_complete": false,
+    "lean_parity_established": false
+  },
+  "credits": {
+    "official_outcomes": 0,
+    "axeyum_outcomes": 0,
+    "paired_cells": 0,
+    "performance_rows": 0,
+    "complete_populations": 0,
+    "complete_axes": 0,
+    "satisfied_gates": 0,
+    "parity_credit": 0
+  },
+  "residual": [
+    "M1 must inspect every pinned primary, sidecar, runner, hook, and directory support closure.",
+    "M2 must derive exact module, generated-artifact, runtime, library, FFI, request, and project dependency closures.",
+    "M3 must review the full case authority and resolve every provisional field before TL0.6.4 acceptance.",
+    "TL0.6.5 may form matched native rows only after complete official execution and accepted TL0.6.4 classification evidence."
+  ],
+  "verdict": "all U2 cases have a harness floor; TL0.6.4 and Lean parity remain incomplete"
+}
