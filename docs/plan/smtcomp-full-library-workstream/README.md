@@ -264,12 +264,12 @@ gate.
 
 ## 5. Remaining work, in dependency order
 
-1. **Harness admission (S5).** Selection identity S0--S4 is complete under
+1. **Harness admission (S5) — complete.** Selection identity S0--S4 is complete under
    [accepted ADR-0356](../../research/09-decisions/adr-0356-preregister-official-smtcomp-selection-identity.md).
-   Bind E1b preflight to the accepted completion, selected list, and selected-
-   file ledger, then prove the handoff on a tiny fixture. The bounded
-   [S5 implementation plan](../smtcomp-harness-admission-s5-2026-07-23.md) is
-   preregistered; it does not authorize a large run.
+   E1b now binds the accepted completion, selected list, selected-file ledger,
+   and physical bytes. The [S5 result](../smtcomp-harness-admission-s5-result-2026-07-23.md)
+   records the tiny mutation gate and a read-only 45,905-file physical rehash.
+   It does not authorize a large run by itself.
 2. **Fresh P0 slices.** Stage the repaired binary and rerun
    QF_FP/QF_BVFP/QF_ABVFP plus QF_AUFLIA under the completed protocol. Require
    DISAGREE=0.
@@ -343,15 +343,15 @@ NAS (shared, corpus read-only in practice):
    checkout or another lane's NAS output.
 3. Confirm the old s4 process/log state and count literal `WRONG` lines without
    treating the stale run as evidence.
-4. Treat the accepted S4 root as immutable. When the measurement lane resumes,
-   implement only the bounded S5 E1b-admission handoff before repaired P0
-   slices. The active solver capability checkpoint is
+4. Treat the accepted S4 root as immutable. S5 admission is complete; next
+   preregister and execute only the repaired P0 slices before any credited
+   full-population run. The active solver capability checkpoint is
    [`../checked-multi-binder-quantified-uf-models-2026-07-22.md`](../checked-multi-binder-quantified-uf-models-2026-07-22.md).
 5. Update `STATUS.md` and this file before handoff; push only a green topic
    branch for the integration owner.
 
-*Owner: SMT-COMP measurement/full-library lane. Next measurement milestone: a
-tiny S5 admission fixture; the bounded multi-binder checked quantified-UF
+*Owner: SMT-COMP measurement/full-library lane. Next measurement milestone:
+fresh admitted QF_FP/QF_BVFP/QF_ABVFP and QF_AUFLIA P0 slices; the bounded multi-binder checked quantified-UF
 milestone is accepted under ADR-0358. The bounded
 [unknown adjudication](../quantified-uflia-unknown-adjudication-2026-07-22.md)
 now measures the accepted ADR-0359

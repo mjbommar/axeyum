@@ -1,6 +1,6 @@
 # SMT-COMP harness admission S5 plan
 
-Status: preregistered
+Status: complete
 Date: 2026-07-23
 Decision: [accepted ADR-0356](../research/09-decisions/adr-0356-preregister-official-smtcomp-selection-identity.md)
 
@@ -85,6 +85,9 @@ just foundational-resources
 The accepted 45,905-file root receives one read-only admission-manifest build
 and validation pass after the tiny fixture is green. No solver is launched by
 that pass.
+
+Completed result:
+[S5 harness-admission result](smtcomp-harness-admission-s5-result-2026-07-23.md).
 
 ## Stop conditions
 
