@@ -92,6 +92,66 @@ impl Kernel {
         })
     }
 
+    /// Try one Lean quotient-eliminator reduction step.
+    ///
+    /// `Quot.lift` uses function position 3 and major position 5;
+    /// `Quot.ind` uses function position 3 and major position 4. The major is
+    /// reduced to WHNF and must then be the checked package's `Quot.mk` applied
+    /// to exactly three arguments. The representative is its last argument.
+    /// Any arguments after the eliminator's major are reapplied to the result.
+    pub(crate) fn reduce_quotient(&mut self, expression: ExprId) -> Option<ExprId> {
+        let (head, arguments) = self.unfold_apps(expression);
+        let ExprNode::Const(eliminator_name, _) = self.expr_node(head).clone() else {
+            return None;
+        };
+        let eliminator = self.env.get(eliminator_name)?;
+        let Declaration::Quotient { kind, .. } = eliminator else {
+            return None;
+        };
+        let (major_position, function_position, eliminator_component) = match kind {
+            QuotKind::Lift => (5, 3, "lift"),
+            QuotKind::Ind => (4, 3, "ind"),
+            QuotKind::Type | QuotKind::Ctor => return None,
+        };
+        if !self.is_named_quotient_member(eliminator_name, eliminator_component) {
+            return None;
+        }
+        let major = *arguments.get(major_position)?;
+        let major = self.whnf(major);
+        let (constructor, constructor_arguments) = self.unfold_apps(major);
+        let ExprNode::Const(constructor_name, _) = self.expr_node(constructor).clone() else {
+            return None;
+        };
+        if constructor_arguments.len() != 3
+            || !matches!(
+                self.env.get(constructor_name),
+                Some(Declaration::Quotient {
+                    kind: QuotKind::Ctor,
+                    ..
+                })
+            )
+            || !self.is_named_quotient_member(constructor_name, "mk")
+        {
+            return None;
+        }
+
+        let function = arguments[function_position];
+        let representative = constructor_arguments[2];
+        let result = self.app(function, representative);
+        Some(self.apps(result, &arguments[major_position + 1..]))
+    }
+
+    fn is_named_quotient_member(&self, name: NameId, component: &str) -> bool {
+        let ExprName::Member { parent } = ExprName::from_kernel(self, name, component) else {
+            return false;
+        };
+        matches!(
+            self.name_node(parent),
+            crate::NameNode::Str(root, quotient) if quotient == "Quot"
+                && matches!(self.name_node(*root), crate::NameNode::Anonymous)
+        )
+    }
+
     fn with_quotient_transaction<T>(
         &mut self,
         action: impl FnOnce(&mut Self) -> Result<T, KernelError>,
@@ -652,6 +712,22 @@ impl Kernel {
     }
 }
 
+enum ExprName {
+    Member { parent: NameId },
+    Other,
+}
+
+impl ExprName {
+    fn from_kernel(kernel: &Kernel, name: NameId, component: &str) -> Self {
+        match kernel.name_node(name) {
+            crate::NameNode::Str(parent, actual) if actual == component => {
+                Self::Member { parent: *parent }
+            }
+            _ => Self::Other,
+        }
+    }
+}
+
 #[derive(Clone, Copy)]
 struct QuotientBinderNames {
     alpha: NameId,
@@ -666,7 +742,8 @@ struct QuotientBinderNames {
 
 #[cfg(test)]
 mod tests {
-    use std::collections::HashMap;
+    use std::collections::{BTreeSet, HashMap};
+    use std::fmt::Write;
 
     use super::*;
 
@@ -686,6 +763,68 @@ mod tests {
         let u = kernel.name_str(root, "quot_u");
         let v = kernel.name_str(root, "quot_v");
         kernel.canonical_quotient_package(u, v)
+    }
+
+    fn initialized_kernel() -> Kernel {
+        let mut kernel = Kernel::new();
+        declare_canonical_eq(&mut kernel);
+        let declarations = package(&mut kernel);
+        kernel
+            .add_quotient_package(&declarations)
+            .expect("canonical quotient package should admit");
+        kernel
+    }
+
+    fn mk_application(
+        kernel: &mut Kernel,
+        kind: QuotKind,
+        function: ExprId,
+        major: Option<ExprId>,
+        trailing: &[ExprId],
+    ) -> ExprId {
+        let names = kernel.quotient_names();
+        let zero = kernel.level_zero();
+        let head = match kind {
+            QuotKind::Lift => kernel.const_(names.quot_lift, vec![zero, zero]),
+            QuotKind::Ind => kernel.const_(names.quot_ind, vec![zero]),
+            QuotKind::Type | QuotKind::Ctor => panic!("not an eliminator"),
+        };
+        let filler = kernel.sort_zero();
+        let mut arguments = match kind {
+            QuotKind::Lift => vec![filler, filler, filler, function, filler],
+            QuotKind::Ind => vec![filler, filler, filler, function],
+            QuotKind::Type | QuotKind::Ctor => unreachable!(),
+        };
+        if let Some(major) = major {
+            arguments.push(major);
+            arguments.extend_from_slice(trailing);
+        }
+        kernel.apps(head, &arguments)
+    }
+
+    fn mk_major(kernel: &mut Kernel, representative: ExprId, argument_count: usize) -> ExprId {
+        let names = kernel.quotient_names();
+        let zero = kernel.level_zero();
+        let constructor = kernel.const_(names.quot_mk, vec![zero]);
+        let filler = kernel.sort_zero();
+        let mut arguments = vec![filler, filler, representative, filler];
+        arguments.truncate(argument_count);
+        kernel.apps(constructor, &arguments)
+    }
+
+    fn wrap_major(kernel: &mut Kernel, mut major: ExprId, depth: usize) -> ExprId {
+        let root = kernel.anon();
+        let ty = kernel.sort_zero();
+        for step in 0..depth {
+            let body = kernel.bvar(0);
+            if step.is_multiple_of(2) {
+                let identity = kernel.lam(root, ty, body, BinderInfo::Default);
+                major = kernel.app(identity, major);
+            } else {
+                major = kernel.let_(root, ty, major, body);
+            }
+        }
+        major
     }
 
     fn rename_binders(
@@ -908,5 +1047,244 @@ mod tests {
             Err(KernelError::QuotientTypeMismatch { .. })
         ));
         assert!(!fresh.environment().contains(inserted_name));
+    }
+
+    #[test]
+    fn lift_and_ind_reduce_to_the_representative_and_reapply_trailing_arguments() {
+        let mut kernel = initialized_kernel();
+        let representative = kernel.sort_zero();
+        let names = kernel.quotient_names();
+        let zero = kernel.level_zero();
+        let function = kernel.const_(names.eq, vec![zero]);
+        let major = mk_major(&mut kernel, representative, 3);
+        let trailing = [kernel.sort_zero(), kernel.sort_zero()];
+
+        for kind in [QuotKind::Lift, QuotKind::Ind] {
+            let expression = mk_application(&mut kernel, kind, function, Some(major), &trailing);
+            let applied = kernel.app(function, representative);
+            let expected = kernel.apps(applied, &trailing);
+            assert_eq!(kernel.reduce_quotient(expression), Some(expected));
+        }
+    }
+
+    #[test]
+    fn quotient_reduction_whnfs_the_major_and_keeps_inert_boundaries() {
+        let mut kernel = initialized_kernel();
+        let names = kernel.quotient_names();
+        let zero = kernel.level_zero();
+        let representative = kernel.sort_zero();
+        let ty = kernel.sort_zero();
+        let root = kernel.anon();
+        let body = kernel.bvar(0);
+        let function = kernel.lam(root, ty, body, BinderInfo::Default);
+        let exact_major = mk_major(&mut kernel, representative, 3);
+        let wrapped_major = wrap_major(&mut kernel, exact_major, 2);
+        let reducible = mk_application(
+            &mut kernel,
+            QuotKind::Lift,
+            function,
+            Some(wrapped_major),
+            &[],
+        );
+        assert_eq!(kernel.whnf(reducible), representative);
+
+        let underapplied = mk_application(&mut kernel, QuotKind::Lift, function, None, &[]);
+        assert_eq!(kernel.reduce_quotient(underapplied), None);
+        assert_eq!(kernel.whnf(underapplied), underapplied);
+
+        let wrong_head = kernel.const_(names.eq_refl, vec![zero]);
+        let filler = kernel.sort_zero();
+        let wrong_head = kernel.apps(wrong_head, &[filler, filler, representative]);
+        let wrong_head_application =
+            mk_application(&mut kernel, QuotKind::Ind, function, Some(wrong_head), &[]);
+        assert_eq!(kernel.whnf(wrong_head_application), wrong_head_application);
+
+        for argument_count in [2, 4] {
+            let wrong_arity = mk_major(&mut kernel, representative, argument_count);
+            let application =
+                mk_application(&mut kernel, QuotKind::Ind, function, Some(wrong_arity), &[]);
+            assert_eq!(kernel.whnf(application), application);
+        }
+
+        let stuck = kernel.const_(names.eq, vec![zero]);
+        let stuck_application =
+            mk_application(&mut kernel, QuotKind::Lift, function, Some(stuck), &[]);
+        assert_eq!(kernel.whnf(stuck_application), stuck_application);
+    }
+
+    #[test]
+    fn same_named_ordinary_constants_never_activate_quotient_reduction() {
+        let mut kernel = Kernel::new();
+        let names = kernel.quotient_names();
+        let type_ = kernel.sort_zero();
+        for name in [names.quot_mk, names.quot_lift, names.quot_ind] {
+            kernel
+                .add_declaration(Declaration::Axiom {
+                    name,
+                    uparams: vec![],
+                    ty: type_,
+                })
+                .expect("same-named ordinary control should admit");
+        }
+        let representative = kernel.sort_zero();
+        let major = kernel.const_(names.quot_mk, vec![]);
+        let major = kernel.apps(major, &[type_, type_, representative]);
+        let function = kernel.const_(names.quot_ind, vec![]);
+        let application = kernel.const_(names.quot_lift, vec![]);
+        let application = kernel.apps(application, &[type_, type_, type_, function, type_, major]);
+        assert_eq!(kernel.whnf(application), application);
+    }
+
+    #[derive(Debug, Clone, Copy)]
+    enum MajorShape {
+        Exact,
+        Wrapped,
+        WrongHead,
+        WrongArity,
+    }
+
+    #[derive(Debug, Clone, Copy)]
+    enum ArityShape {
+        Underapplied,
+        Exact,
+        Trailing,
+    }
+
+    #[derive(Debug, Clone, Copy)]
+    enum FunctionShape {
+        Neutral,
+        Identity,
+    }
+
+    #[derive(Debug, Clone, PartialEq, Eq)]
+    struct QuotientGrammarSummary {
+        descriptors: usize,
+        fired: usize,
+        inert: usize,
+        transcript: String,
+    }
+
+    #[allow(clippy::too_many_lines)]
+    fn run_quotient_grammar() -> QuotientGrammarSummary {
+        let mut kernel = initialized_kernel();
+        let names = kernel.quotient_names();
+        let root = kernel.anon();
+        let zero = kernel.level_zero();
+        let neutral = kernel.const_(names.eq, vec![zero]);
+        let mut descriptors = BTreeSet::new();
+        let mut transcript = String::new();
+        let mut fired = 0;
+        let mut inert = 0;
+
+        for kind in [QuotKind::Lift, QuotKind::Ind] {
+            for major_shape in [
+                MajorShape::Exact,
+                MajorShape::Wrapped,
+                MajorShape::WrongHead,
+                MajorShape::WrongArity,
+            ] {
+                for arity_shape in [
+                    ArityShape::Underapplied,
+                    ArityShape::Exact,
+                    ArityShape::Trailing,
+                ] {
+                    for trailing_axis in 0..4 {
+                        for function_shape in [FunctionShape::Neutral, FunctionShape::Identity] {
+                            for wrapper_depth in 0..3 {
+                                let descriptor = format!(
+                                    "{kind:?}/{major_shape:?}/{arity_shape:?}/t{trailing_axis}/\
+                                     {function_shape:?}/w{wrapper_depth}"
+                                );
+                                assert!(descriptors.insert(descriptor.clone()));
+
+                                let mut level = zero;
+                                for _ in 0..trailing_axis {
+                                    level = kernel.level_succ(level);
+                                }
+                                let representative = kernel.sort(level);
+                                let type_ = kernel.sort_zero();
+                                let function = match function_shape {
+                                    FunctionShape::Neutral => neutral,
+                                    FunctionShape::Identity => {
+                                        let body = kernel.bvar(0);
+                                        kernel.lam(root, type_, body, BinderInfo::Default)
+                                    }
+                                };
+                                let raw_major = match major_shape {
+                                    MajorShape::Exact | MajorShape::Wrapped => {
+                                        mk_major(&mut kernel, representative, 3)
+                                    }
+                                    MajorShape::WrongHead => {
+                                        let head = kernel.const_(names.eq_refl, vec![zero]);
+                                        kernel.apps(head, &[type_, type_, representative])
+                                    }
+                                    MajorShape::WrongArity => {
+                                        mk_major(&mut kernel, representative, 2)
+                                    }
+                                };
+                                let major = wrap_major(
+                                    &mut kernel,
+                                    raw_major,
+                                    wrapper_depth
+                                        + usize::from(matches!(major_shape, MajorShape::Wrapped)),
+                                );
+                                let trailing =
+                                    (0..=trailing_axis).map(|_| type_).collect::<Vec<_>>();
+                                let major = (!matches!(arity_shape, ArityShape::Underapplied))
+                                    .then_some(major);
+                                let applied_trailing =
+                                    if matches!(arity_shape, ArityShape::Trailing) {
+                                        trailing.as_slice()
+                                    } else {
+                                        &[]
+                                    };
+                                let expression = mk_application(
+                                    &mut kernel,
+                                    kind,
+                                    function,
+                                    major,
+                                    applied_trailing,
+                                );
+                                let should_fire = !matches!(arity_shape, ArityShape::Underapplied)
+                                    && matches!(
+                                        major_shape,
+                                        MajorShape::Exact | MajorShape::Wrapped
+                                    );
+                                let actual = kernel.whnf(expression);
+                                if should_fire {
+                                    let expected = kernel.app(function, representative);
+                                    let expected = kernel.apps(expected, applied_trailing);
+                                    let expected = kernel.whnf(expected);
+                                    assert_eq!(actual, expected, "{descriptor}");
+                                    fired += 1;
+                                    let _ = writeln!(transcript, "{descriptor}=fire");
+                                } else {
+                                    assert_eq!(actual, expression, "{descriptor}");
+                                    inert += 1;
+                                    let _ = writeln!(transcript, "{descriptor}=inert");
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        QuotientGrammarSummary {
+            descriptors: descriptors.len(),
+            fired,
+            inert,
+            transcript,
+        }
+    }
+
+    #[test]
+    fn generated_quotient_seam_population_is_complete_and_byte_identical() {
+        let first = run_quotient_grammar();
+        let second = run_quotient_grammar();
+        assert_eq!(first, second);
+        assert_eq!(first.descriptors, 576);
+        assert_eq!(first.fired + first.inert, first.descriptors);
+        assert!(first.fired > 0);
+        assert!(first.inert > 0);
     }
 }
