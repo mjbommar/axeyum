@@ -2,7 +2,7 @@
 
 Date: 2026-07-23
 
-Status: **preregistered detached-mount fixture correction; no process or parity credit**
+Status: **completed; see [R4 result](lean-complete-parity-main-integration-r4-result-2026-07-23.md)**
 
 Parent: [R3 plan](lean-complete-parity-main-integration-r3-plan-2026-07-23.md)
 
