@@ -15,6 +15,7 @@ SMTCOMP = ROOT / "scripts" / "smtcomp_repro"
 FIXTURES = SMTCOMP / "fixtures" / "e3"
 sys.path.insert(0, str(SMTCOMP))
 
+import multi_host as multi_host_module  # noqa: E402
 from multi_host import (  # noqa: E402
     ALLOCATION_SCHEMA,
     ATTEMPT_SCHEMA,
@@ -658,6 +659,61 @@ class MultiHostPortableTests(unittest.TestCase):
                     remote_helper_path=layout.root / "multi_host.py",
                     inspect_shared_root=False,
                 )
+
+    def test_post_run_diagnostic_quarantine_is_exact_and_crash_replayable(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            run_dir = Path(tmp)
+            diagnostic_relative = Path("terminals/1/orphan.json")
+            source = run_dir / diagnostic_relative
+            source.parent.mkdir(parents=True)
+            data = canonical_bytes({"status": "failed-diagnostic"})
+            source.write_bytes(data)
+            diagnostic_sha = sha256_bytes(data)
+            quarantine_relative = (
+                Path("quarantine")
+                / "post-run-validation"
+                / f"{diagnostic_sha}-{source.name}"
+            )
+            closure = {
+                "diagnostic_terminal_path": str(diagnostic_relative),
+                "diagnostic_terminal_sha256": diagnostic_sha,
+                "quarantine_path": str(quarantine_relative),
+            }
+
+            def interrupt(phase: str) -> None:
+                if phase == "after_post_run_quarantine":
+                    raise RuntimeError(phase)
+
+            with (
+                mock.patch("multi_host.load_bundle", return_value=object()),
+                self.assertRaisesRegex(RuntimeError, "after_post_run_quarantine"),
+            ):
+                multi_host_module._migrate_post_run_diagnostic(
+                    run_dir,
+                    closure,
+                    phase_hook=interrupt,
+                )
+            destination = run_dir / quarantine_relative
+            self.assertFalse(source.exists())
+            self.assertEqual(destination.read_bytes(), data)
+            with mock.patch("multi_host.load_bundle", return_value=object()):
+                multi_host_module._migrate_post_run_diagnostic(run_dir, closure)
+
+            source.write_bytes(data)
+            with (
+                mock.patch("multi_host.load_bundle", return_value=object()),
+                self.assertRaisesRegex(ContractError, "location mismatch"),
+            ):
+                multi_host_module._migrate_post_run_diagnostic(run_dir, closure)
+            source.unlink()
+            destination.write_bytes(b"tampered")
+            with (
+                mock.patch("multi_host.load_bundle", return_value=object()),
+                self.assertRaisesRegex(ContractError, "hash mismatch"),
+            ):
+                multi_host_module._migrate_post_run_diagnostic(run_dir, closure)
 
     def test_complete_portable_evidence_blocks_unaccounted_loss_and_raw_export(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

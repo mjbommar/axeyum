@@ -27,17 +27,20 @@ from p0_prepare import (  # noqa: E402
 from p0_execute import (  # noqa: E402
     ADMISSION_PATH,
     AXEYUM_CLOSURE_RESULT_PATH,
+    BITWUZLA_POST_RUN_CLOSURE_PATH,
     BITWUZLA_RECOVERY_PATH,
     CELL_RESULT_SCHEMA,
     CLOSURE_ADMISSION_PATH,
     CVC5_RESULT_PATH,
     adjudicate_cell,
     cell_result_root,
+    close_frozen_bitwuzla_v2,
     migrate_legacy_adjudication,
     publish_cell_result,
     recover_frozen_bitwuzla_v2,
     require_integrated_admission,
     require_integrated_bitwuzla_recovery,
+    require_integrated_bitwuzla_post_run_closure,
     require_integrated_cell_admission,
     validate_cell_result,
     validate_cell_launch,
@@ -391,6 +394,126 @@ class P0PrepareTests(unittest.TestCase):
                 run_dir=run_dir,
             )
 
+    def test_bitwuzla_post_run_closure_never_launches_allocation(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            preparation, completion, run_dir, acknowledgement = (
+                _bitwuzla_recovery_fixture(Path(tmp))
+            )
+            expected = {"safe_to_continue": True, "record_count": 1305}
+            plan = {"plan_sha256": "p" * 64}
+            run = {"identity_sha256": "r" * 64}
+            with (
+                mock.patch(
+                    "p0_execute.require_integrated_bitwuzla_post_run_closure"
+                ) as gate,
+                mock.patch(
+                    "p0_execute.validate_preparation", return_value=completion
+                ),
+                mock.patch(
+                    "p0_execute.validate_cell_result",
+                    return_value={"safe_to_continue": True},
+                ) as validate_result,
+                mock.patch(
+                    "p0_execute.validate_frozen_bitwuzla_post_run_closure",
+                    return_value=(plan, run),
+                ) as validate_frozen,
+                mock.patch(
+                    "p0_execute.read_canonical_json",
+                    return_value={"remote_helper_path": "/tmp/multi_host.py"},
+                ),
+                mock.patch(
+                    "p0_execute.close_post_run_validation_failure"
+                ) as close_failure,
+                mock.patch("p0_execute.finalize_multi_host_run") as finalize,
+                mock.patch("p0_execute.publish_cell_result") as publish,
+                mock.patch(
+                    "p0_execute.validate_cell_adjudication", return_value=expected
+                ),
+                mock.patch("p0_execute.start_allocation") as start,
+            ):
+                observed = close_frozen_bitwuzla_v2(
+                    repository_root=ROOT,
+                    preparation_root=preparation,
+                    acknowledged_completion_sha256=acknowledgement,
+                )
+            self.assertEqual(observed, expected)
+            gate.assert_called_once_with(ROOT)
+            self.assertEqual(validate_result.call_count, 3)
+            validate_frozen.assert_called_once_with(
+                preparation_root=preparation,
+                completion=completion,
+                run_dir=run_dir,
+            )
+            close_failure.assert_called_once_with(
+                plan=plan,
+                run=run,
+                run_dir=run_dir,
+                allocation_id="retry-1",
+                shard_id=1,
+                remote_helper_path=Path("/tmp/multi_host.py"),
+                expected_record_set_sha256=(
+                    "ae55b2d0061ffeb615c2e852d5d16f9e886df780de2e53c79808d5578db3a78f"
+                ),
+                expected_canonical_bundle_sha256=(
+                    "93e62151c9ef8798a9a84bbea80f772b9092b751eff686ae1dfbe249b87cee95"
+                ),
+            )
+            finalize.assert_called_once_with(run_dir)
+            publish.assert_called_once_with(
+                preparation_root=preparation,
+                completion=completion,
+                cell_id="bitwuzla",
+                run_dir=run_dir,
+            )
+            start.assert_not_called()
+
+    def test_completed_bitwuzla_post_run_closure_replays_without_mutation(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            preparation, completion, run_dir, acknowledgement = (
+                _bitwuzla_recovery_fixture(Path(tmp))
+            )
+            result_root = cell_result_root(preparation, "bitwuzla")
+            result_root.mkdir(parents=True)
+            result_root.joinpath("complete.json").write_bytes(b"{}\n")
+            expected = {"safe_to_continue": True, "record_count": 1305}
+            with (
+                mock.patch(
+                    "p0_execute.require_integrated_bitwuzla_post_run_closure"
+                ),
+                mock.patch(
+                    "p0_execute.validate_preparation", return_value=completion
+                ),
+                mock.patch(
+                    "p0_execute.validate_cell_result",
+                    return_value={"safe_to_continue": True},
+                ) as validate_result,
+                mock.patch(
+                    "p0_execute.validate_cell_adjudication", return_value=expected
+                ),
+                mock.patch(
+                    "p0_execute.close_post_run_validation_failure"
+                ) as close_failure,
+                mock.patch("p0_execute.finalize_multi_host_run") as finalize,
+                mock.patch("p0_execute.publish_cell_result") as publish,
+                mock.patch("p0_execute.start_allocation") as start,
+            ):
+                observed = close_frozen_bitwuzla_v2(
+                    repository_root=ROOT,
+                    preparation_root=preparation,
+                    acknowledged_completion_sha256=acknowledgement,
+                )
+            self.assertEqual(observed, expected)
+            validate_result.assert_called_once_with(
+                preparation_root=preparation,
+                completion=completion,
+                cell_id="bitwuzla",
+                run_dir=run_dir,
+            )
+            close_failure.assert_not_called()
+            finalize.assert_not_called()
+            publish.assert_not_called()
+            start.assert_not_called()
+
     def test_later_cell_admission_requires_integrated_axeyum_closure_result(
         self,
     ) -> None:
@@ -449,6 +572,14 @@ class P0PrepareTests(unittest.TestCase):
                         Path("scripts/smtcomp_repro/resume_fs.py"),
                     ],
                 )
+
+        with mock.patch(
+            "p0_execute.require_integrated_bitwuzla_recovery"
+        ) as recovery:
+            with mock.patch("p0_execute.require_integrated_path") as path:
+                require_integrated_bitwuzla_post_run_closure(ROOT)
+                recovery.assert_called_once_with(ROOT)
+                path.assert_called_once_with(ROOT, BITWUZLA_POST_RUN_CLOSURE_PATH)
 
     def test_cell_results_stay_outside_run_root_and_resume_completion_last(self) -> None:
         for interrupted_phase in ("after_external_adjudication", "after_raw_export"):

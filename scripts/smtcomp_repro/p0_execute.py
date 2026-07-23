@@ -14,6 +14,7 @@ from pathlib import Path
 from typing import Any, Callable
 
 from multi_host import (
+    close_post_run_validation_failure,
     finalize_multi_host_run,
     finish_allocation,
     recover_released_failed_shard,
@@ -21,7 +22,7 @@ from multi_host import (
     validate_host_command,
 )
 from p0_prepare import validate_preparation
-from resume_contract import ContractError, canonical_bytes, digest
+from resume_contract import ContractError, canonical_bytes, digest, record_set_sha256
 from resume_fs import (
     atomic_install_bytes,
     atomic_install_json,
@@ -45,6 +46,9 @@ CVC5_RESULT_PATH = Path(
 )
 BITWUZLA_RECOVERY_PATH = Path(
     "docs/plan/smtcomp-repaired-p0-v2-bitwuzla-recovery-plan-2026-07-23.md"
+)
+BITWUZLA_POST_RUN_CLOSURE_PATH = Path(
+    "docs/plan/smtcomp-repaired-p0-v2-bitwuzla-post-run-closure-plan-2026-07-23.md"
 )
 CELL_ORDER = ("axeyum", "cvc5", "bitwuzla")
 ADJUDICATION_SCHEMA = "axeyum.smtcomp-repaired-p0-cell-adjudication.v1"
@@ -89,6 +93,33 @@ FROZEN_BITWUZLA_V2_RECOVERY = {
     "runner_terminal_sha256": "092579dd324cbbf17cebd4c5a49b0e25dcf850b0b8c85e2912bf7fdfece1ac26",
     "retry_command_sha256": "d0d03b3c5fde3704629c2c27fc22336d31ab5ef3043325814451247ed671505f",
     "failed_resource_session_id": "p0-bitwuzla-initial-1-f49561551140",
+}
+
+FROZEN_BITWUZLA_V2_POST_RUN_CLOSURE = {
+    "preparation_completion_sha256": "8d9145b2673ee10bf7c38990c20301f13323cfe4ab02c9946b403d0d2e4f4261",
+    "run_identity_sha256": "f495615511402433ae6eaa7a5b90f4b62ad417fb5b71e7459ce4f66da145fc94",
+    "plan_sha256": "1a724265a12ecb70bf61f147012e824f63675456096accc38677f6338894e219",
+    "recovery_sha256": "3501ebe1810602771f5731a6e5bc2d0aaff684c7e311739fcd5123745ad7ec8c",
+    "record_count": 1305,
+    "record_set_sha256": "ae55b2d0061ffeb615c2e852d5d16f9e886df780de2e53c79808d5578db3a78f",
+    "canonical_bundle_sha256": "93e62151c9ef8798a9a84bbea80f772b9092b751eff686ae1dfbe249b87cee95",
+    "shard_completion_sha256s": {
+        "0": "2f54b229a9e9b0274beadaac2c474ec7a0569947a3cbf3ce4faab4d6c688ad67",
+        "1": "e838333ac7b6e16526fc20e37d8679deca14b70618f356254c1a7879ffcd53bf",
+        "2": "5d60638f60583c1e19096c0aff732db352af71b023eb61bfa4b86b1096fa0adb",
+    },
+    "retry_attempt_sha256": "f95fd96966933b476d240064cc273289fa115af65d0a7a8dd7d5c0706680dccc",
+    "retry_terminal_sha256": "fe06334111bd3b79603cca48d2eda2bc16b4fe1ef38d45cf4a9a9c2bcb1d8bdd",
+    "resource_preflight_sha256": "02983c9970e5d4f2fd778a2cd038215cefc68348d2a46f174501448eef76f04c",
+    "resource_terminal_sha256": "c7418c31531707a2465186b425262c766e7b2b009e39c5aea7453de835c24dde",
+    "runner_attempt_sha256": "b362c886340e1b312ed9660a01fd99266aeb8f5d08eee2937685cfed4ec46970",
+    "runner_terminal_sha256": "e22c976eb52b8ca3a57e7c489fc16cdd3ea24f4d9d017a6357c35125158a9400",
+    "diagnostic_terminal_sha256": "092579dd324cbbf17cebd4c5a49b0e25dcf850b0b8c85e2912bf7fdfece1ac26",
+    "stderr_sha256": "afaf730d63b71829b5c268cd09284bb1088512b4b75b9cc0db1ddba2645eb941",
+    "retry_session_id": "p0-bitwuzla-retry-1-f49561551140",
+    "retry_allocation_attempt_id": "retry-1-1784838803556205979-fd575942f3f1",
+    "runner_attempt_id": "1-1784838807213721563-a1914cecdfc641a1a1c3f5c96d79ad1c",
+    "diagnostic_terminal_relative": "terminals/1/1-1784829799870139753-9f61945e0d6f42b5b11aefb32ad7f393.json",
 }
 
 
@@ -157,6 +188,13 @@ def require_integrated_bitwuzla_recovery(repository_root: Path) -> None:
         Path("scripts/smtcomp_repro/resume_fs.py"),
     ):
         require_integrated_path(repository_root, relative)
+
+
+def require_integrated_bitwuzla_post_run_closure(repository_root: Path) -> None:
+    """Require the process-free closure plan and implementation on origin/main."""
+
+    require_integrated_bitwuzla_recovery(repository_root)
+    require_integrated_path(repository_root, BITWUZLA_POST_RUN_CLOSURE_PATH)
 
 
 def _json_count(path: Path) -> int:
@@ -883,6 +921,254 @@ def recover_frozen_bitwuzla_v2(
     )
 
 
+def validate_frozen_bitwuzla_post_run_closure(
+    *,
+    preparation_root: Path,
+    completion: dict[str, Any],
+    run_dir: Path,
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    """Validate the exact 1,305-record post-retry stop state."""
+
+    frozen = FROZEN_BITWUZLA_V2_POST_RUN_CLOSURE
+    _require_file_hash(
+        preparation_root / "complete.json",
+        frozen["preparation_completion_sha256"],
+        "Bitwuzla post-run preparation completion",
+    )
+    cell = _cell_by_id(completion)["bitwuzla"]
+    if cell.get("run_identity_sha256") != frozen["run_identity_sha256"]:
+        raise ContractError("frozen Bitwuzla post-run run identity mismatch")
+    _require_file_hash(
+        run_dir / "multi-host-plan.json",
+        frozen["plan_sha256"],
+        "Bitwuzla post-run plan",
+    )
+    _require_file_hash(
+        run_dir / "multi-host-recoveries" / "initial-1-1.json",
+        frozen["recovery_sha256"],
+        "Bitwuzla post-run recovery",
+    )
+    records = _records(run_dir)
+    if (
+        len(records) != frozen["record_count"]
+        or record_set_sha256(records) != frozen["record_set_sha256"]
+        or Counter(row.get("shard_id") for row in records)
+        != {"0": 435, "1": 435, "2": 435}
+    ):
+        raise ContractError("frozen Bitwuzla post-run record set mismatch")
+    adjudication = adjudicate_cell(
+        completion=completion,
+        cell_id="bitwuzla",
+        run_dir=run_dir,
+    )
+    if (
+        adjudication["safe_to_continue"] is not True
+        or adjudication["record_count"] != 1305
+        or adjudication["status_counts"]
+        != {"no-verdict": 84, "sat": 432, "unsat": 789}
+        or adjudication["termination_counts"]
+        != {"completed": 1221, "wall-timeout": 84}
+    ):
+        raise ContractError("frozen Bitwuzla post-run adjudication mismatch")
+    for shard_id, expected in frozen["shard_completion_sha256s"].items():
+        _require_file_hash(
+            run_dir / "completions" / f"{shard_id}.json",
+            expected,
+            f"Bitwuzla post-run shard {shard_id} completion",
+        )
+    retry_attempt_path = (
+        run_dir
+        / "multi-host-attempts"
+        / "retry-1"
+        / f"{frozen['retry_allocation_attempt_id']}.json"
+    )
+    retry_terminal_path = (
+        run_dir
+        / "multi-host-terminals"
+        / "retry-1"
+        / f"{frozen['retry_allocation_attempt_id']}.json"
+    )
+    if (
+        sorted((run_dir / "multi-host-attempts" / "retry-1").glob("*.json"))
+        != [retry_attempt_path]
+        or sorted((run_dir / "multi-host-terminals" / "retry-1").glob("*.json"))
+        != [retry_terminal_path]
+    ):
+        raise ContractError("frozen Bitwuzla post-run retry population mismatch")
+    _require_file_hash(
+        retry_attempt_path,
+        frozen["retry_attempt_sha256"],
+        "Bitwuzla post-run retry attempt",
+    )
+    _require_file_hash(
+        retry_terminal_path,
+        frozen["retry_terminal_sha256"],
+        "Bitwuzla post-run retry terminal",
+    )
+    retry_terminal = read_canonical_json(retry_terminal_path)
+    if (
+        retry_terminal.get("status") != "failed"
+        or retry_terminal.get("exit_code") != 2
+        or retry_terminal.get("stderr_sha256") != frozen["stderr_sha256"]
+    ):
+        raise ContractError("frozen Bitwuzla post-run retry outcome mismatch")
+    session_root = run_dir / "resource-sessions" / frozen["retry_session_id"]
+    _require_file_hash(
+        session_root / "preflight.json",
+        frozen["resource_preflight_sha256"],
+        "Bitwuzla post-run resource preflight",
+    )
+    _require_file_hash(
+        session_root / "terminal.json",
+        frozen["resource_terminal_sha256"],
+        "Bitwuzla post-run resource terminal",
+    )
+    resource_terminal = read_canonical_json(session_root / "terminal.json")
+    if (
+        resource_terminal.get("status") != "failed"
+        or resource_terminal.get("worker_exit_codes") != [2]
+    ):
+        raise ContractError("frozen Bitwuzla post-run resource outcome mismatch")
+    runner_attempt_path = (
+        run_dir
+        / "attempts"
+        / "1"
+        / f"{frozen['runner_attempt_id']}.json"
+    )
+    runner_terminal_path = (
+        run_dir
+        / "terminals"
+        / "1"
+        / f"{frozen['runner_attempt_id']}.json"
+    )
+    _require_file_hash(
+        runner_attempt_path,
+        frozen["runner_attempt_sha256"],
+        "Bitwuzla post-run runner attempt",
+    )
+    _require_file_hash(
+        runner_terminal_path,
+        frozen["runner_terminal_sha256"],
+        "Bitwuzla post-run runner terminal",
+    )
+    runner_terminal = read_canonical_json(runner_terminal_path)
+    if (
+        runner_terminal.get("status") != "completed"
+        or runner_terminal.get("completed_count") != 435
+        or runner_terminal.get("missing_result_keys") != []
+    ):
+        raise ContractError("frozen Bitwuzla post-run runner outcome mismatch")
+    diagnostic_relative = Path(frozen["diagnostic_terminal_relative"])
+    source = run_dir / diagnostic_relative
+    quarantine = (
+        run_dir
+        / "quarantine"
+        / "post-run-validation"
+        / f"{frozen['diagnostic_terminal_sha256']}-{diagnostic_relative.name}"
+    )
+    present = [path for path in (source, quarantine) if path.is_file()]
+    if (
+        len(present) != 1
+        or present[0].is_symlink()
+        or sha256_file(present[0]) != frozen["diagnostic_terminal_sha256"]
+    ):
+        raise ContractError("frozen Bitwuzla diagnostic terminal mismatch")
+    if any((run_dir / "leases").glob("*.json")):
+        raise ContractError("frozen Bitwuzla post-run state has a live shard lease")
+    plan = read_canonical_json(run_dir / "multi-host-plan.json")
+    run = read_canonical_json(run_dir / "run.json")
+    return plan, run
+
+
+def close_frozen_bitwuzla_v2(
+    *,
+    repository_root: Path,
+    preparation_root: Path,
+    acknowledged_completion_sha256: str,
+    require_integrated: bool = True,
+) -> dict[str, Any]:
+    """Perform only the preregistered process-free Bitwuzla closure."""
+
+    if require_integrated:
+        require_integrated_bitwuzla_post_run_closure(repository_root)
+    if (
+        sha256_file(preparation_root / "complete.json")
+        != acknowledged_completion_sha256
+    ):
+        raise ContractError("operator acknowledgement names another preparation")
+    completion = validate_preparation(preparation_root, require_empty=False)
+    cells = _cell_by_id(completion)
+    run_dir = Path(cells["bitwuzla"]["attempt_root"])
+    result_root = cell_result_root(preparation_root, "bitwuzla")
+    if (result_root / "complete.json").exists():
+        result = validate_cell_result(
+            preparation_root=preparation_root,
+            completion=completion,
+            cell_id="bitwuzla",
+            run_dir=run_dir,
+        )
+        if result.get("safe_to_continue") is not True:
+            raise ContractError("completed Bitwuzla closure is unsafe")
+        return validate_cell_adjudication(
+            completion=completion,
+            cell_id="bitwuzla",
+            run_dir=run_dir,
+            adjudication_path=result_root / "p0-cell-adjudication.json",
+        )
+    for prior_id in ("axeyum", "cvc5"):
+        prior_result = validate_cell_result(
+            preparation_root=preparation_root,
+            completion=completion,
+            cell_id=prior_id,
+            run_dir=Path(cells[prior_id]["attempt_root"]),
+        )
+        if prior_result.get("safe_to_continue") is not True:
+            raise ContractError(f"prior P0 cell blocks Bitwuzla closure: {prior_id}")
+    plan, run = validate_frozen_bitwuzla_post_run_closure(
+        preparation_root=preparation_root,
+        completion=completion,
+        run_dir=run_dir,
+    )
+    retry_command = read_canonical_json(
+        run_dir / "multi-host-commands" / "retry-1.json"
+    )
+    close_post_run_validation_failure(
+        plan=plan,
+        run=run,
+        run_dir=run_dir,
+        allocation_id="retry-1",
+        shard_id=1,
+        remote_helper_path=Path(retry_command["remote_helper_path"]),
+        expected_record_set_sha256=FROZEN_BITWUZLA_V2_POST_RUN_CLOSURE[
+            "record_set_sha256"
+        ],
+        expected_canonical_bundle_sha256=FROZEN_BITWUZLA_V2_POST_RUN_CLOSURE[
+            "canonical_bundle_sha256"
+        ],
+    )
+    finalize_multi_host_run(run_dir)
+    publish_cell_result(
+        preparation_root=preparation_root,
+        completion=completion,
+        cell_id="bitwuzla",
+        run_dir=run_dir,
+    )
+    result = validate_cell_result(
+        preparation_root=preparation_root,
+        completion=completion,
+        cell_id="bitwuzla",
+        run_dir=run_dir,
+    )
+    if result.get("safe_to_continue") is not True:
+        raise ContractError("published Bitwuzla closure is unsafe")
+    return validate_cell_adjudication(
+        completion=completion,
+        cell_id="bitwuzla",
+        run_dir=run_dir,
+        adjudication_path=result_root / "p0-cell-adjudication.json",
+    )
+
+
 def execute_cell(
     *,
     repository_root: Path,
@@ -972,6 +1258,11 @@ def main() -> int:
         choices=("initial-1",),
         help="perform the preregistered frozen Bitwuzla different-host retry",
     )
+    ap.add_argument(
+        "--close-post-run-validation-failure",
+        choices=("retry-1",),
+        help="perform the preregistered process-free Bitwuzla retry closure",
+    )
     args = ap.parse_args()
     if len(args.acknowledge_complete_sha256) != 64:
         ap.error("--acknowledge-complete-sha256 must be a SHA-256")
@@ -979,13 +1270,29 @@ def main() -> int:
         ap.error("--poll-seconds must be between 1 and 60")
     if args.close_completed and args.cell != "axeyum":
         ap.error("--close-completed is restricted to the frozen Axeyum v2 cell")
-    if args.close_completed and args.recover_failed_allocation:
-        ap.error("closure and failed-allocation recovery are mutually exclusive")
+    selected_modes = sum(
+        bool(value)
+        for value in (
+            args.close_completed,
+            args.recover_failed_allocation,
+            args.close_post_run_validation_failure,
+        )
+    )
+    if selected_modes > 1:
+        ap.error("closure and failed-allocation modes are mutually exclusive")
     if args.recover_failed_allocation and args.cell != "bitwuzla":
         ap.error("failed-allocation recovery is restricted to frozen Bitwuzla")
+    if args.close_post_run_validation_failure and args.cell != "bitwuzla":
+        ap.error("post-run closure is restricted to frozen Bitwuzla")
     try:
         preparation_root = args.preparation_root.resolve(strict=True)
-        if args.recover_failed_allocation:
+        if args.close_post_run_validation_failure:
+            adjudication = close_frozen_bitwuzla_v2(
+                repository_root=repository_root,
+                preparation_root=preparation_root,
+                acknowledged_completion_sha256=args.acknowledge_complete_sha256,
+            )
+        elif args.recover_failed_allocation:
             adjudication = recover_frozen_bitwuzla_v2(
                 repository_root=repository_root,
                 preparation_root=preparation_root,
