@@ -714,6 +714,30 @@ def _validate_terminal_record(
             raise ContractError(f"resource terminal counter fields changed: {field}")
 
 
+def validate_resource_session(
+    *,
+    run_dir: Path,
+    run: dict[str, Any],
+    session_id: str,
+    expected_status: str | None = None,
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    """Validate and return one closed E2 resource session."""
+
+    sessions = _load_sessions(run_dir)
+    session = sessions.get(session_id)
+    if session is None:
+        raise ContractError("missing exact resource session evidence")
+    preflight = session["preflight"]
+    terminal = session["terminal"]
+    _validate_preflight_record(preflight, run, session_id)
+    if terminal is None:
+        raise ContractError("resource session lacks its terminal")
+    _validate_terminal_record(terminal, preflight, run)
+    if expected_status is not None and terminal["status"] != expected_status:
+        raise ContractError("resource session terminal status mismatch")
+    return preflight, terminal
+
+
 def validate_resource_evidence(run_dir: Path, bundle: Any) -> None:
     """Validate all E2 session artifacts before scoring export."""
 
@@ -918,4 +942,5 @@ __all__ = [
     "run_worker_pool",
     "validate_enforcement",
     "validate_resource_evidence",
+    "validate_resource_session",
 ]

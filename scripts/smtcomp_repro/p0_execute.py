@@ -153,6 +153,7 @@ def require_integrated_bitwuzla_recovery(repository_root: Path) -> None:
     for relative in (
         BITWUZLA_RECOVERY_PATH,
         Path("scripts/smtcomp_repro/multi_host.py"),
+        Path("scripts/smtcomp_repro/resource_enforcement.py"),
         Path("scripts/smtcomp_repro/resume_fs.py"),
     ):
         require_integrated_path(repository_root, relative)

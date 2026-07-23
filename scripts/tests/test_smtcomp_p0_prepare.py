@@ -443,6 +443,7 @@ class P0PrepareTests(unittest.TestCase):
                     [
                         BITWUZLA_RECOVERY_PATH,
                         Path("scripts/smtcomp_repro/multi_host.py"),
+                        Path("scripts/smtcomp_repro/resource_enforcement.py"),
                         Path("scripts/smtcomp_repro/resume_fs.py"),
                     ],
                 )

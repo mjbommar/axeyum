@@ -491,6 +491,18 @@ class MultiHostPortableTests(unittest.TestCase):
                     }
                 )
             )
+            resource_terminal = {
+                "status": "failed",
+                "worker_exit_codes": [2],
+                "record_sha256": "2" * 64,
+            }
+            session.joinpath("terminal.json").write_bytes(
+                canonical_bytes(resource_terminal)
+            )
+            validated_session = (
+                read_canonical_json(session / "preflight.json"),
+                resource_terminal,
+            )
             runner_terminal = {
                 "status": "failed",
                 "exit_code": 1,
@@ -566,6 +578,10 @@ class MultiHostPortableTests(unittest.TestCase):
                 canonical_bytes(malformed_runner_terminal)
             )
             with (
+                mock.patch(
+                    "multi_host.validate_resource_session",
+                    return_value=validated_session,
+                ),
                 mock.patch("multi_host.remote_liveness", return_value=dead),
                 mock.patch(
                     "multi_host._load_allocation_evidence",
@@ -585,6 +601,10 @@ class MultiHostPortableTests(unittest.TestCase):
                 )
             runner_terminal_path.write_bytes(canonical_bytes(runner_terminal))
             with (
+                mock.patch(
+                    "multi_host.validate_resource_session",
+                    return_value=validated_session,
+                ),
                 mock.patch("multi_host.remote_liveness", return_value=dead),
                 mock.patch(
                     "multi_host._load_allocation_evidence",
@@ -617,6 +637,10 @@ class MultiHostPortableTests(unittest.TestCase):
 
             revived = dict(dead, unit_state="active", launcher_live=True)
             with (
+                mock.patch(
+                    "multi_host.validate_resource_session",
+                    return_value=validated_session,
+                ),
                 mock.patch("multi_host.remote_liveness", return_value=revived),
                 mock.patch(
                     "multi_host._load_allocation_evidence",

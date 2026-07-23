@@ -46,6 +46,7 @@ from resource_enforcement import (
     build_resource_completion,
     install_resource_completion,
     validate_resource_evidence,
+    validate_resource_session,
 )
 from resume_runner import (
     RUNNER_SOURCE_NAMES,
@@ -198,6 +199,8 @@ RELEASED_RECOVERY_FIELDS = {
     "failed_terminal_record_sha256",
     "runner_terminal_path",
     "runner_terminal_sha256",
+    "resource_terminal_record_sha256",
+    "resource_terminal_sha256",
     "lease_state",
     "remote_unit",
     "remote_unit_state",
@@ -1476,6 +1479,7 @@ def recover_failed_shard(
         or retry is None
         or retry["recovers_allocation_id"] != failed_allocation_id
         or len(retry["shard_ids"]) != 1
+        or failed["shard_ids"] != retry["shard_ids"]
     ):
         raise ContractError("unregistered multi-host recovery")
     shard_id = retry["shard_ids"][0]
@@ -1584,9 +1588,12 @@ def recover_released_failed_shard(
         run_dir / "multi-host-recoveries" / f"{failed_allocation_id}-{shard_id}.json"
     )
     session_dir = run_dir / "resource-sessions" / resource_session_id
-    preflight = read_canonical_json(session_dir / "preflight.json")
-    if (session_dir / "terminal.json").exists():
-        raise ContractError("released recovery has an unexpected resource terminal")
+    preflight, resource_terminal = validate_resource_session(
+        run_dir=run_dir,
+        run=run,
+        session_id=resource_session_id,
+        expected_status="failed",
+    )
     registrations = {row["host_id"]: row for row in plan["host_registrations"]}
     registration = registrations[failed["host_id"]]
     if (
@@ -1622,6 +1629,8 @@ def recover_released_failed_shard(
         failed_attempt.get("session_id") != resource_session_id
         or failed_terminal is None
         or failed_terminal.get("status") != "failed"
+        or resource_terminal.get("worker_exit_codes")
+        != [failed_terminal.get("exit_code")]
     ):
         raise ContractError("released recovery lacks its failed allocation terminal")
 
@@ -1692,6 +1701,8 @@ def recover_released_failed_shard(
             "failed_terminal_record_sha256": failed_terminal["record_sha256"],
             "runner_terminal_path": str(runner_terminal_path.relative_to(run_dir)),
             "runner_terminal_sha256": sha256_file(runner_terminal_path),
+            "resource_terminal_record_sha256": resource_terminal["record_sha256"],
+            "resource_terminal_sha256": sha256_file(session_dir / "terminal.json"),
             "lease_state": "released-after-failure",
             "remote_unit": unit,
             "remote_unit_state": liveness["unit_state"],
@@ -1933,6 +1944,14 @@ def _load_recoveries(
                 record.get("runner_terminal_sha256"),
                 "runner terminal sha256",
             )
+            _require_sha(
+                record.get("resource_terminal_record_sha256"),
+                "resource terminal record sha256",
+            )
+            _require_sha(
+                record.get("resource_terminal_sha256"),
+                "resource terminal sha256",
+            )
             if record.get("lease_state") != "released-after-failure":
                 raise ContractError("released recovery lease state mismatch")
             if (run_dir / "leases" / f"{record['shard_id']}.json").exists():
@@ -1971,6 +1990,18 @@ def _load_recoveries(
                 raise ContractError("released recovery allocation evidence is missing")
             failed_attempt = read_canonical_json(attempt_path)
             failed_terminal = read_canonical_json(terminal_path)
+            resource_preflight, resource_terminal = validate_resource_session(
+                run_dir=run_dir,
+                run=run,
+                session_id=record["resource_session_id"],
+                expected_status="failed",
+            )
+            resource_terminal_path = (
+                run_dir
+                / "resource-sessions"
+                / record["resource_session_id"]
+                / "terminal.json"
+            )
             if (
                 failed_attempt.get("attempt_id") != record["failed_attempt_id"]
                 or failed_attempt.get("allocation_id") != failed["allocation_id"]
@@ -1978,13 +2009,23 @@ def _load_recoveries(
                 or failed_terminal.get("status") != "failed"
                 or failed_terminal.get("record_sha256")
                 != record["failed_terminal_record_sha256"]
+                or resource_terminal.get("worker_exit_codes")
+                != [failed_terminal.get("exit_code")]
+                or resource_terminal.get("record_sha256")
+                != record["resource_terminal_record_sha256"]
+                or sha256_file(resource_terminal_path)
+                != record["resource_terminal_sha256"]
             ):
                 raise ContractError("released recovery failed terminal mismatch")
-        session = read_canonical_json(
-            run_dir
-            / "resource-sessions"
-            / record["resource_session_id"]
-            / "preflight.json"
+        session = (
+            resource_preflight
+            if schema == RELEASED_RECOVERY_SCHEMA
+            else read_canonical_json(
+                run_dir
+                / "resource-sessions"
+                / record["resource_session_id"]
+                / "preflight.json"
+            )
         )
         if (
             session.get("launcher_pid") != record.get("launcher_pid")
