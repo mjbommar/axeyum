@@ -343,6 +343,14 @@ Again, there are distinct targets:
   still semantics-only: no provider configuration, M2.3 authority, process,
   trace, runner edge, native outcome, pair, or parity credit exists, and M2.3
   binding remains downstream of accepted M2.1 and M2.2 results.
+  M2.4's
+  [Lake workspace/project plan](plan/lean-u2-native-dependency-tl0.6.4-m2.4-lake-project-plan-2026-07-23.md)
+  now preregisters executable configuration, manifest/override/materialization
+  order, target/facet/job semantics, query/setup build projections, cache and
+  network state, and downstream ownership. Its read-only floor has 52 direct
+  Lake cases with 70 tracked configuration roots plus 28 wrapper-directory
+  lexical candidates pending M2.3. No M2.4 authority, process, configured
+  workspace, edge, observation, outcome, pair, or parity credit exists.
   The subsequent
   [TL0.7.1 contract](plan/lean-execution-evidence-tl0.7.1-2026-07-22.md)
   defines explicit 4/8 GiB local lanes, twelve typed termination classes, and

@@ -107,6 +107,102 @@ class LeanCompleteParityTests(unittest.TestCase):
             },
         )
 
+    def test_m2_4_lake_project_preregistration_matches_u2_authority(self) -> None:
+        authority = GEN.load_json(GEN.U2_AUTHORITY)
+        lake_cases = [
+            case for case in authority["cases"] if case["kind"] == "lake-directory"
+        ]
+        self.assertEqual(len(lake_cases), 52)
+        self.assertEqual(
+            sum(case["profiles"] == ["default", "full-lake"] for case in lake_cases),
+            7,
+        )
+        self.assertEqual(
+            sum(case["profiles"] == ["full-lake"] for case in lake_cases), 45
+        )
+        self.assertEqual(len({case["support_scope"] for case in lake_cases}), 52)
+
+        selected_scripts = {case["source_path"] for case in lake_cases}
+        tracked_lake_scripts = {
+            row["path"]
+            for row in authority["content_files"]
+            if row["path"].endswith("/test.sh")
+            and (
+                row["path"].startswith("tests/lake/examples/")
+                or row["path"].startswith("tests/lake/tests/")
+            )
+        }
+        self.assertEqual(len(tracked_lake_scripts), 55)
+        self.assertEqual(
+            tracked_lake_scripts - selected_scripts,
+            {
+                "tests/lake/examples/bootstrap/test.sh",
+                "tests/lake/tests/online/test.sh",
+                "tests/lake/tests/toolchain/test.sh",
+            },
+        )
+
+        prefixes = tuple(f"{case['support_scope'].rstrip('/')}/" for case in lake_cases)
+        support_rows = [
+            row
+            for row in authority["content_files"]
+            if row["path"].startswith(prefixes)
+        ]
+        self.assertEqual(len(support_rows), 1045)
+        self.assertEqual(sum(row["bytes"] for row in support_rows), 250_410)
+
+        config_roots: dict[str, set[str]] = {}
+        for row in support_rows:
+            path = row["path"]
+            basename = path.rsplit("/", 1)[-1]
+            if basename in {"lakefile.lean", "lakefile.toml"}:
+                config_roots.setdefault(path.rsplit("/", 1)[0], set()).add(basename)
+        self.assertEqual(len(config_roots), 70)
+        self.assertEqual(
+            sum(files == {"lakefile.lean"} for files in config_roots.values()), 46
+        )
+        self.assertEqual(
+            sum(files == {"lakefile.toml"} for files in config_roots.values()), 17
+        )
+        self.assertEqual(sum(len(files) == 2 for files in config_roots.values()), 7)
+        self.assertEqual(
+            sum(row["path"].endswith("/lakefile.lean") for row in support_rows), 53
+        )
+        self.assertEqual(
+            sum(row["path"].endswith("/lakefile.toml") for row in support_rows), 24
+        )
+        self.assertEqual(
+            sum(row["path"].endswith("/lake-manifest.json") for row in support_rows),
+            0,
+        )
+        self.assertEqual(
+            sum(row["path"].endswith("/lean-toolchain") for row in support_rows), 1
+        )
+
+        no_tracked_config = {
+            case["id"]
+            for case in lake_cases
+            if not any(
+                root == case["support_scope"]
+                or root.startswith(f"{case['support_scope']}/")
+                for root in config_roots
+            )
+        }
+        self.assertEqual(
+            no_tracked_config,
+            {
+                "tests/lake/tests/13013/test.sh",
+                "tests/lake/tests/api/test.sh",
+                "tests/lake/tests/depTree/test.sh",
+                "tests/lake/tests/env/test.sh",
+                "tests/lake/tests/init/test.sh",
+                "tests/lake/tests/old/test.sh",
+                "tests/lake/tests/serve/test.sh",
+                "tests/lake/tests/toml/test.sh",
+                "tests/lake/tests/translateConfig/test.sh",
+            },
+        )
+
     def test_committed_registry_is_valid_and_rendering_is_deterministic(self) -> None:
         self.assertEqual(self.failures(), [])
         first = GEN.build_report(self.data)
@@ -328,6 +424,10 @@ class LeanCompleteParityTests(unittest.TestCase):
         )
         self.assertIn(
             "docs/plan/lean-u2-native-dependency-tl0.6.4-m2.3-runner-generated-plan-2026-07-23.md",
+            source_paths,
+        )
+        self.assertIn(
+            "docs/plan/lean-u2-native-dependency-tl0.6.4-m2.4-lake-project-plan-2026-07-23.md",
             source_paths,
         )
         self.assertIn(

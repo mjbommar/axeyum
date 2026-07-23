@@ -623,6 +623,19 @@ edge, native outcome, pair, performance row, or terminal credit exists; those
 remain downstream of accepted M2.1 and M2.2 results plus a separately frozen
 M2.3.1 authority.
 
+The source-first
+[M2.4 Lake workspace/project plan](lean-u2-native-dependency-tl0.6.4-m2.4-lake-project-plan-2026-07-23.md)
+now freezes the next semantics-only boundary. Its read-only floor contains 52
+direct Lake cases with 70 tracked configuration roots and 28 disjoint
+wrapper-directory lexical candidates whose reachability remains owned by M2.3.
+It separates executable configuration, manifest/override/materialization
+order, target/facet/job resolution, query and setup build projections,
+artifact/cache/network state, and downstream compiler/runtime/server ownership.
+No M2.4 authority, process formula, configured workspace, package/target edge,
+observation, outcome, pair, performance row, or terminal credit exists; the
+actual input denominator remains downstream of accepted M2.1-M2.3 results and
+a separately frozen M2.4.1 authority.
+
 ## 8. Layer-specific equivalence
 
 One byte-comparison rule cannot cover the entire system:

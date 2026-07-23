@@ -33,7 +33,7 @@ Current machine-derived state:
 | U0-U9 | 0 complete authorities | a complete executable denominator for any terminal population |
 | A0-A11 | 0 complete axes | end-to-end native behavior on any complete required population |
 | G1-G10 | 0 satisfied terminal gates | any terminal parity claim |
-| U2 official execution/classification | 8 consumed processes, 66 official outcomes, 65 passes / 1 failure over **65 unique cases**; execution M1 derives 5 exact memberships and 289 physical shards, one locally complete; TL0.6.4 M0 gives all 3,723 cases a harness floor, M1 inspects 7,004 tracked files / 90,909 spans, M2.0 freezes an empty typed graph across 408,374 factored case/variant occurrences, and M2.1-M2.3 now have source-first header, resolution/effective-import, and configured-runner semantics without executing those programs | the 3,678/3,723-case parents, all 111 full attempts, any resolved dependency node/edge/closure, configured provider/runner edge, exact dependency-reviewed classification, an Axeyum outcome, a pair, or performance |
+| U2 official execution/classification | 8 consumed processes, 66 official outcomes, 65 passes / 1 failure over **65 unique cases**; execution M1 derives 5 exact memberships and 289 physical shards, one locally complete; TL0.6.4 M0 gives all 3,723 cases a harness floor, M1 inspects 7,004 tracked files / 90,909 spans, M2.0 freezes an empty typed graph across 408,374 factored case/variant occurrences, and M2.1-M2.4 now have source-first header, resolution/effective-import, configured-runner, and Lake-project semantics without executing those programs | the 3,678/3,723-case parents, all 111 full attempts, any resolved dependency node/edge/closure, configured provider/runner/Lake edge, exact dependency-reviewed classification, an Axeyum outcome, a pair, or performance |
 
 The accepted
 [`R3 result`](lean-u2-official-execution-tl0.6.3-m0-r3-result-2026-07-22.md)
@@ -223,6 +223,17 @@ runners through two tracked symlinks. No M2.3 input authority, process formula,
 provider configuration, trace, edge, outcome, pair, or credit exists before
 accepted M2.1/M2.2 results and a separate M2.3.1 authority.
 
+M2.4's
+[Lake workspace/project plan](lean-u2-native-dependency-tl0.6.4-m2.4-lake-project-plan-2026-07-23.md)
+now preregisters executable configuration, manifest/override/materialization,
+target/facet/job, query/setup, artifact/cache/network, and downstream ownership
+semantics. The current read-only floor is 52 direct Lake cases with 70 tracked
+configuration roots plus 28 wrapper-directory lexical candidates; M2.3 must
+prove which candidates transfer. No M2.4 authority, process formula,
+configured workspace, package/target edge, observation, outcome, pair, or
+credit exists before accepted M2.1-M2.3 results and a separate M2.4.1
+authority.
+
 ## 2. What the SMT-LIB comparison actually says
 
 The solver program supplies a mature measurement warning for Lean parity:
@@ -337,7 +348,7 @@ execution, and content/dependency-complete U2 classification.
 4. Explicitly authorize, execute once, and validate TL0.6.4 M2.1's exact
    39-process fast/full header pass; then bind and execute M2.2-M2.7 module,
    generated-artifact, runtime, library, FFI, request, and project closures.
-   M2.2/M2.3 plans freeze semantics only: neither is an input authority or
+   M2.2-M2.4 plans freeze semantics only: none is an input authority or
    execution permission. Do not infer FFI absence from M0 or closure from
    M2.0/pre-execution M2.1.
 5. Review all rows under M3 and accept TL0.6.4 only when no provisional field,

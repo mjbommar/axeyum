@@ -388,6 +388,15 @@ Start at the root [`PLAN.md`](../../PLAN.md) (map + standing rules) and
   control families. It creates no M2.3 authority, process budget, evidence,
   configured provider, runner edge, observation, outcome, pair, or parity
   credit; binding remains downstream of accepted M2.1 and M2.2 results.
+- [`TL0.6.4 M2.4 Lake workspace/project plan`](lean-u2-native-dependency-tl0.6.4-m2.4-lake-project-plan-2026-07-23.md)
+  — preregisters executable Lean/TOML configuration, manifest/override/
+  materialization order, target/facet/job resolution, query/setup build
+  projections, cache/network state, artifact provenance, and downstream
+  ownership. The read-only research floor contains 52 direct Lake cases with
+  70 tracked configuration roots plus 28 wrapper-directory lexical candidates;
+  accepted M2.3 evidence must determine the actual denominator. It creates no
+  M2.4 authority, process budget, evidence, workspace, edge, observation,
+  outcome, pair, or parity credit.
 - [`Lean complete-parity worktree-portability R1 result`](lean-complete-parity-worktree-portability-r1-result-2026-07-23.md)
   — records the bounded validator repair at `c3f068ea`, `09e1dcd2`,
   `2267f41b`, and `98d85098`: retained repository-owned process/store paths
