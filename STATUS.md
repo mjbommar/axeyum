@@ -383,6 +383,26 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-22 — certified bounded rational-weight integer-order Bessel-J
+  limits.** Wave sixteen's bounded cross-area probe ranks the variable-weight
+  continuation of the existing fixed-order asymptotic ahead of growing-rate
+  Bessel products and quadratic-pole inverse Z. DLMF 10.17.3/10.11.1 give
+  `Jₙ(r(x))→0` whenever an exact rational-coefficient argument has numerator
+  degree greater than denominator degree; multiplying by an exact rational
+  weight whose numerator degree is no greater than its denominator preserves
+  that zero limit. `limit` therefore closes `c·w(x)·Jₙ(r(x))→0` at either real
+  infinity for every public order and `x`-free `c`. Orders 0, 3, 32, and
+  `u32::MAX`, bounded and decaying weights, degree-growing arguments, symbolic
+  outer factors, and both infinities pass; SymPy independently agrees on all 24
+  order-0-through-3 cases. Growing weights (including the true but deliberately
+  deferred subcritical-rate case), modified Bessel `I`, Bessel denominators,
+  symbolic rational coefficients, multiple Bessel factors, and bounded Bessel
+  arguments decline. The thermally managed 557-unit/147-doctest suite passed
+  (1821.62 s for units), with workspace warning-denied Clippy (5.94 s warm),
+  stable/nightly rustdoc, WASM, links, whitespace, and owned-line formatting
+  green. Next: resume broad probing; rate-sensitive products and quadratic-pole
+  inverse Z remain deliberately bounded follow-ups.
+
 - **2026-07-22 — exact finite-rational inner-limit composition for integer-order
   Bessel J/I.** Wave fifteen's bounded probe ranks this existing-head continuity
   seam ahead of variable-rate Bessel asymptotics and quadratic-pole inverse Z.
@@ -8399,6 +8419,12 @@ plan is built and committed on the current branch:
   R1/R2 history, a new run/evidence root, universal 512 MiB Lean runtime stacks
   from pinned source semantics, and the measured tiered artifact store. It
   authorizes one process only after separately pushed implementation gates.
+- **2026-07-22 — Added certified bounded rational-weight Bessel-J infinity
+  limits.** Fixed-order asymptotics now close `c·w(x)·Jₙ(r(x))→0` at both real
+  infinities when exact rational-coefficient `r` grows by degree and exact
+  rational `w` is bounded by degree, with explicit growing-weight, modified-I,
+  denominator, symbolic-coefficient, multiple-Bessel, and bounded-argument
+  declines. CAS now has 557 units and 147 doctests.
 - **2026-07-22 — Added exact finite-rational Bessel J/I limit composition.**
   Fixed integer-order first-kind continuity now maps any exact rational inner
   limit through `Jₙ` or `Iₙ`, with variable-free outer factors and explicit

@@ -13,15 +13,15 @@ elsewhere in `docs/plan/`). Read this file first when resuming.
   [multi-agent operations guide](../contributor-guide/multi-agent-operations.md):
   work only in the dedicated CAS worktree on an `agent/cas/*` branch, push that
   branch, and leave `main` to the integration owner. The current increment is
-  `agent/cas/gap-probe-wave-fifteen`, based on integration parent `7b69407a`,
-  with implementation commit `cca76313` (integrated by `09ddccd2`); do not
+  `agent/cas/gap-probe-wave-sixteen`, based on integration parent `d0ef8b69`,
+  with implementation commit `75447869` (integrated by `44ac7abb`); do not
   rebase it onto `main` ahead of the integration owner.
-- **Tests:** `556` unit + `147` doctests, **all green**, warning-denied workspace
+- **Tests:** `557` unit + `147` doctests, **all green**, warning-denied workspace
   all-target/all-feature Clippy-clean, strict stable/nightly rustdoc-green,
   wasm-green, links-green, and whitespace-clean.
 - **Source of truth for capabilities:** `docs/research/10-cas/README.md`
   (capability table) and `docs/research/10-cas/diary.md` (chronological entries;
-  latest is **Entry 37afd**). Keep both in sync when landing features.
+  latest is **Entry 37afe**). Keep both in sync when landing features.
 - **Method that works:** empirical **gap-probing** (below). It found every recent
   feature *and* a serious infinite-hang regression.
 
@@ -585,6 +585,25 @@ orders `0..=255`), and Stirling-composed raw moments (regressed for orders
   public head, operator, backend, evidence format, or logic fragment changed, so
   no ADR is required.
 
+**Certified bounded rational-weight integer-order Bessel-J limits**
+- Wave sixteen's bounded cross-area probe compared rational weights on the
+  established unbounded-argument Bessel limit with growing/subcritical-rate
+  products and quadratic-pole inverse Z. Bounded and decaying rational weights
+  were the smallest theorem-backed existing-head extension; rate-sensitive
+  growing products and the oscillatory inverse-Z representation remain larger.
+- DLMF 10.17.3 and 10.11.1 give the fixed-order zero envelope for a rational
+  argument `r` whose numerator degree exceeds its denominator degree. `limit`
+  now retains that result under an exact rational weight `w` whose numerator
+  degree is no greater than its denominator, plus any `x`-free outer factor.
+  Orders 0, 3, 32, and `u32::MAX`, bounded and decaying weights, three
+  degree-growing argument shapes, both infinities, and symbolic outer factors
+  pass. SymPy independently agrees on all 24 order-0-through-3 cases.
+- Growing weights (including the true but deferred `x·J₀(x³)` rate case),
+  modified Bessel `I`, Bessel denominators, symbolic rational coefficients,
+  multiple Bessel factors, and bounded arguments decline. No public head,
+  operator, backend, evidence format, or logic fragment changed, so no ADR is
+  required.
+
 ---
 
 ## 5. Zeilberger / WZ — how it works and where to extend
@@ -919,9 +938,9 @@ esac
 export AXEYUM_CAS_TMP
 trap 'find "$AXEYUM_CAS_TMP" -depth -delete' EXIT
 git rev-parse --abbrev-ref HEAD        # → agent/cas/...
-git merge-base --is-ancestor cca76313 HEAD
+git merge-base --is-ancestor 75447869 HEAD
 CARGO_BUILD_JOBS=1 TMPDIR="$AXEYUM_CAS_TMP" cargo test -p axeyum-cas --jobs 1
-# → 556 unit + 147 doctests green
+# → 557 unit + 147 doctests green
 ```
 Then: read `docs/research/10-cas/diary.md` tail for the latest context, and pick
 up from §6 or resume the gap-probing loop. Push the green owned topic branch;
