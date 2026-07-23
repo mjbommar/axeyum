@@ -79,6 +79,9 @@ ADR-0358 is accepted on this evidence.
 This increment does not add multi-variable MBQI counterexample search, vacuous
 prefix elimination, existential alternation, interpreted binder expressions,
 uninterpreted carrier sorts, arbitrary model repair, serialized certificates,
-or Lean SAT reconstruction. After the branch-wide gates, measure whether
-SAT-only ground candidates leave enough genuinely satisfiable profiles unknown
-to justify a separately checked model-repair proposal.
+or Lean SAT reconstruction. The follow-up
+[unknown adjudication](quantified-uflia-unknown-adjudication-2026-07-22.md)
+found 105 Z3-SAT Axeyum declines, including 96 at the ordinary satisfiable-
+instantiation boundary. Proposed ADR-0359 therefore preregisters a separate,
+default-only checked repair increment; explicit-entry and arbitrary repair
+remain out of scope.

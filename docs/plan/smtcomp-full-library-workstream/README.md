@@ -352,6 +352,7 @@ NAS (shared, corpus read-only in practice):
 
 *Owner: SMT-COMP measurement/full-library lane. Next measurement milestone: a
 tiny S5 admission fixture; the bounded multi-binder checked quantified-UF
-milestone is accepted under ADR-0358. Before any model-repair proposal, measure
-the remaining satisfiable unknown profiles; do not substitute another large
-run for that bounded evidence.*
+milestone is accepted under ADR-0358. The bounded
+[unknown adjudication](../quantified-uflia-unknown-adjudication-2026-07-22.md)
+now justifies proposed ADR-0359 default-only checked repair; do not substitute
+another large run for that bounded implementation.*
