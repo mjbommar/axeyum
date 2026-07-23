@@ -302,15 +302,22 @@ Again, there are distinct targets:
   across observed ext4/tmpfs, with exact completion-last recovery and 16/16
   uninterrupted projection equality. It still records zero real/U2/parity
   credit and explicitly does not qualify power/host loss or network/object
-  durability. TL0.7.4 remains the prerequisite to official U2 execution.
-  Its source-first
+  durability. TL0.7.4 has since closed the remaining local prerequisite to
+  official U2 execution. Its source-first
   [acceptance plan](plan/lean-execution-acceptance-tl0.7.4-plan-2026-07-22.md)
   freezes one pinned-Lean compile preflight and one exact official-export
   control, both empty-selection and structurally unable to receive U2/parity
   credit. Attempt 001's 4 GiB compile failed before `.olean` creation because
   Lean's default task-stack reservation exhausted address space; the exporter
   did not run. The [R1 plan](plan/lean-execution-acceptance-tl0.7.4-r1-plan-2026-07-22.md)
-  preregisters exact `-s524288` and terminal-before-artifact retention.
+  preregisters exact `-s524288` and terminal-before-artifact retention. The
+  [final result](plan/lean-execution-acceptance-tl0.7.4-2026-07-22.md) retains
+  that failure plus two completed R1 controls: a 9,672-byte `.olean` compiled
+  under 4 GiB and an exact 3,849-byte/65-line official export under 8 GiB.
+  The [authority](plan/lean-execution-acceptance-v1.json) covers three process
+  attempts, two completions, and 67 files / 142,523 bytes, while every U2,
+  Axeyum, pairing, performance, and parity counter remains zero. TL0.7 is
+  complete; TL0.6.3 official execution is unblocked but has not begun.
 
 See the source-backed [kernel gap audit](prover-track/research/06-kernel-gap-analysis.md)
 and [proof reconstruction plan](plan/track-3-proof-lean/P3.7-lean-reconstruction.md),

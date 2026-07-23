@@ -422,10 +422,10 @@ state.
 > the no-execution boundary. TL0.7.1's
 > [result](docs/plan/lean-execution-evidence-tl0.7.1-2026-07-22.md) now closes
 > the machine authority with two lanes, five synthetic lifecycle controls,
-> twelve mutation tests, and zero real outcomes. TL0.7.2 process behavior and
-> TL0.7.3 local process-interruption storage controls are now closed; TL0.7.4
-> no-credit real controls and all official outcomes remain open. Exact paired
-> records remain later TL0.6.5 work.
+> twelve mutation tests, and zero real outcomes. TL0.7.2 process behavior,
+> TL0.7.3 local process-interruption storage, and TL0.7.4's two no-credit real
+> controls are now closed. Official U2 outcomes remain open under TL0.6.3;
+> exact paired records remain later TL0.6.5 work.
 > TL0.7.2's source-first
 > [process-adapter plan](docs/plan/lean-execution-process-adapter-tl0.7.2-plan-2026-07-22.md)
 > was pushed before implementation or probes. The subsequent
@@ -444,8 +444,9 @@ state.
 > references, 22 contract tests cover eighteen mutation families, and 65 exact
 > evidence files are retained. This proves bounded local process-interruption
 > recovery, not power/host loss or network/object durability; Lean/U2 outcomes,
-> paired cells, performance rows, and parity credit remain zero. TL0.7.4's two
-> explicitly no-credit real controls are next; TL0.6.3 remains blocked.
+> paired cells, performance rows, and parity credit remain zero. TL0.7.4 has
+> since closed the remaining local execution-policy prerequisite; TL0.6.3 is
+> now unblocked and remains the next official-execution step.
 > TL0.7.4 now has a source-first
 > [acceptance plan](docs/plan/lean-execution-acceptance-tl0.7.4-plan-2026-07-22.md)
 > for two empty-selection external controls: compile the committed flat probe
@@ -461,8 +462,14 @@ state.
 > third stack mapping to return `ENOMEM`; no `.olean`, completion, or exporter
 > process followed. A source-first R1 plan now freezes `-s524288` after a
 > no-credit task-stack matrix and requires terminal-before-artifact failure
-> retention. No R1 control has run. The controls cannot create a U2/Axeyum outcome,
-> denominator, paired/performance row, or parity credit.
+> retention. R1 then completed from published control revision `679f4b9d`:
+> the 4 GiB compile produced a 9,672-byte `.olean`, and the 8 GiB exporter
+> produced the exact committed 3,849-byte/65-line stream. All process groups
+> were reaped. The [final result](docs/plan/lean-execution-acceptance-tl0.7.4-2026-07-22.md)
+> retains the failed attempt plus both completed controls as 67 files / 142,523
+> bytes. The controls create no U2/Axeyum outcome, denominator, paired/
+> performance row, or parity credit. TL0.7 is complete; source-first TL0.6.3
+> official execution is next.
 > The runtime-derived
 > TL0.4 ledger now freezes **65** prelude assumptions (real 30, integer 34,
 > string 1) by canonical type digest before dependent native elaborator, Lake,

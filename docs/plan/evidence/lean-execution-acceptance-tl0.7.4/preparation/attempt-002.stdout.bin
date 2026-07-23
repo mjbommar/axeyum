@@ -1,0 +1,6 @@
+✔ [2/6] Built Export (5.1s)
+✔ [3/6] Built Export:c.o (1.5s)
+✔ [4/6] Built Main (498ms)
+✔ [5/6] Built Main:c.o (110ms)
+✔ [6/6] Built lean4export:exe (948ms)
+Build completed successfully (6 jobs).

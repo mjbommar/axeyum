@@ -331,9 +331,9 @@ record-set digests. CTest/JUnit, logs, runner labels, provider conclusions, and
 expiring artifacts do not independently prove completion. Five synthetic
 controls and nineteen mutation classes validate representation only. Every real
 run/outcome/pair/performance counter remains zero, so TL0.7.1 grants no U2 or
-terminal credit. TL0.7.2 and TL0.7.3 now prove bounded process and local
-process-interruption behavior; TL0.7.4 must exercise the complete path with
-two no-credit real controls before TL0.6.3 begins.
+terminal credit. TL0.7.2 and TL0.7.3 prove bounded process and local
+process-interruption behavior; TL0.7.4 now exercises the complete path with
+two no-credit real controls and satisfies the local prerequisite to TL0.6.3.
 
 TL0.7.2 is now complete under its
 [source-first process-adapter plan](lean-execution-process-adapter-tl0.7.2-plan-2026-07-22.md)
@@ -342,7 +342,7 @@ eight synthetic controls retain 40 exact files and sixteen raw streams across
 both registered `RLIMIT_AS` lanes, including a descendant-bearing timeout with
 no live group member after cleanup. The result still has zero case/completion
 records, U2 outcomes, paired cells, performance rows, and parity credit.
-TL0.7.4 remains mandatory before TL0.6.3.
+TL0.7.4 subsequently satisfied the remaining local policy prerequisite.
 
 TL0.7.3 is now complete under its
 [source-first checkpoint-store plan](lean-execution-store-tl0.7.3-plan-2026-07-22.md)
@@ -353,8 +353,8 @@ every interrupted/resumed canonical projection equals its uninterrupted
 reference. The authority retains 65 exact files and still records zero real
 outcomes, completed U2 cases, paired cells, performance rows, and parity
 credit. This is local process-interruption evidence, explicitly not power or
-host loss, NFS, provider, object, or distributed durability. TL0.7.4 remains
-mandatory before TL0.6.3.
+host loss, NFS, provider, object, or distributed durability. TL0.7.4
+subsequently satisfied the remaining local policy prerequisite.
 
 TL0.7.4 is now governed by a
 [source-first acceptance plan](lean-execution-acceptance-tl0.7.4-plan-2026-07-22.md).
@@ -370,9 +370,16 @@ exceeded the 4 GiB address-space envelope, and installed no completion. The
 exporter did not run. Its [failed result](lean-execution-acceptance-tl0.7.4-attempt-001-2026-07-22.md)
 and source-first [R1 plan](lean-execution-acceptance-tl0.7.4-r1-plan-2026-07-22.md)
 freeze the exact diagnosis, `-s524288` retry, and terminal-before-artifact
-retention. No R1 control has run. None of these processes can create a
-U2/Axeyum outcome, denominator, paired cell, performance row, or terminal
-credit.
+retention. The [final result](lean-execution-acceptance-tl0.7.4-2026-07-22.md)
+then completed both R1 controls from published source revision `679f4b9d`:
+the 4 GiB compile produced a 9,672-byte `.olean`, the 8 GiB official exporter
+produced the exact committed 3,849-byte/65-line stream, and all process groups
+were reaped. The [authority](lean-execution-acceptance-v1.json) retains the
+failed attempt plus both completions as 67 files / 142,523 bytes. None of
+these processes creates a U2/Axeyum outcome, denominator, paired cell,
+performance row, or terminal credit. TL0.7 is complete and TL0.6.3 is
+unblocked; the parity scoreboard remains at zero complete populations, axes,
+paired cells, and terminal gates.
 
 ## 8. Layer-specific equivalence
 

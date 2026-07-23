@@ -4,7 +4,7 @@
   "source_identities": [
     {
       "path": ".github/workflows/ci.yml",
-      "sha256": "78c548d9c198b1b762e56515be77bc851cfe75cf41de6e011c8868e98d16db7b"
+      "sha256": "f86a0909df66a91271069b6b5496d0fa1a38885fa04cb2a3ec461b6a6f896faf"
     },
     {
       "path": "docs/plan/generated/lean-execution-evidence.md",
@@ -31,6 +31,10 @@
       "sha256": "e481b4769b85bd2737003320829a8f4b2c3d979e999746050f312acdfc9b6934"
     },
     {
+      "path": "docs/plan/lean-execution-acceptance-v1.json",
+      "sha256": "bd3f01fc5ac61bbcfdf23a82055fd58d47cf8167240727ec35e51ceb2a4be05f"
+    },
+    {
       "path": "docs/plan/lean-execution-evidence-tl0.7.1-2026-07-22.md",
       "sha256": "281bb75975186e4eb5a99359eb302a8280d12c4d2e06ed5ebd954a41dab9cb2c"
     },
@@ -52,7 +56,7 @@
     },
     {
       "path": "docs/plan/lean-system-implementation-plan-2026-07-21.md",
-      "sha256": "5be5a04938eee9cff7e29dcfad8b418cab89c1fe92a336300aeb162c87712fa9"
+      "sha256": "afdc4e6a84aa30a3b47a639016ca7979e0093812216e439e2476d5e437a678e9"
     },
     {
       "path": "docs/plan/lean-u2-official-ci-profiles-tl0.6.2-2026-07-22.md",
@@ -68,11 +72,11 @@
     },
     {
       "path": "docs/plan/lean4-complete-parity-contract-2026-07-22.md",
-      "sha256": "7637b9b4ec0526e70ff084193c0d802b590ba68522906a8ea206331dfd27958b"
+      "sha256": "5624c2ba729cb7b7186b2e3eead807f37d0e85c23988e0bae250a1b7d2e42f44"
     },
     {
       "path": "scripts/gen-lean-complete-parity.py",
-      "sha256": "c19b1f082f1a1d82395fd99da0a97a4e5d9abb4d3eba5b5cbe42ff7d3a7c525d"
+      "sha256": "f5f85ffdb728b0d723cea939f09279620b283540b33eb9a68b3c700fcffda145"
     },
     {
       "path": "scripts/gen-lean-execution-evidence.py",
@@ -85,6 +89,10 @@
     {
       "path": "scripts/gen-lean-u2-test-authority.py",
       "sha256": "2c173c2621c374179ee346aa8cc710a84e8c37792b2ead25d4e80f8144ad34ba"
+    },
+    {
+      "path": "scripts/lean_execution_acceptance.py",
+      "sha256": "7fb314d552e811de1e3a799d104d9cdace45e3f81f220d6a25bb56008efa9d7d"
     },
     {
       "path": "scripts/lean_execution_process.py",
@@ -100,7 +108,11 @@
     },
     {
       "path": "scripts/tests/test_lean_complete_parity.py",
-      "sha256": "ebe29d62d2ef431e170ec517d486eda7e859d0f975f397b30ffd400d1dcd873f"
+      "sha256": "ea562aca28acebf9ba9a6a2b6b2f3fee2bca1cc0a6193a57960384a38636c285"
+    },
+    {
+      "path": "scripts/tests/test_lean_execution_acceptance.py",
+      "sha256": "985c6bba645d24c5b13d7071da64d3d63316222c8889b4f6f48c8d1dcb70e7e4"
     },
     {
       "path": "scripts/tests/test_lean_execution_evidence.py",
@@ -429,11 +441,47 @@
         "official_or_axeyum_execution": false
       }
     },
+    "execution_acceptance_authority": {
+      "status": "accepted-no-credit-real-controls",
+      "observed_external_process_attempts": 3,
+      "failed_external_process_attempts": 1,
+      "completed_external_controls": 2,
+      "retained_files": 67,
+      "retained_bytes": 142523,
+      "u2_cases": 0,
+      "official_outcomes": 0,
+      "axeyum_outcomes": 0,
+      "paired_cells": 0,
+      "performance_rows": 0,
+      "claims": {
+        "real_process_controls": true,
+        "failed_compile_attempt_retained": true,
+        "pinned_lean_compile_observed": true,
+        "official_export_observed": true,
+        "reference_stream_byte_equal": true,
+        "official_u2_execution": false,
+        "axeyum_import_or_check": false,
+        "paired_comparison": false,
+        "performance_measurement": false,
+        "power_or_host_loss_durability": false
+      },
+      "credits": {
+        "credited_runs": 0,
+        "official_u2_cases": 0,
+        "official_outcomes": 0,
+        "axeyum_outcomes": 0,
+        "paired_cells": 0,
+        "performance_rows": 0,
+        "complete_axes": 0,
+        "satisfied_gates": 0,
+        "parity_credit": 0
+      }
+    },
     "implementation_tasks": {
       "rows": 140,
       "status_counts": {
-        "DONE": 25,
-        "PARTIAL": 7,
+        "DONE": 27,
+        "PARTIAL": 5,
         "TODO": 108,
         "BLOCKED": 0
       }

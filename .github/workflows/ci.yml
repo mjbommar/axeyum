@@ -246,6 +246,7 @@ jobs:
       - run: python3 -m unittest scripts.tests.test_lean_execution_store
       - run: python3 scripts/lean_execution_store.py result --check
       - run: python3 -m unittest scripts.tests.test_lean_execution_acceptance
+      - run: python3 scripts/lean_execution_acceptance.py result --check
       - run: python3 -m unittest scripts.tests.test_lean_complete_parity
       - run: python3 scripts/gen-lean-complete-parity.py --check
       - run: python3 -m unittest scripts.tests.test_lean_official_construct_matrix
