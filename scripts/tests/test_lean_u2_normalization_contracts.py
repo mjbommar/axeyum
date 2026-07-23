@@ -57,22 +57,30 @@ class LeanU2NormalizationContractTests(unittest.TestCase):
             tuple(contract["id"] for contract in self.data["contracts"]),
             NORMALIZATION.CONTRACT_IDS,
         )
-        self.assertEqual(self.data["summary"]["compared_fields"], 68)
-        self.assertEqual(self.data["summary"]["ignored_rules"], 18)
-        self.assertEqual(self.data["summary"]["typed_field_occurrences"], 86)
+        self.assertEqual(self.data["summary"]["contracts"], 10)
+        self.assertEqual(self.data["summary"]["compared_fields"], 76)
+        self.assertEqual(self.data["summary"]["ignored_rules"], 20)
+        self.assertEqual(self.data["summary"]["covered_axes"], 12)
+        self.assertEqual(self.data["summary"]["axis_contract_occurrences"], 15)
+        self.assertEqual(self.data["summary"]["typed_field_occurrences"], 96)
         self.assertEqual(
             self.data["summary"]["value_schema_counts"],
             {
                 "enum": 3,
-                "nonempty-string": 9,
-                "nonnegative-integer": 9,
-                "sha256": 65,
+                "nonempty-string": 10,
+                "nonnegative-integer": 10,
+                "sha256": 73,
             },
         )
         self.assertTrue(
             (ROOT / "docs/plan/lean-u2-normalization-contracts-v1.json").is_file()
         )
-        self.assertEqual(NORMALIZATION.MANIFEST.name, "lean-u2-normalization-contracts-v2.json")
+        self.assertTrue(
+            (ROOT / "docs/plan/lean-u2-normalization-contracts-v2.json").is_file()
+        )
+        self.assertEqual(
+            NORMALIZATION.MANIFEST.name, "lean-u2-normalization-contracts-v3.json"
+        )
         self.assertEqual(
             tuple(
                 NORMALIZATION.load_execution_evidence()["taxonomies"][
@@ -109,7 +117,7 @@ class LeanU2NormalizationContractTests(unittest.TestCase):
                     f"semantic field did not affect digest: {contract['id']}:{field['field']}",
                 )
                 mutations += 1
-        self.assertEqual(mutations, 68)
+        self.assertEqual(mutations, 76)
 
     def test_every_ignored_rule_preserves_projection_digest(self) -> None:
         mutations = 0
@@ -129,7 +137,7 @@ class LeanU2NormalizationContractTests(unittest.TestCase):
                     f"ignored field changed digest: {contract['id']}:{rule['field']}",
                 )
                 mutations += 1
-        self.assertEqual(mutations, 18)
+        self.assertEqual(mutations, 20)
 
     def test_every_field_schema_rejects_a_malformed_value(self) -> None:
         rejected = 0
@@ -145,7 +153,7 @@ class LeanU2NormalizationContractTests(unittest.TestCase):
                         self.data, contract["id"], mutated
                     )
                 rejected += 1
-        self.assertEqual(rejected, 86)
+        self.assertEqual(rejected, 96)
 
     def test_projection_is_allowlist_based_and_rejects_wrong_value_shapes(self) -> None:
         contract = self.data["contracts"][0]
@@ -176,7 +184,70 @@ class LeanU2NormalizationContractTests(unittest.TestCase):
             )
         with self.assertRaisesRegex(NORMALIZATION.ObservationError, "unknown"):
             NORMALIZATION.normalize_observation(
-                self.data, "invented-normalizer-v2", observation
+                self.data, "lean-process-harness-v2", observation
+            )
+        with self.assertRaisesRegex(NORMALIZATION.ObservationError, "unknown"):
+            NORMALIZATION.normalize_observation(
+                self.data, "invented-normalizer-v3", observation
+            )
+
+    def test_axis_coverage_and_mathlib_contract_are_exact(self) -> None:
+        pairs = {
+            (contract["id"], axis)
+            for contract in self.data["contracts"]
+            for axis in contract["applicable_axes"]
+        }
+        self.assertEqual(len(pairs), 15)
+        self.assertEqual(
+            {axis for _, axis in pairs}, set(NORMALIZATION.AXIS_IDS)
+        )
+        mathlib = next(
+            contract
+            for contract in self.data["contracts"]
+            if contract["layer"] == "mathlib-ecosystem"
+        )
+        self.assertEqual(mathlib["applicable_axes"], ["A10"])
+        self.assertEqual(
+            [field["field"] for field in mathlib["compared_fields"]],
+            [
+                "axiom_trust_closure_sha256",
+                "build_outcomes_sha256",
+                "declaration_closure_sha256",
+                "failure_classification_sha256",
+                "module_outcomes_sha256",
+                "runtime_tests_sha256",
+                "tactic_results_sha256",
+                "test_outcomes_sha256",
+            ],
+        )
+
+        missing_a10 = copy.deepcopy(self.data)
+        missing_a10["contracts"][-1]["applicable_axes"] = []
+        missing_a10["contracts"][-1]["contract_sha256"] = (
+            NORMALIZATION.normalization_contract_digest(
+                missing_a10["contracts"][-1]
+            )
+        )
+        self.assertTrue(
+            any(
+                "cover exactly A0-A11" in failure
+                for failure in NORMALIZATION.validate_manifest(missing_a10)
+            )
+        )
+
+        for axes in (["A0", "A0", "A11"], ["A11", "A0"], ["A0", "A12"]):
+            malformed = copy.deepcopy(self.data)
+            malformed["contracts"][0]["applicable_axes"] = axes
+            malformed["contracts"][0]["contract_sha256"] = (
+                NORMALIZATION.normalization_contract_digest(
+                    malformed["contracts"][0]
+                )
+            )
+            self.assertTrue(
+                any(
+                    "known, unique, and sorted" in failure
+                    for failure in NORMALIZATION.validate_manifest(malformed)
+                )
             )
 
     def test_digest_integer_and_enum_controls_fail_closed(self) -> None:

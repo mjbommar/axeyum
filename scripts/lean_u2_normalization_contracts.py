@@ -13,22 +13,24 @@ from typing import Any
 
 
 ROOT = Path(__file__).resolve().parent.parent
-MANIFEST = ROOT / "docs" / "plan" / "lean-u2-normalization-contracts-v2.json"
+MANIFEST = ROOT / "docs" / "plan" / "lean-u2-normalization-contracts-v3.json"
 OUT_MD = ROOT / "docs" / "plan" / "generated" / "lean-u2-normalization-contracts.md"
 EXECUTION_EVIDENCE = ROOT / "docs" / "plan" / "lean-execution-evidence-v1.json"
 
-CONTRACT_DOMAIN = "axeyum-lean-normalization-contract-v2"
-PROJECTION_DOMAIN = "axeyum-lean-normalized-observation-v2"
+CONTRACT_DOMAIN = "axeyum-lean-normalization-contract-v3"
+PROJECTION_DOMAIN = "axeyum-lean-normalized-observation-v3"
+AXIS_IDS = tuple(f"A{index}" for index in range(12))
 CONTRACT_IDS = (
-    "lean-process-harness-v2",
-    "lean-parser-macro-v2",
-    "lean-elaboration-v2",
-    "lean-kernel-assurance-v2",
-    "lean-module-cache-v2",
-    "lean-tactic-v2",
-    "lean-compiler-runtime-v2",
-    "lean-server-rpc-v2",
-    "lean-lake-project-v2",
+    "lean-process-harness-v3",
+    "lean-parser-macro-v3",
+    "lean-elaboration-v3",
+    "lean-kernel-assurance-v3",
+    "lean-module-cache-v3",
+    "lean-tactic-v3",
+    "lean-compiler-runtime-v3",
+    "lean-server-rpc-v3",
+    "lean-lake-project-v3",
+    "lean-mathlib-ecosystem-v3",
 )
 TERMINATION_CLASSES = (
     "exited",
@@ -62,7 +64,7 @@ def enum_field(
 
 
 EXPECTED_CONTRACTS = {
-    "lean-process-harness-v2": {
+    "lean-process-harness-v3": {
         "layer": "process-harness",
         "applicable_axes": ("A0", "A11"),
         "compared_fields": sha256_fields(
@@ -75,7 +77,7 @@ EXPECTED_CONTRACTS = {
         )
         + (enum_field("termination_class", TERMINATION_CLASSES),),
     },
-    "lean-parser-macro-v2": {
+    "lean-parser-macro-v3": {
         "layer": "parser-macro",
         "applicable_axes": ("A3",),
         "compared_fields": sha256_fields(
@@ -86,7 +88,7 @@ EXPECTED_CONTRACTS = {
             "syntax_tree_sha256",
         ),
     },
-    "lean-elaboration-v2": {
+    "lean-elaboration-v3": {
         "layer": "elaboration",
         "applicable_axes": ("A4",),
         "compared_fields": sha256_fields(
@@ -98,7 +100,7 @@ EXPECTED_CONTRACTS = {
             "info_trees_sha256",
         ),
     },
-    "lean-kernel-assurance-v2": {
+    "lean-kernel-assurance-v3": {
         "layer": "kernel-assurance",
         "applicable_axes": ("A1", "A9"),
         "compared_fields": (
@@ -114,7 +116,7 @@ EXPECTED_CONTRACTS = {
             "normal_form_sha256",
         ),
     },
-    "lean-module-cache-v2": {
+    "lean-module-cache-v3": {
         "layer": "module-cache",
         "applicable_axes": ("A2", "A6", "A9"),
         "compared_fields": sha256_fields(
@@ -127,7 +129,7 @@ EXPECTED_CONTRACTS = {
             "visibility_sha256",
         ),
     },
-    "lean-tactic-v2": {
+    "lean-tactic-v3": {
         "layer": "tactic",
         "applicable_axes": ("A5",),
         "compared_fields": sha256_fields(
@@ -139,7 +141,7 @@ EXPECTED_CONTRACTS = {
             "theorem_term_sha256",
         ),
     },
-    "lean-compiler-runtime-v2": {
+    "lean-compiler-runtime-v3": {
         "layer": "compiler-runtime",
         "applicable_axes": ("A8",),
         "compared_fields": sha256_fields(
@@ -155,7 +157,7 @@ EXPECTED_CONTRACTS = {
         + (enum_field("termination_class", TERMINATION_CLASSES),)
         + sha256_fields("value_sha256"),
     },
-    "lean-server-rpc-v2": {
+    "lean-server-rpc-v3": {
         "layer": "server-rpc",
         "applicable_axes": ("A7",),
         "compared_fields": sha256_fields(
@@ -170,7 +172,7 @@ EXPECTED_CONTRACTS = {
             "worker_watchdog_sha256",
         ),
     },
-    "lean-lake-project-v2": {
+    "lean-lake-project-v3": {
         "layer": "lake-project",
         "applicable_axes": ("A6", "A11"),
         "compared_fields": sha256_fields(
@@ -184,6 +186,20 @@ EXPECTED_CONTRACTS = {
             "revisions_sha256",
             "targets_facets_jobs_sha256",
             "workspace_graph_sha256",
+        ),
+    },
+    "lean-mathlib-ecosystem-v3": {
+        "layer": "mathlib-ecosystem",
+        "applicable_axes": ("A10",),
+        "compared_fields": sha256_fields(
+            "axiom_trust_closure_sha256",
+            "build_outcomes_sha256",
+            "declaration_closure_sha256",
+            "failure_classification_sha256",
+            "module_outcomes_sha256",
+            "runtime_tests_sha256",
+            "tactic_results_sha256",
+            "test_outcomes_sha256",
         ),
     },
 }
@@ -338,7 +354,7 @@ def validate_manifest(data: dict[str, Any]) -> list[str]:
     failures: list[str] = []
     if set(data) != TOP_LEVEL_FIELDS:
         failures.append("top-level fields must be exact")
-    if data.get("schema") != "axeyum-lean-u2-normalization-contracts-v2":
+    if data.get("schema") != "axeyum-lean-u2-normalization-contracts-v3":
         failures.append("schema drift")
     if data.get("target") != {
         "lean_version": "4.30.0",
@@ -381,8 +397,22 @@ def validate_manifest(data: dict[str, Any]) -> list[str]:
             continue
         if contract.get("layer") != expected["layer"]:
             failures.append(f"{contract_id}: layer drift")
-        if tuple(contract.get("applicable_axes", ())) != expected["applicable_axes"]:
+        applicable_axes = contract.get("applicable_axes")
+        if not isinstance(applicable_axes, list):
+            failures.append(f"{contract_id}: applicable_axes must be a list")
+            applicable_axes = []
+        if tuple(applicable_axes) != expected["applicable_axes"]:
             failures.append(f"{contract_id}: applicable axes drift")
+        if (
+            not applicable_axes
+            or any(axis not in AXIS_IDS for axis in applicable_axes)
+            or applicable_axes
+            != sorted(applicable_axes, key=lambda axis: int(axis[1:]))
+            or len(applicable_axes) != len(set(applicable_axes))
+        ):
+            failures.append(
+                f"{contract_id}: applicable axes must be known, unique, and sorted"
+            )
         compared = contract.get("compared_fields")
         if not isinstance(compared, list):
             failures.append(f"{contract_id}: compared_fields must be a list")
@@ -458,6 +488,15 @@ def validate_manifest(data: dict[str, Any]) -> list[str]:
         elif seal != normalization_contract_digest(contract):
             failures.append(f"{contract_id}: contract_sha256 does not match content")
 
+    covered_axes = {
+        axis
+        for contract in contracts
+        if isinstance(contract, dict)
+        for axis in contract.get("applicable_axes", [])
+        if isinstance(axis, str)
+    }
+    if covered_axes != set(AXIS_IDS):
+        failures.append("normalization contracts must cover exactly A0-A11")
     field_schemas = [
         field
         for contract in contracts
@@ -479,6 +518,12 @@ def validate_manifest(data: dict[str, Any]) -> list[str]:
         ),
         "ignored_rules": sum(
             len(contract.get("ignored_fields", []))
+            for contract in contracts
+            if isinstance(contract, dict)
+        ),
+        "covered_axes": len(covered_axes),
+        "axis_contract_occurrences": sum(
+            len(contract.get("applicable_axes", []))
             for contract in contracts
             if isinstance(contract, dict)
         ),
@@ -543,6 +588,8 @@ def render_markdown(data: dict[str, Any]) -> str:
             f"**{summary['compared_fields']} compared fields**, and "
             f"**{summary['ignored_rules']} explicit ignored-field rules**, for "
             f"**{summary['typed_field_occurrences']} typed field occurrences**. "
+            f"The registry covers **{summary['covered_axes']} axes** through "
+            f"**{summary['axis_contract_occurrences']} contract/axis occurrences**. "
             "The sealed kinds are "
             f"**{summary['value_schema_counts']['sha256']} SHA-256**, "
             f"**{summary['value_schema_counts']['enum']} enum**, "
@@ -603,6 +650,8 @@ def main() -> int:
         f"contracts={summary['contracts']}|"
         f"compared_fields={summary['compared_fields']}|"
         f"ignored_rules={summary['ignored_rules']}|"
+        f"covered_axes={summary['covered_axes']}|"
+        f"axis_contracts={summary['axis_contract_occurrences']}|"
         f"typed_fields={summary['typed_field_occurrences']}|"
         f"sha256={summary['value_schema_counts']['sha256']}|"
         f"enum={summary['value_schema_counts']['enum']}|"
