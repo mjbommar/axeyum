@@ -383,8 +383,8 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
-- **2026-07-22 — TL0.6.3 M0 has one retained local official failure; R2 is
-  source-first preregistered.** The [M0 plan](docs/plan/lean-u2-official-execution-tl0.6.3-m0-plan-2026-07-22.md)
+- **2026-07-22 — TL0.6.3 M0 has one retained local official outcome; R3 is
+  source-first preregistered after R2 stopped before import.** The [M0 plan](docs/plan/lean-u2-official-execution-tl0.6.3-m0-plan-2026-07-22.md)
   selects only `compile/534.lean` from the exact release-tag Linux-release
   cell's 3,678-case `-E foreign` selection. It freezes official commit/tree,
   context/cell/attempt/selection/case identities, released Lean/leanc and full
@@ -406,9 +406,15 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   not resolve static `libc++`/`libc++abi`. The same C links with the bundled
   toolchain compiler, and official Linux release preparation leaves `LEAN_CC`
   unset for tests. The [R2 plan](docs/plan/lean-u2-official-execution-tl0.6.3-m0-r2-plan-2026-07-22.md)
-  removes only that override. Current coverage is one failed official outcome,
-  zero passes, 1/3,678 parent cases observed, and zero provider, Axeyum, pairs,
-  performance, axes, gates, or parity credit.
+  removed only that override, but [attempt 003](docs/plan/lean-u2-official-execution-tl0.6.3-m0-r2-result-2026-07-22.md)
+  exited 1 before the runner imported because direct-file Python execution put
+  `scripts/`, not the repository root, at the front of `sys.path`. It created
+  neither work nor evidence root, harness, CTest process, or official outcome.
+  The [R3 plan](docs/plan/lean-u2-official-execution-tl0.6.3-m0-r3-plan-2026-07-22.md)
+  freezes that invocation authority and requires a direct-entry smoke gate
+  before a new implementation and attempt 004. Current coverage remains one
+  failed official outcome, zero passes, 1/3,678 parent cases observed, and zero
+  provider, Axeyum, pairs, performance, axes, gates, or parity credit.
 
 - **2026-07-22 — TL0.7.4 closes the real local execution controls without U2,
   Axeyum, pairing, performance, or parity credit.** The

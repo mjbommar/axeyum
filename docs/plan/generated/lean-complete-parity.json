@@ -28,7 +28,7 @@
     },
     {
       "path": "docs/plan/lean-complete-parity-v1.json",
-      "sha256": "bb6d77ed232eb7c762e9d031015a2257d31f1cb359968651c5c9acae56c560c7"
+      "sha256": "0dfa950d076a79b08acb54a237e878ffa5f3be053d300f3f4a63087b3cc8908f"
     },
     {
       "path": "docs/plan/lean-execution-acceptance-tl0.7.4-2026-07-22.md",
@@ -79,8 +79,20 @@
       "sha256": "f8ce7d6c4ddea6b8cebf04f4e708b7e8b2085c6b58173d08b5086cd82e00a817"
     },
     {
+      "path": "docs/plan/lean-u2-official-execution-tl0.6.3-m0-r2-invocation-v1.json",
+      "sha256": "662f9e399660c0cca676988e7b4a7f9ba3a0f2dd3469e0b6313e09c56d6a18fc"
+    },
+    {
       "path": "docs/plan/lean-u2-official-execution-tl0.6.3-m0-r2-plan-2026-07-22.md",
       "sha256": "1c926eb7f1a5e0e147c4cb54ea9a709c5fc6ed8a9c80108b1cfd526a530eb7b1"
+    },
+    {
+      "path": "docs/plan/lean-u2-official-execution-tl0.6.3-m0-r2-result-2026-07-22.md",
+      "sha256": "649393afba456b4e9f4c0abd367f9d4eca4caa12a127bc469bb7b44c0b314819"
+    },
+    {
+      "path": "docs/plan/lean-u2-official-execution-tl0.6.3-m0-r3-plan-2026-07-22.md",
+      "sha256": "594d0edb8b1536e229afdcded6213b9a1d9cb1ab77d5a3db949015f0a9bda406"
     },
     {
       "path": "docs/plan/lean-u2-official-execution-tl0.6.3-m0-v1.json",
@@ -96,7 +108,7 @@
     },
     {
       "path": "scripts/gen-lean-complete-parity.py",
-      "sha256": "4be8a9999c3457ca26107f9e6d0636ccf67006fa9b963d069a5d111cbacbc382"
+      "sha256": "571fef97e911fc1f77ad42047e6b3ac701cf590a85b83c0e6366c2448a8c6c43"
     },
     {
       "path": "scripts/gen-lean-execution-evidence.py",
@@ -132,7 +144,7 @@
     },
     {
       "path": "scripts/tests/test_lean_complete_parity.py",
-      "sha256": "d94301efadee24eead9e587c0bc29150cd3fad9f7895d09987244334af2b07e3"
+      "sha256": "67c5cfdf93ddc5ed9a14478d4eab4b113d6bc88fa9c1a283f705d23a0814c60a"
     },
     {
       "path": "scripts/tests/test_lean_execution_acceptance.py",
@@ -506,9 +518,9 @@
       }
     },
     "u2_official_execution_authority": {
-      "status": "complete-local-official-case-outcome",
-      "process_attempts": 2,
-      "incomplete_process_attempts": 1,
+      "status": "failed-before-runner-import",
+      "process_attempts": 3,
+      "incomplete_process_attempts": 2,
       "completed_process_attempts": 1,
       "parent_selected_cases": 3678,
       "local_shard_completed_cases": 1,
@@ -519,8 +531,6 @@
       "paired_cells": 0,
       "performance_rows": 0,
       "claims": {
-        "official_lean_case_observed": true,
-        "local_shard_complete": true,
         "parent_profile_complete": false,
         "official_provider_reproduced": false,
         "axeyum_observed": false,
@@ -529,19 +539,19 @@
         "lean_parity_established": false
       },
       "credits": {
-        "axeyum_outcomes": 0,
-        "complete_axes": 0,
-        "complete_populations": 0,
         "official_cases": 1,
-        "official_failures": 1,
         "official_outcomes": 1,
         "official_passes": 0,
+        "official_failures": 1,
+        "parent_profiles_completed": 0,
+        "official_providers_reproduced": 0,
+        "axeyum_outcomes": 0,
         "paired_cells": 0,
-        "parent_profile_completions": 0,
-        "parity_credit": 0,
         "performance_rows": 0,
-        "provider_completions": 0,
-        "satisfied_gates": 0
+        "complete_populations": 0,
+        "complete_axes": 0,
+        "satisfied_gates": 0,
+        "parity_credit": 0
       }
     },
     "implementation_tasks": {
@@ -670,11 +680,23 @@
           "detail": "Preregistered attempt-003 correction using the released toolchain compiler without reinterpreting R1's failure."
         },
         {
+          "path": "docs/plan/lean-u2-official-execution-tl0.6.3-m0-r2-invocation-v1.json",
+          "detail": "Three-attempt authority retaining attempt 003's direct-entry import failure, absent roots, exact embedded process transcript, zero new outcomes, and zero parity credit."
+        },
+        {
+          "path": "docs/plan/lean-u2-official-execution-tl0.6.3-m0-r2-result-2026-07-22.md",
+          "detail": "Bounded R2 invocation result, Python path root cause, and explicit non-claims."
+        },
+        {
+          "path": "docs/plan/lean-u2-official-execution-tl0.6.3-m0-r3-plan-2026-07-22.md",
+          "detail": "Preregistered attempt-004 direct-entry correction with the R2 invocation authority frozen and no execution credit."
+        },
+        {
           "path": "docs/plan/lean4-complete-parity-contract-2026-07-22.md",
           "detail": "Pinned tests tree inventory and the required CTest/test-pile derivation rule."
         }
       ],
-      "residual": "Current execution coverage is one decided local official failure outcome from a 3,678-case parent, with zero official passes, Axeyum outcomes, or pairs. Execute the preregistered adapter-corrected R2 case, then every derived official profile with exact executable/environment/resource/attempt/case/completion evidence; classify native surfaces and run matched Axeyum cases. Registration plus one failed local outcome is not complete U2 authority."
+      "residual": "Current execution coverage is three process attempts but only one decided local official failure outcome from a 3,678-case parent, with zero official passes, Axeyum outcomes, or pairs. Attempt 003 stopped before runner import and adds no outcome. Implement the preregistered direct-entry-corrected R3 case, then every derived official profile with exact executable/environment/resource/attempt/case/completion evidence; classify native surfaces and run matched Axeyum cases. Registration plus one failed local outcome is not complete U2 authority."
     },
     {
       "id": "U3",

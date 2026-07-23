@@ -128,11 +128,23 @@
           "detail": "Preregistered attempt-003 correction using the released toolchain compiler without reinterpreting R1's failure."
         },
         {
+          "path": "docs/plan/lean-u2-official-execution-tl0.6.3-m0-r2-invocation-v1.json",
+          "detail": "Three-attempt authority retaining attempt 003's direct-entry import failure, absent roots, exact embedded process transcript, zero new outcomes, and zero parity credit."
+        },
+        {
+          "path": "docs/plan/lean-u2-official-execution-tl0.6.3-m0-r2-result-2026-07-22.md",
+          "detail": "Bounded R2 invocation result, Python path root cause, and explicit non-claims."
+        },
+        {
+          "path": "docs/plan/lean-u2-official-execution-tl0.6.3-m0-r3-plan-2026-07-22.md",
+          "detail": "Preregistered attempt-004 direct-entry correction with the R2 invocation authority frozen and no execution credit."
+        },
+        {
           "path": "docs/plan/lean4-complete-parity-contract-2026-07-22.md",
           "detail": "Pinned tests tree inventory and the required CTest/test-pile derivation rule."
         }
       ],
-      "residual": "Current execution coverage is one decided local official failure outcome from a 3,678-case parent, with zero official passes, Axeyum outcomes, or pairs. Execute the preregistered adapter-corrected R2 case, then every derived official profile with exact executable/environment/resource/attempt/case/completion evidence; classify native surfaces and run matched Axeyum cases. Registration plus one failed local outcome is not complete U2 authority."
+      "residual": "Current execution coverage is three process attempts but only one decided local official failure outcome from a 3,678-case parent, with zero official passes, Axeyum outcomes, or pairs. Attempt 003 stopped before runner import and adds no outcome. Implement the preregistered direct-entry-corrected R3 case, then every derived official profile with exact executable/environment/resource/attempt/case/completion evidence; classify native surfaces and run matched Axeyum cases. Registration plus one failed local outcome is not complete U2 authority."
     },
     {
       "id": "U3",
