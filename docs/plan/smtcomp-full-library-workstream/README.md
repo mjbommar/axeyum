@@ -276,7 +276,11 @@ gate.
    [S5.1 admitted-slice plan](../smtcomp-admitted-slices-s5.1-plan-2026-07-23.md)
    and [result](../smtcomp-admitted-slices-s5.1-result-2026-07-23.md) close the
    ordered-subset handoff without launching a solver. Preregister the actual P0
-   execution identities and limits before launching it.
+   execution identities and limits before launching it. The
+   [repaired-P0 execution plan](../smtcomp-repaired-p0-execution-plan-2026-07-23.md)
+   now freezes the preparation boundary; no distributed solver is launched
+   until its P0-S1 result records the integrated source, binary, run, and host
+   identities.
 3. **Credited full population.** Only then execute Axeyum, cvc5, and Bitwuzla on
    the same versioned selection; publish the per-logic inventory and regenerate
    the coverage-weighted parity matrix without combining incompatible regimes.
