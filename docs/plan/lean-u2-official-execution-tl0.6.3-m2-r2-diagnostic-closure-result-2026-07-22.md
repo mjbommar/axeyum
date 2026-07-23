@@ -31,4 +31,8 @@ This result establishes the sustainable future evidence policy but does not
 authorize a retry. A later source-first attempt must use a new attempt/root,
 freeze universal `LEAN_STACK_SIZE_KB` control for direct docparse and generated
 executables, and preserve the family-specific retained-byte policy before any
-process runs.
+process runs. The subsequently preregistered
+[R3 attempt-002 plan](lean-u2-official-execution-tl0.6.3-m2-r3-attempt-002-plan-2026-07-23.md)
+does exactly that: it preserves this result as immutable history, assigns new
+run/work/evidence identities, freezes `LEAN_STACK_SIZE_KB=524288`, and permits
+at most one new process only after separately pushed implementation gates.

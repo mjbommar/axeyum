@@ -472,7 +472,19 @@ The published
 authorizes no process and no retroactive credit. It binds the exact 124-row /
 950,327,258-byte generated manifest, retains only 67 outcome/log payloads /
 106,610 bytes, and records 56 reproducible C/executable intermediates /
-950,219,754 bytes as metadata-only evidence before any later retry design.
+950,219,754 bytes as metadata-only evidence. The accepted
+[R2 result](lean-u2-official-execution-tl0.6.3-m2-r2-diagnostic-closure-result-2026-07-22.md)
+records the completion-last zero-process append: 69 new files / 159,346 bytes,
+152 whole-root files / 5,307,372 bytes, and unchanged invalid R1 credit. The
+source-first
+[R3 attempt-002 plan](lean-u2-official-execution-tl0.6.3-m2-r3-attempt-002-plan-2026-07-23.md)
+now freezes new run/work/evidence roots, universal
+`LEAN_STACK_SIZE_KB=524288`, the unchanged 64-case/8 GiB/one-worker/hour lane,
+and the family-specific tiered store. It authorizes at most one new process
+only after its implementation and offline gates are separately committed and
+pushed. Until a valid R3 completion exists, M2 still contributes zero case or
+shard credit and all parent/provider/Axeyum/pair/performance/parity counters
+remain zero.
 
 ## 8. Layer-specific equivalence
 
