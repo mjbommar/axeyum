@@ -57,6 +57,11 @@ reproduced:
   `LEAN_COMPLETE_PARITY|populations=10|complete_populations=0|axes=12|complete_axes=0|paired_cells=0|gates_satisfied=0|terminal_ready=false`;
 - `just links` passes.
 
+After committing the result, the focused 24-test store suite, full
+`just parity-docs`, and `just links` were repeated successfully from a second
+fresh detached checkout at `/tmp/axeyum-lean-r4-fresh.UfEUKG` on `1efdfbb7`.
+The checkout was clean after the gates and was then removed.
+
 `cargo fmt --all --check` remains red on unrelated pre-existing Rust files,
 including `crates/axeyum-bench/examples/audit_dominance.rs` and multiple
 `crates/axeyum-cas` sources. R4 owns no Rust files and does not rewrite that
