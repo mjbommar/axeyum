@@ -60,6 +60,7 @@ mod lean_pp;
 mod level;
 mod name;
 mod prelude;
+mod quotient;
 mod string_prelude;
 mod tc;
 
@@ -69,7 +70,7 @@ use std::hash::{DefaultHasher, Hash, Hasher};
 use std::ops::Index;
 
 pub use arith_prelude::{ArithPrelude, build_arith_prelude};
-pub use env::{Declaration, Environment, RecRule, ReducibilityHint};
+pub use env::{Declaration, Environment, QuotKind, RecRule, ReducibilityHint};
 pub use expr::{BinderInfo, ExprId, ExprNode, Lit, NatLit};
 pub use inductive::InductiveFamilySpec;
 pub use int_prelude::{IntPrelude, build_int_prelude};
