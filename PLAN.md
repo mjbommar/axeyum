@@ -9257,7 +9257,14 @@ coverage never regresses):
    `exit-zero-4g` parity attribution drift is repaired outside this lane. Next:
    publish the implementation checkpoint, then classify one distinct bounded
    mechanism for the eight residual seeds without cap growth or evidence
-   widening.
+   widening. That classification is now frozen under proposed ADR-0363: one
+   outer initial-candidate retry augments ADR-0359 default values with exact
+   source literals and binder-independent evaluated source terms, after
+   ADR-0362 and ADR-0360 have declined. Under the unchanged 32-value/256-default
+   product caps, five independently replayed candidates close seeds 30, 32, 70,
+   150, and 242; seed 122 declines at 289 combinations and seeds 175/182 exhaust
+   their bounded products. Implement this exact additive boundary next, with
+   the expected differential fixed at 233/233 agreement and 215/215 SAT replay.
 3. **Bank the CDCL(T) spine** (Gap 3): the default-dispatch ADR for the
    built-but-opt-in `CdclT` routes, then port arrays-lazy
    ([P2.2](docs/plan/track-2-theories/P2.2-arrays-lazy.md)) onto it — the
