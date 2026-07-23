@@ -626,7 +626,13 @@ state.
 > records clean pushed `ff2406b1`, exact history/spec/control bindings, both
 > conditional branches and inversion mutations, nine focused tests, and zero
 > implicit execution. Next push this documentation checkpoint, revalidate clean
-> remote equality, and run one stack probe plus one completion-grade control;
+> remote equality, and run one stack probe plus one completion-grade control.
+> The stack probe passed at `7076e453`, but control history preflight recursively
+> re-entered the rebound R6 adapter before root creation or Lean launch. The
+> source-first
+> [R1 correction plan](docs/plan/lean-u2-official-execution-tl0.6.3-m2-r6-control-history-r1-plan-2026-07-23.md)
+> freezes only captured-original R5 history delegation and restoration. Next
+> implement/test/push R1; attempt 004 remains unconsumed;
 > then form native pairs. Do not rerun
 > the singleton for population credit. The
 > [complete-parity execution roadmap](docs/plan/lean4-complete-parity-roadmap-2026-07-22.md)

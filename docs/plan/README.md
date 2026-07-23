@@ -298,6 +298,10 @@ Start at the root [`PLAN.md`](../../PLAN.md) (map + standing rules) and
   pushed R6 implementation with exact R5 history binding, fresh control/run
   identities, both conditional artifact branches and inversion mutations,
   nine focused tests, and zero implicit execution.
+- [`lean-u2-official-execution-tl0.6.3-m2-r6-control-history-r1-plan-2026-07-23.md`](lean-u2-official-execution-tl0.6.3-m2-r6-control-history-r1-plan-2026-07-23.md) —
+  source-first pre-process correction after temporary history rebinding recursed
+  before control-root creation; freezes captured-original R5 validation and
+  restoration without consuming attempt 004.
 - [`lean-compatibility-v1.json`](lean-compatibility-v1.json) and generated
   [`Lean compatibility matrix`](generated/lean-compatibility.md) — TL0.2's
   executable eight-field assurance contract, K0-K6 profile gates, registered

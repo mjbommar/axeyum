@@ -233,7 +233,11 @@ the unchanged 32 GiB/512 MiB lane, and a JUnit-selected 123-row all-pass versus
 124-row any-failure closure. The separately pushed
 [R6 implementation checkpoint](lean-u2-official-execution-tl0.6.3-m2-r6-attempt-004-implementation-2026-07-23.md)
 binds both branches and inversion mutations with no implicit execution. A fresh
-control and the single selected attempt remain open.
+control and the single selected attempt remain open. The first control call
+stopped in temporary history rebinding before root/process creation; the
+source-first [R1 correction](lean-u2-official-execution-tl0.6.3-m2-r6-control-history-r1-plan-2026-07-23.md)
+freezes captured-original R5 validation and restoration without consuming
+attempt 004.
 
 L0 exits when status is generated from evidence rather than hand-copied prose.
 
