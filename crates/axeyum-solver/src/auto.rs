@@ -5070,14 +5070,11 @@ fn mbqi_free_int_symbols(
     Some(symbols.into_iter().collect())
 }
 
-/// Builds ADR-0360's complete, deterministic free-Int value pool. Overflow is
-/// a decline, never truncation: truncating would make the measured Cartesian
-/// search depend on insertion order rather than the preregistered policy.
-fn mbqi_free_int_value_pool(
+fn mbqi_free_int_base_values(
     arena: &TermArena,
     assertions: &[TermId],
     initial_model: &Model,
-) -> Option<Vec<i128>> {
+) -> BTreeSet<i128> {
     let mut values = BTreeSet::from([0]);
     for (_, value) in initial_model.iter() {
         if let Value::Int(integer) = value {
@@ -5101,7 +5098,10 @@ fn mbqi_free_int_value_pool(
             _ => {}
         }
     }
+    values
+}
 
+fn mbqi_close_free_int_value_pool(mut values: BTreeSet<i128>) -> Option<Vec<i128>> {
     let bases: Vec<i128> = values.iter().copied().collect();
     for base in bases {
         if let Some(predecessor) = base.checked_sub(1) {
@@ -5112,6 +5112,75 @@ fn mbqi_free_int_value_pool(
         }
     }
     (values.len() <= MAX_MBQI_FREE_INT_VALUES).then(|| values.into_iter().collect())
+}
+
+/// Builds ADR-0360's complete, deterministic free-Int value pool. Overflow is
+/// a decline, never truncation: truncating would make the measured Cartesian
+/// search depend on insertion order rather than the preregistered policy.
+fn mbqi_free_int_value_pool(
+    arena: &TermArena,
+    assertions: &[TermId],
+    initial_model: &Model,
+) -> Option<Vec<i128>> {
+    mbqi_close_free_int_value_pool(mbqi_free_int_base_values(arena, assertions, initial_model))
+}
+
+/// Extends ADR-0360's raw scalar pool with ADR-0361's untrusted values from the
+/// initial candidate: integer UF results and exact-source integer subterms that
+/// evaluate without any quantified binder. The same neighbour closure and cap
+/// apply once to the combined raw pool.
+fn mbqi_evaluated_free_int_value_pool(
+    arena: &TermArena,
+    assertions: &[TermId],
+    initial_model: &Model,
+) -> Option<Vec<i128>> {
+    let mut values = mbqi_free_int_base_values(arena, assertions, initial_model);
+    for (_, function) in initial_model.functions() {
+        if let Value::Int(integer) = function.default_value() {
+            values.insert(integer);
+        }
+        for (_, value) in function.value_entries() {
+            if let Value::Int(integer) = value {
+                values.insert(*integer);
+            }
+        }
+    }
+
+    let mut seen = BTreeSet::new();
+    let mut visit_order = Vec::new();
+    let mut binders = BTreeSet::new();
+    let mut stack: Vec<TermId> = assertions.iter().rev().copied().collect();
+    while let Some(term) = stack.pop() {
+        if !seen.insert(term) {
+            continue;
+        }
+        visit_order.push(term);
+        if let TermNode::App { op, args } = arena.node(term) {
+            if let Op::Forall(symbol) | Op::Exists(symbol) = op {
+                binders.insert(*symbol);
+            }
+            stack.extend(args.iter().rev().copied());
+        }
+    }
+
+    let assignment = initial_model.to_assignment();
+    let mut binder_dependent = BTreeSet::new();
+    for term in visit_order.into_iter().rev() {
+        let depends_on_binder = match arena.node(term) {
+            TermNode::Symbol(symbol) => binders.contains(symbol),
+            TermNode::App { args, .. } => args.iter().any(|arg| binder_dependent.contains(arg)),
+            _ => false,
+        };
+        if depends_on_binder {
+            binder_dependent.insert(term);
+        } else if arena.sort_of(term) == Sort::Int
+            && let Ok(Value::Int(integer)) = eval(arena, term, &assignment)
+        {
+            values.insert(integer);
+        }
+    }
+
+    mbqi_close_free_int_value_pool(values)
 }
 
 /// Clones `config` with only the time remaining under the caller-owned MBQI
@@ -5146,6 +5215,29 @@ fn complete_mbqi_free_int_candidate(
 ) -> Option<Model> {
     let symbols = mbqi_free_int_symbols(arena, assertions, universal_assertions)?;
     let values = mbqi_free_int_value_pool(arena, assertions, initial_model)?;
+    complete_mbqi_free_int_candidate_for_values(
+        arena,
+        assertions,
+        universal_assertions,
+        ground,
+        &symbols,
+        &values,
+        config,
+        deadline,
+    )
+}
+
+#[allow(clippy::too_many_arguments)]
+fn complete_mbqi_free_int_candidate_for_values(
+    arena: &mut TermArena,
+    assertions: &[TermId],
+    universal_assertions: &[TermId],
+    ground: &[TermId],
+    symbols: &[SymbolId],
+    values: &[i128],
+    config: &SolverConfig,
+    deadline: Option<Instant>,
+) -> Option<Model> {
     let tuple_count = values
         .len()
         .checked_pow(u32::try_from(symbols.len()).ok()?)?;
@@ -5184,6 +5276,36 @@ fn complete_mbqi_free_int_candidate(
         }
     }
     None
+}
+
+/// ADR-0361's additive evaluated-value retry. The ADR-0360 pool has already
+/// been exhausted before this is called, so an identical or overflowing pool
+/// declines without repeating work.
+fn complete_mbqi_evaluated_free_int_candidate(
+    arena: &mut TermArena,
+    assertions: &[TermId],
+    universal_assertions: &[TermId],
+    ground: &[TermId],
+    initial_model: &Model,
+    config: &SolverConfig,
+    deadline: Option<Instant>,
+) -> Option<Model> {
+    let symbols = mbqi_free_int_symbols(arena, assertions, universal_assertions)?;
+    let baseline_values = mbqi_free_int_value_pool(arena, assertions, initial_model)?;
+    let values = mbqi_evaluated_free_int_value_pool(arena, assertions, initial_model)?;
+    if values == baseline_values {
+        return None;
+    }
+    complete_mbqi_free_int_candidate_for_values(
+        arena,
+        assertions,
+        universal_assertions,
+        ground,
+        &symbols,
+        &values,
+        config,
+        deadline,
+    )
 }
 
 /// Model-based quantifier instantiation (MBQI): a refutation loop for top-level
@@ -5276,6 +5398,7 @@ pub fn prove_unsat_by_mbqi(
     // graceful `Unknown`, never spin (the "unknown is never an error / never hang" rule).
     let deadline = config.timeout.and_then(|t| Instant::now().checked_add(t));
     let mut instances: Vec<TermId> = Vec::new();
+    let mut initial_ground_model = None;
     for round in 0..MAX_MBQI_ROUNDS {
         if past_deadline(deadline) || instances.len() > MAX_MBQI_INSTANCES {
             return Ok(CheckResult::Unknown(UnknownReason {
@@ -5291,6 +5414,9 @@ pub fn prove_unsat_by_mbqi(
             // `unsat` (sound — instances are implied) or `unknown` transfers.
             return Ok(result);
         };
+        if round == 0 {
+            initial_ground_model = Some(model.clone());
+        }
         // MBQI-as-model-finder (P2.6 T2.6.5): before trying to *refute* the
         // candidate, test whether it is already a **genuine** model of every
         // universal. For the almost-uninterpreted fragment (bound var Int/Real
@@ -5443,8 +5569,27 @@ pub fn prove_unsat_by_mbqi(
         }
         if !added {
             // No universal could be refined at this model: the trigger-based
-            // family may still refute via compound terms; otherwise `unknown`.
-            return prove_unsat_by_ematching(arena, assertions, config);
+            // family may still refute via compound terms. Only after that
+            // established route also declines does ADR-0361 spend the remaining
+            // shared deadline on its evaluated-value SAT-only retry. This keeps
+            // the new search from delaying any pre-existing MBQI/E-matching
+            // decision.
+            let ematching = prove_unsat_by_ematching(arena, assertions, config)?;
+            if matches!(ematching, CheckResult::Unknown(_))
+                && let Some(initial_model) = &initial_ground_model
+                && let Some(model) = complete_mbqi_evaluated_free_int_candidate(
+                    arena,
+                    assertions,
+                    &universal_assertions,
+                    &ground,
+                    initial_model,
+                    config,
+                    deadline,
+                )
+            {
+                return Ok(CheckResult::Sat(model));
+            }
+            return Ok(ematching);
         }
     }
     Ok(CheckResult::Unknown(UnknownReason {
@@ -6257,6 +6402,46 @@ mod tests {
         assert!(
             mbqi_free_int_value_pool(&arena, &overflow_assertions, &Model::new()).is_none(),
             "the neighbor-closed pool must decline instead of truncating"
+        );
+    }
+
+    #[test]
+    fn mbqi_evaluated_value_pool_uses_uf_results_and_ground_source_only() {
+        let mut arena = TermArena::new();
+        let function = arena
+            .declare_fun("evaluated_pool_f", &[Sort::Int], Sort::Int)
+            .unwrap();
+        let binder = arena.declare("evaluated_pool_x", Sort::Int).unwrap();
+        let scalar = arena.declare("evaluated_pool_y", Sort::Int).unwrap();
+        let binder_variable = arena.var(binder);
+        let scalar_variable = arena.var(scalar);
+        let three = arena.int_const(3);
+        let four = arena.int_const(4);
+        let binder_product = arena.int_mul(binder_variable, three).unwrap();
+        let binder_application = arena.apply(function, &[binder_variable]).unwrap();
+        let universal_body = arena.eq(binder_product, binder_application).unwrap();
+        let universal = arena.forall(binder, universal_body).unwrap();
+        let ground_product = arena.int_mul(scalar_variable, four).unwrap();
+        let ground_application = arena.apply(function, &[scalar_variable]).unwrap();
+        let ground = arena.int_le(ground_product, ground_application).unwrap();
+
+        let interpretation =
+            axeyum_ir::FuncValue::constant_value(vec![Sort::Int], Sort::Int, Value::Int(5))
+                .define_value(&[Value::Int(2)], Value::Int(9));
+        let mut model = Model::new();
+        model.set(binder, Value::Int(100));
+        model.set(scalar, Value::Int(2));
+        model.set_function(function, interpretation);
+
+        assert_eq!(
+            mbqi_evaluated_free_int_value_pool(&arena, &[universal, ground], &model),
+            Some(vec![-1, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 99, 100, 101])
+        );
+        assert!(
+            !mbqi_evaluated_free_int_value_pool(&arena, &[universal, ground], &model)
+                .unwrap()
+                .contains(&300),
+            "the evaluable-looking binder product must not enter the ground pool"
         );
     }
 
