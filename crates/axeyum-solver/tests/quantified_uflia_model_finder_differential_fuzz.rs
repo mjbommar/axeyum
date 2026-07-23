@@ -800,6 +800,41 @@ fn quantified_uflia_model_finder_differential_fuzz_disagree_zero() {
 }
 
 #[test]
+fn evaluated_scalar_candidates_close_the_two_production_residuals() {
+    let cfg = SolverConfig::new().with_timeout(AXEYUM_TIMEOUT);
+    for seed in [23_u64, 231] {
+        let mut rng = Lcg::new(seed);
+        let inst = Instance::generate(&mut rng);
+        assert_eq!(z3_decide(&inst), Verdict::Sat, "seed {seed}");
+        let (mut arena, _, _, _, _, assertions) = inst.build_axeyum();
+        let result = prove_unsat_by_mbqi(&mut arena, &assertions, &cfg).unwrap();
+        let CheckResult::Sat(model) = result else {
+            panic!("seed {seed} must complete to checked SAT, got {result:?}");
+        };
+        assert!(check_model(&arena, &assertions, &model).unwrap());
+    }
+}
+
+#[test]
+fn evaluated_scalar_retry_preserves_the_prior_seed_145_sat() {
+    let seed = 145_u64;
+    let mut rng = Lcg::new(seed);
+    let inst = Instance::generate(&mut rng);
+    assert_eq!(z3_decide(&inst), Verdict::Sat);
+    let (mut arena, _, _, _, _, assertions) = inst.build_axeyum();
+    let result = prove_unsat_by_mbqi(
+        &mut arena,
+        &assertions,
+        &SolverConfig::new().with_timeout(AXEYUM_TIMEOUT),
+    )
+    .unwrap();
+    let CheckResult::Sat(model) = result else {
+        panic!("the deferred retry must not steal seed 145's prior SAT: {result:?}");
+    };
+    assert!(check_model(&arena, &assertions, &model).unwrap());
+}
+
+#[test]
 fn two_binder_cartesian_profiles_agree_with_z3() {
     let cfg = SolverConfig::new().with_timeout(AXEYUM_TIMEOUT);
     let mut ax_sat = 0_u64;
@@ -1031,7 +1066,7 @@ fn exact_source_symbols(arena: &TermArena, assertions: &[TermId]) -> BTreeSet<Sy
 
 #[test]
 #[ignore = "diagnostic; set AXEYUM_QUANT_UFLIA_SCALAR_DIAGNOSTIC_SEEDS"]
-fn diagnose_evaluated_source_scalar_completion_for_quantified_uflia_unknowns() {
+fn diagnose_fixed_query_evaluated_scalar_probe_for_quantified_uflia_unknowns() {
     const MAX_VALUES: usize = 16;
     const MAX_TUPLES: usize = 256;
 
@@ -1129,7 +1164,7 @@ fn diagnose_evaluated_source_scalar_completion_for_quantified_uflia_unknowns() {
     }
 
     println!(
-        "EVALUATED_SOURCE_SCALAR_COMPLETION|sat={sat}|unknown={unknown}|candidate_checks={candidate_checks}"
+        "FIXED_QUERY_EVALUATED_SCALAR_PROBE|sat={sat}|unknown={unknown}|candidate_checks={candidate_checks}"
     );
 }
 
