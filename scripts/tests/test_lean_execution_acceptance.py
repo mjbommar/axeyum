@@ -13,6 +13,55 @@ from scripts import lean_execution_acceptance as ACCEPTANCE
 
 
 class LeanExecutionAcceptanceContractTests(unittest.TestCase):
+    def test_readonly_mode_separates_live_and_clean_checkout_files(self) -> None:
+        tracked = ACCEPTANCE.DEFAULT_EVIDENCE_ROOT / "preparation/build.json"
+        self.assertTrue(ACCEPTANCE._accepted_readonly_mode(tracked))
+
+        with tempfile.TemporaryDirectory(dir=ACCEPTANCE.ROOT) as temporary:
+            path = Path(temporary) / "evidence.bin"
+            path.write_bytes(b"evidence")
+            path.chmod(0o664)
+            self.assertFalse(ACCEPTANCE._accepted_readonly_mode(path))
+            path.chmod(0o444)
+            self.assertTrue(ACCEPTANCE._accepted_readonly_mode(path))
+            path.chmod(0o755)
+            self.assertFalse(ACCEPTANCE._accepted_readonly_mode(path))
+
+    def test_checkout_mode_requires_clean_stage_zero_100644_identity(self) -> None:
+        with tempfile.TemporaryDirectory(dir=ACCEPTANCE.ROOT) as temporary:
+            path = Path(temporary) / "evidence.bin"
+            path.write_bytes(b"evidence")
+            path.chmod(0o664)
+            relative = path.resolve().relative_to(ACCEPTANCE.ROOT).as_posix()
+
+            clean = mock.Mock(returncode=0)
+
+            def listed(row: bytes) -> mock.Mock:
+                return mock.Mock(returncode=0, stdout=row)
+
+            valid = f"100644 {'a' * 40} 0\t{relative}\0".encode()
+            with mock.patch.object(
+                ACCEPTANCE.subprocess, "run", side_effect=[clean, listed(valid)]
+            ):
+                self.assertTrue(ACCEPTANCE._accepted_readonly_mode(path))
+
+            invalid_rows = (
+                f"100755 {'a' * 40} 0\t{relative}\0".encode(),
+                f"100644 {'a' * 40} 1\t{relative}\0".encode(),
+                f"100644 {'a' * 40} 0\twrong/path\0".encode(),
+                valid + valid,
+                b"malformed\0",
+            )
+            for row in invalid_rows:
+                with self.subTest(row=row), mock.patch.object(
+                    ACCEPTANCE.subprocess, "run", side_effect=[clean, listed(row)]
+                ):
+                    self.assertFalse(ACCEPTANCE._accepted_readonly_mode(path))
+
+            dirty = mock.Mock(returncode=1)
+            with mock.patch.object(ACCEPTANCE.subprocess, "run", return_value=dirty):
+                self.assertFalse(ACCEPTANCE._accepted_readonly_mode(path))
+
     def build_record(self) -> dict:
         lake = "/opt/lean-4.30/bin/lake"
         environment = {

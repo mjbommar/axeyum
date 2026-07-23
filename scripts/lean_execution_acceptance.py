@@ -415,32 +415,57 @@ def _file_record(relative: str, path: Path) -> dict[str, Any]:
 
 
 def _accepted_readonly_mode(path: Path) -> bool:
-    """Accept live 0444 or Git-checkout 0644 for already tracked evidence.
+    """Accept live 0444 or a clean tracked non-executable Git checkout file.
 
     Git stores only the executable bit, so a committed 0444 checkpoint is
-    materialized as 0644 in a fresh checkout. Untracked/live evidence must
-    still be 0444; this exception cannot make a temporary mutation fixture
-    pass.
+    materialized with checkout/umask-dependent write bits. Untracked/live
+    evidence must still be 0444; this exception cannot make a temporary
+    mutation fixture pass.
     """
 
+    if not path.is_file() or path.is_symlink():
+        return False
     mode = stat.S_IMODE(path.stat().st_mode)
     if mode == 0o444:
         return True
-    if mode != 0o644:
+    if mode & 0o111:
         return False
     try:
         relative = path.resolve().relative_to(ROOT).as_posix()
     except ValueError:
         return False
-    completed = subprocess.run(
-        ["/usr/bin/git", "-C", str(ROOT), "ls-files", "--error-unmatch", "--", relative],
+    clean = subprocess.run(
+        ["/usr/bin/git", "-C", str(ROOT), "diff", "--quiet", "HEAD", "--", relative],
         stdin=subprocess.DEVNULL,
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,
         check=False,
         timeout=5,
     )
-    return completed.returncode == 0
+    if clean.returncode != 0:
+        return False
+    listed = subprocess.run(
+        ["/usr/bin/git", "-C", str(ROOT), "ls-files", "--stage", "-z", "--", relative],
+        stdin=subprocess.DEVNULL,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.DEVNULL,
+        check=False,
+        timeout=5,
+    )
+    if listed.returncode != 0:
+        return False
+    records = [record for record in listed.stdout.split(b"\0") if record]
+    if len(records) != 1:
+        return False
+    metadata, separator, raw_path = records[0].partition(b"\t")
+    fields = metadata.split()
+    return (
+        bool(separator)
+        and len(fields) == 3
+        and fields[0] == b"100644"
+        and fields[2] == b"0"
+        and os.fsdecode(raw_path) == relative
+    )
 
 
 def capture_build_record(
