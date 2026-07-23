@@ -10352,8 +10352,9 @@ pub fn limit(expr: &CasExpr, var: &str, point: LimitPoint) -> Option<CasExpr> {
         return Some(value);
     }
     // Fixed integer-order Bessel J has an oscillatory O(|z|^{-1/2}) envelope on
-    // the real axis. Apply that exact zero limit only to a rational-affine argument
-    // and an outer factor independent of the limiting variable.
+    // the real axis. Apply that exact zero limit only to a nonconstant rational-
+    // coefficient polynomial argument and an outer factor independent of the
+    // limiting variable.
     if matches!(point, LimitPoint::PosInfinity | LimitPoint::NegInfinity)
         && let Some(value) = limit_bessel_j_at_infinity(expr, var, point)
     {
@@ -10992,15 +10993,17 @@ fn limit_bounded_decay(expr: &CasExpr, var: &str, point: LimitPoint) -> Option<C
     }
 }
 
-/// Limit of `c·Jₙ(a·x+b)` at either real infinity for fixed nonnegative integer
-/// `n`, nonzero rational `a`, rational `b`, and any `x`-free factor `c`.
+/// Limit of `c·Jₙ(p(x))` at either real infinity for fixed nonnegative integer
+/// `n`, a nonconstant rational-coefficient polynomial `p`, and any `x`-free
+/// factor `c`.
 ///
 /// NIST DLMF 10.17.3 gives the fixed-order large-positive-argument expansion with
 /// an oscillatory `O(z^{-1/2})` envelope. DLMF 10.11.1 gives
 /// `Jₙ(-z)=(-1)ⁿJₙ(z)` for integer `n`, so the negative-real direction has the
-/// same zero limit. The rule deliberately does not substitute inside a denominator
-/// or accept an `x`-dependent outer factor: those shapes need rate analysis, and
-/// replacing `Jₙ` by zero there would be unsound.
+/// same zero limit. Every admitted nonconstant real polynomial has
+/// `|p(x)|→∞` at both real infinities. The rule deliberately does not substitute
+/// inside a denominator or accept an `x`-dependent outer factor: those shapes need
+/// rate analysis, and replacing `Jₙ` by zero there would be unsound.
 fn limit_bessel_j_at_infinity(expr: &CasExpr, var: &str, point: LimitPoint) -> Option<CasExpr> {
     if !matches!(point, LimitPoint::PosInfinity | LimitPoint::NegInfinity) {
         return None;
@@ -11009,7 +11012,15 @@ fn limit_bessel_j_at_infinity(expr: &CasExpr, var: &str, point: LimitPoint) -> O
     let CasExpr::Unary(UnaryFunc::BesselJ(_), argument) = core else {
         return None;
     };
-    univariate_affine(&argument, var)?;
+    let ratio = normalize_rational(&argument)?;
+    let denominator = multipoly_as_constant(&ratio.den)?;
+    if denominator.is_zero() {
+        return None;
+    }
+    let polynomial = ratio.num.to_univariate(var)?;
+    if poly::rat_degree(&polynomial)? == 0 {
+        return None;
+    }
     Some(CasExpr::zero())
 }
 
@@ -21700,7 +21711,6 @@ mod tests {
         // behavior. They must continue to decline instead of inheriting a false zero.
         assert!(limit(&x().bessel_i(0), "x", pos()).is_none());
         assert!(limit(&(CasExpr::int(2).sqrt() * x()).bessel_j(0), "x", pos()).is_none());
-        assert!(limit(&x().pow(2).bessel_j(0), "x", pos()).is_none());
         assert!(limit(&(v("a") + x()).bessel_j(0), "x", pos()).is_none());
         assert_equal(
             &limit(&CasExpr::zero().bessel_j(0), "x", pos()).unwrap(),
@@ -21709,14 +21719,47 @@ mod tests {
         assert!(limit(&(CasExpr::int(1) / x().bessel_j(0)), "x", pos()).is_none());
         assert!(limit(&(x() * x().bessel_j(0)), "x", pos()).is_none());
         assert_equal(
-            &limit(
-                &x().bessel_j(0),
-                "x",
-                LimitPoint::Finite(Rational::zero()),
-            )
-            .unwrap(),
+            &limit(&x().bessel_j(0), "x", LimitPoint::Finite(Rational::zero())).unwrap(),
             &CasExpr::int(1),
         );
+    }
+
+    #[test]
+    fn limits_of_integer_order_bessel_j_polynomial_arguments_and_declines() {
+        let x = || v("x");
+        let pos = || LimitPoint::PosInfinity;
+        let neg = || LimitPoint::NegInfinity;
+
+        // Every nonconstant real polynomial has unbounded magnitude at both real
+        // infinities, so the fixed-order DLMF envelope still forces Jₙ(p(x)) → 0.
+        for order in [0, 3, 32, u32::MAX] {
+            for argument in [
+                x().pow(2),
+                x().pow(3) - CasExpr::int(2) * x() + CasExpr::int(1),
+                CasExpr::int(1) - x().pow(2),
+                CasExpr::rat(1, 2) * x().pow(4) - CasExpr::int(3),
+            ] {
+                let bessel = argument.bessel_j(order);
+                assert_equal(&limit(&bessel, "x", pos()).unwrap(), &CasExpr::zero());
+                assert_equal(&limit(&bessel, "x", neg()).unwrap(), &CasExpr::zero());
+            }
+        }
+
+        // Rational functions, irrational or symbolic polynomial coefficients,
+        // modified Bessel I, and variable-dependent outer factors remain outside
+        // this theorem-backed direct-head rule.
+        assert!(limit(&(x() + CasExpr::int(1) / x()).bessel_j(0), "x", pos()).is_none());
+        assert!(
+            limit(
+                &(CasExpr::int(2).sqrt() * x().pow(2)).bessel_j(0),
+                "x",
+                pos()
+            )
+            .is_none()
+        );
+        assert!(limit(&(v("a") * x().pow(2)).bessel_j(0), "x", pos()).is_none());
+        assert!(limit(&x().pow(2).bessel_i(0), "x", pos()).is_none());
+        assert!(limit(&(x() * x().pow(2).bessel_j(0)), "x", pos()).is_none());
     }
 
     #[test]
