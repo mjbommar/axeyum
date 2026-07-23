@@ -27,27 +27,35 @@ public solver path:
 
 1. Fixing every free ground scalar to the value from one complete Z3 model
    turns 23 of 39 cases into checked Axeyum SAT and leaves 16 Unknown.
-2. A pure-Rust production-shaped pool starts with zero and scalar assignments
-   from the Axeyum ground model, adds exact source integer literals, then adds
-   checked predecessor/successor values. It retains at most 16 values and tests
-   at most 256 one/two-scalar tuples. This turns **33 of 39** cases into checked
-   SAT after **180 total candidate queries** and leaves only seeds
-   `30, 32, 70, 122, 182, 242` Unknown.
+2. The first pure-Rust production-shaped diagnostic fixed the generator's one
+   or two declared ground symbols. Its pool starts with zero and scalar
+   assignments from the Axeyum ground model, adds source integer literals, then
+   adds checked predecessor/successor values. It truncated the pool at 16 and
+   reported **33 of 39** checked SAT after **180 total candidate queries**.
+3. Implementation validation tightened that experiment to ADR-0360's actual
+   boundary: collect symbols only from the exact assertion sequence, exclude
+   universal binders, and decline if the complete neighbor-closed pool exceeds
+   16 rather than truncating it. That policy turns **28 of 39** cases into
+   checked SAT. Eleven remain Unknown: `23, 30, 32, 70, 111, 122, 150, 175,
+   182, 231, 242`.
 
-The second result exceeds the first because alternative small scalar values can
-make the existing ADR-0359 default pool sufficient even when Z3 chooses a much
-larger but equally valid scalar/function model. Every diagnostic SAT result
-passes canonical replay against the original assertions plus its temporary
-fixing; production ADR-0360 must then discard the fixing and replay the exact
-original assertion sequence before granting credit.
+The bounded results exceed the Z3-fixing result because alternative small
+scalar values can make the existing ADR-0359 default pool sufficient even when
+Z3 chooses a much larger but equally valid scalar/function model. The five-case
+gap between the exploratory 33 and production 28 is now classified rather than
+hidden: two cases rely on truncating an oversized pool, while three rely on a
+generator-declared symbol absent from the assertion sequence. Production must
+do neither. Every credited SAT result discards the fixing and passes canonical
+replay against the exact original assertion sequence.
 
 ## Bounded conclusion
 
-Free-Int candidate completion is the dominant next measured SAT increment: it
-can close at least 33 of the 39 remaining oracle-SAT declines without changing
-the finite-profile checker. The six residual seeds mix source-threshold default
-needs and nested/ground UF relationships and remain a separate measurement
-boundary. They are not evidence for widening ADR-0360.
+Free-Int candidate completion is the dominant next measured SAT increment: the
+strict production policy closes 28 of the 39 remaining oracle-SAT declines
+without changing the finite-profile checker. The eleven residual seeds mix
+pool-overflow, extra default-value demand, source-threshold default needs, and
+nested/ground UF relationships and remain a separate measurement boundary.
+They are not evidence for widening ADR-0360.
 
 ## Reproduction
 
