@@ -2,8 +2,8 @@
 
 Date: 2026-07-23
 
-Status: **Lean implementation and validation complete on the pushed topic
-branch; full green-before-merge gate blocked by pre-existing out-of-lane
+Status: **implementation integrated on `main` and post-merge Lean validation
+complete; repository-wide gate still blocked by pre-existing out-of-lane
 formatting; no process outcome or parity credit**
 
 Plan:
@@ -67,6 +67,18 @@ The pushed topic history is:
 | `97b2b1a0` | bind retained store source hashes to the validated result revision |
 | `1fd4db38` | refresh only current-source identities in the generated terminal registry |
 
+The integration owner landed that history on `main` through:
+
+| Main commit | Integrated scope |
+|---|---|
+| `949dd3d9` | R7 preregistration |
+| `9fe5cab6` | current-only overrides plus revision-bound retained-store validation |
+| `2fd4c187` | R7 result, contract/roadmap/status updates, and generated current identities |
+
+Post-merge Lean validation used current-main base `198e9d98`; the only topic
+delta was the later documentation clarification about the repository format
+gate.
+
 Final current source identities are:
 
 | Source | SHA-256 |
@@ -116,7 +128,9 @@ opt-in live sentinel skip. It covers the SMT filesystem primitive, Lean store,
 acceptance, U2, and M2 validators, including a fresh synthetic 16-cell SIGKILL
 matrix across the worktree and `/dev/shm` storage classes.
 
-`just parity-docs && just links` passes in the owning worktree. This includes:
+`just parity-docs && just links` passes both before integration and again over
+the integrated current-main tree plus the documentation clarification. This
+includes:
 
 - 24 TL0.7.3 store tests and exact retained-result replay;
 - 24 TL0.7.4 acceptance tests with one expected skip and exact authority replay;
@@ -165,10 +179,11 @@ This repair makes the cross-lane validator green; it does not establish Lean
 parity. All U0--U9 populations, A0--A11 axes, paired cells, and G1--G10 gates
 remain incomplete or zero, and `terminal_ready` remains false.
 
-The pushed topic branch is ready for integration review, not yet merge. After
-the out-of-lane formatting baseline is repaired, the integration owner must
-run the complete green-before-merge gate, merge in the chosen order, and replay
-current `main`. Only then does the next Lean-parity action remain explicit
-authorization and validation of the already preregistered TL0.6.4 M2.1 process
-program. M2.2 must receive a separate source-first input authority before any
-execution or downstream native pair.
+The R7 implementation is already on `main`; it no longer blocks SMT's shared
+source gate. The later topic-only documentation clarification must wait for the
+ordinary green merge discipline. The integration owner still needs to resolve
+the separate out-of-lane formatting baseline and complete a repository-wide
+green gate. The next Lean-parity action remains explicit authorization and
+validation of the already preregistered TL0.6.4 M2.1 process program. M2.2 must
+receive a separate source-first input authority before any execution or
+downstream native pair.

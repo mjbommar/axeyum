@@ -486,7 +486,7 @@ non-executable representation. The complete-parity check passes from a
 differently rooted detached worktree without rewriting historical authorities
 or changing any evidence, outcome, or credit.
 
-The subsequent
+The subsequently integrated
 [R7 current-source identity result](lean-complete-parity-current-source-identity-r7-result-2026-07-23.md)
 closes the next cross-lane drift after SMT-COMP legitimately added an optional
 target filter to the shared `resume_fs.py` primitive. Historical retained cells
@@ -495,8 +495,9 @@ repository gates admit only reviewed successor `b05c3218...`; and new result
 generation remains bound to a committed ancestor containing every current
 source byte. All accepted authorities and evidence aggregates remain
 byte-identical, and the complete-parity check again passes from a differently
-rooted detached checkout. This is current-validator integrity, not an outcome
-or parity increment.
+rooted detached checkout. Main merges `949dd3d9`, `9fe5cab6`, and `2fd4c187`
+carry the repair and its generated identities. This is current-validator
+integrity, not an outcome or parity increment.
 
 TL0.6.3 M0 is now governed by a
 [source-first official-case plan](lean-u2-official-execution-tl0.6.3-m0-plan-2026-07-22.md).

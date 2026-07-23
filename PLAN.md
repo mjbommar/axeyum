@@ -731,11 +731,11 @@ state.
 > evidence-producing source rows, current gates freeze the exact reviewed
 > successor, 93 focused tests pass with one expected skip, and both owning-root
 > and detached-root terminal checks remain honestly zero-credit. Current-main
-> integration and a post-merge replay precede any M2.1 authorization. The
-> Lean-specific gates are green, but repository-wide `just check` still stops
+> merges `949dd3d9`, `9fe5cab6`, and `2fd4c187` now carry the repair, and the
+> post-merge focused/parity/link replay passes. The Lean-specific gates are
+> green, but repository-wide `just check` still stops
 > at the same one-benchmark/eight-CAS out-of-lane formatting baseline; R7 owns
-> no Rust and is not merge-eligible until the integration owner clears that
-> separate gate.
+> no Rust. That separate gate and explicit M2.1 authorization remain open.
 > The runtime-derived
 > TL0.4 ledger now freezes **65** prelude assumptions (real 30, integer 34,
 > string 1) by canonical type digest before dependent native elaborator, Lake,
