@@ -314,10 +314,12 @@ gate.
    recovery without fake lease evidence, and exposes a hash-pinned recovery-only
    coordinator mode. Twenty-three focused tests now cover the three coordinator
    restart paths, including fresh liveness/evidence validation when replaying an
-   existing authority record. The 71-test portable gate passes with one live-
-   host skip. Mandatory cgroup and live multi-host E3 gates are also clean on
-   `9299b890`; the live gate passes 71 tests without skips. No Bitwuzla credit
-   is claimed, and no recovery mutation may occur before exact integration.
+   existing authority record. Released runner evidence must also exactly account
+   every shard-assigned key as missing under the complete terminal contract. The
+   71-test portable gate passes with one live-host skip. Mandatory cgroup and
+   live multi-host E3 gates are also clean on `aeca9b53`; the live gate passes
+   71 tests without skips. No Bitwuzla credit is claimed, and no recovery
+   mutation may occur before exact integration.
 3. **Credited full population.** Only then execute Axeyum, cvc5, and Bitwuzla on
    the same versioned selection; publish the per-logic inventory and regenerate
    the coverage-weighted parity matrix without combining incompatible regimes.

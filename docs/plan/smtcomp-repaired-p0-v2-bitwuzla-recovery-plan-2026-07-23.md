@@ -171,7 +171,9 @@ The bounded implementation:
 - directly exercises all three coordinator restart paths: fresh exact retry,
   completed-retry finalization, and completed-result replay. Authority replay
   repeats current remote-liveness, lease, allocation-evidence, runner-terminal,
-  and zero-record checks before returning the existing record.
+  and zero-record checks before returning the existing record. The runner
+  terminal must have the complete contract field set, exact empty-result digest,
+  and all shard-assigned keys in its missing set.
 
 Read-only live validation reports:
 
@@ -198,9 +200,9 @@ AXEYUM_REQUIRE_SMTCOMP_CGROUP=1 ./scripts/check-smtcomp-resume.sh
 
 AXEYUM_REQUIRE_SMTCOMP_MULTIHOST=1 ./scripts/check-smtcomp-resume.sh
   71 tests, OK, no skips
-  evidence=/nas3/data/axeyum/harness/e3-gate/live-1784833003812766152-9299b8907208
-  control=f692188a8dcb92da5fab2bcf97c4e9a8ace3ebfe0a27a4fa4d74b089ff5629d4
-  loss=8744c6e2acd6bc5d560420f0ac3db14b845949d9e54e1d1e02947180de272df3
+  evidence=/nas3/data/axeyum/harness/e3-gate/live-1784833294438172715-aeca9b53277a
+  control=c12d25372266e26859b4de63ccd87d220edc77db0fe4f875bd88b23816e6ce96
+  loss=5afe1e45b4c8015b0c5a0a6f11d66371e4038011c70686418ff1232e91f22b13
 
 ./scripts/check-links.sh
   passed
