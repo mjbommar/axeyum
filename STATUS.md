@@ -401,6 +401,22 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   Next: after the integrator lands this result, execute Axeyum, cvc5, and
   Bitwuzla sequentially under the frozen commands; stop on the first
   contradiction, disagreement, or evidence/identity failure.
+- **2026-07-22 — certified subcritical rational-rate integer-order Bessel-J
+  limits.** Wave seventeen closes the rate-sensitive continuation left by the
+  bounded-weight checkpoint. If an exact rational argument grows like
+  `|x|^d` and an exact rational weight like `|x|^e`, DLMF 10.17.3/10.11.1 give
+  `w(x)Jₙ(r(x))=O(|x|^(e-d/2))`; `limit` now returns zero under the strict
+  integer condition `2e<d`, retaining any `x`-free factor. Orders 0, 3, 32,
+  and `u32::MAX`, polynomial and rational weights/arguments, reflected signs,
+  and both infinities pass. A 24-case mpmath check agrees with the leading
+  asymptotic to maximum envelope-scaled error 0.00215744; SymPy honestly leaves
+  the prototype `x·J₀(x³)` unevaluated. Borderline `2e=d`, supercritical rates,
+  modified Bessel `I`, Bessel denominators, symbolic rational coefficients,
+  multiple Bessel factors, and bounded arguments decline. The thermally managed
+  558-unit/147-doctest suite passed (2086.07 s for units), with workspace
+  warning-denied Clippy (5.10 s warm), stable/nightly rustdoc, WASM, links,
+  whitespace, and owned-line formatting green. Next: resume broad probing;
+  quadratic-pole inverse Z remains representation-bound.
 
 - **2026-07-22 — certified bounded rational-weight integer-order Bessel-J
   limits.** Wave sixteen's bounded cross-area probe ranks the variable-weight
@@ -8444,6 +8460,12 @@ plan is built and committed on the current branch:
   R1/R2 history, a new run/evidence root, universal 512 MiB Lean runtime stacks
   from pinned source semantics, and the measured tiered artifact store. It
   authorizes one process only after separately pushed implementation gates.
+- **2026-07-22 — Added certified subcritical rational-rate Bessel-J infinity
+  limits.** The fixed-order envelope now closes `c·w(x)·Jₙ(r(x))→0` at both
+  real infinities whenever exact rational degree growth satisfies
+  `2·growth(w)<growth(r)`, with strict borderline/supercritical, modified-I,
+  denominator, symbolic-coefficient, multiple-Bessel, and bounded-argument
+  declines. CAS now has 558 units and 147 doctests.
 - **2026-07-22 — Added certified bounded rational-weight Bessel-J infinity
   limits.** Fixed-order asymptotics now close `c·w(x)·Jₙ(r(x))→0` at both real
   infinities when exact rational-coefficient `r` grows by degree and exact
