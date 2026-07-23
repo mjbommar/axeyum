@@ -400,9 +400,8 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   same-population comparison mechanisms. Eleven focused publication tests and
   the expanded 126-test portable gate pass with one expected live-host skip.
   Lean R7 is integrated by merge `9fe5cab6`; the remaining current mainline
-  blocker is out-of-lane formatting drift. Next: integrate the publication
-  fixture, wait for that repair, rebase, run both exact readiness gates, perform
-  the separately reviewed
+  blocker is out-of-lane formatting drift. Next: wait for that repair, rebase,
+  run both exact readiness gates, perform the separately reviewed
   host/sentinel capture, and publish only an empty `launch_authorized=false`
   preparation inside that frozen window. No host probe, NAS mutation,
   allocation, or solver launch is authorized before that boundary.

@@ -1,8 +1,7 @@
 # SMT-COMP credited full-population execution plan
 
-Status: preregistered design; F1/F2 process-free mechanisms integrated through
-sealed preflight; publication fixtures implemented on the SMT topic; live F2,
-F3, and F4 not yet accepted
+Status: preregistered design; F1/F2 process-free mechanisms and publication
+fixtures integrated; live F2, F3, and F4 not yet accepted
 Date: 2026-07-23
 Selection authority: [accepted S4 result](smtcomp-official-selection-final-s4-2026-07-22.md)
 Harness admission: [S5 result](smtcomp-harness-admission-s5-result-2026-07-23.md)
