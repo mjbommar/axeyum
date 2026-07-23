@@ -13,15 +13,15 @@ elsewhere in `docs/plan/`). Read this file first when resuming.
   [multi-agent operations guide](../contributor-guide/multi-agent-operations.md):
   work only in the dedicated CAS worktree on an `agent/cas/*` branch, push that
   branch, and leave `main` to the integration owner. The current increment is
-  `agent/cas/gap-probe-wave-sixteen`, based on integration parent `d0ef8b69`,
-  with implementation commit `75447869` (integrated by `44ac7abb`); do not
+  `agent/cas/gap-probe-wave-seventeen`, based on integration parent `db18c0c9`,
+  with implementation commit `d193ab75` (integrated by `10d7aa54`); do not
   rebase it onto `main` ahead of the integration owner.
-- **Tests:** `557` unit + `147` doctests, **all green**, warning-denied workspace
+- **Tests:** `558` unit + `147` doctests, **all green**, warning-denied workspace
   all-target/all-feature Clippy-clean, strict stable/nightly rustdoc-green,
   wasm-green, links-green, and whitespace-clean.
 - **Source of truth for capabilities:** `docs/research/10-cas/README.md`
   (capability table) and `docs/research/10-cas/diary.md` (chronological entries;
-  latest is **Entry 37afe**). Keep both in sync when landing features.
+  latest is **Entry 37aff**). Keep both in sync when landing features.
 - **Method that works:** empirical **gap-probing** (below). It found every recent
   feature *and* a serious infinite-hang regression.
 
@@ -604,6 +604,25 @@ orders `0..=255`), and Stirling-composed raw moments (regressed for orders
   operator, backend, evidence format, or logic fragment changed, so no ADR is
   required.
 
+**Certified subcritical rational-rate integer-order Bessel-J limits**
+- Wave seventeen probed the rate boundary left by wave sixteen: `x·J₀(x³)`,
+  `x²·J₃(x⁵)`, and a rational weight/argument pair all declined, together with
+  the correct borderline, supercritical, modified-I, and denominator controls.
+  This strict-rate seam is smaller than the representation work still required
+  for quadratic-pole inverse Z.
+- For exact rational rates `w(x)=O(|x|^e)` and `r(x)=Θ(|x|^d)`, DLMF 10.17.3
+  and 10.11.1 give `w(x)Jₙ(r(x))=O(|x|^(e-d/2))`. `limit` now returns zero
+  exactly when the degree-derived integer condition `2e<d` holds, plus any
+  `x`-free outer factor. Orders 0, 3, 32, and `u32::MAX`, three polynomial or
+  rational rate pairs, reflected signs, and both infinities pass.
+- Borderline `2e=d`, supercritical rates, modified Bessel `I`, Bessel
+  denominators, symbolic rational coefficients, multiple Bessel factors, and
+  bounded arguments decline. A 24-case mpmath leading-asymptotic check has
+  maximum envelope-scaled error 0.00215744; SymPy leaves the prototype
+  `x·J₀(x³)` unevaluated rather than independently deciding it. No public head,
+  operator, backend, evidence format, or logic fragment changed, so no ADR is
+  required.
+
 ---
 
 ## 5. Zeilberger / WZ — how it works and where to extend
@@ -938,9 +957,9 @@ esac
 export AXEYUM_CAS_TMP
 trap 'find "$AXEYUM_CAS_TMP" -depth -delete' EXIT
 git rev-parse --abbrev-ref HEAD        # → agent/cas/...
-git merge-base --is-ancestor 75447869 HEAD
+git merge-base --is-ancestor d193ab75 HEAD
 CARGO_BUILD_JOBS=1 TMPDIR="$AXEYUM_CAS_TMP" cargo test -p axeyum-cas --jobs 1
-# → 557 unit + 147 doctests green
+# → 558 unit + 147 doctests green
 ```
 Then: read `docs/research/10-cas/diary.md` tail for the latest context, and pick
 up from §6 or resume the gap-probing loop. Push the green owned topic branch;
