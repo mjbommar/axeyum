@@ -490,9 +490,19 @@ state.
 > toolchain's static C++ libraries. A same-C A/B control passes with the
 > override absent, matching official Linux release source that leaves
 > `LEAN_CC` unset for tests. The [R2 plan](docs/plan/lean-u2-official-execution-tl0.6.3-m0-r2-plan-2026-07-22.md)
-> removes only that override before attempt 003. Current coverage is one failed
-> official outcome, zero passes, 1/3,678 parent cases observed, and zero
-> provider, Axeyum, pairing, performance, axis, gate, or parity credit.
+> removed only that override, but the [R2 result](docs/plan/lean-u2-official-execution-tl0.6.3-m0-r2-result-2026-07-22.md)
+> retained attempt 003's failure before direct-entry runner import and no new
+> official outcome. The preregistered R3 correction then ran attempt 004 once
+> and passed the same singleton with the released bundled compiler/linker. The
+> accepted [R3 result](docs/plan/lean-u2-official-execution-tl0.6.3-m0-r3-result-2026-07-22.md)
+> retains four process attempts, two incomplete attempts, one failed and one
+> passed official outcome for one unique case. Coverage remains 1/3,678, with
+> zero provider, Axeyum, pairing, performance, axis, gate, or parity credit.
+> Next derive fresh child shards and form native pairs; do not rerun the
+> singleton for population credit. The
+> [complete-parity execution roadmap](docs/plan/lean4-complete-parity-roadmap-2026-07-22.md)
+> now reconciles this U2 boundary with the SMT-LIB evidence layers and the
+> dependency-ordered R0-R10 path to all U0-U9/A0-A11/G1-G10 exits.
 > The runtime-derived
 > TL0.4 ledger now freezes **65** prelude assumptions (real 30, integer 34,
 > string 1) by canonical type digest before dependent native elaborator, Lake,

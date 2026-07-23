@@ -140,11 +140,27 @@
           "detail": "Preregistered attempt-004 direct-entry correction with the R2 invocation authority frozen and no execution credit."
         },
         {
+          "path": "docs/plan/lean-u2-official-execution-tl0.6.3-m0-r3-v1.json",
+          "detail": "Four-attempt amended R3 authority retaining two incomplete processes, one failed and one passed official outcome for the same unique case, zero Axeyum outcomes or pairs, and zero parity credit."
+        },
+        {
+          "path": "docs/plan/generated/lean-u2-official-execution-tl0.6.3-m0-r3.md",
+          "detail": "Generated bounded result summary: 1/3,678 unique official-case coverage, one pass, one failure, and no parent/provider/Axeyum/pair/performance/parity completion."
+        },
+        {
+          "path": "docs/plan/lean-u2-official-execution-tl0.6.3-m0-r3-result-2026-07-22.md",
+          "detail": "Accepted R3 result, exact evidence closure, four-attempt history, Python direct-entry diagnosis, non-claims, and next U2 boundary."
+        },
+        {
+          "path": "docs/plan/lean4-complete-parity-roadmap-2026-07-22.md",
+          "detail": "Dependency-ordered R0-R10 roadmap, evidence-layered SMT-LIB comparison, immediate queue, and exact terminal claim switch."
+        },
+        {
           "path": "docs/plan/lean4-complete-parity-contract-2026-07-22.md",
           "detail": "Pinned tests tree inventory and the required CTest/test-pile derivation rule."
         }
       ],
-      "residual": "Current execution coverage is three process attempts but only one decided local official failure outcome from a 3,678-case parent, with zero official passes, Axeyum outcomes, or pairs. Attempt 003 stopped before runner import and adds no outcome. Implement the preregistered direct-entry-corrected R3 case, then every derived official profile with exact executable/environment/resource/attempt/case/completion evidence; classify native surfaces and run matched Axeyum cases. Registration plus one failed local outcome is not complete U2 authority."
+      "residual": "Current execution coverage is four process attempts and two decided official outcomes for one unique case from a 3,678-case parent: one environment-induced failure and one pass, with zero Axeyum outcomes or pairs. Attempt 003 stopped before runner import and adds no outcome. One unique official case is not complete U2 authority. Derive fresh child shards from every official profile with exact executable/environment/resource/attempt/case/completion evidence, classify native surfaces, and run matched Axeyum cases; retries of the singleton do not increase population coverage."
     },
     {
       "id": "U3",

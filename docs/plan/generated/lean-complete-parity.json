@@ -4,7 +4,7 @@
   "source_identities": [
     {
       "path": ".github/workflows/ci.yml",
-      "sha256": "b48acc6739fb3737897142536ca10983062bb949898f1a4735eeb189b4ff1a84"
+      "sha256": "20a0e8a96e39a97bb41b68f64f9469dbc715eb6ae7ac19dd43d8ff381cae7a32"
     },
     {
       "path": "docs/plan/generated/lean-execution-evidence.md",
@@ -13,6 +13,10 @@
     {
       "path": "docs/plan/generated/lean-u2-official-ci-profiles.md",
       "sha256": "9b159c245dc81807ef8c209bf60218876179ffa8531c5af5a80123d151c47436"
+    },
+    {
+      "path": "docs/plan/generated/lean-u2-official-execution-tl0.6.3-m0-r3.md",
+      "sha256": "6c8f3f8149d3af5b05a269914ffc1b635c6a11ce8bf71ba6f9204758b44defa0"
     },
     {
       "path": "docs/plan/generated/lean-u2-test-authority.md",
@@ -28,7 +32,7 @@
     },
     {
       "path": "docs/plan/lean-complete-parity-v1.json",
-      "sha256": "0dfa950d076a79b08acb54a237e878ffa5f3be053d300f3f4a63087b3cc8908f"
+      "sha256": "a5725c34df595d7c26e88b8a15bcdfa840ddc7be63ad634f772c1e02501fa9f4"
     },
     {
       "path": "docs/plan/lean-execution-acceptance-tl0.7.4-2026-07-22.md",
@@ -60,7 +64,7 @@
     },
     {
       "path": "docs/plan/lean-system-implementation-plan-2026-07-21.md",
-      "sha256": "cc1a9bfd025139bc82313bb648f20ac8aa8e4f984cb1e24b9e3e4bc3007b3078"
+      "sha256": "7450ba0d9ac3c4d022cc07c7202bcfbab8f54674899e9e7c27044d1d4fc0de37"
     },
     {
       "path": "docs/plan/lean-u2-official-ci-profiles-tl0.6.2-2026-07-22.md",
@@ -95,6 +99,14 @@
       "sha256": "594d0edb8b1536e229afdcded6213b9a1d9cb1ab77d5a3db949015f0a9bda406"
     },
     {
+      "path": "docs/plan/lean-u2-official-execution-tl0.6.3-m0-r3-result-2026-07-22.md",
+      "sha256": "e0dd855462c4a5e3928d3be252239a22f00622c17241916d13ec618d3bd81227"
+    },
+    {
+      "path": "docs/plan/lean-u2-official-execution-tl0.6.3-m0-r3-v1.json",
+      "sha256": "fe04cd96fb9f08c8a0e834ec11f954c3c8172912332da28fc2a92adf0cedb475"
+    },
+    {
       "path": "docs/plan/lean-u2-official-execution-tl0.6.3-m0-v1.json",
       "sha256": "61c7bb015dee1cb767b6c460a08f2c4416a62f1c41e040c817fd5b0d6ea24f8d"
     },
@@ -104,11 +116,15 @@
     },
     {
       "path": "docs/plan/lean4-complete-parity-contract-2026-07-22.md",
-      "sha256": "aae025461f6b37a51cff6f6c8e228077fe3fcf0cb50ea6fac01178a4bfac1211"
+      "sha256": "6db2a9a0fff4ff8ecc367a9fd4e35b8ea6bf516d095ff3d09031c50bb4133c46"
+    },
+    {
+      "path": "docs/plan/lean4-complete-parity-roadmap-2026-07-22.md",
+      "sha256": "2745d469e4419501ba381ef4459702894e879d063ac36038c5b2100b4109edcd"
     },
     {
       "path": "scripts/gen-lean-complete-parity.py",
-      "sha256": "571fef97e911fc1f77ad42047e6b3ac701cf590a85b83c0e6366c2448a8c6c43"
+      "sha256": "f8692b1bcf6d99ba8ef58789ebbf7bdca6f55141e033b895b130cc4efd528c82"
     },
     {
       "path": "scripts/gen-lean-execution-evidence.py",
@@ -139,12 +155,16 @@
       "sha256": "47c779d5b465e32b1ffa8faf3598472ed2ac98bd058928494e65a68d4f205fc2"
     },
     {
+      "path": "scripts/lean_u2_official_execution_r3_result.py",
+      "sha256": "955f91838debb65b939492108d8a5cd66a0cb5834f9b1e03a69d80a8afbe3f73"
+    },
+    {
       "path": "scripts/tests/test_lean_compatibility.py",
       "sha256": "b95626776c5ee358062b5e9b274037b9ad3dab6f0ea500eeae143a792295eb99"
     },
     {
       "path": "scripts/tests/test_lean_complete_parity.py",
-      "sha256": "67c5cfdf93ddc5ed9a14478d4eab4b113d6bc88fa9c1a283f705d23a0814c60a"
+      "sha256": "6046133bd0f81e08ff5e1f1e1cf8e1900bd31925c94f14b6d65a21f0e52bba4d"
     },
     {
       "path": "scripts/tests/test_lean_execution_acceptance.py",
@@ -169,6 +189,10 @@
     {
       "path": "scripts/tests/test_lean_u2_official_execution.py",
       "sha256": "0b5346109aba8b5222056577ef72ce9d375ebb63bb2883a3e91e588bcb4b2119"
+    },
+    {
+      "path": "scripts/tests/test_lean_u2_official_execution_r3_result.py",
+      "sha256": "ac5b0284618ae26628a0bbc3207510786ca9ea375be1616efc59499934fb109d"
     },
     {
       "path": "scripts/tests/test_lean_u2_test_authority.py",
@@ -518,19 +542,21 @@
       }
     },
     "u2_official_execution_authority": {
-      "status": "failed-before-runner-import",
-      "process_attempts": 3,
+      "status": "complete-local-official-case-history",
+      "process_attempts": 4,
       "incomplete_process_attempts": 2,
-      "completed_process_attempts": 1,
+      "completed_process_attempts": 2,
       "parent_selected_cases": 3678,
       "local_shard_completed_cases": 1,
-      "official_outcomes": 1,
-      "official_passes": 0,
+      "official_outcomes": 2,
+      "official_passes": 1,
       "official_failures": 1,
       "axeyum_outcomes": 0,
       "paired_cells": 0,
       "performance_rows": 0,
       "claims": {
+        "official_lean_case_observed": true,
+        "local_shard_complete": true,
         "parent_profile_complete": false,
         "official_provider_reproduced": false,
         "axeyum_observed": false,
@@ -540,18 +566,18 @@
       },
       "credits": {
         "official_cases": 1,
-        "official_outcomes": 1,
-        "official_passes": 0,
+        "official_outcomes": 2,
+        "official_passes": 1,
         "official_failures": 1,
-        "parent_profiles_completed": 0,
-        "official_providers_reproduced": 0,
         "axeyum_outcomes": 0,
         "paired_cells": 0,
         "performance_rows": 0,
         "complete_populations": 0,
         "complete_axes": 0,
         "satisfied_gates": 0,
-        "parity_credit": 0
+        "parity_credit": 0,
+        "parent_profile_completions": 0,
+        "provider_completions": 0
       }
     },
     "implementation_tasks": {
@@ -692,11 +718,27 @@
           "detail": "Preregistered attempt-004 direct-entry correction with the R2 invocation authority frozen and no execution credit."
         },
         {
+          "path": "docs/plan/lean-u2-official-execution-tl0.6.3-m0-r3-v1.json",
+          "detail": "Four-attempt amended R3 authority retaining two incomplete processes, one failed and one passed official outcome for the same unique case, zero Axeyum outcomes or pairs, and zero parity credit."
+        },
+        {
+          "path": "docs/plan/generated/lean-u2-official-execution-tl0.6.3-m0-r3.md",
+          "detail": "Generated bounded result summary: 1/3,678 unique official-case coverage, one pass, one failure, and no parent/provider/Axeyum/pair/performance/parity completion."
+        },
+        {
+          "path": "docs/plan/lean-u2-official-execution-tl0.6.3-m0-r3-result-2026-07-22.md",
+          "detail": "Accepted R3 result, exact evidence closure, four-attempt history, Python direct-entry diagnosis, non-claims, and next U2 boundary."
+        },
+        {
+          "path": "docs/plan/lean4-complete-parity-roadmap-2026-07-22.md",
+          "detail": "Dependency-ordered R0-R10 roadmap, evidence-layered SMT-LIB comparison, immediate queue, and exact terminal claim switch."
+        },
+        {
           "path": "docs/plan/lean4-complete-parity-contract-2026-07-22.md",
           "detail": "Pinned tests tree inventory and the required CTest/test-pile derivation rule."
         }
       ],
-      "residual": "Current execution coverage is three process attempts but only one decided local official failure outcome from a 3,678-case parent, with zero official passes, Axeyum outcomes, or pairs. Attempt 003 stopped before runner import and adds no outcome. Implement the preregistered direct-entry-corrected R3 case, then every derived official profile with exact executable/environment/resource/attempt/case/completion evidence; classify native surfaces and run matched Axeyum cases. Registration plus one failed local outcome is not complete U2 authority."
+      "residual": "Current execution coverage is four process attempts and two decided official outcomes for one unique case from a 3,678-case parent: one environment-induced failure and one pass, with zero Axeyum outcomes or pairs. Attempt 003 stopped before runner import and adds no outcome. One unique official case is not complete U2 authority. Derive fresh child shards from every official profile with exact executable/environment/resource/attempt/case/completion evidence, classify native surfaces, and run matched Axeyum cases; retries of the singleton do not increase population coverage."
     },
     {
       "id": "U3",

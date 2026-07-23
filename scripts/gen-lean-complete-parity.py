@@ -10,7 +10,6 @@ cell, or unqualified complete-parity claim.
 from __future__ import annotations
 
 import argparse
-import base64
 import hashlib
 import importlib.util
 import json
@@ -39,7 +38,7 @@ U2_OFFICIAL_EXECUTION = (
     ROOT
     / "docs"
     / "plan"
-    / "lean-u2-official-execution-tl0.6.3-m0-r2-invocation-v1.json"
+    / "lean-u2-official-execution-tl0.6.3-m0-r3-v1.json"
 )
 IMPLEMENTATION_PLAN = ROOT / "docs" / "plan" / "lean-system-implementation-plan-2026-07-21.md"
 
@@ -764,144 +763,16 @@ def execution_acceptance_snapshot() -> dict[str, Any]:
 
 
 def u2_official_execution_snapshot() -> dict[str, Any]:
-    checker = load_script(
-        "lean_u2_official_execution_for_complete_parity",
-        ROOT / "scripts" / "lean_u2_official_execution.py",
+    result_adapter = load_script(
+        "lean_u2_official_execution_r3_result_for_complete_parity",
+        ROOT / "scripts" / "lean_u2_official_execution_r3_result.py",
     )
     data = load_json(U2_OFFICIAL_EXECUTION)
-    failures: list[str] = []
-    if not checker.valid_seal(data, "axeyum-lean-u2-official-execution-r2-invocation-v1"):
-        failures.append("R2 invocation authority seal drift")
-    expected_attempts = [
-        {
-            "id": "attempt-001",
-            "sequence": 1,
-            "status": "incomplete-process-failure",
-            "official_outcomes": 0,
-        },
-        {
-            "id": "attempt-002",
-            "sequence": 2,
-            "status": "complete-local-official-case-outcome",
-            "outcome": "failed",
-            "official_outcomes": 1,
-        },
-        {
-            "id": "attempt-003",
-            "sequence": 3,
-            "status": "failed-before-runner-import",
-            "official_outcomes": 0,
-        },
-    ]
-    expected_summary = {
-        "process_attempts": 3,
-        "incomplete_process_attempts": 2,
-        "completed_process_attempts": 1,
-        "parent_selected_cases": 3678,
-        "local_shard_completed_cases": 1,
-        "official_cases": 1,
-        "official_outcomes": 1,
-        "official_passes": 0,
-        "official_failures": 1,
-        "parent_profiles_completed": 0,
-        "official_providers_reproduced": 0,
-        "axeyum_outcomes": 0,
-        "paired_cells": 0,
-        "performance_rows": 0,
-        "parity_credit": 0,
-    }
-    expected_credits = {
-        "official_cases": 1,
-        "official_outcomes": 1,
-        "official_passes": 0,
-        "official_failures": 1,
-        "parent_profiles_completed": 0,
-        "official_providers_reproduced": 0,
-        "axeyum_outcomes": 0,
-        "paired_cells": 0,
-        "performance_rows": 0,
-        "complete_populations": 0,
-        "complete_axes": 0,
-        "satisfied_gates": 0,
-        "parity_credit": 0,
-    }
-    expected_argv = [
-        "python3",
-        "scripts/lean_u2_official_execution_r2.py",
-        "run-m0",
-        "--implementation-revision",
-        "660915572968435f68b7a08fd95e737db6ef7762",
-        "--source-repo",
-        "/home/mjbommar/.cache/axeyum-lean-system-research/lean4-v4.30.0",
-        "--toolchain-root",
-        "/home/mjbommar/.cache/axeyum-lean-gate-v430-audit/elan-home/toolchains/"
-        "leanprover--lean4---v4.30.0",
-        "--work-root",
-        "/home/mjbommar/.cache/axeyum-tl063-m0-r2-66091557",
-        "--evidence-root",
-        "docs/plan/evidence/lean-u2-official-execution-tl0.6.3-m0-r2",
-    ]
-    if (
-        data.get("status") != "failed-before-runner-import"
-        or data.get("implementation_revision")
-        != "660915572968435f68b7a08fd95e737db6ef7762"
-        or data.get("r2_preregistration_commit")
-        != "f1ad1043fd2c95e4295345046013ae895c415f05"
-        or data.get("r2_plan_sha256")
-        != "1c926eb7f1a5e0e147c4cb54ea9a709c5fc6ed8a9c80108b1cfd526a530eb7b1"
-        or data.get("attempt_id") != "attempt-003"
-        or data.get("sequence") != 3
-        or data.get("capture_class") != "orchestration-process-transcript"
-        or data.get("working_directory")
-        != "/home/mjbommar/projects/personal/axeyum-lean-parity"
-        or data.get("argv") != expected_argv
-        or data.get("environment") != {"state": "not-recorded", "value": None}
-        or data.get("preconditions")
-        != {
-            "working_tree_clean": True,
-            "head_and_tracking_revision": "660915572968435f68b7a08fd95e737db6ef7762",
-            "private_work_root_absent": True,
-            "evidence_root_absent": True,
-        }
-        or data.get("attempts") != expected_attempts
-        or data.get("summary") != expected_summary
-        or data.get("credits") != expected_credits
+    failures = result_adapter.validate_result_authority(data)
+    if data != result_adapter.build_result_authority(
+        result_adapter.R3.DEFAULT_EVIDENCE_ROOT
     ):
-        failures.append("R2 invocation history or credit drift")
-    terminal = data.get("terminal", {})
-    for field, expected_bytes, expected_sha256 in (
-        ("stdout", 0, "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"),
-        ("stderr", 265, "743f4e81513ab9f004ccab1115da538340a490b805d783e285f26ddcbafb8ca2"),
-    ):
-        stream = terminal.get(field, {}) if isinstance(terminal, dict) else {}
-        try:
-            raw = base64.b64decode(stream.get("base64", ""), validate=True)
-        except (TypeError, ValueError):
-            raw = b"invalid"
-        if (
-            stream.get("bytes") != expected_bytes
-            or stream.get("sha256") != expected_sha256
-            or len(raw) != expected_bytes
-            or hashlib.sha256(raw).hexdigest() != expected_sha256
-        ):
-            failures.append(f"R2 invocation {field} evidence drift")
-    if (
-        terminal.get("class") != "exited"
-        or terminal.get("exit_code") != 1
-        or terminal.get("signal") is not None
-        or terminal.get("runner_import_completed") is not False
-        or terminal.get("harness_prepared") is not False
-        or terminal.get("ctest_launched") is not False
-        or data.get("postconditions")
-        != {
-            "private_work_root_absent": True,
-            "evidence_root_absent": True,
-            "official_outcome_created": False,
-            "completion_created": False,
-        }
-        or any(data.get("claims", {}).values())
-    ):
-        failures.append("R2 invocation terminal, root, or claim drift")
+        failures.append("committed R3 result authority is stale")
     if failures:
         raise RuntimeError(
             "invalid Lean U2 official execution authority: " + "; ".join(failures)
@@ -967,6 +838,8 @@ def report_source_paths(data: dict[str, Any]) -> list[Path]:
         ROOT / "scripts" / "tests" / "test_lean_execution_acceptance.py",
         ROOT / "scripts" / "lean_u2_official_execution.py",
         ROOT / "scripts" / "tests" / "test_lean_u2_official_execution.py",
+        ROOT / "scripts" / "lean_u2_official_execution_r3_result.py",
+        ROOT / "scripts" / "tests" / "test_lean_u2_official_execution_r3_result.py",
     }
     for collection in (data["populations"], data["axes"], data["terminal_gates"]):
         for item in collection:
@@ -1173,15 +1046,16 @@ def render_markdown(report: dict[str, Any]) -> str:
             f"- TL0.6.3 local official execution: "
             f"{official_execution['process_attempts']} process attempts, "
             f"{official_execution['incomplete_process_attempts']} incomplete, "
-            f"{official_execution['official_outcomes']} decided official outcome "
+            f"{official_execution['official_outcomes']} decided official outcomes "
             f"from {official_execution['parent_selected_cases']} parent-selected cases, "
             f"{official_execution['official_passes']} pass, "
             f"{official_execution['official_failures']} failure, "
             f"{official_execution['axeyum_outcomes']} Axeyum outcomes, "
             f"{official_execution['paired_cells']} paired cells, and "
             f"{official_execution['credits']['parity_credit']} parity credit. Attempt 003 "
-            "stopped before runner import; the one observed local failure does not "
-            "complete U2 or establish a semantic pair.",
+            "stopped before runner import; attempt 004 passed the same unique singleton. "
+            "One observed case with no Axeyum result does not complete U2 or establish "
+            "a semantic pair.",
             f"- Implementation ledger: {tasks['rows']} rows; "
             + ", ".join(
                 f"`{key}`={value}" for key, value in tasks["status_counts"].items()

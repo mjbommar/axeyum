@@ -54,10 +54,10 @@ class LeanCompleteParityTests(unittest.TestCase):
             [("default", 3678), ("full-lake", 3723)],
         )
         official = first["bounded_snapshot"]["u2_official_execution_authority"]
-        self.assertEqual(official["process_attempts"], 3)
+        self.assertEqual(official["process_attempts"], 4)
         self.assertEqual(official["incomplete_process_attempts"], 2)
-        self.assertEqual(official["official_outcomes"], 1)
-        self.assertEqual(official["official_passes"], 0)
+        self.assertEqual(official["official_outcomes"], 2)
+        self.assertEqual(official["official_passes"], 1)
         self.assertEqual(official["official_failures"], 1)
         self.assertEqual(official["axeyum_outcomes"], 0)
         self.assertEqual(official["paired_cells"], 0)
@@ -134,10 +134,11 @@ class LeanCompleteParityTests(unittest.TestCase):
         self.assertIn("docs/plan/lean-execution-acceptance-v1.json", source_paths)
         self.assertIn("scripts/lean_execution_acceptance.py", source_paths)
         self.assertIn(
-            "docs/plan/lean-u2-official-execution-tl0.6.3-m0-r2-invocation-v1.json",
+            "docs/plan/lean-u2-official-execution-tl0.6.3-m0-r3-v1.json",
             source_paths,
         )
         self.assertIn("scripts/lean_u2_official_execution.py", source_paths)
+        self.assertIn("scripts/lean_u2_official_execution_r3_result.py", source_paths)
 
     def test_u2_registration_is_bounded_not_terminal_authority(self) -> None:
         population = self.population("U2")
@@ -145,7 +146,7 @@ class LeanCompleteParityTests(unittest.TestCase):
         self.assertIsNone(population["raw_denominator"])
         self.assertIsNone(population["normalized_denominator"])
         self.assertIsNone(population["content_digest"])
-        self.assertIn("one failed local outcome is not complete", population["residual"])
+        self.assertIn("One unique official case is not complete", population["residual"])
 
     def test_population_order_and_incomplete_denominators_are_fail_closed(self) -> None:
         self.data["populations"][0], self.data["populations"][1] = (
