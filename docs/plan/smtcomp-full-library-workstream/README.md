@@ -376,8 +376,9 @@ gate.
    exact native/per-logic/pairwise/three-way
    same-population comparison with interruption replay and rejecting mutations.
    The [publication fixture](../smtcomp-credited-full-publication-fixture-2026-07-23.md)
-   records the publication boundary. Topic commits `9bd98516` through
-   `0a73f840` add exact solver-prefix preparation replay, per-shard retry-capable
+   records the publication boundary. Commit `9bd98516`, integrated by
+   `0c09a44b`, adds exact solver-prefix preparation replay; topic commits
+   `50f7c9d8` through `d8e187f2` add per-shard retry-capable
    checkpoint schema v2 and immutable checkpoint persistence, prior-cell
    disagreement-safe adjudication, and the process-free authority coordinator.
    The [coordinator fixture](../smtcomp-credited-full-execution-coordinator-fixture-2026-07-23.md)

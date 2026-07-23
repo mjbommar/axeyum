@@ -393,8 +393,9 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   publication window, and binds the result into completion schema v2.
   Merges `f65f4647` and `c4d9050a` integrate commits `e7c05374` and `d7c78371`'s
   previously missing completion-last external cell result and exact
-  same-population comparison mechanisms. Topic commits `9bd98516` through
-  `0a73f840` now add exact solver-prefix preparation replay, per-shard
+  same-population comparison mechanisms. Commit `9bd98516`, integrated by
+  `0c09a44b`, adds exact solver-prefix preparation replay; topic commits
+  `50f7c9d8` through `d8e187f2` add per-shard
   retry-capable checkpoint schema v2 and immutable persistence, prior-cell
   disagreement-safe adjudication, and the process-free authority coordinator.
   The expanded 135-test portable gate passes with one expected live-host skip.
@@ -8706,8 +8707,9 @@ plan is built and committed on the current branch:
   open.
 
 - **2026-07-23 — Implemented fail-closed credited-full execution authority;
-  no live execution occurred.** Topic commits `9bd98516` through `0a73f840`
-  close the process-free seam from a completed cell to external publication.
+  no live execution occurred.** Commit `9bd98516`, integrated by `0c09a44b`,
+  and topic commits `50f7c9d8` through `d8e187f2` close the process-free seam
+  from a completed cell to external publication.
   Immutable preparation replay permits runtime additions only under an exact
   solver-order prefix. Checkpoint schema v2 closes each wave by six shards and
   accepts only the exact initial owner or registered retry; checkpoints now
