@@ -113,7 +113,11 @@
         },
         {
           "path": "docs/plan/lean-u2-official-execution-tl0.6.3-m2-implementation-2026-07-22.md",
-          "detail": "Pushed post-plan checkpoints for the pure contract, 64-case completion-last store, corrected case-before-post order, and tested one-shot runner. The run command exists but remains uninvoked with zero outcomes or terminal credit."
+          "detail": "Pushed post-plan checkpoints for the pure contract, 64-case completion-last store, corrected case-before-post order, and tested one-shot runner. The first invocation stopped during selected-source preflight before any harness, discovery, prelaunch, or child process."
+        },
+        {
+          "path": "docs/plan/lean-u2-official-execution-tl0.6.3-m2-r1-symlink-preflight-plan-2026-07-22.md",
+          "detail": "Preregistered manifest-only correction for the pinned compile-bench runner symlink after a pre-process stop; the process attempt remains unconsumed and all outcome and parity credit remains zero."
         },
         {
           "path": "docs/plan/lean-execution-evidence-v1.json",
@@ -184,7 +188,7 @@
           "detail": "Pinned tests tree inventory and the required CTest/test-pile derivation rule."
         }
       ],
-      "residual": "Current execution coverage is four process attempts and two decided official outcomes for one unique case from a 3,678-case parent: one environment-induced failure and one pass, with zero Axeyum outcomes or pairs. Attempt 003 stopped before runner import and adds no outcome. M1 partitions all eight official selections into five exact ordered memberships and 289 physical child shards, but every new shard and all 111 official attempts remain not run. M2 preregisters the lowest-ordinal zero-history 64-case shard under a one-hour 8 GiB/one-worker local lane. Its fail-closed pure offline contract is implemented and mutation-tested, but it deliberately exposes no live execution command and no harness discovery or process has run. Implement, validate, commit, and push the separate launch/store runner before the single authorized attempt; then classify native surfaces and run matched Axeyum cases. Scheduling metadata and singleton retries do not increase population coverage."
+      "residual": "Current execution coverage is four process attempts and two decided official outcomes for one unique case from a 3,678-case parent: one environment-induced failure and one pass, with zero Axeyum outcomes or pairs. Attempt 003 stopped before runner import and adds no outcome. M1 partitions all eight official selections into five exact ordered memberships and 289 physical child shards, but every new shard and all 111 official attempts remain not run. M2 selects the lowest-ordinal zero-history 64-case shard under a one-hour 8 GiB/one-worker local lane and has a pushed fail-closed contract, completion store, and one-shot runner. Its first invocation stopped during selected-source preflight before any harness, discovery, prelaunch, or child process because the official compile-bench runner is a pinned symlink; therefore the process attempt remains unconsumed. Implement, validate, commit, and push the preregistered manifest-only R1 correction, repeat exact read-only preflight from a fresh work root, and only then reconsider the single process attempt. Then classify native surfaces and run matched Axeyum cases. Scheduling metadata and singleton retries do not increase population coverage."
     },
     {
       "id": "U3",

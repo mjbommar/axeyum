@@ -59,8 +59,13 @@ credit contract, with no live execution surface and zero outcome or terminal
 credit. Commit `57dcf343` subsequently adds and pushes the exact 64-case
 completion-last store. Commit `d1f144d4` corrects the frozen evidence order,
 and commit `431d3959` implements and pushes the one-shot runner. The command
-exists but remains uninvoked pending exact external preflight revalidation; no
-live harness discovery or process has run.
+exists, but its first invocation stopped during selected-source preflight
+because the official compile-bench runner is a pinned link rather than a
+regular manifest row. No harness, discovery, prelaunch, evidence root, or child
+process exists, so the process attempt remains unconsumed. The
+[`R1 correction plan`](lean-u2-official-execution-tl0.6.3-m2-r1-symlink-preflight-plan-2026-07-22.md)
+freezes safe one-hop relative manifest resolution, exact link/target identities,
+mutation gates, and a fresh work root before another read-only preflight.
 
 ## 2. What the SMT-LIB comparison actually says
 

@@ -528,8 +528,15 @@ state.
 > discovery and fake processes only; the full parity surface passes 267 tests
 > with one intentional skip. The registry records `run_command=true` and
 > `live_execution_observed=false`; no live harness discovery or test process
-> has run. Next revalidate every external preflight input from the clean pushed
-> revision before deciding whether to invoke the single authorized attempt;
+> had run at publication. The first invocation then stopped during selected-
+> source preflight because the new validator treated the pinned
+> `tests/compile_bench/run_test.sh -> ../compile/run_test.sh` symlink as a
+> missing regular file. No evidence root, harness, discovery, prelaunch, or
+> child process exists, so the process attempt remains unconsumed. The
+> [R1 correction plan](docs/plan/lean-u2-official-execution-tl0.6.3-m2-r1-symlink-preflight-plan-2026-07-22.md)
+> freezes one safe in-tree symlink-resolution rule, mutation gates, a new work
+> root, and no other change. Next implement/test/commit/push R1, repeat exact
+> read-only preflight, and only then reconsider the single process attempt;
 > then form native pairs. Do not rerun
 > the singleton for population credit. The
 > [complete-parity execution roadmap](docs/plan/lean4-complete-parity-roadmap-2026-07-22.md)

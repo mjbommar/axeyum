@@ -449,8 +449,16 @@ immutable store and four focused store tests, also without a launch command.
 No live harness discovery or process has run; these checkpoints therefore
 change none of the preceding outcome counts or claims. Commit `d1f144d4`
 corrects case-before-post ordering, and commit `431d3959` implements, tests,
-commits, and pushes the one-shot runner without invoking it. Exact external
-preflight revalidation remains before the single authorized attempt.
+commits, and pushes the one-shot runner. Its first invocation stopped during
+selected-source preflight before harness construction, discovery, prelaunch,
+or child process because the official compile-bench runner is the pinned
+`tests/compile_bench/run_test.sh -> ../compile/run_test.sh` link rather than a
+regular manifest row. No evidence root exists and the process attempt remains
+unconsumed. The source-first
+[R1 correction plan](lean-u2-official-execution-tl0.6.3-m2-r1-symlink-preflight-plan-2026-07-22.md)
+freezes exact manifest-only one-hop relative-link resolution, mutation gates,
+a fresh work root, and no other execution or credit change before another
+read-only preflight.
 
 ## 8. Layer-specific equivalence
 
