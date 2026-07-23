@@ -125,7 +125,7 @@ oracle-free. Where a mainstream CAS *computes* a transformed expression and asks
 you to trust it, Axeyum *decides and certifies*. Results are exact; certified
 operations carry a machine-checked backstop (a decidable zero-test, or
 differentiate-and-check), so an out-of-fragment case **declines rather than
-returns a wrong answer**. Current surface (529 tests, clippy-clean):
+returns a wrong answer**. Current surface (530 tests, clippy-clean):
 
 - **Calculus** — `differentiate`/`differentiate_n`, `integrate` (polynomial, full
   rational via Horowitz + Rothstein–Trager, `∫p·eˣ`, `∫p·sin|cos`),
@@ -133,9 +133,10 @@ returns a wrong answer**. Current surface (529 tests, clippy-clean):
   and checker-backed WZ families for fixed-shift binomial convolutions and
   squared-binomial falling-factorial moments through order 255 and
   Stirling-composed raw moments through order 35, plus Laplace pairs with
-  repeated real and rational-frequency quadratic poles, bounded polynomial-
-  geometric Z-transform pairs, and Fourier series with exact rational-trig
-  coefficients on the canonical symmetric period.
+  repeated real/rational-frequency quadratic poles and rational-scale/shift
+  Bessel `J₀`, bounded polynomial-geometric Z-transform pairs, and Fourier
+  series with exact rational-trig coefficients on the canonical symmetric
+  period.
 - **Algebra** — `expand`, `simplify`, `factor` (full ℤ/ℚ, Berlekamp–Zassenhaus),
   `cancel`, `apart`, `poly_gcd`, `resultant`, `discriminant`, `solve` (rational,
   quadratic, complex, factorable degree ≥ 3), Gröbner bases, radical simplification.

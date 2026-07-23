@@ -521,6 +521,22 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   profiles. All attempts remain `not-run`; official executions, Axeyum
   executions, paired cells, axes, and terminal gates remain zero. Next: TL0.7
   resource/checkpoint authority, then retained TL0.6.3 official executions.
+- **2026-07-22 — exact rational-scale/shift Bessel-`J₀` Laplace pairs.** A
+  timeout-bounded third cross-area probe found the already-representable
+  `J₀(t)`, `J₀(2t)`, `e^tJ₀(2t)`, and matching inverse transforms all declined,
+  while mixed rational inverse-Laplace and rational-trig Fourier controls
+  certified. `laplace_transform` now implements the NIST DLMF 3.5.40 pair
+  `J₀(bt) ↦ 1/√(s²+b²)` for rational `b`; the existing shift and transform-
+  derivative rules automatically cover `e^{at}` and polynomial `t` weights.
+  `inverse_laplace` recognizes exact rational-scaled square roots of completed-
+  square quadratics, reconstructs `c·e^{at}J₀(bt)`, and still returns only after
+  the public forward transform certifies the complete original expression.
+  Unit/scaled/shifted, polynomial-weighted, rational-frequency, and independent
+  SymPy controls pass; `J₁`, irrational frequency, and nonquadratic radical
+  inputs explicitly decline. The full 530-unit/147-doctest suite, warning-
+  denied workspace all-target/all-feature Clippy, strict stable/nightly
+  rustdoc, WASM, links, and whitespace checks pass.
+
 - **2026-07-22 — repeated irreducible-quadratic inverse-Laplace poles.** The
   measured declines at `1/(s²+1)²`, `s/(s²+1)²`, cubic/shifted quadratic powers,
   and a mixed real/quadratic denominator now reconstruct exactly. `apart`
@@ -8070,6 +8086,12 @@ plan is built and committed on the current branch:
   contracts pass under the one-worker/4 GiB policy. M3's >=640-case generated
   grammar and forced mutation teeth are next; importer policy and M0 streams
   remain untouched.
+- **2026-07-22 — Added exact Bessel-`J₀` Laplace pairs.** Forward transforms now
+  cover rationally scaled, exponentially shifted, and polynomial-weighted
+  `J₀`; inverse square-root quadratic transforms reconstruct the matching
+  damped Bessel form only after an exact forward round trip. Bounded decline
+  controls bring the CAS surface to 530 unit tests and 147 doctests.
+
 - **2026-07-22 — Added bounded repeated-quadratic inverse Laplace.** Exact
   partial fractions now reconstruct rational-frequency quadratic poles through
   multiplicity 7 in a forward-generated damped-oscillator basis, including
