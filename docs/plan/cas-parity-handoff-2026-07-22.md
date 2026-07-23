@@ -13,15 +13,15 @@ elsewhere in `docs/plan/`). Read this file first when resuming.
   [multi-agent operations guide](../contributor-guide/multi-agent-operations.md):
   work only in the dedicated CAS worktree on an `agent/cas/*` branch, push that
   branch, and leave `main` to the integration owner. The current increment is
-  `agent/cas/gap-probe-wave-ten`, based on integration parent `6c08f19c`, with
-  implementation commit `186c6f83` (integrated by `4aa66e6d`); do not rebase it
+  `agent/cas/gap-probe-wave-eleven`, based on integration parent `35aef7c5`, with
+  implementation commit `f2f756cc` (integrated by `669a09c8`); do not rebase it
   onto `main` ahead of the integration owner.
-- **Tests:** `551` unit + `147` doctests, **all green**, warning-denied workspace
+- **Tests:** `552` unit + `147` doctests, **all green**, warning-denied workspace
   all-target/all-feature Clippy-clean, strict stable/nightly rustdoc-green,
   wasm-green, links-green, and whitespace-clean.
 - **Source of truth for capabilities:** `docs/research/10-cas/README.md`
   (capability table) and `docs/research/10-cas/diary.md` (chronological entries;
-  latest is **Entry 37af8**). Keep both in sync when landing features.
+  latest is **Entry 37af9**). Keep both in sync when landing features.
 - **Method that works:** empirical **gap-probing** (below). It found every recent
   feature *and* a serious infinite-hang regression.
 
@@ -502,6 +502,20 @@ orders `0..=255`), and Stirling-composed raw moments (regressed for orders
   decline. No public head, operator, backend, evidence format, or logic fragment
   changed, so no ADR is required.
 
+**Certified rational-scale integer-order Bessel-J improper integrals**
+- Wave eleven ranked the existing-head DLMF integral ahead of quadratic-pole
+  inverse Z, which requires a new oscillatory sequence fragment and exact angle
+  representation. DLMF 10.22.41 gives `∫₀^∞Jₙ(t)dt=1` for every public
+  nonnegative integer order.
+- `improper_integrate` applies the exact change of scale to `c·Jₙ(ax)` for any
+  nonzero rational `a` and `x`-free factor `c`. Negative scales use integer-order
+  parity. The rule is constant-time in `n`; orders through `u32::MAX`, half and
+  reflected scales, and symbolic factors pass.
+- Modified Bessel `I`, shifted/nonlinear/irrational/zero scales, checked-negation
+  overflow, and a nonzero lower bound decline. The value is theorem-backed; no
+  elementary-antiderivative claim is made. No public head, operator, backend,
+  evidence format, or logic fragment changed, so no ADR is required.
+
 ---
 
 ## 5. Zeilberger / WZ — how it works and where to extend
@@ -756,7 +770,9 @@ Ordered roughly by value:
 
 1. **Resume broad, timeout-bounded gap probing.** Direct order-one and weighted
    Bessel antiderivatives through order 32 are closed through the normal
-   certificate path; order 33 is the explicit discovery boundary. The moment
+   certificate path; order 33 is the explicit discovery boundary. Rational-scale
+   integer-order Bessel-J improper integrals on `[0,∞)` are also closed, while
+   the standalone positive-infinity asymptotic limit remains open. The moment
    families retain separate explicit resource boundaries:
    direct order 256 needs `Γ(257)`, raw order 36 needs public coefficients beyond
    `i128`, and repeated-quadratic inverse Laplace multiplicity 8 exceeds
@@ -830,9 +846,9 @@ esac
 export AXEYUM_CAS_TMP
 trap 'find "$AXEYUM_CAS_TMP" -depth -delete' EXIT
 git rev-parse --abbrev-ref HEAD        # → agent/cas/...
-git merge-base --is-ancestor 186c6f83 HEAD
+git merge-base --is-ancestor f2f756cc HEAD
 CARGO_BUILD_JOBS=1 TMPDIR="$AXEYUM_CAS_TMP" cargo test -p axeyum-cas --jobs 1
-# → 551 unit + 147 doctests green
+# → 552 unit + 147 doctests green
 ```
 Then: read `docs/research/10-cas/diary.md` tail for the latest context, and pick
 up from §6 or resume the gap-probing loop. Push the green owned topic branch;

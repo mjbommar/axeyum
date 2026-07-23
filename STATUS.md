@@ -383,6 +383,20 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-22 — certified rational-scale integer-order Bessel-J improper
+  integrals.** Wave eleven ranks the narrow existing-head DLMF identity ahead
+  of quadratic-pole inverse Z, which needs a new oscillatory sequence fragment.
+  `improper_integrate` now returns the exact theorem-backed value for
+  `c·Jₙ(ax)` on `[0,∞)` for any public nonnegative integer order, nonzero
+  rational `a`, and variable-free `c`; reflected scales use exact Bessel parity.
+  Orders 0, 1, 2, 7, 32, and `u32::MAX`, half/reflected scales, and rational or
+  symbolic factors pass. Modified Bessel `I`, shifted, nonlinear, irrational,
+  zero, and checked-negation-overflow scales plus other bounds decline. The
+  thermally managed 552-unit/147-doctest suite passed (1614.65 s for units),
+  with workspace warning-denied Clippy (131.99 s), stable/nightly rustdoc,
+  WASM, links, and whitespace green. Next: resume broad probing from the
+  remaining standalone Bessel asymptotic and quadratic inverse-Z gaps.
+
 - **2026-07-22 — certified bounded integer-order Bessel inverse-Laplace family.**
   Wave ten closes the measured order-three inverse gap by applying the existing
   exact positive-order recognizer to the explicitly bounded family `1≤n≤32`;
@@ -8242,6 +8256,10 @@ plan is built and committed on the current branch:
   R1/R2 history, a new run/evidence root, universal 512 MiB Lean runtime stacks
   from pinned source semantics, and the measured tiered artifact store. It
   authorizes one process only after separately pushed implementation gates.
+- **2026-07-22 — Added certified rational-scale Bessel-J improper integrals.**
+  The theorem-backed `∫₀^∞cJₙ(ax)dx` family covers all public orders with exact
+  scale/parity handling and fail-closed adjacent forms, bringing CAS to 552
+  units and 147 doctests.
 - **2026-07-22 — Added the certified bounded Bessel inverse-Laplace family.**
   Exact roundtrip-checked `Jₙ`/`Iₙ` recognition through order 32, additive
   order-three coverage, and explicit order-33/extreme-order declines retain CAS
