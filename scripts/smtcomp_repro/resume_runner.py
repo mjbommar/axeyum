@@ -12,6 +12,7 @@ import hashlib
 import json
 import os
 import platform
+import re
 import socket
 import subprocess
 import sys
@@ -77,6 +78,7 @@ OUTPUT_CAPTURE_POLICY = {
     "parser": "last-sat-unsat-unknown-token-v1",
     "sidecars": "sha256-content-addressed",
 }
+SOLVER_ENVIRONMENT_KEY = re.compile(r"[A-Z][A-Z0-9_]{0,63}\Z")
 RUNNER_SOURCE_NAMES = (
     "compete.py",
     "multi_host.py",
@@ -234,6 +236,24 @@ def solver_command_sha256(command_template: list[str]) -> str:
     return digest(command_template)
 
 
+def normalize_solver_environment(
+    environment: dict[str, str] | None,
+) -> dict[str, str]:
+    """Validate and canonicalize the explicit solver-process environment overlay."""
+
+    normalized = {} if environment is None else dict(environment)
+    if any(
+        not isinstance(key, str)
+        or not SOLVER_ENVIRONMENT_KEY.fullmatch(key)
+        or not isinstance(value, str)
+        or "\0" in value
+        or "\n" in value
+        for key, value in normalized.items()
+    ):
+        raise ContractError("invalid solver environment overlay")
+    return {key: normalized[key] for key in sorted(normalized)}
+
+
 def _solver_binary(command_template: list[str]) -> Path:
     if not command_template or "{bench}" in command_template[0]:
         raise ContractError("solver command has no fixed executable")
@@ -259,6 +279,7 @@ def _run_manifest(
     cores: int,
     shard_count: int,
     enforcement: dict[str, Any],
+    solver_environment: dict[str, str] | None = None,
     source_identity: dict[str, Any] | None = None,
     toolchain_identity: str | None = None,
 ) -> dict[str, Any]:
@@ -269,11 +290,14 @@ def _run_manifest(
     )
     binary_sha256 = sha256_file(_solver_binary(command_template))
     command_sha256 = solver_command_sha256(command_template)
+    environment = normalize_solver_environment(solver_environment)
+    environment_sha256 = digest(environment)
     solver_config_sha256 = digest(
         {
             "solver_id": solver_id,
             "solver_binary_sha256": binary_sha256,
             "solver_command_sha256": command_sha256,
+            "solver_environment_sha256": environment_sha256,
         }
     )
     identity = {
@@ -286,6 +310,7 @@ def _run_manifest(
         "solver_id": solver_id,
         "solver_binary_sha256": binary_sha256,
         "solver_command_sha256": command_sha256,
+        "solver_environment_sha256": environment_sha256,
         "solver_config_sha256": solver_config_sha256,
         "runner_source_sha256": source["runner_source_sha256"],
         "repository_commit": source["repository_commit"],
@@ -333,6 +358,7 @@ def fixture_run_manifest(
     memory_limit_bytes: int,
     cores: int,
     shard_count: int,
+    solver_environment: dict[str, str] | None = None,
 ) -> dict[str, Any]:
     """Build a canonical E1b fake-run manifest for executable gate fixtures."""
 
@@ -350,6 +376,7 @@ def fixture_run_manifest(
         memory_limit_bytes=memory_limit_bytes,
         cores=cores,
         shard_count=shard_count,
+        solver_environment=solver_environment,
         enforcement=fixture_enforcement(memory_limit_bytes),
     )
 
@@ -375,6 +402,7 @@ def cgroup_run_manifest(
     multi_host: bool = False,
     source_identity: dict[str, Any] | None = None,
     toolchain_identity: str | None = None,
+    solver_environment: dict[str, str] | None = None,
 ) -> dict[str, Any]:
     """Build a canonical E2/E3 cgroup-backed measurement manifest."""
 
@@ -400,6 +428,7 @@ def cgroup_run_manifest(
         memory_limit_bytes=memory_limit_bytes,
         cores=cores,
         shard_count=shard_count,
+        solver_environment=solver_environment,
         enforcement=enforcement,
         source_identity=source_identity,
         toolchain_identity=toolchain_identity,
@@ -768,6 +797,7 @@ def _validate_preflight(
     source_identity: dict[str, Any] | None,
     official_selection_root: Path | None,
     allow_unadmitted_selection_fixture: bool,
+    solver_environment: dict[str, str] | None,
 ) -> tuple[dict[str, Any], str]:
     identity, run_hash = validate_run(run)
     enforcement = validate_enforcement(run)
@@ -799,6 +829,9 @@ def _validate_preflight(
         "corpus_identity_sha256": sha256_file(corpus_manifest),
         "solver_binary_sha256": sha256_file(_solver_binary(command_template)),
         "solver_command_sha256": solver_command_sha256(command_template),
+        "solver_environment_sha256": digest(
+            normalize_solver_environment(solver_environment)
+        ),
         "runner_source_sha256": source["runner_source_sha256"],
         "source_tree_state_sha256": source["source_tree_state_sha256"],
         "toolchain_identity_sha256": toolchain_identity_sha256(),
@@ -865,6 +898,7 @@ def preflight_resumable(
     source_identity_manifest: Path | None = None,
     official_selection_root: Path | None = None,
     allow_unadmitted_selection_fixture: bool = False,
+    solver_environment: dict[str, str] | None = None,
 ) -> tuple[dict[str, Any], dict[str, Any], str, list[BenchmarkInput]]:
     """Validate all immutable inputs without creating the run directory."""
 
@@ -895,6 +929,7 @@ def preflight_resumable(
         source_identity=source_identity,
         official_selection_root=official_selection_root,
         allow_unadmitted_selection_fixture=allow_unadmitted_selection_fixture,
+        solver_environment=solver_environment,
     )
     inputs = load_benchmark_inputs(
         file_list,
@@ -1102,12 +1137,16 @@ def _execute_one(
     wall_limit_s: float,
     memory_limit_bytes: int,
     runner: Runner,
+    solver_environment: dict[str, str],
 ) -> RunResult:
     command = [token.replace("{bench}", row.path) for token in command_template]
+    environment = os.environ.copy()
+    environment.update(solver_environment)
     return runner(
         command,
         wall_limit_s=wall_limit_s,
         mem_limit_bytes=memory_limit_bytes,
+        env=environment,
     )
 
 
@@ -1160,6 +1199,7 @@ def execute_resumable(
     allow_unadmitted_selection_fixture: bool = False,
     runner: Runner = run_solver_metered,
     phase_hook: PhaseHook | None = None,
+    solver_environment: dict[str, str] | None = None,
 ) -> bool:
     """Execute one resumable shard and return whether the whole run is complete."""
 
@@ -1185,8 +1225,10 @@ def execute_resumable(
         source_identity_manifest=source_identity_manifest,
         official_selection_root=official_selection_root,
         allow_unadmitted_selection_fixture=allow_unadmitted_selection_fixture,
+        solver_environment=solver_environment,
     )
     assignments = _assignments(inputs, shard_count)
+    normalized_solver_environment = normalize_solver_environment(solver_environment)
     shard_id = str(shard_index)
     shard_inputs = [row for row in inputs if row.sequence % shard_count == shard_index]
     assigned = {row.result_key for row in shard_inputs}
@@ -1285,6 +1327,7 @@ def execute_resumable(
                     wall_limit_ms / 1000.0,
                     memory_limit_bytes,
                     runner,
+                    normalized_solver_environment,
                 )
             except Exception as exc:
                 run_result = _runner_error_result(exc)
@@ -1428,6 +1471,7 @@ __all__ = [
     "export_legacy_raw",
     "fixture_run_manifest",
     "official_selection_input_manifest",
+    "normalize_solver_environment",
     "preflight_resumable",
     "selection_input_manifest",
     "source_identity_artifact",

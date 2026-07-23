@@ -54,11 +54,13 @@ def _identity(enforcement: dict[str, Any]) -> dict[str, Any]:
     solver_id = "axeyum"
     solver_binary = fake_sha("solver-binary")
     solver_command = fake_sha("solver-command")
+    solver_environment = fake_sha("solver-environment")
     solver_config = digest(
         {
             "solver_id": solver_id,
             "solver_binary_sha256": solver_binary,
             "solver_command_sha256": solver_command,
+            "solver_environment_sha256": solver_environment,
         }
     )
     return {
@@ -71,6 +73,7 @@ def _identity(enforcement: dict[str, Any]) -> dict[str, Any]:
         "solver_id": solver_id,
         "solver_binary_sha256": solver_binary,
         "solver_command_sha256": solver_command,
+        "solver_environment_sha256": solver_environment,
         "solver_config_sha256": solver_config,
         "runner_source_sha256": fake_sha("runner-source"),
         "repository_commit": fake_sha("repository-commit"),

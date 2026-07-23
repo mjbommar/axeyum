@@ -73,6 +73,17 @@ def test_non_utf8_output_is_retained_byte_exactly_and_still_parsed():
     assert result.observed == Status.SAT
 
 
+def test_explicit_environment_is_applied_to_solver_only():
+    environment = os.environ.copy()
+    environment["AXEYUM_SMTCOMP_TEST_ENV"] = "frozen-value"
+    result = _python(
+        "import os; print(os.environ['AXEYUM_SMTCOMP_TEST_ENV'])",
+        env=environment,
+    )
+    assert result.stdout_bytes == b"frozen-value\n"
+    assert "AXEYUM_SMTCOMP_TEST_ENV" not in os.environ
+
+
 def _run_all():
     tests = sorted(name for name in globals() if name.startswith("test_"))
     failed = 0

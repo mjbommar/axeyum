@@ -25,6 +25,7 @@
     "solver_id",
     "solver_binary_sha256",
     "solver_command_sha256",
+    "solver_environment_sha256",
     "solver_config_sha256",
     "runner_source_sha256",
     "repository_commit",

@@ -136,6 +136,7 @@ def run_solver(
     mem_limit_bytes: Optional[int] = None,
     grace_s: float = 2.0,
     evidenced_resource_limit_kind: Optional[str] = None,
+    env: Optional[dict[str, str]] = None,
 ) -> RunResult:
     """Execute `cmd`, enforcing wall/mem limits, measuring wall+CPU (§5, §7.1)."""
     if evidenced_resource_limit_kind not in {None, "cpu", "memory"}:
@@ -146,6 +147,7 @@ def run_solver(
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         preexec_fn=_preexec(mem_limit_bytes),
+        env=env,
     )
     rss_sampler = _PeakRssSampler(proc.pid)
     rss_sampler.start()
@@ -256,6 +258,7 @@ def run_solver_metered(
     mem_limit_bytes: Optional[int] = None,
     grace_s: float = 2.0,
     evidenced_resource_limit_kind: Optional[str] = None,
+    env: Optional[dict[str, str]] = None,
 ) -> RunResult:
     """Like run_solver but attributes CPU via a cumulative-rusage delta so it is
     correct when called repeatedly in one process."""
@@ -267,6 +270,7 @@ def run_solver_metered(
         mem_limit_bytes=mem_limit_bytes,
         grace_s=grace_s,
         evidenced_resource_limit_kind=evidenced_resource_limit_kind,
+        env=env,
     )
     after = meter.snapshot()
     cpu = max(0.0, after - before)
