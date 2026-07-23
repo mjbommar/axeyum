@@ -125,7 +125,7 @@ oracle-free. Where a mainstream CAS *computes* a transformed expression and asks
 you to trust it, Axeyum *decides and certifies*. Results are exact; certified
 operations carry a machine-checked backstop (a decidable zero-test, or
 differentiate-and-check), so an out-of-fragment case **declines rather than
-returns a wrong answer**. Current surface (533 tests, clippy-clean):
+returns a wrong answer**. Current surface (534 tests, clippy-clean):
 
 - **Calculus** — `differentiate`/`differentiate_n`, `integrate` (polynomial, full
   rational via Horowitz + Rothstein–Trager, `∫p·eˣ`, `∫p·sin|cos`),
@@ -145,9 +145,10 @@ returns a wrong answer**. Current surface (533 tests, clippy-clean):
   calculus (gradient, Jacobian, divergence, curl).
 - **Number theory** — primality, factorization, φ, CRT, Legendre/Jacobi,
   primitive roots, discrete log (BSGS), continued fractions, Pell.
-- **ODEs** — constant-coefficient homogeneous/inhomogeneous, certified
-  first-order families, and exact or symbolic initial-value specialization
-  whenever the evaluated basis matrix is rational.
+- **ODEs** — constant-coefficient homogeneous/inhomogeneous, including generic
+  non-polynomial first-order routing through the certified integrating-factor
+  solver; certified first-order families; and exact or symbolic initial-value
+  specialization whenever the evaluated basis matrix is rational.
 
 The coverage target is *at least* SymPy's compute surface, aiming at
 Mathematica's, measured against the 23-node
