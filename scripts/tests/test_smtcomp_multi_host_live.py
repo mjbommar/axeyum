@@ -179,6 +179,7 @@ class E3LiveGate(unittest.TestCase):
             str(run_dir),
             "--selection-manifest",
             str(paths["selection"]),
+            "--allow-unadmitted-selection-fixture",
             "--corpus-manifest",
             str(paths["corpus"]),
             "--environment-manifest",

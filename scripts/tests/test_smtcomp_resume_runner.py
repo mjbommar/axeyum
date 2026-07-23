@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import multiprocessing
 import os
@@ -18,7 +19,7 @@ ROOT = Path(__file__).resolve().parents[2]
 SMTCOMP = ROOT / "scripts" / "smtcomp_repro"
 sys.path.insert(0, str(SMTCOMP))
 
-from resume_contract import ContractError, canonical_bytes  # noqa: E402
+from resume_contract import ContractError, canonical_bytes, digest  # noqa: E402
 from resume_fs import (  # noqa: E402
     LeaseConflict,
     acquire_shard_lease,
@@ -28,9 +29,11 @@ from resume_fs import (  # noqa: E402
     validate_bundle_directory,
 )
 from resume_runner import (  # noqa: E402
+    cgroup_run_manifest,
     execute_resumable,
     export_legacy_raw,
     fixture_run_manifest,
+    official_selection_input_manifest,
     selection_input_manifest,
 )
 from runner import RunResult  # noqa: E402
@@ -112,12 +115,21 @@ class Layout:
         self.run_manifest = root / "run-manifest.json"
         self.run_manifest.write_bytes(canonical_bytes(run))
 
-    def execute(self, run_dir: Path, *, runner=None, phase_hook=None) -> bool:
+    def execute(
+        self,
+        run_dir: Path,
+        *,
+        runner=None,
+        phase_hook=None,
+        official_selection_root: Path | None = None,
+    ) -> bool:
         kwargs = {}
         if runner is not None:
             kwargs["runner"] = runner
         if phase_hook is not None:
             kwargs["phase_hook"] = phase_hook
+        if official_selection_root is not None:
+            kwargs["official_selection_root"] = official_selection_root
         return execute_resumable(
             run_manifest=self.run_manifest,
             run_dir=run_dir,
@@ -176,6 +188,86 @@ class Layout:
         return command
 
 
+def file_sha256(path: Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def reseal_selection_root(root: Path, completion: dict) -> Path:
+    payload = {
+        key: value for key, value in completion.items() if key != "payload_sha256"
+    }
+    completion["payload_sha256"] = digest(payload)
+    complete = root / "complete.json"
+    complete.write_bytes(canonical_bytes(completion))
+    accepted = root.parent / f"accepted-{file_sha256(complete)}"
+    root.rename(accepted)
+    return accepted
+
+
+def install_official_selection(layout: Layout) -> Path:
+    attempt = layout.root / "selection-attempt"
+    attempt.mkdir()
+    benchmark_ids = [
+        str(path).split("non-incremental/", 1)[1] for path in layout.benchmarks
+    ]
+    benchmark_ids = [f"non-incremental/{benchmark_id}" for benchmark_id in benchmark_ids]
+    selected = attempt / "official-selected.txt"
+    selected.write_text("".join(f"{value}\n" for value in benchmark_ids), encoding="utf-8")
+    ledger = attempt / "selected-files.jsonl"
+    ledger.write_bytes(
+        b"".join(
+            canonical_bytes(
+                {
+                    "archive": "QF_BV.tar.zst",
+                    "benchmark_id": benchmark_id,
+                    "bytes": path.stat().st_size,
+                    "logic": "QF_BV",
+                    "sha256": file_sha256(path),
+                }
+            )
+            for benchmark_id, path in zip(benchmark_ids, layout.benchmarks)
+        )
+    )
+    completion = {
+        "artifacts": {
+            "official-selected.txt": file_sha256(selected),
+            "selected-files.jsonl": file_sha256(ledger),
+        },
+        "authority_sha256": "a" * 64,
+        "metadata_rows": len(benchmark_ids),
+        "payload_sha256": "",
+        "schema": "axeyum-smtcomp-official-selection-v1",
+        "selected_files": len(benchmark_ids),
+        "selection_observed": True,
+        "status": "complete",
+    }
+    accepted = reseal_selection_root(attempt, completion)
+    layout.selection_manifest.write_bytes(
+        canonical_bytes(
+            official_selection_input_manifest(
+                layout.file_list, "non-incremental/", accepted
+            )
+        )
+    )
+    run = fixture_run_manifest(
+        repository_root=ROOT,
+        source_root=SMTCOMP,
+        file_list=layout.file_list,
+        selection_manifest=layout.selection_manifest,
+        corpus_manifest=layout.corpus_manifest,
+        environment_manifest=layout.environment_manifest,
+        solver_id="fake",
+        command_template=layout.command_template,
+        track="single_query",
+        wall_limit_ms=layout.wall_limit_ms,
+        memory_limit_bytes=layout.memory_limit_bytes,
+        cores=1,
+        shard_count=1,
+    )
+    layout.run_manifest.write_bytes(canonical_bytes(run))
+    return accepted
+
+
 def fixed_result(command: list[str], **_kwargs) -> RunResult:
     unsat = command[1].endswith("case-b.smt2")
     status = Status.UNSAT if unsat else Status.SAT
@@ -203,6 +295,132 @@ def fixed_result(command: list[str], **_kwargs) -> RunResult:
 
 
 class ResumeRunnerTests(unittest.TestCase):
+    def test_admitted_selection_executes_tiny_fixture(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            layout = Layout(root)
+            accepted = install_official_selection(layout)
+            run_dir = root / "admitted-run"
+            self.assertTrue(
+                layout.execute(
+                    run_dir,
+                    runner=fixed_result,
+                    official_selection_root=accepted,
+                )
+            )
+            selection = read_canonical_json(layout.selection_manifest)
+            self.assertEqual(selection["schema"], "axeyum.smtcomp-selection-input.v2")
+            self.assertEqual(
+                selection["official_selection"]["completion_sha256"],
+                accepted.name.removeprefix("accepted-"),
+            )
+            self.assertEqual(len(selection["benchmarks"]), 2)
+
+    def test_admitted_selection_mutations_reject_before_run_directory(self) -> None:
+        for mutation in range(1, 9):
+            with (
+                self.subTest(mutation=f"S5-M{mutation:02d}"),
+                tempfile.TemporaryDirectory() as tmp,
+            ):
+                root = Path(tmp)
+                layout = Layout(root)
+                accepted = install_official_selection(layout)
+                if mutation == 1:
+                    completion = read_canonical_json(accepted / "complete.json")
+                    completion["status"] = "incomplete"
+                    staging = accepted.with_name("selection-mutated")
+                    accepted.rename(staging)
+                    accepted = reseal_selection_root(staging, completion)
+                elif mutation == 2:
+                    completion = read_canonical_json(accepted / "complete.json")
+                    completion["payload_sha256"] = "0" * 64
+                    complete = accepted / "complete.json"
+                    complete.write_bytes(canonical_bytes(completion))
+                    staging = accepted.with_name("selection-mutated")
+                    accepted.rename(staging)
+                    completion_sha256 = file_sha256(staging / "complete.json")
+                    destination = staging.parent / f"accepted-{completion_sha256}"
+                    staging.rename(destination)
+                    accepted = destination
+                elif mutation == 3:
+                    destination = accepted.with_name(f"accepted-{'0' * 64}")
+                    accepted.rename(destination)
+                    accepted = destination
+                elif mutation == 4:
+                    with (accepted / "official-selected.txt").open("ab") as selected:
+                        selected.write(b"non-incremental/QF_BV/z/extra.smt2\n")
+                elif mutation == 5:
+                    with (accepted / "selected-files.jsonl").open("ab") as ledger:
+                        ledger.write(b"{}\n")
+                elif mutation == 6:
+                    selected_path = accepted / "official-selected.txt"
+                    selected = selected_path.read_text(encoding="utf-8").splitlines()
+                    selected_path.write_text(
+                        "".join(f"{value}\n" for value in reversed(selected)),
+                        encoding="utf-8",
+                    )
+                    completion = read_canonical_json(accepted / "complete.json")
+                    completion["artifacts"]["official-selected.txt"] = file_sha256(
+                        selected_path
+                    )
+                    staging = accepted.with_name("selection-mutated")
+                    accepted.rename(staging)
+                    accepted = reseal_selection_root(staging, completion)
+                elif mutation == 7:
+                    ledger_path = accepted / "selected-files.jsonl"
+                    rows = ledger_path.read_bytes().splitlines(keepends=True)
+                    first = json.loads(rows[0])
+                    first["bytes"] += 1
+                    rows[0] = canonical_bytes(first)
+                    ledger_path.write_bytes(b"".join(rows))
+                    completion = read_canonical_json(accepted / "complete.json")
+                    completion["artifacts"]["selected-files.jsonl"] = file_sha256(
+                        ledger_path
+                    )
+                    staging = accepted.with_name("selection-mutated")
+                    accepted.rename(staging)
+                    accepted = reseal_selection_root(staging, completion)
+                else:
+                    with layout.benchmarks[0].open("ab") as benchmark:
+                        benchmark.write(b"; physical drift\n")
+
+                run_dir = root / "must-not-exist"
+                with self.assertRaises(ContractError):
+                    layout.execute(
+                        run_dir,
+                        runner=fixed_result,
+                        official_selection_root=accepted,
+                    )
+                self.assertFalse(run_dir.exists())
+
+    def test_cgroup_preflight_rejects_legacy_selection_without_fixture_override(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            layout = Layout(root)
+            run = cgroup_run_manifest(
+                repository_root=ROOT,
+                source_root=SMTCOMP,
+                file_list=layout.file_list,
+                selection_manifest=layout.selection_manifest,
+                corpus_manifest=layout.corpus_manifest,
+                environment_manifest=layout.environment_manifest,
+                solver_id="fake",
+                command_template=layout.command_template,
+                track="single_query",
+                wall_limit_ms=layout.wall_limit_ms,
+                memory_limit_bytes=layout.memory_limit_bytes,
+                cores=1,
+                shard_count=1,
+                worker_slots=1,
+                aggregate_memory_bytes=layout.memory_limit_bytes,
+                pids_max=32,
+            )
+            layout.run_manifest.write_bytes(canonical_bytes(run))
+            run_dir = root / "must-not-exist"
+            with self.assertRaisesRegex(ContractError, "unadmitted selection fixture"):
+                layout.execute(run_dir, runner=fixed_result)
+            self.assertFalse(run_dir.exists())
+
     def test_benchmark_byte_drift_rejects_before_solver_or_run_directory(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

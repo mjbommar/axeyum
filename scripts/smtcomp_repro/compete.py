@@ -451,6 +451,10 @@ def main() -> int:
     ap.add_argument("--resource-session-id", default=None, help=argparse.SUPPRESS)
     ap.add_argument("--selection-manifest", default=None,
                     help="selection identity artifact required by resumable mode")
+    ap.add_argument("--official-selection-root", default=None,
+                    help="content-addressed accepted S4 selection root")
+    ap.add_argument("--allow-unadmitted-selection-fixture", action="store_true",
+                    help=argparse.SUPPRESS)
     ap.add_argument("--corpus-manifest", default=None,
                     help="corpus identity artifact required by resumable mode")
     ap.add_argument("--environment-manifest", default=None,
@@ -544,6 +548,11 @@ def main() -> int:
             run_dir = Path(args.run_dir)
             file_list = Path(args.file_list)
             selection_manifest = Path(args.selection_manifest)
+            official_selection_root = (
+                Path(args.official_selection_root)
+                if args.official_selection_root is not None
+                else None
+            )
             corpus_manifest = Path(args.corpus_manifest)
             environment_manifest = Path(args.environment_manifest)
             source_identity_manifest = (
@@ -580,6 +589,10 @@ def main() -> int:
                     resource_session_id=args.resource_session_id,
                     require_active_enforcement=False,
                     source_identity_manifest=source_identity_manifest,
+                    official_selection_root=official_selection_root,
+                    allow_unadmitted_selection_fixture=(
+                        args.allow_unadmitted_selection_fixture
+                    ),
                 )
                 enforcement = validate_enforcement(run, require_measurement=True)
                 from resource_enforcement import MULTI_HOST_KIND
@@ -727,6 +740,10 @@ def main() -> int:
                 verbose=not args.quiet,
                 resource_session_id=args.resource_session_id,
                 source_identity_manifest=source_identity_manifest,
+                official_selection_root=official_selection_root,
+                allow_unadmitted_selection_fixture=(
+                    args.allow_unadmitted_selection_fixture
+                ),
             )
             if complete and args.dump_raw:
                 if args.resource_session_id is not None:

@@ -61,6 +61,8 @@ from smtlib_meta import read_meta
 
 
 SELECTION_INPUT_SCHEMA = "axeyum.smtcomp-selection-input.v1"
+OFFICIAL_SELECTION_INPUT_SCHEMA = "axeyum.smtcomp-selection-input.v2"
+OFFICIAL_SELECTION_SCHEMA = "axeyum-smtcomp-official-selection-v1"
 SELECTION_SCHEMA = "axeyum.smtcomp-run-selection.v1"
 SOURCE_IDENTITY_SCHEMA = "axeyum.smtcomp-source-identity.v1"
 SOURCE_IDENTITY_FIELDS = {
@@ -128,6 +130,14 @@ def sha256_file(path: Path) -> str:
         for chunk in iter(lambda: handle.read(1024 * 1024), b""):
             hasher.update(chunk)
     return hasher.hexdigest()
+
+
+def _is_sha256(value: object) -> bool:
+    return (
+        isinstance(value, str)
+        and len(value) == 64
+        and all(character in "0123456789abcdef" for character in value)
+    )
 
 
 def _run_git(root: Path, *args: str) -> bytes:
@@ -422,6 +432,135 @@ def _selected_paths(file_list: Path) -> list[str]:
     return lines
 
 
+def _official_benchmark_id(value: object) -> str:
+    if not isinstance(value, str) or "\\" in value:
+        raise ContractError(f"invalid official benchmark identity: {value!r}")
+    parts = value.split("/")
+    if (
+        len(parts) < 4
+        or parts[0] != "non-incremental"
+        or any(part in {"", ".", ".."} for part in parts)
+    ):
+        raise ContractError(f"invalid official benchmark identity: {value!r}")
+    return value
+
+
+def _official_selected(path: Path) -> tuple[bytes, list[str]]:
+    if path.is_symlink() or not path.is_file():
+        raise ContractError(f"official selected list is not a regular file: {path}")
+    raw = path.read_bytes()
+    try:
+        text = raw.decode("utf-8")
+    except UnicodeDecodeError as exc:
+        raise ContractError("official selected list is not UTF-8") from exc
+    if not text.endswith("\n") or "\r" in text:
+        raise ContractError("official selected list is not canonically LF-terminated")
+    selected = text.splitlines()
+    if not selected:
+        raise ContractError("official selected list is empty")
+    previous: str | None = None
+    for benchmark_id in selected:
+        _official_benchmark_id(benchmark_id)
+        if previous is not None and benchmark_id <= previous:
+            raise ContractError("official selected list is not strictly sorted and unique")
+        previous = benchmark_id
+    return raw, selected
+
+
+def _canonical_jsonl_row(raw: bytes, label: str) -> dict[str, Any]:
+    try:
+        row = json.loads(raw)
+    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise ContractError(f"malformed selected-file ledger row: {label}") from exc
+    if not isinstance(row, dict) or raw != canonical_bytes(row):
+        raise ContractError(f"non-canonical selected-file ledger row: {label}")
+    return row
+
+
+def _official_selection_identity(
+    accepted_root: Path,
+) -> tuple[dict[str, Any], list[str]]:
+    if accepted_root.is_symlink() or not accepted_root.is_dir():
+        raise ContractError(
+            f"official selection root is not a regular directory: {accepted_root}"
+        )
+    completion_path = accepted_root / "complete.json"
+    if completion_path.is_symlink() or not completion_path.is_file():
+        raise ContractError("official selection completion is not a regular file")
+    completion = read_canonical_json(completion_path)
+    expected_fields = {
+        "artifacts",
+        "authority_sha256",
+        "metadata_rows",
+        "payload_sha256",
+        "schema",
+        "selected_files",
+        "selection_observed",
+        "status",
+    }
+    if not isinstance(completion, dict) or set(completion) != expected_fields:
+        raise ContractError("official selection completion field set mismatch")
+    if (
+        completion["schema"] != OFFICIAL_SELECTION_SCHEMA
+        or completion["status"] != "complete"
+        or completion["selection_observed"] is not True
+        or not _is_sha256(completion["authority_sha256"])
+        or not _is_sha256(completion["payload_sha256"])
+    ):
+        raise ContractError("official selection is not a completed observed selection")
+    selected_count = completion["selected_files"]
+    metadata_rows = completion["metadata_rows"]
+    if (
+        isinstance(selected_count, bool)
+        or not isinstance(selected_count, int)
+        or selected_count <= 0
+        or isinstance(metadata_rows, bool)
+        or not isinstance(metadata_rows, int)
+        or metadata_rows < selected_count
+    ):
+        raise ContractError("official selection completion counts are invalid")
+    payload = {key: value for key, value in completion.items() if key != "payload_sha256"}
+    if completion["payload_sha256"] != digest(payload):
+        raise ContractError("official selection completion payload hash mismatch")
+    completion_sha256 = sha256_file(completion_path)
+    if accepted_root.name != f"accepted-{completion_sha256}":
+        raise ContractError("official selection content-addressed root mismatch")
+    artifacts = completion["artifacts"]
+    if not isinstance(artifacts, dict):
+        raise ContractError("official selection artifact map is invalid")
+    selected_path = accepted_root / "official-selected.txt"
+    ledger_path = accepted_root / "selected-files.jsonl"
+    for name, path in (
+        ("official-selected.txt", selected_path),
+        ("selected-files.jsonl", ledger_path),
+    ):
+        expected = artifacts.get(name)
+        if (
+            not _is_sha256(expected)
+            or path.is_symlink()
+            or not path.is_file()
+            or sha256_file(path) != expected
+        ):
+            raise ContractError(f"official selection artifact identity mismatch: {name}")
+    selected_raw, selected = _official_selected(selected_path)
+    if len(selected) != selected_count:
+        raise ContractError("official selection count differs from selected list")
+    identity = {
+        "completion_payload_sha256": completion["payload_sha256"],
+        "completion_sha256": completion_sha256,
+        "official_selected": {
+            "bytes": len(selected_raw),
+            "sha256": artifacts["official-selected.txt"],
+        },
+        "selected_files": {
+            "bytes": ledger_path.stat().st_size,
+            "rows": selected_count,
+            "sha256": artifacts["selected-files.jsonl"],
+        },
+    }
+    return identity, selected
+
+
 def selection_input_manifest(file_list: Path, marker: str) -> dict[str, Any]:
     """Freeze the exact ordered benchmark IDs and bytes used by E1b preflight."""
 
@@ -450,16 +589,96 @@ def selection_input_manifest(file_list: Path, marker: str) -> dict[str, Any]:
     }
 
 
+def official_selection_input_manifest(
+    file_list: Path, marker: str, accepted_root: Path
+) -> dict[str, Any]:
+    """Bind an E1b execution ledger to one accepted S4 selection artifact."""
+
+    if marker != "non-incremental/":
+        raise ContractError("official selection requires the canonical benchmark marker")
+    selection_identity, official_selected = _official_selection_identity(accepted_root)
+    paths = _selected_paths(file_list)
+    if len(paths) != len(official_selected):
+        raise ContractError("execution list count differs from official selection")
+    ledger_path = accepted_root / "selected-files.jsonl"
+    benchmarks = []
+    with ledger_path.open("rb") as ledger:
+        for sequence, (raw_path, official_id) in enumerate(zip(paths, official_selected)):
+            raw_row = ledger.readline()
+            if not raw_row:
+                raise ContractError("selected-file ledger ended before official selected list")
+            row = _canonical_jsonl_row(raw_row, str(sequence))
+            if set(row) != {"archive", "benchmark_id", "bytes", "logic", "sha256"}:
+                raise ContractError(f"selected-file ledger field set mismatch: {sequence}")
+            benchmark_id = _normalize_benchmark_id(raw_path, marker)
+            official_benchmark_id = f"{marker}{benchmark_id}"
+            expected_logic = official_id.split("/", 2)[1]
+            expected_sha256 = row.get("sha256")
+            expected_bytes = row.get("bytes")
+            if (
+                official_benchmark_id != official_id
+                or row.get("benchmark_id") != official_id
+                or row.get("logic") != expected_logic
+                or not isinstance(row.get("archive"), str)
+                or isinstance(expected_bytes, bool)
+                or not isinstance(expected_bytes, int)
+                or expected_bytes < 0
+                or not _is_sha256(expected_sha256)
+            ):
+                raise ContractError(f"selected-file ledger identity mismatch: {sequence}")
+            path = Path(raw_path)
+            if path.is_symlink() or not path.is_file():
+                raise ContractError(f"official benchmark is not a regular file: {raw_path}")
+            if (
+                path.stat().st_size != expected_bytes
+                or sha256_file(path) != expected_sha256
+            ):
+                raise ContractError(f"official benchmark bytes differ: {benchmark_id}")
+            benchmarks.append(
+                {
+                    "sequence": sequence,
+                    "path": raw_path,
+                    "benchmark_id": benchmark_id,
+                    "benchmark_sha256": expected_sha256,
+                    "input_bytes": expected_bytes,
+                }
+            )
+        if ledger.readline():
+            raise ContractError("selected-file ledger has rows beyond official selected list")
+    return {
+        "schema": OFFICIAL_SELECTION_INPUT_SCHEMA,
+        "selected_list_sha256": sha256_file(file_list),
+        "benchmark_id_marker": marker,
+        "official_selection": selection_identity,
+        "benchmarks": benchmarks,
+    }
+
+
 def load_benchmark_inputs(
     file_list: Path,
     *,
     selection_manifest: Path,
     marker: str,
     solver_config_sha256: str,
+    official_selection_root: Path | None = None,
 ) -> list[BenchmarkInput]:
     lines = _selected_paths(file_list)
-    expected_selection = selection_input_manifest(file_list, marker)
-    if read_canonical_json(selection_manifest) != expected_selection:
+    observed_selection = read_canonical_json(selection_manifest)
+    if not isinstance(observed_selection, dict):
+        raise ContractError("selection manifest is not an object")
+    if observed_selection.get("schema") == OFFICIAL_SELECTION_INPUT_SCHEMA:
+        if official_selection_root is None:
+            raise ContractError("official selection preflight requires its accepted root")
+        expected_selection = official_selection_input_manifest(
+            file_list, marker, official_selection_root
+        )
+    elif observed_selection.get("schema") == SELECTION_INPUT_SCHEMA:
+        if official_selection_root is not None:
+            raise ContractError("accepted selection root requires an admitted selection manifest")
+        expected_selection = selection_input_manifest(file_list, marker)
+    else:
+        raise ContractError("selection manifest schema mismatch")
+    if observed_selection != expected_selection:
         raise ContractError("selection manifest benchmark identity mismatch")
     inputs = []
     seen_ids: set[str] = set()
@@ -522,9 +741,28 @@ def _validate_preflight(
     resource_session_id: str | None,
     require_active_enforcement: bool,
     source_identity: dict[str, Any] | None,
+    official_selection_root: Path | None,
+    allow_unadmitted_selection_fixture: bool,
 ) -> tuple[dict[str, Any], str]:
     identity, run_hash = validate_run(run)
     enforcement = validate_enforcement(run)
+    selection = read_canonical_json(selection_manifest)
+    selection_schema = selection.get("schema") if isinstance(selection, dict) else None
+    if selection_schema == OFFICIAL_SELECTION_INPUT_SCHEMA:
+        if official_selection_root is None:
+            raise ContractError("admitted selection preflight requires --official-selection-root")
+    elif selection_schema == SELECTION_INPUT_SCHEMA:
+        if official_selection_root is not None:
+            raise ContractError("legacy selection manifest cannot name an official selection root")
+        if (
+            enforcement["kind"] != FIXTURE_KIND
+            and not allow_unadmitted_selection_fixture
+        ):
+            raise ContractError(
+                "cgroup-backed preflight rejects an unadmitted selection fixture"
+            )
+    else:
+        raise ContractError("selection manifest schema mismatch")
     source = (
         source_identity_artifact(repository_root, source_root)
         if source_identity is None
@@ -600,6 +838,8 @@ def preflight_resumable(
     resource_session_id: str | None = None,
     require_active_enforcement: bool = False,
     source_identity_manifest: Path | None = None,
+    official_selection_root: Path | None = None,
+    allow_unadmitted_selection_fixture: bool = False,
 ) -> tuple[dict[str, Any], dict[str, Any], str, list[BenchmarkInput]]:
     """Validate all immutable inputs without creating the run directory."""
 
@@ -628,12 +868,15 @@ def preflight_resumable(
         resource_session_id=resource_session_id,
         require_active_enforcement=require_active_enforcement,
         source_identity=source_identity,
+        official_selection_root=official_selection_root,
+        allow_unadmitted_selection_fixture=allow_unadmitted_selection_fixture,
     )
     inputs = load_benchmark_inputs(
         file_list,
         selection_manifest=selection_manifest,
         marker=benchmark_id_marker,
         solver_config_sha256=identity["solver_config_sha256"],
+        official_selection_root=official_selection_root,
     )
     return run, identity, run_hash, inputs
 
@@ -888,6 +1131,8 @@ def execute_resumable(
     verbose: bool,
     resource_session_id: str | None = None,
     source_identity_manifest: Path | None = None,
+    official_selection_root: Path | None = None,
+    allow_unadmitted_selection_fixture: bool = False,
     runner: Runner = run_solver_metered,
     phase_hook: PhaseHook | None = None,
 ) -> bool:
@@ -913,6 +1158,8 @@ def execute_resumable(
         resource_session_id=resource_session_id,
         require_active_enforcement=True,
         source_identity_manifest=source_identity_manifest,
+        official_selection_root=official_selection_root,
+        allow_unadmitted_selection_fixture=allow_unadmitted_selection_fixture,
     )
     assignments = _assignments(inputs, shard_count)
     shard_id = str(shard_index)
@@ -1155,6 +1402,7 @@ __all__ = [
     "execute_resumable",
     "export_legacy_raw",
     "fixture_run_manifest",
+    "official_selection_input_manifest",
     "preflight_resumable",
     "selection_input_manifest",
     "source_identity_artifact",
