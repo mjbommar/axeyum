@@ -334,8 +334,16 @@ gate.
    successful inner evidence, quarantines only the exact diagnostic terminal,
    emits a closure-bound v2 multi-host completion, and never calls the
    allocation launcher. Thirty-one focused tests and the 75-test
-   portable/cgroup/live gates pass; live E3 has no skips. The real NAS run is
-   unchanged until the plan and implementation are integrated on `origin/main`.
+   portable/cgroup/live gates pass; live E3 has no skips. The real NAS run
+   remained unchanged until the plan and implementation were integrated on
+   `origin/main`.
+   The integrator landed those boundaries through `2855ddf7`. The explicit
+   no-launch closure then completed successfully, published a 1,305-row safe
+   Bitwuzla result, and replayed with an identical 1,359-file inventory digest.
+   The [Bitwuzla closure result](../smtcomp-repaired-p0-v2-bitwuzla-closure-result-2026-07-23.md)
+   records zero known-status contradiction, zero Axeyum/cvc5 disagreement, and
+   every final artifact identity. All three repaired-P0 cells are now closed;
+   the combined three-cell comparison is next.
 3. **Credited full population.** Only then execute Axeyum, cvc5, and Bitwuzla on
    the same versioned selection; publish the per-logic inventory and regenerate
    the coverage-weighted parity matrix without combining incompatible regimes.
@@ -387,6 +395,8 @@ Repository:
   `docs/plan/smtcomp-repaired-p0-v2-bitwuzla-recovery-plan-2026-07-23.md`;
 - repaired-P0 v2 Bitwuzla post-run closure plan:
   `docs/plan/smtcomp-repaired-p0-v2-bitwuzla-post-run-closure-plan-2026-07-23.md`;
+- repaired-P0 v2 Bitwuzla closure result:
+  `docs/plan/smtcomp-repaired-p0-v2-bitwuzla-closure-result-2026-07-23.md`;
 - candidate failure handoff:
   `docs/plan/smtcomp-full-library-candidate-run-handoff-2026-07-21.md`;
 - ranked gap plan: `docs/plan/full-library-gap-closing-plan-2026-07-22.md`;
@@ -422,11 +432,11 @@ NAS (shared, corpus read-only in practice):
    treating the stale run as evidence.
 4. Treat the accepted S4 root as immutable. S5/S5.1 admission and the repaired
    P0-S1 v2 preparation, Axeyum closure, and cvc5 execution are complete.
-   Bitwuzla has completed all 1,305 inner records after its sole frozen retry,
-   but outer finalization is stopped on the pre-launch diagnostic terminal.
-   Do not launch another retry. Resume only from the hash-pinned process-free
-   post-run closure plan, and do not mutate live evidence until its
-   implementation and checkpoint bytes exist on `origin/main`. The active solver
+   Bitwuzla's sole retry and process-free evidence closure are complete. Its
+   1,305 records, v2 E3 completion, external result, safe adjudication, and
+   byte-identical replay are frozen in the closure result. Do not launch another
+   retry. Integrate that result, then derive the combined three-cell repaired-P0
+   comparison before proposing a larger credited population. The active solver
    capability checkpoint is
    [`../checked-multi-binder-quantified-uf-models-2026-07-22.md`](../checked-multi-binder-quantified-uf-models-2026-07-22.md).
 5. Update `STATUS.md` and this file before handoff; push only a green topic

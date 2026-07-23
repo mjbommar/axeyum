@@ -8583,6 +8583,20 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
+- **2026-07-23 — Closed and independently validated the repaired-P0 Bitwuzla
+  cell without another solver launch.** After the integrator landed the exact
+  closure bytes through `2855ddf7`, the explicit process-free command retained
+  the failed outer allocation/resource terminals, quarantined only the exact
+  pre-launch diagnostic terminal, and published valid E2/E3 v2 plus external
+  cell completion. The final 1,305 records are 432 `sat`, 789 `unsat`, and 84
+  timeout/no-verdict with zero known-status contradiction, zero Axeyum/cvc5
+  disagreement, and `safe_to_continue=true`. Strict bundle/resource/multi-host
+  and external-result validation passes. A second closure command changed none
+  of the 1,359 artifact bytes: the before/after inventory SHA-256 is
+  `24dc225e63646dec153be0181e9dfe3aadd9696721d7417c1e84e6738ed82724`.
+  All three repaired-P0 cells are closed; integrate the Bitwuzla result document
+  and derive the combined three-cell comparison next.
+
 - **2026-07-23 — Completed and green-gated the process-free Bitwuzla
   post-run closure implementation; live evidence remains unchanged.** The sole
   frozen retry actually completed all 435 shard-1 cases, leaving 1,305/1,305
