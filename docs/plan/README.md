@@ -230,6 +230,12 @@ Start at the root [`PLAN.md`](../../PLAN.md) (map + standing rules) and
   invalid family-blind artifact closure, no post/projection/completion, and
   zero M2 case/shard credit. The 83-file read-only root is retained; R1 cannot
   retry.
+- [`lean-u2-official-execution-tl0.6.3-m2-r2-diagnostic-closure-plan-2026-07-22.md`](lean-u2-official-execution-tl0.6.3-m2-r2-diagnostic-closure-plan-2026-07-22.md) —
+  source-first, zero-process R2 append plan. It freezes family-specific
+  generated paths and a sustainable assurance split: retain 67 outcome/log
+  payloads (106,610 bytes), bind 56 reproducible C/executable intermediates
+  (950,219,754 bytes) by exact metadata, append diagnostic completion last,
+  and preserve zero R1/M2 credit.
 - [`lean-compatibility-v1.json`](lean-compatibility-v1.json) and generated
   [`Lean compatibility matrix`](generated/lean-compatibility.md) — TL0.2's
   executable eight-field assurance contract, K0-K6 profile gates, registered

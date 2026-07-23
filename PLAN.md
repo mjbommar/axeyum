@@ -547,8 +547,14 @@ state.
 > 34 fail), but post-run closure rejected a compile-family `.c`/`.out` demand
 > incorrectly applied to passing docparse cases. No post, projection, or
 > completion exists, so all 64 rows remain diagnostic and M2 credit is zero.
-> Commit and push the exact incomplete evidence/result before preregistering any
-> family-specific artifact correction or evidence-completion recovery;
+> The exact incomplete evidence/result is committed and pushed at `d9b286a1`.
+> The source-first
+> [R2 diagnostic-closure plan](docs/plan/lean-u2-official-execution-tl0.6.3-m2-r2-diagnostic-closure-plan-2026-07-22.md)
+> now freezes a zero-process, zero-credit append: all 124 generated rows /
+> 950,327,258 bytes remain manifest-bound, while only 67 outcome captures and
+> CTest logs / 106,610 bytes are retained and 56 reproducible C/executable
+> intermediates / 950,219,754 bytes remain explicit metadata-only evidence.
+> Next implement and test R2 without launching Lean or changing R1 credit;
 > then form native pairs. Do not rerun
 > the singleton for population credit. The
 > [complete-parity execution roadmap](docs/plan/lean4-complete-parity-roadmap-2026-07-22.md)

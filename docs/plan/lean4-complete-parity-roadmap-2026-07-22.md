@@ -74,7 +74,13 @@ and the attempt ran once. The
 retains exact 64-row JUnit (30 pass / 34 fail), but family-blind docparse
 artifact closure stopped before completion. The attempt is consumed, all rows
 remain diagnostic, and M2 credit is zero pending publication of the invalid
-evidence/result and any later source-first recovery decision.
+evidence/result and any later source-first recovery decision. The evidence is
+now published, and the
+[`R2 diagnostic-closure plan`](lean-u2-official-execution-tl0.6.3-m2-r2-diagnostic-closure-plan-2026-07-22.md)
+freezes a zero-process/zero-credit storage split: all 124 generated rows remain
+bound, 67 outcome/log payloads are retained, and 56 large reproducible
+intermediates remain metadata-only. A later process still needs a separately
+preregistered attempt and universal stack control.
 
 ## 2. What the SMT-LIB comparison actually says
 
