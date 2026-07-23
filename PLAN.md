@@ -663,8 +663,13 @@ state.
 > now classifies all 3,723 cases exactly once at a conservative harness floor
 > across ten stable native surfaces. All source-content refinement, exact
 > dependency closure, native outcomes, pairs, and parity credit remain
-> `not-run` or zero. Next source-first work is the next child shard plus M1
-> pinned-content refinement, followed by M2 exact closure and M3 review before
+> `not-run` or zero. The accepted
+> [M1 result](docs/plan/lean-u2-native-surface-classification-tl0.6.4-m1-result-2026-07-23.md)
+> now inspects all 7,004 tracked files, retains 90,909 exact/candidate spans,
+> and projects all 3,723 cases. All exact dependency closures/native outcomes
+> remain `not-run`, 3,670 generated-wrapper residuals remain, and pairs/parity
+> remain zero. Next source-first work is the next child shard plus M2 exact
+> closure and M3 review before
 > native pairs. Do not rerun
 > the singleton for population credit. The
 > [complete-parity execution roadmap](docs/plan/lean4-complete-parity-roadmap-2026-07-22.md)

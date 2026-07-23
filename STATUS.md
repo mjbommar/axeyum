@@ -383,6 +383,18 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-23 — TL0.6.4 M1 accepts the full tracked U2 content census without
+  claiming dependency closure, native support, or Lean parity.** The
+  [source-first plan](docs/plan/lean-u2-native-surface-classification-tl0.6.4-m1-plan-2026-07-23.md),
+  [bounded result](docs/plan/lean-u2-native-surface-classification-tl0.6.4-m1-result-2026-07-23.md),
+  [authority](docs/plan/lean-u2-native-surface-content-v1.json), and generated
+  [summary](docs/plan/generated/lean-u2-native-surface-content.md) inspect 7,004
+  tracked files, retain 90,909 exact/candidate spans, and project all 3,723
+  cases. All rows remain provisional, 3,670 retain a generated-wrapper
+  residual, every exact dependency closure/native outcome is `not-run`, and
+  pairs/parity remain zero. Next: M2 exact module/generated/runtime/FFI/request/
+  project closure and M3 full-row review, alongside a fresh official shard.
+
 - **2026-07-23 — TL0.6.4 M0 accepts the complete U2 harness floor without
   claiming native support or Lean parity.** The source-first
   [plan](docs/plan/lean-u2-native-surface-classification-tl0.6.4-m0-plan-2026-07-23.md),
@@ -393,8 +405,9 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   surfaces. The family floor contains 4,238 direct and 12,111 closure
   occurrences, but every content refinement, exact dependency closure, and
   native outcome remains `not-run`; native pairs and terminal parity remain
-  zero. Next: M1 pinned-content refinement, M2 exact dependency closure, and
-  M3 complete-row review, alongside a fresh source-first official shard.
+  zero. M1 has since accepted the full tracked-source census. Next: M2 exact
+  dependency closure and M3 complete-row review, alongside a fresh source-first
+  official shard.
 
 - **2026-07-22 — certified weighted integer-order Bessel antiderivative family.**
   Wave nine measured higher weighted antiderivatives against already-green
@@ -791,8 +804,9 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   shard from unchanged completion `1f0b9af8`. Aggregate local U2 coverage is 66
   outcomes / 65 unique cases; every provider/Axeyum/pair/parity counter remains
   zero. TL0.6.4 M0 now supplies a non-crediting harness floor for every U2
-  case. Next: source-first next child shard plus M1 pinned-content refinement,
-  then M2 exact closure and M3 review. Attempt 004 is closed and cannot retry.
+  case. M1 now accepts the full tracked-source census. Next: source-first next
+  child shard plus M2 exact closure and M3 review. Attempt 004 is closed and
+  cannot retry.
 
 - **2026-07-22 — TL0.6.3 M1 derives complete deterministic U2 child-shard
   scheduling with zero new outcomes or parity credit.** The source-first
@@ -8104,6 +8118,14 @@ plan is built and committed on the current branch:
 | P5.5 | External target, measured | **DONE (bounded v1, ADR-0323--0338):** authenticated Tock capture plus eight rechecked dual-DRAT proofs and six replayed controls, UNKNOWN=0, DISAGREE=0. Query time 12.700 s; fresh outer wall 50.745 s; peak RSS 1,256,496 KiB; zero OOM deltas. The committed case study compares exact target validation, universal coverage, trust, effort, artifact boundaries, and limits. No Tock bug was found, so no upstream issue is applicable. This is not a speed or whole-kernel claim. |
 
 ## Changelog
+
+- **2026-07-23 — Accepted TL0.6.4 M1's 7,004-file/3,723-case tracked-content
+  census.** The authority retains 90,909 exact/candidate spans, 94 support
+  scopes, 3,670 generated-wrapper residuals, and provisional direct/closure
+  surface counts. Lossless hit-index compaction reduces the current canonical
+  file to 49,295,677 bytes without changing any semantic count. All exact
+  dependency, native-outcome, pair, and terminal parity fields remain unrun or
+  zero; TL0.6.4 stays PARTIAL pending M2-M3.
 
 - **2026-07-23 — Accepted TL0.6.4 M0's full 3,723-case U2 harness floor.** Ten
   stable surfaces, fourteen exact family rules, three overrides, 4,238 direct

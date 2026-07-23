@@ -329,6 +329,17 @@ Start at the root [`PLAN.md`](../../PLAN.md) (map + standing rules) and
   stable native surfaces. All content refinement, exact dependency closure,
   native outcomes, pairs, and parity credit remain `not-run` or zero; M1-M3
   must refine and review the complete case population before TL0.6.4 closes.
+- [`TL0.6.4 M1 source-first plan`](lean-u2-native-surface-classification-tl0.6.4-m1-plan-2026-07-23.md),
+  [`generated-wrapper correction`](lean-u2-native-surface-classification-tl0.6.4-m1-generated-wrapper-r1-plan-2026-07-23.md),
+  [`lossless compaction plan`](lean-u2-native-surface-classification-tl0.6.4-m1-authority-compaction-r2-plan-2026-07-23.md),
+  [`accepted bounded result`](lean-u2-native-surface-classification-tl0.6.4-m1-result-2026-07-23.md),
+  [`authority`](lean-u2-native-surface-content-v1.json), and generated
+  [Markdown](generated/lean-u2-native-surface-content.md)/
+  [JSON](generated/lean-u2-native-surface-content.json) — inspect all 7,004
+  tracked files, retain 90,909 exact/candidate spans, and project all 3,723
+  cases while keeping 3,670 generated-wrapper residuals. Exact dependency
+  closure, native outcomes, pairs, and parity credit remain `not-run` or zero;
+  M2 and M3 remain mandatory.
 - [`lean-compatibility-v1.json`](lean-compatibility-v1.json) and generated
   [`Lean compatibility matrix`](generated/lean-compatibility.md) — TL0.2's
   executable eight-field assurance contract, K0-K6 profile gates, registered

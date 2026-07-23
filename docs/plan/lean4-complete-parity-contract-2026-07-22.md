@@ -529,8 +529,20 @@ family floor yields 4,238 direct and 12,111 transitive surface occurrences,
 but all 3,723 content refinements, exact dependency closures, and native
 outcomes remain `not-run`; Axeyum outcomes, pairs, and terminal parity credit
 remain zero. The observed zero FFI floor is provisional, not an absence claim.
-M1-M3 must inspect pinned content, derive exact closures, and review every row
-before TL0.6.4 closes or TL0.6.5 forms a native pair.
+This was the pre-M1 boundary: M1-M3 had to inspect pinned content, derive exact
+closures, and review every row before TL0.6.4 could close or TL0.6.5 form a
+native pair.
+
+M1 has since accepted the bounded
+[tracked-content result](lean-u2-native-surface-classification-tl0.6.4-m1-result-2026-07-23.md),
+[canonical authority](lean-u2-native-surface-content-v1.json), and generated
+[summary](generated/lean-u2-native-surface-content.md). It inspects all 7,004
+tracked files, retains 90,909 exact/candidate signal spans, projects all 3,723
+cases, and inventories 3,670 generated-wrapper residuals. The resulting direct
+surface census includes 24 provisional FFI cases, but content signals are not
+reachability, implementation, execution, or agreement. All exact dependency
+closures and native outcomes remain `not-run`; pairs and terminal credit remain
+zero. M2 exact closure and M3 complete-row review are still required.
 
 ## 8. Layer-specific equivalence
 
@@ -633,8 +645,8 @@ Before another broad implementation claim:
 
 1. retain the R3 singleton and accepted R6 shard as immutable history; execute
    only fresh source-first child shards with unique-case accounting;
-2. complete TL0.6.4 M1 pinned-content refinement for all 3,723 cases, then M2
-   exact module/runtime/FFI/request/project closures and M3 full-row review;
+2. retain accepted TL0.6.4 M1 as source-only evidence; complete M2 exact
+   module/generated/runtime/FFI/request/project closures and M3 full-row review;
 3. repair and attest the remote official-Lean executable identity from changed
    working directories, retaining provider, duration, RSS, and axiom evidence;
 4. form the first native official/Axeyum semantic pair only after its complete

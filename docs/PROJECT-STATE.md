@@ -294,7 +294,14 @@ Again, there are distinct targets:
   transitive surface occurrences, but all source-content refinement, exact
   dependency closure, and native outcomes remain `not-run`; zero observed FFI
   cases at this floor is not an FFI-absence claim. Native pairs and parity stay
-  zero pending complete M1-M3 refinement and review. The subsequent
+  zero pending complete M1-M3 refinement and review. The accepted
+  [M1 result](plan/lean-u2-native-surface-classification-tl0.6.4-m1-result-2026-07-23.md)
+  now inspects all 7,004 tracked files, retains 90,909 exact/candidate signal
+  spans, and projects all 3,723 cases. It exposes 24 provisional content-backed
+  FFI case surfaces and 3,670 generated-wrapper residuals without treating
+  either as reachability or native support. Exact dependency closure and every
+  native outcome remain `not-run`; pairs and parity remain zero pending M2/M3.
+  The subsequent
   [TL0.7.1 contract](plan/lean-execution-evidence-tl0.7.1-2026-07-22.md)
   defines explicit 4/8 GiB local lanes, twelve typed termination classes, and
   immutable completion-last evidence. Its five controls are synthetic and all

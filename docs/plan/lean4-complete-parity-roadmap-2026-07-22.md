@@ -33,7 +33,7 @@ Current machine-derived state:
 | U0-U9 | 0 complete authorities | a complete executable denominator for any terminal population |
 | A0-A11 | 0 complete axes | end-to-end native behavior on any complete required population |
 | G1-G10 | 0 satisfied terminal gates | any terminal parity claim |
-| U2 official execution/classification | 8 consumed processes, 66 official outcomes, 65 passes / 1 failure over **65 unique cases**; execution M1 derives 5 exact memberships and 289 physical shards, one locally complete; TL0.6.4 M0 gives all 3,723 cases a non-crediting harness floor | the 3,678/3,723-case parents, all 111 full attempts, content-refined/exact dependency classification, an official provider, an Axeyum outcome, a pair, or performance |
+| U2 official execution/classification | 8 consumed processes, 66 official outcomes, 65 passes / 1 failure over **65 unique cases**; execution M1 derives 5 exact memberships and 289 physical shards, one locally complete; TL0.6.4 M0 gives all 3,723 cases a harness floor and classification M1 inspects 7,004 tracked files / 90,909 spans | the 3,678/3,723-case parents, all 111 full attempts, exact dependency-reviewed classification, an official provider, an Axeyum outcome, a pair, or performance |
 
 The accepted
 [`R3 result`](lean-u2-official-execution-tl0.6.3-m0-r3-result-2026-07-22.md)
@@ -162,8 +162,14 @@ source-first child shard. TL0.6.4 M0 has since accepted a bounded
 [harness-floor classification](lean-u2-native-surface-classification-tl0.6.4-m0-result-2026-07-23.md):
 all 3,723 registered cases map exactly once to ten stable native surfaces, but
 all source-content refinement, exact dependency closure, native outcomes,
-pairs, and parity credit remain `not-run` or zero. M1-M3 must refine and review
-the complete population before TL0.6.4 closes.
+pairs, and parity credit remain `not-run` or zero. This was the pre-M1 boundary:
+M1-M3 had to refine and review the complete population before TL0.6.4 could
+close. The accepted
+[M1 result](lean-u2-native-surface-classification-tl0.6.4-m1-result-2026-07-23.md)
+now inspects all 7,004 tracked files and retains 90,909 exact/candidate spans
+over all 3,723 case projections. It is still source-only: 3,670 cases retain a
+generated-wrapper residual, all exact dependency closures/native outcomes are
+`not-run`, and pairs/parity remain zero. M2 and M3 remain open.
 
 ## 2. What the SMT-LIB comparison actually says
 
@@ -252,9 +258,9 @@ The critical semantic path is:
 Three lanes should proceed alongside it without claiming to shorten that
 dependency chain:
 
-- R1 expands official U2 execution. TL0.6.4 M0 now supplies every case's
-  conservative harness floor; M1/M2 still must replace that floor with pinned
-  content evidence and exact dependency closure before M3 review.
+- R1 expands official U2 execution. TL0.6.4 M0 supplies every case's
+  conservative harness floor and accepted M1 supplies the complete tracked-
+  source census; M2 still must derive exact dependency closure before M3 review.
 - R0 keeps identities, completion rules, pair schemas, and dashboards ready so
   new capabilities become auditable evidence rather than anecdotes.
 - R7 and R10 preregister editor, adversarial, platform, package, and migration
@@ -271,8 +277,8 @@ execution, and content/dependency-complete U2 classification.
    never rerun either to manufacture coverage.
 2. Select and preregister the next fresh deterministic child shard, preserving
    exact unique-case accounting and the one-process/no-retry discipline.
-3. Complete TL0.6.4 M1 pinned-content refinement for all 3,723 cases, including
-   every primary, sidecar, runner, hook, and directory support closure.
+3. Retain accepted TL0.6.4 M1's 7,004-file/3,723-case source census as
+   provisional evidence; do not reinterpret lexical signals as reachability.
 4. Complete TL0.6.4 M2 exact module, generated-artifact, runtime, library, FFI,
    request, and project dependency closures; do not infer FFI absence from M0.
 5. Review all rows under M3 and accept TL0.6.4 only when no provisional field,

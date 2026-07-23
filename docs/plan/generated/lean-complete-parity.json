@@ -44,7 +44,7 @@
     },
     {
       "path": "docs/plan/lean-complete-parity-v1.json",
-      "sha256": "09297df96028824332ba009f421d75aef33f888c028a82d7afa92c350c8c65e1"
+      "sha256": "5cef1a0fc096aedc8a2b89dd79fb87051cd788bf806cd5d86896694125e09cc7"
     },
     {
       "path": "docs/plan/lean-execution-acceptance-tl0.7.4-2026-07-22.md",
@@ -76,7 +76,7 @@
     },
     {
       "path": "docs/plan/lean-system-implementation-plan-2026-07-21.md",
-      "sha256": "20cdb0973c05bd86b4d46c9986686bcb3e67bfbb58f6e4033c00aad248ba3a55"
+      "sha256": "28828996d6a50a8f2ae086548c3d8f9fefd5154861379f20a6ca948996b2a4a6"
     },
     {
       "path": "docs/plan/lean-u2-native-surface-classification-tl0.6.4-m0-plan-2026-07-23.md",
@@ -85,6 +85,10 @@
     {
       "path": "docs/plan/lean-u2-native-surface-classification-tl0.6.4-m1-plan-2026-07-23.md",
       "sha256": "cfec00b0cc7e0336d46e377bcad2de2ebaf7d8b99345c14044c97a2628962d35"
+    },
+    {
+      "path": "docs/plan/lean-u2-native-surface-classification-tl0.6.4-m1-result-2026-07-23.md",
+      "sha256": "8fdde5b558d0b67c537c5e75fd0a2961fa4bfad8384d65e63127e5ec026b7711"
     },
     {
       "path": "docs/plan/lean-u2-native-surface-classification-v1.json",
@@ -272,11 +276,11 @@
     },
     {
       "path": "docs/plan/lean4-complete-parity-contract-2026-07-22.md",
-      "sha256": "44d40e166b6037f10368131af0cfe6a2d69bf59218a6f501c35d45db13d9ff82"
+      "sha256": "23df318d8d6732adfe584e4028843955128c3d43fb37ddccbf1855641b58e41f"
     },
     {
       "path": "docs/plan/lean4-complete-parity-roadmap-2026-07-22.md",
-      "sha256": "145454bd82c8b91145666e38df0ec00bbbb2fdd3faabb0436a4a7d5f9c8c10cd"
+      "sha256": "084d7cc638bc58240322d45f7e71cba993b5d55164b06ec381491ab9069e248c"
     },
     {
       "path": "scripts/gen-lean-complete-parity.py",
@@ -1366,6 +1370,10 @@
         {
           "path": "docs/plan/lean-u2-native-surface-classification-tl0.6.4-m1-plan-2026-07-23.md",
           "detail": "Source-first M1 contract for byte-exact tracked-content inspection, role-aware case projection, structured and lexical controls, generated-artifact boundary, and M2/M3 continuation."
+        },
+        {
+          "path": "docs/plan/lean-u2-native-surface-classification-tl0.6.4-m1-result-2026-07-23.md",
+          "detail": "Accepted bounded M1 result with complete denominators, source-first/correction history, lossless compaction, exact artifact identities, validation, nonclaims, and M2/M3 handoff."
         },
         {
           "path": "docs/plan/lean-u2-official-execution-tl0.6.3-m2-shard-0001-plan-2026-07-22.md",
