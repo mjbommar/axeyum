@@ -342,8 +342,12 @@ gate.
    Bitwuzla result, and replayed with an identical 1,359-file inventory digest.
    The [Bitwuzla closure result](../smtcomp-repaired-p0-v2-bitwuzla-closure-result-2026-07-23.md)
    records zero known-status contradiction, zero Axeyum/cvc5 disagreement, and
-   every final artifact identity. All three repaired-P0 cells are now closed;
-   the combined three-cell comparison is next.
+   every final artifact identity. All three repaired-P0 cells are now closed.
+   The [combined-comparison plan](../smtcomp-repaired-p0-combined-comparison-plan-2026-07-23.md)
+   freezes the exact 1,810-row Axeyum/cvc5 population, the 1,305-row
+   three-solver FP population, the separate 505-row QF_AUFLIA projection, and
+   forbids a cross-scope scalar ranking. Implementation and generated results
+   are next.
 3. **Credited full population.** Only then execute Axeyum, cvc5, and Bitwuzla on
    the same versioned selection; publish the per-logic inventory and regenerate
    the coverage-weighted parity matrix without combining incompatible regimes.
@@ -397,6 +401,8 @@ Repository:
   `docs/plan/smtcomp-repaired-p0-v2-bitwuzla-post-run-closure-plan-2026-07-23.md`;
 - repaired-P0 v2 Bitwuzla closure result:
   `docs/plan/smtcomp-repaired-p0-v2-bitwuzla-closure-result-2026-07-23.md`;
+- repaired-P0 combined-comparison plan:
+  `docs/plan/smtcomp-repaired-p0-combined-comparison-plan-2026-07-23.md`;
 - candidate failure handoff:
   `docs/plan/smtcomp-full-library-candidate-run-handoff-2026-07-21.md`;
 - ranked gap plan: `docs/plan/full-library-gap-closing-plan-2026-07-22.md`;
