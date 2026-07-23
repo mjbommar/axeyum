@@ -1,6 +1,6 @@
 # ADR-0358: Preregister multi-binder finite-profile quantified-UF models
 
-Status: proposed
+Status: accepted
 Date: 2026-07-22
 
 ## Context
@@ -92,3 +92,24 @@ deterministically bounded by 16 binders and 4,096 checked tuples. Larger
 products, vacuous prefixes, existential alternation, interpreted binder
 expressions, uninterpreted carrier sorts, model repair, serialization, and Lean
 reconstruction remain honest follow-ups.
+
+## Outcome
+
+Accepted on 2026-07-22 after implementation and all preregistered evidence
+gates. The independent checker now flattens a leading block of one through 16
+distinct `Int`/`Real` universals, derives each representative set from exact UF
+argument positions, rejects Cartesian products above 4,096 tuples, and
+evaluates the untouched matrix at every tuple. The unified front door attempts
+this source-bound certificate only for a SAT ground candidate and returns to
+existing E-matching when certification declines.
+
+The focused model finder passes 18/18, including integer and mixed-sort
+front-door SAT, Cartesian table-point violations, fallback UNSAT, malformed
+prefixes, and both caps. Solver-library 894/894, evidence 69/69,
+instantiation 15/15, capability/support ledgers 2/2 and 12/12, and all-target
+all-feature warning-denied Clippy pass. The established 256-case one-binder
+direct-Z3 differential has zero disagreement and canonical replay for every
+Axeyum SAT result; the new two-binder matrix agrees 64/64, split 32 SAT / 32
+UNSAT, with every SAT result replayed. Workspace tests and doctests, strict
+rustdoc, foundational resources, parity and link checks, SMT-COMP recovery,
+and the QF_BV profile gate also pass.
