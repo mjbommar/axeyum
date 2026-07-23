@@ -383,6 +383,20 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-22 — certified bounded integer-order Bessel inverse-Laplace family.**
+  Wave ten closes the measured order-three inverse gap by applying the existing
+  exact positive-order recognizer to the explicitly bounded family `1≤n≤32`;
+  the established order-zero routes complete `Jₙ`/`Iₙ` inverse support through
+  order 32. Each discovery still has to match a rational multiple of its public
+  forward basis, then pass an independent whole-input forward transform and
+  exact zero-test. J/I orders 3, 8, 16, and 32, a shifted/scaled order-seven
+  case, full roundtrips, and `J₀+J₃` pass. Order 33 and `u32::MAX`, irrational
+  or zero frequency, malformed numerators, and supported-plus-order-33 sums
+  decline. The thermally managed 551-unit/147-doctest suite passed
+  (1936.53 s for units), with workspace warning-denied Clippy, stable/nightly
+  rustdoc, WASM, links, and whitespace green. Next: resume broad probing from
+  the remaining Bessel asymptotic/improper and quadratic inverse-Z gaps.
+
 - **2026-07-22 — certified weighted integer-order Bessel antiderivative family.**
   Wave nine measured higher weighted antiderivatives against already-green
   weighted Laplace controls and continuing order-three inverse-Laplace,
@@ -8228,6 +8242,10 @@ plan is built and committed on the current branch:
   R1/R2 history, a new run/evidence root, universal 512 MiB Lean runtime stacks
   from pinned source semantics, and the measured tiered artifact store. It
   authorizes one process only after separately pushed implementation gates.
+- **2026-07-22 — Added the certified bounded Bessel inverse-Laplace family.**
+  Exact roundtrip-checked `Jₙ`/`Iₙ` recognition through order 32, additive
+  order-three coverage, and explicit order-33/extreme-order declines retain CAS
+  at 551 units and 147 doctests.
 - **2026-07-22 — Added the certified weighted integer-order Bessel family.**
   Order-generic division-free recurrence equality plus capped discovery through
   order 32, explicit order-33 declines, and nested symbolic-factor hardening
