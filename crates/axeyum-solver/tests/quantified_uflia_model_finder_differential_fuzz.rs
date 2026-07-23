@@ -41,9 +41,12 @@ use std::{
     time::{Duration, Instant},
 };
 
-use axeyum_ir::{Assignment, FuncId, Sort, SymbolId, TermArena, TermId, TermNode, Value, eval};
+use axeyum_ir::{
+    Assignment, FuncId, FuncValue, Op, Sort, SymbolId, TermArena, TermId, TermNode, Value, eval,
+};
 use axeyum_solver::{
-    CheckResult, Model, SolverConfig, check_auto, check_model, prove_unsat_by_mbqi,
+    CheckResult, Model, QuantifiedUfModelSatCertificate, SolverConfig, check_auto, check_model,
+    check_quantified_uf_model_sat, prove_unsat_by_mbqi,
 };
 use z3::ast::{Ast, Bool, Int};
 use z3::{FuncDecl, Params, SatResult, Solver, Sort as Z3Sort};
@@ -1086,6 +1089,163 @@ fn exact_source_symbols(arena: &TermArena, assertions: &[TermId]) -> BTreeSet<Sy
         }
     }
     symbols
+}
+
+fn exact_source_functions(arena: &TermArena, assertions: &[TermId]) -> BTreeSet<FuncId> {
+    let mut functions = BTreeSet::new();
+    let mut seen = BTreeSet::new();
+    let mut stack: Vec<TermId> = assertions.iter().rev().copied().collect();
+    while let Some(term) = stack.pop() {
+        if !seen.insert(term) {
+            continue;
+        }
+        if let TermNode::App { op, args } = arena.node(term) {
+            if let Op::Apply(function) = op {
+                functions.insert(*function);
+            }
+            stack.extend(args.iter().rev().copied());
+        }
+    }
+    functions
+}
+
+fn replace_int_function_default(
+    arena: &TermArena,
+    model: &Model,
+    function: FuncId,
+    default: i128,
+) -> FuncValue {
+    let (_, params, result) = arena.function(function);
+    assert_eq!(result, Sort::Int);
+    let mut replacement = FuncValue::constant_value(params.to_vec(), result, Value::Int(default));
+    if let Some(existing) = model.function(function) {
+        for (arguments, value) in existing.value_entries() {
+            replacement = replacement.define_value(arguments, value.clone());
+        }
+    }
+    replacement
+}
+
+#[allow(clippy::too_many_arguments)]
+fn search_source_literal_default_candidates(
+    arena: &TermArena,
+    assertions: &[TermId],
+    universal: TermId,
+    binder: SymbolId,
+    functions: &[FuncId],
+    values: &[i128],
+    index: usize,
+    model: &Model,
+    chosen: &mut Vec<i128>,
+) -> Option<(Model, Vec<i128>)> {
+    if index == functions.len() {
+        let certificate = QuantifiedUfModelSatCertificate {
+            assertion: universal,
+            binder,
+        };
+        if !check_quantified_uf_model_sat(arena, universal, model, &certificate) {
+            return None;
+        }
+        let mut certified = model.clone();
+        certified.set_quantified_uf_model_sat_certificate(certificate);
+        return check_model(arena, assertions, &certified)
+            .ok()
+            .filter(|accepted| *accepted)
+            .map(|_| (certified, chosen.clone()));
+    }
+
+    for &value in values {
+        let mut candidate = model.clone();
+        candidate.set_function(
+            functions[index],
+            replace_int_function_default(arena, model, functions[index], value),
+        );
+        chosen.push(value);
+        if let Some(found) = search_source_literal_default_candidates(
+            arena,
+            assertions,
+            universal,
+            binder,
+            functions,
+            values,
+            index + 1,
+            &candidate,
+            chosen,
+        ) {
+            return Some(found);
+        }
+        chosen.pop();
+    }
+    None
+}
+
+#[test]
+#[ignore = "diagnostic; set AXEYUM_QUANT_UFLIA_DEFAULT_DIAGNOSTIC_SEEDS"]
+fn diagnose_source_literal_uf_default_repair_for_quantified_uflia_unknowns() {
+    const MAX_VALUES: usize = 32;
+    const MAX_CANDIDATES: usize = 256;
+
+    let raw = std::env::var("AXEYUM_QUANT_UFLIA_DEFAULT_DIAGNOSTIC_SEEDS")
+        .expect("set AXEYUM_QUANT_UFLIA_DEFAULT_DIAGNOSTIC_SEEDS");
+    let cfg = SolverConfig::new().with_timeout(AXEYUM_TIMEOUT);
+    let mut checked_sat = 0_u64;
+
+    for field in raw.split(',') {
+        let seed: u64 = field.trim().parse().expect("diagnostic seed must be u64");
+        let mut rng = Lcg::new(seed);
+        let inst = Instance::generate(&mut rng);
+        assert_eq!(z3_decide(&inst), Verdict::Sat);
+        let (mut arena, binder, _, _, ground, assertions) = inst.build_axeyum();
+        let universal = assertions[0];
+        let ground_model = match check_auto(&mut arena, &ground, &cfg) {
+            Ok(CheckResult::Sat(model)) => model,
+            other => panic!("seed {seed} ground slice must be SAT, got {other:?}"),
+        };
+
+        let mut raw_values = evaluated_int_candidate_pool(&arena, &assertions, &ground_model);
+        raw_values.extend(inst.integer_literals());
+        let mut values = raw_values.clone();
+        for value in raw_values {
+            if let Some(predecessor) = value.checked_sub(1) {
+                values.insert(predecessor);
+            }
+            if let Some(successor) = value.checked_add(1) {
+                values.insert(successor);
+            }
+        }
+        let functions: Vec<FuncId> = exact_source_functions(&arena, &[universal])
+            .into_iter()
+            .collect();
+        let candidate_count = values
+            .len()
+            .checked_pow(u32::try_from(functions.len()).unwrap())
+            .unwrap_or(usize::MAX);
+        let found = if values.len() <= MAX_VALUES && candidate_count <= MAX_CANDIDATES {
+            search_source_literal_default_candidates(
+                &arena,
+                &assertions,
+                universal,
+                binder,
+                &functions,
+                &values.iter().copied().collect::<Vec<_>>(),
+                0,
+                &ground_model,
+                &mut Vec::new(),
+            )
+        } else {
+            None
+        };
+        if found.is_some() {
+            checked_sat += 1;
+        }
+        println!(
+            "seed {seed}: source_default_pool={values:?}, functions={}, candidates={candidate_count}, checked_defaults={:?}",
+            functions.len(),
+            found.as_ref().map(|(_, defaults)| defaults)
+        );
+    }
+
+    println!("SOURCE_LITERAL_UF_DEFAULT_REPAIR|checked_sat={checked_sat}");
 }
 
 #[test]
