@@ -401,6 +401,23 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   Next: after the integrator lands this result, execute Axeyum, cvc5, and
   Bitwuzla sequentially under the frozen commands; stop on the first
   contradiction, disagreement, or evidence/identity failure.
+- **2026-07-22 — certified rational-rate products of integer-order Bessel J.**
+  Wave eighteen composes the fixed-order envelope across a finite direct product:
+  if exact rational arguments grow like `|x|^dᵢ` and an exact rational weight
+  like `|x|^e`, then `w(x)∏Jₙᵢ(rᵢ(x))=O(|x|^(e-Σdᵢ/2))`. `limit` now returns
+  zero under the strict checked condition `2e<Σdᵢ`, retaining only an `x`-free
+  outer factor and requiring every Bessel argument to grow in magnitude. Two-
+  and three-factor products, polynomial/rational arguments, weights through
+  degree two, reflected signs, orders through `u32::MAX`, and both infinities
+  pass. An 8-case 80-digit mpmath leading-asymptotic check has maximum
+  envelope-scaled error 0.0115689; SymPy times out without deciding the same
+  product set. Borderline/supercritical combined rates, any bounded argument,
+  modified Bessel `I`, denominators, and symbolic rational coefficients decline.
+  The thermally managed 559-unit/147-doctest suite passed (2347.62 s for units),
+  with workspace warning-denied Clippy (7.00 s warm), stable/nightly rustdoc,
+  WASM, links, whitespace, and owned-line formatting green. Next: resume broad
+  probing; quadratic-pole inverse Z remains representation-bound.
+
 - **2026-07-22 — certified subcritical rational-rate integer-order Bessel-J
   limits.** Wave seventeen closes the rate-sensitive continuation left by the
   bounded-weight checkpoint. If an exact rational argument grows like
@@ -8460,6 +8477,12 @@ plan is built and committed on the current branch:
   R1/R2 history, a new run/evidence root, universal 512 MiB Lean runtime stacks
   from pinned source semantics, and the measured tiered artifact store. It
   authorizes one process only after separately pushed implementation gates.
+- **2026-07-22 — Added certified rational-rate Bessel-J product limits.** The
+  fixed-order envelope now composes across finite direct products and closes
+  `c·w(x)·∏Jₙᵢ(rᵢ(x))→0` whenever exact rational degree growth satisfies
+  `2·growth(w)<Σgrowth(rᵢ)`, with strict combined-rate, bounded-argument,
+  modified-I, denominator, and symbolic-coefficient declines. CAS now has 559
+  units and 147 doctests.
 - **2026-07-22 — Added certified subcritical rational-rate Bessel-J infinity
   limits.** The fixed-order envelope now closes `c·w(x)·Jₙ(r(x))→0` at both
   real infinities whenever exact rational degree growth satisfies
