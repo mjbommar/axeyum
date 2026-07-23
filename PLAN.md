@@ -570,8 +570,12 @@ state.
 > [R3 attempt-002 plan](docs/plan/lean-u2-official-execution-tl0.6.3-m2-r3-attempt-002-plan-2026-07-23.md)
 > now freezes the new run/evidence roots, 512 MiB universal Lean runtime stack,
 > unchanged one-worker/8 GiB/hour lane, family-specific 67-payload store, and
-> zero parent/provider/native/pair/parity credit. Next implement/test/push R3
-> without constructing its harness or running a selected case;
+> zero parent/provider/native/pair/parity credit. The
+> [R3 implementation checkpoint](docs/plan/lean-u2-official-execution-tl0.6.3-m2-r3-attempt-002-implementation-2026-07-23.md)
+> records pushed commit `d47dacc6`, 6/6 focused and 264 aggregate Lean tests,
+> the successful harmless direct-runtime stack probe, and still no selected
+> harness/discovery/process. Next perform exact clean/tracking/remote/root/hash
+> preflight, then invoke attempt 002 at most once;
 > then form native pairs. Do not rerun
 > the singleton for population credit. The
 > [complete-parity execution roadmap](docs/plan/lean4-complete-parity-roadmap-2026-07-22.md)

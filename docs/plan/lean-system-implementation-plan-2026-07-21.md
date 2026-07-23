@@ -197,6 +197,13 @@ result. U2 therefore advances through these separately reviewable slices:
 | TL0.6.5 | TODO | Run matched native Axeyum cases incrementally and publish exact overlap, official-only, Axeyum-only, mismatch, unadjudicated, not-run, invalid-run, assurance, and resource fields. | TL0.6.3, TL0.6.4 | XL | Every paired row satisfies the terminal cell schema and independently checked accepted declarations/proofs retain trust evidence. |
 | TL0.6.6 | TODO | Review and promote U2 only after the complete declared platform/profile matrix and all both-system outcomes close without unexplained mismatch or missing completion evidence. | TL0.6.5 | M | U2 becomes `complete_authority`; otherwise it remains bounded with an exact residual and no terminal denominator promotion. |
 
+Current TL0.6.3 handoff: the separately pushed
+[M2 R3 implementation checkpoint](lean-u2-official-execution-tl0.6.3-m2-r3-attempt-002-implementation-2026-07-23.md)
+records commit `d47dacc6`, six focused and 264 aggregate Lean tests, the exact
+harmless 512 MiB direct-runtime stack probe, and no selected R3 execution.
+Final clean/remote/root/hash preflight now precedes the one permitted
+attempt-002 invocation.
+
 L0 exits when status is generated from evidence rather than hand-copied prose.
 
 ### TL0.7 Lean execution evidence slices
@@ -542,9 +549,11 @@ parallel lane:
     and R3's released-toolchain pass. M1 has since derived the exact five
     memberships and 289 physical shards; M2 R1 consumed the first 64-case
     process but received zero credit after invalid artifact closure; M2 R2
-    completed its zero-process tiered diagnostic append. **NEXT:** implement,
-    validate, commit, and push the source-first M2 R3 attempt-002 runner, then
-    invoke its fresh 64-case shard at most once under universal
+    completed its zero-process tiered diagnostic append. Pushed commit
+    `d47dacc6` now implements and validates the source-first M2 R3 attempt-002
+    runner and tiered store without selected execution. **NEXT:** perform the
+    exact external clean/remote/root/hash preflight, then invoke its fresh
+    64-case shard at most once under universal
     `LEAN_STACK_SIZE_KB=524288`. Classify completed native dependencies and
     form the first official/Axeyum pair. Do not rerun the singleton for coverage
     or promote an official-only pass into parity credit. Continue U0-U9
