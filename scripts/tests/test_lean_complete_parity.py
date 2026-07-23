@@ -529,6 +529,53 @@ class LeanCompleteParityTests(unittest.TestCase):
         self.assertEqual(dependency["summary"]["native_outcomes"], 0)
         self.assertEqual(dependency["summary"]["paired_cells"], 0)
 
+    def test_m3_review_preregistration_remains_noncrediting(self) -> None:
+        dependency = GEN.load_json(GEN.U2_NATIVE_DEPENDENCY)
+        u2 = self.population("U2")
+
+        self.assertEqual(len(dependency["case_rows"]), 3_723)
+        self.assertEqual(len(dependency["provider_variants"]), 111)
+        self.assertEqual(
+            dependency["summary"]["case_variant_occurrences"], 408_374
+        )
+        self.assertEqual(
+            dependency["summary"]["provider_state_counts"], {"unbound": 111}
+        )
+        self.assertEqual(dependency["summary"]["resolved_case_closures"], 0)
+        self.assertEqual(dependency["summary"]["native_outcomes"], 0)
+        self.assertEqual(dependency["summary"]["paired_cells"], 0)
+
+        merge_resolver = next(
+            resolver
+            for resolver in dependency["resolvers"]
+            if resolver["id"] == "m2.7-variant-merge-v1"
+        )
+        self.assertEqual(merge_resolver["state"], "not-run")
+        self.assertEqual(u2["state"], "bounded_profile")
+        self.assertIsNone(u2["raw_denominator"])
+        self.assertIsNone(u2["normalized_denominator"])
+        self.assertIsNone(u2["content_digest"])
+        self.assertFalse(
+            any(
+                "m3" in evidence["path"].lower()
+                and "result" in evidence["path"].lower()
+                for evidence in u2["evidence"]
+            )
+        )
+
+        self.assertEqual(
+            sum(
+                population["state"] == "complete_authority"
+                for population in self.data["populations"]
+            ),
+            0,
+        )
+        self.assertEqual(
+            sum(axis["state"] == "complete" for axis in self.data["axes"]), 0
+        )
+        self.assertEqual(len(self.data["paired_cells"]), 0)
+        self.assertFalse(self.data["terminal_claim_enabled"])
+
     def test_committed_registry_is_valid_and_rendering_is_deterministic(self) -> None:
         self.assertEqual(self.failures(), [])
         first = GEN.build_report(self.data)
