@@ -11235,10 +11235,15 @@ fn linear_var_coefficient(arg: &CasExpr, var: &str) -> Option<Rational> {
 }
 
 /// The Laplace transform `L{g}(s)` of a single elementary "base" `g` in `t`
-/// (`1`, `e^{a·t}`, `sin(b·t)`, `cos(b·t)`, `Jₙ(b·t)`), returned in the variable
-/// `s`. `None` outside that table. The Bessel pair is the nonnegative-integer
+/// (`1`, `e^{a·t}`, `sin(b·t)`, `cos(b·t)`, `Jₙ(b·t)`, `Iₙ(b·t)`), returned in
+/// the variable `s`. `None` outside that table. The Bessel-J pair is the
+/// nonnegative-integer
 /// specialization of [NIST DLMF 10.22.49](https://dlmf.nist.gov/10.22.E49):
 /// `L{Jₙ(bt)} = ((√(s²+b²)−s)/b)ⁿ / √(s²+b²)` for `b ≠ 0`.
+/// The modified-Bessel pair follows by Laplace-transforming the integer-order
+/// [NIST DLMF 10.32.3](https://dlmf.nist.gov/10.32.E3) integral representation:
+/// `L{Iₙ(bt)} = ((s−√(s²−b²))/b)ⁿ / √(s²−b²)` for `b ≠ 0`, in its convergence
+/// half-plane `Re(s) > |b|`.
 fn laplace_base(g: &CasExpr, t: &str, s: &str) -> Option<CasExpr> {
     let s_var = CasExpr::var(s);
     match g {
@@ -11271,15 +11276,32 @@ fn laplace_base(g: &CasExpr, t: &str, s: &str) -> Option<CasExpr> {
             let ratio = (root.clone() - s_var) / CasExpr::Const(b);
             Some(ratio.pow(*order) / root)
         }
+        CasExpr::Unary(UnaryFunc::BesselI(order), arg) => {
+            let b = linear_var_coefficient(arg, t)?;
+            if b.is_zero() {
+                return if *order == 0 {
+                    Some(CasExpr::int(1) / s_var) // I₀(0)=1
+                } else {
+                    Some(CasExpr::zero()) // Iₙ(0)=0 for every positive integer n
+                };
+            }
+            let root = (s_var.clone().pow(2) - CasExpr::Const(b.checked_mul(b)?)).sqrt();
+            if *order == 0 {
+                return Some(CasExpr::int(1) / root);
+            }
+            let ratio = (s_var - root.clone()) / CasExpr::Const(b);
+            Some(ratio.pow(*order) / root)
+        }
         _ => None,
     }
 }
 
 /// The Laplace transform `L{f}(s) = ∫₀^∞ f(t)·e^{−st} dt` of an elementary function
 /// `f` in `t`, returned in the variable `s`. Handles linear combinations of
-/// `tᵏ·e^{a·t}`, `tᵏ·sin(b·t)`, `tᵏ·cos(b·t)`, `tᵏ·Jₙ(b·t)`, and polynomials
-/// (via `L{tᵏ·g} = (−1)ᵏ dᵏ/dsᵏ L{g}` and the `1, e^{at}, sin, cos, Jₙ` table).
-/// `None` outside that fragment or on overflow.
+/// `tᵏ·e^{a·t}`, `tᵏ·sin(b·t)`, `tᵏ·cos(b·t)`, `tᵏ·Jₙ(b·t)`, `tᵏ·Iₙ(b·t)`, and
+/// polynomials (via `L{tᵏ·g} = (−1)ᵏ dᵏ/dsᵏ L{g}` and the
+/// `1, e^{at}, sin, cos, Jₙ, Iₙ` table). `None` outside that fragment or on
+/// overflow. Modified-Bessel results use their usual convergence half-plane.
 ///
 /// ```
 /// use axeyum_cas::{CasExpr, laplace_transform, equal, ZeroTest};
@@ -11315,9 +11337,9 @@ pub fn laplace_transform(f: &CasExpr, t: &str, s: &str) -> Option<CasExpr> {
     }
 
     // Decompose the term into constant `c`, power `t^power`, an `exp(a·t)` **shift**
-    // (`L{e^{at}g}=G(s−a)`), and a transcendental base `g ∈ {1, sin, cos, Jₙ}`. The
-    // exp is always extracted as a shift, which subsumes `L{e^{at}} = 1/(s−a)` and
-    // enables `L{e^{at}·sin(bt)}` etc.
+    // (`L{e^{at}g}=G(s−a)`), and a transcendental base
+    // `g ∈ {1, sin, cos, Jₙ, Iₙ}`. The exp is always extracted as a shift, which
+    // subsumes `L{e^{at}} = 1/(s−a)` and enables `L{e^{at}·sin(bt)}` etc.
     let factors = flatten_mul(f); // flatten the left-nested `*` tree
     let mut coefficient = Rational::integer(1);
     let mut power = 0u32;
@@ -11341,7 +11363,10 @@ pub fn laplace_transform(f: &CasExpr, t: &str, s: &str) -> Option<CasExpr> {
                 shift = arg_poly[1];
                 shift_seen = true;
             }
-            CasExpr::Unary(UnaryFunc::Sin | UnaryFunc::Cos | UnaryFunc::BesselJ(_), _) => {
+            CasExpr::Unary(
+                UnaryFunc::Sin | UnaryFunc::Cos | UnaryFunc::BesselJ(_) | UnaryFunc::BesselI(_),
+                _,
+            ) => {
                 if base_seen {
                     return None; // more than one transform-table base — unsupported
                 }
@@ -11418,8 +11443,10 @@ pub fn laurent_series(f: &CasExpr, var: &str, order: usize) -> Option<CasExpr> {
 /// The **inverse Laplace transform** `L⁻¹{F}(t)`. Handles proper rational
 /// functions with simple/repeated rational real poles or irreducible-quadratic
 /// poles with rational damped frequency (including repeated powers through
-/// multiplicity seven), plus the exact Bessel pair
-/// `c/√((s−a)²+b²) ↦ c·e^{at}J₀(bt)` for rational `a`, `b`, and `c`.
+/// multiplicity seven), plus the exact Bessel pairs
+/// `c/√((s−a)²+b²) ↦ c·e^{at}J₀(bt)` and
+/// `c/√((s−a)²−b²) ↦ c·e^{at}I₀(bt)` for rational `a` and `c` and nonzero
+/// rational `b`.
 /// **Certified** by the round trip `L{result} = F` (via [`laplace_transform`] and
 /// the zero-test). Returns `None` for improper rational inputs, unsupported pole
 /// families, irrational frequencies, or resource overflow.
@@ -11434,7 +11461,9 @@ pub fn laurent_series(f: &CasExpr, var: &str, order: usize) -> Option<CasExpr> {
 /// ```
 #[must_use]
 pub fn inverse_laplace(f: &CasExpr, s: &str, t: &str) -> Option<CasExpr> {
-    if let Some(result) = inverse_laplace_bessel_j0(f, s, t) {
+    if let Some(result) =
+        inverse_laplace_bessel_j0(f, s, t).or_else(|| inverse_laplace_bessel_i0(f, s, t))
+    {
         return match equal(&laplace_transform(&result, t, s)?, f) {
             ZeroTest::Certified { equal: true, .. } => Some(result),
             _ => None,
@@ -11482,7 +11511,7 @@ pub fn inverse_laplace(f: &CasExpr, s: &str, t: &str) -> Option<CasExpr> {
 /// Extract the rational scale and quadratic radicand from a product spelling of
 /// `c/√q(s)`. Exactly one radical quotient is allowed; every other factor must be
 /// rational and constant.
-fn inverse_laplace_bessel_j0_parts(expr: &CasExpr) -> Option<(Rational, &CasExpr)> {
+fn inverse_laplace_bessel_radical_parts(expr: &CasExpr) -> Option<(Rational, &CasExpr)> {
     match expr {
         CasExpr::Div(numerator, denominator) => {
             let CasExpr::Const(scale) = numerator.as_ref() else {
@@ -11494,7 +11523,7 @@ fn inverse_laplace_bessel_j0_parts(expr: &CasExpr) -> Option<(Rational, &CasExpr
             Some((*scale, radicand))
         }
         CasExpr::Neg(inner) => {
-            let (scale, radicand) = inverse_laplace_bessel_j0_parts(inner)?;
+            let (scale, radicand) = inverse_laplace_bessel_radical_parts(inner)?;
             Some((scale.checked_neg()?, radicand))
         }
         CasExpr::Mul(factors) => {
@@ -11504,7 +11533,8 @@ fn inverse_laplace_bessel_j0_parts(expr: &CasExpr) -> Option<(Rational, &CasExpr
                 if let CasExpr::Const(value) = factor {
                     scale = scale.checked_mul(*value)?;
                 } else {
-                    let (factor_scale, factor_radicand) = inverse_laplace_bessel_j0_parts(factor)?;
+                    let (factor_scale, factor_radicand) =
+                        inverse_laplace_bessel_radical_parts(factor)?;
                     if radicand.is_some() {
                         return None;
                     }
@@ -11523,7 +11553,7 @@ fn inverse_laplace_bessel_j0_parts(expr: &CasExpr) -> Option<(Rational, &CasExpr
 /// parameter is rational and `lead` has a rational square root. The caller still
 /// requires the complete forward-transform equality certificate.
 fn inverse_laplace_bessel_j0(f: &CasExpr, s: &str, t: &str) -> Option<CasExpr> {
-    let (scale, radicand) = inverse_laplace_bessel_j0_parts(f)?;
+    let (scale, radicand) = inverse_laplace_bessel_radical_parts(f)?;
     if scale.is_zero() {
         return Some(CasExpr::zero());
     }
@@ -11539,6 +11569,48 @@ fn inverse_laplace_bessel_j0(f: &CasExpr, s: &str, t: &str) -> Option<CasExpr> {
         oscillation
     } else {
         scaled_term(alpha, tvar).exp() * oscillation
+    };
+    Some(scaled_term(coefficient, unscaled))
+}
+
+/// Invert the bounded modified-Bessel pair
+/// `c/√(lead·((s−alpha)²−beta²)) ↦ (c/√lead)e^{alpha·t}I₀(beta·t)` when every
+/// parameter is rational, `beta` is nonzero, and `lead` has a rational square
+/// root. The caller still requires the complete forward-transform equality
+/// certificate.
+fn inverse_laplace_bessel_i0(f: &CasExpr, s: &str, t: &str) -> Option<CasExpr> {
+    let (scale, radicand) = inverse_laplace_bessel_radical_parts(f)?;
+    if scale.is_zero() {
+        return Some(CasExpr::zero());
+    }
+    let quadratic = normalize(radicand)?.to_univariate(s)?;
+    if poly::rat_degree(&quadratic)? != 2 {
+        return None;
+    }
+    let lead = *quadratic.get(2)?;
+    let p_coeff = quadratic
+        .get(1)
+        .copied()
+        .unwrap_or_else(Rational::zero)
+        .checked_div(lead)?;
+    let q_coeff = quadratic
+        .first()
+        .copied()
+        .unwrap_or_else(Rational::zero)
+        .checked_div(lead)?;
+    let alpha = p_coeff.checked_div(Rational::integer(-2))?;
+    let beta_sq = alpha.checked_mul(alpha)?.checked_sub(q_coeff)?;
+    let beta = rational_sqrt(beta_sq)?;
+    if beta.is_zero() {
+        return None;
+    }
+    let coefficient = scale.checked_div(rational_sqrt(lead)?)?;
+    let tvar = CasExpr::var(t);
+    let growth = scaled_term(beta, tvar.clone()).bessel_i(0);
+    let unscaled = if alpha.is_zero() {
+        growth
+    } else {
+        scaled_term(alpha, tvar).exp() * growth
     };
     Some(scaled_term(coefficient, unscaled))
 }
@@ -20006,8 +20078,7 @@ mod tests {
             &(CasExpr::int(1) / (unit_quadratic.clone() * unit_quadratic.sqrt())),
         );
 
-        // Modified Bessel, irrational scales, and affine arguments retain honest declines.
-        assert!(laplace_transform(&t().bessel_i(0), "t", "s").is_none());
+        // Irrational scales and affine arguments retain honest declines.
         assert!(laplace_transform(&(CasExpr::int(2).sqrt() * t()).bessel_j(1), "t", "s").is_none());
         assert!(laplace_transform(&(t() + CasExpr::int(1)).bessel_j(1), "t", "s").is_none());
     }
@@ -20044,6 +20115,148 @@ mod tests {
                 );
             }
         }
+    }
+
+    #[test]
+    fn laplace_modified_bessel_i_orders_scaling_and_composition() {
+        let s = || v("s");
+        let t = || v("t");
+        let quadratic = |shift: i128, frequency_squared: Rational| {
+            (s() - CasExpr::int(shift)).pow(2) - CasExpr::Const(frequency_squared)
+        };
+
+        let unit_quadratic = quadratic(0, Rational::integer(1));
+        let unit_root = unit_quadratic.clone().sqrt();
+        assert_equal(
+            &laplace_transform(&t().bessel_i(0), "t", "s").expect("I0 transform"),
+            &(CasExpr::int(1) / unit_root.clone()),
+        );
+        assert_equal(
+            &laplace_transform(&t().bessel_i(1), "t", "s").expect("I1 transform"),
+            &((s() - unit_root.clone()) / unit_root.clone()),
+        );
+        let scaled_root = quadratic(0, Rational::integer(4)).sqrt();
+        assert_equal(
+            &laplace_transform(&(CasExpr::int(2) * t()).bessel_i(2), "t", "s")
+                .expect("scaled I2 transform"),
+            &(((s() - scaled_root.clone()) / CasExpr::int(2)).pow(2) / scaled_root),
+        );
+
+        let half = CasExpr::rat(1, 2);
+        let positive_i3 = laplace_transform(&(half.clone() * t()).bessel_i(3), "t", "s")
+            .expect("positive rational-scale I3 transform");
+        let negative_i3 = laplace_transform(&(-half * t()).bessel_i(3), "t", "s")
+            .expect("negative rational-scale I3 transform");
+        assert_equal(&negative_i3, &(-positive_i3));
+        assert_equal(
+            &laplace_transform(&CasExpr::zero().bessel_i(4), "t", "s")
+                .expect("positive-order modified Bessel at zero"),
+            &CasExpr::zero(),
+        );
+        assert_equal(
+            &laplace_transform(&CasExpr::zero().bessel_i(0), "t", "s").expect("I0(0) is one"),
+            &(CasExpr::int(1) / s()),
+        );
+        assert!(laplace_transform(&t().bessel_i(u32::MAX), "t", "s").is_some());
+
+        assert_equal(
+            &laplace_transform(&(t().exp() * t().bessel_i(0)), "t", "s")
+                .expect("shifted I0 transform"),
+            &(CasExpr::int(1) / quadratic(1, Rational::integer(1)).sqrt()),
+        );
+        assert_equal(
+            &laplace_transform(&(t() * t().bessel_i(1)), "t", "s")
+                .expect("polynomial-weighted I1 transform"),
+            &(CasExpr::int(1) / (unit_quadratic.clone() * unit_quadratic.sqrt())),
+        );
+
+        assert!(laplace_transform(&(CasExpr::int(2).sqrt() * t()).bessel_i(0), "t", "s").is_none());
+        assert!(laplace_transform(&(t() + CasExpr::int(1)).bessel_i(0), "t", "s").is_none());
+    }
+
+    #[test]
+    fn laplace_modified_bessel_i_order_family_replays_derivative_recurrence() {
+        let s = || v("s");
+        let t = || v("t");
+        for scale in [
+            Rational::integer(1),
+            Rational::integer(-2),
+            Rational::new(1, 2),
+        ] {
+            let transforms: Vec<CasExpr> = (0..=17)
+                .map(|order| {
+                    laplace_transform(&(CasExpr::Const(scale) * t()).bessel_i(order), "t", "s")
+                        .unwrap_or_else(|| panic!("missing I{order} transform at scale {scale:?}"))
+                })
+                .collect();
+
+            // d/dt I₀(bt)=bI₁(bt), I₀(0)=1 gives sF₀−bF₁=1.
+            assert_equal(
+                &(s() * transforms[0].clone() - CasExpr::Const(scale) * transforms[1].clone()),
+                &CasExpr::int(1),
+            );
+            // d/dt Iₙ(bt)=b(Iₙ₋₁+Iₙ₊₁)/2 and Iₙ(0)=0 for n>0.
+            for order in 1..=16 {
+                assert_equal(
+                    &(s() * transforms[order].clone()),
+                    &(CasExpr::Const(scale)
+                        * CasExpr::rat(1, 2)
+                        * (transforms[order - 1].clone() + transforms[order + 1].clone())),
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn inverse_laplace_modified_bessel_i0_pairs() {
+        let s = || v("s");
+        let t = || v("t");
+        let unit = CasExpr::int(1) / (s().pow(2) - CasExpr::int(1)).sqrt();
+        assert_equal(
+            &inverse_laplace(&unit, "s", "t").expect("inverse unit I0 pair"),
+            &t().bessel_i(0),
+        );
+        assert_equal(
+            &inverse_laplace(&(CasExpr::int(-3) * unit), "s", "t").expect("scaled inverse I0 pair"),
+            &(CasExpr::int(-3) * t().bessel_i(0)),
+        );
+
+        let shifted = CasExpr::int(1) / ((s() - CasExpr::int(1)).pow(2) - CasExpr::int(4)).sqrt();
+        assert_equal(
+            &inverse_laplace(&shifted, "s", "t").expect("shifted inverse I0 pair"),
+            &(t().exp() * (CasExpr::int(2) * t()).bessel_i(0)),
+        );
+        let rational =
+            CasExpr::int(1) / ((s() + CasExpr::int(2)).pow(2) - CasExpr::rat(1, 4)).sqrt();
+        assert_equal(
+            &inverse_laplace(&rational, "s", "t").expect("rational inverse I0 pair"),
+            &((CasExpr::int(-2) * t()).exp() * (CasExpr::rat(1, 2) * t()).bessel_i(0)),
+        );
+
+        assert!(
+            inverse_laplace(
+                &(CasExpr::int(1) / (s().pow(2) - CasExpr::int(2)).sqrt()),
+                "s",
+                "t"
+            )
+            .is_none()
+        );
+        assert!(
+            inverse_laplace(
+                &(CasExpr::int(1) / (CasExpr::int(2) * (s().pow(2) - CasExpr::int(1))).sqrt()),
+                "s",
+                "t"
+            )
+            .is_none()
+        );
+        assert!(
+            inverse_laplace(
+                &(CasExpr::int(1) / (s() - CasExpr::int(1)).pow(2).sqrt()),
+                "s",
+                "t"
+            )
+            .is_none()
+        );
     }
 
     #[test]

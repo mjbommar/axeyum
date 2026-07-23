@@ -13,14 +13,15 @@ elsewhere in `docs/plan/`). Read this file first when resuming.
   [multi-agent operations guide](../contributor-guide/multi-agent-operations.md):
   work only in the dedicated CAS worktree on an `agent/cas/*` branch, push that
   branch, and leave `main` to the integration owner. The current increment is
-  `agent/cas/arbitrary-order-bessel-laplace`, stacked on integration parent
-  `1f94605d`; do not rebase it onto `main` ahead of the integration owner.
-- **Tests:** `536` unit + `147` doctests, **all green**, warning-denied workspace
+  `agent/cas/modified-bessel-laplace`, stacked on `e837115a` (integrated into
+  `main` by `278668e1`); do not rebase it onto `main` ahead of the integration
+  owner.
+- **Tests:** `539` unit + `147` doctests, **all green**, warning-denied workspace
   all-target/all-feature Clippy-clean, strict stable/nightly rustdoc-green,
   wasm-green, links-green, and whitespace-clean.
 - **Source of truth for capabilities:** `docs/research/10-cas/README.md`
   (capability table) and `docs/research/10-cas/diary.md` (chronological entries;
-  latest is **Entry 37aee**). Keep both in sync when landing features.
+  latest is **Entry 37aef**). Keep both in sync when landing features.
 - **Method that works:** empirical **gap-probing** (below). It found every recent
   feature *and* a serious infinite-hang regression.
 
@@ -312,8 +313,33 @@ orders `0..=255`), and Stirling-composed raw moments (regressed for orders
   `sF₀+bF₁=1` and `sFₙ=(b/2)(Fₙ₋₁−Fₙ₊₁)` through order 17 at scales
   `1`, `−2`, and `1/2`; SymPy independently agrees for orders 0--3.
 - Modified Bessel `I₀`, irrational Bessel scale, and affine Bessel argument
-  retain explicit declines. No public expression head, operator, backend,
-  evidence format, or logic fragment changed, so no ADR is required.
+  retained explicit declines at that historical checkpoint. The modified-
+  Bessel gap is closed by the next increment; irrational and affine arguments
+  still decline. No public expression head, operator, backend, evidence format,
+  or logic fragment changed, so no ADR is required.
+
+**Arbitrary-order rational-scale/shift modified-Bessel-`Iₙ` Laplace and inverse `I₀`**
+- The handoff-ranked follow-up probe confirmed forward `I₀`, `I₁`, scaled
+  `I₂`, shifted `I₀`, polynomial-weighted `I₁`, and unit/shifted inverse `I₀`
+  all declined, while the arbitrary-order Bessel-J control remained green.
+- Laplace-transforming the integer-order NIST DLMF 10.32.3 integral
+  representation gives
+  `L{Iₙ(bt)}=((s−√(s²−b²))/b)ⁿ/√(s²−b²)` for nonzero exact rational `b` in
+  `Re(s)>|b|`. `laplace_base` now implements that form for every public order;
+  `b=0` returns `1/s` at order zero and zero at positive orders. One symbolic
+  power represents the order, so the full `u32` domain remains bounded.
+- Existing exponential shift and transform differentiation cover
+  `e^{at}Iₙ(bt)` and `t^kIₙ(bt)`. Independent exact replay checks
+  `sF₀−bF₁=1` and `sFₙ=(b/2)(Fₙ₋₁+Fₙ₊₁)` through order 17 at scales `1`,
+  `−2`, and `1/2`. SymPy independently agrees on representative orders 0--4.
+- `inverse_laplace` now recognizes exact rational square-root quadratics of
+  the form `c/√((s−a)²−b²)`, constructs `c·e^{at}I₀(bt)`, and retains the
+  existing mandatory public-forward-transform plus zero-test round trip.
+  Unit, signed-scale, shifted integer-frequency, and shifted half-frequency
+  pairs pass. Irrational forward scales, affine arguments, irrational inverse
+  frequencies, non-square leading scale, and zero-frequency branch-degenerate
+  radicals decline. No public expression head, operator, backend, evidence
+  format, or logic fragment changed, so no ADR is required.
 
 ---
 
@@ -567,17 +593,18 @@ semantics changed.
 
 Ordered roughly by value:
 
-1. **Modified-Bessel transform follow-up.** The latest broad probe measured
-   forward `I₀/I₁` and inverse `I₀` as the closest existing-head transform gap;
-   add only a bounded exact table with a checker/self-checking scenario, and
-   keep inverse `Jₙ` for `n>0` separate from this forward increment.
-2. **Resume broad, timeout-bounded gap probing.** The moment families now have
+1. **Resume broad, timeout-bounded gap probing.** The moment families now have
    explicit resource boundaries: direct order 256 needs `Γ(257)`, raw order 36
    needs public coefficients beyond `i128`, and repeated-quadratic inverse
    Laplace multiplicity 8 exceeds checked-`i128` normalization at
    `t⁷cos(βt)`. Extending these requires a deliberate resource/data-model
    decision rather than another local cancellation. Fixed-shift `r=8` remains
    a focused exact-growth candidate if a concrete use needs it.
+2. **Higher-order inverse Bessel forms.** Forward `Jₙ` and `Iₙ` are now exact
+   for every public order, but inverse square-root recognition deliberately
+   stops at `J₀`/`I₀`. Probe the explicit order-one forms first and retain the
+   mandatory full forward round trip; do not infer general inverse support from
+   the forward tables alone.
 3. **Alternating series** `∑(−1)ᵏ/k = −ln2`, `∑(−1)ᵏ/(2k+1)=π/4−…`, Dirichlet
    eta `η(s)`. **Blocked by the data model**: `(−1)ᵏ` has no clean real
    representation (`geometric_power(−1)` = `exp(k·ln(−1))`, complex `ln`). Would
@@ -638,9 +665,9 @@ esac
 export AXEYUM_CAS_TMP
 trap 'find "$AXEYUM_CAS_TMP" -depth -delete' EXIT
 git rev-parse --abbrev-ref HEAD        # → agent/cas/...
-git merge-base --is-ancestor 1f94605d HEAD
+git merge-base --is-ancestor e837115a HEAD
 CARGO_BUILD_JOBS=1 TMPDIR="$AXEYUM_CAS_TMP" cargo test -p axeyum-cas --jobs 1
-# → 536 unit + 147 doctests green
+# → 539 unit + 147 doctests green
 ```
 Then: read `docs/research/10-cas/diary.md` tail for the latest context, and pick
 up from §6 or resume the gap-probing loop. Push the green owned topic branch;
