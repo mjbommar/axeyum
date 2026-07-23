@@ -113,7 +113,12 @@ the direct stack probe passed, but the corrected nine-task control reached a
 under the exact 16 GiB limit. Cleanup left no selected root or process, so
 attempt 003 remains unconsumed and R4 adds zero credit. The immediate U2 path
 is therefore a new source-first larger-lane qualification with retained failed
-control evidence, not selected execution under R4.
+control evidence, not selected execution under R4. The preregistered
+[`R5 plan`](lean-u2-official-execution-tl0.6.3-m2-r5-attempt-003-plan-2026-07-23.md)
+selects one 32 GiB resource-only doubling and makes both control success and
+failure completion-grade evidence. It reuses selected attempt 003 only because
+R4 created no selected root/process; no R5 control or implementation exists at
+preregistration.
 
 ## 2. What the SMT-LIB comparison actually says
 

@@ -215,7 +215,10 @@ rejects the 16 GiB lane before selected discovery: stack propagation passed,
 but the corrected fanout hit thread creation at a 16,504,496,128-byte peak and
 was reaped. No selected root exists, attempt 003 remains unconsumed, and the
 next action is a new preregistered larger-lane qualification with retained
-failed-control evidence.
+failed-control evidence. The source-first
+[R5 plan](lean-u2-official-execution-tl0.6.3-m2-r5-attempt-003-plan-2026-07-23.md)
+now freezes 32 GiB and completion-grade control evidence while preserving the
+still-unconsumed selected attempt and every non-resource boundary.
 
 L0 exits when status is generated from evidence rather than hand-copied prose.
 
