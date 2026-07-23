@@ -380,7 +380,7 @@
     },
     {
       "path": "scripts/tests/test_lean_u2_official_execution_m2_r3.py",
-      "sha256": "451c91b6d1d70d924b4cdafbc65c139387ec5469ad064f58c6e9461cf8aa05b2"
+      "sha256": "123e17f452e53b5a88d7c6eb81ff3a6a1a0ef21a74d80162a628e5d2b57ea957"
     },
     {
       "path": "scripts/tests/test_lean_u2_official_execution_m2_r4.py",
