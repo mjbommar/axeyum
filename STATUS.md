@@ -383,6 +383,22 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-22 — exact order-two Bessel inverse Laplace pairs.** The sixth
+  timeout-bounded cross-area probe selected unit/shifted `J₂` and `I₂` inverse
+  transforms while order three remained a measured decline. Public inverse
+  dispatch now explicitly enumerates orders one and two through one private
+  recognizer that reconstructs a rational shift/frequency from a unique
+  quadratic radical and requires rational equivalence to the selected public
+  forward basis. The outer route independently repeats the full forward
+  transform and zero-test before returning. Positive/negative integer and half
+  frequencies, three shifts, both families, explicit closed-form fixtures, and
+  an outer scale pass; even order-two parity and the order-three/irrational/
+  malformed/multiple-root/zero-frequency boundaries are frozen. The thermally
+  managed 548-unit/147-doctest suite passed (1646.20 s for units), together with
+  workspace Clippy (2m14s), stable/nightly rustdoc, WASM, links, and whitespace.
+  Next: resume broad timeout-bounded probing; treat order three as a separate
+  bounded increment rather than inferring arbitrary inverse support.
+
 - **2026-07-22 — certified direct and weighted Bessel antiderivatives.** The
   rational-affine `J₁`/`I₁` pairs remain certified through `J₀′=−J₁` /
   `I₀′=I₁`; weighted `c·u·J₀(u)` / `c·u·I₀(u)` now add the exact
@@ -393,9 +409,7 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   that atom's exponent and introduces no `1/u` domain seam. Unit, scale, shift,
   reflection, symbolic-factor, recurrence, near-miss, FTC, and decline controls
   pass. The 547-unit/147-doctest suite passed (998.34 s for units), together with
-  workspace Clippy, stable/nightly rustdoc, WASM, links, and whitespace. Next:
-  resume broad timeout-bounded probing or measure explicit order-two inverse
-  Bessel forms through the mandatory forward round trip.
+  workspace Clippy, stable/nightly rustdoc, WASM, links, and whitespace.
 
 - **2026-07-22 — exact arbitrary-order Bessel Maclaurin series and zero
   limits.** The existing `series` compute path now composes every nonnegative
@@ -7927,6 +7941,10 @@ plan is built and committed on the current branch:
   R1/R2 history, a new run/evidence root, universal 512 MiB Lean runtime stacks
   from pinned source semantics, and the measured tiered artifact store. It
   authorizes one process only after separately pushed implementation gates.
+- **2026-07-22 — Added exact order-two Bessel inverse Laplace pairs.** Explicit
+  order-one/two dispatch, shared rational shift/frequency discovery, independent
+  public forward-round-trip certification, parity controls, and order-three
+  declines bring CAS to 548 units and 147 doctests.
 - **2026-07-22 — Added certified weighted order-zero Bessel antiderivatives.**
   Division-free, terminating order-one recurrence reduction closes rational-
   affine `uJ₀(u)` / `uI₀(u)` through the unchanged differentiate-and-check
