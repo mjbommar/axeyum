@@ -351,7 +351,8 @@ gate.
    contradictions and zero cross-solver disagreements remain, and the
    self-sealed JSON/Markdown reproduce from the three validated roots.
 3. **Credited full population — F1 and the complete process-free F2 preflight
-   implementation are integrated.** The
+   implementation are integrated; process-free result publication is
+   topic-ready.** The
    [full-population plan](../smtcomp-credited-full-population-plan-2026-07-23.md)
    freezes the same 45,905-file selection for all three solvers, a 96-shard/
    48-allocation wave schedule, six-worker aggregate/16-GiB-per-host resource envelope,
@@ -370,7 +371,12 @@ gate.
    sentinels and byte sidecars, safe outcomes, and a 30-minute publication
    window. The full batch landed by merge `1b8ae016`. Lean R7 is also integrated
    by merge `9fe5cab6`; live preparation remains blocked by out-of-lane bench/CAS
-   format drift. No host probe, sentinel, NAS preparation root, resource session,
+   format drift. Topic commits `e7c05374` and `d7c78371` add completion-last
+   external cell results and exact native/per-logic/pairwise/three-way
+   same-population comparison with interruption replay and rejecting mutations.
+   The [publication fixture](../smtcomp-credited-full-publication-fixture-2026-07-23.md)
+   records the boundary. It does not construct live F3 execution authority or
+   complete F4. No host probe, sentinel, NAS preparation root, resource session,
    allocation, or solver process was started.
 
 The same implementation rule continues to apply: prove each new mechanism and
@@ -433,6 +439,8 @@ Repository:
   `docs/plan/smtcomp-credited-full-population-f1-result-2026-07-23.md`;
 - credited full-population F2 preparation implementation result:
   `docs/plan/smtcomp-credited-full-preparation-f2-implementation-2026-07-23.md`;
+- credited full-population publication fixture:
+  `docs/plan/smtcomp-credited-full-publication-fixture-2026-07-23.md`;
 - candidate failure handoff:
   `docs/plan/smtcomp-full-library-candidate-run-handoff-2026-07-21.md`;
 - ranked gap plan: `docs/plan/full-library-gap-closing-plan-2026-07-22.md`;
@@ -477,7 +485,8 @@ NAS (shared, corpus read-only in practice):
    integrated. Its complete F2 process-free preparation mechanism, including
    explicit semantic host/sentinel preflight, is integrated by merge
    `1b8ae016`; no live root has been published. Revalidate the exact current
-   `origin/main`, require both registered gates to be green, then perform the
+   `origin/main`, integrate the process-free cell-result/comparison bytes,
+   require both registered gates to be green, then perform the
    separately reviewed host/sentinel capture and publish only a process-free
    `launch_authorized=false` root inside its frozen 30-minute window. Do not
    probe hosts, mutate the NAS, or launch a solver allocation while

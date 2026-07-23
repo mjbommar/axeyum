@@ -1,7 +1,8 @@
 # SMT-COMP credited full-population execution plan
 
-Status: preregistered design; fixture implementation, preparation, and execution
-not yet accepted
+Status: preregistered design; F1/F2 process-free mechanisms integrated through
+sealed preflight; publication fixtures implemented on the SMT topic; live F2,
+F3, and F4 not yet accepted
 Date: 2026-07-23
 Selection authority: [accepted S4 result](smtcomp-official-selection-final-s4-2026-07-22.md)
 Harness admission: [S5 result](smtcomp-harness-admission-s5-result-2026-07-23.md)
@@ -218,6 +219,12 @@ Before live preparation, tiny fixtures must prove:
   rejection; and
 - missing/reordered/duplicate/stale host or sentinel evidence, unsafe sentinel
   outcomes, and mutated sentinel input/output rejection.
+
+The process-free
+[publication fixture](smtcomp-credited-full-publication-fixture-2026-07-23.md)
+implements the remaining external-cell and same-population comparison boundary.
+It does not provide a live F2 preparation, construct F3 execution authority, or
+claim F4 results.
 
 ## Milestones and authorization
 
