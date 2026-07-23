@@ -618,9 +618,12 @@ state.
 > [diagnostic-closure implementation checkpoint](docs/plan/lean-u2-official-execution-tl0.6.3-m2-r5-diagnostic-closure-implementation-2026-07-23.md)
 > records pushed `08f23ee4`: portable/raw validation, exact 123/66/56/1
 > classification, completion-last zero-credit append, four focused tests, and
-> no process surface. Next push this documentation checkpoint, revalidate clean
-> remote equality, and append the diagnostic namespace once without launching
-> Lean;
+> no process surface. The
+> [diagnostic-closure result](docs/plan/lean-u2-official-execution-tl0.6.3-m2-r5-diagnostic-closure-result-2026-07-23.md)
+> now closes that append with 68 files / 149,513 bytes, completion
+> `2d5d43a7`, zero processes/outcomes, and unchanged invalid-attempt credit.
+> Next preregister attempt 004 with fresh roots and conditional failure-log
+> semantics before any selected execution;
 > then form native pairs. Do not rerun
 > the singleton for population credit. The
 > [complete-parity execution roadmap](docs/plan/lean4-complete-parity-roadmap-2026-07-22.md)

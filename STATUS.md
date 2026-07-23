@@ -709,8 +709,12 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   [diagnostic-closure implementation checkpoint](docs/plan/lean-u2-official-execution-tl0.6.3-m2-r5-diagnostic-closure-implementation-2026-07-23.md)
   records clean pushed `08f23ee4`: portable/raw validation, exact 123/66/56/1
   classification, completion-last zero-credit append, four focused tests, and
-  no process surface. Next push this documentation checkpoint, verify remote
-  equality, and append the diagnostic namespace once without launching Lean.
+  no process surface. The
+  [diagnostic-closure result](docs/plan/lean-u2-official-execution-tl0.6.3-m2-r5-diagnostic-closure-result-2026-07-23.md)
+  now records the 68-file / 149,513-byte completion-last append, completion
+  `2d5d43a7`, zero processes/outcomes, and unchanged invalid-attempt credit.
+  R5 is closed. Next preregister attempt 004 with fresh roots and conditional
+  failure-log semantics before any selected execution.
 
 - **2026-07-22 — TL0.6.3 M1 derives complete deterministic U2 child-shard
   scheduling with zero new outcomes or parity credit.** The source-first
@@ -8022,6 +8026,12 @@ plan is built and committed on the current branch:
 | P5.5 | External target, measured | **DONE (bounded v1, ADR-0323--0338):** authenticated Tock capture plus eight rechecked dual-DRAT proofs and six replayed controls, UNKNOWN=0, DISAGREE=0. Query time 12.700 s; fresh outer wall 50.745 s; peak RSS 1,256,496 KiB; zero OOM deltas. The committed case study compares exact target validation, universal coverage, trust, effort, artifact boundaries, and limits. No Tock bug was found, so no upstream issue is applicable. This is not a speed or whole-kernel claim. |
 
 ## Changelog
+
+- **2026-07-23 — Completed R5's process-free diagnostic closure.** From clean
+  remote-equal `836538af`, preparation revalidated the exact 123/66/56/1 split;
+  one append installed 68 files / 149,513 bytes and completion `2d5d43a7` last.
+  No process ran, all 64 rows remain diagnostic, and every outcome/parity field
+  remains zero. R5 is closed; attempt 004 requires a new source-first plan.
 
 - **2026-07-23 — Implemented and pushed the R5 zero-process diagnostic
   closure.** Commit `08f23ee4` validates the frozen all-pass attempt, binds the

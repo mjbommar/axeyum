@@ -228,7 +228,7 @@ class LeanCompleteParityTests(unittest.TestCase):
             population["residual"],
         )
         self.assertIn(
-            "The frozen 83-file root has all case records but no post/projection/completion",
+            "Its completed zero-process diagnostic closure binds 68 appended files",
             population["residual"],
         )
 
