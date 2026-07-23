@@ -383,6 +383,19 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-23 — credited SMT-COMP full-population F2 is implementation-ready,
+  not live-ready.** F1 and its supervised-wave executor are integrated. The SMT
+  preparation implementation is integrated by merge `502e8875`; it seals and
+  durably replays a process-free, completion-last F2 candidate with every
+  registered input under one attempt and with zero execution evidence. The
+  focused 28 tests and 115-test portable gate pass.
+  Next: wait for a green current `origin/main`—including the Lean R7
+  current-source identity implementation and out-of-lane formatting repair—then
+  rebase, run both exact readiness gates, perform the separately reviewed
+  host/sentinel checks, and publish only an empty `launch_authorized=false`
+  preparation. No host probe, NAS mutation, allocation, or solver launch is
+  authorized before that boundary.
+
 - **2026-07-23 — repaired SMT-COMP P0 v2 Axeyum runtime and process-free export
   closure are complete; cvc5 remains integration-gated.** The v1 Axeyum
   cell completed its 1,810 records but
@@ -8615,8 +8628,27 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
+- **2026-07-23 — Implemented the sealed process-free F2 preparation candidate;
+  no live preparation or execution occurred.** Current `origin/main` includes
+  the full F1 supervisor, readiness gate, and F2 preparation implementation by
+  merge `502e8875`. The mechanism requires all preparation inputs under one
+  attempt, validates a content-addressed staged runner bundle, binds executable
+  bytes to every run manifest, freezes the cvc5 and Bitwuzla preregistration
+  hashes, rejects any attempt/terminal/record/resource-session evidence,
+  inventories every candidate byte, and installs `complete.json` last with
+  `launch_authorized=false`. Readiness can be checked against the current tree
+  and durably replayed from its recorded Git objects.
+  Mutation coverage rejects repository, source, binary, selection, composition,
+  namespace, and execution-evidence drift. The focused 28 tests and 115-test SMT
+  gate pass with one expected live-host skip. Live F2 remains withheld: workspace
+  formatting is red in out-of-lane bench/CAS files, and the integrated Lean R7
+  plan has not yet landed its current-source identity implementation. No host
+  probe, sentinel, NAS root, resource session, allocation, or solver ran. See
+  the [F2 implementation result](docs/plan/smtcomp-credited-full-preparation-f2-implementation-2026-07-23.md).
+
 - **2026-07-23 — Completed the credited full-population F1 fixture
-  implementation; live preparation remains blocked.** The exact 45,905-row
+  implementation; it is integrated, while live preparation remains blocked.**
+  The exact 45,905-row
   three-solver population now has a 96-shard/48-initial/96-retry/16-wave
   process-free contract, three run/plan/schedule manifests, and 432 registered
   command manifests. Self-sealed checkpoints reject noncontiguous restart
@@ -8625,13 +8657,12 @@ plan is built and committed on the current branch:
   90 C stop, and 80 C cooldown; and the remote helper stops only the exact
   registered E3 systemd unit. The supervised fixture drains all started handles
   through terminals after pause, thermal stop, or partial launch failure and
-  withholds checkpoints on failure. The focused 25 tests and 112-test SMT gate
-  pass with one expected live-host skip; links and generated checks pass. The
-  final supervisor commit remains topic-only, and the existing out-of-lane
-  bench/CAS format drift plus Lean's stale `resume_fs.py` source pin still block
-  branch-wide `just check`, F2 live preparation, and every solver launch. The
-  latter is the exact one-hash `1968e7b6...` to `b05c3218...` drift already
-  assigned to the Lean lane; this result does not edit its self-sealed evidence.
+  withholds checkpoints on failure. The final supervisor landed by merge
+  `8dc788b5`; the later readiness gate landed by `e5b1921f`. The existing
+  out-of-lane bench/CAS format drift plus the pending Lean R7 current-source
+  identity implementation still block branch-wide `just check`, live F2
+  preparation, and every solver launch. This result does not edit Lean-owned
+  validators, tests, or evidence.
   See the
   [F1 result](docs/plan/smtcomp-credited-full-population-f1-result-2026-07-23.md).
 

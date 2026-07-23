@@ -44,7 +44,7 @@ from runner import run_solver
 
 PREPARATION_SCHEMA = "axeyum.smtcomp-repaired-p0-preparation.v1"
 CORPUS_SCHEMA = "axeyum.smtcomp-repaired-p0-corpus.v1"
-SENTINEL_SCHEMA = "axeyum.smtcomp-repaired-p0-sentinel.v1"
+SENTINEL_SCHEMA = "axeyum.smtcomp-incident-sentinel.v2"
 SAFE_ID = re.compile(r"[A-Za-z0-9][A-Za-z0-9_.-]{0,127}\Z")
 P0_LOGICS = frozenset({"QF_FP", "QF_BVFP", "QF_ABVFP", "QF_AUFLIA"})
 FP_LOGICS = frozenset({"QF_FP", "QF_BVFP", "QF_ABVFP"})
@@ -210,12 +210,14 @@ def _sentinel_outcome(
         command.extend(["--timeout-ms", str(solver.internal_timeout_ms)])
     environment = os.environ.copy()
     environment.update(SOLVER_ENVIRONMENT)
+    started_at_ns = time.time_ns()
     result = run_solver(
         command,
         wall_limit_s=20.0,
         mem_limit_bytes=8 * 1024**3,
         env=environment,
     )
+    ended_at_ns = time.time_ns()
     stem = f"{sentinel.sentinel_id}-{solver.solver_id}"
     stdout_path = output_dir / f"{stem}.stdout"
     stderr_path = output_dir / f"{stem}.stderr"
@@ -237,6 +239,8 @@ def _sentinel_outcome(
             "exit_code": result.exit_code,
             "signal": result.signal,
             "resource_limit_kind": result.resource_limit_kind,
+            "started_at_ns": started_at_ns,
+            "ended_at_ns": ended_at_ns,
             "wall_time_ns": round(result.scoring_wall_time * 1_000_000_000),
             "runner_elapsed_ns": round(result.runner_elapsed * 1_000_000_000),
             "stdout_path": str(stdout_path.resolve(strict=True)),

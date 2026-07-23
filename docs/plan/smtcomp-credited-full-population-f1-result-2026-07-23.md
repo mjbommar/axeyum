@@ -1,7 +1,7 @@
 # SMT-COMP credited full-population F1 fixture result
 
-Status: implementation complete on the SMT topic branch; integration and live
-process-free preparation not yet accepted
+Status: integrated on `origin/main`; live process-free preparation not yet
+accepted
 Date: 2026-07-23
 Plan: [credited full-population execution](smtcomp-credited-full-population-plan-2026-07-23.md)
 
@@ -43,7 +43,8 @@ flag and cannot satisfy the live 45,905-row preregistration gate.
 
 ## Mutation and interruption coverage
 
-The focused module has 25 tests. It rejects population count/list/manifest/order
+The focused module now has 28 tests across F1 and the process-free F2
+preparation boundary. It rejects population count/list/manifest/order
 drift, resource and topology drift, same-host or missing retries, missing or
 misbound thermal observations, stale observations, threshold and hysteresis
 mutations, noncontiguous checkpoints, failed checkpoint terminals, mutated
@@ -65,10 +66,10 @@ The following pass on the rebased SMT topic branch:
 
 ```text
 python3 -m unittest scripts.tests.test_smtcomp_full_population
-25 tests, OK
+28 tests, OK
 
 ./scripts/check-smtcomp-resume.sh
-112 tests, OK (one expected live-host skip)
+115 tests, OK (one expected live-host skip)
 runner/scoring/pipeline/selection/provenance checks, OK
 generated resume contract, selection authority, and repaired-P0 comparison, OK
 
@@ -79,12 +80,15 @@ all links ok
 `cargo fmt --all --check` still stops on the previously recorded out-of-lane
 bench/CAS formatting drift. The SMT lane did not edit or reformat those files.
 
-`just parity-docs` also reaches the already reported Lean cross-lane pin after
-all preceding stages pass. Its sole observed failure is
+The focused Lean store check still reaches the already reported cross-lane
+current-source identity failure. Its sole observed failure is
 `test_preregistered_source_identities_are_frozen`: the now-integrated SMT-owned
 `resume_fs.py` hashes to `b05c32185d75d579...`, while
-`lean_execution_store.py` still freezes `1968e7b6424c2dd9...`. This result does
-not hand-edit or regenerate Lean's historical/current self-sealed structure.
+the test still expects historical identity `1968e7b6424c2dd9...`. The integrated
+[Lean R7 plan](lean-complete-parity-current-source-identity-r7-plan-2026-07-23.md)
+correctly keeps historical evidence frozen and preregisters a distinct current
+source identity; its implementation has not yet landed. This result does not
+edit Lean-owned validators, tests, or evidence.
 
 Therefore branch-wide `just check` and live F2 preparation remain blocked on
 those two explicitly out-of-lane gates even though the SMT-specific fixture
@@ -92,12 +96,13 @@ gate is green.
 
 ## Integration and next authorization boundary
 
-The integrator has landed the F0 plan and F1 preparation/thermal primitives
-through `origin/main` commit `5e46d6cf`. The final supervised-wave commit is
-`25f93413` on `agent/smtcomp/full-library-resume` and still requires normal
-green-gated integration.
+The integrator landed the final supervised-wave implementation (`25f93413`) by
+merge `8dc788b5`. The later
+readiness gate (`bfb0cb87`, merged by `e5b1921f`) and F2 preparation mechanism
+(`ea9781c9`, merged by `502e8875`) are also integrated. Current `origin/main` is
+`502e8875`; F1 is no longer waiting on integration.
 
-After that integration, F2 may add the live adapter and publish one
+F2 may publish one live
 process-free `launch_authorized=false` preparation only when all of the
 following are simultaneously true:
 
@@ -112,3 +117,9 @@ following are simultaneously true:
    record.
 
 F1 does not authorize live preparation or execution.
+
+The process-free F2 completion candidate is implemented separately in the
+[F2 implementation result](smtcomp-credited-full-preparation-f2-implementation-2026-07-23.md).
+Its implementation bytes are integrated; this result document still requires
+normal green-gated integration. No live host probe, sentinel, NAS publication,
+or allocation launch has occurred.

@@ -82,6 +82,36 @@ own that drift.
 The three historical FP/AUFLIA incident sentinels from the repaired-P0 plan run
 again before publication. Any unsafe sentinel outcome rejects preparation.
 
+### F2 host and sentinel evidence contract
+
+The F2 completion must carry one separately sealed preflight record; hashes
+transitively embedded in run manifests are not sufficient. The record binds:
+
+- exactly three canonical host observations, in `s5`, `s6`, `s7` order, plus
+  the registrations reconstructed from those observations;
+- the exact environment manifest reproduced from those observations and the
+  same registrations present in every cell plan;
+- exactly eight sentinel observations in this order: QF_ABVFP on Axeyum, cvc5,
+  and Bitwuzla; QF_BVFP on the same three; then QF_AUFLIA on Axeyum and cvc5;
+- the exact staged solver binary, sentinel input, stdout, and stderr hashes;
+- monotonic start/end timestamps for every sentinel and one capture interval
+  enclosing all host and sentinel observations; and
+- a publication deadline no more than 30 minutes after the first captured
+  observation. Preparation after that deadline rejects and requires fresh
+  probes and sentinel runs.
+
+All staged binaries, sentinel inputs, sidecars, the environment manifest, and
+the preflight record live beneath the preparation attempt and enter its complete
+artifact ledger. Live QF_ABVFP and QF_BVFP rows require completed, exit-zero
+`unsat` from all three solvers. Live QF_AUFLIA requires completed, exit-zero
+`sat` from cvc5; Axeyum may only complete with `sat`/`unknown` or time out with
+no verdict. Any `unsat`, signal, resource termination, malformed identity,
+missing row, duplicate row, stale interval, or output mutation rejects.
+
+The completion schema advances before any live F2 publication. Historical
+repaired-P0 records remain immutable and are not rewritten; the reusable
+sentinel validator accepts only the new timestamped schema for F2.
+
 ## Resource and shard contract
 
 The run reuses the registered `s5`/`s6`/`s7` NFSv4.1 environment class with a
@@ -185,7 +215,9 @@ Before live preparation, tiny fixtures must prove:
 - exact-unit thermal stop without blanket process matching;
 - completion-last external results and complete 45,905-row accounting; and
 - stale source, plan, binary, environment, selection, and generated-artifact
-  rejection.
+  rejection; and
+- missing/reordered/duplicate/stale host or sentinel evidence, unsafe sentinel
+  outcomes, and mutated sentinel input/output rejection.
 
 ## Milestones and authorization
 
