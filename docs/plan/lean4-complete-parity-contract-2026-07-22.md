@@ -440,9 +440,13 @@ performance, population, axis, gate, or parity credit.
 
 The pushed [M2 execution plan](lean-u2-official-execution-tl0.6.3-m2-shard-0001-plan-2026-07-22.md)
 now selects the lowest-ordinal 64-case shard with no historical observation and
-freezes one local attempt. Its adapter is not implemented, and no harness,
-discovery, or process has run; it therefore changes none of the preceding
-counts or claims.
+freezes one local attempt. The pushed
+[offline implementation checkpoint](lean-u2-official-execution-tl0.6.3-m2-implementation-2026-07-22.md)
+records commit `9783ba93`: a pure fail-closed spec/harness/discovery/JUnit/
+artifact/credit contract with thirteen focused tests and deliberately no live
+execution command. No live harness discovery or process has run; it therefore
+changes none of the preceding outcome counts or claims. The launch/store runner
+remains a separate pre-attempt implementation checkpoint.
 
 ## 8. Layer-specific equivalence
 

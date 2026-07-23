@@ -52,7 +52,12 @@ reference multiplicities, not completed executions. All 111 attempts remain
 The separately pushed
 [`M2 plan`](lean-u2-official-execution-tl0.6.3-m2-shard-0001-plan-2026-07-22.md)
 selects the lowest-ordinal zero-history shard (64 cases) and freezes one local
-attempt, but its runner is not implemented and no harness or process has run.
+attempt. The pushed
+[`offline implementation checkpoint`](lean-u2-official-execution-tl0.6.3-m2-implementation-2026-07-22.md)
+records commit `9783ba93` and its exact spec/harness/discovery/JUnit/artifact/
+credit contract, with no live execution surface and zero outcome or terminal
+credit. The separate launch/store runner is not implemented, and no live
+harness discovery or process has run.
 
 ## 2. What the SMT-LIB comparison actually says
 

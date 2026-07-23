@@ -459,6 +459,8 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   source-first preregistered after R2 stopped before import.** The [M0 plan](docs/plan/lean-u2-official-execution-tl0.6.3-m0-plan-2026-07-22.md)
 - **2026-07-22 — TL0.6.3 M2 is preregistered for one fresh 64-case shard; no
   runner or process exists yet.** The source-first
+- **2026-07-22 — TL0.6.3 M2's pure 64-case execution contract is implemented
+  and pushed; no live runner or process exists yet.** The source-first
   [plan](docs/plan/lean-u2-official-execution-tl0.6.3-m2-shard-0001-plan-2026-07-22.md)
   was committed and pushed at `16bd6f08` before implementation, harness
   construction, discovery, or execution. It deterministically selects the
@@ -468,8 +470,19 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   identities, a one-hour 8 GiB per-process/one-worker local lane, one attempt,
   zero-or-64 conservative JUnit outcome publication, completion-last evidence,
   thirteen mutation classes, and zero parent/provider/Axeyum/pair/performance/
-  terminal credit. Next: implement and offline-validate the adapter, commit and
-  push it separately, then consider the single authorized live attempt.
+  terminal credit. The
+  [offline implementation checkpoint](docs/plan/lean-u2-official-execution-tl0.6.3-m2-implementation-2026-07-22.md)
+  records that commit `9783ba93` separately implements the exact pure contract
+  and pushes it at the same remote ref: frozen authority/shard
+  validation, all 64 normalized registrations, wrapper and CTest rendering,
+  strict discovery/JUnit projection, generated-artifact closure, and bounded
+  zero-terminal-credit result projection. Thirteen focused tests include
+  resealed semantic, order, count, property, skipped/disabled, terminal,
+  artifact, manifest, linkage, and source-drift mutations. The parity-docs
+  surface passes 258 tests with one intentional skip and every generator/check;
+  the M2 CLI has only offline `--check`. Next: implement and offline-validate
+  the separate launch/store runner, commit and push it, then consider the
+  single authorized live attempt.
 
 - **2026-07-22 — TL0.6.3 M1 derives complete deterministic U2 child-shard
   scheduling with zero new outcomes or parity credit.** The source-first
@@ -7974,6 +7987,16 @@ plan is built and committed on the current branch:
   their uncertified `Fpa2Bv` proof credit. The pathological 30-minute
   collection path and fail-closed panic disappear; the exact pinned Lean 4.30
   gate accepts the current 70/70 modules with zero skips and zero failures.
+- **2026-07-22 — Implemented and pushed TL0.6.3 M2's fail-closed offline
+  contract.** The
+  [checkpoint](docs/plan/lean-u2-official-execution-tl0.6.3-m2-implementation-2026-07-22.md)
+  records commit `9783ba93`, which binds the preregistered 64-case shard to exact
+  wrapper/CTest generation, discovery, JUnit, artifact, and result-projection
+  semantics; thirteen mutation-focused tests and both CI surfaces enforce it.
+  The complete-parity registry records `live_execution_surface=false`, zero
+  outcomes, and zero parity credit. No harness discovery or test process ran;
+  launch/store implementation remains a separately committed prerequisite.
+
 - **2026-07-22 — Preregistered TL0.6.3 M2's first fresh multi-case
   execution.** The pushed plan selects derived shard `0001` by the frozen
   lowest-ordinal zero-history rule, binds all 64 exact cases and the release
