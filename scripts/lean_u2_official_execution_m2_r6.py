@@ -47,6 +47,14 @@ CORRECTION_COMMIT = "8bb97f77828706382bad8ee933fe76179c00dca2"
 CORRECTION_PLAN_SHA256 = (
     "d5069a7cdcc139e18508f2db23b00b371866283a3b25d0bb8816e4642f999bde"
 )
+REPLAY_PLAN = ROOT / (
+    "docs/plan/lean-u2-official-execution-tl0.6.3-m2-r6-"
+    "completion-replay-r2-plan-2026-07-23.md"
+)
+REPLAY_PREREGISTRATION_COMMIT = "74b593aa3020be6d0d60df47696a1417dfa37fdc"
+REPLAY_PLAN_SHA256 = (
+    "7455f7d48982c1da1360061043f9a6377b9ba1c860aee1707aa3c96d29143565"
+)
 
 RUN_ID = "tl0.6.3-m2-release-linux-shard-0001-v5"
 ATTEMPT_ID = "attempt-004"
@@ -129,10 +137,13 @@ def validate_history() -> dict[str, Any]:
     if (
         not M2.HEX40.fullmatch(PREREGISTRATION_COMMIT)
         or not M2.HEX40.fullmatch(CORRECTION_COMMIT)
+        or not M2.HEX40.fullmatch(REPLAY_PREREGISTRATION_COMMIT)
         or not PLAN.is_file()
         or BASE.sha256_file(PLAN) != PLAN_SHA256
         or not CORRECTION_PLAN.is_file()
         or BASE.sha256_file(CORRECTION_PLAN) != CORRECTION_PLAN_SHA256
+        or not REPLAY_PLAN.is_file()
+        or BASE.sha256_file(REPLAY_PLAN) != REPLAY_PLAN_SHA256
         or not R5_RESULT.is_file()
         or BASE.sha256_file(R5_RESULT) != R5_RESULT_SHA256
         or completion["record_sha256"] != R5_COMPLETION_SHA256
@@ -386,8 +397,10 @@ def _completion_assurance(bundle: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def build_completion(root: Path) -> dict[str, Any]:
-    bundle = R3.validate_dependencies(root)
+def build_completion(
+    root: Path, *, allow_completion: bool = False
+) -> dict[str, Any]:
+    bundle = R3.validate_dependencies(root, allow_completion=allow_completion)
     dependencies = OLD_STORE.accepted_inventory(root, include_completion=False)
     return BASE.seal(
         {
@@ -426,7 +439,7 @@ def validate_complete_store(root: Path) -> dict[str, Any]:
     ):
         raise R6Error("missing, linked, or mutable R6 completion record")
     completion = BASE.load_canonical(path)
-    if completion != build_completion(root):
+    if completion != build_completion(root, allow_completion=True):
         raise R6Error("R6 completion dependency or credit drift")
     return completion
 

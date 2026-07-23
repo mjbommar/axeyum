@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 import copy
+import shutil
 import subprocess
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 from unittest import mock
@@ -170,6 +172,23 @@ class LeanU2OfficialExecutionM2R6Tests(unittest.TestCase):
             )
             self.assertEqual((len(retained), len(metadata), len(wrapper)), (66, 56, 1))
         self.assertEqual(M2.RUN_ID, original_run_id)
+
+    def test_completion_replay_is_explicit_exact_and_nonmutating(self) -> None:
+        expected = BASE.load_canonical(R6.DEFAULT_EVIDENCE_ROOT / "completion.json")
+        with tempfile.TemporaryDirectory(prefix="axeyum-r6-replay-") as temp:
+            root = Path(temp) / "evidence"
+            shutil.copytree(R6.DEFAULT_EVIDENCE_ROOT, root)
+            for path in root.rglob("*"):
+                if path.is_file():
+                    path.chmod(0o444)
+            before = R6.R3.R2_DIAGNOSTIC.portable_manifest(root)
+            with R6.r6_bindings():
+                with self.assertRaisesRegex(R6.R3.R3Error, "completion exists"):
+                    R6.build_completion(root)
+                completion = R6.validate_complete_store(root)
+            after = R6.R3.R2_DIAGNOSTIC.portable_manifest(root)
+        self.assertEqual(completion, expected)
+        self.assertEqual(before, after)
 
     def test_cli_offline_has_no_implicit_control_or_selected_execution(self) -> None:
         result = subprocess.run(
