@@ -320,9 +320,14 @@ Again, there are distinct targets:
   complete. TL0.6.3 is now partial through a
   [source-first M0 plan](plan/lean-u2-official-execution-tl0.6.3-m0-plan-2026-07-22.md)
   for the singleton `compile/534.lean` child shard of the exact release-tag
-  Linux-release selection. No M0 harness or test has run. A valid result may
-  create only one local official-case outcome, not parent-profile/provider,
-  Axeyum, pairing, performance, axis, gate, or parity credit.
+  Linux-release selection. [Attempt 001](plan/lean-u2-official-execution-tl0.6.3-m0-attempt-001-2026-07-22.md)
+  retained an exited-8 thread-creation failure and exact JUnit/CTest evidence,
+  but no case or completion: its supposed one-worker control did not reach the
+  Lean command-line shell. The [R1 plan](plan/lean-u2-official-execution-tl0.6.3-m0-r1-plan-2026-07-22.md)
+  freezes explicit shell `-j1` and the preset log closure before retry. Attempt
+  001 has zero outcomes. A valid R1 result may create only one local official-
+  case outcome, not parent-profile/provider, Axeyum, pairing, performance,
+  axis, gate, or parity credit.
 
 See the source-backed [kernel gap audit](prover-track/research/06-kernel-gap-analysis.md)
 and [proof reconstruction plan](plan/track-3-proof-lean/P3.7-lean-reconstruction.md),

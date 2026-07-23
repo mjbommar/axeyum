@@ -1,0 +1,22 @@
+Start testing: Jul 23 01:12 UTC
+----------------------------------------------------------
+1/1 Testing: compile/534.lean
+1/1 Test: compile/534.lean
+Command: "/usr/bin/bash" "/home/mjbommar/.cache/axeyum-tl063-m0-bc59fda5/source/tests/with_stage1_test_env.sh" "/home/mjbommar/.cache/axeyum-tl063-m0-bc59fda5/source/tests/compile/run_test.sh" "534.lean"
+Directory: /home/mjbommar/.cache/axeyum-tl063-m0-bc59fda5/source/tests/compile
+"compile/534.lean" start time: Jul 23 01:12 UTC
+Output:
+----------------------------------------------------------
+Compiling and executing lean file
+libc++abi: terminating due to uncaught exception of type lean::exception: failed to create thread
+run_test.sh: line 31: 3859141 Aborted                    (core dumped) lean --c="$1.c" "${TEST_LEAN_ARGS[@]}" "$1"
+TEST FAILED: Failed to compile 534.lean into 534.lean.c
+<end of output>
+Test time =   0.31 sec
+----------------------------------------------------------
+Test Failed.
+"compile/534.lean" end time: Jul 23 01:12 UTC
+"compile/534.lean" time elapsed: 00:00:00
+----------------------------------------------------------
+
+End testing: Jul 23 01:12 UTC
