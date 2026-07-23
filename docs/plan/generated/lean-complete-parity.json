@@ -36,7 +36,7 @@
     },
     {
       "path": "docs/plan/lean-complete-parity-v1.json",
-      "sha256": "bad1f324597175cca6a8e91e7fb52fc1d32e640df8d22eb32d014fb7b754b6ba"
+      "sha256": "26cf9c6de499a3488e335224f0aaa434ff539982fc8813ba77ac40b9dbb73b89"
     },
     {
       "path": "docs/plan/lean-execution-acceptance-tl0.7.4-2026-07-22.md",
@@ -68,7 +68,7 @@
     },
     {
       "path": "docs/plan/lean-system-implementation-plan-2026-07-21.md",
-      "sha256": "f49f4c60b37880c9de50979ed6fc9b6c91a3e0bfadf4dc674b53ded9cc9db46c"
+      "sha256": "2ea2d39f3aac086a00f961f60a15ee0b416036e5d2a12304968f944063ace86f"
     },
     {
       "path": "docs/plan/lean-u2-official-child-shards-v1.json",
@@ -128,7 +128,15 @@
     },
     {
       "path": "docs/plan/lean-u2-official-execution-tl0.6.3-m2-implementation-2026-07-22.md",
-      "sha256": "1362160340c24841ff771fb74c9e25dc12bd3e529312af73d92a5d03dac0e272"
+      "sha256": "ae1fcaa1125a390e2ceb1746d8c2b5f5e6afd1d51f5118ce0b240ad0e4daaa92"
+    },
+    {
+      "path": "docs/plan/lean-u2-official-execution-tl0.6.3-m2-r1-result-2026-07-22.md",
+      "sha256": "700e6789f3b1cf1620c006ee88b5ed71a54f1f95262c3eb5472a758aae028c9e"
+    },
+    {
+      "path": "docs/plan/lean-u2-official-execution-tl0.6.3-m2-r1-result-v1.json",
+      "sha256": "df5f95b9ee4f96e576119e7225eac98f0329a1eadbfd901703287627af852dd6"
     },
     {
       "path": "docs/plan/lean-u2-official-execution-tl0.6.3-m2-r1-symlink-preflight-implementation-2026-07-22.md",
@@ -148,11 +156,11 @@
     },
     {
       "path": "docs/plan/lean4-complete-parity-contract-2026-07-22.md",
-      "sha256": "e044fd7b6cf8cbff92af97fa459867d0b52446d46b7cb25e98c9c2fae36b4ed1"
+      "sha256": "672f83726ccb639f945d8623296aa4a09cb30d0b89b38ca344436b12ad641d0f"
     },
     {
       "path": "docs/plan/lean4-complete-parity-roadmap-2026-07-22.md",
-      "sha256": "b08099945f5d46cb0ba9d1d0f584bc8435609acb48292b5facb95974000bcd1f"
+      "sha256": "8bcc076b1495f1de0fdca584838657f4f8e04085772c77f8ed52c365aa0195ab"
     },
     {
       "path": "scripts/gen-lean-complete-parity.py",
@@ -212,7 +220,7 @@
     },
     {
       "path": "scripts/tests/test_lean_complete_parity.py",
-      "sha256": "e04de8b8aeab9ad9312759b55ec15fcf0fada1c6830f3c06a7256c52248547b9"
+      "sha256": "dbef8c8fe20b218aebd62b7d56c2c3d2162ef8d09c7c499d8cdcf71aa5554f52"
     },
     {
       "path": "scripts/tests/test_lean_execution_acceptance.py",
@@ -844,6 +852,14 @@
           "detail": "Pushed bounded R1 implementation with exact link and target identities, manifest-only lexical resolution, mutation coverage, and no new work root, harness, discovery, prelaunch, or process."
         },
         {
+          "path": "docs/plan/lean-u2-official-execution-tl0.6.3-m2-r1-result-v1.json",
+          "detail": "Exact invalid-attempt authority binding 83 read-only evidence files, one consumed process, 64 diagnostic JUnit rows, absent completion, and zero M2 outcome or shard credit."
+        },
+        {
+          "path": "docs/plan/lean-u2-official-execution-tl0.6.3-m2-r1-result-2026-07-22.md",
+          "detail": "Bounded R1 result, family-blind docparse artifact-closure diagnosis, observed thread-failure boundary, and explicit non-claims."
+        },
+        {
           "path": "docs/plan/lean-execution-evidence-v1.json",
           "detail": "TL0.7.1 contract authority for explicit resource lanes, typed terminations, immutable run/attempt/case/artifact/completion records, and zero real outcomes."
         },
@@ -912,7 +928,7 @@
           "detail": "Pinned tests tree inventory and the required CTest/test-pile derivation rule."
         }
       ],
-      "residual": "Current execution coverage is four process attempts and two decided official outcomes for one unique case from a 3,678-case parent: one environment-induced failure and one pass, with zero Axeyum outcomes or pairs. Attempt 003 stopped before runner import and adds no outcome. M1 partitions all eight official selections into five exact ordered memberships and 289 physical child shards, but every new shard and all 111 official attempts remain not run. M2 selects the lowest-ordinal zero-history 64-case shard under a one-hour 8 GiB/one-worker local lane and has a pushed fail-closed contract, completion store, and one-shot runner. Its first invocation stopped during selected-source preflight before any harness, discovery, prelaunch, or child process because the official compile-bench runner is a pinned symlink; therefore the process attempt remains unconsumed. The preregistered manifest-only R1 correction is implemented, tested, committed, and pushed with no new work root or live surface. Publish its documentation checkpoint, repeat exact read-only preflight from a fresh revision-named root, and only then reconsider the single process attempt. Then classify native surfaces and run matched Axeyum cases. Scheduling metadata and singleton retries do not increase population coverage."
+      "residual": "Current credited execution coverage remains two decided official outcomes for one unique case from a 3,678-case parent, with zero Axeyum outcomes or pairs. There are now five process attempts: four M0 attempts plus one M2 attempt. M1 partitions all eight official selections into five exact ordered memberships and 289 physical child shards, but every derived shard and all 111 official attempts remain incomplete. M2's corrected R1 runner passed preflight and ran the lowest-ordinal zero-history 64-case shard once. It retained exact 64-row JUnit with 30 passes and 34 failures, but a family-blind artifact rule demanded compile .c/.out products from docparse and stopped before post/projection/completion. Completion-last policy therefore grants zero M2 case or shard credit. Publish the exact 83-file invalid evidence and result before any source-first artifact correction or no-rerun evidence-recovery plan; R1 permits no retry. Then classify native surfaces and run matched Axeyum cases. Scheduling metadata, diagnostic rows, and retries do not increase population coverage."
     },
     {
       "id": "U3",

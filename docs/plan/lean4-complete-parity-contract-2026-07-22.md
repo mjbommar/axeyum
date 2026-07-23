@@ -461,7 +461,12 @@ a fresh work root, and no other execution or credit change before another
 read-only preflight. The separately pushed
 [R1 implementation checkpoint](lean-u2-official-execution-tl0.6.3-m2-r1-symlink-preflight-implementation-2026-07-22.md)
 records commit `9d5d40c8`, exact link/target binding, fifteen mutation
-variants, complete offline validation, and no new work root or live surface.
+variants, complete offline validation, and no new work root or live surface at
+that checkpoint. The subsequent
+[R1 result](lean-u2-official-execution-tl0.6.3-m2-r1-result-2026-07-22.md)
+retains one consumed process and exact 64-row JUnit (30 pass / 34 fail), but a
+family-blind docparse artifact rule stopped before post/projection/completion.
+All 64 rows remain diagnostic and M2 case/shard credit is zero.
 
 ## 8. Layer-specific equivalence
 

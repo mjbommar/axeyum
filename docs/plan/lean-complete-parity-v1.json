@@ -124,6 +124,14 @@
           "detail": "Pushed bounded R1 implementation with exact link and target identities, manifest-only lexical resolution, mutation coverage, and no new work root, harness, discovery, prelaunch, or process."
         },
         {
+          "path": "docs/plan/lean-u2-official-execution-tl0.6.3-m2-r1-result-v1.json",
+          "detail": "Exact invalid-attempt authority binding 83 read-only evidence files, one consumed process, 64 diagnostic JUnit rows, absent completion, and zero M2 outcome or shard credit."
+        },
+        {
+          "path": "docs/plan/lean-u2-official-execution-tl0.6.3-m2-r1-result-2026-07-22.md",
+          "detail": "Bounded R1 result, family-blind docparse artifact-closure diagnosis, observed thread-failure boundary, and explicit non-claims."
+        },
+        {
           "path": "docs/plan/lean-execution-evidence-v1.json",
           "detail": "TL0.7.1 contract authority for explicit resource lanes, typed terminations, immutable run/attempt/case/artifact/completion records, and zero real outcomes."
         },
@@ -192,7 +200,7 @@
           "detail": "Pinned tests tree inventory and the required CTest/test-pile derivation rule."
         }
       ],
-      "residual": "Current execution coverage is four process attempts and two decided official outcomes for one unique case from a 3,678-case parent: one environment-induced failure and one pass, with zero Axeyum outcomes or pairs. Attempt 003 stopped before runner import and adds no outcome. M1 partitions all eight official selections into five exact ordered memberships and 289 physical child shards, but every new shard and all 111 official attempts remain not run. M2 selects the lowest-ordinal zero-history 64-case shard under a one-hour 8 GiB/one-worker local lane and has a pushed fail-closed contract, completion store, and one-shot runner. Its first invocation stopped during selected-source preflight before any harness, discovery, prelaunch, or child process because the official compile-bench runner is a pinned symlink; therefore the process attempt remains unconsumed. The preregistered manifest-only R1 correction is implemented, tested, committed, and pushed with no new work root or live surface. Publish its documentation checkpoint, repeat exact read-only preflight from a fresh revision-named root, and only then reconsider the single process attempt. Then classify native surfaces and run matched Axeyum cases. Scheduling metadata and singleton retries do not increase population coverage."
+      "residual": "Current credited execution coverage remains two decided official outcomes for one unique case from a 3,678-case parent, with zero Axeyum outcomes or pairs. There are now five process attempts: four M0 attempts plus one M2 attempt. M1 partitions all eight official selections into five exact ordered memberships and 289 physical child shards, but every derived shard and all 111 official attempts remain incomplete. M2's corrected R1 runner passed preflight and ran the lowest-ordinal zero-history 64-case shard once. It retained exact 64-row JUnit with 30 passes and 34 failures, but a family-blind artifact rule demanded compile .c/.out products from docparse and stopped before post/projection/completion. Completion-last policy therefore grants zero M2 case or shard credit. Publish the exact 83-file invalid evidence and result before any source-first artifact correction or no-rerun evidence-recovery plan; R1 permits no retry. Then classify native surfaces and run matched Axeyum cases. Scheduling metadata, diagnostic rows, and retries do not increase population coverage."
     },
     {
       "id": "U3",

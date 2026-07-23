@@ -1,0 +1,754 @@
+Test project /home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/harness
+      Start  1: compile/uint_fold.lean
+ 1/64 Test  #1: compile/uint_fold.lean .........................   Passed    0.57 sec
+      Start  2: compile/unreachable.lean
+ 2/64 Test  #2: compile/unreachable.lean .......................   Passed    0.47 sec
+      Start  3: compile/uset.lean
+ 3/64 Test  #3: compile/uset.lean ..............................   Passed    0.48 sec
+      Start  4: compile/utf8Path.lean
+ 4/64 Test  #4: compile/utf8Path.lean ..........................   Passed    0.45 sec
+      Start  5: compile/wait_dedicated.lean
+ 5/64 Test  #5: compile/wait_dedicated.lean ....................   Passed    0.68 sec
+      Start  6: compile_bench/binarytrees.lean
+ 6/64 Test  #6: compile_bench/binarytrees.lean .................   Passed    1.55 sec
+      Start  7: compile_bench/binarytrees.st.lean
+ 7/64 Test  #7: compile_bench/binarytrees.st.lean ..............   Passed    1.58 sec
+      Start  8: compile_bench/channel.lean
+ 8/64 Test  #8: compile_bench/channel.lean .....................***Failed    0.72 sec
+Compiling and executing lean file
+++ ./channel.lean.out 4 1000
+/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/util.sh: line 94: 487604 Aborted                    (core dumped) "${@}" > "$CAPTURED.out.produced" 2>&1
+libc++abi: terminating due to uncaught exception of type lean::exception: failed to create thread
+[1m--- channel.lean.out.expected	2026-05-26 08:34:15.000000000 +0000[0m
+[1m+++ channel.lean.out.produced	2026-07-23 04:11:34.012241849 +0000[0m
+[36m@@ -1,14 +1 @@[0m
+[31m-measurement: bounded0_spsc ...[0m
+[31m-measurement: bounded0_mpsc ...[0m
+[31m-measurement: bounded0_mpmc ...[0m
+[31m-measurement: bounded1_spsc ...[0m
+[31m-measurement: bounded1_mpsc ...[0m
+[31m-measurement: bounded1_mpmc ...[0m
+[31m-measurement: boundedn_spsc ...[0m
+[31m-measurement: boundedn_mpsc ...[0m
+[31m-measurement: boundedn_mpmc ...[0m
+[31m-measurement: boundedn_seq ...[0m
+[31m-measurement: unbounded_spsc ...[0m
+[31m-measurement: unbounded_mpsc ...[0m
+[31m-measurement: unbounded_mpmc ...[0m
+[31m-measurement: unbounded_seq ...[0m
+[32m+libc++abi: terminating due to uncaught exception of type lean::exception: failed to create thread[0m
+TEST FAILED: Unexpected output
+
+      Start  9: compile_bench/const_fold.lean
+ 9/64 Test  #9: compile_bench/const_fold.lean ..................   Passed    0.77 sec
+      Start 10: compile_bench/deriv.lean
+10/64 Test #10: compile_bench/deriv.lean .......................   Passed    0.89 sec
+      Start 11: compile_bench/hashmap.lean
+11/64 Test #11: compile_bench/hashmap.lean .....................   Passed    2.04 sec
+      Start 12: compile_bench/identifier_completion.lean
+12/64 Test #12: compile_bench/identifier_completion.lean .......***Failed    0.36 sec
+Interpreting lean file
+++ lean -Dlinter.all=false -j1 --run identifier_completion.lean
+libc++abi: terminating due to uncaught exception of type lean::exception: failed to create thread
+uncaught exception: Expected JSON-RPC response, got: '{"error":{"code":-32902,"message":"Server process for file:///home/sebastian/lean4/tests/bench/identifier_completion.lean crashed, likely due to a stack overflow or a bug."},"id":1,"jsonrpc":"2.0"}'
+Watchdog error: Cannot read LSP message: Stream was closed
+[1m--- identifier_completion.lean.out.expected	2026-05-26 08:34:15.000000000 +0000[0m
+[1m+++ identifier_completion.lean.out.produced	2026-07-23 04:11:38.065456649 +0000[0m
+[36m@@ -1 +1,3 @@[0m
+[31m-measurement: completion ...[0m
+[32m+libc++abi: terminating due to uncaught exception of type lean::exception: failed to create thread[0m
+[32m+uncaught exception: Expected JSON-RPC response, got: '{"error":{"code":-32902,"message":"Server process for file:///home/sebastian/lean4/tests/bench/identifier_completion.lean crashed, likely due to a stack overflow or a bug."},"id":1,"jsonrpc":"2.0"}'[0m
+[32m+Watchdog error: Cannot read LSP message: Stream was closed[0m
+TEST FAILED: Unexpected output
+
+      Start 13: compile_bench/ilean_roundtrip.lean
+13/64 Test #13: compile_bench/ilean_roundtrip.lean .............   Passed    0.90 sec
+      Start 14: compile_bench/iterators.lean
+14/64 Test #14: compile_bench/iterators.lean ...................   Passed    2.80 sec
+      Start 15: compile_bench/liasolver.lean
+15/64 Test #15: compile_bench/liasolver.lean ...................   Passed    5.49 sec
+      Start 16: compile_bench/nat_repr.lean
+16/64 Test #16: compile_bench/nat_repr.lean ....................   Passed    0.54 sec
+      Start 17: compile_bench/parser.lean
+17/64 Test #17: compile_bench/parser.lean ......................   Passed    1.02 sec
+      Start 18: compile_bench/phashmap.lean
+18/64 Test #18: compile_bench/phashmap.lean ....................   Passed    1.77 sec
+      Start 19: compile_bench/qsort.lean
+19/64 Test #19: compile_bench/qsort.lean .......................   Passed    1.38 sec
+      Start 20: compile_bench/rbmap.lean
+20/64 Test #20: compile_bench/rbmap.lean .......................   Passed    1.29 sec
+      Start 21: compile_bench/rbmap_checkpoint.lean
+21/64 Test #21: compile_bench/rbmap_checkpoint.lean ............   Passed    1.35 sec
+      Start 22: compile_bench/rbmap_fbip.lean
+22/64 Test #22: compile_bench/rbmap_fbip.lean ..................   Passed    0.70 sec
+      Start 23: compile_bench/rbmap_library.lean
+23/64 Test #23: compile_bench/rbmap_library.lean ...............   Passed    0.85 sec
+      Start 24: compile_bench/server_startup.lean
+24/64 Test #24: compile_bench/server_startup.lean ..............   Passed    0.97 sec
+      Start 25: compile_bench/sigmaIterator.lean
+25/64 Test #25: compile_bench/sigmaIterator.lean ...............   Passed    0.90 sec
+      Start 26: compile_bench/treemap.lean
+26/64 Test #26: compile_bench/treemap.lean .....................   Passed    2.10 sec
+      Start 27: compile_bench/unionfind.lean
+27/64 Test #27: compile_bench/unionfind.lean ...................   Passed    1.63 sec
+      Start 28: compile_bench/watchdogRss.lean
+28/64 Test #28: compile_bench/watchdogRss.lean .................   Passed    4.41 sec
+      Start 29: compile_bench/workspaceSymbolsNewRanges.lean
+29/64 Test #29: compile_bench/workspaceSymbolsNewRanges.lean ...   Passed    3.27 sec
+      Start 30: docparse/arg_0001.txt
+30/64 Test #30: docparse/arg_0001.txt ..........................***Failed    0.25 sec
+++ lean -Dlinter.all=false --run run_test.lean arg_0001.txt
+/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/util.sh: line 94: 491011 Aborted                    (core dumped) "${@}" > "$CAPTURED.out.produced" 2>&1
+libc++abi: terminating due to uncaught exception of type lean::exception: failed to create thread
+[1m--- arg_0001.txt.out.expected	2026-05-26 08:34:15.000000000 +0000[0m
+[1m+++ arg_0001.txt.out.produced	2026-07-23 04:12:09.583943132 +0000[0m
+[36m@@ -1,4 +1 @@[0m
+[31m-Success! Final stack:[0m
+[31m-  (Lean.Doc.Syntax.anon[0m
+[31m-   (Lean.Doc.Syntax.arg_ident `x))[0m
+[31m-All input consumed.[0m
+\ No newline at end of file
+[32m+libc++abi: terminating due to uncaught exception of type lean::exception: failed to create thread[0m
+TEST FAILED: Unexpected output
+
+      Start 31: docparse/arg_0002.txt
+31/64 Test #31: docparse/arg_0002.txt ..........................***Failed    0.24 sec
+++ lean -Dlinter.all=false --run run_test.lean arg_0002.txt
+/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/util.sh: line 94: 491027 Aborted                    (core dumped) "${@}" > "$CAPTURED.out.produced" 2>&1
+libc++abi: terminating due to uncaught exception of type lean::exception: failed to create thread
+[1m--- arg_0002.txt.out.expected	2026-05-26 08:34:15.000000000 +0000[0m
+[1m+++ arg_0002.txt.out.produced	2026-07-23 04:12:09.836943082 +0000[0m
+[36m@@ -1,6 +1 @@[0m
+[31m-Success! Final stack:[0m
+[31m-  (Lean.Doc.Syntax.named_no_paren[0m
+[31m-   `x[0m
+[31m-   ":="[0m
+[31m-   (Lean.Doc.Syntax.arg_num (num "1")))[0m
+[31m-All input consumed.[0m
+\ No newline at end of file
+[32m+libc++abi: terminating due to uncaught exception of type lean::exception: failed to create thread[0m
+TEST FAILED: Unexpected output
+
+      Start 32: docparse/arg_0003.txt
+32/64 Test #32: docparse/arg_0003.txt ..........................***Failed    0.26 sec
+++ lean -Dlinter.all=false --run run_test.lean arg_0003.txt
+/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/util.sh: line 94: 491044 Aborted                    (core dumped) "${@}" > "$CAPTURED.out.produced" 2>&1
+libc++abi: terminating due to uncaught exception of type lean::exception: failed to create thread
+[1m--- arg_0003.txt.out.expected	2026-05-26 08:34:15.000000000 +0000[0m
+[1m+++ arg_0003.txt.out.produced	2026-07-23 04:12:10.089943031 +0000[0m
+[36m@@ -1,8 +1 @@[0m
+[31m-Success! Final stack:[0m
+[31m-  (Lean.Doc.Syntax.named[0m
+[31m-   "("[0m
+[31m-   `x[0m
+[31m-   ":="[0m
+[31m-   (Lean.Doc.Syntax.arg_num (num "1"))[0m
+[31m-   ")")[0m
+[31m-All input consumed.[0m
+\ No newline at end of file
+[32m+libc++abi: terminating due to uncaught exception of type lean::exception: failed to create thread[0m
+TEST FAILED: Unexpected output
+
+      Start 33: docparse/arg_0004.txt
+33/64 Test #33: docparse/arg_0004.txt ..........................***Failed    0.23 sec
+++ lean -Dlinter.all=false --run run_test.lean arg_0004.txt
+/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/util.sh: line 94: 491094 Aborted                    (core dumped) "${@}" > "$CAPTURED.out.produced" 2>&1
+libc++abi: terminating due to uncaught exception of type lean::exception: failed to create thread
+[1m--- arg_0004.txt.out.expected	2026-05-26 08:34:15.000000000 +0000[0m
+[1m+++ arg_0004.txt.out.produced	2026-07-23 04:12:10.329942983 +0000[0m
+[36m@@ -1,4 +1 @@[0m
+[31m-Failure @0 (⟨1, 0⟩): expected '(', '+', '-', expected identifier, string, or number or token[0m
+[31m-Final stack:[0m
+[31m-  <missing>[0m
+[31m-Remaining: "\n(x:=1)"[0m
+\ No newline at end of file
+[32m+libc++abi: terminating due to uncaught exception of type lean::exception: failed to create thread[0m
+TEST FAILED: Unexpected output
+
+      Start 34: docparse/arg_0005.txt
+34/64 Test #34: docparse/arg_0005.txt ..........................***Failed    0.25 sec
+++ lean -Dlinter.all=false --run run_test.lean arg_0005.txt
+/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/util.sh: line 94: 491110 Aborted                    (core dumped) "${@}" > "$CAPTURED.out.produced" 2>&1
+libc++abi: terminating due to uncaught exception of type lean::exception: failed to create thread
+[1m--- arg_0005.txt.out.expected	2026-05-26 08:34:15.000000000 +0000[0m
+[1m+++ arg_0005.txt.out.produced	2026-07-23 04:12:10.565942936 +0000[0m
+[36m@@ -1,3 +1 @@[0m
+[31m-Success! Final stack:[0m
+[31m-  (Lean.Doc.Syntax.flag_on "+" `foo)[0m
+[31m-All input consumed.[0m
+\ No newline at end of file
+[32m+libc++abi: terminating due to uncaught exception of type lean::exception: failed to create thread[0m
+TEST FAILED: Unexpected output
+
+      Start 35: docparse/arg_0006.txt
+35/64 Test #35: docparse/arg_0006.txt ..........................   Passed    0.29 sec
+      Start 36: docparse/arg_0007.txt
+36/64 Test #36: docparse/arg_0007.txt ..........................***Failed    0.25 sec
+++ lean -Dlinter.all=false --run run_test.lean arg_0007.txt
+/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/util.sh: line 94: 491165 Aborted                    (core dumped) "${@}" > "$CAPTURED.out.produced" 2>&1
+libc++abi: terminating due to uncaught exception of type lean::exception: failed to create thread
+[1m--- arg_0007.txt.out.expected	2026-05-26 08:34:15.000000000 +0000[0m
+[1m+++ arg_0007.txt.out.produced	2026-07-23 04:12:11.104942828 +0000[0m
+[36m@@ -1,4 +1 @@[0m
+[31m-Failure @2 (⟨1, 2⟩): expected no space before[0m
+[31m-Final stack:[0m
+[31m-  (Lean.Doc.Syntax.flag_off "-" `other)[0m
+[31m-Remaining: "other"[0m
+\ No newline at end of file
+[32m+libc++abi: terminating due to uncaught exception of type lean::exception: failed to create thread[0m
+TEST FAILED: Unexpected output
+
+      Start 37: docparse/arg_0008.txt
+37/64 Test #37: docparse/arg_0008.txt ..........................***Failed    0.23 sec
+++ lean -Dlinter.all=false --run run_test.lean arg_0008.txt
+/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/util.sh: line 94: 491201 Aborted                    (core dumped) "${@}" > "$CAPTURED.out.produced" 2>&1
+libc++abi: terminating due to uncaught exception of type lean::exception: failed to create thread
+[1m--- arg_0008.txt.out.expected	2026-05-26 08:34:15.000000000 +0000[0m
+[1m+++ arg_0008.txt.out.produced	2026-07-23 04:12:11.351942779 +0000[0m
+[36m@@ -1,9 +1 @@[0m
+[31m-Success! Final stack:[0m
+[31m-  (Lean.Doc.Syntax.named[0m
+[31m-   "("[0m
+[31m-   `x[0m
+[31m-   ":="[0m
+[31m-   (Lean.Doc.Syntax.arg_num (num "1"))[0m
+[31m-   ")")[0m
+[31m-Remaining:[0m
+[31m-"\n"[0m
+\ No newline at end of file
+[32m+libc++abi: terminating due to uncaught exception of type lean::exception: failed to create thread[0m
+TEST FAILED: Unexpected output
+
+      Start 38: docparse/arg_0009.txt
+38/64 Test #38: docparse/arg_0009.txt ..........................***Failed    0.24 sec
+++ lean -Dlinter.all=false --run run_test.lean arg_0009.txt
+/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/util.sh: line 94: 491218 Aborted                    (core dumped) "${@}" > "$CAPTURED.out.produced" 2>&1
+libc++abi: terminating due to uncaught exception of type lean::exception: failed to create thread
+[1m--- arg_0009.txt.out.expected	2026-05-26 08:34:15.000000000 +0000[0m
+[1m+++ arg_0009.txt.out.produced	2026-07-23 04:12:11.585942732 +0000[0m
+[36m@@ -1,6 +1 @@[0m
+[31m-Success! Final stack:[0m
+[31m-  (Lean.Doc.Syntax.named_no_paren[0m
+[31m-   `x[0m
+[31m-   ":="[0m
+[31m-   (Lean.Doc.Syntax.arg_ident `y))[0m
+[31m-All input consumed.[0m
+\ No newline at end of file
+[32m+libc++abi: terminating due to uncaught exception of type lean::exception: failed to create thread[0m
+TEST FAILED: Unexpected output
+
+      Start 39: docparse/arg_0010.txt
+39/64 Test #39: docparse/arg_0010.txt ..........................***Failed    0.25 sec
+++ lean -Dlinter.all=false --run run_test.lean arg_0010.txt
+/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/util.sh: line 94: 491235 Aborted                    (core dumped) "${@}" > "$CAPTURED.out.produced" 2>&1
+libc++abi: terminating due to uncaught exception of type lean::exception: failed to create thread
+[1m--- arg_0010.txt.out.expected	2026-05-26 08:34:15.000000000 +0000[0m
+[1m+++ arg_0010.txt.out.produced	2026-07-23 04:12:11.826942684 +0000[0m
+[36m@@ -1,8 +1 @@[0m
+[31m-Success! Final stack:[0m
+[31m-  (Lean.Doc.Syntax.named[0m
+[31m-   "("[0m
+[31m-   `x[0m
+[31m-   ":="[0m
+[31m-   (Lean.Doc.Syntax.arg_ident `y)[0m
+[31m-   ")")[0m
+[31m-All input consumed.[0m
+\ No newline at end of file
+[32m+libc++abi: terminating due to uncaught exception of type lean::exception: failed to create thread[0m
+TEST FAILED: Unexpected output
+
+      Start 40: docparse/arg_0011.txt
+40/64 Test #40: docparse/arg_0011.txt ..........................***Failed    0.24 sec
+++ lean -Dlinter.all=false --run run_test.lean arg_0011.txt
+/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/util.sh: line 94: 491251 Aborted                    (core dumped) "${@}" > "$CAPTURED.out.produced" 2>&1
+libc++abi: terminating due to uncaught exception of type lean::exception: failed to create thread
+[1m--- arg_0011.txt.out.expected	2026-05-26 08:34:15.000000000 +0000[0m
+[1m+++ arg_0011.txt.out.produced	2026-07-23 04:12:12.077942634 +0000[0m
+[36m@@ -1,6 +1 @@[0m
+[31m-Success! Final stack:[0m
+[31m-  (Lean.Doc.Syntax.named_no_paren[0m
+[31m-   `x[0m
+[31m-   ":="[0m
+[31m-   (Lean.Doc.Syntax.arg_str (str "\"y\"")))[0m
+[31m-All input consumed.[0m
+\ No newline at end of file
+[32m+libc++abi: terminating due to uncaught exception of type lean::exception: failed to create thread[0m
+TEST FAILED: Unexpected output
+
+      Start 41: docparse/arg_0012.txt
+41/64 Test #41: docparse/arg_0012.txt ..........................***Failed    0.24 sec
+++ lean -Dlinter.all=false --run run_test.lean arg_0012.txt
+/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/util.sh: line 94: 491290 Aborted                    (core dumped) "${@}" > "$CAPTURED.out.produced" 2>&1
+libc++abi: terminating due to uncaught exception of type lean::exception: failed to create thread
+[1m--- arg_0012.txt.out.expected	2026-05-26 08:34:15.000000000 +0000[0m
+[1m+++ arg_0012.txt.out.produced	2026-07-23 04:12:12.320942585 +0000[0m
+[36m@@ -1,7 +1 @@[0m
+[31m-Failure @3 (⟨1, 3⟩): unterminated string literal[0m
+[31m-Final stack:[0m
+[31m- • `x[0m
+[31m- • ":="[0m
+[31m- • (Lean.Doc.Syntax.arg_str <missing>)[0m
+[31m-[0m
+[31m-Remaining: "\"y"[0m
+\ No newline at end of file
+[32m+libc++abi: terminating due to uncaught exception of type lean::exception: failed to create thread[0m
+TEST FAILED: Unexpected output
+
+      Start 42: docparse/arg_0013.txt
+42/64 Test #42: docparse/arg_0013.txt ..........................***Failed    0.23 sec
+++ lean -Dlinter.all=false --run run_test.lean arg_0013.txt
+/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/util.sh: line 94: 491307 Aborted                    (core dumped) "${@}" > "$CAPTURED.out.produced" 2>&1
+libc++abi: terminating due to uncaught exception of type lean::exception: failed to create thread
+[1m--- arg_0013.txt.out.expected	2026-05-26 08:34:15.000000000 +0000[0m
+[1m+++ arg_0013.txt.out.produced	2026-07-23 04:12:12.556942538 +0000[0m
+[36m@@ -1,13 +1 @@[0m
+[31m-2 failures:[0m
+[31m-  @7 (⟨1, 7⟩): expected ')'[0m
+[31m-    ""[0m
+[31m-  @7 (⟨1, 7⟩): unterminated string literal[0m
+[31m-    ""[0m
+[31m-[0m
+[31m-Final stack:[0m
+[31m-  (Lean.Doc.Syntax.named[0m
+[31m-   "("[0m
+[31m-   `x[0m
+[31m-   ":="[0m
+[31m-   (Lean.Doc.Syntax.arg_str <missing>)[0m
+[31m-   <missing>)[0m
+\ No newline at end of file
+[32m+libc++abi: terminating due to uncaught exception of type lean::exception: failed to create thread[0m
+TEST FAILED: Unexpected output
+
+      Start 43: docparse/arg_0014.txt
+43/64 Test #43: docparse/arg_0014.txt ..........................***Failed    0.24 sec
+++ lean -Dlinter.all=false --run run_test.lean arg_0014.txt
+/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/util.sh: line 94: 491329 Aborted                    (core dumped) "${@}" > "$CAPTURED.out.produced" 2>&1
+libc++abi: terminating due to uncaught exception of type lean::exception: failed to create thread
+[1m--- arg_0014.txt.out.expected	2026-05-26 08:34:15.000000000 +0000[0m
+[1m+++ arg_0014.txt.out.produced	2026-07-23 04:12:12.796942490 +0000[0m
+[36m@@ -1,4 +1 @@[0m
+[31m-Success! Final stack:[0m
+[31m-  (Lean.Doc.Syntax.anon[0m
+[31m-   (Lean.Doc.Syntax.arg_num (num "42")))[0m
+[31m-All input consumed.[0m
+\ No newline at end of file
+[32m+libc++abi: terminating due to uncaught exception of type lean::exception: failed to create thread[0m
+TEST FAILED: Unexpected output
+
+      Start 44: docparse/arg_0015.txt
+44/64 Test #44: docparse/arg_0015.txt ..........................***Failed    0.25 sec
+++ lean -Dlinter.all=false --run run_test.lean arg_0015.txt
+/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/util.sh: line 94: 491346 Aborted                    (core dumped) "${@}" > "$CAPTURED.out.produced" 2>&1
+libc++abi: terminating due to uncaught exception of type lean::exception: failed to create thread
+[1m--- arg_0015.txt.out.expected	2026-05-26 08:34:15.000000000 +0000[0m
+[1m+++ arg_0015.txt.out.produced	2026-07-23 04:12:13.044942441 +0000[0m
+[36m@@ -1,17 +1 @@[0m
+[31m-4 failures:[0m
+[31m-  @4 (⟨1, 4⟩): expected ')'[0m
+[31m-    ""[0m
+[31m-  @4 (⟨1, 4⟩): expected ':='[0m
+[31m-    ""[0m
+[31m-  @4 (⟨1, 4⟩): expected token[0m
+[31m-    ""[0m
+[31m-  @4 (⟨1, 4⟩): unexpected end of input[0m
+[31m-    ""[0m
+[31m-[0m
+[31m-Final stack:[0m
+[31m-  (Lean.Doc.Syntax.named[0m
+[31m-   "("[0m
+[31m-   <missing>[0m
+[31m-   <missing>[0m
+[31m-   <missing>[0m
+[31m-   <missing>)[0m
+\ No newline at end of file
+[32m+libc++abi: terminating due to uncaught exception of type lean::exception: failed to create thread[0m
+TEST FAILED: Unexpected output
+
+      Start 45: docparse/arg_0016.txt
+45/64 Test #45: docparse/arg_0016.txt ..........................   Passed    0.31 sec
+      Start 46: docparse/arg_0017.txt
+46/64 Test #46: docparse/arg_0017.txt ..........................***Failed    0.25 sec
+++ lean -Dlinter.all=false --run run_test.lean arg_0017.txt
+/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/util.sh: line 94: 491432 Aborted                    (core dumped) "${@}" > "$CAPTURED.out.produced" 2>&1
+libc++abi: terminating due to uncaught exception of type lean::exception: failed to create thread
+[1m--- arg_0017.txt.out.expected	2026-05-26 08:34:15.000000000 +0000[0m
+[1m+++ arg_0017.txt.out.produced	2026-07-23 04:12:13.608942328 +0000[0m
+[36m@@ -1,9 +1 @@[0m
+[31m-Failure @8 (⟨1, 8⟩): expected ')'[0m
+[31m-Final stack:[0m
+[31m-  (Lean.Doc.Syntax.named[0m
+[31m-   "("[0m
+[31m-   `x[0m
+[31m-   ":="[0m
+[31m-   (Lean.Doc.Syntax.arg_num (num "42"))[0m
+[31m-   <missing>)[0m
+[31m-Remaining: "\n)"[0m
+\ No newline at end of file
+[32m+libc++abi: terminating due to uncaught exception of type lean::exception: failed to create thread[0m
+TEST FAILED: Unexpected output
+
+      Start 47: docparse/arg_0018.txt
+47/64 Test #47: docparse/arg_0018.txt ..........................***Failed    0.25 sec
+++ lean -Dlinter.all=false --run run_test.lean arg_0018.txt
+/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/util.sh: line 94: 491471 Aborted                    (core dumped) "${@}" > "$CAPTURED.out.produced" 2>&1
+libc++abi: terminating due to uncaught exception of type lean::exception: failed to create thread
+[1m--- arg_0018.txt.out.expected	2026-05-26 08:34:15.000000000 +0000[0m
+[1m+++ arg_0018.txt.out.produced	2026-07-23 04:12:13.847942280 +0000[0m
+[36m@@ -1,9 +1 @@[0m
+[31m-Failure @8 (⟨1, 8⟩): expected ')'[0m
+[31m-Final stack:[0m
+[31m-  (Lean.Doc.Syntax.named[0m
+[31m-   "("[0m
+[31m-   `x[0m
+[31m-   ":="[0m
+[31m-   (Lean.Doc.Syntax.arg_num (num "42"))[0m
+[31m-   <missing>)[0m
+[31m-Remaining: "\na"[0m
+\ No newline at end of file
+[32m+libc++abi: terminating due to uncaught exception of type lean::exception: failed to create thread[0m
+TEST FAILED: Unexpected output
+
+      Start 48: docparse/arg_val_0001.txt
+48/64 Test #48: docparse/arg_val_0001.txt ......................***Failed    0.24 sec
+++ lean -Dlinter.all=false --run run_test.lean arg_val_0001.txt
+/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/util.sh: line 94: 491508 Aborted                    (core dumped) "${@}" > "$CAPTURED.out.produced" 2>&1
+libc++abi: terminating due to uncaught exception of type lean::exception: failed to create thread
+[1m--- arg_val_0001.txt.out.expected	2026-05-26 08:34:15.000000000 +0000[0m
+[1m+++ arg_val_0001.txt.out.produced	2026-07-23 04:12:14.097942231 +0000[0m
+[36m@@ -1,4 +1 @@[0m
+[31m-Success! Final stack:[0m
+[31m-  (Lean.Doc.Syntax.anon[0m
+[31m-   (Lean.Doc.Syntax.arg_num (num "1")))[0m
+[31m-All input consumed.[0m
+\ No newline at end of file
+[32m+libc++abi: terminating due to uncaught exception of type lean::exception: failed to create thread[0m
+TEST FAILED: Unexpected output
+
+      Start 49: docparse/arg_val_0002.txt
+49/64 Test #49: docparse/arg_val_0002.txt ......................***Failed    0.24 sec
+++ lean -Dlinter.all=false --run run_test.lean arg_val_0002.txt
+/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/util.sh: line 94: 491554 Aborted                    (core dumped) "${@}" > "$CAPTURED.out.produced" 2>&1
+libc++abi: terminating due to uncaught exception of type lean::exception: failed to create thread
+[1m--- arg_val_0002.txt.out.expected	2026-05-26 08:34:15.000000000 +0000[0m
+[1m+++ arg_val_0002.txt.out.produced	2026-07-23 04:12:14.342942181 +0000[0m
+[36m@@ -1,4 +1 @@[0m
+[31m-Success! Final stack:[0m
+[31m-  (Lean.Doc.Syntax.anon[0m
+[31m-   (Lean.Doc.Syntax.arg_num (num "3")))[0m
+[31m-All input consumed.[0m
+\ No newline at end of file
+[32m+libc++abi: terminating due to uncaught exception of type lean::exception: failed to create thread[0m
+TEST FAILED: Unexpected output
+
+      Start 50: docparse/arg_val_0003.txt
+50/64 Test #50: docparse/arg_val_0003.txt ......................***Failed    0.23 sec
+++ lean -Dlinter.all=false --run run_test.lean arg_val_0003.txt
+/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/util.sh: line 94: 491586 Aborted                    (core dumped) "${@}" > "$CAPTURED.out.produced" 2>&1
+libc++abi: terminating due to uncaught exception of type lean::exception: failed to create thread
+[1m--- arg_val_0003.txt.out.expected	2026-05-26 08:34:15.000000000 +0000[0m
+[1m+++ arg_val_0003.txt.out.produced	2026-07-23 04:12:14.582299834 +0000[0m
+[36m@@ -1,4 +1 @@[0m
+[31m-Failure @0 (⟨1, 0⟩): unexpected end of input; expected '(', '+' or '-'[0m
+[31m-Final stack:[0m
+[31m-  <missing>[0m
+[31m-Remaining: ""[0m
+\ No newline at end of file
+[32m+libc++abi: terminating due to uncaught exception of type lean::exception: failed to create thread[0m
+TEST FAILED: Unexpected output
+
+      Start 51: docparse/arg_val_0004.txt
+51/64 Test #51: docparse/arg_val_0004.txt ......................***Failed    0.23 sec
+++ lean -Dlinter.all=false --run run_test.lean arg_val_0004.txt
+/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/util.sh: line 94: 491624 Aborted                    (core dumped) "${@}" > "$CAPTURED.out.produced" 2>&1
+libc++abi: terminating due to uncaught exception of type lean::exception: failed to create thread
+[1m--- arg_val_0004.txt.out.expected	2026-05-26 08:34:15.000000000 +0000[0m
+[1m+++ arg_val_0004.txt.out.produced	2026-07-23 04:12:14.811942088 +0000[0m
+[36m@@ -1,5 +1 @@[0m
+[31m-Success! Final stack:[0m
+[31m-  (Lean.Doc.Syntax.anon[0m
+[31m-   (Lean.Doc.Syntax.arg_str[0m
+[31m-    (str "\"a b c\t d\"")))[0m
+[31m-All input consumed.[0m
+\ No newline at end of file
+[32m+libc++abi: terminating due to uncaught exception of type lean::exception: failed to create thread[0m
+TEST FAILED: Unexpected output
+
+      Start 52: docparse/arg_val_0005.txt
+52/64 Test #52: docparse/arg_val_0005.txt ......................***Failed    0.37 sec
+++ lean -Dlinter.all=false --run run_test.lean arg_val_0005.txt
+/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/util.sh: line 94: 491653 Aborted                    (core dumped) "${@}" > "$CAPTURED.out.produced" 2>&1
+libc++abi: terminating due to uncaught exception of type lean::exception: failed to create thread
+[1m--- arg_val_0005.txt.out.expected	2026-05-26 08:34:15.000000000 +0000[0m
+[1m+++ arg_val_0005.txt.out.produced	2026-07-23 04:12:15.172942016 +0000[0m
+[36m@@ -1,6 +1 @@[0m
+[31m-Success! Final stack:[0m
+[31m-  (Lean.Doc.Syntax.anon[0m
+[31m-   (Lean.Doc.Syntax.arg_str[0m
+[31m-    (str "\"a b c\t d\"")))[0m
+[31m-Remaining:[0m
+[31m-"\n"[0m
+\ No newline at end of file
+[32m+libc++abi: terminating due to uncaught exception of type lean::exception: failed to create thread[0m
+TEST FAILED: Unexpected output
+
+      Start 53: docparse/arg_val_0006.txt
+53/64 Test #53: docparse/arg_val_0006.txt ......................***Failed    0.25 sec
+++ lean -Dlinter.all=false --run run_test.lean arg_val_0006.txt
+/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/util.sh: line 94: 491717 Aborted                    (core dumped) "${@}" > "$CAPTURED.out.produced" 2>&1
+libc++abi: terminating due to uncaught exception of type lean::exception: failed to create thread
+[1m--- arg_val_0006.txt.out.expected	2026-05-26 08:34:15.000000000 +0000[0m
+[1m+++ arg_val_0006.txt.out.produced	2026-07-23 04:12:15.427941965 +0000[0m
+[36m@@ -1,5 +1 @@[0m
+[31m-Success! Final stack:[0m
+[31m-  (Lean.Doc.Syntax.anon[0m
+[31m-   (Lean.Doc.Syntax.arg_num (num "43")))[0m
+[31m-Remaining:[0m
+[31m-"\n\"foo\""[0m
+\ No newline at end of file
+[32m+libc++abi: terminating due to uncaught exception of type lean::exception: failed to create thread[0m
+TEST FAILED: Unexpected output
+
+      Start 54: docparse/arg_val_0007.txt
+54/64 Test #54: docparse/arg_val_0007.txt ......................***Failed    0.24 sec
+++ lean -Dlinter.all=false --run run_test.lean arg_val_0007.txt
+/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/util.sh: line 94: 491750 Aborted                    (core dumped) "${@}" > "$CAPTURED.out.produced" 2>&1
+libc++abi: terminating due to uncaught exception of type lean::exception: failed to create thread
+[1m--- arg_val_0007.txt.out.expected	2026-05-26 08:34:15.000000000 +0000[0m
+[1m+++ arg_val_0007.txt.out.produced	2026-07-23 04:12:15.679941915 +0000[0m
+[36m@@ -1,4 +1 @@[0m
+[31m-Failure @0 (⟨1, 0⟩): unterminated string literal; expected '(', '+', '-' or token[0m
+[31m-Final stack:[0m
+[31m-  (Lean.Doc.Syntax.arg_str <missing>)[0m
+[31m-Remaining: "\"foo"[0m
+\ No newline at end of file
+[32m+libc++abi: terminating due to uncaught exception of type lean::exception: failed to create thread[0m
+TEST FAILED: Unexpected output
+
+      Start 55: docparse/args_0001.txt
+55/64 Test #55: docparse/args_0001.txt .........................   Passed    0.31 sec
+      Start 56: docparse/args_0002.txt
+56/64 Test #56: docparse/args_0002.txt .........................***Failed    0.26 sec
+++ lean -Dlinter.all=false --run run_test.lean args_0002.txt
+/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/util.sh: line 94: 491853 Aborted                    (core dumped) "${@}" > "$CAPTURED.out.produced" 2>&1
+libc++abi: terminating due to uncaught exception of type lean::exception: failed to create thread
+[1m--- args_0002.txt.out.expected	2026-05-26 08:34:15.000000000 +0000[0m
+[1m+++ args_0002.txt.out.produced	2026-07-23 04:12:16.241941802 +0000[0m
+[36m@@ -1,9 +1 @@[0m
+[31m-Success! Final stack:[0m
+[31m-  [(Lean.Doc.Syntax.named_no_paren[0m
+[31m-    `dialect[0m
+[31m-    ":="[0m
+[31m-    (Lean.Doc.Syntax.arg_str (str "\"chicken\"")))[0m
+[31m-   (Lean.Doc.Syntax.anon[0m
+[31m-    (Lean.Doc.Syntax.arg_num (num "43")))][0m
+[31m-Remaining:[0m
+[31m-"\nfoo"[0m
+\ No newline at end of file
+[32m+libc++abi: terminating due to uncaught exception of type lean::exception: failed to create thread[0m
+TEST FAILED: Unexpected output
+
+      Start 57: docparse/args_0003.txt
+57/64 Test #57: docparse/args_0003.txt .........................***Failed    0.24 sec
+++ lean -Dlinter.all=false --run run_test.lean args_0003.txt
+/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/util.sh: line 94: 491883 Aborted                    (core dumped) "${@}" > "$CAPTURED.out.produced" 2>&1
+libc++abi: terminating due to uncaught exception of type lean::exception: failed to create thread
+[1m--- args_0003.txt.out.expected	2026-05-26 08:34:15.000000000 +0000[0m
+[1m+++ args_0003.txt.out.produced	2026-07-23 04:12:16.494941751 +0000[0m
+[36m@@ -1,9 +1 @@[0m
+[31m-Success! Final stack:[0m
+[31m-  [(Lean.Doc.Syntax.named_no_paren[0m
+[31m-    `dialect[0m
+[31m-    ":="[0m
+[31m-    (Lean.Doc.Syntax.arg_str (str "\"chicken\"")))[0m
+[31m-   (Lean.Doc.Syntax.anon[0m
+[31m-    (Lean.Doc.Syntax.arg_num (num "43")))][0m
+[31m-Remaining:[0m
+[31m-"\n(foo)"[0m
+\ No newline at end of file
+[32m+libc++abi: terminating due to uncaught exception of type lean::exception: failed to create thread[0m
+TEST FAILED: Unexpected output
+
+      Start 58: docparse/blockOpener_0001.txt
+58/64 Test #58: docparse/blockOpener_0001.txt ..................***Failed    0.24 sec
+++ lean -Dlinter.all=false --run run_test.lean blockOpener_0001.txt
+/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/util.sh: line 94: 491913 Aborted                    (core dumped) "${@}" > "$CAPTURED.out.produced" 2>&1
+libc++abi: terminating due to uncaught exception of type lean::exception: failed to create thread
+[1m--- blockOpener_0001.txt.out.expected	2026-05-26 08:34:15.000000000 +0000[0m
+[1m+++ blockOpener_0001.txt.out.produced	2026-07-23 04:12:16.732941704 +0000[0m
+[36m@@ -1,4 +1 @@[0m
+[31m-Success! Final stack:[0m
+[31m- empty[0m
+[31m-Remaining:[0m
+[31m-"abc"[0m
+\ No newline at end of file
+[32m+libc++abi: terminating due to uncaught exception of type lean::exception: failed to create thread[0m
+TEST FAILED: Unexpected output
+
+      Start 59: docparse/blockOpener_0002.txt
+59/64 Test #59: docparse/blockOpener_0002.txt ..................***Failed    0.24 sec
+++ lean -Dlinter.all=false --run run_test.lean blockOpener_0002.txt
+/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/util.sh: line 94: 491937 Aborted                    (core dumped) "${@}" > "$CAPTURED.out.produced" 2>&1
+libc++abi: terminating due to uncaught exception of type lean::exception: failed to create thread
+[1m--- blockOpener_0002.txt.out.expected	2026-05-26 08:34:15.000000000 +0000[0m
+[1m+++ blockOpener_0002.txt.out.produced	2026-07-23 04:12:16.973941656 +0000[0m
+[36m@@ -1,4 +1 @@[0m
+[31m-Success! Final stack:[0m
+[31m- empty[0m
+[31m-Remaining:[0m
+[31m-"abc"[0m
+\ No newline at end of file
+[32m+libc++abi: terminating due to uncaught exception of type lean::exception: failed to create thread[0m
+TEST FAILED: Unexpected output
+
+      Start 60: docparse/blockOpener_0003.txt
+60/64 Test #60: docparse/blockOpener_0003.txt ..................***Failed    0.22 sec
+++ lean -Dlinter.all=false --run run_test.lean blockOpener_0003.txt
+/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/util.sh: line 94: 491999 Aborted                    (core dumped) "${@}" > "$CAPTURED.out.produced" 2>&1
+libc++abi: terminating due to uncaught exception of type lean::exception: failed to create thread
+[1m--- blockOpener_0003.txt.out.expected	2026-05-26 08:34:15.000000000 +0000[0m
+[1m+++ blockOpener_0003.txt.out.produced	2026-07-23 04:12:17.204941610 +0000[0m
+[36m@@ -1,4 +1 @@[0m
+[31m-Success! Final stack:[0m
+[31m- empty[0m
+[31m-Remaining:[0m
+[31m-"abc"[0m
+\ No newline at end of file
+[32m+libc++abi: terminating due to uncaught exception of type lean::exception: failed to create thread[0m
+TEST FAILED: Unexpected output
+
+      Start 61: docparse/block_0001.txt
+61/64 Test #61: docparse/block_0001.txt ........................***Failed    0.22 sec
+++ lean -Dlinter.all=false --run run_test.lean block_0001.txt
+/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/util.sh: line 94: 492032 Aborted                    (core dumped) "${@}" > "$CAPTURED.out.produced" 2>&1
+libc++abi: terminating due to uncaught exception of type lean::exception: failed to create thread
+[1m--- block_0001.txt.out.expected	2026-05-26 08:34:15.000000000 +0000[0m
+[1m+++ block_0001.txt.out.produced	2026-07-23 04:12:17.427941565 +0000[0m
+[36m@@ -1,36 +1 @@[0m
+[31m-Success! Final stack:[0m
+[31m-  (Lean.Doc.Syntax.ul[0m
+[31m-   "ul{"[0m
+[31m-   [(Lean.Doc.Syntax.li[0m
+[31m-     "*"[0m
+[31m-     [(Lean.Doc.Syntax.para[0m
+[31m-       "para{"[0m
+[31m-       [(Lean.Doc.Syntax.text[0m
+[31m-         (str "\"Here's a bullet\""))][0m
+[31m-       "}")])[0m
+[31m-    (Lean.Doc.Syntax.li[0m
+[31m-     "*"[0m
+[31m-     [(Lean.Doc.Syntax.para[0m
+[31m-       "para{"[0m
+[31m-       [(Lean.Doc.Syntax.text[0m
+[31m-         (str[0m
+[31m-          "\"and another with some code in it\""))][0m
+[31m-       "}")[0m
+[31m-      (Lean.Doc.Syntax.codeblock[0m
+[31m-       "````"[0m
+[31m-       [`lean []][0m
+[31m-       "\n"[0m
+[31m-       (str "\"hey\\n\\nthere\\n\"")[0m
+[31m-       "````")])[0m
+[31m-    (Lean.Doc.Syntax.li[0m
+[31m-     "*"[0m
+[31m-     [(Lean.Doc.Syntax.para[0m
+[31m-       "para{"[0m
+[31m-       [(Lean.Doc.Syntax.text[0m
+[31m-         (str "\"and another one\""))[0m
+[31m-        (Lean.Doc.Syntax.linebreak[0m
+[31m-         "line!"[0m
+[31m-         (str "\"\\n\""))][0m
+[31m-       "}")])][0m
+[31m-   "}")[0m
+[31m-All input consumed.[0m
+\ No newline at end of file
+[32m+libc++abi: terminating due to uncaught exception of type lean::exception: failed to create thread[0m
+TEST FAILED: Unexpected output
+
+      Start 62: docparse/block_0002.txt
+62/64 Test #62: docparse/block_0002.txt ........................***Failed    0.24 sec
+++ lean -Dlinter.all=false --run run_test.lean block_0002.txt
+/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/util.sh: line 94: 492059 Aborted                    (core dumped) "${@}" > "$CAPTURED.out.produced" 2>&1
+libc++abi: terminating due to uncaught exception of type lean::exception: failed to create thread
+[1m--- block_0002.txt.out.expected	2026-05-26 08:34:15.000000000 +0000[0m
+[1m+++ block_0002.txt.out.produced	2026-07-23 04:12:17.667941517 +0000[0m
+[36m@@ -1,4 +1 @@[0m
+[31m-Success! Final stack:[0m
+[31m-  (Lean.Doc.Syntax.command "{" `test [] "}")[0m
+[31m-Remaining:[0m
+[31m-"Here's a paragraph."[0m
+\ No newline at end of file
+[32m+libc++abi: terminating due to uncaught exception of type lean::exception: failed to create thread[0m
+TEST FAILED: Unexpected output
+
+      Start 63: docparse/block_0003.txt
+63/64 Test #63: docparse/block_0003.txt ........................***Failed    0.24 sec
+++ lean -Dlinter.all=false --run run_test.lean block_0003.txt
+/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/util.sh: line 94: 492086 Aborted                    (core dumped) "${@}" > "$CAPTURED.out.produced" 2>&1
+libc++abi: terminating due to uncaught exception of type lean::exception: failed to create thread
+[1m--- block_0003.txt.out.expected	2026-05-26 08:34:15.000000000 +0000[0m
+[1m+++ block_0003.txt.out.produced	2026-07-23 04:12:17.904941470 +0000[0m
+[36m@@ -1,4 +1 @@[0m
+[31m-Success! Final stack:[0m
+[31m-  (Lean.Doc.Syntax.command "{" `test [] "}")[0m
+[31m-Remaining:[0m
+[31m-" Here's a paragraph."[0m
+\ No newline at end of file
+[32m+libc++abi: terminating due to uncaught exception of type lean::exception: failed to create thread[0m
+TEST FAILED: Unexpected output
+
+      Start 64: docparse/block_0004.txt
+64/64 Test #64: docparse/block_0004.txt ........................***Failed    0.25 sec
+++ lean -Dlinter.all=false --run run_test.lean block_0004.txt
+/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/util.sh: line 94: 492115 Aborted                    (core dumped) "${@}" > "$CAPTURED.out.produced" 2>&1
+libc++abi: terminating due to uncaught exception of type lean::exception: failed to create thread
+[1m--- block_0004.txt.out.expected	2026-05-26 08:34:15.000000000 +0000[0m
+[1m+++ block_0004.txt.out.produced	2026-07-23 04:12:18.151941421 +0000[0m
+[36m@@ -1,4 +1 @@[0m
+[31m-Success! Final stack:[0m
+[31m-  (Lean.Doc.Syntax.command "{" `test [] "}")[0m
+[31m-Remaining:[0m
+[31m-" Here's a paragraph."[0m
+\ No newline at end of file
+[32m+libc++abi: terminating due to uncaught exception of type lean::exception: failed to create thread[0m
+TEST FAILED: Unexpected output
+
+
+47% tests passed, 34 tests failed out of 64
+
+Total Test time (real) =  50.73 sec
+
+The following tests FAILED:
+	  8 - compile_bench/channel.lean (Failed)
+	 12 - compile_bench/identifier_completion.lean (Failed)
+	 30 - docparse/arg_0001.txt (Failed)
+	 31 - docparse/arg_0002.txt (Failed)
+	 32 - docparse/arg_0003.txt (Failed)
+	 33 - docparse/arg_0004.txt (Failed)
+	 34 - docparse/arg_0005.txt (Failed)
+	 36 - docparse/arg_0007.txt (Failed)
+	 37 - docparse/arg_0008.txt (Failed)
+	 38 - docparse/arg_0009.txt (Failed)
+	 39 - docparse/arg_0010.txt (Failed)
+	 40 - docparse/arg_0011.txt (Failed)
+	 41 - docparse/arg_0012.txt (Failed)
+	 42 - docparse/arg_0013.txt (Failed)
+	 43 - docparse/arg_0014.txt (Failed)
+	 44 - docparse/arg_0015.txt (Failed)
+	 46 - docparse/arg_0017.txt (Failed)
+	 47 - docparse/arg_0018.txt (Failed)
+	 48 - docparse/arg_val_0001.txt (Failed)
+	 49 - docparse/arg_val_0002.txt (Failed)
+	 50 - docparse/arg_val_0003.txt (Failed)
+	 51 - docparse/arg_val_0004.txt (Failed)
+	 52 - docparse/arg_val_0005.txt (Failed)
+	 53 - docparse/arg_val_0006.txt (Failed)
+	 54 - docparse/arg_val_0007.txt (Failed)
+	 56 - docparse/args_0002.txt (Failed)
+	 57 - docparse/args_0003.txt (Failed)
+	 58 - docparse/blockOpener_0001.txt (Failed)
+	 59 - docparse/blockOpener_0002.txt (Failed)
+	 60 - docparse/blockOpener_0003.txt (Failed)
+	 61 - docparse/block_0001.txt (Failed)
+	 62 - docparse/block_0002.txt (Failed)
+	 63 - docparse/block_0003.txt (Failed)
+	 64 - docparse/block_0004.txt (Failed)

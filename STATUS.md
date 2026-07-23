@@ -432,9 +432,15 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   [R1 implementation checkpoint](docs/plan/lean-u2-official-execution-tl0.6.3-m2-r1-symlink-preflight-implementation-2026-07-22.md)
   records commit `9d5d40c8`: lexical manifest-only resolution, exact official
   link/target equality, fifteen mutation variants, and 268 passing tests with
-  one intentional skip. No new work root or live surface was created. Next:
-  publish the checkpoint and repeat the exact read-only preflight from a fresh
-  revision-named root.
+  one intentional skip. After that checkpoint was published, exact external
+  preflight passed and the one process attempt ran. The
+  [R1 result](docs/plan/lean-u2-official-execution-tl0.6.3-m2-r1-result-2026-07-22.md)
+  and [authority](docs/plan/lean-u2-official-execution-tl0.6.3-m2-r1-result-v1.json)
+  retain 83 read-only files and exact 64-row JUnit (30 pass / 34 fail), but
+  family-blind artifact closure demanded compile `.c`/`.out` products from
+  passing docparse cases and stopped before post/projection/completion. The
+  attempt is consumed and invalid, so M2 outcome/shard credit remains zero.
+  Next: commit and push the evidence/result before any correction plan.
 
 - **2026-07-22 — TL0.6.3 M1 derives complete deterministic U2 child-shard
   scheduling with zero new outcomes or parity credit.** The source-first
@@ -7746,6 +7752,15 @@ plan is built and committed on the current branch:
 | P5.5 | External target, measured | **DONE (bounded v1, ADR-0323--0338):** authenticated Tock capture plus eight rechecked dual-DRAT proofs and six replayed controls, UNKNOWN=0, DISAGREE=0. Query time 12.700 s; fresh outer wall 50.745 s; peak RSS 1,256,496 KiB; zero OOM deltas. The committed case study compares exact target validation, universal coverage, trust, effort, artifact boundaries, and limits. No Tock bug was found, so no upstream issue is applicable. This is not a speed or whole-kernel claim. |
 
 ## Changelog
+
+- **2026-07-22 — Retained TL0.6.3 M2 R1 attempt 001 as invalid after
+  post-process artifact closure.** Corrected source preflight passed; CTest ran
+  once, exited 8 in 50,775 ms, reaped its process group, and produced exact
+  64-row JUnit with 30 passes and 34 failures. The evidence model then assigned
+  compile `.c`/`.out` artifacts to docparse and rejected the first passing
+  docparse case before post/projection/completion. The exact 83-file /
+  5,148,026-byte read-only root is retained, but completion-last policy grants
+  zero M2 case or shard credit. R1 permits no retry.
 
 - **2026-07-22 — Implemented, validated, committed, and pushed the bounded M2
   R1 symlink-preflight correction without creating a new work root.** Commit
