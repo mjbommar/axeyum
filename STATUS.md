@@ -8602,6 +8602,26 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
+- **2026-07-23 — Completed the credited full-population F1 fixture
+  implementation; live preparation remains blocked.** The exact 45,905-row
+  three-solver population now has a 96-shard/48-initial/96-retry/16-wave
+  process-free contract, three run/plan/schedule manifests, and 432 registered
+  command manifests. Self-sealed checkpoints reject noncontiguous restart
+  state; the scheduler launches nothing around unclosed/failed/lost attempts;
+  thermal evidence binds the exact `k10temp/Tctl` source, <=60-second freshness,
+  90 C stop, and 80 C cooldown; and the remote helper stops only the exact
+  registered E3 systemd unit. The supervised fixture drains all started handles
+  through terminals after pause, thermal stop, or partial launch failure and
+  withholds checkpoints on failure. The focused 25 tests and 112-test SMT gate
+  pass with one expected live-host skip; links and generated checks pass. The
+  final supervisor commit remains topic-only, and the existing out-of-lane
+  bench/CAS format drift plus Lean's stale `resume_fs.py` source pin still block
+  branch-wide `just check`, F2 live preparation, and every solver launch. The
+  latter is the exact one-hash `1968e7b6...` to `b05c3218...` drift already
+  assigned to the Lean lane; this result does not edit its self-sealed evidence.
+  See the
+  [F1 result](docs/plan/smtcomp-credited-full-population-f1-result-2026-07-23.md).
+
 - **2026-07-23 — Completed the repaired-P0 combined comparison without another
   solver or NAS mutation.** The fail-closed generator independently validates
   all three external results and joins only `(benchmark_id, benchmark_sha256)`.
