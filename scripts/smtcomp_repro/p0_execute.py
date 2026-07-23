@@ -847,7 +847,11 @@ def recover_frozen_bitwuzla_v2(
         ],
         remote_helper_path=Path(command["remote_helper_path"]),
     )
-    handle = start_allocation(plan=plan, command_manifest=command, run_dir=run_dir)
+    handle = start_allocation(
+        plan=plan,
+        command_manifest=run_dir / "multi-host-commands" / "retry-1.json",
+        run_dir=run_dir,
+    )
     print("P0_CELL_STARTED|cell=bitwuzla|allocation=retry-1", flush=True)
     while handle.process.poll() is None:
         print(
