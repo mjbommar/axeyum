@@ -589,7 +589,13 @@ state.
 > and [implementation checkpoint](docs/plan/lean-u2-official-execution-tl0.6.3-m2-r4-fanout-control-r1-implementation-2026-07-23.md)
 > freeze/publish only that token at `d8b0404b`; no selected root exists. Next
 > push the checkpoint, rerun both controls from its remote-equal revision, and
-> invoke attempt 003 once;
+> invoke attempt 003 once. The
+> [R4 control result](docs/plan/lean-u2-official-execution-tl0.6.3-m2-r4-control-result-2026-07-23.md)
+> instead rejects the 16 GiB lane: the corrected nine-task control emitted
+> `failed to create thread` at a 16,504,496,128-byte peak and timed out, while
+> cleanup left no selected root. Attempt 003 remains unconsumed and R4 grants
+> zero credit. Next preregister a larger lane with retained failed-control
+> evidence; do not invoke `run-r4`;
 > then form native pairs. Do not rerun
 > the singleton for population credit. The
 > [complete-parity execution roadmap](docs/plan/lean4-complete-parity-roadmap-2026-07-22.md)

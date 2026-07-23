@@ -483,7 +483,15 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   [implementation checkpoint](docs/plan/lean-u2-official-execution-tl0.6.3-m2-r4-fanout-control-r1-implementation-2026-07-23.md)
   records clean pushed commit `d8b0404b`. Next push this documentation
   checkpoint, then rerun the two controls and exact external preflight from
-  that remote-equal revision before invoking R4 once.
+  that remote-equal revision before invoking R4 once. The corrected control
+  instead produced the
+  [R4 control result](docs/plan/lean-u2-official-execution-tl0.6.3-m2-r4-control-result-2026-07-23.md):
+  stack propagation passed, but released Lean emitted `failed to create
+  thread` at a 16,504,496,128-byte `VmPeak` under the exact 16 GiB limit and
+  timed out. Whole-group cleanup left both selected roots absent. Attempt 003
+  remains unconsumed, R4 is blocked before discovery, and all credit remains
+  zero. Next preregister a larger lane with retained failed-control evidence;
+  do not invoke `run-r4`.
 
 - **2026-07-22 — TL0.6.3 M1 derives complete deterministic U2 child-shard
   scheduling with zero new outcomes or parity credit.** The source-first
@@ -7795,6 +7803,12 @@ plan is built and committed on the current branch:
 | P5.5 | External target, measured | **DONE (bounded v1, ADR-0323--0338):** authenticated Tock capture plus eight rechecked dual-DRAT proofs and six replayed controls, UNKNOWN=0, DISAGREE=0. Query time 12.700 s; fresh outer wall 50.745 s; peak RSS 1,256,496 KiB; zero OOM deltas. The committed case study compares exact target validation, universal coverage, trust, effort, artifact boundaries, and limits. No Tock bug was found, so no upstream issue is applicable. This is not a speed or whole-kernel claim. |
 
 ## Changelog
+
+- **2026-07-23 — Rejected R4's 16 GiB lane before selected execution.** From
+  clean pushed `628c5911`, the stack probe passed; the corrected nine-task
+  control then hit `failed to create thread` at a 16,504,496,128-byte peak and
+  timed out. Cleanup left no selected root or process. Attempt 003 remains
+  unconsumed and every outcome/parity counter stays zero.
 
 - **2026-07-23 — Corrected the no-credit R4 fanout control without consuming
   attempt 003.** The first clean pushed control run passed the stack probe but

@@ -503,7 +503,12 @@ now freezes one new attempt with a single resource delta: 16 GiB local
 shard/command/store, one worker, one-hour watchdog, one selected process, and
 no retry. A harmless released-Lean nine-dedicated-thread control must qualify
 the new lane before selected execution. This remains local resource evidence,
-not an official-provider or parity claim.
+not an official-provider or parity claim. The subsequent
+[R4 control result](lean-u2-official-execution-tl0.6.3-m2-r4-control-result-2026-07-23.md)
+rejects that 16 GiB lane: the corrected control emitted `failed to create
+thread`, timed out, and was reaped before any selected root or discovery.
+Attempt 003 remains unconsumed, but the R4 selected surface is blocked; a new
+source-first resource qualification is required and no counter changes.
 
 ## 8. Layer-specific equivalence
 

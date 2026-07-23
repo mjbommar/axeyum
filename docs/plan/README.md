@@ -269,6 +269,10 @@ Start at the root [`PLAN.md`](../../PLAN.md) (map + standing rules) and
   disclose the first harmless control's missing-`do` syntax failure, freeze and
   publish the one-token correction, and preserve the unconsumed selected
   attempt and every resource/shard/store/credit boundary.
+- [`lean-u2-official-execution-tl0.6.3-m2-r4-control-result-2026-07-23.md`](lean-u2-official-execution-tl0.6.3-m2-r4-control-result-2026-07-23.md) —
+  rejected 16 GiB lane result: corrected nine-task control hit thread creation
+  at the address-space ceiling and cleaned up before selected discovery, so
+  attempt 003 remains unconsumed and all credit stays zero.
 - [`lean-compatibility-v1.json`](lean-compatibility-v1.json) and generated
   [`Lean compatibility matrix`](generated/lean-compatibility.md) — TL0.2's
   executable eight-field assurance contract, K0-K6 profile gates, registered
