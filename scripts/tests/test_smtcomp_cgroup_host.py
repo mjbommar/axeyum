@@ -140,6 +140,7 @@ class E2Layout:
             str(self.run_dir),
             "--selection-manifest",
             str(self.selection_manifest),
+            "--allow-unadmitted-selection-fixture",
             "--corpus-manifest",
             str(self.corpus_manifest),
             "--environment-manifest",

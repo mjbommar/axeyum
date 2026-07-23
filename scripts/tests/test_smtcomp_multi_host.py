@@ -342,6 +342,7 @@ class MultiHostPortableTests(unittest.TestCase):
                 str(paths["selected.txt"]),
                 "--selection-manifest",
                 str(paths["selection.json"]),
+                "--allow-unadmitted-selection-fixture",
                 "--corpus-manifest",
                 str(paths["corpus.json"]),
                 "--environment-manifest",
@@ -552,6 +553,7 @@ class MultiHostPortableTests(unittest.TestCase):
                         verbose=False,
                         resource_session_id=session_id,
                         source_identity_manifest=staged / "source-identity.json",
+                        allow_unadmitted_selection_fixture=True,
                         runner=self.solver_result,
                     )
 
@@ -632,6 +634,7 @@ class MultiHostPortableTests(unittest.TestCase):
                     str(file_list),
                     "--selection-manifest",
                     str(selection),
+                    "--allow-unadmitted-selection-fixture",
                     "--corpus-manifest",
                     str(corpus),
                     "--environment-manifest",
