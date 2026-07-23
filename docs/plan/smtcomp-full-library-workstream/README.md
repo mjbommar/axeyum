@@ -358,6 +358,9 @@ now measures the accepted ADR-0359
 [default-only checked repair](../checked-quantified-uf-default-repair-2026-07-22.md):
 178 checked SAT results versus 111 at baseline, with zero disagreements and
 every SAT model replayed. The complete workspace/static/resource/parity/link/
-profile/recovery gates are green. Measure the remaining free-scalar and larger-
-search Unknowns before the next separately preregistered functionality
-increment; do not substitute another large run for that bounded analysis.*
+profile/recovery gates are green. The complete 39-case Z3-SAT remainder is now
+[measured](../quantified-uflia-free-int-completion-measurement-2026-07-22.md):
+a source/model-derived 16-value, 256-tuple scalar probe checks 33 additional SAT
+models after only 180 candidate queries. Implement only that preregistered
+ADR-0360 boundary next; the six residual seeds remain separate. Do not
+substitute another large run for the bounded implementation.*
