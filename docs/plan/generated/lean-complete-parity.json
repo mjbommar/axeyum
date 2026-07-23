@@ -4,7 +4,7 @@
   "source_identities": [
     {
       "path": ".github/workflows/ci.yml",
-      "sha256": "5be632fa6cc842d3d456d428ffb7e525f9eebfce70b00af92af9b2cf2c451fe6"
+      "sha256": "190c846d6cb72a5d40f4fc5a341a56e01af2105b60c298735e712b2b3ade4e9d"
     },
     {
       "path": "docs/plan/generated/lean-execution-evidence.md",
@@ -231,6 +231,10 @@
       "sha256": "d5069a7cdcc139e18508f2db23b00b371866283a3b25d0bb8816e4642f999bde"
     },
     {
+      "path": "docs/plan/lean-u2-official-execution-tl0.6.3-m2-r6-v1.json",
+      "sha256": "af7a532175f959b78058f27c5bc90af2f2f36b1d88b69dd2a785d5d4699a8b83"
+    },
+    {
       "path": "docs/plan/lean-u2-official-execution-tl0.6.3-m2-shard-0001-plan-2026-07-22.md",
       "sha256": "4cef4ba9c57820f5bff82e4cfdfdc524b3d0d54665a947cf2b27560767ec81dd"
     },
@@ -248,7 +252,7 @@
     },
     {
       "path": "scripts/gen-lean-complete-parity.py",
-      "sha256": "6e1cea9944b34478f7cd7d7b524072b74dbf6c693cb82bba48e329345daac11b"
+      "sha256": "d0332f1f21f42947a47c1a044acced844cb10cf998e5d0bcc0c3fddf8f48ae2d"
     },
     {
       "path": "scripts/gen-lean-execution-evidence.py",
@@ -311,6 +315,10 @@
       "sha256": "ec3a1a09996293ea68f40caf1b22c054f1888f67b97e50fb03b8da17f1a1dcfa"
     },
     {
+      "path": "scripts/lean_u2_official_execution_m2_r6_result.py",
+      "sha256": "34cea673c7d04a0918d3623617b70aea4b79d792d3138ff079b57d72fa2ff53b"
+    },
+    {
       "path": "scripts/lean_u2_official_execution_m2_run.py",
       "sha256": "5763298bb33c97baacc0c29d6cc67a8df2ece796f7ea182c59957f5be59eb593"
     },
@@ -328,7 +336,7 @@
     },
     {
       "path": "scripts/tests/test_lean_complete_parity.py",
-      "sha256": "35ea8646ee7013bf316937cdb3d8a6bf23e91e7330abd76a481770668ffe4772"
+      "sha256": "80e8bf478f13496a7910667c0be8f3cbd968fda1d4ee3ad529334146b9394753"
     },
     {
       "path": "scripts/tests/test_lean_execution_acceptance.py",
@@ -385,6 +393,10 @@
     {
       "path": "scripts/tests/test_lean_u2_official_execution_m2_r6.py",
       "sha256": "e4b0d8b1c0bae0d580475be90859231e01402a510ed41fd6aaa48f880fd80621"
+    },
+    {
+      "path": "scripts/tests/test_lean_u2_official_execution_m2_r6_result.py",
+      "sha256": "7407de3fd7626c5d2d9c794f5aac917795ca0d1661d678a7dd97566e96485070"
     },
     {
       "path": "scripts/tests/test_lean_u2_official_execution_m2_run.py",
@@ -902,6 +914,44 @@
         "selected_processes": 0,
         "outcomes": 0,
         "parity": 0
+      },
+      "r6_result": {
+        "status": "accepted-local-official-shard",
+        "summary": {
+          "local_physical_shards_completed": 1,
+          "official_cases": 64,
+          "official_failures": 0,
+          "official_outcomes": 64,
+          "official_passes": 64,
+          "unique_new_official_cases": 64
+        },
+        "credits": {
+          "axeyum_outcomes": 0,
+          "complete_axes": 0,
+          "complete_populations": 0,
+          "local_physical_shards_completed": 1,
+          "official_attempt_completions": 0,
+          "official_cases": 64,
+          "official_failures": 0,
+          "official_outcomes": 64,
+          "official_passes": 64,
+          "official_provider_completions": 0,
+          "paired_cells": 0,
+          "parent_profile_completions": 0,
+          "parity_credit": 0,
+          "performance_rows": 0,
+          "satisfied_gates": 0,
+          "unique_new_official_cases": 64
+        },
+        "claims": {
+          "axeyum_native_outcomes_observed": false,
+          "lean_complete_parity": false,
+          "local_official_shard_observed": true,
+          "official_provider_reproduced": false,
+          "paired_parity_observed": false,
+          "parent_profile_complete": false,
+          "performance_claimed": false
+        }
       },
       "r3_incomplete": {
         "terminal_class": "wall-timeout",

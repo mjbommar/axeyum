@@ -849,6 +849,16 @@ def u2_m2_contract_snapshot() -> dict[str, Any]:
         "lean_u2_official_execution_m2_r6_for_complete_parity",
         ROOT / "scripts" / "lean_u2_official_execution_m2_r6.py",
     )
+    r6_result = load_script(
+        "lean_u2_official_execution_m2_r6_result_for_complete_parity",
+        ROOT / "scripts" / "lean_u2_official_execution_m2_r6_result.py",
+    )
+    r6_authority = load_json(
+        ROOT / "docs/plan/lean-u2-official-execution-tl0.6.3-m2-r6-v1.json"
+    )
+    r6_failures = r6_result.validate_result_authority(r6_authority)
+    if r6_failures:
+        raise RuntimeError("invalid R6 result authority: " + "; ".join(r6_failures))
     incomplete = r3.validate_incomplete_evidence(r3.DEFAULT_EVIDENCE_ROOT)
     return contract.validate_offline_contract() | {
         "store": store.validate_offline_contract(),
@@ -858,6 +868,12 @@ def u2_m2_contract_snapshot() -> dict[str, Any]:
         "r5": r5.validate_offline_contract(),
         "r5_diagnostic": r5_diagnostic.validate_offline_contract(),
         "r6": r6.validate_offline_contract(),
+        "r6_result": {
+            "status": r6_authority["status"],
+            "summary": r6_authority["summary"],
+            "credits": r6_authority["credits"],
+            "claims": r6_authority["claims"],
+        },
         "r3_incomplete": {
             "terminal_class": incomplete["terminal"]["class"],
             "terminal_sha256": incomplete["terminal"]["record_sha256"],
@@ -938,6 +954,12 @@ def report_source_paths(data: dict[str, Any]) -> list[Path]:
         / "test_lean_u2_official_execution_m2_r5_diagnostic.py",
         ROOT / "scripts" / "lean_u2_official_execution_m2_r6.py",
         ROOT / "scripts" / "tests" / "test_lean_u2_official_execution_m2_r6.py",
+        ROOT / "scripts" / "lean_u2_official_execution_m2_r6_result.py",
+        ROOT
+        / "scripts"
+        / "tests"
+        / "test_lean_u2_official_execution_m2_r6_result.py",
+        ROOT / "docs/plan/lean-u2-official-execution-tl0.6.3-m2-r6-v1.json",
     }
     for collection in (data["populations"], data["axes"], data["terminal_gates"]):
         for item in collection:
