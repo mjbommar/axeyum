@@ -36,16 +36,21 @@ state.
 > now installs checksum-pinned elan without a fake Lake project and makes
 > `AXEYUM_REQUIRE_LEAN=1` fail closed. Its first real run exposed four hidden
 > quantified-BV export failures (67/71); real-inductive rendering for the exact
-> computing Bool/BV families plus one measured elaborator-depth option raises
-> the same bounded local run to **71/71 accepted, zero skipped, zero failed**.
+> computing Bool/BV families plus one measured elaborator-depth option raised
+> that historical bounded run to **71/71 accepted, zero skipped, zero failed**.
+> The later FP soundness repair revoked uncertified `Fpa2Bv` proof credit from
+> one QF_FP row and the QF_BVFP family. The current fail-closed population is
+> **70/70 accepted, zero skipped, zero failed** under pinned Lean 4.30.
 > The first corrected remote job failed before the representative sweep because
 > its explicit Lean path resolved to an unconfigured elan shim outside the
-> repository working directory. Remote acceptance, exhaustive acceptance, and
-> prelude-axiom discharge therefore remain open; do not convert representative
+> repository working directory. The workflow now exports the versioned
+> executable returned by `elan which lean` and preflights it from a temporary
+> directory. A remote rerun, exhaustive acceptance, and prelude-axiom discharge
+> remain open; do not convert representative
 > local source acceptance into full proof-family or Lean parity.
 
 > **Lean-system interoperability reset (2026-07-21).** The independent Rust
-> kernel and the 71/71 official-source gate are not a bundled Lean distribution,
+> kernel and the current 70/70 official-source gate are not a bundled Lean distribution,
 > but neither are they merely a printer. The new
 > [compatibility roadmap](docs/plan/lean-system-compatibility-roadmap-2026-07-21.md)
 > inventories the actual kernel, CAS, rewrite, curriculum, and Track 6 assets

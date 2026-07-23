@@ -1,7 +1,7 @@
 # Official-Lean CI gate audit and repair — 2026-07-21
 
-Status: **local 71/71 acceptance measured; first corrected remote attempt
-failed before the representative sweep**
+Status: **current post-FP-soundness population accepts locally 70/70; direct
+versioned-executable repair is locally verified; remote rerun remains open**
 
 ## Why this audit exists
 
@@ -96,6 +96,28 @@ cannot.
 MISSING_LEAN_FAIL_CLOSED|status=101
 ```
 
+## Post-FP soundness boundary: current 70/70
+
+The 2026-07-22 floating-point soundness repair deliberately revoked whole-
+reduction certificate credit from `qf_fp_misc` and both registered QF_BVFP
+rows. Their `Fpa2Bv` reductions are not independently certified, so they may
+still be solver decisions but cannot remain solver-proof/Lean families. The
+old harness continued invoking those rows: `qf_fp_misc` spent more than 30
+minutes in Rust-side reconstruction, while `qf_bvfp_float_no_simp3` correctly
+declined and panicked the representative gate.
+
+The current registry therefore retains the supported QF_FP constant family,
+removes `qf_fp_misc` from that builder, and removes the unsupported QF_BVFP
+family. This is a trust-boundary correction, not a proof-coverage win. The
+historical 71/71 result above remains evidence for its pre-repair revision; it
+is not current credit. A fresh fail-closed local run against the exact pinned
+Lean 4.30 executable reports:
+
+```text
+[lean crosscheck:representative] checked 70 of 70 modules in 5.9s using 2 jobs (no budget); 0 skipped due to budget; 0 FAILED
+LEAN_CROSSCHECK|label=representative|families=70|modules=70|checked=70|budget_skipped=0|failed=0
+```
+
 ## First corrected remote attempt: executable identity failure
 
 GitHub Actions run
@@ -103,7 +125,7 @@ GitHub Actions run
 was the first retained main-branch execution after the local correction. The
 job installed the pinned toolchain and passed the repository-root
 `lean --version` step. It then reached the third kernel cross-check and failed
-before running the representative 71-family solver-proof command.
+before running the then-71-family solver-proof command.
 
 The test used the explicit path
 `$RUNNER_TEMP/axeyum-lean/elan-home/bin/lean`. That path is the elan shim, not
@@ -118,11 +140,15 @@ error: no default toolchain configured. run `elan default stable` to install & c
 The exact failing
 [job](https://github.com/mjbommar/axeyum/actions/runs/29951909263/job/89031426984)
 is retained as operational evidence. It grants no remote source-acceptance
-credit and does not invalidate the bounded local pinned-executable result. The
-repair must make `AXEYUM_LEAN_BIN` name the installed versioned executable (or
-otherwise bind the exact pinned toolchain independently of the working
-directory), add a changed-working-directory preflight, and then rerun the full
-remote contract.
+credit and does not invalidate the bounded local pinned-executable result.
+
+The follow-up implementation now resolves Lean with `elan which lean` under the
+explicit repository-pinned `ELAN_TOOLCHAIN`, records that direct versioned
+executable in `AXEYUM_LEAN_BIN`, and executes it from `$RUNNER_TEMP` before
+exporting the environment. The checksum-pinned installer also reports the
+resolved path and invokes that path directly for its version record. Local
+changed-working-directory verification passes. A full remote rerun is still
+required before this repair receives remote acceptance credit.
 
 ## CI acceptance contract
 
@@ -133,7 +159,7 @@ The CI job now has five independently visible gates:
 3. the standalone real-inductive integration test;
 4. the representative solver-proof test with `AXEYUM_REQUIRE_LEAN=1`, zero
    budget, and two workers; and
-5. an exact grep for the 71-family, 71-module, 71-checked, zero-skipped,
+5. an exact grep for the 70-family, 70-module, 70-checked, zero-skipped,
    zero-failed attestation.
 
 Changing the family registry without updating the expected denominator makes
@@ -143,8 +169,10 @@ an absent summary also fails.
 
 ## What this closes—and what it does not
 
-This closes local representative **source acceptance** for 71 registered
-solver-proof families and fixes the missing-binary skip. It does not prove:
+This closes current local representative **source acceptance** for 70
+registered solver-proof families, fixes the stale FP-family admission plus the
+missing-binary skip, and locally fixes working-directory-independent executable
+identity. It does not prove:
 
 - that the workflow is remotely green; the first corrected remote attempt
   failed on executable/toolchain resolution before the representative sweep;
@@ -156,7 +184,7 @@ solver-proof families and fixes the missing-binary skip. It does not prove:
 
 The next gate is one successful remote job whose archived log contains the
 installer record, versioned executable identity from a non-repository working
-directory, Lean version, all kernel differential passes, and exact 71/71
+directory, Lean version, all kernel differential passes, and exact 70/70
 attestation. After that, add a machine-checked expected-axiom inventory and only
-then size the scheduled exhaustive sweep. Do not turn 71 representative modules
-into “71 complete proof families” or “Lean parity.”
+then size the scheduled exhaustive sweep. Do not turn 70 representative modules
+into “70 complete proof families” or “Lean parity.”

@@ -390,6 +390,7 @@ def main() -> int:
         f"{snapshot['p4dfa_z3_only_20s']} Z3-only",
         "general solving-power distance to Z3 is not measured",
         "71/71 accepted",
+        "70/70 accepted",
     ):
         if marker not in parity_audit_text:
             failures.append(
@@ -412,8 +413,10 @@ def main() -> int:
 
     lean_gate_text = LEAN_GATE_AUDIT.read_text(encoding="utf-8")
     for marker in (
-        f"modules={lean_family_count}|checked=67|budget_skipped=0|failed=4",
-        f"71/{lean_family_count}",
+        "modules=71|checked=67|budget_skipped=0|failed=4",
+        "families=71|modules=71|checked=71|budget_skipped=0|failed=0",
+        f"families={lean_family_count}|modules={lean_family_count}|"
+        f"checked={lean_family_count}|budget_skipped=0|failed=0",
         "budget_skipped=0|failed=0",
         "MISSING_LEAN_FAIL_CLOSED",
         "first corrected remote attempt",
@@ -423,6 +426,34 @@ def main() -> int:
             failures.append(
                 f"{LEAN_GATE_AUDIT.relative_to(ROOT)}: missing Lean-gate marker {marker!r}"
             )
+
+    lean_installer_text = LEAN_INSTALLER.read_text(encoding="utf-8")
+    for marker in (
+        "ELAN_TOOLCHAIN=",
+        'elan" which lean',
+        "lean_bin=",
+        "resolved Lean executable",
+    ):
+        if marker not in lean_installer_text:
+            failures.append(
+                f"{LEAN_INSTALLER.relative_to(ROOT)}: missing executable-identity marker {marker!r}"
+            )
+
+    workflow_text = CI_WORKFLOW.read_text(encoding="utf-8")
+    for marker in (
+        "ELAN_TOOLCHAIN=",
+        'elan" which lean',
+        "AXEYUM_LEAN_BIN=$lean_bin",
+        'cd "$RUNNER_TEMP"',
+    ):
+        if marker not in workflow_text:
+            failures.append(
+                f"{CI_WORKFLOW.relative_to(ROOT)}: missing executable-identity marker {marker!r}"
+            )
+    if "AXEYUM_LEAN_BIN=$lean_root/elan-home/bin/lean" in workflow_text:
+        failures.append(
+            f"{CI_WORKFLOW.relative_to(ROOT)}: AXEYUM_LEAN_BIN must not name the elan shim"
+        )
 
     project_state_markers = (
         f"{snapshot['decided']} / {snapshot['files']}",
@@ -451,7 +482,7 @@ def main() -> int:
         "zero interactive textual-session rows",
         "cannot be retroactively classified",
         "fully competition-faithful",
-        "71/71 accepted",
+        f"{lean_family_count}/{lean_family_count} accepted",
     )
     project_state_text = PROJECT_STATE.read_text(encoding="utf-8")
     for marker in project_state_markers:

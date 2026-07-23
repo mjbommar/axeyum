@@ -108,7 +108,6 @@ const FAMILY_BUILDERS: &[FamilyBuilder] = &[
     qf_ff_term_level_enum_rows_check_in_real_lean,
     qf_ff_bv_defined_enum_gap_rows_check_in_real_lean,
     qf_fp_bv_defined_enum_rows_check_in_real_lean,
-    qf_bvfp_bv_defined_enum_rows_check_in_real_lean,
     qf_dt_cvc5_slice_checks_in_real_lean,
     lra_refutation_checks_in_real_lean,
     qf_lra_ite_true_identity_checks_in_real_lean,
@@ -945,42 +944,8 @@ fn qf_fp_bv_defined_enum_rows_check_in_real_lean() {
                 "../../../corpus/public-curated/non-incremental/QF_FP/bitwuzla-regress-clean/solver__fp__fp_zero.smt2"
             ),
         ),
-        (
-            "qf_fp_misc",
-            include_str!(
-                "../../../corpus/public-curated/non-incremental/QF_FP/bitwuzla-regress-clean/solver__fp__fp_misc.smt2"
-            ),
-        ),
     ] {
         let mut script = parse_script(input).expect("QF_FP row parses");
-        let assertions = script.assertions.clone();
-        let (fragment, source) = prove_unsat_to_lean_module(&mut script.arena, &assertions)
-            .unwrap_or_else(|error| panic!("{tag}: BV defined enum reconstructs: {error}"));
-        assert_eq!(fragment, ProofFragment::BvDefinedEnum, "{tag}");
-        assert!(
-            !source.contains("sorryAx"),
-            "{tag}: BV defined enum module must not use sorryAx:\n{source}"
-        );
-        lean_accepts(tag, &source);
-    }
-}
-
-fn qf_bvfp_bv_defined_enum_rows_check_in_real_lean() {
-    for (tag, input) in [
-        (
-            "qf_bvfp_float_no_simp3",
-            include_str!(
-                "../../../corpus/public-curated/non-incremental/QF_BVFP/bitwuzla-regress-clean/solver__fp__Float-no-simp3-main.smt2"
-            ),
-        ),
-        (
-            "qf_bvfp_fp_fromsbv",
-            include_str!(
-                "../../../corpus/public-curated/non-incremental/QF_BVFP/bitwuzla-regress-clean/solver__fp__fp_fromsbv.smt2"
-            ),
-        ),
-    ] {
-        let mut script = parse_script(input).expect("QF_BVFP row parses");
         let assertions = script.assertions.clone();
         let (fragment, source) = prove_unsat_to_lean_module(&mut script.arena, &assertions)
             .unwrap_or_else(|error| panic!("{tag}: BV defined enum reconstructs: {error}"));

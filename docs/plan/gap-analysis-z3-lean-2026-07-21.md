@@ -369,7 +369,7 @@ second-pass cost.
 
 ### G6 — Turn external Lean checking into a required tiered gate
 
-The solver proof harness registers 71 proof families and can send representative
+The solver proof harness registers 70 currently supported proof families and can send representative
 or exhaustive modules to official Lean. The exhaustive test is intentionally
 ignored. Before this increment, CI hard-required official Lean only for the
 separate inductive cross-check, so the solver-proof sweep could take its optional
@@ -384,18 +384,23 @@ uses checksum-pinned elan, and the solver harness now makes
 The first real representative run exposed four quantified-BV export failures
 (67/71); preserving the exact Bool/BV iota rules and recording one measured
 elaborator-depth bound raises the same local cell to **71/71 accepted, zero
-skipped, zero failed**. The docs-consistency gate binds the family denominator,
-installer checksum, workflow command, and exact attestation. See the
+skipped, zero failed** at that revision. The later FP soundness repair removed
+the uncertified QF_BVFP family and one non-representative QF_FP row; the current
+fail-closed cell is **70/70 accepted, zero skipped, zero failed**. The
+docs-consistency gate binds the current family denominator, installer checksum,
+workflow command, and exact attestation. See the
 [official-Lean gate audit](official-lean-ci-gate-audit-2026-07-21.md).
 
 The first corrected main-branch remote job installed the pin and passed
 repository-root `lean --version`, then failed before the representative sweep:
 the explicit Lean path was an elan shim with no default toolchain when a kernel
 test changed working directory. It is retained as a failed remote gate and
-receives zero 71-family credit.
+receives zero current-family credit. The workflow now selects the installed
+versioned executable and preflights it from a temporary directory; its remote
+confirmation remains open.
 
 **Remaining research:** record the first successful remote duration/RSS, Lean
-version, and 71/71 attestation. Only then add the
+version, and current 70/70 attestation. Only then add the
 exhaustive sweep on a scheduled/release cadence with an
 archived checked/declined manifest and `#print axioms` summary.
 
