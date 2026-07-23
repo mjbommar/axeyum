@@ -13,6 +13,7 @@ python3 -m unittest \
   scripts.tests.test_smtcomp_multi_host_live \
   scripts.tests.test_smtcomp_full_compare \
   scripts.tests.test_smtcomp_full_population \
+  scripts.tests.test_smtcomp_full_result \
   scripts.tests.test_smtcomp_p0_compare \
   scripts.tests.test_smtcomp_p0_prepare \
   scripts.smtcomp_repro.tests.test_corpus_acquisition \

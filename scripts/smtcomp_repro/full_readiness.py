@@ -35,10 +35,12 @@ DEFAULT_REQUIRED_PATHS = (
     "scripts/smtcomp_repro/full_preflight.py",
     "scripts/smtcomp_repro/full_prepare.py",
     "scripts/smtcomp_repro/full_readiness.py",
+    "scripts/smtcomp_repro/full_result.py",
     "scripts/smtcomp_repro/incident_sentinels.py",
     "scripts/smtcomp_repro/multi_host.py",
     "scripts/tests/test_smtcomp_full_compare.py",
     "scripts/tests/test_smtcomp_full_population.py",
+    "scripts/tests/test_smtcomp_full_result.py",
 )
 GATE_FIELDS = {
     "schema",
