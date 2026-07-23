@@ -115,6 +115,16 @@ python3 scripts/generate-smtcomp-repaired-p0-comparison.py --check
 
 Live revalidation additionally names the frozen preparation root. Neither mode
 writes to the preparation or any NAS artifact.
+
+The credited 45,905-row lane separately provides process-free external cell
+results in `full_result.py` and an exact same-population comparison in
+`full_compare.py`. Cell results bind a sealed final execution authority and
+publish canonical records, per-logic adjudication, and completion last. The
+comparison validates all three result roots, rejects contradictions or solver
+disagreements, and publishes native, per-logic, pairwise, and three-way counts
+without a performance or scalar-ranking claim. These are fixture-proven
+publication mechanisms, not live F2/F3/F4 results.
+
 The local kill-tested boundary is in the
 [`E1a result`](../../docs/plan/smtcomp-resumable-filesystem-e1a-2026-07-21.md).
 The source-backed v2 process-schema correction and narrow integration seams are
