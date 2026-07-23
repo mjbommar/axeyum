@@ -458,7 +458,10 @@ unconsumed. The source-first
 [R1 correction plan](lean-u2-official-execution-tl0.6.3-m2-r1-symlink-preflight-plan-2026-07-22.md)
 freezes exact manifest-only one-hop relative-link resolution, mutation gates,
 a fresh work root, and no other execution or credit change before another
-read-only preflight.
+read-only preflight. The separately pushed
+[R1 implementation checkpoint](lean-u2-official-execution-tl0.6.3-m2-r1-symlink-preflight-implementation-2026-07-22.md)
+records commit `9d5d40c8`, exact link/target binding, fifteen mutation
+variants, complete offline validation, and no new work root or live surface.
 
 ## 8. Layer-specific equivalence
 

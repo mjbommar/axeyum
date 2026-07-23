@@ -65,7 +65,11 @@ regular manifest row. No harness, discovery, prelaunch, evidence root, or child
 process exists, so the process attempt remains unconsumed. The
 [`R1 correction plan`](lean-u2-official-execution-tl0.6.3-m2-r1-symlink-preflight-plan-2026-07-22.md)
 freezes safe one-hop relative manifest resolution, exact link/target identities,
-mutation gates, and a fresh work root before another read-only preflight.
+mutation gates, and a fresh work root before another read-only preflight. The
+[`R1 implementation checkpoint`](lean-u2-official-execution-tl0.6.3-m2-r1-symlink-preflight-implementation-2026-07-22.md)
+records pushed commit `9d5d40c8`, fifteen fail-closed mutation variants, and
+no new work root or live process. Publish that checkpoint and repeat exact
+external preflight before reconsidering the single process attempt.
 
 ## 2. What the SMT-LIB comparison actually says
 

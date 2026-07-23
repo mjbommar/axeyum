@@ -428,8 +428,13 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   [R1 correction plan](docs/plan/lean-u2-official-execution-tl0.6.3-m2-r1-symlink-preflight-plan-2026-07-22.md)
   freezes manifest-only safe relative-link resolution, exact link/target
   identities, mutation gates, a fresh work root, and no other rule change.
-  Next: implement, test, commit, and push R1 before repeating the exact
-  read-only preflight.
+  The separately pushed
+  [R1 implementation checkpoint](docs/plan/lean-u2-official-execution-tl0.6.3-m2-r1-symlink-preflight-implementation-2026-07-22.md)
+  records commit `9d5d40c8`: lexical manifest-only resolution, exact official
+  link/target equality, fifteen mutation variants, and 268 passing tests with
+  one intentional skip. No new work root or live surface was created. Next:
+  publish the checkpoint and repeat the exact read-only preflight from a fresh
+  revision-named root.
 
 - **2026-07-22 — TL0.6.3 M1 derives complete deterministic U2 child-shard
   scheduling with zero new outcomes or parity credit.** The source-first
@@ -7741,6 +7746,15 @@ plan is built and committed on the current branch:
 | P5.5 | External target, measured | **DONE (bounded v1, ADR-0323--0338):** authenticated Tock capture plus eight rechecked dual-DRAT proofs and six replayed controls, UNKNOWN=0, DISAGREE=0. Query time 12.700 s; fresh outer wall 50.745 s; peak RSS 1,256,496 KiB; zero OOM deltas. The committed case study compares exact target validation, universal coverage, trust, effort, artifact boundaries, and limits. No Tock bug was found, so no upstream issue is applicable. This is not a speed or whole-kernel claim. |
 
 ## Changelog
+
+- **2026-07-22 — Implemented, validated, committed, and pushed the bounded M2
+  R1 symlink-preflight correction without creating a new work root.** Commit
+  `9d5d40c8` resolves candidate links only from captured manifest rows, rejects
+  absolute/escaping/chained/non-regular targets, and requires byte-exact
+  compile-bench link and compile target identities. Six focused runner tests
+  cover all 64 cases and fifteen link/target mutation variants; 268 tests pass
+  with one intentional skip and every generator/check is green. No evidence,
+  harness, discovery, prelaunch, child process, or outcome was created.
 
 - **2026-07-22 — Preregistered the bounded M2 R1 selected-runner symlink
   correction after a pre-process stop.** The first `run-m2` invocation created

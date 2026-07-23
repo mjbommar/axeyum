@@ -47,6 +47,13 @@ so the process attempt remains unconsumed. The source-first
 [R1 correction plan](lean-u2-official-execution-tl0.6.3-m2-r1-symlink-preflight-plan-2026-07-22.md)
 freezes one safe manifest-only symlink rule before any correction.
 
+Commit `9d5d40c8183deea85cf5f50d1ae380ccf7a99462` subsequently
+implements, validates, commits, and pushes exactly that correction. The
+[R1 implementation checkpoint](lean-u2-official-execution-tl0.6.3-m2-r1-symlink-preflight-implementation-2026-07-22.md)
+binds the corrected source/test hashes, exact link and target identities,
+fifteen mutation variants, full validation, and the unchanged absence of any
+new work root or live execution surface.
+
 ## 2. Exact implementation identities
 
 | Source | SHA-256 |
@@ -147,9 +154,9 @@ outcome, completion of shard `0001`, a parent-selection completion, provider
 reproduction, an Axeyum outcome, a matched pair, performance, an axis, a gate,
 or Lean parity.
 
-Next implement, test, commit, and push only the R1 manifest-only selected-runner
-correction. Then revalidate the corrected runner's external preflight inputs
-from the new clean pushed revision: exact Lean source repository/tree, released
+Next publish the R1 implementation checkpoint, then revalidate the corrected
+runner's external preflight inputs from the new clean pushed revision: exact
+Lean source repository/tree, released
 toolchain root and compiler closure, local tool identities, a fresh work root,
 the still-absent evidence root, storage class, and unchanged authorities.
 Invoke the single process attempt only if every preflight remains exact. Any
