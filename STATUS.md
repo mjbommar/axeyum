@@ -634,7 +634,14 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   The source-first [R4 plan](docs/plan/lean-u2-official-execution-tl0.6.3-m2-r4-attempt-003-plan-2026-07-23.md)
   freezes attempt 003 with new roots, the sole 8-to-16 GiB `RLIMIT_AS` delta,
   unchanged 512 MiB stack/shard/command/store, a harmless nine-thread control,
-  one selected process, and no retry. Next implement/test/push only.
+  one selected process, and no retry. The
+  [R4 implementation checkpoint](docs/plan/lean-u2-official-execution-tl0.6.3-m2-r4-attempt-003-implementation-2026-07-23.md)
+  records clean pushed commit `3748427d`: exact R1-R3 authority binding, the
+  16 GiB process adapter, harmless stack and nine-dedicated-task controls,
+  inherited 124/67/56/1 tiered closure, five focused tests, and CI/generator
+  integration. No R4 control, harness, discovery, or selected process has run.
+  Next push this documentation checkpoint, then run the two controls and exact
+  external preflight from that remote-equal revision before invoking R4 once.
 
 - **2026-07-22 — TL0.6.3 M1 derives complete deterministic U2 child-shard
   scheduling with zero new outcomes or parity credit.** The source-first
@@ -7946,6 +7953,14 @@ plan is built and committed on the current branch:
 | P5.5 | External target, measured | **DONE (bounded v1, ADR-0323--0338):** authenticated Tock capture plus eight rechecked dual-DRAT proofs and six replayed controls, UNKNOWN=0, DISAGREE=0. Query time 12.700 s; fresh outer wall 50.745 s; peak RSS 1,256,496 KiB; zero OOM deltas. The committed case study compares exact target validation, universal coverage, trust, effort, artifact boundaries, and limits. No Tock bug was found, so no upstream issue is applicable. This is not a speed or whole-kernel claim. |
 
 ## Changelog
+
+- **2026-07-23 — Implemented and pushed M2 R4 attempt 003 without consuming
+  it.** Commit `3748427d` binds the frozen R3 timeout authority, changes only
+  the local lane identity and `RLIMIT_AS` to 16 GiB, adds a no-credit
+  nine-dedicated-task released-Lean control plus the existing stack probe,
+  preserves exact R3 wrapper/shard/store semantics, and passes focused,
+  generator, parity, and documentation checks. No R4 control or selected
+  process has run; both controls remain external preflight requirements.
 
 - **2026-07-23 — Preregistered M2 R4 attempt 003.** The source-first plan keeps
   R3's stack and exact shard/store, changes only the local address-space lane
