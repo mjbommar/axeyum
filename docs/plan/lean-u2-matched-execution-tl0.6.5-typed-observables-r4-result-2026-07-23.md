@@ -1,10 +1,15 @@
 # Lean U2 TL0.6.5 R4 result — typed normalized observables
 
-Date: 2026-07-23  
-Status: **accepted bounded schema correction; no process or parity credit**  
-Plan: [R4 typed-observable plan](lean-u2-matched-execution-tl0.6.5-typed-observables-r4-plan-2026-07-23.md)  
-Preregistration: `7418ba95`  
-Typed projection checkpoint: `7ef93b57`  
+Date: 2026-07-23
+
+Status: **accepted bounded schema correction; no process or parity credit**
+
+Plan: [R4 typed-observable plan](lean-u2-matched-execution-tl0.6.5-typed-observables-r4-plan-2026-07-23.md)
+
+Preregistration: `7418ba95`
+
+Typed projection checkpoint: `7ef93b57`
+
 Complete-parity integration checkpoint: `92d30d38`
 
 ## Result
