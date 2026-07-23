@@ -52,7 +52,11 @@
     },
     {
       "path": "docs/plan/lean-complete-parity-v1.json",
-      "sha256": "d8897611c4c722391bf97e20aa95464aaa4bf49ff34c4c6ecb6431c2e5250585"
+      "sha256": "d5363beb55d4febf54e1622270ae38d13f5160d451a4a035ca762d2f31821ee2"
+    },
+    {
+      "path": "docs/plan/lean-complete-parity-worktree-portability-r1-result-2026-07-23.md",
+      "sha256": "9dd36ff4d7402c804fabfaca927721239fafa1495897ff8de442d37f6e2689eb"
     },
     {
       "path": "docs/plan/lean-execution-acceptance-tl0.7.4-2026-07-22.md",
@@ -101,6 +105,10 @@
     {
       "path": "docs/plan/lean-u2-native-dependency-tl0.6.4-m2.2-plan-2026-07-23.md",
       "sha256": "25fffdf8291f526bff4a0fca270c6e43c52cdc5659a1e3b19499b18071ee3de1"
+    },
+    {
+      "path": "docs/plan/lean-u2-native-dependency-tl0.6.4-m2.3-runner-generated-plan-2026-07-23.md",
+      "sha256": "669a62d21ac774657f99ffacc5708fd67db3a63bcc6958c60fff2b87ce752b38"
     },
     {
       "path": "docs/plan/lean-u2-native-dependency-v1.json",
@@ -316,11 +324,11 @@
     },
     {
       "path": "docs/plan/lean4-complete-parity-contract-2026-07-22.md",
-      "sha256": "6bb43a81699a6e48af5b8808edc89226928d54e377d9ac30afac691074ac0989"
+      "sha256": "353f7e21446f81af474018815314e15c31adc341a979d1f964b417527eed41e5"
     },
     {
       "path": "docs/plan/lean4-complete-parity-roadmap-2026-07-22.md",
-      "sha256": "a0b99d4df810a88bb102ca502a05720d3ffcb58419d9e16231aee29651a80552"
+      "sha256": "af900ed88863b2e983b88bda6da863c864ed3dbfaf0af29e89771a693b441701"
     },
     {
       "path": "scripts/gen-lean-complete-parity.py",
@@ -356,7 +364,7 @@
     },
     {
       "path": "scripts/lean_execution_acceptance.py",
-      "sha256": "9c64e981de30ba286da9daf8c4bd2d2d8cca485353a4011935c44e5aa747c8e4"
+      "sha256": "c86cf48698c830d037959e46adc8283c6e55a56e9d2f46b3f253b975a5c34b60"
     },
     {
       "path": "scripts/lean_execution_process.py",
@@ -364,7 +372,7 @@
     },
     {
       "path": "scripts/lean_execution_store.py",
-      "sha256": "31798c7a37018f58b4dda99fcc9478c550d37844a93acad48c1e86016c0d2513"
+      "sha256": "1ee32b411970331cd8afcc85495f91c69400cc5fb98e1af6608f551117dbc6f8"
     },
     {
       "path": "scripts/lean_u2_header_full_parser.lean",
@@ -376,11 +384,11 @@
     },
     {
       "path": "scripts/lean_u2_official_execution.py",
-      "sha256": "eb3ea924c23e137bf6e273d0d8bc2fc7c7dfd2ba4163b49d33731a89a16af0db"
+      "sha256": "758ef8119b9fd06920a342dcb7c8e0040b080fba80498442f646edb8d1d9af80"
     },
     {
       "path": "scripts/lean_u2_official_execution_m2.py",
-      "sha256": "bc2d99c2db924106591eeba63241baca623a294c7cd7655e3a89f77e752655c1"
+      "sha256": "bd02ca121f35331825a6647974a70e9cf0f496c5f7ab407736207e18f0e9d0cb"
     },
     {
       "path": "scripts/lean_u2_official_execution_m2_r2.py",
@@ -428,7 +436,7 @@
     },
     {
       "path": "scripts/tests/test_lean_complete_parity.py",
-      "sha256": "a5c73cc8c725071925edc92937f5714699404e8036e53fd0329a7f69c468f6e1"
+      "sha256": "7ce61b7bcead3d6d4109312fed91b4125ea3dfffb993e3762812c7fbe2ef173b"
     },
     {
       "path": "scripts/tests/test_lean_execution_acceptance.py",
@@ -444,7 +452,7 @@
     },
     {
       "path": "scripts/tests/test_lean_execution_store.py",
-      "sha256": "6b6b17354039e7533618df5819c8ae8e9e3986b124f751f84196dd2146e9b00b"
+      "sha256": "c37454502f1446562bb77b15187bd32d2976952ac79c8b87285d4b27482749ea"
     },
     {
       "path": "scripts/tests/test_lean_u2_native_dependency.py",
@@ -1610,6 +1618,14 @@
           "detail": "Preregistered M2.2 R1 correction separating raw import closure from Lean's modifier-sensitive effective load fixed point and freezing ordered incremental .olean parts, IR-only reachability, cycle declines, controls, and zero-credit boundary."
         },
         {
+          "path": "docs/plan/lean-u2-native-dependency-tl0.6.4-m2.3-runner-generated-plan-2026-07-23.md",
+          "detail": "Preregistered M2.3 configured-runner and generated-artifact semantics: exact 3,670/52/1 dispatch partition, configured CMake/CTest provenance, shell-state and source resolution, hooks and marker precedence, static-versus-observed edges, downstream ownership, controls, and zero-process/zero-credit boundary."
+        },
+        {
+          "path": "docs/plan/lean-complete-parity-worktree-portability-r1-result-2026-07-23.md",
+          "detail": "Accepted bounded portability repair: retained repository-owned process/store paths are checkout-root-relative, Git checkout permissions preserve content/seal integrity, historical authorities remain immutable while new revisions freeze current sources, focused and live store tests pass, and the complete-parity check succeeds from a differently rooted detached worktree."
+        },
+        {
           "path": "docs/plan/lean-u2-official-execution-tl0.6.3-m2-shard-0001-plan-2026-07-22.md",
           "detail": "Pushed immutable source-first execution plan for the lowest-ordinal 64-case shard with no historical observation; no harness discovery or test process has run."
         },
@@ -1794,7 +1810,7 @@
           "detail": "Pinned tests tree inventory and the required CTest/test-pile derivation rule."
         }
       ],
-      "residual": "Current credited local execution coverage is 66 official outcomes (65 passes / one failure) over 65 unique cases from the 3,678-case release Linux parent, with one of 289 derived physical shards complete and zero Axeyum outcomes or pairs. There are eight consumed selected process attempts: four M0 attempts, invalid M2 R1, timeout M2 R3, invalid M2 R5, and accepted M2 R6. M2 R1 retained 30 diagnostic passes / 34 failures but failed closure; R2 completed its zero-process diagnostic append. M2 R3 timed out after channel thread-creation failure. R4's 16 GiB control failed before selected discovery. R5 passed 64/64 under 32 GiB but its unconditional failure-log contract invalidated it; its diagnostic completion grants zero outcomes. R6 attempt 004 passed 64/64 under conditional semantics, and qualifying replay accepts its unchanged 152-file completion as 64 outcomes / one local shard. TL0.6.4 M0 assigns all 3,723 cases a conservative harness floor. M1 completes a source-only census over 7,004 tracked files and 90,909 exact/candidate signal spans, while 3,670 cases retain a generated-wrapper residual. M2.0 freezes the typed node, edge, assurance, resolver, provider-variant, selection, and case contract across 408,374 factored case/variant occurrences, but all 111 providers remain unbound and all exact module/generated/runtime/FFI/request/project nodes, edges, and closures remain not run or empty. M2.1 now preregisters 4,092 exact Lean source rows, 32 batches, 14 controls, and 39 no-retry processes, but no M2.1 process or header edge has been observed. M2.2 now preregisters exact module/source/artifact resolution semantics and fail-closed controls. Its R1 correction additionally separates raw import closure from the modifier-sensitive effective load fixed point and freezes ordered incremental .olean parts, IR-only reachability, and bounded cycle declines. M2.2 still has no input authority, process budget, resolution/effective rows, observations, or credit before accepted M2.1 evidence. All 111 full official workflow attempts and every Axeyum/pair/performance/population/axis/gate/parity counter remain incomplete or zero. Next execute another source-first child shard, explicitly authorize and validate the TL0.6.4 M2.1 attempt, bind and execute M2.2-M2.7 exact dependency closure, complete M3 review, and only then run matched Axeyum cases. Scheduling metadata, content signals, empty graph contracts, unexecuted controls, diagnostic rows, and retries do not increase population coverage."
+      "residual": "Current credited local execution coverage is 66 official outcomes (65 passes / one failure) over 65 unique cases from the 3,678-case release Linux parent, with one of 289 derived physical shards complete and zero Axeyum outcomes or pairs. There are eight consumed selected process attempts: four M0 attempts, invalid M2 R1, timeout M2 R3, invalid M2 R5, and accepted M2 R6. M2 R1 retained 30 diagnostic passes / 34 failures but failed closure; R2 completed its zero-process diagnostic append. M2 R3 timed out after channel thread-creation failure. R4's 16 GiB control failed before selected discovery. R5 passed 64/64 under 32 GiB but its unconditional failure-log contract invalidated it; its diagnostic completion grants zero outcomes. R6 attempt 004 passed 64/64 under conditional semantics, and qualifying replay accepts its unchanged 152-file completion as 64 outcomes / one local shard. TL0.6.4 M0 assigns all 3,723 cases a conservative harness floor. M1 completes a source-only census over 7,004 tracked files and 90,909 exact/candidate signal spans, while 3,670 cases retain a generated-wrapper residual. M2.0 freezes the typed node, edge, assurance, resolver, provider-variant, selection, and case contract across 408,374 factored case/variant occurrences, but all 111 providers remain unbound and all exact module/generated/runtime/FFI/request/project nodes, edges, and closures remain not run or empty. M2.1 now preregisters 4,092 exact Lean source rows, 32 batches, 14 controls, and 39 no-retry processes, but no M2.1 process or header edge has been observed. M2.2 now preregisters exact module/source/artifact resolution semantics and fail-closed controls. Its R1 correction additionally separates raw import closure from the modifier-sensitive effective load fixed point and freezes ordered incremental .olean parts, IR-only reachability, and bounded cycle declines. M2.3 now preregisters the exact 3,670 wrapper / 52 inline Lake / one lint dispatch partition, configured CMake/CTest provenance, runner and shell-state semantics, trace boundary, and fail-closed controls. M2.2 and M2.3 still have no input authority, process budget, resolution/configuration/trace rows, observations, or credit before accepted M2.1 evidence and their own separately bound authorities. All 111 full official workflow attempts and every Axeyum/pair/performance/population/axis/gate/parity counter remain incomplete or zero. Next execute another source-first child shard, explicitly authorize and validate the TL0.6.4 M2.1 attempt, bind and execute M2.2-M2.7 exact dependency closure, complete M3 review, and only then run matched Axeyum cases. Scheduling metadata, content signals, empty graph contracts, unexecuted controls, diagnostic rows, and retries do not increase population coverage."
     },
     {
       "id": "U3",

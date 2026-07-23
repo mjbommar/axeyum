@@ -33,7 +33,7 @@ Current machine-derived state:
 | U0-U9 | 0 complete authorities | a complete executable denominator for any terminal population |
 | A0-A11 | 0 complete axes | end-to-end native behavior on any complete required population |
 | G1-G10 | 0 satisfied terminal gates | any terminal parity claim |
-| U2 official execution/classification | 8 consumed processes, 66 official outcomes, 65 passes / 1 failure over **65 unique cases**; execution M1 derives 5 exact memberships and 289 physical shards, one locally complete; TL0.6.4 M0 gives all 3,723 cases a harness floor, M1 inspects 7,004 tracked files / 90,909 spans, and M2.0 freezes an empty typed graph across 408,374 factored case/variant occurrences | the 3,678/3,723-case parents, all 111 full attempts, any resolved dependency node/edge/closure, exact dependency-reviewed classification, an official provider, an Axeyum outcome, a pair, or performance |
+| U2 official execution/classification | 8 consumed processes, 66 official outcomes, 65 passes / 1 failure over **65 unique cases**; execution M1 derives 5 exact memberships and 289 physical shards, one locally complete; TL0.6.4 M0 gives all 3,723 cases a harness floor, M1 inspects 7,004 tracked files / 90,909 spans, M2.0 freezes an empty typed graph across 408,374 factored case/variant occurrences, and M2.1-M2.3 now have source-first header, resolution/effective-import, and configured-runner semantics without executing those programs | the 3,678/3,723-case parents, all 111 full attempts, any resolved dependency node/edge/closure, configured provider/runner edge, exact dependency-reviewed classification, an Axeyum outcome, a pair, or performance |
 
 The accepted
 [`R3 result`](lean-u2-official-execution-tl0.6.3-m0-r3-result-2026-07-22.md)
@@ -212,6 +212,17 @@ ordered incremental prefix. R1 freezes those states, bounded cycle declines,
 and added controls, but still supplies no M2.2 input, process, observation, or
 credit.
 
+M2.3's
+[configured-runner/generated-artifact plan](lean-u2-native-dependency-tl0.6.4-m2.3-runner-generated-plan-2026-07-23.md)
+now freezes the next non-executing boundary. It reproduces the exact 3,670
+generated-wrapper / 52 inline Lake / one direct-lint dispatch partition and
+distinguishes configured CMake/CTest facts, shell-source/shared-state facts,
+statically proved edges, observed trace edges, and downstream Lake/runtime/RPC
+ownership. The wrapper route binds 41 registered paths resolving to 39 regular
+runners through two tracked symlinks. No M2.3 input authority, process formula,
+provider configuration, trace, edge, outcome, pair, or credit exists before
+accepted M2.1/M2.2 results and a separate M2.3.1 authority.
+
 ## 2. What the SMT-LIB comparison actually says
 
 The solver program supplies a mature measurement warning for Lean parity:
@@ -324,9 +335,11 @@ execution, and content/dependency-complete U2 classification.
    typed empty-graph/provider contract as provisional evidence; do not
    reinterpret lexical signals, schema rows, or variant counts as reachability.
 4. Explicitly authorize, execute once, and validate TL0.6.4 M2.1's exact
-   39-process fast/full header pass; then execute M2.2-M2.7 module,
+   39-process fast/full header pass; then bind and execute M2.2-M2.7 module,
    generated-artifact, runtime, library, FFI, request, and project closures.
-   Do not infer FFI absence from M0 or closure from M2.0/pre-execution M2.1.
+   M2.2/M2.3 plans freeze semantics only: neither is an input authority or
+   execution permission. Do not infer FFI absence from M0 or closure from
+   M2.0/pre-execution M2.1.
 5. Review all rows under M3 and accept TL0.6.4 only when no provisional field,
    unknown surface, or silent official-Lean delegation remains.
 6. Repair and attest the remote official-Lean executable identity across

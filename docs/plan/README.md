@@ -379,6 +379,24 @@ Start at the root [`PLAN.md`](../../PLAN.md) (map + standing rules) and
   loading. No M2.2 input authority, process budget, evidence, resolution row,
   native outcome, pair, or parity credit exists before accepted M2.1 evidence
   and a separately bound M2.2 authority.
+- [`TL0.6.4 M2.3 configured-runner/generated-artifact plan`](lean-u2-native-dependency-tl0.6.4-m2.3-runner-generated-plan-2026-07-23.md)
+  — preregisters the exact 3,670 generated-wrapper / 52 inline-Lake / one
+  direct-lint dispatch partition, 41 registered runner paths and two symlink
+  resolutions, provider-specific CMake/CTest provenance, source-tree wrapper
+  overwrite isolation, shell source and shared-state semantics, hook/marker
+  precedence, static-versus-observed edges, downstream ownership, and twenty
+  control families. It creates no M2.3 authority, process budget, evidence,
+  configured provider, runner edge, observation, outcome, pair, or parity
+  credit; binding remains downstream of accepted M2.1 and M2.2 results.
+- [`Lean complete-parity worktree-portability R1 result`](lean-complete-parity-worktree-portability-r1-result-2026-07-23.md)
+  — records the bounded validator repair at `c3f068ea`, `09e1dcd2`,
+  `2267f41b`, and `98d85098`: retained repository-owned process/store paths
+  replay relative to one recovered checkout root, Git-reproduced evidence
+  remains content/seal checked, historical authority replay stays immutable,
+  and a new committed revision still freezes current source rows. Focused and
+  live store tests pass, and the complete-parity check succeeds from a
+  differently rooted detached worktree. This is gate portability, not added
+  Lean parity credit.
 - [`lean-compatibility-v1.json`](lean-compatibility-v1.json) and generated
   [`Lean compatibility matrix`](generated/lean-compatibility.md) — TL0.2's
   executable eight-field assurance contract, K0-K6 profile gates, registered

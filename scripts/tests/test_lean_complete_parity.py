@@ -34,6 +34,79 @@ class LeanCompleteParityTests(unittest.TestCase):
     def failures(self) -> list[str]:
         return GEN.validate_manifest(self.data)
 
+    def test_m2_3_dispatch_preregistration_matches_u2_authority(self) -> None:
+        authority = GEN.load_json(GEN.U2_AUTHORITY)
+        cases = authority["cases"]
+        route_counts = {"wrapper": 0, "lake-inline": 0, "lint": 0}
+        wrapper_runners = set()
+        for case in cases:
+            command = case["registration"]["command"]
+            if (
+                command[0] == "$BASH"
+                and command[1] == "$LEAN_ROOT/tests/with_stage1_test_env.sh"
+            ):
+                route_counts["wrapper"] += 1
+                wrapper_runners.add(command[2])
+            elif command[0:2] == ["$BASH", "-c"]:
+                route_counts["lake-inline"] += 1
+            elif command == ["$PYTHON3", "lint.py"]:
+                route_counts["lint"] += 1
+            else:
+                self.fail(f"unregistered M2.3 dispatch route: {case['id']}")
+        self.assertEqual(
+            route_counts, {"wrapper": 3670, "lake-inline": 52, "lint": 1}
+        )
+        self.assertEqual(len(wrapper_runners), 41)
+        self.assertIn(
+            "$LEAN_ROOT/tests/compile_bench/run_test.sh", wrapper_runners
+        )
+        self.assertIn("$LEAN_ROOT/tests/elab_bench/run_test.sh", wrapper_runners)
+
+        inline_profiles = {"default+full-lake": 0, "full-lake": 0}
+        for case in cases:
+            if case["kind"] != "lake-directory":
+                continue
+            if case["profiles"] == ["default", "full-lake"]:
+                inline_profiles["default+full-lake"] += 1
+            elif case["profiles"] == ["full-lake"]:
+                inline_profiles["full-lake"] += 1
+            else:
+                self.fail(f"unexpected Lake profile set: {case['id']}")
+        self.assertEqual(
+            inline_profiles, {"default+full-lake": 7, "full-lake": 45}
+        )
+
+        suffix_counts = {
+            suffix: sum(
+                sidecar.endswith(suffix)
+                for case in cases
+                for sidecar in case["sidecars"]
+            )
+            for suffix in (
+                ".init.sh",
+                ".before.sh",
+                ".after.sh",
+                ".out.expected",
+                ".out.ignored",
+                ".no_interpret",
+                ".do_interpret",
+                ".no_compile",
+            )
+        }
+        self.assertEqual(
+            suffix_counts,
+            {
+                ".init.sh": 27,
+                ".before.sh": 6,
+                ".after.sh": 0,
+                ".out.expected": 1480,
+                ".out.ignored": 60,
+                ".no_interpret": 6,
+                ".do_interpret": 2,
+                ".no_compile": 1,
+            },
+        )
+
     def test_committed_registry_is_valid_and_rendering_is_deterministic(self) -> None:
         self.assertEqual(self.failures(), [])
         first = GEN.build_report(self.data)
@@ -251,6 +324,14 @@ class LeanCompleteParityTests(unittest.TestCase):
         self.assertTrue(all(value == 0 for value in header["credits"].values()))
         self.assertIn(
             "docs/plan/lean-u2-native-header-contract-m2.1-v1.json",
+            source_paths,
+        )
+        self.assertIn(
+            "docs/plan/lean-u2-native-dependency-tl0.6.4-m2.3-runner-generated-plan-2026-07-23.md",
+            source_paths,
+        )
+        self.assertIn(
+            "docs/plan/lean-complete-parity-worktree-portability-r1-result-2026-07-23.md",
             source_paths,
         )
         self.assertIn(

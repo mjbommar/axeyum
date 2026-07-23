@@ -334,6 +334,15 @@ Again, there are distinct targets:
   without module data. It also binds `.olean`, `.olean.server`, and
   `.olean.private` as one ordered incremental family, not three independently
   readable artifacts, and turns cyclic module imports into bounded declines.
+  M2.3's
+  [configured-runner/generated-artifact plan](plan/lean-u2-native-dependency-tl0.6.4-m2.3-runner-generated-plan-2026-07-23.md)
+  now preregisters the exact 3,670 wrapper / 52 inline Lake / one lint dispatch
+  partition, provider-specific CMake and CTest provenance, private generated
+  wrapper isolation, exact shell-source/shared-state behavior, runner symlinks,
+  hook and marker precedence, and static-versus-observed edge rules. This is
+  still semantics-only: no provider configuration, M2.3 authority, process,
+  trace, runner edge, native outcome, pair, or parity credit exists, and M2.3
+  binding remains downstream of accepted M2.1 and M2.2 results.
   The subsequent
   [TL0.7.1 contract](plan/lean-execution-evidence-tl0.7.1-2026-07-22.md)
   defines explicit 4/8 GiB local lanes, twelve typed termination classes, and

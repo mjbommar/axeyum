@@ -412,6 +412,16 @@ credits remain unchanged; the current validator/test bytes are tracked by this
 terminal registry. This prevents a clean textual merge from either leaving the
 gate red or silently rewriting downstream U2 history.
 
+The later
+[worktree-portability R1 result](lean-complete-parity-worktree-portability-r1-result-2026-07-23.md)
+closes the broader checkout-root defect exposed by that repair. Repository-
+owned retained process and store paths now replay relative to one recovered
+checkout root, external executables and content identities remain exact, and
+committed read-only M2 evidence accepts only Git's clean tracked
+non-executable representation. The complete-parity check passes from a
+differently rooted detached worktree without rewriting historical authorities
+or changing any evidence, outcome, or credit.
+
 TL0.6.3 M0 is now governed by a
 [source-first official-case plan](lean-u2-official-execution-tl0.6.3-m0-plan-2026-07-22.md).
 It selects `compile/534.lean` as a singleton child shard of the exact
@@ -598,6 +608,20 @@ module and force descendant revisits. R1 also freezes exported/server/private
 `.olean` files as one ordered incremental serialization, separate `.ir`
 reachability, and bounded cycle declines. These are future M2.2 proof
 obligations, not current resolver or parity observations.
+
+The source-first
+[M2.3 configured-runner/generated-artifact plan](lean-u2-native-dependency-tl0.6.4-m2.3-runner-generated-plan-2026-07-23.md)
+now freezes the next boundary without configuring or tracing anything. The
+registered U2 denominator partitions into 3,670 generated-wrapper cases, 52
+inline Lake `bash -c` cases, and one direct Python lint case. The wrapper route
+uses 41 registered paths resolving to 39 regular runners through two tracked
+symlinks. M2.3 separates exact provider CMake/CTest generation, configured
+dispatch, shell sourcing and state, hooks and marker precedence, statically
+proved edges, observed trace edges, and M2.4-M2.6 downstream ownership. No
+M2.3 input authority, process formula, provider, configured wrapper, trace,
+edge, native outcome, pair, performance row, or terminal credit exists; those
+remain downstream of accepted M2.1 and M2.2 results plus a separately frozen
+M2.3.1 authority.
 
 ## 8. Layer-specific equivalence
 
