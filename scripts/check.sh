@@ -40,6 +40,7 @@ step lean-execution-store-tests python3 -m unittest scripts.tests.test_lean_exec
 step lean-execution-store python3 scripts/lean_execution_store.py result --check
 step lean-u2-official-execution-tests python3 -m unittest scripts.tests.test_lean_u2_official_execution
 step lean-u2-official-execution-r2-tests python3 -m unittest scripts.tests.test_lean_u2_official_execution_r2
+step lean-u2-official-execution-r3-tests python3 -m unittest scripts.tests.test_lean_u2_official_execution_r3
 step lean-complete-parity-tests python3 -m unittest scripts.tests.test_lean_complete_parity
 step lean-complete-parity python3 scripts/gen-lean-complete-parity.py --check
 step lean-construct-matrix-tests python3 -m unittest scripts.tests.test_lean_official_construct_matrix
