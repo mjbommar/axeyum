@@ -120,6 +120,18 @@
           "detail": "Source-first M0 contract for the ten-surface dependency DAG, fourteen exact family rules, three case overrides, mutation gates, stop conditions, and non-crediting boundary."
         },
         {
+          "path": "docs/plan/lean-u2-native-surface-content-v1.json",
+          "detail": "TL0.6.4 M1 full tracked-content authority: 7,004 file rows, 3,723 case projections, 90,909 exact/candidate signal spans, complete tracked-source census, and zero exact dependency/native/pair/parity credit."
+        },
+        {
+          "path": "docs/plan/generated/lean-u2-native-surface-content.md",
+          "detail": "Generated media, signal, provisional surface, generated-wrapper residual, and non-crediting denominators for the complete tracked U2 content census."
+        },
+        {
+          "path": "docs/plan/lean-u2-native-surface-classification-tl0.6.4-m1-plan-2026-07-23.md",
+          "detail": "Source-first M1 contract for byte-exact tracked-content inspection, role-aware case projection, structured and lexical controls, generated-artifact boundary, and M2/M3 continuation."
+        },
+        {
           "path": "docs/plan/lean-u2-official-execution-tl0.6.3-m2-shard-0001-plan-2026-07-22.md",
           "detail": "Pushed immutable source-first execution plan for the lowest-ordinal 64-case shard with no historical observation; no harness discovery or test process has run."
         },
@@ -304,7 +316,7 @@
           "detail": "Pinned tests tree inventory and the required CTest/test-pile derivation rule."
         }
       ],
-      "residual": "Current credited local execution coverage is 66 official outcomes (65 passes / one failure) over 65 unique cases from the 3,678-case release Linux parent, with one of 289 derived physical shards complete and zero Axeyum outcomes or pairs. There are eight consumed selected process attempts: four M0 attempts, invalid M2 R1, timeout M2 R3, invalid M2 R5, and accepted M2 R6. M2 R1 retained 30 diagnostic passes / 34 failures but failed closure; R2 completed its zero-process diagnostic append. M2 R3 timed out after channel thread-creation failure. R4's 16 GiB control failed before selected discovery. R5 passed 64/64 under 32 GiB but its unconditional failure-log contract invalidated it; its diagnostic completion grants zero outcomes. R6 attempt 004 passed 64/64 under conditional semantics, and qualifying replay accepts its unchanged 152-file completion as 64 outcomes / one local shard. TL0.6.4 M0 assigns all 3,723 cases a conservative harness floor, but content refinement and exact module dependency closure remain not run for all rows. All 111 full official workflow attempts, the parent/provider profiles, and every Axeyum/pair/performance/population/axis/gate/parity counter remain incomplete or zero. Next execute another source-first child shard, complete TL0.6.4 M1/M2 classification evidence, and run matched Axeyum cases. Scheduling metadata, controls, diagnostic rows, and retries do not increase population coverage."
+      "residual": "Current credited local execution coverage is 66 official outcomes (65 passes / one failure) over 65 unique cases from the 3,678-case release Linux parent, with one of 289 derived physical shards complete and zero Axeyum outcomes or pairs. There are eight consumed selected process attempts: four M0 attempts, invalid M2 R1, timeout M2 R3, invalid M2 R5, and accepted M2 R6. M2 R1 retained 30 diagnostic passes / 34 failures but failed closure; R2 completed its zero-process diagnostic append. M2 R3 timed out after channel thread-creation failure. R4's 16 GiB control failed before selected discovery. R5 passed 64/64 under 32 GiB but its unconditional failure-log contract invalidated it; its diagnostic completion grants zero outcomes. R6 attempt 004 passed 64/64 under conditional semantics, and qualifying replay accepts its unchanged 152-file completion as 64 outcomes / one local shard. TL0.6.4 M0 assigns all 3,723 cases a conservative harness floor. M1 now completes a source-only census over 7,004 tracked files and 90,909 exact/candidate signal spans, while 3,670 cases retain a generated-wrapper residual and all exact module/generated/runtime/FFI/request/project dependency closures remain not run. All 111 full official workflow attempts, the parent/provider profiles, and every Axeyum/pair/performance/population/axis/gate/parity counter remain incomplete or zero. Next execute another source-first child shard, complete TL0.6.4 M2 exact dependency closure and M3 review, and only then run matched Axeyum cases. Scheduling metadata, content signals, controls, diagnostic rows, and retries do not increase population coverage."
     },
     {
       "id": "U3",

@@ -118,6 +118,8 @@ parity-docs:
     python3 scripts/gen-lean-u2-official-child-shards.py --check
     python3 -m unittest scripts.tests.test_lean_u2_native_surface_classification
     python3 scripts/gen-lean-u2-native-surface-classification.py --check
+    python3 -m unittest scripts.tests.test_lean_u2_native_surface_content
+    python3 scripts/gen-lean-u2-native-surface-content.py --check
     python3 -m unittest scripts.tests.test_lean_execution_evidence
     python3 scripts/gen-lean-execution-evidence.py --check
     python3 -m unittest scripts.tests.test_lean_execution_process

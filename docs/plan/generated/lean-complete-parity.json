@@ -4,7 +4,7 @@
   "source_identities": [
     {
       "path": ".github/workflows/ci.yml",
-      "sha256": "c2f68e7c259ac37c8e3d0de900fe64e98638568b9a33491cf244aba985f2d971"
+      "sha256": "7a4adc010d7bbbe3e63280c2ec96a90b7d567e48507b3ebda947c63d68528cde"
     },
     {
       "path": "docs/plan/generated/lean-execution-evidence.md",
@@ -13,6 +13,10 @@
     {
       "path": "docs/plan/generated/lean-u2-native-surface-classification.md",
       "sha256": "7338aad7ec63b5f0192b475246eaeb913b20c8c09e4c412c18a17a453ed8797f"
+    },
+    {
+      "path": "docs/plan/generated/lean-u2-native-surface-content.md",
+      "sha256": "257f7a4903f213afd0a66eea99eed850731f0d978198e8102e6dbe503b2760b0"
     },
     {
       "path": "docs/plan/generated/lean-u2-official-child-shards.md",
@@ -40,7 +44,7 @@
     },
     {
       "path": "docs/plan/lean-complete-parity-v1.json",
-      "sha256": "49df54db3b1b62f984fd5f2a8b585be05451ef4d9ebd1092e4d865cc57906240"
+      "sha256": "09297df96028824332ba009f421d75aef33f888c028a82d7afa92c350c8c65e1"
     },
     {
       "path": "docs/plan/lean-execution-acceptance-tl0.7.4-2026-07-22.md",
@@ -79,8 +83,16 @@
       "sha256": "275e1fc80333116cc92131f0cb6228babc994f4c8a002c87994a286ea00fbe15"
     },
     {
+      "path": "docs/plan/lean-u2-native-surface-classification-tl0.6.4-m1-plan-2026-07-23.md",
+      "sha256": "cfec00b0cc7e0336d46e377bcad2de2ebaf7d8b99345c14044c97a2628962d35"
+    },
+    {
       "path": "docs/plan/lean-u2-native-surface-classification-v1.json",
       "sha256": "89b29bc6820d1d948d5cd4defdd28eb59ddb55a5924a3cf770c0b21282959959"
+    },
+    {
+      "path": "docs/plan/lean-u2-native-surface-content-v1.json",
+      "sha256": "c83d10ce0f0619d4327dbbd7544bd584360cb080d35778ca7798a5f7da17560f"
     },
     {
       "path": "docs/plan/lean-u2-official-child-shards-v1.json",
@@ -268,7 +280,7 @@
     },
     {
       "path": "scripts/gen-lean-complete-parity.py",
-      "sha256": "83c81b77a9bd724ae8bd0d046bbe882cc39d935a0efb0fcf9fafed9872be2fc8"
+      "sha256": "fedb611b92b785d510d024c7f055f3e8a7efff5bca3f64c3948cd6572ea56ac2"
     },
     {
       "path": "scripts/gen-lean-execution-evidence.py",
@@ -277,6 +289,10 @@
     {
       "path": "scripts/gen-lean-u2-native-surface-classification.py",
       "sha256": "4827fc4ed27e729b36f2c0451059e4a4c7e4186ac8650eb54e8e98b1d740ccf6"
+    },
+    {
+      "path": "scripts/gen-lean-u2-native-surface-content.py",
+      "sha256": "107d699e3ab372ee78e686affcb7cbd940d6ff4ae3446dc29f90d1cd6927fb05"
     },
     {
       "path": "scripts/gen-lean-u2-official-child-shards.py",
@@ -356,7 +372,7 @@
     },
     {
       "path": "scripts/tests/test_lean_complete_parity.py",
-      "sha256": "a6d2d749b15ff62d3c25ba2e17123d482a6f41ab8180eba134278d954ffcc92d"
+      "sha256": "b79941945c9f87c0e6599c81194b09e905623c25f67335670e50f607eb1f2689"
     },
     {
       "path": "scripts/tests/test_lean_execution_acceptance.py",
@@ -377,6 +393,10 @@
     {
       "path": "scripts/tests/test_lean_u2_native_surface_classification.py",
       "sha256": "eb88b21ffb7ba99be7d7f62bed01d1895952c42f6430e2a51d2fa517a61ef551"
+    },
+    {
+      "path": "scripts/tests/test_lean_u2_native_surface_content.py",
+      "sha256": "8acec41e70a820c2bd5b713673fc98f6019cd675885e8f2169b24ad265472da4"
     },
     {
       "path": "scripts/tests/test_lean_u2_official_child_shards.py",
@@ -843,6 +863,126 @@
         "parity_credit": 0
       }
     },
+    "u2_native_content_authority": {
+      "scope": "full-u2-pinned-content-surface-refinement-not-support-or-parity",
+      "status": "complete-tracked-content-census-dependency-closure-not-run",
+      "summary": {
+        "cases_with_content_added_surface": 3394,
+        "cases_with_generated_wrapper_residual": 3670,
+        "classification_state_counts": {
+          "content-census-provisional": 3723
+        },
+        "closure_surface_counts": {
+          "adversarial": 316,
+          "compiler-runtime": 860,
+          "editor-rpc": 147,
+          "elaborator": 3717,
+          "ffi": 24,
+          "kernel-import": 3717,
+          "modules-lake": 223,
+          "parser-macro": 3717,
+          "tactic-meta": 1678,
+          "toolchain-cli": 6
+        },
+        "content_refinement_counts": {
+          "complete-census": 3723
+        },
+        "decoder_state_counts": {
+          "decoded": 6694,
+          "inspected-no-decoder": 16,
+          "malformed-structured": 294
+        },
+        "direct_surface_counts": {
+          "adversarial": 316,
+          "compiler-runtime": 841,
+          "editor-rpc": 147,
+          "elaborator": 3463,
+          "ffi": 24,
+          "kernel-import": 871,
+          "modules-lake": 81,
+          "parser-macro": 439,
+          "tactic-meta": 1678,
+          "toolchain-cli": 6
+        },
+        "media_counts": {
+          "binary": 10,
+          "c-family": 9,
+          "expected": 1488,
+          "json": 170,
+          "lean": 4092,
+          "python": 19,
+          "shell": 237,
+          "symlink": 6,
+          "text": 444,
+          "toml": 529
+        },
+        "module_dependency_closure_counts": {
+          "not-run": 3723
+        },
+        "native_outcome_counts": {
+          "not-run": 3723
+        },
+        "registration_cases": 3723,
+        "role_file_counts": {
+          "case-hook": 33,
+          "case-local-support": 1331,
+          "family-runner": 93,
+          "primary": 3723,
+          "registration-wrapper-template": 3,
+          "shared-support": 7002,
+          "sidecar": 1591,
+          "unreferenced-content": 0
+        },
+        "signal_hit_counts": {
+          "c.abi-declaration": 10,
+          "json.document-version": 13,
+          "json.rpc-method": 2,
+          "lean.compiler-api": 51,
+          "lean.declaration": 65469,
+          "lean.elaborator-extension": 187,
+          "lean.evaluation-command": 4622,
+          "lean.ffi-declaration": 46,
+          "lean.import-command": 1544,
+          "lean.meta-api": 332,
+          "lean.recursion-control": 1314,
+          "lean.server-api": 78,
+          "lean.syntax-declaration": 573,
+          "lean.syntax-quotation": 1085,
+          "lean.tactic-block": 14039,
+          "shell.native-link-candidate": 20,
+          "shell.tool-command": 1287,
+          "toml.native-link-field": 1,
+          "toml.project-field": 236
+        },
+        "signal_hits": 90909,
+        "support_scopes": 94,
+        "tracked_content_files": 7004
+      },
+      "claims": {
+        "all_registration_cases_content_projected": true,
+        "all_tracked_u2_content_files_inspected": true,
+        "content_signal_census_complete": true,
+        "generated_wrappers_materialized": false,
+        "lean_parity_established": false,
+        "matched_pair_formed": false,
+        "module_dependency_closure_complete": false,
+        "native_execution_observed": false,
+        "performance_measured": false,
+        "tl0_6_4_complete": false,
+        "u2_complete": false
+      },
+      "credits": {
+        "axeyum_outcomes": 0,
+        "complete_axes": 0,
+        "complete_populations": 0,
+        "official_outcomes": 0,
+        "paired_cells": 0,
+        "parity_credit": 0,
+        "performance_rows": 0,
+        "satisfied_gates": 0
+      },
+      "record_sha256": "d10f350d2c01d116538c9b52dcef71f38c473c81a36b3b41f75da4f39b889887"
+    },
     "execution_evidence_authority": {
       "scope": "execution-evidence-contract-only-no-process-or-parity-outcome",
       "lane_policies": 2,
@@ -1216,6 +1356,18 @@
           "detail": "Source-first M0 contract for the ten-surface dependency DAG, fourteen exact family rules, three case overrides, mutation gates, stop conditions, and non-crediting boundary."
         },
         {
+          "path": "docs/plan/lean-u2-native-surface-content-v1.json",
+          "detail": "TL0.6.4 M1 full tracked-content authority: 7,004 file rows, 3,723 case projections, 90,909 exact/candidate signal spans, complete tracked-source census, and zero exact dependency/native/pair/parity credit."
+        },
+        {
+          "path": "docs/plan/generated/lean-u2-native-surface-content.md",
+          "detail": "Generated media, signal, provisional surface, generated-wrapper residual, and non-crediting denominators for the complete tracked U2 content census."
+        },
+        {
+          "path": "docs/plan/lean-u2-native-surface-classification-tl0.6.4-m1-plan-2026-07-23.md",
+          "detail": "Source-first M1 contract for byte-exact tracked-content inspection, role-aware case projection, structured and lexical controls, generated-artifact boundary, and M2/M3 continuation."
+        },
+        {
           "path": "docs/plan/lean-u2-official-execution-tl0.6.3-m2-shard-0001-plan-2026-07-22.md",
           "detail": "Pushed immutable source-first execution plan for the lowest-ordinal 64-case shard with no historical observation; no harness discovery or test process has run."
         },
@@ -1400,7 +1552,7 @@
           "detail": "Pinned tests tree inventory and the required CTest/test-pile derivation rule."
         }
       ],
-      "residual": "Current credited local execution coverage is 66 official outcomes (65 passes / one failure) over 65 unique cases from the 3,678-case release Linux parent, with one of 289 derived physical shards complete and zero Axeyum outcomes or pairs. There are eight consumed selected process attempts: four M0 attempts, invalid M2 R1, timeout M2 R3, invalid M2 R5, and accepted M2 R6. M2 R1 retained 30 diagnostic passes / 34 failures but failed closure; R2 completed its zero-process diagnostic append. M2 R3 timed out after channel thread-creation failure. R4's 16 GiB control failed before selected discovery. R5 passed 64/64 under 32 GiB but its unconditional failure-log contract invalidated it; its diagnostic completion grants zero outcomes. R6 attempt 004 passed 64/64 under conditional semantics, and qualifying replay accepts its unchanged 152-file completion as 64 outcomes / one local shard. TL0.6.4 M0 assigns all 3,723 cases a conservative harness floor, but content refinement and exact module dependency closure remain not run for all rows. All 111 full official workflow attempts, the parent/provider profiles, and every Axeyum/pair/performance/population/axis/gate/parity counter remain incomplete or zero. Next execute another source-first child shard, complete TL0.6.4 M1/M2 classification evidence, and run matched Axeyum cases. Scheduling metadata, controls, diagnostic rows, and retries do not increase population coverage."
+      "residual": "Current credited local execution coverage is 66 official outcomes (65 passes / one failure) over 65 unique cases from the 3,678-case release Linux parent, with one of 289 derived physical shards complete and zero Axeyum outcomes or pairs. There are eight consumed selected process attempts: four M0 attempts, invalid M2 R1, timeout M2 R3, invalid M2 R5, and accepted M2 R6. M2 R1 retained 30 diagnostic passes / 34 failures but failed closure; R2 completed its zero-process diagnostic append. M2 R3 timed out after channel thread-creation failure. R4's 16 GiB control failed before selected discovery. R5 passed 64/64 under 32 GiB but its unconditional failure-log contract invalidated it; its diagnostic completion grants zero outcomes. R6 attempt 004 passed 64/64 under conditional semantics, and qualifying replay accepts its unchanged 152-file completion as 64 outcomes / one local shard. TL0.6.4 M0 assigns all 3,723 cases a conservative harness floor. M1 now completes a source-only census over 7,004 tracked files and 90,909 exact/candidate signal spans, while 3,670 cases retain a generated-wrapper residual and all exact module/generated/runtime/FFI/request/project dependency closures remain not run. All 111 full official workflow attempts, the parent/provider profiles, and every Axeyum/pair/performance/population/axis/gate/parity counter remain incomplete or zero. Next execute another source-first child shard, complete TL0.6.4 M2 exact dependency closure and M3 review, and only then run matched Axeyum cases. Scheduling metadata, content signals, controls, diagnostic rows, and retries do not increase population coverage."
     },
     {
       "id": "U3",

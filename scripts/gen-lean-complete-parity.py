@@ -34,6 +34,9 @@ U2_CHILD_SHARDS = ROOT / "docs" / "plan" / "lean-u2-official-child-shards-v1.jso
 U2_NATIVE_SURFACES = (
     ROOT / "docs" / "plan" / "lean-u2-native-surface-classification-v1.json"
 )
+U2_NATIVE_CONTENT = (
+    ROOT / "docs" / "plan" / "lean-u2-native-surface-content-v1.json"
+)
 EXECUTION_EVIDENCE = ROOT / "docs" / "plan" / "lean-execution-evidence-v1.json"
 EXECUTION_PROCESS = ROOT / "docs" / "plan" / "lean-execution-process-v1.json"
 EXECUTION_STORE = ROOT / "docs" / "plan" / "lean-execution-store-v1.json"
@@ -701,6 +704,27 @@ def u2_native_surface_snapshot() -> dict[str, Any]:
     }
 
 
+def u2_native_content_snapshot() -> dict[str, Any]:
+    checker = load_script(
+        "lean_u2_native_content_for_complete_parity",
+        ROOT / "scripts" / "gen-lean-u2-native-surface-content.py",
+    )
+    data = load_json(U2_NATIVE_CONTENT)
+    failures = checker.validate_authority(data)
+    if failures:
+        raise RuntimeError(
+            "invalid U2 native-content authority: " + "; ".join(failures)
+        )
+    return {
+        "scope": data["scope"],
+        "status": data["status"],
+        "summary": data["summary"],
+        "claims": data["claims"],
+        "credits": data["credits"],
+        "record_sha256": data["record_sha256"],
+    }
+
+
 def execution_evidence_snapshot() -> dict[str, Any]:
     checker = load_script(
         "lean_execution_evidence_for_complete_parity",
@@ -930,6 +954,7 @@ def report_source_paths(data: dict[str, Any]) -> list[Path]:
         U2_CI_PROFILES,
         U2_CHILD_SHARDS,
         U2_NATIVE_SURFACES,
+        U2_NATIVE_CONTENT,
         EXECUTION_EVIDENCE,
         EXECUTION_PROCESS,
         EXECUTION_STORE,
@@ -950,6 +975,11 @@ def report_source_paths(data: dict[str, Any]) -> list[Path]:
         / "scripts"
         / "tests"
         / "test_lean_u2_native_surface_classification.py",
+        ROOT / "scripts" / "gen-lean-u2-native-surface-content.py",
+        ROOT
+        / "scripts"
+        / "tests"
+        / "test_lean_u2_native_surface_content.py",
         ROOT / "scripts" / "gen-lean-execution-evidence.py",
         ROOT / "scripts" / "tests" / "test_lean_execution_evidence.py",
         ROOT / "scripts" / "lean_execution_process.py",
@@ -1020,6 +1050,7 @@ def build_report(data: dict[str, Any]) -> dict[str, Any]:
             "u2_ci_profile_authority": u2_ci_profile_snapshot(),
             "u2_child_shard_authority": u2_child_shard_snapshot(),
             "u2_native_surface_authority": u2_native_surface_snapshot(),
+            "u2_native_content_authority": u2_native_content_snapshot(),
             "execution_evidence_authority": execution_evidence_snapshot(),
             "execution_process_authority": execution_process_snapshot(),
             "execution_store_authority": execution_store_snapshot(),
@@ -1098,6 +1129,7 @@ def render_markdown(report: dict[str, Any]) -> str:
     u2_ci = bounded["u2_ci_profile_authority"]
     u2_shards = bounded["u2_child_shard_authority"]
     u2_surfaces = bounded["u2_native_surface_authority"]
+    u2_content = bounded["u2_native_content_authority"]
     execution = bounded["execution_evidence_authority"]
     process = bounded["execution_process_authority"]
     store = bounded["execution_store_authority"]
@@ -1183,6 +1215,17 @@ def render_markdown(report: dict[str, Any]) -> str:
             f"cases, with {u2_surfaces['credits']['paired_cells']} paired cells and "
             f"{u2_surfaces['credits']['parity_credit']} parity credit. This is a "
             "harness floor, not accepted TL0.6.4 classification.",
+            f"- U2 pinned-content surface census: "
+            f"{u2_content['summary']['tracked_content_files']:,} tracked files, "
+            f"{u2_content['summary']['registration_cases']:,} case projections, "
+            f"{u2_content['summary']['signal_hits']:,} exact/candidate signal hits, "
+            f"{u2_content['summary']['cases_with_content_added_surface']:,} cases "
+            "with content-observed provisional surfaces, and "
+            f"{u2_content['summary']['cases_with_generated_wrapper_residual']:,} "
+            "generated-wrapper residuals. Exact module/generated/runtime/FFI/"
+            "request/project dependency closure and native outcomes remain not-run; "
+            f"paired cells and parity credit remain {u2_content['credits']['paired_cells']} / "
+            f"{u2_content['credits']['parity_credit']}.",
             f"- Lean execution evidence: {execution['lane_policies']} lane templates, "
             f"{execution['termination_classes']} termination classes, "
             f"{execution['synthetic_controls']} synthetic controls, and "
