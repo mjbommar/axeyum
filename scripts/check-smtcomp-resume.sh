@@ -11,6 +11,7 @@ python3 -m unittest \
   scripts.tests.test_smtcomp_cgroup_host \
   scripts.tests.test_smtcomp_multi_host \
   scripts.tests.test_smtcomp_multi_host_live \
+  scripts.tests.test_smtcomp_p0_compare \
   scripts.tests.test_smtcomp_p0_prepare \
   scripts.smtcomp_repro.tests.test_corpus_acquisition \
   scripts.smtcomp_repro.tests.test_final_selection_audit \
@@ -22,3 +23,4 @@ for test in test_scoring test_pipeline test_selection test_provenance; do
 done
 python3 scripts/gen-smtcomp-resume-contract.py --check
 python3 scripts/gen-smtcomp-selection-authority.py --check
+python3 scripts/generate-smtcomp-repaired-p0-comparison.py --check
