@@ -598,26 +598,36 @@ def official_selection_input_manifest(
         raise ContractError("official selection requires the canonical benchmark marker")
     selection_identity, official_selected = _official_selection_identity(accepted_root)
     paths = _selected_paths(file_list)
-    if len(paths) != len(official_selected):
-        raise ContractError("execution list count differs from official selection")
+    requested = []
+    previous_official_id: str | None = None
+    for raw_path in paths:
+        benchmark_id = _normalize_benchmark_id(raw_path, marker)
+        official_id = f"{marker}{benchmark_id}"
+        _official_benchmark_id(official_id)
+        if previous_official_id is not None and official_id <= previous_official_id:
+            raise ContractError(
+                "execution list is not a strictly ordered official-selection subset"
+            )
+        previous_official_id = official_id
+        requested.append((raw_path, benchmark_id, official_id))
     ledger_path = accepted_root / "selected-files.jsonl"
     benchmarks = []
+    requested_index = 0
     with ledger_path.open("rb") as ledger:
-        for sequence, (raw_path, official_id) in enumerate(zip(paths, official_selected)):
+        for ledger_index, official_id in enumerate(official_selected):
             raw_row = ledger.readline()
             if not raw_row:
                 raise ContractError("selected-file ledger ended before official selected list")
-            row = _canonical_jsonl_row(raw_row, str(sequence))
+            row = _canonical_jsonl_row(raw_row, str(ledger_index))
             if set(row) != {"archive", "benchmark_id", "bytes", "logic", "sha256"}:
-                raise ContractError(f"selected-file ledger field set mismatch: {sequence}")
-            benchmark_id = _normalize_benchmark_id(raw_path, marker)
-            official_benchmark_id = f"{marker}{benchmark_id}"
+                raise ContractError(
+                    f"selected-file ledger field set mismatch: {ledger_index}"
+                )
             expected_logic = official_id.split("/", 2)[1]
             expected_sha256 = row.get("sha256")
             expected_bytes = row.get("bytes")
             if (
-                official_benchmark_id != official_id
-                or row.get("benchmark_id") != official_id
+                row.get("benchmark_id") != official_id
                 or row.get("logic") != expected_logic
                 or not isinstance(row.get("archive"), str)
                 or isinstance(expected_bytes, bool)
@@ -625,7 +635,18 @@ def official_selection_input_manifest(
                 or expected_bytes < 0
                 or not _is_sha256(expected_sha256)
             ):
-                raise ContractError(f"selected-file ledger identity mismatch: {sequence}")
+                raise ContractError(
+                    f"selected-file ledger identity mismatch: {ledger_index}"
+                )
+            if requested_index >= len(requested):
+                continue
+            raw_path, benchmark_id, requested_official_id = requested[requested_index]
+            if requested_official_id < official_id:
+                raise ContractError(
+                    f"execution benchmark is not officially selected: {requested_official_id}"
+                )
+            if requested_official_id != official_id:
+                continue
             path = Path(raw_path)
             if path.is_symlink() or not path.is_file():
                 raise ContractError(f"official benchmark is not a regular file: {raw_path}")
@@ -636,15 +657,19 @@ def official_selection_input_manifest(
                 raise ContractError(f"official benchmark bytes differ: {benchmark_id}")
             benchmarks.append(
                 {
-                    "sequence": sequence,
+                    "sequence": requested_index,
                     "path": raw_path,
                     "benchmark_id": benchmark_id,
                     "benchmark_sha256": expected_sha256,
                     "input_bytes": expected_bytes,
                 }
             )
+            requested_index += 1
         if ledger.readline():
             raise ContractError("selected-file ledger has rows beyond official selected list")
+    if requested_index != len(requested):
+        missing = requested[requested_index][2]
+        raise ContractError(f"execution benchmark is not officially selected: {missing}")
     return {
         "schema": OFFICIAL_SELECTION_INPUT_SCHEMA,
         "selected_list_sha256": sha256_file(file_list),
