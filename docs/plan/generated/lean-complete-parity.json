@@ -4,7 +4,7 @@
   "source_identities": [
     {
       "path": ".github/workflows/ci.yml",
-      "sha256": "406b5d18d6c531e4289df1b7e2ed3e0930c2b51a5cf08bd81aff7998a2e487bd"
+      "sha256": "5be632fa6cc842d3d456d428ffb7e525f9eebfce70b00af92af9b2cf2c451fe6"
     },
     {
       "path": "docs/plan/generated/lean-execution-evidence.md",
@@ -224,7 +224,7 @@
     },
     {
       "path": "scripts/gen-lean-complete-parity.py",
-      "sha256": "c97598f5b186ac31b6e1c8e033b039e6a59504b9051fdd4e165d8d75584a7d89"
+      "sha256": "6e1cea9944b34478f7cd7d7b524072b74dbf6c693cb82bba48e329345daac11b"
     },
     {
       "path": "scripts/gen-lean-execution-evidence.py",
@@ -283,6 +283,10 @@
       "sha256": "6f5c085d276ec9661c276a0bc1704a31ef6b6358df93c8b255a7e26ebd4bd29f"
     },
     {
+      "path": "scripts/lean_u2_official_execution_m2_r6.py",
+      "sha256": "27b0e5af6480d89c469283b530decb1053897496cfe059fe902a954c1a40d878"
+    },
+    {
       "path": "scripts/lean_u2_official_execution_m2_run.py",
       "sha256": "5763298bb33c97baacc0c29d6cc67a8df2ece796f7ea182c59957f5be59eb593"
     },
@@ -300,7 +304,7 @@
     },
     {
       "path": "scripts/tests/test_lean_complete_parity.py",
-      "sha256": "f38453ceb64997bcf36d18c7804fde4fc1e92ff5bd882f27f5b36b244444f487"
+      "sha256": "a7f63dcda23ffe9d4517591e6e77c1b440b30997afabd679d7d553200a73582e"
     },
     {
       "path": "scripts/tests/test_lean_execution_acceptance.py",
@@ -353,6 +357,10 @@
     {
       "path": "scripts/tests/test_lean_u2_official_execution_m2_r5_diagnostic.py",
       "sha256": "73a7967ded220e05b4e1972b3c624046fc14f1f8e132ecb2a6e931a714d2cca4"
+    },
+    {
+      "path": "scripts/tests/test_lean_u2_official_execution_m2_r6.py",
+      "sha256": "85c03e0ee6b5f5521d80d002ae669b433966e9b9851d65578d3a901a75b427d7"
     },
     {
       "path": "scripts/tests/test_lean_u2_official_execution_m2_run.py",
@@ -860,6 +868,16 @@
         "diagnostic_junit_rows": 64,
         "official_outcomes": 0,
         "parity_credit": 0
+      },
+      "r6": {
+        "cases": 64,
+        "all_pass_generated": 123,
+        "failing_generated": 124,
+        "memory_limit_bytes": 34359738368,
+        "controls": 0,
+        "selected_processes": 0,
+        "outcomes": 0,
+        "parity": 0
       },
       "r3_incomplete": {
         "terminal_class": "wall-timeout",
