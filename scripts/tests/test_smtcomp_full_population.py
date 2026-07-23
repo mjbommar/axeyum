@@ -1182,6 +1182,34 @@ class FullPopulationContractTests(unittest.TestCase):
                     repository_root=ROOT,
                     inspect_shared_root=False,
                 )
+            self.assertEqual(
+                validate_full_preparation(
+                    attempt,
+                    repository_root=ROOT,
+                    inspect_shared_root=False,
+                    allowed_execution_solver_ids=("axeyum",),
+                )["record_sha256"],
+                completion["record_sha256"],
+            )
+            with self.assertRaisesRegex(ContractError, "solver prefix"):
+                validate_full_preparation(
+                    attempt,
+                    repository_root=ROOT,
+                    inspect_shared_root=False,
+                    allowed_execution_solver_ids=("cvc5",),
+                )
+            later_cell_evidence = (
+                attempt / "cells" / "cvc5" / "records" / "unexpected"
+            )
+            later_cell_evidence.write_bytes(b"later cell must remain empty\n")
+            with self.assertRaisesRegex(ContractError, "execution evidence"):
+                validate_full_preparation(
+                    attempt,
+                    repository_root=ROOT,
+                    inspect_shared_root=False,
+                    allowed_execution_solver_ids=("axeyum",),
+                )
+            later_cell_evidence.unlink()
             evidence.unlink()
             sentinel_stdout = Path(sentinel_records[0]["stdout_path"])
             sentinel_stdout.write_bytes(b"sat\n")

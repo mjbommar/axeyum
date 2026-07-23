@@ -513,10 +513,12 @@ def validate_full_cell_composition(
     *,
     selection: dict[str, Any],
     inspect_shared_root: bool = True,
+    allowed_execution_solver_ids: tuple[str, ...] = (),
 ) -> dict[str, Any]:
     """Revalidate every process-free run, plan, schedule, and host command."""
 
     validate_full_selection(selection)
+    _validate_execution_solver_prefix(allowed_execution_solver_ids)
     if (
         set(composition) != COMPOSITION_FIELDS
         or composition.get("schema") != COMPOSITION_SCHEMA
@@ -608,8 +610,9 @@ def validate_full_cell_composition(
             ):
                 raise ContractError("full cell composition command identity drift")
         run_root = attempt / "cells" / cell["solver_id"]
-        if any((run_root / "multi-host-attempts").iterdir()) or any(
-            (run_root / "multi-host-terminals").iterdir()
+        if cell["solver_id"] not in allowed_execution_solver_ids and (
+            any((run_root / "multi-host-attempts").iterdir())
+            or any((run_root / "multi-host-terminals").iterdir())
         ):
             raise ContractError("full cell composition unexpectedly contains attempts")
         observed_schedules.add(schedule["record_sha256"])
@@ -653,8 +656,21 @@ def _validate_staged_source(
     return bundle, source_identity
 
 
-def _reject_execution_evidence(attempt: Path) -> None:
+def _validate_execution_solver_prefix(solver_ids: tuple[str, ...]) -> None:
+    if (
+        not isinstance(solver_ids, tuple)
+        or solver_ids != SOLVER_IDS[: len(solver_ids)]
+    ):
+        raise ContractError("full execution solver prefix mismatch")
+
+
+def _reject_execution_evidence(
+    attempt: Path, *, allowed_execution_solver_ids: tuple[str, ...] = ()
+) -> None:
+    _validate_execution_solver_prefix(allowed_execution_solver_ids)
     for cell_id in SOLVER_IDS:
+        if cell_id in allowed_execution_solver_ids:
+            continue
         run_root = attempt / "cells" / cell_id
         for relative in (
             "multi-host-attempts",
@@ -800,9 +816,17 @@ def validate_full_preparation(
     *,
     repository_root: Path,
     inspect_shared_root: bool = True,
+    allowed_execution_solver_ids: tuple[str, ...] = (),
 ) -> dict[str, Any]:
-    """Replay a completion-last preparation and prove that execution is empty."""
+    """Replay a completion-last preparation and its permitted execution prefix.
 
+    The default remains the strict F2 boundary and admits no execution bytes.
+    F3 coordinators may name only an exact prefix of ``SOLVER_IDS``; immutable
+    preparation artifacts still rehash, and runtime additions outside those
+    cell roots still reject.
+    """
+
+    _validate_execution_solver_prefix(allowed_execution_solver_ids)
     attempt = attempt_root.resolve(strict=True)
     completion = read_canonical_json(attempt / "complete.json")
     if (
@@ -833,6 +857,7 @@ def validate_full_preparation(
         composition,
         selection=selection,
         inspect_shared_root=inspect_shared_root,
+        allowed_execution_solver_ids=allowed_execution_solver_ids,
     )
     validate_readiness(
         readiness, repository_root=repository_root, inspect_current=False
@@ -871,7 +896,9 @@ def validate_full_preparation(
         or (not fixture_only and readiness["ready_for_live_preparation"] is not True)
     ):
         raise ContractError("full preparation component identity mismatch")
-    _reject_execution_evidence(attempt)
+    _reject_execution_evidence(
+        attempt, allowed_execution_solver_ids=allowed_execution_solver_ids
+    )
     cells = {cell["solver_id"]: cell for cell in composition["cells"]}
     binaries = completion.get("binaries")
     if (
@@ -915,13 +942,28 @@ def validate_full_preparation(
     if not isinstance(artifact_rows, list):
         raise ContractError("full preparation artifact ledger mismatch")
     completion_path = attempt / "complete.json"
-    expected_paths = [
+    observed_paths = [
         str(path.relative_to(attempt))
         for path in sorted(attempt.rglob("*"))
         if path.is_file() and path != completion_path
     ]
-    if [row.get("path") for row in artifact_rows] != expected_paths:
-        raise ContractError("full preparation artifact namespace drift")
+    recorded_paths = [row.get("path") for row in artifact_rows]
+    if not allowed_execution_solver_ids:
+        if recorded_paths != observed_paths:
+            raise ContractError("full preparation artifact namespace drift")
+    else:
+        if not all(isinstance(path, str) for path in recorded_paths):
+            raise ContractError("full preparation artifact ledger mismatch")
+        recorded = set(recorded_paths)
+        observed = set(observed_paths)
+        if not recorded <= observed:
+            raise ContractError("full preparation artifact namespace drift")
+        allowed_prefixes = tuple(
+            f"cells/{solver_id}/" for solver_id in allowed_execution_solver_ids
+        )
+        extras = observed - recorded
+        if any(not path.startswith(allowed_prefixes) for path in extras):
+            raise ContractError("full preparation execution namespace drift")
     for row in artifact_rows:
         if set(row) != {"path", "bytes", "sha256"}:
             raise ContractError("full preparation artifact row mismatch")
@@ -933,5 +975,7 @@ def validate_full_preparation(
             or sha256_file(path) != row["sha256"]
         ):
             raise ContractError(f"full preparation artifact drift: {row['path']}")
-    _reject_execution_evidence(attempt)
+    _reject_execution_evidence(
+        attempt, allowed_execution_solver_ids=allowed_execution_solver_ids
+    )
     return completion
