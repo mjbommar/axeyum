@@ -1,6 +1,6 @@
 # Checked finite-profile quantified-UF models
 
-Status: implemented; final branch-wide gate pending
+Status: accepted
 Date: 2026-07-22
 Decision: [ADR-0357](../research/09-decisions/adr-0357-preregister-checked-finite-profile-quantified-uf-models.md)
 Owner: solver/engine lane in `agent/smtcomp/full-library-resume`
@@ -69,7 +69,7 @@ The focused suite covers:
 - interpreted binder occurrences and nested quantifiers declining; and
 - deterministic profile-cap overflow declining.
 
-Current completed gates:
+Completed gates:
 
 - `cargo test -p axeyum-solver --all-features --lib -j1`: 894 passed;
 - `cargo test -p axeyum-solver --all-features --test mbqi_model_finder -j1`:
@@ -77,16 +77,25 @@ Current completed gates:
 - `cargo test -p axeyum-solver --all-features --test instantiation -j1`:
   15 passed;
 - capability ledger generation/check: 2 passed.
+- direct-Z3 quantified-UFLIA differential: 256 cases, 130 jointly decided,
+  130 agreements, 110 Axeyum SAT results replayed, zero disagreement;
+- workspace tests across all features, including 894 solver unit tests and all
+  resumed integration/doc-test targets, pass in aggregate;
+- workspace all-target/all-feature warning-denied Clippy and strict rustdoc;
+- foundational resources, parity documents, documentation links, and
+  `git diff --check`;
+- SMT-COMP resume contract: 52 tests with one environment skip plus all
+  generators and legacy runner/scoring/pipeline/selection/provenance tests;
+- QF_BV profile and both raw/canonical 162-file Glaurung semantic gates, with
+  complete manifest/oracle agreement and zero replay failure.
 
-The existing quantified-UFLIA direct-Z3 differential and branch-wide gates are
-recorded here after completion; no broader decide-rate claim is inferred from
-the focused cases.
+No broader decide-rate claim is inferred from the focused cases.
 
 ## Deliberate boundary and next action
 
-This increment does not accept multiple universal binders, nested quantifiers,
+This accepted increment does not accept multiple universal binders, nested quantifiers,
 interpreted binder occurrences, uninterpreted carrier binders, arbitrary model
 repair, serialized proof exchange, or Lean SAT reconstruction. The next
 capability increment is multi-binder Cartesian finite-profile checking, but only
-after this one-binder evidence boundary remains green under differential and
+now that this one-binder evidence boundary is green under differential and
 branch-wide validation.

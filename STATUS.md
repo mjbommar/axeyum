@@ -616,9 +616,9 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   The CAS topic stack passes 527 unit tests, 147 doctests, warning-denied
   workspace all-target/all-feature Clippy, strict stable/nightly rustdoc,
   `wasm32-unknown-unknown`, links, and `git diff --check`.
-- **2026-07-22 — active solver work now closes the existing MBQI SAT evidence
-  boundary instead of waiting on more measurement infrastructure.** Proposed
-  ADR-0357 is implemented: a one-binder almost-uninterpreted `Int`/`Real`
+- **2026-07-22 — accepted ADR-0357 closes the existing MBQI SAT evidence
+  boundary instead of waiting on more measurement infrastructure.** A
+  one-binder almost-uninterpreted `Int`/`Real`
   candidate carries a source-bound finite-profile UF-model certificate only
   after a separate small checker re-matches the untouched assertion, validates
   exact function signatures and binder argument positions, derives every table
@@ -630,10 +630,12 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   door downgrades preprocessed candidates that cannot replay against the
   caller's original assertions. Completed gates so far: 894 solver unit tests,
   12 focused model-finder/certificate tests, 15 instantiation tests, capability
-  generation, and the 256-case direct-Z3 smoke differential with zero
-  disagreement. Next: finish warning-denied/full repository gates, accept the
-  ADR, publish the branch, then take the bounded multi-binder finite-profile
-  increment.
+  generation, and the 256-case direct-Z3 smoke differential with 130/130
+  jointly decided agreements and all 110 Axeyum SAT results replayed. Workspace
+  tests, Clippy, rustdoc, foundational resources, links, SMT-COMP recovery,
+  QF_BV profile, and both 162-file Glaurung semantic policies are green. Next:
+  publish the branch and implement the separately reviewed bounded
+  multi-binder finite-profile increment.
 
 - **2026-07-22 — ADR-0356 S4 official selection identity is complete; S5 is
   deliberately not blocking solver functionality.** The accepted root
@@ -7834,16 +7836,17 @@ plan is built and committed on the current branch:
   rebootstrap rules, selection factoring, mutation matrix, outputs, and stop
   conditions are frozen before implementation or derived profile counts. U2
   remains bounded and records no execution or paired-result credit.
-- **2026-07-22 — Implemented checked finite-profile quantified-UF SAT models
-  under ADR-0357.** The old MBQI model finder could return SAT while canonical
+- **2026-07-22 — Accepted checked finite-profile quantified-UF SAT models under
+  ADR-0357.** The old MBQI model finder could return SAT while canonical
   `check_model` rejected the same infinite-domain source. `Model` now carries a
   lazily stored exact-source certificate; a separate checker reconstructs the
   one-binder almost-uninterpreted finite proof from exact UF argument positions,
   model tables/defaults, and a bounded complete representative set. Public
   model and evidence replay now succeed, while malformed/tampered/resource-
   limited cases decline. Focused solver, instantiation, capability, and
-  256-case direct-Z3 differential gates pass with zero disagreement; branch-
-  wide gates remain before ADR acceptance and publication.
+  256-case direct-Z3 differential gates pass with zero disagreement. Workspace
+  and lane-wide static, documentation, provenance, and semantic gates pass;
+  multi-binder Cartesian profiles are the next capability increment.
 
 - **2026-07-22 — Completed and freshly verified ADR-0356 S4.** The accepted
   content-addressed selection contains 450,472 decisions and 45,905 selected

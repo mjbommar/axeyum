@@ -1,6 +1,6 @@
 # ADR-0357: Preregister checked finite-profile quantified-UF models
 
-Status: proposed
+Status: accepted
 Date: 2026-07-22
 
 ## Context
@@ -106,3 +106,18 @@ API used by evidence and benchmarks. The additional model field remains behind
 the existing lazily allocated quantified-certificate aggregate. Unsupported
 shapes remain honest `unknown`. Multi-binder finite profiles become the next
 natural capability increment, with this checker as their trusted foundation.
+
+## Outcome
+
+Accepted on 2026-07-22. The source-bound one-binder checker, canonical model
+replay, SAT evidence route, and unified-solver replay guard satisfy every
+registered positive, negative, tamper, mixed-position, and resource-cap gate.
+The 256-case direct-Z3 differential produced 130 jointly decided cases with
+zero disagreement and replayed all 110 Axeyum SAT results. Workspace tests,
+warning-denied Clippy, strict rustdoc, foundational resources, documentation
+links, the SMT-COMP resume contract, the QF_BV profile, and both 162-case
+Glaurung semantic policies are green. See the
+[result](../../plan/checked-finite-profile-quantified-uf-models-2026-07-22.md).
+
+This acceptance does not widen the fragment. Multiple binders remain the next
+separately reviewed Cartesian-profile increment.
