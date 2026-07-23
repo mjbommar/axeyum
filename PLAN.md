@@ -520,9 +520,14 @@ state.
 > 64-test CTest rendering, synthetic discovery normalization, strict JUnit
 > pass/fail projection, generated-artifact closure, and zero-terminal-credit
 > accounting. Thirteen focused mutation tests pass, and the CLI deliberately
-> exposes no live execution command. No live harness discovery or test process
-> has run. Next implement, validate, commit, and push the separate launch/store
-> runner before the authorized attempt; then form native pairs. Do not rerun
+> exposes no live execution command. Commit `57dcf343` additionally implements
+> and pushes the completion-last immutable store: 15 fixed JSON records, four
+> raw payloads, two harness artifacts, 64 exact ordered case records, generated
+> artifact closure, and one final completion record. Four store tests reject
+> missing/reordered/mutable/symlinked/extra/overwritten/tampered evidence. No
+> live harness discovery or test process has run. Next implement, validate,
+> commit, and push the separate one-shot launch runner before the authorized
+> attempt; then form native pairs. Do not rerun
 > the singleton for population credit. The
 > [complete-parity execution roadmap](docs/plan/lean4-complete-parity-roadmap-2026-07-22.md)
 > now reconciles this U2 boundary with the SMT-LIB evidence layers and the

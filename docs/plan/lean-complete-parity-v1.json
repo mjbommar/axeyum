@@ -113,7 +113,7 @@
         },
         {
           "path": "docs/plan/lean-u2-official-execution-tl0.6.3-m2-implementation-2026-07-22.md",
-          "detail": "Pushed post-plan checkpoint for the pure offline specification, harness rendering, discovery, JUnit, artifact-closure, and zero-credit projection contract; it exposes no live execution command or outcome."
+          "detail": "Pushed post-plan checkpoints for the pure offline specification, harness rendering, discovery, JUnit, artifact-closure, zero-credit projection, 64 exact case records, and completion-last immutable store; neither exposes a live execution command or outcome."
         },
         {
           "path": "docs/plan/lean-execution-evidence-v1.json",

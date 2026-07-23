@@ -1,7 +1,7 @@
 # Lean U2 TL0.6.3 M2 offline implementation checkpoint
 
-Status: **implemented, validated, committed, and pushed; no live harness
-discovery or test process has run**
+Status: **pure contract and completion store implemented, validated, committed,
+and pushed; no live harness discovery or test process has run**
 
 Date: 2026-07-22
 
@@ -19,8 +19,12 @@ remote `agent/docs/lean4-complete-parity` refs were equal at that commit.
 
 This checkpoint deliberately adds no live process-launch command. It creates
 no live harness, runs no discovery command, launches no CTest process, and
-publishes no attempt or case outcome. The separate launch/store runner remains
+publishes no attempt or case outcome. The separate one-shot launch runner remains
 a precondition for the plan's single authorized attempt.
+
+Commit `57dcf343daf4e294bdd8cc89307ab19f3a3182bd` subsequently
+implemented, validated, committed, and pushed the completion-last evidence
+store. It also exposes only offline `--check`; the launch boundary is unchanged.
 
 ## 2. Exact implementation identities
 
@@ -65,6 +69,29 @@ The offline check reports:
 LEAN_U2_M2_CONTRACT|cases=64|first=compile/uint_fold.lean|last=docparse/block_0004.txt|live_execution=false|outcomes=0|pairs=0|parity=0
 ```
 
+### 3.1 Completion-store checkpoint
+
+| Source | SHA-256 |
+|---|---|
+| `scripts/lean_u2_official_execution_m2.py` at `57dcf343` | `cb57a133f8208df089b6f303d703fcaaca673c0ace4e564ca94b36e7427519a5` |
+| `scripts/lean_u2_official_execution_m2_store.py` | `70cf04d2207afcbc86a6448cf38478ecad6541057da781a56bdc51669aee006f` |
+| `scripts/tests/test_lean_u2_official_execution_m2_store.py` | `8d878a8abdd8e6258a70852896a5a2d5630ee342a50ad3338563c1efd2579cda` |
+
+The store freezes 15 JSON record paths, four raw payload paths, two harness
+artifact paths, `cases/0000.json` through `cases/0063.json`, the exact generated
+artifact namespace, and `completion.json` last. It verifies canonical seals,
+read-only regular files, raw descriptors, harness/discovery/JUnit/post links,
+exact per-case reconstruction, generated payload hashes, namespace closure,
+and the final dependency digest. Four focused tests cover successful round-trip
+plus missing/extra records, nested extras, early completion, case/raw/generated
+mutation, symlink/mode drift, overwrite conflict, and resealed completion
+tampering. The full parity-doc surface passed 262 tests with one intentional
+skip and every generator/check.
+
+```text
+LEAN_U2_M2_STORE|json=15|raw=4|artifacts=2|cases=64|live_execution=false|outcomes=0|parity=0
+```
+
 ## 4. Exact non-claims and next step
 
 This checkpoint does not establish a CTest discovery, an official case
@@ -72,8 +99,9 @@ outcome, completion of shard `0001`, a parent-selection completion, provider
 reproduction, an Axeyum outcome, a matched pair, performance, an axis, a gate,
 or Lean parity.
 
-Next implement the launch/store runner only from the frozen plan and this pure
-contract. It must reuse the accepted process/store primitives, retain exact
-source/toolchain/discovery/raw/JUnit/artifact/terminal records, remain
-completion-last, and expose at most the single preregistered attempt. Commit and
-push that implementation before any live harness construction or discovery.
+Next implement the one-shot launch runner only from the frozen plan, pure
+contract, and completion store. It must reuse the accepted process primitives,
+retain exact source/toolchain/discovery/raw/JUnit/artifact/terminal records,
+remain completion-last, and expose at most the single preregistered attempt.
+Commit and push that implementation before any live harness construction or
+discovery.

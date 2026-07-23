@@ -56,8 +56,9 @@ attempt. The pushed
 [`offline implementation checkpoint`](lean-u2-official-execution-tl0.6.3-m2-implementation-2026-07-22.md)
 records commit `9783ba93` and its exact spec/harness/discovery/JUnit/artifact/
 credit contract, with no live execution surface and zero outcome or terminal
-credit. The separate launch/store runner is not implemented, and no live
-harness discovery or process has run.
+credit. Commit `57dcf343` subsequently adds and pushes the exact 64-case
+completion-last store. Only the one-shot launch runner remains unimplemented,
+and no live harness discovery or process has run.
 
 ## 2. What the SMT-LIB comparison actually says
 
