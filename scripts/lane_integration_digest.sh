@@ -59,9 +59,14 @@ done
 
 echo ""
 echo "──── host health ────"
-printf 'disk: %s /tmp, %s /nas4\n' \
-  "$(df -h /tmp 2>/dev/null | awk 'NR==2{print $5}')" \
-  "$(df -h /nas4 2>/dev/null | awk 'NR==2{print $5}')"
+# NOTE: the worktrees live under ~/projects on the ROOT fs (/), NOT the NAS.
+# `df /nas4` resolves to / (only /nas4/DATA is the 28T NAS mount) — so the disk
+# that actually fills from Rust target/ dirs is /, and that is what we flag.
+printf 'disk: %s / (root: worktrees+target/, avail %s), %s /nas4/data (NAS 28T), %s /tmp\n' \
+  "$(df -h / 2>/dev/null | awk 'NR==2{print $5}')" \
+  "$(df -h / 2>/dev/null | awk 'NR==2{print $4}')" \
+  "$(df -h /nas4/data 2>/dev/null | awk 'NR==2{print $5}')" \
+  "$(df -h /tmp 2>/dev/null | awk 'NR==2{print $5}')"
 # Match ONLY genuine solver runaways: the distributed runner (compete.py) or the
 # harness-STAGED solver binary running unbounded. Deliberately NOT `axeyum-smtcomp`
 # anywhere in the path — that matched every lane build/test binary under the
