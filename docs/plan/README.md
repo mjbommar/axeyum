@@ -581,6 +581,10 @@ Start at the root [`PLAN.md`](../../PLAN.md) (map + standing rules) and
   fixture-only active-runner integration with exact preflight, immutable
   attempts/results/sidecars, typed termination, lease recovery, and
   completion-gated raw export.
+- [`smtcomp-repaired-p0-v2-export-layout-closure-plan-2026-07-23.md`](smtcomp-repaired-p0-v2-export-layout-closure-plan-2026-07-23.md) —
+  frozen completed Axeyum v2 evidence, the coordinator-output namespace defect
+  caught at raw export, and the hash-pinned process-free closure plan that
+  preserves the strict generic validator and blocks cvc5 pending integration.
 - [`smtcomp-one-host-resource-enforcement-e2-2026-07-22.md`](smtcomp-one-host-resource-enforcement-e2-2026-07-22.md) —
   one-host user-systemd/cgroup-v2 aggregate memory, swap, CPU, and PID
   enforcement with bounded workers, immutable counter evidence, and destructive
