@@ -335,18 +335,39 @@ impl UnaryFunc {
                 (CasExpr::var("pi") * u().pow(2) / CasExpr::int(2)).cos()
             }
             // d/du Jₙ(u): J₀′ = −J₁; for n ≥ 1, Jₙ′ = (Jₙ₋₁ − Jₙ₊₁)/2.
+            // At the public `u32::MAX` order, use the equivalent backward form
+            // Jₙ′ = Jₙ₋₁ − (n/u)Jₙ rather than overflowing at `n + 1`.
             UnaryFunc::BesselJ(0) => -CasExpr::Unary(UnaryFunc::BesselJ(1), Box::new(u())),
             UnaryFunc::BesselJ(order) => {
-                (CasExpr::Unary(UnaryFunc::BesselJ(order - 1), Box::new(u()))
-                    - CasExpr::Unary(UnaryFunc::BesselJ(order + 1), Box::new(u())))
-                    / CasExpr::int(2)
+                let previous = CasExpr::Unary(UnaryFunc::BesselJ(order - 1), Box::new(u()));
+                if let Some(next_order) = order.checked_add(1) {
+                    (previous
+                        - CasExpr::Unary(UnaryFunc::BesselJ(next_order), Box::new(u())))
+                        / CasExpr::int(2)
+                } else {
+                    previous
+                        - scaled_term(
+                            Rational::integer(i128::from(order)),
+                            CasExpr::Unary(UnaryFunc::BesselJ(order), Box::new(u())),
+                        ) / u()
+                }
             }
             // d/du Iₙ(u): I₀′ = I₁; for n ≥ 1, Iₙ′ = (Iₙ₋₁ + Iₙ₊₁)/2.
+            // At `u32::MAX`, use Iₙ′ = Iₙ₋₁ − (n/u)Iₙ for the same reason.
             UnaryFunc::BesselI(0) => CasExpr::Unary(UnaryFunc::BesselI(1), Box::new(u())),
             UnaryFunc::BesselI(order) => {
-                (CasExpr::Unary(UnaryFunc::BesselI(order - 1), Box::new(u()))
-                    + CasExpr::Unary(UnaryFunc::BesselI(order + 1), Box::new(u())))
-                    / CasExpr::int(2)
+                let previous = CasExpr::Unary(UnaryFunc::BesselI(order - 1), Box::new(u()));
+                if let Some(next_order) = order.checked_add(1) {
+                    (previous
+                        + CasExpr::Unary(UnaryFunc::BesselI(next_order), Box::new(u())))
+                        / CasExpr::int(2)
+                } else {
+                    previous
+                        - scaled_term(
+                            Rational::integer(i128::from(order)),
+                            CasExpr::Unary(UnaryFunc::BesselI(order), Box::new(u())),
+                        ) / u()
+                }
             }
             // Inverse trig/hyperbolic derivatives.
             UnaryFunc::Asin => CasExpr::int(1) / (CasExpr::int(1) - u().pow(2)).sqrt(),
@@ -12773,6 +12794,7 @@ pub fn integrate(expr: &CasExpr, var: &str) -> Option<CertifiedIntegral> {
         integrate_log_substitution(expr, var),
         integrate_gaussian(expr, var),
         integrate_special_integral(expr, var),
+        integrate_bessel_order_one(expr, var),
         integrate_fresnel(expr, var),
         integrate_inverse_radical(expr, var),
         integrate_radical_usub(expr, var),
@@ -15908,6 +15930,36 @@ fn integrate_special_integral(expr: &CasExpr, var: &str) -> Option<CasExpr> {
         return None;
     }
     Some(CasExpr::Unary(head, arg.clone()))
+}
+
+/// Direct order-one Bessel antiderivatives at a nonconstant rational-affine
+/// argument `u = slope·var + intercept`:
+///
+/// - `∫ c·J₁(u) dvar = −(c/slope)·J₀(u)`;
+/// - `∫ c·I₁(u) dvar =  (c/slope)·I₀(u)`.
+///
+/// These are exactly the public derivative rules `J₀′ = −J₁` and `I₀′ = I₁`
+/// plus the chain rule. The caller still performs the ordinary full
+/// differentiate-and-check certificate before returning the candidate. Other
+/// orders and nonlinear or symbolic-slope arguments decline here; in particular,
+/// the weighted `var·J₀` / `var·I₀` pairs need a separate recurrence-normalization
+/// proof that the current zero-test deliberately does not assume.
+fn integrate_bessel_order_one(expr: &CasExpr, var: &str) -> Option<CasExpr> {
+    let (free, core) = split_var_free_factor(expr, var);
+    let (modified, argument) = match &core {
+        CasExpr::Unary(UnaryFunc::BesselJ(1), argument) => (false, argument),
+        CasExpr::Unary(UnaryFunc::BesselI(1), argument) => (true, argument),
+        _ => return None,
+    };
+    let [_, slope] = univariate_affine(argument, var)?;
+    let sign = if modified { Rational::integer(1) } else { Rational::integer(-1) };
+    let coefficient = sign.checked_div(slope)?;
+    let base = if modified {
+        (**argument).clone().bessel_i(0)
+    } else {
+        (**argument).clone().bessel_j(0)
+    };
+    Some(simplify(&(free * scaled_term(coefficient, base))))
 }
 
 /// Distribute integration over a fraction whose numerator is a sum:
@@ -23749,6 +23801,88 @@ mod tests {
     }
 
     #[test]
+    fn integrate_direct_order_one_bessel_pairs() {
+        let x = || v("x");
+        let shifted = CasExpr::int(2) * x() + CasExpr::int(3);
+        let reflected = CasExpr::int(3) - x() / CasExpr::int(2);
+        let symbolic_scale = v("A");
+
+        // DLMF 10.6 / 10.29: J₀′ = −J₁ and I₀′ = I₁. Rational-affine chain
+        // factors and var-free outer factors remain exact.
+        for (integrand, expected) in [
+            (x().bessel_j(1), -x().bessel_j(0)),
+            (
+                shifted.clone().bessel_j(1),
+                -shifted.clone().bessel_j(0) / CasExpr::int(2),
+            ),
+            (
+                reflected.clone().bessel_j(1),
+                CasExpr::int(2) * reflected.clone().bessel_j(0),
+            ),
+            (x().bessel_i(1), x().bessel_i(0)),
+            (
+                shifted.clone().bessel_i(1),
+                shifted.clone().bessel_i(0) / CasExpr::int(2),
+            ),
+            (
+                reflected.clone().bessel_i(1),
+                CasExpr::int(-2) * reflected.clone().bessel_i(0),
+            ),
+            (
+                symbolic_scale.clone() * shifted.clone().bessel_i(1),
+                symbolic_scale * shifted.clone().bessel_i(0) / CasExpr::int(2),
+            ),
+        ] {
+            let result = integrate(&integrand, "x").expect("direct Bessel pair");
+            assert!(result.is_certified(), "not certified: ∫{integrand}");
+            assert_equal(&result.antiderivative, &expected);
+            assert_equal(&result.antiderivative.differentiate("x"), &integrand);
+        }
+
+        // The certified candidates feed the ordinary FTC path unchanged.
+        let j_definite = definite_integrate(
+            &x().bessel_j(1),
+            "x",
+            &CasExpr::zero(),
+            &CasExpr::int(2),
+        )
+        .expect("definite J1 integral");
+        assert!(j_definite.is_certified());
+        assert_equal(
+            &j_definite.value,
+            &(CasExpr::zero().bessel_j(0) - CasExpr::int(2).bessel_j(0)),
+        );
+        let i_definite = definite_integrate(
+            &x().bessel_i(1),
+            "x",
+            &CasExpr::zero(),
+            &CasExpr::int(2),
+        )
+        .expect("definite I1 integral");
+        assert!(i_definite.is_certified());
+        assert_equal(
+            &i_definite.value,
+            &(CasExpr::int(2).bessel_i(0) - CasExpr::zero().bessel_i(0)),
+        );
+
+        // Other orders and arguments stay outside this direct derivative slice.
+        for unsupported in [
+            x().bessel_j(0),
+            x().bessel_i(0),
+            x().bessel_j(2),
+            x().bessel_i(2),
+            x().bessel_j(u32::MAX),
+            x().pow(2).bessel_j(1),
+            (v("y") * x()).bessel_i(1),
+            scaled_term(Rational::integer(i128::MIN), x()).bessel_j(1),
+            x() * (CasExpr::int(2) * x()).bessel_j(0),
+            x() * (CasExpr::int(2) * x()).bessel_i(0),
+        ] {
+            assert!(integrate(&unsupported, "x").is_none(), "unexpected integral: {unsupported}");
+        }
+    }
+
+    #[test]
     fn integrate_polynomial_times_exponential() {
         let x = || v("x");
         // ∫ x·eˣ dx = (x−1)eˣ ; ∫ x²·eˣ = (x²−2x+2)eˣ — certified by differentiation.
@@ -24841,6 +24975,12 @@ mod tests {
         assert_equal(&j(0, x()).differentiate("x"), &(-j(1, x())));
         assert_equal(&j(1, x()).differentiate("x"), &((j(0, x()) - j(2, x())) / CasExpr::int(2)));
         assert_equal(&j(2, x()).differentiate("x"), &((j(1, x()) - j(3, x())) / CasExpr::int(2)));
+        let max_order = u32::MAX;
+        assert_equal(
+            &j(max_order, x()).differentiate("x"),
+            &(j(max_order - 1, x())
+                - CasExpr::int(i128::from(max_order)) * j(max_order, x()) / x()),
+        );
         // Numeric values against known references, including higher orders.
         let close = |got: f64, want: f64| assert!((got - want).abs() < 1e-4, "{got} vs {want}");
         close(evalf(&j(0, CasExpr::int(0)), &[]).unwrap(), 1.0);
@@ -24860,6 +25000,12 @@ mod tests {
         assert_equal(&i(0, x()).differentiate("x"), &i(1, x()));
         assert_equal(&i(1, x()).differentiate("x"), &((i(0, x()) + i(2, x())) / CasExpr::int(2)));
         assert_equal(&i(2, x()).differentiate("x"), &((i(1, x()) + i(3, x())) / CasExpr::int(2)));
+        let max_order = u32::MAX;
+        assert_equal(
+            &i(max_order, x()).differentiate("x"),
+            &(i(max_order - 1, x())
+                - CasExpr::int(i128::from(max_order)) * i(max_order, x()) / x()),
+        );
         // Numeric values against known references (monotone increasing, all positive).
         let close = |got: f64, want: f64| assert!((got - want).abs() < 1e-4, "{got} vs {want}");
         close(evalf(&i(0, CasExpr::int(0)), &[]).unwrap(), 1.0);
