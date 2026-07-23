@@ -500,10 +500,12 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   from 111 to 178 with zero disagreements under the complete branch gate. The
   differential now retains all 39 remaining ordinary-incomplete/Z3-SAT seeds.
   Fixing their one/two ground scalars to one Z3 model closes 23; a pure-Rust
-  production-shaped pool from the Axeyum ground model, exact source literals,
-  zero, and checked neighbors closes 33 under 16-value/256-tuple caps after only
-  180 candidate queries. Every diagnostic SAT replays. Seeds 30, 32, 70, 122,
-  182, and 242 remain Unknown. Proposed ADR-0360 permits temporary scalar
+  exploratory pool from the Axeyum ground model, source literals, zero, and
+  checked neighbors reported 33 under 16-value/256-tuple caps after 180 queries,
+  but implementation validation found that it truncated overflow and fixed
+  generator declarations absent from the query. The strict exact-source,
+  no-truncation policy checks 28; seeds 23, 30, 32, 70, 111, 122, 150, 175, 182,
+  231, and 242 remain Unknown. Proposed ADR-0360 permits temporary scalar
   equalities only as untrusted QF candidate hints; fixing-UNSAT never transfers,
   and only the existing source-bound finite-profile certificate plus canonical
   exact-original-query replay may return SAT. Next: implement that bounded

@@ -360,7 +360,8 @@ now measures the accepted ADR-0359
 every SAT model replayed. The complete workspace/static/resource/parity/link/
 profile/recovery gates are green. The complete 39-case Z3-SAT remainder is now
 [measured](../quantified-uflia-free-int-completion-measurement-2026-07-22.md):
-a source/model-derived 16-value, 256-tuple scalar probe checks 33 additional SAT
-models after only 180 candidate queries. Implement only that preregistered
-ADR-0360 boundary next; the six residual seeds remain separate. Do not
+the strict exact-source, non-truncating 16-value/256-tuple scalar policy checks
+28 additional SAT models. The exploratory 33-case result used two broader
+heuristics and is not the production gate. Implement only the preregistered
+ADR-0360 boundary next; the eleven residual seeds remain separate. Do not
 substitute another large run for the bounded implementation.*

@@ -14,22 +14,28 @@ universal can make every bounded default-only completion fail.
 
 The retained diagnostic first fixed those symbols to values from one complete
 Z3 model; 23 of 39 cases then pass the existing Axeyum finite-profile checker.
-A production-shaped probe instead uses only the ground Axeyum model, exact
-source integer literals, zero, and checked predecessor/successor values. With a
-16-value pool and 256-tuple cap, 33 of 39 cases become checked SAT after only
-180 candidate queries across the population. Six remain honest Unknowns:
-seeds 30, 32, 70, 122, 182, and 242.
+The original production-shaped probe used the ground Axeyum model, source
+integer literals, zero, and checked predecessor/successor values. It reported
+33 of 39 checked SAT after 180 candidate queries, but implementation validation
+found that the probe truncated oversized pools and fixed generator-declared
+symbols absent from the actual assertion sequence. Those are legitimate search
+experiments, but they do not measure the stricter policy below. Replaying the
+exact assertion symbols and declining rather than truncating closes **28 of
+39**. Eleven remain honest Unknowns: seeds 23, 30, 32, 70, 111, 122, 150, 175,
+182, 231, and 242.
 
 ## Decision
 
 **Add one bounded, deterministic, untrusted candidate search over at most two
-free `Int` symbols relevant to an already admitted ADR-0357/0358 universal,
-before the ordinary single-binder MBQI refinement loop.**
+free `Int` symbols in the exact assertion sequence of a query with an already
+admitted ADR-0357/0358 universal, before the ordinary single-binder MBQI
+refinement loop.**
 
 The increment will:
 
-- collect only free `Int` symbols occurring in the exact universal matrices,
-  excluding every bound symbol; zero symbols or more than two decline;
+- collect only free `Int` symbols occurring in the exact assertion sequence,
+  excluding every universal bound symbol; zero symbols or more than two
+  decline;
 - build one stable pool from zero, same-sort scalar assignments in the initial
   ground candidate, every exact source `IntConst`, and checked `-1`/`+1`
   neighbors; more than 16 distinct values declines rather than truncates;
@@ -47,6 +53,10 @@ The increment will:
 The scalar choices and temporary equalities are search hints, not evidence.
 The returned scalar assignments, complete UF interpretations, source-bound
 certificates, and exact original-query replay remain the checkable artifact.
+Symbols occurring only in ground assertions remain eligible: the frozen
+measurement includes cases where fixing such a symbol changes deterministic QF
+model generation enough to expose a certifiable UF model, even though the
+fixing itself is absent from the accepted source and evidence.
 
 ## Evidence gates
 
@@ -54,10 +64,10 @@ Acceptance requires:
 
 1. Representative one- and two-scalar cases complete to checked SAT while
    their original ground constraints and explicit UF table points replay.
-2. The frozen 39-seed remainder produces at least the measured 33 checked SAT
-   results under the exact 16-value/256-tuple policy; the six declared residual
-   seeds remain soundly classified unless a separately explained existing
-   route also checks them.
+2. The frozen 39-seed remainder produces at least the measured 28 checked SAT
+   results under the exact 16-value/256-tuple policy; the eleven declared
+   residual seeds remain soundly classified unless a separately explained
+   existing route also checks them.
 3. Temporary-fixing `Unsat`, `Unknown`, timeout, and error results are ignored;
    no refutation or evidence object may contain a fixing.
 4. Zero/more-than-two relevant symbols, non-Int symbols, pool overflow,
@@ -81,12 +91,12 @@ Acceptance requires:
 - **Use Z3 model values.** Rejected: the oracle measurement demonstrates the
   gap but cannot participate in the pure-Rust production solver.
 - **Generalize immediately to `Real` or more symbols.** Deferred: the measured
-  33-case gain is entirely one/two-symbol `Int`, and the bounded product is
+  28-case gain is entirely one/two-symbol `Int`, and the bounded product is
   independently reviewable.
 
 ## Consequences
 
 This should close most of the measured post-ADR-0359 SAT remainder without
-widening the trusted checker or UNSAT surface. It does not repair the six
+widening the trusted checker or UNSAT surface. It does not repair the eleven
 residual cases, synthesize arbitrary arithmetic defaults, complete free Reals,
 search more than two scalars, or claim complete MBQI.

@@ -9123,10 +9123,12 @@ coverage never regresses):
    nine to zero. ADR-0359 is accepted after the complete workspace/static/
    resource/parity/link/profile/recovery gate. Explicit-table repair,
    broader scalar completion, and general model repair remain later. The exact
-   39-case oracle-SAT remainder is now measured: a 16-value/256-tuple bounded
-   one/two-free-Int probe checks 33 additional models after 180 candidate
-   queries. Proposed ADR-0360 opens only that temporary-fixing candidate search,
-   with exact original-query replay still authoritative;
+   39-case oracle-SAT remainder is now measured: the strict 16-value/256-tuple
+   one/two-free-Int policy checks 28 additional models. The earlier 33-case
+   exploratory result truncated pools and included generator declarations absent
+   from the assertion sequence; it is not the production gate. Proposed
+   ADR-0360 opens only the exact-source temporary-fixing candidate search, with
+   exact original-query replay still authoritative;
    MAM/trigger-inference (T2.6.1/2) follow as throughput.
 3. **Bank the CDCL(T) spine** (Gap 3): the default-dispatch ADR for the
    built-but-opt-in `CdclT` routes, then port arrays-lazy
