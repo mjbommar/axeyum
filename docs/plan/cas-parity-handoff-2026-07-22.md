@@ -13,15 +13,15 @@ elsewhere in `docs/plan/`). Read this file first when resuming.
   [multi-agent operations guide](../contributor-guide/multi-agent-operations.md):
   work only in the dedicated CAS worktree on an `agent/cas/*` branch, push that
   branch, and leave `main` to the integration owner. The current increment is
-  `agent/cas/bessel-weighted-antiderivatives`, based on integration parent
-  `f810da7b`, with implementation commit `0a144a48`; do not rebase it onto
-  `main` ahead of the integration owner.
-- **Tests:** `547` unit + `147` doctests, **all green**, warning-denied workspace
+  `agent/cas/gap-probe-wave-six`, based on integration parent `adf91650`, with
+  implementation commit `2a4179a0` (integrated by `fbb1c4c5`); do not rebase it
+  onto `main` ahead of the integration owner.
+- **Tests:** `548` unit + `147` doctests, **all green**, warning-denied workspace
   all-target/all-feature Clippy-clean, strict stable/nightly rustdoc-green,
   wasm-green, links-green, and whitespace-clean.
 - **Source of truth for capabilities:** `docs/research/10-cas/README.md`
   (capability table) and `docs/research/10-cas/diary.md` (chronological entries;
-  latest is **Entry 37af3**). Keep both in sync when landing features.
+  latest is **Entry 37af4**). Keep both in sync when landing features.
 - **Method that works:** empirical **gap-probing** (below). It found every recent
   feature *and* a serious infinite-hang regression.
 
@@ -407,6 +407,27 @@ orders `0..=255`), and Stirling-composed raw moments (regressed for orders
   No public operator, head, backend, evidence format, or logic fragment changed,
   so no ADR is required.
 
+**Exact rational-scale/shift order-two Bessel inverse Laplace pairs**
+- A sixth timeout-bounded probe measured unit/shifted `J₂` and `I₂` inverse
+  transforms as the best bounded existing-head decline. Order three, weighted
+  order-one transforms, elliptic integration, and quadratic-pole inverse Z
+  remained honest declines; Fourier-exponential and second-order ODE controls
+  stayed green.
+- The private indexed recognizer shares one parameter-discovery route for
+  orders one and two, but public dispatch enumerates only those exact orders.
+  It reconstructs a rational shift and positive rational frequency from one
+  quadratic radical and requires the complete input to be a rational multiple
+  of the selected public forward transform.
+- The outer inverse route still independently applies the complete public
+  forward transform and exact zero-test before returning. Recognition alone is
+  never evidence. Independent explicit unit formulas supplement the generated
+  round-trip matrix.
+- Positive/negative integer and half frequencies, three shifts, both families,
+  and an outer scale pass. Odd order-one and even order-two parity are frozen;
+  order three and the earlier malformed/irrational/multiple-root/zero-frequency
+  boundaries decline. No public head, operator, backend, evidence format, or
+  logic fragment changed, so no ADR is required.
+
 ---
 
 ## 5. Zeilberger / WZ — how it works and where to extend
@@ -670,9 +691,9 @@ Ordered roughly by value:
    a concrete use needs it.
 2. **Higher-order inverse Bessel forms.** Forward `Jₙ` and `Iₙ` are exact for
    every public order, while inverse recognition deliberately stops at order
-   one. Probe the explicit order-two forms next and retain the mandatory full
-   forward round trip; do not infer general inverse support from the forward
-   tables alone.
+   two. Explicit order three remains a measured decline. Probe it only as a
+   bounded follow-up and retain the mandatory full forward round trip; do not
+   infer general inverse support from the forward tables alone.
 3. **Alternating series** `∑(−1)ᵏ/k = −ln2`, `∑(−1)ᵏ/(2k+1)=π/4−…`, Dirichlet
    eta `η(s)`. **Blocked by the data model**: `(−1)ᵏ` has no clean real
    representation (`geometric_power(−1)` = `exp(k·ln(−1))`, complex `ln`). Would
@@ -733,9 +754,9 @@ esac
 export AXEYUM_CAS_TMP
 trap 'find "$AXEYUM_CAS_TMP" -depth -delete' EXIT
 git rev-parse --abbrev-ref HEAD        # → agent/cas/...
-git merge-base --is-ancestor 0a144a48 HEAD
+git merge-base --is-ancestor 2a4179a0 HEAD
 CARGO_BUILD_JOBS=1 TMPDIR="$AXEYUM_CAS_TMP" cargo test -p axeyum-cas --jobs 1
-# → 547 unit + 147 doctests green
+# → 548 unit + 147 doctests green
 ```
 Then: read `docs/research/10-cas/diary.md` tail for the latest context, and pick
 up from §6 or resume the gap-probing loop. Push the green owned topic branch;
