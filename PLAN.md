@@ -614,8 +614,13 @@ state.
 > consumed attempt 003 with a clean 78,449 ms exit and 64/64 diagnostic passes.
 > Post closure stopped because all-pass CTest omitted failure-only
 > `LastTestsFailed.log` (123 actual versus 124 frozen paths). Credit remains
-> zero. Next commit the 83-file raw root and implement only the source-first
-> zero-process diagnostic closure;
+> zero. The 83-file raw root is pushed at `0dd47703`, and the separate
+> [diagnostic-closure implementation checkpoint](docs/plan/lean-u2-official-execution-tl0.6.3-m2-r5-diagnostic-closure-implementation-2026-07-23.md)
+> records pushed `08f23ee4`: portable/raw validation, exact 123/66/56/1
+> classification, completion-last zero-credit append, four focused tests, and
+> no process surface. Next push this documentation checkpoint, revalidate clean
+> remote equality, and append the diagnostic namespace once without launching
+> Lean;
 > then form native pairs. Do not rerun
 > the singleton for population credit. The
 > [complete-parity execution roadmap](docs/plan/lean4-complete-parity-roadmap-2026-07-22.md)
