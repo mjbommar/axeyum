@@ -437,8 +437,20 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   [cvc5 result](docs/plan/smtcomp-repaired-p0-v2-cvc5-result-2026-07-23.md)
   freezes every completion hash. Bitwuzla still has zero evidence and is now
   hard-gated on exact integration of that result and the corresponding source
-  check. Next: integrate the cvc5 checkpoint, revalidate both prior cells, then
-  launch only the frozen Bitwuzla initial allocations.
+  check. Merge `0f7cdac1` integrated the cvc5 checkpoint and admitted exactly
+  the three frozen Bitwuzla initial allocations. `initial-0` and `initial-2`
+  completed 435 records each. `initial-1` failed before producing a record when
+  shared-directory orphan recovery raced another shard's atomic temporary;
+  its runner and host terminals are retained and its lease was cleanly
+  released. The coordinator waited for the other shards and then stopped with
+  `exact recovery required`. The
+  [Bitwuzla recovery plan](docs/plan/smtcomp-repaired-p0-v2-bitwuzla-recovery-plan-2026-07-23.md)
+  freezes 870 records (285 `sat`, 532 `unsat`, 53 no verdict, zero known-status
+  contradiction), zero live processes/leases/recovery records, the exact
+  failure evidence, and only eligible different-host `retry-1`. No Bitwuzla
+  credit is claimed. Next: integrate the plan, scope orphan cleanup to the owned
+  shard, add clean-release recovery evidence and a recovery-only coordinator
+  mode, gate it, then execute only `retry-1`.
 - **2026-07-23 — certified rational weights inside powered rational-rate
   Bessel-J products.** Wave twenty-one extends the structural powered-product
   recognizer to exact rational weights inside the power. It carries each

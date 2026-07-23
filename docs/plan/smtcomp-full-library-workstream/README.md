@@ -270,7 +270,7 @@ gate.
    and physical bytes. The [S5 result](../smtcomp-harness-admission-s5-result-2026-07-23.md)
    records the tiny mutation gate and a read-only 45,905-file physical rehash.
    It does not authorize a large run by itself.
-2. **Fresh P0 slices — Axeyum and cvc5 cells closed; cvc5 result integration pending.** Stage the repaired binary and rerun
+2. **Fresh P0 slices — Axeyum/cvc5 closed; Bitwuzla recovery repair pending.** Stage the repaired binary and rerun
    QF_FP/QF_BVFP/QF_ABVFP plus QF_AUFLIA under the completed protocol. Require
    DISAGREE=0. The bounded
    [S5.1 admitted-slice plan](../smtcomp-admitted-slices-s5.1-plan-2026-07-23.md)
@@ -302,6 +302,14 @@ gate.
    closed all 1,810 records with zero known-status contradiction and zero
    Axeyum/cvc5 disagreement. Bitwuzla remains blocked until the exact cvc5
    result and its admission-source check are integrated.
+   Merge `0f7cdac1` integrated that boundary and admitted the three frozen
+   Bitwuzla initial allocations. Shards 0 and 2 completed 435 records each;
+   shard 1 failed before producing a record because concurrent startup exposed
+   a shared-directory orphan-temporary quarantine race. The coordinator
+   retained all evidence and stopped before recovery. The
+   [Bitwuzla recovery plan](../smtcomp-repaired-p0-v2-bitwuzla-recovery-plan-2026-07-23.md)
+   freezes the 870-record stop state and preregisters the runner repair plus
+   exact different-host `retry-1` path. No Bitwuzla credit is claimed.
 3. **Credited full population.** Only then execute Axeyum, cvc5, and Bitwuzla on
    the same versioned selection; publish the per-logic inventory and regenerate
    the coverage-weighted parity matrix without combining incompatible regimes.
@@ -349,6 +357,8 @@ Repository:
   `docs/plan/smtcomp-repaired-p0-v2-axeyum-closure-result-2026-07-23.md`;
 - repaired-P0 v2 cvc5 result:
   `docs/plan/smtcomp-repaired-p0-v2-cvc5-result-2026-07-23.md`;
+- repaired-P0 v2 Bitwuzla recovery plan:
+  `docs/plan/smtcomp-repaired-p0-v2-bitwuzla-recovery-plan-2026-07-23.md`;
 - candidate failure handoff:
   `docs/plan/smtcomp-full-library-candidate-run-handoff-2026-07-21.md`;
 - ranked gap plan: `docs/plan/full-library-gap-closing-plan-2026-07-22.md`;
@@ -383,11 +393,12 @@ NAS (shared, corpus read-only in practice):
 3. Confirm the old s4 process/log state and count literal `WRONG` lines without
    treating the stale run as evidence.
 4. Treat the accepted S4 root as immutable. S5/S5.1 admission and the repaired
-   P0-S1 v2 preparation are complete. The Axeyum closure and cvc5 execution are
-   complete. Keep Bitwuzla blocked until the exact cvc5 result and
-   admission-source bytes exist on `origin/main`; then execute only the final
-   frozen repaired P0 cell before any credited full-population run. The active
-   solver capability checkpoint is
+   P0-S1 v2 preparation, Axeyum closure, and cvc5 execution are complete.
+   Bitwuzla is stopped after a typed initial-allocation failure with 870 durable
+   records. Keep recovery blocked until the exact recovery plan, scoped orphan
+   repair, clean-release recovery contract, and checkpoint bytes exist on
+   `origin/main`; then launch only frozen `retry-1`. The active solver
+   capability checkpoint is
    [`../checked-multi-binder-quantified-uf-models-2026-07-22.md`](../checked-multi-binder-quantified-uf-models-2026-07-22.md).
 5. Update `STATUS.md` and this file before handoff; push only a green topic
    branch for the integration owner.
