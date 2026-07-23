@@ -4,7 +4,7 @@
   "source_identities": [
     {
       "path": ".github/workflows/ci.yml",
-      "sha256": "fab5ae81ea4ffaf1af46218a5ccf097bbe129f129afec1fc54e17128e94bab15"
+      "sha256": "a8d88cfbe8698f37265c441cf5d567546606dd3e6af07bf3f888e7e8dbb3a992"
     },
     {
       "path": "docs/plan/generated/lean-execution-evidence.md",
@@ -180,7 +180,7 @@
     },
     {
       "path": "scripts/gen-lean-complete-parity.py",
-      "sha256": "45205193cc1ad755ca7d24c192080d6f764aaa8fd4d1bda26a9613825b2e3671"
+      "sha256": "08a6e31c018b21ef51f008531a911b07307ecfc83bf0975040477597a11cc20a"
     },
     {
       "path": "scripts/gen-lean-execution-evidence.py",
@@ -223,6 +223,10 @@
       "sha256": "a20a63086aaa516239eb4c88dcdb529ca79789748cf22bdd041b9ec5acfef533"
     },
     {
+      "path": "scripts/lean_u2_official_execution_m2_r3.py",
+      "sha256": "7f65466ad7197918c574ed3c40f74c60cb3f867e67151f178663dbdd806c341f"
+    },
+    {
       "path": "scripts/lean_u2_official_execution_m2_run.py",
       "sha256": "5763298bb33c97baacc0c29d6cc67a8df2ece796f7ea182c59957f5be59eb593"
     },
@@ -240,7 +244,7 @@
     },
     {
       "path": "scripts/tests/test_lean_complete_parity.py",
-      "sha256": "998f9188b60dd91683160d08cd90918312ac5af20996ef6d157c86a1bc2b15c7"
+      "sha256": "0c151c72f48984866c536ec5e04a064998e07724f13318ddbc13d2bb27b55a44"
     },
     {
       "path": "scripts/tests/test_lean_execution_acceptance.py",
@@ -277,6 +281,10 @@
     {
       "path": "scripts/tests/test_lean_u2_official_execution_m2_r2.py",
       "sha256": "a12b8be616c92b31e5d9cbd549862283e74f2d5e43e5fa442521f43ca27754e2"
+    },
+    {
+      "path": "scripts/tests/test_lean_u2_official_execution_m2_r3.py",
+      "sha256": "8b02728ee34122ff04565ebd1fcb2517c3123a316f231e6d9d194e15d163c44b"
     },
     {
       "path": "scripts/tests/test_lean_u2_official_execution_m2_run.py",
@@ -752,6 +760,14 @@
         "r1_plan_sha256": "e0fd948ee39e0f1808eec459a18766683d3781e602cc481c8fa10a70e9a0d5f9",
         "run_command_exposed": true,
         "live_execution_observed": false
+      },
+      "r3": {
+        "cases": 64,
+        "generated": 124,
+        "wrapper_sha256": "72a3f56f52374398cbc1d51a930e140c6cb13c106708507df0b4c31210f42e4b",
+        "selected_processes": 0,
+        "outcomes": 0,
+        "parity": 0
       }
     },
     "implementation_tasks": {
