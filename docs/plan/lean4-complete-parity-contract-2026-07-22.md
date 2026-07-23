@@ -556,6 +556,19 @@ resolver and case closure is `not-run`, the node and edge lists are empty, no
 external process ran, and all native/pair/performance/terminal credit remains
 zero. M2.1-M2.7 must populate exact variant-owned graphs before M3 review.
 
+M2.1 is now source-first and process-ready under its
+[exact plan](lean-u2-native-dependency-tl0.6.4-m2.1-plan-2026-07-23.md),
+[pre-execution result](lean-u2-native-dependency-tl0.6.4-m2.1-pre-execution-2026-07-23.md),
+and [input/control authority](lean-u2-native-header-contract-m2.1-v1.json).
+The frozen pass covers 4,092 exact Lean sources / 9,697,571 bytes in 32
+fast-parser batches, compares all rows with the full parser, includes 14 exact
+controls, and permits exactly 39 sequential processes with zero retries. Its
+content-authorized runner is implemented and CI-gated, but attempt 001 remains
+unconsumed and its evidence root is absent. Therefore observed processes,
+declared header edges, resolutions, native outcomes, pairs, and all terminal
+credit remain zero until explicit authorization, immutable-evidence validation,
+and a separate offline promotion.
+
 ## 8. Layer-specific equivalence
 
 One byte-comparison rule cannot cover the entire system:
@@ -657,8 +670,9 @@ Before another broad implementation claim:
 
 1. retain the R3 singleton and accepted R6 shard as immutable history; execute
    only fresh source-first child shards with unique-case accounting;
-2. retain accepted TL0.6.4 M1 as source-only evidence and M2.0 as an empty
-   typed graph/provider contract; execute M2.1-M2.7 exact module/generated/
+2. retain accepted TL0.6.4 M1 as source-only evidence, M2.0 as an empty typed
+   graph/provider contract, and M2.1's input authority as unexecuted; explicitly
+   authorize/validate M2.1, then execute M2.2-M2.7 exact module/generated/
    runtime/FFI/request/project closures and M3 full-row review;
 3. repair and attest the remote official-Lean executable identity from changed
    working directories, retaining provider, duration, RSS, and axiom evidence;

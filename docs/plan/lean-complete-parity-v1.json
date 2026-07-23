@@ -164,6 +164,10 @@
           "detail": "Generated M2.1 frozen-denominator and explicit no-process/no-edge summary."
         },
         {
+          "path": "docs/plan/lean-u2-native-dependency-tl0.6.4-m2.1-pre-execution-2026-07-23.md",
+          "detail": "Accepted M2.1 implementation-readiness result with exact checkpoint history, process/evidence behavior, artifact identities, validation, content authorization, and explicit no-process boundary."
+        },
+        {
           "path": "docs/plan/lean-u2-official-execution-tl0.6.3-m2-shard-0001-plan-2026-07-22.md",
           "detail": "Pushed immutable source-first execution plan for the lowest-ordinal 64-case shard with no historical observation; no harness discovery or test process has run."
         },

@@ -349,6 +349,16 @@ Start at the root [`PLAN.md`](../../PLAN.md) (map + standing rules) and
   3,723 U2 cases and 408,374 factored case/variant occurrences. M2.0 is
   process-free and non-crediting: providers are unbound, all nodes/edges/
   closures remain empty or `not-run`, and M2.1-M2.7 plus M3 remain mandatory.
+- [`TL0.6.4 M2.1 source-first plan`](lean-u2-native-dependency-tl0.6.4-m2.1-plan-2026-07-23.md),
+  [`pre-execution result`](lean-u2-native-dependency-tl0.6.4-m2.1-pre-execution-2026-07-23.md),
+  [`input/control authority`](lean-u2-native-header-contract-m2.1-v1.json), and
+  generated [Markdown](generated/lean-u2-native-header-contract-m2.1.md)/
+  [JSON](generated/lean-u2-native-header-contract-m2.1.json) — freeze 4,092
+  exact Lean sources, 32 batches, 14 controls, and a 39-process no-retry
+  fast/full header comparison. The runner is implemented and gated, but
+  attempt 001 is unconsumed and its evidence root absent; all observed-process,
+  header-edge, resolution, native, pair, and parity counts remain zero pending
+  explicit authorization.
 - [`lean-compatibility-v1.json`](lean-compatibility-v1.json) and generated
   [`Lean compatibility matrix`](generated/lean-compatibility.md) — TL0.2's
   executable eight-field assurance contract, K0-K6 profile gates, registered

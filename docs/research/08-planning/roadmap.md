@@ -48,6 +48,10 @@ Last updated: 2026-07-22
 > resolvers, providers, closures, native outcomes, pairs, and parity credit
 > remain unbound, `not-run`, or zero. M2.1-M2.7 exact closure and M3 review are
 > still required; schema scale is not behavioral coverage.
+> M2.1's 4,092-source/32-batch/14-control/39-process input authority, runner,
+> and full-parser comparator are now pushed and CI-gated, but the attempt is
+> explicitly unexecuted and its evidence root absent. Process readiness is not
+> header evidence; observed processes and edges remain zero.
 > Its
 > [completion audit](../../../docs/plan/lean-system-roadmap-completion-audit-2026-07-21.md)
 > verifies every named environment gap and the current Axeyum/Lean/mathlib

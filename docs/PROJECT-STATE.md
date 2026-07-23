@@ -310,6 +310,14 @@ Again, there are distinct targets:
   node/edge lists and external-process counts are zero, and no native, pair,
   performance, population, axis, gate, or parity credit is added. M2.1-M2.7
   exact closure and M3 complete-row review remain required.
+  M2.1 is now
+  [implemented but unexecuted](plan/lean-u2-native-dependency-tl0.6.4-m2.1-pre-execution-2026-07-23.md):
+  its authority freezes 4,092 exact Lean inputs / 9,697,571 bytes, 32 batches,
+  14 fast/full parser controls, and 39 sequential no-retry processes. The
+  runner is content-authorized and CI-gated, but its evidence root is absent;
+  observed processes, header edges, resolved nodes/edges, and all terminal
+  credit remain zero pending explicit authorization and immutable-evidence
+  validation.
   The subsequent
   [TL0.7.1 contract](plan/lean-execution-evidence-tl0.7.1-2026-07-22.md)
   defines explicit 4/8 GiB local lanes, twelve typed termination classes, and

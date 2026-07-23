@@ -52,7 +52,7 @@
     },
     {
       "path": "docs/plan/lean-complete-parity-v1.json",
-      "sha256": "4a08cf1c0e8ae12b64bbed383d20399716769f1ccd288878c980ce6d1d6c1fe9"
+      "sha256": "3e4e1a6335b8f09c31236bd8ebc6f0ab90e1ea95a58fd9a1f4591632f0314259"
     },
     {
       "path": "docs/plan/lean-execution-acceptance-tl0.7.4-2026-07-22.md",
@@ -89,6 +89,10 @@
     {
       "path": "docs/plan/lean-u2-native-dependency-tl0.6.4-m2.1-plan-2026-07-23.md",
       "sha256": "7daa62ae0342c8fa64872604f880343fe9498866676675b61e911d034e3b999f"
+    },
+    {
+      "path": "docs/plan/lean-u2-native-dependency-tl0.6.4-m2.1-pre-execution-2026-07-23.md",
+      "sha256": "d1c95ac65ad0387028759e015f1c43c1678cd1616161a2a7aa3d8458870d1753"
     },
     {
       "path": "docs/plan/lean-u2-native-dependency-v1.json",
@@ -304,11 +308,11 @@
     },
     {
       "path": "docs/plan/lean4-complete-parity-contract-2026-07-22.md",
-      "sha256": "df0040bb1b5769db72523651cae888fc1e5adf111b0a021c721c2c5afebbd66c"
+      "sha256": "b51b4d317fc3685005632a9e4da67bf6369e07c530bd49f699e4e9c09569dc42"
     },
     {
       "path": "docs/plan/lean4-complete-parity-roadmap-2026-07-22.md",
-      "sha256": "3c4ae78da4319b2d0453970273bc4969486fe30f7f5f9e0fb8188b7193620c9b"
+      "sha256": "361689c5907be28b31655544bc9fae3e1180eabe4845c2b730d1b39a91ec71ef"
     },
     {
       "path": "scripts/gen-lean-complete-parity.py",
@@ -1584,6 +1588,10 @@
         {
           "path": "docs/plan/generated/lean-u2-native-header-contract-m2.1.md",
           "detail": "Generated M2.1 frozen-denominator and explicit no-process/no-edge summary."
+        },
+        {
+          "path": "docs/plan/lean-u2-native-dependency-tl0.6.4-m2.1-pre-execution-2026-07-23.md",
+          "detail": "Accepted M2.1 implementation-readiness result with exact checkpoint history, process/evidence behavior, artifact identities, validation, content authorization, and explicit no-process boundary."
         },
         {
           "path": "docs/plan/lean-u2-official-execution-tl0.6.3-m2-shard-0001-plan-2026-07-22.md",
