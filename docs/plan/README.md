@@ -316,6 +316,10 @@ Start at the root [`PLAN.md`](../../PLAN.md) (map + standing rules) and
 - [`lean-u2-official-execution-tl0.6.3-m2-r6-completion-replay-r2-implementation-2026-07-23.md`](lean-u2-official-execution-tl0.6.3-m2-r6-completion-replay-r2-implementation-2026-07-23.md) —
   pushed explicit pre-install/post-install completion modes and copied-root
   unchanged-inventory regression; qualifying read-only replay remains next.
+- [`R6 accepted result`](lean-u2-official-execution-tl0.6.3-m2-r6-result-2026-07-23.md)
+  and [`authority`](lean-u2-official-execution-tl0.6.3-m2-r6-v1.json) —
+  portable exact replay accepts 64/64 local outcomes and one physical shard;
+  parent/provider/Axeyum/pair/performance/population/axis/gate/parity stay zero.
 - [`lean-compatibility-v1.json`](lean-compatibility-v1.json) and generated
   [`Lean compatibility matrix`](generated/lean-compatibility.md) — TL0.2's
   executable eight-field assurance contract, K0-K6 profile gates, registered

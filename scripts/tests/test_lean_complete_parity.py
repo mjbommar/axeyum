@@ -239,11 +239,11 @@ class LeanCompleteParityTests(unittest.TestCase):
         self.assertIsNone(population["normalized_denominator"])
         self.assertIsNone(population["content_digest"])
         self.assertIn(
-            "all 111 official attempts remain incomplete",
+            "All 111 full official workflow attempts",
             population["residual"],
         )
         self.assertIn(
-            "R6 attempt 004 then passed 64/64 under conditional semantics",
+            "Current credited local execution coverage is 66 official outcomes",
             population["residual"],
         )
 

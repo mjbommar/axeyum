@@ -248,7 +248,11 @@ replay used pre-install completion mode. The source-first
 authorizes only validator correction over the unchanged root. Its pushed
 [implementation checkpoint](lean-u2-official-execution-tl0.6.3-m2-r6-completion-replay-r2-implementation-2026-07-23.md)
 passes copied-root unchanged-inventory replay; qualifying post-publication
-validation remains open.
+validation then passed. The [accepted R6 result](lean-u2-official-execution-tl0.6.3-m2-r6-result-2026-07-23.md)
+and [authority](lean-u2-official-execution-tl0.6.3-m2-r6-v1.json) credit 64
+local outcomes / one physical shard and preserve every parent/provider/Axeyum/
+pair/performance/parity zero. Continue another child shard and TL0.6.4 native-
+surface classification.
 
 L0 exits when status is generated from evidence rather than hand-copied prose.
 
@@ -605,9 +609,11 @@ parallel lane:
     failure. R4 implemented a 16 GiB local lane with unchanged stack/shard/store
     and a harmless nine-thread control. The corrected control reached released
     Lean but failed thread creation at the address-space ceiling and was reaped
-    before selected discovery; attempt 003 remains unconsumed and credit stays
-    zero. **NEXT:** preregister and qualify a larger local lane with retained
-    failed-control evidence before selected execution. Classify
+    before selected discovery. R5's 32 GiB attempt later passed 64/64 but failed
+    its unconditional-log closure with zero credit. R6 corrected that contract,
+    and its accepted authority now credits 64/64 outcomes and one local shard;
+    aggregate U2 is 66 outcomes over 65 unique cases. **NEXT:** source-first the
+    next child shard and classify
     completed native dependencies and
     form the first official/Axeyum pair. Do not rerun the singleton for coverage
     or promote an official-only pass into parity credit. Continue U0-U9

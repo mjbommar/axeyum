@@ -33,14 +33,14 @@ Current machine-derived state:
 | U0-U9 | 0 complete authorities | a complete executable denominator for any terminal population |
 | A0-A11 | 0 complete axes | end-to-end native behavior on any complete required population |
 | G1-G10 | 0 satisfied terminal gates | any terminal parity claim |
-| U2 official execution | 4 processes, 2 official outcomes, 1 pass and 1 failure for **one unique case**; M1 separately derives 5 exact memberships and 289 not-run physical shards | the 3,678/3,723-case parents, an official provider, an Axeyum outcome, a pair, or performance |
+| U2 official execution | 8 consumed processes, 66 official outcomes, 65 passes / 1 failure over **65 unique cases**; M1 derives 5 exact memberships and 289 physical shards, one locally complete | the 3,678/3,723-case parents, all 111 full attempts, an official provider, an Axeyum outcome, a pair, or performance |
 
 The accepted
 [`R3 result`](lean-u2-official-execution-tl0.6.3-m0-r3-result-2026-07-22.md)
-is useful because it qualifies one real local official-case path. Its unique
-coverage is 1/3,678, not 2/3,678: the pass and earlier failure are outcomes for
-the same case. There are still zero native Axeyum U2 outcomes and zero paired
-cells.
+is useful because it qualifies one real local official-case path. The later R6
+authority adds 64 disjoint local cases, so aggregate unique coverage is now
+65/3,678 rather than the historical singleton's 1/3,678. There are still zero
+native Axeyum U2 outcomes and zero paired cells.
 
 The accepted
 [`M1 shard result`](lean-u2-official-execution-tl0.6.3-m1-shard-result-2026-07-22.md)
@@ -152,7 +152,13 @@ authorizes only validator-mode correction over the unchanged root. R6 remains
 zero-credit until exact replay passes; no selected retry exists. Its
 [`R2 implementation`](lean-u2-official-execution-tl0.6.3-m2-r6-completion-replay-r2-implementation-2026-07-23.md)
 is pushed at `ce319a9d` with an unchanged-inventory copied-root test. Next
-publish the checkpoint and perform one qualifying read-only replay.
+publish the checkpoint and perform one qualifying read-only replay. That replay
+passed, and the
+[`accepted R6 result`](lean-u2-official-execution-tl0.6.3-m2-r6-result-2026-07-23.md)
+credits 64/64 local official outcomes plus one physical shard. Aggregate local
+U2 is now 66 outcomes / 65 unique cases; all full official attempts, parent,
+provider, Axeyum, pairing, and parity remain incomplete. Next execute another
+source-first child shard and start TL0.6.4 native-surface classification.
 
 ## 2. What the SMT-LIB comparison actually says
 

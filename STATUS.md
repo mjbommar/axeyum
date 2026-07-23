@@ -758,7 +758,13 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   [R2 implementation checkpoint](docs/plan/lean-u2-official-execution-tl0.6.3-m2-r6-completion-replay-r2-implementation-2026-07-23.md)
   records pushed `ce319a9d`, explicit pre/post modes, unchanged-inventory replay,
   and eleven focused tests. Next push this checkpoint and perform one qualifying
-  read-only validation. Credit remains zero pending that replay; no retry exists.
+  read-only validation. The
+  [accepted R6 result](docs/plan/lean-u2-official-execution-tl0.6.3-m2-r6-result-2026-07-23.md)
+  and sealed authority now credit 64/64 local official outcomes and one physical
+  shard from unchanged completion `1f0b9af8`. Aggregate local U2 coverage is 66
+  outcomes / 65 unique cases; every provider/Axeyum/pair/parity counter remains
+  zero. Next: source-first next child shard plus TL0.6.4 native-surface
+  classification. Attempt 004 is closed and cannot retry.
 
 - **2026-07-22 — TL0.6.3 M1 derives complete deterministic U2 child-shard
   scheduling with zero new outcomes or parity credit.** The source-first
@@ -8070,6 +8076,12 @@ plan is built and committed on the current branch:
 | P5.5 | External target, measured | **DONE (bounded v1, ADR-0323--0338):** authenticated Tock capture plus eight rechecked dual-DRAT proofs and six replayed controls, UNKNOWN=0, DISAGREE=0. Query time 12.700 s; fresh outer wall 50.745 s; peak RSS 1,256,496 KiB; zero OOM deltas. The committed case study compares exact target validation, universal coverage, trust, effort, artifact boundaries, and limits. No Tock bug was found, so no upstream issue is applicable. This is not a speed or whole-kernel claim. |
 
 ## Changelog
+
+- **2026-07-23 — Accepted R6's 64-pass local shard without claiming Lean
+  parity.** Post-publication replay returned existing completion `1f0b9af8` and
+  left the 152-file digest unchanged. Portable authority `1823f065` credits 64
+  outcomes / one local shard. Aggregate local U2 coverage is 66 outcomes over
+  65 unique cases; provider/Axeyum/pair/performance/terminal parity stays zero.
 
 - **2026-07-23 — Implemented and pushed R6 completion replay without changing
   evidence.** Commit `ce319a9d` keeps pre-install rejection and permits only
