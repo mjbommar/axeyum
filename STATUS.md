@@ -383,6 +383,22 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-22 — certified rational-polynomial integer-order Bessel-J limits.**
+  Wave thirteen ranks the nonlinear Bessel neighbor ahead of quadratic-pole
+  inverse Z: every nonconstant real polynomial has unbounded magnitude at both
+  real infinities, so the same NIST DLMF 10.17.3/10.11.1 fixed-order envelope
+  closes `c·Jₙ(p(x))→0` for rational-coefficient `p` and `x`-free `c`. The rule
+  remains constant-time in `n`. Orders 0, 3, 32, and `u32::MAX`, degrees two
+  through four, both leading signs and infinities, a half coefficient, shifts,
+  and symbolic outer factors pass. Rational-function arguments, irrational or
+  symbolic polynomial coefficients, modified Bessel `I`, and variable-dependent
+  weights decline. SymPy independently agrees for orders 0 through 3 on all
+  four polynomial shapes. The thermally managed 554-unit/147-doctest suite
+  passed (1478.68 s for units), with workspace warning-denied Clippy (10.69 s
+  warm), stable/nightly rustdoc, WASM, links, whitespace, and owned-line
+  formatting green. Next: resume broad probing; quadratic-pole inverse Z still
+  requires an oscillatory-sequence transform fragment.
+
 - **2026-07-22 — certified affine integer-order Bessel-J limits at both
   infinities.** Wave twelve closes the remaining measured Bessel asymptotic gap
   using NIST DLMF 10.17.3's fixed-order `O(|z|^{-1/2})` envelope and 10.11.1's
@@ -390,15 +406,16 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   either real infinity for every public order, nonzero rational `a`, rational
   `b`, and `x`-free `c`; the rule is constant-time in `n`. Orders 0, 1, 2, 7,
   32, and `u32::MAX`, both scale signs, both infinities, shifts, symbolic
-  factors, and additive linearity pass. Modified Bessel `I`, irrational or
-  nonlinear arguments, symbolic shifts, reciprocals, and polynomial weights
-  explicitly decline; constant and finite-point `J₀(0)=1` behavior remains
+  factors, and additive linearity pass. Modified Bessel `I`, irrational
+  arguments, symbolic shifts, reciprocals, and polynomial weights explicitly
+  decline; constant and finite-point `J₀(0)=1` behavior remains
   unchanged. The thermally managed 553-unit/147-doctest suite passed (1527.65 s
   for units), with workspace warning-denied Clippy (2m14s), stable/nightly
   rustdoc, WASM, links, and whitespace green. The non-mutating formatter audit
   retains broad baseline drift but proposes no owned-line changes. Next: resume
   broad probing; quadratic-pole inverse Z remains a larger representation-bound
-  candidate.
+  candidate. Wave thirteen subsequently closes every nonconstant
+  rational-coefficient polynomial argument.
 
 - **2026-07-22 — certified rational-scale integer-order Bessel-J improper
   integrals.** Wave eleven ranks the narrow existing-head DLMF identity ahead
@@ -8317,6 +8334,11 @@ plan is built and committed on the current branch:
   R1/R2 history, a new run/evidence root, universal 512 MiB Lean runtime stacks
   from pinned source semantics, and the measured tiered artifact store. It
   authorizes one process only after separately pushed implementation gates.
+- **2026-07-22 — Added certified rational-polynomial Bessel-J infinity
+  limits.** The fixed-order DLMF envelope now closes `c·Jₙ(p(x))→0` at both
+  infinities for every nonconstant rational-coefficient polynomial `p`, with
+  exact polynomial admission and fail-closed rational-function/irrational/
+  symbolic-coefficient neighbors, bringing CAS to 554 units and 147 doctests.
 - **2026-07-22 — Added certified affine integer-order Bessel-J infinity
   limits.** The DLMF-backed fixed-order asymptotic closes `c·Jₙ(ax+b)→0` at
   both real infinities for all public orders, with rational-affine arguments,

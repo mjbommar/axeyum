@@ -13,15 +13,15 @@ elsewhere in `docs/plan/`). Read this file first when resuming.
   [multi-agent operations guide](../contributor-guide/multi-agent-operations.md):
   work only in the dedicated CAS worktree on an `agent/cas/*` branch, push that
   branch, and leave `main` to the integration owner. The current increment is
-  `agent/cas/gap-probe-wave-twelve`, based on integration parent `57496921`, with
-  implementation commits `9b40d3bf` and `b36b779f` (integrated by `6e054af0`
-  and `cb274adc`); do not rebase it onto `main` ahead of the integration owner.
-- **Tests:** `553` unit + `147` doctests, **all green**, warning-denied workspace
+  `agent/cas/gap-probe-wave-thirteen`, based on integration parent `4682a486`,
+  with implementation commit `3a361b0a` (integrated by `44e08f0b`); do not
+  rebase it onto `main` ahead of the integration owner.
+- **Tests:** `554` unit + `147` doctests, **all green**, warning-denied workspace
   all-target/all-feature Clippy-clean, strict stable/nightly rustdoc-green,
   wasm-green, links-green, and whitespace-clean.
 - **Source of truth for capabilities:** `docs/research/10-cas/README.md`
   (capability table) and `docs/research/10-cas/diary.md` (chronological entries;
-  latest is **Entry 37afa**). Keep both in sync when landing features.
+  latest is **Entry 37afb**). Keep both in sync when landing features.
 - **Method that works:** empirical **gap-probing** (below). It found every recent
   feature *and* a serious infinite-hang regression.
 
@@ -533,6 +533,22 @@ orders `0..=255`), and Stirling-composed raw moments (regressed for orders
   `J₀(0)=1` behavior remains unchanged. No public head, operator, backend,
   evidence format, or logic fragment changed, so no ADR is required.
 
+**Certified rational-polynomial integer-order Bessel-J limits**
+- Wave thirteen compared the adjacent nonlinear `Jₙ` limit gap with
+  quadratic-pole inverse Z. The latter still needs a new oscillatory-sequence
+  transform fragment, while every nonconstant real polynomial has unbounded
+  magnitude at both infinities and therefore remains under DLMF 10.17.3's
+  fixed-order envelope plus 10.11.1's integer-order continuation.
+- `limit` now returns zero for `c·Jₙ(p(x))` at either real infinity for every
+  public order, nonconstant rational-coefficient polynomial `p`, and `x`-free
+  `c`. Orders through `u32::MAX`, degrees two through four, both leading signs
+  and infinities, a half coefficient, shifts, and symbolic factors pass. SymPy
+  independently agrees for orders 0 through 3 on all four polynomial shapes.
+- Rational-function arguments such as `x+1/x`, irrational or symbolic
+  polynomial coefficients, modified Bessel `I`, and variable-dependent outer
+  weights decline. No public head, operator, backend, evidence format, or logic
+  fragment changed, so no ADR is required.
+
 ---
 
 ## 5. Zeilberger / WZ — how it works and where to extend
@@ -788,9 +804,10 @@ Ordered roughly by value:
 1. **Resume broad, timeout-bounded gap probing.** Direct order-one and weighted
    Bessel antiderivatives through order 32 are closed through the normal
    certificate path; order 33 is the explicit discovery boundary. Rational-scale
-   integer-order Bessel-J improper integrals on `[0,∞)` and rational-affine
-   integer-order Bessel-J limits at both real infinities are also closed. The
-   moment families retain separate explicit resource boundaries:
+   integer-order Bessel-J improper integrals on `[0,∞)` and nonconstant
+   rational-polynomial integer-order Bessel-J limits at both real infinities
+   are also closed. The moment families retain separate explicit resource
+   boundaries:
    direct order 256 needs `Γ(257)`, raw order 36 needs public coefficients beyond
    `i128`, and repeated-quadratic inverse Laplace multiplicity 8 exceeds
    checked-`i128` normalization at `t⁷cos(βt)`. Extending these requires a
@@ -863,9 +880,9 @@ esac
 export AXEYUM_CAS_TMP
 trap 'find "$AXEYUM_CAS_TMP" -depth -delete' EXIT
 git rev-parse --abbrev-ref HEAD        # → agent/cas/...
-git merge-base --is-ancestor b36b779f HEAD
+git merge-base --is-ancestor 3a361b0a HEAD
 CARGO_BUILD_JOBS=1 TMPDIR="$AXEYUM_CAS_TMP" cargo test -p axeyum-cas --jobs 1
-# → 553 unit + 147 doctests green
+# → 554 unit + 147 doctests green
 ```
 Then: read `docs/research/10-cas/diary.md` tail for the latest context, and pick
 up from §6 or resume the gap-probing loop. Push the green owned topic branch;
