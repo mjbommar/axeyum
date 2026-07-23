@@ -9,6 +9,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -37,8 +38,11 @@ from full_population import (  # noqa: E402
     validate_wave_checkpoint,
 )
 from full_prepare import (  # noqa: E402
+    FullSolverCell,
+    compose_full_cell_manifests,
     full_host_argv,
     materialize_full_selection,
+    validate_full_cell_composition,
     validate_full_selection,
 )
 from multi_host import (  # noqa: E402
@@ -49,6 +53,8 @@ from multi_host import (  # noqa: E402
 )
 from resource_enforcement import MULTI_HOST_KIND  # noqa: E402
 from resume_contract import ContractError, canonical_bytes, digest  # noqa: E402
+from resume_fs import read_canonical_json  # noqa: E402
+from resume_runner import source_identity_artifact  # noqa: E402
 
 
 ENFORCEMENT_ID = "e" * 64
@@ -764,6 +770,120 @@ class FullPopulationContractTests(unittest.TestCase):
                     corpus_manifest=paths["corpus.json"],
                     environment_manifest=paths["environment.json"],
                     source_identity_manifest=paths["source-identity.json"],
+                )
+
+    def test_fixture_composer_publishes_all_cell_manifests_without_attempts(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            shared = root / "shared"
+            corpus = shared / "corpus"
+            selection_dir = shared / "selection"
+            attempt = shared / "attempt"
+            selection_dir.mkdir(parents=True)
+            attempt.mkdir()
+            accepted = accepted_fixture(shared, corpus)
+            selection = materialize_full_selection(
+                accepted_root=accepted,
+                corpus_root=corpus,
+                output_dir=selection_dir,
+                fixture_only=True,
+            )
+            corpus_manifest = shared / "corpus.json"
+            environment_manifest = shared / "environment.json"
+            corpus_manifest.write_bytes(canonical_bytes({"fixture": "corpus"}))
+            environment_manifest.write_bytes(canonical_bytes({"fixture": "environment"}))
+            environment_sha = sha256_file(environment_manifest)
+            filesystem_sha = "f" * 64
+            registrations = [
+                reseal(
+                    {
+                        "schema": REGISTRATION_SCHEMA,
+                        "host_id": host_id,
+                        "ssh_target": host_id,
+                        "hostname": f"server-{host_id}",
+                        "kernel_release": "fixture-kernel",
+                        "machine": "x86_64",
+                        "python_version": "3.fixture",
+                        "python_executable_sha256": "1" * 64,
+                        "toolchain_identity_sha256": "2" * 64,
+                        "cgroup_controllers": ["cpu", "io", "memory", "pids"],
+                        "user_systemd_transient": True,
+                        "shared_filesystem_class_sha256": filesystem_sha,
+                        "environment_class_sha256": environment_sha,
+                    }
+                )
+                for host_id in HOST_IDS
+            ]
+            source_identity = source_identity_artifact(ROOT, SMTCOMP)
+            source_identity_path = shared / "source-identity.json"
+            source_identity_path.write_bytes(canonical_bytes(source_identity))
+            binaries = []
+            for solver_id in SOLVER_IDS:
+                binary = shared / f"{solver_id}-solver"
+                binary.write_bytes(f"{solver_id} fixture".encode("ascii"))
+                binary.chmod(0o755)
+                binaries.append(binary)
+            cells = [
+                FullSolverCell("axeyum", binaries[0], "fixture", 19_000),
+                FullSolverCell("cvc5", binaries[1], "fixture"),
+                FullSolverCell("bitwuzla", binaries[2], "fixture"),
+            ]
+            with mock.patch(
+                "multi_host.shared_filesystem_observation",
+                return_value={"class_sha256": filesystem_sha},
+            ):
+                composition = compose_full_cell_manifests(
+                    repository_root=ROOT,
+                    source_root=SMTCOMP,
+                    shared_root=shared,
+                    attempt_root=attempt,
+                    selection=selection,
+                    corpus_manifest=corpus_manifest,
+                    environment_manifest=environment_manifest,
+                    source_identity_manifest=source_identity_path,
+                    host_registrations=registrations,
+                    solver_cells=cells,
+                    fixture_only=True,
+                )
+            composed = composition["cells"]
+            self.assertEqual([row["solver_id"] for row in composed], list(SOLVER_IDS))
+            self.assertFalse(composition["launch_authorized"])
+            self.assertEqual(
+                {row["selection_record_sha256"] for row in composed},
+                {selection["record_sha256"]},
+            )
+            for cell in composed:
+                self.assertEqual(len(cell["commands"]), 144)
+                run = read_canonical_json(Path(cell["run_manifest_path"]))
+                self.assertEqual(run["identity"]["shard_count"], SHARD_COUNT)
+                self.assertEqual(run["resource_enforcement"]["worker_slots"], 2)
+                self.assertEqual(
+                    run["resource_enforcement"]["aggregate_memory_bytes"],
+                    16 * 1024**3,
+                )
+                run_root = attempt / "cells" / cell["solver_id"]
+                self.assertFalse(any((run_root / "multi-host-attempts").iterdir()))
+                self.assertFalse(any((run_root / "multi-host-terminals").iterdir()))
+            first = read_canonical_json(
+                Path(composed[0]["commands"][0]["path"])
+            )
+            retry = read_canonical_json(
+                Path(composed[0]["commands"][48]["path"])
+            )
+            self.assertEqual(
+                first["argv"][first["argv"].index("--host-shards") + 1], "0,1"
+            )
+            self.assertEqual(
+                retry["argv"][retry["argv"].index("--host-shards") + 1], "0"
+            )
+            self.assertIn("--allow-unadmitted-selection-fixture", first["argv"])
+            mutated = copy.deepcopy(composition)
+            mutated["cells"][0]["commands"][0]["shard_ids"] = [1, 0]
+            with self.assertRaises(ContractError):
+                validate_full_cell_composition(
+                    reseal(mutated),
+                    selection=selection,
+                    inspect_shared_root=False,
                 )
 
 
