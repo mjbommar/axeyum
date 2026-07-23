@@ -1,0 +1,203 @@
+{
+  "schema": "axeyum-lean-u2-official-child-shards-report-v1",
+  "generated_from": "docs/plan/lean-u2-official-child-shards-v1.json",
+  "generated_from_sha256": "6a2ec0b3edd353f3deb76e805052d5d2465ed1c9dd59cf221b0d175d0ce5e3e9",
+  "authority_record_sha256": "923df740b24b2dd1ec05e277bcfaec43681d5fd4d6fbdf1a67ebd6a6144e6f28",
+  "status": "complete-derivation-not-run",
+  "scope": "official-u2-child-shard-derivation-not-execution-or-parity",
+  "target": {
+    "repository": "https://github.com/leanprover/lean4.git",
+    "official_repository": "leanprover/lean4",
+    "version": "4.30.0",
+    "tag": "v4.30.0",
+    "commit": "d024af099ca4bf2c86f649261ebf59565dc8c622"
+  },
+  "policy": {
+    "method": "exact-membership-deduplication-plus-contiguous-bounded-partition",
+    "max_cases_per_shard": 64,
+    "preserve_parent_order": true,
+    "deduplicate_exact_ordered_membership_only": true,
+    "representative_sample": false,
+    "canonical_json": "UTF-8; sorted keys; compact separators; no NaN/infinity",
+    "digest_construction": "ASCII domain + NUL + canonical JSON bytes"
+  },
+  "summary": {
+    "registration_cases": 3723,
+    "selection_sets": 8,
+    "official_attempts": 111,
+    "distinct_membership_plans": 5,
+    "distinct_membership_case_occurrences": 18277,
+    "physical_child_shards": 289,
+    "selection_expanded_shard_occurrences": 461,
+    "attempt_expanded_shard_occurrences": 6451,
+    "selected_case_union": 3723,
+    "selected_case_union_sha256": "21e9bc117f0bedb7e80cd2f87ac8cb7d5032af4a946d6666f4298e531b1e5369",
+    "historical_unique_observed_cases": 1,
+    "outcomes_observed_by_m1": 0
+  },
+  "membership_plans": [
+    {
+      "id": "membership-6f5d4dadd9bc51b42521fd6bb07e6fd270f4b638a08156c28cfa6cf7a998a488",
+      "selected_count": 3678,
+      "selection_set_ids": [
+        "default-all",
+        "default-filtered-aec7358564e4"
+      ],
+      "shard_count": 58,
+      "selected_ids_sha256": "6f5d4dadd9bc51b42521fd6bb07e6fd270f4b638a08156c28cfa6cf7a998a488",
+      "record_sha256": "e5fd151892afbd532582e160a35e0549bfcb0efa836aab65975b4c83981ce6e2"
+    },
+    {
+      "id": "membership-7c49a81ac4e3a5e791515b62a798745f082a9325e40e7f49390b6d66c493e6cd",
+      "selected_count": 3723,
+      "selection_set_ids": [
+        "full-lake-all",
+        "full-lake-filtered-6325d6cffd5d"
+      ],
+      "shard_count": 59,
+      "selected_ids_sha256": "7c49a81ac4e3a5e791515b62a798745f082a9325e40e7f49390b6d66c493e6cd",
+      "record_sha256": "38795cc306105ed748fa5a8aff0506e71a847dfae3cd677105e455a39bc63f21"
+    },
+    {
+      "id": "membership-9edadfadaf699fbbc624dbea40c9c66953b6928d347f343bb197019582bd356e",
+      "selected_count": 3477,
+      "selection_set_ids": [
+        "default-filtered-d1bb9722e72c",
+        "full-lake-filtered-d803b176baa6"
+      ],
+      "shard_count": 55,
+      "selected_ids_sha256": "9edadfadaf699fbbc624dbea40c9c66953b6928d347f343bb197019582bd356e",
+      "record_sha256": "de9b9c5ffbaa946ff2e1d0c1568bf4ed692290669b6d7ed9ea929b317cb3248a"
+    },
+    {
+      "id": "membership-bc35ab1c1ee29ede3bd33cc90c09ab8f573747720f457b6cefb364db0c6ac419",
+      "selected_count": 3722,
+      "selection_set_ids": [
+        "full-lake-filtered-cbb2894dd43f"
+      ],
+      "shard_count": 59,
+      "selected_ids_sha256": "bc35ab1c1ee29ede3bd33cc90c09ab8f573747720f457b6cefb364db0c6ac419",
+      "record_sha256": "37329bcf5630ce6d8cbb8c78a5f18dcd60658521af23906991fa245ba933b7dd"
+    },
+    {
+      "id": "membership-cd78d60a181a643ff844c6bd29a09d71be50741c7347aaa40490a8a73150f56a",
+      "selected_count": 3677,
+      "selection_set_ids": [
+        "default-filtered-bfb0a7b69c6e"
+      ],
+      "shard_count": 58,
+      "selected_ids_sha256": "cd78d60a181a643ff844c6bd29a09d71be50741c7347aaa40490a8a73150f56a",
+      "record_sha256": "310f7b4720f9ecf9f7d301dac1704ae89ef3e02deaf9c93f99bbe2948e726e89"
+    }
+  ],
+  "selection_bindings": [
+    {
+      "selection_set_id": "default-all",
+      "membership_plan_id": "membership-6f5d4dadd9bc51b42521fd6bb07e6fd270f4b638a08156c28cfa6cf7a998a488",
+      "selected_count": 3678,
+      "shard_count": 58,
+      "outcome": "not-run"
+    },
+    {
+      "selection_set_id": "default-filtered-aec7358564e4",
+      "membership_plan_id": "membership-6f5d4dadd9bc51b42521fd6bb07e6fd270f4b638a08156c28cfa6cf7a998a488",
+      "selected_count": 3678,
+      "shard_count": 58,
+      "outcome": "not-run"
+    },
+    {
+      "selection_set_id": "default-filtered-bfb0a7b69c6e",
+      "membership_plan_id": "membership-cd78d60a181a643ff844c6bd29a09d71be50741c7347aaa40490a8a73150f56a",
+      "selected_count": 3677,
+      "shard_count": 58,
+      "outcome": "not-run"
+    },
+    {
+      "selection_set_id": "default-filtered-d1bb9722e72c",
+      "membership_plan_id": "membership-9edadfadaf699fbbc624dbea40c9c66953b6928d347f343bb197019582bd356e",
+      "selected_count": 3477,
+      "shard_count": 55,
+      "outcome": "not-run"
+    },
+    {
+      "selection_set_id": "full-lake-all",
+      "membership_plan_id": "membership-7c49a81ac4e3a5e791515b62a798745f082a9325e40e7f49390b6d66c493e6cd",
+      "selected_count": 3723,
+      "shard_count": 59,
+      "outcome": "not-run"
+    },
+    {
+      "selection_set_id": "full-lake-filtered-6325d6cffd5d",
+      "membership_plan_id": "membership-7c49a81ac4e3a5e791515b62a798745f082a9325e40e7f49390b6d66c493e6cd",
+      "selected_count": 3723,
+      "shard_count": 59,
+      "outcome": "not-run"
+    },
+    {
+      "selection_set_id": "full-lake-filtered-cbb2894dd43f",
+      "membership_plan_id": "membership-bc35ab1c1ee29ede3bd33cc90c09ab8f573747720f457b6cefb364db0c6ac419",
+      "selected_count": 3722,
+      "shard_count": 59,
+      "outcome": "not-run"
+    },
+    {
+      "selection_set_id": "full-lake-filtered-d803b176baa6",
+      "membership_plan_id": "membership-9edadfadaf699fbbc624dbea40c9c66953b6928d347f343bb197019582bd356e",
+      "selected_count": 3477,
+      "shard_count": 55,
+      "outcome": "not-run"
+    }
+  ],
+  "historical_observation": {
+    "authority_path": "docs/plan/lean-u2-official-execution-tl0.6.3-m0-r3-v1.json",
+    "authority_physical_sha256": "fe04cd96fb9f08c8a0e834ec11f954c3c8172912332da28fc2a92adf0cedb475",
+    "authority_record_sha256": "0a82746dc3a8fd8e138f0bd9ecdc2064ba856feccb10a840fcd72ca8ad7674db",
+    "case_id": "compile/534.lean",
+    "registration_case_sha256": "ea289dd25543d2e90f2da84b79b60598a3848b600262969a8babe228133c0d4f",
+    "r3_case_record_sha256": "64fbf989ec5e458f6e8b69bad71c4c6532cd73e4be70baa998ffae4f702289eb",
+    "process_attempts": 4,
+    "completed_process_attempts": 2,
+    "official_outcomes": 2,
+    "official_passes": 1,
+    "official_failures": 1,
+    "parent_profiles_completed": 0,
+    "providers_completed": 0,
+    "axeyum_outcomes": 0,
+    "paired_cells": 0,
+    "performance_rows": 0,
+    "credit_scope": "historical-local-singleton-only",
+    "completes_m1_shard": false,
+    "record_sha256": "044c5bb29818a0e75cc0e6c865e72a28a2d24207993617ef33fd0e7fa80a7ad7"
+  },
+  "claims": {
+    "parent_memberships_partitioned": true,
+    "selection_bindings_complete": true,
+    "attempt_bindings_complete": true,
+    "historical_observation_annotated": true,
+    "official_execution_complete": false,
+    "official_provider_reproduced": false,
+    "axeyum_observed": false,
+    "matched_pair_formed": false,
+    "performance_measured": false,
+    "lean_parity_established": false
+  },
+  "credits": {
+    "official_executed_attempts": 0,
+    "official_completed_cases": 0,
+    "official_profile_completions": 0,
+    "official_provider_completions": 0,
+    "axeyum_outcomes": 0,
+    "paired_cells": 0,
+    "performance_rows": 0,
+    "complete_populations": 0,
+    "complete_axes": 0,
+    "satisfied_gates": 0,
+    "parity_credit": 0
+  },
+  "residual": [
+    "Preregister executable, provider, environment, resource, attempt, completion, and retry identities before executing a child shard.",
+    "Execute official child shards and retain complete or explicitly incomplete raw evidence without converting official outcomes into native parity credit.",
+    "Implement native Axeyum surfaces and form exact official/Axeyum pairs before any functional parity claim."
+  ],
+  "verdict": "complete deterministic child-shard derivation; no execution or parity outcome"
+}
