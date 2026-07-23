@@ -347,7 +347,7 @@ The result taxonomy is:
 | `agree-reject` | both reject the invalid/unsupported input with compatible class and state | negative compatibility credit |
 | `official-only` | official Lean succeeds; Axeyum rejects, declines, times out, or exhausts resources | missing capability; blocks full profile |
 | `axeyum-only` | Axeyum accepts while official Lean rejects | compatibility disagreement; soundness-critical at kernel/admission boundaries |
-| `semantic-mismatch` | both succeed but core, environment, proof, output, state, or transcript differs beyond the registered normalization | blocks parity |
+| `semantic-mismatch` | both produce the same semantic result class but normalized core, environment, proof, output, state, diagnostic, or transcript differs | blocks parity |
 | `unadjudicated` | the oracle/equivalence rule cannot decide whether outputs agree | no parity credit |
 | `not-run` | identity, preflight, execution, or completion is absent | no parity credit |
 | `invalid-run` | pin, population, environment, resource, attempt, or artifact evidence is inconsistent | retain diagnostically; zero parity credit |
@@ -356,14 +356,17 @@ Totals are always accompanied by exact overlap. `agree-success = N` alone is
 insufficient without the `official-only`, `axeyum-only`, mismatch,
 unadjudicated, and not-run denominators.
 
-Outcome/state coherence is fail-closed. Agreement, directional difference,
-semantic mismatch, and unadjudicated comparison require two complete side
-records. `not-run` requires at least one absent side and no invalid side;
-`invalid-run` requires at least one invalid side. A completed timeout, resource
-exhaustion, or supported decline remains a completed typed execution and can
-produce a directional outcome. Total absence of launch/completion is
-`not-run`; inconsistent pins, artifacts, or attempt evidence are
-`invalid-run`, even after exit zero.
+Outcome/state coherence is fail-closed and derived under the
+[TL0.6.5 R2 plan](lean-u2-matched-execution-tl0.6.5-outcome-derivation-r2-plan-2026-07-23.md).
+Each complete execution carries a typed semantic/non-semantic result class;
+the comparison carries distinct official/Axeyum normalized-observable
+identities. Agreement requires two compatible semantic result classes and
+equal present normalized identities. `not-run` requires at least one absent
+side and no invalid side; `invalid-run` requires at least one invalid side. A
+completed timeout, resource exhaustion, or supported decline remains a
+completed typed execution and can produce a directional outcome. Total absence
+of launch/completion is `not-run`; inconsistent pins, artifacts, or attempt
+evidence are `invalid-run`, even after exit zero.
 
 ### 7.1 TL0.7.1 execution-evidence checkpoint
 

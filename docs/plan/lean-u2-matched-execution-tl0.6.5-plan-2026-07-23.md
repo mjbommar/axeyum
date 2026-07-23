@@ -160,6 +160,7 @@ values:
 | Field | Meaning |
 |---|---|
 | `record_state` | `complete`, `not-run`, or `invalid` |
+| `result_class` | nullable comparison projection: `success`, `reject`, `decline`, `timeout`, `resource-exhaustion`, or `failure` |
 | `executable_sha256` | exact executable/provider identity |
 | `configuration_sha256` | effective system configuration identity |
 | `command_sha256` | exact argv/cwd/input/redirection contract identity |
@@ -178,10 +179,11 @@ values:
 | `record_sha256` | canonical seal over every other field in this execution record |
 
 For `complete`, every scalar identity and metric is present and validates.
+It also requires one typed `result_class`.
 For `not-run` and `invalid`, unavailable execution-derived values are JSON
 `null`, not magic all-zero digests or invented attempts. Any values that are
 present must still validate, and retained evidence must explain absence or
-invalidity. `invalid` never becomes `complete` by later patching; a new valid
+invalidity; `result_class` must be null. `invalid` never becomes `complete` by later patching; a new valid
 attempt creates a new immutable execution record while history stays visible.
 
 ### 5.3 Comparison record
@@ -194,6 +196,8 @@ attempt creates a new immutable execution record while history stays visible.
 | `contract_sha256` | exact selected-observable, ignored-field, equivalence, and taxonomy contract |
 | `official_record_sha256` | exact cited official execution-record seal |
 | `axeyum_record_sha256` | exact cited Axeyum execution-record seal |
+| `official_normalized_sha256` | nullable canonical official selected-observable projection |
+| `axeyum_normalized_sha256` | nullable canonical Axeyum selected-observable projection |
 | `result_sha256` | canonical comparison-result identity |
 | `completed` | comparison record was installed last over the two cited side records |
 | `evidence` | nonempty raw/normalized diff and independent-check links |
@@ -227,13 +231,14 @@ normalization breaks the comparison seal, a common-identity mutation breaks
 the cell seal, and a correctly resealed cell still breaks the frozen
 population cell-seal authority.
 
-Outcome/state coherence is exact:
-
-| Comparison outcome | Required side states |
-|---|---|
-| `agree-success`, `agree-reject`, `official-only`, `axeyum-only`, `semantic-mismatch`, `unadjudicated` | both `complete` |
-| `not-run` | at least one side `not-run`, neither side `invalid` |
-| `invalid-run` | at least one side `invalid` |
+Outcome/state/result/normalization coherence is derived exactly under the
+[R2 outcome-derivation plan](lean-u2-matched-execution-tl0.6.5-outcome-derivation-r2-plan-2026-07-23.md).
+Invalid state dominates as `invalid-run`; otherwise absent state derives
+`not-run`. Two complete successful or rejecting sides agree only when both
+canonical normalized identities exist and are equal. Unequal same-class
+semantic results derive `semantic-mismatch`; missing normalized identity
+derives `unadjudicated`. Directional outcomes derive from the typed side-result
+classes, never from a hand-entered comparison label.
 
 An Axeyum timeout, resource exhaustion, or supported decline is a completed
 typed Axeyum execution and can therefore produce `official-only`. Total absence
@@ -331,7 +336,7 @@ is retained for TL0.6.6 and blocks U2 promotion.
 | Milestone | Work | Exit | Non-credit boundary |
 |---|---|---|---|
 | M0 — obligation authority | after both parents, expand every accepted execution slot into exact comparison obligations | count, ordered IDs/digest, ordered cell-seal digest, layer/normalization ownership, exclusions, and zero executions validate | no process or outcome |
-| M1 — comparison implementation | implement side/comparison records, normalizers, joiner, store, projector, and independent validator | all schema, mutation, determinism, and copied-root controls pass | synthetic controls only |
+| M1 — comparison implementation | implement side/comparison records, typed result projection, derived taxonomy, normalizers, joiner, store, projector, and independent validator | all schema, mutation, determinism, and copied-root controls pass | synthetic controls only |
 | M2 — attempt authority | bind exact native executable, commands, environment, platform/resources, shard mapping, output root, and stop rules | explicit authorization digest validates | no launch before authorization |
 | M3 — bounded native execution | execute one preregistered bounded shard and install completion last | every selected side record and absence/invalid row validates | bounded profile only |
 | M4 — incremental campaign | resume over disjoint exact obligations with immutable attempts | every U2 execution slot has a selected native record or explicit terminal absence | no U2 promotion |
@@ -353,15 +358,17 @@ Before this plan can be registered as the TL0.6.5 contract:
    zero digest or borrowed attempt;
 4. outcome/state coherence rejects agreement without two complete sides,
    `not-run` without an absent side, and `invalid-run` without an invalid side;
-5. paired-population authorities bind expected count, sorted-ID digest, and
+5. typed side results plus normalized-observable identities derive the
+   comparison taxonomy and reject sealed but incoherent labels;
+6. paired-population authorities bind expected count, sorted-ID digest, and
    sorted `(id, cell_sha256)` digest;
-6. G3 rejects a nonempty proper subset even if every registered row agrees;
-7. source/path/content/member/profile identities remain distinct;
-8. generator output is byte-identical under `--check` from a detached copied
+7. G3 rejects a nonempty proper subset even if every registered row agrees;
+8. source/path/content/member/profile identities remain distinct;
+9. generator output is byte-identical under `--check` from a detached copied
    repository root;
-9. focused parity tests, the full parity documentation gate, and link checks
+10. focused parity tests, the full parity documentation gate, and link checks
    pass; and
-10. all counters remain at current truth: zero native outcomes, zero paired
+11. all counters remain at current truth: zero native outcomes, zero paired
     cells, zero complete paired-population authorities, and zero parity credit.
 
 ## 11. Primary sources and design references
@@ -383,6 +390,12 @@ Before this plan can be registered as the TL0.6.5 contract:
   keeps commands/configurations, task sets, limits, per-execution results,
   resource measurements, and raw logs explicit. It is a methodology reference;
   TL0.6.5 does not adopt BenchExec or authorize a process.
+- [BenchExec's result classifier](https://github.com/sosy-lab/benchexec/blob/main/benchexec/result.py)
+  separates tool-result class from correct, wrong, unknown, missing, and error
+  categories; TL0.6.5 likewise does not infer agreement from completion.
+- The [SMT-COMP 2025 rules](https://smt-comp.github.io/2025/rules.pdf)
+  separately account for answers, unknown, abort, erroneous results, and model
+  validation. This is a taxonomy-method reference, not an adopted policy.
 - [RFC 8785](https://www.rfc-editor.org/rfc/rfc8785.html) explains why
   repeatable cryptographic hashing requires invariant serialization. Axeyum
   adopts that requirement but freezes the narrower internal encoding in
