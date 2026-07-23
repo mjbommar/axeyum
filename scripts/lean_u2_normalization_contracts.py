@@ -13,41 +13,72 @@ from typing import Any
 
 
 ROOT = Path(__file__).resolve().parent.parent
-MANIFEST = ROOT / "docs" / "plan" / "lean-u2-normalization-contracts-v1.json"
+MANIFEST = ROOT / "docs" / "plan" / "lean-u2-normalization-contracts-v2.json"
 OUT_MD = ROOT / "docs" / "plan" / "generated" / "lean-u2-normalization-contracts.md"
+EXECUTION_EVIDENCE = ROOT / "docs" / "plan" / "lean-execution-evidence-v1.json"
 
-CONTRACT_DOMAIN = "axeyum-lean-normalization-contract-v1"
-PROJECTION_DOMAIN = "axeyum-lean-normalized-observation-v1"
+CONTRACT_DOMAIN = "axeyum-lean-normalization-contract-v2"
+PROJECTION_DOMAIN = "axeyum-lean-normalized-observation-v2"
 CONTRACT_IDS = (
-    "lean-process-harness-v1",
-    "lean-parser-macro-v1",
-    "lean-elaboration-v1",
-    "lean-kernel-assurance-v1",
-    "lean-module-cache-v1",
-    "lean-tactic-v1",
-    "lean-compiler-runtime-v1",
-    "lean-server-rpc-v1",
-    "lean-lake-project-v1",
+    "lean-process-harness-v2",
+    "lean-parser-macro-v2",
+    "lean-elaboration-v2",
+    "lean-kernel-assurance-v2",
+    "lean-module-cache-v2",
+    "lean-tactic-v2",
+    "lean-compiler-runtime-v2",
+    "lean-server-rpc-v2",
+    "lean-lake-project-v2",
 )
-IGNORED_FIELDS = ("collector_sequence", "evidence_storage_path")
+TERMINATION_CLASSES = (
+    "exited",
+    "signaled",
+    "wall-timeout",
+    "cpu-timeout",
+    "memory-limit",
+    "pids-limit",
+    "disk-limit",
+    "cancelled",
+    "runner-lost",
+    "launch-failed",
+    "preflight-invalid",
+    "unknown-termination",
+)
+ADMISSION_CLASSES = ("admitted", "rejected", "declined")
+IGNORED_SCHEMAS = (
+    ("collector_sequence", "nonnegative-integer"),
+    ("evidence_storage_path", "nonempty-string"),
+)
+
+
+def sha256_fields(*names: str) -> tuple[tuple[str, str, tuple[str, ...]], ...]:
+    return tuple((name, "sha256", ()) for name in names)
+
+
+def enum_field(
+    name: str, values: tuple[str, ...]
+) -> tuple[str, str, tuple[str, ...]]:
+    return (name, "enum", values)
+
+
 EXPECTED_CONTRACTS = {
-    "lean-process-harness-v1": {
+    "lean-process-harness-v2": {
         "layer": "process-harness",
         "applicable_axes": ("A0", "A11"),
-        "compared_fields": (
-            "cleanup_state",
-            "completion_state",
+        "compared_fields": sha256_fields(
+            "cleanup_state_sha256",
+            "completion_state_sha256",
             "declared_effects_sha256",
-            "expected_exit_policy",
+            "expected_exit_policy_sha256",
             "stderr_bytes_sha256",
             "stdout_bytes_sha256",
-            "termination_class",
-        ),
+        )
+        + (enum_field("termination_class", TERMINATION_CLASSES),),
     },
-    "lean-parser-macro-v1": {
+    "lean-parser-macro-v2": {
         "layer": "parser-macro",
         "applicable_axes": ("A3",),
-        "compared_fields": (
+        "compared_fields": sha256_fields(
             "macro_expansion_sha256",
             "recovery_nodes_sha256",
             "scope_hygiene_sha256",
@@ -55,10 +86,10 @@ EXPECTED_CONTRACTS = {
             "syntax_tree_sha256",
         ),
     },
-    "lean-elaboration-v1": {
+    "lean-elaboration-v2": {
         "layer": "elaboration",
         "applicable_axes": ("A4",),
-        "compared_fields": (
+        "compared_fields": sha256_fields(
             "core_terms_sha256",
             "declarations_sha256",
             "diagnostics_sha256",
@@ -67,11 +98,13 @@ EXPECTED_CONTRACTS = {
             "info_trees_sha256",
         ),
     },
-    "lean-kernel-assurance-v1": {
+    "lean-kernel-assurance-v2": {
         "layer": "kernel-assurance",
         "applicable_axes": ("A1", "A9"),
         "compared_fields": (
-            "admission_class",
+            enum_field("admission_class", ADMISSION_CLASSES),
+        )
+        + sha256_fields(
             "axiom_trust_closure_sha256",
             "declaration_identity_sha256",
             "definitional_equality_sha256",
@@ -81,10 +114,10 @@ EXPECTED_CONTRACTS = {
             "normal_form_sha256",
         ),
     },
-    "lean-module-cache-v1": {
+    "lean-module-cache-v2": {
         "layer": "module-cache",
         "applicable_axes": ("A2", "A6", "A9"),
-        "compared_fields": (
+        "compared_fields": sha256_fields(
             "artifact_identity_sha256",
             "effective_import_closure_sha256",
             "environment_parts_sha256",
@@ -94,10 +127,10 @@ EXPECTED_CONTRACTS = {
             "visibility_sha256",
         ),
     },
-    "lean-tactic-v1": {
+    "lean-tactic-v2": {
         "layer": "tactic",
         "applicable_axes": ("A5",),
-        "compared_fields": (
+        "compared_fields": sha256_fields(
             "diagnostics_sha256",
             "final_goals_sha256",
             "independent_admission_sha256",
@@ -106,26 +139,26 @@ EXPECTED_CONTRACTS = {
             "theorem_term_sha256",
         ),
     },
-    "lean-compiler-runtime-v1": {
+    "lean-compiler-runtime-v2": {
         "layer": "compiler-runtime",
         "applicable_axes": ("A8",),
-        "compared_fields": (
+        "compared_fields": sha256_fields(
             "exception_sha256",
-            "execution_route",
+            "execution_route_sha256",
             "ffi_abi_sha256",
             "filesystem_effects_sha256",
             "frontend_result_sha256",
             "load_initialization_sha256",
             "stderr_bytes_sha256",
             "stdout_bytes_sha256",
-            "termination_class",
-            "value_sha256",
-        ),
+        )
+        + (enum_field("termination_class", TERMINATION_CLASSES),)
+        + sha256_fields("value_sha256"),
     },
-    "lean-server-rpc-v1": {
+    "lean-server-rpc-v2": {
         "layer": "server-rpc",
         "applicable_axes": ("A7",),
-        "compared_fields": (
+        "compared_fields": sha256_fields(
             "cancellation_sha256",
             "diagnostics_sha256",
             "document_versions_sha256",
@@ -137,10 +170,10 @@ EXPECTED_CONTRACTS = {
             "worker_watchdog_sha256",
         ),
     },
-    "lean-lake-project-v1": {
+    "lean-lake-project-v2": {
         "layer": "lake-project",
         "applicable_axes": ("A6", "A11"),
-        "compared_fields": (
+        "compared_fields": sha256_fields(
             "artifacts_sha256",
             "cache_state_sha256",
             "command_exits_sha256",
@@ -185,6 +218,11 @@ def load_manifest() -> dict[str, Any]:
         return json.load(handle)
 
 
+def load_execution_evidence() -> dict[str, Any]:
+    with EXECUTION_EVIDENCE.open(encoding="utf-8") as handle:
+        return json.load(handle)
+
+
 def canonical_json_bytes(value: Any) -> bytes:
     return json.dumps(
         value,
@@ -221,22 +259,41 @@ def contract_map(data: dict[str, Any]) -> dict[str, dict[str, Any]]:
     }
 
 
-def _validate_json_value(value: Any, path: str) -> None:
-    if value is None or isinstance(value, (bool, int, str)):
+def field_schema_tuple(field: Any) -> tuple[Any, Any, tuple[Any, ...]]:
+    if not isinstance(field, dict):
+        return (None, None, ())
+    values = field.get("values")
+    return (
+        field.get("field"),
+        field.get("kind"),
+        tuple(values) if isinstance(values, list) else (),
+    )
+
+
+def validate_observation_value(
+    contract_id: str, field: dict[str, Any], value: Any
+) -> None:
+    name = str(field.get("field"))
+    kind = field.get("kind")
+    owner = f"{contract_id}.{name}"
+    if kind == "sha256":
+        if not isinstance(value, str) or not HEX64.fullmatch(value):
+            raise ObservationError(f"{owner}: expected lowercase 64-hex SHA-256")
         return
-    if isinstance(value, float):
-        raise ObservationError(f"{path}: floating-point values are forbidden")
-    if isinstance(value, list):
-        for index, item in enumerate(value):
-            _validate_json_value(item, f"{path}[{index}]")
+    if kind == "enum":
+        values = field.get("values")
+        if not isinstance(value, str) or value not in values:
+            raise ObservationError(f"{owner}: value is outside the registered enum")
         return
-    if isinstance(value, dict):
-        for key, item in value.items():
-            if not isinstance(key, str):
-                raise ObservationError(f"{path}: object keys must be strings")
-            _validate_json_value(item, f"{path}.{key}")
+    if kind == "nonnegative-integer":
+        if not isinstance(value, int) or isinstance(value, bool) or value < 0:
+            raise ObservationError(f"{owner}: expected nonnegative JSON integer")
         return
-    raise ObservationError(f"{path}: unsupported JSON value {type(value).__name__}")
+    if kind == "nonempty-string":
+        if not isinstance(value, str) or not value:
+            raise ObservationError(f"{owner}: expected nonempty string")
+        return
+    raise ObservationError(f"{owner}: unknown registered field kind {kind!r}")
 
 
 def normalize_observation(
@@ -247,7 +304,7 @@ def normalize_observation(
         raise ObservationError(f"unknown normalization id {normalization_id!r}")
     if not isinstance(observation, dict):
         raise ObservationError("observation must be an object")
-    compared = tuple(contract["compared_fields"])
+    compared = tuple(item["field"] for item in contract["compared_fields"])
     ignored = tuple(item["field"] for item in contract["ignored_fields"])
     expected = set(compared) | set(ignored)
     actual = set(observation)
@@ -257,8 +314,12 @@ def normalize_observation(
         raise ObservationError(
             f"observation fields must be exact; missing={missing}, extra={extra}"
         )
+    schemas = {
+        item["field"]: item
+        for item in contract["compared_fields"] + contract["ignored_fields"]
+    }
     for field, value in observation.items():
-        _validate_json_value(value, field)
+        validate_observation_value(normalization_id, schemas[field], value)
     return {
         "schema": PROJECTION_DOMAIN,
         "normalization_id": normalization_id,
@@ -277,7 +338,7 @@ def validate_manifest(data: dict[str, Any]) -> list[str]:
     failures: list[str] = []
     if set(data) != TOP_LEVEL_FIELDS:
         failures.append("top-level fields must be exact")
-    if data.get("schema") != "axeyum-lean-u2-normalization-contracts-v1":
+    if data.get("schema") != "axeyum-lean-u2-normalization-contracts-v2":
         failures.append("schema drift")
     if data.get("target") != {
         "lean_version": "4.30.0",
@@ -294,6 +355,7 @@ def validate_manifest(data: dict[str, Any]) -> list[str]:
         "unknown_field_policy": "reject",
         "numeric_policy": "integers-only-no-floats",
         "array_policy": "order-is-semantic",
+        "value_schema_policy": "validate-before-project",
     }:
         failures.append("implementation contract drift")
 
@@ -322,29 +384,73 @@ def validate_manifest(data: dict[str, Any]) -> list[str]:
         if tuple(contract.get("applicable_axes", ())) != expected["applicable_axes"]:
             failures.append(f"{contract_id}: applicable axes drift")
         compared = contract.get("compared_fields")
-        compared_tuple = tuple(compared) if isinstance(compared, list) else ()
-        if compared_tuple != expected["compared_fields"]:
-            failures.append(f"{contract_id}: compared fields/order drift")
+        if not isinstance(compared, list):
+            failures.append(f"{contract_id}: compared_fields must be a list")
             compared = []
-        if len(compared) != len(set(compared)) or any(
-            not FIELD_NAME.fullmatch(str(field)) for field in compared
+        compared_tuples = tuple(field_schema_tuple(field) for field in compared)
+        if compared_tuples != expected["compared_fields"]:
+            failures.append(f"{contract_id}: compared field schemas/order drift")
+        compared_names: list[Any] = []
+        for field in compared:
+            if not isinstance(field, dict):
+                failures.append(f"{contract_id}: compared field must be an object")
+                continue
+            name = field.get("field")
+            kind = field.get("kind")
+            compared_names.append(name)
+            expected_keys = {"field", "kind", "values"} if kind == "enum" else {
+                "field",
+                "kind",
+            }
+            if set(field) != expected_keys:
+                failures.append(
+                    f"{contract_id}.{name}: field schema keys must be exact"
+                )
+            if not FIELD_NAME.fullmatch(str(name)):
+                failures.append(f"{contract_id}: compared field must be snake_case")
+            if kind not in {"sha256", "enum"}:
+                failures.append(f"{contract_id}.{name}: invalid compared field kind")
+            if kind == "enum":
+                values = field.get("values")
+                if (
+                    not isinstance(values, list)
+                    or not values
+                    or any(not isinstance(value, str) or not value for value in values)
+                    or len(values) != len(set(values))
+                ):
+                    failures.append(
+                        f"{contract_id}.{name}: enum values must be nonempty unique strings"
+                    )
+        names_are_strings = all(isinstance(name, str) for name in compared_names)
+        if (
+            not names_are_strings
+            or compared_names != sorted(compared_names)
+            or len(compared_names) != len(set(compared_names))
         ):
-            failures.append(f"{contract_id}: compared fields must be unique snake_case")
+            failures.append(
+                f"{contract_id}: compared fields must be unique and sorted"
+            )
         ignored = contract.get("ignored_fields")
         if not isinstance(ignored, list):
             failures.append(f"{contract_id}: ignored_fields must be a list")
             ignored = []
         ignored_names: list[Any] = []
+        ignored_schemas: list[tuple[Any, Any]] = []
         for rule in ignored:
-            if not isinstance(rule, dict) or set(rule) != {"field", "reason"}:
-                failures.append(f"{contract_id}: ignored rules must contain field/reason")
+            if not isinstance(rule, dict) or set(rule) != {"field", "kind", "reason"}:
+                failures.append(
+                    f"{contract_id}: ignored rules must contain field/kind/reason"
+                )
                 continue
             ignored_names.append(rule.get("field"))
+            ignored_schemas.append((rule.get("field"), rule.get("kind")))
             if not isinstance(rule.get("reason"), str) or not rule["reason"].strip():
                 failures.append(f"{contract_id}: ignored rule reason is required")
-        if tuple(ignored_names) != IGNORED_FIELDS:
-            failures.append(f"{contract_id}: ignored fields/order drift")
-        if set(compared) & set(ignored_names):
+        if tuple(ignored_schemas) != IGNORED_SCHEMAS:
+            failures.append(f"{contract_id}: ignored field schemas/order drift")
+        if all(isinstance(name, str) for name in ignored_names) and set(
+            compared_names
+        ) & set(ignored_names):
             failures.append(f"{contract_id}: compared and ignored fields overlap")
         seal = contract.get("contract_sha256")
         if not HEX64.fullmatch(str(seal or "")):
@@ -352,6 +458,18 @@ def validate_manifest(data: dict[str, Any]) -> list[str]:
         elif seal != normalization_contract_digest(contract):
             failures.append(f"{contract_id}: contract_sha256 does not match content")
 
+    field_schemas = [
+        field
+        for contract in contracts
+        if isinstance(contract, dict)
+        for collection in ("compared_fields", "ignored_fields")
+        for field in contract.get(collection, [])
+        if isinstance(field, dict)
+    ]
+    schema_counts = {
+        kind: sum(field.get("kind") == kind for field in field_schemas)
+        for kind in ("enum", "nonempty-string", "nonnegative-integer", "sha256")
+    }
     summary = {
         "contracts": len(contracts),
         "compared_fields": sum(
@@ -364,6 +482,8 @@ def validate_manifest(data: dict[str, Any]) -> list[str]:
             for contract in contracts
             if isinstance(contract, dict)
         ),
+        "typed_field_occurrences": len(field_schemas),
+        "value_schema_counts": schema_counts,
         "raw_extractors_implemented": 0,
         "semantic_canonicalizers_implemented": 0,
         "official_outcomes": 0,
@@ -373,6 +493,11 @@ def validate_manifest(data: dict[str, Any]) -> list[str]:
     }
     if data.get("summary") != summary:
         failures.append("summary must equal derived zero-credit contract totals")
+    execution_evidence = load_execution_evidence()
+    if tuple(
+        execution_evidence.get("taxonomies", {}).get("termination_classes", ())
+    ) != TERMINATION_CLASSES:
+        failures.append("termination classes drift from execution-evidence authority")
     if data.get("claims") != {
         "parents_complete": False,
         "obligation_authority_complete": False,
@@ -416,13 +541,22 @@ def render_markdown(data: dict[str, Any]) -> str:
             "",
             f"Totals: **{summary['contracts']} contracts**, "
             f"**{summary['compared_fields']} compared fields**, and "
-            f"**{summary['ignored_rules']} explicit ignored-field rules**.",
+            f"**{summary['ignored_rules']} explicit ignored-field rules**, for "
+            f"**{summary['typed_field_occurrences']} typed field occurrences**. "
+            "The sealed kinds are "
+            f"**{summary['value_schema_counts']['sha256']} SHA-256**, "
+            f"**{summary['value_schema_counts']['enum']} enum**, "
+            f"**{summary['value_schema_counts']['nonnegative-integer']} "
+            "nonnegative-integer**, and "
+            f"**{summary['value_schema_counts']['nonempty-string']} nonempty-string**.",
             "",
-            "The projection kernel rejects missing or unknown fields, floating-point "
-            "values, unregistered normalizers, cross-layer reuse, and stale contract "
-            "seals. The only ignored fields are `collector_sequence` and "
-            "`evidence_storage_path`; their reasons are sealed per contract. Array "
-            "order remains semantic.",
+            "The projection kernel validates each typed value before projection and "
+            "rejects missing or unknown fields, malformed digests, values outside a "
+            "registered enum, negative or Boolean collector sequences, empty storage "
+            "paths, unregistered normalizers, cross-layer reuse, and stale contract "
+            "seals. No field schema admits an array or object. The only ignored fields "
+            "are `collector_sequence` and `evidence_storage_path`; their types and "
+            "reasons are sealed per contract.",
             "",
             "This authority does not establish that raw Lean or Axeyum artifacts can "
             "yet be transformed into these fields. That layer-specific extraction and "
@@ -469,6 +603,11 @@ def main() -> int:
         f"contracts={summary['contracts']}|"
         f"compared_fields={summary['compared_fields']}|"
         f"ignored_rules={summary['ignored_rules']}|"
+        f"typed_fields={summary['typed_field_occurrences']}|"
+        f"sha256={summary['value_schema_counts']['sha256']}|"
+        f"enum={summary['value_schema_counts']['enum']}|"
+        f"nonnegative_integer={summary['value_schema_counts']['nonnegative-integer']}|"
+        f"nonempty_string={summary['value_schema_counts']['nonempty-string']}|"
         "raw_extractors=0|semantic_canonicalizers=0|paired_cells=0|parity_credit=0"
     )
     return 0
