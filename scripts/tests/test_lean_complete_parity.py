@@ -180,6 +180,14 @@ class LeanCompleteParityTests(unittest.TestCase):
             "scripts/tests/test_lean_u2_official_execution_m2_run.py",
             source_paths,
         )
+        self.assertIn(
+            "docs/plan/lean-u2-official-execution-tl0.6.3-m2-r1-result-v1.json",
+            source_paths,
+        )
+        self.assertIn(
+            "docs/plan/lean-u2-official-execution-tl0.6.3-m2-r1-result-2026-07-22.md",
+            source_paths,
+        )
 
     def test_u2_registration_is_bounded_not_terminal_authority(self) -> None:
         population = self.population("U2")
@@ -188,7 +196,11 @@ class LeanCompleteParityTests(unittest.TestCase):
         self.assertIsNone(population["normalized_denominator"])
         self.assertIsNone(population["content_digest"])
         self.assertIn(
-            "every new shard and all 111 official attempts remain not run",
+            "all 111 official attempts remain incomplete",
+            population["residual"],
+        )
+        self.assertIn(
+            "Completion-last policy therefore grants zero M2 case or shard credit",
             population["residual"],
         )
 

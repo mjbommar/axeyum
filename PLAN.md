@@ -545,8 +545,15 @@ state.
 > records pushed commit `9d5d40c8`, manifest-only lexical resolution, exact
 > link/target identities, fifteen link/target mutation variants, and 268
 > passing tests with one intentional skip. No new work root or live surface was
-> created. Next publish this checkpoint, repeat exact read-only preflight from a
-> fresh revision-named root, and only then reconsider the single process attempt;
+> created at that checkpoint. After publication, exact external preflight
+> passed and the single attempt ran once. The
+> [R1 result](docs/plan/lean-u2-official-execution-tl0.6.3-m2-r1-result-2026-07-22.md)
+> retains 83 read-only files: CTest exited 8 with exact 64-row JUnit (30 pass /
+> 34 fail), but post-run closure rejected a compile-family `.c`/`.out` demand
+> incorrectly applied to passing docparse cases. No post, projection, or
+> completion exists, so all 64 rows remain diagnostic and M2 credit is zero.
+> Commit and push the exact incomplete evidence/result before preregistering any
+> family-specific artifact correction or evidence-completion recovery;
 > then form native pairs. Do not rerun
 > the singleton for population credit. The
 > [complete-parity execution roadmap](docs/plan/lean4-complete-parity-roadmap-2026-07-22.md)

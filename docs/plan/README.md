@@ -225,6 +225,13 @@ Start at the root [`PLAN.md`](../../PLAN.md) (map + standing rules) and
   pushed R1 implementation checkpoint for commit `9d5d40c8`: manifest-only
   lexical resolution, exact pinned link/target identities, fifteen mutation
   variants, full Lean/parity validation, and no new work root or live process.
+- [`lean-u2-official-execution-tl0.6.3-m2-r1-result-2026-07-22.md`](lean-u2-official-execution-tl0.6.3-m2-r1-result-2026-07-22.md),
+  [`authority`](lean-u2-official-execution-tl0.6.3-m2-r1-result-v1.json), and
+  [incomplete evidence](evidence/lean-u2-official-execution-tl0.6.3-m2-shard-0001/) —
+  one consumed process attempt with exact 64-row JUnit (30 pass / 34 fail) but
+  invalid family-blind artifact closure, no post/projection/completion, and
+  zero M2 case/shard credit. The 83-file read-only root is retained; R1 cannot
+  retry.
 - [`lean-compatibility-v1.json`](lean-compatibility-v1.json) and generated
   [`Lean compatibility matrix`](generated/lean-compatibility.md) — TL0.2's
   executable eight-field assurance contract, K0-K6 profile gates, registered

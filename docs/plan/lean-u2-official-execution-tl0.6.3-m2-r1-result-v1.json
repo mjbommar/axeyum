@@ -1,0 +1,131 @@
+{
+  "schema": "axeyum-lean-u2-official-execution-m2-r1-result-v1",
+  "status": "invalid-post-artifact-closure",
+  "implementation_revision": "591087667864e9c39519dafad2c2e9086ff6d973",
+  "r1_preregistration_commit": "3e761588eb8487dab510906e6d5fc3c90cc08fef",
+  "r1_plan_sha256": "e0fd948ee39e0f1808eec459a18766683d3781e602cc481c8fa10a70e9a0d5f9",
+  "runner_correction_commit": "9d5d40c8183deea85cf5f50d1ae380ccf7a99462",
+  "attempt_id": "attempt-001",
+  "sequence": 1,
+  "invocation": {
+    "working_directory": "/home/mjbommar/projects/personal/axeyum-lean-parity",
+    "argv": [
+      "python3",
+      "scripts/lean_u2_official_execution_m2_run.py",
+      "run-m2",
+      "--implementation-revision",
+      "591087667864e9c39519dafad2c2e9086ff6d973",
+      "--source-repo",
+      "/home/mjbommar/projects/personal/axeyum-lean-parity/references/lean4",
+      "--toolchain-root",
+      "/home/mjbommar/.cache/axeyum-lean-gate-v430-audit/elan-home/toolchains/leanprover--lean4---v4.30.0",
+      "--work-root",
+      "/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766"
+    ],
+    "terminal": {
+      "class": "exited",
+      "exit_code": 1,
+      "signal": null,
+      "stdout": {
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "base64": ""
+      },
+      "stderr": {
+        "bytes": 81,
+        "sha256": "35796e93dcd3971eca04f9319f8733c3d7376bf83d833196f2c2a7e8b4290b3b",
+        "base64": "TEVBTl9VMl9NMl9SVU5fRVJST1J8cGFzc2VkIGNhc2UgbGFja3MgZGVjbGFyZWQgYXJ0aWZhY3RzOiBkb2NwYXJzZS9hcmdfMDAwNi50eHQK"
+      }
+    }
+  },
+  "retained_evidence": {
+    "root": "docs/plan/evidence/lean-u2-official-execution-tl0.6.3-m2-shard-0001",
+    "state": "incomplete-read-only",
+    "files": 83,
+    "bytes": 5148026,
+    "manifest_domain": "axeyum-lean-u2-official-execution-m2-r1-incomplete-evidence-v1",
+    "manifest_sha256": "8692f3184dba764e0904f1db2d2283a56a71cccced0c371ddd634807cc0b2961",
+    "case_records": 64,
+    "case_record_ids_sha256": "957afcec757607808bd32748c36d4378a341bc2eebf08043a05c75cbb0b1304d",
+    "post_present": false,
+    "projection_present": false,
+    "completion_present": false
+  },
+  "records": {
+    "prelaunch_sha256": "b1a431a1f2dfbdc38c7e623f705f0de52230d666962e65b0e92037e979e8b2d6",
+    "terminal_sha256": "a4152e8ef82c2b5fe7388b5f661f655095696ea3a60fb5b5c03defadc70a0798",
+    "junit_sha256": "5ffa07e7b51f331a4941384b0a479df917bb8ee1efbe2ab90e14e6ea9ab6e51f",
+    "source_sha256": "1cdbe4171c71f4874ccb5c9d4112a3cab5d0c089f4ef15cc0403e642187dcefe",
+    "toolchain_sha256": "3458a5cee4564d3f1ab7c28387ef485c89db9d94278b0465b7904ad7a25d506f",
+    "tools_sha256": "80dc19a99d0b5cba598add36ef311d1aebb76dc3f07ccfd6f33b548c2914e3c9"
+  },
+  "ctest_process": {
+    "terminal_class": "exited",
+    "exit_code": 8,
+    "signal": null,
+    "wall_time_ms": 50775,
+    "peak_rss_bytes": 19972096,
+    "watchdog_fired": false,
+    "direct_child_reaped": true,
+    "live_non_zombie_pids_after_cleanup": []
+  },
+  "observed_junit": {
+    "rows": 64,
+    "passes": 30,
+    "failures": 34,
+    "compile_passes": 5,
+    "compile_failures": 0,
+    "compile_bench_passes": 22,
+    "compile_bench_failures": 2,
+    "docparse_passes": 3,
+    "docparse_failures": 32,
+    "credit_state": "invalid-no-completion"
+  },
+  "artifact_closure": {
+    "state": "invalid",
+    "first_error": "passed case lacks declared artifacts: docparse/arg_0006.txt",
+    "model_error": "docparse was assigned compile-family .c and .out artifacts although its runner emits only .out.produced",
+    "source_runner": "tests/docparse/run_test.sh",
+    "source_runner_sha256": "46f17e20ef94483b3ba2bb52b218e718af048e81786534844578a557f05777ae"
+  },
+  "summary": {
+    "m2_process_attempts": 1,
+    "m2_completed_attempts": 0,
+    "m2_official_cases": 0,
+    "m2_official_outcomes": 0,
+    "m2_official_passes": 0,
+    "m2_official_failures": 0,
+    "cumulative_u2_process_attempts": 5,
+    "cumulative_u2_unique_official_cases": 1,
+    "cumulative_u2_official_outcomes": 2,
+    "axeyum_outcomes": 0,
+    "paired_cells": 0,
+    "performance_rows": 0,
+    "parity_credit": 0
+  },
+  "credits": {
+    "official_cases": 0,
+    "official_outcomes": 0,
+    "official_passes": 0,
+    "official_failures": 0,
+    "parent_profiles_completed": 0,
+    "official_providers_reproduced": 0,
+    "axeyum_outcomes": 0,
+    "paired_cells": 0,
+    "performance_rows": 0,
+    "complete_populations": 0,
+    "complete_axes": 0,
+    "satisfied_gates": 0,
+    "parity_credit": 0
+  },
+  "claims": {
+    "local_physical_shard_complete": false,
+    "parent_profile_complete": false,
+    "official_provider_reproduced": false,
+    "axeyum_observed": false,
+    "matched_pair_formed": false,
+    "performance_measured": false,
+    "lean_parity_established": false
+  },
+  "record_sha256": "0df3ed527d28b12b17cd5a3c0db3970f01a98e7886452feefda3f02068edb9fe"
+}

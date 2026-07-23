@@ -68,8 +68,13 @@ freezes safe one-hop relative manifest resolution, exact link/target identities,
 mutation gates, and a fresh work root before another read-only preflight. The
 [`R1 implementation checkpoint`](lean-u2-official-execution-tl0.6.3-m2-r1-symlink-preflight-implementation-2026-07-22.md)
 records pushed commit `9d5d40c8`, fifteen fail-closed mutation variants, and
-no new work root or live process. Publish that checkpoint and repeat exact
-external preflight before reconsidering the single process attempt.
+no new work root or live process at publication. Exact preflight then passed
+and the attempt ran once. The
+[`R1 result`](lean-u2-official-execution-tl0.6.3-m2-r1-result-2026-07-22.md)
+retains exact 64-row JUnit (30 pass / 34 fail), but family-blind docparse
+artifact closure stopped before completion. The attempt is consumed, all rows
+remain diagnostic, and M2 credit is zero pending publication of the invalid
+evidence/result and any later source-first recovery decision.
 
 ## 2. What the SMT-LIB comparison actually says
 

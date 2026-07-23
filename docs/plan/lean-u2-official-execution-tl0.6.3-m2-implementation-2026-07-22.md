@@ -54,6 +54,13 @@ binds the corrected source/test hashes, exact link and target identities,
 fifteen mutation variants, full validation, and the unchanged absence of any
 new work root or live execution surface.
 
+After that checkpoint was published, the exact external preflight passed and
+the single process attempt ran. The
+[R1 result](lean-u2-official-execution-tl0.6.3-m2-r1-result-2026-07-22.md)
+retains its exact terminal/JUnit/case evidence but records invalid post-run
+artifact closure and no completion. This historical implementation checkpoint
+does not promote those diagnostic rows into outcomes.
+
 ## 2. Exact implementation identities
 
 | Source | SHA-256 |
@@ -154,11 +161,7 @@ outcome, completion of shard `0001`, a parent-selection completion, provider
 reproduction, an Axeyum outcome, a matched pair, performance, an axis, a gate,
 or Lean parity.
 
-Next publish the R1 implementation checkpoint, then revalidate the corrected
-runner's external preflight inputs from the new clean pushed revision: exact
-Lean source repository/tree, released
-toolchain root and compiler closure, local tool identities, a fresh work root,
-the still-absent evidence root, storage class, and unchanged authorities.
-Invoke the single process attempt only if every preflight remains exact. Any
-other mismatch stops before live harness discovery; any post-launch failure is
-retained without retry under this plan.
+The R1 attempt is consumed and cannot be retried. Next commit and push its exact
+incomplete evidence, authority, and result. Only a separately published
+source-first plan may correct family-specific artifact closure or authorize a
+no-process completion recovery from the retained work/evidence roots.
