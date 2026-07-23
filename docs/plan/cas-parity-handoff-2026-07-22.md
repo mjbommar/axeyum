@@ -13,15 +13,15 @@ elsewhere in `docs/plan/`). Read this file first when resuming.
   [multi-agent operations guide](../contributor-guide/multi-agent-operations.md):
   work only in the dedicated CAS worktree on an `agent/cas/*` branch, push that
   branch, and leave `main` to the integration owner. The current increment is
-  `agent/cas/gap-probe-wave-seventeen`, based on integration parent `db18c0c9`,
-  with implementation commit `d193ab75` (integrated by `10d7aa54`); do not
+  `agent/cas/gap-probe-wave-eighteen`, based on integration parent `7e27880d`,
+  with implementation commit `aa924df5` (integrated by `402d95b4`); do not
   rebase it onto `main` ahead of the integration owner.
-- **Tests:** `558` unit + `147` doctests, **all green**, warning-denied workspace
+- **Tests:** `559` unit + `147` doctests, **all green**, warning-denied workspace
   all-target/all-feature Clippy-clean, strict stable/nightly rustdoc-green,
   wasm-green, links-green, and whitespace-clean.
 - **Source of truth for capabilities:** `docs/research/10-cas/README.md`
   (capability table) and `docs/research/10-cas/diary.md` (chronological entries;
-  latest is **Entry 37aff**). Keep both in sync when landing features.
+  latest is **Entry 37b00**). Keep both in sync when landing features.
 - **Method that works:** empirical **gap-probing** (below). It found every recent
   feature *and* a serious infinite-hang regression.
 
@@ -623,6 +623,25 @@ orders `0..=255`), and Stirling-composed raw moments (regressed for orders
   operator, backend, evidence format, or logic fragment changed, so no ADR is
   required.
 
+**Certified rational-rate products of integer-order Bessel J**
+- Wave eighteen probed two- and three-factor Bessel-J products after the strict
+  single-factor rate rule landed. Bounded-weight, growing-weight, rational-rate,
+  and reflected product cases all declined together with the correct combined
+  borderline/supercritical, modified-I, and bounded-argument controls.
+- DLMF 10.17.3 and 10.11.1 apply independently to every fixed-order factor. For
+  rational rates `rᵢ(x)=Θ(|x|^dᵢ)` and `w(x)=O(|x|^e)`, their product is
+  `O(|x|^(e-Σdᵢ/2))`; `limit` now sums the checked exact argument-degree growths
+  and returns zero only when `2e<Σdᵢ`. Every direct Bessel argument must itself
+  grow in magnitude, and any remaining outer factor must be `x`-free.
+- Regressions cover two and three factors, polynomial and rational arguments,
+  weights through degree two, orders through `u32::MAX`, reflected signs, and
+  both infinities. Borderline/supercritical combined rates, bounded arguments,
+  modified Bessel `I`, denominators, and symbolic rational coefficients decline.
+  An 80-digit mpmath leading-asymptotic comparison passes 8/8 with maximum
+  envelope-scaled error 0.0115689; SymPy times out after 120 seconds without a
+  decision. No public head, operator, backend, evidence format, or logic
+  fragment changed, so no ADR is required.
+
 ---
 
 ## 5. Zeilberger / WZ — how it works and where to extend
@@ -957,9 +976,9 @@ esac
 export AXEYUM_CAS_TMP
 trap 'find "$AXEYUM_CAS_TMP" -depth -delete' EXIT
 git rev-parse --abbrev-ref HEAD        # → agent/cas/...
-git merge-base --is-ancestor d193ab75 HEAD
+git merge-base --is-ancestor aa924df5 HEAD
 CARGO_BUILD_JOBS=1 TMPDIR="$AXEYUM_CAS_TMP" cargo test -p axeyum-cas --jobs 1
-# → 558 unit + 147 doctests green
+# → 559 unit + 147 doctests green
 ```
 Then: read `docs/research/10-cas/diary.md` tail for the latest context, and pick
 up from §6 or resume the gap-probing loop. Push the green owned topic branch;
