@@ -384,4 +384,11 @@ frontier ratchet, the CI-mode aggregate has one late load-sensitive word/Int
 test that passes in isolation and as a complete test binary, and the rebased
 Lean parity gate still rejects retained `exit-zero-4g` evidence for run/spec
 attribution drift. Keep those branch-gate observations separate from the green
-227-case semantic result and do not rewrite Lean-owned retained evidence here.*
+227-case semantic result and do not rewrite Lean-owned retained evidence here.
+The exact nine-seed follow-up is now
+[measured](../quantified-uflia-one-level-fixed-mbqi-measurement-2026-07-23.md):
+proposed ADR-0362 permits one recursion-guarded inner MBQI pass under one
+temporary source-`Int` fixing, with the unchanged 16-value pool, shared
+deadline, and exact unfixed replay. It measures one additional model, seed 111
+at the first candidate (`-5`), and does not authorize two-symbol recursive
+search, cap growth, or general function synthesis.*

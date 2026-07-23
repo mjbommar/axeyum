@@ -9240,7 +9240,12 @@ coverage never regresses):
    rewrite Lean-owned evidence here. Next, commit and publish this bounded
    implementation checkpoint, then measure one separately preregistered
    mechanism for the nine residual seeds; recursive MBQI re-entry for seed 111
-   is not part of ADR-0361.
+   is not part of ADR-0361. That measurement is now frozen under proposed
+   ADR-0362: exactly one source `Int`, the unchanged evaluated 16-value pool,
+   one recursion-guarded inner MBQI pass per candidate, the shared outer
+   deadline, no transfer of fixed-query UNSAT, and exact replay without the
+   fixing. Seed 111 succeeds on the first ordered candidate (`-5`); the other
+   eight seeds receive no credit. Implement only this one-level boundary next.
 3. **Bank the CDCL(T) spine** (Gap 3): the default-dispatch ADR for the
    built-but-opt-in `CdclT` routes, then port arrays-lazy
    ([P2.2](docs/plan/track-2-theories/P2.2-arrays-lazy.md)) onto it — the
