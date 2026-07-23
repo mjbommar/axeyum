@@ -556,8 +556,9 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   runner or process exists yet.** The source-first
 - **2026-07-22 — TL0.6.3 M2's pure 64-case execution contract is implemented
   and pushed; no live runner or process exists yet.** The source-first
-- **2026-07-23 — ADR-0361 evaluated-scalar completion is implemented; branch
-  gates are in progress.** Commit `471738aa` preserves the established
+- **2026-07-23 — ADR-0361 evaluated-scalar completion is implemented; its
+  semantic gate is green and branch acceptance remains pending.** Commit
+  `471738aa` preserves the established
   ADR-0360, ordinary MBQI, and E-matching order, then uses the remaining shared
   deadline for one evaluated-value retry. UF default/override values and
   exact-source ground integer term values remain untrusted search hints under
@@ -567,9 +568,17 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   warning-denied solver Clippy. The frozen differential improves to 227/227
   agreement and 209/209 SAT replay with no prior decision lost. The nine
   ordinary Z3-SAT Unknowns are `30, 32, 70, 111, 122, 150, 175, 182, 242`;
-  recursive MBQI re-entry for seed 111 is explicitly out of scope. Next: finish
-  the complete branch-wide gate, record any cross-lane blocker, and publish the
-  rebased green topic branch for integration.
+  recursive MBQI re-entry for seed 111 is explicitly out of scope. The
+  complementary workspace, Clippy, strict rustdoc, resource, profile, recovery,
+  reflection, benchmark, public QF_BV, rules, and link gates pass. A non-CI
+  solver aggregate reproducibly misses the hardware-relative LIA frontier
+  ratchet; CI mode clears it but has one late load-sensitive word/Int test that
+  passes in isolation and as a complete 14-test binary. The rebased Lean parity
+  gate remains red only after its preceding sub-gates, at retained
+  `exit-zero-4g` run/spec attribution drift. ADR-0361 remains proposed. Next:
+  commit and publish this bounded implementation checkpoint, then preregister
+  the next distinct mechanism for the nine residual seeds without widening
+  ADR-0361 or rewriting Lean-owned evidence.
 
 - **2026-07-22 — ADR-0360 free-Int completion is implemented and comprehensively
   gated; acceptance is blocked on cross-lane parity evidence.** Commit

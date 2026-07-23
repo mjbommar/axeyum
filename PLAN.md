@@ -9229,9 +9229,18 @@ coverage never regresses):
    integer term values under the same two-symbol, 16-value, 256-tuple, shared-
    deadline, certification, and exact-replay boundaries. The frozen production
    differential reaches 227/227 agreement and 209/209 SAT replay, with no prior
-   decision lost and nine ordinary Z3-SAT Unknowns left separate. Complete the
-   branch-wide gate before acceptance; recursive MBQI re-entry for seed 111 is
-   not part of this increment.
+   decision lost and nine ordinary Z3-SAT Unknowns left separate. The complete
+   complementary workspace, lint, documentation, resource, profile, recovery,
+   reflection, benchmark, public QF_BV, rules, and link gates pass. Keep
+   ADR-0361 proposed: the non-CI solver aggregate reproducibly misses only its
+   hardware-relative LIA frontier ratchet; CI mode clears that ratchet but has
+   one late load-sensitive word/Int test that passes in isolation and as a
+   complete test binary; and the rebased Lean parity gate still rejects
+   retained `exit-zero-4g` evidence for run/spec attribution drift. Do not
+   rewrite Lean-owned evidence here. Next, commit and publish this bounded
+   implementation checkpoint, then measure one separately preregistered
+   mechanism for the nine residual seeds; recursive MBQI re-entry for seed 111
+   is not part of ADR-0361.
 3. **Bank the CDCL(T) spine** (Gap 3): the default-dispatch ADR for the
    built-but-opt-in `CdclT` routes, then port arrays-lazy
    ([P2.2](docs/plan/track-2-theories/P2.2-arrays-lazy.md)) onto it — the

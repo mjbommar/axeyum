@@ -376,5 +376,12 @@ seed 111, required recursive MBQI re-entry and is excluded. Implement only that
 preregistered post-decline search-hint change. Commit `471738aa` now implements
 it after the established ADR-0360, MBQI, and E-matching routes, preserving all
 prior decisions. The 256-case production gate reaches 227/227 agreement and
-209/209 SAT replay; the remaining nine seeds stay separate while the complete
-branch-wide acceptance gate runs.*
+209/209 SAT replay; the remaining nine seeds stay separate. The complementary
+workspace, lint, documentation, resource, profile, recovery, reflection,
+benchmark, public QF_BV, rules, and link gates pass. ADR-0361 remains proposed:
+the non-CI solver aggregate reproducibly misses its hardware-relative LIA
+frontier ratchet, the CI-mode aggregate has one late load-sensitive word/Int
+test that passes in isolation and as a complete test binary, and the rebased
+Lean parity gate still rejects retained `exit-zero-4g` evidence for run/spec
+attribution drift. Keep those branch-gate observations separate from the green
+227-case semantic result and do not rewrite Lean-owned retained evidence here.*

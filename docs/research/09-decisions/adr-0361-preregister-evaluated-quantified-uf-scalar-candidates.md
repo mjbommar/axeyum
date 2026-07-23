@@ -105,7 +105,18 @@ production differential reaches 227 jointly decided agreements, 209 Axeyum SAT,
 24 Axeyum UNSAT, and 23 Axeyum Unknown, with 209/209 SAT replay and no error or
 disagreement. Its ordinary-incomplete Z3-SAT remainder is exactly
 `30, 32, 70, 111, 122, 150, 175, 182, 242`; no previous SAT or UNSAT result is
-lost. Acceptance remains pending until the complete branch-wide gate finishes.
+lost.
+
+The completed branch pass leaves the decision proposed. The frozen semantic
+gate, complementary workspace tests, Clippy, strict rustdoc, resources,
+profiles, recovery, reflection, benchmark repetition, public QF_BV corpus,
+rules, and links pass. A non-CI full solver run reproducibly misses only the
+hardware-relative LIA frontier ratchet; CI mode passes that ratchet but records
+one late load-sensitive word/Int SAT timeout that passes both exact isolation
+and its complete 14-test binary. Separately, `just parity-docs` remains blocked
+by the Lean-owned retained `exit-zero-4g` run/spec attribution drift after all
+preceding parity sub-gates pass. These observations do not contradict the new
+models, but evidence gate 6 is not fully satisfied, so acceptance is deferred.
 
 ## Alternatives
 

@@ -1,6 +1,6 @@
 # Quantified-UFLIA evaluated-scalar measurement
 
-Status: implemented; branch-wide acceptance gates in progress
+Status: implemented; acceptance pending branch-gate blockers
 Date: 2026-07-23
 Owner: solver/engine lane in `agent/smtcomp/full-library-resume`
 
@@ -78,8 +78,38 @@ assigns a universal binder in the model and confirms that a binder-dependent
 term is still excluded by source dependency rather than accidentally treated as
 ground. Focused integration coverage checks the new seed-23 and seed-231 models
 and the preserved seed-145 model. Warning-denied solver Clippy and the complete
-256-case differential pass; the remaining branch-wide gates are recorded in the
-workstream status as they complete.
+256-case differential pass; the completed branch-wide outcome follows.
+
+## Branch-gate outcome
+
+The implementation and its frozen semantic gate are green. The complete
+256-case differential reports 227/227 jointly decided agreements and 209/209
+SAT replay, with zero errors or disagreements. Workspace all-feature Clippy,
+warning-denied rustdoc, complementary workspace tests excluding the solver
+package, foundational resources, QF_BV profile, SMT-COMP recovery, reflection
+semantics, benchmark-repetition tests, the pinned 162-file Glaurung QF_BV pack,
+rules-as-code, and documentation links also pass.
+
+Two solver-package observations prevent accepting ADR-0361 at this checkpoint:
+
+- A non-CI full solver-package run reaches `progress_frontier` and reproduces a
+  hardware-relative `frontier_lia_cuts` ratchet miss: size 25 exceeds four
+  seconds while size 26 completes in about 26 ms, so the measured frontier is
+  24 versus the committed 26. The test's documented `CI=1` mode skips this
+  noisy ratchet while retaining the curve diagnostic.
+- The CI-mode full solver-package run passes that frontier and all changed
+  quantified-UF coverage, then reports one late load-sensitive failure in
+  `from_int_type002_arith_bound_is_sat`. The exact test immediately passes in
+  1.18 seconds and its complete 14-test integration binary passes 14/14 in
+  4.06 seconds. This is not a reproduced correctness regression, but it is not
+  a clean uninterrupted aggregate run either.
+
+The rebased `just parity-docs` gate independently remains red in the Lean-owned
+retained evidence check with
+`LEAN_PROCESS_ATTEMPT_ERROR|exit-zero-4g: run/spec attribution drift`. Every
+preceding parity sub-gate passes. This SMT-COMP lane does not rewrite that
+retained cross-lane evidence. ADR-0361 therefore remains proposed even though
+its focused, differential, replay, lint, and documentation evidence is green.
 
 ## Reproduction
 
