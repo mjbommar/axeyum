@@ -391,7 +391,10 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   environment from captured observations, replays the ordered eight incident
   sentinels including byte sidecars and semantic outcomes, enforces a 30-minute
   publication window, and binds the result into completion schema v2. The
-  focused 28 tests and 115-test portable gate pass.
+  Merges `f65f4647` and `c4d9050a` integrate commits `e7c05374` and `d7c78371`'s
+  previously missing completion-last external cell result and exact
+  same-population comparison mechanisms. Eleven focused publication tests and
+  the expanded 126-test portable gate pass with one expected live-host skip.
   Lean R7 is integrated by merge `9fe5cab6`; the remaining current mainline
   blocker is out-of-lane formatting drift. Next: wait for that repair, rebase,
   run both exact readiness gates, perform the separately reviewed
@@ -8645,6 +8648,23 @@ plan is built and committed on the current branch:
 | P5.5 | External target, measured | **DONE (bounded v1, ADR-0323--0338):** authenticated Tock capture plus eight rechecked dual-DRAT proofs and six replayed controls, UNKNOWN=0, DISAGREE=0. Query time 12.700 s; fresh outer wall 50.745 s; peak RSS 1,256,496 KiB; zero OOM deltas. The committed case study compares exact target validation, universal coverage, trust, effort, artifact boundaries, and limits. No Tock bug was found, so no upstream issue is applicable. This is not a speed or whole-kernel claim. |
 
 ## Changelog
+
+- **2026-07-23 — Implemented completion-last credited-full cell results and
+  same-population comparison; no live execution occurred.** Commits `e7c05374`
+  and `d7c78371`, integrated by merges `f65f4647` and `c4d9050a`, add the
+  process-free publication boundary omitted from the
+  initial F1 fixture. A cell result binds preparation/selection/run/plan/
+  schedule, ordered wave checkpoints, resource and multi-host completions, and
+  exact record/key sets before publishing canonical records, per-logic
+  adjudication, and completion last. Unsafe known-status contradictions remain
+  retained but cannot authorize another cell. The comparison validates all
+  three result roots and requires identical populations before publishing
+  native, per-logic, all-pair, and three-solver decision/termination views.
+  Same-sized replacements, duplicates, sequence gaps, metadata drift,
+  contradiction/disagreement, byte mutation, extra artifacts, and interruption
+  all have rejecting controls. Eleven focused tests and the 126-test portable
+  gate pass with one expected live-host skip. Live authority construction from
+  validated 16-wave E3 evidence remains F3 work; F4 has no real result.
 
 - **2026-07-23 — Bound F2 host and incident-sentinel evidence explicitly;
   no live observation or execution occurred.** Commit `43f871ad`, integrated by

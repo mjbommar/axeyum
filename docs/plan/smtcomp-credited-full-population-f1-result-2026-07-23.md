@@ -62,7 +62,7 @@ The supervised-wave fixture additionally proves:
 
 ## Gates
 
-The following pass on the rebased SMT topic branch:
+The following passed at the F1 checkpoint:
 
 ```text
 python3 -m unittest scripts.tests.test_smtcomp_full_population
@@ -80,27 +80,19 @@ all links ok
 `cargo fmt --all --check` still stops on the previously recorded out-of-lane
 bench/CAS formatting drift. The SMT lane did not edit or reformat those files.
 
-The focused Lean store check still reaches the already reported cross-lane
-current-source identity failure. Its sole observed failure is
-`test_preregistered_source_identities_are_frozen`: the now-integrated SMT-owned
-`resume_fs.py` hashes to `b05c32185d75d579...`, while
-the test still expects historical identity `1968e7b6424c2dd9...`. The integrated
-[Lean R7 plan](lean-complete-parity-current-source-identity-r7-plan-2026-07-23.md)
-correctly keeps historical evidence frozen and preregisters a distinct current
-source identity; its implementation has not yet landed. This result does not
-edit Lean-owned validators, tests, or evidence.
-
-Therefore branch-wide `just check` and live F2 preparation remain blocked on
-those two explicitly out-of-lane gates even though the SMT-specific fixture
-gate is green.
+Lean R7 subsequently landed by merge `9fe5cab6`; the focused frozen-source test
+now passes. Branch-wide `just check` and live F2 preparation remain blocked only
+on the explicitly out-of-lane formatting gate even though the SMT-specific
+fixture gate is green. This result does not edit Lean-owned validators, tests,
+or evidence.
 
 ## Integration and next authorization boundary
 
 The integrator landed the final supervised-wave implementation (`25f93413`) by
 merge `8dc788b5`. The later
 readiness gate (`bfb0cb87`, merged by `e5b1921f`) and F2 preparation mechanism
-(`ea9781c9`, merged by `502e8875`) are also integrated. Current `origin/main` is
-`502e8875`; F1 is no longer waiting on integration.
+(`ea9781c9`, merged by `502e8875`) are also integrated. F1 is no longer waiting
+on integration.
 
 F2 may publish one live
 process-free `launch_authorized=false` preparation only when all of the
@@ -120,6 +112,7 @@ F1 does not authorize live preparation or execution.
 
 The process-free F2 completion candidate is implemented separately in the
 [F2 implementation result](smtcomp-credited-full-preparation-f2-implementation-2026-07-23.md).
-Its implementation bytes are integrated; this result document still requires
-normal green-gated integration. No live host probe, sentinel, NAS publication,
-or allocation launch has occurred.
+Its implementation and this result document are integrated. The later
+[publication fixture](smtcomp-credited-full-publication-fixture-2026-07-23.md)
+extends the portable gate to 126 tests without a live action. No live host
+probe, sentinel, NAS publication, or allocation launch has occurred.
