@@ -560,11 +560,14 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   nine-seed post-ADR-0361 classification checks 45 bounded candidates and finds
   exactly one replay-clean model: seed 111 at the first ordered value, `-5`,
   from an 11-value pool over one relevant source `Int`. Proposed ADR-0362 reuses
-  that pool and the shared deadline, disables the retry in the inner MBQI call,
-  ignores fixed-query UNSAT/Unknown, and accepts SAT only after exact unfixed
-  replay. Two-symbol recursion, larger pools, and general UF synthesis remain
-  excluded. Next: commit the preregistration, then implement its structurally
-  one-level internal entry and focused controls.
+  the first ordered value from that pool and the shared deadline, disables the
+  retry in the inner MBQI call, ignores fixed-query UNSAT/Unknown, and accepts
+  SAT only after exact unfixed replay. A focused preimplementation test corrected
+  the initially inert post-sweep order: invoke the one inner pass after older
+  routes decline, then continue the unchanged evaluated sweep. Multi-value or
+  two-symbol recursion, larger pools, and general UF synthesis remain excluded.
+  Next: commit the boundary correction, then implement its structurally
+  one-level, one-candidate internal entry and focused controls.
 - **2026-07-23 — ADR-0361 evaluated-scalar completion is implemented; its
   semantic gate is green and branch acceptance remains pending.** Commit
   `471738aa` preserves the established
