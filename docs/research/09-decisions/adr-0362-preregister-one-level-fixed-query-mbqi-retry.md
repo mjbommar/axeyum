@@ -25,11 +25,12 @@ the same fixed-query retry again.
 
 ## Decision
 
-**After every pre-ADR-0361 outer route declines, permit one recursion-guarded
-MBQI pass under the first ordered value in ADR-0361's complete pool for exactly
-one relevant source `Int`. If it declines, continue the unchanged ADR-0361
-evaluated sweep. Treat the equality as search guidance and accept only
-replay-clean SAT against the exact unfixed original assertions.**
+**Immediately after the initial ground candidate fails direct certification,
+permit one recursion-guarded MBQI pass under the first ordered value in
+ADR-0361's complete pool for exactly one relevant source `Int`. If it declines,
+continue ADR-0360, ordinary MBQI, E-matching, and ADR-0361 unchanged. Treat the
+equality as search guidance and accept only replay-clean SAT against the exact
+unfixed original assertions.**
 
 The implementation will:
 
@@ -37,7 +38,8 @@ The implementation will:
   symbol exists and has sort `Int`;
 - reuse ADR-0361's evaluated pool, including deterministic ordering, checked
   neighbour closure, and the existing 16-value non-truncating cap;
-- run only after ADR-0360 completion, ordinary MBQI, and E-matching decline;
+- run only after the initial ground candidate fails direct finite-profile
+  certification and before ADR-0360's complete candidate sweep;
 - select only the first ordered evaluated value and permit at most one inner
   MBQI invocation before continuing ADR-0361's complete one-shot sweep;
 - derive every inner timeout from the outer shared deadline;
@@ -53,11 +55,13 @@ or source-fragment admission. The inner loop may use ordinary checked repair and
 finite-profile certification; none of its search trace is evidence.
 
 The originally proposed post-ADR-0361 placement was corrected before an
-implementation commit. A focused test showed that the complete evaluated sweep
-can consume the caller's remaining deadline, leaving no budget for the inner
-pass. The first-candidate-only placement is executable under the same deadline,
-matches seed 111's measured first-candidate success, and is narrower than
-rerunning MBQI for all values.
+implementation commit. Focused tests showed that ADR-0360, ordinary MBQI, or
+E-matching can consume the caller's remaining deadline, leaving no budget for a
+later inner pass. The first-candidate-only placement immediately after failed
+initial certification is executable under the same deadline, matches seed
+111's measured first-candidate success, and is narrower than rerunning MBQI for
+all values. Its frozen 256-case prototype reaches 228/228 agreement and 210/210
+SAT replay with no prior decision lost; seed 145 remains checked SAT.
 
 ## Evidence gates
 
