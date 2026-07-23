@@ -383,6 +383,22 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-22 — certified additive radical-bearing inverse Laplace closure.**
+  Wave seven measured same/distinct-radical and rational-plus-Bessel sums as a
+  bounded gap while nonzero-center Bessel series and Fourier/ODE controls stayed
+  green. The new square-root-guarded route recursively inverts strict additive
+  children, requires each summand's existing certificate, and independently
+  forward-transforms plus zero-tests the complete sum; ordinary rational sums
+  retain whole-expression inversion. Same/distinct Bessel families and
+  frequencies, nested sums, `1/s+J₀`, and shifted/scaled mixed forms pass. A
+  supported term plus order three or irrational frequency declines. The mixed
+  case also fixed the zero-pole basis from unreplayable `exp(0t)` to exact one;
+  a rational-cancellation control freezes the prior route. The thermally managed
+  549-unit/147-doctest suite passed (1392.88 s for units), with workspace Clippy,
+  stable/nightly rustdoc, WASM, links, and whitespace green. Next: resume broad
+  probing; weighted Bessel transforms/integrals, asymptotics, improper `J₀`,
+  and quadratic inverse Z remain measured gaps.
+
 - **2026-07-22 — exact order-two Bessel inverse Laplace pairs.** The sixth
   timeout-bounded cross-area probe selected unit/shifted `J₂` and `I₂` inverse
   transforms while order three remained a measured decline. Public inverse
@@ -393,11 +409,9 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   transform and zero-test before returning. Positive/negative integer and half
   frequencies, three shifts, both families, explicit closed-form fixtures, and
   an outer scale pass; even order-two parity and the order-three/irrational/
-  malformed/multiple-root/zero-frequency boundaries are frozen. The thermally
+  malformed/zero-frequency boundaries are frozen. The thermally
   managed 548-unit/147-doctest suite passed (1646.20 s for units), together with
   workspace Clippy (2m14s), stable/nightly rustdoc, WASM, links, and whitespace.
-  Next: resume broad timeout-bounded probing; treat order three as a separate
-  bounded increment rather than inferring arbitrary inverse support.
 
 - **2026-07-22 — certified direct and weighted Bessel antiderivatives.** The
   rational-affine `J₁`/`I₁` pairs remain certified through `J₀′=−J₁` /
@@ -8011,6 +8025,10 @@ plan is built and committed on the current branch:
   R1/R2 history, a new run/evidence root, universal 512 MiB Lean runtime stacks
   from pinned source semantics, and the measured tiered artifact store. It
   authorizes one process only after separately pushed implementation gates.
+- **2026-07-22 — Added certified additive Bessel inverse Laplace closure.** A
+  square-root-guarded per-summand route plus independent whole-sum round trip,
+  fail-closed unsupported-term controls, and the zero-pole `1/s→1` repair bring
+  CAS to 549 units and 147 doctests.
 - **2026-07-22 — Added exact order-two Bessel inverse Laplace pairs.** Explicit
   order-one/two dispatch, shared rational shift/frequency discovery, independent
   public forward-round-trip certification, parity controls, and order-three
