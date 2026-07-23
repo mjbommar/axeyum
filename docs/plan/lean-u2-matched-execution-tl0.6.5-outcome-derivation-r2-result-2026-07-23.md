@@ -78,8 +78,17 @@ The implementation checkpoint passed:
 - deterministic complete-parity generation; and
 - `git diff --check`.
 
-The full parity-document, link, and differently rooted detached-worktree gates
-remain required at the final documentation checkpoint.
+The final documentation checkpoint additionally passed:
+
+- `just parity-docs`, including all 23 complete-parity tests and every
+  registered parity evidence generator/checker;
+- `just links`; and
+- from a clean detached worktree at a different absolute root, complete-parity
+  generator `--check`, all five focused R2 controls, and link validation.
+
+The detached worktree was removed after validation. No M2.1 native header run
+or M2.2-M2.7 external process was authorized or launched; the read-only M2.1
+contract checks continued to report zero observed processes and zero edges.
 
 ## Research basis
 
@@ -102,4 +111,3 @@ they are accepted, TL0.6.5 M0 must derive the complete layer-expanded
 comparison-obligation authority; M1 must then implement each registered
 layer-specific canonical normalizer and its semantic/ignored-field mutation
 controls before any native attempt can earn a paired outcome.
-

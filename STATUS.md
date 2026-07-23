@@ -8180,9 +8180,10 @@ plan is built and committed on the current branch:
   eight taxonomy outcomes from side state, result classes, normalized
   availability, and normalized equality. Twenty-three complete-parity tests
   include all outcome positives plus fully resealed result/normalization
-  mutations, missing-normalization, and non-complete rejection controls. No
-  parent, normalizer, process, outcome, pair, complete authority, gate, or
-  parity credit was created.
+  mutations, missing-normalization, and non-complete rejection controls. Full
+  parity-document and link gates plus a differently rooted detached generator,
+  five-test, and link replay pass. No parent, normalizer, process, outcome,
+  pair, complete authority, gate, or parity credit was created.
 
 - **2026-07-23 — Closed TL0.6.5's declarative-hash and ID-only authority
   gaps before any matched execution exists.** The validator now recomputes
