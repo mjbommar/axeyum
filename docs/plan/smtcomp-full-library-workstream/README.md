@@ -400,3 +400,14 @@ the strengthened differential, solver Clippy, strict rustdoc, and one
 uninterrupted CI-mode full solver-package run pass. ADR-0362 remains proposed
 only on the unchanged Lean-owned retained `exit-zero-4g` run/spec attribution
 drift; do not rewrite that evidence in this lane.*
+
+*The next exact eight-seed classification is now frozen in the
+[source-guided default measurement](../quantified-uflia-source-guided-default-measurement-2026-07-23.md)
+under proposed ADR-0363. One additive outer initial-candidate retry augments
+ADR-0359's default pool with exact source integer literals and
+binder-independent evaluated source terms, after ADR-0362 and ADR-0360 decline.
+The unchanged 32-value/256-combination envelope independently certifies seeds
+30, 32, 70, 150, and 242; seed 122 declines at 289 combinations and seeds
+175/182 exhaust. Implement only this default-only, replay-checked boundary next;
+do not raise caps, rank/truncate overflow, alter explicit entries, or rewrite
+cross-lane evidence.*

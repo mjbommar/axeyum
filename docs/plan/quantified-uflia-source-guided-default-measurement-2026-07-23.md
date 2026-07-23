@@ -1,0 +1,89 @@
+# Quantified-UFLIA source-guided default measurement
+
+Status: measured; production boundary preregistered
+Date: 2026-07-23
+Owner: solver/engine lane in `agent/smtcomp/full-library-resume`
+
+## Population
+
+The frozen population is the eight ordinary Z3-SAT Unknowns remaining after
+ADR-0362 on the 256-case quantified-UFLIA differential:
+
+```text
+30, 32, 70, 122, 150, 175, 182, 242
+```
+
+No generator, oracle, timeout, function cap, value cap, Cartesian cap, source
+fragment, certificate, or replay rule changes.
+
+## Classification
+
+ADR-0359 derives candidate UF defaults from model values, existing UF defaults
+and entries, zero, and one checked predecessor/successor closure. The residual
+sources contain additional exact integer information not yet used for default
+repair: source literals and binder-independent integer subterms evaluable under
+the initial ground candidate.
+
+A retained diagnostic adds those source-derived values before the same one-step
+neighbour closure, preserves every scalar assignment and explicit UF table
+entry, and searches only when the existing 32-value and 256-combination caps
+hold. Every reported success passes the independent finite-profile checker and
+canonical replay of the complete original assertion sequence.
+
+| Seed | Closed values | Relevant Int-result UFs | Product | Checked defaults |
+|---:|---:|---:|---:|---|
+| 30 | 16 | 1 | 16 | `[-10]` |
+| 32 | 13 | 2 | 169 | `[-7, -7]` |
+| 70 | 18 | 1 | 18 | `[5]` |
+| 122 | 17 | 2 | 289 | decline: product overflow |
+| 150 | 5 | 2 | 25 | `[-3, -3]` |
+| 175 | 23 | 1 | 23 | exhausted |
+| 182 | 13 | 2 | 169 | exhausted |
+| 242 | 10 | 2 | 100 | `[-4, 4]` |
+
+The mechanism closes five cases without cap growth. Seeds 150 and 242 are
+especially discriminating: neither has a source-relevant free scalar, so their
+models cannot be attributed to ADR-0360/0361 scalar completion. Seed 122
+demonstrates fail-closed product overflow, while seeds 175 and 182 demonstrate
+complete bounded exhaustion.
+
+## Production boundary
+
+Proposed
+[ADR-0363](../research/09-decisions/adr-0363-preregister-source-guided-quantified-uf-default-repair.md)
+adds one outer, initial-candidate-only retry:
+
+- run ADR-0359's established model-only default repair first;
+- preserve ADR-0362's one-level fixed-query retry and ADR-0360's complete
+  free-Int completion before this new retry;
+- derive an `Int` pool from ADR-0359's existing values plus exact source integer
+  literals and binder-independent source integer subterms that evaluate under
+  the unchanged initial candidate;
+- apply one checked predecessor/successor closure, decline rather than truncate
+  above 32 values, and decline above 256 complete default tuples;
+- preserve scalar assignments, function signatures, and every explicit table
+  entry byte-for-byte; admit only relevant `Int`-result functions;
+- disable the retry in ADR-0362's inner MBQI invocation and attempt it at most
+  once in the outer invocation; and
+- accept only a model independently certified for every original universal and
+  canonically replayed against every exact original assertion.
+
+The placement preserves every established decision before spending work on the
+new mechanism. On decline, ordinary MBQI, E-matching, and ADR-0361 continue
+unchanged under the caller's shared deadline.
+
+The preregistered frozen expectation is 233 jointly decided agreements, 215
+Axeyum SAT, 24 Axeyum UNSAT, 17 Axeyum Unknown, 215/215 SAT replay, and zero
+error or disagreement. The residual ordinary Z3-SAT Unknowns should be exactly
+`122, 175, 182`.
+
+## Reproduction
+
+```sh
+AXEYUM_QUANT_UFLIA_DEFAULT_DIAGNOSTIC_SEEDS='30,32,70,122,150,175,182,242' \
+  CARGO_TARGET_DIR=target-codex CARGO_BUILD_JOBS=2 \
+  cargo test -p axeyum-solver --all-features \
+  --test quantified_uflia_model_finder_differential_fuzz \
+  diagnose_source_literal_uf_default_repair_for_quantified_uflia_unknowns \
+  -j2 -- --ignored --exact --nocapture
+```
