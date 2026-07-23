@@ -10300,6 +10300,14 @@ pub fn limit(expr: &CasExpr, var: &str, point: LimitPoint) -> Option<CasExpr> {
     if let Some(value) = limit_rational(expr, var, point) {
         return Some(value);
     }
+    // Absolute value is continuous on the reals. Compose it only through an
+    // exact rational inner limit, keeping this branch independent of symbolic
+    // sign or complex-domain reasoning: `lim |f(x)| = |lim f(x)|`.
+    if let CasExpr::Unary(UnaryFunc::Abs, inner) = expr
+        && let Some(CasExpr::Const(value)) = limit(inner, var, point)
+    {
+        return Some(CasExpr::Const(value).abs());
+    }
     // Linearity: `lim (f + g) = lim f + lim g` when both are finite — computes a
     // sum term-by-term (`x/(x²+1) + atan x → 0 + π/2` at ∞). Falls through if any
     // term's limit doesn't exist (an `∞ − ∞` form is left to other rules).
@@ -21866,6 +21874,69 @@ mod tests {
         assert!(limit(&(x() * x().sin()), "x", LimitPoint::PosInfinity).is_none());
         assert!(limit(&x().sin(), "x", LimitPoint::PosInfinity).is_none());
         assert!(limit(&(CasExpr::int(1) / x().sin()), "x", LimitPoint::PosInfinity).is_none());
+    }
+
+    #[test]
+    fn limits_compose_absolute_value_over_exact_rational_inner_limits_and_decline() {
+        let x = || v("x");
+        let pos = || LimitPoint::PosInfinity;
+        let neg = || LimitPoint::NegInfinity;
+        let finite_zero = || LimitPoint::Finite(Rational::zero());
+        let cases = [
+            (x().abs(), finite_zero(), CasExpr::zero()),
+            (
+                (x() - CasExpr::int(1)).abs(),
+                finite_zero(),
+                CasExpr::one(),
+            ),
+            (
+                ((x() - CasExpr::int(1)) / (x() + CasExpr::int(1))).abs(),
+                pos(),
+                CasExpr::one(),
+            ),
+            (
+                ((CasExpr::int(1) - x()) / (x() + CasExpr::int(1))).abs(),
+                neg(),
+                CasExpr::one(),
+            ),
+            ((x().sin() / x()).abs(), pos(), CasExpr::zero()),
+            ((x().sin() / x()).abs(), neg(), CasExpr::zero()),
+            (x().bessel_j(0).abs(), pos(), CasExpr::zero()),
+            (
+                (x() * x().pow(3).bessel_j(0)).abs(),
+                neg(),
+                CasExpr::zero(),
+            ),
+            (x().erf().abs(), pos(), CasExpr::one()),
+            (x().erf().abs(), neg(), CasExpr::one()),
+        ];
+
+        // The outer absolute value composes only after the complete inner limit
+        // has produced an exact real rational, then folds that rational's sign.
+        for (expression, point, expected) in cases {
+            assert_equal(&limit(&expression, "x", point).unwrap(), &expected);
+        }
+
+        // No inner limit means no continuity result. A symbolic finite inner
+        // value likewise stays outside this intentionally exact-rational rule.
+        assert!(limit(&x().sin().abs(), "x", pos()).is_none());
+        assert!(limit(&x().abs(), "x", pos()).is_none());
+        assert!(
+            limit(
+                &(CasExpr::int(1) / x().bessel_j(0)).abs(),
+                "x",
+                pos(),
+            )
+            .is_none()
+        );
+        assert!(
+            limit(
+                &(x() + v("a")).abs(),
+                "x",
+                finite_zero(),
+            )
+            .is_none()
+        );
     }
 
     #[test]
