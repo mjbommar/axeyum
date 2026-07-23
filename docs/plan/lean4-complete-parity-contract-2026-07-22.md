@@ -405,6 +405,13 @@ performance row, or terminal credit. TL0.7 is complete and TL0.6.3 is
 unblocked; the parity scoreboard remains at zero complete populations, axes,
 paired cells, and terminal gates.
 
+The later [R2 merge-drift repair](lean-execution-acceptance-tl0.7.4-merge-drift-r2-result-2026-07-23.md)
+separates the immutable evidence-producing source identities from the current
+compatible installer identity. The authority, evidence, observations, and
+credits remain unchanged; the current validator/test bytes are tracked by this
+terminal registry. This prevents a clean textual merge from either leaving the
+gate red or silently rewriting downstream U2 history.
+
 TL0.6.3 M0 is now governed by a
 [source-first official-case plan](lean-u2-official-execution-tl0.6.3-m0-plan-2026-07-22.md).
 It selects `compile/534.lean` as a singleton child shard of the exact

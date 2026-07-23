@@ -169,6 +169,12 @@ while that historical authority pins
 M1 did not modify either file and did not rebind historical evidence to hide
 the unrelated drift.
 
+The subsequent source-first
+[TL0.7.4 R2 repair](lean-execution-acceptance-tl0.7.4-merge-drift-r2-result-2026-07-23.md)
+now closes that gate defect without rewriting the historical authority or any
+downstream U2 evidence. It separates historical result inputs from the current
+compatible installer and adds mutation coverage for both identities.
+
 ## 8. Nonclaims and required continuation
 
 M1 does not claim an exact Lean import graph, configured wrapper bytes,

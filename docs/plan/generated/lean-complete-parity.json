@@ -56,7 +56,7 @@
     },
     {
       "path": "docs/plan/lean-execution-acceptance-tl0.7.4-2026-07-22.md",
-      "sha256": "0db3eea2704f17a1d6ab5eeb46813f6c2a148fabae2f655c6025cb9ecbc6c0d2"
+      "sha256": "86371f2be239a9f10d3135dd2965f55a3696f3009a4ecfcedb7720f7b9e855d3"
     },
     {
       "path": "docs/plan/lean-execution-acceptance-v1.json",
@@ -112,7 +112,7 @@
     },
     {
       "path": "docs/plan/lean-u2-native-surface-classification-tl0.6.4-m1-result-2026-07-23.md",
-      "sha256": "8fdde5b558d0b67c537c5e75fd0a2961fa4bfad8384d65e63127e5ec026b7711"
+      "sha256": "b1391344083d671c97b32cc308b8f9e9b7db295b2aee2db4a441d78ba66fbc2d"
     },
     {
       "path": "docs/plan/lean-u2-native-surface-classification-tl0.6.4-m2-plan-2026-07-23.md",
@@ -308,7 +308,7 @@
     },
     {
       "path": "docs/plan/lean4-complete-parity-contract-2026-07-22.md",
-      "sha256": "bb8363ed76b118a7ccdb58c7eaf8341df90b0b8b0bcd51ce1aaf6ea19292564c"
+      "sha256": "e28d47a9960d50e2e2e79e790f8da848f5bb523f8b2c6eff594605c912bb6deb"
     },
     {
       "path": "docs/plan/lean4-complete-parity-roadmap-2026-07-22.md",

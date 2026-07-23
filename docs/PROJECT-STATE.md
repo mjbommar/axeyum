@@ -348,8 +348,11 @@ Again, there are distinct targets:
   under 4 GiB and an exact 3,849-byte/65-line official export under 8 GiB.
   The [authority](plan/lean-execution-acceptance-v1.json) covers three process
   attempts, two completions, and 67 files / 142,523 bytes, while every U2,
-  Axeyum, pairing, performance, and parity counter remains zero. TL0.7 is
-  complete. TL0.6.3 is now partial through a
+  Axeyum, pairing, performance, and parity counter remains zero. A subsequent
+  [R2 merge-drift repair](plan/lean-execution-acceptance-tl0.7.4-merge-drift-r2-result-2026-07-23.md)
+  preserves the historical authority/evidence and separately validates
+  the current fail-closed installer. TL0.7 is complete. TL0.6.3 is now partial
+  through a
   [source-first M0 plan](plan/lean-u2-official-execution-tl0.6.3-m0-plan-2026-07-22.md)
   for the singleton `compile/534.lean` child shard of the exact release-tag
   Linux-release selection. [Attempt 001](plan/lean-u2-official-execution-tl0.6.3-m0-attempt-001-2026-07-22.md)

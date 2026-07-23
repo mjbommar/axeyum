@@ -143,6 +143,8 @@ Start at the root [`PLAN.md`](../../PLAN.md) (map + standing rules) and
   the cause; R1 freezes a 512 MiB `-s` task stack and terminal-before-artifact
   failure closure before retry.
 - [`lean-execution-acceptance-tl0.7.4-2026-07-22.md`](lean-execution-acceptance-tl0.7.4-2026-07-22.md),
+  [`R2 merge-drift plan`](lean-execution-acceptance-tl0.7.4-merge-drift-r2-plan-2026-07-23.md),
+  [`R2 result`](lean-execution-acceptance-tl0.7.4-merge-drift-r2-result-2026-07-23.md),
   [`lean-execution-acceptance-v1.json`](lean-execution-acceptance-v1.json), and
   generated [Markdown](generated/lean-execution-acceptance.md)/
   [JSON](generated/lean-execution-acceptance.json) — TL0.7.4's final bounded
@@ -150,7 +152,9 @@ Start at the root [`PLAN.md`](../../PLAN.md) (map + standing rules) and
   official export, exact equality to the committed 65-line stream, 67 retained
   files / 142,523 bytes, and zero U2/Axeyum/pair/performance/parity credit.
   This closes TL0.7's local policy prerequisite and unblocks TL0.6.3; it is not
-  an official test result or Lean parity claim.
+  an official test result or Lean parity claim. R2 preserves the historical
+  authority/evidence while separately validating the current fail-closed Lean
+  installer, closing a semantic merge drift without changing any credit.
 - [`lean-u2-official-execution-tl0.6.3-m0-plan-2026-07-22.md`](lean-u2-official-execution-tl0.6.3-m0-plan-2026-07-22.md) —
   source-first first-outcome plan for `compile/534.lean`, an exact singleton
   child shard of the release-tag Linux-release 3,678-case selection. It freezes

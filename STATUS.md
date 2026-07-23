@@ -383,6 +383,13 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-23 — TL0.7.4 semantic merge drift is repaired without rewriting
+  evidence.** The source-first [R2 result](docs/plan/lean-execution-acceptance-tl0.7.4-merge-drift-r2-result-2026-07-23.md)
+  separates immutable historical result inputs from the current fail-closed
+  pinned-Lean installer. All 22 tests pass except the deliberately skipped
+  opt-in live sentinel; authority and evidence bytes remain unchanged, and all
+  U2/Axeyum/pair/performance/parity credit remains zero.
+
 - **2026-07-23 — TL0.6.4 M2.1 is source-first, implemented, gated, and waiting
   for explicit attempt authorization; no header evidence has run.** The
   [plan](docs/plan/lean-u2-native-dependency-tl0.6.4-m2.1-plan-2026-07-23.md),
@@ -8149,6 +8156,12 @@ plan is built and committed on the current branch:
 | P5.5 | External target, measured | **DONE (bounded v1, ADR-0323--0338):** authenticated Tock capture plus eight rechecked dual-DRAT proofs and six replayed controls, UNKNOWN=0, DISAGREE=0. Query time 12.700 s; fresh outer wall 50.745 s; peak RSS 1,256,496 KiB; zero OOM deltas. The committed case study compares exact target validation, universal coverage, trust, effort, artifact boundaries, and limits. No Tock bug was found, so no upstream issue is applicable. This is not a speed or whole-kernel claim. |
 
 ## Changelog
+
+- **2026-07-23 — Repaired TL0.7.4's installer-identity merge drift.** The
+  [R2 plan](docs/plan/lean-execution-acceptance-tl0.7.4-merge-drift-r2-plan-2026-07-23.md)
+  preceded a validator/test correction that preserves the historical authority,
+  both evidence roots, three attempts, two completions, and every zero-credit
+  field while requiring the current `elan which lean` installer bytes.
 
 - **2026-07-23 — Published TL0.6.4 M2.1's process-ready, zero-process header
   contract.** The exact 4,092-file input authority, 32 batches, 14 controls,
