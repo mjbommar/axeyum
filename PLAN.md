@@ -540,8 +540,13 @@ state.
 > child process exists, so the process attempt remains unconsumed. The
 > [R1 correction plan](docs/plan/lean-u2-official-execution-tl0.6.3-m2-r1-symlink-preflight-plan-2026-07-22.md)
 > freezes one safe in-tree symlink-resolution rule, mutation gates, a new work
-> root, and no other change. Next implement/test/commit/push R1, repeat exact
-> read-only preflight, and only then reconsider the single process attempt;
+> root, and no other change. The
+> [R1 implementation checkpoint](docs/plan/lean-u2-official-execution-tl0.6.3-m2-r1-symlink-preflight-implementation-2026-07-22.md)
+> records pushed commit `9d5d40c8`, manifest-only lexical resolution, exact
+> link/target identities, fifteen link/target mutation variants, and 268
+> passing tests with one intentional skip. No new work root or live surface was
+> created. Next publish this checkpoint, repeat exact read-only preflight from a
+> fresh revision-named root, and only then reconsider the single process attempt;
 > then form native pairs. Do not rerun
 > the singleton for population credit. The
 > [complete-parity execution roadmap](docs/plan/lean4-complete-parity-roadmap-2026-07-22.md)

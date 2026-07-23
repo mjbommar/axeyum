@@ -221,6 +221,10 @@ Start at the root [`PLAN.md`](../../PLAN.md) (map + standing rules) and
   relative in-tree resolution through the source manifest, rejects link and
   target mutations, preserves the unconsumed process attempt, and requires a
   fresh work root before another preflight.
+- [`lean-u2-official-execution-tl0.6.3-m2-r1-symlink-preflight-implementation-2026-07-22.md`](lean-u2-official-execution-tl0.6.3-m2-r1-symlink-preflight-implementation-2026-07-22.md) —
+  pushed R1 implementation checkpoint for commit `9d5d40c8`: manifest-only
+  lexical resolution, exact pinned link/target identities, fifteen mutation
+  variants, full Lean/parity validation, and no new work root or live process.
 - [`lean-compatibility-v1.json`](lean-compatibility-v1.json) and generated
   [`Lean compatibility matrix`](generated/lean-compatibility.md) — TL0.2's
   executable eight-field assurance contract, K0-K6 profile gates, registered
