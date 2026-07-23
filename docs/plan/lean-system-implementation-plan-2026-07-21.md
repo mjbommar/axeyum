@@ -226,7 +226,11 @@ unconditional 124-path contract did not admit all-pass CTest's absent
 [diagnostic result](lean-u2-official-execution-tl0.6.3-m2-r5-diagnostic-closure-result-2026-07-23.md)
 now binds the exact 123 generated rows and appends 68 completion-last files with
 zero processes/outcomes. R5 is closed. Next preregister attempt 004 with fresh
-roots and conditional failure-log semantics; do not promote or rerun R5.
+roots and conditional failure-log semantics; do not promote or rerun R5. The
+[R6 plan](lean-u2-official-execution-tl0.6.3-m2-r6-attempt-004-plan-2026-07-23.md)
+now does so: attempt 004/sequence 4, run v5, fresh control/work/evidence roots,
+the unchanged 32 GiB/512 MiB lane, and a JUnit-selected 123-row all-pass versus
+124-row any-failure closure. Implementation and execution remain open.
 
 L0 exits when status is generated from evidence rather than hand-copied prose.
 

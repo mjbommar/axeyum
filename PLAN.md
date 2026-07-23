@@ -622,8 +622,12 @@ state.
 > [diagnostic-closure result](docs/plan/lean-u2-official-execution-tl0.6.3-m2-r5-diagnostic-closure-result-2026-07-23.md)
 > now closes that append with 68 files / 149,513 bytes, completion
 > `2d5d43a7`, zero processes/outcomes, and unchanged invalid-attempt credit.
-> Next preregister attempt 004 with fresh roots and conditional failure-log
-> semantics before any selected execution;
+> The source-first
+> [R6 attempt-004 plan](docs/plan/lean-u2-official-execution-tl0.6.3-m2-r6-attempt-004-plan-2026-07-23.md)
+> now freezes fresh roots, the unchanged qualified 32 GiB/512 MiB lane, a
+> JUnit-selected 123-row all-pass versus 124-row any-failure closure, one
+> selected process, and no retry. Next implement/test/push R6 and its
+> documentation checkpoint before any control or selected execution;
 > then form native pairs. Do not rerun
 > the singleton for population credit. The
 > [complete-parity execution roadmap](docs/plan/lean4-complete-parity-roadmap-2026-07-22.md)
