@@ -648,7 +648,13 @@ state.
 > [R2 implementation checkpoint](docs/plan/lean-u2-official-execution-tl0.6.3-m2-r6-completion-replay-r2-implementation-2026-07-23.md)
 > records pushed `ce319a9d`, explicit pre/post modes, unchanged-inventory replay,
 > and eleven focused tests. Next push this checkpoint and perform one qualifying
-> read-only validation from clean remote equality;
+> read-only validation from clean remote equality. The
+> [accepted R6 result](docs/plan/lean-u2-official-execution-tl0.6.3-m2-r6-result-2026-07-23.md)
+> and sealed authority now credit 64/64 local official outcomes and one physical
+> shard from unchanged completion `1f0b9af8`. Aggregate local U2 coverage is 66
+> outcomes / 65 unique cases; every provider/Axeyum/pair/parity counter remains
+> zero. Next source-first work is the next child shard plus TL0.6.4 native-
+> surface classification;
 > then form native pairs. Do not rerun
 > the singleton for population credit. The
 > [complete-parity execution roadmap](docs/plan/lean4-complete-parity-roadmap-2026-07-22.md)
