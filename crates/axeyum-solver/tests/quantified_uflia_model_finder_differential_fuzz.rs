@@ -36,7 +36,7 @@
 // help, readability of this fuzz harness.
 #![allow(clippy::many_single_char_names)]
 
-use std::time::Duration;
+use std::{collections::BTreeMap, time::Duration};
 
 use axeyum_ir::{Assignment, FuncId, Sort, SymbolId, TermArena, TermId, Value, eval};
 use axeyum_solver::{CheckResult, Model, SolverConfig, check_model, prove_unsat_by_mbqi};
@@ -531,6 +531,31 @@ fn z3_decide(inst: &Instance) -> Verdict {
 }
 
 #[derive(Default)]
+struct OracleTally {
+    sat: u64,
+    unsat: u64,
+    unknown: u64,
+    example_seeds: Vec<u64>,
+}
+
+impl OracleTally {
+    fn record(&mut self, verdict: Verdict, seed: u64) {
+        match verdict {
+            Verdict::Sat => self.sat += 1,
+            Verdict::Unsat => self.unsat += 1,
+            Verdict::Unknown => self.unknown += 1,
+        }
+        if self.example_seeds.len() < 8 {
+            self.example_seeds.push(seed);
+        }
+    }
+
+    fn total(&self) -> u64 {
+        self.sat + self.unsat + self.unknown
+    }
+}
+
+#[derive(Default)]
 struct Tally {
     total: u64,
     jointly_decided: u64,
@@ -541,6 +566,66 @@ struct Tally {
     ax_error_skipped: u64,
     z3_unknown_skipped: u64,
     sat_replayed: u64,
+    ax_unknown_by_reason: BTreeMap<String, OracleTally>,
+    ax_error_by_reason: BTreeMap<String, OracleTally>,
+}
+
+fn report_and_check_tally(t: &Tally, minimum_jointly_decided: u64) {
+    println!("=== quantified-UFLIA model-finder differential fuzz tally ===");
+    println!("total instances:      {}", t.total);
+    println!("jointly decided:      {}", t.jointly_decided);
+    println!("agreements:           {}", t.agreements);
+    println!("axeyum Sat:           {}", t.ax_sat);
+    println!("axeyum Unsat:         {}", t.ax_unsat);
+    println!("axeyum Unknown:       {}", t.ax_unknown);
+    println!(
+        "axeyum Err (skipped): {} (orthogonal arith_dpll replay-robustness gap; neutral)",
+        t.ax_error_skipped
+    );
+    println!("Z3 Unknown (skipped): {}", t.z3_unknown_skipped);
+    println!("Sat replays verified: {}", t.sat_replayed);
+    println!("Axeyum Unknown by exact reason and Z3 adjudication:");
+    for (reason, oracle) in &t.ax_unknown_by_reason {
+        println!(
+            "  {reason}: z3_sat={}, z3_unsat={}, z3_unknown={}, example_seeds={:?}",
+            oracle.sat, oracle.unsat, oracle.unknown, oracle.example_seeds
+        );
+    }
+    println!("Axeyum Err by exact reason and Z3 adjudication:");
+    for (reason, oracle) in &t.ax_error_by_reason {
+        println!(
+            "  {reason}: z3_sat={}, z3_unsat={}, z3_unknown={}, example_seeds={:?}",
+            oracle.sat, oracle.unsat, oracle.unknown, oracle.example_seeds
+        );
+    }
+    println!("DISAGREEMENTS:        0");
+
+    assert_eq!(
+        t.ax_unknown_by_reason
+            .values()
+            .map(OracleTally::total)
+            .sum::<u64>(),
+        t.ax_unknown,
+        "every Axeyum Unknown must retain an exact reason and oracle adjudication"
+    );
+    assert_eq!(
+        t.ax_error_by_reason
+            .values()
+            .map(OracleTally::total)
+            .sum::<u64>(),
+        t.ax_error_skipped,
+        "every Axeyum Err must retain an exact reason and oracle adjudication"
+    );
+    assert!(
+        t.jointly_decided >= minimum_jointly_decided,
+        "too few jointly-decided instances ({}); the differential gate is not \
+         meaningfully exercised",
+        t.jointly_decided
+    );
+    assert!(
+        t.ax_sat > 0,
+        "the quantified sat direction was never exercised (ax_sat = 0)"
+    );
 }
 
 fn run_differential_fuzz(instances: u64, minimum_jointly_decided: u64) {
@@ -560,21 +645,41 @@ fn run_differential_fuzz(instances: u64, minimum_jointly_decided: u64) {
         let inst = Instance::generate(&mut rng);
 
         let (mut arena, x_sym, body, ground, assertions) = inst.build_axeyum();
+        let ax_result = prove_unsat_by_mbqi(&mut arena, &assertions, &cfg);
+        let z3_label = z3_decide(&inst);
+        if z3_label == Verdict::Unknown {
+            t.z3_unknown_skipped += 1;
+        }
+
         // A `SolverError` is adjudication-neutral: it is never a sat/unsat
-        // verdict, so it can never be a wrong sat/unsat. (An orthogonal, pre-
-        // existing `arith_dpll` model-replay-robustness gap — a UF left unbound
-        // in that backend's own replay — surfaces here as an `Err` rather than
-        // `Unknown`; it is not in the MBQI-model-finding path under test, so the
-        // sweep records it and moves on rather than derailing the gate.)
-        let Ok(ax) = prove_unsat_by_mbqi(&mut arena, &assertions, &cfg) else {
-            t.ax_error_skipped += 1;
-            continue;
+        // verdict, so it can never be a wrong sat/unsat. Retain its exact class
+        // and oracle adjudication so an operational gap cannot disappear into
+        // one aggregate skip count or be mistaken for MBQI incompleteness.
+        let ax = match ax_result {
+            Ok(ax) => ax,
+            Err(error) => {
+                t.ax_error_skipped += 1;
+                t.ax_error_by_reason
+                    .entry(error.to_string())
+                    .or_default()
+                    .record(z3_label, seed);
+                continue;
+            }
         };
         let ax_label = label(&ax);
         match ax_label {
             Verdict::Sat => t.ax_sat += 1,
             Verdict::Unsat => t.ax_unsat += 1,
-            Verdict::Unknown => t.ax_unknown += 1,
+            Verdict::Unknown => {
+                t.ax_unknown += 1;
+                let CheckResult::Unknown(reason) = &ax else {
+                    unreachable!("unknown label must carry an UnknownReason")
+                };
+                t.ax_unknown_by_reason
+                    .entry(format!("{:?}: {}", reason.kind, reason.detail))
+                    .or_default()
+                    .record(z3_label, seed);
+            }
         }
 
         // Independent replay of a `sat` model: the model is keyed by this arena's
@@ -596,10 +701,7 @@ fn run_differential_fuzz(instances: u64, minimum_jointly_decided: u64) {
             t.sat_replayed += 1;
         }
 
-        // Z3 oracle.
-        let z3_label = z3_decide(&inst);
         if z3_label == Verdict::Unknown {
-            t.z3_unknown_skipped += 1;
             continue;
         }
         if ax_label == Verdict::Unknown {
@@ -622,33 +724,7 @@ fn run_differential_fuzz(instances: u64, minimum_jointly_decided: u64) {
         }
     }
 
-    println!("=== quantified-UFLIA model-finder differential fuzz tally ===");
-    println!("total instances:      {}", t.total);
-    println!("jointly decided:      {}", t.jointly_decided);
-    println!("agreements:           {}", t.agreements);
-    println!("axeyum Sat:           {}", t.ax_sat);
-    println!("axeyum Unsat:         {}", t.ax_unsat);
-    println!("axeyum Unknown:       {}", t.ax_unknown);
-    println!(
-        "axeyum Err (skipped): {} (orthogonal arith_dpll replay-robustness gap; neutral)",
-        t.ax_error_skipped
-    );
-    println!("Z3 Unknown (skipped): {}", t.z3_unknown_skipped);
-    println!("Sat replays verified: {}", t.sat_replayed);
-    println!("DISAGREEMENTS:        0");
-
-    // The gate is only meaningful if the new sat direction is actually exercised
-    // (some `sat`s decided) and enough instances are jointly adjudicated.
-    assert!(
-        t.jointly_decided >= minimum_jointly_decided,
-        "too few jointly-decided instances ({}); the differential gate is not \
-         meaningfully exercised",
-        t.jointly_decided
-    );
-    assert!(
-        t.ax_sat > 0,
-        "the quantified sat direction was never exercised (ax_sat = 0)"
-    );
+    report_and_check_tally(&t, minimum_jointly_decided);
 }
 
 #[test]
