@@ -1,6 +1,6 @@
 # SMT-COMP admitted slices S5.1 plan
 
-Status: preregistered
+Status: complete
 Date: 2026-07-23
 Depends on: [S5 harness-admission result](smtcomp-harness-admission-s5-result-2026-07-23.md)
 Decision: [accepted ADR-0356](../research/09-decisions/adr-0356-preregister-official-smtcomp-selection-identity.md)
@@ -78,3 +78,6 @@ After the tiny fixture passes, construct and validate one no-solver combined
 1,810-file execution ledger against the accepted S4 root. Only then may a
 separate P0 execution plan preregister binaries, oracles, limits, hosts, shards,
 and result gates.
+
+Completed result:
+[S5.1 admitted-slice result](smtcomp-admitted-slices-s5.1-result-2026-07-23.md).
