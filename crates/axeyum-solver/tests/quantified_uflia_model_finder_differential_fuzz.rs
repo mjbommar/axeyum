@@ -830,3 +830,24 @@ fn two_binder_cartesian_profiles_agree_with_z3() {
 fn quantified_uflia_model_finder_differential_fuzz_full() {
     run_differential_fuzz(FULL_INSTANCES, 100);
 }
+
+#[test]
+#[ignore = "diagnostic; set AXEYUM_QUANT_UFLIA_DIAGNOSTIC_SEEDS to comma-separated seeds"]
+fn diagnose_quantified_uflia_model_finder_seeds() {
+    let raw = std::env::var("AXEYUM_QUANT_UFLIA_DIAGNOSTIC_SEEDS")
+        .expect("set AXEYUM_QUANT_UFLIA_DIAGNOSTIC_SEEDS");
+    let cfg = SolverConfig::new().with_timeout(AXEYUM_TIMEOUT);
+    for field in raw.split(',') {
+        let seed: u64 = field.trim().parse().expect("diagnostic seed must be u64");
+        let mut rng = Lcg::new(seed);
+        let inst = Instance::generate(&mut rng);
+        let (mut arena, _, _, _, assertions) = inst.build_axeyum();
+        let axeyum =
+            prove_unsat_by_mbqi(&mut arena, &assertions, &cfg).map(|result| label(&result));
+        println!(
+            "=== seed {seed}: Axeyum={axeyum:?}, Z3={:?} ===\n{}",
+            z3_decide(&inst),
+            inst.dump()
+        );
+    }
+}
