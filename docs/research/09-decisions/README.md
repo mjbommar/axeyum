@@ -415,3 +415,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [0358](adr-0358-preregister-multi-binder-finite-profile-quantified-uf-models.md) | Preregister bounded Cartesian finite-profile certificates for leading multi-binder quantified-UF models | accepted |
 | [0359](adr-0359-preregister-checked-quantified-uf-default-repair.md) | Preregister bounded checked default-only model repair for quantified Int/Real-result UFs | accepted |
 | [0360](adr-0360-preregister-checked-quantified-uf-free-int-completion.md) | Preregister bounded untrusted free-Int candidate completion behind exact quantified-UF model replay | proposed |
+| [0361](adr-0361-preregister-evaluated-quantified-uf-scalar-candidates.md) | Preregister evaluated ground-source and UF-result scalar candidates without widening quantified-UF search or evidence caps | proposed |

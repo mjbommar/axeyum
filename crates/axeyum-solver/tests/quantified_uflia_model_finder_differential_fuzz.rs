@@ -1032,8 +1032,8 @@ fn exact_source_symbols(arena: &TermArena, assertions: &[TermId]) -> BTreeSet<Sy
 #[test]
 #[ignore = "diagnostic; set AXEYUM_QUANT_UFLIA_SCALAR_DIAGNOSTIC_SEEDS"]
 fn diagnose_evaluated_source_scalar_completion_for_quantified_uflia_unknowns() {
-    const MAX_VALUES: usize = 32;
-    const MAX_TUPLES: usize = 1_024;
+    const MAX_VALUES: usize = 16;
+    const MAX_TUPLES: usize = 256;
 
     let raw = std::env::var("AXEYUM_QUANT_UFLIA_SCALAR_DIAGNOSTIC_SEEDS")
         .expect("set AXEYUM_QUANT_UFLIA_SCALAR_DIAGNOSTIC_SEEDS");
