@@ -370,8 +370,12 @@ pub const SUPPORT_MATRIX: &[SupportRow] = &[
                ADR-0357/0358 finite-profile UF-model certificate: the canonical checker re-derives \
                each binder's exact argument positions, every relevant finite-table key \
                representative, and one fresh default representative from the untouched source and \
-               model, then checks their Cartesian product under a 4,096-tuple cap. Missing or \
-               malformed coverage declines. \
+               model, then checks their Cartesian product under a 4,096-tuple cap. ADR-0359 adds \
+               bounded untrusted repair of only total defaults for at most eight relevant \
+               Int/Real-result functions, while preserving every scalar assignment and explicit \
+               table entry; per-sort pools are capped at 32 and the complete Cartesian search at \
+               256 candidates. Every repaired candidate still requires the same source \
+               certificate and canonical model replay. Missing or malformed coverage declines. \
                The BV subclass accepts only one exact \
                same-width universal identity recipe and reflexive signed/unsigned non-strict order \
                (ADR-0121). A separate outer-BV witness certificate proves one exact equality guard \
@@ -440,8 +444,9 @@ pub const SUPPORT_MATRIX: &[SupportRow] = &[
                ADR-0130/0131/0132/0133/0134/0135/0138 affine-LSB, witness, signed-interval, zero-product, residual-QF_BV, and instance-set classes, piecewise/general Skolem functions, \
                non-equality online antecedents, direct online proof serialization, high-frequency \
                assignment callbacks, negative quantifier contexts, broader alternation/functions, \
-               general nested QE/QSAT, and broad proof reconstruction remain incomplete. \
-               ADR-0016/0032/0095/0096/0097/0098/0099/0100/0101/0107/0108/0109/0110/0111/0112/0113/0114/0115/0116/0117/0118/0119/0120/0121/0122/0123/0124/0125/0126/0127/0128/0129/0130/0131/0132/0133/0134/0135/0138/0139/0140",
+               general nested QE/QSAT, explicit-table repair, free-scalar completion, and broad \
+               proof reconstruction remain incomplete. \
+               ADR-0016/0032/0095/0096/0097/0098/0099/0100/0101/0107/0108/0109/0110/0111/0112/0113/0114/0115/0116/0117/0118/0119/0120/0121/0122/0123/0124/0125/0126/0127/0128/0129/0130/0131/0132/0133/0134/0135/0138/0139/0140/0357/0358/0359",
     },
     SupportRow {
         fragment: "datatypes (algebraic)",

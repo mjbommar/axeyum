@@ -354,5 +354,9 @@ NAS (shared, corpus read-only in practice):
 tiny S5 admission fixture; the bounded multi-binder checked quantified-UF
 milestone is accepted under ADR-0358. The bounded
 [unknown adjudication](../quantified-uflia-unknown-adjudication-2026-07-22.md)
-now justifies proposed ADR-0359 default-only checked repair; do not substitute
-another large run for that bounded implementation.*
+now measures the implemented ADR-0359
+[default-only checked repair](../checked-quantified-uf-default-repair-2026-07-22.md):
+178 checked SAT results versus 111 at baseline, with zero disagreements and
+every SAT model replayed. Finish its branch-wide acceptance gates before the
+next separately preregistered functionality increment; do not substitute
+another large run for those bounded gates.*

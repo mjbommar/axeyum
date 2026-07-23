@@ -794,6 +794,21 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   ADR-0359, with the existing finite-profile checker and canonical source replay
   remaining the sole SAT acceptance boundary.
 
+- **2026-07-22 — ADR-0359 bounded UF-default repair is implemented and
+  measured; final branch gates are pending.** The untrusted search changes only
+  total defaults for at most eight relevant Int/Real-result UFs, preserves
+  every scalar assignment and explicit table point, and declines beyond
+  32-value pools or 256 complete candidates. The independent ADR-0357/0358
+  source checker and canonical original-query replay remain the only SAT
+  acceptance boundary. Focused MBQI is 21/21, four internal repair-boundary
+  tests pass, and solver all-target/all-feature Clippy is clean. The same
+  256-case direct-Z3 sweep improves checked SAT from 111 to 178 and joint
+  decisions from 131 to 197, with 197/197 agreement, 178/178 SAT replay, and
+  zero errors. Ordinary-incomplete/Z3-SAT declines fall from 96 to 39 and
+  resource-limited/Z3-SAT declines from nine to zero. Next: complete the full
+  ADR-0359 evidence gates, accept only if green, then measure the remaining
+  free-scalar/larger-search Unknown boundary before any new implementation.
+
 - **2026-07-22 — ADR-0356 S4 official selection identity is complete; S5 is
   deliberately not blocking solver functionality.** The accepted root
   `/nas3/data/axeyum/harness/official-selection-2026-sq/accepted-322adaa78396bf42d4660d12582e6db1cf2166a765bb912fdfb179975a9c9698`

@@ -3,6 +3,14 @@
 Status: proposed
 Date: 2026-07-22
 
+Implementation note (2026-07-22): the bounded repair and its focused gates are
+implemented in topic commit `79a8dd21`; ADR acceptance remains withheld until
+the branch-wide evidence gates below complete. The post-implementation 256-case
+differential reports 178 checked Axeyum SAT results versus 111 at baseline,
+zero disagreements, and canonical replay for every SAT result. The ordinary
+Z3-SAT incomplete bucket fell from 96 to 39 and the resource-limited Z3-SAT
+bucket from nine to zero.
+
 ## Context
 
 Accepted ADR-0357/0358 can certify a finite-table-plus-default UF model over a
