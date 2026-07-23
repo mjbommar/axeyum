@@ -399,6 +399,136 @@ class LeanCompleteParityTests(unittest.TestCase):
             Counter({"pile": 142, "directory": 1}),
         )
 
+    def test_m2_7_variant_merge_preregistration_matches_m2_0(self) -> None:
+        dependency = GEN.load_json(GEN.U2_NATIVE_DEPENDENCY)
+        selections = dependency["selection_rows"]
+        variants = dependency["provider_variants"]
+        cases = dependency["case_rows"]
+
+        self.assertEqual(len(selections), 8)
+        self.assertEqual(len(variants), 111)
+        self.assertEqual(len(cases), 3_723)
+        self.assertEqual(
+            dependency["summary"]["case_variant_occurrences"], 408_374
+        )
+        self.assertEqual(
+            Counter(case["provider_variant_count"] for case in cases),
+            Counter({111: 3_476, 104: 202, 34: 45}),
+        )
+        self.assertEqual(
+            sum(case["provider_variant_count"] for case in cases), 408_374
+        )
+        self.assertEqual(
+            Counter(len(case["applicable_selection_set_ids"]) for case in cases),
+            Counter({8: 3_476, 6: 202, 3: 45}),
+        )
+        self.assertTrue(
+            all(
+                case["variant_factoring"] == "selection-set-reference"
+                for case in cases
+            )
+        )
+
+        self.assertEqual(len({variant["context_id"] for variant in variants}), 17)
+        self.assertEqual(
+            Counter(variant["event"] for variant in variants),
+            Counter(
+                {
+                    "pull_request": 72,
+                    "workflow_dispatch": 10,
+                    "schedule": 10,
+                    "push-tag-v4.30.0": 10,
+                    "push": 5,
+                    "merge_group": 4,
+                }
+            ),
+        )
+        self.assertEqual(
+            Counter(variant["phase"] for variant in variants),
+            Counter({"primary": 85, "rebootstrap": 26}),
+        )
+        self.assertEqual(
+            Counter(variant["preset"] for variant in variants),
+            Counter({"release": 97, "sanitize": 7, "reldebug": 7}),
+        )
+        self.assertEqual(
+            Counter(variant["target_stage"] for variant in variants),
+            Counter({"stage1": 111}),
+        )
+
+        selection_counts = {
+            selection["selection_set_id"]: (
+                selection["selected_count"],
+                len(selection["provider_variant_ids"]),
+            )
+            for selection in selections
+        }
+        self.assertEqual(
+            selection_counts,
+            {
+                "default-all": (3_678, 57),
+                "default-filtered-aec7358564e4": (3_678, 8),
+                "default-filtered-bfb0a7b69c6e": (3_677, 5),
+                "default-filtered-d1bb9722e72c": (3_477, 5),
+                "full-lake-all": (3_723, 28),
+                "full-lake-filtered-6325d6cffd5d": (3_723, 4),
+                "full-lake-filtered-cbb2894dd43f": (3_722, 2),
+                "full-lake-filtered-d803b176baa6": (3_477, 2),
+            },
+        )
+        selection_ids_by_content: dict[tuple[int, str], set[str]] = {}
+        for selection in selections:
+            key = (selection["selected_count"], selection["selected_ids_sha256"])
+            selection_ids_by_content.setdefault(key, set()).add(
+                selection["selection_set_id"]
+            )
+        self.assertEqual(len(selection_ids_by_content), 5)
+        self.assertEqual(
+            {
+                frozenset(selection_ids)
+                for selection_ids in selection_ids_by_content.values()
+                if len(selection_ids) > 1
+            },
+            {
+                frozenset(
+                    {"default-all", "default-filtered-aec7358564e4"}
+                ),
+                frozenset(
+                    {
+                        "default-filtered-d1bb9722e72c",
+                        "full-lake-filtered-d803b176baa6",
+                    }
+                ),
+                frozenset(
+                    {"full-lake-all", "full-lake-filtered-6325d6cffd5d"}
+                ),
+            },
+        )
+
+        merge_resolver = next(
+            resolver
+            for resolver in dependency["resolvers"]
+            if resolver["id"] == "m2.7-variant-merge-v1"
+        )
+        self.assertEqual(merge_resolver["milestone"], "M2.7")
+        self.assertEqual(merge_resolver["state"], "not-run")
+        self.assertEqual(
+            merge_resolver["edge_classes"],
+            [
+                "conditional-on-profile",
+                "conditional-on-platform",
+                "conditional-on-branch",
+            ],
+        )
+        self.assertEqual(
+            dependency["summary"]["provider_state_counts"], {"unbound": 111}
+        )
+        self.assertEqual(dependency["summary"]["nodes"], 0)
+        self.assertEqual(dependency["summary"]["edges"], 0)
+        self.assertEqual(dependency["summary"]["resolved_case_closures"], 0)
+        self.assertEqual(dependency["summary"]["native_outcomes"], 0)
+        self.assertEqual(dependency["summary"]["paired_cells"], 0)
+
     def test_committed_registry_is_valid_and_rendering_is_deterministic(self) -> None:
         self.assertEqual(self.failures(), [])
         first = GEN.build_report(self.data)
