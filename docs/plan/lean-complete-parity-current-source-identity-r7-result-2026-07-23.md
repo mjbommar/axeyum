@@ -2,8 +2,9 @@
 
 Date: 2026-07-23
 
-Status: **implementation and validation complete on the pushed topic branch;
-current-main integration pending; no process outcome or parity credit**
+Status: **Lean implementation and validation complete on the pushed topic
+branch; full green-before-merge gate blocked by pre-existing out-of-lane
+formatting; no process outcome or parity credit**
 
 Plan:
 [R7 current-source identity plan](lean-complete-parity-current-source-identity-r7-plan-2026-07-23.md)
@@ -135,6 +136,25 @@ LEAN_COMPLETE_PARITY|populations=10|complete_populations=0|axes=12|complete_axes
 
 The detached checkout was clean and removed after validation.
 
+The repository-wide `just check` gate reaches `cargo fmt --all --check` and
+stops on the same pre-existing formatting drift in one benchmark file and
+eight CAS files recorded by R6:
+
+- `crates/axeyum-bench/examples/audit_dominance.rs`;
+- `crates/axeyum-cas/src/combinatorics.rs`;
+- `crates/axeyum-cas/src/gosper.rs`;
+- `crates/axeyum-cas/src/lib.rs`;
+- `crates/axeyum-cas/src/ntheory_advanced.rs`;
+- `crates/axeyum-cas/src/ntheory_more.rs`;
+- `crates/axeyum-cas/src/orthopoly.rs`;
+- `crates/axeyum-cas/src/series.rs`; and
+- `crates/axeyum-cas/src/special.rs`.
+
+R7 owns no Rust and does not reformat another lane's files. Consequently the
+Lean-specific gates are green, but the topic branch must not merge until the
+integration owner obtains a green repository-wide gate after that separate
+baseline drift is resolved.
+
 ## 6. Nonclaims and handoff
 
 R7 launched no Lean, Axeyum, M2.1--M2.7, solver, installer, exporter,
@@ -145,8 +165,10 @@ This repair makes the cross-lane validator green; it does not establish Lean
 parity. All U0--U9 populations, A0--A11 axes, paired cells, and G1--G10 gates
 remain incomplete or zero, and `terminal_ready` remains false.
 
-The pushed topic branch is ready for the integration owner's green-gated
-merge. After integration and a current-main replay, the next Lean-parity action
-remains explicit authorization and validation of the already preregistered
-TL0.6.4 M2.1 process program. M2.2 must then receive a separate source-first
-input authority before any execution or downstream native pair.
+The pushed topic branch is ready for integration review, not yet merge. After
+the out-of-lane formatting baseline is repaired, the integration owner must
+run the complete green-before-merge gate, merge in the chosen order, and replay
+current `main`. Only then does the next Lean-parity action remain explicit
+authorization and validation of the already preregistered TL0.6.4 M2.1 process
+program. M2.2 must receive a separate source-first input authority before any
+execution or downstream native pair.
