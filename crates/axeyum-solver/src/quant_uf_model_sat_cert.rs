@@ -228,6 +228,43 @@ pub(crate) fn certify_quantified_uf_model_sat(
     check_quantified_uf_model_sat(arena, assertion, model, &certificate).then_some(certificate)
 }
 
+/// Returns every UF application needed to evaluate an accepted source shape.
+///
+/// This is search-side discovery only: callers may use the deterministic set to
+/// construct candidate interpretations, but [`check_quantified_uf_model_sat`]
+/// remains the acceptance boundary.
+pub(crate) fn quantified_uf_model_functions(
+    arena: &TermArena,
+    assertion: TermId,
+) -> Option<BTreeSet<FuncId>> {
+    let (binders, body) = universal_prefix(arena, assertion)?;
+    for &binder in &binders {
+        let sort = arena.symbol(binder).1;
+        if !matches!(sort, Sort::Int | Sort::Real) {
+            return None;
+        }
+        if relevant_function_positions(arena, body, binder)?.is_empty() {
+            return None;
+        }
+    }
+
+    let mut functions = BTreeSet::new();
+    let mut seen = BTreeSet::new();
+    let mut stack = vec![body];
+    while let Some(term) = stack.pop() {
+        if !seen.insert(term) {
+            continue;
+        }
+        if let TermNode::App { op, args } = arena.node(term) {
+            if let Op::Apply(function) = op {
+                functions.insert(*function);
+            }
+            stack.extend(args.iter().copied());
+        }
+    }
+    (!functions.is_empty()).then_some(functions)
+}
+
 /// Returns the exact UF argument positions occupied by `binder`, or `None` when
 /// an occurrence is not a direct UF argument.
 fn relevant_function_positions(

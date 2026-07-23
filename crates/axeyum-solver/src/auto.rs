@@ -4993,12 +4993,19 @@ fn certify_mbqi_candidate(
     universal_assertions: &[TermId],
     model: &Model,
 ) -> Result<Option<Model>, SolverError> {
-    let Some(certificates) =
+    let (mut certified_model, certificates) = if let Some(certificates) =
         crate::mbqi_model_finder::certify_all_universals(arena, universal_assertions, model)
-    else {
+    {
+        (model.clone(), certificates)
+    } else if let Some(repaired) = crate::mbqi_model_finder::repair_and_certify_all_universals(
+        arena,
+        universal_assertions,
+        model,
+    ) {
+        repaired
+    } else {
         return Ok(None);
     };
-    let mut certified_model = model.clone();
     for certificate in certificates {
         certified_model.set_quantified_uf_model_sat_certificate(certificate);
     }

@@ -214,6 +214,86 @@ fn forall_real_uf_nonneg_is_sat() {
 }
 
 #[test]
+fn default_repair_synthesizes_two_missing_int_functions() {
+    // With no ground assertions the first QF candidate has no f/g
+    // interpretations. A constant completion f=0,g=0 satisfies the exact
+    // source; only canonical finite-profile replay may accept it.
+    let mut arena = TermArena::new();
+    let f = int_fn(&mut arena, "f");
+    let g = int_fn(&mut arena, "g");
+    let (binder, x) = int_bound(&mut arena, "x");
+    let fx = arena.apply(f, &[x]).unwrap();
+    let gx = arena.apply(g, &[x]).unwrap();
+    let minus_two = arena.int_const(-2);
+    let scaled = arena.int_mul(minus_two, fx).unwrap();
+    let minus_eight = arena.int_const(-8);
+    let lower = arena.int_add(minus_eight, scaled).unwrap();
+    let body = arena.int_ge(gx, lower).unwrap();
+    let forall = arena.forall(binder, body).unwrap();
+
+    let CheckResult::Sat(model) = check(&mut arena, &[forall]) else {
+        panic!("bounded default completion must find the checked constant model");
+    };
+    assert!(model.function(f).is_some());
+    assert!(model.function(g).is_some());
+    assert!(check_model(&arena, &[forall], &model).unwrap());
+}
+
+#[test]
+fn default_repair_preserves_int_table_entry_for_strict_universal() {
+    // The ground point f(5)=3 must remain exact while the unobserved default is
+    // moved above zero. Rewriting the table point would invalidate replay.
+    let mut arena = TermArena::new();
+    let f = int_fn(&mut arena, "f");
+    let (binder, x) = int_bound(&mut arena, "x");
+    let fx = arena.apply(f, &[x]).unwrap();
+    let zero = arena.int_const(0);
+    let body = arena.int_gt(fx, zero).unwrap();
+    let forall = arena.forall(binder, body).unwrap();
+    let five = arena.int_const(5);
+    let f5 = arena.apply(f, &[five]).unwrap();
+    let three = arena.int_const(3);
+    let point = arena.eq(f5, three).unwrap();
+    let assertions = [forall, point];
+
+    let CheckResult::Sat(model) = check(&mut arena, &assertions) else {
+        panic!("strict integer default repair must find a checked model");
+    };
+    let interpretation = model.function(f).expect("repaired f interpretation");
+    assert_eq!(interpretation.apply_value(&[Value::Int(5)]), Value::Int(3));
+    assert!(matches!(
+        interpretation.apply_value(&[Value::Int(6)]),
+        Value::Int(value) if value > 0
+    ));
+    assert!(check_model(&arena, &assertions, &model).unwrap());
+}
+
+#[test]
+fn default_repair_uses_checked_real_successor() {
+    let mut arena = TermArena::new();
+    let f = arena.declare_fun("f", &[Sort::Real], Sort::Real).unwrap();
+    let binder = arena.declare("r", Sort::Real).unwrap();
+    let r = arena.var(binder);
+    let fr = arena.apply(f, &[r]).unwrap();
+    let zero = arena.real_const(Rational::zero());
+    let body = arena.real_gt(fr, zero).unwrap();
+    let forall = arena.forall(binder, body).unwrap();
+
+    let CheckResult::Sat(model) = check(&mut arena, &[forall]) else {
+        panic!("strict real default repair must find a checked model");
+    };
+    let interpretation = model.function(f).expect("repaired f interpretation");
+    let Value::Real(default) = interpretation.default_value() else {
+        panic!("real-result function must carry a real default");
+    };
+    assert!(matches!(
+        default.checked_cmp(&Rational::zero()),
+        Some(core::cmp::Ordering::Greater)
+    ));
+    assert!(check_model(&arena, &[forall], &model).unwrap());
+}
+
+#[test]
 fn two_binder_uf_nonneg_is_sat_and_model_replays() {
     // ∀x y:Int. f(x,y) ≥ 0  ∧  f(1,2) = 3.
     let mut arena = TermArena::new();
