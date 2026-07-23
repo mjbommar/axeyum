@@ -3955,21 +3955,50 @@ fn operator_on_monomial(char_coeffs: &[Rational], power: usize) -> Option<Vec<Ra
     Some(result)
 }
 
-/// Solve a **constant-coefficient linear ODE with polynomial forcing**
-/// `Σₖ cₖ·y⁽ᵏ⁾ = f(x)`, where `char_coeffs = [c₀, …, cₙ]` and `forcing` is a
-/// polynomial in `var`. Returns the general solution — a particular polynomial
-/// solution (found by **undetermined coefficients**, including the `xˢ` factor for
-/// resonance with the root `0`) plus the homogeneous solution (symbolic constants
-/// `C0, C1, …`).
+/// Route a constant-coefficient first-order equation
+/// `c₁·y′ + c₀·y = forcing` through [`dsolve_first_order_linear`] after the exact
+/// normalization `p = c₀/c₁`, `q = forcing/c₁`. The routed solver certifies the
+/// normalized equation; this helper additionally certifies the original scaled
+/// operator before returning.
+fn dsolve_constant_first_order_inhomogeneous(
+    char_coeffs: &[Rational],
+    forcing: &CasExpr,
+    var: &str,
+) -> Option<CasExpr> {
+    if poly::rat_degree(char_coeffs)? != 1 {
+        return None;
+    }
+    let constant = *char_coeffs.first()?;
+    let leading = *char_coeffs.get(1)?;
+    let inverse_leading = Rational::integer(1).checked_div(leading)?;
+    let p = CasExpr::Const(constant.checked_mul(inverse_leading)?);
+    let q = scaled_term(inverse_leading, forcing.clone());
+    let solution = dsolve_first_order_linear(&p, &q, var)?;
+
+    let original_operator = CasExpr::Const(constant) * solution.clone()
+        + CasExpr::Const(leading) * solution.differentiate(var);
+    match equal(&simplify(&original_operator), forcing) {
+        ZeroTest::Certified { equal: true, .. } => Some(solution),
+        _ => None,
+    }
+}
+
+/// Solve a **constant-coefficient linear inhomogeneous ODE**
+/// `Σₖ cₖ·y⁽ᵏ⁾ = f(x)`, where `char_coeffs = [c₀, …, cₙ]`. Polynomial forcing
+/// uses **undetermined coefficients**, including the `xˢ` factor for resonance
+/// with the root `0`. Non-polynomial first-order equations use the certified
+/// integrating-factor path; non-polynomial second-order equations use variation
+/// of parameters. Returns a particular solution plus the homogeneous solution
+/// with symbolic constants `C0, C1, …`.
 ///
 /// **Certified** by applying the ODE operator to the returned solution and
 /// zero-testing the residual against `forcing` (the same differentiate-and-check
 /// that certifies [`dsolve_homogeneous`]) — the polynomial particular part and the
 /// single-exponential homogeneous atoms both lie in the decidable fragment.
 ///
-/// Returns `None` if `forcing` is not a polynomial in `var`, if the homogeneous
-/// part is outside [`dsolve_homogeneous`]'s domain (irrational characteristic
-/// roots), or on overflow.
+/// Returns `None` if no method can integrate the forcing, if the homogeneous part
+/// is outside [`dsolve_homogeneous`]'s domain, if the operator degree is outside
+/// the bounded non-polynomial routes, or on overflow.
 ///
 /// ```
 /// use axeyum_cas::{CasExpr, dsolve_inhomogeneous};
@@ -3991,10 +4020,14 @@ pub fn dsolve_inhomogeneous(
     var: &str,
 ) -> Option<CasExpr> {
     let trimmed = poly::rat_trim(char_coeffs.to_vec());
-    poly::rat_degree(&trimmed)?; // reject the zero operator
-    // Non-polynomial forcing (exp, trig, products) → variation of parameters.
+    let operator_degree = poly::rat_degree(&trimmed)?; // reject the zero operator
+    // Non-polynomial forcing (exp, trig, products) → a degree-specific certified route.
     let Some(forcing_coeffs) = univariate_coeffs(forcing, var).map(poly::rat_trim) else {
-        return dsolve_variation_of_parameters(char_coeffs, forcing, var);
+        return if operator_degree == 1 {
+            dsolve_constant_first_order_inhomogeneous(&trimmed, forcing, var)
+        } else {
+            dsolve_variation_of_parameters(char_coeffs, forcing, var)
+        };
     };
 
     // Zero forcing → the pure homogeneous problem.
@@ -18430,6 +18463,69 @@ mod tests {
             - CasExpr::int(3) * sol4.differentiate("x")
             + CasExpr::int(2) * sol4.clone();
         assert_equal(&residual4, &x());
+    }
+
+    #[test]
+    fn dsolve_inhomogeneous_first_order_routing() {
+        let ig = Rational::integer;
+        let x = || v("x");
+        let check = |coeffs: &[Rational], forcing: CasExpr, expected_particular: CasExpr| {
+            let solution = dsolve_inhomogeneous(coeffs, &forcing, "x").expect("first-order route");
+            let residual =
+                coeffs
+                    .iter()
+                    .enumerate()
+                    .fold(CasExpr::zero(), |acc, (order, &coefficient)| {
+                        acc + CasExpr::Const(coefficient) * solution.differentiate_n("x", order)
+                    });
+            assert_equal(&residual, &forcing);
+            assert_equal(
+                &simplify(&solution.substitute("C0", &CasExpr::zero())),
+                &expected_particular,
+            );
+        };
+
+        // y′ + y = eˣ and y′ + y = sin x.
+        check(&[ig(1), ig(1)], x().exp(), CasExpr::rat(1, 2) * x().exp());
+        check(
+            &[ig(1), ig(1)],
+            x().sin(),
+            CasExpr::rat(1, 2) * (x().sin() - x().cos()),
+        );
+        // Exact leading-coefficient normalization, including resonance and sign.
+        check(&[ig(4), ig(2)], x().exp(), CasExpr::rat(1, 6) * x().exp());
+        check(
+            &[ig(-2), ig(2)],
+            x().exp(),
+            CasExpr::rat(1, 2) * x() * x().exp(),
+        );
+        check(
+            &[ig(2), ig(-2)],
+            x().exp(),
+            CasExpr::rat(-1, 2) * x() * x().exp(),
+        );
+        check(&[ig(0), ig(2)], x().exp(), CasExpr::rat(1, 2) * x().exp());
+        // Trailing zero coefficients do not hide the true first-order degree.
+        check(
+            &[ig(1), ig(1), ig(0)],
+            x().exp(),
+            CasExpr::rat(1, 2) * x().exp(),
+        );
+
+        // Degree zero/cubic operators and an unintegrable first-order forcing
+        // retain honest declines; the polynomial route remains independently green.
+        assert!(dsolve_inhomogeneous(&[ig(2)], &x().exp(), "x").is_none());
+        assert!(dsolve_inhomogeneous(&[ig(1), ig(0), ig(0), ig(1)], &x().exp(), "x").is_none());
+        assert!(
+            dsolve_inhomogeneous(
+                &[ig(1), ig(1)],
+                &(CasExpr::int(1) / (x().pow(2) + CasExpr::int(1))),
+                "x",
+            )
+            .is_none()
+        );
+        let polynomial = dsolve_inhomogeneous(&[ig(1), ig(1)], &x(), "x").unwrap();
+        assert_equal(&(polynomial.differentiate("x") + polynomial), &x());
     }
 
     #[test]

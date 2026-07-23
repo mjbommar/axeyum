@@ -388,6 +388,21 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-22 — certified generic first-order inhomogeneous routing.**
+  `dsolve_inhomogeneous` now recognizes a trimmed degree-one constant-
+  coefficient operator with non-polynomial forcing, divides both coefficients
+  and forcing by the exact nonzero leading coefficient, and routes the
+  normalized equation through `dsolve_first_order_linear`. That existing solver
+  retains its integrating-factor residual certificate; the new wrapper also
+  substitutes the answer back into the original scaled operator before
+  returning it. Exponential, sine, scaled-leading, resonant, negative-leading,
+  derivative-only, and trailing-zero-coefficient controls pass, while degree
+  zero/cubic operators and an unintegrable forcing still decline. The existing
+  polynomial and second-order variation-of-parameters routes are unchanged.
+  SymPy independently agrees on the exact representative forms. The full
+  534-unit/147-doctest suite, warning-denied workspace all-target/all-feature
+  Clippy, strict stable/nightly rustdoc, and WASM build pass.
+
 - **2026-07-22 — TL0.6.3 M0 attempt 001 failed closed; R1 is source-first
   preregistered.** The [M0 plan](docs/plan/lean-u2-official-execution-tl0.6.3-m0-plan-2026-07-22.md)
 - **2026-07-22 — exact-expression initial-condition data.** The measured
@@ -7793,6 +7808,13 @@ plan is built and committed on the current branch:
 | P5.5 | External target, measured | **DONE (bounded v1, ADR-0323--0338):** authenticated Tock capture plus eight rechecked dual-DRAT proofs and six replayed controls, UNKNOWN=0, DISAGREE=0. Query time 12.700 s; fresh outer wall 50.745 s; peak RSS 1,256,496 KiB; zero OOM deltas. The committed case study compares exact target validation, universal coverage, trust, effort, artifact boundaries, and limits. No Tock bug was found, so no upstream issue is applicable. This is not a speed or whole-kernel claim. |
 
 ## Changelog
+
+- **2026-07-22 — Routed generic first-order inhomogeneous ODEs.**
+  Non-polynomial degree-one constant-coefficient equations now reuse the
+  certified integrating-factor solver after exact leading-coefficient
+  normalization, then replay against the original operator. Polynomial and
+  second-order routes remain unchanged; bounded positive and decline controls
+  bring the CAS surface to 534 unit tests and 147 doctests.
 
 - **2026-07-22 — Added exact-expression IVP data.**
   `apply_initial_conditions` now solves rational evaluated basis matrices
