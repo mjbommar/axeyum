@@ -9,6 +9,8 @@ use axeyum_lean_import::{
 
 const FIXTURE: &str =
     include_str!("../../../docs/plan/fixtures/lean4export-v4.30-axeyum-probe.ndjson");
+const QUOTIENT_FIXTURE: &str =
+    include_str!("../../../docs/plan/fixtures/lean4export-v4.30-quotient.ndjson");
 
 const EXACT_FLAT_IDENTITIES: [(&str, &str, &str); 8] = [
     (
@@ -50,6 +52,51 @@ const EXACT_FLAT_IDENTITIES: [(&str, &str, &str); 8] = [
         "Two.right",
         "3fd1de82b904ae84e20d882629b5ae6de0a79fb2ed8891b717ace05be59d1e34",
         "8a72f302e06972ed0a3a87932b1183abc22266d515b43e12e31f5d375580a3e5",
+    ),
+];
+
+const EXACT_QUOTIENT_IDENTITIES: [(&str, DeclarationKind, &str, &str); 7] = [
+    (
+        "Eq",
+        DeclarationKind::Inductive,
+        "0d5ce3dcc21a8f59792798ae5ef9d44386f4a98cf0362476dc01479d83a863dc",
+        "db78f23ab48111c3712c19b6d3b972273eabff0d10707429fe25a5a6adcfe615",
+    ),
+    (
+        "Quot",
+        DeclarationKind::Quotient,
+        "c04372f31e5e0d9fdfcc3cec65a97426361c147337ac521fb2be393d3bea8db6",
+        "041ae2cf343563b09c9d79d6ac74935ffb4233bcffc92a9bf3d697cc48eb8759",
+    ),
+    (
+        "Eq.rec",
+        DeclarationKind::Recursor,
+        "73a3c6ea274d4cee991fc8ed9589c13c426b6c01d6653cdc86ec71b3c331df6b",
+        "189bf4a218ab8f284d4fff5d72abbba0dbae1df4f4afbbfe7abc8807070d5f24",
+    ),
+    (
+        "Eq.refl",
+        DeclarationKind::Constructor,
+        "cb975064d20ed8dd160b08628f9063c0af645933e89243a5c4b38f97d4e0f967",
+        "d5fe82ef7dfe801cef7ceb9375589cd576384512c387119ddea36c9dbca958fb",
+    ),
+    (
+        "Quot.mk",
+        DeclarationKind::Quotient,
+        "7f1b2a47ab50593d26cd6d71839cf7fa4695ea1801863c5f453f1a92349de144",
+        "7a23b950d7a19ba57fa449cd5222a194964416808b637d3b4807484afc8af0cf",
+    ),
+    (
+        "Quot.ind",
+        DeclarationKind::Quotient,
+        "f5ed6181a3d8507644be89a97b1daeaff8eb510d3d7cb12beea7f043f77ca153",
+        "2ac02cf0f5e913771fa22f3bc398389e1e0628bcbc063886c47ddc6c44498043",
+    ),
+    (
+        "Quot.lift",
+        DeclarationKind::Quotient,
+        "c98c5f0ebf8e62fca139493eebf8e3735c20149bdfa0d96d0f1efd64ba74ac5d",
+        "c9e444568f88e623a5fd50891677a0513c6846c7783c09940620d9eaf0ea3306",
     ),
 ];
 
@@ -152,6 +199,54 @@ fn flat_fixture_identity_manifest_is_complete_stable_and_canonically_ordered() {
         })
         .collect();
     assert_eq!(exact, EXACT_FLAT_IDENTITIES);
+}
+
+#[test]
+fn quotient_fixture_identity_manifest_is_deterministic_and_not_axiomatic() {
+    let first = import(QUOTIENT_FIXTURE);
+    let second = import(QUOTIENT_FIXTURE);
+    assert_eq!(first.identity_version, IDENTITY_VERSION);
+    assert_eq!(first.axiom_identities, second.axiom_identities);
+    assert_eq!(first.declaration_identities, second.declaration_identities);
+    assert!(first.axiom_identities.is_empty());
+    assert_eq!(first.declaration_identities.len(), 7);
+    let exact = first
+        .declaration_identities
+        .iter()
+        .map(|identity| {
+            (
+                identity.name.as_str(),
+                identity.kind,
+                identity.content_sha256.as_str(),
+                identity.dependency_sha256.as_str(),
+            )
+        })
+        .collect::<Vec<_>>();
+    assert_eq!(exact, EXACT_QUOTIENT_IDENTITIES);
+
+    assert_eq!(
+        declaration(&first, "Quot.mk").dependencies,
+        [axeyum_lean_import::DeclarationDependencyIdentity {
+            name: "Quot".to_owned(),
+            content_sha256: declaration(&first, "Quot").content_sha256.clone(),
+        }]
+    );
+    assert_eq!(
+        declaration(&first, "Quot.ind")
+            .dependencies
+            .iter()
+            .map(|dependency| dependency.name.as_str())
+            .collect::<Vec<_>>(),
+        ["Quot", "Quot.mk"]
+    );
+    assert_eq!(
+        declaration(&first, "Quot.lift")
+            .dependencies
+            .iter()
+            .map(|dependency| dependency.name.as_str())
+            .collect::<Vec<_>>(),
+        ["Eq", "Quot"]
+    );
 }
 
 #[test]
