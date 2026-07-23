@@ -433,9 +433,15 @@ state.
 > contract hardening, not an observed pair or parity credit. R3 now adds a
 > content-bound nine-layer normalization authority plus an executable exact-
 > field projection kernel: 68 semantic fields and 18 narrowly justified
-> ignored-field rules have exhaustive mutation controls, and paired cells must
-> cite a registered same-layer current contract. Raw extractors and semantic
+> ignored-field rules have exhaustive mutation controls. R4 now versions that
+> authority and validates all 86 field occurrences before projection as 65
+> SHA-256 values, three sealed enums, nine nonnegative integers, or nine
+> nonempty strings; fully resealed v1 normalizers reject. Paired cells must cite
+> a registered same-layer current contract. Raw extractors and semantic
 > canonicalizers remain zero, so this still creates no observed pair or credit.
+> Next: complete accepted TL0.6.3/TL0.6.4 parents, derive the exact
+> layer-expanded obligations, and validate raw-to-canonical adapters before
+> authorizing a native attempt.
 > TL0.7.2's source-first
 > [process-adapter plan](docs/plan/lean-execution-process-adapter-tl0.7.2-plan-2026-07-22.md)
 > was pushed before implementation or probes. The subsequent

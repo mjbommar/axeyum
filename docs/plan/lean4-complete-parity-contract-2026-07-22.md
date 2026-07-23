@@ -375,15 +375,20 @@ fully resealed semantic mutation controls.
 The source-first
 [R3 normalization plan](lean-u2-matched-execution-tl0.6.5-normalization-r3-plan-2026-07-23.md),
 [accepted bounded result](lean-u2-matched-execution-tl0.6.5-normalization-r3-result-2026-07-23.md),
-[machine authority](lean-u2-normalization-contracts-v1.json), and generated
-[summary](generated/lean-u2-normalization-contracts.md) now resolve the
-comparison's normalizer through nine content-bound layer contracts. Their 68
-semantic fields and 18 narrowly justified ignored-field rules feed an
-integer-only canonical-JSON projection kernel. Missing or unknown fields,
-floating-point values, invented normalizer IDs, cross-layer reuse, and stale
-normalizer seals reject. Exhaustive controls mutate every semantic and ignored
-field. This is contract/projection evidence only: raw Lean/Axeyum extractors,
-semantic canonicalizers, post-parent obligations, and real pairs remain absent.
+and immutable [v1 authority](lean-u2-normalization-contracts-v1.json) first
+resolved the comparison's normalizer through nine content-bound layer
+contracts. The subsequent source-first
+[R4 plan](lean-u2-matched-execution-tl0.6.5-typed-observables-r4-plan-2026-07-23.md),
+[accepted bounded result](lean-u2-matched-execution-tl0.6.5-typed-observables-r4-result-2026-07-23.md),
+current [v2 authority](lean-u2-normalization-contracts-v2.json), and generated
+[summary](generated/lean-u2-normalization-contracts.md) validate all 86 field
+occurrences before projection: 65 SHA-256 identities, three sealed enums, nine
+nonnegative integers, and nine nonempty strings. The 68 semantic fields and 18
+narrowly justified ignored rules are unchanged. Missing, unknown, malformed,
+v1/invented, cross-layer, and stale-seal inputs reject; exhaustive controls
+mutate every semantic and ignored field. This is contract/projection evidence
+only: raw Lean/Axeyum extractors, semantic canonicalizers, post-parent
+obligations, and real pairs remain absent.
 
 ### 7.1 TL0.7.1 execution-evidence checkpoint
 

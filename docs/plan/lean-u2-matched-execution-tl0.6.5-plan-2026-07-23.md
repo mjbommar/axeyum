@@ -256,7 +256,12 @@ The source-first
 then closes R3's remaining value-shape defect: field names alone do not prove
 that digests, enums, integers, or strings have the required types. R4 versions
 the authority, contract IDs, and projection domain before any observation can
-exist; it remains offline and non-crediting.
+exist. The accepted bounded
+[R4 result](lean-u2-matched-execution-tl0.6.5-typed-observables-r4-result-2026-07-23.md)
+now validates all 86 typed occurrences before projection: 65 SHA-256 values,
+three enums, nine nonnegative integers, and nine nonempty strings. All 68
+semantic and 18 ignored-field controls pass, and the terminal registry rejects
+a fully resealed v1 normalizer. It remains offline and non-crediting.
 
 An Axeyum timeout, resource exhaustion, or supported decline is a completed
 typed Axeyum execution and can therefore produce `official-only`. Total absence
