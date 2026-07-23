@@ -3,6 +3,7 @@ from __future__ import annotations
 import importlib.util
 import json
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -190,6 +191,91 @@ class LeanU2NativeHeaderContractTests(unittest.TestCase):
         }
         with self.assertRaises(GEN.HeaderContractError):
             GEN.normalize_fast_output(json.dumps(malformed_import).encode(), 1, "bad")
+
+
+class LeanU2NativeHeaderProcessRunnerTests(unittest.TestCase):
+    def run_in_temporary_root(
+        self, process_id: str, argv: list[str], stdout_limit: int
+    ) -> tuple[dict[str, object], bytes, bytes, GEN.HeaderContractError | None]:
+        limits = {
+            "address_space_bytes": 512 * 1024 * 1024,
+            "cpu_seconds": 5,
+            "wall_seconds": 5,
+            "stdout_bytes": stdout_limit,
+            "stderr_bytes": 1024,
+            "file_size_bytes": 1024 * 1024,
+        }
+        stdin = b""
+        spec = {
+            "ordinal": 0,
+            "process_id": process_id,
+            "category": "synthetic-control",
+            "argv": argv,
+            "cwd": str(ROOT),
+            "environment": {"LANG": "C", "LC_ALL": "C"},
+            "stdin_bytes": len(stdin),
+            "stdin_sha256": GEN.sha256_bytes(stdin),
+            "stdin": stdin,
+            "limits": limits,
+        }
+        prior_root = GEN.EVIDENCE_ROOT
+        with tempfile.TemporaryDirectory(prefix="axeyum-m2-1-runner-") as temporary:
+            evidence_root = Path(temporary)
+            (evidence_root / GEN.PROCESS_DIR).mkdir()
+            GEN.EVIDENCE_ROOT = evidence_root
+            error = None
+            try:
+                GEN.run_process(spec)
+            except GEN.HeaderContractError as caught:
+                error = caught
+            finally:
+                GEN.EVIDENCE_ROOT = prior_root
+            directory = evidence_root / GEN.PROCESS_DIR / f"0000-{process_id}"
+            record = GEN.load_process_record(directory / "record.json")
+            stdout = (directory / "stdout.bin").read_bytes()
+            stderr = (directory / "stderr.bin").read_bytes()
+        return record, stdout, stderr, error
+
+    def test_success_retains_exact_stream_and_sealed_record(self) -> None:
+        record, stdout, stderr, error = self.run_in_temporary_root(
+            "synthetic-success", ["/usr/bin/printf", "ok"], 1024
+        )
+        self.assertIsNone(error)
+        self.assertEqual(record["status"], "complete")
+        self.assertEqual(record["returncode"], 0)
+        self.assertEqual(stdout, b"ok")
+        self.assertEqual(stderr, b"")
+        self.assertFalse(record["wall_limit_fired"])
+        self.assertFalse(record["stdout_limit_fired"])
+        self.assertFalse(record["stderr_limit_fired"])
+
+    def test_stdout_overflow_is_typed_retained_and_fail_closed(self) -> None:
+        record, stdout, stderr, error = self.run_in_temporary_root(
+            "synthetic-stdout-overflow",
+            ["/usr/bin/head", "-c", "8192", "/dev/zero"],
+            1024,
+        )
+        self.assertIsNotNone(error)
+        self.assertEqual(record["status"], "failed-stdout-limit")
+        self.assertTrue(record["stdout_limit_fired"])
+        self.assertFalse(record["output_within_limits"])
+        self.assertGreater(len(stdout), 1024)
+        self.assertLessEqual(len(stdout), 8192)
+        self.assertEqual(stderr, b"")
+
+    def test_launch_failure_is_sealed_with_empty_streams(self) -> None:
+        record, stdout, stderr, error = self.run_in_temporary_root(
+            "synthetic-launch-failure",
+            ["/definitely/missing/axeyum-m2-1-synthetic"],
+            1024,
+        )
+        self.assertIsNotNone(error)
+        self.assertEqual(record["status"], "failed-launch")
+        self.assertIsNone(record["returncode"])
+        self.assertEqual(record["launch_error_type"], "FileNotFoundError")
+        self.assertTrue(record["launch_error_message"])
+        self.assertEqual(stdout, b"")
+        self.assertEqual(stderr, b"")
 
 
 @unittest.skipUnless(GEN.CONTRACT.is_file(), "M2.1 contract not derived yet")

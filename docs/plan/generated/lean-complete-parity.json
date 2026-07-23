@@ -364,7 +364,7 @@
     },
     {
       "path": "scripts/lean_u2_native_dependency_m2_1.py",
-      "sha256": "516581394f7026f99b56d9ed99c0049e9235b15b138b0f3df80cba68709ce26c"
+      "sha256": "9d1e13ca59535d198c7f5fa8f1bf6b79c9f76fb3ee0c944ee9bebb2a15bb2b07"
     },
     {
       "path": "scripts/lean_u2_official_execution.py",
@@ -444,7 +444,7 @@
     },
     {
       "path": "scripts/tests/test_lean_u2_native_dependency_m2_1.py",
-      "sha256": "21c2cdf54ac11485717dd4a8485efe716e861588443e403188d310d5a359af96"
+      "sha256": "c5fcdc48d2978b96da1f798a7601b37349dda5fc5d2e6d150a4a2fbb66cb8501"
     },
     {
       "path": "scripts/tests/test_lean_u2_native_surface_classification.py",

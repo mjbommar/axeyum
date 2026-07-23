@@ -1037,38 +1037,81 @@ def run_process(spec: dict[str, Any]) -> dict[str, Any]:
     stdin_path.write_bytes(spec["stdin"])
     before = resource.getrusage(resource.RUSAGE_CHILDREN)
     start_ns = time.time_ns()
-    timed_out = False
-    process = subprocess.Popen(
-        spec["argv"],
-        cwd=spec["cwd"],
-        env=spec["environment"],
-        stdin=subprocess.PIPE,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        start_new_session=True,
-        preexec_fn=lambda: set_child_limits(spec["limits"]),
-    )
-    try:
-        stdout, stderr = process.communicate(
-            input=spec["stdin"], timeout=spec["limits"]["wall_seconds"]
-        )
-    except subprocess.TimeoutExpired:
-        timed_out = True
-        os.killpg(process.pid, signal.SIGKILL)
-        stdout, stderr = process.communicate()
+    start_monotonic_ns = time.monotonic_ns()
+    process: subprocess.Popen[bytes] | None = None
+    limit_fired: str | None = None
+    launch_error: BaseException | None = None
+    with (
+        stdin_path.open("rb") as stdin_handle,
+        stdout_path.open("xb") as stdout_handle,
+        stderr_path.open("xb") as stderr_handle,
+    ):
+        try:
+            process = subprocess.Popen(
+                spec["argv"],
+                cwd=spec["cwd"],
+                env=spec["environment"],
+                stdin=stdin_handle,
+                stdout=stdout_handle,
+                stderr=stderr_handle,
+                start_new_session=True,
+                preexec_fn=lambda: set_child_limits(spec["limits"]),
+            )
+        except (OSError, subprocess.SubprocessError) as error:
+            launch_error = error
+        if process is not None:
+            wall_limit_ns = spec["limits"]["wall_seconds"] * 1_000_000_000
+            while True:
+                returncode = process.poll()
+                elapsed_ns = time.monotonic_ns() - start_monotonic_ns
+                stdout_bytes = stdout_path.stat().st_size
+                stderr_bytes = stderr_path.stat().st_size
+                if elapsed_ns > wall_limit_ns:
+                    limit_fired = "wall"
+                elif stdout_bytes > spec["limits"]["stdout_bytes"]:
+                    limit_fired = "stdout"
+                elif stderr_bytes > spec["limits"]["stderr_bytes"]:
+                    limit_fired = "stderr"
+                if limit_fired is not None:
+                    if returncode is None:
+                        try:
+                            os.killpg(process.pid, signal.SIGKILL)
+                        except ProcessLookupError:
+                            pass
+                    process.wait()
+                    break
+                if returncode is not None:
+                    break
+                time.sleep(0.005)
+
     end_ns = time.time_ns()
     after = resource.getrusage(resource.RUSAGE_CHILDREN)
-    stdout_path.write_bytes(stdout)
-    stderr_path.write_bytes(stderr)
+    stdout_bytes = stdout_path.stat().st_size
+    stderr_bytes = stderr_path.stat().st_size
+    if limit_fired is None and stdout_bytes > spec["limits"]["stdout_bytes"]:
+        limit_fired = "stdout"
+    if limit_fired is None and stderr_bytes > spec["limits"]["stderr_bytes"]:
+        limit_fired = "stderr"
+    wall_limit_fired = limit_fired == "wall"
+    stdout_limit_fired = limit_fired == "stdout"
+    stderr_limit_fired = limit_fired == "stderr"
     output_within_limits = (
-        len(stdout) <= spec["limits"]["stdout_bytes"]
-        and len(stderr) <= spec["limits"]["stderr_bytes"]
+        stdout_bytes <= spec["limits"]["stdout_bytes"]
+        and stderr_bytes <= spec["limits"]["stderr_bytes"]
     )
-    status = (
-        "complete"
-        if process.returncode == 0 and not timed_out and output_within_limits
-        else "failed"
-    )
+    returncode = process.returncode if process is not None else None
+    if launch_error is not None:
+        status = "failed-launch"
+    elif wall_limit_fired:
+        status = "failed-wall-limit"
+    elif stdout_limit_fired:
+        status = "failed-stdout-limit"
+    elif stderr_limit_fired:
+        status = "failed-stderr-limit"
+    elif returncode == 0:
+        status = "complete"
+    else:
+        status = "failed-exit"
     record = seal(
         {
             **public_process_spec(spec),
@@ -1076,12 +1119,21 @@ def run_process(spec: dict[str, Any]) -> dict[str, Any]:
             "started_unix_ns": start_ns,
             "ended_unix_ns": end_ns,
             "wall_duration_ns": end_ns - start_ns,
-            "timed_out": timed_out,
-            "returncode": process.returncode,
-            "stdout_bytes": len(stdout),
-            "stdout_sha256": sha256_bytes(stdout),
-            "stderr_bytes": len(stderr),
-            "stderr_sha256": sha256_bytes(stderr),
+            "timed_out": wall_limit_fired,
+            "wall_limit_fired": wall_limit_fired,
+            "stdout_limit_fired": stdout_limit_fired,
+            "stderr_limit_fired": stderr_limit_fired,
+            "returncode": returncode,
+            "launch_error_type": (
+                type(launch_error).__name__ if launch_error is not None else None
+            ),
+            "launch_error_message": (
+                str(launch_error) if launch_error is not None else None
+            ),
+            "stdout_bytes": stdout_bytes,
+            "stdout_sha256": sha256_file(stdout_path),
+            "stderr_bytes": stderr_bytes,
+            "stderr_sha256": sha256_file(stderr_path),
             "output_within_limits": output_within_limits,
             "user_cpu_seconds": after.ru_utime - before.ru_utime,
             "system_cpu_seconds": after.ru_stime - before.ru_stime,
@@ -1097,9 +1149,8 @@ def run_process(spec: dict[str, Any]) -> dict[str, Any]:
     record_path.write_text(json_text(record), encoding="utf-8")
     if status != "complete":
         raise HeaderContractError(
-            f"process {spec['process_id']} failed without retry: "
-            f"returncode={process.returncode} timeout={timed_out} "
-            f"output_within_limits={output_within_limits}"
+            f"process {spec['process_id']} stopped without retry: "
+            f"status={status} returncode={returncode}"
         )
     return record
 
