@@ -267,9 +267,9 @@ gate.
 1. **Harness admission (S5).** Selection identity S0--S4 is complete under
    [accepted ADR-0356](../../research/09-decisions/adr-0356-preregister-official-smtcomp-selection-identity.md).
    Bind E1b preflight to the accepted completion, selected list, and selected-
-   file ledger, then prove the handoff on a tiny fixture. This is deferred while
-   checked solver capability proceeds; do not treat the deferral as permission
-   for a large run.
+   file ledger, then prove the handoff on a tiny fixture. The bounded
+   [S5 implementation plan](../smtcomp-harness-admission-s5-2026-07-23.md) is
+   preregistered; it does not authorize a large run.
 2. **Fresh P0 slices.** Stage the repaired binary and rerun
    QF_FP/QF_BVFP/QF_ABVFP plus QF_AUFLIA under the completed protocol. Require
    DISAGREE=0.
