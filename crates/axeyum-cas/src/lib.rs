@@ -10337,6 +10337,12 @@ pub fn limit(expr: &CasExpr, var: &str, point: LimitPoint) -> Option<CasExpr> {
     {
         return Some(simplify(&fold_elementary_constants(&inner_limit.exp())));
     }
+    // For fixed integer order, Bessel J and modified Bessel I are entire in
+    // their argument. Compose an exact rational inner limit through either head,
+    // retaining an outer factor only when it is independent of the limit variable.
+    if let Some(value) = limit_bessel_at_rational_argument(expr, var, point) {
+        return Some(value);
+    }
     // At ±∞, an exponential dominates any rational factor: `R(x)·∏exp(cᵢx)^{±} → 0`
     // when the net exponential rate decays (e.g. `x²/eˣ → 0`).
     if matches!(point, LimitPoint::PosInfinity | LimitPoint::NegInfinity)
@@ -11019,6 +11025,40 @@ fn limit_bessel_j_at_infinity(expr: &CasExpr, var: &str, point: LimitPoint) -> O
         return None;
     }
     Some(CasExpr::zero())
+}
+
+/// Compose a finite exact-rational inner limit through fixed integer-order
+/// Bessel `Jₙ` or modified Bessel `Iₙ`.
+///
+/// NIST DLMF 10.2(ii) and 10.25(ii) define these first-kind functions as entire
+/// functions of the argument for integer order, so continuity gives
+/// `lim Hₙ(r(x)) = Hₙ(lim r(x))`. Restricting the inner result to a literal
+/// rational keeps this rule branch-free and exact. An outer factor is admitted
+/// only when it is independent of the limiting variable.
+fn limit_bessel_at_rational_argument(
+    expr: &CasExpr,
+    var: &str,
+    point: LimitPoint,
+) -> Option<CasExpr> {
+    let (outer, core) = split_var_free_factor(expr, var);
+    let CasExpr::Unary(func @ (UnaryFunc::BesselJ(order) | UnaryFunc::BesselI(order)), argument) =
+        core
+    else {
+        return None;
+    };
+    let CasExpr::Const(value) = simplify(&limit(&argument, var, point)?) else {
+        return None;
+    };
+    let at_limit = if value.is_zero() {
+        if order == 0 {
+            CasExpr::one()
+        } else {
+            CasExpr::zero()
+        }
+    } else {
+        CasExpr::Unary(func, Box::new(CasExpr::Const(value)))
+    };
+    Some(simplify(&(outer * at_limit)))
 }
 
 /// Whether any `sin`/`cos` appears inside a denominator (the second operand of a
@@ -21777,10 +21817,13 @@ mod tests {
         }
 
         // Equal/lower numerator degree has a finite argument limit and must not be
-        // replaced with the large-argument zero. Preserve the already-supported
-        // reciprocal-substitution result J₀(1/x) → J₀(0) = 1.
+        // replaced with the large-argument zero. Continuity now returns the exact
+        // Bessel value at that rational limit; reciprocal J₀(1/x) still tends to 1.
         let bounded = (x().pow(2) + CasExpr::int(1)) / (x().pow(2) + CasExpr::int(2));
-        assert!(limit(&bounded.bessel_j(0), "x", pos()).is_none());
+        assert_equal(
+            &limit(&bounded.bessel_j(0), "x", pos()).unwrap(),
+            &CasExpr::int(1).bessel_j(0),
+        );
         assert_equal(
             &limit(&(CasExpr::int(1) / x()).bessel_j(0), "x", pos()).unwrap(),
             &CasExpr::int(1),
@@ -21798,6 +21841,95 @@ mod tests {
                 &((CasExpr::int(2).sqrt() * x().pow(2)) / x()).bessel_j(0),
                 "x",
                 pos()
+            )
+            .is_none()
+        );
+    }
+
+    #[test]
+    fn limits_of_bessel_heads_at_finite_rational_inner_limits_and_declines() {
+        let x = || v("x");
+        let pos = || LimitPoint::PosInfinity;
+        let neg = || LimitPoint::NegInfinity;
+        let shapes = [
+            (
+                (x().pow(2) + CasExpr::int(1)) / (x().pow(2) + CasExpr::int(2)),
+                Rational::integer(1),
+            ),
+            (
+                (CasExpr::int(-2) * x().pow(3) + CasExpr::int(1))
+                    / (x().pow(3) + CasExpr::int(2)),
+                Rational::integer(-2),
+            ),
+            (
+                (x().pow(4) - CasExpr::int(3))
+                    / (CasExpr::int(2) * x().pow(4) + CasExpr::int(1)),
+                Rational::new(1, 2),
+            ),
+        ];
+
+        // DLMF 10.2(ii)/10.25(ii): fixed integer-order Jₙ and Iₙ are entire in
+        // their argument, so exact finite rational inner limits compose directly.
+        // The rule is constant-time in the public order.
+        for order in [0, 3, 32, u32::MAX] {
+            for (argument, value) in &shapes {
+                for point in [pos(), neg()] {
+                    assert_equal(
+                        &limit(&argument.clone().bessel_j(order), "x", point).unwrap(),
+                        &CasExpr::Const(*value).bessel_j(order),
+                    );
+                    assert_equal(
+                        &limit(&argument.clone().bessel_i(order), "x", point).unwrap(),
+                        &CasExpr::Const(*value).bessel_i(order),
+                    );
+                }
+            }
+        }
+
+        assert_equal(
+            &limit(&(v("c") * shapes[0].0.clone().bessel_j(3)), "x", pos()).unwrap(),
+            &(v("c") * CasExpr::int(1).bessel_j(3)),
+        );
+        assert_equal(
+            &limit(&(CasExpr::int(1) / x()).bessel_i(7), "x", neg()).unwrap(),
+            &CasExpr::zero(),
+        );
+
+        // Non-rational or nonexistent inner limits, an unbounded modified-Bessel
+        // argument, variable-dependent outer factors, and a Bessel denominator
+        // remain outside the exact continuity rule.
+        assert!(limit(&x().sin().bessel_j(0), "x", pos()).is_none());
+        assert!(
+            limit(
+                &((CasExpr::int(2).sqrt() * x().pow(2)) / (x().pow(2) + CasExpr::int(1)))
+                    .bessel_j(0),
+                "x",
+                pos(),
+            )
+            .is_none()
+        );
+        assert!(
+            limit(
+                &((v("a") * x().pow(2)) / (x().pow(2) + CasExpr::int(1))).bessel_i(0),
+                "x",
+                pos(),
+            )
+            .is_none()
+        );
+        assert!(limit(&x().bessel_i(0), "x", pos()).is_none());
+        assert!(
+            limit(
+                &(x() * shapes[0].0.clone().bessel_j(0)),
+                "x",
+                pos(),
+            )
+            .is_none()
+        );
+        assert!(
+            limit(
+                &(CasExpr::int(1) / shapes[0].0.clone().bessel_j(0)),
+                "x",
+                pos(),
             )
             .is_none()
         );
