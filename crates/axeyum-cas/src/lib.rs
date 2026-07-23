@@ -11446,7 +11446,7 @@ pub fn laurent_series(f: &CasExpr, var: &str, order: usize) -> Option<CasExpr> {
 /// multiplicity seven), plus the exact Bessel pairs
 /// `c/√((s−a)²+b²) ↦ c·e^{at}J₀(bt)` and
 /// `c/√((s−a)²−b²) ↦ c·e^{at}I₀(bt)` for rational `a` and `c` and nonzero
-/// rational `b`.
+/// rational `b`, together with the corresponding order-one `J₁`/`I₁` pairs.
 /// **Certified** by the round trip `L{result} = F` (via [`laplace_transform`] and
 /// the zero-test). Returns `None` for improper rational inputs, unsupported pole
 /// families, irrational frequencies, or resource overflow.
@@ -11461,8 +11461,9 @@ pub fn laurent_series(f: &CasExpr, var: &str, order: usize) -> Option<CasExpr> {
 /// ```
 #[must_use]
 pub fn inverse_laplace(f: &CasExpr, s: &str, t: &str) -> Option<CasExpr> {
-    if let Some(result) =
-        inverse_laplace_bessel_j0(f, s, t).or_else(|| inverse_laplace_bessel_i0(f, s, t))
+    if let Some(result) = inverse_laplace_bessel_j0(f, s, t)
+        .or_else(|| inverse_laplace_bessel_i0(f, s, t))
+        .or_else(|| inverse_laplace_bessel_order_one(f, s, t))
     {
         return match equal(&laplace_transform(&result, t, s)?, f) {
             ZeroTest::Certified { equal: true, .. } => Some(result),
@@ -11613,6 +11614,106 @@ fn inverse_laplace_bessel_i0(f: &CasExpr, s: &str, t: &str) -> Option<CasExpr> {
         scaled_term(alpha, tvar).exp() * growth
     };
     Some(scaled_term(coefficient, unscaled))
+}
+
+/// The unique square-root radicand in `expr`. Repeated occurrences of the same
+/// root are accepted; a second distinct root declines so parameter discovery
+/// cannot silently choose one branch-bearing atom over another.
+fn unique_sqrt_radicand(expr: &CasExpr) -> Option<&CasExpr> {
+    fn visit<'a>(expr: &'a CasExpr, found: &mut Option<&'a CasExpr>) -> Option<()> {
+        match expr {
+            CasExpr::Const(_) | CasExpr::Var(_) => {}
+            CasExpr::Add(items) | CasExpr::Mul(items) => {
+                for item in items {
+                    visit(item, found)?;
+                }
+            }
+            CasExpr::Neg(inner) | CasExpr::Pow(inner, _) => visit(inner, found)?,
+            CasExpr::Div(numerator, denominator) => {
+                visit(numerator, found)?;
+                visit(denominator, found)?;
+            }
+            CasExpr::Unary(UnaryFunc::Sqrt, radicand) => {
+                if found.is_some_and(|prior| prior != radicand.as_ref()) {
+                    return None;
+                }
+                *found = Some(radicand);
+                visit(radicand, found)?;
+            }
+            CasExpr::Unary(_, argument) => visit(argument, found)?,
+        }
+        Some(())
+    }
+
+    let mut found = None;
+    visit(expr, &mut found)?;
+    found
+}
+
+/// Exact rational `c` such that `value = c·basis` in the rational-function-over-
+/// opaque-atoms fragment. This is discovery only: the public inverse route still
+/// replays the complete forward transform through the zero-test before returning.
+fn rational_scale_between(value: &CasExpr, basis: &CasExpr) -> Option<Rational> {
+    let ratio = normalize_rational(&(value.clone() / basis.clone()))?.reduced()?;
+    let numerator = multipoly_as_constant(&ratio.num)?;
+    let denominator = multipoly_as_constant(&ratio.den)?;
+    numerator.checked_div(denominator)
+}
+
+/// Invert the exact order-one Bessel families by discovering the unique quadratic
+/// radical, reconstructing the rational shift/frequency, and accepting only a
+/// rational multiple of the corresponding public forward transform:
+///
+/// - `L{e^{alpha·t}J₁(beta·t)} = ((√((s−alpha)²+beta²)−(s−alpha))/beta)
+///   / √((s−alpha)²+beta²)`;
+/// - `L{e^{alpha·t}I₁(beta·t)} = (((s−alpha)−√((s−alpha)²−beta²))/beta)
+///   / √((s−alpha)²−beta²)`.
+///
+/// `alpha`, `beta`, and the outer scale must all be rational, with `beta != 0`.
+/// The caller independently certifies the reconstructed complete input.
+fn inverse_laplace_bessel_order_one(f: &CasExpr, s: &str, t: &str) -> Option<CasExpr> {
+    let radicand = unique_sqrt_radicand(f)?;
+    let quadratic = normalize(radicand)?.to_univariate(s)?;
+    if poly::rat_degree(&quadratic)? != 2 {
+        return None;
+    }
+    let lead = *quadratic.get(2)?;
+    let p_coeff = quadratic
+        .get(1)
+        .copied()
+        .unwrap_or_else(Rational::zero)
+        .checked_div(lead)?;
+    let q_coeff = quadratic
+        .first()
+        .copied()
+        .unwrap_or_else(Rational::zero)
+        .checked_div(lead)?;
+    let alpha = p_coeff.checked_div(Rational::integer(-2))?;
+    let centered_constant = q_coeff.checked_sub(alpha.checked_mul(alpha)?)?;
+    let (modified, beta_squared) = match centered_constant.numerator().cmp(&0) {
+        core::cmp::Ordering::Greater => (false, centered_constant),
+        core::cmp::Ordering::Less => (true, centered_constant.checked_neg()?),
+        core::cmp::Ordering::Equal => return None,
+    };
+    let beta = rational_sqrt(beta_squared)?;
+    if beta.is_zero() {
+        return None;
+    }
+
+    let tvar = CasExpr::var(t);
+    let core = if modified {
+        scaled_term(beta, tvar.clone()).bessel_i(1)
+    } else {
+        scaled_term(beta, tvar.clone()).bessel_j(1)
+    };
+    let basis = if alpha.is_zero() {
+        core
+    } else {
+        scaled_term(alpha, tvar).exp() * core
+    };
+    let transform = laplace_transform(&basis, t, s)?;
+    let scale = rational_scale_between(f, &transform)?;
+    Some(scaled_term(scale, basis))
 }
 
 /// `L⁻¹{(c·s+d)/(a₂·s²+a₁·s+a₀)}` for an **irreducible** quadratic (no real poles)
@@ -20256,6 +20357,123 @@ mod tests {
                 "t"
             )
             .is_none()
+        );
+    }
+
+    #[test]
+    fn inverse_laplace_order_one_bessel_pairs() {
+        let s = || v("s");
+        let t = || v("t");
+        for scale in [
+            Rational::integer(1),
+            Rational::integer(2),
+            Rational::integer(-2),
+            Rational::new(1, 2),
+        ] {
+            for shift in [
+                Rational::integer(-1),
+                Rational::zero(),
+                Rational::integer(3),
+            ] {
+                for modified in [false, true] {
+                    let input_core = if modified {
+                        (CasExpr::Const(scale) * t()).bessel_i(1)
+                    } else {
+                        (CasExpr::Const(scale) * t()).bessel_j(1)
+                    };
+                    let function = if shift.is_zero() {
+                        input_core
+                    } else {
+                        (CasExpr::Const(shift) * t()).exp() * input_core
+                    };
+                    let transform = laplace_transform(&function, "t", "s")
+                        .unwrap_or_else(|| panic!("missing order-one transform for {function}"));
+                    let inverse = inverse_laplace(&transform, "s", "t")
+                        .unwrap_or_else(|| panic!("missing order-one inverse for {transform}"));
+                    // The quadratic radical determines |beta|; choose the positive
+                    // frequency and absorb odd parity at a negative input scale into
+                    // the outer coefficient.
+                    let (canonical_scale, parity) = if scale.numerator() < 0 {
+                        (scale.checked_neg().unwrap(), CasExpr::int(-1))
+                    } else {
+                        (scale, CasExpr::int(1))
+                    };
+                    let canonical_core = if modified {
+                        (CasExpr::Const(canonical_scale) * t()).bessel_i(1)
+                    } else {
+                        (CasExpr::Const(canonical_scale) * t()).bessel_j(1)
+                    };
+                    let canonical = if shift.is_zero() {
+                        parity * canonical_core
+                    } else {
+                        parity * (CasExpr::Const(shift) * t()).exp() * canonical_core
+                    };
+                    assert_equal(&inverse, &canonical);
+                }
+            }
+        }
+
+        let j_root = (s().pow(2) + CasExpr::int(1)).sqrt();
+        assert_equal(
+            &inverse_laplace(&(CasExpr::int(1) - s() / j_root), "s", "t")
+                .expect("expanded J1 spelling"),
+            &t().bessel_j(1),
+        );
+        let i_root = (s().pow(2) - CasExpr::int(1)).sqrt();
+        assert_equal(
+            &inverse_laplace(&(s() / i_root - CasExpr::int(1)), "s", "t")
+                .expect("expanded I1 spelling"),
+            &t().bessel_i(1),
+        );
+        let scaled_function = CasExpr::int(-3)
+            * (CasExpr::int(2) * t()).exp()
+            * (CasExpr::rat(1, 2) * t()).bessel_j(1);
+        let scaled_transform = laplace_transform(&scaled_function, "t", "s").unwrap();
+        assert_equal(
+            &inverse_laplace(&scaled_transform, "s", "t").expect("outer-scaled J1 pair"),
+            &scaled_function,
+        );
+    }
+
+    #[test]
+    fn inverse_laplace_order_one_bessel_declines() {
+        let s = || v("s");
+        let t = || v("t");
+        let j2 = laplace_transform(&t().bessel_j(2), "t", "s").unwrap();
+        let i2 = laplace_transform(&t().bessel_i(2), "t", "s").unwrap();
+        assert!(inverse_laplace(&j2, "s", "t").is_none());
+        assert!(inverse_laplace(&i2, "s", "t").is_none());
+
+        let irrational_root = (s().pow(2) + CasExpr::int(2)).sqrt();
+        assert!(
+            inverse_laplace(
+                &((irrational_root.clone() - s()) / irrational_root),
+                "s",
+                "t"
+            )
+            .is_none()
+        );
+        let wrong_numerator_root = (s().pow(2) + CasExpr::int(1)).sqrt();
+        assert!(
+            inverse_laplace(
+                &((wrong_numerator_root.clone() - CasExpr::int(2) * s()) / wrong_numerator_root),
+                "s",
+                "t"
+            )
+            .is_none()
+        );
+        assert!(
+            inverse_laplace(
+                &(CasExpr::int(1) / (s().pow(2) + CasExpr::int(1)).sqrt()
+                    + CasExpr::int(1) / (s().pow(2) + CasExpr::int(4)).sqrt()),
+                "s",
+                "t"
+            )
+            .is_none()
+        );
+        let zero_frequency = s().pow(2).sqrt();
+        assert!(
+            inverse_laplace(&((zero_frequency.clone() - s()) / zero_frequency), "s", "t").is_none()
         );
     }
 

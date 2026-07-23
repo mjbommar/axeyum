@@ -13,15 +13,14 @@ elsewhere in `docs/plan/`). Read this file first when resuming.
   [multi-agent operations guide](../contributor-guide/multi-agent-operations.md):
   work only in the dedicated CAS worktree on an `agent/cas/*` branch, push that
   branch, and leave `main` to the integration owner. The current increment is
-  `agent/cas/modified-bessel-laplace`, stacked on `e837115a` (integrated into
-  `main` by `278668e1`); do not rebase it onto `main` ahead of the integration
-  owner.
-- **Tests:** `539` unit + `147` doctests, **all green**, warning-denied workspace
+  `agent/cas/order-one-bessel-inverse-laplace`, based on integration parent
+  `1e3bcf20`; do not rebase it onto `main` ahead of the integration owner.
+- **Tests:** `541` unit + `147` doctests, **all green**, warning-denied workspace
   all-target/all-feature Clippy-clean, strict stable/nightly rustdoc-green,
   wasm-green, links-green, and whitespace-clean.
 - **Source of truth for capabilities:** `docs/research/10-cas/README.md`
   (capability table) and `docs/research/10-cas/diary.md` (chronological entries;
-  latest is **Entry 37aef**). Keep both in sync when landing features.
+  latest is **Entry 37af0**). Keep both in sync when landing features.
 - **Method that works:** empirical **gap-probing** (below). It found every recent
   feature *and* a serious infinite-hang regression.
 
@@ -341,6 +340,29 @@ orders `0..=255`), and Stirling-composed raw moments (regressed for orders
   radicals decline. No public expression head, operator, backend, evidence
   format, or logic fragment changed, so no ADR is required.
 
+**Exact rational-scale/shift order-one Bessel inverse Laplace pairs**
+- A fifth timeout-bounded broad probe compared the handoff-ranked inverse
+  family against adjacent surfaces. Unit/scaled/shifted `J₁` and `I₁`, plus
+  order-two controls, all declined. Bessel Maclaurin series, zero limits, and
+  elementary Bessel antiderivatives also declined and remain measured follow-
+  ups. In contrast, two rational-trigonometric Fourier families and exact
+  Gaussian/rational integrating-factor ODE controls were already green.
+- `inverse_laplace_bessel_order_one` finds exactly one distinct square-root
+  atom, normalizes its quadratic radicand to recover the rational shift and
+  positive rational frequency, and constructs the matching `J₁` or `I₁`
+  candidate. The complete input must reduce to a rational multiple of that
+  candidate's public `laplace_transform`; the outer `inverse_laplace` gate then
+  independently repeats the whole forward transform and exact zero-test before
+  returning. Discovery is therefore not acceptance.
+- Regressions cover both families over positive/negative integer and half
+  frequencies, three shifts, expanded unit spellings, and an independent outer
+  scale. Negative frequencies canonicalize to a positive frequency plus the
+  odd-parity outer sign. Order two, irrational frequency, a malformed linear
+  numerator, two distinct radicals, and zero frequency decline. SymPy
+  independently agrees on unit, integer/half-frequency, and shifted formulas.
+  No new expression head, public operator, backend, evidence format, or logic
+  fragment changed, so no ADR is required.
+
 ---
 
 ## 5. Zeilberger / WZ — how it works and where to extend
@@ -593,32 +615,43 @@ semantics changed.
 
 Ordered roughly by value:
 
-1. **Resume broad, timeout-bounded gap probing.** The moment families now have
+1. **Bessel Maclaurin-series and zero-limit follow-up.** The fifth broad probe
+   measured `series(Jₙ(x))`, `series(Iₙ(x))` for orders 0--2 and the limits
+   `J₁(x)/x`, `I₁(x)/x` at zero as consistent declines. The existing public
+   heads and rational coefficient domain can represent the exact series; add a
+   bounded coefficient recurrence plus an independent ODE/recurrence scenario,
+   and preserve honest overflow/order declines.
+2. **Bessel antiderivative follow-up.** The same probe measured `J₁`, `I₁`,
+   `xJ₀`, and `xI₀` (including rational argument scales) as declines. Start with
+   the direct derivative pairs and require the normal public differentiate-and-
+   check certificate; do not add recurrence rewriting unless it is separately
+   value-preserving and termination-safe.
+3. **Resume broad, timeout-bounded gap probing.** The moment families now have
    explicit resource boundaries: direct order 256 needs `Γ(257)`, raw order 36
    needs public coefficients beyond `i128`, and repeated-quadratic inverse
    Laplace multiplicity 8 exceeds checked-`i128` normalization at
    `t⁷cos(βt)`. Extending these requires a deliberate resource/data-model
    decision rather than another local cancellation. Fixed-shift `r=8` remains
    a focused exact-growth candidate if a concrete use needs it.
-2. **Higher-order inverse Bessel forms.** Forward `Jₙ` and `Iₙ` are now exact
-   for every public order, but inverse square-root recognition deliberately
-   stops at `J₀`/`I₀`. Probe the explicit order-one forms first and retain the
-   mandatory full forward round trip; do not infer general inverse support from
-   the forward tables alone.
-3. **Alternating series** `∑(−1)ᵏ/k = −ln2`, `∑(−1)ᵏ/(2k+1)=π/4−…`, Dirichlet
+4. **Higher-order inverse Bessel forms.** Forward `Jₙ` and `Iₙ` are exact for
+   every public order, while inverse recognition now deliberately stops at
+   order one. Probe the explicit order-two forms next and retain the mandatory
+   full forward round trip; do not infer general inverse support from the
+   forward tables alone.
+5. **Alternating series** `∑(−1)ᵏ/k = −ln2`, `∑(−1)ᵏ/(2k+1)=π/4−…`, Dirichlet
    eta `η(s)`. **Blocked by the data model**: `(−1)ᵏ` has no clean real
    representation (`geometric_power(−1)` = `exp(k·ln(−1))`, complex `ln`). Would
    need a dedicated alternating-sign representation or a complex extension.
-4. **Continue gap-probing** — still productive. Areas not yet swept much:
+6. **Continue gap-probing** — still productive. Areas not yet swept much:
    Fourier and additional inverse-transform families, 2nd-order variable-coeff
    ODEs, PDE separation, richer assumptions/piecewise behavior, elliptic
    integrals, and `bessely`/`besselk` (second-kind / modified-second-kind, via
    the proven indexed Bessel-head pattern but requiring log-singular numerics).
-5. **Minor display nits** (value-correct, cosmetic): denominator rationalization
+7. **Minor display nits** (value-correct, cosmetic): denominator rationalization
    `1/√3→√3/3` (doesn't fit the size-gated simplify cleanly); `L{t·eᵗ}` shows
    `−(−1/(s−1)²)` for some internal structures (the manually-built structure folds
    fine — a subtle structural mismatch worth 20 min if it bugs you).
-6. **One-sided limits** (`lim_{x→0⁺} √x·ln x = 0`) — the limit API is two-sided;
+8. **One-sided limits** (`lim_{x→0⁺} √x·ln x = 0`) — the limit API is two-sided;
    `√x` isn't defined for `x<0` so the two-sided limit legitimately declines.
 
 ---
@@ -665,9 +698,9 @@ esac
 export AXEYUM_CAS_TMP
 trap 'find "$AXEYUM_CAS_TMP" -depth -delete' EXIT
 git rev-parse --abbrev-ref HEAD        # → agent/cas/...
-git merge-base --is-ancestor e837115a HEAD
+git merge-base --is-ancestor 1e3bcf20 HEAD
 CARGO_BUILD_JOBS=1 TMPDIR="$AXEYUM_CAS_TMP" cargo test -p axeyum-cas --jobs 1
-# → 539 unit + 147 doctests green
+# → 541 unit + 147 doctests green
 ```
 Then: read `docs/research/10-cas/diary.md` tail for the latest context, and pick
 up from §6 or resume the gap-probing loop. Push the green owned topic branch;

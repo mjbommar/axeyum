@@ -388,6 +388,21 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-22 — exact order-one Bessel inverse Laplace pairs.** A fifth broad,
+  timeout-bounded probe found that rational-trigonometric Fourier cases and
+  representative Gaussian/rational integrating-factor ODEs already succeed,
+  while every tested order-one `J₁`/`I₁` inverse pair declined. The inverse
+  route now discovers one exact quadratic radical, reconstructs its rational
+  shift and positive frequency, requires the complete input to be a rational
+  multiple of the corresponding public forward transform, and then retains the
+  existing whole-expression forward-transform plus zero-test certificate.
+  Unit, integer/half, signed-frequency, shifted, expanded-spelling, and outer-
+  scale cases pass across both families. Order two, irrational frequency,
+  malformed numerator, multiple radicals, and zero frequency still decline.
+  The full 541-unit/147-doctest suite passed (the thermally throttled unit gate
+  took 1308.60 s), together with warning-denied workspace all-target/all-feature
+  Clippy, strict stable/nightly rustdoc, WASM build, links, and whitespace checks.
+
 - **2026-07-22 — arbitrary-order modified-Bessel-`Iₙ` Laplace transforms and
   inverse `I₀`.** The existing rational-scale transform table now covers every
   public nonnegative modified-Bessel order using
@@ -7972,6 +7987,12 @@ plan is built and committed on the current branch:
 | P5.5 | External target, measured | **DONE (bounded v1, ADR-0323--0338):** authenticated Tock capture plus eight rechecked dual-DRAT proofs and six replayed controls, UNKNOWN=0, DISAGREE=0. Query time 12.700 s; fresh outer wall 50.745 s; peak RSS 1,256,496 KiB; zero OOM deltas. The committed case study compares exact target validation, universal coverage, trust, effort, artifact boundaries, and limits. No Tock bug was found, so no upstream issue is applicable. This is not a speed or whole-kernel claim. |
 
 ## Changelog
+
+- **2026-07-22 — Added exact order-one Bessel inverse Laplace pairs.** Exact
+  rational-scale/shift `J₁` and `I₁` transforms now invert through a structural
+  candidate finder plus the mandatory full public forward round trip. Broad-
+  probe controls and explicit malformed/unsupported declines bring the CAS
+  surface to 541 unit tests and 147 doctests.
 
 - **2026-07-22 — Added arbitrary-order modified-Bessel-`Iₙ` Laplace and
   inverse `I₀` pairs.** The rational-scale table now composes every public
