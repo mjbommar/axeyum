@@ -78,8 +78,8 @@ The current positive evidence remains valuable:
 - the selected official construct matrix has seven rows, six independently
   admitted rows, four computation-checked rows, and zero current transactional
   declines;
-- the local official-Lean solver-proof gate accepts 71/71 representative
-  generated modules; and
+- the current local official-Lean solver-proof gate accepts 70/70
+  representative generated modules after the FP trust-boundary correction; and
 - TL2.11-TL2.14 close strict positivity, recursive induction hypotheses,
   mutual groups, and nested-inductive expansion for their registered
   populations.
@@ -95,7 +95,9 @@ The current negative evidence is equally binding:
   `AXEYUM_LEAN_BIN` named an elan shim that had no default toolchain when the
   test changed working directory. The retained
   [job log](https://github.com/mjbommar/axeyum/actions/runs/29951909263/job/89031426984)
-  is a failed remote gate, not 71/71 remote credit.
+  is a failed remote gate, not current 70/70 remote credit. The workflow now
+  resolves the installed versioned executable and preflights it outside the
+  repository; the confirming remote rerun remains open.
 
 ## 3. What the SMT-LIB comparison teaches this roadmap
 
@@ -422,8 +424,8 @@ matrix” or “K3 parity for the selected certificate-tactic corpus.”
 The existing TL task graph remains authoritative. The complete-parity view
 groups it into reviewable waves:
 
-1. **P0 — contract and remote gate:** close TL0.3/TL0.5-TL0.8, fix the remote
-   Lean executable identity, extend the seeded U0-U9/A0-A11 registry into
+1. **P0 — contract and remote gate:** close TL0.3/TL0.5-TL0.8, remotely verify
+   the direct Lean executable identity, extend the seeded U0-U9/A0-A11 registry into
    complete population authorities, and make all status derive from evidence.
 2. **P1 — robust K0/K1:** close TL1 property/durability/API work,
    TL2.8-TL2.10, and generated TL2.15/TL2.16 breadth before broad libraries.
@@ -454,9 +456,10 @@ run.
 
 Before another broad implementation claim:
 
-1. repair the remote Lean job so `AXEYUM_LEAN_BIN` resolves to the installed
-   versioned executable from any working directory, then archive the first true
-   71/71 remote attestation, duration, RSS, and axiom summary;
+1. archive the first true remote run after the job's locally verified repair
+   makes `AXEYUM_LEAN_BIN` resolve to the installed versioned executable from
+   any working directory, including its
+   current 70/70 remote attestation, duration, RSS, and axiom summary;
 2. extend TL0.6's generated registry seed from bounded K0/K1 and selected-
    construct evidence to content-identified complete construct, source, tactic,
    project, editor, runtime, ecosystem, and platform authorities;

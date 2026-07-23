@@ -18,7 +18,8 @@ and Lean.” It supports three different readings:
    long-horizon system target. A follow-up records bounded local 71/71
    official-Lean source acceptance. The first corrected remote job has now
    failed before that sweep on executable/toolchain resolution, and exhaustive
-   acceptance remains open.
+   acceptance remains open. The workflow-side direct-executable repair is now
+   locally verified, but its remote confirmation is not yet evidence.
 
 The operational mistake would be to turn either “8 versus 8” or “not Z3/Lean
 parity” into a project-wide percentage. The roadmap must name the target and its
@@ -98,11 +99,15 @@ But the validation boundary is narrower than “Lean accepts it all”:
 - after replacing that Lake-only setup path, the first real local sweep accepted
   67/71 modules and rejected four quantified-BV exports; narrow real-inductive
   and elaborator-depth corrections then produced **71/71 accepted, zero skipped,
-  zero failed** under official Lean 4.30;
+  zero failed** under official Lean 4.30 at that revision;
+- the subsequent FP soundness repair revoked uncertified `Fpa2Bv` proof credit
+  from one QF_FP row and the QF_BVFP family. The current registered population
+  is **70/70 accepted, zero skipped, zero failed** under the same pinned Lean;
 - the first corrected main-branch remote job then failed before the
   representative sweep because its explicit Lean path resolved to an elan shim
   with no default toolchain outside the repository directory; this is a failed
-  operational gate, not remote 71/71 credit;
+  operational gate, not remote 71/71 credit. The workflow now resolves and
+  preflights the installed versioned executable; the remote rerun remains open;
 - the bounded kernel/import arc has since closed projection, arbitrary-
   precision Nat literals, strict positivity, recursive-indexed/reflexive
   induction hypotheses, atomic mutual groups, and nested-inductive expansion
@@ -129,7 +134,7 @@ profile, and a fail-closed Lean tactic/import path.
 | Selected p4dfa decision count | Tied 8/113, but only 6 jointly decided and two unique decisions each | Study complementary solved sets; do not claim solver parity |
 | General Z3 solving power | **Not measured** on a representative matched population | Finish durable official-style selection and run matched Z3/cvc5/Bitwuzla/Axeyum cells before assigning distance |
 | Z3-compatible product surface | Far: command/session/API and portfolio gaps are directly inventoried | Prioritize the ordered session contract and conformance, not another isolated theory seed |
-| Solver-proof export to Lean | Substantial implementation; local representative official-Lean acceptance is 71/71, remote and exhaustive acceptance are open | Archive a green remote attestation, then measure the exhaustive sweep without inflating representative coverage |
+| Solver-proof export to Lean | Substantial implementation; current local representative official-Lean acceptance is 70/70 after the FP trust-boundary correction, while historical 71/71 remains revision-scoped; remote and exhaustive acceptance are open | Archive a green remote attestation, then measure the exhaustive sweep without inflating representative coverage |
 | Declared Lean-core profile | Partial, with explicit kernel and assumption gaps | Build a differential profile; classify and discharge or explicitly retain all 65 ledgered assumptions |
 | Full Lean system | Far; not a solver milestone, but an accepted long-horizon native-system target | Keep it out of solver percentages; use the separate complete-parity contract and A0-A11/U0-U9 exits |
 
@@ -144,7 +149,7 @@ profile, and a fail-closed Lean tactic/import path.
 5. Keep production Z3 replacement **far** and attach that label to the measured
    command/session, robustness, and portfolio gaps.
 6. Archive the repaired non-skippable external-Lean job's first remote Lean
-   version, 71/71 attestation, duration, RSS, and axiom inventory.
+   version, current 70/70 attestation, duration, RSS, and axiom inventory.
 7. Separate official-Lean source acceptance from validation of asserted prelude
    mathematics; classify and independently discharge or retain the 65 ledgered
    assumptions.

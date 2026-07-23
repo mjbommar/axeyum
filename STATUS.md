@@ -83,20 +83,25 @@ QF_BV three-solver control (19/24 each). The public inventory's legacy
 contradictions of known statuses; the exact p4dfa overlap is 6 jointly decided,
 2 Axeyum-only, and 2 Z3-only. General Z3 solving-power distance is therefore
 unmeasured, while production compatibility remains demonstrably far. The
-required 71-family official-Lean solver-proof tier now bypasses the
+required official-Lean solver-proof tier now bypasses the
 Lake-only action, installs checksum-pinned elan, and fails closed on a missing
 binary or incomplete sweep. Its first real local run rejected four modules
 (67/71): three lost Bool/BV iota rules under opaque-inductive export and one hit
 Lean's default elaborator recursion depth. Narrow export corrections rerun at
-**71/71 accepted with two workers, zero skipped, zero failed**. The first
+**71/71 accepted with two workers, zero skipped, zero failed** at that revision.
+The later FP soundness repair revoked uncertified `Fpa2Bv` credit from one QF_FP
+row and the QF_BVFP family; a fresh pinned-Lean run now accepts the current
+**70/70** population with zero skips or failures. The first
 corrected run's Lean-worker phase took 6.8 s; a same-shape confirmation under
 different local load took 53.3 s, so neither is promoted as a performance
 claim. The standalone inductive test and missing-Lean negative control also
 pass. The first corrected remote job is now retained as a failed gate: it
 stopped before the representative sweep because `AXEYUM_LEAN_BIN` named an
 elan shim without a default toolchain outside the repository working directory.
-A true remote 71/71 attestation and archived duration/RSS remain open before
-sizing the scheduled exhaustive tier. See the
+The workflow now resolves the versioned executable with `elan which lean` and
+preflights it from a temporary directory; a true remote current-70/70
+attestation and archived duration/RSS remain open before sizing the scheduled
+exhaustive tier. See the
 [target evidence audit](docs/plan/parity-target-evidence-audit-2026-07-21.md).
 
 - **Strings (P2.7): Phase A is essentially DONE** — A.1a/b landed (first-class
@@ -383,6 +388,17 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-22 — the official-Lean representative gate now matches the FP
+  trust boundary.** The July 22 FP soundness repair had already made
+  `qf_fp_misc` and both QF_BVFP rows decline proof production because their
+  whole `Fpa2Bv` reductions are uncertified, but the 71-family registry still
+  invoked them. `qf_fp_misc` consumed more than 30 minutes in Rust-side proof
+  construction and `qf_bvfp_float_no_simp3` then failed the gate. The current
+  registry removes that unsupported QF_BVFP family and the non-representative
+  QF_FP row. Pinned Lean 4.30 accepts **70/70**, zero skipped, zero failed, in
+  the required two-worker/no-budget profile. Historical 71/71 remains scoped
+  to its pre-FP revision; it is not current certificate credit.
+
 - **2026-07-22 — TL0.7.3 immutable checkpointing is source-first
   preregistered; no store kill cell has run.** The
   [plan](docs/plan/lean-execution-store-tl0.7.3-plan-2026-07-22.md) reuses the
@@ -546,7 +562,7 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   and terminal gates remain at zero. TL0.6.2 has since closed the official
   event/check-level/platform/preset/filter/stage/rebootstrap profile
   derivation without executing tests; TL0.7/TL0.6.3 and TL0.3's true remote
-  71/71 executable-identity gate remain independently open.
+  current 70/70 executable-identity gate remain independently open.
 
 - **2026-07-22 — product-level cancellation carries raw squared-binomial
   moments through order 33.** Every even factor shared with the known
@@ -7636,6 +7652,13 @@ plan is built and committed on the current branch:
 | P5.5 | External target, measured | **DONE (bounded v1, ADR-0323--0338):** authenticated Tock capture plus eight rechecked dual-DRAT proofs and six replayed controls, UNKNOWN=0, DISAGREE=0. Query time 12.700 s; fresh outer wall 50.745 s; peak RSS 1,256,496 KiB; zero OOM deltas. The committed case study compares exact target validation, universal coverage, trust, effort, artifact boundaries, and limits. No Tock bug was found, so no upstream issue is applicable. This is not a speed or whole-kernel claim. |
 
 ## Changelog
+
+- **2026-07-22 — Reconciled the official-Lean gate with the FP soundness
+  boundary.** Removed the unsupported QF_BVFP reconstruction family and
+  `qf_fp_misc` row after the independent evidence layer had already revoked
+  their uncertified `Fpa2Bv` proof credit. The pathological 30-minute
+  collection path and fail-closed panic disappear; the exact pinned Lean 4.30
+  gate accepts the current 70/70 modules with zero skips and zero failures.
 
 - **2026-07-22 — Completed TL0.7.1's contract-only Lean execution authority.**
   Two explicit local lanes, twelve evidence-gated termination classes, seven

@@ -124,14 +124,17 @@ Again, there are distinct targets:
 
 - **Solver proof export:** substantial and useful today. Supported refutations
   become kernel-checked terms and self-contained Lean modules. The harness
-  registers 71 proof-family builders and CI is configured to send one module
-  per family to official Lean. A repaired checksum-pinned local run now records
-  **71/71 accepted, zero skipped, zero failed** after exposing and correcting
-  four hidden quantified-BV export failures. The first corrected remote job is
+  registers 70 proof-family builders and CI is configured to send one module
+  per family to official Lean. A fresh checksum-pinned local run records
+  **70/70 accepted, zero skipped, zero failed**. The earlier 71/71 population is
+  historical: the FP soundness repair correctly revoked uncertified `Fpa2Bv`
+  credit from one QF_FP row and the QF_BVFP family. The first corrected remote job is
   retained but earns no acceptance credit: it failed before the representative
   sweep because the explicit Lean path resolved to an elan shim without a
-  default toolchain outside the repository working directory. The exhaustive
-  every-module sweep is not a required per-change gate.
+  default toolchain outside the repository working directory. The workflow now
+  resolves the versioned executable and preflights it outside the repository;
+  the remote rerun remains open. The exhaustive every-module sweep is not a
+  required per-change gate.
 - **Lean-core compatibility:** partial. The in-tree kernel implements dependent
   core terms, universes, declarations, WHNF, definitional equality, proof
   irrelevance, useful inductives, recursors, iota reduction, dependent

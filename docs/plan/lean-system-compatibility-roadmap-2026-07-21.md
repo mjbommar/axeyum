@@ -20,12 +20,16 @@ Axeyum already has an independent, pure-Rust implementation of a meaningful
 Lean 4 **kernel-compatible checking slice**. It does not bundle Lean, call into
 Lean to type-check terms, or expose Lean FFI objects. Official Lean is an
 external differential oracle. On the current representative generated lane,
-official Lean 4.30 locally accepts 71/71 emitted modules. That result is real
-and useful, but it is evidence about a selected reconstruction surface, not
+official Lean 4.30 locally accepts 70/70 emitted modules. The earlier 71/71
+population is revision-scoped because the FP soundness repair revoked
+uncertified `Fpa2Bv` proof credit. The current result is real and useful, but it
+is evidence about a selected reconstruction surface, not
 parity with the Lean language or ecosystem. The first corrected remote job has
 since failed before reaching that sweep because the explicit executable path
 resolved to an unconfigured elan shim outside the repository working directory;
-it receives zero remote acceptance credit.
+it receives zero remote acceptance credit. The workflow now resolves and
+preflights the installed versioned executable independently of the working
+directory, but the confirming remote rerun remains open.
 
 The missing surface is not one bug called “Lean parity.” It is at least eight
 separate systems: import, kernel admission breadth, source parsing/macros,
@@ -68,7 +72,7 @@ must name which one it means.
 
 | Target | Meaning | Current bounded evidence | Status |
 |---|---|---|---|
-| Lean-source output | Axeyum renders `.lean` modules that official Lean accepts | fail-closed 71/71 representative-family gate | implemented on a selected reconstruction slice |
+| Lean-source output | Axeyum renders `.lean` modules that official Lean accepts | fail-closed current 70/70 representative-family gate; historical 71/71 before the FP trust-boundary correction | implemented on a selected reconstruction slice |
 | Independent Lean-core checking | Rust code implements names, universes, expressions, environments, reduction, definitional equality, type checking, and selected inductives | `axeyum-lean-kernel`, no runtime dependencies or `unsafe` | substantial selected slice, not complete Lean kernel admission |
 | Lean declaration import | consume definitions/theorems from an official versioned interchange and check them independently | Rust format-3.1 reader admits the official flat fixture as 8 checked declarations and direct-recursive `MiniNat`/`MiniList` as 11 more | initial flat/direct-recursive profiles implemented; broad imports open |
 | Lean language compatibility | parse, expand macros, elaborate overloaded/implicit source, run tactics, produce information trees | no Lean frontend implementation | absent |

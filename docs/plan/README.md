@@ -29,9 +29,11 @@ Start at the root [`PLAN.md`](../../PLAN.md) (map + standing rules) and
 - [`official-lean-ci-gate-audit-2026-07-21.md`](official-lean-ci-gate-audit-2026-07-21.md) —
   primary-source diagnosis of the Lake-action setup failure, checksum-pinned
   non-Lake installer, missing-binary fail-closed repair, initial 67/71 external
-  rejection result, narrow export corrections, bounded local 71/71 rerun, and
-  the first corrected remote attempt's working-directory-dependent elan-shim
-  failure before the representative sweep.
+  rejection result, narrow export corrections, bounded historical 71/71 rerun,
+  the post-FP-soundness 70/70 current gate, and the first corrected remote
+  attempt's working-directory-dependent elan-shim failure before the
+  representative sweep, plus the locally verified direct-executable repair
+  awaiting remote confirmation.
 - [`lean-system-compatibility-roadmap-2026-07-21.md`](lean-system-compatibility-roadmap-2026-07-21.md) —
   evidence-backed separation of independent kernel checking from the missing
   Lean frontend/workflow/mathlib surfaces, a real format-3.1 `lean4export`

@@ -55,6 +55,11 @@ if ! "$ELAN_HOME/bin/elan" toolchain list | grep -Fxq "$toolchain"; then
     "$ELAN_HOME/bin/elan" toolchain install "$toolchain"
 fi
 
-lean_version=$("$ELAN_HOME/bin/lean" --version)
-printf 'LEAN_INSTALL|elan=%s|elan_sha256=%s|toolchain=%s|lean=%s\n' \
-    "$elan_version" "$elan_sha256" "$toolchain" "$lean_version"
+lean_bin=$(ELAN_TOOLCHAIN="$toolchain" "$ELAN_HOME/bin/elan" which lean)
+if [[ ! -x "$lean_bin" ]]; then
+    echo "resolved Lean executable is not executable: $lean_bin" >&2
+    exit 1
+fi
+lean_version=$("$lean_bin" --version)
+printf 'LEAN_INSTALL|elan=%s|elan_sha256=%s|toolchain=%s|lean_bin=%s|lean=%s\n' \
+    "$elan_version" "$elan_sha256" "$toolchain" "$lean_bin" "$lean_version"
