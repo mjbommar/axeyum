@@ -383,6 +383,22 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-22 — certified weighted integer-order Bessel antiderivative family.**
+  Wave nine measured higher weighted antiderivatives against already-green
+  weighted Laplace controls and continuing order-three inverse-Laplace,
+  improper/limit `J₀`, and quadratic inverse-Z declines. The order-generic DLMF
+  identities now close `uⁿ⁺¹Jₙ(u)` / `uⁿ⁺¹Iₙ(u)` for rational-affine `u` and
+  variable-free factors through the explicit discovery cap `n=32`; every result
+  still passes the full public derivative and exact zero-test certificate, while
+  order 33 and wrong powers decline. Division-free recurrence equality now
+  covers every public `u32` order, including a checked `u32::MAX` regression.
+  Nested symbolic/reflected coverage also hardened variable-free-factor
+  extraction to flatten products recursively. The thermally managed
+  551-unit/147-doctest suite passed (1574.57 s for units), with workspace
+  warning-denied Clippy (42.14 s warm), stable/nightly rustdoc, WASM, links, and
+  whitespace green. Next: resume broad probing from the remaining measured
+  inverse-transform, Bessel asymptotic/improper, and quadratic inverse-Z gaps.
+
 - **2026-07-22 — certified weighted order-one Bessel antiderivatives.** The
   measured `u²J₁(u)` / `u²I₁(u)` gap now closes for rational-affine `u` and
   variable-free outer factors through candidates `u²J₂(u)/slope` and
@@ -396,9 +412,7 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   symbolic slopes, and reciprocal overflow decline. The thermally managed
   550-unit/147-doctest suite passed (1446.42 s for units), with workspace
   warning-denied Clippy (2m49s), stable/nightly rustdoc, WASM, links, and
-  whitespace green. Next: resume broad probing; higher weighted Bessel orders,
-  weighted transforms, asymptotics, improper `J₀`, and quadratic inverse Z
-  remain unclaimed or measured gaps.
+  whitespace green.
 
 - **2026-07-22 — certified additive radical-bearing inverse Laplace closure.**
   Wave seven measured same/distinct-radical and rational-plus-Bessel sums as a
@@ -8191,6 +8205,10 @@ plan is built and committed on the current branch:
   R1/R2 history, a new run/evidence root, universal 512 MiB Lean runtime stacks
   from pinned source semantics, and the measured tiered artifact store. It
   authorizes one process only after separately pushed implementation gates.
+- **2026-07-22 — Added the certified weighted integer-order Bessel family.**
+  Order-generic division-free recurrence equality plus capped discovery through
+  order 32, explicit order-33 declines, and nested symbolic-factor hardening
+  bring CAS to 551 units and 147 doctests.
 - **2026-07-22 — Added certified weighted order-one Bessel antiderivatives.**
   Bounded division-free order-two/three recurrence reduction closes rational-
   affine `u²J₁(u)` / `u²I₁(u)` through the unchanged differentiate-and-check

@@ -13,15 +13,15 @@ elsewhere in `docs/plan/`). Read this file first when resuming.
   [multi-agent operations guide](../contributor-guide/multi-agent-operations.md):
   work only in the dedicated CAS worktree on an `agent/cas/*` branch, push that
   branch, and leave `main` to the integration owner. The current increment is
-  `agent/cas/bessel-weighted-order-one-antiderivatives`, based on integration
-  parent `a6de705a`, with implementation commit `4dcf8621` (integrated by
-  `cef45a35`); do not rebase it onto `main` ahead of the integration owner.
-- **Tests:** `550` unit + `147` doctests, **all green**, warning-denied workspace
+  `agent/cas/gap-probe-wave-nine`, based on integration parent `7ea56666`, with
+  implementation commit `5d84ad4e` (integrated by `40e897ad`); do not rebase it
+  onto `main` ahead of the integration owner.
+- **Tests:** `551` unit + `147` doctests, **all green**, warning-denied workspace
   all-target/all-feature Clippy-clean, strict stable/nightly rustdoc-green,
   wasm-green, links-green, and whitespace-clean.
 - **Source of truth for capabilities:** `docs/research/10-cas/README.md`
   (capability table) and `docs/research/10-cas/diary.md` (chronological entries;
-  latest is **Entry 37af6**). Keep both in sync when landing features.
+  latest is **Entry 37af7**). Keep both in sync when landing features.
 - **Method that works:** empirical **gap-probing** (below). It found every recent
   feature *and* a serious infinite-hang regression.
 
@@ -467,6 +467,25 @@ orders `0..=255`), and Stirling-composed raw moments (regressed for orders
   No public head, operator, backend, evidence format, or logic fragment changed,
   so no ADR is required.
 
+**Certified weighted integer-order Bessel antiderivative family**
+- Wave nine measured weighted order-two/three antiderivatives against already-
+  green polynomial-weighted Bessel Laplace controls and continuing declines for
+  order-three inverse Laplace, improper/limit `J₀`, and quadratic inverse Z.
+- The order-generic DLMF 10.6.6 / 10.29.4 identities now drive
+  `∫c·uⁿ⁺¹Jₙ(u)=(c/slope)uⁿ⁺¹Jₙ₊₁(u)` and the corresponding `I` family for
+  rational-affine `u`, variable-free `c`, and the explicit discovery cap
+  `0≤n≤32`. Every candidate still passes the complete public derivative and
+  exact zero-test certificate; order 33 and wrong powers decline.
+- Division-free recurrence equality is safe for every public `u32` order: each
+  finite descriptor rewrites only an exact argument multiple, lowers the target
+  atom, and introduces only lower orders. The recurrence coefficient is widened
+  to checked `i128` before doubling, and regressions reach `u32::MAX`.
+- J/I orders 2, 3, 8, 16, and 32, shifts, reflection, nested symbolic factors,
+  derivative replay, and definite FTC pass. The nested symbolic/reflected case
+  also hardened variable-free-factor extraction to flatten multiplication
+  recursively rather than depend on tree association. No public head, operator,
+  backend, evidence format, or logic fragment changed, so no ADR is required.
+
 ---
 
 ## 5. Zeilberger / WZ — how it works and where to extend
@@ -719,10 +738,10 @@ semantics changed.
 
 Ordered roughly by value:
 
-1. **Resume broad, timeout-bounded gap probing.** The direct order-one and
-   weighted order-zero/order-one Bessel antiderivative pairs are closed through
-   the normal certificate path. Higher weighted orders remain deliberately
-   unclaimed. The moment families retain explicit resource boundaries:
+1. **Resume broad, timeout-bounded gap probing.** Direct order-one and weighted
+   Bessel antiderivatives through order 32 are closed through the normal
+   certificate path; order 33 is the explicit discovery boundary. The moment
+   families retain separate explicit resource boundaries:
    direct order 256 needs `Γ(257)`, raw order 36 needs public coefficients beyond
    `i128`, and repeated-quadratic inverse Laplace multiplicity 8 exceeds
    checked-`i128` normalization at `t⁷cos(βt)`. Extending these requires a
@@ -794,9 +813,9 @@ esac
 export AXEYUM_CAS_TMP
 trap 'find "$AXEYUM_CAS_TMP" -depth -delete' EXIT
 git rev-parse --abbrev-ref HEAD        # → agent/cas/...
-git merge-base --is-ancestor 4dcf8621 HEAD
+git merge-base --is-ancestor 5d84ad4e HEAD
 CARGO_BUILD_JOBS=1 TMPDIR="$AXEYUM_CAS_TMP" cargo test -p axeyum-cas --jobs 1
-# → 550 unit + 147 doctests green
+# → 551 unit + 147 doctests green
 ```
 Then: read `docs/research/10-cas/diary.md` tail for the latest context, and pick
 up from §6 or resume the gap-probing loop. Push the green owned topic branch;
