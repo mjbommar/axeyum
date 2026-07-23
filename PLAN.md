@@ -437,8 +437,15 @@ state.
 > authority and validates all 86 field occurrences before projection as 65
 > SHA-256 values, three sealed enums, nine nonnegative integers, or nine
 > nonempty strings; fully resealed v1 normalizers reject. Paired cells must cite
-> a registered same-layer current contract. Raw extractors and semantic
-> canonicalizers remain zero, so this still creates no observed pair or credit.
+> a registered same-layer current contract. R5 now versions that authority
+> again, adds the missing A10 mathlib-ecosystem projection route, and requires
+> each cell axis to be one of the selected contract's sealed `applicable_axes`.
+> Ten contracts cover A0--A11 through 15 exact applicability pairs, select 76
+> semantic fields, justify 20 ignored rules, and validate 96 typed occurrences;
+> all 105 unregistered contract/axis pairs reject after full resealing. This is
+> normalizer-axis coverage, not a mathlib population or completed axis. Raw
+> extractors and semantic canonicalizers remain zero, so it still creates no
+> observed pair or credit.
 > Next: complete accepted TL0.6.3/TL0.6.4 parents, derive the exact
 > layer-expanded obligations, and validate raw-to-canonical adapters before
 > authorizing a native attempt.

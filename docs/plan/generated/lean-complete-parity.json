@@ -95,6 +95,10 @@
       "sha256": "16fee574d4c206a6a0103c88d7db2cb87db940a741bd3de28f4f05e4ee974b33"
     },
     {
+      "path": "docs/plan/lean-u2-matched-execution-tl0.6.5-axis-coverage-r5-result-2026-07-23.md",
+      "sha256": "3986845b3ec69d4c89475d56dbbcd0af7a84067397079237e1d49e79a3de7f1b"
+    },
+    {
       "path": "docs/plan/lean-u2-matched-execution-tl0.6.5-content-seals-r1-result-2026-07-23.md",
       "sha256": "4e51df229d2425f8e4ed1846d75d4428e7e461cb0788f75d57ea779676757f18"
     },
@@ -112,7 +116,7 @@
     },
     {
       "path": "docs/plan/lean-u2-matched-execution-tl0.6.5-plan-2026-07-23.md",
-      "sha256": "71c7b4863392d7649734f9c88f52e88c5d64efbb4364cedbe2d2f93734de624a"
+      "sha256": "e70d0182e3dcebf1a35cf90be2e2c5cc4f19b3f4f38a4dfc3c04d38370387b5e"
     },
     {
       "path": "docs/plan/lean-u2-matched-execution-tl0.6.5-typed-observables-r4-plan-2026-07-23.md",
@@ -388,7 +392,7 @@
     },
     {
       "path": "docs/plan/lean4-complete-parity-contract-2026-07-22.md",
-      "sha256": "710c9f2b773afc0dfdff2f50496652f5a30ae63b026ac0ea0778c81f258561e0"
+      "sha256": "dba6941609484e2169a2b7e6f95b22e7c82203648e7db8d545fda1b90bcde62e"
     },
     {
       "path": "docs/plan/lean4-complete-parity-roadmap-2026-07-22.md",
@@ -396,7 +400,7 @@
     },
     {
       "path": "scripts/gen-lean-complete-parity.py",
-      "sha256": "1103b0d0bdbfc595ffb55ec3b3cc1d121e64716e39015ba04d0080dcc4731b4b"
+      "sha256": "5095dc4c18ba1be96e7b165d3fbe700e73e71f350493df8c93ade46e99e63d59"
     },
     {
       "path": "scripts/gen-lean-execution-evidence.py",
@@ -504,7 +508,7 @@
     },
     {
       "path": "scripts/tests/test_lean_complete_parity.py",
-      "sha256": "538997d2c9c00872536168b85986a3dde04fdace2d49dfcbdf216423a7141ae5"
+      "sha256": "762805016badbd354576d3c9d9b19c11601daf5c0444aa976ce77445db8320b7"
     },
     {
       "path": "scripts/tests/test_lean_execution_acceptance.py",

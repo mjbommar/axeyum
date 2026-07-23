@@ -380,8 +380,8 @@ resolved the comparison's normalizer through nine content-bound layer
 contracts. The subsequent source-first
 [R4 plan](lean-u2-matched-execution-tl0.6.5-typed-observables-r4-plan-2026-07-23.md),
 [accepted bounded result](lean-u2-matched-execution-tl0.6.5-typed-observables-r4-result-2026-07-23.md),
-current [v2 authority](lean-u2-normalization-contracts-v2.json), and generated
-[summary](generated/lean-u2-normalization-contracts.md) validate all 86 field
+and immutable [v2 authority](lean-u2-normalization-contracts-v2.json) validate
+all 86 field
 occurrences before projection: 65 SHA-256 identities, three sealed enums, nine
 nonnegative integers, and nine nonempty strings. The 68 semantic fields and 18
 narrowly justified ignored rules are unchanged. Missing, unknown, malformed,
@@ -389,6 +389,18 @@ v1/invented, cross-layer, and stale-seal inputs reject; exhaustive controls
 mutate every semantic and ignored field. This is contract/projection evidence
 only: raw Lean/Axeyum extractors, semantic canonicalizers, post-parent
 obligations, and real pairs remain absent.
+
+The source-first
+[R5 axis-coverage plan](lean-u2-matched-execution-tl0.6.5-axis-coverage-r5-plan-2026-07-23.md),
+[accepted bounded result](lean-u2-matched-execution-tl0.6.5-axis-coverage-r5-result-2026-07-23.md),
+current [v3 authority](lean-u2-normalization-contracts-v3.json), and generated
+[summary](generated/lean-u2-normalization-contracts.md) additionally enforce
+each paired cell's axis against its selected contract. The ten contracts cover
+all A0--A11 through 15 registered contract/axis occurrences; all 105 other
+pairs reject after complete resealing. The added A10 mathlib-ecosystem contract
+raises the authority to 76 semantic fields, 20 ignored rules, and 96 typed
+occurrences. It is only a profile-level projection route: no mathlib
+population, observation, matched pair, completed axis, or parity credit exists.
 
 ### 7.1 TL0.7.1 execution-evidence checkpoint
 

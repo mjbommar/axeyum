@@ -985,6 +985,10 @@ class LeanCompleteParityTests(unittest.TestCase):
             source_paths,
         )
         self.assertIn(
+            "docs/plan/lean-u2-matched-execution-tl0.6.5-axis-coverage-r5-result-2026-07-23.md",
+            source_paths,
+        )
+        self.assertIn(
             "docs/plan/lean-u2-native-header-contract-m2.1-v1.json",
             source_paths,
         )

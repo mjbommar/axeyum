@@ -460,13 +460,21 @@ Start at the root [`PLAN.md`](../../PLAN.md) (map + standing rules) and
   subsequent source-first
   [R4 plan](lean-u2-matched-execution-tl0.6.5-typed-observables-r4-plan-2026-07-23.md)
   and [accepted bounded result](lean-u2-matched-execution-tl0.6.5-typed-observables-r4-result-2026-07-23.md)
-  publish the current [v2 authority](lean-u2-normalization-contracts-v2.json)
-  and generated [summary](generated/lean-u2-normalization-contracts.md): nine
+  publish the immutable [v2 authority](lean-u2-normalization-contracts-v2.json): nine
   sealed layer contracts select 68 semantic fields, justify 18 ignored-field
   rules, and validate all 86 value occurrences as 65 SHA-256 identities, three
   enums, nine nonnegative integers, or nine nonempty strings before projection.
-  The paired-cell validator rejects missing/unknown or malformed values,
-  invented/v1 IDs, cross-layer reuse, and stale normalizer seals. Raw
+  The subsequent source-first
+  [R5 axis-coverage plan](lean-u2-matched-execution-tl0.6.5-axis-coverage-r5-plan-2026-07-23.md)
+  and [accepted bounded result](lean-u2-matched-execution-tl0.6.5-axis-coverage-r5-result-2026-07-23.md)
+  publish the current [v3 authority](lean-u2-normalization-contracts-v3.json)
+  and generated [summary](generated/lean-u2-normalization-contracts.md): ten
+  contracts select 76 semantic fields, justify 20 ignored rules, validate 96
+  typed occurrences, and cover all A0--A11 through 15 exact applicability
+  pairs. The paired-cell validator rejects missing/unknown or malformed
+  values, invented/v1/v2 IDs, cross-layer reuse, stale seals, and all 105
+  unregistered contract/axis pairs after full resealing. The new A10
+  mathlib-ecosystem route is not a mathlib population or completed axis. Raw
   extractors and semantic canonicalizers remain zero. It
   authorizes no process and creates no native outcome, pair, performance row,
   U2 promotion, or parity credit.

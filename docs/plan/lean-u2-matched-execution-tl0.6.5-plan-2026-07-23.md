@@ -265,11 +265,16 @@ a fully resealed v1 normalizer. It remains offline and non-crediting.
 
 The subsequent source-first
 [R5 axis-coverage plan](lean-u2-matched-execution-tl0.6.5-axis-coverage-r5-plan-2026-07-23.md)
-records two remaining offline defects before implementation: paired-cell
-validation does not enforce a contract's sealed `applicable_axes`, and the v2
-registry has no normalizer for terminal A10. R5 preregisters a versioned
-mathlib-ecosystem contract, complete A0--A11 coverage, and exhaustive positive
-and negative axis/normalizer controls. It authorizes no process or outcome.
+identified two remaining offline defects: paired-cell validation did not
+enforce a contract's sealed `applicable_axes`, and the v2 registry had no
+normalizer for terminal A10. The accepted bounded
+[R5 result](lean-u2-matched-execution-tl0.6.5-axis-coverage-r5-result-2026-07-23.md)
+publishes the v3 authority with ten contracts, complete A0--A11 normalizer
+coverage, and 76 compared / 20 ignored / 96 typed field occurrences. All 15
+registered contract/axis pairs pass and all 105 unregistered pairs reject
+after full resealing. The new A10 mathlib-ecosystem contract is a projection
+route, not a mathlib population or completed axis. R5 remains offline and
+authorizes no process or outcome.
 
 An Axeyum timeout, resource exhaustion, or supported decline is a completed
 typed Axeyum execution and can therefore produce `official-only`. Total absence

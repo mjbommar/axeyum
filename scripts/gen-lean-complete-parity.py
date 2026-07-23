@@ -77,6 +77,12 @@ U2_NORMALIZATION_R5_PLAN = (
     / "plan"
     / "lean-u2-matched-execution-tl0.6.5-axis-coverage-r5-plan-2026-07-23.md"
 )
+U2_NORMALIZATION_R5_RESULT = (
+    ROOT
+    / "docs"
+    / "plan"
+    / "lean-u2-matched-execution-tl0.6.5-axis-coverage-r5-result-2026-07-23.md"
+)
 EXECUTION_EVIDENCE = ROOT / "docs" / "plan" / "lean-execution-evidence-v1.json"
 EXECUTION_PROCESS = ROOT / "docs" / "plan" / "lean-execution-process-v1.json"
 EXECUTION_STORE = ROOT / "docs" / "plan" / "lean-execution-store-v1.json"
@@ -1510,6 +1516,7 @@ def report_source_paths(data: dict[str, Any]) -> list[Path]:
         U2_NORMALIZATION_R4_PLAN,
         U2_NORMALIZATION_R4_RESULT,
         U2_NORMALIZATION_R5_PLAN,
+        U2_NORMALIZATION_R5_RESULT,
         EXECUTION_EVIDENCE,
         EXECUTION_PROCESS,
         EXECUTION_STORE,
