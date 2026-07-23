@@ -324,9 +324,18 @@ class LeanExecutionStoreContractTests(unittest.TestCase):
         self.assertEqual(manifest["parity_credit"], 0)
 
     def test_preregistered_source_identities_are_frozen(self) -> None:
+        historical_primitive = next(
+            row
+            for row in STORE.HISTORICAL_RESULT_SOURCE_INPUTS
+            if row["path"] == "scripts/smtcomp_repro/resume_fs.py"
+        )
+        self.assertEqual(
+            historical_primitive["sha256"],
+            "1968e7b6424c2dd9273bff5041e96fc21b83ec01b2205dcc840d5dc942be1aec",
+        )
         self.assertEqual(
             STORE.sha256_file(STORE.PRIMITIVE),
-            "1968e7b6424c2dd9273bff5041e96fc21b83ec01b2205dcc840d5dc942be1aec",
+            "b05c32185d75d5790f26ba25b6891c373712a565942400f4b08fa49bdc3c0ea6",
         )
         self.assertEqual(
             STORE.PREREGISTRATION_COMMIT,
@@ -395,6 +404,17 @@ class LeanExecutionStoreContractTests(unittest.TestCase):
                 ),
                 [],
             )
+            self.assertIn(
+                "kill cell source identity drift",
+                STORE.validate_process_evidence(
+                    process,
+                    target_path=target,
+                    phase=phase,
+                    evidence_directory=evidence,
+                    expected_worker_sha256=STORE.sha256_file(STORE.WORKER),
+                    expected_primitive_sha256="0" * 64,
+                ),
+            )
             relocated = copy.deepcopy(process)
             relocated_root = Path("/var/tmp/independent-axeyum-worktree")
             relocated["command"][1] = str(
@@ -454,6 +474,7 @@ class LeanExecutionStoreContractTests(unittest.TestCase):
 
     def test_historical_result_source_selection_is_exact(self) -> None:
         authority = json.loads(STORE.RESULT_AUTHORITY.read_bytes())
+        self.assertEqual(STORE.validate_result_authority(authority), [])
         self.assertEqual(
             authority["preregistration"]["implementation_revision"],
             STORE.HISTORICAL_IMPLEMENTATION_REVISION,

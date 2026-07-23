@@ -288,6 +288,20 @@ class LeanExecutionAcceptanceContractTests(unittest.TestCase):
             ACCEPTANCE.CURRENT_REPOSITORY_INPUTS["scripts/install-pinned-lean.sh"],
             "8a48e25ee2d2fb6d364dcbe0505b8a2fd660237e18e536d52117dc947d4c71ee",
         )
+        primitive_relative = "scripts/smtcomp_repro/resume_fs.py"
+        primitive = ACCEPTANCE.ROOT / primitive_relative
+        self.assertEqual(
+            ACCEPTANCE.FROZEN_REPOSITORY_INPUTS[primitive_relative],
+            "1968e7b6424c2dd9273bff5041e96fc21b83ec01b2205dcc840d5dc942be1aec",
+        )
+        self.assertEqual(
+            ACCEPTANCE.CURRENT_REPOSITORY_INPUTS[primitive_relative],
+            "b05c32185d75d5790f26ba25b6891c373712a565942400f4b08fa49bdc3c0ea6",
+        )
+        self.assertEqual(
+            ACCEPTANCE.sha256_file(primitive),
+            ACCEPTANCE.CURRENT_REPOSITORY_INPUTS[primitive_relative],
+        )
         original_sha256_file = ACCEPTANCE.sha256_file
         with mock.patch.object(
             ACCEPTANCE,
@@ -300,6 +314,19 @@ class LeanExecutionAcceptanceContractTests(unittest.TestCase):
         ):
             self.assertIn(
                 "frozen repository input drift: scripts/install-pinned-lean.sh",
+                ACCEPTANCE.validate_repository_inputs(),
+            )
+        with mock.patch.object(
+            ACCEPTANCE,
+            "sha256_file",
+            side_effect=lambda path: (
+                "0" * 64
+                if Path(path) == primitive
+                else original_sha256_file(Path(path))
+            ),
+        ):
+            self.assertIn(
+                f"frozen repository input drift: {primitive_relative}",
                 ACCEPTANCE.validate_repository_inputs(),
             )
         self.assertEqual(ACCEPTANCE.sha256_file(ACCEPTANCE.FLAT_SOURCE), ACCEPTANCE.FLAT_SOURCE_SHA256)
