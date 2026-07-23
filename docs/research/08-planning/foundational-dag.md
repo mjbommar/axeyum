@@ -304,6 +304,15 @@ Use this table as the planning checklist before declaring a fragment public.
 | Proof artifacts | Envelope ADR | N/A | Exportable DIMACS + DRAT text (`export_qf_bv_unsat_proof`) | Oracle-specific | DRAT checker (ADR-0011) + proof-producing core (ADR-0012) | DRAT (RUP+RAT) checked in-tree and re-checkable externally (drat-trim) |
 | Front door | n/a | n/a | `solve_smtlib`: SMT-LIB text → checked answer (ADR-0018) | via `solve` | `solve` routes any theory/quantifier mode; `solve_smtlib` adds the text path | Decision cross-checked against script `:status`; model replay inside `solve` |
 
+ADR-0357/0358 refine the quantifier row's infinite-domain SAT boundary. One
+leading block of at most 16 distinct `Int`/`Real` binders may carry a
+source-bound finite-profile UF-model certificate only when every binder occurs
+directly as a UF argument. The independent checker derives each binder's exact
+table-key representatives plus one fresh default representative and evaluates
+the complete Cartesian product under a 4,096-tuple cap. Search-proposed tuples
+are never evidence; malformed, unsupported, or over-cap shapes decline, and
+failed multi-binder SAT certification returns to E-matching.
+
 ADR-0123 refines the quantifier row's SAT boundary: Bool/Int/BV syntax may be
 traversed by the checked free-Boolean model evaluator, but BV predicates remain
 opaque. SAT is admitted only when a complete carried Boolean assignment makes

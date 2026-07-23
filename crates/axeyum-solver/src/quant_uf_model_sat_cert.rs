@@ -26,8 +26,9 @@ pub const QUANTIFIED_UF_BINDER_CAP: usize = 16;
 pub struct QuantifiedUfModelSatCertificate {
     /// Exact original quantified assertion covered by this certificate.
     pub assertion: TermId,
-    /// Exact source binder, redundantly recorded so stale/tampered certificates
-    /// fail closed before finite-profile evaluation.
+    /// Exact outer source binder, redundantly recorded so stale/tampered
+    /// certificates fail closed before finite-profile evaluation. The assertion
+    /// itself binds the complete leading prefix.
     pub binder: SymbolId,
 }
 

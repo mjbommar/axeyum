@@ -645,6 +645,18 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   is SAT-only; failed certification returns to existing E-matching rather than
   adding an implicit multi-variable refutation heuristic.
 
+- **2026-07-22 — implemented ADR-0358's bounded Cartesian quantified-UF
+  models.** `solve` now returns checked SAT for leading two-binder integer and
+  mixed integer/real almost-uninterpreted universals. The independent checker
+  reconstructs up to 16 distinct binders, per-binder exact UF positions and
+  representatives, and at most 4,096 Cartesian tuples; malformed prefixes,
+  interpreted/vacuous/unsupported binders, table violations, and both caps
+  decline. A conflicting ground point falls back to E-matching and remains
+  UNSAT. Focused MBQI is 18/18, solver library 894/894, evidence 69/69,
+  instantiation 15/15, ledger gates 2/2 and 12/12, and the new direct-Z3 matrix
+  agrees 64/64 (32 SAT / 32 UNSAT) with canonical replay. Next: finish
+  branch-wide gates, accept ADR-0358, and publish the topic branch.
+
 - **2026-07-22 — ADR-0356 S4 official selection identity is complete; S5 is
   deliberately not blocking solver functionality.** The accepted root
   `/nas3/data/axeyum/harness/official-selection-2026-sq/accepted-322adaa78396bf42d4660d12582e6db1cf2166a765bb912fdfb179975a9c9698`

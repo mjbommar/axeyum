@@ -346,7 +346,7 @@ NAS (shared, corpus read-only in practice):
 4. Treat the accepted S4 root as immutable. When the measurement lane resumes,
    implement only the bounded S5 E1b-admission handoff before repaired P0
    slices. The active solver capability checkpoint is
-   [`../checked-finite-profile-quantified-uf-models-2026-07-22.md`](../checked-finite-profile-quantified-uf-models-2026-07-22.md).
+   [`../checked-multi-binder-quantified-uf-models-2026-07-22.md`](../checked-multi-binder-quantified-uf-models-2026-07-22.md).
 5. Update `STATUS.md` and this file before handoff; push only a green topic
    branch for the integration owner.
 

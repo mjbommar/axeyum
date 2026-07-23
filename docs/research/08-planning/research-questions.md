@@ -235,6 +235,11 @@ Out of scope:
     `check_model` independently reconstructs every finite UF-table profile plus
     one all-default representative. Search-side sampling no longer receives
     public SAT credit, and unsupported preprocessing combinations decline.
+    Proposed [ADR-0358](../09-decisions/adr-0358-preregister-multi-binder-finite-profile-quantified-uf-models.md)
+    extends only that checked route to one leading block of at most 16 distinct
+    `Int`/`Real` binders. The checker derives per-binder representatives from
+    exact UF argument positions and replays their complete Cartesian product
+    under the existing 4,096 cap; declined SAT candidates return to E-matching.
     [ADR-0123](../09-decisions/adr-0123-checked-boolean-discharge-of-quantified-bv-closures.md)
     extends ADR-0107's syntax admission to Bool/Int/BV while keeping every
     non-reflexive BV predicate opaque. A carried complete free-Boolean model may

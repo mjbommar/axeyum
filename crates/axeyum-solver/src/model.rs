@@ -26,7 +26,7 @@ struct QuantifiedSatCertificates {
 /// a separate list sorted by [`FuncId`]. Restricted quantified results may
 /// additionally carry checked Skolem certificates (ADR-0096/0121), checked
 /// free-Boolean universal models (ADR-0107), or checked finite-profile UF models
-/// (ADR-0357); use the full-profile `check_model` entry point rather than
+/// (ADR-0357/0358); use the full-profile `check_model` entry point rather than
 /// evaluator-only replay when quantifiers are possible.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct Model {

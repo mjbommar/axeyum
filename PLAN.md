@@ -9022,8 +9022,9 @@ coverage never regresses):
    ([P2.6 T2.6.5](docs/plan/track-2-theories/P2.6-quantifiers.md)) — the
    refutation side exists, and accepted ADR-0357 now makes the narrow one-binder
    `Int`/`Real` UF model slice pass canonical original-query replay. Implement
-   bounded multi-binder Cartesian finite profiles next under proposed ADR-0358;
-   general model repair remains later capability work;
+   bounded multi-binder Cartesian finite profiles are implemented under
+   proposed ADR-0358 and await final branch-wide gates; general model repair
+   remains later capability work;
    MAM/trigger-inference (T2.6.1/2) follow as throughput.
 3. **Bank the CDCL(T) spine** (Gap 3): the default-dispatch ADR for the
    built-but-opt-in `CdclT` routes, then port arrays-lazy

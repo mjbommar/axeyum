@@ -873,21 +873,23 @@ pub const CAPABILITIES: &[Capability] = &[
     },
     Capability {
         area: "quantifiers",
-        feature: "checked finite-profile SAT models for one almost-uninterpreted Int/Real \
-                  universal",
+        feature: "checked finite-profile SAT models for bounded almost-uninterpreted Int/Real \
+                  universal prefixes",
         assurance: Assurance::Checked,
         evidence: "MBQI search remains untrusted. A source-bound certificate names the exact \
-                   original forall assertion and binder; the canonical model checker independently \
-                   re-matches a quantifier-free body in which every binder occurrence is a direct \
-                   UF argument, validates every relevant finite-table function signature, derives \
-                   special values from the exact occupied argument positions, adds one fresh \
-                   all-default representative, and evaluator-replays every profile under a 4,096 \
-                   cap. Missing/tampered/stale/extra certificates, functions, signatures, table \
-                   violations, nested quantifiers, interpreted binder occurrences, and cap overflow \
-                   fail closed. The unified front door downgrades any preprocessing combination \
-                   that cannot replay against the caller's original assertion sequence. Multiple \
-                   binders, model repair, serialization, and Lean reconstruction remain open",
-        reference: "ADR-0357",
+                   original forall assertion and outer binder; the canonical model checker \
+                   independently flattens one leading block of at most 16 distinct Int/Real \
+                   binders, re-matches a quantifier-free matrix in which every binder occurrence is \
+                   a direct UF argument, validates every relevant finite-table function signature, \
+                   derives each binder's special values from its exact occupied argument positions, \
+                   adds one fresh default representative per binder, and evaluator-replays their \
+                   Cartesian product under a 4,096-tuple cap. Missing/tampered/stale/extra \
+                   certificates, functions, signatures, table violations, duplicate/vacuous/ \
+                   unsupported binders, non-leading quantifiers, interpreted occurrences, and cap \
+                   overflow fail closed. The unified front door downgrades any preprocessing \
+                   combination that cannot replay against the caller's original assertion sequence. \
+                   Model repair, serialization, alternation, and Lean reconstruction remain open",
+        reference: "ADR-0357/0358",
     },
     Capability {
         area: "quantifiers",
