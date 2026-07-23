@@ -452,10 +452,16 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   `scripts/`, not the repository root, at the front of `sys.path`. It created
   neither work nor evidence root, harness, CTest process, or official outcome.
   The [R3 plan](docs/plan/lean-u2-official-execution-tl0.6.3-m0-r3-plan-2026-07-22.md)
-  freezes that invocation authority and requires a direct-entry smoke gate
-  before a new implementation and attempt 004. Current coverage remains one
-  failed official outcome, zero passes, 1/3,678 parent cases observed, and zero
-  provider, Axeyum, pairs, performance, axes, gates, or parity credit.
+  froze that invocation authority and required a direct-entry smoke gate before
+  attempt 004. The separately committed R3 implementation then passed the exact
+  official singleton with bundled compiler/linker evidence and immutable
+  completion. A post-execution validator incorrectly rejected the two bounded
+  positive claims (`official_lean_case_observed` and `local_shard_complete`), so
+  the [result-projection amendment](docs/plan/lean-u2-official-execution-tl0.6.3-m0-r3-result-amendment-2026-07-22.md)
+  freezes the pass before a separate offline result adapter. Current coverage is
+  four process attempts, two decided official outcomes for one unique case, one
+  pass, one failure, 1/3,678 parent cases observed, and zero provider, Axeyum,
+  pairs, performance, axes, gates, or parity credit.
 
 - **2026-07-22 — TL0.7.4 closes the real local execution controls without U2,
   Axeyum, pairing, performance, or parity credit.** The
