@@ -13,14 +13,15 @@ elsewhere in `docs/plan/`). Read this file first when resuming.
   [multi-agent operations guide](../contributor-guide/multi-agent-operations.md):
   work only in the dedicated CAS worktree on an `agent/cas/*` branch, push that
   branch, and leave `main` to the integration owner. The current increment is
-  `agent/cas/broad-gap-probe-wave2`, stacked on CAS parent `5b7992ae`; do not
+  `agent/cas/inverse-laplace-repeated-quadratic`, stacked on CAS parent
+  `140df3ac`; do not
   rebase it onto `main` ahead of the integration owner.
-- **Tests:** `528` unit + `147` doctests, **all green**, warning-denied workspace
+- **Tests:** `529` unit + `147` doctests, **all green**, warning-denied workspace
   all-target/all-feature Clippy-clean, strict stable/nightly rustdoc-green,
   wasm-green, links-green, and whitespace-clean.
 - **Source of truth for capabilities:** `docs/research/10-cas/README.md`
   (capability table) and `docs/research/10-cas/diary.md` (chronological entries;
-  latest is **Entry 37adz**). Keep both in sync when landing features.
+  latest is **Entry 37aea**). Keep both in sync when landing features.
 - **Method that works:** empirical **gap-probing** (below). It found every recent
   feature *and* a serious infinite-hang regression.
 
@@ -198,6 +199,27 @@ orders `0..=255`), and Stirling-composed raw moments (regressed for orders
   a proof-boundary correction with no public operator, evidence format,
   backend, or logic change, so the foundational DAG and research-question
   register require no ADR.
+
+**Repeated irreducible-quadratic inverse Laplace**
+- The next measured transform family is now closed for rational damped
+  frequency through multiplicity 7. Exact `apart` terms `(A(s))/q(s)^m` are
+  reconstructed in the `2m`-member basis
+  `tʳe^{αt}{cos,sin}(βt)`, `0≤r<m`. Each basis column comes from the existing
+  forward Laplace transform; one exact rational solve finds the coefficients,
+  and the pre-existing whole-expression forward zero-test round trip remains
+  mandatory before a result is returned.
+- Explicit controls freeze `1/(s²+1)²`, `s/(s²+1)²`, `1/(s²+1)³`, a shifted
+  damped double pole, and `1/((s−2)(s²+1)²)`. The mixed result was independently
+  checked against SymPy's partial fractions and inverse transform. Every unit-
+  quadratic multiplicity 1 through 7 additionally round-trips.
+- Multiplicity 8 is the first explicit resource decline: it needs the
+  `t⁷cos(βt)` basis member, whose forward expression exists but whose rational
+  normalization exceeds the public checked-`i128` coefficient path. Irrational
+  frequencies still decline because the forward transform cannot certify them.
+  This is a bounded reconstruction extension, not permission to bypass either
+  exact normalization or the round trip.
+- No public operator, backend, evidence format, or logic fragment changed, so
+  the foundational DAG and research-question register require no ADR.
 
 ---
 
@@ -456,29 +478,25 @@ Ordered roughly by value:
    `i128` intermediates: direct order 256 needs `Γ(257)` beyond the bounded
    concrete checker, while raw order 36 needs public coefficients beyond
    `i128`. Extending either now requires a deliberate resource/data-model
-   decision, not another local cancellation. Fixed-shift `r=8` remains a focused
-   exact-growth candidate if a concrete use needs it.
-2. **Repeated irreducible-quadratic inverse-Laplace poles.** Fresh probes of
-   `1/(s²+1)²`, `s/(s²+1)²`, `1/(s²+1)³`, shifted quadratic powers, and a mixed
-   real/quadratic denominator all decline. The forward transform already covers
-   the required polynomial-times-damped-sinusoid outputs, so an exact bounded
-   partial-fraction reconstruction plus mandatory forward round trip is the next
-   high-value transform increment.
-3. **Alternating series** `∑(−1)ᵏ/k = −ln2`, `∑(−1)ᵏ/(2k+1)=π/4−…`, Dirichlet
+   decision, not another local cancellation. Repeated-quadratic inverse Laplace
+   now has the same kind of measured boundary at multiplicity 8: the required
+   `t⁷cos(βt)` forward normalization exceeds checked `i128`. Fixed-shift `r=8`
+   remains a focused exact-growth candidate if a concrete use needs it.
+2. **Alternating series** `∑(−1)ᵏ/k = −ln2`, `∑(−1)ᵏ/(2k+1)=π/4−…`, Dirichlet
    eta `η(s)`. **Blocked by the data model**: `(−1)ᵏ` has no clean real
    representation (`geometric_power(−1)` = `exp(k·ln(−1))`, complex `ln`). Would
    need a dedicated alternating-sign representation or a complex extension.
-4. **Continue gap-probing** — still productive. Areas not yet swept much:
+3. **Continue gap-probing** — still productive. Areas not yet swept much:
    Fourier and additional inverse-transform families, 2nd-order variable-coeff
    ODEs, PDE separation, vector calculus (grad/div/curl), assumptions/`refine`,
    piecewise, elliptic integrals, `bessely`/`besselk` (second-kind / modified-2nd,
    via the proven `UnaryFunc::BesselI(u32)` parameterize-the-variant technique
    but they need log-singular numerics).
-5. **Minor display nits** (value-correct, cosmetic): denominator rationalization
+4. **Minor display nits** (value-correct, cosmetic): denominator rationalization
    `1/√3→√3/3` (doesn't fit the size-gated simplify cleanly); `L{t·eᵗ}` shows
    `−(−1/(s−1)²)` for some internal structures (the manually-built structure folds
    fine — a subtle structural mismatch worth 20 min if it bugs you).
-6. **One-sided limits** (`lim_{x→0⁺} √x·ln x = 0`) — the limit API is two-sided;
+5. **One-sided limits** (`lim_{x→0⁺} √x·ln x = 0`) — the limit API is two-sided;
    `√x` isn't defined for `x<0` so the two-sided limit legitimately declines.
 
 ---
@@ -525,9 +543,9 @@ esac
 export AXEYUM_CAS_TMP
 trap 'find "$AXEYUM_CAS_TMP" -depth -delete' EXIT
 git rev-parse --abbrev-ref HEAD        # → agent/cas/...
-git merge-base --is-ancestor 5b7992ae HEAD
+git merge-base --is-ancestor 140df3ac HEAD
 CARGO_BUILD_JOBS=1 TMPDIR="$AXEYUM_CAS_TMP" cargo test -p axeyum-cas --jobs 1
-# → 528 unit + 147 doctests green
+# → 529 unit + 147 doctests green
 ```
 Then: read `docs/research/10-cas/diary.md` tail for the latest context, and pick
 up from §6 or resume the gap-probing loop. Push the green owned topic branch;

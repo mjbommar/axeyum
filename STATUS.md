@@ -374,6 +374,22 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-22 — repeated irreducible-quadratic inverse-Laplace poles.** The
+  measured declines at `1/(s²+1)²`, `s/(s²+1)²`, cubic/shifted quadratic powers,
+  and a mixed real/quadratic denominator now reconstruct exactly. `apart`
+  supplies terms `(A(s))/q(s)^m`; for a rational shift/frequency the inverse is
+  solved in the `2m`-member basis
+  `tʳe^{αt}{cos,sin}(βt)`, using the existing forward transform to build one
+  exact rational system. The whole result still returns only after the existing
+  forward zero-test round trip certifies the original transform. Explicit
+  double/cubic formulas, a damped shifted pair, an independently checked mixed
+  decomposition, and every multiplicity 1 through 7 pass. Multiplicity 8 is the
+  first deliberate decline because its `t⁷cos(βt)` basis transform exceeds the
+  checked-`i128` rational normalizer; irrational frequencies continue to
+  decline. The complete 529-unit/147-doctest suite, warning-denied workspace
+  all-target/all-feature Clippy, strict stable/nightly rustdoc, WASM build,
+  links, and whitespace checks pass.
+
 - **2026-07-22 — exact rational-trig Fourier coefficients on the symmetric
   period.** A second timeout-bounded gap probe found repeated irreducible-
   quadratic inverse-Laplace poles as the next transform gap, but also exposed a
@@ -7347,6 +7363,13 @@ plan is built and committed on the current branch:
 | P5.5 | External target, measured | **DONE (bounded v1, ADR-0323--0338):** authenticated Tock capture plus eight rechecked dual-DRAT proofs and six replayed controls, UNKNOWN=0, DISAGREE=0. Query time 12.700 s; fresh outer wall 50.745 s; peak RSS 1,256,496 KiB; zero OOM deltas. The committed case study compares exact target validation, universal coverage, trust, effort, artifact boundaries, and limits. No Tock bug was found, so no upstream issue is applicable. This is not a speed or whole-kernel claim. |
 
 ## Changelog
+
+- **2026-07-22 — Added bounded repeated-quadratic inverse Laplace.** Exact
+  partial fractions now reconstruct rational-frequency quadratic poles through
+  multiplicity 7 in a forward-generated damped-oscillator basis, including
+  shifted and mixed real/quadratic cases. Mandatory forward certification and
+  explicit multiplicity-8/irrational-frequency declines bring the CAS surface
+  to 529 unit tests and 147 doctests.
 
 - **2026-07-22 — Closed the symmetric-period rational-trig Fourier boundary
   seam.** `definite_full_period_rational_trig` now handles `[-π,π]` through the

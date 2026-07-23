@@ -11289,11 +11289,12 @@ pub fn laurent_series(f: &CasExpr, var: &str, order: usize) -> Option<CasExpr> {
     Some(result)
 }
 
-/// The **inverse Laplace transform** `L⁻¹{F}(t)` of a proper rational function `F(s)`
-/// with **simple real rational poles**: `F = Σ Rᵢ/(s−aᵢ)` gives `Σ Rᵢ·e^{aᵢt}`,
-/// where each residue `Rᵢ = Res_{s=aᵢ} F`. **Certified** by the round trip
-/// `L{result} = F` (via [`laplace_transform`] and the zero-test). Returns `None` for
-/// an improper `F`, or poles that are repeated, irrational, or complex (future work).
+/// The **inverse Laplace transform** `L⁻¹{F}(t)` of a proper rational function
+/// `F(s)`. Handles simple and repeated rational real poles plus irreducible-
+/// quadratic poles with rational damped frequency, including repeated powers
+/// through multiplicity seven. **Certified** by the round trip `L{result} = F` (via
+/// [`laplace_transform`] and the zero-test). Returns `None` for an improper `F`,
+/// unsupported pole families, irrational frequencies, or resource overflow.
 ///
 /// ```
 /// use axeyum_cas::{CasExpr, inverse_laplace, equal, ZeroTest};
@@ -11333,8 +11334,9 @@ pub fn inverse_laplace(f: &CasExpr, s: &str, t: &str) -> Option<CasExpr> {
         // sinusoid, when the frequency `b` is rational.
         inverse_laplace_quadratic(&num, &den, t)?
     } else {
-        // Repeated real poles (`1/s² → t`, `1/(s−1)² → t·e^t`).
-        inverse_laplace_repeated_poles(f, s, t)?
+        // General exact partial fractions: repeated real poles, repeated
+        // irreducible quadratics, and mixtures of those supported families.
+        inverse_laplace_partial_fractions(f, s, t)?
     };
     // Round-trip certificate: L{result} = F.
     match equal(&laplace_transform(&result, t, s)?, f) {
@@ -11348,18 +11350,47 @@ pub fn inverse_laplace(f: &CasExpr, s: &str, t: &str) -> Option<CasExpr> {
 /// gives `e^{αt}·[c·cos(βt) + ((d+cα)/β)·sin(βt)]`. `β = √(q − p²/4)` must be
 /// rational (else the forward round-trip can't certify a surd frequency). Certified
 /// by the caller's round trip.
-fn inverse_laplace_quadratic(num: &[Rational], den: &[Rational], t: &str) -> Option<CasExpr> {
+fn inverse_laplace_quadratic_parameters(
+    den: &[Rational],
+) -> Option<(Rational, Rational, Rational)> {
     let lead = *den.get(2)?;
-    let p_coeff = den.get(1).copied().unwrap_or_else(Rational::zero).checked_div(lead)?;
-    let q_coeff = den.first().copied().unwrap_or_else(Rational::zero).checked_div(lead)?;
+    let p_coeff = den
+        .get(1)
+        .copied()
+        .unwrap_or_else(Rational::zero)
+        .checked_div(lead)?;
+    let q_coeff = den
+        .first()
+        .copied()
+        .unwrap_or_else(Rational::zero)
+        .checked_div(lead)?;
     // α = −p/2, β² = q − p²/4 (> 0 for an irreducible quadratic).
     let alpha = p_coeff.checked_div(Rational::integer(-2))?;
-    let beta_sq = q_coeff.checked_sub(p_coeff.checked_mul(p_coeff)?.checked_div(Rational::integer(4))?)?;
+    let beta_sq = q_coeff.checked_sub(
+        p_coeff
+            .checked_mul(p_coeff)?
+            .checked_div(Rational::integer(4))?,
+    )?;
     let beta = rational_sqrt(beta_sq)?; // rational frequency only
+    (!beta.is_zero()).then_some((lead, alpha, beta))
+}
+
+fn inverse_laplace_quadratic(num: &[Rational], den: &[Rational], t: &str) -> Option<CasExpr> {
+    let (lead, alpha, beta) = inverse_laplace_quadratic_parameters(den)?;
     // Numerator (num_lin·s + num_const) over the leading coefficient.
-    let num_lin = num.get(1).copied().unwrap_or_else(Rational::zero).checked_div(lead)?;
-    let num_const = num.first().copied().unwrap_or_else(Rational::zero).checked_div(lead)?;
-    let sin_coeff = num_const.checked_add(num_lin.checked_mul(alpha)?)?.checked_div(beta)?;
+    let num_lin = num
+        .get(1)
+        .copied()
+        .unwrap_or_else(Rational::zero)
+        .checked_div(lead)?;
+    let num_const = num
+        .first()
+        .copied()
+        .unwrap_or_else(Rational::zero)
+        .checked_div(lead)?;
+    let sin_coeff = num_const
+        .checked_add(num_lin.checked_mul(alpha)?)?
+        .checked_div(beta)?;
     let tvar = CasExpr::var(t);
     let bt = CasExpr::Const(beta) * tvar.clone();
     // Build a distributed **sum** `c·e^{αt}cos(βt) + K·e^{αt}sin(βt)` (not
@@ -11386,61 +11417,166 @@ fn inverse_laplace_quadratic(num: &[Rational], den: &[Rational], t: &str) -> Opt
     }
 }
 
-/// `L⁻¹` for a rational function with **repeated real poles**: partial-fraction via
-/// [`apart`], then map each term `A/(s−a)^k → A·t^{k−1}/(k−1)!·e^{at}`. Closes
-/// `1/s² → t`, `1/(s−1)² → t·e^t`, `1/s³ → t²/2`. `None` if any `apart` term is not
-/// `constant/(s−a)^k` for a rational pole `a` (e.g. a residual irreducible
-/// quadratic). Certified by the caller's round trip.
-fn inverse_laplace_repeated_poles(f: &CasExpr, s: &str, t: &str) -> Option<CasExpr> {
+/// Map one partial-fraction term `A/(s−a)^k` to
+/// `A·t^{k−1}/(k−1)!·e^{at}` for a rational real pole `a`.
+fn inverse_laplace_real_pole_term(term: &CasExpr, s: &str, t: &str) -> Option<CasExpr> {
+    let tvar = CasExpr::var(t);
+    let rf = normalize_rational(term)?;
+    let numerator = rf.num.to_univariate(s)?;
+    let denominator = rf.den.to_univariate(s)?;
+    // Numerator must be a constant `C`; denominator a pure power `lead·(s−a)^k`.
+    if poly::rat_degree(&numerator)? != 0 {
+        return None;
+    }
+    let num_const = numerator.first().copied()?;
+    let k = poly::rat_degree(&denominator)?;
+    let lead = *denominator.last()?;
+    let pole = *ratint::rational_roots(&denominator)
+        .unwrap_or_default()
+        .first()?;
+    // Verify `denominator = lead·(s−a)^k` (a single pole of full multiplicity).
+    let mut reconstructed = vec![lead];
+    for _ in 0..k {
+        reconstructed =
+            poly::ratpoly_mul(&reconstructed, &[pole.checked_neg()?, Rational::integer(1)])?;
+    }
+    if poly::rat_trim(reconstructed) != poly::rat_trim(denominator) {
+        return None;
+    }
+    // A = C/lead; term = A · t^{k−1}/(k−1)! · e^{at}.
+    let mut factorial = Rational::integer(1);
+    for j in 1..k {
+        factorial = factorial.checked_mul(Rational::integer(i128::try_from(j).ok()?))?;
+    }
+    let coeff = num_const.checked_div(lead)?.checked_div(factorial)?;
+    let power = u32::try_from(k - 1).ok()?;
+    let mut factors: Vec<CasExpr> = Vec::new();
+    if coeff != Rational::integer(1) {
+        factors.push(CasExpr::Const(coeff));
+    }
+    match power {
+        0 => {}
+        1 => factors.push(tvar.clone()),
+        _ => factors.push(tvar.clone().pow(power)),
+    }
+    if !pole.is_zero() {
+        factors.push(scaled_term(pole, tvar).exp()); // e^{at}, clean when a = 1
+    }
+    Some(match factors.len() {
+        0 => CasExpr::Const(coeff),
+        1 => factors.into_iter().next()?,
+        _ => CasExpr::Mul(factors),
+    })
+}
+
+// Multiplicity eight first needs the `t^7·cos(βt)` basis member. Its forward
+// transform is constructible, but rational normalization exceeds the public
+// checked-`i128` coefficient path, so the mandatory round trip cannot certify it.
+const MAX_INVERSE_LAPLACE_QUADRATIC_MULTIPLICITY: usize = 7;
+
+/// One unscaled member of the exact basis
+/// `t^power·e^{alpha·t}·{cos,sin}(beta·t)` used for a repeated quadratic pole.
+fn inverse_laplace_oscillator_basis(
+    alpha: Rational,
+    beta: Rational,
+    power: usize,
+    sine: bool,
+    t: &str,
+) -> Option<CasExpr> {
+    let tvar = CasExpr::var(t);
+    let angle = scaled_term(beta, tvar.clone());
+    let oscillation = if sine { angle.sin() } else { angle.cos() };
+    let mut factors = Vec::new();
+    match u32::try_from(power).ok()? {
+        0 => {}
+        1 => factors.push(tvar.clone()),
+        exponent => factors.push(tvar.clone().pow(exponent)),
+    }
+    if !alpha.is_zero() {
+        factors.push(scaled_term(alpha, tvar).exp());
+    }
+    factors.push(oscillation);
+    Some(match factors.len() {
+        1 => factors.into_iter().next()?,
+        _ => CasExpr::Mul(factors),
+    })
+}
+
+/// Invert one exact partial-fraction term `(A(s))/q(s)^m`, where `q` is an
+/// irreducible quadratic with rational shift `alpha` and frequency `beta`.
+/// The inverse lies in the `2m`-dimensional basis
+/// `t^r·e^{alpha·t}{cos,sin}(beta·t)`, `0 ≤ r < m`. Build each basis column with
+/// the existing forward transform, solve the exact rational coefficient system,
+/// and leave the mandatory whole-expression round trip to the caller.
+fn inverse_laplace_quadratic_pole_term(term: &CasExpr, s: &str, t: &str) -> Option<CasExpr> {
+    let rf = normalize_rational(term)?;
+    let numerator = poly::rat_trim(rf.num.to_univariate(s)?);
+    let denominator = poly::rat_trim(rf.den.to_univariate(s)?);
+    let factors = factor_univariate_over_q(&denominator)?;
+    let [(quadratic, multiplicity)] = factors.as_slice() else {
+        return None;
+    };
+    if poly::rat_degree(quadratic)? != 2 {
+        return None;
+    }
+    let multiplicity = usize::try_from(*multiplicity).ok()?;
+    if multiplicity == 0 || multiplicity > MAX_INVERSE_LAPLACE_QUADRATIC_MULTIPLICITY {
+        return None;
+    }
+    let target_degree = poly::rat_degree(&denominator)?;
+    if target_degree != 2 * multiplicity || poly::rat_degree(&numerator)? >= target_degree {
+        return None;
+    }
+    let (_lead, alpha, beta) = inverse_laplace_quadratic_parameters(quadratic)?;
+
+    let mut columns: Vec<Vec<Rational>> = Vec::with_capacity(target_degree);
+    let mut basis: Vec<CasExpr> = Vec::with_capacity(target_degree);
+    for power in 0..multiplicity {
+        for sine in [false, true] {
+            let member = inverse_laplace_oscillator_basis(alpha, beta, power, sine, t)?;
+            let transform = normalize_rational(&laplace_transform(&member, t, s)?)?;
+            let basis_numerator = transform.num.to_univariate(s)?;
+            let basis_denominator = transform.den.to_univariate(s)?;
+            let quotient = poly::rat_exact_div(&denominator, &basis_denominator)?;
+            let mut column = poly::ratpoly_mul(&basis_numerator, &quotient)?;
+            if poly::rat_degree(&column).is_some_and(|degree| degree >= target_degree) {
+                return None;
+            }
+            column.resize(target_degree, Rational::zero());
+            columns.push(column);
+            basis.push(member);
+        }
+    }
+    let mut rhs = numerator;
+    rhs.resize(target_degree, Rational::zero());
+    let coefficients = ratint::solve_linear(&columns, &rhs)?;
+    let terms: Vec<CasExpr> = coefficients
+        .into_iter()
+        .zip(basis)
+        .filter(|(coefficient, _)| !coefficient.is_zero())
+        .map(|(coefficient, member)| scaled_term(coefficient, member))
+        .collect();
+    Some(match terms.len() {
+        0 => CasExpr::zero(),
+        1 => terms.into_iter().next()?,
+        _ => CasExpr::Add(terms),
+    })
+}
+
+/// `L⁻¹` for exact supported partial fractions. Real terms use the closed-form
+/// repeated-pole rule; irreducible-quadratic terms use the bounded exact
+/// oscillator reconstruction above. Mixed real/quadratic denominators work
+/// because [`apart`] separates them first. Certified by the caller's round trip.
+fn inverse_laplace_partial_fractions(f: &CasExpr, s: &str, t: &str) -> Option<CasExpr> {
     let decomposed = apart(f, s)?;
     let mut term_list = Vec::new();
     flatten_add_terms(&decomposed, s, &mut term_list);
-    let tvar = CasExpr::var(t);
-    let mut out: Vec<CasExpr> = Vec::new();
+    let mut out = Vec::with_capacity(term_list.len());
     for term in &term_list {
-        let rf = normalize_rational(term)?;
-        let numerator = rf.num.to_univariate(s)?;
-        let denominator = rf.den.to_univariate(s)?;
-        // Numerator must be a constant `C`; denominator a pure power `lead·(s−a)^k`.
-        if poly::rat_degree(&numerator)? != 0 {
-            return None;
-        }
-        let num_const = numerator.first().copied()?;
-        let k = poly::rat_degree(&denominator)?;
-        let lead = *denominator.last()?;
-        let pole = *ratint::rational_roots(&denominator).unwrap_or_default().first()?;
-        // Verify `denominator = lead·(s−a)^k` (a single pole of full multiplicity).
-        let mut reconstructed = vec![lead];
-        for _ in 0..k {
-            reconstructed = poly::ratpoly_mul(&reconstructed, &[pole.checked_neg()?, Rational::integer(1)])?;
-        }
-        if poly::rat_trim(reconstructed) != poly::rat_trim(denominator) {
-            return None;
-        }
-        // A = C/lead; term = A · t^{k−1}/(k−1)! · e^{at}.
-        let mut factorial = Rational::integer(1);
-        for j in 1..k {
-            factorial = factorial.checked_mul(Rational::integer(i128::try_from(j).ok()?))?;
-        }
-        let coeff = num_const.checked_div(lead)?.checked_div(factorial)?;
-        let power = u32::try_from(k - 1).ok()?;
-        let mut factors: Vec<CasExpr> = Vec::new();
-        if coeff != Rational::integer(1) {
-            factors.push(CasExpr::Const(coeff));
-        }
-        match power {
-            0 => {}
-            1 => factors.push(tvar.clone()),
-            _ => factors.push(tvar.clone().pow(power)),
-        }
-        if !pole.is_zero() {
-            factors.push(scaled_term(pole, tvar.clone()).exp()); // e^{at}, clean when a = 1
-        }
-        out.push(match factors.len() {
-            0 => CasExpr::Const(coeff),
-            1 => factors.into_iter().next()?,
-            _ => CasExpr::Mul(factors),
-        });
+        out.push(
+            inverse_laplace_real_pole_term(term, s, t)
+                .or_else(|| inverse_laplace_quadratic_pole_term(term, s, t))?,
+        );
     }
     match out.len() {
         0 => None,
@@ -19348,6 +19484,86 @@ mod tests {
         assert_equal(
             &inverse_laplace(&(CasExpr::int(1) / (s().pow(2) * (s() - CasExpr::int(1)))), "s", "t").unwrap(),
             &(t().exp() - CasExpr::int(1) - t()),
+        );
+    }
+
+    #[test]
+    fn inverse_laplace_repeated_quadratic_poles() {
+        let s = || v("s");
+        let t = || v("t");
+        let unit_quadratic = || s().pow(2) + CasExpr::int(1);
+
+        // Standard double-pole pairs.
+        assert_equal(
+            &inverse_laplace(&(CasExpr::int(1) / unit_quadratic().pow(2)), "s", "t")
+                .expect("double quadratic pole"),
+            &(CasExpr::rat(1, 2) * t().sin() - CasExpr::rat(1, 2) * t() * t().cos()),
+        );
+        assert_equal(
+            &inverse_laplace(&(s() / unit_quadratic().pow(2)), "s", "t")
+                .expect("linear numerator over double quadratic pole"),
+            &(CasExpr::rat(1, 2) * t() * t().sin()),
+        );
+
+        // Cubic pole: (3 sin t - 3t cos t - t² sin t)/8.
+        assert_equal(
+            &inverse_laplace(&(CasExpr::int(1) / unit_quadratic().pow(3)), "s", "t")
+                .expect("cubic quadratic pole"),
+            &(CasExpr::rat(3, 8) * t().sin()
+                - CasExpr::rat(3, 8) * t() * t().cos()
+                - CasExpr::rat(1, 8) * t().pow(2) * t().sin()),
+        );
+
+        // Shifted/damped frequency: e^t(sin(2t)-2t cos(2t))/16.
+        let shifted_quadratic = (s() - CasExpr::int(1)).pow(2) + CasExpr::int(4);
+        assert_equal(
+            &inverse_laplace(&(CasExpr::int(1) / shifted_quadratic.pow(2)), "s", "t")
+                .expect("shifted repeated quadratic pole"),
+            &(CasExpr::rat(1, 16) * t().exp() * (CasExpr::int(2) * t()).sin()
+                - CasExpr::rat(1, 8) * t() * t().exp() * (CasExpr::int(2) * t()).cos()),
+        );
+
+        // Mixed real/quadratic factors are separated exactly by `apart`.
+        let mixed = CasExpr::int(1) / ((s() - CasExpr::int(2)) * unit_quadratic().pow(2));
+        let mixed_inverse = inverse_laplace(&mixed, "s", "t").expect("mixed pole families");
+        assert_equal(
+            &mixed_inverse,
+            &(-CasExpr::rat(1, 10) * t() * t().sin()
+                + CasExpr::rat(1, 5) * t() * t().cos()
+                + CasExpr::rat(1, 25) * (CasExpr::int(2) * t()).exp()
+                - CasExpr::rat(7, 25) * t().sin()
+                - CasExpr::rat(1, 25) * t().cos()),
+        );
+        assert_equal(
+            &laplace_transform(&mixed_inverse, "t", "s").unwrap(),
+            &mixed,
+        );
+
+        // Freeze the explicit reconstruction bound and its first decline.
+        for multiplicity in 1..=MAX_INVERSE_LAPLACE_QUADRATIC_MULTIPLICITY {
+            let exponent = u32::try_from(multiplicity).unwrap();
+            let transform = CasExpr::int(1) / unit_quadratic().pow(exponent);
+            let inverse = inverse_laplace(&transform, "s", "t")
+                .unwrap_or_else(|| panic!("admitted multiplicity {multiplicity}"));
+            assert_equal(&laplace_transform(&inverse, "t", "s").unwrap(), &transform);
+        }
+        let above_bound = u32::try_from(MAX_INVERSE_LAPLACE_QUADRATIC_MULTIPLICITY + 1).unwrap();
+        assert!(
+            inverse_laplace(
+                &(CasExpr::int(1) / unit_quadratic().pow(above_bound)),
+                "s",
+                "t",
+            )
+            .is_none()
+        );
+        // Irrational frequency remains outside the forward-certifiable fragment.
+        assert!(
+            inverse_laplace(
+                &(CasExpr::int(1) / (s().pow(2) + CasExpr::int(2)).pow(2)),
+                "s",
+                "t",
+            )
+            .is_none()
         );
     }
 
