@@ -482,7 +482,13 @@ now freezes new run/work/evidence roots, universal
 `LEAN_STACK_SIZE_KB=524288`, the unchanged 64-case/8 GiB/one-worker/hour lane,
 and the family-specific tiered store. It authorizes at most one new process
 only after its implementation and offline gates are separately committed and
-pushed. Until a valid R3 completion exists, M2 still contributes zero case or
+pushed. The separately pushed
+[R3 implementation checkpoint](lean-u2-official-execution-tl0.6.3-m2-r3-attempt-002-implementation-2026-07-23.md)
+records commit `d47dacc6`, the exact stack-aware runner and tiered store, 6/6
+focused and 264 aggregate Lean tests, and a harmless released-Lean probe that
+observed `524288` without constructing the selected harness. Final clean,
+tracking, remote, root, and hash preflight remains before the one allowed
+invocation. Until a valid R3 completion exists, M2 still contributes zero case or
 shard credit and all parent/provider/Axeyum/pair/performance/parity counters
 remain zero.
 

@@ -457,7 +457,10 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   [R3 plan](docs/plan/lean-u2-official-execution-tl0.6.3-m2-r3-attempt-002-plan-2026-07-23.md)
   now registers attempt 002 with new roots, `LEAN_STACK_SIZE_KB=524288`, the
   unchanged 64-case/8 GiB/one-worker/hour lane, and R2's tiered artifact policy.
-  No R3 harness, discovery, or process exists. Next implement/test/push only.
+  The [implementation checkpoint](docs/plan/lean-u2-official-execution-tl0.6.3-m2-r3-attempt-002-implementation-2026-07-23.md)
+  records pushed commit `d47dacc6`, 6/6 focused and 264 aggregate Lean tests,
+  an exact harmless released-Lean stack probe, and no selected harness,
+  discovery, or process. Next run final external preflight, then invoke once.
 
 - **2026-07-22 — TL0.6.3 M1 derives complete deterministic U2 child-shard
   scheduling with zero new outcomes or parity credit.** The source-first
@@ -7769,6 +7772,11 @@ plan is built and committed on the current branch:
 | P5.5 | External target, measured | **DONE (bounded v1, ADR-0323--0338):** authenticated Tock capture plus eight rechecked dual-DRAT proofs and six replayed controls, UNKNOWN=0, DISAGREE=0. Query time 12.700 s; fresh outer wall 50.745 s; peak RSS 1,256,496 KiB; zero OOM deltas. The committed case study compares exact target validation, universal coverage, trust, effort, artifact boundaries, and limits. No Tock bug was found, so no upstream issue is applicable. This is not a speed or whole-kernel claim. |
 
 ## Changelog
+
+- **2026-07-23 — Published the M2 R3 attempt-002 runner.** Commit `d47dacc6`
+  adds the exact stack-aware spec/wrapper, family-specific tiered evidence
+  store, completion-last validation, one-shot surface, six focused tests, and
+  all CI/generator wiring. The selected attempt remains unconsumed.
 
 - **2026-07-23 — Preregistered M2 R3 attempt 002.** The plan binds immutable
   R1/R2 history, a new run/evidence root, universal 512 MiB Lean runtime stacks
