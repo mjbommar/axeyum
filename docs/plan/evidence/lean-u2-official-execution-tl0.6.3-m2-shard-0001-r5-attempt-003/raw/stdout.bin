@@ -1,0 +1,133 @@
+Test project /home/mjbommar/.cache/axeyum-tl063-m2-r5-c445027d/harness
+      Start  1: compile/uint_fold.lean
+ 1/64 Test  #1: compile/uint_fold.lean .........................   Passed    0.77 sec
+      Start  2: compile/unreachable.lean
+ 2/64 Test  #2: compile/unreachable.lean .......................   Passed    0.62 sec
+      Start  3: compile/uset.lean
+ 3/64 Test  #3: compile/uset.lean ..............................   Passed    0.51 sec
+      Start  4: compile/utf8Path.lean
+ 4/64 Test  #4: compile/utf8Path.lean ..........................   Passed    0.45 sec
+      Start  5: compile/wait_dedicated.lean
+ 5/64 Test  #5: compile/wait_dedicated.lean ....................   Passed    0.64 sec
+      Start  6: compile_bench/binarytrees.lean
+ 6/64 Test  #6: compile_bench/binarytrees.lean .................   Passed    1.96 sec
+      Start  7: compile_bench/binarytrees.st.lean
+ 7/64 Test  #7: compile_bench/binarytrees.st.lean ..............   Passed    1.99 sec
+      Start  8: compile_bench/channel.lean
+ 8/64 Test  #8: compile_bench/channel.lean .....................   Passed    1.60 sec
+      Start  9: compile_bench/const_fold.lean
+ 9/64 Test  #9: compile_bench/const_fold.lean ..................   Passed    0.87 sec
+      Start 10: compile_bench/deriv.lean
+10/64 Test #10: compile_bench/deriv.lean .......................   Passed    1.03 sec
+      Start 11: compile_bench/hashmap.lean
+11/64 Test #11: compile_bench/hashmap.lean .....................   Passed    2.16 sec
+      Start 12: compile_bench/identifier_completion.lean
+12/64 Test #12: compile_bench/identifier_completion.lean .......   Passed    5.44 sec
+      Start 13: compile_bench/ilean_roundtrip.lean
+13/64 Test #13: compile_bench/ilean_roundtrip.lean .............   Passed    0.84 sec
+      Start 14: compile_bench/iterators.lean
+14/64 Test #14: compile_bench/iterators.lean ...................   Passed    3.63 sec
+      Start 15: compile_bench/liasolver.lean
+15/64 Test #15: compile_bench/liasolver.lean ...................   Passed    8.93 sec
+      Start 16: compile_bench/nat_repr.lean
+16/64 Test #16: compile_bench/nat_repr.lean ....................   Passed    0.75 sec
+      Start 17: compile_bench/parser.lean
+17/64 Test #17: compile_bench/parser.lean ......................   Passed    1.46 sec
+      Start 18: compile_bench/phashmap.lean
+18/64 Test #18: compile_bench/phashmap.lean ....................   Passed    2.95 sec
+      Start 19: compile_bench/qsort.lean
+19/64 Test #19: compile_bench/qsort.lean .......................   Passed    2.39 sec
+      Start 20: compile_bench/rbmap.lean
+20/64 Test #20: compile_bench/rbmap.lean .......................   Passed    2.15 sec
+      Start 21: compile_bench/rbmap_checkpoint.lean
+21/64 Test #21: compile_bench/rbmap_checkpoint.lean ............   Passed    2.21 sec
+      Start 22: compile_bench/rbmap_fbip.lean
+22/64 Test #22: compile_bench/rbmap_fbip.lean ..................   Passed    0.94 sec
+      Start 23: compile_bench/rbmap_library.lean
+23/64 Test #23: compile_bench/rbmap_library.lean ...............   Passed    1.18 sec
+      Start 24: compile_bench/server_startup.lean
+24/64 Test #24: compile_bench/server_startup.lean ..............   Passed    1.28 sec
+      Start 25: compile_bench/sigmaIterator.lean
+25/64 Test #25: compile_bench/sigmaIterator.lean ...............   Passed    1.23 sec
+      Start 26: compile_bench/treemap.lean
+26/64 Test #26: compile_bench/treemap.lean .....................   Passed    3.15 sec
+      Start 27: compile_bench/unionfind.lean
+27/64 Test #27: compile_bench/unionfind.lean ...................   Passed    2.27 sec
+      Start 28: compile_bench/watchdogRss.lean
+28/64 Test #28: compile_bench/watchdogRss.lean .................   Passed    5.93 sec
+      Start 29: compile_bench/workspaceSymbolsNewRanges.lean
+29/64 Test #29: compile_bench/workspaceSymbolsNewRanges.lean ...   Passed    6.03 sec
+      Start 30: docparse/arg_0001.txt
+30/64 Test #30: docparse/arg_0001.txt ..........................   Passed    0.55 sec
+      Start 31: docparse/arg_0002.txt
+31/64 Test #31: docparse/arg_0002.txt ..........................   Passed    0.29 sec
+      Start 32: docparse/arg_0003.txt
+32/64 Test #32: docparse/arg_0003.txt ..........................   Passed    0.33 sec
+      Start 33: docparse/arg_0004.txt
+33/64 Test #33: docparse/arg_0004.txt ..........................   Passed    0.28 sec
+      Start 34: docparse/arg_0005.txt
+34/64 Test #34: docparse/arg_0005.txt ..........................   Passed    0.29 sec
+      Start 35: docparse/arg_0006.txt
+35/64 Test #35: docparse/arg_0006.txt ..........................   Passed    0.28 sec
+      Start 36: docparse/arg_0007.txt
+36/64 Test #36: docparse/arg_0007.txt ..........................   Passed    0.28 sec
+      Start 37: docparse/arg_0008.txt
+37/64 Test #37: docparse/arg_0008.txt ..........................   Passed    0.28 sec
+      Start 38: docparse/arg_0009.txt
+38/64 Test #38: docparse/arg_0009.txt ..........................   Passed    0.29 sec
+      Start 39: docparse/arg_0010.txt
+39/64 Test #39: docparse/arg_0010.txt ..........................   Passed    0.45 sec
+      Start 40: docparse/arg_0011.txt
+40/64 Test #40: docparse/arg_0011.txt ..........................   Passed    0.28 sec
+      Start 41: docparse/arg_0012.txt
+41/64 Test #41: docparse/arg_0012.txt ..........................   Passed    0.29 sec
+      Start 42: docparse/arg_0013.txt
+42/64 Test #42: docparse/arg_0013.txt ..........................   Passed    0.28 sec
+      Start 43: docparse/arg_0014.txt
+43/64 Test #43: docparse/arg_0014.txt ..........................   Passed    0.28 sec
+      Start 44: docparse/arg_0015.txt
+44/64 Test #44: docparse/arg_0015.txt ..........................   Passed    0.27 sec
+      Start 45: docparse/arg_0016.txt
+45/64 Test #45: docparse/arg_0016.txt ..........................   Passed    0.27 sec
+      Start 46: docparse/arg_0017.txt
+46/64 Test #46: docparse/arg_0017.txt ..........................   Passed    0.28 sec
+      Start 47: docparse/arg_0018.txt
+47/64 Test #47: docparse/arg_0018.txt ..........................   Passed    0.28 sec
+      Start 48: docparse/arg_val_0001.txt
+48/64 Test #48: docparse/arg_val_0001.txt ......................   Passed    0.28 sec
+      Start 49: docparse/arg_val_0002.txt
+49/64 Test #49: docparse/arg_val_0002.txt ......................   Passed    0.28 sec
+      Start 50: docparse/arg_val_0003.txt
+50/64 Test #50: docparse/arg_val_0003.txt ......................   Passed    0.47 sec
+      Start 51: docparse/arg_val_0004.txt
+51/64 Test #51: docparse/arg_val_0004.txt ......................   Passed    0.48 sec
+      Start 52: docparse/arg_val_0005.txt
+52/64 Test #52: docparse/arg_val_0005.txt ......................   Passed    0.47 sec
+      Start 53: docparse/arg_val_0006.txt
+53/64 Test #53: docparse/arg_val_0006.txt ......................   Passed    0.47 sec
+      Start 54: docparse/arg_val_0007.txt
+54/64 Test #54: docparse/arg_val_0007.txt ......................   Passed    0.46 sec
+      Start 55: docparse/args_0001.txt
+55/64 Test #55: docparse/args_0001.txt .........................   Passed    0.47 sec
+      Start 56: docparse/args_0002.txt
+56/64 Test #56: docparse/args_0002.txt .........................   Passed    0.48 sec
+      Start 57: docparse/args_0003.txt
+57/64 Test #57: docparse/args_0003.txt .........................   Passed    0.47 sec
+      Start 58: docparse/blockOpener_0001.txt
+58/64 Test #58: docparse/blockOpener_0001.txt ..................   Passed    0.49 sec
+      Start 59: docparse/blockOpener_0002.txt
+59/64 Test #59: docparse/blockOpener_0002.txt ..................   Passed    0.47 sec
+      Start 60: docparse/blockOpener_0003.txt
+60/64 Test #60: docparse/blockOpener_0003.txt ..................   Passed    0.47 sec
+      Start 61: docparse/block_0001.txt
+61/64 Test #61: docparse/block_0001.txt ........................   Passed    0.47 sec
+      Start 62: docparse/block_0002.txt
+62/64 Test #62: docparse/block_0002.txt ........................   Passed    0.47 sec
+      Start 63: docparse/block_0003.txt
+63/64 Test #63: docparse/block_0003.txt ........................   Passed    0.30 sec
+      Start 64: docparse/block_0004.txt
+64/64 Test #64: docparse/block_0004.txt ........................   Passed    0.48 sec
+
+100% tests passed, 0 tests failed out of 64
+
+Total Test time (real) =  78.41 sec
