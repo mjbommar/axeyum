@@ -26,12 +26,15 @@ from p0_prepare import (  # noqa: E402
 )
 from p0_execute import (  # noqa: E402
     ADMISSION_PATH,
+    AXEYUM_CLOSURE_RESULT_PATH,
     CELL_RESULT_SCHEMA,
+    CLOSURE_ADMISSION_PATH,
     adjudicate_cell,
     cell_result_root,
     migrate_legacy_adjudication,
     publish_cell_result,
     require_integrated_admission,
+    require_integrated_cell_admission,
     validate_cell_result,
     validate_cell_launch,
 )
@@ -205,6 +208,36 @@ class P0PrepareTests(unittest.TestCase):
                 side_effect=[b"", result.read_bytes()],
             ):
                 require_integrated_admission(root)
+
+    def test_later_cell_admission_requires_integrated_axeyum_closure_result(
+        self,
+    ) -> None:
+        with mock.patch("p0_execute.require_integrated_admission") as base:
+            with mock.patch("p0_execute.require_integrated_path") as path:
+                require_integrated_cell_admission(ROOT, "axeyum")
+                base.assert_called_once_with(ROOT)
+                self.assertEqual(
+                    [call.args[1] for call in path.call_args_list],
+                    [
+                        CLOSURE_ADMISSION_PATH,
+                        Path("scripts/smtcomp_repro/p0_execute.py"),
+                        Path("scripts/smtcomp_repro/resume_runner.py"),
+                    ],
+                )
+
+        with mock.patch("p0_execute.require_integrated_admission") as base:
+            with mock.patch("p0_execute.require_integrated_path") as path:
+                require_integrated_cell_admission(ROOT, "cvc5")
+                base.assert_called_once_with(ROOT)
+                self.assertEqual(
+                    [call.args[1] for call in path.call_args_list],
+                    [
+                        CLOSURE_ADMISSION_PATH,
+                        Path("scripts/smtcomp_repro/p0_execute.py"),
+                        Path("scripts/smtcomp_repro/resume_runner.py"),
+                        AXEYUM_CLOSURE_RESULT_PATH,
+                    ],
+                )
 
     def test_cell_results_stay_outside_run_root_and_resume_completion_last(self) -> None:
         for interrupted_phase in ("after_external_adjudication", "after_raw_export"):

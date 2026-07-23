@@ -270,7 +270,7 @@ gate.
    and physical bytes. The [S5 result](../smtcomp-harness-admission-s5-result-2026-07-23.md)
    records the tiny mutation gate and a read-only 45,905-file physical rehash.
    It does not authorize a large run by itself.
-2. **Fresh P0 slices — Axeyum runtime complete, export-layout closure pending.** Stage the repaired binary and rerun
+2. **Fresh P0 slices — Axeyum cell closed; result integration pending.** Stage the repaired binary and rerun
    QF_FP/QF_BVFP/QF_ABVFP plus QF_AUFLIA under the completed protocol. Require
    DISAGREE=0. The bounded
    [S5.1 admitted-slice plan](../smtcomp-admitted-slices-s5.1-plan-2026-07-23.md)
@@ -291,10 +291,12 @@ gate.
    root. The [closure plan](../smtcomp-repaired-p0-v2-export-layout-closure-plan-2026-07-23.md)
    freezes that evidence and separates coordinator outputs without weakening
    the validator. Commit `5c06ec76` implements that process-free closure and
-   passes the portable, cgroup, and live multi-host gates. Axeyum receives no
-   credit and cvc5 remains blocked until the implementation/checkpoint bytes
-   are integrated and the closure is executed, independently validated,
-   documented, and integrated.
+   passes the portable, cgroup, and live multi-host gates. The
+   [closure result](../smtcomp-repaired-p0-v2-axeyum-closure-result-2026-07-23.md)
+   records the exact process-free migration, 1,810-row raw export, external
+   completion, independent validation, and byte-identical replay. Axeyum
+   receives no credit and cvc5 remains blocked until that result and its
+   admission-source check are integrated on `origin/main`.
 3. **Credited full population.** Only then execute Axeyum, cvc5, and Bitwuzla on
    the same versioned selection; publish the per-logic inventory and regenerate
    the coverage-weighted parity matrix without combining incompatible regimes.
@@ -338,6 +340,8 @@ Repository:
   `docs/plan/smtcomp-repaired-p0-v1-layout-incident-2026-07-23.md`;
 - repaired-P0 v2 export-layout closure plan:
   `docs/plan/smtcomp-repaired-p0-v2-export-layout-closure-plan-2026-07-23.md`;
+- repaired-P0 v2 Axeyum closure result:
+  `docs/plan/smtcomp-repaired-p0-v2-axeyum-closure-result-2026-07-23.md`;
 - candidate failure handoff:
   `docs/plan/smtcomp-full-library-candidate-run-handoff-2026-07-21.md`;
 - ranked gap plan: `docs/plan/full-library-gap-closing-plan-2026-07-22.md`;
@@ -372,11 +376,11 @@ NAS (shared, corpus read-only in practice):
 3. Confirm the old s4 process/log state and count literal `WRONG` lines without
    treating the stale run as evidence.
 4. Treat the accepted S4 root as immutable. S5/S5.1 admission and the repaired
-   P0-S1 v2 preparation are complete. The Axeyum runtime evidence is also
-   complete, but its export-layout closure is not. Keep cvc5 blocked until the
-   exact process-free closure result exists on `origin/main`; then execute only
-   the remaining frozen repaired P0 cells in order before any credited
-   full-population run. The active solver capability checkpoint is
+   P0-S1 v2 preparation are complete. The Axeyum runtime evidence and
+   process-free export-layout closure are complete. Keep cvc5 blocked until
+   the exact closure result and admission-source bytes exist on `origin/main`;
+   then execute only the remaining frozen repaired P0 cells in order before any
+   credited full-population run. The active solver capability checkpoint is
    [`../checked-multi-binder-quantified-uf-models-2026-07-22.md`](../checked-multi-binder-quantified-uf-models-2026-07-22.md).
 5. Update `STATUS.md` and this file before handoff; push only a green topic
    branch for the integration owner.

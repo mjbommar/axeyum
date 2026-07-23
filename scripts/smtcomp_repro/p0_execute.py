@@ -36,6 +36,9 @@ ADMISSION_PATH = Path(
 CLOSURE_ADMISSION_PATH = Path(
     "docs/plan/smtcomp-repaired-p0-v2-export-layout-closure-plan-2026-07-23.md"
 )
+AXEYUM_CLOSURE_RESULT_PATH = Path(
+    "docs/plan/smtcomp-repaired-p0-v2-axeyum-closure-result-2026-07-23.md"
+)
 CELL_ORDER = ("axeyum", "cvc5", "bitwuzla")
 ADJUDICATION_SCHEMA = "axeyum.smtcomp-repaired-p0-cell-adjudication.v1"
 CELL_RESULT_SCHEMA = "axeyum.smtcomp-repaired-p0-cell-result.v1"
@@ -93,6 +96,25 @@ def require_integrated_admission(repository_root: Path) -> None:
     """Require the exact local P0-S1 result bytes to exist on origin/main."""
 
     require_integrated_path(repository_root, ADMISSION_PATH)
+
+
+def require_integrated_cell_admission(
+    repository_root: Path, cell_id: str
+) -> None:
+    """Require every repository artifact that admits ``cell_id``."""
+
+    if cell_id not in CELL_ORDER:
+        raise ContractError("unknown repaired-P0 cell")
+    require_integrated_admission(repository_root)
+    require_integrated_path(repository_root, CLOSURE_ADMISSION_PATH)
+    require_integrated_path(
+        repository_root, Path("scripts/smtcomp_repro/p0_execute.py")
+    )
+    require_integrated_path(
+        repository_root, Path("scripts/smtcomp_repro/resume_runner.py")
+    )
+    if cell_id != "axeyum":
+        require_integrated_path(repository_root, AXEYUM_CLOSURE_RESULT_PATH)
 
 
 def _json_count(path: Path) -> int:
@@ -222,14 +244,7 @@ def validate_cell_launch(
     if cell_id not in CELL_ORDER:
         raise ContractError("unknown repaired-P0 cell")
     if require_integrated:
-        require_integrated_admission(repository_root)
-        require_integrated_path(repository_root, CLOSURE_ADMISSION_PATH)
-        require_integrated_path(
-            repository_root, Path("scripts/smtcomp_repro/p0_execute.py")
-        )
-        require_integrated_path(
-            repository_root, Path("scripts/smtcomp_repro/resume_runner.py")
-        )
+        require_integrated_cell_admission(repository_root, cell_id)
     complete_path = preparation_root / "complete.json"
     if sha256_file(complete_path) != acknowledged_completion_sha256:
         raise ContractError("operator acknowledgement names another preparation")

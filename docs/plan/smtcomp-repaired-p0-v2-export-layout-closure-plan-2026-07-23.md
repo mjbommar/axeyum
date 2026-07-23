@@ -1,6 +1,7 @@
 # SMT-COMP repaired P0 v2 export-layout closure plan
 
-Status: implemented and gated in `5c06ec76`; no closure mutation performed
+Status: implemented, live closure executed, and independently validated; exact
+result bytes pending integration
 Date: 2026-07-23
 Preparation: [P0-S1 v2 result](smtcomp-repaired-p0-preparation-s1-result-2026-07-23.md)
 Prior incident: [v1 runtime-layout incident](smtcomp-repaired-p0-v1-layout-incident-2026-07-23.md)
@@ -227,8 +228,8 @@ evidence.
 
 ## Next boundary
 
-The preregistration is integrated and the bounded implementation is committed,
-gated, and pushed. After the implementation and these exact checkpoint bytes
-are integrated, run the closure once against the
-frozen Axeyum v2 cell, independently validate and document its result, and
-integrate that result. Only then may the frozen cvc5 cell start.
+The preregistration and implementation are integrated. The exact process-free
+closure has completed and its independent validation is recorded in the
+[Axeyum closure result](smtcomp-repaired-p0-v2-axeyum-closure-result-2026-07-23.md).
+Integrate that result and the corresponding admission-source check on
+`origin/main`; only then may the frozen cvc5 cell start.
