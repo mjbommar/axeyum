@@ -122,6 +122,7 @@ parity-docs:
     python3 scripts/lean_execution_store.py result --check
     python3 -m unittest scripts.tests.test_lean_execution_acceptance
     python3 scripts/lean_execution_acceptance.py result --check
+    python3 -m unittest scripts.tests.test_lean_u2_official_execution
     python3 -m unittest scripts.tests.test_lean_complete_parity
     python3 -m unittest scripts.tests.test_lean_official_construct_matrix
     python3 scripts/check-lean-official-construct-matrix.py --check
