@@ -447,8 +447,10 @@ artifact/credit contract with thirteen focused tests and deliberately no live
 execution command. Commit `57dcf343` adds the pushed 64-case completion-last
 immutable store and four focused store tests, also without a launch command.
 No live harness discovery or process has run; these checkpoints therefore
-change none of the preceding outcome counts or claims. The one-shot launch
-runner remains a separate pre-attempt implementation checkpoint.
+change none of the preceding outcome counts or claims. Commit `d1f144d4`
+corrects case-before-post ordering, and commit `431d3959` implements, tests,
+commits, and pushes the one-shot runner without invoking it. Exact external
+preflight revalidation remains before the single authorized attempt.
 
 ## 8. Layer-specific equivalence
 

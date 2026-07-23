@@ -198,15 +198,18 @@ Start at the root [`PLAN.md`](../../PLAN.md) (map + standing rules) and
   The plan freezes a one-hour 8 GiB/one-worker local lane, zero-or-64 outcome
   publication, one attempt, and all non-credit boundaries. Commit `9783ba93`
   implements and pushes the pure exact spec/harness/discovery/JUnit/artifact/
-  credit contract and thirteen focused tests; its CLI has no live execution
-  command. The separate launch/store runner does not exist yet, and no live
-  harness discovery or test process has run.
+  credit contract and thirteen focused tests. Commits `57dcf343`, `d1f144d4`,
+  and `431d3959` add the completion store, correct case-before-post ordering,
+  and implement/push the one-shot runner. Its run command exists but remains
+  uninvoked; no live harness discovery or test process has run.
 - [`lean-u2-official-execution-tl0.6.3-m2-implementation-2026-07-22.md`](lean-u2-official-execution-tl0.6.3-m2-implementation-2026-07-22.md) —
   post-plan implementation checkpoint for commit `9783ba93`, exact source
   identities, thirteen mutation-focused tests, and commit `57dcf343`'s exact
   64-case completion-last store plus four focused store tests. Complete
-  parity-doc validation retains the explicit zero-outcome/zero-credit boundary
-  before the one-shot launch runner.
+  parity-doc validation, the `d1f144d4` evidence-order correction, and
+  `431d3959`'s tested/pushed one-shot runner retain the explicit
+  `live_execution_observed=false` and zero-outcome/zero-credit boundary before
+  external preflight and the single attempt.
 - [`lean-compatibility-v1.json`](lean-compatibility-v1.json) and generated
   [`Lean compatibility matrix`](generated/lean-compatibility.md) — TL0.2's
   executable eight-field assurance contract, K0-K6 profile gates, registered
