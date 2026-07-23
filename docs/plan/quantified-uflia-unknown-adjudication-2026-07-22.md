@@ -1,6 +1,6 @@
 # Quantified-UFLIA unknown adjudication
 
-Status: baseline and ADR-0359 implementation measured; final acceptance gates pending
+Status: complete; ADR-0359 accepted
 Date: 2026-07-22
 Owner: solver/engine lane in `agent/smtcomp/full-library-resume`
 

@@ -1,15 +1,15 @@
 # ADR-0359: Preregister checked quantified-UF default repair
 
-Status: proposed
+Status: accepted
 Date: 2026-07-22
 
-Implementation note (2026-07-22): the bounded repair and its focused gates are
-implemented in topic commit `79a8dd21`; ADR acceptance remains withheld until
-the branch-wide evidence gates below complete. The post-implementation 256-case
-differential reports 178 checked Axeyum SAT results versus 111 at baseline,
-zero disagreements, and canonical replay for every SAT result. The ordinary
-Z3-SAT incomplete bucket fell from 96 to 39 and the resource-limited Z3-SAT
-bucket from nine to zero.
+Acceptance note (2026-07-22): the bounded repair is implemented in topic commit
+`79a8dd21`. The post-implementation 256-case differential reports 178 checked
+Axeyum SAT results versus 111 at baseline, zero disagreements, and canonical
+replay for every SAT result. The ordinary Z3-SAT incomplete bucket fell from 96
+to 39 and the resource-limited Z3-SAT bucket from nine to zero. All focused,
+workspace, static, generated-resource, parity, link, QF_BV-profile, and
+SMT-COMP-recovery gates below passed on the containing branch before acceptance.
 
 ## Context
 

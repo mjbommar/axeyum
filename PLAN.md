@@ -9102,8 +9102,9 @@ coverage never regresses):
    default-only repair raises checked SAT from 111 to 178 on that same 256-case
    population with zero disagreements and every SAT model replayed; ordinary
    Z3-SAT declines fall from 96 to 39 and resource-limited Z3-SAT declines from
-   nine to zero. Final branch-wide acceptance gates remain open. Explicit-table
-   repair, free-scalar completion, and general model repair remain later,
+   nine to zero. ADR-0359 is accepted after the complete workspace/static/
+   resource/parity/link/profile/recovery gate. Explicit-table repair,
+   free-scalar completion, and general model repair remain later,
    separately preregistered capability work;
    MAM/trigger-inference (T2.6.1/2) follow as throughput.
 3. **Bank the CDCL(T) spine** (Gap 3): the default-dispatch ADR for the

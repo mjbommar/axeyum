@@ -874,6 +874,21 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   ADR-0359 evidence gates, accept only if green, then measure the remaining
   free-scalar/larger-search Unknown boundary before any new implementation.
 
+- **2026-07-22 — accepted ADR-0359 after comprehensive branch-wide gates.**
+  The final run repeats 898/898 solver units, 69/69 evidence, 15/15
+  instantiation, 21/21 MBQI, the 256-case direct-Z3 repair differential in
+  77.16 seconds, and the broader UFLIA differential in 420.71 seconds with zero
+  disagreements. Workspace tests and doctests pass under the registered
+  exclusion of two independent CAS moment-family stress tests; warning-denied
+  workspace Clippy and strict rustdoc are clean. Foundational resources validate
+  137 concept rows and 174 packs; parity compares 680 decisions with zero
+  disagreement; links, whitespace, QF_BV profile, and SMT-COMP recovery pass
+  (52 tests, one environment skip). Five timing-sensitive frontier JSON rewrites
+  from the workspace run were inspected and restored to their committed
+  baseline. Next: publish the green topic branch, then classify the remaining
+  39 oracle-SAT Unknowns into free-scalar, explicit-table, shape, and bounded-
+  search causes before preregistering another functionality increment.
+
 - **2026-07-22 — ADR-0356 S4 official selection identity is complete; S5 is
   deliberately not blocking solver functionality.** The accepted root
   `/nas3/data/axeyum/harness/official-selection-2026-sq/accepted-322adaa78396bf42d4660d12582e6db1cf2166a765bb912fdfb179975a9c9698`
