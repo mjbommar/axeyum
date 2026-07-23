@@ -22,9 +22,9 @@ R1 changes only the compile-control stack input and failure closure:
    `pinned-lean-compile-preflight-4g-tstack512m`;
 2. insert exact Lean option `-s524288` after `-j1`, selecting a 512 MiB task
    stack in the pinned CLI's documented KiB unit;
-3. keep the exact 4 GiB `RLIMIT_AS`, one requested thread, 60-second watchdog,
-   source, Lean binary, environment, working-directory policy, and zero-credit
-   selection;
+3. keep the exact 4 GiB `RLIMIT_AS`, one requested Lean worker, 60-second
+   watchdog, source, Lean binary, environment, working-directory policy, and
+   zero-credit selection; the OS-thread count is explicitly not enforced;
 4. install raw streams and terminal evidence before checking for a successful
    output artifact; and
 5. bind the failed-attempt evidence and its no-credit diagnostics into the
@@ -46,6 +46,12 @@ zero and produced the identical 9,672-byte `.olean`, while 960 MiB and 1 GiB
 failed to create a thread under 4 GiB. The result must record the option in the
 exact command and resource envelope as `task_stack_limit` with state
 `observed`, value `536870912`, and unit `bytes`.
+
+`-j1` and `LEAN_NUM_THREADS=1` record requested Lean work parallelism, not an
+OS-thread ceiling. Attempt 001's trace observes multiple runtime threads even
+with those settings. R1 therefore records `worker_limit` as one requested
+worker but `thread_limit` as `not-enforced`/null. It must not claim that one OS
+thread was observed or enforced.
 
 R1 does not use `LEAN_STACK_SIZE_KB` as a substitute. The diagnostic showed
 that changing that environment value alone did not prevent the later task
