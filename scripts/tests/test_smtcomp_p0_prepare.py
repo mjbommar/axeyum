@@ -26,8 +26,13 @@ from p0_prepare import (  # noqa: E402
 )
 from p0_execute import (  # noqa: E402
     ADMISSION_PATH,
+    CELL_RESULT_SCHEMA,
     adjudicate_cell,
+    cell_result_root,
+    migrate_legacy_adjudication,
+    publish_cell_result,
     require_integrated_admission,
+    validate_cell_result,
     validate_cell_launch,
 )
 from resume_contract import ContractError, canonical_bytes, digest  # noqa: E402
@@ -52,6 +57,48 @@ def _seal(value: dict) -> dict:
 
 def _sha(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def _cell_result_fixture(root: Path) -> tuple[Path, dict, Path]:
+    preparation = root / "preparation"
+    run_dir = preparation / "cells" / "axeyum"
+    (run_dir / "records").mkdir(parents=True)
+    (preparation / "complete.json").write_bytes(b'{"fixture":"complete"}\n')
+    cells = []
+    for solver_id in ("axeyum", "cvc5", "bitwuzla"):
+        cell_root = preparation / "cells" / solver_id
+        cell_root.mkdir(parents=True, exist_ok=True)
+        manifest = preparation / "inputs" / f"{solver_id}-run-manifest.json"
+        manifest.parent.mkdir(parents=True, exist_ok=True)
+        manifest.write_bytes(
+            canonical_bytes({"identity_sha256": f"{solver_id:0<64}"[:64]})
+        )
+        cells.append(
+            {
+                "solver_id": solver_id,
+                "attempt_root": str(cell_root),
+                "run_manifest_path": str(manifest),
+            }
+        )
+    record = {
+        "benchmark_id": "QF_FP/fixture.smt2",
+        "benchmark_sha256": "b" * 64,
+        "expected_status": "sat",
+        "reported_status": "sat",
+        "result_key": "r" * 64,
+        "termination_class": "completed",
+    }
+    (run_dir / "records" / f"{record['result_key']}.json").write_bytes(
+        canonical_bytes(record)
+    )
+    (run_dir / "resource-completion.json").write_bytes(
+        canonical_bytes({"record_sha256": "c" * 64})
+    )
+    (run_dir / "multi-host-completion.json").write_bytes(
+        canonical_bytes({"record_sha256": "d" * 64})
+    )
+    completion = {"cells": cells, "record_sha256": "e" * 64}
+    return preparation, completion, run_dir
 
 
 def _accepted_root(shared: Path, corpus: Path) -> Path:
@@ -151,13 +198,168 @@ class P0PrepareTests(unittest.TestCase):
                 "p0_execute.subprocess.check_output",
                 side_effect=[b"", b"different result\n"],
             ):
-                with self.assertRaisesRegex(ContractError, "different P0-S1"):
+                with self.assertRaisesRegex(ContractError, "different P0 admission"):
                     require_integrated_admission(root)
             with mock.patch(
                 "p0_execute.subprocess.check_output",
                 side_effect=[b"", result.read_bytes()],
             ):
                 require_integrated_admission(root)
+
+    def test_cell_results_stay_outside_run_root_and_resume_completion_last(self) -> None:
+        for interrupted_phase in ("after_external_adjudication", "after_raw_export"):
+            with self.subTest(interrupted_phase=interrupted_phase):
+                with tempfile.TemporaryDirectory() as tmp:
+                    preparation, completion, run_dir = _cell_result_fixture(Path(tmp))
+                    raw = b'{"QF_FP/fixture.smt2":{"axeyum":{}}}'
+
+                    def interrupt(phase: str) -> None:
+                        if phase == interrupted_phase:
+                            raise RuntimeError(phase)
+
+                    patches = (
+                        mock.patch("p0_execute.finalize_multi_host_run", return_value={}),
+                        mock.patch(
+                            "p0_execute.validate_bundle_directory",
+                            return_value=b"canonical-bundle",
+                        ),
+                        mock.patch("p0_execute.legacy_raw_bytes", return_value=raw),
+                    )
+                    with patches[0], patches[1], patches[2]:
+                        with self.assertRaisesRegex(RuntimeError, interrupted_phase):
+                            publish_cell_result(
+                                preparation_root=preparation,
+                                completion=completion,
+                                cell_id="axeyum",
+                                run_dir=run_dir,
+                                phase_hook=interrupt,
+                            )
+                        partial = cell_result_root(preparation, "axeyum")
+                        self.assertFalse((partial / "complete.json").exists())
+                        self.assertTrue((partial / "p0-cell-adjudication.json").exists())
+                        self.assertEqual(
+                            (partial / "raw-results.json").exists(),
+                            interrupted_phase == "after_raw_export",
+                        )
+                        result = publish_cell_result(
+                            preparation_root=preparation,
+                            completion=completion,
+                            cell_id="axeyum",
+                            run_dir=run_dir,
+                        )
+                        self.assertEqual(result["schema"], CELL_RESULT_SCHEMA)
+                        self.assertTrue(result["safe_to_continue"])
+                        self.assertEqual(result["raw_result_count"], 1)
+                        self.assertEqual(
+                            validate_cell_result(
+                                preparation_root=preparation,
+                                completion=completion,
+                                cell_id="axeyum",
+                                run_dir=run_dir,
+                            ),
+                            result,
+                        )
+                        unexpected = partial / "unexpected.json"
+                        unexpected.write_bytes(b"{}")
+                        with self.assertRaisesRegex(
+                            ContractError, "unexpected P0 cell-result artifact"
+                        ):
+                            validate_cell_result(
+                                preparation_root=preparation,
+                                completion=completion,
+                                cell_id="axeyum",
+                                run_dir=run_dir,
+                            )
+                        unexpected.unlink()
+                        raw_path = partial / "raw-results.json"
+                        raw_path.chmod(0o644)
+                        raw_path.write_bytes(b"{}")
+                        with self.assertRaisesRegex(ContractError, "raw export drift"):
+                            validate_cell_result(
+                                preparation_root=preparation,
+                                completion=completion,
+                                cell_id="axeyum",
+                                run_dir=run_dir,
+                            )
+                    self.assertFalse((run_dir / "p0-cell-adjudication.json").exists())
+                    self.assertFalse((run_dir / "raw-results.json").exists())
+                    self.assertEqual(
+                        sorted(
+                            path.name
+                            for path in cell_result_root(
+                                preparation, "axeyum"
+                            ).iterdir()
+                        ),
+                        ["complete.json", "p0-cell-adjudication.json", "raw-results.json"],
+                    )
+
+    def test_cell_result_conflict_stops_before_raw_or_completion(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            preparation, completion, run_dir = _cell_result_fixture(Path(tmp))
+            result_root = cell_result_root(preparation, "axeyum")
+            result_root.mkdir(parents=True)
+            (result_root / "p0-cell-adjudication.json").write_bytes(b"conflict")
+            with (
+                mock.patch("p0_execute.finalize_multi_host_run", return_value={}),
+                mock.patch(
+                    "p0_execute.validate_bundle_directory",
+                    return_value=b"canonical-bundle",
+                ),
+                mock.patch(
+                    "p0_execute.legacy_raw_bytes",
+                    return_value=b'{"QF_FP/fixture.smt2":{"axeyum":{}}}',
+                ),
+                self.assertRaisesRegex(ContractError, "immutable checkpoint conflict"),
+            ):
+                publish_cell_result(
+                    preparation_root=preparation,
+                    completion=completion,
+                    cell_id="axeyum",
+                    run_dir=run_dir,
+                )
+            self.assertFalse((result_root / "raw-results.json").exists())
+            self.assertFalse((result_root / "complete.json").exists())
+
+    def test_legacy_adjudication_quarantine_is_exact_and_idempotent(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            run_dir = Path(tmp)
+            data = canonical_bytes({"schema": "legacy-fixture"})
+            digest_hex = hashlib.sha256(data).hexdigest()
+            source = run_dir / "p0-cell-adjudication.json"
+            source.write_bytes(data)
+
+            def interrupt(phase: str) -> None:
+                if phase == "after_legacy_quarantine":
+                    raise RuntimeError(phase)
+
+            with self.assertRaisesRegex(RuntimeError, "after_legacy_quarantine"):
+                migrate_legacy_adjudication(
+                    run_dir=run_dir,
+                    adjudication_sha256=digest_hex,
+                    phase_hook=interrupt,
+                )
+            destination = (
+                run_dir
+                / "quarantine"
+                / f"p0-cell-adjudication-layout-v1-{digest_hex}.json"
+            )
+            self.assertFalse(source.exists())
+            self.assertEqual(destination.read_bytes(), data)
+            migrate_legacy_adjudication(
+                run_dir=run_dir,
+                adjudication_sha256=digest_hex,
+            )
+            with self.assertRaisesRegex(ContractError, "source adjudication mismatch"):
+                migrate_legacy_adjudication(
+                    run_dir=run_dir,
+                    adjudication_sha256="0" * 64,
+                )
+            source.write_bytes(data)
+            with self.assertRaisesRegex(ContractError, "duplicate adjudication"):
+                migrate_legacy_adjudication(
+                    run_dir=run_dir,
+                    adjudication_sha256=digest_hex,
+                )
 
     def test_adjudication_finds_known_and_cross_solver_conflicts(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
