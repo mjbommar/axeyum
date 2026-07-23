@@ -657,6 +657,99 @@ fn quantified_uflia_model_finder_differential_fuzz_disagree_zero() {
 }
 
 #[test]
+fn two_binder_cartesian_profiles_agree_with_z3() {
+    let cfg = SolverConfig::new().with_timeout(AXEYUM_TIMEOUT);
+    let mut ax_sat = 0_u64;
+    let mut ax_unsat = 0_u64;
+
+    for seed in 0..64_i64 {
+        let threshold = seed.rem_euclid(5) - 2;
+        let expect_sat = seed % 2 == 0;
+        let point_count = usize::try_from(seed.rem_euclid(3) + 1).unwrap();
+
+        let mut arena = TermArena::new();
+        let function = arena
+            .declare_fun("f", &[Sort::Int, Sort::Int], Sort::Int)
+            .unwrap();
+        let x_sym = arena.declare("x", Sort::Int).unwrap();
+        let y_sym = arena.declare("y", Sort::Int).unwrap();
+        let x = arena.var(x_sym);
+        let y = arena.var(y_sym);
+        let application = arena.apply(function, &[x, y]).unwrap();
+        let lower = arena.int_const(i128::from(threshold));
+        let body = arena.int_ge(application, lower).unwrap();
+        let inner = arena.forall(y_sym, body).unwrap();
+        let forall = arena.forall(x_sym, inner).unwrap();
+        let mut assertions = vec![forall];
+
+        let z3_solver = Solver::new();
+        let mut params = Params::new();
+        params.set_u32(
+            "timeout",
+            u32::try_from(Z3_TIMEOUT.as_millis()).unwrap_or(u32::MAX),
+        );
+        z3_solver.set_params(&params);
+        let z3_x = Int::new_const("x");
+        let z3_y = Int::new_const("y");
+        let int_sort = Z3Sort::int();
+        let z3_function = FuncDecl::new("f", &[&int_sort, &int_sort], &int_sort);
+        let z3_application = z3_function
+            .apply(&[&z3_x as &dyn Ast, &z3_y as &dyn Ast])
+            .as_int()
+            .unwrap();
+        let z3_body = z3_application.ge(Int::from_i64(threshold));
+        z3_solver.assert(z3::ast::forall_const(
+            &[&z3_x as &dyn Ast, &z3_y as &dyn Ast],
+            &[],
+            &z3_body,
+        ));
+
+        for point in 0..point_count {
+            let a = seed.rem_euclid(7) + i64::try_from(point).unwrap();
+            let b = seed.rem_euclid(11) - i64::try_from(point).unwrap();
+            let value = if !expect_sat && point == 0 {
+                threshold - 1
+            } else {
+                threshold + 1 + i64::try_from(point).unwrap()
+            };
+            let a_term = arena.int_const(i128::from(a));
+            let b_term = arena.int_const(i128::from(b));
+            let at_point = arena.apply(function, &[a_term, b_term]).unwrap();
+            let value_term = arena.int_const(i128::from(value));
+            assertions.push(arena.eq(at_point, value_term).unwrap());
+
+            let z3_at_point = z3_function
+                .apply(&[&Int::from_i64(a) as &dyn Ast, &Int::from_i64(b) as &dyn Ast])
+                .as_int()
+                .unwrap();
+            z3_solver.assert(z3_at_point.eq(Int::from_i64(value)));
+        }
+
+        let axeyum = prove_unsat_by_mbqi(&mut arena, &assertions, &cfg).unwrap();
+        let axeyum_verdict = label(&axeyum);
+        match &axeyum {
+            CheckResult::Sat(model) => {
+                ax_sat += 1;
+                assert!(check_model(&arena, &assertions, model).unwrap());
+            }
+            CheckResult::Unsat => ax_unsat += 1,
+            CheckResult::Unknown(reason) => {
+                panic!("seed {seed} unexpectedly declined: {reason:?}")
+            }
+        }
+        let z3_verdict = match z3_solver.check() {
+            SatResult::Sat => Verdict::Sat,
+            SatResult::Unsat => Verdict::Unsat,
+            SatResult::Unknown => panic!("Z3 unexpectedly declined seed {seed}"),
+        };
+        assert_eq!(axeyum_verdict, z3_verdict, "seed {seed}");
+    }
+
+    assert_eq!(ax_sat, 32);
+    assert_eq!(ax_unsat, 32);
+}
+
+#[test]
 #[ignore = "full 2,000-instance quantified-UFLIA differential campaign"]
 fn quantified_uflia_model_finder_differential_fuzz_full() {
     run_differential_fuzz(FULL_INSTANCES, 100);
