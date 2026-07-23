@@ -1,6 +1,6 @@
 # Quantified-UFLIA profile-guided model-completion measurement
 
-Status: measured; production boundary preregistered
+Status: measured; production boundary implemented; solver gates green
 Date: 2026-07-23
 Owner: solver/engine lane in `agent/smtcomp/full-library-resume`
 
@@ -79,6 +79,41 @@ The projected production totals are therefore exactly 219 SAT, 24 UNSAT, and
 The direct-Z3 gate should reach at least 235 jointly decided agreements; higher
 counts are permitted only for the already observed independent oracle-timeout
 variance.
+
+## Production result
+
+Commit `1c8e5125` implements the preregistered loop after the established
+MBQI, E-matching, and ADR-0361 routes. The production implementation keeps the
+original shared deadline, adds one exact source instance per round, caps both
+rounds and accumulated instances at 32, and declines every non-SAT inner result.
+It also rejects multiple binders/universals, `Real` binders, non-`Int` function
+signatures, incompatible storage, duplicate instances, and expired deadlines.
+
+Two production differential executions, including the uninterrupted aggregate
+solver-package run, returned the exact preregistered result:
+
+```text
+jointly decided: 236
+agreements:      236
+Axeyum SAT:      219
+Axeyum UNSAT:     24
+Axeyum Unknown:   13
+Axeyum errors:     0
+SAT replays:     219
+disagreements:     0
+ordinary Z3-SAT residuals: none
+```
+
+Focused source-definition, falsifier, cap, deadline, outer-only, and
+non-transfer controls pass. Warning-denied all-target/all-feature solver Clippy
+and strict rustdoc pass. One uninterrupted `CI=1` all-feature solver-package
+run passes all 913 library tests, every non-ignored integration test, and both
+doctests. The aggregate run also rechecks the production 256-case differential
+at the exact 219/24/13 boundary.
+
+ADR-0364 remains proposed because the existing cross-lane Lean parity-evidence
+run/spec attribution drift is unchanged and is not owned by this lane. No
+Lean-owned retained evidence was rewritten.
 
 ## Rejected measured alternative
 

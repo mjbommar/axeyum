@@ -63,6 +63,27 @@ E-matching Unknown on decline. No public evidence type, checker admission,
 source fragment, UNSAT route, value pool, default Cartesian cap, or scalar
 completion cap changes.
 
+## Implementation evidence
+
+Commit `1c8e5125` implements this boundary without changing the decision. The
+exact residual controls certify and replay seeds 122, 175, 182, and 226. The
+production 256-case differential passes twice at 236/236 jointly decided
+agreements, exactly 219 SAT, 24 UNSAT, and 13 Unknown, with 219/219 SAT replay,
+zero errors/disagreements, and no ordinary Z3-SAT residual.
+
+Focused tests cover exact constant-definition replacement, preservation of
+unrelated scalar state, binder-dependent nondefinitions, exact table-key
+falsifiers, outer-only/deadline behavior, the instance cap, no inner-UNSAT
+transfer, and rejection of Bool-result, `Real`-binder, and multiple-binder
+profiles. Warning-denied all-target/all-feature solver Clippy and strict
+rustdoc pass. One uninterrupted CI-mode all-feature solver-package run passes
+all 913 library tests, every non-ignored integration test, and both doctests,
+including the exact production differential.
+
+The ADR remains proposed only because the pre-existing cross-lane Lean
+parity-evidence run/spec attribution drift is unchanged. This lane does not own
+or rewrite that retained evidence.
+
 ## Evidence gates
 
 Acceptance requires:

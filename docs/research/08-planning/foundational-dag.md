@@ -326,6 +326,17 @@ the default pool, without changing scalar assignments or explicit UF entries.
 It retains ADR-0359's 32-value/256-tuple caps and accepts only the same
 finite-profile certificate plus canonical full-source replay.
 
+After every established route above declines, ADR-0364 permits one SAT-only,
+single-`Int`-binder finite-profile completion loop under the original remaining
+deadline. Missing relevant `Int` functions may receive a zero search default,
+and an exact top-level `f(binder) = ground_term` conjunct may propose a total
+constant function; neither is evidence. The independent checker supplies at
+most one exact falsifying source instance per round under 32-round/32-instance
+caps. Every inner non-SAT result, unsupported signature, duplicate, cap, or
+deadline declines. SAT still requires the existing finite-profile certificate
+and canonical full-source replay; no checker, source fragment, evidence type,
+or UNSAT route widens.
+
 ADR-0123 refines the quantifier row's SAT boundary: Bool/Int/BV syntax may be
 traversed by the checked free-Boolean model evaluator, but BV predicates remain
 opaque. SAT is admitted only when a complete carried Boolean assignment makes
