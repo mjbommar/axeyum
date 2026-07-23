@@ -808,11 +808,11 @@ fn run_differential_fuzz(instances: u64, minimum_jointly_decided: u64) -> Tally 
 
 #[test]
 fn quantified_uflia_model_finder_differential_fuzz_disagree_zero() {
-    let tally = run_differential_fuzz(SMOKE_INSTANCES, 232);
+    let tally = run_differential_fuzz(SMOKE_INSTANCES, 235);
     assert_eq!(tally.agreements, tally.jointly_decided);
-    assert_eq!(tally.ax_sat, 215);
+    assert_eq!(tally.ax_sat, 219);
     assert_eq!(tally.ax_unsat, 24);
-    assert_eq!(tally.ax_unknown, 17);
+    assert_eq!(tally.ax_unknown, 13);
     assert_eq!(tally.ax_error_skipped, 0);
     let mut z3_sat_residuals: Vec<u64> = tally
         .ax_unknown_by_reason
@@ -820,7 +820,7 @@ fn quantified_uflia_model_finder_differential_fuzz_disagree_zero() {
         .flat_map(|oracle| oracle.z3_sat_seeds.iter().copied())
         .collect();
     z3_sat_residuals.sort_unstable();
-    assert_eq!(z3_sat_residuals, [122, 175, 182]);
+    assert!(z3_sat_residuals.is_empty());
 }
 
 #[test]
@@ -912,18 +912,18 @@ fn source_guided_uf_defaults_close_five_production_residuals() {
 }
 
 #[test]
-fn source_guided_uf_defaults_preserve_three_bounded_declines() {
+fn profile_guided_model_completion_closes_four_residuals() {
     let config = SolverConfig::new().with_timeout(AXEYUM_TIMEOUT);
-    for seed in [122_u64, 175, 182] {
+    for seed in [122_u64, 175, 182, 226] {
         let mut rng = Lcg::new(seed);
         let inst = Instance::generate(&mut rng);
-        assert_eq!(z3_decide(&inst), Verdict::Sat, "seed {seed}");
+        assert_ne!(z3_decide(&inst), Verdict::Unsat, "seed {seed}");
         let (mut arena, _, _, _, _, assertions) = inst.build_axeyum();
         let result = prove_unsat_by_mbqi(&mut arena, &assertions, &config).unwrap();
-        assert!(
-            matches!(result, CheckResult::Unknown(_)),
-            "seed {seed} must remain a bounded decline, got {result:?}"
-        );
+        let CheckResult::Sat(model) = result else {
+            panic!("profile-guided completion must close seed {seed}, got {result:?}");
+        };
+        assert!(check_model(&arena, &assertions, &model).unwrap());
     }
 }
 

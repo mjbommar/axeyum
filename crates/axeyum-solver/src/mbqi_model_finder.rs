@@ -5,7 +5,10 @@
 //! source checker accepts every original universal and returns one certificate
 //! per assertion.
 
-use std::{collections::BTreeSet, time::Instant};
+use std::{
+    collections::{BTreeMap, BTreeSet},
+    time::Instant,
+};
 
 use axeyum_ir::{FuncId, FuncValue, Rational, Sort, TermArena, TermId, TermNode, Value, eval};
 
@@ -135,6 +138,157 @@ pub(crate) fn repair_and_certify_all_universals_with_source_int_values(
     }
 
     search_source_default_repairs(arena, universal_assertions, model, &repairs, 0, deadline)
+}
+
+/// Completes one untrusted candidate for ADR-0364's single-`Int`-binder
+/// finite-profile loop.
+///
+/// Missing source functions receive a zero default so the profile is
+/// evaluable. An exact top-level conjunct `f(binder) = ground_term` may then
+/// propose the corresponding total constant function. Neither operation is
+/// evidence; callers must independently certify and replay the returned model.
+pub(crate) fn complete_profile_guided_int_candidate(
+    arena: &TermArena,
+    assertion: TermId,
+    model: &Model,
+) -> Option<Model> {
+    let TermNode::App {
+        op: axeyum_ir::Op::Forall(binder),
+        args,
+    } = arena.node(assertion)
+    else {
+        return None;
+    };
+    let [body] = &**args else {
+        return None;
+    };
+    if arena.symbol(*binder).1 != Sort::Int
+        || matches!(
+            arena.node(*body),
+            TermNode::App {
+                op: axeyum_ir::Op::Forall(_),
+                ..
+            }
+        )
+    {
+        return None;
+    }
+
+    let functions =
+        crate::quant_uf_model_sat_cert::quantified_uf_model_functions(arena, assertion)?;
+    let mut completed = model.clone();
+    for function in functions {
+        let (_, params, result) = arena.function(function);
+        if result != Sort::Int || params.iter().any(|sort| *sort != Sort::Int) {
+            return None;
+        }
+        if let Some(interpretation) = completed.function(function) {
+            if interpretation.params() != params
+                || interpretation.result() != result
+                || !interpretation.uses_value_storage()
+            {
+                return None;
+            }
+        } else {
+            completed.set_function(
+                function,
+                FuncValue::constant_value(params.to_vec(), result, Value::Int(0)),
+            );
+        }
+    }
+
+    let definitions = constant_int_function_definitions(arena, *body, *binder);
+    for (function, value_term) in definitions {
+        let value = eval(arena, value_term, &completed.to_assignment()).ok()?;
+        let Value::Int(_) = value else {
+            return None;
+        };
+        let (_, params, result) = arena.function(function);
+        completed.set_function(
+            function,
+            FuncValue::constant_value(params.to_vec(), result, value),
+        );
+    }
+    Some(completed)
+}
+
+fn constant_int_function_definitions(
+    arena: &TermArena,
+    body: TermId,
+    binder: axeyum_ir::SymbolId,
+) -> Vec<(FuncId, TermId)> {
+    fn depends_on_symbol(
+        arena: &TermArena,
+        term: TermId,
+        symbol: axeyum_ir::SymbolId,
+        memo: &mut BTreeMap<TermId, bool>,
+    ) -> bool {
+        if let Some(depends) = memo.get(&term) {
+            return *depends;
+        }
+        let depends = match arena.node(term) {
+            TermNode::Symbol(candidate) => *candidate == symbol,
+            TermNode::App { args, .. } => args
+                .iter()
+                .any(|&argument| depends_on_symbol(arena, argument, symbol, memo)),
+            _ => false,
+        };
+        memo.insert(term, depends);
+        depends
+    }
+
+    fn direct_binder_application(
+        arena: &TermArena,
+        term: TermId,
+        binder: axeyum_ir::SymbolId,
+    ) -> Option<FuncId> {
+        let TermNode::App {
+            op: axeyum_ir::Op::Apply(function),
+            args,
+        } = arena.node(term)
+        else {
+            return None;
+        };
+        let [argument] = &**args else {
+            return None;
+        };
+        matches!(arena.node(*argument), TermNode::Symbol(symbol) if *symbol == binder)
+            .then_some(*function)
+    }
+
+    let mut definitions = Vec::new();
+    let mut dependency_memo = BTreeMap::new();
+    let mut stack = vec![body];
+    while let Some(term) = stack.pop() {
+        let TermNode::App { op, args } = arena.node(term) else {
+            continue;
+        };
+        match op {
+            axeyum_ir::Op::BoolAnd => stack.extend(args.iter().rev().copied()),
+            axeyum_ir::Op::Eq => {
+                let [left, right] = &**args else {
+                    continue;
+                };
+                let definition = direct_binder_application(arena, *left, binder)
+                    .filter(|_| !depends_on_symbol(arena, *right, binder, &mut dependency_memo))
+                    .map(|function| (function, *right))
+                    .or_else(|| {
+                        direct_binder_application(arena, *right, binder)
+                            .filter(|_| {
+                                !depends_on_symbol(arena, *left, binder, &mut dependency_memo)
+                            })
+                            .map(|function| (function, *left))
+                    });
+                if let Some(definition) = definition
+                    && !definitions.contains(&definition)
+                {
+                    definitions.push(definition);
+                }
+            }
+            _ => {}
+        }
+    }
+    definitions
 }
 
 fn same_value_set(left: &[Value], right: &[Value]) -> bool {
@@ -591,6 +745,114 @@ mod tests {
             )
             .is_none(),
             "the source-guided increment is Int-result-only"
+        );
+    }
+
+    #[test]
+    fn profile_completion_applies_exact_constant_definition_and_clears_entries() {
+        let mut arena = TermArena::new();
+        let function = arena
+            .declare_fun("profile_constant_f", &[Sort::Int], Sort::Int)
+            .unwrap();
+        let binder = arena.declare("profile_constant_x", Sort::Int).unwrap();
+        let scalar = arena.declare("profile_constant_y", Sort::Int).unwrap();
+        let variable = arena.var(binder);
+        let scalar_variable = arena.var(scalar);
+        let application = arena.apply(function, &[variable]).unwrap();
+        let body = arena.eq(application, scalar_variable).unwrap();
+        let universal = arena.forall(binder, body).unwrap();
+
+        let interpretation = FuncValue::constant_value(vec![Sort::Int], Sort::Int, Value::Int(8))
+            .define_value(&[Value::Int(2)], Value::Int(9));
+        let mut model = Model::new();
+        model.set(scalar, Value::Int(-3));
+        model.set_function(function, interpretation);
+
+        let completed = complete_profile_guided_int_candidate(&arena, universal, &model)
+            .expect("the exact source definition must produce a candidate");
+        assert_eq!(completed.get(scalar), Some(Value::Int(-3)));
+        let completed_function = completed.function(function).unwrap();
+        assert_eq!(completed_function.default_value(), Value::Int(-3));
+        assert_eq!(completed_function.value_entries().count(), 0);
+    }
+
+    #[test]
+    fn profile_completion_does_not_treat_binder_dependent_equality_as_definition() {
+        let mut arena = TermArena::new();
+        let first = arena
+            .declare_fun("profile_dependent_f", &[Sort::Int], Sort::Int)
+            .unwrap();
+        let second = arena
+            .declare_fun("profile_dependent_g", &[Sort::Int], Sort::Int)
+            .unwrap();
+        let binder = arena.declare("profile_dependent_x", Sort::Int).unwrap();
+        let variable = arena.var(binder);
+        let first_application = arena.apply(first, &[variable]).unwrap();
+        let second_application = arena.apply(second, &[variable]).unwrap();
+        let body = arena.eq(first_application, second_application).unwrap();
+        let universal = arena.forall(binder, body).unwrap();
+
+        let interpretation = FuncValue::constant_value(vec![Sort::Int], Sort::Int, Value::Int(4))
+            .define_value(&[Value::Int(2)], Value::Int(7));
+        let mut model = Model::new();
+        model.set_function(first, interpretation.clone());
+        model.set_function(second, interpretation);
+
+        let completed = complete_profile_guided_int_candidate(&arena, universal, &model)
+            .expect("the supported profile must remain evaluable");
+        assert_eq!(
+            completed.function(first).unwrap().value_entries().count(),
+            1,
+            "a binder-dependent equality must not clear explicit entries"
+        );
+    }
+
+    #[test]
+    fn profile_completion_declines_non_int_and_multiple_binder_profiles() {
+        let mut bool_result_arena = TermArena::new();
+        let predicate = bool_result_arena
+            .declare_fun("profile_bool_result_p", &[Sort::Int], Sort::Bool)
+            .unwrap();
+        let binder = bool_result_arena
+            .declare("profile_bool_result_x", Sort::Int)
+            .unwrap();
+        let variable = bool_result_arena.var(binder);
+        let body = bool_result_arena.apply(predicate, &[variable]).unwrap();
+        let universal = bool_result_arena.forall(binder, body).unwrap();
+        assert!(
+            complete_profile_guided_int_candidate(&bool_result_arena, universal, &Model::new())
+                .is_none(),
+            "Bool-result functions are outside the Int-only profile"
+        );
+
+        let mut real_binder_arena = TermArena::new();
+        let binder = real_binder_arena
+            .declare("profile_real_binder_x", Sort::Real)
+            .unwrap();
+        let body = real_binder_arena.bool_const(true);
+        let universal = real_binder_arena.forall(binder, body).unwrap();
+        assert!(
+            complete_profile_guided_int_candidate(&real_binder_arena, universal, &Model::new())
+                .is_none(),
+            "Real binders are outside the single-Int-binder profile"
+        );
+
+        let mut multiple_binder_arena = TermArena::new();
+        let outer = multiple_binder_arena
+            .declare("profile_multiple_outer", Sort::Int)
+            .unwrap();
+        let inner = multiple_binder_arena
+            .declare("profile_multiple_inner", Sort::Int)
+            .unwrap();
+        let body = multiple_binder_arena.bool_const(true);
+        let inner_universal = multiple_binder_arena.forall(inner, body).unwrap();
+        let universal = multiple_binder_arena
+            .forall(outer, inner_universal)
+            .unwrap();
+        assert!(
+            complete_profile_guided_int_candidate(&multiple_binder_arena, universal, &Model::new())
+                .is_none(),
+            "nested universal binders must not enter the single-binder profile"
         );
     }
 }
