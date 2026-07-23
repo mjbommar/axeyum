@@ -264,6 +264,11 @@ Start at the root [`PLAN.md`](../../PLAN.md) (map + standing rules) and
   pushed R4 implementation checkpoint for the 16 GiB adapter, exact R3
   authority binding, separately explicit stack/fanout controls, inherited
   tiered closure, focused/aggregate gates, and still-unconsumed attempt 003.
+- [`R4 fanout-control R1 plan`](lean-u2-official-execution-tl0.6.3-m2-r4-fanout-control-r1-plan-2026-07-23.md)
+  and [`implementation checkpoint`](lean-u2-official-execution-tl0.6.3-m2-r4-fanout-control-r1-implementation-2026-07-23.md) —
+  disclose the first harmless control's missing-`do` syntax failure, freeze and
+  publish the one-token correction, and preserve the unconsumed selected
+  attempt and every resource/shard/store/credit boundary.
 - [`lean-compatibility-v1.json`](lean-compatibility-v1.json) and generated
   [`Lean compatibility matrix`](generated/lean-compatibility.md) — TL0.2's
   executable eight-field assurance contract, K0-K6 profile gates, registered

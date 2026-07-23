@@ -582,8 +582,14 @@ state.
 > [R4 implementation checkpoint](docs/plan/lean-u2-official-execution-tl0.6.3-m2-r4-attempt-003-implementation-2026-07-23.md)
 > records clean pushed commit `3748427d`, the exact 16 GiB adapter, R1-R3
 > history validation, separately explicit stack/fanout controls, inherited
-> tiered closure, and zero implicit execution. Next push that checkpoint, run
-> both controls from its remote-equal revision, and invoke attempt 003 once;
+> tiered closure, and zero implicit execution. The first clean control run
+> passed the stack probe but exposed a missing `do` in the harmless fanout
+> source before task creation. The source-first
+> [R1 correction plan](docs/plan/lean-u2-official-execution-tl0.6.3-m2-r4-fanout-control-r1-plan-2026-07-23.md)
+> and [implementation checkpoint](docs/plan/lean-u2-official-execution-tl0.6.3-m2-r4-fanout-control-r1-implementation-2026-07-23.md)
+> freeze/publish only that token at `d8b0404b`; no selected root exists. Next
+> push the checkpoint, rerun both controls from its remote-equal revision, and
+> invoke attempt 003 once;
 > then form native pairs. Do not rerun
 > the singleton for population credit. The
 > [complete-parity execution roadmap](docs/plan/lean4-complete-parity-roadmap-2026-07-22.md)
