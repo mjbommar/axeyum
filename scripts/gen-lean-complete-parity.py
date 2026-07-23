@@ -31,6 +31,9 @@ AXIOM_LEDGER = ROOT / "docs" / "plan" / "lean-axiom-ledger-v1.json"
 U2_AUTHORITY = ROOT / "docs" / "plan" / "lean-u2-test-authority-v1.json"
 U2_CI_PROFILES = ROOT / "docs" / "plan" / "lean-u2-official-ci-profiles-v1.json"
 U2_CHILD_SHARDS = ROOT / "docs" / "plan" / "lean-u2-official-child-shards-v1.json"
+U2_NATIVE_SURFACES = (
+    ROOT / "docs" / "plan" / "lean-u2-native-surface-classification-v1.json"
+)
 EXECUTION_EVIDENCE = ROOT / "docs" / "plan" / "lean-execution-evidence-v1.json"
 EXECUTION_PROCESS = ROOT / "docs" / "plan" / "lean-execution-process-v1.json"
 EXECUTION_STORE = ROOT / "docs" / "plan" / "lean-execution-store-v1.json"
@@ -678,6 +681,26 @@ def u2_child_shard_snapshot() -> dict[str, Any]:
     }
 
 
+def u2_native_surface_snapshot() -> dict[str, Any]:
+    checker = load_script(
+        "lean_u2_native_surfaces_for_complete_parity",
+        ROOT / "scripts" / "gen-lean-u2-native-surface-classification.py",
+    )
+    data = load_json(U2_NATIVE_SURFACES)
+    failures = checker.validate_authority(data)
+    if failures:
+        raise RuntimeError(
+            "invalid U2 native-surface authority: " + "; ".join(failures)
+        )
+    return {
+        "scope": data["scope"],
+        "status": data["status"],
+        "summary": data["summary"],
+        "claims": data["claims"],
+        "credits": data["credits"],
+    }
+
+
 def execution_evidence_snapshot() -> dict[str, Any]:
     checker = load_script(
         "lean_execution_evidence_for_complete_parity",
@@ -906,6 +929,7 @@ def report_source_paths(data: dict[str, Any]) -> list[Path]:
         U2_AUTHORITY,
         U2_CI_PROFILES,
         U2_CHILD_SHARDS,
+        U2_NATIVE_SURFACES,
         EXECUTION_EVIDENCE,
         EXECUTION_PROCESS,
         EXECUTION_STORE,
@@ -921,6 +945,11 @@ def report_source_paths(data: dict[str, Any]) -> list[Path]:
         ROOT / "scripts" / "tests" / "test_lean_u2_official_ci_profiles.py",
         ROOT / "scripts" / "gen-lean-u2-official-child-shards.py",
         ROOT / "scripts" / "tests" / "test_lean_u2_official_child_shards.py",
+        ROOT / "scripts" / "gen-lean-u2-native-surface-classification.py",
+        ROOT
+        / "scripts"
+        / "tests"
+        / "test_lean_u2_native_surface_classification.py",
         ROOT / "scripts" / "gen-lean-execution-evidence.py",
         ROOT / "scripts" / "tests" / "test_lean_execution_evidence.py",
         ROOT / "scripts" / "lean_execution_process.py",
@@ -990,6 +1019,7 @@ def build_report(data: dict[str, Any]) -> dict[str, Any]:
             "u2_test_authority": u2_test_snapshot(),
             "u2_ci_profile_authority": u2_ci_profile_snapshot(),
             "u2_child_shard_authority": u2_child_shard_snapshot(),
+            "u2_native_surface_authority": u2_native_surface_snapshot(),
             "execution_evidence_authority": execution_evidence_snapshot(),
             "execution_process_authority": execution_process_snapshot(),
             "execution_store_authority": execution_store_snapshot(),
@@ -1067,6 +1097,7 @@ def render_markdown(report: dict[str, Any]) -> str:
     u2_tests = bounded["u2_test_authority"]
     u2_ci = bounded["u2_ci_profile_authority"]
     u2_shards = bounded["u2_child_shard_authority"]
+    u2_surfaces = bounded["u2_native_surface_authority"]
     execution = bounded["execution_evidence_authority"]
     process = bounded["execution_process_authority"]
     store = bounded["execution_store_authority"]
@@ -1143,6 +1174,15 @@ def render_markdown(report: dict[str, Any]) -> str:
             f"{u2_shards['summary']['attempt_expanded_shard_occurrences']:,} "
             "attempt-expanded shard occurrences. All 111 attempt bindings remain "
             "not-run; execution, pairing, performance, and parity credit remain zero.",
+            f"- U2 native-surface harness floor: "
+            f"{u2_surfaces['summary']['registration_cases']:,} cases classified once "
+            f"across {len(u2_surfaces['summary']['closure_surface_counts'])} observed "
+            "closure surfaces; content refinement, exact module dependency closure, "
+            f"and native outcome remain not-run for "
+            f"{u2_surfaces['summary']['registration_cases']:,}/{u2_surfaces['summary']['registration_cases']:,} "
+            f"cases, with {u2_surfaces['credits']['paired_cells']} paired cells and "
+            f"{u2_surfaces['credits']['parity_credit']} parity credit. This is a "
+            "harness floor, not accepted TL0.6.4 classification.",
             f"- Lean execution evidence: {execution['lane_policies']} lane templates, "
             f"{execution['termination_classes']} termination classes, "
             f"{execution['synthetic_controls']} synthetic controls, and "

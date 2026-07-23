@@ -4,11 +4,15 @@
   "source_identities": [
     {
       "path": ".github/workflows/ci.yml",
-      "sha256": "190c846d6cb72a5d40f4fc5a341a56e01af2105b60c298735e712b2b3ade4e9d"
+      "sha256": "c2f68e7c259ac37c8e3d0de900fe64e98638568b9a33491cf244aba985f2d971"
     },
     {
       "path": "docs/plan/generated/lean-execution-evidence.md",
       "sha256": "502cd3514e753108d4af9b487925f58161bf92eb29631899bb5befa92a82d2ca"
+    },
+    {
+      "path": "docs/plan/generated/lean-u2-native-surface-classification.md",
+      "sha256": "7338aad7ec63b5f0192b475246eaeb913b20c8c09e4c412c18a17a453ed8797f"
     },
     {
       "path": "docs/plan/generated/lean-u2-official-child-shards.md",
@@ -36,7 +40,7 @@
     },
     {
       "path": "docs/plan/lean-complete-parity-v1.json",
-      "sha256": "39caeeb54ce2eae9f4c4ea408ebd03b65197c2d87e16f54742ca4fd2e4a81650"
+      "sha256": "49df54db3b1b62f984fd5f2a8b585be05451ef4d9ebd1092e4d865cc57906240"
     },
     {
       "path": "docs/plan/lean-execution-acceptance-tl0.7.4-2026-07-22.md",
@@ -68,7 +72,15 @@
     },
     {
       "path": "docs/plan/lean-system-implementation-plan-2026-07-21.md",
-      "sha256": "94a32fc9b2fd3aa18747e7af747deb35c90a7563198aaa0a7a5370b4e0d4d9d1"
+      "sha256": "2f4f63f1d51d2e3c726d5e305999f715642ea07b1445f56bdefa291b96da8d25"
+    },
+    {
+      "path": "docs/plan/lean-u2-native-surface-classification-tl0.6.4-m0-plan-2026-07-23.md",
+      "sha256": "275e1fc80333116cc92131f0cb6228babc994f4c8a002c87994a286ea00fbe15"
+    },
+    {
+      "path": "docs/plan/lean-u2-native-surface-classification-v1.json",
+      "sha256": "89b29bc6820d1d948d5cd4defdd28eb59ddb55a5924a3cf770c0b21282959959"
     },
     {
       "path": "docs/plan/lean-u2-official-child-shards-v1.json",
@@ -256,11 +268,15 @@
     },
     {
       "path": "scripts/gen-lean-complete-parity.py",
-      "sha256": "d0332f1f21f42947a47c1a044acced844cb10cf998e5d0bcc0c3fddf8f48ae2d"
+      "sha256": "83c81b77a9bd724ae8bd0d046bbe882cc39d935a0efb0fcf9fafed9872be2fc8"
     },
     {
       "path": "scripts/gen-lean-execution-evidence.py",
       "sha256": "025f935111b83e1a3bbc78af50a4ad5671baa370bda02fe94756481e54f55418"
+    },
+    {
+      "path": "scripts/gen-lean-u2-native-surface-classification.py",
+      "sha256": "4827fc4ed27e729b36f2c0451059e4a4c7e4186ac8650eb54e8e98b1d740ccf6"
     },
     {
       "path": "scripts/gen-lean-u2-official-child-shards.py",
@@ -340,7 +356,7 @@
     },
     {
       "path": "scripts/tests/test_lean_complete_parity.py",
-      "sha256": "167447a1ad5c8271e915793103dae2b951ef7c362e19f35e4b33efa4efeed34c"
+      "sha256": "a6d2d749b15ff62d3c25ba2e17123d482a6f41ab8180eba134278d954ffcc92d"
     },
     {
       "path": "scripts/tests/test_lean_execution_acceptance.py",
@@ -357,6 +373,10 @@
     {
       "path": "scripts/tests/test_lean_execution_store.py",
       "sha256": "1ef995ace9fccd59af05640c5b256782b9183e9c9665101df99127a24b65d72f"
+    },
+    {
+      "path": "scripts/tests/test_lean_u2_native_surface_classification.py",
+      "sha256": "eb88b21ffb7ba99be7d7f62bed01d1895952c42f6430e2a51d2fa517a61ef551"
     },
     {
       "path": "scripts/tests/test_lean_u2_official_child_shards.py",
@@ -703,6 +723,117 @@
         "official_completed_cases": 0,
         "official_profile_completions": 0,
         "official_provider_completions": 0,
+        "axeyum_outcomes": 0,
+        "paired_cells": 0,
+        "performance_rows": 0,
+        "complete_populations": 0,
+        "complete_axes": 0,
+        "satisfied_gates": 0,
+        "parity_credit": 0
+      }
+    },
+    "u2_native_surface_authority": {
+      "scope": "full-u2-native-surface-harness-floor-not-support-or-parity",
+      "status": "complete-harness-floor-content-and-dependencies-not-run",
+      "summary": {
+        "registration_cases": 3723,
+        "profile_case_occurrences": {
+          "default": 3678,
+          "full-lake": 3723
+        },
+        "family_counts": {
+          "bench": 1,
+          "compile": 60,
+          "compile_bench": 24,
+          "doc-examples": 8,
+          "docparse": 197,
+          "elab": 2854,
+          "elab_bench": 40,
+          "elab_fail": 316,
+          "lake": 52,
+          "lint": 1,
+          "misc": 5,
+          "misc_dir": 2,
+          "pkg": 27,
+          "server": 4,
+          "server_interactive": 132
+        },
+        "kind_counts": {
+          "directory": 31,
+          "lake-directory": 52,
+          "lint": 1,
+          "pile": 3639
+        },
+        "family_kind_counts": {
+          "bench/directory": 1,
+          "compile/pile": 60,
+          "compile_bench/pile": 24,
+          "doc-examples/directory": 1,
+          "doc-examples/pile": 7,
+          "docparse/pile": 197,
+          "elab/pile": 2854,
+          "elab_bench/pile": 40,
+          "elab_fail/pile": 316,
+          "lake/lake-directory": 52,
+          "lint/lint": 1,
+          "misc/pile": 5,
+          "misc_dir/directory": 2,
+          "pkg/directory": 27,
+          "server/pile": 4,
+          "server_interactive/pile": 132
+        },
+        "direct_surface_counts": {
+          "adversarial": 316,
+          "compiler-runtime": 282,
+          "editor-rpc": 137,
+          "elaborator": 3217,
+          "modules-lake": 81,
+          "parser-macro": 197,
+          "tactic-meta": 2,
+          "toolchain-cli": 6
+        },
+        "closure_surface_counts": {
+          "adversarial": 316,
+          "compiler-runtime": 282,
+          "editor-rpc": 137,
+          "elaborator": 3717,
+          "kernel-import": 3717,
+          "modules-lake": 217,
+          "parser-macro": 3717,
+          "tactic-meta": 2,
+          "toolchain-cli": 6
+        },
+        "direct_surface_occurrences": 4238,
+        "closure_surface_occurrences": 12111,
+        "classification_state_counts": {
+          "harness-floor": 3723
+        },
+        "content_refinement_counts": {
+          "not-run": 3723
+        },
+        "module_dependency_closure_counts": {
+          "not-run": 3723
+        },
+        "native_outcome_counts": {
+          "not-run": 3723
+        },
+        "family_rules_used": 14,
+        "case_overrides_used": 3
+      },
+      "claims": {
+        "all_registration_cases_have_harness_floor": true,
+        "family_kind_population_closed": true,
+        "surface_dependency_closure_derived": true,
+        "pinned_content_refined": false,
+        "module_dependency_closure_complete": false,
+        "native_execution_observed": false,
+        "matched_pair_formed": false,
+        "performance_measured": false,
+        "u2_complete": false,
+        "lean_parity_established": false
+      },
+      "credits": {
+        "official_outcomes": 0,
         "axeyum_outcomes": 0,
         "paired_cells": 0,
         "performance_rows": 0,
@@ -1073,6 +1204,18 @@
           "detail": "Accepted M1 derivation result, exact source and output identities, mutation validation, explicit non-claims, and next execution handoff."
         },
         {
+          "path": "docs/plan/lean-u2-native-surface-classification-v1.json",
+          "detail": "TL0.6.4 M0 full-population harness-floor authority: all 3,723 cases classified exactly once across stable owned surfaces while content refinement, exact module dependency closure, native outcomes, pairs, and parity credit remain not run or zero."
+        },
+        {
+          "path": "docs/plan/generated/lean-u2-native-surface-classification.md",
+          "detail": "Generated surface and family denominators with the explicit M1 content-refinement and M2 exact-dependency residual."
+        },
+        {
+          "path": "docs/plan/lean-u2-native-surface-classification-tl0.6.4-m0-plan-2026-07-23.md",
+          "detail": "Source-first M0 contract for the ten-surface dependency DAG, fourteen exact family rules, three case overrides, mutation gates, stop conditions, and non-crediting boundary."
+        },
+        {
           "path": "docs/plan/lean-u2-official-execution-tl0.6.3-m2-shard-0001-plan-2026-07-22.md",
           "detail": "Pushed immutable source-first execution plan for the lowest-ordinal 64-case shard with no historical observation; no harness discovery or test process has run."
         },
@@ -1257,7 +1400,7 @@
           "detail": "Pinned tests tree inventory and the required CTest/test-pile derivation rule."
         }
       ],
-      "residual": "Current credited local execution coverage is 66 official outcomes (65 passes / one failure) over 65 unique cases from the 3,678-case release Linux parent, with one of 289 derived physical shards complete and zero Axeyum outcomes or pairs. There are eight consumed selected process attempts: four M0 attempts, invalid M2 R1, timeout M2 R3, invalid M2 R5, and accepted M2 R6. M2 R1 retained 30 diagnostic passes / 34 failures but failed closure; R2 completed its zero-process diagnostic append. M2 R3 timed out after channel thread-creation failure. R4's 16 GiB control failed before selected discovery. R5 passed 64/64 under 32 GiB but its unconditional failure-log contract invalidated it; its diagnostic completion grants zero outcomes. R6 attempt 004 passed 64/64 under conditional semantics, and qualifying replay accepts its unchanged 152-file completion as 64 outcomes / one local shard. All 111 full official workflow attempts, the parent/provider profiles, and every Axeyum/pair/performance/population/axis/gate/parity counter remain incomplete or zero. Next execute another source-first child shard, classify TL0.6.4 native surfaces, and run matched Axeyum cases. Scheduling metadata, controls, diagnostic rows, and retries do not increase population coverage."
+      "residual": "Current credited local execution coverage is 66 official outcomes (65 passes / one failure) over 65 unique cases from the 3,678-case release Linux parent, with one of 289 derived physical shards complete and zero Axeyum outcomes or pairs. There are eight consumed selected process attempts: four M0 attempts, invalid M2 R1, timeout M2 R3, invalid M2 R5, and accepted M2 R6. M2 R1 retained 30 diagnostic passes / 34 failures but failed closure; R2 completed its zero-process diagnostic append. M2 R3 timed out after channel thread-creation failure. R4's 16 GiB control failed before selected discovery. R5 passed 64/64 under 32 GiB but its unconditional failure-log contract invalidated it; its diagnostic completion grants zero outcomes. R6 attempt 004 passed 64/64 under conditional semantics, and qualifying replay accepts its unchanged 152-file completion as 64 outcomes / one local shard. TL0.6.4 M0 assigns all 3,723 cases a conservative harness floor, but content refinement and exact module dependency closure remain not run for all rows. All 111 full official workflow attempts, the parent/provider profiles, and every Axeyum/pair/performance/population/axis/gate/parity counter remain incomplete or zero. Next execute another source-first child shard, complete TL0.6.4 M1/M2 classification evidence, and run matched Axeyum cases. Scheduling metadata, controls, diagnostic rows, and retries do not increase population coverage."
     },
     {
       "id": "U3",

@@ -99,6 +99,27 @@ class LeanCompleteParityTests(unittest.TestCase):
         self.assertTrue(u2_shards["claims"]["parent_memberships_partitioned"])
         self.assertFalse(u2_shards["claims"]["official_execution_complete"])
         self.assertTrue(all(value == 0 for value in u2_shards["credits"].values()))
+        u2_surfaces = first["bounded_snapshot"]["u2_native_surface_authority"]
+        self.assertEqual(
+            u2_surfaces["status"],
+            "complete-harness-floor-content-and-dependencies-not-run",
+        )
+        self.assertEqual(u2_surfaces["summary"]["registration_cases"], 3723)
+        self.assertEqual(
+            u2_surfaces["summary"]["classification_state_counts"],
+            {"harness-floor": 3723},
+        )
+        self.assertEqual(
+            u2_surfaces["summary"]["content_refinement_counts"],
+            {"not-run": 3723},
+        )
+        self.assertEqual(
+            u2_surfaces["summary"]["module_dependency_closure_counts"],
+            {"not-run": 3723},
+        )
+        self.assertEqual(u2_surfaces["credits"]["paired_cells"], 0)
+        self.assertEqual(u2_surfaces["credits"]["parity_credit"], 0)
+        self.assertFalse(u2_surfaces["claims"]["pinned_content_refined"])
         execution = first["bounded_snapshot"]["execution_evidence_authority"]
         self.assertEqual(execution["lane_policies"], 2)
         self.assertEqual(execution["termination_classes"], 12)
@@ -160,6 +181,14 @@ class LeanCompleteParityTests(unittest.TestCase):
         self.assertIn("docs/plan/lean-u2-official-ci-profiles-v1.json", source_paths)
         self.assertIn("docs/plan/lean-u2-official-child-shards-v1.json", source_paths)
         self.assertIn("scripts/gen-lean-u2-official-child-shards.py", source_paths)
+        self.assertIn(
+            "docs/plan/lean-u2-native-surface-classification-v1.json",
+            source_paths,
+        )
+        self.assertIn(
+            "scripts/gen-lean-u2-native-surface-classification.py",
+            source_paths,
+        )
         self.assertIn("docs/plan/lean-execution-evidence-v1.json", source_paths)
         self.assertIn("docs/plan/lean-execution-process-v1.json", source_paths)
         self.assertIn("docs/plan/lean-execution-store-v1.json", source_paths)

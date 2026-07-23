@@ -34,6 +34,8 @@ step lean-u2-ci-profile-tests python3 -m unittest scripts.tests.test_lean_u2_off
 step lean-u2-ci-profiles python3 scripts/gen-lean-u2-official-ci-profiles.py --check
 step lean-u2-child-shard-tests python3 -m unittest scripts.tests.test_lean_u2_official_child_shards
 step lean-u2-child-shards python3 scripts/gen-lean-u2-official-child-shards.py --check
+step lean-u2-native-surface-tests python3 -m unittest scripts.tests.test_lean_u2_native_surface_classification
+step lean-u2-native-surface python3 scripts/gen-lean-u2-native-surface-classification.py --check
 step lean-execution-evidence-tests python3 -m unittest scripts.tests.test_lean_execution_evidence
 step lean-execution-evidence python3 scripts/gen-lean-execution-evidence.py --check
 step lean-execution-process-tests python3 -m unittest scripts.tests.test_lean_execution_process
