@@ -1,0 +1,90 @@
+{
+  "schema": "axeyum-lean-u2-native-dependency-report-v1",
+  "as_of": "2026-07-23",
+  "target": {
+    "commit": "d024af099ca4bf2c86f649261ebf59565dc8c622",
+    "repository": "https://github.com/leanprover/lean4.git",
+    "tag": "v4.30.0",
+    "version": "4.30.0"
+  },
+  "verdict": "M2.0 graph and provider contract frozen; all dependency resolution and Lean parity remain not run",
+  "summary": {
+    "registration_cases": 3723,
+    "selection_sets": 8,
+    "provider_variants": 111,
+    "case_variant_occurrences": 408374,
+    "provider_state_counts": {
+      "unbound": 111
+    },
+    "variant_dependency_state_counts": {
+      "not-run": 111
+    },
+    "case_dependency_state_counts": {
+      "not-run": 3723
+    },
+    "nodes": 0,
+    "edges": 0,
+    "resolved_case_closures": 0,
+    "m1_direct_surface_counts": {
+      "adversarial": 316,
+      "compiler-runtime": 841,
+      "editor-rpc": 147,
+      "elaborator": 3463,
+      "ffi": 24,
+      "kernel-import": 871,
+      "modules-lake": 81,
+      "parser-macro": 439,
+      "tactic-meta": 1678,
+      "toolchain-cli": 6
+    },
+    "m1_closure_surface_counts": {
+      "adversarial": 316,
+      "compiler-runtime": 860,
+      "editor-rpc": 147,
+      "elaborator": 3717,
+      "ffi": 24,
+      "kernel-import": 3717,
+      "modules-lake": 223,
+      "parser-macro": 3717,
+      "tactic-meta": 1678,
+      "toolchain-cli": 6
+    },
+    "external_processes": 0,
+    "native_outcomes": 0,
+    "paired_cells": 0
+  },
+  "claims": {
+    "graph_contract_frozen": true,
+    "all_m1_cases_projected": true,
+    "official_variants_factored": true,
+    "provider_identity_bound": false,
+    "header_graph_complete": false,
+    "source_artifact_resolution_complete": false,
+    "runner_generated_closure_complete": false,
+    "lake_project_closure_complete": false,
+    "runtime_ffi_closure_complete": false,
+    "editor_rpc_closure_complete": false,
+    "all_case_profile_closures_complete": false,
+    "native_execution_observed": false,
+    "matched_pair_formed": false,
+    "tl0_6_4_complete": false,
+    "lean_parity_established": false
+  },
+  "credits": {
+    "official_outcomes": 0,
+    "axeyum_outcomes": 0,
+    "paired_cells": 0,
+    "performance_rows": 0,
+    "complete_populations": 0,
+    "complete_axes": 0,
+    "satisfied_gates": 0,
+    "parity_credit": 0
+  },
+  "residual": [
+    "M2.1 must retain exact pinned --deps-json header-import evidence for every applicable Lean source.",
+    "M2.2-M2.6 must resolve source/artifact, generated runner, Lake/project, runtime/FFI, and editor/RPC edges per provider variant.",
+    "M2.7 must merge every case/profile graph with no unresolved or provider-unavailable required edge before M3 review.",
+    "No M2.0 row is an execution, support, pair, performance, population, axis, gate, or parity result."
+  ],
+  "authority_record_sha256": "250b662691af5d71e375f3643454f94585bc51ff6f28aff69091b0f3956fdc86"
+}
