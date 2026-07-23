@@ -272,7 +272,9 @@ gate.
    It does not authorize a large run by itself.
 2. **Fresh P0 slices.** Stage the repaired binary and rerun
    QF_FP/QF_BVFP/QF_ABVFP plus QF_AUFLIA under the completed protocol. Require
-   DISAGREE=0.
+   DISAGREE=0. The bounded
+   [S5.1 admitted-slice plan](../smtcomp-admitted-slices-s5.1-plan-2026-07-23.md)
+   first closes the ordered-subset handoff without launching a solver.
 3. **Credited full population.** Only then execute Axeyum, cvc5, and Bitwuzla on
    the same versioned selection; publish the per-logic inventory and regenerate
    the coverage-weighted parity matrix without combining incompatible regimes.
