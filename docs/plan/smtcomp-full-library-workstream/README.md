@@ -350,8 +350,8 @@ gate.
    now closes that boundary: all populations account, zero known-status
    contradictions and zero cross-solver disagreements remain, and the
    self-sealed JSON/Markdown reproduce from the three validated roots.
-3. **Credited full population — F1 and the base process-free F2 implementation
-   are integrated; explicit host/sentinel binding is topic-ready.** The
+3. **Credited full population — F1 and the complete process-free F2 preflight
+   implementation are integrated.** The
    [full-population plan](../smtcomp-credited-full-population-plan-2026-07-23.md)
    freezes the same 45,905-file selection for all three solvers, a 96-shard/
    48-allocation wave schedule, six-worker aggregate/16-GiB-per-host resource envelope,
@@ -364,15 +364,14 @@ gate.
    adds clean-`origin/main` readiness evidence, a content-addressed staged source
    bundle, frozen oracle checks, a complete artifact ledger, completion-last
    publication, durable Git-object replay, and zero-execution-evidence gates.
-   The base implementation landed by merge `502e8875`. Topic commit `43f871ad`
-   adds a sealed preparation-schema-v2 preflight that semantically replays the
+   The base implementation landed by merge `502e8875`. Commit `43f871ad` adds a
+   sealed preparation-schema-v2 preflight that semantically replays the
    exact three host observations and registrations, eight ordered incident
    sentinels and byte sidecars, safe outcomes, and a 30-minute publication
-   window. Those bytes and this result/status refresh still require normal
-   integration. Live preparation is blocked by out-of-lane bench/CAS format
-   drift and the missing Lean R7 current-source identity repair on
-   `origin/main`. No host probe, sentinel, NAS preparation root, resource
-   session, allocation, or solver process was started.
+   window. The full batch landed by merge `1b8ae016`. Lean R7 is also integrated
+   by merge `9fe5cab6`; live preparation remains blocked by out-of-lane bench/CAS
+   format drift. No host probe, sentinel, NAS preparation root, resource session,
+   allocation, or solver process was started.
 
 The same implementation rule continues to apply: prove each new mechanism and
 its destructive/interruption tests on a tiny corpus before spending the full
@@ -475,12 +474,11 @@ NAS (shared, corpus read-only in practice):
    retry. The combined three-cell repaired-P0 comparison is also complete and
    keeps the 1,305-row FP scope separate from the 1,810-row Axeyum/cvc5 scope.
    The credited full-population F1 fixture result and supervised-wave bytes are
-   integrated. Its base F2 process-free preparation mechanism is also
-   integrated. The explicit semantic host/sentinel preflight and refreshed
-   result/status surfaces remain on the SMT topic branch, and no live root has
-   been published. Integrate those bytes, revalidate the exact current
-   `origin/main`, run both registered green gates, then perform the separately
-   reviewed host/sentinel capture and publish only a process-free
+   integrated. Its complete F2 process-free preparation mechanism, including
+   explicit semantic host/sentinel preflight, is integrated by merge
+   `1b8ae016`; no live root has been published. Revalidate the exact current
+   `origin/main`, require both registered gates to be green, then perform the
+   separately reviewed host/sentinel capture and publish only a process-free
    `launch_authorized=false` root inside its frozen 30-minute window. Do not
    probe hosts, mutate the NAS, or launch a solver allocation while
    `origin/main` is branch-wide red. The active solver

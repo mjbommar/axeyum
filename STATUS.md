@@ -384,17 +384,17 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 ## Current focus
 
 - **2026-07-23 — credited SMT-COMP full-population F2 is implementation-ready,
-  not live-ready.** F1 and its supervised-wave executor are integrated. The base
-  SMT preparation implementation is integrated by merge `502e8875`; topic
-  commit `43f871ad` adds the explicit sealed preflight required before live
-  preparation. It reconstructs the exact three host registrations and
+  not live-ready.** F1 and its supervised-wave executor are integrated. Merge
+  `1b8ae016` integrates the complete process-free F2 preparation mechanism,
+  including commit `43f871ad`'s explicit sealed preflight. It reconstructs the
+  exact three host registrations and
   environment from captured observations, replays the ordered eight incident
   sentinels including byte sidecars and semantic outcomes, enforces a 30-minute
   publication window, and binds the result into completion schema v2. The
   focused 28 tests and 115-test portable gate pass.
-  Next: wait for a green current `origin/main`—including the Lean R7
-  current-source identity implementation and out-of-lane formatting repair—then
-  rebase, run both exact readiness gates, perform the separately reviewed
+  Lean R7 is integrated by merge `9fe5cab6`; the remaining current mainline
+  blocker is out-of-lane formatting drift. Next: wait for that repair, rebase,
+  run both exact readiness gates, perform the separately reviewed
   host/sentinel capture, and publish only an empty `launch_authorized=false`
   preparation inside that frozen window. No host probe, NAS mutation,
   allocation, or solver launch is authorized before that boundary.
@@ -8644,7 +8644,8 @@ plan is built and committed on the current branch:
 ## Changelog
 
 - **2026-07-23 — Bound F2 host and incident-sentinel evidence explicitly;
-  no live observation or execution occurred.** Topic commit `43f871ad` adds a
+  no live observation or execution occurred.** Commit `43f871ad`, integrated by
+  merge `1b8ae016`, adds a
   process-free full-preflight builder/validator, upgrades full-preparation
   completion to schema v2, and makes the repaired-P0 producer retain exact
   sentinel capture intervals. The preflight requires exactly `s5`/`s6`/`s7`,
