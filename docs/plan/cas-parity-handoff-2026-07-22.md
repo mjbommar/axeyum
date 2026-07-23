@@ -13,15 +13,15 @@ elsewhere in `docs/plan/`). Read this file first when resuming.
   [multi-agent operations guide](../contributor-guide/multi-agent-operations.md):
   work only in the dedicated CAS worktree on an `agent/cas/*` branch, push that
   branch, and leave `main` to the integration owner. The current implementation
-  increment is `agent/cas/gap-probe-wave-twenty-two`, with source commit
-  `a6e79b08` integrated exactly by merge `5b42a0ef`; do not rebase topic work
+  increment is `agent/cas/gap-probe-wave-twenty-three`, with source commit
+  `bd7d251a` integrated exactly by merge `a317a502`; do not rebase topic work
   onto `main` ahead of the integration owner.
-- **Tests:** `563` unit + `147` doctests, **all green**, warning-denied workspace
+- **Tests:** `565` unit + `147` doctests, **all green**, warning-denied workspace
   all-target/all-feature Clippy-clean, strict stable/nightly rustdoc-green,
   wasm-green, links-green, and whitespace-clean.
 - **Source of truth for capabilities:** `docs/research/10-cas/README.md`
   (capability table) and `docs/research/10-cas/diary.md` (chronological entries;
-  latest is **Entry 37b04**). Keep both in sync when landing features.
+  latest is **Entry 37b05**). Keep both in sync when landing features.
 - **Method that works:** empirical **gap-probing** (below). It found every recent
   feature *and* a serious infinite-hang regression.
 
@@ -733,6 +733,32 @@ orders `0..=255`), and Stirling-composed raw moments (regressed for orders
   across external-contention pauses. No public head, operator, backend,
   evidence format, or logic fragment changed, so no ADR is required.
 
+**Exact continuous-head limits and sound asymptotic routing**
+- Wave twenty-three probed thirteen existing real-continuous unary heads over
+  rational, squeeze, Bessel, and weighted-Bessel inner limits. The probe found
+  a correctness defect before the intended parity gap: the old
+  `arg_tends_to_infinity` used two large `evalf` samples, and unreliable Bessel
+  samples produced false `+∞` asymptotes including `atan(J₀(x))→−π/2`,
+  `erf(J₀(x))→−1`, `Si(J₀(x))→−π/2`, and Fresnel S/C values `−1/2`.
+- Numeric sampling has been removed from this proof boundary. A head argument
+  is now certified unbounded only when `algebraic_leading_at_infinity` returns
+  a positive exact order and the simplified leading coefficient has a strict
+  known sign. This preserves the rational, polynomial, surd, and algebraic
+  asymptote routes and rejects Bessel, oscillatory, bounded, and
+  leading-cancellation shapes rather than guessing from floating samples.
+- `Sin`, `Cos`, `Atan`, `Erf`, `Si`, `Shi`, `FresnelS`, `FresnelC`, `Asinh`,
+  `Ai`, `AiPrime`, `Bi`, and `BiPrime` now compose only after the complete
+  existing inner route returns a literal exact rational. Seventy-eight admitted
+  checks cover six exact inner shapes for all thirteen heads; oscillatory and
+  symbolic inners plus the discontinuous sign head remain controls. SymPy
+  agrees on 21/26 independently checked rational/Bessel pairs and leaves five
+  unevaluated, with no contradiction. Source commit `bd7d251a` was integrated
+  exactly by merge `a317a502`, with identical source blob and stable patch
+  identity. The full thermally managed gate passed 565 unit tests in 5671.04
+  seconds wall time and 147 doctests, preserving one process across contention
+  pauses. No public head, operator, backend, evidence format, or logic fragment
+  changed, so no ADR is required.
+
 ---
 
 ## 5. Zeilberger / WZ — how it works and where to extend
@@ -1067,9 +1093,9 @@ esac
 export AXEYUM_CAS_TMP
 trap 'find "$AXEYUM_CAS_TMP" -depth -delete' EXIT
 git rev-parse --abbrev-ref HEAD        # → agent/cas/...
-git merge-base --is-ancestor a6e79b08 HEAD
+git merge-base --is-ancestor bd7d251a HEAD
 CARGO_BUILD_JOBS=1 TMPDIR="$AXEYUM_CAS_TMP" cargo test -p axeyum-cas --jobs 1
-# → 563 unit + 147 doctests green
+# → 565 unit + 147 doctests green
 ```
 Then: read `docs/research/10-cas/diary.md` tail for the latest context, and pick
 up from §6 or resume the gap-probing loop. Push the green owned topic branch;

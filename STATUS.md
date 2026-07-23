@@ -451,6 +451,25 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   credit is claimed. Next: integrate the plan, scope orphan cleanup to the owned
   shard, add clean-release recovery evidence and a recovery-only coordinator
   mode, gate it, then execute only `retry-1`.
+- **2026-07-23 — exact continuous-head limits and sound asymptotic routing.**
+  Wave twenty-three found that the numeric-sampling predicate for unbounded
+  head arguments could misclassify oscillatory Bessel inputs: at `+∞`, it
+  returned false asymptotes such as `atan(J₀(x))→−π/2`, `erf(J₀(x))→−1`,
+  `Si(J₀(x))→−π/2`, and Fresnel values `−1/2`. Numeric samples are now removed
+  from that proof boundary. Unboundedness is admitted only from the existing
+  exact algebraic leading order plus a strictly known leading-coefficient sign,
+  preserving rational/polynomial/surd/algebraic routes while rejecting Bessel,
+  oscillatory, bounded, and leading-cancellation shapes. Thirteen existing
+  globally real-continuous heads now also compose through a complete literal
+  exact-rational inner limit; 78 admitted regressions span rational, squeeze,
+  Bessel, weighted-Bessel, and finite-point shapes, with oscillatory, symbolic,
+  and discontinuous controls. SymPy agrees on 21/26 independently checked
+  head/shape pairs and leaves five unevaluated, with no contradiction. The
+  thermally managed full gate passed 565 unit tests in 5671.04 s wall time and
+  147 doctests; workspace warning-denied Clippy (7.86 s), WASM (7.21 s),
+  strict stable/nightly rustdoc (3.23/1.98 s), links, whitespace, and owned-line
+  formatting are green. Source `bd7d251a` was integrated exactly by merge
+  `a317a502`, with identical source blob and stable patch identity.
 - **2026-07-23 — exact-rational absolute-value limit continuity.** Wave
   twenty-two composes the existing `Abs` head through any inner limit that
   resolves to an exact rational, so finite-point, rational-function, squeeze,
@@ -8969,6 +8988,11 @@ plan is built and committed on the current branch:
   R1/R2 history, a new run/evidence root, universal 512 MiB Lean runtime stacks
   from pinned source semantics, and the measured tiered artifact store. It
   authorizes one process only after separately pushed implementation gates.
+- **2026-07-23 — Replaced sampled asymptotic guesses with exact proofs and
+  added exact-rational continuous-head composition.** Thirteen existing
+  globally real-continuous heads now compose over exact rational inner limits,
+  while asymptotic head routing requires exact algebraic growth and sign
+  evidence. CAS now has 565 units and 147 doctests.
 - **2026-07-23 — Added exact-rational absolute-value limit continuity.** The
   existing `Abs` head now composes through any exact rational inner limit and
   folds the result, while oscillatory, divergent, reciprocal-Bessel, and
