@@ -1,6 +1,6 @@
 # Quantified-UFLIA one-level fixed-MBQI measurement
 
-Status: measured; implementation not started
+Status: measured; preimplementation ordering corrected
 Date: 2026-07-23
 Owner: solver/engine lane in `agent/smtcomp/full-library-resume`
 
@@ -48,13 +48,22 @@ structural depth bound. Proposed
 permits only a one-level internal retry for exactly one relevant source `Int`:
 
 - reuse ADR-0361's complete deterministic value pool and 16-value cap;
-- run only after ADR-0360, ordinary MBQI, E-matching, and ADR-0361's one-shot
-  evaluated completion all decline;
+- run only after ADR-0360, ordinary MBQI, and E-matching decline;
+- try only the first ordered evaluated value, then continue ADR-0361's unchanged
+  one-shot evaluated sweep if the inner attempt declines;
 - pass the caller's remaining shared deadline to every inner attempt;
 - disable this retry inside the inner MBQI invocation;
 - ignore inner UNSAT and Unknown results; and
 - accept inner SAT only when canonical `check_model` succeeds on the exact
   original assertions without the temporary scalar equality.
+
+The initial proposed ordering placed the inner pass after ADR-0361's complete
+evaluated sweep. A focused preimplementation test proved that ordering inert:
+the sweep may consume the complete shared deadline before an inner pass can
+start. The corrected first-candidate placement is strictly narrower than the
+45-query diagnostic, permits at most one inner MBQI invocation, and preserves
+all pre-ADR-0361 routes. It also matches the measurement: seed 111 succeeds on
+that first candidate.
 
 The expected frozen result is 228 jointly decided agreements, 210 Axeyum SAT,
 24 Axeyum UNSAT, 22 Axeyum Unknown, 210/210 SAT replay, and zero error or

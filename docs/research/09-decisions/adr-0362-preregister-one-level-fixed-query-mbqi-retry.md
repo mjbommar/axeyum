@@ -25,10 +25,11 @@ the same fixed-query retry again.
 
 ## Decision
 
-**After every established outer route declines, permit one recursion-guarded
-MBQI pass under each value in ADR-0361's complete pool for exactly one relevant
-source `Int`. Treat the equality as search guidance and accept only replay-clean
-SAT against the exact unfixed original assertions.**
+**After every pre-ADR-0361 outer route declines, permit one recursion-guarded
+MBQI pass under the first ordered value in ADR-0361's complete pool for exactly
+one relevant source `Int`. If it declines, continue the unchanged ADR-0361
+evaluated sweep. Treat the equality as search guidance and accept only
+replay-clean SAT against the exact unfixed original assertions.**
 
 The implementation will:
 
@@ -36,8 +37,9 @@ The implementation will:
   symbol exists and has sort `Int`;
 - reuse ADR-0361's evaluated pool, including deterministic ordering, checked
   neighbour closure, and the existing 16-value non-truncating cap;
-- run only after ADR-0360 completion, ordinary MBQI, E-matching, and ADR-0361
-  one-shot evaluated completion decline;
+- run only after ADR-0360 completion, ordinary MBQI, and E-matching decline;
+- select only the first ordered evaluated value and permit at most one inner
+  MBQI invocation before continuing ADR-0361's complete one-shot sweep;
 - derive every inner timeout from the outer shared deadline;
 - call an internal MBQI entry with fixed-query retry disabled, making recursive
   retry depth structurally at most one;
@@ -50,6 +52,13 @@ This changes no public evidence type, checker, UNSAT route, value cap, tuple cap
 or source-fragment admission. The inner loop may use ordinary checked repair and
 finite-profile certification; none of its search trace is evidence.
 
+The originally proposed post-ADR-0361 placement was corrected before an
+implementation commit. A focused test showed that the complete evaluated sweep
+can consume the caller's remaining deadline, leaving no budget for the inner
+pass. The first-candidate-only placement is executable under the same deadline,
+matches seed 111's measured first-candidate success, and is narrower than
+rerunning MBQI for all values.
+
 ## Evidence gates
 
 Acceptance requires:
@@ -59,8 +68,9 @@ Acceptance requires:
 2. A recursion control proves the inner call cannot enter fixed-query retry.
 3. A fixed-query UNSAT control is ignored rather than transferred, and tampered
    returned scalar/function data fails original-query replay.
-4. Zero-symbol, multiple-symbol, pool-overflow, and exhausted searches remain
-   honest Unknowns under the unchanged shared deadline.
+4. Zero-symbol, multiple-symbol, pool-overflow, and first-candidate failures
+   continue into the unchanged evaluated sweep and remain honest Unknowns when
+   every established route declines.
 5. The normal 256-case differential reaches at least the measured 228 jointly
    decided agreements and 210/210 SAT replay with no error, disagreement, or
    previously decided result lost.
@@ -72,7 +82,8 @@ Acceptance requires:
 
 - **Call the public MBQI entry recursively without a guard.** Rejected: the
   implementation would have only a time bound, not a structural depth bound.
-- **Run the inner loop for two free scalars.** Deferred: up to 256 complete MBQI
+- **Run the inner loop for every scalar value or two free scalars.** Deferred:
+  up to 16 or 256 complete MBQI
   attempts has no measured residual payoff and materially widens work.
 - **Raise the 16-value cap.** Rejected: seed 111 succeeds within the existing
   pool; overflow cases require separate measurement.
