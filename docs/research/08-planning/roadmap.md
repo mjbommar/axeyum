@@ -2,7 +2,7 @@
 
 Status: **foundation phases (0–7) landed**; active execution has moved to the
 multi-track Z3 + Lean parity plan.
-Last updated: 2026-07-22
+Last updated: 2026-07-23
 
 > **Where the live plan is now.** This file is the *research/foundation* roadmap
 > (Phases 0–7 — the decidable finite-domain + arithmetic foundation, now built).
@@ -54,6 +54,13 @@ Last updated: 2026-07-22
 > The attempt is
 > explicitly unexecuted and its evidence root absent. Process readiness is not
 > header evidence; observed processes and edges remain zero.
+> M2.2's
+> [source-first resolution plan](../../../docs/plan/lean-u2-native-dependency-tl0.6.4-m2.2-plan-2026-07-23.md)
+> now preregisters first-prefix candidate semantics, independent existence and
+> content checks, the released module/artifact universe, transitive module-data
+> closure, the complete CLI process formula, and 18 controls. It has no input
+> authority, process budget, observations, resolutions, or credit before an
+> accepted M2.1 result and a separately bound authority.
 > Its
 > [completion audit](../../../docs/plan/lean-system-roadmap-completion-audit-2026-07-21.md)
 > verifies every named environment gap and the current Axeyum/Lean/mathlib

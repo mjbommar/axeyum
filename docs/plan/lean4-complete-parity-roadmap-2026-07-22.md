@@ -191,6 +191,17 @@ changing the frozen process program. Consequently no header edge or process
 observation has been added; explicit authorization, evidence
 validation, and offline promotion remain the next M2.1 steps.
 
+M2.2's
+[source-first resolution plan](lean-u2-native-dependency-tl0.6.4-m2.2-plan-2026-07-23.md)
+is now preregistered. It freezes Lean 4.30 first-prefix candidate behavior,
+the distinction between candidate selection and leaf existence/content,
+absent-versus-empty search paths, the released source/artifact universe,
+transitive module-data closure, the complete CLI process formula, and 18
+controls. It deliberately freezes no M2.2 input authority or process budget
+and records no observations, resolutions, native outcomes, pairs, or parity
+credit. M2.2 may be bound only after M2.1 evidence is accepted under a
+separate source-first checkpoint.
+
 ## 2. What the SMT-LIB comparison actually says
 
 The solver program supplies a mature measurement warning for Lean parity:

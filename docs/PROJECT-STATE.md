@@ -318,7 +318,15 @@ Again, there are distinct targets:
   ceilings, and seals launch failures, but its evidence root is absent;
   observed processes, header edges, resolved nodes/edges, and all terminal
   credit remain zero pending explicit authorization and immutable-evidence
-  validation.
+  validation. M2.2's
+  [source-first resolution plan](plan/lean-u2-native-dependency-tl0.6.4-m2.2-plan-2026-07-23.md)
+  now separately freezes Lean 4.30's first-prefix candidate behavior,
+  independent source/`.olean` existence and content checks, released module
+  universe, transitive module-data closure, full CLI process formula, and 18
+  controls. A returned candidate is not proof that its leaf exists. This is
+  semantics-only preregistration: no M2.2 input authority, process,
+  observation, resolved edge, native outcome, pair, or parity credit exists
+  before accepted M2.1 evidence and a separately bound M2.2 authority.
   The subsequent
   [TL0.7.1 contract](plan/lean-execution-evidence-tl0.7.1-2026-07-22.md)
   defines explicit 4/8 GiB local lanes, twelve typed termination classes, and

@@ -578,6 +578,17 @@ declared header edges, resolutions, native outcomes, pairs, and all terminal
 credit remain zero until explicit authorization, immutable-evidence validation,
 and a separate offline promotion.
 
+M2.2's
+[source-first resolution plan](lean-u2-native-dependency-tl0.6.4-m2.2-plan-2026-07-23.md)
+now preregisters the exact Lean 4.30 module-to-source/artifact boundary. It
+freezes first-prefix candidate selection separately from leaf existence and
+content identity, absent-versus-empty path behavior, released module and
+`.olean` sidecar inventories, transitive module-data closure, the complete
+CLI process formula, and 18 controls. This is not a resolution authority:
+there are no M2.2 frozen inputs, processes, observations, rows, edges, native
+outcomes, pairs, or terminal credit. Binding M2.2 remains downstream of an
+accepted M2.1 result and requires its own source-first authority.
+
 ## 8. Layer-specific equivalence
 
 One byte-comparison rule cannot cover the entire system:

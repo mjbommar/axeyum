@@ -668,8 +668,19 @@ state.
 > now inspects all 7,004 tracked files, retains 90,909 exact/candidate spans,
 > and projects all 3,723 cases. All exact dependency closures/native outcomes
 > remain `not-run`, 3,670 generated-wrapper residuals remain, and pairs/parity
-> remain zero. Next source-first work is the next child shard plus M2 exact
-> closure and M3 review before
+> remain zero. The accepted
+> [M2.0 result](docs/plan/lean-u2-native-surface-classification-tl0.6.4-m2.0-result-2026-07-23.md)
+> freezes the empty typed graph/provider contract; M2.1's
+> [pre-execution result](docs/plan/lean-u2-native-dependency-tl0.6.4-m2.1-pre-execution-2026-07-23.md)
+> freezes 4,092 inputs and 39 no-retry processes but remains explicitly
+> unexecuted. M2.2's
+> [source-first resolution plan](docs/plan/lean-u2-native-dependency-tl0.6.4-m2.2-plan-2026-07-23.md)
+> now freezes first-prefix candidate semantics, separate leaf-existence/content
+> checks, released inventories, transitive module-data closure, and controls,
+> but no M2.2 input authority, process, observation, or credit. Next actions are
+> to authorize and validate M2.1 only when the user explicitly permits its
+> exact command, then bind M2.2 under a separate source-first authority and
+> continue M2.3-M2.7 plus M3 review before
 > native pairs. Do not rerun
 > the singleton for population credit. The
 > [complete-parity execution roadmap](docs/plan/lean4-complete-parity-roadmap-2026-07-22.md)
