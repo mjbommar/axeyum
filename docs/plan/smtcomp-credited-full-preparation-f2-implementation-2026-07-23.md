@@ -1,0 +1,95 @@
+# SMT-COMP credited full-population F2 preparation implementation
+
+Status: process-free implementation integrated by `origin/main` merge
+`502e8875`; result/status integration and live preparation remain outstanding
+
+Date: 2026-07-23
+
+Plan: [credited full-population execution](smtcomp-credited-full-population-plan-2026-07-23.md)
+
+## Result
+
+The repository now has a fail-closed publisher and replay validator for an F2
+preparation candidate. This increment ran only temporary fixtures. It did not
+probe `s5`/`s6`/`s7`, execute a sentinel, build or stage a live release binary,
+write a live NAS preparation root, create a resource session or allocation
+attempt, or start a solver.
+
+The candidate requires:
+
+- a readiness record for one exact clean `HEAD == origin/main` state;
+- exact successful observations for `just check` and
+  `./scripts/check-smtcomp-resume.sh`, bound to that commit and worktree-status
+  digest;
+- byte identity between every registered preparation source and `origin/main`;
+- the frozen 45,905-row accepted selection and full list/manifest identities;
+- all process-free input manifests under the candidate attempt root;
+- a content-addressed, immutable runner source bundle with its own file ledger,
+  completion seal, and source identity;
+- executable Axeyum, cvc5, and Bitwuzla bytes under the attempt root, with each
+  digest matching its run manifest and the two oracle digests matching the
+  preregistration; and
+- three replay-valid cells containing the exact common schedule and all 432
+  allocation command manifests.
+
+Publication first installs sealed copies of the selection, composition, and
+readiness records. It then inventories every file under the attempt root and
+installs `complete.json` last. The completion state is
+`prepared-no-launch`, and `launch_authorized` is always `false`.
+
+## Replay and mutation boundary
+
+Replay checks the recorded Git commits directly, so a valid historical
+candidate does not become unverifiable merely because the repository later
+advances. Current-state inspection remains mandatory when readiness is first
+built and when a candidate is published.
+
+The validator rehashes the accepted selection, staged source bundle, source
+identity, run/plan/schedule/command records, binaries, copied component records,
+and complete artifact namespace. It rejects:
+
+- a stale gate, changed conclusion, dirty or non-main live source state;
+- missing, reordered, external, or mutated preparation inputs;
+- source-bundle, binary, run-manifest, selection, or command drift;
+- a second or pre-existing completion;
+- any nonempty `multi-host-attempts`, `multi-host-terminals`, `records`, or
+  `resource-sessions` namespace; and
+- any file added, removed, or changed after completion.
+
+The fixture intercepts the publisher's atomic installs and proves that
+`complete.json` is the final call. It then injects execution evidence and
+mutates a solver binary; both replays reject.
+
+## Gates
+
+The following pass after rebasing onto current `origin/main` `502e8875`:
+
+```text
+python3 -m unittest scripts.tests.test_smtcomp_full_population
+28 tests, OK
+
+./scripts/check-smtcomp-resume.sh
+115 tests, OK (one expected live-host skip)
+runner/scoring/pipeline/selection/provenance checks, OK
+generated resume contract, selection authority, and repaired-P0 comparison, OK
+```
+
+This result/status document and its readiness-source registration are not yet
+integrated. Independently, the branch-wide gate is not green:
+`cargo fmt --all --check` reports existing
+format drift in the bench/CAS lane, which this increment did not edit. The
+focused Lean store check also still fails exactly because live
+`resume_fs.py` is `b05c3218...` while its test expects historical
+`1968e7b6...`. The integrated
+[Lean R7 plan](lean-complete-parity-current-source-identity-r7-plan-2026-07-23.md)
+preregisters the correct historical/current split, but its implementation is
+not yet on `origin/main`.
+
+## Authorization boundary
+
+This result proves only the process-free candidate mechanism. It is not an F2
+live result and does not authorize F3. Live F2 remains conditional on a clean,
+green, byte-identical `origin/main`, fresh accepted-population rehash, reviewed
+host/environment/thermal probes, repaired-P0 and incident sentinels, and
+completion of an empty `launch_authorized=false` preparation. F3 remains
+forbidden until that exact live F2 result is integrated by the mainline owner.
