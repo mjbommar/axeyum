@@ -1,0 +1,24 @@
+Start testing: Jul 23 02:12 UTC
+----------------------------------------------------------
+1/1 Testing: compile/534.lean
+1/1 Test: compile/534.lean
+Command: "/usr/bin/bash" "/home/mjbommar/.cache/axeyum-tl063-m0-r3-d0390561/source/tests/with_stage1_test_env.sh" "/home/mjbommar/.cache/axeyum-tl063-m0-r3-d0390561/source/tests/compile/run_test.sh" "534.lean"
+Directory: /home/mjbommar/.cache/axeyum-tl063-m0-r3-d0390561/source/tests/compile
+"compile/534.lean" start time: Jul 23 02:12 UTC
+Output:
+----------------------------------------------------------
+Compiling and executing lean file
+++ ./534.lean.out
+hi
+Interpreting lean file
+++ lean -Dlinter.all=false -j1 --run 534.lean
+hi
+<end of output>
+Test time =   0.64 sec
+----------------------------------------------------------
+Test Passed.
+"compile/534.lean" end time: Jul 23 02:12 UTC
+"compile/534.lean" time elapsed: 00:00:00
+----------------------------------------------------------
+
+End testing: Jul 23 02:12 UTC

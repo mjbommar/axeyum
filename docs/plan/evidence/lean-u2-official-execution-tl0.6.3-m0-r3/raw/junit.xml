@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="(empty)"
+	tests="1"
+	failures="0"
+	disabled="0"
+	skipped="0"
+	hostname=""
+	time="0"
+	timestamp="2026-07-23T02:12:32"
+	>
+	<testcase name="compile/534.lean" classname="compile/534.lean" time="0.6444" status="run">
+		<properties/>
+		<system-out>Compiling and executing lean file
+++ ./534.lean.out
+hi
+Interpreting lean file
+++ lean -Dlinter.all=false -j1 --run 534.lean
+hi
+</system-out>
+	</testcase>
+</testsuite>

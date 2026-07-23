@@ -1,0 +1,34 @@
+{
+  "backtraceGraph" : 
+  {
+    "commands" : [],
+    "files" : [],
+    "nodes" : []
+  },
+  "kind" : "ctestInfo",
+  "tests" : 
+  [
+    {
+      "command" : 
+      [
+        "/usr/bin/bash",
+        "/home/mjbommar/.cache/axeyum-tl063-m0-r3-d0390561/source/tests/with_stage1_test_env.sh",
+        "/home/mjbommar/.cache/axeyum-tl063-m0-r3-d0390561/source/tests/compile/run_test.sh",
+        "534.lean"
+      ],
+      "name" : "compile/534.lean",
+      "properties" : 
+      [
+        {
+          "name" : "WORKING_DIRECTORY",
+          "value" : "/home/mjbommar/.cache/axeyum-tl063-m0-r3-d0390561/source/tests/compile"
+        }
+      ]
+    }
+  ],
+  "version" : 
+  {
+    "major" : 1,
+    "minor" : 0
+  }
+}

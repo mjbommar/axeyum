@@ -1,0 +1,7 @@
+Test project /home/mjbommar/.cache/axeyum-tl063-m0-r3-d0390561/harness
+    Start 1: compile/534.lean
+1/1 Test #1: compile/534.lean .................   Passed    0.64 sec
+
+100% tests passed, 0 tests failed out of 1
+
+Total Test time (real) =   0.65 sec
