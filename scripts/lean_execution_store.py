@@ -156,6 +156,40 @@ NETWORK_FILESYSTEMS = {
     "nfs4",
     "smb3",
 }
+HISTORICAL_RESULT_SOURCE_INPUTS = (
+    {
+        "path": "docs/plan/lean-execution-store-tl0.7.3-plan-2026-07-22.md",
+        "sha256": "77b9af8ad012d907c2aa8297008066117d476f0e8018a33278a5104892044263",
+    },
+    {
+        "path": "scripts/lean_execution_store.py",
+        "sha256": "06d388a49d927a2f1b65a4632cd6297b140a579cf80edd5177fc6849b62ec679",
+    },
+    {
+        "path": "scripts/tests/test_lean_execution_store.py",
+        "sha256": "1ef995ace9fccd59af05640c5b256782b9183e9c9665101df99127a24b65d72f",
+    },
+    {
+        "path": "scripts/smtcomp_repro/resume_fs.py",
+        "sha256": "1968e7b6424c2dd9273bff5041e96fc21b83ec01b2205dcc840d5dc942be1aec",
+    },
+    {
+        "path": "scripts/smtcomp_repro/resume_fs_fixture_worker.py",
+        "sha256": "a8ba281cc20e883f7b5e37d5010de50abf1dd60d7017d740188e53e2208e8810",
+    },
+    {
+        "path": "scripts/gen-lean-execution-evidence.py",
+        "sha256": "025f935111b83e1a3bbc78af50a4ad5671baa370bda02fe94756481e54f55418",
+    },
+    {
+        "path": "docs/plan/lean-execution-evidence-v1.json",
+        "sha256": "83fbfeaf6baa4c1bd747ce80bba87a15aaf159bb164a7647cc8e3155282fa05a",
+    },
+    {
+        "path": "docs/plan/lean-execution-process-v1.json",
+        "sha256": "0fc2d552f8594e2285eef2f0307a9b4d5313024166f0256486b731366947c0bf",
+    },
+)
 
 
 class StoreEvidenceError(ValueError):
@@ -184,6 +218,18 @@ def digest(value: Any) -> str:
 
 def domain_digest(domain: str, value: Any) -> str:
     return sha256_bytes(domain.encode("ascii") + b"\0" + canonical_bytes(value))
+
+
+def _root_for_repository_relative_path(path: str, relative: Path) -> Path | None:
+    """Recover a checkout root from an absolute path and repository suffix."""
+    candidate = Path(path)
+    if not candidate.is_absolute() or relative.is_absolute() or ".." in relative.parts:
+        return None
+    for part in reversed(relative.parts):
+        if candidate.name != part:
+            return None
+        candidate = candidate.parent
+    return candidate
 
 
 def object_digest(value: dict[str, Any], field: str) -> str:
@@ -1042,19 +1088,10 @@ def validate_process_evidence(
         or process.get("process_group_id") != pid
     ):
         failures.append("kill cell process/group identity drift")
-    expected_environment = {
-        "LANG": "C.UTF-8",
-        "PYTHONHASHSEED": "0",
-        "PYTHONPATH": str(SMTCOMP),
-    }
-    if process.get("environment") != expected_environment:
-        failures.append("kill cell environment drift")
-    if process.get("environment_sha256") != digest(process.get("environment")):
-        failures.append("kill cell environment identity drift")
     command = process.get("command")
     expected_prefixes = (
         os.path.realpath(sys.executable),
-        str(WORKER.resolve()),
+        None,
         "--directory",
         None,
         "--filename",
@@ -1066,6 +1103,7 @@ def validate_process_evidence(
         "--marker",
         None,
     )
+    recorded_root = None
     if not isinstance(command, list) or len(command) != len(expected_prefixes):
         failures.append("kill cell command fields drift")
     else:
@@ -1073,6 +1111,12 @@ def validate_process_evidence(
             if expected is not None and actual != expected:
                 failures.append("kill cell command semantics drift")
                 break
+        if isinstance(command[1], str):
+            recorded_root = _root_for_repository_relative_path(
+                command[1], WORKER.relative_to(ROOT)
+            )
+        if recorded_root is None:
+            failures.append("kill cell command semantics drift")
         if all(isinstance(command[index], str) for index in (3, 7, 11)):
             target_directory = Path(command[3])
             payload = Path(command[7])
@@ -1088,6 +1132,19 @@ def validate_process_evidence(
                 failures.append("kill cell ephemeral command paths drift")
         else:
             failures.append("kill cell command path types drift")
+    expected_environment = {
+        "LANG": "C.UTF-8",
+        "PYTHONHASHSEED": "0",
+        "PYTHONPATH": str(
+            recorded_root / SMTCOMP.relative_to(ROOT)
+            if recorded_root is not None
+            else SMTCOMP
+        ),
+    }
+    if process.get("environment") != expected_environment:
+        failures.append("kill cell environment drift")
+    if process.get("environment_sha256") != digest(process.get("environment")):
+        failures.append("kill cell environment identity drift")
     if process.get("command_sha256") != digest(command):
         failures.append("kill cell command identity drift")
     executable = Path(os.path.realpath(sys.executable))
@@ -1338,6 +1395,44 @@ def validate_implementation_revision(
             )
 
 
+def validate_historical_result_revision(implementation_revision: str) -> None:
+    """Verify the retained source identities directly in their recorded revision."""
+    if not HEX40.fullmatch(implementation_revision):
+        raise StoreEvidenceError("implementation revision must be lowercase 40-hex")
+    git = shutil.which("git")
+    if git is None:
+        raise StoreEvidenceError("git is required to validate the implementation revision")
+    git = os.path.realpath(git)
+    ancestry = subprocess.run(
+        [git, "merge-base", "--is-ancestor", implementation_revision, "HEAD"],
+        cwd=ROOT,
+        stdin=subprocess.DEVNULL,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        check=False,
+        timeout=10,
+    )
+    if ancestry.returncode != 0:
+        raise StoreEvidenceError("implementation revision is not an ancestor of HEAD")
+    for source in HISTORICAL_RESULT_SOURCE_INPUTS:
+        committed = subprocess.run(
+            [git, "show", f"{implementation_revision}:{source['path']}"],
+            cwd=ROOT,
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            check=False,
+            timeout=10,
+        )
+        if (
+            committed.returncode != 0
+            or sha256_bytes(committed.stdout) != source["sha256"]
+        ):
+            raise StoreEvidenceError(
+                "implementation revision source identity drift: " + source["path"]
+            )
+
+
 def build_result_authority(evidence_root: Path, *, implementation_revision: str) -> dict[str, Any]:
     evidence_root = evidence_root.resolve()
     try:
@@ -1346,17 +1441,7 @@ def build_result_authority(evidence_root: Path, *, implementation_revision: str)
         raise StoreEvidenceError("store evidence root must be inside repository") from exc
     storage_document, cells = validate_evidence_root(evidence_root)
     evidence_files = _evidence_manifest(evidence_root)
-    source_paths = [
-        PREREGISTRATION_PLAN,
-        Path(__file__).resolve(),
-        ROOT / "scripts/tests/test_lean_execution_store.py",
-        PRIMITIVE,
-        WORKER,
-        ROOT / "scripts/gen-lean-execution-evidence.py",
-        ROOT / "docs/plan/lean-execution-evidence-v1.json",
-        ROOT / "docs/plan/lean-execution-process-v1.json",
-    ]
-    validate_implementation_revision(implementation_revision, source_paths)
+    validate_historical_result_revision(implementation_revision)
     phase_counts = Counter(cell["phase"] for cell in cells)
     target_counts = Counter(cell["target_role"] for cell in cells)
     class_counts = Counter(cell["storage_class_id"] for cell in cells)
@@ -1372,10 +1457,7 @@ def build_result_authority(evidence_root: Path, *, implementation_revision: str)
             "plan_published_before_implementation": True,
             "implementation_published_before_kill_matrix": True,
         },
-        "source_inputs": [
-            {"path": path.relative_to(ROOT).as_posix(), "sha256": sha256_file(path)}
-            for path in source_paths
-        ],
+        "source_inputs": copy.deepcopy(list(HISTORICAL_RESULT_SOURCE_INPUTS)),
         "evidence_root": relative_evidence_root,
         "evidence_files": evidence_files,
         "storage_classes": storage_document["storage_classes"],
