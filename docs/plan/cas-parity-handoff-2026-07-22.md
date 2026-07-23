@@ -13,15 +13,15 @@ elsewhere in `docs/plan/`). Read this file first when resuming.
   [multi-agent operations guide](../contributor-guide/multi-agent-operations.md):
   work only in the dedicated CAS worktree on an `agent/cas/*` branch, push that
   branch, and leave `main` to the integration owner. The current increment is
-  `agent/cas/gap-probe-wave-nine`, based on integration parent `7ea56666`, with
-  implementation commit `5d84ad4e` (integrated by `40e897ad`); do not rebase it
+  `agent/cas/gap-probe-wave-ten`, based on integration parent `6c08f19c`, with
+  implementation commit `186c6f83` (integrated by `4aa66e6d`); do not rebase it
   onto `main` ahead of the integration owner.
 - **Tests:** `551` unit + `147` doctests, **all green**, warning-denied workspace
   all-target/all-feature Clippy-clean, strict stable/nightly rustdoc-green,
   wasm-green, links-green, and whitespace-clean.
 - **Source of truth for capabilities:** `docs/research/10-cas/README.md`
   (capability table) and `docs/research/10-cas/diary.md` (chronological entries;
-  latest is **Entry 37af7**). Keep both in sync when landing features.
+  latest is **Entry 37af8**). Keep both in sync when landing features.
 - **Method that works:** empirical **gap-probing** (below). It found every recent
   feature *and* a serious infinite-hang regression.
 
@@ -486,6 +486,22 @@ orders `0..=255`), and Stirling-composed raw moments (regressed for orders
   recursively rather than depend on tree association. No public head, operator,
   backend, evidence format, or logic fragment changed, so no ADR is required.
 
+**Certified bounded integer-order Bessel inverse-Laplace family**
+- Wave ten audited the existing positive-order inverse recognizer after order
+  three remained the nearest measured transform gap. The same DLMF-backed
+  indexed forms used by the arbitrary-order forward transformer now drive
+  bounded inverse discovery for `Jₙ` and `Iₙ` through order 32; the established
+  order-zero routes complete the family `0≤n≤32`.
+- Recognition remains subordinate to two exact gates: the complete input must
+  be a rational multiple of the selected public forward basis, and the outer
+  inverse route independently forward-transforms and zero-tests the reconstructed
+  result. Additive radical-bearing inputs retain their all-summands-or-none rule.
+- J/I orders 3, 8, 16, and 32, a shifted/scaled order-seven case, complete
+  forward roundtrips, and `J₀+J₃` pass. Order 33 and `u32::MAX`, irrational or
+  zero frequency, malformed numerators, and supported-plus-order-33 sums
+  decline. No public head, operator, backend, evidence format, or logic fragment
+  changed, so no ADR is required.
+
 ---
 
 ## 5. Zeilberger / WZ — how it works and where to extend
@@ -748,11 +764,12 @@ Ordered roughly by value:
    deliberate resource/data-model decision rather than another local
    cancellation. Fixed-shift `r=8` remains a focused exact-growth candidate if
    a concrete use needs it.
-2. **Higher-order inverse Bessel forms.** Forward `Jₙ` and `Iₙ` are exact for
-   every public order, while inverse recognition deliberately stops at order
-   two. Explicit order three remains a measured decline. Probe it only as a
-   bounded follow-up and retain the mandatory full forward round trip; do not
-   infer general inverse support from the forward tables alone.
+2. **Higher-order inverse Bessel boundary.** Forward `Jₙ` and `Iₙ` are exact
+   for every public order, while inverse recognition is explicitly bounded to
+   `0≤n≤32`. Order 33 and `u32::MAX` decline promptly. Raising that boundary
+   requires an explicit resource justification and must retain the mandatory
+   complete forward round trip; do not infer unbounded inverse support from the
+   forward tables alone.
 3. **Alternating series** `∑(−1)ᵏ/k = −ln2`, `∑(−1)ᵏ/(2k+1)=π/4−…`, Dirichlet
    eta `η(s)`. **Blocked by the data model**: `(−1)ᵏ` has no clean real
    representation (`geometric_power(−1)` = `exp(k·ln(−1))`, complex `ln`). Would
@@ -813,7 +830,7 @@ esac
 export AXEYUM_CAS_TMP
 trap 'find "$AXEYUM_CAS_TMP" -depth -delete' EXIT
 git rev-parse --abbrev-ref HEAD        # → agent/cas/...
-git merge-base --is-ancestor 5d84ad4e HEAD
+git merge-base --is-ancestor 186c6f83 HEAD
 CARGO_BUILD_JOBS=1 TMPDIR="$AXEYUM_CAS_TMP" cargo test -p axeyum-cas --jobs 1
 # → 551 unit + 147 doctests green
 ```
