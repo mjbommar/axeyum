@@ -117,9 +117,9 @@ No M2.1 native-header process or M2.2--M2.7 external process was launched.
 ## Portability integration boundary
 
 The ROOT-relative portability repair remains present and validated on this
-Lean branch. It is not yet on `main`. At the R5 closure check, remote `main`
-was `3969125545372bc81802e381c26c10f2ee0f9e49`, and docs run
-[`30029123431`](https://github.com/mjbommar/axeyum/actions/runs/30029123431)
+Lean branch. It is not yet on `main`. At the final R5 audit, remote `main`
+was `ec1e469680ee3aaed6efc66484969fdc08dc3053`, and docs run
+[`30030253543`](https://github.com/mjbommar/axeyum/actions/runs/30030253543)
 still failed with:
 
 ```text

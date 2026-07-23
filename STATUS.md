@@ -8184,7 +8184,7 @@ plan is built and committed on the current branch:
   parity-docs, links, and differently rooted detached replay pass. No raw
   extractor, canonicalizer, mathlib population, outcome, paired cell,
   completed axis/gate, or parity credit was created. Remote `main` at
-  `39691255` still fails docs run `30029123431` on the separate branch-only
+  `ec1e4696` still fails docs run `30030253543` on the separate branch-only
   `exit-zero-4g` ROOT-relative-path portability repair.
 
 - **2026-07-23 — Bound TL0.6.5 normalization IDs to executable layer
