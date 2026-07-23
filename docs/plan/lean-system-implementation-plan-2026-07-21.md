@@ -245,7 +245,10 @@ selected execution remain open. Both later passed/ran once at `dc588033`; the
 retains complete-looking 64/64 evidence but zero credit because post-install
 replay used pre-install completion mode. The source-first
 [R2 plan](lean-u2-official-execution-tl0.6.3-m2-r6-completion-replay-r2-plan-2026-07-23.md)
-authorizes only validator correction over the unchanged root.
+authorizes only validator correction over the unchanged root. Its pushed
+[implementation checkpoint](lean-u2-official-execution-tl0.6.3-m2-r6-completion-replay-r2-implementation-2026-07-23.md)
+passes copied-root unchanged-inventory replay; qualifying post-publication
+validation remains open.
 
 L0 exits when status is generated from evidence rather than hand-copied prose.
 

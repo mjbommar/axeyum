@@ -754,7 +754,11 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   mode. The source-first
   [R2 correction plan](docs/plan/lean-u2-official-execution-tl0.6.3-m2-r6-completion-replay-r2-plan-2026-07-23.md)
   authorizes validator-only `allow_completion=true` replay. Attempt 004 is
-  consumed; credit remains zero pending exact validation and no retry exists.
+  consumed. The
+  [R2 implementation checkpoint](docs/plan/lean-u2-official-execution-tl0.6.3-m2-r6-completion-replay-r2-implementation-2026-07-23.md)
+  records pushed `ce319a9d`, explicit pre/post modes, unchanged-inventory replay,
+  and eleven focused tests. Next push this checkpoint and perform one qualifying
+  read-only validation. Credit remains zero pending that replay; no retry exists.
 
 - **2026-07-22 — TL0.6.3 M1 derives complete deterministic U2 child-shard
   scheduling with zero new outcomes or parity credit.** The source-first
@@ -8066,6 +8070,12 @@ plan is built and committed on the current branch:
 | P5.5 | External target, measured | **DONE (bounded v1, ADR-0323--0338):** authenticated Tock capture plus eight rechecked dual-DRAT proofs and six replayed controls, UNKNOWN=0, DISAGREE=0. Query time 12.700 s; fresh outer wall 50.745 s; peak RSS 1,256,496 KiB; zero OOM deltas. The committed case study compares exact target validation, universal coverage, trust, effort, artifact boundaries, and limits. No Tock bug was found, so no upstream issue is applicable. This is not a speed or whole-kernel claim. |
 
 ## Changelog
+
+- **2026-07-23 — Implemented and pushed R6 completion replay without changing
+  evidence.** Commit `ce319a9d` keeps pre-install rejection and permits only
+  post-install reconstruction with completion excluded from dependencies. The
+  exact copied-root test returns `1f0b9af8` with unchanged inventory; qualifying
+  validation waits for the pushed documentation checkpoint.
 
 - **2026-07-23 — Consumed R6 attempt 004 with a complete-looking 64-pass store
   pending validator-only replay.** The corrected control passed; one selected

@@ -649,7 +649,11 @@ state.
 > pre-install completion mode. Credit remains zero. The source-first
 > [R2 correction plan](docs/plan/lean-u2-official-execution-tl0.6.3-m2-r6-completion-replay-r2-plan-2026-07-23.md)
 > authorizes only explicit `allow_completion=true` validation of the unchanged
-> root. Next commit/push the frozen evidence and plans, then implement R2;
+> root. The
+> [R2 implementation checkpoint](docs/plan/lean-u2-official-execution-tl0.6.3-m2-r6-completion-replay-r2-implementation-2026-07-23.md)
+> records pushed `ce319a9d`, explicit pre/post modes, unchanged-inventory replay,
+> and eleven focused tests. Next push this checkpoint and perform one qualifying
+> read-only validation from clean remote equality;
 > then form native pairs. Do not rerun
 > the singleton for population credit. The
 > [complete-parity execution roadmap](docs/plan/lean4-complete-parity-roadmap-2026-07-22.md)
