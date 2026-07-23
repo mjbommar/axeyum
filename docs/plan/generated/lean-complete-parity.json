@@ -4,7 +4,7 @@
   "source_identities": [
     {
       "path": ".github/workflows/ci.yml",
-      "sha256": "7b942a0a5c5de85702aaaa64d16beedee5baaede04ffee2ae77602588644ae53"
+      "sha256": "95ab70dd6dd16dad0b60019311427a7db2e514b1712ff36362933de0c5c180c9"
     },
     {
       "path": "docs/plan/generated/lean-execution-evidence.md",
@@ -148,7 +148,7 @@
     },
     {
       "path": "scripts/gen-lean-complete-parity.py",
-      "sha256": "a4bdd581c0e0e0b36bd770c30ccc299fe4bf9324d19a5b33c4b4c51a9a8f114f"
+      "sha256": "eb124068a3bd4c9ed7060f4c96fe26d0ece065a70d4e15260f64873c282670a3"
     },
     {
       "path": "scripts/gen-lean-execution-evidence.py",
@@ -184,7 +184,11 @@
     },
     {
       "path": "scripts/lean_u2_official_execution_m2.py",
-      "sha256": "8c62eacf4303cb7def34703d158f2e199c1aebc441cf2b55ff9a338280f678d3"
+      "sha256": "cb57a133f8208df089b6f303d703fcaaca673c0ace4e564ca94b36e7427519a5"
+    },
+    {
+      "path": "scripts/lean_u2_official_execution_m2_store.py",
+      "sha256": "70cf04d2207afcbc86a6448cf38478ecad6541057da781a56bdc51669aee006f"
     },
     {
       "path": "scripts/lean_u2_official_execution_r3_result.py",
@@ -196,7 +200,7 @@
     },
     {
       "path": "scripts/tests/test_lean_complete_parity.py",
-      "sha256": "8b0b999454ea1dc246169fd7b2da7ebd1159e06df505573486a3584ffd5283d9"
+      "sha256": "6a5243885cb79e0b96d2767f6c575b1e4111fc8411e8d50273805515d9122ca6"
     },
     {
       "path": "scripts/tests/test_lean_execution_acceptance.py",
@@ -229,6 +233,10 @@
     {
       "path": "scripts/tests/test_lean_u2_official_execution_m2.py",
       "sha256": "3a33a6e3fd7e1cd42bf25127442b59f57c495226fed3edc19768c4cd2704f710"
+    },
+    {
+      "path": "scripts/tests/test_lean_u2_official_execution_m2_store.py",
+      "sha256": "8d878a8abdd8e6258a70852896a5a2d5630ee342a50ad3338563c1efd2579cda"
     },
     {
       "path": "scripts/tests/test_lean_u2_official_execution_r3_result.py",
@@ -681,7 +689,13 @@
       "ctest_bytes": 19192,
       "live_execution_surface": false,
       "official_outcomes": 0,
-      "parity_credit": 0
+      "parity_credit": 0,
+      "store": {
+        "fixed_json": 15,
+        "fixed_raw": 4,
+        "fixed_artifacts": 2,
+        "case_records": 64
+      }
     },
     "implementation_tasks": {
       "rows": 140,
