@@ -405,10 +405,22 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   Portable/E2/E3 gates pass 62 tests, and the refreshed live E3 evidence is
   rooted at
   `/nas3/data/axeyum/harness/e3-gate/live-1784819040016021568-be4cb33c41b0`.
-  Next: commit and push only this topic branch; after the integrator lands the
-  exact v2 admission bytes, execute Axeyum, cvc5, and Bitwuzla sequentially
-  under the frozen commands; stop on the first contradiction, disagreement,
-  or evidence/identity failure.
+  The integrated v2 admission then authorized exactly the three Axeyum initial
+  allocations. All 1,810 records, three shard completions, resource completion,
+  and multi-host completion are now closed. Adjudication reports 450 `sat`, 464
+  `unsat`, 280 `unknown`, 616 no verdict, zero known-status contradictions, zero
+  cross-solver disagreements, and `safe_to_continue=true`. Final raw export
+  nevertheless rejected because the coordinator placed its adjudication file
+  inside the strict generic run root. No cvc5/Bitwuzla process ran. Commit
+  `5c06ec76` now implements the bounded, hash-pinned process-free closure:
+  external completion-last cell results, deterministic raw bytes, exact legacy
+  migration, prior-cell result validation, and integrated-source launch gates.
+  Focused 7-test, portable 65-test, mandatory cgroup, and committed live
+  multi-host gates pass; the live freeze revalidates read-only. The
+  implementation/checkpoint bytes are pushed but not yet integrated, so no live
+  closure mutation has occurred. Next: after exact integration, close and
+  document the frozen Axeyum cell, then admit cvc5 only after those result bytes
+  also land on `origin/main`.
 - **2026-07-22 — certified nested powers of pure rational-rate Bessel-J
   products.** Wave twenty extends the multiplicity-weighted envelope to powers
   around an entire finite product, provided every variable-dependent factor
@@ -450,18 +462,6 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   formatting green. Source `8c82e7d1` was integrated exactly by `ac2571ce`.
   Next: resume broad probing; quadratic-pole inverse Z remains
   representation-bound.
-  The integrated v2 admission then authorized exactly the three Axeyum initial
-  allocations. All 1,810 records, three shard completions, resource completion,
-  and multi-host completion are now closed. Adjudication reports 450 `sat`, 464
-  `unsat`, 280 `unknown`, 616 no verdict, zero known-status contradictions, zero
-  cross-solver disagreements, and `safe_to_continue=true`. Final raw export
-  nevertheless rejected because the coordinator placed its adjudication file
-  inside the strict generic run root. No cvc5/Bitwuzla process ran. The
-  hash-pinned process-free closure plan separates coordinator outputs, preserves
-  the validator allowlist, and forbids any solver rerun or runtime-evidence
-  rewrite. Next: integrate that plan, implement and gate the closure, integrate
-  the implementation, close and document the frozen Axeyum cell, then admit
-  cvc5 only after the exact result bytes land on `origin/main`.
 - **2026-07-22 — certified rational-rate products of integer-order Bessel J.**
   Wave eighteen composes the fixed-order envelope across a finite direct product:
   if exact rational arguments grow like `|x|^dᵢ` and an exact rational weight
@@ -8423,6 +8423,14 @@ plan is built and committed on the current branch:
 | P5.5 | External target, measured | **DONE (bounded v1, ADR-0323--0338):** authenticated Tock capture plus eight rechecked dual-DRAT proofs and six replayed controls, UNKNOWN=0, DISAGREE=0. Query time 12.700 s; fresh outer wall 50.745 s; peak RSS 1,256,496 KiB; zero OOM deltas. The committed case study compares exact target validation, universal coverage, trust, effort, artifact boundaries, and limits. No Tock bug was found, so no upstream issue is applicable. This is not a speed or whole-kernel claim. |
 
 ## Changelog
+
+- **2026-07-23 — Implemented and pushed the Axeyum v2 process-free closure
+  without operating on live evidence.** Commit `5c06ec76` separates all
+  coordinator outputs, binds completion last, hard-codes the frozen live hashes,
+  and makes subsequent launches require integrated repair sources. Interruption,
+  conflict, raw-drift, and quarantine-replay tests pass; portable/E2/E3 now run
+  65 tests green. The live E3 completion hashes are recorded in the closure
+  plan. Integration remains required before the closure command can run.
 
 - **2026-07-23 — Froze and preregistered the Axeyum v2 export-layout closure.**
   All three initial allocations completed 1,810 records with closed aggregate

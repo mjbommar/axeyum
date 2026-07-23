@@ -290,8 +290,11 @@ gate.
    rejected the coordinator-owned adjudication file in the strict generic run
    root. The [closure plan](../smtcomp-repaired-p0-v2-export-layout-closure-plan-2026-07-23.md)
    freezes that evidence and separates coordinator outputs without weakening
-   the validator. Axeyum receives no credit and cvc5 remains blocked until the
-   process-free closure is implemented, integrated, executed, and documented.
+   the validator. Commit `5c06ec76` implements that process-free closure and
+   passes the portable, cgroup, and live multi-host gates. Axeyum receives no
+   credit and cvc5 remains blocked until the implementation/checkpoint bytes
+   are integrated and the closure is executed, independently validated,
+   documented, and integrated.
 3. **Credited full population.** Only then execute Axeyum, cvc5, and Bitwuzla on
    the same versioned selection; publish the per-logic inventory and regenerate
    the coverage-weighted parity matrix without combining incompatible regimes.
