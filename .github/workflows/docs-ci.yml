@@ -39,6 +39,8 @@ jobs:
       - run: python3 scripts/lean_u2_official_execution_m2.py --check
       - run: python3 -m unittest scripts.tests.test_lean_u2_official_execution_m2_store
       - run: python3 scripts/lean_u2_official_execution_m2_store.py --check
+      - run: python3 -m unittest scripts.tests.test_lean_u2_official_execution_m2_run
+      - run: python3 scripts/lean_u2_official_execution_m2_run.py offline-check
       - run: python3 -m unittest scripts.tests.test_lean_complete_parity
       - run: python3 scripts/gen-lean-complete-parity.py --check
       - run: python3 -m unittest scripts.tests.test_lean_official_construct_matrix

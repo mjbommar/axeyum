@@ -72,6 +72,8 @@ class LeanCompleteParityTests(unittest.TestCase):
         self.assertEqual(m2["store"]["fixed_json"], 15)
         self.assertEqual(m2["store"]["fixed_raw"], 4)
         self.assertEqual(m2["store"]["case_records"], 64)
+        self.assertTrue(m2["runner"]["run_command_exposed"])
+        self.assertFalse(m2["runner"]["live_execution_observed"])
         self.assertEqual(u2["outcomes"]["paired_registered"], 0)
         u2_ci = first["bounded_snapshot"]["u2_ci_profile_authority"]
         self.assertEqual(u2_ci["derivation"]["contexts"], 17)
@@ -171,6 +173,11 @@ class LeanCompleteParityTests(unittest.TestCase):
         self.assertIn("scripts/lean_u2_official_execution_m2_store.py", source_paths)
         self.assertIn(
             "scripts/tests/test_lean_u2_official_execution_m2_store.py",
+            source_paths,
+        )
+        self.assertIn("scripts/lean_u2_official_execution_m2_run.py", source_paths)
+        self.assertIn(
+            "scripts/tests/test_lean_u2_official_execution_m2_run.py",
             source_paths,
         )
 
