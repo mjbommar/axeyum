@@ -1075,6 +1075,8 @@ def validate_process_evidence(
     target_path: str,
     phase: str,
     evidence_directory: Path,
+    expected_worker_sha256: str | None = None,
+    expected_primitive_sha256: str | None = None,
 ) -> list[str]:
     failures: list[str] = []
     if not isinstance(process, dict) or set(process) != PROCESS_EVIDENCE_FIELDS:
@@ -1151,7 +1153,14 @@ def validate_process_evidence(
     executable = Path(os.path.realpath(sys.executable))
     if process.get("executable_sha256") != sha256_file(executable):
         failures.append("kill cell executable identity drift")
-    if process.get("worker_sha256") != sha256_file(WORKER) or process.get("primitive_sha256") != sha256_file(PRIMITIVE):
+    if expected_worker_sha256 is None:
+        expected_worker_sha256 = sha256_file(WORKER)
+    if expected_primitive_sha256 is None:
+        expected_primitive_sha256 = sha256_file(PRIMITIVE)
+    if (
+        process.get("worker_sha256") != expected_worker_sha256
+        or process.get("primitive_sha256") != expected_primitive_sha256
+    ):
         failures.append("kill cell source identity drift")
     for kind in ("stdout", "stderr"):
         path = evidence_directory / f"{kind}.bin"
@@ -1183,7 +1192,14 @@ def validate_process_evidence(
     return failures
 
 
-def validate_cell(cell: Any, *, storage_document: dict[str, Any], evidence_directory: Path) -> list[str]:
+def validate_cell(
+    cell: Any,
+    *,
+    storage_document: dict[str, Any],
+    evidence_directory: Path,
+    expected_worker_sha256: str | None = None,
+    expected_primitive_sha256: str | None = None,
+) -> list[str]:
     failures: list[str] = []
     fields = {
         "schema",
@@ -1255,6 +1271,8 @@ def validate_cell(cell: Any, *, storage_document: dict[str, Any], evidence_direc
                 target_path=TARGET_PATHS[target_role],
                 phase=phase,
                 evidence_directory=evidence_directory,
+                expected_worker_sha256=expected_worker_sha256,
+                expected_primitive_sha256=expected_primitive_sha256,
             )
         )
     else:
@@ -1274,7 +1292,12 @@ def validate_cell(cell: Any, *, storage_document: dict[str, Any], evidence_direc
     return failures
 
 
-def validate_evidence_root(evidence_root: Path) -> tuple[dict[str, Any], list[dict[str, Any]]]:
+def validate_evidence_root(
+    evidence_root: Path,
+    *,
+    expected_worker_sha256: str | None = None,
+    expected_primitive_sha256: str | None = None,
+) -> tuple[dict[str, Any], list[dict[str, Any]]]:
     if evidence_root.is_symlink() or not evidence_root.is_dir():
         raise StoreEvidenceError("store evidence root must be a real directory")
     storage_path = evidence_root / "storage-classes.json"
@@ -1333,7 +1356,13 @@ def validate_evidence_root(evidence_root: Path) -> tuple[dict[str, Any], list[di
         if any(path.is_symlink() or not path.is_file() for path in entries):
             raise StoreEvidenceError(f"kill cell contains a non-file or symlink: {control_id}")
         cell = load_canonical(directory / "cell.json")
-        failures = validate_cell(cell, storage_document=storage_document, evidence_directory=directory)
+        failures = validate_cell(
+            cell,
+            storage_document=storage_document,
+            evidence_directory=directory,
+            expected_worker_sha256=expected_worker_sha256,
+            expected_primitive_sha256=expected_primitive_sha256,
+        )
         if failures:
             raise StoreEvidenceError(f"{control_id}: {'; '.join(failures)}")
         cells.append(cell)
@@ -1466,9 +1495,18 @@ def build_result_authority(evidence_root: Path, *, implementation_revision: str)
         relative_evidence_root = evidence_root.relative_to(ROOT).as_posix()
     except ValueError as exc:
         raise StoreEvidenceError("store evidence root must be inside repository") from exc
-    storage_document, cells = validate_evidence_root(evidence_root)
-    evidence_files = _evidence_manifest(evidence_root)
     source_inputs = result_source_inputs(implementation_revision)
+    source_hashes = {row["path"]: row["sha256"] for row in source_inputs}
+    storage_document, cells = validate_evidence_root(
+        evidence_root,
+        expected_worker_sha256=source_hashes[
+            WORKER.relative_to(ROOT).as_posix()
+        ],
+        expected_primitive_sha256=source_hashes[
+            PRIMITIVE.relative_to(ROOT).as_posix()
+        ],
+    )
+    evidence_files = _evidence_manifest(evidence_root)
     phase_counts = Counter(cell["phase"] for cell in cells)
     target_counts = Counter(cell["target_role"] for cell in cells)
     class_counts = Counter(cell["storage_class_id"] for cell in cells)

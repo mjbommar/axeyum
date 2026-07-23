@@ -404,6 +404,17 @@ class LeanExecutionStoreContractTests(unittest.TestCase):
                 ),
                 [],
             )
+            self.assertIn(
+                "kill cell source identity drift",
+                STORE.validate_process_evidence(
+                    process,
+                    target_path=target,
+                    phase=phase,
+                    evidence_directory=evidence,
+                    expected_worker_sha256=STORE.sha256_file(STORE.WORKER),
+                    expected_primitive_sha256="0" * 64,
+                ),
+            )
             relocated = copy.deepcopy(process)
             relocated_root = Path("/var/tmp/independent-axeyum-worktree")
             relocated["command"][1] = str(
@@ -463,6 +474,7 @@ class LeanExecutionStoreContractTests(unittest.TestCase):
 
     def test_historical_result_source_selection_is_exact(self) -> None:
         authority = json.loads(STORE.RESULT_AUTHORITY.read_bytes())
+        self.assertEqual(STORE.validate_result_authority(authority), [])
         self.assertEqual(
             authority["preregistration"]["implementation_revision"],
             STORE.HISTORICAL_IMPLEMENTATION_REVISION,
