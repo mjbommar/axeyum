@@ -513,16 +513,23 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   runner or process exists yet.** The source-first
 - **2026-07-22 — TL0.6.3 M2's pure 64-case execution contract is implemented
   and pushed; no live runner or process exists yet.** The source-first
-- **2026-07-22 — ADR-0360 free-Int completion is implemented and solver-gated;
-  workspace acceptance is in progress.** Commit `5b4c5b40` searches the complete
+- **2026-07-22 — ADR-0360 free-Int completion is implemented and comprehensively
+  gated; acceptance is blocked on cross-lane parity evidence.** Commit
+  `5b4c5b40` searches the complete
   bounded product for at most two exact-source free Int symbols only on the
   initial MBQI candidate, under the shared deadline. Temporary fixings remain
   QF search hints; source-bound finite-profile certification and exact unfixed
-  replay are authoritative. Focused cap/decline/evidence tests and the complete
-  solver package pass. The 256-case differential reaches 225/225 agreement,
-  207/207 SAT replay, and the corrected eleven-seed ordinary Z3-SAT Unknown
-  remainder. Next: finish workspace/static/resource/parity/link/profile/
-  recovery gates, accept ADR-0360, and publish the topic branch.
+  replay are authoritative. Focused cap/decline/evidence tests, the complete
+  solver package, complementary workspace tests, Clippy, strict rustdoc,
+  foundational/profile/reflection/benchmark/rules/recovery/link gates, and the
+  pinned 162-file Glaurung QF_BV pack pass. The 256-case differential reaches
+  225/225 agreement, 207/207 SAT replay, and the corrected eleven-seed ordinary
+  Z3-SAT Unknown remainder. `parity-docs` alone is red because retained Lean
+  process/store commands name the `axeyum-lean-parity` worktree while their
+  checkers reconstruct this worktree (`run/spec attribution drift`; `kill cell
+  environment drift`); the corresponding unit suites pass. Next: have the Lean
+  lane make that evidence gate worktree-independent, then accept ADR-0360 and
+  publish the green topic branch without rewriting another lane's evidence.
 
 - **2026-07-22 — the complete post-ADR-0359 Z3-SAT remainder now justifies
   proposed ADR-0360 free-Int completion.** Accepted ADR-0359 raised checked SAT

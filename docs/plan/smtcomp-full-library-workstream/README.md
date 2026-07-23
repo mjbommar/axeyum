@@ -357,13 +357,14 @@ milestone is accepted under ADR-0358. The bounded
 now measures the accepted ADR-0359
 [default-only checked repair](../checked-quantified-uf-default-repair-2026-07-22.md):
 178 checked SAT results versus 111 at baseline, with zero disagreements and
-every SAT model replayed. The complete workspace/static/resource/parity/link/
-profile/recovery gates are green. The complete 39-case Z3-SAT remainder is now
+every SAT model replayed. The complete 39-case Z3-SAT remainder is now
 [measured](../quantified-uflia-free-int-completion-measurement-2026-07-22.md):
 the strict exact-source, non-truncating 16-value/256-tuple scalar policy checks
 28 additional SAT models. The exploratory 33-case result used two broader
-heuristics and is not the production gate. Implement only the preregistered
-ADR-0360 boundary is now implemented in `5b4c5b40`: the solver package and
-225/225 direct-Z3 joint differential are green, with 207/207 SAT replay. Finish
-the workspace/static/resource/parity/link/profile/recovery acceptance gate;
-the eleven residual seeds remain separate.*
+heuristics and is not the production gate. The preregistered ADR-0360 boundary
+is now implemented in `5b4c5b40`: the solver package, complementary workspace
+tests, static/resource/profile/recovery gates, and 225/225 direct-Z3 joint
+differential are green, with 207/207 SAT replay. Acceptance is blocked only by
+the cross-lane Lean parity-evidence worktree-path drift recorded in the
+measurement note; do not rewrite that lane's retained evidence here. The
+eleven residual seeds remain separate.*
