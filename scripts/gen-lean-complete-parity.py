@@ -31,6 +31,58 @@ AXIOM_LEDGER = ROOT / "docs" / "plan" / "lean-axiom-ledger-v1.json"
 U2_AUTHORITY = ROOT / "docs" / "plan" / "lean-u2-test-authority-v1.json"
 U2_CI_PROFILES = ROOT / "docs" / "plan" / "lean-u2-official-ci-profiles-v1.json"
 U2_CHILD_SHARDS = ROOT / "docs" / "plan" / "lean-u2-official-child-shards-v1.json"
+U2_NATIVE_SURFACES = (
+    ROOT / "docs" / "plan" / "lean-u2-native-surface-classification-v1.json"
+)
+U2_NATIVE_CONTENT = (
+    ROOT / "docs" / "plan" / "lean-u2-native-surface-content-v1.json"
+)
+U2_NATIVE_DEPENDENCY = (
+    ROOT / "docs" / "plan" / "lean-u2-native-dependency-v1.json"
+)
+U2_NATIVE_HEADER_CONTRACT = (
+    ROOT / "docs" / "plan" / "lean-u2-native-header-contract-m2.1-v1.json"
+)
+U2_NORMALIZATION_CONTRACTS_V1 = (
+    ROOT / "docs" / "plan" / "lean-u2-normalization-contracts-v1.json"
+)
+U2_NORMALIZATION_CONTRACTS_V2 = (
+    ROOT / "docs" / "plan" / "lean-u2-normalization-contracts-v2.json"
+)
+U2_NORMALIZATION_CONTRACTS = (
+    ROOT / "docs" / "plan" / "lean-u2-normalization-contracts-v3.json"
+)
+U2_NORMALIZATION_SCRIPT = ROOT / "scripts" / "lean_u2_normalization_contracts.py"
+U2_NORMALIZATION_RESULT = (
+    ROOT
+    / "docs"
+    / "plan"
+    / "lean-u2-matched-execution-tl0.6.5-normalization-r3-result-2026-07-23.md"
+)
+U2_NORMALIZATION_R4_PLAN = (
+    ROOT
+    / "docs"
+    / "plan"
+    / "lean-u2-matched-execution-tl0.6.5-typed-observables-r4-plan-2026-07-23.md"
+)
+U2_NORMALIZATION_R4_RESULT = (
+    ROOT
+    / "docs"
+    / "plan"
+    / "lean-u2-matched-execution-tl0.6.5-typed-observables-r4-result-2026-07-23.md"
+)
+U2_NORMALIZATION_R5_PLAN = (
+    ROOT
+    / "docs"
+    / "plan"
+    / "lean-u2-matched-execution-tl0.6.5-axis-coverage-r5-plan-2026-07-23.md"
+)
+U2_NORMALIZATION_R5_RESULT = (
+    ROOT
+    / "docs"
+    / "plan"
+    / "lean-u2-matched-execution-tl0.6.5-axis-coverage-r5-result-2026-07-23.md"
+)
 EXECUTION_EVIDENCE = ROOT / "docs" / "plan" / "lean-execution-evidence-v1.json"
 EXECUTION_PROCESS = ROOT / "docs" / "plan" / "lean-execution-process-v1.json"
 EXECUTION_STORE = ROOT / "docs" / "plan" / "lean-execution-store-v1.json"
@@ -106,39 +158,76 @@ OUTCOME_CLASSES = (
     "invalid-run",
 )
 PARITY_OUTCOMES = {"agree-success", "agree-reject"}
+PAIRED_AUTHORITY_STATES = {
+    "not_registered",
+    "bounded_profile",
+    "complete_authority",
+}
+PAIRED_AUTHORITY_FIELDS = {
+    "population",
+    "state",
+    "expected_cells",
+    "expected_ids_sha256",
+    "expected_cell_seals_sha256",
+    "evidence",
+    "residual",
+}
 PAIRED_CELL_FIELDS = {
     "id",
     "population",
+    "population_member_id",
+    "profile_id",
     "axis",
     "layer",
-    "outcome",
     "source_sha256",
     "dependency_sha256",
     "source_family",
-    "normalization",
-    "official_executable_sha256",
-    "official_configuration_sha256",
-    "axeyum_executable_sha256",
-    "axeyum_configuration_sha256",
+    "official",
+    "axeyum",
+    "comparison",
+    "cell_sha256",
+}
+PAIRED_EXECUTION_FIELDS = {
+    "record_state",
+    "result_class",
+    "executable_sha256",
+    "configuration_sha256",
     "command_sha256",
     "environment_sha256",
     "platform_id",
     "resource_envelope_sha256",
     "attempt_id",
-    "completed",
-    "official_outcome_sha256",
-    "axeyum_outcome_sha256",
-    "official_assurance_sha256",
-    "axeyum_assurance_sha256",
+    "completion_sha256",
+    "outcome_sha256",
+    "assurance_sha256",
     "diagnostics_sha256",
-    "official_duration_ms",
-    "axeyum_duration_ms",
-    "official_peak_rss_kib",
-    "axeyum_peak_rss_kib",
-    "official_artifact_bytes",
-    "axeyum_artifact_bytes",
-    "official_evidence",
-    "axeyum_evidence",
+    "duration_ms",
+    "peak_rss_kib",
+    "artifact_bytes",
+    "evidence",
+    "record_sha256",
+}
+PAIRED_EXECUTION_STATES = {"complete", "not-run", "invalid"}
+PAIRED_EXECUTION_RESULT_CLASSES = {
+    "success",
+    "reject",
+    "decline",
+    "timeout",
+    "resource-exhaustion",
+    "failure",
+}
+PAIRED_COMPARISON_FIELDS = {
+    "outcome",
+    "normalization_id",
+    "normalization_sha256",
+    "contract_sha256",
+    "official_record_sha256",
+    "axeyum_record_sha256",
+    "official_normalized_sha256",
+    "axeyum_normalized_sha256",
+    "result_sha256",
+    "completed",
+    "evidence",
 }
 HEX40 = re.compile(r"^[0-9a-f]{40}$")
 HEX64 = re.compile(r"^[0-9a-f]{64}$")
@@ -266,6 +355,23 @@ def validate_definitions(data: dict[str, Any], failures: list[str]) -> None:
             failures.append(f"{field} definitions must be non-empty strings")
 
 
+def validate_normalization_authority(
+    data: dict[str, Any], failures: list[str]
+) -> dict[str, dict[str, Any]]:
+    expected_path = "docs/plan/lean-u2-normalization-contracts-v3.json"
+    if data.get("normalization_authority") != expected_path:
+        failures.append("normalization authority path drift")
+        return {}
+    normalizer = load_script(
+        "lean_u2_normalization_contracts_for_complete_parity",
+        U2_NORMALIZATION_SCRIPT,
+    )
+    authority = load_json(U2_NORMALIZATION_CONTRACTS)
+    for failure in normalizer.validate_manifest(authority):
+        failures.append(f"normalization authority: {failure}")
+    return normalizer.contract_map(authority)
+
+
 def validate_populations(data: dict[str, Any], failures: list[str]) -> dict[str, Any]:
     populations = data.get("populations")
     if not isinstance(populations, list):
@@ -370,7 +476,283 @@ def validate_axes(
     return result
 
 
-def validate_paired_cells(data: dict[str, Any], failures: list[str]) -> list[dict[str, Any]]:
+def paired_id_digest(ids: list[str]) -> str:
+    digest = hashlib.sha256()
+    digest.update(b"axeyum-lean-paired-cell-ids-v1\0")
+    for cell_id in sorted(ids):
+        digest.update(cell_id.encode("utf-8"))
+        digest.update(b"\0")
+    return digest.hexdigest()
+
+
+def canonical_json_digest(domain: str, value: Any) -> str:
+    """Hash one versioned internal canonical-JSON value.
+
+    The input schemas admit only JSON primitives.  This encoding is deliberately
+    specified here rather than described as RFC 8785: UTF-8, sorted object keys,
+    original array order, no insignificant whitespace, non-ASCII retained, and
+    no NaN/infinity.  The NUL-terminated domain separates structurally identical
+    values used for different parity authorities.
+    """
+    encoded = json.dumps(
+        value,
+        sort_keys=True,
+        separators=(",", ":"),
+        ensure_ascii=False,
+        allow_nan=False,
+    ).encode("utf-8")
+    digest = hashlib.sha256()
+    digest.update(domain.encode("ascii"))
+    digest.update(b"\0")
+    digest.update(encoded)
+    return digest.hexdigest()
+
+
+def digest_without_field(domain: str, value: dict[str, Any], field: str) -> str:
+    payload = {key: item for key, item in value.items() if key != field}
+    return canonical_json_digest(domain, payload)
+
+
+def paired_execution_digest(execution: dict[str, Any]) -> str:
+    return digest_without_field(
+        "axeyum-lean-paired-execution-v1", execution, "record_sha256"
+    )
+
+
+def paired_comparison_digest(comparison: dict[str, Any]) -> str:
+    return digest_without_field(
+        "axeyum-lean-paired-comparison-v1", comparison, "result_sha256"
+    )
+
+
+def paired_cell_digest(cell: dict[str, Any]) -> str:
+    return digest_without_field("axeyum-lean-paired-cell-v1", cell, "cell_sha256")
+
+
+def paired_cell_seals_digest(cells: list[dict[str, Any]]) -> str:
+    rows = [
+        {"id": str(cell.get("id")), "cell_sha256": cell.get("cell_sha256")}
+        for cell in sorted(cells, key=lambda cell: str(cell.get("id")))
+    ]
+    return canonical_json_digest("axeyum-lean-paired-cell-seals-v1", rows)
+
+
+def validate_paired_execution(
+    owner: str, execution: Any, failures: list[str]
+) -> tuple[str | None, str | None]:
+    if not isinstance(execution, dict):
+        failures.append(f"{owner}: execution record must be an object")
+        return None, None
+    if set(execution) != PAIRED_EXECUTION_FIELDS:
+        failures.append(f"{owner}: execution record fields must be exact")
+    state = execution.get("record_state")
+    if state not in PAIRED_EXECUTION_STATES:
+        failures.append(f"{owner}: invalid execution record_state {state!r}")
+        state = None
+    result_class = execution.get("result_class")
+    if result_class is not None and result_class not in PAIRED_EXECUTION_RESULT_CLASSES:
+        failures.append(f"{owner}: invalid execution result_class {result_class!r}")
+        result_class = None
+
+    digest_fields = (
+        "executable_sha256",
+        "configuration_sha256",
+        "command_sha256",
+        "environment_sha256",
+        "resource_envelope_sha256",
+        "completion_sha256",
+        "outcome_sha256",
+        "assurance_sha256",
+        "diagnostics_sha256",
+    )
+    string_fields = ("platform_id", "attempt_id")
+    metric_fields = ("duration_ms", "peak_rss_kib", "artifact_bytes")
+    for field in digest_fields:
+        value = execution.get(field)
+        if value is not None and not HEX64.fullmatch(str(value)):
+            failures.append(f"{owner}: {field} must be null or lowercase 64-hex")
+    for field in string_fields:
+        value = execution.get(field)
+        if value is not None and (not isinstance(value, str) or not value.strip()):
+            failures.append(f"{owner}: {field} must be null or a non-empty string")
+    for field in metric_fields:
+        value = execution.get(field)
+        if value is not None and (
+            not isinstance(value, int) or isinstance(value, bool) or value < 0
+        ):
+            failures.append(f"{owner}: {field} must be null or a non-negative integer")
+
+    if state == "complete":
+        for field in digest_fields + string_fields + metric_fields:
+            if execution.get(field) is None:
+                failures.append(f"{owner}: complete execution requires {field}")
+        if result_class is None:
+            failures.append(f"{owner}: complete execution requires result_class")
+    elif execution.get("result_class") is not None:
+        failures.append(f"{owner}: non-complete execution requires null result_class")
+    validate_evidence(owner, execution.get("evidence"), failures, required=True)
+    record_sha256 = execution.get("record_sha256")
+    if not HEX64.fullmatch(str(record_sha256 or "")):
+        failures.append(f"{owner}: record_sha256 must be lowercase 64-hex")
+    elif paired_execution_digest(execution) != record_sha256:
+        failures.append(f"{owner}: record_sha256 must match canonical execution")
+    return state, result_class
+
+
+def derive_paired_outcome(
+    official_state: str | None,
+    axeyum_state: str | None,
+    official_result: str | None,
+    axeyum_result: str | None,
+    official_normalized: str | None,
+    axeyum_normalized: str | None,
+) -> str | None:
+    if "invalid" in {official_state, axeyum_state}:
+        return "invalid-run"
+    if "not-run" in {official_state, axeyum_state}:
+        return "not-run"
+    if {official_state, axeyum_state} != {"complete"}:
+        return None
+    if (
+        official_result not in PAIRED_EXECUTION_RESULT_CLASSES
+        or axeyum_result not in PAIRED_EXECUTION_RESULT_CLASSES
+    ):
+        return None
+
+    normalized_available = (
+        official_normalized is not None and axeyum_normalized is not None
+    )
+    if official_result == axeyum_result == "success":
+        if not normalized_available:
+            return "unadjudicated"
+        return (
+            "agree-success"
+            if official_normalized == axeyum_normalized
+            else "semantic-mismatch"
+        )
+    if official_result == axeyum_result == "reject":
+        if not normalized_available:
+            return "unadjudicated"
+        return (
+            "agree-reject"
+            if official_normalized == axeyum_normalized
+            else "semantic-mismatch"
+        )
+    if official_result == "success":
+        return "official-only"
+    if official_result == "reject" and axeyum_result == "success":
+        return "axeyum-only"
+    return "unadjudicated"
+
+
+def validate_paired_comparison(
+    owner: str,
+    comparison: Any,
+    axis: Any,
+    layer: Any,
+    normalization_contracts: dict[str, dict[str, Any]],
+    official: Any,
+    axeyum: Any,
+    official_state: str | None,
+    axeyum_state: str | None,
+    official_result: str | None,
+    axeyum_result: str | None,
+    failures: list[str],
+) -> str | None:
+    if not isinstance(comparison, dict):
+        failures.append(f"{owner}: comparison record must be an object")
+        return None
+    if set(comparison) != PAIRED_COMPARISON_FIELDS:
+        failures.append(f"{owner}: comparison record fields must be exact")
+    outcome = comparison.get("outcome")
+    if outcome not in OUTCOME_CLASSES:
+        failures.append(f"{owner}: invalid comparison outcome {outcome!r}")
+        outcome = None
+    normalization_id = comparison.get("normalization_id")
+    if not isinstance(normalization_id, str) or not normalization_id.strip():
+        failures.append(f"{owner}: non-empty normalization_id is required")
+    else:
+        normalization_contract = normalization_contracts.get(normalization_id)
+        if normalization_contract is None:
+            failures.append(
+                f"{owner}: normalization_id {normalization_id!r} is not registered"
+            )
+        else:
+            if axis not in normalization_contract.get("applicable_axes", []):
+                failures.append(
+                    f"{owner}: cell axis {axis!r} must be registered for "
+                    f"normalization_id {normalization_id!r}"
+                )
+            if layer != normalization_contract.get("layer"):
+                failures.append(
+                    f"{owner}: cell layer {layer!r} must match normalization layer "
+                    f"{normalization_contract.get('layer')!r}"
+                )
+            if comparison.get("normalization_sha256") != normalization_contract.get(
+                "contract_sha256"
+            ):
+                failures.append(
+                    f"{owner}: normalization_sha256 must match registered contract"
+                )
+    for field in (
+        "normalization_sha256",
+        "contract_sha256",
+        "official_record_sha256",
+        "axeyum_record_sha256",
+        "result_sha256",
+    ):
+        if not HEX64.fullmatch(str(comparison.get(field, ""))):
+            failures.append(f"{owner}: {field} must be lowercase 64-hex")
+    normalized: dict[str, str | None] = {}
+    for side, state in (
+        ("official", official_state),
+        ("axeyum", axeyum_state),
+    ):
+        field = f"{side}_normalized_sha256"
+        value = comparison.get(field)
+        if value is not None and not HEX64.fullmatch(str(value)):
+            failures.append(f"{owner}: {field} must be null or lowercase 64-hex")
+            value = None
+        if state != "complete" and comparison.get(field) is not None:
+            failures.append(f"{owner}: non-complete {side} side requires null {field}")
+        normalized[side] = value
+    if isinstance(official, dict) and (
+        comparison.get("official_record_sha256") != official.get("record_sha256")
+    ):
+        failures.append(f"{owner}: official record seal must match cited execution")
+    if isinstance(axeyum, dict) and (
+        comparison.get("axeyum_record_sha256") != axeyum.get("record_sha256")
+    ):
+        failures.append(f"{owner}: Axeyum record seal must match cited execution")
+    result_sha256 = comparison.get("result_sha256")
+    if HEX64.fullmatch(str(result_sha256 or "")) and (
+        paired_comparison_digest(comparison) != result_sha256
+    ):
+        failures.append(f"{owner}: result_sha256 must match canonical comparison")
+    if comparison.get("completed") is not True:
+        failures.append(f"{owner}: comparison must be completed")
+    validate_evidence(owner, comparison.get("evidence"), failures, required=True)
+
+    derived_outcome = derive_paired_outcome(
+        official_state,
+        axeyum_state,
+        official_result,
+        axeyum_result,
+        normalized["official"],
+        normalized["axeyum"],
+    )
+    if outcome is not None and derived_outcome is not None and outcome != derived_outcome:
+        failures.append(
+            f"{owner}: outcome {outcome!r} must equal derived {derived_outcome!r}"
+        )
+    return outcome
+
+
+def validate_paired_cells(
+    data: dict[str, Any],
+    normalization_contracts: dict[str, dict[str, Any]],
+    failures: list[str],
+) -> list[dict[str, Any]]:
     outcomes = data.get("outcome_classes")
     if (tuple(outcomes) if isinstance(outcomes, list) else None) != OUTCOME_CLASSES:
         failures.append(f"outcome_classes/order must be {OUTCOME_CLASSES!r}")
@@ -394,56 +776,161 @@ def validate_paired_cells(data: dict[str, Any], failures: list[str]) -> list[dic
             failures.append(f"{cell_id}: invalid population")
         if cell.get("axis") not in AXIS_IDS:
             failures.append(f"{cell_id}: invalid axis")
-        if cell.get("outcome") not in OUTCOME_CLASSES:
-            failures.append(f"{cell_id}: invalid outcome")
-        digest_fields = (
-            "source_sha256",
-            "dependency_sha256",
-            "official_executable_sha256",
-            "official_configuration_sha256",
-            "axeyum_executable_sha256",
-            "axeyum_configuration_sha256",
-            "command_sha256",
-            "environment_sha256",
-            "resource_envelope_sha256",
-            "official_outcome_sha256",
-            "axeyum_outcome_sha256",
-            "official_assurance_sha256",
-            "axeyum_assurance_sha256",
-            "diagnostics_sha256",
-        )
-        for field in digest_fields:
+        for field in ("source_sha256", "dependency_sha256"):
             if not HEX64.fullmatch(str(cell.get(field, ""))):
                 failures.append(f"{cell_id}: {field} must be lowercase 64-hex")
         for field in (
             "layer",
             "source_family",
-            "normalization",
-            "platform_id",
-            "attempt_id",
+            "population_member_id",
+            "profile_id",
         ):
             if not isinstance(cell.get(field), str) or not cell[field].strip():
                 failures.append(f"{cell_id}: non-empty {field} is required")
-        if cell.get("completed") is not True:
-            failures.append(f"{cell_id}: terminal paired cell must be completed")
-        for field in (
-            "official_duration_ms",
-            "axeyum_duration_ms",
-            "official_peak_rss_kib",
-            "axeyum_peak_rss_kib",
-            "official_artifact_bytes",
-            "axeyum_artifact_bytes",
-        ):
-            value = cell.get(field)
-            if not isinstance(value, int) or isinstance(value, bool) or value < 0:
-                failures.append(f"{cell_id}: {field} must be a non-negative integer")
-        for field in ("official_evidence", "axeyum_evidence"):
-            validate_evidence(cell_id + "." + field, cell.get(field), failures, required=True)
+        official_state, official_result = validate_paired_execution(
+            cell_id + ".official", cell.get("official"), failures
+        )
+        axeyum_state, axeyum_result = validate_paired_execution(
+            cell_id + ".axeyum", cell.get("axeyum"), failures
+        )
+        validate_paired_comparison(
+            cell_id + ".comparison",
+            cell.get("comparison"),
+            cell.get("axis"),
+            cell.get("layer"),
+            normalization_contracts,
+            cell.get("official"),
+            cell.get("axeyum"),
+            official_state,
+            axeyum_state,
+            official_result,
+            axeyum_result,
+            failures,
+        )
+        cell_sha256 = cell.get("cell_sha256")
+        if not HEX64.fullmatch(str(cell_sha256 or "")):
+            failures.append(f"{cell_id}: cell_sha256 must be lowercase 64-hex")
+        elif paired_cell_digest(cell) != cell_sha256:
+            failures.append(f"{cell_id}: cell_sha256 must match canonical cell")
     return cells
 
 
+def validate_paired_authorities(
+    data: dict[str, Any], cells: list[dict[str, Any]], failures: list[str]
+) -> dict[str, dict[str, Any]]:
+    authorities = data.get("paired_population_authorities")
+    if not isinstance(authorities, list):
+        failures.append("paired_population_authorities must be a list")
+        return {}
+    ids = tuple(
+        authority.get("population")
+        for authority in authorities
+        if isinstance(authority, dict)
+    )
+    if ids != POPULATION_IDS:
+        failures.append(
+            f"paired population authority ids/order must be {POPULATION_IDS!r}"
+        )
+    result: dict[str, dict[str, Any]] = {}
+    for authority in authorities:
+        if not isinstance(authority, dict):
+            failures.append("every paired population authority must be an object")
+            continue
+        population = str(authority.get("population", "<unknown>"))
+        if set(authority) != PAIRED_AUTHORITY_FIELDS:
+            failures.append(f"{population}: paired authority fields must be exact")
+        if population not in POPULATION_IDS:
+            failures.append(f"{population}: invalid paired authority population")
+            continue
+        result[population] = authority
+        state = authority.get("state")
+        if state not in PAIRED_AUTHORITY_STATES:
+            failures.append(f"{population}: invalid paired authority state {state!r}")
+        expected = authority.get("expected_cells")
+        if not isinstance(expected, int) or isinstance(expected, bool) or expected < 0:
+            failures.append(
+                f"{population}: expected_cells must be a non-negative integer"
+            )
+            expected = -1
+        expected_digest = authority.get("expected_ids_sha256")
+        expected_cell_seals_digest = authority.get("expected_cell_seals_sha256")
+        if expected == 0:
+            if expected_digest is not None:
+                failures.append(
+                    f"{population}: zero expected cells require a null ID digest"
+                )
+            if expected_cell_seals_digest is not None:
+                failures.append(
+                    f"{population}: zero expected cells require a null cell-seal digest"
+                )
+        elif not HEX64.fullmatch(str(expected_digest or "")):
+            failures.append(
+                f"{population}: nonzero expected cells require a lowercase 64-hex ID digest"
+            )
+        if expected > 0 and not HEX64.fullmatch(
+            str(expected_cell_seals_digest or "")
+        ):
+            failures.append(
+                f"{population}: nonzero expected cells require a lowercase 64-hex cell-seal digest"
+            )
+        residual = authority.get("residual")
+        if not isinstance(residual, str) or not residual.strip():
+            failures.append(f"{population}: non-empty paired authority residual is required")
+        validate_evidence(
+            population + ".paired-authority",
+            authority.get("evidence"),
+            failures,
+            required=state in {"bounded_profile", "complete_authority"},
+        )
+
+        population_cells = [
+            cell
+            for cell in cells
+            if isinstance(cell, dict) and cell.get("population") == population
+        ]
+        population_ids = [str(cell.get("id")) for cell in population_cells]
+        if state == "not_registered":
+            if (
+                expected != 0
+                or expected_digest is not None
+                or expected_cell_seals_digest is not None
+                or population_cells
+            ):
+                failures.append(
+                    f"{population}: not_registered authority must have zero cells and no digests"
+                )
+            if authority.get("evidence"):
+                failures.append(
+                    f"{population}: not_registered authority cannot carry evidence"
+                )
+        elif state in {"bounded_profile", "complete_authority"}:
+            if expected <= 0:
+                failures.append(
+                    f"{population}: registered paired authority requires positive expected_cells"
+                )
+            if len(population_cells) != expected:
+                failures.append(
+                    f"{population}: registered cell count must equal expected_cells"
+                )
+            if population_ids and paired_id_digest(population_ids) != expected_digest:
+                failures.append(
+                    f"{population}: registered cell ID digest must match authority"
+                )
+            if population_cells and (
+                paired_cell_seals_digest(population_cells)
+                != expected_cell_seals_digest
+            ):
+                failures.append(
+                    f"{population}: registered cell-seal digest must match authority"
+                )
+    return result
+
+
 def derived_gate_states(
-    populations: dict[str, Any], axes: dict[str, Any], cells: list[dict[str, Any]]
+    populations: dict[str, Any],
+    axes: dict[str, Any],
+    paired_authorities: dict[str, dict[str, Any]],
+    cells: list[dict[str, Any]],
 ) -> dict[str, bool]:
     complete_populations = bool(populations) and all(
         item.get("state") == "complete_authority" for item in populations.values()
@@ -451,8 +938,14 @@ def derived_gate_states(
     complete_axes = bool(axes) and all(
         item.get("state") == "complete" for item in axes.values()
     )
-    paired_agreement = bool(cells) and all(
-        cell.get("outcome") in PARITY_OUTCOMES for cell in cells
+    complete_paired_authorities = bool(paired_authorities) and all(
+        authority.get("state") == "complete_authority"
+        for authority in paired_authorities.values()
+    )
+    paired_agreement = complete_paired_authorities and bool(cells) and all(
+        isinstance(cell.get("comparison"), dict)
+        and cell["comparison"].get("outcome") in PARITY_OUTCOMES
+        for cell in cells
     )
     return {"G1": complete_populations, "G2": complete_axes, "G3": paired_agreement}
 
@@ -461,6 +954,7 @@ def validate_gates(
     data: dict[str, Any],
     populations: dict[str, Any],
     axes: dict[str, Any],
+    paired_authorities: dict[str, dict[str, Any]],
     cells: list[dict[str, Any]],
     failures: list[str],
 ) -> bool:
@@ -471,7 +965,7 @@ def validate_gates(
     ids = tuple(gate.get("id") for gate in gates if isinstance(gate, dict))
     if ids != GATE_IDS:
         failures.append(f"terminal gate ids/order must be {GATE_IDS!r}")
-    derived = derived_gate_states(populations, axes, cells)
+    derived = derived_gate_states(populations, axes, paired_authorities, cells)
     for gate in gates:
         if not isinstance(gate, dict):
             failures.append("every terminal gate must be an object")
@@ -556,10 +1050,14 @@ def validate_manifest(data: dict[str, Any]) -> list[str]:
         failures.append("contract path is missing")
     validate_target(data, failures)
     validate_definitions(data, failures)
+    normalization_contracts = validate_normalization_authority(data, failures)
     populations = validate_populations(data, failures)
     axes = validate_axes(data, populations, failures)
-    cells = validate_paired_cells(data, failures)
-    terminal_ready = validate_gates(data, populations, axes, cells, failures)
+    cells = validate_paired_cells(data, normalization_contracts, failures)
+    paired_authorities = validate_paired_authorities(data, cells, failures)
+    terminal_ready = validate_gates(
+        data, populations, axes, paired_authorities, cells, failures
+    )
     validate_claim_surfaces(data, terminal_ready, failures)
     return failures
 
@@ -675,6 +1173,89 @@ def u2_child_shard_snapshot() -> dict[str, Any]:
         "summary": data["summary"],
         "claims": data["claims"],
         "credits": data["credits"],
+    }
+
+
+def u2_native_surface_snapshot() -> dict[str, Any]:
+    checker = load_script(
+        "lean_u2_native_surfaces_for_complete_parity",
+        ROOT / "scripts" / "gen-lean-u2-native-surface-classification.py",
+    )
+    data = load_json(U2_NATIVE_SURFACES)
+    failures = checker.validate_authority(data)
+    if failures:
+        raise RuntimeError(
+            "invalid U2 native-surface authority: " + "; ".join(failures)
+        )
+    return {
+        "scope": data["scope"],
+        "status": data["status"],
+        "summary": data["summary"],
+        "claims": data["claims"],
+        "credits": data["credits"],
+    }
+
+
+def u2_native_content_snapshot() -> dict[str, Any]:
+    checker = load_script(
+        "lean_u2_native_content_for_complete_parity",
+        ROOT / "scripts" / "gen-lean-u2-native-surface-content.py",
+    )
+    data = load_json(U2_NATIVE_CONTENT)
+    failures = checker.validate_authority(data)
+    if failures:
+        raise RuntimeError(
+            "invalid U2 native-content authority: " + "; ".join(failures)
+        )
+    return {
+        "scope": data["scope"],
+        "status": data["status"],
+        "summary": data["summary"],
+        "claims": data["claims"],
+        "credits": data["credits"],
+        "record_sha256": data["record_sha256"],
+    }
+
+
+def u2_native_dependency_snapshot() -> dict[str, Any]:
+    checker = load_script(
+        "lean_u2_native_dependency_for_complete_parity",
+        ROOT / "scripts" / "gen-lean-u2-native-dependency.py",
+    )
+    data = load_json(U2_NATIVE_DEPENDENCY)
+    failures = checker.validate_authority(data)
+    if failures:
+        raise RuntimeError(
+            "invalid U2 native-dependency authority: " + "; ".join(failures)
+        )
+    return {
+        "scope": data["scope"],
+        "status": data["status"],
+        "summary": data["summary"],
+        "claims": data["claims"],
+        "credits": data["credits"],
+        "record_sha256": data["record_sha256"],
+    }
+
+
+def u2_native_header_contract_snapshot() -> dict[str, Any]:
+    checker = load_script(
+        "lean_u2_native_header_contract_for_complete_parity",
+        ROOT / "scripts" / "lean_u2_native_dependency_m2_1.py",
+    )
+    data = load_json(U2_NATIVE_HEADER_CONTRACT)
+    failures = checker.validate_contract(data)
+    if failures:
+        raise RuntimeError(
+            "invalid U2 native-header contract: " + "; ".join(failures)
+        )
+    return {
+        "scope": data["scope"],
+        "status": data["status"],
+        "summary": data["summary"],
+        "claims": data["claims"],
+        "credits": data["credits"],
+        "record_sha256": data["record_sha256"],
     }
 
 
@@ -897,6 +1478,23 @@ def task_snapshot() -> dict[str, Any]:
     }
 
 
+def u2_normalization_contract_snapshot() -> dict[str, Any]:
+    normalizer = load_script(
+        "lean_u2_normalization_contracts_snapshot",
+        U2_NORMALIZATION_SCRIPT,
+    )
+    authority = load_json(U2_NORMALIZATION_CONTRACTS)
+    failures = normalizer.validate_manifest(authority)
+    if failures:
+        raise RuntimeError("invalid U2 normalization authority: " + "; ".join(failures))
+    return {
+        "status": authority["status"],
+        "summary": authority["summary"],
+        "claims": authority["claims"],
+        "contract_ids": [contract["id"] for contract in authority["contracts"]],
+    }
+
+
 def report_source_paths(data: dict[str, Any]) -> list[Path]:
     paths = {
         MANIFEST,
@@ -906,6 +1504,19 @@ def report_source_paths(data: dict[str, Any]) -> list[Path]:
         U2_AUTHORITY,
         U2_CI_PROFILES,
         U2_CHILD_SHARDS,
+        U2_NATIVE_SURFACES,
+        U2_NATIVE_CONTENT,
+        U2_NATIVE_DEPENDENCY,
+        U2_NATIVE_HEADER_CONTRACT,
+        U2_NORMALIZATION_CONTRACTS_V1,
+        U2_NORMALIZATION_CONTRACTS_V2,
+        U2_NORMALIZATION_CONTRACTS,
+        U2_NORMALIZATION_SCRIPT,
+        U2_NORMALIZATION_RESULT,
+        U2_NORMALIZATION_R4_PLAN,
+        U2_NORMALIZATION_R4_RESULT,
+        U2_NORMALIZATION_R5_PLAN,
+        U2_NORMALIZATION_R5_RESULT,
         EXECUTION_EVIDENCE,
         EXECUTION_PROCESS,
         EXECUTION_STORE,
@@ -915,12 +1526,34 @@ def report_source_paths(data: dict[str, Any]) -> list[Path]:
         ROOT / data["contract"],
         ROOT / "scripts" / "gen-lean-complete-parity.py",
         ROOT / "scripts" / "tests" / "test_lean_complete_parity.py",
+        ROOT
+        / "scripts"
+        / "tests"
+        / "test_lean_u2_normalization_contracts.py",
         ROOT / "scripts" / "gen-lean-u2-test-authority.py",
         ROOT / "scripts" / "tests" / "test_lean_u2_test_authority.py",
         ROOT / "scripts" / "gen-lean-u2-official-ci-profiles.py",
         ROOT / "scripts" / "tests" / "test_lean_u2_official_ci_profiles.py",
         ROOT / "scripts" / "gen-lean-u2-official-child-shards.py",
         ROOT / "scripts" / "tests" / "test_lean_u2_official_child_shards.py",
+        ROOT / "scripts" / "gen-lean-u2-native-surface-classification.py",
+        ROOT
+        / "scripts"
+        / "tests"
+        / "test_lean_u2_native_surface_classification.py",
+        ROOT / "scripts" / "gen-lean-u2-native-surface-content.py",
+        ROOT
+        / "scripts"
+        / "tests"
+        / "test_lean_u2_native_surface_content.py",
+        ROOT / "scripts" / "gen-lean-u2-native-dependency.py",
+        ROOT / "scripts" / "tests" / "test_lean_u2_native_dependency.py",
+        ROOT / "scripts" / "lean_u2_native_dependency_m2_1.py",
+        ROOT / "scripts" / "lean_u2_header_full_parser.lean",
+        ROOT
+        / "scripts"
+        / "tests"
+        / "test_lean_u2_native_dependency_m2_1.py",
         ROOT / "scripts" / "gen-lean-execution-evidence.py",
         ROOT / "scripts" / "tests" / "test_lean_execution_evidence.py",
         ROOT / "scripts" / "lean_execution_process.py",
@@ -961,19 +1594,31 @@ def report_source_paths(data: dict[str, Any]) -> list[Path]:
         / "test_lean_u2_official_execution_m2_r6_result.py",
         ROOT / "docs/plan/lean-u2-official-execution-tl0.6.3-m2-r6-v1.json",
     }
-    for collection in (data["populations"], data["axes"], data["terminal_gates"]):
+    for collection in (
+        data["populations"],
+        data["paired_population_authorities"],
+        data["axes"],
+        data["terminal_gates"],
+    ):
         for item in collection:
             paths.update(ROOT / evidence["path"] for evidence in item["evidence"])
     for cell in data["paired_cells"]:
-        for field in ("official_evidence", "axeyum_evidence"):
-            paths.update(ROOT / evidence["path"] for evidence in cell[field])
+        for field in ("official", "axeyum", "comparison"):
+            paths.update(
+                ROOT / evidence["path"] for evidence in cell[field]["evidence"]
+            )
     return sorted(paths, key=relative)
 
 
 def build_report(data: dict[str, Any]) -> dict[str, Any]:
     population_counts = Counter(item["state"] for item in data["populations"])
     axis_counts = Counter(item["state"] for item in data["axes"])
-    outcome_counts = Counter(cell["outcome"] for cell in data["paired_cells"])
+    paired_authority_counts = Counter(
+        item["state"] for item in data["paired_population_authorities"]
+    )
+    outcome_counts = Counter(
+        cell["comparison"]["outcome"] for cell in data["paired_cells"]
+    )
     terminal_ready = all(gate["state"] == "satisfied" for gate in data["terminal_gates"])
     source_paths = report_source_paths(data)
     return {
@@ -990,6 +1635,11 @@ def build_report(data: dict[str, Any]) -> dict[str, Any]:
             "u2_test_authority": u2_test_snapshot(),
             "u2_ci_profile_authority": u2_ci_profile_snapshot(),
             "u2_child_shard_authority": u2_child_shard_snapshot(),
+            "u2_native_surface_authority": u2_native_surface_snapshot(),
+            "u2_native_content_authority": u2_native_content_snapshot(),
+            "u2_native_dependency_authority": u2_native_dependency_snapshot(),
+            "u2_native_header_contract_authority": u2_native_header_contract_snapshot(),
+            "u2_normalization_contract_authority": u2_normalization_contract_snapshot(),
             "execution_evidence_authority": execution_evidence_snapshot(),
             "execution_process_authority": execution_process_snapshot(),
             "execution_store_authority": execution_store_snapshot(),
@@ -1019,13 +1669,33 @@ def build_report(data: dict[str, Any]) -> dict[str, Any]:
             },
         },
         "axes": data["axes"],
+        "paired_population_authorities": data["paired_population_authorities"],
         "paired_summary": {
             "registered_cells": len(data["paired_cells"]),
-            "required_fields": sorted(PAIRED_CELL_FIELDS),
+            "expected_cells": sum(
+                item["expected_cells"]
+                for item in data["paired_population_authorities"]
+            ),
+            "authority_state_counts": {
+                state: paired_authority_counts[state]
+                for state in (
+                    "complete_authority",
+                    "bounded_profile",
+                    "not_registered",
+                )
+            },
+            "required_fields": {
+                "cell": sorted(PAIRED_CELL_FIELDS),
+                "execution": sorted(PAIRED_EXECUTION_FIELDS),
+                "comparison": sorted(PAIRED_COMPARISON_FIELDS),
+            },
             "outcome_counts": {
                 outcome: outcome_counts[outcome] for outcome in OUTCOME_CLASSES
             },
-            "terminal_population_registered": bool(data["paired_cells"]),
+            "terminal_population_registered": all(
+                item["state"] == "complete_authority"
+                for item in data["paired_population_authorities"]
+            ),
         },
         "paired_cells": data["paired_cells"],
         "terminal_gates": data["terminal_gates"],
@@ -1067,6 +1737,11 @@ def render_markdown(report: dict[str, Any]) -> str:
     u2_tests = bounded["u2_test_authority"]
     u2_ci = bounded["u2_ci_profile_authority"]
     u2_shards = bounded["u2_child_shard_authority"]
+    u2_surfaces = bounded["u2_native_surface_authority"]
+    u2_content = bounded["u2_native_content_authority"]
+    u2_dependency = bounded["u2_native_dependency_authority"]
+    u2_header = bounded["u2_native_header_contract_authority"]
+    u2_normalization = bounded["u2_normalization_contract_authority"]
     execution = bounded["execution_evidence_authority"]
     process = bounded["execution_process_authority"]
     store = bounded["execution_store_authority"]
@@ -1143,6 +1818,70 @@ def render_markdown(report: dict[str, Any]) -> str:
             f"{u2_shards['summary']['attempt_expanded_shard_occurrences']:,} "
             "attempt-expanded shard occurrences. All 111 attempt bindings remain "
             "not-run; execution, pairing, performance, and parity credit remain zero.",
+            f"- U2 native-surface harness floor: "
+            f"{u2_surfaces['summary']['registration_cases']:,} cases classified once "
+            f"across {len(u2_surfaces['summary']['closure_surface_counts'])} observed "
+            "closure surfaces; content refinement, exact module dependency closure, "
+            f"and native outcome remain not-run for "
+            f"{u2_surfaces['summary']['registration_cases']:,}/{u2_surfaces['summary']['registration_cases']:,} "
+            f"cases, with {u2_surfaces['credits']['paired_cells']} paired cells and "
+            f"{u2_surfaces['credits']['parity_credit']} parity credit. This is a "
+            "harness floor, not accepted TL0.6.4 classification.",
+            f"- U2 pinned-content surface census: "
+            f"{u2_content['summary']['tracked_content_files']:,} tracked files, "
+            f"{u2_content['summary']['registration_cases']:,} case projections, "
+            f"{u2_content['summary']['signal_hits']:,} exact/candidate signal hits, "
+            f"{u2_content['summary']['cases_with_content_added_surface']:,} cases "
+            "with content-observed provisional surfaces, and "
+            f"{u2_content['summary']['cases_with_generated_wrapper_residual']:,} "
+            "generated-wrapper residuals. Exact module/generated/runtime/FFI/"
+            "request/project dependency closure and native outcomes remain not-run; "
+            f"paired cells and parity credit remain {u2_content['credits']['paired_cells']} / "
+            f"{u2_content['credits']['parity_credit']}.",
+            f"- U2 native dependency contract: "
+            f"{u2_dependency['summary']['registration_cases']:,} cases across "
+            f"{u2_dependency['summary']['provider_variants']} factored official "
+            f"variants and {u2_dependency['summary']['case_variant_occurrences']:,} "
+            "case/variant occurrences; resolved nodes, edges, and case closures "
+            f"remain {u2_dependency['summary']['nodes']} / "
+            f"{u2_dependency['summary']['edges']} / "
+            f"{u2_dependency['summary']['resolved_case_closures']}. M2.0 freezes "
+            "the typed graph/provider schema only; external processes, native "
+            f"outcomes, paired cells, and parity credit remain "
+            f"{u2_dependency['summary']['external_processes']} / "
+            f"{u2_dependency['summary']['native_outcomes']} / "
+            f"{u2_dependency['summary']['paired_cells']} / "
+            f"{u2_dependency['credits']['parity_credit']}.",
+            f"- U2 M2.1 header input/control contract: "
+            f"{u2_header['summary']['corpus_rows']:,} exact Lean sources / "
+            f"{u2_header['summary']['corpus_bytes']:,} bytes in "
+            f"{u2_header['summary']['batches']} deterministic batches, with "
+            f"{u2_header['summary']['controls']} frozen controls and "
+            f"{u2_header['summary']['planned_processes']} planned processes. "
+            "This is a pre-execution authority: observed processes, declared "
+            f"header edges, resolved nodes/edges, native outcomes, paired cells, "
+            f"and parity credit remain {u2_header['summary']['observed_processes']} / "
+            f"{u2_header['summary']['declared_header_edges']} / "
+            f"{u2_header['summary']['resolved_nodes']} / "
+            f"{u2_header['summary']['resolved_edges']} / "
+            f"{u2_header['summary']['native_outcomes']} / "
+            f"{u2_header['summary']['paired_cells']} / "
+            f"{u2_header['credits']['parity_credit']}.",
+            f"- U2 normalization-contract authority: "
+            f"{u2_normalization['summary']['contracts']} registered layer contracts, "
+            f"{u2_normalization['summary']['compared_fields']} selected semantic fields, "
+            f"{u2_normalization['summary']['ignored_rules']} explicit ignored-field "
+            f"rules, and {u2_normalization['summary']['typed_field_occurrences']} "
+            f"typed field occurrences across {u2_normalization['summary']['covered_axes']} "
+            f"axes and {u2_normalization['summary']['axis_contract_occurrences']} "
+            "contract/axis pairs. Malformed typed values and unregistered "
+            "axis/normalizer pairs reject before projection. "
+            "Raw extractors and semantic canonicalizers remain "
+            f"{u2_normalization['summary']['raw_extractors_implemented']} / "
+            f"{u2_normalization['summary']['semantic_canonicalizers_implemented']}; "
+            f"paired cells and parity credit remain "
+            f"{u2_normalization['summary']['paired_cells']} / "
+            f"{u2_normalization['summary']['parity_credit']}.",
             f"- Lean execution evidence: {execution['lane_policies']} lane templates, "
             f"{execution['termination_classes']} termination classes, "
             f"{execution['synthetic_controls']} synthetic controls, and "
@@ -1244,10 +1983,26 @@ def render_markdown(report: dict[str, Any]) -> str:
             "",
             "## Paired terminal cells",
             "",
-            f"Registered terminal cells: **{paired['registered_cells']}**. "
+            f"Expected / registered terminal cells: **{paired['expected_cells']} / "
+            f"{paired['registered_cells']}**. "
             "The selected construct matrix remains bounded evidence until complete "
             "population identity, paired official/Axeyum execution, normalization, "
             "and source/dependency identity are registered.",
+            "",
+            "| Population | Authority state | Expected cells | ID digest | Evidence | Residual |",
+            "|---|---|---:|---|---|---|",
+        ]
+    )
+    for authority in report["paired_population_authorities"]:
+        digest = authority["expected_ids_sha256"] or "—"
+        lines.append(
+            f"| `{authority['population']}` | `{authority['state']}` | "
+            f"{authority['expected_cells']} | `{digest}` | "
+            f"{evidence_links(authority['evidence'])} | "
+            f"{md_escape(authority['residual'])} |"
+        )
+    lines.extend(
+        [
             "",
             "| Outcome | Count |",
             "|---|---:|",
@@ -1277,11 +2032,11 @@ def render_markdown(report: dict[str, Any]) -> str:
             "- An incomplete population cannot publish terminal raw/normalized "
             "denominators or a terminal content digest.",
             "- A complete axis cannot depend on an incomplete population.",
-            "- A terminal paired cell requires exact source and dependency digests, "
-            "normalization, source family, executable/configuration, command, "
-            "environment, platform, resource, attempt, completion, outcome, "
-            "assurance, diagnostics, timing, RSS, artifact-size, and both evidence "
-            "sides.",
+            "- A terminal paired cell requires common member/profile/source/dependency "
+            "identity, separate official and Axeyum execution records, and a completed "
+            "normalization/comparison record with retained evidence.",
+            "- G3 additionally requires complete count-and-ID authorities for every "
+            "U0-U9 paired population; a nonempty all-agree subset cannot satisfy it.",
             "- G1-G3 are derived from population, axis, and paired-cell states; they "
             "cannot be hand-promoted.",
             "- The terminal claim switch must exactly match all ten gate states.",

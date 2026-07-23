@@ -311,15 +311,33 @@ fills a higher one.
 Every comparison cell must retain at least:
 
 - target release/commit and population ID;
-- normalized case ID, exact source bytes, dependency-closure digest, and source
-  family;
-- official and Axeyum executable/configuration identities;
-- command, environment, platform, resource envelope, attempt, and completion
-  identities;
-- layer being compared and the declared normalization;
-- official outcome, Axeyum outcome, assurance fields, diagnostics, duration,
-  peak RSS, and artifact sizes; and
-- links to raw output and independently checked artifacts.
+- normalized member and profile IDs, exact source bytes, dependency-closure
+  digest, source family, axis, and layer;
+- a distinct official execution record with its own executable, configuration,
+  command, environment, platform, resource envelope, attempt, completion,
+  outcome, assurance, diagnostics, duration, peak RSS, artifact size, and raw
+  evidence identities;
+- a structurally separate native Axeyum execution record with those same
+  execution-local fields and no borrowed official identity;
+- a third completed comparison record binding the declared normalization,
+  exact comparison contract/result, taxonomy outcome, and retained raw/
+  normalized diff evidence; and
+- typed `complete`, `not-run`, or `invalid` state per execution. Missing values
+  are JSON `null`, never fabricated zero digests or borrowed attempts.
+
+The executable
+[TL0.6.5 contract](lean-u2-matched-execution-tl0.6.5-plan-2026-07-23.md)
+corrects the registry's original flat shape before any pair exists. A
+comparison is a third evidence object over two independent executions, not a
+shared command/environment/attempt record. Each side, comparison, and whole
+cell carries a recomputed domain-separated seal; the comparison cites both
+exact side seals. Each U0-U9 paired population also registers exact count,
+sorted-ID, and sorted `(id, cell_sha256)` authorities. G3 requires all ten
+authorities to be `complete_authority` and every expected cell to agree; one
+nonempty all-agree subset, an ID-preserving content mutation, or a correctly
+resealed cell under a stale population authority cannot satisfy it. The
+[R1 seal result](lean-u2-matched-execution-tl0.6.5-content-seals-r1-result-2026-07-23.md)
+records the validator and mutation controls.
 
 The result taxonomy is:
 
@@ -329,7 +347,7 @@ The result taxonomy is:
 | `agree-reject` | both reject the invalid/unsupported input with compatible class and state | negative compatibility credit |
 | `official-only` | official Lean succeeds; Axeyum rejects, declines, times out, or exhausts resources | missing capability; blocks full profile |
 | `axeyum-only` | Axeyum accepts while official Lean rejects | compatibility disagreement; soundness-critical at kernel/admission boundaries |
-| `semantic-mismatch` | both succeed but core, environment, proof, output, state, or transcript differs beyond the registered normalization | blocks parity |
+| `semantic-mismatch` | both produce the same semantic result class but normalized core, environment, proof, output, state, diagnostic, or transcript differs | blocks parity |
 | `unadjudicated` | the oracle/equivalence rule cannot decide whether outputs agree | no parity credit |
 | `not-run` | identity, preflight, execution, or completion is absent | no parity credit |
 | `invalid-run` | pin, population, environment, resource, attempt, or artifact evidence is inconsistent | retain diagnostically; zero parity credit |
@@ -337,6 +355,52 @@ The result taxonomy is:
 Totals are always accompanied by exact overlap. `agree-success = N` alone is
 insufficient without the `official-only`, `axeyum-only`, mismatch,
 unadjudicated, and not-run denominators.
+
+Outcome/state coherence is fail-closed and derived under the
+[TL0.6.5 R2 plan](lean-u2-matched-execution-tl0.6.5-outcome-derivation-r2-plan-2026-07-23.md).
+Each complete execution carries a typed semantic/non-semantic result class;
+the comparison carries distinct official/Axeyum normalized-observable
+identities. Agreement requires two compatible semantic result classes and
+equal present normalized identities. `not-run` requires at least one absent
+side and no invalid side; `invalid-run` requires at least one invalid side. A
+completed timeout, resource exhaustion, or supported decline remains a
+completed typed execution and can produce a directional outcome. Total absence
+of launch/completion is `not-run`; inconsistent pins, artifacts, or attempt
+evidence are `invalid-run`, even after exit zero.
+The accepted
+[R2 result](lean-u2-matched-execution-tl0.6.5-outcome-derivation-r2-result-2026-07-23.md)
+implements this derivation with positive coverage for all eight outcomes and
+fully resealed semantic mutation controls.
+
+The source-first
+[R3 normalization plan](lean-u2-matched-execution-tl0.6.5-normalization-r3-plan-2026-07-23.md),
+[accepted bounded result](lean-u2-matched-execution-tl0.6.5-normalization-r3-result-2026-07-23.md),
+and immutable [v1 authority](lean-u2-normalization-contracts-v1.json) first
+resolved the comparison's normalizer through nine content-bound layer
+contracts. The subsequent source-first
+[R4 plan](lean-u2-matched-execution-tl0.6.5-typed-observables-r4-plan-2026-07-23.md),
+[accepted bounded result](lean-u2-matched-execution-tl0.6.5-typed-observables-r4-result-2026-07-23.md),
+and immutable [v2 authority](lean-u2-normalization-contracts-v2.json) validate
+all 86 field
+occurrences before projection: 65 SHA-256 identities, three sealed enums, nine
+nonnegative integers, and nine nonempty strings. The 68 semantic fields and 18
+narrowly justified ignored rules are unchanged. Missing, unknown, malformed,
+v1/invented, cross-layer, and stale-seal inputs reject; exhaustive controls
+mutate every semantic and ignored field. This is contract/projection evidence
+only: raw Lean/Axeyum extractors, semantic canonicalizers, post-parent
+obligations, and real pairs remain absent.
+
+The source-first
+[R5 axis-coverage plan](lean-u2-matched-execution-tl0.6.5-axis-coverage-r5-plan-2026-07-23.md),
+[accepted bounded result](lean-u2-matched-execution-tl0.6.5-axis-coverage-r5-result-2026-07-23.md),
+current [v3 authority](lean-u2-normalization-contracts-v3.json), and generated
+[summary](generated/lean-u2-normalization-contracts.md) additionally enforce
+each paired cell's axis against its selected contract. The ten contracts cover
+all A0--A11 through 15 registered contract/axis occurrences; all 105 other
+pairs reject after complete resealing. The added A10 mathlib-ecosystem contract
+raises the authority to 76 semantic fields, 20 ignored rules, and 96 typed
+occurrences. It is only a profile-level projection route: no mathlib
+population, observation, matched pair, completed axis, or parity credit exists.
 
 ### 7.1 TL0.7.1 execution-evidence checkpoint
 
@@ -404,6 +468,23 @@ these processes creates a U2/Axeyum outcome, denominator, paired cell,
 performance row, or terminal credit. TL0.7 is complete and TL0.6.3 is
 unblocked; the parity scoreboard remains at zero complete populations, axes,
 paired cells, and terminal gates.
+
+The later [R2 merge-drift repair](lean-execution-acceptance-tl0.7.4-merge-drift-r2-result-2026-07-23.md)
+separates the immutable evidence-producing source identities from the current
+compatible installer identity. The authority, evidence, observations, and
+credits remain unchanged; the current validator/test bytes are tracked by this
+terminal registry. This prevents a clean textual merge from either leaving the
+gate red or silently rewriting downstream U2 history.
+
+The later
+[worktree-portability R1 result](lean-complete-parity-worktree-portability-r1-result-2026-07-23.md)
+closes the broader checkout-root defect exposed by that repair. Repository-
+owned retained process and store paths now replay relative to one recovered
+checkout root, external executables and content identities remain exact, and
+committed read-only M2 evidence accepts only Git's clean tracked
+non-executable representation. The complete-parity check passes from a
+differently rooted detached worktree without rewriting historical authorities
+or changing any evidence, outcome, or credit.
 
 TL0.6.3 M0 is now governed by a
 [source-first official-case plan](lean-u2-official-execution-tl0.6.3-m0-plan-2026-07-22.md).
@@ -513,6 +594,164 @@ source-first resource qualification is required and no counter changes. The
 freezes that next boundary at 32 GiB with completion-grade control evidence;
 it does not itself authorize a parity claim or add an outcome.
 
+R6 subsequently closed one fresh 64-case local shard. The accepted
+[R6 result](lean-u2-official-execution-tl0.6.3-m2-r6-result-2026-07-23.md)
+and authority retain 64/64 outcomes from an unchanged completion-last root.
+Aggregate local U2 coverage is 66 outcomes over 65 unique cases. No full
+official attempt, parent selection, official provider, Axeyum outcome, paired
+cell, performance row, population, axis, gate, or parity claim is complete.
+
+TL0.6.4 M0 now has an accepted bounded
+[harness-floor result](lean-u2-native-surface-classification-tl0.6.4-m0-result-2026-07-23.md),
+[canonical authority](lean-u2-native-surface-classification-v1.json), and
+generated [summary](generated/lean-u2-native-surface-classification.md). All
+3,723 U2 cases are classified exactly once across ten stable surface IDs. The
+family floor yields 4,238 direct and 12,111 transitive surface occurrences,
+but all 3,723 content refinements, exact dependency closures, and native
+outcomes remain `not-run`; Axeyum outcomes, pairs, and terminal parity credit
+remain zero. The observed zero FFI floor is provisional, not an absence claim.
+This was the pre-M1 boundary: M1-M3 had to inspect pinned content, derive exact
+closures, and review every row before TL0.6.4 could close or TL0.6.5 form a
+native pair.
+
+M1 has since accepted the bounded
+[tracked-content result](lean-u2-native-surface-classification-tl0.6.4-m1-result-2026-07-23.md),
+[canonical authority](lean-u2-native-surface-content-v1.json), and generated
+[summary](generated/lean-u2-native-surface-content.md). It inspects all 7,004
+tracked files, retains 90,909 exact/candidate signal spans, projects all 3,723
+cases, and inventories 3,670 generated-wrapper residuals. The resulting direct
+surface census includes 24 provisional FFI cases, but content signals are not
+reachability, implementation, execution, or agreement. All exact dependency
+closures and native outcomes remain `not-run`; pairs and terminal credit remain
+zero. M2 exact closure and M3 complete-row review are still required.
+
+M2.0 has since accepted the offline
+[typed dependency/provider contract](lean-u2-native-surface-classification-tl0.6.4-m2.0-result-2026-07-23.md),
+[canonical authority](lean-u2-native-dependency-v1.json), and generated
+[summary](generated/lean-u2-native-dependency.md). It registers eleven node
+classes, 31 edge classes, nine evidence states, seven resolver milestones,
+eight exact selection sets, 111 official variants, and all 3,723 case rows.
+Selection factoring represents 408,374 case/variant occurrences without
+duplicating case graphs. This is not closure: every provider is unbound, every
+resolver and case closure is `not-run`, the node and edge lists are empty, no
+external process ran, and all native/pair/performance/terminal credit remains
+zero. M2.1-M2.7 must populate exact variant-owned graphs before M3 review.
+
+M2.1 is now source-first and process-ready under its
+[exact plan](lean-u2-native-dependency-tl0.6.4-m2.1-plan-2026-07-23.md),
+[pre-execution result](lean-u2-native-dependency-tl0.6.4-m2.1-pre-execution-2026-07-23.md),
+and [input/control authority](lean-u2-native-header-contract-m2.1-v1.json).
+The frozen pass covers 4,092 exact Lean sources / 9,697,571 bytes in 32
+fast-parser batches, compares all rows with the full parser, includes 14 exact
+controls, and permits exactly 39 sequential processes with zero retries. Its
+content-authorized runner is implemented and CI-gated, but attempt 001 remains
+unconsumed and its evidence root is absent. A preregistered R1 correction now
+enforces file-backed live stream ceilings and sealed launch failures; its
+synthetic tests are not parity observations. Therefore observed processes,
+declared header edges, resolutions, native outcomes, pairs, and all terminal
+credit remain zero until explicit authorization, immutable-evidence validation,
+and a separate offline promotion.
+
+M2.2's
+[source-first resolution plan](lean-u2-native-dependency-tl0.6.4-m2.2-plan-2026-07-23.md)
+now preregisters the exact Lean 4.30 module-to-source/artifact boundary. It
+freezes first-prefix candidate selection separately from leaf existence and
+content identity, absent-versus-empty path behavior, released module and
+`.olean` sidecar inventories, transitive module-data closure, the complete
+CLI process formula, and 18 controls. This is not a resolution authority:
+there are no M2.2 frozen inputs, processes, observations, rows, edges, native
+outcomes, pairs, or terminal credit. Binding M2.2 remains downstream of an
+accepted M2.1 result and requires its own source-first authority.
+
+The source-audited
+[M2.2 R1 correction](lean-u2-native-dependency-tl0.6.4-m2.2-effective-import-r1-plan-2026-07-23.md)
+closes a pre-implementation ambiguity in that plan. Raw module-data adjacency
+is not Lean's effective import/load closure: root mode and `public`, `meta`, and
+`all` modifiers form a least fixed point, and a repeated path can upgrade a
+module and force descendant revisits. R1 also freezes exported/server/private
+`.olean` files as one ordered incremental serialization, separate `.ir`
+reachability, and bounded cycle declines. These are future M2.2 proof
+obligations, not current resolver or parity observations.
+
+The source-first
+[M2.3 configured-runner/generated-artifact plan](lean-u2-native-dependency-tl0.6.4-m2.3-runner-generated-plan-2026-07-23.md)
+now freezes the next boundary without configuring or tracing anything. The
+registered U2 denominator partitions into 3,670 generated-wrapper cases, 52
+inline Lake `bash -c` cases, and one direct Python lint case. The wrapper route
+uses 41 registered paths resolving to 39 regular runners through two tracked
+symlinks. M2.3 separates exact provider CMake/CTest generation, configured
+dispatch, shell sourcing and state, hooks and marker precedence, statically
+proved edges, observed trace edges, and M2.4-M2.7 downstream ownership. No
+M2.3 input authority, process formula, provider, configured wrapper, trace,
+edge, native outcome, pair, performance row, or terminal credit exists; those
+remain downstream of accepted M2.1 and M2.2 results plus a separately frozen
+M2.3.1 authority.
+
+The source-first
+[M2.4 Lake workspace/project plan](lean-u2-native-dependency-tl0.6.4-m2.4-lake-project-plan-2026-07-23.md)
+now freezes the next semantics-only boundary. Its read-only floor contains 52
+direct Lake cases with 70 tracked configuration roots and 28 disjoint
+wrapper-directory lexical candidates whose reachability remains owned by M2.3.
+It separates executable configuration, manifest/override/materialization
+order, target/facet/job resolution, query and setup build projections,
+artifact/cache/network state, and downstream compiler/runtime/server ownership.
+No M2.4 authority, process formula, configured workspace, package/target edge,
+observation, outcome, pair, performance row, or terminal credit exists; the
+actual input denominator remains downstream of accepted M2.1-M2.3 results and
+a separately frozen M2.4.1 authority.
+
+The source-first
+[M2.5 compiler/runtime/FFI plan](lean-u2-native-dependency-tl0.6.4-m2.5-compiler-runtime-ffi-plan-2026-07-23.md)
+now freezes the next semantics-only boundary. The source census supplies 841
+direct / 860 closure compiler-runtime cases and 24 provisional FFI cases, but
+accepted M2.3/M2.4 route evidence must determine the actual denominator. M2.5
+separates frontend compilation, `#eval`, IR interpretation, C/LLVM emission,
+native compile/link/load, ABI/symbol/initialization, runtime effects, and
+platform variants. No M2.5 authority, process, artifact, observation, outcome,
+pair, performance row, or terminal credit exists.
+
+The source-first
+[M2.6 editor/server/RPC plan](lean-u2-native-dependency-tl0.6.4-m2.6-editor-rpc-plan-2026-07-23.md)
+now freezes the next semantics-only boundary and corrects a provisional M1
+projection without rewriting accepted history. Eleven generic Lake manifest
+and configuration `version` fields had promoted four non-server cases into the
+147-case editor/RPC surface; M2.6 explicitly rejects those four rows, yielding
+a 143-case source floor. It distinguishes 137 registered server-process
+harnesses from six server/RPC API-only source cases, then separates raw
+transport, lifecycle/capabilities, documents/versions/edits, snapshots,
+diagnostics/publication, cancellation, watchdog/worker processes, restart, RPC
+sessions/references/widgets, normalization, and experimental `idbg` ownership.
+No M2.6 authority, process formula, transcript, observation, outcome, pair,
+performance row, or terminal credit exists; accepted M2.1-M2.5 transfers and a
+separate M2.6.1 authority must determine the executable denominator.
+
+The source-first
+[M2.7 variant-merge and M3-handoff plan](lean-u2-native-dependency-tl0.6.4-m2.7-variant-merge-plan-2026-07-23.md)
+now freezes the final M2 semantics-only boundary. Its closure unit is one exact
+case and one exact official variant across the accepted M2.0 denominator of
+408,374 cells. Node/edge content may deduplicate only when every cell owner,
+condition, route, assurance dimension, decline, residual, and evidence pointer
+round-trips losslessly. Static, configured, observed, not-taken, unavailable,
+and declined states are not a total order; one variant cannot promote another.
+Union, intersection, delta, and explicitly proved equivalence remain
+non-crediting views, and the deterministic M3 queue retains every case and
+variant even when storage is shared. No M2.7 authority, accepted M2.1-M2.6
+transfer, merged graph, closed cell, M3 review, outcome, pair, performance row,
+or terminal credit exists.
+
+The source-first
+[M3 complete-row independent-review plan](lean-u2-native-surface-classification-tl0.6.4-m3-review-plan-2026-07-23.md)
+now freezes how TL0.6.4 classification can be accepted after M2.7. It requires
+one independent primary disposition for each of 3,723 case rows and all
+408,374 applicable case/variant cells; risk-bearing declines, corrections,
+equivalence proofs, intentionally-online routes, and resolved contradictions
+also require independent secondary concurrence. Review may span validated
+append-only sessions, but sampling, representative approval, silent replay,
+and in-place M2 repair are forbidden. A finding returns to a new retained M2
+correction/result. No accepted M2 parent, M3 authority, assignment, review
+event, disposition, TL0.6.4 acceptance, outcome, pair, performance row, or
+terminal credit exists.
+
 ## 8. Layer-specific equivalence
 
 One byte-comparison rule cannot cover the entire system:
@@ -612,29 +851,32 @@ run.
 
 Before another broad implementation claim:
 
-1. retain the R3 singleton as closed and derive fresh deterministic U2 child
-   shards from the registered parent/profile authorities;
-2. repair the remote Lean job so `AXEYUM_LEAN_BIN` resolves to the installed
-   versioned executable from any working directory, then archive the first true
-   71/71 remote attestation, duration, RSS, and axiom summary;
-3. execute and classify new U2 shards with unique-case accounting, then form the
-   first native official/Axeyum semantic pair;
-4. extend TL0.6's generated registry seed from bounded K0/K1 and selected-
+1. retain the R3 singleton and accepted R6 shard as immutable history; execute
+   only fresh source-first child shards with unique-case accounting;
+2. retain accepted TL0.6.4 M1 as source-only evidence, M2.0 as an empty typed
+   graph/provider contract, and M2.1's input authority as unexecuted; explicitly
+   authorize/validate M2.1, then execute M2.2-M2.7 exact module/generated/
+   runtime/FFI/request/project closures and M3 full-row review;
+3. repair and attest the remote official-Lean executable identity from changed
+   working directories, retaining provider, duration, RSS, and axiom evidence;
+4. form the first native official/Axeyum semantic pair only after its complete
+   classification, official completion, normalization, and native evidence;
+5. extend TL0.6's generated registry seed from bounded K0/K1 and selected-
    construct evidence to content-identified complete construct, source, tactic,
    project, editor, runtime, ecosystem, and platform authorities;
-5. freeze separate official populations for elaboration success, elaboration
+6. freeze separate official populations for elaboration success, elaboration
    failure, compile+interpret, Lake, package, server, and benchmark suites;
-6. record normalized per-layer equivalence rules and mutation tests before
+7. record normalized per-layer equivalence rules and mutation tests before
    running those populations;
-7. add content/dependency/source-family identities and exact paired overlap to
+8. add content/dependency/source-family identities and exact paired overlap to
    every Lean scoreboard;
-8. retain adapter, official-oracle, and native outcomes as separate columns;
-9. complete the String and quotient K1 roots and regenerate the dependency-
+9. retain adapter, official-oracle, and native outcomes as separate columns;
+10. complete the String and quotient K1 roots and regenerate the dependency-
    closed blocker ranking;
-10. classify all 65 prelude assumptions before reporting broader proof parity;
-11. turn the pinned mathlib tree inventory into module/declaration/dependency/
+11. classify all 65 prelude assumptions before reporting broader proof parity;
+12. turn the pinned mathlib tree inventory into module/declaration/dependency/
     tactic/test manifests before assigning any coverage percentage; and
-12. keep the landed documentation claim guard enforced and expand its live
+13. keep the landed documentation claim guard enforced and expand its live
     claim-surface list when a new public status surface is introduced.
 
 ## 12. Primary sources

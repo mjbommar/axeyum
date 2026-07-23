@@ -2,6 +2,7 @@
   "schema": "axeyum-lean-complete-parity-v1",
   "as_of": "2026-07-22",
   "contract": "docs/plan/lean4-complete-parity-contract-2026-07-22.md",
+  "normalization_authority": "docs/plan/lean-u2-normalization-contracts-v3.json",
   "target": {
     "lean_version": "4.30.0",
     "lean_commit": "d024af099ca4bf2c86f649261ebf59565dc8c622",
@@ -106,6 +107,118 @@
         {
           "path": "docs/plan/lean-u2-official-execution-tl0.6.3-m1-shard-result-2026-07-22.md",
           "detail": "Accepted M1 derivation result, exact source and output identities, mutation validation, explicit non-claims, and next execution handoff."
+        },
+        {
+          "path": "docs/plan/lean-u2-native-surface-classification-v1.json",
+          "detail": "TL0.6.4 M0 full-population harness-floor authority: all 3,723 cases classified exactly once across stable owned surfaces while content refinement, exact module dependency closure, native outcomes, pairs, and parity credit remain not run or zero."
+        },
+        {
+          "path": "docs/plan/generated/lean-u2-native-surface-classification.md",
+          "detail": "Generated surface and family denominators with the explicit M1 content-refinement and M2 exact-dependency residual."
+        },
+        {
+          "path": "docs/plan/lean-u2-native-surface-classification-tl0.6.4-m0-plan-2026-07-23.md",
+          "detail": "Source-first M0 contract for the ten-surface dependency DAG, fourteen exact family rules, three case overrides, mutation gates, stop conditions, and non-crediting boundary."
+        },
+        {
+          "path": "docs/plan/lean-u2-native-surface-content-v1.json",
+          "detail": "TL0.6.4 M1 full tracked-content authority: 7,004 file rows, 3,723 case projections, 90,909 exact/candidate signal spans, complete tracked-source census, and zero exact dependency/native/pair/parity credit."
+        },
+        {
+          "path": "docs/plan/generated/lean-u2-native-surface-content.md",
+          "detail": "Generated media, signal, provisional surface, generated-wrapper residual, and non-crediting denominators for the complete tracked U2 content census."
+        },
+        {
+          "path": "docs/plan/lean-u2-native-surface-classification-tl0.6.4-m1-plan-2026-07-23.md",
+          "detail": "Source-first M1 contract for byte-exact tracked-content inspection, role-aware case projection, structured and lexical controls, generated-artifact boundary, and M2/M3 continuation."
+        },
+        {
+          "path": "docs/plan/lean-u2-native-surface-classification-tl0.6.4-m1-result-2026-07-23.md",
+          "detail": "Accepted bounded M1 result with complete denominators, source-first/correction history, lossless compaction, exact artifact identities, validation, nonclaims, and M2/M3 handoff."
+        },
+        {
+          "path": "docs/plan/lean-u2-native-dependency-v1.json",
+          "detail": "TL0.6.4 M2.0 typed dependency/provider contract for all 3,723 cases, eight exact selection sets, 111 factored official variants, and 408,374 case/variant occurrences; all nodes, edges, processes, native outcomes, pairs, and parity credit remain empty or zero."
+        },
+        {
+          "path": "docs/plan/generated/lean-u2-native-dependency.md",
+          "detail": "Generated empty-graph, unbound-provider, not-run closure, and explicit non-crediting summary for M2.0."
+        },
+        {
+          "path": "docs/plan/lean-u2-native-surface-classification-tl0.6.4-m2-plan-2026-07-23.md",
+          "detail": "Source-first M2.0-M2.7 program for exact header, source/artifact, generated-runner, Lake/project, runtime/FFI, editor/RPC, and variant-merge dependency closure."
+        },
+        {
+          "path": "docs/plan/lean-u2-native-surface-classification-tl0.6.4-m2.0-result-2026-07-23.md",
+          "detail": "Accepted bounded M2.0 result with source-first checkpoint history, exact denominators and seals, empty-graph/provider boundary, validation, nonclaims, and M2.1-M2.7 handoff."
+        },
+        {
+          "path": "docs/plan/lean-u2-native-dependency-tl0.6.4-m2.1-plan-2026-07-23.md",
+          "detail": "Preregistered exact fast/full header-parser program for all 4,092 tracked Lean sources, 14 controls, 39 sequential processes, immutable completion-last evidence, and zero retries or implicit credit."
+        },
+        {
+          "path": "docs/plan/lean-u2-native-header-contract-m2.1-v1.json",
+          "detail": "M2.1 pre-execution input/control authority: 4,092 exact source rows, 32 deterministic batches, 14 controls, 39 planned processes, zero observations, and zero header/native/parity credit."
+        },
+        {
+          "path": "docs/plan/generated/lean-u2-native-header-contract-m2.1.md",
+          "detail": "Generated M2.1 frozen-denominator and explicit no-process/no-edge summary."
+        },
+        {
+          "path": "docs/plan/lean-u2-native-dependency-tl0.6.4-m2.1-pre-execution-2026-07-23.md",
+          "detail": "Accepted M2.1 implementation-readiness result with exact checkpoint history, process/evidence behavior, artifact identities, validation, content authorization, and explicit no-process boundary."
+        },
+        {
+          "path": "docs/plan/lean-u2-native-dependency-tl0.6.4-m2.2-plan-2026-07-23.md",
+          "detail": "Preregistered M2.2 exact module/source/artifact resolution semantics: first-prefix candidate behavior, independent existence/content checks, released universe, transitive module-data closure, full CLI process formula, controls, and zero-credit boundary."
+        },
+        {
+          "path": "docs/plan/lean-u2-native-dependency-tl0.6.4-m2.2-effective-import-r1-plan-2026-07-23.md",
+          "detail": "Preregistered M2.2 R1 correction separating raw import closure from Lean's modifier-sensitive effective load fixed point and freezing ordered incremental .olean parts, IR-only reachability, cycle declines, controls, and zero-credit boundary."
+        },
+        {
+          "path": "docs/plan/lean-u2-native-dependency-tl0.6.4-m2.3-runner-generated-plan-2026-07-23.md",
+          "detail": "Preregistered M2.3 configured-runner and generated-artifact semantics: exact 3,670/52/1 dispatch partition, configured CMake/CTest provenance, shell-state and source resolution, hooks and marker precedence, static-versus-observed edges, downstream ownership, controls, and zero-process/zero-credit boundary."
+        },
+        {
+          "path": "docs/plan/lean-u2-native-dependency-tl0.6.4-m2.4-lake-project-plan-2026-07-23.md",
+          "detail": "Preregistered M2.4 Lake workspace/project semantics: 52 direct cases and 70 tracked configuration roots plus 28 wrapper-directory lexical candidates pending M2.3, executable configuration, manifest/override/materialization order, target/facet/job behavior, query/setup build projections, cache/network state, downstream ownership, and zero-process/zero-credit boundary."
+        },
+        {
+          "path": "docs/plan/lean-u2-native-dependency-tl0.6.4-m2.5-compiler-runtime-ffi-plan-2026-07-23.md",
+          "detail": "Preregistered M2.5 compiler/runtime/FFI semantics: 841 direct and 860 closure compiler-runtime cases plus 24 provisional FFI cases, distinct compiled/interpreted/eval/C/LLVM routes, toolchain/artifact/ABI/symbol/initialization/effect closure, controls, and zero-process/zero-credit boundary."
+        },
+        {
+          "path": "docs/plan/lean-u2-native-dependency-tl0.6.4-m2.6-editor-rpc-plan-2026-07-23.md",
+          "detail": "Preregistered M2.6 editor/server/RPC semantics: immutable M1 correction overlay rejects four Lake cases promoted by eleven generic JSON version fields, yielding a 143-case source floor; separates 137 server harnesses from six API-only cases and freezes transport/lifecycle/document/snapshot/cancellation/watchdog/worker/RPC/session/idbg closure with zero process or credit."
+        },
+        {
+          "path": "docs/plan/lean-u2-native-dependency-tl0.6.4-m2.7-variant-merge-plan-2026-07-23.md",
+          "detail": "Preregistered M2.7 lossless variant-merge and M3-handoff semantics for all 408,374 exact case/variant cells: provenance-preserving graph deduplication, non-total-order assurance vectors, per-cell closure, non-crediting union/intersection/delta/equivalence views, correction/residual retention, and deterministic complete-row review queues with zero accepted parent transfer, merged closure, or credit."
+        },
+        {
+          "path": "docs/plan/lean-u2-native-surface-classification-tl0.6.4-m3-review-plan-2026-07-23.md",
+          "detail": "Preregistered M3.0 independent complete-row review semantics: exact primary dispositions for all 3,723 cases and 408,374 applicable cells, secondary concurrence for risk-bearing rows, resumable append-only review with explicit supersession, fail-closed repair routing, and bounded TL0.6.4 classification acceptance with no accepted M2 parent, review event, or parity credit."
+        },
+        {
+          "path": "docs/plan/lean-u2-matched-execution-tl0.6.5-plan-2026-07-23.md",
+          "detail": "Preregistered TL0.6.5 matched-execution semantics: distinct case/execution-slot/comparison-obligation denominators, independent sealed official and Axeyum execution records with typed result classes, typed absent/invalid states, a comparison that cites both side seals and normalized-observable identities, exact pair-population count/ID/cell-seal authorities, derived non-vacuous G3 outcomes, and zero execution or credit before complete accepted TL0.6.3/TL0.6.4 parents."
+        },
+        {
+          "path": "docs/plan/lean-u2-matched-execution-tl0.6.5-content-seals-r1-result-2026-07-23.md",
+          "detail": "Accepted bounded TL0.6.5 R1 schema correction: versioned deterministic execution, comparison, cell, and population cell-seal digests are recomputed with mutation teeth; all native outcomes, paired cells, complete pair authorities, gates, and parity credit remain zero."
+        },
+        {
+          "path": "docs/plan/lean-u2-matched-execution-tl0.6.5-outcome-derivation-r2-plan-2026-07-23.md",
+          "detail": "Preregistered TL0.6.5 R2 schema correction: complete side records project typed success/reject/decline/timeout/resource/failure classes, comparisons bind separate canonical normalized identities, and all eight comparison outcomes are derived rather than trusted; this authorizes no process or credit."
+        },
+        {
+          "path": "docs/plan/lean-u2-matched-execution-tl0.6.5-outcome-derivation-r2-result-2026-07-23.md",
+          "detail": "Accepted bounded TL0.6.5 R2 schema result: all eight outcomes derive from typed side states/results and normalized-observable equality, including fully resealed semantic mutation controls; all real pair and parity counters remain zero."
+        },
+        {
+          "path": "docs/plan/lean-complete-parity-worktree-portability-r1-result-2026-07-23.md",
+          "detail": "Accepted bounded portability repair: retained repository-owned process/store paths are checkout-root-relative, Git checkout permissions preserve content/seal integrity, historical authorities remain immutable while new revisions freeze current sources, focused and live store tests pass, and the complete-parity check succeeds from a differently rooted detached worktree."
         },
         {
           "path": "docs/plan/lean-u2-official-execution-tl0.6.3-m2-shard-0001-plan-2026-07-22.md",
@@ -292,7 +405,7 @@
           "detail": "Pinned tests tree inventory and the required CTest/test-pile derivation rule."
         }
       ],
-      "residual": "Current credited local execution coverage is 66 official outcomes (65 passes / one failure) over 65 unique cases from the 3,678-case release Linux parent, with one of 289 derived physical shards complete and zero Axeyum outcomes or pairs. There are eight consumed selected process attempts: four M0 attempts, invalid M2 R1, timeout M2 R3, invalid M2 R5, and accepted M2 R6. M2 R1 retained 30 diagnostic passes / 34 failures but failed closure; R2 completed its zero-process diagnostic append. M2 R3 timed out after channel thread-creation failure. R4's 16 GiB control failed before selected discovery. R5 passed 64/64 under 32 GiB but its unconditional failure-log contract invalidated it; its diagnostic completion grants zero outcomes. R6 attempt 004 passed 64/64 under conditional semantics, and qualifying replay accepts its unchanged 152-file completion as 64 outcomes / one local shard. All 111 full official workflow attempts, the parent/provider profiles, and every Axeyum/pair/performance/population/axis/gate/parity counter remain incomplete or zero. Next execute another source-first child shard, classify TL0.6.4 native surfaces, and run matched Axeyum cases. Scheduling metadata, controls, diagnostic rows, and retries do not increase population coverage."
+      "residual": "Current credited local execution coverage is 66 official outcomes (65 passes / one failure) over 65 unique cases from the 3,678-case release Linux parent, with one of 289 derived physical shards complete and zero Axeyum outcomes or pairs. There are eight consumed selected process attempts: four M0 attempts, invalid M2 R1, timeout M2 R3, invalid M2 R5, and accepted M2 R6. M2 R1 retained 30 diagnostic passes / 34 failures but failed closure; R2 completed its zero-process diagnostic append. M2 R3 timed out after channel thread-creation failure. R4's 16 GiB control failed before selected discovery. R5 passed 64/64 under 32 GiB but its unconditional failure-log contract invalidated it; its diagnostic completion grants zero outcomes. R6 attempt 004 passed 64/64 under conditional semantics, and qualifying replay accepts its unchanged 152-file completion as 64 outcomes / one local shard. TL0.6.4 M0 assigns all 3,723 cases a conservative harness floor. M1 completes a source-only census over 7,004 tracked files and 90,909 exact/candidate signal spans, while 3,670 cases retain a generated-wrapper residual. M2.0 freezes the typed node, edge, assurance, resolver, provider-variant, selection, and case contract across 408,374 factored case/variant occurrences, but all 111 providers remain unbound and all exact module/generated/runtime/FFI/request/project nodes, edges, and closures remain not run or empty. M2.1 now preregisters 4,092 exact Lean source rows, 32 batches, 14 controls, and 39 no-retry processes, but no M2.1 process or header edge has been observed. M2.2 now preregisters exact module/source/artifact resolution semantics and fail-closed controls. Its R1 correction additionally separates raw import closure from the modifier-sensitive effective load fixed point and freezes ordered incremental .olean parts, IR-only reachability, and bounded cycle declines. M2.3 now preregisters the exact 3,670 wrapper / 52 inline Lake / one lint dispatch partition, configured CMake/CTest provenance, runner and shell-state semantics, trace boundary, and fail-closed controls. M2.4 now preregisters Lake workspace/project closure over a read-only floor of 52 direct cases, 70 tracked configuration roots, and 28 wrapper-directory lexical candidates pending M2.3, including configuration, manifest, materialization, target/facet/job, cache, and network semantics. M2.5 now preregisters compiler/runtime/FFI closure over a source-only floor of 841 direct and 860 closure compiler-runtime cases plus 24 provisional FFI cases, including distinct frontend, interpreter, native toolchain, artifact, ABI, initialization, and effect routes. M2.6 now preserves the accepted M1 authority while rejecting four Lake cases promoted by eleven generic JSON version fields; its corrected 143-case source floor separates 137 server harnesses from six API-only cases and preregisters raw transport, lifecycle, document/snapshot, cancellation, watchdog/worker, restart, RPC/session/widget, normalization, and idbg semantics. M2.7 now preregisters lossless provenance/assurance joins and deterministic M3 handoff over all 408,374 exact case/variant cells; equal content may deduplicate storage but never ownership, denominator, conditions, declines, or evidence. M3.0 now preregisters exact independent review of all 3,723 case rows and 408,374 cell rows, including secondary concurrence for risk-bearing dispositions and resumable append-only review; it has no accepted M2.7 parent, input authority, assignment, event, disposition, or TL0.6.4 acceptance. M2.2-M2.7 still have no accepted input authorities or parent transfers, resolved/configured/observed closures, or closed case/variant cells; M3 has no review acceptance, outcomes, pairs, or credit before accepted M2.1 evidence and separately bound downstream authorities. All 111 full official workflow attempts and every Axeyum/pair/performance/population/axis/gate/parity counter remain incomplete or zero. Next execute another source-first child shard, explicitly authorize and validate the TL0.6.4 M2.1 attempt, bind and execute M2.2-M2.7 exact dependency closure, complete M3 review, and only then run matched Axeyum cases. Scheduling metadata, content signals, empty graph contracts, unexecuted controls, diagnostic rows, and retries do not increase population coverage."
     },
     {
       "id": "U3",
@@ -543,6 +656,98 @@
       "populations": ["U0", "U4", "U6", "U9"],
       "evidence": [],
       "residual": "No full install/package/offline/platform/migration matrix currently earns parity credit."
+    }
+  ],
+  "paired_population_authorities": [
+    {
+      "population": "U0",
+      "state": "not_registered",
+      "expected_cells": 0,
+      "expected_ids_sha256": null,
+      "expected_cell_seals_sha256": null,
+      "evidence": [],
+      "residual": "No complete toolchain/bootstrap comparison-obligation authority is registered."
+    },
+    {
+      "population": "U1",
+      "state": "not_registered",
+      "expected_cells": 0,
+      "expected_ids_sha256": null,
+      "expected_cell_seals_sha256": null,
+      "evidence": [],
+      "residual": "No complete kernel/core comparison-obligation authority is registered."
+    },
+    {
+      "population": "U2",
+      "state": "not_registered",
+      "expected_cells": 0,
+      "expected_ids_sha256": null,
+      "expected_cell_seals_sha256": null,
+      "evidence": [],
+      "residual": "TL0.6.5 has no accepted TL0.6.3/TL0.6.4 parents or derived official/native comparison-obligation authority."
+    },
+    {
+      "population": "U3",
+      "state": "not_registered",
+      "expected_cells": 0,
+      "expected_ids_sha256": null,
+      "expected_cell_seals_sha256": null,
+      "evidence": [],
+      "residual": "No complete core-library comparison-obligation authority is registered."
+    },
+    {
+      "population": "U4",
+      "state": "not_registered",
+      "expected_cells": 0,
+      "expected_ids_sha256": null,
+      "expected_cell_seals_sha256": null,
+      "evidence": [],
+      "residual": "No complete Lake/project comparison-obligation authority is registered."
+    },
+    {
+      "population": "U5",
+      "state": "not_registered",
+      "expected_cells": 0,
+      "expected_ids_sha256": null,
+      "expected_cell_seals_sha256": null,
+      "evidence": [],
+      "residual": "No complete server/editor comparison-obligation authority is registered."
+    },
+    {
+      "population": "U6",
+      "state": "not_registered",
+      "expected_cells": 0,
+      "expected_ids_sha256": null,
+      "expected_cell_seals_sha256": null,
+      "evidence": [],
+      "residual": "No complete runtime/compiler comparison-obligation authority is registered."
+    },
+    {
+      "population": "U7",
+      "state": "not_registered",
+      "expected_cells": 0,
+      "expected_ids_sha256": null,
+      "expected_cell_seals_sha256": null,
+      "evidence": [],
+      "residual": "No complete mathlib comparison-obligation authority is registered."
+    },
+    {
+      "population": "U8",
+      "state": "not_registered",
+      "expected_cells": 0,
+      "expected_ids_sha256": null,
+      "expected_cell_seals_sha256": null,
+      "evidence": [],
+      "residual": "No complete adversarial/security comparison-obligation authority is registered."
+    },
+    {
+      "population": "U9",
+      "state": "not_registered",
+      "expected_cells": 0,
+      "expected_ids_sha256": null,
+      "expected_cell_seals_sha256": null,
+      "evidence": [],
+      "residual": "No complete platform/release comparison-obligation authority is registered."
     }
   ],
   "outcome_classes": [

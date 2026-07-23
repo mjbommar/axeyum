@@ -241,6 +241,14 @@ jobs:
       - run: python3 scripts/gen-lean-u2-official-ci-profiles.py --check
       - run: python3 -m unittest scripts.tests.test_lean_u2_official_child_shards
       - run: python3 scripts/gen-lean-u2-official-child-shards.py --check
+      - run: python3 -m unittest scripts.tests.test_lean_u2_native_surface_classification
+      - run: python3 scripts/gen-lean-u2-native-surface-classification.py --check
+      - run: python3 -m unittest scripts.tests.test_lean_u2_native_surface_content
+      - run: python3 scripts/gen-lean-u2-native-surface-content.py --check
+      - run: python3 -m unittest scripts.tests.test_lean_u2_native_dependency
+      - run: python3 scripts/gen-lean-u2-native-dependency.py --check
+      - run: python3 -m unittest scripts.tests.test_lean_u2_native_dependency_m2_1
+      - run: python3 scripts/lean_u2_native_dependency_m2_1.py check-contract
       - run: python3 -m unittest scripts.tests.test_lean_execution_evidence
       - run: python3 scripts/gen-lean-execution-evidence.py --check
       - run: python3 -m unittest scripts.tests.test_lean_execution_process
