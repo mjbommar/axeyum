@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import copy
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any, Callable
 
 from full_population import (
@@ -16,16 +17,110 @@ from full_population import (
     SHA256,
     THERMAL_MAX_INTERVAL_NS,
     THERMAL_STOP_MILLICELSIUS,
+    WAVE_COUNT,
     build_wave_checkpoint,
     scheduler_decision,
+    validate_checkpoint_chain,
     validate_schedule,
     validate_thermal_observation,
     validate_thermal_stop,
 )
 from resume_contract import ContractError, digest
+from resume_fs import (
+    atomic_install_json,
+    read_canonical_json,
+    recover_orphan_temporaries,
+)
 
 
 WAVE_OUTCOME_SCHEMA = "axeyum.smtcomp-credited-full-wave-outcome.v1"
+CHECKPOINT_DIRECTORY = "full-wave-checkpoints"
+
+
+def load_wave_checkpoints(
+    run_dir: Path,
+    *,
+    schedule: dict[str, Any],
+    plan_sha256: str,
+    run_identity_sha256: str,
+    cell_id: str,
+) -> list[dict[str, Any]]:
+    """Load the exact immutable, contiguous checkpoint prefix for one cell."""
+
+    root = run_dir / CHECKPOINT_DIRECTORY
+    if not root.exists():
+        return []
+    if root.is_symlink() or not root.is_dir():
+        raise ContractError("full wave checkpoint directory mismatch")
+    paths = sorted(root.iterdir(), key=lambda path: path.name)
+    if any(path.is_symlink() or not path.is_file() for path in paths):
+        raise ContractError("unexpected full wave checkpoint artifact")
+    expected_names = [f"wave-{index:02d}.json" for index in range(len(paths))]
+    if [path.name for path in paths] != expected_names:
+        raise ContractError("full wave checkpoint inventory is not contiguous")
+    checkpoints = [read_canonical_json(path) for path in paths]
+    return validate_checkpoint_chain(
+        checkpoints,
+        schedule=schedule,
+        plan_sha256=plan_sha256,
+        run_identity_sha256=run_identity_sha256,
+        cell_id=cell_id,
+    )
+
+
+def publish_wave_checkpoint(
+    run_dir: Path,
+    *,
+    checkpoint: dict[str, Any],
+    schedule: dict[str, Any],
+    plan_sha256: str,
+    run_identity_sha256: str,
+    cell_id: str,
+    phase_hook: Callable[[str], None] | None = None,
+) -> dict[str, Any]:
+    """Install one checkpoint without permitting a gap or byte replacement."""
+
+    checkpoint_root = run_dir / CHECKPOINT_DIRECTORY
+    recover_orphan_temporaries(
+        checkpoint_root,
+        quarantine_root=run_dir / "quarantine",
+        eligible_targets={f"wave-{index:02d}.json" for index in range(WAVE_COUNT)},
+    )
+    checkpoints = load_wave_checkpoints(
+        run_dir,
+        schedule=schedule,
+        plan_sha256=plan_sha256,
+        run_identity_sha256=run_identity_sha256,
+        cell_id=cell_id,
+    )
+    wave_index = checkpoint.get("wave_index")
+    if type(wave_index) is int and 0 <= wave_index < len(checkpoints):
+        if checkpoint == checkpoints[wave_index]:
+            return checkpoints[wave_index]
+        raise ContractError("full wave checkpoint conflicts with installed wave")
+    if wave_index != len(checkpoints):
+        raise ContractError("full wave checkpoint is not the next exact wave")
+    validate_checkpoint_chain(
+        [*checkpoints, checkpoint],
+        schedule=schedule,
+        plan_sha256=plan_sha256,
+        run_identity_sha256=run_identity_sha256,
+        cell_id=cell_id,
+    )
+    atomic_install_json(
+        checkpoint_root,
+        f"wave-{wave_index:02d}.json",
+        checkpoint,
+        phase_hook=phase_hook,
+        quarantine_root=run_dir / "quarantine",
+    )
+    return load_wave_checkpoints(
+        run_dir,
+        schedule=schedule,
+        plan_sha256=plan_sha256,
+        run_identity_sha256=run_identity_sha256,
+        cell_id=cell_id,
+    )[-1]
 
 
 @dataclass(frozen=True)
