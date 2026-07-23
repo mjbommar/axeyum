@@ -1162,7 +1162,7 @@ macro_rules! full_exports {
         pub use quant_sat_cert::{check_model, check_model_with_assignment};
         #[doc(hidden)]
         pub use quant_uf_model_sat_cert::{
-            QUANTIFIED_UF_PROFILE_CAP, QuantifiedUfModelSatCertificate,
+            QUANTIFIED_UF_BINDER_CAP, QUANTIFIED_UF_PROFILE_CAP, QuantifiedUfModelSatCertificate,
             check_quantified_uf_model_sat,
         };
         #[doc(hidden)]

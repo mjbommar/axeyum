@@ -28,8 +28,9 @@ use axeyum_ir::{
     Assignment, FuncId, FuncValue, Rational, Sort, SymbolId, TermArena, TermId, Value, eval,
 };
 use axeyum_solver::{
-    CheckResult, Evidence, Model, QUANTIFIED_UF_PROFILE_CAP, QuantifiedUfModelSatCertificate,
-    SolverConfig, check_model, check_quantified_uf_model_sat, produce_evidence, solve,
+    CheckResult, Evidence, Model, QUANTIFIED_UF_BINDER_CAP, QUANTIFIED_UF_PROFILE_CAP,
+    QuantifiedUfModelSatCertificate, SolverConfig, check_model, check_quantified_uf_model_sat,
+    produce_evidence, solve,
 };
 
 fn config() -> SolverConfig {
@@ -210,6 +211,90 @@ fn forall_real_uf_nonneg_is_sat() {
         panic!("∀r:Real. f(r) ≥ 0 ∧ f(2.5) = 1 is satisfiable");
     };
     assert!(check_model(&arena, &assertions, &model).unwrap());
+}
+
+#[test]
+fn two_binder_uf_nonneg_is_sat_and_model_replays() {
+    // ∀x y:Int. f(x,y) ≥ 0  ∧  f(1,2) = 3.
+    let mut arena = TermArena::new();
+    let function = arena
+        .declare_fun("f", &[Sort::Int, Sort::Int], Sort::Int)
+        .unwrap();
+    let (x_binder, x) = int_bound(&mut arena, "x");
+    let (y_binder, y) = int_bound(&mut arena, "y");
+    let application = arena.apply(function, &[x, y]).unwrap();
+    let zero = arena.int_const(0);
+    let body = arena.int_ge(application, zero).unwrap();
+    let inner = arena.forall(y_binder, body).unwrap();
+    let forall = arena.forall(x_binder, inner).unwrap();
+
+    let one = arena.int_const(1);
+    let two = arena.int_const(2);
+    let at_point = arena.apply(function, &[one, two]).unwrap();
+    let three = arena.int_const(3);
+    let point = arena.eq(at_point, three).unwrap();
+    let assertions = [forall, point];
+
+    let CheckResult::Sat(model) = check(&mut arena, &assertions) else {
+        panic!("the bounded two-binder finite-profile model must be found");
+    };
+    assert!(model.quantified_uf_model_sat_certificate(forall).is_some());
+    assert!(check_model(&arena, &assertions, &model).unwrap());
+    assert!(Evidence::Sat(model).check(&arena, &assertions).unwrap());
+}
+
+#[test]
+fn mixed_two_binder_uf_nonneg_is_sat_and_model_replays() {
+    let mut arena = TermArena::new();
+    let function = arena
+        .declare_fun("f", &[Sort::Int, Sort::Real], Sort::Real)
+        .unwrap();
+    let (x_binder, x) = int_bound(&mut arena, "x");
+    let r_binder = arena.declare("r", Sort::Real).unwrap();
+    let r = arena.var(r_binder);
+    let application = arena.apply(function, &[x, r]).unwrap();
+    let zero = arena.real_const(Rational::integer(0));
+    let body = arena.real_ge(application, zero).unwrap();
+    let inner = arena.forall(r_binder, body).unwrap();
+    let forall = arena.forall(x_binder, inner).unwrap();
+
+    let four = arena.int_const(4);
+    let half = arena.real_const(Rational::new(1, 2));
+    let at_point = arena.apply(function, &[four, half]).unwrap();
+    let three = arena.real_const(Rational::integer(3));
+    let point = arena.eq(at_point, three).unwrap();
+    let assertions = [forall, point];
+
+    let CheckResult::Sat(model) = check(&mut arena, &assertions) else {
+        panic!("the mixed-sort Cartesian finite-profile model must be found");
+    };
+    assert!(check_model(&arena, &assertions, &model).unwrap());
+    assert!(Evidence::Sat(model).check(&arena, &assertions).unwrap());
+}
+
+#[test]
+fn two_binder_conflicting_point_falls_back_to_unsat_refutation() {
+    let mut arena = TermArena::new();
+    let function = arena
+        .declare_fun("f", &[Sort::Int, Sort::Int], Sort::Int)
+        .unwrap();
+    let (x_binder, x) = int_bound(&mut arena, "x");
+    let (y_binder, y) = int_bound(&mut arena, "y");
+    let application = arena.apply(function, &[x, y]).unwrap();
+    let zero = arena.int_const(0);
+    let body = arena.int_ge(application, zero).unwrap();
+    let inner = arena.forall(y_binder, body).unwrap();
+    let forall = arena.forall(x_binder, inner).unwrap();
+    let one = arena.int_const(1);
+    let two = arena.int_const(2);
+    let at_point = arena.apply(function, &[one, two]).unwrap();
+    let negative = arena.int_const(-1);
+    let point = arena.eq(at_point, negative).unwrap();
+
+    assert!(matches!(
+        check(&mut arena, &[forall, point]),
+        CheckResult::Unsat
+    ));
 }
 
 // ---------------------------------------------------------------------------
@@ -473,26 +558,128 @@ fn finite_profile_checker_handles_repeated_argument_positions() {
 }
 
 #[test]
-fn checker_rejects_nested_and_interpreted_binder_occurrences() {
+fn finite_profile_checker_checks_cartesian_binary_table_points() {
+    let mut arena = TermArena::new();
+    let function = arena
+        .declare_fun("f", &[Sort::Int, Sort::Int], Sort::Int)
+        .unwrap();
+    let (x_binder, x) = int_bound(&mut arena, "x");
+    let (y_binder, y) = int_bound(&mut arena, "y");
+    let application = arena.apply(function, &[x, y]).unwrap();
+    let zero = arena.int_const(0);
+    let body = arena.int_ge(application, zero).unwrap();
+    let inner = arena.forall(y_binder, body).unwrap();
+    let forall = arena.forall(x_binder, inner).unwrap();
+    let certificate = QuantifiedUfModelSatCertificate {
+        assertion: forall,
+        binder: x_binder,
+    };
+
+    let positive = FuncValue::constant_value(vec![Sort::Int, Sort::Int], Sort::Int, Value::Int(0))
+        .define_value(&[Value::Int(1), Value::Int(2)], Value::Int(7));
+    let mut model = Model::new();
+    model.set_function(function, positive.clone());
+    assert!(check_quantified_uf_model_sat(
+        &arena,
+        forall,
+        &model,
+        &certificate
+    ));
+
+    model.set_function(
+        function,
+        positive.define_value(&[Value::Int(1), Value::Int(2)], Value::Int(-1)),
+    );
+    assert!(!check_quantified_uf_model_sat(
+        &arena,
+        forall,
+        &model,
+        &certificate
+    ));
+}
+
+#[test]
+fn finite_profile_checker_handles_mixed_int_real_binders() {
+    let mut arena = TermArena::new();
+    let function = arena
+        .declare_fun("f", &[Sort::Int, Sort::Real], Sort::Real)
+        .unwrap();
+    let (x_binder, x) = int_bound(&mut arena, "x");
+    let r_binder = arena.declare("r", Sort::Real).unwrap();
+    let r = arena.var(r_binder);
+    let application = arena.apply(function, &[x, r]).unwrap();
+    let zero = arena.real_const(Rational::integer(0));
+    let body = arena.real_ge(application, zero).unwrap();
+    let inner = arena.forall(r_binder, body).unwrap();
+    let forall = arena.forall(x_binder, inner).unwrap();
+    let certificate = QuantifiedUfModelSatCertificate {
+        assertion: forall,
+        binder: x_binder,
+    };
+    let half = Rational::new(1, 2);
+    let positive = FuncValue::constant_value(
+        vec![Sort::Int, Sort::Real],
+        Sort::Real,
+        Value::Real(Rational::integer(0)),
+    )
+    .define_value(
+        &[Value::Int(4), Value::Real(half)],
+        Value::Real(Rational::integer(3)),
+    );
+    let mut model = Model::new();
+    model.set_function(function, positive.clone());
+    assert!(check_quantified_uf_model_sat(
+        &arena,
+        forall,
+        &model,
+        &certificate
+    ));
+    model.set_function(
+        function,
+        positive.define_value(
+            &[Value::Int(4), Value::Real(half)],
+            Value::Real(Rational::integer(-1)),
+        ),
+    );
+    assert!(!check_quantified_uf_model_sat(
+        &arena,
+        forall,
+        &model,
+        &certificate
+    ));
+}
+
+#[test]
+fn checker_rejects_nonleading_vacuous_duplicate_and_interpreted_binders() {
     let mut arena = TermArena::new();
     let function = int_fn(&mut arena, "f");
     let (outer_binder, outer) = int_bound(&mut arena, "x");
     let application = arena.apply(function, &[outer]).unwrap();
     let zero = arena.int_const(0);
+    let direct_body = arena.int_ge(application, zero).unwrap();
     let interpreted = arena.int_add(application, outer).unwrap();
     let interpreted_body = arena.int_ge(interpreted, zero).unwrap();
     let interpreted_forall = arena.forall(outer_binder, interpreted_body).unwrap();
 
     let (inner_binder, _inner) = int_bound(&mut arena, "y");
-    let inner_forall = arena.forall(inner_binder, interpreted_body).unwrap();
-    let nested_forall = arena.forall(outer_binder, inner_forall).unwrap();
+    let vacuous_inner = arena.forall(inner_binder, direct_body).unwrap();
+    let vacuous_forall = arena.forall(outer_binder, vacuous_inner).unwrap();
+    let duplicate_inner = arena.forall(outer_binder, direct_body).unwrap();
+    let duplicate_forall = arena.forall(outer_binder, duplicate_inner).unwrap();
+    let existential_inner = arena.exists(inner_binder, direct_body).unwrap();
+    let existential_forall = arena.forall(outer_binder, existential_inner).unwrap();
 
     let mut model = Model::new();
     model.set_function(
         function,
         FuncValue::constant_value(vec![Sort::Int], Sort::Int, Value::Int(0)),
     );
-    for assertion in [interpreted_forall, nested_forall] {
+    for assertion in [
+        interpreted_forall,
+        vacuous_forall,
+        duplicate_forall,
+        existential_forall,
+    ] {
         let certificate = QuantifiedUfModelSatCertificate {
             assertion,
             binder: outer_binder,
@@ -504,6 +691,28 @@ fn checker_rejects_nested_and_interpreted_binder_occurrences() {
             &certificate
         ));
     }
+
+    let bool_function = arena
+        .declare_fun("bool_f", &[Sort::Bool], Sort::Bool)
+        .unwrap();
+    let bool_binder = arena.declare("b", Sort::Bool).unwrap();
+    let bool_variable = arena.var(bool_binder);
+    let bool_body = arena.apply(bool_function, &[bool_variable]).unwrap();
+    let bool_forall = arena.forall(bool_binder, bool_body).unwrap();
+    model.set_function(
+        bool_function,
+        FuncValue::constant(vec![Sort::Bool], Sort::Bool, 1),
+    );
+    let bool_certificate = QuantifiedUfModelSatCertificate {
+        assertion: bool_forall,
+        binder: bool_binder,
+    };
+    assert!(!check_quantified_uf_model_sat(
+        &arena,
+        bool_forall,
+        &model,
+        &bool_certificate
+    ));
 }
 
 #[test]
@@ -532,5 +741,70 @@ fn profile_cap_overflow_declines() {
         forall,
         &model,
         &certificate
+    ));
+}
+
+#[test]
+fn cartesian_profile_and_binder_caps_decline() {
+    let mut arena = TermArena::new();
+    let function = arena
+        .declare_fun("f", &[Sort::Int, Sort::Int], Sort::Int)
+        .unwrap();
+    let (x_binder, x) = int_bound(&mut arena, "x");
+    let (y_binder, y) = int_bound(&mut arena, "y");
+    let application = arena.apply(function, &[x, y]).unwrap();
+    let zero = arena.int_const(0);
+    let body = arena.int_ge(application, zero).unwrap();
+    let inner = arena.forall(y_binder, body).unwrap();
+    let forall = arena.forall(x_binder, inner).unwrap();
+    let mut interpretation =
+        FuncValue::constant_value(vec![Sort::Int, Sort::Int], Sort::Int, Value::Int(0));
+    for value in 0..64_i128 {
+        interpretation =
+            interpretation.define_value(&[Value::Int(value), Value::Int(value)], Value::Int(1));
+    }
+    let mut model = Model::new();
+    model.set_function(function, interpretation);
+    let certificate = QuantifiedUfModelSatCertificate {
+        assertion: forall,
+        binder: x_binder,
+    };
+    assert!(!check_quantified_uf_model_sat(
+        &arena,
+        forall,
+        &model,
+        &certificate
+    ));
+
+    let parameters = vec![Sort::Int; QUANTIFIED_UF_BINDER_CAP + 1];
+    let wide_function = arena.declare_fun("wide", &parameters, Sort::Int).unwrap();
+    let mut binders = Vec::new();
+    let mut variables = Vec::new();
+    for index in 0..=QUANTIFIED_UF_BINDER_CAP {
+        let name = format!("b{index}");
+        let binder = arena.declare(&name, Sort::Int).unwrap();
+        variables.push(arena.var(binder));
+        binders.push(binder);
+    }
+    let wide_application = arena.apply(wide_function, &variables).unwrap();
+    let zero = arena.int_const(0);
+    let mut wide_assertion = arena.int_ge(wide_application, zero).unwrap();
+    for &binder in binders.iter().rev() {
+        wide_assertion = arena.forall(binder, wide_assertion).unwrap();
+    }
+    let mut wide_model = Model::new();
+    wide_model.set_function(
+        wide_function,
+        FuncValue::constant_value(parameters, Sort::Int, Value::Int(0)),
+    );
+    let wide_certificate = QuantifiedUfModelSatCertificate {
+        assertion: wide_assertion,
+        binder: binders[0],
+    };
+    assert!(!check_quantified_uf_model_sat(
+        &arena,
+        wide_assertion,
+        &wide_model,
+        &wide_certificate
     ));
 }
