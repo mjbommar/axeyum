@@ -47,6 +47,7 @@ name = "axeyum-fp"
 version = "0.1.0"
 dependencies = [
  "axeyum-ir",
+ "num-bigint",
 ]
 
 [[package]]
@@ -62,6 +63,9 @@ dependencies = [
 [[package]]
 name = "axeyum-lean-kernel"
 version = "0.1.0"
+dependencies = [
+ "num-bigint",
+]
 
 [[package]]
 name = "axeyum-mir-contract-fixture"
