@@ -156,7 +156,6 @@ class M2StoreFixture:
             spec=self.spec,
             terminal=self.terminal,
             junit=self.junit,
-            post=self.post,
         )
 
     def install(self) -> None:

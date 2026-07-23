@@ -174,7 +174,6 @@ def validate_dependencies(
         spec=spec,
         terminal=terminal,
         junit=junit,
-        post=post,
     )
     if case_failures:
         raise M2StoreError("; ".join(case_failures))
