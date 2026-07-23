@@ -54,7 +54,8 @@ class LeanCompleteParityTests(unittest.TestCase):
             [("default", 3678), ("full-lake", 3723)],
         )
         official = first["bounded_snapshot"]["u2_official_execution_authority"]
-        self.assertEqual(official["process_attempts"], 2)
+        self.assertEqual(official["process_attempts"], 3)
+        self.assertEqual(official["incomplete_process_attempts"], 2)
         self.assertEqual(official["official_outcomes"], 1)
         self.assertEqual(official["official_passes"], 0)
         self.assertEqual(official["official_failures"], 1)
@@ -133,7 +134,7 @@ class LeanCompleteParityTests(unittest.TestCase):
         self.assertIn("docs/plan/lean-execution-acceptance-v1.json", source_paths)
         self.assertIn("scripts/lean_execution_acceptance.py", source_paths)
         self.assertIn(
-            "docs/plan/lean-u2-official-execution-tl0.6.3-m0-v1.json",
+            "docs/plan/lean-u2-official-execution-tl0.6.3-m0-r2-invocation-v1.json",
             source_paths,
         )
         self.assertIn("scripts/lean_u2_official_execution.py", source_paths)
