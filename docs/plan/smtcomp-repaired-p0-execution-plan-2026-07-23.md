@@ -150,3 +150,34 @@ Passing this plan review authorizes only P0-S1 preparation and sentinel checks.
 Distributed solver launch begins only after a committed preparation result
 freezes the integrated source commit, staged Axeyum binary, three run identities,
 host plans, and exact external attempt roots.
+
+## Preparation-only operator
+
+`scripts/prepare-smtcomp-repaired-p0.py` implements P0-S1 without importing or
+calling the allocation launcher. It requires a clean repository, probes all
+three hosts through the staged content-addressed runner, reconstructs both
+admitted selection slices, copies and hashes all solver binaries, executes the
+eight preregistered sentinel cells, and publishes three empty run namespaces
+with initial and retry command manifests. A canonical `complete.json` is
+installed last with `launch_authorized=false`.
+
+The operator is invoked only after the release binary and repository gates are
+fresh on integrated `main`:
+
+```sh
+python3 scripts/prepare-smtcomp-repaired-p0.py \
+  --shared-root /nas3/data/axeyum/harness/official-selection-2026-sq \
+  --accepted-selection /nas3/data/axeyum/harness/official-selection-2026-sq/accepted-322adaa78396bf42d4660d12582e6db1cf2166a765bb912fdfb179975a9c9698 \
+  --corpus-root /nas3/data/axeyum/harness/official-selection-2026-sq/corpus-acquisition-1784745749642951377-d48fb0dc/corpus \
+  --corpus-manifest /nas3/data/axeyum/harness/official-selection-2026-sq/corpus-acquisition-1784745749642951377-d48fb0dc/corpus-audit.json \
+  --axeyum-binary target-codex/release/examples/smtcomp_cli \
+  --cvc5-binary /nas3/data/axeyum/harness/bin/cvc5 \
+  --bitwuzla-binary /nas3/data/axeyum/harness/bin/bitwuzla \
+  --qf-abvfp-sentinel /path/to/preserved/qf-abvfp-query.26.smt2 \
+  --qf-bvfp-sentinel /path/to/preserved/qf-bvfp-query.26.smt2 \
+  --qf-auflia-sentinel /path/to/official/pipeline-invalid.smt2
+```
+
+The printed completion is review input, not launch authorization. Allocation
+execution remains a separate post-integration action gated on the committed
+P0-S1 result document.

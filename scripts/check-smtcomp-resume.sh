@@ -11,6 +11,7 @@ python3 -m unittest \
   scripts.tests.test_smtcomp_cgroup_host \
   scripts.tests.test_smtcomp_multi_host \
   scripts.tests.test_smtcomp_multi_host_live \
+  scripts.tests.test_smtcomp_p0_prepare \
   scripts.smtcomp_repro.tests.test_corpus_acquisition \
   scripts.smtcomp_repro.tests.test_final_selection_audit \
   scripts.smtcomp_repro.tests.test_official_producer \

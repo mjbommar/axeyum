@@ -82,6 +82,7 @@ SOLVER_ENVIRONMENT_KEY = re.compile(r"[A-Z][A-Z0-9_]{0,63}\Z")
 RUNNER_SOURCE_NAMES = (
     "compete.py",
     "multi_host.py",
+    "p0_prepare.py",
     "resume_contract.py",
     "resume_fs.py",
     "resume_runner.py",
