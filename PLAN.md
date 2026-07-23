@@ -9132,7 +9132,9 @@ coverage never regresses):
    exploratory result truncated pools and included generator declarations absent
    from the assertion sequence; it is not the production gate. Proposed
    ADR-0360 opens only the exact-source temporary-fixing candidate search, with
-   exact original-query replay still authoritative;
+   exact original-query replay still authoritative. Commit `5b4c5b40` now
+   implements that boundary; the solver package and 225/225 direct-Z3 joint
+   differential are green, with workspace acceptance gates in progress;
    MAM/trigger-inference (T2.6.1/2) follow as throughput.
 3. **Bank the CDCL(T) spine** (Gap 3): the default-dispatch ADR for the
    built-but-opt-in `CdclT` routes, then port arrays-lazy
