@@ -26,7 +26,7 @@ class LeanCompleteParityTests(unittest.TestCase):
         self.kernel_normalizer = next(
             contract
             for contract in self.normalization_data["contracts"]
-            if contract["id"] == "lean-kernel-assurance-v2"
+            if contract["id"] == "lean-kernel-assurance-v3"
         )
 
     def population(self, population_id: str) -> dict:
@@ -88,6 +88,8 @@ class LeanCompleteParityTests(unittest.TestCase):
     def paired_cell(
         self,
         *,
+        normalizer: dict | None = None,
+        axis: str | None = None,
         outcome: str = "agree-success",
         official_state: str = "complete",
         axeyum_state: str = "complete",
@@ -96,13 +98,15 @@ class LeanCompleteParityTests(unittest.TestCase):
         official_normalized: str | None = "2" * 64,
         axeyum_normalized: str | None = "2" * 64,
     ) -> dict:
+        selected_normalizer = normalizer or self.kernel_normalizer
+        selected_axis = axis or selected_normalizer["applicable_axes"][0]
         cell = {
             "id": "bounded-probe",
             "population": "U1",
             "population_member_id": "kernel-probe",
             "profile_id": "linux-control",
-            "axis": "A1",
-            "layer": self.kernel_normalizer["layer"],
+            "axis": selected_axis,
+            "layer": selected_normalizer["layer"],
             "source_sha256": "c" * 64,
             "dependency_sha256": "d" * 64,
             "source_family": "probe",
@@ -115,8 +119,8 @@ class LeanCompleteParityTests(unittest.TestCase):
         }
         comparison = {
             "outcome": outcome,
-            "normalization_id": self.kernel_normalizer["id"],
-            "normalization_sha256": self.kernel_normalizer["contract_sha256"],
+            "normalization_id": selected_normalizer["id"],
+            "normalization_sha256": selected_normalizer["contract_sha256"],
             "contract_sha256": "f" * 64,
             "official_record_sha256": cell["official"]["record_sha256"],
             "axeyum_record_sha256": cell["axeyum"]["record_sha256"],
@@ -930,17 +934,19 @@ class LeanCompleteParityTests(unittest.TestCase):
             "u2_normalization_contract_authority"
         ]
         self.assertEqual(normalization["status"], "bounded-contract-only")
-        self.assertEqual(normalization["summary"]["contracts"], 9)
-        self.assertEqual(normalization["summary"]["compared_fields"], 68)
-        self.assertEqual(normalization["summary"]["ignored_rules"], 18)
-        self.assertEqual(normalization["summary"]["typed_field_occurrences"], 86)
+        self.assertEqual(normalization["summary"]["contracts"], 10)
+        self.assertEqual(normalization["summary"]["compared_fields"], 76)
+        self.assertEqual(normalization["summary"]["ignored_rules"], 20)
+        self.assertEqual(normalization["summary"]["covered_axes"], 12)
+        self.assertEqual(normalization["summary"]["axis_contract_occurrences"], 15)
+        self.assertEqual(normalization["summary"]["typed_field_occurrences"], 96)
         self.assertEqual(
             normalization["summary"]["value_schema_counts"],
             {
                 "enum": 3,
-                "nonempty-string": 9,
-                "nonnegative-integer": 9,
-                "sha256": 65,
+                "nonempty-string": 10,
+                "nonnegative-integer": 10,
+                "sha256": 73,
             },
         )
         self.assertEqual(normalization["summary"]["raw_extractors_implemented"], 0)
@@ -957,6 +963,10 @@ class LeanCompleteParityTests(unittest.TestCase):
             "docs/plan/lean-u2-normalization-contracts-v2.json",
             source_paths,
         )
+        self.assertIn(
+            "docs/plan/lean-u2-normalization-contracts-v3.json",
+            source_paths,
+        )
         self.assertIn("scripts/lean_u2_normalization_contracts.py", source_paths)
         self.assertIn(
             "docs/plan/lean-u2-matched-execution-tl0.6.5-normalization-r3-result-2026-07-23.md",
@@ -968,6 +978,10 @@ class LeanCompleteParityTests(unittest.TestCase):
         )
         self.assertIn(
             "docs/plan/lean-u2-matched-execution-tl0.6.5-typed-observables-r4-result-2026-07-23.md",
+            source_paths,
+        )
+        self.assertIn(
+            "docs/plan/lean-u2-matched-execution-tl0.6.5-axis-coverage-r5-plan-2026-07-23.md",
             source_paths,
         )
         self.assertIn(
@@ -1280,6 +1294,28 @@ class LeanCompleteParityTests(unittest.TestCase):
         self.data = GEN.load_manifest()
         cell = self.paired_cell()
         self.register_bounded_pair(cell)
+        cell["comparison"]["normalization_id"] = "lean-kernel-assurance-v2"
+        cell["comparison"]["normalization_sha256"] = (
+            "7fe91be6487edcb06dab219aea358e6b35ff70c0615ff0f71844210299e73141"
+        )
+        self.reseal_pair(cell)
+        self.assertTrue(
+            any("is not registered" in failure for failure in self.failures())
+        )
+
+        self.data = GEN.load_manifest()
+        cell = self.paired_cell(axis="A0")
+        self.register_bounded_pair(cell)
+        self.assertTrue(
+            any(
+                "cell axis 'A0' must be registered" in failure
+                for failure in self.failures()
+            )
+        )
+
+        self.data = GEN.load_manifest()
+        cell = self.paired_cell()
+        self.register_bounded_pair(cell)
         cell["layer"] = "parser-macro"
         self.reseal_pair(cell)
         self.assertTrue(
@@ -1297,6 +1333,43 @@ class LeanCompleteParityTests(unittest.TestCase):
                 for failure in self.failures()
             )
         )
+
+    def test_every_normalizer_axis_pair_is_enforced_after_full_resealing(self) -> None:
+        normalization_contracts = {
+            contract["id"]: contract
+            for contract in self.normalization_data["contracts"]
+        }
+        accepted = 0
+        rejected = 0
+        mathlib_accepted = 0
+        for contract in self.normalization_data["contracts"]:
+            for axis in GEN.AXIS_IDS:
+                self.data = GEN.load_manifest()
+                cell = self.paired_cell(normalizer=contract, axis=axis)
+                self.register_bounded_pair(cell)
+                failures: list[str] = []
+                cells = GEN.validate_paired_cells(
+                    self.data, normalization_contracts, failures
+                )
+                GEN.validate_paired_authorities(self.data, cells, failures)
+                applicability_failures = [
+                    failure
+                    for failure in failures
+                    if "must be registered for normalization_id" in failure
+                ]
+                if axis in contract["applicable_axes"]:
+                    self.assertEqual(failures, [], (contract["id"], axis))
+                    accepted += 1
+                    if contract["layer"] == "mathlib-ecosystem":
+                        mathlib_accepted += 1
+                else:
+                    self.assertEqual(
+                        len(applicability_failures), 1, (contract["id"], axis)
+                    )
+                    rejected += 1
+        self.assertEqual(accepted, 15)
+        self.assertEqual(rejected, 105)
+        self.assertEqual(mathlib_accepted, 1)
 
     def test_paired_authority_binds_resealed_cell_content(self) -> None:
         cell = self.paired_cell()

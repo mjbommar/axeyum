@@ -46,8 +46,11 @@ U2_NATIVE_HEADER_CONTRACT = (
 U2_NORMALIZATION_CONTRACTS_V1 = (
     ROOT / "docs" / "plan" / "lean-u2-normalization-contracts-v1.json"
 )
-U2_NORMALIZATION_CONTRACTS = (
+U2_NORMALIZATION_CONTRACTS_V2 = (
     ROOT / "docs" / "plan" / "lean-u2-normalization-contracts-v2.json"
+)
+U2_NORMALIZATION_CONTRACTS = (
+    ROOT / "docs" / "plan" / "lean-u2-normalization-contracts-v3.json"
 )
 U2_NORMALIZATION_SCRIPT = ROOT / "scripts" / "lean_u2_normalization_contracts.py"
 U2_NORMALIZATION_RESULT = (
@@ -67,6 +70,12 @@ U2_NORMALIZATION_R4_RESULT = (
     / "docs"
     / "plan"
     / "lean-u2-matched-execution-tl0.6.5-typed-observables-r4-result-2026-07-23.md"
+)
+U2_NORMALIZATION_R5_PLAN = (
+    ROOT
+    / "docs"
+    / "plan"
+    / "lean-u2-matched-execution-tl0.6.5-axis-coverage-r5-plan-2026-07-23.md"
 )
 EXECUTION_EVIDENCE = ROOT / "docs" / "plan" / "lean-execution-evidence-v1.json"
 EXECUTION_PROCESS = ROOT / "docs" / "plan" / "lean-execution-process-v1.json"
@@ -343,7 +352,7 @@ def validate_definitions(data: dict[str, Any], failures: list[str]) -> None:
 def validate_normalization_authority(
     data: dict[str, Any], failures: list[str]
 ) -> dict[str, dict[str, Any]]:
-    expected_path = "docs/plan/lean-u2-normalization-contracts-v2.json"
+    expected_path = "docs/plan/lean-u2-normalization-contracts-v3.json"
     if data.get("normalization_authority") != expected_path:
         failures.append("normalization authority path drift")
         return {}
@@ -633,6 +642,7 @@ def derive_paired_outcome(
 def validate_paired_comparison(
     owner: str,
     comparison: Any,
+    axis: Any,
     layer: Any,
     normalization_contracts: dict[str, dict[str, Any]],
     official: Any,
@@ -662,6 +672,11 @@ def validate_paired_comparison(
                 f"{owner}: normalization_id {normalization_id!r} is not registered"
             )
         else:
+            if axis not in normalization_contract.get("applicable_axes", []):
+                failures.append(
+                    f"{owner}: cell axis {axis!r} must be registered for "
+                    f"normalization_id {normalization_id!r}"
+                )
             if layer != normalization_contract.get("layer"):
                 failures.append(
                     f"{owner}: cell layer {layer!r} must match normalization layer "
@@ -775,6 +790,7 @@ def validate_paired_cells(
         validate_paired_comparison(
             cell_id + ".comparison",
             cell.get("comparison"),
+            cell.get("axis"),
             cell.get("layer"),
             normalization_contracts,
             cell.get("official"),
@@ -1487,11 +1503,13 @@ def report_source_paths(data: dict[str, Any]) -> list[Path]:
         U2_NATIVE_DEPENDENCY,
         U2_NATIVE_HEADER_CONTRACT,
         U2_NORMALIZATION_CONTRACTS_V1,
+        U2_NORMALIZATION_CONTRACTS_V2,
         U2_NORMALIZATION_CONTRACTS,
         U2_NORMALIZATION_SCRIPT,
         U2_NORMALIZATION_RESULT,
         U2_NORMALIZATION_R4_PLAN,
         U2_NORMALIZATION_R4_RESULT,
+        U2_NORMALIZATION_R5_PLAN,
         EXECUTION_EVIDENCE,
         EXECUTION_PROCESS,
         EXECUTION_STORE,
@@ -1847,7 +1865,10 @@ def render_markdown(report: dict[str, Any]) -> str:
             f"{u2_normalization['summary']['compared_fields']} selected semantic fields, "
             f"{u2_normalization['summary']['ignored_rules']} explicit ignored-field "
             f"rules, and {u2_normalization['summary']['typed_field_occurrences']} "
-            "typed field occurrences. Malformed typed values reject before projection. "
+            f"typed field occurrences across {u2_normalization['summary']['covered_axes']} "
+            f"axes and {u2_normalization['summary']['axis_contract_occurrences']} "
+            "contract/axis pairs. Malformed typed values and unregistered "
+            "axis/normalizer pairs reject before projection. "
             "Raw extractors and semantic canonicalizers remain "
             f"{u2_normalization['summary']['raw_extractors_implemented']} / "
             f"{u2_normalization['summary']['semantic_canonicalizers_implemented']}; "

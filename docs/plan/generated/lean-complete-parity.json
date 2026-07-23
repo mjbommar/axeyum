@@ -52,7 +52,7 @@
     },
     {
       "path": "docs/plan/lean-complete-parity-v1.json",
-      "sha256": "aeb66414b12b3da1fb094cec0c2979ecee0104b54b3d0aa896207dcb67994c93"
+      "sha256": "4a6a09acf6950b7d38e4ce1a8136af9152ae752b923e9ab66d7d0417c1b4672c"
     },
     {
       "path": "docs/plan/lean-complete-parity-worktree-portability-r1-result-2026-07-23.md",
@@ -91,6 +91,10 @@
       "sha256": "ea6ab1e192ccec458e6e2afcee1918d6d8ff1b2e8b6ec5a19ddd5db4fac79c4d"
     },
     {
+      "path": "docs/plan/lean-u2-matched-execution-tl0.6.5-axis-coverage-r5-plan-2026-07-23.md",
+      "sha256": "16fee574d4c206a6a0103c88d7db2cb87db940a741bd3de28f4f05e4ee974b33"
+    },
+    {
       "path": "docs/plan/lean-u2-matched-execution-tl0.6.5-content-seals-r1-result-2026-07-23.md",
       "sha256": "4e51df229d2425f8e4ed1846d75d4428e7e461cb0788f75d57ea779676757f18"
     },
@@ -108,7 +112,7 @@
     },
     {
       "path": "docs/plan/lean-u2-matched-execution-tl0.6.5-plan-2026-07-23.md",
-      "sha256": "5bc8436a9b9ac150da535de66207d96925c00059cd46ee647f982e21ed84c08b"
+      "sha256": "71c7b4863392d7649734f9c88f52e88c5d64efbb4364cedbe2d2f93734de624a"
     },
     {
       "path": "docs/plan/lean-u2-matched-execution-tl0.6.5-typed-observables-r4-plan-2026-07-23.md",
@@ -201,6 +205,10 @@
     {
       "path": "docs/plan/lean-u2-normalization-contracts-v2.json",
       "sha256": "b77a5027bc64fa8165596162f0f36955165f81d23d4f61c8f2d318b4c3e09294"
+    },
+    {
+      "path": "docs/plan/lean-u2-normalization-contracts-v3.json",
+      "sha256": "effb8a4f75e3796b4f0bb1d4b6fced1134464f1e3a202b8e813d12eb15073cb1"
     },
     {
       "path": "docs/plan/lean-u2-official-child-shards-v1.json",
@@ -388,7 +396,7 @@
     },
     {
       "path": "scripts/gen-lean-complete-parity.py",
-      "sha256": "1483a659f073571ef0656585591697e26be3833f6b940b34cf46cd6896ef289c"
+      "sha256": "1103b0d0bdbfc595ffb55ec3b3cc1d121e64716e39015ba04d0080dcc4731b4b"
     },
     {
       "path": "scripts/gen-lean-execution-evidence.py",
@@ -440,7 +448,7 @@
     },
     {
       "path": "scripts/lean_u2_normalization_contracts.py",
-      "sha256": "fa1731a5a6948fd5f4653339900ab5275af76845c6f21509196327d2e5333c5c"
+      "sha256": "4521bb0ee8a16bb0038972f7b580b4efe15ec7f728587a8c10b3cf2dd03aa3aa"
     },
     {
       "path": "scripts/lean_u2_official_execution.py",
@@ -496,7 +504,7 @@
     },
     {
       "path": "scripts/tests/test_lean_complete_parity.py",
-      "sha256": "97daac6c1fd574ffc751e86a2f375e3d2290fcb95bf1ace382aaba45df3456e4"
+      "sha256": "538997d2c9c00872536168b85986a3dde04fdace2d49dfcbdf216423a7141ae5"
     },
     {
       "path": "scripts/tests/test_lean_execution_acceptance.py",
@@ -532,7 +540,7 @@
     },
     {
       "path": "scripts/tests/test_lean_u2_normalization_contracts.py",
-      "sha256": "d889ba280a9110d0bf8ac4a6bfadb13466718ff2f43742f2d07aab5ad21276ac"
+      "sha256": "e557e63d04b81c749de2a0932ef184cb8776f2162b6123f1c54479561f0cb96a"
     },
     {
       "path": "scripts/tests/test_lean_u2_official_child_shards.py",
@@ -1256,15 +1264,17 @@
     "u2_normalization_contract_authority": {
       "status": "bounded-contract-only",
       "summary": {
-        "contracts": 9,
-        "compared_fields": 68,
-        "ignored_rules": 18,
-        "typed_field_occurrences": 86,
+        "contracts": 10,
+        "compared_fields": 76,
+        "ignored_rules": 20,
+        "covered_axes": 12,
+        "axis_contract_occurrences": 15,
+        "typed_field_occurrences": 96,
         "value_schema_counts": {
           "enum": 3,
-          "nonempty-string": 9,
-          "nonnegative-integer": 9,
-          "sha256": 65
+          "nonempty-string": 10,
+          "nonnegative-integer": 10,
+          "sha256": 73
         },
         "raw_extractors_implemented": 0,
         "semantic_canonicalizers_implemented": 0,
@@ -1282,15 +1292,16 @@
         "lean_complete_parity": false
       },
       "contract_ids": [
-        "lean-process-harness-v2",
-        "lean-parser-macro-v2",
-        "lean-elaboration-v2",
-        "lean-kernel-assurance-v2",
-        "lean-module-cache-v2",
-        "lean-tactic-v2",
-        "lean-compiler-runtime-v2",
-        "lean-server-rpc-v2",
-        "lean-lake-project-v2"
+        "lean-process-harness-v3",
+        "lean-parser-macro-v3",
+        "lean-elaboration-v3",
+        "lean-kernel-assurance-v3",
+        "lean-module-cache-v3",
+        "lean-tactic-v3",
+        "lean-compiler-runtime-v3",
+        "lean-server-rpc-v3",
+        "lean-lake-project-v3",
+        "lean-mathlib-ecosystem-v3"
       ]
     },
     "execution_evidence_authority": {
