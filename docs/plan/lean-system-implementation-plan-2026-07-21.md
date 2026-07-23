@@ -237,7 +237,10 @@ control and the single selected attempt remain open. The first control call
 stopped in temporary history rebinding before root/process creation; the
 source-first [R1 correction](lean-u2-official-execution-tl0.6.3-m2-r6-control-history-r1-plan-2026-07-23.md)
 freezes captured-original R5 validation and restoration without consuming
-attempt 004.
+attempt 004. Its pushed
+[implementation checkpoint](lean-u2-official-execution-tl0.6.3-m2-r6-control-history-r1-implementation-2026-07-23.md)
+now passes the exact temporary-control-context regression; corrected control and
+selected execution remain open.
 
 L0 exits when status is generated from evidence rather than hand-copied prose.
 
