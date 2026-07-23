@@ -1576,20 +1576,6 @@ def recover_released_failed_shard(
     recovery_path = (
         run_dir / "multi-host-recoveries" / f"{failed_allocation_id}-{shard_id}.json"
     )
-    if recovery_path.exists():
-        matches = [
-            row
-            for row in _load_recoveries(run_dir, plan, run)
-            if row["failed_allocation_id"] == failed_allocation_id
-            and row["retry_allocation_id"] == retry_allocation_id
-            and row["resource_session_id"] == resource_session_id
-            and row["shard_id"] == shard_id
-            and row["schema"] == RELEASED_RECOVERY_SCHEMA
-        ]
-        if len(matches) != 1:
-            raise ContractError("host recovery replay mismatch")
-        return matches[0]
-
     session_dir = run_dir / "resource-sessions" / resource_session_id
     preflight = read_canonical_json(session_dir / "preflight.json")
     if (session_dir / "terminal.json").exists():
@@ -1651,6 +1637,20 @@ def recover_released_failed_shard(
         for path in _json_files(run_dir / "records")
     ):
         raise ContractError("released recovery shard has durable result records")
+
+    if recovery_path.exists():
+        matches = [
+            row
+            for row in _load_recoveries(run_dir, plan, run)
+            if row["failed_allocation_id"] == failed_allocation_id
+            and row["retry_allocation_id"] == retry_allocation_id
+            and row["resource_session_id"] == resource_session_id
+            and row["shard_id"] == shard_id
+            and row["schema"] == RELEASED_RECOVERY_SCHEMA
+        ]
+        if len(matches) != 1:
+            raise ContractError("host recovery replay mismatch")
+        return matches[0]
 
     record = _sealed(
         {

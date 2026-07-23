@@ -573,6 +573,26 @@ class MultiHostPortableTests(unittest.TestCase):
             self.assertEqual(record["lease_state"], "released-after-failure")
             self.assertFalse((layout.root / "leases" / "0.json").exists())
 
+            revived = dict(dead, unit_state="active", launcher_live=True)
+            with (
+                mock.patch("multi_host.remote_liveness", return_value=revived),
+                mock.patch(
+                    "multi_host._load_allocation_evidence",
+                    return_value=allocation_evidence,
+                ),
+                self.assertRaisesRegex(ContractError, "still live"),
+            ):
+                recover_released_failed_shard(
+                    plan=plan,
+                    run=layout.run,
+                    run_dir=layout.root,
+                    failed_allocation_id="initial-0",
+                    retry_allocation_id="retry-0",
+                    resource_session_id=session_id,
+                    remote_helper_path=layout.root / "multi_host.py",
+                    inspect_shared_root=False,
+                )
+
     def test_complete_portable_evidence_blocks_unaccounted_loss_and_raw_export(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp).resolve()
