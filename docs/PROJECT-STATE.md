@@ -367,6 +367,16 @@ Again, there are distinct targets:
   cancellation, watchdog/worker, restart, RPC/session/widget, normalization,
   and `idbg` ownership. No M2.6 authority, process, transcript, observation,
   outcome, pair, performance row, or parity credit exists.
+  M2.7's
+  [variant-merge and M3-handoff plan](plan/lean-u2-native-dependency-tl0.6.4-m2.7-variant-merge-plan-2026-07-23.md)
+  now preregisters lossless closure across all 408,374 exact case/variant
+  cells. Content-addressed graph storage cannot collapse per-cell owners,
+  conditions, assurance dimensions, declines, residuals, or evidence; union,
+  intersection, delta, and proved equivalence remain non-crediting views. The
+  plan retains M2.6's correction overlay and emits every case and variant into
+  a deterministic M3 queue. No M2.7 authority, accepted parent transfer,
+  merged graph, closed cell, M3 review, outcome, pair, performance row, or
+  parity credit exists.
   The subsequent
   [TL0.7.1 contract](plan/lean-execution-evidence-tl0.7.1-2026-07-22.md)
   defines explicit 4/8 GiB local lanes, twelve typed termination classes, and

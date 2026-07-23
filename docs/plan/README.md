@@ -412,6 +412,14 @@ Start at the root [`PLAN.md`](../../PLAN.md) (map + standing rules) and
   snapshot, cancellation, watchdog/worker, RPC/session/widget, restart, and
   `idbg` ownership. It creates no M2.6 authority, process, transcript,
   observation, outcome, pair, performance row, or parity credit.
+- [`TL0.6.4 M2.7 variant-merge and M3-handoff plan`](lean-u2-native-dependency-tl0.6.4-m2.7-variant-merge-plan-2026-07-23.md)
+  — freezes lossless joins over all 408,374 exact case/variant cells. Shared
+  graph content may deduplicate only while preserving every owner, condition,
+  assurance dimension, decline, residual, and evidence pointer. It defines
+  per-cell closure, non-crediting union/intersection/delta/equivalence views,
+  M1/M2 correction retention, and a deterministic complete-row M3 queue. It
+  creates no M2.7 authority, accepted parent transfer, merged closure, closed
+  cell, M3 acceptance, outcome, pair, performance row, or parity credit.
 - [`Lean complete-parity worktree-portability R1 result`](lean-complete-parity-worktree-portability-r1-result-2026-07-23.md)
   — records the bounded validator repair at `c3f068ea`, `09e1dcd2`,
   `2267f41b`, and `98d85098`: retained repository-owned process/store paths

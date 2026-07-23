@@ -617,7 +617,7 @@ inline Lake `bash -c` cases, and one direct Python lint case. The wrapper route
 uses 41 registered paths resolving to 39 regular runners through two tracked
 symlinks. M2.3 separates exact provider CMake/CTest generation, configured
 dispatch, shell sourcing and state, hooks and marker precedence, statically
-proved edges, observed trace edges, and M2.4-M2.6 downstream ownership. No
+proved edges, observed trace edges, and M2.4-M2.7 downstream ownership. No
 M2.3 input authority, process formula, provider, configured wrapper, trace,
 edge, native outcome, pair, performance row, or terminal credit exists; those
 remain downstream of accepted M2.1 and M2.2 results plus a separately frozen
@@ -660,6 +660,20 @@ sessions/references/widgets, normalization, and experimental `idbg` ownership.
 No M2.6 authority, process formula, transcript, observation, outcome, pair,
 performance row, or terminal credit exists; accepted M2.1-M2.5 transfers and a
 separate M2.6.1 authority must determine the executable denominator.
+
+The source-first
+[M2.7 variant-merge and M3-handoff plan](lean-u2-native-dependency-tl0.6.4-m2.7-variant-merge-plan-2026-07-23.md)
+now freezes the final M2 semantics-only boundary. Its closure unit is one exact
+case and one exact official variant across the accepted M2.0 denominator of
+408,374 cells. Node/edge content may deduplicate only when every cell owner,
+condition, route, assurance dimension, decline, residual, and evidence pointer
+round-trips losslessly. Static, configured, observed, not-taken, unavailable,
+and declined states are not a total order; one variant cannot promote another.
+Union, intersection, delta, and explicitly proved equivalence remain
+non-crediting views, and the deterministic M3 queue retains every case and
+variant even when storage is shared. No M2.7 authority, accepted M2.1-M2.6
+transfer, merged graph, closed cell, M3 review, outcome, pair, performance row,
+or terminal credit exists.
 
 ## 8. Layer-specific equivalence
 
