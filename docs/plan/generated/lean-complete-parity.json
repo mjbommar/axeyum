@@ -304,7 +304,7 @@
     },
     {
       "path": "scripts/lean_u2_official_execution_m2_r6.py",
-      "sha256": "18af039b262f21fe3dba6ce161fb21e308c9390920102cb9c1b48bc0fc742716"
+      "sha256": "ec3a1a09996293ea68f40caf1b22c054f1888f67b97e50fb03b8da17f1a1dcfa"
     },
     {
       "path": "scripts/lean_u2_official_execution_m2_run.py",
@@ -380,7 +380,7 @@
     },
     {
       "path": "scripts/tests/test_lean_u2_official_execution_m2_r6.py",
-      "sha256": "90b739a89e0395b2be730b735e43b04bb11d45d78f77c5910960a6859c9a0a57"
+      "sha256": "e4b0d8b1c0bae0d580475be90859231e01402a510ed41fd6aaa48f880fd80621"
     },
     {
       "path": "scripts/tests/test_lean_u2_official_execution_m2_run.py",
