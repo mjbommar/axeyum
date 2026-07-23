@@ -2,7 +2,7 @@
   "schema": "axeyum-lean-complete-parity-v1",
   "as_of": "2026-07-22",
   "contract": "docs/plan/lean4-complete-parity-contract-2026-07-22.md",
-  "normalization_authority": "docs/plan/lean-u2-normalization-contracts-v1.json",
+  "normalization_authority": "docs/plan/lean-u2-normalization-contracts-v2.json",
   "target": {
     "lean_version": "4.30.0",
     "lean_commit": "d024af099ca4bf2c86f649261ebf59565dc8c622",

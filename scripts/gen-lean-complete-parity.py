@@ -43,8 +43,11 @@ U2_NATIVE_DEPENDENCY = (
 U2_NATIVE_HEADER_CONTRACT = (
     ROOT / "docs" / "plan" / "lean-u2-native-header-contract-m2.1-v1.json"
 )
-U2_NORMALIZATION_CONTRACTS = (
+U2_NORMALIZATION_CONTRACTS_V1 = (
     ROOT / "docs" / "plan" / "lean-u2-normalization-contracts-v1.json"
+)
+U2_NORMALIZATION_CONTRACTS = (
+    ROOT / "docs" / "plan" / "lean-u2-normalization-contracts-v2.json"
 )
 U2_NORMALIZATION_SCRIPT = ROOT / "scripts" / "lean_u2_normalization_contracts.py"
 U2_NORMALIZATION_RESULT = (
@@ -52,6 +55,12 @@ U2_NORMALIZATION_RESULT = (
     / "docs"
     / "plan"
     / "lean-u2-matched-execution-tl0.6.5-normalization-r3-result-2026-07-23.md"
+)
+U2_NORMALIZATION_R4_PLAN = (
+    ROOT
+    / "docs"
+    / "plan"
+    / "lean-u2-matched-execution-tl0.6.5-typed-observables-r4-plan-2026-07-23.md"
 )
 EXECUTION_EVIDENCE = ROOT / "docs" / "plan" / "lean-execution-evidence-v1.json"
 EXECUTION_PROCESS = ROOT / "docs" / "plan" / "lean-execution-process-v1.json"
@@ -328,7 +337,7 @@ def validate_definitions(data: dict[str, Any], failures: list[str]) -> None:
 def validate_normalization_authority(
     data: dict[str, Any], failures: list[str]
 ) -> dict[str, dict[str, Any]]:
-    expected_path = "docs/plan/lean-u2-normalization-contracts-v1.json"
+    expected_path = "docs/plan/lean-u2-normalization-contracts-v2.json"
     if data.get("normalization_authority") != expected_path:
         failures.append("normalization authority path drift")
         return {}
@@ -1471,9 +1480,11 @@ def report_source_paths(data: dict[str, Any]) -> list[Path]:
         U2_NATIVE_CONTENT,
         U2_NATIVE_DEPENDENCY,
         U2_NATIVE_HEADER_CONTRACT,
+        U2_NORMALIZATION_CONTRACTS_V1,
         U2_NORMALIZATION_CONTRACTS,
         U2_NORMALIZATION_SCRIPT,
         U2_NORMALIZATION_RESULT,
+        U2_NORMALIZATION_R4_PLAN,
         EXECUTION_EVIDENCE,
         EXECUTION_PROCESS,
         EXECUTION_STORE,
@@ -1827,8 +1838,10 @@ def render_markdown(report: dict[str, Any]) -> str:
             f"- U2 normalization-contract authority: "
             f"{u2_normalization['summary']['contracts']} registered layer contracts, "
             f"{u2_normalization['summary']['compared_fields']} selected semantic fields, "
-            f"and {u2_normalization['summary']['ignored_rules']} explicit ignored-field "
-            "rules. Raw extractors and semantic canonicalizers remain "
+            f"{u2_normalization['summary']['ignored_rules']} explicit ignored-field "
+            f"rules, and {u2_normalization['summary']['typed_field_occurrences']} "
+            "typed field occurrences. Malformed typed values reject before projection. "
+            "Raw extractors and semantic canonicalizers remain "
             f"{u2_normalization['summary']['raw_extractors_implemented']} / "
             f"{u2_normalization['summary']['semantic_canonicalizers_implemented']}; "
             f"paired cells and parity credit remain "

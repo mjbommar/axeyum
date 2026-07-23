@@ -26,7 +26,7 @@ class LeanCompleteParityTests(unittest.TestCase):
         self.kernel_normalizer = next(
             contract
             for contract in self.normalization_data["contracts"]
-            if contract["id"] == "lean-kernel-assurance-v1"
+            if contract["id"] == "lean-kernel-assurance-v2"
         )
 
     def population(self, population_id: str) -> dict:
@@ -933,6 +933,16 @@ class LeanCompleteParityTests(unittest.TestCase):
         self.assertEqual(normalization["summary"]["contracts"], 9)
         self.assertEqual(normalization["summary"]["compared_fields"], 68)
         self.assertEqual(normalization["summary"]["ignored_rules"], 18)
+        self.assertEqual(normalization["summary"]["typed_field_occurrences"], 86)
+        self.assertEqual(
+            normalization["summary"]["value_schema_counts"],
+            {
+                "enum": 3,
+                "nonempty-string": 9,
+                "nonnegative-integer": 9,
+                "sha256": 65,
+            },
+        )
         self.assertEqual(normalization["summary"]["raw_extractors_implemented"], 0)
         self.assertEqual(
             normalization["summary"]["semantic_canonicalizers_implemented"], 0
@@ -943,9 +953,17 @@ class LeanCompleteParityTests(unittest.TestCase):
             "docs/plan/lean-u2-normalization-contracts-v1.json",
             source_paths,
         )
+        self.assertIn(
+            "docs/plan/lean-u2-normalization-contracts-v2.json",
+            source_paths,
+        )
         self.assertIn("scripts/lean_u2_normalization_contracts.py", source_paths)
         self.assertIn(
             "docs/plan/lean-u2-matched-execution-tl0.6.5-normalization-r3-result-2026-07-23.md",
+            source_paths,
+        )
+        self.assertIn(
+            "docs/plan/lean-u2-matched-execution-tl0.6.5-typed-observables-r4-plan-2026-07-23.md",
             source_paths,
         )
         self.assertIn(
@@ -1238,6 +1256,18 @@ class LeanCompleteParityTests(unittest.TestCase):
         cell = self.paired_cell()
         self.register_bounded_pair(cell)
         cell["comparison"]["normalization_id"] = "invented-normalizer-v1"
+        self.reseal_pair(cell)
+        self.assertTrue(
+            any("is not registered" in failure for failure in self.failures())
+        )
+
+        self.data = GEN.load_manifest()
+        cell = self.paired_cell()
+        self.register_bounded_pair(cell)
+        cell["comparison"]["normalization_id"] = "lean-kernel-assurance-v1"
+        cell["comparison"]["normalization_sha256"] = (
+            "d17a5465f91014449aa614f5f57fac9f532f50622f7ffd76aa6c26f236506843"
+        )
         self.reseal_pair(cell)
         self.assertTrue(
             any("is not registered" in failure for failure in self.failures())
