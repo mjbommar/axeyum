@@ -1,6 +1,6 @@
 # TL0.7.4 plan — no-credit pinned Lean/export acceptance controls
 
-Status: **preregistered; exporter preparation built; no compile/export control has run**
+Status: **PARTIAL; attempt 001 failed at 4 GiB; R1 preregistered; exporter not run**
 
 Date: 2026-07-22
 
@@ -34,9 +34,10 @@ outcome, U2 denominator, paired cell, performance row, axis/gate credit, or
 parity credit.
 
 An identity-only `lean --version` observation and read-only exporter source
-census were performed while writing this plan. No Lean source compilation,
-`.olean` creation, exporter build, or export process has run for TL0.7.4. The
-plan must be committed and pushed before any of those actions.
+census were performed while writing the original plan. At that publication
+boundary no Lean source compilation, `.olean` creation, exporter build, or
+export process had run for TL0.7.4. The plan was committed and pushed before
+those later actions; current attempt state is recorded in Section 8.
 
 ## 2. Frozen repository and installed-tool inputs
 
@@ -290,3 +291,19 @@ external cache, or any result would need U2/parity credit to pass.
 Successful TL0.7.4 acceptance closes TL0.7's local policy prerequisite only.
 It allows TL0.6.3 to start retaining actual official U2 profile executions; it
 does not itself execute or satisfy one registered U2 case.
+
+## 8. Attempt 001 and R1
+
+Source revision `4ba69b7076996057390e54daf8624e1b1cec9fb7` was pushed
+before the first pair. The 4 GiB compile process then aborted before producing
+an `.olean` because Lean's default 1 GiB task-thread stack exhausted the finite
+address-space envelope while creating a later runtime thread. The exporter did
+not run. The retained [attempt result](lean-execution-acceptance-tl0.7.4-attempt-001-2026-07-22.md)
+records the partial store, raw diagnostic, 4/5/6/8 GiB matrix, explicit task
+stack matrix, and `strace`, with zero completion or credit.
+
+Any retry is governed by the separate
+[R1 source-first plan](lean-execution-acceptance-tl0.7.4-r1-plan-2026-07-22.md).
+It adds exact `-s524288` (512 MiB task stack) to the compile command, requires
+terminal installation before artifact validation on all outcomes, and binds
+the failed attempt into the final authority. No R1 control has run.

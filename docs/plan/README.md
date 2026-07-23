@@ -128,6 +128,12 @@ Start at the root [`PLAN.md`](../../PLAN.md) (map + standing rules) and
   8 GiB, with immutable completion and byte equality to the committed 65-line
   flat stream. Both controls have empty U2 selections and zero outcome,
   pairing, performance, and parity credit.
+- [`lean-execution-acceptance-tl0.7.4-attempt-001-2026-07-22.md`](lean-execution-acceptance-tl0.7.4-attempt-001-2026-07-22.md) and
+  [`R1 plan`](lean-execution-acceptance-tl0.7.4-r1-plan-2026-07-22.md) — the
+  first 4 GiB process failed before `.olean` creation when Lean's default 1 GiB
+  task stacks exhausted address space. The retained no-credit matrices bound
+  the cause; R1 freezes a 512 MiB `-s` task stack and terminal-before-artifact
+  failure closure before retry.
 - [`lean-compatibility-v1.json`](lean-compatibility-v1.json) and generated
   [`Lean compatibility matrix`](generated/lean-compatibility.md) — TL0.2's
   executable eight-field assurance contract, K0-K6 profile gates, registered

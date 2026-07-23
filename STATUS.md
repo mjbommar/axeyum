@@ -383,9 +383,8 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
-- **2026-07-22 — TL0.7.4 no-credit real-control acceptance is source-first
-  preregistered; exporter preparation built, but no compile/export control has
-  run.** The
+- **2026-07-22 — TL0.7.4 attempt 001 failed closed at the exact 4 GiB
+  boundary; R1 is source-first preregistered and the exporter has not run.** The
   [plan](docs/plan/lean-execution-acceptance-tl0.7.4-plan-2026-07-22.md)
   freezes the exact Lean 4.30 binary/toolchain, official `lean4export` v4.30.0
   commit/tree/build, committed flat source and 65-line NDJSON oracle, 4/8 GiB
@@ -393,11 +392,18 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   sixteen mutation families. The two empty-selection controls compile the flat
   probe, then export its owned `.olean` and require byte equality. They cannot
   create a U2/Axeyum outcome, denominator, pair, performance row, or parity
-  credit. The plan was pushed before preparation. The exact source build
+  credit. The original plan was pushed before preparation. The exact source build
   produced SHA-256 `8e763913...4449`; its first `-j1` invocation was rejected
   before compilation, and the supported build stayed clean. A plan amendment
-  also corrects a 62-character source-hash transcription before implementation
-  or either retained process.
+  also corrected a 62-character source-hash transcription before implementation.
+  Source revision `4ba69b70` was pushed before attempt 001, which retained a
+  98-byte `failed to create thread` diagnostic and no `.olean` or completion.
+  A focused trace shows a third 1,073,745,920-byte stack mapping failing with
+  `ENOMEM`; 5/6/8 GiB pass with default stacks. Under 4 GiB, explicit Lean
+  `-s` values through 768 MiB pass and produce identical `.olean` bytes, while
+  960 MiB/1 GiB fail. The [R1 plan](docs/plan/lean-execution-acceptance-tl0.7.4-r1-plan-2026-07-22.md)
+  freezes `-s524288`, preserves the [failed result](docs/plan/lean-execution-acceptance-tl0.7.4-attempt-001-2026-07-22.md),
+  and hardens terminal-before-artifact retention before any retry.
 
 - **2026-07-22 — TL0.7.3 closes registered local process-interruption
   checkpointing without Lean, U2, durability, or parity credit.** The

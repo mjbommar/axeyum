@@ -362,9 +362,15 @@ compile the committed flat probe with the exact pinned Lean binary under the
 `lean4export` v4.30.0 under the 8 GiB lane and require byte equality with the
 committed 65-line stream. The exact official exporter preparation build has
 completed from a clean tree; a preregistration amendment corrects a
-62-character flat-source digest transcription. No compile or export control
-has run. The pair cannot create a U2/Axeyum outcome, denominator, paired cell,
-performance row, or terminal credit.
+62-character flat-source digest transcription. The first compile control ran,
+failed before `.olean` creation because default task-stack reservations
+exceeded the 4 GiB address-space envelope, and installed no completion. The
+exporter did not run. Its [failed result](lean-execution-acceptance-tl0.7.4-attempt-001-2026-07-22.md)
+and source-first [R1 plan](lean-execution-acceptance-tl0.7.4-r1-plan-2026-07-22.md)
+freeze the exact diagnosis, `-s524288` retry, and terminal-before-artifact
+retention. No R1 control has run. None of these processes can create a
+U2/Axeyum outcome, denominator, paired cell, performance row, or terminal
+credit.
 
 ## 8. Layer-specific equivalence
 
