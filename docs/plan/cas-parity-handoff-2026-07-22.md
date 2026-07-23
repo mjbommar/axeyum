@@ -13,15 +13,15 @@ elsewhere in `docs/plan/`). Read this file first when resuming.
   [multi-agent operations guide](../contributor-guide/multi-agent-operations.md):
   work only in the dedicated CAS worktree on an `agent/cas/*` branch, push that
   branch, and leave `main` to the integration owner. The current increment is
-  `agent/cas/gap-probe-wave-eighteen`, based on integration parent `7e27880d`,
-  with implementation commit `aa924df5` (integrated by `402d95b4`); do not
+  `agent/cas/gap-probe-wave-nineteen`, based on integration parent `ed5598c5`,
+  with implementation commit `8c82e7d1` (integrated by `ac2571ce`); do not
   rebase it onto `main` ahead of the integration owner.
-- **Tests:** `559` unit + `147` doctests, **all green**, warning-denied workspace
+- **Tests:** `560` unit + `147` doctests, **all green**, warning-denied workspace
   all-target/all-feature Clippy-clean, strict stable/nightly rustdoc-green,
   wasm-green, links-green, and whitespace-clean.
 - **Source of truth for capabilities:** `docs/research/10-cas/README.md`
   (capability table) and `docs/research/10-cas/diary.md` (chronological entries;
-  latest is **Entry 37b00**). Keep both in sync when landing features.
+  latest is **Entry 37b01**). Keep both in sync when landing features.
 - **Method that works:** empirical **gap-probing** (below). It found every recent
   feature *and* a serious infinite-hang regression.
 
@@ -642,6 +642,28 @@ orders `0..=255`), and Stirling-composed raw moments (regressed for orders
   decision. No public head, operator, backend, evidence format, or logic
   fragment changed, so no ADR is required.
 
+**Certified positive-integer powers in rational-rate Bessel-J products**
+- Wave nineteen probed the nearest composition seam after direct products:
+  `J₀(x)²`, `xJ₃(x)³`, weighted rational-rate powers, and mixed powered/direct
+  products all declined, together with the correct combined borderline,
+  supercritical, modified-I, and denominator controls.
+- A positive integer power repeats the same fixed-order envelope. For
+  `w(x)=O(|x|^e)` and `rᵢ(x)=Θ(|x|^dᵢ)`, the powered product is
+  `O(|x|^(e-Σmᵢdᵢ/2))`; `limit` now checked-multiplies each argument growth by
+  its public `u32` multiplicity and returns zero only when `2e<Σmᵢdᵢ`.
+  Zero powers remain on the ordinary simplification route and do not count as
+  Bessel factors.
+- Regressions cover squares, cubes, mixed direct/powered factors, polynomial and
+  rational arguments, reflected signs, both infinities, `u32::MAX` order, and a
+  `u32::MAX` exponent without expansion. The theorem recognizer now precedes
+  generic rational normalization at infinity so hostile public powers terminate
+  promptly; unsupported shapes still fall through fail-closed. Borderline and
+  supercritical rates, modified-I powers, and powered denominators decline.
+  An 80-digit mpmath leading-asymptotic comparison passes 10/10 with maximum
+  envelope-scaled error 0.00916891831061. SymPy proves `J₀(x)²→0` but leaves the
+  four weighted/mixed prototypes unevaluated. No public head, operator, backend,
+  evidence format, or logic fragment changed, so no ADR is required.
+
 ---
 
 ## 5. Zeilberger / WZ — how it works and where to extend
@@ -976,9 +998,9 @@ esac
 export AXEYUM_CAS_TMP
 trap 'find "$AXEYUM_CAS_TMP" -depth -delete' EXIT
 git rev-parse --abbrev-ref HEAD        # → agent/cas/...
-git merge-base --is-ancestor aa924df5 HEAD
+git merge-base --is-ancestor 8c82e7d1 HEAD
 CARGO_BUILD_JOBS=1 TMPDIR="$AXEYUM_CAS_TMP" cargo test -p axeyum-cas --jobs 1
-# → 559 unit + 147 doctests green
+# → 560 unit + 147 doctests green
 ```
 Then: read `docs/research/10-cas/diary.md` tail for the latest context, and pick
 up from §6 or resume the gap-probing loop. Push the green owned topic branch;
