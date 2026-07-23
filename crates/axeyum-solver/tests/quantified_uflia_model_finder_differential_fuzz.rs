@@ -1630,6 +1630,7 @@ fn diagnostic_profile_cegis(
     seed: u64,
     trace: bool,
     initial_instance_count: usize,
+    deadline: Instant,
 ) -> Option<DiagnosticProfileCegisResult> {
     const ROUND_CAP: usize = 32;
 
@@ -1642,7 +1643,6 @@ fn diagnostic_profile_cegis(
     };
     let constant_definitions = diagnostic_constant_function_definitions(&arena, body, binder);
     let mut instances = Vec::with_capacity(initial_instance_count);
-    let deadline = Instant::now().checked_add(AXEYUM_TIMEOUT)?;
     let mut integer = 0_i128;
     for _ in 0..initial_instance_count {
         instances.push(diagnostic_profile_instance(
@@ -1735,7 +1735,8 @@ fn diagnose_finite_profile_cegis_for_quantified_uflia_residuals() {
         let seed: u64 = field.trim().parse().expect("diagnostic seed must be u64");
         let mut rng = Lcg::new(seed);
         let inst = Instance::generate(&mut rng);
-        let result = diagnostic_profile_cegis(&inst, &cfg, seed, true, 0);
+        let deadline = Instant::now().checked_add(AXEYUM_TIMEOUT).unwrap();
+        let result = diagnostic_profile_cegis(&inst, &cfg, seed, true, 0, deadline);
 
         println!(
             "PROFILE_CEGIS|seed={seed}|accepted={}|rounds={:?}|instances={}",
@@ -1758,7 +1759,8 @@ fn diagnose_batched_finite_profile_cegis_for_quantified_uflia_residuals() {
         let mut rng = Lcg::new(seed);
         let inst = Instance::generate(&mut rng);
         let started = Instant::now();
-        let result = diagnostic_profile_cegis(&inst, &cfg, seed, true, 16);
+        let deadline = Instant::now().checked_add(AXEYUM_TIMEOUT).unwrap();
+        let result = diagnostic_profile_cegis(&inst, &cfg, seed, true, 16, deadline);
         println!(
             "BATCHED_PROFILE_CEGIS|seed={seed}|accepted={}|rounds={:?}|instances={}|elapsed_ms={}",
             result.is_some(),
@@ -1784,12 +1786,15 @@ fn diagnose_finite_profile_cegis_smoke_population() {
         let mut rng = Lcg::new(seed);
         let inst = Instance::generate(&mut rng);
         let (mut arena, _, _, _, _, assertions) = inst.build_axeyum();
+        let deadline = Instant::now().checked_add(AXEYUM_TIMEOUT).unwrap();
         match prove_unsat_by_mbqi(&mut arena, &assertions, &cfg).expect("baseline MBQI result") {
             CheckResult::Sat(_) => baseline_sat += 1,
             CheckResult::Unsat => baseline_unsat += 1,
             CheckResult::Unknown(_) => {
                 baseline_unknown += 1;
-                if let Some(result) = diagnostic_profile_cegis(&inst, &cfg, seed, false, 0) {
+                if let Some(result) =
+                    diagnostic_profile_cegis(&inst, &cfg, seed, false, 0, deadline)
+                {
                     recovered.push((seed, result.rounds, result.instances));
                     match z3_decide(&inst) {
                         Verdict::Sat => recovered_z3_sat.push(seed),
