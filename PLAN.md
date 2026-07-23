@@ -565,9 +565,13 @@ state.
 > the diagnostic namespace once without launching Lean or changing R1 credit.
 > The [R2 result](docs/plan/lean-u2-official-execution-tl0.6.3-m2-r2-diagnostic-closure-result-2026-07-22.md)
 > now records successful completion-last append: 69 new files / 159,346 bytes,
-> zero processes, zero outcomes, and unchanged invalid R1 credit. Next publish
-> that evidence/result, then preregister any new process with a new attempt/root
-> and universal `LEAN_STACK_SIZE_KB` control;
+> zero processes, zero outcomes, and unchanged invalid R1 credit. Commit
+> `0f1e1b22` publishes that evidence/result. The source-first
+> [R3 attempt-002 plan](docs/plan/lean-u2-official-execution-tl0.6.3-m2-r3-attempt-002-plan-2026-07-23.md)
+> now freezes the new run/evidence roots, 512 MiB universal Lean runtime stack,
+> unchanged one-worker/8 GiB/hour lane, family-specific 67-payload store, and
+> zero parent/provider/native/pair/parity credit. Next implement/test/push R3
+> without constructing its harness or running a selected case;
 > then form native pairs. Do not rerun
 > the singleton for population credit. The
 > [complete-parity execution roadmap](docs/plan/lean4-complete-parity-roadmap-2026-07-22.md)

@@ -79,8 +79,16 @@ now published, and the
 [`R2 diagnostic-closure plan`](lean-u2-official-execution-tl0.6.3-m2-r2-diagnostic-closure-plan-2026-07-22.md)
 freezes a zero-process/zero-credit storage split: all 124 generated rows remain
 bound, 67 outcome/log payloads are retained, and 56 large reproducible
-intermediates remain metadata-only. A later process still needs a separately
-preregistered attempt and universal stack control.
+intermediates remain metadata-only. The accepted
+[`R2 result`](lean-u2-official-execution-tl0.6.3-m2-r2-diagnostic-closure-result-2026-07-22.md)
+installs that append completion last with 69 new files, zero processes, zero
+outcomes, and unchanged invalid R1 credit. The separately source-first
+[`R3 attempt-002 plan`](lean-u2-official-execution-tl0.6.3-m2-r3-attempt-002-plan-2026-07-23.md)
+now assigns new run/work/evidence identities and freezes universal
+`LEAN_STACK_SIZE_KB=524288`, the same 64-case/8 GiB/one-worker/hour lane, and
+R2's tiered family-specific store. It permits at most one new process only
+after implementation and offline gates are committed and pushed; no R3
+harness, discovery, or process exists at preregistration.
 
 ## 2. What the SMT-LIB comparison actually says
 
@@ -190,8 +198,10 @@ execution/classification.
 3. Repair and attest the remote official-Lean executable identity across changed
    working directories, then retain the first true remote 71/71 result without
    converting it into native parity credit.
-4. Execute fresh official child shards through the qualified TL0.7 path and
-   publish complete/incomplete/invalid outcomes separately.
+4. Implement and validate the preregistered M2 R3 attempt-002 runner without
+   selected execution, publish that checkpoint, then run its exact fresh
+   64-case shard at most once through the qualified TL0.7 path and publish
+   complete/incomplete/invalid outcomes separately.
 5. Classify every executed U2 case into kernel/import, parser/macro,
    elaborator/declaration, tactic/meta, module/Lake, server, runtime/compiler,
    FFI, or adversarial dependency ownership.

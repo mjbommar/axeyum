@@ -246,6 +246,10 @@ Start at the root [`PLAN.md`](../../PLAN.md) (map + standing rules) and
   accepted zero-process diagnostic append: 69 new files / 159,346 bytes,
   completion-last validation, all 124 generated rows bound, and unchanged zero
   R1/M2 outcome or parity credit.
+- [`lean-u2-official-execution-tl0.6.3-m2-r3-attempt-002-plan-2026-07-23.md`](lean-u2-official-execution-tl0.6.3-m2-r3-attempt-002-plan-2026-07-23.md) —
+  source-first second-attempt plan with new roots, universal
+  `LEAN_STACK_SIZE_KB=524288`, unchanged 64-case resource lane, R2's tiered
+  artifact assurance, one process, and zero terminal parity promotion.
 - [`lean-compatibility-v1.json`](lean-compatibility-v1.json) and generated
   [`Lean compatibility matrix`](generated/lean-compatibility.md) — TL0.2's
   executable eight-field assurance contract, K0-K6 profile gates, registered
