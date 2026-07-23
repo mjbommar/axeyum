@@ -584,8 +584,8 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   runner or process exists yet.** The source-first
 - **2026-07-22 — TL0.6.3 M2's pure 64-case execution contract is implemented
   and pushed; no live runner or process exists yet.** The source-first
-- **2026-07-23 — ADR-0363 preregisters source-guided quantified-UF default
-  repair for five residual models.** A retained diagnostic adds exact source
+- **2026-07-23 — ADR-0363's source-guided quantified-UF default repair is
+  implemented for five residual models.** A retained diagnostic adds exact source
   integer literals and binder-independent evaluated source terms to ADR-0359's
   existing default candidates while preserving the 32-value/256-combination
   caps, scalar assignments, and explicit UF entries. It checks seeds 30, 32,
@@ -595,8 +595,17 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   outer initial candidate, only after ADR-0362 and ADR-0360 decline, and leaves
   ordinary MBQI/E-matching/ADR-0361 unchanged on failure. Two prototype runs
   hold 215/215 SAT replay and vary only between 232 and 233 joint agreements as
-  Z3 records ten versus nine independent timeouts. Next: implement the exact
-  boundary with a 232 joint floor and exact semantic counts.
+  Z3 records ten versus nine independent timeouts. Commit `568efb15` implements
+  the exact boundary. The production differential returns exactly 215 SAT, 24
+  UNSAT, and 17 Unknown with 215/215 SAT replay, zero errors/disagreements, and
+  exactly seeds 122, 175, and 182 as ordinary Z3-SAT residuals. Focused tests,
+  warning-denied solver Clippy, strict rustdoc, and links pass. A CI-mode full
+  solver-package run passed all 907 library tests and the changed differential
+  before one unrelated late load-sensitive word/Int SAT test declined; the exact
+  test and its full 14-test binary immediately pass under the same CI settings.
+  ADR-0363 stays proposed while branch-wide gates remain open. Next: classify
+  one distinct bounded mechanism for the three residual seeds without cap
+  growth or evidence widening.
 - **2026-07-23 — ADR-0362's guarded fixed-query MBQI level is implemented and
   passes its solver gates.** The
   nine-seed post-ADR-0361 classification checks 45 bounded candidates and finds

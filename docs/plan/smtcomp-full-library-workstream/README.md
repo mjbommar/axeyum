@@ -408,6 +408,13 @@ ADR-0359's default pool with exact source integer literals and
 binder-independent evaluated source terms, after ADR-0362 and ADR-0360 decline.
 The unchanged 32-value/256-combination envelope independently certifies seeds
 30, 32, 70, 150, and 242; seed 122 declines at 289 combinations and seeds
-175/182 exhaust. Implement only this default-only, replay-checked boundary next;
-do not raise caps, rank/truncate overflow, alter explicit entries, or rewrite
-cross-lane evidence.*
+175/182 exhaust. Commit `568efb15` implements this exact default-only,
+replay-checked boundary. The frozen differential now returns exactly 215 SAT,
+24 UNSAT, and 17 Unknown with 215/215 SAT replay, zero errors/disagreements,
+and exactly `122, 175, 182` as ordinary Z3-SAT residuals. Focused tests, solver
+Clippy, strict rustdoc, and links pass. One uninterrupted full-package run
+passed all 907 library tests and this differential before an unrelated late
+word/Int SAT test declined under sustained load; the exact test and its full
+14-test binary pass under the same CI configuration. Keep that aggregate
+observation separate, do not raise caps or rewrite cross-lane evidence, and
+classify one distinct bounded mechanism for the three residual seeds next.*

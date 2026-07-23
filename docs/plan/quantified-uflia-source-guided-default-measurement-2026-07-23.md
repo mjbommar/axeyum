@@ -1,6 +1,6 @@
 # Quantified-UFLIA source-guided default measurement
 
-Status: measured; production boundary preregistered
+Status: implemented; focused and differential gates green
 Date: 2026-07-23
 Owner: solver/engine lane in `agent/smtcomp/full-library-resume`
 
@@ -91,3 +91,25 @@ AXEYUM_QUANT_UFLIA_DEFAULT_DIAGNOSTIC_SEEDS='30,32,70,122,150,175,182,242' \
   diagnose_source_literal_uf_default_repair_for_quantified_uflia_unknowns \
   -j2 -- --ignored --exact --nocapture
 ```
+
+## Implementation evidence
+
+Commit `568efb15` implements the preregistered production boundary without
+changing the source fragment, caps, candidate order, or evidence route. The
+production-path differential returns exactly 215 SAT, 24 UNSAT, and 17 Unknown,
+replays all 215 SAT models, reports no error or disagreement, and leaves exactly
+seeds `122, 175, 182` Unknown among ordinary Z3-SAT cases. Repeated runs retain
+the preregistered 232/233 jointly decided oracle-timeout variation.
+
+Focused tests freeze source-value collection, binder-dependency exclusion,
+explicit-entry preservation, deadline and product-cap decline, unsupported
+result-sort decline, the five exact new models/default tuples, and the three
+exact residual Unknowns. Solver all-target/all-feature Clippy with warnings
+denied, strict rustdoc, and the documentation link gate pass. An uninterrupted
+CI-mode solver-package run passed all 907 library tests and the changed
+quantified-UFLIA differential, then exposed one unrelated load-sensitive
+`word_int_coupling_sat::from_int_type002_arith_bound_is_sat` miss late in the
+aggregate. The exact test immediately passed alone in 1.16 seconds and its
+complete 14-test integration binary passed in 4.02 seconds under the same CI
+configuration. This is recorded as an aggregate-gate observation, not as a
+green full-package claim and not as evidence for ADR-0363.

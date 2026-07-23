@@ -9267,6 +9267,18 @@ coverage never regresses):
    replay invariant and vary only between 232/232 and 233/233 joint agreement
    as Z3 records ten versus nine independent two-second timeouts. Implement this
    exact additive boundary next with a 232 joint floor and exact semantic counts.
+   Commit `568efb15` now implements that exact boundary. The frozen production
+   differential returns exactly 215 SAT, 24 UNSAT, and 17 Unknown, replays all
+   215 SAT models, reports zero errors/disagreements, and leaves exactly seeds
+   122, 175, and 182 as ordinary Z3-SAT Unknowns. Focused tests, warning-denied
+   solver Clippy, strict rustdoc, and links pass. One uninterrupted CI-mode
+   solver-package run passed 907 library tests and the changed differential,
+   then exposed an unrelated late load-sensitive word/Int SAT decline; that
+   exact test and its complete 14-test binary pass immediately under the same
+   CI configuration. Do not call the aggregate green. Keep ADR-0363 proposed
+   while branch-wide gates remain open, and classify one distinct bounded
+   mechanism for the three residual seeds next without cap growth or evidence
+   widening.
 3. **Bank the CDCL(T) spine** (Gap 3): the default-dispatch ADR for the
    built-but-opt-in `CdclT` routes, then port arrays-lazy
    ([P2.2](docs/plan/track-2-theories/P2.2-arrays-lazy.md)) onto it — the
