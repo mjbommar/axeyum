@@ -149,7 +149,10 @@ retains clean 64/64 JUnit and completion last, but replay used pre-install
 completion mode. The
 [`R2 plan`](lean-u2-official-execution-tl0.6.3-m2-r6-completion-replay-r2-plan-2026-07-23.md)
 authorizes only validator-mode correction over the unchanged root. R6 remains
-zero-credit until exact replay passes; no selected retry exists.
+zero-credit until exact replay passes; no selected retry exists. Its
+[`R2 implementation`](lean-u2-official-execution-tl0.6.3-m2-r6-completion-replay-r2-implementation-2026-07-23.md)
+is pushed at `ce319a9d` with an unchanged-inventory copied-root test. Next
+publish the checkpoint and perform one qualifying read-only replay.
 
 ## 2. What the SMT-LIB comparison actually says
 

@@ -311,6 +311,9 @@ Start at the root [`PLAN.md`](../../PLAN.md) (map + standing rules) and
   consumed 64-pass attempt with completion installed last, but zero current
   credit until a source-first validator-only mode correction replays the exact
   unchanged 152-file root.
+- [`lean-u2-official-execution-tl0.6.3-m2-r6-completion-replay-r2-implementation-2026-07-23.md`](lean-u2-official-execution-tl0.6.3-m2-r6-completion-replay-r2-implementation-2026-07-23.md) —
+  pushed explicit pre-install/post-install completion modes and copied-root
+  unchanged-inventory regression; qualifying read-only replay remains next.
 - [`lean-compatibility-v1.json`](lean-compatibility-v1.json) and generated
   [`Lean compatibility matrix`](generated/lean-compatibility.md) — TL0.2's
   executable eight-field assurance contract, K0-K6 profile gates, registered
