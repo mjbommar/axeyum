@@ -360,8 +360,10 @@ It freezes two empty-selection, no-credit external controls before execution:
 compile the committed flat probe with the exact pinned Lean binary under the
 4 GiB lane, then export the owned `.olean` with source-built official
 `lean4export` v4.30.0 under the 8 GiB lane and require byte equality with the
-committed 65-line stream. No exporter build, compilation, or export control has
-run. The pair cannot create a U2/Axeyum outcome, denominator, paired cell,
+committed 65-line stream. The exact official exporter preparation build has
+completed from a clean tree; a preregistration amendment corrects a
+62-character flat-source digest transcription. No compile or export control
+has run. The pair cannot create a U2/Axeyum outcome, denominator, paired cell,
 performance row, or terminal credit.
 
 ## 8. Layer-specific equivalence

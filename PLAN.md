@@ -446,8 +446,13 @@ state.
 > for two empty-selection external controls: compile the committed flat probe
 > with the exact pinned Lean binary under 4 GiB, then export its `.olean` with
 > source-built official `lean4export` v4.30.0 under 8 GiB and require exact
-> equality with the committed 65-line NDJSON stream. No compile, exporter build,
-> or export control has run. The pair cannot create a U2/Axeyum outcome,
+> equality with the committed 65-line NDJSON stream. The exact official exporter
+> preparation build now exists; an initial unsupported `-j1` Lake invocation
+> stopped before compilation, and the supported one-thread-environment build
+> produced a 206,915,024-byte executable with SHA-256 `8e763913...4449` from a
+> still-clean source tree. A published amendment corrects a 62-character flat
+> source digest transcription to its actual 64-character SHA-256. No compile or
+> export control has run. The pair cannot create a U2/Axeyum outcome,
 > denominator, paired/performance row, or parity credit.
 > The runtime-derived
 > TL0.4 ledger now freezes **65** prelude assumptions (real 30, integer 34,
