@@ -449,7 +449,11 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   this diagnostic append before touching the live evidence root. The
   [implementation checkpoint](docs/plan/lean-u2-official-execution-tl0.6.3-m2-r2-diagnostic-closure-implementation-2026-07-22.md)
   records pushed commit `e846daf9`, two exact offline tests, CI integration,
-  and no process command. Publish it before the one append-only action.
+  and no process command. After checkpoint publication, the one append-only
+  action completed from `beaa171b`: 69 diagnostic files / 159,346 bytes,
+  completion `5ef1040a`, zero processes, zero outcomes, and unchanged invalid
+  R1 credit. The [R2 result](docs/plan/lean-u2-official-execution-tl0.6.3-m2-r2-diagnostic-closure-result-2026-07-22.md)
+  is next to publish before any new process plan.
 
 - **2026-07-22 — TL0.6.3 M1 derives complete deterministic U2 child-shard
   scheduling with zero new outcomes or parity credit.** The source-first
@@ -7761,6 +7765,11 @@ plan is built and committed on the current branch:
 | P5.5 | External target, measured | **DONE (bounded v1, ADR-0323--0338):** authenticated Tock capture plus eight rechecked dual-DRAT proofs and six replayed controls, UNKNOWN=0, DISAGREE=0. Query time 12.700 s; fresh outer wall 50.745 s; peak RSS 1,256,496 KiB; zero OOM deltas. The committed case study compares exact target validation, universal coverage, trust, effort, artifact boundaries, and limits. No Tock bug was found, so no upstream issue is applicable. This is not a speed or whole-kernel claim. |
 
 ## Changelog
+
+- **2026-07-22 — Completed M2 R2's append-only diagnostic closure.** From clean
+  pushed revision `beaa171b`, the offline command added 67 retained payloads,
+  post, and completion: 69 files / 159,346 bytes total. It added zero processes,
+  outcomes, or parity credit and left R1 invalid under its original contract.
 
 - **2026-07-22 — Implemented and pushed M2 R2's offline-only diagnostic
   closure.** Commit `e846daf9` binds the exact R1 evidence and work projection,

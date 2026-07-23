@@ -31,7 +31,9 @@ class LeanU2OfficialExecutionM2R2Tests(unittest.TestCase):
     def test_append_is_zero_credit_completion_last_and_tamper_sensitive(self) -> None:
         with tempfile.TemporaryDirectory(prefix="axeyum-m2-r2-test-") as temporary:
             root = Path(temporary) / "evidence"
-            shutil.copytree(R2.EVIDENCE_ROOT, root)
+            shutil.copytree(
+                R2.EVIDENCE_ROOT, root, ignore=shutil.ignore_patterns("diagnostic")
+            )
             for path in root.rglob("*"):
                 if path.is_file():
                     path.chmod(0o444)

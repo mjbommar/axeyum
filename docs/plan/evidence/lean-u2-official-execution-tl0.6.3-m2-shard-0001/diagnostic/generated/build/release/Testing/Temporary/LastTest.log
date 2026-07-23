@@ -1,0 +1,1923 @@
+Start testing: Jul 23 04:11 UTC
+----------------------------------------------------------
+1/64 Testing: compile/uint_fold.lean
+1/64 Test: compile/uint_fold.lean
+Command: "/usr/bin/bash" "/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/with_stage1_test_env.sh" "/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/compile/run_test.sh" "uint_fold.lean"
+Directory: /home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/compile
+"compile/uint_fold.lean" start time: Jul 23 04:11 UTC
+Output:
+----------------------------------------------------------
+Compiling and executing lean file
+++ ./uint_fold.lean.out
+12760
+12720
+11
+6
+44
+Interpreting lean file
+++ lean -Dlinter.all=false -j1 --run uint_fold.lean
+12760
+12720
+11
+6
+44
+<end of output>
+Test time =   0.57 sec
+----------------------------------------------------------
+Test Passed.
+"compile/uint_fold.lean" end time: Jul 23 04:11 UTC
+"compile/uint_fold.lean" time elapsed: 00:00:00
+----------------------------------------------------------
+
+2/64 Testing: compile/unreachable.lean
+2/64 Test: compile/unreachable.lean
+Command: "/usr/bin/bash" "/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/with_stage1_test_env.sh" "/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/compile/run_test.sh" "unreachable.lean"
+Directory: /home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/compile
+"compile/unreachable.lean" start time: Jul 23 04:11 UTC
+Output:
+----------------------------------------------------------
+Compiling and executing lean file
+++ ./unreachable.lean.out
+Interpreting lean file
+++ lean -Dlinter.all=false -j1 --run unreachable.lean
+<end of output>
+Test time =   0.47 sec
+----------------------------------------------------------
+Test Passed.
+"compile/unreachable.lean" end time: Jul 23 04:11 UTC
+"compile/unreachable.lean" time elapsed: 00:00:00
+----------------------------------------------------------
+
+3/64 Testing: compile/uset.lean
+3/64 Test: compile/uset.lean
+Command: "/usr/bin/bash" "/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/with_stage1_test_env.sh" "/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/compile/run_test.sh" "uset.lean"
+Directory: /home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/compile
+"compile/uset.lean" start time: Jul 23 04:11 UTC
+Output:
+----------------------------------------------------------
+Compiling and executing lean file
+++ ./uset.lean.out
+1
+Interpreting lean file
+++ lean -Dlinter.all=false -j1 --run uset.lean
+1
+<end of output>
+Test time =   0.48 sec
+----------------------------------------------------------
+Test Passed.
+"compile/uset.lean" end time: Jul 23 04:11 UTC
+"compile/uset.lean" time elapsed: 00:00:00
+----------------------------------------------------------
+
+4/64 Testing: compile/utf8Path.lean
+4/64 Test: compile/utf8Path.lean
+Command: "/usr/bin/bash" "/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/with_stage1_test_env.sh" "/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/compile/run_test.sh" "utf8Path.lean"
+Directory: /home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/compile
+"compile/utf8Path.lean" start time: Jul 23 04:11 UTC
+Output:
+----------------------------------------------------------
+Compiling and executing lean file
+++ ./utf8Path.lean.out
+Interpreting lean file
+++ lean -Dlinter.all=false -j1 --run utf8Path.lean
+<end of output>
+Test time =   0.45 sec
+----------------------------------------------------------
+Test Passed.
+"compile/utf8Path.lean" end time: Jul 23 04:11 UTC
+"compile/utf8Path.lean" time elapsed: 00:00:00
+----------------------------------------------------------
+
+5/64 Testing: compile/wait_dedicated.lean
+5/64 Test: compile/wait_dedicated.lean
+Command: "/usr/bin/bash" "/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/with_stage1_test_env.sh" "/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/compile/run_test.sh" "wait_dedicated.lean"
+Directory: /home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/compile
+"compile/wait_dedicated.lean" start time: Jul 23 04:11 UTC
+Output:
+----------------------------------------------------------
+Compiling and executing lean file
+++ ./wait_dedicated.lean.out
+Hi there
+Interpreting lean file
+++ lean -Dlinter.all=false -j1 --run wait_dedicated.lean
+Hi there
+<end of output>
+Test time =   0.68 sec
+----------------------------------------------------------
+Test Passed.
+"compile/wait_dedicated.lean" end time: Jul 23 04:11 UTC
+"compile/wait_dedicated.lean" time elapsed: 00:00:00
+----------------------------------------------------------
+
+6/64 Testing: compile_bench/binarytrees.lean
+6/64 Test: compile_bench/binarytrees.lean
+Command: "/usr/bin/bash" "/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/with_stage1_test_env.sh" "/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/compile_bench/run_test.sh" "binarytrees.lean"
+Directory: /home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/compile_bench
+"compile_bench/binarytrees.lean" start time: Jul 23 04:11 UTC
+Output:
+----------------------------------------------------------
+Compiling and executing lean file
+++ ./binarytrees.lean.out 14
+stretch tree of depth 15	 check: 65535
+16384	 trees of depth 4	 check: 507904
+4096	 trees of depth 6	 check: 520192
+1024	 trees of depth 8	 check: 523264
+256	 trees of depth 10	 check: 524032
+64	 trees of depth 12	 check: 524224
+16	 trees of depth 14	 check: 524272
+long lived tree of depth 14	 check: 32767
+Interpreting lean file
+++ lean -Dlinter.all=false -j1 --run binarytrees.lean 14
+stretch tree of depth 15	 check: 65535
+16384	 trees of depth 4	 check: 507904
+4096	 trees of depth 6	 check: 520192
+1024	 trees of depth 8	 check: 523264
+256	 trees of depth 10	 check: 524032
+64	 trees of depth 12	 check: 524224
+16	 trees of depth 14	 check: 524272
+long lived tree of depth 14	 check: 32767
+<end of output>
+Test time =   1.55 sec
+----------------------------------------------------------
+Test Passed.
+"compile_bench/binarytrees.lean" end time: Jul 23 04:11 UTC
+"compile_bench/binarytrees.lean" time elapsed: 00:00:01
+----------------------------------------------------------
+
+7/64 Testing: compile_bench/binarytrees.st.lean
+7/64 Test: compile_bench/binarytrees.st.lean
+Command: "/usr/bin/bash" "/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/with_stage1_test_env.sh" "/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/compile_bench/run_test.sh" "binarytrees.st.lean"
+Directory: /home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/compile_bench
+"compile_bench/binarytrees.st.lean" start time: Jul 23 04:11 UTC
+Output:
+----------------------------------------------------------
+Compiling and executing lean file
+++ ./binarytrees.st.lean.out 14
+stretch tree of depth 15	 check: 65535
+16384	 trees of depth 4	 check: 507904
+4096	 trees of depth 6	 check: 520192
+1024	 trees of depth 8	 check: 523264
+256	 trees of depth 10	 check: 524032
+64	 trees of depth 12	 check: 524224
+16	 trees of depth 14	 check: 524272
+long lived tree of depth 14	 check: 32767
+Interpreting lean file
+++ lean -Dlinter.all=false -j1 --run binarytrees.st.lean 14
+stretch tree of depth 15	 check: 65535
+16384	 trees of depth 4	 check: 507904
+4096	 trees of depth 6	 check: 520192
+1024	 trees of depth 8	 check: 523264
+256	 trees of depth 10	 check: 524032
+64	 trees of depth 12	 check: 524224
+16	 trees of depth 14	 check: 524272
+long lived tree of depth 14	 check: 32767
+<end of output>
+Test time =   1.58 sec
+----------------------------------------------------------
+Test Passed.
+"compile_bench/binarytrees.st.lean" end time: Jul 23 04:11 UTC
+"compile_bench/binarytrees.st.lean" time elapsed: 00:00:01
+----------------------------------------------------------
+
+8/64 Testing: compile_bench/channel.lean
+8/64 Test: compile_bench/channel.lean
+Command: "/usr/bin/bash" "/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/with_stage1_test_env.sh" "/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/compile_bench/run_test.sh" "channel.lean"
+Directory: /home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/compile_bench
+"compile_bench/channel.lean" start time: Jul 23 04:11 UTC
+Output:
+----------------------------------------------------------
+Compiling and executing lean file
+++ ./channel.lean.out 4 1000
+/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/util.sh: line 94: 487604 Aborted                    (core dumped) "${@}" > "$CAPTURED.out.produced" 2>&1
+libc++abi: terminating due to uncaught exception of type lean::exception: failed to create thread
+[1m--- channel.lean.out.expected	2026-05-26 08:34:15.000000000 +0000[0m
+[1m+++ channel.lean.out.produced	2026-07-23 04:11:34.012241849 +0000[0m
+[36m@@ -1,14 +1 @@[0m
+[31m-measurement: bounded0_spsc ...[0m
+[31m-measurement: bounded0_mpsc ...[0m
+[31m-measurement: bounded0_mpmc ...[0m
+[31m-measurement: bounded1_spsc ...[0m
+[31m-measurement: bounded1_mpsc ...[0m
+[31m-measurement: bounded1_mpmc ...[0m
+[31m-measurement: boundedn_spsc ...[0m
+[31m-measurement: boundedn_mpsc ...[0m
+[31m-measurement: boundedn_mpmc ...[0m
+[31m-measurement: boundedn_seq ...[0m
+[31m-measurement: unbounded_spsc ...[0m
+[31m-measurement: unbounded_mpsc ...[0m
+[31m-measurement: unbounded_mpmc ...[0m
+[31m-measurement: unbounded_seq ...[0m
+[32m+libc++abi: terminating due to uncaught exception of type lean::exception: failed to create thread[0m
+TEST FAILED: Unexpected output
+<end of output>
+Test time =   0.72 sec
+----------------------------------------------------------
+Test Failed.
+"compile_bench/channel.lean" end time: Jul 23 04:11 UTC
+"compile_bench/channel.lean" time elapsed: 00:00:00
+----------------------------------------------------------
+
+9/64 Testing: compile_bench/const_fold.lean
+9/64 Test: compile_bench/const_fold.lean
+Command: "/usr/bin/bash" "/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/with_stage1_test_env.sh" "/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/compile_bench/run_test.sh" "const_fold.lean"
+Directory: /home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/compile_bench
+"compile_bench/const_fold.lean" start time: Jul 23 04:11 UTC
+Output:
+----------------------------------------------------------
+Setting stack size to unlimited
+Compiling and executing lean file
+const_fold.lean:55:2: warning: unused variable `e`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+const_fold.lean:64:6: warning: unused variable `x`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+++ ./const_fold.lean.out 15
+93011 93011
+Interpreting lean file
+++ lean -Dlinter.all=false -j1 --run const_fold.lean 15
+93011 93011
+<end of output>
+Test time =   0.77 sec
+----------------------------------------------------------
+Test Passed.
+"compile_bench/const_fold.lean" end time: Jul 23 04:11 UTC
+"compile_bench/const_fold.lean" time elapsed: 00:00:00
+----------------------------------------------------------
+
+10/64 Testing: compile_bench/deriv.lean
+10/64 Test: compile_bench/deriv.lean
+Command: "/usr/bin/bash" "/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/with_stage1_test_env.sh" "/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/compile_bench/run_test.sh" "deriv.lean"
+Directory: /home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/compile_bench
+"compile_bench/deriv.lean" start time: Jul 23 04:11 UTC
+Output:
+----------------------------------------------------------
+Compiling and executing lean file
+deriv.lean:13:2: warning: unused variable `a`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+++ ./deriv.lean.out 7
+1 count: 6
+2 count: 22
+3 count: 90
+4 count: 420
+5 count: 2202
+6 count: 12886
+7 count: 83648
+Interpreting lean file
+++ lean -Dlinter.all=false -j1 --run deriv.lean 7
+1 count: 6
+2 count: 22
+3 count: 90
+4 count: 420
+5 count: 2202
+6 count: 12886
+7 count: 83648
+<end of output>
+Test time =   0.89 sec
+----------------------------------------------------------
+Test Passed.
+"compile_bench/deriv.lean" end time: Jul 23 04:11 UTC
+"compile_bench/deriv.lean" time elapsed: 00:00:00
+----------------------------------------------------------
+
+11/64 Testing: compile_bench/hashmap.lean
+11/64 Test: compile_bench/hashmap.lean
+Command: "/usr/bin/bash" "/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/with_stage1_test_env.sh" "/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/compile_bench/run_test.sh" "hashmap.lean"
+Directory: /home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/compile_bench
+"compile_bench/hashmap.lean" start time: Jul 23 04:11 UTC
+Output:
+----------------------------------------------------------
+Compiling and executing lean file
+++ ./hashmap.lean.out 11 100
+measurement: containsHit 35.641100 s
+measurement: containsMiss 72.660800 s
+measurement: iterate 202.483000 s
+measurement: insertIfNewHit 39.152000 s
+measurement: insertHit 73.829600 s
+measurement: insertMissEmpty 159.897500 s
+measurement: insertMissEmptyWithCapacity 41.013800 s
+measurement: eraseInsert 43.227700 s
+Interpreting lean file
+++ lean -Dlinter.all=false -j1 --run hashmap.lean 11 100
+measurement: containsHit 778.935600 s
+measurement: containsMiss 1115.619700 s
+measurement: iterate 778.162200 s
+measurement: insertIfNewHit 817.331000 s
+measurement: insertHit 1085.959100 s
+measurement: insertMissEmpty 2442.230900 s
+measurement: insertMissEmptyWithCapacity 991.474500 s
+measurement: eraseInsert 2631.492200 s
+<end of output>
+Test time =   2.04 sec
+----------------------------------------------------------
+Test Passed.
+"compile_bench/hashmap.lean" end time: Jul 23 04:11 UTC
+"compile_bench/hashmap.lean" time elapsed: 00:00:02
+----------------------------------------------------------
+
+12/64 Testing: compile_bench/identifier_completion.lean
+12/64 Test: compile_bench/identifier_completion.lean
+Command: "/usr/bin/bash" "/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/with_stage1_test_env.sh" "/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/compile_bench/run_test.sh" "identifier_completion.lean"
+Directory: /home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/compile_bench
+"compile_bench/identifier_completion.lean" start time: Jul 23 04:11 UTC
+Output:
+----------------------------------------------------------
+Interpreting lean file
+++ lean -Dlinter.all=false -j1 --run identifier_completion.lean
+libc++abi: terminating due to uncaught exception of type lean::exception: failed to create thread
+uncaught exception: Expected JSON-RPC response, got: '{"error":{"code":-32902,"message":"Server process for file:///home/sebastian/lean4/tests/bench/identifier_completion.lean crashed, likely due to a stack overflow or a bug."},"id":1,"jsonrpc":"2.0"}'
+Watchdog error: Cannot read LSP message: Stream was closed
+[1m--- identifier_completion.lean.out.expected	2026-05-26 08:34:15.000000000 +0000[0m
+[1m+++ identifier_completion.lean.out.produced	2026-07-23 04:11:38.065456649 +0000[0m
+[36m@@ -1 +1,3 @@[0m
+[31m-measurement: completion ...[0m
+[32m+libc++abi: terminating due to uncaught exception of type lean::exception: failed to create thread[0m
+[32m+uncaught exception: Expected JSON-RPC response, got: '{"error":{"code":-32902,"message":"Server process for file:///home/sebastian/lean4/tests/bench/identifier_completion.lean crashed, likely due to a stack overflow or a bug."},"id":1,"jsonrpc":"2.0"}'[0m
+[32m+Watchdog error: Cannot read LSP message: Stream was closed[0m
+TEST FAILED: Unexpected output
+<end of output>
+Test time =   0.36 sec
+----------------------------------------------------------
+Test Failed.
+"compile_bench/identifier_completion.lean" end time: Jul 23 04:11 UTC
+"compile_bench/identifier_completion.lean" time elapsed: 00:00:00
+----------------------------------------------------------
+
+13/64 Testing: compile_bench/ilean_roundtrip.lean
+13/64 Test: compile_bench/ilean_roundtrip.lean
+Command: "/usr/bin/bash" "/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/with_stage1_test_env.sh" "/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/compile_bench/run_test.sh" "ilean_roundtrip.lean"
+Directory: /home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/compile_bench
+"compile_bench/ilean_roundtrip.lean" start time: Jul 23 04:11 UTC
+Output:
+----------------------------------------------------------
+Compiling and executing lean file
+++ ./ilean_roundtrip.lean.out 1000
+measurement: compress 0.014000 s
+measurement: parse 0.005000 s
+Interpreting lean file
+++ lean -Dlinter.all=false -j1 --run ilean_roundtrip.lean 1000
+measurement: compress 0.004000 s
+measurement: parse 0.002000 s
+<end of output>
+Test time =   0.90 sec
+----------------------------------------------------------
+Test Passed.
+"compile_bench/ilean_roundtrip.lean" end time: Jul 23 04:11 UTC
+"compile_bench/ilean_roundtrip.lean" time elapsed: 00:00:00
+----------------------------------------------------------
+
+14/64 Testing: compile_bench/iterators.lean
+14/64 Test: compile_bench/iterators.lean
+Command: "/usr/bin/bash" "/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/with_stage1_test_env.sh" "/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/compile_bench/run_test.sh" "iterators.lean"
+Directory: /home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/compile_bench
+"compile_bench/iterators.lean" start time: Jul 23 04:11 UTC
+Output:
+----------------------------------------------------------
+Compiling and executing lean file
+iterators.lean:55:5: warning: `Std.Iter.count` has been deprecated: Use `Std.Iter.length` instead
+
+Note: The updated constant has a different type:
+  {α β : Type w} → [inst : Std.Iterator α Id β] → [Std.IteratorLoop α Id Id] → Std.Iter β → Nat
+instead of
+  {α β : Type u_1} → [inst : Std.Iterator α Id β] → [Std.IteratorLoop α Id Id] → Std.Iter β → Nat
+++ ./iterators.lean.out
+xs[0] = 0
+xs[10000] = 10000
+xs[20000] = 20000
+xs[30000] = 30000
+xs[40000] = 40000
+xs[50000] = 50000
+xs[60000] = 60000
+xs[70000] = 70000
+xs[80000] = 80000
+xs[90000] = 90000
+xs[0] = 0
+xs[10000] = 10000
+xs[20000] = 20000
+xs[30000] = 30000
+xs[40000] = 40000
+xs[50000] = 50000
+xs[60000] = 60000
+xs[70000] = 70000
+xs[80000] = 80000
+xs[90000] = 90000
+Interpreting lean file
+++ lean -Dlinter.all=false -j1 --run iterators.lean
+xs[0] = 0
+xs[10000] = 10000
+xs[20000] = 20000
+xs[30000] = 30000
+xs[40000] = 40000
+xs[50000] = 50000
+xs[60000] = 60000
+xs[70000] = 70000
+xs[80000] = 80000
+xs[90000] = 90000
+xs[0] = 0
+xs[10000] = 10000
+xs[20000] = 20000
+xs[30000] = 30000
+xs[40000] = 40000
+xs[50000] = 50000
+xs[60000] = 60000
+xs[70000] = 70000
+xs[80000] = 80000
+xs[90000] = 90000
+<end of output>
+Test time =   2.80 sec
+----------------------------------------------------------
+Test Passed.
+"compile_bench/iterators.lean" end time: Jul 23 04:11 UTC
+"compile_bench/iterators.lean" time elapsed: 00:00:02
+----------------------------------------------------------
+
+15/64 Testing: compile_bench/liasolver.lean
+15/64 Test: compile_bench/liasolver.lean
+Command: "/usr/bin/bash" "/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/with_stage1_test_env.sh" "/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/compile_bench/run_test.sh" "liasolver.lean"
+Directory: /home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/compile_bench
+"compile_bench/liasolver.lean" start time: Jul 23 04:11 UTC
+Output:
+----------------------------------------------------------
+Compiling and executing lean file
+liasolver.lean:337:6: warning: unused variable `nEquations`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+liasolver.lean:342:8: warning: unused variable `nTerms`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+++ ./liasolver.lean.out liasolver.lean.ex-50-50-1.leq
+SAT
+-104 -253 65 75 -271 269 234 -125 59 -291 23 -150 -127 -232 11 -66 -199 133 -51 -120 -141 276 24 6 -85 28 240 54 -182 -160 128 14 -212 269 -154 28 134 -125 -49 192 14 -130 69 -53 -157 264 103 48 -271 184
+Interpreting lean file
+++ lean -Dlinter.all=false -j1 --run liasolver.lean liasolver.lean.ex-50-50-1.leq
+SAT
+-104 -253 65 75 -271 269 234 -125 59 -291 23 -150 -127 -232 11 -66 -199 133 -51 -120 -141 276 24 6 -85 28 240 54 -182 -160 128 14 -212 269 -154 28 134 -125 -49 192 14 -130 69 -53 -157 264 103 48 -271 184
+<end of output>
+Test time =   5.49 sec
+----------------------------------------------------------
+Test Passed.
+"compile_bench/liasolver.lean" end time: Jul 23 04:11 UTC
+"compile_bench/liasolver.lean" time elapsed: 00:00:05
+----------------------------------------------------------
+
+16/64 Testing: compile_bench/nat_repr.lean
+16/64 Test: compile_bench/nat_repr.lean
+Command: "/usr/bin/bash" "/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/with_stage1_test_env.sh" "/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/compile_bench/run_test.sh" "nat_repr.lean"
+Directory: /home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/compile_bench
+"compile_bench/nat_repr.lean" start time: Jul 23 04:11 UTC
+Output:
+----------------------------------------------------------
+Compiling and executing lean file
+++ ./nat_repr.lean.out 500
+324355
+Interpreting lean file
+++ lean -Dlinter.all=false -j1 --run nat_repr.lean 500
+324355
+<end of output>
+Test time =   0.54 sec
+----------------------------------------------------------
+Test Passed.
+"compile_bench/nat_repr.lean" end time: Jul 23 04:11 UTC
+"compile_bench/nat_repr.lean" time elapsed: 00:00:00
+----------------------------------------------------------
+
+17/64 Testing: compile_bench/parser.lean
+17/64 Test: compile_bench/parser.lean
+Command: "/usr/bin/bash" "/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/with_stage1_test_env.sh" "/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/compile_bench/run_test.sh" "parser.lean"
+Directory: /home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/compile_bench
+"compile_bench/parser.lean" start time: Jul 23 04:11 UTC
+Output:
+----------------------------------------------------------
+Compiling and executing lean file
+++ ./parser.lean.out ../../src/Init/Prelude.lean 2
+Interpreting lean file
+++ lean -Dlinter.all=false -j1 --run parser.lean ../../src/Init/Prelude.lean 2
+<end of output>
+Test time =   1.02 sec
+----------------------------------------------------------
+Test Passed.
+"compile_bench/parser.lean" end time: Jul 23 04:11 UTC
+"compile_bench/parser.lean" time elapsed: 00:00:01
+----------------------------------------------------------
+
+18/64 Testing: compile_bench/phashmap.lean
+18/64 Test: compile_bench/phashmap.lean
+Command: "/usr/bin/bash" "/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/with_stage1_test_env.sh" "/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/compile_bench/run_test.sh" "phashmap.lean"
+Directory: /home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/compile_bench
+"compile_bench/phashmap.lean" start time: Jul 23 04:11 UTC
+Output:
+----------------------------------------------------------
+Compiling and executing lean file
+++ ./phashmap.lean.out 11 100
+measurement: containsHit 8.754700 s
+measurement: containsMiss 17.222500 s
+measurement: iterate 51.313800 s
+measurement: insertHit 24.284700 s
+measurement: insertMissEmpty 35.644900 s
+measurement: insertMissEmptyShared 86.878100 s
+measurement: eraseInsert 110.493200 s
+Interpreting lean file
+++ lean -Dlinter.all=false -j1 --run phashmap.lean 11 100
+measurement: containsHit 975.063500 s
+measurement: containsMiss 1572.970100 s
+measurement: iterate 975.080600 s
+measurement: insertHit 1664.781500 s
+measurement: insertMissEmpty 1338.976100 s
+measurement: insertMissEmptyShared 1513.835500 s
+measurement: eraseInsert 3419.021700 s
+<end of output>
+Test time =   1.77 sec
+----------------------------------------------------------
+Test Passed.
+"compile_bench/phashmap.lean" end time: Jul 23 04:11 UTC
+"compile_bench/phashmap.lean" time elapsed: 00:00:01
+----------------------------------------------------------
+
+19/64 Testing: compile_bench/qsort.lean
+19/64 Test: compile_bench/qsort.lean
+Command: "/usr/bin/bash" "/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/with_stage1_test_env.sh" "/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/compile_bench/run_test.sh" "qsort.lean"
+Directory: /home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/compile_bench
+"compile_bench/qsort.lean" start time: Jul 23 04:11 UTC
+Output:
+----------------------------------------------------------
+Compiling and executing lean file
+qsort.lean:7:7: warning: unused variable `seed`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+++ ./qsort.lean.out 80
+Interpreting lean file
+++ lean -Dlinter.all=false -j1 --run qsort.lean 80
+<end of output>
+Test time =   1.38 sec
+----------------------------------------------------------
+Test Passed.
+"compile_bench/qsort.lean" end time: Jul 23 04:11 UTC
+"compile_bench/qsort.lean" time elapsed: 00:00:01
+----------------------------------------------------------
+
+20/64 Testing: compile_bench/rbmap.lean
+20/64 Test: compile_bench/rbmap.lean
+Command: "/usr/bin/bash" "/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/with_stage1_test_env.sh" "/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/compile_bench/run_test.sh" "rbmap.lean"
+Directory: /home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/compile_bench
+"compile_bench/rbmap.lean" start time: Jul 23 04:11 UTC
+Output:
+----------------------------------------------------------
+Compiling and executing lean file
+++ ./rbmap.lean.out 100000
+10000
+Interpreting lean file
+++ lean -Dlinter.all=false -j1 --run rbmap.lean 100000
+10000
+<end of output>
+Test time =   1.29 sec
+----------------------------------------------------------
+Test Passed.
+"compile_bench/rbmap.lean" end time: Jul 23 04:11 UTC
+"compile_bench/rbmap.lean" time elapsed: 00:00:01
+----------------------------------------------------------
+
+21/64 Testing: compile_bench/rbmap_checkpoint.lean
+21/64 Test: compile_bench/rbmap_checkpoint.lean
+Command: "/usr/bin/bash" "/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/with_stage1_test_env.sh" "/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/compile_bench/run_test.sh" "rbmap_checkpoint.lean"
+Directory: /home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/compile_bench
+"compile_bench/rbmap_checkpoint.lean" start time: Jul 23 04:11 UTC
+Output:
+----------------------------------------------------------
+Compiling and executing lean file
+++ ./rbmap_checkpoint.lean.out 100000 10
+10001 10000
+Interpreting lean file
+++ lean -Dlinter.all=false -j1 --run rbmap_checkpoint.lean 100000 10
+10001 10000
+<end of output>
+Test time =   1.35 sec
+----------------------------------------------------------
+Test Passed.
+"compile_bench/rbmap_checkpoint.lean" end time: Jul 23 04:11 UTC
+"compile_bench/rbmap_checkpoint.lean" time elapsed: 00:00:01
+----------------------------------------------------------
+
+22/64 Testing: compile_bench/rbmap_fbip.lean
+22/64 Test: compile_bench/rbmap_fbip.lean
+Command: "/usr/bin/bash" "/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/with_stage1_test_env.sh" "/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/compile_bench/run_test.sh" "rbmap_fbip.lean"
+Directory: /home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/compile_bench
+"compile_bench/rbmap_fbip.lean" start time: Jul 23 04:11 UTC
+Output:
+----------------------------------------------------------
+Compiling and executing lean file
+++ ./rbmap_fbip.lean.out 2000
+200
+Interpreting lean file
+++ lean -Dlinter.all=false -j1 --run rbmap_fbip.lean 2000
+200
+<end of output>
+Test time =   0.70 sec
+----------------------------------------------------------
+Test Passed.
+"compile_bench/rbmap_fbip.lean" end time: Jul 23 04:11 UTC
+"compile_bench/rbmap_fbip.lean" time elapsed: 00:00:00
+----------------------------------------------------------
+
+23/64 Testing: compile_bench/rbmap_library.lean
+23/64 Test: compile_bench/rbmap_library.lean
+Command: "/usr/bin/bash" "/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/with_stage1_test_env.sh" "/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/compile_bench/run_test.sh" "rbmap_library.lean"
+Directory: /home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/compile_bench
+"compile_bench/rbmap_library.lean" start time: Jul 23 04:11 UTC
+Output:
+----------------------------------------------------------
+Compiling and executing lean file
+++ ./rbmap_library.lean.out 2000
+1999
+Interpreting lean file
+++ lean -Dlinter.all=false -j1 --run rbmap_library.lean 2000
+1999
+<end of output>
+Test time =   0.85 sec
+----------------------------------------------------------
+Test Passed.
+"compile_bench/rbmap_library.lean" end time: Jul 23 04:11 UTC
+"compile_bench/rbmap_library.lean" time elapsed: 00:00:00
+----------------------------------------------------------
+
+24/64 Testing: compile_bench/server_startup.lean
+24/64 Test: compile_bench/server_startup.lean
+Command: "/usr/bin/bash" "/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/with_stage1_test_env.sh" "/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/compile_bench/run_test.sh" "server_startup.lean"
+Directory: /home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/compile_bench
+"compile_bench/server_startup.lean" start time: Jul 23 04:11 UTC
+Output:
+----------------------------------------------------------
+Compiling and executing lean file
+++ ./server_startup.lean.out
+Interpreting lean file
+++ lean -Dlinter.all=false -j1 --run server_startup.lean
+<end of output>
+Test time =   0.97 sec
+----------------------------------------------------------
+Test Passed.
+"compile_bench/server_startup.lean" end time: Jul 23 04:11 UTC
+"compile_bench/server_startup.lean" time elapsed: 00:00:00
+----------------------------------------------------------
+
+25/64 Testing: compile_bench/sigmaIterator.lean
+25/64 Test: compile_bench/sigmaIterator.lean
+Command: "/usr/bin/bash" "/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/with_stage1_test_env.sh" "/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/compile_bench/run_test.sh" "sigmaIterator.lean"
+Directory: /home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/compile_bench
+"compile_bench/sigmaIterator.lean" start time: Jul 23 04:11 UTC
+Output:
+----------------------------------------------------------
+Compiling and executing lean file
+++ ./sigmaIterator.lean.out 100
+4950
+Interpreting lean file
+++ lean -Dlinter.all=false -j1 --run sigmaIterator.lean 100
+4950
+<end of output>
+Test time =   0.90 sec
+----------------------------------------------------------
+Test Passed.
+"compile_bench/sigmaIterator.lean" end time: Jul 23 04:11 UTC
+"compile_bench/sigmaIterator.lean" time elapsed: 00:00:00
+----------------------------------------------------------
+
+26/64 Testing: compile_bench/treemap.lean
+26/64 Test: compile_bench/treemap.lean
+Command: "/usr/bin/bash" "/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/with_stage1_test_env.sh" "/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/compile_bench/run_test.sh" "treemap.lean"
+Directory: /home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/compile_bench
+"compile_bench/treemap.lean" start time: Jul 23 04:11 UTC
+Output:
+----------------------------------------------------------
+Compiling and executing lean file
+++ ./treemap.lean.out 11 100
+measurement: containsHit 25.784800 s
+measurement: containsMiss 42.087000 s
+measurement: iterate 37.814400 s
+measurement: insertIfNewHit 31.823100 s
+measurement: insertHit 120.639200 s
+measurement: insertRandomMissEmpty 154.781800 s
+measurement: insertSequentialMissEmpty 192.882300 s
+measurement: insertRandomMissEmptyShared 224.553100 s
+measurement: eraseInsert 97.879800 s
+Interpreting lean file
+++ lean -Dlinter.all=false -j1 --run treemap.lean 11 100
+measurement: containsHit 859.810700 s
+measurement: containsMiss 1334.201400 s
+measurement: iterate 264.213800 s
+measurement: insertIfNewHit 911.591100 s
+measurement: insertHit 2159.260800 s
+measurement: insertRandomMissEmpty 2156.861800 s
+measurement: insertSequentialMissEmpty 2566.571300 s
+measurement: insertRandomMissEmptyShared 2383.684100 s
+measurement: eraseInsert 5492.016000 s
+<end of output>
+Test time =   2.10 sec
+----------------------------------------------------------
+Test Passed.
+"compile_bench/treemap.lean" end time: Jul 23 04:12 UTC
+"compile_bench/treemap.lean" time elapsed: 00:00:02
+----------------------------------------------------------
+
+27/64 Testing: compile_bench/unionfind.lean
+27/64 Test: compile_bench/unionfind.lean
+Command: "/usr/bin/bash" "/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/with_stage1_test_env.sh" "/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/compile_bench/run_test.sh" "unionfind.lean"
+Directory: /home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/compile_bench
+"compile_bench/unionfind.lean" start time: Jul 23 04:12 UTC
+Output:
+----------------------------------------------------------
+Compiling and executing lean file
+unionfind.lean:7:55: warning: unused variable `s`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+unionfind.lean:29:19: warning: `structure ... :=` has been deprecated in favor of `structure ... where`.
+
+Note: This linter can be disabled with `set_option linter.deprecated false`
+unionfind.lean:125:16: warning: unused variable `s`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+unionfind.lean:126:19: warning: unused variable `s`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+++ ./unionfind.lean.out 70000
+ok 69000
+Interpreting lean file
+++ lean -Dlinter.all=false -j1 --run unionfind.lean 70000
+ok 69000
+<end of output>
+Test time =   1.63 sec
+----------------------------------------------------------
+Test Passed.
+"compile_bench/unionfind.lean" end time: Jul 23 04:12 UTC
+"compile_bench/unionfind.lean" time elapsed: 00:00:01
+----------------------------------------------------------
+
+28/64 Testing: compile_bench/watchdogRss.lean
+28/64 Test: compile_bench/watchdogRss.lean
+Command: "/usr/bin/bash" "/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/with_stage1_test_env.sh" "/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/compile_bench/run_test.sh" "watchdogRss.lean"
+Directory: /home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/compile_bench
+"compile_bench/watchdogRss.lean" start time: Jul 23 04:12 UTC
+Output:
+----------------------------------------------------------
+Compiling and executing lean file
+++ ./watchdogRss.lean.out
+Interpreting lean file
+++ lean -Dlinter.all=false -j1 --run watchdogRss.lean
+<end of output>
+Test time =   4.41 sec
+----------------------------------------------------------
+Test Passed.
+"compile_bench/watchdogRss.lean" end time: Jul 23 04:12 UTC
+"compile_bench/watchdogRss.lean" time elapsed: 00:00:04
+----------------------------------------------------------
+
+29/64 Testing: compile_bench/workspaceSymbolsNewRanges.lean
+29/64 Test: compile_bench/workspaceSymbolsNewRanges.lean
+Command: "/usr/bin/bash" "/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/with_stage1_test_env.sh" "/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/compile_bench/run_test.sh" "workspaceSymbolsNewRanges.lean"
+Directory: /home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/compile_bench
+"compile_bench/workspaceSymbolsNewRanges.lean" start time: Jul 23 04:12 UTC
+Output:
+----------------------------------------------------------
+Compiling and executing lean file
+workspaceSymbolsNewRanges.lean:28:22: warning: `String.get` has been deprecated: Use `String.Pos.Raw.get` instead
+
+Note: The updated constant is in a different namespace. Dot notation may need to be changed (e.g., from `x.get` to `String.Pos.Raw.get x`).
+workspaceSymbolsNewRanges.lean:31:45: warning: `String.get` has been deprecated: Use `String.Pos.Raw.get` instead
+
+Note: The updated constant is in a different namespace. Dot notation may need to be changed (e.g., from `x.get` to `String.Pos.Raw.get x`).
+workspaceSymbolsNewRanges.lean:31:59: warning: `String.get` has been deprecated: Use `String.Pos.Raw.get` instead
+
+Note: The updated constant is in a different namespace. Dot notation may need to be changed (e.g., from `x.get` to `String.Pos.Raw.get x`).
+workspaceSymbolsNewRanges.lean:34:41: warning: `String.get` has been deprecated: Use `String.Pos.Raw.get` instead
+
+Note: The updated constant is in a different namespace. Dot notation may need to be changed (e.g., from `x.get` to `String.Pos.Raw.get x`).
+workspaceSymbolsNewRanges.lean:34:61: warning: `String.get` has been deprecated: Use `String.Pos.Raw.get` instead
+
+Note: The updated constant is in a different namespace. Dot notation may need to be changed (e.g., from `x.get` to `String.Pos.Raw.get x`).
+workspaceSymbolsNewRanges.lean:34:81: warning: `String.get` has been deprecated: Use `String.Pos.Raw.get` instead
+
+Note: The updated constant is in a different namespace. Dot notation may need to be changed (e.g., from `x.get` to `String.Pos.Raw.get x`).
+workspaceSymbolsNewRanges.lean:35:29: warning: `String.get` has been deprecated: Use `String.Pos.Raw.get` instead
+
+Note: The updated constant is in a different namespace. Dot notation may need to be changed (e.g., from `x.get` to `String.Pos.Raw.get x`).
+workspaceSymbolsNewRanges.lean:35:61: warning: `String.get` has been deprecated: Use `String.Pos.Raw.get` instead
+
+Note: The updated constant is in a different namespace. Dot notation may need to be changed (e.g., from `x.get` to `String.Pos.Raw.get x`).
+workspaceSymbolsNewRanges.lean:40:19: warning: `String.mkIterator` has been deprecated: Use `String.Legacy.mkIterator` instead
+
+Note: The updated constant is in a different namespace. Dot notation may need to be changed (e.g., from `x.mkIterator` to `String.Legacy.mkIterator x`).
+workspaceSymbolsNewRanges.lean:43:30: warning: `String.get` has been deprecated: Use `String.Pos.Raw.get` instead
+
+Note: The updated constant is in a different namespace. Dot notation may need to be changed (e.g., from `x.get` to `String.Pos.Raw.get x`).
+workspaceSymbolsNewRanges.lean:200:18: warning: `String.get` has been deprecated: Use `String.Pos.Raw.get` instead
+
+Note: The updated constant is in a different namespace. Dot notation may need to be changed (e.g., from `x.get` to `String.Pos.Raw.get x`).
+workspaceSymbolsNewRanges.lean:200:45: warning: `String.get` has been deprecated: Use `String.Pos.Raw.get` instead
+
+Note: The updated constant is in a different namespace. Dot notation may need to be changed (e.g., from `x.get` to `String.Pos.Raw.get x`).
+workspaceSymbolsNewRanges.lean:131:29: warning: `String.get` has been deprecated: Use `String.Pos.Raw.get` instead
+
+Note: The updated constant is in a different namespace. Dot notation may need to be changed (e.g., from `x.get` to `String.Pos.Raw.get x`).
+workspaceSymbolsNewRanges.lean:131:53: warning: `String.get` has been deprecated: Use `String.Pos.Raw.get` instead
+
+Note: The updated constant is in a different namespace. Dot notation may need to be changed (e.g., from `x.get` to `String.Pos.Raw.get x`).
+++ ./workspaceSymbolsNewRanges.lean.out
+315 matches
+339 matches
+37 matches
+1 matches
+29 matches
+40 matches
+3 matches
+73 matches
+321 matches
+11 matches
+9 matches
+1 matches
+Interpreting lean file
+++ lean -Dlinter.all=false -j1 --run workspaceSymbolsNewRanges.lean
+315 matches
+339 matches
+37 matches
+1 matches
+29 matches
+40 matches
+3 matches
+73 matches
+321 matches
+11 matches
+9 matches
+1 matches
+<end of output>
+Test time =   3.27 sec
+----------------------------------------------------------
+Test Passed.
+"compile_bench/workspaceSymbolsNewRanges.lean" end time: Jul 23 04:12 UTC
+"compile_bench/workspaceSymbolsNewRanges.lean" time elapsed: 00:00:03
+----------------------------------------------------------
+
+30/64 Testing: docparse/arg_0001.txt
+30/64 Test: docparse/arg_0001.txt
+Command: "/usr/bin/bash" "/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/with_stage1_test_env.sh" "/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/docparse/run_test.sh" "arg_0001.txt"
+Directory: /home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/docparse
+"docparse/arg_0001.txt" start time: Jul 23 04:12 UTC
+Output:
+----------------------------------------------------------
+++ lean -Dlinter.all=false --run run_test.lean arg_0001.txt
+/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/util.sh: line 94: 491011 Aborted                    (core dumped) "${@}" > "$CAPTURED.out.produced" 2>&1
+libc++abi: terminating due to uncaught exception of type lean::exception: failed to create thread
+[1m--- arg_0001.txt.out.expected	2026-05-26 08:34:15.000000000 +0000[0m
+[1m+++ arg_0001.txt.out.produced	2026-07-23 04:12:09.583943132 +0000[0m
+[36m@@ -1,4 +1 @@[0m
+[31m-Success! Final stack:[0m
+[31m-  (Lean.Doc.Syntax.anon[0m
+[31m-   (Lean.Doc.Syntax.arg_ident `x))[0m
+[31m-All input consumed.[0m
+\ No newline at end of file
+[32m+libc++abi: terminating due to uncaught exception of type lean::exception: failed to create thread[0m
+TEST FAILED: Unexpected output
+<end of output>
+Test time =   0.25 sec
+----------------------------------------------------------
+Test Failed.
+"docparse/arg_0001.txt" end time: Jul 23 04:12 UTC
+"docparse/arg_0001.txt" time elapsed: 00:00:00
+----------------------------------------------------------
+
+31/64 Testing: docparse/arg_0002.txt
+31/64 Test: docparse/arg_0002.txt
+Command: "/usr/bin/bash" "/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/with_stage1_test_env.sh" "/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/docparse/run_test.sh" "arg_0002.txt"
+Directory: /home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/docparse
+"docparse/arg_0002.txt" start time: Jul 23 04:12 UTC
+Output:
+----------------------------------------------------------
+++ lean -Dlinter.all=false --run run_test.lean arg_0002.txt
+/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/util.sh: line 94: 491027 Aborted                    (core dumped) "${@}" > "$CAPTURED.out.produced" 2>&1
+libc++abi: terminating due to uncaught exception of type lean::exception: failed to create thread
+[1m--- arg_0002.txt.out.expected	2026-05-26 08:34:15.000000000 +0000[0m
+[1m+++ arg_0002.txt.out.produced	2026-07-23 04:12:09.836943082 +0000[0m
+[36m@@ -1,6 +1 @@[0m
+[31m-Success! Final stack:[0m
+[31m-  (Lean.Doc.Syntax.named_no_paren[0m
+[31m-   `x[0m
+[31m-   ":="[0m
+[31m-   (Lean.Doc.Syntax.arg_num (num "1")))[0m
+[31m-All input consumed.[0m
+\ No newline at end of file
+[32m+libc++abi: terminating due to uncaught exception of type lean::exception: failed to create thread[0m
+TEST FAILED: Unexpected output
+<end of output>
+Test time =   0.24 sec
+----------------------------------------------------------
+Test Failed.
+"docparse/arg_0002.txt" end time: Jul 23 04:12 UTC
+"docparse/arg_0002.txt" time elapsed: 00:00:00
+----------------------------------------------------------
+
+32/64 Testing: docparse/arg_0003.txt
+32/64 Test: docparse/arg_0003.txt
+Command: "/usr/bin/bash" "/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/with_stage1_test_env.sh" "/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/docparse/run_test.sh" "arg_0003.txt"
+Directory: /home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/docparse
+"docparse/arg_0003.txt" start time: Jul 23 04:12 UTC
+Output:
+----------------------------------------------------------
+++ lean -Dlinter.all=false --run run_test.lean arg_0003.txt
+/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/util.sh: line 94: 491044 Aborted                    (core dumped) "${@}" > "$CAPTURED.out.produced" 2>&1
+libc++abi: terminating due to uncaught exception of type lean::exception: failed to create thread
+[1m--- arg_0003.txt.out.expected	2026-05-26 08:34:15.000000000 +0000[0m
+[1m+++ arg_0003.txt.out.produced	2026-07-23 04:12:10.089943031 +0000[0m
+[36m@@ -1,8 +1 @@[0m
+[31m-Success! Final stack:[0m
+[31m-  (Lean.Doc.Syntax.named[0m
+[31m-   "("[0m
+[31m-   `x[0m
+[31m-   ":="[0m
+[31m-   (Lean.Doc.Syntax.arg_num (num "1"))[0m
+[31m-   ")")[0m
+[31m-All input consumed.[0m
+\ No newline at end of file
+[32m+libc++abi: terminating due to uncaught exception of type lean::exception: failed to create thread[0m
+TEST FAILED: Unexpected output
+<end of output>
+Test time =   0.26 sec
+----------------------------------------------------------
+Test Failed.
+"docparse/arg_0003.txt" end time: Jul 23 04:12 UTC
+"docparse/arg_0003.txt" time elapsed: 00:00:00
+----------------------------------------------------------
+
+33/64 Testing: docparse/arg_0004.txt
+33/64 Test: docparse/arg_0004.txt
+Command: "/usr/bin/bash" "/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/with_stage1_test_env.sh" "/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/docparse/run_test.sh" "arg_0004.txt"
+Directory: /home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/docparse
+"docparse/arg_0004.txt" start time: Jul 23 04:12 UTC
+Output:
+----------------------------------------------------------
+++ lean -Dlinter.all=false --run run_test.lean arg_0004.txt
+/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/util.sh: line 94: 491094 Aborted                    (core dumped) "${@}" > "$CAPTURED.out.produced" 2>&1
+libc++abi: terminating due to uncaught exception of type lean::exception: failed to create thread
+[1m--- arg_0004.txt.out.expected	2026-05-26 08:34:15.000000000 +0000[0m
+[1m+++ arg_0004.txt.out.produced	2026-07-23 04:12:10.329942983 +0000[0m
+[36m@@ -1,4 +1 @@[0m
+[31m-Failure @0 (⟨1, 0⟩): expected '(', '+', '-', expected identifier, string, or number or token[0m
+[31m-Final stack:[0m
+[31m-  <missing>[0m
+[31m-Remaining: "\n(x:=1)"[0m
+\ No newline at end of file
+[32m+libc++abi: terminating due to uncaught exception of type lean::exception: failed to create thread[0m
+TEST FAILED: Unexpected output
+<end of output>
+Test time =   0.23 sec
+----------------------------------------------------------
+Test Failed.
+"docparse/arg_0004.txt" end time: Jul 23 04:12 UTC
+"docparse/arg_0004.txt" time elapsed: 00:00:00
+----------------------------------------------------------
+
+34/64 Testing: docparse/arg_0005.txt
+34/64 Test: docparse/arg_0005.txt
+Command: "/usr/bin/bash" "/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/with_stage1_test_env.sh" "/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/docparse/run_test.sh" "arg_0005.txt"
+Directory: /home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/docparse
+"docparse/arg_0005.txt" start time: Jul 23 04:12 UTC
+Output:
+----------------------------------------------------------
+++ lean -Dlinter.all=false --run run_test.lean arg_0005.txt
+/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/util.sh: line 94: 491110 Aborted                    (core dumped) "${@}" > "$CAPTURED.out.produced" 2>&1
+libc++abi: terminating due to uncaught exception of type lean::exception: failed to create thread
+[1m--- arg_0005.txt.out.expected	2026-05-26 08:34:15.000000000 +0000[0m
+[1m+++ arg_0005.txt.out.produced	2026-07-23 04:12:10.565942936 +0000[0m
+[36m@@ -1,3 +1 @@[0m
+[31m-Success! Final stack:[0m
+[31m-  (Lean.Doc.Syntax.flag_on "+" `foo)[0m
+[31m-All input consumed.[0m
+\ No newline at end of file
+[32m+libc++abi: terminating due to uncaught exception of type lean::exception: failed to create thread[0m
+TEST FAILED: Unexpected output
+<end of output>
+Test time =   0.25 sec
+----------------------------------------------------------
+Test Failed.
+"docparse/arg_0005.txt" end time: Jul 23 04:12 UTC
+"docparse/arg_0005.txt" time elapsed: 00:00:00
+----------------------------------------------------------
+
+35/64 Testing: docparse/arg_0006.txt
+35/64 Test: docparse/arg_0006.txt
+Command: "/usr/bin/bash" "/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/with_stage1_test_env.sh" "/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/docparse/run_test.sh" "arg_0006.txt"
+Directory: /home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/docparse
+"docparse/arg_0006.txt" start time: Jul 23 04:12 UTC
+Output:
+----------------------------------------------------------
+++ lean -Dlinter.all=false --run run_test.lean arg_0006.txt
+Success! Final stack:
+  (Lean.Doc.Syntax.flag_off "-" `other)
+All input consumed.
+<end of output>
+Test time =   0.29 sec
+----------------------------------------------------------
+Test Passed.
+"docparse/arg_0006.txt" end time: Jul 23 04:12 UTC
+"docparse/arg_0006.txt" time elapsed: 00:00:00
+----------------------------------------------------------
+
+36/64 Testing: docparse/arg_0007.txt
+36/64 Test: docparse/arg_0007.txt
+Command: "/usr/bin/bash" "/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/with_stage1_test_env.sh" "/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/docparse/run_test.sh" "arg_0007.txt"
+Directory: /home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/docparse
+"docparse/arg_0007.txt" start time: Jul 23 04:12 UTC
+Output:
+----------------------------------------------------------
+++ lean -Dlinter.all=false --run run_test.lean arg_0007.txt
+/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/util.sh: line 94: 491165 Aborted                    (core dumped) "${@}" > "$CAPTURED.out.produced" 2>&1
+libc++abi: terminating due to uncaught exception of type lean::exception: failed to create thread
+[1m--- arg_0007.txt.out.expected	2026-05-26 08:34:15.000000000 +0000[0m
+[1m+++ arg_0007.txt.out.produced	2026-07-23 04:12:11.104942828 +0000[0m
+[36m@@ -1,4 +1 @@[0m
+[31m-Failure @2 (⟨1, 2⟩): expected no space before[0m
+[31m-Final stack:[0m
+[31m-  (Lean.Doc.Syntax.flag_off "-" `other)[0m
+[31m-Remaining: "other"[0m
+\ No newline at end of file
+[32m+libc++abi: terminating due to uncaught exception of type lean::exception: failed to create thread[0m
+TEST FAILED: Unexpected output
+<end of output>
+Test time =   0.25 sec
+----------------------------------------------------------
+Test Failed.
+"docparse/arg_0007.txt" end time: Jul 23 04:12 UTC
+"docparse/arg_0007.txt" time elapsed: 00:00:00
+----------------------------------------------------------
+
+37/64 Testing: docparse/arg_0008.txt
+37/64 Test: docparse/arg_0008.txt
+Command: "/usr/bin/bash" "/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/with_stage1_test_env.sh" "/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/docparse/run_test.sh" "arg_0008.txt"
+Directory: /home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/docparse
+"docparse/arg_0008.txt" start time: Jul 23 04:12 UTC
+Output:
+----------------------------------------------------------
+++ lean -Dlinter.all=false --run run_test.lean arg_0008.txt
+/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/util.sh: line 94: 491201 Aborted                    (core dumped) "${@}" > "$CAPTURED.out.produced" 2>&1
+libc++abi: terminating due to uncaught exception of type lean::exception: failed to create thread
+[1m--- arg_0008.txt.out.expected	2026-05-26 08:34:15.000000000 +0000[0m
+[1m+++ arg_0008.txt.out.produced	2026-07-23 04:12:11.351942779 +0000[0m
+[36m@@ -1,9 +1 @@[0m
+[31m-Success! Final stack:[0m
+[31m-  (Lean.Doc.Syntax.named[0m
+[31m-   "("[0m
+[31m-   `x[0m
+[31m-   ":="[0m
+[31m-   (Lean.Doc.Syntax.arg_num (num "1"))[0m
+[31m-   ")")[0m
+[31m-Remaining:[0m
+[31m-"\n"[0m
+\ No newline at end of file
+[32m+libc++abi: terminating due to uncaught exception of type lean::exception: failed to create thread[0m
+TEST FAILED: Unexpected output
+<end of output>
+Test time =   0.23 sec
+----------------------------------------------------------
+Test Failed.
+"docparse/arg_0008.txt" end time: Jul 23 04:12 UTC
+"docparse/arg_0008.txt" time elapsed: 00:00:00
+----------------------------------------------------------
+
+38/64 Testing: docparse/arg_0009.txt
+38/64 Test: docparse/arg_0009.txt
+Command: "/usr/bin/bash" "/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/with_stage1_test_env.sh" "/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/docparse/run_test.sh" "arg_0009.txt"
+Directory: /home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/docparse
+"docparse/arg_0009.txt" start time: Jul 23 04:12 UTC
+Output:
+----------------------------------------------------------
+++ lean -Dlinter.all=false --run run_test.lean arg_0009.txt
+/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/util.sh: line 94: 491218 Aborted                    (core dumped) "${@}" > "$CAPTURED.out.produced" 2>&1
+libc++abi: terminating due to uncaught exception of type lean::exception: failed to create thread
+[1m--- arg_0009.txt.out.expected	2026-05-26 08:34:15.000000000 +0000[0m
+[1m+++ arg_0009.txt.out.produced	2026-07-23 04:12:11.585942732 +0000[0m
+[36m@@ -1,6 +1 @@[0m
+[31m-Success! Final stack:[0m
+[31m-  (Lean.Doc.Syntax.named_no_paren[0m
+[31m-   `x[0m
+[31m-   ":="[0m
+[31m-   (Lean.Doc.Syntax.arg_ident `y))[0m
+[31m-All input consumed.[0m
+\ No newline at end of file
+[32m+libc++abi: terminating due to uncaught exception of type lean::exception: failed to create thread[0m
+TEST FAILED: Unexpected output
+<end of output>
+Test time =   0.24 sec
+----------------------------------------------------------
+Test Failed.
+"docparse/arg_0009.txt" end time: Jul 23 04:12 UTC
+"docparse/arg_0009.txt" time elapsed: 00:00:00
+----------------------------------------------------------
+
+39/64 Testing: docparse/arg_0010.txt
+39/64 Test: docparse/arg_0010.txt
+Command: "/usr/bin/bash" "/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/with_stage1_test_env.sh" "/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/docparse/run_test.sh" "arg_0010.txt"
+Directory: /home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/docparse
+"docparse/arg_0010.txt" start time: Jul 23 04:12 UTC
+Output:
+----------------------------------------------------------
+++ lean -Dlinter.all=false --run run_test.lean arg_0010.txt
+/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/util.sh: line 94: 491235 Aborted                    (core dumped) "${@}" > "$CAPTURED.out.produced" 2>&1
+libc++abi: terminating due to uncaught exception of type lean::exception: failed to create thread
+[1m--- arg_0010.txt.out.expected	2026-05-26 08:34:15.000000000 +0000[0m
+[1m+++ arg_0010.txt.out.produced	2026-07-23 04:12:11.826942684 +0000[0m
+[36m@@ -1,8 +1 @@[0m
+[31m-Success! Final stack:[0m
+[31m-  (Lean.Doc.Syntax.named[0m
+[31m-   "("[0m
+[31m-   `x[0m
+[31m-   ":="[0m
+[31m-   (Lean.Doc.Syntax.arg_ident `y)[0m
+[31m-   ")")[0m
+[31m-All input consumed.[0m
+\ No newline at end of file
+[32m+libc++abi: terminating due to uncaught exception of type lean::exception: failed to create thread[0m
+TEST FAILED: Unexpected output
+<end of output>
+Test time =   0.25 sec
+----------------------------------------------------------
+Test Failed.
+"docparse/arg_0010.txt" end time: Jul 23 04:12 UTC
+"docparse/arg_0010.txt" time elapsed: 00:00:00
+----------------------------------------------------------
+
+40/64 Testing: docparse/arg_0011.txt
+40/64 Test: docparse/arg_0011.txt
+Command: "/usr/bin/bash" "/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/with_stage1_test_env.sh" "/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/docparse/run_test.sh" "arg_0011.txt"
+Directory: /home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/docparse
+"docparse/arg_0011.txt" start time: Jul 23 04:12 UTC
+Output:
+----------------------------------------------------------
+++ lean -Dlinter.all=false --run run_test.lean arg_0011.txt
+/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/util.sh: line 94: 491251 Aborted                    (core dumped) "${@}" > "$CAPTURED.out.produced" 2>&1
+libc++abi: terminating due to uncaught exception of type lean::exception: failed to create thread
+[1m--- arg_0011.txt.out.expected	2026-05-26 08:34:15.000000000 +0000[0m
+[1m+++ arg_0011.txt.out.produced	2026-07-23 04:12:12.077942634 +0000[0m
+[36m@@ -1,6 +1 @@[0m
+[31m-Success! Final stack:[0m
+[31m-  (Lean.Doc.Syntax.named_no_paren[0m
+[31m-   `x[0m
+[31m-   ":="[0m
+[31m-   (Lean.Doc.Syntax.arg_str (str "\"y\"")))[0m
+[31m-All input consumed.[0m
+\ No newline at end of file
+[32m+libc++abi: terminating due to uncaught exception of type lean::exception: failed to create thread[0m
+TEST FAILED: Unexpected output
+<end of output>
+Test time =   0.24 sec
+----------------------------------------------------------
+Test Failed.
+"docparse/arg_0011.txt" end time: Jul 23 04:12 UTC
+"docparse/arg_0011.txt" time elapsed: 00:00:00
+----------------------------------------------------------
+
+41/64 Testing: docparse/arg_0012.txt
+41/64 Test: docparse/arg_0012.txt
+Command: "/usr/bin/bash" "/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/with_stage1_test_env.sh" "/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/docparse/run_test.sh" "arg_0012.txt"
+Directory: /home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/docparse
+"docparse/arg_0012.txt" start time: Jul 23 04:12 UTC
+Output:
+----------------------------------------------------------
+++ lean -Dlinter.all=false --run run_test.lean arg_0012.txt
+/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/util.sh: line 94: 491290 Aborted                    (core dumped) "${@}" > "$CAPTURED.out.produced" 2>&1
+libc++abi: terminating due to uncaught exception of type lean::exception: failed to create thread
+[1m--- arg_0012.txt.out.expected	2026-05-26 08:34:15.000000000 +0000[0m
+[1m+++ arg_0012.txt.out.produced	2026-07-23 04:12:12.320942585 +0000[0m
+[36m@@ -1,7 +1 @@[0m
+[31m-Failure @3 (⟨1, 3⟩): unterminated string literal[0m
+[31m-Final stack:[0m
+[31m- • `x[0m
+[31m- • ":="[0m
+[31m- • (Lean.Doc.Syntax.arg_str <missing>)[0m
+[31m-[0m
+[31m-Remaining: "\"y"[0m
+\ No newline at end of file
+[32m+libc++abi: terminating due to uncaught exception of type lean::exception: failed to create thread[0m
+TEST FAILED: Unexpected output
+<end of output>
+Test time =   0.24 sec
+----------------------------------------------------------
+Test Failed.
+"docparse/arg_0012.txt" end time: Jul 23 04:12 UTC
+"docparse/arg_0012.txt" time elapsed: 00:00:00
+----------------------------------------------------------
+
+42/64 Testing: docparse/arg_0013.txt
+42/64 Test: docparse/arg_0013.txt
+Command: "/usr/bin/bash" "/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/with_stage1_test_env.sh" "/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/docparse/run_test.sh" "arg_0013.txt"
+Directory: /home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/docparse
+"docparse/arg_0013.txt" start time: Jul 23 04:12 UTC
+Output:
+----------------------------------------------------------
+++ lean -Dlinter.all=false --run run_test.lean arg_0013.txt
+/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/util.sh: line 94: 491307 Aborted                    (core dumped) "${@}" > "$CAPTURED.out.produced" 2>&1
+libc++abi: terminating due to uncaught exception of type lean::exception: failed to create thread
+[1m--- arg_0013.txt.out.expected	2026-05-26 08:34:15.000000000 +0000[0m
+[1m+++ arg_0013.txt.out.produced	2026-07-23 04:12:12.556942538 +0000[0m
+[36m@@ -1,13 +1 @@[0m
+[31m-2 failures:[0m
+[31m-  @7 (⟨1, 7⟩): expected ')'[0m
+[31m-    ""[0m
+[31m-  @7 (⟨1, 7⟩): unterminated string literal[0m
+[31m-    ""[0m
+[31m-[0m
+[31m-Final stack:[0m
+[31m-  (Lean.Doc.Syntax.named[0m
+[31m-   "("[0m
+[31m-   `x[0m
+[31m-   ":="[0m
+[31m-   (Lean.Doc.Syntax.arg_str <missing>)[0m
+[31m-   <missing>)[0m
+\ No newline at end of file
+[32m+libc++abi: terminating due to uncaught exception of type lean::exception: failed to create thread[0m
+TEST FAILED: Unexpected output
+<end of output>
+Test time =   0.23 sec
+----------------------------------------------------------
+Test Failed.
+"docparse/arg_0013.txt" end time: Jul 23 04:12 UTC
+"docparse/arg_0013.txt" time elapsed: 00:00:00
+----------------------------------------------------------
+
+43/64 Testing: docparse/arg_0014.txt
+43/64 Test: docparse/arg_0014.txt
+Command: "/usr/bin/bash" "/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/with_stage1_test_env.sh" "/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/docparse/run_test.sh" "arg_0014.txt"
+Directory: /home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/docparse
+"docparse/arg_0014.txt" start time: Jul 23 04:12 UTC
+Output:
+----------------------------------------------------------
+++ lean -Dlinter.all=false --run run_test.lean arg_0014.txt
+/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/util.sh: line 94: 491329 Aborted                    (core dumped) "${@}" > "$CAPTURED.out.produced" 2>&1
+libc++abi: terminating due to uncaught exception of type lean::exception: failed to create thread
+[1m--- arg_0014.txt.out.expected	2026-05-26 08:34:15.000000000 +0000[0m
+[1m+++ arg_0014.txt.out.produced	2026-07-23 04:12:12.796942490 +0000[0m
+[36m@@ -1,4 +1 @@[0m
+[31m-Success! Final stack:[0m
+[31m-  (Lean.Doc.Syntax.anon[0m
+[31m-   (Lean.Doc.Syntax.arg_num (num "42")))[0m
+[31m-All input consumed.[0m
+\ No newline at end of file
+[32m+libc++abi: terminating due to uncaught exception of type lean::exception: failed to create thread[0m
+TEST FAILED: Unexpected output
+<end of output>
+Test time =   0.24 sec
+----------------------------------------------------------
+Test Failed.
+"docparse/arg_0014.txt" end time: Jul 23 04:12 UTC
+"docparse/arg_0014.txt" time elapsed: 00:00:00
+----------------------------------------------------------
+
+44/64 Testing: docparse/arg_0015.txt
+44/64 Test: docparse/arg_0015.txt
+Command: "/usr/bin/bash" "/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/with_stage1_test_env.sh" "/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/docparse/run_test.sh" "arg_0015.txt"
+Directory: /home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/docparse
+"docparse/arg_0015.txt" start time: Jul 23 04:12 UTC
+Output:
+----------------------------------------------------------
+++ lean -Dlinter.all=false --run run_test.lean arg_0015.txt
+/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/util.sh: line 94: 491346 Aborted                    (core dumped) "${@}" > "$CAPTURED.out.produced" 2>&1
+libc++abi: terminating due to uncaught exception of type lean::exception: failed to create thread
+[1m--- arg_0015.txt.out.expected	2026-05-26 08:34:15.000000000 +0000[0m
+[1m+++ arg_0015.txt.out.produced	2026-07-23 04:12:13.044942441 +0000[0m
+[36m@@ -1,17 +1 @@[0m
+[31m-4 failures:[0m
+[31m-  @4 (⟨1, 4⟩): expected ')'[0m
+[31m-    ""[0m
+[31m-  @4 (⟨1, 4⟩): expected ':='[0m
+[31m-    ""[0m
+[31m-  @4 (⟨1, 4⟩): expected token[0m
+[31m-    ""[0m
+[31m-  @4 (⟨1, 4⟩): unexpected end of input[0m
+[31m-    ""[0m
+[31m-[0m
+[31m-Final stack:[0m
+[31m-  (Lean.Doc.Syntax.named[0m
+[31m-   "("[0m
+[31m-   <missing>[0m
+[31m-   <missing>[0m
+[31m-   <missing>[0m
+[31m-   <missing>)[0m
+\ No newline at end of file
+[32m+libc++abi: terminating due to uncaught exception of type lean::exception: failed to create thread[0m
+TEST FAILED: Unexpected output
+<end of output>
+Test time =   0.25 sec
+----------------------------------------------------------
+Test Failed.
+"docparse/arg_0015.txt" end time: Jul 23 04:12 UTC
+"docparse/arg_0015.txt" time elapsed: 00:00:00
+----------------------------------------------------------
+
+45/64 Testing: docparse/arg_0016.txt
+45/64 Test: docparse/arg_0016.txt
+Command: "/usr/bin/bash" "/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/with_stage1_test_env.sh" "/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/docparse/run_test.sh" "arg_0016.txt"
+Directory: /home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/docparse
+"docparse/arg_0016.txt" start time: Jul 23 04:12 UTC
+Output:
+----------------------------------------------------------
+++ lean -Dlinter.all=false --run run_test.lean arg_0016.txt
+3 failures:
+  @6 (⟨1, 6⟩): expected ')'
+    ""
+  @6 (⟨1, 6⟩): expected ':='
+    ""
+  @6 (⟨1, 6⟩): unexpected end of input
+    ""
+
+Final stack:
+  (Lean.Doc.Syntax.named
+   "("
+   `x
+   <missing>
+   <missing>
+   <missing>)
+<end of output>
+Test time =   0.31 sec
+----------------------------------------------------------
+Test Passed.
+"docparse/arg_0016.txt" end time: Jul 23 04:12 UTC
+"docparse/arg_0016.txt" time elapsed: 00:00:00
+----------------------------------------------------------
+
+46/64 Testing: docparse/arg_0017.txt
+46/64 Test: docparse/arg_0017.txt
+Command: "/usr/bin/bash" "/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/with_stage1_test_env.sh" "/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/docparse/run_test.sh" "arg_0017.txt"
+Directory: /home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/docparse
+"docparse/arg_0017.txt" start time: Jul 23 04:12 UTC
+Output:
+----------------------------------------------------------
+++ lean -Dlinter.all=false --run run_test.lean arg_0017.txt
+/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/util.sh: line 94: 491432 Aborted                    (core dumped) "${@}" > "$CAPTURED.out.produced" 2>&1
+libc++abi: terminating due to uncaught exception of type lean::exception: failed to create thread
+[1m--- arg_0017.txt.out.expected	2026-05-26 08:34:15.000000000 +0000[0m
+[1m+++ arg_0017.txt.out.produced	2026-07-23 04:12:13.608942328 +0000[0m
+[36m@@ -1,9 +1 @@[0m
+[31m-Failure @8 (⟨1, 8⟩): expected ')'[0m
+[31m-Final stack:[0m
+[31m-  (Lean.Doc.Syntax.named[0m
+[31m-   "("[0m
+[31m-   `x[0m
+[31m-   ":="[0m
+[31m-   (Lean.Doc.Syntax.arg_num (num "42"))[0m
+[31m-   <missing>)[0m
+[31m-Remaining: "\n)"[0m
+\ No newline at end of file
+[32m+libc++abi: terminating due to uncaught exception of type lean::exception: failed to create thread[0m
+TEST FAILED: Unexpected output
+<end of output>
+Test time =   0.25 sec
+----------------------------------------------------------
+Test Failed.
+"docparse/arg_0017.txt" end time: Jul 23 04:12 UTC
+"docparse/arg_0017.txt" time elapsed: 00:00:00
+----------------------------------------------------------
+
+47/64 Testing: docparse/arg_0018.txt
+47/64 Test: docparse/arg_0018.txt
+Command: "/usr/bin/bash" "/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/with_stage1_test_env.sh" "/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/docparse/run_test.sh" "arg_0018.txt"
+Directory: /home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/docparse
+"docparse/arg_0018.txt" start time: Jul 23 04:12 UTC
+Output:
+----------------------------------------------------------
+++ lean -Dlinter.all=false --run run_test.lean arg_0018.txt
+/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/util.sh: line 94: 491471 Aborted                    (core dumped) "${@}" > "$CAPTURED.out.produced" 2>&1
+libc++abi: terminating due to uncaught exception of type lean::exception: failed to create thread
+[1m--- arg_0018.txt.out.expected	2026-05-26 08:34:15.000000000 +0000[0m
+[1m+++ arg_0018.txt.out.produced	2026-07-23 04:12:13.847942280 +0000[0m
+[36m@@ -1,9 +1 @@[0m
+[31m-Failure @8 (⟨1, 8⟩): expected ')'[0m
+[31m-Final stack:[0m
+[31m-  (Lean.Doc.Syntax.named[0m
+[31m-   "("[0m
+[31m-   `x[0m
+[31m-   ":="[0m
+[31m-   (Lean.Doc.Syntax.arg_num (num "42"))[0m
+[31m-   <missing>)[0m
+[31m-Remaining: "\na"[0m
+\ No newline at end of file
+[32m+libc++abi: terminating due to uncaught exception of type lean::exception: failed to create thread[0m
+TEST FAILED: Unexpected output
+<end of output>
+Test time =   0.25 sec
+----------------------------------------------------------
+Test Failed.
+"docparse/arg_0018.txt" end time: Jul 23 04:12 UTC
+"docparse/arg_0018.txt" time elapsed: 00:00:00
+----------------------------------------------------------
+
+48/64 Testing: docparse/arg_val_0001.txt
+48/64 Test: docparse/arg_val_0001.txt
+Command: "/usr/bin/bash" "/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/with_stage1_test_env.sh" "/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/docparse/run_test.sh" "arg_val_0001.txt"
+Directory: /home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/docparse
+"docparse/arg_val_0001.txt" start time: Jul 23 04:12 UTC
+Output:
+----------------------------------------------------------
+++ lean -Dlinter.all=false --run run_test.lean arg_val_0001.txt
+/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/util.sh: line 94: 491508 Aborted                    (core dumped) "${@}" > "$CAPTURED.out.produced" 2>&1
+libc++abi: terminating due to uncaught exception of type lean::exception: failed to create thread
+[1m--- arg_val_0001.txt.out.expected	2026-05-26 08:34:15.000000000 +0000[0m
+[1m+++ arg_val_0001.txt.out.produced	2026-07-23 04:12:14.097942231 +0000[0m
+[36m@@ -1,4 +1 @@[0m
+[31m-Success! Final stack:[0m
+[31m-  (Lean.Doc.Syntax.anon[0m
+[31m-   (Lean.Doc.Syntax.arg_num (num "1")))[0m
+[31m-All input consumed.[0m
+\ No newline at end of file
+[32m+libc++abi: terminating due to uncaught exception of type lean::exception: failed to create thread[0m
+TEST FAILED: Unexpected output
+<end of output>
+Test time =   0.24 sec
+----------------------------------------------------------
+Test Failed.
+"docparse/arg_val_0001.txt" end time: Jul 23 04:12 UTC
+"docparse/arg_val_0001.txt" time elapsed: 00:00:00
+----------------------------------------------------------
+
+49/64 Testing: docparse/arg_val_0002.txt
+49/64 Test: docparse/arg_val_0002.txt
+Command: "/usr/bin/bash" "/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/with_stage1_test_env.sh" "/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/docparse/run_test.sh" "arg_val_0002.txt"
+Directory: /home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/docparse
+"docparse/arg_val_0002.txt" start time: Jul 23 04:12 UTC
+Output:
+----------------------------------------------------------
+++ lean -Dlinter.all=false --run run_test.lean arg_val_0002.txt
+/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/util.sh: line 94: 491554 Aborted                    (core dumped) "${@}" > "$CAPTURED.out.produced" 2>&1
+libc++abi: terminating due to uncaught exception of type lean::exception: failed to create thread
+[1m--- arg_val_0002.txt.out.expected	2026-05-26 08:34:15.000000000 +0000[0m
+[1m+++ arg_val_0002.txt.out.produced	2026-07-23 04:12:14.342942181 +0000[0m
+[36m@@ -1,4 +1 @@[0m
+[31m-Success! Final stack:[0m
+[31m-  (Lean.Doc.Syntax.anon[0m
+[31m-   (Lean.Doc.Syntax.arg_num (num "3")))[0m
+[31m-All input consumed.[0m
+\ No newline at end of file
+[32m+libc++abi: terminating due to uncaught exception of type lean::exception: failed to create thread[0m
+TEST FAILED: Unexpected output
+<end of output>
+Test time =   0.24 sec
+----------------------------------------------------------
+Test Failed.
+"docparse/arg_val_0002.txt" end time: Jul 23 04:12 UTC
+"docparse/arg_val_0002.txt" time elapsed: 00:00:00
+----------------------------------------------------------
+
+50/64 Testing: docparse/arg_val_0003.txt
+50/64 Test: docparse/arg_val_0003.txt
+Command: "/usr/bin/bash" "/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/with_stage1_test_env.sh" "/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/docparse/run_test.sh" "arg_val_0003.txt"
+Directory: /home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/docparse
+"docparse/arg_val_0003.txt" start time: Jul 23 04:12 UTC
+Output:
+----------------------------------------------------------
+++ lean -Dlinter.all=false --run run_test.lean arg_val_0003.txt
+/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/util.sh: line 94: 491586 Aborted                    (core dumped) "${@}" > "$CAPTURED.out.produced" 2>&1
+libc++abi: terminating due to uncaught exception of type lean::exception: failed to create thread
+[1m--- arg_val_0003.txt.out.expected	2026-05-26 08:34:15.000000000 +0000[0m
+[1m+++ arg_val_0003.txt.out.produced	2026-07-23 04:12:14.582299834 +0000[0m
+[36m@@ -1,4 +1 @@[0m
+[31m-Failure @0 (⟨1, 0⟩): unexpected end of input; expected '(', '+' or '-'[0m
+[31m-Final stack:[0m
+[31m-  <missing>[0m
+[31m-Remaining: ""[0m
+\ No newline at end of file
+[32m+libc++abi: terminating due to uncaught exception of type lean::exception: failed to create thread[0m
+TEST FAILED: Unexpected output
+<end of output>
+Test time =   0.23 sec
+----------------------------------------------------------
+Test Failed.
+"docparse/arg_val_0003.txt" end time: Jul 23 04:12 UTC
+"docparse/arg_val_0003.txt" time elapsed: 00:00:00
+----------------------------------------------------------
+
+51/64 Testing: docparse/arg_val_0004.txt
+51/64 Test: docparse/arg_val_0004.txt
+Command: "/usr/bin/bash" "/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/with_stage1_test_env.sh" "/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/docparse/run_test.sh" "arg_val_0004.txt"
+Directory: /home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/docparse
+"docparse/arg_val_0004.txt" start time: Jul 23 04:12 UTC
+Output:
+----------------------------------------------------------
+++ lean -Dlinter.all=false --run run_test.lean arg_val_0004.txt
+/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/util.sh: line 94: 491624 Aborted                    (core dumped) "${@}" > "$CAPTURED.out.produced" 2>&1
+libc++abi: terminating due to uncaught exception of type lean::exception: failed to create thread
+[1m--- arg_val_0004.txt.out.expected	2026-05-26 08:34:15.000000000 +0000[0m
+[1m+++ arg_val_0004.txt.out.produced	2026-07-23 04:12:14.811942088 +0000[0m
+[36m@@ -1,5 +1 @@[0m
+[31m-Success! Final stack:[0m
+[31m-  (Lean.Doc.Syntax.anon[0m
+[31m-   (Lean.Doc.Syntax.arg_str[0m
+[31m-    (str "\"a b c\t d\"")))[0m
+[31m-All input consumed.[0m
+\ No newline at end of file
+[32m+libc++abi: terminating due to uncaught exception of type lean::exception: failed to create thread[0m
+TEST FAILED: Unexpected output
+<end of output>
+Test time =   0.23 sec
+----------------------------------------------------------
+Test Failed.
+"docparse/arg_val_0004.txt" end time: Jul 23 04:12 UTC
+"docparse/arg_val_0004.txt" time elapsed: 00:00:00
+----------------------------------------------------------
+
+52/64 Testing: docparse/arg_val_0005.txt
+52/64 Test: docparse/arg_val_0005.txt
+Command: "/usr/bin/bash" "/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/with_stage1_test_env.sh" "/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/docparse/run_test.sh" "arg_val_0005.txt"
+Directory: /home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/docparse
+"docparse/arg_val_0005.txt" start time: Jul 23 04:12 UTC
+Output:
+----------------------------------------------------------
+++ lean -Dlinter.all=false --run run_test.lean arg_val_0005.txt
+/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/util.sh: line 94: 491653 Aborted                    (core dumped) "${@}" > "$CAPTURED.out.produced" 2>&1
+libc++abi: terminating due to uncaught exception of type lean::exception: failed to create thread
+[1m--- arg_val_0005.txt.out.expected	2026-05-26 08:34:15.000000000 +0000[0m
+[1m+++ arg_val_0005.txt.out.produced	2026-07-23 04:12:15.172942016 +0000[0m
+[36m@@ -1,6 +1 @@[0m
+[31m-Success! Final stack:[0m
+[31m-  (Lean.Doc.Syntax.anon[0m
+[31m-   (Lean.Doc.Syntax.arg_str[0m
+[31m-    (str "\"a b c\t d\"")))[0m
+[31m-Remaining:[0m
+[31m-"\n"[0m
+\ No newline at end of file
+[32m+libc++abi: terminating due to uncaught exception of type lean::exception: failed to create thread[0m
+TEST FAILED: Unexpected output
+<end of output>
+Test time =   0.37 sec
+----------------------------------------------------------
+Test Failed.
+"docparse/arg_val_0005.txt" end time: Jul 23 04:12 UTC
+"docparse/arg_val_0005.txt" time elapsed: 00:00:00
+----------------------------------------------------------
+
+53/64 Testing: docparse/arg_val_0006.txt
+53/64 Test: docparse/arg_val_0006.txt
+Command: "/usr/bin/bash" "/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/with_stage1_test_env.sh" "/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/docparse/run_test.sh" "arg_val_0006.txt"
+Directory: /home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/docparse
+"docparse/arg_val_0006.txt" start time: Jul 23 04:12 UTC
+Output:
+----------------------------------------------------------
+++ lean -Dlinter.all=false --run run_test.lean arg_val_0006.txt
+/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/util.sh: line 94: 491717 Aborted                    (core dumped) "${@}" > "$CAPTURED.out.produced" 2>&1
+libc++abi: terminating due to uncaught exception of type lean::exception: failed to create thread
+[1m--- arg_val_0006.txt.out.expected	2026-05-26 08:34:15.000000000 +0000[0m
+[1m+++ arg_val_0006.txt.out.produced	2026-07-23 04:12:15.427941965 +0000[0m
+[36m@@ -1,5 +1 @@[0m
+[31m-Success! Final stack:[0m
+[31m-  (Lean.Doc.Syntax.anon[0m
+[31m-   (Lean.Doc.Syntax.arg_num (num "43")))[0m
+[31m-Remaining:[0m
+[31m-"\n\"foo\""[0m
+\ No newline at end of file
+[32m+libc++abi: terminating due to uncaught exception of type lean::exception: failed to create thread[0m
+TEST FAILED: Unexpected output
+<end of output>
+Test time =   0.25 sec
+----------------------------------------------------------
+Test Failed.
+"docparse/arg_val_0006.txt" end time: Jul 23 04:12 UTC
+"docparse/arg_val_0006.txt" time elapsed: 00:00:00
+----------------------------------------------------------
+
+54/64 Testing: docparse/arg_val_0007.txt
+54/64 Test: docparse/arg_val_0007.txt
+Command: "/usr/bin/bash" "/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/with_stage1_test_env.sh" "/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/docparse/run_test.sh" "arg_val_0007.txt"
+Directory: /home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/docparse
+"docparse/arg_val_0007.txt" start time: Jul 23 04:12 UTC
+Output:
+----------------------------------------------------------
+++ lean -Dlinter.all=false --run run_test.lean arg_val_0007.txt
+/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/util.sh: line 94: 491750 Aborted                    (core dumped) "${@}" > "$CAPTURED.out.produced" 2>&1
+libc++abi: terminating due to uncaught exception of type lean::exception: failed to create thread
+[1m--- arg_val_0007.txt.out.expected	2026-05-26 08:34:15.000000000 +0000[0m
+[1m+++ arg_val_0007.txt.out.produced	2026-07-23 04:12:15.679941915 +0000[0m
+[36m@@ -1,4 +1 @@[0m
+[31m-Failure @0 (⟨1, 0⟩): unterminated string literal; expected '(', '+', '-' or token[0m
+[31m-Final stack:[0m
+[31m-  (Lean.Doc.Syntax.arg_str <missing>)[0m
+[31m-Remaining: "\"foo"[0m
+\ No newline at end of file
+[32m+libc++abi: terminating due to uncaught exception of type lean::exception: failed to create thread[0m
+TEST FAILED: Unexpected output
+<end of output>
+Test time =   0.24 sec
+----------------------------------------------------------
+Test Failed.
+"docparse/arg_val_0007.txt" end time: Jul 23 04:12 UTC
+"docparse/arg_val_0007.txt" time elapsed: 00:00:00
+----------------------------------------------------------
+
+55/64 Testing: docparse/args_0001.txt
+55/64 Test: docparse/args_0001.txt
+Command: "/usr/bin/bash" "/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/with_stage1_test_env.sh" "/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/docparse/run_test.sh" "args_0001.txt"
+Directory: /home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/docparse
+"docparse/args_0001.txt" start time: Jul 23 04:12 UTC
+Output:
+----------------------------------------------------------
+++ lean -Dlinter.all=false --run run_test.lean args_0001.txt
+Success! Final stack:
+  [(Lean.Doc.Syntax.anon
+    (Lean.Doc.Syntax.arg_num (num "43")))]
+Remaining:
+"\n\"foo\""
+<end of output>
+Test time =   0.31 sec
+----------------------------------------------------------
+Test Passed.
+"docparse/args_0001.txt" end time: Jul 23 04:12 UTC
+"docparse/args_0001.txt" time elapsed: 00:00:00
+----------------------------------------------------------
+
+56/64 Testing: docparse/args_0002.txt
+56/64 Test: docparse/args_0002.txt
+Command: "/usr/bin/bash" "/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/with_stage1_test_env.sh" "/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/docparse/run_test.sh" "args_0002.txt"
+Directory: /home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/docparse
+"docparse/args_0002.txt" start time: Jul 23 04:12 UTC
+Output:
+----------------------------------------------------------
+++ lean -Dlinter.all=false --run run_test.lean args_0002.txt
+/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/util.sh: line 94: 491853 Aborted                    (core dumped) "${@}" > "$CAPTURED.out.produced" 2>&1
+libc++abi: terminating due to uncaught exception of type lean::exception: failed to create thread
+[1m--- args_0002.txt.out.expected	2026-05-26 08:34:15.000000000 +0000[0m
+[1m+++ args_0002.txt.out.produced	2026-07-23 04:12:16.241941802 +0000[0m
+[36m@@ -1,9 +1 @@[0m
+[31m-Success! Final stack:[0m
+[31m-  [(Lean.Doc.Syntax.named_no_paren[0m
+[31m-    `dialect[0m
+[31m-    ":="[0m
+[31m-    (Lean.Doc.Syntax.arg_str (str "\"chicken\"")))[0m
+[31m-   (Lean.Doc.Syntax.anon[0m
+[31m-    (Lean.Doc.Syntax.arg_num (num "43")))][0m
+[31m-Remaining:[0m
+[31m-"\nfoo"[0m
+\ No newline at end of file
+[32m+libc++abi: terminating due to uncaught exception of type lean::exception: failed to create thread[0m
+TEST FAILED: Unexpected output
+<end of output>
+Test time =   0.26 sec
+----------------------------------------------------------
+Test Failed.
+"docparse/args_0002.txt" end time: Jul 23 04:12 UTC
+"docparse/args_0002.txt" time elapsed: 00:00:00
+----------------------------------------------------------
+
+57/64 Testing: docparse/args_0003.txt
+57/64 Test: docparse/args_0003.txt
+Command: "/usr/bin/bash" "/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/with_stage1_test_env.sh" "/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/docparse/run_test.sh" "args_0003.txt"
+Directory: /home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/docparse
+"docparse/args_0003.txt" start time: Jul 23 04:12 UTC
+Output:
+----------------------------------------------------------
+++ lean -Dlinter.all=false --run run_test.lean args_0003.txt
+/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/util.sh: line 94: 491883 Aborted                    (core dumped) "${@}" > "$CAPTURED.out.produced" 2>&1
+libc++abi: terminating due to uncaught exception of type lean::exception: failed to create thread
+[1m--- args_0003.txt.out.expected	2026-05-26 08:34:15.000000000 +0000[0m
+[1m+++ args_0003.txt.out.produced	2026-07-23 04:12:16.494941751 +0000[0m
+[36m@@ -1,9 +1 @@[0m
+[31m-Success! Final stack:[0m
+[31m-  [(Lean.Doc.Syntax.named_no_paren[0m
+[31m-    `dialect[0m
+[31m-    ":="[0m
+[31m-    (Lean.Doc.Syntax.arg_str (str "\"chicken\"")))[0m
+[31m-   (Lean.Doc.Syntax.anon[0m
+[31m-    (Lean.Doc.Syntax.arg_num (num "43")))][0m
+[31m-Remaining:[0m
+[31m-"\n(foo)"[0m
+\ No newline at end of file
+[32m+libc++abi: terminating due to uncaught exception of type lean::exception: failed to create thread[0m
+TEST FAILED: Unexpected output
+<end of output>
+Test time =   0.24 sec
+----------------------------------------------------------
+Test Failed.
+"docparse/args_0003.txt" end time: Jul 23 04:12 UTC
+"docparse/args_0003.txt" time elapsed: 00:00:00
+----------------------------------------------------------
+
+58/64 Testing: docparse/blockOpener_0001.txt
+58/64 Test: docparse/blockOpener_0001.txt
+Command: "/usr/bin/bash" "/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/with_stage1_test_env.sh" "/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/docparse/run_test.sh" "blockOpener_0001.txt"
+Directory: /home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/docparse
+"docparse/blockOpener_0001.txt" start time: Jul 23 04:12 UTC
+Output:
+----------------------------------------------------------
+++ lean -Dlinter.all=false --run run_test.lean blockOpener_0001.txt
+/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/util.sh: line 94: 491913 Aborted                    (core dumped) "${@}" > "$CAPTURED.out.produced" 2>&1
+libc++abi: terminating due to uncaught exception of type lean::exception: failed to create thread
+[1m--- blockOpener_0001.txt.out.expected	2026-05-26 08:34:15.000000000 +0000[0m
+[1m+++ blockOpener_0001.txt.out.produced	2026-07-23 04:12:16.732941704 +0000[0m
+[36m@@ -1,4 +1 @@[0m
+[31m-Success! Final stack:[0m
+[31m- empty[0m
+[31m-Remaining:[0m
+[31m-"abc"[0m
+\ No newline at end of file
+[32m+libc++abi: terminating due to uncaught exception of type lean::exception: failed to create thread[0m
+TEST FAILED: Unexpected output
+<end of output>
+Test time =   0.24 sec
+----------------------------------------------------------
+Test Failed.
+"docparse/blockOpener_0001.txt" end time: Jul 23 04:12 UTC
+"docparse/blockOpener_0001.txt" time elapsed: 00:00:00
+----------------------------------------------------------
+
+59/64 Testing: docparse/blockOpener_0002.txt
+59/64 Test: docparse/blockOpener_0002.txt
+Command: "/usr/bin/bash" "/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/with_stage1_test_env.sh" "/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/docparse/run_test.sh" "blockOpener_0002.txt"
+Directory: /home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/docparse
+"docparse/blockOpener_0002.txt" start time: Jul 23 04:12 UTC
+Output:
+----------------------------------------------------------
+++ lean -Dlinter.all=false --run run_test.lean blockOpener_0002.txt
+/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/util.sh: line 94: 491937 Aborted                    (core dumped) "${@}" > "$CAPTURED.out.produced" 2>&1
+libc++abi: terminating due to uncaught exception of type lean::exception: failed to create thread
+[1m--- blockOpener_0002.txt.out.expected	2026-05-26 08:34:15.000000000 +0000[0m
+[1m+++ blockOpener_0002.txt.out.produced	2026-07-23 04:12:16.973941656 +0000[0m
+[36m@@ -1,4 +1 @@[0m
+[31m-Success! Final stack:[0m
+[31m- empty[0m
+[31m-Remaining:[0m
+[31m-"abc"[0m
+\ No newline at end of file
+[32m+libc++abi: terminating due to uncaught exception of type lean::exception: failed to create thread[0m
+TEST FAILED: Unexpected output
+<end of output>
+Test time =   0.24 sec
+----------------------------------------------------------
+Test Failed.
+"docparse/blockOpener_0002.txt" end time: Jul 23 04:12 UTC
+"docparse/blockOpener_0002.txt" time elapsed: 00:00:00
+----------------------------------------------------------
+
+60/64 Testing: docparse/blockOpener_0003.txt
+60/64 Test: docparse/blockOpener_0003.txt
+Command: "/usr/bin/bash" "/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/with_stage1_test_env.sh" "/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/docparse/run_test.sh" "blockOpener_0003.txt"
+Directory: /home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/docparse
+"docparse/blockOpener_0003.txt" start time: Jul 23 04:12 UTC
+Output:
+----------------------------------------------------------
+++ lean -Dlinter.all=false --run run_test.lean blockOpener_0003.txt
+/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/util.sh: line 94: 491999 Aborted                    (core dumped) "${@}" > "$CAPTURED.out.produced" 2>&1
+libc++abi: terminating due to uncaught exception of type lean::exception: failed to create thread
+[1m--- blockOpener_0003.txt.out.expected	2026-05-26 08:34:15.000000000 +0000[0m
+[1m+++ blockOpener_0003.txt.out.produced	2026-07-23 04:12:17.204941610 +0000[0m
+[36m@@ -1,4 +1 @@[0m
+[31m-Success! Final stack:[0m
+[31m- empty[0m
+[31m-Remaining:[0m
+[31m-"abc"[0m
+\ No newline at end of file
+[32m+libc++abi: terminating due to uncaught exception of type lean::exception: failed to create thread[0m
+TEST FAILED: Unexpected output
+<end of output>
+Test time =   0.22 sec
+----------------------------------------------------------
+Test Failed.
+"docparse/blockOpener_0003.txt" end time: Jul 23 04:12 UTC
+"docparse/blockOpener_0003.txt" time elapsed: 00:00:00
+----------------------------------------------------------
+
+61/64 Testing: docparse/block_0001.txt
+61/64 Test: docparse/block_0001.txt
+Command: "/usr/bin/bash" "/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/with_stage1_test_env.sh" "/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/docparse/run_test.sh" "block_0001.txt"
+Directory: /home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/docparse
+"docparse/block_0001.txt" start time: Jul 23 04:12 UTC
+Output:
+----------------------------------------------------------
+++ lean -Dlinter.all=false --run run_test.lean block_0001.txt
+/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/util.sh: line 94: 492032 Aborted                    (core dumped) "${@}" > "$CAPTURED.out.produced" 2>&1
+libc++abi: terminating due to uncaught exception of type lean::exception: failed to create thread
+[1m--- block_0001.txt.out.expected	2026-05-26 08:34:15.000000000 +0000[0m
+[1m+++ block_0001.txt.out.produced	2026-07-23 04:12:17.427941565 +0000[0m
+[36m@@ -1,36 +1 @@[0m
+[31m-Success! Final stack:[0m
+[31m-  (Lean.Doc.Syntax.ul[0m
+[31m-   "ul{"[0m
+[31m-   [(Lean.Doc.Syntax.li[0m
+[31m-     "*"[0m
+[31m-     [(Lean.Doc.Syntax.para[0m
+[31m-       "para{"[0m
+[31m-       [(Lean.Doc.Syntax.text[0m
+[31m-         (str "\"Here's a bullet\""))][0m
+[31m-       "}")])[0m
+[31m-    (Lean.Doc.Syntax.li[0m
+[31m-     "*"[0m
+[31m-     [(Lean.Doc.Syntax.para[0m
+[31m-       "para{"[0m
+[31m-       [(Lean.Doc.Syntax.text[0m
+[31m-         (str[0m
+[31m-          "\"and another with some code in it\""))][0m
+[31m-       "}")[0m
+[31m-      (Lean.Doc.Syntax.codeblock[0m
+[31m-       "````"[0m
+[31m-       [`lean []][0m
+[31m-       "\n"[0m
+[31m-       (str "\"hey\\n\\nthere\\n\"")[0m
+[31m-       "````")])[0m
+[31m-    (Lean.Doc.Syntax.li[0m
+[31m-     "*"[0m
+[31m-     [(Lean.Doc.Syntax.para[0m
+[31m-       "para{"[0m
+[31m-       [(Lean.Doc.Syntax.text[0m
+[31m-         (str "\"and another one\""))[0m
+[31m-        (Lean.Doc.Syntax.linebreak[0m
+[31m-         "line!"[0m
+[31m-         (str "\"\\n\""))][0m
+[31m-       "}")])][0m
+[31m-   "}")[0m
+[31m-All input consumed.[0m
+\ No newline at end of file
+[32m+libc++abi: terminating due to uncaught exception of type lean::exception: failed to create thread[0m
+TEST FAILED: Unexpected output
+<end of output>
+Test time =   0.22 sec
+----------------------------------------------------------
+Test Failed.
+"docparse/block_0001.txt" end time: Jul 23 04:12 UTC
+"docparse/block_0001.txt" time elapsed: 00:00:00
+----------------------------------------------------------
+
+62/64 Testing: docparse/block_0002.txt
+62/64 Test: docparse/block_0002.txt
+Command: "/usr/bin/bash" "/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/with_stage1_test_env.sh" "/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/docparse/run_test.sh" "block_0002.txt"
+Directory: /home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/docparse
+"docparse/block_0002.txt" start time: Jul 23 04:12 UTC
+Output:
+----------------------------------------------------------
+++ lean -Dlinter.all=false --run run_test.lean block_0002.txt
+/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/util.sh: line 94: 492059 Aborted                    (core dumped) "${@}" > "$CAPTURED.out.produced" 2>&1
+libc++abi: terminating due to uncaught exception of type lean::exception: failed to create thread
+[1m--- block_0002.txt.out.expected	2026-05-26 08:34:15.000000000 +0000[0m
+[1m+++ block_0002.txt.out.produced	2026-07-23 04:12:17.667941517 +0000[0m
+[36m@@ -1,4 +1 @@[0m
+[31m-Success! Final stack:[0m
+[31m-  (Lean.Doc.Syntax.command "{" `test [] "}")[0m
+[31m-Remaining:[0m
+[31m-"Here's a paragraph."[0m
+\ No newline at end of file
+[32m+libc++abi: terminating due to uncaught exception of type lean::exception: failed to create thread[0m
+TEST FAILED: Unexpected output
+<end of output>
+Test time =   0.24 sec
+----------------------------------------------------------
+Test Failed.
+"docparse/block_0002.txt" end time: Jul 23 04:12 UTC
+"docparse/block_0002.txt" time elapsed: 00:00:00
+----------------------------------------------------------
+
+63/64 Testing: docparse/block_0003.txt
+63/64 Test: docparse/block_0003.txt
+Command: "/usr/bin/bash" "/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/with_stage1_test_env.sh" "/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/docparse/run_test.sh" "block_0003.txt"
+Directory: /home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/docparse
+"docparse/block_0003.txt" start time: Jul 23 04:12 UTC
+Output:
+----------------------------------------------------------
+++ lean -Dlinter.all=false --run run_test.lean block_0003.txt
+/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/util.sh: line 94: 492086 Aborted                    (core dumped) "${@}" > "$CAPTURED.out.produced" 2>&1
+libc++abi: terminating due to uncaught exception of type lean::exception: failed to create thread
+[1m--- block_0003.txt.out.expected	2026-05-26 08:34:15.000000000 +0000[0m
+[1m+++ block_0003.txt.out.produced	2026-07-23 04:12:17.904941470 +0000[0m
+[36m@@ -1,4 +1 @@[0m
+[31m-Success! Final stack:[0m
+[31m-  (Lean.Doc.Syntax.command "{" `test [] "}")[0m
+[31m-Remaining:[0m
+[31m-" Here's a paragraph."[0m
+\ No newline at end of file
+[32m+libc++abi: terminating due to uncaught exception of type lean::exception: failed to create thread[0m
+TEST FAILED: Unexpected output
+<end of output>
+Test time =   0.24 sec
+----------------------------------------------------------
+Test Failed.
+"docparse/block_0003.txt" end time: Jul 23 04:12 UTC
+"docparse/block_0003.txt" time elapsed: 00:00:00
+----------------------------------------------------------
+
+64/64 Testing: docparse/block_0004.txt
+64/64 Test: docparse/block_0004.txt
+Command: "/usr/bin/bash" "/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/with_stage1_test_env.sh" "/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/docparse/run_test.sh" "block_0004.txt"
+Directory: /home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/docparse
+"docparse/block_0004.txt" start time: Jul 23 04:12 UTC
+Output:
+----------------------------------------------------------
+++ lean -Dlinter.all=false --run run_test.lean block_0004.txt
+/home/mjbommar/.cache/axeyum-tl063-m2-r1-59108766/source/tests/util.sh: line 94: 492115 Aborted                    (core dumped) "${@}" > "$CAPTURED.out.produced" 2>&1
+libc++abi: terminating due to uncaught exception of type lean::exception: failed to create thread
+[1m--- block_0004.txt.out.expected	2026-05-26 08:34:15.000000000 +0000[0m
+[1m+++ block_0004.txt.out.produced	2026-07-23 04:12:18.151941421 +0000[0m
+[36m@@ -1,4 +1 @@[0m
+[31m-Success! Final stack:[0m
+[31m-  (Lean.Doc.Syntax.command "{" `test [] "}")[0m
+[31m-Remaining:[0m
+[31m-" Here's a paragraph."[0m
+\ No newline at end of file
+[32m+libc++abi: terminating due to uncaught exception of type lean::exception: failed to create thread[0m
+TEST FAILED: Unexpected output
+<end of output>
+Test time =   0.25 sec
+----------------------------------------------------------
+Test Failed.
+"docparse/block_0004.txt" end time: Jul 23 04:12 UTC
+"docparse/block_0004.txt" time elapsed: 00:00:00
+----------------------------------------------------------
+
+End testing: Jul 23 04:12 UTC
