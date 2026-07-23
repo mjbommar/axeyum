@@ -383,6 +383,20 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-22 — TL0.6.3 M2 is preregistered for one fresh 64-case shard; no
+  runner or process exists yet.** The source-first
+  [plan](docs/plan/lean-u2-official-execution-tl0.6.3-m2-shard-0001-plan-2026-07-22.md)
+  was committed and pushed at `16bd6f08` before implementation, harness
+  construction, discovery, or execution. It deterministically selects the
+  lowest-ordinal shard in the release Linux membership with zero historical
+  observations: ordinal 1, offsets `[64,128)`, 64 compile/compile-bench/
+  docparse cases. It freezes exact parent/shard/input/helper/toolchain
+  identities, a one-hour 8 GiB per-process/one-worker local lane, one attempt,
+  zero-or-64 conservative JUnit outcome publication, completion-last evidence,
+  thirteen mutation classes, and zero parent/provider/Axeyum/pair/performance/
+  terminal credit. Next: implement and offline-validate the adapter, commit and
+  push it separately, then consider the single authorized live attempt.
+
 - **2026-07-22 — TL0.6.3 M1 derives complete deterministic U2 child-shard
   scheduling with zero new outcomes or parity credit.** The source-first
   [plan](docs/plan/lean-u2-official-execution-tl0.6.3-m1-shard-plan-2026-07-22.md)
@@ -7693,6 +7707,13 @@ plan is built and committed on the current branch:
 | P5.5 | External target, measured | **DONE (bounded v1, ADR-0323--0338):** authenticated Tock capture plus eight rechecked dual-DRAT proofs and six replayed controls, UNKNOWN=0, DISAGREE=0. Query time 12.700 s; fresh outer wall 50.745 s; peak RSS 1,256,496 KiB; zero OOM deltas. The committed case study compares exact target validation, universal coverage, trust, effort, artifact boundaries, and limits. No Tock bug was found, so no upstream issue is applicable. This is not a speed or whole-kernel claim. |
 
 ## Changelog
+
+- **2026-07-22 — Preregistered TL0.6.3 M2's first fresh multi-case
+  execution.** The pushed plan selects derived shard `0001` by the frozen
+  lowest-ordinal zero-history rule, binds all 64 exact cases and the release
+  Linux provenance chain, and registers one hour/8 GiB/one worker with one
+  attempt and zero-or-64 outcome publication. No runner, harness, discovery,
+  or process has run; implementation must be committed and pushed separately.
 
 - **2026-07-22 — Completed TL0.6.3 M1's non-executed U2 child-shard
   derivation.** A separately pushed preregistration freezes exact ordered-list

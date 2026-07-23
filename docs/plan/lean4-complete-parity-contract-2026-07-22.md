@@ -438,6 +438,12 @@ attempt bindings and every new shard remain `not-run`. The historical M0 case
 is annotation only, so this derivation changes no U2 outcome, pair,
 performance, population, axis, gate, or parity credit.
 
+The pushed [M2 execution plan](lean-u2-official-execution-tl0.6.3-m2-shard-0001-plan-2026-07-22.md)
+now selects the lowest-ordinal 64-case shard with no historical observation and
+freezes one local attempt. Its adapter is not implemented, and no harness,
+discovery, or process has run; it therefore changes none of the preceding
+counts or claims.
+
 ## 8. Layer-specific equivalence
 
 One byte-comparison rule cannot cover the entire system:

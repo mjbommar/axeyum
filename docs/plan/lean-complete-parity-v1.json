@@ -108,6 +108,10 @@
           "detail": "Accepted M1 derivation result, exact source and output identities, mutation validation, explicit non-claims, and next execution handoff."
         },
         {
+          "path": "docs/plan/lean-u2-official-execution-tl0.6.3-m2-shard-0001-plan-2026-07-22.md",
+          "detail": "Pushed source-first execution plan for the lowest-ordinal 64-case shard with no historical observation; no harness, discovery, or test process has run."
+        },
+        {
           "path": "docs/plan/lean-execution-evidence-v1.json",
           "detail": "TL0.7.1 contract authority for explicit resource lanes, typed terminations, immutable run/attempt/case/artifact/completion records, and zero real outcomes."
         },
@@ -176,7 +180,7 @@
           "detail": "Pinned tests tree inventory and the required CTest/test-pile derivation rule."
         }
       ],
-      "residual": "Current execution coverage is four process attempts and two decided official outcomes for one unique case from a 3,678-case parent: one environment-induced failure and one pass, with zero Axeyum outcomes or pairs. Attempt 003 stopped before runner import and adds no outcome. M1 now partitions all eight official selections into five exact ordered memberships and 289 physical child shards, but every new shard and all 111 official attempts remain not run. Preregister and execute fresh child shards with exact executable/environment/resource/attempt/case/completion evidence, classify native surfaces, and run matched Axeyum cases; scheduling metadata and singleton retries do not increase population coverage."
+      "residual": "Current execution coverage is four process attempts and two decided official outcomes for one unique case from a 3,678-case parent: one environment-induced failure and one pass, with zero Axeyum outcomes or pairs. Attempt 003 stopped before runner import and adds no outcome. M1 partitions all eight official selections into five exact ordered memberships and 289 physical child shards, but every new shard and all 111 official attempts remain not run. M2 now preregisters the lowest-ordinal zero-history 64-case shard under a one-hour 8 GiB/one-worker local lane; its runner is not yet implemented and no harness, discovery, or process has run. Implement, validate, commit, and push that runner before the single authorized attempt; then classify native surfaces and run matched Axeyum cases. Scheduling metadata and singleton retries do not increase population coverage."
     },
     {
       "id": "U3",

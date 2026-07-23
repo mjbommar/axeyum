@@ -49,6 +49,10 @@ selections reduce to five exact ordered memberships and 289 bounded physical
 shards. The 461 selection-expanded and 6,451 attempt-expanded occurrences are
 reference multiplicities, not completed executions. All 111 attempts remain
 `not-run`, and no derived shard or ordered prefix is a representative sample.
+The separately pushed
+[`M2 plan`](lean-u2-official-execution-tl0.6.3-m2-shard-0001-plan-2026-07-22.md)
+selects the lowest-ordinal zero-history shard (64 cases) and freezes one local
+attempt, but its runner is not implemented and no harness or process has run.
 
 ## 2. What the SMT-LIB comparison actually says
 

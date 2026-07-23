@@ -191,6 +191,13 @@ Start at the root [`PLAN.md`](../../PLAN.md) (map + standing rules) and
   All 111 official attempts remain `not-run`; the historical M0 singleton is
   annotation only, so U2 execution, native pairing, performance, and parity
   credit do not advance.
+- [`lean-u2-official-execution-tl0.6.3-m2-shard-0001-plan-2026-07-22.md`](lean-u2-official-execution-tl0.6.3-m2-shard-0001-plan-2026-07-22.md) —
+  pushed source-first plan for the first fresh multi-case execution. It selects
+  the lowest-ordinal derived shard with no historical observation: 64 exact
+  compile, compile-bench, and docparse cases at membership offsets `[64,128)`.
+  The plan freezes a one-hour 8 GiB/one-worker local lane, zero-or-64 outcome
+  publication, one attempt, and all non-credit boundaries. No M2 runner,
+  harness, discovery, or test process exists yet.
 - [`lean-compatibility-v1.json`](lean-compatibility-v1.json) and generated
   [`Lean compatibility matrix`](generated/lean-compatibility.md) — TL0.2's
   executable eight-field assurance contract, K0-K6 profile gates, registered
