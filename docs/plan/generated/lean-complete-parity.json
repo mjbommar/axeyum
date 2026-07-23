@@ -4,7 +4,7 @@
   "source_identities": [
     {
       "path": ".github/workflows/ci.yml",
-      "sha256": "95ab70dd6dd16dad0b60019311427a7db2e514b1712ff36362933de0c5c180c9"
+      "sha256": "45baf258a92dd84ee767ebd0813dfab902e21fc0a82b3541abef97ba002cd44d"
     },
     {
       "path": "docs/plan/generated/lean-execution-evidence.md",
@@ -148,7 +148,7 @@
     },
     {
       "path": "scripts/gen-lean-complete-parity.py",
-      "sha256": "eb124068a3bd4c9ed7060f4c96fe26d0ece065a70d4e15260f64873c282670a3"
+      "sha256": "91f85261c641a63bd327cd06b3aa5734b21583f78bd5f6e4ec2eb16e7bf86d7e"
     },
     {
       "path": "scripts/gen-lean-execution-evidence.py",
@@ -187,6 +187,10 @@
       "sha256": "03502d99a007cbcb3a6b5ee76585694ad4a8eae39c753d3266fec8396ec65788"
     },
     {
+      "path": "scripts/lean_u2_official_execution_m2_run.py",
+      "sha256": "bb6d484f542369c42679c816deb5d7cce132dc57df22f1bbc64320026f4961e4"
+    },
+    {
       "path": "scripts/lean_u2_official_execution_m2_store.py",
       "sha256": "26bea458a5a29434a0013aab5c1733a6e5d41918a9d6ba4f370cc93e14c702c8"
     },
@@ -200,7 +204,7 @@
     },
     {
       "path": "scripts/tests/test_lean_complete_parity.py",
-      "sha256": "6a5243885cb79e0b96d2767f6c575b1e4111fc8411e8d50273805515d9122ca6"
+      "sha256": "e04de8b8aeab9ad9312759b55ec15fcf0fada1c6830f3c06a7256c52248547b9"
     },
     {
       "path": "scripts/tests/test_lean_execution_acceptance.py",
@@ -233,6 +237,10 @@
     {
       "path": "scripts/tests/test_lean_u2_official_execution_m2.py",
       "sha256": "3a33a6e3fd7e1cd42bf25127442b59f57c495226fed3edc19768c4cd2704f710"
+    },
+    {
+      "path": "scripts/tests/test_lean_u2_official_execution_m2_run.py",
+      "sha256": "1c86f48e432ba1988e7905239f766f458ea0ac051bda8a9b3e60072256292f2d"
     },
     {
       "path": "scripts/tests/test_lean_u2_official_execution_m2_store.py",
@@ -695,6 +703,13 @@
         "fixed_raw": 4,
         "fixed_artifacts": 2,
         "case_records": 64
+      },
+      "runner": {
+        "cases": 64,
+        "store_cases": 64,
+        "lane": "official-ctest-local-8g-lean-j1-shard64-v1",
+        "run_command_exposed": true,
+        "live_execution_observed": false
       }
     },
     "implementation_tasks": {
