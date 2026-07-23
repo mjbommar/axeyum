@@ -408,6 +408,26 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   exact v2 admission bytes, execute Axeyum, cvc5, and Bitwuzla sequentially
   under the frozen commands; stop on the first contradiction, disagreement,
   or evidence/identity failure.
+- **2026-07-22 — certified nested powers of pure rational-rate Bessel-J
+  products.** Wave twenty extends the multiplicity-weighted envelope to powers
+  around an entire finite product, provided every variable-dependent factor
+  inside the power is Bessel J. Nested positive integer multiplicities are
+  composed structurally in `u128` with proof-preserving saturation and no
+  expansion. Product squares/cubes, mixed inner powers, rational/polynomial
+  arguments, reflected signs, variable-free factors and denominators, both
+  infinities, a product exponent of `u32::MAX`, and three nested `u32::MAX`
+  exponents pass promptly; the pre-change hostile product exponent timed out.
+  Internal variable weights, modified-I factors, Bessel denominators, and zero
+  powers remain fail-closed or preserve their established exact result. A
+  10-case 80-digit mpmath check has maximum envelope-scaled error
+  0.00000890279693823; SymPy proves four prototypes and leaves the externally
+  weighted product square unevaluated. The thermally managed
+  561-unit/147-doctest suite passed (2946.95 s for units), with workspace
+  warning-denied Clippy (6.13 s warm), WASM (32.75 s), strict stable/nightly
+  rustdoc (1.89/1.86 s), links, whitespace, and owned-line formatting green.
+  Source `02f99a79` was integrated exactly by `0e44005b`. Next: resume broad
+  probing; variable weights inside product powers and quadratic-pole inverse Z
+  remain deliberately bounded follow-ups.
 - **2026-07-22 — certified positive-integer powers in rational-rate Bessel-J
   products.** Wave nineteen extends the fixed-order product envelope to
   `c·w(x)·∏Jₙᵢ(rᵢ(x))^mᵢ` for positive integer multiplicities: if exact
@@ -8514,6 +8534,12 @@ plan is built and committed on the current branch:
   R1/R2 history, a new run/evidence root, universal 512 MiB Lean runtime stacks
   from pinned source semantics, and the measured tiered artifact store. It
   authorizes one process only after separately pushed implementation gates.
+- **2026-07-22 — Added certified nested powers of rational-rate Bessel-J
+  products.** Powers around a pure finite Bessel-J product now distribute their
+  multiplicity structurally without expansion, including nested hostile public
+  exponents, while internal variable weights, modified-I factors, denominators,
+  and zero powers retain bounded behavior. CAS now has 561 units and 147
+  doctests.
 - **2026-07-22 — Added certified powered rational-rate Bessel-J product
   limits.** Positive integer powers now contribute multiplicity-weighted exact
   argument growth, closing `c·w(x)·∏Jₙᵢ(rᵢ(x))^mᵢ→0` whenever
