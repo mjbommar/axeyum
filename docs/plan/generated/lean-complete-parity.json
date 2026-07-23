@@ -4,7 +4,7 @@
   "source_identities": [
     {
       "path": ".github/workflows/ci.yml",
-      "sha256": "86aa2d5499fdf4e6da1163008999b1035397cb7bc2ce84a0ab494a2d952b9fcd"
+      "sha256": "1f722bd18bda365b7fae7a7b7e064230ab5debb2d8eb5902b1bd001193d1946b"
     },
     {
       "path": "docs/plan/generated/lean-execution-evidence.md",
@@ -196,7 +196,7 @@
     },
     {
       "path": "scripts/gen-lean-complete-parity.py",
-      "sha256": "cd219854116aa8493046e10c628d18b74a92a1ee6c2e958ac9f82a04d5842810"
+      "sha256": "5bccd0cf9c28677507bc538f7634509013f977ff39cfa58b9abdc470f99494b5"
     },
     {
       "path": "scripts/gen-lean-execution-evidence.py",
@@ -243,6 +243,10 @@
       "sha256": "617fbe051aeaa05b3408d060ed86b9efb5e229c594d33a14afa6fa9269e35771"
     },
     {
+      "path": "scripts/lean_u2_official_execution_m2_r4.py",
+      "sha256": "ff1f322ea8a01636330ef1a9a30fabc279bacb77685df80f2f6d39ae251bb771"
+    },
+    {
       "path": "scripts/lean_u2_official_execution_m2_run.py",
       "sha256": "5763298bb33c97baacc0c29d6cc67a8df2ece796f7ea182c59957f5be59eb593"
     },
@@ -260,7 +264,7 @@
     },
     {
       "path": "scripts/tests/test_lean_complete_parity.py",
-      "sha256": "472a3ba7d9995d569d5351c4ca2666e5859793643c632a52008dda0b4ca3a340"
+      "sha256": "a9d90c894930b4c915be801955f7ee5798a48db4f260d428197703e250a98943"
     },
     {
       "path": "scripts/tests/test_lean_execution_acceptance.py",
@@ -301,6 +305,10 @@
     {
       "path": "scripts/tests/test_lean_u2_official_execution_m2_r3.py",
       "sha256": "451c91b6d1d70d924b4cdafbc65c139387ec5469ad064f58c6e9461cf8aa05b2"
+    },
+    {
+      "path": "scripts/tests/test_lean_u2_official_execution_m2_r4.py",
+      "sha256": "8bdc8f7bb182438f9903dfb36320a3f67cf16e894b5e529735bacffb0b9525bc"
     },
     {
       "path": "scripts/tests/test_lean_u2_official_execution_m2_run.py",
@@ -781,6 +789,14 @@
         "cases": 64,
         "generated": 124,
         "wrapper_sha256": "72a3f56f52374398cbc1d51a930e140c6cb13c106708507df0b4c31210f42e4b",
+        "selected_processes": 0,
+        "outcomes": 0,
+        "parity": 0
+      },
+      "r4": {
+        "cases": 64,
+        "generated": 124,
+        "memory_limit_bytes": 17179869184,
         "selected_processes": 0,
         "outcomes": 0,
         "parity": 0
