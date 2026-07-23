@@ -26,6 +26,7 @@ from full_population import (
     build_schedule,
     validate_schedule,
 )
+from full_preflight import validate_full_preflight
 from full_readiness import validate_readiness
 from multi_host import (
     build_host_command,
@@ -48,7 +49,7 @@ from resume_runner import (
 
 SELECTION_SCHEMA = "axeyum.smtcomp-credited-full-selection-preparation.v1"
 COMPOSITION_SCHEMA = "axeyum.smtcomp-credited-full-cell-composition.v1"
-PREPARATION_SCHEMA = "axeyum.smtcomp-credited-full-preparation.v1"
+PREPARATION_SCHEMA = "axeyum.smtcomp-credited-full-preparation.v2"
 ACCEPTED_COMPLETION_SHA256 = (
     "322adaa78396bf42d4660d12582e6db1cf2166a765bb912fdfb179975a9c9698"
 )
@@ -87,6 +88,7 @@ PREPARATION_FIELDS = {
     "selection_record_sha256",
     "composition_record_sha256",
     "readiness_record_sha256",
+    "preflight_record_sha256",
     "source_root",
     "source_identity_path",
     "source_identity_record_sha256",
@@ -676,6 +678,7 @@ def publish_full_preparation_candidate(
     selection: dict[str, Any],
     composition: dict[str, Any],
     readiness: dict[str, Any],
+    preflight: dict[str, Any],
     solver_cells: list[FullSolverCell],
     prepared_at_ns: int | None = None,
 ) -> dict[str, Any]:
@@ -684,6 +687,9 @@ def publish_full_preparation_candidate(
     attempt = attempt_root.resolve(strict=True)
     source = source_root.resolve(strict=True)
     source_identity_path = source_identity_manifest.resolve(strict=True)
+    timestamp = time.time_ns() if prepared_at_ns is None else prepared_at_ns
+    if type(timestamp) is not int or timestamp <= 0:
+        raise ContractError("invalid full preparation timestamp")
     if (attempt / "complete.json").exists():
         raise ContractError("full preparation candidate is already complete")
     validate_full_selection(selection)
@@ -694,9 +700,12 @@ def publish_full_preparation_candidate(
     )
     validate_readiness(readiness, repository_root=repository_root)
     fixture_only = selection["fixture_only"]
+    if not isinstance(preflight, dict):
+        raise ContractError("full preparation preflight type mismatch")
     if (
         composition["fixture_only"] is not fixture_only
         or readiness["fixture_only"] is not fixture_only
+        or preflight.get("fixture_only") is not fixture_only
         or composition["attempt_root"] != str(attempt)
         or (not fixture_only and readiness["ready_for_live_preparation"] is not True)
     ):
@@ -742,9 +751,15 @@ def publish_full_preparation_candidate(
                 "sha256": observed_sha256,
             }
         )
-    timestamp = time.time_ns() if prepared_at_ns is None else prepared_at_ns
-    if type(timestamp) is not int or timestamp <= 0:
-        raise ContractError("invalid full preparation timestamp")
+    binary_paths = {cell.solver_id: cell.binary for cell in solver_cells}
+    validate_full_preflight(
+        preflight,
+        attempt_root=attempt,
+        composition=composition,
+        solver_binaries=binary_paths,
+        prepared_at_ns=timestamp,
+    )
+    atomic_install_json(inputs, "full-preflight.json", preflight)
     _reject_execution_evidence(attempt)
     completion_path = attempt / "complete.json"
     artifacts = [
@@ -763,6 +778,7 @@ def publish_full_preparation_candidate(
             "selection_record_sha256": selection["record_sha256"],
             "composition_record_sha256": composition["record_sha256"],
             "readiness_record_sha256": readiness["record_sha256"],
+            "preflight_record_sha256": preflight["record_sha256"],
             "source_root": str(source),
             "source_identity_path": str(source_identity_path),
             "source_identity_record_sha256": source_identity["record_sha256"],
@@ -809,6 +825,9 @@ def validate_full_preparation(
     selection = read_canonical_json(inputs / "full-selection-preparation.json")
     composition = read_canonical_json(inputs / "full-cell-composition.json")
     readiness = read_canonical_json(inputs / "full-readiness.json")
+    preflight = read_canonical_json(inputs / "full-preflight.json")
+    if not isinstance(preflight, dict):
+        raise ContractError("full preparation preflight type mismatch")
     validate_full_selection(selection)
     validate_full_cell_composition(
         composition,
@@ -838,6 +857,7 @@ def validate_full_preparation(
         completion["selection_record_sha256"] != selection["record_sha256"]
         or completion["composition_record_sha256"] != composition["record_sha256"]
         or completion["readiness_record_sha256"] != readiness["record_sha256"]
+        or completion["preflight_record_sha256"] != preflight.get("record_sha256")
         or completion["source_identity_record_sha256"]
         != source_identity["record_sha256"]
         or completion["source_bundle_record_sha256"]
@@ -847,6 +867,7 @@ def validate_full_preparation(
         or selection["fixture_only"] is not fixture_only
         or composition["fixture_only"] is not fixture_only
         or readiness["fixture_only"] is not fixture_only
+        or preflight.get("fixture_only") is not fixture_only
         or (not fixture_only and readiness["ready_for_live_preparation"] is not True)
     ):
         raise ContractError("full preparation component identity mismatch")
@@ -883,6 +904,13 @@ def validate_full_preparation(
             )
         ):
             raise ContractError("full preparation binary artifact drift")
+    validate_full_preflight(
+        preflight,
+        attempt_root=attempt,
+        composition=composition,
+        solver_binaries={row["solver_id"]: Path(row["path"]) for row in binaries},
+        prepared_at_ns=completion["prepared_at_ns"],
+    )
     artifact_rows = completion.get("artifacts")
     if not isinstance(artifact_rows, list):
         raise ContractError("full preparation artifact ledger mismatch")

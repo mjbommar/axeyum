@@ -31,8 +31,10 @@ DEFAULT_REQUIRED_PATHS = (
     "scripts/check-smtcomp-resume.sh",
     "scripts/smtcomp_repro/full_execute.py",
     "scripts/smtcomp_repro/full_population.py",
+    "scripts/smtcomp_repro/full_preflight.py",
     "scripts/smtcomp_repro/full_prepare.py",
     "scripts/smtcomp_repro/full_readiness.py",
+    "scripts/smtcomp_repro/incident_sentinels.py",
     "scripts/smtcomp_repro/multi_host.py",
     "scripts/tests/test_smtcomp_full_population.py",
 )

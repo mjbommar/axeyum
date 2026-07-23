@@ -50,19 +50,33 @@ from full_prepare import (  # noqa: E402
 )
 from full_execute import WaveHandle, supervise_one_wave  # noqa: E402
 import full_prepare as full_prepare_module  # noqa: E402
+from full_preflight import (  # noqa: E402
+    PREFLIGHT_MAX_AGE_NS,
+    build_full_preflight,
+    validate_full_preflight,
+)
 from full_readiness import (  # noqa: E402
     DEFAULT_REQUIRED_PATHS,
     build_gate_observation,
     build_readiness,
     validate_readiness,
 )
+from incident_sentinels import (  # noqa: E402
+    SENTINEL_ROWS,
+    SENTINEL_SCHEMA,
+    SOLVER_ENVIRONMENT,
+    seal_sentinel,
+)
 import multi_host as multi_host_module  # noqa: E402
 from multi_host import (  # noqa: E402
+    OBSERVATION_SCHEMA,
     PLAN_SCHEMA,
     REGISTRATION_SCHEMA,
     TRANSPORT,
     stop_remote_unit,
     stage_execution_bundle,
+    environment_manifest,
+    host_registration,
     validate_plan,
 )
 from resource_enforcement import MULTI_HOST_KIND  # noqa: E402
@@ -179,6 +193,65 @@ def readiness_repository(
         check=True,
     )
     return required
+
+
+def incident_sentinel_fixture(
+    *, attempt: Path, binaries: dict[str, Path], started_at_ns: int
+) -> list[dict]:
+    inputs = attempt / "inputs" / "sentinels"
+    outputs = attempt / "sentinels" / "outputs"
+    inputs.mkdir(parents=True)
+    outputs.mkdir(parents=True)
+    sentinel_paths = {}
+    records = []
+    for index, (sentinel_id, kind, solver_id) in enumerate(SENTINEL_ROWS):
+        sentinel_path = sentinel_paths.get(sentinel_id)
+        if sentinel_path is None:
+            sentinel_path = inputs / f"{sentinel_id}.smt2"
+            sentinel_path.write_text(f"; fixture {kind}\n(check-sat)\n", encoding="utf-8")
+            sentinel_paths[sentinel_id] = sentinel_path
+        status = "unsat" if kind != "qf_auflia" else (
+            "unknown" if solver_id == "axeyum" else "sat"
+        )
+        stdout_path = outputs / f"{sentinel_id}-{solver_id}.stdout"
+        stderr_path = outputs / f"{sentinel_id}-{solver_id}.stderr"
+        stdout_path.write_text(f"{status}\n", encoding="ascii")
+        stderr_path.write_bytes(b"")
+        command = [str(binaries[solver_id]), str(sentinel_path)]
+        if solver_id == "axeyum":
+            command.extend(["--timeout-ms", "19000"])
+        observed_at = started_at_ns + index * 10
+        records.append(
+            seal_sentinel(
+                {
+                    "schema": SENTINEL_SCHEMA,
+                    "sentinel_id": sentinel_id,
+                    "sentinel_kind": kind,
+                    "sentinel_path": str(sentinel_path),
+                    "sentinel_sha256": sha256_file(sentinel_path),
+                    "solver_id": solver_id,
+                    "solver_binary_sha256": sha256_file(binaries[solver_id]),
+                    "command_sha256": digest(command),
+                    "environment_sha256": digest(SOLVER_ENVIRONMENT),
+                    "observed_status": status,
+                    "termination_class": "completed",
+                    "exit_code": 0,
+                    "signal": None,
+                    "resource_limit_kind": None,
+                    "started_at_ns": observed_at,
+                    "ended_at_ns": observed_at + 1,
+                    "wall_time_ns": 1,
+                    "runner_elapsed_ns": 1,
+                    "stdout_path": str(stdout_path),
+                    "stdout_sha256": sha256_file(stdout_path),
+                    "stdout_bytes": stdout_path.stat().st_size,
+                    "stderr_path": str(stderr_path),
+                    "stderr_sha256": sha256_file(stderr_path),
+                    "stderr_bytes": stderr_path.stat().st_size,
+                }
+            )
+        )
+    return records
 
 
 class FullPopulationContractTests(unittest.TestCase):
@@ -831,28 +904,45 @@ class FullPopulationContractTests(unittest.TestCase):
             corpus_manifest = selection_dir / "corpus.json"
             environment_manifest = selection_dir / "environment.json"
             corpus_manifest.write_bytes(canonical_bytes({"fixture": "corpus"}))
-            environment_manifest.write_bytes(canonical_bytes({"fixture": "environment"}))
-            environment_sha = sha256_file(environment_manifest)
-            filesystem_sha = "f" * 64
-            registrations = [
+            filesystem = {
+                "source": "fixture:/shared",
+                "filesystem_type": "nfs4",
+                "mount_point": str(shared),
+                "options": ["hard", "local_lock=none", "vers=4.1"],
+            }
+            filesystem["class_sha256"] = digest(filesystem)
+            filesystem_sha = filesystem["class_sha256"]
+            observations = [
                 reseal(
                     {
-                        "schema": REGISTRATION_SCHEMA,
-                        "host_id": host_id,
-                        "ssh_target": host_id,
+                        "schema": OBSERVATION_SCHEMA,
                         "hostname": f"server-{host_id}",
                         "kernel_release": "fixture-kernel",
                         "machine": "x86_64",
                         "python_version": "3.fixture",
-                        "python_executable_sha256": "1" * 64,
+                        "python_executable_sha256": sha256_file(
+                            Path(sys.executable).resolve()
+                        ),
                         "toolchain_identity_sha256": "2" * 64,
                         "cgroup_controllers": ["cpu", "io", "memory", "pids"],
                         "user_systemd_transient": True,
+                        "shared_filesystem": filesystem,
                         "shared_filesystem_class_sha256": filesystem_sha,
-                        "environment_class_sha256": environment_sha,
                     }
                 )
                 for host_id in HOST_IDS
+            ]
+            environment = multi_host_module.environment_manifest(observations)
+            environment_manifest.write_bytes(canonical_bytes(environment))
+            environment_sha = sha256_file(environment_manifest)
+            registrations = [
+                host_registration(
+                    host_id=host_id,
+                    ssh_target=host_id,
+                    observation=observation,
+                    environment_sha256=environment_sha,
+                )
+                for host_id, observation in zip(HOST_IDS, observations, strict=True)
             ]
             fixture_root = root / "empty-fixtures"
             fixture_root.mkdir()
@@ -957,6 +1047,103 @@ class FullPopulationContractTests(unittest.TestCase):
                 required_paths=("scripts/smtcomp_repro/full_population.py",),
                 fixture_only=True,
             )
+            binaries_by_solver = {
+                cell.solver_id: cell.binary for cell in cells
+            }
+            sentinel_records = incident_sentinel_fixture(
+                attempt=attempt,
+                binaries=binaries_by_solver,
+                started_at_ns=5000,
+            )
+            preflight = build_full_preflight(
+                attempt_root=attempt,
+                environment_path=environment_manifest,
+                composition=composition,
+                solver_binaries=binaries_by_solver,
+                host_observations=observations,
+                sentinel_records=sentinel_records,
+                started_at_ns=4900,
+                ended_at_ns=5100,
+                fixture_only=True,
+            )
+            reordered = copy.deepcopy(preflight)
+            reordered["sentinel_records"][0], reordered["sentinel_records"][1] = (
+                reordered["sentinel_records"][1],
+                reordered["sentinel_records"][0],
+            )
+            with self.assertRaisesRegex(ContractError, "order/identity"):
+                validate_full_preflight(
+                    reseal(reordered),
+                    attempt_root=attempt,
+                    composition=composition,
+                    solver_binaries=binaries_by_solver,
+                    prepared_at_ns=5200,
+                )
+            missing = copy.deepcopy(preflight)
+            missing["sentinel_records"].pop()
+            with self.assertRaisesRegex(ContractError, "row inventory"):
+                validate_full_preflight(
+                    reseal(missing),
+                    attempt_root=attempt,
+                    composition=composition,
+                    solver_binaries=binaries_by_solver,
+                    prepared_at_ns=5200,
+                )
+            duplicate = copy.deepcopy(preflight)
+            duplicate["sentinel_records"][-1] = copy.deepcopy(
+                duplicate["sentinel_records"][0]
+            )
+            with self.assertRaisesRegex(ContractError, "order/identity"):
+                validate_full_preflight(
+                    reseal(duplicate),
+                    attempt_root=attempt,
+                    composition=composition,
+                    solver_binaries=binaries_by_solver,
+                    prepared_at_ns=5200,
+                )
+            host_drift = copy.deepcopy(preflight)
+            host_drift["host_observations"][0]["hostname"] = "other-host"
+            host_drift["host_observations"][0] = reseal(
+                host_drift["host_observations"][0]
+            )
+            with self.assertRaises(ContractError):
+                validate_full_preflight(
+                    reseal(host_drift),
+                    attempt_root=attempt,
+                    composition=composition,
+                    solver_binaries=binaries_by_solver,
+                    prepared_at_ns=5200,
+                )
+            unsafe = copy.deepcopy(preflight)
+            unsafe_stdout = Path(unsafe["sentinel_records"][0]["stdout_path"])
+            unsafe_stdout.write_bytes(b"sat\n")
+            unsafe["sentinel_records"][0]["observed_status"] = "sat"
+            unsafe["sentinel_records"][0]["stdout_sha256"] = sha256_file(
+                unsafe_stdout
+            )
+            unsafe["sentinel_records"][0]["stdout_bytes"] = (
+                unsafe_stdout.stat().st_size
+            )
+            unsafe["sentinel_records"][0] = seal_sentinel(
+                unsafe["sentinel_records"][0]
+            )
+            with self.assertRaisesRegex(ContractError, "outcome is unsafe"):
+                validate_full_preflight(
+                    reseal(unsafe),
+                    attempt_root=attempt,
+                    composition=composition,
+                    solver_binaries=binaries_by_solver,
+                    prepared_at_ns=5200,
+                )
+            unsafe_stdout.write_bytes(b"unsat\n")
+            with self.assertRaisesRegex(ContractError, "outside capture window"):
+                validate_full_preflight(
+                    preflight,
+                    attempt_root=attempt,
+                    composition=composition,
+                    solver_binaries=binaries_by_solver,
+                    prepared_at_ns=4900 + PREFLIGHT_MAX_AGE_NS + 1,
+                )
             original_install = full_prepare_module.atomic_install_json
             with mock.patch.object(
                 full_prepare_module,
@@ -971,8 +1158,9 @@ class FullPopulationContractTests(unittest.TestCase):
                     selection=selection,
                     composition=composition,
                     readiness=readiness,
+                    preflight=preflight,
                     solver_cells=cells,
-                    prepared_at_ns=4000,
+                    prepared_at_ns=5200,
                 )
             self.assertEqual(install.call_args_list[-1].args[1], "complete.json")
             self.assertEqual(completion["status"], "prepared-no-launch")
@@ -995,6 +1183,15 @@ class FullPopulationContractTests(unittest.TestCase):
                     inspect_shared_root=False,
                 )
             evidence.unlink()
+            sentinel_stdout = Path(sentinel_records[0]["stdout_path"])
+            sentinel_stdout.write_bytes(b"sat\n")
+            with self.assertRaises(ContractError):
+                validate_full_preparation(
+                    attempt,
+                    repository_root=ROOT,
+                    inspect_shared_root=False,
+                )
+            sentinel_stdout.write_bytes(b"unsat\n")
             binaries[0].write_bytes(b"mutated solver")
             with self.assertRaises(ContractError):
                 validate_full_preparation(
