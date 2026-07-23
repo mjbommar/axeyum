@@ -367,4 +367,9 @@ tests, static/resource/profile/recovery gates, and 225/225 direct-Z3 joint
 differential are green, with 207/207 SAT replay. Acceptance is blocked only by
 the cross-lane Lean parity-evidence worktree-path drift recorded in the
 measurement note; do not rewrite that lane's retained evidence here. The
-eleven residual seeds remain separate.*
+eleven residual seeds remain separate. Their first exact follow-up is now
+[measured](../quantified-uflia-evaluated-scalar-measurement-2026-07-23.md):
+proposed ADR-0361 adds only initial UF-result and evaluable exact-source integer
+values to ADR-0360's pool and checks three more models under the unchanged
+16-value/256-tuple caps. Implement only that preregistered search-hint change;
+the remaining eight seeds stay separate.*
