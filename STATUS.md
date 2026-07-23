@@ -637,6 +637,14 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   publish the branch and implement the separately reviewed bounded
   multi-binder finite-profile increment.
 
+- **2026-07-22 — ADR-0358 preregisters the multi-binder MBQI functionality
+  increment.** The checker will flatten one leading block of at most 16 distinct
+  `Int`/`Real` universals, derive each binder's representatives from its exact
+  UF argument positions, and replay the complete Cartesian product under the
+  existing 4,096-profile cap. Search remains untrusted and the first widening
+  is SAT-only; failed certification returns to existing E-matching rather than
+  adding an implicit multi-variable refutation heuristic.
+
 - **2026-07-22 — ADR-0356 S4 official selection identity is complete; S5 is
   deliberately not blocking solver functionality.** The accepted root
   `/nas3/data/axeyum/harness/official-selection-2026-sq/accepted-322adaa78396bf42d4660d12582e6db1cf2166a765bb912fdfb179975a9c9698`
