@@ -350,9 +350,8 @@ gate.
    now closes that boundary: all populations account, zero known-status
    contradictions and zero cross-solver disagreements remain, and the
    self-sealed JSON/Markdown reproduce from the three validated roots.
-3. **Credited full population — F1 and the complete process-free F2 preflight
-   implementation are integrated; process-free result publication is
-   topic-ready.** The
+3. **Credited full population — F1, the complete process-free F2 preflight, and
+   process-free result publication are integrated.** The
    [full-population plan](../smtcomp-credited-full-population-plan-2026-07-23.md)
    freezes the same 45,905-file selection for all three solvers, a 96-shard/
    48-allocation wave schedule, six-worker aggregate/16-GiB-per-host resource envelope,
@@ -371,8 +370,9 @@ gate.
    sentinels and byte sidecars, safe outcomes, and a 30-minute publication
    window. The full batch landed by merge `1b8ae016`. Lean R7 is also integrated
    by merge `9fe5cab6`; live preparation remains blocked by out-of-lane bench/CAS
-   format drift. Topic commits `e7c05374` and `d7c78371` add completion-last
-   external cell results and exact native/per-logic/pairwise/three-way
+   format drift. Commits `e7c05374` and `d7c78371`, integrated by merges
+   `f65f4647` and `c4d9050a`, add completion-last external cell results and
+   exact native/per-logic/pairwise/three-way
    same-population comparison with interruption replay and rejecting mutations.
    The [publication fixture](../smtcomp-credited-full-publication-fixture-2026-07-23.md)
    records the boundary. It does not construct live F3 execution authority or
@@ -484,9 +484,9 @@ NAS (shared, corpus read-only in practice):
    The credited full-population F1 fixture result and supervised-wave bytes are
    integrated. Its complete F2 process-free preparation mechanism, including
    explicit semantic host/sentinel preflight, is integrated by merge
-   `1b8ae016`; no live root has been published. Revalidate the exact current
-   `origin/main`, integrate the process-free cell-result/comparison bytes,
-   require both registered gates to be green, then perform the
+   `1b8ae016`; the process-free cell-result/comparison bytes are also integrated
+   by `c4d9050a`, and no live root has been published. Revalidate the exact
+   current `origin/main`, require both registered gates to be green, then perform the
    separately reviewed host/sentinel capture and publish only a process-free
    `launch_authorized=false` root inside its frozen 30-minute window. Do not
    probe hosts, mutate the NAS, or launch a solver allocation while

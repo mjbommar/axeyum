@@ -391,18 +391,13 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   environment from captured observations, replays the ordered eight incident
   sentinels including byte sidecars and semantic outcomes, enforces a 30-minute
   publication window, and binds the result into completion schema v2. The
-  Topic commits `e7c05374` and `d7c78371` now add the previously missing
-  completion-last external cell result and exact same-population comparison
-  mechanisms. Eleven focused publication tests and the expanded 126-test
-  portable gate pass with one expected live-host skip.
   Merges `f65f4647` and `c4d9050a` integrate commits `e7c05374` and `d7c78371`'s
   previously missing completion-last external cell result and exact
   same-population comparison mechanisms. Eleven focused publication tests and
   the expanded 126-test portable gate pass with one expected live-host skip.
   Lean R7 is integrated by merge `9fe5cab6`; the remaining current mainline
-  blocker is out-of-lane formatting drift. Next: integrate the publication
-  fixture, wait for that repair, rebase, run both exact readiness gates, perform
-  the separately reviewed
+  blocker is out-of-lane formatting drift. Next: wait for that repair, rebase,
+  run both exact readiness gates, perform the separately reviewed
   host/sentinel capture, and publish only an empty `launch_authorized=false`
   preparation inside that frozen window. No host probe, NAS mutation,
   allocation, or solver launch is authorized before that boundary.
@@ -8656,7 +8651,6 @@ plan is built and committed on the current branch:
 
 - **2026-07-23 — Implemented completion-last credited-full cell results and
   same-population comparison; no live execution occurred.** Commits `e7c05374`
-  and `d7c78371` add the process-free publication boundary omitted from the
   and `d7c78371`, integrated by merges `f65f4647` and `c4d9050a`, add the
   process-free publication boundary omitted from the
   initial F1 fixture. A cell result binds preparation/selection/run/plan/
