@@ -380,8 +380,8 @@ prior decisions. The 256-case production gate reaches 227/227 agreement and
 workspace, lint, documentation, resource, profile, recovery, reflection,
 benchmark, public QF_BV, rules, and link gates pass. ADR-0361 remains proposed:
 the non-CI solver aggregate reproducibly misses its hardware-relative LIA
-frontier ratchet, the CI-mode aggregate has one late load-sensitive word/Int
-test that passes in isolation and as a complete test binary, and the rebased
+frontier ratchet. A fresh uninterrupted CI-mode aggregate clears the earlier
+load-sensitive word/Int transient. The rebased
 Lean parity gate still rejects retained `exit-zero-4g` evidence for run/spec
 attribution drift. Keep those branch-gate observations separate from the green
 227-case semantic result and do not rewrite Lean-owned retained evidence here.
@@ -395,4 +395,8 @@ certification fails, then continues ADR-0360, ordinary MBQI, E-matching, and
 ADR-0361 on decline. The prototype reaches 228/228 agreement and 210/210 SAT
 replay, adds seed 111 at `-5`, preserves seed 145, and does not authorize
 multi-value or two-symbol recursive search, cap growth, or general function
-synthesis.*
+synthesis. Commit `f380d1b3` implements that exact boundary. Focused controls,
+the strengthened differential, solver Clippy, strict rustdoc, and one
+uninterrupted CI-mode full solver-package run pass. ADR-0362 remains proposed
+only on the unchanged Lean-owned retained `exit-zero-4g` run/spec attribution
+drift; do not rewrite that evidence in this lane.*

@@ -90,19 +90,21 @@ package, foundational resources, QF_BV profile, SMT-COMP recovery, reflection
 semantics, benchmark-repetition tests, the pinned 162-file Glaurung QF_BV pack,
 rules-as-code, and documentation links also pass.
 
-Two solver-package observations prevent accepting ADR-0361 at this checkpoint:
+One solver-package observation still prevents accepting ADR-0361 at this
+checkpoint:
 
 - A non-CI full solver-package run reaches `progress_frontier` and reproduces a
   hardware-relative `frontier_lia_cuts` ratchet miss: size 25 exceeds four
   seconds while size 26 completes in about 26 ms, so the measured frontier is
   24 versus the committed 26. The test's documented `CI=1` mode skips this
   noisy ratchet while retaining the curve diagnostic.
-- The CI-mode full solver-package run passes that frontier and all changed
-  quantified-UF coverage, then reports one late load-sensitive failure in
-  `from_int_type002_arith_bound_is_sat`. The exact test immediately passes in
-  1.18 seconds and its complete 14-test integration binary passes 14/14 in
-  4.06 seconds. This is not a reproduced correctness regression, but it is not
-  a clean uninterrupted aggregate run either.
+
+The initial CI-mode aggregate recorded one late load-sensitive failure in
+`from_int_type002_arith_bound_is_sat`; exact and whole-binary reruns passed. A
+fresh uninterrupted CI-mode full solver-package run after ADR-0362 now passes
+every non-ignored test, including that complete 14-test binary in 4.04 seconds.
+The transient is therefore not a current blocker; the non-CI hardware-relative
+frontier ratchet remains.
 
 The rebased `just parity-docs` gate independently remains red in the Lean-owned
 retained evidence check with
