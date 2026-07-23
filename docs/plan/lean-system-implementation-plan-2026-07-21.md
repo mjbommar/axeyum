@@ -218,7 +218,15 @@ next action is a new preregistered larger-lane qualification with retained
 failed-control evidence. The source-first
 [R5 plan](lean-u2-official-execution-tl0.6.3-m2-r5-attempt-003-plan-2026-07-23.md)
 now freezes 32 GiB and completion-grade control evidence while preserving the
-still-unconsumed selected attempt and every non-resource boundary.
+still-unconsumed selected attempt and every non-resource boundary. Its
+[incomplete result](lean-u2-official-execution-tl0.6.3-m2-r5-attempt-003-incomplete-result-2026-07-23.md)
+then consumed attempt 003 with a clean 64/64 JUnit but stopped because the
+unconditional 124-path contract did not admit all-pass CTest's absent
+`LastTestsFailed.log`. The separate
+[diagnostic result](lean-u2-official-execution-tl0.6.3-m2-r5-diagnostic-closure-result-2026-07-23.md)
+now binds the exact 123 generated rows and appends 68 completion-last files with
+zero processes/outcomes. R5 is closed. Next preregister attempt 004 with fresh
+roots and conditional failure-log semantics; do not promote or rerun R5.
 
 L0 exits when status is generated from evidence rather than hand-copied prose.
 

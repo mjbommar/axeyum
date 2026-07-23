@@ -36,7 +36,7 @@
     },
     {
       "path": "docs/plan/lean-complete-parity-v1.json",
-      "sha256": "c14c85ef0a55aa7ebd1f56fbc84adb607d248b4f52bf80eb29069a98fd85ee61"
+      "sha256": "7fd1b3c26aed4bc8a6c8005a94ddd1fe9db056278ee7f25e14594c21446926fa"
     },
     {
       "path": "docs/plan/lean-execution-acceptance-tl0.7.4-2026-07-22.md",
@@ -68,7 +68,7 @@
     },
     {
       "path": "docs/plan/lean-system-implementation-plan-2026-07-21.md",
-      "sha256": "3672f072a0afb76ab6073b70ebaf82286571dbd0373d208dfdffd809fea05fb5"
+      "sha256": "ed5eed032b13bcece78e9ac7627efa5a46a903b1163df175bc4811c883ec9dc4"
     },
     {
       "path": "docs/plan/lean-u2-official-child-shards-v1.json",
@@ -195,6 +195,14 @@
       "sha256": "12fc9fc218f31a105b09634da875ccebd653bcb92bde96ad605cc057297d6b82"
     },
     {
+      "path": "docs/plan/lean-u2-official-execution-tl0.6.3-m2-r5-diagnostic-closure-implementation-2026-07-23.md",
+      "sha256": "6e7878a6bf7f38bf28bd9de5ee184ad4f9a9fdf8314be2e3bfeaa6199903f005"
+    },
+    {
+      "path": "docs/plan/lean-u2-official-execution-tl0.6.3-m2-r5-diagnostic-closure-result-2026-07-23.md",
+      "sha256": "25d102e6ead0d43ad69f3eb3e5064281e20fb86368ba2be4f0b49168869eeab2"
+    },
+    {
       "path": "docs/plan/lean-u2-official-execution-tl0.6.3-m2-shard-0001-plan-2026-07-22.md",
       "sha256": "4cef4ba9c57820f5bff82e4cfdfdc524b3d0d54665a947cf2b27560767ec81dd"
     },
@@ -208,7 +216,7 @@
     },
     {
       "path": "docs/plan/lean4-complete-parity-roadmap-2026-07-22.md",
-      "sha256": "9ed9ca41f26ecb949d6b1587a87d65f12cd318d571a9294b5b91f74bd9f4922a"
+      "sha256": "56d339fcaddb1243d82196dbf1172667e023273119212bd46b26331e2b2210cf"
     },
     {
       "path": "scripts/gen-lean-complete-parity.py",
@@ -288,7 +296,7 @@
     },
     {
       "path": "scripts/tests/test_lean_complete_parity.py",
-      "sha256": "478d48e6abb7dad0e4eff8e501024964c6a3f2a1eb510a433c0057741dfab257"
+      "sha256": "f38453ceb64997bcf36d18c7804fde4fc1e92ff5bd882f27f5b36b244444f487"
     },
     {
       "path": "scripts/tests/test_lean_execution_acceptance.py",
@@ -843,7 +851,7 @@
         "parity": 0
       },
       "r5_diagnostic": {
-        "state": "incomplete-selected-attempt",
+        "state": "complete-invalid-selected-attempt-diagnostic",
         "selected_attempt_consumed": true,
         "diagnostic_junit_rows": 64,
         "official_outcomes": 0,
@@ -1037,6 +1045,14 @@
           "detail": "Consumed attempt 003: passed 32 GiB control and clean 64/64 selected JUnit, then fail-closed post rejection of absent all-pass LastTestsFailed.log; 83 pre-post files and zero credit."
         },
         {
+          "path": "docs/plan/lean-u2-official-execution-tl0.6.3-m2-r5-diagnostic-closure-implementation-2026-07-23.md",
+          "detail": "Pushed process-free R5 closure implementation with portable raw validation, exact 123/66/56/1 artifact classification, completion-last append, and zero-credit enforcement."
+        },
+        {
+          "path": "docs/plan/lean-u2-official-execution-tl0.6.3-m2-r5-diagnostic-closure-result-2026-07-23.md",
+          "detail": "Completed 68-file diagnostic append binding 64 all-pass rows and conditional failure-log absence with zero processes, zero outcomes, and unchanged invalid attempt-003 credit."
+        },
+        {
           "path": "docs/plan/lean-execution-evidence-v1.json",
           "detail": "TL0.7.1 contract authority for explicit resource lanes, typed terminations, immutable run/attempt/case/artifact/completion records, and zero real outcomes."
         },
@@ -1105,7 +1121,7 @@
           "detail": "Pinned tests tree inventory and the required CTest/test-pile derivation rule."
         }
       ],
-      "residual": "Current credited execution coverage remains two decided official outcomes for one unique case from a 3,678-case parent, with zero Axeyum outcomes or pairs. There are seven consumed selected process attempts: four M0 attempts, invalid M2 R1, timeout M2 R3, and invalid M2 R5. M1 partitions all eight official selections into five exact ordered memberships and 289 physical child shards, but every derived shard and all 111 official attempts remain incomplete. M2 R1 retained exact 64-row JUnit with 30 passes and 34 failures, but family-blind docparse artifact closure stopped before post/projection/completion. R2 completed its zero-process diagnostic append with unchanged credit. M2 R3 exported LEAN_STACK_SIZE_KB=524288, printed seven diagnostic passes, then timed out after channel thread-creation failure; its 17-file root has no JUnit/cases/completion and zero credit. R4's 16 GiB nine-task control failed before selected discovery, leaving attempt 003 unconsumed. R5's completion-grade 32 GiB control passed, and selected attempt 003 then exited cleanly with exact 64/64 JUnit passes. Fail-closed post capture nevertheless rejected the absent all-pass LastTestsFailed.log: 123 generated paths versus 124 preregistered. The frozen 83-file root has all case records but no post/projection/completion, so R5 grants zero outcomes and cannot retry. A zero-process diagnostic closure must bind its exact 66 retained payloads, 56 metadata rows, conditional-log absence, and invalid zero-credit completion before attempt 004 can be preregistered. Then classify native surfaces and run matched Axeyum cases. Scheduling metadata, controls, diagnostic rows, and retries do not increase population coverage."
+      "residual": "Current credited execution coverage remains two decided official outcomes for one unique case from a 3,678-case parent, with zero Axeyum outcomes or pairs. There are seven consumed selected process attempts: four M0 attempts, invalid M2 R1, timeout M2 R3, and invalid M2 R5. M1 partitions all eight official selections into five exact ordered memberships and 289 physical child shards, but every derived shard and all 111 official attempts remain incomplete. M2 R1 retained exact 64-row JUnit with 30 passes and 34 failures, but family-blind docparse artifact closure stopped before post/projection/completion. R2 completed its zero-process diagnostic append with unchanged credit. M2 R3 exported LEAN_STACK_SIZE_KB=524288, printed seven diagnostic passes, then timed out after channel thread-creation failure; its 17-file root has no JUnit/cases/completion and zero credit. R4's 16 GiB nine-task control failed before selected discovery, leaving attempt 003 unconsumed. R5's completion-grade 32 GiB control passed, and selected attempt 003 then exited cleanly with exact 64/64 JUnit passes. Fail-closed post capture nevertheless rejected the absent all-pass LastTestsFailed.log: 123 generated paths versus 124 preregistered. Its completed zero-process diagnostic closure binds 68 appended files, including 66 retained payloads, 56 metadata rows, conditional-log absence, and invalid zero-credit completion. R5 remains zero-outcome and cannot retry. Attempt 004 must preregister conditional-log semantics and fresh roots before one selected execution. Then classify native surfaces and run matched Axeyum cases. Scheduling metadata, controls, diagnostic rows, and retries do not increase population coverage."
     },
     {
       "id": "U3",

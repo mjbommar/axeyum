@@ -285,6 +285,11 @@ Start at the root [`PLAN.md`](../../PLAN.md) (map + standing rules) and
   consumed all-pass selected run stopped at exact artifact closure because
   failure-only `LastTestsFailed.log` was absent; 83 pre-post files and 64
   diagnostic passes are frozen with zero credit before a zero-process append.
+- [`R5 diagnostic implementation`](lean-u2-official-execution-tl0.6.3-m2-r5-diagnostic-closure-implementation-2026-07-23.md)
+  and [`result`](lean-u2-official-execution-tl0.6.3-m2-r5-diagnostic-closure-result-2026-07-23.md) —
+  separately pushed process-free validator followed by a completion-last
+  68-file append binding the all-pass conditional-log absence, exact retained
+  versus metadata-only split, and unchanged invalid-attempt zero credit.
 - [`lean-compatibility-v1.json`](lean-compatibility-v1.json) and generated
   [`Lean compatibility matrix`](generated/lean-compatibility.md) — TL0.2's
   executable eight-field assurance contract, K0-K6 profile gates, registered

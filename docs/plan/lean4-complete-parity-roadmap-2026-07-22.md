@@ -121,8 +121,12 @@ R4 created no selected root/process. The subsequent
 [`R5 incomplete result`](lean-u2-official-execution-tl0.6.3-m2-r5-attempt-003-incomplete-result-2026-07-23.md)
 records a passed control and clean 64/64 selected JUnit, but fail-closed post
 capture rejected the absent all-pass `LastTestsFailed.log`. Attempt 003 is
-consumed with zero credit; first freeze/append its zero-process diagnostic
-closure, then preregister attempt 004 with conditional-log semantics.
+consumed with zero credit. The subsequent
+[`R5 diagnostic closure`](lean-u2-official-execution-tl0.6.3-m2-r5-diagnostic-closure-result-2026-07-23.md)
+appends 68 files / 149,513 bytes completion-last with zero processes and binds
+the 64 passes, 123 generated rows, 66 retained payloads, 56 metadata rows, and
+conditional failure-log absence without promoting any outcome. R5 is closed;
+next preregister attempt 004 with conditional-log semantics and fresh roots.
 
 ## 2. What the SMT-LIB comparison actually says
 
