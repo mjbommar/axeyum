@@ -378,7 +378,9 @@ class P0PrepareTests(unittest.TestCase):
                 remote_helper_path=Path("/tmp/multi-host-helper.py"),
             )
             start.assert_called_once_with(
-                plan=plan, command_manifest=command, run_dir=run_dir
+                plan=plan,
+                command_manifest=run_dir / "multi-host-commands" / "retry-1.json",
+                run_dir=run_dir,
             )
             finish.assert_called_once_with(handle, timeout=1.0)
             finalize.assert_called_once_with(run_dir)
