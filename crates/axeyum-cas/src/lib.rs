@@ -10285,17 +10285,9 @@ pub enum LimitPoint {
 /// expression, or on overflow. Exact by construction over the rational fragment.
 #[must_use]
 pub fn limit(expr: &CasExpr, var: &str, point: LimitPoint) -> Option<CasExpr> {
-    // Fixed integer-order Bessel J has an oscillatory O(|z|^{-1/2}) envelope on
-    // the real axis. Apply that exact zero limit to a finite product of positive
-    // integer powers whose rational-function arguments all grow in magnitude,
-    // multiplied only by an x-free factor and a rational weight whose growth is
-    // strictly slower than the combined square-root decay. This precedes generic
-    // rational normalization because that route treats Bessel heads as atoms and
-    // could otherwise expand a hostile public power before this bounded check.
-    if matches!(point, LimitPoint::PosInfinity | LimitPoint::NegInfinity)
-        && let Some(value) = limit_bessel_j_at_infinity(expr, var, point)
-    {
-        return Some(value);
+    match limit_preflight(expr, var, point) {
+        LimitPreflight::Continue => {}
+        LimitPreflight::Return(result) => return result,
     }
     if let Some(value) = limit_rational(expr, var, point) {
         return Some(value);
@@ -10373,8 +10365,9 @@ pub fn limit(expr: &CasExpr, var: &str, point: LimitPoint) -> Option<CasExpr> {
     {
         return Some(value);
     }
-    // Geometric decay with a transcendental rate (`r^k = exp(k·ln r)`, `|r|<1`),
-    // whose sign is decided numerically.
+    // Geometric decay with an exact logarithmic rate (`r^k = exp(k·ln r)`,
+    // `|r|<1`). The rate sign is proved from positive-rational logarithms; other
+    // transcendental constants decline rather than being classified numerically.
     if matches!(point, LimitPoint::PosInfinity | LimitPoint::NegInfinity)
         && let Some(value) = limit_geometric_decay(expr, var, point)
     {
@@ -11488,69 +11481,293 @@ fn arg_tends_to_infinity(arg: &CasExpr, var: &str, point: LimitPoint) -> Option<
     }
 }
 
-/// Like [`limit_exp_dominated`] but for exp factors with a **transcendental** rate,
-/// e.g. `exp(k·ln r) = r^k` (`ln r` is not rational). The net rate's *sign* is
-/// decided numerically (`evalf`), which is all that matters: a strictly negative
-/// net rate in the limit direction decays to `0`, dominating any rational factor.
-/// Enables convergent geometric infinite sums (`∑ r^k`, `|r|<1`).
+/// Like [`limit_exp_dominated`] but for exp factors with an exact logarithmic rate,
+/// e.g. `exp(k·ln r) = r^k` (`ln r` is not rational). The net rate's sign is
+/// certified from a rational linear combination of logarithms of positive exact
+/// rationals. A strictly negative net rate in the limit direction decays to `0`,
+/// dominating any rational factor. Other transcendental rates decline; no
+/// floating approximation participates in the proof boundary.
 fn limit_geometric_decay(expr: &CasExpr, var: &str, point: LimitPoint) -> Option<CasExpr> {
-    let mut rate = 0.0_f64;
-    if !numeric_exp_rate(expr, var, 1.0, &mut rate) {
+    let mut rate = CasExpr::zero();
+    if !exact_exp_rate(expr, var, Rational::integer(1), &mut rate) {
         return None;
     }
-    if rate == 0.0 {
-        return None; // no net exponential — not this path
-    }
-    let effective = match point {
-        LimitPoint::NegInfinity => -rate,
-        _ => rate,
+    let sign = exact_log_rate_sign(&rate)?;
+    let effective = match (point, sign) {
+        (LimitPoint::NegInfinity, Sign::Positive) => Sign::Negative,
+        (LimitPoint::NegInfinity, Sign::Negative) => Sign::Positive,
+        (_, sign) => sign,
     };
-    if effective < 0.0 {
+    if effective == Sign::Negative {
         Some(CasExpr::zero())
     } else {
-        None // net growth → ±∞
+        None // zero or growth is not a finite decaying limit
     }
 }
 
-/// Numeric analogue of [`accumulate_exp_rate`]: sums `sign·cᵢ` (as f64, via
-/// `evalf` of the linear coefficient) for each `exp(cᵢ·var)` factor — so a
-/// transcendental rate like `ln r` contributes its numeric value. Non-exponential
-/// factors must be rational functions of `var`. `false` if outside that shape.
-fn numeric_exp_rate(expr: &CasExpr, var: &str, sign: f64, rate: &mut f64) -> bool {
+const MAX_GENERIC_LIMIT_EXP_POWER: u32 = 64;
+
+enum LimitPreflight {
+    Continue,
+    Return(Option<CasExpr>),
+}
+
+/// Run resource-bounded theorem routes before generic rational normalization can
+/// expand a hostile public power around an exponential or atomized Bessel head.
+fn limit_preflight(expr: &CasExpr, var: &str, point: LimitPoint) -> LimitPreflight {
+    if !matches!(point, LimitPoint::PosInfinity | LimitPoint::NegInfinity) {
+        return LimitPreflight::Continue;
+    }
+    if has_oversized_exponential_power(expr) {
+        return LimitPreflight::Return(limit_geometric_decay(expr, var, point));
+    }
+    if let Some(value) = limit_bessel_j_at_infinity(expr, var, point) {
+        return LimitPreflight::Return(Some(value));
+    }
+    LimitPreflight::Continue
+}
+
+fn contains_exponential_head(expr: &CasExpr) -> bool {
+    match expr {
+        CasExpr::Unary(UnaryFunc::Exp, _) => true,
+        CasExpr::Unary(_, argument) | CasExpr::Neg(argument) | CasExpr::Pow(argument, _) => {
+            contains_exponential_head(argument)
+        }
+        CasExpr::Div(numerator, denominator) => {
+            contains_exponential_head(numerator) || contains_exponential_head(denominator)
+        }
+        CasExpr::Add(items) | CasExpr::Mul(items) => items.iter().any(contains_exponential_head),
+        CasExpr::Const(_) | CasExpr::Var(_) => false,
+    }
+}
+
+fn has_oversized_exponential_power(expr: &CasExpr) -> bool {
+    match expr {
+        CasExpr::Pow(base, exponent)
+            if *exponent > MAX_GENERIC_LIMIT_EXP_POWER && contains_exponential_head(base) =>
+        {
+            true
+        }
+        CasExpr::Unary(_, argument) | CasExpr::Neg(argument) | CasExpr::Pow(argument, _) => {
+            has_oversized_exponential_power(argument)
+        }
+        CasExpr::Div(numerator, denominator) => {
+            has_oversized_exponential_power(numerator)
+                || has_oversized_exponential_power(denominator)
+        }
+        CasExpr::Add(items) | CasExpr::Mul(items) => {
+            items.iter().any(has_oversized_exponential_power)
+        }
+        CasExpr::Const(_) | CasExpr::Var(_) => false,
+    }
+}
+
+/// Symbolic analogue of [`accumulate_exp_rate`]: sums the exact linear
+/// coefficients of each `exp(cᵢ·var)` factor. Non-exponential factors must be
+/// rational functions of `var`. The caller separately proves the resulting
+/// logarithmic rate's sign.
+fn exact_exp_rate(expr: &CasExpr, var: &str, sign: Rational, rate: &mut CasExpr) -> bool {
     match expr {
         CasExpr::Mul(_) => flatten_mul(expr)
             .iter()
-            .all(|f| numeric_exp_rate(f, var, sign, rate)),
+            .all(|f| exact_exp_rate(f, var, sign, rate)),
         CasExpr::Div(a, b) => {
-            numeric_exp_rate(a, var, sign, rate) && numeric_exp_rate(b, var, -sign, rate)
+            let Some(negative) = sign.checked_neg() else {
+                return false;
+            };
+            exact_exp_rate(a, var, sign, rate) && exact_exp_rate(b, var, negative, rate)
         }
-        CasExpr::Neg(inner) => numeric_exp_rate(inner, var, sign, rate),
+        CasExpr::Neg(inner) => exact_exp_rate(inner, var, sign, rate),
         CasExpr::Pow(base, exponent) => {
-            if let CasExpr::Unary(UnaryFunc::Exp, _) = base.as_ref() {
-                numeric_exp_rate(base, var, sign * f64::from(*exponent), rate)
-            } else {
-                is_rational_function(expr, var)
-            }
+            let Some(scaled) = sign.checked_mul(Rational::integer(i128::from(*exponent))) else {
+                return false;
+            };
+            exact_exp_rate(base, var, scaled, rate)
         }
         CasExpr::Unary(UnaryFunc::Exp, arg) => {
-            // The argument must be linear in `var`: its second derivative vanishes,
-            // and the first derivative is a constant we can evaluate numerically.
-            // Fold first so residual `var·0` terms don't leave a spurious free `var`.
+            // The argument must be exactly linear in `var`: its second derivative
+            // certifies as zero and its first derivative contains no `var`.
             let derivative = simplify(&arg.differentiate(var));
             let second = simplify(&derivative.differentiate(var));
-            if evalf(&second, &[]).is_none_or(|value| value != 0.0) {
+            if !matches!(
+                equal(&second, &CasExpr::zero()),
+                ZeroTest::Certified { equal: true, .. }
+            ) || expr_contains_var(&derivative, var)
+            {
                 return false;
             }
-            match evalf(&derivative, &[]) {
-                Some(coeff) => {
-                    *rate += sign * coeff;
-                    true
-                }
-                None => false,
-            }
+            let contribution = scaled_term(sign, derivative);
+            *rate = simplify(&(rate.clone() + contribution));
+            true
         }
         _ => is_rational_function(expr, var),
     }
+}
+
+const MAX_EXACT_LOG_RATE_TERMS: usize = 64;
+const MAX_EXACT_LOG_RATE_BITS: u64 = 16_384;
+
+/// Collect `scale·ln(r)` terms for positive exact rationals `r` plus an exact
+/// rational offset. Any other transcendental head is outside the exact
+/// geometric-rate fragment; opposite-signed rational/log parts later decline.
+fn collect_exact_log_rate(
+    expr: &CasExpr,
+    scale: Rational,
+    rational_offset: &mut Rational,
+    terms: &mut Vec<(Rational, Rational)>,
+) -> bool {
+    if scale.is_zero() {
+        return true;
+    }
+    match expr {
+        CasExpr::Const(value) => scale
+            .checked_mul(*value)
+            .and_then(|term| rational_offset.checked_add(term))
+            .is_some_and(|sum| {
+                *rational_offset = sum;
+                true
+            }),
+        CasExpr::Add(items) => items
+            .iter()
+            .all(|item| collect_exact_log_rate(item, scale, rational_offset, terms)),
+        CasExpr::Neg(inner) => scale
+            .checked_neg()
+            .is_some_and(|negative| {
+                collect_exact_log_rate(inner, negative, rational_offset, terms)
+            }),
+        CasExpr::Div(numerator, denominator) => {
+            let CasExpr::Const(divisor) = denominator.as_ref() else {
+                return false;
+            };
+            scale
+                .checked_div(*divisor)
+                .is_some_and(|quotient| {
+                    collect_exact_log_rate(numerator, quotient, rational_offset, terms)
+                })
+        }
+        CasExpr::Mul(factors) => {
+            let mut coefficient = scale;
+            let mut nonconstant = None;
+            for factor in factors {
+                if let CasExpr::Const(value) = factor {
+                    let Some(product) = coefficient.checked_mul(*value) else {
+                        return false;
+                    };
+                    coefficient = product;
+                } else if nonconstant.replace(factor).is_some() {
+                    return false;
+                }
+            }
+            match nonconstant {
+                Some(term) => collect_exact_log_rate(term, coefficient, rational_offset, terms),
+                None => rational_offset.checked_add(coefficient).is_some_and(|sum| {
+                    *rational_offset = sum;
+                    true
+                }),
+            }
+        }
+        CasExpr::Unary(UnaryFunc::Ln, argument) => {
+            let CasExpr::Const(base) = argument.as_ref() else {
+                return false;
+            };
+            if base.numerator() <= 0 || terms.len() >= MAX_EXACT_LOG_RATE_TERMS {
+                return false;
+            }
+            terms.push((scale, *base));
+            true
+        }
+        _ => false,
+    }
+}
+
+/// Prove the sign of a rational linear combination `Σ qᵢ ln(rᵢ)`, `rᵢ>0`.
+/// Same-sign terms decide structurally, including hostile multiplicities. Mixed
+/// signs are reduced to one bounded exact rational product after clearing
+/// coefficient denominators. Resource overflow is an honest `None`.
+fn exact_log_rate_sign(rate: &CasExpr) -> Option<Sign> {
+    if matches!(
+        equal(rate, &CasExpr::zero()),
+        ZeroTest::Certified { equal: true, .. }
+    ) {
+        return Some(Sign::Zero);
+    }
+    let mut terms = Vec::new();
+    let mut rational_offset = Rational::zero();
+    if !collect_exact_log_rate(
+        rate,
+        Rational::integer(1),
+        &mut rational_offset,
+        &mut terms,
+    ) {
+        return None;
+    }
+    terms.retain(|(coefficient, base)| !coefficient.is_zero() && *base != Rational::integer(1));
+    if terms.is_empty() {
+        return Some(if rational_offset.is_zero() {
+            Sign::Zero
+        } else if rational_offset.numerator() > 0 {
+            Sign::Positive
+        } else {
+            Sign::Negative
+        });
+    }
+
+    let term_sign = |coefficient: Rational, base: Rational| {
+        let log_positive = base > Rational::integer(1);
+        let coefficient_positive = coefficient.numerator() > 0;
+        if log_positive == coefficient_positive {
+            Sign::Positive
+        } else {
+            Sign::Negative
+        }
+    };
+    let first = term_sign(terms[0].0, terms[0].1);
+    let offset_agrees = rational_offset.is_zero()
+        || (rational_offset.numerator() > 0 && first == Sign::Positive)
+        || (rational_offset.numerator() < 0 && first == Sign::Negative);
+    if offset_agrees
+        && terms.iter().all(|(coefficient, base)| term_sign(*coefficient, *base) == first)
+    {
+        return Some(first);
+    }
+    if !rational_offset.is_zero() {
+        return None;
+    }
+
+    let common_denominator = terms.iter().try_fold(1_i128, |common, (coefficient, _)| {
+        poly::lcm_i128(common, coefficient.denominator())
+    })?;
+    let mut numerator = BigInt::from(1);
+    let mut denominator = BigInt::from(1);
+    let mut bit_budget = 0_u64;
+    for (coefficient, base) in terms {
+        let multiplier = common_denominator.checked_div(coefficient.denominator())?;
+        let exponent = coefficient.numerator().checked_mul(multiplier)?;
+        let power = u32::try_from(exponent.unsigned_abs()).ok()?;
+        if power > MAX_CONCRETE_BIGNUM_POWER {
+            return None;
+        }
+        let base_bits = u64::from(128 - base.numerator().unsigned_abs().leading_zeros())
+            + u64::from(128 - base.denominator().unsigned_abs().leading_zeros());
+        bit_budget = bit_budget.checked_add(base_bits.checked_mul(u64::from(power))?)?;
+        if bit_budget > MAX_EXACT_LOG_RATE_BITS {
+            return None;
+        }
+        let powered_numerator = BigInt::from(base.numerator()).pow(power);
+        let powered_denominator = BigInt::from(base.denominator()).pow(power);
+        if exponent < 0 {
+            numerator *= powered_denominator;
+            denominator *= powered_numerator;
+        } else {
+            numerator *= powered_numerator;
+            denominator *= powered_denominator;
+        }
+    }
+    Some(match numerator.cmp(&denominator) {
+        core::cmp::Ordering::Less => Sign::Negative,
+        core::cmp::Ordering::Equal => Sign::Zero,
+        core::cmp::Ordering::Greater => Sign::Positive,
+    })
 }
 
 /// Walk a product/quotient, adding `sign·cᵢ` to `rate` for each `exp(cᵢ·var)`
@@ -21873,6 +22090,103 @@ mod tests {
         );
         // Growth diverges (no finite limit): eˣ/x → +∞.
         assert!(limit(&(x().exp() / x()), "x", LimitPoint::PosInfinity).is_none());
+    }
+
+    #[test]
+    fn geometric_decay_requires_an_exact_logarithmic_rate_sign() {
+        let x = || v("x");
+        let ln2 = || CasExpr::int(2).ln();
+        let ln3 = || CasExpr::int(3).ln();
+        let ln6 = || CasExpr::int(6).ln();
+
+        assert_eq!(
+            exact_log_rate_sign(&CasExpr::rat(1, 2).ln()),
+            Some(Sign::Negative),
+        );
+        assert_eq!(exact_log_rate_sign(&(ln2() - ln3())), Some(Sign::Negative));
+        assert_eq!(exact_log_rate_sign(&(ln3() - ln2())), Some(Sign::Positive));
+        assert_eq!(
+            exact_log_rate_sign(&(ln2() + ln3() - ln6())),
+            Some(Sign::Zero),
+        );
+        assert_eq!(
+            exact_log_rate_sign(&(CasExpr::int(-1) + CasExpr::rat(1, 2).ln())),
+            Some(Sign::Negative),
+        );
+        assert_eq!(
+            exact_log_rate_sign(&(CasExpr::int(1) + CasExpr::int(2).ln())),
+            Some(Sign::Positive),
+        );
+        assert_eq!(
+            exact_log_rate_sign(&(CasExpr::int(1) + CasExpr::rat(1, 2).ln())),
+            None,
+        );
+        assert_eq!(
+            exact_log_rate_sign(&(CasExpr::rat(1, 2) * CasExpr::int(4).ln() - ln2())),
+            Some(Sign::Zero),
+        );
+        let hostile_rate = CasExpr::int(i128::from(u32::MAX)) * CasExpr::rat(1, 2).ln();
+        assert_eq!(exact_log_rate_sign(&hostile_rate), Some(Sign::Negative));
+
+        // Exact log-rate decay remains available in both real directions.
+        let decays_right = (x() * (ln2() - ln3())).exp();
+        let decays_left = (x() * (ln3() - ln2())).exp();
+        let rational_and_log_decay = (x() * (CasExpr::int(-1) + CasExpr::rat(1, 2).ln())).exp();
+        let split_decay = x().pow(2) * (x() * ln2()).exp() / (x() * ln3()).exp();
+        let hostile_power = (x() * CasExpr::rat(1, 2).ln()).exp().pow(u32::MAX);
+        let hostile_nested_power = (x() * CasExpr::rat(1, 2).ln())
+            .exp()
+            .pow(u32::MAX)
+            .pow(u32::MAX);
+        assert_equal(
+            &limit(&decays_right, "x", LimitPoint::PosInfinity).unwrap(),
+            &CasExpr::zero(),
+        );
+        assert_equal(
+            &limit(&decays_left, "x", LimitPoint::NegInfinity).unwrap(),
+            &CasExpr::zero(),
+        );
+        for expression in [
+            rational_and_log_decay,
+            split_decay,
+            hostile_power,
+            hostile_nested_power,
+        ] {
+            assert_equal(
+                &limit(&expression, "x", LimitPoint::PosInfinity).unwrap(),
+                &CasExpr::zero(),
+            );
+        }
+        let opposing_unknown = (x() * (CasExpr::int(1) + CasExpr::rat(1, 2).ln())).exp();
+        assert!(limit(&opposing_unknown, "x", LimitPoint::PosInfinity).is_none());
+        assert!(limit(&opposing_unknown, "x", LimitPoint::NegInfinity).is_none());
+        let hostile_growth = x().exp().pow(u32::MAX);
+        assert!(limit(&hostile_growth, "x", LimitPoint::PosInfinity).is_none());
+        assert_equal(
+            &limit(&hostile_growth, "x", LimitPoint::NegInfinity).unwrap(),
+            &CasExpr::zero(),
+        );
+        let hostile_cancellation = (x() * CasExpr::rat(1, 2).ln()).exp().pow(u32::MAX)
+            / (x() * CasExpr::rat(1, 2).ln()).exp().pow(u32::MAX);
+        assert!(limit(&hostile_cancellation, "x", LimitPoint::PosInfinity).is_none());
+        assert!(limit(&hostile_cancellation, "x", LimitPoint::NegInfinity).is_none());
+
+        // Machin's identity is exact, but its f64 evaluation has a positive
+        // residual on common libm implementations. It and epsilon perturbations
+        // must never be classified from that residual.
+        let machin_zero = CasExpr::int(16) * CasExpr::rat(1, 5).atan()
+            - CasExpr::int(4) * CasExpr::rat(1, 239).atan()
+            - CasExpr::var("pi");
+        let epsilon = CasExpr::rat(1, 100_000_000_000_000_000);
+        for rate in [
+            machin_zero.clone(),
+            machin_zero.clone() - epsilon.clone(),
+            machin_zero + epsilon,
+        ] {
+            let exponential = (x() * rate).exp();
+            assert!(limit(&exponential, "x", LimitPoint::PosInfinity).is_none());
+            assert!(limit(&exponential, "x", LimitPoint::NegInfinity).is_none());
+        }
     }
 
     #[test]
