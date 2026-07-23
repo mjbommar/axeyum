@@ -383,6 +383,23 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-22 — certified affine integer-order Bessel-J limits at both
+  infinities.** Wave twelve closes the remaining measured Bessel asymptotic gap
+  using NIST DLMF 10.17.3's fixed-order `O(|z|^{-1/2})` envelope and 10.11.1's
+  integer-order continuation. `limit` now returns zero for `c·Jₙ(ax+b)` at
+  either real infinity for every public order, nonzero rational `a`, rational
+  `b`, and `x`-free `c`; the rule is constant-time in `n`. Orders 0, 1, 2, 7,
+  32, and `u32::MAX`, both scale signs, both infinities, shifts, symbolic
+  factors, and additive linearity pass. Modified Bessel `I`, irrational or
+  nonlinear arguments, symbolic shifts, reciprocals, and polynomial weights
+  explicitly decline; constant and finite-point `J₀(0)=1` behavior remains
+  unchanged. The thermally managed 553-unit/147-doctest suite passed (1527.65 s
+  for units), with workspace warning-denied Clippy (2m14s), stable/nightly
+  rustdoc, WASM, links, and whitespace green. The non-mutating formatter audit
+  retains broad baseline drift but proposes no owned-line changes. Next: resume
+  broad probing; quadratic-pole inverse Z remains a larger representation-bound
+  candidate.
+
 - **2026-07-22 — certified rational-scale integer-order Bessel-J improper
   integrals.** Wave eleven ranks the narrow existing-head DLMF identity ahead
   of quadratic-pole inverse Z, which needs a new oscillatory sequence fragment.
@@ -394,8 +411,8 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   zero, and checked-negation-overflow scales plus other bounds decline. The
   thermally managed 552-unit/147-doctest suite passed (1614.65 s for units),
   with workspace warning-denied Clippy (131.99 s), stable/nightly rustdoc,
-  WASM, links, and whitespace green. Next: resume broad probing from the
-  remaining standalone Bessel asymptotic and quadratic inverse-Z gaps.
+  WASM, links, and whitespace green. Wave twelve subsequently closes the
+  standalone Bessel asymptotic; quadratic inverse Z remains a larger candidate.
 
 - **2026-07-22 — certified bounded integer-order Bessel inverse-Laplace family.**
   Wave ten closes the measured order-three inverse gap by applying the existing
@@ -408,8 +425,9 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   or zero frequency, malformed numerators, and supported-plus-order-33 sums
   decline. The thermally managed 551-unit/147-doctest suite passed
   (1936.53 s for units), with workspace warning-denied Clippy, stable/nightly
-  rustdoc, WASM, links, and whitespace green. Next: resume broad probing from
-  the remaining Bessel asymptotic/improper and quadratic inverse-Z gaps.
+  rustdoc, WASM, links, and whitespace green. Waves eleven and twelve
+  subsequently close the Bessel improper/asymptotic gaps; quadratic inverse Z
+  remains a larger candidate.
 
 - **2026-07-22 — certified weighted integer-order Bessel antiderivative family.**
   Wave nine measured higher weighted antiderivatives against already-green
@@ -424,8 +442,8 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   extraction to flatten products recursively. The thermally managed
   551-unit/147-doctest suite passed (1574.57 s for units), with workspace
   warning-denied Clippy (42.14 s warm), stable/nightly rustdoc, WASM, links, and
-  whitespace green. Next: resume broad probing from the remaining measured
-  inverse-transform, Bessel asymptotic/improper, and quadratic inverse-Z gaps.
+  whitespace green. Later waves close the measured inverse-Bessel and Bessel
+  asymptotic/improper gaps; quadratic inverse Z remains a larger candidate.
 
 - **2026-07-22 — certified weighted order-one Bessel antiderivatives.** The
   measured `u²J₁(u)` / `u²I₁(u)` gap now closes for rational-affine `u` and
@@ -8276,6 +8294,11 @@ plan is built and committed on the current branch:
   R1/R2 history, a new run/evidence root, universal 512 MiB Lean runtime stacks
   from pinned source semantics, and the measured tiered artifact store. It
   authorizes one process only after separately pushed implementation gates.
+- **2026-07-22 — Added certified affine integer-order Bessel-J infinity
+  limits.** The DLMF-backed fixed-order asymptotic closes `c·Jₙ(ax+b)→0` at
+  both real infinities for all public orders, with rational-affine arguments,
+  variable-free factors, and explicit rate/domain declines, bringing CAS to
+  553 units and 147 doctests.
 - **2026-07-22 — Added certified rational-scale Bessel-J improper integrals.**
   The theorem-backed `∫₀^∞cJₙ(ax)dx` family covers all public orders with exact
   scale/parity handling and fail-closed adjacent forms, bringing CAS to 552
