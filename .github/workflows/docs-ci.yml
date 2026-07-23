@@ -26,6 +26,8 @@ jobs:
       - run: python3 scripts/gen-lean-u2-native-surface-classification.py --check
       - run: python3 -m unittest scripts.tests.test_lean_u2_native_surface_content
       - run: python3 scripts/gen-lean-u2-native-surface-content.py --check
+      - run: python3 -m unittest scripts.tests.test_lean_u2_native_dependency
+      - run: python3 scripts/gen-lean-u2-native-dependency.py --check
       - run: python3 -m unittest scripts.tests.test_lean_execution_evidence
       - run: python3 scripts/gen-lean-execution-evidence.py --check
       - run: python3 -m unittest scripts.tests.test_lean_execution_process

@@ -37,6 +37,9 @@ U2_NATIVE_SURFACES = (
 U2_NATIVE_CONTENT = (
     ROOT / "docs" / "plan" / "lean-u2-native-surface-content-v1.json"
 )
+U2_NATIVE_DEPENDENCY = (
+    ROOT / "docs" / "plan" / "lean-u2-native-dependency-v1.json"
+)
 EXECUTION_EVIDENCE = ROOT / "docs" / "plan" / "lean-execution-evidence-v1.json"
 EXECUTION_PROCESS = ROOT / "docs" / "plan" / "lean-execution-process-v1.json"
 EXECUTION_STORE = ROOT / "docs" / "plan" / "lean-execution-store-v1.json"
@@ -725,6 +728,27 @@ def u2_native_content_snapshot() -> dict[str, Any]:
     }
 
 
+def u2_native_dependency_snapshot() -> dict[str, Any]:
+    checker = load_script(
+        "lean_u2_native_dependency_for_complete_parity",
+        ROOT / "scripts" / "gen-lean-u2-native-dependency.py",
+    )
+    data = load_json(U2_NATIVE_DEPENDENCY)
+    failures = checker.validate_authority(data)
+    if failures:
+        raise RuntimeError(
+            "invalid U2 native-dependency authority: " + "; ".join(failures)
+        )
+    return {
+        "scope": data["scope"],
+        "status": data["status"],
+        "summary": data["summary"],
+        "claims": data["claims"],
+        "credits": data["credits"],
+        "record_sha256": data["record_sha256"],
+    }
+
+
 def execution_evidence_snapshot() -> dict[str, Any]:
     checker = load_script(
         "lean_execution_evidence_for_complete_parity",
@@ -955,6 +979,7 @@ def report_source_paths(data: dict[str, Any]) -> list[Path]:
         U2_CHILD_SHARDS,
         U2_NATIVE_SURFACES,
         U2_NATIVE_CONTENT,
+        U2_NATIVE_DEPENDENCY,
         EXECUTION_EVIDENCE,
         EXECUTION_PROCESS,
         EXECUTION_STORE,
@@ -980,6 +1005,8 @@ def report_source_paths(data: dict[str, Any]) -> list[Path]:
         / "scripts"
         / "tests"
         / "test_lean_u2_native_surface_content.py",
+        ROOT / "scripts" / "gen-lean-u2-native-dependency.py",
+        ROOT / "scripts" / "tests" / "test_lean_u2_native_dependency.py",
         ROOT / "scripts" / "gen-lean-execution-evidence.py",
         ROOT / "scripts" / "tests" / "test_lean_execution_evidence.py",
         ROOT / "scripts" / "lean_execution_process.py",
@@ -1051,6 +1078,7 @@ def build_report(data: dict[str, Any]) -> dict[str, Any]:
             "u2_child_shard_authority": u2_child_shard_snapshot(),
             "u2_native_surface_authority": u2_native_surface_snapshot(),
             "u2_native_content_authority": u2_native_content_snapshot(),
+            "u2_native_dependency_authority": u2_native_dependency_snapshot(),
             "execution_evidence_authority": execution_evidence_snapshot(),
             "execution_process_authority": execution_process_snapshot(),
             "execution_store_authority": execution_store_snapshot(),
@@ -1130,6 +1158,7 @@ def render_markdown(report: dict[str, Any]) -> str:
     u2_shards = bounded["u2_child_shard_authority"]
     u2_surfaces = bounded["u2_native_surface_authority"]
     u2_content = bounded["u2_native_content_authority"]
+    u2_dependency = bounded["u2_native_dependency_authority"]
     execution = bounded["execution_evidence_authority"]
     process = bounded["execution_process_authority"]
     store = bounded["execution_store_authority"]
@@ -1226,6 +1255,20 @@ def render_markdown(report: dict[str, Any]) -> str:
             "request/project dependency closure and native outcomes remain not-run; "
             f"paired cells and parity credit remain {u2_content['credits']['paired_cells']} / "
             f"{u2_content['credits']['parity_credit']}.",
+            f"- U2 native dependency contract: "
+            f"{u2_dependency['summary']['registration_cases']:,} cases across "
+            f"{u2_dependency['summary']['provider_variants']} factored official "
+            f"variants and {u2_dependency['summary']['case_variant_occurrences']:,} "
+            "case/variant occurrences; resolved nodes, edges, and case closures "
+            f"remain {u2_dependency['summary']['nodes']} / "
+            f"{u2_dependency['summary']['edges']} / "
+            f"{u2_dependency['summary']['resolved_case_closures']}. M2.0 freezes "
+            "the typed graph/provider schema only; external processes, native "
+            f"outcomes, paired cells, and parity credit remain "
+            f"{u2_dependency['summary']['external_processes']} / "
+            f"{u2_dependency['summary']['native_outcomes']} / "
+            f"{u2_dependency['summary']['paired_cells']} / "
+            f"{u2_dependency['credits']['parity_credit']}.",
             f"- Lean execution evidence: {execution['lane_policies']} lane templates, "
             f"{execution['termination_classes']} termination classes, "
             f"{execution['synthetic_controls']} synthetic controls, and "

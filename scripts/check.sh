@@ -38,6 +38,8 @@ step lean-u2-native-surface-tests python3 -m unittest scripts.tests.test_lean_u2
 step lean-u2-native-surface python3 scripts/gen-lean-u2-native-surface-classification.py --check
 step lean-u2-native-content-tests python3 -m unittest scripts.tests.test_lean_u2_native_surface_content
 step lean-u2-native-content python3 scripts/gen-lean-u2-native-surface-content.py --check
+step lean-u2-native-dependency-tests python3 -m unittest scripts.tests.test_lean_u2_native_dependency
+step lean-u2-native-dependency python3 scripts/gen-lean-u2-native-dependency.py --check
 step lean-execution-evidence-tests python3 -m unittest scripts.tests.test_lean_execution_evidence
 step lean-execution-evidence python3 scripts/gen-lean-execution-evidence.py --check
 step lean-execution-process-tests python3 -m unittest scripts.tests.test_lean_execution_process

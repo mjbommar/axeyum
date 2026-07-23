@@ -220,6 +220,24 @@ class LeanCompleteParityTests(unittest.TestCase):
             "scripts/gen-lean-u2-native-surface-content.py",
             source_paths,
         )
+        dependency = first["bounded_snapshot"]["u2_native_dependency_authority"]
+        self.assertEqual(dependency["summary"]["registration_cases"], 3723)
+        self.assertEqual(dependency["summary"]["provider_variants"], 111)
+        self.assertEqual(dependency["summary"]["case_variant_occurrences"], 408374)
+        self.assertEqual(dependency["summary"]["nodes"], 0)
+        self.assertEqual(dependency["summary"]["edges"], 0)
+        self.assertEqual(dependency["summary"]["resolved_case_closures"], 0)
+        self.assertFalse(dependency["claims"]["provider_identity_bound"])
+        self.assertFalse(dependency["claims"]["lean_parity_established"])
+        self.assertTrue(all(value == 0 for value in dependency["credits"].values()))
+        self.assertIn(
+            "docs/plan/lean-u2-native-dependency-v1.json",
+            source_paths,
+        )
+        self.assertIn(
+            "scripts/gen-lean-u2-native-dependency.py",
+            source_paths,
+        )
         self.assertIn("docs/plan/lean-execution-evidence-v1.json", source_paths)
         self.assertIn("docs/plan/lean-execution-process-v1.json", source_paths)
         self.assertIn("docs/plan/lean-execution-store-v1.json", source_paths)
