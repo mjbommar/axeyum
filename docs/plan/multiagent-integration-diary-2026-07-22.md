@@ -692,3 +692,37 @@ verified (WRONG→0 re-staged); quantifier path now proof-carrying (but not more
 capable); CAS moment/transform machinery deep; Lean nested-inductive done + full
 parity registry building. **The QF_*/quantifier COVERAGE gap remains ~50% decided
 and essentially unmoved** — the climb (plan Ranks 1–2, 5) is still not underway.
+
+---
+
+## 2026-07-23 — TRACKED ISSUE: lean exit-zero-4g evidence is non-portable (BLOCKS lean lane)
+
+**Symptom.** `scripts/gen-lean-complete-parity.py --check` (wired in `scripts/check.sh:61`,
+`.github/workflows/ci.yml:280`, `.github/workflows/docs-ci.yml:61`) fails with:
+`invalid Lean execution process authority: exit-zero-4g: run/spec attribution drift`.
+
+**Root cause.** `lean_execution_process.py:build_control_spec('exit-zero-4g')` recomputes the
+process command from the LIVE tree root, while the committed evidence
+`docs/plan/evidence/lean-execution-process-tl0.7.2/exit-zero-4g/run.json` hardcodes the
+agent's own worktree absolute path:
+- spec (recomputed on main): `/usr/bin/python3.14 /home/mjbommar/projects/personal/axeyum/scripts/lean_execution_probe.py exit-zero`
+- run.json (committed):      `/usr/bin/python3.14 /home/mjbommar/projects/personal/axeyum-lean-parity/scripts/lean_execution_probe.py exit-zero`
+`run_id` matches; `command` does not → `run/spec attribution drift` (lean_execution_process.py:964).
+
+**Blast radius.** Passes ONLY in `.../axeyum-lean-parity`. Fails on `main` (`.../axeyum`), on any
+other machine, and in GitHub CI (runner checkout path is `/home/runner/work/...`). This is a
+reproducibility hole in *proof-carrying* evidence — the exact property the lane exists to guarantee.
+
+**History.** Latent on `main` for ~9h — introduced by `2fee0f83 docs(lean): close TL0.7.2 process
+controls`. Missed because the lean green-gate used `check-parity-docs.py`, which does not invoke
+`gen-lean-complete-parity.py --check`. **Gate corrected going forward: lean merges must run
+`gen-lean-complete-parity.py --check` (or `scripts/check.sh`'s lean steps).**
+
+**Decision.** HOLD lean-lane integration at `main=7d3de58b`. The fix is lean-domain work (make the
+run/spec command comparison ROOT-relative, or store a normalized/relative path in the evidence, then
+regenerate) — not an integrator patch (would collide with the agent, who is actively editing exactly
+this area: U2 classification, execution-process/evidence). Unblock + resume merges once the branch
+makes `gen-lean-complete-parity.py --check` pass from an arbitrary tree root.
+
+**Unaffected lanes keep flowing.** CAS + SMT merges proceed normally (SMT guarded MBQI retry landed
+this cycle, z3-diff sound). Only lean is held.
