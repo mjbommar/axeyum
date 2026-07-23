@@ -275,6 +275,23 @@ class LeanU2OfficialExecutionTests(unittest.TestCase):
         finally:
             U2.CURRENT_REPOSITORY_INPUT_OVERRIDES[relative] = current
 
+    def test_resume_fs_successor_is_current_only(self) -> None:
+        relative = "scripts/smtcomp_repro/resume_fs.py"
+        historical = "1968e7b6424c2dd9273bff5041e96fc21b83ec01b2205dcc840d5dc942be1aec"
+        current = "b05c32185d75d5790f26ba25b6891c373712a565942400f4b08fa49bdc3c0ea6"
+        self.assertEqual(U2.REPOSITORY_INPUTS[relative], historical)
+        self.assertEqual(U2.CURRENT_REPOSITORY_INPUT_OVERRIDES[relative], current)
+        self.assertEqual(U2.sha256_file(U2.ROOT / relative), current)
+
+        U2.CURRENT_REPOSITORY_INPUT_OVERRIDES[relative] = "0" * 64
+        try:
+            self.assertIn(
+                f"frozen repository input drift: {relative}",
+                U2.validate_repository_inputs(),
+            )
+        finally:
+            U2.CURRENT_REPOSITORY_INPUT_OVERRIDES[relative] = current
+
     def test_spec_freezes_singleton_parent_command_environment_and_lane(self) -> None:
         spec = self.spec()
         self.assertEqual(U2.validate_spec(spec), [])
