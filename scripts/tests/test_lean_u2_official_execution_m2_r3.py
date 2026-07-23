@@ -243,6 +243,9 @@ class LeanU2OfficialExecutionM2R3Tests(unittest.TestCase):
         with tempfile.TemporaryDirectory(prefix="axeyum-r3-incomplete-test-") as temporary:
             root = Path(temporary) / "evidence"
             shutil.copytree(R3.DEFAULT_EVIDENCE_ROOT, root)
+            for path in root.rglob("*"):
+                if path.is_file():
+                    path.chmod(0o444)
             stdout = root / "raw/stdout.bin"
             stdout.chmod(0o644)
             stdout.write_bytes(stdout.read_bytes() + b"tamper")
