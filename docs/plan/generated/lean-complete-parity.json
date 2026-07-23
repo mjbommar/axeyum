@@ -276,7 +276,7 @@
     },
     {
       "path": "scripts/lean_execution_acceptance.py",
-      "sha256": "c86cf48698c830d037959e46adc8283c6e55a56e9d2f46b3f253b975a5c34b60"
+      "sha256": "49c62cbd75c98b3a9bdc3e5d0365055fd0b571a98e3c33966fe48d5f330030cc"
     },
     {
       "path": "scripts/lean_execution_process.py",
@@ -344,7 +344,7 @@
     },
     {
       "path": "scripts/tests/test_lean_execution_acceptance.py",
-      "sha256": "a7141dbba6f607d6009a3d12c9a6415fbfaa6921c988acec806d6d19b1abefaf"
+      "sha256": "02b575078ca72dbfa0ee3281c882bb7231606f98bea1c813fc08270daf043e6b"
     },
     {
       "path": "scripts/tests/test_lean_execution_evidence.py",
