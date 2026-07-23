@@ -219,6 +219,50 @@ def _index_records(
     return indexed
 
 
+def validate_full_cell_records(
+    solver_id: str,
+    records: Iterable[dict[str, Any]],
+    *,
+    expected_logic_counts: dict[str, int],
+    fixture_only: bool,
+) -> dict[tuple[str, str], dict[str, Any]]:
+    """Validate one complete ordered-population record set for comparison."""
+
+    _expect(solver_id in SOLVER_IDS, "full comparison solver identity drift")
+    _expect(type(fixture_only) is bool, "full comparison fixture scope mismatch")
+    indexed = _index_records(
+        solver_id,
+        records,
+        set(expected_logic_counts),
+        fixture_only=fixture_only,
+    )
+    observed = dict(
+        sorted(Counter(_logic(row) for row in indexed.values()).items())
+    )
+    expected = dict(sorted(expected_logic_counts.items()))
+    _expect(
+        observed == expected,
+        f"full comparison logic population drift: {solver_id}",
+    )
+    population = sum(expected.values())
+    _expect(
+        sorted(row["sequence"] for row in indexed.values())
+        == list(range(population)),
+        f"full comparison sequence coverage drift: {solver_id}",
+    )
+    return indexed
+
+
+def summarize_full_cell_records(
+    indexed: dict[tuple[str, str], dict[str, Any]],
+    *,
+    expected_logic_counts: dict[str, int],
+) -> dict[str, Any]:
+    """Return the native overall/per-logic summary and content identities."""
+
+    return _cell_summary(indexed, sorted(expected_logic_counts))
+
+
 def _summary(records: Iterable[dict[str, Any]]) -> dict[str, Any]:
     material = list(records)
     statuses = Counter(_reported(row) for row in material)
@@ -406,28 +450,15 @@ def _derive_full_comparison(
             "live full comparison population differs from preregistration",
         )
     indexed = {
-        solver_id: _index_records(
+        solver_id: validate_full_cell_records(
             solver_id,
             records_by_solver[solver_id],
-            set(expected_logic_counts),
+            expected_logic_counts=expected_logic_counts,
             fixture_only=authority["fixture_only"],
         )
         for solver_id in SOLVER_IDS
     }
     expected_observed = dict(sorted(expected_logic_counts.items()))
-    for solver_id in SOLVER_IDS:
-        observed = dict(
-            sorted(Counter(_logic(row) for row in indexed[solver_id].values()).items())
-        )
-        _expect(
-            observed == expected_observed,
-            f"full comparison logic population drift: {solver_id}",
-        )
-        _expect(
-            sorted(row["sequence"] for row in indexed[solver_id].values())
-            == list(range(population)),
-            f"full comparison sequence coverage drift: {solver_id}",
-        )
     common_keys = set(indexed[SOLVER_IDS[0]])
     for solver_id in SOLVER_IDS[1:]:
         _expect(
@@ -492,7 +523,9 @@ def _derive_full_comparison(
                 "same_population_all_cells": True,
             },
             "native_cells": {
-                solver_id: _cell_summary(indexed[solver_id], logics)
+                solver_id: summarize_full_cell_records(
+                    indexed[solver_id], expected_logic_counts=expected_logic_counts
+                )
                 for solver_id in SOLVER_IDS
             },
             "pairwise": pairwise,
