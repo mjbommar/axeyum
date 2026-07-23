@@ -30,6 +30,8 @@ U2_PATH = ROOT / "docs/plan/lean-u2-test-authority-v1.json"
 U2_VALIDATOR_PATH = ROOT / "scripts/gen-lean-u2-test-authority.py"
 M0_PATH = ROOT / "docs/plan/lean-u2-native-surface-classification-v1.json"
 M0_VALIDATOR_PATH = ROOT / "scripts/gen-lean-u2-native-surface-classification.py"
+GENERATOR_PATH = ROOT / "scripts/gen-lean-u2-native-surface-content.py"
+TEST_PATH = ROOT / "scripts/tests/test_lean_u2_native_surface_content.py"
 
 SCHEMA = "axeyum-lean-u2-native-surface-content-v1"
 REPORT_SCHEMA = "axeyum-lean-u2-native-surface-content-report-v1"
@@ -319,7 +321,7 @@ PINNED_POSITIVE_CONTROLS = {
     "tests/elab_bench/big_beq.lean": ["lean.syntax-declaration"],
     "tests/server_interactive/catHover.lean": ["lean.syntax-declaration"],
     "doc/examples/Certora2022/ex1.lean": ["lean.evaluation-command"],
-    "doc/examples/ICERM2022/meta.lean": ["lean.meta-api"],
+    "tests/elab_bench/cbv_decide.lean": ["lean.meta-api"],
     "tests/misc_dir/server_project/run_test.lean": ["lean.server-api"],
     "tests/elab/toLCNFCacheBug.lean": ["lean.compiler-api"],
     "doc/examples/widgets.lean": ["lean.import-command"],
@@ -979,6 +981,7 @@ def build_case_rows(
     for case, m0_row, projection in zip(u2["cases"], m0["case_rows"], projections, strict=True):
         promotable_paths = set(projection["primary"] + projection["hooks"] + projection["case_local"])
         evidence = []
+        evidenced_path_signals: set[tuple[str, str]] = set()
         candidate_hits = 0
         exact_signal_ids: set[str] = set()
         applicable_signal_ids: set[str] = set()
@@ -990,15 +993,18 @@ def build_case_rows(
             for hit in file_row["signal_hits"]:
                 if hit["disposition"] == "promote":
                     exact_signal_ids.add(hit["signal_id"])
-                    evidence.append(
-                        {
-                            "path": path,
-                            "file_sha256": file_row["sha256"],
-                            "signal_id": hit["signal_id"],
-                            "hit_record_sha256": hit["record_sha256"],
-                            "surface_effect": hit["surface_effect"],
-                        }
-                    )
+                    evidence_key = (path, hit["signal_id"])
+                    if evidence_key not in evidenced_path_signals:
+                        evidenced_path_signals.add(evidence_key)
+                        evidence.append(
+                            {
+                                "path": path,
+                                "file_sha256": file_row["sha256"],
+                                "signal_id": hit["signal_id"],
+                                "hit_record_sha256": hit["record_sha256"],
+                                "surface_effect": hit["surface_effect"],
+                            }
+                        )
                 else:
                     candidate_hits += 1
         evidence.sort(key=lambda row: (row["path"], row["signal_id"], row["hit_record_sha256"]))
@@ -1113,6 +1119,16 @@ def build_authority(source_root: Path) -> dict[str, Any]:
         "validator_sources": [
             {"path": relative, "sha256": digest}
             for relative, digest in VALIDATOR_HASHES.items()
+        ],
+        "implementation_sources": [
+            {
+                "path": GENERATOR_PATH.relative_to(ROOT).as_posix(),
+                "sha256": sha256_file(GENERATOR_PATH),
+            },
+            {
+                "path": TEST_PATH.relative_to(ROOT).as_posix(),
+                "sha256": sha256_file(TEST_PATH),
+            },
         ],
         "parent_logical_seals": {
             "content_files_sha256": u2["content_files_sha256"],
@@ -1241,6 +1257,15 @@ def validate_authority(data: dict[str, Any]) -> list[str]:
         failures.append("source authorities drift")
     if data.get("validator_sources") != expected_validators:
         failures.append("validator sources drift")
+    expected_implementation_sources = [
+        {
+            "path": path.relative_to(ROOT).as_posix(),
+            "sha256": sha256_file(path),
+        }
+        for path in (GENERATOR_PATH, TEST_PATH)
+    ]
+    if data.get("implementation_sources") != expected_implementation_sources:
+        failures.append("implementation sources drift")
     expected_parent_seals = {
         "content_files_sha256": u2["content_files_sha256"],
         "cases_sha256": u2["cases_sha256"],
@@ -1534,8 +1559,10 @@ def render_markdown(report: dict[str, Any]) -> str:
 
 
 def write_outputs(authority: dict[str, Any]) -> None:
-    MANIFEST.write_text(json_text(authority), encoding="utf-8")
-    report = summarize(authority)
+    MANIFEST.write_bytes(canonical_bytes(authority) + b"\n")
+    # Reload the canonical sorted-key representation so generated report order
+    # is identical during derivation and offline --check.
+    report = summarize(load_json(MANIFEST))
     OUT_JSON.write_text(json_text(report), encoding="utf-8")
     OUT_MD.write_text(render_markdown(report), encoding="utf-8")
 
