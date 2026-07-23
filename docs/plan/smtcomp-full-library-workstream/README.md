@@ -346,8 +346,11 @@ gate.
    The [combined-comparison plan](../smtcomp-repaired-p0-combined-comparison-plan-2026-07-23.md)
    freezes the exact 1,810-row Axeyum/cvc5 population, the 1,305-row
    three-solver FP population, the separate 505-row QF_AUFLIA projection, and
-   forbids a cross-scope scalar ranking. Implementation and generated results
-   are next.
+   forbids a cross-scope scalar ranking. The
+   [combined-comparison result](../smtcomp-repaired-p0-combined-comparison-result-2026-07-23.md)
+   now closes that boundary: all populations account, zero known-status
+   contradictions and zero cross-solver disagreements remain, and the
+   self-sealed JSON/Markdown reproduce from the three validated roots.
 3. **Credited full population.** Only then execute Axeyum, cvc5, and Bitwuzla on
    the same versioned selection; publish the per-logic inventory and regenerate
    the coverage-weighted parity matrix without combining incompatible regimes.
@@ -403,6 +406,9 @@ Repository:
   `docs/plan/smtcomp-repaired-p0-v2-bitwuzla-closure-result-2026-07-23.md`;
 - repaired-P0 combined-comparison plan:
   `docs/plan/smtcomp-repaired-p0-combined-comparison-plan-2026-07-23.md`;
+- repaired-P0 combined-comparison result and generated views:
+  `docs/plan/smtcomp-repaired-p0-combined-comparison-result-2026-07-23.md` and
+  `docs/plan/generated/smtcomp-repaired-p0-comparison.{json,md}`;
 - candidate failure handoff:
   `docs/plan/smtcomp-full-library-candidate-run-handoff-2026-07-21.md`;
 - ranked gap plan: `docs/plan/full-library-gap-closing-plan-2026-07-22.md`;
@@ -441,8 +447,9 @@ NAS (shared, corpus read-only in practice):
    Bitwuzla's sole retry and process-free evidence closure are complete. Its
    1,305 records, v2 E3 completion, external result, safe adjudication, and
    byte-identical replay are frozen in the closure result. Do not launch another
-   retry. Integrate that result, then derive the combined three-cell repaired-P0
-   comparison before proposing a larger credited population. The active solver
+   retry. The combined three-cell repaired-P0 comparison is also complete and
+   keeps the 1,305-row FP scope separate from the 1,810-row Axeyum/cvc5 scope.
+   Integrate that result before preregistering a larger credited population. The active solver
    capability checkpoint is
    [`../checked-multi-binder-quantified-uf-models-2026-07-22.md`](../checked-multi-binder-quantified-uf-models-2026-07-22.md).
 5. Update `STATUS.md` and this file before handoff; push only a green topic
