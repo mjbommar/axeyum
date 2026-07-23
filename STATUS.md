@@ -491,7 +491,13 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   timed out. Whole-group cleanup left both selected roots absent. Attempt 003
   remains unconsumed, R4 is blocked before discovery, and all credit remains
   zero. Next preregister a larger lane with retained failed-control evidence;
-  do not invoke `run-r4`.
+  do not invoke `run-r4`. The source-first
+  [R5 plan](docs/plan/lean-u2-official-execution-tl0.6.3-m2-r5-attempt-003-plan-2026-07-23.md)
+  now freezes a 32 GiB resource-only lane, reuses still-unconsumed selected
+  attempt 003, requires completion-grade success/failure fanout evidence in an
+  external revision-named root, and preserves every stack/shard/command/store/
+  credit boundary. Next implement/test/push R5 only; no control or selected
+  process is authorized before that separate checkpoint.
 
 - **2026-07-22 — TL0.6.3 M1 derives complete deterministic U2 child-shard
   scheduling with zero new outcomes or parity credit.** The source-first
@@ -7803,6 +7809,12 @@ plan is built and committed on the current branch:
 | P5.5 | External target, measured | **DONE (bounded v1, ADR-0323--0338):** authenticated Tock capture plus eight rechecked dual-DRAT proofs and six replayed controls, UNKNOWN=0, DISAGREE=0. Query time 12.700 s; fresh outer wall 50.745 s; peak RSS 1,256,496 KiB; zero OOM deltas. The committed case study compares exact target validation, universal coverage, trust, effort, artifact boundaries, and limits. No Tock bug was found, so no upstream issue is applicable. This is not a speed or whole-kernel claim. |
 
 ## Changelog
+
+- **2026-07-23 — Preregistered R5's 32 GiB qualification for still-unconsumed
+  attempt 003.** Pinned runtime/task/channel sources and the R4 peak support one
+  resource-only doubling. R5 adds completion-grade fanout failure evidence,
+  keeps the exact nine-task source and 512 MiB stack, and forbids selected
+  discovery until the control succeeds from a clean pushed implementation.
 
 - **2026-07-23 — Rejected R4's 16 GiB lane before selected execution.** From
   clean pushed `628c5911`, the stack probe passed; the corrected nine-task

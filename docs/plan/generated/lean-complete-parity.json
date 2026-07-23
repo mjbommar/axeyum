@@ -36,7 +36,7 @@
     },
     {
       "path": "docs/plan/lean-complete-parity-v1.json",
-      "sha256": "377b0ed1575a313a7d8f21ff480f9f3243a363a673108e3dd5cd15626903e660"
+      "sha256": "ea9e4361043eb56ec34dfe2beb2821d3e1fef81d863f1c28a1ac2353bcda44f8"
     },
     {
       "path": "docs/plan/lean-execution-acceptance-tl0.7.4-2026-07-22.md",
@@ -68,7 +68,7 @@
     },
     {
       "path": "docs/plan/lean-system-implementation-plan-2026-07-21.md",
-      "sha256": "333222af7de5fb77645cb59f4069d6b897c9a0cd9c17c8e50aa33e099cd4be3b"
+      "sha256": "3672f072a0afb76ab6073b70ebaf82286571dbd0373d208dfdffd809fea05fb5"
     },
     {
       "path": "docs/plan/lean-u2-official-child-shards-v1.json",
@@ -183,6 +183,10 @@
       "sha256": "ced2d1d4d747dd564e703cc2a1aa58c7ccc21aa32c73a9902c96f8f37de27c07"
     },
     {
+      "path": "docs/plan/lean-u2-official-execution-tl0.6.3-m2-r5-attempt-003-plan-2026-07-23.md",
+      "sha256": "12fc9fc218f31a105b09634da875ccebd653bcb92bde96ad605cc057297d6b82"
+    },
+    {
       "path": "docs/plan/lean-u2-official-execution-tl0.6.3-m2-shard-0001-plan-2026-07-22.md",
       "sha256": "4cef4ba9c57820f5bff82e4cfdfdc524b3d0d54665a947cf2b27560767ec81dd"
     },
@@ -192,11 +196,11 @@
     },
     {
       "path": "docs/plan/lean4-complete-parity-contract-2026-07-22.md",
-      "sha256": "b040b0f2679a833a7898f515e2952631ca6f544e1a90fc662afccf2c4f06361a"
+      "sha256": "07b98c1055e6496750d337431b1abc9102dbd28558a03e554625b0b969a50d3c"
     },
     {
       "path": "docs/plan/lean4-complete-parity-roadmap-2026-07-22.md",
-      "sha256": "64c5cc81ea95acf0be0eac6374404c896b157297ced3b9a4d3d80806c5291e95"
+      "sha256": "c838e09b33493837fbe6b767b1c2cc444c2210f90260f212a83796c2425c5886"
     },
     {
       "path": "scripts/gen-lean-complete-parity.py",
@@ -981,6 +985,10 @@
           "detail": "Rejected 16 GiB local lane: the corrected nine-dedicated-task control hit thread creation at the address-space ceiling, cleaned up without selected discovery, and left attempt 003 unconsumed with zero credit."
         },
         {
+          "path": "docs/plan/lean-u2-official-execution-tl0.6.3-m2-r5-attempt-003-plan-2026-07-23.md",
+          "detail": "Preregistered 32 GiB resource-only lane reusing still-unconsumed selected attempt 003, with completion-grade fanout success/failure evidence and unchanged stack/shard/command/store/credit rules."
+        },
+        {
           "path": "docs/plan/lean-execution-evidence-v1.json",
           "detail": "TL0.7.1 contract authority for explicit resource lanes, typed terminations, immutable run/attempt/case/artifact/completion records, and zero real outcomes."
         },
@@ -1049,7 +1057,7 @@
           "detail": "Pinned tests tree inventory and the required CTest/test-pile derivation rule."
         }
       ],
-      "residual": "Current credited execution coverage remains two decided official outcomes for one unique case from a 3,678-case parent, with zero Axeyum outcomes or pairs. There are six consumed selected process attempts: four M0 attempts, invalid M2 R1, and timeout M2 R3. M1 partitions all eight official selections into five exact ordered memberships and 289 physical child shards, but every derived shard and all 111 official attempts remain incomplete. M2 R1 retained exact 64-row JUnit with 30 passes and 34 failures, but family-blind docparse artifact closure stopped before post/projection/completion. Completion-last policy therefore grants zero M2 case or shard credit. R2 then completed a zero-process diagnostic append that binds all 124 generated rows, retains 67 outcome/log payloads, keeps 56 large reproducible intermediates metadata-only, and leaves credit unchanged. M2 R3 exported LEAN_STACK_SIZE_KB=524288 and ran attempt 002 once. CTest printed seven diagnostic passes, then compile_bench/channel.lean failed dedicated-thread creation and deadlocked; the one-hour watchdog reaped the group. The retained 17-file root has no JUnit, cases, post, projection, or completion, so R3 adds zero outcome or shard credit and cannot retry. R4 implemented a 16 GiB attempt-003 lane and required a harmless nine-dedicated-task control before selected discovery. The corrected control reached released Lean but emitted failed to create thread under the exact limit and timed out cleanly; no work/evidence root, harness, discovery, or selected process was created, so attempt 003 remains unconsumed and R4 grants zero credit. A new source-first resource qualification must pass before any selected invocation. Then classify native surfaces and run matched Axeyum cases. Scheduling metadata, controls, diagnostic rows, and retries do not increase population coverage."
+      "residual": "Current credited execution coverage remains two decided official outcomes for one unique case from a 3,678-case parent, with zero Axeyum outcomes or pairs. There are six consumed selected process attempts: four M0 attempts, invalid M2 R1, and timeout M2 R3. M1 partitions all eight official selections into five exact ordered memberships and 289 physical child shards, but every derived shard and all 111 official attempts remain incomplete. M2 R1 retained exact 64-row JUnit with 30 passes and 34 failures, but family-blind docparse artifact closure stopped before post/projection/completion. Completion-last policy therefore grants zero M2 case or shard credit. R2 then completed a zero-process diagnostic append that binds all 124 generated rows, retains 67 outcome/log payloads, keeps 56 large reproducible intermediates metadata-only, and leaves credit unchanged. M2 R3 exported LEAN_STACK_SIZE_KB=524288 and ran attempt 002 once. CTest printed seven diagnostic passes, then compile_bench/channel.lean failed dedicated-thread creation and deadlocked; the one-hour watchdog reaped the group. The retained 17-file root has no JUnit, cases, post, projection, or completion, so R3 adds zero outcome or shard credit and cannot retry. R4 implemented a 16 GiB attempt-003 lane and required a harmless nine-dedicated-task control before selected discovery. The corrected control reached released Lean but emitted failed to create thread under the exact limit and timed out cleanly; no work/evidence root, harness, discovery, or selected process was created, so attempt 003 remains unconsumed and R4 grants zero credit. R5 preregisters a 32 GiB resource-only lane with completion-grade control evidence; it must be implemented, tested, committed, and pushed before any control or selected invocation. Then classify native surfaces and run matched Axeyum cases. Scheduling metadata, controls, diagnostic rows, and retries do not increase population coverage."
     },
     {
       "id": "U3",

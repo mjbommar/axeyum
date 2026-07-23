@@ -508,7 +508,10 @@ not an official-provider or parity claim. The subsequent
 rejects that 16 GiB lane: the corrected control emitted `failed to create
 thread`, timed out, and was reaped before any selected root or discovery.
 Attempt 003 remains unconsumed, but the R4 selected surface is blocked; a new
-source-first resource qualification is required and no counter changes.
+source-first resource qualification is required and no counter changes. The
+[R5 plan](lean-u2-official-execution-tl0.6.3-m2-r5-attempt-003-plan-2026-07-23.md)
+freezes that next boundary at 32 GiB with completion-grade control evidence;
+it does not itself authorize a parity claim or add an outcome.
 
 ## 8. Layer-specific equivalence
 

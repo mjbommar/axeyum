@@ -273,6 +273,10 @@ Start at the root [`PLAN.md`](../../PLAN.md) (map + standing rules) and
   rejected 16 GiB lane result: corrected nine-task control hit thread creation
   at the address-space ceiling and cleaned up before selected discovery, so
   attempt 003 remains unconsumed and all credit stays zero.
+- [`lean-u2-official-execution-tl0.6.3-m2-r5-attempt-003-plan-2026-07-23.md`](lean-u2-official-execution-tl0.6.3-m2-r5-attempt-003-plan-2026-07-23.md) —
+  source-first 32 GiB lane plan reusing still-unconsumed selected attempt 003,
+  adding completion-grade success/failure fanout evidence, and preserving the
+  exact stack/shard/command/store and zero-terminal-credit boundaries.
 - [`lean-compatibility-v1.json`](lean-compatibility-v1.json) and generated
   [`Lean compatibility matrix`](generated/lean-compatibility.md) — TL0.2's
   executable eight-field assurance contract, K0-K6 profile gates, registered
