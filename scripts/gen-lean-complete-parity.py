@@ -888,6 +888,8 @@ def report_source_paths(data: dict[str, Any]) -> list[Path]:
         ROOT / "scripts" / "tests" / "test_lean_u2_official_execution_m2_store.py",
         ROOT / "scripts" / "lean_u2_official_execution_m2_run.py",
         ROOT / "scripts" / "tests" / "test_lean_u2_official_execution_m2_run.py",
+        ROOT / "scripts" / "lean_u2_official_execution_m2_r2.py",
+        ROOT / "scripts" / "tests" / "test_lean_u2_official_execution_m2_r2.py",
     }
     for collection in (data["populations"], data["axes"], data["terminal_gates"]):
         for item in collection:

@@ -4,7 +4,7 @@
   "source_identities": [
     {
       "path": ".github/workflows/ci.yml",
-      "sha256": "45baf258a92dd84ee767ebd0813dfab902e21fc0a82b3541abef97ba002cd44d"
+      "sha256": "fab5ae81ea4ffaf1af46218a5ccf097bbe129f129afec1fc54e17128e94bab15"
     },
     {
       "path": "docs/plan/generated/lean-execution-evidence.md",
@@ -168,7 +168,7 @@
     },
     {
       "path": "scripts/gen-lean-complete-parity.py",
-      "sha256": "91f85261c641a63bd327cd06b3aa5734b21583f78bd5f6e4ec2eb16e7bf86d7e"
+      "sha256": "45205193cc1ad755ca7d24c192080d6f764aaa8fd4d1bda26a9613825b2e3671"
     },
     {
       "path": "scripts/gen-lean-execution-evidence.py",
@@ -207,6 +207,10 @@
       "sha256": "03502d99a007cbcb3a6b5ee76585694ad4a8eae39c753d3266fec8396ec65788"
     },
     {
+      "path": "scripts/lean_u2_official_execution_m2_r2.py",
+      "sha256": "a20a63086aaa516239eb4c88dcdb529ca79789748cf22bdd041b9ec5acfef533"
+    },
+    {
       "path": "scripts/lean_u2_official_execution_m2_run.py",
       "sha256": "5763298bb33c97baacc0c29d6cc67a8df2ece796f7ea182c59957f5be59eb593"
     },
@@ -224,7 +228,7 @@
     },
     {
       "path": "scripts/tests/test_lean_complete_parity.py",
-      "sha256": "dbef8c8fe20b218aebd62b7d56c2c3d2162ef8d09c7c499d8cdcf71aa5554f52"
+      "sha256": "998f9188b60dd91683160d08cd90918312ac5af20996ef6d157c86a1bc2b15c7"
     },
     {
       "path": "scripts/tests/test_lean_execution_acceptance.py",
@@ -257,6 +261,10 @@
     {
       "path": "scripts/tests/test_lean_u2_official_execution_m2.py",
       "sha256": "3a33a6e3fd7e1cd42bf25127442b59f57c495226fed3edc19768c4cd2704f710"
+    },
+    {
+      "path": "scripts/tests/test_lean_u2_official_execution_m2_r2.py",
+      "sha256": "ce68a0331c3d6537fd6a0d482a8e89d5950b1a9b45b94cfae4d98497117d7be3"
     },
     {
       "path": "scripts/tests/test_lean_u2_official_execution_m2_run.py",
