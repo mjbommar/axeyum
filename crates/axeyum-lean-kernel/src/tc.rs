@@ -654,7 +654,9 @@ impl Kernel {
                 // constructor-headed major reduces to the matching minor applied
                 // to the constructor's fields (ADR-0036, slice 4).
                 ExprNode::Const(..) => {
-                    if let Some(reduced) = self.reduce_rec(cursor) {
+                    if let Some(reduced) = self.reduce_quotient(cursor) {
+                        cursor = reduced;
+                    } else if let Some(reduced) = self.reduce_rec(cursor) {
                         cursor = reduced;
                     } else if let Some(reduced) = self.reduce_nat_succ(cursor) {
                         cursor = reduced;

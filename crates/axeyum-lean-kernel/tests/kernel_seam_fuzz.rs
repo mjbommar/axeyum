@@ -9,11 +9,12 @@
 //! 3. proof irrelevance × iota reduction;
 //! 4. literals × reduction/admission.
 //!
-//! Projection/eta and quotient seams remain unrepresentable until TL2.2-TL2.5
-//! and TL2.10. They are not credited here. The historical complete
-//! large-elimination exploit remains in `prop_large_elim_derives_false.rs`; this
-//! harness generalizes its feature boundary and attempts a `False` admission in
-//! every generated case.
+//! Projection/eta generated seams remain outside this historical population.
+//! TL2.10's quotient implementation has its own 576-descriptor, twice-repeated
+//! package/reduction grammar in `quotient.rs`; it is not double-counted in this
+//! 768-case summary. The historical complete large-elimination exploit remains
+//! in `prop_large_elim_derives_false.rs`; this harness generalizes its feature
+//! boundary and attempts a `False` admission in every generated case.
 
 use axeyum_lean_kernel::{
     BinderInfo, Declaration, ExprId, Kernel, KernelError, Lit, NameId, NatLit, build_logic_prelude,
