@@ -3,7 +3,7 @@
 Status: **implemented core + active expansion** (kickoff 2026-07-20)
 Last updated: 2026-07-22
 
-## Implemented (`crates/axeyum-cas` — pure Rust, WASM-safe, 545 unit + 147 doctests, clippy-clean)
+## Implemented (`crates/axeyum-cas` — pure Rust, WASM-safe, 547 unit + 147 doctests, clippy-clean)
 
 > **Data-model frontier now built** (special functions & fractional powers, none needing a `Pow`
 > representation change): the **gamma family** `Γ`, arbitrary-order **polygamma** `ψ⁽ⁿ⁾` (via
@@ -21,12 +21,14 @@ return a wrong answer). Runnable demos: `examples/certified_calculus.rs`,
 `examples/cas_tour.rs`.
 
 The certified integration table includes the direct rational-affine Bessel pairs
-`∫J₁(ax+b)dx=−J₀(ax+b)/a` and `∫I₁(ax+b)dx=I₀(ax+b)/a`; weighted `xJ₀`/`xI₀`
-forms remain outside the zero-test recurrence fragment.
+`∫J₁(ax+b)dx=−J₀(ax+b)/a` and `∫I₁(ax+b)dx=I₀(ax+b)/a`, plus the weighted
+pairs `∫uJ₀(u)dx=uJ₁(u)/a` and `∫uI₀(u)dx=uI₁(u)/a` for
+`u=ax+b`. The latter certify through division-free polynomial recurrences
+`uJ₂=2J₁−uJ₀` and `uI₂=uI₀−2I₁`; mismatched weights still decline.
 
 | Area | Functions | Certified |
 |---|---|---|
-| Core | `differentiate`/`differentiate_n`, `substitute`, `expand`, `collect` (group by powers), `simplify`, `trigsimp`, `normalize`, `equal` (zero-test w/ witness, **Euler-sound for related trig atoms**, **log arithmetic** `2ln2−ln3=ln(4/3)` via prime-basis expansion) | equal ✓ |
+| Core | `differentiate`/`differentiate_n`, `substitute`, `expand`, `collect` (group by powers), `simplify`, `trigsimp`, `normalize`, `equal` (zero-test w/ witness, **Euler-sound for related trig atoms**, **log arithmetic** `2ln2−ln3=ln(4/3)` via prime-basis expansion, division-free order-one **Bessel recurrences**) | equal ✓ |
 | Rational | `cancel` (uni+multivariate), `apart`, `factor` (**full ℚ irreducible factorization** — peels rational roots then splits the degree-≥2 residual via Berlekamp–Zassenhaus, `x⁴+x²+1=(x²+x+1)(x²−x+1)`), `factor_univariate_over_q`/`factor_expr` (full ℤ/ℚ, Berlekamp–Zassenhaus); **bivariate** quadratics `x²−y²` and sum/difference of like powers `x³−y³=(x−y)(x²+xy+y²)`, `x⁵+y⁵`, `poly_gcd`, `poly_div`, `resultant`, `discriminant`, `cyclotomic_polynomial`, `degree`/`coeff`/`leading_coeff` | factor/apart/factor_expr ✓ |
 | Equations | `solve` (rational, quadratic w/ simplified surds, **complex**, degree-≥3 factoring over ℚ; **elementary transcendental** `eˣ−5⇒ln5`, `ln x−2⇒e²`, `√x−3⇒9`; **polynomial in eˣ** `e^{2x}−3e^x+2⇒{0,ln2}`); `solve_polynomial_system` (bivariate, Sylvester resultant); `real_roots` → `AlgebraicReal` (RootOf, any degree), `real_root_intervals`/`count_real_roots` (Sturm), `approximate_real_roots`; `solve_polynomial_inequality` | rational + radical + transcendental + system ✓; Sturm-certified |
 | Summation | `sum_polynomial` (telescoping), `gosper_sum` (indefinite hypergeometric), `infinite_sum` (**convergent** Σ_{k}^∞ — geometric `Σr^k=1/(1−r)`, p-series `Σ1/k²=π²/6` via ζ) | ✓ |
@@ -57,7 +59,7 @@ forms remain outside the zero-test recurrence fragment.
 
 Heads: `exp, sin, cos, tan, ln, atan, sqrt, abs`, the inverse pair
 `asin/acos/asinh/acosh`, and the special functions `erf, Si, Ci, Ei, li, Shi, Chi,
-FresnelS, FresnelC, BesselJ0, BesselJ1` (extensible `Unary` — each adds a `name`,
+FresnelS, FresnelC, BesselJ(u32), BesselI(u32)` (extensible `Unary` — each adds a `name`,
 derivative, `series` rule, and `evalf` kernel; everything else is catch-all). The zero-test
 carries sound folds — `I²=−1`, Pythagorean `sin²+cos²=1`, the **symbolic radical
 fold** `(√u)²=u` for any `u` (not just constants — so `x/√x=√x` certifies), `ln(exp u)=u`,

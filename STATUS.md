@@ -383,15 +383,19 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
-- **2026-07-22 — certified direct order-one Bessel antiderivatives.** Rational-
-  affine `J₁`/`I₁` arguments now integrate through `J₀′=−J₁` / `I₀′=I₁`, with
-  every result accepted only by the normal differentiate-and-zero-test gate.
-  Unit, shifted/reflected, scaled, symbolic-factor, and FTC cases pass; weighted
-  `xJ₀`/`xI₀` remain explicit recurrence-boundary declines. An adjacent
-  `u32::MAX` derivative overflow panic is replaced by exact backward recurrences.
-  The 545-unit/147-doctest suite passed (933.50 s for units), with workspace
-  Clippy, stable/nightly rustdoc, WASM, links, and whitespace green. Next:
-  decide the weighted-pair recurrence proof or resume broad bounded probing.
+- **2026-07-22 — certified direct and weighted Bessel antiderivatives.** The
+  rational-affine `J₁`/`I₁` pairs remain certified through `J₀′=−J₁` /
+  `I₀′=I₁`; weighted `c·u·J₀(u)` / `c·u·I₀(u)` now add the exact
+  candidates `(c/slope)uJ₁(u)` / `(c/slope)uI₁(u)`. Their ordinary public
+  differentiate-and-zero-test certificates close through division-free DLMF
+  recurrences only when an order-two atom's full polynomial coefficient is
+  exactly divisible by its matching argument. Each replacement strictly lowers
+  that atom's exponent and introduces no `1/u` domain seam. Unit, scale, shift,
+  reflection, symbolic-factor, recurrence, near-miss, FTC, and decline controls
+  pass. The 547-unit/147-doctest suite passed (998.34 s for units), together with
+  workspace Clippy, stable/nightly rustdoc, WASM, links, and whitespace. Next:
+  resume broad timeout-bounded probing or measure explicit order-two inverse
+  Bessel forms through the mandatory forward round trip.
 
 - **2026-07-22 — exact arbitrary-order Bessel Maclaurin series and zero
   limits.** The existing `series` compute path now composes every nonnegative
@@ -7886,6 +7890,10 @@ plan is built and committed on the current branch:
   R1/R2 history, a new run/evidence root, universal 512 MiB Lean runtime stacks
   from pinned source semantics, and the measured tiered artifact store. It
   authorizes one process only after separately pushed implementation gates.
+- **2026-07-22 — Added certified weighted order-zero Bessel antiderivatives.**
+  Division-free, terminating order-one recurrence reduction closes rational-
+  affine `uJ₀(u)` / `uI₀(u)` through the unchanged differentiate-and-check
+  gate, bringing CAS to 547 units and 147 doctests.
 - **2026-07-22 — Added certified direct order-one Bessel antiderivatives.**
   Rational-affine `J₁`/`I₁` pairs, FTC controls, explicit recurrence declines,
   and maximum-order derivative hardening bring CAS to 545 units/147 doctests.
