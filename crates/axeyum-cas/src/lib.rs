@@ -11586,14 +11586,16 @@ pub fn laurent_series(f: &CasExpr, var: &str, order: usize) -> Option<CasExpr> {
     Some(result)
 }
 
+const MAX_INVERSE_LAPLACE_BESSEL_ORDER: u32 = 32;
+
 /// The **inverse Laplace transform** `L⁻¹{F}(t)`. Handles proper rational
 /// functions with simple/repeated rational real poles or irreducible-quadratic
 /// poles with rational damped frequency (including repeated powers through
 /// multiplicity seven), plus the exact Bessel pairs
 /// `c/√((s−a)²+b²) ↦ c·e^{at}J₀(bt)` and
 /// `c/√((s−a)²−b²) ↦ c·e^{at}I₀(bt)` for rational `a` and `c` and nonzero
-/// rational `b`, together with the corresponding order-one and order-two
-/// `Jₙ`/`Iₙ` pairs and finite additive combinations whose radical-bearing
+/// rational `b`, together with the corresponding `Jₙ`/`Iₙ` pairs through order
+/// 32 and finite additive combinations whose radical-bearing
 /// summands all invert independently.
 /// **Certified** by the round trip `L{result} = F` (via [`laplace_transform`] and
 /// the zero-test). Returns `None` for improper rational inputs, unsupported pole
@@ -11611,8 +11613,10 @@ pub fn laurent_series(f: &CasExpr, var: &str, order: usize) -> Option<CasExpr> {
 pub fn inverse_laplace(f: &CasExpr, s: &str, t: &str) -> Option<CasExpr> {
     if let Some(result) = inverse_laplace_bessel_j0(f, s, t)
         .or_else(|| inverse_laplace_bessel_i0(f, s, t))
-        .or_else(|| inverse_laplace_bessel_order(f, s, t, 1))
-        .or_else(|| inverse_laplace_bessel_order(f, s, t, 2))
+        .or_else(|| {
+            (1..=MAX_INVERSE_LAPLACE_BESSEL_ORDER)
+                .find_map(|order| inverse_laplace_bessel_order(f, s, t, order))
+        })
     {
         return match equal(&laplace_transform(&result, t, s)?, f) {
             ZeroTest::Certified { equal: true, .. } => Some(result),
@@ -11870,8 +11874,8 @@ fn rational_scale_between(value: &CasExpr, basis: &CasExpr) -> Option<Rational> 
 ///   / √((s−alpha)²−beta²)`.
 ///
 /// `alpha`, `beta`, and the outer scale must all be rational, with `beta != 0`.
-/// Public dispatch deliberately selects only orders one and two; the caller
-/// independently certifies the reconstructed complete input.
+/// Public dispatch tries the explicit resource-bounded orders 1 through 32; the
+/// caller independently certifies the reconstructed complete input.
 fn inverse_laplace_bessel_order(f: &CasExpr, s: &str, t: &str, order: u32) -> Option<CasExpr> {
     if order == 0 {
         return None;
@@ -20925,8 +20929,15 @@ mod tests {
             &combined,
         );
 
-        let order_three = transform(&t().bessel_j(3));
-        assert!(inverse_laplace(&(j0.clone() + order_three), "s", "t").is_none());
+        let order_three_function = t().bessel_j(3);
+        let order_three = transform(&order_three_function);
+        assert_equal(
+            &inverse_laplace(&(j0.clone() + order_three), "s", "t")
+                .expect("additive order-three inverse"),
+            &(j0_function + order_three_function),
+        );
+        let order_thirty_three = transform(&t().bessel_j(33));
+        assert!(inverse_laplace(&(j0.clone() + order_thirty_three), "s", "t").is_none());
         let irrational_root = (s().pow(2) + CasExpr::int(2)).sqrt();
         let irrational_order_one = (irrational_root.clone() - s()) / irrational_root;
         assert!(inverse_laplace(&(j0 + irrational_order_one), "s", "t").is_none());
@@ -20942,13 +20953,34 @@ mod tests {
     }
 
     #[test]
-    fn inverse_laplace_bessel_order_declines() {
+    fn inverse_laplace_bessel_integer_order_family_and_declines() {
         let s = || v("s");
         let t = || v("t");
-        let j3 = laplace_transform(&t().bessel_j(3), "t", "s").unwrap();
-        let i3 = laplace_transform(&t().bessel_i(3), "t", "s").unwrap();
-        assert!(inverse_laplace(&j3, "s", "t").is_none());
-        assert!(inverse_laplace(&i3, "s", "t").is_none());
+        for order in [3, 8, 16, 32] {
+            for function in [t().bessel_j(order), t().bessel_i(order)] {
+                let transform = laplace_transform(&function, "t", "s").unwrap();
+                let inverse = inverse_laplace(&transform, "s", "t")
+                    .unwrap_or_else(|| panic!("missing order-{order} inverse"));
+                assert_equal(&inverse, &function);
+                assert_equal(&laplace_transform(&inverse, "t", "s").unwrap(), &transform);
+            }
+        }
+
+        let shifted = CasExpr::int(-3)
+            * (CasExpr::int(2) * t()).exp()
+            * (CasExpr::rat(1, 2) * t()).bessel_i(7);
+        let shifted_transform = laplace_transform(&shifted, "t", "s").unwrap();
+        assert_equal(
+            &inverse_laplace(&shifted_transform, "s", "t").expect("shifted order-seven inverse"),
+            &shifted,
+        );
+
+        for order in [33, u32::MAX] {
+            let j = laplace_transform(&t().bessel_j(order), "t", "s").unwrap();
+            let i = laplace_transform(&t().bessel_i(order), "t", "s").unwrap();
+            assert!(inverse_laplace(&j, "s", "t").is_none());
+            assert!(inverse_laplace(&i, "s", "t").is_none());
+        }
 
         let irrational_root = (s().pow(2) + CasExpr::int(2)).sqrt();
         assert!(
