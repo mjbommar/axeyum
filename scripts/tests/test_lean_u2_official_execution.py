@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import copy
+import json
+import shutil
 import tempfile
 import unittest
 from pathlib import Path
@@ -24,7 +26,7 @@ class LeanU2OfficialExecutionTests(unittest.TestCase):
                 "schema": U2.TERMINAL_SCHEMA,
                 "run_id": U2.RUN_ID,
                 "attempt_id": U2.ATTEMPT_ID,
-                "sequence": 1,
+                "sequence": U2.SEQUENCE,
                 "prelaunch_sha256": prelaunch_sha256,
                 "class": "exited",
                 "exit_code": exit_code,
@@ -68,6 +70,8 @@ class LeanU2OfficialExecutionTests(unittest.TestCase):
             (U2.CASE_RUNNER, U2.CASE_RUNNER_SHA256),
             (U2.UTIL_SOURCE, U2.UTIL_SHA256),
             (U2.WITH_ENV_SOURCE, U2.WITH_ENV_SHA256),
+            (U2.UNICODE_SOURCE_PATHS[0], "1" * 64),
+            (U2.UNICODE_SOURCE_PATHS[1], "2" * 64),
         )
         rows = [
             {"path": path, "kind": "file", "mode": 0o644, "bytes": 1, "sha256": sha, "target": None}
@@ -165,7 +169,13 @@ class LeanU2OfficialExecutionTests(unittest.TestCase):
         }, U2.HARNESS_SCHEMA)
         storage = U2.STORE.capture_storage_class(U2.STORE.STORAGE_CLASS_IDS[0], U2.ROOT)
         run = U2.build_run_record(spec, source, toolchain, tools, harness, storage)
-        prelaunch = U2.build_prelaunch(spec, run)
+        prelaunch = U2.build_prelaunch(
+            spec,
+            run,
+            U2.failed_attempt_dependency(
+                live_readonly_validated=True, git_index_validated=True
+            ),
+        )
         terminal = self.terminal(prelaunch_sha256=prelaunch["record_sha256"])
         raw_junit = b'<testsuite tests="1" failures="0"><testcase name="compile/534.lean"/></testsuite>'
         junit = U2.parse_junit(raw_junit, terminal)
@@ -174,12 +184,16 @@ class LeanU2OfficialExecutionTests(unittest.TestCase):
             "tests/compile/534.lean.c": b"generated c\n",
             "tests/compile/534.lean.out": b"generated executable\n",
             "tests/compile/534.lean.out.produced": b"expected output\n",
+            U2.CTEST_SOURCE_PATHS[0]: b"compile/534.lean 1 0\n---\n",
+            U2.CTEST_SOURCE_PATHS[1]: b"passed CTest log\n",
         }
         modes = {
             "tests/with_stage1_test_env.sh": 0o755,
             "tests/compile/534.lean.c": 0o644,
             "tests/compile/534.lean.out": 0o755,
             "tests/compile/534.lean.out.produced": 0o644,
+            U2.CTEST_SOURCE_PATHS[0]: 0o644,
+            U2.CTEST_SOURCE_PATHS[1]: 0o644,
         }
         generated_paths = sorted(generated_payloads)
         generated_rows = [
@@ -199,6 +213,12 @@ class LeanU2OfficialExecutionTests(unittest.TestCase):
             "original_file_count": len(source["files"]),
             "original_files_unchanged": True,
             "generated_paths": generated_paths,
+            "case_generated_paths": [
+                path for path in generated_paths if path in U2.CASE_GENERATED_SOURCE_PATHS
+            ],
+            "ctest_generated_paths": [
+                path for path in generated_paths if path in U2.CTEST_SOURCE_PATHS
+            ],
             "generated_files": generated_rows,
             "generated_files_sha256": U2.domain_digest("axeyum-lean-u2-generated-files-v1", generated_rows),
             "undeclared_paths": [],
@@ -241,10 +261,51 @@ class LeanU2OfficialExecutionTests(unittest.TestCase):
     def test_spec_freezes_singleton_parent_command_environment_and_lane(self) -> None:
         spec = self.spec()
         self.assertEqual(U2.validate_spec(spec), [])
+        self.assertEqual(spec["attempt_id"], "attempt-002")
+        self.assertEqual(spec["sequence"], 2)
         self.assertEqual(spec["selection_case_ids"], [U2.CASE_ID])
         self.assertEqual(len(spec["command"]), 12)
         self.assertEqual(spec["command"][-4:], ["-E", "foreign", "-R", r"^compile/534[.]lean$"])
         self.assertEqual(spec["resource_envelope"]["memory_limit"]["value"], 8_589_934_592)
+        self.assertEqual(spec["resource_envelope"]["ctest_worker_limit"]["value"], 1)
+        self.assertEqual(spec["resource_envelope"]["lean_shell_worker_limit"]["value"], 1)
+        self.assertEqual(
+            spec["resource_envelope"]["generated_runtime_worker_limit"]["state"],
+            "requested",
+        )
+        self.assertEqual(spec["resource_envelope"]["os_thread_limit"]["state"], "not-enforced")
+        self.assertEqual(
+            spec["resource_envelope"]["task_stack_policy"],
+            "unmodified-Lean-default-no-s-option",
+        )
+
+    def test_wrapper_freezes_both_official_test_arrays_and_no_stack_override(self) -> None:
+        wrapper = U2.render_environment_wrapper(
+            Path("/tmp/axeyum-u2-source"), Path("/tmp/axeyum-u2-toolchain")
+        ).decode()
+        lean = "TEST_LEAN_ARGS=(-j1)"
+        leani = "TEST_LEANI_ARGS=(-j1)"
+        source = 'source "$TEST_DIR/util.sh"'
+        self.assertEqual(wrapper.count(lean), 1)
+        self.assertEqual(wrapper.count(leani), 1)
+        self.assertLess(wrapper.index(lean), wrapper.index(leani))
+        self.assertLess(wrapper.index(leani), wrapper.index(source))
+        self.assertNotIn("--tstack", wrapper)
+        self.assertNotRegex(wrapper, r"(?:^|\s)-s\d")
+
+    def test_utf8_canonical_json_accepts_unicode_and_rejects_ascii_escaping(self) -> None:
+        value = {"paths": list(U2.UNICODE_SOURCE_PATHS)}
+        canonical = U2.canonical_bytes(value)
+        self.assertIn("英語".encode(), canonical)
+        with tempfile.TemporaryDirectory(dir=U2.ROOT) as temporary:
+            path = Path(temporary) / "record.json"
+            path.write_bytes(canonical)
+            self.assertEqual(U2.load_canonical(path), value)
+            path.write_bytes(
+                (json.dumps(value, sort_keys=True, separators=(",", ":")) + "\n").encode()
+            )
+            with self.assertRaisesRegex(U2.U2ExecutionError, "noncanonical"):
+                U2.load_canonical(path)
 
     def test_spec_rejects_shard_parent_command_environment_and_credit_drift(self) -> None:
         mutations = (
@@ -361,19 +422,61 @@ class LeanU2OfficialExecutionTests(unittest.TestCase):
             tracked.write_bytes(b"source")
             source = {"files": U2.manifest_tree(root), "record_sha256": "e" * 64}
             wrapper = U2.render_environment_wrapper(root, root)
-            generated = root / "tests/with_stage1_test_env.sh"
-            generated.parent.mkdir(parents=True)
-            generated.write_bytes(wrapper)
-            record, payloads = U2.build_post_record(root, source, wrapper)
-            self.assertEqual(record["generated_paths"], ["tests/with_stage1_test_env.sh"])
+            payloads_by_path = {
+                "tests/with_stage1_test_env.sh": wrapper,
+                "tests/compile/534.lean.c": b"c",
+                "tests/compile/534.lean.out": b"out",
+                "tests/compile/534.lean.out.produced": b"produced",
+                U2.CTEST_SOURCE_PATHS[0]: b"cost",
+                U2.CTEST_SOURCE_PATHS[1]: b"log",
+            }
+            for relative, payload in payloads_by_path.items():
+                generated = root / relative
+                generated.parent.mkdir(parents=True, exist_ok=True)
+                generated.write_bytes(payload)
+            record, payloads = U2.build_post_record(root, source, wrapper, "passed")
+            self.assertEqual(
+                set(record["generated_paths"]),
+                {*U2.CASE_GENERATED_SOURCE_PATHS, *U2.CTEST_REQUIRED_SOURCE_PATHS},
+            )
             self.assertEqual(payloads["tests/with_stage1_test_env.sh"], wrapper)
             (root / "undeclared").write_bytes(b"x")
             with self.assertRaisesRegex(U2.U2ExecutionError, "undeclared"):
-                U2.build_post_record(root, source, wrapper)
+                U2.build_post_record(root, source, wrapper, "passed")
             (root / "undeclared").unlink()
             tracked.write_bytes(b"changed")
             with self.assertRaisesRegex(U2.U2ExecutionError, "mutated"):
-                U2.build_post_record(root, source, wrapper)
+                U2.build_post_record(root, source, wrapper, "passed")
+
+    def test_post_run_enforces_ctest_pass_and_failure_artifact_closure(self) -> None:
+        with tempfile.TemporaryDirectory(dir=U2.ROOT) as temporary:
+            root = Path(temporary)
+            source = {"files": [], "record_sha256": "e" * 64}
+            wrapper = U2.render_environment_wrapper(root, root)
+            payloads = {
+                "tests/with_stage1_test_env.sh": wrapper,
+                "tests/compile/534.lean.c": b"c",
+                "tests/compile/534.lean.out": b"out",
+                "tests/compile/534.lean.out.produced": b"produced",
+                U2.CTEST_SOURCE_PATHS[0]: b"cost",
+                U2.CTEST_SOURCE_PATHS[1]: b"last",
+            }
+            for relative, payload in payloads.items():
+                path = root / relative
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_bytes(payload)
+            U2.build_post_record(root, source, wrapper, "passed")
+            failed_log = root / U2.CTEST_SOURCE_PATHS[2]
+            failed_log.write_bytes(b"failed")
+            with self.assertRaisesRegex(U2.U2ExecutionError, "LastTestsFailed"):
+                U2.build_post_record(root, source, wrapper, "passed")
+            U2.build_post_record(root, source, wrapper, "failed")
+            failed_log.unlink()
+            with self.assertRaisesRegex(U2.U2ExecutionError, "required CTest"):
+                U2.build_post_record(root, source, wrapper, "failed")
+            (root / U2.CTEST_SOURCE_PATHS[1]).unlink()
+            with self.assertRaisesRegex(U2.U2ExecutionError, "exact declared"):
+                U2.build_post_record(root, source, wrapper, "passed")
 
     def test_case_record_cannot_claim_parent_provider_axeyum_or_parity_credit(self) -> None:
         junit = U2.parse_junit(
@@ -386,6 +489,8 @@ class LeanU2OfficialExecutionTests(unittest.TestCase):
             "original_file_count": 1,
             "original_files_unchanged": True,
             "generated_paths": ["tests/with_stage1_test_env.sh"],
+            "case_generated_paths": ["tests/with_stage1_test_env.sh"],
+            "ctest_generated_paths": [],
             "generated_files": [],
             "generated_files_sha256": U2.domain_digest("axeyum-lean-u2-generated-files-v1", []),
             "undeclared_paths": [],
@@ -407,8 +512,22 @@ class LeanU2OfficialExecutionTests(unittest.TestCase):
             self.assertEqual(completion["credits"]["parity_credit"], 0)
             self.assertEqual({row["path"] for row in evidence}, set(U2.BASE_EVIDENCE_PATHS))
 
-    def test_complete_evidence_rejects_missing_extra_writable_and_raw_drift(self) -> None:
-        mutations = ("missing", "extra", "writable", "raw-drift")
+    def test_result_authority_retains_two_attempts_and_one_bounded_outcome(self) -> None:
+        with tempfile.TemporaryDirectory(dir=U2.ROOT) as temporary:
+            root = Path(temporary)
+            self.materialize_evidence(root)
+            authority = U2.build_result_authority(
+                root, implementation_revision="a" * 40
+            )
+            self.assertEqual(U2.validate_result_authority(authority), [])
+            self.assertEqual(authority["summary"]["process_attempts"], 2)
+            self.assertEqual(authority["summary"]["official_outcomes"], 1)
+            self.assertEqual(authority["attempts"][0]["official_outcomes"], 0)
+            self.assertEqual(authority["attempts"][1]["official_outcomes"], 1)
+            self.assertEqual(authority["credits"]["parity_credit"], 0)
+
+    def test_complete_evidence_rejects_missing_extra_and_raw_drift(self) -> None:
+        mutations = ("missing", "extra", "raw-drift")
         for mutation in mutations:
             with self.subTest(mutation=mutation), tempfile.TemporaryDirectory(dir=U2.ROOT) as temporary:
                 root = Path(temporary)
@@ -417,8 +536,6 @@ class LeanU2OfficialExecutionTests(unittest.TestCase):
                     (root / "raw/stdout.bin").unlink()
                 elif mutation == "extra":
                     self.write_readonly(root, "extra.bin", b"extra")
-                elif mutation == "writable":
-                    (root / "case.json").chmod(0o644)
                 else:
                     path = root / "raw/stdout.bin"
                     path.chmod(0o644)
@@ -426,6 +543,71 @@ class LeanU2OfficialExecutionTests(unittest.TestCase):
                     path.chmod(0o444)
                 with self.assertRaises(U2.U2ExecutionError):
                     U2.validate_evidence_root(root)
+
+    def test_live_evidence_rejects_writable_but_offline_checkout_accepts_it(self) -> None:
+        with tempfile.TemporaryDirectory(dir=U2.ROOT) as temporary:
+            root = Path(temporary)
+            self.materialize_evidence(root)
+            path = root / "case.json"
+            path.chmod(0o644)
+            U2.validate_evidence_root(root)
+            with self.assertRaisesRegex(U2.U2ExecutionError, "not read-only"):
+                U2.validate_evidence_root(root, require_live_readonly=True)
+
+    def test_failed_attempt_dependency_validates_live_and_git_modes(self) -> None:
+        dependency = U2.validate_failed_attempt(
+            require_live_readonly=True,
+            require_git_index=True,
+        )
+        self.assertEqual(
+            dependency,
+            U2.failed_attempt_dependency(
+                live_readonly_validated=True, git_index_validated=True
+            ),
+        )
+        self.assertEqual(dependency["official_outcomes"], 0)
+        self.assertEqual(dependency["parity_credit"], 0)
+
+    def test_failed_attempt_live_mode_is_distinct_from_offline_content_validation(self) -> None:
+        with tempfile.TemporaryDirectory(dir=U2.ROOT) as temporary:
+            root = Path(temporary) / "failed"
+            shutil.copytree(U2.FAILED_EVIDENCE_ROOT, root)
+            U2.validate_failed_attempt(
+                root, require_live_readonly=True, require_git_index=False
+            )
+            path = root / "terminal.json"
+            path.chmod(0o644)
+            U2.validate_failed_attempt(
+                root, require_live_readonly=False, require_git_index=False
+            )
+            with self.assertRaisesRegex(U2.U2ExecutionError, "mode 0444"):
+                U2.validate_failed_attempt(
+                    root, require_live_readonly=True, require_git_index=False
+                )
+
+    def test_failed_attempt_rejects_added_missing_symlink_and_content_drift(self) -> None:
+        for mutation in ("added", "missing", "symlink", "content"):
+            with self.subTest(mutation=mutation), tempfile.TemporaryDirectory(
+                dir=U2.ROOT
+            ) as temporary:
+                root = Path(temporary) / "failed"
+                shutil.copytree(U2.FAILED_EVIDENCE_ROOT, root)
+                if mutation == "added":
+                    (root / "extra").write_bytes(b"extra")
+                elif mutation == "missing":
+                    (root / "raw/stderr.bin").unlink()
+                elif mutation == "symlink":
+                    path = root / "raw/stderr.bin"
+                    path.unlink()
+                    path.symlink_to("stdout.bin")
+                else:
+                    path = root / "raw/stderr.bin"
+                    path.chmod(0o644)
+                    path.write_bytes(b"drift")
+                with self.assertRaises(U2.U2ExecutionError):
+                    U2.validate_failed_attempt(
+                        root, require_live_readonly=False, require_git_index=False
+                    )
 
     def test_complete_evidence_rejects_case_credit_and_completion_drift(self) -> None:
         with tempfile.TemporaryDirectory(dir=U2.ROOT) as temporary:
