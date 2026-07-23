@@ -316,7 +316,7 @@ gate.
    restart paths, including fresh liveness/evidence validation when replaying an
    existing authority record. Released runner evidence must also exactly account
    every shard-assigned key as missing under the complete terminal contract. The
-   real frozen session retains a valid failed resource terminal; `2365b8cd`
+   real frozen session retains a valid failed resource terminal; `6a34bf2e`
    corrects the earlier absent-terminal model by validating and binding its file
    and record hashes plus matching worker exit code. Twenty-eight focused tests
    and the 72-test portable/cgroup/live gates pass; live E3 has no skips. No

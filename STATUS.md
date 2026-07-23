@@ -463,14 +463,14 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   digest, and all 435 assigned keys in its missing set; the frozen evidence
   passes this stronger check. A subsequent exact namespace audit found that the
   failed resource session correctly retains a sealed failed `terminal.json`;
-  the first implementation had incorrectly rejected its presence. `2365b8cd`
+  the first implementation had incorrectly rejected its presence. `6a34bf2e`
   now validates that resource session through the E2 contract, binds terminal
   file/record hashes, matches worker exit `[2]` to the failed outer allocation,
   and adds `resource_enforcement.py` to the exact integration gate. A write-
   mocked dry run passes the complete live recovery preflight and leaves recovery
   records at zero. Twenty-eight focused tests and all 72 portable, mandatory
   cgroup, and live E3 tests pass; live evidence is
-  `/nas3/data/axeyum/harness/e3-gate/live-1784833784220517354-2365b8cd82a7`.
+  `/nas3/data/axeyum/harness/e3-gate/live-1784833951553616481-378813e09840`.
   Recovery stays blocked until these source and checkpoint bytes are integrated.
 - **2026-07-23 — certified rational weights inside powered rational-rate
   Bessel-J products.** Wave twenty-one extends the structural powered-product

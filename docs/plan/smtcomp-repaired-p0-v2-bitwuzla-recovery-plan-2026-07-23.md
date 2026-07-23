@@ -207,9 +207,9 @@ AXEYUM_REQUIRE_SMTCOMP_CGROUP=1 ./scripts/check-smtcomp-resume.sh
 
 AXEYUM_REQUIRE_SMTCOMP_MULTIHOST=1 ./scripts/check-smtcomp-resume.sh
   72 tests, OK, no skips
-  evidence=/nas3/data/axeyum/harness/e3-gate/live-1784833784220517354-2365b8cd82a7
-  control=c3d67b815250a03e2c6ff2fbdf2603efb729acfdf05bd3426c7320ac41a81c36
-  loss=ea1ee4db10455e3d6d1f2a2e2c27f5074fd8e9814e9f62917972a4dc4986c4ea
+  evidence=/nas3/data/axeyum/harness/e3-gate/live-1784833951553616481-378813e09840
+  control=4574cfc31d1dbe905510d4fe629b1e62d8e779ebcc3745a7078fc87973f034a0
+  loss=fc5f11d24804ce1d1f8a9d9d948dc6c10eeae3676570742d8f86a79898f26fe0
 
 ./scripts/check-links.sh
   passed
