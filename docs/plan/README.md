@@ -145,6 +145,12 @@ Start at the root [`PLAN.md`](../../PLAN.md) (map + standing rules) and
   files / 142,523 bytes, and zero U2/Axeyum/pair/performance/parity credit.
   This closes TL0.7's local policy prerequisite and unblocks TL0.6.3; it is not
   an official test result or Lean parity claim.
+- [`lean-u2-official-execution-tl0.6.3-m0-plan-2026-07-22.md`](lean-u2-official-execution-tl0.6.3-m0-plan-2026-07-22.md) —
+  source-first first-outcome plan for `compile/534.lean`, an exact singleton
+  child shard of the release-tag Linux-release 3,678-case selection. It freezes
+  upstream, toolchain, harness, 8 GiB/one-worker CTest, JUnit, immutable case,
+  completion, mutation, and credit boundaries before any test process. Even a
+  valid pass cannot complete the parent profile or create Axeyum/parity credit.
 - [`lean-compatibility-v1.json`](lean-compatibility-v1.json) and generated
   [`Lean compatibility matrix`](generated/lean-compatibility.md) — TL0.2's
   executable eight-field assurance contract, K0-K6 profile gates, registered

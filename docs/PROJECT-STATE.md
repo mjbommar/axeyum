@@ -317,7 +317,12 @@ Again, there are distinct targets:
   The [authority](plan/lean-execution-acceptance-v1.json) covers three process
   attempts, two completions, and 67 files / 142,523 bytes, while every U2,
   Axeyum, pairing, performance, and parity counter remains zero. TL0.7 is
-  complete; TL0.6.3 official execution is unblocked but has not begun.
+  complete. TL0.6.3 is now partial through a
+  [source-first M0 plan](plan/lean-u2-official-execution-tl0.6.3-m0-plan-2026-07-22.md)
+  for the singleton `compile/534.lean` child shard of the exact release-tag
+  Linux-release selection. No M0 harness or test has run. A valid result may
+  create only one local official-case outcome, not parent-profile/provider,
+  Axeyum, pairing, performance, axis, gate, or parity credit.
 
 See the source-backed [kernel gap audit](prover-track/research/06-kernel-gap-analysis.md)
 and [proof reconstruction plan](plan/track-3-proof-lean/P3.7-lean-reconstruction.md),

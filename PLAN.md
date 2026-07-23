@@ -469,7 +469,15 @@ state.
 > retains the failed attempt plus both completed controls as 67 files / 142,523
 > bytes. The controls create no U2/Axeyum outcome, denominator, paired/
 > performance row, or parity credit. TL0.7 is complete; source-first TL0.6.3
-> official execution is next.
+> official execution is next. TL0.6.3 M0 now has a published
+> [source-first plan](docs/plan/lean-u2-official-execution-tl0.6.3-m0-plan-2026-07-22.md)
+> for the exact `compile/534.lean` case: a one-case child shard of the
+> release-tag Linux-release cell's 3,678-case `-E foreign` selection. It
+> registers a distinct 8 GiB/one-worker local CTest lane and immutable
+> source/toolchain/JUnit/case/completion evidence. No M0 harness or test has
+> run; even a valid pass can create only one local official-case outcome, not
+> parent-profile, provider, Axeyum, pairing, performance, axis, gate, or parity
+> credit.
 > The runtime-derived
 > TL0.4 ledger now freezes **65** prelude assumptions (real 30, integer 34,
 > string 1) by canonical type digest before dependent native elaborator, Lake,

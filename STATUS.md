@@ -388,6 +388,17 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-22 — TL0.6.3 M0 is source-first preregistered; no official U2 test
+  has run.** The [M0 plan](docs/plan/lean-u2-official-execution-tl0.6.3-m0-plan-2026-07-22.md)
+  selects only `compile/534.lean` from the exact release-tag Linux-release
+  cell's 3,678-case `-E foreign` selection. It freezes official commit/tree,
+  context/cell/attempt/selection/case identities, released Lean/leanc and full
+  toolchain closure, a separate 8 GiB/one-worker local CTest lane, exact
+  discovery/JUnit/case/completion records, mutation gates, and stop conditions.
+  The child shard cannot complete the parent official profile or claim its
+  provider. A valid pass can add only one local official-case outcome; Axeyum,
+  pairing, performance, population, axis, gate, and parity credit remain zero.
+
 - **2026-07-22 — TL0.7.4 closes the real local execution controls without U2,
   Axeyum, pairing, performance, or parity credit.** The
   [plan](docs/plan/lean-execution-acceptance-tl0.7.4-plan-2026-07-22.md)

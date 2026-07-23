@@ -104,11 +104,23 @@
           "detail": "TL0.7.1 result, source-first order, corrections, non-claims, and process/durability handoff."
         },
         {
+          "path": "docs/plan/lean-execution-acceptance-v1.json",
+          "detail": "TL0.7.4 authority retaining one failed compile plus two completed no-credit real controls through the process/store path; every U2 and parity counter remains zero."
+        },
+        {
+          "path": "docs/plan/lean-execution-acceptance-tl0.7.4-2026-07-22.md",
+          "detail": "Bounded TL0.7 closure and explicit handoff to source-first official U2 execution."
+        },
+        {
+          "path": "docs/plan/lean-u2-official-execution-tl0.6.3-m0-plan-2026-07-22.md",
+          "detail": "Preregistered one-case child shard of the release-tag Linux-release selection; no M0 test outcome exists yet."
+        },
+        {
           "path": "docs/plan/lean4-complete-parity-contract-2026-07-22.md",
           "detail": "Pinned tests tree inventory and the required CTest/test-pile derivation rule."
         }
       ],
-      "residual": "Implement TL0.7.2-TL0.7.4 process/durability controls, then execute and retain the derived official profiles with exact executable/environment/resource/attempt/completion evidence and matched native Axeyum cases; contract/profile derivation alone is not complete U2 authority."
+      "residual": "Execute and retain the preregistered TL0.6.3 shards and then every derived official profile with exact executable/environment/resource/attempt/case/completion evidence; classify native surfaces and run matched Axeyum cases. The profile derivation alone is not complete U2 authority, and TL0.7 controls add no U2 outcome."
     },
     {
       "id": "U3",
