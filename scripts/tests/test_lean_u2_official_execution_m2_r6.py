@@ -148,6 +148,19 @@ class LeanU2OfficialExecutionM2R6Tests(unittest.TestCase):
                 R5.validate_revision_preflight(revision)
         gate.assert_called_once_with(revision)
 
+    def test_control_history_uses_captured_r5_gate_and_restores_binding(self) -> None:
+        original = R5.validate_history
+        captured = mock.Mock(wraps=original)
+        with mock.patch.dict(
+            R6._R5_CONTROL_ORIGINALS, {"validate_history": captured}
+        ):
+            with R6.r6_control_bindings():
+                completion = R5.validate_history()
+                self.assertIs(R5.validate_history, R6.validate_history)
+        self.assertIs(R5.validate_history, original)
+        self.assertEqual(completion["record_sha256"], R6.R5_COMPLETION_SHA256)
+        self.assertGreaterEqual(captured.call_count, 1)
+
     def test_bindings_install_split_and_restore_prior_contract(self) -> None:
         original_run_id = M2.RUN_ID
         with R6.r6_bindings():

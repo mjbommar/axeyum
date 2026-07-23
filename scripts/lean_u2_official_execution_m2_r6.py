@@ -39,6 +39,14 @@ R5_RESULT_SHA256 = "25d102e6ead0d43ad69f3eb3e5064281e20fb86368ba2be4f0b49168869e
 R5_COMPLETION_SHA256 = (
     "2d5d43a7787ccf4333b152be8794a12b45edc7527e32732abb2cf1cce1ffce3c"
 )
+CORRECTION_PLAN = ROOT / (
+    "docs/plan/lean-u2-official-execution-tl0.6.3-m2-r6-"
+    "control-history-r1-plan-2026-07-23.md"
+)
+CORRECTION_COMMIT = "8bb97f77828706382bad8ee933fe76179c00dca2"
+CORRECTION_PLAN_SHA256 = (
+    "d5069a7cdcc139e18508f2db23b00b371866283a3b25d0bb8816e4642f999bde"
+)
 
 RUN_ID = "tl0.6.3-m2-release-linux-shard-0001-v5"
 ATTEMPT_ID = "attempt-004"
@@ -83,6 +91,26 @@ UNCONDITIONAL_PATHS = tuple(
     path for path in R3.declared_generated_paths() if path != FAILURE_LOG
 )
 _R5_VALIDATE_REVISION_PREFLIGHT = R5.validate_revision_preflight
+_R5_VALIDATE_HISTORY = R5.validate_history
+_R5_CONTROL_ORIGINALS = {
+    name: getattr(R5, name)
+    for name in (
+        "PREREGISTRATION_COMMIT",
+        "PLAN_SHA256",
+        "RUN_ID",
+        "ATTEMPT_ID",
+        "SEQUENCE",
+        "LANE_ID",
+        "CONTROL_ROOT_PREFIX",
+        "CONTROL_SPEC_SCHEMA",
+        "CONTROL_PRELAUNCH_SCHEMA",
+        "CONTROL_TERMINAL_SCHEMA",
+        "CONTROL_COMPLETION_SCHEMA",
+        "CONTROL_RECORD_SET_DOMAIN",
+        "validate_history",
+        "validate_revision_preflight",
+    )
+}
 
 
 class R6Error(ValueError):
@@ -90,11 +118,21 @@ class R6Error(ValueError):
 
 
 def validate_history() -> dict[str, Any]:
-    completion = R5_DIAGNOSTIC.validate_completed(R5.DEFAULT_EVIDENCE_ROOT)
+    current = {name: getattr(R5, name) for name in _R5_CONTROL_ORIGINALS}
+    for name, value in _R5_CONTROL_ORIGINALS.items():
+        setattr(R5, name, value)
+    try:
+        completion = R5_DIAGNOSTIC.validate_completed(R5.DEFAULT_EVIDENCE_ROOT)
+    finally:
+        for name, value in current.items():
+            setattr(R5, name, value)
     if (
         not M2.HEX40.fullmatch(PREREGISTRATION_COMMIT)
+        or not M2.HEX40.fullmatch(CORRECTION_COMMIT)
         or not PLAN.is_file()
         or BASE.sha256_file(PLAN) != PLAN_SHA256
+        or not CORRECTION_PLAN.is_file()
+        or BASE.sha256_file(CORRECTION_PLAN) != CORRECTION_PLAN_SHA256
         or not R5_RESULT.is_file()
         or BASE.sha256_file(R5_RESULT) != R5_RESULT_SHA256
         or completion["record_sha256"] != R5_COMPLETION_SHA256
