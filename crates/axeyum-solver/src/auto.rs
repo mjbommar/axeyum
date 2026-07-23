@@ -4756,6 +4756,16 @@ const MAX_MBQI_ROUNDS: usize = 16;
 /// the loop bails to `unknown` past this many instances even with no wall-clock budget.
 const MAX_MBQI_INSTANCES: usize = 4096;
 
+/// Maximum free integer symbols whose ground values the quantified-UF model
+/// finder may complete before ordinary MBQI refinement (ADR-0360).
+const MAX_MBQI_FREE_INT_SYMBOLS: usize = 2;
+
+/// Maximum complete value pool used for each ADR-0360 free integer symbol.
+const MAX_MBQI_FREE_INT_VALUES: usize = 16;
+
+/// Maximum complete Cartesian product searched by ADR-0360.
+const MAX_MBQI_FREE_INT_TUPLES: usize = 256;
+
 /// A `Value` as a constant term (scalar sorts only).
 fn value_to_const(arena: &mut TermArena, value: &Value) -> Option<TermId> {
     match value {
@@ -5013,6 +5023,169 @@ fn certify_mbqi_candidate(
         .map(|accepted| accepted.then_some(certified_model))
 }
 
+/// Collects the one or two free `Int` symbols that occur in the exact assertion
+/// sequence. Every leading universal binder is excluded; a non-`Int` free
+/// scalar, no free scalar, or a wider symbol set makes ADR-0360 decline without
+/// changing the ordinary MBQI path.
+fn mbqi_free_int_symbols(
+    arena: &TermArena,
+    assertions: &[TermId],
+    universal_assertions: &[TermId],
+) -> Option<Vec<SymbolId>> {
+    let mut binders = BTreeSet::new();
+    for &assertion in universal_assertions {
+        let mut matrix = assertion;
+        let mut saw_binder = false;
+        while let TermNode::App {
+            op: Op::Forall(binder),
+            args,
+        } = arena.node(matrix)
+        {
+            let [body] = &**args else {
+                return None;
+            };
+            saw_binder = true;
+            binders.insert(*binder);
+            matrix = *body;
+        }
+        if !saw_binder || has_quantifier(arena, &[matrix]) {
+            return None;
+        }
+    }
+
+    let mut symbols = BTreeSet::new();
+    for &assertion in assertions {
+        collect_term_symbols(arena, assertion, &mut symbols);
+    }
+    symbols.retain(|symbol| !binders.contains(symbol));
+    if symbols.is_empty() || symbols.len() > MAX_MBQI_FREE_INT_SYMBOLS {
+        return None;
+    }
+    if symbols
+        .iter()
+        .any(|symbol| arena.symbol(*symbol).1 != Sort::Int)
+    {
+        return None;
+    }
+    Some(symbols.into_iter().collect())
+}
+
+/// Builds ADR-0360's complete, deterministic free-Int value pool. Overflow is
+/// a decline, never truncation: truncating would make the measured Cartesian
+/// search depend on insertion order rather than the preregistered policy.
+fn mbqi_free_int_value_pool(
+    arena: &TermArena,
+    assertions: &[TermId],
+    initial_model: &Model,
+) -> Option<Vec<i128>> {
+    let mut values = BTreeSet::from([0]);
+    for (_, value) in initial_model.iter() {
+        if let Value::Int(integer) = value {
+            values.insert(integer);
+        }
+    }
+
+    let mut seen = BTreeSet::new();
+    let mut stack: Vec<TermId> = assertions.iter().rev().copied().collect();
+    while let Some(term) = stack.pop() {
+        if !seen.insert(term) {
+            continue;
+        }
+        match arena.node(term) {
+            TermNode::IntConst(integer) => {
+                values.insert(*integer);
+            }
+            TermNode::App { args, .. } => {
+                stack.extend(args.iter().rev().copied());
+            }
+            _ => {}
+        }
+    }
+
+    let bases: Vec<i128> = values.iter().copied().collect();
+    for base in bases {
+        if let Some(predecessor) = base.checked_sub(1) {
+            values.insert(predecessor);
+        }
+        if let Some(successor) = base.checked_add(1) {
+            values.insert(successor);
+        }
+    }
+    (values.len() <= MAX_MBQI_FREE_INT_VALUES).then(|| values.into_iter().collect())
+}
+
+/// Clones `config` with only the time remaining under the caller-owned MBQI
+/// deadline. `None` means the shared deadline has already expired.
+fn mbqi_config_with_deadline(
+    config: &SolverConfig,
+    deadline: Option<Instant>,
+) -> Option<SolverConfig> {
+    let mut candidate = config.clone();
+    if let Some(deadline) = deadline {
+        let remaining = deadline.checked_duration_since(Instant::now())?;
+        if remaining.is_zero() {
+            return None;
+        }
+        candidate.timeout = Some(remaining);
+    }
+    Some(candidate)
+}
+
+/// ADR-0360's SAT-only free-Int candidate completion. Temporary equalities are
+/// submitted only to the untrusted quantifier-free model generator. Any result
+/// other than a candidate that independently certifies and replays against the
+/// exact original assertion sequence is ignored.
+fn complete_mbqi_free_int_candidate(
+    arena: &mut TermArena,
+    assertions: &[TermId],
+    universal_assertions: &[TermId],
+    ground: &[TermId],
+    initial_model: &Model,
+    config: &SolverConfig,
+    deadline: Option<Instant>,
+) -> Option<Model> {
+    let symbols = mbqi_free_int_symbols(arena, assertions, universal_assertions)?;
+    let values = mbqi_free_int_value_pool(arena, assertions, initial_model)?;
+    let tuple_count = values
+        .len()
+        .checked_pow(u32::try_from(symbols.len()).ok()?)?;
+    if tuple_count > MAX_MBQI_FREE_INT_TUPLES {
+        return None;
+    }
+
+    for tuple_index in 0..tuple_count {
+        let candidate_config = mbqi_config_with_deadline(config, deadline)?;
+        let mut remaining_index = tuple_index;
+        let mut chosen = vec![0; symbols.len()];
+        for slot in (0..symbols.len()).rev() {
+            chosen[slot] = values[remaining_index % values.len()];
+            remaining_index /= values.len();
+        }
+
+        let mut candidate_query = ground.to_vec();
+        for (&symbol, &value) in symbols.iter().zip(&chosen) {
+            let variable = arena.var(symbol);
+            let constant = arena.int_const(value);
+            let fixing = arena.eq(variable, constant).ok()?;
+            candidate_query.push(fixing);
+        }
+        let Ok(CheckResult::Sat(candidate_model)) =
+            check_auto(arena, &candidate_query, &candidate_config)
+        else {
+            continue;
+        };
+        if past_deadline(deadline) {
+            return None;
+        }
+        if let Ok(Some(certified)) =
+            certify_mbqi_candidate(arena, assertions, universal_assertions, &candidate_model)
+        {
+            return Some(certified);
+        }
+    }
+    None
+}
+
 /// Model-based quantifier instantiation (MBQI): a refutation loop for top-level
 /// universals over infinite domains. Each round decides `ground ∧ instances`; on
 /// a `sat` candidate, every single-binder universal `∀x. body` is checked against
@@ -5103,7 +5276,7 @@ pub fn prove_unsat_by_mbqi(
     // graceful `Unknown`, never spin (the "unknown is never an error / never hang" rule).
     let deadline = config.timeout.and_then(|t| Instant::now().checked_add(t));
     let mut instances: Vec<TermId> = Vec::new();
-    for _ in 0..MAX_MBQI_ROUNDS {
+    for round in 0..MAX_MBQI_ROUNDS {
         if past_deadline(deadline) || instances.len() > MAX_MBQI_INSTANCES {
             return Ok(CheckResult::Unknown(UnknownReason {
                 kind: UnknownKind::ResourceLimit,
@@ -5130,6 +5303,23 @@ pub fn prove_unsat_by_mbqi(
         // directions are unchanged.
         if let Some(model) =
             certify_mbqi_candidate(arena, assertions, &universal_assertions, &model)?
+        {
+            return Ok(CheckResult::Sat(model));
+        }
+        // ADR-0360: on the initial ground candidate only, search the complete
+        // bounded product of one/two relevant free-Int assignments. The fixing
+        // equalities guide only QF model generation; every accepted result is
+        // certified and replayed against `assertions` without those fixings.
+        if round == 0
+            && let Some(model) = complete_mbqi_free_int_candidate(
+                arena,
+                assertions,
+                &universal_assertions,
+                &ground,
+                &model,
+                config,
+                deadline,
+            )
         {
             return Ok(CheckResult::Sat(model));
         }
@@ -6004,6 +6194,76 @@ impl Features {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn mbqi_free_int_symbol_policy_uses_exact_source_and_excludes_binders() {
+        let mut arena = TermArena::new();
+        let function = arena
+            .declare_fun("scalar_policy_f", &[Sort::Int], Sort::Int)
+            .unwrap();
+        let binder = arena.declare("scalar_policy_x", Sort::Int).unwrap();
+        let first = arena.declare("scalar_policy_first", Sort::Int).unwrap();
+        let second = arena.declare("scalar_policy_second", Sort::Int).unwrap();
+        let binder_variable = arena.var(binder);
+        let first_variable = arena.var(first);
+        let second_variable = arena.var(second);
+        let application = arena.apply(function, &[binder_variable]).unwrap();
+        let sum = arena.int_add(first_variable, second_variable).unwrap();
+        let body = arena.eq(application, sum).unwrap();
+        let universal = arena.forall(binder, body).unwrap();
+        assert_eq!(
+            mbqi_free_int_symbols(&arena, &[universal], &[universal]),
+            Some(vec![first, second])
+        );
+
+        let third = arena.declare("scalar_policy_third", Sort::Int).unwrap();
+        let zero = arena.int_const(0);
+        let third_variable = arena.var(third);
+        let third_ground = arena.int_ge(third_variable, zero).unwrap();
+        assert!(
+            mbqi_free_int_symbols(&arena, &[universal, third_ground], &[universal]).is_none(),
+            "more than two exact-source free Int symbols must decline"
+        );
+
+        let real = arena.declare("scalar_policy_real", Sort::Real).unwrap();
+        let real_zero = arena.real_const(Rational::zero());
+        let real_variable = arena.var(real);
+        let real_ground = arena.real_ge(real_variable, real_zero).unwrap();
+        assert!(
+            mbqi_free_int_symbols(&arena, &[universal, real_ground], &[universal]).is_none(),
+            "a free non-Int source symbol must decline"
+        );
+    }
+
+    #[test]
+    fn mbqi_free_int_value_pool_is_complete_neighbor_closed_or_declines() {
+        let mut arena = TermArena::new();
+        let symbol = arena.declare("scalar_pool_y", Sort::Int).unwrap();
+        let variable = arena.var(symbol);
+        let seven = arena.int_const(7);
+        let assertion = arena.int_le(variable, seven).unwrap();
+        let mut model = Model::new();
+        model.set(symbol, Value::Int(5));
+        assert_eq!(
+            mbqi_free_int_value_pool(&arena, &[assertion], &model),
+            Some(vec![-1, 0, 1, 4, 5, 6, 7, 8])
+        );
+
+        let mut overflow_assertions = Vec::new();
+        for value in (0_i128..=18).step_by(3) {
+            let constant = arena.int_const(value);
+            overflow_assertions.push(arena.int_le(variable, constant).unwrap());
+        }
+        assert!(
+            mbqi_free_int_value_pool(&arena, &overflow_assertions, &Model::new()).is_none(),
+            "the neighbor-closed pool must decline instead of truncating"
+        );
+    }
+
+    #[test]
+    fn mbqi_candidate_config_honors_expired_shared_deadline() {
+        assert!(mbqi_config_with_deadline(&SolverConfig::new(), Some(Instant::now())).is_none());
+    }
 
     #[test]
     fn abv_online_probe_isolated_from_caller_arena() {
