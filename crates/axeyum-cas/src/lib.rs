@@ -14816,7 +14816,10 @@ fn improper_gamma_integral(
     lower: LimitPoint,
     upper: LimitPoint,
 ) -> Option<DefiniteIntegral> {
-    if !matches!((&lower, &upper), (LimitPoint::Finite(z), LimitPoint::PosInfinity) if z.is_zero()) {
+    if !matches!(
+        (&lower, &upper),
+        (LimitPoint::Finite(z), LimitPoint::PosInfinity) if z.is_zero()
+    ) {
         return None;
     }
     let (coefficient, power, has_exp) = extract_gamma_form(expr, var)?;
@@ -14836,6 +14839,48 @@ fn improper_gamma_integral(
         value: simplify(&(CasExpr::Const(coefficient) * gamma)),
         antiderivative: CasExpr::zero(),
         certificate: ZeroTest::Certified { equal: true, witness: MultiPoly::zero() },
+    })
+}
+
+/// NIST DLMF 10.22.41 gives `∫₀^∞ Jₙ(t) dt = 1` for every nonnegative integer
+/// order. Apply the exact change of scale to `c·Jₙ(a·x)`, including
+/// `Jₙ(−u) = (−1)ⁿJₙ(u)` when the rational scale is negative. The outer factor
+/// may be any expression independent of `var`; shifted, nonlinear, irrational,
+/// and zero scales deliberately remain outside this exact family.
+fn improper_bessel_j_integral(
+    expr: &CasExpr,
+    var: &str,
+    lower: LimitPoint,
+    upper: LimitPoint,
+) -> Option<DefiniteIntegral> {
+    if !matches!((&lower, &upper), (LimitPoint::Finite(z), LimitPoint::PosInfinity) if z.is_zero()) {
+        return None;
+    }
+    let (free, core) = split_var_free_factor(expr, var);
+    let CasExpr::Unary(UnaryFunc::BesselJ(order), argument) = core else {
+        return None;
+    };
+    let [intercept, slope] = univariate_affine(&argument, var)?;
+    if !intercept.is_zero() {
+        return None;
+    }
+    let negative_scale = slope.numerator() < 0;
+    let magnitude = if negative_scale {
+        slope.checked_neg()?
+    } else {
+        slope
+    };
+    let mut scale = Rational::integer(1).checked_div(magnitude)?;
+    if negative_scale && order % 2 == 1 {
+        scale = scale.checked_neg()?;
+    }
+    Some(DefiniteIntegral {
+        value: simplify(&(free * CasExpr::Const(scale))),
+        antiderivative: CasExpr::zero(),
+        certificate: ZeroTest::Certified {
+            equal: true,
+            witness: MultiPoly::zero(),
+        },
     })
 }
 
@@ -14892,10 +14937,12 @@ fn improper_reciprocal_antisymmetry(
 /// infinite bound routes through [`limit`] (so exponential-decay integrands
 /// converge — `∫₀^∞ e^{−x} = 1`, `∫₀^∞ x·e^{−x} = 1`). Non-elementary Gaussian
 /// moments `∫ P(x)·e^{−a x²}` (perfect-square `a`) reduce to `√π` multiples via a
-/// closed-form recurrence on the erf-certified base. Returns `None` when no
-/// antiderivative is found or a boundary limit **diverges** (the integral does not
-/// converge) — an honest decline, never a wrong value. The caller is responsible
-/// for continuity of the integrand on the (open) interval, as for [`definite_integrate`].
+/// closed-form recurrence on the erf-certified base. Rationally scaled integer-order
+/// Bessel-J functions use their exact DLMF integral over `[0,∞)`. Returns `None`
+/// when no antiderivative or exact special family is found, or when a boundary limit
+/// **diverges** (the integral does not converge) — an honest decline, never a wrong
+/// value. The caller is responsible for continuity of the integrand on the (open)
+/// interval, as for [`definite_integrate`].
 ///
 /// ```
 /// use axeyum_cas::{CasExpr, LimitPoint, improper_integrate};
@@ -14929,6 +14976,9 @@ pub fn improper_integrate(
     }
     if let Some(gamma) = improper_gamma_integral(expr, var, lower, upper) {
         return Some(gamma);
+    }
+    if let Some(bessel) = improper_bessel_j_integral(expr, var, lower, upper) {
+        return Some(bessel);
     }
     if let Some(fourier) = improper_fourier_quadratic(expr, var, lower, upper) {
         return Some(fourier);
@@ -22511,6 +22561,81 @@ mod tests {
             assert!(r.is_certified());
             assert_equal(&r.value, &value);
         }
+    }
+
+    #[test]
+    fn improper_bessel_j_integer_order_family_and_declines() {
+        let x = || v("x");
+        let zero = || LimitPoint::Finite(Rational::zero());
+        let integrate_to_infinity = |integrand: &CasExpr| {
+            improper_integrate(integrand, "x", zero(), LimitPoint::PosInfinity)
+        };
+
+        for order in [0, 1, 2, 7, 32, u32::MAX] {
+            for (scale, expected) in [
+                (Rational::integer(1), Rational::integer(1)),
+                (Rational::integer(2), Rational::new(1, 2)),
+                (Rational::new(1, 2), Rational::integer(2)),
+            ] {
+                let integrand = scaled_term(scale, x()).bessel_j(order);
+                let result = integrate_to_infinity(&integrand)
+                    .unwrap_or_else(|| panic!("missing order-{order}, scale-{scale:?} integral"));
+                assert!(result.is_certified());
+                assert_equal(&result.value, &CasExpr::Const(expected));
+            }
+        }
+
+        for (order, expected) in [
+            (0, Rational::new(1, 2)),
+            (1, Rational::new(-1, 2)),
+            (2, Rational::new(1, 2)),
+            (u32::MAX, Rational::new(-1, 2)),
+        ] {
+            let integrand = scaled_term(Rational::integer(-2), x()).bessel_j(order);
+            let result = integrate_to_infinity(&integrand)
+                .unwrap_or_else(|| panic!("missing reflected order-{order} integral"));
+            assert_equal(&result.value, &CasExpr::Const(expected));
+        }
+
+        assert_equal(
+            &integrate_to_infinity(
+                &(CasExpr::int(3) * scaled_term(Rational::new(1, 2), x()).bessel_j(8)),
+            )
+            .expect("rational outer factor")
+            .value,
+            &CasExpr::int(6),
+        );
+        assert_equal(
+            &integrate_to_infinity(
+                &(v("c") * scaled_term(Rational::integer(2), x()).bessel_j(3)),
+            )
+            .expect("symbolic outer factor")
+            .value,
+            &(v("c") / CasExpr::int(2)),
+        );
+
+        assert!(integrate_to_infinity(&x().bessel_i(0)).is_none());
+        assert!(integrate_to_infinity(&(x() + CasExpr::int(1)).bessel_j(0)).is_none());
+        assert!(integrate_to_infinity(&x().pow(2).bessel_j(0)).is_none());
+        assert!(
+            integrate_to_infinity(&(CasExpr::int(2).sqrt() * x()).bessel_j(0)).is_none()
+        );
+        assert!(
+            integrate_to_infinity(
+                &scaled_term(Rational::integer(i128::MIN), x()).bessel_j(0),
+            )
+            .is_none()
+        );
+        assert!(integrate_to_infinity(&CasExpr::zero().bessel_j(0)).is_none());
+        assert!(
+            improper_integrate(
+                &x().bessel_j(0),
+                "x",
+                LimitPoint::Finite(Rational::integer(1)),
+                LimitPoint::PosInfinity,
+            )
+            .is_none()
+        );
     }
 
     #[test]
