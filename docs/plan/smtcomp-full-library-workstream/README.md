@@ -270,7 +270,7 @@ gate.
    and physical bytes. The [S5 result](../smtcomp-harness-admission-s5-result-2026-07-23.md)
    records the tiny mutation gate and a read-only 45,905-file physical rehash.
    It does not authorize a large run by itself.
-2. **Fresh P0 slices.** Stage the repaired binary and rerun
+2. **Fresh P0 slices — prepared, execution pending.** Stage the repaired binary and rerun
    QF_FP/QF_BVFP/QF_ABVFP plus QF_AUFLIA under the completed protocol. Require
    DISAGREE=0. The bounded
    [S5.1 admitted-slice plan](../smtcomp-admitted-slices-s5.1-plan-2026-07-23.md)
@@ -278,9 +278,12 @@ gate.
    ordered-subset handoff without launching a solver. Preregister the actual P0
    execution identities and limits before launching it. The
    [repaired-P0 execution plan](../smtcomp-repaired-p0-execution-plan-2026-07-23.md)
-   now freezes the preparation boundary; no distributed solver is launched
-   until its P0-S1 result records the integrated source, binary, run, and host
-   identities.
+   freezes the preparation boundary. The
+   [P0-S1 result](../smtcomp-repaired-p0-preparation-s1-result-2026-07-23.md)
+   now records the integrated source, exact binaries, sentinels, three run/plan
+   identities, and empty initial/retry namespaces. Execute the three cells in
+   preregistered order without overlap; this preparation grants no result
+   credit.
 3. **Credited full population.** Only then execute Axeyum, cvc5, and Bitwuzla on
    the same versioned selection; publish the per-logic inventory and regenerate
    the coverage-weighted parity matrix without combining incompatible regimes.
@@ -318,6 +321,8 @@ Repository:
   `docs/plan/smtcomp-official-selection-producer-s3-2026-07-22.md`;
 - official selection S4 final result:
   `docs/plan/smtcomp-official-selection-final-s4-2026-07-22.md`;
+- repaired P0-S1 preparation result:
+  `docs/plan/smtcomp-repaired-p0-preparation-s1-result-2026-07-23.md`;
 - candidate failure handoff:
   `docs/plan/smtcomp-full-library-candidate-run-handoff-2026-07-21.md`;
 - ranked gap plan: `docs/plan/full-library-gap-closing-plan-2026-07-22.md`;
@@ -351,8 +356,9 @@ NAS (shared, corpus read-only in practice):
    checkout or another lane's NAS output.
 3. Confirm the old s4 process/log state and count literal `WRONG` lines without
    treating the stale run as evidence.
-4. Treat the accepted S4 root as immutable. S5 and S5.1 admission are complete;
-   next preregister and execute only the repaired P0 slices before any credited
+4. Treat the accepted S4 root as immutable. S5/S5.1 admission and P0-S1
+   preparation are complete; next execute only the three frozen repaired P0
+   cells in order before any credited
    full-population run. The active solver capability checkpoint is
    [`../checked-multi-binder-quantified-uf-models-2026-07-22.md`](../checked-multi-binder-quantified-uf-models-2026-07-22.md).
 5. Update `STATUS.md` and this file before handoff; push only a green topic
