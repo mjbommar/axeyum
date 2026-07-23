@@ -45,6 +45,8 @@ step lean-u2-official-execution-r2-tests python3 -m unittest scripts.tests.test_
 step lean-u2-official-execution-r3-tests python3 -m unittest scripts.tests.test_lean_u2_official_execution_r3
 step lean-u2-official-execution-r3-result-tests python3 -m unittest scripts.tests.test_lean_u2_official_execution_r3_result
 step lean-u2-official-execution-r3-result python3 scripts/lean_u2_official_execution_r3_result.py result --check
+step lean-u2-official-execution-m2-tests python3 -m unittest scripts.tests.test_lean_u2_official_execution_m2
+step lean-u2-official-execution-m2 python3 scripts/lean_u2_official_execution_m2.py --check
 step lean-complete-parity-tests python3 -m unittest scripts.tests.test_lean_complete_parity
 step lean-complete-parity python3 scripts/gen-lean-complete-parity.py --check
 step lean-construct-matrix-tests python3 -m unittest scripts.tests.test_lean_official_construct_matrix

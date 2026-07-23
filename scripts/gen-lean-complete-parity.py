@@ -816,6 +816,14 @@ def u2_official_execution_snapshot() -> dict[str, Any]:
     }
 
 
+def u2_m2_contract_snapshot() -> dict[str, Any]:
+    contract = load_script(
+        "lean_u2_official_execution_m2_for_complete_parity",
+        ROOT / "scripts" / "lean_u2_official_execution_m2.py",
+    )
+    return contract.validate_offline_contract()
+
+
 def task_snapshot() -> dict[str, Any]:
     rows = TASK_ROW.findall(IMPLEMENTATION_PLAN.read_text(encoding="utf-8"))
     counts = Counter(status for _, status in rows)
@@ -863,6 +871,8 @@ def report_source_paths(data: dict[str, Any]) -> list[Path]:
         ROOT / "scripts" / "tests" / "test_lean_u2_official_execution.py",
         ROOT / "scripts" / "lean_u2_official_execution_r3_result.py",
         ROOT / "scripts" / "tests" / "test_lean_u2_official_execution_r3_result.py",
+        ROOT / "scripts" / "lean_u2_official_execution_m2.py",
+        ROOT / "scripts" / "tests" / "test_lean_u2_official_execution_m2.py",
     }
     for collection in (data["populations"], data["axes"], data["terminal_gates"]):
         for item in collection:
@@ -898,6 +908,7 @@ def build_report(data: dict[str, Any]) -> dict[str, Any]:
             "execution_store_authority": execution_store_snapshot(),
             "execution_acceptance_authority": execution_acceptance_snapshot(),
             "u2_official_execution_authority": u2_official_execution_snapshot(),
+            "u2_m2_execution_contract": u2_m2_contract_snapshot(),
             "implementation_tasks": task_snapshot(),
         },
         "population_summary": {
@@ -974,6 +985,7 @@ def render_markdown(report: dict[str, Any]) -> str:
     store = bounded["execution_store_authority"]
     acceptance = bounded["execution_acceptance_authority"]
     official_execution = bounded["u2_official_execution_authority"]
+    m2_contract = bounded["u2_m2_execution_contract"]
     tasks = bounded["implementation_tasks"]
     terminal = report["terminal"]
     claim_guard = report["claim_guard"]
@@ -1089,6 +1101,14 @@ def render_markdown(report: dict[str, Any]) -> str:
             "stopped before runner import; attempt 004 passed the same unique singleton. "
             "One observed case with no Axeyum result does not complete U2 or establish "
             "a semantic pair.",
+            f"- TL0.6.3 M2 offline execution contract: {m2_contract['case_count']} "
+            f"ordered cases from `{m2_contract['first_case_id']}` through "
+            f"`{m2_contract['last_case_id']}`; live execution surface is "
+            f"`{str(m2_contract['live_execution_surface']).lower()}`, with "
+            f"{m2_contract['official_outcomes']} official outcomes and "
+            f"{m2_contract['parity_credit']} parity credit. This validates the frozen "
+            "specification, harness rendering, discovery, JUnit, artifact closure, and "
+            "credit projection only; it is not a process run.",
             f"- Implementation ledger: {tasks['rows']} rows; "
             + ", ".join(
                 f"`{key}`={value}" for key, value in tasks["status_counts"].items()

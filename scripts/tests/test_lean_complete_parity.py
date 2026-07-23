@@ -62,6 +62,13 @@ class LeanCompleteParityTests(unittest.TestCase):
         self.assertEqual(official["axeyum_outcomes"], 0)
         self.assertEqual(official["paired_cells"], 0)
         self.assertEqual(official["credits"]["parity_credit"], 0)
+        m2 = first["bounded_snapshot"]["u2_m2_execution_contract"]
+        self.assertEqual(m2["case_count"], 64)
+        self.assertEqual(m2["first_case_id"], "compile/uint_fold.lean")
+        self.assertEqual(m2["last_case_id"], "docparse/block_0004.txt")
+        self.assertFalse(m2["live_execution_surface"])
+        self.assertEqual(m2["official_outcomes"], 0)
+        self.assertEqual(m2["parity_credit"], 0)
         self.assertEqual(u2["outcomes"]["paired_registered"], 0)
         u2_ci = first["bounded_snapshot"]["u2_ci_profile_authority"]
         self.assertEqual(u2_ci["derivation"]["contexts"], 17)
@@ -154,6 +161,10 @@ class LeanCompleteParityTests(unittest.TestCase):
         )
         self.assertIn("scripts/lean_u2_official_execution.py", source_paths)
         self.assertIn("scripts/lean_u2_official_execution_r3_result.py", source_paths)
+        self.assertIn("scripts/lean_u2_official_execution_m2.py", source_paths)
+        self.assertIn(
+            "scripts/tests/test_lean_u2_official_execution_m2.py", source_paths
+        )
 
     def test_u2_registration_is_bounded_not_terminal_authority(self) -> None:
         population = self.population("U2")
