@@ -11001,11 +11001,7 @@ fn limit_bounded_decay(expr: &CasExpr, var: &str, point: LimitPoint) -> Option<C
 /// same zero limit. The rule deliberately does not substitute inside a denominator
 /// or accept an `x`-dependent outer factor: those shapes need rate analysis, and
 /// replacing `Jₙ` by zero there would be unsound.
-fn limit_bessel_j_at_infinity(
-    expr: &CasExpr,
-    var: &str,
-    point: LimitPoint,
-) -> Option<CasExpr> {
+fn limit_bessel_j_at_infinity(expr: &CasExpr, var: &str, point: LimitPoint) -> Option<CasExpr> {
     if !matches!(point, LimitPoint::PosInfinity | LimitPoint::NegInfinity) {
         return None;
     }
