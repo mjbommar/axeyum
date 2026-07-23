@@ -578,7 +578,12 @@ state.
 > [R4 attempt-003 plan](docs/plan/lean-u2-official-execution-tl0.6.3-m2-r4-attempt-003-plan-2026-07-23.md)
 > now freezes a single 8-to-16 GiB lane delta, unchanged 512 MiB stack/shard/
 > command/store, a harmless nine-dedicated-thread qualification control, new
-> roots, one selected process, and no retry. Next implement/test/push R4 only;
+> roots, one selected process, and no retry. The
+> [R4 implementation checkpoint](docs/plan/lean-u2-official-execution-tl0.6.3-m2-r4-attempt-003-implementation-2026-07-23.md)
+> records clean pushed commit `3748427d`, the exact 16 GiB adapter, R1-R3
+> history validation, separately explicit stack/fanout controls, inherited
+> tiered closure, and zero implicit execution. Next push that checkpoint, run
+> both controls from its remote-equal revision, and invoke attempt 003 once;
 > then form native pairs. Do not rerun
 > the singleton for population credit. The
 > [complete-parity execution roadmap](docs/plan/lean4-complete-parity-roadmap-2026-07-22.md)

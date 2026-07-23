@@ -260,6 +260,10 @@ Start at the root [`PLAN.md`](../../PLAN.md) (map + standing rules) and
   source-first 16 GiB lane plan preserving the 512 MiB stack and exact shard,
   requiring a harmless nine-dedicated-thread qualification, one selected
   process, tiered closure, zero terminal promotion, and no retry.
+- [`lean-u2-official-execution-tl0.6.3-m2-r4-attempt-003-implementation-2026-07-23.md`](lean-u2-official-execution-tl0.6.3-m2-r4-attempt-003-implementation-2026-07-23.md) —
+  pushed R4 implementation checkpoint for the 16 GiB adapter, exact R3
+  authority binding, separately explicit stack/fanout controls, inherited
+  tiered closure, focused/aggregate gates, and still-unconsumed attempt 003.
 - [`lean-compatibility-v1.json`](lean-compatibility-v1.json) and generated
   [`Lean compatibility matrix`](generated/lean-compatibility.md) — TL0.2's
   executable eight-field assurance contract, K0-K6 profile gates, registered
