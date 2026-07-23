@@ -13,14 +13,14 @@ elsewhere in `docs/plan/`). Read this file first when resuming.
   [multi-agent operations guide](../contributor-guide/multi-agent-operations.md):
   work only in the dedicated CAS worktree on an `agent/cas/*` branch, push that
   branch, and leave `main` to the integration owner. The current increment is
-  `agent/cas/bessel-j0-laplace`, stacked on CAS parent `f3971e2a`; do not
+  `agent/cas/exact-ivp-data`, stacked on integration parent `d0c8b2ea`; do not
   rebase it onto `main` ahead of the integration owner.
-- **Tests:** `530` unit + `147` doctests, **all green**, warning-denied workspace
+- **Tests:** `533` unit + `147` doctests, **all green**, warning-denied workspace
   all-target/all-feature Clippy-clean, strict stable/nightly rustdoc-green,
   wasm-green, links-green, and whitespace-clean.
 - **Source of truth for capabilities:** `docs/research/10-cas/README.md`
   (capability table) and `docs/research/10-cas/diary.md` (chronological entries;
-  latest is **Entry 37aeb**). Keep both in sync when landing features.
+  latest is **Entry 37aec**). Keep both in sync when landing features.
 - **Method that works:** empirical **gap-probing** (below). It found every recent
   feature *and* a serious infinite-hang regression.
 
@@ -244,6 +244,30 @@ orders `0..=255`), and Stirling-composed raw moments (regressed for orders
 - No new expression head, public operator, backend, evidence format, or logic
   fragment was introduced, so the foundational DAG and research-question
   register require no ADR.
+
+**Exact-expression initial-condition data**
+- The wave-three declines `y(0)=√2, y′(0)=1` and `y(0)=A, y′(0)=B` now
+  specialize the oscillator to `√2 cos x+sin x` and `A cos x+B sin x`.
+  SymPy independently agrees on both forms and on the retained rational
+  `x=π/2` control `−3 cos x+2 sin x`.
+- The evaluated baseline and every integration-constant coefficient remain in
+  the exact rational fragment. When the condition right-hand sides are not
+  rational, the implementation obtains each inverse-matrix column from the
+  existing checked-`i128`/bounded-bignum rational solver, then forms exact
+  `CasExpr` linear combinations. It does not introduce symbolic pivoting or
+  assume a denominator nonzero.
+- After substituting every solved constant, the public path differentiates and
+  evaluates the complete result for every original condition. A result is
+  returned only when the zero-test certifies each equality. This adds the
+  missing checker boundary to the older rational-only specialization too.
+- Expression-valued systems are capped at 16 constants. Reserved integration-
+  constant-shaped data, data depending on the ODE variable, nonrational basis
+  coefficients, singular systems, and dimension 17 decline. A 17-constant
+  rational system succeeds, proving the existing rational path was not
+  narrowed by the symbolic cap.
+- No expression head, operator, backend, evidence format, or logic fragment
+  changed; this is a bounded extension and certification strengthening of the
+  existing public IVP operation, so no ADR is required.
 
 ---
 
@@ -497,39 +521,33 @@ semantics changed.
 
 Ordered roughly by value:
 
-1. **Exact or symbolic initial-condition data.** The wave-three probe shows
-   `apply_initial_conditions` solves the oscillator at `x=π/2` with rational
-   data but declines both `y(0)=√2, y′(0)=1` and symbolic `A,B` data. At common
-   exact points the basis matrix is rational; solving it against exact
-   `CasExpr` right-hand sides and certifying every substituted condition is the
-   next high-value ODE increment.
-2. **Generic first-order inhomogeneous routing.** The same probe shows
+1. **Generic first-order inhomogeneous routing.** The wave-three probe shows
    `dsolve_inhomogeneous([1,1], e^x)` and the sine analogue decline even though
    `dsolve_first_order_linear` owns the required certified method. Route the
    degree-one operator through that public solver, preserving its residual
    certificate, instead of sending all non-polynomial forcing only to the
    second-order variation-of-parameters helper.
-3. **Resume broad, timeout-bounded gap probing.** The moment families now have
+2. **Resume broad, timeout-bounded gap probing.** The moment families now have
    explicit resource boundaries: direct order 256 needs `Γ(257)`, raw order 36
    needs public coefficients beyond `i128`, and repeated-quadratic inverse
    Laplace multiplicity 8 exceeds checked-`i128` normalization at
    `t⁷cos(βt)`. Extending these requires a deliberate resource/data-model
    decision rather than another local cancellation. Fixed-shift `r=8` remains
    a focused exact-growth candidate if a concrete use needs it.
-4. **Alternating series** `∑(−1)ᵏ/k = −ln2`, `∑(−1)ᵏ/(2k+1)=π/4−…`, Dirichlet
+3. **Alternating series** `∑(−1)ᵏ/k = −ln2`, `∑(−1)ᵏ/(2k+1)=π/4−…`, Dirichlet
    eta `η(s)`. **Blocked by the data model**: `(−1)ᵏ` has no clean real
    representation (`geometric_power(−1)` = `exp(k·ln(−1))`, complex `ln`). Would
    need a dedicated alternating-sign representation or a complex extension.
-5. **Continue gap-probing** — still productive. Areas not yet swept much:
+4. **Continue gap-probing** — still productive. Areas not yet swept much:
    Fourier and additional inverse-transform families, 2nd-order variable-coeff
    ODEs, PDE separation, richer assumptions/piecewise behavior, elliptic
    integrals, and `bessely`/`besselk` (second-kind / modified-second-kind, via
    the proven indexed Bessel-head pattern but requiring log-singular numerics).
-6. **Minor display nits** (value-correct, cosmetic): denominator rationalization
+5. **Minor display nits** (value-correct, cosmetic): denominator rationalization
    `1/√3→√3/3` (doesn't fit the size-gated simplify cleanly); `L{t·eᵗ}` shows
    `−(−1/(s−1)²)` for some internal structures (the manually-built structure folds
    fine — a subtle structural mismatch worth 20 min if it bugs you).
-7. **One-sided limits** (`lim_{x→0⁺} √x·ln x = 0`) — the limit API is two-sided;
+6. **One-sided limits** (`lim_{x→0⁺} √x·ln x = 0`) — the limit API is two-sided;
    `√x` isn't defined for `x<0` so the two-sided limit legitimately declines.
 
 ---
@@ -576,9 +594,9 @@ esac
 export AXEYUM_CAS_TMP
 trap 'find "$AXEYUM_CAS_TMP" -depth -delete' EXIT
 git rev-parse --abbrev-ref HEAD        # → agent/cas/...
-git merge-base --is-ancestor f3971e2a HEAD
+git merge-base --is-ancestor d0c8b2ea HEAD
 CARGO_BUILD_JOBS=1 TMPDIR="$AXEYUM_CAS_TMP" cargo test -p axeyum-cas --jobs 1
-# → 530 unit + 147 doctests green
+# → 533 unit + 147 doctests green
 ```
 Then: read `docs/research/10-cas/diary.md` tail for the latest context, and pick
 up from §6 or resume the gap-probing loop. Push the green owned topic branch;
