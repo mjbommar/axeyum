@@ -465,6 +465,10 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   retains a 3,600,038 ms wall timeout after seven diagnostic passes and a
   channel thread-creation/deadlock symptom: 17 files / 4,908,035 bytes, group
   reaped, no JUnit/cases/completion, zero M2 credit, and no retry.
+  The source-first [R4 plan](docs/plan/lean-u2-official-execution-tl0.6.3-m2-r4-attempt-003-plan-2026-07-23.md)
+  freezes attempt 003 with new roots, the sole 8-to-16 GiB `RLIMIT_AS` delta,
+  unchanged 512 MiB stack/shard/command/store, a harmless nine-thread control,
+  one selected process, and no retry. Next implement/test/push only.
 
 - **2026-07-22 — TL0.6.3 M1 derives complete deterministic U2 child-shard
   scheduling with zero new outcomes or parity credit.** The source-first
@@ -7776,6 +7780,11 @@ plan is built and committed on the current branch:
 | P5.5 | External target, measured | **DONE (bounded v1, ADR-0323--0338):** authenticated Tock capture plus eight rechecked dual-DRAT proofs and six replayed controls, UNKNOWN=0, DISAGREE=0. Query time 12.700 s; fresh outer wall 50.745 s; peak RSS 1,256,496 KiB; zero OOM deltas. The committed case study compares exact target validation, universal coverage, trust, effort, artifact boundaries, and limits. No Tock bug was found, so no upstream issue is applicable. This is not a speed or whole-kernel claim. |
 
 ## Changelog
+
+- **2026-07-23 — Preregistered M2 R4 attempt 003.** The source-first plan keeps
+  R3's stack and exact shard/store, changes only the local address-space lane
+  from 8 to 16 GiB, requires a harmless nine-dedicated-thread qualification,
+  and preserves one-shot/zero-terminal-credit boundaries.
 
 - **2026-07-23 — Retained M2 R3 attempt-002's wall timeout.** Exact preflight
   passed at `0a4d5daa`; the channel benchmark then failed dedicated-thread

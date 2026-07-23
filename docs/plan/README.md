@@ -256,6 +256,10 @@ Start at the root [`PLAN.md`](../../PLAN.md) (map + standing rules) and
   [`result`](lean-u2-official-execution-tl0.6.3-m2-r3-attempt-002-result-2026-07-23.md) —
   retained one-hour channel deadlock timeout: group reaped, 17 immutable files,
   no JUnit/completion, zero M2 outcome/parity credit, and no retry.
+- [`lean-u2-official-execution-tl0.6.3-m2-r4-attempt-003-plan-2026-07-23.md`](lean-u2-official-execution-tl0.6.3-m2-r4-attempt-003-plan-2026-07-23.md) —
+  source-first 16 GiB lane plan preserving the 512 MiB stack and exact shard,
+  requiring a harmless nine-dedicated-thread qualification, one selected
+  process, tiered closure, zero terminal promotion, and no retry.
 - [`lean-compatibility-v1.json`](lean-compatibility-v1.json) and generated
   [`Lean compatibility matrix`](generated/lean-compatibility.md) — TL0.2's
   executable eight-field assurance contract, K0-K6 profile gates, registered

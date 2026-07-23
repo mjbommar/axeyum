@@ -205,6 +205,11 @@ Final clean/remote/root/hash preflight passed at `0a4d5daa`, then attempt 002
 ran once. Its [R3 result](lean-u2-official-execution-tl0.6.3-m2-r3-attempt-002-result-2026-07-23.md)
 retains a reaped one-hour channel deadlock timeout, 17 files, no
 JUnit/completion, zero M2 credit, and no retry.
+The source-first
+[M2 R4 attempt-003 plan](lean-u2-official-execution-tl0.6.3-m2-r4-attempt-003-plan-2026-07-23.md)
+now freezes the sole 8-to-16 GiB lane delta, unchanged 512 MiB stack and exact
+shard/store, a harmless nine-dedicated-thread qualification, one selected
+process, zero terminal promotion, and no retry.
 
 L0 exits when status is generated from evidence rather than hand-copied prose.
 
@@ -558,7 +563,9 @@ parallel lane:
     but the one allowed process timed out after the channel benchmark failed
     dedicated-thread creation and deadlocked. The group was reaped with no
     JUnit/completion or M2 credit. **NEXT:** publish/preserve that consumed R3
-    failure, then preregister any new resource/isolation attempt. Classify
+    failure. The R4 plan now preregisters a 16 GiB local lane with unchanged
+    stack/shard/store and a harmless nine-thread control. **NEXT:** implement,
+    test, commit, and push R4 without selected execution. Classify
     completed native dependencies and
     form the first official/Axeyum pair. Do not rerun the singleton for coverage
     or promote an official-only pass into parity credit. Continue U0-U9

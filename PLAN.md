@@ -574,6 +574,11 @@ state.
 > [R3 result](docs/plan/lean-u2-official-execution-tl0.6.3-m2-r3-attempt-002-result-2026-07-23.md)
 > retains a 3,600,038 ms watchdog timeout, reaped group, 17 files / 4,908,035
 > bytes, no JUnit/completion, and zero M2 credit. R3 is consumed with no retry;
+> the source-first
+> [R4 attempt-003 plan](docs/plan/lean-u2-official-execution-tl0.6.3-m2-r4-attempt-003-plan-2026-07-23.md)
+> now freezes a single 8-to-16 GiB lane delta, unchanged 512 MiB stack/shard/
+> command/store, a harmless nine-dedicated-thread qualification control, new
+> roots, one selected process, and no retry. Next implement/test/push R4 only;
 > then form native pairs. Do not rerun
 > the singleton for population credit. The
 > [complete-parity execution roadmap](docs/plan/lean4-complete-parity-roadmap-2026-07-22.md)

@@ -496,6 +496,14 @@ dedicated-thread-creation/channel-deadlock symptom. The group was reaped; the
 17-file evidence root has no JUnit, cases, post, projection, or completion.
 R3 is consumed with no retry and zero M2 case/shard credit. All
 parent/provider/Axeyum/pair/performance/parity counters remain zero.
+The source-first
+[R4 attempt-003 plan](lean-u2-official-execution-tl0.6.3-m2-r4-attempt-003-plan-2026-07-23.md)
+now freezes one new attempt with a single resource delta: 16 GiB local
+`RLIMIT_AS` instead of 8 GiB. It preserves the 512 MiB universal stack, exact
+shard/command/store, one worker, one-hour watchdog, one selected process, and
+no retry. A harmless released-Lean nine-dedicated-thread control must qualify
+the new lane before selected execution. This remains local resource evidence,
+not an official-provider or parity claim.
 
 ## 8. Layer-specific equivalence
 
