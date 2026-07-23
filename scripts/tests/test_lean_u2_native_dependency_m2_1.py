@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import importlib.util
+import json
 import sys
 import unittest
 from pathlib import Path
@@ -98,6 +99,97 @@ class LeanU2NativeHeaderContractTests(unittest.TestCase):
         self.assertFalse(self.data["claims"]["fast_parser_observed"])
         self.assertFalse(self.data["claims"]["lean_parity_established"])
         self.assertTrue(all(value == 0 for value in self.data["credits"].values()))
+
+    def test_process_program_is_closed_ordered_and_nonexecuting(self) -> None:
+        specs = GEN.build_process_specs(self.data)
+        self.assertEqual(len(specs), 39)
+        self.assertEqual(
+            [row["category"] for row in specs[:4]], ["preflight"] * 4
+        )
+        self.assertEqual(
+            [row["category"] for row in specs[4:36]], ["fast-corpus"] * 32
+        )
+        self.assertEqual(specs[36]["category"], "fast-controls")
+        self.assertEqual(specs[37]["category"], "full-corpus")
+        self.assertEqual(specs[38]["category"], "full-controls")
+        self.assertEqual(specs[4]["argv"][-2:], ["--deps-json", "--stdin"])
+        self.assertEqual(specs[37]["argv"][-2], "--run")
+        self.assertEqual(specs[37]["stdin_bytes"], sum(
+            len(row["path"].encode()) + 1 for row in self.data["corpus_rows"]
+        ))
+        payload = GEN.authorization_payload(self.data)
+        self.assertEqual(payload["process_count"], 39)
+        self.assertEqual(payload["retry_budget"], 0)
+        self.assertEqual(len(GEN.authorization_digest(self.data)), 64)
+
+    def test_parser_output_normalization_preserves_order_duplicates_and_diagnostics(self) -> None:
+        imports = [
+            {
+                "module": "Init",
+                "importAll": False,
+                "isExported": True,
+                "isMeta": False,
+            },
+            {
+                "module": "Lean",
+                "importAll": False,
+                "isExported": False,
+                "isMeta": False,
+            },
+            {
+                "module": "Lean",
+                "importAll": False,
+                "isExported": False,
+                "isMeta": False,
+            },
+        ]
+        fast_bytes = json.dumps(
+            {
+                "imports": [
+                    {"result": {"imports": imports, "isModule": True}, "errors": []}
+                ]
+            }
+        ).encode()
+        full_bytes = json.dumps(
+            {
+                "rows": [
+                    {
+                        "result": {
+                            "imports": imports,
+                            "isModule": True,
+                            "terminalLine": 3,
+                            "terminalColumn": 0,
+                            "messages": ["retained diagnostic"],
+                        },
+                        "errors": [],
+                    }
+                ]
+            }
+        ).encode()
+        fast = GEN.normalize_fast_output(fast_bytes, 1, "fast")
+        full = GEN.normalize_full_output(full_bytes, 1, "full")
+        self.assertEqual(
+            [row["module"] for row in fast[0]["result"]["imports"]],
+            ["Init", "Lean", "Lean"],
+        )
+        self.assertEqual(GEN.compare_parser_row(fast[0], full[0]), "equal-with-full-diagnostic")
+
+    def test_parser_output_normalization_rejects_schema_and_row_count_drift(self) -> None:
+        with self.assertRaises(GEN.HeaderContractError):
+            GEN.normalize_fast_output(b"{}", 1, "missing")
+        malformed_import = {
+            "imports": [
+                {
+                    "result": {
+                        "imports": [{"module": "Lean", "isExported": True}],
+                        "isModule": False,
+                    },
+                    "errors": [],
+                }
+            ]
+        }
+        with self.assertRaises(GEN.HeaderContractError):
+            GEN.normalize_fast_output(json.dumps(malformed_import).encode(), 1, "bad")
 
 
 @unittest.skipUnless(GEN.CONTRACT.is_file(), "M2.1 contract not derived yet")

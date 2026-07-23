@@ -9,7 +9,14 @@ import functools
 import hashlib
 import importlib.util
 import json
+import os
+import platform
+import resource
+import signal
+import stat
+import subprocess
 import sys
+import time
 from pathlib import Path
 from types import ModuleType
 from typing import Any
@@ -90,6 +97,17 @@ PROCESS_COUNT = 39
 CORPUS_ROWS = 4092
 CORPUS_BYTES = 9_697_571
 CASE_ROWS = 3723
+CONTRACT_PHYSICAL_SHA256 = (
+    "8447cf92349467962363baea30973f0cb4b0d95c1527b6544fd50e4e09100b5b"
+)
+CONTRACT_RECORD_SHA256 = (
+    "f0c8f7a0725c78d5659eda52c1bee29ae08548a9e1bfe8043a369ca772381466"
+)
+RUNNER_PATH = ROOT / "scripts/lean_u2_native_dependency_m2_1.py"
+PROCESS_DOMAIN = "axeyum-lean-u2-native-header-process-m2.1-v1"
+COMPLETION_DOMAIN = "axeyum-lean-u2-native-header-completion-m2.1-v1"
+AUTHORIZATION_DOMAIN = "axeyum-lean-u2-native-header-authorization-m2.1-v1"
+PROCESS_DIR = "processes"
 
 CORPUS_DOMAIN = "axeyum-lean-u2-native-header-corpus-row-m2.1-v1"
 BATCH_DOMAIN = "axeyum-lean-u2-native-header-batch-m2.1-v1"
@@ -763,9 +781,667 @@ def check_contract() -> None:
     )
 
 
+def load_valid_contract() -> dict[str, Any]:
+    if not CONTRACT.is_file() or sha256_file(CONTRACT) != CONTRACT_PHYSICAL_SHA256:
+        raise HeaderContractError("committed M2.1 contract physical identity drift")
+    data = load_json(CONTRACT)
+    failures = validate_contract(data)
+    if failures:
+        raise HeaderContractError("invalid committed M2.1 contract: " + "; ".join(failures))
+    if data.get("record_sha256") != CONTRACT_RECORD_SHA256:
+        raise HeaderContractError("committed M2.1 contract logical identity drift")
+    return data
+
+
+def process_limits(*, full_corpus: bool = False) -> dict[str, int]:
+    return {
+        "address_space_bytes": 4 * 1024**3,
+        "cpu_seconds": 60,
+        "wall_seconds": 300 if full_corpus else 120,
+        "stdout_bytes": 64 * 1024**2 if full_corpus else 16 * 1024**2,
+        "stderr_bytes": 2 * 1024**2,
+        "file_size_bytes": 256 * 1024**2,
+    }
+
+
+def process_environment() -> dict[str, str]:
+    return {"LANG": "C", "LC_ALL": "C"}
+
+
+def lines_bytes(values: list[str]) -> bytes:
+    return ("\n".join(values) + "\n").encode("utf-8")
+
+
+def build_process_specs(contract: dict[str, Any]) -> list[dict[str, Any]]:
+    specs: list[dict[str, Any]] = []
+
+    def add(
+        process_id: str,
+        category: str,
+        argv: list[str],
+        stdin: bytes = b"",
+        *,
+        full_corpus: bool = False,
+    ) -> None:
+        specs.append(
+            {
+                "ordinal": len(specs),
+                "process_id": process_id,
+                "category": category,
+                "argv": argv,
+                "cwd": str(SOURCE_ROOT),
+                "environment": process_environment(),
+                "stdin_bytes": len(stdin),
+                "stdin_sha256": sha256_bytes(stdin),
+                "stdin": stdin,
+                "limits": process_limits(full_corpus=full_corpus),
+            }
+        )
+
+    add(
+        "preflight-git-head",
+        "preflight",
+        ["/usr/bin/git", "rev-parse", "HEAD"],
+    )
+    add(
+        "preflight-git-clean",
+        "preflight",
+        ["/usr/bin/git", "status", "--porcelain=v1", "--untracked-files=all"],
+    )
+    add(
+        "preflight-lean-elf",
+        "preflight",
+        ["/usr/bin/readelf", "-d", str(LEAN_BIN)],
+    )
+    add("preflight-lean-version", "preflight", [str(LEAN_BIN), "--version"])
+
+    corpus = contract["corpus_rows"]
+    for batch in contract["batches"]:
+        rows = corpus[batch["start_ordinal"] : batch["stop_ordinal_exclusive"]]
+        stdin = lines_bytes([row["path"] for row in rows])
+        if sha256_bytes(stdin) != batch["stdin_sha256"]:
+            raise HeaderContractError(f"batch stdin drift: {batch['batch_id']}")
+        add(
+            f"fast-{batch['batch_id']}",
+            "fast-corpus",
+            [str(LEAN_BIN), "-j1", "--deps-json", "--stdin"],
+            stdin,
+        )
+
+    control_paths = [
+        str(EVIDENCE_ROOT / row["relative_path"]) for row in contract["controls"]
+    ]
+    add(
+        "fast-controls",
+        "fast-controls",
+        [str(LEAN_BIN), "-j1", "--deps-json", "--stdin"],
+        lines_bytes(control_paths),
+    )
+    add(
+        "full-corpus",
+        "full-corpus",
+        [str(LEAN_BIN), "-j1", "--run", str(HELPER_PATH)],
+        lines_bytes([row["path"] for row in corpus]),
+        full_corpus=True,
+    )
+    add(
+        "full-controls",
+        "full-controls",
+        [str(LEAN_BIN), "-j1", "--run", str(HELPER_PATH)],
+        lines_bytes(control_paths),
+    )
+    if len(specs) != PROCESS_COUNT:
+        raise HeaderContractError(
+            f"process closure drift: expected {PROCESS_COUNT}, got {len(specs)}"
+        )
+    return specs
+
+
+def public_process_spec(spec: dict[str, Any]) -> dict[str, Any]:
+    return {key: value for key, value in spec.items() if key != "stdin"}
+
+
+def authorization_payload(contract: dict[str, Any]) -> dict[str, Any]:
+    specs = build_process_specs(contract)
+    return {
+        "contract_physical_sha256": CONTRACT_PHYSICAL_SHA256,
+        "contract_record_sha256": CONTRACT_RECORD_SHA256,
+        "runner_sha256": sha256_file(RUNNER_PATH),
+        "helper_sha256": sha256_file(HELPER_PATH),
+        "source_root": str(SOURCE_ROOT),
+        "evidence_root": str(EVIDENCE_ROOT),
+        "process_specs_sha256": domain_digest(
+            "axeyum-lean-u2-native-header-process-specs-m2.1-v1",
+            [public_process_spec(spec) for spec in specs],
+        ),
+        "process_count": len(specs),
+        "retry_budget": 0,
+    }
+
+
+def authorization_digest(contract: dict[str, Any]) -> str:
+    return domain_digest(AUTHORIZATION_DOMAIN, authorization_payload(contract))
+
+
+def verify_file_identity(
+    path: Path, *, bytes_expected: int, sha256_expected: str, mode_expected: int | None = None
+) -> None:
+    if not path.is_file() or path.is_symlink():
+        raise HeaderContractError(f"provider file missing or not regular: {path}")
+    metadata = path.stat()
+    if metadata.st_size != bytes_expected or sha256_file(path) != sha256_expected:
+        raise HeaderContractError(f"provider file physical identity drift: {path}")
+    if mode_expected is not None and stat.S_IMODE(metadata.st_mode) != mode_expected:
+        raise HeaderContractError(f"provider file mode drift: {path}")
+
+
+def verify_provider_files(contract: dict[str, Any]) -> None:
+    floor = contract["provider_floor"]
+    verify_file_identity(
+        LEAN_BIN,
+        bytes_expected=floor["lean_binary_bytes"],
+        sha256_expected=floor["lean_binary_sha256"],
+        mode_expected=int(floor["lean_binary_mode"], 8),
+    )
+    verify_file_identity(
+        Path(floor["git"]["path"]),
+        bytes_expected=floor["git"]["bytes"],
+        sha256_expected=floor["git"]["sha256"],
+    )
+    readelf = Path(floor["readelf"]["path"])
+    if str(readelf.resolve()) != floor["readelf"]["realpath"]:
+        raise HeaderContractError("readelf realpath drift")
+    verify_file_identity(
+        readelf.resolve(),
+        bytes_expected=floor["readelf"]["bytes"],
+        sha256_expected=floor["readelf"]["sha256"],
+    )
+    lib_root = LEAN_BIN.parent.parent / "lib/lean"
+    for library in floor["toolchain_libraries"]:
+        verify_file_identity(
+            lib_root / library["name"],
+            bytes_expected=library["bytes"],
+            sha256_expected=library["sha256"],
+        )
+    if not SOURCE_ROOT.is_dir() or SOURCE_ROOT.is_symlink():
+        raise HeaderContractError("pinned source root missing or symlinked")
+    uname = os.uname()
+    libc_name, libc_version = platform.libc_ver()
+    expected_platform = floor["platform"]
+    if (
+        uname.sysname != expected_platform["os"]
+        or uname.machine != expected_platform["arch"]
+        or libc_name != "glibc"
+        or libc_version != expected_platform["glibc"]
+    ):
+        raise HeaderContractError(
+            "provider platform drift: "
+            f"{uname.sysname}/{uname.machine}/{libc_name}/{libc_version}"
+        )
+
+
+def render_run_command() -> None:
+    contract = load_valid_contract()
+    verify_provider_files(contract)
+    digest = authorization_digest(contract)
+    print(
+        "LEAN_U2_NATIVE_HEADER_RUN|"
+        f"authorization={digest}|processes={PROCESS_COUNT}|files={CORPUS_ROWS}|"
+        f"evidence_root={EVIDENCE_ROOT.relative_to(ROOT)}"
+    )
+    print(
+        "python3 scripts/lean_u2_native_dependency_m2_1.py run "
+        f"--authorization {digest}"
+    )
+
+
+def materialize_controls(contract: dict[str, Any]) -> None:
+    for row in contract["controls"]:
+        path = EVIDENCE_ROOT / row["relative_path"]
+        if row["source"] is None:
+            if path.exists() or path.is_symlink():
+                raise HeaderContractError(f"missing control unexpectedly exists: {path}")
+            continue
+        path.parent.mkdir(parents=True, exist_ok=True)
+        data = row["source"].encode("utf-8")
+        if len(data) != row["bytes"] or sha256_bytes(data) != row["sha256"]:
+            raise HeaderContractError(f"control bytes drift before materialization: {row['id']}")
+        path.write_bytes(data)
+
+
+def set_child_limits(limits: dict[str, int]) -> None:
+    resource.setrlimit(
+        resource.RLIMIT_AS,
+        (limits["address_space_bytes"], limits["address_space_bytes"]),
+    )
+    resource.setrlimit(
+        resource.RLIMIT_CPU, (limits["cpu_seconds"], limits["cpu_seconds"])
+    )
+    resource.setrlimit(
+        resource.RLIMIT_FSIZE,
+        (limits["file_size_bytes"], limits["file_size_bytes"]),
+    )
+
+
+def process_directory(spec: dict[str, Any]) -> Path:
+    return EVIDENCE_ROOT / PROCESS_DIR / f"{spec['ordinal']:04d}-{spec['process_id']}"
+
+
+def run_process(spec: dict[str, Any]) -> dict[str, Any]:
+    directory = process_directory(spec)
+    directory.mkdir(parents=True, exist_ok=False)
+    stdin_path = directory / "stdin.bin"
+    stdout_path = directory / "stdout.bin"
+    stderr_path = directory / "stderr.bin"
+    record_path = directory / "record.json"
+    stdin_path.write_bytes(spec["stdin"])
+    before = resource.getrusage(resource.RUSAGE_CHILDREN)
+    start_ns = time.time_ns()
+    timed_out = False
+    process = subprocess.Popen(
+        spec["argv"],
+        cwd=spec["cwd"],
+        env=spec["environment"],
+        stdin=subprocess.PIPE,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        start_new_session=True,
+        preexec_fn=lambda: set_child_limits(spec["limits"]),
+    )
+    try:
+        stdout, stderr = process.communicate(
+            input=spec["stdin"], timeout=spec["limits"]["wall_seconds"]
+        )
+    except subprocess.TimeoutExpired:
+        timed_out = True
+        os.killpg(process.pid, signal.SIGKILL)
+        stdout, stderr = process.communicate()
+    end_ns = time.time_ns()
+    after = resource.getrusage(resource.RUSAGE_CHILDREN)
+    stdout_path.write_bytes(stdout)
+    stderr_path.write_bytes(stderr)
+    output_within_limits = (
+        len(stdout) <= spec["limits"]["stdout_bytes"]
+        and len(stderr) <= spec["limits"]["stderr_bytes"]
+    )
+    status = (
+        "complete"
+        if process.returncode == 0 and not timed_out and output_within_limits
+        else "failed"
+    )
+    record = seal(
+        {
+            **public_process_spec(spec),
+            "status": status,
+            "started_unix_ns": start_ns,
+            "ended_unix_ns": end_ns,
+            "wall_duration_ns": end_ns - start_ns,
+            "timed_out": timed_out,
+            "returncode": process.returncode,
+            "stdout_bytes": len(stdout),
+            "stdout_sha256": sha256_bytes(stdout),
+            "stderr_bytes": len(stderr),
+            "stderr_sha256": sha256_bytes(stderr),
+            "output_within_limits": output_within_limits,
+            "user_cpu_seconds": after.ru_utime - before.ru_utime,
+            "system_cpu_seconds": after.ru_stime - before.ru_stime,
+            "max_rss_kib_children_cumulative": after.ru_maxrss,
+            "files": {
+                "stdin": str(stdin_path.relative_to(EVIDENCE_ROOT)),
+                "stdout": str(stdout_path.relative_to(EVIDENCE_ROOT)),
+                "stderr": str(stderr_path.relative_to(EVIDENCE_ROOT)),
+            },
+        },
+        PROCESS_DOMAIN,
+    )
+    record_path.write_text(json_text(record), encoding="utf-8")
+    if status != "complete":
+        raise HeaderContractError(
+            f"process {spec['process_id']} failed without retry: "
+            f"returncode={process.returncode} timeout={timed_out} "
+            f"output_within_limits={output_within_limits}"
+        )
+    return record
+
+
+def inventory(root: Path, *, exclude_completion: bool) -> list[dict[str, Any]]:
+    rows = []
+    for path in sorted((item for item in root.rglob("*") if item.is_file())):
+        relative = str(path.relative_to(root))
+        if exclude_completion and relative == "completion.json":
+            continue
+        rows.append(
+            {
+                "path": relative,
+                "bytes": path.stat().st_size,
+                "sha256": sha256_file(path),
+            }
+        )
+    return rows
+
+
+def write_completion(
+    contract: dict[str, Any], authorization: str, records: list[dict[str, Any]]
+) -> None:
+    rows = inventory(EVIDENCE_ROOT, exclude_completion=True)
+    completion = seal(
+        {
+            "schema": "axeyum-lean-u2-native-header-completion-m2.1-v1",
+            "contract_record_sha256": contract["record_sha256"],
+            "authorization": authorization,
+            "process_count": len(records),
+            "process_record_sha256s": [row["record_sha256"] for row in records],
+            "inventory_count": len(rows),
+            "inventory_sha256": domain_digest(
+                "axeyum-lean-u2-native-header-evidence-inventory-m2.1-v1", rows
+            ),
+            "inventory": rows,
+            "state": "complete-unvalidated-parser-evidence",
+            "credit": 0,
+        },
+        COMPLETION_DOMAIN,
+    )
+    (EVIDENCE_ROOT / "completion.json").write_text(
+        json_text(completion), encoding="utf-8"
+    )
+
+
+def run_attempt(authorization: str) -> None:
+    contract = load_valid_contract()
+    verify_provider_files(contract)
+    expected = authorization_digest(contract)
+    if authorization != expected:
+        raise HeaderContractError(
+            f"authorization digest mismatch: expected {expected}, got {authorization}"
+        )
+    if EVIDENCE_ROOT.exists() or EVIDENCE_ROOT.is_symlink():
+        raise HeaderContractError(f"evidence root already exists: {EVIDENCE_ROOT}")
+    EVIDENCE_ROOT.mkdir(parents=True)
+    materialize_controls(contract)
+    (EVIDENCE_ROOT / PROCESS_DIR).mkdir()
+    (EVIDENCE_ROOT / "authorization.json").write_text(
+        json_text(
+            {
+                "authorization": authorization,
+                "payload": authorization_payload(contract),
+            }
+        ),
+        encoding="utf-8",
+    )
+    records = []
+    for spec in build_process_specs(contract):
+        records.append(run_process(spec))
+    write_completion(contract, authorization, records)
+    print(
+        f"lean-u2-native-header: completed {len(records)} process records; "
+        "parser normalization and authority promotion remain unrun"
+    )
+
+
+def load_process_record(path: Path) -> dict[str, Any]:
+    data = load_json(path)
+    expected = domain_digest(
+        PROCESS_DOMAIN,
+        {key: value for key, value in data.items() if key != "record_sha256"},
+    )
+    if data.get("record_sha256") != expected:
+        raise HeaderContractError(f"process record seal drift: {path}")
+    return data
+
+
+def parse_json_output(data: bytes, label: str) -> dict[str, Any]:
+    try:
+        value = json.loads(data)
+    except (UnicodeDecodeError, json.JSONDecodeError) as error:
+        raise HeaderContractError(f"invalid UTF-8 JSON from {label}: {error}") from error
+    if not isinstance(value, dict):
+        raise HeaderContractError(f"non-object JSON from {label}")
+    return value
+
+
+def normalize_import(value: Any, label: str) -> dict[str, Any]:
+    if not isinstance(value, dict):
+        raise HeaderContractError(f"non-object import row in {label}")
+    expected_keys = {"module", "importAll", "isExported", "isMeta"}
+    if set(value) != expected_keys:
+        raise HeaderContractError(f"import schema drift in {label}: {sorted(value)}")
+    if not isinstance(value["module"], str) or not all(
+        isinstance(value[key], bool) for key in expected_keys - {"module"}
+    ):
+        raise HeaderContractError(f"import value type drift in {label}")
+    return {
+        "module": value["module"],
+        "import_all": value["importAll"],
+        "is_exported": value["isExported"],
+        "is_meta": value["isMeta"],
+    }
+
+
+def optional_result(row: dict[str, Any]) -> Any:
+    if "result" in row:
+        return row["result"]
+    return row.get("result?")
+
+
+def normalize_fast_output(data: bytes, expected_count: int, label: str) -> list[dict[str, Any]]:
+    value = parse_json_output(data, label)
+    rows = value.get("imports")
+    if not isinstance(rows, list) or len(rows) != expected_count:
+        raise HeaderContractError(
+            f"fast row-count drift in {label}: expected {expected_count}, "
+            f"got {None if not isinstance(rows, list) else len(rows)}"
+        )
+    normalized = []
+    for index, row in enumerate(rows):
+        row_label = f"{label}[{index}]"
+        if not isinstance(row, dict) or not isinstance(row.get("errors"), list):
+            raise HeaderContractError(f"fast result schema drift in {row_label}")
+        errors = row["errors"]
+        if not all(isinstance(error, str) for error in errors):
+            raise HeaderContractError(f"fast error type drift in {row_label}")
+        result = optional_result(row)
+        if result is None:
+            if not errors:
+                raise HeaderContractError(f"fast row has neither result nor error: {row_label}")
+            normalized.append({"state": "error", "errors": errors, "result": None})
+            continue
+        if errors or not isinstance(result, dict):
+            raise HeaderContractError(f"fast row mixes result/error in {row_label}")
+        imports = result.get("imports")
+        if not isinstance(imports, list) or not isinstance(result.get("isModule"), bool):
+            raise HeaderContractError(f"fast module-header schema drift in {row_label}")
+        normalized.append(
+            {
+                "state": "success",
+                "errors": [],
+                "result": {
+                    "imports": [normalize_import(item, row_label) for item in imports],
+                    "is_module": result["isModule"],
+                },
+            }
+        )
+    return normalized
+
+
+def normalize_full_output(data: bytes, expected_count: int, label: str) -> list[dict[str, Any]]:
+    value = parse_json_output(data, label)
+    rows = value.get("rows")
+    if not isinstance(rows, list) or len(rows) != expected_count:
+        raise HeaderContractError(
+            f"full row-count drift in {label}: expected {expected_count}, "
+            f"got {None if not isinstance(rows, list) else len(rows)}"
+        )
+    normalized = []
+    for index, row in enumerate(rows):
+        row_label = f"{label}[{index}]"
+        if not isinstance(row, dict) or not isinstance(row.get("errors"), list):
+            raise HeaderContractError(f"full result schema drift in {row_label}")
+        errors = row["errors"]
+        if not all(isinstance(error, str) for error in errors):
+            raise HeaderContractError(f"full error type drift in {row_label}")
+        result = optional_result(row)
+        if result is None:
+            if not errors:
+                raise HeaderContractError(f"full row has neither result nor error: {row_label}")
+            normalized.append({"state": "error", "errors": errors, "result": None})
+            continue
+        if errors or not isinstance(result, dict):
+            raise HeaderContractError(f"full row mixes result/error in {row_label}")
+        imports = result.get("imports")
+        messages = result.get("messages")
+        if (
+            not isinstance(imports, list)
+            or not isinstance(messages, list)
+            or not all(isinstance(message, str) for message in messages)
+            or not isinstance(result.get("isModule"), bool)
+            or not isinstance(result.get("terminalLine"), int)
+            or not isinstance(result.get("terminalColumn"), int)
+        ):
+            raise HeaderContractError(f"full module-header schema drift in {row_label}")
+        normalized.append(
+            {
+                "state": "diagnostic" if messages else "success",
+                "errors": [],
+                "result": {
+                    "imports": [normalize_import(item, row_label) for item in imports],
+                    "is_module": result["isModule"],
+                    "terminal_line": result["terminalLine"],
+                    "terminal_column": result["terminalColumn"],
+                    "messages": messages,
+                },
+            }
+        )
+    return normalized
+
+
+def compare_parser_row(fast: dict[str, Any], full: dict[str, Any]) -> str:
+    if fast["state"] == "success" and full["state"] in ("success", "diagnostic"):
+        fast_result = fast["result"]
+        full_result = full["result"]
+        if (
+            fast_result["imports"] == full_result["imports"]
+            and fast_result["is_module"] == full_result["is_module"]
+        ):
+            return "equal" if full["state"] == "success" else "equal-with-full-diagnostic"
+        return "import-or-module-mismatch"
+    if fast["state"] == "error" and full["state"] == "error":
+        return "paired-error"
+    if fast["state"] == "error" and full["state"] == "diagnostic":
+        return "fast-error-full-diagnostic"
+    if fast["state"] == "error" and full["state"] == "success":
+        return "fast-error-full-success"
+    return "fast-success-full-error"
+
+
+def validate_evidence() -> None:
+    contract = load_valid_contract()
+    verify_provider_files(contract)
+    if not EVIDENCE_ROOT.is_dir():
+        raise HeaderContractError(f"missing evidence root: {EVIDENCE_ROOT}")
+    completion_path = EVIDENCE_ROOT / "completion.json"
+    if not completion_path.is_file():
+        raise HeaderContractError("attempt is incomplete: completion.json absent")
+    completion = load_json(completion_path)
+    expected_completion = domain_digest(
+        COMPLETION_DOMAIN,
+        {key: value for key, value in completion.items() if key != "record_sha256"},
+    )
+    if completion.get("record_sha256") != expected_completion:
+        raise HeaderContractError("completion record seal drift")
+    expected_auth = authorization_digest(contract)
+    if completion.get("authorization") != expected_auth:
+        raise HeaderContractError("completion authorization drift")
+    specs = build_process_specs(contract)
+    records = []
+    for spec in specs:
+        directory = process_directory(spec)
+        record = load_process_record(directory / "record.json")
+        if public_process_spec(spec) != {
+            key: record[key] for key in public_process_spec(spec)
+        }:
+            raise HeaderContractError(f"process specification drift: {spec['process_id']}")
+        for field in ("stdin", "stdout", "stderr"):
+            path = EVIDENCE_ROOT / record["files"][field]
+            if not path.is_file():
+                raise HeaderContractError(
+                    f"missing {field} evidence for {spec['process_id']}"
+                )
+            if path.stat().st_size != record[f"{field}_bytes"]:
+                raise HeaderContractError(f"{field} byte count drift: {spec['process_id']}")
+            if sha256_file(path) != record[f"{field}_sha256"]:
+                raise HeaderContractError(f"{field} hash drift: {spec['process_id']}")
+        if record["status"] != "complete" or record["returncode"] != 0:
+            raise HeaderContractError(f"non-complete process: {spec['process_id']}")
+        records.append(record)
+    if records[0]["stdout_sha256"] != sha256_bytes(
+        (TARGET["lean_commit"] + "\n").encode("ascii")
+    ):
+        raise HeaderContractError("preflight source HEAD output drift")
+    if records[1]["stdout_bytes"] != 0:
+        raise HeaderContractError("preflight source checkout is not clean")
+    readelf_stdout = (
+        EVIDENCE_ROOT / records[2]["files"]["stdout"]
+    ).read_text(encoding="utf-8")
+    for token in (
+        "$ORIGIN/../lib:$ORIGIN/../lib/lean",
+        "libInit_shared.so",
+        "libleanshared.so",
+        "libleanshared_1.so",
+        "libleanshared_2.so",
+    ):
+        if token not in readelf_stdout:
+            raise HeaderContractError(f"preflight ELF output missing {token}")
+    version_stdout = (
+        EVIDENCE_ROOT / records[3]["files"]["stdout"]
+    ).read_text(encoding="utf-8")
+    for token in ("version 4.30.0", TARGET["lean_commit"], "x86_64"):
+        if token not in version_stdout:
+            raise HeaderContractError(f"preflight version output missing {token}")
+    if any(record["stderr_bytes"] != 0 for record in records):
+        raise HeaderContractError("one or more retained processes wrote stderr")
+    authorization_record = load_json(EVIDENCE_ROOT / "authorization.json")
+    if authorization_record != {
+        "authorization": expected_auth,
+        "payload": authorization_payload(contract),
+    }:
+        raise HeaderContractError("authorization record drift")
+    for control in contract["controls"]:
+        path = EVIDENCE_ROOT / control["relative_path"]
+        if control["source"] is None:
+            if path.exists() or path.is_symlink():
+                raise HeaderContractError(f"missing control exists: {control['id']}")
+        elif (
+            not path.is_file()
+            or path.stat().st_size != control["bytes"]
+            or sha256_file(path) != control["sha256"]
+        ):
+            raise HeaderContractError(f"control identity drift: {control['id']}")
+    rows = inventory(EVIDENCE_ROOT, exclude_completion=True)
+    if rows != completion.get("inventory"):
+        raise HeaderContractError("post-completion evidence inventory drift")
+    if completion.get("inventory_count") != len(rows):
+        raise HeaderContractError("completion inventory count drift")
+    if completion.get("inventory_sha256") != domain_digest(
+        "axeyum-lean-u2-native-header-evidence-inventory-m2.1-v1", rows
+    ):
+        raise HeaderContractError("completion inventory seal drift")
+    if completion.get("process_record_sha256s") != [
+        row["record_sha256"] for row in records
+    ]:
+        raise HeaderContractError("completion process-record projection drift")
+    print(
+        f"LEAN_U2_NATIVE_HEADER_EVIDENCE|processes={len(records)}|"
+        f"files={contract['summary']['corpus_rows']}|state=complete-unvalidated|credit=0"
+    )
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("command", choices=("contract", "check-contract"))
+    parser.add_argument(
+        "command",
+        choices=("contract", "check-contract", "render-run", "run", "check-evidence"),
+    )
+    parser.add_argument("--authorization")
     args = parser.parse_args()
     try:
         if args.command == "contract":
@@ -775,8 +1451,16 @@ def main() -> int:
                 f"lean-u2-native-header: froze {contract['summary']['corpus_rows']} "
                 "inputs; no M2.1 process observed"
             )
-        else:
+        elif args.command == "check-contract":
             check_contract()
+        elif args.command == "render-run":
+            render_run_command()
+        elif args.command == "run":
+            if not args.authorization:
+                raise HeaderContractError("run requires --authorization")
+            run_attempt(args.authorization)
+        else:
+            validate_evidence()
     except HeaderContractError as error:
         print(f"lean-u2-native-header: {error}", file=sys.stderr)
         return 1
