@@ -416,3 +416,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [0359](adr-0359-preregister-checked-quantified-uf-default-repair.md) | Preregister bounded checked default-only model repair for quantified Int/Real-result UFs | accepted |
 | [0360](adr-0360-preregister-checked-quantified-uf-free-int-completion.md) | Preregister bounded untrusted free-Int candidate completion behind exact quantified-UF model replay | proposed |
 | [0361](adr-0361-preregister-evaluated-quantified-uf-scalar-candidates.md) | Preregister evaluated ground-source and UF-result scalar candidates without widening quantified-UF search or evidence caps | proposed |
+| [0362](adr-0362-preregister-one-level-fixed-query-mbqi-retry.md) | Preregister one recursion-guarded MBQI pass under one temporary source-Int fixing with exact unfixed replay | proposed |
