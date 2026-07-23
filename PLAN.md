@@ -508,8 +508,15 @@ state.
 > physical shards capped at 64 cases: 461 selection-expanded and 6,451
 > attempt-expanded occurrences. Every new shard and all 111 official attempts
 > remain `not-run`; the M0 singleton is historical annotation only. Next
-> preregister and execute fresh derived shards, then form native pairs; do not
-> rerun the singleton for population credit. The
+> the pushed
+> [M2 plan](docs/plan/lean-u2-official-execution-tl0.6.3-m2-shard-0001-plan-2026-07-22.md)
+> selects the lowest-ordinal zero-history shard: 64 exact compile,
+> compile-bench, and docparse cases at offsets `[64,128)`. It freezes a
+> one-hour 8 GiB/one-worker lane, zero-or-64 result publication, and one
+> attempt. No M2 adapter, harness, discovery, or test process has run. Next
+> implement, validate, commit, and push that runner before the authorized
+> attempt; then form native pairs. Do not rerun the singleton for population
+> credit. The
 > [complete-parity execution roadmap](docs/plan/lean4-complete-parity-roadmap-2026-07-22.md)
 > now reconciles this U2 boundary with the SMT-LIB evidence layers and the
 > dependency-ordered R0-R10 path to all U0-U9/A0-A11/G1-G10 exits.

@@ -439,6 +439,20 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   source-first preregistered.** The [M0 plan](docs/plan/lean-u2-official-execution-tl0.6.3-m0-plan-2026-07-22.md)
 - **2026-07-22 — TL0.6.3 M0 has one retained local official outcome; R3 is
   source-first preregistered after R2 stopped before import.** The [M0 plan](docs/plan/lean-u2-official-execution-tl0.6.3-m0-plan-2026-07-22.md)
+- **2026-07-22 — TL0.6.3 M2 is preregistered for one fresh 64-case shard; no
+  runner or process exists yet.** The source-first
+  [plan](docs/plan/lean-u2-official-execution-tl0.6.3-m2-shard-0001-plan-2026-07-22.md)
+  was committed and pushed at `16bd6f08` before implementation, harness
+  construction, discovery, or execution. It deterministically selects the
+  lowest-ordinal shard in the release Linux membership with zero historical
+  observations: ordinal 1, offsets `[64,128)`, 64 compile/compile-bench/
+  docparse cases. It freezes exact parent/shard/input/helper/toolchain
+  identities, a one-hour 8 GiB per-process/one-worker local lane, one attempt,
+  zero-or-64 conservative JUnit outcome publication, completion-last evidence,
+  thirteen mutation classes, and zero parent/provider/Axeyum/pair/performance/
+  terminal credit. Next: implement and offline-validate the adapter, commit and
+  push it separately, then consider the single authorized live attempt.
+
 - **2026-07-22 — TL0.6.3 M1 derives complete deterministic U2 child-shard
   scheduling with zero new outcomes or parity credit.** The source-first
   [plan](docs/plan/lean-u2-official-execution-tl0.6.3-m1-shard-plan-2026-07-22.md)
@@ -7925,6 +7939,13 @@ plan is built and committed on the current branch:
   their uncertified `Fpa2Bv` proof credit. The pathological 30-minute
   collection path and fail-closed panic disappear; the exact pinned Lean 4.30
   gate accepts the current 70/70 modules with zero skips and zero failures.
+- **2026-07-22 — Preregistered TL0.6.3 M2's first fresh multi-case
+  execution.** The pushed plan selects derived shard `0001` by the frozen
+  lowest-ordinal zero-history rule, binds all 64 exact cases and the release
+  Linux provenance chain, and registers one hour/8 GiB/one worker with one
+  attempt and zero-or-64 outcome publication. No runner, harness, discovery,
+  or process has run; implementation must be committed and pushed separately.
+
 - **2026-07-22 — Completed TL0.6.3 M1's non-executed U2 child-shard
   derivation.** A separately pushed preregistration freezes exact ordered-list
   factoring and contiguous 64-case partitions. The accepted authority derives
