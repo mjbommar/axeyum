@@ -383,6 +383,25 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-23 — repaired SMT-COMP P0 is immutably prepared, with no solver
+  allocation launched.** A preparation-only operator now binds and applies the
+  three one-thread environment variables in run identity, admits only the exact
+  S5.1 lists, copies and hashes all three binaries, reruns eight incident
+  sentinels, probes `s5`/`s6`/`s7`, and creates three empty E3 cells with three
+  initial plus three different-host retry commands each. The 1,810-file union
+  and 1,305-file FP-only identities reproduce preregistration exactly. Both FP
+  sentinels complete `unsat` on Axeyum/cvc5/Bitwuzla; cvc5 completes `sat` on
+  AUFLIA while Axeyum produces no verdict before the explicit 20-second wall
+  timeout. Completion SHA-256 is
+  `63c153f2c84c82d5363bdcec648b39a19d7c43308874b7549ba2e16687b5d76b`;
+  independent validation rehashed 50 artifacts and confirmed zero run records
+  or attempts. Portable/E2/E3 gates pass 60 tests, and the refreshed live E3
+  evidence is rooted at
+  `/nas3/data/axeyum/harness/e3-gate/live-1784811785919018559-da679e1429de`.
+  Next: after the integrator lands this result, execute Axeyum, cvc5, and
+  Bitwuzla sequentially under the frozen commands; stop on the first
+  contradiction, disagreement, or evidence/identity failure.
+
 - **2026-07-22 — certified bounded rational-weight integer-order Bessel-J
   limits.** Wave sixteen's bounded cross-area probe ranks the variable-weight
   continuation of the existing fixed-order asymptotic ahead of growing-rate
