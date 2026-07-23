@@ -2,7 +2,9 @@
 
 Date: 2026-07-23
 
-Status: **preregistered integration only; no process or parity credit**
+Status: **complete and validated on `main`; no process or parity credit**
+
+Result: [R6 integration result](lean-complete-parity-main-integration-r6-result-2026-07-23.md)
 
 Contract: [complete Lean 4.30 parity](lean4-complete-parity-contract-2026-07-22.md)
 
