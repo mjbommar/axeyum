@@ -196,8 +196,15 @@ Start at the root [`PLAN.md`](../../PLAN.md) (map + standing rules) and
   the lowest-ordinal derived shard with no historical observation: 64 exact
   compile, compile-bench, and docparse cases at membership offsets `[64,128)`.
   The plan freezes a one-hour 8 GiB/one-worker local lane, zero-or-64 outcome
-  publication, one attempt, and all non-credit boundaries. No M2 runner,
-  harness, discovery, or test process exists yet.
+  publication, one attempt, and all non-credit boundaries. Commit `9783ba93`
+  implements and pushes the pure exact spec/harness/discovery/JUnit/artifact/
+  credit contract and thirteen focused tests; its CLI has no live execution
+  command. The separate launch/store runner does not exist yet, and no live
+  harness discovery or test process has run.
+- [`lean-u2-official-execution-tl0.6.3-m2-implementation-2026-07-22.md`](lean-u2-official-execution-tl0.6.3-m2-implementation-2026-07-22.md) —
+  post-plan implementation checkpoint for commit `9783ba93`, exact source
+  identities, thirteen mutation-focused tests, complete parity-doc validation,
+  and the explicit zero-outcome/zero-credit boundary before launch/store work.
 - [`lean-compatibility-v1.json`](lean-compatibility-v1.json) and generated
   [`Lean compatibility matrix`](generated/lean-compatibility.md) — TL0.2's
   executable eight-field assurance contract, K0-K6 profile gates, registered

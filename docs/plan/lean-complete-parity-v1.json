@@ -109,7 +109,11 @@
         },
         {
           "path": "docs/plan/lean-u2-official-execution-tl0.6.3-m2-shard-0001-plan-2026-07-22.md",
-          "detail": "Pushed source-first execution plan for the lowest-ordinal 64-case shard with no historical observation. Its pure offline specification, harness rendering, discovery, JUnit, artifact-closure, and zero-credit projection contract is implemented and mutation-tested; it exposes no live execution command, and no harness discovery or test process has run."
+          "detail": "Pushed immutable source-first execution plan for the lowest-ordinal 64-case shard with no historical observation; no harness discovery or test process has run."
+        },
+        {
+          "path": "docs/plan/lean-u2-official-execution-tl0.6.3-m2-implementation-2026-07-22.md",
+          "detail": "Pushed post-plan checkpoint for the pure offline specification, harness rendering, discovery, JUnit, artifact-closure, and zero-credit projection contract; it exposes no live execution command or outcome."
         },
         {
           "path": "docs/plan/lean-execution-evidence-v1.json",

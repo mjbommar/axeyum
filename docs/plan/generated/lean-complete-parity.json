@@ -36,7 +36,7 @@
     },
     {
       "path": "docs/plan/lean-complete-parity-v1.json",
-      "sha256": "74ed328f2a5b1a04377ddc86373af98046ea966b98d43e6aa834fa45d7cc8408"
+      "sha256": "e7a8e604b4722298e434dc40b0e6ea65eca04bd12dc3d7c323355ecb2f4eaf0f"
     },
     {
       "path": "docs/plan/lean-execution-acceptance-tl0.7.4-2026-07-22.md",
@@ -68,7 +68,7 @@
     },
     {
       "path": "docs/plan/lean-system-implementation-plan-2026-07-21.md",
-      "sha256": "23e637c2d33a48035fc5901815478d3e47767dec75b3bfdbb64a454c15439121"
+      "sha256": "7ae9f5ba8fb0b2fec5e84788ffe955932c2fd9a8b86e174393571678505f5533"
     },
     {
       "path": "docs/plan/lean-u2-official-child-shards-v1.json",
@@ -127,6 +127,10 @@
       "sha256": "d477d50c04b4cd20ac8bf927b44d93f7b2b3bbe0b020b821d73e72de2a498381"
     },
     {
+      "path": "docs/plan/lean-u2-official-execution-tl0.6.3-m2-implementation-2026-07-22.md",
+      "sha256": "09ad78a3e051a97c1490e27c901fe923ca0da30e3d391d7e9dabaaba02fb1a96"
+    },
+    {
       "path": "docs/plan/lean-u2-official-execution-tl0.6.3-m2-shard-0001-plan-2026-07-22.md",
       "sha256": "4cef4ba9c57820f5bff82e4cfdfdc524b3d0d54665a947cf2b27560767ec81dd"
     },
@@ -136,11 +140,11 @@
     },
     {
       "path": "docs/plan/lean4-complete-parity-contract-2026-07-22.md",
-      "sha256": "6a2af76bb9bd3da999b50b1567cbf1d5ef2cc6a5b0c805d63b3da586e42709d8"
+      "sha256": "20a3ea7daa4b4b147656eacaeae87b0a15f4c50ce9c9bda416789b1a8c1a6a78"
     },
     {
       "path": "docs/plan/lean4-complete-parity-roadmap-2026-07-22.md",
-      "sha256": "1f5d92047a0e2ec831931b9f758d7ffcd675259092c1489d4ae696d9ea5029cd"
+      "sha256": "4a55714f205bac7844507f6fecc81723a165ab962637e322de75a51abe9ab2fa"
     },
     {
       "path": "scripts/gen-lean-complete-parity.py",
@@ -786,7 +790,11 @@
         },
         {
           "path": "docs/plan/lean-u2-official-execution-tl0.6.3-m2-shard-0001-plan-2026-07-22.md",
-          "detail": "Pushed source-first execution plan for the lowest-ordinal 64-case shard with no historical observation. Its pure offline specification, harness rendering, discovery, JUnit, artifact-closure, and zero-credit projection contract is implemented and mutation-tested; it exposes no live execution command, and no harness discovery or test process has run."
+          "detail": "Pushed immutable source-first execution plan for the lowest-ordinal 64-case shard with no historical observation; no harness discovery or test process has run."
+        },
+        {
+          "path": "docs/plan/lean-u2-official-execution-tl0.6.3-m2-implementation-2026-07-22.md",
+          "detail": "Pushed post-plan checkpoint for the pure offline specification, harness rendering, discovery, JUnit, artifact-closure, and zero-credit projection contract; it exposes no live execution command or outcome."
         },
         {
           "path": "docs/plan/lean-execution-evidence-v1.json",
