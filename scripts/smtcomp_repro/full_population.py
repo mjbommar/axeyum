@@ -24,7 +24,7 @@ SCHEDULE_SCHEMA = "axeyum.smtcomp-credited-full-schedule.v1"
 WAVE_SCHEMA = "axeyum.smtcomp-credited-full-wave.v1"
 THERMAL_OBSERVATION_SCHEMA = "axeyum.smtcomp-credited-full-thermal-observation.v1"
 THERMAL_STOP_SCHEMA = "axeyum.smtcomp-credited-full-thermal-stop.v1"
-CHECKPOINT_SCHEMA = "axeyum.smtcomp-credited-full-wave-checkpoint.v1"
+CHECKPOINT_SCHEMA = "axeyum.smtcomp-credited-full-wave-checkpoint.v2"
 SCHEDULER_DECISION_SCHEMA = "axeyum.smtcomp-credited-full-scheduler-decision.v1"
 
 POPULATION_COUNT = 45_905
@@ -133,12 +133,19 @@ CHECKPOINT_FIELDS = {
     "run_identity_sha256",
     "cell_id",
     "wave_index",
-    "allocation_terminals",
+    "shard_completions",
     "cumulative_benchmark_count",
     "next_wave_index",
     "record_sha256",
 }
 CHECKPOINT_TERMINAL_FIELDS = {
+    "allocation_id",
+    "attempt_id",
+    "status",
+    "terminal_record_sha256",
+}
+CHECKPOINT_SHARD_COMPLETION_FIELDS = {
+    "shard_id",
     "allocation_id",
     "attempt_id",
     "status",
@@ -628,26 +635,57 @@ def build_wave_checkpoint(
     allocation_terminals: list[dict[str, Any]],
     cumulative_records: int,
 ) -> dict[str, Any]:
-    """Build derived restart state after all three wave allocations complete."""
+    """Build derived restart state after every wave shard is complete.
+
+    A shard may be closed either by its preregistered initial allocation or by
+    its one exact different-host retry.  This is deliberately shard-granular:
+    one failed two-shard initial allocation requires two independently proven
+    retry terminals before its wave can rejoin the checkpoint chain.
+    """
 
     validate_schedule(schedule)
     if type(wave_index) is not int or not 0 <= wave_index < WAVE_COUNT:
         raise ContractError("invalid checkpoint wave index")
-    expected_ids = schedule["waves"][wave_index]["allocation_ids"]
-    by_allocation: dict[str, dict[str, Any]] = {}
+    wave = schedule["waves"][wave_index]
+    expected_shards = wave["shard_ids"]
+    allocations = {
+        row["allocation_id"]: row for row in schedule["allocations"]
+    }
+    initial_owner = {
+        shard_id: allocation_id
+        for allocation_id in wave["allocation_ids"]
+        for shard_id in allocations[allocation_id]["shard_ids"]
+    }
+    by_shard: dict[int, dict[str, Any]] = {}
     for terminal in allocation_terminals:
         if set(terminal) != CHECKPOINT_TERMINAL_FIELDS:
             raise ContractError("checkpoint terminal field mismatch")
         allocation_id = _require_safe_id(terminal.get("allocation_id"), "allocation_id")
-        if allocation_id in by_allocation:
-            raise ContractError("duplicate checkpoint allocation terminal")
+        allocation = allocations.get(allocation_id)
+        if allocation is None:
+            raise ContractError("checkpoint names an unknown allocation")
         _require_safe_id(terminal.get("attempt_id"), "attempt_id")
         _require_sha256(terminal.get("terminal_record_sha256"), "terminal_record_sha256")
         if terminal.get("status") != "completed":
             raise ContractError("checkpoint cannot include a failed allocation")
-        by_allocation[allocation_id] = copy.deepcopy(terminal)
-    if set(by_allocation) != set(expected_ids):
-        raise ContractError("checkpoint does not close the exact wave allocations")
+        for shard_id in allocation["shard_ids"]:
+            owner = initial_owner.get(shard_id)
+            if owner is None or (
+                allocation_id != owner
+                and not (
+                    allocation["generation"] == 1
+                    and allocation["recovers_allocation_id"] == owner
+                )
+            ):
+                raise ContractError("checkpoint allocation is not valid for wave shard")
+            if shard_id in by_shard:
+                raise ContractError("duplicate checkpoint shard completion")
+            by_shard[shard_id] = {
+                "shard_id": shard_id,
+                **copy.deepcopy(terminal),
+            }
+    if set(by_shard) != set(expected_shards):
+        raise ContractError("checkpoint does not close every exact wave shard")
     expected_records = cumulative_benchmark_count(schedule, wave_index)
     if cumulative_records != expected_records:
         raise ContractError("checkpoint cumulative population mismatch")
@@ -661,7 +699,7 @@ def build_wave_checkpoint(
             ),
             "cell_id": _require_safe_id(cell_id, "cell_id"),
             "wave_index": wave_index,
-            "allocation_terminals": [by_allocation[value] for value in expected_ids],
+            "shard_completions": [by_shard[value] for value in expected_shards],
             "cumulative_benchmark_count": cumulative_records,
             "next_wave_index": wave_index + 1 if wave_index + 1 < WAVE_COUNT else None,
         }
@@ -698,19 +736,50 @@ def validate_wave_checkpoint(
     wave_index = checkpoint.get("wave_index")
     if type(wave_index) is not int or not 0 <= wave_index < WAVE_COUNT:
         raise ContractError("invalid checkpoint wave index")
-    terminals = checkpoint.get("allocation_terminals")
-    if not isinstance(terminals, list):
-        raise ContractError("checkpoint terminals must be a list")
-    expected_ids = schedule["waves"][wave_index]["allocation_ids"]
-    if [row.get("allocation_id") for row in terminals] != expected_ids:
-        raise ContractError("checkpoint allocation order/identity mismatch")
-    for terminal in terminals:
-        if set(terminal) != CHECKPOINT_TERMINAL_FIELDS:
-            raise ContractError("checkpoint terminal field mismatch")
-        _require_safe_id(terminal.get("attempt_id"), "attempt_id")
-        _require_sha256(terminal.get("terminal_record_sha256"), "terminal_record_sha256")
-        if terminal.get("status") != "completed":
-            raise ContractError("checkpoint includes non-completed terminal")
+    completions = checkpoint.get("shard_completions")
+    if not isinstance(completions, list):
+        raise ContractError("checkpoint shard completions must be a list")
+    wave = schedule["waves"][wave_index]
+    expected_shards = wave["shard_ids"]
+    if [row.get("shard_id") for row in completions] != expected_shards:
+        raise ContractError("checkpoint shard order/identity mismatch")
+    allocations = {
+        row["allocation_id"]: row for row in schedule["allocations"]
+    }
+    initial_owner = {
+        shard_id: allocation_id
+        for allocation_id in wave["allocation_ids"]
+        for shard_id in allocations[allocation_id]["shard_ids"]
+    }
+    for completion in completions:
+        if set(completion) != CHECKPOINT_SHARD_COMPLETION_FIELDS:
+            raise ContractError("checkpoint shard completion field mismatch")
+        allocation_id = _require_safe_id(
+            completion.get("allocation_id"), "allocation_id"
+        )
+        allocation = allocations.get(allocation_id)
+        shard_id = completion.get("shard_id")
+        owner = initial_owner.get(shard_id)
+        if (
+            allocation is None
+            or type(shard_id) is not int
+            or shard_id not in allocation["shard_ids"]
+            or owner is None
+            or (
+                allocation_id != owner
+                and not (
+                    allocation["generation"] == 1
+                    and allocation["recovers_allocation_id"] == owner
+                )
+            )
+        ):
+            raise ContractError("checkpoint allocation is not valid for wave shard")
+        _require_safe_id(completion.get("attempt_id"), "attempt_id")
+        _require_sha256(
+            completion.get("terminal_record_sha256"), "terminal_record_sha256"
+        )
+        if completion.get("status") != "completed":
+            raise ContractError("checkpoint includes non-completed shard")
     expected_count = cumulative_benchmark_count(schedule, wave_index)
     expected_next = wave_index + 1 if wave_index + 1 < WAVE_COUNT else None
     if (

@@ -622,7 +622,7 @@ class FullPopulationContractTests(unittest.TestCase):
         for label, mutate in (
             (
                 "terminal",
-                lambda row: row["allocation_terminals"][0].__setitem__(
+                lambda row: row["shard_completions"][0].__setitem__(
                     "status", "failed"
                 ),
             ),
@@ -657,6 +657,60 @@ class FullPopulationContractTests(unittest.TestCase):
                 cooldown_required=False,
                 thermal_observations=[],
                 decided_at_ns=2000,
+            )
+
+    def test_recovered_wave_checkpoint_requires_each_exact_shard_retry(self) -> None:
+        schedule = build_schedule(ENFORCEMENT_ID)
+        terminals = self.wave_terminals(schedule, 0)[1:]
+        terminals.extend(
+            [
+                {
+                    "allocation_id": f"full-retry-{shard_id:02d}",
+                    "attempt_id": f"retry-attempt-{shard_id:02d}",
+                    "status": "completed",
+                    "terminal_record_sha256": f"{100 + shard_id:064x}",
+                }
+                for shard_id in (0, 1)
+            ]
+        )
+        checkpoint = build_wave_checkpoint(
+            schedule=schedule,
+            plan_sha256=PLAN_ID,
+            run_identity_sha256=RUN_ID,
+            cell_id=CELL_ID,
+            wave_index=0,
+            allocation_terminals=terminals,
+            cumulative_records=cumulative_benchmark_count(schedule, 0),
+        )
+        self.assertEqual(
+            [row["allocation_id"] for row in checkpoint["shard_completions"][:2]],
+            ["full-retry-00", "full-retry-01"],
+        )
+        self.assertEqual(
+            [row["allocation_id"] for row in checkpoint["shard_completions"][2:4]],
+            ["full-initial-01", "full-initial-01"],
+        )
+
+        missing = terminals[:-1]
+        with self.assertRaisesRegex(ContractError, "every exact wave shard"):
+            build_wave_checkpoint(
+                schedule=schedule,
+                plan_sha256=PLAN_ID,
+                run_identity_sha256=RUN_ID,
+                cell_id=CELL_ID,
+                wave_index=0,
+                allocation_terminals=missing,
+                cumulative_records=cumulative_benchmark_count(schedule, 0),
+            )
+        mutated = copy.deepcopy(checkpoint)
+        mutated["shard_completions"][0]["allocation_id"] = "full-retry-02"
+        with self.assertRaisesRegex(ContractError, "not valid for wave shard"):
+            validate_wave_checkpoint(
+                reseal(mutated),
+                schedule=schedule,
+                plan_sha256=PLAN_ID,
+                run_identity_sha256=RUN_ID,
+                cell_id=CELL_ID,
             )
 
     def test_scheduler_never_launches_around_unclosed_failure_loss_or_pause(self) -> None:
