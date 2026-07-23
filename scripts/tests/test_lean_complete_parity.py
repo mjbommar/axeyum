@@ -193,6 +193,10 @@ class LeanCompleteParityTests(unittest.TestCase):
         self.assertIn(
             "scripts/tests/test_lean_u2_official_execution_m2_r3.py", source_paths
         )
+        self.assertIn("scripts/lean_u2_official_execution_m2_r4.py", source_paths)
+        self.assertIn(
+            "scripts/tests/test_lean_u2_official_execution_m2_r4.py", source_paths
+        )
         self.assertIn(
             "docs/plan/lean-u2-official-execution-tl0.6.3-m2-r1-result-v1.json",
             source_paths,
