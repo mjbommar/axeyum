@@ -1,0 +1,25 @@
+Start testing: Jul 23 01:34 UTC
+----------------------------------------------------------
+1/1 Testing: compile/534.lean
+1/1 Test: compile/534.lean
+Command: "/usr/bin/bash" "/home/mjbommar/.cache/axeyum-tl063-m0-r1-1a2e7d3a/source/tests/with_stage1_test_env.sh" "/home/mjbommar/.cache/axeyum-tl063-m0-r1-1a2e7d3a/source/tests/compile/run_test.sh" "534.lean"
+Directory: /home/mjbommar/.cache/axeyum-tl063-m0-r1-1a2e7d3a/source/tests/compile
+"compile/534.lean" start time: Jul 23 01:34 UTC
+Output:
+----------------------------------------------------------
+Compiling and executing lean file
+/usr/bin/x86_64-linux-gnu-ld.bfd: cannot find -lc++: No such file or directory
+/usr/bin/x86_64-linux-gnu-ld.bfd: have you installed the static version of the c++ library ?
+/usr/bin/x86_64-linux-gnu-ld.bfd: cannot find -lc++abi: No such file or directory
+/usr/bin/x86_64-linux-gnu-ld.bfd: have you installed the static version of the c++abi library ?
+collect2: error: ld returned 1 exit status
+TEST FAILED: Failed to compile 534.lean.c
+<end of output>
+Test time =   0.43 sec
+----------------------------------------------------------
+Test Failed.
+"compile/534.lean" end time: Jul 23 01:34 UTC
+"compile/534.lean" time elapsed: 00:00:00
+----------------------------------------------------------
+
+End testing: Jul 23 01:34 UTC

@@ -113,14 +113,26 @@
         },
         {
           "path": "docs/plan/lean-u2-official-execution-tl0.6.3-m0-plan-2026-07-22.md",
-          "detail": "Preregistered one-case child shard of the release-tag Linux-release selection; no M0 test outcome exists yet."
+          "detail": "Source-first one-case child-shard registration for the release-tag Linux-release selection."
+        },
+        {
+          "path": "docs/plan/lean-u2-official-execution-tl0.6.3-m0-v1.json",
+          "detail": "Two-attempt M0 authority retaining one incomplete process failure and one decided local official failure outcome; zero passes, Axeyum outcomes, pairs, performance rows, and parity credit."
+        },
+        {
+          "path": "docs/plan/lean-u2-official-execution-tl0.6.3-m0-r1-result-2026-07-22.md",
+          "detail": "Bounded R1 result, exact evidence identities, source-backed LEAN_CC adapter diagnosis, and explicit non-claims."
+        },
+        {
+          "path": "docs/plan/lean-u2-official-execution-tl0.6.3-m0-r2-plan-2026-07-22.md",
+          "detail": "Preregistered attempt-003 correction using the released toolchain compiler without reinterpreting R1's failure."
         },
         {
           "path": "docs/plan/lean4-complete-parity-contract-2026-07-22.md",
           "detail": "Pinned tests tree inventory and the required CTest/test-pile derivation rule."
         }
       ],
-      "residual": "Execute and retain the preregistered TL0.6.3 shards and then every derived official profile with exact executable/environment/resource/attempt/case/completion evidence; classify native surfaces and run matched Axeyum cases. The profile derivation alone is not complete U2 authority, and TL0.7 controls add no U2 outcome."
+      "residual": "Current execution coverage is one decided local official failure outcome from a 3,678-case parent, with zero official passes, Axeyum outcomes, or pairs. Execute the preregistered adapter-corrected R2 case, then every derived official profile with exact executable/environment/resource/attempt/case/completion evidence; classify native surfaces and run matched Axeyum cases. Registration plus one failed local outcome is not complete U2 authority."
     },
     {
       "id": "U3",

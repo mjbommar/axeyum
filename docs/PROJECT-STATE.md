@@ -324,10 +324,15 @@ Again, there are distinct targets:
   freezes explicit shell `-j1` and the preset log closure before retry. Attempt
   001's [Git-mode amendment](plan/lean-u2-official-execution-tl0.6.3-m0-r1-git-mode-amendment-2026-07-22.md)
   separates live `0444` installation enforcement from Git-checkout validation,
-  where ordinary files are necessarily `100644`. Attempt 001 has zero
-  outcomes. A valid R1 result may create only one local official-
-  case outcome, not parent-profile/provider, Axeyum, pairing, performance,
-  axis, gate, or parity credit.
+  where ordinary files are necessarily `100644`. The
+  [R1 result](plan/lean-u2-official-execution-tl0.6.3-m0-r1-result-2026-07-22.md)
+  now retains one decided local official failure: generated C was produced,
+  then the adapter's `LEAN_CC=/usr/bin/cc` override selected a system linker
+  without the released toolchain's static C++ libraries. The same C links with
+  the override absent. [R2](plan/lean-u2-official-execution-tl0.6.3-m0-r2-plan-2026-07-22.md)
+  corrects only that adapter field. Current coverage is one failed outcome,
+  zero passes, and 1/3,678 parent cases observed; parent/provider completion,
+  Axeyum, pairing, performance, axes, gates, and parity credit remain zero.
 
 See the source-backed [kernel gap audit](prover-track/research/06-kernel-gap-analysis.md)
 and [proof reconstruction plan](plan/track-3-proof-lean/P3.7-lean-reconstruction.md),

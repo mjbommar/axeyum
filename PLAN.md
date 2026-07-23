@@ -478,9 +478,16 @@ state.
 > [Git-mode amendment](docs/plan/lean-u2-official-execution-tl0.6.3-m0-r1-git-mode-amendment-2026-07-22.md)
 > separates strict live `0444` installation validation from portable offline
 > Git-tree/content validation because Git records both `0444` and `0644` as
-> regular mode `100644`. Attempt 001 has zero outcomes; even a
-> valid R1 pass can create only one local official-case outcome, not parent-
-> profile, provider, Axeyum, pairing, performance, axis, gate, or parity credit.
+> regular mode `100644`. The [R1 result](docs/plan/lean-u2-official-execution-tl0.6.3-m0-r1-result-2026-07-22.md)
+> closes one local official **failure** outcome: explicit `-j1` and artifact
+> closure succeeded, generated C was retained, and the adapter's
+> `LEAN_CC=/usr/bin/cc` override then selected a linker without the released
+> toolchain's static C++ libraries. A same-C A/B control passes with the
+> override absent, matching official Linux release source that leaves
+> `LEAN_CC` unset for tests. The [R2 plan](docs/plan/lean-u2-official-execution-tl0.6.3-m0-r2-plan-2026-07-22.md)
+> removes only that override before attempt 003. Current coverage is one failed
+> official outcome, zero passes, 1/3,678 parent cases observed, and zero
+> provider, Axeyum, pairing, performance, axis, gate, or parity credit.
 > The runtime-derived
 > TL0.4 ledger now freezes **65** prelude assumptions (real 30, integer 34,
 > string 1) by canonical type digest before dependent native elaborator, Lake,

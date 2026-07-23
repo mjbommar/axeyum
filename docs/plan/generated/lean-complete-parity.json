@@ -28,7 +28,7 @@
     },
     {
       "path": "docs/plan/lean-complete-parity-v1.json",
-      "sha256": "f9f94ba979945e9e1ba688022902df2525528e2008ca74bd4f2aafebeae109b5"
+      "sha256": "bb6d77ed232eb7c762e9d031015a2257d31f1cb359968651c5c9acae56c560c7"
     },
     {
       "path": "docs/plan/lean-execution-acceptance-tl0.7.4-2026-07-22.md",
@@ -60,7 +60,7 @@
     },
     {
       "path": "docs/plan/lean-system-implementation-plan-2026-07-21.md",
-      "sha256": "f42b62ad1acd81486c431b096331e955479fd5e3b2283763508be672223d39f3"
+      "sha256": "cc1a9bfd025139bc82313bb648f20ac8aa8e4f984cb1e24b9e3e4bc3007b3078"
     },
     {
       "path": "docs/plan/lean-u2-official-ci-profiles-tl0.6.2-2026-07-22.md",
@@ -75,16 +75,28 @@
       "sha256": "6c8aeeadca17ac79b9b949f504b1a4b8a9bc1c52c8343e4f2eebcbd045158e90"
     },
     {
+      "path": "docs/plan/lean-u2-official-execution-tl0.6.3-m0-r1-result-2026-07-22.md",
+      "sha256": "f8ce7d6c4ddea6b8cebf04f4e708b7e8b2085c6b58173d08b5086cd82e00a817"
+    },
+    {
+      "path": "docs/plan/lean-u2-official-execution-tl0.6.3-m0-r2-plan-2026-07-22.md",
+      "sha256": "1c926eb7f1a5e0e147c4cb54ea9a709c5fc6ed8a9c80108b1cfd526a530eb7b1"
+    },
+    {
+      "path": "docs/plan/lean-u2-official-execution-tl0.6.3-m0-v1.json",
+      "sha256": "61c7bb015dee1cb767b6c460a08f2c4416a62f1c41e040c817fd5b0d6ea24f8d"
+    },
+    {
       "path": "docs/plan/lean-u2-test-authority-v1.json",
       "sha256": "d7446e7965bac100ac6b5c607cbb7c87b5b80063fc23b3ec998fff2736d5d18e"
     },
     {
       "path": "docs/plan/lean4-complete-parity-contract-2026-07-22.md",
-      "sha256": "f7559a8667659fb77f95b3a6a70b2994da9ee6666772c96b1d306b5cf75eca6c"
+      "sha256": "aae025461f6b37a51cff6f6c8e228077fe3fcf0cb50ea6fac01178a4bfac1211"
     },
     {
       "path": "scripts/gen-lean-complete-parity.py",
-      "sha256": "f5f85ffdb728b0d723cea939f09279620b283540b33eb9a68b3c700fcffda145"
+      "sha256": "4be8a9999c3457ca26107f9e6d0636ccf67006fa9b963d069a5d111cbacbc382"
     },
     {
       "path": "scripts/gen-lean-execution-evidence.py",
@@ -111,12 +123,16 @@
       "sha256": "06d388a49d927a2f1b65a4632cd6297b140a579cf80edd5177fc6849b62ec679"
     },
     {
+      "path": "scripts/lean_u2_official_execution.py",
+      "sha256": "47c779d5b465e32b1ffa8faf3598472ed2ac98bd058928494e65a68d4f205fc2"
+    },
+    {
       "path": "scripts/tests/test_lean_compatibility.py",
       "sha256": "b95626776c5ee358062b5e9b274037b9ad3dab6f0ea500eeae143a792295eb99"
     },
     {
       "path": "scripts/tests/test_lean_complete_parity.py",
-      "sha256": "ea562aca28acebf9ba9a6a2b6b2f3fee2bca1cc0a6193a57960384a38636c285"
+      "sha256": "d94301efadee24eead9e587c0bc29150cd3fad9f7895d09987244334af2b07e3"
     },
     {
       "path": "scripts/tests/test_lean_execution_acceptance.py",
@@ -137,6 +153,10 @@
     {
       "path": "scripts/tests/test_lean_u2_official_ci_profiles.py",
       "sha256": "8705885cb8fa9637b0caa3cc1839b8c03442ba0fb8bf8e33a9b35599201f1d41"
+    },
+    {
+      "path": "scripts/tests/test_lean_u2_official_execution.py",
+      "sha256": "0b5346109aba8b5222056577ef72ce9d375ebb63bb2883a3e91e588bcb4b2119"
     },
     {
       "path": "scripts/tests/test_lean_u2_test_authority.py",
@@ -485,6 +505,45 @@
         "parity_credit": 0
       }
     },
+    "u2_official_execution_authority": {
+      "status": "complete-local-official-case-outcome",
+      "process_attempts": 2,
+      "incomplete_process_attempts": 1,
+      "completed_process_attempts": 1,
+      "parent_selected_cases": 3678,
+      "local_shard_completed_cases": 1,
+      "official_outcomes": 1,
+      "official_passes": 0,
+      "official_failures": 1,
+      "axeyum_outcomes": 0,
+      "paired_cells": 0,
+      "performance_rows": 0,
+      "claims": {
+        "official_lean_case_observed": true,
+        "local_shard_complete": true,
+        "parent_profile_complete": false,
+        "official_provider_reproduced": false,
+        "axeyum_observed": false,
+        "matched_pair_formed": false,
+        "performance_measured": false,
+        "lean_parity_established": false
+      },
+      "credits": {
+        "axeyum_outcomes": 0,
+        "complete_axes": 0,
+        "complete_populations": 0,
+        "official_cases": 1,
+        "official_failures": 1,
+        "official_outcomes": 1,
+        "official_passes": 0,
+        "paired_cells": 0,
+        "parent_profile_completions": 0,
+        "parity_credit": 0,
+        "performance_rows": 0,
+        "provider_completions": 0,
+        "satisfied_gates": 0
+      }
+    },
     "implementation_tasks": {
       "rows": 140,
       "status_counts": {
@@ -596,14 +655,26 @@
         },
         {
           "path": "docs/plan/lean-u2-official-execution-tl0.6.3-m0-plan-2026-07-22.md",
-          "detail": "Preregistered one-case child shard of the release-tag Linux-release selection; no M0 test outcome exists yet."
+          "detail": "Source-first one-case child-shard registration for the release-tag Linux-release selection."
+        },
+        {
+          "path": "docs/plan/lean-u2-official-execution-tl0.6.3-m0-v1.json",
+          "detail": "Two-attempt M0 authority retaining one incomplete process failure and one decided local official failure outcome; zero passes, Axeyum outcomes, pairs, performance rows, and parity credit."
+        },
+        {
+          "path": "docs/plan/lean-u2-official-execution-tl0.6.3-m0-r1-result-2026-07-22.md",
+          "detail": "Bounded R1 result, exact evidence identities, source-backed LEAN_CC adapter diagnosis, and explicit non-claims."
+        },
+        {
+          "path": "docs/plan/lean-u2-official-execution-tl0.6.3-m0-r2-plan-2026-07-22.md",
+          "detail": "Preregistered attempt-003 correction using the released toolchain compiler without reinterpreting R1's failure."
         },
         {
           "path": "docs/plan/lean4-complete-parity-contract-2026-07-22.md",
           "detail": "Pinned tests tree inventory and the required CTest/test-pile derivation rule."
         }
       ],
-      "residual": "Execute and retain the preregistered TL0.6.3 shards and then every derived official profile with exact executable/environment/resource/attempt/case/completion evidence; classify native surfaces and run matched Axeyum cases. The profile derivation alone is not complete U2 authority, and TL0.7 controls add no U2 outcome."
+      "residual": "Current execution coverage is one decided local official failure outcome from a 3,678-case parent, with zero official passes, Axeyum outcomes, or pairs. Execute the preregistered adapter-corrected R2 case, then every derived official profile with exact executable/environment/resource/attempt/case/completion evidence; classify native surfaces and run matched Axeyum cases. Registration plus one failed local outcome is not complete U2 authority."
     },
     {
       "id": "U3",

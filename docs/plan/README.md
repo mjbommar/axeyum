@@ -157,7 +157,14 @@ Start at the root [`PLAN.md`](../../PLAN.md) (map + standing rules) and
   that `LEAN_NUM_THREADS=1` did not constrain Lean's command-line shell. R1
   preregisters supported test-array `-j1`, corrected worker evidence, and the
   preset-created CTest log set before a fresh retry. The amendment distinguishes
-  live `0444` installation from portable Git `100644` checkout validation.
+  live `0444` installation from portable Git `100644` checkout validation. The
+  [`R1 result`](lean-u2-official-execution-tl0.6.3-m0-r1-result-2026-07-22.md)
+  retains one local official failure after generated-C production because the
+  adapter forced `leanc` through system `cc`; the released toolchain compiler
+  links the same C. The separately published
+  [`R2 plan`](lean-u2-official-execution-tl0.6.3-m0-r2-plan-2026-07-22.md)
+  removes only that override. Current U2 execution is one failure, zero passes,
+  zero Axeyum/pairs/parity, and 1/3,678 parent cases observed.
 - [`lean-compatibility-v1.json`](lean-compatibility-v1.json) and generated
   [`Lean compatibility matrix`](generated/lean-compatibility.md) — TL0.2's
   executable eight-field assurance contract, K0-K6 profile gates, registered

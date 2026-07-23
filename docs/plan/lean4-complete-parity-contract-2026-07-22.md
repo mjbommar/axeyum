@@ -383,11 +383,16 @@ TL0.6.3 M0 is now governed by a
 [source-first official-case plan](lean-u2-official-execution-tl0.6.3-m0-plan-2026-07-22.md).
 It selects `compile/534.lean` as a singleton child shard of the exact
 release-tag Linux-release 3,678-case selection and registers a separate local
-8 GiB/one-worker CTest lane. No M0 harness or test has run. A valid completed
-pass may add one local official-case outcome, but cannot complete the parent
-official profile, claim its provider, create an Axeyum outcome or pair, publish
-performance evidence, or advance any complete population, axis, or terminal
-gate.
+8 GiB/one-worker CTest lane. The [R1 result](lean-u2-official-execution-tl0.6.3-m0-r1-result-2026-07-22.md)
+now retains two process attempts and one decided local official failure: the
+adapter forced `leanc` through system `cc`, while the released toolchain
+compiler links the retained generated C successfully. Current coverage is one
+failure outcome, zero passes, and 1/3,678 parent cases observed. The
+[R2 plan](lean-u2-official-execution-tl0.6.3-m0-r2-plan-2026-07-22.md)
+removes only that override. Neither one outcome nor a future singleton pass can
+complete the parent official profile, claim its provider, create an Axeyum
+outcome or pair, publish performance evidence, or advance any complete
+population, axis, or terminal gate.
 
 ## 8. Layer-specific equivalence
 
