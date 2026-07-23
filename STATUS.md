@@ -500,9 +500,18 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   harness artifacts, and the exact generated-artifact namespace. Four focused
   store tests reject missing, extra, mutable, symlinked, overwritten, reordered,
   raw/payload-drifted, or completion-tampered evidence; the full surface now
-  passes 262 tests with one intentional skip. Both M2 CLIs remain offline-only.
-  Next: implement and offline-validate the separate one-shot launch runner,
-  commit and push it, then consider the single authorized live attempt.
+  passes 262 tests with one intentional skip. Commit `d1f144d4` corrects the
+  pre-run case-before-post dependency order. Commit `431d3959` then implements,
+  tests, commits, and pushes the one-shot runner: clean/upstream revision gates,
+  exact archive/toolchain/source validation, harness/discovery closure,
+  platform/lane/shard/run/prelaunch records, 8 GiB/one-hour process
+  classification, 64-case → post → projection → completion ordering, and full
+  retained-evidence revalidation. Five runner tests use synthetic discovery and
+  fake processes only; the complete surface passes 267 tests with one
+  intentional skip. The registry now distinguishes `run_command=true` from
+  `live_execution_observed=false`. Next: revalidate every external preflight
+  input from the clean pushed revision before deciding whether to invoke the
+  single authorized live attempt.
 
 - **2026-07-22 — TL0.6.3 M1 derives complete deterministic U2 child-shard
   scheduling with zero new outcomes or parity credit.** The source-first
@@ -8028,6 +8037,21 @@ plan is built and committed on the current branch:
   their uncertified `Fpa2Bv` proof credit. The pathological 30-minute
   collection path and fail-closed panic disappear; the exact pinned Lean 4.30
   gate accepts the current 70/70 modules with zero skips and zero failures.
+- **2026-07-22 — Implemented, validated, committed, and pushed TL0.6.3 M2's
+  one-shot runner without executing it.** Commit `431d3959` binds the exact
+  source archive, released bundled toolchain/compiler probe, 64-registration
+  harness and discovery, platform/lane/shard/run/prelaunch identities, process
+  group cleanup, strict JUnit/case/post/projection ordering, and immutable
+  completion store. Five offline tests use synthetic discovery and fake
+  processes; 267 parity tests plus all generators/checks pass. The run command
+  now exists, but no live discovery or test process ran and outcome/parity
+  credit remains zero.
+
+- **2026-07-22 — Corrected M2's evidence dependency direction before runner
+  publication.** Commit `d1f144d4` removes the case-record dependency on the
+  later post record, preserving the frozen install order: JUnit → 64 cases →
+  post/projection → completion. Focused store and registry checks pass.
+
 - **2026-07-22 — Implemented and pushed TL0.6.3 M2's completion-last evidence
   store.** Commit `57dcf343` extends the pure contract with exact per-case
   records and an immutable store whose final completion binds all JSON, raw,

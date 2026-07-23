@@ -36,7 +36,7 @@
     },
     {
       "path": "docs/plan/lean-complete-parity-v1.json",
-      "sha256": "39caaeb4aa0716241f60f61ce26637c09c84a4e3ce6a5d7e2397e86b52fcf8b9"
+      "sha256": "3faee518c3ec0e46b2803329dcbbaa85a0923cac443df1d7597ae651d8d24559"
     },
     {
       "path": "docs/plan/lean-execution-acceptance-tl0.7.4-2026-07-22.md",
@@ -68,7 +68,7 @@
     },
     {
       "path": "docs/plan/lean-system-implementation-plan-2026-07-21.md",
-      "sha256": "288fff95de5656f3ed80911d22fecfa6d6a874752f6d883b2bd8938e603eb4a9"
+      "sha256": "c47922b058aba1346c8246bbe50dad6daefcd4da90c85250f4c9912d397fa62d"
     },
     {
       "path": "docs/plan/lean-u2-official-child-shards-v1.json",
@@ -128,7 +128,7 @@
     },
     {
       "path": "docs/plan/lean-u2-official-execution-tl0.6.3-m2-implementation-2026-07-22.md",
-      "sha256": "2b5a245492cb24a6e5bafbde51f3fb2bd1712bbb179c3926f20136f946dbcca5"
+      "sha256": "8ef8cad21859a618325fe9ad7f58d1e4d8521fe403c6aa892e995202d97b7794"
     },
     {
       "path": "docs/plan/lean-u2-official-execution-tl0.6.3-m2-shard-0001-plan-2026-07-22.md",
@@ -140,11 +140,11 @@
     },
     {
       "path": "docs/plan/lean4-complete-parity-contract-2026-07-22.md",
-      "sha256": "7787b50996d5a0d9b8904d1c8fdcd43d07d8c8d38ba6f9acf334dfb4d2d6c494"
+      "sha256": "c3186c098267bba71340e0209c6a348b9613f95380c1b5ff5b3f75fa38dff810"
     },
     {
       "path": "docs/plan/lean4-complete-parity-roadmap-2026-07-22.md",
-      "sha256": "587261e4d5d30a232078ee8f95c507979f90479c632f0177b5bd0ed3dbb64211"
+      "sha256": "56d8214337f61c197cc8ac8ad9b9b1fa22f46714e5f9ffbb987189fdf51e6755"
     },
     {
       "path": "scripts/gen-lean-complete-parity.py",
@@ -823,7 +823,7 @@
         },
         {
           "path": "docs/plan/lean-u2-official-execution-tl0.6.3-m2-implementation-2026-07-22.md",
-          "detail": "Pushed post-plan checkpoints for the pure offline specification, harness rendering, discovery, JUnit, artifact-closure, zero-credit projection, 64 exact case records, and completion-last immutable store; neither exposes a live execution command or outcome."
+          "detail": "Pushed post-plan checkpoints for the pure contract, 64-case completion-last store, corrected case-before-post order, and tested one-shot runner. The run command exists but remains uninvoked with zero outcomes or terminal credit."
         },
         {
           "path": "docs/plan/lean-execution-evidence-v1.json",

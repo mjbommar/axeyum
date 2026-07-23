@@ -1,7 +1,8 @@
 # Lean U2 TL0.6.3 M2 offline implementation checkpoint
 
-Status: **pure contract and completion store implemented, validated, committed,
-and pushed; no live harness discovery or test process has run**
+Status: **pure contract, completion store, and one-shot runner implemented,
+validated, committed, and pushed; no live harness discovery or test process has
+run**
 
 Date: 2026-07-22
 
@@ -17,14 +18,24 @@ implementation. Commit `9783ba9306bcc95a6dee894e16e96af2b0e25bd5` then
 implemented, validated, committed, and pushed the pure contract. The local and
 remote `agent/docs/lean4-complete-parity` refs were equal at that commit.
 
-This checkpoint deliberately adds no live process-launch command. It creates
-no live harness, runs no discovery command, launches no CTest process, and
-publishes no attempt or case outcome. The separate one-shot launch runner remains
-a precondition for the plan's single authorized attempt.
+That first checkpoint deliberately added no live process-launch command. It
+created no live harness, ran no discovery command, launched no CTest process,
+and published no attempt or case outcome. A separately committed one-shot
+runner remained a precondition for the plan's single authorized attempt.
 
 Commit `57dcf343daf4e294bdd8cc89307ab19f3a3182bd` subsequently
 implemented, validated, committed, and pushed the completion-last evidence
 store. It also exposes only offline `--check`; the launch boundary is unchanged.
+
+Commit `d1f144d46aad67a88e2dce195911ca851b143695` then corrected the
+dependency direction before launcher publication: the 64 case records bind
+spec/terminal/JUnit and can be installed before post/projection, as the frozen
+plan requires.
+
+Commit `431d3959ae5c3d7bbabf25c1d3a3aa6ab88f6f4c` subsequently
+implemented, validated, committed, and pushed the one-shot runner. Local,
+tracking, and remote refs were equal at that revision. The command exists but
+has not been invoked.
 
 ## 2. Exact implementation identities
 
@@ -92,6 +103,33 @@ skip and every generator/check.
 LEAN_U2_M2_STORE|json=15|raw=4|artifacts=2|cases=64|live_execution=false|outcomes=0|parity=0
 ```
 
+### 3.2 One-shot runner checkpoint
+
+| Source | SHA-256 |
+|---|---|
+| `scripts/lean_u2_official_execution_m2_run.py` | `bb6d484f542369c42679c816deb5d7cce132dc57df22f1bbc64320026f4961e4` |
+| `scripts/tests/test_lean_u2_official_execution_m2_run.py` | `1c86f48e432ba1988e7905239f766f458ea0ac051bda8a9b3e60072256292f2d` |
+
+The runner enforces a clean full implementation revision equal to its tracking
+ref, new work/evidence roots, exact frozen authorities, `git archive` at the
+pinned Lean tree, all selected source/sidecar/runner identities, the released
+toolchain and bundled-compiler probe, local tool identities, exact harness/
+discovery semantics, observed platform and storage class, frozen lane/shard/
+run/prelaunch records, process-group cleanup, strict terminal/JUnit agreement,
+case-before-post ordering, generated-artifact closure, and final store
+validation.
+
+Five focused tests cover exact synthetic discovery and records, discovery
+mutation before process creation, run/prelaunch linkage and resealed drift,
+fake exited and launch-failed terminals plus telemetry/exit mutation,
+selected-source drift, and explicit CLI gating. No test invokes CTest. The full
+parity-doc surface passed 267 tests with one intentional skip and every
+generator/check.
+
+```text
+LEAN_U2_M2_RUNNER|cases=64|store_cases=64|lane=official-ctest-local-8g-lean-j1-shard64-v1|run_command=true|live_execution_observed=false|outcomes=0|parity=0
+```
+
 ## 4. Exact non-claims and next step
 
 This checkpoint does not establish a CTest discovery, an official case
@@ -99,9 +137,9 @@ outcome, completion of shard `0001`, a parent-selection completion, provider
 reproduction, an Axeyum outcome, a matched pair, performance, an axis, a gate,
 or Lean parity.
 
-Next implement the one-shot launch runner only from the frozen plan, pure
-contract, and completion store. It must reuse the accepted process primitives,
-retain exact source/toolchain/discovery/raw/JUnit/artifact/terminal records,
-remain completion-last, and expose at most the single preregistered attempt.
-Commit and push that implementation before any live harness construction or
-discovery.
+Next revalidate the committed runner's external preflight inputs from the clean
+pushed revision: exact Lean source repository/tree, released toolchain root and
+compiler closure, local tool identities, new work/evidence roots, storage
+class, and unchanged authorities. Invoke `run-m2` at most once only if every
+preflight remains exact. Any mismatch stops before live harness discovery; any
+post-launch failure is retained without retry under this plan.

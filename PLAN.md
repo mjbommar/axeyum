@@ -524,10 +524,18 @@ state.
 > and pushes the completion-last immutable store: 15 fixed JSON records, four
 > raw payloads, two harness artifacts, 64 exact ordered case records, generated
 > artifact closure, and one final completion record. Four store tests reject
-> missing/reordered/mutable/symlinked/extra/overwritten/tampered evidence. No
-> live harness discovery or test process has run. Next implement, validate,
-> commit, and push the separate one-shot launch runner before the authorized
-> attempt; then form native pairs. Do not rerun
+> missing/reordered/mutable/symlinked/extra/overwritten/tampered evidence.
+> Commit `d1f144d4` removes a discovered case-to-post dependency cycle so the
+> frozen case-before-post order is executable. Commit `431d3959` then
+> implements, tests, commits, and pushes the one-shot launcher with exact
+> source/toolchain/platform/lane/shard/run/prelaunch/discovery/terminal
+> validation and completion-store integration. Five runner tests use synthetic
+> discovery and fake processes only; the full parity surface passes 267 tests
+> with one intentional skip. The registry records `run_command=true` and
+> `live_execution_observed=false`; no live harness discovery or test process
+> has run. Next revalidate every external preflight input from the clean pushed
+> revision before deciding whether to invoke the single authorized attempt;
+> then form native pairs. Do not rerun
 > the singleton for population credit. The
 > [complete-parity execution roadmap](docs/plan/lean4-complete-parity-roadmap-2026-07-22.md)
 > now reconciles this U2 boundary with the SMT-LIB evidence layers and the
