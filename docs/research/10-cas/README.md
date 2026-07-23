@@ -3,7 +3,7 @@
 Status: **implemented core + active expansion** (kickoff 2026-07-20)
 Last updated: 2026-07-22
 
-## Implemented (`crates/axeyum-cas` — pure Rust, WASM-safe, 544 unit + 147 doctests, clippy-clean)
+## Implemented (`crates/axeyum-cas` — pure Rust, WASM-safe, 545 unit + 147 doctests, clippy-clean)
 
 > **Data-model frontier now built** (special functions & fractional powers, none needing a `Pow`
 > representation change): the **gamma family** `Γ`, arbitrary-order **polygamma** `ψ⁽ⁿ⁾` (via
@@ -19,6 +19,10 @@ carry a machine-checked proof (a decidable zero-test / differentiate-and-check),
 which also acts as a correctness backstop (out-of-fragment cases decline, never
 return a wrong answer). Runnable demos: `examples/certified_calculus.rs`,
 `examples/cas_tour.rs`.
+
+The certified integration table includes the direct rational-affine Bessel pairs
+`∫J₁(ax+b)dx=−J₀(ax+b)/a` and `∫I₁(ax+b)dx=I₀(ax+b)/a`; weighted `xJ₀`/`xI₀`
+forms remain outside the zero-test recurrence fragment.
 
 | Area | Functions | Certified |
 |---|---|---|

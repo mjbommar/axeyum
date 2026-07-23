@@ -383,6 +383,118 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-22 — certified direct order-one Bessel antiderivatives.** Rational-
+  affine `J₁`/`I₁` arguments now integrate through `J₀′=−J₁` / `I₀′=I₁`, with
+  every result accepted only by the normal differentiate-and-zero-test gate.
+  Unit, shifted/reflected, scaled, symbolic-factor, and FTC cases pass; weighted
+  `xJ₀`/`xI₀` remain explicit recurrence-boundary declines. An adjacent
+  `u32::MAX` derivative overflow panic is replaced by exact backward recurrences.
+  The 545-unit/147-doctest suite passed (933.50 s for units), with workspace
+  Clippy, stable/nightly rustdoc, WASM, links, and whitespace green. Next:
+  decide the weighted-pair recurrence proof or resume broad bounded probing.
+
+- **2026-07-22 — exact arbitrary-order Bessel Maclaurin series and zero
+  limits.** The existing `series` compute path now composes every nonnegative
+  integer-order `Jₙ` and `Iₙ` whose argument vanishes at the origin, using the
+  checked recurrence `c₀=1/(2ⁿn!)`, `cₖ=cₖ₋₁/(4k(n+k))` and alternating signs
+  for `Jₙ`. The valuation check runs before order-dependent work, so
+  `u32::MAX` at a small truncation returns exact zero promptly; coefficients
+  beyond the public checked-`i128` rational domain decline. DLMF/SymPy fixtures,
+  nonlinear composition, both defining ODEs through order 16 / degree 24, and
+  public zero limits through order 8 pass. The full 544-unit/147-doctest suite
+  passed (923.30 s for units), together with warning-denied workspace Clippy,
+  strict stable/nightly rustdoc, WASM, links, and whitespace checks. Next:
+  implement the measured direct Bessel antiderivative pairs through the normal
+  differentiate-and-check certificate.
+
+- **2026-07-22 — exact order-one Bessel inverse Laplace pairs.** A fifth broad,
+  timeout-bounded probe found that rational-trigonometric Fourier cases and
+  representative Gaussian/rational integrating-factor ODEs already succeed,
+  while every tested order-one `J₁`/`I₁` inverse pair declined. The inverse
+  route now discovers one exact quadratic radical, reconstructs its rational
+  shift and positive frequency, requires the complete input to be a rational
+  multiple of the corresponding public forward transform, and then retains the
+  existing whole-expression forward-transform plus zero-test certificate.
+  Unit, integer/half, signed-frequency, shifted, expanded-spelling, and outer-
+  scale cases pass across both families. Order two, irrational frequency,
+  malformed numerator, multiple radicals, and zero frequency still decline.
+  The full 541-unit/147-doctest suite passed (the thermally throttled unit gate
+  took 1308.60 s), together with warning-denied workspace all-target/all-feature
+  Clippy, strict stable/nightly rustdoc, WASM build, links, and whitespace checks.
+
+- **2026-07-22 — arbitrary-order modified-Bessel-`Iₙ` Laplace transforms and
+  inverse `I₀`.** The existing rational-scale transform table now covers every
+  public nonnegative modified-Bessel order using
+  `L{Iₙ(bt)}=((s−√(s²−b²))/b)ⁿ/√(s²−b²)` in the convergence half-plane
+  `Re(s)>|b|`, with exact `b=0` handling and no order-sized construction loop.
+  Existing shifts and transform derivatives compose unchanged. The inverse
+  route recognizes rational-scale/shift `I₀` square-root quadratics and returns
+  only after the public forward transform and zero-test certify the complete
+  input. Unit, positive/negative rational-scale, shifted, polynomial-weighted,
+  zero-argument, and `u32::MAX` controls pass; an independent derivative-
+  recurrence replay checks orders 0 through 17 at three scales. Irrational and
+  affine forward arguments, irrational inverse frequency, uncertifiable
+  leading scale, and the branch-degenerate zero-frequency inverse still
+  decline. The full 539-unit/147-doctest suite, warning-denied workspace
+  all-target/all-feature Clippy, strict stable/nightly rustdoc, WASM build,
+  links, and whitespace checks pass.
+
+- **2026-07-22 — arbitrary-order Bessel-`Jₙ` Laplace transforms.** The
+  existing rational-scale Bessel table now covers every public nonnegative
+  integer order using the exact DLMF 10.22.49 specialization
+  `L{Jₙ(bt)}=((√(s²+b²)−s)/b)ⁿ/√(s²+b²)`, with exact `b=0` handling and no
+  order-sized construction loop. Existing exponential-shift and transform-
+  derivative rules compose with the whole family. Unit, positive/negative
+  rational-scale, shifted, polynomial-weighted, zero-argument, and
+  `u32::MAX` controls pass; an independent derivative-recurrence replay checks
+  orders 0 through 17 at three scales. Modified Bessel still declined at this
+  checkpoint and is closed by the entry above; irrational-scale and affine-
+  argument inputs remain outside the exact table. The full 536-unit/147-doctest suite,
+  warning-denied workspace all-target/all-feature Clippy, strict stable/nightly
+  rustdoc, WASM build, links, and whitespace checks pass.
+
+- **2026-07-22 — certified generic first-order inhomogeneous routing.**
+  `dsolve_inhomogeneous` now recognizes a trimmed degree-one constant-
+  coefficient operator with non-polynomial forcing, divides both coefficients
+  and forcing by the exact nonzero leading coefficient, and routes the
+  normalized equation through `dsolve_first_order_linear`. That existing solver
+  retains its integrating-factor residual certificate; the new wrapper also
+  substitutes the answer back into the original scaled operator before
+  returning it. Exponential, sine, scaled-leading, resonant, negative-leading,
+  derivative-only, and trailing-zero-coefficient controls pass, while degree
+  zero/cubic operators and an unintegrable forcing still decline. The existing
+  polynomial and second-order variation-of-parameters routes are unchanged.
+  SymPy independently agrees on the exact representative forms. The full
+  534-unit/147-doctest suite, warning-denied workspace all-target/all-feature
+  Clippy, strict stable/nightly rustdoc, and WASM build pass.
+
+- **2026-07-22 — TL0.6.3 M0 attempt 001 failed closed; R1 is source-first
+  preregistered.** The [M0 plan](docs/plan/lean-u2-official-execution-tl0.6.3-m0-plan-2026-07-22.md)
+- **2026-07-22 — exact-expression initial-condition data.** The measured
+  oscillator cases `y(0)=√2, y′(0)=1` and `y(0)=A, y′(0)=B` now specialize to
+  `√2 cos x + sin x` and `A cos x + B sin x`. The existing rational evaluation
+  still owns the basis matrix and baseline; for an expression-valued right-hand
+  side, exact rational inverse columns are computed through the existing
+  checked-`i128`/bounded-bignum solver and then combined with the values. Every
+  returned solution is substituted into every original condition and accepted
+  only when the zero-test certifies exact equality. Reserved `C<digits>` data,
+  data depending on the ODE variable, nonrational basis coefficients, singular
+  systems, and symbolic dimension 17 explicitly decline; a 17-constant rational
+  system proves the legacy path is not narrowed. SymPy independently agrees on
+  both new solutions and the existing `x=π/2` control. The full 533-unit/
+  147-doctest suite, warning-denied workspace all-target/all-feature Clippy,
+  strict stable/nightly rustdoc, WASM, links, and whitespace checks pass.
+
+- **2026-07-22 — TL0.6.3 M0 is source-first preregistered; no official U2 test
+  has run.** The [M0 plan](docs/plan/lean-u2-official-execution-tl0.6.3-m0-plan-2026-07-22.md)
+- **2026-07-22 — TL0.6.3 M0 has one retained local official failure; R2 is
+  source-first preregistered.** The [M0 plan](docs/plan/lean-u2-official-execution-tl0.6.3-m0-plan-2026-07-22.md)
+- **2026-07-22 — TL0.6.3 M0 has one retained local official outcome; R3 is
+  source-first preregistered after R2 stopped before import.** The [M0 plan](docs/plan/lean-u2-official-execution-tl0.6.3-m0-plan-2026-07-22.md)
+- **2026-07-22 — TL0.6.3 M2 is preregistered for one fresh 64-case shard; no
+  runner or process exists yet.** The source-first
+- **2026-07-22 — TL0.6.3 M2's pure 64-case execution contract is implemented
+  and pushed; no live runner or process exists yet.** The source-first
 - **2026-07-22 — TL0.6.3 M2's runner is pushed; its first invocation stopped
   during source preflight before any harness, discovery, or process.** The source-first
   [plan](docs/plan/lean-u2-official-execution-tl0.6.3-m2-shard-0001-plan-2026-07-22.md)
@@ -7774,6 +7886,14 @@ plan is built and committed on the current branch:
   R1/R2 history, a new run/evidence root, universal 512 MiB Lean runtime stacks
   from pinned source semantics, and the measured tiered artifact store. It
   authorizes one process only after separately pushed implementation gates.
+- **2026-07-22 — Added certified direct order-one Bessel antiderivatives.**
+  Rational-affine `J₁`/`I₁` pairs, FTC controls, explicit recurrence declines,
+  and maximum-order derivative hardening bring CAS to 545 units/147 doctests.
+
+- **2026-07-22 — Added exact arbitrary-order Bessel Maclaurin series and zero
+  limits.** Checked `Jₙ`/`Iₙ` coefficient recurrences, independent fixtures and
+  ODE replay, public removable limits, and explicit overflow/order boundaries
+  bring the CAS surface to 544 unit tests and 147 doctests.
 
 - **2026-07-22 — Completed M2 R2's append-only diagnostic closure.** From clean
   pushed revision `beaa171b`, the offline command added 67 retained payloads,
