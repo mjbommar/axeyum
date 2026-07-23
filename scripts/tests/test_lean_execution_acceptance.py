@@ -230,6 +230,29 @@ class LeanExecutionAcceptanceContractTests(unittest.TestCase):
 
     def test_01_repository_and_fixture_pins_are_exact(self) -> None:
         self.assertEqual(ACCEPTANCE.validate_repository_inputs(), [])
+        installer = ACCEPTANCE.ROOT / "scripts/install-pinned-lean.sh"
+        self.assertEqual(
+            ACCEPTANCE.FROZEN_REPOSITORY_INPUTS["scripts/install-pinned-lean.sh"],
+            "75acb49a48e18b43523257ac22bc82889d614a6678c1cc3a457b3a150e1c7f71",
+        )
+        self.assertEqual(
+            ACCEPTANCE.CURRENT_REPOSITORY_INPUTS["scripts/install-pinned-lean.sh"],
+            "8a48e25ee2d2fb6d364dcbe0505b8a2fd660237e18e536d52117dc947d4c71ee",
+        )
+        original_sha256_file = ACCEPTANCE.sha256_file
+        with mock.patch.object(
+            ACCEPTANCE,
+            "sha256_file",
+            side_effect=lambda path: (
+                "0" * 64
+                if Path(path) == installer
+                else original_sha256_file(Path(path))
+            ),
+        ):
+            self.assertIn(
+                "frozen repository input drift: scripts/install-pinned-lean.sh",
+                ACCEPTANCE.validate_repository_inputs(),
+            )
         self.assertEqual(ACCEPTANCE.sha256_file(ACCEPTANCE.FLAT_SOURCE), ACCEPTANCE.FLAT_SOURCE_SHA256)
         self.assertEqual(ACCEPTANCE.sha256_file(ACCEPTANCE.REFERENCE_STREAM), ACCEPTANCE.REFERENCE_SHA256)
         self.assertEqual(ACCEPTANCE.REFERENCE_STREAM.stat().st_size, 3_849)
@@ -507,7 +530,7 @@ class LeanExecutionAcceptanceContractTests(unittest.TestCase):
                 "preregistration_commit": ACCEPTANCE.PREREGISTRATION_COMMIT,
                 "r1_preregistration_commit": ACCEPTANCE.R1_PREREGISTRATION_COMMIT,
                 "implementation_revision": "a" * 40,
-                "source_inputs": [],
+                "source_inputs": ACCEPTANCE.historical_result_source_inputs(),
                 "build": {},
                 "failed_attempt": {
                     "control_id": ACCEPTANCE.FAILED_COMPILE_CONTROL,
