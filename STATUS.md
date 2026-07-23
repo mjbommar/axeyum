@@ -451,6 +451,19 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   credit is claimed. Next: integrate the plan, scope orphan cleanup to the owned
   shard, add clean-release recovery evidence and a recovery-only coordinator
   mode, gate it, then execute only `retry-1`.
+- **2026-07-23 — exact-rational absolute-value limit continuity.** Wave
+  twenty-two composes the existing `Abs` head through any inner limit that
+  resolves to an exact rational, so finite-point, rational-function, squeeze,
+  Bessel-J, weighted Bessel-J, and error-function results now fold through
+  `|lim f|` without symbolic sign assumptions. Oscillatory, divergent,
+  reciprocal-Bessel, and symbolic finite-inner controls remain fail-closed.
+  SymPy agrees on nine of ten admitted shapes and leaves the weighted Bessel
+  prototype unevaluated. The thermally managed full gate passed 563 unit tests
+  in 6106.45 s wall time and 147 doctests, with the same process preserved
+  across external-contention pauses; workspace warning-denied Clippy (13.07 s),
+  WASM (7.00 s), strict stable/nightly rustdoc (2.00/1.79 s), links,
+  whitespace, and owned-line formatting are green. Source `a6e79b08` was
+  integrated exactly by merge `5b42a0ef`.
 - **2026-07-23 — certified rational weights inside powered rational-rate
   Bessel-J products.** Wave twenty-one extends the structural powered-product
   recognizer to exact rational weights inside the power. It carries each
@@ -8607,6 +8620,11 @@ plan is built and committed on the current branch:
   R1/R2 history, a new run/evidence root, universal 512 MiB Lean runtime stacks
   from pinned source semantics, and the measured tiered artifact store. It
   authorizes one process only after separately pushed implementation gates.
+- **2026-07-23 — Added exact-rational absolute-value limit continuity.** The
+  existing `Abs` head now composes through any exact rational inner limit and
+  folds the result, while oscillatory, divergent, reciprocal-Bessel, and
+  symbolic finite-inner cases remain fail-closed. CAS now has 563 units and
+  147 doctests.
 - **2026-07-23 — Added certified rational weights inside powered rational-rate
   Bessel-J product limits.** Internal rational numerator/denominator weights now
   inherit enclosing multiplicities in the exact combined envelope-rate check,

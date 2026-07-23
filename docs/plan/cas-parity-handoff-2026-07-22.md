@@ -13,15 +13,15 @@ elsewhere in `docs/plan/`). Read this file first when resuming.
   [multi-agent operations guide](../contributor-guide/multi-agent-operations.md):
   work only in the dedicated CAS worktree on an `agent/cas/*` branch, push that
   branch, and leave `main` to the integration owner. The current implementation
-  increment is `agent/cas/gap-probe-wave-twenty-one`, with source commit
-  `9cb6f731` integrated exactly by merge `53766474`; do not rebase topic work
+  increment is `agent/cas/gap-probe-wave-twenty-two`, with source commit
+  `a6e79b08` integrated exactly by merge `5b42a0ef`; do not rebase topic work
   onto `main` ahead of the integration owner.
-- **Tests:** `562` unit + `147` doctests, **all green**, warning-denied workspace
+- **Tests:** `563` unit + `147` doctests, **all green**, warning-denied workspace
   all-target/all-feature Clippy-clean, strict stable/nightly rustdoc-green,
   wasm-green, links-green, and whitespace-clean.
 - **Source of truth for capabilities:** `docs/research/10-cas/README.md`
   (capability table) and `docs/research/10-cas/diary.md` (chronological entries;
-  latest is **Entry 37b03**). Keep both in sync when landing features.
+  latest is **Entry 37b04**). Keep both in sync when landing features.
 - **Method that works:** empirical **gap-probing** (below). It found every recent
   feature *and* a serious infinite-hang regression.
 
@@ -711,6 +711,28 @@ orders `0..=255`), and Stirling-composed raw moments (regressed for orders
   operator, backend, evidence format, or logic fragment changed, so no ADR is
   required.
 
+**Exact-rational absolute-value limit continuity**
+- Wave twenty-two probed continuity through the existing `Abs` expression
+  head. Before the change, `|x|` at zero, absolute values of rational-function
+  limits, `|sin(x)/x|`, `|J₀(x)|`, `|xJ₀(x³)|`, and `|erf(x)|` all
+  declined or left an unfurled exact absolute value. Oscillatory `|sin x|`,
+  divergent `|x|`, reciprocal-Bessel, and symbolic finite-inner forms supplied
+  the negative controls.
+- `limit` now applies real continuity only after the complete inner route has
+  returned a literal exact rational, then folds that rational's absolute value.
+  This deliberately avoids symbolic sign analysis and complex-domain claims;
+  if the inner limit is absent, divergent, oscillatory, or symbolic, the rule
+  declines and existing dispatch continues unchanged.
+- Ten admitted regressions cover finite points, rational functions, both
+  infinity directions, squeeze, Bessel-J, weighted Bessel-J, and error-function
+  routes. SymPy independently agrees on nine and leaves only the weighted
+  Bessel prototype unevaluated; its oscillatory/divergent controls remain
+  nonfinite rather than false zeroes. Source commit `a6e79b08` was integrated
+  exactly by merge `5b42a0ef`. The full thermally managed gate passed 563 unit
+  tests in 6106.45 seconds wall time and 147 doctests, preserving one process
+  across external-contention pauses. No public head, operator, backend,
+  evidence format, or logic fragment changed, so no ADR is required.
+
 ---
 
 ## 5. Zeilberger / WZ — how it works and where to extend
@@ -1045,9 +1067,9 @@ esac
 export AXEYUM_CAS_TMP
 trap 'find "$AXEYUM_CAS_TMP" -depth -delete' EXIT
 git rev-parse --abbrev-ref HEAD        # → agent/cas/...
-git merge-base --is-ancestor 9cb6f731 HEAD
+git merge-base --is-ancestor a6e79b08 HEAD
 CARGO_BUILD_JOBS=1 TMPDIR="$AXEYUM_CAS_TMP" cargo test -p axeyum-cas --jobs 1
-# → 562 unit + 147 doctests green
+# → 563 unit + 147 doctests green
 ```
 Then: read `docs/research/10-cas/diary.md` tail for the latest context, and pick
 up from §6 or resume the gap-probing loop. Push the green owned topic branch;
