@@ -10360,7 +10360,8 @@ pub fn limit(expr: &CasExpr, var: &str, point: LimitPoint) -> Option<CasExpr> {
     // Fixed integer-order Bessel J has an oscillatory O(|z|^{-1/2}) envelope on
     // the real axis. Apply that exact zero limit to a rational-function argument
     // whose numerator degree exceeds its denominator degree, multiplied only by
-    // an x-free factor and a bounded rational weight.
+    // an x-free factor and a rational weight whose growth is strictly slower
+    // than the resulting square-root decay.
     if matches!(point, LimitPoint::PosInfinity | LimitPoint::NegInfinity)
         && let Some(value) = limit_bessel_j_at_infinity(expr, var, point)
     {
@@ -11001,18 +11002,20 @@ fn limit_bounded_decay(expr: &CasExpr, var: &str, point: LimitPoint) -> Option<C
 
 /// Limit of `c·w(x)·Jₙ(r(x))` at either real infinity for fixed nonnegative
 /// integer `n`, a rational-coefficient rational function `r` whose numerator
-/// degree is greater than its denominator degree, a bounded rational weight `w`,
-/// and any `x`-free factor `c`.
+/// degree is greater than its denominator degree, a rational weight `w` whose
+/// degree growth is less than half the argument's degree growth, and any
+/// `x`-free factor `c`.
 ///
 /// NIST DLMF 10.17.3 gives the fixed-order large-positive-argument expansion with
 /// an oscillatory `O(z^{-1/2})` envelope. DLMF 10.11.1 gives
 /// `Jₙ(-z)=(-1)ⁿJₙ(z)` for integer `n`, so the negative-real direction has the
 /// same zero limit. Every admitted argument has `|r(x)|→∞` at both real
-/// infinities, and a rational weight whose numerator degree does not exceed its
-/// denominator degree stays bounded there. Their product therefore tends to
-/// zero. The rule deliberately does not substitute the Bessel head inside a
-/// denominator or accept a growing weight: those shapes need rate analysis, and
-/// replacing `Jₙ` by zero there would be unsound.
+/// infinities. If `r(x)=Θ(|x|^d)` and `w(x)=O(|x|^e)`, the product is
+/// `O(|x|^(e-d/2))`; the exact degree condition `2e<d` therefore proves a zero
+/// limit. Bounded and decaying weights have `e=0` for this comparison. The rule
+/// deliberately does not substitute the Bessel head inside a denominator or
+/// admit the borderline/supercritical cases, where replacing `Jₙ` by zero would
+/// be unsound.
 fn limit_bessel_j_at_infinity(expr: &CasExpr, var: &str, point: LimitPoint) -> Option<CasExpr> {
     if !matches!(point, LimitPoint::PosInfinity | LimitPoint::NegInfinity) {
         return None;
@@ -11038,13 +11041,16 @@ fn limit_bessel_j_at_infinity(expr: &CasExpr, var: &str, point: LimitPoint) -> O
     let weight_ratio = normalize_rational(&weight)?;
     let weight_numerator = weight_ratio.num.to_univariate(var)?;
     let weight_denominator = weight_ratio.den.to_univariate(var)?;
-    if poly::rat_degree(&weight_numerator)? > poly::rat_degree(&weight_denominator)? {
-        return None;
-    }
+    let weight_numerator_degree = poly::rat_degree(&weight_numerator)?;
+    let weight_denominator_degree = poly::rat_degree(&weight_denominator)?;
     let ratio = normalize_rational(&argument)?;
     let numerator = ratio.num.to_univariate(var)?;
     let denominator = ratio.den.to_univariate(var)?;
-    if poly::rat_degree(&numerator)? <= poly::rat_degree(&denominator)? {
+    let numerator_degree = poly::rat_degree(&numerator)?;
+    let denominator_degree = poly::rat_degree(&denominator)?;
+    let argument_growth = numerator_degree.checked_sub(denominator_degree)?;
+    let weight_growth = weight_numerator_degree.saturating_sub(weight_denominator_degree);
+    if weight_growth.checked_mul(2)? >= argument_growth {
         return None;
     }
     Some(CasExpr::zero())
@@ -21917,11 +21923,10 @@ mod tests {
             &CasExpr::zero(),
         );
 
-        // Growing weights need the precise Bessel decay rate; even the true
-        // subcritical x·J₀(x³) case stays outside this bounded-weight increment.
+        // Borderline and supercritical growing weights do not inherit a zero
+        // limit from the Bessel envelope.
         assert!(limit(&(x() * x().bessel_j(0)), "x", pos()).is_none());
         assert!(limit(&(x() * x().pow(2).bessel_j(0)), "x", pos()).is_none());
-        assert!(limit(&(x() * x().pow(3).bessel_j(0)), "x", pos()).is_none());
 
         // Modified Bessel growth, Bessel denominators, symbolic rational
         // coefficients, multiple Bessel factors, and bounded Bessel arguments
@@ -21968,6 +21973,51 @@ mod tests {
             )
             .is_none()
         );
+    }
+
+    #[test]
+    fn limits_of_subcritical_growing_rational_weights_times_bessel_j() {
+        let x = || v("x");
+        let pos = || LimitPoint::PosInfinity;
+        let neg = || LimitPoint::NegInfinity;
+        let cases = [
+            (x(), x().pow(3)),
+            (
+                x().pow(2),
+                x().pow(5) - CasExpr::int(2) * x().pow(2) + CasExpr::int(1),
+            ),
+            (
+                (x().pow(2) + CasExpr::int(1)) / (x() + CasExpr::int(1)),
+                (x().pow(5) + CasExpr::int(1)) / (x().pow(2) + CasExpr::int(1)),
+            ),
+        ];
+
+        // For rational rates w(x)=O(|x|^e) and r(x)=Theta(|x|^d), the
+        // fixed-order Bessel envelope gives w(x)J_n(r(x))=O(|x|^(e-d/2)).
+        // The strict integer condition 2e<d proves an exact zero limit.
+        for order in [0, 3, 32, u32::MAX] {
+            for (weight, argument) in &cases {
+                let expression = weight.clone() * argument.clone().bessel_j(order);
+                assert_equal(&limit(&expression, "x", pos()).unwrap(), &CasExpr::zero());
+                assert_equal(&limit(&expression, "x", neg()).unwrap(), &CasExpr::zero());
+            }
+        }
+
+        assert_equal(
+            &limit(
+                &(v("c") * CasExpr::int(-2) * x() *
+                    (CasExpr::int(-1) * x().pow(3) + CasExpr::int(1)).bessel_j(7)),
+                "x",
+                neg(),
+            )
+            .unwrap(),
+            &CasExpr::zero(),
+        );
+
+        // Equality is insufficient: at 2e=d the asymptotic envelope is only
+        // O(1). Faster weights are likewise outside the certified zero region.
+        assert!(limit(&(x() * x().pow(2).bessel_j(0)), "x", pos()).is_none());
+        assert!(limit(&(x().pow(2) * x().pow(3).bessel_j(0)), "x", pos()).is_none());
     }
 
     #[test]
