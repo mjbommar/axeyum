@@ -383,6 +383,19 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-23 — TL0.6.4 M0 accepts the complete U2 harness floor without
+  claiming native support or Lean parity.** The source-first
+  [plan](docs/plan/lean-u2-native-surface-classification-tl0.6.4-m0-plan-2026-07-23.md),
+  [bounded result](docs/plan/lean-u2-native-surface-classification-tl0.6.4-m0-result-2026-07-23.md),
+  [authority](docs/plan/lean-u2-native-surface-classification-v1.json), and
+  generated [summary](docs/plan/generated/lean-u2-native-surface-classification.md)
+  classify all 3,723 registered cases exactly once across ten stable native
+  surfaces. The family floor contains 4,238 direct and 12,111 closure
+  occurrences, but every content refinement, exact dependency closure, and
+  native outcome remains `not-run`; native pairs and terminal parity remain
+  zero. Next: M1 pinned-content refinement, M2 exact dependency closure, and
+  M3 complete-row review, alongside a fresh source-first official shard.
+
 - **2026-07-22 — certified weighted integer-order Bessel antiderivative family.**
   Wave nine measured higher weighted antiderivatives against already-green
   weighted Laplace controls and continuing order-three inverse-Laplace,
@@ -777,8 +790,9 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   and sealed authority now credit 64/64 local official outcomes and one physical
   shard from unchanged completion `1f0b9af8`. Aggregate local U2 coverage is 66
   outcomes / 65 unique cases; every provider/Axeyum/pair/parity counter remains
-  zero. Next: source-first next child shard plus TL0.6.4 native-surface
-  classification. Attempt 004 is closed and cannot retry.
+  zero. TL0.6.4 M0 now supplies a non-crediting harness floor for every U2
+  case. Next: source-first next child shard plus M1 pinned-content refinement,
+  then M2 exact closure and M3 review. Attempt 004 is closed and cannot retry.
 
 - **2026-07-22 — TL0.6.3 M1 derives complete deterministic U2 child-shard
   scheduling with zero new outcomes or parity credit.** The source-first
@@ -8090,6 +8104,13 @@ plan is built and committed on the current branch:
 | P5.5 | External target, measured | **DONE (bounded v1, ADR-0323--0338):** authenticated Tock capture plus eight rechecked dual-DRAT proofs and six replayed controls, UNKNOWN=0, DISAGREE=0. Query time 12.700 s; fresh outer wall 50.745 s; peak RSS 1,256,496 KiB; zero OOM deltas. The committed case study compares exact target validation, universal coverage, trust, effort, artifact boundaries, and limits. No Tock bug was found, so no upstream issue is applicable. This is not a speed or whole-kernel claim. |
 
 ## Changelog
+
+- **2026-07-23 — Accepted TL0.6.4 M0's full 3,723-case U2 harness floor.** Ten
+  stable surfaces, fourteen exact family rules, three overrides, 4,238 direct
+  occurrences, and 12,111 transitive occurrences validate under focused,
+  aggregate, generator, CI, and documentation gates. All content refinement,
+  exact dependency closure, native outcomes, pairs, and terminal parity remain
+  unrun or zero; TL0.6.4 stays PARTIAL pending M1-M3.
 
 - **2026-07-23 — Accepted R6's 64-pass local shard without claiming Lean
   parity.** Post-publication replay returned existing completion `1f0b9af8` and

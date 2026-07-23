@@ -33,7 +33,7 @@ Current machine-derived state:
 | U0-U9 | 0 complete authorities | a complete executable denominator for any terminal population |
 | A0-A11 | 0 complete axes | end-to-end native behavior on any complete required population |
 | G1-G10 | 0 satisfied terminal gates | any terminal parity claim |
-| U2 official execution | 8 consumed processes, 66 official outcomes, 65 passes / 1 failure over **65 unique cases**; M1 derives 5 exact memberships and 289 physical shards, one locally complete | the 3,678/3,723-case parents, all 111 full attempts, an official provider, an Axeyum outcome, a pair, or performance |
+| U2 official execution/classification | 8 consumed processes, 66 official outcomes, 65 passes / 1 failure over **65 unique cases**; execution M1 derives 5 exact memberships and 289 physical shards, one locally complete; TL0.6.4 M0 gives all 3,723 cases a non-crediting harness floor | the 3,678/3,723-case parents, all 111 full attempts, content-refined/exact dependency classification, an official provider, an Axeyum outcome, a pair, or performance |
 
 The accepted
 [`R3 result`](lean-u2-official-execution-tl0.6.3-m0-r3-result-2026-07-22.md)
@@ -158,7 +158,12 @@ passed, and the
 credits 64/64 local official outcomes plus one physical shard. Aggregate local
 U2 is now 66 outcomes / 65 unique cases; all full official attempts, parent,
 provider, Axeyum, pairing, and parity remain incomplete. Next execute another
-source-first child shard and start TL0.6.4 native-surface classification.
+source-first child shard. TL0.6.4 M0 has since accepted a bounded
+[harness-floor classification](lean-u2-native-surface-classification-tl0.6.4-m0-result-2026-07-23.md):
+all 3,723 registered cases map exactly once to ten stable native surfaces, but
+all source-content refinement, exact dependency closure, native outcomes,
+pairs, and parity credit remain `not-run` or zero. M1-M3 must refine and review
+the complete population before TL0.6.4 closes.
 
 ## 2. What the SMT-LIB comparison actually says
 
@@ -247,8 +252,9 @@ The critical semantic path is:
 Three lanes should proceed alongside it without claiming to shorten that
 dependency chain:
 
-- R1 expands official U2 execution and classifies every case by the native
-  surface it will eventually exercise.
+- R1 expands official U2 execution. TL0.6.4 M0 now supplies every case's
+  conservative harness floor; M1/M2 still must replace that floor with pinned
+  content evidence and exact dependency closure before M3 review.
 - R0 keeps identities, completion rules, pair schemas, and dashboards ready so
   new capabilities become auditable evidence rather than anecdotes.
 - R7 and R10 preregister editor, adversarial, platform, package, and migration
@@ -256,39 +262,36 @@ dependency chain:
 
 The best next implementation priority remains the deepest blocker shared by
 many populations, not the easiest count increase. The current shared blockers
-are K1 import closure, the native parser/elaborator boundary, and complete U2
-execution/classification.
+are K1 import closure, the native parser/elaborator boundary, complete U2
+execution, and content/dependency-complete U2 classification.
 
 ## 6. Immediate next ten actions
 
-1. Treat the R3 singleton as closed; never rerun it to manufacture coverage.
-2. Treat the accepted five-membership/289-shard M1 derivation as scheduling
-   metadata only; preserve its exact order, unique-case accounting, and
-   zero-outcome boundary.
-3. Repair and attest the remote official-Lean executable identity across changed
-   working directories, then retain the first true remote 71/71 result without
-   converting it into native parity credit.
-4. Implement/test/push the preregistered M2 R4 16 GiB lane and harmless
-   nine-dedicated-thread control without selected execution. Only after exact
-   clean remote-equal preflight may attempt 003 run once; do not retry or
-   reinterpret R3.
-5. Classify every executed U2 case into kernel/import, parser/macro,
-   elaborator/declaration, tactic/meta, module/Lake, server, runtime/compiler,
-   FFI, or adversarial dependency ownership.
-6. Close K1's String-literal and quotient-package roots, regenerate the
+1. Treat the R3 singleton and accepted R6 shard as closed immutable history;
+   never rerun either to manufacture coverage.
+2. Select and preregister the next fresh deterministic child shard, preserving
+   exact unique-case accounting and the one-process/no-retry discipline.
+3. Complete TL0.6.4 M1 pinned-content refinement for all 3,723 cases, including
+   every primary, sidecar, runner, hook, and directory support closure.
+4. Complete TL0.6.4 M2 exact module, generated-artifact, runtime, library, FFI,
+   request, and project dependency closures; do not infer FFI absence from M0.
+5. Review all rows under M3 and accept TL0.6.4 only when no provisional field,
+   unknown surface, or silent official-Lean delegation remains.
+6. Repair and attest the remote official-Lean executable identity across
+   changed working directories without converting official evidence into
+   native parity credit.
+7. Close K1's String-literal and quotient-package roots, regenerate the
    construct matrix, and preserve fail-closed decline codes for anything still
    unsupported.
-7. Register the dependency-closed U3 `Init`/`Std`/Lean-module population and
+8. Register the dependency-closed U3 `Init`/`Std`/Lean-module population and
    classify/discharge the 65 prelude assumptions instead of treating import
    counts as trust closure.
-8. Land the native source/syntax substrate and first end-to-end
+9. Land the native source/syntax substrate and first end-to-end
    source-to-independent-kernel cell before widening tactics or mathlib.
-9. Form the first native official/Axeyum U2 pair with exact normalization,
+10. Form the first native official/Axeyum U2 pair with exact normalization,
    assurance, resources, and raw evidence; report overlap direction even when
-   both totals are equal.
-10. Recompute the generated critical path after every accepted capability and
-    block any public complete/full/100% claim until the terminal switch derives
-    true.
+   both totals are equal, then regenerate the terminal scoreboard and keep the
+   public complete/full/100% guard closed until its switch derives true.
 
 ## 7. The terminal claim switch
 

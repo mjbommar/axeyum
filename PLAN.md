@@ -658,9 +658,14 @@ state.
 > and sealed authority now credit 64/64 local official outcomes and one physical
 > shard from unchanged completion `1f0b9af8`. Aggregate local U2 coverage is 66
 > outcomes / 65 unique cases; every provider/Axeyum/pair/parity counter remains
-> zero. Next source-first work is the next child shard plus TL0.6.4 native-
-> surface classification;
-> then form native pairs. Do not rerun
+> zero. The accepted
+> [TL0.6.4 M0 result](docs/plan/lean-u2-native-surface-classification-tl0.6.4-m0-result-2026-07-23.md)
+> now classifies all 3,723 cases exactly once at a conservative harness floor
+> across ten stable native surfaces. All source-content refinement, exact
+> dependency closure, native outcomes, pairs, and parity credit remain
+> `not-run` or zero. Next source-first work is the next child shard plus M1
+> pinned-content refinement, followed by M2 exact closure and M3 review before
+> native pairs. Do not rerun
 > the singleton for population credit. The
 > [complete-parity execution roadmap](docs/plan/lean4-complete-parity-roadmap-2026-07-22.md)
 > now reconciles this U2 boundary with the SMT-LIB evidence layers and the

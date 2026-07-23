@@ -72,7 +72,7 @@
     },
     {
       "path": "docs/plan/lean-system-implementation-plan-2026-07-21.md",
-      "sha256": "2f4f63f1d51d2e3c726d5e305999f715642ea07b1445f56bdefa291b96da8d25"
+      "sha256": "20cdb0973c05bd86b4d46c9986686bcb3e67bfbb58f6e4033c00aad248ba3a55"
     },
     {
       "path": "docs/plan/lean-u2-native-surface-classification-tl0.6.4-m0-plan-2026-07-23.md",
@@ -260,11 +260,11 @@
     },
     {
       "path": "docs/plan/lean4-complete-parity-contract-2026-07-22.md",
-      "sha256": "07b98c1055e6496750d337431b1abc9102dbd28558a03e554625b0b969a50d3c"
+      "sha256": "44d40e166b6037f10368131af0cfe6a2d69bf59218a6f501c35d45db13d9ff82"
     },
     {
       "path": "docs/plan/lean4-complete-parity-roadmap-2026-07-22.md",
-      "sha256": "6fbc6014617cd60f62d91753d1d98e2d1f09c86aa99d1f2e06a7f81209784d5d"
+      "sha256": "145454bd82c8b91145666e38df0ec00bbbb2fdd3faabb0436a4a7d5f9c8c10cd"
     },
     {
       "path": "scripts/gen-lean-complete-parity.py",
@@ -1102,8 +1102,8 @@
       "rows": 140,
       "status_counts": {
         "DONE": 27,
-        "PARTIAL": 6,
-        "TODO": 107,
+        "PARTIAL": 7,
+        "TODO": 106,
         "BLOCKED": 0
       }
     }

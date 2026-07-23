@@ -320,6 +320,15 @@ Start at the root [`PLAN.md`](../../PLAN.md) (map + standing rules) and
   and [`authority`](lean-u2-official-execution-tl0.6.3-m2-r6-v1.json) —
   portable exact replay accepts 64/64 local outcomes and one physical shard;
   parent/provider/Axeyum/pair/performance/population/axis/gate/parity stay zero.
+- [`TL0.6.4 M0 source-first plan`](lean-u2-native-surface-classification-tl0.6.4-m0-plan-2026-07-23.md),
+  [`accepted bounded result`](lean-u2-native-surface-classification-tl0.6.4-m0-result-2026-07-23.md),
+  [`authority`](lean-u2-native-surface-classification-v1.json), and generated
+  [Markdown](generated/lean-u2-native-surface-classification.md)/
+  [JSON](generated/lean-u2-native-surface-classification.json) — all 3,723 U2
+  cases have exactly one conservative harness-floor classification across ten
+  stable native surfaces. All content refinement, exact dependency closure,
+  native outcomes, pairs, and parity credit remain `not-run` or zero; M1-M3
+  must refine and review the complete case population before TL0.6.4 closes.
 - [`lean-compatibility-v1.json`](lean-compatibility-v1.json) and generated
   [`Lean compatibility matrix`](generated/lean-compatibility.md) — TL0.2's
   executable eight-field assurance contract, K0-K6 profile gates, registered

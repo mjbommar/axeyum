@@ -513,6 +513,25 @@ source-first resource qualification is required and no counter changes. The
 freezes that next boundary at 32 GiB with completion-grade control evidence;
 it does not itself authorize a parity claim or add an outcome.
 
+R6 subsequently closed one fresh 64-case local shard. The accepted
+[R6 result](lean-u2-official-execution-tl0.6.3-m2-r6-result-2026-07-23.md)
+and authority retain 64/64 outcomes from an unchanged completion-last root.
+Aggregate local U2 coverage is 66 outcomes over 65 unique cases. No full
+official attempt, parent selection, official provider, Axeyum outcome, paired
+cell, performance row, population, axis, gate, or parity claim is complete.
+
+TL0.6.4 M0 now has an accepted bounded
+[harness-floor result](lean-u2-native-surface-classification-tl0.6.4-m0-result-2026-07-23.md),
+[canonical authority](lean-u2-native-surface-classification-v1.json), and
+generated [summary](generated/lean-u2-native-surface-classification.md). All
+3,723 U2 cases are classified exactly once across ten stable surface IDs. The
+family floor yields 4,238 direct and 12,111 transitive surface occurrences,
+but all 3,723 content refinements, exact dependency closures, and native
+outcomes remain `not-run`; Axeyum outcomes, pairs, and terminal parity credit
+remain zero. The observed zero FFI floor is provisional, not an absence claim.
+M1-M3 must inspect pinned content, derive exact closures, and review every row
+before TL0.6.4 closes or TL0.6.5 forms a native pair.
+
 ## 8. Layer-specific equivalence
 
 One byte-comparison rule cannot cover the entire system:
@@ -612,29 +631,30 @@ run.
 
 Before another broad implementation claim:
 
-1. retain the R3 singleton as closed and derive fresh deterministic U2 child
-   shards from the registered parent/profile authorities;
-2. repair the remote Lean job so `AXEYUM_LEAN_BIN` resolves to the installed
-   versioned executable from any working directory, then archive the first true
-   71/71 remote attestation, duration, RSS, and axiom summary;
-3. execute and classify new U2 shards with unique-case accounting, then form the
-   first native official/Axeyum semantic pair;
-4. extend TL0.6's generated registry seed from bounded K0/K1 and selected-
+1. retain the R3 singleton and accepted R6 shard as immutable history; execute
+   only fresh source-first child shards with unique-case accounting;
+2. complete TL0.6.4 M1 pinned-content refinement for all 3,723 cases, then M2
+   exact module/runtime/FFI/request/project closures and M3 full-row review;
+3. repair and attest the remote official-Lean executable identity from changed
+   working directories, retaining provider, duration, RSS, and axiom evidence;
+4. form the first native official/Axeyum semantic pair only after its complete
+   classification, official completion, normalization, and native evidence;
+5. extend TL0.6's generated registry seed from bounded K0/K1 and selected-
    construct evidence to content-identified complete construct, source, tactic,
    project, editor, runtime, ecosystem, and platform authorities;
-5. freeze separate official populations for elaboration success, elaboration
+6. freeze separate official populations for elaboration success, elaboration
    failure, compile+interpret, Lake, package, server, and benchmark suites;
-6. record normalized per-layer equivalence rules and mutation tests before
+7. record normalized per-layer equivalence rules and mutation tests before
    running those populations;
-7. add content/dependency/source-family identities and exact paired overlap to
+8. add content/dependency/source-family identities and exact paired overlap to
    every Lean scoreboard;
-8. retain adapter, official-oracle, and native outcomes as separate columns;
-9. complete the String and quotient K1 roots and regenerate the dependency-
+9. retain adapter, official-oracle, and native outcomes as separate columns;
+10. complete the String and quotient K1 roots and regenerate the dependency-
    closed blocker ranking;
-10. classify all 65 prelude assumptions before reporting broader proof parity;
-11. turn the pinned mathlib tree inventory into module/declaration/dependency/
+11. classify all 65 prelude assumptions before reporting broader proof parity;
+12. turn the pinned mathlib tree inventory into module/declaration/dependency/
     tactic/test manifests before assigning any coverage percentage; and
-12. keep the landed documentation claim guard enforced and expand its live
+13. keep the landed documentation claim guard enforced and expand its live
     claim-surface list when a new public status surface is introduced.
 
 ## 12. Primary sources

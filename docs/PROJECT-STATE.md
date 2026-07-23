@@ -288,6 +288,13 @@ Again, there are distinct targets:
   derives 17 event contexts, 153 matrix cells, 111 declared CTest attempts, and
   eight exact selection sets. Every attempt remains `not-run`; this closes
   configuration identity, not Lean execution or Axeyum parity. The subsequent
+  [TL0.6.4 M0 result](plan/lean-u2-native-surface-classification-tl0.6.4-m0-result-2026-07-23.md)
+  classifies all 3,723 registered cases exactly once by a conservative harness
+  floor across ten stable native surfaces. It records 4,238 direct and 12,111
+  transitive surface occurrences, but all source-content refinement, exact
+  dependency closure, and native outcomes remain `not-run`; zero observed FFI
+  cases at this floor is not an FFI-absence claim. Native pairs and parity stay
+  zero pending complete M1-M3 refinement and review. The subsequent
   [TL0.7.1 contract](plan/lean-execution-evidence-tl0.7.1-2026-07-22.md)
   defines explicit 4/8 GiB local lanes, twelve typed termination classes, and
   immutable completion-last evidence. Its five controls are synthetic and all
