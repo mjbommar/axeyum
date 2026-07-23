@@ -27,6 +27,7 @@ from multi_host import (  # noqa: E402
     build_multi_host_completion,
     install_host_command,
     recover_failed_shard,
+    recover_released_failed_shard,
     stage_execution_bundle,
     validate_execution_bundle,
     validate_host_command,
@@ -464,6 +465,112 @@ class MultiHostPortableTests(unittest.TestCase):
                         inspect_shared_root=False,
                     )
             self.assertTrue(second.is_file())
+
+    def test_released_failed_runner_authorizes_exact_retry_without_fake_lease(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            layout = PortableE3(Path(tmp))
+            plan = layout.plan()
+            session_id = "failed-session"
+            session = layout.root / "resource-sessions" / session_id
+            session.mkdir(parents=True)
+            session.joinpath("preflight.json").write_bytes(
+                canonical_bytes(
+                    {
+                        "host_id": "server5",
+                        "shard_ids": [0],
+                        "launcher_pid": 4242,
+                        "run_identity_sha256": layout.run["identity_sha256"],
+                        "started_at_ns": 1,
+                    }
+                )
+            )
+            runner_terminal = {
+                "status": "failed",
+                "completed_count": 0,
+                "durable_result_keys": [],
+                "new_result_keys": [],
+                "skipped_result_keys": [],
+            }
+            runner_terminal_path = layout.root / "terminals" / "0" / "runner.json"
+            runner_terminal_path.parent.mkdir(parents=True)
+            runner_terminal_path.write_bytes(canonical_bytes(runner_terminal))
+            (layout.root / "records").mkdir()
+            failed_attempt = {
+                "attempt_id": "failed-attempt",
+                "session_id": session_id,
+            }
+            failed_terminal = seal(
+                {
+                    "schema": ALLOCATION_TERMINAL_SCHEMA,
+                    "attempt_id": "failed-attempt",
+                    "status": "failed",
+                    "exit_code": 2,
+                    "stdout_sha256": "0" * 64,
+                    "stdout_bytes": 0,
+                    "stderr_sha256": "1" * 64,
+                    "stderr_bytes": 1,
+                    "ended_at_ns": 2,
+                }
+            )
+            attempt_path = (
+                layout.root
+                / "multi-host-attempts"
+                / "initial-0"
+                / "failed-attempt.json"
+            )
+            terminal_path = (
+                layout.root
+                / "multi-host-terminals"
+                / "initial-0"
+                / "failed-attempt.json"
+            )
+            attempt_path.parent.mkdir(parents=True)
+            terminal_path.parent.mkdir(parents=True)
+            attempt_path.write_bytes(canonical_bytes(failed_attempt))
+            terminal_path.write_bytes(canonical_bytes(failed_terminal))
+            dead = {
+                "unit": "axeyum-smtcomp-e3-failed-session.service",
+                "unit_state": "failed",
+                "launcher_pid": 4242,
+                "launcher_live": False,
+            }
+            allocation_evidence = (
+                {},
+                {"initial-0": [failed_attempt]},
+                {"failed-attempt": failed_terminal},
+            )
+            with (
+                mock.patch("multi_host.remote_liveness", return_value=dead),
+                mock.patch(
+                    "multi_host._load_allocation_evidence",
+                    return_value=allocation_evidence,
+                ),
+            ):
+                record = recover_released_failed_shard(
+                    plan=plan,
+                    run=layout.run,
+                    run_dir=layout.root,
+                    failed_allocation_id="initial-0",
+                    retry_allocation_id="retry-0",
+                    resource_session_id=session_id,
+                    remote_helper_path=layout.root / "multi_host.py",
+                    inspect_shared_root=False,
+                )
+                replay = recover_released_failed_shard(
+                    plan=plan,
+                    run=layout.run,
+                    run_dir=layout.root,
+                    failed_allocation_id="initial-0",
+                    retry_allocation_id="retry-0",
+                    resource_session_id=session_id,
+                    remote_helper_path=layout.root / "multi_host.py",
+                    inspect_shared_root=False,
+                )
+            self.assertEqual(record, replay)
+            self.assertEqual(record["lease_state"], "released-after-failure")
+            self.assertFalse((layout.root / "leases" / "0.json").exists())
 
     def test_complete_portable_evidence_blocks_unaccounted_loss_and_raw_export(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

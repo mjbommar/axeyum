@@ -27,6 +27,7 @@ from p0_prepare import (  # noqa: E402
 from p0_execute import (  # noqa: E402
     ADMISSION_PATH,
     AXEYUM_CLOSURE_RESULT_PATH,
+    BITWUZLA_RECOVERY_PATH,
     CELL_RESULT_SCHEMA,
     CLOSURE_ADMISSION_PATH,
     CVC5_RESULT_PATH,
@@ -35,6 +36,7 @@ from p0_execute import (  # noqa: E402
     migrate_legacy_adjudication,
     publish_cell_result,
     require_integrated_admission,
+    require_integrated_bitwuzla_recovery,
     require_integrated_cell_admission,
     validate_cell_result,
     validate_cell_launch,
@@ -252,6 +254,19 @@ class P0PrepareTests(unittest.TestCase):
                         Path("scripts/smtcomp_repro/resume_runner.py"),
                         AXEYUM_CLOSURE_RESULT_PATH,
                         CVC5_RESULT_PATH,
+                    ],
+                )
+
+        with mock.patch("p0_execute.require_integrated_cell_admission") as base:
+            with mock.patch("p0_execute.require_integrated_path") as path:
+                require_integrated_bitwuzla_recovery(ROOT)
+                base.assert_called_once_with(ROOT, "bitwuzla")
+                self.assertEqual(
+                    [call.args[1] for call in path.call_args_list],
+                    [
+                        BITWUZLA_RECOVERY_PATH,
+                        Path("scripts/smtcomp_repro/multi_host.py"),
+                        Path("scripts/smtcomp_repro/resume_fs.py"),
                     ],
                 )
 

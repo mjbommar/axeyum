@@ -1,6 +1,7 @@
 # SMT-COMP repaired P0 v2 Bitwuzla recovery plan
 
-Status: preregistered stop state; no recovery mutation or retry launch performed
+Status: preregistered; implementation complete and portable-gated; no recovery
+mutation or retry launch performed
 Date: 2026-07-23
 Predecessor: [cvc5 result](smtcomp-repaired-p0-v2-cvc5-result-2026-07-23.md)
 Preparation: [P0-S1 v2 result](smtcomp-repaired-p0-preparation-s1-result-2026-07-23.md)
@@ -149,3 +150,55 @@ Before live recovery:
 The current 870 records receive no Bitwuzla correctness, performance, coverage,
 or parity credit. The completed Axeyum and cvc5 cells remain unchanged and
 credit-eligible under their own integrated result boundaries.
+
+## Implementation checkpoint
+
+The bounded implementation:
+
+- scopes startup orphan recovery to the current shard's exact assigned result
+  filenames, leaving every foreign or malformed temporary untouched;
+- adds `axeyum.smtcomp-host-released-recovery.v1`, which binds the failed outer
+  allocation terminal, zero-record inner runner terminal, absent lease, dead
+  process observation, and exact different-host retry without fabricating stale
+  lease quarantine;
+- preserves and continues to validate the existing stale-lease recovery schema;
+- adds a Bitwuzla-only `--recover-failed-allocation initial-1` coordinator mode
+  with every frozen live hash above hard-pinned;
+- requires this plan and all recovery-source bytes to be exact on `origin/main`;
+  and
+- validates replay after authority publication, process-free finalization after
+  a completed retry, and a fully published result without launching twice.
+
+Read-only live validation reports:
+
+```text
+FROZEN_BITWUZLA_RECOVERY_VALID
+plan=3531135a711b6de1e899e4cfdcda432c68e5ec77387f3e004131579725eec927
+retry=retry-1
+```
+
+Current gates:
+
+```text
+python3 -m unittest \
+  scripts.tests.test_smtcomp_resume_fs \
+  scripts.tests.test_smtcomp_multi_host \
+  scripts.tests.test_smtcomp_p0_prepare
+  20 tests, OK
+
+./scripts/check-smtcomp-resume.sh
+  68 tests, OK, one live-host skip
+
+./scripts/check-links.sh
+  passed
+
+just foundational-resources
+  passed
+
+git diff --check
+  passed
+```
+
+Next: commit and integrate the implementation/checkpoint bytes, rerun mandatory
+cgroup and live multi-host E3 from the clean commit, then revalidate the frozen
+stop state and execute only `retry-1`.

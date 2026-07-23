@@ -61,6 +61,7 @@ COMMAND_SCHEMA = "axeyum.smtcomp-host-command.v1"
 ATTEMPT_SCHEMA = "axeyum.smtcomp-host-allocation-attempt.v1"
 TERMINAL_SCHEMA = "axeyum.smtcomp-host-allocation-terminal.v1"
 RECOVERY_SCHEMA = "axeyum.smtcomp-host-recovery.v1"
+RELEASED_RECOVERY_SCHEMA = "axeyum.smtcomp-host-released-recovery.v1"
 FAULT_SCHEMA = "axeyum.smtcomp-host-fault-observation.v1"
 COMPLETION_SCHEMA = "axeyum.smtcomp-multi-host-completion.v1"
 
@@ -176,6 +177,26 @@ RECOVERY_FIELDS = {
     "launcher_live",
     "observed_at_ns",
     "quarantine_path",
+    "record_sha256",
+}
+RELEASED_RECOVERY_FIELDS = {
+    "schema",
+    "plan_sha256",
+    "run_identity_sha256",
+    "failed_allocation_id",
+    "retry_allocation_id",
+    "resource_session_id",
+    "shard_id",
+    "failed_attempt_id",
+    "failed_terminal_record_sha256",
+    "runner_terminal_path",
+    "runner_terminal_sha256",
+    "lease_state",
+    "remote_unit",
+    "remote_unit_state",
+    "launcher_pid",
+    "launcher_live",
+    "observed_at_ns",
     "record_sha256",
 }
 FAULT_FIELDS = {
@@ -1526,6 +1547,141 @@ def recover_failed_shard(
     return record
 
 
+def recover_released_failed_shard(
+    *,
+    plan: dict[str, Any],
+    run: dict[str, Any],
+    run_dir: Path,
+    failed_allocation_id: str,
+    retry_allocation_id: str,
+    resource_session_id: str,
+    remote_helper_path: Path,
+    inspect_shared_root: bool = True,
+) -> dict[str, Any]:
+    """Authorize one retry after a failed runner cleanly released its lease."""
+
+    validate_plan(plan, run, inspect_shared_root=inspect_shared_root)
+    _require_safe(resource_session_id, "resource_session_id")
+    allocations = {row["allocation_id"]: row for row in plan["allocations"]}
+    failed = allocations.get(failed_allocation_id)
+    retry = allocations.get(retry_allocation_id)
+    if (
+        failed is None
+        or retry is None
+        or retry["recovers_allocation_id"] != failed_allocation_id
+        or len(retry["shard_ids"]) != 1
+    ):
+        raise ContractError("unregistered multi-host recovery")
+    shard_id = retry["shard_ids"][0]
+    recovery_path = (
+        run_dir / "multi-host-recoveries" / f"{failed_allocation_id}-{shard_id}.json"
+    )
+    if recovery_path.exists():
+        matches = [
+            row
+            for row in _load_recoveries(run_dir, plan, run)
+            if row["failed_allocation_id"] == failed_allocation_id
+            and row["retry_allocation_id"] == retry_allocation_id
+            and row["resource_session_id"] == resource_session_id
+            and row["shard_id"] == shard_id
+            and row["schema"] == RELEASED_RECOVERY_SCHEMA
+        ]
+        if len(matches) != 1:
+            raise ContractError("host recovery replay mismatch")
+        return matches[0]
+
+    session_dir = run_dir / "resource-sessions" / resource_session_id
+    preflight = read_canonical_json(session_dir / "preflight.json")
+    if (session_dir / "terminal.json").exists():
+        raise ContractError("released recovery has an unexpected resource terminal")
+    registrations = {row["host_id"]: row for row in plan["host_registrations"]}
+    registration = registrations[failed["host_id"]]
+    if (
+        preflight.get("host_id") != registration["hostname"]
+        or shard_id not in preflight.get("shard_ids", [])
+    ):
+        raise ContractError("resource session does not own the failed shard")
+    unit = f"{run['resource_enforcement']['unit_prefix']}-{resource_session_id}.service"
+    liveness = remote_liveness(
+        registration=registration,
+        remote_helper_path=remote_helper_path,
+        unit=unit,
+        launcher_pid=preflight["launcher_pid"],
+    )
+    if liveness["launcher_live"] or liveness["unit_state"] in {
+        "active",
+        "activating",
+        "deactivating",
+    }:
+        raise ContractError("failed allocation is still live; recovery refused")
+    if (run_dir / "leases" / f"{shard_id}.json").exists():
+        raise ContractError("released recovery found a live or stale shard lease")
+
+    _commands, attempts, terminals = _load_allocation_evidence(
+        run_dir, plan, inspect_shared_root=inspect_shared_root
+    )
+    failed_attempts = attempts.get(failed_allocation_id, [])
+    if len(failed_attempts) != 1:
+        raise ContractError("released recovery requires one failed allocation attempt")
+    failed_attempt = failed_attempts[0]
+    failed_terminal = terminals.get(failed_attempt["attempt_id"])
+    if (
+        failed_attempt.get("session_id") != resource_session_id
+        or failed_terminal is None
+        or failed_terminal.get("status") != "failed"
+    ):
+        raise ContractError("released recovery lacks its failed allocation terminal")
+
+    runner_terminal_root = run_dir / "terminals" / str(shard_id)
+    runner_terminal_paths = _json_files(runner_terminal_root)
+    if len(runner_terminal_paths) != 1:
+        raise ContractError("released recovery requires one runner terminal")
+    runner_terminal_path = runner_terminal_paths[0]
+    runner_terminal = read_canonical_json(runner_terminal_path)
+    if (
+        runner_terminal.get("status") != "failed"
+        or runner_terminal.get("completed_count") != 0
+        or runner_terminal.get("durable_result_keys") != []
+        or runner_terminal.get("new_result_keys") != []
+        or runner_terminal.get("skipped_result_keys") != []
+    ):
+        raise ContractError("released recovery runner terminal is not zero-record failed")
+    if any(
+        read_canonical_json(path).get("shard_id") == str(shard_id)
+        for path in _json_files(run_dir / "records")
+    ):
+        raise ContractError("released recovery shard has durable result records")
+
+    record = _sealed(
+        {
+            "schema": RELEASED_RECOVERY_SCHEMA,
+            "plan_sha256": plan["plan_sha256"],
+            "run_identity_sha256": run["identity_sha256"],
+            "failed_allocation_id": failed_allocation_id,
+            "retry_allocation_id": retry_allocation_id,
+            "resource_session_id": resource_session_id,
+            "shard_id": shard_id,
+            "failed_attempt_id": failed_attempt["attempt_id"],
+            "failed_terminal_record_sha256": failed_terminal["record_sha256"],
+            "runner_terminal_path": str(runner_terminal_path.relative_to(run_dir)),
+            "runner_terminal_sha256": sha256_file(runner_terminal_path),
+            "lease_state": "released-after-failure",
+            "remote_unit": unit,
+            "remote_unit_state": liveness["unit_state"],
+            "launcher_pid": preflight["launcher_pid"],
+            "launcher_live": liveness["launcher_live"],
+            "observed_at_ns": time.time_ns(),
+        }
+    )
+    atomic_install_json(
+        recovery_path.parent,
+        recovery_path.name,
+        record,
+        quarantine_root=run_dir / "quarantine",
+    )
+    return record
+
+
 def _json_files(directory: Path) -> list[Path]:
     if not directory.is_dir():
         raise ContractError(f"missing multi-host artifact directory: {directory}")
@@ -1676,7 +1832,15 @@ def _load_recoveries(
     recoveries = []
     for path in _json_files(root):
         record = read_canonical_json(path)
-        if set(record) != RECOVERY_FIELDS or record.get("schema") != RECOVERY_SCHEMA:
+        schema = record.get("schema")
+        expected_fields = (
+            RECOVERY_FIELDS
+            if schema == RECOVERY_SCHEMA
+            else RELEASED_RECOVERY_FIELDS
+            if schema == RELEASED_RECOVERY_SCHEMA
+            else None
+        )
+        if expected_fields is None or set(record) != expected_fields:
             raise ContractError("host recovery field/schema mismatch")
         _validate_seal(record)
         expected_name = f"{record.get('failed_allocation_id')}-{record.get('shard_id')}.json"
@@ -1696,13 +1860,13 @@ def _load_recoveries(
             in {"active", "activating", "deactivating"}
         ):
             raise ContractError("host recovery ownership/liveness mismatch")
-        for field in (
+        common_safe_fields = (
             "failed_allocation_id",
             "retry_allocation_id",
             "resource_session_id",
-            "lease_owner_id",
             "remote_unit",
-        ):
+        )
+        for field in common_safe_fields:
             _require_safe(record.get(field), field)
         if (
             type(record.get("shard_id")) is not int
@@ -1712,22 +1876,79 @@ def _load_recoveries(
             or record["observed_at_ns"] < 0
         ):
             raise ContractError("invalid host recovery process identity")
-        recovery_id = (
-            f"{plan['plan_sha256'][:12]}-{failed['allocation_id']}-{record['shard_id']}"
-        )
-        expected_quarantine = (
-            Path("quarantine")
-            / "stale-leases"
-            / f"{record['shard_id']}.json.{recovery_id}"
-        )
-        if record.get("quarantine_path") != str(expected_quarantine):
-            raise ContractError("host recovery quarantine identity mismatch")
-        quarantine = run_dir / expected_quarantine
-        if not quarantine.is_file() or quarantine.is_symlink():
-            raise ContractError("host recovery quarantine evidence is missing")
-        lease = read_canonical_json(quarantine)
-        if lease.get("owner_id") != record.get("lease_owner_id"):
-            raise ContractError("host recovery lease-owner mismatch")
+        if schema == RECOVERY_SCHEMA:
+            _require_safe(record.get("lease_owner_id"), "lease_owner_id")
+            recovery_id = (
+                f"{plan['plan_sha256'][:12]}-{failed['allocation_id']}-"
+                f"{record['shard_id']}"
+            )
+            expected_quarantine = (
+                Path("quarantine")
+                / "stale-leases"
+                / f"{record['shard_id']}.json.{recovery_id}"
+            )
+            if record.get("quarantine_path") != str(expected_quarantine):
+                raise ContractError("host recovery quarantine identity mismatch")
+            quarantine = run_dir / expected_quarantine
+            if not quarantine.is_file() or quarantine.is_symlink():
+                raise ContractError("host recovery quarantine evidence is missing")
+            lease = read_canonical_json(quarantine)
+            if lease.get("owner_id") != record.get("lease_owner_id"):
+                raise ContractError("host recovery lease-owner mismatch")
+        else:
+            for field in ("failed_attempt_id",):
+                _require_safe(record.get(field), field)
+            _require_sha(
+                record.get("failed_terminal_record_sha256"),
+                "failed terminal record sha256",
+            )
+            _require_sha(
+                record.get("runner_terminal_sha256"),
+                "runner terminal sha256",
+            )
+            if record.get("lease_state") != "released-after-failure":
+                raise ContractError("released recovery lease state mismatch")
+            if (run_dir / "leases" / f"{record['shard_id']}.json").exists():
+                raise ContractError("released recovery shard lease reappeared")
+            expected_runner_root = run_dir / "terminals" / str(record["shard_id"])
+            runner_path = run_dir / str(record.get("runner_terminal_path"))
+            if (
+                runner_path.parent != expected_runner_root
+                or not runner_path.is_file()
+                or runner_path.is_symlink()
+                or sha256_file(runner_path) != record["runner_terminal_sha256"]
+            ):
+                raise ContractError("released recovery runner terminal mismatch")
+            runner_terminal = read_canonical_json(runner_path)
+            if (
+                runner_terminal.get("status") != "failed"
+                or runner_terminal.get("completed_count") != 0
+                or runner_terminal.get("durable_result_keys") != []
+                or runner_terminal.get("new_result_keys") != []
+                or runner_terminal.get("skipped_result_keys") != []
+            ):
+                raise ContractError("released recovery runner outcome mismatch")
+            allocation_attempt_root = (
+                run_dir / "multi-host-attempts" / failed["allocation_id"]
+            )
+            allocation_terminal_root = (
+                run_dir / "multi-host-terminals" / failed["allocation_id"]
+            )
+            attempt_path = (
+                allocation_attempt_root / f"{record['failed_attempt_id']}.json"
+            )
+            terminal_path = (
+                allocation_terminal_root / f"{record['failed_attempt_id']}.json"
+            )
+            if not attempt_path.is_file() or not terminal_path.is_file():
+                raise ContractError("released recovery allocation evidence is missing")
+            failed_terminal = read_canonical_json(terminal_path)
+            if (
+                failed_terminal.get("status") != "failed"
+                or failed_terminal.get("record_sha256")
+                != record["failed_terminal_record_sha256"]
+            ):
+                raise ContractError("released recovery failed terminal mismatch")
         session = read_canonical_json(
             run_dir
             / "resource-sessions"

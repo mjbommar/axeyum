@@ -450,7 +450,13 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   failure evidence, and only eligible different-host `retry-1`. No Bitwuzla
   credit is claimed. Next: integrate the plan, scope orphan cleanup to the owned
   shard, add clean-release recovery evidence and a recovery-only coordinator
-  mode, gate it, then execute only `retry-1`.
+  mode, gate it, then execute only `retry-1`. The implementation is now present:
+  foreign shard temporaries are excluded, released-lease failure evidence binds
+  both failed terminals and dead liveness, stale-lease recovery is unchanged,
+  and the Bitwuzla-only retry mode hard-pins every frozen hash and exact
+  `retry-1`. Twenty focused tests and the 68-test portable gate pass; live state
+  revalidation remains read-only. Recovery stays blocked until these source and
+  checkpoint bytes are integrated and the clean mandatory cgroup/E3 gates pass.
 - **2026-07-23 — certified rational weights inside powered rational-rate
   Bessel-J products.** Wave twenty-one extends the structural powered-product
   recognizer to exact rational weights inside the power. It carries each
