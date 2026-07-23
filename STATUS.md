@@ -497,7 +497,13 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   attempt 003, requires completion-grade success/failure fanout evidence in an
   external revision-named root, and preserves every stack/shard/command/store/
   credit boundary. Next implement/test/push R5 only; no control or selected
-  process is authorized before that separate checkpoint.
+  process is authorized before that separate checkpoint. The
+  [R5 implementation checkpoint](docs/plan/lean-u2-official-execution-tl0.6.3-m2-r5-attempt-003-implementation-2026-07-23.md)
+  records clean pushed commit `1d1c8ab8`: 32 GiB process binding,
+  completion-grade success/failure control evidence, explicit authorization
+  digest, five focused tests, and CI/generator integration. No R5 control or
+  selected root exists. Next push this documentation checkpoint, then run one
+  stack probe and one control from its clean remote-equal revision.
 
 - **2026-07-22 — TL0.6.3 M1 derives complete deterministic U2 child-shard
   scheduling with zero new outcomes or parity credit.** The source-first
@@ -7809,6 +7815,12 @@ plan is built and committed on the current branch:
 | P5.5 | External target, measured | **DONE (bounded v1, ADR-0323--0338):** authenticated Tock capture plus eight rechecked dual-DRAT proofs and six replayed controls, UNKNOWN=0, DISAGREE=0. Query time 12.700 s; fresh outer wall 50.745 s; peak RSS 1,256,496 KiB; zero OOM deltas. The committed case study compares exact target validation, universal coverage, trust, effort, artifact boundaries, and limits. No Tock bug was found, so no upstream issue is applicable. This is not a speed or whole-kernel claim. |
 
 ## Changelog
+
+- **2026-07-23 — Implemented and pushed R5 without running its control.** Commit
+  `1d1c8ab8` adds the 32 GiB adapter and completion-last external control store,
+  retains source/raw/host/process samples for success and failure, requires an
+  explicit authorizing digest before selected execution, and preserves the
+  still-unconsumed attempt and zero-credit boundary.
 
 - **2026-07-23 — Preregistered R5's 32 GiB qualification for still-unconsumed
   attempt 003.** Pinned runtime/task/channel sources and the R4 peak support one

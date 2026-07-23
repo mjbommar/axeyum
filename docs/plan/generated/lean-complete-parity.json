@@ -36,7 +36,7 @@
     },
     {
       "path": "docs/plan/lean-complete-parity-v1.json",
-      "sha256": "ea9e4361043eb56ec34dfe2beb2821d3e1fef81d863f1c28a1ac2353bcda44f8"
+      "sha256": "100a17586d8fd55b47808ae751815945528ac98b817d383aea44c013a0ebd555"
     },
     {
       "path": "docs/plan/lean-execution-acceptance-tl0.7.4-2026-07-22.md",
@@ -181,6 +181,10 @@
     {
       "path": "docs/plan/lean-u2-official-execution-tl0.6.3-m2-r4-control-result-2026-07-23.md",
       "sha256": "ced2d1d4d747dd564e703cc2a1aa58c7ccc21aa32c73a9902c96f8f37de27c07"
+    },
+    {
+      "path": "docs/plan/lean-u2-official-execution-tl0.6.3-m2-r5-attempt-003-implementation-2026-07-23.md",
+      "sha256": "eb39040b526f918ed5ba0686e9b16acfa21e3729d59bc49911aa28b9e2d5a2ec"
     },
     {
       "path": "docs/plan/lean-u2-official-execution-tl0.6.3-m2-r5-attempt-003-plan-2026-07-23.md",
@@ -1006,6 +1010,10 @@
           "detail": "Preregistered 32 GiB resource-only lane reusing still-unconsumed selected attempt 003, with completion-grade fanout success/failure evidence and unchanged stack/shard/command/store/credit rules."
         },
         {
+          "path": "docs/plan/lean-u2-official-execution-tl0.6.3-m2-r5-attempt-003-implementation-2026-07-23.md",
+          "detail": "Pushed R5 implementation checkpoint for the 32 GiB adapter, completion-grade success/failure control store, explicit selected authorization digest, focused gates, and zero implicit execution."
+        },
+        {
           "path": "docs/plan/lean-execution-evidence-v1.json",
           "detail": "TL0.7.1 contract authority for explicit resource lanes, typed terminations, immutable run/attempt/case/artifact/completion records, and zero real outcomes."
         },
@@ -1074,7 +1082,7 @@
           "detail": "Pinned tests tree inventory and the required CTest/test-pile derivation rule."
         }
       ],
-      "residual": "Current credited execution coverage remains two decided official outcomes for one unique case from a 3,678-case parent, with zero Axeyum outcomes or pairs. There are six consumed selected process attempts: four M0 attempts, invalid M2 R1, and timeout M2 R3. M1 partitions all eight official selections into five exact ordered memberships and 289 physical child shards, but every derived shard and all 111 official attempts remain incomplete. M2 R1 retained exact 64-row JUnit with 30 passes and 34 failures, but family-blind docparse artifact closure stopped before post/projection/completion. Completion-last policy therefore grants zero M2 case or shard credit. R2 then completed a zero-process diagnostic append that binds all 124 generated rows, retains 67 outcome/log payloads, keeps 56 large reproducible intermediates metadata-only, and leaves credit unchanged. M2 R3 exported LEAN_STACK_SIZE_KB=524288 and ran attempt 002 once. CTest printed seven diagnostic passes, then compile_bench/channel.lean failed dedicated-thread creation and deadlocked; the one-hour watchdog reaped the group. The retained 17-file root has no JUnit, cases, post, projection, or completion, so R3 adds zero outcome or shard credit and cannot retry. R4 implemented a 16 GiB attempt-003 lane and required a harmless nine-dedicated-task control before selected discovery. The corrected control reached released Lean but emitted failed to create thread under the exact limit and timed out cleanly; no work/evidence root, harness, discovery, or selected process was created, so attempt 003 remains unconsumed and R4 grants zero credit. R5 preregisters a 32 GiB resource-only lane with completion-grade control evidence; it must be implemented, tested, committed, and pushed before any control or selected invocation. Then classify native surfaces and run matched Axeyum cases. Scheduling metadata, controls, diagnostic rows, and retries do not increase population coverage."
+      "residual": "Current credited execution coverage remains two decided official outcomes for one unique case from a 3,678-case parent, with zero Axeyum outcomes or pairs. There are six consumed selected process attempts: four M0 attempts, invalid M2 R1, and timeout M2 R3. M1 partitions all eight official selections into five exact ordered memberships and 289 physical child shards, but every derived shard and all 111 official attempts remain incomplete. M2 R1 retained exact 64-row JUnit with 30 passes and 34 failures, but family-blind docparse artifact closure stopped before post/projection/completion. Completion-last policy therefore grants zero M2 case or shard credit. R2 then completed a zero-process diagnostic append that binds all 124 generated rows, retains 67 outcome/log payloads, keeps 56 large reproducible intermediates metadata-only, and leaves credit unchanged. M2 R3 exported LEAN_STACK_SIZE_KB=524288 and ran attempt 002 once. CTest printed seven diagnostic passes, then compile_bench/channel.lean failed dedicated-thread creation and deadlocked; the one-hour watchdog reaped the group. The retained 17-file root has no JUnit, cases, post, projection, or completion, so R3 adds zero outcome or shard credit and cannot retry. R4 implemented a 16 GiB attempt-003 lane and required a harmless nine-dedicated-task control before selected discovery. The corrected control reached released Lean but emitted failed to create thread under the exact limit and timed out cleanly; no work/evidence root, harness, discovery, or selected process was created, so attempt 003 remains unconsumed and R4 grants zero credit. R5's pushed implementation binds a 32 GiB resource-only lane and completion-grade control evidence; no R5 control or selected process exists before the separate documentation checkpoint. Then classify native surfaces and run matched Axeyum cases. Scheduling metadata, controls, diagnostic rows, and retries do not increase population coverage."
     },
     {
       "id": "U3",

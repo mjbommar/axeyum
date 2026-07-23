@@ -599,7 +599,12 @@ state.
 > [R5 attempt-003 plan](docs/plan/lean-u2-official-execution-tl0.6.3-m2-r5-attempt-003-plan-2026-07-23.md)
 > now freezes a 32 GiB resource-only lane, completion-grade success/failure
 > fanout evidence, the still-unconsumed selected attempt identity, and unchanged
-> stack/shard/command/store/credit rules. Next implement/test/push R5 only;
+> stack/shard/command/store/credit rules. The
+> [R5 implementation checkpoint](docs/plan/lean-u2-official-execution-tl0.6.3-m2-r5-attempt-003-implementation-2026-07-23.md)
+> now records clean pushed `1d1c8ab8`, the 32 GiB adapter,
+> completion-grade success/failure control evidence, explicit authorization,
+> and zero implicit execution. Next push the checkpoint and run one stack probe
+> plus one control from its remote-equal revision;
 > then form native pairs. Do not rerun
 > the singleton for population credit. The
 > [complete-parity execution roadmap](docs/plan/lean4-complete-parity-roadmap-2026-07-22.md)
