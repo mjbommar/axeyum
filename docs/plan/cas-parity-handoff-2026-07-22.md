@@ -13,15 +13,15 @@ elsewhere in `docs/plan/`). Read this file first when resuming.
   [multi-agent operations guide](../contributor-guide/multi-agent-operations.md):
   work only in the dedicated CAS worktree on an `agent/cas/*` branch, push that
   branch, and leave `main` to the integration owner. The current increment is
-  `agent/cas/gap-probe-wave-seven`, based on integration parent `bbfae1d9`, with
-  implementation commit `099b6da3` (integrated by `f5934d8f`); do not rebase it
-  onto `main` ahead of the integration owner.
-- **Tests:** `549` unit + `147` doctests, **all green**, warning-denied workspace
+  `agent/cas/bessel-weighted-order-one-antiderivatives`, based on integration
+  parent `a6de705a`, with implementation commit `4dcf8621` (integrated by
+  `cef45a35`); do not rebase it onto `main` ahead of the integration owner.
+- **Tests:** `550` unit + `147` doctests, **all green**, warning-denied workspace
   all-target/all-feature Clippy-clean, strict stable/nightly rustdoc-green,
   wasm-green, links-green, and whitespace-clean.
 - **Source of truth for capabilities:** `docs/research/10-cas/README.md`
   (capability table) and `docs/research/10-cas/diary.md` (chronological entries;
-  latest is **Entry 37af5**). Keep both in sync when landing features.
+  latest is **Entry 37af6**). Keep both in sync when landing features.
 - **Method that works:** empirical **gap-probing** (below). It found every recent
   feature *and* a serious infinite-hang regression.
 
@@ -447,6 +447,26 @@ orders `0..=255`), and Stirling-composed raw moments (regressed for orders
   No public head, operator, backend, evidence format, or logic fragment changed,
   so no ADR is required.
 
+**Certified weighted order-one Bessel antiderivatives**
+- The next bounded integration gap now accepts `c·u²·J₁(u)` and
+  `c·u²·I₁(u)` for nonconstant rational-affine `u` and variable-free `c`,
+  including exact rational multiples of `u²`. The candidates are
+  `(c/slope)u²J₂(u)` and `(c/slope)u²I₂(u)` and still return only after the
+  unchanged public differentiate-and-zero-test gate succeeds.
+- DLMF 10.6.6 and 10.29.4 supply the derivative identities. The zero-test now
+  closes their product derivatives with division-free recurrences for target
+  orders two and three, processed in descending order. A target is rewritten
+  only when its complete coefficient divides exactly by the normalized
+  argument; the replacement lowers that target and introduces only lower
+  orders, so no `1/u` seam or unbounded recurrence search is added.
+- Unit, rational-scale, shifted, reflected, symbolic-factor, exact recurrence,
+  derivative-replay, and definite-FTC controls pass. Lower/higher or mismatched
+  weights, order-two integrands, nonlinear arguments, symbolic slopes, and
+  reciprocal overflow decline. Recurrence collection remains explicitly
+  bounded to orders two and three; no arbitrary-order integral claim is made.
+  No public head, operator, backend, evidence format, or logic fragment changed,
+  so no ADR is required.
+
 ---
 
 ## 5. Zeilberger / WZ — how it works and where to extend
@@ -699,9 +719,10 @@ semantics changed.
 
 Ordered roughly by value:
 
-1. **Resume broad, timeout-bounded gap probing.** The direct and weighted
-   first-kind Bessel antiderivative pairs are closed through the normal
-   certificate path. The moment families retain explicit resource boundaries:
+1. **Resume broad, timeout-bounded gap probing.** The direct order-one and
+   weighted order-zero/order-one Bessel antiderivative pairs are closed through
+   the normal certificate path. Higher weighted orders remain deliberately
+   unclaimed. The moment families retain explicit resource boundaries:
    direct order 256 needs `Γ(257)`, raw order 36 needs public coefficients beyond
    `i128`, and repeated-quadratic inverse Laplace multiplicity 8 exceeds
    checked-`i128` normalization at `t⁷cos(βt)`. Extending these requires a
@@ -773,9 +794,9 @@ esac
 export AXEYUM_CAS_TMP
 trap 'find "$AXEYUM_CAS_TMP" -depth -delete' EXIT
 git rev-parse --abbrev-ref HEAD        # → agent/cas/...
-git merge-base --is-ancestor 099b6da3 HEAD
+git merge-base --is-ancestor 4dcf8621 HEAD
 CARGO_BUILD_JOBS=1 TMPDIR="$AXEYUM_CAS_TMP" cargo test -p axeyum-cas --jobs 1
-# → 549 unit + 147 doctests green
+# → 550 unit + 147 doctests green
 ```
 Then: read `docs/research/10-cas/diary.md` tail for the latest context, and pick
 up from §6 or resume the gap-probing loop. Push the green owned topic branch;
