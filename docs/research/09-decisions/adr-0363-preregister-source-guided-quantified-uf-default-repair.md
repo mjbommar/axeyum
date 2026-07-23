@@ -103,3 +103,26 @@ runs observe 232/233 joint agreements solely with ten/nine independent Z3
 timeouts. Three residual seeds remain a separate problem. This does not add
 arbitrary arithmetic synthesis, scalar ranking, explicit-entry repair, general
 UF models, or proof reconstruction.
+
+## Implementation evidence
+
+Commit `568efb15` implements the decision exactly. It adds a deterministic
+source-value pool, excludes binder-dependent evaluated terms, preserves
+existing function entries, shares the caller deadline, and invokes the retry
+only at the outer initial-candidate boundary after ADR-0362 and ADR-0360
+decline. Candidate acceptance still requires the independent finite-profile
+certificate and canonical full-source replay.
+
+The frozen differential reports exactly 215 SAT, 24 UNSAT, 17 Unknown, 215/215
+SAT replay, zero errors/disagreements, and residual ordinary Z3-SAT Unknowns
+`122, 175, 182`; joint agreement remains 232/233 solely with the preregistered
+independent Z3 timeout variance. Focused controls, warning-denied solver
+Clippy, strict rustdoc, and links pass. A CI-mode full solver-package run passed
+907 library tests and the changed quantified-UFLIA suite before one unrelated
+late load-sensitive word/Int SAT test declined; that exact test and its entire
+14-test binary pass immediately under the same CI configuration. ADR-0363
+remains proposed while the branch aggregate, including the separately owned
+Lean parity evidence, is not fully green. A fresh `just parity-docs` reaches
+that retained evidence and fails exactly with
+`LEAN_PROCESS_ATTEMPT_ERROR|exit-zero-4g: run/spec attribution drift`; this
+solver lane does not rewrite it.

@@ -317,7 +317,14 @@ bounded untrusted repair of only total defaults for at most eight relevant
 explicit table entry, caps each stable same-sort value pool at 32 and the
 Cartesian search at 256 candidates, and returns SAT only through that same
 source certificate plus canonical original-query replay. Explicit-entry
-repair, free-scalar completion, and general model synthesis remain open.
+repair and general model synthesis remain open. ADR-0360 may first complete a
+bounded set of source-relevant free `Int` scalars, and ADR-0362 may attempt one
+recursion-guarded fixed-query MBQI pass for the first ordered scalar candidate.
+After both decline, ADR-0363 permits one outer initial-candidate retry that adds
+exact source integer literals and binder-independent evaluated source terms to
+the default pool, without changing scalar assignments or explicit UF entries.
+It retains ADR-0359's 32-value/256-tuple caps and accepts only the same
+finite-profile certificate plus canonical full-source replay.
 
 ADR-0123 refines the quantifier row's SAT boundary: Bool/Int/BV syntax may be
 traversed by the checked free-Boolean model evaluator, but BV predicates remain
