@@ -418,3 +418,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [0361](adr-0361-preregister-evaluated-quantified-uf-scalar-candidates.md) | Preregister evaluated ground-source and UF-result scalar candidates without widening quantified-UF search or evidence caps | proposed |
 | [0362](adr-0362-preregister-one-level-fixed-query-mbqi-retry.md) | Preregister one recursion-guarded MBQI pass under one temporary source-Int fixing with exact unfixed replay | proposed |
 | [0363](adr-0363-preregister-source-guided-quantified-uf-default-repair.md) | Preregister one bounded source-guided Int-result UF-default retry after established quantified-UF completion routes | proposed |
+| [0364](adr-0364-preregister-profile-guided-quantified-uf-model-completion.md) | Preregister one shared-deadline SAT-only finite-profile completion loop with exact source definitions and checker-derived counterexamples | proposed |

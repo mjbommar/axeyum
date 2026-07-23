@@ -418,3 +418,16 @@ word/Int SAT test declined under sustained load; the exact test and its full
 14-test binary pass under the same CI configuration. Keep that aggregate
 observation separate, do not raise caps or rewrite cross-lane evidence, and
 classify one distinct bounded mechanism for the three residual seeds next.*
+
+*That next mechanism is now frozen in the
+[profile-guided completion measurement](../quantified-uflia-profile-guided-model-completion-measurement-2026-07-23.md)
+under proposed ADR-0364. After all established routes decline, one SAT-only
+single-Int-binder CEGIS loop uses exact total-function source definitions and
+checker-derived finite-profile counterexamples under the original remaining
+deadline. Two complete 256-case measurements identically recover ordinary
+Z3-SAT seeds 122/175/182 plus independently certified Z3-timeout seed 226 in
+1/0/1/2 rounds. The projected exact totals are 219 SAT, 24 UNSAT, 13 Unknown,
+and 219/219 replay with no ordinary Z3-SAT residual. Implement only this
+32-round/32-instance, fail-closed boundary next; do not use the measured-bad
+blind batch, grant fresh time, transfer inner UNSAT, or rewrite arbitrary
+function entries.*

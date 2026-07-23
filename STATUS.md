@@ -602,6 +602,20 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   runner or process exists yet.** The source-first
 - **2026-07-22 — TL0.6.3 M2's pure 64-case execution contract is implemented
   and pushed; no live runner or process exists yet.** The source-first
+- **2026-07-23 — ADR-0364 preregisters profile-guided quantified-UF model
+  completion.** The exact post-ADR-0363 residuals require table structure:
+  seed 122 needs distinct ground `g` points plus a total `f`, seed 175's ground
+  candidate carries a stale `f(2)` entry despite `forall x. f(x) = -3`, and
+  seed 182 needs a nonconstant nested `f(g(x))` model. One SAT-only loop runs
+  after established MBQI/E-matching/ADR-0361 decline, under only the original
+  deadline's remaining time. Exact total-function source definitions are
+  untrusted model hints; checker-derived finite-profile falsifiers add one exact
+  source instance per round. Two repeated 256-case measurements identically
+  recover seeds 122/175/182 plus independently certified Z3-timeout seed 226 at
+  1/0/1/2 rounds, projecting 219 SAT, 24 UNSAT, 13 Unknown, and 219/219 replay.
+  A blind 16-instance batch is rejected because it overfits seeds 175/182 and
+  reaches exhaustion/timeout. Next: implement only the preregistered
+  32-round/32-instance, shared-deadline, SAT-only boundary.
 - **2026-07-23 — ADR-0363's source-guided quantified-UF default repair is
   implemented for five residual models.** A retained diagnostic adds exact source
   integer literals and binder-independent evaluated source terms to ADR-0359's
