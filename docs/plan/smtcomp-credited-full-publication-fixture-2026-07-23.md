@@ -1,7 +1,7 @@
 # SMT-COMP credited full-population publication fixture
 
-Status: process-free implementation on SMT topic commits `e7c05374` and
-`d7c78371`; integration, live F2 preparation, execution, and comparison remain
+Status: process-free implementation integrated by `origin/main` merges
+`f65f4647` and `c4d9050a`; live F2 preparation, execution, and comparison remain
 outstanding
 
 Date: 2026-07-23
@@ -90,6 +90,6 @@ resource and multi-host completions, every v2 record and output sidecar, and the
 consumed here. The complete three-cell comparison remains impossible until all
 three sequential cells have safe external results.
 
-No live action is authorized until these source/result bytes are integrated by
-the mainline owner and the exact current `origin/main` passes both readiness
-gates.
+These source/result bytes are integrated. No live action is authorized until
+the exact current `origin/main` passes both readiness gates and an exact F2
+result is integrated by the mainline owner.
