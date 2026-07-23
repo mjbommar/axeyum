@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import copy
+import json
 import sys
 import unittest
 from pathlib import Path
@@ -22,9 +23,16 @@ from full_population import (  # noqa: E402
     WAVE_COUNT,
     build_population_contract,
     build_schedule,
+    build_thermal_observation,
+    build_thermal_stop,
+    build_wave_checkpoint,
+    cumulative_benchmark_count,
+    scheduler_decision,
     shard_benchmark_count,
     validate_population_contract,
     validate_schedule,
+    validate_thermal_stop,
+    validate_wave_checkpoint,
 )
 from multi_host import (  # noqa: E402
     PLAN_SCHEMA,
@@ -37,6 +45,10 @@ from resume_contract import ContractError, digest  # noqa: E402
 
 
 ENFORCEMENT_ID = "e" * 64
+PLAN_ID = "a" * 64
+RUN_ID = "b" * 64
+CELL_ID = "axeyum"
+UNIT_PREFIX = "axeyum-smtcomp-full"
 
 
 def reseal(value: dict) -> dict:
@@ -54,6 +66,69 @@ def seal_as(value: dict, field: str) -> dict:
 
 
 class FullPopulationContractTests(unittest.TestCase):
+    @staticmethod
+    def sensors_json(temperature: object) -> bytes:
+        return json.dumps(
+            {"k10temp-pci-00c3": {"Tctl": {"temp1_input": temperature}}}
+        ).encode("utf-8")
+
+    def thermal_observations(
+        self,
+        schedule: dict,
+        *,
+        wave_index: int,
+        temperatures: tuple[object, object, object],
+        attempt_ids: tuple[str | None, str | None, str | None] = (None, None, None),
+    ) -> list[dict]:
+        wave = schedule["waves"][wave_index]
+        return [
+            build_thermal_observation(
+                sensors_json=self.sensors_json(temperature),
+                plan_sha256=PLAN_ID,
+                run_identity_sha256=RUN_ID,
+                cell_id=CELL_ID,
+                wave_index=wave_index,
+                allocation_id=allocation_id,
+                attempt_id=attempt_id,
+                host_id=host_id,
+                observed_at_ns=1000 + index,
+            )
+            for index, (host_id, allocation_id, attempt_id, temperature) in enumerate(
+                zip(
+                    wave["host_ids"],
+                    wave["allocation_ids"],
+                    attempt_ids,
+                    temperatures,
+                    strict=True,
+                )
+            )
+        ]
+
+    @staticmethod
+    def wave_terminals(schedule: dict, wave_index: int) -> list[dict]:
+        return [
+            {
+                "allocation_id": allocation_id,
+                "attempt_id": f"attempt-{wave_index:02d}-{index}",
+                "status": "completed",
+                "terminal_record_sha256": f"{wave_index * 3 + index:064x}",
+            }
+            for index, allocation_id in enumerate(
+                schedule["waves"][wave_index]["allocation_ids"]
+            )
+        ]
+
+    def checkpoint(self, schedule: dict, wave_index: int) -> dict:
+        return build_wave_checkpoint(
+            schedule=schedule,
+            plan_sha256=PLAN_ID,
+            run_identity_sha256=RUN_ID,
+            cell_id=CELL_ID,
+            wave_index=wave_index,
+            allocation_terminals=self.wave_terminals(schedule, wave_index),
+            cumulative_records=cumulative_benchmark_count(schedule, wave_index),
+        )
+
     def test_population_is_identical_for_all_three_cells(self) -> None:
         contract = validate_population_contract(build_population_contract())
         self.assertEqual(contract["population_count"], POPULATION_COUNT)
@@ -211,6 +286,303 @@ class FullPopulationContractTests(unittest.TestCase):
     def test_bad_enforcement_identity_rejects(self) -> None:
         with self.assertRaises(ContractError):
             build_schedule("not-a-sha")
+
+    def test_thermal_observation_requires_exact_sensor_and_numeric_value(self) -> None:
+        schedule = build_schedule(ENFORCEMENT_ID)
+        observation = self.thermal_observations(
+            schedule, wave_index=0, temperatures=(39.75, 40, 40.125)
+        )[0]
+        self.assertEqual(observation["temperature_millicelsius"], 39_750)
+        self.assertEqual(observation["sensor_label"], "Tctl")
+
+        malformed = (
+            b"{}",
+            self.sensors_json("90.0"),
+            self.sensors_json(True),
+            self.sensors_json(40.0001),
+            b'{"k10temp-pci-00c3":{"Tctl":{"temp1_input":40,'
+            b'"temp1_input":41}}}',
+            b'{"k10temp-pci-00c3":{"Tctl":{"temp1_input":NaN}}}',
+        )
+        wave = schedule["waves"][0]
+        for index, raw in enumerate(malformed):
+            with self.subTest(index=index), self.assertRaises(ContractError):
+                build_thermal_observation(
+                    sensors_json=raw,
+                    plan_sha256=PLAN_ID,
+                    run_identity_sha256=RUN_ID,
+                    cell_id=CELL_ID,
+                    wave_index=0,
+                    allocation_id=wave["allocation_ids"][0],
+                    attempt_id=None,
+                    host_id="s5",
+                    observed_at_ns=1,
+                )
+
+    def test_thermal_threshold_and_cooldown_hysteresis_gate_launch(self) -> None:
+        schedule = build_schedule(ENFORCEMENT_ID)
+
+        def decide(temperatures: tuple[object, object, object], cooldown: bool) -> dict:
+            return scheduler_decision(
+                schedule=schedule,
+                checkpoints=[],
+                plan_sha256=PLAN_ID,
+                run_identity_sha256=RUN_ID,
+                cell_id=CELL_ID,
+                open_attempt_ids=[],
+                failed_allocation_ids=[],
+                lost_allocation_ids=[],
+                pause_requested=False,
+                cooldown_required=cooldown,
+                thermal_observations=self.thermal_observations(
+                    schedule, wave_index=0, temperatures=temperatures
+                ),
+                decided_at_ns=2000,
+            )
+
+        self.assertEqual(decide((89.999, 70, 70), False)["status"], "launch")
+        self.assertEqual(
+            decide((90, 70, 70), False)["status"], "thermal-stop-required"
+        )
+        self.assertEqual(decide((79.999, 70, 70), True)["status"], "launch")
+        self.assertEqual(decide((80, 70, 70), True)["status"], "thermal-cooldown")
+
+    def test_thermal_launch_requires_exact_three_host_wave_identity(self) -> None:
+        schedule = build_schedule(ENFORCEMENT_ID)
+        observations = self.thermal_observations(
+            schedule, wave_index=0, temperatures=(40, 40, 40)
+        )
+        for label, mutate in (
+            ("missing", lambda rows: rows.pop()),
+            ("duplicate", lambda rows: rows.__setitem__(2, rows[0])),
+            (
+                "active attempt",
+                lambda rows: rows[0].__setitem__("attempt_id", "already-running"),
+            ),
+            (
+                "wrong allocation",
+                lambda rows: rows[0].__setitem__("allocation_id", "full-initial-03"),
+            ),
+        ):
+            with self.subTest(label=label):
+                mutated = copy.deepcopy(observations)
+                mutate(mutated)
+                if label not in {"missing", "duplicate"}:
+                    mutated[0] = reseal(mutated[0])
+                with self.assertRaises(ContractError):
+                    scheduler_decision(
+                        schedule=schedule,
+                        checkpoints=[],
+                        plan_sha256=PLAN_ID,
+                        run_identity_sha256=RUN_ID,
+                        cell_id=CELL_ID,
+                        open_attempt_ids=[],
+                        failed_allocation_ids=[],
+                        lost_allocation_ids=[],
+                        pause_requested=False,
+                        cooldown_required=False,
+                        thermal_observations=mutated,
+                        decided_at_ns=2000,
+                    )
+
+        with self.assertRaises(ContractError):
+            scheduler_decision(
+                schedule=schedule,
+                checkpoints=[],
+                plan_sha256=PLAN_ID,
+                run_identity_sha256=RUN_ID,
+                cell_id=CELL_ID,
+                open_attempt_ids=[],
+                failed_allocation_ids=[],
+                lost_allocation_ids=[],
+                pause_requested=False,
+                cooldown_required=False,
+                thermal_observations=observations,
+                decided_at_ns=60_000_001_001,
+            )
+
+    def test_wave_checkpoint_is_deterministic_and_drives_restart_skip(self) -> None:
+        schedule = build_schedule(ENFORCEMENT_ID)
+        checkpoint = self.checkpoint(schedule, 0)
+        self.assertEqual(checkpoint, self.checkpoint(schedule, 0))
+        decision = scheduler_decision(
+            schedule=schedule,
+            checkpoints=[checkpoint],
+            plan_sha256=PLAN_ID,
+            run_identity_sha256=RUN_ID,
+            cell_id=CELL_ID,
+            open_attempt_ids=[],
+            failed_allocation_ids=[],
+            lost_allocation_ids=[],
+            pause_requested=False,
+            cooldown_required=False,
+            thermal_observations=self.thermal_observations(
+                schedule, wave_index=1, temperatures=(40, 40, 40)
+            ),
+            decided_at_ns=2000,
+        )
+        self.assertEqual(decision["status"], "launch")
+        self.assertEqual(decision["next_wave_index"], 1)
+        self.assertEqual(
+            decision["allocation_ids"], schedule["waves"][1]["allocation_ids"]
+        )
+
+    def test_checkpoint_mutations_and_noncontiguous_chain_reject(self) -> None:
+        schedule = build_schedule(ENFORCEMENT_ID)
+        checkpoint = self.checkpoint(schedule, 0)
+        for label, mutate in (
+            (
+                "terminal",
+                lambda row: row["allocation_terminals"][0].__setitem__(
+                    "status", "failed"
+                ),
+            ),
+            (
+                "count",
+                lambda row: row.__setitem__("cumulative_benchmark_count", 1),
+            ),
+            ("next", lambda row: row.__setitem__("next_wave_index", 2)),
+        ):
+            with self.subTest(label=label):
+                mutated = copy.deepcopy(checkpoint)
+                mutate(mutated)
+                with self.assertRaises(ContractError):
+                    validate_wave_checkpoint(
+                        reseal(mutated),
+                        schedule=schedule,
+                        plan_sha256=PLAN_ID,
+                        run_identity_sha256=RUN_ID,
+                        cell_id=CELL_ID,
+                    )
+        with self.assertRaises(ContractError):
+            scheduler_decision(
+                schedule=schedule,
+                checkpoints=[self.checkpoint(schedule, 1)],
+                plan_sha256=PLAN_ID,
+                run_identity_sha256=RUN_ID,
+                cell_id=CELL_ID,
+                open_attempt_ids=[],
+                failed_allocation_ids=[],
+                lost_allocation_ids=[],
+                pause_requested=False,
+                cooldown_required=False,
+                thermal_observations=[],
+                decided_at_ns=2000,
+            )
+
+    def test_scheduler_never_launches_around_unclosed_failure_loss_or_pause(self) -> None:
+        schedule = build_schedule(ENFORCEMENT_ID)
+        cases = (
+            ("blocked-unclosed", ["attempt-open"], [], [], False),
+            ("blocked-failure", [], ["full-initial-00"], [], False),
+            ("blocked-failure", [], [], ["full-initial-01"], False),
+            ("paused", [], [], [], True),
+        )
+        for expected, opens, failed, lost, pause in cases:
+            with self.subTest(expected=expected, failed=failed, lost=lost):
+                decision = scheduler_decision(
+                    schedule=schedule,
+                    checkpoints=[],
+                    plan_sha256=PLAN_ID,
+                    run_identity_sha256=RUN_ID,
+                    cell_id=CELL_ID,
+                    open_attempt_ids=opens,
+                    failed_allocation_ids=failed,
+                    lost_allocation_ids=lost,
+                    pause_requested=pause,
+                    cooldown_required=False,
+                    thermal_observations=[],
+                    decided_at_ns=2000,
+                )
+                self.assertEqual(decision["status"], expected)
+                self.assertEqual(decision["allocation_ids"], [])
+
+    def test_all_sixteen_checkpoints_close_the_cell_without_thermal_probe(self) -> None:
+        schedule = build_schedule(ENFORCEMENT_ID)
+        checkpoints = [self.checkpoint(schedule, index) for index in range(WAVE_COUNT)]
+        decision = scheduler_decision(
+            schedule=schedule,
+            checkpoints=checkpoints,
+            plan_sha256=PLAN_ID,
+            run_identity_sha256=RUN_ID,
+            cell_id=CELL_ID,
+            open_attempt_ids=[],
+            failed_allocation_ids=[],
+            lost_allocation_ids=[],
+            pause_requested=False,
+            cooldown_required=False,
+            thermal_observations=[],
+            decided_at_ns=2000,
+        )
+        self.assertEqual(decision["status"], "complete")
+        self.assertIsNone(decision["next_wave_index"])
+        self.assertEqual(checkpoints[-1]["cumulative_benchmark_count"], POPULATION_COUNT)
+
+    def test_thermal_stop_binds_active_attempt_and_exact_systemd_unit(self) -> None:
+        schedule = build_schedule(ENFORCEMENT_ID)
+        observation = self.thermal_observations(
+            schedule,
+            wave_index=0,
+            temperatures=(90, 40, 40),
+            attempt_ids=("active-attempt", None, None),
+        )[0]
+        record = build_thermal_stop(
+            observation=observation,
+            session_id="session-001",
+            unit_prefix=UNIT_PREFIX,
+            exit_code=0,
+            post_stop_unit_state="inactive",
+            stopped_at_ns=2000,
+        )
+        self.assertEqual(
+            record["command"],
+            [
+                "systemctl",
+                "--user",
+                "stop",
+                "axeyum-smtcomp-full-session-001.service",
+            ],
+        )
+        for label, mutate in (
+            ("blanket", lambda row: row.__setitem__("command", ["pkill", "solver"])),
+            (
+                "other unit",
+                lambda row: row.__setitem__(
+                    "remote_unit", "axeyum-smtcomp-full-other.service"
+                ),
+            ),
+            ("failed stop", lambda row: row.__setitem__("exit_code", 1)),
+            (
+                "active state",
+                lambda row: row.__setitem__("post_stop_unit_state", "active"),
+            ),
+        ):
+            with self.subTest(label=label):
+                mutated = copy.deepcopy(record)
+                mutate(mutated)
+                with self.assertRaises(ContractError):
+                    validate_thermal_stop(
+                        reseal(mutated),
+                        observation=observation,
+                        session_id="session-001",
+                        unit_prefix=UNIT_PREFIX,
+                    )
+
+        cool = self.thermal_observations(
+            schedule,
+            wave_index=0,
+            temperatures=(89.999, 40, 40),
+            attempt_ids=("active-attempt", None, None),
+        )[0]
+        with self.assertRaises(ContractError):
+            build_thermal_stop(
+                observation=cool,
+                session_id="session-001",
+                unit_prefix=UNIT_PREFIX,
+                exit_code=0,
+                post_stop_unit_state="inactive",
+                stopped_at_ns=2000,
+            )
 
 
 if __name__ == "__main__":

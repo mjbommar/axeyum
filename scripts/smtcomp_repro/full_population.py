@@ -9,7 +9,10 @@ write shared storage, or launch a solver.
 from __future__ import annotations
 
 import copy
+import hashlib
+import json
 import re
+from decimal import Decimal, InvalidOperation
 from typing import Any
 
 from multi_host import allocation
@@ -19,6 +22,10 @@ from resume_contract import ContractError, digest
 POPULATION_SCHEMA = "axeyum.smtcomp-credited-full-population.v1"
 SCHEDULE_SCHEMA = "axeyum.smtcomp-credited-full-schedule.v1"
 WAVE_SCHEMA = "axeyum.smtcomp-credited-full-wave.v1"
+THERMAL_OBSERVATION_SCHEMA = "axeyum.smtcomp-credited-full-thermal-observation.v1"
+THERMAL_STOP_SCHEMA = "axeyum.smtcomp-credited-full-thermal-stop.v1"
+CHECKPOINT_SCHEMA = "axeyum.smtcomp-credited-full-wave-checkpoint.v1"
+SCHEDULER_DECISION_SCHEMA = "axeyum.smtcomp-credited-full-scheduler-decision.v1"
 
 POPULATION_COUNT = 45_905
 SHARD_COUNT = 96
@@ -44,6 +51,12 @@ MEMORY_SWAP_BYTES = 0
 PIDS_MAX = 64
 WALL_LIMIT_MS = 20_000
 AXEYUM_INTERNAL_TIMEOUT_MS = 19_000
+THERMAL_STOP_MILLICELSIUS = 90_000
+THERMAL_RESUME_MILLICELSIUS = 80_000
+THERMAL_MAX_INTERVAL_NS = 60_000_000_000
+THERMAL_SENSOR_CHIP = "k10temp-pci-00c3"
+THERMAL_SENSOR_LABEL = "Tctl"
+THERMAL_SENSOR_FIELD = "temp1_input"
 
 SHA256 = re.compile(r"[0-9a-f]{64}\Z")
 POPULATION_FIELDS = {
@@ -77,6 +90,81 @@ WAVE_FIELDS = {
     "benchmark_count",
     "record_sha256",
 }
+THERMAL_OBSERVATION_FIELDS = {
+    "schema",
+    "plan_sha256",
+    "run_identity_sha256",
+    "cell_id",
+    "wave_index",
+    "allocation_id",
+    "attempt_id",
+    "host_id",
+    "sensor_chip",
+    "sensor_label",
+    "sensor_field",
+    "temperature_millicelsius",
+    "observed_at_ns",
+    "sensors_json_sha256",
+    "sensors_json_bytes",
+    "record_sha256",
+}
+THERMAL_STOP_FIELDS = {
+    "schema",
+    "plan_sha256",
+    "run_identity_sha256",
+    "cell_id",
+    "wave_index",
+    "allocation_id",
+    "attempt_id",
+    "session_id",
+    "host_id",
+    "thermal_observation_record_sha256",
+    "remote_unit",
+    "command",
+    "exit_code",
+    "post_stop_unit_state",
+    "stopped_at_ns",
+    "record_sha256",
+}
+CHECKPOINT_FIELDS = {
+    "schema",
+    "schedule_record_sha256",
+    "plan_sha256",
+    "run_identity_sha256",
+    "cell_id",
+    "wave_index",
+    "allocation_terminals",
+    "cumulative_benchmark_count",
+    "next_wave_index",
+    "record_sha256",
+}
+CHECKPOINT_TERMINAL_FIELDS = {
+    "allocation_id",
+    "attempt_id",
+    "status",
+    "terminal_record_sha256",
+}
+SCHEDULER_DECISION_FIELDS = {
+    "schema",
+    "schedule_record_sha256",
+    "plan_sha256",
+    "run_identity_sha256",
+    "cell_id",
+    "status",
+    "completed_checkpoint_sha256s",
+    "next_wave_index",
+    "allocation_ids",
+    "open_attempt_ids",
+    "failed_allocation_ids",
+    "lost_allocation_ids",
+    "pause_requested",
+    "cooldown_required",
+    "thermal_observation_sha256s",
+    "decided_at_ns",
+    "record_sha256",
+}
+SAFE_ID = re.compile(r"[A-Za-z0-9][A-Za-z0-9_.-]{0,127}\Z")
+SAFE_UNIT_PREFIX = re.compile(r"[A-Za-z0-9][A-Za-z0-9_.-]{0,63}\Z")
 
 
 def _sealed(value: dict[str, Any]) -> dict[str, Any]:
@@ -90,6 +178,18 @@ def _require_sha256(value: object, field: str) -> str:
     if not isinstance(value, str) or not SHA256.fullmatch(value):
         raise ContractError(f"invalid {field}")
     return value
+
+
+def _require_safe_id(value: object, field: str) -> str:
+    if not isinstance(value, str) or not SAFE_ID.fullmatch(value):
+        raise ContractError(f"invalid {field}")
+    return value
+
+
+def _validate_seal(value: dict[str, Any]) -> None:
+    expected = value.get("record_sha256")
+    if not isinstance(expected, str) or expected != _sealed(value)["record_sha256"]:
+        raise ContractError("record seal mismatch")
 
 
 def shard_benchmark_count(shard_id: int) -> int:
@@ -247,3 +347,503 @@ def validate_schedule(schedule: dict[str, Any]) -> dict[str, Any]:
         if set(wave) != WAVE_FIELDS or wave.get("schema") != WAVE_SCHEMA:
             raise ContractError("full-population wave field/schema mismatch")
     return schedule
+
+
+def _unique_json_object(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
+    result: dict[str, Any] = {}
+    for key, value in pairs:
+        if key in result:
+            raise ContractError("duplicate key in sensors JSON")
+        result[key] = value
+    return result
+
+
+def _reject_json_constant(value: str) -> None:
+    raise ContractError(f"non-finite constant in sensors JSON: {value}")
+
+
+def _parse_sensors_json(raw: bytes) -> tuple[dict[str, Any], int]:
+    try:
+        decoded = raw.decode("utf-8")
+        payload = json.loads(
+            decoded,
+            object_pairs_hook=_unique_json_object,
+            parse_constant=_reject_json_constant,
+        )
+    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise ContractError("malformed sensors JSON") from exc
+    if not isinstance(payload, dict):
+        raise ContractError("sensors JSON root must be an object")
+    try:
+        value = payload[THERMAL_SENSOR_CHIP][THERMAL_SENSOR_LABEL][
+            THERMAL_SENSOR_FIELD
+        ]
+    except (KeyError, TypeError) as exc:
+        raise ContractError("required CPU thermal sensor is missing") from exc
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        raise ContractError("CPU thermal sensor value is not numeric")
+    try:
+        millicelsius = Decimal(str(value)) * 1000
+    except InvalidOperation as exc:
+        raise ContractError("CPU thermal sensor value is invalid") from exc
+    if not millicelsius.is_finite() or millicelsius != millicelsius.to_integral_value():
+        raise ContractError("CPU thermal sensor lacks exact millidegree precision")
+    result = int(millicelsius)
+    if not 0 <= result <= 150_000:
+        raise ContractError("CPU thermal sensor value is outside the accepted range")
+    return payload, result
+
+
+def build_thermal_observation(
+    *,
+    sensors_json: bytes,
+    plan_sha256: str,
+    run_identity_sha256: str,
+    cell_id: str,
+    wave_index: int,
+    allocation_id: str,
+    attempt_id: str | None,
+    host_id: str,
+    observed_at_ns: int,
+) -> dict[str, Any]:
+    """Parse and seal one exact-source ``sensors -j`` observation."""
+
+    if not isinstance(sensors_json, bytes) or not sensors_json:
+        raise ContractError("sensors JSON must be non-empty bytes")
+    _payload, millicelsius = _parse_sensors_json(sensors_json)
+    observation = _sealed(
+        {
+            "schema": THERMAL_OBSERVATION_SCHEMA,
+            "plan_sha256": _require_sha256(plan_sha256, "plan_sha256"),
+            "run_identity_sha256": _require_sha256(
+                run_identity_sha256, "run_identity_sha256"
+            ),
+            "cell_id": _require_safe_id(cell_id, "cell_id"),
+            "wave_index": wave_index,
+            "allocation_id": _require_safe_id(allocation_id, "allocation_id"),
+            "attempt_id": (
+                None
+                if attempt_id is None
+                else _require_safe_id(attempt_id, "attempt_id")
+            ),
+            "host_id": _require_safe_id(host_id, "host_id"),
+            "sensor_chip": THERMAL_SENSOR_CHIP,
+            "sensor_label": THERMAL_SENSOR_LABEL,
+            "sensor_field": THERMAL_SENSOR_FIELD,
+            "temperature_millicelsius": millicelsius,
+            "observed_at_ns": observed_at_ns,
+            "sensors_json_sha256": hashlib.sha256(sensors_json).hexdigest(),
+            "sensors_json_bytes": len(sensors_json),
+        }
+    )
+    return validate_thermal_observation(observation)
+
+
+def validate_thermal_observation(observation: dict[str, Any]) -> dict[str, Any]:
+    if (
+        set(observation) != THERMAL_OBSERVATION_FIELDS
+        or observation.get("schema") != THERMAL_OBSERVATION_SCHEMA
+    ):
+        raise ContractError("thermal observation field/schema mismatch")
+    _validate_seal(observation)
+    for field in ("plan_sha256", "run_identity_sha256", "sensors_json_sha256"):
+        _require_sha256(observation.get(field), field)
+    for field in ("cell_id", "allocation_id", "host_id"):
+        _require_safe_id(observation.get(field), field)
+    attempt_id = observation.get("attempt_id")
+    if attempt_id is not None:
+        _require_safe_id(attempt_id, "attempt_id")
+    if (
+        type(observation.get("wave_index")) is not int
+        or not 0 <= observation["wave_index"] < WAVE_COUNT
+        or type(observation.get("observed_at_ns")) is not int
+        or observation["observed_at_ns"] <= 0
+        or type(observation.get("temperature_millicelsius")) is not int
+        or not 0 <= observation["temperature_millicelsius"] <= 150_000
+        or type(observation.get("sensors_json_bytes")) is not int
+        or observation["sensors_json_bytes"] <= 0
+    ):
+        raise ContractError("thermal observation numeric field mismatch")
+    if (
+        observation["sensor_chip"] != THERMAL_SENSOR_CHIP
+        or observation["sensor_label"] != THERMAL_SENSOR_LABEL
+        or observation["sensor_field"] != THERMAL_SENSOR_FIELD
+        or observation["host_id"] not in HOST_IDS
+    ):
+        raise ContractError("thermal observation source/host mismatch")
+    return observation
+
+
+def _validate_thermal_launch_set(
+    *,
+    observations: list[dict[str, Any]],
+    schedule: dict[str, Any],
+    plan_sha256: str,
+    run_identity_sha256: str,
+    cell_id: str,
+    wave_index: int,
+    cooldown_required: bool,
+    decided_at_ns: int,
+) -> tuple[bool, str, list[str]]:
+    if type(cooldown_required) is not bool:
+        raise ContractError("cooldown_required must be Boolean")
+    wave = schedule["waves"][wave_index]
+    expected = dict(zip(wave["host_ids"], wave["allocation_ids"], strict=True))
+    by_host: dict[str, dict[str, Any]] = {}
+    for observation in observations:
+        validate_thermal_observation(observation)
+        host_id = observation["host_id"]
+        if host_id in by_host:
+            raise ContractError("duplicate host thermal observation")
+        if (
+            observation["plan_sha256"] != plan_sha256
+            or observation["run_identity_sha256"] != run_identity_sha256
+            or observation["cell_id"] != cell_id
+            or observation["wave_index"] != wave_index
+            or observation["allocation_id"] != expected.get(host_id)
+            or observation["attempt_id"] is not None
+            or observation["observed_at_ns"] > decided_at_ns
+            or decided_at_ns - observation["observed_at_ns"] > THERMAL_MAX_INTERVAL_NS
+        ):
+            raise ContractError("pre-wave thermal observation identity mismatch")
+        by_host[host_id] = observation
+    if set(by_host) != set(HOST_IDS):
+        raise ContractError("pre-wave thermal observations do not cover every host")
+    record_ids = [by_host[host]["record_sha256"] for host in HOST_IDS]
+    temperatures = [by_host[host]["temperature_millicelsius"] for host in HOST_IDS]
+    if any(value >= THERMAL_STOP_MILLICELSIUS for value in temperatures):
+        return False, "thermal-stop-required", record_ids
+    if cooldown_required and any(
+        value >= THERMAL_RESUME_MILLICELSIUS for value in temperatures
+    ):
+        return False, "thermal-cooldown", record_ids
+    return True, "launch", record_ids
+
+
+def build_thermal_stop(
+    *,
+    observation: dict[str, Any],
+    session_id: str,
+    unit_prefix: str,
+    exit_code: int,
+    post_stop_unit_state: str,
+    stopped_at_ns: int,
+) -> dict[str, Any]:
+    """Seal proof that only an overheated allocation's registered unit stopped."""
+
+    validate_thermal_observation(observation)
+    if observation["temperature_millicelsius"] < THERMAL_STOP_MILLICELSIUS:
+        raise ContractError("thermal stop requires an at-threshold observation")
+    if observation["attempt_id"] is None:
+        raise ContractError("thermal stop requires an active allocation attempt")
+    session = _require_safe_id(session_id, "session_id")
+    if not SAFE_UNIT_PREFIX.fullmatch(unit_prefix):
+        raise ContractError("invalid thermal-stop unit prefix")
+    remote_unit = f"{unit_prefix}-{session}.service"
+    record = _sealed(
+        {
+            "schema": THERMAL_STOP_SCHEMA,
+            "plan_sha256": observation["plan_sha256"],
+            "run_identity_sha256": observation["run_identity_sha256"],
+            "cell_id": observation["cell_id"],
+            "wave_index": observation["wave_index"],
+            "allocation_id": observation["allocation_id"],
+            "attempt_id": observation["attempt_id"],
+            "session_id": session,
+            "host_id": observation["host_id"],
+            "thermal_observation_record_sha256": observation["record_sha256"],
+            "remote_unit": remote_unit,
+            "command": ["systemctl", "--user", "stop", remote_unit],
+            "exit_code": exit_code,
+            "post_stop_unit_state": post_stop_unit_state,
+            "stopped_at_ns": stopped_at_ns,
+        }
+    )
+    return validate_thermal_stop(
+        record,
+        observation=observation,
+        session_id=session,
+        unit_prefix=unit_prefix,
+    )
+
+
+def validate_thermal_stop(
+    record: dict[str, Any],
+    *,
+    observation: dict[str, Any],
+    session_id: str,
+    unit_prefix: str,
+) -> dict[str, Any]:
+    validate_thermal_observation(observation)
+    if set(record) != THERMAL_STOP_FIELDS or record.get("schema") != THERMAL_STOP_SCHEMA:
+        raise ContractError("thermal-stop field/schema mismatch")
+    _validate_seal(record)
+    session = _require_safe_id(session_id, "session_id")
+    if not SAFE_UNIT_PREFIX.fullmatch(unit_prefix):
+        raise ContractError("invalid thermal-stop unit prefix")
+    expected_unit = f"{unit_prefix}-{session}.service"
+    identity_fields = (
+        "plan_sha256",
+        "run_identity_sha256",
+        "cell_id",
+        "wave_index",
+        "allocation_id",
+        "attempt_id",
+        "host_id",
+    )
+    if any(record[field] != observation[field] for field in identity_fields):
+        raise ContractError("thermal-stop observation identity mismatch")
+    if (
+        observation["temperature_millicelsius"] < THERMAL_STOP_MILLICELSIUS
+        or record["thermal_observation_record_sha256"]
+        != observation["record_sha256"]
+        or record["session_id"] != session
+        or record["remote_unit"] != expected_unit
+        or record["command"] != ["systemctl", "--user", "stop", expected_unit]
+        or record["exit_code"] != 0
+        or record["post_stop_unit_state"] not in {"inactive", "failed"}
+        or type(record["stopped_at_ns"]) is not int
+        or record["stopped_at_ns"] <= observation["observed_at_ns"]
+    ):
+        raise ContractError("thermal-stop exact-unit evidence mismatch")
+    return record
+
+
+def cumulative_benchmark_count(schedule: dict[str, Any], wave_index: int) -> int:
+    validate_schedule(schedule)
+    if type(wave_index) is not int or not 0 <= wave_index < WAVE_COUNT:
+        raise ContractError("invalid checkpoint wave index")
+    return sum(
+        wave["benchmark_count"] for wave in schedule["waves"][: wave_index + 1]
+    )
+
+
+def build_wave_checkpoint(
+    *,
+    schedule: dict[str, Any],
+    plan_sha256: str,
+    run_identity_sha256: str,
+    cell_id: str,
+    wave_index: int,
+    allocation_terminals: list[dict[str, Any]],
+    cumulative_records: int,
+) -> dict[str, Any]:
+    """Build derived restart state after all three wave allocations complete."""
+
+    validate_schedule(schedule)
+    if type(wave_index) is not int or not 0 <= wave_index < WAVE_COUNT:
+        raise ContractError("invalid checkpoint wave index")
+    expected_ids = schedule["waves"][wave_index]["allocation_ids"]
+    by_allocation: dict[str, dict[str, Any]] = {}
+    for terminal in allocation_terminals:
+        if set(terminal) != CHECKPOINT_TERMINAL_FIELDS:
+            raise ContractError("checkpoint terminal field mismatch")
+        allocation_id = _require_safe_id(terminal.get("allocation_id"), "allocation_id")
+        if allocation_id in by_allocation:
+            raise ContractError("duplicate checkpoint allocation terminal")
+        _require_safe_id(terminal.get("attempt_id"), "attempt_id")
+        _require_sha256(terminal.get("terminal_record_sha256"), "terminal_record_sha256")
+        if terminal.get("status") != "completed":
+            raise ContractError("checkpoint cannot include a failed allocation")
+        by_allocation[allocation_id] = copy.deepcopy(terminal)
+    if set(by_allocation) != set(expected_ids):
+        raise ContractError("checkpoint does not close the exact wave allocations")
+    expected_records = cumulative_benchmark_count(schedule, wave_index)
+    if cumulative_records != expected_records:
+        raise ContractError("checkpoint cumulative population mismatch")
+    record = _sealed(
+        {
+            "schema": CHECKPOINT_SCHEMA,
+            "schedule_record_sha256": schedule["record_sha256"],
+            "plan_sha256": _require_sha256(plan_sha256, "plan_sha256"),
+            "run_identity_sha256": _require_sha256(
+                run_identity_sha256, "run_identity_sha256"
+            ),
+            "cell_id": _require_safe_id(cell_id, "cell_id"),
+            "wave_index": wave_index,
+            "allocation_terminals": [by_allocation[value] for value in expected_ids],
+            "cumulative_benchmark_count": cumulative_records,
+            "next_wave_index": wave_index + 1 if wave_index + 1 < WAVE_COUNT else None,
+        }
+    )
+    return validate_wave_checkpoint(
+        record,
+        schedule=schedule,
+        plan_sha256=plan_sha256,
+        run_identity_sha256=run_identity_sha256,
+        cell_id=cell_id,
+    )
+
+
+def validate_wave_checkpoint(
+    checkpoint: dict[str, Any],
+    *,
+    schedule: dict[str, Any],
+    plan_sha256: str,
+    run_identity_sha256: str,
+    cell_id: str,
+) -> dict[str, Any]:
+    validate_schedule(schedule)
+    if set(checkpoint) != CHECKPOINT_FIELDS or checkpoint.get("schema") != CHECKPOINT_SCHEMA:
+        raise ContractError("wave checkpoint field/schema mismatch")
+    _validate_seal(checkpoint)
+    if (
+        checkpoint["schedule_record_sha256"] != schedule["record_sha256"]
+        or checkpoint["plan_sha256"] != _require_sha256(plan_sha256, "plan_sha256")
+        or checkpoint["run_identity_sha256"]
+        != _require_sha256(run_identity_sha256, "run_identity_sha256")
+        or checkpoint["cell_id"] != _require_safe_id(cell_id, "cell_id")
+    ):
+        raise ContractError("wave checkpoint run identity mismatch")
+    wave_index = checkpoint.get("wave_index")
+    if type(wave_index) is not int or not 0 <= wave_index < WAVE_COUNT:
+        raise ContractError("invalid checkpoint wave index")
+    terminals = checkpoint.get("allocation_terminals")
+    if not isinstance(terminals, list):
+        raise ContractError("checkpoint terminals must be a list")
+    expected_ids = schedule["waves"][wave_index]["allocation_ids"]
+    if [row.get("allocation_id") for row in terminals] != expected_ids:
+        raise ContractError("checkpoint allocation order/identity mismatch")
+    for terminal in terminals:
+        if set(terminal) != CHECKPOINT_TERMINAL_FIELDS:
+            raise ContractError("checkpoint terminal field mismatch")
+        _require_safe_id(terminal.get("attempt_id"), "attempt_id")
+        _require_sha256(terminal.get("terminal_record_sha256"), "terminal_record_sha256")
+        if terminal.get("status") != "completed":
+            raise ContractError("checkpoint includes non-completed terminal")
+    expected_count = cumulative_benchmark_count(schedule, wave_index)
+    expected_next = wave_index + 1 if wave_index + 1 < WAVE_COUNT else None
+    if (
+        checkpoint["cumulative_benchmark_count"] != expected_count
+        or checkpoint["next_wave_index"] != expected_next
+    ):
+        raise ContractError("wave checkpoint count/continuation mismatch")
+    return checkpoint
+
+
+def validate_checkpoint_chain(
+    checkpoints: list[dict[str, Any]],
+    *,
+    schedule: dict[str, Any],
+    plan_sha256: str,
+    run_identity_sha256: str,
+    cell_id: str,
+) -> list[dict[str, Any]]:
+    if not isinstance(checkpoints, list) or len(checkpoints) > WAVE_COUNT:
+        raise ContractError("invalid wave checkpoint chain")
+    for expected_index, checkpoint in enumerate(checkpoints):
+        validate_wave_checkpoint(
+            checkpoint,
+            schedule=schedule,
+            plan_sha256=plan_sha256,
+            run_identity_sha256=run_identity_sha256,
+            cell_id=cell_id,
+        )
+        if checkpoint["wave_index"] != expected_index:
+            raise ContractError("wave checkpoint chain is not a contiguous prefix")
+    return checkpoints
+
+
+def _sorted_safe_ids(values: list[str], field: str) -> list[str]:
+    if not isinstance(values, list):
+        raise ContractError(f"{field} must be a list")
+    checked = [_require_safe_id(value, field) for value in values]
+    if checked != sorted(set(checked)):
+        raise ContractError(f"{field} must be sorted and unique")
+    return checked
+
+
+def scheduler_decision(
+    *,
+    schedule: dict[str, Any],
+    checkpoints: list[dict[str, Any]],
+    plan_sha256: str,
+    run_identity_sha256: str,
+    cell_id: str,
+    open_attempt_ids: list[str],
+    failed_allocation_ids: list[str],
+    lost_allocation_ids: list[str],
+    pause_requested: bool,
+    cooldown_required: bool,
+    thermal_observations: list[dict[str, Any]],
+    decided_at_ns: int,
+) -> dict[str, Any]:
+    """Return the only permitted next action from durable scheduler state."""
+
+    validate_schedule(schedule)
+    plan = _require_sha256(plan_sha256, "plan_sha256")
+    run = _require_sha256(run_identity_sha256, "run_identity_sha256")
+    cell = _require_safe_id(cell_id, "cell_id")
+    validate_checkpoint_chain(
+        checkpoints,
+        schedule=schedule,
+        plan_sha256=plan,
+        run_identity_sha256=run,
+        cell_id=cell,
+    )
+    opens = _sorted_safe_ids(open_attempt_ids, "open_attempt_ids")
+    failed = _sorted_safe_ids(failed_allocation_ids, "failed_allocation_ids")
+    lost = _sorted_safe_ids(lost_allocation_ids, "lost_allocation_ids")
+    if type(pause_requested) is not bool or type(cooldown_required) is not bool:
+        raise ContractError("scheduler flags must be Boolean")
+    if type(decided_at_ns) is not int or decided_at_ns <= 0:
+        raise ContractError("invalid scheduler decision time")
+    initial_ids = {
+        row["allocation_id"]
+        for row in schedule["allocations"]
+        if row["generation"] == 0
+    }
+    if not set(failed + lost) <= initial_ids:
+        raise ContractError("scheduler failure names a non-initial allocation")
+
+    next_wave = len(checkpoints) if len(checkpoints) < WAVE_COUNT else None
+    status: str
+    allocation_ids: list[str] = []
+    thermal_ids: list[str] = []
+    if opens:
+        status = "blocked-unclosed"
+    elif failed or lost:
+        status = "blocked-failure"
+    elif pause_requested:
+        status = "paused"
+    elif next_wave is None:
+        status = "complete"
+    else:
+        permitted, thermal_status, thermal_ids = _validate_thermal_launch_set(
+            observations=thermal_observations,
+            schedule=schedule,
+            plan_sha256=plan,
+            run_identity_sha256=run,
+            cell_id=cell,
+            wave_index=next_wave,
+            cooldown_required=cooldown_required,
+            decided_at_ns=decided_at_ns,
+        )
+        status = "launch" if permitted else thermal_status
+        if permitted:
+            allocation_ids = schedule["waves"][next_wave]["allocation_ids"]
+    decision = _sealed(
+        {
+            "schema": SCHEDULER_DECISION_SCHEMA,
+            "schedule_record_sha256": schedule["record_sha256"],
+            "plan_sha256": plan,
+            "run_identity_sha256": run,
+            "cell_id": cell,
+            "status": status,
+            "completed_checkpoint_sha256s": [
+                checkpoint["record_sha256"] for checkpoint in checkpoints
+            ],
+            "next_wave_index": next_wave,
+            "allocation_ids": allocation_ids,
+            "open_attempt_ids": opens,
+            "failed_allocation_ids": failed,
+            "lost_allocation_ids": lost,
+            "pause_requested": pause_requested,
+            "cooldown_required": cooldown_required,
+            "thermal_observation_sha256s": thermal_ids,
+            "decided_at_ns": decided_at_ns,
+        }
+    )
+    if set(decision) != SCHEDULER_DECISION_FIELDS:
+        raise AssertionError("internal scheduler decision field drift")
+    return decision
