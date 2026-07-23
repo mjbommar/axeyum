@@ -351,15 +351,18 @@ gate.
    now closes that boundary: all populations account, zero known-status
    contradictions and zero cross-solver disagreements remain, and the
    self-sealed JSON/Markdown reproduce from the three validated roots.
-3. **Credited full population — F0 plan preregistered.** The
+3. **Credited full population — F1 fixture implementation complete on topic.** The
    [full-population plan](../smtcomp-credited-full-population-plan-2026-07-23.md)
    freezes the same 45,905-file selection for all three solvers, a 96-shard/
-   48-allocation wave schedule, six-worker/16-GiB-per-host resource envelope,
+   48-allocation wave schedule, six-worker aggregate/16-GiB-per-host resource envelope,
    exact different-host retries, thermal backoff, and complete per-logic
-   adjudication. Fixture implementation is next. Live preparation remains
-   blocked until that implementation and plan are integrated on a branch-wide
-   green `origin/main`; the SMT lane does not own the current bench/CAS format
-   drift.
+   adjudication. The [F1 result](../smtcomp-credited-full-population-f1-result-2026-07-23.md)
+   now closes fixture-only selection rehashing, 432-command composition,
+   checkpoint/restart scheduling, exact thermal-unit stop, and supervised wave
+   interruption tests. Its final supervisor commit still needs integration.
+   Live preparation remains blocked until all F1 bytes are integrated on a
+   branch-wide green `origin/main`; the SMT lane does not own the current
+   bench/CAS format drift or Lean's stale `resume_fs.py` historical-source pin.
 
 The same implementation rule continues to apply: prove each new mechanism and
 its destructive/interruption tests on a tiny corpus before spending the full
@@ -417,6 +420,8 @@ Repository:
   `docs/plan/generated/smtcomp-repaired-p0-comparison.{json,md}`;
 - credited full-population execution plan:
   `docs/plan/smtcomp-credited-full-population-plan-2026-07-23.md`;
+- credited full-population F1 fixture result:
+  `docs/plan/smtcomp-credited-full-population-f1-result-2026-07-23.md`;
 - candidate failure handoff:
   `docs/plan/smtcomp-full-library-candidate-run-handoff-2026-07-21.md`;
 - ranked gap plan: `docs/plan/full-library-gap-closing-plan-2026-07-22.md`;
@@ -457,9 +462,11 @@ NAS (shared, corpus read-only in practice):
    byte-identical replay are frozen in the closure result. Do not launch another
    retry. The combined three-cell repaired-P0 comparison is also complete and
    keeps the 1,305-row FP scope separate from the 1,810-row Axeyum/cvc5 scope.
-   The credited full-population F0 plan is preregistered. Implement and prove its
-   fixture-only preparation, wave scheduler, and thermal-stop contract next; do
-   not publish a live preparation while `origin/main` is branch-wide red. The active solver
+   The credited full-population F1 fixture result is complete on the SMT topic
+   branch. Integrate its final supervised-wave bytes, then implement the F2 live
+   adapter and publish only a process-free `launch_authorized=false` preparation
+   after branch-wide `just check` is green. Do not launch a solver allocation
+   while `origin/main` is branch-wide red. The active solver
    capability checkpoint is
    [`../checked-multi-binder-quantified-uf-models-2026-07-22.md`](../checked-multi-binder-quantified-uf-models-2026-07-22.md).
 5. Update `STATUS.md` and this file before handoff; push only a green topic
