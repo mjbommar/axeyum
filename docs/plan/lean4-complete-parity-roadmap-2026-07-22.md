@@ -126,7 +126,12 @@ consumed with zero credit. The subsequent
 appends 68 files / 149,513 bytes completion-last with zero processes and binds
 the 64 passes, 123 generated rows, 66 retained payloads, 56 metadata rows, and
 conditional failure-log absence without promoting any outcome. R5 is closed;
-next preregister attempt 004 with conditional-log semantics and fresh roots.
+the source-first
+[`R6 attempt-004 plan`](lean-u2-official-execution-tl0.6.3-m2-r6-attempt-004-plan-2026-07-23.md)
+now freezes fresh roots and one selected process on the unchanged qualified
+lane. It selects the 123-row all-pass or 124-row any-failure artifact shape
+only after exact JUnit validation. Next implement/test/push R6 and a fresh
+completion-grade control; no selected process is yet authorized.
 
 ## 2. What the SMT-LIB comparison actually says
 
