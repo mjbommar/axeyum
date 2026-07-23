@@ -383,6 +383,23 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-22 — exact finite-rational inner-limit composition for integer-order
+  Bessel J/I.** Wave fifteen's bounded probe ranks this existing-head continuity
+  seam ahead of variable-rate Bessel asymptotics and quadratic-pole inverse Z.
+  DLMF 10.2(ii)/10.25(ii) make `Jₙ` and `Iₙ` entire in their argument for fixed
+  nonnegative integer order, so `limit` now returns `Hₙ(q)` whenever the inner
+  limit is an exact rational `q`, retaining only an outer factor independent of
+  the limit variable. Orders 0, 3, 32, and `u32::MAX`, three rational limits,
+  both heads, and both infinities pass in constant time; SymPy independently
+  agrees on all 48 order-0-through-3 cases. Non-rational or nonexistent inner
+  limits, unbounded modified-Bessel arguments, variable-dependent factors, and
+  Bessel denominators decline; prior unbounded-`Jₙ` and zero-argument behavior
+  remains unchanged. The thermally managed 556-unit/147-doctest suite passed
+  (1639.99 s for units), with workspace warning-denied Clippy (2.89 s warm),
+  stable/nightly rustdoc, WASM, links, whitespace, and owned-line formatting
+  green. Next: resume broad probing; quadratic-pole inverse Z remains
+  representation-bound.
+
 - **2026-07-22 — certified unbounded rational-function integer-order Bessel-J
   limits.** Wave fourteen extends the exact fixed-order DLMF asymptotic from
   polynomials to rational arguments `r(x)=p(x)/q(x)` with rational
@@ -8368,6 +8385,11 @@ plan is built and committed on the current branch:
   R1/R2 history, a new run/evidence root, universal 512 MiB Lean runtime stacks
   from pinned source semantics, and the measured tiered artifact store. It
   authorizes one process only after separately pushed implementation gates.
+- **2026-07-22 — Added exact finite-rational Bessel J/I limit composition.**
+  Fixed integer-order first-kind continuity now maps any exact rational inner
+  limit through `Jₙ` or `Iₙ`, with variable-free outer factors and explicit
+  non-rational, unbounded-I, weighted, and denominator declines. CAS now has 556
+  units and 147 doctests.
 - **2026-07-22 — Added certified unbounded rational-function Bessel-J infinity
   limits.** The fixed-order DLMF envelope now closes `c·Jₙ(p(x)/q(x))→0` at
   both real infinities whenever the exact rational-coefficient numerator degree
