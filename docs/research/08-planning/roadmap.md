@@ -2,7 +2,7 @@
 
 Status: **foundation phases (0–7) landed**; active execution has moved to the
 multi-track Z3 + Lean parity plan.
-Last updated: 2026-07-22
+Last updated: 2026-07-23
 
 > **Where the live plan is now.** This file is the *research/foundation* roadmap
 > (Phases 0–7 — the decidable finite-domain + arithmetic foundation, now built).
@@ -41,6 +41,48 @@ Last updated: 2026-07-22
 > maps that terminal contract into dependency-ordered R0-R10 phases, reconciles
 > the committed/diagnostic/official-selection SMT-LIB evidence layers, and
 > preserves the distinction between pinned v4.30 parity and maintained parity.
+> TL0.6.4 now has accepted M0 harness-floor and M1 tracked-content authorities
+> for all 3,723 U2 cases. Accepted M2.0 additionally freezes the typed
+> dependency/provider contract across 111 official variants and 408,374
+> factored case/variant occurrences, but its node/edge lists are empty and all
+> resolvers, providers, closures, native outcomes, pairs, and parity credit
+> remain unbound, `not-run`, or zero. M2.1-M2.7 exact closure and M3 review are
+> still required; schema scale is not behavioral coverage.
+> TL0.6.5's post-parent matched-execution schema is preregistered but has no
+> input authority or process authorization. Its R1 correction now recomputes
+> domain-separated seals for each official/Axeyum execution, the comparison,
+> and the whole paired cell; every comparison cites both exact side seals, and
+> each U0-U9 population authority binds count, sorted IDs, and sorted cell
+> seals. This closes ID-preserving content substitution without changing the
+> current zero-outcome, zero-pair, zero-credit boundary.
+> R2 additionally separates execution completion from semantic result and
+> correctness: each complete side projects a typed result class, comparisons
+> bind distinct official/Axeyum normalized-observable identities, and the
+> validator derives all eight outcomes. Fully resealed result/normalization
+> mutations cannot preserve stale agreement. R3 now registers nine sealed
+> layer contracts with 68 semantic fields and 18 explicit ignored-field rules;
+> exact-field canonical projection and paired-cell contract resolution are
+> executable. Raw extractors, semantic canonicalizers, and real pairs remain
+> future post-parent work.
+> M2.1's 4,092-source/32-batch/14-control/39-process input authority, runner,
+> and full-parser comparator are now pushed and CI-gated; the runner also has
+> preregistered live file-backed stream ceilings and sealed launch failures.
+> The attempt is
+> explicitly unexecuted and its evidence root absent. Process readiness is not
+> header evidence; observed processes and edges remain zero.
+> M2.2's
+> [source-first resolution plan](../../../docs/plan/lean-u2-native-dependency-tl0.6.4-m2.2-plan-2026-07-23.md)
+> now preregisters first-prefix candidate semantics, independent existence and
+> content checks, the released module/artifact universe, transitive module-data
+> closure, the complete CLI process formula, and 18 controls. It has no input
+> authority, process budget, observations, resolutions, or credit before an
+> accepted M2.1 result and a separately bound authority.
+> Its source-audited
+> [R1 correction](../../../docs/plan/lean-u2-native-dependency-tl0.6.4-m2.2-effective-import-r1-plan-2026-07-23.md)
+> additionally separates raw imports from the modifier-sensitive effective
+> load fixed point and freezes repeated-path upgrades, ordered incremental
+> `.olean` parts, IR-only reachability, bounded cycle declines, and added
+> controls. These remain unexecuted obligations, not closure evidence.
 > Its
 > [completion audit](../../../docs/plan/lean-system-roadmap-completion-audit-2026-07-21.md)
 > verifies every named environment gap and the current Axeyum/Lean/mathlib

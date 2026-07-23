@@ -4,11 +4,27 @@
   "source_identities": [
     {
       "path": ".github/workflows/ci.yml",
-      "sha256": "ee5931eee7ae7c43f1234663ff47b8c6bff4ad81a0fe23887c2505c7af945dc1"
+      "sha256": "0e1e2d64563f05cec1cd1d369303e5e60782bbc4c2c3aae7c17edf2449c3e7e9"
     },
     {
       "path": "docs/plan/generated/lean-execution-evidence.md",
       "sha256": "502cd3514e753108d4af9b487925f58161bf92eb29631899bb5befa92a82d2ca"
+    },
+    {
+      "path": "docs/plan/generated/lean-u2-native-dependency.md",
+      "sha256": "999dc0d1b9685be5ba36aab5f9758abbb42cad12aeda013ccc0d647ccf6eae4c"
+    },
+    {
+      "path": "docs/plan/generated/lean-u2-native-header-contract-m2.1.md",
+      "sha256": "dfe6fcf334dfde2d782be432a0cde86798e5f6120394b2c4de208ba582bb0053"
+    },
+    {
+      "path": "docs/plan/generated/lean-u2-native-surface-classification.md",
+      "sha256": "7338aad7ec63b5f0192b475246eaeb913b20c8c09e4c412c18a17a453ed8797f"
+    },
+    {
+      "path": "docs/plan/generated/lean-u2-native-surface-content.md",
+      "sha256": "257f7a4903f213afd0a66eea99eed850731f0d978198e8102e6dbe503b2760b0"
     },
     {
       "path": "docs/plan/generated/lean-u2-official-child-shards.md",
@@ -36,11 +52,15 @@
     },
     {
       "path": "docs/plan/lean-complete-parity-v1.json",
-      "sha256": "39caeeb54ce2eae9f4c4ea408ebd03b65197c2d87e16f54742ca4fd2e4a81650"
+      "sha256": "4a6a09acf6950b7d38e4ce1a8136af9152ae752b923e9ab66d7d0417c1b4672c"
+    },
+    {
+      "path": "docs/plan/lean-complete-parity-worktree-portability-r1-result-2026-07-23.md",
+      "sha256": "9dd36ff4d7402c804fabfaca927721239fafa1495897ff8de442d37f6e2689eb"
     },
     {
       "path": "docs/plan/lean-execution-acceptance-tl0.7.4-2026-07-22.md",
-      "sha256": "0db3eea2704f17a1d6ab5eeb46813f6c2a148fabae2f655c6025cb9ecbc6c0d2"
+      "sha256": "86371f2be239a9f10d3135dd2965f55a3696f3009a4ecfcedb7720f7b9e855d3"
     },
     {
       "path": "docs/plan/lean-execution-acceptance-v1.json",
@@ -68,7 +88,131 @@
     },
     {
       "path": "docs/plan/lean-system-implementation-plan-2026-07-21.md",
-      "sha256": "2f4f63f1d51d2e3c726d5e305999f715642ea07b1445f56bdefa291b96da8d25"
+      "sha256": "ea6ab1e192ccec458e6e2afcee1918d6d8ff1b2e8b6ec5a19ddd5db4fac79c4d"
+    },
+    {
+      "path": "docs/plan/lean-u2-matched-execution-tl0.6.5-axis-coverage-r5-plan-2026-07-23.md",
+      "sha256": "16fee574d4c206a6a0103c88d7db2cb87db940a741bd3de28f4f05e4ee974b33"
+    },
+    {
+      "path": "docs/plan/lean-u2-matched-execution-tl0.6.5-axis-coverage-r5-result-2026-07-23.md",
+      "sha256": "fd2744aaf20dda58f09e8640639352b990f9025def6686a54d0b598e13cd6450"
+    },
+    {
+      "path": "docs/plan/lean-u2-matched-execution-tl0.6.5-content-seals-r1-result-2026-07-23.md",
+      "sha256": "4e51df229d2425f8e4ed1846d75d4428e7e461cb0788f75d57ea779676757f18"
+    },
+    {
+      "path": "docs/plan/lean-u2-matched-execution-tl0.6.5-normalization-r3-result-2026-07-23.md",
+      "sha256": "532fa886c8825e84be12cf856efa39ef3824c6be2f1c5d9e9e9b07fa49ff128b"
+    },
+    {
+      "path": "docs/plan/lean-u2-matched-execution-tl0.6.5-outcome-derivation-r2-plan-2026-07-23.md",
+      "sha256": "5bcbc34f3d11828132a04266ba6d01ac3be101771d2d4e5bc84b37b5ca0c4293"
+    },
+    {
+      "path": "docs/plan/lean-u2-matched-execution-tl0.6.5-outcome-derivation-r2-result-2026-07-23.md",
+      "sha256": "033fe5fd0c036ca02a3999728d6d76d016238fa4756f8c3eaadbb746bb4a4e27"
+    },
+    {
+      "path": "docs/plan/lean-u2-matched-execution-tl0.6.5-plan-2026-07-23.md",
+      "sha256": "e70d0182e3dcebf1a35cf90be2e2c5cc4f19b3f4f38a4dfc3c04d38370387b5e"
+    },
+    {
+      "path": "docs/plan/lean-u2-matched-execution-tl0.6.5-typed-observables-r4-plan-2026-07-23.md",
+      "sha256": "05ec992a190e9dcd4ea05c18ce0901a335a0d5fee99f14c627a173d988252175"
+    },
+    {
+      "path": "docs/plan/lean-u2-matched-execution-tl0.6.5-typed-observables-r4-result-2026-07-23.md",
+      "sha256": "6c1f9761e0f0225fc6c69c80035e9862d2f2a40ac0262c4b249df9489f50803a"
+    },
+    {
+      "path": "docs/plan/lean-u2-native-dependency-tl0.6.4-m2.1-plan-2026-07-23.md",
+      "sha256": "7daa62ae0342c8fa64872604f880343fe9498866676675b61e911d034e3b999f"
+    },
+    {
+      "path": "docs/plan/lean-u2-native-dependency-tl0.6.4-m2.1-pre-execution-2026-07-23.md",
+      "sha256": "ff8fbf63e5c9dd1796292df07f9521468148a95dd84328d6b60826c52f056710"
+    },
+    {
+      "path": "docs/plan/lean-u2-native-dependency-tl0.6.4-m2.2-effective-import-r1-plan-2026-07-23.md",
+      "sha256": "7098c682c242be1968d42c197b2bcadc9870d8a1721b790298d54e980c927ce7"
+    },
+    {
+      "path": "docs/plan/lean-u2-native-dependency-tl0.6.4-m2.2-plan-2026-07-23.md",
+      "sha256": "25fffdf8291f526bff4a0fca270c6e43c52cdc5659a1e3b19499b18071ee3de1"
+    },
+    {
+      "path": "docs/plan/lean-u2-native-dependency-tl0.6.4-m2.3-runner-generated-plan-2026-07-23.md",
+      "sha256": "669a62d21ac774657f99ffacc5708fd67db3a63bcc6958c60fff2b87ce752b38"
+    },
+    {
+      "path": "docs/plan/lean-u2-native-dependency-tl0.6.4-m2.4-lake-project-plan-2026-07-23.md",
+      "sha256": "75d135c290c5e3c140af668eaee1a9f48191c5a3bdbe8d9e45924a0c810a682e"
+    },
+    {
+      "path": "docs/plan/lean-u2-native-dependency-tl0.6.4-m2.5-compiler-runtime-ffi-plan-2026-07-23.md",
+      "sha256": "79f171152899d6cad2415af76d982e25ca9417ceecab4c328f74df5f96ab0562"
+    },
+    {
+      "path": "docs/plan/lean-u2-native-dependency-tl0.6.4-m2.6-editor-rpc-plan-2026-07-23.md",
+      "sha256": "760661d9f61900b8e309d2286111b411dc7a8b93e555090deceb3fbee4cf9753"
+    },
+    {
+      "path": "docs/plan/lean-u2-native-dependency-tl0.6.4-m2.7-variant-merge-plan-2026-07-23.md",
+      "sha256": "90cfd4475e5c84378f773f625f88db6fb10ba9b642a91f1d9fec32c8f2a8f96b"
+    },
+    {
+      "path": "docs/plan/lean-u2-native-dependency-v1.json",
+      "sha256": "46d2c17363bf8e4097d12df20f8ee9ffb86acf647642068d3eacc72e711dd4d6"
+    },
+    {
+      "path": "docs/plan/lean-u2-native-header-contract-m2.1-v1.json",
+      "sha256": "8447cf92349467962363baea30973f0cb4b0d95c1527b6544fd50e4e09100b5b"
+    },
+    {
+      "path": "docs/plan/lean-u2-native-surface-classification-tl0.6.4-m0-plan-2026-07-23.md",
+      "sha256": "275e1fc80333116cc92131f0cb6228babc994f4c8a002c87994a286ea00fbe15"
+    },
+    {
+      "path": "docs/plan/lean-u2-native-surface-classification-tl0.6.4-m1-plan-2026-07-23.md",
+      "sha256": "cfec00b0cc7e0336d46e377bcad2de2ebaf7d8b99345c14044c97a2628962d35"
+    },
+    {
+      "path": "docs/plan/lean-u2-native-surface-classification-tl0.6.4-m1-result-2026-07-23.md",
+      "sha256": "b1391344083d671c97b32cc308b8f9e9b7db295b2aee2db4a441d78ba66fbc2d"
+    },
+    {
+      "path": "docs/plan/lean-u2-native-surface-classification-tl0.6.4-m2-plan-2026-07-23.md",
+      "sha256": "a03fccc1beb59b075eab798e3f5b2f4e92b403d947bc13c95b2920714777ced5"
+    },
+    {
+      "path": "docs/plan/lean-u2-native-surface-classification-tl0.6.4-m2.0-result-2026-07-23.md",
+      "sha256": "e82f8b26ad9c19c38c5011cf90d096c6244a1bce237599b5a8ab1d62103d5c25"
+    },
+    {
+      "path": "docs/plan/lean-u2-native-surface-classification-tl0.6.4-m3-review-plan-2026-07-23.md",
+      "sha256": "f44e49e387c2128037750d1a242e75a8cc786bbbc0e40f91cc65ad1523a72752"
+    },
+    {
+      "path": "docs/plan/lean-u2-native-surface-classification-v1.json",
+      "sha256": "89b29bc6820d1d948d5cd4defdd28eb59ddb55a5924a3cf770c0b21282959959"
+    },
+    {
+      "path": "docs/plan/lean-u2-native-surface-content-v1.json",
+      "sha256": "c83d10ce0f0619d4327dbbd7544bd584360cb080d35778ca7798a5f7da17560f"
+    },
+    {
+      "path": "docs/plan/lean-u2-normalization-contracts-v1.json",
+      "sha256": "e85141b7da5f58b05290a24831eefb4eedb317a74025d3f7817235d7da3c6acc"
+    },
+    {
+      "path": "docs/plan/lean-u2-normalization-contracts-v2.json",
+      "sha256": "b77a5027bc64fa8165596162f0f36955165f81d23d4f61c8f2d318b4c3e09294"
+    },
+    {
+      "path": "docs/plan/lean-u2-normalization-contracts-v3.json",
+      "sha256": "effb8a4f75e3796b4f0bb1d4b6fced1134464f1e3a202b8e813d12eb15073cb1"
     },
     {
       "path": "docs/plan/lean-u2-official-child-shards-v1.json",
@@ -248,19 +392,31 @@
     },
     {
       "path": "docs/plan/lean4-complete-parity-contract-2026-07-22.md",
-      "sha256": "07b98c1055e6496750d337431b1abc9102dbd28558a03e554625b0b969a50d3c"
+      "sha256": "dba6941609484e2169a2b7e6f95b22e7c82203648e7db8d545fda1b90bcde62e"
     },
     {
       "path": "docs/plan/lean4-complete-parity-roadmap-2026-07-22.md",
-      "sha256": "6fbc6014617cd60f62d91753d1d98e2d1f09c86aa99d1f2e06a7f81209784d5d"
+      "sha256": "e378293860f99d5e5ede8fddb0072795c14d25594b3f5bb7bf2f49ae4e1d5170"
     },
     {
       "path": "scripts/gen-lean-complete-parity.py",
-      "sha256": "d0332f1f21f42947a47c1a044acced844cb10cf998e5d0bcc0c3fddf8f48ae2d"
+      "sha256": "5095dc4c18ba1be96e7b165d3fbe700e73e71f350493df8c93ade46e99e63d59"
     },
     {
       "path": "scripts/gen-lean-execution-evidence.py",
       "sha256": "025f935111b83e1a3bbc78af50a4ad5671baa370bda02fe94756481e54f55418"
+    },
+    {
+      "path": "scripts/gen-lean-u2-native-dependency.py",
+      "sha256": "e5f835bf4a0dbd4e59e82068b1e57b073f484153333962d1c85e0c308de90b19"
+    },
+    {
+      "path": "scripts/gen-lean-u2-native-surface-classification.py",
+      "sha256": "4827fc4ed27e729b36f2c0451059e4a4c7e4186ac8650eb54e8e98b1d740ccf6"
+    },
+    {
+      "path": "scripts/gen-lean-u2-native-surface-content.py",
+      "sha256": "107d699e3ab372ee78e686affcb7cbd940d6ff4ae3446dc29f90d1cd6927fb05"
     },
     {
       "path": "scripts/gen-lean-u2-official-child-shards.py",
@@ -285,6 +441,18 @@
     {
       "path": "scripts/lean_execution_store.py",
       "sha256": "1ee32b411970331cd8afcc85495f91c69400cc5fb98e1af6608f551117dbc6f8"
+    },
+    {
+      "path": "scripts/lean_u2_header_full_parser.lean",
+      "sha256": "12812e7956e5f6c5914247e7523b32559328febbeb319083652c458b3b9e4af2"
+    },
+    {
+      "path": "scripts/lean_u2_native_dependency_m2_1.py",
+      "sha256": "9d1e13ca59535d198c7f5fa8f1bf6b79c9f76fb3ee0c944ee9bebb2a15bb2b07"
+    },
+    {
+      "path": "scripts/lean_u2_normalization_contracts.py",
+      "sha256": "4521bb0ee8a16bb0038972f7b580b4efe15ec7f728587a8c10b3cf2dd03aa3aa"
     },
     {
       "path": "scripts/lean_u2_official_execution.py",
@@ -340,7 +508,7 @@
     },
     {
       "path": "scripts/tests/test_lean_complete_parity.py",
-      "sha256": "167447a1ad5c8271e915793103dae2b951ef7c362e19f35e4b33efa4efeed34c"
+      "sha256": "762805016badbd354576d3c9d9b19c11601daf5c0444aa976ce77445db8320b7"
     },
     {
       "path": "scripts/tests/test_lean_execution_acceptance.py",
@@ -356,7 +524,27 @@
     },
     {
       "path": "scripts/tests/test_lean_execution_store.py",
-      "sha256": "c37454502f1446562bb77b15187bd32d2976952ac79c8b87285d4b27482749ea"
+      "sha256": "febcdd79108faee49901a7173335d98e97607d5460a7d9c312038db43b8da555"
+    },
+    {
+      "path": "scripts/tests/test_lean_u2_native_dependency.py",
+      "sha256": "6f6e157077f7dcd854fdaea998e73aff6b99de30aa23a310129d5ef034c44c93"
+    },
+    {
+      "path": "scripts/tests/test_lean_u2_native_dependency_m2_1.py",
+      "sha256": "c5fcdc48d2978b96da1f798a7601b37349dda5fc5d2e6d150a4a2fbb66cb8501"
+    },
+    {
+      "path": "scripts/tests/test_lean_u2_native_surface_classification.py",
+      "sha256": "eb88b21ffb7ba99be7d7f62bed01d1895952c42f6430e2a51d2fa517a61ef551"
+    },
+    {
+      "path": "scripts/tests/test_lean_u2_native_surface_content.py",
+      "sha256": "8acec41e70a820c2bd5b713673fc98f6019cd675885e8f2169b24ad265472da4"
+    },
+    {
+      "path": "scripts/tests/test_lean_u2_normalization_contracts.py",
+      "sha256": "e557e63d04b81c749de2a0932ef184cb8776f2162b6123f1c54479561f0cb96a"
     },
     {
       "path": "scripts/tests/test_lean_u2_official_child_shards.py",
@@ -712,6 +900,414 @@
         "parity_credit": 0
       }
     },
+    "u2_native_surface_authority": {
+      "scope": "full-u2-native-surface-harness-floor-not-support-or-parity",
+      "status": "complete-harness-floor-content-and-dependencies-not-run",
+      "summary": {
+        "registration_cases": 3723,
+        "profile_case_occurrences": {
+          "default": 3678,
+          "full-lake": 3723
+        },
+        "family_counts": {
+          "bench": 1,
+          "compile": 60,
+          "compile_bench": 24,
+          "doc-examples": 8,
+          "docparse": 197,
+          "elab": 2854,
+          "elab_bench": 40,
+          "elab_fail": 316,
+          "lake": 52,
+          "lint": 1,
+          "misc": 5,
+          "misc_dir": 2,
+          "pkg": 27,
+          "server": 4,
+          "server_interactive": 132
+        },
+        "kind_counts": {
+          "directory": 31,
+          "lake-directory": 52,
+          "lint": 1,
+          "pile": 3639
+        },
+        "family_kind_counts": {
+          "bench/directory": 1,
+          "compile/pile": 60,
+          "compile_bench/pile": 24,
+          "doc-examples/directory": 1,
+          "doc-examples/pile": 7,
+          "docparse/pile": 197,
+          "elab/pile": 2854,
+          "elab_bench/pile": 40,
+          "elab_fail/pile": 316,
+          "lake/lake-directory": 52,
+          "lint/lint": 1,
+          "misc/pile": 5,
+          "misc_dir/directory": 2,
+          "pkg/directory": 27,
+          "server/pile": 4,
+          "server_interactive/pile": 132
+        },
+        "direct_surface_counts": {
+          "adversarial": 316,
+          "compiler-runtime": 282,
+          "editor-rpc": 137,
+          "elaborator": 3217,
+          "modules-lake": 81,
+          "parser-macro": 197,
+          "tactic-meta": 2,
+          "toolchain-cli": 6
+        },
+        "closure_surface_counts": {
+          "adversarial": 316,
+          "compiler-runtime": 282,
+          "editor-rpc": 137,
+          "elaborator": 3717,
+          "kernel-import": 3717,
+          "modules-lake": 217,
+          "parser-macro": 3717,
+          "tactic-meta": 2,
+          "toolchain-cli": 6
+        },
+        "direct_surface_occurrences": 4238,
+        "closure_surface_occurrences": 12111,
+        "classification_state_counts": {
+          "harness-floor": 3723
+        },
+        "content_refinement_counts": {
+          "not-run": 3723
+        },
+        "module_dependency_closure_counts": {
+          "not-run": 3723
+        },
+        "native_outcome_counts": {
+          "not-run": 3723
+        },
+        "family_rules_used": 14,
+        "case_overrides_used": 3
+      },
+      "claims": {
+        "all_registration_cases_have_harness_floor": true,
+        "family_kind_population_closed": true,
+        "surface_dependency_closure_derived": true,
+        "pinned_content_refined": false,
+        "module_dependency_closure_complete": false,
+        "native_execution_observed": false,
+        "matched_pair_formed": false,
+        "performance_measured": false,
+        "u2_complete": false,
+        "lean_parity_established": false
+      },
+      "credits": {
+        "official_outcomes": 0,
+        "axeyum_outcomes": 0,
+        "paired_cells": 0,
+        "performance_rows": 0,
+        "complete_populations": 0,
+        "complete_axes": 0,
+        "satisfied_gates": 0,
+        "parity_credit": 0
+      }
+    },
+    "u2_native_content_authority": {
+      "scope": "full-u2-pinned-content-surface-refinement-not-support-or-parity",
+      "status": "complete-tracked-content-census-dependency-closure-not-run",
+      "summary": {
+        "cases_with_content_added_surface": 3394,
+        "cases_with_generated_wrapper_residual": 3670,
+        "classification_state_counts": {
+          "content-census-provisional": 3723
+        },
+        "closure_surface_counts": {
+          "adversarial": 316,
+          "compiler-runtime": 860,
+          "editor-rpc": 147,
+          "elaborator": 3717,
+          "ffi": 24,
+          "kernel-import": 3717,
+          "modules-lake": 223,
+          "parser-macro": 3717,
+          "tactic-meta": 1678,
+          "toolchain-cli": 6
+        },
+        "content_refinement_counts": {
+          "complete-census": 3723
+        },
+        "decoder_state_counts": {
+          "decoded": 6694,
+          "inspected-no-decoder": 16,
+          "malformed-structured": 294
+        },
+        "direct_surface_counts": {
+          "adversarial": 316,
+          "compiler-runtime": 841,
+          "editor-rpc": 147,
+          "elaborator": 3463,
+          "ffi": 24,
+          "kernel-import": 871,
+          "modules-lake": 81,
+          "parser-macro": 439,
+          "tactic-meta": 1678,
+          "toolchain-cli": 6
+        },
+        "media_counts": {
+          "binary": 10,
+          "c-family": 9,
+          "expected": 1488,
+          "json": 170,
+          "lean": 4092,
+          "python": 19,
+          "shell": 237,
+          "symlink": 6,
+          "text": 444,
+          "toml": 529
+        },
+        "module_dependency_closure_counts": {
+          "not-run": 3723
+        },
+        "native_outcome_counts": {
+          "not-run": 3723
+        },
+        "registration_cases": 3723,
+        "role_file_counts": {
+          "case-hook": 33,
+          "case-local-support": 1331,
+          "family-runner": 93,
+          "primary": 3723,
+          "registration-wrapper-template": 3,
+          "shared-support": 7002,
+          "sidecar": 1591,
+          "unreferenced-content": 0
+        },
+        "signal_hit_counts": {
+          "c.abi-declaration": 10,
+          "json.document-version": 13,
+          "json.rpc-method": 2,
+          "lean.compiler-api": 51,
+          "lean.declaration": 65469,
+          "lean.elaborator-extension": 187,
+          "lean.evaluation-command": 4622,
+          "lean.ffi-declaration": 46,
+          "lean.import-command": 1544,
+          "lean.meta-api": 332,
+          "lean.recursion-control": 1314,
+          "lean.server-api": 78,
+          "lean.syntax-declaration": 573,
+          "lean.syntax-quotation": 1085,
+          "lean.tactic-block": 14039,
+          "shell.native-link-candidate": 20,
+          "shell.tool-command": 1287,
+          "toml.native-link-field": 1,
+          "toml.project-field": 236
+        },
+        "signal_hits": 90909,
+        "support_scopes": 94,
+        "tracked_content_files": 7004
+      },
+      "claims": {
+        "all_registration_cases_content_projected": true,
+        "all_tracked_u2_content_files_inspected": true,
+        "content_signal_census_complete": true,
+        "generated_wrappers_materialized": false,
+        "lean_parity_established": false,
+        "matched_pair_formed": false,
+        "module_dependency_closure_complete": false,
+        "native_execution_observed": false,
+        "performance_measured": false,
+        "tl0_6_4_complete": false,
+        "u2_complete": false
+      },
+      "credits": {
+        "axeyum_outcomes": 0,
+        "complete_axes": 0,
+        "complete_populations": 0,
+        "official_outcomes": 0,
+        "paired_cells": 0,
+        "parity_credit": 0,
+        "performance_rows": 0,
+        "satisfied_gates": 0
+      },
+      "record_sha256": "d10f350d2c01d116538c9b52dcef71f38c473c81a36b3b41f75da4f39b889887"
+    },
+    "u2_native_dependency_authority": {
+      "scope": "full-u2-dependency-graph-contract-empty-non-crediting",
+      "status": "m2.0-contract-complete-all-dependency-resolution-not-run",
+      "summary": {
+        "registration_cases": 3723,
+        "selection_sets": 8,
+        "provider_variants": 111,
+        "case_variant_occurrences": 408374,
+        "provider_state_counts": {
+          "unbound": 111
+        },
+        "variant_dependency_state_counts": {
+          "not-run": 111
+        },
+        "case_dependency_state_counts": {
+          "not-run": 3723
+        },
+        "nodes": 0,
+        "edges": 0,
+        "resolved_case_closures": 0,
+        "m1_direct_surface_counts": {
+          "adversarial": 316,
+          "compiler-runtime": 841,
+          "editor-rpc": 147,
+          "elaborator": 3463,
+          "ffi": 24,
+          "kernel-import": 871,
+          "modules-lake": 81,
+          "parser-macro": 439,
+          "tactic-meta": 1678,
+          "toolchain-cli": 6
+        },
+        "m1_closure_surface_counts": {
+          "adversarial": 316,
+          "compiler-runtime": 860,
+          "editor-rpc": 147,
+          "elaborator": 3717,
+          "ffi": 24,
+          "kernel-import": 3717,
+          "modules-lake": 223,
+          "parser-macro": 3717,
+          "tactic-meta": 1678,
+          "toolchain-cli": 6
+        },
+        "external_processes": 0,
+        "native_outcomes": 0,
+        "paired_cells": 0
+      },
+      "claims": {
+        "graph_contract_frozen": true,
+        "all_m1_cases_projected": true,
+        "official_variants_factored": true,
+        "provider_identity_bound": false,
+        "header_graph_complete": false,
+        "source_artifact_resolution_complete": false,
+        "runner_generated_closure_complete": false,
+        "lake_project_closure_complete": false,
+        "runtime_ffi_closure_complete": false,
+        "editor_rpc_closure_complete": false,
+        "all_case_profile_closures_complete": false,
+        "native_execution_observed": false,
+        "matched_pair_formed": false,
+        "tl0_6_4_complete": false,
+        "lean_parity_established": false
+      },
+      "credits": {
+        "official_outcomes": 0,
+        "axeyum_outcomes": 0,
+        "paired_cells": 0,
+        "performance_rows": 0,
+        "complete_populations": 0,
+        "complete_axes": 0,
+        "satisfied_gates": 0,
+        "parity_credit": 0
+      },
+      "record_sha256": "250b662691af5d71e375f3643454f94585bc51ff6f28aff69091b0f3956fdc86"
+    },
+    "u2_native_header_contract_authority": {
+      "scope": "full-u2-tracked-lean-header-input-and-control-contract",
+      "status": "preregistered-no-m2.1-corpus-or-control-process",
+      "summary": {
+        "case_rows": 3723,
+        "corpus_rows": 4092,
+        "corpus_bytes": 9697571,
+        "mode_counts": {
+          "100644": 4084,
+          "100755": 8
+        },
+        "max_path_utf8_bytes": 69,
+        "newline_or_cr_paths": 0,
+        "first_path": "doc/examples/Certora2022/ex1.lean",
+        "last_path": "tests/simpperf/simp500.lean",
+        "batches": 32,
+        "full_batches": 31,
+        "final_batch_rows": 124,
+        "controls": 14,
+        "planned_processes": 39,
+        "observed_processes": 0,
+        "declared_header_edges": 0,
+        "resolved_nodes": 0,
+        "resolved_edges": 0,
+        "native_outcomes": 0,
+        "paired_cells": 0
+      },
+      "claims": {
+        "input_population_frozen": true,
+        "batch_partition_frozen": true,
+        "control_matrix_frozen": true,
+        "provider_identity_observed": false,
+        "fast_parser_observed": false,
+        "full_parser_observed": false,
+        "header_declarations_complete": false,
+        "source_or_artifact_resolution_complete": false,
+        "native_support_observed": false,
+        "tl0_6_4_complete": false,
+        "lean_parity_established": false
+      },
+      "credits": {
+        "resolved_source_edges": 0,
+        "resolved_olean_edges": 0,
+        "transitive_import_edges": 0,
+        "configured_edges": 0,
+        "runtime_edges": 0,
+        "official_outcomes": 0,
+        "axeyum_outcomes": 0,
+        "paired_cells": 0,
+        "performance_rows": 0,
+        "complete_populations": 0,
+        "complete_axes": 0,
+        "satisfied_gates": 0,
+        "parity_credit": 0
+      },
+      "record_sha256": "f0c8f7a0725c78d5659eda52c1bee29ae08548a9e1bfe8043a369ca772381466"
+    },
+    "u2_normalization_contract_authority": {
+      "status": "bounded-contract-only",
+      "summary": {
+        "contracts": 10,
+        "compared_fields": 76,
+        "ignored_rules": 20,
+        "covered_axes": 12,
+        "axis_contract_occurrences": 15,
+        "typed_field_occurrences": 96,
+        "value_schema_counts": {
+          "enum": 3,
+          "nonempty-string": 10,
+          "nonnegative-integer": 10,
+          "sha256": 73
+        },
+        "raw_extractors_implemented": 0,
+        "semantic_canonicalizers_implemented": 0,
+        "official_outcomes": 0,
+        "axeyum_outcomes": 0,
+        "paired_cells": 0,
+        "parity_credit": 0
+      },
+      "claims": {
+        "parents_complete": false,
+        "obligation_authority_complete": false,
+        "raw_extractors_implemented": false,
+        "semantic_canonicalizers_implemented": false,
+        "external_process_observed": false,
+        "lean_complete_parity": false
+      },
+      "contract_ids": [
+        "lean-process-harness-v3",
+        "lean-parser-macro-v3",
+        "lean-elaboration-v3",
+        "lean-kernel-assurance-v3",
+        "lean-module-cache-v3",
+        "lean-tactic-v3",
+        "lean-compiler-runtime-v3",
+        "lean-server-rpc-v3",
+        "lean-lake-project-v3",
+        "lean-mathlib-ecosystem-v3"
+      ]
+    },
     "execution_evidence_authority": {
       "scope": "execution-evidence-contract-only-no-process-or-parity-outcome",
       "lane_policies": 2,
@@ -971,8 +1567,8 @@
       "rows": 140,
       "status_counts": {
         "DONE": 27,
-        "PARTIAL": 6,
-        "TODO": 107,
+        "PARTIAL": 8,
+        "TODO": 105,
         "BLOCKED": 0
       }
     }
@@ -1071,6 +1667,118 @@
         {
           "path": "docs/plan/lean-u2-official-execution-tl0.6.3-m1-shard-result-2026-07-22.md",
           "detail": "Accepted M1 derivation result, exact source and output identities, mutation validation, explicit non-claims, and next execution handoff."
+        },
+        {
+          "path": "docs/plan/lean-u2-native-surface-classification-v1.json",
+          "detail": "TL0.6.4 M0 full-population harness-floor authority: all 3,723 cases classified exactly once across stable owned surfaces while content refinement, exact module dependency closure, native outcomes, pairs, and parity credit remain not run or zero."
+        },
+        {
+          "path": "docs/plan/generated/lean-u2-native-surface-classification.md",
+          "detail": "Generated surface and family denominators with the explicit M1 content-refinement and M2 exact-dependency residual."
+        },
+        {
+          "path": "docs/plan/lean-u2-native-surface-classification-tl0.6.4-m0-plan-2026-07-23.md",
+          "detail": "Source-first M0 contract for the ten-surface dependency DAG, fourteen exact family rules, three case overrides, mutation gates, stop conditions, and non-crediting boundary."
+        },
+        {
+          "path": "docs/plan/lean-u2-native-surface-content-v1.json",
+          "detail": "TL0.6.4 M1 full tracked-content authority: 7,004 file rows, 3,723 case projections, 90,909 exact/candidate signal spans, complete tracked-source census, and zero exact dependency/native/pair/parity credit."
+        },
+        {
+          "path": "docs/plan/generated/lean-u2-native-surface-content.md",
+          "detail": "Generated media, signal, provisional surface, generated-wrapper residual, and non-crediting denominators for the complete tracked U2 content census."
+        },
+        {
+          "path": "docs/plan/lean-u2-native-surface-classification-tl0.6.4-m1-plan-2026-07-23.md",
+          "detail": "Source-first M1 contract for byte-exact tracked-content inspection, role-aware case projection, structured and lexical controls, generated-artifact boundary, and M2/M3 continuation."
+        },
+        {
+          "path": "docs/plan/lean-u2-native-surface-classification-tl0.6.4-m1-result-2026-07-23.md",
+          "detail": "Accepted bounded M1 result with complete denominators, source-first/correction history, lossless compaction, exact artifact identities, validation, nonclaims, and M2/M3 handoff."
+        },
+        {
+          "path": "docs/plan/lean-u2-native-dependency-v1.json",
+          "detail": "TL0.6.4 M2.0 typed dependency/provider contract for all 3,723 cases, eight exact selection sets, 111 factored official variants, and 408,374 case/variant occurrences; all nodes, edges, processes, native outcomes, pairs, and parity credit remain empty or zero."
+        },
+        {
+          "path": "docs/plan/generated/lean-u2-native-dependency.md",
+          "detail": "Generated empty-graph, unbound-provider, not-run closure, and explicit non-crediting summary for M2.0."
+        },
+        {
+          "path": "docs/plan/lean-u2-native-surface-classification-tl0.6.4-m2-plan-2026-07-23.md",
+          "detail": "Source-first M2.0-M2.7 program for exact header, source/artifact, generated-runner, Lake/project, runtime/FFI, editor/RPC, and variant-merge dependency closure."
+        },
+        {
+          "path": "docs/plan/lean-u2-native-surface-classification-tl0.6.4-m2.0-result-2026-07-23.md",
+          "detail": "Accepted bounded M2.0 result with source-first checkpoint history, exact denominators and seals, empty-graph/provider boundary, validation, nonclaims, and M2.1-M2.7 handoff."
+        },
+        {
+          "path": "docs/plan/lean-u2-native-dependency-tl0.6.4-m2.1-plan-2026-07-23.md",
+          "detail": "Preregistered exact fast/full header-parser program for all 4,092 tracked Lean sources, 14 controls, 39 sequential processes, immutable completion-last evidence, and zero retries or implicit credit."
+        },
+        {
+          "path": "docs/plan/lean-u2-native-header-contract-m2.1-v1.json",
+          "detail": "M2.1 pre-execution input/control authority: 4,092 exact source rows, 32 deterministic batches, 14 controls, 39 planned processes, zero observations, and zero header/native/parity credit."
+        },
+        {
+          "path": "docs/plan/generated/lean-u2-native-header-contract-m2.1.md",
+          "detail": "Generated M2.1 frozen-denominator and explicit no-process/no-edge summary."
+        },
+        {
+          "path": "docs/plan/lean-u2-native-dependency-tl0.6.4-m2.1-pre-execution-2026-07-23.md",
+          "detail": "Accepted M2.1 implementation-readiness result with exact checkpoint history, process/evidence behavior, artifact identities, validation, content authorization, and explicit no-process boundary."
+        },
+        {
+          "path": "docs/plan/lean-u2-native-dependency-tl0.6.4-m2.2-plan-2026-07-23.md",
+          "detail": "Preregistered M2.2 exact module/source/artifact resolution semantics: first-prefix candidate behavior, independent existence/content checks, released universe, transitive module-data closure, full CLI process formula, controls, and zero-credit boundary."
+        },
+        {
+          "path": "docs/plan/lean-u2-native-dependency-tl0.6.4-m2.2-effective-import-r1-plan-2026-07-23.md",
+          "detail": "Preregistered M2.2 R1 correction separating raw import closure from Lean's modifier-sensitive effective load fixed point and freezing ordered incremental .olean parts, IR-only reachability, cycle declines, controls, and zero-credit boundary."
+        },
+        {
+          "path": "docs/plan/lean-u2-native-dependency-tl0.6.4-m2.3-runner-generated-plan-2026-07-23.md",
+          "detail": "Preregistered M2.3 configured-runner and generated-artifact semantics: exact 3,670/52/1 dispatch partition, configured CMake/CTest provenance, shell-state and source resolution, hooks and marker precedence, static-versus-observed edges, downstream ownership, controls, and zero-process/zero-credit boundary."
+        },
+        {
+          "path": "docs/plan/lean-u2-native-dependency-tl0.6.4-m2.4-lake-project-plan-2026-07-23.md",
+          "detail": "Preregistered M2.4 Lake workspace/project semantics: 52 direct cases and 70 tracked configuration roots plus 28 wrapper-directory lexical candidates pending M2.3, executable configuration, manifest/override/materialization order, target/facet/job behavior, query/setup build projections, cache/network state, downstream ownership, and zero-process/zero-credit boundary."
+        },
+        {
+          "path": "docs/plan/lean-u2-native-dependency-tl0.6.4-m2.5-compiler-runtime-ffi-plan-2026-07-23.md",
+          "detail": "Preregistered M2.5 compiler/runtime/FFI semantics: 841 direct and 860 closure compiler-runtime cases plus 24 provisional FFI cases, distinct compiled/interpreted/eval/C/LLVM routes, toolchain/artifact/ABI/symbol/initialization/effect closure, controls, and zero-process/zero-credit boundary."
+        },
+        {
+          "path": "docs/plan/lean-u2-native-dependency-tl0.6.4-m2.6-editor-rpc-plan-2026-07-23.md",
+          "detail": "Preregistered M2.6 editor/server/RPC semantics: immutable M1 correction overlay rejects four Lake cases promoted by eleven generic JSON version fields, yielding a 143-case source floor; separates 137 server harnesses from six API-only cases and freezes transport/lifecycle/document/snapshot/cancellation/watchdog/worker/RPC/session/idbg closure with zero process or credit."
+        },
+        {
+          "path": "docs/plan/lean-u2-native-dependency-tl0.6.4-m2.7-variant-merge-plan-2026-07-23.md",
+          "detail": "Preregistered M2.7 lossless variant-merge and M3-handoff semantics for all 408,374 exact case/variant cells: provenance-preserving graph deduplication, non-total-order assurance vectors, per-cell closure, non-crediting union/intersection/delta/equivalence views, correction/residual retention, and deterministic complete-row review queues with zero accepted parent transfer, merged closure, or credit."
+        },
+        {
+          "path": "docs/plan/lean-u2-native-surface-classification-tl0.6.4-m3-review-plan-2026-07-23.md",
+          "detail": "Preregistered M3.0 independent complete-row review semantics: exact primary dispositions for all 3,723 cases and 408,374 applicable cells, secondary concurrence for risk-bearing rows, resumable append-only review with explicit supersession, fail-closed repair routing, and bounded TL0.6.4 classification acceptance with no accepted M2 parent, review event, or parity credit."
+        },
+        {
+          "path": "docs/plan/lean-u2-matched-execution-tl0.6.5-plan-2026-07-23.md",
+          "detail": "Preregistered TL0.6.5 matched-execution semantics: distinct case/execution-slot/comparison-obligation denominators, independent sealed official and Axeyum execution records with typed result classes, typed absent/invalid states, a comparison that cites both side seals and normalized-observable identities, exact pair-population count/ID/cell-seal authorities, derived non-vacuous G3 outcomes, and zero execution or credit before complete accepted TL0.6.3/TL0.6.4 parents."
+        },
+        {
+          "path": "docs/plan/lean-u2-matched-execution-tl0.6.5-content-seals-r1-result-2026-07-23.md",
+          "detail": "Accepted bounded TL0.6.5 R1 schema correction: versioned deterministic execution, comparison, cell, and population cell-seal digests are recomputed with mutation teeth; all native outcomes, paired cells, complete pair authorities, gates, and parity credit remain zero."
+        },
+        {
+          "path": "docs/plan/lean-u2-matched-execution-tl0.6.5-outcome-derivation-r2-plan-2026-07-23.md",
+          "detail": "Preregistered TL0.6.5 R2 schema correction: complete side records project typed success/reject/decline/timeout/resource/failure classes, comparisons bind separate canonical normalized identities, and all eight comparison outcomes are derived rather than trusted; this authorizes no process or credit."
+        },
+        {
+          "path": "docs/plan/lean-u2-matched-execution-tl0.6.5-outcome-derivation-r2-result-2026-07-23.md",
+          "detail": "Accepted bounded TL0.6.5 R2 schema result: all eight outcomes derive from typed side states/results and normalized-observable equality, including fully resealed semantic mutation controls; all real pair and parity counters remain zero."
+        },
+        {
+          "path": "docs/plan/lean-complete-parity-worktree-portability-r1-result-2026-07-23.md",
+          "detail": "Accepted bounded portability repair: retained repository-owned process/store paths are checkout-root-relative, Git checkout permissions preserve content/seal integrity, historical authorities remain immutable while new revisions freeze current sources, focused and live store tests pass, and the complete-parity check succeeds from a differently rooted detached worktree."
         },
         {
           "path": "docs/plan/lean-u2-official-execution-tl0.6.3-m2-shard-0001-plan-2026-07-22.md",
@@ -1257,7 +1965,7 @@
           "detail": "Pinned tests tree inventory and the required CTest/test-pile derivation rule."
         }
       ],
-      "residual": "Current credited local execution coverage is 66 official outcomes (65 passes / one failure) over 65 unique cases from the 3,678-case release Linux parent, with one of 289 derived physical shards complete and zero Axeyum outcomes or pairs. There are eight consumed selected process attempts: four M0 attempts, invalid M2 R1, timeout M2 R3, invalid M2 R5, and accepted M2 R6. M2 R1 retained 30 diagnostic passes / 34 failures but failed closure; R2 completed its zero-process diagnostic append. M2 R3 timed out after channel thread-creation failure. R4's 16 GiB control failed before selected discovery. R5 passed 64/64 under 32 GiB but its unconditional failure-log contract invalidated it; its diagnostic completion grants zero outcomes. R6 attempt 004 passed 64/64 under conditional semantics, and qualifying replay accepts its unchanged 152-file completion as 64 outcomes / one local shard. All 111 full official workflow attempts, the parent/provider profiles, and every Axeyum/pair/performance/population/axis/gate/parity counter remain incomplete or zero. Next execute another source-first child shard, classify TL0.6.4 native surfaces, and run matched Axeyum cases. Scheduling metadata, controls, diagnostic rows, and retries do not increase population coverage."
+      "residual": "Current credited local execution coverage is 66 official outcomes (65 passes / one failure) over 65 unique cases from the 3,678-case release Linux parent, with one of 289 derived physical shards complete and zero Axeyum outcomes or pairs. There are eight consumed selected process attempts: four M0 attempts, invalid M2 R1, timeout M2 R3, invalid M2 R5, and accepted M2 R6. M2 R1 retained 30 diagnostic passes / 34 failures but failed closure; R2 completed its zero-process diagnostic append. M2 R3 timed out after channel thread-creation failure. R4's 16 GiB control failed before selected discovery. R5 passed 64/64 under 32 GiB but its unconditional failure-log contract invalidated it; its diagnostic completion grants zero outcomes. R6 attempt 004 passed 64/64 under conditional semantics, and qualifying replay accepts its unchanged 152-file completion as 64 outcomes / one local shard. TL0.6.4 M0 assigns all 3,723 cases a conservative harness floor. M1 completes a source-only census over 7,004 tracked files and 90,909 exact/candidate signal spans, while 3,670 cases retain a generated-wrapper residual. M2.0 freezes the typed node, edge, assurance, resolver, provider-variant, selection, and case contract across 408,374 factored case/variant occurrences, but all 111 providers remain unbound and all exact module/generated/runtime/FFI/request/project nodes, edges, and closures remain not run or empty. M2.1 now preregisters 4,092 exact Lean source rows, 32 batches, 14 controls, and 39 no-retry processes, but no M2.1 process or header edge has been observed. M2.2 now preregisters exact module/source/artifact resolution semantics and fail-closed controls. Its R1 correction additionally separates raw import closure from the modifier-sensitive effective load fixed point and freezes ordered incremental .olean parts, IR-only reachability, and bounded cycle declines. M2.3 now preregisters the exact 3,670 wrapper / 52 inline Lake / one lint dispatch partition, configured CMake/CTest provenance, runner and shell-state semantics, trace boundary, and fail-closed controls. M2.4 now preregisters Lake workspace/project closure over a read-only floor of 52 direct cases, 70 tracked configuration roots, and 28 wrapper-directory lexical candidates pending M2.3, including configuration, manifest, materialization, target/facet/job, cache, and network semantics. M2.5 now preregisters compiler/runtime/FFI closure over a source-only floor of 841 direct and 860 closure compiler-runtime cases plus 24 provisional FFI cases, including distinct frontend, interpreter, native toolchain, artifact, ABI, initialization, and effect routes. M2.6 now preserves the accepted M1 authority while rejecting four Lake cases promoted by eleven generic JSON version fields; its corrected 143-case source floor separates 137 server harnesses from six API-only cases and preregisters raw transport, lifecycle, document/snapshot, cancellation, watchdog/worker, restart, RPC/session/widget, normalization, and idbg semantics. M2.7 now preregisters lossless provenance/assurance joins and deterministic M3 handoff over all 408,374 exact case/variant cells; equal content may deduplicate storage but never ownership, denominator, conditions, declines, or evidence. M3.0 now preregisters exact independent review of all 3,723 case rows and 408,374 cell rows, including secondary concurrence for risk-bearing dispositions and resumable append-only review; it has no accepted M2.7 parent, input authority, assignment, event, disposition, or TL0.6.4 acceptance. M2.2-M2.7 still have no accepted input authorities or parent transfers, resolved/configured/observed closures, or closed case/variant cells; M3 has no review acceptance, outcomes, pairs, or credit before accepted M2.1 evidence and separately bound downstream authorities. All 111 full official workflow attempts and every Axeyum/pair/performance/population/axis/gate/parity counter remain incomplete or zero. Next execute another source-first child shard, explicitly authorize and validate the TL0.6.4 M2.1 attempt, bind and execute M2.2-M2.7 exact dependency closure, complete M3 review, and only then run matched Axeyum cases. Scheduling metadata, content signals, empty graph contracts, unexecuted controls, diagnostic rows, and retries do not increase population coverage."
     },
     {
       "id": "U3",
@@ -1588,42 +2296,156 @@
       "residual": "No full install/package/offline/platform/migration matrix currently earns parity credit."
     }
   ],
+  "paired_population_authorities": [
+    {
+      "population": "U0",
+      "state": "not_registered",
+      "expected_cells": 0,
+      "expected_ids_sha256": null,
+      "expected_cell_seals_sha256": null,
+      "evidence": [],
+      "residual": "No complete toolchain/bootstrap comparison-obligation authority is registered."
+    },
+    {
+      "population": "U1",
+      "state": "not_registered",
+      "expected_cells": 0,
+      "expected_ids_sha256": null,
+      "expected_cell_seals_sha256": null,
+      "evidence": [],
+      "residual": "No complete kernel/core comparison-obligation authority is registered."
+    },
+    {
+      "population": "U2",
+      "state": "not_registered",
+      "expected_cells": 0,
+      "expected_ids_sha256": null,
+      "expected_cell_seals_sha256": null,
+      "evidence": [],
+      "residual": "TL0.6.5 has no accepted TL0.6.3/TL0.6.4 parents or derived official/native comparison-obligation authority."
+    },
+    {
+      "population": "U3",
+      "state": "not_registered",
+      "expected_cells": 0,
+      "expected_ids_sha256": null,
+      "expected_cell_seals_sha256": null,
+      "evidence": [],
+      "residual": "No complete core-library comparison-obligation authority is registered."
+    },
+    {
+      "population": "U4",
+      "state": "not_registered",
+      "expected_cells": 0,
+      "expected_ids_sha256": null,
+      "expected_cell_seals_sha256": null,
+      "evidence": [],
+      "residual": "No complete Lake/project comparison-obligation authority is registered."
+    },
+    {
+      "population": "U5",
+      "state": "not_registered",
+      "expected_cells": 0,
+      "expected_ids_sha256": null,
+      "expected_cell_seals_sha256": null,
+      "evidence": [],
+      "residual": "No complete server/editor comparison-obligation authority is registered."
+    },
+    {
+      "population": "U6",
+      "state": "not_registered",
+      "expected_cells": 0,
+      "expected_ids_sha256": null,
+      "expected_cell_seals_sha256": null,
+      "evidence": [],
+      "residual": "No complete runtime/compiler comparison-obligation authority is registered."
+    },
+    {
+      "population": "U7",
+      "state": "not_registered",
+      "expected_cells": 0,
+      "expected_ids_sha256": null,
+      "expected_cell_seals_sha256": null,
+      "evidence": [],
+      "residual": "No complete mathlib comparison-obligation authority is registered."
+    },
+    {
+      "population": "U8",
+      "state": "not_registered",
+      "expected_cells": 0,
+      "expected_ids_sha256": null,
+      "expected_cell_seals_sha256": null,
+      "evidence": [],
+      "residual": "No complete adversarial/security comparison-obligation authority is registered."
+    },
+    {
+      "population": "U9",
+      "state": "not_registered",
+      "expected_cells": 0,
+      "expected_ids_sha256": null,
+      "expected_cell_seals_sha256": null,
+      "evidence": [],
+      "residual": "No complete platform/release comparison-obligation authority is registered."
+    }
+  ],
   "paired_summary": {
     "registered_cells": 0,
-    "required_fields": [
-      "attempt_id",
-      "axeyum_artifact_bytes",
-      "axeyum_assurance_sha256",
-      "axeyum_configuration_sha256",
-      "axeyum_duration_ms",
-      "axeyum_evidence",
-      "axeyum_executable_sha256",
-      "axeyum_outcome_sha256",
-      "axeyum_peak_rss_kib",
-      "axis",
-      "command_sha256",
-      "completed",
-      "dependency_sha256",
-      "diagnostics_sha256",
-      "environment_sha256",
-      "id",
-      "layer",
-      "normalization",
-      "official_artifact_bytes",
-      "official_assurance_sha256",
-      "official_configuration_sha256",
-      "official_duration_ms",
-      "official_evidence",
-      "official_executable_sha256",
-      "official_outcome_sha256",
-      "official_peak_rss_kib",
-      "outcome",
-      "platform_id",
-      "population",
-      "resource_envelope_sha256",
-      "source_family",
-      "source_sha256"
-    ],
+    "expected_cells": 0,
+    "authority_state_counts": {
+      "complete_authority": 0,
+      "bounded_profile": 0,
+      "not_registered": 10
+    },
+    "required_fields": {
+      "cell": [
+        "axeyum",
+        "axis",
+        "cell_sha256",
+        "comparison",
+        "dependency_sha256",
+        "id",
+        "layer",
+        "official",
+        "population",
+        "population_member_id",
+        "profile_id",
+        "source_family",
+        "source_sha256"
+      ],
+      "execution": [
+        "artifact_bytes",
+        "assurance_sha256",
+        "attempt_id",
+        "command_sha256",
+        "completion_sha256",
+        "configuration_sha256",
+        "diagnostics_sha256",
+        "duration_ms",
+        "environment_sha256",
+        "evidence",
+        "executable_sha256",
+        "outcome_sha256",
+        "peak_rss_kib",
+        "platform_id",
+        "record_sha256",
+        "record_state",
+        "resource_envelope_sha256",
+        "result_class"
+      ],
+      "comparison": [
+        "axeyum_normalized_sha256",
+        "axeyum_record_sha256",
+        "completed",
+        "contract_sha256",
+        "evidence",
+        "normalization_id",
+        "normalization_sha256",
+        "official_normalized_sha256",
+        "official_record_sha256",
+        "outcome",
+        "result_sha256"
+      ]
+    },
     "outcome_counts": {
       "agree-success": 0,
       "agree-reject": 0,

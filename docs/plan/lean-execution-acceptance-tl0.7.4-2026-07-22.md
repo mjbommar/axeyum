@@ -15,6 +15,7 @@ Plans and prior attempt:
 - [original source-first plan](lean-execution-acceptance-tl0.7.4-plan-2026-07-22.md)
 - [attempt 001 failed result](lean-execution-acceptance-tl0.7.4-attempt-001-2026-07-22.md)
 - [R1 source-first plan](lean-execution-acceptance-tl0.7.4-r1-plan-2026-07-22.md)
+- [R2 merge-drift repair](lean-execution-acceptance-tl0.7.4-merge-drift-r2-result-2026-07-23.md)
 
 ## 1. Result
 
@@ -48,11 +49,15 @@ It is not Lean 4 parity and does not complete any parity population or axis.
 | R1 thread-accounting clarification | `fde64fb39ded789f3a392a818d86d2dc7d299406` | before R1 source/process |
 | R1 runner/tests | `679f4b9d1941b166c86db652501f1ba7df417da0` | before both completed controls |
 | Rendered-authority check fix | `408381b1e098bf83594266066afb00594f25a402` | after immutable controls; generator/check path only |
+| Installer merge-drift plan | `959374cf88de2b9062caf495c6fab4f55adf4f29` | after immutable controls; before R2 validator repair |
+| Historical/current input split | `d51650e4dfb7db565fc49724f13882144bdbe75c` | after immutable controls; validator/test path only |
 
 The authority names `679f4b9d...` as the control implementation revision.
 The later `408381b1...` change only taught `--check` to read the same indented
 JSON format the generator writes; it did not change or rerun either process.
-The authority source-input list hashes the final script/test bytes.
+The authority source-input list hashes the final historical script/test bytes.
+R2 deliberately tracks its newer validator/test bytes in the terminal registry
+without changing that list.
 
 ## 3. Exporter build provenance
 
@@ -131,6 +136,12 @@ downloads, or reruns external controls.
 
 Authority SHA-256:
 `f8a4d949b5dda4f37f8115a674702eb6dcaccc96394889d1ae3c28febeb4bfa5`.
+
+The subsequent [R2 merge-drift repair](lean-execution-acceptance-tl0.7.4-merge-drift-r2-result-2026-07-23.md)
+keeps this historical seal and all evidence bytes unchanged while separately
+validating the newer fail-closed installer merged from the official-Lean gate.
+The current validator is tracked by the complete-parity registry rather than
+post-hoc rebinding this authority or its downstream U2 descendants.
 
 The result proves only that these two exact external controls traverse the
 local resource/process/immutable-store/completion path. It does not prove:

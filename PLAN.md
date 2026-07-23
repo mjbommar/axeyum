@@ -425,7 +425,30 @@ state.
 > twelve mutation tests, and zero real outcomes. TL0.7.2 process behavior,
 > TL0.7.3 local process-interruption storage, and TL0.7.4's two no-credit real
 > controls are now closed. Official U2 outcomes remain open under TL0.6.3;
-> exact paired records remain later TL0.6.5 work.
+> exact paired records remain later TL0.6.5 work. Their preregistered schema
+> now recomputes execution/comparison/cell seals and binds each population by
+> count, sorted IDs, and sorted cell seals. It also requires typed complete-side
+> result classes and distinct normalized-observable identities, deriving all
+> eight comparison outcomes instead of trusting a sealed label. This is
+> contract hardening, not an observed pair or parity credit. R3 now adds a
+> content-bound nine-layer normalization authority plus an executable exact-
+> field projection kernel: 68 semantic fields and 18 narrowly justified
+> ignored-field rules have exhaustive mutation controls. R4 now versions that
+> authority and validates all 86 field occurrences before projection as 65
+> SHA-256 values, three sealed enums, nine nonnegative integers, or nine
+> nonempty strings; fully resealed v1 normalizers reject. Paired cells must cite
+> a registered same-layer current contract. R5 now versions that authority
+> again, adds the missing A10 mathlib-ecosystem projection route, and requires
+> each cell axis to be one of the selected contract's sealed `applicable_axes`.
+> Ten contracts cover A0--A11 through 15 exact applicability pairs, select 76
+> semantic fields, justify 20 ignored rules, and validate 96 typed occurrences;
+> all 105 unregistered contract/axis pairs reject after full resealing. This is
+> normalizer-axis coverage, not a mathlib population or completed axis. Raw
+> extractors and semantic canonicalizers remain zero, so it still creates no
+> observed pair or credit.
+> Next: complete accepted TL0.6.3/TL0.6.4 parents, derive the exact
+> layer-expanded obligations, and validate raw-to-canonical adapters before
+> authorizing a native attempt.
 > TL0.7.2's source-first
 > [process-adapter plan](docs/plan/lean-execution-process-adapter-tl0.7.2-plan-2026-07-22.md)
 > was pushed before implementation or probes. The subsequent
@@ -658,9 +681,35 @@ state.
 > and sealed authority now credit 64/64 local official outcomes and one physical
 > shard from unchanged completion `1f0b9af8`. Aggregate local U2 coverage is 66
 > outcomes / 65 unique cases; every provider/Axeyum/pair/parity counter remains
-> zero. Next source-first work is the next child shard plus TL0.6.4 native-
-> surface classification;
-> then form native pairs. Do not rerun
+> zero. The accepted
+> [TL0.6.4 M0 result](docs/plan/lean-u2-native-surface-classification-tl0.6.4-m0-result-2026-07-23.md)
+> now classifies all 3,723 cases exactly once at a conservative harness floor
+> across ten stable native surfaces. All source-content refinement, exact
+> dependency closure, native outcomes, pairs, and parity credit remain
+> `not-run` or zero. The accepted
+> [M1 result](docs/plan/lean-u2-native-surface-classification-tl0.6.4-m1-result-2026-07-23.md)
+> now inspects all 7,004 tracked files, retains 90,909 exact/candidate spans,
+> and projects all 3,723 cases. All exact dependency closures/native outcomes
+> remain `not-run`, 3,670 generated-wrapper residuals remain, and pairs/parity
+> remain zero. The accepted
+> [M2.0 result](docs/plan/lean-u2-native-surface-classification-tl0.6.4-m2.0-result-2026-07-23.md)
+> freezes the empty typed graph/provider contract; M2.1's
+> [pre-execution result](docs/plan/lean-u2-native-dependency-tl0.6.4-m2.1-pre-execution-2026-07-23.md)
+> freezes 4,092 inputs and 39 no-retry processes but remains explicitly
+> unexecuted. M2.2's
+> [source-first resolution plan](docs/plan/lean-u2-native-dependency-tl0.6.4-m2.2-plan-2026-07-23.md)
+> now freezes first-prefix candidate semantics, separate leaf-existence/content
+> checks, released inventories, transitive module-data closure, and controls.
+> Its source-first
+> [R1 correction](docs/plan/lean-u2-native-dependency-tl0.6.4-m2.2-effective-import-r1-plan-2026-07-23.md)
+> now also separates raw imports from Lean's modifier-sensitive effective load
+> fixed point and freezes ordered incremental `.olean` parts, IR-only
+> reachability, and bounded cycle declines. There is still no M2.2 input
+> authority, process, observation, or credit. Next actions are
+> to authorize and validate M2.1 only when the user explicitly permits its
+> exact command, then bind M2.2 under a separate source-first authority and
+> continue M2.3-M2.7 plus M3 review before
+> native pairs. Do not rerun
 > the singleton for population credit. The
 > [complete-parity execution roadmap](docs/plan/lean4-complete-parity-roadmap-2026-07-22.md)
 > now reconciles this U2 boundary with the SMT-LIB evidence layers and the

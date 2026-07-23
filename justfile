@@ -116,6 +116,14 @@ parity-docs:
     python3 scripts/gen-lean-u2-official-ci-profiles.py --check
     python3 -m unittest scripts.tests.test_lean_u2_official_child_shards
     python3 scripts/gen-lean-u2-official-child-shards.py --check
+    python3 -m unittest scripts.tests.test_lean_u2_native_surface_classification
+    python3 scripts/gen-lean-u2-native-surface-classification.py --check
+    python3 -m unittest scripts.tests.test_lean_u2_native_surface_content
+    python3 scripts/gen-lean-u2-native-surface-content.py --check
+    python3 -m unittest scripts.tests.test_lean_u2_native_dependency
+    python3 scripts/gen-lean-u2-native-dependency.py --check
+    python3 -m unittest scripts.tests.test_lean_u2_native_dependency_m2_1
+    python3 scripts/lean_u2_native_dependency_m2_1.py check-contract
     python3 -m unittest scripts.tests.test_lean_execution_evidence
     python3 scripts/gen-lean-execution-evidence.py --check
     python3 -m unittest scripts.tests.test_lean_execution_process
@@ -150,6 +158,8 @@ parity-docs:
     python3 scripts/lean_u2_official_execution_m2_r6.py offline-check
     python3 -m unittest scripts.tests.test_lean_u2_official_execution_m2_r6_result
     python3 scripts/lean_u2_official_execution_m2_r6_result.py result --check
+    python3 -m unittest scripts.tests.test_lean_u2_normalization_contracts
+    python3 scripts/lean_u2_normalization_contracts.py --check
     python3 -m unittest scripts.tests.test_lean_complete_parity
     python3 -m unittest scripts.tests.test_lean_official_construct_matrix
     python3 scripts/check-lean-official-construct-matrix.py --check

@@ -1,0 +1,610 @@
+{
+  "schema": "axeyum-lean-u2-normalization-contracts-v3",
+  "target": {
+    "lean_version": "4.30.0",
+    "lean_commit": "d024af099ca4bf2c86f649261ebf59565dc8c622"
+  },
+  "status": "bounded-contract-only",
+  "implementation": {
+    "canonicalization_schema": "axeyum-lean-normalized-observation-v3",
+    "contract_digest_domain": "axeyum-lean-normalization-contract-v3",
+    "projection_digest_domain": "axeyum-lean-normalized-observation-v3",
+    "encoding": "utf8-sorted-object-keys-original-array-order-compact-json",
+    "unknown_field_policy": "reject",
+    "numeric_policy": "integers-only-no-floats",
+    "array_policy": "order-is-semantic",
+    "value_schema_policy": "validate-before-project"
+  },
+  "contracts": [
+    {
+      "id": "lean-process-harness-v3",
+      "layer": "process-harness",
+      "applicable_axes": [
+        "A0",
+        "A11"
+      ],
+      "compared_fields": [
+        {
+          "field": "cleanup_state_sha256",
+          "kind": "sha256"
+        },
+        {
+          "field": "completion_state_sha256",
+          "kind": "sha256"
+        },
+        {
+          "field": "declared_effects_sha256",
+          "kind": "sha256"
+        },
+        {
+          "field": "expected_exit_policy_sha256",
+          "kind": "sha256"
+        },
+        {
+          "field": "stderr_bytes_sha256",
+          "kind": "sha256"
+        },
+        {
+          "field": "stdout_bytes_sha256",
+          "kind": "sha256"
+        },
+        {
+          "field": "termination_class",
+          "kind": "enum",
+          "values": [
+            "exited",
+            "signaled",
+            "wall-timeout",
+            "cpu-timeout",
+            "memory-limit",
+            "pids-limit",
+            "disk-limit",
+            "cancelled",
+            "runner-lost",
+            "launch-failed",
+            "preflight-invalid",
+            "unknown-termination"
+          ]
+        }
+      ],
+      "ignored_fields": [
+        {
+          "field": "collector_sequence",
+          "kind": "nonnegative-integer",
+          "reason": "Local ingestion order is non-semantic; attempt and completion order remain sealed by their owning records."
+        },
+        {
+          "field": "evidence_storage_path",
+          "kind": "nonempty-string",
+          "reason": "Raw evidence content and reachability are sealed separately; local storage spelling is non-semantic."
+        }
+      ],
+      "contract_sha256": "ab7c0b5719539e643d17deeeaa251cc1875a4830aefded0dbdb8575ce3fa55ca"
+    },
+    {
+      "id": "lean-parser-macro-v3",
+      "layer": "parser-macro",
+      "applicable_axes": [
+        "A3"
+      ],
+      "compared_fields": [
+        {
+          "field": "macro_expansion_sha256",
+          "kind": "sha256"
+        },
+        {
+          "field": "recovery_nodes_sha256",
+          "kind": "sha256"
+        },
+        {
+          "field": "scope_hygiene_sha256",
+          "kind": "sha256"
+        },
+        {
+          "field": "source_spans_sha256",
+          "kind": "sha256"
+        },
+        {
+          "field": "syntax_tree_sha256",
+          "kind": "sha256"
+        }
+      ],
+      "ignored_fields": [
+        {
+          "field": "collector_sequence",
+          "kind": "nonnegative-integer",
+          "reason": "Local ingestion order is non-semantic; syntax and expansion order remain selected observables."
+        },
+        {
+          "field": "evidence_storage_path",
+          "kind": "nonempty-string",
+          "reason": "Raw evidence content and reachability are sealed separately; local storage spelling is non-semantic."
+        }
+      ],
+      "contract_sha256": "25179fa04e777292e9bb097d588395e9b1db2fded2f74edef577248e2f366d3d"
+    },
+    {
+      "id": "lean-elaboration-v3",
+      "layer": "elaboration",
+      "applicable_axes": [
+        "A4"
+      ],
+      "compared_fields": [
+        {
+          "field": "core_terms_sha256",
+          "kind": "sha256"
+        },
+        {
+          "field": "declarations_sha256",
+          "kind": "sha256"
+        },
+        {
+          "field": "diagnostics_sha256",
+          "kind": "sha256"
+        },
+        {
+          "field": "environment_extensions_sha256",
+          "kind": "sha256"
+        },
+        {
+          "field": "inferred_types_sha256",
+          "kind": "sha256"
+        },
+        {
+          "field": "info_trees_sha256",
+          "kind": "sha256"
+        }
+      ],
+      "ignored_fields": [
+        {
+          "field": "collector_sequence",
+          "kind": "nonnegative-integer",
+          "reason": "Local ingestion order is non-semantic; declaration and diagnostic order remain inside selected identities."
+        },
+        {
+          "field": "evidence_storage_path",
+          "kind": "nonempty-string",
+          "reason": "Raw evidence content and reachability are sealed separately; local storage spelling is non-semantic."
+        }
+      ],
+      "contract_sha256": "6bbc49da727771485cff7798c830a3b86d2b47d290d1d527fcc8f500f5d2d2a0"
+    },
+    {
+      "id": "lean-kernel-assurance-v3",
+      "layer": "kernel-assurance",
+      "applicable_axes": [
+        "A1",
+        "A9"
+      ],
+      "compared_fields": [
+        {
+          "field": "admission_class",
+          "kind": "enum",
+          "values": [
+            "admitted",
+            "rejected",
+            "declined"
+          ]
+        },
+        {
+          "field": "axiom_trust_closure_sha256",
+          "kind": "sha256"
+        },
+        {
+          "field": "declaration_identity_sha256",
+          "kind": "sha256"
+        },
+        {
+          "field": "definitional_equality_sha256",
+          "kind": "sha256"
+        },
+        {
+          "field": "dependency_identity_sha256",
+          "kind": "sha256"
+        },
+        {
+          "field": "independent_replay_sha256",
+          "kind": "sha256"
+        },
+        {
+          "field": "inferred_type_sha256",
+          "kind": "sha256"
+        },
+        {
+          "field": "normal_form_sha256",
+          "kind": "sha256"
+        }
+      ],
+      "ignored_fields": [
+        {
+          "field": "collector_sequence",
+          "kind": "nonnegative-integer",
+          "reason": "Local ingestion order is non-semantic; declaration and dependency order remain inside selected identities."
+        },
+        {
+          "field": "evidence_storage_path",
+          "kind": "nonempty-string",
+          "reason": "Raw evidence content and reachability are sealed separately; local storage spelling is non-semantic."
+        }
+      ],
+      "contract_sha256": "41c66452e20a24e54c00ed21bd70cd29451434e04bd707dd4f64b2dcbf8fe924"
+    },
+    {
+      "id": "lean-module-cache-v3",
+      "layer": "module-cache",
+      "applicable_axes": [
+        "A2",
+        "A6",
+        "A9"
+      ],
+      "compared_fields": [
+        {
+          "field": "artifact_identity_sha256",
+          "kind": "sha256"
+        },
+        {
+          "field": "effective_import_closure_sha256",
+          "kind": "sha256"
+        },
+        {
+          "field": "environment_parts_sha256",
+          "kind": "sha256"
+        },
+        {
+          "field": "initialization_sha256",
+          "kind": "sha256"
+        },
+        {
+          "field": "invalidation_sha256",
+          "kind": "sha256"
+        },
+        {
+          "field": "raw_import_closure_sha256",
+          "kind": "sha256"
+        },
+        {
+          "field": "visibility_sha256",
+          "kind": "sha256"
+        }
+      ],
+      "ignored_fields": [
+        {
+          "field": "collector_sequence",
+          "kind": "nonnegative-integer",
+          "reason": "Local ingestion order is non-semantic; import, initialization, and invalidation order remain selected observables."
+        },
+        {
+          "field": "evidence_storage_path",
+          "kind": "nonempty-string",
+          "reason": "Raw evidence content and reachability are sealed separately; local storage spelling is non-semantic."
+        }
+      ],
+      "contract_sha256": "0f6a6376ea5fbcdcb26cd619c2e9e93afce51829d7d9e498cbb39df487d3e118"
+    },
+    {
+      "id": "lean-tactic-v3",
+      "layer": "tactic",
+      "applicable_axes": [
+        "A5"
+      ],
+      "compared_fields": [
+        {
+          "field": "diagnostics_sha256",
+          "kind": "sha256"
+        },
+        {
+          "field": "final_goals_sha256",
+          "kind": "sha256"
+        },
+        {
+          "field": "independent_admission_sha256",
+          "kind": "sha256"
+        },
+        {
+          "field": "initial_goals_sha256",
+          "kind": "sha256"
+        },
+        {
+          "field": "metavariable_state_sha256",
+          "kind": "sha256"
+        },
+        {
+          "field": "theorem_term_sha256",
+          "kind": "sha256"
+        }
+      ],
+      "ignored_fields": [
+        {
+          "field": "collector_sequence",
+          "kind": "nonnegative-integer",
+          "reason": "Local ingestion order is non-semantic; goal and metavariable order remain inside selected identities."
+        },
+        {
+          "field": "evidence_storage_path",
+          "kind": "nonempty-string",
+          "reason": "Raw evidence content and reachability are sealed separately; local storage spelling is non-semantic."
+        }
+      ],
+      "contract_sha256": "a20de203cc23708cb88592beaba010af140cf4296e75ed40e05a779aa0c17646"
+    },
+    {
+      "id": "lean-compiler-runtime-v3",
+      "layer": "compiler-runtime",
+      "applicable_axes": [
+        "A8"
+      ],
+      "compared_fields": [
+        {
+          "field": "exception_sha256",
+          "kind": "sha256"
+        },
+        {
+          "field": "execution_route_sha256",
+          "kind": "sha256"
+        },
+        {
+          "field": "ffi_abi_sha256",
+          "kind": "sha256"
+        },
+        {
+          "field": "filesystem_effects_sha256",
+          "kind": "sha256"
+        },
+        {
+          "field": "frontend_result_sha256",
+          "kind": "sha256"
+        },
+        {
+          "field": "load_initialization_sha256",
+          "kind": "sha256"
+        },
+        {
+          "field": "stderr_bytes_sha256",
+          "kind": "sha256"
+        },
+        {
+          "field": "stdout_bytes_sha256",
+          "kind": "sha256"
+        },
+        {
+          "field": "termination_class",
+          "kind": "enum",
+          "values": [
+            "exited",
+            "signaled",
+            "wall-timeout",
+            "cpu-timeout",
+            "memory-limit",
+            "pids-limit",
+            "disk-limit",
+            "cancelled",
+            "runner-lost",
+            "launch-failed",
+            "preflight-invalid",
+            "unknown-termination"
+          ]
+        },
+        {
+          "field": "value_sha256",
+          "kind": "sha256"
+        }
+      ],
+      "ignored_fields": [
+        {
+          "field": "collector_sequence",
+          "kind": "nonnegative-integer",
+          "reason": "Local ingestion order is non-semantic; effect, output, and initialization order remain selected observables."
+        },
+        {
+          "field": "evidence_storage_path",
+          "kind": "nonempty-string",
+          "reason": "Raw evidence content and reachability are sealed separately; local storage spelling is non-semantic."
+        }
+      ],
+      "contract_sha256": "61d8e793eb058fd5df8a4b8a4d9840a4b768c556d418536278e06631af578c53"
+    },
+    {
+      "id": "lean-server-rpc-v3",
+      "layer": "server-rpc",
+      "applicable_axes": [
+        "A7"
+      ],
+      "compared_fields": [
+        {
+          "field": "cancellation_sha256",
+          "kind": "sha256"
+        },
+        {
+          "field": "diagnostics_sha256",
+          "kind": "sha256"
+        },
+        {
+          "field": "document_versions_sha256",
+          "kind": "sha256"
+        },
+        {
+          "field": "restart_sha256",
+          "kind": "sha256"
+        },
+        {
+          "field": "snapshots_sha256",
+          "kind": "sha256"
+        },
+        {
+          "field": "stale_result_suppression_sha256",
+          "kind": "sha256"
+        },
+        {
+          "field": "transcript_sha256",
+          "kind": "sha256"
+        },
+        {
+          "field": "widgets_sha256",
+          "kind": "sha256"
+        },
+        {
+          "field": "worker_watchdog_sha256",
+          "kind": "sha256"
+        }
+      ],
+      "ignored_fields": [
+        {
+          "field": "collector_sequence",
+          "kind": "nonnegative-integer",
+          "reason": "Local ingestion order is non-semantic; transcript, request, version, and cancellation order remain selected observables."
+        },
+        {
+          "field": "evidence_storage_path",
+          "kind": "nonempty-string",
+          "reason": "Raw evidence content and reachability are sealed separately; local storage spelling is non-semantic."
+        }
+      ],
+      "contract_sha256": "4984a10db48ef2964c9652cf3c7754c14f684afc41817dfeb3e2e925405ab851"
+    },
+    {
+      "id": "lean-lake-project-v3",
+      "layer": "lake-project",
+      "applicable_axes": [
+        "A6",
+        "A11"
+      ],
+      "compared_fields": [
+        {
+          "field": "artifacts_sha256",
+          "kind": "sha256"
+        },
+        {
+          "field": "cache_state_sha256",
+          "kind": "sha256"
+        },
+        {
+          "field": "command_exits_sha256",
+          "kind": "sha256"
+        },
+        {
+          "field": "incremental_offline_sha256",
+          "kind": "sha256"
+        },
+        {
+          "field": "manifests_sha256",
+          "kind": "sha256"
+        },
+        {
+          "field": "materialization_sha256",
+          "kind": "sha256"
+        },
+        {
+          "field": "network_policy_sha256",
+          "kind": "sha256"
+        },
+        {
+          "field": "revisions_sha256",
+          "kind": "sha256"
+        },
+        {
+          "field": "targets_facets_jobs_sha256",
+          "kind": "sha256"
+        },
+        {
+          "field": "workspace_graph_sha256",
+          "kind": "sha256"
+        }
+      ],
+      "ignored_fields": [
+        {
+          "field": "collector_sequence",
+          "kind": "nonnegative-integer",
+          "reason": "Local ingestion order is non-semantic; graph, job, command, cache, and incremental order remain selected observables."
+        },
+        {
+          "field": "evidence_storage_path",
+          "kind": "nonempty-string",
+          "reason": "Raw evidence content and reachability are sealed separately; local storage spelling is non-semantic."
+        }
+      ],
+      "contract_sha256": "a39fde68f9a23c59bc0abfeea3a9a606c84300c7093d7878418487ce6080a0ed"
+    },
+    {
+      "id": "lean-mathlib-ecosystem-v3",
+      "layer": "mathlib-ecosystem",
+      "applicable_axes": [
+        "A10"
+      ],
+      "compared_fields": [
+        {
+          "field": "axiom_trust_closure_sha256",
+          "kind": "sha256"
+        },
+        {
+          "field": "build_outcomes_sha256",
+          "kind": "sha256"
+        },
+        {
+          "field": "declaration_closure_sha256",
+          "kind": "sha256"
+        },
+        {
+          "field": "failure_classification_sha256",
+          "kind": "sha256"
+        },
+        {
+          "field": "module_outcomes_sha256",
+          "kind": "sha256"
+        },
+        {
+          "field": "runtime_tests_sha256",
+          "kind": "sha256"
+        },
+        {
+          "field": "tactic_results_sha256",
+          "kind": "sha256"
+        },
+        {
+          "field": "test_outcomes_sha256",
+          "kind": "sha256"
+        }
+      ],
+      "ignored_fields": [
+        {
+          "field": "collector_sequence",
+          "kind": "nonnegative-integer",
+          "reason": "Local ingestion order is non-semantic; complete module, build, test, tactic, failure-classification, and runtime order remain inside selected identities."
+        },
+        {
+          "field": "evidence_storage_path",
+          "kind": "nonempty-string",
+          "reason": "Raw evidence content and reachability are sealed separately; local storage spelling is non-semantic."
+        }
+      ],
+      "contract_sha256": "ed7264b5fad04a5ce302d0d8b9be2d5c3e2995677764b78c4d7744c8c91153c4"
+    }
+  ],
+  "summary": {
+    "contracts": 10,
+    "compared_fields": 76,
+    "ignored_rules": 20,
+    "covered_axes": 12,
+    "axis_contract_occurrences": 15,
+    "typed_field_occurrences": 96,
+    "value_schema_counts": {
+      "enum": 3,
+      "nonempty-string": 10,
+      "nonnegative-integer": 10,
+      "sha256": 73
+    },
+    "raw_extractors_implemented": 0,
+    "semantic_canonicalizers_implemented": 0,
+    "official_outcomes": 0,
+    "axeyum_outcomes": 0,
+    "paired_cells": 0,
+    "parity_credit": 0
+  },
+  "claims": {
+    "parents_complete": false,
+    "obligation_authority_complete": false,
+    "raw_extractors_implemented": false,
+    "semantic_canonicalizers_implemented": false,
+    "external_process_observed": false,
+    "lean_complete_parity": false
+  }
+}

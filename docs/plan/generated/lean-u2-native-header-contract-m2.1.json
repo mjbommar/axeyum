@@ -1,0 +1,68 @@
+{
+  "schema": "axeyum-lean-u2-native-header-contract-m2.1-report-v1",
+  "as_of": "2026-07-23",
+  "target": {
+    "lean_version": "4.30.0",
+    "lean_commit": "d024af099ca4bf2c86f649261ebf59565dc8c622"
+  },
+  "verdict": "M2.1 input, batch, provider-floor, and control contract frozen; no header parser process or dependency edge observed",
+  "summary": {
+    "case_rows": 3723,
+    "corpus_rows": 4092,
+    "corpus_bytes": 9697571,
+    "mode_counts": {
+      "100644": 4084,
+      "100755": 8
+    },
+    "max_path_utf8_bytes": 69,
+    "newline_or_cr_paths": 0,
+    "first_path": "doc/examples/Certora2022/ex1.lean",
+    "last_path": "tests/simpperf/simp500.lean",
+    "batches": 32,
+    "full_batches": 31,
+    "final_batch_rows": 124,
+    "controls": 14,
+    "planned_processes": 39,
+    "observed_processes": 0,
+    "declared_header_edges": 0,
+    "resolved_nodes": 0,
+    "resolved_edges": 0,
+    "native_outcomes": 0,
+    "paired_cells": 0
+  },
+  "claims": {
+    "input_population_frozen": true,
+    "batch_partition_frozen": true,
+    "control_matrix_frozen": true,
+    "provider_identity_observed": false,
+    "fast_parser_observed": false,
+    "full_parser_observed": false,
+    "header_declarations_complete": false,
+    "source_or_artifact_resolution_complete": false,
+    "native_support_observed": false,
+    "tl0_6_4_complete": false,
+    "lean_parity_established": false
+  },
+  "credits": {
+    "resolved_source_edges": 0,
+    "resolved_olean_edges": 0,
+    "transitive_import_edges": 0,
+    "configured_edges": 0,
+    "runtime_edges": 0,
+    "official_outcomes": 0,
+    "axeyum_outcomes": 0,
+    "paired_cells": 0,
+    "performance_rows": 0,
+    "complete_populations": 0,
+    "complete_axes": 0,
+    "satisfied_gates": 0,
+    "parity_credit": 0
+  },
+  "residual": [
+    "Commit, test, push, and ref-equal the process/evidence implementation.",
+    "Obtain explicit user authorization for the one-shot 39-process attempt.",
+    "Retain and compare all 4,092 fast/full parser rows and exact controls.",
+    "Keep all M2.2-M2.7 source/artifact/runtime/native closure not run."
+  ],
+  "authority_record_sha256": "f0c8f7a0725c78d5659eda52c1bee29ae08548a9e1bfe8043a369ca772381466"
+}

@@ -288,6 +288,128 @@ Again, there are distinct targets:
   derives 17 event contexts, 153 matrix cells, 111 declared CTest attempts, and
   eight exact selection sets. Every attempt remains `not-run`; this closes
   configuration identity, not Lean execution or Axeyum parity. The subsequent
+  [TL0.6.4 M0 result](plan/lean-u2-native-surface-classification-tl0.6.4-m0-result-2026-07-23.md)
+  classifies all 3,723 registered cases exactly once by a conservative harness
+  floor across ten stable native surfaces. It records 4,238 direct and 12,111
+  transitive surface occurrences, but all source-content refinement, exact
+  dependency closure, and native outcomes remain `not-run`; zero observed FFI
+  cases at this floor is not an FFI-absence claim. Native pairs and parity stay
+  zero pending complete M1-M3 refinement and review. The accepted
+  [M1 result](plan/lean-u2-native-surface-classification-tl0.6.4-m1-result-2026-07-23.md)
+  now inspects all 7,004 tracked files, retains 90,909 exact/candidate signal
+  spans, and projects all 3,723 cases. It exposes 24 provisional content-backed
+  FFI case surfaces and 3,670 generated-wrapper residuals without treating
+  either as reachability or native support. Exact dependency closure and every
+  native outcome remain `not-run`; pairs and parity remain zero pending M2/M3.
+  The accepted
+  [M2.0 result](plan/lean-u2-native-surface-classification-tl0.6.4-m2.0-result-2026-07-23.md)
+  now freezes an eleven-node-class, 31-edge-class, nine-evidence-state graph
+  contract across eight selection sets, 111 official variants, and 408,374
+  factored case/variant occurrences. It remains an empty contract: all
+  providers are unbound, all seven resolvers and 3,723 closures are `not-run`,
+  node/edge lists and external-process counts are zero, and no native, pair,
+  performance, population, axis, gate, or parity credit is added. M2.1-M2.7
+  exact closure and M3 complete-row review remain required.
+  M2.1 is now
+  [implemented but unexecuted](plan/lean-u2-native-dependency-tl0.6.4-m2.1-pre-execution-2026-07-23.md):
+  its authority freezes 4,092 exact Lean inputs / 9,697,571 bytes, 32 batches,
+  14 fast/full parser controls, and 39 sequential no-retry processes. The
+  runner is content-authorized and CI-gated, enforces file-backed live stream
+  ceilings, and seals launch failures, but its evidence root is absent;
+  observed processes, header edges, resolved nodes/edges, and all terminal
+  credit remain zero pending explicit authorization and immutable-evidence
+  validation. M2.2's
+  [source-first resolution plan](plan/lean-u2-native-dependency-tl0.6.4-m2.2-plan-2026-07-23.md)
+  now separately freezes Lean 4.30's first-prefix candidate behavior,
+  independent source/`.olean` existence and content checks, released module
+  universe, transitive module-data closure, full CLI process formula, and 18
+  controls. A returned candidate is not proof that its leaf exists. This is
+  semantics-only preregistration: no M2.2 input authority, process,
+  observation, resolved edge, native outcome, pair, or parity credit exists
+  before accepted M2.1 evidence and a separately bound M2.2 authority. The
+  source-audited
+  [R1 correction](plan/lean-u2-native-dependency-tl0.6.4-m2.2-effective-import-r1-plan-2026-07-23.md)
+  further requires separate raw and effective closures: Lean joins
+  `public`/`meta`/`all` state across repeated module paths and may load IR
+  without module data. It also binds `.olean`, `.olean.server`, and
+  `.olean.private` as one ordered incremental family, not three independently
+  readable artifacts, and turns cyclic module imports into bounded declines.
+  M2.3's
+  [configured-runner/generated-artifact plan](plan/lean-u2-native-dependency-tl0.6.4-m2.3-runner-generated-plan-2026-07-23.md)
+  now preregisters the exact 3,670 wrapper / 52 inline Lake / one lint dispatch
+  partition, provider-specific CMake and CTest provenance, private generated
+  wrapper isolation, exact shell-source/shared-state behavior, runner symlinks,
+  hook and marker precedence, and static-versus-observed edge rules. This is
+  still semantics-only: no provider configuration, M2.3 authority, process,
+  trace, runner edge, native outcome, pair, or parity credit exists, and M2.3
+  binding remains downstream of accepted M2.1 and M2.2 results.
+  M2.4's
+  [Lake workspace/project plan](plan/lean-u2-native-dependency-tl0.6.4-m2.4-lake-project-plan-2026-07-23.md)
+  now preregisters executable configuration, manifest/override/materialization
+  order, target/facet/job semantics, query/setup build projections, cache and
+  network state, and downstream ownership. Its read-only floor has 52 direct
+  Lake cases with 70 tracked configuration roots plus 28 wrapper-directory
+  lexical candidates pending M2.3. No M2.4 authority, process, configured
+  workspace, edge, observation, outcome, pair, or parity credit exists.
+  M2.5's
+  [compiler/runtime/FFI plan](plan/lean-u2-native-dependency-tl0.6.4-m2.5-compiler-runtime-ffi-plan-2026-07-23.md)
+  now preregisters distinct compiled, IR-interpreted, `#eval`, C/LLVM,
+  toolchain/artifact, ABI/symbol/initialization, runtime-effect, and platform
+  routes. Its source-only floor is 841 direct / 860 closure compiler-runtime
+  cases and 24 provisional FFI cases; no M2.5 authority, process, artifact,
+  observation, outcome, pair, performance row, or parity credit exists.
+  M2.6's
+  [editor/server/RPC plan](plan/lean-u2-native-dependency-tl0.6.4-m2.6-editor-rpc-plan-2026-07-23.md)
+  preserves M1 history while rejecting four Lake cases promoted only by eleven
+  generic JSON `version` fields, yielding a qualified 143-case source floor.
+  It separates 137 server-process harnesses from six API-only sources and
+  preregisters raw transport, lifecycle, document/snapshot/publication,
+  cancellation, watchdog/worker, restart, RPC/session/widget, normalization,
+  and `idbg` ownership. No M2.6 authority, process, transcript, observation,
+  outcome, pair, performance row, or parity credit exists.
+  M2.7's
+  [variant-merge and M3-handoff plan](plan/lean-u2-native-dependency-tl0.6.4-m2.7-variant-merge-plan-2026-07-23.md)
+  now preregisters lossless closure across all 408,374 exact case/variant
+  cells. Content-addressed graph storage cannot collapse per-cell owners,
+  conditions, assurance dimensions, declines, residuals, or evidence; union,
+  intersection, delta, and proved equivalence remain non-crediting views. The
+  plan retains M2.6's correction overlay and emits every case and variant into
+  a deterministic M3 queue. No M2.7 authority, accepted parent transfer,
+  merged graph, closed cell, M3 review, outcome, pair, performance row, or
+  parity credit exists.
+  M3.0's
+  [complete-row independent-review plan](plan/lean-u2-native-surface-classification-tl0.6.4-m3-review-plan-2026-07-23.md)
+  now preregisters exact review after an accepted M2.7 result: one independent
+  primary disposition per 3,723 case rows and 408,374 case/variant cells, with
+  secondary concurrence for risk-bearing rows. The append-only campaign may
+  resume after validating its frozen prefix, but cannot sample, approve by
+  representative, silently replay, or repair M2 in place. No accepted M2
+  parent, M3 authority, assignment, review event, disposition, TL0.6.4
+  acceptance, outcome, pair, performance row, or parity credit exists.
+  TL0.6.5's
+  [matched-execution plan](plan/lean-u2-matched-execution-tl0.6.5-plan-2026-07-23.md)
+  now corrects the terminal pair schema before any pair exists. Official Lean
+  and native Axeyum each retain independent executable, configuration,
+  command, environment, platform, resource, attempt, completion, outcome,
+  assurance, diagnostics, metrics, and evidence identities; normalization and
+  taxonomy live in a third comparison record. R1 seals both executions, the
+  comparison, the whole cell, and the sorted population cell-seal list. R2 now
+  requires a typed result class on each complete side, retains separate
+  official/Axeyum normalized-observable identities, and derives all eight
+  outcomes instead of trusting a sealed label. R3 registers nine content-bound
+  layer contracts with 68 semantic fields and 18 explicit ignored-field rules;
+  its exact-field projection kernel rejects unknown fields, floats, invented
+  IDs, cross-layer reuse, and stale contract seals. Raw extractors and semantic
+  canonicalizers remain unimplemented. Separate case, 408,374 candidate
+  execution-slot, and future layer-expanded comparison-obligation denominators
+  prevent accidental count collapse. Per-population expected-count/sorted-ID/
+  sorted-cell-seal authorities and typed `not-run`/`invalid` sides prevent a
+  nonempty agreeing subset, content substitution, or omitted failures from
+  satisfying G3. This is contract/schema
+  progress only: the required parents, comparison authority, Axeyum process,
+  native outcome, pair, performance row, U2 promotion, and parity credit remain
+  absent.
+  The subsequent
   [TL0.7.1 contract](plan/lean-execution-evidence-tl0.7.1-2026-07-22.md)
   defines explicit 4/8 GiB local lanes, twelve typed termination classes, and
   immutable completion-last evidence. Its five controls are synthetic and all
@@ -316,8 +438,11 @@ Again, there are distinct targets:
   under 4 GiB and an exact 3,849-byte/65-line official export under 8 GiB.
   The [authority](plan/lean-execution-acceptance-v1.json) covers three process
   attempts, two completions, and 67 files / 142,523 bytes, while every U2,
-  Axeyum, pairing, performance, and parity counter remains zero. TL0.7 is
-  complete. TL0.6.3 is now partial through a
+  Axeyum, pairing, performance, and parity counter remains zero. A subsequent
+  [R2 merge-drift repair](plan/lean-execution-acceptance-tl0.7.4-merge-drift-r2-result-2026-07-23.md)
+  preserves the historical authority/evidence and separately validates
+  the current fail-closed installer. TL0.7 is complete. TL0.6.3 is now partial
+  through a
   [source-first M0 plan](plan/lean-u2-official-execution-tl0.6.3-m0-plan-2026-07-22.md)
   for the singleton `compile/534.lean` child shard of the exact release-tag
   Linux-release selection. [Attempt 001](plan/lean-u2-official-execution-tl0.6.3-m0-attempt-001-2026-07-22.md)

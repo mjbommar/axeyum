@@ -1,0 +1,133 @@
+{
+  "schema": "axeyum-lean-u2-native-surface-content-report-v1",
+  "as_of": "2026-07-23",
+  "target": {
+    "commit": "d024af099ca4bf2c86f649261ebf59565dc8c622",
+    "repository": "https://github.com/leanprover/lean4.git",
+    "tag": "v4.30.0",
+    "version": "4.30.0"
+  },
+  "verdict": "all tracked U2 content has a provisional signal census; TL0.6.4 and Lean parity remain incomplete",
+  "summary": {
+    "cases_with_content_added_surface": 3394,
+    "cases_with_generated_wrapper_residual": 3670,
+    "classification_state_counts": {
+      "content-census-provisional": 3723
+    },
+    "closure_surface_counts": {
+      "adversarial": 316,
+      "compiler-runtime": 860,
+      "editor-rpc": 147,
+      "elaborator": 3717,
+      "ffi": 24,
+      "kernel-import": 3717,
+      "modules-lake": 223,
+      "parser-macro": 3717,
+      "tactic-meta": 1678,
+      "toolchain-cli": 6
+    },
+    "content_refinement_counts": {
+      "complete-census": 3723
+    },
+    "decoder_state_counts": {
+      "decoded": 6694,
+      "inspected-no-decoder": 16,
+      "malformed-structured": 294
+    },
+    "direct_surface_counts": {
+      "adversarial": 316,
+      "compiler-runtime": 841,
+      "editor-rpc": 147,
+      "elaborator": 3463,
+      "ffi": 24,
+      "kernel-import": 871,
+      "modules-lake": 81,
+      "parser-macro": 439,
+      "tactic-meta": 1678,
+      "toolchain-cli": 6
+    },
+    "media_counts": {
+      "binary": 10,
+      "c-family": 9,
+      "expected": 1488,
+      "json": 170,
+      "lean": 4092,
+      "python": 19,
+      "shell": 237,
+      "symlink": 6,
+      "text": 444,
+      "toml": 529
+    },
+    "module_dependency_closure_counts": {
+      "not-run": 3723
+    },
+    "native_outcome_counts": {
+      "not-run": 3723
+    },
+    "registration_cases": 3723,
+    "role_file_counts": {
+      "case-hook": 33,
+      "case-local-support": 1331,
+      "family-runner": 93,
+      "primary": 3723,
+      "registration-wrapper-template": 3,
+      "shared-support": 7002,
+      "sidecar": 1591,
+      "unreferenced-content": 0
+    },
+    "signal_hit_counts": {
+      "c.abi-declaration": 10,
+      "json.document-version": 13,
+      "json.rpc-method": 2,
+      "lean.compiler-api": 51,
+      "lean.declaration": 65469,
+      "lean.elaborator-extension": 187,
+      "lean.evaluation-command": 4622,
+      "lean.ffi-declaration": 46,
+      "lean.import-command": 1544,
+      "lean.meta-api": 332,
+      "lean.recursion-control": 1314,
+      "lean.server-api": 78,
+      "lean.syntax-declaration": 573,
+      "lean.syntax-quotation": 1085,
+      "lean.tactic-block": 14039,
+      "shell.native-link-candidate": 20,
+      "shell.tool-command": 1287,
+      "toml.native-link-field": 1,
+      "toml.project-field": 236
+    },
+    "signal_hits": 90909,
+    "support_scopes": 94,
+    "tracked_content_files": 7004
+  },
+  "claims": {
+    "all_registration_cases_content_projected": true,
+    "all_tracked_u2_content_files_inspected": true,
+    "content_signal_census_complete": true,
+    "generated_wrappers_materialized": false,
+    "lean_parity_established": false,
+    "matched_pair_formed": false,
+    "module_dependency_closure_complete": false,
+    "native_execution_observed": false,
+    "performance_measured": false,
+    "tl0_6_4_complete": false,
+    "u2_complete": false
+  },
+  "credits": {
+    "axeyum_outcomes": 0,
+    "complete_axes": 0,
+    "complete_populations": 0,
+    "official_outcomes": 0,
+    "paired_cells": 0,
+    "parity_credit": 0,
+    "performance_rows": 0,
+    "satisfied_gates": 0
+  },
+  "residual": [
+    "Generated tests/with_stage1_test_env.sh references are inventoried but not materialized; M2 owns configured-wrapper closure.",
+    "M2 must derive exact module, generated-artifact, runtime, library, FFI, request, and project dependency closures.",
+    "M3 must review every provisional case row and resolve all candidate and no-signal-observed fields.",
+    "TL0.6.5 may form native pairs only after accepted TL0.6.4 and matching complete official/native evidence."
+  ],
+  "authority_record_sha256": "d10f350d2c01d116538c9b52dcef71f38c473c81a36b3b41f75da4f39b889887"
+}
