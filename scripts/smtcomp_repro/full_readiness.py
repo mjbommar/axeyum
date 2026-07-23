@@ -29,6 +29,7 @@ DEFAULT_REQUIRED_PATHS = (
     "docs/plan/smtcomp-credited-full-population-plan-2026-07-23.md",
     "docs/plan/smtcomp-credited-full-preparation-f2-implementation-2026-07-23.md",
     "scripts/check-smtcomp-resume.sh",
+    "scripts/smtcomp_repro/full_compare.py",
     "scripts/smtcomp_repro/full_execute.py",
     "scripts/smtcomp_repro/full_population.py",
     "scripts/smtcomp_repro/full_preflight.py",
@@ -36,6 +37,7 @@ DEFAULT_REQUIRED_PATHS = (
     "scripts/smtcomp_repro/full_readiness.py",
     "scripts/smtcomp_repro/incident_sentinels.py",
     "scripts/smtcomp_repro/multi_host.py",
+    "scripts/tests/test_smtcomp_full_compare.py",
     "scripts/tests/test_smtcomp_full_population.py",
 )
 GATE_FIELDS = {
