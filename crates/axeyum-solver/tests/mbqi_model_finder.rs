@@ -294,6 +294,132 @@ fn default_repair_uses_checked_real_successor() {
 }
 
 #[test]
+fn free_int_completion_preserves_explicit_function_point() {
+    // The ground candidate sees only f(5)=3, so its absent/default y assignment
+    // cannot make `f` constantly equal to y while preserving that table point.
+    // ADR-0360 fixes y=3 only for candidate generation; the returned model must
+    // then satisfy the exact unfixed source and preserve f(5)=3.
+    let mut arena = TermArena::new();
+    let function = int_fn(&mut arena, "f");
+    let (binder, variable) = int_bound(&mut arena, "x");
+    let free = arena.declare("y", Sort::Int).unwrap();
+    let application = arena.apply(function, &[variable]).unwrap();
+    let free_variable = arena.var(free);
+    let body = arena.eq(application, free_variable).unwrap();
+    let forall = arena.forall(binder, body).unwrap();
+    let five = arena.int_const(5);
+    let at_five = arena.apply(function, &[five]).unwrap();
+    let three = arena.int_const(3);
+    let point = arena.eq(at_five, three).unwrap();
+    let assertions = [forall, point];
+
+    let CheckResult::Sat(model) = check(&mut arena, &assertions) else {
+        panic!("bounded free-Int completion must find the exact checked model");
+    };
+    assert_eq!(model.get(free), Some(Value::Int(3)));
+    assert_eq!(
+        model
+            .function(function)
+            .expect("completed function")
+            .apply_value(&[Value::Int(5)]),
+        Value::Int(3)
+    );
+    assert!(check_model(&arena, &assertions, &model).unwrap());
+    assert!(Evidence::Sat(model).check(&arena, &assertions).unwrap());
+}
+
+#[test]
+fn two_free_int_completion_searches_complete_cartesian_product() {
+    // Neither free scalar occurs in the QF ground slice. The source requires
+    // f(x)=y+z and f(5)=3, so candidate generation must search both scalars and
+    // the final exact replay must establish y+z=3 without retaining fixings.
+    let mut arena = TermArena::new();
+    let function = int_fn(&mut arena, "f");
+    let (binder, variable) = int_bound(&mut arena, "x");
+    let first = arena.declare("y", Sort::Int).unwrap();
+    let second = arena.declare("z", Sort::Int).unwrap();
+    let first_variable = arena.var(first);
+    let second_variable = arena.var(second);
+    let sum = arena.int_add(first_variable, second_variable).unwrap();
+    let application = arena.apply(function, &[variable]).unwrap();
+    let body = arena.eq(application, sum).unwrap();
+    let forall = arena.forall(binder, body).unwrap();
+    let five = arena.int_const(5);
+    let at_five = arena.apply(function, &[five]).unwrap();
+    let three = arena.int_const(3);
+    let point = arena.eq(at_five, three).unwrap();
+    let assertions = [forall, point];
+
+    let CheckResult::Sat(model) = check(&mut arena, &assertions) else {
+        panic!("bounded two-free-Int completion must find the exact checked model");
+    };
+    let Value::Int(first_value) = model.get(first).expect("first completed scalar") else {
+        panic!("first scalar must be Int");
+    };
+    let Value::Int(second_value) = model.get(second).expect("second completed scalar") else {
+        panic!("second scalar must be Int");
+    };
+    assert_eq!(first_value.checked_add(second_value), Some(3));
+    assert_eq!(
+        model
+            .function(function)
+            .expect("completed function")
+            .apply_value(&[Value::Int(5)]),
+        Value::Int(3)
+    );
+    assert!(check_model(&arena, &assertions, &model).unwrap());
+    assert!(Evidence::Sat(model).check(&arena, &assertions).unwrap());
+}
+
+#[test]
+fn free_real_completion_remains_outside_the_preregistered_search() {
+    let mut arena = TermArena::new();
+    let function = arena.declare_fun("f", &[Sort::Int], Sort::Real).unwrap();
+    let (binder, variable) = int_bound(&mut arena, "x");
+    let free = arena.declare("r", Sort::Real).unwrap();
+    let application = arena.apply(function, &[variable]).unwrap();
+    let free_variable = arena.var(free);
+    let body = arena.eq(application, free_variable).unwrap();
+    let forall = arena.forall(binder, body).unwrap();
+    let five = arena.int_const(5);
+    let at_five = arena.apply(function, &[five]).unwrap();
+    let three_halves = arena.real_const(Rational::new(3, 2));
+    let point = arena.eq(at_five, three_halves).unwrap();
+
+    assert!(matches!(
+        check(&mut arena, &[forall, point]),
+        CheckResult::Unknown(_)
+    ));
+}
+
+#[test]
+fn three_free_ints_remain_outside_the_preregistered_search() {
+    let mut arena = TermArena::new();
+    let function = int_fn(&mut arena, "f");
+    let (binder, variable) = int_bound(&mut arena, "x");
+    let first = arena.declare("a", Sort::Int).unwrap();
+    let second = arena.declare("b", Sort::Int).unwrap();
+    let third = arena.declare("c", Sort::Int).unwrap();
+    let first_variable = arena.var(first);
+    let second_variable = arena.var(second);
+    let third_variable = arena.var(third);
+    let first_sum = arena.int_add(first_variable, second_variable).unwrap();
+    let sum = arena.int_add(first_sum, third_variable).unwrap();
+    let application = arena.apply(function, &[variable]).unwrap();
+    let body = arena.eq(application, sum).unwrap();
+    let forall = arena.forall(binder, body).unwrap();
+    let five = arena.int_const(5);
+    let at_five = arena.apply(function, &[five]).unwrap();
+    let three = arena.int_const(3);
+    let point = arena.eq(at_five, three).unwrap();
+
+    assert!(matches!(
+        check(&mut arena, &[forall, point]),
+        CheckResult::Unknown(_)
+    ));
+}
+
+#[test]
 fn two_binder_uf_nonneg_is_sat_and_model_replays() {
     // ∀x y:Int. f(x,y) ≥ 0  ∧  f(1,2) = 3.
     let mut arena = TermArena::new();
