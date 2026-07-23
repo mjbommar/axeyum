@@ -885,7 +885,10 @@ Before another broad implementation claim:
    every Lean scoreboard;
 9. retain adapter, official-oracle, and native outcomes as separate columns;
 10. complete the String and quotient K1 roots and regenerate the dependency-
-   closed blocker ranking;
+    closed blocker ranking; quotient TL2.10 is now preregistered under
+    [proposed ADR-0365](../research/09-decisions/adr-0365-preregister-lean-quotient-package.md)
+    and its [P0-M4 plan](lean-quotient-package-tl2.10-plan-2026-07-23.md), with
+    zero admission or parity credit until every registered exit closes;
 11. classify all 65 prelude assumptions before reporting broader proof parity;
 12. turn the pinned mathlib tree inventory into module/declaration/dependency/
     tactic/test manifests before assigning any coverage percentage; and

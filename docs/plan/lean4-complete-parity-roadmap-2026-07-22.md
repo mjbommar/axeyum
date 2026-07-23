@@ -438,7 +438,10 @@ execution, and content/dependency-complete U2 classification.
    native parity credit.
 7. Close K1's String-literal and quotient-package roots, regenerate the
    construct matrix, and preserve fail-closed decline codes for anything still
-   unsupported.
+   unsupported. Quotient TL2.10 P0 is now source-backed and preregistered under
+   proposed ADR-0365; it grants no admission or K1 credit until its native,
+   generated, importer, identity, renderer, differential, and publication
+   exits close. String remains a separate broader dependency closure.
 8. Register the dependency-closed U3 `Init`/`Std`/Lean-module population and
    classify/discharge the 65 prelude assumptions instead of treating import
    counts as trust closure.

@@ -394,6 +394,16 @@ state.
 > adapter or incomplete-run substitution. The current generated matrix has one
 > satisfied K0 row, four of five K1 rows, and zero satisfied K2-K6 rows; TL2.14
 > completion is not full Lean parity.
+> The next dependency-ordered K1 kernel root, TL2.10 quotient support, is now
+> preregistered under
+> [proposed ADR-0365](docs/research/09-decisions/adr-0365-preregister-lean-quotient-package.md)
+> and its
+> [P0--M4 plan](docs/plan/lean-quotient-package-tl2.10-plan-2026-07-23.md).
+> P0 freezes canonical `Eq` validation, atomic four-declaration admission,
+> exact `Quot.lift`/`Quot.ind` reduction, importer/identity/renderer boundaries,
+> generated seam coverage, and transactional mutations. It adds no quotient
+> admission or K1/parity credit; String and every broader Lean-system gate
+> remain open.
 > TL0.6 is now partial: the fail-closed
 > [complete-parity registry](docs/plan/lean-complete-parity-v1.json) and
 > generated [Markdown](docs/plan/generated/lean-complete-parity.md)/
