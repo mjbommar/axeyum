@@ -274,7 +274,9 @@ gate.
    QF_FP/QF_BVFP/QF_ABVFP plus QF_AUFLIA under the completed protocol. Require
    DISAGREE=0. The bounded
    [S5.1 admitted-slice plan](../smtcomp-admitted-slices-s5.1-plan-2026-07-23.md)
-   first closes the ordered-subset handoff without launching a solver.
+   and [result](../smtcomp-admitted-slices-s5.1-result-2026-07-23.md) close the
+   ordered-subset handoff without launching a solver. Preregister the actual P0
+   execution identities and limits before launching it.
 3. **Credited full population.** Only then execute Axeyum, cvc5, and Bitwuzla on
    the same versioned selection; publish the per-logic inventory and regenerate
    the coverage-weighted parity matrix without combining incompatible regimes.
@@ -345,15 +347,16 @@ NAS (shared, corpus read-only in practice):
    checkout or another lane's NAS output.
 3. Confirm the old s4 process/log state and count literal `WRONG` lines without
    treating the stale run as evidence.
-4. Treat the accepted S4 root as immutable. S5 admission is complete; next
-   preregister and execute only the repaired P0 slices before any credited
+4. Treat the accepted S4 root as immutable. S5 and S5.1 admission are complete;
+   next preregister and execute only the repaired P0 slices before any credited
    full-population run. The active solver capability checkpoint is
    [`../checked-multi-binder-quantified-uf-models-2026-07-22.md`](../checked-multi-binder-quantified-uf-models-2026-07-22.md).
 5. Update `STATUS.md` and this file before handoff; push only a green topic
    branch for the integration owner.
 
 *Owner: SMT-COMP measurement/full-library lane. Next measurement milestone:
-fresh admitted QF_FP/QF_BVFP/QF_ABVFP and QF_AUFLIA P0 slices; the bounded multi-binder checked quantified-UF
+preregistered fresh admitted QF_FP/QF_BVFP/QF_ABVFP and QF_AUFLIA P0 slices;
+the bounded multi-binder checked quantified-UF
 milestone is accepted under ADR-0358. The bounded
 [unknown adjudication](../quantified-uflia-unknown-adjudication-2026-07-22.md)
 now measures the accepted ADR-0359

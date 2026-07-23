@@ -400,8 +400,8 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   green. Next: resume broad probing; quadratic-pole inverse Z remains
   representation-bound.
 
-- **2026-07-23 — SMT-COMP S5 harness admission is complete without a solver
-  run.** E1b's new v2 selection-input ledger binds a content-addressed S4
+- **2026-07-23 — SMT-COMP S5/S5.1 selection admission is complete without a
+  solver run.** E1b's v2 selection-input ledger binds a content-addressed S4
   completion, canonical official list, exact selected-file ledger, and physical
   execution bytes. The two-file positive fixture and all nine preregistered
   rejecting mutations pass; cgroup-backed E2/E3 preflight now rejects the old
@@ -409,10 +409,16 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   A read-only pass over the accepted 45,905-file population rehashed all
   15,148,369,947 selected bytes and produced a 19,266,433-byte execution ledger
   with SHA-256 `8e68f29c63f11867304d5fe03eb5a2c47e0cfd15ffdcb0b5b3878dd056734791`.
-  The 55-test resume gate, foundational resources, links, compilation, and
-  whitespace checks pass. No P0/full-population result is credited. Next:
-  preregister the admitted repaired FP/AUFLIA P0 slices and require
-  `DISAGREE=0` before any full run.
+  The S5 resume, foundational-resource, link, compilation, and whitespace
+  gates pass. S5.1 adds only strict official-order subsets: five
+  new rejecting mutations and a one-file executable fixture pass. The exact
+  1,810-file FP/AUFLIA P0 union rehashes 36,995,297 bytes while validating the
+  complete 45,905-row list/ledger; its 762,981-byte manifest has SHA-256
+  `a8cb9ba090b22e658e06dc53b4c97e1cdce595117acc1cbdc7f8476e9e85f4f4`.
+  A second full 15.1 GB pass remains byte-identical to S5, and the expanded
+  resume gate passes 57 tests. No P0/full-population result is credited. Next:
+  preregister the actual repaired FP/AUFLIA execution identities and limits,
+  then require `DISAGREE=0` before any full run.
 
 - **2026-07-22 — certified unbounded rational-function integer-order Bessel-J
   limits.** Wave fourteen extends the exact fixed-order DLMF asymptotic from
