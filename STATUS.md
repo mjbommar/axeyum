@@ -476,6 +476,8 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   runner or process exists yet.** The source-first
 - **2026-07-22 — TL0.6.3 M2's pure 64-case execution contract is implemented
   and pushed; no live runner or process exists yet.** The source-first
+- **2026-07-22 — TL0.6.3 M2's runner is pushed; its first invocation stopped
+  during source preflight before any harness, discovery, or process.** The source-first
   [plan](docs/plan/lean-u2-official-execution-tl0.6.3-m2-shard-0001-plan-2026-07-22.md)
   was committed and pushed at `16bd6f08` before implementation, harness
   construction, discovery, or execution. It deterministically selects the
@@ -509,9 +511,18 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   retained-evidence revalidation. Five runner tests use synthetic discovery and
   fake processes only; the complete surface passes 267 tests with one
   intentional skip. The registry now distinguishes `run_command=true` from
-  `live_execution_observed=false`. Next: revalidate every external preflight
-  input from the clean pushed revision before deciding whether to invoke the
-  single authorized live attempt.
+  `live_execution_observed=false`. The first invocation at documentation
+  revision `519d91c1` created only a private work root and exact Lean source
+  archive, then stopped because the validator treated the pinned
+  `tests/compile_bench/run_test.sh -> ../compile/run_test.sh` link as a missing
+  regular file. No evidence root, toolchain capture, harness, discovery,
+  prelaunch, or child process exists, so the process attempt remains
+  unconsumed. The source-first
+  [R1 correction plan](docs/plan/lean-u2-official-execution-tl0.6.3-m2-r1-symlink-preflight-plan-2026-07-22.md)
+  freezes manifest-only safe relative-link resolution, exact link/target
+  identities, mutation gates, a fresh work root, and no other rule change.
+  Next: implement, test, commit, and push R1 before repeating the exact
+  read-only preflight.
 
 - **2026-07-22 — TL0.6.3 M1 derives complete deterministic U2 child-shard
   scheduling with zero new outcomes or parity credit.** The source-first
@@ -8037,6 +8048,16 @@ plan is built and committed on the current branch:
   their uncertified `Fpa2Bv` proof credit. The pathological 30-minute
   collection path and fail-closed panic disappear; the exact pinned Lean 4.30
   gate accepts the current 70/70 modules with zero skips and zero failures.
+- **2026-07-22 — Preregistered the bounded M2 R1 selected-runner symlink
+  correction after a pre-process stop.** The first `run-m2` invocation created
+  only a retained private work root and exact source archive, then rejected 24
+  compile-bench registrations because their official runner is the pinned
+  `tests/compile_bench/run_test.sh -> ../compile/run_test.sh` link. No evidence
+  root, toolchain capture, harness, discovery, prelaunch, or child process
+  exists; the process attempt remains unconsumed. The R1 plan freezes one-hop
+  safe relative manifest resolution, exact link/target identities, mutation
+  gates, a fresh work root, and zero outcome or parity credit.
+
 - **2026-07-22 — Implemented, validated, committed, and pushed TL0.6.3 M2's
   one-shot runner without executing it.** Commit `431d3959` binds the exact
   source archive, released bundled toolchain/compiler probe, 64-registration

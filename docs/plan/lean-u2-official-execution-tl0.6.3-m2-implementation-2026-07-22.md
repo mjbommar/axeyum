@@ -1,8 +1,8 @@
 # Lean U2 TL0.6.3 M2 offline implementation checkpoint
 
 Status: **pure contract, completion store, and one-shot runner implemented,
-validated, committed, and pushed; no live harness discovery or test process has
-run**
+validated, committed, and pushed; first invocation stopped during source
+preflight before any live harness discovery or test process**
 
 Date: 2026-07-22
 
@@ -34,8 +34,18 @@ plan requires.
 
 Commit `431d3959ae5c3d7bbabf25c1d3a3aa6ab88f6f4c` subsequently
 implemented, validated, committed, and pushed the one-shot runner. Local,
-tracking, and remote refs were equal at that revision. The command exists but
-has not been invoked.
+tracking, and remote refs were equal at that revision. Documentation commit
+`519d91c15e7f4ab587c94611e8da7ebe668670db` was likewise pushed before the
+first invocation.
+
+That invocation created only a retained private work root and exact Lean source
+archive, then stopped during selected-source validation because all 24
+compile-bench registrations use the intentional pinned
+`tests/compile_bench/run_test.sh -> ../compile/run_test.sh` link. No evidence
+root, toolchain capture, harness, discovery, prelaunch, or child process exists,
+so the process attempt remains unconsumed. The source-first
+[R1 correction plan](lean-u2-official-execution-tl0.6.3-m2-r1-symlink-preflight-plan-2026-07-22.md)
+freezes one safe manifest-only symlink rule before any correction.
 
 ## 2. Exact implementation identities
 
@@ -137,9 +147,11 @@ outcome, completion of shard `0001`, a parent-selection completion, provider
 reproduction, an Axeyum outcome, a matched pair, performance, an axis, a gate,
 or Lean parity.
 
-Next revalidate the committed runner's external preflight inputs from the clean
-pushed revision: exact Lean source repository/tree, released toolchain root and
-compiler closure, local tool identities, new work/evidence roots, storage
-class, and unchanged authorities. Invoke `run-m2` at most once only if every
-preflight remains exact. Any mismatch stops before live harness discovery; any
-post-launch failure is retained without retry under this plan.
+Next implement, test, commit, and push only the R1 manifest-only selected-runner
+correction. Then revalidate the corrected runner's external preflight inputs
+from the new clean pushed revision: exact Lean source repository/tree, released
+toolchain root and compiler closure, local tool identities, a fresh work root,
+the still-absent evidence root, storage class, and unchanged authorities.
+Invoke the single process attempt only if every preflight remains exact. Any
+other mismatch stops before live harness discovery; any post-launch failure is
+retained without retry under this plan.

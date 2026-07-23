@@ -203,7 +203,10 @@ Start at the root [`PLAN.md`](../../PLAN.md) (map + standing rules) and
   credit contract and thirteen focused tests. Commits `57dcf343`, `d1f144d4`,
   and `431d3959` add the completion store, correct case-before-post ordering,
   and implement/push the one-shot runner. Its run command exists but remains
-  uninvoked; no live harness discovery or test process has run.
+  without a live process observation. The first invocation stopped during
+  selected-source preflight before harness construction, discovery, prelaunch,
+  or child process because the official compile-bench runner is a pinned
+  symlink rather than a regular manifest row.
 - [`lean-u2-official-execution-tl0.6.3-m2-implementation-2026-07-22.md`](lean-u2-official-execution-tl0.6.3-m2-implementation-2026-07-22.md) —
   post-plan implementation checkpoint for commit `9783ba93`, exact source
   identities, thirteen mutation-focused tests, and commit `57dcf343`'s exact
@@ -211,7 +214,13 @@ Start at the root [`PLAN.md`](../../PLAN.md) (map + standing rules) and
   parity-doc validation, the `d1f144d4` evidence-order correction, and
   `431d3959`'s tested/pushed one-shot runner retain the explicit
   `live_execution_observed=false` and zero-outcome/zero-credit boundary before
-  external preflight and the single attempt.
+  external preflight and the single process attempt.
+- [`lean-u2-official-execution-tl0.6.3-m2-r1-symlink-preflight-plan-2026-07-22.md`](lean-u2-official-execution-tl0.6.3-m2-r1-symlink-preflight-plan-2026-07-22.md) —
+  source-first correction plan after the stopped first invocation. It binds the
+  exact official compile-bench link and target, permits only safe one-hop
+  relative in-tree resolution through the source manifest, rejects link and
+  target mutations, preserves the unconsumed process attempt, and requires a
+  fresh work root before another preflight.
 - [`lean-compatibility-v1.json`](lean-compatibility-v1.json) and generated
   [`Lean compatibility matrix`](generated/lean-compatibility.md) — TL0.2's
   executable eight-field assurance contract, K0-K6 profile gates, registered
