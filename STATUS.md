@@ -8583,6 +8583,20 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
+- **2026-07-23 — Completed the repaired-P0 combined comparison without another
+  solver or NAS mutation.** The fail-closed generator independently validates
+  all three external results and joins only `(benchmark_id, benchmark_sha256)`.
+  Axeyum decides 914/1,810, cvc5 1,513/1,810, and Bitwuzla 1,221/1,305. On the
+  exact 1,305-row three-solver FP population, 609 rows have three agreeing
+  decisions, 448 have two, 169 have one, and 79 have none; disagreements are
+  zero. The other 505 rows are proven to be exactly QF_AUFLIA and stay in a
+  separate Axeyum/cvc5 projection. The artifact distinguishes `unknown`, no
+  verdict, known-correct, and unadjudicated decisions and forbids cross-scope or
+  performance ranking. Twelve focused tests, the 87-test portable gate, live
+  three-root replay, links, foundational resources, and generated-byte checks
+  pass. Commit `c9e3a972` is pushed on the SMT topic branch; integrator landing
+  precedes a separately preregistered common-selection full-population plan.
+
 - **2026-07-23 — Closed and independently validated the repaired-P0 Bitwuzla
   cell without another solver launch.** After the integrator landed the exact
   closure bytes through `2855ddf7`, the explicit process-free command retained
@@ -8594,8 +8608,8 @@ plan is built and committed on the current branch:
   and external-result validation passes. A second closure command changed none
   of the 1,359 artifact bytes: the before/after inventory SHA-256 is
   `24dc225e63646dec153be0181e9dfe3aadd9696721d7417c1e84e6738ed82724`.
-  All three repaired-P0 cells are closed; integrate the Bitwuzla result document
-  and derive the combined three-cell comparison next.
+  All three repaired-P0 cells are closed; the later combined-comparison result
+  supersedes this next-action sentence.
 
 - **2026-07-23 — Completed and green-gated the process-free Bitwuzla
   post-run closure implementation; live evidence remains unchanged.** The sole
