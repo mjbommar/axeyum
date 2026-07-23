@@ -105,7 +105,15 @@ The source-first
 now selects the larger-address-space branch of that decision: one 16 GiB local
 lane, unchanged 512 MiB stack and exact shard/command/store, a harmless
 nine-dedicated-thread control, one selected process, and no retry or terminal
-promotion.
+promotion. The separately published implementation and one-token control
+correction reached the
+[`R4 control result`](lean-u2-official-execution-tl0.6.3-m2-r4-control-result-2026-07-23.md):
+the direct stack probe passed, but the corrected nine-task control reached a
+16,504,496,128-byte `VmPeak`, emitted `failed to create thread`, and timed out
+under the exact 16 GiB limit. Cleanup left no selected root or process, so
+attempt 003 remains unconsumed and R4 adds zero credit. The immediate U2 path
+is therefore a new source-first larger-lane qualification with retained failed
+control evidence, not selected execution under R4.
 
 ## 2. What the SMT-LIB comparison actually says
 
