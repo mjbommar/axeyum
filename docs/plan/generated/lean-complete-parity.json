@@ -328,7 +328,7 @@
     },
     {
       "path": "scripts/lean_u2_official_execution_m2_store.py",
-      "sha256": "26bea458a5a29434a0013aab5c1733a6e5d41918a9d6ba4f370cc93e14c702c8"
+      "sha256": "e61fd7400f3c885916fafa21f6aa6c2731e79a4752cf84d1700428a7810a9c75"
     },
     {
       "path": "scripts/lean_u2_official_execution_r3_result.py",
