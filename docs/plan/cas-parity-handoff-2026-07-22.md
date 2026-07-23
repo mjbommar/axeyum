@@ -13,15 +13,15 @@ elsewhere in `docs/plan/`). Read this file first when resuming.
   [multi-agent operations guide](../contributor-guide/multi-agent-operations.md):
   work only in the dedicated CAS worktree on an `agent/cas/*` branch, push that
   branch, and leave `main` to the integration owner. The current increment is
-  `agent/cas/gap-probe-wave-nineteen`, based on integration parent `ed5598c5`,
-  with implementation commit `8c82e7d1` (integrated by `ac2571ce`); do not
+  `agent/cas/gap-probe-wave-twenty`, based on integration parent `461ce9c2`,
+  with implementation commit `02f99a79` (integrated by `0e44005b`); do not
   rebase it onto `main` ahead of the integration owner.
-- **Tests:** `560` unit + `147` doctests, **all green**, warning-denied workspace
+- **Tests:** `561` unit + `147` doctests, **all green**, warning-denied workspace
   all-target/all-feature Clippy-clean, strict stable/nightly rustdoc-green,
   wasm-green, links-green, and whitespace-clean.
 - **Source of truth for capabilities:** `docs/research/10-cas/README.md`
   (capability table) and `docs/research/10-cas/diary.md` (chronological entries;
-  latest is **Entry 37b01**). Keep both in sync when landing features.
+  latest is **Entry 37b02**). Keep both in sync when landing features.
 - **Method that works:** empirical **gap-probing** (below). It found every recent
   feature *and* a serious infinite-hang regression.
 
@@ -664,6 +664,29 @@ orders `0..=255`), and Stirling-composed raw moments (regressed for orders
   four weighted/mixed prototypes unevaluated. No public head, operator, backend,
   evidence format, or logic fragment changed, so no ADR is required.
 
+**Certified nested powers of pure rational-rate Bessel-J products**
+- Wave twenty probed powers around an entire finite product. Product squares,
+  weighted product squares, nested powers, and symbolic-constant product powers
+  all declined; a pure product raised to `u32::MAX` timed out in generic rational
+  normalization. Internal variable-dependent weights, modified-I factors,
+  denominators, and zero powers supplied the fail-closed controls.
+- `limit` now structurally distributes an outer positive integer multiplicity
+  only when the powered expression's variable-dependent part is entirely a
+  finite Bessel-J product. It composes nested multiplicities in `u128` and uses
+  proof-preserving saturation: on supported 32/64-bit targets, any saturated
+  decay budget necessarily exceeds twice the maximum `usize`-derived rational
+  weight degree. No product or public power is expanded.
+- Regressions cover product squares/cubes, mixed inner powers, rational and
+  polynomial arguments, reflected signs, variable-free factors and denominators,
+  both infinities, a product exponent of `u32::MAX`, and three nested
+  `u32::MAX` exponents. Internal variable weights (including a mathematically
+  subcritical but deliberately unsupported case), modified-I factors, Bessel
+  denominators, and zero powers remain bounded as intended. An 80-digit mpmath
+  leading-asymptotic comparison passes 10/10 with maximum envelope-scaled error
+  0.00000890279693823. SymPy proves four of five prototypes and leaves only the
+  externally weighted product square unevaluated. No public head, operator,
+  backend, evidence format, or logic fragment changed, so no ADR is required.
+
 ---
 
 ## 5. Zeilberger / WZ — how it works and where to extend
@@ -998,9 +1021,9 @@ esac
 export AXEYUM_CAS_TMP
 trap 'find "$AXEYUM_CAS_TMP" -depth -delete' EXIT
 git rev-parse --abbrev-ref HEAD        # → agent/cas/...
-git merge-base --is-ancestor 8c82e7d1 HEAD
+git merge-base --is-ancestor 02f99a79 HEAD
 CARGO_BUILD_JOBS=1 TMPDIR="$AXEYUM_CAS_TMP" cargo test -p axeyum-cas --jobs 1
-# → 560 unit + 147 doctests green
+# → 561 unit + 147 doctests green
 ```
 Then: read `docs/research/10-cas/diary.md` tail for the latest context, and pick
 up from §6 or resume the gap-probing loop. Push the green owned topic branch;
