@@ -12,16 +12,16 @@ elsewhere in `docs/plan/`). Read this file first when resuming.
 - **Branch/worktree discipline:** follow the current
   [multi-agent operations guide](../contributor-guide/multi-agent-operations.md):
   work only in the dedicated CAS worktree on an `agent/cas/*` branch, push that
-  branch, and leave `main` to the integration owner. The current increment is
-  `agent/cas/gap-probe-wave-twenty`, based on integration parent `461ce9c2`,
-  with implementation commit `02f99a79` (integrated by `0e44005b`); do not
-  rebase it onto `main` ahead of the integration owner.
-- **Tests:** `561` unit + `147` doctests, **all green**, warning-denied workspace
+  branch, and leave `main` to the integration owner. The current implementation
+  increment is `agent/cas/gap-probe-wave-twenty-one`, with source commit
+  `9cb6f731` integrated exactly by merge `53766474`; do not rebase topic work
+  onto `main` ahead of the integration owner.
+- **Tests:** `562` unit + `147` doctests, **all green**, warning-denied workspace
   all-target/all-feature Clippy-clean, strict stable/nightly rustdoc-green,
   wasm-green, links-green, and whitespace-clean.
 - **Source of truth for capabilities:** `docs/research/10-cas/README.md`
   (capability table) and `docs/research/10-cas/diary.md` (chronological entries;
-  latest is **Entry 37b02**). Keep both in sync when landing features.
+  latest is **Entry 37b03**). Keep both in sync when landing features.
 - **Method that works:** empirical **gap-probing** (below). It found every recent
   feature *and* a serious infinite-hang regression.
 
@@ -687,6 +687,30 @@ orders `0..=255`), and Stirling-composed raw moments (regressed for orders
   externally weighted product square unevaluated. No public head, operator,
   backend, evidence format, or logic fragment changed, so no ADR is required.
 
+**Certified rational weights inside powered rational-rate Bessel-J products**
+- Wave twenty-one probed the internal-weight boundary left by wave twenty.
+  Subcritical squares/cubes with polynomial and rational weights, external plus
+  internal weights, rational denominator weights, nested powers, and a
+  `u32::MAX` exponent all declined; the hostile exponent timed out before the
+  bounded recognizer could return. Borderline/supercritical rates, Bessel
+  denominators, modified-I mixtures, and symbolic coefficients supplied the
+  fail-closed controls.
+- The structural collector now records each rational leaf with its inherited
+  power multiplicity and numerator/denominator orientation. `limit` normalizes
+  those leaves individually, checked-accumulates their exact `u128` degree
+  budgets with the external weight, and compares the resulting net growth with
+  the multiplicity-weighted Bessel decay budget. This admits `(xJ₀(x³))²`
+  without expanding either the product or its power; rational-budget overflow
+  declines, while the established proof-preserving decay saturation remains.
+- Regressions cover polynomial and unbounded-rational Bessel arguments,
+  numerator and denominator weights, external/internal composition, nested
+  powers, both infinities, and exponent `u32::MAX`. An 80-digit mpmath
+  leading-asymptotic comparison passes 12/12 at `|x|=200.125` with maximum
+  envelope-scaled error 0.00916891831060612. SymPy proves two of six shapes at
+  both infinities and leaves the other four unevaluated. No public head,
+  operator, backend, evidence format, or logic fragment changed, so no ADR is
+  required.
+
 ---
 
 ## 5. Zeilberger / WZ — how it works and where to extend
@@ -1021,9 +1045,9 @@ esac
 export AXEYUM_CAS_TMP
 trap 'find "$AXEYUM_CAS_TMP" -depth -delete' EXIT
 git rev-parse --abbrev-ref HEAD        # → agent/cas/...
-git merge-base --is-ancestor 02f99a79 HEAD
+git merge-base --is-ancestor 9cb6f731 HEAD
 CARGO_BUILD_JOBS=1 TMPDIR="$AXEYUM_CAS_TMP" cargo test -p axeyum-cas --jobs 1
-# → 561 unit + 147 doctests green
+# → 562 unit + 147 doctests green
 ```
 Then: read `docs/research/10-cas/diary.md` tail for the latest context, and pick
 up from §6 or resume the gap-probing loop. Push the green owned topic branch;

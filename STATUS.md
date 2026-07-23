@@ -429,6 +429,20 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   result bytes on `origin/main`, so Axeyum receives no credit and cvc5 remains
   blocked until this checkpoint is integrated. Next: integrate this result and
   gate, revalidate Axeyum, then launch only the frozen cvc5 initial allocations.
+- **2026-07-23 — certified rational weights inside powered rational-rate
+  Bessel-J products.** Wave twenty-one extends the structural powered-product
+  recognizer to exact rational weights inside the power. It carries each
+  weight's inherited multiplicity and numerator/denominator orientation into a
+  checked combined degree budget, so subcritical forms such as
+  `(xJ₀(x³))²` return zero at both infinities without expansion, including at
+  exponent `u32::MAX`. Borderline/supercritical rates, Bessel denominators,
+  modified-I mixtures, and symbolic coefficients remain fail-closed. A 12-case
+  80-digit mpmath check has maximum envelope-scaled error
+  0.00916891831060612; SymPy proves two of six shapes at both directions and
+  leaves four unevaluated. The thermally managed 562-unit/147-doctest suite
+  passed (2183.78 s for units), with workspace warning-denied Clippy, WASM,
+  strict stable/nightly rustdoc, links, whitespace, and owned-line formatting
+  green. Source `9cb6f731` was integrated exactly by merge `53766474`.
 - **2026-07-22 — certified nested powers of pure rational-rate Bessel-J
   products.** Wave twenty extends the multiplicity-weighted envelope to powers
   around an entire finite product, provided every variable-dependent factor
@@ -8571,6 +8585,11 @@ plan is built and committed on the current branch:
   R1/R2 history, a new run/evidence root, universal 512 MiB Lean runtime stacks
   from pinned source semantics, and the measured tiered artifact store. It
   authorizes one process only after separately pushed implementation gates.
+- **2026-07-23 — Added certified rational weights inside powered rational-rate
+  Bessel-J product limits.** Internal rational numerator/denominator weights now
+  inherit enclosing multiplicities in the exact combined envelope-rate check,
+  without expanding products or hostile powers. CAS now has 562 units and 147
+  doctests.
 - **2026-07-22 — Added certified nested powers of rational-rate Bessel-J
   products.** Powers around a pure finite Bessel-J product now distribute their
   multiplicity structurally without expansion, including nested hostile public
