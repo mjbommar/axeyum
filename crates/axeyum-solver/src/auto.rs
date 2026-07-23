@@ -5308,6 +5308,58 @@ fn complete_mbqi_evaluated_free_int_candidate(
     )
 }
 
+/// Accepts only a fixed-query SAT candidate that independently replays against
+/// the exact unfixed assertion sequence. In particular, fixed-query UNSAT does
+/// not transfer: the temporary scalar equality strengthened that query.
+fn replay_one_level_fixed_mbqi_candidate(
+    arena: &TermArena,
+    assertions: &[TermId],
+    result: CheckResult,
+) -> Result<Option<Model>, SolverError> {
+    let CheckResult::Sat(model) = result else {
+        return Ok(None);
+    };
+    crate::check_model(arena, assertions, &model).map(|accepted| accepted.then_some(model))
+}
+
+/// ADR-0362's structurally one-level, first-candidate fixed-query retry. The
+/// inner MBQI entry is invoked with this retry disabled, so the shared deadline
+/// is not the only recursion bound. Only one exact-source free `Int` and the
+/// first ordered evaluated value are admitted; broader scalar search remains a
+/// one-shot ADR-0360/0361 mechanism.
+#[allow(clippy::too_many_arguments)]
+fn complete_mbqi_one_level_fixed_candidate(
+    arena: &mut TermArena,
+    assertions: &[TermId],
+    universal_assertions: &[TermId],
+    initial_model: &Model,
+    config: &SolverConfig,
+    deadline: Option<Instant>,
+) -> Result<Option<Model>, SolverError> {
+    let Some(symbols) = mbqi_free_int_symbols(arena, assertions, universal_assertions) else {
+        return Ok(None);
+    };
+    let [symbol] = symbols.as_slice() else {
+        return Ok(None);
+    };
+    let Some(value) = mbqi_evaluated_free_int_value_pool(arena, assertions, initial_model)
+        .and_then(|values| values.into_iter().next())
+    else {
+        return Ok(None);
+    };
+
+    let Some(candidate_config) = mbqi_config_with_deadline(config, deadline) else {
+        return Ok(None);
+    };
+    let variable = arena.var(*symbol);
+    let constant = arena.int_const(value);
+    let fixing = arena.eq(variable, constant)?;
+    let mut fixed_assertions = assertions.to_vec();
+    fixed_assertions.push(fixing);
+    let result = prove_unsat_by_mbqi_inner(arena, &fixed_assertions, &candidate_config, false)?;
+    replay_one_level_fixed_mbqi_candidate(arena, assertions, result)
+}
+
 /// Model-based quantifier instantiation (MBQI): a refutation loop for top-level
 /// universals over infinite domains. Each round decides `ground ∧ instances`; on
 /// a `sat` candidate, every single-binder universal `∀x. body` is checked against
@@ -5327,6 +5379,16 @@ pub fn prove_unsat_by_mbqi(
     arena: &mut TermArena,
     assertions: &[TermId],
     config: &SolverConfig,
+) -> Result<CheckResult, SolverError> {
+    prove_unsat_by_mbqi_inner(arena, assertions, config, true)
+}
+
+#[allow(clippy::too_many_lines)]
+fn prove_unsat_by_mbqi_inner(
+    arena: &mut TermArena,
+    assertions: &[TermId],
+    config: &SolverConfig,
+    allow_one_level_fixed_retry: bool,
 ) -> Result<CheckResult, SolverError> {
     // Split into ground assertions and top-level universal prefixes. The
     // refutation loop below remains single-binder. Multi-binder prefixes get a
@@ -5429,6 +5491,23 @@ pub fn prove_unsat_by_mbqi(
         // directions are unchanged.
         if let Some(model) =
             certify_mbqi_candidate(arena, assertions, &universal_assertions, &model)?
+        {
+            return Ok(CheckResult::Sat(model));
+        }
+        // ADR-0362: after the initial candidate itself fails certification,
+        // deepen only the first ordered evaluated value for one source Int. The
+        // inner entry disables this retry, and a decline continues into the
+        // complete ADR-0360 search and every established refutation route.
+        if round == 0
+            && allow_one_level_fixed_retry
+            && let Some(model) = complete_mbqi_one_level_fixed_candidate(
+                arena,
+                assertions,
+                &universal_assertions,
+                &model,
+                config,
+                deadline,
+            )?
         {
             return Ok(CheckResult::Sat(model));
         }
@@ -6448,6 +6527,85 @@ mod tests {
     #[test]
     fn mbqi_candidate_config_honors_expired_shared_deadline() {
         assert!(mbqi_config_with_deadline(&SolverConfig::new(), Some(Instant::now())).is_none());
+    }
+
+    #[test]
+    fn mbqi_one_level_fixed_retry_is_guarded_and_replays_unfixed_seed_111_shape() {
+        let mut arena = TermArena::new();
+        let f = arena
+            .declare_fun("one_level_f", &[Sort::Int], Sort::Int)
+            .unwrap();
+        let g = arena
+            .declare_fun("one_level_g", &[Sort::Int], Sort::Int)
+            .unwrap();
+        let binder = arena.declare("one_level_x", Sort::Int).unwrap();
+        let scalar = arena.declare("one_level_y", Sort::Int).unwrap();
+
+        let binder_variable = arena.var(binder);
+        let minus_two = arena.int_const(-2);
+        let f_at_binder = arena.apply(f, &[binder_variable]).unwrap();
+        let universal_body = arena.eq(f_at_binder, minus_two).unwrap();
+        let universal = arena.forall(binder, universal_body).unwrap();
+
+        let four = arena.int_const(4);
+        let minus_four = arena.int_const(-4);
+        let one = arena.int_const(1);
+        let scalar_variable = arena.var(scalar);
+        let f_minus_four = arena.apply(f, &[minus_four]).unwrap();
+        let scalar_plus_f = arena.int_add(scalar_variable, f_minus_four).unwrap();
+        let lower_bound = arena.int_add(scalar_plus_f, one).unwrap();
+        let g_four = arena.apply(g, &[four]).unwrap();
+        let ground_bound = arena.int_ge(g_four, lower_bound).unwrap();
+
+        let g_f_minus_four = arena.apply(g, &[f_minus_four]).unwrap();
+        let g_one = arena.apply(g, &[one]).unwrap();
+        let f_g_one = arena.apply(f, &[g_one]).unwrap();
+        let ground_equality = arena.eq(g_f_minus_four, f_g_one).unwrap();
+        let assertions = vec![universal, ground_bound, ground_equality];
+        let config = SolverConfig::new().with_timeout(Duration::from_secs(2));
+
+        assert!(matches!(
+            prove_unsat_by_mbqi_inner(&mut arena, &assertions, &config, false).unwrap(),
+            CheckResult::Unknown(_)
+        ));
+
+        let minus_five = arena.int_const(-5);
+        let fixing = arena.eq(scalar_variable, minus_five).unwrap();
+        let mut fixed_assertions = assertions.clone();
+        fixed_assertions.push(fixing);
+        let fixed_result =
+            prove_unsat_by_mbqi_inner(&mut arena, &fixed_assertions, &config, false).unwrap();
+        assert!(matches!(fixed_result, CheckResult::Sat(_)));
+
+        let CheckResult::Sat(model) =
+            prove_unsat_by_mbqi(&mut arena, &assertions, &config).unwrap()
+        else {
+            panic!("one guarded fixed-query level must recover the measured model");
+        };
+        assert!(crate::check_model(&arena, &assertions, &model).unwrap());
+        assert_eq!(model.get(scalar), Some(Value::Int(-5)));
+    }
+
+    #[test]
+    fn mbqi_one_level_fixed_retry_never_transfers_non_sat_result() {
+        let arena = TermArena::new();
+        assert!(
+            replay_one_level_fixed_mbqi_candidate(&arena, &[], CheckResult::Unsat)
+                .unwrap()
+                .is_none()
+        );
+        assert!(
+            replay_one_level_fixed_mbqi_candidate(
+                &arena,
+                &[],
+                CheckResult::Unknown(UnknownReason {
+                    kind: UnknownKind::Incomplete,
+                    detail: "fixed-query control".to_owned(),
+                }),
+            )
+            .unwrap()
+            .is_none()
+        );
     }
 
     #[test]

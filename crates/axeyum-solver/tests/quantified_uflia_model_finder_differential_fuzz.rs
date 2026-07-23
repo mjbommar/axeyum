@@ -683,6 +683,10 @@ fn report_and_check_tally(t: &Tally, minimum_jointly_decided: u64) {
         t.ax_error_skipped,
         "every Axeyum Err must retain an exact reason and oracle adjudication"
     );
+    assert_eq!(
+        t.sat_replayed, t.ax_sat,
+        "every Axeyum SAT result must pass canonical original-query replay"
+    );
     assert!(
         t.jointly_decided >= minimum_jointly_decided,
         "too few jointly-decided instances ({}); the differential gate is not \
@@ -796,7 +800,7 @@ fn run_differential_fuzz(instances: u64, minimum_jointly_decided: u64) {
 
 #[test]
 fn quantified_uflia_model_finder_differential_fuzz_disagree_zero() {
-    run_differential_fuzz(SMOKE_INSTANCES, 100);
+    run_differential_fuzz(SMOKE_INSTANCES, 228);
 }
 
 #[test]
@@ -832,6 +836,26 @@ fn evaluated_scalar_retry_preserves_the_prior_seed_145_sat() {
         panic!("the deferred retry must not steal seed 145's prior SAT: {result:?}");
     };
     assert!(check_model(&arena, &assertions, &model).unwrap());
+}
+
+#[test]
+fn one_level_fixed_mbqi_retry_closes_seed_111() {
+    let seed = 111_u64;
+    let mut rng = Lcg::new(seed);
+    let inst = Instance::generate(&mut rng);
+    assert_eq!(z3_decide(&inst), Verdict::Sat);
+    let (mut arena, _, y_symbols, _, _, assertions) = inst.build_axeyum();
+    let result = prove_unsat_by_mbqi(
+        &mut arena,
+        &assertions,
+        &SolverConfig::new().with_timeout(AXEYUM_TIMEOUT),
+    )
+    .unwrap();
+    let CheckResult::Sat(model) = result else {
+        panic!("one guarded fixed-query level must recover seed 111: {result:?}");
+    };
+    assert!(check_model(&arena, &assertions, &model).unwrap());
+    assert_eq!(model.get(y_symbols[1]), Some(Value::Int(-5)));
 }
 
 #[test]
