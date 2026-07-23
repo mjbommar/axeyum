@@ -605,6 +605,19 @@ class LeanExecutionAcceptanceContractTests(unittest.TestCase):
             self.assertFalse((control_root / "artifact.json").exists())
             self.assertFalse((control_root / "completion.json").exists())
 
+    def test_21_pretty_result_document_uses_generated_json_loader(self) -> None:
+        with tempfile.TemporaryDirectory(dir=ACCEPTANCE.ROOT) as temporary:
+            path = Path(temporary) / "result.json"
+            path.write_text('{\n  "schema": "fixture",\n  "value": 1\n}\n')
+            self.assertEqual(
+                ACCEPTANCE.load_json_document(path),
+                {"schema": "fixture", "value": 1},
+            )
+            with self.assertRaisesRegex(
+                ACCEPTANCE.AcceptanceEvidenceError, "malformed generated JSON"
+            ):
+                ACCEPTANCE.load_json_document(Path(temporary) / "missing.json")
+
 
 @unittest.skipUnless(
     os.environ.get("AXEYUM_RUN_LEAN_EXECUTION_ACCEPTANCE_LIVE") == "1",

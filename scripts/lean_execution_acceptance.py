@@ -305,6 +305,20 @@ def load_canonical(path: Path) -> Any:
     return value
 
 
+def load_json_document(path: Path) -> Any:
+    """Load a human-readable generated JSON document.
+
+    Immutable evidence records use ``load_canonical``. Result authorities are
+    deliberately rendered with indentation and are checked against their exact
+    regenerated text instead.
+    """
+
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise AcceptanceEvidenceError(f"malformed generated JSON: {path}") from exc
+
+
 def _install_json(root: Path, relative: str, value: Any) -> str:
     path = Path(relative)
     if path.is_absolute() or ".." in path.parts or len(path.parts) > 2:
@@ -1917,7 +1931,7 @@ def generate_result(
     if check:
         if not RESULT_AUTHORITY.is_file():
             raise AcceptanceEvidenceError("missing committed result authority")
-        authority = load_canonical(RESULT_AUTHORITY)
+        authority = load_json_document(RESULT_AUTHORITY)
         failures = validate_result_authority(authority)
         if failures:
             raise AcceptanceEvidenceError("; ".join(failures))
