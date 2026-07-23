@@ -383,8 +383,8 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
-- **2026-07-23 — repaired SMT-COMP P0 v2 Axeyum runtime is complete; derived
-  export closure is preregistered and cvc5 remains blocked.** The v1 Axeyum
+- **2026-07-23 — repaired SMT-COMP P0 v2 Axeyum runtime and process-free export
+  closure are complete; cvc5 remains integration-gated.** The v1 Axeyum
   cell completed its 1,810 records but
   exposed a fail-closed evidence-layout defect at aggregate finalization;
   those records and timings remain diagnostic-only and receive no P0 credit.
@@ -417,10 +417,18 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   migration, prior-cell result validation, and integrated-source launch gates.
   Focused 7-test, portable 65-test, mandatory cgroup, and committed live
   multi-host gates pass; the live freeze revalidates read-only. The
-  implementation/checkpoint bytes are pushed but not yet integrated, so no live
-  closure mutation has occurred. Next: after exact integration, close and
-  document the frozen Axeyum cell, then admit cvc5 only after those result bytes
-  also land on `origin/main`.
+  implementation/checkpoint bytes were integrated at `db5b0603`. The exact
+  process-free closure then migrated only the frozen adjudication, reproduced
+  canonical bundle `104f27cd...3c6a`, exported all 1,810 raw rows as
+  `9424ab09...81820`, and installed external completion
+  `28402ac3...3ca` / record `97f27a48...b1c4a57`. Independent validation and a
+  second closure replay were byte-identical; cvc5/Bitwuzla still have zero
+  evidence and all three hosts are idle. The
+  [closure result](docs/plan/smtcomp-repaired-p0-v2-axeyum-closure-result-2026-07-23.md)
+  records the exact boundary. A new admission-source gate requires those exact
+  result bytes on `origin/main`, so Axeyum receives no credit and cvc5 remains
+  blocked until this checkpoint is integrated. Next: integrate this result and
+  gate, revalidate Axeyum, then launch only the frozen cvc5 initial allocations.
 - **2026-07-22 — certified nested powers of pure rational-rate Bessel-J
   products.** Wave twenty extends the multiplicity-weighted envelope to powers
   around an entire finite product, provided every variable-dependent factor
