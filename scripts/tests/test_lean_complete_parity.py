@@ -69,6 +69,9 @@ class LeanCompleteParityTests(unittest.TestCase):
         self.assertFalse(m2["live_execution_surface"])
         self.assertEqual(m2["official_outcomes"], 0)
         self.assertEqual(m2["parity_credit"], 0)
+        self.assertEqual(m2["store"]["fixed_json"], 15)
+        self.assertEqual(m2["store"]["fixed_raw"], 4)
+        self.assertEqual(m2["store"]["case_records"], 64)
         self.assertEqual(u2["outcomes"]["paired_registered"], 0)
         u2_ci = first["bounded_snapshot"]["u2_ci_profile_authority"]
         self.assertEqual(u2_ci["derivation"]["contexts"], 17)
@@ -164,6 +167,11 @@ class LeanCompleteParityTests(unittest.TestCase):
         self.assertIn("scripts/lean_u2_official_execution_m2.py", source_paths)
         self.assertIn(
             "scripts/tests/test_lean_u2_official_execution_m2.py", source_paths
+        )
+        self.assertIn("scripts/lean_u2_official_execution_m2_store.py", source_paths)
+        self.assertIn(
+            "scripts/tests/test_lean_u2_official_execution_m2_store.py",
+            source_paths,
         )
 
     def test_u2_registration_is_bounded_not_terminal_authority(self) -> None:

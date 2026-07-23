@@ -115,6 +115,7 @@ SPEC_SCHEMA = "axeyum-lean-u2-official-execution-m2-spec-v1"
 HARNESS_SCHEMA = "axeyum-lean-u2-official-execution-m2-harness-v1"
 JUNIT_SCHEMA = "axeyum-lean-u2-official-execution-m2-junit-v1"
 POST_SCHEMA = "axeyum-lean-u2-official-execution-m2-post-v1"
+CASE_SCHEMA = "axeyum-lean-u2-official-execution-m2-case-v1"
 PROJECTION_SCHEMA = "axeyum-lean-u2-official-execution-m2-projection-v1"
 HEX40 = re.compile(r"[0-9a-f]{40}\Z")
 
@@ -887,6 +888,97 @@ def result_projection(junit: dict[str, Any], post: dict[str, Any]) -> dict[str, 
         },
         PROJECTION_SCHEMA,
     )
+
+
+def case_credits(outcome: str) -> dict[str, int]:
+    if outcome not in {"passed", "failed"}:
+        raise M2ContractError("M2 case outcome is not decided")
+    return {
+        "official_cases": 1,
+        "official_outcomes": 1,
+        "official_passes": int(outcome == "passed"),
+        "official_failures": int(outcome == "failed"),
+        **ZERO_TERMINAL_CREDITS,
+    }
+
+
+def build_case_records(
+    *,
+    spec: dict[str, Any],
+    terminal: dict[str, Any],
+    junit: dict[str, Any],
+    post: dict[str, Any],
+) -> list[dict[str, Any]]:
+    spec_failures = validate_spec(spec)
+    if spec_failures:
+        raise M2ContractError("; ".join(spec_failures))
+    junit_failures = validate_junit_projection(junit)
+    if junit_failures:
+        raise M2ContractError("; ".join(junit_failures))
+    if (
+        not isinstance(terminal, dict)
+        or not BASE.HEX64.fullmatch(str(terminal.get("record_sha256", "")))
+        or junit.get("terminal_sha256") != terminal["record_sha256"]
+        or not BASE.valid_seal(post, POST_SCHEMA)
+        or post.get("junit_sha256") != junit["record_sha256"]
+    ):
+        raise M2ContractError("M2 case terminal/JUnit/post linkage drift")
+    outcomes = {row["id"]: row["outcome"] for row in junit["cases"]}
+    records = []
+    for ordinal, case in enumerate(selected_contract()["cases"]):
+        outcome = outcomes[case["id"]]
+        records.append(
+            BASE.seal(
+                {
+                    "schema": CASE_SCHEMA,
+                    "run_id": RUN_ID,
+                    "attempt_id": ATTEMPT_ID,
+                    "shard_id": SHARD_ID,
+                    "ordinal": ordinal,
+                    "case_id": case["id"],
+                    "registration_sha256": case["sha256"],
+                    "family": case["family"],
+                    "kind": case["kind"],
+                    "source_path": case["source_path"],
+                    "source_sha256": case["source_sha256"],
+                    "sidecars": case["sidecars"],
+                    "expected_path": case["expected_path"],
+                    "output_policy": case["output_policy"],
+                    "parent": spec["parent"],
+                    "terminal_sha256": terminal["record_sha256"],
+                    "junit_sha256": junit["record_sha256"],
+                    "post_sha256": post["record_sha256"],
+                    "outcome": outcome,
+                    "local_shard_only": True,
+                    "official_provider_claimed": False,
+                    "credits": case_credits(outcome),
+                    "record_sha256": "",
+                },
+                CASE_SCHEMA,
+            )
+        )
+    return records
+
+
+def validate_case_records(
+    records: Any,
+    *,
+    spec: dict[str, Any],
+    terminal: dict[str, Any],
+    junit: dict[str, Any],
+    post: dict[str, Any],
+) -> list[str]:
+    if not isinstance(records, list):
+        return ["M2 case records are not a list"]
+    try:
+        expected = build_case_records(
+            spec=spec, terminal=terminal, junit=junit, post=post
+        )
+    except (KeyError, TypeError, M2ContractError) as error:
+        return [f"M2 case records cannot be reconstructed: {error}"]
+    if records != expected:
+        return ["M2 case record count, order, identity, outcome, or credit drift"]
+    return []
 
 
 def synthetic_discovery(

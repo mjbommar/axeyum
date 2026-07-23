@@ -821,7 +821,13 @@ def u2_m2_contract_snapshot() -> dict[str, Any]:
         "lean_u2_official_execution_m2_for_complete_parity",
         ROOT / "scripts" / "lean_u2_official_execution_m2.py",
     )
-    return contract.validate_offline_contract()
+    store = load_script(
+        "lean_u2_official_execution_m2_store_for_complete_parity",
+        ROOT / "scripts" / "lean_u2_official_execution_m2_store.py",
+    )
+    return contract.validate_offline_contract() | {
+        "store": store.validate_offline_contract()
+    }
 
 
 def task_snapshot() -> dict[str, Any]:
@@ -873,6 +879,8 @@ def report_source_paths(data: dict[str, Any]) -> list[Path]:
         ROOT / "scripts" / "tests" / "test_lean_u2_official_execution_r3_result.py",
         ROOT / "scripts" / "lean_u2_official_execution_m2.py",
         ROOT / "scripts" / "tests" / "test_lean_u2_official_execution_m2.py",
+        ROOT / "scripts" / "lean_u2_official_execution_m2_store.py",
+        ROOT / "scripts" / "tests" / "test_lean_u2_official_execution_m2_store.py",
     }
     for collection in (data["populations"], data["axes"], data["terminal_gates"]):
         for item in collection:
@@ -1108,7 +1116,8 @@ def render_markdown(report: dict[str, Any]) -> str:
             f"{m2_contract['official_outcomes']} official outcomes and "
             f"{m2_contract['parity_credit']} parity credit. This validates the frozen "
             "specification, harness rendering, discovery, JUnit, artifact closure, and "
-            "credit projection only; it is not a process run.",
+            f"credit projection plus a {m2_contract['store']['case_records']}-case "
+            "completion-last immutable store only; it is not a process run.",
             f"- Implementation ledger: {tasks['rows']} rows; "
             + ", ".join(
                 f"`{key}`={value}" for key, value in tasks["status_counts"].items()
