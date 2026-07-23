@@ -444,9 +444,11 @@ freezes one local attempt. The pushed
 [offline implementation checkpoint](lean-u2-official-execution-tl0.6.3-m2-implementation-2026-07-22.md)
 records commit `9783ba93`: a pure fail-closed spec/harness/discovery/JUnit/
 artifact/credit contract with thirteen focused tests and deliberately no live
-execution command. No live harness discovery or process has run; it therefore
-changes none of the preceding outcome counts or claims. The launch/store runner
-remains a separate pre-attempt implementation checkpoint.
+execution command. Commit `57dcf343` adds the pushed 64-case completion-last
+immutable store and four focused store tests, also without a launch command.
+No live harness discovery or process has run; these checkpoints therefore
+change none of the preceding outcome counts or claims. The one-shot launch
+runner remains a separate pre-attempt implementation checkpoint.
 
 ## 8. Layer-specific equivalence
 

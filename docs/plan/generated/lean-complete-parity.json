@@ -36,7 +36,7 @@
     },
     {
       "path": "docs/plan/lean-complete-parity-v1.json",
-      "sha256": "e7a8e604b4722298e434dc40b0e6ea65eca04bd12dc3d7c323355ecb2f4eaf0f"
+      "sha256": "39caaeb4aa0716241f60f61ce26637c09c84a4e3ce6a5d7e2397e86b52fcf8b9"
     },
     {
       "path": "docs/plan/lean-execution-acceptance-tl0.7.4-2026-07-22.md",
@@ -68,7 +68,7 @@
     },
     {
       "path": "docs/plan/lean-system-implementation-plan-2026-07-21.md",
-      "sha256": "7ae9f5ba8fb0b2fec5e84788ffe955932c2fd9a8b86e174393571678505f5533"
+      "sha256": "288fff95de5656f3ed80911d22fecfa6d6a874752f6d883b2bd8938e603eb4a9"
     },
     {
       "path": "docs/plan/lean-u2-official-child-shards-v1.json",
@@ -128,7 +128,7 @@
     },
     {
       "path": "docs/plan/lean-u2-official-execution-tl0.6.3-m2-implementation-2026-07-22.md",
-      "sha256": "09ad78a3e051a97c1490e27c901fe923ca0da30e3d391d7e9dabaaba02fb1a96"
+      "sha256": "2b5a245492cb24a6e5bafbde51f3fb2bd1712bbb179c3926f20136f946dbcca5"
     },
     {
       "path": "docs/plan/lean-u2-official-execution-tl0.6.3-m2-shard-0001-plan-2026-07-22.md",
@@ -140,11 +140,11 @@
     },
     {
       "path": "docs/plan/lean4-complete-parity-contract-2026-07-22.md",
-      "sha256": "20a3ea7daa4b4b147656eacaeae87b0a15f4c50ce9c9bda416789b1a8c1a6a78"
+      "sha256": "7787b50996d5a0d9b8904d1c8fdcd43d07d8c8d38ba6f9acf334dfb4d2d6c494"
     },
     {
       "path": "docs/plan/lean4-complete-parity-roadmap-2026-07-22.md",
-      "sha256": "4a55714f205bac7844507f6fecc81723a165ab962637e322de75a51abe9ab2fa"
+      "sha256": "587261e4d5d30a232078ee8f95c507979f90479c632f0177b5bd0ed3dbb64211"
     },
     {
       "path": "scripts/gen-lean-complete-parity.py",
@@ -808,7 +808,7 @@
         },
         {
           "path": "docs/plan/lean-u2-official-execution-tl0.6.3-m2-implementation-2026-07-22.md",
-          "detail": "Pushed post-plan checkpoint for the pure offline specification, harness rendering, discovery, JUnit, artifact-closure, and zero-credit projection contract; it exposes no live execution command or outcome."
+          "detail": "Pushed post-plan checkpoints for the pure offline specification, harness rendering, discovery, JUnit, artifact-closure, zero-credit projection, 64 exact case records, and completion-last immutable store; neither exposes a live execution command or outcome."
         },
         {
           "path": "docs/plan/lean-execution-evidence-v1.json",

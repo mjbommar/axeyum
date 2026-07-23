@@ -203,8 +203,10 @@ Start at the root [`PLAN.md`](../../PLAN.md) (map + standing rules) and
   harness discovery or test process has run.
 - [`lean-u2-official-execution-tl0.6.3-m2-implementation-2026-07-22.md`](lean-u2-official-execution-tl0.6.3-m2-implementation-2026-07-22.md) —
   post-plan implementation checkpoint for commit `9783ba93`, exact source
-  identities, thirteen mutation-focused tests, complete parity-doc validation,
-  and the explicit zero-outcome/zero-credit boundary before launch/store work.
+  identities, thirteen mutation-focused tests, and commit `57dcf343`'s exact
+  64-case completion-last store plus four focused store tests. Complete
+  parity-doc validation retains the explicit zero-outcome/zero-credit boundary
+  before the one-shot launch runner.
 - [`lean-compatibility-v1.json`](lean-compatibility-v1.json) and generated
   [`Lean compatibility matrix`](generated/lean-compatibility.md) — TL0.2's
   executable eight-field assurance contract, K0-K6 profile gates, registered

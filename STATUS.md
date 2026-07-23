@@ -403,10 +403,15 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   zero-terminal-credit result projection. Thirteen focused tests include
   resealed semantic, order, count, property, skipped/disabled, terminal,
   artifact, manifest, linkage, and source-drift mutations. The parity-docs
-  surface passes 258 tests with one intentional skip and every generator/check;
-  the M2 CLI has only offline `--check`. Next: implement and offline-validate
-  the separate launch/store runner, commit and push it, then consider the
-  single authorized live attempt.
+  surface passed 258 tests with one intentional skip and every generator/check.
+  Commit `57dcf343` then adds and pushes 64 exact sealed case records plus a
+  completion-last store over 15 fixed JSON records, four raw payloads, two
+  harness artifacts, and the exact generated-artifact namespace. Four focused
+  store tests reject missing, extra, mutable, symlinked, overwritten, reordered,
+  raw/payload-drifted, or completion-tampered evidence; the full surface now
+  passes 262 tests with one intentional skip. Both M2 CLIs remain offline-only.
+  Next: implement and offline-validate the separate one-shot launch runner,
+  commit and push it, then consider the single authorized live attempt.
 
 - **2026-07-22 — TL0.6.3 M1 derives complete deterministic U2 child-shard
   scheduling with zero new outcomes or parity credit.** The source-first
@@ -7718,6 +7723,15 @@ plan is built and committed on the current branch:
 | P5.5 | External target, measured | **DONE (bounded v1, ADR-0323--0338):** authenticated Tock capture plus eight rechecked dual-DRAT proofs and six replayed controls, UNKNOWN=0, DISAGREE=0. Query time 12.700 s; fresh outer wall 50.745 s; peak RSS 1,256,496 KiB; zero OOM deltas. The committed case study compares exact target validation, universal coverage, trust, effort, artifact boundaries, and limits. No Tock bug was found, so no upstream issue is applicable. This is not a speed or whole-kernel claim. |
 
 ## Changelog
+
+- **2026-07-22 — Implemented and pushed TL0.6.3 M2's completion-last evidence
+  store.** Commit `57dcf343` extends the pure contract with exact per-case
+  records and an immutable store whose final completion binds all JSON, raw,
+  harness, generated, and 64 ordered case dependencies. Four store tests and
+  both CI surfaces enforce namespace, mode, symlink, overwrite, raw-payload,
+  artifact, record-order, and completion-closure failures. The store CLI has no
+  launch command; no live discovery or process ran and all outcome/terminal
+  credit remains zero.
 
 - **2026-07-22 — Implemented and pushed TL0.6.3 M2's fail-closed offline
   contract.** The
