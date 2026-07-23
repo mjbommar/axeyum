@@ -845,6 +845,10 @@ def u2_m2_contract_snapshot() -> dict[str, Any]:
         "lean_u2_official_execution_m2_r5_diagnostic_for_complete_parity",
         ROOT / "scripts" / "lean_u2_official_execution_m2_r5_diagnostic.py",
     )
+    r6 = load_script(
+        "lean_u2_official_execution_m2_r6_for_complete_parity",
+        ROOT / "scripts" / "lean_u2_official_execution_m2_r6.py",
+    )
     incomplete = r3.validate_incomplete_evidence(r3.DEFAULT_EVIDENCE_ROOT)
     return contract.validate_offline_contract() | {
         "store": store.validate_offline_contract(),
@@ -853,6 +857,7 @@ def u2_m2_contract_snapshot() -> dict[str, Any]:
         "r4": r4.validate_offline_contract(),
         "r5": r5.validate_offline_contract(),
         "r5_diagnostic": r5_diagnostic.validate_offline_contract(),
+        "r6": r6.validate_offline_contract(),
         "r3_incomplete": {
             "terminal_class": incomplete["terminal"]["class"],
             "terminal_sha256": incomplete["terminal"]["record_sha256"],
@@ -931,6 +936,8 @@ def report_source_paths(data: dict[str, Any]) -> list[Path]:
         / "scripts"
         / "tests"
         / "test_lean_u2_official_execution_m2_r5_diagnostic.py",
+        ROOT / "scripts" / "lean_u2_official_execution_m2_r6.py",
+        ROOT / "scripts" / "tests" / "test_lean_u2_official_execution_m2_r6.py",
     }
     for collection in (data["populations"], data["axes"], data["terminal_gates"]):
         for item in collection:
