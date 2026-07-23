@@ -115,8 +115,8 @@ No M2.1 native-header process or M2.2-M2.7 external process was launched.
 
 The root-relative portability repair remains present and validated on this
 Lean branch. It is not yet on `main`. At the final R4 check, remote `main` was
-`6384710704c320bca403d84fb211a3386de58dfc`, and docs run
-[`30026321836`](https://github.com/mjbommar/axeyum/actions/runs/30026321836)
+`2a04d8f0ae79a862975dde5fb78773d39064fc05`, and docs run
+[`30027546161`](https://github.com/mjbommar/axeyum/actions/runs/30027546161)
 still failed with:
 
 ```text

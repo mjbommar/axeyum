@@ -8294,7 +8294,7 @@ plan is built and committed on the current branch:
   mutations; 24 complete-parity controls reject fully resealed v1 normalizers.
   Full parity-docs, links, and differently rooted detached replay pass with
   zero outcomes, pairs, gates, or parity credit. Remote `main` remains a
-  separate integration boundary: docs run `30026321836` at `63847107` still
+  separate integration boundary: docs run `30027546161` at `2a04d8f0` still
   fails `exit-zero-4g` with run/spec attribution drift.
 
 - **2026-07-23 — Closed the complete-parity worktree-portability defect on the
