@@ -17,28 +17,31 @@ information that the pool discards: UF default/override results and values of
 ground integer source subterms under that same candidate. Those values are
 untrusted model-generation hints, just like the existing scalar assignments.
 
-A retained exact-source diagnostic over the eleven residual seeds adds only
-those candidate values before applying the existing neighbour closure. Under
-the unchanged 16-value and 256-tuple caps, it certifies three additional models:
+A retained fixed-query probe over the eleven residual seeds adds only those
+candidate values before applying the existing neighbour closure. Under the
+unchanged 16-value and 256-tuple caps, it found three models:
 
 | Seed | Exact free Ints | Closed pool | Tuples | Checked assignment |
 |---:|---:|---:|---:|---|
 | 23 | 2 | 13 | 169 | `[-4, -4]` |
-| 111 | 1 | 11 | 11 | `[-5]` |
 | 231 | 2 | 12 | 144 | `[-10, -10]` |
 
-Every returned model passes canonical replay against the original assertions
-without its temporary equalities. The other eight seeds remain Unknown. In
-particular, seed 175 produces 23 values and therefore declines without
-truncation; seeds 150 and 242 contain no exact-source free `Int` and remain
-outside the search.
+Production-path validation then corrected the boundary: seeds 23 and 231 pass
+the actual one-shot candidate-certification path, while seed 111 succeeds only
+when the probe recursively re-enters the complete MBQI loop with its fixing.
+ADR-0361 does not add that recursive search. The exact production gate is
+therefore **two** additional models, not three. Both returned models pass
+canonical replay against the original assertions without their temporary
+equalities. The other nine seeds remain Unknown. In particular, seed 175
+produces 23 values and therefore declines without truncation; seeds 150 and 242
+contain no exact-source free `Int` and remain outside the search.
 
 ## Decision
 
-**Extend only ADR-0360's untrusted value-pool construction with integer results
-already present in the initial ground candidate and evaluable exact-source
-integer subterms. Keep every search, resource, and evidence boundary
-unchanged.**
+**After the established MBQI and E-matching routes both decline, retry only
+ADR-0360's SAT candidate search with integer results already present in the
+initial ground candidate and evaluable exact-source integer subterms. Keep
+every resource and evidence boundary unchanged.**
 
 The implementation will:
 
@@ -52,6 +55,9 @@ The implementation will:
   apply the existing checked predecessor/successor closure exactly once;
 - retain the existing exact-source one/two-free-`Int`, 16-value, 256-tuple, and
   shared-deadline gates, declining rather than truncating on any overflow; and
+- save the initial ground candidate, run ordinary ADR-0360 completion, MBQI,
+  and E-matching first, and spend only the remaining shared deadline on the
+  evaluated pool after all of those established routes decline; and
 - continue treating all values and temporary equalities as search hints. Only
   ADR-0357/0358 certification, optional ADR-0359 repair, and canonical replay
   of the exact original assertion sequence may return SAT.
@@ -68,8 +74,10 @@ Acceptance requires:
 1. Focused tests prove deterministic collection of scalar assignments, UF
    default/override results, and evaluable exact-source terms, while excluding
    binder-dependent and non-`Int` values.
-2. The three measured seeds become checked SAT with the exact closed pool sizes,
-   tuple counts, and assignments above under the existing caps.
+2. The two production-measured seeds become checked SAT with the exact closed
+   pool sizes, tuple counts, and assignments above under the existing caps;
+   seed 111 remains Unknown unless a separately preregistered recursive search
+   is added.
 3. Seed 175 declines on complete-pool overflow; zero-symbol seeds 150/242 and
    the other unsupported residual shapes remain honest Unknowns.
 4. Temporary-fixing failure cannot transfer to the original query, and every
@@ -77,16 +85,37 @@ Acceptance requires:
    source. Tampered scalar/function values or certificates reject.
 5. The normal 256-case direct-Z3 differential has zero disagreements, replays
    every Axeyum SAT model, and reduces the ordinary Z3-SAT residual by at least
-   the measured three cases without changing any UNSAT result.
+   the measured two cases without changing any prior SAT or UNSAT result.
 6. Solver Clippy/rustdoc, focused and full solver tests, complementary workspace
    tests, foundational resources, profiles, recovery, parity, and links pass.
+
+## Implementation evidence
+
+Commit `471738aa` implements the decision without changing any public evidence
+type or resource cap. The evaluated retry is deliberately last: the solver
+first runs the existing ADR-0360 pool, ordinary MBQI, and E-matching, then uses
+only the remaining shared deadline. This preserves seed 145, which regressed to
+a resource-limit Unknown when an intermediate implementation ran the expanded
+pool before the established routes.
+
+Focused tests cover deterministic value collection, explicit rejection of
+binder-dependent source terms even when the model assigns the binder, checked
+SAT for seeds 23 and 231, and preservation of seed 145. The frozen 256-case
+production differential reaches 227 jointly decided agreements, 209 Axeyum SAT,
+24 Axeyum UNSAT, and 23 Axeyum Unknown, with 209/209 SAT replay and no error or
+disagreement. Its ordinary-incomplete Z3-SAT remainder is exactly
+`30, 32, 70, 111, 122, 150, 175, 182, 242`; no previous SAT or UNSAT result is
+lost. Acceptance remains pending until the complete branch-wide gate finishes.
 
 ## Alternatives
 
 - **Increase the value/tuple caps.** Rejected: every measured success is already
   below 16/256. Seed 175's 23-value pool is evidence to decline, not to widen.
+- **Recursively rerun MBQI under every fixing.** Deferred: it explains the
+  exploratory seed-111 result but is a distinct, more expensive search with
+  recursion and termination obligations.
 - **Add arbitrary arithmetic synthesis.** Deferred: exact candidate/source
-  values close three cases without introducing a new synthesis language.
+  values close two cases without introducing a new synthesis language.
 - **Trust initial UF values as evidence.** Rejected: they remain search hints.
   The finite-profile checker and original-query replay remain authoritative.
 - **Search when no exact-source free scalar exists.** Rejected: that is UF
@@ -96,6 +125,5 @@ Acceptance requires:
 
 This increment improves model generation without changing the trusted checker,
 the public evidence format, any UNSAT route, or the resource envelope. It does
-not address the eight residual cases, free `Real` symbols, more than two free
+not address the nine residual cases, free `Real` symbols, more than two free
 scalars, general function synthesis, or complete MBQI.
-

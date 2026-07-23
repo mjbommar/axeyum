@@ -513,6 +513,21 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   runner or process exists yet.** The source-first
 - **2026-07-22 — TL0.6.3 M2's pure 64-case execution contract is implemented
   and pushed; no live runner or process exists yet.** The source-first
+- **2026-07-23 — ADR-0361 evaluated-scalar completion is implemented; branch
+  gates are in progress.** Commit `471738aa` preserves the established
+  ADR-0360, ordinary MBQI, and E-matching order, then uses the remaining shared
+  deadline for one evaluated-value retry. UF default/override values and
+  exact-source ground integer term values remain untrusted search hints under
+  the unchanged two-symbol, 16-value, and 256-tuple limits. Source dependency
+  excludes binder-dependent terms even when the model assigns their binder.
+  Focused collection, seed-23/231, and seed-145 preservation tests pass, as does
+  warning-denied solver Clippy. The frozen differential improves to 227/227
+  agreement and 209/209 SAT replay with no prior decision lost. The nine
+  ordinary Z3-SAT Unknowns are `30, 32, 70, 111, 122, 150, 175, 182, 242`;
+  recursive MBQI re-entry for seed 111 is explicitly out of scope. Next: finish
+  the complete branch-wide gate, record any cross-lane blocker, and publish the
+  rebased green topic branch for integration.
+
 - **2026-07-22 — ADR-0360 free-Int completion is implemented and comprehensively
   gated; acceptance is blocked on cross-lane parity evidence.** Commit
   `5b4c5b40` searches the complete

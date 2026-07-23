@@ -370,6 +370,11 @@ measurement note; do not rewrite that lane's retained evidence here. The
 eleven residual seeds remain separate. Their first exact follow-up is now
 [measured](../quantified-uflia-evaluated-scalar-measurement-2026-07-23.md):
 proposed ADR-0361 adds only initial UF-result and evaluable exact-source integer
-values to ADR-0360's pool and checks three more models under the unchanged
-16-value/256-tuple caps. Implement only that preregistered search-hint change;
-the remaining eight seeds stay separate.*
+values to a deferred ADR-0360 retry and checks two more models under the
+unchanged 16-value/256-tuple caps. The initial fixed-query probe's third model,
+seed 111, required recursive MBQI re-entry and is excluded. Implement only that
+preregistered post-decline search-hint change. Commit `471738aa` now implements
+it after the established ADR-0360, MBQI, and E-matching routes, preserving all
+prior decisions. The 256-case production gate reaches 227/227 agreement and
+209/209 SAT replay; the remaining nine seeds stay separate while the complete
+branch-wide acceptance gate runs.*

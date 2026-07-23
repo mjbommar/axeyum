@@ -9158,7 +9158,15 @@ coverage never regresses):
    process/store evidence embedding its originating worktree path while the
    checker reconstructs the current one; the Lean lane must make that gate
    worktree-independent or refresh its retained evidence. MAM/trigger-inference
-   (T2.6.1/2) follow as throughput after acceptance.
+   (T2.6.1/2) follow as throughput after acceptance. Proposed ADR-0361 is now
+   implemented in `471738aa`: after all established routes decline, one
+   evaluated-value retry adds initial UF result values and exact-source ground
+   integer term values under the same two-symbol, 16-value, 256-tuple, shared-
+   deadline, certification, and exact-replay boundaries. The frozen production
+   differential reaches 227/227 agreement and 209/209 SAT replay, with no prior
+   decision lost and nine ordinary Z3-SAT Unknowns left separate. Complete the
+   branch-wide gate before acceptance; recursive MBQI re-entry for seed 111 is
+   not part of this increment.
 3. **Bank the CDCL(T) spine** (Gap 3): the default-dispatch ADR for the
    built-but-opt-in `CdclT` routes, then port arrays-lazy
    ([P2.2](docs/plan/track-2-theories/P2.2-arrays-lazy.md)) onto it — the
