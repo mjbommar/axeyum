@@ -10285,6 +10285,18 @@ pub enum LimitPoint {
 /// expression, or on overflow. Exact by construction over the rational fragment.
 #[must_use]
 pub fn limit(expr: &CasExpr, var: &str, point: LimitPoint) -> Option<CasExpr> {
+    // Fixed integer-order Bessel J has an oscillatory O(|z|^{-1/2}) envelope on
+    // the real axis. Apply that exact zero limit to a finite product of positive
+    // integer powers whose rational-function arguments all grow in magnitude,
+    // multiplied only by an x-free factor and a rational weight whose growth is
+    // strictly slower than the combined square-root decay. This precedes generic
+    // rational normalization because that route treats Bessel heads as atoms and
+    // could otherwise expand a hostile public power before this bounded check.
+    if matches!(point, LimitPoint::PosInfinity | LimitPoint::NegInfinity)
+        && let Some(value) = limit_bessel_j_at_infinity(expr, var, point)
+    {
+        return Some(value);
+    }
     if let Some(value) = limit_rational(expr, var, point) {
         return Some(value);
     }
@@ -10354,16 +10366,6 @@ pub fn limit(expr: &CasExpr, var: &str, point: LimitPoint) -> Option<CasExpr> {
     // whose sign is decided numerically.
     if matches!(point, LimitPoint::PosInfinity | LimitPoint::NegInfinity)
         && let Some(value) = limit_geometric_decay(expr, var, point)
-    {
-        return Some(value);
-    }
-    // Fixed integer-order Bessel J has an oscillatory O(|z|^{-1/2}) envelope on
-    // the real axis. Apply that exact zero limit to a finite product whose
-    // rational-function arguments all grow in magnitude, multiplied only by an
-    // x-free factor and a rational weight whose growth is strictly slower than
-    // the combined square-root decay.
-    if matches!(point, LimitPoint::PosInfinity | LimitPoint::NegInfinity)
-        && let Some(value) = limit_bessel_j_at_infinity(expr, var, point)
     {
         return Some(value);
     }
@@ -11000,22 +11002,24 @@ fn limit_bounded_decay(expr: &CasExpr, var: &str, point: LimitPoint) -> Option<C
     }
 }
 
-/// Limit of `c·w(x)·∏Jₙᵢ(rᵢ(x))` at either real infinity for fixed nonnegative
-/// integer orders, rational-coefficient rational functions `rᵢ` whose numerator
-/// degrees are greater than their denominator degrees, a rational weight `w`
-/// whose degree growth is less than half the sum of the argument degree growths,
-/// and any `x`-free factor `c`.
+/// Limit of `c·w(x)·∏Jₙᵢ(rᵢ(x))^mᵢ` at either real infinity for fixed
+/// nonnegative integer orders, positive integer multiplicities, rational-
+/// coefficient rational functions `rᵢ` whose numerator degrees are greater than
+/// their denominator degrees, a rational weight `w` whose degree growth is less
+/// than half the multiplicity-weighted sum of the argument degree growths, and
+/// any `x`-free factor `c`.
 ///
 /// NIST DLMF 10.17.3 gives the fixed-order large-positive-argument expansion with
 /// an oscillatory `O(z^{-1/2})` envelope. DLMF 10.11.1 gives
 /// `Jₙ(-z)=(-1)ⁿJₙ(z)` for integer `n`, so the negative-real direction has the
 /// same zero limit. Every admitted argument has `|rᵢ(x)|→∞` at both real
 /// infinities. If `rᵢ(x)=Θ(|x|^dᵢ)` and `w(x)=O(|x|^e)`, the complete product is
-/// `O(|x|^(e-Σdᵢ/2))`; the exact degree condition `2e<Σdᵢ` therefore proves a
-/// zero limit. Bounded and decaying weights have `e=0` for this comparison. The
-/// rule deliberately does not substitute a Bessel head inside a denominator or
-/// admit a bounded argument or borderline/supercritical rate, where applying
-/// the combined envelope would be unsound.
+/// `O(|x|^(e-Σmᵢdᵢ/2))`; the exact degree condition `2e<Σmᵢdᵢ` therefore proves
+/// a zero limit. Bounded and decaying weights have `e=0` for this comparison.
+/// The rule deliberately does not substitute a Bessel head inside a denominator
+/// or admit a bounded argument or borderline/supercritical rate, where applying
+/// the combined envelope would be unsound. Zero powers remain on the ordinary
+/// rational/simplification route and do not count as Bessel factors.
 fn limit_bessel_j_at_infinity(expr: &CasExpr, var: &str, point: LimitPoint) -> Option<CasExpr> {
     if !matches!(point, LimitPoint::PosInfinity | LimitPoint::NegInfinity) {
         return None;
@@ -11025,7 +11029,13 @@ fn limit_bessel_j_at_infinity(expr: &CasExpr, var: &str, point: LimitPoint) -> O
     let mut weight_factors = Vec::new();
     for factor in flatten_mul(&core) {
         match factor {
-            CasExpr::Unary(UnaryFunc::BesselJ(_), inner) => arguments.push(*inner),
+            CasExpr::Unary(UnaryFunc::BesselJ(_), inner) => arguments.push((*inner, 1)),
+            CasExpr::Pow(base, multiplicity) if multiplicity > 0 => match *base {
+                CasExpr::Unary(UnaryFunc::BesselJ(_), inner) => {
+                    arguments.push((*inner, multiplicity));
+                }
+                base => weight_factors.push(CasExpr::Pow(Box::new(base), multiplicity)),
+            },
             other => weight_factors.push(other),
         }
     }
@@ -11043,14 +11053,15 @@ fn limit_bessel_j_at_infinity(expr: &CasExpr, var: &str, point: LimitPoint) -> O
     let weight_numerator_degree = poly::rat_degree(&weight_numerator)?;
     let weight_denominator_degree = poly::rat_degree(&weight_denominator)?;
     let mut argument_growth = 0usize;
-    for argument in arguments {
+    for (argument, multiplicity) in arguments {
         let ratio = normalize_rational(&argument)?;
         let numerator = ratio.num.to_univariate(var)?;
         let denominator = ratio.den.to_univariate(var)?;
         let numerator_degree = poly::rat_degree(&numerator)?;
         let denominator_degree = poly::rat_degree(&denominator)?;
         let growth = numerator_degree.checked_sub(denominator_degree)?;
-        argument_growth = argument_growth.checked_add(growth)?;
+        let repeated_growth = growth.checked_mul(usize::try_from(multiplicity).ok()?)?;
+        argument_growth = argument_growth.checked_add(repeated_growth)?;
     }
     let weight_growth = weight_numerator_degree.saturating_sub(weight_denominator_degree);
     if weight_growth.checked_mul(2)? >= argument_growth {
@@ -22085,6 +22096,89 @@ mod tests {
                 pos(),
             )
             .is_none()
+        );
+    }
+
+    #[test]
+    fn limits_of_positive_integer_bessel_j_powers_and_declines() {
+        let x = || v("x");
+        let pos = || LimitPoint::PosInfinity;
+        let neg = || LimitPoint::NegInfinity;
+        let rational_argument =
+            (x().pow(5) + CasExpr::int(1)) / (x().pow(2) + CasExpr::int(1));
+        let cases = [
+            x().bessel_j(0).pow(2),
+            x() * x().bessel_j(3).pow(3),
+            x().pow(2) * x().pow(3).bessel_j(2).pow(2),
+            x() * x().bessel_j(0).pow(2) * x().pow(2).bessel_j(1),
+            x().pow(2) * rational_argument.bessel_j(u32::MAX).pow(2),
+            x().bessel_j(0).pow(u32::MAX),
+        ];
+
+        // A positive power m repeats the fixed-order envelope m times without
+        // expanding the expression: it contributes m*growth(argument) to the
+        // combined strict rate check.
+        for expression in &cases {
+            assert_equal(&limit(expression, "x", pos()).unwrap(), &CasExpr::zero());
+            assert_equal(&limit(expression, "x", neg()).unwrap(), &CasExpr::zero());
+        }
+
+        assert_equal(
+            &limit(
+                &(v("c")
+                    * CasExpr::int(-2)
+                    * x()
+                    * (CasExpr::int(-1) * x().pow(3) + CasExpr::int(1))
+                        .bessel_j(7)
+                        .pow(2)),
+                "x",
+                neg(),
+            )
+            .unwrap(),
+            &CasExpr::zero(),
+        );
+
+        // Zero power remains one. Equality in the combined rate, faster
+        // weights, modified-I powers, and powered denominators do not inherit
+        // the certified zero limit. The established zero-argument composition
+        // still maps J₀(1/x)^2 to one.
+        assert_equal(
+            &limit(&x().bessel_j(0).pow(0), "x", pos()).unwrap(),
+            &CasExpr::one(),
+        );
+        assert!(
+            limit(
+                &(x() * x().bessel_j(0).pow(2)),
+                "x",
+                pos(),
+            )
+            .is_none()
+        );
+        assert!(
+            limit(
+                &(x().pow(2) * x().bessel_j(0).pow(2)),
+                "x",
+                pos(),
+            )
+            .is_none()
+        );
+        assert!(limit(&x().bessel_i(0).pow(2), "x", pos()).is_none());
+        assert!(
+            limit(
+                &(x() / x().bessel_j(0).pow(2)),
+                "x",
+                pos(),
+            )
+            .is_none()
+        );
+        assert_equal(
+            &limit(
+                &((CasExpr::int(1) / x()).bessel_j(0).pow(2)),
+                "x",
+                pos(),
+            )
+            .unwrap(),
+            &CasExpr::one(),
         );
     }
 
