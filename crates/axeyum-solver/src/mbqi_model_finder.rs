@@ -5,9 +5,9 @@
 //! source checker accepts every original universal and returns one certificate
 //! per assertion.
 
-use std::collections::BTreeSet;
+use std::{collections::BTreeSet, time::Instant};
 
-use axeyum_ir::{FuncId, FuncValue, Rational, Sort, TermArena, Value};
+use axeyum_ir::{FuncId, FuncValue, Rational, Sort, TermArena, TermId, TermNode, Value, eval};
 
 use crate::{Model, QuantifiedUfModelSatCertificate};
 
@@ -81,6 +81,148 @@ pub(crate) fn repair_and_certify_all_universals(
     }
 
     search_default_repairs(arena, assertions, model, &repairs, 0)
+}
+
+/// Adds exact-source integer values to ADR-0359's default candidates for one
+/// bounded, deadline-aware retry. This remains untrusted search: all returned
+/// universals are independently certified from the repaired model.
+pub(crate) fn repair_and_certify_all_universals_with_source_int_values(
+    arena: &TermArena,
+    source_assertions: &[TermId],
+    universal_assertions: &[TermId],
+    model: &Model,
+    deadline: Option<Instant>,
+) -> Option<(Model, Vec<QuantifiedUfModelSatCertificate>)> {
+    if universal_assertions.is_empty() || deadline_expired(deadline) {
+        return None;
+    }
+
+    let mut functions = BTreeSet::new();
+    for &assertion in universal_assertions {
+        functions.extend(
+            crate::quant_uf_model_sat_cert::quantified_uf_model_functions(arena, assertion)?,
+        );
+    }
+    if functions.is_empty() || functions.len() > DEFAULT_REPAIR_FUNCTION_CAP {
+        return None;
+    }
+
+    let values = source_guided_int_defaults(arena, source_assertions, model)?;
+    let baseline = candidate_defaults(model, Sort::Int)?;
+    if same_value_set(&values, &baseline) {
+        return None;
+    }
+
+    let mut repairs = Vec::with_capacity(functions.len());
+    let mut candidate_count = 1_usize;
+    for function in functions {
+        let (_, params, result) = arena.function(function);
+        if result != Sort::Int {
+            return None;
+        }
+        if let Some(interpretation) = model.function(function)
+            && (interpretation.params() != params
+                || interpretation.result() != result
+                || !interpretation.uses_value_storage())
+        {
+            return None;
+        }
+        candidate_count = candidate_count.checked_mul(values.len())?;
+        if candidate_count > DEFAULT_REPAIR_CANDIDATE_CAP {
+            return None;
+        }
+        repairs.push((function, values.clone()));
+    }
+
+    search_source_default_repairs(arena, universal_assertions, model, &repairs, 0, deadline)
+}
+
+fn same_value_set(left: &[Value], right: &[Value]) -> bool {
+    left.len() == right.len() && left.iter().all(|value| right.contains(value))
+}
+
+fn source_guided_int_defaults(
+    arena: &TermArena,
+    assertions: &[TermId],
+    model: &Model,
+) -> Option<Vec<Value>> {
+    let mut values = BTreeSet::from([0_i128]);
+    for (_, value) in model.iter() {
+        if let Value::Int(integer) = value {
+            values.insert(integer);
+        }
+    }
+    for (_, interpretation) in model.functions() {
+        if interpretation.result() != Sort::Int || !interpretation.uses_value_storage() {
+            continue;
+        }
+        if let Value::Int(integer) = interpretation.default_value() {
+            values.insert(integer);
+        }
+        for (_, value) in interpretation.value_entries() {
+            if let Value::Int(integer) = value {
+                values.insert(*integer);
+            }
+        }
+    }
+
+    let mut seen = BTreeSet::new();
+    let mut visit_order = Vec::new();
+    let mut binders = BTreeSet::new();
+    let mut stack: Vec<TermId> = assertions.iter().rev().copied().collect();
+    while let Some(term) = stack.pop() {
+        if !seen.insert(term) {
+            continue;
+        }
+        visit_order.push(term);
+        match arena.node(term) {
+            TermNode::IntConst(integer) => {
+                values.insert(*integer);
+            }
+            TermNode::App { op, args } => {
+                if let axeyum_ir::Op::Forall(symbol) | axeyum_ir::Op::Exists(symbol) = op {
+                    binders.insert(*symbol);
+                }
+                stack.extend(args.iter().rev().copied());
+            }
+            _ => {}
+        }
+    }
+
+    let assignment = model.to_assignment();
+    let mut binder_dependent = BTreeSet::new();
+    for term in visit_order.into_iter().rev() {
+        let depends_on_binder = match arena.node(term) {
+            TermNode::Symbol(symbol) => binders.contains(symbol),
+            TermNode::App { args, .. } => args.iter().any(|arg| binder_dependent.contains(arg)),
+            _ => false,
+        };
+        if depends_on_binder {
+            binder_dependent.insert(term);
+        } else if arena.sort_of(term) == Sort::Int
+            && let Ok(Value::Int(integer)) = eval(arena, term, &assignment)
+        {
+            values.insert(integer);
+        }
+    }
+
+    let bases: Vec<i128> = values.iter().copied().collect();
+    for base in bases {
+        if let Some(predecessor) = base.checked_sub(1) {
+            values.insert(predecessor);
+        }
+        if let Some(successor) = base.checked_add(1) {
+            values.insert(successor);
+        }
+    }
+    if values.len() > DEFAULT_REPAIR_VALUE_CAP {
+        return None;
+    }
+    Some(values.into_iter().map(Value::Int).collect())
+}
+
+fn deadline_expired(deadline: Option<Instant>) -> bool {
+    deadline.is_some_and(|deadline| Instant::now() >= deadline)
 }
 
 fn candidate_defaults(model: &Model, result: Sort) -> Option<Vec<Value>> {
@@ -187,6 +329,49 @@ fn search_default_repairs(
     None
 }
 
+fn search_source_default_repairs(
+    arena: &TermArena,
+    assertions: &[axeyum_ir::TermId],
+    model: &Model,
+    repairs: &[(FuncId, Vec<Value>)],
+    index: usize,
+    deadline: Option<Instant>,
+) -> Option<(Model, Vec<QuantifiedUfModelSatCertificate>)> {
+    if deadline_expired(deadline) {
+        return None;
+    }
+    if index == repairs.len() {
+        let certificates = certify_all_universals(arena, assertions, model)?;
+        if deadline_expired(deadline) {
+            return None;
+        }
+        return Some((model.clone(), certificates));
+    }
+
+    let (function, defaults) = &repairs[index];
+    for default in defaults {
+        if deadline_expired(deadline) {
+            return None;
+        }
+        let mut candidate = model.clone();
+        candidate.set_function(
+            *function,
+            with_default(arena, model, *function, default.clone()),
+        );
+        if let Some(repaired) = search_source_default_repairs(
+            arena,
+            assertions,
+            &candidate,
+            repairs,
+            index + 1,
+            deadline,
+        ) {
+            return Some(repaired);
+        }
+    }
+    None
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -259,5 +444,153 @@ mod tests {
         let mut model = Model::new();
         model.set(symbol, Value::Int(i128::MAX));
         assert!(repair_and_certify_all_universals(&arena, &[universal], &model).is_some());
+    }
+
+    #[test]
+    fn source_guided_int_values_include_ground_terms_but_not_binder_terms() {
+        let mut arena = TermArena::new();
+        let function = arena
+            .declare_fun("source_guided_f", &[Sort::Int], Sort::Int)
+            .unwrap();
+        let binder = arena.declare("source_guided_x", Sort::Int).unwrap();
+        let scalar = arena.declare("source_guided_y", Sort::Int).unwrap();
+        let binder_variable = arena.var(binder);
+        let scalar_variable = arena.var(scalar);
+        let three = arena.int_const(3);
+        let four = arena.int_const(4);
+        let binder_product = arena.int_mul(binder_variable, three).unwrap();
+        let binder_application = arena.apply(function, &[binder_variable]).unwrap();
+        let universal_body = arena.eq(binder_product, binder_application).unwrap();
+        let universal = arena.forall(binder, universal_body).unwrap();
+        let ground_product = arena.int_mul(scalar_variable, four).unwrap();
+        let ground_application = arena.apply(function, &[scalar_variable]).unwrap();
+        let ground = arena.int_le(ground_product, ground_application).unwrap();
+
+        let interpretation = FuncValue::constant_value(vec![Sort::Int], Sort::Int, Value::Int(5))
+            .define_value(&[Value::Int(2)], Value::Int(9));
+        let mut model = Model::new();
+        model.set(binder, Value::Int(100));
+        model.set(scalar, Value::Int(2));
+        model.set_function(function, interpretation);
+
+        assert_eq!(
+            source_guided_int_defaults(&arena, &[universal, ground], &model),
+            Some(
+                [-1, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 99, 100, 101]
+                    .into_iter()
+                    .map(Value::Int)
+                    .collect()
+            )
+        );
+        assert!(
+            !source_guided_int_defaults(&arena, &[universal, ground], &model)
+                .unwrap()
+                .contains(&Value::Int(300)),
+            "the binder-dependent product must not become a source candidate"
+        );
+    }
+
+    #[test]
+    fn source_guided_repair_preserves_entries_and_honors_deadline() {
+        let mut arena = TermArena::new();
+        let function = arena
+            .declare_fun("source_guided_entry_f", &[Sort::Int], Sort::Int)
+            .unwrap();
+        let binder = arena.declare("source_guided_entry_x", Sort::Int).unwrap();
+        let variable = arena.var(binder);
+        let application = arena.apply(function, &[variable]).unwrap();
+        let four = arena.int_const(4);
+        let body = arena.eq(application, four).unwrap();
+        let universal = arena.forall(binder, body).unwrap();
+        let seven = arena.int_const(7);
+        let at_seven = arena.apply(function, &[seven]).unwrap();
+        let ground = arena.eq(at_seven, four).unwrap();
+
+        let interpretation = FuncValue::constant_value(vec![Sort::Int], Sort::Int, Value::Int(0))
+            .define_value(&[Value::Int(7)], Value::Int(4));
+        let mut model = Model::new();
+        model.set_function(function, interpretation);
+
+        let (repaired, certificates) = repair_and_certify_all_universals_with_source_int_values(
+            &arena,
+            &[universal, ground],
+            &[universal],
+            &model,
+            None,
+        )
+        .expect("the exact source constant must repair the total default");
+        assert_eq!(certificates.len(), 1);
+        let repaired_function = repaired.function(function).unwrap();
+        assert_eq!(repaired_function.default_value(), Value::Int(4));
+        assert_eq!(
+            repaired_function.apply_value(&[Value::Int(7)]),
+            Value::Int(4)
+        );
+        assert!(
+            repair_and_certify_all_universals_with_source_int_values(
+                &arena,
+                &[universal, ground],
+                &[universal],
+                &model,
+                Some(Instant::now()),
+            )
+            .is_none()
+        );
+    }
+
+    #[test]
+    fn source_guided_repair_declines_over_cartesian_cap() {
+        let mut arena = TermArena::new();
+        let first = arena
+            .declare_fun("source_guided_cap_f", &[Sort::Int], Sort::Int)
+            .unwrap();
+        let second = arena
+            .declare_fun("source_guided_cap_g", &[Sort::Int], Sort::Int)
+            .unwrap();
+        let binder = arena.declare("source_guided_cap_x", Sort::Int).unwrap();
+        let variable = arena.var(binder);
+        let first_application = arena.apply(first, &[variable]).unwrap();
+        let second_application = arena.apply(second, &[variable]).unwrap();
+        let body = arena.eq(first_application, second_application).unwrap();
+        let universal = arena.forall(binder, body).unwrap();
+        let mut assertions = vec![universal];
+        for value in (0_i128..=15).step_by(3) {
+            let constant = arena.int_const(value);
+            assertions.push(arena.eq(constant, constant).unwrap());
+        }
+
+        assert!(
+            repair_and_certify_all_universals_with_source_int_values(
+                &arena,
+                &assertions,
+                &[universal],
+                &Model::new(),
+                None,
+            )
+            .is_none(),
+            "a source pool wider than 16 values over two functions must exceed 256 tuples"
+        );
+
+        let mut unsupported_arena = TermArena::new();
+        let predicate = unsupported_arena
+            .declare_fun("source_guided_bool", &[Sort::Int], Sort::Bool)
+            .unwrap();
+        let binder = unsupported_arena
+            .declare("source_guided_bool_x", Sort::Int)
+            .unwrap();
+        let variable = unsupported_arena.var(binder);
+        let body = unsupported_arena.apply(predicate, &[variable]).unwrap();
+        let universal = unsupported_arena.forall(binder, body).unwrap();
+        assert!(
+            repair_and_certify_all_universals_with_source_int_values(
+                &unsupported_arena,
+                &[universal],
+                &[universal],
+                &Model::new(),
+                None,
+            )
+            .is_none(),
+            "the source-guided increment is Int-result-only"
+        );
     }
 }

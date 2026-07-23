@@ -633,6 +633,7 @@ struct Tally {
     ax_unknown: u64,
     ax_error_skipped: u64,
     z3_unknown_skipped: u64,
+    z3_unknown_seeds: Vec<u64>,
     sat_replayed: u64,
     ax_unknown_by_reason: BTreeMap<String, OracleTally>,
     ax_error_by_reason: BTreeMap<String, OracleTally>,
@@ -651,6 +652,7 @@ fn report_and_check_tally(t: &Tally, minimum_jointly_decided: u64) {
         t.ax_error_skipped
     );
     println!("Z3 Unknown (skipped): {}", t.z3_unknown_skipped);
+    println!("Z3 Unknown seeds:     {:?}", t.z3_unknown_seeds);
     println!("Sat replays verified: {}", t.sat_replayed);
     println!("Axeyum Unknown by exact reason and Z3 adjudication:");
     for (reason, oracle) in &t.ax_unknown_by_reason {
@@ -702,7 +704,7 @@ fn report_and_check_tally(t: &Tally, minimum_jointly_decided: u64) {
     );
 }
 
-fn run_differential_fuzz(instances: u64, minimum_jointly_decided: u64) {
+fn run_differential_fuzz(instances: u64, minimum_jointly_decided: u64) -> Tally {
     let cfg = SolverConfig::new().with_timeout(AXEYUM_TIMEOUT);
     let mut t = Tally::default();
 
@@ -723,6 +725,7 @@ fn run_differential_fuzz(instances: u64, minimum_jointly_decided: u64) {
         let z3_label = z3_decide(&inst);
         if z3_label == Verdict::Unknown {
             t.z3_unknown_skipped += 1;
+            t.z3_unknown_seeds.push(seed);
         }
 
         // A `SolverError` is adjudication-neutral: it is never a sat/unsat
@@ -799,11 +802,24 @@ fn run_differential_fuzz(instances: u64, minimum_jointly_decided: u64) {
     }
 
     report_and_check_tally(&t, minimum_jointly_decided);
+    t
 }
 
 #[test]
 fn quantified_uflia_model_finder_differential_fuzz_disagree_zero() {
-    run_differential_fuzz(SMOKE_INSTANCES, 228);
+    let tally = run_differential_fuzz(SMOKE_INSTANCES, 232);
+    assert_eq!(tally.agreements, tally.jointly_decided);
+    assert_eq!(tally.ax_sat, 215);
+    assert_eq!(tally.ax_unsat, 24);
+    assert_eq!(tally.ax_unknown, 17);
+    assert_eq!(tally.ax_error_skipped, 0);
+    let mut z3_sat_residuals: Vec<u64> = tally
+        .ax_unknown_by_reason
+        .values()
+        .flat_map(|oracle| oracle.z3_sat_seeds.iter().copied())
+        .collect();
+    z3_sat_residuals.sort_unstable();
+    assert_eq!(z3_sat_residuals, [122, 175, 182]);
 }
 
 #[test]
@@ -859,6 +875,55 @@ fn one_level_fixed_mbqi_retry_closes_seed_111() {
     };
     assert!(check_model(&arena, &assertions, &model).unwrap());
     assert_eq!(model.get(y_symbols[1]), Some(Value::Int(-5)));
+}
+
+#[test]
+fn source_guided_uf_defaults_close_five_production_residuals() {
+    let expected = [
+        (30_u64, &[-10_i128][..]),
+        (32, &[-7, -7]),
+        (70, &[5]),
+        (150, &[-3, -3]),
+        (242, &[-4, 4]),
+    ];
+    let config = SolverConfig::new().with_timeout(AXEYUM_TIMEOUT);
+    for (seed, defaults) in expected {
+        let mut rng = Lcg::new(seed);
+        let inst = Instance::generate(&mut rng);
+        assert_eq!(z3_decide(&inst), Verdict::Sat, "seed {seed}");
+        let (mut arena, _, _, _, _, assertions) = inst.build_axeyum();
+        let result = prove_unsat_by_mbqi(&mut arena, &assertions, &config).unwrap();
+        let CheckResult::Sat(model) = result else {
+            panic!("source-guided defaults must close seed {seed}, got {result:?}");
+        };
+        assert!(check_model(&arena, &assertions, &model).unwrap());
+        let actual: Vec<i128> = ["f", "g"]
+            .into_iter()
+            .filter_map(|name| arena.find_function(name))
+            .filter_map(|function| model.function(function))
+            .filter_map(|function| match function.default_value() {
+                Value::Int(value) => Some(value),
+                _ => None,
+            })
+            .collect();
+        assert_eq!(actual, defaults, "seed {seed}");
+    }
+}
+
+#[test]
+fn source_guided_uf_defaults_preserve_three_bounded_declines() {
+    let config = SolverConfig::new().with_timeout(AXEYUM_TIMEOUT);
+    for seed in [122_u64, 175, 182] {
+        let mut rng = Lcg::new(seed);
+        let inst = Instance::generate(&mut rng);
+        assert_eq!(z3_decide(&inst), Verdict::Sat, "seed {seed}");
+        let (mut arena, _, _, _, _, assertions) = inst.build_axeyum();
+        let result = prove_unsat_by_mbqi(&mut arena, &assertions, &config).unwrap();
+        assert!(
+            matches!(result, CheckResult::Unknown(_)),
+            "seed {seed} must remain a bounded decline, got {result:?}"
+        );
+    }
 }
 
 #[test]
