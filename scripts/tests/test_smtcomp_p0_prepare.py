@@ -166,10 +166,17 @@ class P0PrepareTests(unittest.TestCase):
             for solver_id in ("axeyum", "cvc5", "bitwuzla"):
                 run_root = root / solver_id
                 (run_root / "records").mkdir(parents=True)
-                (run_root / "run-manifest.json").write_bytes(
+                run_manifest = run_root / "run-manifest.json"
+                run_manifest.write_bytes(
                     canonical_bytes({"identity_sha256": solver_id * 8})
                 )
-                cells.append({"solver_id": solver_id, "attempt_root": str(run_root)})
+                cells.append(
+                    {
+                        "solver_id": solver_id,
+                        "attempt_root": str(run_root),
+                        "run_manifest_path": str(run_manifest),
+                    }
+                )
             shared = {
                 "benchmark_id": "QF_FP/fixture/conflict.smt2",
                 "benchmark_sha256": "b" * 64,
@@ -296,17 +303,43 @@ class P0PrepareTests(unittest.TestCase):
             for cell in completion["cells"]:
                 self.assertEqual(len(cell["commands"]), 6)
                 run_root = Path(cell["attempt_root"])
+                run_manifest = Path(cell["run_manifest_path"])
+                self.assertEqual(run_manifest.parent, attempt / "inputs")
+                self.assertFalse((run_root / "run-manifest.json").exists())
                 self.assertEqual(list((run_root / "records").iterdir()), [])
-                run = read_canonical_json(run_root / "run-manifest.json")
+                run = read_canonical_json(run_manifest)
                 self.assertEqual(
                     run["identity"]["solver_environment_sha256"],
                     digest(SOLVER_ENVIRONMENT),
                 )
                 for command in cell["commands"]:
-                    argv = read_canonical_json(Path(command["path"]))["argv"]
+                    command_record = read_canonical_json(Path(command["path"]))
+                    self.assertEqual(
+                        Path(command_record["run_manifest_path"]), run_manifest
+                    )
+                    argv = command_record["argv"]
                     self.assertIn("AYU_THREADS=1", argv)
                     self.assertIn("OMP_NUM_THREADS=1", argv)
                     self.assertIn("RAYON_NUM_THREADS=1", argv)
+
+            command_path = Path(completion["cells"][0]["commands"][0]["path"])
+            original_command = command_path.read_bytes()
+            command = json.loads(original_command)
+            command["run_manifest_path"] = str(attempt / "inputs" / "wrong.json")
+            command["record_sha256"] = digest(
+                {key: value for key, value in command.items() if key != "record_sha256"}
+            )
+            command_path.chmod(0o644)
+            command_path.write_bytes(canonical_bytes(command))
+            with self.assertRaisesRegex(ContractError, "artifact drift"):
+                validate_cell_launch(
+                    repository_root=ROOT,
+                    preparation_root=attempt,
+                    cell_id="axeyum",
+                    acknowledged_completion_sha256=_sha(attempt / "complete.json"),
+                    require_integrated=False,
+                )
+            command_path.write_bytes(original_command)
 
             environment = attempt / "inputs" / "environment.json"
             environment.chmod(0o644)
