@@ -67,11 +67,13 @@ class LeanCompleteParityTests(unittest.TestCase):
             "peak_rss_kib": 1,
             "artifact_bytes": 1,
             "evidence": self.retained_evidence(),
+            "record_sha256": None,
         }
         if state != "complete":
             for field in execution:
-                if field not in {"record_state", "evidence"}:
+                if field not in {"record_state", "evidence", "record_sha256"}:
                     execution[field] = None
+        execution["record_sha256"] = GEN.paired_execution_digest(execution)
         return execution
 
     def paired_cell(
@@ -81,7 +83,7 @@ class LeanCompleteParityTests(unittest.TestCase):
         official_state: str = "complete",
         axeyum_state: str = "complete",
     ) -> dict:
-        return {
+        cell = {
             "id": "bounded-probe",
             "population": "U1",
             "population_member_id": "kernel-probe",
@@ -93,16 +95,24 @@ class LeanCompleteParityTests(unittest.TestCase):
             "source_family": "probe",
             "official": self.paired_execution(official_state, "a"),
             "axeyum": self.paired_execution(axeyum_state, "b"),
-            "comparison": {
-                "outcome": outcome,
-                "normalization_id": "kernel-expression-v1",
-                "normalization_sha256": "e" * 64,
-                "contract_sha256": "f" * 64,
-                "result_sha256": "1" * 64,
-                "completed": True,
-                "evidence": self.retained_evidence(),
-            },
+            "comparison": {},
+            "cell_sha256": None,
         }
+        comparison = {
+            "outcome": outcome,
+            "normalization_id": "kernel-expression-v1",
+            "normalization_sha256": "e" * 64,
+            "contract_sha256": "f" * 64,
+            "official_record_sha256": cell["official"]["record_sha256"],
+            "axeyum_record_sha256": cell["axeyum"]["record_sha256"],
+            "result_sha256": None,
+            "completed": True,
+            "evidence": self.retained_evidence(),
+        }
+        comparison["result_sha256"] = GEN.paired_comparison_digest(comparison)
+        cell["comparison"] = comparison
+        cell["cell_sha256"] = GEN.paired_cell_digest(cell)
+        return cell
 
     def register_bounded_pair(self, cell: dict) -> None:
         self.data["paired_cells"] = [cell]
@@ -112,6 +122,7 @@ class LeanCompleteParityTests(unittest.TestCase):
                 "state": "bounded_profile",
                 "expected_cells": 1,
                 "expected_ids_sha256": GEN.paired_id_digest([cell["id"]]),
+                "expected_cell_seals_sha256": GEN.paired_cell_seals_digest([cell]),
                 "evidence": self.retained_evidence(),
                 "residual": "Synthetic bounded schema control; no terminal credit.",
             }
@@ -1074,6 +1085,10 @@ class LeanCompleteParityTests(unittest.TestCase):
         self.assertNotIn("command_sha256", GEN.PAIRED_CELL_FIELDS)
         self.assertIn("command_sha256", GEN.PAIRED_EXECUTION_FIELDS)
         self.assertIn("attempt_id", GEN.PAIRED_EXECUTION_FIELDS)
+        self.assertIn("record_sha256", GEN.PAIRED_EXECUTION_FIELDS)
+        self.assertIn("cell_sha256", GEN.PAIRED_CELL_FIELDS)
+        self.assertIn("official_record_sha256", GEN.PAIRED_COMPARISON_FIELDS)
+        self.assertIn("axeyum_record_sha256", GEN.PAIRED_COMPARISON_FIELDS)
         self.assertIn("completed", GEN.PAIRED_COMPARISON_FIELDS)
         self.data["outcome_classes"][-1] = "other"
         self.assertTrue(any("outcome_classes/order" in failure for failure in self.failures()))
@@ -1108,6 +1123,62 @@ class LeanCompleteParityTests(unittest.TestCase):
                 "complete execution requires command_sha256" in failure
                 for failure in self.failures()
             )
+        )
+        self.assertTrue(
+            any(
+                "record_sha256 must match canonical execution" in failure
+                for failure in self.failures()
+            )
+        )
+
+    def test_paired_seals_bind_both_executions_comparison_and_cell(self) -> None:
+        cell = self.paired_cell()
+        self.register_bounded_pair(cell)
+
+        cell["official"]["command_sha256"] = "9" * 64
+        failures = self.failures()
+        self.assertTrue(
+            any("record_sha256 must match canonical execution" in failure for failure in failures)
+        )
+
+        self.data = GEN.load_manifest()
+        cell = self.paired_cell()
+        self.register_bounded_pair(cell)
+        cell["comparison"]["official_record_sha256"] = "9" * 64
+        failures = self.failures()
+        self.assertTrue(
+            any("official record seal must match cited execution" in failure for failure in failures)
+        )
+        self.assertTrue(
+            any("result_sha256 must match canonical comparison" in failure for failure in failures)
+        )
+
+        self.data = GEN.load_manifest()
+        cell = self.paired_cell()
+        self.register_bounded_pair(cell)
+        cell["comparison"]["normalization_sha256"] = "9" * 64
+        failures = self.failures()
+        self.assertTrue(
+            any("result_sha256 must match canonical comparison" in failure for failure in failures)
+        )
+
+        self.data = GEN.load_manifest()
+        cell = self.paired_cell()
+        self.register_bounded_pair(cell)
+        cell["profile_id"] = "changed-profile"
+        self.assertTrue(
+            any("cell_sha256 must match canonical cell" in failure for failure in self.failures())
+        )
+
+    def test_paired_authority_binds_resealed_cell_content(self) -> None:
+        cell = self.paired_cell()
+        self.register_bounded_pair(cell)
+        cell["profile_id"] = "changed-profile"
+        cell["cell_sha256"] = GEN.paired_cell_digest(cell)
+        failures = self.failures()
+        self.assertFalse(any("cell_sha256 must match canonical cell" in failure for failure in failures))
+        self.assertTrue(
+            any("registered cell-seal digest must match authority" in failure for failure in failures)
         )
 
     def test_paired_outcome_requires_coherent_side_states(self) -> None:
@@ -1150,6 +1221,16 @@ class LeanCompleteParityTests(unittest.TestCase):
         self.assertTrue(
             any(
                 "registered cell ID digest must match authority" in failure
+                for failure in self.failures()
+            )
+        )
+
+        self.data = GEN.load_manifest()
+        self.register_bounded_pair(self.paired_cell())
+        self.paired_authority("U1")["expected_cell_seals_sha256"] = "0" * 64
+        self.assertTrue(
+            any(
+                "registered cell-seal digest must match authority" in failure
                 for failure in self.failures()
             )
         )

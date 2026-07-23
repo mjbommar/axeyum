@@ -128,6 +128,7 @@ PAIRED_AUTHORITY_FIELDS = {
     "state",
     "expected_cells",
     "expected_ids_sha256",
+    "expected_cell_seals_sha256",
     "evidence",
     "residual",
 }
@@ -144,6 +145,7 @@ PAIRED_CELL_FIELDS = {
     "official",
     "axeyum",
     "comparison",
+    "cell_sha256",
 }
 PAIRED_EXECUTION_FIELDS = {
     "record_state",
@@ -162,6 +164,7 @@ PAIRED_EXECUTION_FIELDS = {
     "peak_rss_kib",
     "artifact_bytes",
     "evidence",
+    "record_sha256",
 }
 PAIRED_EXECUTION_STATES = {"complete", "not-run", "invalid"}
 PAIRED_COMPARISON_FIELDS = {
@@ -169,6 +172,8 @@ PAIRED_COMPARISON_FIELDS = {
     "normalization_id",
     "normalization_sha256",
     "contract_sha256",
+    "official_record_sha256",
+    "axeyum_record_sha256",
     "result_sha256",
     "completed",
     "evidence",
@@ -412,6 +417,58 @@ def paired_id_digest(ids: list[str]) -> str:
     return digest.hexdigest()
 
 
+def canonical_json_digest(domain: str, value: Any) -> str:
+    """Hash one versioned internal canonical-JSON value.
+
+    The input schemas admit only JSON primitives.  This encoding is deliberately
+    specified here rather than described as RFC 8785: UTF-8, sorted object keys,
+    original array order, no insignificant whitespace, non-ASCII retained, and
+    no NaN/infinity.  The NUL-terminated domain separates structurally identical
+    values used for different parity authorities.
+    """
+    encoded = json.dumps(
+        value,
+        sort_keys=True,
+        separators=(",", ":"),
+        ensure_ascii=False,
+        allow_nan=False,
+    ).encode("utf-8")
+    digest = hashlib.sha256()
+    digest.update(domain.encode("ascii"))
+    digest.update(b"\0")
+    digest.update(encoded)
+    return digest.hexdigest()
+
+
+def digest_without_field(domain: str, value: dict[str, Any], field: str) -> str:
+    payload = {key: item for key, item in value.items() if key != field}
+    return canonical_json_digest(domain, payload)
+
+
+def paired_execution_digest(execution: dict[str, Any]) -> str:
+    return digest_without_field(
+        "axeyum-lean-paired-execution-v1", execution, "record_sha256"
+    )
+
+
+def paired_comparison_digest(comparison: dict[str, Any]) -> str:
+    return digest_without_field(
+        "axeyum-lean-paired-comparison-v1", comparison, "result_sha256"
+    )
+
+
+def paired_cell_digest(cell: dict[str, Any]) -> str:
+    return digest_without_field("axeyum-lean-paired-cell-v1", cell, "cell_sha256")
+
+
+def paired_cell_seals_digest(cells: list[dict[str, Any]]) -> str:
+    rows = [
+        {"id": str(cell.get("id")), "cell_sha256": cell.get("cell_sha256")}
+        for cell in sorted(cells, key=lambda cell: str(cell.get("id")))
+    ]
+    return canonical_json_digest("axeyum-lean-paired-cell-seals-v1", rows)
+
+
 def validate_paired_execution(
     owner: str, execution: Any, failures: list[str]
 ) -> str | None:
@@ -458,12 +515,19 @@ def validate_paired_execution(
             if execution.get(field) is None:
                 failures.append(f"{owner}: complete execution requires {field}")
     validate_evidence(owner, execution.get("evidence"), failures, required=True)
+    record_sha256 = execution.get("record_sha256")
+    if not HEX64.fullmatch(str(record_sha256 or "")):
+        failures.append(f"{owner}: record_sha256 must be lowercase 64-hex")
+    elif paired_execution_digest(execution) != record_sha256:
+        failures.append(f"{owner}: record_sha256 must match canonical execution")
     return state
 
 
 def validate_paired_comparison(
     owner: str,
     comparison: Any,
+    official: Any,
+    axeyum: Any,
     official_state: str | None,
     axeyum_state: str | None,
     failures: list[str],
@@ -480,9 +544,28 @@ def validate_paired_comparison(
     normalization_id = comparison.get("normalization_id")
     if not isinstance(normalization_id, str) or not normalization_id.strip():
         failures.append(f"{owner}: non-empty normalization_id is required")
-    for field in ("normalization_sha256", "contract_sha256", "result_sha256"):
+    for field in (
+        "normalization_sha256",
+        "contract_sha256",
+        "official_record_sha256",
+        "axeyum_record_sha256",
+        "result_sha256",
+    ):
         if not HEX64.fullmatch(str(comparison.get(field, ""))):
             failures.append(f"{owner}: {field} must be lowercase 64-hex")
+    if isinstance(official, dict) and (
+        comparison.get("official_record_sha256") != official.get("record_sha256")
+    ):
+        failures.append(f"{owner}: official record seal must match cited execution")
+    if isinstance(axeyum, dict) and (
+        comparison.get("axeyum_record_sha256") != axeyum.get("record_sha256")
+    ):
+        failures.append(f"{owner}: Axeyum record seal must match cited execution")
+    result_sha256 = comparison.get("result_sha256")
+    if HEX64.fullmatch(str(result_sha256 or "")) and (
+        paired_comparison_digest(comparison) != result_sha256
+    ):
+        failures.append(f"{owner}: result_sha256 must match canonical comparison")
     if comparison.get("completed") is not True:
         failures.append(f"{owner}: comparison must be completed")
     validate_evidence(owner, comparison.get("evidence"), failures, required=True)
@@ -545,10 +628,17 @@ def validate_paired_cells(data: dict[str, Any], failures: list[str]) -> list[dic
         validate_paired_comparison(
             cell_id + ".comparison",
             cell.get("comparison"),
+            cell.get("official"),
+            cell.get("axeyum"),
             official_state,
             axeyum_state,
             failures,
         )
+        cell_sha256 = cell.get("cell_sha256")
+        if not HEX64.fullmatch(str(cell_sha256 or "")):
+            failures.append(f"{cell_id}: cell_sha256 must be lowercase 64-hex")
+        elif paired_cell_digest(cell) != cell_sha256:
+            failures.append(f"{cell_id}: cell_sha256 must match canonical cell")
     return cells
 
 
@@ -590,14 +680,25 @@ def validate_paired_authorities(
             )
             expected = -1
         expected_digest = authority.get("expected_ids_sha256")
+        expected_cell_seals_digest = authority.get("expected_cell_seals_sha256")
         if expected == 0:
             if expected_digest is not None:
                 failures.append(
                     f"{population}: zero expected cells require a null ID digest"
                 )
+            if expected_cell_seals_digest is not None:
+                failures.append(
+                    f"{population}: zero expected cells require a null cell-seal digest"
+                )
         elif not HEX64.fullmatch(str(expected_digest or "")):
             failures.append(
                 f"{population}: nonzero expected cells require a lowercase 64-hex ID digest"
+            )
+        if expected > 0 and not HEX64.fullmatch(
+            str(expected_cell_seals_digest or "")
+        ):
+            failures.append(
+                f"{population}: nonzero expected cells require a lowercase 64-hex cell-seal digest"
             )
         residual = authority.get("residual")
         if not isinstance(residual, str) or not residual.strip():
@@ -616,9 +717,14 @@ def validate_paired_authorities(
         ]
         population_ids = [str(cell.get("id")) for cell in population_cells]
         if state == "not_registered":
-            if expected != 0 or expected_digest is not None or population_cells:
+            if (
+                expected != 0
+                or expected_digest is not None
+                or expected_cell_seals_digest is not None
+                or population_cells
+            ):
                 failures.append(
-                    f"{population}: not_registered authority must have zero cells and no digest"
+                    f"{population}: not_registered authority must have zero cells and no digests"
                 )
             if authority.get("evidence"):
                 failures.append(
@@ -636,6 +742,13 @@ def validate_paired_authorities(
             if population_ids and paired_id_digest(population_ids) != expected_digest:
                 failures.append(
                     f"{population}: registered cell ID digest must match authority"
+                )
+            if population_cells and (
+                paired_cell_seals_digest(population_cells)
+                != expected_cell_seals_digest
+            ):
+                failures.append(
+                    f"{population}: registered cell-seal digest must match authority"
                 )
     return result
 

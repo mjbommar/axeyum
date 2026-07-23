@@ -52,7 +52,7 @@
     },
     {
       "path": "docs/plan/lean-complete-parity-v1.json",
-      "sha256": "aa2d3efe951f1881111f8f9999a8aee30a1745a36b4915cc385bccfc70783935"
+      "sha256": "4741b47d24ac6d8f7ab92165b0bf3861b9a33e9f76f2cca4f51dacaa0cd7eb9b"
     },
     {
       "path": "docs/plan/lean-complete-parity-worktree-portability-r1-result-2026-07-23.md",
@@ -356,7 +356,7 @@
     },
     {
       "path": "scripts/gen-lean-complete-parity.py",
-      "sha256": "7867a44a0b9a1a512a101cf60325b48691089fd6d865a9a8676cae9f0f757250"
+      "sha256": "6954bffa78d537e0e3e651a0edcf58d11d547a4542c28b371e6b9eb1d932fc17"
     },
     {
       "path": "scripts/gen-lean-execution-evidence.py",
@@ -460,7 +460,7 @@
     },
     {
       "path": "scripts/tests/test_lean_complete_parity.py",
-      "sha256": "e11d9ec4ace9f3c6ca1e3fb356edd322e0baa674e5ec2e255385554c5009af13"
+      "sha256": "1bbaecc87d053cdb6ef7bd110c3f1bde11bec45af775f1b1cfb7c96b23935907"
     },
     {
       "path": "scripts/tests/test_lean_execution_acceptance.py",
@@ -2195,6 +2195,7 @@
       "state": "not_registered",
       "expected_cells": 0,
       "expected_ids_sha256": null,
+      "expected_cell_seals_sha256": null,
       "evidence": [],
       "residual": "No complete toolchain/bootstrap comparison-obligation authority is registered."
     },
@@ -2203,6 +2204,7 @@
       "state": "not_registered",
       "expected_cells": 0,
       "expected_ids_sha256": null,
+      "expected_cell_seals_sha256": null,
       "evidence": [],
       "residual": "No complete kernel/core comparison-obligation authority is registered."
     },
@@ -2211,6 +2213,7 @@
       "state": "not_registered",
       "expected_cells": 0,
       "expected_ids_sha256": null,
+      "expected_cell_seals_sha256": null,
       "evidence": [],
       "residual": "TL0.6.5 has no accepted TL0.6.3/TL0.6.4 parents or derived official/native comparison-obligation authority."
     },
@@ -2219,6 +2222,7 @@
       "state": "not_registered",
       "expected_cells": 0,
       "expected_ids_sha256": null,
+      "expected_cell_seals_sha256": null,
       "evidence": [],
       "residual": "No complete core-library comparison-obligation authority is registered."
     },
@@ -2227,6 +2231,7 @@
       "state": "not_registered",
       "expected_cells": 0,
       "expected_ids_sha256": null,
+      "expected_cell_seals_sha256": null,
       "evidence": [],
       "residual": "No complete Lake/project comparison-obligation authority is registered."
     },
@@ -2235,6 +2240,7 @@
       "state": "not_registered",
       "expected_cells": 0,
       "expected_ids_sha256": null,
+      "expected_cell_seals_sha256": null,
       "evidence": [],
       "residual": "No complete server/editor comparison-obligation authority is registered."
     },
@@ -2243,6 +2249,7 @@
       "state": "not_registered",
       "expected_cells": 0,
       "expected_ids_sha256": null,
+      "expected_cell_seals_sha256": null,
       "evidence": [],
       "residual": "No complete runtime/compiler comparison-obligation authority is registered."
     },
@@ -2251,6 +2258,7 @@
       "state": "not_registered",
       "expected_cells": 0,
       "expected_ids_sha256": null,
+      "expected_cell_seals_sha256": null,
       "evidence": [],
       "residual": "No complete mathlib comparison-obligation authority is registered."
     },
@@ -2259,6 +2267,7 @@
       "state": "not_registered",
       "expected_cells": 0,
       "expected_ids_sha256": null,
+      "expected_cell_seals_sha256": null,
       "evidence": [],
       "residual": "No complete adversarial/security comparison-obligation authority is registered."
     },
@@ -2267,6 +2276,7 @@
       "state": "not_registered",
       "expected_cells": 0,
       "expected_ids_sha256": null,
+      "expected_cell_seals_sha256": null,
       "evidence": [],
       "residual": "No complete platform/release comparison-obligation authority is registered."
     }
@@ -2283,6 +2293,7 @@
       "cell": [
         "axeyum",
         "axis",
+        "cell_sha256",
         "comparison",
         "dependency_sha256",
         "id",
@@ -2309,15 +2320,18 @@
         "outcome_sha256",
         "peak_rss_kib",
         "platform_id",
+        "record_sha256",
         "record_state",
         "resource_envelope_sha256"
       ],
       "comparison": [
+        "axeyum_record_sha256",
         "completed",
         "contract_sha256",
         "evidence",
         "normalization_id",
         "normalization_sha256",
+        "official_record_sha256",
         "outcome",
         "result_sha256"
       ]

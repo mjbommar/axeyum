@@ -651,6 +651,7 @@
       "state": "not_registered",
       "expected_cells": 0,
       "expected_ids_sha256": null,
+      "expected_cell_seals_sha256": null,
       "evidence": [],
       "residual": "No complete toolchain/bootstrap comparison-obligation authority is registered."
     },
@@ -659,6 +660,7 @@
       "state": "not_registered",
       "expected_cells": 0,
       "expected_ids_sha256": null,
+      "expected_cell_seals_sha256": null,
       "evidence": [],
       "residual": "No complete kernel/core comparison-obligation authority is registered."
     },
@@ -667,6 +669,7 @@
       "state": "not_registered",
       "expected_cells": 0,
       "expected_ids_sha256": null,
+      "expected_cell_seals_sha256": null,
       "evidence": [],
       "residual": "TL0.6.5 has no accepted TL0.6.3/TL0.6.4 parents or derived official/native comparison-obligation authority."
     },
@@ -675,6 +678,7 @@
       "state": "not_registered",
       "expected_cells": 0,
       "expected_ids_sha256": null,
+      "expected_cell_seals_sha256": null,
       "evidence": [],
       "residual": "No complete core-library comparison-obligation authority is registered."
     },
@@ -683,6 +687,7 @@
       "state": "not_registered",
       "expected_cells": 0,
       "expected_ids_sha256": null,
+      "expected_cell_seals_sha256": null,
       "evidence": [],
       "residual": "No complete Lake/project comparison-obligation authority is registered."
     },
@@ -691,6 +696,7 @@
       "state": "not_registered",
       "expected_cells": 0,
       "expected_ids_sha256": null,
+      "expected_cell_seals_sha256": null,
       "evidence": [],
       "residual": "No complete server/editor comparison-obligation authority is registered."
     },
@@ -699,6 +705,7 @@
       "state": "not_registered",
       "expected_cells": 0,
       "expected_ids_sha256": null,
+      "expected_cell_seals_sha256": null,
       "evidence": [],
       "residual": "No complete runtime/compiler comparison-obligation authority is registered."
     },
@@ -707,6 +714,7 @@
       "state": "not_registered",
       "expected_cells": 0,
       "expected_ids_sha256": null,
+      "expected_cell_seals_sha256": null,
       "evidence": [],
       "residual": "No complete mathlib comparison-obligation authority is registered."
     },
@@ -715,6 +723,7 @@
       "state": "not_registered",
       "expected_cells": 0,
       "expected_ids_sha256": null,
+      "expected_cell_seals_sha256": null,
       "evidence": [],
       "residual": "No complete adversarial/security comparison-obligation authority is registered."
     },
@@ -723,6 +732,7 @@
       "state": "not_registered",
       "expected_cells": 0,
       "expected_ids_sha256": null,
+      "expected_cell_seals_sha256": null,
       "evidence": [],
       "residual": "No complete platform/release comparison-obligation authority is registered."
     }
