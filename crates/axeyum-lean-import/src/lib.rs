@@ -13,8 +13,10 @@
 //! kernel, safe non-inductive declarations, and ordered one- or multi-family
 //! inductive groups. It translates projections and natural literals, compares
 //! kernel-derived nested-inductive auxiliary recursors by checked name, and
-//! rejects unsupported string literals, quotient packages, unsafe or partial
-//! declarations, unknown records, and malformed/forward references. Reflexive
+//! rejects unsupported string literals, unsafe or partial declarations,
+//! unknown records, and malformed/forward references. Quotient records are
+//! buffered as one exact ordered package and sent through the kernel's atomic
+//! canonical-package gate. Reflexive
 //! and nested-count metadata are descriptive; the independent kernel decides
 //! support from the translated terms. [`import_ndjson`] owns a private staging
 //! kernel and publishes it only after the complete stream succeeds, so an error
@@ -34,7 +36,7 @@ use std::io::{self, BufRead, Read};
 
 use axeyum_lean_kernel::{
     BinderInfo, Declaration, ExprId, InductiveFamilySpec, Kernel, KernelError, LevelId, Lit,
-    NameId, NatLit, RecRule, ReducibilityHint,
+    NameId, NatLit, QuotKind, RecRule, ReducibilityHint,
 };
 use serde_json::{Map, Value};
 
@@ -256,6 +258,8 @@ struct ImportState<'kernel> {
     expressions: Vec<ExprId>,
     declaration_records: usize,
     axioms: Vec<String>,
+    pending_quotient: Vec<Declaration>,
+    quotient_complete: bool,
 }
 
 #[derive(Debug)]
@@ -288,6 +292,8 @@ impl<'kernel> ImportState<'kernel> {
             expressions: Vec::new(),
             declaration_records: 0,
             axioms: Vec::new(),
+            pending_quotient: Vec::new(),
+            quotient_complete: false,
         }
     }
 
@@ -595,15 +601,97 @@ impl<'kernel> ImportState<'kernel> {
                 "expected exactly one known declaration kind",
             ));
         }
+        if !self.pending_quotient.is_empty() && kinds[0] != "quot" {
+            return Err(malformed(
+                line,
+                "declaration record interleaves an incomplete quotient package",
+            ));
+        }
         self.declaration_records += 1;
         match kinds[0] {
             "axiom" => self.import_axiom(required(record, "axiom", line)?, line),
             "def" => self.import_definition(required(record, "def", line)?, line),
             "opaque" => self.import_opaque(required(record, "opaque", line)?, line),
             "thm" => self.import_theorem(required(record, "thm", line)?, line),
-            "quot" => Err(unsupported(line, "quotient-package")),
+            "quot" => self.import_quotient(required(record, "quot", line)?, line),
             "inductive" => self.import_inductive(required(record, "inductive", line)?, line),
             _ => unreachable!(),
+        }
+    }
+
+    fn import_quotient(&mut self, raw: &Value, line: usize) -> Result<(), ImportError> {
+        if self.quotient_complete {
+            return Err(malformed(line, "duplicate quotient package"));
+        }
+        let value = object(raw, line, "quot")?;
+        exact_keys(
+            value,
+            &["name", "levelParams", "type", "kind"],
+            line,
+            "quot",
+        )?;
+        let kind_text = string(required(value, "kind", line)?, line, "quot.kind")?;
+        let kind = match kind_text {
+            "type" => QuotKind::Type,
+            "ctor" => QuotKind::Ctor,
+            "lift" => QuotKind::Lift,
+            "ind" => QuotKind::Ind,
+            _ => return Err(malformed(line, "quot.kind is not type, ctor, lift, or ind")),
+        };
+        let expected = [
+            QuotKind::Type,
+            QuotKind::Ctor,
+            QuotKind::Lift,
+            QuotKind::Ind,
+        ]
+        .get(self.pending_quotient.len())
+        .copied()
+        .ok_or_else(|| malformed(line, "quotient package exceeds four declarations"))?;
+        if kind != expected {
+            return Err(malformed(
+                line,
+                format!(
+                    "quot.kind is out of order: expected {}, got {kind_text}",
+                    quotient_kind_name(expected)
+                ),
+            ));
+        }
+        let declaration = Declaration::Quotient {
+            name: self.name(required(value, "name", line)?, line, "quot.name")?,
+            uparams: self.name_array(
+                required(value, "levelParams", line)?,
+                line,
+                "quot.levelParams",
+            )?,
+            ty: self.expression(required(value, "type", line)?, line, "quot.type")?,
+            kind,
+        };
+        self.pending_quotient.push(declaration);
+        if self.pending_quotient.len() == 4 {
+            self.kernel
+                .add_quotient_package(&self.pending_quotient)
+                .map_err(|source| ImportError::Kernel {
+                    line,
+                    declaration: "quotient package".to_owned(),
+                    source,
+                })?;
+            self.pending_quotient.clear();
+            self.quotient_complete = true;
+        }
+        Ok(())
+    }
+
+    fn finish(&self, line: usize) -> Result<(), ImportError> {
+        if self.pending_quotient.is_empty() {
+            Ok(())
+        } else {
+            Err(malformed(
+                line,
+                format!(
+                    "incomplete quotient package at EOF: received {} of 4 declarations",
+                    self.pending_quotient.len()
+                ),
+            ))
         }
     }
 
@@ -1495,6 +1583,7 @@ fn import_into_staging_kernel<R: BufRead>(
         }
     }
     let metadata = metadata.ok_or_else(|| malformed(1, "empty stream; metadata is required"))?;
+    state.finish(record_count)?;
     let (axiom_identities, declaration_identities) = build_identity_manifest(state.kernel)
         .map_err(|message| {
             malformed(
@@ -1517,6 +1606,15 @@ fn import_into_staging_kernel<R: BufRead>(
         axiom_identities,
         declaration_identities,
     })
+}
+
+const fn quotient_kind_name(kind: QuotKind) -> &'static str {
+    match kind {
+        QuotKind::Type => "type",
+        QuotKind::Ctor => "ctor",
+        QuotKind::Lift => "lift",
+        QuotKind::Ind => "ind",
+    }
 }
 
 #[derive(Debug)]

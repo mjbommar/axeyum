@@ -2,8 +2,8 @@
 
 use std::io::{BufReader, Cursor, Read};
 
-use axeyum_lean_import::{ImportError, ImportLimits, import_ndjson};
-use axeyum_lean_kernel::{Kernel, KernelError};
+use axeyum_lean_import::{DeclarationKind, ImportError, ImportLimits, import_ndjson};
+use axeyum_lean_kernel::{Declaration, Kernel, KernelError, QuotKind};
 
 const FIXTURE: &str =
     include_str!("../../../docs/plan/fixtures/lean4export-v4.30-axeyum-probe.ndjson");
@@ -222,18 +222,241 @@ fn official_nat_literal_fixture_is_independently_admitted_and_computes() {
 }
 
 #[test]
-fn quotient_fixture_retains_its_stable_first_decline() {
-    let error = import(QUOTIENT_FIXTURE).unwrap_err();
-    assert!(
-        matches!(
-            error,
-            ImportError::Unsupported {
-                line: 65,
-                code: "quotient-package"
-            }
+fn official_quotient_fixture_is_atomically_admitted_and_computes() {
+    let (mut kernel, report) = import(QUOTIENT_FIXTURE).expect("quotient closure admits");
+    assert_eq!(
+        (
+            report.names,
+            report.levels,
+            report.expressions,
+            report.declaration_records,
+            report.admitted_declarations,
         ),
-        "{error:?}",
+        (25, 3, 87, 5, 7)
     );
+    assert!(report.axioms.is_empty());
+    assert!(report.axiom_identities.is_empty());
+    assert_eq!(report.declaration_identities.len(), 7);
+    let quotient_identities = report
+        .declaration_identities
+        .iter()
+        .filter(|identity| identity.kind == DeclarationKind::Quotient)
+        .collect::<Vec<_>>();
+    assert_eq!(quotient_identities.len(), 4);
+
+    let root = kernel.anon();
+    let quot = kernel.name_str(root, "Quot");
+    let quot_mk = kernel.name_str(quot, "mk");
+    let quot_lift = kernel.name_str(quot, "lift");
+    let quot_ind = kernel.name_str(quot, "ind");
+    for (name, kind) in [
+        (quot, QuotKind::Type),
+        (quot_mk, QuotKind::Ctor),
+        (quot_lift, QuotKind::Lift),
+        (quot_ind, QuotKind::Ind),
+    ] {
+        assert!(matches!(
+            kernel.environment().get(name),
+            Some(Declaration::Quotient {
+                kind: actual_kind,
+                ..
+            }) if *actual_kind == kind
+        ));
+    }
+
+    let zero = kernel.level_zero();
+    let representative = kernel.sort_zero();
+    let ty = kernel.sort_zero();
+    let body = kernel.bvar(0);
+    let function = kernel.lam(root, ty, body, axeyum_lean_kernel::BinderInfo::Default);
+    let constructor = kernel.const_(quot_mk, vec![zero]);
+    let constructor = kernel.app(constructor, ty);
+    let constructor = kernel.app(constructor, ty);
+    let constructor = kernel.app(constructor, representative);
+    let lift = kernel.const_(quot_lift, vec![zero, zero]);
+    let mut application = lift;
+    for argument in [ty, ty, ty, function, ty, constructor] {
+        application = kernel.app(application, argument);
+    }
+    assert_eq!(kernel.whnf(application), representative);
+}
+
+#[test]
+fn quotient_wire_order_completeness_and_interleaving_are_fail_closed() {
+    for end_line in [65, 73, 100] {
+        let prefix = format!(
+            "{}\n",
+            QUOTIENT_FIXTURE
+                .lines()
+                .take(end_line)
+                .collect::<Vec<_>>()
+                .join("\n")
+        );
+        let error = import(&prefix).unwrap_err();
+        assert!(
+            matches!(error, ImportError::Malformed { line, ref message }
+                if line == end_line && message.contains("incomplete quotient package")),
+            "end_line={end_line}: {error:?}"
+        );
+    }
+
+    let wrong_order = QUOTIENT_FIXTURE.replacen(r#""kind":"type""#, r#""kind":"ctor""#, 1);
+    let error = import(&wrong_order).unwrap_err();
+    assert!(
+        matches!(error, ImportError::Malformed { line: 65, ref message }
+            if message.contains("out of order")),
+        "{error:?}"
+    );
+
+    let mut lines = QUOTIENT_FIXTURE.lines().collect::<Vec<_>>();
+    lines.insert(
+        65,
+        r#"{"axiom":{"isUnsafe":false,"levelParams":[],"name":15,"type":0}}"#,
+    );
+    let interleaved = format!("{}\n", lines.join("\n"));
+    let error = import(&interleaved).unwrap_err();
+    assert!(
+        matches!(error, ImportError::Malformed { line: 66, ref message }
+            if message.contains("interleaves")),
+        "{error:?}"
+    );
+
+    let quotient_records = QUOTIENT_FIXTURE
+        .lines()
+        .filter(|line| line.starts_with(r#"{"quot":"#))
+        .collect::<Vec<_>>();
+    assert_eq!(quotient_records.len(), 4);
+    let duplicated = format!("{QUOTIENT_FIXTURE}{}\n", quotient_records.join("\n"));
+    let error = import(&duplicated).unwrap_err();
+    assert!(
+        matches!(error, ImportError::Malformed { line: 122, ref message }
+            if message.contains("duplicate quotient package")),
+        "{error:?}"
+    );
+}
+
+#[test]
+fn quotient_relation_and_proof_type_mutations_reach_the_kernel_gate() {
+    for (needle, replacement) in [
+        (
+            r#"{"quot":{"kind":"lift","levelParams":[11,19],"name":18,"type":69}}"#,
+            r#"{"quot":{"kind":"lift","levelParams":[11,19],"name":18,"type":68}}"#,
+        ),
+        (
+            r#"{"quot":{"kind":"ind","levelParams":[11],"name":23,"type":86}}"#,
+            r#"{"quot":{"kind":"ind","levelParams":[11],"name":23,"type":85}}"#,
+        ),
+    ] {
+        let mutated = QUOTIENT_FIXTURE.replace(needle, replacement);
+        assert_ne!(mutated, QUOTIENT_FIXTURE);
+        let error = import(&mutated).unwrap_err();
+        assert!(
+            matches!(
+                error,
+                ImportError::Kernel {
+                    line: 121,
+                    source: KernelError::QuotientTypeMismatch { .. },
+                    ..
+                }
+            ),
+            "{error:?}"
+        );
+    }
+}
+
+#[test]
+fn quotient_wire_shape_and_package_metadata_mutations_fail_closed() {
+    for (needle, replacement, expected_line, expected_message) in [
+        (
+            r#""quot":{"kind":"type","levelParams":[11],"name":15,"type":43}"#,
+            r#""quot":{"kind":"mystery","levelParams":[11],"name":15,"type":43}"#,
+            65,
+            "quot.kind is not",
+        ),
+        (
+            r#""quot":{"kind":"type","levelParams":[11],"name":15,"type":43}"#,
+            r#""quot":{"extra":0,"kind":"type","levelParams":[11],"name":15,"type":43}"#,
+            65,
+            "expected fields",
+        ),
+    ] {
+        let mutated = QUOTIENT_FIXTURE.replace(needle, replacement);
+        assert_ne!(mutated, QUOTIENT_FIXTURE);
+        let error = import(&mutated).unwrap_err();
+        assert!(
+            matches!(error, ImportError::Malformed { line, ref message }
+                if line == expected_line && message.contains(expected_message)),
+            "{error:?}"
+        );
+    }
+
+    for (needle, replacement, expected) in [
+        (
+            r#"{"quot":{"kind":"type","levelParams":[11],"name":15,"type":43}}"#,
+            r#"{"quot":{"kind":"type","levelParams":[11],"name":1,"type":43}}"#,
+            "name",
+        ),
+        (
+            r#"{"quot":{"kind":"lift","levelParams":[11,19],"name":18,"type":69}}"#,
+            r#"{"quot":{"kind":"lift","levelParams":[11],"name":18,"type":69}}"#,
+            "universe",
+        ),
+    ] {
+        let mutated = QUOTIENT_FIXTURE.replace(needle, replacement);
+        assert_ne!(mutated, QUOTIENT_FIXTURE);
+        let error = import(&mutated).unwrap_err();
+        match expected {
+            "name" => assert!(
+                matches!(
+                    error,
+                    ImportError::Kernel {
+                        line: 121,
+                        source: KernelError::QuotientPackageNameMismatch { .. },
+                        ..
+                    }
+                ),
+                "expected name rejection, got {error:?}"
+            ),
+            "universe" => assert!(
+                matches!(
+                    error,
+                    ImportError::Kernel {
+                        line: 121,
+                        source: KernelError::QuotientUniverseParametersMismatch { .. },
+                        ..
+                    }
+                ),
+                "expected universe rejection, got {error:?}"
+            ),
+            _ => unreachable!("unknown rejection expectation"),
+        }
+    }
+}
+
+#[test]
+fn quotient_named_ordinary_axiom_remains_in_the_axiom_ledger() {
+    let fixture = format!(
+        "{QUOTIENT_FIXTURE}{{\"in\":26,\"str\":{{\"pre\":15,\"str\":\"sound\"}}}}\n\
+         {{\"axiom\":{{\"isUnsafe\":false,\"levelParams\":[],\"name\":26,\"type\":3}}}}\n"
+    );
+    let (kernel, report) = import(&fixture).expect("ordinary post-package axiom admits");
+    assert_eq!(report.axiom_identities.len(), 1);
+    assert_eq!(report.axiom_identities[0].name, "Quot.sound");
+    assert_eq!(
+        report
+            .declaration_identities
+            .iter()
+            .find(|identity| identity.name == "Quot.sound")
+            .map(|identity| identity.kind),
+        Some(DeclarationKind::Axiom)
+    );
+    assert!(matches!(
+        kernel.environment().iter().find_map(|(_, declaration)| {
+            (kernel.display_name(declaration.name()).to_string() == "Quot.sound")
+                .then_some(declaration)
+        }),
+        Some(Declaration::Axiom { .. })
+    ));
 }
 
 #[test]
@@ -539,21 +762,13 @@ fn late_failures_never_return_a_partially_admitted_environment() {
     .unwrap_err();
     assert!(matches!(error, ImportError::Kernel { .. }), "{error:?}");
 
+    let malformed_after_quotient = format!("{QUOTIENT_FIXTURE}{{\"truncated\":");
     let error = import_ndjson(
-        Cursor::new(QUOTIENT_FIXTURE.as_bytes()),
+        Cursor::new(malformed_after_quotient.as_bytes()),
         ImportLimits::default(),
     )
     .unwrap_err();
-    assert!(
-        matches!(
-            error,
-            ImportError::Unsupported {
-                code: "quotient-package",
-                ..
-            }
-        ),
-        "{error:?}"
-    );
+    assert!(matches!(error, ImportError::Json { .. }), "{error:?}");
 
     let record_limit = FIXTURE.lines().count() - 1;
     let error = import_ndjson(
