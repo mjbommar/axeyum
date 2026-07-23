@@ -43,10 +43,13 @@ from full_prepare import (  # noqa: E402
     compose_full_cell_manifests,
     full_host_argv,
     materialize_full_selection,
+    publish_full_preparation_candidate,
     validate_full_cell_composition,
+    validate_full_preparation,
     validate_full_selection,
 )
 from full_execute import WaveHandle, supervise_one_wave  # noqa: E402
+import full_prepare as full_prepare_module  # noqa: E402
 from full_readiness import (  # noqa: E402
     DEFAULT_REQUIRED_PATHS,
     build_gate_observation,
@@ -59,12 +62,12 @@ from multi_host import (  # noqa: E402
     REGISTRATION_SCHEMA,
     TRANSPORT,
     stop_remote_unit,
+    stage_execution_bundle,
     validate_plan,
 )
 from resource_enforcement import MULTI_HOST_KIND  # noqa: E402
 from resume_contract import ContractError, canonical_bytes, digest  # noqa: E402
 from resume_fs import read_canonical_json  # noqa: E402
-from resume_runner import source_identity_artifact  # noqa: E402
 
 
 ENFORCEMENT_ID = "e" * 64
@@ -815,10 +818,9 @@ class FullPopulationContractTests(unittest.TestCase):
             root = Path(tmp)
             shared = root / "shared"
             corpus = shared / "corpus"
-            selection_dir = shared / "selection"
             attempt = shared / "attempt"
+            selection_dir = attempt / "inputs"
             selection_dir.mkdir(parents=True)
-            attempt.mkdir()
             accepted = accepted_fixture(shared, corpus)
             selection = materialize_full_selection(
                 accepted_root=accepted,
@@ -826,8 +828,8 @@ class FullPopulationContractTests(unittest.TestCase):
                 output_dir=selection_dir,
                 fixture_only=True,
             )
-            corpus_manifest = shared / "corpus.json"
-            environment_manifest = shared / "environment.json"
+            corpus_manifest = selection_dir / "corpus.json"
+            environment_manifest = selection_dir / "environment.json"
             corpus_manifest.write_bytes(canonical_bytes({"fixture": "corpus"}))
             environment_manifest.write_bytes(canonical_bytes({"fixture": "environment"}))
             environment_sha = sha256_file(environment_manifest)
@@ -852,12 +854,23 @@ class FullPopulationContractTests(unittest.TestCase):
                 )
                 for host_id in HOST_IDS
             ]
-            source_identity = source_identity_artifact(ROOT, SMTCOMP)
-            source_identity_path = shared / "source-identity.json"
-            source_identity_path.write_bytes(canonical_bytes(source_identity))
+            fixture_root = root / "empty-fixtures"
+            fixture_root.mkdir()
+            staging_parent = attempt / "source-bundles"
+            staging_parent.mkdir()
+            bundle_root, source_identity = stage_execution_bundle(
+                repository_root=ROOT,
+                source_root=SMTCOMP,
+                fixture_root=fixture_root,
+                staging_parent=staging_parent,
+            )
+            staged_source = bundle_root / "scripts" / "smtcomp_repro"
+            source_identity_path = bundle_root / "source-identity.json"
             binaries = []
+            binary_root = attempt / "binaries"
+            binary_root.mkdir()
             for solver_id in SOLVER_IDS:
-                binary = shared / f"{solver_id}-solver"
+                binary = binary_root / solver_id
                 binary.write_bytes(f"{solver_id} fixture".encode("ascii"))
                 binary.chmod(0o755)
                 binaries.append(binary)
@@ -872,7 +885,7 @@ class FullPopulationContractTests(unittest.TestCase):
             ):
                 composition = compose_full_cell_manifests(
                     repository_root=ROOT,
-                    source_root=SMTCOMP,
+                    source_root=staged_source,
                     shared_root=shared,
                     attempt_root=attempt,
                     selection=selection,
@@ -921,6 +934,72 @@ class FullPopulationContractTests(unittest.TestCase):
                 validate_full_cell_composition(
                     reseal(mutated),
                     selection=selection,
+                    inspect_shared_root=False,
+                )
+
+            gates = [
+                build_gate_observation(
+                    repository_root=ROOT,
+                    command=list(command),
+                    exit_code=0,
+                    stdout=b"fixture-only green\n",
+                    stderr=b"",
+                    started_at_ns=3000 + index * 10,
+                    ended_at_ns=3001 + index * 10,
+                )
+                for index, command in enumerate(
+                    (("just", "check"), ("./scripts/check-smtcomp-resume.sh",))
+                )
+            ]
+            readiness = build_readiness(
+                repository_root=ROOT,
+                gate_observations=gates,
+                required_paths=("scripts/smtcomp_repro/full_population.py",),
+                fixture_only=True,
+            )
+            original_install = full_prepare_module.atomic_install_json
+            with mock.patch.object(
+                full_prepare_module,
+                "atomic_install_json",
+                wraps=original_install,
+            ) as install:
+                completion = publish_full_preparation_candidate(
+                    repository_root=ROOT,
+                    source_root=staged_source,
+                    source_identity_manifest=source_identity_path,
+                    attempt_root=attempt,
+                    selection=selection,
+                    composition=composition,
+                    readiness=readiness,
+                    solver_cells=cells,
+                    prepared_at_ns=4000,
+                )
+            self.assertEqual(install.call_args_list[-1].args[1], "complete.json")
+            self.assertEqual(completion["status"], "prepared-no-launch")
+            self.assertFalse(completion["launch_authorized"])
+            self.assertTrue((attempt / "complete.json").is_file())
+            self.assertEqual(
+                validate_full_preparation(
+                    attempt,
+                    repository_root=ROOT,
+                    inspect_shared_root=False,
+                )["record_sha256"],
+                completion["record_sha256"],
+            )
+            evidence = attempt / "cells" / "axeyum" / "records" / "unexpected"
+            evidence.write_bytes(b"must reject pre-existing execution evidence\n")
+            with self.assertRaisesRegex(ContractError, "execution evidence"):
+                validate_full_preparation(
+                    attempt,
+                    repository_root=ROOT,
+                    inspect_shared_root=False,
+                )
+            evidence.unlink()
+            binaries[0].write_bytes(b"mutated solver")
+            with self.assertRaises(ContractError):
+                validate_full_preparation(
+                    attempt,
+                    repository_root=ROOT,
                     inspect_shared_root=False,
                 )
 
@@ -1231,7 +1310,6 @@ class FullPopulationContractTests(unittest.TestCase):
                 validate_readiness(readiness, repository_root=root)["record_sha256"],
                 readiness["record_sha256"],
             )
-
             bad_gate = build_gate_observation(
                 repository_root=root,
                 command=["just", "check"],
@@ -1254,6 +1332,54 @@ class FullPopulationContractTests(unittest.TestCase):
                     required_paths=required,
                     require_ready=True,
                 )
+
+    def test_readiness_durable_validation_uses_recorded_git_objects(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            required = readiness_repository(root, DEFAULT_REQUIRED_PATHS)
+            gates = [
+                build_gate_observation(
+                    repository_root=root,
+                    command=list(command),
+                    exit_code=0,
+                    stdout=b"green\n",
+                    stderr=b"",
+                    started_at_ns=1000 + index * 10,
+                    ended_at_ns=1001 + index * 10,
+                )
+                for index, command in enumerate(
+                    (("just", "check"), ("./scripts/check-smtcomp-resume.sh",))
+                )
+            ]
+            readiness = build_readiness(
+                repository_root=root,
+                gate_observations=gates,
+                required_paths=required,
+                require_ready=True,
+            )
+            (root / required[0]).write_text("next revision\n", encoding="utf-8")
+            subprocess.run(["git", "add", required[0]], cwd=root, check=True)
+            subprocess.run(
+                ["git", "commit", "-m", "advance"],
+                cwd=root,
+                check=True,
+                capture_output=True,
+            )
+            subprocess.run(
+                ["git", "update-ref", "refs/remotes/origin/main", "HEAD"],
+                cwd=root,
+                check=True,
+            )
+            self.assertEqual(
+                validate_readiness(
+                    readiness,
+                    repository_root=root,
+                    inspect_current=False,
+                )["record_sha256"],
+                readiness["record_sha256"],
+            )
+            with self.assertRaisesRegex(ContractError, "repository drift"):
+                validate_readiness(readiness, repository_root=root)
 
     def test_readiness_rejects_stale_gate_or_resealed_conclusion(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
