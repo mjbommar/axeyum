@@ -122,9 +122,15 @@ def validate_cell_launch(
             raise ContractError("P0 cell contains prior execution evidence")
 
     plan = read_canonical_json(run_dir / "multi-host-plan.json")
-    run = read_canonical_json(run_dir / "run-manifest.json")
+    run_path = Path(cell["run_manifest_path"])
+    try:
+        run_path.resolve(strict=True).relative_to(preparation_root / "inputs")
+    except ValueError as exc:
+        raise ContractError("P0 cell run manifest escapes the input namespace") from exc
+    run = read_canonical_json(run_path)
     if (
         run["identity_sha256"] != cell["run_identity_sha256"]
+        or sha256_file(run_path) != cell["run_manifest_sha256"]
         or plan["plan_sha256"] != cell["plan_sha256"]
     ):
         raise ContractError("P0 cell run/plan identity drift")
@@ -132,6 +138,8 @@ def validate_cell_launch(
     for allocation_id in ("initial-0", "initial-1", "initial-2"):
         path = run_dir / "multi-host-commands" / f"{allocation_id}.json"
         command = read_canonical_json(path)
+        if command.get("run_manifest_path") != str(run_path):
+            raise ContractError("P0 command run-manifest path drift")
         command_plan, command_run, allocation = validate_host_command(command)
         if (
             command_plan["plan_sha256"] != plan["plan_sha256"]
@@ -206,7 +214,7 @@ def adjudicate_cell(
             "schema": ADJUDICATION_SCHEMA,
             "solver_id": cell_id,
             "run_identity_sha256": read_canonical_json(
-                run_dir / "run-manifest.json"
+                Path(_cell_by_id(completion)[cell_id]["run_manifest_path"])
             )["identity_sha256"],
             "record_count": len(records),
             "status_counts": dict(sorted(status_counts.items())),

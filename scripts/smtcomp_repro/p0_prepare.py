@@ -517,6 +517,7 @@ def prepare_p0(
     cells = []
     for cell in solvers:
         run_dir = attempt / "cells" / cell.solver_id
+        run_path = inputs / f"{cell.solver_id}-run-manifest.json"
         command_template = [str(copied[cell.solver_id]), "{bench}"]
         if cell.internal_timeout_ms is not None:
             command_template.extend(["--timeout-ms", str(cell.internal_timeout_ms)])
@@ -543,6 +544,7 @@ def prepare_p0(
             toolchain_identity=observations[0]["toolchain_identity_sha256"],
             solver_environment=SOLVER_ENVIRONMENT,
         )
+        atomic_install_json(inputs, run_path.name, run)
         plan = build_plan(
             run=run,
             shared_root=shared,
@@ -551,9 +553,7 @@ def prepare_p0(
             allocations=_allocations(run["resource_enforcement"]["enforcement_id"]),
         )
         prepare_run_directory(plan=plan, run=run, run_dir=run_dir)
-        run_path = run_dir / "run-manifest.json"
         plan_path = run_dir / "multi-host-plan.json"
-        atomic_install_json(run_dir, run_path.name, run)
         atomic_install_json(run_dir, plan_path.name, plan)
         command_rows = []
         allocations = {row["allocation_id"]: row for row in plan["allocations"]}
@@ -604,6 +604,7 @@ def prepare_p0(
                 "attempt_root": str(run_dir.resolve(strict=True)),
                 "selection": cell.selection,
                 "run_identity_sha256": run["identity_sha256"],
+                "run_manifest_path": str(run_path.resolve(strict=True)),
                 "run_manifest_sha256": sha256_file(run_path),
                 "plan_sha256": plan["plan_sha256"],
                 "plan_file_sha256": sha256_file(plan_path),
