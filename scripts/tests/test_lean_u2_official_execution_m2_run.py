@@ -51,6 +51,37 @@ class LeanU2OfficialExecutionM2RunTests(unittest.TestCase):
             junit_path=self.root / "attempt/test-results.xml",
         )
 
+    @staticmethod
+    def manifest_file(path: str, sha256: str = "0" * 64) -> dict:
+        return {
+            "path": path,
+            "kind": "file",
+            "mode": 0o644,
+            "bytes": 1,
+            "sha256": sha256,
+            "target": None,
+        }
+
+    def selected_source(self) -> dict:
+        rows = {}
+        for case in M2.selected_contract()["cases"]:
+            rows[case["source_path"]] = self.manifest_file(
+                case["source_path"], case["source_sha256"]
+            )
+            for sidecar in case["sidecars"]:
+                rows[sidecar] = self.manifest_file(sidecar)
+            runner = case["registration"]["command"][2].removeprefix(
+                "$LEAN_ROOT/"
+            )
+            rows[runner] = self.manifest_file(runner)
+        rows[RUN.COMPILE_BENCH_RUNNER_PATH] = copy.deepcopy(
+            RUN.COMPILE_BENCH_RUNNER_ROW
+        )
+        rows[RUN.COMPILE_RUNNER_TARGET_PATH] = copy.deepcopy(
+            RUN.COMPILE_RUNNER_TARGET_ROW
+        )
+        return {"files": sorted(rows.values(), key=lambda row: row["path"])}
+
     def prepare(self) -> tuple[dict, dict, bytes, bytes, bytes]:
         payload = M2.synthetic_discovery(
             source_root=self.source,
@@ -284,20 +315,16 @@ class LeanU2OfficialExecutionM2RunTests(unittest.TestCase):
         )
 
     def test_selected_source_and_cli_fail_closed_without_live_run(self) -> None:
-        rows = {}
-        for case in M2.selected_contract()["cases"]:
-            rows[case["source_path"]] = {
-                "path": case["source_path"],
-                "kind": "file",
-                "sha256": case["source_sha256"],
-            }
-            for sidecar in case["sidecars"]:
-                rows[sidecar] = {"path": sidecar, "kind": "file", "sha256": "0" * 64}
-            runner = case["registration"]["command"][2].removeprefix("$LEAN_ROOT/")
-            rows[runner] = {"path": runner, "kind": "file", "sha256": "0" * 64}
-        source = {"files": sorted(rows.values(), key=lambda row: row["path"])}
+        source = self.selected_source()
         with mock.patch.object(BASE, "validate_source_record", return_value=[]):
             self.assertEqual(RUN.validate_selected_source(source), [])
+            compile_bench = [
+                case
+                for case in M2.selected_contract()["cases"]
+                if case["registration"]["command"][2]
+                == "$LEAN_ROOT/" + RUN.COMPILE_BENCH_RUNNER_PATH
+            ]
+            self.assertEqual(len(compile_bench), 24)
             changed = copy.deepcopy(source)
             target = next(
                 row
@@ -332,6 +359,95 @@ class LeanU2OfficialExecutionM2RunTests(unittest.TestCase):
         )
         self.assertEqual(help_result.returncode, 0, help_result.stderr.decode())
         self.assertIn(b"run-m2", help_result.stdout)
+
+    def test_compile_bench_runner_symlink_mutations_fail_closed(self) -> None:
+        source = self.selected_source()
+
+        def mutate_row(value: dict, path: str) -> dict:
+            return next(row for row in value["files"] if row["path"] == path)
+
+        mutations = {}
+
+        missing = copy.deepcopy(source)
+        missing["files"] = [
+            row
+            for row in missing["files"]
+            if row["path"] != RUN.COMPILE_BENCH_RUNNER_PATH
+        ]
+        mutations["missing"] = missing
+
+        renamed = copy.deepcopy(source)
+        mutate_row(renamed, RUN.COMPILE_BENCH_RUNNER_PATH)["path"] += ".renamed"
+        mutations["renamed"] = renamed
+
+        regularized = copy.deepcopy(source)
+        link = mutate_row(regularized, RUN.COMPILE_BENCH_RUNNER_PATH)
+        link.update(self.manifest_file(RUN.COMPILE_BENCH_RUNNER_PATH))
+        mutations["regularized"] = regularized
+
+        for name, target in (
+            ("absolute", "/tests/compile/run_test.sh"),
+            ("escaping", "../../../outside/run_test.sh"),
+            ("wrong-target", "../compiler/run_test.sh"),
+        ):
+            changed = copy.deepcopy(source)
+            mutate_row(changed, RUN.COMPILE_BENCH_RUNNER_PATH)["target"] = target
+            mutations[name] = changed
+
+        chained = copy.deepcopy(source)
+        target = mutate_row(chained, RUN.COMPILE_RUNNER_TARGET_PATH)
+        target["kind"] = "symlink"
+        target["target"] = "other.sh"
+        mutations["chained"] = chained
+
+        for field, value in (
+            ("mode", 0o755),
+            ("bytes", 21),
+            ("sha256", "f" * 64),
+        ):
+            changed = copy.deepcopy(source)
+            mutate_row(changed, RUN.COMPILE_BENCH_RUNNER_PATH)[field] = value
+            mutations[f"link-{field}"] = changed
+
+        target_missing = copy.deepcopy(source)
+        target_missing["files"] = [
+            row
+            for row in target_missing["files"]
+            if row["path"] != RUN.COMPILE_RUNNER_TARGET_PATH
+        ]
+        mutations["target-missing"] = target_missing
+
+        for field, value in (
+            ("kind", "symlink"),
+            ("mode", 0o755),
+            ("bytes", 1_211),
+            ("sha256", "f" * 64),
+        ):
+            changed = copy.deepcopy(source)
+            target = mutate_row(changed, RUN.COMPILE_RUNNER_TARGET_PATH)
+            target[field] = value
+            if field == "kind":
+                target["target"] = "other.sh"
+            mutations[f"target-{field}"] = changed
+
+        with mock.patch.object(BASE, "validate_source_record", return_value=[]):
+            self.assertEqual(RUN.validate_selected_source(source), [])
+            for name, changed in mutations.items():
+                with self.subTest(name=name):
+                    self.assertTrue(RUN.validate_selected_source(changed))
+
+        self.assertEqual(
+            RUN._resolve_manifest_link(
+                RUN.COMPILE_BENCH_RUNNER_PATH, "../compile/run_test.sh"
+            ),
+            RUN.COMPILE_RUNNER_TARGET_PATH,
+        )
+        self.assertIsNone(
+            RUN._resolve_manifest_link(RUN.COMPILE_BENCH_RUNNER_PATH, "/absolute")
+        )
+        self.assertIsNone(
+            RUN._resolve_manifest_link(RUN.COMPILE_BENCH_RUNNER_PATH, "../../../escape")
+        )
 
 
 if __name__ == "__main__":

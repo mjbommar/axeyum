@@ -11,7 +11,7 @@ import signal
 import subprocess
 import sys
 import time
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import Any, Callable
 
 
@@ -35,6 +35,32 @@ DISCOVERY_SCHEMA = "axeyum-lean-u2-official-execution-m2-discovery-v1"
 RUN_SCHEMA = "axeyum-lean-u2-official-execution-m2-run-v1"
 PRELAUNCH_SCHEMA = "axeyum-lean-u2-official-execution-m2-prelaunch-v1"
 TERMINAL_SCHEMA = "axeyum-lean-u2-official-execution-m2-terminal-v1"
+
+R1_PLAN = ROOT / (
+    "docs/plan/"
+    "lean-u2-official-execution-tl0.6.3-m2-r1-symlink-preflight-plan-2026-07-22.md"
+)
+R1_PREREGISTRATION_COMMIT = "3e761588eb8487dab510906e6d5fc3c90cc08fef"
+R1_PLAN_SHA256 = "e0fd948ee39e0f1808eec459a18766683d3781e602cc481c8fa10a70e9a0d5f9"
+
+COMPILE_BENCH_RUNNER_PATH = "tests/compile_bench/run_test.sh"
+COMPILE_BENCH_RUNNER_ROW = {
+    "path": COMPILE_BENCH_RUNNER_PATH,
+    "kind": "symlink",
+    "mode": 0o777,
+    "bytes": 22,
+    "sha256": "674a6c537535d76d6f10d195c61ad8da8de97e903f2735326e4a927a7e0d3299",
+    "target": "../compile/run_test.sh",
+}
+COMPILE_RUNNER_TARGET_PATH = "tests/compile/run_test.sh"
+COMPILE_RUNNER_TARGET_ROW = {
+    "path": COMPILE_RUNNER_TARGET_PATH,
+    "kind": "file",
+    "mode": 0o644,
+    "bytes": 1_212,
+    "sha256": "557fe4726ec23d812a0649c56def2c22daa89faeddc58b7e49b118f3ab123396",
+    "target": None,
+}
 
 
 class M2RunError(ValueError):
@@ -69,6 +95,55 @@ def validate_revision_preflight(implementation_revision: str) -> None:
         raise M2RunError("working tree must be clean before M2 execution")
 
 
+def _resolve_manifest_link(link_path: str, target: Any) -> str | None:
+    """Resolve one relative manifest link without consulting the filesystem."""
+    if not isinstance(target, str) or not target:
+        return None
+    target_path = PurePosixPath(target)
+    if target_path.is_absolute():
+        return None
+    parts = list(PurePosixPath(link_path).parent.parts)
+    for part in target_path.parts:
+        if part in {"", "."}:
+            continue
+        if part == "..":
+            if not parts:
+                return None
+            parts.pop()
+        else:
+            parts.append(part)
+    if not parts:
+        return None
+    return PurePosixPath(*parts).as_posix()
+
+
+def _validate_selected_runner(
+    runner: Any, by_path: dict[Any, dict[str, Any]]
+) -> bool:
+    prefix = "$LEAN_ROOT/"
+    if not isinstance(runner, str) or not runner.startswith(prefix):
+        return False
+    runner_path = runner[len(prefix) :]
+    row = by_path.get(runner_path, {})
+    if runner_path == COMPILE_BENCH_RUNNER_PATH:
+        resolved = _resolve_manifest_link(runner_path, row.get("target"))
+        target_row = by_path.get(resolved, {}) if resolved is not None else {}
+        return (
+            row == COMPILE_BENCH_RUNNER_ROW
+            and resolved == COMPILE_RUNNER_TARGET_PATH
+            and target_row == COMPILE_RUNNER_TARGET_ROW
+        )
+    if row.get("kind") == "file":
+        return True
+    if row.get("kind") != "symlink":
+        return False
+    resolved = _resolve_manifest_link(runner_path, row.get("target"))
+    target_row = by_path.get(resolved, {}) if resolved is not None else {}
+    if target_row.get("kind") != "file":
+        return False
+    return True
+
+
 def validate_selected_source(source: Any) -> list[str]:
     failures = BASE.validate_source_record(source)
     if not isinstance(source, dict):
@@ -88,10 +163,7 @@ def validate_selected_source(source: Any) -> list[str]:
         if case["expected_path"] is not None and case["expected_path"] not in case["sidecars"]:
             failures.append(f"M2 expected-output registration drift: {case['id']}")
         runner = case["registration"]["command"][2]
-        prefix = "$LEAN_ROOT/"
-        if not runner.startswith(prefix) or by_path.get(runner[len(prefix) :], {}).get(
-            "kind"
-        ) != "file":
+        if not _validate_selected_runner(runner, by_path):
             failures.append(f"M2 selected runner missing: {case['id']}")
     return failures
 
@@ -996,6 +1068,12 @@ def run_m2(args: argparse.Namespace) -> None:
 
 
 def validate_offline_runner() -> dict[str, Any]:
+    if (
+        not M2.HEX40.fullmatch(R1_PREREGISTRATION_COMMIT)
+        or not R1_PLAN.is_file()
+        or BASE.sha256_file(R1_PLAN) != R1_PLAN_SHA256
+    ):
+        raise M2RunError("M2 R1 symlink-preflight plan drift")
     contract = M2.validate_offline_contract()
     store = M2_STORE.validate_offline_contract()
     lane = build_lane_record()
@@ -1008,6 +1086,8 @@ def validate_offline_runner() -> dict[str, Any]:
         "cases": contract["case_count"],
         "store_cases": store["case_records"],
         "lane": lane["lane_id"],
+        "r1_preregistration_commit": R1_PREREGISTRATION_COMMIT,
+        "r1_plan_sha256": R1_PLAN_SHA256,
         "run_command_exposed": True,
         "live_execution_observed": False,
     }
