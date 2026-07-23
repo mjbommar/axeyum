@@ -23,7 +23,7 @@ import time
 import uuid
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 from resume_contract import (
     ATTEMPT_TERMINAL_FIELDS,
@@ -72,6 +72,8 @@ RECOVERY_SCHEMA = "axeyum.smtcomp-host-recovery.v1"
 RELEASED_RECOVERY_SCHEMA = "axeyum.smtcomp-host-released-recovery.v1"
 FAULT_SCHEMA = "axeyum.smtcomp-host-fault-observation.v1"
 COMPLETION_SCHEMA = "axeyum.smtcomp-multi-host-completion.v1"
+POST_RUN_CLOSURE_SCHEMA = "axeyum.smtcomp-post-run-validation-closure.v1"
+POST_RUN_COMPLETION_SCHEMA = "axeyum.smtcomp-multi-host-completion.v2"
 
 SAFE_ID = re.compile(r"[A-Za-z0-9][A-Za-z0-9_.-]{0,127}\Z")
 SAFE_SSH_TARGET = re.compile(r"[A-Za-z0-9][A-Za-z0-9_.@-]{0,127}\Z")
@@ -239,6 +241,44 @@ COMPLETION_FIELDS = {
     "resource_completion_sha256",
     "fault_record_sha256",
     "completed_at_ns",
+    "record_sha256",
+}
+POST_RUN_COMPLETION_FIELDS = COMPLETION_FIELDS | {
+    "post_run_closure_record_sha256s",
+}
+POST_RUN_CLOSURE_FIELDS = {
+    "schema",
+    "plan_sha256",
+    "run_identity_sha256",
+    "recovery_record_sha256",
+    "allocation_id",
+    "allocation_attempt_id",
+    "allocation_attempt_sha256",
+    "allocation_attempt_record_sha256",
+    "allocation_terminal_sha256",
+    "allocation_terminal_record_sha256",
+    "resource_session_id",
+    "resource_preflight_sha256",
+    "resource_preflight_record_sha256",
+    "resource_terminal_sha256",
+    "resource_terminal_record_sha256",
+    "shard_id",
+    "runner_attempt_id",
+    "runner_attempt_sha256",
+    "runner_terminal_sha256",
+    "shard_completion_sha256",
+    "diagnostic_terminal_path",
+    "diagnostic_terminal_sha256",
+    "quarantine_path",
+    "stderr_sha256",
+    "error_class",
+    "record_set_sha256",
+    "canonical_bundle_sha256",
+    "remote_unit",
+    "remote_unit_state",
+    "launcher_pid",
+    "launcher_live",
+    "observed_at_ns",
     "record_sha256",
 }
 RUN_DIRECTORIES = (
@@ -1860,6 +1900,76 @@ def _load_allocation_evidence(
     return commands, attempts, terminals
 
 
+def _post_run_quarantine_relative(
+    diagnostic_relative: Path, diagnostic_sha256: str
+) -> Path:
+    if (
+        diagnostic_relative.is_absolute()
+        or len(diagnostic_relative.parts) != 3
+        or diagnostic_relative.parts[0] != "terminals"
+        or diagnostic_relative.suffix != ".json"
+        or ".." in diagnostic_relative.parts
+    ):
+        raise ContractError("post-run diagnostic terminal path mismatch")
+    _require_sha(diagnostic_sha256, "diagnostic terminal sha256")
+    return (
+        Path("quarantine")
+        / "post-run-validation"
+        / f"{diagnostic_sha256}-{diagnostic_relative.name}"
+    )
+
+
+def _raw_post_run_closures(run_dir: Path) -> list[dict[str, Any]]:
+    root = run_dir / "quarantine" / "post-run-validation-closures"
+    if not root.exists():
+        return []
+    rows = []
+    for path in _json_files(root):
+        record = read_canonical_json(path)
+        if (
+            set(record) != POST_RUN_CLOSURE_FIELDS
+            or record.get("schema") != POST_RUN_CLOSURE_SCHEMA
+        ):
+            raise ContractError("post-run closure field/schema mismatch")
+        _validate_seal(record)
+        if path.name != f"{record.get('allocation_id')}.json":
+            raise ContractError("post-run closure filename/allocation mismatch")
+        rows.append(record)
+    return rows
+
+
+def _released_runner_terminal_path(
+    run_dir: Path, record: dict[str, Any]
+) -> Path:
+    """Resolve released-failure evidence before or after exact quarantine."""
+
+    source = run_dir / str(record.get("runner_terminal_path"))
+    if source.is_file() and not source.is_symlink():
+        return source
+    matches = [
+        closure
+        for closure in _raw_post_run_closures(run_dir)
+        if closure.get("diagnostic_terminal_path")
+        == record.get("runner_terminal_path")
+        and closure.get("diagnostic_terminal_sha256")
+        == record.get("runner_terminal_sha256")
+        and closure.get("recovery_record_sha256") == record.get("record_sha256")
+    ]
+    if len(matches) != 1:
+        return source
+    closure = matches[0]
+    diagnostic_relative = Path(closure["diagnostic_terminal_path"])
+    expected_quarantine = _post_run_quarantine_relative(
+        diagnostic_relative, closure["diagnostic_terminal_sha256"]
+    )
+    if closure.get("quarantine_path") != str(expected_quarantine):
+        raise ContractError("post-run closure quarantine identity mismatch")
+    destination = run_dir / expected_quarantine
+    if source.exists() or not destination.is_file() or destination.is_symlink():
+        raise ContractError("post-run diagnostic terminal location mismatch")
+    return destination
+
+
 def _load_recoveries(
     run_dir: Path, plan: dict[str, Any], run: dict[str, Any]
 ) -> list[dict[str, Any]]:
@@ -1957,12 +2067,22 @@ def _load_recoveries(
             if (run_dir / "leases" / f"{record['shard_id']}.json").exists():
                 raise ContractError("released recovery shard lease reappeared")
             expected_runner_root = run_dir / "terminals" / str(record["shard_id"])
-            runner_path = run_dir / str(record.get("runner_terminal_path"))
+            runner_path = _released_runner_terminal_path(run_dir, record)
+            expected_source = run_dir / str(record.get("runner_terminal_path"))
+            allowed_parents = {
+                expected_runner_root,
+                run_dir / "quarantine" / "post-run-validation",
+            }
             if (
-                runner_path.parent != expected_runner_root
+                runner_path.parent not in allowed_parents
                 or not runner_path.is_file()
                 or runner_path.is_symlink()
                 or sha256_file(runner_path) != record["runner_terminal_sha256"]
+            ):
+                raise ContractError("released recovery runner terminal mismatch")
+            if (
+                runner_path.parent == expected_runner_root
+                and runner_path != expected_source
             ):
                 raise ContractError("released recovery runner terminal mismatch")
             runner_terminal = read_canonical_json(runner_path)
@@ -2037,6 +2157,468 @@ def _load_recoveries(
             raise ContractError("host recovery launcher mismatch")
         recoveries.append(record)
     return recoveries
+
+
+def _post_run_locations(
+    run_dir: Path, closure: dict[str, Any]
+) -> tuple[Path, Path, Path]:
+    diagnostic_relative = Path(str(closure.get("diagnostic_terminal_path")))
+    diagnostic_sha256 = str(closure.get("diagnostic_terminal_sha256"))
+    expected_quarantine = _post_run_quarantine_relative(
+        diagnostic_relative, diagnostic_sha256
+    )
+    if closure.get("quarantine_path") != str(expected_quarantine):
+        raise ContractError("post-run closure quarantine identity mismatch")
+    source = run_dir / diagnostic_relative
+    destination = run_dir / expected_quarantine
+    present = [path for path in (source, destination) if path.is_file()]
+    if len(present) != 1 or any(path.is_symlink() for path in present):
+        raise ContractError("post-run diagnostic terminal location mismatch")
+    if sha256_file(present[0]) != diagnostic_sha256:
+        raise ContractError("post-run diagnostic terminal hash mismatch")
+    return source, destination, present[0]
+
+
+def _post_run_bundle(
+    run_dir: Path, closure: dict[str, Any]
+) -> tuple[Any, Path, Path]:
+    source, destination, present = _post_run_locations(run_dir, closure)
+    if present != destination:
+        raise ContractError("post-run diagnostic terminal is not quarantined")
+    return load_bundle(run_dir), source, destination
+
+
+def _require_file_sha(path: Path, expected: Any, label: str) -> None:
+    _require_sha(expected, label)
+    if not path.is_file() or path.is_symlink() or sha256_file(path) != expected:
+        raise ContractError(f"post-run closure {label} mismatch")
+
+
+def _load_post_run_closures(
+    run_dir: Path,
+    plan: dict[str, Any],
+    run: dict[str, Any],
+    commands: dict[str, dict[str, Any]],
+    attempts: dict[str, list[dict[str, Any]]],
+    terminals: dict[str, dict[str, Any]],
+    recoveries: list[dict[str, Any]],
+) -> tuple[list[dict[str, Any]], Any | None]:
+    records = _raw_post_run_closures(run_dir)
+    if not records:
+        return [], None
+    if len(records) != 1:
+        raise ContractError("multiple post-run closures are unsupported")
+    closure = records[0]
+    if (
+        closure.get("plan_sha256") != plan["plan_sha256"]
+        or closure.get("run_identity_sha256") != run["identity_sha256"]
+        or closure.get("error_class") != "terminal-without-launch-manifest"
+        or closure.get("launcher_live") is not False
+        or closure.get("remote_unit_state")
+        in {"active", "activating", "deactivating"}
+    ):
+        raise ContractError("post-run closure identity/liveness mismatch")
+    for field in (
+        "allocation_id",
+        "allocation_attempt_id",
+        "resource_session_id",
+        "runner_attempt_id",
+        "remote_unit",
+    ):
+        _require_safe(closure.get(field), field)
+    for field in ("shard_id", "launcher_pid", "observed_at_ns"):
+        if type(closure.get(field)) is not int or closure[field] < 0:
+            raise ContractError(f"invalid post-run closure field: {field}")
+    _require_e3_unit(closure["remote_unit"])
+    if closure["launcher_pid"] <= 0:
+        raise ContractError("invalid post-run closure launcher PID")
+
+    allocation_id = closure["allocation_id"]
+    allocation_rows = attempts.get(allocation_id, [])
+    if len(allocation_rows) != 1:
+        raise ContractError("post-run closure lacks its allocation attempt")
+    allocation_attempt = allocation_rows[0]
+    allocation_terminal = terminals.get(allocation_attempt["attempt_id"])
+    command = commands.get(allocation_id)
+    recovery_matches = [
+        row
+        for row in recoveries
+        if row["retry_allocation_id"] == allocation_id
+        and row["shard_id"] == closure["shard_id"]
+        and row["record_sha256"] == closure["recovery_record_sha256"]
+    ]
+    if (
+        command is None
+        or len(recovery_matches) != 1
+        or allocation_attempt["attempt_id"] != closure["allocation_attempt_id"]
+        or allocation_attempt["session_id"] != closure["resource_session_id"]
+        or allocation_attempt["record_sha256"]
+        != closure["allocation_attempt_record_sha256"]
+        or allocation_terminal is None
+        or allocation_terminal.get("status") != "failed"
+        or allocation_terminal.get("exit_code") != 2
+        or allocation_terminal.get("record_sha256")
+        != closure["allocation_terminal_record_sha256"]
+        or allocation_terminal.get("stderr_sha256") != closure["stderr_sha256"]
+    ):
+        raise ContractError("post-run closure allocation outcome mismatch")
+
+    allocation_attempt_path = (
+        run_dir
+        / "multi-host-attempts"
+        / allocation_id
+        / f"{allocation_attempt['attempt_id']}.json"
+    )
+    allocation_terminal_path = (
+        run_dir
+        / "multi-host-terminals"
+        / allocation_id
+        / f"{allocation_attempt['attempt_id']}.json"
+    )
+    _require_file_sha(
+        allocation_attempt_path,
+        closure["allocation_attempt_sha256"],
+        "allocation attempt sha256",
+    )
+    _require_file_sha(
+        allocation_terminal_path,
+        closure["allocation_terminal_sha256"],
+        "allocation terminal sha256",
+    )
+    stderr_path = (
+        run_dir
+        / "multi-host-outputs"
+        / "stderr"
+        / f"{closure['stderr_sha256']}.bin"
+    )
+    _require_file_sha(stderr_path, closure["stderr_sha256"], "stderr sha256")
+    stderr_bytes = stderr_path.read_bytes()
+    error_prefix = b"terminal has no launch manifest: "
+    diagnostic_suffix = (
+        b"/" + closure["diagnostic_terminal_path"].encode("utf-8") + b"\n"
+    )
+    if error_prefix not in stderr_bytes or diagnostic_suffix not in stderr_bytes:
+        raise ContractError("post-run closure stderr error-class mismatch")
+
+    preflight, resource_terminal = validate_resource_session(
+        run_dir=run_dir,
+        run=run,
+        session_id=closure["resource_session_id"],
+        expected_status="failed",
+    )
+    preflight_path = (
+        run_dir
+        / "resource-sessions"
+        / closure["resource_session_id"]
+        / "preflight.json"
+    )
+    resource_terminal_path = preflight_path.with_name("terminal.json")
+    if (
+        preflight.get("record_sha256")
+        != closure["resource_preflight_record_sha256"]
+        or resource_terminal.get("record_sha256")
+        != closure["resource_terminal_record_sha256"]
+        or resource_terminal.get("worker_exit_codes") != [2]
+        or preflight.get("launcher_pid") != closure["launcher_pid"]
+        or preflight.get("shard_ids") != [closure["shard_id"]]
+    ):
+        raise ContractError("post-run closure resource outcome mismatch")
+    _require_file_sha(
+        preflight_path,
+        closure["resource_preflight_sha256"],
+        "resource preflight sha256",
+    )
+    _require_file_sha(
+        resource_terminal_path,
+        closure["resource_terminal_sha256"],
+        "resource terminal sha256",
+    )
+
+    bundle, source, destination = _post_run_bundle(run_dir, closure)
+    shard_id = str(closure["shard_id"])
+    runner_attempts = bundle.attempts.get(shard_id, [])
+    if len(runner_attempts) != 1:
+        raise ContractError("post-run closure runner attempt mismatch")
+    runner_attempt = runner_attempts[0]
+    runner_terminal = runner_attempt.get("terminal")
+    shard_completion = bundle.completions.get(shard_id)
+    if (
+        runner_attempt.get("attempt_id") != closure["runner_attempt_id"]
+        or runner_attempt.get("resource_session_id")
+        != closure["resource_session_id"]
+        or runner_terminal is None
+        or runner_terminal.get("status") != "completed"
+        or runner_terminal.get("exit_code") != 0
+        or runner_terminal.get("missing_result_keys") != []
+        or shard_completion is None
+        or shard_completion.get("state") != "complete"
+        or shard_completion.get("attempt_ids") != [closure["runner_attempt_id"]]
+        or shard_completion.get("unclosed_attempt_ids") != []
+    ):
+        raise ContractError("post-run closure inner runner outcome mismatch")
+    runner_attempt_path = (
+        run_dir / "attempts" / shard_id / f"{closure['runner_attempt_id']}.json"
+    )
+    runner_terminal_path = (
+        run_dir / "terminals" / shard_id / f"{closure['runner_attempt_id']}.json"
+    )
+    completion_path = run_dir / "completions" / f"{shard_id}.json"
+    _require_file_sha(
+        runner_attempt_path,
+        closure["runner_attempt_sha256"],
+        "runner attempt sha256",
+    )
+    _require_file_sha(
+        runner_terminal_path,
+        closure["runner_terminal_sha256"],
+        "runner terminal sha256",
+    )
+    _require_file_sha(
+        completion_path,
+        closure["shard_completion_sha256"],
+        "shard completion sha256",
+    )
+    diagnostic_id = Path(closure["diagnostic_terminal_path"]).stem
+    if any(
+        attempt.get("attempt_id") == diagnostic_id
+        for shard_attempts in bundle.attempts.values()
+        for attempt in shard_attempts
+    ):
+        raise ContractError("post-run diagnostic unexpectedly has a launch")
+    if (run_dir / "leases" / f"{shard_id}.json").exists():
+        raise ContractError("post-run closure shard lease reappeared")
+    if record_set_sha256(bundle.records) != closure["record_set_sha256"]:
+        raise ContractError("post-run closure record set mismatch")
+    canonical = sha256_bytes(merge_complete(bundle))
+    if canonical != closure["canonical_bundle_sha256"]:
+        raise ContractError("post-run closure canonical bundle mismatch")
+    latest = max(
+        allocation_terminal["ended_at_ns"],
+        resource_terminal["ended_at_ns"],
+        runner_terminal["ended_at_ns"],
+    )
+    if closure["observed_at_ns"] < latest:
+        raise ContractError("post-run closure predates terminal evidence")
+    if source.exists() == destination.exists():
+        raise ContractError("post-run diagnostic terminal replay mismatch")
+    return records, bundle
+
+
+def _migrate_post_run_diagnostic(
+    run_dir: Path,
+    closure: dict[str, Any],
+    *,
+    phase_hook: Callable[[str], None] | None = None,
+) -> None:
+    source, destination, _present = _post_run_locations(run_dir, closure)
+    if destination.exists():
+        return
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    os.replace(source, destination)
+    for directory in (source.parent, destination.parent, destination.parent.parent):
+        descriptor = os.open(directory, os.O_RDONLY | getattr(os, "O_DIRECTORY", 0))
+        try:
+            os.fsync(descriptor)
+        finally:
+            os.close(descriptor)
+    if phase_hook is not None:
+        phase_hook("after_post_run_quarantine")
+
+
+def close_post_run_validation_failure(
+    *,
+    plan: dict[str, Any],
+    run: dict[str, Any],
+    run_dir: Path,
+    allocation_id: str,
+    shard_id: int,
+    remote_helper_path: Path,
+    expected_record_set_sha256: str,
+    expected_canonical_bundle_sha256: str,
+    inspect_shared_root: bool = True,
+    phase_hook: Callable[[str], None] | None = None,
+) -> dict[str, Any]:
+    """Close one exact post-run finalizer failure without launching work."""
+
+    validate_plan(plan, run, inspect_shared_root=inspect_shared_root)
+    closure_root = run_dir / "quarantine" / "post-run-validation-closures"
+    closure_path = closure_root / f"{_require_safe(allocation_id, 'allocation_id')}.json"
+    existing = _raw_post_run_closures(run_dir)
+    if existing:
+        if len(existing) != 1 or existing[0].get("allocation_id") != allocation_id:
+            raise ContractError("post-run closure replay mismatch")
+        _migrate_post_run_diagnostic(run_dir, existing[0], phase_hook=phase_hook)
+        commands, attempts, terminals = _load_allocation_evidence(
+            run_dir, plan, inspect_shared_root=inspect_shared_root
+        )
+        recoveries = _load_recoveries(run_dir, plan, run)
+        validated, _bundle = _load_post_run_closures(
+            run_dir, plan, run, commands, attempts, terminals, recoveries
+        )
+        return validated[0]
+
+    commands, attempts, terminals = _load_allocation_evidence(
+        run_dir, plan, inspect_shared_root=inspect_shared_root
+    )
+    recoveries = _load_recoveries(run_dir, plan, run)
+    recovery_matches = [
+        row
+        for row in recoveries
+        if row["retry_allocation_id"] == allocation_id and row["shard_id"] == shard_id
+    ]
+    allocation_rows = attempts.get(allocation_id, [])
+    if len(recovery_matches) != 1 or len(allocation_rows) != 1:
+        raise ContractError("post-run closure lacks exact recovery/allocation")
+    recovery = recovery_matches[0]
+    allocation_attempt = allocation_rows[0]
+    allocation_terminal = terminals.get(allocation_attempt["attempt_id"])
+    if allocation_terminal is None:
+        raise ContractError("post-run closure allocation remains unclosed")
+    diagnostic_relative = Path(recovery["runner_terminal_path"])
+    diagnostic_sha256 = recovery["runner_terminal_sha256"]
+    quarantine_relative = _post_run_quarantine_relative(
+        diagnostic_relative, diagnostic_sha256
+    )
+    source = run_dir / diagnostic_relative
+    if (
+        not source.is_file()
+        or source.is_symlink()
+        or sha256_file(source) != diagnostic_sha256
+        or (run_dir / quarantine_relative).exists()
+    ):
+        raise ContractError("post-run closure diagnostic source mismatch")
+    records = [
+        read_canonical_json(path) for path in _json_files(run_dir / "records")
+    ]
+    if record_set_sha256(records) != expected_record_set_sha256:
+        raise ContractError("post-run closure expected record set mismatch")
+    runner_attempt_paths = _json_files(run_dir / "attempts" / str(shard_id))
+    if len(runner_attempt_paths) != 1:
+        raise ContractError("post-run closure inner runner is incomplete")
+    runner_attempt = read_canonical_json(runner_attempt_paths[0])
+    runner_terminal_path = (
+        run_dir
+        / "terminals"
+        / str(shard_id)
+        / f"{runner_attempt.get('attempt_id')}.json"
+    )
+    completion_path = run_dir / "completions" / f"{shard_id}.json"
+    if not runner_terminal_path.is_file() or not completion_path.is_file():
+        raise ContractError("post-run closure inner runner is incomplete")
+    runner_terminal = read_canonical_json(runner_terminal_path)
+    shard_completion = read_canonical_json(completion_path)
+    if (
+        allocation_terminal.get("status") != "failed"
+        or allocation_terminal.get("exit_code") != 2
+        or runner_terminal.get("status") != "completed"
+        or shard_completion.get("state") != "complete"
+    ):
+        raise ContractError("post-run closure outcome class mismatch")
+    session_id = allocation_attempt["session_id"]
+    preflight, resource_terminal = validate_resource_session(
+        run_dir=run_dir,
+        run=run,
+        session_id=session_id,
+        expected_status="failed",
+    )
+    if resource_terminal.get("worker_exit_codes") != [2]:
+        raise ContractError("post-run closure resource exit mismatch")
+    allocation = next(
+        (row for row in plan["allocations"] if row["allocation_id"] == allocation_id),
+        None,
+    )
+    if allocation is None or allocation.get("shard_ids") != [shard_id]:
+        raise ContractError("post-run closure allocation mapping mismatch")
+    registration = next(
+        row
+        for row in plan["host_registrations"]
+        if row["host_id"] == allocation["host_id"]
+    )
+    unit = f"{run['resource_enforcement']['unit_prefix']}-{session_id}.service"
+    liveness = remote_liveness(
+        registration=registration,
+        remote_helper_path=remote_helper_path,
+        unit=unit,
+        launcher_pid=preflight["launcher_pid"],
+    )
+    if (
+        liveness.get("unit") != unit
+        or liveness.get("launcher_pid") != preflight["launcher_pid"]
+        or liveness.get("launcher_live") is not False
+        or liveness.get("unit_state") in {"active", "activating", "deactivating"}
+        or (run_dir / "leases" / f"{shard_id}.json").exists()
+    ):
+        raise ContractError("post-run closure process or lease is still live")
+
+    allocation_attempt_path = (
+        run_dir
+        / "multi-host-attempts"
+        / allocation_id
+        / f"{allocation_attempt['attempt_id']}.json"
+    )
+    allocation_terminal_path = (
+        run_dir
+        / "multi-host-terminals"
+        / allocation_id
+        / f"{allocation_attempt['attempt_id']}.json"
+    )
+    preflight_path = run_dir / "resource-sessions" / session_id / "preflight.json"
+    resource_terminal_path = preflight_path.with_name("terminal.json")
+    runner_attempt_path = runner_attempt_paths[0]
+    shard_completion_path = completion_path
+    record = _sealed(
+        {
+            "schema": POST_RUN_CLOSURE_SCHEMA,
+            "plan_sha256": plan["plan_sha256"],
+            "run_identity_sha256": run["identity_sha256"],
+            "recovery_record_sha256": recovery["record_sha256"],
+            "allocation_id": allocation_id,
+            "allocation_attempt_id": allocation_attempt["attempt_id"],
+            "allocation_attempt_sha256": sha256_file(allocation_attempt_path),
+            "allocation_attempt_record_sha256": allocation_attempt["record_sha256"],
+            "allocation_terminal_sha256": sha256_file(allocation_terminal_path),
+            "allocation_terminal_record_sha256": allocation_terminal["record_sha256"],
+            "resource_session_id": session_id,
+            "resource_preflight_sha256": sha256_file(preflight_path),
+            "resource_preflight_record_sha256": preflight["record_sha256"],
+            "resource_terminal_sha256": sha256_file(resource_terminal_path),
+            "resource_terminal_record_sha256": resource_terminal["record_sha256"],
+            "shard_id": shard_id,
+            "runner_attempt_id": runner_attempt["attempt_id"],
+            "runner_attempt_sha256": sha256_file(runner_attempt_path),
+            "runner_terminal_sha256": sha256_file(runner_terminal_path),
+            "shard_completion_sha256": sha256_file(shard_completion_path),
+            "diagnostic_terminal_path": str(diagnostic_relative),
+            "diagnostic_terminal_sha256": diagnostic_sha256,
+            "quarantine_path": str(quarantine_relative),
+            "stderr_sha256": allocation_terminal["stderr_sha256"],
+            "error_class": "terminal-without-launch-manifest",
+            "record_set_sha256": expected_record_set_sha256,
+            "canonical_bundle_sha256": expected_canonical_bundle_sha256,
+            "remote_unit": unit,
+            "remote_unit_state": liveness["unit_state"],
+            "launcher_pid": preflight["launcher_pid"],
+            "launcher_live": False,
+            "observed_at_ns": time.time_ns(),
+        }
+    )
+    atomic_install_json(
+        closure_path.parent,
+        closure_path.name,
+        record,
+        quarantine_root=run_dir / "quarantine",
+    )
+    if phase_hook is not None:
+        phase_hook("after_post_run_closure")
+    _migrate_post_run_diagnostic(run_dir, record, phase_hook=phase_hook)
+    commands, attempts, terminals = _load_allocation_evidence(
+        run_dir, plan, inspect_shared_root=inspect_shared_root
+    )
+    recoveries = _load_recoveries(run_dir, plan, run)
+    validated, _bundle = _load_post_run_closures(
+        run_dir, plan, run, commands, attempts, terminals, recoveries
+    )
+    return validated[0]
 
 
 def _load_fault_observation(
@@ -2121,6 +2703,11 @@ def validate_multi_host_state(
         run_dir, plan, inspect_shared_root=inspect_shared_root
     )
     recoveries = _load_recoveries(run_dir, plan, run)
+    post_run_closures, post_run_bundle = _load_post_run_closures(
+        run_dir, plan, run, commands, attempts, terminals, recoveries
+    )
+    if post_run_bundle is not None:
+        bundle = post_run_bundle
     fault_observation = _load_fault_observation(
         run_dir, plan, run, commands, attempts, terminals
     )
@@ -2199,13 +2786,21 @@ def validate_multi_host_state(
         if key in recovery_by_failed_shard:
             raise ContractError("duplicate host recovery authority")
         recovery_by_failed_shard[key] = row
+
+    post_run_completed_allocations = {
+        row["allocation_id"] for row in post_run_closures
+    }
+
+    def allocation_completed(allocation_id: str) -> bool:
+        return any(
+            terminals.get(row["attempt_id"], {}).get("status") == "completed"
+            for row in attempts[allocation_id]
+        ) or allocation_id in post_run_completed_allocations
+
     for allocation_id in initial_ids:
         allocation_row = allocations[allocation_id]
         allocation_attempts = attempts[allocation_id]
-        if any(
-            terminals.get(row["attempt_id"], {}).get("status") == "completed"
-            for row in allocation_attempts
-        ):
+        if allocation_completed(allocation_id):
             if any(
                 row["failed_allocation_id"] == allocation_id for row in recoveries
             ):
@@ -2216,10 +2811,7 @@ def validate_multi_host_state(
             if recovery is None:
                 raise ContractError("failed initial allocation lacks exact recovery")
             retry_id = recovery["retry_allocation_id"]
-            if not any(
-                terminals.get(row["attempt_id"], {}).get("status") == "completed"
-                for row in attempts[retry_id]
-            ):
+            if not allocation_completed(retry_id):
                 raise ContractError("retry allocation did not complete")
             if not any(
                 row["session_id"] == recovery["resource_session_id"]
@@ -2235,9 +2827,22 @@ def validate_multi_host_state(
         "resource_session_ids": sorted(resource_sessions),
         "canonical_bundle_sha256": sha256_bytes(merge_complete(bundle)),
     }
+    if post_run_closures:
+        computed["post_run_closure_record_sha256s"] = sorted(
+            row["record_sha256"] for row in post_run_closures
+        )
     resource_completion = read_canonical_json(run_dir / "resource-completion.json")
     recovered_session_ids = sorted(
-        {row["resource_session_id"] for row in recoveries}
+        {
+            row["resource_session_id"]
+            for row in recoveries
+            if not (
+                run_dir
+                / "resource-sessions"
+                / row["resource_session_id"]
+                / "terminal.json"
+            ).is_file()
+        }
     )
     if resource_completion.get("unclosed_session_ids") != recovered_session_ids:
         raise ContractError("resource completion has unaccounted unclosed sessions")
@@ -2249,7 +2854,13 @@ def validate_multi_host_state(
     )
     if require_completion:
         completion = read_canonical_json(run_dir / "multi-host-completion.json")
-        if set(completion) != COMPLETION_FIELDS or completion.get("schema") != COMPLETION_SCHEMA:
+        expected_fields = (
+            POST_RUN_COMPLETION_FIELDS if post_run_closures else COMPLETION_FIELDS
+        )
+        expected_schema = (
+            POST_RUN_COMPLETION_SCHEMA if post_run_closures else COMPLETION_SCHEMA
+        )
+        if set(completion) != expected_fields or completion.get("schema") != expected_schema:
             raise ContractError("multi-host completion field/schema mismatch")
         _validate_seal(completion)
         for field, value in computed.items():
@@ -2263,6 +2874,7 @@ def validate_multi_host_state(
                 + [row["started_at_ns"] for row in all_launches]
                 + [row["ended_at_ns"] for row in terminals.values()]
                 + [row["observed_at_ns"] for row in recoveries]
+                + [row["observed_at_ns"] for row in post_run_closures]
                 + (
                     [fault_observation["killed_at_ns"]]
                     if fault_observation is not None
@@ -2289,7 +2901,11 @@ def build_multi_host_completion(
     )
     return _sealed(
         {
-            "schema": COMPLETION_SCHEMA,
+            "schema": (
+                POST_RUN_COMPLETION_SCHEMA
+                if "post_run_closure_record_sha256s" in computed
+                else COMPLETION_SCHEMA
+            ),
             **computed,
             "completed_at_ns": time.time_ns(),
         }
@@ -2476,6 +3092,7 @@ __all__ = [
     "build_multi_host_completion",
     "build_plan",
     "canonical_outcome_projection",
+    "close_post_run_validation_failure",
     "environment_manifest",
     "finalize_multi_host_run",
     "finish_allocation",
@@ -2485,6 +3102,7 @@ __all__ = [
     "local_host_observation",
     "prepare_run_directory",
     "recover_failed_shard",
+    "recover_released_failed_shard",
     "remote_probe",
     "remote_file_observation",
     "shared_filesystem_observation",
