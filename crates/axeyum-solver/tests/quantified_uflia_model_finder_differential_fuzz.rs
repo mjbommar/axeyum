@@ -36,10 +36,15 @@
 // help, readability of this fuzz harness.
 #![allow(clippy::many_single_char_names)]
 
-use std::{collections::BTreeMap, time::Duration};
+use std::{
+    collections::{BTreeMap, BTreeSet},
+    time::Duration,
+};
 
 use axeyum_ir::{Assignment, FuncId, Sort, SymbolId, TermArena, TermId, Value, eval};
-use axeyum_solver::{CheckResult, Model, SolverConfig, check_model, prove_unsat_by_mbqi};
+use axeyum_solver::{
+    CheckResult, Model, SolverConfig, check_auto, check_model, prove_unsat_by_mbqi,
+};
 use z3::ast::{Ast, Bool, Int};
 use z3::{FuncDecl, Params, SatResult, Solver, Sort as Z3Sort};
 
@@ -301,6 +306,21 @@ impl T {
             }
         }
     }
+
+    fn collect_integer_literals(&self, values: &mut BTreeSet<i128>) {
+        match self {
+            T::X | T::Y(_) => {}
+            T::C(value) => {
+                values.insert(i128::from(*value));
+            }
+            T::F(term) | T::G(term) => term.collect_integer_literals(values),
+            T::Lin(a, left, b, right, c) => {
+                values.extend([i128::from(*a), i128::from(*b), i128::from(*c)]);
+                left.collect_integer_literals(values);
+                right.collect_integer_literals(values);
+            }
+        }
+    }
 }
 
 #[derive(Clone)]
@@ -364,17 +384,24 @@ impl Instance {
     /// Build the axeyum assertions: `[∀x. body, ground_facts…]`. Returns the
     /// arena, the bound symbol, the raw (unquantified) body term, and the ground
     /// fact terms, so a `sat` model can be independently replayed.
-    fn build_axeyum(&self) -> (TermArena, SymbolId, TermId, Vec<TermId>, Vec<TermId>) {
+    fn build_axeyum(
+        &self,
+    ) -> (
+        TermArena,
+        SymbolId,
+        Vec<SymbolId>,
+        TermId,
+        Vec<TermId>,
+        Vec<TermId>,
+    ) {
         let mut a = TermArena::new();
         let x_sym = a.declare("x", Sort::Int).unwrap();
         let x = a.var(x_sym);
         let ynames = ["y0", "y1"];
-        let ys: Vec<TermId> = (0..self.num_ground)
-            .map(|i| {
-                let s = a.declare(ynames[i], Sort::Int).unwrap();
-                a.var(s)
-            })
+        let y_symbols: Vec<SymbolId> = (0..self.num_ground)
+            .map(|i| a.declare(ynames[i], Sort::Int).unwrap())
             .collect();
+        let ys: Vec<TermId> = y_symbols.iter().map(|&symbol| a.var(symbol)).collect();
         let f = a.declare_fun("f", &[Sort::Int], Sort::Int).unwrap();
         let g = a.declare_fun("g", &[Sort::Int], Sort::Int).unwrap();
 
@@ -402,7 +429,7 @@ impl Instance {
 
         let mut assertions = vec![forall];
         assertions.extend(ground_terms.iter().copied());
-        (a, x_sym, body, ground_terms, assertions)
+        (a, x_sym, y_symbols, body, ground_terms, assertions)
     }
 
     fn to_z3(&self, solver: &Solver) {
@@ -460,6 +487,15 @@ impl Instance {
             ));
         }
         lines.join("\n")
+    }
+
+    fn integer_literals(&self) -> BTreeSet<i128> {
+        let mut values = BTreeSet::new();
+        for atom in self.body_atoms.iter().chain(&self.ground_atoms) {
+            atom.lhs.collect_integer_literals(&mut values);
+            atom.rhs.collect_integer_literals(&mut values);
+        }
+        values
     }
 }
 
@@ -528,6 +564,29 @@ fn z3_decide(inst: &Instance) -> Verdict {
         SatResult::Unsat => Verdict::Unsat,
         SatResult::Unknown => Verdict::Unknown,
     }
+}
+
+fn z3_ground_scalar_model(inst: &Instance) -> Option<Vec<i128>> {
+    let solver = Solver::new();
+    let mut params = Params::new();
+    params.set_u32(
+        "timeout",
+        u32::try_from(Z3_TIMEOUT.as_millis()).unwrap_or(u32::MAX),
+    );
+    solver.set_params(&params);
+    inst.to_z3(&solver);
+    if solver.check() != SatResult::Sat {
+        return None;
+    }
+    let model = solver.get_model()?;
+    (0..inst.num_ground)
+        .map(|index| {
+            model
+                .eval(&Int::new_const(format!("y{index}")), true)?
+                .as_i64()
+                .map(i128::from)
+        })
+        .collect()
 }
 
 #[derive(Default)]
@@ -652,7 +711,7 @@ fn run_differential_fuzz(instances: u64, minimum_jointly_decided: u64) {
         let mut rng = Lcg::new(seed);
         let inst = Instance::generate(&mut rng);
 
-        let (mut arena, x_sym, body, ground, assertions) = inst.build_axeyum();
+        let (mut arena, x_sym, _, body, ground, assertions) = inst.build_axeyum();
         let ax_result = prove_unsat_by_mbqi(&mut arena, &assertions, &cfg);
         let z3_label = z3_decide(&inst);
         if z3_label == Verdict::Unknown {
@@ -849,7 +908,7 @@ fn diagnose_quantified_uflia_model_finder_seeds() {
         let seed: u64 = field.trim().parse().expect("diagnostic seed must be u64");
         let mut rng = Lcg::new(seed);
         let inst = Instance::generate(&mut rng);
-        let (mut arena, _, _, _, assertions) = inst.build_axeyum();
+        let (mut arena, _, _, _, _, assertions) = inst.build_axeyum();
         let axeyum =
             prove_unsat_by_mbqi(&mut arena, &assertions, &cfg).map(|result| label(&result));
         println!(
@@ -858,4 +917,134 @@ fn diagnose_quantified_uflia_model_finder_seeds() {
             inst.dump()
         );
     }
+}
+
+#[test]
+#[ignore = "diagnostic; set AXEYUM_QUANT_UFLIA_SCALAR_DIAGNOSTIC_SEEDS"]
+fn diagnose_z3_scalar_completion_for_quantified_uflia_unknowns() {
+    let raw = std::env::var("AXEYUM_QUANT_UFLIA_SCALAR_DIAGNOSTIC_SEEDS")
+        .expect("set AXEYUM_QUANT_UFLIA_SCALAR_DIAGNOSTIC_SEEDS");
+    let cfg = SolverConfig::new().with_timeout(AXEYUM_TIMEOUT);
+    let mut sat = 0_u64;
+    let mut unknown = 0_u64;
+
+    for field in raw.split(',') {
+        let seed: u64 = field.trim().parse().expect("diagnostic seed must be u64");
+        let mut rng = Lcg::new(seed);
+        let inst = Instance::generate(&mut rng);
+        let Some(values) = z3_ground_scalar_model(&inst) else {
+            panic!("seed {seed} must be Z3 SAT for scalar-completion diagnosis");
+        };
+        let (mut arena, _, y_symbols, _, _, mut assertions) = inst.build_axeyum();
+        assert_eq!(y_symbols.len(), values.len());
+        for (&symbol, &value) in y_symbols.iter().zip(&values) {
+            let variable = arena.var(symbol);
+            let constant = arena.int_const(value);
+            assertions.push(arena.eq(variable, constant).unwrap());
+        }
+        let result = prove_unsat_by_mbqi(&mut arena, &assertions, &cfg)
+            .expect("scalar-completion diagnostic must not error");
+        match &result {
+            CheckResult::Sat(model) => {
+                sat += 1;
+                assert!(check_model(&arena, &assertions, model).unwrap());
+            }
+            CheckResult::Unknown(_) => unknown += 1,
+            CheckResult::Unsat => panic!(
+                "seed {seed} became UNSAT under scalar values from a Z3 model; wrong refutation"
+            ),
+        }
+        println!(
+            "seed {seed}: z3_scalars={values:?}, Axeyum={:?}",
+            label(&result)
+        );
+    }
+
+    println!("Z3_SCALAR_COMPLETION|sat={sat}|unknown={unknown}");
+}
+
+fn push_scalar_candidate(values: &mut Vec<i128>, candidate: i128) {
+    if values.len() < 16 && !values.contains(&candidate) {
+        values.push(candidate);
+    }
+}
+
+#[test]
+#[ignore = "diagnostic; set AXEYUM_QUANT_UFLIA_SCALAR_DIAGNOSTIC_SEEDS"]
+fn diagnose_bounded_source_scalar_completion_for_quantified_uflia_unknowns() {
+    let raw = std::env::var("AXEYUM_QUANT_UFLIA_SCALAR_DIAGNOSTIC_SEEDS")
+        .expect("set AXEYUM_QUANT_UFLIA_SCALAR_DIAGNOSTIC_SEEDS");
+    let cfg = SolverConfig::new().with_timeout(AXEYUM_TIMEOUT);
+    let mut sat = 0_u64;
+    let mut unknown = 0_u64;
+    let mut candidate_checks = 0_u64;
+
+    for field in raw.split(',') {
+        let seed: u64 = field.trim().parse().expect("diagnostic seed must be u64");
+        let mut rng = Lcg::new(seed);
+        let inst = Instance::generate(&mut rng);
+        assert_eq!(z3_decide(&inst), Verdict::Sat);
+
+        let (mut ground_arena, _, _, _, ground, _) = inst.build_axeyum();
+        let ground_model = match check_auto(&mut ground_arena, &ground, &cfg) {
+            Ok(CheckResult::Sat(model)) => model,
+            other => panic!("seed {seed} ground slice must be SAT, got {other:?}"),
+        };
+        let mut candidates = Vec::new();
+        push_scalar_candidate(&mut candidates, 0);
+        for (_, value) in ground_model.iter() {
+            if let Value::Int(integer) = value {
+                push_scalar_candidate(&mut candidates, integer);
+            }
+        }
+        for literal in inst.integer_literals() {
+            push_scalar_candidate(&mut candidates, literal);
+        }
+        let bases = candidates.clone();
+        for base in bases {
+            if let Some(predecessor) = base.checked_sub(1) {
+                push_scalar_candidate(&mut candidates, predecessor);
+            }
+            if let Some(successor) = base.checked_add(1) {
+                push_scalar_candidate(&mut candidates, successor);
+            }
+        }
+
+        let mut found = None;
+        'assignments: for &first in &candidates {
+            let second_values: &[i128] = if inst.num_ground == 1 {
+                &[0]
+            } else {
+                &candidates
+            };
+            for &second in second_values {
+                candidate_checks += 1;
+                let values = [first, second];
+                let (mut arena, _, y_symbols, _, _, mut assertions) = inst.build_axeyum();
+                for (&symbol, &value) in y_symbols.iter().zip(&values) {
+                    let variable = arena.var(symbol);
+                    let constant = arena.int_const(value);
+                    assertions.push(arena.eq(variable, constant).unwrap());
+                }
+                if let CheckResult::Sat(model) = prove_unsat_by_mbqi(&mut arena, &assertions, &cfg)
+                    .expect("bounded scalar-completion diagnostic must not error")
+                {
+                    assert!(check_model(&arena, &assertions, &model).unwrap());
+                    found = Some(values[..y_symbols.len()].to_vec());
+                    break 'assignments;
+                }
+            }
+        }
+
+        if found.is_some() {
+            sat += 1;
+        } else {
+            unknown += 1;
+        }
+        println!("seed {seed}: source_scalar_pool={candidates:?}, checked_sat_scalars={found:?}");
+    }
+
+    println!(
+        "BOUNDED_SOURCE_SCALAR_COMPLETION|sat={sat}|unknown={unknown}|candidate_checks={candidate_checks}"
+    );
 }
