@@ -620,3 +620,69 @@ fn hex(bytes: &Hash) -> String {
     }
     output
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn quotient_identity_is_sensitive_to_kind_type_and_dependencies() {
+        let mut kernel = Kernel::new();
+        let root = kernel.anon();
+        let name = kernel.name_str(root, "Quot.synthetic");
+        let parameter = kernel.name_str(root, "u");
+        let dependency_a = kernel.name_str(root, "DependencyA");
+        let dependency_b = kernel.name_str(root, "DependencyB");
+        let ty = kernel.sort_zero();
+        let zero = kernel.level_zero();
+        let one = kernel.level_succ(zero);
+        let alternate_type = kernel.sort(one);
+        let dependency_type_a = kernel.const_(dependency_a, vec![]);
+        let dependency_type_b = kernel.const_(dependency_b, vec![]);
+
+        let make_declaration = |ty, kind| Declaration::Quotient {
+            name,
+            uparams: vec![parameter],
+            ty,
+            kind,
+        };
+        let declaration = make_declaration(ty, QuotKind::Type);
+        let different_kind = make_declaration(ty, QuotKind::Ctor);
+        let different_type = make_declaration(alternate_type, QuotKind::Type);
+        let source_dependency = make_declaration(dependency_type_a, QuotKind::Type);
+        let replacement_dependency = make_declaration(dependency_type_b, QuotKind::Type);
+
+        let mut builder = IdentityBuilder::new(&kernel);
+        let original_digest = builder
+            .declaration_digest(&declaration)
+            .expect("synthetic quotient identity");
+        assert_ne!(
+            original_digest,
+            builder
+                .declaration_digest(&different_kind)
+                .expect("kind-mutated quotient identity")
+        );
+        assert_ne!(
+            original_digest,
+            builder
+                .declaration_digest(&different_type)
+                .expect("type-mutated quotient identity")
+        );
+        assert_ne!(
+            builder
+                .declaration_digest(&source_dependency)
+                .expect("first dependency quotient identity"),
+            builder
+                .declaration_digest(&replacement_dependency)
+                .expect("second dependency quotient identity")
+        );
+        assert_eq!(
+            builder.direct_dependencies(&source_dependency),
+            [dependency_a]
+        );
+        assert_eq!(
+            builder.direct_dependencies(&replacement_dependency),
+            [dependency_b]
+        );
+    }
+}
