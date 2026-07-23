@@ -265,6 +265,41 @@ pub(crate) fn quantified_uf_model_functions(
     (!functions.is_empty()).then_some(functions)
 }
 
+/// Returns the first exact finite-profile value that falsifies a supported
+/// single-`Int`-binder universal under `model`.
+///
+/// This is search guidance only. Absence is deliberately ambiguous between an
+/// accepted profile and every unsupported/malformed case; callers must still
+/// use [`check_quantified_uf_model_sat`] as the SAT authority.
+pub(crate) fn first_quantified_uf_model_falsifier(
+    arena: &TermArena,
+    assertion: TermId,
+    model: &Model,
+) -> Option<Value> {
+    let (binders, body) = universal_prefix(arena, assertion)?;
+    let [binder] = binders.as_slice() else {
+        return None;
+    };
+    if arena.symbol(*binder).1 != Sort::Int {
+        return None;
+    }
+    let positions = relevant_function_positions(arena, body, *binder)?;
+    if positions.is_empty() {
+        return None;
+    }
+    let representatives = representatives_for_binder(arena, model, Sort::Int, &positions)?;
+    let mut assignment = model.to_assignment();
+    for representative in representatives {
+        assignment.set(*binder, representative.clone());
+        match eval(arena, body, &assignment) {
+            Ok(Value::Bool(true)) => {}
+            Ok(Value::Bool(false)) => return Some(representative),
+            _ => return None,
+        }
+    }
+    None
+}
+
 /// Returns the exact UF argument positions occupied by `binder`, or `None` when
 /// an occurrence is not a direct UF argument.
 fn relevant_function_positions(
@@ -418,5 +453,37 @@ mod tests {
         let avoid = vec![Value::Int(0), Value::Int(1), Value::Int(-1), Value::Int(2)];
         let generic = fresh_value(Sort::Int, &avoid).unwrap();
         assert!(!avoid.contains(&generic));
+    }
+
+    #[test]
+    fn single_int_profile_falsifier_uses_exact_table_keys() {
+        let mut arena = TermArena::new();
+        let function = arena.declare_fun("f", &[Sort::Int], Sort::Int).unwrap();
+        let binder = arena.declare("x", Sort::Int).unwrap();
+        let variable = arena.var(binder);
+        let application = arena.apply(function, &[variable]).unwrap();
+        let zero = arena.int_const(0);
+        let body = arena.int_ge(application, zero).unwrap();
+        let universal = arena.forall(binder, body).unwrap();
+
+        let mut model = Model::new();
+        model.set_function(
+            function,
+            axeyum_ir::FuncValue::constant_value(vec![Sort::Int], Sort::Int, Value::Int(0))
+                .define_value(&[Value::Int(2)], Value::Int(-1)),
+        );
+        assert_eq!(
+            first_quantified_uf_model_falsifier(&arena, universal, &model),
+            Some(Value::Int(2))
+        );
+
+        model.set_function(
+            function,
+            axeyum_ir::FuncValue::constant_value(vec![Sort::Int], Sort::Int, Value::Int(0)),
+        );
+        assert_eq!(
+            first_quantified_uf_model_falsifier(&arena, universal, &model),
+            None
+        );
     }
 }

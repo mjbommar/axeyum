@@ -4766,6 +4766,12 @@ const MAX_MBQI_FREE_INT_VALUES: usize = 16;
 /// Maximum complete Cartesian product searched by ADR-0360.
 const MAX_MBQI_FREE_INT_TUPLES: usize = 256;
 
+/// Maximum candidate solves in ADR-0364's SAT-only finite-profile completion.
+const MAX_MBQI_PROFILE_COMPLETION_ROUNDS: usize = 32;
+
+/// Maximum exact source instances accumulated by ADR-0364.
+const MAX_MBQI_PROFILE_COMPLETION_INSTANCES: usize = 32;
+
 /// A `Value` as a constant term (scalar sorts only).
 fn value_to_const(arena: &mut TermArena, value: &Value) -> Option<TermId> {
     match value {
@@ -5349,6 +5355,91 @@ fn complete_mbqi_source_guided_default_candidate(
     crate::check_model(arena, assertions, &repaired).map(|accepted| accepted.then_some(repaired))
 }
 
+/// ADR-0364's post-decline SAT-only finite-profile completion loop. Every QF
+/// solve and source-definition rewrite is untrusted candidate generation; only
+/// the independent finite-profile certificates plus exact full replay can
+/// return a model.
+fn complete_mbqi_profile_guided_candidate(
+    arena: &mut TermArena,
+    assertions: &[TermId],
+    universal_assertions: &[TermId],
+    ground: &[TermId],
+    config: &SolverConfig,
+    deadline: Option<Instant>,
+) -> Option<Model> {
+    let [universal] = universal_assertions else {
+        return None;
+    };
+    let TermNode::App {
+        op: Op::Forall(binder),
+        args,
+    } = arena.node(*universal)
+    else {
+        return None;
+    };
+    let [body] = &**args else {
+        return None;
+    };
+    if arena.symbol(*binder).1 != Sort::Int {
+        return None;
+    }
+    let binder = *binder;
+    let body = *body;
+    let universal = *universal;
+    let mut instances = Vec::new();
+
+    for _ in 0..MAX_MBQI_PROFILE_COMPLETION_ROUNDS {
+        let candidate_config = mbqi_config_with_deadline(config, deadline)?;
+        let mut query = ground.to_vec();
+        query.extend(instances.iter().copied());
+        let Ok(CheckResult::Sat(candidate)) = check_auto(arena, &query, &candidate_config) else {
+            return None;
+        };
+        if past_deadline(deadline) {
+            return None;
+        }
+        let candidate = crate::mbqi_model_finder::complete_profile_guided_int_candidate(
+            arena, universal, &candidate,
+        )?;
+
+        if let Some(certificates) = crate::mbqi_model_finder::certify_all_universals(
+            arena,
+            universal_assertions,
+            &candidate,
+        ) {
+            let mut certified = candidate.clone();
+            for certificate in certificates {
+                certified.set_quantified_uf_model_sat_certificate(certificate);
+            }
+            if !past_deadline(deadline)
+                && matches!(crate::check_model(arena, assertions, &certified), Ok(true))
+            {
+                return Some(certified);
+            }
+        }
+
+        let falsifier = crate::quant_uf_model_sat_cert::first_quantified_uf_model_falsifier(
+            arena, universal, &candidate,
+        )?;
+        let constant = value_to_const(arena, &falsifier)?;
+        let variable = arena.var(binder);
+        let replacements = HashMap::from([(variable, constant)]);
+        let instance = replace_subterms(arena, body, &replacements, &mut HashMap::new()).ok()?;
+        if !push_mbqi_profile_completion_instance(&mut instances, instance) {
+            return None;
+        }
+    }
+    None
+}
+
+fn push_mbqi_profile_completion_instance(instances: &mut Vec<TermId>, instance: TermId) -> bool {
+    if instances.len() >= MAX_MBQI_PROFILE_COMPLETION_INSTANCES || instances.contains(&instance) {
+        return false;
+    }
+    instances.push(instance);
+    true
+}
+
 /// ADR-0362's structurally one-level, first-candidate fixed-query retry. The
 /// inner MBQI entry is invoked with this retry disabled, so the shared deadline
 /// is not the only recursion bound. Only one exact-source free `Int` and the
@@ -5705,6 +5796,24 @@ fn prove_unsat_by_mbqi_inner(
                     &universal_assertions,
                     &ground,
                     initial_model,
+                    config,
+                    deadline,
+                )
+            {
+                return Ok(CheckResult::Sat(model));
+            }
+            // ADR-0364: only after ordinary MBQI, E-matching, and ADR-0361
+            // decline, spend the original deadline's remaining time on exact
+            // finite-profile counterexamples. The helper is SAT-only and is
+            // disabled in ADR-0362's inner invocation so prior retry behavior
+            // and recursion depth remain unchanged.
+            if matches!(ematching, CheckResult::Unknown(_))
+                && allow_outer_candidate_retries
+                && let Some(model) = complete_mbqi_profile_guided_candidate(
+                    arena,
+                    assertions,
+                    &universal_assertions,
+                    &ground,
                     config,
                     deadline,
                 )
@@ -6648,6 +6757,114 @@ mod tests {
             )
             .unwrap()
             .is_none()
+        );
+    }
+
+    #[test]
+    fn mbqi_profile_completion_is_outer_only_and_deadline_bound() {
+        let mut arena = TermArena::new();
+        let function = arena
+            .declare_fun("profile_outer_f", &[Sort::Int], Sort::Int)
+            .unwrap();
+        let binder = arena.declare("profile_outer_x", Sort::Int).unwrap();
+        let variable = arena.var(binder);
+        let application = arena.apply(function, &[variable]).unwrap();
+        let nested = arena.apply(function, &[application]).unwrap();
+        let minus_one = arena.int_const(-1);
+        let at_minus_one = arena.apply(function, &[minus_one]).unwrap();
+        let zero = arena.int_const(0);
+        let nonnegative = arena.int_ge(application, zero).unwrap();
+        let increasing = arena.int_gt(nested, at_minus_one).unwrap();
+        let body = arena.and(nonnegative, increasing).unwrap();
+        let universal = arena.forall(binder, body).unwrap();
+        let assertions = vec![universal];
+        let config = SolverConfig::new().with_timeout(Duration::from_secs(2));
+
+        assert!(matches!(
+            prove_unsat_by_mbqi_inner(&mut arena, &assertions, &config, false).unwrap(),
+            CheckResult::Unknown(_)
+        ));
+        let CheckResult::Sat(model) =
+            prove_unsat_by_mbqi_inner(&mut arena, &assertions, &config, true).unwrap()
+        else {
+            panic!("the outer profile completion must recover the checked model");
+        };
+        assert!(crate::check_model(&arena, &assertions, &model).unwrap());
+
+        assert!(
+            complete_mbqi_profile_guided_candidate(
+                &mut arena,
+                &assertions,
+                &[universal],
+                &[],
+                &config,
+                Some(Instant::now()),
+            )
+            .is_none(),
+            "an expired shared deadline must decline before QF search"
+        );
+    }
+
+    #[test]
+    fn mbqi_profile_completion_caps_instances_and_never_transfers_unsat() {
+        let mut arena = TermArena::new();
+        let mut instances = Vec::new();
+        for value in 0..MAX_MBQI_PROFILE_COMPLETION_INSTANCES {
+            let instance = arena.int_const(i128::try_from(value).unwrap());
+            assert!(push_mbqi_profile_completion_instance(
+                &mut instances,
+                instance
+            ));
+        }
+        assert_eq!(instances.len(), MAX_MBQI_PROFILE_COMPLETION_INSTANCES);
+        let duplicate = instances[0];
+        assert!(!push_mbqi_profile_completion_instance(
+            &mut instances,
+            duplicate
+        ));
+        let one_over = arena.int_const(1000);
+        assert!(!push_mbqi_profile_completion_instance(
+            &mut instances,
+            one_over
+        ));
+        assert_eq!(MAX_MBQI_PROFILE_COMPLETION_ROUNDS, 32);
+
+        let function = arena
+            .declare_fun("profile_unsat_f", &[Sort::Int], Sort::Int)
+            .unwrap();
+        let binder = arena.declare("profile_unsat_x", Sort::Int).unwrap();
+        let variable = arena.var(binder);
+        let application = arena.apply(function, &[variable]).unwrap();
+        let zero = arena.int_const(0);
+        let body = arena.int_ge(application, zero).unwrap();
+        let universal = arena.forall(binder, body).unwrap();
+        let contradiction = arena.bool_const(false);
+        let assertions = vec![universal, contradiction];
+        let config = SolverConfig::new().with_timeout(Duration::from_secs(1));
+        let deadline = Instant::now().checked_add(Duration::from_secs(1));
+        assert!(
+            complete_mbqi_profile_guided_candidate(
+                &mut arena,
+                &assertions,
+                &[universal],
+                &[contradiction],
+                &config,
+                deadline,
+            )
+            .is_none(),
+            "inner QF UNSAT must decline instead of transferring"
+        );
+        assert!(
+            complete_mbqi_profile_guided_candidate(
+                &mut arena,
+                &assertions,
+                &[universal, universal],
+                &[contradiction],
+                &config,
+                deadline,
+            )
+            .is_none(),
+            "multiple universals are outside ADR-0364"
         );
     }
 
