@@ -41,7 +41,12 @@ from resource_enforcement import (  # noqa: E402
     build_resource_completion,
     install_resource_completion,
 )
-from resume_contract import ContractError, canonical_bytes, digest  # noqa: E402
+from resume_contract import (  # noqa: E402
+    ContractError,
+    canonical_bytes,
+    digest,
+    record_set_sha256,
+)
 from resume_fs import (  # noqa: E402
     atomic_install_bytes,
     atomic_install_json,
@@ -488,14 +493,26 @@ class MultiHostPortableTests(unittest.TestCase):
             )
             runner_terminal = {
                 "status": "failed",
+                "exit_code": 1,
+                "signal": None,
+                "wall_time_ns": 1,
+                "peak_rss_bytes": 0,
                 "completed_count": 0,
+                "result_set_sha256": record_set_sha256([]),
                 "durable_result_keys": [],
                 "new_result_keys": [],
                 "skipped_result_keys": [],
+                "missing_result_keys": ["f" * 64],
+                "ended_at_ns": 2,
             }
             runner_terminal_path = layout.root / "terminals" / "0" / "runner.json"
             runner_terminal_path.parent.mkdir(parents=True)
             runner_terminal_path.write_bytes(canonical_bytes(runner_terminal))
+            assignment_path = layout.root / "assignments" / "0.json"
+            assignment_path.parent.mkdir(parents=True)
+            assignment_path.write_bytes(
+                canonical_bytes({"shard_id": "0", "result_keys": ["f" * 64]})
+            )
             (layout.root / "records").mkdir()
             failed_attempt = {
                 "attempt_id": "failed-attempt",
@@ -542,6 +559,31 @@ class MultiHostPortableTests(unittest.TestCase):
                 {"initial-0": [failed_attempt]},
                 {"failed-attempt": failed_terminal},
             )
+            malformed_runner_terminal = dict(
+                runner_terminal, missing_result_keys=[]
+            )
+            runner_terminal_path.write_bytes(
+                canonical_bytes(malformed_runner_terminal)
+            )
+            with (
+                mock.patch("multi_host.remote_liveness", return_value=dead),
+                mock.patch(
+                    "multi_host._load_allocation_evidence",
+                    return_value=allocation_evidence,
+                ),
+                self.assertRaisesRegex(ContractError, "runner terminal"),
+            ):
+                recover_released_failed_shard(
+                    plan=plan,
+                    run=layout.run,
+                    run_dir=layout.root,
+                    failed_allocation_id="initial-0",
+                    retry_allocation_id="retry-0",
+                    resource_session_id=session_id,
+                    remote_helper_path=layout.root / "multi_host.py",
+                    inspect_shared_root=False,
+                )
+            runner_terminal_path.write_bytes(canonical_bytes(runner_terminal))
             with (
                 mock.patch("multi_host.remote_liveness", return_value=dead),
                 mock.patch(

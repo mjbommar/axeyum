@@ -25,7 +25,14 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from resume_contract import ContractError, canonical_bytes, digest, merge_complete
+from resume_contract import (
+    ATTEMPT_TERMINAL_FIELDS,
+    ContractError,
+    canonical_bytes,
+    digest,
+    merge_complete,
+    record_set_sha256,
+)
 from resume_fs import (
     atomic_install_bytes,
     atomic_install_json,
@@ -1624,14 +1631,34 @@ def recover_released_failed_shard(
         raise ContractError("released recovery requires one runner terminal")
     runner_terminal_path = runner_terminal_paths[0]
     runner_terminal = read_canonical_json(runner_terminal_path)
+    assignment = read_canonical_json(run_dir / "assignments" / f"{shard_id}.json")
+    assigned_keys = assignment.get("result_keys")
     if (
-        runner_terminal.get("status") != "failed"
+        set(assignment) != {"shard_id", "result_keys"}
+        or assignment.get("shard_id") != str(shard_id)
+        or not isinstance(assigned_keys, list)
+        or not assigned_keys
+        or len(assigned_keys) != len(set(assigned_keys))
+        or any(SHA256.fullmatch(key) is None for key in assigned_keys)
+        or set(runner_terminal) != ATTEMPT_TERMINAL_FIELDS
+        or runner_terminal.get("status") != "failed"
+        or runner_terminal.get("exit_code") != 1
+        or runner_terminal.get("signal") is not None
+        or type(runner_terminal.get("wall_time_ns")) is not int
+        or runner_terminal["wall_time_ns"] < 0
+        or runner_terminal.get("peak_rss_bytes") != 0
         or runner_terminal.get("completed_count") != 0
+        or runner_terminal.get("result_set_sha256") != record_set_sha256([])
         or runner_terminal.get("durable_result_keys") != []
         or runner_terminal.get("new_result_keys") != []
         or runner_terminal.get("skipped_result_keys") != []
+        or runner_terminal.get("missing_result_keys") != sorted(assigned_keys)
+        or type(runner_terminal.get("ended_at_ns")) is not int
+        or runner_terminal["ended_at_ns"] < 0
     ):
-        raise ContractError("released recovery runner terminal is not zero-record failed")
+        raise ContractError(
+            "released recovery runner terminal is not exact zero-record failed"
+        )
     if any(
         read_canonical_json(path).get("shard_id") == str(shard_id)
         for path in _json_files(run_dir / "records")
