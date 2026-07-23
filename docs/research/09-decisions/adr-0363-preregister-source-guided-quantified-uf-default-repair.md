@@ -69,10 +69,11 @@ Acceptance requires:
    remain honest Unknowns for product overflow or bounded exhaustion.
 4. ADR-0362 seed 111, ADR-0361 seeds 23/231, ADR-0360 seed 145, and prior
    SAT/UNSAT decisions remain unchanged.
-5. The frozen 256-case direct-Z3 differential reaches at least 233 jointly
-   decided agreements and 215 replayed SAT models with zero disagreement,
+5. The frozen 256-case direct-Z3 differential reaches at least 232 jointly
+   decided agreements, exactly 215 replayed SAT models, and zero disagreement,
    error, or replay failure; the ordinary Z3-SAT residual is exactly
-   `122, 175, 182`.
+   `122, 175, 182`. The 232 floor covers the measured nine-versus-ten Z3
+   timeout variance without weakening any Axeyum or replay invariant.
 6. Solver Clippy, strict rustdoc, focused/full solver tests, branch-owned
    documentation, and proportional repository gates pass. Cross-lane retained
    evidence is reported separately and is never rewritten here.
@@ -95,8 +96,10 @@ Acceptance requires:
 
 ## Consequences
 
-The expected frozen differential moves from 228 to 233 jointly decided cases
-and from 210 to 215 checked SAT models without changing the trusted checker,
-public evidence format, UNSAT route, or any cap. Three residual seeds remain a
-separate problem. This does not add arbitrary arithmetic synthesis, scalar
-ranking, explicit-entry repair, general UF models, or proof reconstruction.
+The expected frozen differential moves from 228 to at least 232 jointly decided
+cases and from 210 to exactly 215 checked SAT models without changing the
+trusted checker, public evidence format, UNSAT route, or any cap. Prototype
+runs observe 232/233 joint agreements solely with ten/nine independent Z3
+timeouts. Three residual seeds remain a separate problem. This does not add
+arbitrary arithmetic synthesis, scalar ranking, explicit-entry repair, general
+UF models, or proof reconstruction.

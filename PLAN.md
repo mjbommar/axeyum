@@ -9263,8 +9263,10 @@ coverage never regresses):
    ADR-0362 and ADR-0360 have declined. Under the unchanged 32-value/256-default
    product caps, five independently replayed candidates close seeds 30, 32, 70,
    150, and 242; seed 122 declines at 289 combinations and seeds 175/182 exhaust
-   their bounded products. Implement this exact additive boundary next, with
-   the expected differential fixed at 233/233 agreement and 215/215 SAT replay.
+   their bounded products. Two prototype runs agree on the exact 215/215 SAT
+   replay invariant and vary only between 232/232 and 233/233 joint agreement
+   as Z3 records ten versus nine independent two-second timeouts. Implement this
+   exact additive boundary next with a 232 joint floor and exact semantic counts.
 3. **Bank the CDCL(T) spine** (Gap 3): the default-dispatch ADR for the
    built-but-opt-in `CdclT` routes, then port arrays-lazy
    ([P2.2](docs/plan/track-2-theories/P2.2-arrays-lazy.md)) onto it — the
