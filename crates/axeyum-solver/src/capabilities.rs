@@ -883,13 +883,19 @@ pub const CAPABILITIES: &[Capability] = &[
                    a direct UF argument, validates every relevant finite-table function signature, \
                    derives each binder's special values from its exact occupied argument positions, \
                    adds one fresh default representative per binder, and evaluator-replays their \
-                   Cartesian product under a 4,096-tuple cap. Missing/tampered/stale/extra \
+                   Cartesian product under a 4,096-tuple cap. Bounded untrusted search may \
+                   repair only the total defaults of at most eight relevant Int/Real-result \
+                   functions: every scalar assignment and explicit table entry is preserved, \
+                   per-sort value pools are capped at 32, at most 256 complete candidates are \
+                   tried, and only an independently certified candidate receives SAT credit. \
+                   Missing/tampered/stale/extra \
                    certificates, functions, signatures, table violations, duplicate/vacuous/ \
                    unsupported binders, non-leading quantifiers, interpreted occurrences, and cap \
                    overflow fail closed. The unified front door downgrades any preprocessing \
                    combination that cannot replay against the caller's original assertion sequence. \
-                   Model repair, serialization, alternation, and Lean reconstruction remain open",
-        reference: "ADR-0357/0358",
+                   Explicit-table repair, free-scalar completion, serialization, alternation, and \
+                   Lean reconstruction remain open",
+        reference: "ADR-0357/0358/0359",
     },
     Capability {
         area: "quantifiers",

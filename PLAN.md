@@ -9051,10 +9051,14 @@ coverage never regresses):
    `Int`/`Real` UF model slice pass canonical original-query replay. Bounded
    multi-binder Cartesian finite profiles are now implemented and accepted
    under ADR-0358 with full branch-wide gates. The follow-up 256-case oracle
-   adjudication finds 105 Z3-SAT Axeyum declines, 96 at the ordinary
-   satisfiable-instantiation boundary; proposed ADR-0359 therefore opens only
-   bounded default-only checked repair, while general model repair remains
-   later capability work;
+   adjudication found 105 Z3-SAT Axeyum declines, 96 at the ordinary
+   satisfiable-instantiation boundary. The implemented ADR-0359 bounded
+   default-only repair raises checked SAT from 111 to 178 on that same 256-case
+   population with zero disagreements and every SAT model replayed; ordinary
+   Z3-SAT declines fall from 96 to 39 and resource-limited Z3-SAT declines from
+   nine to zero. Final branch-wide acceptance gates remain open. Explicit-table
+   repair, free-scalar completion, and general model repair remain later,
+   separately preregistered capability work;
    MAM/trigger-inference (T2.6.1/2) follow as throughput.
 3. **Bank the CDCL(T) spine** (Gap 3): the default-dispatch ADR for the
    built-but-opt-in `CdclT` routes, then port arrays-lazy

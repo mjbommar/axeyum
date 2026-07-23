@@ -311,7 +311,13 @@ directly as a UF argument. The independent checker derives each binder's exact
 table-key representatives plus one fresh default representative and evaluates
 the complete Cartesian product under a 4,096-tuple cap. Search-proposed tuples
 are never evidence; malformed, unsupported, or over-cap shapes decline, and
-failed multi-binder SAT certification returns to E-matching.
+failed multi-binder SAT certification returns to E-matching. ADR-0359 permits
+bounded untrusted repair of only total defaults for at most eight relevant
+`Int`/`Real`-result functions. It preserves every scalar assignment and
+explicit table entry, caps each stable same-sort value pool at 32 and the
+Cartesian search at 256 candidates, and returns SAT only through that same
+source certificate plus canonical original-query replay. Explicit-entry
+repair, free-scalar completion, and general model synthesis remain open.
 
 ADR-0123 refines the quantifier row's SAT boundary: Bool/Int/BV syntax may be
 traversed by the checked free-Boolean model evaluator, but BV predicates remain
