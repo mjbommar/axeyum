@@ -34,6 +34,9 @@ EXECUTION_EVIDENCE = ROOT / "docs" / "plan" / "lean-execution-evidence-v1.json"
 EXECUTION_PROCESS = ROOT / "docs" / "plan" / "lean-execution-process-v1.json"
 EXECUTION_STORE = ROOT / "docs" / "plan" / "lean-execution-store-v1.json"
 EXECUTION_ACCEPTANCE = ROOT / "docs" / "plan" / "lean-execution-acceptance-v1.json"
+U2_OFFICIAL_EXECUTION = (
+    ROOT / "docs" / "plan" / "lean-u2-official-execution-tl0.6.3-m0-v1.json"
+)
 IMPLEMENTATION_PLAN = ROOT / "docs" / "plan" / "lean-system-implementation-plan-2026-07-21.md"
 
 POPULATION_IDS = tuple(f"U{index}" for index in range(10))
@@ -756,6 +759,36 @@ def execution_acceptance_snapshot() -> dict[str, Any]:
     }
 
 
+def u2_official_execution_snapshot() -> dict[str, Any]:
+    checker = load_script(
+        "lean_u2_official_execution_for_complete_parity",
+        ROOT / "scripts" / "lean_u2_official_execution.py",
+    )
+    data = load_json(U2_OFFICIAL_EXECUTION)
+    failures = checker.validate_result_authority(data)
+    if failures:
+        raise RuntimeError(
+            "invalid Lean U2 official execution authority: " + "; ".join(failures)
+        )
+    summary = data["summary"]
+    return {
+        "status": data["status"],
+        "process_attempts": summary["process_attempts"],
+        "incomplete_process_attempts": summary["incomplete_process_attempts"],
+        "completed_process_attempts": summary["completed_process_attempts"],
+        "parent_selected_cases": summary["parent_selected_cases"],
+        "local_shard_completed_cases": summary["local_shard_completed_cases"],
+        "official_outcomes": summary["official_outcomes"],
+        "official_passes": summary["official_passes"],
+        "official_failures": summary["official_failures"],
+        "axeyum_outcomes": summary["axeyum_outcomes"],
+        "paired_cells": summary["paired_cells"],
+        "performance_rows": summary["performance_rows"],
+        "claims": data["claims"],
+        "credits": data["credits"],
+    }
+
+
 def task_snapshot() -> dict[str, Any]:
     rows = TASK_ROW.findall(IMPLEMENTATION_PLAN.read_text(encoding="utf-8"))
     counts = Counter(status for _, status in rows)
@@ -779,6 +812,7 @@ def report_source_paths(data: dict[str, Any]) -> list[Path]:
         EXECUTION_PROCESS,
         EXECUTION_STORE,
         EXECUTION_ACCEPTANCE,
+        U2_OFFICIAL_EXECUTION,
         IMPLEMENTATION_PLAN,
         ROOT / data["contract"],
         ROOT / "scripts" / "gen-lean-complete-parity.py",
@@ -795,6 +829,8 @@ def report_source_paths(data: dict[str, Any]) -> list[Path]:
         ROOT / "scripts" / "tests" / "test_lean_execution_store.py",
         ROOT / "scripts" / "lean_execution_acceptance.py",
         ROOT / "scripts" / "tests" / "test_lean_execution_acceptance.py",
+        ROOT / "scripts" / "lean_u2_official_execution.py",
+        ROOT / "scripts" / "tests" / "test_lean_u2_official_execution.py",
     }
     for collection in (data["populations"], data["axes"], data["terminal_gates"]):
         for item in collection:
@@ -828,6 +864,7 @@ def build_report(data: dict[str, Any]) -> dict[str, Any]:
             "execution_process_authority": execution_process_snapshot(),
             "execution_store_authority": execution_store_snapshot(),
             "execution_acceptance_authority": execution_acceptance_snapshot(),
+            "u2_official_execution_authority": u2_official_execution_snapshot(),
             "implementation_tasks": task_snapshot(),
         },
         "population_summary": {
@@ -902,6 +939,7 @@ def render_markdown(report: dict[str, Any]) -> str:
     process = bounded["execution_process_authority"]
     store = bounded["execution_store_authority"]
     acceptance = bounded["execution_acceptance_authority"]
+    official_execution = bounded["u2_official_execution_authority"]
     tasks = bounded["implementation_tasks"]
     terminal = report["terminal"]
     claim_guard = report["claim_guard"]
@@ -996,6 +1034,16 @@ def render_markdown(report: dict[str, Any]) -> str:
             f"{acceptance['performance_rows']} performance rows, and "
             f"{acceptance['credits']['parity_credit']} parity credit. The real controls "
             "qualify the local execution path only.",
+            f"- TL0.6.3 local official execution: "
+            f"{official_execution['process_attempts']} process attempts, "
+            f"{official_execution['official_outcomes']} decided official outcome "
+            f"from {official_execution['parent_selected_cases']} parent-selected cases, "
+            f"{official_execution['official_passes']} pass, "
+            f"{official_execution['official_failures']} failure, "
+            f"{official_execution['axeyum_outcomes']} Axeyum outcomes, "
+            f"{official_execution['paired_cells']} paired cells, and "
+            f"{official_execution['credits']['parity_credit']} parity credit. The one "
+            "observed local failure does not complete U2 or establish a semantic pair.",
             f"- Implementation ledger: {tasks['rows']} rows; "
             + ", ".join(
                 f"`{key}`={value}" for key, value in tasks["status_counts"].items()

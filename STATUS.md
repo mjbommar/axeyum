@@ -407,6 +407,8 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 - **2026-07-22 — TL0.6.3 M0 is source-first preregistered; no official U2 test
   has run.** The [M0 plan](docs/plan/lean-u2-official-execution-tl0.6.3-m0-plan-2026-07-22.md)
+- **2026-07-22 — TL0.6.3 M0 has one retained local official failure; R2 is
+  source-first preregistered.** The [M0 plan](docs/plan/lean-u2-official-execution-tl0.6.3-m0-plan-2026-07-22.md)
   selects only `compile/534.lean` from the exact release-tag Linux-release
   cell's 3,678-case `-E foreign` selection. It freezes official commit/tree,
   context/cell/attempt/selection/case identities, released Lean/leanc and full
@@ -421,11 +423,16 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   evidence, and declared preset logs. A preregistered
   [Git-mode amendment](docs/plan/lean-u2-official-execution-tl0.6.3-m0-r1-git-mode-amendment-2026-07-22.md)
   keeps strict live `0444` installation checks while making offline validation
-  depend on Git mode `100644`, exact bytes, seals, and manifest identity. No R1
-  process has run. The child shard
-  cannot complete the parent/provider; even a valid pass adds only one local
-  official outcome while Axeyum, pairs, performance, axes, gates, and parity
-  remain zero.
+  depend on Git mode `100644`, exact bytes, seals, and manifest identity. The
+  [R1 result](docs/plan/lean-u2-official-execution-tl0.6.3-m0-r1-result-2026-07-22.md)
+  retained 23 files / 4,778,395 bytes and one decided failed outcome: generated
+  C succeeded, but `LEAN_CC=/usr/bin/cc` selected system `ld.bfd`, which could
+  not resolve static `libc++`/`libc++abi`. The same C links with the bundled
+  toolchain compiler, and official Linux release preparation leaves `LEAN_CC`
+  unset for tests. The [R2 plan](docs/plan/lean-u2-official-execution-tl0.6.3-m0-r2-plan-2026-07-22.md)
+  removes only that override. Current coverage is one failed official outcome,
+  zero passes, 1/3,678 parent cases observed, and zero provider, Axeyum, pairs,
+  performance, axes, gates, or parity credit.
 
 - **2026-07-22 — TL0.7.4 closes the real local execution controls without U2,
   Axeyum, pairing, performance, or parity credit.** The

@@ -1,0 +1,76 @@
+{
+  "schema": "axeyum-lean-u2-official-execution-summary-v1",
+  "status": "complete-local-official-case-outcome",
+  "implementation_revision": "1a2e7d3aa59710ba4c5dce7fe7f90f86db4841e4",
+  "attempts": [
+    {
+      "id": "attempt-001",
+      "sequence": 1,
+      "status": "incomplete-process-failure",
+      "terminal_sha256": "93d033a92b1ba13631cf754ec717cf6058afb5a76e4a617eab1891331d93a55e",
+      "junit_sha256": "03b4aec0d34fdbbadd9acae8327934d7d90da87593ae74ecd49cc01f0069f687",
+      "evidence_manifest_sha256": "7b8452e0a003a11867d2fc2150c00af99a0a61f41b10238b88a3ed2bb3838065",
+      "official_outcomes": 0,
+      "parity_credit": 0
+    },
+    {
+      "id": "attempt-002",
+      "sequence": 2,
+      "status": "complete-local-official-case-outcome",
+      "terminal_sha256": "a0d2cef7134a9301458250cc1fa5de360aacbbdc342fbe81e13d962640a0dc20",
+      "junit_sha256": "65deb3bef7c2c9910f5763731eda116c7453bc6f11069184a9801226d039852c",
+      "completion_sha256": "85d4c1b4b478157d1f54b35c993e559f8ab5fd2f7489dce7b2b842d4d06c9e91",
+      "official_outcomes": 1,
+      "parity_credit": 0
+    }
+  ],
+  "case": {
+    "id": "compile/534.lean",
+    "outcome": "failed",
+    "record_sha256": "0be92a1001b97108e7cee7da2fa58e223d45b13a672bd94d55f850f92df59b71"
+  },
+  "summary": {
+    "parent_selected_cases": 3678,
+    "process_attempts": 2,
+    "incomplete_process_attempts": 1,
+    "completed_process_attempts": 1,
+    "local_shard_selected_cases": 1,
+    "local_shard_completed_cases": 1,
+    "official_outcomes": 1,
+    "official_passes": 0,
+    "official_failures": 1,
+    "parent_profiles_completed": 0,
+    "providers_completed": 0,
+    "axeyum_outcomes": 0,
+    "paired_cells": 0,
+    "performance_rows": 0,
+    "complete_axes": 0,
+    "satisfied_gates": 0
+  },
+  "claims": {
+    "official_lean_case_observed": true,
+    "local_shard_complete": true,
+    "parent_profile_complete": false,
+    "official_provider_reproduced": false,
+    "axeyum_observed": false,
+    "matched_pair_formed": false,
+    "performance_measured": false,
+    "lean_parity_established": false
+  },
+  "credits": {
+    "axeyum_outcomes": 0,
+    "complete_axes": 0,
+    "complete_populations": 0,
+    "official_cases": 1,
+    "official_failures": 1,
+    "official_outcomes": 1,
+    "official_passes": 0,
+    "paired_cells": 0,
+    "parent_profile_completions": 0,
+    "parity_credit": 0,
+    "performance_rows": 0,
+    "provider_completions": 0,
+    "satisfied_gates": 0
+  },
+  "authority_sha256": "fe1a61fd0ec3e2fed918d46711cec66644b0980795dfaf80fe9ed401556dfa6e"
+}

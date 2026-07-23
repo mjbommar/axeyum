@@ -1,0 +1,18 @@
+Test project /home/mjbommar/.cache/axeyum-tl063-m0-r1-1a2e7d3a/harness
+    Start 1: compile/534.lean
+1/1 Test #1: compile/534.lean .................***Failed    0.43 sec
+Compiling and executing lean file
+/usr/bin/x86_64-linux-gnu-ld.bfd: cannot find -lc++: No such file or directory
+/usr/bin/x86_64-linux-gnu-ld.bfd: have you installed the static version of the c++ library ?
+/usr/bin/x86_64-linux-gnu-ld.bfd: cannot find -lc++abi: No such file or directory
+/usr/bin/x86_64-linux-gnu-ld.bfd: have you installed the static version of the c++abi library ?
+collect2: error: ld returned 1 exit status
+TEST FAILED: Failed to compile 534.lean.c
+
+
+0% tests passed, 1 tests failed out of 1
+
+Total Test time (real) =   0.43 sec
+
+The following tests FAILED:
+	  1 - compile/534.lean (Failed)
