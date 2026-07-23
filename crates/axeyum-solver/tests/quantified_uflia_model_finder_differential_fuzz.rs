@@ -536,12 +536,18 @@ struct OracleTally {
     unsat: u64,
     unknown: u64,
     example_seeds: Vec<u64>,
+    z3_sat_seeds: Vec<u64>,
 }
 
 impl OracleTally {
     fn record(&mut self, verdict: Verdict, seed: u64) {
         match verdict {
-            Verdict::Sat => self.sat += 1,
+            Verdict::Sat => {
+                self.sat += 1;
+                if self.z3_sat_seeds.len() < 64 {
+                    self.z3_sat_seeds.push(seed);
+                }
+            }
             Verdict::Unsat => self.unsat += 1,
             Verdict::Unknown => self.unknown += 1,
         }
@@ -587,15 +593,17 @@ fn report_and_check_tally(t: &Tally, minimum_jointly_decided: u64) {
     println!("Axeyum Unknown by exact reason and Z3 adjudication:");
     for (reason, oracle) in &t.ax_unknown_by_reason {
         println!(
-            "  {reason}: z3_sat={}, z3_unsat={}, z3_unknown={}, example_seeds={:?}",
-            oracle.sat, oracle.unsat, oracle.unknown, oracle.example_seeds
+            "  {reason}: z3_sat={}, z3_unsat={}, z3_unknown={}, example_seeds={:?}, \
+             z3_sat_seeds={:?}",
+            oracle.sat, oracle.unsat, oracle.unknown, oracle.example_seeds, oracle.z3_sat_seeds
         );
     }
     println!("Axeyum Err by exact reason and Z3 adjudication:");
     for (reason, oracle) in &t.ax_error_by_reason {
         println!(
-            "  {reason}: z3_sat={}, z3_unsat={}, z3_unknown={}, example_seeds={:?}",
-            oracle.sat, oracle.unsat, oracle.unknown, oracle.example_seeds
+            "  {reason}: z3_sat={}, z3_unsat={}, z3_unknown={}, example_seeds={:?}, \
+             z3_sat_seeds={:?}",
+            oracle.sat, oracle.unsat, oracle.unknown, oracle.example_seeds, oracle.z3_sat_seeds
         );
     }
     println!("DISAGREEMENTS:        0");
