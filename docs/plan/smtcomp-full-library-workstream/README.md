@@ -270,7 +270,7 @@ gate.
    and physical bytes. The [S5 result](../smtcomp-harness-admission-s5-result-2026-07-23.md)
    records the tiny mutation gate and a read-only 45,905-file physical rehash.
    It does not authorize a large run by itself.
-2. **Fresh P0 slices — prepared, execution pending.** Stage the repaired binary and rerun
+2. **Fresh P0 slices — v2 prepared, integration-gated execution pending.** Stage the repaired binary and rerun
    QF_FP/QF_BVFP/QF_ABVFP plus QF_AUFLIA under the completed protocol. Require
    DISAGREE=0. The bounded
    [S5.1 admitted-slice plan](../smtcomp-admitted-slices-s5.1-plan-2026-07-23.md)
@@ -281,9 +281,13 @@ gate.
    freezes the preparation boundary. The
    [P0-S1 result](../smtcomp-repaired-p0-preparation-s1-result-2026-07-23.md)
    now records the integrated source, exact binaries, sentinels, three run/plan
-   identities, and empty initial/retry namespaces. Execute the three cells in
-   preregistered order without overlap; this preparation grants no result
-   credit.
+   identities, and empty initial/retry namespaces. Its v2 layout keeps immutable
+   run manifests under `inputs/`, outside the mutable runtime evidence roots;
+   all 50 artifacts rehash and all 18 commands name those exact external
+   manifests. The retained v1 run remains diagnostic-only and contributes no
+   records or timings. Execute the three cells in preregistered order without
+   overlap only after the exact v2 result bytes land on `origin/main`; this
+   preparation grants no result credit.
 3. **Credited full population.** Only then execute Axeyum, cvc5, and Bitwuzla on
    the same versioned selection; publish the per-logic inventory and regenerate
    the coverage-weighted parity matrix without combining incompatible regimes.
@@ -358,9 +362,10 @@ NAS (shared, corpus read-only in practice):
    checkout or another lane's NAS output.
 3. Confirm the old s4 process/log state and count literal `WRONG` lines without
    treating the stale run as evidence.
-4. Treat the accepted S4 root as immutable. S5/S5.1 admission and P0-S1
-   preparation are complete; next execute only the three frozen repaired P0
-   cells in order before any credited
+4. Treat the accepted S4 root as immutable. S5/S5.1 admission and the repaired
+   P0-S1 v2 preparation are complete. Keep execution blocked until the exact v2
+   result bytes exist on `origin/main`; then execute only the three frozen
+   repaired P0 cells in order before any credited
    full-population run. The active solver capability checkpoint is
    [`../checked-multi-binder-quantified-uf-models-2026-07-22.md`](../checked-multi-binder-quantified-uf-models-2026-07-22.md).
 5. Update `STATUS.md` and this file before handoff; push only a green topic

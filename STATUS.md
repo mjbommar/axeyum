@@ -383,24 +383,31 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
-- **2026-07-23 — repaired SMT-COMP P0 is immutably prepared, with no solver
-  allocation launched.** A preparation-only operator now binds and applies the
-  three one-thread environment variables in run identity, admits only the exact
-  S5.1 lists, copies and hashes all three binaries, reruns eight incident
-  sentinels, probes `s5`/`s6`/`s7`, and creates three empty E3 cells with three
-  initial plus three different-host retry commands each. The 1,810-file union
-  and 1,305-file FP-only identities reproduce preregistration exactly. Both FP
-  sentinels complete `unsat` on Axeyum/cvc5/Bitwuzla; cvc5 completes `sat` on
-  AUFLIA while Axeyum produces no verdict before the explicit 20-second wall
-  timeout. Completion SHA-256 is
-  `63c153f2c84c82d5363bdcec648b39a19d7c43308874b7549ba2e16687b5d76b`;
-  independent validation rehashed 50 artifacts and confirmed zero run records
-  or attempts. Portable/E2/E3 gates pass 60 tests, and the refreshed live E3
-  evidence is rooted at
-  `/nas3/data/axeyum/harness/e3-gate/live-1784811785919018559-da679e1429de`.
-  Next: after the integrator lands this result, execute Axeyum, cvc5, and
-  Bitwuzla sequentially under the frozen commands; stop on the first
-  contradiction, disagreement, or evidence/identity failure.
+- **2026-07-23 — repaired SMT-COMP P0 v2 is immutably prepared, with no solver
+  allocation launched.** The v1 Axeyum cell completed its 1,810 records but
+  exposed a fail-closed evidence-layout defect at aggregate finalization;
+  those records and timings remain diagnostic-only and receive no P0 credit.
+  The integrated repair keeps immutable run manifests under `inputs/`, outside
+  mutable runtime evidence roots, without weakening the validator. A wholly
+  new preparation-only v2 run binds and applies the three one-thread
+  environment variables in run identity, admits only the exact S5.1 lists,
+  copies and hashes all three binaries, reruns eight incident sentinels, probes
+  `s5`/`s6`/`s7`, and creates three empty E3 cells with three initial plus three
+  different-host retry commands each. The 1,810-file union and 1,305-file
+  FP-only identities reproduce preregistration exactly. Both FP sentinels
+  complete `unsat` on Axeyum/cvc5/Bitwuzla; cvc5 completes `sat` on AUFLIA
+  while Axeyum produces no verdict before the explicit 20-second wall timeout.
+  V2 completion SHA-256 is
+  `8d9145b2673ee10bf7c38990c20301f13323cfe4ab02c9946b403d0d2e4f4261`;
+  independent validation rehashed 50 artifacts, checked all 18 external
+  run-manifest bindings, and confirmed zero runtime evidence artifacts.
+  Portable/E2/E3 gates pass 62 tests, and the refreshed live E3 evidence is
+  rooted at
+  `/nas3/data/axeyum/harness/e3-gate/live-1784819040016021568-be4cb33c41b0`.
+  Next: commit and push only this topic branch; after the integrator lands the
+  exact v2 admission bytes, execute Axeyum, cvc5, and Bitwuzla sequentially
+  under the frozen commands; stop on the first contradiction, disagreement,
+  or evidence/identity failure.
 - **2026-07-22 — certified rational-rate products of integer-order Bessel J.**
   Wave eighteen composes the fixed-order envelope across a finite direct product:
   if exact rational arguments grow like `|x|^dᵢ` and an exact rational weight
@@ -8362,6 +8369,15 @@ plan is built and committed on the current branch:
 | P5.5 | External target, measured | **DONE (bounded v1, ADR-0323--0338):** authenticated Tock capture plus eight rechecked dual-DRAT proofs and six replayed controls, UNKNOWN=0, DISAGREE=0. Query time 12.700 s; fresh outer wall 50.745 s; peak RSS 1,256,496 KiB; zero OOM deltas. The committed case study compares exact target validation, universal coverage, trust, effort, artifact boundaries, and limits. No Tock bug was found, so no upstream issue is applicable. This is not a speed or whole-kernel claim. |
 
 ## Changelog
+
+- **2026-07-23 — Published the repaired SMT-COMP P0-S1 v2 preparation for
+  integration review.** Integrated `be4cb33c` passes the portable, cgroup, and
+  live multi-host 62-test gates; the rebuilt Axeyum binary remains
+  `d705d700…b756`. The new `repaired-p0-prep-20260723-75e544a8-v2` root
+  rehashes all 50 artifacts, binds all 18 commands to immutable external run
+  manifests, and contains zero attempts or runtime result artifacts.
+  `complete.json` is `8d9145b2…4261`. No cell launch is authorized until these
+  exact result bytes are integrated on `origin/main`.
 
 - **2026-07-23 — Accepted R6's 64-pass local shard without claiming Lean
   parity.** Post-publication replay returned existing completion `1f0b9af8` and

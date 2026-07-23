@@ -1,42 +1,50 @@
 # SMT-COMP repaired P0-S1 preparation result
 
-Status: complete; no distributed solver launched
+Status: complete at v2; no distributed solver launched
 Date: 2026-07-23
 Plan: [repaired P0 execution plan](smtcomp-repaired-p0-execution-plan-2026-07-23.md)
-Operator implementation: `b226652f`
-Integrated source: `da679e1429de9d55effad35e6608d54ddb1d8fcd`
+Layout repair: [preregistered repair plan](smtcomp-repaired-p0-runtime-layout-repair-plan-2026-07-23.md)
+Operator implementation: `de91aff0`
+Integrated source: `be4cb33c41b0bc0e709e783d4f2f3984bd1d46e3`
 
 ## Bounded result
 
-P0-S1 is complete. The preparation-only operator reproduced both admitted
+P0-S1 v2 is complete. The preparation-only operator reproduced both admitted
 selection identities, copied and rehashed all three solver binaries, reran the
 eight incident sentinel cells, registered the live `s5`/`s6`/`s7` environment,
 and published three empty E3 run namespaces with exact initial and
 different-host retry commands.
 
-No allocation attempt, resource session, shard attempt, solver record, or
-multi-host terminal exists in any prepared cell. The preparation completion
-sets `launch_authorized=false`; this document records reviewable inputs and is
-not evidence that P0 has run or passed.
+This v2 root supersedes the unusable v1 preparation. The
+[retained v1 incident](smtcomp-repaired-p0-v1-layout-incident-2026-07-23.md)
+records why its completed Axeyum records receive no result credit. V2 does not
+reuse any v1 record, attempt, timing, terminal, or namespace.
+
+No allocation attempt, resource session, shard attempt, solver record,
+multi-host terminal, adjudication, or raw export exists in any v2 cell. The
+preparation completion sets `launch_authorized=false`; this document records
+reviewable inputs and is not evidence that P0 has run or passed.
 
 ## Immutable preparation identity
 
 | Item | Value |
 |---|---|
-| Attempt root | `/nas3/data/axeyum/harness/official-selection-2026-sq/repaired-p0-prep-20260723-da679e1429de-v1` |
-| `complete.json` bytes | 29,191 |
-| `complete.json` SHA-256 | `63c153f2c84c82d5363bdcec648b39a19d7c43308874b7549ba2e16687b5d76b` |
-| Completion record SHA-256 | `c3c4c45d7916aad818e9196ee3975282465e0413b8f8359391cddc70d29a8c3a` |
+| Attempt root | `/nas3/data/axeyum/harness/official-selection-2026-sq/repaired-p0-prep-20260723-75e544a8-v2` |
+| `complete.json` bytes | 29,449 |
+| `complete.json` SHA-256 | `8d9145b2673ee10bf7c38990c20301f13323cfe4ab02c9946b403d0d2e4f4261` |
+| Completion record SHA-256 | `d3ae8e7cd870c48c19417495aeb99b53ed1a797db58092b79d0828b9255b5f7b` |
 | Accepted-selection completion | `322adaa78396bf42d4660d12582e6db1cf2166a765bb912fdfb179975a9c9698` |
-| Source identity SHA-256 | `a4aa9b774cb07079160a371f5c0b570aaba08a7f570eeb01d70ad8e005119b10` |
-| Source bundle | `/nas3/data/axeyum/harness/official-selection-2026-sq/source-bundles/5b4c24fdc0f6fa69f5f9f92d991ebd48660b2172861c7298d282142f7db2467d` |
+| Source identity SHA-256 | `423e45ec8bfb7b28e6cd0db722f2a8a39935b3eec9efe2f7e8a23173e3b13483` |
+| Source bundle | `/nas3/data/axeyum/harness/official-selection-2026-sq/source-bundles/4c970d3ec9e94add432cd5322b5619f1c87bb1a7f3dc2de2bde07ee043035091` |
 | Environment manifest SHA-256 | `72188709c7ba654593f13ce508073e789afb68a38d386dafd744ee05d2ca5031` |
 | Frozen child environment | `AYU_THREADS=1`, `OMP_NUM_THREADS=1`, `RAYON_NUM_THREADS=1` |
 | Content-bound attempt artifacts | 50 |
 
-Independent post-publication validation rehashed all 50 artifacts, revalidated
-the source bundle, and confirmed zero files in each cell's `records`,
-`attempts`, and `multi-host-attempts` namespaces.
+Independent post-publication validation rehashed all 50 artifacts, confirmed
+that every cell run manifest is under the immutable `inputs/` namespace,
+checked that all 18 host-command manifests name the exact external manifest,
+and found zero runtime evidence artifacts. No cell runtime root contains
+`run-manifest.json`.
 
 ## Selection and binary identities
 
@@ -53,8 +61,8 @@ the source bundle, and confirmed zero files in each cell's `records`,
 
 The union and FP-only values exactly reproduce the S5.1 preregistration. The
 Axeyum release bytes also reproduce the pre-operator build because the
-integrated preparation changes affect only the Python harness and documents,
-not the Rust target.
+integrated layout repair affects only the Python harness and documents, not the
+Rust target.
 
 ## Sentinel result
 
@@ -87,9 +95,9 @@ one-worker, one-core, 8-GiB, three-striped-shard E3 policy.
 
 | Solver | Run identity SHA-256 | Plan identity SHA-256 | Run file SHA-256 | Plan file SHA-256 |
 |---|---|---|---|---|
-| Axeyum | `03966268266c31fceee7e9eb8d8c5610b137462a5d62bb24a432c00bd828efd8` | `7f119f954accd5c1652dc4bcd16a2e80bf0092f7001f173645123caaf00f7690` | `eebd046c6373e06935a3dae0b435a8c079f0b0ca857b992ca59b16a95fefe9fe` | `a06fad16d6c491dd89645981c88804756d7d219d2c8f3296b8f03781cd13ab40` |
-| cvc5 | `ba0b5d22a31b6271456a0be6a6b716b9b09575b8571b115abe9978453294fce7` | `89668c324b4f7f6bde669ecaf027038d6563bcb001ec35d9627f4217695ccec9` | `f54bdf25b685a58d630e1943c68e800058c293b9f4e9710b0cb6251c0100b7a5` | `aebbfa540f7e8c1f62f8053fecf744d51c1e260e1188c0449b73418bcbba4f18` |
-| Bitwuzla | `15c63870992b2fd372129e98ba188e5c5e4a20733c88f4797904900adf0f45b6` | `87b8086ebb93ca15b78c69824a3475be1738819ba505f8bc96e82f92155d3d92` | `c610e51f72d3a8ad62dda884fe8d2c77e6a859089412f7fec03782102b3fcd22` | `9875fbca92644a00895f948c7560c5ec71a56dfd5190d025977fa8f31fabbdc3` |
+| Axeyum | `5d75bf98f1fe7e8458ac1f5efbd75ea728bd57cff9b0c674002986c6e8dcd2d3` | `1f3adf46565cc627fc534bfb0abeff61fe7480404f138006e77e376c41aea734` | `96930791f801169580e39d67e7ed7e25a9081ad953e6c4237cbbdaa6dbbf0f24` | `2b2429419d3d6c1e9f860da438174c0a6cb70d888227bdc861550327b772b97d` |
+| cvc5 | `1d32c45c1371528cf3d4e6bad5801600490f09151ede779bd348de2f124e7745` | `2b48eb57b514e57b2cc46d3df9fb932a3b5c4bcd066540599cf62bd061d75d6f` | `81d82f17c3642e03673e64166cc16bc5f834c395d5e6becc0a7744681bd9c64b` | `3dade51c26d724ec5157b8cf6a09c860c57775a197bc4f961ed45b8a03e630f8` |
+| Bitwuzla | `f495615511402433ae6eaa7a5b90f4b62ad417fb5b71e7459ce4f66da145fc94` | `3531135a711b6de1e899e4cfdcda432c68e5ec77387f3e004131579725eec927` | `2c5f26323af8f6b05ff0dcf291323083d7d06848ae42d727e52143d95ee75ccb` | `1a724265a12ecb70bf61f147012e824f63675456096accc38677f6338894e219` |
 
 ## Gates
 
@@ -99,33 +107,39 @@ CARGO_BUILD_JOBS=2 CARGO_TARGET_DIR=target-codex cargo build --release --locked 
   passed; exact binary hash above
 
 ./scripts/check-smtcomp-resume.sh
-  60 tests, OK, one live-host skip
+  62 tests, OK, one live-host skip
 
 AXEYUM_REQUIRE_SMTCOMP_CGROUP=1 ./scripts/check-smtcomp-resume.sh
-  60 tests, OK, one multi-host skip
+  62 tests, OK, one multi-host skip
 
 AXEYUM_REQUIRE_SMTCOMP_MULTIHOST=1 ./scripts/check-smtcomp-resume.sh
-  60 tests, OK, no skips
-  evidence: /nas3/data/axeyum/harness/e3-gate/live-1784811785919018559-da679e1429de
-  control completion: 8d84004a667ca78cf3a869c16e5816aca87881aca69adcd1e73edd251ce16a83
-  loss/retry completion: 2a2f98a5d9285930944fb72b44771af3e2ab38498c4cd2d611fe5882468dc50c
+  62 tests, OK, no skips
+  evidence: /nas3/data/axeyum/harness/e3-gate/live-1784819040016021568-be4cb33c41b0
+  control completion: 602cd3549e35ec62228d79d072c340548f44aca3ac05699605617768df94b971
+  loss/retry completion: 267959c87e71935c9639d7f9b2363861883df4d006d7f9f8a120b1a7f7b0806c
 
 just foundational-resources
   passed
 
 ./scripts/check-links.sh
   passed
+
+git diff --check
+  passed
 ```
 
 ## Next boundary
 
-After this result is committed and integrated, P0 execution may begin in the
-preregistered order: Axeyum, then cvc5, then Bitwuzla. One coordinator must
-launch only the three initial commands for the active cell, retain all failure
-evidence, use a retry command only after the existing exact liveness/recovery
-gate proves the corresponding initial owner dead, and finalize/export only
-after all three shards complete. Solver cells must not overlap.
+After these exact v2 result bytes are committed and integrated on
+`origin/main`, P0 execution may begin in the preregistered order: Axeyum, then
+cvc5, then Bitwuzla. The coordinator's exact-byte admission gate must reject
+execution before that integration. One coordinator must launch only the three
+initial commands for the active cell, retain all failure evidence, use a retry
+command only after the existing exact liveness/recovery gate proves the
+corresponding initial owner dead, and finalize/export only after all three
+shards complete. Solver cells must not overlap.
 
 Any known-status contradiction, cross-solver `sat`/`unsat` disagreement,
 identity drift, malformed evidence, or unregistered recovery stops remaining
-cells. No P0 correctness or coverage result is credited by this preparation.
+cells. No P0 correctness, performance, or coverage result is credited by this
+preparation.
