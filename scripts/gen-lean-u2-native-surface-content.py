@@ -64,7 +64,6 @@ EXPECTED_M0_CASE_ROWS_SHA256 = (
 )
 
 SIGNAL_DOMAIN = "axeyum-lean-u2-native-content-signal-v1"
-HIT_DOMAIN = "axeyum-lean-u2-native-content-hit-v1"
 FILE_DOMAIN = "axeyum-lean-u2-native-content-file-v1"
 SCOPE_DOMAIN = "axeyum-lean-u2-native-content-scope-v1"
 CASE_DOMAIN = "axeyum-lean-u2-native-content-case-v1"
@@ -697,24 +696,21 @@ def hit_record(
 ) -> dict[str, Any]:
     line, column = line_column(data, start)
     context = data[max(0, start - 32) : min(len(data), end + 32)]
-    return seal(
-        {
-            "signal_id": signal["id"],
-            "signal_version": signal["version"],
-            "confidence": signal["confidence"],
-            "disposition": signal["disposition"],
-            "surface_effect": signal["surface_effect"],
-            "byte_start": start,
-            "byte_end": end,
-            "line": line,
-            "column": column,
-            "matched_bytes": end - start,
-            "matched_sha256": sha256_bytes(data[start:end]),
-            "context_sha256": sha256_bytes(context),
-            "matcher_route": matcher_route,
-        },
-        HIT_DOMAIN,
-    )
+    return {
+        "signal_id": signal["id"],
+        "signal_version": signal["version"],
+        "confidence": signal["confidence"],
+        "disposition": signal["disposition"],
+        "surface_effect": signal["surface_effect"],
+        "byte_start": start,
+        "byte_end": end,
+        "line": line,
+        "column": column,
+        "matched_bytes": end - start,
+        "matched_sha256": sha256_bytes(data[start:end]),
+        "context_sha256": sha256_bytes(context),
+        "matcher_route": matcher_route,
+    }
 
 
 def active_regex_hits(
@@ -990,7 +986,7 @@ def build_case_rows(
             applicable_signal_ids.update(
                 signal["id"] for signal in SIGNALS if file_row["media_class"] in signal["media_classes"]
             )
-            for hit in file_row["signal_hits"]:
+            for hit_index, hit in enumerate(file_row["signal_hits"]):
                 if hit["disposition"] == "promote":
                     exact_signal_ids.add(hit["signal_id"])
                     evidence_key = (path, hit["signal_id"])
@@ -1001,13 +997,13 @@ def build_case_rows(
                                 "path": path,
                                 "file_sha256": file_row["sha256"],
                                 "signal_id": hit["signal_id"],
-                                "hit_record_sha256": hit["record_sha256"],
+                                "hit_index": hit_index,
                                 "surface_effect": hit["surface_effect"],
                             }
                         )
                 else:
                     candidate_hits += 1
-        evidence.sort(key=lambda row: (row["path"], row["signal_id"], row["hit_record_sha256"]))
+        evidence.sort(key=lambda row: (row["path"], row["signal_id"], row["hit_index"]))
         observed_surfaces = ordered_surfaces(
             (surface for item in evidence for surface in item["surface_effect"]), m0
         )
@@ -1294,7 +1290,7 @@ def validate_authority(data: dict[str, Any]) -> list[str]:
     if len(file_rows) != len(parent_files):
         failures.append(f"file row count drift: {len(file_rows)} != {len(parent_files)}")
     signal_by_id = {row["id"]: row for row in SIGNALS}
-    hits_by_path: dict[str, dict[str, dict[str, Any]]] = {}
+    hits_by_path: dict[str, list[dict[str, Any]]] = {}
     for index, (row, parent) in enumerate(zip(file_rows, parent_files, strict=False)):
         label = f"file row {index} ({parent['path']})"
         if not isinstance(row, dict):
@@ -1310,12 +1306,11 @@ def validate_authority(data: dict[str, Any]) -> list[str]:
         if not isinstance(hits, list):
             failures.append(f"{label} signal hits must be a list")
             hits = []
-        resolved: dict[str, dict[str, Any]] = {}
         previous: tuple[int, int, str] | None = None
         for hit_index, hit in enumerate(hits):
             hit_label = f"{label} hit {hit_index}"
-            validate_record_seal(hit, HIT_DOMAIN, hit_label, failures)
             if not isinstance(hit, dict):
+                failures.append(f"{hit_label} must be an object")
                 continue
             signal = signal_by_id.get(hit.get("signal_id"))
             if signal is None:
@@ -1332,14 +1327,14 @@ def validate_authority(data: dict[str, Any]) -> list[str]:
             if previous is not None and order < previous:
                 failures.append(f"{label} hit order drift")
             previous = order
-            if isinstance(hit.get("record_sha256"), str):
-                resolved[hit["record_sha256"]] = hit
+            if "record_sha256" in hit:
+                failures.append(f"{hit_label} redundant per-hit seal present")
         if row.get("signal_hits_sha256") != domain_digest(
             "axeyum-lean-u2-native-content-file-hits-v1", hits
         ):
             failures.append(f"{label} hit list seal drift")
         validate_record_seal(row, FILE_DOMAIN, label, failures)
-        hits_by_path[parent["path"]] = resolved
+        hits_by_path[parent["path"]] = hits
     if data.get("file_rows_sha256") != domain_digest(
         "axeyum-lean-u2-native-content-files-v1", file_rows
     ):
@@ -1421,9 +1416,15 @@ def validate_authority(data: dict[str, Any]) -> list[str]:
             path = evidence_row.get("path")
             if path not in promotable_paths:
                 failures.append(f"{label} shared/sidecar/runner evidence promoted")
-            hit = hits_by_path.get(path, {}).get(evidence_row.get("hit_record_sha256"))
+            hit_index = evidence_row.get("hit_index")
+            path_hits = hits_by_path.get(path, [])
+            hit = (
+                path_hits[hit_index]
+                if isinstance(hit_index, int) and 0 <= hit_index < len(path_hits)
+                else None
+            )
             if hit is None or hit.get("disposition") != "promote":
-                failures.append(f"{label} unresolved or non-promoting evidence")
+                failures.append(f"{label} out-of-range, unresolved, or non-promoting evidence index")
                 continue
             if evidence_row.get("signal_id") != hit["signal_id"] or evidence_row.get("surface_effect") != hit["surface_effect"]:
                 failures.append(f"{label} evidence semantic drift")

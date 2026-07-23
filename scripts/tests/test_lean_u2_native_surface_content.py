@@ -175,7 +175,7 @@ class LeanU2NativeSurfaceContentAuthorityTests(unittest.TestCase):
         row["roles"] = ["unreferenced-content"]
         hit = row["signal_hits"][0]
         hit["surface_effect"] = ["ffi"]
-        row["signal_hits"][0] = GEN.seal(hit, GEN.HIT_DOMAIN)
+        row["signal_hits"][0] = hit
         row["signal_hits_sha256"] = GEN.domain_digest(
             "axeyum-lean-u2-native-content-file-hits-v1", row["signal_hits"]
         )
@@ -189,6 +189,7 @@ class LeanU2NativeSurfaceContentAuthorityTests(unittest.TestCase):
         row = next(row for row in self.data["case_rows"] if row["signal_evidence"])
         evidence = row["signal_evidence"][0]
         evidence["path"] = "tests/util.sh"
+        evidence["hit_index"] = 10**9
         row["signal_evidence_sha256"] = GEN.domain_digest(
             "axeyum-lean-u2-native-content-case-evidence-v1", row["signal_evidence"]
         )
@@ -197,7 +198,7 @@ class LeanU2NativeSurfaceContentAuthorityTests(unittest.TestCase):
         row.update(GEN.seal(row, GEN.CASE_DOMAIN))
         self.reseal_case_rows()
         failures = self.failures()
-        self.assertTrue(any("unresolved or non-promoting evidence" in item or "shared/sidecar/runner" in item for item in failures))
+        self.assertTrue(any("evidence index" in item or "shared/sidecar/runner" in item for item in failures))
         self.assertTrue(any("M0 floor" in item for item in failures))
 
     def test_generated_residual_and_credit_mutations_are_rejected(self) -> None:
