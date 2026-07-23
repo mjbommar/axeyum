@@ -351,6 +351,13 @@ Again, there are distinct targets:
   Lake cases with 70 tracked configuration roots plus 28 wrapper-directory
   lexical candidates pending M2.3. No M2.4 authority, process, configured
   workspace, edge, observation, outcome, pair, or parity credit exists.
+  M2.5's
+  [compiler/runtime/FFI plan](plan/lean-u2-native-dependency-tl0.6.4-m2.5-compiler-runtime-ffi-plan-2026-07-23.md)
+  now preregisters distinct compiled, IR-interpreted, `#eval`, C/LLVM,
+  toolchain/artifact, ABI/symbol/initialization, runtime-effect, and platform
+  routes. Its source-only floor is 841 direct / 860 closure compiler-runtime
+  cases and 24 provisional FFI cases; no M2.5 authority, process, artifact,
+  observation, outcome, pair, performance row, or parity credit exists.
   The subsequent
   [TL0.7.1 contract](plan/lean-execution-evidence-tl0.7.1-2026-07-22.md)
   defines explicit 4/8 GiB local lanes, twelve typed termination classes, and

@@ -636,6 +636,16 @@ observation, outcome, pair, performance row, or terminal credit exists; the
 actual input denominator remains downstream of accepted M2.1-M2.3 results and
 a separately frozen M2.4.1 authority.
 
+The source-first
+[M2.5 compiler/runtime/FFI plan](lean-u2-native-dependency-tl0.6.4-m2.5-compiler-runtime-ffi-plan-2026-07-23.md)
+now freezes the next semantics-only boundary. The source census supplies 841
+direct / 860 closure compiler-runtime cases and 24 provisional FFI cases, but
+accepted M2.3/M2.4 route evidence must determine the actual denominator. M2.5
+separates frontend compilation, `#eval`, IR interpretation, C/LLVM emission,
+native compile/link/load, ABI/symbol/initialization, runtime effects, and
+platform variants. No M2.5 authority, process, artifact, observation, outcome,
+pair, performance row, or terminal credit exists.
+
 ## 8. Layer-specific equivalence
 
 One byte-comparison rule cannot cover the entire system:

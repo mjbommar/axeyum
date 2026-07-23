@@ -33,7 +33,7 @@ Current machine-derived state:
 | U0-U9 | 0 complete authorities | a complete executable denominator for any terminal population |
 | A0-A11 | 0 complete axes | end-to-end native behavior on any complete required population |
 | G1-G10 | 0 satisfied terminal gates | any terminal parity claim |
-| U2 official execution/classification | 8 consumed processes, 66 official outcomes, 65 passes / 1 failure over **65 unique cases**; execution M1 derives 5 exact memberships and 289 physical shards, one locally complete; TL0.6.4 M0 gives all 3,723 cases a harness floor, M1 inspects 7,004 tracked files / 90,909 spans, M2.0 freezes an empty typed graph across 408,374 factored case/variant occurrences, and M2.1-M2.4 now have source-first header, resolution/effective-import, configured-runner, and Lake-project semantics without executing those programs | the 3,678/3,723-case parents, all 111 full attempts, any resolved dependency node/edge/closure, configured provider/runner/Lake edge, exact dependency-reviewed classification, an Axeyum outcome, a pair, or performance |
+| U2 official execution/classification | 8 consumed processes, 66 official outcomes, 65 passes / 1 failure over **65 unique cases**; execution M1 derives 5 exact memberships and 289 physical shards, one locally complete; TL0.6.4 M0 gives all 3,723 cases a harness floor, M1 inspects 7,004 tracked files / 90,909 spans, M2.0 freezes an empty typed graph across 408,374 factored case/variant occurrences, and M2.1-M2.5 now have source-first header, resolution/effective-import, configured-runner, Lake-project, and compiler/runtime/FFI semantics without executing those programs | the 3,678/3,723-case parents, all 111 full attempts, any resolved dependency node/edge/closure, configured provider/runner/Lake/compiler/runtime/FFI edge, exact dependency-reviewed classification, an Axeyum outcome, a pair, or performance |
 
 The accepted
 [`R3 result`](lean-u2-official-execution-tl0.6.3-m0-r3-result-2026-07-22.md)
@@ -234,6 +234,16 @@ configured workspace, package/target edge, observation, outcome, pair, or
 credit exists before accepted M2.1-M2.3 results and a separate M2.4.1
 authority.
 
+M2.5's
+[compiler/runtime/FFI plan](lean-u2-native-dependency-tl0.6.4-m2.5-compiler-runtime-ffi-plan-2026-07-23.md)
+now preregisters distinct frontend/compiler, `#eval`, IR-interpreter, C/LLVM,
+native toolchain/artifact, ABI/symbol/initialization, runtime-effect, and
+platform routes. Its source-only floor is 841 direct / 860 closure
+compiler-runtime cases plus 24 provisional FFI cases, not an executable
+denominator. No M2.5 authority, process, artifact, observation, outcome, pair,
+performance row, or credit exists before accepted M2.1-M2.4 transfers and a
+separate M2.5.1 authority.
+
 ## 2. What the SMT-LIB comparison actually says
 
 The solver program supplies a mature measurement warning for Lean parity:
@@ -348,7 +358,7 @@ execution, and content/dependency-complete U2 classification.
 4. Explicitly authorize, execute once, and validate TL0.6.4 M2.1's exact
    39-process fast/full header pass; then bind and execute M2.2-M2.7 module,
    generated-artifact, runtime, library, FFI, request, and project closures.
-   M2.2-M2.4 plans freeze semantics only: none is an input authority or
+   M2.2-M2.5 plans freeze semantics only: none is an input authority or
    execution permission. Do not infer FFI absence from M0 or closure from
    M2.0/pre-execution M2.1.
 5. Review all rows under M3 and accept TL0.6.4 only when no provisional field,

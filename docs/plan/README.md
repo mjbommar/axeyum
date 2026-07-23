@@ -397,6 +397,13 @@ Start at the root [`PLAN.md`](../../PLAN.md) (map + standing rules) and
   accepted M2.3 evidence must determine the actual denominator. It creates no
   M2.4 authority, process budget, evidence, workspace, edge, observation,
   outcome, pair, or parity credit.
+- [`TL0.6.4 M2.5 compiler/runtime/FFI plan`](lean-u2-native-dependency-tl0.6.4-m2.5-compiler-runtime-ffi-plan-2026-07-23.md)
+  — preregisters distinct compiled, IR-interpreted, `#eval`, C, LLVM, native
+  toolchain, artifact, ABI, symbol, initialization, runtime, and effect routes.
+  Its source-only floor is 841 direct / 860 closure compiler-runtime cases and
+  24 provisional FFI cases; accepted M2.3/M2.4 transfers must determine the
+  actual route denominator. It creates no M2.5 authority, process, artifact,
+  runtime/FFI observation, outcome, pair, performance row, or parity credit.
 - [`Lean complete-parity worktree-portability R1 result`](lean-complete-parity-worktree-portability-r1-result-2026-07-23.md)
   — records the bounded validator repair at `c3f068ea`, `09e1dcd2`,
   `2267f41b`, and `98d85098`: retained repository-owned process/store paths

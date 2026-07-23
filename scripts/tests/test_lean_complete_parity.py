@@ -203,6 +203,78 @@ class LeanCompleteParityTests(unittest.TestCase):
             },
         )
 
+    def test_m2_5_compiler_runtime_ffi_preregistration_matches_m1(self) -> None:
+        content = GEN.load_json(GEN.U2_NATIVE_CONTENT)
+        cases = content["case_rows"]
+        compiler_direct = [
+            case for case in cases if "compiler-runtime" in case["direct_surfaces"]
+        ]
+        compiler_closure = [
+            case for case in cases if "compiler-runtime" in case["surface_closure"]
+        ]
+        ffi_direct = [case for case in cases if "ffi" in case["direct_surfaces"]]
+        self.assertEqual(len(compiler_direct), 841)
+        self.assertEqual(len(compiler_closure), 860)
+        self.assertEqual(len(ffi_direct), 24)
+        self.assertEqual(
+            sum(
+                "compiler-runtime" in case["m0_direct_surfaces"]
+                for case in cases
+            ),
+            282,
+        )
+        self.assertEqual(
+            sum(
+                "compiler-runtime" in case["content_observed_surfaces"]
+                for case in cases
+            ),
+            559,
+        )
+        self.assertEqual(
+            sum("ffi" in case["content_observed_surfaces"] for case in cases), 24
+        )
+        self.assertEqual(
+            sum("lean.evaluation-command" in case["exact_signal_ids"] for case in cases),
+            539,
+        )
+        self.assertEqual(
+            sum("lean.compiler-api" in case["exact_signal_ids"] for case in cases),
+            28,
+        )
+        self.assertEqual(
+            sum("lean.ffi-declaration" in case["exact_signal_ids"] for case in cases),
+            22,
+        )
+        self.assertEqual(
+            sum("c.abi-declaration" in case["exact_signal_ids"] for case in cases),
+            3,
+        )
+        self.assertEqual(
+            sum("toml.native-link-field" in case["exact_signal_ids"] for case in cases),
+            1,
+        )
+
+        compile_cases = [case for case in cases if case["family"] == "compile"]
+        self.assertEqual(len(compile_cases), 60)
+        no_interpret = {
+            file_row["path"]
+            for file_row in content["file_rows"]
+            if file_row["path"].startswith("tests/compile/")
+            and file_row["path"].endswith(".lean.no_interpret")
+        }
+        self.assertEqual(
+            no_interpret,
+            {
+                "tests/compile/StackOverflow.lean.no_interpret",
+                "tests/compile/StackOverflowTask.lean.no_interpret",
+                "tests/compile/init.lean.no_interpret",
+                "tests/compile/initUnboxed.lean.no_interpret",
+                "tests/compile/lazylist.lean.no_interpret",
+                "tests/compile/map_big.lean.no_interpret",
+            },
+        )
+        self.assertEqual(len(compile_cases) - len(no_interpret), 54)
+
     def test_committed_registry_is_valid_and_rendering_is_deterministic(self) -> None:
         self.assertEqual(self.failures(), [])
         first = GEN.build_report(self.data)
@@ -428,6 +500,10 @@ class LeanCompleteParityTests(unittest.TestCase):
         )
         self.assertIn(
             "docs/plan/lean-u2-native-dependency-tl0.6.4-m2.4-lake-project-plan-2026-07-23.md",
+            source_paths,
+        )
+        self.assertIn(
+            "docs/plan/lean-u2-native-dependency-tl0.6.4-m2.5-compiler-runtime-ffi-plan-2026-07-23.md",
             source_paths,
         )
         self.assertIn(

@@ -52,7 +52,7 @@
     },
     {
       "path": "docs/plan/lean-complete-parity-v1.json",
-      "sha256": "b7f68f629c220b752c8f6c0f6035b96793a8cfa8f7f60f39894d0407ad2c1018"
+      "sha256": "66ccf7642c382d6a70ab9b3863f52d894e470d81c1699c73779ec56a5d35256d"
     },
     {
       "path": "docs/plan/lean-complete-parity-worktree-portability-r1-result-2026-07-23.md",
@@ -113,6 +113,10 @@
     {
       "path": "docs/plan/lean-u2-native-dependency-tl0.6.4-m2.4-lake-project-plan-2026-07-23.md",
       "sha256": "75d135c290c5e3c140af668eaee1a9f48191c5a3bdbe8d9e45924a0c810a682e"
+    },
+    {
+      "path": "docs/plan/lean-u2-native-dependency-tl0.6.4-m2.5-compiler-runtime-ffi-plan-2026-07-23.md",
+      "sha256": "79f171152899d6cad2415af76d982e25ca9417ceecab4c328f74df5f96ab0562"
     },
     {
       "path": "docs/plan/lean-u2-native-dependency-v1.json",
@@ -328,11 +332,11 @@
     },
     {
       "path": "docs/plan/lean4-complete-parity-contract-2026-07-22.md",
-      "sha256": "df9d0ebde938a73303b51d229e3d329ad566ca8ed7e848da0c3de0302729ae96"
+      "sha256": "7fbe2b02ffbd5b4e04ef39f36a088d4a0e042cb9f4d33beef9e4d62494dc9718"
     },
     {
       "path": "docs/plan/lean4-complete-parity-roadmap-2026-07-22.md",
-      "sha256": "620ef644cbc2cb81bf2631114e9dee9b6dc43b57bf746e11895d8dada1d36066"
+      "sha256": "f509eda4569f93cc0c58d58f6173d0ce1896582f38cfce855f71fc109b0232eb"
     },
     {
       "path": "scripts/gen-lean-complete-parity.py",
@@ -440,7 +444,7 @@
     },
     {
       "path": "scripts/tests/test_lean_complete_parity.py",
-      "sha256": "fbe9c8d06a2959c6cceabe252b23b46dcaee6bedb0cbf17a6b280ad4dfd0b19d"
+      "sha256": "8bbba9997a36ada2c01c0c09bcf40b9001868f8fd768ce0984efcc24cf6c078b"
     },
     {
       "path": "scripts/tests/test_lean_execution_acceptance.py",
@@ -1628,6 +1632,10 @@
         {
           "path": "docs/plan/lean-u2-native-dependency-tl0.6.4-m2.4-lake-project-plan-2026-07-23.md",
           "detail": "Preregistered M2.4 Lake workspace/project semantics: 52 direct cases and 70 tracked configuration roots plus 28 wrapper-directory lexical candidates pending M2.3, executable configuration, manifest/override/materialization order, target/facet/job behavior, query/setup build projections, cache/network state, downstream ownership, and zero-process/zero-credit boundary."
+        },
+        {
+          "path": "docs/plan/lean-u2-native-dependency-tl0.6.4-m2.5-compiler-runtime-ffi-plan-2026-07-23.md",
+          "detail": "Preregistered M2.5 compiler/runtime/FFI semantics: 841 direct and 860 closure compiler-runtime cases plus 24 provisional FFI cases, distinct compiled/interpreted/eval/C/LLVM routes, toolchain/artifact/ABI/symbol/initialization/effect closure, controls, and zero-process/zero-credit boundary."
         },
         {
           "path": "docs/plan/lean-complete-parity-worktree-portability-r1-result-2026-07-23.md",

@@ -184,6 +184,10 @@
           "detail": "Preregistered M2.4 Lake workspace/project semantics: 52 direct cases and 70 tracked configuration roots plus 28 wrapper-directory lexical candidates pending M2.3, executable configuration, manifest/override/materialization order, target/facet/job behavior, query/setup build projections, cache/network state, downstream ownership, and zero-process/zero-credit boundary."
         },
         {
+          "path": "docs/plan/lean-u2-native-dependency-tl0.6.4-m2.5-compiler-runtime-ffi-plan-2026-07-23.md",
+          "detail": "Preregistered M2.5 compiler/runtime/FFI semantics: 841 direct and 860 closure compiler-runtime cases plus 24 provisional FFI cases, distinct compiled/interpreted/eval/C/LLVM routes, toolchain/artifact/ABI/symbol/initialization/effect closure, controls, and zero-process/zero-credit boundary."
+        },
+        {
           "path": "docs/plan/lean-complete-parity-worktree-portability-r1-result-2026-07-23.md",
           "detail": "Accepted bounded portability repair: retained repository-owned process/store paths are checkout-root-relative, Git checkout permissions preserve content/seal integrity, historical authorities remain immutable while new revisions freeze current sources, focused and live store tests pass, and the complete-parity check succeeds from a differently rooted detached worktree."
         },
