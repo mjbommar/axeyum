@@ -136,6 +136,10 @@
           "detail": "Preregistered zero-process, zero-credit diagnostic closure with exact family-specific artifact classification and retained-byte versus metadata-only storage split."
         },
         {
+          "path": "docs/plan/lean-u2-official-execution-tl0.6.3-m2-r2-diagnostic-closure-implementation-2026-07-22.md",
+          "detail": "Pushed offline-only R2 implementation with exact projection, copied completion-last replay, CI wiring, and no live append or process."
+        },
+        {
           "path": "docs/plan/lean-execution-evidence-v1.json",
           "detail": "TL0.7.1 contract authority for explicit resource lanes, typed terminations, immutable run/attempt/case/artifact/completion records, and zero real outcomes."
         },

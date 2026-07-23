@@ -83,25 +83,20 @@ QF_BV three-solver control (19/24 each). The public inventory's legacy
 contradictions of known statuses; the exact p4dfa overlap is 6 jointly decided,
 2 Axeyum-only, and 2 Z3-only. General Z3 solving-power distance is therefore
 unmeasured, while production compatibility remains demonstrably far. The
-required official-Lean solver-proof tier now bypasses the
+required 71-family official-Lean solver-proof tier now bypasses the
 Lake-only action, installs checksum-pinned elan, and fails closed on a missing
 binary or incomplete sweep. Its first real local run rejected four modules
 (67/71): three lost Bool/BV iota rules under opaque-inductive export and one hit
 Lean's default elaborator recursion depth. Narrow export corrections rerun at
-**71/71 accepted with two workers, zero skipped, zero failed** at that revision.
-The later FP soundness repair revoked uncertified `Fpa2Bv` credit from one QF_FP
-row and the QF_BVFP family; a fresh pinned-Lean run now accepts the current
-**70/70** population with zero skips or failures. The first
+**71/71 accepted with two workers, zero skipped, zero failed**. The first
 corrected run's Lean-worker phase took 6.8 s; a same-shape confirmation under
 different local load took 53.3 s, so neither is promoted as a performance
 claim. The standalone inductive test and missing-Lean negative control also
 pass. The first corrected remote job is now retained as a failed gate: it
 stopped before the representative sweep because `AXEYUM_LEAN_BIN` named an
 elan shim without a default toolchain outside the repository working directory.
-The workflow now resolves the versioned executable with `elan which lean` and
-preflights it from a temporary directory; a true remote current-70/70
-attestation and archived duration/RSS remain open before sizing the scheduled
-exhaustive tier. See the
+A true remote 71/71 attestation and archived duration/RSS remain open before
+sizing the scheduled exhaustive tier. See the
 [target evidence audit](docs/plan/parity-target-evidence-audit-2026-07-21.md).
 
 - **Strings (P2.7): Phase A is essentially DONE** — A.1a/b landed (first-class
@@ -388,108 +383,6 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
-- **2026-07-22 — exact arbitrary-order Bessel Maclaurin series and zero
-  limits.** The existing `series` compute path now composes every nonnegative
-  integer-order `Jₙ` and `Iₙ` whose argument vanishes at the origin, using the
-  checked recurrence `c₀=1/(2ⁿn!)`, `cₖ=cₖ₋₁/(4k(n+k))` and alternating signs
-  for `Jₙ`. The valuation check runs before order-dependent work, so
-  `u32::MAX` at a small truncation returns exact zero promptly; coefficients
-  beyond the public checked-`i128` rational domain decline. DLMF/SymPy fixtures,
-  nonlinear composition, both defining ODEs through order 16 / degree 24, and
-  public zero limits through order 8 pass. The full 544-unit/147-doctest suite
-  passed (923.30 s for units), together with warning-denied workspace Clippy,
-  strict stable/nightly rustdoc, WASM, links, and whitespace checks. Next:
-  implement the measured direct Bessel antiderivative pairs through the normal
-  differentiate-and-check certificate.
-
-- **2026-07-22 — exact order-one Bessel inverse Laplace pairs.** A fifth broad,
-  timeout-bounded probe found that rational-trigonometric Fourier cases and
-  representative Gaussian/rational integrating-factor ODEs already succeed,
-  while every tested order-one `J₁`/`I₁` inverse pair declined. The inverse
-  route now discovers one exact quadratic radical, reconstructs its rational
-  shift and positive frequency, requires the complete input to be a rational
-  multiple of the corresponding public forward transform, and then retains the
-  existing whole-expression forward-transform plus zero-test certificate.
-  Unit, integer/half, signed-frequency, shifted, expanded-spelling, and outer-
-  scale cases pass across both families. Order two, irrational frequency,
-  malformed numerator, multiple radicals, and zero frequency still decline.
-  The full 541-unit/147-doctest suite passed (the thermally throttled unit gate
-  took 1308.60 s), together with warning-denied workspace all-target/all-feature
-  Clippy, strict stable/nightly rustdoc, WASM build, links, and whitespace checks.
-
-- **2026-07-22 — arbitrary-order modified-Bessel-`Iₙ` Laplace transforms and
-  inverse `I₀`.** The existing rational-scale transform table now covers every
-  public nonnegative modified-Bessel order using
-  `L{Iₙ(bt)}=((s−√(s²−b²))/b)ⁿ/√(s²−b²)` in the convergence half-plane
-  `Re(s)>|b|`, with exact `b=0` handling and no order-sized construction loop.
-  Existing shifts and transform derivatives compose unchanged. The inverse
-  route recognizes rational-scale/shift `I₀` square-root quadratics and returns
-  only after the public forward transform and zero-test certify the complete
-  input. Unit, positive/negative rational-scale, shifted, polynomial-weighted,
-  zero-argument, and `u32::MAX` controls pass; an independent derivative-
-  recurrence replay checks orders 0 through 17 at three scales. Irrational and
-  affine forward arguments, irrational inverse frequency, uncertifiable
-  leading scale, and the branch-degenerate zero-frequency inverse still
-  decline. The full 539-unit/147-doctest suite, warning-denied workspace
-  all-target/all-feature Clippy, strict stable/nightly rustdoc, WASM build,
-  links, and whitespace checks pass.
-
-- **2026-07-22 — arbitrary-order Bessel-`Jₙ` Laplace transforms.** The
-  existing rational-scale Bessel table now covers every public nonnegative
-  integer order using the exact DLMF 10.22.49 specialization
-  `L{Jₙ(bt)}=((√(s²+b²)−s)/b)ⁿ/√(s²+b²)`, with exact `b=0` handling and no
-  order-sized construction loop. Existing exponential-shift and transform-
-  derivative rules compose with the whole family. Unit, positive/negative
-  rational-scale, shifted, polynomial-weighted, zero-argument, and
-  `u32::MAX` controls pass; an independent derivative-recurrence replay checks
-  orders 0 through 17 at three scales. Modified Bessel still declined at this
-  checkpoint and is closed by the entry above; irrational-scale and affine-
-  argument inputs remain outside the exact table. The full 536-unit/147-doctest suite,
-  warning-denied workspace all-target/all-feature Clippy, strict stable/nightly
-  rustdoc, WASM build, links, and whitespace checks pass.
-
-- **2026-07-22 — certified generic first-order inhomogeneous routing.**
-  `dsolve_inhomogeneous` now recognizes a trimmed degree-one constant-
-  coefficient operator with non-polynomial forcing, divides both coefficients
-  and forcing by the exact nonzero leading coefficient, and routes the
-  normalized equation through `dsolve_first_order_linear`. That existing solver
-  retains its integrating-factor residual certificate; the new wrapper also
-  substitutes the answer back into the original scaled operator before
-  returning it. Exponential, sine, scaled-leading, resonant, negative-leading,
-  derivative-only, and trailing-zero-coefficient controls pass, while degree
-  zero/cubic operators and an unintegrable forcing still decline. The existing
-  polynomial and second-order variation-of-parameters routes are unchanged.
-  SymPy independently agrees on the exact representative forms. The full
-  534-unit/147-doctest suite, warning-denied workspace all-target/all-feature
-  Clippy, strict stable/nightly rustdoc, and WASM build pass.
-
-- **2026-07-22 — TL0.6.3 M0 attempt 001 failed closed; R1 is source-first
-  preregistered.** The [M0 plan](docs/plan/lean-u2-official-execution-tl0.6.3-m0-plan-2026-07-22.md)
-- **2026-07-22 — exact-expression initial-condition data.** The measured
-  oscillator cases `y(0)=√2, y′(0)=1` and `y(0)=A, y′(0)=B` now specialize to
-  `√2 cos x + sin x` and `A cos x + B sin x`. The existing rational evaluation
-  still owns the basis matrix and baseline; for an expression-valued right-hand
-  side, exact rational inverse columns are computed through the existing
-  checked-`i128`/bounded-bignum solver and then combined with the values. Every
-  returned solution is substituted into every original condition and accepted
-  only when the zero-test certifies exact equality. Reserved `C<digits>` data,
-  data depending on the ODE variable, nonrational basis coefficients, singular
-  systems, and symbolic dimension 17 explicitly decline; a 17-constant rational
-  system proves the legacy path is not narrowed. SymPy independently agrees on
-  both new solutions and the existing `x=π/2` control. The full 533-unit/
-  147-doctest suite, warning-denied workspace all-target/all-feature Clippy,
-  strict stable/nightly rustdoc, WASM, links, and whitespace checks pass.
-
-- **2026-07-22 — TL0.6.3 M0 is source-first preregistered; no official U2 test
-  has run.** The [M0 plan](docs/plan/lean-u2-official-execution-tl0.6.3-m0-plan-2026-07-22.md)
-- **2026-07-22 — TL0.6.3 M0 has one retained local official failure; R2 is
-  source-first preregistered.** The [M0 plan](docs/plan/lean-u2-official-execution-tl0.6.3-m0-plan-2026-07-22.md)
-- **2026-07-22 — TL0.6.3 M0 has one retained local official outcome; R3 is
-  source-first preregistered after R2 stopped before import.** The [M0 plan](docs/plan/lean-u2-official-execution-tl0.6.3-m0-plan-2026-07-22.md)
-- **2026-07-22 — TL0.6.3 M2 is preregistered for one fresh 64-case shard; no
-  runner or process exists yet.** The source-first
-- **2026-07-22 — TL0.6.3 M2's pure 64-case execution contract is implemented
-  and pushed; no live runner or process exists yet.** The source-first
 - **2026-07-22 — TL0.6.3 M2's runner is pushed; its first invocation stopped
   during source preflight before any harness, discovery, or process.** The source-first
   [plan](docs/plan/lean-u2-official-execution-tl0.6.3-m2-shard-0001-plan-2026-07-22.md)
@@ -553,7 +446,10 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   total 950,327,258 bytes, but only 67 outcome captures/CTest logs totaling
   106,610 bytes are retained; 56 reproducible C/executable intermediates
   totaling 950,219,754 bytes remain manifest-only. Next: implement/test/push
-  this diagnostic append before touching the live evidence root.
+  this diagnostic append before touching the live evidence root. The
+  [implementation checkpoint](docs/plan/lean-u2-official-execution-tl0.6.3-m2-r2-diagnostic-closure-implementation-2026-07-22.md)
+  records pushed commit `e846daf9`, two exact offline tests, CI integration,
+  and no process command. Publish it before the one append-only action.
 
 - **2026-07-22 — TL0.6.3 M1 derives complete deterministic U2 child-shard
   scheduling with zero new outcomes or parity credit.** The source-first
@@ -668,31 +564,6 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   mutation families. This is local process-interruption recovery, not power/
   host loss, NFS, provider, object, or distributed durability. Real/U2
   outcomes, paired cells, performance rows, and parity credit remain zero.
-  Next: source-first TL0.7.4 no-credit pinned-Lean/export controls; TL0.6.3
-  remains blocked.
-- **2026-07-22 — the official-Lean representative gate now matches the FP
-  trust boundary.** The July 22 FP soundness repair had already made
-  `qf_fp_misc` and both QF_BVFP rows decline proof production because their
-  whole `Fpa2Bv` reductions are uncertified, but the 71-family registry still
-  invoked them. `qf_fp_misc` consumed more than 30 minutes in Rust-side proof
-  construction and `qf_bvfp_float_no_simp3` then failed the gate. The current
-  registry removes that unsupported QF_BVFP family and the non-representative
-  QF_FP row. Pinned Lean 4.30 accepts **70/70**, zero skipped, zero failed, in
-  the required two-worker/no-budget profile. Historical 71/71 remains scoped
-  to its pre-FP revision; it is not current certificate credit.
-
-- **2026-07-22 — TL0.7.3 immutable checkpointing is source-first
-  preregistered; no store kill cell has run.** The
-  [plan](docs/plan/lean-execution-store-tl0.7.3-plan-2026-07-22.md) reuses the
-  exact accepted ADR-0344 local no-replace primitive without editing the
-  SMT-COMP lane, then adds strict Lean record/filename/self-hash validation and
-  completion-last closure over the interrupted/resumed synthetic fixture. Its
-  16 destructive cells cross dependency versus completion installation, four
-  exposed persistence boundaries, and worktree-local versus `/dev/shm`
-  storage. Eighteen mutation families cover overwrite, conflict/orphan,
-  namespace, lost-attempt, dependency/digest/order, projection, source, and
-  credit drift. This is planned local `SIGKILL` recovery, not power-loss, NFS,
-  host-loss, provider, or parity evidence.
   TL0.7.4 has since closed the remaining local execution-policy prerequisite;
   TL0.6.3 is now unblocked.
 
@@ -743,169 +614,6 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   profiles. All attempts remain `not-run`; official executions, Axeyum
   executions, paired cells, axes, and terminal gates remain zero. Next: TL0.7
   resource/checkpoint authority, then retained TL0.6.3 official executions.
-- **2026-07-22 — exact rational-scale/shift Bessel-`J₀` Laplace pairs.** A
-  timeout-bounded third cross-area probe found the already-representable
-  `J₀(t)`, `J₀(2t)`, `e^tJ₀(2t)`, and matching inverse transforms all declined,
-  while mixed rational inverse-Laplace and rational-trig Fourier controls
-  certified. `laplace_transform` now implements the NIST DLMF 3.5.40 pair
-  `J₀(bt) ↦ 1/√(s²+b²)` for rational `b`; the existing shift and transform-
-  derivative rules automatically cover `e^{at}` and polynomial `t` weights.
-  `inverse_laplace` recognizes exact rational-scaled square roots of completed-
-  square quadratics, reconstructs `c·e^{at}J₀(bt)`, and still returns only after
-  the public forward transform certifies the complete original expression.
-  Unit/scaled/shifted, polynomial-weighted, rational-frequency, and independent
-  SymPy controls pass; `J₁`, irrational frequency, and nonquadratic radical
-  inputs explicitly decline. The full 530-unit/147-doctest suite, warning-
-  denied workspace all-target/all-feature Clippy, strict stable/nightly
-  rustdoc, WASM, links, and whitespace checks pass.
-
-- **2026-07-22 — repeated irreducible-quadratic inverse-Laplace poles.** The
-  measured declines at `1/(s²+1)²`, `s/(s²+1)²`, cubic/shifted quadratic powers,
-  and a mixed real/quadratic denominator now reconstruct exactly. `apart`
-  supplies terms `(A(s))/q(s)^m`; for a rational shift/frequency the inverse is
-  solved in the `2m`-member basis
-  `tʳe^{αt}{cos,sin}(βt)`, using the existing forward transform to build one
-  exact rational system. The whole result still returns only after the existing
-  forward zero-test round trip certifies the original transform. Explicit
-  double/cubic formulas, a damped shifted pair, an independently checked mixed
-  decomposition, and every multiplicity 1 through 7 pass. Multiplicity 8 is the
-  first deliberate decline because its `t⁷cos(βt)` basis transform exceeds the
-  checked-`i128` rational normalizer; irrational frequencies continue to
-  decline. The complete 529-unit/147-doctest suite, warning-denied workspace
-  all-target/all-feature Clippy, strict stable/nightly rustdoc, WASM build,
-  links, and whitespace checks pass.
-
-- **2026-07-22 — exact rational-trig Fourier coefficients on the symmetric
-  period.** A second timeout-bounded gap probe found repeated irreducible-
-  quadratic inverse-Laplace poles as the next transform gap, but also exposed a
-  higher-priority boundary seam: `fourier_series(1/(2+cos x),[-π,π])` used the
-  generic FTC route and substituted `±π` into a discontinuous
-  `tan(x/2)` antiderivative. The resulting coefficients contained
-  `tan(±π/2)`, evaluated numerically only through floating-point pole behavior,
-  and could not certify against their exact values. The full-period rational-
-  trig helper now recognizes both canonical spellings `[0,2π]` and `[-π,π]`;
-  on the symmetric interval the Weierstrass variable maps monotonically from
-  `−∞` to `∞`, so the existing certified improper-integral route applies.
-  A focused regression proves `∫₋π^π dx/(2+cos x)=2π/√3`, its first cosine
-  coefficient, and the two-harmonic closed form
-  `(1/√3)[1+2Σₖ(√3−2)^k cos(kx)]`. Existing full/half-period, polynomial, and
-  exponential Fourier controls remain green. The full 528-unit/147-doctest CAS
-  suite, warning-denied workspace all-target/all-feature Clippy, strict
-  stable/nightly rustdoc, WASM build, links, and whitespace checks pass.
-
-- **2026-07-22 — bounded polynomial-geometric Z transforms and repeated-pole
-  inverses.** A timeout-bounded cross-area probe found the standard transform
-  declines at `Z{n·2ⁿ}`, `Z{n²·2ⁿ}`, and repeated inverse-Z poles while Fourier,
-  ODE, assumption, and Laplace controls already succeeded. `z_transform` now
-  admits exact linear combinations of `P(n)aⁿ` for rational `P` of degree at
-  most 32 and positive rational `a`, using a falling-factorial basis and private
-  `BigRational` composition before mandatory conversion to public checked-`i128`
-  coefficients. `inverse_z_transform` reconstructs positive-rational poles of
-  multiplicity at most 32 from exact principal-part derivatives and returns a
-  sequence only after the existing forward zero-test round trip certifies it.
-  Independent reciprocal-series checks cover several bases and degrees; an
-  Eulerian-row check freezes the degree-32 ceiling; multiplicities 1 through 32
-  round-trip. Nonlinear exponents, non-positive/irrational poles, improper
-  inputs, degree 33, multiplicity 33, and final coefficient overflow decline.
-  The CAS topic stack passes 527 unit tests, 147 doctests, warning-denied
-  workspace all-target/all-feature Clippy, strict stable/nightly rustdoc,
-  `wasm32-unknown-unknown`, links, and `git diff --check`.
-- **2026-07-22 — accepted ADR-0357 closes the existing MBQI SAT evidence
-  boundary instead of waiting on more measurement infrastructure.** A
-  one-binder almost-uninterpreted `Int`/`Real`
-  candidate carries a source-bound finite-profile UF-model certificate only
-  after a separate small checker re-matches the untouched assertion, validates
-  exact function signatures and binder argument positions, derives every table
-  representative plus one all-default point, and evaluates all profiles under
-  a 4,096 cap. Canonical `check_model`, `Evidence::Sat::check`, and
-  `produce_evidence` now accept the genuine result; stale/extra certificates,
-  wrong binders/signatures, missing functions, table violations, nested or
-  interpreted occurrences, and cap overflow fail closed. The unified front
-  door downgrades preprocessed candidates that cannot replay against the
-  caller's original assertions. Completed gates so far: 894 solver unit tests,
-  12 focused model-finder/certificate tests, 15 instantiation tests, capability
-  generation, and the 256-case direct-Z3 smoke differential with 130/130
-  jointly decided agreements and all 110 Axeyum SAT results replayed. Workspace
-  tests, Clippy, rustdoc, foundational resources, links, SMT-COMP recovery,
-  QF_BV profile, and both 162-file Glaurung semantic policies are green. Next:
-  publish the branch and implement the separately reviewed bounded
-  multi-binder finite-profile increment.
-
-- **2026-07-22 — ADR-0358 preregisters the multi-binder MBQI functionality
-  increment.** The checker will flatten one leading block of at most 16 distinct
-  `Int`/`Real` universals, derive each binder's representatives from its exact
-  UF argument positions, and replay the complete Cartesian product under the
-  existing 4,096-profile cap. Search remains untrusted and the first widening
-  is SAT-only; failed certification returns to existing E-matching rather than
-  adding an implicit multi-variable refutation heuristic.
-
-- **2026-07-22 — accepted ADR-0358's bounded Cartesian quantified-UF
-  models.** `solve` now returns checked SAT for leading two-binder integer and
-  mixed integer/real almost-uninterpreted universals. The independent checker
-  reconstructs up to 16 distinct binders, per-binder exact UF positions and
-  representatives, and at most 4,096 Cartesian tuples; malformed prefixes,
-  interpreted/vacuous/unsupported binders, table violations, and both caps
-  decline. A conflicting ground point falls back to E-matching and remains
-  UNSAT. Focused MBQI is 18/18, solver library 894/894, evidence 69/69,
-  instantiation 15/15, ledger gates 2/2 and 12/12, and the new direct-Z3 matrix
-  agrees 64/64 (32 SAT / 32 UNSAT) with canonical replay. Full workspace tests
-  and doctests, all-target/all-feature warning-denied Clippy, strict rustdoc,
-  foundational resources (137 concept rows / 174 packs), parity and links,
-  SMT-COMP recovery, QF_BV profile, and whitespace are green. Next: publish
-  the topic branch, then measure the remaining satisfiable unknowns before
-  proposing any separately checked model-repair increment.
-
-- **2026-07-22 — quantified-UFLIA Unknowns are now oracle-adjudicated and
-  ADR-0359 preregisters the next real SAT capability.** The 256-case direct-Z3
-  smoke reports 121 Axeyum Unknowns: 105 Z3 SAT, 11 Z3 UNSAT, and five Z3
-  Unknown. The dominant ordinary-incomplete bucket alone contains 96 Z3-SAT
-  cases; only nine Z3-SAT cases are in the resource bucket. Deterministic seed
-  diagnostics reproduce missing or incompatible total UF defaults while
-  preserving ground points. Next: implement bounded default-only repair under
-  ADR-0359, with the existing finite-profile checker and canonical source replay
-  remaining the sole SAT acceptance boundary.
-
-- **2026-07-22 — ADR-0359 bounded UF-default repair is implemented and
-  measured; final branch gates are pending.** The untrusted search changes only
-  total defaults for at most eight relevant Int/Real-result UFs, preserves
-  every scalar assignment and explicit table point, and declines beyond
-  32-value pools or 256 complete candidates. The independent ADR-0357/0358
-  source checker and canonical original-query replay remain the only SAT
-  acceptance boundary. Focused MBQI is 21/21, four internal repair-boundary
-  tests pass, and solver all-target/all-feature Clippy is clean. The same
-  256-case direct-Z3 sweep improves checked SAT from 111 to 178 and joint
-  decisions from 131 to 197, with 197/197 agreement, 178/178 SAT replay, and
-  zero errors. Ordinary-incomplete/Z3-SAT declines fall from 96 to 39 and
-  resource-limited/Z3-SAT declines from nine to zero. Next: complete the full
-  ADR-0359 evidence gates, accept only if green, then measure the remaining
-  free-scalar/larger-search Unknown boundary before any new implementation.
-
-- **2026-07-22 — accepted ADR-0359 after comprehensive branch-wide gates.**
-  The final run repeats 898/898 solver units, 69/69 evidence, 15/15
-  instantiation, 21/21 MBQI, the 256-case direct-Z3 repair differential in
-  77.16 seconds, and the broader UFLIA differential in 420.71 seconds with zero
-  disagreements. Workspace tests and doctests pass under the registered
-  exclusion of two independent CAS moment-family stress tests; warning-denied
-  workspace Clippy and strict rustdoc are clean. Foundational resources validate
-  137 concept rows and 174 packs; parity compares 680 decisions with zero
-  disagreement; links, whitespace, QF_BV profile, and SMT-COMP recovery pass
-  (52 tests, one environment skip). Five timing-sensitive frontier JSON rewrites
-  from the workspace run were inspected and restored to their committed
-  baseline. Next: publish the green topic branch, then classify the remaining
-  39 oracle-SAT Unknowns into free-scalar, explicit-table, shape, and bounded-
-  search causes before preregistering another functionality increment.
-
-- **2026-07-22 — ADR-0356 S4 official selection identity is complete; S5 is
-  deliberately not blocking solver functionality.** The accepted root
-  `/nas3/data/axeyum/harness/official-selection-2026-sq/accepted-322adaa78396bf42d4660d12582e6db1cf2166a765bb912fdfb179975a9c9698`
-  reconstructs all 450,472 terminal decisions and binds 45,905 selected files
-  / 15,148,369,947 bytes. All 18 invariants pass, all 18 mutations reject, and
-  a second fresh process physically rehashed every selected file before
-  returning `SMTCOMP_FINAL_SELECTION_VERIFY_OK`. The exact live-used
-  implementation commit `5f8864bc` is preserved remotely as
-  `agent/smtcomp/s4-audit-5f8864bc`. ADR-0356 is accepted. S5 remains a tiny
-  E1b admission fixture required before any credited run, but is deferred while
-  checked quantified solver work proceeds.
 
 - **2026-07-22 — bounded bignum base checking carries direct moments through
   order 255 and raw moments through 35.** `certifies_wz_sum` retains its
@@ -963,7 +671,7 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   and terminal gates remain at zero. TL0.6.2 has since closed the official
   event/check-level/platform/preset/filter/stage/rebootstrap profile
   derivation without executing tests; TL0.7/TL0.6.3 and TL0.3's true remote
-  current 70/70 executable-identity gate remain independently open.
+  71/71 executable-identity gate remain independently open.
 
 - **2026-07-22 — product-level cancellation carries raw squared-binomial
   moments through order 33.** Every even factor shared with the known
@@ -8054,51 +7762,12 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
-- **2026-07-22 — Added exact arbitrary-order Bessel Maclaurin series and zero
-  limits.** Checked `Jₙ`/`Iₙ` coefficient recurrences, independent fixtures and
-  ODE replay, public removable limits, and explicit overflow/order boundaries
-  bring the CAS surface to 544 unit tests and 147 doctests.
+- **2026-07-22 — Implemented and pushed M2 R2's offline-only diagnostic
+  closure.** Commit `e846daf9` binds the exact R1 evidence and work projection,
+  family-specific paths, 124/67/56/1 split, no-overwrite append, completion-last
+  replay, and zero credit. Two tests cover the real projection and a copied
+  append; no live evidence byte or process was created.
 
-- **2026-07-22 — Added exact order-one Bessel inverse Laplace pairs.** Exact
-  rational-scale/shift `J₁` and `I₁` transforms now invert through a structural
-  candidate finder plus the mandatory full public forward round trip. Broad-
-  probe controls and explicit malformed/unsupported declines bring the CAS
-  surface to 541 unit tests and 147 doctests.
-
-- **2026-07-22 — Added arbitrary-order modified-Bessel-`Iₙ` Laplace and
-  inverse `I₀` pairs.** The rational-scale table now composes every public
-  nonnegative order with existing shift and polynomial-weight rules, while the
-  inverse route is exact forward-round-trip-certified. Recurrence, boundary,
-  and decline controls bring the CAS surface to 539 unit tests and 147
-  doctests.
-
-- **2026-07-22 — Extended Laplace transforms to arbitrary Bessel-`Jₙ`
-  order.** The rational-scale table now implements the exact closed form for
-  every public nonnegative integer order, composes with the existing shift and
-  polynomial-weight rules, and is replay-checked against the Bessel derivative
-  recurrence. Explicit boundary and decline controls bring the CAS surface to
-  536 unit tests and 147 doctests.
-
-- **2026-07-22 — Routed generic first-order inhomogeneous ODEs.**
-  Non-polynomial degree-one constant-coefficient equations now reuse the
-  certified integrating-factor solver after exact leading-coefficient
-  normalization, then replay against the original operator. Polynomial and
-  second-order routes remain unchanged; bounded positive and decline controls
-  bring the CAS surface to 534 unit tests and 147 doctests.
-
-- **2026-07-22 — Added exact-expression IVP data.**
-  `apply_initial_conditions` now solves rational evaluated basis matrices
-  against exact radicals or symbolic parameters, preserves the older rational
-  path beyond the symbolic 16-constant cap, and certifies every original
-  condition after substitution. The bounded controls bring the CAS surface to
-  533 unit tests and 147 doctests.
-
-- **2026-07-22 — Reconciled the official-Lean gate with the FP soundness
-  boundary.** Removed the unsupported QF_BVFP reconstruction family and
-  `qf_fp_misc` row after the independent evidence layer had already revoked
-  their uncertified `Fpa2Bv` proof credit. The pathological 30-minute
-  collection path and fail-closed panic disappear; the exact pinned Lean 4.30
-  gate accepts the current 70/70 modules with zero skips and zero failures.
 - **2026-07-22 — Preregistered M2 R2 as a zero-process diagnostic closure.**
   The plan binds published R1 commit/authority/evidence, corrects only the
   family classification used for diagnostics, freezes the exact 124-row /
@@ -8212,26 +7881,6 @@ plan is built and committed on the current branch:
   rebootstrap rules, selection factoring, mutation matrix, outputs, and stop
   conditions are frozen before implementation or derived profile counts. U2
   remains bounded and records no execution or paired-result credit.
-- **2026-07-22 — Accepted checked finite-profile quantified-UF SAT models under
-  ADR-0357.** The old MBQI model finder could return SAT while canonical
-  `check_model` rejected the same infinite-domain source. `Model` now carries a
-  lazily stored exact-source certificate; a separate checker reconstructs the
-  one-binder almost-uninterpreted finite proof from exact UF argument positions,
-  model tables/defaults, and a bounded complete representative set. Public
-  model and evidence replay now succeed, while malformed/tampered/resource-
-  limited cases decline. Focused solver, instantiation, capability, and
-  256-case direct-Z3 differential gates pass with zero disagreement. Workspace
-  and lane-wide static, documentation, provenance, and semantic gates pass;
-  multi-binder Cartesian profiles are the next capability increment.
-
-- **2026-07-22 — Completed and freshly verified ADR-0356 S4.** The accepted
-  content-addressed selection contains 450,472 decisions and 45,905 selected
-  file identities. The independent full join and second physical selected-file
-  hash pass succeeded; 18/18 invariants pass and 18/18 registered mutations
-  reject. The compact result is
-  [recorded here](docs/plan/smtcomp-official-selection-final-s4-2026-07-22.md),
-  and the live-used pre-rebase implementation commit remains reachable through
-  remote archival branch `agent/smtcomp/s4-audit-5f8864bc`.
 
 - **2026-07-22 — Preregistered the live-blocked ADR-0356 S4 auditor.** The new
   independent standard-library path validates exact prior-stage artifact sets,
@@ -8500,34 +8149,6 @@ plan is built and committed on the current branch:
   contracts pass under the one-worker/4 GiB policy. M3's >=640-case generated
   grammar and forced mutation teeth are next; importer policy and M0 streams
   remain untouched.
-- **2026-07-22 — Added exact Bessel-`J₀` Laplace pairs.** Forward transforms now
-  cover rationally scaled, exponentially shifted, and polynomial-weighted
-  `J₀`; inverse square-root quadratic transforms reconstruct the matching
-  damped Bessel form only after an exact forward round trip. Bounded decline
-  controls bring the CAS surface to 530 unit tests and 147 doctests.
-
-- **2026-07-22 — Added bounded repeated-quadratic inverse Laplace.** Exact
-  partial fractions now reconstruct rational-frequency quadratic poles through
-  multiplicity 7 in a forward-generated damped-oscillator basis, including
-  shifted and mixed real/quadratic cases. Mandatory forward certification and
-  explicit multiplicity-8/irrational-frequency declines bring the CAS surface
-  to 529 unit tests and 147 doctests.
-
-- **2026-07-22 — Closed the symmetric-period rational-trig Fourier boundary
-  seam.** `definite_full_period_rational_trig` now handles `[-π,π]` through the
-  same certified whole-real-line Weierstrass integral as `[0,2π]`, preventing
-  generic FTC from emitting `tan(±π/2)` boundary terms. Exact integral,
-  coefficient, and Fourier closed-form regressions bring the CAS surface to
-  528 unit tests and 147 doctests.
-
-- **2026-07-22 — Extended the exact Z-transform pair to bounded
-  polynomial-geometric families.** Forward transforms use
-  `P(n)=Σqᵣ(n)ᵣ` and `Z{(n)ᵣaⁿ}=r!aʳz/(z−a)ʳ⁺¹`; inverse transforms recover the
-  principal parts of `X(z)/z` at repeated positive-rational poles and accept the
-  reconstructed sequence only after an exact forward round trip. Explicit
-  degree/multiplicity ceilings of 32, independent series/Eulerian controls, and
-  fail-closed negative cases bring the CAS gate to 527 units and 147 doctests.
-
 - **2026-07-22 — Added bounded exact bignum WZ base checking.** A private
   rational/positive-integer-Gamma evaluator runs only after the existing base
   equality returns `Unknown`, with explicit Gamma/power limits and fail-closed

@@ -559,7 +559,10 @@ state.
 > 950,327,258 bytes remain manifest-bound, while only 67 outcome captures and
 > CTest logs / 106,610 bytes are retained and 56 reproducible C/executable
 > intermediates / 950,219,754 bytes remain explicit metadata-only evidence.
-> Next implement and test R2 without launching Lean or changing R1 credit;
+> The [R2 implementation checkpoint](docs/plan/lean-u2-official-execution-tl0.6.3-m2-r2-diagnostic-closure-implementation-2026-07-22.md)
+> records pushed offline-only commit `e846daf9` and two exact projection/store
+> tests. Next publish that checkpoint, revalidate clean ref equality, and append
+> the diagnostic namespace once without launching Lean or changing R1 credit;
 > then form native pairs. Do not rerun
 > the singleton for population credit. The
 > [complete-parity execution roadmap](docs/plan/lean4-complete-parity-roadmap-2026-07-22.md)
