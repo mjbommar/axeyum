@@ -456,10 +456,12 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   and the Bitwuzla-only retry mode hard-pins every frozen hash and exact
   `retry-1`. Twenty-three focused tests directly cover fresh retry, completed-
   retry finalization, and completed-result replay; the 71-test portable gate
-  passes with one live-host skip. Live state revalidation remains read-only.
-  Mandatory cgroup and live multi-host E3 gates are clean on `eab74458`; the
-  live gate passes 71 tests without skips at
-  `/nas3/data/axeyum/harness/e3-gate/live-1784832792764426288-eab74458d98c`.
+  passes with one live-host skip. Existing-authority replay now repeats current
+  remote-liveness, lease, full allocation-evidence, runner-terminal, and zero-
+  record checks rather than trusting the earlier observation. Live state
+  revalidation remains read-only. Mandatory cgroup and live multi-host E3 gates
+  are clean on `9299b890`; the live gate passes 71 tests without skips at
+  `/nas3/data/axeyum/harness/e3-gate/live-1784833003812766152-9299b8907208`.
   Recovery stays blocked until these source and checkpoint bytes are integrated.
 - **2026-07-23 — certified rational weights inside powered rational-rate
   Bessel-J products.** Wave twenty-one extends the structural powered-product

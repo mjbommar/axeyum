@@ -169,7 +169,9 @@ The bounded implementation:
 - validates replay after authority publication, process-free finalization after
   a completed retry, and a fully published result without launching twice; and
 - directly exercises all three coordinator restart paths: fresh exact retry,
-  completed-retry finalization, and completed-result replay.
+  completed-retry finalization, and completed-result replay. Authority replay
+  repeats current remote-liveness, lease, allocation-evidence, runner-terminal,
+  and zero-record checks before returning the existing record.
 
 Read-only live validation reports:
 
@@ -196,9 +198,9 @@ AXEYUM_REQUIRE_SMTCOMP_CGROUP=1 ./scripts/check-smtcomp-resume.sh
 
 AXEYUM_REQUIRE_SMTCOMP_MULTIHOST=1 ./scripts/check-smtcomp-resume.sh
   71 tests, OK, no skips
-  evidence=/nas3/data/axeyum/harness/e3-gate/live-1784832792764426288-eab74458d98c
-  control=73890cfa5573c99407ad3ca58c15b4a946d4eede2b221786e58b486511d91fe9
-  loss=4dd128af5d82281094b56a38b116c4a00d52068d85bd90147fc09e9c7ed8cc7e
+  evidence=/nas3/data/axeyum/harness/e3-gate/live-1784833003812766152-9299b8907208
+  control=f692188a8dcb92da5fab2bcf97c4e9a8ace3ebfe0a27a4fa4d74b089ff5629d4
+  loss=8744c6e2acd6bc5d560420f0ac3db14b845949d9e54e1d1e02947180de272df3
 
 ./scripts/check-links.sh
   passed
