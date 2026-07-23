@@ -1229,13 +1229,13 @@ impl MultiPoly {
         Some(out)
     }
 
-    /// Reduce the polynomial Bessel recurrences needed by the bounded weighted
-    /// product derivatives:
+    /// Reduce the polynomial Bessel recurrences needed by weighted product
+    /// derivatives, for every public order `n >= 2`:
     ///
     /// - `u·J₂(u) = 2·J₁(u) − u·J₀(u)`;
     /// - `u·I₂(u) = u·I₀(u) − 2·I₁(u)`;
-    /// - `u·J₃(u) = 4·J₂(u) − u·J₁(u)`;
-    /// - `u·I₃(u) = u·I₁(u) − 4·I₂(u)`.
+    /// - `u·Jₙ(u) = 2(n−1)·Jₙ₋₁(u) − u·Jₙ₋₂(u)`;
+    /// - `u·Iₙ(u) = u·Iₙ₋₂(u) − 2(n−1)·Iₙ₋₁(u)`.
     ///
     /// Each descriptor is `(target atom key, order, modified?, argument
     /// expression, normalized polynomial argument)`. Targets are processed in
@@ -1275,8 +1275,9 @@ impl MultiPoly {
             };
             let lower = MultiPoly::single_var(&atom_name(&family(order - 2).name(), argument));
             let previous = MultiPoly::single_var(&atom_name(&family(order - 1).name(), argument));
-            let recurrence_scale =
-                Rational::integer(i128::from(order.checked_sub(1)?.checked_mul(2)?));
+            let recurrence_scale = Rational::integer(
+                i128::from(order.checked_sub(1)?).checked_mul(2)?,
+            );
             let scaled_previous = previous.mul(&MultiPoly::constant(recurrence_scale))?;
             let replacement = if *modified {
                 // u·I_n = u·I_(n-2) − 2(n−1)·I_(n-1).
@@ -2236,6 +2237,8 @@ fn expand_log_over_primes(expr: &CasExpr) -> CasExpr {
     }
 }
 
+const MAX_WEIGHTED_BESSEL_ORDER: u32 = 32;
+
 /// The core cross-multiplication zero-test (no Euler canonicalization). Treats
 /// transcendental heads as independent atoms; see [`equal`] for why the public
 /// entry point re-checks a non-equal result on the [`rewrite_exp`] form.
@@ -2280,12 +2283,12 @@ fn equal_core(a: &CasExpr, b: &CasExpr) -> ZeroTest {
                     nth_roots.insert(key.clone(), (*q, poly));
                 }
             }
-            // Polynomial, division-free forms of the bounded n=1,2 recurrences.
+            // Polynomial, division-free forms of the public Bessel recurrences.
             // Arguments over a rational constant denominator are still
             // polynomials after absorbing that denominator into their
             // coefficients.
             CasExpr::Unary(func @ (UnaryFunc::BesselJ(order) | UnaryFunc::BesselI(order)), arg)
-                if (2..=3).contains(order) =>
+                if *order >= 2 =>
             {
                 if let Some(ratio) = normalize_rational(arg)
                     && let Some(denominator) = multipoly_as_constant(&ratio.den)
@@ -12975,7 +12978,7 @@ pub fn integrate(expr: &CasExpr, var: &str) -> Option<CertifiedIntegral> {
         integrate_gaussian(expr, var),
         integrate_special_integral(expr, var),
         integrate_weighted_bessel_order_zero(expr, var),
-        integrate_weighted_bessel_order_one(expr, var),
+        integrate_weighted_bessel_positive_order(expr, var),
         integrate_bessel_order_one(expr, var),
         integrate_fresnel(expr, var),
         integrate_inverse_radical(expr, var),
@@ -15512,14 +15515,14 @@ fn integrate_poly_times_sinusoid(expr: &CasExpr, var: &str) -> Option<CasExpr> {
 /// **symbolic** constants (`π`, `√2`, …), enabling `∫ c·g = c·∫ g` for them.
 fn split_var_free_factor(expr: &CasExpr, var: &str) -> (CasExpr, CasExpr) {
     match expr {
-        CasExpr::Mul(factors) => {
+        CasExpr::Mul(_) => {
             let mut free = Vec::new();
             let mut dependent = Vec::new();
-            for factor in factors {
-                if expr_contains_var(factor, var) {
-                    dependent.push(factor.clone());
+            for factor in flatten_mul(expr) {
+                if expr_contains_var(&factor, var) {
+                    dependent.push(factor);
                 } else {
-                    free.push(factor.clone());
+                    free.push(factor);
                 }
             }
             let mul_or_one = |mut parts: Vec<CasExpr>| match parts.len() {
@@ -16195,24 +16198,24 @@ fn integrate_weighted_bessel_order_zero(expr: &CasExpr, var: &str) -> Option<Cas
     )))
 }
 
-/// Integrate the bounded next weighted Bessel pair:
+/// Integrate the resource-bounded positive-integer-order weighted Bessel family:
 ///
-/// - `∫ c·u²·J₁(u) dvar = (c/slope)·u²·J₂(u)`;
-/// - `∫ c·u²·I₁(u) dvar = (c/slope)·u²·I₂(u)`;
+/// - `∫ c·u^(n+1)·Jₙ(u) dvar = (c/slope)·u^(n+1)·Jₙ₊₁(u)`;
+/// - `∫ c·u^(n+1)·Iₙ(u) dvar = (c/slope)·u^(n+1)·Iₙ₊₁(u)`;
 ///
-/// where `u = slope·var + intercept` and `c` is var-free. The weight may be
-/// written as any exact rational multiple of `u²`. The public certificate uses
-/// the division-free order-three and order-two recurrence reductions; a
-/// mismatched weight, nonlinear argument, symbolic slope, or nonzero remainder
-/// declines.
-fn integrate_weighted_bessel_order_one(expr: &CasExpr, var: &str) -> Option<CasExpr> {
+/// where `1 <= n <= 32`, `u = slope·var + intercept`, and `c` is var-free. The
+/// weight may be written as any exact rational multiple of `u^(n+1)`. The
+/// public certificate uses bounded division-free Bessel recurrences; a higher
+/// order, mismatched weight, nonlinear argument, symbolic slope, or nonzero
+/// remainder declines.
+fn integrate_weighted_bessel_positive_order(expr: &CasExpr, var: &str) -> Option<CasExpr> {
     let (free, core) = split_var_free_factor(expr, var);
     let mut factors = flatten_mul(&core);
-    let bessel_index = factors.iter().position(|factor| {
-        matches!(
-            factor,
-            CasExpr::Unary(UnaryFunc::BesselJ(1) | UnaryFunc::BesselI(1), _)
-        )
+    let bessel_index = factors.iter().position(|factor| match factor {
+        CasExpr::Unary(UnaryFunc::BesselJ(order) | UnaryFunc::BesselI(order), _) => {
+            (1..=MAX_WEIGHTED_BESSEL_ORDER).contains(order)
+        }
+        _ => false,
     })?;
     let CasExpr::Unary(head, argument) = factors.remove(bessel_index) else {
         return None;
@@ -16220,27 +16223,38 @@ fn integrate_weighted_bessel_order_one(expr: &CasExpr, var: &str) -> Option<CasE
     if factors.iter().any(|factor| {
         matches!(
             factor,
-            CasExpr::Unary(UnaryFunc::BesselJ(1) | UnaryFunc::BesselI(1), _)
+            CasExpr::Unary(UnaryFunc::BesselJ(_) | UnaryFunc::BesselI(_), _)
         )
     }) {
         return None;
     }
+    let (order, modified) = match head {
+        UnaryFunc::BesselJ(order) if (1..=MAX_WEIGHTED_BESSEL_ORDER).contains(&order) => {
+            (order, false)
+        }
+        UnaryFunc::BesselI(order) if (1..=MAX_WEIGHTED_BESSEL_ORDER).contains(&order) => {
+            (order, true)
+        }
+        _ => return None,
+    };
     let weight = build_product(factors);
     let [_, slope] = univariate_affine(&argument, var)?;
 
-    let argument_squared = (*argument).clone().pow(2);
-    let ratio = normalize_rational(&(weight / argument_squared.clone()))?.reduced()?;
+    let weight_power = order.checked_add(1)?;
+    let argument_power = (*argument).clone().pow(weight_power);
+    let ratio = normalize_rational(&(weight / argument_power.clone()))?.reduced()?;
     let numerator = multipoly_as_constant(&ratio.num)?;
     let denominator = multipoly_as_constant(&ratio.den)?;
     let weight_scale = numerator.checked_div(denominator)?;
     let coefficient = weight_scale.checked_div(slope)?;
-    let order_two = match head {
-        UnaryFunc::BesselJ(1) => (*argument).clone().bessel_j(2),
-        UnaryFunc::BesselI(1) => (*argument).clone().bessel_i(2),
-        _ => return None,
+    let next_order = order.checked_add(1)?;
+    let next_bessel = if modified {
+        (*argument).clone().bessel_i(next_order)
+    } else {
+        (*argument).clone().bessel_j(next_order)
     };
     Some(simplify(
-        &(free * scaled_term(coefficient, argument_squared * order_two)),
+        &(free * scaled_term(coefficient, argument_power * next_bessel)),
     ))
 }
 
@@ -24318,22 +24332,17 @@ mod tests {
         let symbolic = v("A");
 
         for argument in [x, shifted] {
-            let j_recurrence = argument.clone() * argument.clone().bessel_j(2)
-                + argument.clone() * argument.clone().bessel_j(0)
-                - CasExpr::int(2) * argument.clone().bessel_j(1);
-            let i_recurrence = argument.clone() * argument.clone().bessel_i(2)
-                - argument.clone() * argument.clone().bessel_i(0)
-                + CasExpr::int(2) * argument.clone().bessel_i(1);
-            let j_order_three = argument.clone() * argument.clone().bessel_j(3)
-                + argument.clone() * argument.clone().bessel_j(1)
-                - CasExpr::int(4) * argument.clone().bessel_j(2);
-            let i_order_three = argument.clone() * argument.clone().bessel_i(3)
-                - argument.clone() * argument.clone().bessel_i(1)
-                + CasExpr::int(4) * argument.clone().bessel_i(2);
-            assert_equal(&j_recurrence, &CasExpr::zero());
-            assert_equal(&(symbolic.clone() * i_recurrence), &CasExpr::zero());
-            assert_equal(&j_order_three, &CasExpr::zero());
-            assert_equal(&(symbolic.clone() * i_order_three), &CasExpr::zero());
+            for order in [2, 3, 4, 34, u32::MAX] {
+                let scale = CasExpr::int(2 * i128::from(order - 1));
+                let j_recurrence = argument.clone() * argument.clone().bessel_j(order)
+                    + argument.clone() * argument.clone().bessel_j(order - 2)
+                    - scale.clone() * argument.clone().bessel_j(order - 1);
+                let i_recurrence = argument.clone() * argument.clone().bessel_i(order)
+                    - argument.clone() * argument.clone().bessel_i(order - 2)
+                    + scale * argument.clone().bessel_i(order - 1);
+                assert_equal(&j_recurrence, &CasExpr::zero());
+                assert_equal(&(symbolic.clone() * i_recurrence), &CasExpr::zero());
+            }
 
             // A near-miss must remain nonzero; the reducer changes only exact
             // argument multiples and exact recurrence coefficients.
@@ -24469,6 +24478,90 @@ mod tests {
             x().pow(2) * x().pow(2).bessel_j(1),
             x().pow(2) * (v("a") * x()).bessel_i(1),
             x().pow(2) * scaled_term(Rational::integer(i128::MIN), x()).bessel_j(1),
+        ] {
+            assert!(
+                integrate(&unsupported, "x").is_none(),
+                "unexpected integral: {unsupported}"
+            );
+        }
+    }
+
+    #[test]
+    fn integrate_weighted_integer_order_bessel_family() {
+        let x = || v("x");
+
+        for order in [2, 3, 8, 16, 32] {
+            let power = order + 1;
+            for (integrand, expected) in [
+                (
+                    x().pow(power) * x().bessel_j(order),
+                    x().pow(power) * x().bessel_j(order + 1),
+                ),
+                (
+                    x().pow(power) * x().bessel_i(order),
+                    x().pow(power) * x().bessel_i(order + 1),
+                ),
+            ] {
+                let result = integrate(&integrand, "x").expect("weighted Bessel family");
+                assert!(result.is_certified(), "not certified: ∫{integrand}");
+                assert_equal(&result.antiderivative, &expected);
+                assert_equal(&result.antiderivative.differentiate("x"), &integrand);
+            }
+        }
+
+        let shifted = CasExpr::int(2) * x() + CasExpr::int(3);
+        let shifted_integrand = shifted.clone().pow(3) * shifted.clone().bessel_j(2);
+        let shifted_result = integrate(&shifted_integrand, "x").expect("shifted order-two pair");
+        assert!(shifted_result.is_certified());
+        assert_equal(
+            &shifted_result.antiderivative,
+            &(shifted.clone().pow(3) * shifted.bessel_j(3) / CasExpr::int(2)),
+        );
+
+        let reflected = CasExpr::int(3) - x() / CasExpr::int(2);
+        let reflected_integrand = reflected.clone().pow(5) * reflected.clone().bessel_i(4);
+        let reflected_result =
+            integrate(&reflected_integrand, "x").expect("reflected order-four pair");
+        assert!(reflected_result.is_certified());
+        assert_equal(
+            &reflected_result.antiderivative,
+            &(CasExpr::int(-2)
+                * reflected.clone().pow(5)
+                * reflected.clone().bessel_i(5)),
+        );
+        let symbolic = v("A");
+        let symbolic_reflected_integrand =
+            symbolic.clone() * reflected.clone().pow(5) * reflected.clone().bessel_i(4);
+        let symbolic_reflected_expected = CasExpr::int(-2)
+            * symbolic
+            * reflected.clone().pow(5)
+            * reflected.bessel_i(5);
+        let symbolic_reflected_result = integrate(&symbolic_reflected_integrand, "x")
+            .expect("symbolic reflected order-four pair");
+        assert!(symbolic_reflected_result.is_certified());
+        assert_equal(
+            &symbolic_reflected_result.antiderivative,
+            &symbolic_reflected_expected,
+        );
+
+        let definite = definite_integrate(
+            &(x().pow(3) * x().bessel_i(2)),
+            "x",
+            &CasExpr::zero(),
+            &CasExpr::int(2),
+        )
+        .expect("weighted order-two definite Bessel integral");
+        assert!(definite.is_certified());
+        assert_equal(
+            &definite.value,
+            &(CasExpr::int(8) * CasExpr::int(2).bessel_i(3)),
+        );
+
+        for unsupported in [
+            x().pow(34) * x().bessel_j(33),
+            x().pow(34) * x().bessel_i(33),
+            x().pow(2) * x().bessel_j(2),
+            x().pow(4) * x().bessel_i(2),
         ] {
             assert!(
                 integrate(&unsupported, "x").is_none(),
