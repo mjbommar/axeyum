@@ -8613,8 +8613,12 @@ plan is built and committed on the current branch:
   verdict, known-correct, and unadjudicated decisions and forbids cross-scope or
   performance ranking. Twelve focused tests, the 87-test portable gate, live
   three-root replay, links, foundational resources, and generated-byte checks
-  pass. Commit `c9e3a972` is pushed on the SMT topic branch; integrator landing
-  precedes a separately preregistered common-selection full-population plan.
+  pass. The integrator landed the harness through `08c52380`; the result/status
+  document remains on the SMT topic branch. A later full `just check` stops at
+  pre-existing format drift in one bench and eight CAS files, which this lane
+  did not modify. Integrator resolution of that out-of-lane gate plus result
+  landing precedes a separately preregistered common-selection full-population
+  plan.
 
 - **2026-07-23 — Closed and independently validated the repaired-P0 Bitwuzla
   cell without another solver launch.** After the integrator landed the exact

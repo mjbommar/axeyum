@@ -1,6 +1,7 @@
 # SMT-COMP repaired P0 combined-comparison result
 
-Status: complete on the pushed SMT topic branch; integration acceptance pending
+Status: comparison complete; harness integrated, result/status landing pending;
+branch-wide format gate blocked by out-of-lane drift
 Date: 2026-07-23
 Plan: [combined-comparison plan](smtcomp-repaired-p0-combined-comparison-plan-2026-07-23.md)
 Generated view: [combined comparison](generated/smtcomp-repaired-p0-comparison.md)
@@ -84,7 +85,8 @@ decides 250, neither decides 2, and there are zero disagreements.
 
 Implementation commit `c9e3a972` adds the pure comparator, bounded generator,
 self-sealed JSON, derived Markdown, portable generated-artifact check, and
-fixture/mutation coverage.
+fixture/mutation coverage. The integrator subsequently landed the
+preregistration and implementation through `origin/main=08c52380`.
 
 ## Gates
 
@@ -99,6 +101,21 @@ links: OK
 foundational resources: 137 concepts, 174 example packs, OK
 git diff --check: OK
 ```
+
+The later branch-wide `just check` attempt stopped at its first recipe,
+`cargo fmt --all --check`, before any downstream recipe ran. The formatter
+reports pre-existing drift in one bench file and eight CAS source files:
+
+```text
+crates/axeyum-bench/examples/audit_dominance.rs
+crates/axeyum-cas/src/{combinatorics,gosper,lib,ntheory_advanced,
+  ntheory_more,orthopoly,series,special}.rs
+```
+
+Those paths are outside this lane, are already present in the integrated base,
+and were not modified or reformatted here. The SMT-specific gates above remain
+green, but the topic agent does not claim a green branch-wide gate or take
+ownership of the unrelated formatting repair.
 
 The live command and a second fresh check reproduced both committed generated
 files byte-identically:
