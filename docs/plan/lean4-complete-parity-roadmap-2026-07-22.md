@@ -134,8 +134,11 @@ only after exact JUnit validation. Next implement/test/push R6 and a fresh
 completion-grade control; no selected process is yet authorized. The separate
 [`R6 implementation checkpoint`](lean-u2-official-execution-tl0.6.3-m2-r6-attempt-004-implementation-2026-07-23.md)
 is now pushed at `ff2406b1`, with both branches and inversion mutations tested.
-Next publish that checkpoint and run one fresh control from the resulting clean
-remote-equal revision.
+After publication, the direct stack probe passed but delegated control history
+preflight recursed before root creation. The source-first
+[`R1 correction`](lean-u2-official-execution-tl0.6.3-m2-r6-control-history-r1-plan-2026-07-23.md)
+freezes captured-original R5 validation/restoration; attempt 004 remains
+unconsumed. Next implement/test/push R1 before repeating the harmless control.
 
 ## 2. What the SMT-LIB comparison actually says
 
