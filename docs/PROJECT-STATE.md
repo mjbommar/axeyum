@@ -330,15 +330,24 @@ Again, there are distinct targets:
   then the adapter's `LEAN_CC=/usr/bin/cc` override selected a system linker
   without the released toolchain's static C++ libraries. The same C links with
   the override absent. [R2](plan/lean-u2-official-execution-tl0.6.3-m0-r2-plan-2026-07-22.md)
-  corrects only that adapter field. Current coverage is one failed outcome,
-  zero passes, and 1/3,678 parent cases observed; parent/provider completion,
-  Axeyum, pairing, performance, axes, gates, and parity credit remain zero.
+  corrected only that adapter field, but attempt 003 failed before direct-entry
+  runner import and created no outcome. The preregistered R3 correction ran
+  attempt 004 once and passed the same singleton with the released bundled
+  compiler/linker. The accepted [R3 result](plan/lean-u2-official-execution-tl0.6.3-m0-r3-result-2026-07-22.md)
+  retains four process attempts, two incomplete attempts, and one failed plus
+  one passed official outcome for **one unique case**. Coverage remains
+  1/3,678; parent/provider completion, Axeyum, pairing, performance, axes,
+  gates, and parity credit remain zero. The
+  [complete-parity execution roadmap](plan/lean4-complete-parity-roadmap-2026-07-22.md)
+  gives the SMT-LIB-derived measurement rules and dependency-ordered R0-R10
+  path to the terminal G1-G10 switch.
 
 See the source-backed [kernel gap audit](prover-track/research/06-kernel-gap-analysis.md)
 and [proof reconstruction plan](plan/track-3-proof-lean/P3.7-lean-reconstruction.md),
 plus the [Lean-system compatibility roadmap](plan/lean-system-compatibility-roadmap-2026-07-21.md),
 the [implementation plan](plan/lean-system-implementation-plan-2026-07-21.md),
-and the [complete-parity contract](plan/lean4-complete-parity-contract-2026-07-22.md).
+the [complete-parity contract](plan/lean4-complete-parity-contract-2026-07-22.md),
+and its [execution roadmap](plan/lean4-complete-parity-roadmap-2026-07-22.md).
 The exact official-test selection checkpoint is the
 [U2 registration authority](plan/lean-u2-test-authority-2026-07-22.md), and its
 official execution-profile derivation is the

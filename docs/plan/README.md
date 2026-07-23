@@ -49,6 +49,12 @@ Start at the root [`PLAN.md`](../../PLAN.md) (map + standing rules) and
   agreement/disagreement/not-run classes and layer-specific equivalence, and
   keeps the current K0/K1 slices separate from the unsatisfied K2-K6 and full-
   system gates.
+- [`lean4-complete-parity-roadmap-2026-07-22.md`](lean4-complete-parity-roadmap-2026-07-22.md) —
+  dependency-ordered R0-R10 program for complete Lean 4.30 parity. It reconciles
+  the committed, diagnostic, official-selection, hard-slice, and focused-MBQI
+  SMT-LIB evidence layers; maps U0-U9/A0-A11 to concrete prerequisites and
+  exits; separates pinned from maintained parity; and defines the immediate
+  unique-case U2, K1, source/elaboration, workflow, runtime, and mathlib queue.
 - [`lean-complete-parity-v1.json`](lean-complete-parity-v1.json), generated
   [`Lean complete-parity status`](generated/lean-complete-parity.md), and
   [machine-readable report](generated/lean-complete-parity.json) — TL0.6's
@@ -163,8 +169,17 @@ Start at the root [`PLAN.md`](../../PLAN.md) (map + standing rules) and
   adapter forced `leanc` through system `cc`; the released toolchain compiler
   links the same C. The separately published
   [`R2 plan`](lean-u2-official-execution-tl0.6.3-m0-r2-plan-2026-07-22.md)
-  removes only that override. Current U2 execution is one failure, zero passes,
-  zero Axeyum/pairs/parity, and 1/3,678 parent cases observed.
+  removed only that override, but the [R2 result](lean-u2-official-execution-tl0.6.3-m0-r2-result-2026-07-22.md)
+  retained attempt 003's failure before direct-entry runner import and no new
+  official outcome. The preregistered R3 correction then ran attempt 004 once
+  and passed the same singleton with the released bundled compiler/linker. The
+  accepted [R3 result](lean-u2-official-execution-tl0.6.3-m0-r3-result-2026-07-22.md),
+  [authority](lean-u2-official-execution-tl0.6.3-m0-r3-v1.json), and generated
+  [summary](generated/lean-u2-official-execution-tl0.6.3-m0-r3.md) retain four
+  process attempts, two incomplete attempts, one failure and one pass for one
+  unique official case. Coverage remains 1/3,678 with zero provider,
+  Axeyum, pair, performance, axis, gate, or parity credit; next derive fresh
+  child shards rather than rerunning the singleton.
 - [`lean-compatibility-v1.json`](lean-compatibility-v1.json) and generated
   [`Lean compatibility matrix`](generated/lean-compatibility.md) — TL0.2's
   executable eight-field assurance contract, K0-K6 profile gates, registered

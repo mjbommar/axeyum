@@ -383,8 +383,8 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
-- **2026-07-22 — TL0.6.3 M0 has one retained local official outcome; R3 is
-  source-first preregistered after R2 stopped before import.** The [M0 plan](docs/plan/lean-u2-official-execution-tl0.6.3-m0-plan-2026-07-22.md)
+- **2026-07-22 — TL0.6.3 M0 retains one passed and one failed official outcome
+  for one unique local case; complete Lean parity remains uncredited.** The [M0 plan](docs/plan/lean-u2-official-execution-tl0.6.3-m0-plan-2026-07-22.md)
   selects only `compile/534.lean` from the exact release-tag Linux-release
   cell's 3,678-case `-E foreign` selection. It freezes official commit/tree,
   context/cell/attempt/selection/case identities, released Lean/leanc and full
@@ -417,10 +417,17 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   completion. A post-execution validator incorrectly rejected the two bounded
   positive claims (`official_lean_case_observed` and `local_shard_complete`), so
   the [result-projection amendment](docs/plan/lean-u2-official-execution-tl0.6.3-m0-r3-result-amendment-2026-07-22.md)
-  freezes the pass before a separate offline result adapter. Current coverage is
+  froze the pass before a separate offline result adapter. The accepted
+  [R3 result](docs/plan/lean-u2-official-execution-tl0.6.3-m0-r3-result-2026-07-22.md),
+  [authority](docs/plan/lean-u2-official-execution-tl0.6.3-m0-r3-v1.json), and
+  generated [summary](docs/plan/generated/lean-u2-official-execution-tl0.6.3-m0-r3.md)
+  now replay that result without any execution command. Current coverage is
   four process attempts, two decided official outcomes for one unique case, one
   pass, one failure, 1/3,678 parent cases observed, and zero provider, Axeyum,
-  pairs, performance, axes, gates, or parity credit.
+  pairs, performance, axes, gates, or parity credit. The
+  [complete-parity roadmap](docs/plan/lean4-complete-parity-roadmap-2026-07-22.md)
+  records the SMT-LIB-derived measurement rules, R0-R10 dependency order, next
+  ten actions, and exact G1-G10 claim switch.
 
 - **2026-07-22 — TL0.7.4 closes the real local execution controls without U2,
   Axeyum, pairing, performance, or parity credit.** The

@@ -32,6 +32,11 @@ Last updated: 2026-07-22
 > [complete Lean 4.30 parity contract](../../../docs/plan/lean4-complete-parity-contract-2026-07-22.md):
 > native A0-A11 behavior over complete content-identified U0-U9 populations,
 > exact paired outcomes, and no adapter substitution or incomplete-run credit.
+> The companion
+> [complete-parity execution roadmap](../../../docs/plan/lean4-complete-parity-roadmap-2026-07-22.md)
+> maps that terminal contract into dependency-ordered R0-R10 phases, reconciles
+> the committed/diagnostic/official-selection SMT-LIB evidence layers, and
+> preserves the distinction between pinned v4.30 parity and maintained parity.
 > Its
 > [completion audit](../../../docs/plan/lean-system-roadmap-completion-audit-2026-07-21.md)
 > verifies every named environment gap and the current Axeyum/Lean/mathlib

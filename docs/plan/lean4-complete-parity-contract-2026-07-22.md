@@ -21,6 +21,9 @@ and [ADR-0345](../research/09-decisions/adr-0345-preregister-lean-system-interop
 Executable task graph:
 [Lean 4.30 system implementation plan](lean-system-implementation-plan-2026-07-21.md).
 
+Dependency-ordered parity program:
+[complete Lean 4 parity execution roadmap](lean4-complete-parity-roadmap-2026-07-22.md).
+
 Executable terminal registry:
 [`lean-complete-parity-v1.json`](lean-complete-parity-v1.json), its generated
 [human-readable status](generated/lean-complete-parity.md), and the generated
@@ -111,9 +114,22 @@ is unsafe:
   actual overlap is six joint, two Axeyum-only, and two Z3-only decisions;
 - the 30-row command/API matrix has direct engines and helpers while still
   reporting zero complete interactive textual-session rows; and
-- the old 64,345-file run exposed soundness defects and operational weaknesses,
-  but receives zero measurement credit because its selection and E1-E3
-  execution evidence were incomplete.
+- the accepted official selection contains 45,905 files / 15,148,369,947 bytes
+  from a 450,472-file corpus, but still needs S5 harness admission before any
+  solver run can receive score credit; and
+- the old 64,345-file run stopped at 33,305 cases without a raw shard artifact
+  and contains 56 literal wrong markers. It remains useful bug-discovery input,
+  but receives zero correctness, coverage, or performance credit because its
+  selection and E1-E3 execution evidence were incomplete.
+
+Focused quantifier evidence has the same boundary. The accepted one-binder
+finite-profile MBQI gate retained 256 direct-Z3 cases, 130 jointly decided
+outcomes, 110 replayed Axeyum SAT models, and zero disagreement. A later
+multi-binder matrix retained 64/64 focused agreements, but caps the fragment at
+16 `Int`/`Real` binders and 4,096 Cartesian tuples. Neither focused result is a
+general-quantifier or Lean-reconstruction claim. The execution
+[roadmap](lean4-complete-parity-roadmap-2026-07-22.md#2-what-the-smt-lib-comparison-actually-says)
+records the exact evidence layers and immutable source revisions.
 
 The Lean program adopts the same rules:
 
@@ -244,13 +260,23 @@ flags, and configuration identities remain distinct. In particular, release
 check level 3 does not imply `LAKE_CI=ON`; that switch is controlled separately
 by the `lake-ci` pull-request label.
 
-Both authorities deliberately record zero official executions, zero completed
-official cases, zero Axeyum executions, and zero paired cells. Executable,
+Both registration authorities deliberately record zero official executions,
+zero completed official cases, zero Axeyum executions, and zero paired cells.
+Executable,
 environment, resource, attempt, completion, log, JUnit, and artifact evidence
 belongs to TL0.6.3 after TL0.7; native surface classification and matched
 Axeyum execution belong to TL0.6.4/TL0.6.5. U2 cannot become
 `complete_authority` until the complete declared profile matrix and matched
 native outcomes are retained case by case and reviewed under TL0.6.6.
+
+TL0.6.3 has since retained the first bounded local official-case history. The
+accepted [R3 result](lean-u2-official-execution-tl0.6.3-m0-r3-result-2026-07-22.md)
+contains four process attempts, two incomplete attempts, and two official
+outcomes for the same unique `compile/534.lean` case: one adapter-induced
+failure and one pass with the released bundled compiler/linker. Unique parent
+coverage remains 1/3,678. No provider profile is complete, and Axeyum outcomes,
+paired cells, performance rows, complete axes, terminal gates, and parity credit
+remain zero.
 
 The initial unqualified full profile requires the official Tier-1 test matrix
 for the pinned release and build/package cells for every official Tier-2
@@ -384,12 +410,19 @@ TL0.6.3 M0 is now governed by a
 It selects `compile/534.lean` as a singleton child shard of the exact
 release-tag Linux-release 3,678-case selection and registers a separate local
 8 GiB/one-worker CTest lane. The [R1 result](lean-u2-official-execution-tl0.6.3-m0-r1-result-2026-07-22.md)
-now retains two process attempts and one decided local official failure: the
+retained two process attempts and one decided local official failure: the
 adapter forced `leanc` through system `cc`, while the released toolchain
-compiler links the retained generated C successfully. Current coverage is one
-failure outcome, zero passes, and 1/3,678 parent cases observed. The
+compiler links the retained generated C successfully. The
 [R2 plan](lean-u2-official-execution-tl0.6.3-m0-r2-plan-2026-07-22.md)
-removes only that override. Neither one outcome nor a future singleton pass can
+removed only that override, but attempt 003 failed before importing the runner
+because direct-file Python execution exposed the script directory instead of
+the repository root. The preregistered R3 correction then executed attempt 004
+once and passed the exact singleton with the released bundled compiler/linker.
+The accepted [R3 authority](lean-u2-official-execution-tl0.6.3-m0-r3-v1.json),
+[result](lean-u2-official-execution-tl0.6.3-m0-r3-result-2026-07-22.md), and
+generated [summary](generated/lean-u2-official-execution-tl0.6.3-m0-r3.md)
+retain four process attempts, two incomplete attempts, one failed and one
+passed official outcome, but only one unique observed case. That does not
 complete the parent official profile, claim its provider, create an Axeyum
 outcome or pair, publish performance evidence, or advance any complete
 population, axis, or terminal gate.
@@ -464,31 +497,25 @@ matrix” or “K3 parity for the selected certificate-tactic corpus.”
 
 ## 10. Execution waves
 
-The existing TL task graph remains authoritative. The complete-parity view
-groups it into reviewable waves:
+The existing TL task graph remains authoritative. The companion
+[execution roadmap](lean4-complete-parity-roadmap-2026-07-22.md#4-dependency-ordered-implementation-program)
+maps it into R0-R10 phases with prerequisites, required deliverables, exits,
+and explicit non-credit boundaries. At contract level, the waves are:
 
-1. **P0 — contract and remote gate:** close TL0.3/TL0.5-TL0.8, fix the remote
-   Lean executable identity, extend the seeded U0-U9/A0-A11 registry into
-   complete population authorities, and make all status derive from evidence.
-2. **P1 — robust K0/K1:** close TL1 property/durability/API work,
-   TL2.8-TL2.10, and generated TL2.15/TL2.16 breadth before broad libraries.
-3. **P2 — trust and library base:** classify/discharge the 65 assumptions,
-   import dependency-closed `Init`/`Std` roots, and connect CAS/rewrite
-   certificates to imported theorem bases.
-4. **P3 — native proof assistant:** land the single goal/metavariable engine,
-   primitive tactics, certificate tactics, and tamper-tested proof terms.
-5. **P4 — native Lean source:** implement syntax/macros and elaboration in
-   dependency order, including declarations, equations, recursion, termination,
-   and information trees.
-6. **P5 — projects and editor:** implement module/cache/Lake semantics and LSP
-   snapshots/transcripts; reproduce clean, incremental, offline, edit, and
-   cancellation matrices.
-7. **P6 — runtime and bootstrap:** implement interpreter/compiler/runtime/
-   metaprogram behavior, reproduce compiled results, and bootstrap selected
-   Lean components.
-8. **P7 — ecosystem and release:** build/test the full pinned mathlib tree,
-   package supported platforms, then maintain current/current-minus-one
-   profiles.
+1. **Measurement and official execution:** keep R0 evidence identities current,
+   finish the complete official U2 profile under R1, and classify every case by
+   its native dependency without retrying one singleton for coverage.
+2. **Kernel/import closure:** finish K1 String/quotient and dependency-closed
+   core/library roots under R2 before promoting broader trust claims.
+3. **Native source and proof assistant:** build R3 parser/macros, R4 elaboration,
+   and R5 tactics in semantic dependency order; every accepted output must end
+   in the independent checker.
+4. **Projects and editor:** close R6 modules/artifacts/Lake before R7
+   incremental server/editor transcripts and stale-state campaigns.
+5. **Runtime and bootstrap:** close R8 evaluator/compiler/runtime behavior and
+   native bootstrap across the declared backends/platforms.
+6. **Ecosystem and release:** close R9 `Init`/`Std`/mathlib and R10
+   adversarial/platform/package/migration evidence, then derive G1-G10.
 
 P1-P3 may advance while the source substrate begins, but no later wave receives
 credit for an unmet dependency. Large campaigns follow the repository rule:
@@ -499,27 +526,29 @@ run.
 
 Before another broad implementation claim:
 
-1. repair the remote Lean job so `AXEYUM_LEAN_BIN` resolves to the installed
+1. retain the R3 singleton as closed and derive fresh deterministic U2 child
+   shards from the registered parent/profile authorities;
+2. repair the remote Lean job so `AXEYUM_LEAN_BIN` resolves to the installed
    versioned executable from any working directory, then archive the first true
    71/71 remote attestation, duration, RSS, and axiom summary;
-2. extend TL0.6's generated registry seed from bounded K0/K1 and selected-
+3. execute and classify new U2 shards with unique-case accounting, then form the
+   first native official/Axeyum semantic pair;
+4. extend TL0.6's generated registry seed from bounded K0/K1 and selected-
    construct evidence to content-identified complete construct, source, tactic,
    project, editor, runtime, ecosystem, and platform authorities;
-3. freeze the exact Lean v4.30.0 test authority from CMake/test-pile semantics,
-   not the 6,931-file tree count;
-4. freeze separate official populations for elaboration success, elaboration
+5. freeze separate official populations for elaboration success, elaboration
    failure, compile+interpret, Lake, package, server, and benchmark suites;
-5. record normalized per-layer equivalence rules and mutation tests before
+6. record normalized per-layer equivalence rules and mutation tests before
    running those populations;
-6. add content/dependency/source-family identities and exact paired overlap to
+7. add content/dependency/source-family identities and exact paired overlap to
    every Lean scoreboard;
-7. retain adapter, official-oracle, and native outcomes as separate columns;
-8. complete the String and quotient K1 roots and regenerate the dependency-
+8. retain adapter, official-oracle, and native outcomes as separate columns;
+9. complete the String and quotient K1 roots and regenerate the dependency-
    closed blocker ranking;
-9. classify all 65 prelude assumptions before reporting broader proof parity;
-10. turn the pinned mathlib tree inventory into module/declaration/dependency/
+10. classify all 65 prelude assumptions before reporting broader proof parity;
+11. turn the pinned mathlib tree inventory into module/declaration/dependency/
     tactic/test manifests before assigning any coverage percentage; and
-11. keep the landed documentation claim guard enforced and expand its live
+12. keep the landed documentation claim guard enforced and expand its live
     claim-surface list when a new public status surface is introduced.
 
 ## 12. Primary sources
@@ -534,10 +563,14 @@ Before another broad implementation claim:
 - [Lean v4.30.0 test-suite contract](https://github.com/leanprover/lean4/blob/v4.30.0/tests/README.md)
 - [Lean v4.30.0 source tree](https://github.com/leanprover/lean4/tree/v4.30.0)
 - [Lean v4.30.0 release assets](https://github.com/leanprover/lean4/releases/tag/v4.30.0)
+- [Lean v4.30.0 release notes](https://lean-lang.org/doc/reference/latest/releases/v4.30.0/)
+- [Current Lean release index](https://lean-lang.org/doc/reference/latest/releases/)
 - [mathlib v4.30.0 source/build instructions](https://github.com/leanprover-community/mathlib4/tree/v4.30.0)
 - [`lean4export` v4.30.0](https://github.com/leanprover/lean4export/tree/v4.30.0)
 - [SMT-LIB 2.7](https://smt-lib.org/papers/smt-lib-reference-v2.7-r2025-07-07.pdf)
 - [SMT-COMP 2024 rules](https://smt-comp.github.io/2024/rules.pdf)
+- [SMT-COMP 2025 rules](https://smt-comp.github.io/2025/rules.pdf)
+- [SMT-COMP 2025 results](https://smt-comp.github.io/2025/results/)
 
 ## 13. Non-claims
 
