@@ -329,8 +329,13 @@ gate.
    written before its launch manifest. The
    [post-run closure plan](../smtcomp-repaired-p0-v2-bitwuzla-post-run-closure-plan-2026-07-23.md)
    freezes that state and forbids another solver retry. Bitwuzla remains
-   uncredited until its explicit process-free closure is implemented,
-   integrated, executed, and independently validated.
+   uncredited. Commit `0eff5d64` now implements the explicit process-free
+   closure without changing `resume_fs.py`: it binds the failed outer and
+   successful inner evidence, quarantines only the exact diagnostic terminal,
+   emits a closure-bound v2 multi-host completion, and never calls the
+   allocation launcher. Thirty-one focused tests and the 75-test
+   portable/cgroup/live gates pass; live E3 has no skips. The real NAS run is
+   unchanged until the plan and implementation are integrated on `origin/main`.
 3. **Credited full population.** Only then execute Axeyum, cvc5, and Bitwuzla on
    the same versioned selection; publish the per-logic inventory and regenerate
    the coverage-weighted parity matrix without combining incompatible regimes.
