@@ -117,8 +117,12 @@ control evidence, not selected execution under R4. The preregistered
 [`R5 plan`](lean-u2-official-execution-tl0.6.3-m2-r5-attempt-003-plan-2026-07-23.md)
 selects one 32 GiB resource-only doubling and makes both control success and
 failure completion-grade evidence. It reuses selected attempt 003 only because
-R4 created no selected root/process; no R5 control or implementation exists at
-preregistration.
+R4 created no selected root/process. The subsequent
+[`R5 incomplete result`](lean-u2-official-execution-tl0.6.3-m2-r5-attempt-003-incomplete-result-2026-07-23.md)
+records a passed control and clean 64/64 selected JUnit, but fail-closed post
+capture rejected the absent all-pass `LastTestsFailed.log`. Attempt 003 is
+consumed with zero credit; first freeze/append its zero-process diagnostic
+closure, then preregister attempt 004 with conditional-log semantics.
 
 ## 2. What the SMT-LIB comparison actually says
 

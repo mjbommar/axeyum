@@ -698,7 +698,15 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   completion-grade success/failure control evidence, explicit authorization
   digest, five focused tests, and CI/generator integration. No R5 control or
   selected root exists. Next push this documentation checkpoint, then run one
-  stack probe and one control from its clean remote-equal revision.
+  stack probe and one control from its clean remote-equal revision. The control
+  passed and authorized selected attempt 003. The
+  [incomplete R5 result](docs/plan/lean-u2-official-execution-tl0.6.3-m2-r5-attempt-003-incomplete-result-2026-07-23.md)
+  records one clean 78,449 ms selected exit and exact 64/64 diagnostic passes,
+  followed by a fail-closed post stop because all-pass CTest omitted
+  `LastTestsFailed.log`: 123 actual versus 124 preregistered paths. Attempt 003
+  is consumed; the frozen 83-file root has no post/projection/completion and
+  grants zero credit. Next commit/push this raw evidence, then implement only
+  the preregistered zero-process diagnostic closure.
 
 - **2026-07-22 — TL0.6.3 M1 derives complete deterministic U2 child-shard
   scheduling with zero new outcomes or parity credit.** The source-first
@@ -8010,6 +8018,12 @@ plan is built and committed on the current branch:
 | P5.5 | External target, measured | **DONE (bounded v1, ADR-0323--0338):** authenticated Tock capture plus eight rechecked dual-DRAT proofs and six replayed controls, UNKNOWN=0, DISAGREE=0. Query time 12.700 s; fresh outer wall 50.745 s; peak RSS 1,256,496 KiB; zero OOM deltas. The committed case study compares exact target validation, universal coverage, trust, effort, artifact boundaries, and limits. No Tock bug was found, so no upstream issue is applicable. This is not a speed or whole-kernel claim. |
 
 ## Changelog
+
+- **2026-07-23 — Consumed R5 attempt 003 with 64 diagnostic passes but zero
+  credit.** The 32 GiB control passed. Selected CTest then exited 0 with clean
+  teardown and 64/64 JUnit passes, but post closure stopped because all-pass
+  CTest omitted failure-only `LastTestsFailed.log`. The 83-file pre-post root is
+  frozen; attempt 003 cannot retry or receive retroactive outcomes.
 
 - **2026-07-23 — Implemented and pushed R5 without running its control.** Commit
   `1d1c8ab8` adds the 32 GiB adapter and completion-last external control store,

@@ -609,7 +609,13 @@ state.
 > now records clean pushed `1d1c8ab8`, the 32 GiB adapter,
 > completion-grade success/failure control evidence, explicit authorization,
 > and zero implicit execution. Next push the checkpoint and run one stack probe
-> plus one control from its remote-equal revision;
+> plus one control from its remote-equal revision. The control passed, then the
+> [R5 incomplete result](docs/plan/lean-u2-official-execution-tl0.6.3-m2-r5-attempt-003-incomplete-result-2026-07-23.md)
+> consumed attempt 003 with a clean 78,449 ms exit and 64/64 diagnostic passes.
+> Post closure stopped because all-pass CTest omitted failure-only
+> `LastTestsFailed.log` (123 actual versus 124 frozen paths). Credit remains
+> zero. Next commit the 83-file raw root and implement only the source-first
+> zero-process diagnostic closure;
 > then form native pairs. Do not rerun
 > the singleton for population credit. The
 > [complete-parity execution roadmap](docs/plan/lean4-complete-parity-roadmap-2026-07-22.md)
