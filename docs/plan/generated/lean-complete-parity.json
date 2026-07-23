@@ -4,7 +4,7 @@
   "source_identities": [
     {
       "path": ".github/workflows/ci.yml",
-      "sha256": "190c846d6cb72a5d40f4fc5a341a56e01af2105b60c298735e712b2b3ade4e9d"
+      "sha256": "ee5931eee7ae7c43f1234663ff47b8c6bff4ad81a0fe23887c2505c7af945dc1"
     },
     {
       "path": "docs/plan/generated/lean-execution-evidence.md",
@@ -68,7 +68,7 @@
     },
     {
       "path": "docs/plan/lean-system-implementation-plan-2026-07-21.md",
-      "sha256": "94a32fc9b2fd3aa18747e7af747deb35c90a7563198aaa0a7a5370b4e0d4d9d1"
+      "sha256": "2f4f63f1d51d2e3c726d5e305999f715642ea07b1445f56bdefa291b96da8d25"
     },
     {
       "path": "docs/plan/lean-u2-official-child-shards-v1.json",
@@ -276,7 +276,7 @@
     },
     {
       "path": "scripts/lean_execution_acceptance.py",
-      "sha256": "9c64e981de30ba286da9daf8c4bd2d2d8cca485353a4011935c44e5aa747c8e4"
+      "sha256": "c86cf48698c830d037959e46adc8283c6e55a56e9d2f46b3f253b975a5c34b60"
     },
     {
       "path": "scripts/lean_execution_process.py",
@@ -284,15 +284,15 @@
     },
     {
       "path": "scripts/lean_execution_store.py",
-      "sha256": "31798c7a37018f58b4dda99fcc9478c550d37844a93acad48c1e86016c0d2513"
+      "sha256": "1ee32b411970331cd8afcc85495f91c69400cc5fb98e1af6608f551117dbc6f8"
     },
     {
       "path": "scripts/lean_u2_official_execution.py",
-      "sha256": "eb3ea924c23e137bf6e273d0d8bc2fc7c7dfd2ba4163b49d33731a89a16af0db"
+      "sha256": "2fe3ecf1c57db598060a82061ba4fa45fa3ca84b89ef673d8aba8636b4d4ed50"
     },
     {
       "path": "scripts/lean_u2_official_execution_m2.py",
-      "sha256": "bc2d99c2db924106591eeba63241baca623a294c7cd7655e3a89f77e752655c1"
+      "sha256": "7b5bcd52a9ed12a323f84561f2a0d3e1fbce898178371e148d2bab5a020a8127"
     },
     {
       "path": "scripts/lean_u2_official_execution_m2_r2.py",
@@ -356,7 +356,7 @@
     },
     {
       "path": "scripts/tests/test_lean_execution_store.py",
-      "sha256": "6b6b17354039e7533618df5819c8ae8e9e3986b124f751f84196dd2146e9b00b"
+      "sha256": "c37454502f1446562bb77b15187bd32d2976952ac79c8b87285d4b27482749ea"
     },
     {
       "path": "scripts/tests/test_lean_u2_official_child_shards.py",
@@ -368,11 +368,11 @@
     },
     {
       "path": "scripts/tests/test_lean_u2_official_execution.py",
-      "sha256": "0b5346109aba8b5222056577ef72ce9d375ebb63bb2883a3e91e588bcb4b2119"
+      "sha256": "68d39bf890e37b7efd927bee454d423d366eca48423e88124f8aeb79a2bc0960"
     },
     {
       "path": "scripts/tests/test_lean_u2_official_execution_m2.py",
-      "sha256": "3a33a6e3fd7e1cd42bf25127442b59f57c495226fed3edc19768c4cd2704f710"
+      "sha256": "00c0cec55a876ed24332836d662b1558ef3611818ae44baac5497d99ff17b81b"
     },
     {
       "path": "scripts/tests/test_lean_u2_official_execution_m2_r2.py",
