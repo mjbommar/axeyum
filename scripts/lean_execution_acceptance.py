@@ -153,6 +153,26 @@ FROZEN_REPOSITORY_INPUTS = {
     "docs/plan/lean-execution-acceptance-tl0.7.4-attempt-001-2026-07-22.md": "27b948b21bc9b2b14e185d2534e2bb96c13648750871c7f4e682b2eece479ec1",
 }
 
+CURRENT_REPOSITORY_INPUTS = {
+    **FROZEN_REPOSITORY_INPUTS,
+    "scripts/install-pinned-lean.sh": "8a48e25ee2d2fb6d364dcbe0505b8a2fd660237e18e536d52117dc947d4c71ee",
+}
+
+HISTORICAL_RESULT_GENERATOR_INPUTS = (
+    {
+        "path": "scripts/lean_execution_acceptance.py",
+        "sha256": "7fb314d552e811de1e3a799d104d9cdace45e3f81f220d6a25bb56008efa9d7d",
+    },
+    {
+        "path": "scripts/tests/test_lean_execution_acceptance.py",
+        "sha256": "985c6bba645d24c5b13d7071da64d3d63316222c8889b4f6f48c8d1dcb70e7e4",
+    },
+    {
+        "path": "docs/plan/lean-execution-acceptance-tl0.7.4-plan-2026-07-22.md",
+        "sha256": "107a91baf7a601b965af490c4c4d5095930eac9f8480c65f72026ce2ad92ad28",
+    },
+)
+
 LANES = {
     COMPILE_CONTROL: {
         "lane_id": "standard-local-4g",
@@ -345,13 +365,20 @@ def _install_bytes(root: Path, relative: str, value: bytes) -> str:
 
 def validate_repository_inputs() -> list[str]:
     failures = []
-    for relative, expected in FROZEN_REPOSITORY_INPUTS.items():
+    for relative, expected in CURRENT_REPOSITORY_INPUTS.items():
         path = ROOT / relative
         if not path.is_file() or sha256_file(path) != expected:
             failures.append(f"frozen repository input drift: {relative}")
     if sha256_file(PREREGISTRATION_PLAN) == "":  # pragma: no cover - documents intent.
         failures.append("preregistration plan is empty")
     return failures
+
+
+def historical_result_source_inputs() -> list[dict[str, str]]:
+    return [
+        {"path": path, "sha256": expected}
+        for path, expected in sorted(FROZEN_REPOSITORY_INPUTS.items())
+    ] + [dict(row) for row in HISTORICAL_RESULT_GENERATOR_INPUTS]
 
 
 def _run_text(command: list[str], *, cwd: Path) -> str:
@@ -1758,14 +1785,7 @@ def build_result_authority(
             "preregistration_commit": PREREGISTRATION_COMMIT,
             "r1_preregistration_commit": R1_PREREGISTRATION_COMMIT,
             "implementation_revision": implementation_revision,
-            "source_inputs": [
-                {"path": path, "sha256": sha256_file(ROOT / path)}
-                for path in sorted(FROZEN_REPOSITORY_INPUTS)
-            ] + [
-                {"path": "scripts/lean_execution_acceptance.py", "sha256": sha256_file(Path(__file__).resolve())},
-                {"path": "scripts/tests/test_lean_execution_acceptance.py", "sha256": sha256_file(ROOT / "scripts/tests/test_lean_execution_acceptance.py")},
-                {"path": PREREGISTRATION_PLAN.relative_to(ROOT).as_posix(), "sha256": sha256_file(PREREGISTRATION_PLAN)},
-            ],
+            "source_inputs": historical_result_source_inputs(),
             "build": {
                 "record_sha256": build["record_sha256"],
                 "exporter_sha256": build["executable"]["sha256"],
@@ -1839,6 +1859,8 @@ def validate_result_authority(authority: Any) -> list[str]:
         failures.append("result preregistration identity drift")
     if authority.get("credits") != ZERO_CREDITS:
         failures.append("acceptance result cannot receive parity credit")
+    if authority.get("source_inputs") != historical_result_source_inputs():
+        failures.append("result historical source-input identity drift")
     summary = authority.get("summary", {})
     for field in (
         "u2_cases", "case_records", "official_outcomes", "axeyum_outcomes",
