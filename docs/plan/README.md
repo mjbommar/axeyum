@@ -404,6 +404,14 @@ Start at the root [`PLAN.md`](../../PLAN.md) (map + standing rules) and
   24 provisional FFI cases; accepted M2.3/M2.4 transfers must determine the
   actual route denominator. It creates no M2.5 authority, process, artifact,
   runtime/FFI observation, outcome, pair, performance row, or parity credit.
+- [`TL0.6.4 M2.6 editor/server/RPC plan`](lean-u2-native-dependency-tl0.6.4-m2.6-editor-rpc-plan-2026-07-23.md)
+  — preserves accepted M1 while rejecting four Lake cases promoted only by
+  eleven generic JSON `version` fields, reducing the qualified source floor
+  from 147 to 143. It separates 137 actual server harness routes from six
+  API-only cases and preregisters raw transport, lifecycle, document/version,
+  snapshot, cancellation, watchdog/worker, RPC/session/widget, restart, and
+  `idbg` ownership. It creates no M2.6 authority, process, transcript,
+  observation, outcome, pair, performance row, or parity credit.
 - [`Lean complete-parity worktree-portability R1 result`](lean-complete-parity-worktree-portability-r1-result-2026-07-23.md)
   — records the bounded validator repair at `c3f068ea`, `09e1dcd2`,
   `2267f41b`, and `98d85098`: retained repository-owned process/store paths

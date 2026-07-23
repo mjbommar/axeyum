@@ -646,6 +646,21 @@ native compile/link/load, ABI/symbol/initialization, runtime effects, and
 platform variants. No M2.5 authority, process, artifact, observation, outcome,
 pair, performance row, or terminal credit exists.
 
+The source-first
+[M2.6 editor/server/RPC plan](lean-u2-native-dependency-tl0.6.4-m2.6-editor-rpc-plan-2026-07-23.md)
+now freezes the next semantics-only boundary and corrects a provisional M1
+projection without rewriting accepted history. Eleven generic Lake manifest
+and configuration `version` fields had promoted four non-server cases into the
+147-case editor/RPC surface; M2.6 explicitly rejects those four rows, yielding
+a 143-case source floor. It distinguishes 137 registered server-process
+harnesses from six server/RPC API-only source cases, then separates raw
+transport, lifecycle/capabilities, documents/versions/edits, snapshots,
+diagnostics/publication, cancellation, watchdog/worker processes, restart, RPC
+sessions/references/widgets, normalization, and experimental `idbg` ownership.
+No M2.6 authority, process formula, transcript, observation, outcome, pair,
+performance row, or terminal credit exists; accepted M2.1-M2.5 transfers and a
+separate M2.6.1 authority must determine the executable denominator.
+
 ## 8. Layer-specific equivalence
 
 One byte-comparison rule cannot cover the entire system:
