@@ -292,9 +292,13 @@ and `invalid-run` rows visible. Exact per-population count/ID/cell-seal
 authorities mean one all-agree subset cannot satisfy G3. R1 recomputes every
 record/cell/population seal; R2 adds typed complete-side result classes and
 separate official/Axeyum normalized-observable identities, then derives all
-eight outcomes. Completion alone can no longer claim agreement. This is
-schema/validator progress
-only: no comparison authority, Axeyum process, native outcome, pair,
+eight outcomes. Completion alone can no longer claim agreement. The accepted
+[R3 normalization result](lean-u2-matched-execution-tl0.6.5-normalization-r3-result-2026-07-23.md)
+adds nine sealed layer contracts, 68 selected semantic fields, 18 explicit ignored-field
+rules, and exact-field canonical projection; paired cells must cite a current
+registered same-layer contract. Raw extractors and semantic canonicalizers
+remain zero. This is schema/validator/projection progress only: no comparison
+obligation authority, Axeyum process, native outcome, pair,
 performance row, or credit exists before complete accepted TL0.6.3 and
 TL0.6.4 parents.
 

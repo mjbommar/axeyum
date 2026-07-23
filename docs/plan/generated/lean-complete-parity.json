@@ -88,11 +88,15 @@
     },
     {
       "path": "docs/plan/lean-system-implementation-plan-2026-07-21.md",
-      "sha256": "de78daa07d33b92fe4581b1e4004ab77e2463b3d1a06b88439a775d0dc1938f1"
+      "sha256": "ea6ab1e192ccec458e6e2afcee1918d6d8ff1b2e8b6ec5a19ddd5db4fac79c4d"
     },
     {
       "path": "docs/plan/lean-u2-matched-execution-tl0.6.5-content-seals-r1-result-2026-07-23.md",
       "sha256": "4e51df229d2425f8e4ed1846d75d4428e7e461cb0788f75d57ea779676757f18"
+    },
+    {
+      "path": "docs/plan/lean-u2-matched-execution-tl0.6.5-normalization-r3-result-2026-07-23.md",
+      "sha256": "532fa886c8825e84be12cf856efa39ef3824c6be2f1c5d9e9e9b07fa49ff128b"
     },
     {
       "path": "docs/plan/lean-u2-matched-execution-tl0.6.5-outcome-derivation-r2-plan-2026-07-23.md",
@@ -104,7 +108,7 @@
     },
     {
       "path": "docs/plan/lean-u2-matched-execution-tl0.6.5-plan-2026-07-23.md",
-      "sha256": "742dad1b159629018a6bfec91ac38442af9fbcb9e975ed416172f9505432a54f"
+      "sha256": "83650ce479163e25e64bb3fb164f67167ee7e8f806ded6426e6119d032f55d25"
     },
     {
       "path": "docs/plan/lean-u2-native-dependency-tl0.6.4-m2.1-plan-2026-07-23.md",
@@ -364,15 +368,15 @@
     },
     {
       "path": "docs/plan/lean4-complete-parity-contract-2026-07-22.md",
-      "sha256": "262bed58ef31f1e699960a7b0c786ccbd304040f78d65486ab63aafbf10b24b1"
+      "sha256": "56e17950d31ff9058430e2ab8aa86e30274e8b235dd2e1936e66b95091015a8b"
     },
     {
       "path": "docs/plan/lean4-complete-parity-roadmap-2026-07-22.md",
-      "sha256": "d1fed3fd4a915cbfaaf87fb0790752784c06a27a99a7f78e498768801de4045d"
+      "sha256": "e378293860f99d5e5ede8fddb0072795c14d25594b3f5bb7bf2f49ae4e1d5170"
     },
     {
       "path": "scripts/gen-lean-complete-parity.py",
-      "sha256": "68a1965cfee067d081f4ca680339708913131f3de5838d8af13bbbcb57dd11ec"
+      "sha256": "135b81b29594ee43bfa0df323b46593d274bc9ba8558bb211de78aedc3de3f65"
     },
     {
       "path": "scripts/gen-lean-execution-evidence.py",
@@ -480,7 +484,7 @@
     },
     {
       "path": "scripts/tests/test_lean_complete_parity.py",
-      "sha256": "bbf0b9709da530529523ad00b06963f92e69386d1bb013f9a4a2575d2d784fe4"
+      "sha256": "cbfcebdffeb91029f3a043e99a1de294e165615b93bc8035318ded1e7875a1fd"
     },
     {
       "path": "scripts/tests/test_lean_execution_acceptance.py",

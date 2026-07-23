@@ -972,9 +972,11 @@ Out of scope:
     empty pre-observation registry under ADR-0344's accepted per-result identity
     and ADR-0343's occurrence/content/population separation; it does not create
     a competing evidence policy. See the
-    [TL0.6.5 plan](../../plan/lean-u2-matched-execution-tl0.6.5-plan-2026-07-23.md)
+    [TL0.6.5 plan](../../plan/lean-u2-matched-execution-tl0.6.5-plan-2026-07-23.md),
     [R1 seal result](../../plan/lean-u2-matched-execution-tl0.6.5-content-seals-r1-result-2026-07-23.md),
-    and [R2 outcome result](../../plan/lean-u2-matched-execution-tl0.6.5-outcome-derivation-r2-result-2026-07-23.md).
+    [R2 outcome result](../../plan/lean-u2-matched-execution-tl0.6.5-outcome-derivation-r2-result-2026-07-23.md),
+    [R3 normalization plan](../../plan/lean-u2-matched-execution-tl0.6.5-normalization-r3-plan-2026-07-23.md),
+    and [R3 result](../../plan/lean-u2-matched-execution-tl0.6.5-normalization-r3-result-2026-07-23.md).
 - [x] When two theories exist, is Nelson-Oppen combination implemented
       directly or via a CDCL(T) core from the start?
   - Answer: expose each live combined theory through the shared `TheorySolver`

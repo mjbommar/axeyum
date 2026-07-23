@@ -47,6 +47,12 @@ U2_NORMALIZATION_CONTRACTS = (
     ROOT / "docs" / "plan" / "lean-u2-normalization-contracts-v1.json"
 )
 U2_NORMALIZATION_SCRIPT = ROOT / "scripts" / "lean_u2_normalization_contracts.py"
+U2_NORMALIZATION_RESULT = (
+    ROOT
+    / "docs"
+    / "plan"
+    / "lean-u2-matched-execution-tl0.6.5-normalization-r3-result-2026-07-23.md"
+)
 EXECUTION_EVIDENCE = ROOT / "docs" / "plan" / "lean-execution-evidence-v1.json"
 EXECUTION_PROCESS = ROOT / "docs" / "plan" / "lean-execution-process-v1.json"
 EXECUTION_STORE = ROOT / "docs" / "plan" / "lean-execution-store-v1.json"
@@ -1467,6 +1473,7 @@ def report_source_paths(data: dict[str, Any]) -> list[Path]:
         U2_NATIVE_HEADER_CONTRACT,
         U2_NORMALIZATION_CONTRACTS,
         U2_NORMALIZATION_SCRIPT,
+        U2_NORMALIZATION_RESULT,
         EXECUTION_EVIDENCE,
         EXECUTION_PROCESS,
         EXECUTION_STORE,

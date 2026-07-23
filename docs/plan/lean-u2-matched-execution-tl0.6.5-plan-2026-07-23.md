@@ -246,7 +246,10 @@ preregisters the remaining offline M1 boundary: nine content-bound layer
 contracts, exact allowlisted canonical projection, and semantic/ignored-field
 mutation controls. It does not claim the future raw-to-selected-field adapters
 or semantic canonicalizers are implemented, and it does not consume either
-missing execution/classification parent.
+missing execution/classification parent. The accepted bounded
+[R3 result](lean-u2-matched-execution-tl0.6.5-normalization-r3-result-2026-07-23.md)
+implements that registry/projection boundary while retaining zero extractors,
+semantic canonicalizers, outcomes, pairs, and parity credit.
 
 An Axeyum timeout, resource exhaustion, or supported decline is a completed
 typed Axeyum execution and can therefore produce `official-only`. Total absence

@@ -59,8 +59,11 @@ Last updated: 2026-07-23
 > correctness: each complete side projects a typed result class, comparisons
 > bind distinct official/Axeyum normalized-observable identities, and the
 > validator derives all eight outcomes. Fully resealed result/normalization
-> mutations cannot preserve stale agreement. Layer normalizers and real pairs
-> remain future post-parent work.
+> mutations cannot preserve stale agreement. R3 now registers nine sealed
+> layer contracts with 68 semantic fields and 18 explicit ignored-field rules;
+> exact-field canonical projection and paired-cell contract resolution are
+> executable. Raw extractors, semantic canonicalizers, and real pairs remain
+> future post-parent work.
 > M2.1's 4,092-source/32-batch/14-control/39-process input authority, runner,
 > and full-parser comparator are now pushed and CI-gated; the runner also has
 > preregistered live file-backed stream ceilings and sealed launch failures.

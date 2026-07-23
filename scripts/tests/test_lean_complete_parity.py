@@ -945,6 +945,10 @@ class LeanCompleteParityTests(unittest.TestCase):
         )
         self.assertIn("scripts/lean_u2_normalization_contracts.py", source_paths)
         self.assertIn(
+            "docs/plan/lean-u2-matched-execution-tl0.6.5-normalization-r3-result-2026-07-23.md",
+            source_paths,
+        )
+        self.assertIn(
             "docs/plan/lean-u2-native-header-contract-m2.1-v1.json",
             source_paths,
         )

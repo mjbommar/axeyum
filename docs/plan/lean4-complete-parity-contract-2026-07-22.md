@@ -372,6 +372,19 @@ The accepted
 implements this derivation with positive coverage for all eight outcomes and
 fully resealed semantic mutation controls.
 
+The source-first
+[R3 normalization plan](lean-u2-matched-execution-tl0.6.5-normalization-r3-plan-2026-07-23.md),
+[accepted bounded result](lean-u2-matched-execution-tl0.6.5-normalization-r3-result-2026-07-23.md),
+[machine authority](lean-u2-normalization-contracts-v1.json), and generated
+[summary](generated/lean-u2-normalization-contracts.md) now resolve the
+comparison's normalizer through nine content-bound layer contracts. Their 68
+semantic fields and 18 narrowly justified ignored-field rules feed an
+integer-only canonical-JSON projection kernel. Missing or unknown fields,
+floating-point values, invented normalizer IDs, cross-layer reuse, and stale
+normalizer seals reject. Exhaustive controls mutate every semantic and ignored
+field. This is contract/projection evidence only: raw Lean/Axeyum extractors,
+semantic canonicalizers, post-parent obligations, and real pairs remain absent.
+
 ### 7.1 TL0.7.1 execution-evidence checkpoint
 
 The [TL0.7.1 result](lean-execution-evidence-tl0.7.1-2026-07-22.md),

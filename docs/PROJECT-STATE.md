@@ -396,7 +396,11 @@ Again, there are distinct targets:
   comparison, the whole cell, and the sorted population cell-seal list. R2 now
   requires a typed result class on each complete side, retains separate
   official/Axeyum normalized-observable identities, and derives all eight
-  outcomes instead of trusting a sealed label. Separate case, 408,374 candidate
+  outcomes instead of trusting a sealed label. R3 registers nine content-bound
+  layer contracts with 68 semantic fields and 18 explicit ignored-field rules;
+  its exact-field projection kernel rejects unknown fields, floats, invented
+  IDs, cross-layer reuse, and stale contract seals. Raw extractors and semantic
+  canonicalizers remain unimplemented. Separate case, 408,374 candidate
   execution-slot, and future layer-expanded comparison-obligation denominators
   prevent accidental count collapse. Per-population expected-count/sorted-ID/
   sorted-cell-seal authorities and typed `not-run`/`invalid` sides prevent a

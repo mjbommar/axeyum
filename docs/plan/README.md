@@ -453,6 +453,16 @@ Start at the root [`PLAN.md`](../../PLAN.md) (map + standing rules) and
   identities so the taxonomy is derived instead of merely sealed; its
   [source-first plan](lean-u2-matched-execution-tl0.6.5-outcome-derivation-r2-plan-2026-07-23.md)
   freezes the exact mapping and controls. It
+  now also carries the source-first
+  [R3 normalization plan](lean-u2-matched-execution-tl0.6.5-normalization-r3-plan-2026-07-23.md),
+  [accepted bounded result](lean-u2-matched-execution-tl0.6.5-normalization-r3-result-2026-07-23.md),
+  [machine authority](lean-u2-normalization-contracts-v1.json), and generated
+  [summary](generated/lean-u2-normalization-contracts.md): nine sealed layer
+  contracts select 68 semantic fields and justify 18 ignored-field rules. The
+  executable exact-field projection kernel and paired-cell validator reject
+  missing/unknown fields, floating-point values, invented IDs, cross-layer
+  reuse, and stale normalizer seals. Raw extractors and semantic canonicalizers
+  remain zero. It
   authorizes no process and creates no native outcome, pair, performance row,
   U2 promotion, or parity credit.
 - [`Lean complete-parity worktree-portability R1 result`](lean-complete-parity-worktree-portability-r1-result-2026-07-23.md)
