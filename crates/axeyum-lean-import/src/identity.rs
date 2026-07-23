@@ -4,7 +4,7 @@ use std::collections::BTreeMap;
 
 use axeyum_lean_kernel::{
     BinderInfo, Declaration, ExprId, ExprNode, Kernel, LevelId, LevelNode, Lit, NameId, NameNode,
-    ReducibilityHint,
+    QuotKind, ReducibilityHint,
 };
 use sha2::{Digest, Sha256};
 
@@ -33,6 +33,8 @@ pub enum DeclarationKind {
     Constructor,
     /// A generated checked recursor and its reduction rules.
     Recursor,
+    /// One member of Lean's privileged fixed quotient package.
+    Quotient,
 }
 
 impl DeclarationKind {
@@ -45,6 +47,7 @@ impl DeclarationKind {
             Self::Inductive => 4,
             Self::Constructor => 5,
             Self::Recursor => 6,
+            Self::Quotient => 7,
         }
     }
 }
@@ -397,6 +400,14 @@ impl<'kernel> IdentityBuilder<'kernel> {
                     hasher.put_hash(value);
                 }
             }
+            Declaration::Quotient { kind, .. } => {
+                hasher.put_u8(match kind {
+                    QuotKind::Type => 0,
+                    QuotKind::Ctor => 1,
+                    QuotKind::Lift => 2,
+                    QuotKind::Ind => 3,
+                });
+            }
         }
         Ok(hasher.finish())
     }
@@ -421,7 +432,8 @@ impl<'kernel> IdentityBuilder<'kernel> {
             Declaration::Axiom { .. }
             | Declaration::Definition { .. }
             | Declaration::Theorem { .. }
-            | Declaration::Opaque { .. } => {}
+            | Declaration::Opaque { .. }
+            | Declaration::Quotient { .. } => {}
         }
         dependencies.retain(|dependency| *dependency != declaration.name());
         dependencies.sort_unstable();
@@ -440,6 +452,7 @@ fn declaration_kind(declaration: &Declaration) -> DeclarationKind {
         Declaration::Inductive { .. } => DeclarationKind::Inductive,
         Declaration::Constructor { .. } => DeclarationKind::Constructor,
         Declaration::Recursor { .. } => DeclarationKind::Recursor,
+        Declaration::Quotient { .. } => DeclarationKind::Quotient,
     }
 }
 

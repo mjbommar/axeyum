@@ -18,9 +18,10 @@
 //!
 //! The inductive, constructor, and recursor variants plus ι-reduction are now
 //! implemented by `inductive.rs`. Projection inference, constructor reduction,
-//! and structure eta use the checked inductive metadata recorded here.
-//! **Deferred to later slices**: `Quotient` reduction; unsupported semantic
-//! paths reject rather than guess.
+//! and structure eta use the checked inductive metadata recorded here. The
+//! privileged fixed quotient-package representation is admitted only through
+//! [`super::Kernel::add_quotient_package`](crate::Kernel::add_quotient_package),
+//! never through the ordinary declaration gate.
 //!
 //! ## Determinism
 //!
@@ -87,6 +88,23 @@ pub struct RecRule {
     /// the minor premises, and the constructor's fields, whose body applies the
     /// matching minor premise to the fields.
     pub value: ExprId,
+}
+
+/// Lean's closed four-way classification for the privileged quotient package.
+///
+/// These are not ordinary axioms or opaque constants. The kind participates in
+/// declaration identity and selects the two kernel reduction rules; package
+/// admission validates the exact name, universe arity, and type for every kind.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum QuotKind {
+    /// The quotient type former `Quot`.
+    Type,
+    /// The representative constructor `Quot.mk`.
+    Ctor,
+    /// The non-dependent eliminator `Quot.lift`.
+    Lift,
+    /// The dependent eliminator `Quot.ind`.
+    Ind,
 }
 
 /// A checked global declaration.
@@ -227,6 +245,20 @@ pub enum Declaration {
         /// The number of indices (non-zero for an indexed family, e.g. `Eq`).
         num_indices: u16,
     },
+    /// One member of Lean's privileged, fixed quotient package.
+    ///
+    /// Direct admission is forbidden. The complete ordered package is checked
+    /// and installed atomically by [`crate::Kernel::add_quotient_package`].
+    Quotient {
+        /// Exact reserved declaration name.
+        name: NameId,
+        /// Universe parameters for this package member.
+        uparams: Vec<NameId>,
+        /// Independently checked canonical package type.
+        ty: ExprId,
+        /// Fixed role within the package.
+        kind: QuotKind,
+    },
 }
 
 impl Declaration {
@@ -263,7 +295,8 @@ impl Declaration {
             | Declaration::Opaque { name, .. }
             | Declaration::Inductive { name, .. }
             | Declaration::Constructor { name, .. }
-            | Declaration::Recursor { name, .. } => *name,
+            | Declaration::Recursor { name, .. }
+            | Declaration::Quotient { name, .. } => *name,
         }
     }
 
@@ -277,7 +310,8 @@ impl Declaration {
             | Declaration::Opaque { uparams, .. }
             | Declaration::Inductive { uparams, .. }
             | Declaration::Constructor { uparams, .. }
-            | Declaration::Recursor { uparams, .. } => uparams,
+            | Declaration::Recursor { uparams, .. }
+            | Declaration::Quotient { uparams, .. } => uparams,
         }
     }
 
@@ -291,7 +325,8 @@ impl Declaration {
             | Declaration::Opaque { ty, .. }
             | Declaration::Inductive { ty, .. }
             | Declaration::Constructor { ty, .. }
-            | Declaration::Recursor { ty, .. } => *ty,
+            | Declaration::Recursor { ty, .. }
+            | Declaration::Quotient { ty, .. } => *ty,
         }
     }
 
@@ -304,7 +339,8 @@ impl Declaration {
             Declaration::Axiom { .. }
             | Declaration::Inductive { .. }
             | Declaration::Constructor { .. }
-            | Declaration::Recursor { .. } => None,
+            | Declaration::Recursor { .. }
+            | Declaration::Quotient { .. } => None,
             Declaration::Definition { value, .. }
             | Declaration::Theorem { value, .. }
             | Declaration::Opaque { value, .. } => Some(*value),
@@ -327,7 +363,8 @@ impl Declaration {
             | Declaration::Opaque { .. }
             | Declaration::Inductive { .. }
             | Declaration::Constructor { .. }
-            | Declaration::Recursor { .. } => None,
+            | Declaration::Recursor { .. }
+            | Declaration::Quotient { .. } => None,
         }
     }
 
@@ -344,7 +381,8 @@ impl Declaration {
             | Declaration::Opaque { .. }
             | Declaration::Inductive { .. }
             | Declaration::Constructor { .. }
-            | Declaration::Recursor { .. } => None,
+            | Declaration::Recursor { .. }
+            | Declaration::Quotient { .. } => None,
         }
     }
 }

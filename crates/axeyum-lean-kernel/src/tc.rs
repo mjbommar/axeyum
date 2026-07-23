@@ -20,8 +20,8 @@
 //!
 //! **Deferred to a later slice** (and erroring cleanly if reached):
 //! String-literal typing/reduction (`Lit::Str` →
-//! [`KernelError::UnsupportedLit`]) and `Quotient` reduction. Projection
-//! inference/reduction, structure eta, and inductive/recursor ι-reduction are
+//! [`KernelError::UnsupportedLit`]). Projection inference/reduction, structure
+//! eta, inductive/recursor ι-reduction, and the fixed quotient package are
 //! implemented. An
 //! unknown `Const` name returns [`KernelError::UnknownConst`].
 //! `Opaque` declarations are admitted but never δ-unfold; `Axiom`s never
@@ -191,6 +191,66 @@ pub enum KernelError {
     /// re-declaration is rejected.
     DeclarationExists {
         /// The name that was already declared.
+        name: crate::name::NameId,
+    },
+    /// A privileged quotient declaration was sent through the ordinary
+    /// single-declaration gate rather than the atomic package gate.
+    QuotientPackageRequired {
+        /// Quotient declaration that could not be admitted alone.
+        name: crate::name::NameId,
+    },
+    /// Quotient initialization requires exactly four ordered declarations.
+    QuotientPackageLength {
+        /// Required fixed package length.
+        expected: usize,
+        /// Supplied package length.
+        got: usize,
+    },
+    /// The environment's `Eq`/`Eq.refl` bootstrap is absent or differs from
+    /// the exact Lean kernel contract required before quotient initialization.
+    QuotientEqBootstrapMismatch {
+        /// First missing or malformed bootstrap declaration.
+        name: crate::name::NameId,
+    },
+    /// A quotient package member occurred under the wrong reserved name or at
+    /// the wrong ordered position.
+    QuotientPackageNameMismatch {
+        /// Zero-based package position.
+        index: usize,
+        /// Reserved name required at this position.
+        expected: crate::name::NameId,
+        /// Supplied declaration name.
+        got: crate::name::NameId,
+    },
+    /// A quotient package declaration carried the wrong fixed role.
+    QuotientPackageKindMismatch {
+        /// Declaration whose role disagreed.
+        name: crate::name::NameId,
+        /// Required role for this reserved name.
+        expected: crate::QuotKind,
+        /// Supplied role.
+        got: crate::QuotKind,
+    },
+    /// A quotient package member has the wrong universe-parameter arity or
+    /// aliases two parameter positions that must be distinct.
+    QuotientUniverseParametersMismatch {
+        /// Declaration whose universe parameters disagreed.
+        name: crate::name::NameId,
+        /// Required number of distinct parameters.
+        expected: usize,
+        /// Supplied parameter count.
+        got: usize,
+    },
+    /// A quotient declaration's type differs from the independently derived
+    /// Lean 4.30 package type (binder display names are ignored).
+    QuotientTypeMismatch {
+        /// Declaration whose type disagreed.
+        name: crate::name::NameId,
+    },
+    /// One or more reserved quotient names already exist, but the environment
+    /// does not contain the complete exact package.
+    QuotientPackageConflict {
+        /// First conflicting reserved name.
         name: crate::name::NameId,
     },
     /// An attempted mutual-inductive declaration contained no families.
@@ -782,10 +842,21 @@ impl Kernel {
     /// reference).
     pub fn add_declaration(&mut self, decl: Declaration) -> Result<(), KernelError> {
         let name = decl.name();
+        if matches!(&decl, Declaration::Quotient { .. }) {
+            return Err(KernelError::QuotientPackageRequired { name });
+        }
         if self.env.contains(name) {
             return Err(KernelError::DeclarationExists { name });
         }
 
+        self.check_declaration(&decl)?;
+        self.env.insert_unchecked(decl);
+        Ok(())
+    }
+
+    /// Check one declaration's ordinary type/value contract without inserting
+    /// it. Privileged package gates use this after their own shape validation.
+    pub(crate) fn check_declaration(&mut self, decl: &Declaration) -> Result<(), KernelError> {
         // (2) The declared type must itself be a type (infer to a `Sort`).
         let ty = decl.ty();
         let mut ctx = LocalContext::new();
@@ -807,7 +878,6 @@ impl Kernel {
             }
         }
 
-        self.env.insert_unchecked(decl);
         Ok(())
     }
 }
