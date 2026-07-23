@@ -427,6 +427,13 @@ def main() -> int:
     ap.add_argument("--limit", type=int, default=None)
     ap.add_argument("--internal-timeout-ms", type=int, default=None,
                     help="soft internal timeout passed to axeyum (ms)")
+    ap.add_argument(
+        "--solver-env",
+        action="append",
+        default=[],
+        metavar="KEY=VALUE",
+        help="environment overlay applied only to resumable solver processes",
+    )
     ap.add_argument("--out", default=None)
     ap.add_argument("--quiet", action="store_true")
     ap.add_argument("--file-list", default=None,
@@ -494,6 +501,7 @@ def main() -> int:
         from resume_runner import (
             execute_resumable,
             export_legacy_raw,
+            normalize_solver_environment,
             preflight_resumable,
             sha256_file,
         )
@@ -513,6 +521,13 @@ def main() -> int:
         )
 
         try:
+            solver_environment: dict[str, str] = {}
+            for assignment in args.solver_env:
+                key, separator, value = assignment.partition("=")
+                if not separator or key in solver_environment:
+                    raise ContractError("--solver-env requires unique KEY=VALUE entries")
+                solver_environment[key] = value
+            solver_environment = normalize_solver_environment(solver_environment)
             if not args.run_manifest or not args.run_dir:
                 raise ContractError("--run-manifest and --run-dir are required together")
             if len(solvers) != 1:
@@ -593,6 +608,7 @@ def main() -> int:
                     allow_unadmitted_selection_fixture=(
                         args.allow_unadmitted_selection_fixture
                     ),
+                    solver_environment=solver_environment,
                 )
                 enforcement = validate_enforcement(run, require_measurement=True)
                 from resource_enforcement import MULTI_HOST_KIND
@@ -744,6 +760,7 @@ def main() -> int:
                 allow_unadmitted_selection_fixture=(
                     args.allow_unadmitted_selection_fixture
                 ),
+                solver_environment=solver_environment,
             )
             if complete and args.dump_raw:
                 if args.resource_session_id is not None:
@@ -756,6 +773,9 @@ def main() -> int:
         except (ContractError, ValueError, OSError) as exc:
             print(f"resumable run rejected: {exc}", file=sys.stderr)
             return 2
+
+    if args.solver_env:
+        ap.error("--solver-env is supported only by resumable execution")
 
     if not solvers or not (args.corpus or args.file_list):
         print("--corpus or --file-list, and --solver, required (unless --score-raw)",

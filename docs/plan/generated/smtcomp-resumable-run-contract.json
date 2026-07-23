@@ -107,6 +107,7 @@
       "solver_id",
       "solver_binary_sha256",
       "solver_command_sha256",
+      "solver_environment_sha256",
       "solver_config_sha256",
       "runner_source_sha256",
       "repository_commit",
@@ -136,7 +137,7 @@
       "unclosed_attempt_ids"
     ]
   },
-  "baseline_output_sha256": "c49348ca02406ff0c1c675e632cfd1c8a03b72f80d36c3c1fbde53d37724ffd4",
+  "baseline_output_sha256": "460fbe673462dc4534cb60b5b516dc5909371fccb5261910bf32e3692a67e495",
   "declines": [
     "V2 is a single-solver run contract; a multi-solver invocation must split into one run identity per solver configuration before central comparison.",
     "This prototype does not make the 2024 cap/family selection official or representative.",

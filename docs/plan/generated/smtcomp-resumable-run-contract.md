@@ -10,7 +10,7 @@ Status: E2 one-host integrated; E3 and official selection remain required before
 - Executable scenarios: **28** (5 accepted controls, 23 rejected mutations)
 - Interrupted/resumed scoring projection byte-identical to uninterrupted: **true**
 - Response observed before a forced timeout remains admitted: **true**
-- Canonical baseline SHA-256: `c49348ca02406ff0c1c675e632cfd1c8a03b72f80d36c3c1fbde53d37724ffd4`
+- Canonical baseline SHA-256: `460fbe673462dc4534cb60b5b516dc5909371fccb5261910bf32e3692a67e495`
 
 ## Why v1 was insufficient
 

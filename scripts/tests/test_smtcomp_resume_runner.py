@@ -60,7 +60,14 @@ if "HANG_AFTER_VERDICT" in text:
 
 
 class Layout:
-    def __init__(self, root: Path, *, hang: bool = False, marker: Path | None = None):
+    def __init__(
+        self,
+        root: Path,
+        *,
+        hang: bool = False,
+        marker: Path | None = None,
+        solver_environment: dict[str, str] | None = None,
+    ):
         self.root = root
         family = root / "corpus" / "non-incremental" / "QF_BV" / "fixture"
         family.mkdir(parents=True)
@@ -93,6 +100,7 @@ class Layout:
         self.solver.write_text(FAKE_SOLVER, encoding="utf-8")
         self.solver.chmod(0o755)
         self.command_template = [str(self.solver), "{bench}"]
+        self.solver_environment = solver_environment or {}
         if marker is not None:
             self.command_template.append(str(marker))
         self.memory_limit_bytes = 512 * 1024**2
@@ -111,6 +119,7 @@ class Layout:
             memory_limit_bytes=self.memory_limit_bytes,
             cores=1,
             shard_count=1,
+            solver_environment=self.solver_environment,
         )
         self.run_manifest = root / "run-manifest.json"
         self.run_manifest.write_bytes(canonical_bytes(run))
@@ -149,6 +158,7 @@ class Layout:
             shard_count=1,
             benchmark_id_marker="non-incremental/",
             verbose=False,
+            solver_environment=self.solver_environment,
             **kwargs,
         )
 
@@ -302,6 +312,40 @@ def fixed_result(command: list[str], **_kwargs) -> RunResult:
 
 
 class ResumeRunnerTests(unittest.TestCase):
+    def test_solver_environment_is_identity_bound_and_applied(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            layout = Layout(
+                root,
+                solver_environment={
+                    "AYU_THREADS": "1",
+                    "OMP_NUM_THREADS": "1",
+                    "RAYON_NUM_THREADS": "1",
+                },
+            )
+            observed_environments = []
+
+            def capture_environment(command: list[str], **kwargs) -> RunResult:
+                observed_environments.append(kwargs["env"])
+                return fixed_result(command, **kwargs)
+
+            self.assertTrue(
+                layout.execute(root / "environment-run", runner=capture_environment)
+            )
+            self.assertEqual(len(observed_environments), 2)
+            for environment in observed_environments:
+                self.assertEqual(environment["AYU_THREADS"], "1")
+                self.assertEqual(environment["OMP_NUM_THREADS"], "1")
+                self.assertEqual(environment["RAYON_NUM_THREADS"], "1")
+
+            layout.solver_environment["AYU_THREADS"] = "2"
+            rejected = root / "environment-drift"
+            with self.assertRaisesRegex(
+                ContractError, "preflight identity mismatch: solver_environment_sha256"
+            ):
+                layout.execute(rejected, runner=fixed_result)
+            self.assertFalse(rejected.exists())
+
     def test_admitted_selection_executes_ordered_subset(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

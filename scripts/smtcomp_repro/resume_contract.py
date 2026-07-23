@@ -33,6 +33,7 @@ RUN_IDENTITY_FIELDS = {
     "solver_id",
     "solver_binary_sha256",
     "solver_command_sha256",
+    "solver_environment_sha256",
     "solver_config_sha256",
     "runner_source_sha256",
     "repository_commit",
@@ -323,6 +324,7 @@ def validate_run(run: dict[str, Any]) -> tuple[dict[str, Any], str]:
             "solver_id": identity["solver_id"],
             "solver_binary_sha256": identity["solver_binary_sha256"],
             "solver_command_sha256": identity["solver_command_sha256"],
+            "solver_environment_sha256": identity["solver_environment_sha256"],
         }
     )
     if identity["solver_config_sha256"] != expected_solver_config:
