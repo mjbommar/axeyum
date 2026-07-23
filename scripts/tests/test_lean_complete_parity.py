@@ -4,6 +4,7 @@ import copy
 import importlib.util
 import sys
 import unittest
+from collections import Counter
 from pathlib import Path
 
 
@@ -274,6 +275,129 @@ class LeanCompleteParityTests(unittest.TestCase):
             },
         )
         self.assertEqual(len(compile_cases) - len(no_interpret), 54)
+
+    def test_m2_6_editor_rpc_preregistration_corrects_version_overlay(self) -> None:
+        content = GEN.load_json(GEN.U2_NATIVE_CONTENT)
+        cases = content["case_rows"]
+        editor_direct = [
+            case for case in cases if "editor-rpc" in case["direct_surfaces"]
+        ]
+        self.assertEqual(len(editor_direct), 147)
+        self.assertEqual(
+            sum("editor-rpc" in case["m0_direct_surfaces"] for case in cases),
+            137,
+        )
+        self.assertEqual(
+            sum(
+                "editor-rpc" in case["content_observed_surfaces"]
+                for case in cases
+            ),
+            22,
+        )
+        self.assertEqual(
+            sum("lean.server-api" in case["exact_signal_ids"] for case in cases),
+            18,
+        )
+        self.assertEqual(
+            sum("json.rpc-method" in case["exact_signal_ids"] for case in cases),
+            0,
+        )
+        self.assertEqual(
+            sum("text.rpc-candidate" in case["exact_signal_ids"] for case in cases),
+            0,
+        )
+
+        rejected_case_paths = {
+            "tests/lake/examples/deps/test.sh": {
+                "tests/lake/examples/deps/bar/lake-manifest.expected.json",
+            },
+            "tests/lake/tests/manifest/test.sh": {
+                "tests/lake/tests/manifest/lake-manifest-latest.json",
+                "tests/lake/tests/manifest/lake-manifest-v1.0.0.json",
+                "tests/lake/tests/manifest/lake-manifest-v1.1.0.json",
+                "tests/lake/tests/manifest/lake-manifest-v1.2.0.json",
+                "tests/lake/tests/manifest/lake-manifest-v4.json",
+                "tests/lake/tests/manifest/lake-manifest-v5.json",
+                "tests/lake/tests/manifest/lake-manifest-v6.json",
+                "tests/lake/tests/manifest/lake-manifest-v7.json",
+            },
+            "tests/lake/tests/reservoirConfig/test.sh": {
+                "tests/lake/tests/reservoirConfig/expected.json",
+            },
+            "tests/lake/tests/toml/test.sh": {
+                "tests/lake/tests/toml/tests/valid/inline-table/end-in-bool.json",
+            },
+        }
+        version_cases = {
+            case["case_id"]: case
+            for case in cases
+            if "json.document-version" in case["exact_signal_ids"]
+        }
+        self.assertEqual(set(version_cases), set(rejected_case_paths))
+        self.assertEqual(
+            {
+                case_id: {
+                    evidence["path"]
+                    for evidence in case["signal_evidence"]
+                    if evidence["signal_id"] == "json.document-version"
+                }
+                for case_id, case in version_cases.items()
+            },
+            rejected_case_paths,
+        )
+        self.assertEqual(sum(map(len, rejected_case_paths.values())), 11)
+        for case in version_cases.values():
+            self.assertEqual(case["family"], "lake")
+            self.assertEqual(case["kind"], "lake-directory")
+            self.assertEqual(
+                set(case["exact_signal_ids"])
+                & {
+                    "json.document-version",
+                    "json.rpc-method",
+                    "lean.server-api",
+                    "text.rpc-candidate",
+                },
+                {"json.document-version"},
+            )
+
+        raw_version_paths = {
+            row["path"]
+            for row in content["file_rows"]
+            if any(
+                hit["signal_id"] == "json.document-version"
+                for hit in row["signal_hits"]
+            )
+        }
+        self.assertEqual(
+            raw_version_paths - set().union(*rejected_case_paths.values()),
+            {
+                "tests/server/diags.lean.content_diag.json",
+                "tests/server/edits_diag.json",
+            },
+        )
+
+        qualified = [
+            case
+            for case in editor_direct
+            if case["case_id"] not in rejected_case_paths
+        ]
+        self.assertEqual(len(qualified), 143)
+        self.assertEqual(
+            Counter(case["family"] for case in qualified),
+            Counter(
+                {
+                    "server_interactive": 132,
+                    "elab": 5,
+                    "server": 4,
+                    "doc-examples": 1,
+                    "misc_dir": 1,
+                }
+            ),
+        )
+        self.assertEqual(
+            Counter(case["kind"] for case in qualified),
+            Counter({"pile": 142, "directory": 1}),
+        )
 
     def test_committed_registry_is_valid_and_rendering_is_deterministic(self) -> None:
         self.assertEqual(self.failures(), [])
