@@ -49,7 +49,9 @@ Last updated: 2026-07-22
 > remain unbound, `not-run`, or zero. M2.1-M2.7 exact closure and M3 review are
 > still required; schema scale is not behavioral coverage.
 > M2.1's 4,092-source/32-batch/14-control/39-process input authority, runner,
-> and full-parser comparator are now pushed and CI-gated, but the attempt is
+> and full-parser comparator are now pushed and CI-gated; the runner also has
+> preregistered live file-backed stream ceilings and sealed launch failures.
+> The attempt is
 > explicitly unexecuted and its evidence root absent. Process readiness is not
 > header evidence; observed processes and edges remain zero.
 > Its

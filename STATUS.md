@@ -391,9 +391,11 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   and generated [summary](docs/plan/generated/lean-u2-native-header-contract-m2.1.md)
   freeze 4,092 exact Lean sources / 9,697,571 bytes, 32 batches, 14 controls,
   and 39 sequential no-retry processes. The content-authorized runner and
-  full-parser comparator pass 11 focused tests and required local/CI gates,
-  but the evidence root is absent: observed processes, header edges, resolved
-  nodes/edges, native outcomes, pairs, and parity credit remain zero. Next:
+  full-parser comparator pass 14 focused tests and required local/CI gates;
+  its preregistered R1 correction now enforces live file-backed stream limits
+  and seals launch failures. The evidence root is absent: observed processes,
+  header edges, resolved nodes/edges, native outcomes, pairs, and parity credit
+  remain zero. Next:
   obtain explicit authorization for exact attempt 001, validate its immutable
   evidence, and only then publish declared-static header rows.
 
@@ -8151,8 +8153,9 @@ plan is built and committed on the current branch:
 - **2026-07-23 — Published TL0.6.4 M2.1's process-ready, zero-process header
   contract.** The exact 4,092-file input authority, 32 batches, 14 controls,
   released-toolchain/provider floor, 39-process completion-last runner,
-  full-parser comparator, 11 focused tests, and local/CI/terminal gates are
-  pushed. Attempt 001 remains unconsumed and its root absent; header edges,
+  full-parser comparator, 14 focused tests, live file-backed stream ceilings,
+  sealed launch failures, and local/CI/terminal gates are pushed. Attempt 001
+  remains unconsumed and its root absent; header edges,
   resolutions, native outcomes, pairs, and parity credit remain zero pending
   exact user authorization.
 

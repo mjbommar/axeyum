@@ -351,11 +351,13 @@ Start at the root [`PLAN.md`](../../PLAN.md) (map + standing rules) and
   closures remain empty or `not-run`, and M2.1-M2.7 plus M3 remain mandatory.
 - [`TL0.6.4 M2.1 source-first plan`](lean-u2-native-dependency-tl0.6.4-m2.1-plan-2026-07-23.md),
   [`pre-execution result`](lean-u2-native-dependency-tl0.6.4-m2.1-pre-execution-2026-07-23.md),
+  [`runner R1 correction`](lean-u2-native-dependency-tl0.6.4-m2.1-runner-streaming-r1-plan-2026-07-23.md),
   [`input/control authority`](lean-u2-native-header-contract-m2.1-v1.json), and
   generated [Markdown](generated/lean-u2-native-header-contract-m2.1.md)/
   [JSON](generated/lean-u2-native-header-contract-m2.1.json) — freeze 4,092
   exact Lean sources, 32 batches, 14 controls, and a 39-process no-retry
-  fast/full header comparison. The runner is implemented and gated, but
+  fast/full header comparison. The runner is implemented and gated with live
+  file-backed stream ceilings and sealed launch failures, but
   attempt 001 is unconsumed and its evidence root absent; all observed-process,
   header-edge, resolution, native, pair, and parity counts remain zero pending
   explicit authorization.

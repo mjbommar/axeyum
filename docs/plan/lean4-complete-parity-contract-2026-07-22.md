@@ -564,7 +564,9 @@ The frozen pass covers 4,092 exact Lean sources / 9,697,571 bytes in 32
 fast-parser batches, compares all rows with the full parser, includes 14 exact
 controls, and permits exactly 39 sequential processes with zero retries. Its
 content-authorized runner is implemented and CI-gated, but attempt 001 remains
-unconsumed and its evidence root is absent. Therefore observed processes,
+unconsumed and its evidence root is absent. A preregistered R1 correction now
+enforces file-backed live stream ceilings and sealed launch failures; its
+synthetic tests are not parity observations. Therefore observed processes,
 declared header edges, resolutions, native outcomes, pairs, and all terminal
 credit remain zero until explicit authorization, immutable-evidence validation,
 and a separate offline promotion.

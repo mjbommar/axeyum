@@ -92,7 +92,7 @@
     },
     {
       "path": "docs/plan/lean-u2-native-dependency-tl0.6.4-m2.1-pre-execution-2026-07-23.md",
-      "sha256": "d1c95ac65ad0387028759e015f1c43c1678cd1616161a2a7aa3d8458870d1753"
+      "sha256": "ff8fbf63e5c9dd1796292df07f9521468148a95dd84328d6b60826c52f056710"
     },
     {
       "path": "docs/plan/lean-u2-native-dependency-v1.json",
@@ -308,11 +308,11 @@
     },
     {
       "path": "docs/plan/lean4-complete-parity-contract-2026-07-22.md",
-      "sha256": "b51b4d317fc3685005632a9e4da67bf6369e07c530bd49f699e4e9c09569dc42"
+      "sha256": "bb8363ed76b118a7ccdb58c7eaf8341df90b0b8b0bcd51ce1aaf6ea19292564c"
     },
     {
       "path": "docs/plan/lean4-complete-parity-roadmap-2026-07-22.md",
-      "sha256": "361689c5907be28b31655544bc9fae3e1180eabe4845c2b730d1b39a91ec71ef"
+      "sha256": "894a0c40c97c90b355aba126a6fb77ca708b28c0e8fb4f144ecf894ce73baf54"
     },
     {
       "path": "scripts/gen-lean-complete-parity.py",

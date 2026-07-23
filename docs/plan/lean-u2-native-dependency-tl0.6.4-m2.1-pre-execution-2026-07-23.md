@@ -10,7 +10,8 @@ Target: Lean `v4.30.0` at
 Parents:
 [M2.1 source-first plan](lean-u2-native-dependency-tl0.6.4-m2.1-plan-2026-07-23.md),
 [M2.1 input/control authority](lean-u2-native-header-contract-m2.1-v1.json),
-and [accepted M2.0 result](lean-u2-native-surface-classification-tl0.6.4-m2.0-result-2026-07-23.md).
+[accepted M2.0 result](lean-u2-native-surface-classification-tl0.6.4-m2.0-result-2026-07-23.md),
+and [M2.1 runner R1 correction](lean-u2-native-dependency-tl0.6.4-m2.1-runner-streaming-r1-plan-2026-07-23.md).
 
 ## 1. Verdict
 
@@ -19,6 +20,9 @@ implementation is accepted for execution readiness. It freezes all 4,092
 M1-bound tracked Lean sources, 32 deterministic fast-parser batches, 14 exact
 controls, four provider/preflight processes, 35 parser processes, immutable
 completion-last evidence, one-process concurrency, and zero retries.
+The accepted R1 runner correction writes child streams directly to retained
+files, enforces wall/stdout/stderr ceilings during bounded polling, and seals
+typed launch failures before stopping.
 
 Attempt 001 has not run. Its evidence root
 `docs/plan/evidence/lean-u2-native-header-m2.1-attempt-001/` is absent. No
@@ -42,6 +46,13 @@ The exact pushed sequence is:
    normalizers, and additional offline tests without invoking `run`.
 5. `86955d44` made the pre-execution contract a required local/CI parity gate
    and added its zero-process snapshot to the terminal registry.
+6. `ac3acddd` published this bounded pre-execution state and its first exact
+   authorization digest without running attempt 001.
+7. `f8bf8eb4` preregistered the R1 live-stream and launch-record correction,
+   explicitly revoking the first authorization before changing runner bytes.
+8. `55504395` implemented and tested the correction, refreshed only the
+   terminal registry's runner/test source identities, and preserved the frozen
+   39-process program and zero observed-process state.
 
 Every checkpoint was pushed with local HEAD equal to its tracking ref. No
 commit grants permission to execute attempt 001 implicitly.
@@ -77,8 +88,12 @@ The runner refuses to start when the contract, parents, executable, helper,
 Git/readelf tools, toolchain libraries, platform, source root, authorization,
 or evidence-root absence differs. Each process retains exact command, cwd,
 environment, stdin, limits, termination, raw streams, resource counters, and a
-sealed record. The runner stops on the first failure without retry and writes
-`completion.json` last only after all 39 processes finish.
+sealed record. Stdout/stderr are written directly to retained files; a bounded
+poll loop kills the process group on the first observed wall or stream-ceiling
+breach. Launch/pre-exec failures retain empty streams, exception diagnostics,
+and a sealed `failed-launch` record. The runner stops on the first failure
+without retry and writes `completion.json` last only after all 39 processes
+finish.
 
 The offline verifier rejects absent completion, process/order/specification
 drift, changed raw streams, nonzero exits, timeouts, stderr, dirty checkout,
@@ -100,9 +115,9 @@ offline promotion checkpoint after evidence validation.
 | input/control authority | 2,340,134 | `8447cf92349467962363baea30973f0cb4b0d95c1527b6544fd50e4e09100b5b` |
 | generated JSON | 2,191 | `c846ed53e69fdd3ed44f8652fa9fee5df4df40269abf82caedaeb9f78f53b62d` |
 | generated Markdown | 1,140 | `dfe6fcf334dfde2d782be432a0cde86798e5f6120394b2c4de208ba582bb0053` |
-| runner/validator | 56,582 | `516581394f7026f99b56d9ed99c0049e9235b15b138b0f3df80cba68709ce26c` |
+| runner/validator | 58,917 | `9d1e13ca59535d198c7f5fa8f1bf6b79c9f76fb3ee0c944ee9bebb2a15bb2b07` |
 | full-parser helper | 1,415 | `12812e7956e5f6c5914247e7523b32559328febbeb319083652c458b3b9e4af2` |
-| focused tests | 11,457 | `21c2cdf54ac11485717dd4a8485efe716e861588443e403188d310d5a359af96` |
+| focused tests | 15,054 | `c5fcdc48d2978b96da1f798a7601b37349dda5fc5d2e6d150a4a2fbb66cb8501` |
 
 Canonical contract seals:
 
@@ -112,9 +127,11 @@ Canonical contract seals:
   and
 - controls: `a651a7d10f29c1e5bc6c5e71a6b7124d865edeaa6cf78ea31598072942f3c51d`.
 
-The current exact authorization digest is:
-
+The original pre-R1 authorization digest
 `17be82707d73b6e4d139c19c6f4e7c5e0cf7cdcaf694ab92d4e47de88bf5c8d6`
+is revoked and must never be used. The current exact authorization digest is:
+
+`79955cb70ca93491efc38a8d2c331197bd89ebb0f61d00b8124dd11660d2f376`
 
 It binds the contract's physical/logical identities, current runner/helper
 bytes, source/evidence roots, complete process-specification digest, process
@@ -124,8 +141,8 @@ count, and zero-retry policy. Any runner/helper change invalidates it.
 
 Accepted task-owned gates include:
 
-- 11 focused input, batch, control, authority, mutation, process-program, and
-  parser-normalization tests;
+- 14 focused input, batch, control, authority, mutation, process-program,
+  parser-normalization, stream-ceiling, and launch-failure tests;
 - deterministic contract and generated-report checking;
 - provider-file revalidation and non-executing run-command rendering;
 - nine complete-parity registry/mutation tests;
@@ -145,7 +162,7 @@ The only preregistered attempt command is:
 
 ```sh
 python3 scripts/lean_u2_native_dependency_m2_1.py run \
-  --authorization 17be82707d73b6e4d139c19c6f4e7c5e0cf7cdcaf694ab92d4e47de88bf5c8d6
+  --authorization 79955cb70ca93491efc38a8d2c331197bd89ebb0f61d00b8124dd11660d2f376
 ```
 
 It must not run until the user explicitly authorizes this exact command after

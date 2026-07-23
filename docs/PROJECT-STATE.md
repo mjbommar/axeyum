@@ -314,7 +314,8 @@ Again, there are distinct targets:
   [implemented but unexecuted](plan/lean-u2-native-dependency-tl0.6.4-m2.1-pre-execution-2026-07-23.md):
   its authority freezes 4,092 exact Lean inputs / 9,697,571 bytes, 32 batches,
   14 fast/full parser controls, and 39 sequential no-retry processes. The
-  runner is content-authorized and CI-gated, but its evidence root is absent;
+  runner is content-authorized and CI-gated, enforces file-backed live stream
+  ceilings, and seals launch failures, but its evidence root is absent;
   observed processes, header edges, resolved nodes/edges, and all terminal
   credit remain zero pending explicit authorization and immutable-evidence
   validation.

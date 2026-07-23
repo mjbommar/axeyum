@@ -185,8 +185,10 @@ M2.1's
 now freezes 4,092 exact Lean source rows / 9,697,571 bytes, 32 deterministic
 batches, 14 fast/full controls, and 39 sequential no-retry processes. The
 runner and immutable-evidence verifier are pushed and gated, but attempt 001
-has not run and its evidence root is absent. Consequently no header edge or
-process observation has been added; explicit authorization, evidence
+has not run and its evidence root is absent. The preregistered R1 correction
+adds live file-backed stream ceilings and sealed launch failures without
+changing the frozen process program. Consequently no header edge or process
+observation has been added; explicit authorization, evidence
 validation, and offline promotion remain the next M2.1 steps.
 
 ## 2. What the SMT-LIB comparison actually says
