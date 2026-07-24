@@ -161,6 +161,12 @@ Start at the root [`PLAN.md`](../../PLAN.md) (map + standing rules) and
   an official test result or Lean parity claim. R2 preserves the historical
   authority/evidence while separately validating the current fail-closed Lean
   installer, closing a semantic merge drift without changing any credit.
+- [`lean-execution-filesystem-decoupling-2026-07-24.md`](lean-execution-filesystem-decoupling-2026-07-24.md) —
+  current Lean execution/acceptance seals vendor their filesystem primitives
+  and interruption worker under Lean ownership. Historical authorities retain
+  exact SMT-era provenance, while a copied-tree mutation probe proves that
+  changing the live SMT resume module no longer invalidates Lean acceptance or
+  `just parity-docs`. This is a portability fix with zero parity credit.
 - [`lean-u2-official-execution-tl0.6.3-m0-plan-2026-07-22.md`](lean-u2-official-execution-tl0.6.3-m0-plan-2026-07-22.md) —
   source-first first-outcome plan for `compile/534.lean`, an exact singleton
   child shard of the release-tag Linux-release 3,678-case selection. It freezes

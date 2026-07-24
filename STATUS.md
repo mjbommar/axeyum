@@ -383,6 +383,22 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-24 — Lean execution seals are decoupled from the SMT-owned resume
+  filesystem implementation.** The
+  [result](docs/plan/lean-execution-filesystem-decoupling-2026-07-24.md)
+  vendors Lean's atomic install, canonical read, recovery, and interruption
+  fixture behind Lean-owned files; current acceptance and U2 input sets no
+  longer seal `scripts/smtcomp_repro/resume_fs.py` or `resume_contract.py`.
+  Immutable TL0.7.4 and TL0.6.3 R3 authorities retain their exact historical
+  SMT-era source identities only for their original implementation revisions.
+  Ninety-two focused tests pass with one expected skip. Clean-tree
+  `just parity-docs` passes; the same gate and the acceptance result check also
+  pass in a copied tree after changing only the SMT resume module from
+  `b05c3218...` to `31a64b89...`. This closes the cross-lane portability
+  blocker, not Lean parity: the terminal registry remains 0/10 populations,
+  0/12 axes, zero paired cells/gates, and `terminal_ready=false`. Next: finish
+  the repository-wide green gate and integrate the reviewed commits to `main`.
+
 - **2026-07-23 — credited SMT-COMP full-population F2 is implementation-ready,
   not live-ready.** F1 and its supervised-wave executor are integrated. Merge
   `1b8ae016` integrates the complete process-free F2 preparation mechanism,
