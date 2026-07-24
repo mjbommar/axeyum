@@ -13,6 +13,7 @@
 name = "axeyum-wasm"
 version = "0.1.0"
 edition = "2024"
+license.workspace = true
 publish = false
 description = "WebAssembly binding exposing Axeyum's QF_BV solver to the browser playground."
 

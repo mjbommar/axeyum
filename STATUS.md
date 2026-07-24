@@ -401,7 +401,13 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   workspace tests/doctests, Clippy, Rustdoc, the 162-file Glaurung comparison
   at 100% decided with zero disagreements, foundational resources, SMT-COMP
   resume, Lean evidence, parity-docs, and links. The reviewed commits are
-  integration-ready for `main`.
+  integrated into `main`. The first GitHub run then exposed two independent
+  `cargo-deny` failures already present in the branch dependency/package
+  metadata: `axeyum-wasm` did not inherit the workspace license, and
+  `crossbeam-epoch` 0.9.18 was covered by RUSTSEC-2026-0204. The follow-up
+  declares the workspace license and updates the lockfile to the fixed 0.9.20;
+  local `cargo deny check`, the WASM crate check, formatting, and diff checks
+  pass.
 
 - **2026-07-23 — credited SMT-COMP full-population F2 is implementation-ready,
   not live-ready.** F1 and its supervised-wave executor are integrated. Merge
