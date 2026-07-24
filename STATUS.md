@@ -383,6 +383,29 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-24 — the missing credited-full F2 live-capture operator is now
+  source-first preregistered; no live action is authorized.** Merge `466618dd`
+  has integrated the SMT-COMP F3 coordinator/admission/scheduler batch, and the
+  later Lean filesystem decoupling removes the historical `resume_fs.py`
+  cross-lane pin. The
+  [live-capture plan](docs/plan/smtcomp-credited-full-preparation-f2-live-capture-plan-2026-07-24.md)
+  freezes the next actual seam: a dedicated operator must prove clean exact
+  local/tracking/remote-main equality, run both registered readiness gates
+  before any NAS write, physically rehash the accepted 45,905-file population,
+  stage the exact source/binaries/inputs, capture `s5`/`s6`/`s7` plus the eight
+  ordered incident sentinels inside 30 minutes, and install only a completion-
+  last `launch_authorized=false` root. It is structurally forbidden from
+  importing or calling F3 admission/allocation paths. Current `origin/main`
+  `08af3665` has a green exact-SHA docs workflow; its CI workflow was still in
+  progress at the source-first checkpoint. A local pre-change `just check`
+  passed formatting, all-feature Clippy, and the observed workspace-test prefix
+  without failure, but was intentionally stopped during the kernel seam tests
+  because the forthcoming operator changes invalidate that run; it is partial,
+  not a green gate. Next: implement and fixture-test the operator, integrate it,
+  then run the separately reviewed F2 capture from exact green main. No host
+  probe, sentinel, NAS preparation root, acceptance record, allocation, or
+  solver wave has been created.
+
 - **2026-07-24 — Lean execution seals are decoupled from the SMT-owned resume
   filesystem implementation.** The
   [result](docs/plan/lean-execution-filesystem-decoupling-2026-07-24.md)
@@ -8735,6 +8758,14 @@ plan is built and committed on the current branch:
 | P5.5 | External target, measured | **DONE (bounded v1, ADR-0323--0338):** authenticated Tock capture plus eight rechecked dual-DRAT proofs and six replayed controls, UNKNOWN=0, DISAGREE=0. Query time 12.700 s; fresh outer wall 50.745 s; peak RSS 1,256,496 KiB; zero OOM deltas. The committed case study compares exact target validation, universal coverage, trust, effort, artifact boundaries, and limits. No Tock bug was found, so no upstream issue is applicable. This is not a speed or whole-kernel claim. |
 
 ## Changelog
+
+- **2026-07-24 — Preregistered the credited-full F2 live-capture operator.**
+  The plan freezes exact local/tracking/remote-main and gate checks before NAS
+  mutation, fresh full-population rehashing, staged source/binary/sentinel
+  identities, ordered three-host/eight-sentinel capture, the 30-minute window,
+  completion-last `launch_authorized=false` publication, retained incomplete
+  failures, static no-allocation controls, and the post-integration live
+  boundary. No operator code or live evidence is claimed by this checkpoint.
 
 - **2026-07-24 — Stabilized the repeated MBQI fixed-retry CI failure without
   changing solver behavior.** Both stable runs failed the same semantic test
