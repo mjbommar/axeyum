@@ -1247,11 +1247,69 @@ class AllocationProcess:
     launch: dict[str, Any]
 
 
+class AllocationLaunchError(OSError):
+    """The durable allocation attempt closed before a child process started."""
+
+
+def _publish_allocation_terminal(
+    *,
+    run_dir: Path,
+    allocation_id: str,
+    attempt_id: str,
+    exit_code: int,
+    stdout: bytes,
+    stderr: bytes,
+) -> dict[str, Any]:
+    stdout_sha256 = sha256_bytes(stdout)
+    stderr_sha256 = sha256_bytes(stderr)
+    for stream, data, content_sha in (
+        ("stdout", stdout, stdout_sha256),
+        ("stderr", stderr, stderr_sha256),
+    ):
+        atomic_install_bytes(
+            run_dir / "multi-host-outputs" / stream,
+            f"{content_sha}.bin",
+            data,
+            quarantine_root=run_dir / "quarantine",
+        )
+    status = (
+        "completed"
+        if exit_code == 0
+        else ("lost" if exit_code == 255 else "failed")
+    )
+    terminal = _sealed(
+        {
+            "schema": TERMINAL_SCHEMA,
+            "attempt_id": attempt_id,
+            "status": status,
+            "exit_code": exit_code,
+            "stdout_sha256": stdout_sha256,
+            "stdout_bytes": len(stdout),
+            "stderr_sha256": stderr_sha256,
+            "stderr_bytes": len(stderr),
+            "ended_at_ns": time.time_ns(),
+        }
+    )
+    atomic_install_json(
+        run_dir / "multi-host-terminals" / allocation_id,
+        f"{attempt_id}.json",
+        terminal,
+        quarantine_root=run_dir / "quarantine",
+    )
+    return terminal
+
+
 def start_allocation(
-    *, plan: dict[str, Any], command_manifest: Path, run_dir: Path
+    *,
+    plan: dict[str, Any],
+    command_manifest: Path,
+    run_dir: Path,
+    inspect_shared_root: bool = True,
 ) -> AllocationProcess:
     command = read_canonical_json(command_manifest)
-    _plan, run, allocation_row = validate_host_command(command)
+    _plan, run, allocation_row = validate_host_command(
+        command, inspect_shared_root=inspect_shared_root
+    )
     if _plan["plan_sha256"] != plan["plan_sha256"]:
         raise ContractError("allocation command uses a different plan")
     registrations = {row["host_id"]: row for row in plan["host_registrations"]}
@@ -1307,7 +1365,17 @@ def start_allocation(
             stderr=subprocess.PIPE,
         )
     except OSError as exc:
-        raise ContractError("unable to start registered host allocation") from exc
+        _publish_allocation_terminal(
+            run_dir=run_dir,
+            allocation_id=allocation_row["allocation_id"],
+            attempt_id=attempt_id,
+            exit_code=126,
+            stdout=b"",
+            stderr=str(exc).encode("utf-8", errors="replace"),
+        )
+        raise AllocationLaunchError(
+            "unable to start registered host allocation"
+        ) from exc
     return AllocationProcess(
         allocation_id=allocation_row["allocation_id"],
         attempt_id=attempt_id,
@@ -1325,40 +1393,17 @@ def finish_allocation(handle: AllocationProcess, *, timeout: float = 120.0) -> d
         raise ContractError(
             f"allocation remains live and requires exact-unit cleanup: {handle.allocation_id}"
         ) from exc
-    stdout_sha256 = sha256_bytes(stdout)
-    stderr_sha256 = sha256_bytes(stderr)
-    for stream, data, content_sha in (
-        ("stdout", stdout, stdout_sha256),
-        ("stderr", stderr, stderr_sha256),
-    ):
-        atomic_install_bytes(
-            handle.run_dir / "multi-host-outputs" / stream,
-            f"{content_sha}.bin",
-            data,
-            quarantine_root=handle.run_dir / "quarantine",
-        )
     code = handle.process.returncode
-    status = "completed" if code == 0 else ("lost" if code == 255 else "failed")
-    terminal = _sealed(
-        {
-            "schema": TERMINAL_SCHEMA,
-            "attempt_id": handle.attempt_id,
-            "status": status,
-            "exit_code": code,
-            "stdout_sha256": stdout_sha256,
-            "stdout_bytes": len(stdout),
-            "stderr_sha256": stderr_sha256,
-            "stderr_bytes": len(stderr),
-            "ended_at_ns": time.time_ns(),
-        }
+    if type(code) is not int:
+        raise ContractError("allocation process ended without an exit code")
+    return _publish_allocation_terminal(
+        run_dir=handle.run_dir,
+        allocation_id=handle.allocation_id,
+        attempt_id=handle.attempt_id,
+        exit_code=code,
+        stdout=stdout,
+        stderr=stderr,
     )
-    atomic_install_json(
-        handle.run_dir / "multi-host-terminals" / handle.allocation_id,
-        f"{handle.attempt_id}.json",
-        terminal,
-        quarantine_root=handle.run_dir / "quarantine",
-    )
-    return terminal
 
 
 def remote_liveness(
@@ -3454,6 +3499,7 @@ if __name__ == "__main__":
 
 __all__ = [
     "AllocationProcess",
+    "AllocationLaunchError",
     "COMPLETION_FIELDS",
     "PLAN_FIELDS",
     "allocation",

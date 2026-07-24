@@ -17,6 +17,7 @@ sys.path.insert(0, str(SMTCOMP))
 
 import multi_host as multi_host_module  # noqa: E402
 from multi_host import (  # noqa: E402
+    AllocationLaunchError,
     ALLOCATION_SCHEMA,
     ATTEMPT_SCHEMA,
     PLAN_SCHEMA,
@@ -33,6 +34,7 @@ from multi_host import (  # noqa: E402
     recover_released_failed_shard,
     remote_thermal_sample,
     stage_execution_bundle,
+    start_allocation,
     validate_execution_bundle,
     validate_host_command,
     validate_allocation_scheduler_state,
@@ -448,6 +450,30 @@ class MultiHostPortableTests(unittest.TestCase):
             drift = seal(drift)
             with self.assertRaisesRegex(ContractError, "host-shards"):
                 validate_host_command(drift, inspect_shared_root=False)
+
+            command_path = install_host_command(run_dir, command)
+            with (
+                mock.patch(
+                    "multi_host.subprocess.Popen",
+                    side_effect=OSError("fixture spawn failure"),
+                ),
+                self.assertRaisesRegex(AllocationLaunchError, "unable to start"),
+            ):
+                start_allocation(
+                    plan=plan,
+                    command_manifest=command_path,
+                    run_dir=run_dir,
+                    inspect_shared_root=False,
+                )
+            state = derive_allocation_scheduler_state(
+                run_dir,
+                plan=plan,
+                cell_id="portable",
+                inspect_shared_root=False,
+            )
+            self.assertEqual(state["open_attempt_ids"], [])
+            self.assertEqual(state["failed_allocation_ids"], ["initial-0"])
+            self.assertEqual(len(state["allocation_attempts"]), 1)
 
     def test_recovery_requires_dead_exact_owner_and_is_idempotent(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
