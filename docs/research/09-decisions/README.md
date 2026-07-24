@@ -420,3 +420,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [0363](adr-0363-preregister-source-guided-quantified-uf-default-repair.md) | Preregister one bounded source-guided Int-result UF-default retry after established quantified-UF completion routes | proposed |
 | [0364](adr-0364-preregister-profile-guided-quantified-uf-model-completion.md) | Preregister one shared-deadline SAT-only finite-profile completion loop with exact source definitions and checker-derived counterexamples | proposed |
 | [0365](adr-0365-preregister-lean-quotient-package.md) | Preregister atomic canonical Lean quotient-package admission, reduction, import, and identity | proposed |
+| [0366](adr-0366-preregister-lean-string-literal-semantics.md) | Preregister checked Lean String-literal typing and exact Unicode-scalar constructor conversion across defeq, projection, recursors, and import | proposed |

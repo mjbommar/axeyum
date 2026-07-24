@@ -92,7 +92,10 @@ The current positive evidence remains valuable:
 The current negative evidence is equally binding:
 
 - String literals and the dependency-closed complete K1 population remain
-  open; the selected 5/5 fixture total is not complete K1 authority;
+  open; proposed ADR-0366 now preregisters exact checked Unicode-scalar
+  semantics, but implementation, retention of the historical large root, and
+  the authorized differential are still absent, and the selected 5/5 fixture
+  total is not complete K1 authority;
 - no K2-K6 row is satisfied;
 - all 65 reconstruction-prelude assumptions remain semantically unclassified;
   and

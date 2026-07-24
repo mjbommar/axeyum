@@ -408,6 +408,17 @@ state.
 > but M4's separately authorized pinned-Lean differential, ADR acceptance,
 > String, dependency-closed complete K1 authority, and every broader
 > Lean-system gate remain open.
+> The next semantic root, TL2.9 String literals, is now source-preregistered
+> under
+> [proposed ADR-0366](docs/research/09-decisions/adr-0366-preregister-lean-string-literal-semantics.md)
+> and its
+> [P0--M5 plan](docs/plan/lean-string-literal-semantics-tl2.9-plan-2026-07-23.md).
+> P0 freezes a checked reserved Nat/List/Char/String bootstrap, exact
+> Unicode-scalar `String.ofList` conversion, symmetric defeq plus projection
+> and recursor hooks, fail-closed wire/publication rules, identity stability,
+> generated seams, and the authorization boundary for retaining and measuring
+> the historical 570,807-byte official root. No semantic implementation,
+> official-root result, complete-K1, or parity credit exists at P0.
 > TL0.6 is now partial: the fail-closed
 > [complete-parity registry](docs/plan/lean-complete-parity-v1.json) and
 > generated [Markdown](docs/plan/generated/lean-complete-parity.md)/
