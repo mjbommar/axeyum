@@ -18,7 +18,7 @@ These facts are regenerated from existing manifests. They are scoped evidence, n
 
 - Compatibility contract: 12 rows.
   - `K0-checker`: 1/1 rows satisfy that bounded profile.
-  - `K1-import`: 4/5 rows satisfy that bounded profile.
+  - `K1-import`: 5/5 rows satisfy that bounded profile.
   - `K2-source`: 0/2 rows satisfy that bounded profile.
   - `K3-proof`: 0/1 rows satisfy that bounded profile.
   - `K4-workflow`: 0/1 rows satisfy that bounded profile.

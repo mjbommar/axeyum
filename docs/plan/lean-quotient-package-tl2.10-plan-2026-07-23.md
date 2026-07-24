@@ -1,6 +1,6 @@
 # Lean TL2.10 quotient-package execution plan
 
-Status: **P0 preregistered; no quotient admission or parity credit yet**
+Status: **M1--M3 complete offline; M4 differential and acceptance open**
 
 Date: 2026-07-23
 
@@ -8,6 +8,9 @@ Owner: Lean complete-parity lane
 
 Decision:
 [ADR-0365](../research/09-decisions/adr-0365-preregister-lean-quotient-package.md)
+
+Offline result:
+[M1--M3 result](lean-quotient-package-m1-m3-result-2026-07-23.md)
 
 Parent contracts:
 [Lean system implementation plan](lean-system-implementation-plan-2026-07-21.md),
@@ -283,19 +286,19 @@ performs the green-before-merge gate.
 
 ## 9. Exit checklist
 
-- [ ] P0 authority/design committed and pushed.
-- [ ] Canonical Eq prerequisite independently validated.
-- [ ] Exactly four quotient declarations admitted atomically.
-- [ ] Direct/single/partial/mutated packages reject transactionally.
-- [ ] Exact `lift` and `ind` reductions plus inert boundaries pass.
-- [ ] Generated quotient seam population repeats byte-identically.
-- [ ] Exact official fixture imports twice with zero axioms.
-- [ ] All wire and late-failure mutations publish nothing.
-- [ ] Old declaration identities remain byte-identical.
-- [ ] Quotient identities are deterministic and mutation-sensitive.
-- [ ] Renderer uses official built-ins without redeclaration/axiom laundering.
+- [x] P0 authority/design committed and pushed.
+- [x] Canonical Eq prerequisite independently validated.
+- [x] Exactly four quotient declarations admitted atomically.
+- [x] Direct/single/partial/mutated packages reject transactionally.
+- [x] Exact `lift` and `ind` reductions plus inert boundaries pass.
+- [x] Generated quotient seam population repeats byte-identically.
+- [x] Exact official fixture imports twice with zero axioms.
+- [x] All wire and late-failure mutations publish nothing.
+- [x] Old declaration identities remain byte-identical.
+- [x] Quotient identities are deterministic and mutation-sensitive.
+- [x] Renderer uses official built-ins without redeclaration/axiom laundering.
 - [ ] Authorized pinned-Lean differential passes.
-- [ ] Construct/parity authorities and live status regenerate cleanly.
+- [x] Construct/parity authorities and live status regenerate cleanly.
 - [ ] Focused and full repository gates pass.
 - [ ] ADR-0365 accepted and TL2.10/TL2.15 status updated honestly.
 - [ ] Containing commit is pushed and local/remote equality is recorded.

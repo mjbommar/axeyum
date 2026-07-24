@@ -392,18 +392,22 @@ state.
 > target: twelve native behavioral axes, ten content-identified upstream
 > populations, exact paired outcomes, layer-specific equivalence, and zero
 > adapter or incomplete-run substitution. The current generated matrix has one
-> satisfied K0 row, four of five K1 rows, and zero satisfied K2-K6 rows; TL2.14
+> satisfied K0 row, five of five selected K1 rows, and zero satisfied K2-K6
+> rows; TL2.14
 > completion is not full Lean parity.
-> The next dependency-ordered K1 kernel root, TL2.10 quotient support, is now
-> preregistered under
+> The dependency-ordered TL2.10 quotient root now has an
+> [offline M1--M3 result](docs/plan/lean-quotient-package-m1-m3-result-2026-07-23.md)
+> under
 > [proposed ADR-0365](docs/research/09-decisions/adr-0365-preregister-lean-quotient-package.md)
 > and its
 > [P0--M4 plan](docs/plan/lean-quotient-package-tl2.10-plan-2026-07-23.md).
-> P0 freezes canonical `Eq` validation, atomic four-declaration admission,
-> exact `Quot.lift`/`Quot.ind` reduction, importer/identity/renderer boundaries,
-> generated seam coverage, and transactional mutations. It adds no quotient
-> admission or K1/parity credit; String and every broader Lean-system gate
-> remain open.
+> Canonical `Eq` validation, atomic four-declaration admission, exact
+> `Quot.lift`/`Quot.ind` reduction, the twice-identical 576-row seam, exact
+> official import/computation, additive identities, renderer non-laundering,
+> and transactional mutations now pass. The selected K1 fixture matrix is 5/5,
+> but M4's separately authorized pinned-Lean differential, ADR acceptance,
+> String, dependency-closed complete K1 authority, and every broader
+> Lean-system gate remain open.
 > TL0.6 is now partial: the fail-closed
 > [complete-parity registry](docs/plan/lean-complete-parity-v1.json) and
 > generated [Markdown](docs/plan/generated/lean-complete-parity.md)/

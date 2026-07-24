@@ -57,7 +57,7 @@ The generated
 | Profile | Meaning | Satisfied rows | Total rows |
 |---|---|---:|---:|
 | K0 | independent checker | 1 | 1 |
-| K1 | versioned declaration import | 4 | 5 |
+| K1 | versioned declaration import | 5 | 5 |
 | K2 | native source parsing and elaboration | 0 | 2 |
 | K3 | native goals and checked tactics | 0 | 1 |
 | K4 | project and editor workflow | 0 | 1 |
@@ -78,6 +78,8 @@ terminal denominator explicit must not promote the evidence already in hand.
 The current positive evidence remains valuable:
 
 - the independent kernel and importer pass exact K0/K1 fixture profiles;
+- the exact quotient root now imports atomically and computes offline, with its
+  package decline removed only for that registered root;
 - the selected official construct matrix has seven rows, six independently
   admitted rows, four computation-checked rows, and zero current transactional
   declines;
@@ -89,7 +91,8 @@ The current positive evidence remains valuable:
 
 The current negative evidence is equally binding:
 
-- String literals and the quotient package remain unsupported K1 roots;
+- String literals and the dependency-closed complete K1 population remain
+  open; the selected 5/5 fixture total is not complete K1 authority;
 - no K2-K6 row is satisfied;
 - all 65 reconstruction-prelude assumptions remain semantically unclassified;
   and
@@ -843,7 +846,8 @@ and explicit non-credit boundaries. At contract level, the waves are:
 1. **Measurement and official execution:** keep R0 evidence identities current,
    finish the complete official U2 profile under R1, and classify every case by
    its native dependency without retrying one singleton for coverage.
-2. **Kernel/import closure:** finish K1 String/quotient and dependency-closed
+2. **Kernel/import closure:** finish K1 String, the quotient M4 differential,
+   and dependency-closed
    core/library roots under R2 before promoting broader trust claims.
 3. **Native source and proof assistant:** build R3 parser/macros, R4 elaboration,
    and R5 tactics in semantic dependency order; every accepted output must end
@@ -884,11 +888,13 @@ Before another broad implementation claim:
 8. add content/dependency/source-family identities and exact paired overlap to
    every Lean scoreboard;
 9. retain adapter, official-oracle, and native outcomes as separate columns;
-10. complete the String and quotient K1 roots and regenerate the dependency-
-    closed blocker ranking; quotient TL2.10 is now preregistered under
+10. complete the String K1 root and regenerate the dependency-closed blocker
+    ranking; quotient TL2.10's
+    [offline M1--M3 result](lean-quotient-package-m1-m3-result-2026-07-23.md)
+    closes its exact selected root under
     [proposed ADR-0365](../research/09-decisions/adr-0365-preregister-lean-quotient-package.md)
-    and its [P0-M4 plan](lean-quotient-package-tl2.10-plan-2026-07-23.md), with
-    zero admission or parity credit until every registered exit closes;
+    and its [P0-M4 plan](lean-quotient-package-tl2.10-plan-2026-07-23.md), but
+    the authorization-gated M4 differential and final acceptance remain open;
 11. classify all 65 prelude assumptions before reporting broader proof parity;
 12. turn the pinned mathlib tree inventory into module/declaration/dependency/
     tactic/test manifests before assigning any coverage percentage; and
