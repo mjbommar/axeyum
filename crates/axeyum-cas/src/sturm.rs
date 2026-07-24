@@ -224,8 +224,14 @@ mod tests {
         for (interval, root) in intervals.iter().zip([1, 2, 3]) {
             let (lo, hi) = *interval;
             let root_rat = Rational::integer(root);
-            assert!(lo.checked_cmp(&root_rat).unwrap() != core::cmp::Ordering::Greater);
-            assert!(hi.checked_cmp(&root_rat).unwrap() != core::cmp::Ordering::Less);
+            assert_ne!(
+                lo.checked_cmp(&root_rat).unwrap(),
+                core::cmp::Ordering::Greater
+            );
+            assert_ne!(
+                hi.checked_cmp(&root_rat).unwrap(),
+                core::cmp::Ordering::Less
+            );
             // Exactly one root in each isolating interval (Sturm-certified).
             assert_eq!(count_real_roots_in(&p, lo, hi), Some(1));
         }

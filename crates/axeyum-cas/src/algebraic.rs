@@ -234,13 +234,13 @@ mod tests {
         let roots = real_roots(&poly_from(&[-2, 0, 0, 1])).unwrap(); // ∛2
         let refined = roots[0].refine(Rational::new(1, 1_000_000)).unwrap();
         let (lower, upper) = refined.isolating_interval();
-        assert!(
+        assert_ne!(
             upper
                 .checked_sub(lower)
                 .unwrap()
                 .checked_cmp(&Rational::new(1, 1_000_000))
-                .unwrap()
-                != core::cmp::Ordering::Greater
+                .unwrap(),
+            core::cmp::Ordering::Greater
         );
     }
 }

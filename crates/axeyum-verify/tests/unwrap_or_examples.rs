@@ -3,7 +3,8 @@
 //! real result, otherwise the default. Modeled as `ite(!overflows, wrapping_op,
 //! default)` (the boolean `Overflows` node + the non-panicking wrapping op).
 
-#![allow(clippy::many_single_char_names)] // terse fixtures
+// The verifier's bounded fixture contract intentionally exercises `assert!`.
+#![allow(clippy::manual_assert_eq, clippy::many_single_char_names)] // terse fixtures
 
 use axeyum_verify::{Verdict, verify};
 

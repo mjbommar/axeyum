@@ -17,7 +17,8 @@
 //! events (masked to the alphabet) `SEND_SYN`=0, `RECV_SYNACK`=1, `CLOSE`=2,
 //! `DATA`=3.
 
-#![allow(clippy::similar_names)]
+// The verifier's bounded fixture contract intentionally exercises `assert!`.
+#![allow(clippy::manual_assert_eq, clippy::similar_names)]
 
 use axeyum_verify::{Verdict, cert_coverage, verify};
 

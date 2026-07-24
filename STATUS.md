@@ -417,7 +417,12 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   capture: the committed `cargo -vV` identity names Ubuntu 26.04, while the
   floating `ubuntu-latest` runner currently provides Ubuntu 24.04. Only the
   authenticated Cargo MIR job is now pinned to `ubuntu-26.04`; the
-  byte-for-byte identity comparison remains unchanged.
+  byte-for-byte identity comparison remains unchanged. That rerun also picked
+  up Clippy 1.97's new `manual_assert_eq` lint. Three ordinary CAS test
+  assertions now use the equivalent `assert_ne!` form. Nine verifier fixtures
+  retain `assert!` under narrowly scoped lint allowances because that syntax is
+  part of the macro-lowering contract; the focused verifier suites confirm the
+  original verdicts are preserved.
 
 - **2026-07-23 — credited SMT-COMP full-population F2 is implementation-ready,
   not live-ready.** F1 and its supervised-wave executor are integrated. Merge

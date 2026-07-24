@@ -2,6 +2,9 @@
 //! Rotation is a bijection, so a left-then-right round-trip is the identity — a
 //! clean provable property; a single rotation is generally *not* the identity.
 
+// The verifier's bounded fixture contract intentionally exercises `assert!`.
+#![allow(clippy::manual_assert_eq)]
+
 use axeyum_verify::{Verdict, verify};
 
 /// Safe: `rotate_left(8)` then `rotate_right(8)` is the identity on u16.

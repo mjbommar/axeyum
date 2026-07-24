@@ -3,7 +3,12 @@
 //! v = wrapping_op(a,b); <some> } else { <none> }`. The masked-safe fn VERIFIES;
 //! the overflow fn takes the `None` arm and its assert is reachably violated.
 
-#![allow(clippy::many_single_char_names, unused_assignments)] // terse fixtures
+// The verifier's bounded fixture contract intentionally exercises `assert!`.
+#![allow(
+    clippy::manual_assert_eq,
+    clippy::many_single_char_names,
+    unused_assignments
+)] // terse fixtures
 
 use axeyum_verify::{Verdict, verify};
 

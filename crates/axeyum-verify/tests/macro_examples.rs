@@ -12,7 +12,8 @@
 //! We additionally inspect the verdict helpers directly for the headline
 //! examples (a) / (b) / (c).
 
-#![allow(clippy::similar_names)]
+// The verifier's bounded fixture contract intentionally exercises `assert!`.
+#![allow(clippy::manual_assert_eq, clippy::similar_names)]
 
 use axeyum_verify::{Verdict, Witness, opt, verify};
 
