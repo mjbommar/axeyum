@@ -383,30 +383,31 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
-- **2026-07-24 — the missing credited-full F2 live-capture operator is now
-  source-first preregistered; no live action is authorized.** Merge `466618dd`
+- **2026-07-24 — the missing credited-full F2 live-capture operator is
+  implemented, gated, and pushed; no live action is authorized.** Merge `466618dd`
   has integrated the SMT-COMP F3 coordinator/admission/scheduler batch, and the
   later Lean filesystem decoupling removes the historical `resume_fs.py`
   cross-lane pin. The
   [live-capture plan](docs/plan/smtcomp-credited-full-preparation-f2-live-capture-plan-2026-07-24.md)
   and its source-first
   [R1 correction](docs/plan/smtcomp-credited-full-preparation-f2-live-capture-r1-plan-2026-07-24.md)
-  freezes the next actual seam: a dedicated operator must prove clean exact
-  local/tracking/remote-main equality, run both registered readiness gates
-  and revalidate the frozen repaired-P0 comparison plus all three external
-  roots before any NAS write, physically rehash the accepted 45,905-file population,
+  froze the next actual seam. Pushed topic commit `57482ad0` now adds the
+  dedicated no-launch operator: it proves clean exact local/tracking/remote-main
+  equality, runs both registered readiness gates, and revalidates the frozen
+  repaired-P0 comparison plus all three external roots before any NAS write,
+  physically rehashes the accepted 45,905-file population,
   stage the exact source/binaries/inputs, capture `s5`/`s6`/`s7` plus the eight
   ordered incident sentinels and fresh schedule-bound thermal observations
   inside 30 minutes, and install only a completion-last
   `launch_authorized=false` root. It is structurally forbidden from
-  importing or calling F3 admission/allocation paths. Current `origin/main`
-  `08af3665` has a green exact-SHA docs workflow; its CI workflow was still in
-  progress at the source-first checkpoint. A local pre-change `just check`
-  passed formatting, all-feature Clippy, and the observed workspace-test prefix
-  without failure, but was intentionally stopped during the kernel seam tests
-  because the forthcoming operator changes invalidate that run; it is partial,
-  not a green gate. Next: implement and fixture-test the operator, integrate it,
-  then run the separately reviewed F2 capture from exact green main. No host
+  importing or calling F3 admission/allocation paths. Its 44 focused tests,
+  157-test portable gate with one expected live-host skip, `just check-scope
+  main`, foundational-resource and link gates, and full `just check` all pass;
+  the full gate's retained terminal result is exit zero. The
+  [implementation result](docs/plan/smtcomp-credited-full-preparation-f2-live-capture-implementation-2026-07-24.md)
+  records the exact boundary. Next: integrate the implementation and result,
+  establish clean green exact main, build the release binary, and only then run
+  the separately reviewed F2 capture. No host
   probe, sentinel, NAS preparation root, acceptance record, allocation, or
   solver wave has been created.
 
@@ -8762,6 +8763,16 @@ plan is built and committed on the current branch:
 | P5.5 | External target, measured | **DONE (bounded v1, ADR-0323--0338):** authenticated Tock capture plus eight rechecked dual-DRAT proofs and six replayed controls, UNKNOWN=0, DISAGREE=0. Query time 12.700 s; fresh outer wall 50.745 s; peak RSS 1,256,496 KiB; zero OOM deltas. The committed case study compares exact target validation, universal coverage, trust, effort, artifact boundaries, and limits. No Tock bug was found, so no upstream issue is applicable. This is not a speed or whole-kernel claim. |
 
 ## Changelog
+
+- **2026-07-24 — Implemented and pushed the credited-full F2 live-capture
+  operator without taking live action.** Commit `57482ad0` adds exact-main and
+  registered-gate enforcement, process-free repaired-P0 and external-root
+  replay before mutation, non-overwriting full-population staging, ordered
+  host/thermal/sentinel capture, completion-last no-launch publication,
+  read-only replay, and static no-F3 controls. Forty-four focused tests, the
+  157-test portable gate, `just check-scope main`, and full `just check` pass.
+  Integration, live F2 evidence, F3 acceptance, and solver execution remain
+  separate and incomplete.
 
 - **2026-07-24 — Corrected the credited-full F2 source-first contract before
   implementation.** The R1 plan adds process-free replay of the frozen

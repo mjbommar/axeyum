@@ -867,11 +867,16 @@ twenty-four is fully gated, pushed, integrated byte-for-byte, and documented.
 > a completion-last recovery checkpoint instead of relaunching across the
 > terminal-to-checkpoint crash window. Exact different-host retry closure also
 > clears the corresponding historical failure only after all owned shards are
-> checkpointed. The expanded portable lane gate passes 144 tests with one
-> expected live-host skip. No live F2 root or
-> canonical acceptance record exists. Next: integrate and green-gate the topic,
-> repair the Lean-owned source pin, then capture/publish an empty F2 preparation
-> before any distinct acceptance or Axeyum launch.
+> checkpointed. Pushed topic commit `57482ad0` now implements the missing
+> source-first no-launch F2 operator: exact-main and registered-gate guards,
+> repaired-P0/external-root replay before mutation, fresh full-population
+> staging, ordered three-host thermal evidence and eight sentinels, and
+> completion-last publication. Its 157-test portable gate, scoped gate, and
+> full `just check` pass with one expected live-host skip. The historical Lean
+> source pin is closed. No live F2 root or canonical acceptance record exists.
+> Next: integrate the exact implementation and result, establish a clean green
+> main, then run and independently verify the separately authorized empty F2
+> preparation before any distinct acceptance or Axeyum launch.
 > The candidate is not
 > official selection evidence:
 > it still lacks the complete eligibility/status/difficulty policy, official
