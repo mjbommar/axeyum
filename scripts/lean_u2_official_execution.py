@@ -108,6 +108,20 @@ SHARD_ID = "release-tag-l3-linux-release-compile-534-singleton-v1"
 HEX40 = re.compile(r"[0-9a-f]{40}\Z")
 HEX64 = re.compile(r"[0-9a-f]{64}\Z")
 
+HISTORICAL_RESULT_IMPLEMENTATION_REVISION = "1a2e7d3aa59710ba4c5dce7fe7f90f86db4841e4"
+HISTORICAL_RESULT_REPOSITORY_INPUTS = {
+    "docs/plan/lean-u2-test-authority-v1.json": "d7446e7965bac100ac6b5c607cbb7c87b5b80063fc23b3ec998fff2736d5d18e",
+    "docs/plan/lean-u2-official-ci-profiles-v1.json": "4817d177828797f9dab9e62cf7647732d2b9c3788db7b7b4e3461bc868948548",
+    "docs/plan/lean-execution-evidence-v1.json": "83fbfeaf6baa4c1bd747ce80bba87a15aaf159bb164a7647cc8e3155282fa05a",
+    "docs/plan/lean-execution-process-v1.json": "0fc2d552f8594e2285eef2f0307a9b4d5313024166f0256486b731366947c0bf",
+    "docs/plan/lean-execution-store-v1.json": "e167c2054537d628bf1e0621bd6fb864bc8f38847aaf690b8767687ef1d1a647",
+    "docs/plan/lean-execution-acceptance-v1.json": "bd3f01fc5ac61bbcfdf23a82055fd58d47cf8167240727ec35e51ceb2a4be05f",
+    "scripts/lean_execution_process.py": "96f6866f619563e9fc639ca360f40260d2c35b521b3fc67941675d22984b2007",
+    "scripts/lean_execution_store.py": "06d388a49d927a2f1b65a4632cd6297b140a579cf80edd5177fc6849b62ec679",
+    "scripts/smtcomp_repro/resume_contract.py": "4713707b26d81e0e5444acc7c653b461fa79c2a94c392873c8565b443ba33930",
+    "scripts/smtcomp_repro/resume_fs.py": "1968e7b6424c2dd9273bff5041e96fc21b83ec01b2205dcc840d5dc942be1aec",
+}
+
 REPOSITORY_INPUTS = {
     "docs/plan/lean-u2-test-authority-v1.json": "d7446e7965bac100ac6b5c607cbb7c87b5b80063fc23b3ec998fff2736d5d18e",
     "docs/plan/lean-u2-official-ci-profiles-v1.json": "4817d177828797f9dab9e62cf7647732d2b9c3788db7b7b4e3461bc868948548",
@@ -2016,9 +2030,14 @@ def build_result_authority(root: Path, *, implementation_revision: str) -> dict[
     test_path = ROOT / HISTORICAL_RESULT_GENERATOR_INPUTS[1]["path"]
     if not test_path.is_file():
         raise U2ExecutionError("missing official execution contract tests")
+    result_repository_inputs = (
+        HISTORICAL_RESULT_REPOSITORY_INPUTS
+        if implementation_revision == HISTORICAL_RESULT_IMPLEMENTATION_REVISION
+        else REPOSITORY_INPUTS
+    )
     source_inputs = [
-        {"path": path, "sha256": REPOSITORY_INPUTS[path]}
-        for path in sorted(REPOSITORY_INPUTS)
+        {"path": path, "sha256": result_repository_inputs[path]}
+        for path in sorted(result_repository_inputs)
     ] + [
         {"path": PLAN.relative_to(ROOT).as_posix(), "sha256": sha256_file(PLAN)},
         {"path": R1_PLAN.relative_to(ROOT).as_posix(), "sha256": sha256_file(R1_PLAN)},

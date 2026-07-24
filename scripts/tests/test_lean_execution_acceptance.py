@@ -614,7 +614,7 @@ class LeanExecutionAcceptanceContractTests(unittest.TestCase):
                 "preregistration_commit": ACCEPTANCE.PREREGISTRATION_COMMIT,
                 "r1_preregistration_commit": ACCEPTANCE.R1_PREREGISTRATION_COMMIT,
                 "implementation_revision": "a" * 40,
-                "source_inputs": ACCEPTANCE.historical_result_source_inputs(),
+                "source_inputs": ACCEPTANCE.result_source_inputs("a" * 40),
                 "build": {},
                 "failed_attempt": {
                     "control_id": ACCEPTANCE.FAILED_COMPILE_CONTROL,

@@ -134,6 +134,23 @@ EXPORTER_TREE_ROWS = (
     ("100644", "blob", "af9e5d339aeb37e4e6ba2603fb873e637678e304", "lean-toolchain"),
 )
 
+HISTORICAL_RESULT_IMPLEMENTATION_REVISION = "679f4b9d1941b166c86db652501f1ba7df417da0"
+HISTORICAL_RESULT_REPOSITORY_INPUTS = {
+    "docs/plan/lean-execution-evidence-v1.json": "83fbfeaf6baa4c1bd747ce80bba87a15aaf159bb164a7647cc8e3155282fa05a",
+    "docs/plan/lean-execution-process-v1.json": "0fc2d552f8594e2285eef2f0307a9b4d5313024166f0256486b731366947c0bf",
+    "scripts/lean_execution_process.py": "96f6866f619563e9fc639ca360f40260d2c35b521b3fc67941675d22984b2007",
+    "docs/plan/lean-execution-store-v1.json": "e167c2054537d628bf1e0621bd6fb864bc8f38847aaf690b8767687ef1d1a647",
+    "scripts/lean_execution_store.py": "06d388a49d927a2f1b65a4632cd6297b140a579cf80edd5177fc6849b62ec679",
+    "scripts/smtcomp_repro/resume_fs.py": "1968e7b6424c2dd9273bff5041e96fc21b83ec01b2205dcc840d5dc942be1aec",
+    "lean-toolchain": "54727eec5cba149c18842e6deb5c41b369d66455c93ce135d7d5347c782b2325",
+    "scripts/install-pinned-lean.sh": "75acb49a48e18b43523257ac22bc82889d614a6678c1cc3a457b3a150e1c7f71",
+    "docs/plan/fixtures/lean4export-v4.30-axeyum-probe.lean": FLAT_SOURCE_SHA256,
+    "docs/plan/fixtures/lean4export-v4.30-axeyum-probe.ndjson": REFERENCE_SHA256,
+    "docs/plan/lean-u2-official-ci-profiles-v1.json": "4817d177828797f9dab9e62cf7647732d2b9c3788db7b7b4e3461bc868948548",
+    "docs/plan/lean-execution-acceptance-tl0.7.4-r1-plan-2026-07-22.md": "241b9f4c2d68804f7fcfb91ef26c409cea377e75ed8cc58b526ecd031658bcda",
+    "docs/plan/lean-execution-acceptance-tl0.7.4-attempt-001-2026-07-22.md": "27b948b21bc9b2b14e185d2534e2bb96c13648750871c7f4e682b2eece479ec1",
+}
+
 FROZEN_REPOSITORY_INPUTS = {
     "docs/plan/lean-execution-evidence-v1.json": "83fbfeaf6baa4c1bd747ce80bba87a15aaf159bb164a7647cc8e3155282fa05a",
     "docs/plan/lean-execution-process-v1.json": "0fc2d552f8594e2285eef2f0307a9b4d5313024166f0256486b731366947c0bf",
@@ -377,8 +394,25 @@ def validate_repository_inputs() -> list[str]:
 def historical_result_source_inputs() -> list[dict[str, str]]:
     return [
         {"path": path, "sha256": expected}
-        for path, expected in sorted(FROZEN_REPOSITORY_INPUTS.items())
+        for path, expected in sorted(HISTORICAL_RESULT_REPOSITORY_INPUTS.items())
     ] + [dict(row) for row in HISTORICAL_RESULT_GENERATOR_INPUTS]
+
+
+def result_source_inputs(implementation_revision: str) -> list[dict[str, str]]:
+    if implementation_revision == HISTORICAL_RESULT_IMPLEMENTATION_REVISION:
+        return historical_result_source_inputs()
+    current_generators = (
+        Path(__file__).resolve(),
+        ROOT / "scripts/tests/test_lean_execution_acceptance.py",
+        PREREGISTRATION_PLAN,
+    )
+    return [
+        {"path": path, "sha256": expected}
+        for path, expected in sorted(CURRENT_REPOSITORY_INPUTS.items())
+    ] + [
+        {"path": path.relative_to(ROOT).as_posix(), "sha256": sha256_file(path)}
+        for path in current_generators
+    ]
 
 
 def _run_text(command: list[str], *, cwd: Path) -> str:
@@ -1810,7 +1844,7 @@ def build_result_authority(
             "preregistration_commit": PREREGISTRATION_COMMIT,
             "r1_preregistration_commit": R1_PREREGISTRATION_COMMIT,
             "implementation_revision": implementation_revision,
-            "source_inputs": historical_result_source_inputs(),
+            "source_inputs": result_source_inputs(implementation_revision),
             "build": {
                 "record_sha256": build["record_sha256"],
                 "exporter_sha256": build["executable"]["sha256"],
@@ -1884,7 +1918,9 @@ def validate_result_authority(authority: Any) -> list[str]:
         failures.append("result preregistration identity drift")
     if authority.get("credits") != ZERO_CREDITS:
         failures.append("acceptance result cannot receive parity credit")
-    if authority.get("source_inputs") != historical_result_source_inputs():
+    if authority.get("source_inputs") != result_source_inputs(
+        str(authority.get("implementation_revision"))
+    ):
         failures.append("result historical source-input identity drift")
     summary = authority.get("summary", {})
     for field in (
