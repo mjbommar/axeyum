@@ -398,7 +398,7 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   `50f7c9d8` through `d8e187f2` add per-shard
   retry-capable checkpoint schema v2 and immutable persistence, prior-cell
   disagreement-safe adjudication, and the process-free authority coordinator.
-  Topic commits `2fdd4809`, `851e3764`, and `59b1805b` now add a distinct
+  The subsequent admission, admitted-wave, and gate commits add a distinct
   mainline acceptance record, exact safe solver-order cell admission, durable
   Git-object replay, and an admitted-wave entry point that derives run/plan/
   schedule/checkpoint identities from preparation and automatically persists a

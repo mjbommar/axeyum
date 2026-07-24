@@ -384,10 +384,10 @@ gate.
    disagreement-safe adjudication, and the process-free authority coordinator.
    The [coordinator fixture](../smtcomp-credited-full-execution-coordinator-fixture-2026-07-23.md)
    records its gates and the expected Lean pin ownership boundary. It does not
-   construct live F3 authority or complete F4. Topic commits `2fdd4809`,
-   `851e3764`, and `59b1805b` add the separately integrated acceptance record,
-   exact safe solver-order admission, Git-object replay, admitted identity
-   derivation, and automatic checkpoint persistence. The
+   construct live F3 authority or complete F4. The subsequent admission,
+   admitted-wave, and gate commits add the separately integrated acceptance
+   record, exact safe solver-order admission, Git-object replay, admitted
+   identity derivation, and automatic checkpoint persistence. The
    [admission fixture](../smtcomp-credited-full-admission-fixture-2026-07-23.md)
    records the 139-test portable gate. No live acceptance file exists, and no
    host probe, sentinel, NAS preparation root, resource session, allocation,
