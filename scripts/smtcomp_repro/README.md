@@ -124,7 +124,10 @@ same-population comparison in `full_compare.py`. Admission requires a distinct
 integrated acceptance of the exact non-launching F2 completion and the exact
 safe solver-order result prefix. The admitted-wave entry point derives its
 run, plan, schedule, cell, and checkpoint identities from that accepted
-preparation and persists successful checkpoints before returning. The coordinator
+preparation, derives open/failed/lost lifecycle state from validated E3
+attempts and terminals, and persists successful checkpoints before returning.
+Scheduler decision v2 binds the complete sealed lifecycle projection; callers
+cannot supply those lists independently. The coordinator
 replays the immutable preparation, 16 per-shard checkpoints, underlying
 allocation/resource/multi-host completion, v2 records and sidecars, selection,
 and safe prior-cell prefix before deriving authority. Cell results publish

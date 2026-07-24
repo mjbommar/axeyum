@@ -240,6 +240,13 @@ cell then binds the exact safe prior-result prefix, and the admitted-wave entry
 point derives its execution identities from preparation rather than accepting
 them from the caller. No canonical live acceptance record exists yet.
 
+The subsequent
+[scheduler-state fixture](smtcomp-credited-full-scheduler-state-fixture-2026-07-23.md)
+removes the last caller-supplied lifecycle projection from admitted execution.
+Open attempts and failed/lost allocations are recomputed from canonical E3
+attempt/terminal evidence, and scheduler-decision v2 validates and binds the
+complete sealed state before it can launch.
+
 ## Milestones and authorization
 
 - **F0 — this plan:** freeze population, resources, waves, recovery, thermal,

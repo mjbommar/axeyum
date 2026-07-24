@@ -402,8 +402,11 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   mainline acceptance record, exact safe solver-order cell admission, durable
   Git-object replay, and an admitted-wave entry point that derives run/plan/
   schedule/checkpoint identities from preparation and automatically persists a
-  successful checkpoint. The expanded 139-test portable gate passes with one
-  expected live-host skip.
+  successful checkpoint. The subsequent scheduler-state increment removes
+  caller-supplied open/failed/lost lists: it derives a sealed lifecycle record
+  from canonical E3 attempts/terminals, recomputes its projections, and binds
+  it under scheduler-decision v2. The expanded 140-test portable gate passes
+  with one expected live-host skip.
   Branch-wide formatting remains red in the unrelated bench/CAS lane. On the
   rebased topic, Lean parity now stops first because the integrated
   quotient-package contract expects a marker absent from

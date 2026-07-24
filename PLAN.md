@@ -874,8 +874,10 @@ twenty-four is fully gated, pushed, integrated byte-for-byte, and documented.
 > authority, and a separate mainline-gated F3 admission. The admission binds an
 > integrated acceptance of the exact non-launching preparation plus the exact
 > safe solver-order result prefix; its wave entry point derives execution
-> identities from preparation and persists checkpoints automatically. The
-> 139-test lane gate passes with one expected live-host skip. No live F2 root or
+> identities from preparation and persists checkpoints automatically. It now
+> also derives the complete open/failed/lost lifecycle projection from
+> canonical E3 evidence and validates that sealed state inside scheduler
+> decision v2. The 140-test lane gate passes with one expected live-host skip. No live F2 root or
 > canonical acceptance record exists. Next: integrate and green-gate the topic,
 > repair the Lean-owned source pin, then capture/publish an empty F2 preparation
 > before any distinct acceptance or Axeyum launch.

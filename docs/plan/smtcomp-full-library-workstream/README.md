@@ -389,7 +389,11 @@ gate.
    record, exact safe solver-order admission, Git-object replay, admitted
    identity derivation, and automatic checkpoint persistence. The
    [admission fixture](../smtcomp-credited-full-admission-fixture-2026-07-23.md)
-   records the 139-test portable gate. No live acceptance file exists, and no
+   records the 139-test portable gate. The subsequent
+   [scheduler-state fixture](../smtcomp-credited-full-scheduler-state-fixture-2026-07-23.md)
+   derives open/failed/lost lifecycle state from canonical E3 evidence, binds
+   the complete state under scheduler-decision v2, and raises the portable gate
+   to 140 tests. No live acceptance file exists, and no
    host probe, sentinel, NAS preparation root, resource session, allocation,
    or solver process was started.
 
@@ -459,6 +463,8 @@ Repository:
   `docs/plan/smtcomp-credited-full-execution-coordinator-fixture-2026-07-23.md`;
 - credited full-population mainline-admission fixture:
   `docs/plan/smtcomp-credited-full-admission-fixture-2026-07-23.md`;
+- credited full-population scheduler-state fixture:
+  `docs/plan/smtcomp-credited-full-scheduler-state-fixture-2026-07-23.md`;
 - candidate failure handoff:
   `docs/plan/smtcomp-full-library-candidate-run-handoff-2026-07-21.md`;
 - ranked gap plan: `docs/plan/full-library-gap-closing-plan-2026-07-22.md`;
