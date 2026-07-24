@@ -11,6 +11,7 @@ python3 -m unittest \
   scripts.tests.test_smtcomp_cgroup_host \
   scripts.tests.test_smtcomp_multi_host \
   scripts.tests.test_smtcomp_multi_host_live \
+  scripts.tests.test_smtcomp_full_admission \
   scripts.tests.test_smtcomp_full_compare \
   scripts.tests.test_smtcomp_full_execution \
   scripts.tests.test_smtcomp_full_population \

@@ -25,12 +25,14 @@ REQUIRED_GATE_COMMANDS = (
     ("./scripts/check-smtcomp-resume.sh",),
 )
 DEFAULT_REQUIRED_PATHS = (
+    "docs/plan/smtcomp-credited-full-admission-fixture-2026-07-23.md",
     "docs/plan/smtcomp-credited-full-execution-coordinator-fixture-2026-07-23.md",
     "docs/plan/smtcomp-credited-full-population-f1-result-2026-07-23.md",
     "docs/plan/smtcomp-credited-full-population-plan-2026-07-23.md",
     "docs/plan/smtcomp-credited-full-preparation-f2-implementation-2026-07-23.md",
     "docs/plan/smtcomp-credited-full-publication-fixture-2026-07-23.md",
     "scripts/check-smtcomp-resume.sh",
+    "scripts/smtcomp_repro/full_admission.py",
     "scripts/smtcomp_repro/full_compare.py",
     "scripts/smtcomp_repro/full_coordinator.py",
     "scripts/smtcomp_repro/full_execute.py",
@@ -41,6 +43,7 @@ DEFAULT_REQUIRED_PATHS = (
     "scripts/smtcomp_repro/full_result.py",
     "scripts/smtcomp_repro/incident_sentinels.py",
     "scripts/smtcomp_repro/multi_host.py",
+    "scripts/tests/test_smtcomp_full_admission.py",
     "scripts/tests/test_smtcomp_full_compare.py",
     "scripts/tests/test_smtcomp_full_execution.py",
     "scripts/tests/test_smtcomp_full_population.py",
