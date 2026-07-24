@@ -46,7 +46,7 @@ jobs:
     name: rustfmt
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt
@@ -56,7 +56,7 @@ jobs:
     name: clippy
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: clippy
@@ -77,7 +77,7 @@ jobs:
         run: |
           sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc                       /opt/hostedtoolcache/CodeQL /usr/local/share/boost
           df -h /
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
       # The z3-gated differential fuzzes shell out to /usr/bin/z3.
@@ -105,7 +105,7 @@ jobs:
       CARGO_PROFILE_TEST_DEBUG: 0
       AXEYUM_VERIFY_MIR_REQUIRE_CARGO_BUILD: 1
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       # ADR-0287 binds this channel to rustc commit f53b654a8 and LLVM 22.1.4.
       - uses: dtolnay/rust-toolchain@nightly
         with:
@@ -120,7 +120,7 @@ jobs:
       CARGO_PROFILE_DEV_DEBUG: 0
       CARGO_PROFILE_TEST_DEBUG: 0
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
       - run: python3 scripts/check-reflection-semantics-gate.py --run
@@ -129,7 +129,7 @@ jobs:
     name: benchmark micro corpus
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
       - run: cargo run -p axeyum-bench -- corpus/micro --backend sat-bv --timeout-ms 1000 --out /tmp/axeyum-bench-micro-sat-bv.json
@@ -139,7 +139,7 @@ jobs:
     name: check (MSRV 1.88, default features)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@1.88.0
       - uses: Swatinem/rust-cache@v2
       # The MSRV promise covers the default (pure Rust) build — the product
@@ -150,7 +150,7 @@ jobs:
     name: build and smoke-test (wasm32 QF_BV profile)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: wasm32-unknown-unknown
@@ -171,7 +171,7 @@ jobs:
     env:
       RUSTDOCFLAGS: -D warnings
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
       - run: cargo doc --workspace --all-features --no-deps
@@ -186,7 +186,7 @@ jobs:
       AXEYUM_LEAN_BUDGET_SECS: 0
       AXEYUM_LEAN_JOBS: 2
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
       # Axeyum emits standalone Lean modules and is not a Lake project.
@@ -228,14 +228,14 @@ jobs:
     name: cargo-deny
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - uses: EmbarkStudios/cargo-deny-action@v2
 
   docs-links:
     name: docs resources and links
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
         with:
           # Store evidence validates and reads its sealed implementation commit.
           fetch-depth: 0
