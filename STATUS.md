@@ -435,7 +435,13 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   Historical kill-cell validation likewise compares the Python host by role
   while checking its exact recorded executable hash, so moving from the
   retained `/usr/bin/python3.14` to the hosted runner path does not weaken or
-  falsely reject the sealed evidence.
+  falsely reject the sealed evidence. The final stable matrix then repeated an
+  independent solver-test flake: the MBQI fixed-query semantic regression used
+  a two-second wall-clock budget and returned `Unknown` under parallel runner
+  contention. Its finite guard is now 30 seconds, with the unexpected result
+  included in the failure diagnostic. Eight concurrent focused runs and the
+  complete 913-test all-feature solver library pass locally; exact-SHA GitHub
+  validation remains the only open integration gate before a final green claim.
 
 - **2026-07-23 — credited SMT-COMP full-population F2 is implementation-ready,
   not live-ready.** F1 and its supervised-wave executor are integrated. Merge
@@ -8704,6 +8710,14 @@ plan is built and committed on the current branch:
 | P5.5 | External target, measured | **DONE (bounded v1, ADR-0323--0338):** authenticated Tock capture plus eight rechecked dual-DRAT proofs and six replayed controls, UNKNOWN=0, DISAGREE=0. Query time 12.700 s; fresh outer wall 50.745 s; peak RSS 1,256,496 KiB; zero OOM deltas. The committed case study compares exact target validation, universal coverage, trust, effort, artifact boundaries, and limits. No Tock bug was found, so no upstream issue is applicable. This is not a speed or whole-kernel claim. |
 
 ## Changelog
+
+- **2026-07-24 — Stabilized the repeated MBQI fixed-retry CI failure without
+  changing solver behavior.** Both stable runs failed the same semantic test
+  after 912 passes because its test-local two-second timeout expired under
+  full-suite contention. The test now retains a finite 30-second guard and
+  prints the non-SAT result on failure. The focused case passes, eight
+  concurrent copies pass, and the complete 913-test all-feature solver library
+  passes locally; the exact-SHA remote matrix is pending.
 
 - **2026-07-23 — Paused TL2.9 after the pushed P0 checkpoint.** The
   [authoritative resume handoff](docs/plan/lean-string-literal-semantics-tl2.9-resume.md)
