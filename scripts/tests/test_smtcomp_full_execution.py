@@ -301,7 +301,6 @@ class FullExecutionCheckpointTests(unittest.TestCase):
                 "schedule_record_sha256": schedule["record_sha256"],
                 "record_sha256": "d" * 64,
             }
-            outcome = {"status": "wave-completed", "checkpoint": first}
             allocation_ids = {
                 row["allocation_id"] for row in schedule["allocations"]
             }
@@ -366,7 +365,9 @@ class FullExecutionCheckpointTests(unittest.TestCase):
                     wait=unused,
                     pause_requested=lambda: False,
                 )
-            self.assertEqual(uncheckpointed["status"], "blocked-uncheckpointed")
+            self.assertEqual(uncheckpointed["status"], "wave-checkpoint-recovered")
+            first = uncheckpointed["checkpoint"]
+            outcome = {"status": "wave-completed", "checkpoint": first}
             uncheckpointed_launch.assert_not_called()
 
             with (
@@ -407,7 +408,7 @@ class FullExecutionCheckpointTests(unittest.TestCase):
             validate_admission.assert_called_once()
             derive_state.assert_called_once()
             self.assertEqual(supervise.call_args.kwargs["schedule"], schedule)
-            self.assertEqual(supervise.call_args.kwargs["checkpoints"], [])
+            self.assertEqual(supervise.call_args.kwargs["checkpoints"], [first])
             self.assertEqual(
                 supervise.call_args.kwargs["allocation_scheduler_state"],
                 allocation_state,
@@ -498,7 +499,7 @@ class FullExecutionCheckpointTests(unittest.TestCase):
             self.assertEqual(len(authorizations), 2)
             self.assertEqual(
                 authorizations[0]["scheduler_decision"]["status"],
-                "blocked-uncheckpointed",
+                "recover-checkpoint",
             )
             self.assertEqual(
                 authorizations[1]["allocation_scheduler_state"], blocked_state

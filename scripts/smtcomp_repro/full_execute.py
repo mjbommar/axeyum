@@ -402,17 +402,22 @@ def supervise_one_wave(
     )
     authorize_decision(decision)
     if decision["status"] != "launch":
+        recovered = decision["recovery_checkpoint"]
         return _sealed(
             {
                 "schema": WAVE_OUTCOME_SCHEMA,
-                "status": decision["status"],
+                "status": (
+                    "wave-checkpoint-recovered"
+                    if recovered is not None
+                    else decision["status"]
+                ),
                 "scheduler_decision_sha256": decision["record_sha256"],
                 "wave_index": decision["next_wave_index"],
                 "launched_allocation_ids": [],
                 "allocation_terminals": [],
                 "thermal_stop_record_sha256s": [],
                 "active_thermal_observation_sha256s": [],
-                "checkpoint": None,
+                "checkpoint": recovered,
                 "pause_observed": initial_pause,
             }
         )

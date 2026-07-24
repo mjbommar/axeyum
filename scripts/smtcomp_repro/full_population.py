@@ -25,7 +25,7 @@ WAVE_SCHEMA = "axeyum.smtcomp-credited-full-wave.v1"
 THERMAL_OBSERVATION_SCHEMA = "axeyum.smtcomp-credited-full-thermal-observation.v1"
 THERMAL_STOP_SCHEMA = "axeyum.smtcomp-credited-full-thermal-stop.v1"
 CHECKPOINT_SCHEMA = "axeyum.smtcomp-credited-full-wave-checkpoint.v2"
-SCHEDULER_DECISION_SCHEMA = "axeyum.smtcomp-credited-full-scheduler-decision.v3"
+SCHEDULER_DECISION_SCHEMA = "axeyum.smtcomp-credited-full-scheduler-decision.v4"
 
 POPULATION_COUNT = 45_905
 SHARD_COUNT = 96
@@ -164,6 +164,7 @@ SCHEDULER_DECISION_FIELDS = {
     "allocation_ids",
     "open_attempt_ids",
     "uncheckpointed_completed_allocation_ids",
+    "recovery_checkpoint",
     "failed_allocation_ids",
     "lost_allocation_ids",
     "pause_requested",
@@ -874,12 +875,76 @@ def scheduler_decision(
         raise ContractError(
             "scheduler checkpoint names an allocation without a completed terminal"
         )
+    checkpointed_shards = {
+        row["shard_id"]
+        for checkpoint in checkpoints
+        for row in checkpoint["shard_completions"]
+    }
+    allocations_by_id = {
+        row["allocation_id"]: row for row in schedule["allocations"]
+    }
+    failed = [
+        allocation_id
+        for allocation_id in failed
+        if not set(allocations_by_id[allocation_id]["shard_ids"])
+        <= checkpointed_shards
+    ]
+    lost = [
+        allocation_id
+        for allocation_id in lost
+        if not set(allocations_by_id[allocation_id]["shard_ids"])
+        <= checkpointed_shards
+    ]
     uncheckpointed_completed = sorted(completed - checkpointed_allocations)
+    recovery_checkpoint = None
+    if uncheckpointed_completed and not opens and next_wave is not None:
+        wave = schedule["waves"][next_wave]
+        allocations = allocations_by_id
+        initial_ids_for_wave = set(wave["allocation_ids"])
+        eligible_ids = initial_ids_for_wave | {
+            allocation_id
+            for allocation_id, allocation in allocations.items()
+            if allocation["generation"] == 1
+            and allocation["recovers_allocation_id"] in initial_ids_for_wave
+        }
+        terminals = [
+            {
+                "allocation_id": row["allocation_id"],
+                "attempt_id": row["attempt_id"],
+                "status": "completed",
+                "terminal_record_sha256": row["terminal_record_sha256"],
+            }
+            for row in allocation_state["allocation_attempts"]
+            if row["terminal_status"] == "completed"
+            and row["allocation_id"] in eligible_ids
+        ]
+        covered_shards: set[int] = set()
+        ambiguous = False
+        for terminal in terminals:
+            for shard_id in allocations[terminal["allocation_id"]]["shard_ids"]:
+                if shard_id in wave["shard_ids"]:
+                    if shard_id in covered_shards:
+                        ambiguous = True
+                    covered_shards.add(shard_id)
+        if ambiguous:
+            raise ContractError("scheduler recovery has ambiguous shard completion")
+        if covered_shards == set(wave["shard_ids"]):
+            recovery_checkpoint = build_wave_checkpoint(
+                schedule=schedule,
+                plan_sha256=plan,
+                run_identity_sha256=run,
+                cell_id=cell,
+                wave_index=next_wave,
+                allocation_terminals=terminals,
+                cumulative_records=cumulative_benchmark_count(schedule, next_wave),
+            )
     status: str
     allocation_ids: list[str] = []
     thermal_ids: list[str] = []
     if opens:
         status = "blocked-unclosed"
+    elif recovery_checkpoint is not None:
+        status = "recover-checkpoint"
     elif uncheckpointed_completed:
         status = "blocked-uncheckpointed"
     elif failed or lost:
@@ -918,6 +983,7 @@ def scheduler_decision(
             "allocation_ids": allocation_ids,
             "open_attempt_ids": opens,
             "uncheckpointed_completed_allocation_ids": uncheckpointed_completed,
+            "recovery_checkpoint": recovery_checkpoint,
             "failed_allocation_ids": failed,
             "lost_allocation_ids": lost,
             "pause_requested": pause_requested,

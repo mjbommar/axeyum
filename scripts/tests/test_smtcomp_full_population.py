@@ -801,14 +801,14 @@ class FullPopulationContractTests(unittest.TestCase):
                 self.assertEqual(decision["status"], expected)
                 self.assertEqual(decision["allocation_ids"], [])
 
-    def test_scheduler_blocks_completed_wave_until_exact_checkpoint_exists(self) -> None:
+    def test_scheduler_recovers_exact_completed_wave_without_relaunch(self) -> None:
         schedule = build_schedule(ENFORCEMENT_ID)
         completed = schedule["waves"][0]["allocation_ids"]
         state = scheduler_state(
             schedule,
             completed_allocation_ids=completed,
         )
-        blocked = scheduler_decision(
+        recover = scheduler_decision(
             schedule=schedule,
             checkpoints=[],
             plan_sha256=PLAN_ID,
@@ -820,13 +820,47 @@ class FullPopulationContractTests(unittest.TestCase):
             thermal_observations=[],
             decided_at_ns=2000,
         )
-        self.assertEqual(blocked["status"], "blocked-uncheckpointed")
+        self.assertEqual(recover["status"], "recover-checkpoint")
         self.assertEqual(
-            blocked["uncheckpointed_completed_allocation_ids"], completed
+            recover["uncheckpointed_completed_allocation_ids"], completed
         )
-        self.assertEqual(blocked["allocation_ids"], [])
+        self.assertEqual(recover["allocation_ids"], [])
+        checkpoint = validate_wave_checkpoint(
+            recover["recovery_checkpoint"],
+            schedule=schedule,
+            plan_sha256=PLAN_ID,
+            run_identity_sha256=RUN_ID,
+            cell_id=CELL_ID,
+        )
+        self.assertEqual(checkpoint["wave_index"], 0)
+        self.assertEqual(
+            sorted(
+                {
+                    row["allocation_id"]
+                    for row in checkpoint["shard_completions"]
+                }
+            ),
+            completed,
+        )
 
-        checkpoint = self.checkpoint(schedule, 0)
+        partial = scheduler_decision(
+            schedule=schedule,
+            checkpoints=[],
+            plan_sha256=PLAN_ID,
+            run_identity_sha256=RUN_ID,
+            cell_id=CELL_ID,
+            allocation_scheduler_state=scheduler_state(
+                schedule,
+                completed_allocation_ids=completed[:1],
+            ),
+            pause_requested=False,
+            cooldown_required=False,
+            thermal_observations=[],
+            decided_at_ns=2000,
+        )
+        self.assertEqual(partial["status"], "blocked-uncheckpointed")
+        self.assertIsNone(partial["recovery_checkpoint"])
+
         resumed = scheduler_decision(
             schedule=schedule,
             checkpoints=[checkpoint],
@@ -843,6 +877,7 @@ class FullPopulationContractTests(unittest.TestCase):
         )
         self.assertEqual(resumed["status"], "launch")
         self.assertEqual(resumed["next_wave_index"], 1)
+        self.assertIsNone(resumed["recovery_checkpoint"])
 
         with self.assertRaisesRegex(ContractError, "without a completed terminal"):
             scheduler_decision(
@@ -857,6 +892,67 @@ class FullPopulationContractTests(unittest.TestCase):
                 thermal_observations=[],
                 decided_at_ns=2000,
             )
+
+    def test_scheduler_recovery_closes_failed_initial_with_exact_retries(self) -> None:
+        schedule = build_schedule(ENFORCEMENT_ID)
+        allocations = {
+            row["allocation_id"]: row for row in schedule["allocations"]
+        }
+        failed = schedule["waves"][0]["allocation_ids"][0]
+        unaffected = schedule["waves"][0]["allocation_ids"][1:]
+        retries = sorted(
+            row["allocation_id"]
+            for row in schedule["allocations"]
+            if row["generation"] == 1
+            and row["recovers_allocation_id"] == failed
+        )
+        self.assertEqual(
+            {shard for retry in retries for shard in allocations[retry]["shard_ids"]},
+            set(allocations[failed]["shard_ids"]),
+        )
+        state = scheduler_state(
+            schedule,
+            completed_allocation_ids=[*unaffected, *retries],
+            failed_allocation_ids=[failed],
+        )
+        recovery = scheduler_decision(
+            schedule=schedule,
+            checkpoints=[],
+            plan_sha256=PLAN_ID,
+            run_identity_sha256=RUN_ID,
+            cell_id=CELL_ID,
+            allocation_scheduler_state=state,
+            pause_requested=False,
+            cooldown_required=False,
+            thermal_observations=[],
+            decided_at_ns=2000,
+        )
+        self.assertEqual(recovery["status"], "recover-checkpoint")
+        self.assertEqual(recovery["failed_allocation_ids"], [failed])
+        checkpoint = recovery["recovery_checkpoint"]
+        retried_completions = {
+            row["allocation_id"]
+            for row in checkpoint["shard_completions"]
+            if row["shard_id"] in allocations[failed]["shard_ids"]
+        }
+        self.assertEqual(retried_completions, set(retries))
+
+        resumed = scheduler_decision(
+            schedule=schedule,
+            checkpoints=[checkpoint],
+            plan_sha256=PLAN_ID,
+            run_identity_sha256=RUN_ID,
+            cell_id=CELL_ID,
+            allocation_scheduler_state=state,
+            pause_requested=False,
+            cooldown_required=False,
+            thermal_observations=self.thermal_observations(
+                schedule, wave_index=1, temperatures=(40, 40, 40)
+            ),
+            decided_at_ns=2000,
+        )
+        self.assertEqual(resumed["status"], "launch")
+        self.assertEqual(resumed["failed_allocation_ids"], [])
 
     def test_all_sixteen_checkpoints_close_the_cell_without_thermal_probe(self) -> None:
         schedule = build_schedule(ENFORCEMENT_ID)
