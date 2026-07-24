@@ -6714,7 +6714,13 @@ mod tests {
         let f_g_one = arena.apply(f, &[g_one]).unwrap();
         let ground_equality = arena.eq(g_f_minus_four, f_g_one).unwrap();
         let assertions = vec![universal, ground_bound, ground_equality];
-        let config = SolverConfig::new().with_timeout(Duration::from_secs(2));
+        // This test exercises the one-level retry contract, not the timeout
+        // boundary.  The all-features suite runs hundreds of solver tests in
+        // parallel on shared CI runners, where a two-second wall-clock budget
+        // can expire solely from CPU contention before the fixed query is
+        // decided.  Keep a finite guard while leaving enough headroom for the
+        // semantic assertion to be deterministic under that load.
+        let config = SolverConfig::new().with_timeout(Duration::from_secs(30));
 
         assert!(matches!(
             prove_unsat_by_mbqi_inner(&mut arena, &assertions, &config, false).unwrap(),
@@ -6727,7 +6733,10 @@ mod tests {
         fixed_assertions.push(fixing);
         let fixed_result =
             prove_unsat_by_mbqi_inner(&mut arena, &fixed_assertions, &config, false).unwrap();
-        assert!(matches!(fixed_result, CheckResult::Sat(_)));
+        assert!(
+            matches!(fixed_result, CheckResult::Sat(_)),
+            "fixed query must be satisfiable, got {fixed_result:?}"
+        );
 
         let CheckResult::Sat(model) =
             prove_unsat_by_mbqi(&mut arena, &assertions, &config).unwrap()
