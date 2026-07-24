@@ -389,12 +389,16 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   later Lean filesystem decoupling removes the historical `resume_fs.py`
   cross-lane pin. The
   [live-capture plan](docs/plan/smtcomp-credited-full-preparation-f2-live-capture-plan-2026-07-24.md)
+  and its source-first
+  [R1 correction](docs/plan/smtcomp-credited-full-preparation-f2-live-capture-r1-plan-2026-07-24.md)
   freezes the next actual seam: a dedicated operator must prove clean exact
   local/tracking/remote-main equality, run both registered readiness gates
-  before any NAS write, physically rehash the accepted 45,905-file population,
+  and revalidate the frozen repaired-P0 comparison plus all three external
+  roots before any NAS write, physically rehash the accepted 45,905-file population,
   stage the exact source/binaries/inputs, capture `s5`/`s6`/`s7` plus the eight
-  ordered incident sentinels inside 30 minutes, and install only a completion-
-  last `launch_authorized=false` root. It is structurally forbidden from
+  ordered incident sentinels and fresh schedule-bound thermal observations
+  inside 30 minutes, and install only a completion-last
+  `launch_authorized=false` root. It is structurally forbidden from
   importing or calling F3 admission/allocation paths. Current `origin/main`
   `08af3665` has a green exact-SHA docs workflow; its CI workflow was still in
   progress at the source-first checkpoint. A local pre-change `just check`
@@ -8758,6 +8762,13 @@ plan is built and committed on the current branch:
 | P5.5 | External target, measured | **DONE (bounded v1, ADR-0323--0338):** authenticated Tock capture plus eight rechecked dual-DRAT proofs and six replayed controls, UNKNOWN=0, DISAGREE=0. Query time 12.700 s; fresh outer wall 50.745 s; peak RSS 1,256,496 KiB; zero OOM deltas. The committed case study compares exact target validation, universal coverage, trust, effort, artifact boundaries, and limits. No Tock bug was found, so no upstream issue is applicable. This is not a speed or whole-kernel claim. |
 
 ## Changelog
+
+- **2026-07-24 — Corrected the credited-full F2 source-first contract before
+  implementation.** The R1 plan adds process-free replay of the frozen
+  repaired-P0 comparison and its three external roots before attempt creation,
+  plus exactly three fresh `s5`/`s6`/`s7` thermal observations bound to the
+  Axeyum first-wave schedule in preflight v2. No host, solver, or NAS action is
+  authorized or claimed.
 
 - **2026-07-24 — Preregistered the credited-full F2 live-capture operator.**
   The plan freezes exact local/tracking/remote-main and gate checks before NAS
