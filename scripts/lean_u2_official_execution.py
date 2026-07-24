@@ -108,7 +108,10 @@ SHARD_ID = "release-tag-l3-linux-release-compile-534-singleton-v1"
 HEX40 = re.compile(r"[0-9a-f]{40}\Z")
 HEX64 = re.compile(r"[0-9a-f]{64}\Z")
 
-HISTORICAL_RESULT_IMPLEMENTATION_REVISION = "1a2e7d3aa59710ba4c5dce7fe7f90f86db4841e4"
+HISTORICAL_RESULT_IMPLEMENTATION_REVISIONS = {
+    "1a2e7d3aa59710ba4c5dce7fe7f90f86db4841e4",
+    "d0390561a3044ccd6785cb1fdb0a3be2fb41d0bb",
+}
 HISTORICAL_RESULT_REPOSITORY_INPUTS = {
     "docs/plan/lean-u2-test-authority-v1.json": "d7446e7965bac100ac6b5c607cbb7c87b5b80063fc23b3ec998fff2736d5d18e",
     "docs/plan/lean-u2-official-ci-profiles-v1.json": "4817d177828797f9dab9e62cf7647732d2b9c3788db7b7b4e3461bc868948548",
@@ -2032,7 +2035,7 @@ def build_result_authority(root: Path, *, implementation_revision: str) -> dict[
         raise U2ExecutionError("missing official execution contract tests")
     result_repository_inputs = (
         HISTORICAL_RESULT_REPOSITORY_INPUTS
-        if implementation_revision == HISTORICAL_RESULT_IMPLEMENTATION_REVISION
+        if implementation_revision in HISTORICAL_RESULT_IMPLEMENTATION_REVISIONS
         else REPOSITORY_INPUTS
     )
     source_inputs = [

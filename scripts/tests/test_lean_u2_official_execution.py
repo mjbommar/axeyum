@@ -556,6 +556,20 @@ class LeanU2OfficialExecutionTests(unittest.TestCase):
                 U2.REPOSITORY_INPUTS["scripts/lean_vendored_resume_fs.py"],
             )
 
+    def test_retained_r3_result_keeps_its_historical_source_identity(self) -> None:
+        self.assertIn(
+            "d0390561a3044ccd6785cb1fdb0a3be2fb41d0bb",
+            U2.HISTORICAL_RESULT_IMPLEMENTATION_REVISIONS,
+        )
+        self.assertIn(
+            "scripts/smtcomp_repro/resume_fs.py",
+            U2.HISTORICAL_RESULT_REPOSITORY_INPUTS,
+        )
+        self.assertNotIn(
+            "scripts/lean_vendored_resume_fs.py",
+            U2.HISTORICAL_RESULT_REPOSITORY_INPUTS,
+        )
+
     def test_complete_evidence_rejects_missing_extra_and_raw_drift(self) -> None:
         mutations = ("missing", "extra", "raw-drift")
         for mutation in mutations:
