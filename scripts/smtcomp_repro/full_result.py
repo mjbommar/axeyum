@@ -23,8 +23,8 @@ from resume_fs import atomic_install_bytes, atomic_install_json, read_canonical_
 from resume_runner import sha256_file
 
 
-EXECUTION_AUTHORITY_SCHEMA = "axeyum.smtcomp-credited-full-cell-execution.v1"
-ADJUDICATION_SCHEMA = "axeyum.smtcomp-credited-full-cell-adjudication.v1"
+EXECUTION_AUTHORITY_SCHEMA = "axeyum.smtcomp-credited-full-cell-execution.v2"
+ADJUDICATION_SCHEMA = "axeyum.smtcomp-credited-full-cell-adjudication.v2"
 CELL_RESULT_SCHEMA = "axeyum.smtcomp-credited-full-cell-result.v1"
 EXECUTION_AUTHORITY_FIELDS = {
     "schema",
@@ -38,6 +38,8 @@ EXECUTION_AUTHORITY_FIELDS = {
     "wave_checkpoint_record_sha256s",
     "resource_completion_record_sha256",
     "multi_host_completion_record_sha256",
+    "prior_cell_result_record_sha256s",
+    "cross_solver_disagreement_count",
     "population_count",
     "key_set_sha256",
     "record_set_sha256",
@@ -53,6 +55,7 @@ ADJUDICATION_FIELDS = {
     "record_set_sha256",
     "summary",
     "known_status_contradictions",
+    "cross_solver_disagreements",
     "safe_to_continue",
     "record_sha256",
 }
@@ -108,6 +111,8 @@ def build_full_execution_authority(
     wave_checkpoint_record_sha256s: list[str],
     resource_completion_record_sha256: str,
     multi_host_completion_record_sha256: str,
+    prior_cell_result_record_sha256s: list[str],
+    cross_solver_disagreement_count: int,
     population_count: int,
     key_set_sha256: str,
     record_set_sha256: str,
@@ -131,6 +136,10 @@ def build_full_execution_authority(
             ),
             "resource_completion_record_sha256": resource_completion_record_sha256,
             "multi_host_completion_record_sha256": multi_host_completion_record_sha256,
+            "prior_cell_result_record_sha256s": copy.deepcopy(
+                prior_cell_result_record_sha256s
+            ),
+            "cross_solver_disagreement_count": cross_solver_disagreement_count,
             "population_count": population_count,
             "key_set_sha256": key_set_sha256,
             "record_set_sha256": record_set_sha256,
@@ -176,6 +185,24 @@ def validate_full_execution_authority(record: dict[str, Any]) -> dict[str, Any]:
         and all(_is_sha256(value) for value in checkpoints),
         "full execution authority checkpoint inventory mismatch",
     )
+    prior_results = record.get("prior_cell_result_record_sha256s")
+    solver_index = SOLVER_IDS.index(record["solver_id"])
+    _expect(
+        isinstance(prior_results, list)
+        and len(prior_results) == solver_index
+        and len(prior_results) == len(set(prior_results))
+        and all(_is_sha256(value) for value in prior_results),
+        "full execution authority prior-cell inventory mismatch",
+    )
+    _expect(
+        type(record.get("cross_solver_disagreement_count")) is int
+        and record["cross_solver_disagreement_count"] >= 0
+        and (
+            solver_index > 0
+            or record["cross_solver_disagreement_count"] == 0
+        ),
+        "full execution authority disagreement count mismatch",
+    )
     population = record.get("population_count")
     _expect(
         type(population) is int
@@ -209,6 +236,19 @@ def _load_records(path: Path) -> list[dict[str, Any]]:
         records.append(record)
     _expect(data == _records_bytes(records), "full cell result record order drift")
     return records
+
+
+def load_full_cell_result(
+    output_root: Path,
+    *,
+    expected_logic_counts: dict[str, int],
+) -> tuple[dict[str, Any], list[dict[str, Any]]]:
+    """Validate one external result and return its completion plus records."""
+
+    completion = validate_full_cell_result(
+        output_root, expected_logic_counts=expected_logic_counts
+    )
+    return completion, _load_records(output_root / "records.jsonl")
 
 
 def _derive_adjudication(
@@ -246,7 +286,11 @@ def _derive_adjudication(
             "record_set_sha256": summary["record_set_sha256"],
             "summary": summary,
             "known_status_contradictions": contradictions,
-            "safe_to_continue": contradictions == 0,
+            "cross_solver_disagreements": authority[
+                "cross_solver_disagreement_count"
+            ],
+            "safe_to_continue": contradictions == 0
+            and authority["cross_solver_disagreement_count"] == 0,
         }
     )
 
@@ -484,7 +528,7 @@ def load_full_cell_results(
     records_by_solver = {}
     for solver_id in SOLVER_IDS:
         root = result_roots[solver_id]
-        completion = validate_full_cell_result(
+        completion, records = load_full_cell_result(
             root, expected_logic_counts=expected_logic_counts
         )
         _expect(
@@ -492,5 +536,5 @@ def load_full_cell_results(
             "full comparison cell result root identity mismatch",
         )
         completions.append(completion)
-        records_by_solver[solver_id] = _load_records(root / "records.jsonl")
+        records_by_solver[solver_id] = records
     return comparison_authority_from_cell_results(completions), records_by_solver

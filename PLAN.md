@@ -840,6 +840,24 @@ state.
 > strict duplicate rejection, and single-owner lease at E1b; then prove one-host
 > aggregate enforcement and multi-host recovery at E2-E3 before rerunning. Do
 > not modify the frozen attempt or launch the candidate.
+> The credited 45,905-row successor now has fixture-proven F1/F2 preparation,
+> completion-last results/comparison, retry-capable checkpoints, process-free
+> authority, and a separate mainline-gated F3 admission. The admission binds an
+> integrated acceptance of the exact non-launching preparation plus the exact
+> safe solver-order result prefix; its wave entry point derives execution
+> identities from preparation and persists checkpoints automatically. It now
+> also derives the complete open/failed/lost lifecycle projection from
+> canonical E3 evidence and validates that sealed state inside scheduler
+> decision v2. The next process-free increment persists a replayable scheduler
+> authorization before every launch, projects completed terminals, and derives
+> a completion-last recovery checkpoint instead of relaunching across the
+> terminal-to-checkpoint crash window. Exact different-host retry closure also
+> clears the corresponding historical failure only after all owned shards are
+> checkpointed. The expanded portable lane gate passes 144 tests with one
+> expected live-host skip. No live F2 root or
+> canonical acceptance record exists. Next: integrate and green-gate the topic,
+> repair the Lean-owned source pin, then capture/publish an empty F2 preparation
+> before any distinct acceptance or Axeyum launch.
 > The candidate is not
 > official selection evidence:
 > it still lacks the complete eligibility/status/difficulty policy, official

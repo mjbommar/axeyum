@@ -35,8 +35,14 @@ from full_population import (  # noqa: E402
     shard_benchmark_count,
     validate_population_contract,
     validate_schedule,
+    validate_thermal_observation,
     validate_thermal_stop,
     validate_wave_checkpoint,
+)
+from full_admission import (  # noqa: E402
+    build_full_cell_admission,
+    build_full_preparation_acceptance,
+    validate_full_cell_admission,
 )
 from full_prepare import (  # noqa: E402
     FullSolverCell,
@@ -48,7 +54,11 @@ from full_prepare import (  # noqa: E402
     validate_full_preparation,
     validate_full_selection,
 )
-from full_execute import WaveHandle, supervise_one_wave  # noqa: E402
+from full_execute import (  # noqa: E402
+    ConcreteAdmittedWaveRuntime,
+    WaveHandle,
+    supervise_one_wave,
+)
 import full_prepare as full_prepare_module  # noqa: E402
 from full_preflight import (  # noqa: E402
     PREFLIGHT_MAX_AGE_NS,
@@ -73,6 +83,7 @@ from multi_host import (  # noqa: E402
     PLAN_SCHEMA,
     REGISTRATION_SCHEMA,
     TRANSPORT,
+    build_allocation_scheduler_state,
     stop_remote_unit,
     stage_execution_bundle,
     environment_manifest,
@@ -107,6 +118,60 @@ def seal_as(value: dict, field: str) -> dict:
 
 def sha256_file(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def scheduler_state(
+    schedule: dict,
+    *,
+    open_attempt_ids: list[str] | None = None,
+    completed_allocation_ids: list[str] | None = None,
+    failed_allocation_ids: list[str] | None = None,
+    lost_allocation_ids: list[str] | None = None,
+) -> dict:
+    opens = [] if open_attempt_ids is None else open_attempt_ids
+    completed = [] if completed_allocation_ids is None else completed_allocation_ids
+    failed = [] if failed_allocation_ids is None else failed_allocation_ids
+    lost = [] if lost_allocation_ids is None else lost_allocation_ids
+    initial_ids = [
+        row["allocation_id"]
+        for row in schedule["allocations"]
+        if row["generation"] == 0
+    ]
+    rows = []
+    used = set(completed + failed + lost)
+    available = [value for value in initial_ids if value not in used]
+    for index, attempt_id in enumerate(opens):
+        rows.append(
+            {
+                "allocation_id": available[index],
+                "attempt_id": attempt_id,
+                "attempt_record_sha256": f"{index + 1:064x}",
+                "terminal_status": None,
+                "terminal_record_sha256": None,
+            }
+        )
+    for index, (status, allocation_id) in enumerate(
+        [("completed", value) for value in completed]
+        + [("failed", value) for value in failed]
+        + [("lost", value) for value in lost],
+        start=len(rows) + 1,
+    ):
+        rows.append(
+            {
+                "allocation_id": allocation_id,
+                "attempt_id": f"{allocation_id}-{status}",
+                "attempt_record_sha256": f"{index:064x}",
+                "terminal_status": status,
+                "terminal_record_sha256": f"{index + 100:064x}",
+            }
+        )
+    return build_allocation_scheduler_state(
+        plan_sha256=PLAN_ID,
+        run_identity_sha256=RUN_ID,
+        cell_id=CELL_ID,
+        allocation_ids={row["allocation_id"] for row in schedule["allocations"]},
+        allocation_attempts=rows,
+    )
 
 
 def accepted_fixture(shared: Path, corpus: Path) -> Path:
@@ -483,6 +548,24 @@ class FullPopulationContractTests(unittest.TestCase):
         )[0]
         self.assertEqual(observation["temperature_millicelsius"], 39_750)
         self.assertEqual(observation["sensor_label"], "Tctl")
+        self.assertEqual(
+            bytes.fromhex(observation["sensors_json_hex"]), self.sensors_json(39.75)
+        )
+
+        for label, mutate in (
+            (
+                "claimed temperature",
+                lambda row: row.__setitem__("temperature_millicelsius", 39_751),
+            ),
+            ("raw bytes", lambda row: row.__setitem__("sensors_json_hex", "00")),
+            ("raw digest", lambda row: row.__setitem__("sensors_json_sha256", "0" * 64)),
+            ("raw length", lambda row: row.__setitem__("sensors_json_bytes", 1)),
+        ):
+            with self.subTest(label=label):
+                mutated = copy.deepcopy(observation)
+                mutate(mutated)
+                with self.assertRaises(ContractError):
+                    validate_thermal_observation(reseal(mutated))
 
         malformed = (
             b"{}",
@@ -518,9 +601,7 @@ class FullPopulationContractTests(unittest.TestCase):
                 plan_sha256=PLAN_ID,
                 run_identity_sha256=RUN_ID,
                 cell_id=CELL_ID,
-                open_attempt_ids=[],
-                failed_allocation_ids=[],
-                lost_allocation_ids=[],
+                allocation_scheduler_state=scheduler_state(schedule),
                 pause_requested=False,
                 cooldown_required=cooldown,
                 thermal_observations=self.thermal_observations(
@@ -565,9 +646,7 @@ class FullPopulationContractTests(unittest.TestCase):
                         plan_sha256=PLAN_ID,
                         run_identity_sha256=RUN_ID,
                         cell_id=CELL_ID,
-                        open_attempt_ids=[],
-                        failed_allocation_ids=[],
-                        lost_allocation_ids=[],
+                        allocation_scheduler_state=scheduler_state(schedule),
                         pause_requested=False,
                         cooldown_required=False,
                         thermal_observations=mutated,
@@ -581,9 +660,7 @@ class FullPopulationContractTests(unittest.TestCase):
                 plan_sha256=PLAN_ID,
                 run_identity_sha256=RUN_ID,
                 cell_id=CELL_ID,
-                open_attempt_ids=[],
-                failed_allocation_ids=[],
-                lost_allocation_ids=[],
+                allocation_scheduler_state=scheduler_state(schedule),
                 pause_requested=False,
                 cooldown_required=False,
                 thermal_observations=observations,
@@ -600,9 +677,15 @@ class FullPopulationContractTests(unittest.TestCase):
             plan_sha256=PLAN_ID,
             run_identity_sha256=RUN_ID,
             cell_id=CELL_ID,
-            open_attempt_ids=[],
-            failed_allocation_ids=[],
-            lost_allocation_ids=[],
+            allocation_scheduler_state=scheduler_state(
+                schedule,
+                completed_allocation_ids=sorted(
+                    {
+                        row["allocation_id"]
+                        for row in checkpoint["shard_completions"]
+                    }
+                ),
+            ),
             pause_requested=False,
             cooldown_required=False,
             thermal_observations=self.thermal_observations(
@@ -622,7 +705,7 @@ class FullPopulationContractTests(unittest.TestCase):
         for label, mutate in (
             (
                 "terminal",
-                lambda row: row["allocation_terminals"][0].__setitem__(
+                lambda row: row["shard_completions"][0].__setitem__(
                     "status", "failed"
                 ),
             ),
@@ -650,13 +733,65 @@ class FullPopulationContractTests(unittest.TestCase):
                 plan_sha256=PLAN_ID,
                 run_identity_sha256=RUN_ID,
                 cell_id=CELL_ID,
-                open_attempt_ids=[],
-                failed_allocation_ids=[],
-                lost_allocation_ids=[],
+                allocation_scheduler_state=scheduler_state(schedule),
                 pause_requested=False,
                 cooldown_required=False,
                 thermal_observations=[],
                 decided_at_ns=2000,
+            )
+
+    def test_recovered_wave_checkpoint_requires_each_exact_shard_retry(self) -> None:
+        schedule = build_schedule(ENFORCEMENT_ID)
+        terminals = self.wave_terminals(schedule, 0)[1:]
+        terminals.extend(
+            [
+                {
+                    "allocation_id": f"full-retry-{shard_id:02d}",
+                    "attempt_id": f"retry-attempt-{shard_id:02d}",
+                    "status": "completed",
+                    "terminal_record_sha256": f"{100 + shard_id:064x}",
+                }
+                for shard_id in (0, 1)
+            ]
+        )
+        checkpoint = build_wave_checkpoint(
+            schedule=schedule,
+            plan_sha256=PLAN_ID,
+            run_identity_sha256=RUN_ID,
+            cell_id=CELL_ID,
+            wave_index=0,
+            allocation_terminals=terminals,
+            cumulative_records=cumulative_benchmark_count(schedule, 0),
+        )
+        self.assertEqual(
+            [row["allocation_id"] for row in checkpoint["shard_completions"][:2]],
+            ["full-retry-00", "full-retry-01"],
+        )
+        self.assertEqual(
+            [row["allocation_id"] for row in checkpoint["shard_completions"][2:4]],
+            ["full-initial-01", "full-initial-01"],
+        )
+
+        missing = terminals[:-1]
+        with self.assertRaisesRegex(ContractError, "every exact wave shard"):
+            build_wave_checkpoint(
+                schedule=schedule,
+                plan_sha256=PLAN_ID,
+                run_identity_sha256=RUN_ID,
+                cell_id=CELL_ID,
+                wave_index=0,
+                allocation_terminals=missing,
+                cumulative_records=cumulative_benchmark_count(schedule, 0),
+            )
+        mutated = copy.deepcopy(checkpoint)
+        mutated["shard_completions"][0]["allocation_id"] = "full-retry-02"
+        with self.assertRaisesRegex(ContractError, "not valid for wave shard"):
+            validate_wave_checkpoint(
+                reseal(mutated),
+                schedule=schedule,
+                plan_sha256=PLAN_ID,
+                run_identity_sha256=RUN_ID,
+                cell_id=CELL_ID,
             )
 
     def test_scheduler_never_launches_around_unclosed_failure_loss_or_pause(self) -> None:
@@ -675,9 +810,12 @@ class FullPopulationContractTests(unittest.TestCase):
                     plan_sha256=PLAN_ID,
                     run_identity_sha256=RUN_ID,
                     cell_id=CELL_ID,
-                    open_attempt_ids=opens,
-                    failed_allocation_ids=failed,
-                    lost_allocation_ids=lost,
+                    allocation_scheduler_state=scheduler_state(
+                        schedule,
+                        open_attempt_ids=opens,
+                        failed_allocation_ids=failed,
+                        lost_allocation_ids=lost,
+                    ),
                     pause_requested=pause,
                     cooldown_required=False,
                     thermal_observations=[],
@@ -686,18 +824,179 @@ class FullPopulationContractTests(unittest.TestCase):
                 self.assertEqual(decision["status"], expected)
                 self.assertEqual(decision["allocation_ids"], [])
 
+    def test_scheduler_recovers_exact_completed_wave_without_relaunch(self) -> None:
+        schedule = build_schedule(ENFORCEMENT_ID)
+        completed = schedule["waves"][0]["allocation_ids"]
+        state = scheduler_state(
+            schedule,
+            completed_allocation_ids=completed,
+        )
+        recover = scheduler_decision(
+            schedule=schedule,
+            checkpoints=[],
+            plan_sha256=PLAN_ID,
+            run_identity_sha256=RUN_ID,
+            cell_id=CELL_ID,
+            allocation_scheduler_state=state,
+            pause_requested=False,
+            cooldown_required=False,
+            thermal_observations=[],
+            decided_at_ns=2000,
+        )
+        self.assertEqual(recover["status"], "recover-checkpoint")
+        self.assertEqual(
+            recover["uncheckpointed_completed_allocation_ids"], completed
+        )
+        self.assertEqual(recover["allocation_ids"], [])
+        checkpoint = validate_wave_checkpoint(
+            recover["recovery_checkpoint"],
+            schedule=schedule,
+            plan_sha256=PLAN_ID,
+            run_identity_sha256=RUN_ID,
+            cell_id=CELL_ID,
+        )
+        self.assertEqual(checkpoint["wave_index"], 0)
+        self.assertEqual(
+            sorted(
+                {
+                    row["allocation_id"]
+                    for row in checkpoint["shard_completions"]
+                }
+            ),
+            completed,
+        )
+
+        partial = scheduler_decision(
+            schedule=schedule,
+            checkpoints=[],
+            plan_sha256=PLAN_ID,
+            run_identity_sha256=RUN_ID,
+            cell_id=CELL_ID,
+            allocation_scheduler_state=scheduler_state(
+                schedule,
+                completed_allocation_ids=completed[:1],
+            ),
+            pause_requested=False,
+            cooldown_required=False,
+            thermal_observations=[],
+            decided_at_ns=2000,
+        )
+        self.assertEqual(partial["status"], "blocked-uncheckpointed")
+        self.assertIsNone(partial["recovery_checkpoint"])
+
+        resumed = scheduler_decision(
+            schedule=schedule,
+            checkpoints=[checkpoint],
+            plan_sha256=PLAN_ID,
+            run_identity_sha256=RUN_ID,
+            cell_id=CELL_ID,
+            allocation_scheduler_state=state,
+            pause_requested=False,
+            cooldown_required=False,
+            thermal_observations=self.thermal_observations(
+                schedule, wave_index=1, temperatures=(40, 40, 40)
+            ),
+            decided_at_ns=2000,
+        )
+        self.assertEqual(resumed["status"], "launch")
+        self.assertEqual(resumed["next_wave_index"], 1)
+        self.assertIsNone(resumed["recovery_checkpoint"])
+
+        with self.assertRaisesRegex(ContractError, "without a completed terminal"):
+            scheduler_decision(
+                schedule=schedule,
+                checkpoints=[checkpoint],
+                plan_sha256=PLAN_ID,
+                run_identity_sha256=RUN_ID,
+                cell_id=CELL_ID,
+                allocation_scheduler_state=scheduler_state(schedule),
+                pause_requested=False,
+                cooldown_required=False,
+                thermal_observations=[],
+                decided_at_ns=2000,
+            )
+
+    def test_scheduler_recovery_closes_failed_initial_with_exact_retries(self) -> None:
+        schedule = build_schedule(ENFORCEMENT_ID)
+        allocations = {
+            row["allocation_id"]: row for row in schedule["allocations"]
+        }
+        failed = schedule["waves"][0]["allocation_ids"][0]
+        unaffected = schedule["waves"][0]["allocation_ids"][1:]
+        retries = sorted(
+            row["allocation_id"]
+            for row in schedule["allocations"]
+            if row["generation"] == 1
+            and row["recovers_allocation_id"] == failed
+        )
+        self.assertEqual(
+            {shard for retry in retries for shard in allocations[retry]["shard_ids"]},
+            set(allocations[failed]["shard_ids"]),
+        )
+        state = scheduler_state(
+            schedule,
+            completed_allocation_ids=[*unaffected, *retries],
+            failed_allocation_ids=[failed],
+        )
+        recovery = scheduler_decision(
+            schedule=schedule,
+            checkpoints=[],
+            plan_sha256=PLAN_ID,
+            run_identity_sha256=RUN_ID,
+            cell_id=CELL_ID,
+            allocation_scheduler_state=state,
+            pause_requested=False,
+            cooldown_required=False,
+            thermal_observations=[],
+            decided_at_ns=2000,
+        )
+        self.assertEqual(recovery["status"], "recover-checkpoint")
+        self.assertEqual(recovery["failed_allocation_ids"], [failed])
+        checkpoint = recovery["recovery_checkpoint"]
+        retried_completions = {
+            row["allocation_id"]
+            for row in checkpoint["shard_completions"]
+            if row["shard_id"] in allocations[failed]["shard_ids"]
+        }
+        self.assertEqual(retried_completions, set(retries))
+
+        resumed = scheduler_decision(
+            schedule=schedule,
+            checkpoints=[checkpoint],
+            plan_sha256=PLAN_ID,
+            run_identity_sha256=RUN_ID,
+            cell_id=CELL_ID,
+            allocation_scheduler_state=state,
+            pause_requested=False,
+            cooldown_required=False,
+            thermal_observations=self.thermal_observations(
+                schedule, wave_index=1, temperatures=(40, 40, 40)
+            ),
+            decided_at_ns=2000,
+        )
+        self.assertEqual(resumed["status"], "launch")
+        self.assertEqual(resumed["failed_allocation_ids"], [])
+
     def test_all_sixteen_checkpoints_close_the_cell_without_thermal_probe(self) -> None:
         schedule = build_schedule(ENFORCEMENT_ID)
         checkpoints = [self.checkpoint(schedule, index) for index in range(WAVE_COUNT)]
+        completed = sorted(
+            {
+                row["allocation_id"]
+                for checkpoint in checkpoints
+                for row in checkpoint["shard_completions"]
+            }
+        )
         decision = scheduler_decision(
             schedule=schedule,
             checkpoints=checkpoints,
             plan_sha256=PLAN_ID,
             run_identity_sha256=RUN_ID,
             cell_id=CELL_ID,
-            open_attempt_ids=[],
-            failed_allocation_ids=[],
-            lost_allocation_ids=[],
+            allocation_scheduler_state=scheduler_state(
+                schedule,
+                completed_allocation_ids=completed,
+            ),
             pause_requested=False,
             cooldown_required=False,
             thermal_observations=[],
@@ -1174,6 +1473,69 @@ class FullPopulationContractTests(unittest.TestCase):
                 )["record_sha256"],
                 completion["record_sha256"],
             )
+            acceptance = build_full_preparation_acceptance(
+                execution_source_commit=readiness["head_commit"],
+                preparation_record_sha256=completion["record_sha256"],
+                selection_record_sha256=selection["record_sha256"],
+                fixture_only=True,
+            )
+            admission = build_full_cell_admission(
+                attempt,
+                repository_root=ROOT,
+                solver_id="axeyum",
+                expected_logic_counts={"QF_BV": 1, "QF_UF": 1},
+                prior_result_roots={},
+                acceptance=acceptance,
+                inspect_shared_root=False,
+                admitted_at_ns=5300,
+            )
+            self.assertEqual(
+                validate_full_cell_admission(
+                    admission,
+                    preparation_root=attempt,
+                    repository_root=ROOT,
+                    expected_logic_counts={"QF_BV": 1, "QF_UF": 1},
+                    prior_result_roots={},
+                    acceptance=acceptance,
+                    inspect_shared_root=False,
+                ),
+                admission,
+            )
+            drifted_acceptance = copy.deepcopy(acceptance)
+            drifted_acceptance["preparation_record_sha256"] = "0" * 64
+            with self.assertRaisesRegex(ContractError, "acceptance/preparation"):
+                validate_full_cell_admission(
+                    admission,
+                    preparation_root=attempt,
+                    repository_root=ROOT,
+                    expected_logic_counts={"QF_BV": 1, "QF_UF": 1},
+                    prior_result_roots={},
+                    acceptance=reseal(drifted_acceptance),
+                    inspect_shared_root=False,
+                )
+            drifted_admission = copy.deepcopy(admission)
+            drifted_admission["plan_sha256"] = "0" * 64
+            with self.assertRaisesRegex(ContractError, "admission replay drift"):
+                validate_full_cell_admission(
+                    reseal(drifted_admission),
+                    preparation_root=attempt,
+                    repository_root=ROOT,
+                    expected_logic_counts={"QF_BV": 1, "QF_UF": 1},
+                    prior_result_roots={},
+                    acceptance=acceptance,
+                    inspect_shared_root=False,
+                )
+            with self.assertRaisesRegex(ContractError, "prior-result order"):
+                build_full_cell_admission(
+                    attempt,
+                    repository_root=ROOT,
+                    solver_id="cvc5",
+                    expected_logic_counts={"QF_BV": 1, "QF_UF": 1},
+                    prior_result_roots={},
+                    acceptance=acceptance,
+                    inspect_shared_root=False,
+                    admitted_at_ns=5300,
+                )
             evidence = attempt / "cells" / "axeyum" / "records" / "unexpected"
             evidence.write_bytes(b"must reject pre-existing execution evidence\n")
             with self.assertRaisesRegex(ContractError, "execution evidence"):
@@ -1190,6 +1552,18 @@ class FullPopulationContractTests(unittest.TestCase):
                     allowed_execution_solver_ids=("axeyum",),
                 )["record_sha256"],
                 completion["record_sha256"],
+            )
+            self.assertEqual(
+                validate_full_cell_admission(
+                    admission,
+                    preparation_root=attempt,
+                    repository_root=ROOT,
+                    expected_logic_counts={"QF_BV": 1, "QF_UF": 1},
+                    prior_result_roots={},
+                    acceptance=acceptance,
+                    inspect_shared_root=False,
+                ),
+                admission,
             )
             with self.assertRaisesRegex(ContractError, "solver prefix"):
                 validate_full_preparation(
@@ -1332,9 +1706,7 @@ class FullPopulationContractTests(unittest.TestCase):
                 plan_sha256=PLAN_ID,
                 run_identity_sha256=RUN_ID,
                 cell_id=CELL_ID,
-                open_attempt_ids=[],
-                failed_allocation_ids=[],
-                lost_allocation_ids=[],
+                allocation_scheduler_state=scheduler_state(schedule),
                 cooldown_required=False,
                 prewave_thermal_observations=prewave,
                 launch=launch,
@@ -1344,6 +1716,7 @@ class FullPopulationContractTests(unittest.TestCase):
                 now_ns=lambda: 2000,
                 wait=mock.Mock(),
                 pause_requested=pause,
+                authorize_decision=mock.Mock(),
             )
             self.assertEqual(outcome["status"], expected)
             self.assertEqual(
@@ -1351,6 +1724,86 @@ class FullPopulationContractTests(unittest.TestCase):
                 schedule["waves"][0]["allocation_ids"],
             )
             self.assertEqual(outcome["checkpoint"]["wave_index"], 0)
+
+    def test_concrete_runtime_maps_frozen_commands_to_e3_callbacks(self) -> None:
+        schedule = build_schedule(ENFORCEMENT_ID)
+        plan = {
+            "plan_sha256": PLAN_ID,
+            "run_identity_sha256": RUN_ID,
+            "allocations": schedule["allocations"],
+            "host_registrations": [
+                {"host_id": host_id, "ssh_target": host_id}
+                for host_id in HOST_IDS
+            ],
+        }
+        with tempfile.TemporaryDirectory() as temp:
+            run_dir = Path(temp) / CELL_ID
+            commands = run_dir / "multi-host-commands"
+            commands.mkdir(parents=True)
+            for allocation_id in schedule["waves"][0]["allocation_ids"]:
+                (commands / f"{allocation_id}.json").write_bytes(
+                    canonical_bytes({"remote_helper_path": "/tmp/full-multi-host.py"})
+                )
+            runtime = ConcreteAdmittedWaveRuntime(
+                plan=plan,
+                schedule=schedule,
+                run_dir=run_dir,
+                inspect_shared_root=False,
+            )
+            allocation = schedule["allocations"][0]
+            child = mock.Mock()
+            child.poll.return_value = 0
+            process = multi_host_module.AllocationProcess(
+                allocation_id=allocation["allocation_id"],
+                attempt_id="concrete-attempt",
+                session_id="concrete-session",
+                process=child,
+                run_dir=run_dir,
+                launch={"fixture": True},
+            )
+            raw = self.sensors_json(40)
+            stop_evidence = {
+                "exit_code": 0,
+                "post_stop_unit_state": "inactive",
+                "stopped_at_ns": 3000,
+            }
+            with (
+                mock.patch("full_execute.start_allocation", return_value=process) as start,
+                mock.patch("full_execute.remote_thermal_sample", return_value=raw) as sample,
+                mock.patch(
+                    "full_execute.stop_remote_unit", return_value=stop_evidence
+                ) as stop,
+                mock.patch(
+                    "full_execute.finish_allocation",
+                    return_value={"status": "completed", "record_sha256": "f" * 64},
+                ) as finish,
+            ):
+                prewave = runtime.capture_pre_wave(wave_index=0, now_ns=lambda: 1000)
+                handle = runtime.launch(allocation)
+                active = runtime.observe_active(handle, 2000)
+                hot = copy.deepcopy(active)
+                hot["temperature_millicelsius"] = 90_000
+                hot["sensors_json_hex"] = self.sensors_json(90).hex()
+                hot["sensors_json_sha256"] = hashlib.sha256(
+                    self.sensors_json(90)
+                ).hexdigest()
+                hot["sensors_json_bytes"] = len(self.sensors_json(90))
+                hot = reseal(hot)
+                stopped = runtime.stop_overheated(handle, hot)
+                terminal = runtime.poll_terminal(handle)
+
+            self.assertEqual(len(prewave), 3)
+            self.assertEqual(active["attempt_id"], "concrete-attempt")
+            self.assertEqual(stopped["remote_unit"], handle.remote_unit)
+            self.assertEqual(terminal["status"], "completed")
+            self.assertNotIn(handle.attempt_id, runtime.active)
+            self.assertEqual(
+                start.call_args.kwargs["command_manifest"],
+                commands / f"{allocation['allocation_id']}.json",
+            )
+            self.assertEqual(sample.call_count, 4)
+            stop.assert_called_once()
+            finish.assert_called_once_with(process, timeout=5.0)
 
     def test_supervisor_stops_only_overheated_handle_and_withholds_checkpoint(self) -> None:
         schedule = build_schedule(ENFORCEMENT_ID)
@@ -1413,9 +1866,7 @@ class FullPopulationContractTests(unittest.TestCase):
             plan_sha256=PLAN_ID,
             run_identity_sha256=RUN_ID,
             cell_id=CELL_ID,
-            open_attempt_ids=[],
-            failed_allocation_ids=[],
-            lost_allocation_ids=[],
+            allocation_scheduler_state=scheduler_state(schedule),
             cooldown_required=False,
             prewave_thermal_observations=prewave,
             launch=launch,
@@ -1425,6 +1876,7 @@ class FullPopulationContractTests(unittest.TestCase):
             now_ns=lambda: next(times),
             wait=lambda: None,
             pause_requested=lambda: False,
+            authorize_decision=mock.Mock(),
         )
         self.assertEqual(outcome["status"], "cell-stopped")
         self.assertIsNone(outcome["checkpoint"])
@@ -1458,9 +1910,7 @@ class FullPopulationContractTests(unittest.TestCase):
             plan_sha256=PLAN_ID,
             run_identity_sha256=RUN_ID,
             cell_id=CELL_ID,
-            open_attempt_ids=[],
-            failed_allocation_ids=[],
-            lost_allocation_ids=[],
+            allocation_scheduler_state=scheduler_state(schedule),
             cooldown_required=False,
             prewave_thermal_observations=prewave,
             launch=launch,
@@ -1475,6 +1925,7 @@ class FullPopulationContractTests(unittest.TestCase):
             now_ns=lambda: 2000,
             wait=mock.Mock(),
             pause_requested=lambda: False,
+            authorize_decision=mock.Mock(),
         )
         self.assertEqual(outcome["status"], "cell-stopped")
         self.assertEqual(outcome["launched_allocation_ids"], ["full-initial-00"])
@@ -1490,9 +1941,9 @@ class FullPopulationContractTests(unittest.TestCase):
             plan_sha256=PLAN_ID,
             run_identity_sha256=RUN_ID,
             cell_id=CELL_ID,
-            open_attempt_ids=["open-attempt"],
-            failed_allocation_ids=[],
-            lost_allocation_ids=[],
+            allocation_scheduler_state=scheduler_state(
+                schedule, open_attempt_ids=["open-attempt"]
+            ),
             cooldown_required=False,
             prewave_thermal_observations=[],
             launch=launch,
@@ -1502,11 +1953,42 @@ class FullPopulationContractTests(unittest.TestCase):
             now_ns=lambda: 2000,
             wait=mock.Mock(),
             pause_requested=lambda: False,
+            authorize_decision=mock.Mock(),
         )
         self.assertEqual(outcome["status"], "blocked-unclosed")
         launch.assert_not_called()
 
-    def test_readiness_requires_clean_origin_main_and_both_exact_green_gates(self) -> None:
+    def test_supervisor_never_launches_before_durable_authorization(self) -> None:
+        schedule = build_schedule(ENFORCEMENT_ID)
+        launch = mock.Mock()
+
+        def reject_authorization(_decision: dict) -> None:
+            raise RuntimeError("authorization persistence failed")
+
+        with self.assertRaisesRegex(RuntimeError, "persistence failed"):
+            supervise_one_wave(
+                schedule=schedule,
+                checkpoints=[],
+                plan_sha256=PLAN_ID,
+                run_identity_sha256=RUN_ID,
+                cell_id=CELL_ID,
+                allocation_scheduler_state=scheduler_state(schedule),
+                cooldown_required=False,
+                prewave_thermal_observations=self.thermal_observations(
+                    schedule, wave_index=0, temperatures=(40, 40, 40)
+                ),
+                launch=launch,
+                poll_terminal=mock.Mock(),
+                observe_active=mock.Mock(),
+                stop_overheated=mock.Mock(),
+                now_ns=lambda: 2000,
+                wait=mock.Mock(),
+                pause_requested=lambda: False,
+                authorize_decision=reject_authorization,
+            )
+        launch.assert_not_called()
+
+    def test_readiness_requires_integrated_origin_and_both_exact_green_gates(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             required = readiness_repository(root, DEFAULT_REQUIRED_PATHS)
@@ -1557,6 +2039,84 @@ class FullPopulationContractTests(unittest.TestCase):
                     required_paths=required,
                     require_ready=True,
                 )
+
+    def test_readiness_survives_later_origin_main_advancement(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            required = readiness_repository(root, DEFAULT_REQUIRED_PATHS)
+            gates = [
+                build_gate_observation(
+                    repository_root=root,
+                    command=list(command),
+                    exit_code=0,
+                    stdout=b"green\n",
+                    stderr=b"",
+                    started_at_ns=1000 + index * 10,
+                    ended_at_ns=1001 + index * 10,
+                )
+                for index, command in enumerate(
+                    (("just", "check"), ("./scripts/check-smtcomp-resume.sh",))
+                )
+            ]
+            readiness = build_readiness(
+                repository_root=root,
+                gate_observations=gates,
+                required_paths=required,
+                require_ready=True,
+            )
+            recorded_origin = readiness["origin_revision"]
+            advanced = subprocess.run(
+                ["git", "commit-tree", "HEAD^{tree}", "-p", "HEAD", "-m", "advance-origin"],
+                cwd=root,
+                check=True,
+                stdout=subprocess.PIPE,
+                text=True,
+            ).stdout.strip()
+            subprocess.run(
+                ["git", "update-ref", "refs/remotes/origin/main", advanced],
+                cwd=root,
+                check=True,
+            )
+            self.assertNotEqual(advanced, recorded_origin)
+            self.assertEqual(
+                validate_readiness(readiness, repository_root=root)["record_sha256"],
+                readiness["record_sha256"],
+            )
+
+    def test_readiness_accepts_clean_descendant_of_recorded_origin(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            required = readiness_repository(root, DEFAULT_REQUIRED_PATHS)
+            (root / "unrelated.txt").write_text("descendant\n", encoding="utf-8")
+            subprocess.run(["git", "add", "unrelated.txt"], cwd=root, check=True)
+            subprocess.run(
+                ["git", "commit", "-m", "descendant"],
+                cwd=root,
+                check=True,
+                capture_output=True,
+            )
+            gates = [
+                build_gate_observation(
+                    repository_root=root,
+                    command=list(command),
+                    exit_code=0,
+                    stdout=b"green\n",
+                    stderr=b"",
+                    started_at_ns=1000 + index * 10,
+                    ended_at_ns=1001 + index * 10,
+                )
+                for index, command in enumerate(
+                    (("just", "check"), ("./scripts/check-smtcomp-resume.sh",))
+                )
+            ]
+            readiness = build_readiness(
+                repository_root=root,
+                gate_observations=gates,
+                required_paths=required,
+                require_ready=True,
+            )
+            self.assertNotEqual(readiness["head_commit"], readiness["origin_revision"])
+            self.assertTrue(readiness["prerequisites_satisfied"])
 
     def test_readiness_durable_validation_uses_recorded_git_objects(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

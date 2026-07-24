@@ -63,7 +63,9 @@ def records(solver_id: str, *, contradiction: bool = False) -> list[dict]:
     ]
 
 
-def authority(solver_id: str, material: list[dict]) -> dict:
+def authority(
+    solver_id: str, material: list[dict], *, disagreements: int = 0
+) -> dict:
     indexed = validate_full_cell_records(
         solver_id,
         material,
@@ -83,6 +85,11 @@ def authority(solver_id: str, material: list[dict]) -> dict:
         wave_checkpoint_record_sha256s=["2" * 64],
         resource_completion_record_sha256="3" * 64,
         multi_host_completion_record_sha256="4" * 64,
+        prior_cell_result_record_sha256s=[
+            f"{10 + index:064x}"
+            for index in range(SOLVER_IDS.index(solver_id))
+        ],
+        cross_solver_disagreement_count=disagreements,
         population_count=summary["population"],
         key_set_sha256=summary["key_set_sha256"],
         record_set_sha256=summary["record_set_sha256"],
@@ -132,6 +139,20 @@ class FullCellResultTests(unittest.TestCase):
             comparison_authority_from_cell_results(
                 [completion, {**completion, "solver_id": "cvc5"}, {**completion, "solver_id": "bitwuzla"}]
             )
+
+    def test_cross_solver_disagreement_publishes_but_blocks_continuation(self) -> None:
+        material = records("cvc5")
+        with tempfile.TemporaryDirectory() as temp:
+            completion = publish_full_cell_result(
+                Path(temp) / "cell-result",
+                records=material,
+                execution_authority=authority(
+                    "cvc5", material, disagreements=1
+                ),
+                expected_logic_counts=LOGIC_COUNTS,
+                published_at_ns=1100,
+            )
+        self.assertFalse(completion["safe_to_continue"])
 
     def test_interruption_resumes_without_completion_or_byte_drift(self) -> None:
         material = records("cvc5")

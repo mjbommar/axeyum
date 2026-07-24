@@ -9,23 +9,340 @@ from __future__ import annotations
 
 import copy
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any, Callable
 
 from full_population import (
     CHECKPOINT_TERMINAL_FIELDS,
     SHA256,
+    SCHEDULER_DECISION_FIELDS,
+    SCHEDULER_DECISION_SCHEMA,
     THERMAL_MAX_INTERVAL_NS,
     THERMAL_STOP_MILLICELSIUS,
+    WAVE_COUNT,
+    build_thermal_observation,
+    build_thermal_stop,
     build_wave_checkpoint,
     scheduler_decision,
+    validate_checkpoint_chain,
     validate_schedule,
     validate_thermal_observation,
     validate_thermal_stop,
 )
+from multi_host import (
+    AllocationProcess,
+    derive_allocation_scheduler_state,
+    finish_allocation,
+    remote_thermal_sample,
+    start_allocation,
+    stop_remote_unit,
+)
 from resume_contract import ContractError, digest
+from resume_fs import (
+    atomic_install_json,
+    read_canonical_json,
+    recover_orphan_temporaries,
+)
 
 
 WAVE_OUTCOME_SCHEMA = "axeyum.smtcomp-credited-full-wave-outcome.v1"
+SCHEDULER_AUTHORIZATION_SCHEMA = (
+    "axeyum.smtcomp-credited-full-scheduler-authorization.v1"
+)
+CHECKPOINT_DIRECTORY = "full-wave-checkpoints"
+SCHEDULER_AUTHORIZATION_DIRECTORY = "full-scheduler-authorizations"
+SCHEDULER_AUTHORIZATION_FIELDS = {
+    "schema",
+    "event_index",
+    "admission_record_sha256",
+    "allocation_scheduler_state",
+    "thermal_observations",
+    "scheduler_decision",
+    "record_sha256",
+}
+
+
+def _expect(condition: bool, message: str) -> None:
+    if not condition:
+        raise ContractError(message)
+
+
+def load_wave_checkpoints(
+    run_dir: Path,
+    *,
+    schedule: dict[str, Any],
+    plan_sha256: str,
+    run_identity_sha256: str,
+    cell_id: str,
+) -> list[dict[str, Any]]:
+    """Load the exact immutable, contiguous checkpoint prefix for one cell."""
+
+    root = run_dir / CHECKPOINT_DIRECTORY
+    if not root.exists():
+        return []
+    if root.is_symlink() or not root.is_dir():
+        raise ContractError("full wave checkpoint directory mismatch")
+    paths = sorted(root.iterdir(), key=lambda path: path.name)
+    if any(path.is_symlink() or not path.is_file() for path in paths):
+        raise ContractError("unexpected full wave checkpoint artifact")
+    expected_names = [f"wave-{index:02d}.json" for index in range(len(paths))]
+    if [path.name for path in paths] != expected_names:
+        raise ContractError("full wave checkpoint inventory is not contiguous")
+    checkpoints = [read_canonical_json(path) for path in paths]
+    return validate_checkpoint_chain(
+        checkpoints,
+        schedule=schedule,
+        plan_sha256=plan_sha256,
+        run_identity_sha256=run_identity_sha256,
+        cell_id=cell_id,
+    )
+
+
+def publish_wave_checkpoint(
+    run_dir: Path,
+    *,
+    checkpoint: dict[str, Any],
+    schedule: dict[str, Any],
+    plan_sha256: str,
+    run_identity_sha256: str,
+    cell_id: str,
+    phase_hook: Callable[[str], None] | None = None,
+) -> dict[str, Any]:
+    """Install one checkpoint without permitting a gap or byte replacement."""
+
+    checkpoint_root = run_dir / CHECKPOINT_DIRECTORY
+    recover_orphan_temporaries(
+        checkpoint_root,
+        quarantine_root=run_dir / "quarantine",
+        eligible_targets={f"wave-{index:02d}.json" for index in range(WAVE_COUNT)},
+    )
+    checkpoints = load_wave_checkpoints(
+        run_dir,
+        schedule=schedule,
+        plan_sha256=plan_sha256,
+        run_identity_sha256=run_identity_sha256,
+        cell_id=cell_id,
+    )
+    wave_index = checkpoint.get("wave_index")
+    if type(wave_index) is int and 0 <= wave_index < len(checkpoints):
+        if checkpoint == checkpoints[wave_index]:
+            return checkpoints[wave_index]
+        raise ContractError("full wave checkpoint conflicts with installed wave")
+    if wave_index != len(checkpoints):
+        raise ContractError("full wave checkpoint is not the next exact wave")
+    validate_checkpoint_chain(
+        [*checkpoints, checkpoint],
+        schedule=schedule,
+        plan_sha256=plan_sha256,
+        run_identity_sha256=run_identity_sha256,
+        cell_id=cell_id,
+    )
+    atomic_install_json(
+        checkpoint_root,
+        f"wave-{wave_index:02d}.json",
+        checkpoint,
+        phase_hook=phase_hook,
+        quarantine_root=run_dir / "quarantine",
+    )
+    return load_wave_checkpoints(
+        run_dir,
+        schedule=schedule,
+        plan_sha256=plan_sha256,
+        run_identity_sha256=run_identity_sha256,
+        cell_id=cell_id,
+    )[-1]
+
+
+def validate_scheduler_authorization(
+    authorization: dict[str, Any],
+    *,
+    admission_record_sha256: str,
+    schedule: dict[str, Any],
+    checkpoints: list[dict[str, Any]],
+    plan_sha256: str,
+    run_identity_sha256: str,
+    cell_id: str,
+) -> dict[str, Any]:
+    """Replay one durable scheduler authorization from its complete inputs."""
+
+    _expect(
+        isinstance(authorization, dict)
+        and set(authorization) == SCHEDULER_AUTHORIZATION_FIELDS
+        and authorization.get("schema") == SCHEDULER_AUTHORIZATION_SCHEMA
+        and authorization.get("record_sha256")
+        == _sealed(authorization)["record_sha256"],
+        "full scheduler authorization field/schema/seal mismatch",
+    )
+    event_index = authorization.get("event_index")
+    _expect(
+        type(event_index) is int
+        and event_index >= 0
+        and isinstance(admission_record_sha256, str)
+        and SHA256.fullmatch(admission_record_sha256)
+        and authorization.get("admission_record_sha256")
+        == admission_record_sha256,
+        "full scheduler authorization admission/index mismatch",
+    )
+    decision = authorization.get("scheduler_decision")
+    thermal = authorization.get("thermal_observations")
+    _expect(
+        isinstance(decision, dict)
+        and set(decision) == SCHEDULER_DECISION_FIELDS
+        and decision.get("schema") == SCHEDULER_DECISION_SCHEMA
+        and isinstance(thermal, list)
+        and all(isinstance(row, dict) for row in thermal),
+        "full scheduler authorization input mismatch",
+    )
+    completed_ids = decision.get("completed_checkpoint_sha256s")
+    _expect(
+        isinstance(completed_ids, list)
+        and len(completed_ids) <= len(checkpoints)
+        and completed_ids
+        == [row["record_sha256"] for row in checkpoints[: len(completed_ids)]],
+        "full scheduler authorization checkpoint prefix mismatch",
+    )
+    replayed = scheduler_decision(
+        schedule=schedule,
+        checkpoints=checkpoints[: len(completed_ids)],
+        plan_sha256=plan_sha256,
+        run_identity_sha256=run_identity_sha256,
+        cell_id=cell_id,
+        allocation_scheduler_state=authorization["allocation_scheduler_state"],
+        pause_requested=decision["pause_requested"],
+        cooldown_required=decision["cooldown_required"],
+        thermal_observations=thermal,
+        decided_at_ns=decision["decided_at_ns"],
+    )
+    _expect(
+        replayed == decision,
+        "full scheduler authorization decision replay mismatch",
+    )
+    return authorization
+
+
+def load_scheduler_authorizations(
+    run_dir: Path,
+    *,
+    admission_record_sha256: str,
+    schedule: dict[str, Any],
+    checkpoints: list[dict[str, Any]],
+    plan_sha256: str,
+    run_identity_sha256: str,
+    cell_id: str,
+) -> list[dict[str, Any]]:
+    """Load the immutable contiguous scheduler-authorization history."""
+
+    root = run_dir / SCHEDULER_AUTHORIZATION_DIRECTORY
+    if not root.exists():
+        return []
+    _expect(
+        root.is_dir() and not root.is_symlink(),
+        "full scheduler authorization directory mismatch",
+    )
+    paths = sorted(root.iterdir(), key=lambda path: path.name)
+    _expect(
+        all(path.is_file() and not path.is_symlink() for path in paths),
+        "unexpected full scheduler authorization artifact",
+    )
+    expected_names = [f"decision-{index:06d}.json" for index in range(len(paths))]
+    _expect(
+        [path.name for path in paths] == expected_names,
+        "full scheduler authorization inventory is not contiguous",
+    )
+    rows = []
+    previous_time = -1
+    previous_checkpoint_count = 0
+    for index, path in enumerate(paths):
+        row = validate_scheduler_authorization(
+            read_canonical_json(path),
+            admission_record_sha256=admission_record_sha256,
+            schedule=schedule,
+            checkpoints=checkpoints,
+            plan_sha256=plan_sha256,
+            run_identity_sha256=run_identity_sha256,
+            cell_id=cell_id,
+        )
+        decided_at = row["scheduler_decision"]["decided_at_ns"]
+        checkpoint_count = len(
+            row["scheduler_decision"]["completed_checkpoint_sha256s"]
+        )
+        _expect(
+            row["event_index"] == index
+            and decided_at >= previous_time
+            and checkpoint_count >= previous_checkpoint_count,
+            "full scheduler authorization history order mismatch",
+        )
+        previous_time = decided_at
+        previous_checkpoint_count = checkpoint_count
+        rows.append(row)
+    return rows
+
+
+def publish_scheduler_authorization(
+    run_dir: Path,
+    *,
+    admission_record_sha256: str,
+    allocation_scheduler_state: dict[str, Any],
+    thermal_observations: list[dict[str, Any]],
+    decision: dict[str, Any],
+    schedule: dict[str, Any],
+    checkpoints: list[dict[str, Any]],
+    plan_sha256: str,
+    run_identity_sha256: str,
+    cell_id: str,
+    phase_hook: Callable[[str], None] | None = None,
+) -> dict[str, Any]:
+    """Persist one replayable authorization before acting on its decision."""
+
+    root = run_dir / SCHEDULER_AUTHORIZATION_DIRECTORY
+    recover_orphan_temporaries(
+        root,
+        quarantine_root=run_dir / "quarantine",
+    )
+    existing = load_scheduler_authorizations(
+        run_dir,
+        admission_record_sha256=admission_record_sha256,
+        schedule=schedule,
+        checkpoints=checkpoints,
+        plan_sha256=plan_sha256,
+        run_identity_sha256=run_identity_sha256,
+        cell_id=cell_id,
+    )
+    authorization = _sealed(
+        {
+            "schema": SCHEDULER_AUTHORIZATION_SCHEMA,
+            "event_index": len(existing),
+            "admission_record_sha256": admission_record_sha256,
+            "allocation_scheduler_state": allocation_scheduler_state,
+            "thermal_observations": thermal_observations,
+            "scheduler_decision": decision,
+        }
+    )
+    validate_scheduler_authorization(
+        authorization,
+        admission_record_sha256=admission_record_sha256,
+        schedule=schedule,
+        checkpoints=checkpoints,
+        plan_sha256=plan_sha256,
+        run_identity_sha256=run_identity_sha256,
+        cell_id=cell_id,
+    )
+    atomic_install_json(
+        root,
+        f"decision-{len(existing):06d}.json",
+        authorization,
+        phase_hook=phase_hook,
+        quarantine_root=run_dir / "quarantine",
+    )
+    return load_scheduler_authorizations(
+        run_dir,
+        admission_record_sha256=admission_record_sha256,
+        schedule=schedule,
+        checkpoints=checkpoints,
+        plan_sha256=plan_sha256,
+        run_identity_sha256=run_identity_sha256,
+        cell_id=cell_id,
+    )[-1]
 
 
 @dataclass(frozen=True)
@@ -35,6 +352,176 @@ class WaveHandle:
     attempt_id: str
     session_id: str
     remote_unit: str
+
+
+class ConcreteAdmittedWaveRuntime:
+    """Concrete E3 callbacks backed by frozen commands and durable evidence."""
+
+    def __init__(
+        self,
+        *,
+        plan: dict[str, Any],
+        schedule: dict[str, Any],
+        run_dir: Path,
+        inspect_shared_root: bool = True,
+    ) -> None:
+        validate_schedule(schedule)
+        _expect(
+            isinstance(plan, dict)
+            and plan.get("allocations") == schedule["allocations"]
+            and isinstance(plan.get("host_registrations"), list),
+            "concrete admitted runtime plan/schedule mismatch",
+        )
+        self.plan = plan
+        self.schedule = schedule
+        self.run_dir = run_dir.resolve(strict=True)
+        self.inspect_shared_root = inspect_shared_root
+        self.allocations = {
+            row["allocation_id"]: row for row in schedule["allocations"]
+        }
+        self.registrations = {
+            row["host_id"]: row for row in plan["host_registrations"]
+        }
+        _expect(
+            len(self.registrations) == len(plan["host_registrations"])
+            and set(self.registrations)
+            == {row["host_id"] for row in schedule["allocations"]},
+            "concrete admitted runtime host registration mismatch",
+        )
+        self.wave_by_initial_allocation = {
+            allocation_id: wave["wave_index"]
+            for wave in schedule["waves"]
+            for allocation_id in wave["allocation_ids"]
+        }
+        self.active: dict[str, AllocationProcess] = {}
+
+    def _command_path(self, allocation_id: str) -> Path:
+        return self.run_dir / "multi-host-commands" / f"{allocation_id}.json"
+
+    def _remote_helper(self, allocation_id: str) -> Path:
+        command = read_canonical_json(self._command_path(allocation_id))
+        helper = command.get("remote_helper_path")
+        _expect(isinstance(helper, str) and Path(helper).is_absolute(), "runtime helper mismatch")
+        return Path(helper)
+
+    def launch(self, allocation: dict[str, Any]) -> WaveHandle:
+        allocation_id = allocation.get("allocation_id")
+        expected = self.allocations.get(allocation_id)
+        _expect(expected == allocation, "runtime launch allocation mismatch")
+        process = start_allocation(
+            plan=self.plan,
+            command_manifest=self._command_path(allocation_id),
+            run_dir=self.run_dir,
+            inspect_shared_root=self.inspect_shared_root,
+        )
+        _expect(
+            process.allocation_id == allocation_id
+            and process.session_id
+            and process.attempt_id
+            and process.attempt_id not in self.active,
+            "runtime returned a mismatched or duplicate active attempt",
+        )
+        self.active[process.attempt_id] = process
+        return WaveHandle(
+            allocation_id=process.allocation_id,
+            host_id=allocation["host_id"],
+            attempt_id=process.attempt_id,
+            session_id=process.session_id,
+            remote_unit=f"axeyum-smtcomp-e3-{process.session_id}.service",
+        )
+
+    def _active_process(self, handle: WaveHandle) -> AllocationProcess:
+        process = self.active.get(handle.attempt_id)
+        _expect(
+            process is not None
+            and process.allocation_id == handle.allocation_id
+            and process.session_id == handle.session_id,
+            "runtime active handle mismatch",
+        )
+        return process
+
+    def poll_terminal(self, handle: WaveHandle) -> dict[str, Any] | None:
+        process = self._active_process(handle)
+        if process.process.poll() is None:
+            return None
+        terminal = finish_allocation(process, timeout=5.0)
+        del self.active[handle.attempt_id]
+        return {
+            "allocation_id": handle.allocation_id,
+            "attempt_id": handle.attempt_id,
+            "status": terminal["status"],
+            "terminal_record_sha256": terminal["record_sha256"],
+        }
+
+    def observe_active(self, handle: WaveHandle, observed_at_ns: int) -> dict[str, Any]:
+        self._active_process(handle)
+        wave_index = self.wave_by_initial_allocation.get(handle.allocation_id)
+        _expect(wave_index is not None, "runtime active allocation is outside a wave")
+        raw = remote_thermal_sample(
+            registration=self.registrations[handle.host_id],
+            remote_helper_path=self._remote_helper(handle.allocation_id),
+        )
+        return build_thermal_observation(
+            sensors_json=raw,
+            plan_sha256=self.plan["plan_sha256"],
+            run_identity_sha256=self.plan["run_identity_sha256"],
+            cell_id=self.run_dir.name,
+            wave_index=wave_index,
+            allocation_id=handle.allocation_id,
+            attempt_id=handle.attempt_id,
+            host_id=handle.host_id,
+            observed_at_ns=observed_at_ns,
+        )
+
+    def stop_overheated(
+        self, handle: WaveHandle, observation: dict[str, Any]
+    ) -> dict[str, Any]:
+        self._active_process(handle)
+        evidence = stop_remote_unit(
+            registration=self.registrations[handle.host_id],
+            remote_helper_path=self._remote_helper(handle.allocation_id),
+            unit=handle.remote_unit,
+        )
+        return build_thermal_stop(
+            observation=observation,
+            session_id=handle.session_id,
+            unit_prefix="axeyum-smtcomp-e3",
+            exit_code=evidence["exit_code"],
+            post_stop_unit_state=evidence["post_stop_unit_state"],
+            stopped_at_ns=evidence["stopped_at_ns"],
+        )
+
+    def capture_pre_wave(
+        self, *, wave_index: int, now_ns: Callable[[], int]
+    ) -> list[dict[str, Any]]:
+        _expect(
+            type(wave_index) is int and 0 <= wave_index < WAVE_COUNT,
+            "runtime pre-wave index mismatch",
+        )
+        wave = self.schedule["waves"][wave_index]
+        rows = []
+        for host_id, allocation_id in zip(
+            wave["host_ids"], wave["allocation_ids"], strict=True
+        ):
+            raw = remote_thermal_sample(
+                registration=self.registrations[host_id],
+                remote_helper_path=self._remote_helper(allocation_id),
+            )
+            observed_at_ns = now_ns()
+            rows.append(
+                build_thermal_observation(
+                    sensors_json=raw,
+                    plan_sha256=self.plan["plan_sha256"],
+                    run_identity_sha256=self.plan["run_identity_sha256"],
+                    cell_id=self.run_dir.name,
+                    wave_index=wave_index,
+                    allocation_id=allocation_id,
+                    attempt_id=None,
+                    host_id=host_id,
+                    observed_at_ns=observed_at_ns,
+                )
+            )
+        return rows
 
 
 def _sealed(value: dict[str, Any]) -> dict[str, Any]:
@@ -63,9 +550,7 @@ def supervise_one_wave(
     plan_sha256: str,
     run_identity_sha256: str,
     cell_id: str,
-    open_attempt_ids: list[str],
-    failed_allocation_ids: list[str],
-    lost_allocation_ids: list[str],
+    allocation_scheduler_state: dict[str, Any],
     cooldown_required: bool,
     prewave_thermal_observations: list[dict[str, Any]],
     launch: Callable[[dict[str, Any]], WaveHandle],
@@ -75,6 +560,7 @@ def supervise_one_wave(
     now_ns: Callable[[], int],
     wait: Callable[[], None],
     pause_requested: Callable[[], bool],
+    authorize_decision: Callable[[dict[str, Any]], None],
 ) -> dict[str, Any]:
     """Launch and supervise at most one exact wave through durable terminals."""
 
@@ -87,26 +573,30 @@ def supervise_one_wave(
         plan_sha256=plan_sha256,
         run_identity_sha256=run_identity_sha256,
         cell_id=cell_id,
-        open_attempt_ids=open_attempt_ids,
-        failed_allocation_ids=failed_allocation_ids,
-        lost_allocation_ids=lost_allocation_ids,
+        allocation_scheduler_state=allocation_scheduler_state,
         pause_requested=initial_pause,
         cooldown_required=cooldown_required,
         thermal_observations=prewave_thermal_observations,
         decided_at_ns=decision_time,
     )
+    authorize_decision(decision)
     if decision["status"] != "launch":
+        recovered = decision["recovery_checkpoint"]
         return _sealed(
             {
                 "schema": WAVE_OUTCOME_SCHEMA,
-                "status": decision["status"],
+                "status": (
+                    "wave-checkpoint-recovered"
+                    if recovered is not None
+                    else decision["status"]
+                ),
                 "scheduler_decision_sha256": decision["record_sha256"],
                 "wave_index": decision["next_wave_index"],
                 "launched_allocation_ids": [],
                 "allocation_terminals": [],
                 "thermal_stop_record_sha256s": [],
                 "active_thermal_observation_sha256s": [],
-                "checkpoint": None,
+                "checkpoint": recovered,
                 "pause_observed": initial_pause,
             }
         )
@@ -242,3 +732,129 @@ def supervise_one_wave(
             "pause_observed": pause_seen,
         }
     )
+
+
+def supervise_admitted_wave(
+    admission: dict[str, Any],
+    *,
+    preparation_root: Path,
+    repository_root: Path,
+    expected_logic_counts: dict[str, int],
+    prior_result_roots: dict[str, Path],
+    acceptance: dict[str, Any] | None = None,
+    inspect_shared_root: bool = True,
+    cooldown_required: bool,
+    prewave_thermal_observations: list[dict[str, Any]],
+    launch: Callable[[dict[str, Any]], WaveHandle],
+    poll_terminal: Callable[[WaveHandle], dict[str, Any] | None],
+    observe_active: Callable[[WaveHandle, int], dict[str, Any]],
+    stop_overheated: Callable[[WaveHandle, dict[str, Any]], dict[str, Any]],
+    now_ns: Callable[[], int],
+    wait: Callable[[], None],
+    pause_requested: Callable[[], bool],
+    checkpoint_phase_hook: Callable[[str], None] | None = None,
+    authorization_phase_hook: Callable[[str], None] | None = None,
+) -> dict[str, Any]:
+    """Replay admission, derive cell identities, and persist one wave outcome."""
+
+    from full_admission import validate_full_cell_admission
+
+    admission = validate_full_cell_admission(
+        admission,
+        preparation_root=preparation_root,
+        repository_root=repository_root,
+        expected_logic_counts=expected_logic_counts,
+        prior_result_roots=prior_result_roots,
+        acceptance=acceptance,
+        inspect_shared_root=inspect_shared_root,
+    )
+    attempt = preparation_root.resolve(strict=True)
+    composition = read_canonical_json(
+        attempt / "inputs" / "full-cell-composition.json"
+    )
+    cell = next(
+        (
+            row
+            for row in composition.get("cells", [])
+            if row.get("solver_id") == admission["solver_id"]
+        ),
+        None,
+    )
+    _expect(isinstance(cell, dict), "admitted execution cell is absent")
+    run_path = Path(cell.get("run_manifest_path", ""))
+    plan_path = Path(cell.get("plan_path", ""))
+    schedule_path = Path(cell.get("schedule_path", ""))
+    run_dir = plan_path.parent
+    _expect(
+        run_path.parent == attempt / "inputs"
+        and run_dir == attempt / "cells" / admission["solver_id"]
+        and schedule_path.parent == run_dir,
+        "admitted execution artifact path drift",
+    )
+    run = read_canonical_json(run_path)
+    plan = read_canonical_json(plan_path)
+    schedule = validate_schedule(read_canonical_json(schedule_path))
+    _expect(
+        run.get("identity_sha256") == admission["run_identity_sha256"]
+        and plan.get("plan_sha256") == admission["plan_sha256"]
+        and schedule["record_sha256"] == admission["schedule_record_sha256"],
+        "admitted execution identity drift",
+    )
+    allocation_state = derive_allocation_scheduler_state(
+        run_dir,
+        plan=plan,
+        cell_id=admission["solver_id"],
+        inspect_shared_root=inspect_shared_root,
+    )
+    checkpoints = load_wave_checkpoints(
+        run_dir,
+        schedule=schedule,
+        plan_sha256=admission["plan_sha256"],
+        run_identity_sha256=admission["run_identity_sha256"],
+        cell_id=admission["solver_id"],
+    )
+
+    def authorize(decision: dict[str, Any]) -> None:
+        publish_scheduler_authorization(
+            run_dir,
+            admission_record_sha256=admission["record_sha256"],
+            allocation_scheduler_state=allocation_state,
+            thermal_observations=prewave_thermal_observations,
+            decision=decision,
+            schedule=schedule,
+            checkpoints=checkpoints,
+            plan_sha256=admission["plan_sha256"],
+            run_identity_sha256=admission["run_identity_sha256"],
+            cell_id=admission["solver_id"],
+            phase_hook=authorization_phase_hook,
+        )
+
+    outcome = supervise_one_wave(
+        schedule=schedule,
+        checkpoints=checkpoints,
+        plan_sha256=admission["plan_sha256"],
+        run_identity_sha256=admission["run_identity_sha256"],
+        cell_id=admission["solver_id"],
+        allocation_scheduler_state=allocation_state,
+        cooldown_required=cooldown_required,
+        prewave_thermal_observations=prewave_thermal_observations,
+        launch=launch,
+        poll_terminal=poll_terminal,
+        observe_active=observe_active,
+        stop_overheated=stop_overheated,
+        now_ns=now_ns,
+        wait=wait,
+        pause_requested=pause_requested,
+        authorize_decision=authorize,
+    )
+    if outcome["checkpoint"] is not None:
+        publish_wave_checkpoint(
+            run_dir,
+            checkpoint=outcome["checkpoint"],
+            schedule=schedule,
+            plan_sha256=admission["plan_sha256"],
+            run_identity_sha256=admission["run_identity_sha256"],
+            cell_id=admission["solver_id"],
+            phase_hook=checkpoint_phase_hook,
+        )
+    return outcome

@@ -17,6 +17,7 @@ sys.path.insert(0, str(SMTCOMP))
 
 import multi_host as multi_host_module  # noqa: E402
 from multi_host import (  # noqa: E402
+    AllocationLaunchError,
     ALLOCATION_SCHEMA,
     ATTEMPT_SCHEMA,
     PLAN_SCHEMA,
@@ -24,14 +25,19 @@ from multi_host import (  # noqa: E402
     TERMINAL_SCHEMA as ALLOCATION_TERMINAL_SCHEMA,
     TRANSPORT,
     allocation,
+    build_allocation_scheduler_state,
     build_host_command,
     build_multi_host_completion,
+    derive_allocation_scheduler_state,
     install_host_command,
     recover_failed_shard,
     recover_released_failed_shard,
+    remote_thermal_sample,
     stage_execution_bundle,
+    start_allocation,
     validate_execution_bundle,
     validate_host_command,
+    validate_allocation_scheduler_state,
     validate_multi_host_state,
     validate_plan,
 )
@@ -153,6 +159,75 @@ class PortableE3:
 
 
 class MultiHostPortableTests(unittest.TestCase):
+    def test_remote_thermal_sample_is_exact_and_bounded(self) -> None:
+        raw = b'{"k10temp-pci-00c3":{"Tctl":{"temp1_input":40}}}\n'
+        completed = mock.Mock(returncode=0, stdout=raw, stderr=b"")
+        with mock.patch("multi_host.subprocess.run", return_value=completed) as run:
+            self.assertEqual(multi_host_module._thermal_sensors(), raw)
+        self.assertEqual(run.call_args.args[0], ["sensors", "-j"])
+
+        with mock.patch("multi_host.subprocess.run", return_value=completed) as run:
+            self.assertEqual(
+                remote_thermal_sample(
+                    registration={"ssh_target": "s5"},
+                    remote_helper_path=Path("/tmp/full-multi-host.py"),
+                ),
+                raw,
+            )
+        self.assertEqual(run.call_args.args[0][-1], "thermal-sensors")
+
+        for label, returncode, stdout in (
+            ("failure", 2, b""),
+            ("empty", 0, b""),
+            ("oversize", 0, b"x" * (1024 * 1024 + 1)),
+        ):
+            with (
+                self.subTest(label=label),
+                mock.patch(
+                    "multi_host.subprocess.run",
+                    return_value=mock.Mock(
+                        returncode=returncode, stdout=stdout, stderr=b"failed"
+                    ),
+                ),
+                self.assertRaises(ContractError),
+            ):
+                remote_thermal_sample(
+                    registration={"ssh_target": "s5"},
+                    remote_helper_path=Path("/tmp/full-multi-host.py"),
+                )
+
+    def test_scheduler_state_recomputes_terminal_projections(self) -> None:
+        attempts = [
+            {
+                "allocation_id": "initial-0",
+                "attempt_id": "attempt-0",
+                "attempt_record_sha256": "1" * 64,
+                "terminal_status": None,
+                "terminal_record_sha256": None,
+            }
+        ]
+        state = build_allocation_scheduler_state(
+            plan_sha256="2" * 64,
+            run_identity_sha256="3" * 64,
+            cell_id="axeyum",
+            allocation_ids={"initial-0"},
+            allocation_attempts=attempts,
+        )
+        self.assertEqual(state["open_attempt_ids"], ["attempt-0"])
+        self.assertEqual(state["completed_allocation_ids"], [])
+        self.assertEqual(state["failed_allocation_ids"], [])
+
+        omitted = copy.deepcopy(state)
+        omitted["open_attempt_ids"] = []
+        with self.assertRaisesRegex(ContractError, "projection mismatch"):
+            validate_allocation_scheduler_state(
+                seal(omitted),
+                plan_sha256="2" * 64,
+                run_identity_sha256="3" * 64,
+                cell_id="axeyum",
+                allocation_ids={"initial-0"},
+            )
+
     @staticmethod
     def snapshot(run: dict, session_id: str, pid: int) -> dict:
         resources = run["resource_enforcement"]
@@ -375,6 +450,30 @@ class MultiHostPortableTests(unittest.TestCase):
             drift = seal(drift)
             with self.assertRaisesRegex(ContractError, "host-shards"):
                 validate_host_command(drift, inspect_shared_root=False)
+
+            command_path = install_host_command(run_dir, command)
+            with (
+                mock.patch(
+                    "multi_host.subprocess.Popen",
+                    side_effect=OSError("fixture spawn failure"),
+                ),
+                self.assertRaisesRegex(AllocationLaunchError, "unable to start"),
+            ):
+                start_allocation(
+                    plan=plan,
+                    command_manifest=command_path,
+                    run_dir=run_dir,
+                    inspect_shared_root=False,
+                )
+            state = derive_allocation_scheduler_state(
+                run_dir,
+                plan=plan,
+                cell_id="portable",
+                inspect_shared_root=False,
+            )
+            self.assertEqual(state["open_attempt_ids"], [])
+            self.assertEqual(state["failed_allocation_ids"], ["initial-0"])
+            self.assertEqual(len(state["allocation_attempts"]), 1)
 
     def test_recovery_requires_dead_exact_owner_and_is_idempotent(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -979,6 +1078,75 @@ class MultiHostPortableTests(unittest.TestCase):
                     f"{attempt_id}.json",
                     allocation_terminal,
                 )
+
+            scheduler_state = derive_allocation_scheduler_state(
+                run_dir,
+                plan=plan,
+                cell_id="axeyum",
+                inspect_shared_root=False,
+            )
+            self.assertEqual(len(scheduler_state["allocation_attempts"]), 3)
+            self.assertEqual(scheduler_state["open_attempt_ids"], [])
+            self.assertEqual(
+                scheduler_state["completed_allocation_ids"],
+                ["initial-0", "initial-1", "initial-2"],
+            )
+            self.assertEqual(scheduler_state["failed_allocation_ids"], [])
+            self.assertEqual(scheduler_state["lost_allocation_ids"], [])
+
+            first_terminal_path = (
+                run_dir
+                / "multi-host-terminals"
+                / "initial-0"
+                / "allocation-attempt-0.json"
+            )
+            first_terminal = read_canonical_json(first_terminal_path)
+            first_terminal_bytes = first_terminal_path.read_bytes()
+            first_terminal_path.unlink()
+            open_state = derive_allocation_scheduler_state(
+                run_dir,
+                plan=plan,
+                cell_id="axeyum",
+                inspect_shared_root=False,
+            )
+            self.assertEqual(open_state["open_attempt_ids"], ["allocation-attempt-0"])
+            self.assertEqual(
+                open_state["completed_allocation_ids"], ["initial-1", "initial-2"]
+            )
+            atomic_install_bytes(
+                first_terminal_path.parent,
+                first_terminal_path.name,
+                first_terminal_bytes,
+            )
+
+            failed_terminal = copy.deepcopy(first_terminal)
+            failed_terminal["status"] = "failed"
+            failed_terminal["exit_code"] = 1
+            first_terminal_path.unlink()
+            atomic_install_json(
+                first_terminal_path.parent,
+                first_terminal_path.name,
+                seal(failed_terminal),
+            )
+            failed_state = derive_allocation_scheduler_state(
+                run_dir,
+                plan=plan,
+                cell_id="axeyum",
+                inspect_shared_root=False,
+            )
+            self.assertEqual(failed_state["failed_allocation_ids"], ["initial-0"])
+            self.assertEqual(
+                failed_state["completed_allocation_ids"], ["initial-1", "initial-2"]
+            )
+            self.assertNotEqual(
+                failed_state["record_sha256"], scheduler_state["record_sha256"]
+            )
+            first_terminal_path.unlink()
+            atomic_install_bytes(
+                first_terminal_path.parent,
+                first_terminal_path.name,
+                first_terminal_bytes,
+            )
 
             install_resource_completion(
                 run_dir, build_resource_completion(run=run, run_dir=run_dir)

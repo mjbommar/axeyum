@@ -1,7 +1,9 @@
 # SMT-COMP credited full-population execution plan
 
 Status: preregistered design; F1/F2 process-free mechanisms and publication
-fixtures integrated; live F2, F3, and F4 not yet accepted
+fixtures integrated; F3 coordinator plus mainline-gated admission and admitted
+wave fixtures implemented on the SMT topic; live F2, F3, and F4 not yet
+accepted
 Date: 2026-07-23
 Selection authority: [accepted S4 result](smtcomp-official-selection-final-s4-2026-07-22.md)
 Harness admission: [S5 result](smtcomp-harness-admission-s5-result-2026-07-23.md)
@@ -208,7 +210,8 @@ Before live preparation, tiny fixtures must prove:
 - the 96-shard, 48-allocation, 16-wave partition and all 96 different-host
   retries;
 - per-host concurrency, worker, CPU, memory, swap, and PID caps;
-- deterministic wave checkpoints and restart skipping;
+- deterministic per-shard wave checkpoints, exact retry closure, immutable
+  persistence, and restart skipping;
 - no launch after an unclosed, failed, or lost allocation;
 - clean signal pause without an orphan or next-wave launch;
 - thermal sensor/source/threshold/hysteresis mutation rejection;
@@ -221,9 +224,36 @@ Before live preparation, tiny fixtures must prove:
 
 The process-free
 [publication fixture](smtcomp-credited-full-publication-fixture-2026-07-23.md)
-implements the remaining external-cell and same-population comparison boundary.
-It does not provide a live F2 preparation, construct F3 execution authority, or
-claim F4 results.
+implements the external-cell and same-population comparison boundary. The
+[execution-coordinator fixture](smtcomp-credited-full-execution-coordinator-fixture-2026-07-23.md)
+now replays preparation, all 16 per-shard checkpoints and allocation terminals,
+E1/E2/E3 completion, result sidecars, selection rows, and prior-cell safety
+before deriving authority. Neither fixture provides live F2/F3 evidence or
+claims F4 results.
+
+The subsequent
+[admission fixture](smtcomp-credited-full-admission-fixture-2026-07-23.md)
+closes the F2-to-F3 authorization seam without weakening F2's
+`launch_authorized=false` boundary. A separately integrated acceptance record
+must bind the exact preparation, selection, and prepared source revision. Each
+cell then binds the exact safe prior-result prefix, and the admitted-wave entry
+point derives its execution identities from preparation rather than accepting
+them from the caller. No canonical live acceptance record exists yet.
+
+The subsequent
+[scheduler-state fixture](smtcomp-credited-full-scheduler-state-fixture-2026-07-23.md)
+removes the last caller-supplied lifecycle projection from admitted execution.
+Open attempts and failed/lost allocations are recomputed from canonical E3
+attempt/terminal evidence, and scheduler-decision v2 validates and binds the
+complete sealed state before it can launch.
+
+The subsequent
+[scheduler authorization and recovery fixture](smtcomp-credited-full-scheduler-authorization-fixture-2026-07-23.md)
+persists every replayable decision before launch. Scheduler-decision v4 also
+projects completed terminals, forbids a second launch across the
+terminal-to-checkpoint crash window, and completion-last publishes an exact
+reconstructed checkpoint for either the initial allocation set or its frozen
+different-host retries.
 
 ## Milestones and authorization
 
@@ -235,8 +265,9 @@ claim F4 results.
 - **F2 — process-free preparation:** only after F1 and this plan are integrated
   on a green `origin/main`, build/stage binaries, rehash the full population,
   probe hosts/sentinels, and publish an empty `launch_authorized=false` root.
-- **F3 — sequential execution:** only after the exact F2 result is integrated,
-  execute Axeyum, then cvc5, then Bitwuzla through wave/recovery gates.
+- **F3 — sequential execution:** only after the exact F2 result and a distinct
+  acceptance record are integrated, admit Axeyum, then cvc5, then Bitwuzla
+  through exact safe prior-result and wave/recovery gates.
 - **F4 — comparison:** publish the complete 45,905-row per-logic inventory and
   same-population comparison, then rerank the gap-closing program.
 

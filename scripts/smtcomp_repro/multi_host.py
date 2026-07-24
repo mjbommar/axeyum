@@ -74,6 +74,10 @@ FAULT_SCHEMA = "axeyum.smtcomp-host-fault-observation.v1"
 COMPLETION_SCHEMA = "axeyum.smtcomp-multi-host-completion.v1"
 POST_RUN_CLOSURE_SCHEMA = "axeyum.smtcomp-post-run-validation-closure.v1"
 POST_RUN_COMPLETION_SCHEMA = "axeyum.smtcomp-multi-host-completion.v2"
+ALLOCATION_SCHEDULER_STATE_SCHEMA = (
+    "axeyum.smtcomp-multi-host-allocation-scheduler-state.v2"
+)
+REMOTE_THERMAL_MAX_BYTES = 1024 * 1024
 
 SAFE_ID = re.compile(r"[A-Za-z0-9][A-Za-z0-9_.-]{0,127}\Z")
 SAFE_SSH_TARGET = re.compile(r"[A-Za-z0-9][A-Za-z0-9_.@-]{0,127}\Z")
@@ -279,6 +283,25 @@ POST_RUN_CLOSURE_FIELDS = {
     "launcher_pid",
     "launcher_live",
     "observed_at_ns",
+    "record_sha256",
+}
+ALLOCATION_SCHEDULER_ATTEMPT_FIELDS = {
+    "allocation_id",
+    "attempt_id",
+    "attempt_record_sha256",
+    "terminal_status",
+    "terminal_record_sha256",
+}
+ALLOCATION_SCHEDULER_STATE_FIELDS = {
+    "schema",
+    "plan_sha256",
+    "run_identity_sha256",
+    "cell_id",
+    "allocation_attempts",
+    "open_attempt_ids",
+    "completed_allocation_ids",
+    "failed_allocation_ids",
+    "lost_allocation_ids",
     "record_sha256",
 }
 RUN_DIRECTORIES = (
@@ -1224,11 +1247,69 @@ class AllocationProcess:
     launch: dict[str, Any]
 
 
+class AllocationLaunchError(OSError):
+    """The durable allocation attempt closed before a child process started."""
+
+
+def _publish_allocation_terminal(
+    *,
+    run_dir: Path,
+    allocation_id: str,
+    attempt_id: str,
+    exit_code: int,
+    stdout: bytes,
+    stderr: bytes,
+) -> dict[str, Any]:
+    stdout_sha256 = sha256_bytes(stdout)
+    stderr_sha256 = sha256_bytes(stderr)
+    for stream, data, content_sha in (
+        ("stdout", stdout, stdout_sha256),
+        ("stderr", stderr, stderr_sha256),
+    ):
+        atomic_install_bytes(
+            run_dir / "multi-host-outputs" / stream,
+            f"{content_sha}.bin",
+            data,
+            quarantine_root=run_dir / "quarantine",
+        )
+    status = (
+        "completed"
+        if exit_code == 0
+        else ("lost" if exit_code == 255 else "failed")
+    )
+    terminal = _sealed(
+        {
+            "schema": TERMINAL_SCHEMA,
+            "attempt_id": attempt_id,
+            "status": status,
+            "exit_code": exit_code,
+            "stdout_sha256": stdout_sha256,
+            "stdout_bytes": len(stdout),
+            "stderr_sha256": stderr_sha256,
+            "stderr_bytes": len(stderr),
+            "ended_at_ns": time.time_ns(),
+        }
+    )
+    atomic_install_json(
+        run_dir / "multi-host-terminals" / allocation_id,
+        f"{attempt_id}.json",
+        terminal,
+        quarantine_root=run_dir / "quarantine",
+    )
+    return terminal
+
+
 def start_allocation(
-    *, plan: dict[str, Any], command_manifest: Path, run_dir: Path
+    *,
+    plan: dict[str, Any],
+    command_manifest: Path,
+    run_dir: Path,
+    inspect_shared_root: bool = True,
 ) -> AllocationProcess:
     command = read_canonical_json(command_manifest)
-    _plan, run, allocation_row = validate_host_command(command)
+    _plan, run, allocation_row = validate_host_command(
+        command, inspect_shared_root=inspect_shared_root
+    )
     if _plan["plan_sha256"] != plan["plan_sha256"]:
         raise ContractError("allocation command uses a different plan")
     registrations = {row["host_id"]: row for row in plan["host_registrations"]}
@@ -1284,7 +1365,17 @@ def start_allocation(
             stderr=subprocess.PIPE,
         )
     except OSError as exc:
-        raise ContractError("unable to start registered host allocation") from exc
+        _publish_allocation_terminal(
+            run_dir=run_dir,
+            allocation_id=allocation_row["allocation_id"],
+            attempt_id=attempt_id,
+            exit_code=126,
+            stdout=b"",
+            stderr=str(exc).encode("utf-8", errors="replace"),
+        )
+        raise AllocationLaunchError(
+            "unable to start registered host allocation"
+        ) from exc
     return AllocationProcess(
         allocation_id=allocation_row["allocation_id"],
         attempt_id=attempt_id,
@@ -1302,40 +1393,17 @@ def finish_allocation(handle: AllocationProcess, *, timeout: float = 120.0) -> d
         raise ContractError(
             f"allocation remains live and requires exact-unit cleanup: {handle.allocation_id}"
         ) from exc
-    stdout_sha256 = sha256_bytes(stdout)
-    stderr_sha256 = sha256_bytes(stderr)
-    for stream, data, content_sha in (
-        ("stdout", stdout, stdout_sha256),
-        ("stderr", stderr, stderr_sha256),
-    ):
-        atomic_install_bytes(
-            handle.run_dir / "multi-host-outputs" / stream,
-            f"{content_sha}.bin",
-            data,
-            quarantine_root=handle.run_dir / "quarantine",
-        )
     code = handle.process.returncode
-    status = "completed" if code == 0 else ("lost" if code == 255 else "failed")
-    terminal = _sealed(
-        {
-            "schema": TERMINAL_SCHEMA,
-            "attempt_id": handle.attempt_id,
-            "status": status,
-            "exit_code": code,
-            "stdout_sha256": stdout_sha256,
-            "stdout_bytes": len(stdout),
-            "stderr_sha256": stderr_sha256,
-            "stderr_bytes": len(stderr),
-            "ended_at_ns": time.time_ns(),
-        }
+    if type(code) is not int:
+        raise ContractError("allocation process ended without an exit code")
+    return _publish_allocation_terminal(
+        run_dir=handle.run_dir,
+        allocation_id=handle.allocation_id,
+        attempt_id=handle.attempt_id,
+        exit_code=code,
+        stdout=stdout,
+        stderr=stderr,
     )
-    atomic_install_json(
-        handle.run_dir / "multi-host-terminals" / handle.allocation_id,
-        f"{handle.attempt_id}.json",
-        terminal,
-        quarantine_root=handle.run_dir / "quarantine",
-    )
-    return terminal
 
 
 def remote_liveness(
@@ -1504,6 +1572,44 @@ def stop_remote_unit(
     ):
         raise ContractError("remote unit-stop evidence identity mismatch")
     return evidence
+
+
+def remote_thermal_sample(
+    *, registration: dict[str, Any], remote_helper_path: Path
+) -> bytes:
+    """Capture one bounded raw ``sensors -j`` sample from an exact host."""
+
+    ssh_target = _require_safe(
+        registration.get("ssh_target"), "ssh_target", pattern=SAFE_SSH_TARGET
+    )
+    helper = _require_safe_absolute_path(remote_helper_path, "remote_helper_path")
+    try:
+        completed = subprocess.run(
+            [
+                "ssh",
+                "-o",
+                "BatchMode=yes",
+                "-o",
+                "ConnectTimeout=5",
+                ssh_target,
+                "python3",
+                "-B",
+                str(helper),
+                "thermal-sensors",
+            ],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            timeout=20,
+            check=False,
+        )
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        raise ContractError("unable to capture remote thermal sensors") from exc
+    if completed.returncode != 0:
+        raise ContractError("remote thermal sensor command failed")
+    raw = completed.stdout
+    if not raw or len(raw) > REMOTE_THERMAL_MAX_BYTES:
+        raise ContractError("remote thermal sensor output size mismatch")
+    return raw
 
 
 def remote_file_observation(
@@ -1961,6 +2067,177 @@ def _load_allocation_evidence(
                     raise ContractError("duplicate allocation terminal")
                 terminals[attempt_id] = terminal
     return commands, attempts, terminals
+
+
+def validate_allocation_scheduler_state(
+    state: dict[str, Any],
+    *,
+    plan_sha256: str,
+    run_identity_sha256: str,
+    cell_id: str,
+    allocation_ids: set[str],
+) -> dict[str, Any]:
+    """Validate the exact attempt/terminal projection used by a scheduler."""
+
+    if (
+        not isinstance(state, dict)
+        or set(state) != ALLOCATION_SCHEDULER_STATE_FIELDS
+        or state.get("schema") != ALLOCATION_SCHEDULER_STATE_SCHEMA
+    ):
+        raise ContractError("allocation scheduler state field/schema mismatch")
+    _validate_seal(state)
+    if (
+        state.get("plan_sha256") != _require_sha(plan_sha256, "plan_sha256")
+        or state.get("run_identity_sha256")
+        != _require_sha(run_identity_sha256, "run_identity_sha256")
+        or state.get("cell_id") != _require_safe(cell_id, "cell_id")
+    ):
+        raise ContractError("allocation scheduler state identity mismatch")
+    if (
+        not isinstance(allocation_ids, set)
+        or not allocation_ids
+        or any(
+            not isinstance(value, str) or not SAFE_ID.fullmatch(value)
+            for value in allocation_ids
+        )
+    ):
+        raise ContractError("allocation scheduler state allocation inventory mismatch")
+    rows = state.get("allocation_attempts")
+    if not isinstance(rows, list) or any(not isinstance(row, dict) for row in rows):
+        raise ContractError("allocation scheduler state attempt inventory mismatch")
+    ordering = []
+    attempt_ids = set()
+    computed_open = []
+    computed_completed = []
+    computed_failed = []
+    computed_lost = []
+    for row in rows:
+        if set(row) != ALLOCATION_SCHEDULER_ATTEMPT_FIELDS:
+            raise ContractError("allocation scheduler state attempt field mismatch")
+        allocation_id = _require_safe(row.get("allocation_id"), "allocation_id")
+        attempt_id = _require_safe(row.get("attempt_id"), "attempt_id")
+        _require_sha(row.get("attempt_record_sha256"), "attempt_record_sha256")
+        if allocation_id not in allocation_ids or attempt_id in attempt_ids:
+            raise ContractError("allocation scheduler state attempt identity mismatch")
+        attempt_ids.add(attempt_id)
+        ordering.append((allocation_id, attempt_id))
+        status = row.get("terminal_status")
+        terminal_sha = row.get("terminal_record_sha256")
+        if status is None:
+            if terminal_sha is not None:
+                raise ContractError("open allocation carries terminal identity")
+            computed_open.append(attempt_id)
+        elif status in {"completed", "failed", "lost"}:
+            _require_sha(terminal_sha, "terminal_record_sha256")
+            if status == "completed":
+                computed_completed.append(allocation_id)
+            elif status == "failed":
+                computed_failed.append(allocation_id)
+            elif status == "lost":
+                computed_lost.append(allocation_id)
+        else:
+            raise ContractError("allocation scheduler state terminal status mismatch")
+    if ordering != sorted(ordering) or len({row[0] for row in ordering}) != len(rows):
+        raise ContractError("allocation scheduler state attempt order mismatch")
+    expected_lists = {
+        "open_attempt_ids": sorted(computed_open),
+        "completed_allocation_ids": sorted(computed_completed),
+        "failed_allocation_ids": sorted(computed_failed),
+        "lost_allocation_ids": sorted(computed_lost),
+    }
+    if any(state.get(field) != expected for field, expected in expected_lists.items()):
+        raise ContractError("allocation scheduler state projection mismatch")
+    return state
+
+
+def build_allocation_scheduler_state(
+    *,
+    plan_sha256: str,
+    run_identity_sha256: str,
+    cell_id: str,
+    allocation_ids: set[str],
+    allocation_attempts: list[dict[str, Any]],
+) -> dict[str, Any]:
+    """Build a deterministic scheduler projection from validated attempt rows."""
+
+    rows = sorted(
+        copy.deepcopy(allocation_attempts),
+        key=lambda row: (row.get("allocation_id", ""), row.get("attempt_id", "")),
+    )
+    state = _sealed(
+        {
+            "schema": ALLOCATION_SCHEDULER_STATE_SCHEMA,
+            "plan_sha256": plan_sha256,
+            "run_identity_sha256": run_identity_sha256,
+            "cell_id": cell_id,
+            "allocation_attempts": rows,
+            "open_attempt_ids": sorted(
+                row.get("attempt_id")
+                for row in rows
+                if row.get("terminal_status") is None
+            ),
+            "completed_allocation_ids": sorted(
+                row.get("allocation_id")
+                for row in rows
+                if row.get("terminal_status") == "completed"
+            ),
+            "failed_allocation_ids": sorted(
+                row.get("allocation_id")
+                for row in rows
+                if row.get("terminal_status") == "failed"
+            ),
+            "lost_allocation_ids": sorted(
+                row.get("allocation_id")
+                for row in rows
+                if row.get("terminal_status") == "lost"
+            ),
+        }
+    )
+    return validate_allocation_scheduler_state(
+        state,
+        plan_sha256=plan_sha256,
+        run_identity_sha256=run_identity_sha256,
+        cell_id=cell_id,
+        allocation_ids=allocation_ids,
+    )
+
+
+def derive_allocation_scheduler_state(
+    run_dir: Path,
+    *,
+    plan: dict[str, Any],
+    cell_id: str,
+    inspect_shared_root: bool = True,
+) -> dict[str, Any]:
+    """Derive scheduler state from canonical E3 attempts and terminals."""
+
+    _commands, attempts, terminals = _load_allocation_evidence(
+        run_dir, plan, inspect_shared_root=inspect_shared_root
+    )
+    rows = []
+    for allocation_id in sorted(attempts):
+        for attempt in attempts[allocation_id]:
+            terminal = terminals.get(attempt["attempt_id"])
+            rows.append(
+                {
+                    "allocation_id": allocation_id,
+                    "attempt_id": attempt["attempt_id"],
+                    "attempt_record_sha256": attempt["record_sha256"],
+                    "terminal_status": (
+                        None if terminal is None else terminal["status"]
+                    ),
+                    "terminal_record_sha256": (
+                        None if terminal is None else terminal["record_sha256"]
+                    ),
+                }
+            )
+    return build_allocation_scheduler_state(
+        plan_sha256=plan["plan_sha256"],
+        run_identity_sha256=plan["run_identity_sha256"],
+        cell_id=cell_id,
+        allocation_ids={row["allocation_id"] for row in plan["allocations"]},
+        allocation_attempts=rows,
+    )
 
 
 def _post_run_quarantine_relative(
@@ -3146,6 +3423,26 @@ def _observe_file(path: Path) -> dict[str, Any]:
     }
 
 
+def _thermal_sensors() -> bytes:
+    """Remote-helper implementation for an exact bounded ``sensors -j`` call."""
+
+    try:
+        completed = subprocess.run(
+            ["sensors", "-j"],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            timeout=10,
+            check=False,
+        )
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        raise ContractError("unable to execute sensors -j") from exc
+    if completed.returncode != 0:
+        raise ContractError("sensors -j failed")
+    if not completed.stdout or len(completed.stdout) > REMOTE_THERMAL_MAX_BYTES:
+        raise ContractError("sensors -j output size mismatch")
+    return completed.stdout
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Axeyum E3 multi-host helper")
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -3161,6 +3458,7 @@ def main() -> int:
     kill.add_argument("--launcher-pid", required=True, type=int)
     stop = subparsers.add_parser("stop-unit")
     stop.add_argument("--unit", required=True)
+    subparsers.add_parser("thermal-sensors")
     observe = subparsers.add_parser("observe-file")
     observe.add_argument("--path", required=True)
     args = parser.parse_args()
@@ -3183,6 +3481,9 @@ def main() -> int:
         if args.command == "stop-unit":
             sys.stdout.buffer.write(canonical_bytes(_stop_unit(args.unit)))
             return 0
+        if args.command == "thermal-sensors":
+            sys.stdout.buffer.write(_thermal_sensors())
+            return 0
         if args.command == "observe-file":
             sys.stdout.buffer.write(canonical_bytes(_observe_file(Path(args.path))))
             return 0
@@ -3198,6 +3499,7 @@ if __name__ == "__main__":
 
 __all__ = [
     "AllocationProcess",
+    "AllocationLaunchError",
     "COMPLETION_FIELDS",
     "PLAN_FIELDS",
     "allocation",
@@ -3218,6 +3520,7 @@ __all__ = [
     "recover_failed_shard",
     "recover_released_failed_shard",
     "remote_probe",
+    "remote_thermal_sample",
     "remote_file_observation",
     "shared_filesystem_observation",
     "stage_execution_bundle",

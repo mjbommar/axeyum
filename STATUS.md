@@ -450,16 +450,41 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   exact three host registrations and
   environment from captured observations, replays the ordered eight incident
   sentinels including byte sidecars and semantic outcomes, enforces a 30-minute
-  publication window, and binds the result into completion schema v2. The
+  publication window, and binds the result into completion schema v2.
   Merges `f65f4647` and `c4d9050a` integrate commits `e7c05374` and `d7c78371`'s
   previously missing completion-last external cell result and exact
-  same-population comparison mechanisms. Eleven focused publication tests and
-  the expanded 126-test portable gate pass with one expected live-host skip.
-  Lean R7 is integrated by merge `9fe5cab6`; the remaining current mainline
-  blocker is out-of-lane formatting drift. Next: wait for that repair, rebase,
-  run both exact readiness gates, perform the separately reviewed
+  same-population comparison mechanisms. Commit `9bd98516`, integrated by
+  `0c09a44b`, adds exact solver-prefix preparation replay; topic commits
+  `50f7c9d8` through `d8e187f2` add per-shard
+  retry-capable checkpoint schema v2 and immutable persistence, prior-cell
+  disagreement-safe adjudication, and the process-free authority coordinator.
+  The subsequent admission, admitted-wave, and gate commits add a distinct
+  mainline acceptance record, exact safe solver-order cell admission, durable
+  Git-object replay, and an admitted-wave entry point that derives run/plan/
+  schedule/checkpoint identities from preparation and automatically persists a
+  successful checkpoint. The subsequent scheduler-state increment removes
+  caller-supplied open/failed/lost lists: it derives a sealed lifecycle record
+  from canonical E3 attempts/terminals, recomputes its projections, and binds
+  it under scheduler-decision v2. The subsequent process-free authorization
+  increment persists each complete scheduler input/decision before launch,
+  projects completed terminals, blocks duplicate launch after a
+  terminal-before-checkpoint crash, and completion-last reconstructs exact
+  initial or different-host-retry checkpoints under scheduler-decision v4.
+  The three affected suites pass 50 tests; the complete portable gate passes
+  144 with one expected live-host skip. Foundational resources and links are
+  green.
+  Branch-wide formatting remains red in the unrelated bench/CAS lane. The
+  later Lean mainline merge repaired the quotient-package marker boundary; on
+  the rebased topic, Lean parity now reaches exactly the measured
+  `resume_fs.py` historical/current pin (`b05c...` expected, `c776...`
+  current), which remains a Lean-owned repair.
+  Next: integrate this batch, repair both owned gates, rebase, run both exact
+  readiness gates, and perform
+  the separately reviewed
   host/sentinel capture, and publish only an empty `launch_authorized=false`
-  preparation inside that frozen window. No host probe, NAS mutation,
+  preparation inside that frozen window. Then integrate and accept that exact
+  F2 completion before constructing Axeyum admission. No live acceptance
+  manifest, host probe, NAS mutation,
   allocation, or solver launch is authorized before that boundary.
 
 - **2026-07-23 — repaired SMT-COMP P0 v2 Axeyum runtime and process-free export
@@ -8766,6 +8791,24 @@ plan is built and committed on the current branch:
   `quotient-package` decline remains unchanged until implementation and all
   registered evidence closes. String and complete K1/full Lean parity remain
   open.
+
+- **2026-07-23 — Implemented fail-closed credited-full execution authority;
+  no live execution occurred.** Commit `9bd98516`, integrated by `0c09a44b`,
+  and topic commits `50f7c9d8` through `d8e187f2` close the process-free seam
+  from a completed cell to external publication.
+  Immutable preparation replay permits runtime additions only under an exact
+  solver-order prefix. Checkpoint schema v2 closes each wave by six shards and
+  accepts only the exact initial owner or registered retry; checkpoints now
+  persist as a contiguous immutable prefix with interrupted-temporary
+  quarantine. The coordinator replays all 16 checkpoints against underlying
+  allocation terminals, validates E1/E2/E3 completion, output sidecars,
+  selection and v2 record identity, and recomputes prior-cell disagreement
+  before deriving authority. Adjudication now withholds continuation on either
+  a known-status contradiction or cross-solver disagreement. Forty-eight
+  focused tests and the 135-test portable gate pass with one expected live-host
+  skip. Formatting remains red only in bench/CAS; Lean parity reaches the
+  expected `resume_fs.py` pin drift and is left for regeneration by its owner.
+  This is fixture evidence only; live F2/F3/F4 remain incomplete.
 
 - **2026-07-23 — Implemented completion-last credited-full cell results and
   same-population comparison; no live execution occurred.** Commits `e7c05374`

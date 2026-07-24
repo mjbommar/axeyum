@@ -351,7 +351,9 @@ gate.
    contradictions and zero cross-solver disagreements remain, and the
    self-sealed JSON/Markdown reproduce from the three validated roots.
 3. **Credited full population — F1, the complete process-free F2 preflight, and
-   process-free result publication are integrated.** The
+   process-free result publication are integrated; the F3 evidence coordinator,
+   mainline-gated admission, and admitted-wave entry point are fixture-complete
+   on the SMT topic.** The
    [full-population plan](../smtcomp-credited-full-population-plan-2026-07-23.md)
    freezes the same 45,905-file selection for all three solvers, a 96-shard/
    48-allocation wave schedule, six-worker aggregate/16-GiB-per-host resource envelope,
@@ -375,9 +377,31 @@ gate.
    exact native/per-logic/pairwise/three-way
    same-population comparison with interruption replay and rejecting mutations.
    The [publication fixture](../smtcomp-credited-full-publication-fixture-2026-07-23.md)
-   records the boundary. It does not construct live F3 execution authority or
-   complete F4. No host probe, sentinel, NAS preparation root, resource session,
-   allocation, or solver process was started.
+   records the publication boundary. Commit `9bd98516`, integrated by
+   `0c09a44b`, adds exact solver-prefix preparation replay; topic commits
+   `50f7c9d8` through `d8e187f2` add per-shard retry-capable
+   checkpoint schema v2 and immutable checkpoint persistence, prior-cell
+   disagreement-safe adjudication, and the process-free authority coordinator.
+   The [coordinator fixture](../smtcomp-credited-full-execution-coordinator-fixture-2026-07-23.md)
+   records its gates and the expected Lean pin ownership boundary. It does not
+   construct live F3 authority or complete F4. The subsequent admission,
+   admitted-wave, and gate commits add the separately integrated acceptance
+   record, exact safe solver-order admission, Git-object replay, admitted
+   identity derivation, and automatic checkpoint persistence. The
+   [admission fixture](../smtcomp-credited-full-admission-fixture-2026-07-23.md)
+   records the 139-test portable gate. The subsequent
+   [scheduler-state fixture](../smtcomp-credited-full-scheduler-state-fixture-2026-07-23.md)
+   derives open/failed/lost lifecycle state from canonical E3 evidence, binds
+   the complete state under scheduler-decision v2, and raises the portable gate
+   to 140 tests. The subsequent
+   [scheduler authorization fixture](../smtcomp-credited-full-scheduler-authorization-fixture-2026-07-23.md)
+   installs every replayable decision before launch, projects completed
+   terminals, prevents duplicate launch across a missing-checkpoint crash, and
+   completion-last recovers exact initial or different-host-retry checkpoints
+   under scheduler-decision v4. The expanded portable gate passes 144 tests
+   with one expected live-host skip. No live acceptance file exists, and no
+   host probe, sentinel, NAS preparation root, resource session, allocation,
+   or solver process was started.
 
 The same implementation rule continues to apply: prove each new mechanism and
 its destructive/interruption tests on a tiny corpus before spending the full
@@ -441,6 +465,14 @@ Repository:
   `docs/plan/smtcomp-credited-full-preparation-f2-implementation-2026-07-23.md`;
 - credited full-population publication fixture:
   `docs/plan/smtcomp-credited-full-publication-fixture-2026-07-23.md`;
+- credited full-population execution-coordinator fixture:
+  `docs/plan/smtcomp-credited-full-execution-coordinator-fixture-2026-07-23.md`;
+- credited full-population mainline-admission fixture:
+  `docs/plan/smtcomp-credited-full-admission-fixture-2026-07-23.md`;
+- credited full-population scheduler-state fixture:
+  `docs/plan/smtcomp-credited-full-scheduler-state-fixture-2026-07-23.md`;
+- credited full-population scheduler-authorization/recovery fixture:
+  `docs/plan/smtcomp-credited-full-scheduler-authorization-fixture-2026-07-23.md`;
 - candidate failure handoff:
   `docs/plan/smtcomp-full-library-candidate-run-handoff-2026-07-21.md`;
 - ranked gap plan: `docs/plan/full-library-gap-closing-plan-2026-07-22.md`;
@@ -485,10 +517,17 @@ NAS (shared, corpus read-only in practice):
    integrated. Its complete F2 process-free preparation mechanism, including
    explicit semantic host/sentinel preflight, is integrated by merge
    `1b8ae016`; the process-free cell-result/comparison bytes are also integrated
-   by `c4d9050a`, and no live root has been published. Revalidate the exact
-   current `origin/main`, require both registered gates to be green, then perform the
+   by `c4d9050a`. The process-free F3 coordinator, mainline-gated acceptance,
+   admitted-wave entry point, and pre-launch authorization/recovery path are
+   topic-ready but must be integrated. The quotient-package marker is repaired
+   on current main; the Lean owner must
+   regenerate the remaining `resume_fs.py` pin. No live root or canonical
+   acceptance record has been published. Revalidate the exact current `origin/main`,
+   require both registered gates to be green, then perform the
    separately reviewed host/sentinel capture and publish only a process-free
-   `launch_authorized=false` root inside its frozen 30-minute window. Do not
+   `launch_authorized=false` root inside its frozen 30-minute window. Integrate
+   and explicitly accept that exact root before constructing Axeyum admission.
+   Do not
    probe hosts, mutate the NAS, or launch a solver allocation while
    `origin/main` is branch-wide red. The active solver
    capability checkpoint is
