@@ -396,8 +396,12 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   pass in a copied tree after changing only the SMT resume module from
   `b05c3218...` to `31a64b89...`. This closes the cross-lane portability
   blocker, not Lean parity: the terminal registry remains 0/10 populations,
-  0/12 axes, zero paired cells/gates, and `terminal_ready=false`. Next: finish
-  the repository-wide green gate and integrate the reviewed commits to `main`.
+  0/12 axes, zero paired cells/gates, and `terminal_ready=false`. The final
+  isolated `just check` passes with exit zero, including the all-feature
+  workspace tests/doctests, Clippy, Rustdoc, the 162-file Glaurung comparison
+  at 100% decided with zero disagreements, foundational resources, SMT-COMP
+  resume, Lean evidence, parity-docs, and links. The reviewed commits are
+  integration-ready for `main`.
 
 - **2026-07-23 — credited SMT-COMP full-population F2 is implementation-ready,
   not live-ready.** F1 and its supervised-wave executor are integrated. Merge

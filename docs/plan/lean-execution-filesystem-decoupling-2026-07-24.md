@@ -64,6 +64,30 @@ Focused regression coverage also passed 92 tests with one expected skip,
 including all 16 worktree/tmpfs interruption cells and the retained R3 amended
 authority check.
 
+The final isolated integration gate passed with exit zero:
+
+```sh
+CARGO_BUILD_JOBS=1 \
+  CARGO_TARGET_DIR=/home/mjbommar/.cache/axeyum-main-green-20260724-target \
+  RUST_TEST_THREADS=1 \
+  just check
+```
+
+That gate includes formatting, all-target/all-feature Clippy with warnings
+denied, the complete all-feature workspace test and doctest run, warning-denied
+Rustdoc, the pinned Glaurung QF_BV comparison, foundational resources,
+rules-as-code, SMT-COMP resume, Lean parity-evidence generation, and link
+validation. The 162-file Glaurung comparison was 100% decided with
+`DISAGREE=0` and `MANIFEST_DISAGREE=0` in both raw and canonical modes. The
+final parity-docs summary reported `disagree=0` and
+`public_inventory_wrong=0`.
+
+The first full-gate attempt used a disposable target directory on `/tmp` and
+stopped at link time with `Disk quota exceeded`; no product test failed. The
+disposable target was removed and the complete command above was rerun from
+the beginning with the target on `/home`, where it reached the terminal
+exit-zero result.
+
 ## Resume rule
 
 Future Lean execution-store changes may update the Lean-owned vendored module
