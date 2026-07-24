@@ -953,23 +953,6 @@ Out of scope:
     and [offline result](../../plan/lean-quotient-package-m1-m3-result-2026-07-23.md).
     The exact selected import row now passes; the question stays open until the
     separately authorized M4 differential closes and ADR-0365 is accepted.
-- [ ] How can a raw Lean String literal acquire a trusted type and constructor
-      meaning in Axeyum's initially empty import environment without confusing
-      UTF-8 bytes with Unicode characters or trusting reserved-name coincidence?
-  - Proposed answer (2026-07-23): require the checked canonical Nat/List/Char/
-    String surface, then reproduce pinned Lean's exact Unicode-scalar
-    `String.ofList (List (Char.ofNat codepoint))` conversion only at the
-    definitional-equality, projection, and recursor hooks. Parse valid format-
-    3.1 JSON strings losslessly and retain completion-only publication. Native
-    and synthetic evidence must cover scalar order, multi-byte characters,
-    composed/decomposed distinctions, malformed bootstraps, false reductions,
-    identity stability, and a repeated generated seam. See
-    [proposed ADR-0366](../09-decisions/adr-0366-preregister-lean-string-literal-semantics.md)
-    and the
-    [TL2.9 plan](../../plan/lean-string-literal-semantics-tl2.9-plan-2026-07-23.md).
-    The historical 570,807-byte official closure and pinned-Lean differential
-    remain separately authorization-gated, so P0 grants no String-root,
-    complete-K1, or parity credit.
 - [x] Should the proof-assistant bridge export obligations to Lean, import
       checked rewrite rules from Lean, or both — and how early is a
       Lean-checked rewrite-rule library worth prototyping?

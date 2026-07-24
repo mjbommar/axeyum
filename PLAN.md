@@ -9,20 +9,6 @@ and the standing rules; **[STATUS.md](STATUS.md)** is the live tracker (current
 focus, per-phase state, changelog) and is the only file with mutable session
 state.
 
-## CAS lane pause status and next actions (2026-07-23)
-
-The CAS gap-probing lane is intentionally paused after wave twenty-four. Its
-single authoritative restart record is the
-[CAS parity handoff](docs/plan/cas-parity-handoff-2026-07-22.md#0-pause-checkpoint-wave-twenty-four).
-Resume there before running commands or changing files. In brief: the clean
-local topic commit is `01d47334` on
-`agent/cas/gap-probe-wave-twenty-four`; it is not pushed or integrated, no CAS
-validation process remains live, and the full gate must be rerun because the
-completed process's final exit summary was unavailable when its session
-closed. The handoff records the exact observed evidence, remaining gates, and
-ordered restart procedure. Do not begin wave twenty-five until wave
-twenty-four is fully gated, pushed, integrated byte-for-byte, and documented.
-
 > The goal is large and deliberately multi-week/multi-month. It is decomposed
 > into tracks → phases → tasks, each with concrete reference file paths, sizing,
 > and exit criteria, so work can proceed one verifiable increment at a time
@@ -422,21 +408,6 @@ twenty-four is fully gated, pushed, integrated byte-for-byte, and documented.
 > but M4's separately authorized pinned-Lean differential, ADR acceptance,
 > String, dependency-closed complete K1 authority, and every broader
 > Lean-system gate remain open.
-> The next semantic root, TL2.9 String literals, is now source-preregistered
-> under
-> [proposed ADR-0366](docs/research/09-decisions/adr-0366-preregister-lean-string-literal-semantics.md)
-> and its
-> [P0--M5 plan](docs/plan/lean-string-literal-semantics-tl2.9-plan-2026-07-23.md).
-> P0 freezes a checked reserved Nat/List/Char/String bootstrap, exact
-> Unicode-scalar `String.ofList` conversion, symmetric defeq plus projection
-> and recursor hooks, fail-closed wire/publication rules, identity stability,
-> generated seams, and the authorization boundary for retaining and measuring
-> the historical 570,807-byte official root. No semantic implementation,
-> official-root result, complete-K1, or parity credit exists at P0.
-> **This lane is paused after its pushed P0 checkpoint. Resume only from the
-> [authoritative TL2.9 handoff](docs/plan/lean-string-literal-semantics-tl2.9-resume.md),
-> which preserves the exact Git/source state, unresolved defeq placement risk,
-> ordered M1--M5 sequence, and execution/acceptance boundaries.**
 > TL0.6 is now partial: the fail-closed
 > [complete-parity registry](docs/plan/lean-complete-parity-v1.json) and
 > generated [Markdown](docs/plan/generated/lean-complete-parity.md)/

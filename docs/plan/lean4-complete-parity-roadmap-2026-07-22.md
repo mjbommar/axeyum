@@ -380,7 +380,7 @@ official adapter.
 |---|---|---|---|---|
 | R0 — identity and evidence spine | all U; A0 | accepted target tuple and ADRs | complete population schemas, content identities, executable/environment/resource/attempt/completion records, paired taxonomy, generated dashboards, claim guard | Continues until every U row is authoritative. Inventory counts, source trees, or hand-written totals earn no terminal credit. |
 | R1 — official execution breadth | U2, U8, U9; A0 | TL0.6.1/.2 registration and TL0.7 process/store policy | child-shard derivation, every active official profile/provider, immutable JUnit/log/artifact closure, retry/invalid-run accounting, failure campaigns | TL0.6.3 closes only when every selected official case has a valid completion. Retries do not increase unique coverage; an official pass has no native-pair credit. |
-| R2 — kernel and import closure | U1, U3, U8; A1/A2/A9 | K0 plus fail-closed exporter boundary | String root and final quotient differential, complete declaration/core-term authority, invalid mutations, construct closure, `.olean`/export equivalence, large-stream durability, axiom classification | K1 closes with no supported official construct decline and zero unexplained admission/type/value difference. Exporter delegation still does not satisfy parsing or elaboration. |
+| R2 — kernel and import closure | U1, U3, U8; A1/A2/A9 | K0 plus fail-closed exporter boundary | String and quotient roots, complete declaration/core-term authority, invalid mutations, construct closure, `.olean`/export equivalence, large-stream durability, axiom classification | K1 closes with no supported official construct decline and zero unexplained admission/type/value difference. Exporter delegation still does not satisfy parsing or elaboration. |
 | R3 — source, parser, syntax, macros | U2/U3/U7/U8; A3 | stable source maps and native term/environment targets | lexer/layout/UTF-8, dynamic syntax tables, Pratt parser, quotations, hygiene, macros, extensions, recovery, pretty-print normalization, incremental parse cases | Same normalized syntax/diagnostic results on the complete registered source profile. Parsing success alone cannot fill elaboration cells. |
 | R4 — elaboration and declarations | U1/U2/U3/U7/U8; A4 | R2 core semantics and R3 syntax | metavariables, unification, coercions, typeclasses, commands, inductives, equations, structural/mutual/nested/well-founded recursion, termination, normalized diagnostics | Same core/environment/reject result, with every accepted declaration independently admitted. Fixture-level elaboration is not module or tactic parity. |
 | R5 — goals, tactics, metaprograms | U2/U3/U7/U8; A5/A9 | R4 elaborator, explicit trust/evidence route | goal/metavariable state, tactic language, primitive/composite tactics, simplification/automation, metaprogram execution, proof-term/certificate production, replay | Registered goals have matching closure/open state and independently checked proof terms with explicit axioms. Oracle-produced proof success does not satisfy native tactics. |
@@ -443,13 +443,8 @@ execution, and content/dependency-complete U2 classification.
    now closes native admission/reduction, generated seams, exact import,
    identity, renderer, mutation, and publication evidence for its selected
    root. Its authorized M4 differential and final acceptance remain open under
-   proposed ADR-0365; selected 5/5 is not complete K1. String is now
-   source-preregistered under
-   [proposed ADR-0366](../research/09-decisions/adr-0366-preregister-lean-string-literal-semantics.md)
-   and its
-   [P0--M5 plan](lean-string-literal-semantics-tl2.9-plan-2026-07-23.md),
-   but implementation, large-root retention/current-product measurement, and
-   the pinned-Lean differential remain open.
+   proposed ADR-0365; selected 5/5 is not complete K1. String remains a
+   separate broader dependency closure.
 8. Register the dependency-closed U3 `Init`/`Std`/Lean-module population and
    classify/discharge the 65 prelude assumptions instead of treating import
    counts as trust closure.
