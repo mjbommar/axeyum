@@ -1,8 +1,9 @@
 # SMT-COMP Full-Library Work Stream — RESUME HERE
 
 **This folder is the single entry point for the SMT-COMP measurement,
-full-library inventory, and gap-closing lane.** Updated 2026-07-23 after F1
-integration and the fixture-only F2 host/sentinel preflight implementation.
+full-library inventory, and gap-closing lane.** Updated 2026-07-24 after the
+no-launch F2 live-capture implementation was committed, gated, and pushed for
+integration.
 
 The goal is an honest, reproducible per-logic decide/decline/**wrong** map over
 a source-balanced SMT-COMP-style population, followed by a measured and ranked
@@ -399,7 +400,7 @@ gate.
    installs every replayable decision before launch, projects completed
    terminals, prevents duplicate launch across a missing-checkpoint crash, and
    completion-last recovers exact initial or different-host-retry checkpoints
-   under scheduler-decision v4. The expanded portable gate passes 144 tests
+   under scheduler-decision v4. The expanded portable gate passes 157 tests
    with one expected live-host skip. No live acceptance file exists, and no
    host probe, sentinel, NAS preparation root, resource session, allocation,
    or solver process was started. The source-first
@@ -411,7 +412,11 @@ gate.
    [R1 correction](../smtcomp-credited-full-preparation-f2-live-capture-r1-plan-2026-07-24.md)
    additionally requires process-free repaired-P0/external-root revalidation
    before attempt creation and three fresh schedule-bound thermal observations
-   in preflight v2. Its implementation and live capture are still open.
+   in preflight v2. The
+   [implementation result](../smtcomp-credited-full-preparation-f2-live-capture-implementation-2026-07-24.md)
+   records pushed topic commit `57482ad0`, the exact no-launch boundary, focused
+   mutation coverage, a green scoped gate, and an exit-zero full `just check`.
+   Integration and the separately authorized live capture remain open.
 
 The same implementation rule continues to apply: prove each new mechanism and
 its destructive/interruption tests on a tiny corpus before spending the full
@@ -477,6 +482,8 @@ Repository:
   `docs/plan/smtcomp-credited-full-preparation-f2-live-capture-plan-2026-07-24.md`;
 - credited full-population F2 live-capture R1 correction:
   `docs/plan/smtcomp-credited-full-preparation-f2-live-capture-r1-plan-2026-07-24.md`;
+- credited full-population F2 live-capture implementation result:
+  `docs/plan/smtcomp-credited-full-preparation-f2-live-capture-implementation-2026-07-24.md`;
 - credited full-population publication fixture:
   `docs/plan/smtcomp-credited-full-publication-fixture-2026-07-23.md`;
 - credited full-population execution-coordinator fixture:
@@ -535,12 +542,14 @@ NAS (shared, corpus read-only in practice):
    mainline-gated acceptance, admitted-wave entry point, and pre-launch
    authorization/recovery path. The Lean filesystem decoupling is also on
    current main, so the historical SMT-source pin blocker is closed. No live
-   root or canonical acceptance record has been published. Implement and
-   integrate the source-first
+   root or canonical acceptance record has been published. The source-first
    [F2 live-capture plan](../smtcomp-credited-full-preparation-f2-live-capture-plan-2026-07-24.md),
    including its source-first
    [R1 correction](../smtcomp-credited-full-preparation-f2-live-capture-r1-plan-2026-07-24.md),
-   then revalidate exact local/tracking/remote `main` equality and both
+   is implemented by pushed topic commit `57482ad0` and recorded in the
+   [implementation result](../smtcomp-credited-full-preparation-f2-live-capture-implementation-2026-07-24.md).
+   Integrate that exact implementation and result, then revalidate exact
+   local/tracking/remote `main` equality and both
    registered gates before any host probe or NAS mutation. The separately
    reviewed operator may publish only a process-free
    `launch_authorized=false` root inside its frozen 30-minute window. Integrate
