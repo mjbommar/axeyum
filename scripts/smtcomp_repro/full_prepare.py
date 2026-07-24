@@ -27,7 +27,7 @@ from full_population import (
     validate_schedule,
 )
 from full_preflight import validate_full_preflight
-from full_readiness import validate_readiness
+from full_readiness import require_exact_integrated_main, validate_readiness
 from multi_host import (
     build_host_command,
     build_plan,
@@ -685,6 +685,45 @@ def _reject_execution_evidence(
                 )
 
 
+def _authorize_full_preparation_completion(
+    *,
+    repository_root: Path,
+    readiness: dict[str, Any],
+    preflight: dict[str, Any],
+    attempt_root: Path,
+    composition: dict[str, Any],
+    solver_binaries: dict[str, Path],
+    fixture_only: bool,
+    prepared_at_ns: int | None,
+) -> int:
+    """Recheck live authority and deadline immediately before completion."""
+
+    if type(fixture_only) is not bool:
+        raise ContractError("full preparation completion fixture flag mismatch")
+    if prepared_at_ns is not None and (
+        type(prepared_at_ns) is not int or prepared_at_ns <= 0
+    ):
+        raise ContractError("invalid full preparation timestamp")
+    if fixture_only:
+        timestamp = time.time_ns() if prepared_at_ns is None else prepared_at_ns
+    else:
+        if prepared_at_ns is not None:
+            raise ContractError("live full preparation timestamp must be sampled internally")
+        require_exact_integrated_main(
+            repository_root,
+            expected_commit=readiness.get("head_commit"),
+        )
+        timestamp = time.time_ns()
+    validate_full_preflight(
+        preflight,
+        attempt_root=attempt_root,
+        composition=composition,
+        solver_binaries=solver_binaries,
+        prepared_at_ns=timestamp,
+    )
+    return timestamp
+
+
 def publish_full_preparation_candidate(
     *,
     repository_root: Path,
@@ -703,8 +742,9 @@ def publish_full_preparation_candidate(
     attempt = attempt_root.resolve(strict=True)
     source = source_root.resolve(strict=True)
     source_identity_path = source_identity_manifest.resolve(strict=True)
-    timestamp = time.time_ns() if prepared_at_ns is None else prepared_at_ns
-    if type(timestamp) is not int or timestamp <= 0:
+    if prepared_at_ns is not None and (
+        type(prepared_at_ns) is not int or prepared_at_ns <= 0
+    ):
         raise ContractError("invalid full preparation timestamp")
     if (attempt / "complete.json").exists():
         raise ContractError("full preparation candidate is already complete")
@@ -716,6 +756,8 @@ def publish_full_preparation_candidate(
     )
     validate_readiness(readiness, repository_root=repository_root)
     fixture_only = selection["fixture_only"]
+    if not fixture_only and prepared_at_ns is not None:
+        raise ContractError("live full preparation timestamp must be sampled internally")
     if not isinstance(preflight, dict):
         raise ContractError("full preparation preflight type mismatch")
     if (
@@ -768,12 +810,15 @@ def publish_full_preparation_candidate(
             }
         )
     binary_paths = {cell.solver_id: cell.binary for cell in solver_cells}
+    initial_timestamp = (
+        time.time_ns() if prepared_at_ns is None else prepared_at_ns
+    )
     validate_full_preflight(
         preflight,
         attempt_root=attempt,
         composition=composition,
         solver_binaries=binary_paths,
-        prepared_at_ns=timestamp,
+        prepared_at_ns=initial_timestamp,
     )
     atomic_install_json(inputs, "full-preflight.json", preflight)
     _reject_execution_evidence(attempt)
@@ -783,6 +828,16 @@ def publish_full_preparation_candidate(
         for path in sorted(attempt.rglob("*"))
         if path.is_file() and path != completion_path
     ]
+    timestamp = _authorize_full_preparation_completion(
+        repository_root=repository_root,
+        readiness=readiness,
+        preflight=preflight,
+        attempt_root=attempt,
+        composition=composition,
+        solver_binaries=binary_paths,
+        fixture_only=fixture_only,
+        prepared_at_ns=prepared_at_ns,
+    )
     completion = _sealed(
         {
             "schema": PREPARATION_SCHEMA,
