@@ -38,6 +38,11 @@ from full_population import (  # noqa: E402
     validate_thermal_stop,
     validate_wave_checkpoint,
 )
+from full_admission import (  # noqa: E402
+    build_full_cell_admission,
+    build_full_preparation_acceptance,
+    validate_full_cell_admission,
+)
 from full_prepare import (  # noqa: E402
     FullSolverCell,
     compose_full_cell_manifests,
@@ -1228,6 +1233,69 @@ class FullPopulationContractTests(unittest.TestCase):
                 )["record_sha256"],
                 completion["record_sha256"],
             )
+            acceptance = build_full_preparation_acceptance(
+                execution_source_commit=readiness["head_commit"],
+                preparation_record_sha256=completion["record_sha256"],
+                selection_record_sha256=selection["record_sha256"],
+                fixture_only=True,
+            )
+            admission = build_full_cell_admission(
+                attempt,
+                repository_root=ROOT,
+                solver_id="axeyum",
+                expected_logic_counts={"QF_BV": 1, "QF_UF": 1},
+                prior_result_roots={},
+                acceptance=acceptance,
+                inspect_shared_root=False,
+                admitted_at_ns=5300,
+            )
+            self.assertEqual(
+                validate_full_cell_admission(
+                    admission,
+                    preparation_root=attempt,
+                    repository_root=ROOT,
+                    expected_logic_counts={"QF_BV": 1, "QF_UF": 1},
+                    prior_result_roots={},
+                    acceptance=acceptance,
+                    inspect_shared_root=False,
+                ),
+                admission,
+            )
+            drifted_acceptance = copy.deepcopy(acceptance)
+            drifted_acceptance["preparation_record_sha256"] = "0" * 64
+            with self.assertRaisesRegex(ContractError, "acceptance/preparation"):
+                validate_full_cell_admission(
+                    admission,
+                    preparation_root=attempt,
+                    repository_root=ROOT,
+                    expected_logic_counts={"QF_BV": 1, "QF_UF": 1},
+                    prior_result_roots={},
+                    acceptance=reseal(drifted_acceptance),
+                    inspect_shared_root=False,
+                )
+            drifted_admission = copy.deepcopy(admission)
+            drifted_admission["plan_sha256"] = "0" * 64
+            with self.assertRaisesRegex(ContractError, "admission replay drift"):
+                validate_full_cell_admission(
+                    reseal(drifted_admission),
+                    preparation_root=attempt,
+                    repository_root=ROOT,
+                    expected_logic_counts={"QF_BV": 1, "QF_UF": 1},
+                    prior_result_roots={},
+                    acceptance=acceptance,
+                    inspect_shared_root=False,
+                )
+            with self.assertRaisesRegex(ContractError, "prior-result order"):
+                build_full_cell_admission(
+                    attempt,
+                    repository_root=ROOT,
+                    solver_id="cvc5",
+                    expected_logic_counts={"QF_BV": 1, "QF_UF": 1},
+                    prior_result_roots={},
+                    acceptance=acceptance,
+                    inspect_shared_root=False,
+                    admitted_at_ns=5300,
+                )
             evidence = attempt / "cells" / "axeyum" / "records" / "unexpected"
             evidence.write_bytes(b"must reject pre-existing execution evidence\n")
             with self.assertRaisesRegex(ContractError, "execution evidence"):
@@ -1244,6 +1312,18 @@ class FullPopulationContractTests(unittest.TestCase):
                     allowed_execution_solver_ids=("axeyum",),
                 )["record_sha256"],
                 completion["record_sha256"],
+            )
+            self.assertEqual(
+                validate_full_cell_admission(
+                    admission,
+                    preparation_root=attempt,
+                    repository_root=ROOT,
+                    expected_logic_counts={"QF_BV": 1, "QF_UF": 1},
+                    prior_result_roots={},
+                    acceptance=acceptance,
+                    inspect_shared_root=False,
+                ),
+                admission,
             )
             with self.assertRaisesRegex(ContractError, "solver prefix"):
                 validate_full_preparation(
