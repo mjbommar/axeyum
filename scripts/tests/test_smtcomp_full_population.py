@@ -2,12 +2,14 @@
 
 from __future__ import annotations
 
+import ast
 import copy
 import hashlib
 import json
 import subprocess
 import sys
 import tempfile
+import types
 import unittest
 from pathlib import Path
 from unittest import mock
@@ -24,6 +26,7 @@ from full_population import (  # noqa: E402
     RETRY_ALLOCATION_COUNT,
     SHARD_COUNT,
     SOLVER_IDS,
+    THERMAL_STOP_MILLICELSIUS,
     WAVE_COUNT,
     build_population_contract,
     build_schedule,
@@ -44,6 +47,16 @@ from full_admission import (  # noqa: E402
     build_full_preparation_acceptance,
     validate_full_cell_admission,
 )
+from full_capture import (  # noqa: E402
+    ATTEMPT_DIRECTORY,
+    capture_incident_sentinels,
+    capture_live_readiness,
+    capture_preflight_thermals,
+    prepare_full_capture,
+    require_exact_integrated_main,
+    validate_repaired_p0_authority,
+)
+import full_capture as full_capture_module  # noqa: E402
 from full_prepare import (  # noqa: E402
     FullSolverCell,
     compose_full_cell_manifests,
@@ -317,6 +330,41 @@ def incident_sentinel_fixture(
             )
         )
     return records
+
+
+def preflight_thermal_fixture(
+    *,
+    composition: dict,
+    started_at_ns: int,
+    temperatures: tuple[object, object, object] = (70, 71, 72),
+) -> list[dict]:
+    cell = composition["cells"][0]
+    plan = read_canonical_json(Path(cell["plan_path"]))
+    schedule = read_canonical_json(Path(cell["schedule_path"]))
+    wave = schedule["waves"][0]
+    return [
+        build_thermal_observation(
+            sensors_json=json.dumps(
+                {"k10temp-pci-00c3": {"Tctl": {"temp1_input": temperature}}}
+            ).encode("utf-8"),
+            plan_sha256=plan["plan_sha256"],
+            run_identity_sha256=cell["run_identity_sha256"],
+            cell_id="axeyum",
+            wave_index=0,
+            allocation_id=allocation_id,
+            attempt_id=None,
+            host_id=host_id,
+            observed_at_ns=started_at_ns + index,
+        )
+        for index, (host_id, allocation_id, temperature) in enumerate(
+            zip(
+                wave["host_ids"],
+                wave["allocation_ids"],
+                temperatures,
+                strict=True,
+            )
+        )
+    ]
 
 
 class FullPopulationContractTests(unittest.TestCase):
@@ -1360,6 +1408,10 @@ class FullPopulationContractTests(unittest.TestCase):
                 composition=composition,
                 solver_binaries=binaries_by_solver,
                 host_observations=observations,
+                thermal_observations=preflight_thermal_fixture(
+                    composition=composition,
+                    started_at_ns=4950,
+                ),
                 sentinel_records=sentinel_records,
                 started_at_ns=4900,
                 ended_at_ns=5100,
@@ -1400,6 +1452,104 @@ class FullPopulationContractTests(unittest.TestCase):
                     solver_binaries=binaries_by_solver,
                     prepared_at_ns=5200,
                 )
+            missing_thermal = copy.deepcopy(preflight)
+            missing_thermal["thermal_observations"].pop()
+            with self.assertRaisesRegex(ContractError, "thermal observation inventory"):
+                validate_full_preflight(
+                    reseal(missing_thermal),
+                    attempt_root=attempt,
+                    composition=composition,
+                    solver_binaries=binaries_by_solver,
+                    prepared_at_ns=5200,
+                )
+            reordered_thermal = copy.deepcopy(preflight)
+            (
+                reordered_thermal["thermal_observations"][0],
+                reordered_thermal["thermal_observations"][1],
+            ) = (
+                reordered_thermal["thermal_observations"][1],
+                reordered_thermal["thermal_observations"][0],
+            )
+            with self.assertRaisesRegex(ContractError, "thermal observation identity"):
+                validate_full_preflight(
+                    reseal(reordered_thermal),
+                    attempt_root=attempt,
+                    composition=composition,
+                    solver_binaries=binaries_by_solver,
+                    prepared_at_ns=5200,
+                )
+            for field, value in (
+                ("plan_sha256", "1" * 64),
+                ("run_identity_sha256", "2" * 64),
+                ("cell_id", "cvc5"),
+                ("wave_index", 1),
+                ("allocation_id", "full-initial-03"),
+                ("attempt_id", "unexpected-attempt"),
+                ("host_id", "s6"),
+            ):
+                with self.subTest(preflight_thermal_identity_field=field):
+                    drifted = copy.deepcopy(preflight)
+                    drifted["thermal_observations"][0][field] = value
+                    drifted["thermal_observations"][0] = reseal(
+                        drifted["thermal_observations"][0]
+                    )
+                    with self.assertRaisesRegex(
+                        ContractError, "thermal observation identity"
+                    ):
+                        validate_full_preflight(
+                            reseal(drifted),
+                            attempt_root=attempt,
+                            composition=composition,
+                            solver_binaries=binaries_by_solver,
+                            prepared_at_ns=5200,
+                        )
+            raw_drift = copy.deepcopy(preflight)
+            raw_drift["thermal_observations"][0]["sensors_json_hex"] = "00"
+            raw_drift["thermal_observations"][0] = reseal(
+                raw_drift["thermal_observations"][0]
+            )
+            with self.assertRaisesRegex(ContractError, "sensors JSON identity"):
+                validate_full_preflight(
+                    reseal(raw_drift),
+                    attempt_root=attempt,
+                    composition=composition,
+                    solver_binaries=binaries_by_solver,
+                    prepared_at_ns=5200,
+                )
+            for label, rows, message in (
+                (
+                    "out-of-window",
+                    preflight_thermal_fixture(
+                        composition=composition,
+                        started_at_ns=4899,
+                    ),
+                    "escapes capture",
+                ),
+                (
+                    "at-stop-threshold",
+                    preflight_thermal_fixture(
+                        composition=composition,
+                        started_at_ns=4950,
+                        temperatures=(
+                            THERMAL_STOP_MILLICELSIUS / 1000,
+                            71,
+                            72,
+                        ),
+                    ),
+                    "thermal stop threshold",
+                ),
+            ):
+                with self.subTest(preflight_thermal_policy=label):
+                    unsafe_thermal = copy.deepcopy(preflight)
+                    unsafe_thermal["thermal_observations"] = rows
+                    with self.assertRaisesRegex(ContractError, message):
+                        validate_full_preflight(
+                            reseal(unsafe_thermal),
+                            attempt_root=attempt,
+                            composition=composition,
+                            solver_binaries=binaries_by_solver,
+                            prepared_at_ns=5200,
+                        )
             host_drift = copy.deepcopy(preflight)
             host_drift["host_observations"][0]["hostname"] = "other-host"
             host_drift["host_observations"][0] = reseal(
@@ -2205,6 +2355,689 @@ class FullPopulationContractTests(unittest.TestCase):
                     required_paths=required,
                     fixture_only=True,
                 )
+
+
+class FullCaptureOperatorTests(unittest.TestCase):
+    @staticmethod
+    def exact_main_repository(parent: Path) -> Path:
+        bare = parent / "origin.git"
+        root = parent / "source"
+        subprocess.run(
+            ["git", "init", "--bare", str(bare)], check=True, capture_output=True
+        )
+        root.mkdir()
+        subprocess.run(
+            ["git", "init", "-b", "main"], cwd=root, check=True, capture_output=True
+        )
+        subprocess.run(
+            ["git", "config", "user.email", "fixture@example.invalid"],
+            cwd=root,
+            check=True,
+        )
+        subprocess.run(
+            ["git", "config", "user.name", "Fixture"], cwd=root, check=True
+        )
+        (root / "tracked.txt").write_text("fixture\n", encoding="utf-8")
+        subprocess.run(["git", "add", "tracked.txt"], cwd=root, check=True)
+        subprocess.run(
+            ["git", "commit", "-m", "fixture"],
+            cwd=root,
+            check=True,
+            capture_output=True,
+        )
+        subprocess.run(
+            ["git", "remote", "add", "origin", str(bare)], cwd=root, check=True
+        )
+        subprocess.run(
+            ["git", "push", "-u", "origin", "main"],
+            cwd=root,
+            check=True,
+            capture_output=True,
+        )
+        return root
+
+    def test_repaired_p0_authority_requires_live_roots_and_exact_committed_result(
+        self,
+    ) -> None:
+        committed = read_canonical_json(
+            ROOT / "docs/plan/generated/smtcomp-repaired-p0-comparison.json"
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            parent = Path(tmp)
+            missing = parent / "missing"
+            with self.assertRaisesRegex(ContractError, "missing repaired-P0"):
+                validate_repaired_p0_authority(
+                    repository_root=ROOT,
+                    preparation_root=missing,
+                )
+
+            preparation = parent / "repaired-p0"
+            preparation.mkdir()
+            with mock.patch.object(
+                full_capture_module,
+                "derive_live_comparison",
+                return_value=copy.deepcopy(committed),
+            ):
+                validate_repaired_p0_authority(
+                    repository_root=ROOT,
+                    preparation_root=preparation,
+                )
+
+            mismatched = copy.deepcopy(committed)
+            mismatched["claim_boundary"]["reason"] += " drift"
+            mismatched = reseal(mismatched)
+            with mock.patch.object(
+                full_capture_module,
+                "derive_live_comparison",
+                return_value=mismatched,
+            ), self.assertRaisesRegex(ContractError, "committed authority"):
+                validate_repaired_p0_authority(
+                    repository_root=ROOT,
+                    preparation_root=preparation,
+                )
+
+            with mock.patch.object(
+                full_capture_module,
+                "derive_live_comparison",
+                side_effect=ContractError("comparison external completion file drift"),
+            ), self.assertRaisesRegex(ContractError, "external completion"):
+                validate_repaired_p0_authority(
+                    repository_root=ROOT,
+                    preparation_root=preparation,
+                )
+
+    def test_repaired_p0_failure_stops_before_attempt_namespace(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            parent = Path(tmp)
+            root = self.exact_main_repository(parent)
+            shared = parent / "shared"
+            accepted = parent / "accepted"
+            corpus = parent / "corpus"
+            for directory in (shared, accepted, corpus):
+                directory.mkdir()
+            corpus_manifest = parent / "corpus.json"
+            corpus_manifest.write_bytes(canonical_bytes({"fixture": True}))
+            gates = [
+                build_gate_observation(
+                    repository_root=root,
+                    command=list(command),
+                    exit_code=0,
+                    stdout=b"green\n",
+                    stderr=b"",
+                    started_at_ns=1000 + index * 10,
+                    ended_at_ns=1001 + index * 10,
+                )
+                for index, command in enumerate(
+                    (("just", "check"), ("./scripts/check-smtcomp-resume.sh",))
+                )
+            ]
+            readiness = build_readiness(
+                repository_root=root,
+                gate_observations=gates,
+                required_paths=("tracked.txt",),
+                fixture_only=True,
+            )
+
+            def reject_p0(**_kwargs: object) -> None:
+                raise ContractError("unsafe repaired-P0 authority")
+
+            with self.assertRaisesRegex(ContractError, "unsafe repaired-P0"):
+                prepare_full_capture(
+                    repository_root=root,
+                    source_root=root,
+                    shared_root=shared,
+                    accepted_root=accepted,
+                    corpus_root=corpus,
+                    source_corpus_manifest=corpus_manifest,
+                    repaired_p0_preparation=parent / "repaired-p0",
+                    attempt_id="must-not-exist",
+                    solver_sources={
+                        solver_id: parent / solver_id for solver_id in SOLVER_IDS
+                    },
+                    sentinel_sources={
+                        sentinel_id: parent / sentinel_id
+                        for sentinel_id in (
+                            "qf-abvfp-query-26",
+                            "qf-bvfp-query-26",
+                            "qf-auflia-pipeline-invalid",
+                        )
+                    },
+                    readiness=readiness,
+                    fixture_only=True,
+                    repaired_p0_validator=reject_p0,
+                )
+            self.assertFalse((shared / ATTEMPT_DIRECTORY).exists())
+            with self.assertRaisesRegex(ContractError, "registered runtime hooks"):
+                prepare_full_capture(
+                    repository_root=root,
+                    source_root=root,
+                    shared_root=shared,
+                    accepted_root=accepted,
+                    corpus_root=corpus,
+                    source_corpus_manifest=corpus_manifest,
+                    repaired_p0_preparation=parent / "repaired-p0",
+                    attempt_id="must-not-exist-live",
+                    solver_sources={
+                        solver_id: parent / solver_id for solver_id in SOLVER_IDS
+                    },
+                    sentinel_sources={
+                        sentinel_id: parent / sentinel_id
+                        for sentinel_id in (
+                            "qf-abvfp-query-26",
+                            "qf-bvfp-query-26",
+                            "qf-auflia-pipeline-invalid",
+                        )
+                    },
+                    readiness=readiness,
+                    repaired_p0_validator=reject_p0,
+                )
+            self.assertFalse((shared / ATTEMPT_DIRECTORY).exists())
+
+    def test_attempt_creation_rejects_unsafe_and_existing_roots_without_overwrite(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            shared = Path(tmp).resolve()
+            with self.assertRaisesRegex(ContractError, "unsafe.*attempt ID"):
+                full_capture_module._create_attempt(shared, "../escape")
+            self.assertFalse((shared / ATTEMPT_DIRECTORY).exists())
+
+            attempt = full_capture_module._create_attempt(shared, "one-attempt")
+            marker = attempt / "retained.txt"
+            marker.write_text("retained\n", encoding="utf-8")
+            with self.assertRaisesRegex(ContractError, "already exists"):
+                full_capture_module._create_attempt(shared, "one-attempt")
+            self.assertEqual(marker.read_text(encoding="utf-8"), "retained\n")
+
+    def test_exact_main_gate_rejects_dirty_descendant_and_remote_drift(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            parent = Path(tmp)
+            root = self.exact_main_repository(parent)
+            initial = require_exact_integrated_main(root)
+            self.assertEqual(len(initial), 40)
+
+            tracked = root / "tracked.txt"
+            tracked.write_text("dirty\n", encoding="utf-8")
+            with self.assertRaisesRegex(ContractError, "clean worktree"):
+                require_exact_integrated_main(root)
+            tracked.write_text("fixture\n", encoding="utf-8")
+
+            (root / "local.txt").write_text("descendant\n", encoding="utf-8")
+            subprocess.run(["git", "add", "local.txt"], cwd=root, check=True)
+            subprocess.run(
+                ["git", "commit", "-m", "descendant"],
+                cwd=root,
+                check=True,
+                capture_output=True,
+            )
+            with self.assertRaisesRegex(ContractError, "exact integrated remote main"):
+                require_exact_integrated_main(root)
+            subprocess.run(
+                ["git", "push", "origin", "main"],
+                cwd=root,
+                check=True,
+                capture_output=True,
+            )
+            self.assertEqual(require_exact_integrated_main(root), _git_head(root))
+
+            other = parent / "other"
+            subprocess.run(
+                ["git", "clone", "--branch", "main", str(parent / "origin.git"), str(other)],
+                check=True,
+                capture_output=True,
+            )
+            subprocess.run(
+                ["git", "config", "user.email", "fixture@example.invalid"],
+                cwd=other,
+                check=True,
+            )
+            subprocess.run(
+                ["git", "config", "user.name", "Other"], cwd=other, check=True
+            )
+            (other / "remote.txt").write_text("advanced\n", encoding="utf-8")
+            subprocess.run(["git", "add", "remote.txt"], cwd=other, check=True)
+            subprocess.run(
+                ["git", "commit", "-m", "remote advance"],
+                cwd=other,
+                check=True,
+                capture_output=True,
+            )
+            subprocess.run(
+                ["git", "push", "origin", "main"],
+                cwd=other,
+                check=True,
+                capture_output=True,
+            )
+            with self.assertRaisesRegex(ContractError, "exact integrated remote main"):
+                require_exact_integrated_main(root)
+
+    def test_exact_main_gate_rejects_missing_tracking_state(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = self.exact_main_repository(Path(tmp))
+            subprocess.run(
+                ["git", "update-ref", "-d", "refs/remotes/origin/main"],
+                cwd=root,
+                check=True,
+            )
+            with self.assertRaisesRegex(ContractError, "inspect Git state"):
+                require_exact_integrated_main(root)
+
+    def test_failed_registered_gate_stops_before_preparation_namespace(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            parent = Path(tmp)
+            root = self.exact_main_repository(parent)
+            shared = parent / "shared"
+            shared.mkdir()
+            calls = []
+
+            def failed_gate(*, repository_root: Path, command: list[str]) -> dict:
+                calls.append(command)
+                return build_gate_observation(
+                    repository_root=repository_root,
+                    command=command,
+                    exit_code=1,
+                    stdout=b"",
+                    stderr=b"failed\n",
+                    started_at_ns=1000,
+                    ended_at_ns=1001,
+                )
+
+            with self.assertRaisesRegex(ContractError, "registered gate runner"):
+                capture_live_readiness(
+                    repository_root=root,
+                    gate_runner=failed_gate,
+                )
+            self.assertEqual(calls, [])
+
+            with self.assertRaisesRegex(ContractError, "registered.*gate failed"):
+                capture_live_readiness(
+                    repository_root=root,
+                    gate_runner=failed_gate,
+                    fixture_only=True,
+                )
+            self.assertEqual(calls, [["just", "check"]])
+            self.assertFalse((shared / ATTEMPT_DIRECTORY).exists())
+
+            calls.clear()
+
+            def second_gate_fails(
+                *, repository_root: Path, command: list[str]
+            ) -> dict:
+                calls.append(command)
+                return build_gate_observation(
+                    repository_root=repository_root,
+                    command=command,
+                    exit_code=0 if command == ["just", "check"] else 1,
+                    stdout=b"green\n" if command == ["just", "check"] else b"",
+                    stderr=b"" if command == ["just", "check"] else b"failed\n",
+                    started_at_ns=2000 + len(calls) * 10,
+                    ended_at_ns=2001 + len(calls) * 10,
+                )
+
+            with self.assertRaisesRegex(ContractError, "registered.*gate failed"):
+                capture_live_readiness(
+                    repository_root=root,
+                    gate_runner=second_gate_fails,
+                    fixture_only=True,
+                )
+            self.assertEqual(
+                calls,
+                [["just", "check"], ["./scripts/check-smtcomp-resume.sh"]],
+            )
+            self.assertFalse((shared / ATTEMPT_DIRECTORY).exists())
+
+    def test_incident_capture_runs_exact_order_and_rejects_first_wrong(self) -> None:
+        def build_inputs(attempt: Path) -> tuple[dict[str, Path], dict[str, Path], Path]:
+            binary_root = attempt / "binaries"
+            input_root = attempt / "inputs" / "sentinels"
+            output_root = attempt / "sentinels" / "outputs"
+            binary_root.mkdir(parents=True)
+            input_root.mkdir(parents=True)
+            output_root.mkdir(parents=True)
+            binaries = {}
+            for solver_id in SOLVER_IDS:
+                binary = binary_root / solver_id
+                binary.write_text("fixture\n", encoding="utf-8")
+                binary.chmod(0o755)
+                binaries[solver_id] = binary.resolve()
+            sentinels = {}
+            for sentinel_id, kind in {
+                "qf-abvfp-query-26": "qf_abvfp",
+                "qf-bvfp-query-26": "qf_bvfp",
+                "qf-auflia-pipeline-invalid": "qf_auflia",
+            }.items():
+                sentinel = input_root / f"{sentinel_id}.smt2"
+                sentinel.write_text(f"; {kind}\n(check-sat)\n", encoding="utf-8")
+                sentinels[sentinel_id] = sentinel.resolve()
+            return binaries, sentinels, output_root
+
+        with tempfile.TemporaryDirectory() as tmp:
+            attempt = Path(tmp).resolve() / "attempt"
+            attempt.mkdir()
+            binaries, sentinels, output_root = build_inputs(attempt)
+            calls = []
+            clock = iter(range(1000, 1100))
+
+            def safe_runner(command: list[str], **_kwargs: object) -> object:
+                solver_id = Path(command[0]).name
+                sentinel_id = Path(command[1]).stem
+                if sentinel_id == "qf-auflia-pipeline-invalid":
+                    status = "unknown" if solver_id == "axeyum" else "sat"
+                else:
+                    status = "unsat"
+                calls.append((sentinel_id, solver_id, tuple(command[2:])))
+                stdout = f"{status}\n".encode("ascii")
+                return types.SimpleNamespace(
+                    observed=types.SimpleNamespace(value=status),
+                    termination_class="completed",
+                    exit_code=0,
+                    signal=None,
+                    resource_limit_kind=None,
+                    scoring_wall_time=0.001,
+                    runner_elapsed=0.002,
+                    stdout_bytes=stdout,
+                    stderr_bytes=b"",
+                )
+
+            records = capture_incident_sentinels(
+                attempt_root=attempt,
+                solver_binaries=binaries,
+                sentinel_inputs=sentinels,
+                output_dir=output_root,
+                fixture_only=True,
+                solver_runner=safe_runner,
+                now_ns=lambda: next(clock),
+            )
+            self.assertEqual(
+                [(row["sentinel_id"], row["sentinel_kind"], row["solver_id"]) for row in records],
+                list(SENTINEL_ROWS),
+            )
+            self.assertEqual(
+                calls,
+                [
+                    (
+                        sentinel_id,
+                        solver_id,
+                        ("--timeout-ms", "19000")
+                        if solver_id == "axeyum"
+                        else (),
+                    )
+                    for sentinel_id, _kind, solver_id in SENTINEL_ROWS
+                ],
+            )
+            self.assertEqual(len(list(output_root.iterdir())), 16)
+
+            failed = Path(tmp).resolve() / "failed"
+            failed.mkdir()
+            failed_binaries, failed_sentinels, failed_outputs = build_inputs(failed)
+            wrong_calls = []
+
+            def wrong_runner(_command: list[str], **_kwargs: object) -> object:
+                wrong_calls.append(True)
+                return types.SimpleNamespace(
+                    observed=types.SimpleNamespace(value="sat"),
+                    termination_class="completed",
+                    exit_code=0,
+                    signal=None,
+                    resource_limit_kind=None,
+                    scoring_wall_time=0.001,
+                    runner_elapsed=0.002,
+                    stdout_bytes=b"sat\n",
+                    stderr_bytes=b"",
+                )
+
+            with self.assertRaisesRegex(ContractError, "unsafe incident sentinel"):
+                capture_incident_sentinels(
+                    attempt_root=failed,
+                    solver_binaries=failed_binaries,
+                    sentinel_inputs=failed_sentinels,
+                    output_dir=failed_outputs,
+                    fixture_only=True,
+                    solver_runner=wrong_runner,
+                )
+            self.assertEqual(len(wrong_calls), 1)
+            self.assertFalse((failed / "complete.json").exists())
+
+    def test_live_capture_source_has_no_allocation_or_admission_path(self) -> None:
+        source = (SMTCOMP / "full_capture.py").read_text(encoding="utf-8")
+        tree = ast.parse(source)
+        forbidden_modules = {"full_admission", "full_execute"}
+        forbidden_calls = {
+            "execute_host_command",
+            "start_allocation",
+            "finish_allocation",
+            "systemd_run",
+            "stop_remote_unit",
+        }
+        imported = {
+            node.module
+            for node in ast.walk(tree)
+            if isinstance(node, ast.ImportFrom) and node.module is not None
+        }
+        calls = {
+            node.func.id
+            if isinstance(node.func, ast.Name)
+            else node.func.attr
+            for node in ast.walk(tree)
+            if isinstance(node, ast.Call)
+            and isinstance(node.func, (ast.Name, ast.Attribute))
+        }
+        self.assertTrue(imported.isdisjoint(forbidden_modules))
+        self.assertTrue(calls.isdisjoint(forbidden_calls))
+
+    def test_fixture_live_operator_publishes_completion_last_without_execution(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp).resolve()
+            shared = root / "shared"
+            corpus = shared / "corpus"
+            shared.mkdir()
+            accepted = accepted_fixture(shared, corpus)
+            corpus_manifest = root / "corpus-audit.json"
+            corpus_manifest.write_bytes(canonical_bytes({"fixture": "corpus"}))
+
+            solver_sources = {}
+            for solver_id in SOLVER_IDS:
+                binary = root / f"{solver_id}-source"
+                binary.write_text(f"{solver_id} fixture\n", encoding="utf-8")
+                binary.chmod(0o755)
+                solver_sources[solver_id] = binary
+            sentinel_sources = {}
+            for sentinel_id, kind in {
+                "qf-abvfp-query-26": "qf_abvfp",
+                "qf-bvfp-query-26": "qf_bvfp",
+                "qf-auflia-pipeline-invalid": "qf_auflia",
+            }.items():
+                sentinel = root / f"{sentinel_id}.smt2"
+                sentinel.write_text(f"; {kind}\n(check-sat)\n", encoding="utf-8")
+                sentinel_sources[sentinel_id] = sentinel
+
+            filesystem = {
+                "source": "fixture:/shared",
+                "filesystem_type": "nfs4",
+                "mount_point": str(shared),
+                "options": ["hard", "local_lock=none", "vers=4.1"],
+            }
+            filesystem["class_sha256"] = digest(filesystem)
+            observations = {
+                host_id: reseal(
+                    {
+                        "schema": OBSERVATION_SCHEMA,
+                        "hostname": f"server-{host_id}",
+                        "kernel_release": "fixture-kernel",
+                        "machine": "x86_64",
+                        "python_version": "3.fixture",
+                        "python_executable_sha256": sha256_file(
+                            Path(sys.executable).resolve()
+                        ),
+                        "toolchain_identity_sha256": "2" * 64,
+                        "cgroup_controllers": ["cpu", "io", "memory", "pids"],
+                        "user_systemd_transient": True,
+                        "shared_filesystem": filesystem,
+                        "shared_filesystem_class_sha256": filesystem["class_sha256"],
+                    }
+                )
+                for host_id in HOST_IDS
+            }
+            gates = [
+                build_gate_observation(
+                    repository_root=ROOT,
+                    command=list(command),
+                    exit_code=0,
+                    stdout=b"fixture green\n",
+                    stderr=b"",
+                    started_at_ns=1000 + index * 10,
+                    ended_at_ns=1001 + index * 10,
+                )
+                for index, command in enumerate(
+                    (("just", "check"), ("./scripts/check-smtcomp-resume.sh",))
+                )
+            ]
+            readiness = build_readiness(
+                repository_root=ROOT,
+                gate_observations=gates,
+                required_paths=("scripts/smtcomp_repro/full_population.py",),
+                fixture_only=True,
+            )
+            events = []
+            p0_calls = []
+
+            def fixture_p0_validator(
+                *, repository_root: Path, preparation_root: Path
+            ) -> None:
+                p0_calls.append((repository_root, preparation_root))
+
+            def fixture_probe(*, ssh_target: str, **_kwargs: object) -> dict:
+                events.append(("host", ssh_target))
+                return observations[ssh_target]
+
+            def fixture_thermal_probe(
+                *, registration: dict, **_kwargs: object
+            ) -> bytes:
+                events.append(("thermal", registration["host_id"]))
+                return json.dumps(
+                    {
+                        "k10temp-pci-00c3": {
+                            "Tctl": {"temp1_input": 70}
+                        }
+                    }
+                ).encode("utf-8")
+
+            def fixture_runner(command: list[str], **_kwargs: object) -> object:
+                solver_id = Path(command[0]).name
+                sentinel_id = Path(command[1]).stem
+                events.append(("sentinel", f"{sentinel_id}/{solver_id}"))
+                status = (
+                    "unknown"
+                    if sentinel_id == "qf-auflia-pipeline-invalid"
+                    and solver_id == "axeyum"
+                    else "sat"
+                    if sentinel_id == "qf-auflia-pipeline-invalid"
+                    else "unsat"
+                )
+                stdout = f"{status}\n".encode("ascii")
+                return types.SimpleNamespace(
+                    observed=types.SimpleNamespace(value=status),
+                    termination_class="completed",
+                    exit_code=0,
+                    signal=None,
+                    resource_limit_kind=None,
+                    scoring_wall_time=0.001,
+                    runner_elapsed=0.002,
+                    stdout_bytes=stdout,
+                    stderr_bytes=b"",
+                )
+
+            with mock.patch(
+                "multi_host.shared_filesystem_observation",
+                return_value={"class_sha256": filesystem["class_sha256"]},
+            ):
+                attempt = prepare_full_capture(
+                    repository_root=ROOT,
+                    source_root=SMTCOMP,
+                    shared_root=shared,
+                    accepted_root=accepted,
+                    corpus_root=corpus,
+                    source_corpus_manifest=corpus_manifest,
+                    repaired_p0_preparation=root / "repaired-p0",
+                    attempt_id="fixture-live-capture",
+                    solver_sources=solver_sources,
+                    sentinel_sources=sentinel_sources,
+                    readiness=readiness,
+                    fixture_only=True,
+                    repaired_p0_validator=fixture_p0_validator,
+                    remote_probe_fn=fixture_probe,
+                    thermal_probe_fn=fixture_thermal_probe,
+                    solver_runner=fixture_runner,
+                )
+            completion = read_canonical_json(attempt / "complete.json")
+            self.assertEqual(p0_calls, [(ROOT.resolve(), root / "repaired-p0")])
+            self.assertEqual(
+                events[:6],
+                [
+                    *(("host", host_id) for host_id in HOST_IDS),
+                    *(("thermal", host_id) for host_id in HOST_IDS),
+                ],
+            )
+            self.assertEqual(
+                [event[0] for event in events[6:]],
+                ["sentinel"] * len(SENTINEL_ROWS),
+            )
+            self.assertEqual(completion["status"], "prepared-no-launch")
+            self.assertFalse(completion["launch_authorized"])
+            self.assertEqual(
+                validate_full_preparation(
+                    attempt,
+                    repository_root=ROOT,
+                    inspect_shared_root=False,
+                )["record_sha256"],
+                completion["record_sha256"],
+            )
+            preflight = read_canonical_json(attempt / "inputs" / "full-preflight.json")
+            self.assertEqual(
+                [row["host_id"] for row in preflight["thermal_observations"]],
+                list(HOST_IDS),
+            )
+            self.assertTrue(
+                all(
+                    row["temperature_millicelsius"]
+                    < THERMAL_STOP_MILLICELSIUS
+                    for row in preflight["thermal_observations"]
+                )
+            )
+            hot_calls = []
+
+            def hot_probe(**_kwargs: object) -> bytes:
+                hot_calls.append(True)
+                return json.dumps(
+                    {
+                        "k10temp-pci-00c3": {
+                            "Tctl": {
+                                "temp1_input": THERMAL_STOP_MILLICELSIUS / 1000
+                            }
+                        }
+                    }
+                ).encode("utf-8")
+
+            composition = read_canonical_json(
+                attempt / "inputs" / "full-cell-composition.json"
+            )
+            with self.assertRaisesRegex(ContractError, "thermal stop threshold"):
+                capture_preflight_thermals(
+                    composition=composition,
+                    host_registrations=preflight["host_registrations"],
+                    remote_helper_path=attempt / "unused-helper.py",
+                    thermal_probe_fn=hot_probe,
+                )
+            self.assertEqual(len(hot_calls), 1)
+            for solver_id in SOLVER_IDS:
+                cell = attempt / "cells" / solver_id
+                self.assertFalse(any((cell / "multi-host-attempts").iterdir()))
+                self.assertFalse(any((cell / "multi-host-terminals").iterdir()))
+                self.assertFalse(any((cell / "records").iterdir()))
+
+
+def _git_head(root: Path) -> str:
+    return subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=root, text=True).strip()
 
 
 if __name__ == "__main__":

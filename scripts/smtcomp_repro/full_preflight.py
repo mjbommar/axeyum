@@ -11,7 +11,13 @@ import sys
 from pathlib import Path
 from typing import Any
 
-from full_population import HOST_IDS, SOLVER_IDS
+from full_population import (
+    HOST_IDS,
+    SOLVER_IDS,
+    THERMAL_STOP_MILLICELSIUS,
+    validate_schedule,
+    validate_thermal_observation,
+)
 from incident_sentinels import validate_incident_sentinel_records
 from multi_host import (
     environment_manifest,
@@ -23,7 +29,7 @@ from resume_fs import read_canonical_json
 from resume_runner import sha256_file
 
 
-PREFLIGHT_SCHEMA = "axeyum.smtcomp-credited-full-preflight.v1"
+PREFLIGHT_SCHEMA = "axeyum.smtcomp-credited-full-preflight.v2"
 PREFLIGHT_MAX_AGE_NS = 30 * 60 * 1_000_000_000
 PREFLIGHT_FIELDS = {
     "schema",
@@ -36,6 +42,7 @@ PREFLIGHT_FIELDS = {
     "environment_sha256",
     "host_observations",
     "host_registrations",
+    "thermal_observations",
     "sentinel_records",
     "record_sha256",
 }
@@ -83,6 +90,54 @@ def _composition_registrations(composition: dict[str, Any]) -> list[dict[str, An
     return registrations
 
 
+def _validate_preflight_thermals(
+    observations: list[dict[str, Any]],
+    *,
+    composition: dict[str, Any],
+    started_at_ns: int,
+    ended_at_ns: int,
+) -> list[dict[str, Any]]:
+    cells = composition.get("cells")
+    if (
+        not isinstance(cells, list)
+        or not cells
+        or cells[0].get("solver_id") != "axeyum"
+    ):
+        raise ContractError("full preflight Axeyum composition mismatch")
+    cell = cells[0]
+    plan = read_canonical_json(Path(cell.get("plan_path", "")))
+    schedule = validate_schedule(
+        read_canonical_json(Path(cell.get("schedule_path", "")))
+    )
+    wave = schedule["waves"][0]
+    expected = list(zip(wave["host_ids"], wave["allocation_ids"], strict=True))
+    if [host_id for host_id, _allocation_id in expected] != list(HOST_IDS):
+        raise ContractError("full preflight first-wave host order mismatch")
+    if not isinstance(observations, list) or len(observations) != len(expected):
+        raise ContractError("full preflight thermal observation inventory mismatch")
+    validated = [validate_thermal_observation(row) for row in observations]
+    for observation, (host_id, allocation_id) in zip(
+        validated, expected, strict=True
+    ):
+        if (
+            observation["plan_sha256"] != plan.get("plan_sha256")
+            or observation["plan_sha256"] != cell.get("plan_sha256")
+            or observation["run_identity_sha256"]
+            != cell.get("run_identity_sha256")
+            or observation["cell_id"] != "axeyum"
+            or observation["wave_index"] != 0
+            or observation["allocation_id"] != allocation_id
+            or observation["attempt_id"] is not None
+            or observation["host_id"] != host_id
+        ):
+            raise ContractError("full preflight thermal observation identity mismatch")
+        if not started_at_ns <= observation["observed_at_ns"] <= ended_at_ns:
+            raise ContractError("full preflight thermal observation escapes capture")
+        if observation["temperature_millicelsius"] >= THERMAL_STOP_MILLICELSIUS:
+            raise ContractError("full preflight thermal stop threshold reached")
+    return validated
+
+
 def build_full_preflight(
     *,
     attempt_root: Path,
@@ -90,6 +145,7 @@ def build_full_preflight(
     composition: dict[str, Any],
     solver_binaries: dict[str, Path],
     host_observations: list[dict[str, Any]],
+    thermal_observations: list[dict[str, Any]],
     sentinel_records: list[dict[str, Any]],
     started_at_ns: int,
     ended_at_ns: int,
@@ -131,6 +187,12 @@ def build_full_preflight(
         Path(sys.executable).resolve(strict=True)
     ):
         raise ContractError("full preflight coordinator/host Python drift")
+    validated_thermals = _validate_preflight_thermals(
+        thermal_observations,
+        composition=composition,
+        started_at_ns=started_at_ns,
+        ended_at_ns=ended_at_ns,
+    )
     validated_sentinels = validate_incident_sentinel_records(
         sentinel_records,
         attempt_root=attempt,
@@ -153,6 +215,7 @@ def build_full_preflight(
             "environment_sha256": environment_sha256,
             "host_observations": observations,
             "host_registrations": registrations,
+            "thermal_observations": validated_thermals,
             "sentinel_records": validated_sentinels,
         }
     )
@@ -193,6 +256,7 @@ def validate_full_preflight(
         composition=composition,
         solver_binaries=solver_binaries,
         host_observations=preflight.get("host_observations"),
+        thermal_observations=preflight.get("thermal_observations"),
         sentinel_records=preflight.get("sentinel_records"),
         started_at_ns=preflight.get("started_at_ns"),
         ended_at_ns=preflight.get("ended_at_ns"),
