@@ -54,7 +54,11 @@ from full_prepare import (  # noqa: E402
     validate_full_preparation,
     validate_full_selection,
 )
-from full_execute import WaveHandle, supervise_one_wave  # noqa: E402
+from full_execute import (  # noqa: E402
+    ConcreteAdmittedWaveRuntime,
+    WaveHandle,
+    supervise_one_wave,
+)
 import full_prepare as full_prepare_module  # noqa: E402
 from full_preflight import (  # noqa: E402
     PREFLIGHT_MAX_AGE_NS,
@@ -1720,6 +1724,86 @@ class FullPopulationContractTests(unittest.TestCase):
                 schedule["waves"][0]["allocation_ids"],
             )
             self.assertEqual(outcome["checkpoint"]["wave_index"], 0)
+
+    def test_concrete_runtime_maps_frozen_commands_to_e3_callbacks(self) -> None:
+        schedule = build_schedule(ENFORCEMENT_ID)
+        plan = {
+            "plan_sha256": PLAN_ID,
+            "run_identity_sha256": RUN_ID,
+            "allocations": schedule["allocations"],
+            "host_registrations": [
+                {"host_id": host_id, "ssh_target": host_id}
+                for host_id in HOST_IDS
+            ],
+        }
+        with tempfile.TemporaryDirectory() as temp:
+            run_dir = Path(temp) / CELL_ID
+            commands = run_dir / "multi-host-commands"
+            commands.mkdir(parents=True)
+            for allocation_id in schedule["waves"][0]["allocation_ids"]:
+                (commands / f"{allocation_id}.json").write_bytes(
+                    canonical_bytes({"remote_helper_path": "/tmp/full-multi-host.py"})
+                )
+            runtime = ConcreteAdmittedWaveRuntime(
+                plan=plan,
+                schedule=schedule,
+                run_dir=run_dir,
+                inspect_shared_root=False,
+            )
+            allocation = schedule["allocations"][0]
+            child = mock.Mock()
+            child.poll.return_value = 0
+            process = multi_host_module.AllocationProcess(
+                allocation_id=allocation["allocation_id"],
+                attempt_id="concrete-attempt",
+                session_id="concrete-session",
+                process=child,
+                run_dir=run_dir,
+                launch={"fixture": True},
+            )
+            raw = self.sensors_json(40)
+            stop_evidence = {
+                "exit_code": 0,
+                "post_stop_unit_state": "inactive",
+                "stopped_at_ns": 3000,
+            }
+            with (
+                mock.patch("full_execute.start_allocation", return_value=process) as start,
+                mock.patch("full_execute.remote_thermal_sample", return_value=raw) as sample,
+                mock.patch(
+                    "full_execute.stop_remote_unit", return_value=stop_evidence
+                ) as stop,
+                mock.patch(
+                    "full_execute.finish_allocation",
+                    return_value={"status": "completed", "record_sha256": "f" * 64},
+                ) as finish,
+            ):
+                prewave = runtime.capture_pre_wave(wave_index=0, now_ns=lambda: 1000)
+                handle = runtime.launch(allocation)
+                active = runtime.observe_active(handle, 2000)
+                hot = copy.deepcopy(active)
+                hot["temperature_millicelsius"] = 90_000
+                hot["sensors_json_hex"] = self.sensors_json(90).hex()
+                hot["sensors_json_sha256"] = hashlib.sha256(
+                    self.sensors_json(90)
+                ).hexdigest()
+                hot["sensors_json_bytes"] = len(self.sensors_json(90))
+                hot = reseal(hot)
+                stopped = runtime.stop_overheated(handle, hot)
+                terminal = runtime.poll_terminal(handle)
+
+            self.assertEqual(len(prewave), 3)
+            self.assertEqual(active["attempt_id"], "concrete-attempt")
+            self.assertEqual(stopped["remote_unit"], handle.remote_unit)
+            self.assertEqual(terminal["status"], "completed")
+            self.assertNotIn(handle.attempt_id, runtime.active)
+            self.assertEqual(
+                start.call_args.kwargs["command_manifest"],
+                commands / f"{allocation['allocation_id']}.json",
+            )
+            self.assertEqual(sample.call_count, 4)
+            stop.assert_called_once()
+            finish.assert_called_once_with(process, timeout=5.0)
 
     def test_supervisor_stops_only_overheated_handle_and_withholds_checkpoint(self) -> None:
         schedule = build_schedule(ENFORCEMENT_ID)

@@ -20,6 +20,8 @@ from full_population import (
     THERMAL_MAX_INTERVAL_NS,
     THERMAL_STOP_MILLICELSIUS,
     WAVE_COUNT,
+    build_thermal_observation,
+    build_thermal_stop,
     build_wave_checkpoint,
     scheduler_decision,
     validate_checkpoint_chain,
@@ -27,7 +29,14 @@ from full_population import (
     validate_thermal_observation,
     validate_thermal_stop,
 )
-from multi_host import derive_allocation_scheduler_state
+from multi_host import (
+    AllocationProcess,
+    derive_allocation_scheduler_state,
+    finish_allocation,
+    remote_thermal_sample,
+    start_allocation,
+    stop_remote_unit,
+)
 from resume_contract import ContractError, digest
 from resume_fs import (
     atomic_install_json,
@@ -343,6 +352,176 @@ class WaveHandle:
     attempt_id: str
     session_id: str
     remote_unit: str
+
+
+class ConcreteAdmittedWaveRuntime:
+    """Concrete E3 callbacks backed by frozen commands and durable evidence."""
+
+    def __init__(
+        self,
+        *,
+        plan: dict[str, Any],
+        schedule: dict[str, Any],
+        run_dir: Path,
+        inspect_shared_root: bool = True,
+    ) -> None:
+        validate_schedule(schedule)
+        _expect(
+            isinstance(plan, dict)
+            and plan.get("allocations") == schedule["allocations"]
+            and isinstance(plan.get("host_registrations"), list),
+            "concrete admitted runtime plan/schedule mismatch",
+        )
+        self.plan = plan
+        self.schedule = schedule
+        self.run_dir = run_dir.resolve(strict=True)
+        self.inspect_shared_root = inspect_shared_root
+        self.allocations = {
+            row["allocation_id"]: row for row in schedule["allocations"]
+        }
+        self.registrations = {
+            row["host_id"]: row for row in plan["host_registrations"]
+        }
+        _expect(
+            len(self.registrations) == len(plan["host_registrations"])
+            and set(self.registrations)
+            == {row["host_id"] for row in schedule["allocations"]},
+            "concrete admitted runtime host registration mismatch",
+        )
+        self.wave_by_initial_allocation = {
+            allocation_id: wave["wave_index"]
+            for wave in schedule["waves"]
+            for allocation_id in wave["allocation_ids"]
+        }
+        self.active: dict[str, AllocationProcess] = {}
+
+    def _command_path(self, allocation_id: str) -> Path:
+        return self.run_dir / "multi-host-commands" / f"{allocation_id}.json"
+
+    def _remote_helper(self, allocation_id: str) -> Path:
+        command = read_canonical_json(self._command_path(allocation_id))
+        helper = command.get("remote_helper_path")
+        _expect(isinstance(helper, str) and Path(helper).is_absolute(), "runtime helper mismatch")
+        return Path(helper)
+
+    def launch(self, allocation: dict[str, Any]) -> WaveHandle:
+        allocation_id = allocation.get("allocation_id")
+        expected = self.allocations.get(allocation_id)
+        _expect(expected == allocation, "runtime launch allocation mismatch")
+        process = start_allocation(
+            plan=self.plan,
+            command_manifest=self._command_path(allocation_id),
+            run_dir=self.run_dir,
+            inspect_shared_root=self.inspect_shared_root,
+        )
+        _expect(
+            process.allocation_id == allocation_id
+            and process.session_id
+            and process.attempt_id
+            and process.attempt_id not in self.active,
+            "runtime returned a mismatched or duplicate active attempt",
+        )
+        self.active[process.attempt_id] = process
+        return WaveHandle(
+            allocation_id=process.allocation_id,
+            host_id=allocation["host_id"],
+            attempt_id=process.attempt_id,
+            session_id=process.session_id,
+            remote_unit=f"axeyum-smtcomp-e3-{process.session_id}.service",
+        )
+
+    def _active_process(self, handle: WaveHandle) -> AllocationProcess:
+        process = self.active.get(handle.attempt_id)
+        _expect(
+            process is not None
+            and process.allocation_id == handle.allocation_id
+            and process.session_id == handle.session_id,
+            "runtime active handle mismatch",
+        )
+        return process
+
+    def poll_terminal(self, handle: WaveHandle) -> dict[str, Any] | None:
+        process = self._active_process(handle)
+        if process.process.poll() is None:
+            return None
+        terminal = finish_allocation(process, timeout=5.0)
+        del self.active[handle.attempt_id]
+        return {
+            "allocation_id": handle.allocation_id,
+            "attempt_id": handle.attempt_id,
+            "status": terminal["status"],
+            "terminal_record_sha256": terminal["record_sha256"],
+        }
+
+    def observe_active(self, handle: WaveHandle, observed_at_ns: int) -> dict[str, Any]:
+        self._active_process(handle)
+        wave_index = self.wave_by_initial_allocation.get(handle.allocation_id)
+        _expect(wave_index is not None, "runtime active allocation is outside a wave")
+        raw = remote_thermal_sample(
+            registration=self.registrations[handle.host_id],
+            remote_helper_path=self._remote_helper(handle.allocation_id),
+        )
+        return build_thermal_observation(
+            sensors_json=raw,
+            plan_sha256=self.plan["plan_sha256"],
+            run_identity_sha256=self.plan["run_identity_sha256"],
+            cell_id=self.run_dir.name,
+            wave_index=wave_index,
+            allocation_id=handle.allocation_id,
+            attempt_id=handle.attempt_id,
+            host_id=handle.host_id,
+            observed_at_ns=observed_at_ns,
+        )
+
+    def stop_overheated(
+        self, handle: WaveHandle, observation: dict[str, Any]
+    ) -> dict[str, Any]:
+        self._active_process(handle)
+        evidence = stop_remote_unit(
+            registration=self.registrations[handle.host_id],
+            remote_helper_path=self._remote_helper(handle.allocation_id),
+            unit=handle.remote_unit,
+        )
+        return build_thermal_stop(
+            observation=observation,
+            session_id=handle.session_id,
+            unit_prefix="axeyum-smtcomp-e3",
+            exit_code=evidence["exit_code"],
+            post_stop_unit_state=evidence["post_stop_unit_state"],
+            stopped_at_ns=evidence["stopped_at_ns"],
+        )
+
+    def capture_pre_wave(
+        self, *, wave_index: int, now_ns: Callable[[], int]
+    ) -> list[dict[str, Any]]:
+        _expect(
+            type(wave_index) is int and 0 <= wave_index < WAVE_COUNT,
+            "runtime pre-wave index mismatch",
+        )
+        wave = self.schedule["waves"][wave_index]
+        rows = []
+        for host_id, allocation_id in zip(
+            wave["host_ids"], wave["allocation_ids"], strict=True
+        ):
+            raw = remote_thermal_sample(
+                registration=self.registrations[host_id],
+                remote_helper_path=self._remote_helper(allocation_id),
+            )
+            observed_at_ns = now_ns()
+            rows.append(
+                build_thermal_observation(
+                    sensors_json=raw,
+                    plan_sha256=self.plan["plan_sha256"],
+                    run_identity_sha256=self.plan["run_identity_sha256"],
+                    cell_id=self.run_dir.name,
+                    wave_index=wave_index,
+                    allocation_id=allocation_id,
+                    attempt_id=None,
+                    host_id=host_id,
+                    observed_at_ns=observed_at_ns,
+                )
+            )
+        return rows
 
 
 def _sealed(value: dict[str, Any]) -> dict[str, Any]:
