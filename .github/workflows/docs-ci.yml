@@ -15,6 +15,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
+        with:
+          # Store evidence validates and reads its sealed implementation commit.
+          fetch-depth: 0
       - run: ./scripts/check-foundational-resources.sh
       - run: python3 -m unittest scripts.tests.test_lean_u2_test_authority
       - run: python3 scripts/gen-lean-u2-test-authority.py --check

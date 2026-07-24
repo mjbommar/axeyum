@@ -428,7 +428,10 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   path. Run/spec attribution now compares that host executable by its Python 3
   role while retaining the exact sealed executable identity in the historical
   run; repository-owned command arguments and the working directory remain
-  ROOT-relative, and all other external arguments remain byte-exact.
+  ROOT-relative, and all other external arguments remain byte-exact. The docs
+  jobs now use a full Git checkout because the store gate deliberately proves
+  that its sealed implementation revision is an ancestor and reads source
+  blobs from that commit; a depth-one checkout cannot establish either fact.
 
 - **2026-07-23 — credited SMT-COMP full-population F2 is implementation-ready,
   not live-ready.** F1 and its supervised-wave executor are integrated. Merge
