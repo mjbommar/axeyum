@@ -15,7 +15,7 @@ import re
 from decimal import Decimal, InvalidOperation
 from typing import Any
 
-from multi_host import allocation
+from multi_host import allocation, validate_allocation_scheduler_state
 from resume_contract import ContractError, digest
 
 
@@ -814,15 +814,6 @@ def validate_checkpoint_chain(
     return checkpoints
 
 
-def _sorted_safe_ids(values: list[str], field: str) -> list[str]:
-    if not isinstance(values, list):
-        raise ContractError(f"{field} must be a list")
-    checked = [_require_safe_id(value, field) for value in values]
-    if checked != sorted(set(checked)):
-        raise ContractError(f"{field} must be sorted and unique")
-    return checked
-
-
 def scheduler_decision(
     *,
     schedule: dict[str, Any],
@@ -830,10 +821,7 @@ def scheduler_decision(
     plan_sha256: str,
     run_identity_sha256: str,
     cell_id: str,
-    allocation_scheduler_state_sha256: str,
-    open_attempt_ids: list[str],
-    failed_allocation_ids: list[str],
-    lost_allocation_ids: list[str],
+    allocation_scheduler_state: dict[str, Any],
     pause_requested: bool,
     cooldown_required: bool,
     thermal_observations: list[dict[str, Any]],
@@ -845,9 +833,12 @@ def scheduler_decision(
     plan = _require_sha256(plan_sha256, "plan_sha256")
     run = _require_sha256(run_identity_sha256, "run_identity_sha256")
     cell = _require_safe_id(cell_id, "cell_id")
-    allocation_state = _require_sha256(
-        allocation_scheduler_state_sha256,
-        "allocation_scheduler_state_sha256",
+    allocation_state = validate_allocation_scheduler_state(
+        allocation_scheduler_state,
+        plan_sha256=plan,
+        run_identity_sha256=run,
+        cell_id=cell,
+        allocation_ids={row["allocation_id"] for row in schedule["allocations"]},
     )
     validate_checkpoint_chain(
         checkpoints,
@@ -856,9 +847,9 @@ def scheduler_decision(
         run_identity_sha256=run,
         cell_id=cell,
     )
-    opens = _sorted_safe_ids(open_attempt_ids, "open_attempt_ids")
-    failed = _sorted_safe_ids(failed_allocation_ids, "failed_allocation_ids")
-    lost = _sorted_safe_ids(lost_allocation_ids, "lost_allocation_ids")
+    opens = allocation_state["open_attempt_ids"]
+    failed = allocation_state["failed_allocation_ids"]
+    lost = allocation_state["lost_allocation_ids"]
     if type(pause_requested) is not bool or type(cooldown_required) is not bool:
         raise ContractError("scheduler flags must be Boolean")
     if type(decided_at_ns) is not int or decided_at_ns <= 0:
@@ -904,7 +895,7 @@ def scheduler_decision(
             "plan_sha256": plan,
             "run_identity_sha256": run,
             "cell_id": cell,
-            "allocation_scheduler_state_sha256": allocation_state,
+            "allocation_scheduler_state_sha256": allocation_state["record_sha256"],
             "status": status,
             "completed_checkpoint_sha256s": [
                 checkpoint["record_sha256"] for checkpoint in checkpoints

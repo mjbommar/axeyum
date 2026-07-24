@@ -78,6 +78,7 @@ from multi_host import (  # noqa: E402
     PLAN_SCHEMA,
     REGISTRATION_SCHEMA,
     TRANSPORT,
+    build_allocation_scheduler_state,
     stop_remote_unit,
     stage_execution_bundle,
     environment_manifest,
@@ -93,7 +94,6 @@ ENFORCEMENT_ID = "e" * 64
 PLAN_ID = "a" * 64
 RUN_ID = "b" * 64
 CELL_ID = "axeyum"
-ALLOCATION_STATE_ID = "c" * 64
 UNIT_PREFIX = "axeyum-smtcomp-full"
 
 
@@ -113,6 +113,57 @@ def seal_as(value: dict, field: str) -> dict:
 
 def sha256_file(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def scheduler_state(
+    schedule: dict,
+    *,
+    open_attempt_ids: list[str] | None = None,
+    failed_allocation_ids: list[str] | None = None,
+    lost_allocation_ids: list[str] | None = None,
+) -> dict:
+    opens = [] if open_attempt_ids is None else open_attempt_ids
+    failed = [] if failed_allocation_ids is None else failed_allocation_ids
+    lost = [] if lost_allocation_ids is None else lost_allocation_ids
+    initial_ids = [
+        row["allocation_id"]
+        for row in schedule["allocations"]
+        if row["generation"] == 0
+    ]
+    rows = []
+    used = set(failed + lost)
+    available = [value for value in initial_ids if value not in used]
+    for index, attempt_id in enumerate(opens):
+        rows.append(
+            {
+                "allocation_id": available[index],
+                "attempt_id": attempt_id,
+                "attempt_record_sha256": f"{index + 1:064x}",
+                "terminal_status": None,
+                "terminal_record_sha256": None,
+            }
+        )
+    for index, (status, allocation_id) in enumerate(
+        [("failed", value) for value in failed]
+        + [("lost", value) for value in lost],
+        start=len(rows) + 1,
+    ):
+        rows.append(
+            {
+                "allocation_id": allocation_id,
+                "attempt_id": f"{allocation_id}-{status}",
+                "attempt_record_sha256": f"{index:064x}",
+                "terminal_status": status,
+                "terminal_record_sha256": f"{index + 100:064x}",
+            }
+        )
+    return build_allocation_scheduler_state(
+        plan_sha256=PLAN_ID,
+        run_identity_sha256=RUN_ID,
+        cell_id=CELL_ID,
+        allocation_ids={row["allocation_id"] for row in schedule["allocations"]},
+        allocation_attempts=rows,
+    )
 
 
 def accepted_fixture(shared: Path, corpus: Path) -> Path:
@@ -524,10 +575,7 @@ class FullPopulationContractTests(unittest.TestCase):
                 plan_sha256=PLAN_ID,
                 run_identity_sha256=RUN_ID,
                 cell_id=CELL_ID,
-                allocation_scheduler_state_sha256=ALLOCATION_STATE_ID,
-                open_attempt_ids=[],
-                failed_allocation_ids=[],
-                lost_allocation_ids=[],
+                allocation_scheduler_state=scheduler_state(schedule),
                 pause_requested=False,
                 cooldown_required=cooldown,
                 thermal_observations=self.thermal_observations(
@@ -572,10 +620,7 @@ class FullPopulationContractTests(unittest.TestCase):
                         plan_sha256=PLAN_ID,
                         run_identity_sha256=RUN_ID,
                         cell_id=CELL_ID,
-                        allocation_scheduler_state_sha256=ALLOCATION_STATE_ID,
-                        open_attempt_ids=[],
-                        failed_allocation_ids=[],
-                        lost_allocation_ids=[],
+                        allocation_scheduler_state=scheduler_state(schedule),
                         pause_requested=False,
                         cooldown_required=False,
                         thermal_observations=mutated,
@@ -589,10 +634,7 @@ class FullPopulationContractTests(unittest.TestCase):
                 plan_sha256=PLAN_ID,
                 run_identity_sha256=RUN_ID,
                 cell_id=CELL_ID,
-                allocation_scheduler_state_sha256=ALLOCATION_STATE_ID,
-                open_attempt_ids=[],
-                failed_allocation_ids=[],
-                lost_allocation_ids=[],
+                allocation_scheduler_state=scheduler_state(schedule),
                 pause_requested=False,
                 cooldown_required=False,
                 thermal_observations=observations,
@@ -609,10 +651,7 @@ class FullPopulationContractTests(unittest.TestCase):
             plan_sha256=PLAN_ID,
             run_identity_sha256=RUN_ID,
             cell_id=CELL_ID,
-            allocation_scheduler_state_sha256=ALLOCATION_STATE_ID,
-            open_attempt_ids=[],
-            failed_allocation_ids=[],
-            lost_allocation_ids=[],
+            allocation_scheduler_state=scheduler_state(schedule),
             pause_requested=False,
             cooldown_required=False,
             thermal_observations=self.thermal_observations(
@@ -660,10 +699,7 @@ class FullPopulationContractTests(unittest.TestCase):
                 plan_sha256=PLAN_ID,
                 run_identity_sha256=RUN_ID,
                 cell_id=CELL_ID,
-                allocation_scheduler_state_sha256=ALLOCATION_STATE_ID,
-                open_attempt_ids=[],
-                failed_allocation_ids=[],
-                lost_allocation_ids=[],
+                allocation_scheduler_state=scheduler_state(schedule),
                 pause_requested=False,
                 cooldown_required=False,
                 thermal_observations=[],
@@ -740,10 +776,12 @@ class FullPopulationContractTests(unittest.TestCase):
                     plan_sha256=PLAN_ID,
                     run_identity_sha256=RUN_ID,
                     cell_id=CELL_ID,
-                    allocation_scheduler_state_sha256=ALLOCATION_STATE_ID,
-                    open_attempt_ids=opens,
-                    failed_allocation_ids=failed,
-                    lost_allocation_ids=lost,
+                    allocation_scheduler_state=scheduler_state(
+                        schedule,
+                        open_attempt_ids=opens,
+                        failed_allocation_ids=failed,
+                        lost_allocation_ids=lost,
+                    ),
                     pause_requested=pause,
                     cooldown_required=False,
                     thermal_observations=[],
@@ -761,10 +799,7 @@ class FullPopulationContractTests(unittest.TestCase):
             plan_sha256=PLAN_ID,
             run_identity_sha256=RUN_ID,
             cell_id=CELL_ID,
-            allocation_scheduler_state_sha256=ALLOCATION_STATE_ID,
-            open_attempt_ids=[],
-            failed_allocation_ids=[],
-            lost_allocation_ids=[],
+            allocation_scheduler_state=scheduler_state(schedule),
             pause_requested=False,
             cooldown_required=False,
             thermal_observations=[],
@@ -1474,10 +1509,7 @@ class FullPopulationContractTests(unittest.TestCase):
                 plan_sha256=PLAN_ID,
                 run_identity_sha256=RUN_ID,
                 cell_id=CELL_ID,
-                allocation_scheduler_state_sha256=ALLOCATION_STATE_ID,
-                open_attempt_ids=[],
-                failed_allocation_ids=[],
-                lost_allocation_ids=[],
+                allocation_scheduler_state=scheduler_state(schedule),
                 cooldown_required=False,
                 prewave_thermal_observations=prewave,
                 launch=launch,
@@ -1556,10 +1588,7 @@ class FullPopulationContractTests(unittest.TestCase):
             plan_sha256=PLAN_ID,
             run_identity_sha256=RUN_ID,
             cell_id=CELL_ID,
-            allocation_scheduler_state_sha256=ALLOCATION_STATE_ID,
-            open_attempt_ids=[],
-            failed_allocation_ids=[],
-            lost_allocation_ids=[],
+            allocation_scheduler_state=scheduler_state(schedule),
             cooldown_required=False,
             prewave_thermal_observations=prewave,
             launch=launch,
@@ -1602,10 +1631,7 @@ class FullPopulationContractTests(unittest.TestCase):
             plan_sha256=PLAN_ID,
             run_identity_sha256=RUN_ID,
             cell_id=CELL_ID,
-            allocation_scheduler_state_sha256=ALLOCATION_STATE_ID,
-            open_attempt_ids=[],
-            failed_allocation_ids=[],
-            lost_allocation_ids=[],
+            allocation_scheduler_state=scheduler_state(schedule),
             cooldown_required=False,
             prewave_thermal_observations=prewave,
             launch=launch,
@@ -1635,10 +1661,9 @@ class FullPopulationContractTests(unittest.TestCase):
             plan_sha256=PLAN_ID,
             run_identity_sha256=RUN_ID,
             cell_id=CELL_ID,
-            allocation_scheduler_state_sha256=ALLOCATION_STATE_ID,
-            open_attempt_ids=["open-attempt"],
-            failed_allocation_ids=[],
-            lost_allocation_ids=[],
+            allocation_scheduler_state=scheduler_state(
+                schedule, open_attempt_ids=["open-attempt"]
+            ),
             cooldown_required=False,
             prewave_thermal_observations=[],
             launch=launch,

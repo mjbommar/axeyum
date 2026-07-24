@@ -28,7 +28,10 @@ from full_population import (  # noqa: E402
     cumulative_benchmark_count,
 )
 from full_result import CELL_RESULT_SCHEMA, publish_full_cell_result  # noqa: E402
-from multi_host import COMPLETION_SCHEMA as MULTI_HOST_COMPLETION_SCHEMA  # noqa: E402
+from multi_host import (  # noqa: E402
+    COMPLETION_SCHEMA as MULTI_HOST_COMPLETION_SCHEMA,
+    build_allocation_scheduler_state,
+)
 from resource_enforcement import COMPLETION_SCHEMA as RESOURCE_COMPLETION_SCHEMA  # noqa: E402
 from resume_contract import ContractError, canonical_bytes, digest  # noqa: E402
 
@@ -213,12 +216,16 @@ class FullExecutionCheckpointTests(unittest.TestCase):
                 "schedule_record_sha256": schedule["record_sha256"],
             }
             outcome = {"status": "wave-completed", "checkpoint": first}
-            allocation_state = {
-                "record_sha256": "f" * 64,
-                "open_attempt_ids": [],
-                "failed_allocation_ids": [],
-                "lost_allocation_ids": [],
+            allocation_ids = {
+                row["allocation_id"] for row in schedule["allocations"]
             }
+            allocation_state = build_allocation_scheduler_state(
+                plan_sha256=PLAN_ID,
+                run_identity_sha256=RUN_ID,
+                cell_id=CELL_ID,
+                allocation_ids=allocation_ids,
+                allocation_attempts=[],
+            )
             unused = mock.Mock(side_effect=AssertionError("unexpected callback"))
             with (
                 mock.patch(
@@ -260,8 +267,8 @@ class FullExecutionCheckpointTests(unittest.TestCase):
             self.assertEqual(supervise.call_args.kwargs["schedule"], schedule)
             self.assertEqual(supervise.call_args.kwargs["checkpoints"], [])
             self.assertEqual(
-                supervise.call_args.kwargs["allocation_scheduler_state_sha256"],
-                allocation_state["record_sha256"],
+                supervise.call_args.kwargs["allocation_scheduler_state"],
+                allocation_state,
             )
             self.assertEqual(
                 load_wave_checkpoints(
@@ -274,12 +281,21 @@ class FullExecutionCheckpointTests(unittest.TestCase):
                 [first],
             )
 
-            blocked_state = {
-                "record_sha256": "e" * 64,
-                "open_attempt_ids": ["unclosed-attempt"],
-                "failed_allocation_ids": [],
-                "lost_allocation_ids": [],
-            }
+            blocked_state = build_allocation_scheduler_state(
+                plan_sha256=PLAN_ID,
+                run_identity_sha256=RUN_ID,
+                cell_id=CELL_ID,
+                allocation_ids=allocation_ids,
+                allocation_attempts=[
+                    {
+                        "allocation_id": "full-initial-00",
+                        "attempt_id": "unclosed-attempt",
+                        "attempt_record_sha256": "e" * 64,
+                        "terminal_status": None,
+                        "terminal_record_sha256": None,
+                    }
+                ],
+            )
             launch = mock.Mock()
             with (
                 mock.patch(
