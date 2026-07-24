@@ -407,11 +407,11 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   from canonical E3 attempts/terminals, recomputes its projections, and binds
   it under scheduler-decision v2. The expanded 140-test portable gate passes
   with one expected live-host skip.
-  Branch-wide formatting remains red in the unrelated bench/CAS lane. On the
-  rebased topic, Lean parity now stops first because the integrated
-  quotient-package contract expects a marker absent from
-  `crates/axeyum-lean-import/src/lib.rs`; the previously measured
-  `resume_fs.py` historical/current pin remains a downstream Lean-owned repair.
+  Branch-wide formatting remains red in the unrelated bench/CAS lane. The
+  later Lean mainline merge repaired the quotient-package marker boundary; on
+  the rebased topic, Lean parity now reaches exactly the measured
+  `resume_fs.py` historical/current pin (`b05c...` expected, `c776...`
+  current), which remains a Lean-owned repair.
   Next: integrate this batch, repair both owned gates, rebase, run both exact
   readiness gates, and perform
   the separately reviewed

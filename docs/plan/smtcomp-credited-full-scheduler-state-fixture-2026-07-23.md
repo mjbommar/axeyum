@@ -46,6 +46,11 @@ progression.
 The complete `./scripts/check-smtcomp-resume.sh` gate passes 140 tests with one
 expected live-host skip.
 
+On the rebased topic, `just parity-docs` passes the quotient-package boundary
+and reaches exactly the known Lean-owned `resume_fs.py` source pin: expected
+`b05c32185d75...`, current `c77639bb1c63...`. The unrelated bench/CAS
+formatting drift also remains outside this lane.
+
 ## Claim boundary
 
 This is process-free fixture evidence. It did not probe a host, read or mutate
