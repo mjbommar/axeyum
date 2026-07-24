@@ -404,11 +404,13 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   schedule/checkpoint identities from preparation and automatically persists a
   successful checkpoint. The expanded 139-test portable gate passes with one
   expected live-host skip.
-  Branch-wide formatting remains red in the unrelated bench/CAS lane. Lean
-  parity reaches only the expected SMT primitive pin drift for the necessary
-  `resume_fs.py` namespace admission (`b05c...` to `c776...`); the Lean owner
-  must regenerate its historical/current tuple. Next: integrate this batch,
-  repair both owned gates, rebase, run both exact readiness gates, and perform
+  Branch-wide formatting remains red in the unrelated bench/CAS lane. On the
+  rebased topic, Lean parity now stops first because the integrated
+  quotient-package contract expects a marker absent from
+  `crates/axeyum-lean-import/src/lib.rs`; the previously measured
+  `resume_fs.py` historical/current pin remains a downstream Lean-owned repair.
+  Next: integrate this batch, repair both owned gates, rebase, run both exact
+  readiness gates, and perform
   the separately reviewed
   host/sentinel capture, and publish only an empty `launch_authorized=false`
   preparation inside that frozen window. Then integrate and accept that exact

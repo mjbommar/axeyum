@@ -48,8 +48,15 @@ The focused gates cover:
   publication.
 
 The complete `./scripts/check-smtcomp-resume.sh` lane gate passes 139 tests with
-one expected live-host skip. Documentation-link and foundational-resource
-gates remain part of the final topic integration check.
+one expected live-host skip. Documentation links pass. Foundational resources
+validate 137 concepts and 174 packs, including the consumer smoke gate.
+
+The repository-wide gate is not green for separately owned bytes. `cargo fmt
+--all --check` reports only bench/CAS formatting drift. `just parity-docs`
+currently stops at the integrated quotient-package contract because
+`crates/axeyum-lean-import/src/lib.rs` lacks its expected marker; the previously
+observed `resume_fs.py` historical/current pin is downstream of that failure.
+This SMT increment does not edit either owner surface.
 
 ## Claim boundary
 
