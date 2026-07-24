@@ -398,7 +398,12 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   `50f7c9d8` through `d8e187f2` add per-shard
   retry-capable checkpoint schema v2 and immutable persistence, prior-cell
   disagreement-safe adjudication, and the process-free authority coordinator.
-  The expanded 135-test portable gate passes with one expected live-host skip.
+  Topic commits `2fdd4809`, `851e3764`, and `59b1805b` now add a distinct
+  mainline acceptance record, exact safe solver-order cell admission, durable
+  Git-object replay, and an admitted-wave entry point that derives run/plan/
+  schedule/checkpoint identities from preparation and automatically persists a
+  successful checkpoint. The expanded 139-test portable gate passes with one
+  expected live-host skip.
   Branch-wide formatting remains red in the unrelated bench/CAS lane. Lean
   parity reaches only the expected SMT primitive pin drift for the necessary
   `resume_fs.py` namespace admission (`b05c...` to `c776...`); the Lean owner
@@ -406,7 +411,9 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   repair both owned gates, rebase, run both exact readiness gates, and perform
   the separately reviewed
   host/sentinel capture, and publish only an empty `launch_authorized=false`
-  preparation inside that frozen window. No host probe, NAS mutation,
+  preparation inside that frozen window. Then integrate and accept that exact
+  F2 completion before constructing Axeyum admission. No live acceptance
+  manifest, host probe, NAS mutation,
   allocation, or solver launch is authorized before that boundary.
 
 - **2026-07-23 — repaired SMT-COMP P0 v2 Axeyum runtime and process-free export

@@ -116,16 +116,24 @@ python3 scripts/generate-smtcomp-repaired-p0-comparison.py --check
 Live revalidation additionally names the frozen preparation root. Neither mode
 writes to the preparation or any NAS artifact.
 
-The credited 45,905-row lane separately provides a process-free evidence
-coordinator in `full_coordinator.py`, external cell results in `full_result.py`,
-and an exact same-population comparison in `full_compare.py`. The coordinator
+The credited 45,905-row lane separately provides a mainline-gated cell
+admission contract in `full_admission.py`, an admitted-wave entry point in
+`full_execute.py`, a process-free evidence coordinator in
+`full_coordinator.py`, external cell results in `full_result.py`, and an exact
+same-population comparison in `full_compare.py`. Admission requires a distinct
+integrated acceptance of the exact non-launching F2 completion and the exact
+safe solver-order result prefix. The admitted-wave entry point derives its
+run, plan, schedule, cell, and checkpoint identities from that accepted
+preparation and persists successful checkpoints before returning. The coordinator
 replays the immutable preparation, 16 per-shard checkpoints, underlying
 allocation/resource/multi-host completion, v2 records and sidecars, selection,
 and safe prior-cell prefix before deriving authority. Cell results publish
 canonical records, per-logic adjudication, and completion last. The comparison
 validates all three result roots and publishes native, per-logic, pairwise, and
 three-way counts without a performance or scalar-ranking claim. These are
-fixture-proven mechanisms, not live F2/F3/F4 results.
+fixture-proven mechanisms, not live F2/F3/F4 results. The canonical live
+acceptance manifest intentionally does not exist until a later reviewed F2
+result is integrated.
 
 The local kill-tested boundary is in the
 [`E1a result`](../../docs/plan/smtcomp-resumable-filesystem-e1a-2026-07-21.md).

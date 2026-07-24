@@ -1,8 +1,9 @@
 # SMT-COMP credited full-population execution plan
 
 Status: preregistered design; F1/F2 process-free mechanisms and publication
-fixtures integrated; F3 coordinator fixture implemented on the SMT topic; live
-F2, F3, and F4 not yet accepted
+fixtures integrated; F3 coordinator plus mainline-gated admission and admitted
+wave fixtures implemented on the SMT topic; live F2, F3, and F4 not yet
+accepted
 Date: 2026-07-23
 Selection authority: [accepted S4 result](smtcomp-official-selection-final-s4-2026-07-22.md)
 Harness admission: [S5 result](smtcomp-harness-admission-s5-result-2026-07-23.md)
@@ -230,6 +231,15 @@ E1/E2/E3 completion, result sidecars, selection rows, and prior-cell safety
 before deriving authority. Neither fixture provides live F2/F3 evidence or
 claims F4 results.
 
+The subsequent
+[admission fixture](smtcomp-credited-full-admission-fixture-2026-07-23.md)
+closes the F2-to-F3 authorization seam without weakening F2's
+`launch_authorized=false` boundary. A separately integrated acceptance record
+must bind the exact preparation, selection, and prepared source revision. Each
+cell then binds the exact safe prior-result prefix, and the admitted-wave entry
+point derives its execution identities from preparation rather than accepting
+them from the caller. No canonical live acceptance record exists yet.
+
 ## Milestones and authorization
 
 - **F0 — this plan:** freeze population, resources, waves, recovery, thermal,
@@ -240,8 +250,9 @@ claims F4 results.
 - **F2 — process-free preparation:** only after F1 and this plan are integrated
   on a green `origin/main`, build/stage binaries, rehash the full population,
   probe hosts/sentinels, and publish an empty `launch_authorized=false` root.
-- **F3 — sequential execution:** only after the exact F2 result is integrated,
-  execute Axeyum, then cvc5, then Bitwuzla through wave/recovery gates.
+- **F3 — sequential execution:** only after the exact F2 result and a distinct
+  acceptance record are integrated, admit Axeyum, then cvc5, then Bitwuzla
+  through exact safe prior-result and wave/recovery gates.
 - **F4 — comparison:** publish the complete 45,905-row per-logic inventory and
   same-population comparison, then rerank the gap-closing program.
 
