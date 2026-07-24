@@ -24,14 +24,17 @@ from multi_host import (  # noqa: E402
     TERMINAL_SCHEMA as ALLOCATION_TERMINAL_SCHEMA,
     TRANSPORT,
     allocation,
+    build_allocation_scheduler_state,
     build_host_command,
     build_multi_host_completion,
+    derive_allocation_scheduler_state,
     install_host_command,
     recover_failed_shard,
     recover_released_failed_shard,
     stage_execution_bundle,
     validate_execution_bundle,
     validate_host_command,
+    validate_allocation_scheduler_state,
     validate_multi_host_state,
     validate_plan,
 )
@@ -153,6 +156,37 @@ class PortableE3:
 
 
 class MultiHostPortableTests(unittest.TestCase):
+    def test_scheduler_state_recomputes_open_and_failed_projections(self) -> None:
+        attempts = [
+            {
+                "allocation_id": "initial-0",
+                "attempt_id": "attempt-0",
+                "attempt_record_sha256": "1" * 64,
+                "terminal_status": None,
+                "terminal_record_sha256": None,
+            }
+        ]
+        state = build_allocation_scheduler_state(
+            plan_sha256="2" * 64,
+            run_identity_sha256="3" * 64,
+            cell_id="axeyum",
+            allocation_ids={"initial-0"},
+            allocation_attempts=attempts,
+        )
+        self.assertEqual(state["open_attempt_ids"], ["attempt-0"])
+        self.assertEqual(state["failed_allocation_ids"], [])
+
+        omitted = copy.deepcopy(state)
+        omitted["open_attempt_ids"] = []
+        with self.assertRaisesRegex(ContractError, "projection mismatch"):
+            validate_allocation_scheduler_state(
+                seal(omitted),
+                plan_sha256="2" * 64,
+                run_identity_sha256="3" * 64,
+                cell_id="axeyum",
+                allocation_ids={"initial-0"},
+            )
+
     @staticmethod
     def snapshot(run: dict, session_id: str, pid: int) -> dict:
         resources = run["resource_enforcement"]
@@ -979,6 +1013,65 @@ class MultiHostPortableTests(unittest.TestCase):
                     f"{attempt_id}.json",
                     allocation_terminal,
                 )
+
+            scheduler_state = derive_allocation_scheduler_state(
+                run_dir,
+                plan=plan,
+                cell_id="axeyum",
+                inspect_shared_root=False,
+            )
+            self.assertEqual(len(scheduler_state["allocation_attempts"]), 3)
+            self.assertEqual(scheduler_state["open_attempt_ids"], [])
+            self.assertEqual(scheduler_state["failed_allocation_ids"], [])
+            self.assertEqual(scheduler_state["lost_allocation_ids"], [])
+
+            first_terminal_path = (
+                run_dir
+                / "multi-host-terminals"
+                / "initial-0"
+                / "allocation-attempt-0.json"
+            )
+            first_terminal = read_canonical_json(first_terminal_path)
+            first_terminal_bytes = first_terminal_path.read_bytes()
+            first_terminal_path.unlink()
+            open_state = derive_allocation_scheduler_state(
+                run_dir,
+                plan=plan,
+                cell_id="axeyum",
+                inspect_shared_root=False,
+            )
+            self.assertEqual(open_state["open_attempt_ids"], ["allocation-attempt-0"])
+            atomic_install_bytes(
+                first_terminal_path.parent,
+                first_terminal_path.name,
+                first_terminal_bytes,
+            )
+
+            failed_terminal = copy.deepcopy(first_terminal)
+            failed_terminal["status"] = "failed"
+            failed_terminal["exit_code"] = 1
+            first_terminal_path.unlink()
+            atomic_install_json(
+                first_terminal_path.parent,
+                first_terminal_path.name,
+                seal(failed_terminal),
+            )
+            failed_state = derive_allocation_scheduler_state(
+                run_dir,
+                plan=plan,
+                cell_id="axeyum",
+                inspect_shared_root=False,
+            )
+            self.assertEqual(failed_state["failed_allocation_ids"], ["initial-0"])
+            self.assertNotEqual(
+                failed_state["record_sha256"], scheduler_state["record_sha256"]
+            )
+            first_terminal_path.unlink()
+            atomic_install_bytes(
+                first_terminal_path.parent,
+                first_terminal_path.name,
+                first_terminal_bytes,
+            )
 
             install_resource_completion(
                 run_dir, build_resource_completion(run=run, run_dir=run_dir)

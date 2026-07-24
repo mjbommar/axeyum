@@ -74,6 +74,9 @@ FAULT_SCHEMA = "axeyum.smtcomp-host-fault-observation.v1"
 COMPLETION_SCHEMA = "axeyum.smtcomp-multi-host-completion.v1"
 POST_RUN_CLOSURE_SCHEMA = "axeyum.smtcomp-post-run-validation-closure.v1"
 POST_RUN_COMPLETION_SCHEMA = "axeyum.smtcomp-multi-host-completion.v2"
+ALLOCATION_SCHEDULER_STATE_SCHEMA = (
+    "axeyum.smtcomp-multi-host-allocation-scheduler-state.v1"
+)
 
 SAFE_ID = re.compile(r"[A-Za-z0-9][A-Za-z0-9_.-]{0,127}\Z")
 SAFE_SSH_TARGET = re.compile(r"[A-Za-z0-9][A-Za-z0-9_.@-]{0,127}\Z")
@@ -279,6 +282,24 @@ POST_RUN_CLOSURE_FIELDS = {
     "launcher_pid",
     "launcher_live",
     "observed_at_ns",
+    "record_sha256",
+}
+ALLOCATION_SCHEDULER_ATTEMPT_FIELDS = {
+    "allocation_id",
+    "attempt_id",
+    "attempt_record_sha256",
+    "terminal_status",
+    "terminal_record_sha256",
+}
+ALLOCATION_SCHEDULER_STATE_FIELDS = {
+    "schema",
+    "plan_sha256",
+    "run_identity_sha256",
+    "cell_id",
+    "allocation_attempts",
+    "open_attempt_ids",
+    "failed_allocation_ids",
+    "lost_allocation_ids",
     "record_sha256",
 }
 RUN_DIRECTORIES = (
@@ -1961,6 +1982,168 @@ def _load_allocation_evidence(
                     raise ContractError("duplicate allocation terminal")
                 terminals[attempt_id] = terminal
     return commands, attempts, terminals
+
+
+def validate_allocation_scheduler_state(
+    state: dict[str, Any],
+    *,
+    plan_sha256: str,
+    run_identity_sha256: str,
+    cell_id: str,
+    allocation_ids: set[str],
+) -> dict[str, Any]:
+    """Validate the exact attempt/terminal projection used by a scheduler."""
+
+    if (
+        not isinstance(state, dict)
+        or set(state) != ALLOCATION_SCHEDULER_STATE_FIELDS
+        or state.get("schema") != ALLOCATION_SCHEDULER_STATE_SCHEMA
+    ):
+        raise ContractError("allocation scheduler state field/schema mismatch")
+    _validate_seal(state)
+    if (
+        state.get("plan_sha256") != _require_sha(plan_sha256, "plan_sha256")
+        or state.get("run_identity_sha256")
+        != _require_sha(run_identity_sha256, "run_identity_sha256")
+        or state.get("cell_id") != _require_safe(cell_id, "cell_id")
+    ):
+        raise ContractError("allocation scheduler state identity mismatch")
+    if (
+        not isinstance(allocation_ids, set)
+        or not allocation_ids
+        or any(
+            not isinstance(value, str) or not SAFE_ID.fullmatch(value)
+            for value in allocation_ids
+        )
+    ):
+        raise ContractError("allocation scheduler state allocation inventory mismatch")
+    rows = state.get("allocation_attempts")
+    if not isinstance(rows, list) or any(not isinstance(row, dict) for row in rows):
+        raise ContractError("allocation scheduler state attempt inventory mismatch")
+    ordering = []
+    attempt_ids = set()
+    computed_open = []
+    computed_failed = []
+    computed_lost = []
+    for row in rows:
+        if set(row) != ALLOCATION_SCHEDULER_ATTEMPT_FIELDS:
+            raise ContractError("allocation scheduler state attempt field mismatch")
+        allocation_id = _require_safe(row.get("allocation_id"), "allocation_id")
+        attempt_id = _require_safe(row.get("attempt_id"), "attempt_id")
+        _require_sha(row.get("attempt_record_sha256"), "attempt_record_sha256")
+        if allocation_id not in allocation_ids or attempt_id in attempt_ids:
+            raise ContractError("allocation scheduler state attempt identity mismatch")
+        attempt_ids.add(attempt_id)
+        ordering.append((allocation_id, attempt_id))
+        status = row.get("terminal_status")
+        terminal_sha = row.get("terminal_record_sha256")
+        if status is None:
+            if terminal_sha is not None:
+                raise ContractError("open allocation carries terminal identity")
+            computed_open.append(attempt_id)
+        elif status in {"completed", "failed", "lost"}:
+            _require_sha(terminal_sha, "terminal_record_sha256")
+            if status == "failed":
+                computed_failed.append(allocation_id)
+            elif status == "lost":
+                computed_lost.append(allocation_id)
+        else:
+            raise ContractError("allocation scheduler state terminal status mismatch")
+    if ordering != sorted(ordering) or len({row[0] for row in ordering}) != len(rows):
+        raise ContractError("allocation scheduler state attempt order mismatch")
+    expected_lists = {
+        "open_attempt_ids": sorted(computed_open),
+        "failed_allocation_ids": sorted(computed_failed),
+        "lost_allocation_ids": sorted(computed_lost),
+    }
+    if any(state.get(field) != expected for field, expected in expected_lists.items()):
+        raise ContractError("allocation scheduler state projection mismatch")
+    return state
+
+
+def build_allocation_scheduler_state(
+    *,
+    plan_sha256: str,
+    run_identity_sha256: str,
+    cell_id: str,
+    allocation_ids: set[str],
+    allocation_attempts: list[dict[str, Any]],
+) -> dict[str, Any]:
+    """Build a deterministic scheduler projection from validated attempt rows."""
+
+    rows = sorted(
+        copy.deepcopy(allocation_attempts),
+        key=lambda row: (row.get("allocation_id", ""), row.get("attempt_id", "")),
+    )
+    state = _sealed(
+        {
+            "schema": ALLOCATION_SCHEDULER_STATE_SCHEMA,
+            "plan_sha256": plan_sha256,
+            "run_identity_sha256": run_identity_sha256,
+            "cell_id": cell_id,
+            "allocation_attempts": rows,
+            "open_attempt_ids": sorted(
+                row.get("attempt_id")
+                for row in rows
+                if row.get("terminal_status") is None
+            ),
+            "failed_allocation_ids": sorted(
+                row.get("allocation_id")
+                for row in rows
+                if row.get("terminal_status") == "failed"
+            ),
+            "lost_allocation_ids": sorted(
+                row.get("allocation_id")
+                for row in rows
+                if row.get("terminal_status") == "lost"
+            ),
+        }
+    )
+    return validate_allocation_scheduler_state(
+        state,
+        plan_sha256=plan_sha256,
+        run_identity_sha256=run_identity_sha256,
+        cell_id=cell_id,
+        allocation_ids=allocation_ids,
+    )
+
+
+def derive_allocation_scheduler_state(
+    run_dir: Path,
+    *,
+    plan: dict[str, Any],
+    cell_id: str,
+    inspect_shared_root: bool = True,
+) -> dict[str, Any]:
+    """Derive scheduler state from canonical E3 attempts and terminals."""
+
+    _commands, attempts, terminals = _load_allocation_evidence(
+        run_dir, plan, inspect_shared_root=inspect_shared_root
+    )
+    rows = []
+    for allocation_id in sorted(attempts):
+        for attempt in attempts[allocation_id]:
+            terminal = terminals.get(attempt["attempt_id"])
+            rows.append(
+                {
+                    "allocation_id": allocation_id,
+                    "attempt_id": attempt["attempt_id"],
+                    "attempt_record_sha256": attempt["record_sha256"],
+                    "terminal_status": (
+                        None if terminal is None else terminal["status"]
+                    ),
+                    "terminal_record_sha256": (
+                        None if terminal is None else terminal["record_sha256"]
+                    ),
+                }
+            )
+    return build_allocation_scheduler_state(
+        plan_sha256=plan["plan_sha256"],
+        run_identity_sha256=plan["run_identity_sha256"],
+        cell_id=cell_id,
+        allocation_ids={row["allocation_id"] for row in plan["allocations"]},
+        allocation_attempts=rows,
+    )
 
 
 def _post_run_quarantine_relative(
