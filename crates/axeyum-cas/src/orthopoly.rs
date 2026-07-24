@@ -223,7 +223,12 @@ pub fn generalized_laguerre(n: u32, alpha: Rational, var: &str) -> Option<CasExp
         n,
         &[Rational::integer(1)],
         &[one_plus_alpha, Rational::integer(-1)],
-        |k| Some([two_n_minus_one(k)?.checked_add(alpha)?, Rational::integer(-1)]),
+        |k| {
+            Some([
+                two_n_minus_one(k)?.checked_add(alpha)?,
+                Rational::integer(-1),
+            ])
+        },
         |k| n_minus_one(k)?.checked_add(alpha),
         |k| Some(Rational::integer(i128::from(k))),
     )?;
@@ -242,11 +247,17 @@ pub fn gegenbauer(n: u32, lambda: Rational, var: &str) -> Option<CasExpr> {
         &[Rational::zero(), two_lambda],
         // 2(k+λ−1) = (2k−1) + (2λ−1).
         |k| {
-            let b = two_n_minus_one(k)?.checked_add(two_lambda)?.checked_sub(Rational::integer(1))?;
+            let b = two_n_minus_one(k)?
+                .checked_add(two_lambda)?
+                .checked_sub(Rational::integer(1))?;
             Some([Rational::zero(), b])
         },
         // k + 2λ − 2.
-        |k| Rational::integer(i128::from(k)).checked_add(two_lambda)?.checked_sub(Rational::integer(2)),
+        |k| {
+            Rational::integer(i128::from(k))
+                .checked_add(two_lambda)?
+                .checked_sub(Rational::integer(2))
+        },
         |k| Some(Rational::integer(i128::from(k))),
     )?;
     Some(to_expr(&coeffs, var))
@@ -262,7 +273,10 @@ pub fn jacobi(n: u32, alpha: Rational, beta: Rational, var: &str) -> Option<CasE
     let two = Rational::integer(2);
     let seed1 = [
         alpha.checked_sub(beta)?.checked_div(two)?,
-        alpha.checked_add(beta)?.checked_add(two)?.checked_div(two)?,
+        alpha
+            .checked_add(beta)?
+            .checked_add(two)?
+            .checked_div(two)?,
     ];
     let coeffs = three_term_recurrence(
         n,
@@ -272,7 +286,11 @@ pub fn jacobi(n: u32, alpha: Rational, beta: Rational, var: &str) -> Option<CasE
             let kr = Rational::integer(i128::from(k));
             let s = two.checked_mul(kr)?.checked_add(alpha)?.checked_add(beta)?; // 2k+α+β
             let f1 = s.checked_sub(Rational::integer(1))?; // 2k+α+β−1
-            let const_term = f1.checked_mul(alpha.checked_mul(alpha)?.checked_sub(beta.checked_mul(beta)?)?)?;
+            let const_term = f1.checked_mul(
+                alpha
+                    .checked_mul(alpha)?
+                    .checked_sub(beta.checked_mul(beta)?)?,
+            )?;
             // (2k+α+β−1)·(2k+α+β)·(2k+α+β−2) = f1·s·(s−2).
             let x_coeff = f1.checked_mul(s)?.checked_mul(s.checked_sub(two)?)?;
             Some([const_term, x_coeff])

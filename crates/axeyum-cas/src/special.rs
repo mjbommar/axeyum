@@ -184,8 +184,7 @@ pub fn dirichlet_eta(s: i64) -> Option<CasExpr> {
     // factor = 1 − 2^{1−s}. For s ≥ 1, 2^{1−s} = 1/2^{s−1}; for s ≤ 0, = 2^{1−s} (integer).
     let factor = if s >= 1 {
         let power = u32::try_from(s - 1).ok()?;
-        Rational::integer(1)
-            .checked_sub(Rational::checked_new(1, 2i128.checked_pow(power)?)?)?
+        Rational::integer(1).checked_sub(Rational::checked_new(1, 2i128.checked_pow(power)?)?)?
     } else {
         let power = u32::try_from(1 - s).ok()?;
         Rational::integer(1).checked_sub(Rational::integer(2i128.checked_pow(power)?))?
@@ -300,8 +299,14 @@ mod tests {
     fn dirichlet_lambda_closed_forms() {
         let pi = || CasExpr::var("pi");
         // λ(2)=π²/8, λ(4)=π⁴/96; and the identity λ(s) = (ζ(s)+η(s))/2 for s=2,4,6.
-        assert_equal(&dirichlet_lambda(2).unwrap(), &(CasExpr::rat(1, 8) * pi().pow(2)));
-        assert_equal(&dirichlet_lambda(4).unwrap(), &(CasExpr::rat(1, 96) * pi().pow(4)));
+        assert_equal(
+            &dirichlet_lambda(2).unwrap(),
+            &(CasExpr::rat(1, 8) * pi().pow(2)),
+        );
+        assert_equal(
+            &dirichlet_lambda(4).unwrap(),
+            &(CasExpr::rat(1, 96) * pi().pow(4)),
+        );
         for s in [2i64, 4, 6] {
             let lambda = dirichlet_lambda(s).unwrap();
             let half_sum = CasExpr::rat(1, 2) * (zeta(s).unwrap() + dirichlet_eta(s).unwrap());
@@ -315,8 +320,14 @@ mod tests {
     fn dirichlet_eta_closed_forms() {
         let pi = || CasExpr::var("pi");
         // η(2)=π²/12, η(4)=7π⁴/720, η(6)=31π⁶/30240; η(0)=1/2.
-        assert_equal(&dirichlet_eta(2).unwrap(), &(CasExpr::rat(1, 12) * pi().pow(2)));
-        assert_equal(&dirichlet_eta(4).unwrap(), &(CasExpr::rat(7, 720) * pi().pow(4)));
+        assert_equal(
+            &dirichlet_eta(2).unwrap(),
+            &(CasExpr::rat(1, 12) * pi().pow(2)),
+        );
+        assert_equal(
+            &dirichlet_eta(4).unwrap(),
+            &(CasExpr::rat(7, 720) * pi().pow(4)),
+        );
         assert_equal(
             &dirichlet_eta(6).unwrap(),
             &(CasExpr::rat(31, 30240) * pi().pow(6)),
@@ -331,9 +342,18 @@ mod tests {
     fn polygamma_at_one_closed_forms() {
         let pi = || CasExpr::var("pi");
         // ψ′(1) = ζ(2) = π²/6; ψ‴(1) = 6ζ(4) = π⁴/15; ψ⁽⁵⁾(1) = 120ζ(6) = 8π⁶/63.
-        assert_equal(&polygamma_at_one(1).unwrap(), &(CasExpr::rat(1, 6) * pi().pow(2)));
-        assert_equal(&polygamma_at_one(3).unwrap(), &(CasExpr::rat(1, 15) * pi().pow(4)));
-        assert_equal(&polygamma_at_one(5).unwrap(), &(CasExpr::rat(8, 63) * pi().pow(6)));
+        assert_equal(
+            &polygamma_at_one(1).unwrap(),
+            &(CasExpr::rat(1, 6) * pi().pow(2)),
+        );
+        assert_equal(
+            &polygamma_at_one(3).unwrap(),
+            &(CasExpr::rat(1, 15) * pi().pow(4)),
+        );
+        assert_equal(
+            &polygamma_at_one(5).unwrap(),
+            &(CasExpr::rat(8, 63) * pi().pow(6)),
+        );
         // Order 0 (−γ) and even orders (ζ of an odd argument) have no closed form.
         assert!(polygamma_at_one(0).is_none());
         assert!(polygamma_at_one(2).is_none());

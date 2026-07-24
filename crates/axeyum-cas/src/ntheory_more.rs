@@ -253,11 +253,7 @@ pub fn is_deficient(n: i128) -> bool {
 /// ```
 #[must_use]
 pub fn are_amicable(m: i128, n: i128) -> bool {
-    m != n
-        && m > 0
-        && n > 0
-        && aliquot_sum(m) == Some(n)
-        && aliquot_sum(n) == Some(m)
+    m != n && m > 0 && n > 0 && aliquot_sum(m) == Some(n) && aliquot_sum(n) == Some(m)
 }
 
 /// Whether `|n|` is squarefree (no prime factor with exponent `>= 2`).
@@ -330,11 +326,19 @@ pub fn primitive_pythagorean_triples(limit: i128) -> Option<Vec<(i128, i128, i12
         while inner < outer {
             // Coprime, opposite parity ⇒ primitive.
             if (outer - inner) % 2 == 1 && gcd(outer, inner) == 1 {
-                let hypotenuse = outer.checked_mul(outer)?.checked_add(inner.checked_mul(inner)?)?;
+                let hypotenuse = outer
+                    .checked_mul(outer)?
+                    .checked_add(inner.checked_mul(inner)?)?;
                 if hypotenuse <= limit {
-                    let leg_a = outer.checked_mul(outer)?.checked_sub(inner.checked_mul(inner)?)?;
+                    let leg_a = outer
+                        .checked_mul(outer)?
+                        .checked_sub(inner.checked_mul(inner)?)?;
                     let leg_b = 2i128.checked_mul(outer)?.checked_mul(inner)?;
-                    let (small, large) = if leg_a < leg_b { (leg_a, leg_b) } else { (leg_b, leg_a) };
+                    let (small, large) = if leg_a < leg_b {
+                        (leg_a, leg_b)
+                    } else {
+                        (leg_b, leg_a)
+                    };
                     triples.push((small, large, hypotenuse));
                 }
             }

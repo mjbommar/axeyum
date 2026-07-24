@@ -873,11 +873,6 @@ mod tests {
         let evidence = Evidence::Unsat(None);
         assert!(evidence.check(&arena, &[]).unwrap());
         assert!(!evidence.is_certified());
-        assert!(!independently_check_evidence(
-            &evidence,
-            &arena,
-            &[],
-            false
-        ));
+        assert!(!independently_check_evidence(&evidence, &arena, &[], false));
     }
 }

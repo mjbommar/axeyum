@@ -735,7 +735,11 @@ mod tests {
         // Double factorial: 0!!..7!! = 1,1,2,3,8,15,48,105.
         let df = [1, 1, 2, 3, 8, 15, 48, 105];
         for (n, &want) in df.iter().enumerate() {
-            assert_eq!(double_factorial(u32::try_from(n).unwrap()), Some(want), "{n}!!");
+            assert_eq!(
+                double_factorial(u32::try_from(n).unwrap()),
+                Some(want),
+                "{n}!!"
+            );
         }
         // Multinomial: 4!/(2!1!1!) = 12, 3! = 6, and C(5,2) as a two-group case = 10.
         assert_eq!(multinomial(&[2, 1, 1]), Some(12));

@@ -266,14 +266,14 @@ fn root_degree_of(expr: &CasExpr, var: &str) -> Option<u32> {
         CasExpr::Unary(UnaryFunc::Sqrt, arg) if matches!(arg.as_ref(), CasExpr::Var(v) if v == var) => {
             Some(2)
         }
-        CasExpr::Unary(UnaryFunc::NthRoot(q), arg)
-            if matches!(arg.as_ref(), CasExpr::Var(v) if v == var) =>
-        {
+        CasExpr::Unary(UnaryFunc::NthRoot(q), arg) if matches!(arg.as_ref(), CasExpr::Var(v) if v == var) => {
             Some(*q)
         }
         CasExpr::Unary(_, a) | CasExpr::Neg(a) | CasExpr::Pow(a, _) => root_degree_of(a, var),
         CasExpr::Div(a, b) => root_degree_of(a, var).or_else(|| root_degree_of(b, var)),
-        CasExpr::Add(items) | CasExpr::Mul(items) => items.iter().find_map(|t| root_degree_of(t, var)),
+        CasExpr::Add(items) | CasExpr::Mul(items) => {
+            items.iter().find_map(|t| root_degree_of(t, var))
+        }
         CasExpr::Const(_) | CasExpr::Var(_) => None,
     }
 }
@@ -379,9 +379,8 @@ fn taylor_by_derivatives(
             factorial = factorial * Rational::integer(i128::try_from(n).ok()?);
         }
         let derivative = expr.differentiate_n(var, n);
-        let coefficient = crate::fold_elementary_constants(&crate::simplify(
-            &derivative.substitute(var, center),
-        ));
+        let coefficient =
+            crate::fold_elementary_constants(&crate::simplify(&derivative.substitute(var, center)));
         // A genuine constant coefficient: no residual `var`, and finite (no pole).
         if crate::expr_contains_var(&coefficient, var) {
             return None;
@@ -474,8 +473,12 @@ fn coeffs_of(expr: &CasExpr, var: &str, order: usize) -> Option<Series> {
             if top.coeffs.iter().take(m).any(|c| !c.is_zero()) {
                 return None;
             }
-            let top_shifted = Series { coeffs: top.coeffs[m..].to_vec() };
-            let bottom_shifted = Series { coeffs: bottom.coeffs[m..].to_vec() };
+            let top_shifted = Series {
+                coeffs: top.coeffs[m..].to_vec(),
+            };
+            let bottom_shifted = Series {
+                coeffs: bottom.coeffs[m..].to_vec(),
+            };
             top_shifted.div(&bottom_shifted)
         }
         CasExpr::Unary(func, arg) => unary_series(*func, arg, var, order),
@@ -737,7 +740,8 @@ fn binomial_reciprocal(q: u32, degree: usize) -> Option<Rational> {
     let exponent = Rational::checked_new(1, i128::from(q))?;
     let mut result = Rational::integer(1);
     for step in 0..degree {
-        let factor_numerator = exponent.checked_sub(Rational::integer(i128::try_from(step).ok()?))?;
+        let factor_numerator =
+            exponent.checked_sub(Rational::integer(i128::try_from(step).ok()?))?;
         let factor_denominator = Rational::integer(i128::try_from(step + 1).ok()?);
         result = result
             .checked_mul(factor_numerator)?
@@ -791,7 +795,8 @@ mod tests {
         let at0 = |e: &C, n| series_at(e, "x", &C::int(0), n).expect("Puiseux");
         // sin√x = √x − (√x)³/6 + (√x)⁵/120.
         let s = at0(&var().sqrt().sin(), 3);
-        let s_expected = var().sqrt() - C::rat(1, 6) * var().sqrt().pow(3) + C::rat(1, 120) * var().sqrt().pow(5);
+        let s_expected = var().sqrt() - C::rat(1, 6) * var().sqrt().pow(3)
+            + C::rat(1, 120) * var().sqrt().pow(5);
         assert_matches(&s, &s_expected);
         // e^√x = 1 + √x + (√x)²/2 + (√x)³/6 + (√x)⁴/24 (mixed integer/half-integer).
         let e = at0(&var().sqrt().exp(), 2);
@@ -807,9 +812,7 @@ mod tests {
         let at0 = |e: &C, n| series_at(e, "x", &C::int(0), n).expect("Laurent");
         // 1/sin x = 1/x + x/6 + 7x³/360 (odd principal part + Taylor tail).
         let csc = at0(&(C::int(1) / var().sin()), 4);
-        let csc_expected = C::int(1) / var()
-            + C::rat(1, 6) * var()
-            + C::rat(7, 360) * var().pow(3);
+        let csc_expected = C::int(1) / var() + C::rat(1, 6) * var() + C::rat(7, 360) * var().pow(3);
         assert_matches(&csc, &csc_expected);
         // 1/(eˣ−1) = 1/x − 1/2 + x/12 − x³/720 (Bernoulli, pole form).
         let bose = at0(&(C::int(1) / (var().exp() - C::int(1))), 3);
@@ -822,7 +825,8 @@ mod tests {
         assert_matches(&cot, &cot_expected);
         // Double pole: 1/(x·sin x) = 1/x² + 1/6 + 7x²/360.
         let double = at0(&(C::int(1) / (var() * var().sin())), 2);
-        let double_expected = C::int(1) / var().pow(2) + C::rat(1, 6) + C::rat(7, 360) * var().pow(2);
+        let double_expected =
+            C::int(1) / var().pow(2) + C::rat(1, 6) + C::rat(7, 360) * var().pow(2);
         assert_matches(&double, &double_expected);
     }
 
@@ -845,7 +849,13 @@ mod tests {
         // sin(x)/x = 1 − x²/6 + x⁴/120; (1−cos x)/x² = 1/2 − x²/24.
         assert_eq!(
             coeffs(&(var().sin() / var()), 4),
-            vec![Rational::integer(1), Rational::zero(), Rational::new(-1, 6), Rational::zero(), Rational::new(1, 120)]
+            vec![
+                Rational::integer(1),
+                Rational::zero(),
+                Rational::new(-1, 6),
+                Rational::zero(),
+                Rational::new(1, 120)
+            ]
         );
         assert_eq!(
             coeffs(&((C::int(1) - var().cos()) / var().pow(2)), 2),
@@ -989,18 +999,28 @@ mod tests {
             + e.clone() * s()
             + e.clone() * CasExpr::rat(1, 2) * s().pow(2)
             + e * CasExpr::rat(1, 6) * s().pow(3);
-        assert!(matches!(equal(&got, &expected), ZeroTest::Certified { equal: true, .. }));
+        assert!(matches!(
+            equal(&got, &expected),
+            ZeroTest::Certified { equal: true, .. }
+        ));
 
         // sin(x) about x=π/6, order 1: 1/2 + (√3/2)(x − π/6).
         let center = crate::CasExpr::var("pi") / CasExpr::int(6);
         let got = series_at(&var().sin(), "x", &center, 1).expect("taylor fallback");
-        let expected = CasExpr::rat(1, 2)
-            + CasExpr::rat(1, 2) * CasExpr::int(3).sqrt() * (var() - center);
-        assert!(matches!(equal(&got, &expected), ZeroTest::Certified { equal: true, .. }));
+        let expected =
+            CasExpr::rat(1, 2) + CasExpr::rat(1, 2) * CasExpr::int(3).sqrt() * (var() - center);
+        assert!(matches!(
+            equal(&got, &expected),
+            ZeroTest::Certified { equal: true, .. }
+        ));
 
         // A simple pole at the center now expands as its Laurent series: 1/x → 1/x.
-        let pole = series_at(&(CasExpr::int(1) / var()), "x", &CasExpr::int(0), 2).expect("Laurent");
-        assert!(matches!(equal(&pole, &(CasExpr::int(1) / var())), ZeroTest::Certified { equal: true, .. }));
+        let pole =
+            series_at(&(CasExpr::int(1) / var()), "x", &CasExpr::int(0), 2).expect("Laurent");
+        assert!(matches!(
+            equal(&pole, &(CasExpr::int(1) / var())),
+            ZeroTest::Certified { equal: true, .. }
+        ));
         // A branch point (ln x about 0) has no Laurent series — still declines.
         assert!(series_at(&var().ln(), "x", &CasExpr::int(0), 2).is_none());
     }
@@ -1244,7 +1264,11 @@ mod tests {
         let quartic = CasExpr::Unary(UnaryFunc::NthRoot(4), Box::new(CasExpr::int(1) - var()));
         assert_eq!(
             coeffs(&quartic, 2),
-            vec![Rational::integer(1), Rational::new(-1, 4), Rational::new(-3, 32)]
+            vec![
+                Rational::integer(1),
+                Rational::new(-1, 4),
+                Rational::new(-3, 32)
+            ]
         );
     }
 

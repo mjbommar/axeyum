@@ -65,7 +65,9 @@ use std::collections::BTreeMap;
 
 use axeyum_ir::{Rational, poly};
 
-use crate::{CasExpr, MultiPoly, UnaryFunc, ZeroTest, binomial_rat, equal, normalize, normalize_rational};
+use crate::{
+    CasExpr, MultiPoly, UnaryFunc, ZeroTest, binomial_rat, equal, normalize, normalize_rational,
+};
 
 /// A dense univariate rational polynomial, least-significant-coefficient first
 /// (index `i` is the coefficient of `var^i`), matching [`axeyum_ir::poly`].
@@ -167,8 +169,7 @@ fn rational_gosper_with_ratio(
         let Some(x_coeffs) = solve_gosper_equation(&p_poly, &q_poly, &r_shift, bound) else {
             continue;
         };
-        let reduced_certifies =
-            certifies_gosper_equation(&p_poly, &q_poly, &r_shift, &x_coeffs);
+        let reduced_certifies = certifies_gosper_equation(&p_poly, &q_poly, &r_shift, &x_coeffs);
         let x_expr = ratvec_to_expr(var, &x_coeffs)?;
         let r_shift_expr = ratvec_to_expr(var, &r_shift)?;
         let p_expr = ratvec_to_expr(var, &p_poly)?;
@@ -306,14 +307,8 @@ fn structured_difference_from_ratios(
     a: &(RatVec, RatVec),
     d: &(RatVec, RatVec),
 ) -> Option<((RatVec, RatVec), (RatVec, RatVec))> {
-    let one = (
-        vec![Rational::integer(1)],
-        vec![Rational::integer(1)],
-    );
-    let difference = rational_fraction_sub(
-        d,
-        &one,
-    )?;
+    let one = (vec![Rational::integer(1)], vec![Rational::integer(1)]);
+    let difference = rational_fraction_sub(d, &one)?;
     let d_shift = (
         shift_poly(&d.0, Rational::integer(1))?,
         shift_poly(&d.1, Rational::integer(1))?,
@@ -644,8 +639,7 @@ fn certifies_coprime_modular(a: &[Rational], b: &[Rational]) -> bool {
         let Some(b_mod) = reduce(b) else {
             continue;
         };
-        if a_mod.last().is_none_or(|lead| *lead == 0)
-            || b_mod.last().is_none_or(|lead| *lead == 0)
+        if a_mod.last().is_none_or(|lead| *lead == 0) || b_mod.last().is_none_or(|lead| *lead == 0)
         {
             continue;
         }
@@ -703,7 +697,9 @@ fn common_content(coeffs: impl Iterator<Item = Rational>) -> Option<Rational> {
         let d = c.denominator();
         den_lcm = den_lcm.checked_div(gcd(den_lcm, d))?.checked_mul(d)?;
     }
-    (num_gcd != 0).then(|| Rational::checked_new(num_gcd, den_lcm)).flatten()
+    (num_gcd != 0)
+        .then(|| Rational::checked_new(num_gcd, den_lcm))
+        .flatten()
 }
 
 /// The Gosper–Petkovšek normal form of `a/b`: polynomials `(p, q, r)` with
@@ -864,7 +860,10 @@ fn geometric_base(arg: &CasExpr, var: &str) -> Option<Rational> {
     }
     // The exponent must have no constant term: `arg ≡ coefficient·var`.
     let reconstructed = coefficient.clone() * CasExpr::var(var);
-    if !matches!(equal(arg, &reconstructed), ZeroTest::Certified { equal: true, .. }) {
+    if !matches!(
+        equal(arg, &reconstructed),
+        ZeroTest::Certified { equal: true, .. }
+    ) {
         return None;
     }
     // base = exp(coefficient); accept only a rational constant (`exp(−ln2)=½`, …).
@@ -1156,7 +1155,9 @@ mod tests {
         // boundary substitution does not hit `0/0` (previously `∑ k·(1/2)^k` at
         // `k=0` produced `-(0/0)`).
         let k = CasExpr::var("k");
-        let is = |a: &CasExpr, b: &CasExpr| matches!(equal(a, b), ZeroTest::Certified { equal: true, .. });
+        let is = |a: &CasExpr, b: &CasExpr| {
+            matches!(equal(a, b), ZeroTest::Certified { equal: true, .. })
+        };
         let term = CasExpr::Mul(vec![k.clone(), geometric_power(Rational::new(1, 2), "k")]);
         // Finite: ∑_{k=0}^{3} k·(1/2)^k = 1/2 + 2/4 + 3/8 = 11/8.
         let def = crate::definite_sum(&term, "k", &CasExpr::int(0), &CasExpr::int(3)).unwrap();
@@ -1180,19 +1181,28 @@ mod tests {
         // `Neg`-wrapped exponent was not recognised as a rational base).
         let two_pow_neg_k = CasExpr::Neg(Box::new(k() * CasExpr::int(2).ln())).exp();
         assert!(matches!(
-            equal(&infinite_sum(&two_pow_neg_k, "k", &zero()).unwrap(), &CasExpr::int(2)),
+            equal(
+                &infinite_sum(&two_pow_neg_k, "k", &zero()).unwrap(),
+                &CasExpr::int(2)
+            ),
             ZeroTest::Certified { equal: true, .. }
         ));
         // Same value via the `(1/2)^k` spelling `exp(k·ln(½))`.
         let half_pow_k = (k() * CasExpr::rat(1, 2).ln()).exp();
         assert!(matches!(
-            equal(&infinite_sum(&half_pow_k, "k", &zero()).unwrap(), &CasExpr::int(2)),
+            equal(
+                &infinite_sum(&half_pow_k, "k", &zero()).unwrap(),
+                &CasExpr::int(2)
+            ),
             ZeroTest::Certified { equal: true, .. }
         ));
         // With a polynomial factor: ∑_{k≥1} k·2^{−k} = 2.
         let k_two_pow_neg_k = k() * CasExpr::Neg(Box::new(k() * CasExpr::int(2).ln())).exp();
         assert!(matches!(
-            equal(&infinite_sum(&k_two_pow_neg_k, "k", &CasExpr::int(1)).unwrap(), &CasExpr::int(2)),
+            equal(
+                &infinite_sum(&k_two_pow_neg_k, "k", &CasExpr::int(1)).unwrap(),
+                &CasExpr::int(2)
+            ),
             ZeroTest::Certified { equal: true, .. }
         ));
     }
@@ -1258,14 +1268,19 @@ mod tests {
         // `Γ(z+1)=z·Γ(z)` lowering reduces it. Certification goes through the exact
         // zero-test (which now knows that functional equation).
         let k = || CasExpr::var("k");
-        let is = |a: &CasExpr, b: &CasExpr| matches!(equal(a, b), ZeroTest::Certified { equal: true, .. });
+        let is = |a: &CasExpr, b: &CasExpr| {
+            matches!(equal(a, b), ZeroTest::Certified { equal: true, .. })
+        };
 
         // ∑ k·k! : antidifference S(k) = k! = Γ(k+1), since (k+1)! − k! = k·k!.
         let s1 = certified_sum(&(k() * k().factorial()), "k");
         assert!(is(&s1, &k().factorial()));
 
         // ∑ (k²+k+1)·k! : antidifference k·k! = k·Γ(k+1).
-        let s2 = certified_sum(&((k().pow(2) + k() + CasExpr::int(1)) * k().factorial()), "k");
+        let s2 = certified_sum(
+            &((k().pow(2) + k() + CasExpr::int(1)) * k().factorial()),
+            "k",
+        );
         assert!(is(&s2, &(k() * k().factorial())));
 
         // ∑ k/(k+1)! : antidifference −1/k! = −1/Γ(k+1).
@@ -1273,7 +1288,13 @@ mod tests {
         assert!(is(&s3, &(CasExpr::int(-1) / k().factorial())));
 
         // Definite value via telescoping: ∑_{k=1}^{4} k·k! = 5! − 1 = 119.
-        let def = crate::definite_sum(&(k() * k().factorial()), "k", &CasExpr::int(1), &CasExpr::int(4)).unwrap();
+        let def = crate::definite_sum(
+            &(k() * k().factorial()),
+            "k",
+            &CasExpr::int(1),
+            &CasExpr::int(4),
+        )
+        .unwrap();
         assert!(is(&def, &CasExpr::int(119)));
 
         // Soundness: ∑ 1/k! is not Gosper-summable — decline, never a wrong answer.
@@ -1289,7 +1310,8 @@ mod tests {
             / CasExpr::int(64);
         let s_wz = certified_sum(&wz, "k");
         // The antidifference equals `−k·g/(2(k−3))`.
-        let expected = CasExpr::int(-1) * k() * wz.clone() / (CasExpr::int(2) * (k() - CasExpr::int(3)));
+        let expected =
+            CasExpr::int(-1) * k() * wz.clone() / (CasExpr::int(2) * (k() - CasExpr::int(3)));
         assert!(is(&s_wz, &expected));
     }
 
@@ -1318,8 +1340,7 @@ mod tests {
         let k = CasExpr::var("k");
         let binom = |n| crate::binomial_coefficient(&CasExpr::int(n), &k);
         let rhs = |n| {
-            CasExpr::int(n)
-                * crate::binomial_coefficient(&CasExpr::int(2 * n), &CasExpr::int(n))
+            CasExpr::int(n) * crate::binomial_coefficient(&CasExpr::int(2 * n), &CasExpr::int(n))
                 / CasExpr::int(2)
         };
         let f5 = crate::simplify(&(k.clone() * binom(5).pow(2) / rhs(5)));
@@ -1417,8 +1438,7 @@ mod tests {
         let k = CasExpr::var("k");
         let actual = rational_fraction_to_expr(&reduced, "k").unwrap();
         let expected = (k.clone() - CasExpr::int(1)).pow(2)
-            * (CasExpr::int(932) * k.clone().pow(3)
-                - CasExpr::int(9_553) * k.clone().pow(2)
+            * (CasExpr::int(932) * k.clone().pow(3) - CasExpr::int(9_553) * k.clone().pow(2)
                 + CasExpr::int(17_196) * k.clone()
                 - CasExpr::int(8_820))
             / (CasExpr::int(6_524) * k.clone().pow(2) * (k - CasExpr::int(6)).pow(2));

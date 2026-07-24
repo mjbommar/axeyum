@@ -379,8 +379,9 @@ pub fn solve_linear_congruence(a: i128, b: i128, n: i128) -> Option<Vec<i128>> {
     let base = (b.rem_euclid(n) / divisor)
         .checked_mul(bezout)?
         .rem_euclid(step);
-    let mut solutions: Vec<i128> =
-        (0..divisor).map(|k| (base + k * step).rem_euclid(n)).collect();
+    let mut solutions: Vec<i128> = (0..divisor)
+        .map(|k| (base + k * step).rem_euclid(n))
+        .collect();
     solutions.sort_unstable();
     Some(solutions)
 }
@@ -773,8 +774,7 @@ mod tests {
                 for b in 0..n {
                     let solutions = solve_linear_congruence(a, b, n).unwrap();
                     // Brute-force truth set.
-                    let brute: Vec<i128> =
-                        (0..n).filter(|&x| (a * x).rem_euclid(n) == b).collect();
+                    let brute: Vec<i128> = (0..n).filter(|&x| (a * x).rem_euclid(n) == b).collect();
                     assert_eq!(solutions, brute, "{a}x≡{b} (mod {n})");
                 }
             }
