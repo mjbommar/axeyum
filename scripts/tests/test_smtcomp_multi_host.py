@@ -31,6 +31,7 @@ from multi_host import (  # noqa: E402
     install_host_command,
     recover_failed_shard,
     recover_released_failed_shard,
+    remote_thermal_sample,
     stage_execution_bundle,
     validate_execution_bundle,
     validate_host_command,
@@ -156,6 +157,43 @@ class PortableE3:
 
 
 class MultiHostPortableTests(unittest.TestCase):
+    def test_remote_thermal_sample_is_exact_and_bounded(self) -> None:
+        raw = b'{"k10temp-pci-00c3":{"Tctl":{"temp1_input":40}}}\n'
+        completed = mock.Mock(returncode=0, stdout=raw, stderr=b"")
+        with mock.patch("multi_host.subprocess.run", return_value=completed) as run:
+            self.assertEqual(multi_host_module._thermal_sensors(), raw)
+        self.assertEqual(run.call_args.args[0], ["sensors", "-j"])
+
+        with mock.patch("multi_host.subprocess.run", return_value=completed) as run:
+            self.assertEqual(
+                remote_thermal_sample(
+                    registration={"ssh_target": "s5"},
+                    remote_helper_path=Path("/tmp/full-multi-host.py"),
+                ),
+                raw,
+            )
+        self.assertEqual(run.call_args.args[0][-1], "thermal-sensors")
+
+        for label, returncode, stdout in (
+            ("failure", 2, b""),
+            ("empty", 0, b""),
+            ("oversize", 0, b"x" * (1024 * 1024 + 1)),
+        ):
+            with (
+                self.subTest(label=label),
+                mock.patch(
+                    "multi_host.subprocess.run",
+                    return_value=mock.Mock(
+                        returncode=returncode, stdout=stdout, stderr=b"failed"
+                    ),
+                ),
+                self.assertRaises(ContractError),
+            ):
+                remote_thermal_sample(
+                    registration={"ssh_target": "s5"},
+                    remote_helper_path=Path("/tmp/full-multi-host.py"),
+                )
+
     def test_scheduler_state_recomputes_terminal_projections(self) -> None:
         attempts = [
             {

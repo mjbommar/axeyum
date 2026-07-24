@@ -77,6 +77,7 @@ POST_RUN_COMPLETION_SCHEMA = "axeyum.smtcomp-multi-host-completion.v2"
 ALLOCATION_SCHEDULER_STATE_SCHEMA = (
     "axeyum.smtcomp-multi-host-allocation-scheduler-state.v2"
 )
+REMOTE_THERMAL_MAX_BYTES = 1024 * 1024
 
 SAFE_ID = re.compile(r"[A-Za-z0-9][A-Za-z0-9_.-]{0,127}\Z")
 SAFE_SSH_TARGET = re.compile(r"[A-Za-z0-9][A-Za-z0-9_.@-]{0,127}\Z")
@@ -1526,6 +1527,44 @@ def stop_remote_unit(
     ):
         raise ContractError("remote unit-stop evidence identity mismatch")
     return evidence
+
+
+def remote_thermal_sample(
+    *, registration: dict[str, Any], remote_helper_path: Path
+) -> bytes:
+    """Capture one bounded raw ``sensors -j`` sample from an exact host."""
+
+    ssh_target = _require_safe(
+        registration.get("ssh_target"), "ssh_target", pattern=SAFE_SSH_TARGET
+    )
+    helper = _require_safe_absolute_path(remote_helper_path, "remote_helper_path")
+    try:
+        completed = subprocess.run(
+            [
+                "ssh",
+                "-o",
+                "BatchMode=yes",
+                "-o",
+                "ConnectTimeout=5",
+                ssh_target,
+                "python3",
+                "-B",
+                str(helper),
+                "thermal-sensors",
+            ],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            timeout=20,
+            check=False,
+        )
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        raise ContractError("unable to capture remote thermal sensors") from exc
+    if completed.returncode != 0:
+        raise ContractError("remote thermal sensor command failed")
+    raw = completed.stdout
+    if not raw or len(raw) > REMOTE_THERMAL_MAX_BYTES:
+        raise ContractError("remote thermal sensor output size mismatch")
+    return raw
 
 
 def remote_file_observation(
@@ -3339,6 +3378,26 @@ def _observe_file(path: Path) -> dict[str, Any]:
     }
 
 
+def _thermal_sensors() -> bytes:
+    """Remote-helper implementation for an exact bounded ``sensors -j`` call."""
+
+    try:
+        completed = subprocess.run(
+            ["sensors", "-j"],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            timeout=10,
+            check=False,
+        )
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        raise ContractError("unable to execute sensors -j") from exc
+    if completed.returncode != 0:
+        raise ContractError("sensors -j failed")
+    if not completed.stdout or len(completed.stdout) > REMOTE_THERMAL_MAX_BYTES:
+        raise ContractError("sensors -j output size mismatch")
+    return completed.stdout
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Axeyum E3 multi-host helper")
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -3354,6 +3413,7 @@ def main() -> int:
     kill.add_argument("--launcher-pid", required=True, type=int)
     stop = subparsers.add_parser("stop-unit")
     stop.add_argument("--unit", required=True)
+    subparsers.add_parser("thermal-sensors")
     observe = subparsers.add_parser("observe-file")
     observe.add_argument("--path", required=True)
     args = parser.parse_args()
@@ -3375,6 +3435,9 @@ def main() -> int:
             return 0
         if args.command == "stop-unit":
             sys.stdout.buffer.write(canonical_bytes(_stop_unit(args.unit)))
+            return 0
+        if args.command == "thermal-sensors":
+            sys.stdout.buffer.write(_thermal_sensors())
             return 0
         if args.command == "observe-file":
             sys.stdout.buffer.write(canonical_bytes(_observe_file(Path(args.path))))
@@ -3411,6 +3474,7 @@ __all__ = [
     "recover_failed_shard",
     "recover_released_failed_shard",
     "remote_probe",
+    "remote_thermal_sample",
     "remote_file_observation",
     "shared_filesystem_observation",
     "stage_execution_bundle",
