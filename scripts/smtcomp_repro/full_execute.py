@@ -25,6 +25,7 @@ from full_population import (
     validate_thermal_observation,
     validate_thermal_stop,
 )
+from multi_host import derive_allocation_scheduler_state
 from resume_contract import ContractError, digest
 from resume_fs import (
     atomic_install_json,
@@ -163,6 +164,7 @@ def supervise_one_wave(
     plan_sha256: str,
     run_identity_sha256: str,
     cell_id: str,
+    allocation_scheduler_state_sha256: str,
     open_attempt_ids: list[str],
     failed_allocation_ids: list[str],
     lost_allocation_ids: list[str],
@@ -187,6 +189,7 @@ def supervise_one_wave(
         plan_sha256=plan_sha256,
         run_identity_sha256=run_identity_sha256,
         cell_id=cell_id,
+        allocation_scheduler_state_sha256=allocation_scheduler_state_sha256,
         open_attempt_ids=open_attempt_ids,
         failed_allocation_ids=failed_allocation_ids,
         lost_allocation_ids=lost_allocation_ids,
@@ -353,9 +356,6 @@ def supervise_admitted_wave(
     prior_result_roots: dict[str, Path],
     acceptance: dict[str, Any] | None = None,
     inspect_shared_root: bool = True,
-    open_attempt_ids: list[str],
-    failed_allocation_ids: list[str],
-    lost_allocation_ids: list[str],
     cooldown_required: bool,
     prewave_thermal_observations: list[dict[str, Any]],
     launch: Callable[[dict[str, Any]], WaveHandle],
@@ -412,6 +412,12 @@ def supervise_admitted_wave(
         and schedule["record_sha256"] == admission["schedule_record_sha256"],
         "admitted execution identity drift",
     )
+    allocation_state = derive_allocation_scheduler_state(
+        run_dir,
+        plan=plan,
+        cell_id=admission["solver_id"],
+        inspect_shared_root=inspect_shared_root,
+    )
     checkpoints = load_wave_checkpoints(
         run_dir,
         schedule=schedule,
@@ -425,9 +431,10 @@ def supervise_admitted_wave(
         plan_sha256=admission["plan_sha256"],
         run_identity_sha256=admission["run_identity_sha256"],
         cell_id=admission["solver_id"],
-        open_attempt_ids=open_attempt_ids,
-        failed_allocation_ids=failed_allocation_ids,
-        lost_allocation_ids=lost_allocation_ids,
+        allocation_scheduler_state_sha256=allocation_state["record_sha256"],
+        open_attempt_ids=allocation_state["open_attempt_ids"],
+        failed_allocation_ids=allocation_state["failed_allocation_ids"],
+        lost_allocation_ids=allocation_state["lost_allocation_ids"],
         cooldown_required=cooldown_required,
         prewave_thermal_observations=prewave_thermal_observations,
         launch=launch,

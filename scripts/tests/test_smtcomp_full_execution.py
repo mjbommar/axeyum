@@ -213,12 +213,23 @@ class FullExecutionCheckpointTests(unittest.TestCase):
                 "schedule_record_sha256": schedule["record_sha256"],
             }
             outcome = {"status": "wave-completed", "checkpoint": first}
+            allocation_state = {
+                "record_sha256": "f" * 64,
+                "open_attempt_ids": [],
+                "failed_allocation_ids": [],
+                "lost_allocation_ids": [],
+            }
             unused = mock.Mock(side_effect=AssertionError("unexpected callback"))
             with (
                 mock.patch(
                     "full_admission.validate_full_cell_admission",
                     return_value=admission,
                 ) as validate_admission,
+                mock.patch.object(
+                    full_execute_module,
+                    "derive_allocation_scheduler_state",
+                    return_value=allocation_state,
+                ) as derive_state,
                 mock.patch.object(
                     full_execute_module,
                     "supervise_one_wave",
@@ -233,9 +244,6 @@ class FullExecutionCheckpointTests(unittest.TestCase):
                     prior_result_roots={},
                     acceptance={"fixture": True},
                     inspect_shared_root=False,
-                    open_attempt_ids=[],
-                    failed_allocation_ids=[],
-                    lost_allocation_ids=[],
                     cooldown_required=False,
                     prewave_thermal_observations=[],
                     launch=unused,
@@ -248,8 +256,13 @@ class FullExecutionCheckpointTests(unittest.TestCase):
                 )
             self.assertEqual(observed, outcome)
             validate_admission.assert_called_once()
+            derive_state.assert_called_once()
             self.assertEqual(supervise.call_args.kwargs["schedule"], schedule)
             self.assertEqual(supervise.call_args.kwargs["checkpoints"], [])
+            self.assertEqual(
+                supervise.call_args.kwargs["allocation_scheduler_state_sha256"],
+                allocation_state["record_sha256"],
+            )
             self.assertEqual(
                 load_wave_checkpoints(
                     run_dir,
@@ -260,6 +273,44 @@ class FullExecutionCheckpointTests(unittest.TestCase):
                 ),
                 [first],
             )
+
+            blocked_state = {
+                "record_sha256": "e" * 64,
+                "open_attempt_ids": ["unclosed-attempt"],
+                "failed_allocation_ids": [],
+                "lost_allocation_ids": [],
+            }
+            launch = mock.Mock()
+            with (
+                mock.patch(
+                    "full_admission.validate_full_cell_admission",
+                    return_value=admission,
+                ),
+                mock.patch.object(
+                    full_execute_module,
+                    "derive_allocation_scheduler_state",
+                    return_value=blocked_state,
+                ),
+            ):
+                blocked = supervise_admitted_wave(
+                    admission,
+                    preparation_root=attempt,
+                    repository_root=ROOT,
+                    expected_logic_counts={},
+                    prior_result_roots={},
+                    inspect_shared_root=False,
+                    cooldown_required=False,
+                    prewave_thermal_observations=[],
+                    launch=launch,
+                    poll_terminal=unused,
+                    observe_active=unused,
+                    stop_overheated=unused,
+                    now_ns=lambda: 2000,
+                    wait=unused,
+                    pause_requested=lambda: False,
+                )
+            self.assertEqual(blocked["status"], "blocked-unclosed")
+            launch.assert_not_called()
 
             drifted = copy.deepcopy(admission)
             drifted["schedule_record_sha256"] = "0" * 64
@@ -277,9 +328,6 @@ class FullExecutionCheckpointTests(unittest.TestCase):
                     expected_logic_counts={},
                     prior_result_roots={},
                     inspect_shared_root=False,
-                    open_attempt_ids=[],
-                    failed_allocation_ids=[],
-                    lost_allocation_ids=[],
                     cooldown_required=False,
                     prewave_thermal_observations=[],
                     launch=unused,

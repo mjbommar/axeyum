@@ -93,6 +93,7 @@ ENFORCEMENT_ID = "e" * 64
 PLAN_ID = "a" * 64
 RUN_ID = "b" * 64
 CELL_ID = "axeyum"
+ALLOCATION_STATE_ID = "c" * 64
 UNIT_PREFIX = "axeyum-smtcomp-full"
 
 
@@ -523,6 +524,7 @@ class FullPopulationContractTests(unittest.TestCase):
                 plan_sha256=PLAN_ID,
                 run_identity_sha256=RUN_ID,
                 cell_id=CELL_ID,
+                allocation_scheduler_state_sha256=ALLOCATION_STATE_ID,
                 open_attempt_ids=[],
                 failed_allocation_ids=[],
                 lost_allocation_ids=[],
@@ -570,6 +572,7 @@ class FullPopulationContractTests(unittest.TestCase):
                         plan_sha256=PLAN_ID,
                         run_identity_sha256=RUN_ID,
                         cell_id=CELL_ID,
+                        allocation_scheduler_state_sha256=ALLOCATION_STATE_ID,
                         open_attempt_ids=[],
                         failed_allocation_ids=[],
                         lost_allocation_ids=[],
@@ -586,6 +589,7 @@ class FullPopulationContractTests(unittest.TestCase):
                 plan_sha256=PLAN_ID,
                 run_identity_sha256=RUN_ID,
                 cell_id=CELL_ID,
+                allocation_scheduler_state_sha256=ALLOCATION_STATE_ID,
                 open_attempt_ids=[],
                 failed_allocation_ids=[],
                 lost_allocation_ids=[],
@@ -605,6 +609,7 @@ class FullPopulationContractTests(unittest.TestCase):
             plan_sha256=PLAN_ID,
             run_identity_sha256=RUN_ID,
             cell_id=CELL_ID,
+            allocation_scheduler_state_sha256=ALLOCATION_STATE_ID,
             open_attempt_ids=[],
             failed_allocation_ids=[],
             lost_allocation_ids=[],
@@ -655,6 +660,7 @@ class FullPopulationContractTests(unittest.TestCase):
                 plan_sha256=PLAN_ID,
                 run_identity_sha256=RUN_ID,
                 cell_id=CELL_ID,
+                allocation_scheduler_state_sha256=ALLOCATION_STATE_ID,
                 open_attempt_ids=[],
                 failed_allocation_ids=[],
                 lost_allocation_ids=[],
@@ -734,6 +740,7 @@ class FullPopulationContractTests(unittest.TestCase):
                     plan_sha256=PLAN_ID,
                     run_identity_sha256=RUN_ID,
                     cell_id=CELL_ID,
+                    allocation_scheduler_state_sha256=ALLOCATION_STATE_ID,
                     open_attempt_ids=opens,
                     failed_allocation_ids=failed,
                     lost_allocation_ids=lost,
@@ -754,6 +761,7 @@ class FullPopulationContractTests(unittest.TestCase):
             plan_sha256=PLAN_ID,
             run_identity_sha256=RUN_ID,
             cell_id=CELL_ID,
+            allocation_scheduler_state_sha256=ALLOCATION_STATE_ID,
             open_attempt_ids=[],
             failed_allocation_ids=[],
             lost_allocation_ids=[],
@@ -1466,6 +1474,7 @@ class FullPopulationContractTests(unittest.TestCase):
                 plan_sha256=PLAN_ID,
                 run_identity_sha256=RUN_ID,
                 cell_id=CELL_ID,
+                allocation_scheduler_state_sha256=ALLOCATION_STATE_ID,
                 open_attempt_ids=[],
                 failed_allocation_ids=[],
                 lost_allocation_ids=[],
@@ -1547,6 +1556,7 @@ class FullPopulationContractTests(unittest.TestCase):
             plan_sha256=PLAN_ID,
             run_identity_sha256=RUN_ID,
             cell_id=CELL_ID,
+            allocation_scheduler_state_sha256=ALLOCATION_STATE_ID,
             open_attempt_ids=[],
             failed_allocation_ids=[],
             lost_allocation_ids=[],
@@ -1592,6 +1602,7 @@ class FullPopulationContractTests(unittest.TestCase):
             plan_sha256=PLAN_ID,
             run_identity_sha256=RUN_ID,
             cell_id=CELL_ID,
+            allocation_scheduler_state_sha256=ALLOCATION_STATE_ID,
             open_attempt_ids=[],
             failed_allocation_ids=[],
             lost_allocation_ids=[],
@@ -1624,6 +1635,7 @@ class FullPopulationContractTests(unittest.TestCase):
             plan_sha256=PLAN_ID,
             run_identity_sha256=RUN_ID,
             cell_id=CELL_ID,
+            allocation_scheduler_state_sha256=ALLOCATION_STATE_ID,
             open_attempt_ids=["open-attempt"],
             failed_allocation_ids=[],
             lost_allocation_ids=[],

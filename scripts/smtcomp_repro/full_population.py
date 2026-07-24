@@ -25,7 +25,7 @@ WAVE_SCHEMA = "axeyum.smtcomp-credited-full-wave.v1"
 THERMAL_OBSERVATION_SCHEMA = "axeyum.smtcomp-credited-full-thermal-observation.v1"
 THERMAL_STOP_SCHEMA = "axeyum.smtcomp-credited-full-thermal-stop.v1"
 CHECKPOINT_SCHEMA = "axeyum.smtcomp-credited-full-wave-checkpoint.v2"
-SCHEDULER_DECISION_SCHEMA = "axeyum.smtcomp-credited-full-scheduler-decision.v1"
+SCHEDULER_DECISION_SCHEMA = "axeyum.smtcomp-credited-full-scheduler-decision.v2"
 
 POPULATION_COUNT = 45_905
 SHARD_COUNT = 96
@@ -157,6 +157,7 @@ SCHEDULER_DECISION_FIELDS = {
     "plan_sha256",
     "run_identity_sha256",
     "cell_id",
+    "allocation_scheduler_state_sha256",
     "status",
     "completed_checkpoint_sha256s",
     "next_wave_index",
@@ -829,6 +830,7 @@ def scheduler_decision(
     plan_sha256: str,
     run_identity_sha256: str,
     cell_id: str,
+    allocation_scheduler_state_sha256: str,
     open_attempt_ids: list[str],
     failed_allocation_ids: list[str],
     lost_allocation_ids: list[str],
@@ -843,6 +845,10 @@ def scheduler_decision(
     plan = _require_sha256(plan_sha256, "plan_sha256")
     run = _require_sha256(run_identity_sha256, "run_identity_sha256")
     cell = _require_safe_id(cell_id, "cell_id")
+    allocation_state = _require_sha256(
+        allocation_scheduler_state_sha256,
+        "allocation_scheduler_state_sha256",
+    )
     validate_checkpoint_chain(
         checkpoints,
         schedule=schedule,
@@ -898,6 +904,7 @@ def scheduler_decision(
             "plan_sha256": plan,
             "run_identity_sha256": run,
             "cell_id": cell,
+            "allocation_scheduler_state_sha256": allocation_state,
             "status": status,
             "completed_checkpoint_sha256s": [
                 checkpoint["record_sha256"] for checkpoint in checkpoints
