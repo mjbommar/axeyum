@@ -8993,6 +8993,16 @@ plan is built and committed on the current branch:
   globally real-continuous heads now compose over exact rational inner limits,
   while asymptotic head routing requires exact algebraic growth and sign
   evidence. CAS now has 565 units and 147 doctests.
+- **2026-07-23 — Paused CAS wave twenty-four at a committed source
+  checkpoint.** Local commit `01d47334` replaces floating geometric-rate limit
+  decisions with bounded exact logarithmic/rational sign proofs, declines on
+  unsupported transcendental mixtures, and preflights hostile exponential
+  powers. Focused and broad tests plus crate Clippy are green, and every emitted
+  unit result from the thermally managed full run was green, including both
+  long moment families. The process exited without a retrievable final
+  summary/doctest status, so the full gate is deliberately not claimed. No CAS
+  process remains; the branch is clean, unpushed, and unintegrated. Resume only
+  from the [authoritative handoff](docs/plan/cas-parity-handoff-2026-07-22.md#0-pause-checkpoint-wave-twenty-four).
 - **2026-07-23 — Added exact-rational absolute-value limit continuity.** The
   existing `Abs` head now composes through any exact rational inner limit and
   folds the result, while oscillatory, divergent, reciprocal-Bessel, and
