@@ -1988,7 +1988,7 @@ class FullPopulationContractTests(unittest.TestCase):
             )
         launch.assert_not_called()
 
-    def test_readiness_requires_clean_origin_main_and_both_exact_green_gates(self) -> None:
+    def test_readiness_requires_integrated_origin_and_both_exact_green_gates(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             required = readiness_repository(root, DEFAULT_REQUIRED_PATHS)
@@ -2039,6 +2039,84 @@ class FullPopulationContractTests(unittest.TestCase):
                     required_paths=required,
                     require_ready=True,
                 )
+
+    def test_readiness_survives_later_origin_main_advancement(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            required = readiness_repository(root, DEFAULT_REQUIRED_PATHS)
+            gates = [
+                build_gate_observation(
+                    repository_root=root,
+                    command=list(command),
+                    exit_code=0,
+                    stdout=b"green\n",
+                    stderr=b"",
+                    started_at_ns=1000 + index * 10,
+                    ended_at_ns=1001 + index * 10,
+                )
+                for index, command in enumerate(
+                    (("just", "check"), ("./scripts/check-smtcomp-resume.sh",))
+                )
+            ]
+            readiness = build_readiness(
+                repository_root=root,
+                gate_observations=gates,
+                required_paths=required,
+                require_ready=True,
+            )
+            recorded_origin = readiness["origin_revision"]
+            advanced = subprocess.run(
+                ["git", "commit-tree", "HEAD^{tree}", "-p", "HEAD", "-m", "advance-origin"],
+                cwd=root,
+                check=True,
+                stdout=subprocess.PIPE,
+                text=True,
+            ).stdout.strip()
+            subprocess.run(
+                ["git", "update-ref", "refs/remotes/origin/main", advanced],
+                cwd=root,
+                check=True,
+            )
+            self.assertNotEqual(advanced, recorded_origin)
+            self.assertEqual(
+                validate_readiness(readiness, repository_root=root)["record_sha256"],
+                readiness["record_sha256"],
+            )
+
+    def test_readiness_accepts_clean_descendant_of_recorded_origin(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            required = readiness_repository(root, DEFAULT_REQUIRED_PATHS)
+            (root / "unrelated.txt").write_text("descendant\n", encoding="utf-8")
+            subprocess.run(["git", "add", "unrelated.txt"], cwd=root, check=True)
+            subprocess.run(
+                ["git", "commit", "-m", "descendant"],
+                cwd=root,
+                check=True,
+                capture_output=True,
+            )
+            gates = [
+                build_gate_observation(
+                    repository_root=root,
+                    command=list(command),
+                    exit_code=0,
+                    stdout=b"green\n",
+                    stderr=b"",
+                    started_at_ns=1000 + index * 10,
+                    ended_at_ns=1001 + index * 10,
+                )
+                for index, command in enumerate(
+                    (("just", "check"), ("./scripts/check-smtcomp-resume.sh",))
+                )
+            ]
+            readiness = build_readiness(
+                repository_root=root,
+                gate_observations=gates,
+                required_paths=required,
+                require_ready=True,
+            )
+            self.assertNotEqual(readiness["head_commit"], readiness["origin_revision"])
+            self.assertTrue(readiness["prerequisites_satisfied"])
 
     def test_readiness_durable_validation_uses_recorded_git_objects(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

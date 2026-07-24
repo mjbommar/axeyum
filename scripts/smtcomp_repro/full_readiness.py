@@ -1,8 +1,9 @@
 """Repository and gate readiness evidence for SMT-COMP full preparation.
 
 This layer is read-only with respect to Git and cannot launch solvers or hosts.
-It binds gate observations to one exact repository state and refuses live
-readiness unless HEAD is the clean, byte-identical ``origin/main`` revision.
+It binds gate observations to one exact repository state and one fixed
+integrated origin revision. Later movement of ``origin/main`` cannot rewrite
+the meaning of retained readiness evidence.
 """
 
 from __future__ import annotations
@@ -19,7 +20,7 @@ from resume_runner import sha256_file
 
 
 GATE_SCHEMA = "axeyum.smtcomp-credited-full-gate-observation.v1"
-READINESS_SCHEMA = "axeyum.smtcomp-credited-full-readiness.v1"
+READINESS_SCHEMA = "axeyum.smtcomp-credited-full-readiness.v2"
 REQUIRED_GATE_COMMANDS = (
     ("just", "check"),
     ("./scripts/check-smtcomp-resume.sh",),
@@ -70,7 +71,7 @@ READINESS_FIELDS = {
     "repository_root",
     "fixture_only",
     "head_commit",
-    "origin_main_commit",
+    "origin_revision",
     "worktree_status_sha256",
     "worktree_clean",
     "required_paths",
@@ -107,6 +108,22 @@ def _commit(root: Path, revision: str) -> str:
     if len(value) != 40 or any(character not in "0123456789abcdef" for character in value):
         raise ContractError("Git returned an invalid commit identity")
     return value
+
+
+def _is_ancestor(root: Path, ancestor: str, descendant: str) -> bool:
+    try:
+        completed = subprocess.run(
+            ["git", "merge-base", "--is-ancestor", ancestor, descendant],
+            cwd=root,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.PIPE,
+            check=False,
+        )
+    except OSError as exc:
+        raise ContractError("unable to inspect Git ancestry") from exc
+    if completed.returncode not in {0, 1}:
+        raise ContractError("unable to inspect Git ancestry")
+    return completed.returncode == 0
 
 
 def worktree_status(root: Path) -> bytes:
@@ -246,7 +263,7 @@ def build_readiness(
         raise ContractError("readiness flags must be Boolean")
     root = repository_root.resolve(strict=True)
     head = _commit(root, "HEAD")
-    origin = _commit(root, "origin/main")
+    origin_revision = _commit(root, "origin/main")
     status = worktree_status(root)
     status_sha256 = _sha256_bytes(status)
     if (
@@ -262,12 +279,12 @@ def build_readiness(
         local = root / relative
         if local.is_symlink() or not local.is_file():
             raise ContractError(f"missing full-preparation required path: {relative}")
-        origin_bytes = _git(root, "show", f"origin/main:{relative}")
+        origin_bytes = _git(root, "show", f"{origin_revision}:{relative}")
         path_rows.append(
             {
                 "path": relative,
                 "local_sha256": sha256_file(local),
-                "origin_main_sha256": _sha256_bytes(origin_bytes),
+                "origin_revision_sha256": _sha256_bytes(origin_bytes),
                 "byte_identical": local.read_bytes() == origin_bytes,
             }
         )
@@ -287,7 +304,7 @@ def build_readiness(
         by_command[command]["exit_code"] == 0 for command in REQUIRED_GATE_COMMANDS
     )
     prerequisites = (
-        head == origin
+        _is_ancestor(root, origin_revision, head)
         and not status
         and all(row["byte_identical"] for row in path_rows)
         and gates_green
@@ -299,7 +316,7 @@ def build_readiness(
             "repository_root": str(root),
             "fixture_only": fixture_only,
             "head_commit": head,
-            "origin_main_commit": origin,
+            "origin_revision": origin_revision,
             "worktree_status_sha256": status_sha256,
             "worktree_clean": not status,
             "required_paths": path_rows,
@@ -331,7 +348,7 @@ def validate_readiness(
     if type(inspect_current) is not bool:
         raise ContractError("inspect_current must be Boolean")
     recorded_head = readiness.get("head_commit")
-    recorded_origin = readiness.get("origin_main_commit")
+    recorded_origin = readiness.get("origin_revision")
     for value in (recorded_head, recorded_origin):
         if (
             not isinstance(value, str)
@@ -341,6 +358,8 @@ def validate_readiness(
             raise ContractError("full-preparation readiness commit mismatch")
         if _commit(root, value) != value:
             raise ContractError("full-preparation readiness commit object drift")
+    if not _is_ancestor(root, recorded_origin, recorded_head):
+        raise ContractError("full-preparation origin revision is not integrated")
     status_sha256 = readiness.get("worktree_status_sha256")
     worktree_clean = readiness.get("worktree_clean")
     if (
@@ -356,7 +375,6 @@ def validate_readiness(
         if inspect_current
         else {
             "head_commit": recorded_head,
-            "origin_main_commit": recorded_origin,
             "worktree_status_sha256": status_sha256,
             "worktree_clean": worktree_clean,
         }
@@ -364,7 +382,6 @@ def validate_readiness(
     if inspect_current:
         for field in (
             "head_commit",
-            "origin_main_commit",
             "worktree_status_sha256",
             "worktree_clean",
         ):
@@ -397,7 +414,7 @@ def validate_readiness(
         if set(row) != {
             "path",
             "local_sha256",
-            "origin_main_sha256",
+            "origin_revision_sha256",
             "byte_identical",
         }:
             raise ContractError("full-preparation readiness path row mismatch")
@@ -419,7 +436,7 @@ def validate_readiness(
         )
         if (
             row["local_sha256"] != expected_local_sha
-            or row["origin_main_sha256"] != _sha256_bytes(origin_bytes)
+            or row["origin_revision_sha256"] != _sha256_bytes(origin_bytes)
             or row["byte_identical"] is not expected_equal
         ):
             raise ContractError("full-preparation readiness path drift")
@@ -439,7 +456,7 @@ def validate_readiness(
             worktree_status_sha256=observed["worktree_status_sha256"],
         )
     expected_prerequisites = (
-        observed["head_commit"] == observed["origin_main_commit"]
+        _is_ancestor(root, recorded_origin, recorded_head)
         and observed["worktree_clean"]
         and all(row["byte_identical"] for row in paths)
         and {tuple(row["command"]) for row in gates}
@@ -459,7 +476,6 @@ def build_readiness_state(root: Path) -> dict[str, Any]:
     status = worktree_status(root)
     return {
         "head_commit": _commit(root, "HEAD"),
-        "origin_main_commit": _commit(root, "origin/main"),
         "worktree_status_sha256": _sha256_bytes(status),
         "worktree_clean": not status,
     }
