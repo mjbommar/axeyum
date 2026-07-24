@@ -5,7 +5,7 @@
 
 // The verifier's bounded fixture contract intentionally exercises `assert!`.
 #![allow(
-    clippy::manual_assert_eq,
+    clippy::manual_assert,
     clippy::many_single_char_names,
     unused_assignments
 )] // terse fixtures

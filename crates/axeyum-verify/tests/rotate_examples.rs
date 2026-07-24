@@ -3,7 +3,7 @@
 //! clean provable property; a single rotation is generally *not* the identity.
 
 // The verifier's bounded fixture contract intentionally exercises `assert!`.
-#![allow(clippy::manual_assert_eq)]
+#![allow(clippy::manual_assert)]
 
 use axeyum_verify::{Verdict, verify};
 

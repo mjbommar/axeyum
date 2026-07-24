@@ -13,7 +13,7 @@
 //! examples (a) / (b) / (c).
 
 // The verifier's bounded fixture contract intentionally exercises `assert!`.
-#![allow(clippy::manual_assert_eq, clippy::similar_names)]
+#![allow(clippy::manual_assert, clippy::similar_names)]
 
 use axeyum_verify::{Verdict, Witness, opt, verify};
 

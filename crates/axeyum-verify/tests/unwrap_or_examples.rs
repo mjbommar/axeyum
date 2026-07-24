@@ -4,7 +4,7 @@
 //! default)` (the boolean `Overflows` node + the non-panicking wrapping op).
 
 // The verifier's bounded fixture contract intentionally exercises `assert!`.
-#![allow(clippy::manual_assert_eq, clippy::many_single_char_names)] // terse fixtures
+#![allow(clippy::manual_assert, clippy::many_single_char_names)] // terse fixtures
 
 use axeyum_verify::{Verdict, verify};
 
