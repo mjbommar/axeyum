@@ -48,7 +48,7 @@
     },
     {
       "path": "docs/plan/lean-compatibility-v1.json",
-      "sha256": "a292b8288694a09e639aa3db104c4ddc7ea29231ad3e33ab13564c6888172545"
+      "sha256": "1941062fe0bc60c863af2dbef1ab91b771e5a39b1088ba7a18f95cbe16361064"
     },
     {
       "path": "docs/plan/lean-complete-parity-v1.json",
@@ -88,7 +88,7 @@
     },
     {
       "path": "docs/plan/lean-system-implementation-plan-2026-07-21.md",
-      "sha256": "5774a6ca65d463ccfe50e54db803e8e7dfaae55d5035b206a72291098b2e6317"
+      "sha256": "391e6b3f567daa5ff0f89b115bdbe1109f8837cfe7567de0aaab27e26e311787"
     },
     {
       "path": "docs/plan/lean-u2-matched-execution-tl0.6.5-axis-coverage-r5-plan-2026-07-23.md",
@@ -392,11 +392,11 @@
     },
     {
       "path": "docs/plan/lean4-complete-parity-contract-2026-07-22.md",
-      "sha256": "243c987ad422d21307f18c407c0bed0972c8bcf0fd7057f22ab020c2dfec06af"
+      "sha256": "75a0634d2c67aaf21acf1a339c2dd8afdb2d4d6bc2ce159d65327ec721d9c280"
     },
     {
       "path": "docs/plan/lean4-complete-parity-roadmap-2026-07-22.md",
-      "sha256": "526f00799bfe62cafe8f349ca8f4db6a2a75fd1348e5bba87f7306cbe1bf88f0"
+      "sha256": "b1e702a677332d0174234f4f6bb78deeb27dd3b66e12913a6af677cdde995777"
     },
     {
       "path": "scripts/gen-lean-complete-parity.py",
@@ -504,7 +504,7 @@
     },
     {
       "path": "scripts/tests/test_lean_compatibility.py",
-      "sha256": "b95626776c5ee358062b5e9b274037b9ad3dab6f0ea500eeae143a792295eb99"
+      "sha256": "947f71c85db81a02613d541319038346c286849cc2eacda7f15f6028c00ea9eb"
     },
     {
       "path": "scripts/tests/test_lean_complete_parity.py",
@@ -626,7 +626,7 @@
         },
         {
           "id": "K1-import",
-          "satisfied": 4,
+          "satisfied": 5,
           "total": 5
         },
         {

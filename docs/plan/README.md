@@ -719,6 +719,11 @@ Start at the root [`PLAN.md`](../../PLAN.md) (map + standing rules) and
   reduction, ordered private importer buffering, additive v1 identities,
   generated seam coverage, mutation/rollback gates, and explicit no-credit
   boundary before implementation.
+- [`lean-quotient-package-m1-m3-result-2026-07-23.md`](lean-quotient-package-m1-m3-result-2026-07-23.md)
+  — offline atomic quotient admission, exact `lift`/`ind` reduction, frozen
+  576-row seam digest, official importer/computation, identity and renderer
+  evidence, removal of only the selected quotient decline, and the still-open
+  authorized M4 differential/final-acceptance boundary.
 - [`lean-import-transactional-publication-tl1.3-2026-07-22.md`](lean-import-transactional-publication-tl1.3-2026-07-22.md),
   [`lean-import-mutation-corpus-tl1.4-2026-07-22.md`](lean-import-mutation-corpus-tl1.4-2026-07-22.md),
   and [`lean-declaration-identity-tl1.7-2026-07-22.md`](lean-declaration-identity-tl1.7-2026-07-22.md) —

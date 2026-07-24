@@ -7,6 +7,10 @@ Date: 2026-07-23
 Execution plan:
 [TL2.10 quotient-package plan](../../plan/lean-quotient-package-tl2.10-plan-2026-07-23.md)
 
+Implementation status:
+[offline M1--M3 complete](../../plan/lean-quotient-package-m1-m3-result-2026-07-23.md);
+the authorization-gated M4 differential and final acceptance remain open.
+
 ## Context
 
 The pinned Lean 4.30 kernel does not admit quotient declarations as four
@@ -19,10 +23,11 @@ reduction rules that ordinary opaque constants do not have.
 The pinned lean4export revision exposes that trusted package as four `quot`
 records in the fixed order `type`, `ctor`, `lift`, `ind`. Its exporter first
 dumps `Eq`, then emits the complete package even when traversal reaches any one
-quotient declaration. Axeyum currently declines the first such record with
-`Unsupported(quotient-package)`. The exact retained closure is small and
-isolated: 6,301 bytes, 121 records, 25 names, three nonzero levels, 87
-expressions, and five declaration records including `Eq`.
+quotient declaration. At preregistration, Axeyum declined the first such record
+with `Unsupported(quotient-package)`; the offline M1--M3 result now admits the
+exact retained closure. That closure is small and isolated: 6,301 bytes, 121
+records, 25 names, three nonzero levels, 87 expressions, and five declaration
+records including `Eq`.
 
 Treating these records as arbitrary well-typed constants would be unsound and
 would also lose Lean-compatible definitional equality. Treating any prefix as
