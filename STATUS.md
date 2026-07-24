@@ -412,7 +412,12 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   an ordinary exhaustive match, and the adjacent bitblast width matcher no
   longer binds an unused field. A fresh local Rust 1.88 workspace check,
   all-target/all-feature Clippy, the focused Cargo MIR build test, formatting,
-  `cargo-deny`, and diff checks pass.
+  `cargo-deny`, and diff checks pass. The exact-SHA nightly rerun finally
+  exposed a CI-host mismatch in ADR-0317's intentionally strict authenticated
+  capture: the committed `cargo -vV` identity names Ubuntu 26.04, while the
+  floating `ubuntu-latest` runner currently provides Ubuntu 24.04. Only the
+  authenticated Cargo MIR job is now pinned to `ubuntu-26.04`; the
+  byte-for-byte identity comparison remains unchanged.
 
 - **2026-07-23 — credited SMT-COMP full-population F2 is implementation-ready,
   not live-ready.** F1 and its supervised-wave executor are integrated. Merge
