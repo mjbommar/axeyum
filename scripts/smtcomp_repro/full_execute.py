@@ -15,6 +15,8 @@ from typing import Any, Callable
 from full_population import (
     CHECKPOINT_TERMINAL_FIELDS,
     SHA256,
+    SCHEDULER_DECISION_FIELDS,
+    SCHEDULER_DECISION_SCHEMA,
     THERMAL_MAX_INTERVAL_NS,
     THERMAL_STOP_MILLICELSIUS,
     WAVE_COUNT,
@@ -35,7 +37,20 @@ from resume_fs import (
 
 
 WAVE_OUTCOME_SCHEMA = "axeyum.smtcomp-credited-full-wave-outcome.v1"
+SCHEDULER_AUTHORIZATION_SCHEMA = (
+    "axeyum.smtcomp-credited-full-scheduler-authorization.v1"
+)
 CHECKPOINT_DIRECTORY = "full-wave-checkpoints"
+SCHEDULER_AUTHORIZATION_DIRECTORY = "full-scheduler-authorizations"
+SCHEDULER_AUTHORIZATION_FIELDS = {
+    "schema",
+    "event_index",
+    "admission_record_sha256",
+    "allocation_scheduler_state",
+    "thermal_observations",
+    "scheduler_decision",
+    "record_sha256",
+}
 
 
 def _expect(condition: bool, message: str) -> None:
@@ -129,6 +144,198 @@ def publish_wave_checkpoint(
     )[-1]
 
 
+def validate_scheduler_authorization(
+    authorization: dict[str, Any],
+    *,
+    admission_record_sha256: str,
+    schedule: dict[str, Any],
+    checkpoints: list[dict[str, Any]],
+    plan_sha256: str,
+    run_identity_sha256: str,
+    cell_id: str,
+) -> dict[str, Any]:
+    """Replay one durable scheduler authorization from its complete inputs."""
+
+    _expect(
+        isinstance(authorization, dict)
+        and set(authorization) == SCHEDULER_AUTHORIZATION_FIELDS
+        and authorization.get("schema") == SCHEDULER_AUTHORIZATION_SCHEMA
+        and authorization.get("record_sha256")
+        == _sealed(authorization)["record_sha256"],
+        "full scheduler authorization field/schema/seal mismatch",
+    )
+    event_index = authorization.get("event_index")
+    _expect(
+        type(event_index) is int
+        and event_index >= 0
+        and isinstance(admission_record_sha256, str)
+        and SHA256.fullmatch(admission_record_sha256)
+        and authorization.get("admission_record_sha256")
+        == admission_record_sha256,
+        "full scheduler authorization admission/index mismatch",
+    )
+    decision = authorization.get("scheduler_decision")
+    thermal = authorization.get("thermal_observations")
+    _expect(
+        isinstance(decision, dict)
+        and set(decision) == SCHEDULER_DECISION_FIELDS
+        and decision.get("schema") == SCHEDULER_DECISION_SCHEMA
+        and isinstance(thermal, list)
+        and all(isinstance(row, dict) for row in thermal),
+        "full scheduler authorization input mismatch",
+    )
+    completed_ids = decision.get("completed_checkpoint_sha256s")
+    _expect(
+        isinstance(completed_ids, list)
+        and len(completed_ids) <= len(checkpoints)
+        and completed_ids
+        == [row["record_sha256"] for row in checkpoints[: len(completed_ids)]],
+        "full scheduler authorization checkpoint prefix mismatch",
+    )
+    replayed = scheduler_decision(
+        schedule=schedule,
+        checkpoints=checkpoints[: len(completed_ids)],
+        plan_sha256=plan_sha256,
+        run_identity_sha256=run_identity_sha256,
+        cell_id=cell_id,
+        allocation_scheduler_state=authorization["allocation_scheduler_state"],
+        pause_requested=decision["pause_requested"],
+        cooldown_required=decision["cooldown_required"],
+        thermal_observations=thermal,
+        decided_at_ns=decision["decided_at_ns"],
+    )
+    _expect(
+        replayed == decision,
+        "full scheduler authorization decision replay mismatch",
+    )
+    return authorization
+
+
+def load_scheduler_authorizations(
+    run_dir: Path,
+    *,
+    admission_record_sha256: str,
+    schedule: dict[str, Any],
+    checkpoints: list[dict[str, Any]],
+    plan_sha256: str,
+    run_identity_sha256: str,
+    cell_id: str,
+) -> list[dict[str, Any]]:
+    """Load the immutable contiguous scheduler-authorization history."""
+
+    root = run_dir / SCHEDULER_AUTHORIZATION_DIRECTORY
+    if not root.exists():
+        return []
+    _expect(
+        root.is_dir() and not root.is_symlink(),
+        "full scheduler authorization directory mismatch",
+    )
+    paths = sorted(root.iterdir(), key=lambda path: path.name)
+    _expect(
+        all(path.is_file() and not path.is_symlink() for path in paths),
+        "unexpected full scheduler authorization artifact",
+    )
+    expected_names = [f"decision-{index:06d}.json" for index in range(len(paths))]
+    _expect(
+        [path.name for path in paths] == expected_names,
+        "full scheduler authorization inventory is not contiguous",
+    )
+    rows = []
+    previous_time = -1
+    previous_checkpoint_count = 0
+    for index, path in enumerate(paths):
+        row = validate_scheduler_authorization(
+            read_canonical_json(path),
+            admission_record_sha256=admission_record_sha256,
+            schedule=schedule,
+            checkpoints=checkpoints,
+            plan_sha256=plan_sha256,
+            run_identity_sha256=run_identity_sha256,
+            cell_id=cell_id,
+        )
+        decided_at = row["scheduler_decision"]["decided_at_ns"]
+        checkpoint_count = len(
+            row["scheduler_decision"]["completed_checkpoint_sha256s"]
+        )
+        _expect(
+            row["event_index"] == index
+            and decided_at >= previous_time
+            and checkpoint_count >= previous_checkpoint_count,
+            "full scheduler authorization history order mismatch",
+        )
+        previous_time = decided_at
+        previous_checkpoint_count = checkpoint_count
+        rows.append(row)
+    return rows
+
+
+def publish_scheduler_authorization(
+    run_dir: Path,
+    *,
+    admission_record_sha256: str,
+    allocation_scheduler_state: dict[str, Any],
+    thermal_observations: list[dict[str, Any]],
+    decision: dict[str, Any],
+    schedule: dict[str, Any],
+    checkpoints: list[dict[str, Any]],
+    plan_sha256: str,
+    run_identity_sha256: str,
+    cell_id: str,
+    phase_hook: Callable[[str], None] | None = None,
+) -> dict[str, Any]:
+    """Persist one replayable authorization before acting on its decision."""
+
+    root = run_dir / SCHEDULER_AUTHORIZATION_DIRECTORY
+    recover_orphan_temporaries(
+        root,
+        quarantine_root=run_dir / "quarantine",
+    )
+    existing = load_scheduler_authorizations(
+        run_dir,
+        admission_record_sha256=admission_record_sha256,
+        schedule=schedule,
+        checkpoints=checkpoints,
+        plan_sha256=plan_sha256,
+        run_identity_sha256=run_identity_sha256,
+        cell_id=cell_id,
+    )
+    authorization = _sealed(
+        {
+            "schema": SCHEDULER_AUTHORIZATION_SCHEMA,
+            "event_index": len(existing),
+            "admission_record_sha256": admission_record_sha256,
+            "allocation_scheduler_state": allocation_scheduler_state,
+            "thermal_observations": thermal_observations,
+            "scheduler_decision": decision,
+        }
+    )
+    validate_scheduler_authorization(
+        authorization,
+        admission_record_sha256=admission_record_sha256,
+        schedule=schedule,
+        checkpoints=checkpoints,
+        plan_sha256=plan_sha256,
+        run_identity_sha256=run_identity_sha256,
+        cell_id=cell_id,
+    )
+    atomic_install_json(
+        root,
+        f"decision-{len(existing):06d}.json",
+        authorization,
+        phase_hook=phase_hook,
+        quarantine_root=run_dir / "quarantine",
+    )
+    return load_scheduler_authorizations(
+        run_dir,
+        admission_record_sha256=admission_record_sha256,
+        schedule=schedule,
+        checkpoints=checkpoints,
+        plan_sha256=plan_sha256,
+        run_identity_sha256=run_identity_sha256,
+        cell_id=cell_id,
+    )[-1]
+
+
 @dataclass(frozen=True)
 class WaveHandle:
     allocation_id: str
@@ -174,6 +381,7 @@ def supervise_one_wave(
     now_ns: Callable[[], int],
     wait: Callable[[], None],
     pause_requested: Callable[[], bool],
+    authorize_decision: Callable[[dict[str, Any]], None],
 ) -> dict[str, Any]:
     """Launch and supervise at most one exact wave through durable terminals."""
 
@@ -192,6 +400,7 @@ def supervise_one_wave(
         thermal_observations=prewave_thermal_observations,
         decided_at_ns=decision_time,
     )
+    authorize_decision(decision)
     if decision["status"] != "launch":
         return _sealed(
             {
@@ -360,6 +569,7 @@ def supervise_admitted_wave(
     wait: Callable[[], None],
     pause_requested: Callable[[], bool],
     checkpoint_phase_hook: Callable[[str], None] | None = None,
+    authorization_phase_hook: Callable[[str], None] | None = None,
 ) -> dict[str, Any]:
     """Replay admission, derive cell identities, and persist one wave outcome."""
 
@@ -419,6 +629,22 @@ def supervise_admitted_wave(
         run_identity_sha256=admission["run_identity_sha256"],
         cell_id=admission["solver_id"],
     )
+
+    def authorize(decision: dict[str, Any]) -> None:
+        publish_scheduler_authorization(
+            run_dir,
+            admission_record_sha256=admission["record_sha256"],
+            allocation_scheduler_state=allocation_state,
+            thermal_observations=prewave_thermal_observations,
+            decision=decision,
+            schedule=schedule,
+            checkpoints=checkpoints,
+            plan_sha256=admission["plan_sha256"],
+            run_identity_sha256=admission["run_identity_sha256"],
+            cell_id=admission["solver_id"],
+            phase_hook=authorization_phase_hook,
+        )
+
     outcome = supervise_one_wave(
         schedule=schedule,
         checkpoints=checkpoints,
@@ -435,6 +661,7 @@ def supervise_admitted_wave(
         now_ns=now_ns,
         wait=wait,
         pause_requested=pause_requested,
+        authorize_decision=authorize,
     )
     if outcome["checkpoint"] is not None:
         publish_wave_checkpoint(

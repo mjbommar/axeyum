@@ -14,9 +14,12 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "scripts" / "smtcomp_repro"))
 
 from full_execute import (  # noqa: E402
+    load_scheduler_authorizations,
     load_wave_checkpoints,
+    publish_scheduler_authorization,
     publish_wave_checkpoint,
     supervise_admitted_wave,
+    validate_scheduler_authorization,
 )
 import full_execute as full_execute_module  # noqa: E402
 from full_coordinator import derive_full_execution_authority  # noqa: E402
@@ -26,6 +29,7 @@ from full_population import (  # noqa: E402
     build_schedule,
     build_wave_checkpoint,
     cumulative_benchmark_count,
+    scheduler_decision,
 )
 from full_result import CELL_RESULT_SCHEMA, publish_full_cell_result  # noqa: E402
 from multi_host import (  # noqa: E402
@@ -179,6 +183,87 @@ def prior_completion(solver_id: str) -> dict:
 
 
 class FullExecutionCheckpointTests(unittest.TestCase):
+    def test_scheduler_authorization_is_completion_last_and_replayable(self) -> None:
+        schedule = build_schedule(ENFORCEMENT_ID)
+        allocation_state = build_allocation_scheduler_state(
+            plan_sha256=PLAN_ID,
+            run_identity_sha256=RUN_ID,
+            cell_id=CELL_ID,
+            allocation_ids={row["allocation_id"] for row in schedule["allocations"]},
+            allocation_attempts=[],
+        )
+        decision = scheduler_decision(
+            schedule=schedule,
+            checkpoints=[],
+            plan_sha256=PLAN_ID,
+            run_identity_sha256=RUN_ID,
+            cell_id=CELL_ID,
+            allocation_scheduler_state=allocation_state,
+            pause_requested=True,
+            cooldown_required=False,
+            thermal_observations=[],
+            decided_at_ns=100,
+        )
+        with tempfile.TemporaryDirectory() as temp:
+            run_dir = Path(temp) / "run"
+
+            def interrupt(phase: str) -> None:
+                if phase == "after_temp_fsync":
+                    raise RuntimeError("fixture interruption")
+
+            common = {
+                "admission_record_sha256": "d" * 64,
+                "allocation_scheduler_state": allocation_state,
+                "thermal_observations": [],
+                "decision": decision,
+                "schedule": schedule,
+                "checkpoints": [],
+                "plan_sha256": PLAN_ID,
+                "run_identity_sha256": RUN_ID,
+                "cell_id": CELL_ID,
+            }
+            with self.assertRaisesRegex(RuntimeError, "fixture interruption"):
+                publish_scheduler_authorization(
+                    run_dir, **common, phase_hook=interrupt
+                )
+            self.assertFalse(
+                (
+                    run_dir
+                    / "full-scheduler-authorizations"
+                    / "decision-000000.json"
+                ).exists()
+            )
+            installed = publish_scheduler_authorization(run_dir, **common)
+            self.assertEqual(installed["scheduler_decision"], decision)
+            self.assertEqual(
+                load_scheduler_authorizations(run_dir, **{
+                    key: value
+                    for key, value in common.items()
+                    if key
+                    not in {
+                        "allocation_scheduler_state",
+                        "thermal_observations",
+                        "decision",
+                    }
+                }),
+                [installed],
+            )
+            orphans = list((run_dir / "quarantine" / "orphans").iterdir())
+            self.assertEqual(len(orphans), 1)
+
+            mutated = copy.deepcopy(installed)
+            mutated["scheduler_decision"]["status"] = "complete"
+            with self.assertRaisesRegex(ContractError, "decision replay mismatch"):
+                validate_scheduler_authorization(
+                    reseal(mutated),
+                    admission_record_sha256="d" * 64,
+                    schedule=schedule,
+                    checkpoints=[],
+                    plan_sha256=PLAN_ID,
+                    run_identity_sha256=RUN_ID,
+                    cell_id=CELL_ID,
+                )
+
     def test_admitted_entrypoint_derives_identities_and_persists_checkpoint(
         self,
     ) -> None:
@@ -214,6 +299,7 @@ class FullExecutionCheckpointTests(unittest.TestCase):
                 "run_identity_sha256": RUN_ID,
                 "plan_sha256": PLAN_ID,
                 "schedule_record_sha256": schedule["record_sha256"],
+                "record_sha256": "d" * 64,
             }
             outcome = {"status": "wave-completed", "checkpoint": first}
             allocation_ids = {
@@ -327,6 +413,23 @@ class FullExecutionCheckpointTests(unittest.TestCase):
                 )
             self.assertEqual(blocked["status"], "blocked-unclosed")
             launch.assert_not_called()
+            authorizations = load_scheduler_authorizations(
+                run_dir,
+                admission_record_sha256=admission["record_sha256"],
+                schedule=schedule,
+                checkpoints=[first],
+                plan_sha256=PLAN_ID,
+                run_identity_sha256=RUN_ID,
+                cell_id=CELL_ID,
+            )
+            self.assertEqual(len(authorizations), 1)
+            self.assertEqual(
+                authorizations[0]["allocation_scheduler_state"], blocked_state
+            )
+            self.assertEqual(
+                authorizations[0]["scheduler_decision"]["status"],
+                "blocked-unclosed",
+            )
 
             drifted = copy.deepcopy(admission)
             drifted["schedule_record_sha256"] = "0" * 64

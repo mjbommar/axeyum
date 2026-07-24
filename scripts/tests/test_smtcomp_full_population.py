@@ -1519,6 +1519,7 @@ class FullPopulationContractTests(unittest.TestCase):
                 now_ns=lambda: 2000,
                 wait=mock.Mock(),
                 pause_requested=pause,
+                authorize_decision=mock.Mock(),
             )
             self.assertEqual(outcome["status"], expected)
             self.assertEqual(
@@ -1598,6 +1599,7 @@ class FullPopulationContractTests(unittest.TestCase):
             now_ns=lambda: next(times),
             wait=lambda: None,
             pause_requested=lambda: False,
+            authorize_decision=mock.Mock(),
         )
         self.assertEqual(outcome["status"], "cell-stopped")
         self.assertIsNone(outcome["checkpoint"])
@@ -1646,6 +1648,7 @@ class FullPopulationContractTests(unittest.TestCase):
             now_ns=lambda: 2000,
             wait=mock.Mock(),
             pause_requested=lambda: False,
+            authorize_decision=mock.Mock(),
         )
         self.assertEqual(outcome["status"], "cell-stopped")
         self.assertEqual(outcome["launched_allocation_ids"], ["full-initial-00"])
@@ -1673,8 +1676,39 @@ class FullPopulationContractTests(unittest.TestCase):
             now_ns=lambda: 2000,
             wait=mock.Mock(),
             pause_requested=lambda: False,
+            authorize_decision=mock.Mock(),
         )
         self.assertEqual(outcome["status"], "blocked-unclosed")
+        launch.assert_not_called()
+
+    def test_supervisor_never_launches_before_durable_authorization(self) -> None:
+        schedule = build_schedule(ENFORCEMENT_ID)
+        launch = mock.Mock()
+
+        def reject_authorization(_decision: dict) -> None:
+            raise RuntimeError("authorization persistence failed")
+
+        with self.assertRaisesRegex(RuntimeError, "persistence failed"):
+            supervise_one_wave(
+                schedule=schedule,
+                checkpoints=[],
+                plan_sha256=PLAN_ID,
+                run_identity_sha256=RUN_ID,
+                cell_id=CELL_ID,
+                allocation_scheduler_state=scheduler_state(schedule),
+                cooldown_required=False,
+                prewave_thermal_observations=self.thermal_observations(
+                    schedule, wave_index=0, temperatures=(40, 40, 40)
+                ),
+                launch=launch,
+                poll_terminal=mock.Mock(),
+                observe_active=mock.Mock(),
+                stop_overheated=mock.Mock(),
+                now_ns=lambda: 2000,
+                wait=mock.Mock(),
+                pause_requested=lambda: False,
+                authorize_decision=reject_authorization,
+            )
         launch.assert_not_called()
 
     def test_readiness_requires_clean_origin_main_and_both_exact_green_gates(self) -> None:
