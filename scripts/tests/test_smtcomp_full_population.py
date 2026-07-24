@@ -35,6 +35,7 @@ from full_population import (  # noqa: E402
     shard_benchmark_count,
     validate_population_contract,
     validate_schedule,
+    validate_thermal_observation,
     validate_thermal_stop,
     validate_wave_checkpoint,
 )
@@ -543,6 +544,24 @@ class FullPopulationContractTests(unittest.TestCase):
         )[0]
         self.assertEqual(observation["temperature_millicelsius"], 39_750)
         self.assertEqual(observation["sensor_label"], "Tctl")
+        self.assertEqual(
+            bytes.fromhex(observation["sensors_json_hex"]), self.sensors_json(39.75)
+        )
+
+        for label, mutate in (
+            (
+                "claimed temperature",
+                lambda row: row.__setitem__("temperature_millicelsius", 39_751),
+            ),
+            ("raw bytes", lambda row: row.__setitem__("sensors_json_hex", "00")),
+            ("raw digest", lambda row: row.__setitem__("sensors_json_sha256", "0" * 64)),
+            ("raw length", lambda row: row.__setitem__("sensors_json_bytes", 1)),
+        ):
+            with self.subTest(label=label):
+                mutated = copy.deepcopy(observation)
+                mutate(mutated)
+                with self.assertRaises(ContractError):
+                    validate_thermal_observation(reseal(mutated))
 
         malformed = (
             b"{}",

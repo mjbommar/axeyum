@@ -22,7 +22,7 @@ from resume_contract import ContractError, digest
 POPULATION_SCHEMA = "axeyum.smtcomp-credited-full-population.v1"
 SCHEDULE_SCHEMA = "axeyum.smtcomp-credited-full-schedule.v1"
 WAVE_SCHEMA = "axeyum.smtcomp-credited-full-wave.v1"
-THERMAL_OBSERVATION_SCHEMA = "axeyum.smtcomp-credited-full-thermal-observation.v1"
+THERMAL_OBSERVATION_SCHEMA = "axeyum.smtcomp-credited-full-thermal-observation.v2"
 THERMAL_STOP_SCHEMA = "axeyum.smtcomp-credited-full-thermal-stop.v1"
 CHECKPOINT_SCHEMA = "axeyum.smtcomp-credited-full-wave-checkpoint.v2"
 SCHEDULER_DECISION_SCHEMA = "axeyum.smtcomp-credited-full-scheduler-decision.v4"
@@ -54,6 +54,7 @@ AXEYUM_INTERNAL_TIMEOUT_MS = 19_000
 THERMAL_STOP_MILLICELSIUS = 90_000
 THERMAL_RESUME_MILLICELSIUS = 80_000
 THERMAL_MAX_INTERVAL_NS = 60_000_000_000
+THERMAL_SENSOR_MAX_BYTES = 1024 * 1024
 THERMAL_SENSOR_CHIP = "k10temp-pci-00c3"
 THERMAL_SENSOR_LABEL = "Tctl"
 THERMAL_SENSOR_FIELD = "temp1_input"
@@ -104,6 +105,7 @@ THERMAL_OBSERVATION_FIELDS = {
     "sensor_field",
     "temperature_millicelsius",
     "observed_at_ns",
+    "sensors_json_hex",
     "sensors_json_sha256",
     "sensors_json_bytes",
     "record_sha256",
@@ -418,7 +420,11 @@ def build_thermal_observation(
 ) -> dict[str, Any]:
     """Parse and seal one exact-source ``sensors -j`` observation."""
 
-    if not isinstance(sensors_json, bytes) or not sensors_json:
+    if (
+        not isinstance(sensors_json, bytes)
+        or not sensors_json
+        or len(sensors_json) > THERMAL_SENSOR_MAX_BYTES
+    ):
         raise ContractError("sensors JSON must be non-empty bytes")
     _payload, millicelsius = _parse_sensors_json(sensors_json)
     observation = _sealed(
@@ -442,6 +448,7 @@ def build_thermal_observation(
             "sensor_field": THERMAL_SENSOR_FIELD,
             "temperature_millicelsius": millicelsius,
             "observed_at_ns": observed_at_ns,
+            "sensors_json_hex": sensors_json.hex(),
             "sensors_json_sha256": hashlib.sha256(sensors_json).hexdigest(),
             "sensors_json_bytes": len(sensors_json),
         }
@@ -456,6 +463,23 @@ def validate_thermal_observation(observation: dict[str, Any]) -> dict[str, Any]:
     ):
         raise ContractError("thermal observation field/schema mismatch")
     _validate_seal(observation)
+    raw_hex = observation.get("sensors_json_hex")
+    if not isinstance(raw_hex, str):
+        raise ContractError("thermal observation sensors JSON encoding mismatch")
+    try:
+        raw = bytes.fromhex(raw_hex)
+    except ValueError as exc:
+        raise ContractError("thermal observation sensors JSON encoding mismatch") from exc
+    if (
+        not raw
+        or len(raw) > THERMAL_SENSOR_MAX_BYTES
+        or len(raw) != observation.get("sensors_json_bytes")
+        or hashlib.sha256(raw).hexdigest() != observation.get("sensors_json_sha256")
+    ):
+        raise ContractError("thermal observation sensors JSON identity mismatch")
+    _payload, observed_temperature = _parse_sensors_json(raw)
+    if observed_temperature != observation.get("temperature_millicelsius"):
+        raise ContractError("thermal observation temperature replay mismatch")
     for field in ("plan_sha256", "run_identity_sha256", "sensors_json_sha256"):
         _require_sha256(observation.get(field), field)
     for field in ("cell_id", "allocation_id", "host_id"):
