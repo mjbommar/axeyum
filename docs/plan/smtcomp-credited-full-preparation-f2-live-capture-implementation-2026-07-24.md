@@ -1,7 +1,8 @@
 # SMT-COMP credited full-population F2 live-capture implementation
 
-Status: implementation complete on pushed topic commit `57482ad0`; not yet
-integrated, and no live F2 capture is authorized or claimed
+Status: implementation checkpoint on pushed topic commit `57482ad0`; the
+post-implementation [R2 correction](smtcomp-credited-full-preparation-f2-live-capture-r2-plan-2026-07-24.md)
+must land before integration, and no live F2 capture is authorized or claimed
 
 Date: 2026-07-24
 
@@ -103,8 +104,12 @@ ok`.
 
 ## Integration and authorization boundary
 
-This commit is implementation evidence, not a live F2 result. The integration
-owner must land `57482ad0` and this result, then establish an exact clean green
+This commit is implementation evidence, not a live F2 result. A
+post-implementation audit found that exact sentinel environment identity,
+finalization-time deadline enforcement, and the completion-bound remote-main
+check require the source-first R2 correction before integration. The
+integration owner must land the corrected implementation and this result, then
+establish an exact clean green
 `HEAD == origin/main == git ls-remote origin main` state. Only after that may
 the separately reviewed C5 procedure build the release binary and invoke this
 operator with the exact repaired-P0 preparation.
@@ -112,4 +117,5 @@ operator with the exact repaired-P0 preparation.
 Any resulting `launch_authorized=false` root remains review input only. It must
 be independently verified, documented, and integrated byte-for-byte before a
 separate F3 acceptance is constructed. No allocation or solver launch is
-authorized by this implementation checkpoint.
+authorized by this implementation checkpoint. Commit `57482ad0` by itself is
+not ready to land.
