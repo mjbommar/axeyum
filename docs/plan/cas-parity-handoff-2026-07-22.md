@@ -12,18 +12,118 @@ elsewhere in `docs/plan/`). Read this file first when resuming.
 - **Branch/worktree discipline:** follow the current
   [multi-agent operations guide](../contributor-guide/multi-agent-operations.md):
   work only in the dedicated CAS worktree on an `agent/cas/*` branch, push that
-  branch, and leave `main` to the integration owner. The current implementation
-  increment is `agent/cas/gap-probe-wave-twenty-three`, with source commit
-  `bd7d251a` integrated exactly by merge `a317a502`; do not rebase topic work
-  onto `main` ahead of the integration owner.
-- **Tests:** `565` unit + `147` doctests, **all green**, warning-denied workspace
-  all-target/all-feature Clippy-clean, strict stable/nightly rustdoc-green,
-  wasm-green, links-green, and whitespace-clean.
+  branch, and leave `main` to the integration owner. The paused implementation
+  increment is `agent/cas/gap-probe-wave-twenty-four`, with clean local source
+  commit `01d47334`; it is **not pushed or integrated**. Its exact base is the
+  wave-twenty-three docs merge `a200c050`. Do not rebase topic work onto `main`
+  ahead of the integration owner.
+- **Tests:** the last fully closed checkpoint remains wave twenty-three at
+  `565` unit + `147` doctests, all green. Wave twenty-four adds one unit
+  regression (expected total `566`). Focused and broad source gates are green,
+  and every emitted result from the thermally managed full run was green,
+  including both long moment-family tests. The process exited and cleaned its
+  guarded temp directory, but its final exit summary and doctest summary were
+  unavailable after the tool session closed. Therefore the wave-twenty-four
+  full gate is **not claimed complete** and must be rerun on resume.
 - **Source of truth for capabilities:** `docs/research/10-cas/README.md`
   (capability table) and `docs/research/10-cas/diary.md` (chronological entries;
-  latest is **Entry 37b05**). Keep both in sync when landing features.
+  latest integrated entry is **Entry 37b05**). Wave twenty-four documentation
+  is deliberately deferred until its source commit is fully gated and
+  integrated. Keep both files in sync when landing features.
 - **Method that works:** empirical **gap-probing** (below). It found every recent
   feature *and* a serious infinite-hang regression.
+
+---
+
+## 0. Pause checkpoint: wave twenty-four
+
+This section is the authoritative resume point for the paused CAS lane.
+
+### Exact repository state
+
+- Worktree: `/nas4/data/workspace-infosec/claude-axeyum-cas-work`
+- Branch: `agent/cas/gap-probe-wave-twenty-four`
+- HEAD: `01d47334c9ccd40c1ff5cb30ec56d2de0891ed69`
+  (`cas: prove geometric decay rates exactly`)
+- Base: `a200c050` (`merge(cas): record exact continuous-head limits (docs)`)
+- Worktree: clean at pause time
+- Remote/integration: source commit is not pushed and has no integration merge
+- Live work: no CAS test, Cargo parent, thermal guard, or guarded temp directory
+  remains
+
+### What the source checkpoint changes
+
+Wave twenty-four audits the floating proof boundary in geometric exponential
+limits. The pre-change classifier evaluated a symbolic exponential rate as
+`f64`; Machin's exact identity
+`16 atan(1/5) - 4 atan(1/239) - pi = 0` acquired the positive residual
+`4.440892098500626e-16` and could falsely certify a zero asymptote. The source
+checkpoint removes that numeric decision path and instead:
+
+- extracts the exponential rate as an exact symbolic linear coefficient;
+- proves signs for bounded rational combinations of logarithms of positive
+  exact rationals, including exact product comparison for mixed log signs;
+- declines on unsupported transcendental mixtures and resource overflow;
+- preflights hostile public exponents around exponential heads before generic
+  normalization, so direct and nested `u32::MAX` powers return promptly; and
+- adds `geometric_decay_requires_an_exact_logarithmic_rate_sign`, covering
+  exact log signs and cancellation, rational offsets, hostile powers, growth,
+  and the Machin zero and `+/- 1e-17` controls.
+
+An independent rational tangent calculation proved the Machin identity exactly:
+both sides reduce to `13651680/815616479`. SymPy left the Machin rate's sign and
+limits unresolved while agreeing on the pure logarithmic controls. The correct
+boundary is therefore fail-closed, not numeric agreement. No public expression
+head, operator, backend, evidence format, or logic fragment was added; no ADR
+is required.
+
+### Verification completed before pause
+
+- Focused regression: green.
+- Broad filters: `limits_` 19/19, `geometric` 9/9, and `infinite_sum` 2/2
+  green.
+- Warning-denied crate all-target/all-feature Clippy: green after extracting
+  `LimitPreflight`; no lint suppression was added.
+- Non-mutating formatter audit of owned lines: green.
+- `git diff --check`: green before the source commit.
+- Thermally managed full run: every emitted unit result was green, including
+  `squared_binomial_falling_moment_family_is_checked` and
+  `squared_binomial_moment_family_is_checked`. Later emitted WZ tests were also
+  green. The command process then exited, but the tool session no longer
+  exposed its final summary/exit status. Do not convert this observation into a
+  completed `566 unit + 147 doctest` gate.
+
+### Ordered resume procedure
+
+1. Confirm the exact clean state:
+
+   ```bash
+   cd /nas4/data/workspace-infosec/claude-axeyum-cas-work
+   git status --short --branch
+   git rev-parse HEAD
+   # expect branch agent/cas/gap-probe-wave-twenty-four and HEAD 01d47334...
+   ```
+
+2. Rerun the complete guarded CAS test command from section 2 and retain its
+   final `566`-unit and `147`-doctest summaries. Use one build job, two test
+   threads, and the established thermal stop/resume guard if the shared host is
+   contended. Never restart a long test merely because it is thermally paused.
+
+3. Run the still-outstanding gates exactly as listed in section 2: workspace
+   warning-denied Clippy, WASM build, strict stable and nightly rustdoc, link
+   check, `git diff --check`, and the non-mutating owned-line formatter audit.
+
+4. Only after every gate is green, push
+   `agent/cas/gap-probe-wave-twenty-four` for the integration owner. Verify the
+   integration merge by exact `crates/axeyum-cas/src/lib.rs` blob identity and
+   stable patch identity.
+
+5. Cut `agent/cas/gap-probe-wave-twenty-four-docs` from that integration merge.
+   Update `STATUS.md`, this handoff, `docs/research/10-cas/README.md` to `566`
+   units, and append diary Entry 37b06. Commit and push only those owned docs,
+   then verify their exact integration.
+
+6. Do not start wave twenty-five until step 5 is closed.
 
 ---
 
@@ -1093,9 +1193,9 @@ esac
 export AXEYUM_CAS_TMP
 trap 'find "$AXEYUM_CAS_TMP" -depth -delete' EXIT
 git rev-parse --abbrev-ref HEAD        # → agent/cas/...
-git merge-base --is-ancestor bd7d251a HEAD
+git merge-base --is-ancestor a200c050 HEAD
 CARGO_BUILD_JOBS=1 TMPDIR="$AXEYUM_CAS_TMP" cargo test -p axeyum-cas --jobs 1
-# → 565 unit + 147 doctests green
+# wave 24 target → 566 unit + 147 doctests green
 ```
 Then: read `docs/research/10-cas/diary.md` tail for the latest context, and pick
 up from §6 or resume the gap-probing loop. Push the green owned topic branch;
