@@ -383,8 +383,8 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
-- **2026-07-24 — the missing credited-full F2 live-capture operator is
-  implemented, gated, and pushed; no live action is authorized.** Merge `466618dd`
+- **2026-07-24 — the credited-full F2 live-capture implementation is pushed,
+  but a post-implementation R2 audit blocks integration and live action.** Merge `466618dd`
   has integrated the SMT-COMP F3 coordinator/admission/scheduler batch, and the
   later Lean filesystem decoupling removes the historical `resume_fs.py`
   cross-lane pin. The
@@ -405,9 +405,15 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   main`, foundational-resource and link gates, and full `just check` all pass;
   the full gate's retained terminal result is exit zero. The
   [implementation result](docs/plan/smtcomp-credited-full-preparation-f2-live-capture-implementation-2026-07-24.md)
-  records the exact boundary. Next: integrate the implementation and result,
-  establish clean green exact main, build the release binary, and only then run
-  the separately reviewed F2 capture. No host
+  records the checkpoint. The
+  [R2 correction](docs/plan/smtcomp-credited-full-preparation-f2-live-capture-r2-plan-2026-07-24.md)
+  now freezes three repairs found before integration: sentinels must receive
+  exactly the sealed three-variable environment rather than inherited process
+  state; the live completion timestamp must be sampled after artifact inventory;
+  and exact local/tracking/remote main must be rechecked immediately before
+  completion-last installation. Next: implement and gate R2, integrate only the
+  corrected topic, establish clean green exact main, build the release binary,
+  and only then run the separately reviewed F2 capture. No host
   probe, sentinel, NAS preparation root, acceptance record, allocation, or
   solver wave has been created.
 
@@ -8763,6 +8769,14 @@ plan is built and committed on the current branch:
 | P5.5 | External target, measured | **DONE (bounded v1, ADR-0323--0338):** authenticated Tock capture plus eight rechecked dual-DRAT proofs and six replayed controls, UNKNOWN=0, DISAGREE=0. Query time 12.700 s; fresh outer wall 50.745 s; peak RSS 1,256,496 KiB; zero OOM deltas. The committed case study compares exact target validation, universal coverage, trust, effort, artifact boundaries, and limits. No Tock bug was found, so no upstream issue is applicable. This is not a speed or whole-kernel claim. |
 
 ## Changelog
+
+- **2026-07-24 — Withheld the F2 capture topic from integration after a
+  completion-boundary audit.** The source-first R2 plan closes three defects in
+  `57482ad0`: unrecorded inherited sentinel environment, an early caller-supplied
+  completion timestamp that could outlive the 30-minute window during artifact
+  inventory, and no final remote-main recheck at the completion-last edge. No
+  live action occurred; R2 implementation and full gating are required before
+  integration.
 
 - **2026-07-24 — Implemented and pushed the credited-full F2 live-capture
   operator without taking live action.** Commit `57482ad0` adds exact-main and

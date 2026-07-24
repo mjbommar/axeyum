@@ -416,7 +416,13 @@ gate.
    [implementation result](../smtcomp-credited-full-preparation-f2-live-capture-implementation-2026-07-24.md)
    records pushed topic commit `57482ad0`, the exact no-launch boundary, focused
    mutation coverage, a green scoped gate, and an exit-zero full `just check`.
-   Integration and the separately authorized live capture remain open.
+   The subsequent
+   [R2 correction](../smtcomp-credited-full-preparation-f2-live-capture-r2-plan-2026-07-24.md)
+   preregisters three pre-integration repairs: an exact non-inherited sentinel
+   environment, a finalization-time deadline check after artifact inventory,
+   and an exact remote-main recheck at completion-last publication. Integration
+   is on hold until R2 is implemented; the separately authorized live capture
+   also remains open.
 
 The same implementation rule continues to apply: prove each new mechanism and
 its destructive/interruption tests on a tiny corpus before spending the full
@@ -482,6 +488,8 @@ Repository:
   `docs/plan/smtcomp-credited-full-preparation-f2-live-capture-plan-2026-07-24.md`;
 - credited full-population F2 live-capture R1 correction:
   `docs/plan/smtcomp-credited-full-preparation-f2-live-capture-r1-plan-2026-07-24.md`;
+- credited full-population F2 live-capture R2 correction:
+  `docs/plan/smtcomp-credited-full-preparation-f2-live-capture-r2-plan-2026-07-24.md`;
 - credited full-population F2 live-capture implementation result:
   `docs/plan/smtcomp-credited-full-preparation-f2-live-capture-implementation-2026-07-24.md`;
 - credited full-population publication fixture:
@@ -548,7 +556,9 @@ NAS (shared, corpus read-only in practice):
    [R1 correction](../smtcomp-credited-full-preparation-f2-live-capture-r1-plan-2026-07-24.md),
    is implemented by pushed topic commit `57482ad0` and recorded in the
    [implementation result](../smtcomp-credited-full-preparation-f2-live-capture-implementation-2026-07-24.md).
-   Integrate that exact implementation and result, then revalidate exact
+   Do not integrate that checkpoint alone. First implement and gate the
+   [R2 correction](../smtcomp-credited-full-preparation-f2-live-capture-r2-plan-2026-07-24.md),
+   then integrate the corrected implementation and result and revalidate exact
    local/tracking/remote `main` equality and both
    registered gates before any host probe or NAS mutation. The separately
    reviewed operator may publish only a process-free
