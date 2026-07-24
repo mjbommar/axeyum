@@ -425,6 +425,9 @@ class LeanExecutionStoreContractTests(unittest.TestCase):
             )
             relocated = copy.deepcopy(process)
             relocated_root = Path("/var/tmp/independent-axeyum-worktree")
+            relocated["command"][0] = (
+                "/opt/hostedtoolcache/Python/3.13.7/x64/bin/python3.13"
+            )
             relocated["command"][1] = str(
                 relocated_root / STORE.WORKER.relative_to(STORE.ROOT)
             )
@@ -439,6 +442,7 @@ class LeanExecutionStoreContractTests(unittest.TestCase):
                     target_path=target,
                     phase=phase,
                     evidence_directory=evidence,
+                    expected_executable_sha256=process["executable_sha256"],
                 ),
                 [],
             )
@@ -451,6 +455,19 @@ class LeanExecutionStoreContractTests(unittest.TestCase):
                     target_path=target,
                     phase=phase,
                     evidence_directory=evidence,
+                    expected_executable_sha256=process["executable_sha256"],
+                ),
+            )
+            relocated["command"][0] = "/usr/bin/not-the-recorded-python"
+            relocated["command_sha256"] = STORE.digest(relocated["command"])
+            self.assertIn(
+                "kill cell command semantics drift",
+                STORE.validate_process_evidence(
+                    relocated,
+                    target_path=target,
+                    phase=phase,
+                    evidence_directory=evidence,
+                    expected_executable_sha256=process["executable_sha256"],
                 ),
             )
             changed = copy.deepcopy(process)

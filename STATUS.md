@@ -432,6 +432,10 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   jobs now use a full Git checkout because the store gate deliberately proves
   that its sealed implementation revision is an ancestor and reads source
   blobs from that commit; a depth-one checkout cannot establish either fact.
+  Historical kill-cell validation likewise compares the Python host by role
+  while checking its exact recorded executable hash, so moving from the
+  retained `/usr/bin/python3.14` to the hosted runner path does not weaken or
+  falsely reject the sealed evidence.
 
 - **2026-07-23 — credited SMT-COMP full-population F2 is implementation-ready,
   not live-ready.** F1 and its supervised-wave executor are integrated. Merge

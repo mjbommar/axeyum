@@ -69,6 +69,9 @@ RESULT_SCHEMA = "axeyum-lean-execution-store-result-v1"
 SUMMARY_SCHEMA = "axeyum-lean-execution-store-summary-v1"
 PREREGISTRATION_COMMIT = "8bad614645137164eafec6ab6cf068e5035695b5"
 HISTORICAL_IMPLEMENTATION_REVISION = "afe7db6e04c78fcbce04c6f502268ce2d9934121"
+HISTORICAL_RESULT_EXECUTABLE_SHA256 = (
+    "b8d8288faefdd300201f43fcf00f6f539a27218eeed3a3dff5ab10b9c4c99700"
+)
 CONTROL_ID = "interrupted-resumed"
 CREDIT_CLASS = "synthetic-no-credit"
 STORAGE_CLASS_IDS = (
@@ -101,6 +104,7 @@ EXPECTED_ORPHANS = {
 SAFE_ID = re.compile(r"[a-z0-9][a-z0-9.-]{0,127}\Z")
 HEX40 = re.compile(r"[0-9a-f]{40}\Z")
 HEX64 = re.compile(r"[0-9a-f]{64}\Z")
+PYTHON_EXECUTABLE = re.compile(r"python3(?:[.]\d+)?\Z")
 MOUNT_FIELDS = {
     "mount_point",
     "mount_root",
@@ -1078,6 +1082,7 @@ def validate_process_evidence(
     evidence_directory: Path,
     expected_worker_sha256: str | None = None,
     expected_primitive_sha256: str | None = None,
+    expected_executable_sha256: str | None = None,
     expected_worker_relative: Path | None = None,
     expected_pythonpath_relative: Path | None = None,
 ) -> list[str]:
@@ -1096,7 +1101,7 @@ def validate_process_evidence(
         failures.append("kill cell process/group identity drift")
     command = process.get("command")
     expected_prefixes = (
-        os.path.realpath(sys.executable),
+        None,
         None,
         "--directory",
         None,
@@ -1113,6 +1118,12 @@ def validate_process_evidence(
     if not isinstance(command, list) or len(command) != len(expected_prefixes):
         failures.append("kill cell command fields drift")
     else:
+        if (
+            not isinstance(command[0], str)
+            or not Path(command[0]).is_absolute()
+            or PYTHON_EXECUTABLE.fullmatch(Path(command[0]).name) is None
+        ):
+            failures.append("kill cell command semantics drift")
         for actual, expected in zip(command, expected_prefixes, strict=True):
             if expected is not None and actual != expected:
                 failures.append("kill cell command semantics drift")
@@ -1155,8 +1166,9 @@ def validate_process_evidence(
         failures.append("kill cell environment identity drift")
     if process.get("command_sha256") != digest(command):
         failures.append("kill cell command identity drift")
-    executable = Path(os.path.realpath(sys.executable))
-    if process.get("executable_sha256") != sha256_file(executable):
+    if expected_executable_sha256 is None:
+        expected_executable_sha256 = sha256_file(Path(os.path.realpath(sys.executable)))
+    if process.get("executable_sha256") != expected_executable_sha256:
         failures.append("kill cell executable identity drift")
     if expected_worker_sha256 is None:
         expected_worker_sha256 = sha256_file(WORKER)
@@ -1204,6 +1216,7 @@ def validate_cell(
     evidence_directory: Path,
     expected_worker_sha256: str | None = None,
     expected_primitive_sha256: str | None = None,
+    expected_executable_sha256: str | None = None,
     expected_worker_relative: Path | None = None,
     expected_pythonpath_relative: Path | None = None,
 ) -> list[str]:
@@ -1280,6 +1293,7 @@ def validate_cell(
                 evidence_directory=evidence_directory,
                 expected_worker_sha256=expected_worker_sha256,
                 expected_primitive_sha256=expected_primitive_sha256,
+                expected_executable_sha256=expected_executable_sha256,
                 expected_worker_relative=expected_worker_relative,
                 expected_pythonpath_relative=expected_pythonpath_relative,
             )
@@ -1306,6 +1320,7 @@ def validate_evidence_root(
     *,
     expected_worker_sha256: str | None = None,
     expected_primitive_sha256: str | None = None,
+    expected_executable_sha256: str | None = None,
     expected_worker_relative: Path | None = None,
     expected_pythonpath_relative: Path | None = None,
 ) -> tuple[dict[str, Any], list[dict[str, Any]]]:
@@ -1373,6 +1388,7 @@ def validate_evidence_root(
             evidence_directory=directory,
             expected_worker_sha256=expected_worker_sha256,
             expected_primitive_sha256=expected_primitive_sha256,
+            expected_executable_sha256=expected_executable_sha256,
             expected_worker_relative=expected_worker_relative,
             expected_pythonpath_relative=expected_pythonpath_relative,
         )
@@ -1515,15 +1531,18 @@ def build_result_authority(evidence_root: Path, *, implementation_revision: str)
         primitive_source = "scripts/smtcomp_repro/resume_fs.py"
         worker_relative = Path(worker_source)
         pythonpath_relative = Path("scripts/smtcomp_repro")
+        executable_sha256 = HISTORICAL_RESULT_EXECUTABLE_SHA256
     else:
         worker_source = WORKER.relative_to(ROOT).as_posix()
         primitive_source = PRIMITIVE.relative_to(ROOT).as_posix()
         worker_relative = WORKER.relative_to(ROOT)
         pythonpath_relative = LEAN_SCRIPTS.relative_to(ROOT)
+        executable_sha256 = None
     storage_document, cells = validate_evidence_root(
         evidence_root,
         expected_worker_sha256=source_hashes[worker_source],
         expected_primitive_sha256=source_hashes[primitive_source],
+        expected_executable_sha256=executable_sha256,
         expected_worker_relative=worker_relative,
         expected_pythonpath_relative=pythonpath_relative,
     )
