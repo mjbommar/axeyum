@@ -938,7 +938,7 @@ Out of scope:
 - [ ] How must Lean's fixed quotient package be admitted, reduced, imported,
       identified, and rendered without trusting wire declarations or exposing
       a partial package?
-  - Proposed answer (2026-07-23): validate canonical `Eq`/`Eq.refl`, derive and
+  - Offline M1--M3 result (2026-07-23): validate canonical `Eq`/`Eq.refl`, derive and
     atomically admit exactly `Quot`, `Quot.mk`, `Quot.lift`, and `Quot.ind`, and
     permit no ordinary single-declaration insertion. Reproduce pinned Lean's
     exact WHNF-major `lift`/`ind` reductions, including three-argument
@@ -949,8 +949,10 @@ Out of scope:
     built-ins rather than redeclaring them in reconstruction. See
     [proposed ADR-0365](../09-decisions/adr-0365-preregister-lean-quotient-package.md)
     and the
-    [TL2.10 plan](../../plan/lean-quotient-package-tl2.10-plan-2026-07-23.md).
-    No admission, differential, construct-matrix, or parity credit exists at P0.
+    [TL2.10 plan](../../plan/lean-quotient-package-tl2.10-plan-2026-07-23.md)
+    and [offline result](../../plan/lean-quotient-package-m1-m3-result-2026-07-23.md).
+    The exact selected import row now passes; the question stays open until the
+    separately authorized M4 differential closes and ADR-0365 is accepted.
 - [x] Should the proof-assistant bridge export obligations to Lean, import
       checked rewrite rules from Lean, or both — and how early is a
       Lean-checked rewrite-rule library worth prototyping?

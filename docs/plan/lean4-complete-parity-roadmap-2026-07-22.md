@@ -28,7 +28,7 @@ Current machine-derived state:
 | Surface | Current evidence | What it does not prove |
 |---|---|---|
 | K0 independent checker | 1/1 profile rows | source-language or workflow compatibility |
-| K1 versioned import | 4/5 profile rows | String/quotient closure or complete official construct coverage |
+| K1 versioned import | 5/5 selected profile rows | String closure and a dependency-closed complete declaration/core-term authority |
 | K2-K6 | 0 satisfied rows | parser/elaborator, tactics, project/editor, runtime, or ecosystem parity |
 | U0-U9 | 0 complete authorities | a complete executable denominator for any terminal population |
 | A0-A11 | 0 complete axes | end-to-end native behavior on any complete required population |
@@ -436,12 +436,15 @@ execution, and content/dependency-complete U2 classification.
 6. Repair and attest the remote official-Lean executable identity across
    changed working directories without converting official evidence into
    native parity credit.
-7. Close K1's String-literal and quotient-package roots, regenerate the
-   construct matrix, and preserve fail-closed decline codes for anything still
-   unsupported. Quotient TL2.10 P0 is now source-backed and preregistered under
-   proposed ADR-0365; it grants no admission or K1 credit until its native,
-   generated, importer, identity, renderer, differential, and publication
-   exits close. String remains a separate broader dependency closure.
+7. Close K1's String-literal root, define the dependency-closed complete K1
+   authority, and preserve fail-closed decline codes for anything still
+   unsupported. Quotient TL2.10's
+   [offline M1--M3 result](lean-quotient-package-m1-m3-result-2026-07-23.md)
+   now closes native admission/reduction, generated seams, exact import,
+   identity, renderer, mutation, and publication evidence for its selected
+   root. Its authorized M4 differential and final acceptance remain open under
+   proposed ADR-0365; selected 5/5 is not complete K1. String remains a
+   separate broader dependency closure.
 8. Register the dependency-closed U3 `Init`/`Std`/Lean-module population and
    classify/discharge the 65 prelude assumptions instead of treating import
    counts as trust closure.

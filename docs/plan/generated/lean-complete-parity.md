@@ -18,7 +18,7 @@ These facts are regenerated from existing manifests. They are scoped evidence, n
 
 - Compatibility contract: 12 rows.
   - `K0-checker`: 1/1 rows satisfy that bounded profile.
-  - `K1-import`: 4/5 rows satisfy that bounded profile.
+  - `K1-import`: 5/5 rows satisfy that bounded profile.
   - `K2-source`: 0/2 rows satisfy that bounded profile.
   - `K3-proof`: 0/1 rows satisfy that bounded profile.
   - `K4-workflow`: 0/1 rows satisfy that bounded profile.
@@ -40,7 +40,7 @@ These facts are regenerated from existing manifests. They are scoped evidence, n
 - Lean external acceptance controls: 3 process attempts, 1 retained failure, 2 completed controls, and 67 files / 142,523 bytes; 0 U2 cases, 0 official outcomes, 0 Axeyum outcomes, 0 paired cells, 0 performance rows, and 0 parity credit. The real controls qualify the local execution path only.
 - TL0.6.3 local official execution: 4 process attempts, 2 incomplete, 2 decided official outcomes from 3678 parent-selected cases, 1 pass, 1 failure, 0 Axeyum outcomes, 0 paired cells, and 0 parity credit. Attempt 003 stopped before runner import; attempt 004 passed the same unique singleton. One observed case with no Axeyum result does not complete U2 or establish a semantic pair.
 - TL0.6.3 M2 offline execution contract: 64 ordered cases from `compile/uint_fold.lean` through `docparse/block_0004.txt`; live execution surface is `false`, with 0 official outcomes and 0 parity credit. This validates the frozen specification, harness rendering, discovery, JUnit, artifact closure, and credit projection plus a 64-case completion-last immutable store. The one-shot run command is `true` while live execution observed remains `false`; this is not a process result.
-- Implementation ledger: 140 rows; `DONE`=27, `PARTIAL`=8, `TODO`=105, `BLOCKED`=0.
+- Implementation ledger: 139 rows; `DONE`=27, `PARTIAL`=8, `TODO`=104, `BLOCKED`=0.
 
 ## U0-U9 population authorities
 

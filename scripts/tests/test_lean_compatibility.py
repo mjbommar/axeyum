@@ -35,6 +35,7 @@ class LeanCompatibilityContractTests(unittest.TestCase):
         self.assertEqual(first, second)
         self.assertIn("| `K1-import` |", first)
         self.assertIn("`literal-string-typing`", first)
+        self.assertNotIn("`quotient-package`", first)
         self.assertNotIn("`inductive-mutual`", first)
         self.assertNotIn("`inductive-nested`", first)
         self.assertNotIn("`literal-nat-typing`", first)
@@ -62,6 +63,8 @@ class LeanCompatibilityContractTests(unittest.TestCase):
 
     def test_declines_require_registered_codes_and_codes_require_declines(self) -> None:
         row = self.row("lean4export-quotient-root")
+        row["states"]["translated"] = "declined"
+        row["states"]["admitted"] = "not_attempted"
         row["decline_codes"] = []
         self.assertTrue(
             any("declined assurance requires a decline code" in failure for failure in self.failures())
@@ -69,13 +72,13 @@ class LeanCompatibilityContractTests(unittest.TestCase):
 
         self.data = GEN.load_manifest()
         row = self.row("lean4export-flat-fixture")
-        row["decline_codes"] = ["quotient-package"]
+        row["decline_codes"] = ["literal-string-typing"]
         self.assertTrue(
             any("decline code without a declined assurance" in failure for failure in self.failures())
         )
 
         self.data = GEN.load_manifest()
-        row = self.row("lean4export-quotient-root")
+        row = self.row("lean4export-flat-fixture")
         row["decline_codes"] = ["invented-code"]
         self.assertTrue(
             any("unregistered decline codes" in failure for failure in self.failures())

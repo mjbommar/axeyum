@@ -1,7 +1,7 @@
 {
   "version": 1,
   "title": "Axeyum Lean 4.30 compatibility assurance contract",
-  "as_of": "2026-07-22",
+  "as_of": "2026-07-23",
   "target": {
     "lean_version": "4.30.0",
     "lean_commit": "d024af099ca4bf2c86f649261ebf59565dc8c622",
@@ -91,13 +91,6 @@
       "owner": "axeyum-lean-kernel",
       "source_path": "crates/axeyum-lean-import/src/lib.rs",
       "source_marker": "\"literal-string-typing\""
-    },
-    {
-      "code": "quotient-package",
-      "meaning": "The fixed quotient package is outside the current admission profile.",
-      "owner": "axeyum-lean-kernel",
-      "source_path": "crates/axeyum-lean-import/src/lib.rs",
-      "source_marker": "\"quotient-package\""
     }
   ],
   "rows": [
@@ -283,15 +276,15 @@
       "profile": "K1-import",
       "states": {
         "parsed": "succeeded",
-        "translated": "declined",
-        "admitted": "not_attempted",
+        "translated": "succeeded",
+        "admitted": "succeeded",
         "official_admitted": "succeeded",
         "source_elaborated": "succeeded",
         "proof_checked": "not_attempted",
         "workflow_reproduced": "not_attempted",
         "runtime_reproduced": "not_attempted"
       },
-      "decline_codes": ["quotient-package"],
+      "decline_codes": [],
       "evidence": [
         {
           "kind": "fixture",
@@ -301,10 +294,15 @@
         {
           "kind": "test",
           "path": "crates/axeyum-lean-import/tests/lean4export_v31.rs",
-          "detail": "Stable first decline is quotient-package at line 65."
+          "detail": "TL2.10 imports the exact closure atomically as seven declarations with zero axioms, computes Quot.lift, and rejects package/wire/publication mutations."
+        },
+        {
+          "kind": "document",
+          "path": "docs/plan/lean-quotient-package-m1-m3-result-2026-07-23.md",
+          "detail": "Offline M1-M3 kernel, reduction, importer, identity, renderer, and generated-seam evidence; the separate pinned-Lean M4 differential remains open."
         }
       ],
-      "residual": "TL2.10 owns the fixed quotient package and reductions."
+      "residual": "This exact K1 root passes offline; M4 official reduction differential and broader String/complete-K1 authority remain open."
     },
     {
       "id": "official-source-selected-reconstruction",
