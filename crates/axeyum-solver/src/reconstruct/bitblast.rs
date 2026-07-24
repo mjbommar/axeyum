@@ -339,7 +339,11 @@ fn alethe_bv_width(ctx: &ReconstructCtx, term: &AletheTerm) -> Option<usize> {
             ("concat", [hi, lo]) => Some(alethe_bv_width(ctx, hi)? + alethe_bv_width(ctx, lo)?),
             _ => None,
         },
-        AletheTerm::Indexed { op, indices, args } if op == "extract" => {
+        AletheTerm::Indexed {
+            op,
+            indices,
+            args: _,
+        } if op == "extract" => {
             let [hi, lo] = indices.as_slice() else {
                 return None;
             };

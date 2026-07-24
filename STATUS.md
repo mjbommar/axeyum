@@ -407,7 +407,12 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   `crossbeam-epoch` 0.9.18 was covered by RUSTSEC-2026-0204. The follow-up
   declares the workspace license and updates the lockfile to the fixed 0.9.20;
   local `cargo deny check`, the WASM crate check, formatting, and diff checks
-  pass.
+  pass. The exact-SHA rerun then exposed an independent Rust 1.88 boundary: a
+  newer `if let` match guard in checked MIR reflection. It is now expressed as
+  an ordinary exhaustive match, and the adjacent bitblast width matcher no
+  longer binds an unused field. A fresh local Rust 1.88 workspace check,
+  all-target/all-feature Clippy, the focused Cargo MIR build test, formatting,
+  `cargo-deny`, and diff checks pass.
 
 - **2026-07-23 — credited SMT-COMP full-population F2 is implementation-ready,
   not live-ready.** F1 and its supervised-wave executor are integrated. Merge

@@ -661,11 +661,13 @@ fn validate_call_inventory(function: &Function, calls: &CallMode<'_>) -> Result<
         })
         .collect::<Vec<_>>();
     match calls {
-        CallMode::Reject if let Some(span) = call_spans.first().copied() => Err(reflect_error(
-            ReflectErrorKind::UnsupportedCall,
-            span,
-            "checked scalar MIR is call-free unless an explicit verified resolver is supplied",
-        )),
+        CallMode::Reject => call_spans.first().copied().map_or(Ok(()), |span| {
+            Err(reflect_error(
+                ReflectErrorKind::UnsupportedCall,
+                span,
+                "checked scalar MIR is call-free unless an explicit verified resolver is supplied",
+            ))
+        }),
         CallMode::Relational { .. } if call_spans.len() != 1 => Err(reflect_error(
             ReflectErrorKind::UnsupportedCall,
             function.span,
@@ -674,7 +676,7 @@ fn validate_call_inventory(function: &Function, calls: &CallMode<'_>) -> Result<
                 call_spans.len()
             ),
         )),
-        _ => Ok(()),
+        CallMode::Relational { .. } => Ok(()),
     }
 }
 
