@@ -20530,6 +20530,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore = "order-255 certified-moment proof (~15 min); off the per-iteration hot path. Run via `just moment-proofs` or `cargo test -p axeyum-cas -- --ignored`; the full `just check`/CI lane runs it via the `moment-proofs` gate."]
     fn squared_binomial_moment_family_is_checked() {
         let n = || v("n");
         let mut proofs = Vec::new();
@@ -20669,6 +20670,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore = "order-255 certified-moment proof (~15 min); off the per-iteration hot path. Run via `just moment-proofs` or `cargo test -p axeyum-cas -- --ignored`; the full `just check`/CI lane runs it via the `moment-proofs` gate."]
     fn squared_binomial_falling_moment_family_is_checked() {
         let mut proofs = Vec::new();
         for order in 0..=MAX_PROVED_SQUARED_BINOMIAL_FALLING_MOMENT {

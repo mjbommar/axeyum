@@ -4,7 +4,9 @@ default:
     @just --list
 
 # Run every check CI runs (except cargo-deny, which needs the tool installed).
-check: fmt clippy test doc qfbv-profile reflection-semantics-gate benchmark-repetition-tests glaurung-qfbv-regular foundational-resources rules-as-code smtcomp-resume parity-docs links
+# This is the THOROUGH pre-merge/CI gate (whole workspace, ~tens of minutes).
+# While iterating, use `just check-scope` instead — it gates only what changed.
+check: fmt clippy test moment-proofs doc qfbv-profile reflection-semantics-gate benchmark-repetition-tests glaurung-qfbv-regular foundational-resources rules-as-code smtcomp-resume parity-docs links
 
 fmt:
     cargo fmt --all --check
@@ -21,6 +23,20 @@ test:
 # paths. Override the cap with MEM_LIMIT_GB=N.
 test-guarded:
     MEM_LIMIT_GB=64 ./scripts/mem-run.sh cargo test --workspace --all-features
+
+# Scope-aware ITERATION gate: runs only the gates relevant to what changed vs a
+# base ref (default `main`) — see scripts/check-scope.sh. Use this while
+# iterating; `check` stays the authoritative pre-merge/CI gate. Feedback is
+# proportional to the change (a Python-only or one-crate edit gates in seconds).
+check-scope base="main":
+    ./scripts/check-scope.sh {{base}}
+
+# The order-255 certified-moment proofs (squared_binomial_{,falling_}moment_...),
+# kept OFF the per-iteration hot path via #[ignore] (~15 min each). The `check`
+# chain runs this so CI coverage is unchanged; run it yourself only when you
+# touch moment / squared-binomial / falling-factorial code.
+moment-proofs:
+    cargo test -p axeyum-cas --lib -- --ignored
 
 # T6.0.3/TL2.15 seed: deterministic generated coverage of the four currently
 # representable Lean-kernel seams. The workspace `test` recipe also discovers

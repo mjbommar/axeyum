@@ -104,6 +104,41 @@ routine.
 
 ---
 
+## 3b. Iterate fast — scope the gate to what you changed
+
+`just check` is the **pre-merge / CI** gate: all sub-gates over the *whole*
+workspace (`cargo test/clippy --workspace --all-features`, full `doc`, the Python
+gates, and the order-255 moment proofs). It is thorough and **slow** — tens of
+minutes locally, and GitHub CI adds ~40 more. **Do not run it on every edit.**
+Iteration cost should be proportional to what you changed — a Python-only or
+one-crate edit should gate in *seconds*, not hours. While iterating:
+
+- **Scoped one-shot:** `just check-scope` — diffs your change vs `main` and runs
+  only the relevant gates (`cargo test/clippy -p <crate>` for a Rust crate; the
+  touched `test_*.py` plus `parity-docs`/`smtcomp-resume` for Python), skipping
+  everything unrelated. It flags any path it can't confidently scope so you know
+  to fall back to `just check`.
+- **By hand, even narrower:** `cargo test -p <crate> --lib`, or
+  `python3 -m pytest scripts/tests/test_<x>.py` for a single module.
+- **The order-255 CAS moment proofs are `#[ignore]`d** (~15 min *each*). Normal
+  `cargo test -p axeyum-cas` skips them; run them explicitly with
+  **`just moment-proofs`**, and only when you touch moment / squared-binomial /
+  falling-factorial code. The full `just check`/CI lane still runs them (via the
+  `moment-proofs` gate), so coverage is unchanged.
+- **When you do need a full run, go parallel + safe:** prefer **`just
+  test-guarded`** (parallel, 64 GiB mem-capped so a runaway aborts instead of
+  OOM-killing the host) over a single-threaded `RUST_TEST_THREADS=1` run —
+  roughly 2× faster, and it removes the OOM fear that motivated single-threading.
+- **Don't babysit GitHub CI.** Run `just check` (or `test-guarded`) once right
+  before you push, then let CI be an async backstop — check it **once** when it
+  finishes; never sit in a `while true; sleep 30` poll loop (that's a second
+  ~40-min serial wait for no benefit).
+
+Reserve the full `just check` for the moment right before you hand the branch to
+the integrator — not for the edit-test loop.
+
+---
+
 ## 4. Cross-worktree resource discipline (git can't help here)
 
 Multiple agents share more than the object store — they share the NAS corpus,
