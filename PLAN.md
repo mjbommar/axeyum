@@ -877,7 +877,12 @@ twenty-four is fully gated, pushed, integrated byte-for-byte, and documented.
 > identities from preparation and persists checkpoints automatically. It now
 > also derives the complete open/failed/lost lifecycle projection from
 > canonical E3 evidence and validates that sealed state inside scheduler
-> decision v2. The 140-test lane gate passes with one expected live-host skip. No live F2 root or
+> decision v2. The next process-free increment persists a replayable scheduler
+> authorization before every launch, projects completed terminals, and derives
+> a completion-last recovery checkpoint instead of relaunching across the
+> terminal-to-checkpoint crash window. Exact different-host retry closure also
+> clears the corresponding historical failure only after all owned shards are
+> checkpointed. No live F2 root or
 > canonical acceptance record exists. Next: integrate and green-gate the topic,
 > repair the Lean-owned source pin, then capture/publish an empty F2 preparation
 > before any distinct acceptance or Axeyum launch.

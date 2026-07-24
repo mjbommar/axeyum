@@ -405,8 +405,12 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   successful checkpoint. The subsequent scheduler-state increment removes
   caller-supplied open/failed/lost lists: it derives a sealed lifecycle record
   from canonical E3 attempts/terminals, recomputes its projections, and binds
-  it under scheduler-decision v2. The expanded 140-test portable gate passes
-  with one expected live-host skip.
+  it under scheduler-decision v2. The subsequent process-free authorization
+  increment persists each complete scheduler input/decision before launch,
+  projects completed terminals, blocks duplicate launch after a
+  terminal-before-checkpoint crash, and completion-last reconstructs exact
+  initial or different-host-retry checkpoints under scheduler-decision v4.
+  The three affected suites pass 50 tests.
   Branch-wide formatting remains red in the unrelated bench/CAS lane. The
   later Lean mainline merge repaired the quotient-package marker boundary; on
   the rebased topic, Lean parity now reaches exactly the measured

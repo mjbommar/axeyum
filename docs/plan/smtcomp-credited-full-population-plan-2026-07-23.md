@@ -247,6 +247,14 @@ Open attempts and failed/lost allocations are recomputed from canonical E3
 attempt/terminal evidence, and scheduler-decision v2 validates and binds the
 complete sealed state before it can launch.
 
+The subsequent
+[scheduler authorization and recovery fixture](smtcomp-credited-full-scheduler-authorization-fixture-2026-07-23.md)
+persists every replayable decision before launch. Scheduler-decision v4 also
+projects completed terminals, forbids a second launch across the
+terminal-to-checkpoint crash window, and completion-last publishes an exact
+reconstructed checkpoint for either the initial allocation set or its frozen
+different-host retries.
+
 ## Milestones and authorization
 
 - **F0 — this plan:** freeze population, resources, waves, recovery, thermal,

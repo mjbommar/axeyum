@@ -393,7 +393,12 @@ gate.
    [scheduler-state fixture](../smtcomp-credited-full-scheduler-state-fixture-2026-07-23.md)
    derives open/failed/lost lifecycle state from canonical E3 evidence, binds
    the complete state under scheduler-decision v2, and raises the portable gate
-   to 140 tests. No live acceptance file exists, and no
+   to 140 tests. The subsequent
+   [scheduler authorization fixture](../smtcomp-credited-full-scheduler-authorization-fixture-2026-07-23.md)
+   installs every replayable decision before launch, projects completed
+   terminals, prevents duplicate launch across a missing-checkpoint crash, and
+   completion-last recovers exact initial or different-host-retry checkpoints
+   under scheduler-decision v4. No live acceptance file exists, and no
    host probe, sentinel, NAS preparation root, resource session, allocation,
    or solver process was started.
 
@@ -465,6 +470,8 @@ Repository:
   `docs/plan/smtcomp-credited-full-admission-fixture-2026-07-23.md`;
 - credited full-population scheduler-state fixture:
   `docs/plan/smtcomp-credited-full-scheduler-state-fixture-2026-07-23.md`;
+- credited full-population scheduler-authorization/recovery fixture:
+  `docs/plan/smtcomp-credited-full-scheduler-authorization-fixture-2026-07-23.md`;
 - candidate failure handoff:
   `docs/plan/smtcomp-full-library-candidate-run-handoff-2026-07-21.md`;
 - ranked gap plan: `docs/plan/full-library-gap-closing-plan-2026-07-22.md`;
@@ -510,8 +517,9 @@ NAS (shared, corpus read-only in practice):
    explicit semantic host/sentinel preflight, is integrated by merge
    `1b8ae016`; the process-free cell-result/comparison bytes are also integrated
    by `c4d9050a`. The process-free F3 coordinator, mainline-gated acceptance,
-   and admitted-wave entry point are topic-ready but must be integrated. The
-   The quotient-package marker is repaired on current main; the Lean owner must
+   admitted-wave entry point, and pre-launch authorization/recovery path are
+   topic-ready but must be integrated. The quotient-package marker is repaired
+   on current main; the Lean owner must
    regenerate the remaining `resume_fs.py` pin. No live root or canonical
    acceptance record has been published. Revalidate the exact current `origin/main`,
    require both registered gates to be green, then perform the
