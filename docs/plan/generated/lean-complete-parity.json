@@ -432,7 +432,7 @@
     },
     {
       "path": "scripts/lean_execution_acceptance.py",
-      "sha256": "9d3ee1723c200a4af4bc80b30a88be3c8e8f2426791c80f2b34a4fdaefe728f7"
+      "sha256": "df07f1feeab7e8fa449605826046cb07737bbf09ec431ad9cba17184cd04470d"
     },
     {
       "path": "scripts/lean_execution_process.py",
@@ -440,7 +440,7 @@
     },
     {
       "path": "scripts/lean_execution_store.py",
-      "sha256": "809cc599c645ea6578fdf3f73af0b275f4144e2aa36bf3ce0447e218ffed53f2"
+      "sha256": "93180514d0797181d89f559a4e0c6fff05a1bf352c01e57a28256bcbb8dd0a2d"
     },
     {
       "path": "scripts/lean_u2_header_full_parser.lean",
@@ -456,11 +456,11 @@
     },
     {
       "path": "scripts/lean_u2_official_execution.py",
-      "sha256": "4dff7097303a8eb045e42ea91370914bc4a73eab8e339f6c6f0433b78df21437"
+      "sha256": "95ed09b44a03f6efa5c678bd491b8b090ec687f2db90131a5f8e92f4f3effc81"
     },
     {
       "path": "scripts/lean_u2_official_execution_m2.py",
-      "sha256": "d8caf060eb69b4a456f9d6045cac4932c648f36f60093afc2af476c488d3fa34"
+      "sha256": "a84499af0fa4f1b079da8823a8ca3641a30ba2678a5fe4b1d7847c3755f81993"
     },
     {
       "path": "scripts/lean_u2_official_execution_m2_r2.py",
@@ -512,7 +512,7 @@
     },
     {
       "path": "scripts/tests/test_lean_execution_acceptance.py",
-      "sha256": "d05aca05f6668977a531e88421485a59d129d43600a8546de6af5cbd0c56cadb"
+      "sha256": "ceef1257c6b3ba750e78f8d6883a50c24e090e0b26a494afca1f1610abece14f"
     },
     {
       "path": "scripts/tests/test_lean_execution_evidence.py",
@@ -524,7 +524,7 @@
     },
     {
       "path": "scripts/tests/test_lean_execution_store.py",
-      "sha256": "4bc38f9155586e16927dd66bbddbc4953ef4b94a94af1b55bc9feaab950aaa27"
+      "sha256": "df68aa18f8341d55eca5147b00a61dbfe078617db580767017e69be21e26be2f"
     },
     {
       "path": "scripts/tests/test_lean_u2_native_dependency.py",
@@ -556,11 +556,11 @@
     },
     {
       "path": "scripts/tests/test_lean_u2_official_execution.py",
-      "sha256": "766e2e6dc9f24628d39a0b6c7ef46bd84be48f6e80af1f6f273c2f3ef09d000c"
+      "sha256": "9f47a26f04916160c3c7f10b480e3e71142af64290d101ba112f65d881188448"
     },
     {
       "path": "scripts/tests/test_lean_u2_official_execution_m2.py",
-      "sha256": "813b3a1992a2821a41d45591c120a3b1e00a6c89cb25641c1af4371d142abc91"
+      "sha256": "38bcf7fcbd045f2409a1d6d791b7cc2309de6deaf744412faf5e18df15fa011a"
     },
     {
       "path": "scripts/tests/test_lean_u2_official_execution_m2_r2.py",
