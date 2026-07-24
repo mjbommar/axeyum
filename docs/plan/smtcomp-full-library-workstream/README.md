@@ -407,8 +407,11 @@ gate.
    now freezes the missing operator boundary: exact local/tracking/remote-main
    equality and both registered gates precede any NAS mutation; the capture
    may run only the eight bounded sentinels and must publish
-   `launch_authorized=false` completion last. Its implementation and live
-   capture are still open.
+   `launch_authorized=false` completion last. The source-first
+   [R1 correction](../smtcomp-credited-full-preparation-f2-live-capture-r1-plan-2026-07-24.md)
+   additionally requires process-free repaired-P0/external-root revalidation
+   before attempt creation and three fresh schedule-bound thermal observations
+   in preflight v2. Its implementation and live capture are still open.
 
 The same implementation rule continues to apply: prove each new mechanism and
 its destructive/interruption tests on a tiny corpus before spending the full
@@ -472,6 +475,8 @@ Repository:
   `docs/plan/smtcomp-credited-full-preparation-f2-implementation-2026-07-23.md`;
 - credited full-population F2 live-capture plan:
   `docs/plan/smtcomp-credited-full-preparation-f2-live-capture-plan-2026-07-24.md`;
+- credited full-population F2 live-capture R1 correction:
+  `docs/plan/smtcomp-credited-full-preparation-f2-live-capture-r1-plan-2026-07-24.md`;
 - credited full-population publication fixture:
   `docs/plan/smtcomp-credited-full-publication-fixture-2026-07-23.md`;
 - credited full-population execution-coordinator fixture:
@@ -533,6 +538,8 @@ NAS (shared, corpus read-only in practice):
    root or canonical acceptance record has been published. Implement and
    integrate the source-first
    [F2 live-capture plan](../smtcomp-credited-full-preparation-f2-live-capture-plan-2026-07-24.md),
+   including its source-first
+   [R1 correction](../smtcomp-credited-full-preparation-f2-live-capture-r1-plan-2026-07-24.md),
    then revalidate exact local/tracking/remote `main` equality and both
    registered gates before any host probe or NAS mutation. The separately
    reviewed operator may publish only a process-free
