@@ -75,7 +75,7 @@ COMPLETION_SCHEMA = "axeyum.smtcomp-multi-host-completion.v1"
 POST_RUN_CLOSURE_SCHEMA = "axeyum.smtcomp-post-run-validation-closure.v1"
 POST_RUN_COMPLETION_SCHEMA = "axeyum.smtcomp-multi-host-completion.v2"
 ALLOCATION_SCHEDULER_STATE_SCHEMA = (
-    "axeyum.smtcomp-multi-host-allocation-scheduler-state.v1"
+    "axeyum.smtcomp-multi-host-allocation-scheduler-state.v2"
 )
 
 SAFE_ID = re.compile(r"[A-Za-z0-9][A-Za-z0-9_.-]{0,127}\Z")
@@ -298,6 +298,7 @@ ALLOCATION_SCHEDULER_STATE_FIELDS = {
     "cell_id",
     "allocation_attempts",
     "open_attempt_ids",
+    "completed_allocation_ids",
     "failed_allocation_ids",
     "lost_allocation_ids",
     "record_sha256",
@@ -2023,6 +2024,7 @@ def validate_allocation_scheduler_state(
     ordering = []
     attempt_ids = set()
     computed_open = []
+    computed_completed = []
     computed_failed = []
     computed_lost = []
     for row in rows:
@@ -2043,7 +2045,9 @@ def validate_allocation_scheduler_state(
             computed_open.append(attempt_id)
         elif status in {"completed", "failed", "lost"}:
             _require_sha(terminal_sha, "terminal_record_sha256")
-            if status == "failed":
+            if status == "completed":
+                computed_completed.append(allocation_id)
+            elif status == "failed":
                 computed_failed.append(allocation_id)
             elif status == "lost":
                 computed_lost.append(allocation_id)
@@ -2053,6 +2057,7 @@ def validate_allocation_scheduler_state(
         raise ContractError("allocation scheduler state attempt order mismatch")
     expected_lists = {
         "open_attempt_ids": sorted(computed_open),
+        "completed_allocation_ids": sorted(computed_completed),
         "failed_allocation_ids": sorted(computed_failed),
         "lost_allocation_ids": sorted(computed_lost),
     }
@@ -2086,6 +2091,11 @@ def build_allocation_scheduler_state(
                 row.get("attempt_id")
                 for row in rows
                 if row.get("terminal_status") is None
+            ),
+            "completed_allocation_ids": sorted(
+                row.get("allocation_id")
+                for row in rows
+                if row.get("terminal_status") == "completed"
             ),
             "failed_allocation_ids": sorted(
                 row.get("allocation_id")

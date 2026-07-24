@@ -25,7 +25,7 @@ WAVE_SCHEMA = "axeyum.smtcomp-credited-full-wave.v1"
 THERMAL_OBSERVATION_SCHEMA = "axeyum.smtcomp-credited-full-thermal-observation.v1"
 THERMAL_STOP_SCHEMA = "axeyum.smtcomp-credited-full-thermal-stop.v1"
 CHECKPOINT_SCHEMA = "axeyum.smtcomp-credited-full-wave-checkpoint.v2"
-SCHEDULER_DECISION_SCHEMA = "axeyum.smtcomp-credited-full-scheduler-decision.v2"
+SCHEDULER_DECISION_SCHEMA = "axeyum.smtcomp-credited-full-scheduler-decision.v3"
 
 POPULATION_COUNT = 45_905
 SHARD_COUNT = 96
@@ -163,6 +163,7 @@ SCHEDULER_DECISION_FIELDS = {
     "next_wave_index",
     "allocation_ids",
     "open_attempt_ids",
+    "uncheckpointed_completed_allocation_ids",
     "failed_allocation_ids",
     "lost_allocation_ids",
     "pause_requested",
@@ -848,6 +849,7 @@ def scheduler_decision(
         cell_id=cell,
     )
     opens = allocation_state["open_attempt_ids"]
+    completed = set(allocation_state["completed_allocation_ids"])
     failed = allocation_state["failed_allocation_ids"]
     lost = allocation_state["lost_allocation_ids"]
     if type(pause_requested) is not bool or type(cooldown_required) is not bool:
@@ -863,11 +865,23 @@ def scheduler_decision(
         raise ContractError("scheduler failure names a non-initial allocation")
 
     next_wave = len(checkpoints) if len(checkpoints) < WAVE_COUNT else None
+    checkpointed_allocations = {
+        row["allocation_id"]
+        for checkpoint in checkpoints
+        for row in checkpoint["shard_completions"]
+    }
+    if not checkpointed_allocations <= completed:
+        raise ContractError(
+            "scheduler checkpoint names an allocation without a completed terminal"
+        )
+    uncheckpointed_completed = sorted(completed - checkpointed_allocations)
     status: str
     allocation_ids: list[str] = []
     thermal_ids: list[str] = []
     if opens:
         status = "blocked-unclosed"
+    elif uncheckpointed_completed:
+        status = "blocked-uncheckpointed"
     elif failed or lost:
         status = "blocked-failure"
     elif pause_requested:
@@ -903,6 +917,7 @@ def scheduler_decision(
             "next_wave_index": next_wave,
             "allocation_ids": allocation_ids,
             "open_attempt_ids": opens,
+            "uncheckpointed_completed_allocation_ids": uncheckpointed_completed,
             "failed_allocation_ids": failed,
             "lost_allocation_ids": lost,
             "pause_requested": pause_requested,

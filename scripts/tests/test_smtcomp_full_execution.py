@@ -313,6 +313,62 @@ class FullExecutionCheckpointTests(unittest.TestCase):
                 allocation_attempts=[],
             )
             unused = mock.Mock(side_effect=AssertionError("unexpected callback"))
+
+            completed_without_checkpoint = build_allocation_scheduler_state(
+                plan_sha256=PLAN_ID,
+                run_identity_sha256=RUN_ID,
+                cell_id=CELL_ID,
+                allocation_ids=allocation_ids,
+                allocation_attempts=[
+                    {
+                        "allocation_id": allocation_id,
+                        "attempt_id": f"completed-{allocation_id}",
+                        "attempt_record_sha256": f"{index + 1:064x}",
+                        "terminal_status": "completed",
+                        "terminal_record_sha256": f"{index + 101:064x}",
+                    }
+                    for index, allocation_id in enumerate(
+                        sorted(
+                            {
+                                row["allocation_id"]
+                                for row in first["shard_completions"]
+                            }
+                        )
+                    )
+                ],
+            )
+            uncheckpointed_launch = mock.Mock()
+            with (
+                mock.patch(
+                    "full_admission.validate_full_cell_admission",
+                    return_value=admission,
+                ),
+                mock.patch.object(
+                    full_execute_module,
+                    "derive_allocation_scheduler_state",
+                    return_value=completed_without_checkpoint,
+                ),
+            ):
+                uncheckpointed = supervise_admitted_wave(
+                    admission,
+                    preparation_root=attempt,
+                    repository_root=ROOT,
+                    expected_logic_counts={},
+                    prior_result_roots={},
+                    inspect_shared_root=False,
+                    cooldown_required=False,
+                    prewave_thermal_observations=[],
+                    launch=uncheckpointed_launch,
+                    poll_terminal=unused,
+                    observe_active=unused,
+                    stop_overheated=unused,
+                    now_ns=lambda: 1500,
+                    wait=unused,
+                    pause_requested=lambda: False,
+                )
+            self.assertEqual(uncheckpointed["status"], "blocked-uncheckpointed")
+            uncheckpointed_launch.assert_not_called()
+
             with (
                 mock.patch(
                     "full_admission.validate_full_cell_admission",
@@ -374,7 +430,24 @@ class FullExecutionCheckpointTests(unittest.TestCase):
                 allocation_ids=allocation_ids,
                 allocation_attempts=[
                     {
-                        "allocation_id": "full-initial-00",
+                        "allocation_id": allocation_id,
+                        "attempt_id": f"completed-{allocation_id}",
+                        "attempt_record_sha256": f"{index + 1:064x}",
+                        "terminal_status": "completed",
+                        "terminal_record_sha256": f"{index + 101:064x}",
+                    }
+                    for index, allocation_id in enumerate(
+                        sorted(
+                            {
+                                row["allocation_id"]
+                                for row in first["shard_completions"]
+                            }
+                        )
+                    )
+                ]
+                + [
+                    {
+                        "allocation_id": "full-initial-03",
                         "attempt_id": "unclosed-attempt",
                         "attempt_record_sha256": "e" * 64,
                         "terminal_status": None,
@@ -422,12 +495,16 @@ class FullExecutionCheckpointTests(unittest.TestCase):
                 run_identity_sha256=RUN_ID,
                 cell_id=CELL_ID,
             )
-            self.assertEqual(len(authorizations), 1)
-            self.assertEqual(
-                authorizations[0]["allocation_scheduler_state"], blocked_state
-            )
+            self.assertEqual(len(authorizations), 2)
             self.assertEqual(
                 authorizations[0]["scheduler_decision"]["status"],
+                "blocked-uncheckpointed",
+            )
+            self.assertEqual(
+                authorizations[1]["allocation_scheduler_state"], blocked_state
+            )
+            self.assertEqual(
+                authorizations[1]["scheduler_decision"]["status"],
                 "blocked-unclosed",
             )
 

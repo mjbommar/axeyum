@@ -156,7 +156,7 @@ class PortableE3:
 
 
 class MultiHostPortableTests(unittest.TestCase):
-    def test_scheduler_state_recomputes_open_and_failed_projections(self) -> None:
+    def test_scheduler_state_recomputes_terminal_projections(self) -> None:
         attempts = [
             {
                 "allocation_id": "initial-0",
@@ -174,6 +174,7 @@ class MultiHostPortableTests(unittest.TestCase):
             allocation_attempts=attempts,
         )
         self.assertEqual(state["open_attempt_ids"], ["attempt-0"])
+        self.assertEqual(state["completed_allocation_ids"], [])
         self.assertEqual(state["failed_allocation_ids"], [])
 
         omitted = copy.deepcopy(state)
@@ -1022,6 +1023,10 @@ class MultiHostPortableTests(unittest.TestCase):
             )
             self.assertEqual(len(scheduler_state["allocation_attempts"]), 3)
             self.assertEqual(scheduler_state["open_attempt_ids"], [])
+            self.assertEqual(
+                scheduler_state["completed_allocation_ids"],
+                ["initial-0", "initial-1", "initial-2"],
+            )
             self.assertEqual(scheduler_state["failed_allocation_ids"], [])
             self.assertEqual(scheduler_state["lost_allocation_ids"], [])
 
@@ -1041,6 +1046,9 @@ class MultiHostPortableTests(unittest.TestCase):
                 inspect_shared_root=False,
             )
             self.assertEqual(open_state["open_attempt_ids"], ["allocation-attempt-0"])
+            self.assertEqual(
+                open_state["completed_allocation_ids"], ["initial-1", "initial-2"]
+            )
             atomic_install_bytes(
                 first_terminal_path.parent,
                 first_terminal_path.name,
@@ -1063,6 +1071,9 @@ class MultiHostPortableTests(unittest.TestCase):
                 inspect_shared_root=False,
             )
             self.assertEqual(failed_state["failed_allocation_ids"], ["initial-0"])
+            self.assertEqual(
+                failed_state["completed_allocation_ids"], ["initial-1", "initial-2"]
+            )
             self.assertNotEqual(
                 failed_state["record_sha256"], scheduler_state["record_sha256"]
             )

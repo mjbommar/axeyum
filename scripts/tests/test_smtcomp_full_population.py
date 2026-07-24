@@ -119,10 +119,12 @@ def scheduler_state(
     schedule: dict,
     *,
     open_attempt_ids: list[str] | None = None,
+    completed_allocation_ids: list[str] | None = None,
     failed_allocation_ids: list[str] | None = None,
     lost_allocation_ids: list[str] | None = None,
 ) -> dict:
     opens = [] if open_attempt_ids is None else open_attempt_ids
+    completed = [] if completed_allocation_ids is None else completed_allocation_ids
     failed = [] if failed_allocation_ids is None else failed_allocation_ids
     lost = [] if lost_allocation_ids is None else lost_allocation_ids
     initial_ids = [
@@ -131,7 +133,7 @@ def scheduler_state(
         if row["generation"] == 0
     ]
     rows = []
-    used = set(failed + lost)
+    used = set(completed + failed + lost)
     available = [value for value in initial_ids if value not in used]
     for index, attempt_id in enumerate(opens):
         rows.append(
@@ -144,7 +146,8 @@ def scheduler_state(
             }
         )
     for index, (status, allocation_id) in enumerate(
-        [("failed", value) for value in failed]
+        [("completed", value) for value in completed]
+        + [("failed", value) for value in failed]
         + [("lost", value) for value in lost],
         start=len(rows) + 1,
     ):
@@ -651,7 +654,15 @@ class FullPopulationContractTests(unittest.TestCase):
             plan_sha256=PLAN_ID,
             run_identity_sha256=RUN_ID,
             cell_id=CELL_ID,
-            allocation_scheduler_state=scheduler_state(schedule),
+            allocation_scheduler_state=scheduler_state(
+                schedule,
+                completed_allocation_ids=sorted(
+                    {
+                        row["allocation_id"]
+                        for row in checkpoint["shard_completions"]
+                    }
+                ),
+            ),
             pause_requested=False,
             cooldown_required=False,
             thermal_observations=self.thermal_observations(
@@ -790,16 +801,83 @@ class FullPopulationContractTests(unittest.TestCase):
                 self.assertEqual(decision["status"], expected)
                 self.assertEqual(decision["allocation_ids"], [])
 
+    def test_scheduler_blocks_completed_wave_until_exact_checkpoint_exists(self) -> None:
+        schedule = build_schedule(ENFORCEMENT_ID)
+        completed = schedule["waves"][0]["allocation_ids"]
+        state = scheduler_state(
+            schedule,
+            completed_allocation_ids=completed,
+        )
+        blocked = scheduler_decision(
+            schedule=schedule,
+            checkpoints=[],
+            plan_sha256=PLAN_ID,
+            run_identity_sha256=RUN_ID,
+            cell_id=CELL_ID,
+            allocation_scheduler_state=state,
+            pause_requested=False,
+            cooldown_required=False,
+            thermal_observations=[],
+            decided_at_ns=2000,
+        )
+        self.assertEqual(blocked["status"], "blocked-uncheckpointed")
+        self.assertEqual(
+            blocked["uncheckpointed_completed_allocation_ids"], completed
+        )
+        self.assertEqual(blocked["allocation_ids"], [])
+
+        checkpoint = self.checkpoint(schedule, 0)
+        resumed = scheduler_decision(
+            schedule=schedule,
+            checkpoints=[checkpoint],
+            plan_sha256=PLAN_ID,
+            run_identity_sha256=RUN_ID,
+            cell_id=CELL_ID,
+            allocation_scheduler_state=state,
+            pause_requested=False,
+            cooldown_required=False,
+            thermal_observations=self.thermal_observations(
+                schedule, wave_index=1, temperatures=(40, 40, 40)
+            ),
+            decided_at_ns=2000,
+        )
+        self.assertEqual(resumed["status"], "launch")
+        self.assertEqual(resumed["next_wave_index"], 1)
+
+        with self.assertRaisesRegex(ContractError, "without a completed terminal"):
+            scheduler_decision(
+                schedule=schedule,
+                checkpoints=[checkpoint],
+                plan_sha256=PLAN_ID,
+                run_identity_sha256=RUN_ID,
+                cell_id=CELL_ID,
+                allocation_scheduler_state=scheduler_state(schedule),
+                pause_requested=False,
+                cooldown_required=False,
+                thermal_observations=[],
+                decided_at_ns=2000,
+            )
+
     def test_all_sixteen_checkpoints_close_the_cell_without_thermal_probe(self) -> None:
         schedule = build_schedule(ENFORCEMENT_ID)
         checkpoints = [self.checkpoint(schedule, index) for index in range(WAVE_COUNT)]
+        completed = sorted(
+            {
+                row["allocation_id"]
+                for checkpoint in checkpoints
+                for row in checkpoint["shard_completions"]
+            }
+        )
         decision = scheduler_decision(
             schedule=schedule,
             checkpoints=checkpoints,
             plan_sha256=PLAN_ID,
             run_identity_sha256=RUN_ID,
             cell_id=CELL_ID,
-            allocation_scheduler_state=scheduler_state(schedule),
+            allocation_scheduler_state=scheduler_state(
+                schedule,
+                completed_allocation_ids=completed,
+            ),
             pause_requested=False,
             cooldown_required=False,
             thermal_observations=[],
