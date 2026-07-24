@@ -371,8 +371,9 @@ gate.
    exact three host observations and registrations, eight ordered incident
    sentinels and byte sidecars, safe outcomes, and a 30-minute publication
    window. The full batch landed by merge `1b8ae016`. Lean R7 is also integrated
-   by merge `9fe5cab6`; live preparation remains blocked by out-of-lane bench/CAS
-   format drift. Commits `e7c05374` and `d7c78371`, integrated by merges
+   by merge `9fe5cab6`; the later filesystem decoupling removes the stale
+   cross-lane `resume_fs.py` source pin. Commits `e7c05374` and `d7c78371`,
+   integrated by merges
    `f65f4647` and `c4d9050a`, add completion-last external cell results and
    exact native/per-logic/pairwise/three-way
    same-population comparison with interruption replay and rejecting mutations.
@@ -401,7 +402,13 @@ gate.
    under scheduler-decision v4. The expanded portable gate passes 144 tests
    with one expected live-host skip. No live acceptance file exists, and no
    host probe, sentinel, NAS preparation root, resource session, allocation,
-   or solver process was started.
+   or solver process was started. The source-first
+   [F2 live-capture plan](../smtcomp-credited-full-preparation-f2-live-capture-plan-2026-07-24.md)
+   now freezes the missing operator boundary: exact local/tracking/remote-main
+   equality and both registered gates precede any NAS mutation; the capture
+   may run only the eight bounded sentinels and must publish
+   `launch_authorized=false` completion last. Its implementation and live
+   capture are still open.
 
 The same implementation rule continues to apply: prove each new mechanism and
 its destructive/interruption tests on a tiny corpus before spending the full
@@ -463,6 +470,8 @@ Repository:
   `docs/plan/smtcomp-credited-full-population-f1-result-2026-07-23.md`;
 - credited full-population F2 preparation implementation result:
   `docs/plan/smtcomp-credited-full-preparation-f2-implementation-2026-07-23.md`;
+- credited full-population F2 live-capture plan:
+  `docs/plan/smtcomp-credited-full-preparation-f2-live-capture-plan-2026-07-24.md`;
 - credited full-population publication fixture:
   `docs/plan/smtcomp-credited-full-publication-fixture-2026-07-23.md`;
 - credited full-population execution-coordinator fixture:
@@ -517,19 +526,21 @@ NAS (shared, corpus read-only in practice):
    integrated. Its complete F2 process-free preparation mechanism, including
    explicit semantic host/sentinel preflight, is integrated by merge
    `1b8ae016`; the process-free cell-result/comparison bytes are also integrated
-   by `c4d9050a`. The process-free F3 coordinator, mainline-gated acceptance,
-   admitted-wave entry point, and pre-launch authorization/recovery path are
-   topic-ready but must be integrated. The quotient-package marker is repaired
-   on current main; the Lean owner must
-   regenerate the remaining `resume_fs.py` pin. No live root or canonical
-   acceptance record has been published. Revalidate the exact current `origin/main`,
-   require both registered gates to be green, then perform the
-   separately reviewed host/sentinel capture and publish only a process-free
+   by `c4d9050a`. Merge `466618dd` integrates the process-free F3 coordinator,
+   mainline-gated acceptance, admitted-wave entry point, and pre-launch
+   authorization/recovery path. The Lean filesystem decoupling is also on
+   current main, so the historical SMT-source pin blocker is closed. No live
+   root or canonical acceptance record has been published. Implement and
+   integrate the source-first
+   [F2 live-capture plan](../smtcomp-credited-full-preparation-f2-live-capture-plan-2026-07-24.md),
+   then revalidate exact local/tracking/remote `main` equality and both
+   registered gates before any host probe or NAS mutation. The separately
+   reviewed operator may publish only a process-free
    `launch_authorized=false` root inside its frozen 30-minute window. Integrate
    and explicitly accept that exact root before constructing Axeyum admission.
-   Do not
-   probe hosts, mutate the NAS, or launch a solver allocation while
-   `origin/main` is branch-wide red. The active solver
+   Do not probe hosts, mutate the NAS, or launch a solver allocation from the
+   unintegrated operator topic or while `origin/main` is branch-wide red. The
+   active solver
    capability checkpoint is
    [`../checked-multi-binder-quantified-uf-models-2026-07-22.md`](../checked-multi-binder-quantified-uf-models-2026-07-22.md).
 5. Update root `PLAN.md` and this file before handoff; push only a green topic
