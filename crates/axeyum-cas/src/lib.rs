@@ -21348,7 +21348,7 @@ mod tests {
     }
 
     #[test]
-    fn laplace_transforms() {
+    fn laplace_forward_transforms() {
         let t = || v("t");
         let s = || v("s");
         let holds = |f: CasExpr, expected: CasExpr| {
@@ -21398,6 +21398,12 @@ mod tests {
             CasExpr::int(3) * t() + CasExpr::int(2) * t().exp(),
             CasExpr::int(3) / s().pow(2) + CasExpr::int(2) / (s() - CasExpr::int(1)),
         );
+    }
+
+    #[test]
+    fn inverse_laplace_transforms() {
+        let t = || v("t");
+        let s = || v("s");
         // Inverse Laplace (simple real poles), certified by the L round-trip.
         // L⁻¹{1/(s−2)} = e^{2t}.
         assert_equal(
