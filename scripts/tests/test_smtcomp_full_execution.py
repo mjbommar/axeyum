@@ -16,7 +16,9 @@ sys.path.insert(0, str(ROOT / "scripts" / "smtcomp_repro"))
 from full_execute import (  # noqa: E402
     load_wave_checkpoints,
     publish_wave_checkpoint,
+    supervise_admitted_wave,
 )
+import full_execute as full_execute_module  # noqa: E402
 from full_coordinator import derive_full_execution_authority  # noqa: E402
 import full_coordinator as full_coordinator_module  # noqa: E402
 from full_population import (  # noqa: E402
@@ -28,7 +30,7 @@ from full_population import (  # noqa: E402
 from full_result import CELL_RESULT_SCHEMA, publish_full_cell_result  # noqa: E402
 from multi_host import COMPLETION_SCHEMA as MULTI_HOST_COMPLETION_SCHEMA  # noqa: E402
 from resource_enforcement import COMPLETION_SCHEMA as RESOURCE_COMPLETION_SCHEMA  # noqa: E402
-from resume_contract import ContractError, digest  # noqa: E402
+from resume_contract import ContractError, canonical_bytes, digest  # noqa: E402
 
 
 ENFORCEMENT_ID = "e" * 64
@@ -174,6 +176,121 @@ def prior_completion(solver_id: str) -> dict:
 
 
 class FullExecutionCheckpointTests(unittest.TestCase):
+    def test_admitted_entrypoint_derives_identities_and_persists_checkpoint(
+        self,
+    ) -> None:
+        schedule = build_schedule(ENFORCEMENT_ID)
+        first = checkpoint(schedule, 0)
+        with tempfile.TemporaryDirectory() as temp:
+            attempt = Path(temp) / "attempt"
+            inputs = attempt / "inputs"
+            run_dir = attempt / "cells" / CELL_ID
+            inputs.mkdir(parents=True)
+            run_dir.mkdir(parents=True)
+            run_path = inputs / "axeyum-run.json"
+            plan_path = run_dir / "multi-host-plan.json"
+            schedule_path = run_dir / "full-schedule.json"
+            run_path.write_bytes(canonical_bytes({"identity_sha256": RUN_ID}))
+            plan_path.write_bytes(canonical_bytes({"plan_sha256": PLAN_ID}))
+            schedule_path.write_bytes(canonical_bytes(schedule))
+            composition = {
+                "cells": [
+                    {
+                        "solver_id": CELL_ID,
+                        "run_manifest_path": str(run_path),
+                        "plan_path": str(plan_path),
+                        "schedule_path": str(schedule_path),
+                    }
+                ]
+            }
+            (inputs / "full-cell-composition.json").write_bytes(
+                canonical_bytes(composition)
+            )
+            admission = {
+                "solver_id": CELL_ID,
+                "run_identity_sha256": RUN_ID,
+                "plan_sha256": PLAN_ID,
+                "schedule_record_sha256": schedule["record_sha256"],
+            }
+            outcome = {"status": "wave-completed", "checkpoint": first}
+            unused = mock.Mock(side_effect=AssertionError("unexpected callback"))
+            with (
+                mock.patch(
+                    "full_admission.validate_full_cell_admission",
+                    return_value=admission,
+                ) as validate_admission,
+                mock.patch.object(
+                    full_execute_module,
+                    "supervise_one_wave",
+                    return_value=outcome,
+                ) as supervise,
+            ):
+                observed = supervise_admitted_wave(
+                    admission,
+                    preparation_root=attempt,
+                    repository_root=ROOT,
+                    expected_logic_counts={"QF_BV": 1, "QF_UF": 1},
+                    prior_result_roots={},
+                    acceptance={"fixture": True},
+                    inspect_shared_root=False,
+                    open_attempt_ids=[],
+                    failed_allocation_ids=[],
+                    lost_allocation_ids=[],
+                    cooldown_required=False,
+                    prewave_thermal_observations=[],
+                    launch=unused,
+                    poll_terminal=unused,
+                    observe_active=unused,
+                    stop_overheated=unused,
+                    now_ns=unused,
+                    wait=unused,
+                    pause_requested=unused,
+                )
+            self.assertEqual(observed, outcome)
+            validate_admission.assert_called_once()
+            self.assertEqual(supervise.call_args.kwargs["schedule"], schedule)
+            self.assertEqual(supervise.call_args.kwargs["checkpoints"], [])
+            self.assertEqual(
+                load_wave_checkpoints(
+                    run_dir,
+                    schedule=schedule,
+                    plan_sha256=PLAN_ID,
+                    run_identity_sha256=RUN_ID,
+                    cell_id=CELL_ID,
+                ),
+                [first],
+            )
+
+            drifted = copy.deepcopy(admission)
+            drifted["schedule_record_sha256"] = "0" * 64
+            with (
+                mock.patch(
+                    "full_admission.validate_full_cell_admission",
+                    return_value=drifted,
+                ),
+                self.assertRaisesRegex(ContractError, "identity drift"),
+            ):
+                supervise_admitted_wave(
+                    drifted,
+                    preparation_root=attempt,
+                    repository_root=ROOT,
+                    expected_logic_counts={},
+                    prior_result_roots={},
+                    inspect_shared_root=False,
+                    open_attempt_ids=[],
+                    failed_allocation_ids=[],
+                    lost_allocation_ids=[],
+                    cooldown_required=False,
+                    prewave_thermal_observations=[],
+                    launch=unused,
+                    poll_terminal=unused,
+                    observe_active=unused,
+                    stop_overheated=unused,
+                    now_ns=unused,
+                    wait=unused,
+                    pause_requested=unused,
+                )
+
     def test_checkpoint_publication_is_contiguous_immutable_and_replayable(self) -> None:
         schedule = build_schedule(ENFORCEMENT_ID)
         first = checkpoint(schedule, 0)

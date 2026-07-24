@@ -37,6 +37,11 @@ WAVE_OUTCOME_SCHEMA = "axeyum.smtcomp-credited-full-wave-outcome.v1"
 CHECKPOINT_DIRECTORY = "full-wave-checkpoints"
 
 
+def _expect(condition: bool, message: str) -> None:
+    if not condition:
+        raise ContractError(message)
+
+
 def load_wave_checkpoints(
     run_dir: Path,
     *,
@@ -337,3 +342,110 @@ def supervise_one_wave(
             "pause_observed": pause_seen,
         }
     )
+
+
+def supervise_admitted_wave(
+    admission: dict[str, Any],
+    *,
+    preparation_root: Path,
+    repository_root: Path,
+    expected_logic_counts: dict[str, int],
+    prior_result_roots: dict[str, Path],
+    acceptance: dict[str, Any] | None = None,
+    inspect_shared_root: bool = True,
+    open_attempt_ids: list[str],
+    failed_allocation_ids: list[str],
+    lost_allocation_ids: list[str],
+    cooldown_required: bool,
+    prewave_thermal_observations: list[dict[str, Any]],
+    launch: Callable[[dict[str, Any]], WaveHandle],
+    poll_terminal: Callable[[WaveHandle], dict[str, Any] | None],
+    observe_active: Callable[[WaveHandle, int], dict[str, Any]],
+    stop_overheated: Callable[[WaveHandle, dict[str, Any]], dict[str, Any]],
+    now_ns: Callable[[], int],
+    wait: Callable[[], None],
+    pause_requested: Callable[[], bool],
+    checkpoint_phase_hook: Callable[[str], None] | None = None,
+) -> dict[str, Any]:
+    """Replay admission, derive cell identities, and persist one wave outcome."""
+
+    from full_admission import validate_full_cell_admission
+
+    admission = validate_full_cell_admission(
+        admission,
+        preparation_root=preparation_root,
+        repository_root=repository_root,
+        expected_logic_counts=expected_logic_counts,
+        prior_result_roots=prior_result_roots,
+        acceptance=acceptance,
+        inspect_shared_root=inspect_shared_root,
+    )
+    attempt = preparation_root.resolve(strict=True)
+    composition = read_canonical_json(
+        attempt / "inputs" / "full-cell-composition.json"
+    )
+    cell = next(
+        (
+            row
+            for row in composition.get("cells", [])
+            if row.get("solver_id") == admission["solver_id"]
+        ),
+        None,
+    )
+    _expect(isinstance(cell, dict), "admitted execution cell is absent")
+    run_path = Path(cell.get("run_manifest_path", ""))
+    plan_path = Path(cell.get("plan_path", ""))
+    schedule_path = Path(cell.get("schedule_path", ""))
+    run_dir = plan_path.parent
+    _expect(
+        run_path.parent == attempt / "inputs"
+        and run_dir == attempt / "cells" / admission["solver_id"]
+        and schedule_path.parent == run_dir,
+        "admitted execution artifact path drift",
+    )
+    run = read_canonical_json(run_path)
+    plan = read_canonical_json(plan_path)
+    schedule = validate_schedule(read_canonical_json(schedule_path))
+    _expect(
+        run.get("identity_sha256") == admission["run_identity_sha256"]
+        and plan.get("plan_sha256") == admission["plan_sha256"]
+        and schedule["record_sha256"] == admission["schedule_record_sha256"],
+        "admitted execution identity drift",
+    )
+    checkpoints = load_wave_checkpoints(
+        run_dir,
+        schedule=schedule,
+        plan_sha256=admission["plan_sha256"],
+        run_identity_sha256=admission["run_identity_sha256"],
+        cell_id=admission["solver_id"],
+    )
+    outcome = supervise_one_wave(
+        schedule=schedule,
+        checkpoints=checkpoints,
+        plan_sha256=admission["plan_sha256"],
+        run_identity_sha256=admission["run_identity_sha256"],
+        cell_id=admission["solver_id"],
+        open_attempt_ids=open_attempt_ids,
+        failed_allocation_ids=failed_allocation_ids,
+        lost_allocation_ids=lost_allocation_ids,
+        cooldown_required=cooldown_required,
+        prewave_thermal_observations=prewave_thermal_observations,
+        launch=launch,
+        poll_terminal=poll_terminal,
+        observe_active=observe_active,
+        stop_overheated=stop_overheated,
+        now_ns=now_ns,
+        wait=wait,
+        pause_requested=pause_requested,
+    )
+    if outcome["checkpoint"] is not None:
+        publish_wave_checkpoint(
+            run_dir,
+            checkpoint=outcome["checkpoint"],
+            schedule=schedule,
+            plan_sha256=admission["plan_sha256"],
+            run_identity_sha256=admission["run_identity_sha256"],
+            cell_id=admission["solver_id"],
+            phase_hook=checkpoint_phase_hook,
+        )
+    return outcome
