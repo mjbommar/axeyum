@@ -398,7 +398,8 @@ gate.
    installs every replayable decision before launch, projects completed
    terminals, prevents duplicate launch across a missing-checkpoint crash, and
    completion-last recovers exact initial or different-host-retry checkpoints
-   under scheduler-decision v4. No live acceptance file exists, and no
+   under scheduler-decision v4. The expanded portable gate passes 144 tests
+   with one expected live-host skip. No live acceptance file exists, and no
    host probe, sentinel, NAS preparation root, resource session, allocation,
    or solver process was started.
 

@@ -52,6 +52,15 @@ before returning.
 
 The affected execution, population, and E3 suites pass 50 tests.
 
+## Gates
+
+The complete `./scripts/check-smtcomp-resume.sh` gate passes 144 tests with one
+expected live-host skip. The foundational-resource and relative-link gates are
+green. `just parity-docs` reaches only the pre-existing Lean-owned
+`resume_fs.py` pin: expected `b05c32185d75...`, current `c77639bb1c63...`.
+Workspace formatting remains red only in unrelated bench/CAS paths; this lane
+does not reformat or stage them.
+
 ## Claim boundary
 
 This is process-free fixture evidence. It did not probe a host, read or mutate

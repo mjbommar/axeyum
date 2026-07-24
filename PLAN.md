@@ -882,7 +882,8 @@ twenty-four is fully gated, pushed, integrated byte-for-byte, and documented.
 > a completion-last recovery checkpoint instead of relaunching across the
 > terminal-to-checkpoint crash window. Exact different-host retry closure also
 > clears the corresponding historical failure only after all owned shards are
-> checkpointed. No live F2 root or
+> checkpointed. The expanded portable lane gate passes 144 tests with one
+> expected live-host skip. No live F2 root or
 > canonical acceptance record exists. Next: integrate and green-gate the topic,
 > repair the Lean-owned source pin, then capture/publish an empty F2 preparation
 > before any distinct acceptance or Axeyum launch.

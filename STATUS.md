@@ -410,7 +410,9 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   projects completed terminals, blocks duplicate launch after a
   terminal-before-checkpoint crash, and completion-last reconstructs exact
   initial or different-host-retry checkpoints under scheduler-decision v4.
-  The three affected suites pass 50 tests.
+  The three affected suites pass 50 tests; the complete portable gate passes
+  144 with one expected live-host skip. Foundational resources and links are
+  green.
   Branch-wide formatting remains red in the unrelated bench/CAS lane. The
   later Lean mainline merge repaired the quotient-package marker boundary; on
   the rebased topic, Lean parity now reaches exactly the measured
