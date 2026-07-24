@@ -419,6 +419,10 @@ state.
 > generated seams, and the authorization boundary for retaining and measuring
 > the historical 570,807-byte official root. No semantic implementation,
 > official-root result, complete-K1, or parity credit exists at P0.
+> **This lane is paused after its pushed P0 checkpoint. Resume only from the
+> [authoritative TL2.9 handoff](docs/plan/lean-string-literal-semantics-tl2.9-resume.md),
+> which preserves the exact Git/source state, unresolved defeq placement risk,
+> ordered M1--M5 sequence, and execution/acceptance boundaries.**
 > TL0.6 is now partial: the fail-closed
 > [complete-parity registry](docs/plan/lean-complete-parity-v1.json) and
 > generated [Markdown](docs/plan/generated/lean-complete-parity.md)/

@@ -730,6 +730,10 @@ Start at the root [`PLAN.md`](../../PLAN.md) (map + standing rules) and
   `String.ofList` expansion, defeq/projection/recursor hooks, fail-closed wire
   ingestion, deterministic seam coverage, and the explicit authorization gate
   on retaining and measuring the historical 570,807-byte official closure.
+- [`lean-string-literal-semantics-tl2.9-resume.md`](lean-string-literal-semantics-tl2.9-resume.md)
+  — authoritative paused-after-P0 restart state, including exact Git/source
+  identities, the unresolved defeq placement risk, ordered M1--M5 resumption,
+  completed documentation gates, and execution/acceptance stop boundaries.
 - [`lean-import-transactional-publication-tl1.3-2026-07-22.md`](lean-import-transactional-publication-tl1.3-2026-07-22.md),
   [`lean-import-mutation-corpus-tl1.4-2026-07-22.md`](lean-import-mutation-corpus-tl1.4-2026-07-22.md),
   and [`lean-declaration-identity-tl1.7-2026-07-22.md`](lean-declaration-identity-tl1.7-2026-07-22.md) —

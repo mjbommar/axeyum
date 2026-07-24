@@ -1,6 +1,7 @@
 # Lean TL2.9 String-literal semantics execution plan
 
-Status: **P0 preregistered; implementation and authorized official evidence open**
+Status: **PAUSED after pushed P0; implementation and authorized official
+evidence open**
 
 Date: 2026-07-23
 
@@ -8,6 +9,9 @@ Owner: Lean complete-parity lane
 
 Decision:
 [proposed ADR-0366](../research/09-decisions/adr-0366-preregister-lean-string-literal-semantics.md)
+
+Resume:
+[authoritative TL2.9 handoff](lean-string-literal-semantics-tl2.9-resume.md)
 
 Parent contracts:
 [Lean system implementation plan](lean-system-implementation-plan-2026-07-21.md),
