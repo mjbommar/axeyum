@@ -422,7 +422,13 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   assertions now use the equivalent `assert_ne!` form. Nine verifier fixtures
   retain `assert!` under narrowly scoped lint allowances because that syntax is
   part of the macro-lowering contract; the focused verifier suites confirm the
-  original verdicts are preserved.
+  original verdicts are preserved. The clean GitHub checkout then exposed the
+  remaining `exit-zero-4g` portability gap: retained process evidence named
+  `/usr/bin/python3.14`, while the runner supplied Python from a hosted-toolcache
+  path. Run/spec attribution now compares that host executable by its Python 3
+  role while retaining the exact sealed executable identity in the historical
+  run; repository-owned command arguments and the working directory remain
+  ROOT-relative, and all other external arguments remain byte-exact.
 
 - **2026-07-23 — credited SMT-COMP full-population F2 is implementation-ready,
   not live-ready.** F1 and its supervised-wave executor are integrated. Merge

@@ -8,6 +8,7 @@ import subprocess
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 from scripts import lean_execution_process as PROCESS
 
@@ -107,7 +108,19 @@ class LeanExecutionProcessContractTests(unittest.TestCase):
                 wrong_cwd["working_directory"] += "-other"
                 self.assertFalse(PROCESS._run_matches_spec_attribution(wrong_cwd, spec))
 
-    def test_run_spec_attribution_keeps_external_executable_exact(self) -> None:
+    def test_run_spec_attribution_accepts_python_host_relocation(self) -> None:
+        spec = PROCESS.build_control_spec("exit-zero-4g")
+        run = {
+            "command": list(spec["command"]),
+            "working_directory": spec["working_directory"],
+        }
+        run["command"][0] = "/usr/bin/python3.14"
+        spec["command"][0] = (
+            "/opt/hostedtoolcache/Python/3.13.7/x64/bin/python3.13"
+        )
+        self.assertTrue(PROCESS._run_matches_spec_attribution(run, spec))
+
+    def test_run_spec_attribution_rejects_non_python_external_executable(self) -> None:
         spec = PROCESS.build_control_spec("exit-zero-4g")
         run = {
             "command": list(spec["command"]),
@@ -115,6 +128,20 @@ class LeanExecutionProcessContractTests(unittest.TestCase):
         }
         run["command"][0] = "/usr/bin/not-the-recorded-python"
         self.assertFalse(PROCESS._run_matches_spec_attribution(run, spec))
+
+    def test_result_builder_accepts_python_runtime_relocation(self) -> None:
+        authority = json.loads(PROCESS.RESULT_AUTHORITY.read_bytes())
+        evidence_root = PROCESS.ROOT / authority["evidence_root"]
+        implementation_revision = authority["preregistration"][
+            "implementation_revision"
+        ]
+        hosted_python = "/opt/hostedtoolcache/Python/3.13.7/x64/bin/python3.13"
+        with mock.patch.object(PROCESS.sys, "executable", hosted_python):
+            rebuilt = PROCESS.build_result_authority(
+                evidence_root,
+                implementation_revision=implementation_revision,
+            )
+        self.assertEqual(rebuilt, authority)
 
     def test_historical_result_inputs_remain_immutable(self) -> None:
         authority = json.loads(PROCESS.RESULT_AUTHORITY.read_bytes())

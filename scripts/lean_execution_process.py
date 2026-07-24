@@ -155,6 +155,7 @@ EXPECTED_CLASSES = {
 }
 SAFE_ID = re.compile(r"[a-z0-9][a-z0-9.-]{0,127}\Z")
 HEX64 = re.compile(r"[0-9a-f]{64}\Z")
+PYTHON_EXECUTABLE = re.compile(r"python3(?:[.]\d+)?\Z")
 HISTORICAL_RESULT_SOURCE_INPUTS = (
     {
         "path": "docs/plan/lean-execution-process-adapter-tl0.7.2-plan-2026-07-22.md",
@@ -248,8 +249,10 @@ def _run_matches_spec_attribution(run: dict[str, Any], spec: dict[str, Any]) -> 
     Retained process evidence deliberately preserves the absolute command that
     executed.  Validation may happen in another worktree or CI checkout, so
     repository-owned command arguments and the working directory are compared
-    by their ROOT-relative suffix.  Non-repository arguments, including the
-    Python executable, remain byte-exact.
+    by their ROOT-relative suffix.  The Python host executable is compared by
+    role because the retained run already seals its exact executable identity
+    and a validating checkout may use another Python 3 minor/path.  Other
+    non-repository arguments remain byte-exact.
     """
     run_command = run.get("command")
     spec_command = spec.get("command")
@@ -260,13 +263,29 @@ def _run_matches_spec_attribution(run: dict[str, Any], spec: dict[str, Any]) -> 
     ):
         return False
 
+    python_probe_command = (
+        len(spec_command) >= 2
+        and isinstance(spec_command[1], str)
+        and Path(spec_command[1]) == PROBE.resolve()
+    )
     recorded_roots: set[Path] = set()
-    for retained, expected in zip(run_command, spec_command, strict=True):
+    for index, (retained, expected) in enumerate(
+        zip(run_command, spec_command, strict=True)
+    ):
         if not isinstance(retained, str) or not isinstance(expected, str):
             return False
         try:
             relative = Path(expected).relative_to(ROOT)
         except ValueError:
+            if (
+                index == 0
+                and python_probe_command
+                and Path(retained).is_absolute()
+                and Path(expected).is_absolute()
+                and PYTHON_EXECUTABLE.fullmatch(Path(retained).name)
+                and PYTHON_EXECUTABLE.fullmatch(Path(expected).name)
+            ):
+                continue
             if retained != expected:
                 return False
             continue

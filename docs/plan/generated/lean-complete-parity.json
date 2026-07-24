@@ -4,7 +4,7 @@
   "source_identities": [
     {
       "path": ".github/workflows/ci.yml",
-      "sha256": "0e1e2d64563f05cec1cd1d369303e5e60782bbc4c2c3aae7c17edf2449c3e7e9"
+      "sha256": "63a31a17c9a996b35d5c0275d8bb5206a5cf4af5b7cd207c16ca645718de46ba"
     },
     {
       "path": "docs/plan/generated/lean-execution-evidence.md",
@@ -432,11 +432,11 @@
     },
     {
       "path": "scripts/lean_execution_acceptance.py",
-      "sha256": "70b7f064e4d2a080fc6551b489cbca10081202b978fd8953d0332040037feada"
+      "sha256": "11ee4020e14becf613fede078a551c905931fb591ae7f6e3d8531d9256a3a75d"
     },
     {
       "path": "scripts/lean_execution_process.py",
-      "sha256": "b2f90c46928afad352fbf95390c5e54858ce792b5d20677f1ba25978375f7948"
+      "sha256": "fdf6fd4e768e32a428bd0cf03414a7b77cc88de8a590092095b2d28554342cd2"
     },
     {
       "path": "scripts/lean_execution_store.py",
@@ -456,11 +456,11 @@
     },
     {
       "path": "scripts/lean_u2_official_execution.py",
-      "sha256": "3c32c3c733056772de6d8bb2bd368688ede6a9a71173b9db5b862ca10d0ee56d"
+      "sha256": "4f662afb5dc15d426a5b59a38b99defbb2cb820ef18f2076e80059a16817a101"
     },
     {
       "path": "scripts/lean_u2_official_execution_m2.py",
-      "sha256": "c596d456bb749363722975bfd1868806911379b4ae92cad496ba0d3a1f9bc05d"
+      "sha256": "9e27b2a67f8c69568051ededd736b12af221ce8ff5257f27759c17907c97c6cf"
     },
     {
       "path": "scripts/lean_u2_official_execution_m2_r2.py",
@@ -520,7 +520,7 @@
     },
     {
       "path": "scripts/tests/test_lean_execution_process.py",
-      "sha256": "1c2121c19dd8d9b484b26ef4729cf48855dfbfab4f734de6994ccb99b01f20b7"
+      "sha256": "3c1cf5645e746dbb9b88712223af5616309bfed3ff591bb4d674747be6f65da7"
     },
     {
       "path": "scripts/tests/test_lean_execution_store.py",
@@ -560,7 +560,7 @@
     },
     {
       "path": "scripts/tests/test_lean_u2_official_execution_m2.py",
-      "sha256": "8db025d0c82547c7214a1d6bf8a210dbbf797ab3409461a2c55b7fa6934976d3"
+      "sha256": "14ea0c6dc0c422706d5251c2a4911fd875fe097e6d055d58acadaa97028ab026"
     },
     {
       "path": "scripts/tests/test_lean_u2_official_execution_m2_r2.py",
