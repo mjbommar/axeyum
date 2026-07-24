@@ -35,6 +35,7 @@ DEFAULT_REQUIRED_PATHS = (
     "docs/plan/smtcomp-credited-full-preparation-f2-implementation-2026-07-23.md",
     "docs/plan/smtcomp-credited-full-preparation-f2-live-capture-plan-2026-07-24.md",
     "docs/plan/smtcomp-credited-full-preparation-f2-live-capture-r1-plan-2026-07-24.md",
+    "docs/plan/smtcomp-credited-full-preparation-f2-live-capture-r2-plan-2026-07-24.md",
     "docs/plan/smtcomp-credited-full-publication-fixture-2026-07-23.md",
     "docs/plan/smtcomp-credited-full-scheduler-authorization-fixture-2026-07-23.md",
     "docs/plan/smtcomp-credited-full-scheduler-state-fixture-2026-07-23.md",
@@ -116,6 +117,61 @@ def _commit(root: Path, revision: str) -> str:
     if len(value) != 40 or any(character not in "0123456789abcdef" for character in value):
         raise ContractError("Git returned an invalid commit identity")
     return value
+
+
+def _remote_main(root: Path) -> str:
+    try:
+        completed = subprocess.run(
+            ["git", "ls-remote", "--exit-code", "origin", "refs/heads/main"],
+            cwd=root,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            timeout=30,
+            check=False,
+        )
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        raise ContractError("unable to observe remote main") from exc
+    if completed.returncode != 0:
+        raise ContractError("unable to observe remote main")
+    try:
+        lines = completed.stdout.decode("ascii").splitlines()
+    except UnicodeDecodeError as exc:
+        raise ContractError("remote main observation is not ASCII") from exc
+    if len(lines) != 1:
+        raise ContractError("remote main observation is incomplete or ambiguous")
+    fields = lines[0].split("\t")
+    if len(fields) != 2 or fields[1] != "refs/heads/main":
+        raise ContractError("remote main observation has an unexpected shape")
+    value = fields[0]
+    if len(value) != 40 or any(
+        character not in "0123456789abcdef" for character in value
+    ):
+        raise ContractError("remote main observation has an invalid commit")
+    return value
+
+
+def require_exact_integrated_main(
+    repository_root: Path, *, expected_commit: str | None = None
+) -> str:
+    """Require one clean commit shared by HEAD, tracking main, and remote main."""
+
+    root = repository_root.resolve(strict=True)
+    if expected_commit is not None and (
+        not isinstance(expected_commit, str)
+        or len(expected_commit) != 40
+        or any(character not in "0123456789abcdef" for character in expected_commit)
+    ):
+        raise ContractError("invalid expected integrated-main commit")
+    if worktree_status(root):
+        raise ContractError("live full preparation requires a clean worktree")
+    head = _commit(root, "HEAD")
+    tracking = _commit(root, "origin/main")
+    remote = _remote_main(root)
+    if head != tracking or tracking != remote:
+        raise ContractError("live full preparation requires exact integrated remote main")
+    if expected_commit is not None and head != expected_commit:
+        raise ContractError("live full preparation integrated main changed")
+    return head
 
 
 def _is_ancestor(root: Path, ancestor: str, descendant: str) -> bool:

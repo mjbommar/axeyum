@@ -6,6 +6,7 @@ import ast
 import copy
 import hashlib
 import json
+import os
 import subprocess
 import sys
 import tempfile
@@ -1594,11 +1595,31 @@ class FullPopulationContractTests(unittest.TestCase):
                     prepared_at_ns=4900 + PREFLIGHT_MAX_AGE_NS + 1,
                 )
             original_install = full_prepare_module.atomic_install_json
-            with mock.patch.object(
-                full_prepare_module,
-                "atomic_install_json",
-                wraps=original_install,
-            ) as install:
+            original_authorize = (
+                full_prepare_module._authorize_full_preparation_completion
+            )
+            publication_events = []
+
+            def observed_install(*args: object, **kwargs: object) -> str:
+                publication_events.append(("install", args[1]))
+                return original_install(*args, **kwargs)
+
+            def observed_authorize(**kwargs: object) -> int:
+                publication_events.append(("authorize", None))
+                return original_authorize(**kwargs)
+
+            with (
+                mock.patch.object(
+                    full_prepare_module,
+                    "atomic_install_json",
+                    side_effect=observed_install,
+                ) as install,
+                mock.patch.object(
+                    full_prepare_module,
+                    "_authorize_full_preparation_completion",
+                    side_effect=observed_authorize,
+                ),
+            ):
                 completion = publish_full_preparation_candidate(
                     repository_root=ROOT,
                     source_root=staged_source,
@@ -1612,6 +1633,10 @@ class FullPopulationContractTests(unittest.TestCase):
                     prepared_at_ns=5200,
                 )
             self.assertEqual(install.call_args_list[-1].args[1], "complete.json")
+            self.assertLess(
+                publication_events.index(("authorize", None)),
+                publication_events.index(("install", "complete.json")),
+            )
             self.assertEqual(completion["status"], "prepared-no-launch")
             self.assertFalse(completion["launch_authorized"])
             self.assertTrue((attempt / "complete.json").is_file())
@@ -2555,6 +2580,12 @@ class FullCaptureOperatorTests(unittest.TestCase):
             root = self.exact_main_repository(parent)
             initial = require_exact_integrated_main(root)
             self.assertEqual(len(initial), 40)
+            self.assertEqual(
+                require_exact_integrated_main(root, expected_commit=initial),
+                initial,
+            )
+            with self.assertRaisesRegex(ContractError, "integrated main changed"):
+                require_exact_integrated_main(root, expected_commit="0" * 40)
 
             tracked = root / "tracked.txt"
             tracked.write_text("dirty\n", encoding="utf-8")
@@ -2716,9 +2747,10 @@ class FullCaptureOperatorTests(unittest.TestCase):
             attempt.mkdir()
             binaries, sentinels, output_root = build_inputs(attempt)
             calls = []
+            environments = []
             clock = iter(range(1000, 1100))
 
-            def safe_runner(command: list[str], **_kwargs: object) -> object:
+            def safe_runner(command: list[str], **kwargs: object) -> object:
                 solver_id = Path(command[0]).name
                 sentinel_id = Path(command[1]).stem
                 if sentinel_id == "qf-auflia-pipeline-invalid":
@@ -2726,6 +2758,7 @@ class FullCaptureOperatorTests(unittest.TestCase):
                 else:
                     status = "unsat"
                 calls.append((sentinel_id, solver_id, tuple(command[2:])))
+                environments.append(kwargs.get("env"))
                 stdout = f"{status}\n".encode("ascii")
                 return types.SimpleNamespace(
                     observed=types.SimpleNamespace(value=status),
@@ -2739,15 +2772,19 @@ class FullCaptureOperatorTests(unittest.TestCase):
                     stderr_bytes=b"",
                 )
 
-            records = capture_incident_sentinels(
-                attempt_root=attempt,
-                solver_binaries=binaries,
-                sentinel_inputs=sentinels,
-                output_dir=output_root,
-                fixture_only=True,
-                solver_runner=safe_runner,
-                now_ns=lambda: next(clock),
-            )
+            with mock.patch.dict(
+                os.environ,
+                {"AYU_THREADS": "99", "LD_PRELOAD": "/unrecorded/library.so"},
+            ):
+                records = capture_incident_sentinels(
+                    attempt_root=attempt,
+                    solver_binaries=binaries,
+                    sentinel_inputs=sentinels,
+                    output_dir=output_root,
+                    fixture_only=True,
+                    solver_runner=safe_runner,
+                    now_ns=lambda: next(clock),
+                )
             self.assertEqual(
                 [(row["sentinel_id"], row["sentinel_kind"], row["solver_id"]) for row in records],
                 list(SENTINEL_ROWS),
@@ -2766,6 +2803,10 @@ class FullCaptureOperatorTests(unittest.TestCase):
                 ],
             )
             self.assertEqual(len(list(output_root.iterdir())), 16)
+            self.assertEqual(
+                environments,
+                [SOLVER_ENVIRONMENT] * len(SENTINEL_ROWS),
+            )
 
             failed = Path(tmp).resolve() / "failed"
             failed.mkdir()
@@ -2797,6 +2838,134 @@ class FullCaptureOperatorTests(unittest.TestCase):
                 )
             self.assertEqual(len(wrong_calls), 1)
             self.assertFalse((failed / "complete.json").exists())
+
+    def test_completion_authority_rechecks_main_then_samples_final_time(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            attempt = Path(tmp).resolve() / "attempt"
+            attempt.mkdir()
+            events = []
+            readiness = {"head_commit": "a" * 40}
+
+            def exact_main(
+                repository_root: Path, *, expected_commit: str | None = None
+            ) -> str:
+                events.append(("main", repository_root, expected_commit))
+                return readiness["head_commit"]
+
+            def clock() -> int:
+                events.append(("clock",))
+                return 5200
+
+            def preflight(*_args: object, **kwargs: object) -> dict:
+                events.append(("preflight", kwargs["prepared_at_ns"]))
+                return {}
+
+            with (
+                mock.patch.object(
+                    full_prepare_module,
+                    "require_exact_integrated_main",
+                    side_effect=exact_main,
+                ),
+                mock.patch.object(
+                    full_prepare_module.time,
+                    "time_ns",
+                    side_effect=clock,
+                ),
+                mock.patch.object(
+                    full_prepare_module,
+                    "validate_full_preflight",
+                    side_effect=preflight,
+                ),
+            ):
+                timestamp = full_prepare_module._authorize_full_preparation_completion(
+                    repository_root=ROOT,
+                    readiness=readiness,
+                    preflight={},
+                    attempt_root=attempt,
+                    composition={},
+                    solver_binaries={},
+                    fixture_only=False,
+                    prepared_at_ns=None,
+                )
+            self.assertEqual(timestamp, 5200)
+            self.assertEqual(
+                events,
+                [
+                    ("main", ROOT, readiness["head_commit"]),
+                    ("clock",),
+                    ("preflight", 5200),
+                ],
+            )
+            self.assertFalse((attempt / "complete.json").exists())
+
+            with (
+                mock.patch.object(
+                    full_prepare_module,
+                    "require_exact_integrated_main",
+                    side_effect=ContractError(
+                        "live full preparation requires exact integrated remote main"
+                    ),
+                ),
+                mock.patch.object(full_prepare_module.time, "time_ns") as clock_mock,
+                self.assertRaisesRegex(ContractError, "exact integrated remote main"),
+            ):
+                full_prepare_module._authorize_full_preparation_completion(
+                    repository_root=ROOT,
+                    readiness=readiness,
+                    preflight={},
+                    attempt_root=attempt,
+                    composition={},
+                    solver_binaries={},
+                    fixture_only=False,
+                    prepared_at_ns=None,
+                )
+            clock_mock.assert_not_called()
+            self.assertFalse((attempt / "complete.json").exists())
+
+            with mock.patch.object(
+                full_prepare_module,
+                "require_exact_integrated_main",
+            ) as exact:
+                with self.assertRaisesRegex(ContractError, "sampled internally"):
+                    full_prepare_module._authorize_full_preparation_completion(
+                        repository_root=ROOT,
+                        readiness=readiness,
+                        preflight={},
+                        attempt_root=attempt,
+                        composition={},
+                        solver_binaries={},
+                        fixture_only=False,
+                        prepared_at_ns=5100,
+                    )
+                exact.assert_not_called()
+
+            with (
+                mock.patch.object(
+                    full_prepare_module,
+                    "require_exact_integrated_main",
+                    return_value=readiness["head_commit"],
+                ),
+                mock.patch.object(full_prepare_module.time, "time_ns", return_value=5300),
+                mock.patch.object(
+                    full_prepare_module,
+                    "validate_full_preflight",
+                    side_effect=ContractError(
+                        "full preflight publication is outside capture window"
+                    ),
+                ),
+                self.assertRaisesRegex(ContractError, "outside capture window"),
+            ):
+                full_prepare_module._authorize_full_preparation_completion(
+                    repository_root=ROOT,
+                    readiness=readiness,
+                    preflight={},
+                    attempt_root=attempt,
+                    composition={},
+                    solver_binaries={},
+                    fixture_only=False,
+                    prepared_at_ns=None,
+                )
+            self.assertFalse((attempt / "complete.json").exists())
 
     def test_live_capture_source_has_no_allocation_or_admission_path(self) -> None:
         source = (SMTCOMP / "full_capture.py").read_text(encoding="utf-8")

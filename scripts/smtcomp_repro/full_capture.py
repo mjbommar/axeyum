@@ -11,7 +11,6 @@ from __future__ import annotations
 import argparse
 import os
 import re
-import subprocess
 import sys
 import time
 from collections.abc import Callable
@@ -36,9 +35,9 @@ from full_prepare import (
 from full_readiness import (
     REQUIRED_GATE_COMMANDS,
     build_readiness,
+    require_exact_integrated_main,
     run_gate,
     validate_readiness,
-    worktree_status,
 )
 from incident_sentinels import (
     EXPECTED_SENTINELS,
@@ -79,74 +78,6 @@ RemoteProbe = Callable[..., dict[str, Any]]
 RepairedP0Validator = Callable[..., None]
 SolverRunner = Callable[..., Any]
 ThermalProbe = Callable[..., bytes]
-
-
-def _git(root: Path, *args: str) -> bytes:
-    try:
-        return subprocess.check_output(
-            ["git", *args], cwd=root, stderr=subprocess.STDOUT
-        )
-    except (OSError, subprocess.CalledProcessError) as exc:
-        raise ContractError(f"unable to inspect Git state: {' '.join(args)}") from exc
-
-
-def _commit(root: Path, revision: str) -> str:
-    try:
-        value = _git(root, "rev-parse", "--verify", f"{revision}^{{commit}}").decode(
-            "ascii"
-        ).strip()
-    except UnicodeDecodeError as exc:
-        raise ContractError("Git returned a non-ASCII commit identity") from exc
-    if len(value) != 40 or any(
-        character not in "0123456789abcdef" for character in value
-    ):
-        raise ContractError("Git returned an invalid commit identity")
-    return value
-
-
-def _remote_main(root: Path) -> str:
-    try:
-        completed = subprocess.run(
-            ["git", "ls-remote", "--exit-code", "origin", "refs/heads/main"],
-            cwd=root,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            timeout=30,
-            check=False,
-        )
-    except (OSError, subprocess.TimeoutExpired) as exc:
-        raise ContractError("unable to observe remote main") from exc
-    if completed.returncode != 0:
-        raise ContractError("unable to observe remote main")
-    try:
-        lines = completed.stdout.decode("ascii").splitlines()
-    except UnicodeDecodeError as exc:
-        raise ContractError("remote main observation is not ASCII") from exc
-    if len(lines) != 1:
-        raise ContractError("remote main observation is incomplete or ambiguous")
-    fields = lines[0].split("\t")
-    if len(fields) != 2 or fields[1] != "refs/heads/main":
-        raise ContractError("remote main observation has an unexpected shape")
-    value = fields[0]
-    if len(value) != 40 or any(
-        character not in "0123456789abcdef" for character in value
-    ):
-        raise ContractError("remote main observation has an invalid commit")
-    return value
-
-
-def require_exact_integrated_main(repository_root: Path) -> str:
-    """Require one clean commit shared by HEAD, tracking main, and remote main."""
-
-    root = repository_root.resolve(strict=True)
-    if worktree_status(root):
-        raise ContractError("live full preparation requires a clean worktree")
-    head = _commit(root, "HEAD")
-    tracking = _commit(root, "origin/main")
-    remote = _remote_main(root)
-    if head != tracking or tracking != remote:
-        raise ContractError("live full preparation requires exact integrated remote main")
-    return head
 
 
 def capture_live_readiness(
@@ -315,8 +246,7 @@ def capture_incident_sentinels(
     except ValueError as exc:
         raise ContractError("incident sentinel output escapes attempt root") from exc
 
-    environment = os.environ.copy()
-    environment.update(SOLVER_ENVIRONMENT)
+    environment = dict(SOLVER_ENVIRONMENT)
     records = []
     for sentinel_id, kind, solver_id in SENTINEL_ROWS:
         binary = binaries[solver_id]
@@ -649,7 +579,7 @@ def prepare_full_capture(
         readiness=readiness,
         preflight=preflight,
         solver_cells=solver_cells,
-        prepared_at_ns=now_ns(),
+        prepared_at_ns=now_ns() if fixture_only else None,
     )
     if completion.get("launch_authorized") is not False:
         raise ContractError("credited-full preparation unexpectedly authorized launch")
@@ -657,7 +587,7 @@ def prepare_full_capture(
 
 
 def _default_attempt_id(repository_root: Path) -> str:
-    return f"f2-{_commit(repository_root, 'HEAD')[:12]}-{time.time_ns()}"
+    return f"f2-{require_exact_integrated_main(repository_root)[:12]}-{time.time_ns()}"
 
 
 def _progress(message: str) -> None:
