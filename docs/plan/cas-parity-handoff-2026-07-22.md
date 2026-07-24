@@ -43,8 +43,11 @@ This section is the authoritative resume point for the paused CAS lane.
 
 - Worktree: `/nas4/data/workspace-infosec/claude-axeyum-cas-work`
 - Branch: `agent/cas/gap-probe-wave-twenty-four`
-- HEAD: `01d47334c9ccd40c1ff5cb30ec56d2de0891ed69`
-  (`cas: prove geometric decay rates exactly`)
+- Source checkpoint: `01d47334c9ccd40c1ff5cb30ec56d2de0891ed69`
+  (`cas: prove geometric decay rates exactly`), the immediate parent of this
+  committed pause handoff
+- Branch tip: this `docs(cas): record wave twenty-four pause` commit; use
+  `git rev-parse HEAD` for its immutable local identity
 - Base: `a200c050` (`merge(cas): record exact continuous-head limits (docs)`)
 - Worktree: clean at pause time
 - Remote/integration: source commit is not pushed and has no integration merge
@@ -100,8 +103,9 @@ is required.
    ```bash
    cd /nas4/data/workspace-infosec/claude-axeyum-cas-work
    git status --short --branch
-   git rev-parse HEAD
-   # expect branch agent/cas/gap-probe-wave-twenty-four and HEAD 01d47334...
+   git log -2 --oneline
+   git rev-parse HEAD^
+   # expect the wave-24 branch, a clean tree, and HEAD^ = 01d47334...
    ```
 
 2. Rerun the complete guarded CAS test command from section 2 and retain its

@@ -9,6 +9,20 @@ and the standing rules; **[STATUS.md](STATUS.md)** is the live tracker (current
 focus, per-phase state, changelog) and is the only file with mutable session
 state.
 
+## CAS lane pause status and next actions (2026-07-23)
+
+The CAS gap-probing lane is intentionally paused after wave twenty-four. Its
+single authoritative restart record is the
+[CAS parity handoff](docs/plan/cas-parity-handoff-2026-07-22.md#0-pause-checkpoint-wave-twenty-four).
+Resume there before running commands or changing files. In brief: the clean
+local topic commit is `01d47334` on
+`agent/cas/gap-probe-wave-twenty-four`; it is not pushed or integrated, no CAS
+validation process remains live, and the full gate must be rerun because the
+completed process's final exit summary was unavailable when its session
+closed. The handoff records the exact observed evidence, remaining gates, and
+ordered restart procedure. Do not begin wave twenty-five until wave
+twenty-four is fully gated, pushed, integrated byte-for-byte, and documented.
+
 > The goal is large and deliberately multi-week/multi-month. It is decomposed
 > into tracks → phases → tasks, each with concrete reference file paths, sizing,
 > and exit criteria, so work can proceed one verifiable increment at a time
