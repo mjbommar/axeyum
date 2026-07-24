@@ -81,13 +81,13 @@ REPOSITORY_INPUTS = {
 
 CURRENT_REPOSITORY_INPUT_OVERRIDES = {
     "scripts/lean_u2_official_execution.py": (
-        "4dff7097303a8eb045e42ea91370914bc4a73eab8e339f6c6f0433b78df21437"
+        "95ed09b44a03f6efa5c678bd491b8b090ec687f2db90131a5f8e92f4f3effc81"
     ),
     "scripts/lean_execution_process.py": (
         "fdf6fd4e768e32a428bd0cf03414a7b77cc88de8a590092095b2d28554342cd2"
     ),
     "scripts/lean_execution_store.py": (
-        "809cc599c645ea6578fdf3f73af0b275f4144e2aa36bf3ce0447e218ffed53f2"
+        "93180514d0797181d89f559a4e0c6fff05a1bf352c01e57a28256bcbb8dd0a2d"
     ),
 }
 

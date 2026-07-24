@@ -9,7 +9,7 @@ import os
 import signal
 from pathlib import Path
 
-from lean_vendored_resume_fs import atomic_install_json
+from axeyum_fsprims import atomic_install_json
 
 
 def durable_marker(path: Path, phase: str) -> None:

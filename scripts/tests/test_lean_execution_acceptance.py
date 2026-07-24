@@ -288,15 +288,15 @@ class LeanExecutionAcceptanceContractTests(unittest.TestCase):
             ACCEPTANCE.CURRENT_REPOSITORY_INPUTS["scripts/install-pinned-lean.sh"],
             "8a48e25ee2d2fb6d364dcbe0505b8a2fd660237e18e536d52117dc947d4c71ee",
         )
-        primitive_relative = "scripts/lean_vendored_resume_fs.py"
+        primitive_relative = "scripts/axeyum_fsprims.py"
         primitive = ACCEPTANCE.ROOT / primitive_relative
         self.assertEqual(
             ACCEPTANCE.FROZEN_REPOSITORY_INPUTS[primitive_relative],
-            "a60e6d300f193c5f7ee8444573e84a35d145f65a79c444000a0f6e5bf1416a5e",
+            "f66d992bf5ec577012f2b6e056344af3b08841abc89e5e6609f13fc8ca4cf9a0",
         )
         self.assertEqual(
             ACCEPTANCE.CURRENT_REPOSITORY_INPUTS[primitive_relative],
-            "a60e6d300f193c5f7ee8444573e84a35d145f65a79c444000a0f6e5bf1416a5e",
+            "f66d992bf5ec577012f2b6e056344af3b08841abc89e5e6609f13fc8ca4cf9a0",
         )
         self.assertEqual(
             ACCEPTANCE.sha256_file(primitive),

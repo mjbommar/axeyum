@@ -32,7 +32,7 @@ if str(ROOT) not in sys.path:
 
 from scripts import lean_execution_process as PROCESS  # noqa: E402
 from scripts import lean_execution_store as STORE  # noqa: E402
-from scripts.lean_vendored_resume_fs import (  # noqa: E402
+from scripts.axeyum_fsprims import (  # noqa: E402
     CheckpointConflict,
     atomic_install_bytes,
     atomic_install_json,
@@ -157,8 +157,8 @@ FROZEN_REPOSITORY_INPUTS = {
     "scripts/lean_execution_process.py": "96f6866f619563e9fc639ca360f40260d2c35b521b3fc67941675d22984b2007",
     "docs/plan/lean-execution-store-v1.json": "e167c2054537d628bf1e0621bd6fb864bc8f38847aaf690b8767687ef1d1a647",
     "scripts/lean_execution_store.py": "06d388a49d927a2f1b65a4632cd6297b140a579cf80edd5177fc6849b62ec679",
-    "scripts/lean_vendored_resume_fs.py": "a60e6d300f193c5f7ee8444573e84a35d145f65a79c444000a0f6e5bf1416a5e",
-    "scripts/lean_resume_fs_fixture_worker.py": "858fd5fcc45022e5e704f9becda885d190f5384c7f851dd8f23a3409e295f54b",
+    "scripts/axeyum_fsprims.py": "f66d992bf5ec577012f2b6e056344af3b08841abc89e5e6609f13fc8ca4cf9a0",
+    "scripts/lean_resume_fs_fixture_worker.py": "11907a8ec71ba65e9c904f6bb30440a3d58d2316da4d1fc40c87cc9de56e0aeb",
     "lean-toolchain": "54727eec5cba149c18842e6deb5c41b369d66455c93ce135d7d5347c782b2325",
     "scripts/install-pinned-lean.sh": "75acb49a48e18b43523257ac22bc82889d614a6678c1cc3a457b3a150e1c7f71",
     "docs/plan/fixtures/lean4export-v4.30-axeyum-probe.lean": FLAT_SOURCE_SHA256,
@@ -171,7 +171,7 @@ FROZEN_REPOSITORY_INPUTS = {
 CURRENT_REPOSITORY_INPUTS = {
     **FROZEN_REPOSITORY_INPUTS,
     "scripts/lean_execution_process.py": "fdf6fd4e768e32a428bd0cf03414a7b77cc88de8a590092095b2d28554342cd2",
-    "scripts/lean_execution_store.py": "809cc599c645ea6578fdf3f73af0b275f4144e2aa36bf3ce0447e218ffed53f2",
+    "scripts/lean_execution_store.py": "93180514d0797181d89f559a4e0c6fff05a1bf352c01e57a28256bcbb8dd0a2d",
     "scripts/install-pinned-lean.sh": "8a48e25ee2d2fb6d364dcbe0505b8a2fd660237e18e536d52117dc947d4c71ee",
 }
 

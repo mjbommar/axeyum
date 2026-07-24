@@ -29,7 +29,7 @@ if str(ROOT) not in sys.path:
 
 from scripts import lean_execution_process as PROCESS  # noqa: E402
 from scripts import lean_execution_store as STORE  # noqa: E402
-from scripts.lean_vendored_resume_fs import (  # noqa: E402
+from scripts.axeyum_fsprims import (  # noqa: E402
     atomic_install_bytes,
     atomic_install_json,
     canonical_bytes,
@@ -134,13 +134,13 @@ REPOSITORY_INPUTS = {
     "docs/plan/lean-execution-acceptance-v1.json": "bd3f01fc5ac61bbcfdf23a82055fd58d47cf8167240727ec35e51ceb2a4be05f",
     "scripts/lean_execution_process.py": "96f6866f619563e9fc639ca360f40260d2c35b521b3fc67941675d22984b2007",
     "scripts/lean_execution_store.py": "06d388a49d927a2f1b65a4632cd6297b140a579cf80edd5177fc6849b62ec679",
-    "scripts/lean_vendored_resume_fs.py": "a60e6d300f193c5f7ee8444573e84a35d145f65a79c444000a0f6e5bf1416a5e",
-    "scripts/lean_resume_fs_fixture_worker.py": "858fd5fcc45022e5e704f9becda885d190f5384c7f851dd8f23a3409e295f54b",
+    "scripts/axeyum_fsprims.py": "f66d992bf5ec577012f2b6e056344af3b08841abc89e5e6609f13fc8ca4cf9a0",
+    "scripts/lean_resume_fs_fixture_worker.py": "11907a8ec71ba65e9c904f6bb30440a3d58d2316da4d1fc40c87cc9de56e0aeb",
 }
 
 CURRENT_REPOSITORY_INPUT_OVERRIDES = {
     "scripts/lean_execution_process.py": "fdf6fd4e768e32a428bd0cf03414a7b77cc88de8a590092095b2d28554342cd2",
-    "scripts/lean_execution_store.py": "809cc599c645ea6578fdf3f73af0b275f4144e2aa36bf3ce0447e218ffed53f2",
+    "scripts/lean_execution_store.py": "93180514d0797181d89f559a4e0c6fff05a1bf352c01e57a28256bcbb8dd0a2d",
 }
 
 HISTORICAL_RESULT_GENERATOR_INPUTS = (

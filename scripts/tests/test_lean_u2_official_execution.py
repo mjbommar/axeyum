@@ -259,8 +259,8 @@ class LeanU2OfficialExecutionTests(unittest.TestCase):
         self.assertEqual(U2.validate_selection_authorities(), [])
 
     def test_lean_vendored_resume_fs_is_the_only_live_primitive(self) -> None:
-        relative = "scripts/lean_vendored_resume_fs.py"
-        current = "a60e6d300f193c5f7ee8444573e84a35d145f65a79c444000a0f6e5bf1416a5e"
+        relative = "scripts/axeyum_fsprims.py"
+        current = "f66d992bf5ec577012f2b6e056344af3b08841abc89e5e6609f13fc8ca4cf9a0"
         self.assertEqual(U2.REPOSITORY_INPUTS[relative], current)
         self.assertNotIn(relative, U2.CURRENT_REPOSITORY_INPUT_OVERRIDES)
         self.assertEqual(U2.sha256_file(U2.ROOT / relative), current)
@@ -552,8 +552,8 @@ class LeanU2OfficialExecutionTests(unittest.TestCase):
                 row["path"]: row["sha256"] for row in authority["source_inputs"]
             }
             self.assertEqual(
-                source_inputs["scripts/lean_vendored_resume_fs.py"],
-                U2.REPOSITORY_INPUTS["scripts/lean_vendored_resume_fs.py"],
+                source_inputs["scripts/axeyum_fsprims.py"],
+                U2.REPOSITORY_INPUTS["scripts/axeyum_fsprims.py"],
             )
 
     def test_retained_r3_result_keeps_its_historical_source_identity(self) -> None:

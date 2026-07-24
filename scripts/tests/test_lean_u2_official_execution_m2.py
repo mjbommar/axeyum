@@ -121,11 +121,11 @@ class LeanU2OfficialExecutionM2Tests(unittest.TestCase):
         )
         self.assertEqual(
             M2.CURRENT_REPOSITORY_INPUT_OVERRIDES[relative],
-            "4dff7097303a8eb045e42ea91370914bc4a73eab8e339f6c6f0433b78df21437",
+            "95ed09b44a03f6efa5c678bd491b8b090ec687f2db90131a5f8e92f4f3effc81",
         )
         self.assertEqual(
             BASE.sha256_file(BASE.ROOT / relative),
-            "4dff7097303a8eb045e42ea91370914bc4a73eab8e339f6c6f0433b78df21437",
+            "95ed09b44a03f6efa5c678bd491b8b090ec687f2db90131a5f8e92f4f3effc81",
         )
         self.assertEqual(M2.validate_repository_inputs(), [])
 

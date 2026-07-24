@@ -32,7 +32,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 LEAN_SCRIPTS = ROOT / "scripts"
 
-from scripts.lean_vendored_resume_fs import (  # noqa: E402
+from scripts.axeyum_fsprims import (  # noqa: E402
     CheckpointConflict,
     atomic_install_json,
     recover_orphan_temporaries,
@@ -54,7 +54,7 @@ EVIDENCE_CONTRACT = _load_script(
     ROOT / "scripts/gen-lean-execution-evidence.py",
 )
 WORKER = LEAN_SCRIPTS / "lean_resume_fs_fixture_worker.py"
-PRIMITIVE = LEAN_SCRIPTS / "lean_vendored_resume_fs.py"
+PRIMITIVE = LEAN_SCRIPTS / "axeyum_fsprims.py"
 PREREGISTRATION_PLAN = (
     ROOT / "docs/plan/lean-execution-store-tl0.7.3-plan-2026-07-22.md"
 )

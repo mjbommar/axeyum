@@ -335,11 +335,11 @@ class LeanExecutionStoreContractTests(unittest.TestCase):
         )
         self.assertEqual(
             STORE.sha256_file(STORE.PRIMITIVE),
-            "a60e6d300f193c5f7ee8444573e84a35d145f65a79c444000a0f6e5bf1416a5e",
+            "f66d992bf5ec577012f2b6e056344af3b08841abc89e5e6609f13fc8ca4cf9a0",
         )
         self.assertEqual(
             STORE.PRIMITIVE.relative_to(STORE.ROOT).as_posix(),
-            "scripts/lean_vendored_resume_fs.py",
+            "scripts/axeyum_fsprims.py",
         )
         self.assertEqual(
             STORE.WORKER.relative_to(STORE.ROOT).as_posix(),
