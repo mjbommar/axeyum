@@ -258,39 +258,28 @@ class LeanU2OfficialExecutionTests(unittest.TestCase):
         self.assertEqual(U2.validate_repository_inputs(), [])
         self.assertEqual(U2.validate_selection_authorities(), [])
 
-    def test_resume_contract_successor_is_current_only(self) -> None:
-        relative = "scripts/smtcomp_repro/resume_contract.py"
-        historical = "4713707b26d81e0e5444acc7c653b461fa79c2a94c392873c8565b443ba33930"
-        current = "c128444f940b04a99a5be5def253d56df9f17d488dcb2d739891b0085dd0efd7"
-        self.assertEqual(U2.REPOSITORY_INPUTS[relative], historical)
-        self.assertEqual(U2.CURRENT_REPOSITORY_INPUT_OVERRIDES[relative], current)
+    def test_lean_vendored_resume_fs_is_the_only_live_primitive(self) -> None:
+        relative = "scripts/lean_vendored_resume_fs.py"
+        current = "a60e6d300f193c5f7ee8444573e84a35d145f65a79c444000a0f6e5bf1416a5e"
+        self.assertEqual(U2.REPOSITORY_INPUTS[relative], current)
+        self.assertNotIn(relative, U2.CURRENT_REPOSITORY_INPUT_OVERRIDES)
         self.assertEqual(U2.sha256_file(U2.ROOT / relative), current)
+        self.assertNotIn("scripts/smtcomp_repro/resume_fs.py", U2.REPOSITORY_INPUTS)
+        self.assertNotIn("scripts/smtcomp_repro/resume_fs.py", U2.CURRENT_REPOSITORY_INPUT_OVERRIDES)
+        self.assertNotIn("scripts/smtcomp_repro/resume_contract.py", U2.REPOSITORY_INPUTS)
+        self.assertNotIn(
+            "scripts/smtcomp_repro/resume_contract.py",
+            U2.CURRENT_REPOSITORY_INPUT_OVERRIDES,
+        )
 
-        U2.CURRENT_REPOSITORY_INPUT_OVERRIDES[relative] = "0" * 64
+        U2.REPOSITORY_INPUTS[relative] = "0" * 64
         try:
             self.assertIn(
                 f"frozen repository input drift: {relative}",
                 U2.validate_repository_inputs(),
             )
         finally:
-            U2.CURRENT_REPOSITORY_INPUT_OVERRIDES[relative] = current
-
-    def test_resume_fs_successor_is_current_only(self) -> None:
-        relative = "scripts/smtcomp_repro/resume_fs.py"
-        historical = "1968e7b6424c2dd9273bff5041e96fc21b83ec01b2205dcc840d5dc942be1aec"
-        current = "b05c32185d75d5790f26ba25b6891c373712a565942400f4b08fa49bdc3c0ea6"
-        self.assertEqual(U2.REPOSITORY_INPUTS[relative], historical)
-        self.assertEqual(U2.CURRENT_REPOSITORY_INPUT_OVERRIDES[relative], current)
-        self.assertEqual(U2.sha256_file(U2.ROOT / relative), current)
-
-        U2.CURRENT_REPOSITORY_INPUT_OVERRIDES[relative] = "0" * 64
-        try:
-            self.assertIn(
-                f"frozen repository input drift: {relative}",
-                U2.validate_repository_inputs(),
-            )
-        finally:
-            U2.CURRENT_REPOSITORY_INPUT_OVERRIDES[relative] = current
+            U2.REPOSITORY_INPUTS[relative] = current
 
     def test_spec_freezes_singleton_parent_command_environment_and_lane(self) -> None:
         spec = self.spec()
@@ -563,8 +552,8 @@ class LeanU2OfficialExecutionTests(unittest.TestCase):
                 row["path"]: row["sha256"] for row in authority["source_inputs"]
             }
             self.assertEqual(
-                source_inputs["scripts/smtcomp_repro/resume_contract.py"],
-                U2.REPOSITORY_INPUTS["scripts/smtcomp_repro/resume_contract.py"],
+                source_inputs["scripts/lean_vendored_resume_fs.py"],
+                U2.REPOSITORY_INPUTS["scripts/lean_vendored_resume_fs.py"],
             )
 
     def test_complete_evidence_rejects_missing_extra_and_raw_drift(self) -> None:

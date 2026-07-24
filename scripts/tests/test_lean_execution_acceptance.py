@@ -288,15 +288,15 @@ class LeanExecutionAcceptanceContractTests(unittest.TestCase):
             ACCEPTANCE.CURRENT_REPOSITORY_INPUTS["scripts/install-pinned-lean.sh"],
             "8a48e25ee2d2fb6d364dcbe0505b8a2fd660237e18e536d52117dc947d4c71ee",
         )
-        primitive_relative = "scripts/smtcomp_repro/resume_fs.py"
+        primitive_relative = "scripts/lean_vendored_resume_fs.py"
         primitive = ACCEPTANCE.ROOT / primitive_relative
         self.assertEqual(
             ACCEPTANCE.FROZEN_REPOSITORY_INPUTS[primitive_relative],
-            "1968e7b6424c2dd9273bff5041e96fc21b83ec01b2205dcc840d5dc942be1aec",
+            "a60e6d300f193c5f7ee8444573e84a35d145f65a79c444000a0f6e5bf1416a5e",
         )
         self.assertEqual(
             ACCEPTANCE.CURRENT_REPOSITORY_INPUTS[primitive_relative],
-            "b05c32185d75d5790f26ba25b6891c373712a565942400f4b08fa49bdc3c0ea6",
+            "a60e6d300f193c5f7ee8444573e84a35d145f65a79c444000a0f6e5bf1416a5e",
         )
         self.assertEqual(
             ACCEPTANCE.sha256_file(primitive),
@@ -329,6 +329,14 @@ class LeanExecutionAcceptanceContractTests(unittest.TestCase):
                 f"frozen repository input drift: {primitive_relative}",
                 ACCEPTANCE.validate_repository_inputs(),
             )
+        self.assertNotIn(
+            "scripts/smtcomp_repro/resume_fs.py",
+            ACCEPTANCE.FROZEN_REPOSITORY_INPUTS,
+        )
+        self.assertNotIn(
+            "scripts/smtcomp_repro/resume_fs.py",
+            ACCEPTANCE.CURRENT_REPOSITORY_INPUTS,
+        )
         self.assertEqual(ACCEPTANCE.sha256_file(ACCEPTANCE.FLAT_SOURCE), ACCEPTANCE.FLAT_SOURCE_SHA256)
         self.assertEqual(ACCEPTANCE.sha256_file(ACCEPTANCE.REFERENCE_STREAM), ACCEPTANCE.REFERENCE_SHA256)
         self.assertEqual(ACCEPTANCE.REFERENCE_STREAM.stat().st_size, 3_849)

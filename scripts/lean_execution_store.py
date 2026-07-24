@@ -28,10 +28,11 @@ from typing import Any
 
 
 ROOT = Path(__file__).resolve().parents[1]
-SMTCOMP = ROOT / "scripts/smtcomp_repro"
-sys.path.insert(0, str(SMTCOMP))
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+LEAN_SCRIPTS = ROOT / "scripts"
 
-from resume_fs import (  # noqa: E402
+from scripts.lean_vendored_resume_fs import (  # noqa: E402
     CheckpointConflict,
     atomic_install_json,
     recover_orphan_temporaries,
@@ -52,8 +53,8 @@ EVIDENCE_CONTRACT = _load_script(
     "lean_execution_evidence_for_store",
     ROOT / "scripts/gen-lean-execution-evidence.py",
 )
-WORKER = SMTCOMP / "resume_fs_fixture_worker.py"
-PRIMITIVE = SMTCOMP / "resume_fs.py"
+WORKER = LEAN_SCRIPTS / "lean_resume_fs_fixture_worker.py"
+PRIMITIVE = LEAN_SCRIPTS / "lean_vendored_resume_fs.py"
 PREREGISTRATION_PLAN = (
     ROOT / "docs/plan/lean-execution-store-tl0.7.3-plan-2026-07-22.md"
 )
@@ -867,11 +868,11 @@ def _kill_worker(
     environment = {
         "LANG": "C.UTF-8",
         "PYTHONHASHSEED": "0",
-        "PYTHONPATH": str(SMTCOMP),
+        "PYTHONPATH": str(LEAN_SCRIPTS),
     }
     process = subprocess.Popen(
         command,
-        cwd=SMTCOMP,
+        cwd=LEAN_SCRIPTS,
         env=environment,
         stdin=subprocess.DEVNULL,
         stdout=stdout,
@@ -1077,6 +1078,8 @@ def validate_process_evidence(
     evidence_directory: Path,
     expected_worker_sha256: str | None = None,
     expected_primitive_sha256: str | None = None,
+    expected_worker_relative: Path | None = None,
+    expected_pythonpath_relative: Path | None = None,
 ) -> list[str]:
     failures: list[str] = []
     if not isinstance(process, dict) or set(process) != PROCESS_EVIDENCE_FIELDS:
@@ -1114,9 +1117,10 @@ def validate_process_evidence(
             if expected is not None and actual != expected:
                 failures.append("kill cell command semantics drift")
                 break
+        worker_relative = expected_worker_relative or WORKER.relative_to(ROOT)
         if isinstance(command[1], str):
             recorded_root = _root_for_repository_relative_path(
-                command[1], WORKER.relative_to(ROOT)
+                command[1], worker_relative
             )
         if recorded_root is None:
             failures.append("kill cell command semantics drift")
@@ -1135,13 +1139,14 @@ def validate_process_evidence(
                 failures.append("kill cell ephemeral command paths drift")
         else:
             failures.append("kill cell command path types drift")
+    pythonpath_relative = expected_pythonpath_relative or LEAN_SCRIPTS.relative_to(ROOT)
     expected_environment = {
         "LANG": "C.UTF-8",
         "PYTHONHASHSEED": "0",
         "PYTHONPATH": str(
-            recorded_root / SMTCOMP.relative_to(ROOT)
+            recorded_root / pythonpath_relative
             if recorded_root is not None
-            else SMTCOMP
+            else LEAN_SCRIPTS
         ),
     }
     if process.get("environment") != expected_environment:
@@ -1199,6 +1204,8 @@ def validate_cell(
     evidence_directory: Path,
     expected_worker_sha256: str | None = None,
     expected_primitive_sha256: str | None = None,
+    expected_worker_relative: Path | None = None,
+    expected_pythonpath_relative: Path | None = None,
 ) -> list[str]:
     failures: list[str] = []
     fields = {
@@ -1273,6 +1280,8 @@ def validate_cell(
                 evidence_directory=evidence_directory,
                 expected_worker_sha256=expected_worker_sha256,
                 expected_primitive_sha256=expected_primitive_sha256,
+                expected_worker_relative=expected_worker_relative,
+                expected_pythonpath_relative=expected_pythonpath_relative,
             )
         )
     else:
@@ -1297,6 +1306,8 @@ def validate_evidence_root(
     *,
     expected_worker_sha256: str | None = None,
     expected_primitive_sha256: str | None = None,
+    expected_worker_relative: Path | None = None,
+    expected_pythonpath_relative: Path | None = None,
 ) -> tuple[dict[str, Any], list[dict[str, Any]]]:
     if evidence_root.is_symlink() or not evidence_root.is_dir():
         raise StoreEvidenceError("store evidence root must be a real directory")
@@ -1362,6 +1373,8 @@ def validate_evidence_root(
             evidence_directory=directory,
             expected_worker_sha256=expected_worker_sha256,
             expected_primitive_sha256=expected_primitive_sha256,
+            expected_worker_relative=expected_worker_relative,
+            expected_pythonpath_relative=expected_pythonpath_relative,
         )
         if failures:
             raise StoreEvidenceError(f"{control_id}: {'; '.join(failures)}")
@@ -1497,14 +1510,22 @@ def build_result_authority(evidence_root: Path, *, implementation_revision: str)
         raise StoreEvidenceError("store evidence root must be inside repository") from exc
     source_inputs = result_source_inputs(implementation_revision)
     source_hashes = {row["path"]: row["sha256"] for row in source_inputs}
+    if implementation_revision == HISTORICAL_IMPLEMENTATION_REVISION:
+        worker_source = "scripts/smtcomp_repro/resume_fs_fixture_worker.py"
+        primitive_source = "scripts/smtcomp_repro/resume_fs.py"
+        worker_relative = Path(worker_source)
+        pythonpath_relative = Path("scripts/smtcomp_repro")
+    else:
+        worker_source = WORKER.relative_to(ROOT).as_posix()
+        primitive_source = PRIMITIVE.relative_to(ROOT).as_posix()
+        worker_relative = WORKER.relative_to(ROOT)
+        pythonpath_relative = LEAN_SCRIPTS.relative_to(ROOT)
     storage_document, cells = validate_evidence_root(
         evidence_root,
-        expected_worker_sha256=source_hashes[
-            WORKER.relative_to(ROOT).as_posix()
-        ],
-        expected_primitive_sha256=source_hashes[
-            PRIMITIVE.relative_to(ROOT).as_posix()
-        ],
+        expected_worker_sha256=source_hashes[worker_source],
+        expected_primitive_sha256=source_hashes[primitive_source],
+        expected_worker_relative=worker_relative,
+        expected_pythonpath_relative=pythonpath_relative,
     )
     evidence_files = _evidence_manifest(evidence_root)
     phase_counts = Counter(cell["phase"] for cell in cells)

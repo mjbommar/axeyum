@@ -335,7 +335,15 @@ class LeanExecutionStoreContractTests(unittest.TestCase):
         )
         self.assertEqual(
             STORE.sha256_file(STORE.PRIMITIVE),
-            "b05c32185d75d5790f26ba25b6891c373712a565942400f4b08fa49bdc3c0ea6",
+            "a60e6d300f193c5f7ee8444573e84a35d145f65a79c444000a0f6e5bf1416a5e",
+        )
+        self.assertEqual(
+            STORE.PRIMITIVE.relative_to(STORE.ROOT).as_posix(),
+            "scripts/lean_vendored_resume_fs.py",
+        )
+        self.assertEqual(
+            STORE.WORKER.relative_to(STORE.ROOT).as_posix(),
+            "scripts/lean_resume_fs_fixture_worker.py",
         )
         self.assertEqual(
             STORE.PREREGISTRATION_COMMIT,
@@ -369,7 +377,7 @@ class LeanExecutionStoreContractTests(unittest.TestCase):
             environment = {
                 "LANG": "C.UTF-8",
                 "PYTHONHASHSEED": "0",
-                "PYTHONPATH": str(STORE.SMTCOMP),
+                "PYTHONPATH": str(STORE.LEAN_SCRIPTS),
             }
             process = {
                 "command": command,
@@ -422,7 +430,7 @@ class LeanExecutionStoreContractTests(unittest.TestCase):
             )
             relocated["command_sha256"] = STORE.digest(relocated["command"])
             relocated["environment"]["PYTHONPATH"] = str(
-                relocated_root / STORE.SMTCOMP.relative_to(STORE.ROOT)
+                relocated_root / STORE.LEAN_SCRIPTS.relative_to(STORE.ROOT)
             )
             relocated["environment_sha256"] = STORE.digest(relocated["environment"])
             self.assertEqual(
@@ -434,7 +442,7 @@ class LeanExecutionStoreContractTests(unittest.TestCase):
                 ),
                 [],
             )
-            relocated["environment"]["PYTHONPATH"] = str(STORE.SMTCOMP)
+            relocated["environment"]["PYTHONPATH"] = str(STORE.LEAN_SCRIPTS)
             relocated["environment_sha256"] = STORE.digest(relocated["environment"])
             self.assertIn(
                 "kill cell environment drift",

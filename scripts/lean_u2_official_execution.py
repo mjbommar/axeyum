@@ -26,14 +26,14 @@ from typing import Any
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
-SMTCOMP = ROOT / "scripts/smtcomp_repro"
-if str(SMTCOMP) not in sys.path:
-    sys.path.insert(0, str(SMTCOMP))
 
 from scripts import lean_execution_process as PROCESS  # noqa: E402
 from scripts import lean_execution_store as STORE  # noqa: E402
-from resume_contract import canonical_bytes  # noqa: E402
-from resume_fs import atomic_install_bytes, atomic_install_json  # noqa: E402
+from scripts.lean_vendored_resume_fs import (  # noqa: E402
+    atomic_install_bytes,
+    atomic_install_json,
+    canonical_bytes,
+)
 
 
 PLAN = ROOT / "docs/plan/lean-u2-official-execution-tl0.6.3-m0-plan-2026-07-22.md"
@@ -117,15 +117,13 @@ REPOSITORY_INPUTS = {
     "docs/plan/lean-execution-acceptance-v1.json": "bd3f01fc5ac61bbcfdf23a82055fd58d47cf8167240727ec35e51ceb2a4be05f",
     "scripts/lean_execution_process.py": "96f6866f619563e9fc639ca360f40260d2c35b521b3fc67941675d22984b2007",
     "scripts/lean_execution_store.py": "06d388a49d927a2f1b65a4632cd6297b140a579cf80edd5177fc6849b62ec679",
-    "scripts/smtcomp_repro/resume_contract.py": "4713707b26d81e0e5444acc7c653b461fa79c2a94c392873c8565b443ba33930",
-    "scripts/smtcomp_repro/resume_fs.py": "1968e7b6424c2dd9273bff5041e96fc21b83ec01b2205dcc840d5dc942be1aec",
+    "scripts/lean_vendored_resume_fs.py": "a60e6d300f193c5f7ee8444573e84a35d145f65a79c444000a0f6e5bf1416a5e",
+    "scripts/lean_resume_fs_fixture_worker.py": "858fd5fcc45022e5e704f9becda885d190f5384c7f851dd8f23a3409e295f54b",
 }
 
 CURRENT_REPOSITORY_INPUT_OVERRIDES = {
     "scripts/lean_execution_process.py": "b2f90c46928afad352fbf95390c5e54858ce792b5d20677f1ba25978375f7948",
-    "scripts/lean_execution_store.py": "274009d97fc40db01b82c6ea650127815e84a5dbb56eef5f1d60f962a6a3cd1b",
-    "scripts/smtcomp_repro/resume_contract.py": "c128444f940b04a99a5be5def253d56df9f17d488dcb2d739891b0085dd0efd7",
-    "scripts/smtcomp_repro/resume_fs.py": "b05c32185d75d5790f26ba25b6891c373712a565942400f4b08fa49bdc3c0ea6",
+    "scripts/lean_execution_store.py": "acf0fa7f30f8509b298968daa8a505f7cb0010274ce8a42b2fa070411105dc9a",
 }
 
 HISTORICAL_RESULT_GENERATOR_INPUTS = (
