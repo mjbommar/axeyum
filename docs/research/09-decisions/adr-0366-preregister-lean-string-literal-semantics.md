@@ -7,6 +7,9 @@ Date: 2026-07-23
 Execution plan:
 [TL2.9 String-literal plan](../../plan/lean-string-literal-semantics-tl2.9-plan-2026-07-23.md)
 
+Resume status:
+[paused after pushed P0](../../plan/lean-string-literal-semantics-tl2.9-resume.md)
+
 ## Context
 
 Axeyum already stores `.strVal` payloads losslessly as Rust `String` values,
