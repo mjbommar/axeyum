@@ -231,6 +231,45 @@ fn front_door_bare_constant_disjunction_consistent_branch_sat() {
     assert!(matches!(verdict(s), CheckResult::Sat(_)));
 }
 
+#[test]
+fn front_door_kaluza_boolean_aliases_sat() {
+    // Kaluza names each string predicate through a declared Bool before asserting
+    // it. The aliases are exact Boolean structure around the nested Seq atoms.
+    let s = r#"(set-logic QF_SLIA)
+(declare-fun T_1 () Bool)
+(declare-fun T_2 () Bool)
+(declare-fun T_3 () Bool)
+(declare-fun x () String)
+(assert (= T_1 (= x "Example:")))
+(assert (= T_2 (not (= x ""))))
+(assert (= T_3 (not T_2)))
+(assert T_1)
+(assert T_2)
+(assert (not T_3))
+(check-sat)"#;
+    let parsed = parse_script(s).expect("parse Boolean aliases");
+    assert!(
+        !parsed.word_skeleton.is_empty(),
+        "exact Boolean aliases must not collapse the word skeleton"
+    );
+    assert!(matches!(verdict(s), CheckResult::Sat(_)));
+}
+
+#[test]
+fn front_door_kaluza_boolean_aliases_unsat() {
+    // Both named predicates are forced true, pinning x to distinct constants.
+    let s = r#"(set-logic QF_SLIA)
+(declare-fun T_a () Bool)
+(declare-fun T_b () Bool)
+(declare-fun x () String)
+(assert (= T_a (= x "a")))
+(assert (= (= x "b") T_b))
+(assert T_a)
+(assert T_b)
+(check-sat)"#;
+    assert_eq!(verdict(s), CheckResult::Unsat);
+}
+
 // ---------- over-cap (word-first fallback) disjunctive shapes ----------
 //
 // String literals over `STRING_MAX_LEN` (8) make the *bounded* parse decline, so
