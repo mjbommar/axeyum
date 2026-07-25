@@ -1072,7 +1072,8 @@ fn build_word_problem(arena: &mut TermArena, exprs: &[SExpr]) -> Option<WordProb
 /// `true`/`false`) that the flat conjunction side channel flattens away. Returns
 /// `None` (all-or-nothing) when the script falls outside the fragment — any
 /// non-string atom, an `ite`/read over strings, `str.len`/`substr`/regex/extended
-/// functions, a Boolean symbol leaf, or any incremental scoping.
+/// functions, or any incremental scoping. Declared Boolean symbols are retained
+/// exactly, including Boolean equalities used as aliases for string atoms.
 ///
 /// **Soundness.** The online route only ever *adds* a verdict (a certified theory
 /// `unsat` or a replay-checked `sat`, see `axeyum_solver::check_qf_s_online_cdclt`),
@@ -1118,6 +1119,21 @@ fn build_word_skeleton(arena: &mut TermArena, exprs: &[SExpr]) -> Option<WordSke
         }
     }
 
+    // Declared Boolean variables stay first-class Boolean skeleton leaves. Kaluza
+    // and similar symbolic-execution corpora name string predicates through chains
+    // such as `(= T_1 (not (= x "")))` followed by `(assert T_1)`. Retaining the
+    // aliases is an exact Boolean re-encoding; the online route still treats only
+    // the nested Seq equalities as theory atoms and replay-checks the whole skeleton.
+    let mut bool_vars: BTreeMap<String, TermId> = BTreeMap::new();
+    for e in exprs {
+        if let Some(name) = declared_bool_var(e)
+            && !bool_vars.contains_key(name)
+        {
+            let sym = arena.declare(name, Sort::Bool).ok()?;
+            bool_vars.insert(name.to_owned(), arena.var(sym));
+        }
+    }
+
     // Translate every `assert` body into a Bool term over `Seq` equality and
     // `str.in_re` membership atoms; a single unrepresentable atom aborts the whole
     // skeleton. `mem` accumulates the membership theory atoms (deduplicated).
@@ -1134,7 +1150,7 @@ fn build_word_skeleton(arena: &mut TermArena, exprs: &[SExpr]) -> Option<WordSke
         let Some(items) = e.list() else { continue };
         if items.first().and_then(SExpr::atom) == Some("assert") {
             let [_, body] = items else { return None };
-            let t = word_bool(arena, body, &vars, &mut saw_seq_atom, &mut mem)?;
+            let t = word_bool(arena, body, &vars, &bool_vars, &mut saw_seq_atom, &mut mem)?;
             assertions.push(t);
         }
     }
@@ -1176,6 +1192,23 @@ fn declared_int_var(e: &SExpr) -> Option<&str> {
         "declare-fun" if items.len() == 4 => {
             let empty_params = items[2].list().is_some_and(<[SExpr]>::is_empty);
             (empty_params && items[2].list().is_some() && items[3].atom() == Some("Int"))
+                .then(|| items[1].atom())?
+        }
+        _ => None,
+    }
+}
+
+/// The declared name of a 0-ary `Bool`-sorted symbol, if `e` is such a
+/// declaration (`(declare-const p Bool)` or `(declare-fun p () Bool)`).
+fn declared_bool_var(e: &SExpr) -> Option<&str> {
+    let items = e.list()?;
+    match items.first().and_then(SExpr::atom)? {
+        "declare-const" if items.len() == 3 => {
+            (items[2].atom() == Some("Bool")).then(|| items[1].atom())?
+        }
+        "declare-fun" if items.len() == 4 => {
+            let empty_params = items[2].list().is_some_and(<[SExpr]>::is_empty);
+            (empty_params && items[2].list().is_some() && items[3].atom() == Some("Bool"))
                 .then(|| items[1].atom())?
         }
         _ => None,
@@ -1759,7 +1792,8 @@ impl MembershipCollector {
 /// Translates one Boolean term into a `Sort::Bool` [`TermId`] over `Seq` equality
 /// atoms, or `None` on anything outside the skeleton fragment. Recurses through
 /// every Boolean connective; leaves are `Seq` equalities (`=`), `Seq` disequalities
-/// (`not (= …)` / `distinct`), and the Boolean constants. Sets `saw_seq_atom` when a
+/// (`not (= …)` / `distinct`), declared Boolean symbols, and the Boolean constants.
+/// Boolean equality is retained as exact equivalence. Sets `saw_seq_atom` when a
 /// genuine `Seq` equality atom is produced.
 ///
 /// **No polarity tracking is needed** because — unlike [`word_atom`] — this build
@@ -1773,22 +1807,24 @@ fn word_bool(
     arena: &mut TermArena,
     e: &SExpr,
     vars: &BTreeMap<String, (SymbolId, TermId)>,
+    bool_vars: &BTreeMap<String, TermId>,
     saw_seq_atom: &mut bool,
     mem: &mut MembershipCollector,
 ) -> Option<TermId> {
     match e.atom() {
         Some("true") => return Some(arena.bool_const(true)),
         Some("false") => return Some(arena.bool_const(false)),
-        _ => {}
+        Some(name) => return bool_vars.get(name).copied(),
+        None => {}
     }
     let items = e.list()?;
     let head = items.first().and_then(SExpr::atom)?;
     match head {
         // Boolean connectives: fold the (≥1) operands.
         "and" | "or" | "xor" if items.len() >= 2 => {
-            let mut acc = word_bool(arena, &items[1], vars, saw_seq_atom, mem)?;
+            let mut acc = word_bool(arena, &items[1], vars, bool_vars, saw_seq_atom, mem)?;
             for it in &items[2..] {
-                let next = word_bool(arena, it, vars, saw_seq_atom, mem)?;
+                let next = word_bool(arena, it, vars, bool_vars, saw_seq_atom, mem)?;
                 acc = match head {
                     "and" => arena.and(acc, next).ok()?,
                     "or" => arena.or(acc, next).ok()?,
@@ -1799,15 +1835,15 @@ fn word_bool(
         }
         "=>" if items.len() >= 3 => {
             // Right-associative implication chain `a => b => … => z`.
-            let mut acc = word_bool(arena, items.last()?, vars, saw_seq_atom, mem)?;
+            let mut acc = word_bool(arena, items.last()?, vars, bool_vars, saw_seq_atom, mem)?;
             for it in items[1..items.len() - 1].iter().rev() {
-                let ante = word_bool(arena, it, vars, saw_seq_atom, mem)?;
+                let ante = word_bool(arena, it, vars, bool_vars, saw_seq_atom, mem)?;
                 acc = arena.implies(ante, acc).ok()?;
             }
             Some(acc)
         }
         "not" if items.len() == 2 => {
-            let inner = word_bool(arena, &items[1], vars, saw_seq_atom, mem)?;
+            let inner = word_bool(arena, &items[1], vars, bool_vars, saw_seq_atom, mem)?;
             arena.not(inner).ok()
         }
         // `(str.in_re X R)`: a membership theory atom (negative polarity is expressed
@@ -1858,9 +1894,9 @@ fn word_bool(
         // Boolean `ite` only (the branches must themselves be skeleton Booleans; an
         // `ite` over *strings* is not a `word_str_expr` and is declined below).
         "ite" if items.len() == 4 => {
-            let c = word_bool(arena, &items[1], vars, saw_seq_atom, mem)?;
-            let t = word_bool(arena, &items[2], vars, saw_seq_atom, mem)?;
-            let f = word_bool(arena, &items[3], vars, saw_seq_atom, mem)?;
+            let c = word_bool(arena, &items[1], vars, bool_vars, saw_seq_atom, mem)?;
+            let t = word_bool(arena, &items[2], vars, bool_vars, saw_seq_atom, mem)?;
+            let f = word_bool(arena, &items[3], vars, bool_vars, saw_seq_atom, mem)?;
             arena.ite(c, t, f).ok()
         }
         // A **trivially-true length guard** (`(<= 0 (str.len W))` / `(>= (str.len W)
@@ -1870,20 +1906,12 @@ fn word_bool(
         "<=" | ">=" if items.len() == 3 && is_trivial_nonneg_length_atom(head, &items[1..]) => {
             Some(arena.bool_const(true))
         }
-        // `(= a b …)` — chained equality over ≥2 `Seq` expressions → conjunction of
-        // `(= a_0 a_i)`.
+        // `(= a b …)` — either chained equality over `Seq` expressions, or exact
+        // Boolean equivalence over skeleton formulas. Boolean equality is expanded
+        // to `(a => b) ∧ (b => a)` so it remains Boolean structure rather than a
+        // non-Seq theory atom.
         "=" if items.len() >= 3 => {
-            let terms = word_terms(arena, &items[1..], vars)?;
-            let mut acc: Option<TermId> = None;
-            for &t in &terms[1..] {
-                let atom = arena.eq(terms[0], t).ok()?;
-                *saw_seq_atom = true;
-                acc = Some(match acc {
-                    None => atom,
-                    Some(prev) => arena.and(prev, atom).ok()?,
-                });
-            }
-            acc
+            word_equality(arena, &items[1..], vars, bool_vars, saw_seq_atom, mem)
         }
         // `(distinct a b …)` — pairwise disequality → conjunction of `(not (= …))`.
         "distinct" if items.len() >= 3 => {
@@ -1906,6 +1934,45 @@ fn word_bool(
         // outside the skeleton fragment — decline the whole build.
         _ => None,
     }
+}
+
+/// Translates a chained word equality or Boolean equivalence for [`word_bool`].
+fn word_equality(
+    arena: &mut TermArena,
+    items: &[SExpr],
+    vars: &BTreeMap<String, (SymbolId, TermId)>,
+    bool_vars: &BTreeMap<String, TermId>,
+    saw_seq_atom: &mut bool,
+    mem: &mut MembershipCollector,
+) -> Option<TermId> {
+    if let Some(terms) = word_terms(arena, items, vars) {
+        let mut acc: Option<TermId> = None;
+        for &term in &terms[1..] {
+            let atom = arena.eq(terms[0], term).ok()?;
+            *saw_seq_atom = true;
+            acc = Some(match acc {
+                None => atom,
+                Some(prev) => arena.and(prev, atom).ok()?,
+            });
+        }
+        return acc;
+    }
+
+    let terms: Vec<TermId> = items
+        .iter()
+        .map(|term| word_bool(arena, term, vars, bool_vars, saw_seq_atom, mem))
+        .collect::<Option<_>>()?;
+    let mut acc: Option<TermId> = None;
+    for &term in &terms[1..] {
+        let forward = arena.implies(terms[0], term).ok()?;
+        let backward = arena.implies(term, terms[0]).ok()?;
+        let iff = arena.and(forward, backward).ok()?;
+        acc = Some(match acc {
+            None => iff,
+            Some(prev) => arena.and(prev, iff).ok()?,
+        });
+    }
+    acc
 }
 
 /// Translates a `(str.in_re X R)` atom into its membership proxy for [`word_bool`]
