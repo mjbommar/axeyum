@@ -153,11 +153,19 @@ fn try_eliminate(
     // termination with a single bounded QF solve. We pass the sub-query alone (the
     // only thing whose validity we are testing); other assertions never constrain
     // the `cᵢ`, so including them could only mask validity, not create it.
-    match check_auto(arena, &[negated], config)? {
+    match check_auto(arena, &[negated], config) {
         // Definitively UNSAT ⇒ the universal is valid ⇒ replace with `true`.
-        CheckResult::Unsat => Ok(Some(arena.bool_const(true))),
+        Ok(CheckResult::Unsat) => Ok(Some(arena.bool_const(true))),
         // Sat/Unknown ⇒ could not prove validity ⇒ leave the universal untouched.
-        _ => Ok(None),
+        Ok(CheckResult::Sat(_) | CheckResult::Unknown(_)) => Ok(None),
+        Err(SolverError::Unsupported(_))
+            if vars.len() == 1
+                && crate::quant_uf_model_sat_cert::vacuous_unary_uf_guard(arena, body, vars[0])
+                    .is_some() =>
+        {
+            Ok(None)
+        }
+        Err(error) => Err(error),
     }
 }
 

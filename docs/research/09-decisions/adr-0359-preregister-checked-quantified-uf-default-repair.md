@@ -11,6 +11,20 @@ to 39 and the resource-limited Z3-SAT bucket from nine to zero. All focused,
 workspace, static, generated-resource, parity, link, QF_BV-profile, and
 SMT-COMP-recovery gates below passed on the containing branch before acceptance.
 
+Accepted extension (2026-07-25): the same bounded repair may use declared-sort
+model tokens for a unary `Int -> U` function. The independent checker admits one
+additional exact source shape, `forall x. f(x) = c => body`, only when the
+candidate interpretation of `f` is total and constant, has no overriding table
+entries, and its default is distinct from the replayed value of binder-free
+`c`. The implication antecedent is then false for every integer, so `body` may
+contain otherwise unsupported arithmetic occurrences of `x` without sampling.
+For candidate generation only, disconnected quantifier-free ground conjuncts
+may be solved by their existing theory routes and merged; a merged candidate is
+usable only after replay of every exact ground conjunct. The public UFLIA
+`TwoSquares/smtlib.598292.smt2` row moves from `unknown` to replay-certified
+`sat` in 0.01 seconds, matching Z3; the exact falsifying-entry control remains
+`unsat`, and the 1,412-file UFLIA selection has zero wrong verdicts.
+
 ## Context
 
 Accepted ADR-0357/0358 can certify a finite-table-plus-default UF model over a
@@ -30,8 +44,9 @@ candidate, but only the existing source-bound checker may grant SAT credit.
 ## Decision
 
 **Add a bounded, deterministic, untrusted repair search over only the default
-results of relevant `Int`/`Real`-result UF interpretations, preserving every
-existing scalar assignment and explicit function-table entry.**
+results of relevant `Int`/`Real`-result UF interpretations (plus the accepted
+declared-sort guarded extension above), preserving every existing scalar
+assignment and explicit function-table entry.**
 
 The first increment is limited to the already accepted ADR-0357/0358 source
 fragment and will:

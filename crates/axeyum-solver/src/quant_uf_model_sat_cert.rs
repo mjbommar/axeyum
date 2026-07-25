@@ -59,6 +59,12 @@ pub fn check_quantified_uf_model_sat(
         return false;
     }
 
+    if let [binder] = binders.as_slice()
+        && check_vacuous_unary_uf_guard(arena, body, *binder, model)
+    {
+        return true;
+    }
+
     let mut binder_representatives = Vec::with_capacity(binders.len());
     let mut profile_count = 1_usize;
     for &binder in &binders {
@@ -238,6 +244,11 @@ pub(crate) fn quantified_uf_model_functions(
     assertion: TermId,
 ) -> Option<BTreeSet<FuncId>> {
     let (binders, body) = universal_prefix(arena, assertion)?;
+    if let [binder] = binders.as_slice()
+        && let Some((function, _)) = vacuous_unary_uf_guard(arena, body, *binder)
+    {
+        return Some(BTreeSet::from([function]));
+    }
     for &binder in &binders {
         let sort = arena.symbol(binder).1;
         if !matches!(sort, Sort::Int | Sort::Real) {
@@ -263,6 +274,113 @@ pub(crate) fn quantified_uf_model_functions(
         }
     }
     (!functions.is_empty()).then_some(functions)
+}
+
+/// Recognizes `f(x) = ground` as the antecedent of a top-level implication.
+/// The consequent may mention `x` arbitrarily: when a total constant model for
+/// `f` differs from `ground`, the antecedent is false for every `x` and the exact
+/// source universal is true without sampling the consequent's arithmetic.
+pub(crate) fn vacuous_unary_uf_guard(
+    arena: &TermArena,
+    body: TermId,
+    binder: SymbolId,
+) -> Option<(FuncId, TermId)> {
+    if arena.symbol(binder).1 != Sort::Int {
+        return None;
+    }
+    fn application_at_binder(arena: &TermArena, term: TermId, binder: SymbolId) -> Option<FuncId> {
+        let TermNode::App {
+            op: Op::Apply(function),
+            args,
+        } = arena.node(term)
+        else {
+            return None;
+        };
+        let [argument] = &**args else {
+            return None;
+        };
+        matches!(arena.node(*argument), TermNode::Symbol(symbol) if *symbol == binder)
+            .then_some(*function)
+    }
+
+    fn mentions_symbol(arena: &TermArena, root: TermId, symbol: SymbolId) -> bool {
+        let mut seen = BTreeSet::new();
+        let mut stack = vec![root];
+        while let Some(term) = stack.pop() {
+            if !seen.insert(term) {
+                continue;
+            }
+            match arena.node(term) {
+                TermNode::Symbol(candidate) if *candidate == symbol => return true,
+                TermNode::App { args, .. } => stack.extend(args.iter().copied()),
+                _ => {}
+            }
+        }
+        false
+    }
+
+    let TermNode::App {
+        op: Op::BoolImplies,
+        args,
+    } = arena.node(body)
+    else {
+        return None;
+    };
+    let [antecedent, _] = &**args else {
+        return None;
+    };
+    let TermNode::App {
+        op: Op::Eq,
+        args: equality,
+    } = arena.node(*antecedent)
+    else {
+        return None;
+    };
+    let [left, right] = &**equality else {
+        return None;
+    };
+    let candidate = application_at_binder(arena, *left, binder)
+        .filter(|_| !mentions_symbol(arena, *right, binder))
+        .map(|function| (function, *right))
+        .or_else(|| {
+            application_at_binder(arena, *right, binder)
+                .filter(|_| !mentions_symbol(arena, *left, binder))
+                .map(|function| (function, *left))
+        })?;
+    let (_, params, result) = arena.function(candidate.0);
+    (params == [Sort::Int]
+        && matches!(result, Sort::Uninterpreted(_))
+        && arena.sort_of(candidate.1) == result)
+        .then_some(candidate)
+}
+
+fn check_vacuous_unary_uf_guard(
+    arena: &TermArena,
+    body: TermId,
+    binder: SymbolId,
+    model: &Model,
+) -> bool {
+    let Some((function, ground)) = vacuous_unary_uf_guard(arena, body, binder) else {
+        return false;
+    };
+    let binder_sort = arena.symbol(binder).1;
+    let (_, params, result) = arena.function(function);
+    if params != [binder_sort] || arena.sort_of(ground) != result {
+        return false;
+    }
+    let Some(interpretation) = model.function(function) else {
+        return false;
+    };
+    if interpretation.params() != params
+        || interpretation.result() != result
+        || interpretation.value_entries().next().is_some()
+    {
+        return false;
+    }
+    let Ok(ground_value) = eval(arena, ground, &model.to_assignment()) else {
+        return false;
+    };
+    interpretation.default_value() != ground_value
 }
 
 /// Returns the first exact finite-profile value that falsifies a supported
@@ -446,6 +564,74 @@ mod tests {
         let zero = arena.int_const(0);
         let body = arena.int_ge(sum, zero).unwrap();
         assert_eq!(relevant_function_positions(&arena, body, binder), None);
+    }
+
+    #[test]
+    fn constant_distinct_uf_default_certifies_vacuous_guard() {
+        let mut arena = TermArena::new();
+        let carrier = arena.declare_uninterpreted_sort("GuardCarrier");
+        let carrier_sort = Sort::Uninterpreted(carrier);
+        let guarded_value = arena.declare("guarded_value", carrier_sort).unwrap();
+        let function = arena
+            .declare_fun("guard_function", &[Sort::Int], carrier_sort)
+            .unwrap();
+        let binder = arena.declare("guard_x", Sort::Int).unwrap();
+        let variable = arena.var(binder);
+        let application = arena.apply(function, &[variable]).unwrap();
+        let guarded_value_term = arena.var(guarded_value);
+        let antecedent = arena.eq(application, guarded_value_term).unwrap();
+        let five = arena.int_const(5);
+        let consequent = arena.int_ge(variable, five).unwrap();
+        let body = arena.implies(antecedent, consequent).unwrap();
+        let universal = arena.forall(binder, body).unwrap();
+
+        let mut model = Model::new();
+        model.set(
+            guarded_value,
+            Value::Uninterpreted {
+                sort: carrier,
+                value: 0,
+            },
+        );
+        model.set_function(
+            function,
+            axeyum_ir::FuncValue::constant_value(
+                vec![Sort::Int],
+                carrier_sort,
+                Value::Uninterpreted {
+                    sort: carrier,
+                    value: 1,
+                },
+            ),
+        );
+
+        let certificate = certify_quantified_uf_model_sat(&arena, universal, &model)
+            .expect("the source guard is false for every binder value");
+        assert!(check_quantified_uf_model_sat(
+            &arena,
+            universal,
+            &model,
+            &certificate
+        ));
+        assert_eq!(
+            quantified_uf_model_functions(&arena, universal),
+            Some(BTreeSet::from([function]))
+        );
+
+        let nonconstant = model.function(function).unwrap().clone().define_value(
+            &[Value::Int(2)],
+            Value::Uninterpreted {
+                sort: carrier,
+                value: 0,
+            },
+        );
+        model.set_function(function, nonconstant);
+        assert!(!check_quantified_uf_model_sat(
+            &arena,
+            universal,
+            &model,
+            &certificate
+        ));
     }
 
     #[test]
