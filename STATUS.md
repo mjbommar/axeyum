@@ -383,6 +383,20 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-24 — current main and the F2 topic compose cleanly under a bounded
+  synthetic integration gate, but main remains red and no live action is
+  authorized.** The detached
+  [integration preview](docs/plan/smtcomp-credited-full-preparation-f2-integration-preview-2026-07-24.md)
+  combines exact main `08af3665` and audited topic `9cec37e4` at merge tree
+  `f0a08d42` with zero conflicts. `just check-scope origin/main` passes 45
+  focused tests/44 subtests, the 158-test portable gate with one expected
+  live-host skip, and every runner/scoring/pipeline/selection/provenance
+  subgate. `just parity-docs` and links also pass, and the scratch tree stays
+  clean. This closes the bounded merge/scoped-regression uncertainty only.
+  Exact main CI run `30122366840` still fails its non-SMT Clippy and seed-111
+  MBQI controls, the topic is not integrated, and a complete `just check` on
+  the actual integrated commit remains mandatory.
+
 - **2026-07-24 — the F2 implementation/result closure is durably checkpointed,
   but integration and live readiness remain red.** At audit time, local,
   tracking, and live remote topic refs all equaled

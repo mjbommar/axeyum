@@ -157,5 +157,13 @@ no-launch implementation defect. The current live command is the parent C5
 command augmented by R1's mandatory `--repaired-p0-preparation` argument, and
 its printed root must then be passed to a distinct read-only `--verify-root`
 process. Those commands remain prohibited until the current clean remote topic
-through at least `892da376` is integrated and the resulting
+through at least `9cec37e4` is integrated and the resulting
 local/tracking/live-remote main plus both registered gates are green.
+
+The subsequent
+[synthetic integration preview](smtcomp-credited-full-preparation-f2-integration-preview-2026-07-24.md)
+combines exact main `08af3665` with audited topic `9cec37e4` without touching
+the integration checkout. It has no conflicts and passes the complete scoped
+SMT-COMP gate, parity documentation, and link checks. This removes a bounded
+integration uncertainty but does not override main's failed CI or authorize
+live F2.

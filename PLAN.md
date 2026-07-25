@@ -890,9 +890,14 @@ twenty-four is fully gated, pushed, integrated byte-for-byte, and documented.
 > `one_level_fixed_mbqi_retry_closes_seed_111` control returned
 > `Unknown(ResourceLimit)`. The historical Lean source pin is closed, but these
 > current integration/mainline gates are not. No live F2 root or canonical
-> acceptance record exists. Next: integrate the current clean remote topic
-> through at least `892da376`, repair and establish green exact main, then run
-> and independently verify the separately
+> acceptance record exists. A detached synthetic merge of exact main
+> `08af3665` and topic `9cec37e4` has zero conflicts and passes the complete
+> scoped SMT-COMP gate, parity documentation, and links; see the
+> [integration preview](docs/plan/smtcomp-credited-full-preparation-f2-integration-preview-2026-07-24.md).
+> That result is not a merge or a full combined gate. Next: repair exact main,
+> integrate the current clean remote topic through at least `9cec37e4`,
+> establish a green exact combined main, then run and independently verify the
+> separately
 > authorized empty F2 preparation before any distinct acceptance or Axeyum
 > launch.
 > The candidate is not

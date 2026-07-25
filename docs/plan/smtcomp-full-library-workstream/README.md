@@ -77,7 +77,8 @@ The measurement lane is **not ready for another credited 64,345-file run**.
 
 The old s4 run remains useful only as a bug-discovery stream. It predates both
 soundness repairs, uses end-of-shard raw output, and does not satisfy E1-E3. It
-stopped without a raw shard artifact and receives zero measurement credit.
+was later resumed outside the credited workstream, remains active without a
+raw shard artifact, and receives zero measurement credit.
 
 ---
 
@@ -579,8 +580,13 @@ NAS (shared, corpus read-only in practice):
    `Unknown(ResourceLimit)`. Integrate the exact corrected topic and result,
    repair the independent mainline failures, then revalidate exact
    local/tracking/remote `main` equality and both
-   registered gates before any host probe or NAS mutation. The separately
-   reviewed operator may publish only a process-free
+   registered gates before any host probe or NAS mutation. The retained
+   [synthetic integration preview](../smtcomp-credited-full-preparation-f2-integration-preview-2026-07-24.md)
+   proves that exact main `08af3665` and audited topic `9cec37e4` merge without
+   conflicts and pass the scoped SMT-COMP, parity-documentation, and link
+   gates. It is not a merge or a substitute for full `just check` on repaired
+   integrated main. Only after those conditions hold may the reviewed operator
+   publish a process-free
    `launch_authorized=false` root inside its frozen 30-minute window. Integrate
    and explicitly accept that exact root before constructing Axeyum admission.
    Do not probe hosts, run sentinels, mutate the NAS, or launch a solver
