@@ -2,8 +2,8 @@
 
 **This folder is the single entry point for the SMT-COMP measurement,
 full-library inventory, and gap-closing lane.** Updated 2026-07-24 after the
-no-launch F2 live-capture implementation was committed, gated, and pushed for
-integration.
+no-launch F2 live-capture implementation and its R2 completion-boundary
+correction were committed, fully gated, and pushed for integration.
 
 The goal is an honest, reproducible per-logic decide/decline/**wrong** map over
 a source-balanced SMT-COMP-style population, followed by a measured and ranked
@@ -418,11 +418,13 @@ gate.
    mutation coverage, a green scoped gate, and an exit-zero full `just check`.
    The subsequent
    [R2 correction](../smtcomp-credited-full-preparation-f2-live-capture-r2-plan-2026-07-24.md)
-   preregisters three pre-integration repairs: an exact non-inherited sentinel
-   environment, a finalization-time deadline check after artifact inventory,
-   and an exact remote-main recheck at completion-last publication. Integration
-   is on hold until R2 is implemented; the separately authorized live capture
-   also remains open.
+   preregistered and now records the implemented three-part closure on pushed
+   commit `b02c486b`: an exact non-inherited sentinel environment, a
+   finalization-time deadline check after artifact inventory, and an exact
+   remote-main recheck at completion-last publication. The corrected 45-test
+   focused suite, 158-test portable gate, scoped gate, and full workspace
+   `just check` all pass. The corrected topic is ready for the integration
+   owner; the separately authorized post-integration live capture remains open.
 
 The same implementation rule continues to apply: prove each new mechanism and
 its destructive/interruption tests on a tiny corpus before spending the full
@@ -554,11 +556,12 @@ NAS (shared, corpus read-only in practice):
    [F2 live-capture plan](../smtcomp-credited-full-preparation-f2-live-capture-plan-2026-07-24.md),
    including its source-first
    [R1 correction](../smtcomp-credited-full-preparation-f2-live-capture-r1-plan-2026-07-24.md),
-   is implemented by pushed topic commit `57482ad0` and recorded in the
+   was initially implemented by pushed topic commit `57482ad0` and recorded in the
    [implementation result](../smtcomp-credited-full-preparation-f2-live-capture-implementation-2026-07-24.md).
-   Do not integrate that checkpoint alone. First implement and gate the
+   Do not integrate that checkpoint alone. The
    [R2 correction](../smtcomp-credited-full-preparation-f2-live-capture-r2-plan-2026-07-24.md),
-   then integrate the corrected implementation and result and revalidate exact
+   is implemented and fully gated by pushed commit `b02c486b`; integrate the
+   exact corrected topic and result, then revalidate exact
    local/tracking/remote `main` equality and both
    registered gates before any host probe or NAS mutation. The separately
    reviewed operator may publish only a process-free

@@ -867,21 +867,25 @@ twenty-four is fully gated, pushed, integrated byte-for-byte, and documented.
 > a completion-last recovery checkpoint instead of relaunching across the
 > terminal-to-checkpoint crash window. Exact different-host retry closure also
 > clears the corresponding historical failure only after all owned shards are
-> checkpointed. Pushed topic commit `57482ad0` implements the missing
+> checkpointed. Pushed topic commit `57482ad0` implemented the missing
 > source-first no-launch F2 operator: exact-main and registered-gate guards,
 > repaired-P0/external-root replay before mutation, fresh full-population
 > staging, ordered three-host thermal evidence and eight sentinels, and
-> completion-last publication. Its 157-test portable gate, scoped gate, and
-> full `just check` pass with one expected live-host skip. A pre-integration
-> audit nevertheless found three exact closure gaps: inherited sentinel
-> environment outside the sealed digest, a caller-supplied timestamp before
-> artifact inventory, and no remote-main recheck at the completion-last edge.
-> R2 preregisters those repairs; do not integrate `57482ad0` alone. The
-> historical Lean source pin is closed. No live F2 root or canonical acceptance
-> record exists. Next: implement and gate R2, integrate the corrected topic,
-> establish a clean green main, then run and independently verify the separately
-> authorized empty F2 preparation before any distinct acceptance or Axeyum
-> launch.
+> completion-last publication. A pre-integration audit then found three exact
+> closure gaps: inherited sentinel environment outside the sealed digest, a
+> caller-supplied timestamp before artifact inventory, and no remote-main
+> recheck at the completion-last edge. R2 was preregistered at `3992935c` and
+> implemented at pushed commit `b02c486b`: sentinels now receive only the exact
+> sealed environment, live completion time is sampled after inventory, and the
+> shared exact-main inspector reruns immediately before finalization. Its
+> 45-test focused suite, 158-test portable gate with one expected live-host
+> skip, scoped gate, and complete workspace `just check` all pass. Do not
+> integrate `57482ad0` alone; the corrected stack through `b02c486b` is ready
+> for the integration owner. The historical Lean source pin is closed. No live
+> F2 root or canonical acceptance record exists. Next: integrate the exact
+> corrected topic, establish clean green exact main, then run and independently
+> verify the separately authorized empty F2 preparation before any distinct
+> acceptance or Axeyum launch.
 > The candidate is not
 > official selection evidence:
 > it still lacks the complete eligibility/status/difficulty policy, official

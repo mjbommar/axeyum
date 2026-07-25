@@ -383,36 +383,39 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
-- **2026-07-24 — the credited-full F2 live-capture implementation is pushed,
-  but a post-implementation R2 audit blocks integration and live action.** Merge `466618dd`
+- **2026-07-24 — the corrected credited-full F2 live-capture implementation is
+  pushed, fully gated, and ready for integration; live action remains
+  mainline-gated.** Merge `466618dd`
   has integrated the SMT-COMP F3 coordinator/admission/scheduler batch, and the
   later Lean filesystem decoupling removes the historical `resume_fs.py`
   cross-lane pin. The
   [live-capture plan](docs/plan/smtcomp-credited-full-preparation-f2-live-capture-plan-2026-07-24.md)
   and its source-first
   [R1 correction](docs/plan/smtcomp-credited-full-preparation-f2-live-capture-r1-plan-2026-07-24.md)
-  froze the next actual seam. Pushed topic commit `57482ad0` now adds the
+  froze the next actual seam. Pushed topic commit `57482ad0` first added the
   dedicated no-launch operator: it proves clean exact local/tracking/remote-main
   equality, runs both registered readiness gates, and revalidates the frozen
   repaired-P0 comparison plus all three external roots before any NAS write,
   physically rehashes the accepted 45,905-file population,
-  stage the exact source/binaries/inputs, capture `s5`/`s6`/`s7` plus the eight
+  stages the exact source/binaries/inputs, captures `s5`/`s6`/`s7` plus the eight
   ordered incident sentinels and fresh schedule-bound thermal observations
-  inside 30 minutes, and install only a completion-last
+  inside 30 minutes, and installs only a completion-last
   `launch_authorized=false` root. It is structurally forbidden from
-  importing or calling F3 admission/allocation paths. Its 44 focused tests,
-  157-test portable gate with one expected live-host skip, `just check-scope
-  main`, foundational-resource and link gates, and full `just check` all pass;
-  the full gate's retained terminal result is exit zero. The
-  [implementation result](docs/plan/smtcomp-credited-full-preparation-f2-live-capture-implementation-2026-07-24.md)
-  records the checkpoint. The
+  importing or calling F3 admission/allocation paths. A pre-integration audit
+  then found three closure defects and preregistered the
   [R2 correction](docs/plan/smtcomp-credited-full-preparation-f2-live-capture-r2-plan-2026-07-24.md)
-  now freezes three repairs found before integration: sentinels must receive
-  exactly the sealed three-variable environment rather than inherited process
-  state; the live completion timestamp must be sampled after artifact inventory;
-  and exact local/tracking/remote main must be rechecked immediately before
-  completion-last installation. Next: implement and gate R2, integrate only the
-  corrected topic, establish clean green exact main, build the release binary,
+  at `3992935c`. Pushed commit `b02c486b` now gives sentinels exactly the sealed
+  three-variable environment, samples live completion time after artifact
+  inventory, and reruns the shared exact-main inspector immediately before
+  finalization. Its 45 focused tests, 158-test portable gate with one expected
+  live-host skip, `just check-scope main`, and complete workspace `just check`
+  all pass; the full gate's retained terminal result is exit zero with `all
+  links ok`. The
+  [implementation result](docs/plan/smtcomp-credited-full-preparation-f2-live-capture-implementation-2026-07-24.md)
+  records the corrected checkpoint. Do not integrate `57482ad0` alone; the
+  exact corrected stack through `b02c486b` is ready for the integration owner.
+  Next: integrate only the corrected topic, establish clean green exact main,
+  build the release binary,
   and only then run the separately reviewed F2 capture. No host
   probe, sentinel, NAS preparation root, acceptance record, allocation, or
   solver wave has been created.
@@ -8755,7 +8758,7 @@ plan is built and committed on the current branch:
 | P4.2 | Symbolic-execution CFG frontend (angr/unicorn-class) | WIP — first frontend-facing primitives landed: `SymbolicMemory` wraps an SMT array memory state, builds `select`/`store`, routes load-equality branch/assume queries through `SymbolicExecutor`'s automatic warm/memory feasibility APIs, and now exposes conservative write-log normalization / compact read-specific read-over-write `ite` construction for frontend memory logs that skips literal-distinct writes, elides exact-hit guards, preserves later symbolic aliases, and uses the auto route; `SymbolicExecutor::assume_auto` and `SymbolicExecutor::branch` keep same-index store/read-back constraints, literal-distinct concrete-address store-chain misses, zero-initialized constant-array reads, simple array-ITE state-merge reads including same-readback merge-guard and tautology pruning, reducible conditional read/write-index paths with scalar equality-over-`ite` cleanup, symbolic Bool readback equality/connective/xor/implication cleanup, BV bitwise/arithmetic/comparison/slice-extension/shift/div-rem readback cleanup, reducible symbolic-address ROW over store chains with same-index shadowed-store pruning, plain symbolic-base Bool/BV array loads via retained select-congruence abstraction including wide/BV256 index or element projection, direct equal-array symbol assumptions/assertions via retained cross-array select congruence and equal-array model projection, scalar Bool/BV UF applications via retained congruence abstraction including wide/BV256 argument or result projection, helper-level load/write-log queries, and default `explore_cfg` branch/assume/status/model queries on the warm BV path when they reduce or abstract, with original-term replay, while remaining general memory/UF still auto-promotes to the memory/theory-aware route; `SymbolicExecutor::explore_cfg` provides a reusable DFS harness over frontend-supplied CFG states, with solver-scope management, infeasible pruning, unknown-safe traversal, and model-witnessed targets; `explore_cfg_checked` adds frontend-supplied concrete witness extraction + replay callbacks and buckets targets into verified/missing-witness/mismatch cases; `TinyBvProgram` is the first reusable small-target frontend, with a validated BV register/memory IR, label-aware line-oriented assembly import with retained label/source metadata, deterministic PC-to-label lookup, typed static CFG edges and basic blocks, deterministic Graphviz DOT export for the basic-block CFG plus trace-highlighted, block-coverage-highlighted, and edge-coverage-highlighted DOT overlays, block-level trace paths, taken-edge trace reports, source-aware trace rows, consolidated witness trace reports, replay-checked test-case generation reports, block-coverage and edge-coverage test-suite reports, register-register equality branches, symbolic instruction lifting, zero-initialized SMT array memory for `Load`/`Store`, model-witness extraction, independent concrete replay, concrete execution traces, and bounded PC/label reachability/safety reports. Remaining: byte-level/binary broader target work, unbounded/certified safety wrappers over richer CFGs, and eventually general warm memory reuse from P4.1 |
 | P4.3 | Optimization: OMT lexicographic/Pareto + MILP hardening | WIP — single-objective `maximize/minimize_lia` + `_bv`/`_bv_signed` already shipped (exponential+binary bound search, Boolean-structured oracle). **Lexicographic multi-objective landed** (`optimize_lia_lexicographic`, 2026-06-18): optimize objectives in order, pinning each at its optimum (`obj≥v`/`obj≤v`) before the next so later ones range over the optimal face — z3's default lex combination. Sound + terminating (bounded composition of the checked single-objective optimizer); `LexOutcome::Stopped` at the first unbounded/infeasible/unknown objective. **BV lexicographic also landed** (`optimize_bv_lexicographic`, signed/unsigned, `bv_uge/ule/sge/sle` pinning) — lexicographic OMT now covers both LIA and BV. **Box** (`optimize_lia_box` / `optimize_bv_box`, independent) **and Pareto** (`optimize_lia_pareto` / `optimize_bv_pareto`, guided-improvement front enumeration, deterministic point/push caps, each point verified Pareto-optimal) modes also landed — **axeyum now has all 3 of z3's OMT modes (box, lexicographic, pareto) across LIA+BV**. BV Pareto covers unsigned and signed objective values, max/min directions, and graceful `Unknown` for out-of-fragment objective values. MaxSAT returns the witnessing model (`max_satisfiable_model`). `minimize_model` / `Solver::minimize_model` provide replay-checked lexicographic counterexample minimization over selected Bool, unsigned-BV<=127, and Int symbols, and the metadata-aware `minimize_model_objectives` / `Solver::minimize_model_objectives` route adds signed two's-complement BV objective order for signed SDK inputs. `produce_evidence_minimized` / `prove_minimized` preserve the default surface, while `_with_objectives` variants expose signed-objective metadata to frontends. `axeyum-property` v0 is now the first typed SDK consumer of that surface: Bool/BV/Int handles, assumptions, proof calls, minimized countermodel lifting, checked `EvidenceReport` exposure plus best-effort standalone Lean modules and stable evidence/trust/Lean summaries through `ProofCertificate`, typed BV overflow predicates, `.equals()` equality aliases, property-owned Bool/BV/Int builder aliases, `Property::all` / `Property::any` Boolean folds, deterministic native-scalar counterexample-to-`#[test]` rendering with caller-owned prelude/setup snippets, helper-rendered Boolean / `Result<(), E>` / `Result<bool, E>` replay adapters, deterministic `#[cfg(test)]` module assembly, deterministic multi-case fixture file assembly, direct named/tuple aggregate initializer snippets, and explicit nested aggregate field composition, scalar/tuple/derived-struct `Symbolic` declarations/lifting including signed-order two's-complement fixed-width Rust integers, named-field `symbolic_struct` bundles, and the generated SDK corpus/scoreboard gate with 16 graduated workflows, deterministic executable baseline comparisons for scalar counterexamples, an actual fixed-seed proptest shrunk counterexample, struct and replay counterexamples, proved assertions, assumption-backed proved assertions, and a Kani-style assume/assert counterexample baseline, machine-readable `corpus.json`, DISAGREE=0, and 1/1 Lean-required coverage. Remaining: MILP hardening; broader objective support for minimized counterexamples beyond Bool/BV/Int native scalars; property SDK ergonomics (operator traits, richer replay bodies); richer proptest families and real Kani CLI-backed property corpus comparison; differential validation vs Z3 `opt` |
 | P4.4 | SMT-LIB command/API conformance | WIP — the checked 30-row API matrix records 27 rows with exact tests, 6 absent families (including SMT-LIB 2.7 `declare-sort-parameter`), 7 accepted no-ops, and 0 interactive textual-session rows. The follow-up SMT-LIB 2.7 contract prototype passes 14 invariants and 20 abstract fixtures / 107 commands, and corrects the architecture estimate: default/global declaration and definition scope, `reset-assertions`, full-reset arena epochs, exact query snapshots, post-`unknown` inspection, immediate options, and atomic continued errors all precede rendering. Proposed ADR-0342 gates S1 complete ordered command/event capture; production behavior remains unchanged. Later gaps are canonical adapters, parametric sorts, recursive definitions, textual categorical commands, and separately scoped general SyGuS. |
-| P4.5 | Benchmarking & the performance gate (measured Z3 head-to-head) | **WIP: correctness/deployability evidence, neutral warm controls, exact cold attribution, proof denominators, authoritative-policy gates, selected-pair symbolic-CVE recall, and negative harder-driver/duplicate-clause/storage/memo results are complete through ADR-0300; ADR-0302 now passes its run/backend gates on one machine but has not completed the required cross-machine recall-reproducibility matrix.** ADR-0272 rejects performance leadership because warm Bitwuzla wins all four fair drivers. ADR-0273--0275 retain the harder-driver census as incomplete-work negative evidence; ADR-0277 removes its structurally exact candidate after the frozen variance/family gates fail. ADR-0285's flat CNF arena preserves all correctness and exact construction identities and reaches a favorable 0.540824 aggregate logical-storage ratio, but fails its frozen per-instance <=80% gate on 5/162 payload-dominated singleton-clause rows. ADR-0300's dense memo preserves all registered structure and shows favorable bit-blast/cold-total point estimates, but fails the <=3% run-total CV gate (3.0023% BTree, 6.8664% dense); production is restored to BTree and the 12-run negative artifact is retained. ADR-0302 distinguishes exact authority-report stability, backend finding/work identity, and replay-valid model diversity and requires two genuine machines. Broader labeled recall and honest correctness/deployability/proof framing remain open; no warm-speed headline, post-observation rerun, or concretization/symbolic-memory reopening is authorized. |
+| P4.5 | Benchmarking & the performance gate (measured Z3 head-to-head) | **WIP: correctness/deployability evidence, neutral warm controls, exact cold attribution, proof denominators, authoritative-policy gates, selected-pair symbolic-CVE recall, and negative harder-driver/duplicate-clause/storage/memo results are complete through ADR-0300; ADR-0302 now passes its run/backend gates on one machine but has not completed the required cross-machine recall-reproducibility matrix.** ADR-0272 rejects performance leadership because warm Bitwuzla wins all four fair drivers. ADR-0273--0275 retain the harder-driver census as incomplete-work negative evidence; ADR-0277 removes its structurally exact candidate after the frozen variance/family gates fail. ADR-0285's flat CNF arena preserves all correctness and exact construction identities and reaches a favorable 0.540824 aggregate logical-storage ratio, but fails its frozen per-instance <=80% gate on 5/162 payload-dominated singleton-clause rows. ADR-0300's dense memo preserves all registered structure and shows favorable bit-blast/cold-total point estimates, but fails the <=3% run-total CV gate (3.0023% BTree, 6.8664% dense); production is restored to BTree and the 12-run negative artifact is retained. ADR-0302 distinguishes exact authority-report stability, backend finding/work identity, and replay-valid model diversity and requires two genuine machines. The credited 45,905-row F2 no-launch capture operator and its R2 completion-boundary correction are green through pushed topic commit `b02c486b` and await integration; no live root exists. Broader labeled recall and honest correctness/deployability/proof framing remain open; no warm-speed headline, post-observation rerun, or concretization/symbolic-memory reopening is authorized. |
 
 ### Track 5 — Verified Systems (IR reflection) — ADR-0056, adopted 2026-07-06
 | Phase | Title | Status |
@@ -8769,6 +8772,19 @@ plan is built and committed on the current branch:
 | P5.5 | External target, measured | **DONE (bounded v1, ADR-0323--0338):** authenticated Tock capture plus eight rechecked dual-DRAT proofs and six replayed controls, UNKNOWN=0, DISAGREE=0. Query time 12.700 s; fresh outer wall 50.745 s; peak RSS 1,256,496 KiB; zero OOM deltas. The committed case study compares exact target validation, universal coverage, trust, effort, artifact boundaries, and limits. No Tock bug was found, so no upstream issue is applicable. This is not a speed or whole-kernel claim. |
 
 ## Changelog
+
+- **2026-07-24 — Implemented and fully gated the F2 completion-boundary R2
+  correction.** Preregistration commit `3992935c` froze the three defects;
+  pushed code commit `b02c486b` now supplies sentinels only the sealed
+  environment, derives live completion time after inventory, and rechecks exact
+  local/tracking/live-remote main against the readiness commit immediately
+  before finalization. Forty-five focused tests, the 158-test portable gate,
+  `just check-scope main`, and the complete workspace `just check` pass; the
+  full gate exited zero with both ignored CAS families, the 162-file Glaurung
+  gate, generated resources/contracts, parity checks, and `all links ok`. No
+  host probe, live sentinel, NAS preparation root, acceptance, allocation, or
+  solver launch occurred. The corrected topic is ready for integration; live
+  F2 remains conditional on exact clean green main.
 
 - **2026-07-24 — Withheld the F2 capture topic from integration after a
   completion-boundary audit.** The source-first R2 plan closes three defects in

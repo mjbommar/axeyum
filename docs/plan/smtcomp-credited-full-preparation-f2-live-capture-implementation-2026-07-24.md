@@ -1,8 +1,9 @@
 # SMT-COMP credited full-population F2 live-capture implementation
 
-Status: implementation checkpoint on pushed topic commit `57482ad0`; the
-post-implementation [R2 correction](smtcomp-credited-full-preparation-f2-live-capture-r2-plan-2026-07-24.md)
-must land before integration, and no live F2 capture is authorized or claimed
+Status: corrected implementation is pushed and fully gated through
+`b02c486b1711ca3612816b1921c0adbb8086b3a2`; it is ready for the integration
+owner, but no live F2 capture is authorized or claimed before exact clean green
+mainline integration
 
 Date: 2026-07-24
 
@@ -12,13 +13,15 @@ Correction: [F2 live-capture R1 plan](smtcomp-credited-full-preparation-f2-live-
 
 ## Result
 
-Commit `57482ad05a3caf5ce27aef95abae52790a97ffcd` adds the missing
-no-launch operator and pushes it on
-`origin/agent/smtcomp/full-preparation-live`. The implementation was exercised
-only through temporary fixtures. It did not probe `s5`, `s6`, or `s7`; take a
-live thermal sample; execute a live incident sentinel; build or stage a live
-release binary; create a NAS preparation root; publish an acceptance record;
-start an allocation; or launch a solver wave.
+Commit `57482ad05a3caf5ce27aef95abae52790a97ffcd` added the missing no-launch
+operator. A pre-integration audit then preregistered the R2 closure at
+`3992935c`, and commit `b02c486b1711ca3612816b1921c0adbb8086b3a2` implemented
+that correction. The complete stack is pushed on
+`origin/agent/smtcomp/full-preparation-live`. It was exercised only through
+temporary fixtures. It did not probe `s5`, `s6`, or `s7`; take a live thermal
+sample; execute a live incident sentinel; build or stage a live release binary;
+create a NAS preparation root; publish an acceptance record; start an
+allocation; or launch a solver wave.
 
 The implementation consists of:
 
@@ -68,6 +71,15 @@ mutation or any execution-evidence namespace content. Non-fixture dependency
 injection is rejected. A static AST control rejects allocation/admission
 imports and calls, so the module has no F3 or solver-wave path.
 
+R2 additionally seals the final evidence boundary. Sentinel processes receive
+exactly `AYU_THREADS=1`, `OMP_NUM_THREADS=1`, and `RAYON_NUM_THREADS=1`, without
+arbitrary inherited environment state. Live callers cannot supply the
+completion time. After artifact inventory, the publisher rechecks clean exact
+local/tracking/live-remote main against the readiness commit, samples a fresh
+timestamp, revalidates the 30-minute deadline, and only then installs
+`complete.json` last. Focused ordering controls prove that remote drift,
+caller-supplied time, and expiry all reject without a completion.
+
 ## Gates
 
 The following passed on the implementation tree and commit:
@@ -75,10 +87,10 @@ The following passed on the implementation tree and commit:
 ```text
 PYTHONWARNINGS=error python3 -m unittest \
   scripts.tests.test_smtcomp_full_population
-44 tests, OK
+45 tests, OK
 
 ./scripts/check-smtcomp-resume.sh
-157 tests, OK (one expected live-host skip)
+158 tests, OK (one expected live-host skip)
 runner 6/6; scoring 30/30; pipeline 6/6; selection 5/5;
 provenance 2/2; generated contracts, OK
 
@@ -91,10 +103,11 @@ all links ok
 just check-scope main
 exit 0; scoped gates PASSED
 
-just check
-exit 0; formatting, all-feature Clippy, workspace tests and doctests,
-documentation, foundational resources, generated contracts, parity checks,
-and link checks passed
+just check  # corrected code commit b02c486b
+exit 0; formatting, all-feature Clippy, workspace tests and doctests, both
+registered ignored CAS families, documentation, the 162-file regular Glaurung
+gate, foundational resources, generated contracts, parity checks, and link
+checks passed; final line: all links ok
 ```
 
 The long `just check` session's exact terminal result was recovered as exit
@@ -104,12 +117,11 @@ ok`.
 
 ## Integration and authorization boundary
 
-This commit is implementation evidence, not a live F2 result. A
-post-implementation audit found that exact sentinel environment identity,
-finalization-time deadline enforcement, and the completion-bound remote-main
-check require the source-first R2 correction before integration. The
-integration owner must land the corrected implementation and this result, then
-establish an exact clean green
+This corrected stack is implementation evidence, not a live F2 result. The R2
+environment, deadline, and completion-bound exact-main defects are closed and
+fully gated, so the integration hold applies only to the obsolete `57482ad0`
+checkpoint by itself. The integration owner may land the exact corrected topic
+and this result, then must establish an exact clean green
 `HEAD == origin/main == git ls-remote origin main` state. Only after that may
 the separately reviewed C5 procedure build the release binary and invoke this
 operator with the exact repaired-P0 preparation.
@@ -118,4 +130,5 @@ Any resulting `launch_authorized=false` root remains review input only. It must
 be independently verified, documented, and integrated byte-for-byte before a
 separate F3 acceptance is constructed. No allocation or solver launch is
 authorized by this implementation checkpoint. Commit `57482ad0` by itself is
-not ready to land.
+not ready to land; the corrected stack through `b02c486b` is the minimum code
+boundary for integration.
