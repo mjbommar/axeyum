@@ -80,6 +80,13 @@ leave `Unknown`** (never a wrong-unsat). This is a strict analysis: it decides a
 subset of the truly-unsat bounded-complete queries and declines the rest —
 soundness over completeness, per the project stance.
 
+The analyzer also normalizes one exact generated spelling before checking C2:
+an odd-negated `(= (ite C 1 0) 0)` asserts `C`, and
+`(<= (- (str.len s) k) 0)` is exactly `len(s) ≤ k`. Even polarity, non-`1/0`
+branches, other relations, and other arithmetic shapes decline. This recovers
+the bound in PyEx path formulas without treating an arbitrary nested condition
+as guaranteed.
+
 ## Soundness argument (sketch)
 
 Let `Q` be a query satisfying C1∧C2∧C3, and suppose `Q` is real-sat with model

@@ -187,6 +187,15 @@ fn unwrap_annot(e: &SExpr) -> &SExpr {
 /// - `(>= k (str.len s))`  with `k ≤ MAX`      → len ≤ k
 /// - `(> k (str.len s))`   with `k ≤ MAX+1`
 fn length_upper_bounded_var(conj: &SExpr) -> Option<&str> {
+    // PyEx materializes a Boolean branch as `(= (ite C 1 0) 0)` and then wraps
+    // that equality in path-polarity `not`s. An odd number of `not`s asserts
+    // `C` itself. Recover only that exact truth-preserving shape; the even
+    // polarity asserts `not C` and is deliberately not treated as an upper
+    // bound.
+    if let Some(condition) = pyex_asserted_true_condition(conj) {
+        return length_upper_bounded_var(condition);
+    }
+
     let SExpr::List(items) = conj else {
         return None;
     };
@@ -196,6 +205,16 @@ fn length_upper_bounded_var(conj: &SExpr) -> Option<&str> {
     let op = items[0].atom()?;
     let lhs = &items[1];
     let rhs = &items[2];
+
+    // Generated path guards commonly spell `len(s) <= k` as
+    // `(<= (- (str.len s) k) 0)`. This is exact over mathematical integers.
+    if op == "<="
+        && nonneg_int_literal(rhs) == Some(0)
+        && let Some((var, k)) = str_len_minus_nonneg(lhs)
+        && k <= STRING_MAX_LEN
+    {
+        return Some(var);
+    }
 
     // Try to read (str.len s) on one side and a literal on the other; `flipped`
     // tracks whether str.len is on the RIGHT (so the operator direction flips).
@@ -221,6 +240,50 @@ fn length_upper_bounded_var(conj: &SExpr) -> Option<&str> {
         _ => false,
     };
     ok.then_some(var)
+}
+
+/// The condition `C` from an exact asserted `PyEx` wrapper
+/// `(not ... (= (ite C 1 0) 0) ...)` when the number of `not`s is odd.
+fn pyex_asserted_true_condition(mut e: &SExpr) -> Option<&SExpr> {
+    let mut negated = false;
+    while let SExpr::List(items) = e
+        && items.len() == 2
+        && items[0].atom() == Some("not")
+    {
+        negated = !negated;
+        e = &items[1];
+    }
+    if !negated {
+        return None;
+    }
+
+    let equality = e.list()?;
+    if equality.len() != 3 || equality[0].atom() != Some("=") {
+        return None;
+    }
+    let (ite, zero) = if equality[1].list().is_some() {
+        (&equality[1], &equality[2])
+    } else {
+        (&equality[2], &equality[1])
+    };
+    if nonneg_int_literal(zero) != Some(0) {
+        return None;
+    }
+    let ite = ite.list()?;
+    (ite.len() == 4
+        && ite[0].atom() == Some("ite")
+        && nonneg_int_literal(&ite[2]) == Some(1)
+        && nonneg_int_literal(&ite[3]) == Some(0))
+    .then_some(&ite[1])
+}
+
+/// `(str.len s) - k` with a bare string variable and non-negative literal `k`.
+fn str_len_minus_nonneg(e: &SExpr) -> Option<(&str, i128)> {
+    let items = e.list()?;
+    if items.len() != 3 || items[0].atom() != Some("-") {
+        return None;
+    }
+    Some((str_len_arg(&items[1])?, nonneg_int_literal(&items[2])?))
 }
 
 /// If `e` is `(str.len s)` with `s` a bare symbol atom, return `s`.
@@ -349,6 +412,15 @@ mod tests {
         ));
     }
 
+    #[test]
+    fn odd_pyex_indicator_polarity_exposes_true_length_upper_bound() {
+        assert!(is_bounded_complete(
+            "(set-logic QF_SLIA)\n(declare-fun s () String)\n\
+             (assert (not (not (not (= (ite (<= (- (str.len s) 1) 0) 1 0) 0)))))\n\
+             (check-sat)\n"
+        ));
+    }
+
     // --- NEGATIVE (soundness): must return false -----------------------------
 
     #[test]
@@ -394,6 +466,20 @@ mod tests {
         assert!(!is_bounded_complete(
             "(set-logic QF_S)\n(declare-fun s () String)\n\
              (assert (or (str.contains s \"a\") (<= (str.len s) 3)))\n(check-sat)\n"
+        ));
+    }
+
+    #[test]
+    fn false_or_malformed_pyex_indicator_does_not_fake_an_upper_bound() {
+        assert!(!is_bounded_complete(
+            "(set-logic QF_SLIA)\n(declare-fun s () String)\n\
+             (assert (not (not (= (ite (<= (- (str.len s) 1) 0) 1 0) 0))))\n\
+             (check-sat)\n"
+        ));
+        assert!(!is_bounded_complete(
+            "(set-logic QF_SLIA)\n(declare-fun s () String)\n\
+             (assert (not (= (ite (<= (- (str.len s) 1) 0) 2 0) 0)))\n\
+             (check-sat)\n"
         ));
     }
 

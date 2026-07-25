@@ -39,6 +39,20 @@ fn ground_string_unsat_decides_unsat() {
     assert_eq!(verdict(text), CheckResult::Unsat);
 }
 
+/// PyEx encodes a taken Boolean path as an integer indicator. The odd `not`
+/// polarity below is exactly `len(s) - 1 <= 0`, so the packed search is complete;
+/// the character disequality is impossible when the non-empty string has length 1.
+#[test]
+fn pyex_wrapped_length_bound_decides_unsat() {
+    let text = "(set-logic QF_SLIA)\n(declare-fun s () String)\n\
+                (assert (not (not (not (= (ite (<= (- (str.len s) 1) 0) 1 0) 0)))))\n\
+                (assert (> (str.len s) 0))\n\
+                (assert (not (= (str.at s 0) (str.at s (- (str.len s) 1)))))\n\
+                (check-sat)\n";
+    assert!(axeyum_smtlib::is_bounded_complete(text));
+    assert_eq!(verdict(text), CheckResult::Unsat);
+}
+
 /// SOUNDNESS: a free unbounded Int (C1) must NOT let the route upgrade — the
 /// width-32 no-model is genuinely inconclusive. This query is sat; the route
 /// must never turn it into unsat.
