@@ -1833,9 +1833,8 @@ fn int_div_by_zero_skolem_equals_div_by_zero() {
 }
 
 /// A `QF_SLIA` `ReDoS`-corpus shape: `postfixs` must be both a member of the empty
-/// regex and nonempty. The unrelated result concatenation is outside the
-/// membership route, but the retained conjunctive subset is already certified
-/// unsatisfiable, so the full script is unsatisfiable too.
+/// regex and nonempty. The result concatenation is a safe existential output
+/// definition, but the membership contradiction fires before model construction.
 #[test]
 fn redos_empty_postfix_positive_length_decides_unsat() {
     let text = r#"
@@ -1860,7 +1859,7 @@ fn redos_empty_postfix_positive_length_decides_unsat() {
 
     let mut script = parse_script(text).expect("parse ReDoS-shaped membership script");
     assert!(
-        !script
+        script
             .membership_problem
             .as_ref()
             .expect("membership subset")
@@ -1871,6 +1870,46 @@ fn redos_empty_postfix_positive_length_decides_unsat() {
         Some(CheckResult::Unsat),
         "checked subset UNSAT must prove the full conjunction UNSAT"
     );
+}
+
+/// The satisfiable half of the same `ReDoS` shape needs a witness far beyond the
+/// historical 4,096-character cap. The native-loop constructor checks one unit,
+/// repeats it exactly 5,000 times, then lifts the two membership witnesses through
+/// `result = attack ++ postfixs`.
+#[test]
+fn redos_large_loop_and_output_definition_decide_sat() {
+    let text = r#"
+(set-info :status sat)
+(set-logic QF_SLIA)
+(declare-const result String)
+(declare-const attack String)
+(declare-const postfixs String)
+(declare-const prefix RegLan)
+(declare-const infix RegLan)
+(declare-const postfix RegLan)
+(assert (str.in_re attack (re.++ prefix ((_ re.loop 5000 5000) infix) postfix)))
+(assert (= prefix (str.to_re "p")))
+(assert (= infix (str.to_re "i")))
+(assert (= postfix (str.to_re "!")))
+(assert (str.in_re postfixs postfix))
+(assert (>= (str.len postfixs) 1))
+(assert (= result (str.++ attack postfixs)))
+(check-sat)
+"#;
+    assert!(matches!(run(text).result, CheckResult::Sat(_)));
+
+    let mut script = parse_script(text).expect("parse satisfiable ReDoS-shaped script");
+    assert!(
+        script
+            .membership_problem
+            .as_ref()
+            .expect("membership problem")
+            .complete
+    );
+    assert!(matches!(
+        membership_verdict(&mut script, &config()),
+        Some(CheckResult::Sat(_))
+    ));
 }
 
 /// A satisfiable retained subset cannot justify `sat` when a dropped conjunct
@@ -1900,5 +1939,36 @@ fn incomplete_membership_subset_never_claims_sat() {
         membership_verdict(&mut script, &config()),
         None,
         "subset SAT must decline when any asserted conjunct was dropped"
+    );
+}
+
+/// A would-be output definition is not existential when its output is constrained
+/// elsewhere. The parser marks the membership subset incomplete, so its local
+/// witnesses can never escape as a `sat` verdict.
+#[test]
+fn constrained_concat_output_keeps_membership_sat_incomplete() {
+    let text = r#"
+(set-logic QF_SLIA)
+(declare-const x String)
+(declare-const y String)
+(declare-const result String)
+(assert (str.in_re x (str.to_re "a")))
+(assert (str.in_re y (str.to_re "b")))
+(assert (= result (str.++ x y)))
+(assert (= result "wrong"))
+(check-sat)
+"#;
+    let mut script = parse_script(text).expect("parse constrained output script");
+    assert!(
+        !script
+            .membership_problem
+            .as_ref()
+            .expect("membership subset")
+            .complete
+    );
+    assert_eq!(
+        membership_verdict(&mut script, &config()),
+        None,
+        "a constrained output is not a safe existential model definition"
     );
 }
