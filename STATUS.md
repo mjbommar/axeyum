@@ -383,6 +383,18 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-25 — Mixed declared-sort equality now combines with LIA instead of
+  declining.** The SMT-LIB front door previously sent function-free
+  carrier-equality + integer-arithmetic formulas toward carrier bit-blasting,
+  and SAT replay also discarded the EUF carrier assignments. The online UFLIA
+  combination now owns those atoms and preserves carrier classes in its model.
+  Two minimal QF_UFLIA regressions move from `unknown` on fresh `main` to the
+  Z3-agreeing `sat` / `unsat` pair (0/2 to 2/2); the complete 33-test affected
+  target passes in 3.19 s. The fixed 300-file official QF_UFLIA slice remains
+  exactly 15 decided with `WRONG=0`, byte-for-verdict identical to fresh
+  `main`: this is a real missing-mechanism fix, not yet a public-slice score
+  increase. General quantified SAT remains the higher-value open frontier.
+
 - **2026-07-26 — exact head-totality views move 20 Noetzli rows.** Pushed
   `e89e82f5` canonicalizes four unbounded SMT-LIB string laws: length-zero
   emptiness, nonnegative `at` emptiness, `substr(at(...),0,...)` commutation,
@@ -889,7 +901,6 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   slice itself moves 1→64/158, with all 64 decisions agreeing with cvc5. Next:
   close more of its 94 residual rewrites or switch to the largest measured
   PyEx shape when the next rule stops moving multiple rows.
-
 - **2026-07-24 — Lean execution seals are decoupled from the SMT-owned resume
   filesystem implementation.** The
   [result](docs/plan/lean-execution-filesystem-decoupling-2026-07-24.md)
@@ -9247,6 +9258,12 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
+- **2026-07-25 — Combined function-free carrier equality with LIA.** Routed
+  mixed declared-sort/LIA formulas through the online UFLIA solver, classified
+  carrier equalities as EUF atoms, and retained EUF carrier assignments in SAT
+  models. Added front-door SAT and UNSAT regressions; the focused 33-test target
+  and fixed 300-file public-slice comparison are green with zero wrong verdicts.
+
 - **2026-07-26 — moved 20 head-totality-view rows.** Pushed `e89e82f5`
   canonicalizes exact string length/emptiness, nonnegative `at` emptiness,
   `substr(at(...),0,...)`, head deletion, and one-code-point replacement/head
@@ -9686,7 +9703,6 @@ plan is built and committed on the current branch:
   decimal-preimage regex constraints add 107 StringFuzz UNSAT decisions. Exact
   SMT-LIB string identities add 63 Noetzli decisions (1→64/158); all 64 retained
   decisions match cvc5. Focused parser/solver tests and `just check-scope` pass.
-
 - **2026-07-24 — Stabilized the repeated MBQI fixed-retry CI failure without
   changing solver behavior.** Both stable runs failed the same semantic test
   after 912 passes because its test-local two-second timeout expired under
