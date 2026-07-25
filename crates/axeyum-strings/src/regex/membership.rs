@@ -5,13 +5,14 @@
 //! (positive `x ∈ Rᵢ`, negative `x ∉ Rⱼ`) plus optional length bounds, this
 //! module decides the variable's constraint set:
 //!
-//! * **`sat`** — a concrete witness code-point string is found by searching the
-//!   transition-regex derivative graph for an accepting (nullable) residual, then
-//!   **replayed** through the independent reference [`matches()`](super::matches)
-//!   for every atom (positive *and* negative) and checked against the length
-//!   bounds. The replay is mandatory and is the sole gate on `sat` — it mirrors
-//!   the word-equation core's ground-evaluator replay, so no wrong `sat` is
-//!   possible even if the derivative search had a bug.
+//! * **`sat`** — a concrete witness code-point string is found either by a compact
+//!   structural construction (notably for large native loops) or by searching the
+//!   transition-regex derivative graph. Structural witnesses carry a separately
+//!   checked construction proof; searched witnesses are **replayed** through the
+//!   independent reference [`matches()`](super::matches) for every atom (positive
+//!   and negative) and checked against the length bounds. A successful check is the
+//!   sole gate on `sat`, so no wrong `sat` is possible even if either search has a
+//!   bug.
 //! * **`unsat`** — only behind a **re-checkable emptiness certificate**: the
 //!   derivative closure of the combined regex is finite and contains **no**
 //!   nullable residual, and an independent pass ([`recheck_empty`]) confirms the
@@ -47,6 +48,22 @@ pub const DEFAULT_MAX_STATES: usize = 20_000;
 /// declines to `unknown` rather than allocate unboundedly.
 pub const DEFAULT_MAX_WITNESS_LEN: usize = 4_096;
 
+/// Default cap for a compact structurally checked witness. Unlike derivative
+/// search, construction does not clone the growing prefix at every state, so the
+/// larger materialization envelope does not widen the generic search budget.
+const DEFAULT_MAX_CONSTRUCTED_WITNESS_LEN: usize = 2_000_000;
+
+/// Hard recursion cap for the compact structural witness constructor and its
+/// independent checker. Deep or adversarial regex trees simply skip the fast path
+/// and fall back to the bounded derivative route.
+const CONSTRUCT_MAX_DEPTH: usize = 256;
+
+/// The structural constructor delegates Boolean regex nodes (`inter`/`comp`) to
+/// the ordinary derivative witness search. Keep those local witnesses small so
+/// their independent reference-matcher replay stays cheap; native outer loops can
+/// then repeat the checked local witness compactly.
+const CONSTRUCT_REFERENCE_MAX_LEN: usize = 4_096;
+
 /// A single-variable regex-membership problem: the variable must match every
 /// [`positives`](Self::positives) regex, no [`negatives`](Self::negatives) regex,
 /// and have length within `[len_lo, len_hi]`.
@@ -66,8 +83,8 @@ pub struct Membership {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum MembershipOutcome {
     /// A concrete satisfying witness (the variable's code points), already
-    /// replayed through the reference matcher against every atom and the length
-    /// bounds.
+    /// checked by either the compact structural proof checker or the independent
+    /// reference matcher against every represented constraint.
     Sat(Vec<u32>),
     /// The constraint set is unsatisfiable, behind a re-checked emptiness
     /// certificate (a finite nullable-free derivative closure).
@@ -75,6 +92,31 @@ pub enum MembershipOutcome {
     /// Undecided within the budget / outside the decided fragment. First-class —
     /// never a wrong verdict.
     Unknown,
+}
+
+/// Compact proof of how one concrete word was assembled from a regex. The proof
+/// is produced with the witness but checked by [`recheck_constructed`] in a
+/// separate recursive pass before any `sat` result is returned.
+#[derive(Clone, Debug)]
+enum ConstructedProof {
+    Empty,
+    Pred,
+    Concat {
+        split: usize,
+        left: Box<Self>,
+        right: Box<Self>,
+    },
+    UnionLeft(Box<Self>),
+    UnionRight(Box<Self>),
+    StarZero,
+    Loop {
+        count: u32,
+        unit_len: usize,
+        unit: Option<Box<Self>>,
+    },
+    /// A short Boolean-regex subproblem checked by the independent reference
+    /// matcher. This is never used for a large native-loop body as a whole.
+    Reference,
 }
 
 impl Membership {
@@ -140,7 +182,12 @@ impl Membership {
     /// Decides this membership problem with the default caps.
     #[must_use]
     pub fn solve(&self, budget: &SearchBudget) -> MembershipOutcome {
-        self.solve_with_caps(budget, DEFAULT_MAX_STATES, DEFAULT_MAX_WITNESS_LEN)
+        self.solve_with_separate_caps(
+            budget,
+            DEFAULT_MAX_STATES,
+            DEFAULT_MAX_WITNESS_LEN,
+            DEFAULT_MAX_CONSTRUCTED_WITNESS_LEN,
+        )
     }
 
     /// Decides this membership problem with explicit state / witness-length caps.
@@ -155,9 +202,41 @@ impl Membership {
         max_states: usize,
         max_witness_len: usize,
     ) -> MembershipOutcome {
+        self.solve_with_separate_caps(budget, max_states, max_witness_len, max_witness_len)
+    }
+
+    fn solve_with_separate_caps(
+        &self,
+        budget: &SearchBudget,
+        max_states: usize,
+        max_witness_len: usize,
+        max_constructed_witness_len: usize,
+    ) -> MembershipOutcome {
         if budget.past_deadline() {
             return MembershipOutcome::Unknown;
         }
+
+        // A single positive membership with no other constraint admits a compact
+        // structural witness. This avoids walking one derivative state per copy of
+        // a large native loop (the ReDoS corpus uses exact counts up to 80,000).
+        // The separately checked proof is the SAT gate; no unverified construction
+        // escapes this branch.
+        if self.positives.len() == 1
+            && self.negatives.is_empty()
+            && self.len_lo == 0
+            && self.len_hi.is_none()
+            && let Some((word, proof)) = construct_witness(
+                &self.positives[0],
+                budget,
+                max_states,
+                max_constructed_witness_len,
+                0,
+            )
+            && recheck_constructed(&self.positives[0], &word, &proof, 0)
+        {
+            return MembershipOutcome::Sat(word);
+        }
+
         let mut ticks: u64 = 0;
         let mut poll = || {
             ticks = ticks.wrapping_add(1);
@@ -303,6 +382,174 @@ impl Membership {
         }
         self.positives.iter().all(|p| matches(p, w))
             && self.negatives.iter().all(|n| !matches(n, w))
+    }
+}
+
+/// Builds one word together with a compact proof. Concatenation and repetition
+/// are assembled directly; Boolean regex nodes use the bounded derivative search
+/// only for their local (normally short) witness.
+fn construct_witness(
+    regex: &Regex,
+    budget: &SearchBudget,
+    max_states: usize,
+    max_len: usize,
+    depth: usize,
+) -> Option<(Vec<u32>, ConstructedProof)> {
+    if depth > CONSTRUCT_MAX_DEPTH || budget.past_deadline() {
+        return None;
+    }
+    match regex {
+        Regex::Empty => Some((Vec::new(), ConstructedProof::Empty)),
+        Regex::None => None,
+        Regex::Pred(pred) => {
+            let c = pred.witness()?;
+            (max_len >= 1).then_some((vec![c], ConstructedProof::Pred))
+        }
+        Regex::Concat(left, right) => {
+            let (mut left_word, left_proof) =
+                construct_witness(left, budget, max_states, max_len, depth + 1)?;
+            let remaining = max_len.checked_sub(left_word.len())?;
+            let (right_word, right_proof) =
+                construct_witness(right, budget, max_states, remaining, depth + 1)?;
+            let split = left_word.len();
+            left_word.extend(right_word);
+            Some((
+                left_word,
+                ConstructedProof::Concat {
+                    split,
+                    left: Box::new(left_proof),
+                    right: Box::new(right_proof),
+                },
+            ))
+        }
+        Regex::Union(left, right) => {
+            construct_witness(left, budget, max_states, max_len, depth + 1)
+                .map(|(word, proof)| (word, ConstructedProof::UnionLeft(Box::new(proof))))
+                .or_else(|| {
+                    construct_witness(right, budget, max_states, max_len, depth + 1)
+                        .map(|(word, proof)| (word, ConstructedProof::UnionRight(Box::new(proof))))
+                })
+        }
+        Regex::Star(_) => Some((Vec::new(), ConstructedProof::StarZero)),
+        Regex::Loop { inner, lo, hi } => {
+            if hi.is_some_and(|upper| *lo > upper) {
+                return None;
+            }
+            if *lo == 0 {
+                return Some((
+                    Vec::new(),
+                    ConstructedProof::Loop {
+                        count: 0,
+                        unit_len: 0,
+                        unit: None,
+                    },
+                ));
+            }
+            let (unit_word, unit_proof) =
+                construct_witness(inner, budget, max_states, max_len, depth + 1)?;
+            let count = usize::try_from(*lo).ok()?;
+            let total_len = unit_word.len().checked_mul(count)?;
+            if total_len > max_len {
+                return None;
+            }
+            let mut word = Vec::with_capacity(total_len);
+            if !unit_word.is_empty() {
+                for i in 0..count {
+                    if i.is_multiple_of(1_024) && budget.past_deadline() {
+                        return None;
+                    }
+                    word.extend_from_slice(&unit_word);
+                }
+            }
+            Some((
+                word,
+                ConstructedProof::Loop {
+                    count: *lo,
+                    unit_len: unit_word.len(),
+                    unit: Some(Box::new(unit_proof)),
+                },
+            ))
+        }
+        Regex::Inter(_, _) | Regex::Comp(_) => {
+            let local_cap = max_len.min(CONSTRUCT_REFERENCE_MAX_LEN);
+            let word = witness_search(regex, budget, max_states, local_cap)?;
+            Some((word, ConstructedProof::Reference))
+        }
+    }
+}
+
+/// Independently checks a compact structural witness proof against the regex and
+/// the exact materialized word. In particular, a large loop checks one unit proof,
+/// the declared count, and that every concrete chunk equals that unit; it never
+/// trusts the constructor's repetition arithmetic.
+fn recheck_constructed(
+    regex: &Regex,
+    word: &[u32],
+    proof: &ConstructedProof,
+    depth: usize,
+) -> bool {
+    if depth > CONSTRUCT_MAX_DEPTH {
+        return false;
+    }
+    match (regex, proof) {
+        (Regex::Empty, ConstructedProof::Empty) | (Regex::Star(_), ConstructedProof::StarZero) => {
+            word.is_empty()
+        }
+        (Regex::Pred(pred), ConstructedProof::Pred) => word.len() == 1 && pred.contains(word[0]),
+        (
+            Regex::Concat(left, right),
+            ConstructedProof::Concat {
+                split,
+                left: left_proof,
+                right: right_proof,
+            },
+        ) => {
+            *split <= word.len()
+                && recheck_constructed(left, &word[..*split], left_proof, depth + 1)
+                && recheck_constructed(right, &word[*split..], right_proof, depth + 1)
+        }
+        (Regex::Union(left, _), ConstructedProof::UnionLeft(inner)) => {
+            recheck_constructed(left, word, inner, depth + 1)
+        }
+        (Regex::Union(_, right), ConstructedProof::UnionRight(inner)) => {
+            recheck_constructed(right, word, inner, depth + 1)
+        }
+        (
+            Regex::Loop { inner, lo, hi },
+            ConstructedProof::Loop {
+                count,
+                unit_len,
+                unit,
+            },
+        ) => {
+            if *count < *lo || hi.is_some_and(|upper| *count > upper) {
+                return false;
+            }
+            if *count == 0 {
+                return *lo == 0 && word.is_empty() && unit.is_none();
+            }
+            let Some(unit_proof) = unit else {
+                return false;
+            };
+            let Ok(count) = usize::try_from(*count) else {
+                return false;
+            };
+            if unit_len.checked_mul(count) != Some(word.len()) {
+                return false;
+            }
+            if *unit_len == 0 {
+                return word.is_empty() && recheck_constructed(inner, &[], unit_proof, depth + 1);
+            }
+            let unit_word = &word[..*unit_len];
+            recheck_constructed(inner, unit_word, unit_proof, depth + 1)
+                && word
+                    .chunks_exact(*unit_len)
+                    .all(|candidate| candidate == unit_word)
+        }
+        (Regex::Inter(_, _) | Regex::Comp(_), ConstructedProof::Reference) => {
+            word.len() <= CONSTRUCT_REFERENCE_MAX_LEN && matches(regex, word)
+        }
+        _ => false,
     }
 }
 
@@ -460,6 +707,49 @@ mod tests {
             }
             other => panic!("expected sat, got {other:?}"),
         }
+    }
+
+    #[test]
+    fn native_loop_large_witness_is_constructed_and_checked_linearly() {
+        // The derivative route needs one residual per consumed copy and the old
+        // 4,096-character witness cap declined this SMT-COMP ReDoS shape. The
+        // compact proof checks one "ab" unit plus the exact 5,000-copy layout.
+        let regex = Regex::repeat(lit("ab"), 5_000, Some(5_000));
+        let m = Membership {
+            positives: vec![regex],
+            ..Membership::default()
+        };
+        assert_eq!(
+            m.solve_with_caps(&budget(), DEFAULT_MAX_STATES, 4_096),
+            MembershipOutcome::Unknown,
+            "an explicit materialization cap remains authoritative"
+        );
+        match m.solve(&budget()) {
+            MembershipOutcome::Sat(w) => {
+                assert_eq!(w.len(), 10_000);
+                assert!(
+                    w.chunks_exact(2)
+                        .all(|chunk| chunk == [u32::from(b'a'), u32::from(b'b')])
+                );
+            }
+            other => panic!("expected compact native-loop witness, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn constructed_loop_checker_rejects_tampered_materialization() {
+        let regex = Regex::repeat(lit("ab"), 4, Some(4));
+        let (mut word, proof) = construct_witness(
+            &regex,
+            &budget(),
+            DEFAULT_MAX_STATES,
+            DEFAULT_MAX_WITNESS_LEN,
+            0,
+        )
+        .expect("construct repeated witness");
+        assert!(recheck_constructed(&regex, &word, &proof, 0));
+        word[3] = u32::from(b'x');
+        assert!(!recheck_constructed(&regex, &word, &proof, 0));
     }
 
     #[test]
