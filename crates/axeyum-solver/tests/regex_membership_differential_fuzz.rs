@@ -16,9 +16,10 @@
 //! 1..=3 string variables, positive **and** negative `str.in_re` atoms carrying
 //! depth-≤4 regexes (concat / union / intersection / complement / star / plus /
 //! opt / native `re.loop` / `re.range` / `re.allchar` / `re.all` / `re.none`),
-//! occasional length bounds and literal pins, and the odd variable–variable
-//! equality (which makes the retained subset incomplete: subset `unsat` may still
-//! decide, subset `sat` declines). Two oracle fronts adjudicate the same generator:
+//! occasional length bounds, exact ground `str.to_int` values, literal pins, and
+//! the odd variable–variable equality (which makes the retained subset incomplete:
+//! subset `unsat` may still decide, subset `sat` declines). Two oracle fronts
+//! adjudicate the same generator:
 //! the system **Z3** binary (behind the
 //! `z3` feature) and the **cvc5** binary (always, when installed).
 //!
@@ -154,6 +155,12 @@ fn generate(rng: &mut Lcg) -> String {
                 let _ = writeln!(text, "(assert (<= (str.len v{i}) {}))", rng.below(5));
             }
             _ => {}
+        }
+        // Exact decimal-preimage constraint. Most generated regexes use {a,b}, so
+        // this deliberately exercises certified-empty intersections; the dedicated
+        // regression covers a satisfiable leading-zero witness.
+        if rng.below(6) == 0 {
+            let _ = writeln!(text, "(assert (= (str.to_int v{i}) {}))", rng.below(20));
         }
         // Occasional literal pin.
         if rng.below(5) == 0 {

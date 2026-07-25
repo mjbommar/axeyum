@@ -23,6 +23,8 @@
 //! * a length atom `(≷ (str.len X) n)` / `(≷ n (str.len X))` for
 //!   `≷ ∈ {<, <=, >, >=, =}` and a non-negative numeral `n` — a length bound on
 //!   `X`;
+//! * `(= (str.to_int X) n)` / `(= n (str.to_int X))` for a non-negative numeral
+//!   `n` — the exact decimal language of `n`, including leading zeroes;
 //! * `(= X "lit")` / `(= "lit" X)` — pins `X` to a string literal;
 //! * `(= OUT (str.++ X Y …))` (or symmetric) when `OUT` occurs nowhere else and
 //!   every input variable has retained membership constraints — a model-defining
@@ -300,7 +302,15 @@ impl Builder<'_> {
                 }
             }
             "=" if items.len() == 3 => {
-                if let Some(definition) = concat_definition(e, self.vars) {
+                if let Some((name, value)) = to_int_equality(&items[1], &items[2], self.vars) {
+                    self.per_var
+                        .entry(name)
+                        .or_default()
+                        .membership
+                        .positives
+                        .push(decimal_value_regex(value));
+                    true
+                } else if let Some(definition) = concat_definition(e, self.vars) {
                     self.definitions.push(definition);
                     true
                 } else {
@@ -402,6 +412,39 @@ impl Builder<'_> {
             _ => return false,
         }
         true
+    }
+}
+
+/// An equality between `(str.to_int X)` and a non-negative numeral, accepting
+/// either orientation.
+fn to_int_equality(
+    left: &SExpr,
+    right: &SExpr,
+    vars: &BTreeMap<String, SymbolId>,
+) -> Option<(String, u32)> {
+    match (str_to_int_var(left, vars), numeral(right)) {
+        (Some(name), Some(value)) => Some((name, value)),
+        _ => Some((str_to_int_var(right, vars)?, numeral(left)?)),
+    }
+}
+
+/// The declared string variable inside `(str.to_int X)`.
+fn str_to_int_var(e: &SExpr, vars: &BTreeMap<String, SymbolId>) -> Option<String> {
+    let items = e.list()?;
+    (items.len() == 2 && items[0].atom() == Some("str.to_int"))
+        .then(|| variable_name(&items[1], vars))?
+}
+
+/// The exact language of strings whose SMT-LIB `str.to_int` value is `value`.
+/// Decimal strings may contain arbitrary leading zeroes; zero itself requires at
+/// least one zero (`""` maps to `-1`, not zero).
+fn decimal_value_regex(value: u32) -> Regex {
+    let zero = Regex::character(u32::from(b'0'));
+    if value == 0 {
+        Regex::plus(zero)
+    } else {
+        let digits: Vec<u32> = value.to_string().bytes().map(u32::from).collect();
+        Regex::concat(Regex::star(zero), literal_regex(&digits))
     }
 }
 

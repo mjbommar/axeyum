@@ -1912,6 +1912,59 @@ fn redos_large_loop_and_output_definition_decide_sat() {
     ));
 }
 
+/// StringFuzz combines regex languages with a ground `str.to_int` result. The
+/// decimal preimage is an exact regex, so a non-decimal language is certified
+/// empty rather than left as `unknown`.
+#[test]
+fn regex_membership_refutes_incompatible_to_int_value() {
+    let text = r#"
+(set-logic QF_SLIA)
+(declare-const x String)
+(assert (str.in_re x (re.+ (str.to_re "not-a-number"))))
+(assert (= (str.to_int x) 14))
+(check-sat)
+"#;
+    assert_eq!(run(text).result, CheckResult::Unsat);
+
+    let mut script = parse_script(text).expect("parse to_int membership script");
+    assert!(
+        script
+            .membership_problem
+            .as_ref()
+            .expect("membership problem")
+            .complete
+    );
+    assert_eq!(
+        membership_verdict(&mut script, &config()),
+        Some(CheckResult::Unsat)
+    );
+}
+
+/// Leading zeroes are valid decimal representations, so `0014` must remain a
+/// satisfiable witness for `str.to_int x = 14`.
+#[test]
+fn regex_membership_to_int_keeps_leading_zero_witness() {
+    let text = r#"
+(set-logic QF_SLIA)
+(declare-const x String)
+(assert (str.in_re x (str.to_re "0014")))
+(assert (= 14 (str.to_int x)))
+(check-sat)
+"#;
+    let mut script = parse_script(text).expect("parse leading-zero membership script");
+    assert!(
+        script
+            .membership_problem
+            .as_ref()
+            .expect("membership problem")
+            .complete
+    );
+    assert!(matches!(
+        membership_verdict(&mut script, &config()),
+        Some(CheckResult::Sat(_))
+    ));
+}
+
 /// A satisfiable retained subset cannot justify `sat` when a dropped conjunct
 /// exists. Here the dropped self-disequality makes the full script unsatisfiable;
 /// the membership-only route must decline rather than expose its local witness.
