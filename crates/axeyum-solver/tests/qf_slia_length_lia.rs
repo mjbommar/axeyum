@@ -105,6 +105,50 @@ fn length_route_decides_disjunctive_length_sat() {
     );
 }
 
+/// PyEx-style integer indicators must not hide length predicates from the
+/// unbounded length route. Both operand orders and both indicator polarities are
+/// exact Boolean rewrites, and the resulting over-cap witnesses must replay.
+#[test]
+fn length_route_decides_integer_indicator_comparisons() {
+    for s in [
+        "(set-logic QF_SLIA)\n(declare-fun x () String)\n\
+         (assert (= (ite (= (str.len x) 20) 7 9) 7))\n(check-sat)\n",
+        "(set-logic QF_SLIA)\n(declare-fun x () String)\n\
+         (assert (= 9 (ite (= (str.len x) 20) 7 9)))\n\
+         (assert (= (str.len x) 21))\n(check-sat)\n",
+    ] {
+        let mut script = parse_script(s).expect("parse indicator length query");
+        assert!(
+            matches!(
+                length_lia_verdict(&mut script, &cfg()),
+                Some(CheckResult::Sat(_))
+            ),
+            "length route must recover and replay the hidden predicate:\n{s}"
+        );
+    }
+
+    let always_true = "(set-logic QF_SLIA)\n(declare-fun x () String)\n\
+                       (assert (= (ite (= (str.len x) 20) 7 7) 7))\n\
+                       (assert (= (str.len x) 21))\n(check-sat)\n";
+    assert!(matches!(
+        length_lia_verdict(
+            &mut parse_script(always_true).expect("parse constant-true indicator"),
+            &cfg()
+        ),
+        Some(CheckResult::Sat(_))
+    ));
+
+    let always_false = "(set-logic QF_SLIA)\n(declare-fun x () String)\n\
+                        (assert (= (ite (= (str.len x) 20) 7 9) 8))\n(check-sat)\n";
+    assert_eq!(
+        solve_smtlib(always_false, &cfg())
+            .expect("solve constant-false indicator")
+            .result,
+        CheckResult::Unsat,
+        "an indicator equality matching neither branch is exactly false"
+    );
+}
+
 /// The length route is **additive**: a genuinely-`unsat` length-coupled query still
 /// decides `unsat` (the ADR-0052 `StringGate` owns it; the route must not regress it).
 #[test]
