@@ -14,7 +14,7 @@ use axeyum_verify::{Verdict, verify};
 fn unwrap_or_takes_value_in_range(x: u8) -> u8 {
     let a: u8 = x & 0x0f;
     let c: u8 = a.checked_add(1).unwrap_or(0);
-    assert!(c == a + 1);
+    assert_eq!(c, a + 1);
     c
 }
 

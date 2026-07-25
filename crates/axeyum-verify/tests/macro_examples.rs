@@ -275,9 +275,9 @@ fn shadow_ok(c: bool) -> u8 {
     let q: u8 = 5;
     if c {
         let q: u8 = 99;
-        assert!(q == 99);
+        assert_eq!(q, 99);
     }
-    assert!(q == 5);
+    assert_eq!(q, 5);
     q
 }
 

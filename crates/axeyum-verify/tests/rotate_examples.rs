@@ -11,7 +11,7 @@ use axeyum_verify::{Verdict, verify};
 #[verify]
 fn rotate_roundtrip(x: u16) -> u16 {
     let r: u16 = x.rotate_left(8).rotate_right(8);
-    assert!(r == x);
+    assert_eq!(r, x);
     r
 }
 
@@ -30,7 +30,7 @@ fn rotate_roundtrip_verifies() {
 #[verify(expect_bug)]
 fn rotate_is_not_identity(x: u16) -> u16 {
     let r: u16 = x.rotate_left(4);
-    assert!(r == x);
+    assert_eq!(r, x);
     r
 }
 

@@ -112,7 +112,7 @@ fn handshake_ordering_safe(events: [u8; 4]) -> u8 {
         }
         state = next;
         if state == 2 {
-            assert!(seen_syn_sent == 1); // ESTABLISHED implies the handshake happened
+            assert_eq!(seen_syn_sent, 1); // ESTABLISHED implies the handshake happened
         }
         i += 1;
     }
@@ -154,7 +154,7 @@ fn handshake_skip_bug(events: [u8; 4]) -> u8 {
         }
         state = next;
         if state == 2 {
-            assert!(seen_syn_sent == 1);
+            assert_eq!(seen_syn_sent, 1);
         }
         i += 1;
     }
