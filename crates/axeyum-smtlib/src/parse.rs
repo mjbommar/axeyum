@@ -6327,6 +6327,15 @@ fn string_align(
 /// `len(x)` bytes match. A pure bit-vector/Boolean formula over the packed
 /// strings, so it decides both directions (no Int / theory-combination gap).
 fn string_prefixof(arena: &mut TermArena, x: TermId, y: TermId) -> Result<TermId, SmtError> {
+    // Exact identities first. Besides avoiding a quadratic byte comparison, these
+    // keep generated rewrite lemmas independent of the artificial packed bound.
+    if x == y || string_const_bytes(arena, x).is_some_and(|bytes| bytes.is_empty()) {
+        return Ok(arena.bool_const(true));
+    }
+    if string_const_bytes(arena, y).is_some_and(|bytes| bytes.is_empty()) {
+        return string_aware_eq(arena, x, y)?
+            .map_or_else(|| arena.eq(x, y).map_err(SmtError::Ir), Ok);
+    }
     let (x, y, m) = string_align(arena, x, y)?;
     let xlen = string_len_field(arena, x, m)?;
     let ylen = string_len_field(arena, y, m)?;
@@ -6349,6 +6358,15 @@ fn string_prefixof(arena: &mut TermArena, x: TermId, y: TermId) -> Result<TermId
 /// "`y` fits at `d` (`d + len(y) ≤ len(x)`) and matches there". Bounded
 /// (`O(MAX_LEN²)`), decides both directions.
 fn string_contains(arena: &mut TermArena, x: TermId, y: TermId) -> Result<TermId, SmtError> {
+    // Every word contains itself and the empty word. Conversely, the empty word
+    // contains only the empty word. These are exact over unbounded strings.
+    if x == y || string_const_bytes(arena, y).is_some_and(|bytes| bytes.is_empty()) {
+        return Ok(arena.bool_const(true));
+    }
+    if string_const_bytes(arena, x).is_some_and(|bytes| bytes.is_empty()) {
+        return string_aware_eq(arena, x, y)?
+            .map_or_else(|| arena.eq(x, y).map_err(SmtError::Ir), Ok);
+    }
     let (x, y, m) = string_align(arena, x, y)?;
     let xlen = string_len_field(arena, x, m)?;
     let ylen = string_len_field(arena, y, m)?;
@@ -6384,6 +6402,13 @@ fn string_contains(arena: &mut TermArena, x: TermId, y: TermId) -> Result<TermId
 /// `o = len(y) − len(x)`, the bytes match. Disjunction over `o` (pure BV/Bool,
 /// decides both directions).
 fn string_suffixof(arena: &mut TermArena, x: TermId, y: TermId) -> Result<TermId, SmtError> {
+    if x == y || string_const_bytes(arena, x).is_some_and(|bytes| bytes.is_empty()) {
+        return Ok(arena.bool_const(true));
+    }
+    if string_const_bytes(arena, y).is_some_and(|bytes| bytes.is_empty()) {
+        return string_aware_eq(arena, x, y)?
+            .map_or_else(|| arena.eq(x, y).map_err(SmtError::Ir), Ok);
+    }
     let (x, y, m) = string_align(arena, x, y)?;
     let xlen = string_len_field(arena, x, m)?;
     let ylen = string_len_field(arena, y, m)?;
@@ -6419,7 +6444,21 @@ fn string_suffixof(arena: &mut TermArena, x: TermId, y: TermId) -> Result<TermId
 /// The result is a max-length-1 packed string (the smallest sort), canonical, so
 /// it composes with equality. Pure BV/Bool — decides both directions.
 fn string_at_const(arena: &mut TermArena, s: TermId, k: i128) -> Result<TermId, SmtError> {
+    if let Some(bytes) = string_const_bytes(arena, s) {
+        let out = usize::try_from(k)
+            .ok()
+            .and_then(|index| bytes.get(index).copied())
+            .map_or_else(Vec::new, |byte| vec![byte]);
+        return pack_string_literal(arena, &out);
+    }
     let m = string_max_len(arena, s)?;
+    // Declared strings use STRING_MAX_LEN. A non-constant packed string with an
+    // exact maximum length of one is therefore a result of a length-≤1 operator
+    // (`str.at`, `str.from_code`, ...), so index >=1 is genuinely out of range,
+    // not merely beyond an artificial declaration bound.
+    if m == 1 && k >= 1 {
+        return pack_string_literal(arena, &[]);
+    }
     // A negative index is out of range for EVERY string (SMT-LIB), regardless of
     // length — so folding to the empty string is sound and bound-independent.
     if k < 0 {
@@ -6518,7 +6557,54 @@ fn string_substr(
     off: TermId,
     n: TermId,
 ) -> Result<TermId, SmtError> {
+    let off_const = match arena.node(off) {
+        TermNode::IntConst(value) => Some(*value),
+        _ => None,
+    };
+    let n_const = match arena.node(n) {
+        TermNode::IntConst(value) => Some(*value),
+        _ => None,
+    };
+    // Total-function corners and exact ground folds. Performing them before the
+    // bounded mux is both cheaper and bound-independent.
+    if off_const.is_some_and(|value| value < 0) || n_const.is_some_and(|value| value <= 0) {
+        return pack_string_literal(arena, &[]);
+    }
+    if let Some(bytes) = string_const_bytes(arena, s) {
+        if let (Some(off), Some(n)) = (off_const, n_const) {
+            let start = usize::try_from(off).unwrap_or(bytes.len());
+            // A positive `i128` too large for `usize` means "take through the
+            // end", not zero bytes.
+            let take = usize::try_from(n).unwrap_or(usize::MAX);
+            let end = start.saturating_add(take).min(bytes.len());
+            let out = bytes.get(start..end).unwrap_or(&[]);
+            return pack_string_literal(arena, out);
+        }
+        // For a one-character literal, `(str.substr s i i)` is always empty:
+        // i<0 is invalid, i=0 requests zero bytes, and i>=1 starts past the end.
+        if bytes.len() <= 1 && off == n {
+            return pack_string_literal(arena, &[]);
+        }
+        if bytes.is_empty()
+            || off_const
+                .is_some_and(|off| usize::try_from(off).map_or(true, |index| index >= bytes.len()))
+        {
+            return pack_string_literal(arena, &[]);
+        }
+    }
+    // A one-byte slice is precisely `str.at`, including negative/out-of-range
+    // indices and the empty-result cases.
+    if n_const == Some(1) {
+        return match off_const {
+            Some(index) => string_at_const(arena, s, index),
+            None => string_at_int(arena, s, off),
+        };
+    }
     let m = string_max_len(arena, s)?;
+    // Taking from zero through the exact length is the original word.
+    if off_const == Some(0) && n == string_len_int(arena, s, m)? {
+        return Ok(s);
+    }
     let len_i = string_len_int(arena, s, m)?;
     let zero_i = arena.int_const(0);
     // `off` is a valid start: 0 ≤ off < len(s). Out of that range → "" entirely.
@@ -6645,6 +6731,38 @@ fn string_replace(
     a: TermId,
     b: TermId,
 ) -> Result<TermId, SmtError> {
+    // Exact algebraic identities. These are especially important before the
+    // result-bound calculation: a normalized no-op must not be rejected merely
+    // because the unreduced splice could have had a wider packed layout.
+    if s == a {
+        return Ok(b);
+    }
+    if a == b {
+        return Ok(s);
+    }
+    if string_const_bytes(arena, a).is_some_and(|bytes| bytes.is_empty()) {
+        return string_concat(arena, &[b, s]);
+    }
+    // Fully-ground first-occurrence replacement. Keep the existing symbolic
+    // encoding as a fallback when the exact result exceeds the literal cap.
+    if let (Some(sb), Some(ab), Some(bb)) = (
+        string_const_bytes(arena, s),
+        string_const_bytes(arena, a),
+        string_const_bytes(arena, b),
+    ) {
+        let hit = sb.windows(ab.len()).position(|window| window == ab);
+        if let Some(pos) = hit {
+            let mut out = Vec::with_capacity(sb.len() - ab.len() + bb.len());
+            out.extend_from_slice(&sb[..pos]);
+            out.extend_from_slice(&bb);
+            out.extend_from_slice(&sb[pos + ab.len()..]);
+            if out.len() <= STRING_MAX_LEN as usize {
+                return pack_string_literal(arena, &out);
+            }
+        } else {
+            return Ok(s);
+        }
+    }
     let ms = string_max_len(arena, s)?;
     let ma = string_max_len(arena, a)?;
     let mb = string_max_len(arena, b)?;
@@ -6767,6 +6885,16 @@ fn string_indexof(
     t: TermId,
     i: TermId,
 ) -> Result<TermId, SmtError> {
+    if let TermNode::IntConst(offset) = arena.node(i) {
+        if *offset < 0 {
+            return Ok(arena.int_const(-1));
+        }
+        if *offset == 0
+            && (s == t || string_const_bytes(arena, t).is_some_and(|bytes| bytes.is_empty()))
+        {
+            return Ok(arena.int_const(0));
+        }
+    }
     let ms = string_max_len(arena, s)?;
     let mt = string_max_len(arena, t)?;
     let len_s = string_len_int(arena, s, ms)?;
@@ -7405,8 +7533,19 @@ fn string_concat_pair(arena: &mut TermArena, x: TermId, y: TermId) -> Result<Ter
 /// width), then variable operands extend it pairwise. Zero operands is the empty
 /// string; one operand is itself.
 fn string_concat(arena: &mut TermArena, args: &[TermId]) -> Result<TermId, SmtError> {
+    // Empty words are the two-sided identity. Remove them before width accounting
+    // so `x ++ ""` stays exactly `x` instead of acquiring an artificial wider
+    // packed sort (and so nested generated rewrites canonicalize structurally).
+    let args: Vec<TermId> = args
+        .iter()
+        .copied()
+        .filter(|&arg| !string_len_is_zero(arena, arg))
+        .collect();
     if args.is_empty() {
         return pack_string_literal(arena, &[]);
+    }
+    if args.len() == 1 {
+        return Ok(args[0]);
     }
     // Fold a leading constant prefix into a single literal (so `(str.++ "a" "b" v)`
     // does not pay for two concat layers before reaching the variable `v`).
