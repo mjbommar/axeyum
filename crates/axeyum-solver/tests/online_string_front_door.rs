@@ -372,6 +372,66 @@ fn front_door_first_and_last_character_atoms_are_exact() {
     assert_eq!(verdict(unsat), CheckResult::Unsat);
 }
 
+#[test]
+fn front_door_pyex_constant_offset_suffix_view_is_exact() {
+    let sat = r#"(set-logic QF_SLIA)
+(declare-fun value () String)
+(assert (>= 1 0))
+(assert (>= (- (str.len value) 1) 0))
+(assert (= (str.at (str.substr value 1 (- (str.len value) 1)) 0) "b"))
+(assert (= (str.at (str.substr value 1 (- (str.len value) 1))
+                   (- (str.len (str.substr value 1 (- (str.len value) 1))) 1)) "c"))
+(assert (str.contains (str.substr value 1 (- (str.len value) 1)) "b"))
+(assert (not (= (str.len (str.substr value 1 (- (str.len value) 1))) 0)))
+(check-sat)"#;
+    assert!(matches!(verdict(sat), CheckResult::Sat(_)));
+
+    let unsat = r#"(set-logic QF_SLIA)
+(declare-fun value () String)
+(assert (= (str.at (str.substr value 1 (- (str.len value) 1)) 0) "b"))
+(assert (not (str.contains (str.substr value 1 (- (str.len value) 1)) "b")))
+(check-sat)"#;
+    assert_eq!(verdict(unsat), CheckResult::Unsat);
+}
+
+#[test]
+fn front_door_pyex_constant_offset_ten_suffix_view_is_exact() {
+    let s = r#"(set-logic QF_SLIA)
+(declare-fun uri () String)
+(assert (>= 10 0))
+(assert (>= (- (str.len uri) 10) 0))
+(assert (= (str.at (str.substr uri 10 (- (str.len uri) 10)) 0) "A"))
+(assert (= (str.at (str.substr uri 10 (- (str.len uri) 10))
+                   (- (str.len (str.substr uri 10 (- (str.len uri) 10))) 1)) "Z"))
+(check-sat)"#;
+    assert!(matches!(verdict(s), CheckResult::Sat(_)));
+}
+
+#[test]
+fn front_door_pyex_suffix_view_indexof_conflict_is_unsat() {
+    let s = r#"(set-logic QF_SLIA)
+(declare-fun value () String)
+(assert (= (str.indexof (str.substr value 1 (- (str.len value) 1)) "=" 0) (- 1)))
+(assert (str.contains (str.substr value 1 (- (str.len value) 1)) "="))
+(check-sat)"#;
+    assert_eq!(verdict(s), CheckResult::Unsat);
+}
+
+#[test]
+fn front_door_pyex_suffix_view_empty_pattern_corners_are_exact() {
+    let contains_empty = r#"(set-logic QF_SLIA)
+(declare-fun value () String)
+(assert (not (str.contains (str.substr value 10 (- (str.len value) 10)) "")))
+(check-sat)"#;
+    assert_eq!(verdict(contains_empty), CheckResult::Unsat);
+
+    let indexof_empty = r#"(set-logic QF_SLIA)
+(declare-fun value () String)
+(assert (= (str.indexof (str.substr value 10 (- (str.len value) 10)) "" 0) (- 1)))
+(check-sat)"#;
+    assert_eq!(verdict(indexof_empty), CheckResult::Unsat);
+}
+
 // ---------- over-cap (word-first fallback) disjunctive shapes ----------
 //
 // String literals over `STRING_MAX_LEN` (8) make the *bounded* parse decline, so

@@ -1802,9 +1802,9 @@ impl MembershipCollector {
 /// constant-pattern `prefixof`/`suffixof`/`contains` translated to `P·Σ*` / `Σ*·S`
 /// / `Σ*·C·Σ*`), or an exact content predicate (`len(X)=0`,
 /// `indexof(X,C,0)=-1`, first/last-character `str.at` equality), each sound in any
-/// Boolean position. Other `str.len`/`substr`/`to_int` shapes, a compound-subject or
-/// variable-pattern extended function, or any non-string construct returns `None`
-/// (all-or-nothing).
+/// Boolean position. The same predicates are retained over the exact suffix view
+/// `substr(X,n,len(X)-n)`. Other `str.len`/`substr`/`to_int` shapes, a compound
+/// pattern, or any non-string construct returns `None` (all-or-nothing).
 fn word_bool(
     arena: &mut TermArena,
     e: &SExpr,
@@ -1873,25 +1873,45 @@ fn word_bool(
         //   * `(str.suffixof S X)` ⟺ `X ∈ L(Σ*·S)`   (S a constant suffix)
         //   * `(str.contains X C)` ⟺ `X ∈ L(Σ*·C·Σ*)` (C a constant infix)
         //
-        // A variable/compound pattern, or a `str.++`/`substr`/literal subject (not a
-        // single declared variable), declines the whole skeleton.
+        // A subject may also be the exact constant-offset suffix view
+        // `substr(X,n,len(X)-n)`: prefixing the language with exactly `n` arbitrary
+        // characters gives its exact reading over `X`. Other compound subjects and
+        // variable patterns decline the whole skeleton.
         "str.prefixof" if items.len() == 3 => {
             let cps = literal_pattern_cps(&items[1])?;
-            let name = variable_name_skeleton(&items[2], vars)?;
-            let (operand, _) = *vars.get(&name)?;
-            mem.atom(arena, operand, prefix_pattern_regex(&cps))
+            if cps.is_empty() {
+                return Some(arena.bool_const(true));
+            }
+            let view = suffix_view_skeleton(&items[2], vars)?;
+            mem.atom(
+                arena,
+                view.operand,
+                after_exact_prefix(view.dropped, prefix_pattern_regex(&cps)),
+            )
         }
         "str.suffixof" if items.len() == 3 => {
             let cps = literal_pattern_cps(&items[1])?;
-            let name = variable_name_skeleton(&items[2], vars)?;
-            let (operand, _) = *vars.get(&name)?;
-            mem.atom(arena, operand, suffix_pattern_regex(&cps))
+            if cps.is_empty() {
+                return Some(arena.bool_const(true));
+            }
+            let view = suffix_view_skeleton(&items[2], vars)?;
+            mem.atom(
+                arena,
+                view.operand,
+                after_exact_prefix(view.dropped, suffix_pattern_regex(&cps)),
+            )
         }
         "str.contains" if items.len() == 3 => {
-            let name = variable_name_skeleton(&items[1], vars)?;
-            let (operand, _) = *vars.get(&name)?;
             let cps = literal_pattern_cps(&items[2])?;
-            mem.atom(arena, operand, contains_pattern_regex(&cps))
+            if cps.is_empty() {
+                return Some(arena.bool_const(true));
+            }
+            let view = suffix_view_skeleton(&items[1], vars)?;
+            mem.atom(
+                arena,
+                view.operand,
+                after_exact_prefix(view.dropped, contains_pattern_regex(&cps)),
+            )
         }
         // Boolean `ite` only (the branches must themselves be skeleton Booleans; an
         // `ite` over *strings* is not a `word_str_expr` and is declined below).
@@ -1903,10 +1923,10 @@ fn word_bool(
         }
         // A **trivially-true length guard** (`(<= 0 (str.len W))` / `(>= (str.len W)
         // 0)`) is a tautology — replaced by `true` so the redundant `norn-*` guard does
-        // not collapse the skeleton (see [`is_trivial_nonneg_length_atom`]; any other
-        // length comparison still declines).
-        "<=" | ">=" if items.len() == 3 && is_trivial_nonneg_length_atom(head, &items[1..]) => {
-            Some(arena.bool_const(true))
+        // not collapse the skeleton. Exact constant-offset substring length guards
+        // are memberships; any other length comparison still declines.
+        "<" | "<=" | ">" | ">=" if items.len() == 3 => {
+            exact_word_int_comparison(arena, head, &items[1], &items[2], vars, mem)
         }
         // `(= a b …)` — either chained equality over `Seq` expressions, or exact
         // Boolean equivalence over skeleton formulas. Boolean equality is expanded
@@ -1996,14 +2016,15 @@ fn word_equality(
 
 /// Exactly translates regular string-content equalities used heavily by `PyEx`:
 ///
-/// * `len(X) = 0` iff `X` is the empty word;
-/// * `indexof(X, C, 0) = -1` iff `X` does not contain the constant word `C`;
-/// * `at(X, 0) = C` / `at(X, len(X)-1) = C` as a constant prefix/suffix language.
+/// * `len(W) = 0` iff the underlying variable has length at most its dropped prefix;
+/// * `indexof(W, C, 0) = -1` iff suffix view `W` lacks the constant word `C`;
+/// * `at(W, 0) = C` / `at(W, len(W)-1) = C` as prefix/suffix languages.
 ///
-/// Both equality orientations are accepted. The `str.at` result is either empty or
-/// one code point, so a multi-code-point right side is exactly `false`; equality to
-/// the empty word holds exactly when `X` is empty for either supported boundary.
-/// Every non-constant, compound-subject, or other-index shape declines.
+/// Here `W` is either `X` or the exact constant-offset suffix view
+/// `substr(X,n,len(X)-n)`. Both equality orientations are accepted. The `str.at`
+/// result is either empty or one code point, so a multi-code-point right side is
+/// exactly `false`; equality to the empty word holds exactly when `len(X) <= n`.
+/// Every non-constant, other compound-subject, or other-index shape declines.
 fn exact_content_equality(
     arena: &mut TermArena,
     items: &[SExpr],
@@ -2027,47 +2048,98 @@ fn exact_content_equality_ordered(
     let head = app.first().and_then(SExpr::atom)?;
     match head {
         "str.len" | "seq.len" if app.len() == 2 && parse_int_literal(constant) == Some(0) => {
-            let name = variable_name_skeleton(&app[1], vars)?;
-            let (operand, _) = *vars.get(&name)?;
-            mem.atom(arena, operand, axeyum_strings::regex::Regex::Empty)
+            let view = suffix_view_skeleton(&app[1], vars)?;
+            mem.atom(arena, view.operand, at_most_length_regex(view.dropped))
         }
         "str.indexof"
             if app.len() == 4
                 && parse_int_literal(&app[3]) == Some(0)
                 && parse_int_literal(constant) == Some(-1) =>
         {
-            let name = variable_name_skeleton(&app[1], vars)?;
-            let (operand, _) = *vars.get(&name)?;
+            let view = suffix_view_skeleton(&app[1], vars)?;
             let needle = literal_pattern_cps(&app[2])?;
-            let contains = mem.atom(arena, operand, contains_pattern_regex(&needle))?;
+            if needle.is_empty() {
+                return Some(arena.bool_const(false));
+            }
+            let contains = mem.atom(
+                arena,
+                view.operand,
+                after_exact_prefix(view.dropped, contains_pattern_regex(&needle)),
+            )?;
             arena.not(contains).ok()
         }
         "str.at" if app.len() == 3 => {
-            let (name, first) = at_boundary_variable(&app[1], &app[2], vars)?;
-            let (operand, _) = *vars.get(&name)?;
+            let (view, first) = at_boundary_view(&app[1], &app[2], vars)?;
             let value = literal_pattern_cps(constant)?;
             let regex = match value.as_slice() {
-                [] => axeyum_strings::regex::Regex::Empty,
-                [c] if first => prefix_pattern_regex(&[*c]),
-                [c] => suffix_pattern_regex(&[*c]),
+                [] => at_most_length_regex(view.dropped),
+                [c] if first => after_exact_prefix(view.dropped, prefix_pattern_regex(&[*c])),
+                [c] => after_exact_prefix(view.dropped, suffix_pattern_regex(&[*c])),
                 _ => return Some(arena.bool_const(false)),
             };
-            mem.atom(arena, operand, regex)
+            mem.atom(arena, view.operand, regex)
         }
         _ => None,
     }
 }
 
-/// Recognizes `str.at(X, 0)` (`true`) or `str.at(X, len(X)-1)` (`false`) for a
-/// single declared string variable `X`.
-fn at_boundary_variable(
+/// A declared string variable viewed after dropping exactly `dropped` leading
+/// characters. `substr(X,dropped,len(X)-dropped)` denotes this view exactly,
+/// including its empty result when `len(X) <= dropped`.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+struct SuffixView {
+    operand: SymbolId,
+    dropped: u32,
+}
+
+/// Recognizes either a bare declared string variable or its exact constant-offset
+/// suffix view `substr(X,n,len(X)-n)`.
+fn suffix_view_skeleton(
+    e: &SExpr,
+    vars: &BTreeMap<String, (SymbolId, TermId)>,
+) -> Option<SuffixView> {
+    if let Some(name) = variable_name_skeleton(e, vars) {
+        let (operand, _) = *vars.get(&name)?;
+        return Some(SuffixView {
+            operand,
+            dropped: 0,
+        });
+    }
+
+    let app = e.list()?;
+    if app.len() != 4 || !matches!(app[0].atom(), Some("str.substr" | "seq.extract")) {
+        return None;
+    }
+    let name = variable_name_skeleton(&app[1], vars)?;
+    let dropped = u32::try_from(parse_int_literal(&app[2])?).ok()?;
+    let remaining = app[3].list()?;
+    if remaining.len() != 3
+        || remaining[0].atom() != Some("-")
+        || parse_int_literal(&remaining[2])? != i128::from(dropped)
+    {
+        return None;
+    }
+    let len = remaining[1].list()?;
+    if len.len() != 2 || !matches!(len[0].atom(), Some("str.len" | "seq.len")) {
+        return None;
+    }
+    if variable_name_skeleton(&len[1], vars)? != name {
+        return None;
+    }
+    let (operand, _) = *vars.get(&name)?;
+    Some(SuffixView { operand, dropped })
+}
+
+/// Recognizes `str.at(W, 0)` (`true`) or `str.at(W, len(W)-1)` (`false`) for a
+/// supported [`SuffixView`] `W`.
+fn at_boundary_view(
     subject: &SExpr,
     index: &SExpr,
     vars: &BTreeMap<String, (SymbolId, TermId)>,
-) -> Option<(String, bool)> {
-    let name = variable_name_skeleton(subject, vars)?;
+) -> Option<(SuffixView, bool)> {
+    let view = suffix_view_skeleton(subject, vars)?;
     if parse_int_literal(index) == Some(0) {
-        return Some((name, true));
+        return Some((view, true));
     }
     let minus = index.list()?;
     if minus.len() != 3 || minus[0].atom() != Some("-") || parse_int_literal(&minus[2]) != Some(1) {
@@ -2077,7 +2149,7 @@ fn at_boundary_variable(
     if len.len() != 2 || !matches!(len[0].atom(), Some("str.len" | "seq.len")) {
         return None;
     }
-    (variable_name_skeleton(&len[1], vars)? == name).then_some((name, false))
+    (suffix_view_skeleton(&len[1], vars)? == view).then_some((view, false))
 }
 
 /// Exactly folds `(= (ite C a b) k)` (or its symmetric orientation) when `a`,
@@ -2187,30 +2259,91 @@ fn contains_pattern_regex(cps: &[u32]) -> axeyum_strings::regex::Regex {
     Regex::concat(Regex::concat(any(), literal_pattern_regex(cps)), any())
 }
 
-/// Whether `head args` is a **tautological** non-negativity guard on a string
-/// length — `(<= 0 (str.len W))` or `(>= (str.len W) 0)` (also the `seq.len`
-/// spelling). A `str.len`/`seq.len` is non-negative for every string, so the atom
-/// holds in every model; the word-skeleton builder may soundly treat it as `true`.
-///
-/// Deliberately narrow: only the literal-`0` bound against a bare `str.len`/`seq.len`
-/// application is recognized. `(<= (str.len W) 0)` (⇒ `W = ""`), `(< 0 (str.len W))`
-/// (⇒ `W ≠ ""`), or any other length comparison is **not** a tautology and is left
-/// for the caller to decline (the membership skeleton has no `str.len` theory).
-fn is_trivial_nonneg_length_atom(head: &str, args: &[SExpr]) -> bool {
-    let [a, b] = args else { return false };
-    let is_len = |e: &SExpr| {
-        e.list().is_some_and(|l| {
-            l.len() == 2 && matches!(l.first().and_then(SExpr::atom), Some("str.len" | "seq.len"))
-        })
-    };
-    let is_zero = |e: &SExpr| e.atom() == Some("0");
-    match head {
-        // `(<= 0 (str.len W))`
-        "<=" => is_zero(a) && is_len(b),
-        // `(>= (str.len W) 0)`
-        ">=" => is_len(a) && is_zero(b),
-        _ => false,
+/// Prefixes `tail` with exactly `count` arbitrary characters.
+fn after_exact_prefix(
+    count: u32,
+    tail: axeyum_strings::regex::Regex,
+) -> axeyum_strings::regex::Regex {
+    use axeyum_strings::regex::Regex;
+    if count == 0 {
+        tail
+    } else {
+        Regex::concat(Regex::repeat(Regex::any_char(), count, Some(count)), tail)
     }
+}
+
+/// The exact language of words whose length is at most `maximum`.
+fn at_most_length_regex(maximum: u32) -> axeyum_strings::regex::Regex {
+    use axeyum_strings::regex::Regex;
+    Regex::repeat(Regex::any_char(), 0, Some(maximum))
+}
+
+/// The exact language of words whose length is at least `minimum`.
+fn at_least_length_regex(minimum: u32) -> axeyum_strings::regex::Regex {
+    use axeyum_strings::regex::Regex;
+    Regex::repeat(Regex::any_char(), minimum, None)
+}
+
+/// Folds literal integer comparisons and the exact `PyEx` substring guards
+/// `(>= (- (str.len W) n) 0)`. For a suffix view that drops `d` characters, the
+/// latter is `len(X) >= d+n` when `n > 0` and a tautology when `n <= 0`.
+/// The symmetric tautology `(<= 0 (str.len W))` is retained as well. All other
+/// integer comparisons decline the word skeleton.
+fn exact_word_int_comparison(
+    arena: &mut TermArena,
+    head: &str,
+    left: &SExpr,
+    right: &SExpr,
+    vars: &BTreeMap<String, (SymbolId, TermId)>,
+    mem: &mut MembershipCollector,
+) -> Option<TermId> {
+    if let (Some(a), Some(b)) = (parse_int_literal(left), parse_int_literal(right)) {
+        let value = match head {
+            "<" => a < b,
+            "<=" => a <= b,
+            ">" => a > b,
+            ">=" => a >= b,
+            _ => return None,
+        };
+        return Some(arena.bool_const(value));
+    }
+
+    if head == "<=" && parse_int_literal(left) == Some(0) {
+        let len = right.list()?;
+        if len.len() == 2
+            && matches!(len[0].atom(), Some("str.len" | "seq.len"))
+            && suffix_view_skeleton(&len[1], vars).is_some()
+        {
+            return Some(arena.bool_const(true));
+        }
+    }
+
+    if head != ">=" || parse_int_literal(right) != Some(0) {
+        return None;
+    }
+    if let Some(len) = left.list()
+        && len.len() == 2
+        && matches!(len[0].atom(), Some("str.len" | "seq.len"))
+        && suffix_view_skeleton(&len[1], vars).is_some()
+    {
+        return Some(arena.bool_const(true));
+    }
+    let difference = left.list()?;
+    if difference.len() != 3 || difference[0].atom() != Some("-") {
+        return None;
+    }
+    let len = difference[1].list()?;
+    if len.len() != 2 || !matches!(len[0].atom(), Some("str.len" | "seq.len")) {
+        return None;
+    }
+    let view = suffix_view_skeleton(&len[1], vars)?;
+    let threshold = parse_int_literal(&difference[2])?;
+    if threshold <= 0 {
+        return Some(arena.bool_const(true));
+    }
+    let threshold = u32::try_from(threshold).ok()?;
+    let minimum = view.dropped.checked_add(threshold)?;
+    mem.atom(arena, view.operand, at_least_length_regex(minimum))
 }
 
 /// The declared string-variable name if `e` is a bare atom naming one of the
