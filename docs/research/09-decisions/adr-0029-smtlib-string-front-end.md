@@ -116,3 +116,22 @@ single-packed-BV representation end to end and is useful on its own
   fast bounded path under a complete procedure.
 - *Unchanged:* no new IR sort; soundness rests on the existing BV path and model
   replay; `Unsupported`/`unknown` stay first-class.
+
+## Follow-up (2026-07-25): correlated fixed-splice bounds
+
+The packed lowering recognizes the exact generated form
+
+`substr(s,0,i) ++ literal ++ substr(s,i+|literal|,len(s)-(i+|literal|))`
+
+and concatenates it directly into the base string's packed bound. Summing the
+operands' independent maxima rejects the common one-character case as
+`8 + 1 + 8 = 17`, even though its actual length is always at most eight. For
+`L = len(s)` and `j = i + |literal|`, the exact result length is
+`min(L,i) + |literal| + max(L-j,0)`. When `j` is within the base bound, this is
+at most that bound for all `L`, including the short-string cases where the form
+is not equivalent to `str.update`.
+
+On the retained Leetcode residual at the same 250 ms internal budget, this moves
+six `findLadders` rows from `unknown` to three replay-checked `sat` and three
+bound-independent `unsat`. All six agree with Z3 4.13.3 and retained cvc5 1.3.4;
+the exact competition CLI reports 60/71 decisions, 11 unknown, and WRONG=0.

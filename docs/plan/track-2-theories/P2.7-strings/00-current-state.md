@@ -58,7 +58,7 @@ adversarial `str_differential_fuzz` vs Z3 is **DISAGREE=0 over 371 instances**.
 
 | Area | Decide today | Assurance | Boundary to close |
 |---|---|---|---|
-| Bounded ops | all `str.*` within `max_len ≤ 16` | validated (replay + DRAT) | **unbounded length** |
+| Bounded ops | all `str.*` within `max_len ≤ 16`, with exact correlated bounds for generated fixed-position splices | validated (replay + DRAT) | **unbounded length** |
 | Regex | Thompson NFA; Boolean top-level only | validated | nested Boolean; symbolic-derivative regex; complement under concat |
 | `str.len` + LIA | unbounded replay-checked SAT bridge, including exact integer-indicator recovery (ADR-0052); broader coupled content/length is incomplete | sound | unbounded word/length reasoning in later P2.7 phases |
 | String⇄int | bounded decimal | validated | unbounded; undecidable in full (Ganesh–Berzish 2016) |

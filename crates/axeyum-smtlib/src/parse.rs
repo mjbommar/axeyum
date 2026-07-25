@@ -8238,6 +8238,117 @@ fn string_concat(arena: &mut TermArena, args: &[TermId]) -> Result<TermId, SmtEr
     Ok(acc)
 }
 
+/// Concatenates packed strings into a caller-proved result bound.
+///
+/// Unlike [`string_concat`], this does not sum the operands' independent static
+/// maxima. The caller must have proved that the actual concatenated length is at
+/// most `result_max`; active bytes are then copied and shifted exactly as in the
+/// ordinary concatenation encoding. This is used only for syntactically exact
+/// splice identities whose correlated substring lengths establish that bound.
+fn string_concat_with_proved_bound(
+    arena: &mut TermArena,
+    args: &[TermId],
+    result_max: u32,
+) -> Result<TermId, SmtError> {
+    let result_len_width = len_width(result_max);
+    let result_content_width = result_max * 8;
+    let mut result_len = arena.bv_const(result_len_width, 0)?;
+    let mut result_content = arena.bv_const(result_content_width, 0)?;
+    let shift_scale = arena.bv_const(result_content_width, 3)?;
+    let zero_byte = arena.bv_const(8, 0)?;
+
+    for &arg in args {
+        let arg_max = string_max_len(arena, arg)?;
+        let arg_len_width = len_width(arg_max);
+        let arg_len = string_len_field(arena, arg, arg_max)?;
+        let widened_len = match arg_len_width.cmp(&result_len_width) {
+            std::cmp::Ordering::Less => {
+                arena.zero_ext(result_len_width - arg_len_width, arg_len)?
+            }
+            std::cmp::Ordering::Equal => arg_len,
+            std::cmp::Ordering::Greater => arena.extract(result_len_width - 1, 0, arg_len)?,
+        };
+
+        let mut packed_content: Option<TermId> = None;
+        for index in (0..result_max).rev() {
+            let byte = if index < arg_max {
+                string_byte_m(arena, arg, index, arg_max)?
+            } else {
+                zero_byte
+            };
+            packed_content = Some(match packed_content {
+                None => byte,
+                Some(previous) => arena.concat(previous, byte)?,
+            });
+        }
+        let packed_content = packed_content.expect("result_max is positive");
+        let shift_len = arena.zero_ext(result_content_width - result_len_width, result_len)?;
+        let shift = arena.bv_shl(shift_len, shift_scale)?;
+        let shifted = arena.bv_shl(packed_content, shift)?;
+        result_content = arena.bv_or(result_content, shifted)?;
+        result_len = arena.bv_add(result_len, widened_len)?;
+    }
+
+    arena
+        .concat(result_content, result_len)
+        .map_err(SmtError::Ir)
+}
+
+/// Recognizes an exact fixed-position splice whose correlated substring lengths
+/// keep the result within the base string's bound:
+///
+/// `substr(s, 0, i) ++ literal ++ substr(s, i+|literal|, len(s)-(i+|literal|))`.
+///
+/// For `L = len(s)`, the result length is
+/// `min(L,i) + |literal| + max(L-i-|literal|,0)`, hence at most the base bound
+/// whenever `i + |literal|` is within it. This includes the short-string cases;
+/// it is not the simpler `str.update` identity, which would differ there.
+fn fixed_splice_concat_bound(arena: &TermArena, items: &[SExpr], args: &[TermId]) -> Option<u32> {
+    let [head, left, right] = items else {
+        return None;
+    };
+    if !matches!(head.atom(), Some("str.++" | "str.concat")) || args.len() != 2 {
+        return None;
+    }
+    let inner = left.list()?;
+    let [inner_head, prefix_expr, replacement_expr] = inner else {
+        return None;
+    };
+    if !matches!(inner_head.atom(), Some("str.++" | "str.concat")) {
+        return None;
+    }
+    let prefix = prefix_expr.list()?;
+    let suffix = right.list()?;
+    if prefix.len() != 4
+        || suffix.len() != 4
+        || prefix[0].atom() != Some("str.substr")
+        || suffix[0].atom() != Some("str.substr")
+        || prefix[1] != suffix[1]
+    {
+        return None;
+    }
+    let prefix_start = parse_int_literal(strip_subtracted_zero(&prefix[2]))?;
+    let prefix_len = u32::try_from(parse_int_literal(strip_subtracted_zero(&prefix[3]))?).ok()?;
+    if prefix_start != 0 {
+        return None;
+    }
+    let replacement = literal_pattern_cps(replacement_expr)?;
+    if replacement
+        .iter()
+        .any(|&code_point| code_point > u32::from(u8::MAX))
+    {
+        return None;
+    }
+    let replacement_len = u32::try_from(replacement.len()).ok()?;
+    let split = prefix_len.checked_add(replacement_len)?;
+    let suffix_start = u32::try_from(parse_int_literal(strip_subtracted_zero(&suffix[2]))?).ok()?;
+    if suffix_start != split || len_minus_constant(&suffix[3], &suffix[1])? != split {
+        return None;
+    }
+    let result_max = string_max_len(arena, args[1]).ok()?;
+    (split <= result_max).then_some(result_max)
+}
+
 /// The canonical well-formedness constraint for a packed string `v` of max length
 /// `m`: its length is `≤ m`, and every content byte at or above the length is
 /// zero.
@@ -11558,7 +11669,11 @@ fn apply_op(
         // `str.++` — variable concatenation grows into a wider packed sort; a run
         // of constant operands folds to a literal (ADR-0029 slice 2).
         "str.concat" | "str.++" => {
-            let r = string_concat(arena, args)?;
+            let r = if let Some(result_max) = fixed_splice_concat_bound(arena, items, args) {
+                string_concat_with_proved_bound(arena, args, result_max)?
+            } else {
+                string_concat(arena, args)?
+            };
             // P2.7 A.2: `len(x ++ y) = len(x) + len(y)` in the abstraction.
             lenabs.mark_used();
             let mut sum = lenabs.len_expr_string(arena, args[0])?;
