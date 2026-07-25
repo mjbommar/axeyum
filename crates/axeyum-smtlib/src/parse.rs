@@ -10898,7 +10898,10 @@ fn apply_op(
     Ok(match op {
         "not" => {
             need(1)?;
-            arena.not(args[0])?
+            match arena.node(args[0]) {
+                TermNode::BoolConst(value) => arena.bool_const(!value),
+                _ => arena.not(args[0])?,
+            }
         }
         // `str.len` over a packed bounded string (ADR-0029): the length field as
         // an `Int`, so it composes with the existing integer arithmetic
@@ -11189,6 +11192,9 @@ fn apply_op(
             };
             let eq_pair =
                 |arena: &mut TermArena, p: TermId, q: TermId| -> Result<TermId, SmtError> {
+                    if p == q {
+                        return Ok(arena.bool_const(true));
+                    }
                     // P2.7 A.2: `x = y ⟹ len(x) = len(y)` (unbounded). Sound
                     // even for a string-*shaped* user bit-vector (equal BVs have
                     // equal decoded fields), so this hook does not `mark_used`.
@@ -11498,7 +11504,19 @@ fn apply_op(
             if real {
                 fold_args(arena, &a, op, TermArena::real_add)?
             } else {
-                fold_args(arena, &a, op, TermArena::int_add)?
+                if a.is_empty() {
+                    return Err(SmtError::Syntax("`+` expects >= 1 argument".to_owned()));
+                }
+                let nonzero = a
+                    .iter()
+                    .copied()
+                    .filter(|&term| !matches!(arena.node(term), TermNode::IntConst(0)))
+                    .collect::<Vec<_>>();
+                match nonzero.as_slice() {
+                    [] => arena.int_const(0),
+                    [term] => *term,
+                    terms => fold_args(arena, terms, op, TermArena::int_add)?,
+                }
             }
         }
         "*" => {
@@ -11520,6 +11538,10 @@ fn apply_op(
                     for &next in &a[1..] {
                         acc = if real {
                             arena.real_sub(acc, next)?
+                        } else if acc == next {
+                            arena.int_const(0)
+                        } else if matches!(arena.node(next), TermNode::IntConst(0)) {
+                            acc
                         } else {
                             arena.int_sub(acc, next)?
                         };
