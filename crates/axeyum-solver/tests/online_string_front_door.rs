@@ -294,6 +294,30 @@ fn front_door_kaluza_negative_membership_avoids_word_disequalities() {
     assert!(matches!(verdict(s), CheckResult::Sat(_)));
 }
 
+#[test]
+fn front_door_pyex_constant_int_ite_alias_sat() {
+    // PyEx lowers a string predicate C to the integer `(ite C 1 0)` and compares
+    // it with zero. This assertion is exactly `key != "connection"`.
+    let s = r#"(set-logic QF_SLIA)
+(declare-fun key () String)
+(assert (= (ite (= key "connection") 1 0) 0))
+(assert (= key "keep-alive"))
+(check-sat)"#;
+    assert!(matches!(verdict(s), CheckResult::Sat(_)));
+}
+
+#[test]
+fn front_door_pyex_constant_int_ite_alias_unsat() {
+    // Negating the zero comparison forces the string predicate true, conflicting
+    // with the explicit disequality.
+    let s = r#"(set-logic QF_SLIA)
+(declare-fun key () String)
+(assert (not (= (ite (= key "connection") 1 0) 0)))
+(assert (not (= key "connection")))
+(check-sat)"#;
+    assert_eq!(verdict(s), CheckResult::Unsat);
+}
+
 // ---------- over-cap (word-first fallback) disjunctive shapes ----------
 //
 // String literals over `STRING_MAX_LEN` (8) make the *bounded* parse decline, so
