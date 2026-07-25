@@ -2093,7 +2093,8 @@ struct SuffixView {
 }
 
 /// Recognizes either a bare declared string variable or its exact constant-offset
-/// suffix view `substr(X,n,len(X)-n)`.
+/// suffix view `substr(W,n,len(W)-n)`, where `W` may itself be a supported suffix
+/// view. Nested views compose by adding their dropped-prefix lengths.
 fn suffix_view_skeleton(
     e: &SExpr,
     vars: &BTreeMap<String, (SymbolId, TermId)>,
@@ -2110,12 +2111,12 @@ fn suffix_view_skeleton(
     if app.len() != 4 || !matches!(app[0].atom(), Some("str.substr" | "seq.extract")) {
         return None;
     }
-    let name = variable_name_skeleton(&app[1], vars)?;
-    let dropped = u32::try_from(parse_int_literal(&app[2])?).ok()?;
+    let base = suffix_view_skeleton(&app[1], vars)?;
+    let additionally_dropped = u32::try_from(parse_int_literal(&app[2])?).ok()?;
     let remaining = app[3].list()?;
     if remaining.len() != 3
         || remaining[0].atom() != Some("-")
-        || parse_int_literal(&remaining[2])? != i128::from(dropped)
+        || parse_int_literal(&remaining[2])? != i128::from(additionally_dropped)
     {
         return None;
     }
@@ -2123,11 +2124,13 @@ fn suffix_view_skeleton(
     if len.len() != 2 || !matches!(len[0].atom(), Some("str.len" | "seq.len")) {
         return None;
     }
-    if variable_name_skeleton(&len[1], vars)? != name {
+    if len[1] != app[1] {
         return None;
     }
-    let (operand, _) = *vars.get(&name)?;
-    Some(SuffixView { operand, dropped })
+    Some(SuffixView {
+        operand: base.operand,
+        dropped: base.dropped.checked_add(additionally_dropped)?,
+    })
 }
 
 /// Recognizes `str.at(W, 0)` (`true`) or `str.at(W, len(W)-1)` (`false`) for a

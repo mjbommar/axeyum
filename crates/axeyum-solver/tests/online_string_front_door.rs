@@ -408,6 +408,31 @@ fn front_door_pyex_constant_offset_ten_suffix_view_is_exact() {
 }
 
 #[test]
+fn front_door_pyex_nested_constant_offset_suffix_view_is_exact() {
+    let sat = r#"(set-logic QF_SLIA)
+(declare-fun value () String)
+(assert (= (str.at
+  (str.substr (str.substr value 1 (- (str.len value) 1)) 1
+    (- (str.len (str.substr value 1 (- (str.len value) 1))) 1))
+  0) "b"))
+(check-sat)"#;
+    assert!(matches!(verdict(sat), CheckResult::Sat(_)));
+
+    let unsat = r#"(set-logic QF_SLIA)
+(declare-fun value () String)
+(assert (= (str.at
+  (str.substr (str.substr value 1 (- (str.len value) 1)) 1
+    (- (str.len (str.substr value 1 (- (str.len value) 1))) 1))
+  0) "b"))
+(assert (not (str.contains
+  (str.substr (str.substr value 1 (- (str.len value) 1)) 1
+    (- (str.len (str.substr value 1 (- (str.len value) 1))) 1))
+  "b")))
+(check-sat)"#;
+    assert_eq!(verdict(unsat), CheckResult::Unsat);
+}
+
+#[test]
 fn front_door_pyex_suffix_view_indexof_conflict_is_unsat() {
     let s = r#"(set-logic QF_SLIA)
 (declare-fun value () String)
