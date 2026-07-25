@@ -65,7 +65,7 @@ pub(crate) fn repair_and_certify_all_universals(
     let mut candidate_count = 1_usize;
     for function in functions {
         let (_, params, result) = arena.function(function);
-        if !matches!(result, Sort::Int | Sort::Real) {
+        if !matches!(result, Sort::Int | Sort::Real | Sort::Uninterpreted(_)) {
             return None;
         }
         if let Some(interpretation) = model.function(function)
@@ -410,6 +410,7 @@ fn zero_value(sort: Sort) -> Option<Value> {
     match sort {
         Sort::Int => Some(Value::Int(0)),
         Sort::Real => Some(Value::Real(Rational::zero())),
+        Sort::Uninterpreted(sort) => Some(Value::Uninterpreted { sort, value: 0 }),
         _ => None,
     }
 }
@@ -588,6 +589,46 @@ mod tests {
         let body = arena.apply(predicate, &[x]).unwrap();
         let universal = arena.forall(binder, body).unwrap();
         assert!(repair_and_certify_all_universals(&arena, &[universal], &Model::new()).is_none());
+    }
+
+    #[test]
+    fn repairs_uninterpreted_result_default_from_ground_carrier_values() {
+        let mut arena = TermArena::new();
+        let carrier = arena.declare_uninterpreted_sort("Carrier");
+        let carrier_sort = Sort::Uninterpreted(carrier);
+        let first = arena.declare("first", carrier_sort).unwrap();
+        let second = arena.declare("second", carrier_sort).unwrap();
+        let function = arena
+            .declare_fun("carrier_at", &[Sort::Int], carrier_sort)
+            .unwrap();
+        let binder = arena.declare("x", Sort::Int).unwrap();
+        let variable = arena.var(binder);
+        let application = arena.apply(function, &[variable]).unwrap();
+        let first_value = arena.var(first);
+        let body = arena.eq(application, first_value).unwrap();
+        let body = arena.not(body).unwrap();
+        let universal = arena.forall(binder, body).unwrap();
+
+        let first_token = Value::Uninterpreted {
+            sort: carrier,
+            value: 0,
+        };
+        let second_token = Value::Uninterpreted {
+            sort: carrier,
+            value: 1,
+        };
+        let mut model = Model::new();
+        model.set(first, first_token);
+        model.set(second, second_token.clone());
+
+        let (repaired, certificates) =
+            repair_and_certify_all_universals(&arena, &[universal], &model)
+                .expect("a distinct ground carrier value must make the antecedent false");
+        assert_eq!(certificates.len(), 1);
+        assert_eq!(
+            repaired.function(function).unwrap().default_value(),
+            second_token
+        );
     }
 
     #[test]

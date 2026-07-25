@@ -22,8 +22,8 @@
 use std::collections::{BTreeMap, BTreeSet, HashMap};
 
 use axeyum_ir::{
-    ArraySortKey, Assignment, Op, Rational, Sort, SymbolId, TermArena, TermId, TermNode, Value,
-    eval,
+    ArraySortKey, Assignment, FuncId, Op, Rational, Sort, SymbolId, TermArena, TermId, TermNode,
+    Value, eval,
 };
 use axeyum_rewrite::{
     DEFAULT_SOLVE_EQS_FUEL, ModelReconstructionTrail, QuantExpandError, build_app,
@@ -302,11 +302,12 @@ pub fn solve(
         // implied) or `unknown`; on `unknown` the model-based instantiation loop
         // (MBQI, which itself defers to the trigger-based family) takes over.
         Ok(CheckResult::Unknown(_)) | Err(SolverError::Unsupported(_)) => {
-            if matches!(
-                prove_quantified_unsat_via_egraph(arena, assertions, config)?,
-                CheckResult::Unsat
-            ) {
-                return Ok(CheckResult::Unsat);
+            match prove_quantified_unsat_via_egraph(arena, assertions, config) {
+                Ok(CheckResult::Unsat) => return Ok(CheckResult::Unsat),
+                Ok(CheckResult::Sat(_) | CheckResult::Unknown(_)) => {}
+                Err(SolverError::Unsupported(_))
+                    if mbqi_source_shape_supported(arena, assertions) => {}
+                Err(error) => return Err(error),
             }
             let result = prove_unsat_by_mbqi(arena, assertions, config)?;
             match result {
@@ -5206,6 +5207,148 @@ fn mbqi_config_with_deadline(
     Some(candidate)
 }
 
+#[derive(Default)]
+struct MbqiGroundComponent {
+    assertions: Vec<TermId>,
+    symbols: BTreeSet<SymbolId>,
+    functions: BTreeSet<FuncId>,
+}
+
+fn mbqi_ground_dependencies(
+    arena: &TermArena,
+    assertion: TermId,
+) -> (BTreeSet<SymbolId>, BTreeSet<FuncId>) {
+    let mut symbols = BTreeSet::new();
+    let mut functions = BTreeSet::new();
+    let mut seen = BTreeSet::new();
+    let mut stack = vec![assertion];
+    while let Some(term) = stack.pop() {
+        if !seen.insert(term) {
+            continue;
+        }
+        match arena.node(term) {
+            TermNode::Symbol(symbol) => {
+                symbols.insert(*symbol);
+            }
+            TermNode::App { op, args } => {
+                if let Op::Apply(function) = op {
+                    functions.insert(*function);
+                }
+                stack.extend(args.iter().copied());
+            }
+            _ => {}
+        }
+    }
+    (symbols, functions)
+}
+
+fn mbqi_disjoint_ground_components(
+    arena: &TermArena,
+    assertions: &[TermId],
+) -> Vec<MbqiGroundComponent> {
+    let mut components: Vec<MbqiGroundComponent> = Vec::new();
+    for &assertion in assertions {
+        let (mut symbols, mut functions) = mbqi_ground_dependencies(arena, assertion);
+        let mut component_assertions = vec![assertion];
+        let mut index = 0;
+        while index < components.len() {
+            if symbols.is_disjoint(&components[index].symbols)
+                && functions.is_disjoint(&components[index].functions)
+            {
+                index += 1;
+                continue;
+            }
+            let component = components.remove(index);
+            component_assertions.extend(component.assertions);
+            symbols.extend(component.symbols);
+            functions.extend(component.functions);
+            index = 0;
+        }
+        component_assertions.sort_unstable();
+        components.push(MbqiGroundComponent {
+            assertions: component_assertions,
+            symbols,
+            functions,
+        });
+    }
+    components
+}
+
+/// Gives MBQI a ground seed when a conjunction contains independent theory
+/// components that the monolithic dispatcher cannot yet combine. Each connected
+/// component is decided normally; `unsat` transfers from any conjunct, while
+/// `sat` is returned only after the merged source model replays every exact
+/// ground assertion. This is candidate generation, not quantified evidence.
+fn check_mbqi_ground_seed(
+    arena: &mut TermArena,
+    assertions: &[TermId],
+    config: &SolverConfig,
+    deadline: Option<Instant>,
+) -> Result<CheckResult, SolverError> {
+    let original = check_auto(arena, assertions, config);
+    if matches!(&original, Ok(CheckResult::Sat(_) | CheckResult::Unsat)) {
+        return original;
+    }
+
+    let components = mbqi_disjoint_ground_components(arena, assertions);
+    if components.len() < 2 {
+        return original;
+    }
+    let mut combined = Model::new();
+    for component in components {
+        let Some(component_config) = mbqi_config_with_deadline(config, deadline) else {
+            return original;
+        };
+        match check_auto(arena, &component.assertions, &component_config) {
+            Ok(CheckResult::Unsat) => return Ok(CheckResult::Unsat),
+            Ok(CheckResult::Sat(model)) => {
+                for symbol in component.symbols {
+                    if let Some(value) = model.get(symbol) {
+                        combined.set(symbol, value);
+                    }
+                }
+                for function in component.functions {
+                    if let Some(value) = model.function(function) {
+                        combined.set_function(function, value.clone());
+                    }
+                }
+                for (numerator, quotient) in model.real_div_zeros() {
+                    combined.set_real_div_zero(numerator, quotient);
+                }
+            }
+            Ok(CheckResult::Unknown(_)) | Err(_) => return original,
+        }
+    }
+    if matches!(crate::check_model(arena, assertions, &combined), Ok(true)) {
+        Ok(CheckResult::Sat(combined))
+    } else {
+        original
+    }
+}
+
+fn mbqi_source_shape_supported(arena: &TermArena, assertions: &[TermId]) -> bool {
+    let mut saw_universal = false;
+    for &assertion in assertions {
+        if matches!(
+            arena.node(assertion),
+            TermNode::App {
+                op: Op::Forall(_),
+                ..
+            }
+        ) {
+            saw_universal = true;
+            if crate::quant_uf_model_sat_cert::quantified_uf_model_functions(arena, assertion)
+                .is_none()
+            {
+                return false;
+            }
+        } else if has_quantifier(arena, &[assertion]) {
+            return false;
+        }
+    }
+    saw_universal
+}
+
 /// ADR-0360's SAT-only free-Int candidate completion. Temporary equalities are
 /// submitted only to the untrusted quantifier-free model generator. Any result
 /// other than a candidate that independently certifies and replays against the
@@ -5589,7 +5732,7 @@ fn prove_unsat_by_mbqi_inner(
         let mut query = ground.clone();
         query.extend(instances.iter().copied());
         // The query is now quantifier-free (ground + instances).
-        let result = check_auto(arena, &query, config)?;
+        let result = check_mbqi_ground_seed(arena, &query, config, deadline)?;
         let CheckResult::Sat(model) = result else {
             // `unsat` (sound — instances are implied) or `unknown` transfers.
             return Ok(result);
