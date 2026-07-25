@@ -2,8 +2,8 @@
 
 **This folder is the single entry point for the SMT-COMP measurement,
 full-library inventory, and gap-closing lane.** Updated 2026-07-25 after the
-no-launch F2 live-capture R4 gate-environment correction was preregistered.
-Implementation, integration, and live capture remain prohibited.
+no-launch F2 live-capture R4 gate-environment correction was implemented,
+fully gated, and pushed. Integration and live capture remain prohibited.
 
 The goal is an honest, reproducible per-logic decide/decline/**wrong** map over
 a source-balanced SMT-COMP-style population, followed by a measured and ranked
@@ -457,9 +457,14 @@ gate.
    flags, skip controls, loader/Python configuration, and credentials into the
    gate subprocess without sealing that environment. The source-first
    [R4 correction](../smtcomp-credited-full-preparation-f2-live-capture-r4-plan-2026-07-25.md)
-   preregisters a constructed non-secret environment plus sealed resolved-tool
-   identity. Implement and gate R4, then integrate the complete corrected
-   stack before the separately authorized live capture.
+   is implemented, fully gated, and pushed at `30287148`: registered gates use
+   a constructed non-secret environment and seal the complete environment plus
+   canonical resolved-tool identity. Its focused, 160-test aggregate with one
+   expected live-host skip, scoped, and full gates pass; the terminal v2
+   observation binds the tested commit and output identities, and the
+   worktree/frontier remain clean. Integrate the complete corrected stack onto
+   repaired green exact main and pass the combined full gate before the
+   separately authorized live capture.
 
 The same implementation rule continues to apply: prove each new mechanism and
 its destructive/interruption tests on a tiny corpus before spending the full
@@ -636,12 +641,14 @@ NAS (shared, corpus read-only in practice):
    the full gate, and leaves the tracked baselines byte-clean. Integrate that
    checkpoint only as part of the complete corrected stack. The subsequent
    [R4 correction](../smtcomp-credited-full-preparation-f2-live-capture-r4-plan-2026-07-25.md)
-   is preregistered but not implemented: registered gates must stop inheriting
-   arbitrary ambient flags, skip controls, loader/Python settings, and
-   credentials, and must seal the constructed environment plus resolved
-   executable identity. Implement, mutation-test, fully gate, and integrate R4
-   while satisfying all prior green-main conditions before treating C0 as
-   executable. Only then may the reviewed operator
+   is implemented, mutation-tested, fully gated, and pushed at `30287148`:
+   registered gates no longer inherit arbitrary ambient flags, skip controls,
+   loader/Python settings, or credentials, and their v2 observations seal the
+   constructed environment plus canonical executable identity. The final full
+   gate exited zero from that exact commit and left the worktree and tracked
+   frontier clean. Integrate R4 with the complete corrected stack while
+   satisfying all prior green-main conditions, then pass the combined full
+   gate before treating C0 as executable. Only then may the reviewed operator
    publish a process-free
    `launch_authorized=false` root inside its frozen 30-minute window. Integrate
    and explicitly accept that exact root before constructing Axeyum admission.

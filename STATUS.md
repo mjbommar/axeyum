@@ -383,8 +383,9 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
-- **2026-07-25 — F2 R4 gate-environment authority is preregistered; no live
-  action is authorized.** A bounded source probe proved that the R3 gate
+- **2026-07-25 — F2 R4 gate-environment authority is implemented, fully gated,
+  and pushed; no live action is authorized.** A bounded source probe proved
+  that the R3 gate
   runner still forwards arbitrary ambient values after replacing only the
   frontier destination: an unregistered Rust compiler cfg and an explicit
   Glaurung regular-gate skip both reached the child mapping. Ambient loader,
@@ -393,9 +394,15 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   [R4 plan](docs/plan/smtcomp-credited-full-preparation-f2-live-capture-r4-plan-2026-07-25.md)
   freezes a constructed non-secret allow-list and a v2 gate observation that
   binds the complete child environment plus the canonical executable path,
-  size, and hash. Implementation and mutation gates remain open. Exact main is
-  still `08af3665`, the topic is not integrated, and no host, sentinel, NAS,
-  acceptance, allocation, or solver-wave action is permitted.
+  size, and hash. Pushed implementation `30287148` passes the 47-test focused
+  suite, 160-test aggregate with one expected live-host skip, scoped gate, and
+  complete registered `just check`.
+  Its final v2 observation seals the exact tested commit, canonical `just`
+  executable, constructed environment, and output hashes; the post-gate
+  worktree and tracked frontier remain clean, and local/tracking/live remote
+  topic refs agree. Integration onto repaired green exact main and a combined
+  full gate remain open. No host, sentinel, NAS, acceptance, allocation, or
+  solver-wave action is permitted.
 
 - **2026-07-25 — the stale s4 bug-discovery stream finished, but remains
   zero-credit.** A final read-only audit found no surviving runner or solver;
