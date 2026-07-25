@@ -423,8 +423,13 @@ gate.
    finalization-time deadline check after artifact inventory, and an exact
    remote-main recheck at completion-last publication. The corrected 45-test
    focused suite, 158-test portable gate, scoped gate, and full workspace
-   `just check` all pass. The corrected topic is ready for the integration
-   owner; the separately authorized post-integration live capture remains open.
+   `just check` all pass. A later clean reproduction found that `just check`
+   itself rewrites tracked hardware-relative frontier timing JSON. The
+   source-first
+   [R3 correction](../smtcomp-credited-full-preparation-f2-live-capture-r3-plan-2026-07-25.md)
+   preregisters a temporary artifact destination for readiness gates without
+   changing the exact gate, ratchets, or clean-tree requirement. Implement and
+   integrate R3 before the separately authorized live capture.
 
 The same implementation rule continues to apply: prove each new mechanism and
 its destructive/interruption tests on a tiny corpus before spending the full
@@ -492,6 +497,8 @@ Repository:
   `docs/plan/smtcomp-credited-full-preparation-f2-live-capture-r1-plan-2026-07-24.md`;
 - credited full-population F2 live-capture R2 correction:
   `docs/plan/smtcomp-credited-full-preparation-f2-live-capture-r2-plan-2026-07-24.md`;
+- credited full-population F2 live-capture R3 gate-output-isolation correction:
+  `docs/plan/smtcomp-credited-full-preparation-f2-live-capture-r3-plan-2026-07-25.md`;
 - credited full-population F2 live-capture implementation result:
   `docs/plan/smtcomp-credited-full-preparation-f2-live-capture-implementation-2026-07-24.md`;
 - credited full-population publication fixture:
