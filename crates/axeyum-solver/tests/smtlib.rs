@@ -6,7 +6,8 @@
 
 use std::time::Duration;
 
-use axeyum_solver::{CheckResult, SmtLibOutcome, SolverConfig, solve_smtlib};
+use axeyum_smtlib::parse_script;
+use axeyum_solver::{CheckResult, SmtLibOutcome, SolverConfig, membership_verdict, solve_smtlib};
 
 fn config() -> SolverConfig {
     SolverConfig::new().with_timeout(Duration::from_secs(30))
@@ -1829,4 +1830,75 @@ fn int_div_by_zero_skolem_equals_div_by_zero() {
     let text = "(set-logic QF_NIA)\n(declare-fun a () Int)\n\
                 (assert (not (= (@int_div_by_zero a) (div a 0))))\n(check-sat)\n";
     assert_eq!(run(text).result, CheckResult::Unsat);
+}
+
+/// A `QF_SLIA` `ReDoS`-corpus shape: `postfixs` must be both a member of the empty
+/// regex and nonempty. The unrelated result concatenation is outside the
+/// membership route, but the retained conjunctive subset is already certified
+/// unsatisfiable, so the full script is unsatisfiable too.
+#[test]
+fn redos_empty_postfix_positive_length_decides_unsat() {
+    let text = r#"
+(set-info :status unsat)
+(set-logic QF_SLIA)
+(declare-const result String)
+(declare-const attack String)
+(declare-const postfixs String)
+(declare-const prefix RegLan)
+(declare-const infix RegLan)
+(declare-const postfix RegLan)
+(assert (str.in_re attack (re.++ prefix ((_ re.loop 2 2) infix) postfix)))
+(assert (= prefix (str.to_re "p")))
+(assert (= infix (str.to_re "i")))
+(assert (= postfix (str.to_re "")))
+(assert (str.in_re postfixs postfix))
+(assert (>= (str.len postfixs) 1))
+(assert (= result (str.++ attack postfixs)))
+(check-sat)
+"#;
+    assert_eq!(run(text).result, CheckResult::Unsat);
+
+    let mut script = parse_script(text).expect("parse ReDoS-shaped membership script");
+    assert!(
+        !script
+            .membership_problem
+            .as_ref()
+            .expect("membership subset")
+            .complete
+    );
+    assert_eq!(
+        membership_verdict(&mut script, &config()),
+        Some(CheckResult::Unsat),
+        "checked subset UNSAT must prove the full conjunction UNSAT"
+    );
+}
+
+/// A satisfiable retained subset cannot justify `sat` when a dropped conjunct
+/// exists. Here the dropped self-disequality makes the full script unsatisfiable;
+/// the membership-only route must decline rather than expose its local witness.
+#[test]
+fn incomplete_membership_subset_never_claims_sat() {
+    let text = r#"
+(set-logic QF_SLIA)
+(declare-const s String)
+(declare-const result String)
+(declare-const r RegLan)
+(assert (= r (str.to_re "a")))
+(assert (str.in_re s r))
+(assert (not (= result result)))
+(check-sat)
+"#;
+    let mut script = parse_script(text).expect("parse incomplete membership script");
+    assert!(
+        !script
+            .membership_problem
+            .as_ref()
+            .expect("membership subset")
+            .complete
+    );
+    assert_eq!(
+        membership_verdict(&mut script, &config()),
+        None,
+        "subset SAT must decline when any asserted conjunct was dropped"
+    );
 }

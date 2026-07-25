@@ -17,8 +17,9 @@
 //! depth-≤4 regexes (concat / union / intersection / complement / star / plus /
 //! opt / native `re.loop` / `re.range` / `re.allchar` / `re.all` / `re.none`),
 //! occasional length bounds and literal pins, and the odd variable–variable
-//! equality (which the route declines — an adjudication-neutral SKIP). Two oracle
-//! fronts adjudicate the same generator: the system **Z3** binary (behind the
+//! equality (which makes the retained subset incomplete: subset `unsat` may still
+//! decide, subset `sat` declines). Two oracle fronts adjudicate the same generator:
+//! the system **Z3** binary (behind the
 //! `z3` feature) and the **cvc5** binary (always, when installed).
 //!
 //! Joint gate (both fronts): axeyum `Sat` ∧ oracle `unsat` → PANIC (wrong sat);
@@ -159,7 +160,8 @@ fn generate(rng: &mut Lcg) -> String {
             let _ = writeln!(text, "(assert (= v{i} \"{}\"))", gen_literal(rng));
         }
     }
-    // Occasional variable–variable equality (the route declines it → SKIP).
+    // Occasional variable–variable equality: the retained membership subset is
+    // incomplete, so it may prove UNSAT but can never return SAT.
     if num_vars >= 2 && rng.below(6) == 0 {
         let _ = writeln!(text, "(assert (= v0 v1))");
     }
