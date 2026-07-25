@@ -165,6 +165,11 @@ pub struct Script {
     /// no incremental scoping (declined wholesale, same soundness argument as
     /// [`Script::word_problem`]).
     pub word_skeleton: Vec<TermId>,
+    /// The word skeleton contains structurally-interned opaque fixed-splice terms.
+    /// Such a skeleton is a sound equality relaxation for proving `unsat`, but its
+    /// `sat` models need not realize the omitted splice semantics and must be
+    /// discarded by the solver front door.
+    pub word_skeleton_opaque_terms: usize,
     /// The parser-side **regex-membership side channel** (P2.7 T-C.5, ADR-0054):
     /// a translation of the script's `str.in_re` fragment into single-variable
     /// [`MembershipProblem`](crate::MembershipProblem) constraints over the
@@ -707,6 +712,7 @@ fn parse_script_bounded(input: &str) -> Result<Script, SmtError> {
         if let Some(skeleton) = build_word_skeleton(&mut script.arena, &exprs) {
             script.word_skeleton = skeleton.assertions;
             script.word_skeleton_memberships = skeleton.memberships;
+            script.word_skeleton_opaque_terms = skeleton.opaque_terms;
         }
         // Parser-side regex-membership side channel (P2.7 T-C.5): the `str.in_re`
         // fragment translated to code-point membership problems for the
@@ -845,6 +851,7 @@ fn parse_word_only(input: &str) -> Option<Script> {
     if let Some(skeleton) = build_word_skeleton(&mut script.arena, &exprs) {
         script.word_skeleton = skeleton.assertions;
         script.word_skeleton_memberships = skeleton.memberships;
+        script.word_skeleton_opaque_terms = skeleton.opaque_terms;
     }
     // Regex-membership side channel (P2.7 T-C.5): a script whose *bounded* parse
     // declined at a length/loop cap may still be a pure `str.in_re` membership
@@ -1145,6 +1152,8 @@ fn build_word_skeleton(arena: &mut TermArena, exprs: &[SExpr]) -> Option<WordSke
         next: 0,
         concat_defs: Vec::new(),
         next_concat: 0,
+        opaque_words: Vec::new(),
+        next_opaque: 0,
     };
     for e in exprs {
         let Some(items) = e.list() else { continue };
@@ -1169,6 +1178,7 @@ fn build_word_skeleton(arena: &mut TermArena, exprs: &[SExpr]) -> Option<WordSke
     Some(WordSkeleton {
         assertions,
         memberships: mem.memberships,
+        opaque_terms: mem.opaque_words.len(),
     })
 }
 
@@ -1178,6 +1188,7 @@ fn build_word_skeleton(arena: &mut TermArena, exprs: &[SExpr]) -> Option<WordSke
 struct WordSkeleton {
     assertions: Vec<TermId>,
     memberships: Vec<(TermId, SymbolId, axeyum_strings::regex::Regex)>,
+    opaque_terms: usize,
 }
 
 /// The declared name of a 0-ary `Int`-sorted symbol, if `e` is such a declaration
@@ -1788,9 +1799,36 @@ struct MembershipCollector {
     /// Fresh-concat-operand-symbol counter (disjoint from the `!weq!<name>` user
     /// symbols and the `!inre!k` proxy symbols).
     next_concat: u32,
+    /// Structurally interned opaque fixed-splice expressions. They preserve
+    /// equality congruence but intentionally omit splice semantics, making the
+    /// resulting word skeleton UNSAT-only.
+    opaque_words: Vec<(SExpr, TermId)>,
+    /// Fresh opaque-word symbol counter.
+    next_opaque: u32,
 }
 
 impl MembershipCollector {
+    /// Returns one shared `Seq` symbol for a structurally identical opaque word.
+    fn opaque_word(&mut self, arena: &mut TermArena, expression: &SExpr) -> Option<TermId> {
+        if let Some((_, term)) = self
+            .opaque_words
+            .iter()
+            .find(|(candidate, _)| candidate == expression)
+        {
+            return Some(*term);
+        }
+        let sym = arena
+            .declare_internal(
+                &format!("!opaque_word!{}", self.next_opaque),
+                Sort::string(),
+            )
+            .ok()?;
+        self.next_opaque += 1;
+        let term = arena.var(sym);
+        self.opaque_words.push((expression.clone(), term));
+        Some(term)
+    }
+
     /// Introduces a fresh `Seq`-sorted operand symbol `w` for a `str.in_re` whose
     /// subject is a compound word expression `concat` (a `str.++` of variables and
     /// literals), records the definitional equation `w = concat`, and returns `w`'s
@@ -1975,7 +2013,7 @@ fn word_bool(
         }
         // `(distinct a b …)` — pairwise disequality → conjunction of `(not (= …))`.
         "distinct" if items.len() >= 3 => {
-            let terms = word_terms(arena, &items[1..], vars)?;
+            let terms = word_terms_with_opaque(arena, &items[1..], vars, mem)?;
             let mut acc: Option<TermId> = None;
             for i in 0..terms.len() {
                 for &t in &terms[i + 1..] {
@@ -2050,7 +2088,7 @@ fn word_equality(
     {
         return Some(booleanized);
     }
-    if let Some(terms) = word_terms(arena, items, vars) {
+    if let Some(terms) = word_terms_with_opaque(arena, items, vars, mem) {
         let mut acc: Option<TermId> = None;
         for &term in &terms[1..] {
             let atom = arena.eq(terms[0], term).ok()?;
@@ -2078,6 +2116,28 @@ fn word_equality(
         });
     }
     acc
+}
+
+/// Translates word operands for the Boolean skeleton, allowing an exact
+/// fixed-position splice to stand for one structurally-interned opaque `Seq` term.
+/// This is a relaxation: every real model assigns that symbol the splice's value.
+/// The enclosing skeleton is marked UNSAT-only so a model of the relaxation is
+/// never reported as a model of the original string formula.
+fn word_terms_with_opaque(
+    arena: &mut TermArena,
+    expressions: &[SExpr],
+    vars: &BTreeMap<String, (SymbolId, TermId)>,
+    collector: &mut MembershipCollector,
+) -> Option<Vec<TermId>> {
+    expressions
+        .iter()
+        .map(|expression| {
+            word_str_expr(arena, expression, vars).or_else(|| {
+                fixed_splice_split(expression.list()?)?;
+                collector.opaque_word(arena, expression)
+            })
+        })
+        .collect()
 }
 
 /// Exactly translates regular string-content equalities used heavily by `PyEx`:
@@ -2651,7 +2711,10 @@ fn exact_word_int_comparison(
     vars: &BTreeMap<String, (SymbolId, TermId)>,
     mem: &mut MembershipCollector,
 ) -> Option<TermId> {
-    if let (Some(a), Some(b)) = (parse_int_literal(left), parse_int_literal(right)) {
+    if let (Some(a), Some(b)) = (
+        parse_int_literal(strip_subtracted_zero(left)),
+        parse_int_literal(strip_subtracted_zero(right)),
+    ) {
         let value = match head {
             "<" => a < b,
             "<=" => a <= b,
@@ -2669,6 +2732,18 @@ fn exact_word_int_comparison(
             && suffix_view_skeleton(&len[1], vars).is_some()
         {
             return Some(arena.bool_const(true));
+        }
+    }
+
+    if head == "<=" && parse_int_literal(right) == Some(0) {
+        let len = left.list()?;
+        if len.len() == 2 && matches!(len[0].atom(), Some("str.len" | "seq.len")) {
+            let view = suffix_view_skeleton(&len[1], vars)?;
+            return mem.atom(
+                arena,
+                view.operand,
+                at_most_length_regex(view.total_dropped()?),
+            );
         }
     }
 
@@ -8304,10 +8379,18 @@ fn string_concat_with_proved_bound(
 /// whenever `i + |literal|` is within it. This includes the short-string cases;
 /// it is not the simpler `str.update` identity, which would differ there.
 fn fixed_splice_concat_bound(arena: &TermArena, items: &[SExpr], args: &[TermId]) -> Option<u32> {
+    let split = fixed_splice_split(items)?;
+    let result_max = string_max_len(arena, args[1]).ok()?;
+    (split <= result_max).then_some(result_max)
+}
+
+/// Returns the split point of the exact fixed-splice shape recognized by both
+/// the packed lowering and the UNSAT-only word abstraction.
+fn fixed_splice_split(items: &[SExpr]) -> Option<u32> {
     let [head, left, right] = items else {
         return None;
     };
-    if !matches!(head.atom(), Some("str.++" | "str.concat")) || args.len() != 2 {
+    if !matches!(head.atom(), Some("str.++" | "str.concat")) {
         return None;
     }
     let inner = left.list()?;
@@ -8345,8 +8428,7 @@ fn fixed_splice_concat_bound(arena: &TermArena, items: &[SExpr], args: &[TermId]
     if suffix_start != split || len_minus_constant(&suffix[3], &suffix[1])? != split {
         return None;
     }
-    let result_max = string_max_len(arena, args[1]).ok()?;
-    (split <= result_max).then_some(result_max)
+    Some(split)
 }
 
 /// The canonical well-formedness constraint for a packed string `v` of max length

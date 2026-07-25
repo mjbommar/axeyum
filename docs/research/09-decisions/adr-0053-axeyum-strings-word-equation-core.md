@@ -136,3 +136,22 @@ gate.**
   sat).
 - Close the P2.7 "word-level solver home" research-question entry with a link
   here.
+
+## Follow-up (2026-07-25): UNSAT-only opaque fixed-splice equality
+
+The Boolean word skeleton now retains three exact generated constructs:
+
+- `len(W) <= 0` as the regular language of words of length at most zero;
+- ground guards after the identity normalization `(- n 0) = n`; and
+- each structurally identical fixed-position splice as one shared opaque Seq term.
+
+The last item deliberately creates a **relaxation**: every real string model
+extends to the skeleton by assigning the opaque symbol the splice's actual value.
+Therefore a checked equality/disequality or distinct-constant conflict in the
+skeleton proves the original formula UNSAT. A satisfying abstract assignment need
+not realize the omitted splice semantics, so the front door marks such skeletons
+UNSAT-only and discards every SAT result.
+
+At the retained 250 ms budget this moves four `findLadders` rows from `unknown` to
+`unsat`, all agreeing with Z3 4.13.3 and retained cvc5 1.3.4. The exact 71-row
+competition-CLI selection becomes 64 decided / 7 unknown / WRONG=0.
