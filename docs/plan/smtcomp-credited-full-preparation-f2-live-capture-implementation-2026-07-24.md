@@ -132,3 +132,30 @@ separate F3 acceptance is constructed. No allocation or solver launch is
 authorized by this implementation checkpoint. Commit `57482ad0` by itself is
 not ready to land; the corrected stack through `b02c486b` is the minimum code
 boundary for integration.
+
+## Post-closure integration audit
+
+The audited implementation/result closure is pushed through
+`892da3767e306f4e72cdfae2ea13370038ea55e9`; at audit time, local, tracking,
+and live remote topic refs were equal and the worktree was clean. That
+checkpoint has no pull request and is not an ancestor of exact `origin/main`
+`08af3665e553aa1266e45aa46b6467f1ebc5551b`.
+
+Main is independently unfit to authorize C5. Its docs workflow is green, but
+CI run `30122366840` is red in two non-SMT-owned controls. Rust 1.97 rejects the
+two `assert!(seen_syn_sent == 1)` sites in
+`crates/axeyum-verify/tests/protocol_fsm_examples.rs` under
+`manual_assert_eq`; commit `a4a041d2` allowed `manual_assert`, which is a
+different lint. The stable
+`one_level_fixed_mbqi_retry_closes_seed_111` test also returned
+`Unknown(ResourceLimit)` with an exhausted MBQI instantiation budget. Neither
+failure changes the bounded F2 source result, but either one keeps exact-main
+authorization false.
+
+A requirement-by-requirement C0--C5 audit found no additional owned
+no-launch implementation defect. The current live command is the parent C5
+command augmented by R1's mandatory `--repaired-p0-preparation` argument, and
+its printed root must then be passed to a distinct read-only `--verify-root`
+process. Those commands remain prohibited until the current clean remote topic
+through at least `892da376` is integrated and the resulting
+local/tracking/live-remote main plus both registered gates are green.

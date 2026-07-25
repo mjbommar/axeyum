@@ -383,6 +383,32 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-24 — the F2 implementation/result closure is durably checkpointed,
+  but integration and live readiness remain red.** At audit time, local,
+  tracking, and live remote topic refs all equaled
+  `892da3767e306f4e72cdfae2ea13370038ea55e9`, and the worktree was clean. The
+  topic has no pull request, and that commit is not an ancestor of exact
+  `origin/main` `08af3665e553aa1266e45aa46b6467f1ebc5551b`. Main's docs workflow is
+  green, but CI run `30122366840` has two independent failures outside this
+  lane: Rust 1.97 reports `manual_assert_eq` at
+  `crates/axeyum-verify/tests/protocol_fsm_examples.rs:115` and `:157` even
+  though the attempted fix `a4a041d2` allows the different `manual_assert`
+  lint, and stable test `one_level_fixed_mbqi_retry_closes_seed_111` returns
+  `Unknown(ResourceLimit)` instead of recovering the registered model. The C5
+  audit found no new owned no-launch source defect: the current procedure is
+  the parent command plus R1's mandatory `--repaired-p0-preparation`, followed
+  by a separate `--verify-root` process. Do not probe a host, run a sentinel,
+  build or stage live evidence, or create a NAS attempt while either ancestry
+  or exact-main CI is red.
+
+- **2026-07-24 — the old s4 stream is live again but remains zero-credit
+  discovery input.** A read-only host audit found all eight historical
+  `compete.py` shards active. Their latest per-shard indices were 6,851, 6,847,
+  7,466, 6,857, 6,877, 6,875, 7,553, and 6,829 (sum 56,155), while the literal
+  `<<< WRONG` count remained 56. No `raw_*.json` shard exists. This predates
+  the soundness fixes and the E1--E3 evidence contract, so activity and index
+  growth are not correctness, coverage, or credited measurement evidence.
+
 - **2026-07-24 — the corrected credited-full F2 live-capture implementation is
   pushed, fully gated, and ready for integration; live action remains
   mainline-gated.** Merge `466618dd`
@@ -413,8 +439,10 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   links ok`. The
   [implementation result](docs/plan/smtcomp-credited-full-preparation-f2-live-capture-implementation-2026-07-24.md)
   records the corrected checkpoint. Do not integrate `57482ad0` alone; the
-  exact corrected stack through `b02c486b` is ready for the integration owner.
-  Next: integrate only the corrected topic, establish clean green exact main,
+  exact corrected code stack through `b02c486b`, with the final documentation
+  closure through `892da376`, is ready for the integration owner. Next:
+  integrate the current clean remote topic through that checkpoint, establish
+  clean green exact main,
   build the release binary,
   and only then run the separately reviewed F2 capture. No host
   probe, sentinel, NAS preparation root, acceptance record, allocation, or

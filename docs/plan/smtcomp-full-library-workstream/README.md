@@ -202,6 +202,15 @@ including division, multiplication, FMA, conversion, and a repeated
 and receive no correctness, coverage, or measurement credit. The stopped logs
 remain immutable bug-discovery input only.
 
+A later read-only 2026-07-24 audit found that the historical stream had been
+resumed outside this workstream's credited execution path. All eight
+`compete.py` shards were active. Their latest indices were 6,851, 6,847, 7,466,
+6,857, 6,877, 6,875, 7,553, and 6,829 (sum 56,155), with 56 literal
+`<<< WRONG` markers still present and no `raw_*.json` shard published. This
+updates only the process/log snapshot. The run still predates both soundness
+repairs and E1--E3, so it remains bug-discovery input with zero correctness,
+coverage, or measurement credit.
+
 Run identity:
 
 - selected list: 64,345 paths, seed `20260721`, SHA-256
@@ -560,15 +569,23 @@ NAS (shared, corpus read-only in practice):
    [implementation result](../smtcomp-credited-full-preparation-f2-live-capture-implementation-2026-07-24.md).
    Do not integrate that checkpoint alone. The
    [R2 correction](../smtcomp-credited-full-preparation-f2-live-capture-r2-plan-2026-07-24.md),
-   is implemented and fully gated by pushed commit `b02c486b`; integrate the
-   exact corrected topic and result, then revalidate exact
+   is implemented and fully gated by pushed commit `b02c486b`; the audited
+   implementation/result closure is pushed through `892da376`. A fresh audit
+   found no pull request and proved that checkpoint is not an ancestor of
+   `origin/main` `08af3665`. Exact-main CI run `30122366840` is
+   also red outside this lane: Rust 1.97 still rejects two
+   `manual_assert_eq` sites after `a4a041d2` allowed `manual_assert` instead,
+   and stable control `one_level_fixed_mbqi_retry_closes_seed_111` returned
+   `Unknown(ResourceLimit)`. Integrate the exact corrected topic and result,
+   repair the independent mainline failures, then revalidate exact
    local/tracking/remote `main` equality and both
    registered gates before any host probe or NAS mutation. The separately
    reviewed operator may publish only a process-free
    `launch_authorized=false` root inside its frozen 30-minute window. Integrate
    and explicitly accept that exact root before constructing Axeyum admission.
-   Do not probe hosts, mutate the NAS, or launch a solver allocation from the
-   unintegrated operator topic or while `origin/main` is branch-wide red. The
+   Do not probe hosts, run sentinels, mutate the NAS, or launch a solver
+   allocation from the unintegrated operator topic or while `origin/main` is
+   branch-wide red. The
    active solver
    capability checkpoint is
    [`../checked-multi-binder-quantified-uf-models-2026-07-22.md`](../checked-multi-binder-quantified-uf-models-2026-07-22.md).

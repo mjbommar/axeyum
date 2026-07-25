@@ -881,11 +881,20 @@ twenty-four is fully gated, pushed, integrated byte-for-byte, and documented.
 > 45-test focused suite, 158-test portable gate with one expected live-host
 > skip, scoped gate, and complete workspace `just check` all pass. Do not
 > integrate `57482ad0` alone; the corrected stack through `b02c486b` is ready
-> for the integration owner. The historical Lean source pin is closed. No live
-> F2 root or canonical acceptance record exists. Next: integrate the exact
-> corrected topic, establish clean green exact main, then run and independently
-> verify the separately authorized empty F2 preparation before any distinct
-> acceptance or Axeyum launch.
+> for the integration owner, and the audited implementation/result closure is
+> pushed through `892da376`. A fresh integration audit found no pull request
+> and proved that this checkpoint is not an ancestor of `origin/main` `08af3665`.
+> Main's exact CI run `30122366840` is red for two independent non-SMT-owned
+> reasons: Rust 1.97 still rejects two `manual_assert_eq` sites after commit
+> `a4a041d2` allowed the different `manual_assert` lint, and the stable
+> `one_level_fixed_mbqi_retry_closes_seed_111` control returned
+> `Unknown(ResourceLimit)`. The historical Lean source pin is closed, but these
+> current integration/mainline gates are not. No live F2 root or canonical
+> acceptance record exists. Next: integrate the current clean remote topic
+> through at least `892da376`, repair and establish green exact main, then run
+> and independently verify the separately
+> authorized empty F2 preparation before any distinct acceptance or Axeyum
+> launch.
 > The candidate is not
 > official selection evidence:
 > it still lacks the complete eligibility/status/difficulty policy, official
