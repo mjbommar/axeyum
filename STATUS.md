@@ -383,6 +383,20 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-25 — F2 R4 gate-environment authority is preregistered; no live
+  action is authorized.** A bounded source probe proved that the R3 gate
+  runner still forwards arbitrary ambient values after replacing only the
+  frontier destination: an unregistered Rust compiler cfg and an explicit
+  Glaurung regular-gate skip both reached the child mapping. Ambient loader,
+  Python path, target, wrapper, and credential values were likewise outside
+  the sealed gate record. The
+  [R4 plan](docs/plan/smtcomp-credited-full-preparation-f2-live-capture-r4-plan-2026-07-25.md)
+  freezes a constructed non-secret allow-list and a v2 gate observation that
+  binds the complete child environment plus the canonical executable path,
+  size, and hash. Implementation and mutation gates remain open. Exact main is
+  still `08af3665`, the topic is not integrated, and no host, sentinel, NAS,
+  acceptance, allocation, or solver-wave action is permitted.
+
 - **2026-07-25 — the stale s4 bug-discovery stream finished, but remains
   zero-credit.** A final read-only audit found no surviving runner or solver;
   all eight logs reach their exact 8,044/8,043 shard cardinalities and publish

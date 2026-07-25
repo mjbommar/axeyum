@@ -919,6 +919,15 @@ twenty-four is fully gated, pushed, integrated byte-for-byte, and documented.
 > full gate left the worktree and tracked frontier artifacts clean and ended
 > with `all links ok`. Integrate R3 and repair exact main before any live C5
 > action.
+> A subsequent source audit found that R3 still copied the complete ambient
+> environment into each registered gate after replacing only the frontier
+> destination. Unregistered `RUSTFLAGS`, an explicit regular-gate skip, loader
+> settings, Python path configuration, and credentials could therefore cross
+> C0 without being represented in its sealed observation. The source-first
+> [R4 plan](docs/plan/smtcomp-credited-full-preparation-f2-live-capture-r4-plan-2026-07-25.md)
+> preregisters a constructed non-secret allow-list plus sealed environment and
+> resolved-executable identities. Implement, mutation-test, fully gate, and
+> integrate R4 before any live C0/C5 action.
 > Separately, the historical s4 discovery stream has now finished all eight
 > stale end-of-shard outputs. Its
 > [final read-only audit](docs/plan/smtcomp-stale-s4-final-artifact-audit-2026-07-25.md)

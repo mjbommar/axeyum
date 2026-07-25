@@ -2,8 +2,8 @@
 
 **This folder is the single entry point for the SMT-COMP measurement,
 full-library inventory, and gap-closing lane.** Updated 2026-07-25 after the
-no-launch F2 live-capture R3 gate-output-isolation correction was implemented,
-fully gated, and pushed. Integration and live capture remain prohibited.
+no-launch F2 live-capture R4 gate-environment correction was preregistered.
+Implementation, integration, and live capture remain prohibited.
 
 The goal is an honest, reproducible per-logic decide/decline/**wrong** map over
 a source-balanced SMT-COMP-style population, followed by a measured and ranked
@@ -453,7 +453,13 @@ gate.
    ratchets, or clean-tree requirement. Focused tests, the 160-test resume
    aggregate, the scoped gate, and the full `just check` pass; the terminal
    full gate left the source worktree and tracked frontier artifacts clean.
-   Integrate R3 before the separately authorized live capture.
+   A subsequent audit proved that the R3 runner still copied arbitrary ambient
+   flags, skip controls, loader/Python configuration, and credentials into the
+   gate subprocess without sealing that environment. The source-first
+   [R4 correction](../smtcomp-credited-full-preparation-f2-live-capture-r4-plan-2026-07-25.md)
+   preregisters a constructed non-secret environment plus sealed resolved-tool
+   identity. Implement and gate R4, then integrate the complete corrected
+   stack before the separately authorized live capture.
 
 The same implementation rule continues to apply: prove each new mechanism and
 its destructive/interruption tests on a tiny corpus before spending the full
@@ -525,6 +531,8 @@ Repository:
   `docs/plan/smtcomp-credited-full-preparation-f2-live-capture-r2-plan-2026-07-24.md`;
 - credited full-population F2 live-capture R3 gate-output-isolation correction:
   `docs/plan/smtcomp-credited-full-preparation-f2-live-capture-r3-plan-2026-07-25.md`;
+- credited full-population F2 live-capture R4 gate-environment correction:
+  `docs/plan/smtcomp-credited-full-preparation-f2-live-capture-r4-plan-2026-07-25.md`;
 - credited full-population F2 live-capture implementation result:
   `docs/plan/smtcomp-credited-full-preparation-f2-live-capture-implementation-2026-07-24.md`;
 - credited full-population F2 read-only external-input audit:
@@ -626,8 +634,14 @@ NAS (shared, corpus read-only in practice):
    [R3 correction](../smtcomp-credited-full-preparation-f2-live-capture-r3-plan-2026-07-25.md)
    now isolates those five volatile artifacts outside the repository, passes
    the full gate, and leaves the tracked baselines byte-clean. Integrate that
-   exact topic and satisfy all prior green-main conditions before treating C0
-   as executable. Only then may the reviewed operator
+   checkpoint only as part of the complete corrected stack. The subsequent
+   [R4 correction](../smtcomp-credited-full-preparation-f2-live-capture-r4-plan-2026-07-25.md)
+   is preregistered but not implemented: registered gates must stop inheriting
+   arbitrary ambient flags, skip controls, loader/Python settings, and
+   credentials, and must seal the constructed environment plus resolved
+   executable identity. Implement, mutation-test, fully gate, and integrate R4
+   while satisfying all prior green-main conditions before treating C0 as
+   executable. Only then may the reviewed operator
    publish a process-free
    `launch_authorized=false` root inside its frozen 30-minute window. Integrate
    and explicitly accept that exact root before constructing Axeyum admission.
