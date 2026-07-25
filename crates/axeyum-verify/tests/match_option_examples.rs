@@ -1,3 +1,4 @@
+#![allow(clippy::manual_assert_eq)] // assert!(a==b) is required inside #[verify] bodies (assert_eq! does not lower)
 //! `#[axeyum::verify]` over `match a.checked_*(b) { Some(v) => .., None => .. }`
 //! — Option-flow with a value binding. Desugars to `if !Overflows(op,a,b) { let
 //! v = wrapping_op(a,b); <some> } else { <none> }`. The masked-safe fn VERIFIES;
@@ -26,7 +27,7 @@ fn match_some_in_range(x: u8) -> u8 {
             r = 0;
         }
     }
-    assert_eq!(r, a + 1);
+    assert!(r == a + 1);
     r
 }
 
@@ -74,7 +75,7 @@ fn let_bound_unwrap_or(x: u8) -> u8 {
     let a: u8 = x & 0x0f;
     let s = a.checked_add(1);
     let r: u8 = s.unwrap_or(0);
-    assert_eq!(r, a + 1);
+    assert!(r == a + 1);
     r
 }
 

@@ -1,0 +1,14 @@
+# The z3/cvc5-backed differential fuzzes and external-solver decide tests spawn
+# external solver processes and are wall-clock-sensitive. nextest runs tests
+# across ALL binaries in one parallel pool, so many run at once and starve the
+# external solver on CI runners (a decided verdict flips to unknown => spurious
+# failure). `cargo test` avoids this by running one test binary at a time. Put
+# these tests in a serialized group so each gets full resources; everything else
+# stays fully parallel. This is a scheduling fix — it changes no test logic.
+[test-groups.external-solver]
+max-threads = 1
+
+[[profile.default.overrides]]
+filter = 'binary(~fuzz) | binary(~coupling) | binary(~differential) | binary(~front_door) | test(~disagree) | test(/_sat$/)'
+test-group = 'external-solver'
+retries = 2

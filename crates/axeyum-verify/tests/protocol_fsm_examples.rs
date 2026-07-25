@@ -1,3 +1,4 @@
+#![allow(clippy::manual_assert_eq)] // assert!(a==b) is required inside #[verify] bodies (assert_eq! does not lower)
 //! Block C of the *verified systems & protocols* backlog
 //! ([`docs/consumer-track/verify/protocol-state-machines.md`]) — bounded
 //! protocol **state-machine** verification driving the real `#[axeyum::verify]`
@@ -112,7 +113,7 @@ fn handshake_ordering_safe(events: [u8; 4]) -> u8 {
         }
         state = next;
         if state == 2 {
-            assert_eq!(seen_syn_sent, 1); // ESTABLISHED implies the handshake happened
+            assert!(seen_syn_sent == 1); // ESTABLISHED implies the handshake happened
         }
         i += 1;
     }
@@ -154,7 +155,7 @@ fn handshake_skip_bug(events: [u8; 4]) -> u8 {
         }
         state = next;
         if state == 2 {
-            assert_eq!(seen_syn_sent, 1);
+            assert!(seen_syn_sent == 1);
         }
         i += 1;
     }

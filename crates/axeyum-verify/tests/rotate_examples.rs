@@ -1,3 +1,4 @@
+#![allow(clippy::manual_assert_eq)] // assert!(a==b) is required inside #[verify] bodies (assert_eq! does not lower)
 //! `#[axeyum::verify]` over `rotate_left`/`rotate_right` by a constant amount.
 //! Rotation is a bijection, so a left-then-right round-trip is the identity — a
 //! clean provable property; a single rotation is generally *not* the identity.
@@ -11,7 +12,7 @@ use axeyum_verify::{Verdict, verify};
 #[verify]
 fn rotate_roundtrip(x: u16) -> u16 {
     let r: u16 = x.rotate_left(8).rotate_right(8);
-    assert_eq!(r, x);
+    assert!(r == x);
     r
 }
 
@@ -30,7 +31,7 @@ fn rotate_roundtrip_verifies() {
 #[verify(expect_bug)]
 fn rotate_is_not_identity(x: u16) -> u16 {
     let r: u16 = x.rotate_left(4);
-    assert_eq!(r, x);
+    assert!(r == x);
     r
 }
 
