@@ -270,6 +270,30 @@ fn front_door_kaluza_boolean_aliases_unsat() {
     assert_eq!(verdict(s), CheckResult::Unsat);
 }
 
+#[test]
+fn front_door_kaluza_negative_membership_avoids_word_disequalities() {
+    // The real Kaluza 3228/3230/3235 shape. A complement-only membership first
+    // witnesses ε, but the named word predicates forbid ε and "array". The model
+    // search must choose another member (for example "a") and replay the concat.
+    let s = r#"(set-logic QF_SLIA)
+(declare-fun P () String)
+(declare-fun T1 () Bool)
+(declare-fun T2 () Bool)
+(declare-fun T3 () Bool)
+(declare-fun out () String)
+(declare-fun x () String)
+(assert (= T1 (not (= "" x))))
+(assert T1)
+(assert (= T2 (= x "array")))
+(assert (= T3 (not T2)))
+(assert T3)
+(assert (= P x))
+(assert (not (str.in_re P (str.to_re "%"))))
+(assert (= out (str.++ "subtype=" P)))
+(check-sat)"#;
+    assert!(matches!(verdict(s), CheckResult::Sat(_)));
+}
+
 // ---------- over-cap (word-first fallback) disjunctive shapes ----------
 //
 // String literals over `STRING_MAX_LEN` (8) make the *bounded* parse decline, so

@@ -1126,9 +1126,14 @@ fn string_sat_model(arena: &mut TermArena, ctx: &SatModelCtx) -> CheckResult {
     // `Unknown`, never a wrong `sat`).
     let mut pin_eqs: Vec<(TermId, TermId)> = Vec::new();
     if !ctx.pos_mem.is_empty() || !ctx.neg_mem.is_empty() {
-        let Some(witnesses) =
-            membership_witnesses(arena, ctx.eqs, ctx.pos_mem, ctx.neg_mem, ctx.budget)
-        else {
+        let Some(witnesses) = membership_witnesses(
+            arena,
+            ctx.eqs,
+            ctx.diseqs,
+            ctx.pos_mem,
+            ctx.neg_mem,
+            ctx.budget,
+        ) else {
             return CheckResult::Unknown(unknown(
                 "online CDCL(T) membership class has no witnessing model within budget",
             ));
@@ -1276,8 +1281,11 @@ fn literal_regex(cps: &[u32]) -> Regex {
 /// Solves each membership equivalence class (grouped by the variable-variable word
 /// equalities, exactly as [`StringTheory::check_membership_conflict`]) for a
 /// concrete matcher-replayed witness, returning `symbol → witness code points` for
-/// every symbol in a witnessed class. Returns `None` if any class has no witness
-/// within budget (or is unexpectedly empty), so the caller reports `Unknown`.
+/// every symbol in a witnessed class. Ground word equalities and disequalities are
+/// folded into that class as singleton positive/negative languages, so the witness
+/// search does not pick a shortest word that the word system immediately rejects.
+/// Returns `None` if any class has no witness within budget (or is unexpectedly
+/// empty), so the caller reports `Unknown`.
 ///
 /// A **membership-over-concat** operand `w` (one bound by `w = p₁ ++ p₂ ++ …`, see
 /// [`concat_def_for_root`]) is witnessed in a **joint** second stage. Operands bound
@@ -1296,6 +1304,7 @@ fn literal_regex(cps: &[u32]) -> Regex {
 fn membership_witnesses(
     arena: &TermArena,
     eqs: &[(TermId, TermId)],
+    diseqs: &[(TermId, TermId)],
     pos_mem: &[(SymbolId, Regex)],
     neg_mem: &[(SymbolId, Regex)],
     budget: &SearchBudget,
@@ -1340,6 +1349,14 @@ fn membership_witnesses(
             .negatives
             .push(regex.clone());
     }
+    // A membership witness must also respect any asserted `x = "lit"` / `x !=
+    // "lit"` in the same word class. Without these singleton constraints, a
+    // complement-only membership naturally chooses ε, then the word solver rejects
+    // that one choice even when another witness exists (the Kaluza Boolean-alias
+    // rows). These additions only guide SAT model construction; every result is
+    // still replayed against the full skeleton.
+    add_ground_word_constraints(arena, &mut uf, &mut classes, eqs, true);
+    add_ground_word_constraints(arena, &mut uf, &mut classes, diseqs, false);
 
     // Recover the concat structure of each membership operand (a `str.in_re` over a
     // `str.++`, rewritten by the parser to `w ∈ R ∧ w = parts`): the defining `str.++`
@@ -1413,6 +1430,58 @@ fn membership_witnesses(
         }
     }
     Some(out)
+}
+
+/// Adds variable-vs-ground-word constraints to membership classes as singleton
+/// regexes. Constraints on classes without a membership atom are irrelevant here.
+fn add_ground_word_constraints(
+    arena: &TermArena,
+    uf: &mut UnionFind,
+    classes: &mut BTreeMap<SymbolId, Membership>,
+    constraints: &[(TermId, TermId)],
+    positive: bool,
+) {
+    for &(left, right) in constraints {
+        let Some((sym, word)) = variable_ground_word(arena, left, right) else {
+            continue;
+        };
+        let root = uf.find(sym);
+        let Some(problem) = classes.get_mut(&root) else {
+            continue;
+        };
+        let singleton = literal_regex(&word);
+        if positive {
+            problem.positives.push(singleton);
+        } else {
+            problem.negatives.push(singleton);
+        }
+    }
+}
+
+/// Returns the variable and exact code points from a variable-vs-ground-Seq pair,
+/// accepting either orientation.
+fn variable_ground_word(
+    arena: &TermArena,
+    left: TermId,
+    right: TermId,
+) -> Option<(SymbolId, Vec<u32>)> {
+    match (arena.node(left), arena.node(right)) {
+        (TermNode::Symbol(sym), _) if matches!(arena.sort_of(left), Sort::Seq(_)) => {
+            ground_word(arena, right).map(|word| (*sym, word))
+        }
+        (_, TermNode::Symbol(sym)) if matches!(arena.sort_of(right), Sort::Seq(_)) => {
+            ground_word(arena, left).map(|word| (*sym, word))
+        }
+        _ => None,
+    }
+}
+
+/// Evaluates an exact ground `Seq` term to code points, declining symbolic terms.
+fn ground_word(arena: &TermArena, term: TermId) -> Option<Vec<u32>> {
+    match axeyum_ir::eval(arena, term, &axeyum_ir::Assignment::new()).ok()? {
+        Value::Seq(elems) => Some(seq_code_points(&elems)),
+        _ => None,
+    }
 }
 
 /// Witnesses one **concat group** (operands bound to the same `str.++`) jointly over
