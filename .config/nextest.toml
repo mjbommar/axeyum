@@ -19,6 +19,12 @@ default-filter = 'not test(=from_int_type002_arith_bound_is_sat)'
 max-threads = 1
 
 [[profile.default.overrides]]
-filter = 'binary(~fuzz) | binary(~coupling) | binary(~differential) | binary(~front_door) | test(~disagree) | test(/_sat$/)'
+# ALL of axeyum-solver's integration tests (tests/*.rs) — the differential
+# fuzzes, deadline/timeout, and coupling decide tests — spawn external solvers
+# and are wall-clock-sensitive. Serialize the whole class so nextest's
+# cross-binary parallelism can't starve any of them (which flips a decided
+# verdict to Unknown/Timeout and reds a shard). Fast unit tests (kind=lib) and
+# other crates stay fully parallel.
+filter = 'package(axeyum-solver) & kind(test)'
 test-group = 'external-solver'
 retries = 2
