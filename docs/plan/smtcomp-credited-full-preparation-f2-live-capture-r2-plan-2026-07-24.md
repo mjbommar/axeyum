@@ -1,7 +1,9 @@
 # SMT-COMP credited full-population F2 live-capture R2 plan
 
-Status: preregistered correction; the F2 topic must not integrate or run live
-until this correction is implemented and gated
+Status: implemented and gated on pushed commit
+`b02c486b1711ca3612816b1921c0adbb8086b3a2`; no live F2 action was taken,
+and live capture remains conditional on integration into exact clean green
+`main`
 
 Date: 2026-07-24
 
@@ -10,6 +12,8 @@ Parent: [F2 live-capture plan](smtcomp-credited-full-preparation-f2-live-capture
 First correction: [F2 live-capture R1 plan](smtcomp-credited-full-preparation-f2-live-capture-r1-plan-2026-07-24.md)
 
 Implementation audit: [F2 live-capture implementation](smtcomp-credited-full-preparation-f2-live-capture-implementation-2026-07-24.md)
+
+Preregistration commit: `3992935c`
 
 ## Why this correction exists
 
@@ -105,3 +109,34 @@ The final topic must pass `just check` before integration. This R2 correction
 does not authorize host probes, sentinel execution, NAS mutation, F3
 acceptance, allocation, or a solver wave. Live F2 remains conditional on the
 exact corrected topic being integrated into clean green `main`.
+
+## Closure result
+
+Commit `b02c486b1711ca3612816b1921c0adbb8086b3a2` implements the registered
+correction:
+
+- each sentinel subprocess now receives only the exact three-variable sealed
+  environment;
+- live callers cannot inject `prepared_at_ns`, and the publisher samples the
+  completion timestamp only after the complete artifact inventory;
+- the shared exact-main inspector rechecks clean local/tracking/live-remote
+  equality against the readiness commit immediately before the final
+  timestamp/deadline decision; and
+- ordering and mutation controls prove that remote drift, caller timestamps,
+  or deadline expiry reject before `complete.json` is installed.
+
+The corrected code passed 45 focused tests, the 158-test portable resume gate
+with one expected live-host skip, all runner/scoring/pipeline/selection/
+provenance subgates, `just check-scope main`, and the complete workspace
+`just check`. The full gate exited zero after formatting, strict all-feature
+Clippy, workspace tests and doctests, the two registered ignored CAS families,
+warning-denied documentation, the 162-file Glaurung regular gate, foundational
+resources, generated contracts, parity checks, and `all links ok`. Five
+frontier JSON files changed only in runtime `solve_ms` values and were restored
+to their committed bytes after the successful gate.
+
+This closes the source correction and removes the integration hold on the
+corrected topic. It does not authorize live work from the topic branch: the
+integration owner must first land the exact corrected stack, establish clean
+green exact `main`, and rerun the registered authority checks before any host
+probe, sentinel, or NAS mutation.
