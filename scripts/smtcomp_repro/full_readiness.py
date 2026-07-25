@@ -11,6 +11,9 @@ from __future__ import annotations
 import copy
 import hashlib
 import os
+import pwd
+import shutil
+import stat
 import subprocess
 import tempfile
 import time
@@ -21,12 +24,42 @@ from resume_contract import ContractError, digest
 from resume_runner import sha256_file
 
 
-GATE_SCHEMA = "axeyum.smtcomp-credited-full-gate-observation.v1"
-READINESS_SCHEMA = "axeyum.smtcomp-credited-full-readiness.v2"
+GATE_SCHEMA = "axeyum.smtcomp-credited-full-gate-observation.v2"
+READINESS_SCHEMA = "axeyum.smtcomp-credited-full-readiness.v3"
 FRONTIER_ARTIFACT_DIR_ENV = "AXEYUM_PROGRESS_FRONTIER_ARTIFACT_DIR"
 REQUIRED_GATE_COMMANDS = (
     ("just", "check"),
     ("./scripts/check-smtcomp-resume.sh",),
+)
+GATE_FIXED_ENVIRONMENT = {
+    "AXEYUM_GLAURUNG_QFBV_AUTO_DISCOVER": "1",
+    "AXEYUM_GLAURUNG_QFBV_MEMORY_GB": "4",
+    "CARGO_TERM_COLOR": "never",
+    "LANG": "C.UTF-8",
+    "LC_ALL": "C.UTF-8",
+    "NO_COLOR": "1",
+    "PYTHONHASHSEED": "0",
+    "PYTHONNOUSERSITE": "1",
+    "PYTHONWARNINGS": "error",
+    "TZ": "UTC",
+}
+GATE_ACCOUNT_ENVIRONMENT_KEYS = {
+    "CARGO_HOME",
+    "HOME",
+    "LOGNAME",
+    "PATH",
+    "RUSTUP_HOME",
+    "USER",
+}
+GATE_RUNTIME_ENVIRONMENT_KEYS = {
+    "DBUS_SESSION_BUS_ADDRESS",
+    "XDG_RUNTIME_DIR",
+}
+GATE_SYSTEM_PATHS = (
+    Path("/usr/local/sbin"),
+    Path("/usr/local/bin"),
+    Path("/usr/sbin"),
+    Path("/usr/bin"),
 )
 DEFAULT_REQUIRED_PATHS = (
     "crates/axeyum-solver/tests/progress_frontier.rs",
@@ -41,6 +74,7 @@ DEFAULT_REQUIRED_PATHS = (
     "docs/plan/smtcomp-credited-full-preparation-f2-live-capture-r1-plan-2026-07-24.md",
     "docs/plan/smtcomp-credited-full-preparation-f2-live-capture-r2-plan-2026-07-24.md",
     "docs/plan/smtcomp-credited-full-preparation-f2-live-capture-r3-plan-2026-07-25.md",
+    "docs/plan/smtcomp-credited-full-preparation-f2-live-capture-r4-plan-2026-07-25.md",
     "docs/plan/smtcomp-credited-full-publication-fixture-2026-07-23.md",
     "docs/plan/smtcomp-credited-full-scheduler-authorization-fixture-2026-07-23.md",
     "docs/plan/smtcomp-credited-full-scheduler-state-fixture-2026-07-23.md",
@@ -69,6 +103,11 @@ DEFAULT_REQUIRED_PATHS = (
 GATE_FIELDS = {
     "schema",
     "command",
+    "command_executable_path",
+    "command_executable_sha256",
+    "command_executable_bytes",
+    "environment",
+    "environment_sha256",
     "repository_commit",
     "worktree_status_sha256",
     "exit_code",
@@ -203,10 +242,184 @@ def _sha256_bytes(value: bytes) -> str:
     return hashlib.sha256(value).hexdigest()
 
 
+def _canonical_directory(path: Path, label: str) -> Path:
+    if not path.is_absolute() or path.is_symlink():
+        raise ContractError(f"invalid readiness-gate {label} directory")
+    try:
+        resolved = path.resolve(strict=True)
+    except OSError as exc:
+        raise ContractError(f"invalid readiness-gate {label} directory") from exc
+    if resolved != path or not resolved.is_dir():
+        raise ContractError(f"invalid readiness-gate {label} directory")
+    return resolved
+
+
+def _gate_account_environment() -> dict[str, str]:
+    """Derive the canonical account, toolchain, and user-systemd environment."""
+
+    try:
+        account = pwd.getpwuid(os.geteuid())
+    except KeyError as exc:
+        raise ContractError("unable to resolve readiness-gate account") from exc
+    home = _canonical_directory(Path(account.pw_dir), "home")
+    cargo_home = _canonical_directory(home / ".cargo", "Cargo home")
+    rustup_home = _canonical_directory(home / ".rustup", "Rustup home")
+    _canonical_directory(cargo_home / "bin", "Cargo bin")
+    for system_path in GATE_SYSTEM_PATHS:
+        _canonical_directory(system_path, "system PATH")
+    environment = {
+        "CARGO_HOME": str(cargo_home),
+        "HOME": str(home),
+        "LOGNAME": account.pw_name,
+        "PATH": ":".join(
+            [str(cargo_home / "bin"), *(str(path) for path in GATE_SYSTEM_PATHS)]
+        ),
+        "RUSTUP_HOME": str(rustup_home),
+        "USER": account.pw_name,
+    }
+    runtime = Path(f"/run/user/{os.geteuid()}")
+    bus = runtime / "bus"
+    if bus.exists():
+        canonical_runtime = _canonical_directory(runtime, "user runtime")
+        if bus.is_symlink() or not stat.S_ISSOCK(bus.stat().st_mode):
+            raise ContractError("invalid readiness-gate user-systemd bus")
+        environment.update(
+            {
+                "DBUS_SESSION_BUS_ADDRESS": f"unix:path={canonical_runtime / 'bus'}",
+                "XDG_RUNTIME_DIR": str(canonical_runtime),
+            }
+        )
+    return environment
+
+
+def _validate_gate_environment(
+    environment: dict[str, str], *, repository_root: Path, inspect_current: bool = False
+) -> dict[str, str]:
+    """Validate the complete positive allow-list used by a registered gate."""
+
+    if type(inspect_current) is not bool:
+        raise ContractError("readiness-gate environment inspection flag mismatch")
+    if not isinstance(environment, dict) or any(
+        not isinstance(key, str)
+        or not key
+        or not isinstance(value, str)
+        or not value
+        for key, value in environment.items()
+    ):
+        raise ContractError("invalid readiness-gate environment mapping")
+    required = (
+        set(GATE_FIXED_ENVIRONMENT)
+        | GATE_ACCOUNT_ENVIRONMENT_KEYS
+        | {FRONTIER_ARTIFACT_DIR_ENV}
+    )
+    observed = set(environment)
+    if observed not in (
+        required,
+        required | GATE_RUNTIME_ENVIRONMENT_KEYS,
+    ):
+        raise ContractError("unregistered readiness-gate environment key")
+    if any(environment.get(key) != value for key, value in GATE_FIXED_ENVIRONMENT.items()):
+        raise ContractError("readiness-gate fixed environment drift")
+    if environment["USER"] != environment["LOGNAME"]:
+        raise ContractError("readiness-gate account identity mismatch")
+
+    home = Path(environment["HOME"])
+    cargo_home = Path(environment["CARGO_HOME"])
+    rustup_home = Path(environment["RUSTUP_HOME"])
+    if (
+        not home.is_absolute()
+        or ".." in home.parts
+        or cargo_home != home / ".cargo"
+        or rustup_home != home / ".rustup"
+    ):
+        raise ContractError("readiness-gate account path mismatch")
+    expected_path = ":".join(
+        [str(cargo_home / "bin"), *(str(path) for path in GATE_SYSTEM_PATHS)]
+    )
+    if environment["PATH"] != expected_path:
+        raise ContractError("readiness-gate PATH mismatch")
+    for component in environment["PATH"].split(":"):
+        path = Path(component)
+        if not component or not path.is_absolute() or ".." in path.parts:
+            raise ContractError("readiness-gate PATH is not canonical")
+
+    artifact_root = Path(environment[FRONTIER_ARTIFACT_DIR_ENV])
+    repository = repository_root.resolve(strict=True)
+    if not artifact_root.is_absolute() or ".." in artifact_root.parts:
+        raise ContractError("invalid readiness-gate frontier artifact directory")
+    try:
+        artifact_root.relative_to(repository)
+    except ValueError:
+        pass
+    else:
+        raise ContractError("readiness-gate frontier artifacts must be outside repository")
+
+    if GATE_RUNTIME_ENVIRONMENT_KEYS <= observed:
+        runtime = Path(environment["XDG_RUNTIME_DIR"])
+        if (
+            not runtime.is_absolute()
+            or ".." in runtime.parts
+            or environment["DBUS_SESSION_BUS_ADDRESS"]
+            != f"unix:path={runtime / 'bus'}"
+        ):
+            raise ContractError("readiness-gate user-systemd environment mismatch")
+    if inspect_current:
+        expected = {**GATE_FIXED_ENVIRONMENT, **_gate_account_environment()}
+        observed_without_artifact = {
+            key: value
+            for key, value in environment.items()
+            if key != FRONTIER_ARTIFACT_DIR_ENV
+        }
+        if observed_without_artifact != expected:
+            raise ContractError("readiness-gate current environment drift")
+    return environment
+
+
+def _gate_executable(
+    *, repository_root: Path, command: list[str], environment: dict[str, str]
+) -> Path:
+    """Resolve one registered command through only its constructed environment."""
+
+    if tuple(command) not in REQUIRED_GATE_COMMANDS:
+        raise ContractError("unregistered full-preparation gate command")
+    root = repository_root.resolve(strict=True)
+    _validate_gate_environment(
+        environment,
+        repository_root=root,
+        inspect_current=True,
+    )
+    if command[0].startswith("./"):
+        candidate = root / command[0][2:]
+    else:
+        located = shutil.which(command[0], path=environment["PATH"])
+        if located is None:
+            raise ContractError("registered full-preparation gate executable is unavailable")
+        candidate = Path(located)
+    if candidate.is_symlink():
+        raise ContractError("registered full-preparation gate executable is a symlink")
+    try:
+        resolved = candidate.resolve(strict=True)
+    except OSError as exc:
+        raise ContractError(
+            "registered full-preparation gate executable is unavailable"
+        ) from exc
+    if (
+        resolved != candidate
+        or not resolved.is_file()
+        or not os.access(resolved, os.X_OK)
+    ):
+        raise ContractError("registered full-preparation gate executable is invalid")
+    if command[0].startswith("./") and resolved != root / "scripts/check-smtcomp-resume.sh":
+        raise ContractError("registered repository gate executable path drift")
+    return resolved
+
+
 def build_gate_observation(
     *,
     repository_root: Path,
     command: list[str],
+    environment: dict[str, str],
+    command_executable: Path,
     exit_code: int,
     stdout: bytes,
     stderr: bytes,
@@ -229,11 +442,32 @@ def build_gate_observation(
         or ended_at_ns < started_at_ns
     ):
         raise ContractError("invalid full-preparation gate timestamps")
+    validated_environment = _validate_gate_environment(
+        environment,
+        repository_root=root,
+        inspect_current=True,
+    )
+    executable = _gate_executable(
+        repository_root=root,
+        command=command,
+        environment=validated_environment,
+    )
+    try:
+        supplied_executable = command_executable.resolve(strict=True)
+    except OSError as exc:
+        raise ContractError("registered gate executable identity mismatch") from exc
+    if supplied_executable != executable:
+        raise ContractError("registered gate executable identity mismatch")
     status = worktree_status(root)
     return _sealed(
         {
             "schema": GATE_SCHEMA,
             "command": command,
+            "command_executable_path": str(executable),
+            "command_executable_sha256": sha256_file(executable),
+            "command_executable_bytes": executable.stat().st_size,
+            "environment": validated_environment,
+            "environment_sha256": digest(validated_environment),
             "repository_commit": _commit(root, "HEAD"),
             "worktree_status_sha256": _sha256_bytes(status),
             "exit_code": exit_code,
@@ -267,8 +501,18 @@ def run_gate(
                 artifact_root,
                 repository_root=root,
             )
+            executable = _gate_executable(
+                repository_root=root,
+                command=command,
+                environment=environment,
+            )
+            executable_identity = (
+                executable.stat().st_size,
+                sha256_file(executable),
+            )
             completed = _execute_gate_command(
                 command=command,
+                command_executable=executable,
                 repository_root=root,
                 environment=environment,
             )
@@ -277,9 +521,16 @@ def run_gate(
     ended_at_ns = time.time_ns()
     if worktree_status(root) != status_before:
         raise ContractError("registered full-preparation gate mutated the worktree")
+    if executable_identity != (
+        executable.stat().st_size,
+        sha256_file(executable),
+    ):
+        raise ContractError("registered full-preparation gate executable changed")
     return build_gate_observation(
         repository_root=root,
         command=command,
+        environment=environment,
+        command_executable=executable,
         exit_code=completed.returncode,
         stdout=completed.stdout,
         stderr=completed.stderr,
@@ -289,12 +540,16 @@ def run_gate(
 
 
 def _execute_gate_command(
-    *, command: list[str], repository_root: Path, environment: dict[str, str]
+    *,
+    command: list[str],
+    command_executable: Path,
+    repository_root: Path,
+    environment: dict[str, str],
 ) -> subprocess.CompletedProcess[bytes]:
     """Execute the registered child without coupling tests to Git subprocesses."""
 
     return subprocess.run(
-        command,
+        [str(command_executable), *command[1:]],
         cwd=repository_root,
         env=environment,
         stdout=subprocess.PIPE,
@@ -323,17 +578,28 @@ def _gate_environment(
         pass
     else:
         raise ContractError("readiness-gate frontier artifacts must be outside repository")
-    environment = dict(os.environ)
-    environment[FRONTIER_ARTIFACT_DIR_ENV] = str(resolved)
-    return environment
+    environment = {
+        **GATE_FIXED_ENVIRONMENT,
+        **_gate_account_environment(),
+        FRONTIER_ARTIFACT_DIR_ENV: str(resolved),
+    }
+    return _validate_gate_environment(
+        environment,
+        repository_root=repository,
+        inspect_current=True,
+    )
 
 
 def validate_gate_observation(
     observation: dict[str, Any],
     *,
+    repository_root: Path,
     repository_commit: str,
     worktree_status_sha256: str,
+    inspect_current: bool = True,
 ) -> dict[str, Any]:
+    if type(inspect_current) is not bool:
+        raise ContractError("gate observation inspection flag mismatch")
     if set(observation) != GATE_FIELDS or observation.get("schema") != GATE_SCHEMA:
         raise ContractError("full-preparation gate field/schema mismatch")
     if observation.get("record_sha256") != _sealed(observation)["record_sha256"]:
@@ -345,6 +611,42 @@ def validate_gate_observation(
         or observation.get("worktree_status_sha256") != worktree_status_sha256
     ):
         raise ContractError("full-preparation gate repository state drift")
+    environment = observation.get("environment")
+    if not isinstance(environment, dict):
+        raise ContractError("full-preparation gate environment mismatch")
+    _validate_gate_environment(
+        environment,
+        repository_root=repository_root,
+        inspect_current=inspect_current,
+    )
+    if observation.get("environment_sha256") != digest(environment):
+        raise ContractError("full-preparation gate environment identity mismatch")
+    executable_path = observation.get("command_executable_path")
+    executable_sha256 = observation.get("command_executable_sha256")
+    executable_bytes = observation.get("command_executable_bytes")
+    if (
+        not isinstance(executable_path, str)
+        or not Path(executable_path).is_absolute()
+        or ".." in Path(executable_path).parts
+        or not isinstance(executable_sha256, str)
+        or len(executable_sha256) != 64
+        or any(character not in "0123456789abcdef" for character in executable_sha256)
+        or type(executable_bytes) is not int
+        or executable_bytes <= 0
+    ):
+        raise ContractError("full-preparation gate executable identity mismatch")
+    if inspect_current:
+        executable = _gate_executable(
+            repository_root=repository_root,
+            command=observation["command"],
+            environment=environment,
+        )
+        if (
+            str(executable) != executable_path
+            or executable.stat().st_size != executable_bytes
+            or sha256_file(executable) != executable_sha256
+        ):
+            raise ContractError("full-preparation gate executable identity drift")
     for prefix in ("stdout", "stderr"):
         sha = observation.get(f"{prefix}_sha256")
         count = observation.get(f"{prefix}_bytes")
@@ -411,6 +713,7 @@ def build_readiness(
     for observation in gate_observations:
         validate_gate_observation(
             observation,
+            repository_root=root,
             repository_commit=head,
             worktree_status_sha256=status_sha256,
         )
@@ -571,8 +874,10 @@ def validate_readiness(
     for gate in gates:
         validate_gate_observation(
             gate,
+            repository_root=root,
             repository_commit=observed["head_commit"],
             worktree_status_sha256=observed["worktree_status_sha256"],
+            inspect_current=inspect_current,
         )
     expected_prerequisites = (
         _is_ancestor(root, recorded_origin, recorded_head)

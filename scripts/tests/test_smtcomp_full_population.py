@@ -82,7 +82,7 @@ from full_preflight import (  # noqa: E402
 from full_readiness import (  # noqa: E402
     DEFAULT_REQUIRED_PATHS,
     FRONTIER_ARTIFACT_DIR_ENV,
-    build_gate_observation,
+    build_gate_observation as _build_gate_observation,
     build_readiness,
     run_gate,
     validate_readiness,
@@ -135,6 +135,38 @@ def seal_as(value: dict, field: str) -> dict:
 
 def sha256_file(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def build_gate_observation(
+    *,
+    repository_root: Path,
+    command: list[str],
+    exit_code: int,
+    stdout: bytes,
+    stderr: bytes,
+    started_at_ns: int,
+    ended_at_ns: int,
+) -> dict:
+    environment = full_readiness_module._gate_environment(
+        Path(tempfile.gettempdir()).resolve(strict=True),
+        repository_root=repository_root,
+    )
+    executable = full_readiness_module._gate_executable(
+        repository_root=repository_root,
+        command=command,
+        environment=environment,
+    )
+    return _build_gate_observation(
+        repository_root=repository_root,
+        command=command,
+        environment=environment,
+        command_executable=executable,
+        exit_code=exit_code,
+        stdout=stdout,
+        stderr=stderr,
+        started_at_ns=started_at_ns,
+        ended_at_ns=ended_at_ns,
+    )
 
 
 def scheduler_state(
@@ -261,11 +293,17 @@ def readiness_repository(
     subprocess.run(
         ["git", "config", "user.name", "Fixture"], cwd=root, check=True
     )
-    for path in required:
+    tracked = set(required)
+    tracked.add("scripts/check-smtcomp-resume.sh")
+    for path in sorted(tracked):
         target = root / path
         target.parent.mkdir(parents=True, exist_ok=True)
-        target.write_text(f"{path}\n", encoding="utf-8")
-    subprocess.run(["git", "add", *required], cwd=root, check=True)
+        if path == "scripts/check-smtcomp-resume.sh":
+            target.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
+            target.chmod(0o755)
+        else:
+            target.write_text(f"{path}\n", encoding="utf-8")
+    subprocess.run(["git", "add", *sorted(tracked)], cwd=root, check=True)
     subprocess.run(
         ["git", "commit", "-m", "fixture"], cwd=root, check=True, capture_output=True
     )
@@ -2192,6 +2230,16 @@ class FullPopulationContractTests(unittest.TestCase):
             )
             self.assertTrue(readiness["ready_for_live_preparation"])
             self.assertEqual(
+                [row["command"] for row in readiness["gate_observations"]],
+                [list(command) for command in full_readiness_module.REQUIRED_GATE_COMMANDS],
+            )
+            self.assertEqual(
+                Path(
+                    readiness["gate_observations"][1]["command_executable_path"]
+                ),
+                root.resolve() / "scripts/check-smtcomp-resume.sh",
+            )
+            self.assertEqual(
                 validate_readiness(readiness, repository_root=root)["record_sha256"],
                 readiness["record_sha256"],
             )
@@ -2406,7 +2454,15 @@ class FullCaptureOperatorTests(unittest.TestCase):
             ["git", "config", "user.name", "Fixture"], cwd=root, check=True
         )
         (root / "tracked.txt").write_text("fixture\n", encoding="utf-8")
-        subprocess.run(["git", "add", "tracked.txt"], cwd=root, check=True)
+        gate = root / "scripts" / "check-smtcomp-resume.sh"
+        gate.parent.mkdir()
+        gate.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
+        gate.chmod(0o755)
+        subprocess.run(
+            ["git", "add", "tracked.txt", "scripts/check-smtcomp-resume.sh"],
+            cwd=root,
+            check=True,
+        )
         subprocess.run(
             ["git", "commit", "-m", "fixture"],
             cwd=root,
@@ -2723,9 +2779,24 @@ class FullCaptureOperatorTests(unittest.TestCase):
     def test_registered_gate_isolates_volatile_frontier_artifacts(self) -> None:
         calls = []
         inherited = str(ROOT / "must-not-be-used")
+        forbidden = {
+            "API_TOKEN": "must-not-cross",
+            "AXEYUM_GLAURUNG_QFBV_AUTO_DISCOVER": "0",
+            "CARGO_ENCODED_RUSTFLAGS": "unregistered",
+            "CARGO_TARGET_DIR": str(ROOT / "unregistered-target"),
+            "LD_LIBRARY_PATH": "/unregistered/library",
+            "LD_PRELOAD": "/unregistered/preload.so",
+            "PYTHONPATH": "/unregistered/python",
+            "RUSTC_WRAPPER": "/unregistered/wrapper",
+            "RUSTFLAGS": "--cfg axeyum_unregistered_gate_flag",
+        }
 
         def completed_gate(
-            *, command: list[str], environment: dict[str, str], **_kwargs: object
+            *,
+            command: list[str],
+            command_executable: Path,
+            environment: dict[str, str],
+            **_kwargs: object,
         ) -> object:
             self.assertIsInstance(environment, dict)
             artifact_root = Path(environment[FRONTIER_ARTIFACT_DIR_ENV])
@@ -2733,11 +2804,44 @@ class FullCaptureOperatorTests(unittest.TestCase):
             self.assertTrue(artifact_root.is_dir())
             self.assertNotEqual(str(artifact_root), inherited)
             self.assertFalse(artifact_root.is_relative_to(ROOT))
+            self.assertTrue(command_executable.is_absolute())
+            self.assertTrue(command_executable.is_file())
+            self.assertEqual(
+                environment["AXEYUM_GLAURUNG_QFBV_AUTO_DISCOVER"], "1"
+            )
+            self.assertEqual(environment["PYTHONHASHSEED"], "0")
+            self.assertEqual(environment["PYTHONNOUSERSITE"], "1")
+            self.assertEqual(environment["PYTHONWARNINGS"], "error")
+            self.assertTrue(
+                (set(forbidden) - {"AXEYUM_GLAURUNG_QFBV_AUTO_DISCOVER"}).isdisjoint(
+                    environment
+                )
+            )
+            self.assertTrue(
+                all(Path(part).is_absolute() for part in environment["PATH"].split(":"))
+            )
             (artifact_root / "bv_reduction.json").write_text(
                 '{"volatile":true}\n', encoding="utf-8"
             )
-            calls.append((command, artifact_root))
+            calls.append((command, command_executable, artifact_root))
             return types.SimpleNamespace(returncode=0, stdout=b"green\n", stderr=b"")
+
+        with tempfile.TemporaryDirectory() as temporary, mock.patch.dict(
+            os.environ,
+            {FRONTIER_ARTIFACT_DIR_ENV: inherited, **forbidden},
+        ):
+            constructed = full_readiness_module._gate_environment(
+                Path(temporary).resolve(strict=True),
+                repository_root=ROOT,
+            )
+            self.assertEqual(
+                constructed["AXEYUM_GLAURUNG_QFBV_AUTO_DISCOVER"], "1"
+            )
+            self.assertTrue(
+                (set(forbidden) - {"AXEYUM_GLAURUNG_QFBV_AUTO_DISCOVER"}).isdisjoint(
+                    constructed
+                )
+            )
 
         with (
             mock.patch.dict(
@@ -2755,12 +2859,61 @@ class FullCaptureOperatorTests(unittest.TestCase):
         self.assertEqual(observation["exit_code"], 0)
         self.assertEqual(observation["command"], ["just", "check"])
         self.assertEqual(len(calls), 1)
-        self.assertFalse(calls[0][1].exists())
+        self.assertEqual(observation["command_executable_path"], str(calls[0][1]))
+        self.assertEqual(observation["environment_sha256"], digest(observation["environment"]))
+        self.assertFalse(calls[0][2].exists())
         with self.assertRaisesRegex(ContractError, "outside repository"):
             full_readiness_module._gate_environment(
                 (ROOT / "target").resolve(strict=True),
                 repository_root=ROOT,
             )
+
+        mutations = {
+            "unregistered_environment": lambda row: row["environment"].update(
+                {"RUSTFLAGS": "--cfg drift"}
+            ),
+            "account_environment": lambda row: row["environment"].update(
+                {"USER": "other", "LOGNAME": "other"}
+            ),
+            "fixed_environment": lambda row: row["environment"].__setitem__(
+                "LANG", "C"
+            ),
+            "path_environment": lambda row: row["environment"].__setitem__(
+                "PATH", f"/unregistered:{row['environment']['PATH']}"
+            ),
+            "environment_identity": lambda row: row.__setitem__(
+                "environment_sha256", "0" * 64
+            ),
+            "executable_path": lambda row: row.__setitem__(
+                "command_executable_path", "/usr/bin/false"
+            ),
+            "executable_bytes": lambda row: row.__setitem__(
+                "command_executable_bytes", row["command_executable_bytes"] + 1
+            ),
+            "executable_sha256": lambda row: row.__setitem__(
+                "command_executable_sha256", "0" * 64
+            ),
+        }
+        for label, mutate in mutations.items():
+            with self.subTest(gate_identity_mutation=label):
+                mutated = copy.deepcopy(observation)
+                mutate(mutated)
+                if label in {
+                    "unregistered_environment",
+                    "account_environment",
+                    "fixed_environment",
+                    "path_environment",
+                }:
+                    mutated["environment_sha256"] = digest(mutated["environment"])
+                with self.assertRaises(ContractError):
+                    full_readiness_module.validate_gate_observation(
+                        reseal(mutated),
+                        repository_root=ROOT,
+                        repository_commit=observation["repository_commit"],
+                        worktree_status_sha256=observation[
+                            "worktree_status_sha256"
+                        ],
+                    )
 
     def test_registered_gate_rejects_worktree_mutation_without_cleanup(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
