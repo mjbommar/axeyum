@@ -120,6 +120,128 @@ enum ConstructedProof {
 }
 
 impl Membership {
+    /// Tries a small deterministic set of structurally-derived candidate words and
+    /// returns the first one that the independent matcher accepts for the complete
+    /// membership problem.
+    ///
+    /// This is a SAT-only fast path for conjunctions whose combined derivative
+    /// product is much larger than their concrete witness. Candidates come from
+    /// individual positive regexes and pairwise concatenations of those candidates;
+    /// acceptance is always checked against every positive, negative, and length
+    /// constraint. Failure therefore means only "no quick witness", never UNSAT.
+    #[must_use]
+    pub fn quick_witness(&self, budget: &SearchBudget, max_len: usize) -> Option<Vec<u32>> {
+        const MAX_BASE_CANDIDATES: usize = 64;
+
+        let mut bases = vec![Vec::new()];
+        for regex in &self.positives {
+            if budget.past_deadline() {
+                return None;
+            }
+            let Some(word) = simple_structural_witness(regex, max_len, 0) else {
+                continue;
+            };
+            if !bases.contains(&word) {
+                bases.push(word);
+                if bases.len() == MAX_BASE_CANDIDATES {
+                    break;
+                }
+            }
+        }
+
+        let mut best = Vec::new();
+        let mut best_misses = self.miss_count(&best);
+        for candidate in &bases {
+            if let Some(word) =
+                self.consider_quick_candidate(candidate.clone(), &mut best, &mut best_misses)
+            {
+                return Some(word);
+            }
+        }
+        for left in &bases {
+            for right in &bases {
+                if budget.past_deadline() {
+                    return None;
+                }
+                let Some(len) = left.len().checked_add(right.len()) else {
+                    continue;
+                };
+                if len > max_len {
+                    continue;
+                }
+                let mut candidate = Vec::with_capacity(len);
+                candidate.extend(left);
+                candidate.extend(right);
+                if let Some(word) =
+                    self.consider_quick_candidate(candidate, &mut best, &mut best_misses)
+                {
+                    return Some(word);
+                }
+            }
+        }
+
+        // A few PyEx paths need three independent features (for example contains
+        // `A`, contains `O`, and ends in carriage return). Greedily extend the best
+        // replay-scored candidate instead of enumerating all O(n^3) triples.
+        for _ in 0..8 {
+            if budget.past_deadline() {
+                return None;
+            }
+            let prior_misses = best_misses;
+            let prior = best.clone();
+            for base in &bases {
+                let Some(len) = prior.len().checked_add(base.len()) else {
+                    continue;
+                };
+                if len > max_len {
+                    continue;
+                }
+                for position in 0..=prior.len() {
+                    let mut candidate = Vec::with_capacity(len);
+                    candidate.extend_from_slice(&prior[..position]);
+                    candidate.extend(base);
+                    candidate.extend_from_slice(&prior[position..]);
+                    if let Some(word) =
+                        self.consider_quick_candidate(candidate, &mut best, &mut best_misses)
+                    {
+                        return Some(word);
+                    }
+                }
+            }
+            if best_misses >= prior_misses {
+                break;
+            }
+        }
+        None
+    }
+
+    fn miss_count(&self, w: &[u32]) -> usize {
+        let len = u32::try_from(w.len()).unwrap_or(u32::MAX);
+        usize::from(len < self.len_lo || self.len_hi.is_some_and(|hi| len > hi))
+            + self.positives.iter().filter(|p| !matches(p, w)).count()
+            + self.negatives.iter().filter(|n| matches(n, w)).count()
+    }
+
+    fn consider_quick_candidate(
+        &self,
+        candidate: Vec<u32>,
+        best: &mut Vec<u32>,
+        best_misses: &mut usize,
+    ) -> Option<Vec<u32>> {
+        let misses = self.miss_count(&candidate);
+        if misses == 0 {
+            return Some(candidate);
+        }
+        if misses < *best_misses
+            || (misses == *best_misses
+                && (candidate.len(), candidate.as_slice()) < (best.len(), best.as_slice()))
+        {
+            *best_misses = misses;
+            *best = candidate;
+        }
+        None
+    }
+
     /// The `Σ{len_lo, len_hi}` length-shape regex, or [`Regex::None`] when the
     /// bound range is empty (`len_lo > len_hi`). `Σ` is [`Regex::any_char`].
     #[must_use]
@@ -216,6 +338,10 @@ impl Membership {
             return MembershipOutcome::Unknown;
         }
 
+        if let Some(word) = self.quick_witness(budget, max_witness_len) {
+            return MembershipOutcome::Sat(word);
+        }
+
         // A single positive membership with no other constraint admits a compact
         // structural witness. This avoids walking one derivative state per copy of
         // a large native loop (the ReDoS corpus uses exact counts up to 80,000).
@@ -293,6 +419,9 @@ impl Membership {
     ) -> Option<Vec<u32>> {
         if budget.past_deadline() {
             return None;
+        }
+        if let Some(word) = self.quick_witness(budget, max_witness_len) {
+            return Some(word);
         }
         let mut ticks: u64 = 0;
         let mut poll = || {
@@ -382,6 +511,49 @@ impl Membership {
         }
         self.positives.iter().all(|p| matches(p, w))
             && self.negatives.iter().all(|n| !matches(n, w))
+    }
+}
+
+/// Constructs one small word from the non-Boolean structure of `regex`.
+/// `Inter`/`Comp` deliberately decline: the caller combines candidates across
+/// constraints and independently replays them, so guessing through Boolean regex
+/// structure is unnecessary and would duplicate the derivative engine.
+fn simple_structural_witness(regex: &Regex, max_len: usize, depth: usize) -> Option<Vec<u32>> {
+    if depth > CONSTRUCT_MAX_DEPTH {
+        return None;
+    }
+    match regex {
+        Regex::None | Regex::Inter(_, _) | Regex::Comp(_) => None,
+        Regex::Pred(pred) => {
+            if max_len < 1 {
+                return None;
+            }
+            Some(vec![pred.witness()?])
+        }
+        Regex::Concat(left, right) => {
+            let mut word = simple_structural_witness(left, max_len, depth + 1)?;
+            let remaining = max_len.checked_sub(word.len())?;
+            word.extend(simple_structural_witness(right, remaining, depth + 1)?);
+            Some(word)
+        }
+        Regex::Union(left, right) => simple_structural_witness(left, max_len, depth + 1)
+            .or_else(|| simple_structural_witness(right, max_len, depth + 1)),
+        Regex::Empty | Regex::Star(_) => Some(Vec::new()),
+        Regex::Loop { inner, lo, hi } => {
+            if hi.is_some_and(|upper| *lo > upper) {
+                return None;
+            }
+            let count = usize::try_from(*lo).ok()?;
+            if count == 0 {
+                return Some(Vec::new());
+            }
+            let unit = simple_structural_witness(inner, max_len, depth + 1)?;
+            let total = unit.len().checked_mul(count)?;
+            if total > max_len {
+                return None;
+            }
+            Some(unit.repeat(count))
+        }
     }
 }
 
@@ -690,6 +862,47 @@ mod tests {
             Regex::star(Regex::any_char()),
             Regex::concat(lit(s), Regex::star(Regex::any_char())),
         )
+    }
+
+    fn starts_with_lit(s: &str) -> Regex {
+        Regex::concat(lit(s), Regex::star(Regex::any_char()))
+    }
+
+    fn ends_with_lit(s: &str) -> Regex {
+        Regex::concat(Regex::star(Regex::any_char()), lit(s))
+    }
+
+    #[test]
+    fn quick_witness_combines_individual_structural_candidates() {
+        // PyEx-style constraints often have an obvious concrete model while the
+        // combined derivative product is large: a prefix requirement contributes
+        // " ", a contains requirement contributes "Z", and their concatenation
+        // satisfies the whole class. Every excluded character is replayed too.
+        let mut m = Membership {
+            positives: vec![starts_with_lit(" "), contains_lit("Z")],
+            negatives: vec![contains_lit(",")],
+            ..Membership::default()
+        };
+        for c in 'A'..='Y' {
+            m.negatives.push(contains_lit(&c.to_string()));
+        }
+        assert_eq!(
+            m.quick_witness(&budget(), 256),
+            Some(vec![u32::from(b' '), u32::from(b'Z')])
+        );
+    }
+
+    #[test]
+    fn quick_witness_greedily_combines_three_features() {
+        let m = Membership {
+            positives: vec![starts_with_lit("A"), contains_lit("O"), ends_with_lit("\r")],
+            negatives: vec![contains_lit(",")],
+            ..Membership::default()
+        };
+        let witness = m
+            .quick_witness(&budget(), 256)
+            .expect("three-feature replayed witness");
+        assert!(m.accepts(&witness));
     }
 
     #[test]

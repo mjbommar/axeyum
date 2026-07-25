@@ -379,6 +379,12 @@ impl<'a> StringTheory<'a> {
                     problem.negatives.push(regex.clone());
                 }
             }
+            // A concrete witness independently replayed against the whole class
+            // proves this branch non-empty without constructing its potentially
+            // enormous combined derivative closure.
+            if problem.quick_witness(&self.budget, 256).is_some() {
+                continue;
+            }
             // Deadline-bounded: the emptiness closure of a complex regex-intersection
             // must not stall the CDCL loop past its timeout. An abandoned closure just
             // misses this conflict (safe — caught later by the mandatory sat replay).
@@ -735,8 +741,21 @@ impl TheorySolver for StringTheory<'_> {
                 }
             }
         }
-        // All three refuters are certified; report the first conflict found.
+        // The word refuter is cheap on the membership-heavy Python formulas and can
+        // still prune immediately.
         self.check_conflict((atom, value))?;
+        // Regex intersection is substantially more expensive than recording an
+        // atom.  Do it once the branch has assigned every membership atom, instead
+        // of rebuilding the same growing derivative product after each unit.  This
+        // only delays conflict discovery: every total branch assigns every active
+        // theory atom, and any certified conflict is still reported before the
+        // driver can return SAT.
+        let memberships_complete = self.atoms.iter().enumerate().all(|(i, kind)| {
+            !matches!(kind, AtomKind::Membership { .. }) || self.assigned[i].is_some()
+        });
+        if !memberships_complete {
+            return Ok(());
+        }
         self.check_membership_conflict((atom, value))?;
         self.check_concat_emptiness_conflict((atom, value))
     }
