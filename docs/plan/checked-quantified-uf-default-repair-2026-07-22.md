@@ -69,3 +69,15 @@ showed only fresh timing/frontier sampling from the test run; those generated
 measurements were restored to the committed baseline and are not part of this
 functionality result. ADR-0359 is accepted for only the bounded default-repair
 surface described above.
+
+## 2026-07-25 guarded declared-sort extension
+
+The accepted search/check boundary now also covers a unary `Int -> U` function
+guarding a top-level implication. A candidate constant default distinct from the
+guard's binder-free carrier value proves the antecedent false for every binder;
+the checker requires an empty override table and re-evaluates the exact source
+guard. Independent ground theory components may seed the candidate only when
+their merged model replays the complete ground conjunction. This moves the
+public Z3-SAT `TwoSquares/smtlib.598292.smt2` row from `unknown` to certified
+`sat` in 0.01 seconds. A forced `f(0) = c` mutation returns `unsat`; the fresh
+1,412-file UFLIA measurement reports one SAT and zero wrong verdicts.

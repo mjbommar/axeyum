@@ -383,6 +383,17 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-25 — guarded declared-sort MBQI moves a public UFLIA SAT row.**
+  Axeyum now decides the Z3-SAT `TwoSquares/smtlib.598292.smt2` benchmark in
+  0.01 seconds, where Axeyum and cvc5 1.3.4 previously returned `unknown`.
+  Independent ground UF/LIA components produce only an untrusted seed; bounded
+  default repair chooses a declared-sort value, an independent source checker
+  proves the exact `f(x) = c => body` guard false for every integer, and canonical
+  original-query replay gates SAT. The exact forced-entry mutation remains
+  `unsat`. A 1,412-file 250 ms UFLIA rerun has one new SAT and WRONG=0; twelve
+  pre-existing UNSAT outer-wall losses all recover alone under the same internal
+  budget.
+
 - **2026-07-25 — one dense PyEx mechanism moves 715 QF_SLIA rows.** The exact
   word/regex side channel now recognizes constant prefix-and-suffix slices,
   PyEx's split/replace/rejoin spelling of a length-preserving one-character
@@ -8691,6 +8702,7 @@ plan is built and committed on the current branch:
 ### Track 1 — Engine & Performance
 | Phase | Title | Status |
 |---|---|---|
+| P2.6b | Guarded declared-sort MBQI model | **DONE for the accepted ADR-0359 extension:** disconnected ground UF/LIA components seed an untrusted model; a constant-distinct unary `Int -> U` guard is independently checked over the exact source and the full model replays. Public UFLIA `TwoSquares` moves `unknown`→`sat`; broader quantified carrier models remain P2.6 work |
 | P2.6a | Exact source-term BV Skolem depth | **DONE for the ADR-0141 slice:** a single direct BV existential may use one exact source-reachable QF term over leading universals; modular/bitwise/total-UF terms replay only after untouched-source reflexivity. General multiple/piecewise Skolems, free parameters, function-valued models, and SAT Lean export remain P2.6 work |
 | P1.6w | Retained warm nested array-valued UF parameters | **DONE (ADR-0094)** — supported array-valued `Apply` terms can key retained array-valued UF parents directly or under supported structural keys. Direct nested keys encode by the inner application's private projection symbol; structural nested keys encode by replay-safe rewritten structural terms, with private projection/owner symbols excluded from public array-key synthesis. The focused warm array-UF parent suite covers direct nested-key SAT replay, asserted nested-key equality UNSAT, and structural keys with nested application bases. Nested/extended arrays, proofs, and low-load aggregate timing remain |
 | P1.6v | Retained warm structural array-valued UF parameters | **DONE (ADR-0093)** — supported store/constant/array-ITE expressions can key retained array-valued UF parents. The warm path retains scalar dependencies inside structural keys, realizes private key owners against the original structural terms before full-value function projection, uses active equality classes or ADR-0091 relation flags for key congruence, filters private owners/flags/witnesses, and replays originals. The focused warm array-UF parent suite covers scalar UF dependencies inside keys, independent structural-key SAT via relation flags, asserted structural-key equality UNSAT, and the former nested array-valued application-key deferral. ADR-0094 subsequently lands supported nested application keys; proofs and low-load aggregate timing remain |
@@ -8817,6 +8829,14 @@ plan is built and committed on the current branch:
 | P5.5 | External target, measured | **DONE (bounded v1, ADR-0323--0338):** authenticated Tock capture plus eight rechecked dual-DRAT proofs and six replayed controls, UNKNOWN=0, DISAGREE=0. Query time 12.700 s; fresh outer wall 50.745 s; peak RSS 1,256,496 KiB; zero OOM deltas. The committed case study compares exact target validation, universal coverage, trust, effort, artifact boundaries, and limits. No Tock bug was found, so no upstream issue is applicable. This is not a speed or whole-kernel claim. |
 
 ## Changelog
+
+- **2026-07-25 — moved public UFLIA `TwoSquares` from unknown to certified
+  SAT.** Bounded repair now supports declared-sort defaults, the independent
+  checker proves a constant-distinct unary UF implication guard vacuous, and
+  disconnected ground theory components can seed a model only after exact
+  replay. Z3 agrees, the falsifying explicit-point control is UNSAT, the fresh
+  1,412-file slice has WRONG=0, and focused tests pass. No workspace-wide local
+  gate was run.
 
 - **2026-07-25 — moved 715 dense PyEx QF_SLIA declines with one shared exact
   mechanism.** Constant two-sided slices, the split/replace/rejoin transform,
