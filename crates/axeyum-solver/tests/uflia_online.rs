@@ -17,7 +17,7 @@ use axeyum_solver::{
     CheckResult, IncrementalDecisionLia, SolverConfig, UnknownKind,
     check_qf_uflia_boolean_prop_metrics, check_qf_uflia_boolean_with_metrics,
     check_qf_uflia_online, check_with_uf_arithmetic, combined_incremental_lia_structure,
-    combined_incremental_lia_vs_check, combined_theory_lia_propagations,
+    combined_incremental_lia_vs_check, combined_theory_lia_propagations, solve_smtlib,
 };
 
 fn iconst(arena: &mut TermArena, n: i128) -> TermId {
@@ -36,6 +36,39 @@ fn verdict(result: &CheckResult) -> Option<bool> {
         CheckResult::Unsat => Some(false),
         CheckResult::Unknown(_) => None,
     }
+}
+
+#[test]
+fn function_free_carrier_disequality_combines_with_lia_sat() {
+    let script = r#"
+        (set-logic QF_UFLIA)
+        (declare-sort U 0)
+        (declare-const a U)
+        (declare-const b U)
+        (declare-const x Int)
+        (assert (not (= a b)))
+        (assert (> x 0))
+        (check-sat)
+    "#;
+    let outcome = solve_smtlib(script, &SolverConfig::default()).expect("solve mixed carrier/LIA");
+    assert!(matches!(outcome.result, CheckResult::Sat(_)));
+}
+
+#[test]
+fn function_free_carrier_equality_boolean_couples_to_lia_unsat() {
+    let script = r#"
+        (set-logic QF_UFLIA)
+        (declare-sort U 0)
+        (declare-const a U)
+        (declare-const b U)
+        (declare-const x Int)
+        (assert (not (= a b)))
+        (assert (or (= a b) (> x 0)))
+        (assert (<= x 0))
+        (check-sat)
+    "#;
+    let outcome = solve_smtlib(script, &SolverConfig::default()).expect("solve mixed carrier/LIA");
+    assert_eq!(outcome.result, CheckResult::Unsat);
 }
 
 /// Replays a `sat` model against the assertions through the ground evaluator, checking
