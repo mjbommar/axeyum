@@ -49,6 +49,7 @@ pub enum ScriptCommand {
 
 /// A parsed benchmark script.
 #[derive(Debug, Default)]
+#[allow(clippy::struct_excessive_bools)] // Independent parser facts, not one state machine.
 #[non_exhaustive]
 pub struct Script {
     /// Arena holding all parsed terms.
@@ -170,6 +171,13 @@ pub struct Script {
     /// `sat` models need not realize the omitted splice semantics and must be
     /// discarded by the solver front door.
     pub word_skeleton_opaque_terms: usize,
+    /// A contradiction proved directly from guaranteed top-level fixed-splice
+    /// equalities/disequalities and exact string constants. This side fact is
+    /// independent of [`Script::word_skeleton`]: an unrelated unsupported atom may
+    /// make that all-or-nothing skeleton empty while the fixed-splice contradiction
+    /// remains a valid refutation of the complete asserted conjunction. It is never
+    /// populated for incremental or macro-bearing scripts.
+    pub fixed_splice_semantic_unsat: bool,
     /// The parser-side **regex-membership side channel** (P2.7 T-C.5, ADR-0054):
     /// a translation of the script's `str.in_re` fragment into single-variable
     /// [`MembershipProblem`](crate::MembershipProblem) constraints over the
@@ -704,6 +712,7 @@ fn parse_script_bounded(input: &str) -> Result<Script, SmtError> {
     // assertions — a model of the whole is a model of any subset, keeping the
     // "only ever add sat" invariant sound). `parse_sort`/`(Seq E)` are untouched.
     if script.uses_bounded_strings {
+        script.fixed_splice_semantic_unsat = fixed_splice_semantic_facts(&exprs).conflict;
         script.word_problem = build_word_problem(&mut script.arena, &exprs);
         // Parser-side Boolean-structured word skeleton (P1.5b): the superset the
         // online CDCL(T) route decides — `or`/negated word problems the flat
@@ -1144,8 +1153,12 @@ fn build_word_skeleton(arena: &mut TermArena, exprs: &[SExpr]) -> Option<WordSke
     // Translate every `assert` body into a Bool term over `Seq` equality and
     // `str.in_re` membership atoms; a single unrepresentable atom aborts the whole
     // skeleton. `mem` accumulates the membership theory atoms (deduplicated).
+    let semantic_facts = fixed_splice_semantic_facts(exprs);
     let mut assertions: Vec<TermId> = Vec::new();
-    let mut saw_seq_atom = false;
+    let mut saw_seq_atom = semantic_facts.conflict;
+    if semantic_facts.conflict {
+        assertions.push(arena.bool_const(false));
+    }
     let mut mem = MembershipCollector {
         intern: BTreeMap::new(),
         memberships: Vec::new(),
@@ -1154,7 +1167,16 @@ fn build_word_skeleton(arena: &mut TermArena, exprs: &[SExpr]) -> Option<WordSke
         next_concat: 0,
         opaque_words: Vec::new(),
         next_opaque: 0,
+        pinned_words: semantic_facts.pinned_words,
     };
+    for (left, right) in semantic_facts.derived_equalities {
+        let [left, right] = word_terms_with_opaque(arena, &[left, right], &vars, &mut mem)?[..]
+        else {
+            return None;
+        };
+        mem.concat_defs.push(arena.eq(left, right).ok()?);
+        saw_seq_atom = true;
+    }
     for e in exprs {
         let Some(items) = e.list() else { continue };
         if items.first().and_then(SExpr::atom) == Some("assert") {
@@ -1805,9 +1827,18 @@ struct MembershipCollector {
     opaque_words: Vec<(SExpr, TermId)>,
     /// Fresh opaque-word symbol counter.
     next_opaque: u32,
+    /// Exact constants implied by guaranteed top-level equality paths. Replacing
+    /// one of these expressions by its value is equivalence-preserving within the
+    /// asserted conjunction.
+    pinned_words: Vec<(SExpr, Vec<u32>)>,
 }
 
 impl MembershipCollector {
+    /// Returns the exact guaranteed constant for `expression`, if one was derived.
+    fn pinned_word(&self, expression: &SExpr) -> Option<Vec<u32>> {
+        eval_guaranteed_pinned_word(expression, &self.pinned_words, 0)
+    }
+
     /// Returns one shared `Seq` symbol for a structurally identical opaque word.
     fn opaque_word(&mut self, arena: &mut TermArena, expression: &SExpr) -> Option<TermId> {
         if let Some((_, term)) = self
@@ -2132,6 +2163,9 @@ fn word_terms_with_opaque(
     expressions
         .iter()
         .map(|expression| {
+            if let Some(value) = collector.pinned_word(expression) {
+                return seq_from_code_points(arena, &value);
+            }
             word_str_expr(arena, expression, vars).or_else(|| {
                 fixed_splice_split(expression.list()?)?;
                 collector.opaque_word(arena, expression)
@@ -8384,9 +8418,23 @@ fn fixed_splice_concat_bound(arena: &TermArena, items: &[SExpr], args: &[TermId]
     (split <= result_max).then_some(result_max)
 }
 
+/// One exact generated fixed-position splice.
+struct FixedSpliceParts<'a> {
+    base: &'a SExpr,
+    index: u32,
+    replacement: Vec<u32>,
+    split: u32,
+}
+
 /// Returns the split point of the exact fixed-splice shape recognized by both
 /// the packed lowering and the UNSAT-only word abstraction.
 fn fixed_splice_split(items: &[SExpr]) -> Option<u32> {
+    Some(fixed_splice_parts(items)?.split)
+}
+
+/// Decomposes the fixed-splice shape into its base, replacement index/value, and
+/// suffix split point.
+fn fixed_splice_parts(items: &[SExpr]) -> Option<FixedSpliceParts<'_>> {
     let [head, left, right] = items else {
         return None;
     };
@@ -8428,7 +8476,422 @@ fn fixed_splice_split(items: &[SExpr]) -> Option<u32> {
     if suffix_start != split || len_minus_constant(&suffix[3], &suffix[1])? != split {
         return None;
     }
-    Some(split)
+    Some(FixedSpliceParts {
+        base: &prefix[1],
+        index: prefix_len,
+        replacement,
+        split,
+    })
+}
+
+/// Guaranteed fixed-splice consequences used by the UNSAT-only word skeleton.
+#[derive(Default)]
+struct FixedSpliceSemanticFacts {
+    pinned_words: Vec<(SExpr, Vec<u32>)>,
+    derived_equalities: Vec<(SExpr, SExpr)>,
+    conflict: bool,
+}
+
+/// Computes exact constant propagation and the distinct-index splice theorem over
+/// guaranteed top-level equality paths. Every fact is a consequence of the whole
+/// asserted conjunction, so adding it to the word relaxation preserves UNSAT.
+#[allow(clippy::too_many_lines)] // One auditable, fail-closed semantic analysis pass.
+fn fixed_splice_semantic_facts(exprs: &[SExpr]) -> FixedSpliceSemanticFacts {
+    // These facts describe the conjunction of every assertion in the script. They
+    // cannot be applied to one scoped query or across a macro expansion whose
+    // source-level equality path is not represented here.
+    let mut check_sats = 0_u32;
+    for expression in exprs {
+        if expression
+            .list()
+            .and_then(|items| items.first())
+            .and_then(SExpr::atom)
+            == Some("check-sat")
+        {
+            check_sats = check_sats.saturating_add(1);
+        }
+        if let Some(
+            "push" | "pop" | "check-sat-assuming" | "reset-assertions" | "define-fun"
+            | "define-fun-rec" | "define-funs-rec" | "define-sort",
+        ) = expression
+            .list()
+            .and_then(|items| items.first())
+            .and_then(SExpr::atom)
+        {
+            return FixedSpliceSemanticFacts::default();
+        }
+    }
+    if check_sats > 1 {
+        return FixedSpliceSemanticFacts::default();
+    }
+
+    let conjuncts = guaranteed_top_level_conjuncts(exprs);
+    let equalities: Vec<(&SExpr, &SExpr)> = conjuncts
+        .iter()
+        .filter_map(|conjunct| positive_word_equality(conjunct))
+        .collect();
+    let disequalities: Vec<(&SExpr, &SExpr)> = conjuncts
+        .iter()
+        .filter_map(|conjunct| negative_word_equality(conjunct))
+        .collect();
+    if equalities.is_empty() && disequalities.is_empty() {
+        return FixedSpliceSemanticFacts::default();
+    }
+
+    let mut nodes: Vec<SExpr> = Vec::new();
+    let mut edges = Vec::new();
+    for (left, right) in equalities {
+        let left = intern_sexpr(&mut nodes, left);
+        let right = intern_sexpr(&mut nodes, right);
+        edges.push((left, right));
+    }
+    let disequalities: Vec<(usize, usize)> = disequalities
+        .into_iter()
+        .map(|(left, right)| {
+            let left = intern_sexpr(&mut nodes, left);
+            let right = intern_sexpr(&mut nodes, right);
+            (left, right)
+        })
+        .collect();
+    let mut parent: Vec<usize> = (0..nodes.len()).collect();
+    for (left, right) in edges {
+        union_classes(&mut parent, left, right);
+    }
+    for i in 0..parent.len() {
+        parent[i] = find_class(&parent, i);
+    }
+
+    let mut class_values: Vec<Option<Vec<u32>>> = vec![None; nodes.len()];
+    let mut conflict = false;
+    for (i, node) in nodes.iter().enumerate() {
+        if let Some(value) = literal_pattern_cps(node) {
+            set_class_value(&mut class_values, parent[i], value, &mut conflict);
+        }
+    }
+
+    // A class pin may make a fixed splice in another class concrete; iterate to a
+    // stable point. The node count is a deterministic upper bound on propagation
+    // rounds because each useful round pins at least one previously-unpinned class.
+    for _ in 0..nodes.len() {
+        let mut changed = false;
+        for (i, node) in nodes.iter().enumerate() {
+            let was_unpinned = class_values[parent[i]].is_none();
+            if let Some(value) =
+                eval_pinned_splice_semantics(node, &nodes, &parent, &class_values, 0)
+            {
+                set_class_value(&mut class_values, parent[i], value, &mut conflict);
+                changed |= was_unpinned;
+            }
+        }
+        if !changed {
+            break;
+        }
+    }
+
+    // A guaranteed disequality is contradictory when positive equalities already
+    // merged its operands or when exact constant/splice propagation gives both
+    // operands the same value.
+    for &(left, right) in &disequalities {
+        if parent[left] == parent[right] {
+            conflict = true;
+            continue;
+        }
+        let left_value = eval_pinned_splice(&nodes[left], &nodes, &parent, &class_values, 0);
+        let right_value = eval_pinned_splice(&nodes[right], &nodes, &parent, &class_values, 0);
+        if left_value.is_some() && left_value == right_value {
+            conflict = true;
+        }
+    }
+
+    let pinned_words = nodes
+        .iter()
+        .enumerate()
+        .filter_map(|(i, node)| {
+            class_values[parent[i]]
+                .as_ref()
+                .map(|value| (node.clone(), value.clone()))
+        })
+        .collect();
+
+    let lower_bounds: Vec<(&SExpr, u32)> = conjuncts
+        .iter()
+        .filter_map(|conjunct| guaranteed_string_length_lower_bound(conjunct))
+        .collect();
+    let mut derived_equalities = Vec::new();
+    for i in 0..nodes.len() {
+        let Some(left) = nodes[i].list().and_then(fixed_splice_parts) else {
+            continue;
+        };
+        if left.replacement.len() != 1 {
+            continue;
+        }
+        for j in i + 1..nodes.len() {
+            if parent[i] != parent[j] {
+                continue;
+            }
+            let Some(right) = nodes[j].list().and_then(fixed_splice_parts) else {
+                continue;
+            };
+            if right.replacement.len() != 1 || left.base != right.base || left.index == right.index
+            {
+                continue;
+            }
+            let required = left.index.min(right.index).saturating_add(1);
+            if lower_bounds
+                .iter()
+                .any(|(base, bound)| *base == left.base && *bound >= required)
+            {
+                let derived = (left.base.clone(), nodes[i].clone());
+                if !derived_equalities.contains(&derived) {
+                    derived_equalities.push(derived);
+                }
+            }
+        }
+    }
+
+    FixedSpliceSemanticFacts {
+        pinned_words,
+        derived_equalities,
+        conflict,
+    }
+}
+
+/// Every conjunct guaranteed by all top-level assertions, flattening only `and`.
+fn guaranteed_top_level_conjuncts(exprs: &[SExpr]) -> Vec<&SExpr> {
+    let mut out = Vec::new();
+    let mut stack = Vec::new();
+    for expression in exprs {
+        let Some(items) = expression.list() else {
+            continue;
+        };
+        if let [head, body] = items
+            && head.atom() == Some("assert")
+        {
+            stack.push(body);
+        }
+    }
+    while let Some(expression) = stack.pop() {
+        if let Some(items) = expression.list()
+            && items.first().and_then(SExpr::atom) == Some("and")
+        {
+            stack.extend(items[1..].iter());
+        } else {
+            out.push(expression);
+        }
+    }
+    out
+}
+
+/// A string equality known true either directly or through an odd-negated
+/// `PyEx` indicator `(= (ite (= X Y) 1 0) 0)`.
+fn positive_word_equality(expression: &SExpr) -> Option<(&SExpr, &SExpr)> {
+    let mut expression = expression;
+    let mut negated = false;
+    while let Some([head, inner]) = expression.list()
+        && head.atom() == Some("not")
+    {
+        negated = !negated;
+        expression = inner;
+    }
+    if let Some(equality) = pyex_word_indicator_equality(expression) {
+        return negated.then_some(equality);
+    }
+    let [head, left, right] = expression.list()? else {
+        return None;
+    };
+    (head.atom() == Some("=") && !negated).then_some((left, right))
+}
+
+/// A string disequality known true either through direct negation or through an
+/// even-negated `PyEx` indicator `(= (ite (= X Y) 1 0) 0)`.
+fn negative_word_equality(expression: &SExpr) -> Option<(&SExpr, &SExpr)> {
+    let mut expression = expression;
+    let mut negated = false;
+    while let Some([head, inner]) = expression.list()
+        && head.atom() == Some("not")
+    {
+        negated = !negated;
+        expression = inner;
+    }
+    if let Some(equality) = pyex_word_indicator_equality(expression) {
+        return (!negated).then_some(equality);
+    }
+    let [head, left, right] = expression.list()? else {
+        return None;
+    };
+    (head.atom() == Some("=") && negated).then_some((left, right))
+}
+
+/// The underlying word equality in a generated `PyEx` Boolean indicator. The
+/// indicator itself is true exactly when this equality is false.
+fn pyex_word_indicator_equality(expression: &SExpr) -> Option<(&SExpr, &SExpr)> {
+    let [equal, ite, zero] = expression.list()? else {
+        return None;
+    };
+    if equal.atom() != Some("=") || parse_int_literal(zero) != Some(0) {
+        return None;
+    }
+    let [ite_head, condition, one, branch_zero] = ite.list()? else {
+        return None;
+    };
+    if ite_head.atom() != Some("ite")
+        || parse_int_literal(one) != Some(1)
+        || parse_int_literal(branch_zero) != Some(0)
+    {
+        return None;
+    }
+    let [condition_head, left, right] = condition.list()? else {
+        return None;
+    };
+    (condition_head.atom() == Some("=")).then_some((left, right))
+}
+
+/// A guaranteed `len(base) >= k` generated guard.
+fn guaranteed_string_length_lower_bound(expression: &SExpr) -> Option<(&SExpr, u32)> {
+    let [ge, difference, zero] = expression.list()? else {
+        return None;
+    };
+    if ge.atom() != Some(">=") || parse_int_literal(strip_subtracted_zero(zero)) != Some(0) {
+        return None;
+    }
+    let [minus, length, bound] = difference.list()? else {
+        return None;
+    };
+    if minus.atom() != Some("-") {
+        return None;
+    }
+    let [len, base] = length.list()? else {
+        return None;
+    };
+    if len.atom() != Some("str.len") {
+        return None;
+    }
+    let bound = u32::try_from(parse_int_literal(strip_subtracted_zero(bound))?).ok()?;
+    Some((base, bound))
+}
+
+fn intern_sexpr(nodes: &mut Vec<SExpr>, expression: &SExpr) -> usize {
+    if let Some(index) = nodes.iter().position(|candidate| candidate == expression) {
+        index
+    } else {
+        nodes.push(expression.clone());
+        nodes.len() - 1
+    }
+}
+
+fn find_class(parent: &[usize], mut index: usize) -> usize {
+    while parent[index] != index {
+        index = parent[index];
+    }
+    index
+}
+
+fn union_classes(parent: &mut [usize], left: usize, right: usize) {
+    let left = find_class(parent, left);
+    let right = find_class(parent, right);
+    if left != right {
+        parent[right] = left;
+    }
+}
+
+fn set_class_value(
+    values: &mut [Option<Vec<u32>>],
+    class: usize,
+    value: Vec<u32>,
+    conflict: &mut bool,
+) {
+    match &values[class] {
+        Some(existing) if existing != &value => *conflict = true,
+        Some(_) => {}
+        None => values[class] = Some(value),
+    }
+}
+
+/// Evaluates a fixed-splice chain once its base class has an exact constant pin.
+fn eval_pinned_splice(
+    expression: &SExpr,
+    nodes: &[SExpr],
+    parent: &[usize],
+    values: &[Option<Vec<u32>>],
+    depth: u32,
+) -> Option<Vec<u32>> {
+    if depth > 32 {
+        return None;
+    }
+    if let Some(literal) = literal_pattern_cps(expression) {
+        return Some(literal);
+    }
+    if let Some(index) = nodes.iter().position(|candidate| candidate == expression)
+        && let Some(value) = &values[parent[index]]
+    {
+        return Some(value.clone());
+    }
+    let splice = fixed_splice_parts(expression.list()?)?;
+    let base = eval_pinned_splice(splice.base, nodes, parent, values, depth + 1)?;
+    let mut result = substr_code_points(&base, 0, i128::from(splice.index));
+    result.extend_from_slice(&splice.replacement);
+    result.extend(substr_code_points(
+        &base,
+        i128::from(splice.split),
+        i128::try_from(base.len()).ok()? - i128::from(splice.split),
+    ));
+    Some(result)
+}
+
+/// Evaluates the semantic value of a fixed splice even when the splice expression's
+/// own equality class is already pinned. Comparing this value with that class pin
+/// detects a contradiction such as `s = "lot"`, `splice(s, 0, "l") = "log"`.
+fn eval_pinned_splice_semantics(
+    expression: &SExpr,
+    nodes: &[SExpr],
+    parent: &[usize],
+    values: &[Option<Vec<u32>>],
+    depth: u32,
+) -> Option<Vec<u32>> {
+    if depth > 32 {
+        return None;
+    }
+    let splice = fixed_splice_parts(expression.list()?)?;
+    let base = eval_pinned_splice(splice.base, nodes, parent, values, depth + 1)?;
+    let mut result = substr_code_points(&base, 0, i128::from(splice.index));
+    result.extend_from_slice(&splice.replacement);
+    result.extend(substr_code_points(
+        &base,
+        i128::from(splice.split),
+        i128::try_from(base.len()).ok()? - i128::from(splice.split),
+    ));
+    Some(result)
+}
+
+/// Evaluates an arbitrary fixed-splice chain from the exact expression pins
+/// retained by [`MembershipCollector`].
+fn eval_guaranteed_pinned_word(
+    expression: &SExpr,
+    pins: &[(SExpr, Vec<u32>)],
+    depth: u32,
+) -> Option<Vec<u32>> {
+    if depth > 32 {
+        return None;
+    }
+    if let Some(value) = pins
+        .iter()
+        .find_map(|(candidate, value)| (candidate == expression).then_some(value))
+    {
+        return Some(value.clone());
+    }
+    if let Some(literal) = literal_pattern_cps(expression) {
+        return Some(literal);
+    }
+    let splice = fixed_splice_parts(expression.list()?)?;
+    let base = eval_guaranteed_pinned_word(splice.base, pins, depth + 1)?;
+    let mut result = substr_code_points(&base, 0, i128::from(splice.index));
+    result.extend_from_slice(&splice.replacement);
+    result.extend(substr_code_points(
+        &base,
+        i128::from(splice.split),
+        i128::try_from(base.len()).ok()? - i128::from(splice.split),
+    ));
+    Some(result)
 }
 
 /// The canonical well-formedness constraint for a packed string `v` of max length

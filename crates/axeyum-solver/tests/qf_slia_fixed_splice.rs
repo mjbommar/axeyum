@@ -99,3 +99,153 @@ fn opaque_fixed_splice_relaxation_never_reports_sat() {
     assert!(script.word_skeleton_opaque_terms > 0);
     assert_eq!(online_string_verdict(&mut script, &config()), None);
 }
+
+#[test]
+fn guaranteed_constant_pin_folds_a_later_fixed_splice() {
+    let input = r#"(set-logic QF_SLIA)
+(declare-fun s () String)
+(assert (= s "log"))
+(assert (not (not (= (ite (= (str.++ (str.++ (str.substr s 0 2) "t")
+                                      (str.substr s 3 (- (str.len s) 3)))
+                             "lot")
+                        1 0)
+                     0))))
+(assert (>= (- (str.len s) 3) 0))
+(check-sat)
+"#;
+    let mut script = parse_script(input).expect("parse constant-pinned splice");
+    assert_eq!(
+        online_string_verdict(&mut script, &config()),
+        Some(CheckResult::Unsat)
+    );
+}
+
+#[test]
+fn equal_distinct_index_splices_imply_the_in_range_base() {
+    let input = r#"(set-logic QF_SLIA)
+(declare-fun s () String)
+(declare-fun end () String)
+(assert (not (= s end)))
+(assert (= end (str.++ (str.++ (str.substr s 0 2) "t")
+                         (str.substr s 3 (- (str.len s) 3)))))
+(assert (= end (str.++ (str.++ (str.substr s 0 0) "d")
+                         (str.substr s 1 (- (str.len s) 1)))))
+(assert (>= (- (str.len s) 1) 0))
+(check-sat)
+"#;
+    let mut script = parse_script(input).expect("parse equal distinct-index splices");
+    assert_eq!(
+        online_string_verdict(&mut script, &config()),
+        Some(CheckResult::Unsat)
+    );
+}
+
+#[test]
+fn out_of_range_equal_splices_do_not_imply_the_base() {
+    let input = r#"(set-logic QF_SLIA)
+(declare-fun s () String)
+(declare-fun end () String)
+(assert (= s ""))
+(assert (= end "x"))
+(assert (not (= s end)))
+(assert (= end (str.++ (str.++ (str.substr s 0 0) "x")
+                         (str.substr s 1 (- (str.len s) 1)))))
+(assert (= end (str.++ (str.++ (str.substr s 0 2) "x")
+                         (str.substr s 3 (- (str.len s) 3)))))
+(check-sat)
+"#;
+    let mut script = parse_script(input).expect("parse out-of-range splice model");
+    assert_ne!(
+        online_string_verdict(&mut script, &config()),
+        Some(CheckResult::Unsat)
+    );
+    assert!(!script.fixed_splice_semantic_unsat);
+}
+
+#[test]
+fn exact_splice_conflict_survives_an_unrelated_skeleton_decline() {
+    let input = r#"(set-logic QF_SLIA)
+(declare-fun s () String)
+(assert (= s "lot"))
+(assert (= (str.++ (str.++ (str.substr s 0 0) "l")
+                    (str.substr s 1 (- (str.len s) 1)))
+           "log"))
+(assert (= (str.len s) 3))
+(check-sat)
+"#;
+    let script = parse_script(input).expect("parse independent fixed-splice conflict");
+    assert!(script.word_skeleton.is_empty());
+    assert!(script.fixed_splice_semantic_unsat);
+    assert_eq!(
+        solve_smtlib(input, &config())
+            .expect("solve independent fixed-splice conflict")
+            .result,
+        CheckResult::Unsat
+    );
+}
+
+#[test]
+fn exact_splice_disequality_conflict_survives_an_unrelated_skeleton_decline() {
+    let input = r#"(set-logic QF_SLIA)
+(declare-fun s () String)
+(assert (= s "log"))
+(assert (not (= (str.++ (str.++ (str.substr s 0 2) "t")
+                         (str.substr s 3 (- (str.len s) 3)))
+                "lot")))
+(assert (= (str.len s) 3))
+(check-sat)
+"#;
+    let script = parse_script(input).expect("parse independent fixed-splice disequality");
+    assert!(script.word_skeleton.is_empty());
+    assert!(script.fixed_splice_semantic_unsat);
+    assert_eq!(
+        solve_smtlib(input, &config())
+            .expect("solve independent fixed-splice disequality")
+            .result,
+        CheckResult::Unsat
+    );
+}
+
+#[test]
+fn satisfiable_splice_mutation_does_not_set_the_semantic_refuter() {
+    let input = r#"(set-logic QF_SLIA)
+(declare-fun s () String)
+(assert (= s "lot"))
+(assert (= (str.++ (str.++ (str.substr s 0 0) "l")
+                    (str.substr s 1 (- (str.len s) 1)))
+           "lot"))
+(assert (= (str.len s) 3))
+(check-sat)
+"#;
+    let script = parse_script(input).expect("parse satisfiable fixed-splice mutation");
+    assert!(script.word_skeleton.is_empty());
+    assert!(!script.fixed_splice_semantic_unsat);
+    assert_ne!(
+        solve_smtlib(input, &config())
+            .expect("solve satisfiable fixed-splice mutation")
+            .result,
+        CheckResult::Unsat
+    );
+}
+
+#[test]
+fn scoped_splice_conflict_does_not_escape_a_pop() {
+    let input = r#"(set-logic QF_SLIA)
+(declare-fun s () String)
+(assert (= s "lot"))
+(push 1)
+(assert (= (str.++ (str.++ (str.substr s 0 0) "l")
+                    (str.substr s 1 (- (str.len s) 1)))
+           "log"))
+(pop 1)
+(check-sat)
+"#;
+    let script = parse_script(input).expect("parse scoped fixed-splice mutation");
+    assert!(!script.fixed_splice_semantic_unsat);
+    assert_ne!(
+        solve_smtlib(input, &config())
+            .expect("solve scoped fixed-splice mutation")
+            .result,
+        CheckResult::Unsat
+    );
+}
