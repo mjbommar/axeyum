@@ -318,6 +318,60 @@ fn front_door_pyex_constant_int_ite_alias_unsat() {
     assert_eq!(verdict(s), CheckResult::Unsat);
 }
 
+#[test]
+fn front_door_pyex_empty_length_alias_sat() {
+    // A real PyEx residual shape: the triple negation forces `value` empty and
+    // the second integer-valued alias forces the independent key equality.
+    let s = r#"(set-logic QF_SLIA)
+(declare-fun key () String)
+(declare-fun value () String)
+(assert (and
+  (not (not (not (= (ite (= (str.len value) 0) 1 0) 0))))
+  (not (= (ite (= key "connection") 1 0) 0))))
+(check-sat)"#;
+    assert!(matches!(verdict(s), CheckResult::Sat(_)));
+}
+
+#[test]
+fn front_door_pyex_indexof_not_found_alias_sat() {
+    // `indexof(value, "=", 0) != -1` is exactly constant-word containment. The
+    // comma is independently forbidden, so `value = "="` is a replaying model.
+    let s = r#"(set-logic QF_SLIA)
+(declare-fun value () String)
+(assert (and
+  (not (not (not (= (ite (not (= (str.indexof value "=" 0) (- 1))) 1 0) 0))))
+  (not (not (= (ite (str.contains value ",") 1 0) 0)))))
+(check-sat)"#;
+    assert!(matches!(verdict(s), CheckResult::Sat(_)));
+}
+
+#[test]
+fn front_door_indexof_not_found_conflict_is_unsat() {
+    let s = r#"(set-logic QF_SLIA)
+(declare-fun value () String)
+(assert (= (str.indexof value "=" 0) (- 1)))
+(assert (str.contains value "="))
+(check-sat)"#;
+    assert_eq!(verdict(s), CheckResult::Unsat);
+}
+
+#[test]
+fn front_door_first_and_last_character_atoms_are_exact() {
+    let sat = r#"(set-logic QF_SLIA)
+(declare-fun value () String)
+(assert (= (str.at value 0) "a"))
+(assert (= (str.at value (- (str.len value) 1)) "b"))
+(check-sat)"#;
+    assert!(matches!(verdict(sat), CheckResult::Sat(_)));
+
+    let unsat = r#"(set-logic QF_SLIA)
+(declare-fun value () String)
+(assert (= (str.at value 0) "a"))
+(assert (= (str.at value 0) "b"))
+(check-sat)"#;
+    assert_eq!(verdict(unsat), CheckResult::Unsat);
+}
+
 // ---------- over-cap (word-first fallback) disjunctive shapes ----------
 //
 // String literals over `STRING_MAX_LEN` (8) make the *bounded* parse decline, so
