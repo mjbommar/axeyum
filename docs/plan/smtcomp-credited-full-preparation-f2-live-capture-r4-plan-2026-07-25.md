@@ -1,0 +1,143 @@
+# SMT-COMP credited full-population F2 live-capture R4 plan
+
+Status: preregistered correction; implementation, integration, and live F2 are
+prohibited
+
+Date: 2026-07-25
+
+Parent:
+[F2 live-capture plan](smtcomp-credited-full-preparation-f2-live-capture-plan-2026-07-24.md)
+
+Prior corrections:
+[R1](smtcomp-credited-full-preparation-f2-live-capture-r1-plan-2026-07-24.md),
+[R2](smtcomp-credited-full-preparation-f2-live-capture-r2-plan-2026-07-24.md),
+and
+[R3](smtcomp-credited-full-preparation-f2-live-capture-r3-plan-2026-07-25.md)
+
+Durability authority:
+[accepted ADR-0344](../research/09-decisions/adr-0344-preregister-resumable-distributed-benchmark-execution.md)
+
+## Why this correction exists
+
+The R3 readiness runner correctly replaces the volatile frontier destination,
+but it constructs the rest of each gate subprocess environment by copying the
+complete ambient `os.environ`. A bounded source audit demonstrated that both
+`RUSTFLAGS=--cfg axeyum_unregistered_gate_flag` and
+`AXEYUM_GLAURUNG_QFBV_AUTO_DISCOVER=0` survive unchanged in the child mapping.
+The first can change compiled code; the second can turn a normally discovered
+real-data gate into an explicit skip. Loader/compiler overrides, Python user
+site configuration, and unrelated credentials would also cross this boundary
+without appearing in the sealed gate observation.
+
+Consequently, the current C0 record proves the command spelling, exit code,
+output identities, commit, and clean tree, but not the execution environment
+that gave the command those semantics. This is an authority gap, not evidence
+that any retained gate was malicious or incorrect. No live F2 root exists and
+no host, sentinel, NAS, admission, allocation, or solver-wave action was used
+to find it.
+
+R4 closes only the registered-gate environment and executable-identity gap.
+All C0--C5, R1--R3, exact-main, clean-tree, frontier-ratchet, and no-launch
+requirements remain unchanged.
+
+## R4.1: constructed non-secret gate environment
+
+The readiness runner must build each gate subprocess environment from scratch.
+It must not begin with `os.environ`, and it must not pass arbitrary
+`AXEYUM_*`, `GLAURUNG_*`, Cargo/Rust compiler flags, dynamic-loader settings,
+Python path/user-site settings, shell hooks, or credential variables.
+
+The constructed mapping contains only:
+
+- canonical account/runtime discovery required to execute the local toolchain:
+  `HOME`, `USER`, `LOGNAME`, `PATH`, `CARGO_HOME`, `RUSTUP_HOME`, and, when the
+  registered user-systemd session exists, `XDG_RUNTIME_DIR` and
+  `DBUS_SESSION_BUS_ADDRESS`;
+- fixed locale/runtime values: `LANG=C.UTF-8`, `LC_ALL=C.UTF-8`, `TZ=UTC`,
+  `PYTHONHASHSEED=0`, `PYTHONNOUSERSITE=1`, `PYTHONWARNINGS=error`,
+  `NO_COLOR=1`, and `CARGO_TERM_COLOR=never`;
+- the explicit default regular-gate policy:
+  `AXEYUM_GLAURUNG_QFBV_AUTO_DISCOVER=1` and
+  `AXEYUM_GLAURUNG_QFBV_MEMORY_GB=4`; and
+- the unique external `AXEYUM_PROGRESS_FRONTIER_ARTIFACT_DIR` already required
+  by R3.
+
+Account fields are derived from the effective uid rather than copied from
+ambient text. `PATH` is constructed from the canonical Cargo bin directory and
+fixed system tool directories; empty, relative, or caller-prepended components
+are forbidden. The user-systemd values are derived from the effective uid and
+accepted only when their canonical runtime directory and bus socket exist.
+An unavailable required tool or runtime mismatch rejects the gate rather than
+falling back to the caller environment.
+
+The child mapping intentionally contains no API keys, tokens, proxy settings,
+`LD_PRELOAD`, `LD_LIBRARY_PATH`, `RUSTFLAGS`, `CARGO_ENCODED_RUSTFLAGS`,
+`RUSTC_WRAPPER`, `CARGO_TARGET_DIR`, `RUST_TEST_THREADS`, `PYTHONPATH`, or
+caller-selected gate controls. This list is explanatory, not a deny-list: the
+positive allow-list is authoritative.
+
+## R4.2: sealed executable and environment identity
+
+The gate-observation schema advances to v2. In addition to the existing exact
+registered command and output identities, each row records:
+
+- the complete constructed non-secret environment mapping and its canonical
+  SHA-256;
+- the canonical resolved executable path, byte count, and SHA-256; and
+- the unchanged logical command (`just check` or
+  `./scripts/check-smtcomp-resume.sh`).
+
+The runner resolves the executable through the constructed environment before
+launch and executes that exact canonical file. For the repository script, the
+resolved path must be the registered tracked path below the exact source root.
+For `just`, the executable must resolve through the constructed canonical
+`PATH`. Symlink, non-regular, non-executable, path, byte, or environment drift
+rejects. Validation accepts no unregistered environment key and recomputes the
+environment and executable identities from the sealed row.
+
+This schema is safe to advance because no live F2 readiness or preparation
+root exists. Existing fixture-only gate records are regenerated by tests and
+receive no measurement credit.
+
+## R4.3: mutation and integration gates
+
+Focused coverage must prove:
+
+1. caller-supplied semantic flags, loader settings, skip controls, Python path,
+   target overrides, and representative credential names are absent;
+2. the fixed locale, Python, regular-gate, Cargo-account, and R3 frontier values
+   are exact, and an inherited frontier destination is replaced;
+3. `PATH` has only canonical absolute components and the launched executable
+   equals the path and bytes sealed in the observation;
+4. environment, executable-path, executable-byte-count, and executable-hash
+   mutations reject;
+5. both registered logical commands, gate order, byte-exact output hashes,
+   clean-tree checks, and frontier isolation remain unchanged; and
+6. the F2 module still has no admission, allocation, host-unit, or solver-wave
+   path.
+
+Required gates are:
+
+```sh
+PYTHONWARNINGS=error python3 -m unittest \
+  scripts.tests.test_smtcomp_full_population
+./scripts/check-smtcomp-resume.sh
+python3 scripts/gen-smtcomp-resume-contract.py --check
+just check-scope origin/main
+./scripts/check-links.sh
+```
+
+The final corrected topic must pass `just check` with a clean post-gate
+worktree before integration. Neither preregistration nor implementation
+authorizes live F2. The integration owner must land the complete corrected
+stack on repaired green exact main before C0 may run, and C5 remains separately
+authorized after that gate.
+
+## Stop conditions
+
+Stop without widening the allow-list if a required tool is unavailable, the
+clean environment changes a gate result, user-systemd runtime identity is
+ambiguous, a gate mutates tracked bytes, or any mutation control fails.
+Preserve the rejection and amend source-first. Do not restore ambient flags,
+pass credentials for convenience, weaken a regular gate to recover green, or
+perform any live F2 action from this topic.
