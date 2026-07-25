@@ -383,6 +383,20 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-25 — F2 R3 preregisters isolation for a gate-generated tracked-file
+  mutation; no live action is authorized.** A clean targeted reproduction
+  passed the `frontier_bv_reduction` test at 40 over baseline 30, then changed
+  39 timing rows in the tracked `bv_reduction.json`. The complete R2 gate had
+  likewise rewritten all five frontier timing artifacts before their manual
+  restoration. Because live readiness requires a clean exact-main worktree
+  after each registered gate, current `just check` behavior makes C0
+  impossible to seal without an impermissible repository cleanup. The
+  [R3 plan](docs/plan/smtcomp-credited-full-preparation-f2-live-capture-r3-plan-2026-07-25.md)
+  freezes an explicit temporary frontier-artifact destination for readiness
+  gates while preserving the exact command, frontier ratchets, output, and
+  clean-tree rule. Implementation, integration, green main, and live C5 all
+  remain open; the NAS attempt namespace is still absent.
+
 - **2026-07-24 — the frozen C5 external inputs pass a comprehensive read-only
   audit; this is not launch authority.** The
   [input audit](docs/plan/smtcomp-credited-full-preparation-f2-input-audit-2026-07-24.md)

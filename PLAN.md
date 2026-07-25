@@ -906,7 +906,14 @@ twenty-four is fully gated, pushed, integrated byte-for-byte, and documented.
 > sentinel inputs while leaving the F2 attempt namespace absent. This closes
 > bounded input-drift uncertainty only: it did not rehash the 15.1 GB selected
 > payload, build or run Axeyum, probe hosts, or execute sentinels, so C0 and
-> live C5 remain open.
+> live C5 remain open. A clean 2026-07-25 reproduction then exposed one
+> additional C0 defect: the registered `just check` succeeds but rewrites
+> tracked hardware-relative frontier timing JSON, so the readiness operator's
+> mandatory post-gate clean-tree check rejects. The source-first
+> [R3 plan](docs/plan/smtcomp-credited-full-preparation-f2-live-capture-r3-plan-2026-07-25.md)
+> preregisters a temporary artifact destination that preserves the exact gate
+> and ratchets without restoring repository bytes. Implement and integrate R3
+> before any live C5 action.
 > The candidate is not
 > official selection evidence:
 > it still lacks the complete eligibility/status/difficulty policy, official
