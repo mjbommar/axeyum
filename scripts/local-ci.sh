@@ -51,7 +51,7 @@ run() { echo "+ $*" | tee -a "$LOG"; "$@" 2>&1 | tee -a "$LOG"; return "${PIPEST
 rc=0
 # Full parallel, full features, host-sensitive decide tests re-included (they
 # only failed on slow hosted runners) — the `local` nextest profile does that.
-run cargo nextest run --profile local --workspace --all-features || rc=$?
+run cargo nextest run --profile local --workspace --all-features --no-fail-fast || rc=$?
 # nextest does not run doctests.
 run cargo test --workspace --all-features --doc || rc=$?
 
