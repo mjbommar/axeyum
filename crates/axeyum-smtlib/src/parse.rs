@@ -1945,6 +1945,15 @@ fn word_equality(
     saw_seq_atom: &mut bool,
     mem: &mut MembershipCollector,
 ) -> Option<TermId> {
+    // PyEx materializes a Boolean predicate as an integer-valued conditional,
+    // typically `(= (ite C 1 0) 0)`. Constant branches make this an exact Boolean
+    // formula over C, so retain it in the word skeleton before trying Seq equality.
+    if items.len() == 2
+        && let Some(booleanized) =
+            constant_int_ite_equality(arena, items, vars, bool_vars, saw_seq_atom, mem)
+    {
+        return Some(booleanized);
+    }
     if let Some(terms) = word_terms(arena, items, vars) {
         let mut acc: Option<TermId> = None;
         for &term in &terms[1..] {
@@ -1973,6 +1982,31 @@ fn word_equality(
         });
     }
     acc
+}
+
+/// Exactly folds `(= (ite C a b) k)` (or its symmetric orientation) when `a`,
+/// `b`, and `k` are integer literals, leaving `C` as Boolean skeleton structure.
+fn constant_int_ite_equality(
+    arena: &mut TermArena,
+    items: &[SExpr],
+    vars: &BTreeMap<String, (SymbolId, TermId)>,
+    bool_vars: &BTreeMap<String, TermId>,
+    saw_seq_atom: &mut bool,
+    mem: &mut MembershipCollector,
+) -> Option<TermId> {
+    let (ite, expected) = match (items[0].list(), parse_int_literal(&items[1])) {
+        (Some(ite), Some(expected)) => (ite, expected),
+        _ => (items[1].list()?, parse_int_literal(&items[0])?),
+    };
+    if ite.len() != 4 || ite[0].atom() != Some("ite") {
+        return None;
+    }
+    let then_value = parse_int_literal(&ite[2])?;
+    let else_value = parse_int_literal(&ite[3])?;
+    let condition = word_bool(arena, &ite[1], vars, bool_vars, saw_seq_atom, mem)?;
+    let when_true = arena.bool_const(then_value == expected);
+    let when_false = arena.bool_const(else_value == expected);
+    arena.ite(condition, when_true, when_false).ok()
 }
 
 /// Translates a `(str.in_re X R)` atom into its membership proxy for [`word_bool`]
