@@ -1965,6 +1965,47 @@ fn regex_membership_to_int_keeps_leading_zero_witness() {
     ));
 }
 
+/// The Noetzli small-rewrite corpus asserts the negation of exact SMT-LIB string
+/// identities. Normalize these before the bounded encoder expands them: each row
+/// is a genuine, bound-independent contradiction.
+#[test]
+fn string_rewrite_identities_close_noetzli_regressions() {
+    let regressions = [
+        r#"
+(set-logic QF_SLIA)
+(declare-const x String)
+(declare-const z Int)
+(assert (not (= (str.suffixof x (str.substr "A" z z)) (= x ""))))
+(check-sat)
+"#,
+        r#"
+(set-logic QF_SLIA)
+(declare-const x String)
+(declare-const y String)
+(assert (not (= (str.contains x (str.replace x x y)) (str.contains x y))))
+(check-sat)
+"#,
+        r#"
+(set-logic QF_SLIA)
+(declare-const x String)
+(declare-const y String)
+(assert (not (= (str.prefixof x (str.replace x "" y))
+                (str.prefixof x (str.++ y x)))))
+(check-sat)
+"#,
+        r#"
+(set-logic QF_SLIA)
+(declare-const x String)
+(declare-const y String)
+(assert (not (= (str.++ x (str.++ "" y)) (str.++ x y))))
+(check-sat)
+"#,
+    ];
+    for text in regressions {
+        assert_eq!(run(text).result, CheckResult::Unsat, "{text}");
+    }
+}
+
 /// A satisfiable retained subset cannot justify `sat` when a dropped conjunct
 /// exists. Here the dropped self-disequality makes the full script unsatisfiable;
 /// the membership-only route must decline rather than expose its local witness.
