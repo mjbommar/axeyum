@@ -16,6 +16,7 @@ use axeyum_ir::{
     ArraySortKey, FuncId, MAX_BV_WIDTH, Op, Rational, Sort, SymbolId, TermArena, TermId, TermNode,
     WideUint,
 };
+use axeyum_strings::regex::Regex;
 
 use crate::SmtError;
 use crate::sexpr::{SExpr, read_all};
@@ -599,6 +600,11 @@ pub fn parse_script(input: &str) -> Result<Script, SmtError> {
         //
         // A [`SmtError::Syntax`] is malformed input — never a capacity decline — so
         // it is propagated as-is (no fallback).
+        Err(error @ (SmtError::Unsupported(_) | SmtError::Ir(_)))
+            if !word_only_fallback_within_stack_budget(input) =>
+        {
+            Err(error)
+        }
         Err(error @ (SmtError::Unsupported(_) | SmtError::Ir(_))) => match parse_word_only(input) {
             Some(mut script) => {
                 script.word_only_fallback = Some(error.to_string());
@@ -608,6 +614,53 @@ pub fn parse_script(input: &str) -> Result<Script, SmtError> {
         },
         Err(error) => Err(error),
     }
+}
+
+/// Maximum source nesting reparsed by the optional word-only fallback. The bounded
+/// parser has already declined at this point; reparsing much deeper generated terms
+/// can exhaust the native stack while recursively translating or destroying their
+/// S-expression tree. Returning the original bounded error is fail-closed. The scan
+/// ignores parentheses in comments, strings, and quoted symbols.
+fn word_only_fallback_within_stack_budget(input: &str) -> bool {
+    const MAX_DEPTH: u32 = 2_048;
+    let bytes = input.as_bytes();
+    let mut depth = 0_u32;
+    let mut i = 0_usize;
+    let mut string = false;
+    let mut quoted = false;
+    let mut comment = false;
+    while i < bytes.len() {
+        let byte = bytes[i];
+        if comment {
+            comment = byte != b'\n';
+        } else if string {
+            if byte == b'"' {
+                if bytes.get(i + 1) == Some(&b'"') {
+                    i += 1;
+                } else {
+                    string = false;
+                }
+            }
+        } else if quoted {
+            quoted = byte != b'|';
+        } else {
+            match byte {
+                b';' => comment = true,
+                b'"' => string = true,
+                b'|' => quoted = true,
+                b'(' => {
+                    depth = depth.saturating_add(1);
+                    if depth > MAX_DEPTH {
+                        return false;
+                    }
+                }
+                b')' => depth = depth.saturating_sub(1),
+                _ => {}
+            }
+        }
+        i += 1;
+    }
+    true
 }
 
 /// The bounded ADR-0029 parse: the full slice parser (string literals ≤
@@ -1177,13 +1230,13 @@ fn build_word_skeleton(arena: &mut TermArena, exprs: &[SExpr]) -> Option<WordSke
         mem.concat_defs.push(arena.eq(left, right).ok()?);
         saw_seq_atom = true;
     }
-    for e in exprs {
-        let Some(items) = e.list() else { continue };
-        if items.first().and_then(SExpr::atom) == Some("assert") {
-            let [_, body] = items else { return None };
-            let t = word_bool(arena, body, &vars, &bool_vars, &mut saw_seq_atom, &mut mem)?;
-            assertions.push(t);
-        }
+    let conjuncts = guaranteed_top_level_conjuncts(exprs);
+    if conjuncts.len() > 2_048 {
+        return None;
+    }
+    for body in conjuncts {
+        let t = word_bool(arena, body, &vars, &bool_vars, &mut saw_seq_atom, &mut mem)?;
+        assertions.push(t);
     }
 
     // Conjoin the definitional equations minted for `str.in_re` over `str.++`
@@ -1191,6 +1244,16 @@ fn build_word_skeleton(arena: &mut TermArena, exprs: &[SExpr]) -> Option<WordSke
     // they name the concatenation the membership constrains and must hold in the
     // model the online route replays.
     assertions.extend(mem.concat_defs.iter().copied());
+
+    // Keep pathological generated conjunctions below the depth at which the
+    // downstream SAT driver can overflow the native call stack while preparing
+    // clauses. This route is optional: declining preserves the original bounded
+    // parse error as `unknown`, whereas admitting an unsafe skeleton can abort the
+    // competition process. Dense PyEx rows that move the population are well below
+    // this ceiling (roughly 600 conjuncts in the measured family).
+    if assertions.len() > 2_048 {
+        return None;
+    }
 
     // Require at least one genuine `Seq` equality atom **or** a membership atom —
     // otherwise this is not a string problem the online route can decide.
@@ -2075,22 +2138,33 @@ fn word_contains_atom(
     if cps.is_empty() {
         return Some(arena.bool_const(true));
     }
-    if cps.len() == 1
-        && let Some(base) = after_first_occurrence_base(&items[1], &items[2])
-    {
-        let view = content_view_skeleton(base, vars, &cps)?;
+    if let Some((base, delimiter)) = before_first_occurrence_parts(&items[1]) {
+        let [delimiter] = delimiter[..] else {
+            return None;
+        };
+        let [target] = cps[..] else { return None };
+        if delimiter == target {
+            return Some(arena.bool_const(false));
+        }
+        let view = content_view_skeleton(base, vars, &[delimiter, target])?;
+        let not_delimiter =
+            || Regex::inter(Regex::any_char(), Regex::comp(Regex::character(delimiter)));
+        let before_delimiter = Regex::concat(
+            Regex::concat(
+                Regex::concat(Regex::star(not_delimiter()), Regex::character(target)),
+                Regex::star(not_delimiter()),
+            ),
+            Regex::concat(Regex::character(delimiter), Regex::star(Regex::any_char())),
+        );
         return mem.atom(
             arena,
             view.operand,
-            around_exact_view(view, contains_twice_pattern_regex(cps[0])),
+            around_exact_view(view, before_delimiter),
         );
     }
-    let view = content_view_skeleton(&items[1], vars, &cps)?;
-    mem.atom(
-        arena,
-        view.operand,
-        around_exact_view(view, contains_pattern_regex(&cps)),
-    )
+    let (operand, regex) =
+        regex_on_after_first_views(&items[1], vars, &cps, contains_pattern_regex(&cps), 0)?;
+    mem.atom(arena, operand, regex)
 }
 
 /// Translates a chained word equality or Boolean equivalence for [`word_bool`].
@@ -2163,13 +2237,21 @@ fn word_terms_with_opaque(
     expressions
         .iter()
         .map(|expression| {
+            // Preserve every directly representable word expression in the
+            // skeleton. In particular, do not replace a declared variable by a
+            // constant inferred from an asserted equality: doing so would turn
+            // `s = "literal"` into `"literal" = "literal"` and erase the model
+            // binding that membership atoms on `s` must share. Constant propagation
+            // is needed only to give an exact meaning to a fixed-splice expression
+            // that the ordinary word translator cannot represent.
+            if let Some(term) = word_str_expr(arena, expression, vars) {
+                return Some(term);
+            }
             if let Some(value) = collector.pinned_word(expression) {
                 return seq_from_code_points(arena, &value);
             }
-            word_str_expr(arena, expression, vars).or_else(|| {
-                fixed_splice_split(expression.list()?)?;
-                collector.opaque_word(arena, expression)
-            })
+            fixed_splice_split(expression.list()?)?;
+            collector.opaque_word(arena, expression)
         })
         .collect()
 }
@@ -2208,6 +2290,9 @@ fn exact_content_equality_ordered(
     let head = app.first().and_then(SExpr::atom)?;
     match head {
         "str.len" | "seq.len" if app.len() == 2 && parse_int_literal(constant) == Some(0) => {
+            if let Some((operand, regex)) = first_occurrence_empty_view(&app[1], vars) {
+                return mem.atom(arena, operand, regex);
+            }
             let view = suffix_view_skeleton(&app[1], vars)?;
             mem.atom(
                 arena,
@@ -2237,6 +2322,10 @@ fn exact_content_equality_ordered(
             if value.len() > 1 {
                 return Some(arena.bool_const(false));
             }
+            if let Some((operand, regex)) = first_occurrence_at_view(&app[1], &app[2], &value, vars)
+            {
+                return mem.atom(arena, operand, regex);
+            }
             let (view, first) = at_boundary_view(&app[1], &app[2], vars, &value)?;
             let regex = match value.as_slice() {
                 [] => at_most_length_regex(view.total_dropped()?),
@@ -2248,6 +2337,122 @@ fn exact_content_equality_ordered(
         }
         _ => None,
     }
+}
+
+/// Exact language for a before/after-first-occurrence view being empty.
+fn first_occurrence_empty_view(
+    expression: &SExpr,
+    vars: &BTreeMap<String, (SymbolId, TermId)>,
+) -> Option<(SymbolId, Regex)> {
+    if let Some((base, needle)) = before_first_occurrence_parts(expression) {
+        let view = content_view_skeleton(base, vars, &needle)?;
+        let empty_prefix = if needle.is_empty() {
+            Regex::star(Regex::any_char())
+        } else {
+            Regex::union(
+                Regex::comp(contains_pattern_regex(&needle)),
+                prefix_pattern_regex(&needle),
+            )
+        };
+        return Some((view.operand, around_exact_view(view, empty_prefix)));
+    }
+    let (base, needle) = after_first_occurrence_parts(expression)?;
+    let view = content_view_skeleton(base, vars, &[needle])?;
+    let not_needle = Regex::inter(Regex::any_char(), Regex::comp(Regex::character(needle)));
+    let first_at_end = Regex::concat(Regex::star(not_needle), Regex::character(needle));
+    Some((
+        view.operand,
+        around_exact_view(view, Regex::union(Regex::empty(), first_at_end)),
+    ))
+}
+
+/// Exact first/last-character language for before/after-first-occurrence views.
+fn first_occurrence_at_view(
+    expression: &SExpr,
+    index: &SExpr,
+    value: &[u32],
+    vars: &BTreeMap<String, (SymbolId, TermId)>,
+) -> Option<(SymbolId, Regex)> {
+    let first = parse_int_literal(index) == Some(0);
+    let last = index.list().is_some_and(|index| {
+        index.len() == 3
+            && index[0].atom() == Some("-")
+            && parse_int_literal(&index[2]) == Some(1)
+            && index[1]
+                .list()
+                .is_some_and(|len| len.len() == 2 && len[1] == *expression)
+    });
+    if !first && !last {
+        return None;
+    }
+    if let Some((base, delimiter)) = after_first_occurrence_parts(expression) {
+        let view = content_view_skeleton(base, vars, &[delimiter])?;
+        let not_delimiter =
+            || Regex::inter(Regex::any_char(), Regex::comp(Regex::character(delimiter)));
+        let no_delimiter = Regex::comp(contains_pattern_regex(&[delimiter]));
+        let regex = match value {
+            [] => Regex::union(
+                Regex::empty(),
+                Regex::concat(Regex::star(not_delimiter()), Regex::character(delimiter)),
+            ),
+            [c] if first => Regex::union(
+                Regex::inter(no_delimiter, prefix_pattern_regex(&[*c])),
+                Regex::concat(
+                    Regex::concat(
+                        Regex::concat(Regex::star(not_delimiter()), Regex::character(delimiter)),
+                        Regex::character(*c),
+                    ),
+                    Regex::star(Regex::any_char()),
+                ),
+            ),
+            [c] => Regex::union(
+                Regex::inter(no_delimiter, suffix_pattern_regex(&[*c])),
+                Regex::concat(
+                    Regex::concat(
+                        Regex::concat(Regex::star(not_delimiter()), Regex::character(delimiter)),
+                        Regex::star(Regex::any_char()),
+                    ),
+                    Regex::character(*c),
+                ),
+            ),
+            _ => return None,
+        };
+        return Some((view.operand, around_exact_view(view, regex)));
+    }
+    let (base, needle) = before_first_occurrence_parts(expression)?;
+    let view = content_view_skeleton(base, vars, &needle)?;
+    let regex = match value {
+        [] if needle.is_empty() => Regex::star(Regex::any_char()),
+        [] => Regex::union(
+            Regex::comp(contains_pattern_regex(&needle)),
+            prefix_pattern_regex(&needle),
+        ),
+        [c] if first => Regex::inter(
+            Regex::inter(
+                contains_pattern_regex(&needle),
+                Regex::comp(prefix_pattern_regex(&needle)),
+            ),
+            prefix_pattern_regex(&[*c]),
+        ),
+        [c] => {
+            let [needle] = needle[..] else { return None };
+            if *c == needle {
+                Regex::none()
+            } else {
+                let not_needle =
+                    Regex::inter(Regex::any_char(), Regex::comp(Regex::character(needle)));
+                Regex::concat(
+                    Regex::concat(
+                        Regex::concat(Regex::star(not_needle), Regex::character(*c)),
+                        Regex::character(needle),
+                    ),
+                    Regex::star(Regex::any_char()),
+                )
+            }
+        }
+        _ => return None,
+    };
+    Some((view.operand, around_exact_view(view, regex)))
 }
 
 /// A declared string variable viewed after dropping exactly `dropped` leading
@@ -2442,6 +2647,61 @@ fn after_first_occurrence_base<'a>(e: &'a SExpr, needle: &SExpr) -> Option<&'a S
     let len = length[1].list()?;
     (len.len() == 2 && matches!(len[0].atom(), Some("str.len" | "seq.len")) && len[1] == *base)
         .then_some(base)
+}
+
+/// The base and one-code-point needle of an exact suffix strictly after its first
+/// occurrence. This is the self-describing counterpart of
+/// [`after_first_occurrence_base`].
+fn after_first_occurrence_parts(e: &SExpr) -> Option<(&SExpr, u32)> {
+    let suffix = e.list()?;
+    if suffix.len() != 4 || suffix[0].atom() != Some("str.substr") {
+        return None;
+    }
+    let split = strip_subtracted_zero(&suffix[2]).list()?;
+    if split.len() != 3 || split[0].atom() != Some("+") {
+        return None;
+    }
+    let index = if parse_int_literal(&split[1]) == Some(1) {
+        &split[2]
+    } else if parse_int_literal(&split[2]) == Some(1) {
+        &split[1]
+    } else {
+        return None;
+    };
+    let index = index.list()?;
+    if index.len() != 4
+        || index[0].atom() != Some("str.indexof")
+        || index[1] != suffix[1]
+        || parse_int_literal(&index[3]) != Some(0)
+    {
+        return None;
+    }
+    let [needle] = literal_pattern_cps(&index[2])?[..] else {
+        return None;
+    };
+    let base = after_first_occurrence_base(e, &index[2])?;
+    Some((base, needle))
+}
+
+/// The base and constant needle of the exact prefix before its first occurrence:
+/// `substr(s, 0, indexof(s, needle, 0))` (allowing generated `- 0` wrappers).
+fn before_first_occurrence_parts(e: &SExpr) -> Option<(&SExpr, Vec<u32>)> {
+    let prefix = e.list()?;
+    if prefix.len() != 4
+        || prefix[0].atom() != Some("str.substr")
+        || parse_int_literal(&prefix[2]) != Some(0)
+    {
+        return None;
+    }
+    let index = strip_subtracted_zero(&prefix[3]).list()?;
+    if index.len() != 4
+        || index[0].atom() != Some("str.indexof")
+        || index[1] != prefix[1]
+        || parse_int_literal(&index[3]) != Some(0)
+    {
+        return None;
+    }
+    Some((&prefix[1], literal_pattern_cps(&index[2])?))
 }
 
 fn replacement_preserves(needle: &[u32], replacement: &[u32], protected: &[u32]) -> bool {
@@ -2672,19 +2932,6 @@ fn contains_pattern_regex(cps: &[u32]) -> axeyum_strings::regex::Regex {
     Regex::concat(Regex::concat(any(), literal_pattern_regex(cps)), any())
 }
 
-/// Strings containing a code point at least twice.
-fn contains_twice_pattern_regex(c: u32) -> axeyum_strings::regex::Regex {
-    use axeyum_strings::regex::Regex;
-    let any = || Regex::star(Regex::any_char());
-    Regex::concat(
-        Regex::concat(
-            Regex::concat(any(), Regex::character(c)),
-            Regex::concat(any(), Regex::character(c)),
-        ),
-        any(),
-    )
-}
-
 /// Prefixes `tail` with exactly `count` arbitrary characters.
 fn after_exact_prefix(
     count: u32,
@@ -2718,6 +2965,47 @@ fn around_exact_view(
             ),
         )
     }
+}
+
+/// Pulls a regular-language predicate backwards through one or more generated
+/// `suffix-after-first-occurrence` views. If the delimiter is absent, SMT-LIB's
+/// total `indexof = -1` makes the generated split zero and the view is the whole
+/// base; if present, the view is the suffix following the first delimiter.
+fn regex_on_after_first_views(
+    expression: &SExpr,
+    vars: &BTreeMap<String, (SymbolId, TermId)>,
+    protected: &[u32],
+    language: axeyum_strings::regex::Regex,
+    depth: u32,
+) -> Option<(SymbolId, axeyum_strings::regex::Regex)> {
+    use axeyum_strings::regex::Regex;
+    if depth > 16 {
+        return None;
+    }
+    if let Some(view) = content_view_skeleton(expression, vars, protected) {
+        return Some((view.operand, around_exact_view(view, language)));
+    }
+    if let Some(base) = preserved_replace_base(expression, protected) {
+        return regex_on_after_first_views(base, vars, protected, language, depth + 1);
+    }
+    let (base, delimiter) = after_first_occurrence_parts(expression)?;
+    let no_delimiter = Regex::comp(contains_pattern_regex(&[delimiter]));
+    let not_delimiter = Regex::inter(Regex::any_char(), Regex::comp(Regex::character(delimiter)));
+    let preimage = Regex::union(
+        Regex::inter(no_delimiter, language.clone()),
+        Regex::concat(
+            Regex::concat(Regex::star(not_delimiter), Regex::character(delimiter)),
+            language,
+        ),
+    );
+    // A replacement outside the view may be discarded only when it preserves both
+    // the downstream predicate and this split delimiter. Otherwise changing the
+    // first delimiter could change where the suffix begins.
+    let mut protected = protected.to_vec();
+    if !protected.contains(&delimiter) {
+        protected.push(delimiter);
+    }
+    regex_on_after_first_views(base, vars, &protected, preimage, depth + 1)
 }
 
 /// The exact language of words whose length is at most `maximum`.
@@ -2792,6 +3080,25 @@ fn exact_word_int_comparison(
         // For a non-empty needle, a found index plus one never exceeds the
         // haystack length; absence gives -1 + 1 = 0.
         return Some(arena.bool_const(true));
+    }
+    // `indexof(W, C, 0) >= 0` is exactly `contains(W, C)`. PyEx emits this
+    // redundant well-formedness guard around every dynamically sliced word; keep
+    // its exact regular-language reading instead of dropping the whole skeleton.
+    if let Some(indexof) = strip_subtracted_zero(left).list()
+        && indexof.len() == 4
+        && indexof[0].atom() == Some("str.indexof")
+        && parse_int_literal(&indexof[3]) == Some(0)
+    {
+        let needle = literal_pattern_cps(&indexof[2])?;
+        if needle.is_empty() {
+            return Some(arena.bool_const(true));
+        }
+        let view = content_view_skeleton(&indexof[1], vars, &needle)?;
+        return mem.atom(
+            arena,
+            view.operand,
+            around_exact_view(view, contains_pattern_regex(&needle)),
+        );
     }
     if let Some(len) = left.list()
         && len.len() == 2
