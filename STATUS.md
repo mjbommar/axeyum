@@ -383,6 +383,18 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-25 — Mixed declared-sort equality now combines with LIA instead of
+  declining.** The SMT-LIB front door previously sent function-free
+  carrier-equality + integer-arithmetic formulas toward carrier bit-blasting,
+  and SAT replay also discarded the EUF carrier assignments. The online UFLIA
+  combination now owns those atoms and preserves carrier classes in its model.
+  Two minimal QF_UFLIA regressions move from `unknown` on fresh `main` to the
+  Z3-agreeing `sat` / `unsat` pair (0/2 to 2/2); the complete 33-test affected
+  target passes in 3.19 s. The fixed 300-file official QF_UFLIA slice remains
+  exactly 15 decided with `WRONG=0`, byte-for-verdict identical to fresh
+  `main`: this is a real missing-mechanism fix, not yet a public-slice score
+  increase. General quantified SAT remains the higher-value open frontier.
+
 - **2026-07-24 — Lean execution seals are decoupled from the SMT-owned resume
   filesystem implementation.** The
   [result](docs/plan/lean-execution-filesystem-decoupling-2026-07-24.md)
@@ -8735,6 +8747,12 @@ plan is built and committed on the current branch:
 | P5.5 | External target, measured | **DONE (bounded v1, ADR-0323--0338):** authenticated Tock capture plus eight rechecked dual-DRAT proofs and six replayed controls, UNKNOWN=0, DISAGREE=0. Query time 12.700 s; fresh outer wall 50.745 s; peak RSS 1,256,496 KiB; zero OOM deltas. The committed case study compares exact target validation, universal coverage, trust, effort, artifact boundaries, and limits. No Tock bug was found, so no upstream issue is applicable. This is not a speed or whole-kernel claim. |
 
 ## Changelog
+
+- **2026-07-25 — Combined function-free carrier equality with LIA.** Routed
+  mixed declared-sort/LIA formulas through the online UFLIA solver, classified
+  carrier equalities as EUF atoms, and retained EUF carrier assignments in SAT
+  models. Added front-door SAT and UNSAT regressions; the focused 33-test target
+  and fixed 300-file public-slice comparison are green with zero wrong verdicts.
 
 - **2026-07-24 — Stabilized the repeated MBQI fixed-retry CI failure without
   changing solver behavior.** Both stable runs failed the same semantic test

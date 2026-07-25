@@ -575,6 +575,15 @@ impl Search<'_> {
             }
         }
         if let Some(euf_model) = euf.model(self.arena) {
+            // The LIA half assigns only integer symbols. Preserve the e-graph's
+            // carrier-class assignments too; keeping the well-founded placeholders
+            // installed above would alias every declared-sort constant and make a
+            // valid carrier disequality fail replay.
+            for (symbol, value) in euf_model.iter() {
+                if value.sort() != Sort::Int {
+                    model.set(symbol, value);
+                }
+            }
             for (func, interp) in euf_model.functions() {
                 model.set_function(func, interp.clone());
             }
@@ -854,14 +863,15 @@ pub(crate) fn partition(arena: &TermArena, literals: &[Literal]) -> Option<Parti
                 let (a, b) = (args[0], args[1]);
                 let int = arena.sort_of(a) == Sort::Int;
                 let has_uf = mentions_uf(arena, a) || mentions_uf(arena, b);
+                let carrier = matches!(arena.sort_of(a), Sort::Uninterpreted(_));
                 let linear = int && is_linear_int(arena, a) && is_linear_int(arena, b);
                 if linear {
                     lia.push(lit);
                 }
-                if has_uf || (int && !linear) {
+                if has_uf || carrier || (int && !linear) {
                     euf.push(lit);
                 }
-                if !linear && !has_uf {
+                if !linear && !has_uf && !carrier {
                     // Neither a linear-integer equality nor UF-touching: out of scope
                     // (e.g. a Bool equality, or a non-linear integer equality with no
                     // UF).
@@ -893,7 +903,7 @@ fn is_uflia_theory_atom(arena: &TermArena, term: TermId) -> bool {
             let (a, b) = (args[0], args[1]);
             let int = arena.sort_of(a) == Sort::Int;
             let has_uf = mentions_uf(arena, a) || mentions_uf(arena, b);
-            int || has_uf
+            int || has_uf || matches!(arena.sort_of(a), Sort::Uninterpreted(_))
         }
         _ => false,
     }

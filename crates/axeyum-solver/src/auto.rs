@@ -1929,6 +1929,20 @@ fn dispatch_uf_fast_paths(
             });
         }
     }
+    // Ackermann elimination removes every `Apply` node but can leave a genuinely
+    // mixed carrier-equality + LIA formula: its congruence implications relate
+    // declared-sort argument equalities to integer result equalities. That is
+    // still QF_UFLIA and the online combination handles it directly. Requiring
+    // an applied arithmetic function here made the reduced query fall through to
+    // an impossible carrier bit-blast. SAT remains replay-checked inside the
+    // combination.
+    if features.has_int
+        && features.has_uninterpreted_sort
+        && !features.has_function
+        && let Some(result) = dispatch_uf_arith_online(arena, assertions, config, features, rec)?
+    {
+        return Ok(Some(result));
+    }
     // Arithmetic-sorted uninterpreted functions (QF_UFLIA / QF_UFLRA): decide them
     // by EUF + linear-arithmetic combination. Sound either way — its `unsat` is a
     // relaxation refutation, its `sat`/`unknown` fall through.
