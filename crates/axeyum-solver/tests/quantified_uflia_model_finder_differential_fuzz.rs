@@ -863,14 +863,12 @@ fn one_level_fixed_mbqi_retry_closes_seed_111() {
     let seed = 111_u64;
     let mut rng = Lcg::new(seed);
     let inst = Instance::generate(&mut rng);
-    assert_eq!(z3_decide(&inst), Verdict::Sat);
     let (mut arena, _, y_symbols, _, _, assertions) = inst.build_axeyum();
-    let result = prove_unsat_by_mbqi(
-        &mut arena,
-        &assertions,
-        &SolverConfig::new().with_timeout(AXEYUM_TIMEOUT),
-    )
-    .unwrap();
+    // This is a deterministic completion invariant, not a throughput sample.
+    // The fixed MBQI round/instance caps bound the search independent of host
+    // speed; the surrounding test runner owns any emergency wall timeout. The
+    // differential sweep above retains the separate bounded Z3 adjudication.
+    let result = prove_unsat_by_mbqi(&mut arena, &assertions, &SolverConfig::new()).unwrap();
     let CheckResult::Sat(model) = result else {
         panic!("one guarded fixed-query level must recover seed 111: {result:?}");
     };
