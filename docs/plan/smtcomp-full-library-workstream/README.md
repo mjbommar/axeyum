@@ -427,9 +427,12 @@ gate.
    itself rewrites tracked hardware-relative frontier timing JSON. The
    source-first
    [R3 correction](../smtcomp-credited-full-preparation-f2-live-capture-r3-plan-2026-07-25.md)
-   preregisters a temporary artifact destination for readiness gates without
-   changing the exact gate, ratchets, or clean-tree requirement. Implement and
-   integrate R3 before the separately authorized live capture.
+   is implemented and pushed through `fe32194d`: readiness gates use a unique
+   external temporary artifact destination without changing the exact gate,
+   ratchets, or clean-tree requirement. Focused tests, the 160-test resume
+   aggregate, the scoped gate, and the full `just check` pass; the terminal
+   full gate left the source worktree and tracked frontier artifacts clean.
+   Integrate R3 before the separately authorized live capture.
 
 The same implementation rule continues to apply: prove each new mechanism and
 its destructive/interruption tests on a tiny corpus before spending the full

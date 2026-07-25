@@ -1,6 +1,7 @@
 # SMT-COMP credited full-population F2 live-capture R3 plan
 
-Status: preregistered; implementation and live F2 remain prohibited
+Status: implemented, fully gated, and pushed; integration and live F2 remain
+prohibited
 
 Date: 2026-07-25
 
@@ -100,3 +101,51 @@ rehash all selected payload bytes, build the exact integrated Axeyum binary,
 revalidate repaired P0 and external roots, capture all three host and thermal
 observations, and execute all eight sentinels inside the frozen window before
 publishing only `launch_authorized=false` completion last.
+
+## Implementation and closure result
+
+The preregistration is pushed as `6919ec77`. The implementation is pushed as
+`fe32194dc43eceb5dc67137819862dc949cc3c6d` and makes only the registered
+correction:
+
+- `progress_frontier.rs` accepts the strict
+  `AXEYUM_PROGRESS_FRONTIER_ARTIFACT_DIR` override while preserving the
+  historical tracked destination when the variable is absent;
+- the readiness runner creates a unique external temporary directory,
+  overwrites any inherited value, and runs the unchanged registered command;
+- the immutable readiness path set includes both this plan and the frontier
+  writer; and
+- focused controls prove that genuine source mutations still reject and
+  remain visible because the runner performs no repository cleanup.
+
+Focused validation passed: 47 Python tests, the exact Rust selector test,
+warning-denied solver Clippy, the complete nine-test frontier suite with five
+temporary artifacts and no tracked frontier diff, the 160-test SMT-COMP
+aggregate with one expected live-host skip, and `just check-scope origin/main`.
+
+The final full gate ran the exact `just check` command with the registered
+frontier destination set to an external temporary directory. It exited zero
+after formatting, all-feature Clippy, workspace tests, all doctests, both
+registered ignored CAS proofs (2/2 in 873.07 seconds), documentation,
+Glaurung, foundational resources, generated contracts, SMT-COMP/Lean parity,
+and links; the final line was `all links ok`. The gate emitted exactly five
+temporary JSON files:
+
+| Artifact | Bytes | SHA-256 |
+|---|---:|---|
+| `bv_reduction.json` | 2,957 | `fa665ad91ce05655218793ef18a6f8c6bfc853373f5668185f577b091be75116` |
+| `lia_cuts.json` | 2,673 | `83324ac189016ac56933f1f48964a4355bea8bcf883edfd104a0fb923f0b8535` |
+| `nia_unsat.json` | 2,934 | `4e502574d22014b097455fa5ef339914b7f1f6b7af068d0d36f395c04328d294` |
+| `nra_degree.json` | 2,894 | `30abb6229b48725d48f4dc53933f66e3487272a80d9de5e7cbfa983eed55eb13` |
+| `string_bound.json` | 868 | `45be0c5437028a99cfc4501a33744e87213bc9f51c814c772200ce53b0a375aa` |
+
+After the terminal exit, the topic worktree was clean and
+`git diff --exit-code -- bench-results/frontier` passed. The exact temporary
+files and directory were then removed; none is credited or committed.
+
+At closure, local and live remote topic refs equal `fe32194d`. Exact main is
+still `08af3665`: docs run `30122367139` is green, CI run `30122366840` remains
+red on the separately owned Rust 1.97 lint and seed-111 resource-limit
+failures, and the topic has no pull request. Therefore R3 is ready for
+integration but C0/C5 and every live host, sentinel, NAS, admission,
+allocation, and solver action remain prohibited.
