@@ -2422,6 +2422,100 @@ fn seq_unit_len_arithmetic_is_unsat_shaped() {
 }
 
 #[test]
+fn seq_unit_symbolic_int_adds_scoped_injective_range_guard() {
+    // `(Seq Int)` stores each element in 16 bits. A symbolic Int must therefore
+    // be restricted to the signed 16-bit window in the bounded query; otherwise
+    // `0` and `65536` alias after `int2bv` and can fabricate a SAT model for an
+    // UNSAT source formula. The guard is also exported as an encoding bound so
+    // the solver cannot use it to certify a source-theory UNSAT.
+    let text = "(declare-fun unused () (Seq Int))\n(declare-fun x () Int)\n\
+                (assert (= (seq.unit x) (seq.unit x)))\n(check-sat)\n";
+    let script = parse_script(text).expect("symbolic Seq Int unit parses with a guard");
+    assert_eq!(
+        script.len_abstraction_bounds.len(),
+        1,
+        "the signed element range is one encoding-bound fact"
+    );
+    assert!(
+        script.len_abstraction_coarse,
+        "an unconfirmed bounded UNSAT must not bypass the range-bound gate"
+    );
+
+    let x = script.arena.find_symbol("x").expect("x declared");
+    let guarded = *script.assertions.last().expect("guarded user assertion");
+    let mut in_range = Assignment::new();
+    in_range.set(x, Value::Int(7.into()));
+    assert_eq!(
+        eval(&script.arena, guarded, &in_range).unwrap(),
+        Value::Bool(true),
+        "an in-range element remains admitted"
+    );
+    let mut aliased = Assignment::new();
+    aliased.set(x, Value::Int(65_536.into()));
+    assert_eq!(
+        eval(&script.arena, guarded, &aliased).unwrap(),
+        Value::Bool(false),
+        "the modulo-2^16 alias must be excluded from the bounded SAT search"
+    );
+
+    // The guard belongs to the assertion that created it, not to the whole
+    // script: a pop must remove both together.
+    let scoped = parse_script(
+        "(declare-fun unused () (Seq Int))\n(declare-fun x () Int)\n\
+         (push 1)\n(assert (= (seq.unit x) (seq.unit x)))\n(check-sat)\n\
+         (pop 1)\n(check-sat)\n",
+    )
+    .expect("scoped symbolic Seq Int unit parses");
+    let guarded = *scoped.assertions.last().expect("guarded scoped assertion");
+    let push = scoped
+        .commands
+        .iter()
+        .position(|command| matches!(command, ScriptCommand::Push(1)))
+        .expect("push");
+    let guarded_assert = scoped
+        .commands
+        .iter()
+        .position(|command| matches!(command, ScriptCommand::Assert(t) if *t == guarded))
+        .expect("guarded assert");
+    let pop = scoped
+        .commands
+        .iter()
+        .position(|command| matches!(command, ScriptCommand::Pop(1)))
+        .expect("pop");
+    assert!(
+        push < guarded_assert && guarded_assert < pop,
+        "the range guard must share the assertion's incremental scope"
+    );
+
+    // A script-global `:named` alias must retain the guard if it is asserted
+    // after the original scoped assertion has been popped.
+    let named = parse_script(
+        "(declare-fun unused () (Seq Int))\n(declare-fun x () Int)\n\
+         (push 1)\n(assert (! (= (seq.unit x) (seq.unit x)) :named p))\n(pop 1)\n\
+         (assert p)\n(check-sat)\n",
+    )
+    .expect("named symbolic Seq Int assertion parses");
+    let p = *named.assertions.last().expect("re-asserted named term");
+    let x = named.arena.find_symbol("x").expect("x declared");
+    let mut aliased = Assignment::new();
+    aliased.set(x, Value::Int(65_536.into()));
+    assert_eq!(
+        eval(&named.arena, p, &aliased).unwrap(),
+        Value::Bool(false),
+        "the named alias must not shed the injectivity guard after pop"
+    );
+
+    // Hoisting a guard for a quantified element would free its bound variable.
+    // Decline that shape until the guard can be inserted inside the quantifier.
+    let quantified = parse_script(
+        "(declare-fun unused () (Seq Int))\n\
+         (assert (forall ((x Int)) (= (seq.unit x) (seq.unit x))))\n(check-sat)\n",
+    )
+    .expect_err("a symbolic Seq Int guard may not escape its quantifier");
+    assert!(matches!(quantified, SmtError::Unsupported(_)));
+}
+
+#[test]
 fn seq_empty_is_length_zero() {
     // (as seq.empty (Seq Int)) is the length-0 sequence; (not (= s empty)) with a
     // length-0 witness for s is false (s equals empty), with a nonempty witness true.
