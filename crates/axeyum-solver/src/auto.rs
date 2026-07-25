@@ -6714,13 +6714,10 @@ mod tests {
         let f_g_one = arena.apply(f, &[g_one]).unwrap();
         let ground_equality = arena.eq(g_f_minus_four, f_g_one).unwrap();
         let assertions = vec![universal, ground_bound, ground_equality];
-        // This test exercises the one-level retry contract, not the timeout
-        // boundary.  The all-features suite runs hundreds of solver tests in
-        // parallel on shared CI runners, where a two-second wall-clock budget
-        // can expire solely from CPU contention before the fixed query is
-        // decided.  Keep a finite guard while leaving enough headroom for the
-        // semantic assertion to be deterministic under that load.
-        let config = SolverConfig::new().with_timeout(Duration::from_secs(30));
+        // This asserts a deterministic semantic invariant. The fixed MBQI
+        // round/instance caps bound the search; a wall-clock budget would make
+        // the expected SAT depend on host speed and load.
+        let config = SolverConfig::new();
 
         assert!(matches!(
             prove_unsat_by_mbqi_inner(&mut arena, &assertions, &config, false).unwrap(),
