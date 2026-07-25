@@ -68,70 +68,15 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - run: cargo clippy --workspace --all-targets --all-features -- -D warnings
 
-  test:
-    # The full-workspace suite — especially the 32 z3/cvc5 differential-fuzz
-    # binaries (60s+ each) — does NOT finish in a single job's budget: it was
-    # cancelled mid-run at ~74 min, which kept `main` chronically red for many
-    # commits. Public repo => unlimited Actions minutes, so we shard the tests
-    # across parallel jobs with cargo-nextest `--partition`; each shard finishes
-    # fast and the union is the full suite.
-    name: test (stable) [shard ${{ matrix.shard }}/6]
-    runs-on: ubuntu-latest
-    timeout-minutes: 60
-    strategy:
-      fail-fast: false
-      matrix:
-        shard: [1, 2, 3, 4, 5, 6]
-    env:
-      # ~175 test binaries + a from-source z3 (`--all-features`) overflow the
-      # 14 GB runner disk with debuginfo on ("No space left on device", and
-      # lld dying with SIGBUS mid-link). Tests don't need debuginfo in CI.
-      CARGO_PROFILE_DEV_DEBUG: 0
-      CARGO_PROFILE_TEST_DEBUG: 0
-    steps:
-      - name: free runner disk (preinstalled toolsets we never use)
-        run: |
-          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL /usr/local/share/boost
-          df -h /
-      - uses: actions/checkout@v5
-      - uses: dtolnay/rust-toolchain@stable
-      - uses: Swatinem/rust-cache@v2
-      - uses: taiki-e/install-action@nextest
-      # The z3-gated differential fuzzes shell out to /usr/bin/z3.
-      - name: install z3 binary
-        run: sudo apt-get update -q && sudo apt-get install -y -q z3
-      # z3-sys's gh-release download intermittently gets HTTP 403 (runner IP
-      # rate limits); pre-build with backoff so a transient 403 doesn't fail
-      # the shard. The artifact is cached by rust-cache afterwards.
-      - name: build tests (with download retry)
-        run: |
-          for i in 1 2 3; do
-            cargo build --workspace --all-features --tests && exit 0
-            echo "build attempt $i failed; backing off"; sleep 60
-          done
-          exit 1
-      - name: test shard ${{ matrix.shard }}/6
-        run: cargo nextest run --workspace --all-features --partition count:${{ matrix.shard }}/6
-      # nextest does not run doctests; cover them once (fast) on shard 1.
-      - name: doctests
-        if: ${{ matrix.shard == 1 }}
-        run: cargo test --workspace --all-features --doc
-
-  moment-proofs:
-    # The order-255 certified-moment proofs (~15 min each) are #[ignore]d so they
-    # stay off the per-iteration path (see justfile `moment-proofs`); run them
-    # here so CI coverage of them is unchanged. nextest above skips #[ignore]d.
-    name: order-255 moment proofs
-    runs-on: ubuntu-latest
-    timeout-minutes: 45
-    env:
-      CARGO_PROFILE_DEV_DEBUG: 0
-      CARGO_PROFILE_TEST_DEBUG: 0
-    steps:
-      - uses: actions/checkout@v5
-      - uses: dtolnay/rust-toolchain@stable
-      - uses: Swatinem/rust-cache@v2
-      - run: cargo test -p axeyum-cas --lib -- --ignored
+  # NOTE: the heavy test gate lives in scripts/local-ci.sh, run on local
+  # hardware — NOT here. The full-workspace suite (esp. the ~32 z3/cvc5
+  # differential-fuzz binaries, 60s+ each) needs real cores; on GitHub's 4-core
+  # hosted runners it forced serialization + sharding + a 60-min timeout that
+  # still went red (shard 1 cancelled on a4d31228). Locally it runs fully
+  # parallel with full coverage in minutes. The `order-255 moment proofs` job
+  # moved there too (`scripts/local-ci.sh --moment`). GitHub Actions keeps only
+  # the light, fast checks below (fmt/clippy/build/docs/deny) as a cheap first
+  # signal on every push; local-ci.sh is the authoritative gate for main.
 
   cargo-mir-build:
     name: checked Cargo MIR build (nightly-2026-05-01)

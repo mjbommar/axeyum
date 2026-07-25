@@ -1,3 +1,13 @@
+# --- local gate profile (scripts/local-ci.sh) ---------------------------------
+# The heavy suite runs on real hardware now, not GitHub's 4-core hosted runners.
+# With enough cores there is no external-solver starvation, so this profile does
+# NOT serialize anything and does NOT exclude the host-sensitive decide tests —
+# it runs the ENTIRE suite fully parallel for maximum coverage. (It inherits
+# nothing from the default profile's overrides; test-groups are opt-in per
+# profile, so external-solver's max-threads=1 cap simply does not apply here.)
+[profile.local]
+default-filter = 'all()'
+
 [profile.default]
 # CI runners are slower than dev machines; a few z3/LIA-coupling *decide* tests
 # can't finish their host-dependent budget here and return Unknown -> spurious
