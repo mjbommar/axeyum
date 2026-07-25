@@ -8967,16 +8967,20 @@ mod run {
 
         #[test]
         fn query_shape_profiles_lifter_ops_and_rewrite_opportunities() {
+            // NB: fixtures must be NON-reflexive. Parse-time folding rewrites
+            // `(= t t)` to `true`, which would erase the extract/concat patterns
+            // this profiler test measures. Each pattern is asserted equal to a
+            // fresh const so it survives into the query shape.
             let text = "\
                 (set-logic QF_ABV)\n\
                 (declare-const x (_ BitVec 8))\n\
                 (declare-const y (_ BitVec 8))\n\
                 (declare-const a (Array (_ BitVec 8) (_ BitVec 16)))\n\
+                (declare-const w (_ BitVec 8))\n\
                 (assert (= ((_ extract 7 0) ((_ zero_extend 8) x)) x))\n\
                 (assert (= ((_ extract 6 1) ((_ extract 7 0) ((_ sign_extend 8) y)))\n\
                            ((_ extract 6 1) y)))\n\
-                (assert (= ((_ extract 11 4) (concat x y))\n\
-                           ((_ extract 11 4) (concat x y))))\n\
+                (assert (= ((_ extract 11 4) (concat x y)) w))\n\
                 (assert (= (select (store a x ((_ zero_extend 8) y)) x)\n\
                            ((_ zero_extend 8) y)))\n\
                 (check-sat)\n";
@@ -9100,21 +9104,35 @@ mod run {
 
         #[test]
         fn query_shape_classifies_concat_extension_regions_and_nested_depth() {
+            // NB: NON-reflexive fixtures (see sibling test). Parse-time `(= t t)`
+            // -> `true` folding would erase every extract/concat/extend pattern
+            // below; each is asserted equal to a fresh const of matching width so
+            // the query shape retains it.
             let text = "\
                 (set-logic QF_BV)\n\
                 (declare-const x (_ BitVec 8))\n\
                 (declare-const y (_ BitVec 8))\n\
-                (assert (= ((_ extract 7 0) (concat x y)) ((_ extract 7 0) (concat x y))))\n\
-                (assert (= ((_ extract 15 8) (concat x y)) ((_ extract 15 8) (concat x y))))\n\
-                (assert (= ((_ extract 10 6) (concat x y)) ((_ extract 10 6) (concat x y))))\n\
-                (assert (= ((_ extract 7 0) ((_ zero_extend 8) x)) ((_ extract 7 0) ((_ zero_extend 8) x))))\n\
-                (assert (= ((_ extract 15 8) ((_ zero_extend 8) x)) ((_ extract 15 8) ((_ zero_extend 8) x))))\n\
-                (assert (= ((_ extract 10 6) ((_ zero_extend 8) x)) ((_ extract 10 6) ((_ zero_extend 8) x))))\n\
-                (assert (= ((_ extract 7 0) ((_ sign_extend 8) x)) ((_ extract 7 0) ((_ sign_extend 8) x))))\n\
-                (assert (= ((_ extract 15 8) ((_ sign_extend 8) x)) ((_ extract 15 8) ((_ sign_extend 8) x))))\n\
-                (assert (= ((_ extract 10 6) ((_ sign_extend 8) x)) ((_ extract 10 6) ((_ sign_extend 8) x))))\n\
+                (declare-const r1 (_ BitVec 8))\n\
+                (declare-const r2 (_ BitVec 8))\n\
+                (declare-const r3 (_ BitVec 5))\n\
+                (declare-const r4 (_ BitVec 8))\n\
+                (declare-const r5 (_ BitVec 8))\n\
+                (declare-const r6 (_ BitVec 5))\n\
+                (declare-const r7 (_ BitVec 8))\n\
+                (declare-const r8 (_ BitVec 8))\n\
+                (declare-const r9 (_ BitVec 5))\n\
+                (declare-const r10 (_ BitVec 4))\n\
+                (assert (= ((_ extract 7 0) (concat x y)) r1))\n\
+                (assert (= ((_ extract 15 8) (concat x y)) r2))\n\
+                (assert (= ((_ extract 10 6) (concat x y)) r3))\n\
+                (assert (= ((_ extract 7 0) ((_ zero_extend 8) x)) r4))\n\
+                (assert (= ((_ extract 15 8) ((_ zero_extend 8) x)) r5))\n\
+                (assert (= ((_ extract 10 6) ((_ zero_extend 8) x)) r6))\n\
+                (assert (= ((_ extract 7 0) ((_ sign_extend 8) x)) r7))\n\
+                (assert (= ((_ extract 15 8) ((_ sign_extend 8) x)) r8))\n\
+                (assert (= ((_ extract 10 6) ((_ sign_extend 8) x)) r9))\n\
                 (assert (= ((_ extract 3 0) ((_ extract 5 0) ((_ extract 7 0) x)))\n\
-                           ((_ extract 3 0) ((_ extract 5 0) ((_ extract 7 0) x)))))\n\
+                           r10))\n\
                 (check-sat)\n";
             let script = parse_script(text).expect("region fixture parses");
             let stats = TermStats::compute(&script.arena, &script.assertions);
