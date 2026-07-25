@@ -457,6 +457,58 @@ fn front_door_pyex_suffix_view_empty_pattern_corners_are_exact() {
     assert_eq!(verdict(indexof_empty), CheckResult::Unsat);
 }
 
+#[test]
+fn front_door_conbyte_fixed_substr_length_conflict_is_unsat() {
+    // Py-Conbyte's restoreIpAddresses traces spell small constants as nested
+    // arithmetic. The first two guards and the affine lower bound force |s| >= 4;
+    // the negated third slice guard forces |s| <= 2.
+    let s = r#"(set-logic QF_SLIA)
+(declare-fun s () String)
+(assert (= (str.len (str.substr s 1 (- (+ 1 1) 1))) 1))
+(assert (= (str.len (str.substr s 0 (- 1 0))) 1))
+(assert (> (- (- (- (str.len s) 1) 1) 1) 0))
+(assert (str.in_re s (re.+ (re.range "0" "9"))))
+(assert (not (= (str.len (str.substr s (+ 1 1)
+                              (- (+ (+ 1 1) 1) (+ 1 1)))) 1)))
+(check-sat)"#;
+    assert_eq!(verdict(s), CheckResult::Unsat);
+}
+
+#[test]
+fn front_door_conbyte_truncated_fixed_substr_length_is_exact() {
+    // `substr(s,2,3)` has length two exactly when |s| = 4. This exercises the
+    // middle (truncated-but-nonempty) branch of SMT-LIB substring totality.
+    let s = r#"(set-logic QF_SLIA)
+(declare-fun s () String)
+(assert (= (str.len (str.substr s 2 3)) 2))
+(assert (= (str.len s) 4))
+(check-sat)"#;
+    assert!(matches!(verdict(s), CheckResult::Sat(_)));
+}
+
+#[test]
+fn front_door_conbyte_negative_start_substr_is_empty() {
+    let s = r#"(set-logic QF_SLIA)
+(declare-fun s () String)
+(assert (= s "abc"))
+(assert (= (str.len (str.substr s (- 1) 2)) 0))
+(check-sat)"#;
+    assert!(matches!(verdict(s), CheckResult::Sat(_)));
+}
+
+#[test]
+fn front_door_conbyte_over_bound_fixed_substr_stays_unknown() {
+    // A real length-10 model satisfies both constraints. The packed encoder cannot
+    // witness it, and the unbounded substring-length relation must not turn that
+    // bounded limitation into a false UNSAT.
+    let s = r#"(set-logic QF_SLIA)
+(declare-fun s () String)
+(assert (= (str.len (str.substr s 9 1)) 1))
+(assert (= (str.len (str.substr s 10 1)) 0))
+(check-sat)"#;
+    assert!(matches!(verdict(s), CheckResult::Unknown(_)));
+}
+
 // ---------- over-cap (word-first fallback) disjunctive shapes ----------
 //
 // String literals over `STRING_MAX_LEN` (8) make the *bounded* parse decline, so
