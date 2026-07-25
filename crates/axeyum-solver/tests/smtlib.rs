@@ -2021,6 +2021,24 @@ fn string_rewrite_identities_close_noetzli_regressions() {
                 (str.substr x 0 z))))
 (check-sat)
 ",
+        r#"
+(set-logic QF_SLIA)
+(declare-const x String)
+(assert (not (= (str.replace "A" "B" x) "A")))
+(check-sat)
+"#,
+        r#"
+(set-logic QF_SLIA)
+(declare-const x String)
+(declare-const z Int)
+(assert (not (= (str.at x (str.indexof "" "B" z)) "")))
+(check-sat)
+"#,
+        r#"
+(set-logic QF_SLIA)
+(assert (not (= (str.at "B" (+ 1 1)) "")))
+(check-sat)
+"#,
     ];
     for text in regressions {
         assert_eq!(run(text).result, CheckResult::Unsat, "{text}");

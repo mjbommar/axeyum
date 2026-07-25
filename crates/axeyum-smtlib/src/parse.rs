@@ -6993,6 +6993,16 @@ fn string_replace(
     if string_const_bytes(arena, a).is_some_and(|bytes| bytes.is_empty()) {
         return string_concat(arena, &[b, s]);
     }
+    // A constant non-empty needle absent from a constant subject makes the
+    // replacement a no-op regardless of the (possibly symbolic) replacement.
+    // Recognize that before result-width accounting: the exact result is `s`,
+    // so a wide symbolic `b` cannot make this harmless case exceed the cap.
+    if let (Some(sb), Some(ab)) = (string_const_bytes(arena, s), string_const_bytes(arena, a))
+        && !ab.is_empty()
+        && !sb.windows(ab.len()).any(|window| window == ab)
+    {
+        return Ok(s);
+    }
     // Fully-ground first-occurrence replacement. Keep the existing symbolic
     // encoding as a fallback when the exact result exceeds the literal cap.
     if let (Some(sb), Some(ab), Some(bb)) = (
@@ -7135,15 +7145,23 @@ fn string_indexof(
     t: TermId,
     i: TermId,
 ) -> Result<TermId, SmtError> {
-    if let TermNode::IntConst(offset) = arena.node(i) {
-        if *offset < 0 {
+    if let Some(offset) = ground_int_term(arena, i) {
+        if offset < 0 {
             return Ok(arena.int_const(-1));
         }
-        if *offset == 0
+        if offset == 0
             && (s == t || string_const_bytes(arena, t).is_some_and(|bytes| bytes.is_empty()))
         {
             return Ok(arena.int_const(0));
         }
+    }
+    // A non-empty constant needle absent from a constant subject is never found,
+    // independent of the start index (including symbolic or out-of-range starts).
+    if let (Some(sb), Some(tb)) = (string_const_bytes(arena, s), string_const_bytes(arena, t))
+        && !tb.is_empty()
+        && !sb.windows(tb.len()).any(|window| window == tb)
+    {
+        return Ok(arena.int_const(-1));
     }
     let ms = string_max_len(arena, s)?;
     let mt = string_max_len(arena, t)?;
@@ -10959,9 +10977,9 @@ fn apply_op(
         // Returns a length-≤1 packed string.
         "str.at" => {
             need(2)?;
-            let r = match arena.node(args[1]) {
-                TermNode::IntConst(k) => string_at_const(arena, args[0], *k)?,
-                _ => string_at_int(arena, args[0], args[1])?,
+            let r = match ground_int_term(arena, args[1]) {
+                Some(index) => string_at_const(arena, args[0], index)?,
+                None => string_at_int(arena, args[0], args[1])?,
             };
             // P2.7 A.2: `len(str.at s k) ≤ 1` universally (empty when
             // out-of-bounds, one char otherwise).
