@@ -1912,7 +1912,7 @@ fn redos_large_loop_and_output_definition_decide_sat() {
     ));
 }
 
-/// StringFuzz combines regex languages with a ground `str.to_int` result. The
+/// `StringFuzz` combines regex languages with a ground `str.to_int` result. The
 /// decimal preimage is an exact regex, so a non-decimal language is certified
 /// empty rather than left as `unknown`.
 #[test]
@@ -1978,13 +1978,13 @@ fn string_rewrite_identities_close_noetzli_regressions() {
 (assert (not (= (str.suffixof x (str.substr "A" z z)) (= x ""))))
 (check-sat)
 "#,
-        r#"
+        r"
 (set-logic QF_SLIA)
 (declare-const x String)
 (declare-const y String)
 (assert (not (= (str.contains x (str.replace x x y)) (str.contains x y))))
 (check-sat)
-"#,
+",
         r#"
 (set-logic QF_SLIA)
 (declare-const x String)
