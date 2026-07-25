@@ -649,6 +649,86 @@ fn front_door_never_wrong_unsat_on_sat_contains() {
     }
 }
 
+#[test]
+fn front_door_pyex_dense_membership_sat_replays() {
+    // The dense PyEx family accumulates many exact predicates over the same suffix.
+    // A concrete witness is tiny (" Z"), but constructing the full derivative
+    // product for all exclusions used to consume the route's deadline.
+    let s = r#"(set-logic QF_SLIA)
+(declare-const x String)
+(assert (= (str.at x 0) " "))
+(assert (str.contains (str.substr x 1 (- (str.len x) 1)) "Z"))
+(assert (not (str.contains (str.substr x 1 (- (str.len x) 1)) "A")))
+(assert (not (str.contains (str.substr x 1 (- (str.len x) 1)) "B")))
+(assert (not (str.contains (str.substr x 1 (- (str.len x) 1)) "C")))
+(assert (not (str.contains (str.substr x 1 (- (str.len x) 1)) "D")))
+(assert (not (str.contains (str.substr x 1 (- (str.len x) 1)) "E")))
+(assert (not (str.contains (str.substr x 1 (- (str.len x) 1)) "F")))
+(assert (not (str.contains (str.substr x 1 (- (str.len x) 1)) "G")))
+(assert (not (str.contains (str.substr x 1 (- (str.len x) 1)) "H")))
+(assert (not (str.contains (str.substr x 1 (- (str.len x) 1)) "I")))
+(assert (not (str.contains (str.substr x 1 (- (str.len x) 1)) "J")))
+(assert (not (str.contains (str.substr x 1 (- (str.len x) 1)) "K")))
+(assert (not (str.contains (str.substr x 1 (- (str.len x) 1)) "L")))
+(assert (not (str.contains (str.substr x 1 (- (str.len x) 1)) "M")))
+(assert (not (str.contains (str.substr x 1 (- (str.len x) 1)) "N")))
+(assert (not (str.contains (str.substr x 1 (- (str.len x) 1)) "O")))
+(assert (not (str.contains (str.substr x 1 (- (str.len x) 1)) "P")))
+(assert (not (str.contains (str.substr x 1 (- (str.len x) 1)) "Q")))
+(assert (not (str.contains (str.substr x 1 (- (str.len x) 1)) "R")))
+(assert (not (str.contains (str.substr x 1 (- (str.len x) 1)) "S")))
+(assert (not (str.contains (str.substr x 1 (- (str.len x) 1)) "T")))
+(assert (not (str.contains (str.substr x 1 (- (str.len x) 1)) "U")))
+(assert (not (str.contains (str.substr x 1 (- (str.len x) 1)) "V")))
+(assert (not (str.contains (str.substr x 1 (- (str.len x) 1)) "W")))
+(assert (not (str.contains (str.substr x 1 (- (str.len x) 1)) "X")))
+(assert (not (str.contains (str.substr x 1 (- (str.len x) 1)) "Y")))
+(check-sat)"#;
+    match verdict(s) {
+        CheckResult::Sat(_) => {}
+        other => panic!("expected replay-checked SAT for dense PyEx predicates, got {other:?}"),
+    }
+}
+
+#[test]
+fn front_door_pyex_split_replace_view_sat_replays() {
+    // PyEx spells one first-occurrence replacement as a split, replace of the
+    // prefix through the match, and rejoin with the suffix. The transform preserves
+    // `O`, while the dynamic suffix after the first `A` contains `A` exactly when
+    // the sliced word has at least two occurrences.
+    let s = r#"(set-logic QF_SLIA)
+(declare-const x String)
+(assert (str.contains
+  (str.++
+    (str.replace
+      (str.substr (str.substr x 0 (- (- (str.len x) 1) 0)) 0
+        (- (+ (str.indexof (str.substr x 0 (- (- (str.len x) 1) 0)) "A" 0) 1) 0))
+      "A" "a")
+    (str.substr (str.substr x 0 (- (- (str.len x) 1) 0))
+      (+ (str.indexof (str.substr x 0 (- (- (str.len x) 1) 0)) "A" 0) 1)
+      (- (str.len (str.substr x 0 (- (- (str.len x) 1) 0)))
+         (+ (str.indexof (str.substr x 0 (- (- (str.len x) 1) 0)) "A" 0) 1))))
+  "O"))
+(assert (str.contains
+  (str.substr (str.substr x 0 (- (- (str.len x) 1) 0))
+    (+ (str.indexof (str.substr x 0 (- (- (str.len x) 1) 0)) "A" 0) 1)
+    (- (str.len (str.substr x 0 (- (- (str.len x) 1) 0)))
+       (+ (str.indexof (str.substr x 0 (- (- (str.len x) 1) 0)) "A" 0) 1)))
+  "A"))
+(assert (= (str.at (str.substr x 0 (- (- (str.len x) 1) 0))
+                    (- (str.len (str.substr x 0 (- (- (str.len x) 1) 0))) 1))
+           "\u{d}"))
+(assert (>= (- (- (str.len x) 1) 0) 0))
+(assert (>= (- (+ (str.indexof (str.substr x 0 (- (- (str.len x) 1) 0)) "A" 0) 1) 0) 0))
+(assert (>= (- (str.len (str.substr x 0 (- (- (str.len x) 1) 0)))
+               (+ (str.indexof (str.substr x 0 (- (- (str.len x) 1) 0)) "A" 0) 1)) 0))
+(check-sat)"#;
+    match verdict(s) {
+        CheckResult::Sat(_) => {}
+        other => panic!("expected replay-checked SAT for PyEx split/replace view, got {other:?}"),
+    }
+}
+
 // ---------- Phase D: constant-fold str.replace (constant haystack + needle) ----------
 
 #[test]

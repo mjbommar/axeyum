@@ -1882,11 +1882,11 @@ fn word_bool(
             if cps.is_empty() {
                 return Some(arena.bool_const(true));
             }
-            let view = suffix_view_skeleton(&items[2], vars)?;
+            let view = content_view_skeleton(&items[2], vars, &cps)?;
             mem.atom(
                 arena,
                 view.operand,
-                after_exact_prefix(view.dropped, prefix_pattern_regex(&cps)),
+                around_exact_view(view, prefix_pattern_regex(&cps)),
             )
         }
         "str.suffixof" if items.len() == 3 => {
@@ -1894,25 +1894,14 @@ fn word_bool(
             if cps.is_empty() {
                 return Some(arena.bool_const(true));
             }
-            let view = suffix_view_skeleton(&items[2], vars)?;
+            let view = content_view_skeleton(&items[2], vars, &cps)?;
             mem.atom(
                 arena,
                 view.operand,
-                after_exact_prefix(view.dropped, suffix_pattern_regex(&cps)),
+                around_exact_view(view, suffix_pattern_regex(&cps)),
             )
         }
-        "str.contains" if items.len() == 3 => {
-            let cps = literal_pattern_cps(&items[2])?;
-            if cps.is_empty() {
-                return Some(arena.bool_const(true));
-            }
-            let view = suffix_view_skeleton(&items[1], vars)?;
-            mem.atom(
-                arena,
-                view.operand,
-                after_exact_prefix(view.dropped, contains_pattern_regex(&cps)),
-            )
-        }
+        "str.contains" if items.len() == 3 => word_contains_atom(arena, items, vars, mem),
         // Boolean `ite` only (the branches must themselves be skeleton Booleans; an
         // `ite` over *strings* is not a `word_str_expr` and is declined below).
         "ite" if items.len() == 4 => {
@@ -1956,6 +1945,34 @@ fn word_bool(
         // outside the skeleton fragment — decline the whole build.
         _ => None,
     }
+}
+
+fn word_contains_atom(
+    arena: &mut TermArena,
+    items: &[SExpr],
+    vars: &BTreeMap<String, (SymbolId, TermId)>,
+    mem: &mut MembershipCollector,
+) -> Option<TermId> {
+    let cps = literal_pattern_cps(&items[2])?;
+    if cps.is_empty() {
+        return Some(arena.bool_const(true));
+    }
+    if cps.len() == 1
+        && let Some(base) = after_first_occurrence_base(&items[1], &items[2])
+    {
+        let view = content_view_skeleton(base, vars, &cps)?;
+        return mem.atom(
+            arena,
+            view.operand,
+            around_exact_view(view, contains_twice_pattern_regex(cps[0])),
+        );
+    }
+    let view = content_view_skeleton(&items[1], vars, &cps)?;
+    mem.atom(
+        arena,
+        view.operand,
+        around_exact_view(view, contains_pattern_regex(&cps)),
+    )
 }
 
 /// Translates a chained word equality or Boolean equivalence for [`word_bool`].
@@ -2049,33 +2066,40 @@ fn exact_content_equality_ordered(
     match head {
         "str.len" | "seq.len" if app.len() == 2 && parse_int_literal(constant) == Some(0) => {
             let view = suffix_view_skeleton(&app[1], vars)?;
-            mem.atom(arena, view.operand, at_most_length_regex(view.dropped))
+            mem.atom(
+                arena,
+                view.operand,
+                at_most_length_regex(view.total_dropped()?),
+            )
         }
         "str.indexof"
             if app.len() == 4
                 && parse_int_literal(&app[3]) == Some(0)
                 && parse_int_literal(constant) == Some(-1) =>
         {
-            let view = suffix_view_skeleton(&app[1], vars)?;
             let needle = literal_pattern_cps(&app[2])?;
             if needle.is_empty() {
                 return Some(arena.bool_const(false));
             }
+            let view = content_view_skeleton(&app[1], vars, &needle)?;
             let contains = mem.atom(
                 arena,
                 view.operand,
-                after_exact_prefix(view.dropped, contains_pattern_regex(&needle)),
+                around_exact_view(view, contains_pattern_regex(&needle)),
             )?;
             arena.not(contains).ok()
         }
         "str.at" if app.len() == 3 => {
-            let (view, first) = at_boundary_view(&app[1], &app[2], vars)?;
             let value = literal_pattern_cps(constant)?;
+            if value.len() > 1 {
+                return Some(arena.bool_const(false));
+            }
+            let (view, first) = at_boundary_view(&app[1], &app[2], vars, &value)?;
             let regex = match value.as_slice() {
-                [] => at_most_length_regex(view.dropped),
-                [c] if first => after_exact_prefix(view.dropped, prefix_pattern_regex(&[*c])),
-                [c] => after_exact_prefix(view.dropped, suffix_pattern_regex(&[*c])),
-                _ => return Some(arena.bool_const(false)),
+                [] => at_most_length_regex(view.total_dropped()?),
+                [c] if first => around_exact_view(view, prefix_pattern_regex(&[*c])),
+                [c] => around_exact_view(view, suffix_pattern_regex(&[*c])),
+                _ => unreachable!("multi-code-point str.at equality returned above"),
             };
             mem.atom(arena, view.operand, regex)
         }
@@ -2090,6 +2114,13 @@ fn exact_content_equality_ordered(
 struct SuffixView {
     operand: SymbolId,
     dropped: u32,
+    dropped_suffix: u32,
+}
+
+impl SuffixView {
+    fn total_dropped(self) -> Option<u32> {
+        self.dropped.checked_add(self.dropped_suffix)
+    }
 }
 
 /// Recognizes either a bare declared string variable or its exact constant-offset
@@ -2099,38 +2130,273 @@ fn suffix_view_skeleton(
     e: &SExpr,
     vars: &BTreeMap<String, (SymbolId, TermId)>,
 ) -> Option<SuffixView> {
+    content_view_skeleton(e, vars, &[])
+}
+
+/// Recognizes a constant slice of a declared string, optionally through
+/// length-preserving first-occurrence replacements that cannot affect any code
+/// point in `protected`. This captures `PyEx`'s generated lowercase pipeline: while
+/// checking for `"O"`, earlier `"A"→"a"`, … replacements preserve both positions
+/// and every occurrence of `"O"` exactly.
+fn content_view_skeleton(
+    e: &SExpr,
+    vars: &BTreeMap<String, (SymbolId, TermId)>,
+    protected: &[u32],
+) -> Option<SuffixView> {
     if let Some(name) = variable_name_skeleton(e, vars) {
         let (operand, _) = *vars.get(&name)?;
         return Some(SuffixView {
             operand,
             dropped: 0,
+            dropped_suffix: 0,
         });
+    }
+
+    if let Some(base) = preserved_replace_base(e, protected) {
+        return content_view_skeleton(base, vars, protected);
     }
 
     let app = e.list()?;
     if app.len() != 4 || !matches!(app[0].atom(), Some("str.substr" | "seq.extract")) {
         return None;
     }
-    let base = suffix_view_skeleton(&app[1], vars)?;
+    let base = content_view_skeleton(&app[1], vars, protected)?;
     let additionally_dropped = u32::try_from(parse_int_literal(&app[2])?).ok()?;
-    let remaining = app[3].list()?;
-    if remaining.len() != 3
-        || remaining[0].atom() != Some("-")
-        || parse_int_literal(&remaining[2])? != i128::from(additionally_dropped)
-    {
-        return None;
-    }
-    let len = remaining[1].list()?;
-    if len.len() != 2 || !matches!(len[0].atom(), Some("str.len" | "seq.len")) {
-        return None;
-    }
-    if len[1] != app[1] {
+    let total_removed = len_minus_constant(&app[3], &app[1])?;
+    if total_removed < additionally_dropped {
         return None;
     }
     Some(SuffixView {
         operand: base.operand,
         dropped: base.dropped.checked_add(additionally_dropped)?,
+        dropped_suffix: base
+            .dropped_suffix
+            .checked_add(total_removed - additionally_dropped)?,
     })
+}
+
+/// Returns `k` when `e` is syntactically `len(subject) - k`, accepting a nested
+/// chain of subtracted non-negative integer literals. `PyEx` emits the same slice as
+/// `(- (- (str.len s) right_drop) left_drop)` rather than folding the constants.
+fn len_minus_constant(e: &SExpr, subject: &SExpr) -> Option<u32> {
+    let items = e.list()?;
+    if items.len() == 2
+        && matches!(items[0].atom(), Some("str.len" | "seq.len"))
+        && items[1] == *subject
+    {
+        return Some(0);
+    }
+    if items.len() != 3 || items[0].atom() != Some("-") {
+        return None;
+    }
+    let removed = u32::try_from(parse_int_literal(&items[2])?).ok()?;
+    len_minus_constant(&items[1], subject)?.checked_add(removed)
+}
+
+fn len_subject_minus_constant(e: &SExpr) -> Option<(&SExpr, u32)> {
+    let items = e.list()?;
+    if items.len() == 2 && matches!(items[0].atom(), Some("str.len" | "seq.len")) {
+        return Some((&items[1], 0));
+    }
+    if items.len() != 3 || items[0].atom() != Some("-") {
+        return None;
+    }
+    let removed = u32::try_from(parse_int_literal(&items[2])?).ok()?;
+    let (subject, prior) = len_subject_minus_constant(&items[1])?;
+    Some((subject, prior.checked_add(removed)?))
+}
+
+/// Peels a length-preserving first-occurrence replacement that cannot change any
+/// code point in `protected`. Besides ordinary `str.replace`, recognizes `PyEx`'s
+/// exact split/rejoin spelling:
+///
+/// `replace(substr(s,0,indexof(s,n,0)+1),n,r) ++ substr(s,indexof(s,n,0)+1,...)`.
+fn preserved_replace_base<'a>(e: &'a SExpr, protected: &[u32]) -> Option<&'a SExpr> {
+    let items = e.list()?;
+    if items.len() == 4 && items[0].atom() == Some("str.replace") {
+        let needle = literal_pattern_cps(&items[2])?;
+        let replacement = literal_pattern_cps(&items[3])?;
+        if replacement_preserves(&needle, &replacement, protected) {
+            return Some(&items[1]);
+        }
+        return None;
+    }
+
+    if items.len() != 3 || items[0].atom() != Some("str.++") {
+        return None;
+    }
+    let replace = items[1].list()?;
+    if replace.len() != 4 || replace[0].atom() != Some("str.replace") {
+        return None;
+    }
+    let needle = literal_pattern_cps(&replace[2])?;
+    let replacement = literal_pattern_cps(&replace[3])?;
+    // The generated split point is `index + 1`, hence this exact reconstruction is
+    // specifically the one-code-point replacement used by Python lower/upper.
+    if needle.len() != 1
+        || replacement.len() != 1
+        || !replacement_preserves(&needle, &replacement, protected)
+    {
+        return None;
+    }
+
+    let prefix = replace[1].list()?;
+    if prefix.len() != 4
+        || prefix[0].atom() != Some("str.substr")
+        || parse_int_literal(&prefix[2]) != Some(0)
+    {
+        return None;
+    }
+    let base = &prefix[1];
+    let split = strip_subtracted_zero(&prefix[3]);
+    if !is_index_plus_one(split, base, &replace[2]) {
+        return None;
+    }
+
+    let suffix = items[2].list()?;
+    if suffix.len() != 4 || suffix[0].atom() != Some("str.substr") || suffix[1] != *base {
+        return None;
+    }
+    let suffix_start = strip_subtracted_zero(&suffix[2]);
+    if suffix_start != split {
+        return None;
+    }
+    let suffix_len = suffix[3].list()?;
+    if suffix_len.len() != 3
+        || suffix_len[0].atom() != Some("-")
+        || strip_subtracted_zero(&suffix_len[2]) != split
+    {
+        return None;
+    }
+    let len = suffix_len[1].list()?;
+    if len.len() != 2 || !matches!(len[0].atom(), Some("str.len" | "seq.len")) || len[1] != *base {
+        return None;
+    }
+    Some(base)
+}
+
+/// Recognizes the exact suffix strictly after the first occurrence of `needle`:
+/// `substr(s, indexof(s,needle,0)+1, len(s)-(indexof(...)+1))`. For a one-code-point
+/// needle, asking whether this suffix contains the same needle is exactly asking
+/// whether `s` contains at least two occurrences.
+fn after_first_occurrence_base<'a>(e: &'a SExpr, needle: &SExpr) -> Option<&'a SExpr> {
+    let suffix = e.list()?;
+    if suffix.len() != 4 || suffix[0].atom() != Some("str.substr") {
+        return None;
+    }
+    let base = &suffix[1];
+    let split = strip_subtracted_zero(&suffix[2]);
+    if !is_index_plus_one(split, base, needle) {
+        return None;
+    }
+    let length = suffix[3].list()?;
+    if length.len() != 3
+        || length[0].atom() != Some("-")
+        || strip_subtracted_zero(&length[2]) != split
+    {
+        return None;
+    }
+    let len = length[1].list()?;
+    (len.len() == 2 && matches!(len[0].atom(), Some("str.len" | "seq.len")) && len[1] == *base)
+        .then_some(base)
+}
+
+fn replacement_preserves(needle: &[u32], replacement: &[u32], protected: &[u32]) -> bool {
+    needle.len() == replacement.len()
+        && needle
+            .iter()
+            .chain(replacement)
+            .all(|c| !protected.contains(c))
+}
+
+fn strip_subtracted_zero(mut e: &SExpr) -> &SExpr {
+    while let Some(items) = e.list()
+        && items.len() == 3
+        && items[0].atom() == Some("-")
+        && parse_int_literal(&items[2]) == Some(0)
+    {
+        e = &items[1];
+    }
+    e
+}
+
+fn is_index_plus_one(e: &SExpr, subject: &SExpr, needle: &SExpr) -> bool {
+    let Some(plus) = e.list() else { return false };
+    if plus.len() != 3 || plus[0].atom() != Some("+") {
+        return false;
+    }
+    let index = if parse_int_literal(&plus[1]) == Some(1) {
+        &plus[2]
+    } else if parse_int_literal(&plus[2]) == Some(1) {
+        &plus[1]
+    } else {
+        return false;
+    };
+    let Some(index) = index.list() else {
+        return false;
+    };
+    index.len() == 4
+        && index[0].atom() == Some("str.indexof")
+        && index[1] == *subject
+        && index[2] == *needle
+        && parse_int_literal(&index[3]) == Some(0)
+}
+
+fn is_any_index_plus_one(e: &SExpr) -> bool {
+    let Some(plus) = e.list() else { return false };
+    if plus.len() != 3 || plus[0].atom() != Some("+") {
+        return false;
+    }
+    let index = if parse_int_literal(&plus[1]) == Some(1) {
+        &plus[2]
+    } else if parse_int_literal(&plus[2]) == Some(1) {
+        &plus[1]
+    } else {
+        return false;
+    };
+    let Some(index) = index.list() else {
+        return false;
+    };
+    index.len() == 4
+        && index[0].atom() == Some("str.indexof")
+        && parse_int_literal(&index[3]) == Some(0)
+}
+
+fn is_remaining_after_first_nonnegative(e: &SExpr) -> bool {
+    let Some(difference) = e.list() else {
+        return false;
+    };
+    if difference.len() != 3 || difference[0].atom() != Some("-") {
+        return false;
+    }
+    let Some(len) = difference[1].list() else {
+        return false;
+    };
+    if len.len() != 2 || !matches!(len[0].atom(), Some("str.len" | "seq.len")) {
+        return false;
+    }
+    let split = strip_subtracted_zero(&difference[2]);
+    let Some(plus) = split.list() else {
+        return false;
+    };
+    if plus.len() != 3 || plus[0].atom() != Some("+") {
+        return false;
+    }
+    let index = if parse_int_literal(&plus[1]) == Some(1) {
+        &plus[2]
+    } else if parse_int_literal(&plus[2]) == Some(1) {
+        &plus[1]
+    } else {
+        return false;
+    };
+    let Some(index) = index.list() else {
+        return false;
+    };
+    index.len() == 4
+        && index[0].atom() == Some("str.indexof")
+        && index[1] == len[1]
+        && literal_pattern_cps(&index[2]).is_some_and(|needle| !needle.is_empty())
+        && parse_int_literal(&index[3]) == Some(0)
 }
 
 /// Recognizes `str.at(W, 0)` (`true`) or `str.at(W, len(W)-1)` (`false`) for a
@@ -2139,8 +2405,9 @@ fn at_boundary_view(
     subject: &SExpr,
     index: &SExpr,
     vars: &BTreeMap<String, (SymbolId, TermId)>,
+    protected: &[u32],
 ) -> Option<(SuffixView, bool)> {
-    let view = suffix_view_skeleton(subject, vars)?;
+    let view = content_view_skeleton(subject, vars, protected)?;
     if parse_int_literal(index) == Some(0) {
         return Some((view, true));
     }
@@ -2152,7 +2419,7 @@ fn at_boundary_view(
     if len.len() != 2 || !matches!(len[0].atom(), Some("str.len" | "seq.len")) {
         return None;
     }
-    (suffix_view_skeleton(&len[1], vars)? == view).then_some((view, false))
+    (content_view_skeleton(&len[1], vars, protected)? == view).then_some((view, false))
 }
 
 /// Exactly folds `(= (ite C a b) k)` (or its symmetric orientation) when `a`,
@@ -2262,6 +2529,19 @@ fn contains_pattern_regex(cps: &[u32]) -> axeyum_strings::regex::Regex {
     Regex::concat(Regex::concat(any(), literal_pattern_regex(cps)), any())
 }
 
+/// Strings containing a code point at least twice.
+fn contains_twice_pattern_regex(c: u32) -> axeyum_strings::regex::Regex {
+    use axeyum_strings::regex::Regex;
+    let any = || Regex::star(Regex::any_char());
+    Regex::concat(
+        Regex::concat(
+            Regex::concat(any(), Regex::character(c)),
+            Regex::concat(any(), Regex::character(c)),
+        ),
+        any(),
+    )
+}
+
 /// Prefixes `tail` with exactly `count` arbitrary characters.
 fn after_exact_prefix(
     count: u32,
@@ -2272,6 +2552,28 @@ fn after_exact_prefix(
         tail
     } else {
         Regex::concat(Regex::repeat(Regex::any_char(), count, Some(count)), tail)
+    }
+}
+
+/// Wraps the exact language of a constant slice with the arbitrary characters
+/// removed from its left and right edges.
+fn around_exact_view(
+    view: SuffixView,
+    middle: axeyum_strings::regex::Regex,
+) -> axeyum_strings::regex::Regex {
+    use axeyum_strings::regex::Regex;
+    let with_prefix = after_exact_prefix(view.dropped, middle);
+    if view.dropped_suffix == 0 {
+        with_prefix
+    } else {
+        Regex::concat(
+            with_prefix,
+            Regex::repeat(
+                Regex::any_char(),
+                view.dropped_suffix,
+                Some(view.dropped_suffix),
+            ),
+        )
     }
 }
 
@@ -2324,6 +2626,15 @@ fn exact_word_int_comparison(
     if head != ">=" || parse_int_literal(right) != Some(0) {
         return None;
     }
+    if is_any_index_plus_one(strip_subtracted_zero(left)) {
+        // SMT-LIB `indexof` is at least -1, so `indexof(...)+1 >= 0`.
+        return Some(arena.bool_const(true));
+    }
+    if is_remaining_after_first_nonnegative(strip_subtracted_zero(left)) {
+        // For a non-empty needle, a found index plus one never exceeds the
+        // haystack length; absence gives -1 + 1 = 0.
+        return Some(arena.bool_const(true));
+    }
     if let Some(len) = left.list()
         && len.len() == 2
         && matches!(len[0].atom(), Some("str.len" | "seq.len"))
@@ -2331,21 +2642,12 @@ fn exact_word_int_comparison(
     {
         return Some(arena.bool_const(true));
     }
-    let difference = left.list()?;
-    if difference.len() != 3 || difference[0].atom() != Some("-") {
-        return None;
-    }
-    let len = difference[1].list()?;
-    if len.len() != 2 || !matches!(len[0].atom(), Some("str.len" | "seq.len")) {
-        return None;
-    }
-    let view = suffix_view_skeleton(&len[1], vars)?;
-    let threshold = parse_int_literal(&difference[2])?;
-    if threshold <= 0 {
+    let (subject, threshold) = len_subject_minus_constant(left)?;
+    let view = suffix_view_skeleton(subject, vars)?;
+    if threshold == 0 {
         return Some(arena.bool_const(true));
     }
-    let threshold = u32::try_from(threshold).ok()?;
-    let minimum = view.dropped.checked_add(threshold)?;
+    let minimum = view.total_dropped()?.checked_add(threshold)?;
     mem.atom(arena, view.operand, at_least_length_regex(minimum))
 }
 
