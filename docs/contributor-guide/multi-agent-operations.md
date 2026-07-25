@@ -106,20 +106,30 @@ routine.
 
 ## 3b. Iterate fast — scope the gate to what you changed
 
-`just check` is the **pre-merge / CI** gate: all sub-gates over the *whole*
-workspace (`cargo test/clippy --workspace --all-features`, full `doc`, the Python
-gates, and the order-255 moment proofs). It is thorough and **slow** — tens of
-minutes locally, and GitHub CI adds ~40 more. **Do not run it on every edit.**
-Iteration cost should be proportional to what you changed — a Python-only or
-one-crate edit should gate in *seconds*, not hours. While iterating:
+**THE RULE — read this before you ever type `just check`:**
 
-- **Scoped one-shot:** `just check-scope` — diffs your change vs `main` and runs
-  only the relevant gates (`cargo test/clippy -p <crate>` for a Rust crate; the
-  touched `test_*.py` plus `parity-docs`/`smtcomp-resume` for Python), skipping
-  everything unrelated. It flags any path it can't confidently scope so you know
-  to fall back to `just check`.
-- **By hand, even narrower:** `cargo test -p <crate> --lib`, or
-  `python3 -m pytest scripts/tests/test_<x>.py` for a single module.
+> **In the edit → test loop, run ONLY the tests for the crate / file you changed
+> (`cargo test -p <crate>`). Run the full `just check` exactly ONCE — right
+> before you hand the branch to the integrator, never per commit. Running the
+> full gate in the iteration loop is the single biggest time sink in this repo.
+> Do not do it.**
+
+`just check` is the **pre-merge / CI** gate: every sub-gate over the *whole*
+workspace (`cargo test/clippy --workspace --all-features`, full `doc`, the Python
+gates). Deliberately thorough and **slow** — tens of minutes. It is **not an
+iteration tool.** A one-crate or Python-only edit should gate in **seconds**, and
+nothing forces you to run more than that while developing.
+
+**Your iteration loop — pick the narrowest command that covers your change:**
+
+- **Rust, one crate (this is the default):** `cargo test -p <crate>` — e.g. a
+  solver change → `cargo test -p axeyum-solver`; one file → `cargo test -p
+  axeyum-solver --test nra_differential_fuzz`. `cargo test -p axeyum-cas --lib`
+  is ~21 s (moment proofs are `#[ignore]`d — see below).
+- **Python, one module:** `python3 -m pytest scripts/tests/test_<x>.py`.
+- **Not sure what's in scope?** `just check-scope` diffs your change vs `main` and
+  runs only the relevant crate/tests, flagging anything it can't confidently
+  scope so you know to fall back to the full gate.
 - **The order-255 CAS moment proofs are `#[ignore]`d** (~15 min *each*). Normal
   `cargo test -p axeyum-cas` skips them; run them explicitly with
   **`just moment-proofs`**, and only when you touch moment / squared-binomial /
