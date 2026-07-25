@@ -1800,9 +1800,11 @@ impl MembershipCollector {
 /// performs *no* sat-implying reductions: every leaf is either an exact `Seq`
 /// equality/disequality or an exact regex-membership atom (a `str.in_re`, or a
 /// constant-pattern `prefixof`/`suffixof`/`contains` translated to `P·Σ*` / `Σ*·S`
-/// / `Σ*·C·Σ*`), each sound in any Boolean position. A `str.len`/`substr`/`to_int`,
-/// a compound-subject or variable-pattern extended function, or any non-string
-/// construct returns `None` (all-or-nothing).
+/// / `Σ*·C·Σ*`), or an exact content predicate (`len(X)=0`,
+/// `indexof(X,C,0)=-1`, first/last-character `str.at` equality), each sound in any
+/// Boolean position. Other `str.len`/`substr`/`to_int` shapes, a compound-subject or
+/// variable-pattern extended function, or any non-string construct returns `None`
+/// (all-or-nothing).
 fn word_bool(
     arena: &mut TermArena,
     e: &SExpr,
@@ -1945,6 +1947,14 @@ fn word_equality(
     saw_seq_atom: &mut bool,
     mem: &mut MembershipCollector,
 ) -> Option<TermId> {
+    // Common symbolic-execution content predicates have exact regular-language
+    // readings. Retain those before trying ordinary Seq/Boolean equality so they
+    // remain available under arbitrary Boolean structure and constant-ITE aliases.
+    if items.len() == 2
+        && let Some(content) = exact_content_equality(arena, items, vars, mem)
+    {
+        return Some(content);
+    }
     // PyEx materializes a Boolean predicate as an integer-valued conditional,
     // typically `(= (ite C 1 0) 0)`. Constant branches make this an exact Boolean
     // formula over C, so retain it in the word skeleton before trying Seq equality.
@@ -1982,6 +1992,92 @@ fn word_equality(
         });
     }
     acc
+}
+
+/// Exactly translates regular string-content equalities used heavily by `PyEx`:
+///
+/// * `len(X) = 0` iff `X` is the empty word;
+/// * `indexof(X, C, 0) = -1` iff `X` does not contain the constant word `C`;
+/// * `at(X, 0) = C` / `at(X, len(X)-1) = C` as a constant prefix/suffix language.
+///
+/// Both equality orientations are accepted. The `str.at` result is either empty or
+/// one code point, so a multi-code-point right side is exactly `false`; equality to
+/// the empty word holds exactly when `X` is empty for either supported boundary.
+/// Every non-constant, compound-subject, or other-index shape declines.
+fn exact_content_equality(
+    arena: &mut TermArena,
+    items: &[SExpr],
+    vars: &BTreeMap<String, (SymbolId, TermId)>,
+    mem: &mut MembershipCollector,
+) -> Option<TermId> {
+    let [left, right] = items else { return None };
+    exact_content_equality_ordered(arena, left, right, vars, mem)
+        .or_else(|| exact_content_equality_ordered(arena, right, left, vars, mem))
+}
+
+/// One oriented half of [`exact_content_equality`]: `subject = constant`.
+fn exact_content_equality_ordered(
+    arena: &mut TermArena,
+    subject: &SExpr,
+    constant: &SExpr,
+    vars: &BTreeMap<String, (SymbolId, TermId)>,
+    mem: &mut MembershipCollector,
+) -> Option<TermId> {
+    let app = subject.list()?;
+    let head = app.first().and_then(SExpr::atom)?;
+    match head {
+        "str.len" | "seq.len" if app.len() == 2 && parse_int_literal(constant) == Some(0) => {
+            let name = variable_name_skeleton(&app[1], vars)?;
+            let (operand, _) = *vars.get(&name)?;
+            mem.atom(arena, operand, axeyum_strings::regex::Regex::Empty)
+        }
+        "str.indexof"
+            if app.len() == 4
+                && parse_int_literal(&app[3]) == Some(0)
+                && parse_int_literal(constant) == Some(-1) =>
+        {
+            let name = variable_name_skeleton(&app[1], vars)?;
+            let (operand, _) = *vars.get(&name)?;
+            let needle = literal_pattern_cps(&app[2])?;
+            let contains = mem.atom(arena, operand, contains_pattern_regex(&needle))?;
+            arena.not(contains).ok()
+        }
+        "str.at" if app.len() == 3 => {
+            let (name, first) = at_boundary_variable(&app[1], &app[2], vars)?;
+            let (operand, _) = *vars.get(&name)?;
+            let value = literal_pattern_cps(constant)?;
+            let regex = match value.as_slice() {
+                [] => axeyum_strings::regex::Regex::Empty,
+                [c] if first => prefix_pattern_regex(&[*c]),
+                [c] => suffix_pattern_regex(&[*c]),
+                _ => return Some(arena.bool_const(false)),
+            };
+            mem.atom(arena, operand, regex)
+        }
+        _ => None,
+    }
+}
+
+/// Recognizes `str.at(X, 0)` (`true`) or `str.at(X, len(X)-1)` (`false`) for a
+/// single declared string variable `X`.
+fn at_boundary_variable(
+    subject: &SExpr,
+    index: &SExpr,
+    vars: &BTreeMap<String, (SymbolId, TermId)>,
+) -> Option<(String, bool)> {
+    let name = variable_name_skeleton(subject, vars)?;
+    if parse_int_literal(index) == Some(0) {
+        return Some((name, true));
+    }
+    let minus = index.list()?;
+    if minus.len() != 3 || minus[0].atom() != Some("-") || parse_int_literal(&minus[2]) != Some(1) {
+        return None;
+    }
+    let len = minus[1].list()?;
+    if len.len() != 2 || !matches!(len[0].atom(), Some("str.len" | "seq.len")) {
+        return None;
+    }
+    (variable_name_skeleton(&len[1], vars)? == name).then_some((name, false))
 }
 
 /// Exactly folds `(= (ite C a b) k)` (or its symmetric orientation) when `a`,
