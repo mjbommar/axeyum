@@ -168,13 +168,14 @@ pub struct Script {
     /// The parser-side **regex-membership side channel** (P2.7 T-C.5, ADR-0054):
     /// a translation of the script's `str.in_re` fragment into single-variable
     /// [`MembershipProblem`](crate::MembershipProblem) constraints over the
-    /// code-point symbolic-derivative regex engine, populated all-or-nothing over
-    /// the recognized membership fragment (positive/negative `str.in_re` over
-    /// variables or literals, length bounds, and literal pins — nothing else). The
-    /// solver consults it as a second-chance route strictly after the bounded and
-    /// word routes decline: it may add a replay-checked `sat` (a witness matched by
-    /// the reference matcher) or a re-checked-emptiness `unsat`, so a `None` (or an
-    /// undecided problem) simply leaves the prior verdict untouched.
+    /// code-point symbolic-derivative regex engine. It retains supported asserted
+    /// conjuncts (positive/negative `str.in_re` over variables or literals, length
+    /// bounds, literal pins, and exact `RegLan` aliases) and records whether that
+    /// subset is complete. The solver consults it as a second-chance route strictly
+    /// after the bounded and word routes decline: a complete problem may add a
+    /// matcher-replayed `sat`; a complete or incomplete conjunctive subset may add
+    /// `unsat` only behind re-checked emptiness. Otherwise the prior verdict is left
+    /// untouched.
     pub membership_problem: Option<crate::MembershipProblem>,
     /// The **membership theory atoms** of the Boolean-structured word skeleton
     /// (P2.7 T-C.6): one entry per distinct `(str.in_re X R)` atom that appears

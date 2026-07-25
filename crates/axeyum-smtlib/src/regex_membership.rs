@@ -1,20 +1,23 @@
 //! The **regex-membership side channel** (P2.7 T-C.5, ADR-0054).
 //!
-//! A parser-side, all-or-nothing translation of a script's regex-membership
-//! fragment into a set of single-variable [`axeyum_strings::Membership`] problems
-//! over the code-point [`Regex`](axeyum_strings::Regex) engine. It is the regex
+//! A parser-side translation of a script's regex-membership fragment into a set
+//! of single-variable [`axeyum_strings::Membership`] problems over the code-point
+//! [`Regex`](axeyum_strings::Regex) engine. It is the regex
 //! analogue of the [`WordProblem`](crate::Script::word_problem) side channel: the
 //! solver consults it *strictly after* the bounded route and the word routes
 //! decline, and the symbolic-derivative membership solver decides it (witness +
 //! replay for `sat`, a re-checked emptiness certificate for `unsat`).
 //!
-//! ## The recognized fragment (all-or-nothing)
+//! ## The recognized fragment
 //!
-//! Populated only when **every** top-level asserted atom is one of:
+//! The side channel retains these asserted conjuncts:
 //!
 //! * `(str.in_re X R)` / `(not (str.in_re X R))` where `X` is a declared string
 //!   variable and `R` translates to a code-point [`Regex`] — a positive/negative
 //!   membership on `X`;
+//! * a unique top-level definition `(= A R)` (or symmetric) of a declared 0-ary
+//!   `RegLan` alias `A` by a concrete supported regex `R`; the alias is substituted
+//!   into membership regexes;
 //! * `(str.in_re "lit" R)` / its negation over a **string literal** operand — a
 //!   ground membership atom the solver checks by the reference matcher;
 //! * a length atom `(≷ (str.len X) n)` / `(≷ n (str.len X))` for
@@ -23,22 +26,23 @@
 //! * `(= X "lit")` / `(= "lit" X)` — pins `X` to a string literal;
 //! * `(and …)` of the above, and the trivial `true`.
 //!
-//! Anything else — a non-literal, non-variable membership operand (`str.++`,
-//! `str.substr`, …), `str.contains`/other extended functions, `or`/`ite`/nested
-//! `not`, a non-string atom, or any incremental scoping — collapses the whole
-//! channel to `None`. A partial translation could let a witness for the
-//! represented subset violate a dropped atom, so an unrepresentable atom forbids
-//! the whole problem (mirroring [`build_word_problem`](crate::Script)).
+//! An unrecognized conjunct makes [`MembershipProblem::complete`] false but does
+//! not discard recognized conjuncts. This incomplete problem is usable only for
+//! `unsat`: unsatisfiability of a conjunctive subset proves the full script
+//! unsatisfiable, while satisfiability of that subset proves nothing and must
+//! decline. Incremental scoping and macros still collapse the channel to `None`,
+//! because the active-assertion subset is no longer fixed.
 //!
 //! ## Character-set caveat
 //!
 //! String literals are decoded to Unicode **code points** (SMT-LIB `\u{…}` /
 //! `\uXXXX` escapes handled), matching the `axeyum-strings` `BitVec(18)` alphabet
 //! (ADR-0051). A literal or `re.range` endpoint whose code point exceeds
-//! [`ALPHABET_MAX`](axeyum_strings::regex::ALPHABET_MAX) declines the whole
-//! channel rather than translate it unfaithfully.
+//! [`ALPHABET_MAX`](axeyum_strings::regex::ALPHABET_MAX) is not retained rather
+//! than translated unfaithfully; any other retained membership conjuncts make an
+//! incomplete, `unsat`-only problem.
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 
 use axeyum_ir::{Sort, SymbolId, TermArena};
 use axeyum_strings::Membership;
@@ -53,6 +57,10 @@ pub struct MembershipProblem {
     /// The per-variable membership constraints (user variables first, in
     /// declaration order, then synthetic ground-atom entries).
     pub vars: Vec<MemberVar>,
+    /// `true` exactly when every asserted conjunct was represented. A complete
+    /// problem may decide `sat` or `unsat`; an incomplete problem may only prove
+    /// `unsat` from its retained conjunctive subset.
+    pub complete: bool,
 }
 
 /// One variable's membership constraint set, or a synthetic ground membership
@@ -75,8 +83,8 @@ pub struct MemberVar {
 
 impl MembershipProblem {
     /// Builds the side channel from the post-desugar top-level command
-    /// s-expressions, or `None` when the script is outside the recognized regex
-    /// fragment (see the module documentation).
+    /// s-expressions, or `None` when there is no supported membership atom (or
+    /// fixed active assertion set) to retain; see the module documentation.
     #[must_use]
     pub fn build(arena: &mut TermArena, exprs: &[SExpr]) -> Option<MembershipProblem> {
         // Incremental scoping / macros break the "active subset ⊆ all asserts"
@@ -90,6 +98,32 @@ impl MembershipProblem {
                 return None;
             }
         }
+
+        // Unique top-level definitions of declared 0-ary RegLan constants are
+        // exact aliases. Only concrete right-hand sides are admitted here: alias
+        // dependency ordering and recursive definitions remain unsupported.
+        let regex_vars: BTreeSet<String> = exprs
+            .iter()
+            .filter_map(declared_regex_var)
+            .map(str::to_owned)
+            .collect();
+        let mut regex_candidates: BTreeMap<String, (usize, Regex)> = BTreeMap::new();
+        for e in exprs {
+            let Some(body) = asserted_body(e) else {
+                continue;
+            };
+            let Some((name, regex)) = concrete_regex_definition(body, &regex_vars) else {
+                continue;
+            };
+            regex_candidates
+                .entry(name)
+                .and_modify(|entry| entry.0 += 1)
+                .or_insert((1, regex));
+        }
+        let regex_defs: BTreeMap<String, Regex> = regex_candidates
+            .into_iter()
+            .filter_map(|(name, (count, regex))| (count == 1).then_some((name, regex)))
+            .collect();
 
         // Declared string variables → a fresh `Seq`-sorted symbol each (shared
         // with the word channels via the `!weq!<name>` naming convention).
@@ -109,16 +143,25 @@ impl MembershipProblem {
 
         let mut builder = Builder {
             vars: &vars,
+            regex_defs: &regex_defs,
             per_var: BTreeMap::new(),
             grounds: Vec::new(),
             saw_membership: false,
+            complete: true,
         };
         for e in exprs {
             let Some(items) = e.list() else { continue };
             if items.first().and_then(SExpr::atom) == Some("assert") {
                 let [_, body] = items else { return None };
+                // A unique top-level RegLan definition is represented by exact
+                // substitution in every retained membership atom.
+                if concrete_regex_definition(body, &regex_vars)
+                    .is_some_and(|(name, _)| regex_defs.contains_key(&name))
+                {
+                    continue;
+                }
                 if !builder.atom(body) {
-                    return None;
+                    builder.complete = false;
                 }
             }
         }
@@ -128,7 +171,10 @@ impl MembershipProblem {
             return None;
         }
 
-        let mut out = MembershipProblem::default();
+        let mut out = MembershipProblem {
+            vars: Vec::new(),
+            complete: builder.complete,
+        };
         for name in &order {
             if let Some(state) = builder.per_var.remove(name) {
                 out.vars.push(MemberVar {
@@ -160,15 +206,18 @@ struct VarState {
 
 struct Builder<'a> {
     vars: &'a BTreeMap<String, SymbolId>,
+    regex_defs: &'a BTreeMap<String, Regex>,
     per_var: BTreeMap<String, VarState>,
     /// Ground literal-operand atoms: `(membership-over-literal, literal-codepoints)`.
     grounds: Vec<(Membership, Vec<u32>)>,
     saw_membership: bool,
+    complete: bool,
 }
 
 impl Builder<'_> {
-    /// Translates one asserted atom, returning `false` (abort) on anything outside
-    /// the recognized fragment. Recurses through a top-level `and`.
+    /// Retains one asserted conjunct, returning `false` when that conjunct is
+    /// outside the recognized fragment. A top-level `and` visits every child even
+    /// after one child is unsupported, so later usable conjuncts are not lost.
     fn atom(&mut self, e: &SExpr) -> bool {
         if e.atom() == Some("true") {
             return true;
@@ -178,7 +227,13 @@ impl Builder<'_> {
             return false;
         };
         match head {
-            "and" => items[1..].iter().all(|c| self.atom(c)),
+            "and" => {
+                let mut complete = true;
+                for child in &items[1..] {
+                    complete &= self.atom(child);
+                }
+                complete
+            }
             "str.in_re" if items.len() == 3 => self.membership_atom(&items[1], &items[2], true),
             "not" if items.len() == 2 => {
                 let Some(inner) = items[1].list() else {
@@ -201,7 +256,7 @@ impl Builder<'_> {
     /// `(str.in_re operand R)` (or its negation): `operand` is a declared variable
     /// (per-variable constraint) or a string literal (ground atom).
     fn membership_atom(&mut self, operand: &SExpr, re: &SExpr, positive: bool) -> bool {
-        let Some(regex) = translate_regex(re) else {
+        let Some(regex) = translate_regex_with_defs(re, self.regex_defs) else {
             return false;
         };
         self.saw_membership = true;
@@ -305,6 +360,46 @@ fn declared_string_var(e: &SExpr) -> Option<&str> {
     }
 }
 
+/// The declared name of a 0-ary `RegLan`-sorted symbol, if any.
+fn declared_regex_var(e: &SExpr) -> Option<&str> {
+    let items = e.list()?;
+    match items.first().and_then(SExpr::atom)? {
+        "declare-const" if items.len() == 3 => {
+            (items[2].atom() == Some("RegLan")).then(|| items[1].atom())?
+        }
+        "declare-fun" if items.len() == 4 => {
+            let empty_params = items[2].list().is_some_and(<[SExpr]>::is_empty);
+            (empty_params && items[3].atom() == Some("RegLan")).then(|| items[1].atom())?
+        }
+        _ => None,
+    }
+}
+
+/// The body of a well-formed top-level `(assert body)` command.
+fn asserted_body(e: &SExpr) -> Option<&SExpr> {
+    let [head, body] = e.list()? else {
+        return None;
+    };
+    (head.atom() == Some("assert")).then_some(body)
+}
+
+/// A concrete definition of a declared `RegLan` alias, in either equality
+/// orientation. The regex must not depend on another alias.
+fn concrete_regex_definition(e: &SExpr, regex_vars: &BTreeSet<String>) -> Option<(String, Regex)> {
+    let items = e.list()?;
+    if items.len() != 3 || items[0].atom() != Some("=") {
+        return None;
+    }
+    for (name_expr, regex_expr) in [(&items[1], &items[2]), (&items[2], &items[1])] {
+        if let Some(name) = name_expr.atom()
+            && regex_vars.contains(name)
+        {
+            return Some((name.to_owned(), translate_regex(regex_expr)?));
+        }
+    }
+    None
+}
+
 /// The variable name if `e` is a declared string variable atom.
 fn variable_name(e: &SExpr, vars: &BTreeMap<String, SymbolId>) -> Option<String> {
     let a = e.atom()?;
@@ -397,18 +492,24 @@ fn literal_code_points(e: &SExpr) -> Option<Vec<u32>> {
 /// ([`crate::parse`]), which lifts `str.in_re` atoms into theory atoms for the
 /// online CDCL(T) route.
 pub(crate) fn translate_regex(e: &SExpr) -> Option<Regex> {
+    translate_regex_with_defs(e, &BTreeMap::new())
+}
+
+/// Translates a regex while resolving exact, concrete `RegLan` aliases gathered
+/// from unique top-level definitions.
+fn translate_regex_with_defs(e: &SExpr, defs: &BTreeMap<String, Regex>) -> Option<Regex> {
     match e {
         SExpr::Atom(a) => match a.as_str() {
             "re.none" => Some(Regex::none()),
             "re.all" => Some(Regex::star(Regex::any_char())),
             "re.allchar" => Some(Regex::any_char()),
-            _ => None,
+            _ => defs.get(a).cloned(),
         },
         SExpr::List(items) => {
             let head = items.first()?;
             // Indexed forms: `((_ re.loop i j) R)` / `((_ re.^ n) R)`.
             if let Some(list) = head.list() {
-                return translate_indexed(list, &items[1..]);
+                return translate_indexed(list, &items[1..], defs);
             }
             let head = head.atom()?;
             let args = &items[1..];
@@ -428,20 +529,32 @@ pub(crate) fn translate_regex(e: &SExpr) -> Option<Regex> {
                         _ => Some(Regex::none()),
                     }
                 }
-                "re.++" if !args.is_empty() => fold_translate(args, Regex::concat, Regex::Empty),
-                "re.union" if !args.is_empty() => fold_translate(args, Regex::union, Regex::none()),
-                "re.inter" if !args.is_empty() => {
-                    fold_translate(args, Regex::inter, Regex::universal())
+                "re.++" if !args.is_empty() => {
+                    fold_translate(args, Regex::concat, Regex::Empty, defs)
                 }
-                "re.comp" if args.len() == 1 => Some(Regex::comp(translate_regex(&args[0])?)),
+                "re.union" if !args.is_empty() => {
+                    fold_translate(args, Regex::union, Regex::none(), defs)
+                }
+                "re.inter" if !args.is_empty() => {
+                    fold_translate(args, Regex::inter, Regex::universal(), defs)
+                }
+                "re.comp" if args.len() == 1 => {
+                    Some(Regex::comp(translate_regex_with_defs(&args[0], defs)?))
+                }
                 "re.diff" if args.len() == 2 => {
-                    let a = translate_regex(&args[0])?;
-                    let b = translate_regex(&args[1])?;
+                    let a = translate_regex_with_defs(&args[0], defs)?;
+                    let b = translate_regex_with_defs(&args[1], defs)?;
                     Some(Regex::inter(a, Regex::comp(b)))
                 }
-                "re.*" if args.len() == 1 => Some(Regex::star(translate_regex(&args[0])?)),
-                "re.+" if args.len() == 1 => Some(Regex::plus(translate_regex(&args[0])?)),
-                "re.opt" if args.len() == 1 => Some(Regex::opt(translate_regex(&args[0])?)),
+                "re.*" if args.len() == 1 => {
+                    Some(Regex::star(translate_regex_with_defs(&args[0], defs)?))
+                }
+                "re.+" if args.len() == 1 => {
+                    Some(Regex::plus(translate_regex_with_defs(&args[0], defs)?))
+                }
+                "re.opt" if args.len() == 1 => {
+                    Some(Regex::opt(translate_regex_with_defs(&args[0], defs)?))
+                }
                 _ => None,
             }
         }
@@ -450,11 +563,15 @@ pub(crate) fn translate_regex(e: &SExpr) -> Option<Regex> {
 
 /// Translates an indexed regex form: `(_ re.loop i j)` / `(_ re.^ n)` applied to
 /// `args` (exactly one sub-regex).
-fn translate_indexed(idx: &[SExpr], args: &[SExpr]) -> Option<Regex> {
+fn translate_indexed(
+    idx: &[SExpr],
+    args: &[SExpr],
+    defs: &BTreeMap<String, Regex>,
+) -> Option<Regex> {
     if idx.first().and_then(SExpr::atom) != Some("_") || args.len() != 1 {
         return None;
     }
-    let inner = translate_regex(&args[0])?;
+    let inner = translate_regex_with_defs(&args[0], defs)?;
     match idx.get(1).and_then(SExpr::atom) {
         Some("re.loop") if idx.len() == 4 => {
             let lo = numeral(&idx[2])?;
@@ -475,10 +592,11 @@ fn fold_translate(
     args: &[SExpr],
     f: impl Fn(Regex, Regex) -> Regex,
     _unit: Regex,
+    defs: &BTreeMap<String, Regex>,
 ) -> Option<Regex> {
-    let mut acc = translate_regex(&args[0])?;
+    let mut acc = translate_regex_with_defs(&args[0], defs)?;
     for a in &args[1..] {
-        acc = f(acc, translate_regex(a)?);
+        acc = f(acc, translate_regex_with_defs(a, defs)?);
     }
     Some(acc)
 }

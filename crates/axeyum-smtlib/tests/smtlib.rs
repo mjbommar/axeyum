@@ -4260,6 +4260,44 @@ fn regex_declined_constructs_are_clean_unsupported() {
     ));
 }
 
+/// The `ReDoS` corpus defines regexes through 0-ary `RegLan` aliases and mixes the
+/// membership constraints with a word equation. The membership side channel must
+/// retain the supported conjuncts, mark the abstraction incomplete, and resolve
+/// the aliases even when their definitions follow the membership assertion.
+#[test]
+fn regex_membership_retains_incomplete_redos_alias_subset() {
+    let text = r#"
+        (set-logic QF_SLIA)
+        (declare-const result String)
+        (declare-const attack String)
+        (declare-const postfixs String)
+        (declare-const prefix RegLan)
+        (declare-const infix RegLan)
+        (declare-const postfix RegLan)
+        (assert (str.in_re attack (re.++ prefix ((_ re.loop 2 2) infix) postfix)))
+        (assert (= prefix (str.to_re "p")))
+        (assert (= infix (str.to_re "i")))
+        (assert (= postfix (str.to_re "")))
+        (assert (str.in_re postfixs postfix))
+        (assert (>= (str.len postfixs) 1))
+        (assert (= result (str.++ attack postfixs)))
+        (check-sat)
+    "#;
+    let script = parse_script(text).expect("ReDoS-shaped script must reach side channels");
+    let problem = script
+        .membership_problem
+        .expect("supported membership conjuncts must be retained");
+    assert!(
+        !problem.complete,
+        "the unrelated word equation is not represented by the membership subset"
+    );
+    assert_eq!(
+        problem.vars.len(),
+        2,
+        "attack and postfixs membership constraints are retained"
+    );
+}
+
 #[test]
 fn regex_inter_matches_intersection() {
     // (re.inter (re.* (re.range "a" "z")) (str.to_re "ab")): lowercase-only ∩ {"ab"} = {"ab"}.

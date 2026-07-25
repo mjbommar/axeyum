@@ -18,7 +18,10 @@ use axeyum_ir::{
     ArraySortKey, FuncValue, Op, Sort, SymbolId, TermArena, TermId, TermNode, Value, render,
     well_founded_default,
 };
-use axeyum_smtlib::{IntBound, IntBoundKind, Script, ScriptCommand, WordObligation, parse_script};
+use axeyum_smtlib::{
+    IntBound, IntBoundKind, MemberVar, MembershipProblem, Script, ScriptCommand, WordObligation,
+    parse_script,
+};
 use axeyum_strings::{
     MembershipOutcome, RefuteOutcome, SearchBudget, SearchOutcome, refute_word_equations,
     solve_word_equations,
@@ -853,6 +856,23 @@ fn seq_value(codepoints: &[u32]) -> Value {
     )
 }
 
+/// Deterministic fail-fast order for independent membership classes. Fixed
+/// witnesses are replayed first, then classes carrying length bounds (the common
+/// cheap contradiction is `x ∈ ε ∧ len(x) > 0`), then unconstrained classes.
+/// Stable sorting preserves source declaration order within each priority.
+fn prioritized_membership_vars(problem: &MembershipProblem) -> Vec<&MemberVar> {
+    let mut vars: Vec<&MemberVar> = problem.vars.iter().collect();
+    vars.sort_by_key(|var| {
+        let has_length_bound = var.membership.len_lo > 0 || var.membership.len_hi.is_some();
+        (
+            var.pinned.is_none(),
+            !has_length_bound,
+            var.membership.positives.len() + var.membership.negatives.len(),
+        )
+    });
+    vars
+}
+
 /// The **regex-membership second-chance route** (P2.7 T-C.5, ADR-0054).
 ///
 /// Runs *strictly after* the bounded route, the flat word route, and the online
@@ -861,15 +881,18 @@ fn seq_value(codepoints: &[u32]) -> Value {
 /// side channel. The symbolic-derivative sub-solver decides each single-variable
 /// constraint set:
 ///
-/// - it may add `sat` — a per-variable witness the reference matcher has replayed
+/// - it may add `sat` only for a **complete** side channel — a per-variable
+///   witness the reference matcher has replayed
 ///   against every membership atom and length bound (the sole gate on `sat`, so no
 ///   wrong `sat` is possible); the returned model binds each variable's `!weq!`
 ///   `Seq` symbol to its witness. The variables carry **no** cross constraints in
 ///   the recognized fragment, so their independent witnesses jointly satisfy the
 ///   whole problem;
-/// - it may add `unsat` — but **only** behind a re-checked derivative-emptiness
-///   certificate (a finite, nullable-free, closure-verified residual set), or a
-///   ground literal-operand atom the matcher refutes.
+/// - it may add `unsat` — including from an incomplete retained conjunctive
+///   subset — but **only** behind a re-checked derivative-emptiness certificate
+///   (a finite, nullable-free, closure-verified residual set), or a ground
+///   literal-operand atom the matcher refutes. `unsat` of a subset of asserted
+///   conjuncts proves the full conjunction `unsat`; subset `sat` does not.
 ///
 /// A variable the sub-solver leaves `unknown` (over budget / outside the decided
 /// fragment) preserves the prior `unknown` — the route never guesses.
@@ -887,7 +910,7 @@ fn apply_membership_route(
     let budget = membership_budget(config);
     let mut model = Model::new();
     let mut undecided = false;
-    for var in &problem.vars {
+    for var in prioritized_membership_vars(&problem) {
         // A pinned/ground atom: validate the fixed witness through the reference
         // matcher — a violated atom is an immediate `unsat`.
         if let Some(pin) = &var.pinned {
@@ -909,15 +932,16 @@ fn apply_membership_route(
             MembershipOutcome::Unknown => undecided = true,
         }
     }
-    if undecided {
-        let detail = if reason.detail.is_empty() {
+    if undecided || !problem.complete {
+        let route_detail = if problem.complete {
             "regex-membership route declined (over budget or outside the decided fragment)"
-                .to_owned()
         } else {
-            format!(
-                "{}; regex-membership route declined (over budget)",
-                reason.detail
-            )
+            "regex-membership route retained an incomplete conjunctive subset"
+        };
+        let detail = if reason.detail.is_empty() {
+            route_detail.to_owned()
+        } else {
+            format!("{}; {route_detail}", reason.detail)
         };
         return CheckResult::Unknown(UnknownReason {
             kind: reason.kind,
@@ -932,9 +956,10 @@ fn apply_membership_route(
 /// decides, and `None` otherwise. The membership mirror of [`word_route_verdict`] /
 /// [`online_string_verdict`].
 ///
-/// Soundness anchors are those of `apply_membership_route`: `sat` only through a
-/// matcher-replayed witness, `unsat` only through a re-checked emptiness certificate
-/// or a matcher-refuted ground atom. A `sat` model binds `Seq`-level witnesses,
+/// Soundness anchors are those of `apply_membership_route`: `sat` only from a
+/// complete problem through matcher-replayed witnesses, `unsat` only through a
+/// re-checked emptiness certificate or a matcher-refuted ground atom (possibly
+/// over an incomplete conjunctive subset). A `sat` model binds `Seq`-level witnesses,
 /// already checked at that level — callers must not replay it against a packed
 /// bit-vector view. Returns `None` when the script carries no
 /// [`MembershipProblem`](axeyum_smtlib::MembershipProblem) or the route declines.
@@ -1002,7 +1027,7 @@ pub fn membership_unsat_certificate(
 ) -> Option<(axeyum_strings::Membership, String)> {
     let problem = script.membership_problem.as_ref()?;
     let budget = membership_budget(config);
-    for var in &problem.vars {
+    for var in prioritized_membership_vars(problem) {
         // A pinned / ground-literal atom decides `unsat` by a matcher-refuted fixed
         // witness, NOT the derivative-emptiness certificate — no regex-emptiness Lean
         // module for such a verdict. This mirrors `apply_membership_route`'s order:
