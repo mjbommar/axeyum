@@ -384,7 +384,12 @@ fn qf_uf_boolean_euf_rows_use_checked_exhaustive_evidence() {
             include_str!(
                 "../../../corpus/public-curated/non-incremental/QF_UF/cvc5-regress-clean-bounded/cli__regress0__uf__cnf-ite.smt2"
             ),
-            8,
+            // Was 8. This instance contains `(= e e)`, which parse-time identity
+            // folding now collapses to `true`, so it is no longer a Boolean-EUF
+            // atom. The exhaustive certificate over the remaining 7 non-trivial
+            // atoms still certifies (is_certified() below holds) — a sound fold
+            // of a trivially-true atom, not a lost case.
+            7,
         ),
     ] {
         let mut script = parse_script(input).expect("QF_UF Boolean-EUF row parses");
