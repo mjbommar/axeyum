@@ -1000,7 +1000,7 @@ fn apply_membership_route(
 /// over an incomplete conjunctive subset). A `sat` model binds `Seq`-level witnesses,
 /// already checked at that level — callers must not replay it against a packed
 /// bit-vector view. Returns `None` when the script carries no
-/// [`MembershipProblem`](axeyum_smtlib::MembershipProblem) or the route declines.
+/// [`MembershipProblem`] or the route declines.
 #[must_use]
 pub fn membership_verdict(script: &mut Script, config: &SolverConfig) -> Option<CheckResult> {
     script.membership_problem.as_ref()?;
@@ -1023,7 +1023,7 @@ pub fn membership_verdict(script: &mut Script, config: &SolverConfig) -> Option<
 /// the string-`unsat` evidence path: a real `QF_S` regex-membership `unsat` behind
 /// the derivative-emptiness certificate now carries an end-to-end kernel-checked
 /// Lean `False`. Because regexes are **not** represented in the `axeyum-ir` term
-/// arena (they live in the parser's [`MembershipProblem`](axeyum_smtlib::MembershipProblem)
+/// arena (they live in the parser's [`MembershipProblem`]
 /// side channel), this
 /// cannot route through the arena-scanning `prove_unsat_to_lean_module` dispatch —
 /// the reconstruction is threaded here, at the point where the deciding
