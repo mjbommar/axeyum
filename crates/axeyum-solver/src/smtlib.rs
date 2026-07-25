@@ -856,6 +856,10 @@ fn seq_value(codepoints: &[u32]) -> Value {
     )
 }
 
+/// Maximum concrete output length materialized while lifting checked membership
+/// witnesses through an existential concatenation definition.
+const MEMBERSHIP_MAX_LIFTED_WITNESS_LEN: usize = 4_000_000;
+
 /// Deterministic fail-fast order for independent membership classes. Fixed
 /// witnesses are replayed first, then classes carrying length bounds (the common
 /// cheap contradiction is `x ∈ ε ∧ len(x) > 0`), then unconstrained classes.
@@ -881,13 +885,11 @@ fn prioritized_membership_vars(problem: &MembershipProblem) -> Vec<&MemberVar> {
 /// side channel. The symbolic-derivative sub-solver decides each single-variable
 /// constraint set:
 ///
-/// - it may add `sat` only for a **complete** side channel — a per-variable
-///   witness the reference matcher has replayed
-///   against every membership atom and length bound (the sole gate on `sat`, so no
-///   wrong `sat` is possible); the returned model binds each variable's `!weq!`
-///   `Seq` symbol to its witness. The variables carry **no** cross constraints in
-///   the recognized fragment, so their independent witnesses jointly satisfy the
-///   whole problem;
+/// - it may add `sat` only for a **complete** side channel — a checked
+///   per-variable witness against every membership atom and length bound (the sole
+///   gate on `sat`, so no wrong `sat` is possible); the returned model binds each
+///   variable's `!weq!` `Seq` symbol to its witness, then evaluates any safe
+///   existential output concatenations from those exact values;
 /// - it may add `unsat` — including from an incomplete retained conjunctive
 ///   subset — but **only** behind a re-checked derivative-emptiness certificate
 ///   (a finite, nullable-free, closure-verified residual set), or a ground
@@ -909,6 +911,7 @@ fn apply_membership_route(
     };
     let budget = membership_budget(config);
     let mut model = Model::new();
+    let mut witnesses: BTreeMap<SymbolId, Vec<u32>> = BTreeMap::new();
     let mut undecided = false;
     for var in prioritized_membership_vars(&problem) {
         // A pinned/ground atom: validate the fixed witness through the reference
@@ -919,6 +922,7 @@ fn apply_membership_route(
             }
             if let Some(sym) = var.sym {
                 model.set(sym, seq_value(pin));
+                witnesses.insert(sym, pin.clone());
             }
             continue;
         }
@@ -927,6 +931,7 @@ fn apply_membership_route(
             MembershipOutcome::Sat(witness) => {
                 if let Some(sym) = var.sym {
                     model.set(sym, seq_value(&witness));
+                    witnesses.insert(sym, witness);
                 }
             }
             MembershipOutcome::Unknown => undecided = true,
@@ -948,6 +953,39 @@ fn apply_membership_route(
             detail,
         });
     }
+
+    // Every definition is an existential sink proven by the parser to occur in
+    // no other assertion. Its exact concatenated value extends the checked input
+    // witnesses to a model of the full represented conjunction.
+    for definition in &problem.definitions {
+        let Some(total_len) = definition.inputs.iter().try_fold(0usize, |sum, input| {
+            sum.checked_add(witnesses.get(input)?.len())
+        }) else {
+            return CheckResult::Unknown(UnknownReason {
+                kind: reason.kind,
+                detail: "regex-membership route could not lift a concatenation definition"
+                    .to_owned(),
+            });
+        };
+        if total_len > MEMBERSHIP_MAX_LIFTED_WITNESS_LEN {
+            return CheckResult::Unknown(UnknownReason {
+                kind: reason.kind,
+                detail: format!(
+                    "regex-membership concatenation witness length {total_len} exceeds the \
+                     materialization cap {MEMBERSHIP_MAX_LIFTED_WITNESS_LEN}"
+                ),
+            });
+        }
+        let mut output = Vec::with_capacity(total_len);
+        for input in &definition.inputs {
+            output.extend_from_slice(
+                witnesses
+                    .get(input)
+                    .expect("parser admitted only membership-witness inputs"),
+            );
+        }
+        model.set(definition.output, seq_value(&output));
+    }
     CheckResult::Sat(model)
 }
 
@@ -957,7 +995,7 @@ fn apply_membership_route(
 /// [`online_string_verdict`].
 ///
 /// Soundness anchors are those of `apply_membership_route`: `sat` only from a
-/// complete problem through matcher-replayed witnesses, `unsat` only through a
+/// complete problem through checked witnesses, `unsat` only through a
 /// re-checked emptiness certificate or a matcher-refuted ground atom (possibly
 /// over an incomplete conjunctive subset). A `sat` model binds `Seq`-level witnesses,
 /// already checked at that level — callers must not replay it against a packed

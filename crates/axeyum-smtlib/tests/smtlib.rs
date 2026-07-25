@@ -4260,12 +4260,12 @@ fn regex_declined_constructs_are_clean_unsupported() {
     ));
 }
 
-/// The `ReDoS` corpus defines regexes through 0-ary `RegLan` aliases and mixes the
-/// membership constraints with a word equation. The membership side channel must
-/// retain the supported conjuncts, mark the abstraction incomplete, and resolve
-/// the aliases even when their definitions follow the membership assertion.
+/// The `ReDoS` corpus defines regexes through 0-ary `RegLan` aliases and finishes
+/// with an existential output concatenation. The membership side channel resolves
+/// the aliases even when their definitions follow the membership assertion and
+/// retains the safe concatenation as a model definition.
 #[test]
-fn regex_membership_retains_incomplete_redos_alias_subset() {
+fn regex_membership_completes_redos_alias_and_output_definition() {
     let text = r#"
         (set-logic QF_SLIA)
         (declare-const result String)
@@ -4287,14 +4287,16 @@ fn regex_membership_retains_incomplete_redos_alias_subset() {
     let problem = script
         .membership_problem
         .expect("supported membership conjuncts must be retained");
-    assert!(
-        !problem.complete,
-        "the unrelated word equation is not represented by the membership subset"
-    );
+    assert!(problem.complete, "every ReDoS conjunct is represented");
     assert_eq!(
         problem.vars.len(),
         2,
         "attack and postfixs membership constraints are retained"
+    );
+    assert_eq!(
+        problem.definitions.len(),
+        1,
+        "result is constructed from attack and postfixs witnesses"
     );
 }
 

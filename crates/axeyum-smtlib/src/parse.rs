@@ -170,12 +170,12 @@ pub struct Script {
     /// [`MembershipProblem`](crate::MembershipProblem) constraints over the
     /// code-point symbolic-derivative regex engine. It retains supported asserted
     /// conjuncts (positive/negative `str.in_re` over variables or literals, length
-    /// bounds, literal pins, and exact `RegLan` aliases) and records whether that
-    /// subset is complete. The solver consults it as a second-chance route strictly
-    /// after the bounded and word routes decline: a complete problem may add a
-    /// matcher-replayed `sat`; a complete or incomplete conjunctive subset may add
-    /// `unsat` only behind re-checked emptiness. Otherwise the prior verdict is left
-    /// untouched.
+    /// bounds, literal pins, exact `RegLan` aliases, and safe existential output
+    /// concatenations) and records whether that subset is complete. The solver
+    /// consults it as a second-chance route strictly after the bounded and word
+    /// routes decline: a complete problem may add a checked `sat`; a complete or
+    /// incomplete conjunctive subset may add `unsat` only behind re-checked
+    /// emptiness. Otherwise the prior verdict is left untouched.
     pub membership_problem: Option<crate::MembershipProblem>,
     /// The **membership theory atoms** of the Boolean-structured word skeleton
     /// (P2.7 T-C.6): one entry per distinct `(str.in_re X R)` atom that appears
