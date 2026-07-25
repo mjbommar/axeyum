@@ -383,6 +383,22 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-24 — the frozen C5 external inputs pass a comprehensive read-only
+  audit; this is not launch authority.** The
+  [input audit](docs/plan/smtcomp-credited-full-preparation-f2-input-audit-2026-07-24.md)
+  revalidated the accepted completion/list/ledger identities, streamed all
+  45,905 canonical selection rows, and confirmed every selected corpus path is
+  a regular non-symlink file of the recorded size, totaling 15,148,369,947
+  bytes. The sealed corpus audit and its archives/ledger/summary dependencies,
+  exact 89-logic root set, repaired-P0 comparison, cvc5/Bitwuzla executables,
+  and all three sentinels also match their frozen identities. The existing
+  July 23 Axeyum binary is stale and was neither run nor rebuilt. The NAS F2
+  attempt parent remained absent before and after the audit. The topic and
+  main refs were still `79f5d31f` and `08af3665`, respectively, so C0 remains
+  false; the 15.1 GB physical payload rehash, build, host probes, thermal
+  samples, and sentinel runs remain deferred to separately authorized C5 on
+  exact integrated green main.
+
 - **2026-07-24 — current main and the F2 topic compose cleanly under a bounded
   synthetic integration gate, but main remains red and no live action is
   authorized.** The detached

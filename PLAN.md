@@ -899,7 +899,14 @@ twenty-four is fully gated, pushed, integrated byte-for-byte, and documented.
 > establish a green exact combined main, then run and independently verify the
 > separately
 > authorized empty F2 preparation before any distinct acceptance or Axeyum
-> launch.
+> launch. A subsequent read-only
+> [C5 external-input audit](docs/plan/smtcomp-credited-full-preparation-f2-input-audit-2026-07-24.md)
+> revalidated all 45,905 accepted ledger rows and selected-file sizes, the
+> corpus authority chain, repaired-P0 comparison, oracle binaries, and
+> sentinel inputs while leaving the F2 attempt namespace absent. This closes
+> bounded input-drift uncertainty only: it did not rehash the 15.1 GB selected
+> payload, build or run Axeyum, probe hosts, or execute sentinels, so C0 and
+> live C5 remain open.
 > The candidate is not
 > official selection evidence:
 > it still lacks the complete eligibility/status/difficulty policy, official

@@ -2,8 +2,9 @@
 
 **This folder is the single entry point for the SMT-COMP measurement,
 full-library inventory, and gap-closing lane.** Updated 2026-07-24 after the
-no-launch F2 live-capture implementation and its R2 completion-boundary
-correction were committed, fully gated, and pushed for integration.
+no-launch F2 live-capture implementation, its R2 completion-boundary
+correction, and the read-only C5 external-input audit were committed for
+integration.
 
 The goal is an honest, reproducible per-logic decide/decline/**wrong** map over
 a source-balanced SMT-COMP-style population, followed by a measured and ranked
@@ -504,6 +505,8 @@ Repository:
   `docs/plan/smtcomp-credited-full-preparation-f2-live-capture-r2-plan-2026-07-24.md`;
 - credited full-population F2 live-capture implementation result:
   `docs/plan/smtcomp-credited-full-preparation-f2-live-capture-implementation-2026-07-24.md`;
+- credited full-population F2 read-only external-input audit:
+  `docs/plan/smtcomp-credited-full-preparation-f2-input-audit-2026-07-24.md`;
 - credited full-population publication fixture:
   `docs/plan/smtcomp-credited-full-publication-fixture-2026-07-23.md`;
 - credited full-population execution-coordinator fixture:
@@ -585,7 +588,14 @@ NAS (shared, corpus read-only in practice):
    proves that exact main `08af3665` and audited topic `9cec37e4` merge without
    conflicts and pass the scoped SMT-COMP, parity-documentation, and link
    gates. It is not a merge or a substitute for full `just check` on repaired
-   integrated main. Only after those conditions hold may the reviewed operator
+   integrated main. A later read-only
+   [external-input audit](../smtcomp-credited-full-preparation-f2-input-audit-2026-07-24.md)
+   revalidated the complete C5-consumed selection/corpus authority chain,
+   repaired-P0 comparison, oracle binaries, and sentinel inputs without a host
+   probe, sentinel execution, build, or NAS mutation; the F2 attempt namespace
+   remained absent. It reduces input-drift uncertainty but does not satisfy C0
+   or replace C5's full selected-byte rehash. Only after the integration and
+   green-main conditions hold may the reviewed operator
    publish a process-free
    `launch_authorized=false` root inside its frozen 30-minute window. Integrate
    and explicitly accept that exact root before constructing Axeyum admission.

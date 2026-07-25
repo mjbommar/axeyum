@@ -167,3 +167,13 @@ the integration checkout. It has no conflicts and passes the complete scoped
 SMT-COMP gate, parity documentation, and link checks. This removes a bounded
 integration uncertainty but does not override main's failed CI or authorize
 live F2.
+
+The subsequent read-only
+[external-input audit](smtcomp-credited-full-preparation-f2-input-audit-2026-07-24.md)
+also revalidated every C5-consumed frozen artifact available before
+integration: all 45,905 accepted ledger rows and selected-file sizes, the
+corpus audit and its three retained dependencies, the repaired-P0 comparison,
+both oracle binaries, and all three sentinel inputs. The F2 attempt namespace
+remained absent. This reduces input-drift uncertainty only; it deliberately
+did not build or run Axeyum, rehash the 15.1 GB selected payload, probe hosts,
+or run sentinels, and therefore does not satisfy C0 or C5.
