@@ -2,8 +2,8 @@
 
 **This folder is the single entry point for the SMT-COMP measurement,
 full-library inventory, and gap-closing lane.** Updated 2026-07-25 after the
-no-launch F2 live-capture R4 gate-environment correction was implemented,
-fully gated, and pushed. Integration and live capture remain prohibited.
+no-launch F2 live-capture R5 exact-source build correction was preregistered.
+Implementation, integration, and live capture remain prohibited.
 
 The goal is an honest, reproducible per-logic decide/decline/**wrong** map over
 a source-balanced SMT-COMP-style population, followed by a measured and ranked
@@ -465,6 +465,14 @@ gate.
    worktree/frontier remain clean. Integrate the complete corrected stack onto
    repaired green exact main and pass the combined full gate before the
    separately authorized live capture.
+   A subsequent source audit found that the operator still accepts a
+   caller-selected Axeyum executable and labels it from readiness without a
+   retained source-to-build relation. The
+   [R5 correction](../smtcomp-credited-full-preparation-f2-live-capture-r5-plan-2026-07-25.md)
+   preregisters an operator-owned locked offline build under a constructed
+   environment plus sealed Cargo/Rust compiler, output, and binary identities.
+   Implement and gate R5, then integrate the complete corrected stack before
+   the separately authorized live capture.
 
 The same implementation rule continues to apply: prove each new mechanism and
 its destructive/interruption tests on a tiny corpus before spending the full
@@ -538,6 +546,8 @@ Repository:
   `docs/plan/smtcomp-credited-full-preparation-f2-live-capture-r3-plan-2026-07-25.md`;
 - credited full-population F2 live-capture R4 gate-environment correction:
   `docs/plan/smtcomp-credited-full-preparation-f2-live-capture-r4-plan-2026-07-25.md`;
+- credited full-population F2 live-capture R5 exact-source build correction:
+  `docs/plan/smtcomp-credited-full-preparation-f2-live-capture-r5-plan-2026-07-25.md`;
 - credited full-population F2 live-capture implementation result:
   `docs/plan/smtcomp-credited-full-preparation-f2-live-capture-implementation-2026-07-24.md`;
 - credited full-population F2 read-only external-input audit:
@@ -655,6 +665,12 @@ NAS (shared, corpus read-only in practice):
    Do not probe hosts, run sentinels, mutate the NAS, or launch a solver
    allocation from the unintegrated operator topic or while `origin/main` is
    branch-wide red. The
+   [R5 correction](../smtcomp-credited-full-preparation-f2-live-capture-r5-plan-2026-07-25.md)
+   is preregistered but not implemented: replace the caller-selected Axeyum
+   binary with an operator-owned clean exact-source build and retain the
+   toolchain, command, environment, output, and binary relation. Implement,
+   mutation-test, fully gate, and integrate R5 before treating C0 as
+   executable or running the build. The
    active solver
    capability checkpoint is
    [`../checked-multi-binder-quantified-uf-models-2026-07-22.md`](../checked-multi-binder-quantified-uf-models-2026-07-22.md).

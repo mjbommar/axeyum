@@ -936,6 +936,16 @@ twenty-four is fully gated, pushed, integrated byte-for-byte, and documented.
 > clean, and local/tracking/live remote topic refs agree. Integrate the complete
 > corrected stack onto repaired green exact main and pass the combined full
 > gate before any live C0/C5 action.
+> A subsequent source audit proved that the operator still accepts a
+> caller-selected Axeyum executable and assigns the integrated-release label
+> without a retained source-to-build relation. Oracle hashes are frozen, but
+> no live Axeyum hash or build observation exists; the documented external
+> build command is not replayable evidence. The source-first
+> [R5 plan](docs/plan/smtcomp-credited-full-preparation-f2-live-capture-r5-plan-2026-07-25.md)
+> preregisters an operator-owned, clean, locked, offline exact-source build
+> under a constructed environment plus a sealed toolchain/build observation.
+> Implement, mutation-test, fully gate, and integrate R5 before any live
+> C0/C5 action.
 > Separately, the historical s4 discovery stream has now finished all eight
 > stale end-of-shard outputs. Its
 > [final read-only audit](docs/plan/smtcomp-stale-s4-final-artifact-audit-2026-07-25.md)

@@ -383,6 +383,19 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-25 — F2 R5 exact-source Axeyum build authority is preregistered;
+  no live action is authorized.** The current operator accepts a caller-chosen
+  `--axeyum-binary`, hashes it, and derives an integrated-release label from
+  readiness without proving that the bytes were built from that commit. Only
+  the two oracle hashes are frozen, and the documented external Cargo command
+  leaves no replayable build observation. The
+  [R5 plan](docs/plan/smtcomp-credited-full-preparation-f2-live-capture-r5-plan-2026-07-25.md)
+  freezes an operator-owned locked offline build in a unique local target,
+  constructed non-secret environment, sealed Cargo/Rust compiler identities,
+  exact output sidecars, and a source/binary/run/completion relation.
+  Implementation and gates remain open. No build, host, sentinel, NAS,
+  acceptance, allocation, or solver-wave action is permitted.
+
 - **2026-07-25 — F2 R4 gate-environment authority is implemented, fully gated,
   and pushed; no live action is authorized.** A bounded source probe proved
   that the R3 gate
