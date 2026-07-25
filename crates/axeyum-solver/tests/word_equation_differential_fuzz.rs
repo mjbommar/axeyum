@@ -103,24 +103,24 @@ fn gen_short_literal(rng: &mut Lcg) -> String {
     s
 }
 
-/// A maximal 8-byte literal (= the bounded `max_len`), used to force a witness
+/// A maximal 12-byte literal (= the bounded `max_len`), used to force a witness
 /// past the bound so the word route — not the bounded encoder — decides.
 fn gen_long_literal(rng: &mut Lcg) -> String {
-    let mut s = String::with_capacity(8);
-    for _ in 0..8 {
+    let mut s = String::with_capacity(12);
+    for _ in 0..12 {
         s.push(char::from(ALPHABET[rng.below(ALPHABET.len() as u64)]));
     }
     s
 }
 
-/// An **over-long** literal (9..=14 bytes) — strictly longer than the bounded
-/// `max_len` (8). Any declaration or `str.++` mentioning one makes the *bounded*
+/// An **over-long** literal (13..=18 bytes) — strictly longer than the bounded
+/// `max_len` (12). Any declaration or `str.++` mentioning one makes the *bounded*
 /// ADR-0029 parse decline at the length cap, so the script can only reach axeyum
 /// through the **word-first parse fallback** (T-B.4d). Z3 decides it natively, so
 /// biasing scripts toward these exercises the fallback's word route end-to-end
 /// under the same wrong-sat soundness gate.
 fn gen_over_long_literal(rng: &mut Lcg) -> String {
-    let len = 9 + rng.below(6); // 9..=14
+    let len = 13 + rng.below(6); // 13..=18
     let mut s = String::with_capacity(len);
     for _ in 0..len {
         s.push(char::from(ALPHABET[rng.below(ALPHABET.len() as u64)]));
@@ -142,7 +142,7 @@ fn gen_str_expr(rng: &mut Lcg, num_vars: usize, depth: u32, over_long: bool) -> 
         // str.++ of two shallower expressions; at depth ≥ 2 (the "hard" path)
         // occasionally seed a maximal literal to force a past-the-bound witness.
         // In `over_long` (fallback) mode use a *wider* (ternary) concat and seed an
-        // over-8-byte literal, so the summed bounded width blows the cap and only
+        // over-12-byte literal, so the summed bounded width blows the cap and only
         // the word-first parse fallback can decide the script.
         _ => {
             let l = if over_long && rng.below(2) == 0 {
@@ -155,7 +155,7 @@ fn gen_str_expr(rng: &mut Lcg, num_vars: usize, depth: u32, over_long: bool) -> 
             let r = gen_str_expr(rng, num_vars, depth - 1, over_long);
             if over_long && rng.below(2) == 0 {
                 // Ternary concat: three operands push the bounded result width over
-                // the 16-byte cap even without an over-long literal.
+                // the 24-byte cap even without an over-long literal.
                 let m = gen_str_expr(rng, num_vars, depth - 1, over_long);
                 format!("(str.++ {l} {m} {r})")
             } else {
@@ -206,9 +206,9 @@ impl Instance {
     ///   downgrades, exercising the word route's decline).
     fn generate(rng: &mut Lcg) -> Instance {
         // Three difficulty modes: `easy` stays within the bounded `max_len` (the
-        // bounded path decides it); `hard` seeds maximal 8-byte literals and loops
+        // bounded path decides it); `hard` seeds maximal 12-byte literals and loops
         // the bounded gate downgrades (routing to the word search); `over_long`
-        // seeds >8-byte literals and >16-byte concats the bounded *parse* rejects
+        // seeds >12-byte literals and >24-byte concats the bounded *parse* rejects
         // wholesale, so the script reaches axeyum only through the word-first parse
         // fallback (T-B.4d). The soundness gate covers all three.
         let mode = rng.below(3); // 0 = easy, 1 = hard, 2 = over_long (fallback)

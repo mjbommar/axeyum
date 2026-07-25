@@ -90,8 +90,10 @@ well-formedness constraint** (padding bytes forced zero) asserted at
 pattern, so `=` / `distinct` / `not` over strings decide as plain bit-vector
 (in)equality through the existing path — **no operator-dispatch / `Parsed` change
 needed for equality**. `parse_sort` recognizes `String`/`Seq`; `"..."` literals
-pack to constants; bound is `STRING_MAX_LEN = 8` bytes (over-length literals are a
-clean `Unsupported`). Tested end-to-end through `solve_smtlib`
+pack to constants. The initial bound was 8 bytes; the 2026-07-25 corpus-driven
+follow-up raises declared strings/literals to `STRING_MAX_LEN = 12` and temporary
+concatenation results to `STRING_BOUND_CAP = 24`. Over-length terms remain a clean
+`Unsupported`. Tested end-to-end through `solve_smtlib`
 (`decides_string_equality_sat`/`_unsat`, `decides_string_disequality_sat`).
 
 **Deferred (the `Parsed = Term | Str` refactor still applies):** `str.len`
@@ -125,7 +127,7 @@ The packed lowering recognizes the exact generated form
 
 and concatenates it directly into the base string's packed bound. Summing the
 operands' independent maxima rejects the common one-character case as
-`8 + 1 + 8 = 17`, even though its actual length is always at most eight. For
+`12 + 1 + 12 = 25`, even though its actual length is always at most twelve. For
 `L = len(s)` and `j = i + |literal|`, the exact result length is
 `min(L,i) + |literal| + max(L-j,0)`. When `j` is within the base bound, this is
 at most that bound for all `L`, including the short-string cases where the form
@@ -135,3 +137,19 @@ On the retained Leetcode residual at the same 250 ms internal budget, this moves
 six `findLadders` rows from `unknown` to three replay-checked `sat` and three
 bound-independent `unsat`. All six agree with Z3 4.13.3 and retained cvc5 1.3.4;
 the exact competition CLI reports 60/71 decisions, 11 unknown, and WRONG=0.
+
+## Follow-up (2026-07-25): 12-byte declared / 24-byte concat window
+
+Three remaining Leetcode QF_SLIA SAT rows had concrete Z3 witnesses of lengths
+9, 10, and 11; the 8-byte packed window could not represent any of them. The
+front door now uses 12 bytes for declared strings and literals, and permits a
+temporary concatenation result through 24 bytes so two full-width operands do
+not turn otherwise-supported formulas into parse declines. The packed lowering,
+canonical well-formedness constraints, exact-integer model projection, and
+original-query replay are unchanged.
+
+At the same 250 ms internal budget, the exact 71-row Leetcode selection moves
+64→67 decisions: all three gains are replay-checked SAT, no previous decision is
+lost, and WRONG remains zero. The four residual rows are UNSAT and require
+content/length or semantic fixed-splice reasoning rather than a larger witness
+window.

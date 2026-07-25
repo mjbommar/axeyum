@@ -1521,9 +1521,9 @@ fn string_const_and_literal_parse_into_packed_bitvectors() {
 
 /// Packs a byte string into the parser's canonical bounded-string bit-vector
 /// (length in the low 4 bits, byte `i` at bits `[4 + 8i, +8)`), mirroring
-/// `pack_string_literal`. `STRING_MAX_LEN = 8`, `STRING_TOTAL = 4 + 8·8 = 68`.
+/// `pack_string_literal`. `STRING_MAX_LEN = 12`, `STRING_TOTAL = 4 + 8·12 = 100`.
 fn pack_str(bytes: &[u8]) -> u128 {
-    assert!(bytes.len() <= 8);
+    assert!(bytes.len() <= 12);
     let mut content: u128 = 0;
     for (i, &b) in bytes.iter().enumerate() {
         content |= u128::from(b) << (8 * i);
@@ -1540,7 +1540,7 @@ fn eval_string_script(text: &str, s_packed: u128) -> bool {
     asg.set(
         sym,
         Value::Bv {
-            width: 68,
+            width: 100,
             value: s_packed,
         },
     );
@@ -1680,9 +1680,24 @@ fn variable_concat_at_and_contains_decide() {
 }
 
 #[test]
+fn two_full_width_declared_strings_can_form_a_24_byte_concat() {
+    let script = parse_script(
+        "(declare-fun a () String)\n\
+         (declare-fun b () String)\n\
+         (assert (= (str.len (str.++ a b)) 24))\n\
+         (check-sat)\n",
+    )
+    .expect("the 12+12-byte concat stays in the packed front door");
+    assert!(
+        script.word_only_fallback.is_none(),
+        "a 24-byte result is within the packed concat cap"
+    );
+}
+
+#[test]
 fn variable_concat_over_bound_routes_to_word_first_fallback() {
-    // Two declared strings are max_len 8 each, so a++b is max_len 16 (fits the cap).
-    // A *third* concat would be max_len 24 > the 16-byte cap, so the *bounded*
+    // Two declared strings are max_len 12 each, so a++b is max_len 24 (fits the cap).
+    // A *third* concat would be max_len 36 > the 24-byte cap, so the *bounded*
     // ADR-0029 encoder declines it. But this is a pure word equation, so the
     // word-first parse fallback (T-B.4d) catches the bounded decline and returns a
     // word-only `Script`: the bounded caps are an encoding artifact, not a theory
@@ -2308,7 +2323,7 @@ fn declare_fun_string_constant_is_wired_like_declare_const() {
     let mut arena = script.arena;
     let sym = arena.find_symbol("s").expect("s declared");
     let v = arena.var(sym);
-    assert_eq!(arena.sort_of(v), Sort::BitVec(4 + 8 * 8));
+    assert_eq!(arena.sort_of(v), Sort::BitVec(4 + 8 * 12));
 }
 
 #[test]
@@ -4060,7 +4075,7 @@ fn no_set_usage_is_untouched() {
 /// packed bytes, so evaluating the asserted Bool under a concrete packed `s`
 /// directly reports whether that string is in the regex language — an exact
 /// oracle by construction. (`eval_string_script` ANDs the wf constraint too, so
-/// only ≤8-byte strings are valid witnesses, which is the bounded fragment.)
+/// only ≤12-byte strings are valid witnesses, which is the bounded fragment.)
 #[test]
 fn regex_to_re_and_star_and_concat_match() {
     // (str.in_re s (re.++ (str.to_re "a") (re.* (re.range "a" "z")))):
@@ -4492,19 +4507,19 @@ fn string_replace_re_symbolic_string_declines() {
 #[test]
 fn regex_over_bound_string_is_not_a_wrong_verdict() {
     // A regex match constraint plus a length far over the bound: parsing succeeds
-    // (the encoding is over the bounded bytes), and no ≤8-byte witness satisfies a
-    // forced len=12, so eval is false for every representable string — i.e. the
+    // (the encoding is over the bounded bytes), and no ≤12-byte witness satisfies a
+    // forced len=13, so eval is false for every representable string — i.e. the
     // bounded model is unsat-shaped here, which the solver surfaces as `unknown`
     // (tested end-to-end in the corpus run), never a wrong `sat`/`unsat`.
     let text = "(declare-fun s () String)\n\
                 (assert (str.in_re s (re.* (str.to_re \"a\"))))\n\
-                (assert (= (str.len s) 12))\n(check-sat)\n";
+                (assert (= (str.len s) 13))\n(check-sat)\n";
     let script = parse_script(text).expect("over-bound regex still parses");
-    // No representable (≤8-byte, wf) witness can have len 12.
-    for w in [b"".as_slice(), b"a", b"aaaaaaaa"] {
+    // No representable (≤12-byte, wf) witness can have len 13.
+    for w in [b"".as_slice(), b"a", b"aaaaaaaaaaaa"] {
         assert!(
             !eval_string_script(text, pack_str(w)),
-            "len ≠ 12 for any ≤8-byte string"
+            "len ≠ 13 for any ≤12-byte string"
         );
     }
     assert!(

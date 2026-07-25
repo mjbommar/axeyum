@@ -34,7 +34,7 @@ use crate::sexpr::{SExpr, read_all};
 /// Packed per-symbol string length cap (mirrors `parse.rs::STRING_MAX_LEN`). A
 /// declared string is representable iff its length is `≤` this, so a C2 length
 /// bound must pin the var at or below it.
-const STRING_MAX_LEN: i128 = 8;
+const STRING_MAX_LEN: i128 = 12;
 
 /// Any integer literal of at least this magnitude is rejected (C3). The int-blast
 /// is exact only below `2^31`; a larger literal (or one that, added to a bounded
@@ -327,14 +327,14 @@ mod tests {
     fn le_bound_at_max_len_is_bounded_complete() {
         assert!(is_bounded_complete(
             "(set-logic QF_S)\n(declare-fun s () String)\n\
-             (assert (<= (str.len s) 8))\n(assert (str.contains s \"z\"))\n(check-sat)\n"
+             (assert (<= (str.len s) 12))\n(assert (str.contains s \"z\"))\n(check-sat)\n"
         ));
     }
 
     #[test]
     fn flipped_and_eq_length_bounds_count() {
         assert!(is_bounded_complete(
-            "(set-logic QF_S)\n(declare-fun s () String)\n(assert (>= 8 (str.len s)))\n(check-sat)\n"
+            "(set-logic QF_S)\n(declare-fun s () String)\n(assert (>= 12 (str.len s)))\n(check-sat)\n"
         ));
         assert!(is_bounded_complete(
             "(set-logic QF_S)\n(declare-fun s () String)\n(assert (= (str.len s) 4))\n(check-sat)\n"
@@ -382,9 +382,9 @@ mod tests {
 
     #[test]
     fn bound_above_max_len_declines() {
-        // `<= 12` allows len 9..12 which the packed sort cannot represent.
+        // `<= 13` allows len 13 which the packed sort cannot represent.
         assert!(!is_bounded_complete(
-            "(set-logic QF_S)\n(declare-fun s () String)\n(assert (<= (str.len s) 12))\n(check-sat)\n"
+            "(set-logic QF_S)\n(declare-fun s () String)\n(assert (<= (str.len s) 13))\n(check-sat)\n"
         ));
     }
 

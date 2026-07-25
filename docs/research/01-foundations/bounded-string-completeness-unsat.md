@@ -31,7 +31,7 @@ axes, and the int width is only one:
 
 1. **Int width** (≤ 32 bits). A free Int `x` with `(> x 5)` is real-sat (x =
    2³²), but has no bounded-width model → no-model ≠ unsat.
-2. **String length** (≤ `STRING_MAX_LEN = 8` per symbol, `STRING_BOUND_CAP = 16`
+2. **String length** (≤ `STRING_MAX_LEN = 12` per symbol, `STRING_BOUND_CAP = 24`
    per concat). This axis has **no Int symbol at all** yet still breaks the
    upgrade:
    - `(> (str.len s) 100)` — real-sat (s = 101 chars), bounded no-model.
@@ -61,12 +61,12 @@ bounded-sat, so bounded-no-model ⇒ real-unsat — when ALL of:
   grow beyond their (already-bounded) source. A free String with **no** such
   bound (or bounded only from below) → decline (the `str.at`-past-len trap).
 - **C3 — every Int quantity provably < 2³¹.** Given C1+C2, string-derived ints
-  are: `str.len`/positions ≤ `CAP` (16), `str.to_code` ≤ 0x2FFFF, small Int
+  are: `str.len`/positions ≤ `CAP` (24), `str.to_code` ≤ 0x2FFFF, small Int
   literals, and `+`/`-`/`ite`/`min`/`max`/comparisons thereof — all < 2³¹.
   Two escape hatches must be **excluded conservatively**:
-  - `str.to_int` of a string longer than 9 digits: ≤ `10^CAP − 1 = 10^16 − 1 >
-    2³¹`. Allow only when its argument is provably ≤ 9 bytes (e.g. a ≤8-byte
-    declared var), else decline.
+  - `str.to_int` of a string longer than 9 digits: ≤ `10^CAP − 1 = 10^24 − 1 >
+    2³¹`. Allow only when its argument is provably ≤ 9 bytes (a stricter fact than
+    the current 12-byte declaration bound); otherwise decline.
   - non-linear Int arithmetic: a product of ≥ 2 non-constant bounded quantities
     (e.g. `(* (str.len a) (str.len b) …)`) can exceed 2³¹. Allow only linear
     combinations with small constant coefficients; any `*`/`div`/`mod` of two
