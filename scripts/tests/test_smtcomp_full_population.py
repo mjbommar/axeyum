@@ -81,10 +81,13 @@ from full_preflight import (  # noqa: E402
 )
 from full_readiness import (  # noqa: E402
     DEFAULT_REQUIRED_PATHS,
+    FRONTIER_ARTIFACT_DIR_ENV,
     build_gate_observation,
     build_readiness,
+    run_gate,
     validate_readiness,
 )
+import full_readiness as full_readiness_module  # noqa: E402
 from incident_sentinels import (  # noqa: E402
     SENTINEL_ROWS,
     SENTINEL_SCHEMA,
@@ -2716,6 +2719,68 @@ class FullCaptureOperatorTests(unittest.TestCase):
                 [["just", "check"], ["./scripts/check-smtcomp-resume.sh"]],
             )
             self.assertFalse((shared / ATTEMPT_DIRECTORY).exists())
+
+    def test_registered_gate_isolates_volatile_frontier_artifacts(self) -> None:
+        calls = []
+        inherited = str(ROOT / "must-not-be-used")
+
+        def completed_gate(
+            *, command: list[str], environment: dict[str, str], **_kwargs: object
+        ) -> object:
+            self.assertIsInstance(environment, dict)
+            artifact_root = Path(environment[FRONTIER_ARTIFACT_DIR_ENV])
+            self.assertTrue(artifact_root.is_absolute())
+            self.assertTrue(artifact_root.is_dir())
+            self.assertNotEqual(str(artifact_root), inherited)
+            self.assertFalse(artifact_root.is_relative_to(ROOT))
+            (artifact_root / "bv_reduction.json").write_text(
+                '{"volatile":true}\n', encoding="utf-8"
+            )
+            calls.append((command, artifact_root))
+            return types.SimpleNamespace(returncode=0, stdout=b"green\n", stderr=b"")
+
+        with (
+            mock.patch.dict(
+                os.environ,
+                {FRONTIER_ARTIFACT_DIR_ENV: inherited},
+            ),
+            mock.patch.object(
+                full_readiness_module,
+                "_execute_gate_command",
+                side_effect=completed_gate,
+            ),
+        ):
+            observation = run_gate(repository_root=ROOT, command=["just", "check"])
+
+        self.assertEqual(observation["exit_code"], 0)
+        self.assertEqual(observation["command"], ["just", "check"])
+        self.assertEqual(len(calls), 1)
+        self.assertFalse(calls[0][1].exists())
+        with self.assertRaisesRegex(ContractError, "outside repository"):
+            full_readiness_module._gate_environment(
+                (ROOT / "target").resolve(strict=True),
+                repository_root=ROOT,
+            )
+
+    def test_registered_gate_rejects_worktree_mutation_without_cleanup(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = self.exact_main_repository(Path(tmp))
+            mutation = root / "gate-mutation.txt"
+
+            def mutating_gate(**_kwargs: object) -> object:
+                mutation.write_text("must remain visible\n", encoding="utf-8")
+                return types.SimpleNamespace(returncode=0, stdout=b"green\n", stderr=b"")
+
+            with (
+                mock.patch.object(
+                    full_readiness_module,
+                    "_execute_gate_command",
+                    side_effect=mutating_gate,
+                ),
+                self.assertRaisesRegex(ContractError, "mutated the worktree"),
+            ):
+                run_gate(repository_root=root, command=["just", "check"])
+            self.assertEqual(mutation.read_text(encoding="utf-8"), "must remain visible\n")
 
     def test_incident_capture_runs_exact_order_and_rejects_first_wrong(self) -> None:
         def build_inputs(attempt: Path) -> tuple[dict[str, Path], dict[str, Path], Path]:

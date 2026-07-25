@@ -10,7 +10,9 @@ from __future__ import annotations
 
 import copy
 import hashlib
+import os
 import subprocess
+import tempfile
 import time
 from pathlib import Path
 from typing import Any
@@ -21,11 +23,13 @@ from resume_runner import sha256_file
 
 GATE_SCHEMA = "axeyum.smtcomp-credited-full-gate-observation.v1"
 READINESS_SCHEMA = "axeyum.smtcomp-credited-full-readiness.v2"
+FRONTIER_ARTIFACT_DIR_ENV = "AXEYUM_PROGRESS_FRONTIER_ARTIFACT_DIR"
 REQUIRED_GATE_COMMANDS = (
     ("just", "check"),
     ("./scripts/check-smtcomp-resume.sh",),
 )
 DEFAULT_REQUIRED_PATHS = (
+    "crates/axeyum-solver/tests/progress_frontier.rs",
     "docs/plan/generated/smtcomp-repaired-p0-comparison.json",
     "docs/plan/generated/smtcomp-repaired-p0-comparison.md",
     "docs/plan/smtcomp-credited-full-admission-fixture-2026-07-23.md",
@@ -36,6 +40,7 @@ DEFAULT_REQUIRED_PATHS = (
     "docs/plan/smtcomp-credited-full-preparation-f2-live-capture-plan-2026-07-24.md",
     "docs/plan/smtcomp-credited-full-preparation-f2-live-capture-r1-plan-2026-07-24.md",
     "docs/plan/smtcomp-credited-full-preparation-f2-live-capture-r2-plan-2026-07-24.md",
+    "docs/plan/smtcomp-credited-full-preparation-f2-live-capture-r3-plan-2026-07-25.md",
     "docs/plan/smtcomp-credited-full-publication-fixture-2026-07-23.md",
     "docs/plan/smtcomp-credited-full-scheduler-authorization-fixture-2026-07-23.md",
     "docs/plan/smtcomp-credited-full-scheduler-state-fixture-2026-07-23.md",
@@ -250,18 +255,28 @@ def run_gate(
     if tuple(command) not in REQUIRED_GATE_COMMANDS:
         raise ContractError("unregistered full-preparation gate command")
     root = repository_root.resolve(strict=True)
+    status_before = worktree_status(root)
     started_at_ns = time.time_ns()
     try:
-        completed = subprocess.run(
-            command,
-            cwd=root,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            check=False,
-        )
+        with tempfile.TemporaryDirectory(
+            prefix="axeyum-full-readiness-gate-"
+        ) as temporary:
+            artifact_root = Path(temporary) / "progress-frontier"
+            artifact_root.mkdir(mode=0o755)
+            environment = _gate_environment(
+                artifact_root,
+                repository_root=root,
+            )
+            completed = _execute_gate_command(
+                command=command,
+                repository_root=root,
+                environment=environment,
+            )
     except OSError as exc:
         raise ContractError("unable to execute full-preparation gate") from exc
     ended_at_ns = time.time_ns()
+    if worktree_status(root) != status_before:
+        raise ContractError("registered full-preparation gate mutated the worktree")
     return build_gate_observation(
         repository_root=root,
         command=command,
@@ -271,6 +286,46 @@ def run_gate(
         started_at_ns=started_at_ns,
         ended_at_ns=ended_at_ns,
     )
+
+
+def _execute_gate_command(
+    *, command: list[str], repository_root: Path, environment: dict[str, str]
+) -> subprocess.CompletedProcess[bytes]:
+    """Execute the registered child without coupling tests to Git subprocesses."""
+
+    return subprocess.run(
+        command,
+        cwd=repository_root,
+        env=environment,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        check=False,
+    )
+
+
+def _gate_environment(
+    artifact_root: Path, *, repository_root: Path
+) -> dict[str, str]:
+    """Replace any inherited frontier destination with one canonical directory."""
+
+    if artifact_root.is_symlink() or not artifact_root.is_absolute():
+        raise ContractError("invalid readiness-gate frontier artifact directory")
+    try:
+        resolved = artifact_root.resolve(strict=True)
+    except OSError as exc:
+        raise ContractError("invalid readiness-gate frontier artifact directory") from exc
+    if resolved != artifact_root or not resolved.is_dir():
+        raise ContractError("invalid readiness-gate frontier artifact directory")
+    repository = repository_root.resolve(strict=True)
+    try:
+        resolved.relative_to(repository)
+    except ValueError:
+        pass
+    else:
+        raise ContractError("readiness-gate frontier artifacts must be outside repository")
+    environment = dict(os.environ)
+    environment[FRONTIER_ARTIFACT_DIR_ENV] = str(resolved)
+    return environment
 
 
 def validate_gate_observation(
