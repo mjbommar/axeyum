@@ -22,6 +22,11 @@ on:
       # path still runs everything.
       - 'scripts/**'
       - 'justfile'
+      # NOTE: docs/plan/generated/lean-complete-parity.json is CI-validated (the
+      # 'docs resources and links' job runs gen-lean-complete-parity.py --check)
+      # yet lives under docs/, so a regen-only commit is paths-ignored and won't
+      # re-run this workflow. The generator hashes the justfile + scripts, so a
+      # commit touching those MUST regenerate the manifest in the SAME commit.
   pull_request:
 
 # Pushes land every few minutes across two agent lanes and a run takes ~20
