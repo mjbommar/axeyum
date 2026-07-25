@@ -4720,6 +4720,67 @@ fn smtlib_metadata_value(value: &SExpr) -> String {
     }
 }
 
+/// Whether `root` contains a quantifier. Assertion-local encoding guards are
+/// free-variable restrictions and cannot be hoisted across a quantifier whose
+/// bound symbol they may mention, so that combination is declined rather than
+/// silently changing scope.
+fn contains_quantifier(arena: &TermArena, root: TermId) -> bool {
+    let mut seen = HashSet::new();
+    let mut pending = vec![root];
+    while let Some(term) = pending.pop() {
+        if !seen.insert(term) {
+            continue;
+        }
+        if let TermNode::App { op, args } = arena.node(term) {
+            if matches!(op, Op::Forall(_) | Op::Exists(_)) {
+                return true;
+            }
+            pending.extend(args.iter().copied());
+        }
+    }
+    false
+}
+
+/// Conjoin the bounded-representation guards created while parsing one
+/// assertion. This keeps guards under the same `push`/`pop` lifetime as the
+/// sequence term that needs them.
+fn attach_encoding_guards(
+    arena: &mut TermArena,
+    mut term: TermId,
+    guards: &[TermId],
+    context: &str,
+) -> Result<TermId, SmtError> {
+    if guards.is_empty() {
+        return Ok(term);
+    }
+    if contains_quantifier(arena, term) {
+        return Err(SmtError::Unsupported(format!(
+            "symbolic bounded-sequence element guard inside `{context}` quantifier"
+        )));
+    }
+    for &guard in guards {
+        term = arena.and(term, guard)?;
+    }
+    Ok(term)
+}
+
+/// Output/definition contexts have no assertion scope in which an encoding
+/// guard can live. Decline them instead of applying a global restriction that
+/// would survive or disappear incorrectly across incremental commands.
+fn reject_new_encoding_guards(
+    lenabs: &LenAbs,
+    checkpoint: usize,
+    context: &str,
+) -> Result<(), SmtError> {
+    if lenabs.encoding_guard_checkpoint() == checkpoint {
+        Ok(())
+    } else {
+        Err(SmtError::Unsupported(format!(
+            "symbolic bounded-sequence element in `{context}` has no assertion scope"
+        )))
+    }
+}
+
 // A flat dispatch over the SMT-LIB command keywords; one match arm per command.
 #[allow(clippy::too_many_lines, clippy::too_many_arguments)]
 fn parse_command<'a>(
@@ -4809,6 +4870,7 @@ fn parse_command<'a>(
         // Optimization objectives (OMT): `(maximize t)` / `(minimize t)`.
         "maximize" | "minimize" => {
             exact_len(items, 2, head)?;
+            let guard_checkpoint = lenabs.encoding_guard_checkpoint();
             let t = parse_term(
                 &mut script.arena,
                 sexpr_at(items, 1)?,
@@ -4819,6 +4881,7 @@ fn parse_command<'a>(
                 ff,
                 lenabs,
             )?;
+            reject_new_encoding_guards(lenabs, guard_checkpoint, head)?;
             script.objectives.push((t, head == "maximize"));
         }
         // `(get-option k)` and `(get-info k)` record the requested key;
@@ -4849,6 +4912,7 @@ fn parse_command<'a>(
                 .get(1)
                 .and_then(SExpr::list)
                 .ok_or_else(|| SmtError::Syntax("get-value expects (t …)".to_owned()))?;
+            let guard_checkpoint = lenabs.encoding_guard_checkpoint();
             for t in list {
                 let term = parse_term(
                     &mut script.arena,
@@ -4862,6 +4926,7 @@ fn parse_command<'a>(
                 )?;
                 script.get_value_terms.push(term);
             }
+            reject_new_encoding_guards(lenabs, guard_checkpoint, head)?;
         }
         "check-sat-assuming" => {
             exact_len(items, 2, head)?;
@@ -4869,6 +4934,7 @@ fn parse_command<'a>(
                 .get(1)
                 .and_then(SExpr::list)
                 .ok_or_else(|| SmtError::Syntax("check-sat-assuming expects (l ...)".to_owned()))?;
+            let guard_checkpoint = lenabs.encoding_guard_checkpoint();
             let mut assumptions = Vec::with_capacity(list.len());
             for lit in list {
                 assumptions.push(parse_term(
@@ -4882,6 +4948,19 @@ fn parse_command<'a>(
                     lenabs,
                 )?);
             }
+            let guards = lenabs.encoding_guards_since(guard_checkpoint);
+            if !guards.is_empty()
+                && assumptions
+                    .iter()
+                    .any(|&term| contains_quantifier(&script.arena, term))
+            {
+                return Err(SmtError::Unsupported(
+                    "symbolic bounded-sequence element guard inside `check-sat-assuming` \
+                     quantifier"
+                        .to_owned(),
+                ));
+            }
+            assumptions.extend(guards);
             script.check_sats += 1;
             script
                 .commands
@@ -4933,6 +5012,7 @@ fn parse_command<'a>(
             exact_len(items, 2, head)?;
             let body = sexpr_at(items, 1)?;
             let name = named_label(body);
+            let guard_checkpoint = lenabs.encoding_guard_checkpoint();
             let t = parse_term(
                 &mut script.arena,
                 body,
@@ -4943,6 +5023,16 @@ fn parse_command<'a>(
                 ff,
                 lenabs,
             )?;
+            let guards = lenabs.encoding_guards_since(guard_checkpoint);
+            let t = attach_encoding_guards(&mut script.arena, t, &guards, head)?;
+            // `:named` terms are script-global aliases in this parser. Point a
+            // later reference at the guarded bounded assertion, not at the
+            // pre-guard term recorded while parsing the annotation; otherwise
+            // `push`/`pop` followed by `(assert name)` could resurrect the lossy
+            // `int2bv` term without its injectivity guard.
+            if let Some(label) = &name {
+                named.insert(label.clone(), t);
+            }
             script.assertions.push(t);
             script.assertion_names.push(name);
             script.commands.push(ScriptCommand::Assert(t));
@@ -5405,6 +5495,7 @@ fn parse_define_fun_alias(
     declared_sort: Sort,
     body_expr: &SExpr,
 ) -> Result<(), SmtError> {
+    let guard_checkpoint = lenabs.encoding_guard_checkpoint();
     let body = parse_term(
         &mut script.arena,
         body_expr,
@@ -5415,6 +5506,7 @@ fn parse_define_fun_alias(
         ff,
         lenabs,
     )?;
+    reject_new_encoding_guards(lenabs, guard_checkpoint, "define-fun/define-const")?;
     let body_sort = script.arena.sort_of(body);
     // Int→Real coercion for a Real-declared nullary constant whose body is an
     // integer literal/term: SMT-LIB admits `(define-fun x () Real 0)` (a numeral
@@ -6831,6 +6923,12 @@ struct LenAbs {
     /// but not *without* proves the encoding bound bit, so a bounded `unsat`
     /// must downgrade to `unknown`); never part of the sound abstraction.
     bounds: std::cell::RefCell<Vec<TermId>>,
+    /// Per-term **bounded-encoding guards** needed to make a lossy lowering
+    /// injective. At present these are the signed-range guards for symbolic
+    /// `(Seq Int)` elements before `int2bv(SEQ_INT_WIDTH, e)`. The parser
+    /// conjoins the newly-recorded guards with the assertion (or assumption)
+    /// whose term created them, preserving incremental scope.
+    encoding_guards: std::cell::RefCell<Vec<TermId>>,
     /// Fresh-symbol counter (deterministic `!lenabs.N` names).
     fresh: std::cell::Cell<u32>,
     /// A **coarsely-abstracted** string atom is present (`str.<`/`str.<=` —
@@ -6850,6 +6948,52 @@ struct LenAbs {
 impl LenAbs {
     fn mark_used(&self) {
         self.used.set(true);
+    }
+
+    /// Checkpoint the assertion-local encoding guards. A term parser may call
+    /// [`LenAbs::note_encoding_guard`] several times; the command parser uses
+    /// this index to attach exactly those guards to the command being parsed.
+    fn encoding_guard_checkpoint(&self) -> usize {
+        self.encoding_guards.borrow().len()
+    }
+
+    /// Encoding guards recorded since `checkpoint`, in deterministic term
+    /// order. The global log is retained because later commands need their own
+    /// independent checkpoints; callers only clone their command-local suffix.
+    fn encoding_guards_since(&self, checkpoint: usize) -> Vec<TermId> {
+        let guards = self.encoding_guards.borrow();
+        let mut unique = Vec::new();
+        for &guard in &guards[checkpoint..] {
+            if !unique.contains(&guard) {
+                unique.push(guard);
+            }
+        }
+        unique
+    }
+
+    /// Record a restriction required only by the bounded representation.
+    ///
+    /// The guard is conjoined with the bounded query by [`parse_command`], but
+    /// is rewritten to `true` in the unbounded abstraction and separately fed
+    /// to the bound-bite detector. Marking the abstraction coarse prevents the
+    /// weaker bridge-only fallback from certifying an UNSAT that the unbounded
+    /// abstraction could not prove. Thus:
+    ///
+    /// - a bounded SAT model satisfies the guard, so the lossy lowering is
+    ///   injective and the model lifts to the real theory;
+    /// - a bounded UNSAT that needs the guard is downgraded to `unknown` unless
+    ///   the guard-free abstraction independently refutes the source formula.
+    fn note_encoding_guard(&self, arena: &mut TermArena, guard: TermId) {
+        self.mark_used();
+        self.encoding_guards.borrow_mut().push(guard);
+        let mut bounds = self.bounds.borrow_mut();
+        if !bounds.contains(&guard) {
+            bounds.push(guard);
+        }
+        drop(bounds);
+        let truth = arena.bool_const(true);
+        self.note_repl(guard, truth);
+        self.coarse.set(true);
     }
 
     /// Declares a fresh abstraction symbol of `sort`; `nonneg` adds the
@@ -9890,10 +10034,14 @@ fn parse_indexed_constant(arena: &mut TermArena, items: &[SExpr]) -> Result<Term
 /// two's-complement `BitVec(SEQ_INT_WIDTH)`. The slice-1 sequence operators only
 /// move/compare/count whole elements (never do element arithmetic across the
 /// width boundary), so equality/disequality over `Int` elements is exact for
-/// every value representable in this width; an `Int` element **literal** outside
-/// the signed range is declined (never wrapped into a wrong value). `16` keeps the
-/// packed `(Seq Int)` sort within the [`SEQ_TOTAL_BITS_CAP`] ceiling at a useful
-/// element bound while still covering the small integers these benchmarks name.
+/// every value representable in this width. An `Int` element **literal** outside
+/// the signed range is declined; a symbolic element adds a scoped signed-range
+/// guard to the bounded query and the guard is removed by the unbounded-UNSAT
+/// abstraction. Thus a returned SAT model is injective at the element boundary,
+/// while an UNSAT that depends on the finite range becomes `unknown`. `16` keeps
+/// the packed `(Seq Int)` sort within the [`SEQ_TOTAL_BITS_CAP`] ceiling at a
+/// useful element bound while still covering the small integers these benchmarks
+/// name.
 pub(crate) const SEQ_INT_WIDTH: u32 = 16;
 
 /// Hard ceiling on any packed sequence's total bit width. The ground evaluator
@@ -11864,9 +12012,17 @@ fn seq_replace_all(
 
 /// Coerces a `seq.unit` element argument to a `BitVec(ew)`: an `Int` element is
 /// `int2bv`-narrowed to the bounded width (its low `ew` bits, two's-complement),
-/// a `Bool` element becomes a 1-bit value, and a `BitVec(ew)` passes through. An
-/// element of any other shape (or a mismatched BV width) is declined.
-fn seq_coerce_elem(arena: &mut TermArena, e: TermId, ew: u32) -> Result<TermId, SmtError> {
+/// a `Bool` element becomes a 1-bit value, and a `BitVec(ew)` passes through.
+/// A symbolic `Int` additionally records the signed-range guard that makes the
+/// narrowing injective for every admitted SAT model; the bounded-UNSAT gate
+/// removes that guard from its source-theory abstraction. An element of any
+/// other shape (or a mismatched BV width) is declined.
+fn seq_coerce_elem(
+    arena: &mut TermArena,
+    lenabs: &LenAbs,
+    e: TermId,
+    ew: u32,
+) -> Result<TermId, SmtError> {
     match arena.sort_of(e) {
         Sort::BitVec(w) if w == ew => Ok(e),
         Sort::Int => {
@@ -11880,9 +12036,22 @@ fn seq_coerce_elem(arena: &mut TermArena, e: TermId, ew: u32) -> Result<TermId, 
                 if v < lo || v > hi {
                     return Err(SmtError::Unsupported(format!(
                         "sequence Int element literal {v} is outside the signed {ew}-bit range \
-                         (ADR-0029)"
+                        (ADR-0029)"
                     )));
                 }
+            } else {
+                // `int2bv` is periodic outside this signed window. Without the
+                // guard, distinct mathematical integers such as `0` and `65536`
+                // become the same sequence element and can fabricate SAT for an
+                // actually-UNSAT source formula. Restrict the bounded SAT search
+                // to the injective window; StringGate removes this restriction
+                // before certifying any UNSAT.
+                let lo = arena.int_const(-(1i128 << (ew - 1)));
+                let hi = arena.int_const((1i128 << (ew - 1)) - 1);
+                let lower = arena.int_le(lo, e)?;
+                let upper = arena.int_le(e, hi)?;
+                let guard = arena.and(lower, upper)?;
+                lenabs.note_encoding_guard(arena, guard);
             }
             arena.int2bv(ew, e).map_err(SmtError::Ir)
         }
@@ -11953,7 +12122,7 @@ fn apply_seq_op(
                         .to_owned(),
                 )
             })?;
-            let elem = seq_coerce_elem(arena, args[0], ew)?;
+            let elem = seq_coerce_elem(arena, lenabs, args[0], ew)?;
             let r = seq_unit(arena, elem)?;
             lenabs.mark_used();
             let one = arena.int_const(1);

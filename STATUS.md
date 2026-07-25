@@ -383,6 +383,22 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-25 — closed a latent `(Seq Int)` wrong-`sat` before taking more
+  string coverage.** Symbolic `seq.unit` elements were narrowed with
+  `int2bv(16, e)` without restricting `e`, so source-distinct integers such as
+  `0` and `65536` could become the same packed element. The normalized public
+  QF_SLIA `distinct-update` regression therefore returned `sat` for an
+  `unsat` formula. Symbolic elements now add assertion-scoped signed-range
+  guards; every returned bounded SAT model is injective, while the unbounded
+  abstraction removes those encoding-only guards and prevents a guard-induced
+  UNSAT from escaping as anything but `unknown`. Guards retain `push`/`pop` and
+  `:named` scope; quantified/no-assertion contexts decline. The exact regression
+  moves `sat`→`unknown`, its minimized core is Z3-UNSAT, an in-range symbolic
+  SAT remains `sat`, and an out-of-range source SAT remains non-`unsat`. All
+  seven affected public sequence rows retain their prior verdicts (two `sat`,
+  five `unknown`); 27 focused parser sequence tests and six Z3-backed sequence
+  soundness seeds pass. Next: return to a family-sized QF_SLIA gain.
+
 - **2026-07-25 — exact first-occurrence string views add decisions and remove
   PyEx aborts.** The word fallback now gives SMT-LIB-total regular-language
   readings to before/after-first-occurrence `substr`, `contains`, boundary
@@ -8902,6 +8918,12 @@ plan is built and committed on the current branch:
 | P5.5 | External target, measured | **DONE (bounded v1, ADR-0323--0338):** authenticated Tock capture plus eight rechecked dual-DRAT proofs and six replayed controls, UNKNOWN=0, DISAGREE=0. Query time 12.700 s; fresh outer wall 50.745 s; peak RSS 1,256,496 KiB; zero OOM deltas. The committed case study compares exact target validation, universal coverage, trust, effort, artifact boundaries, and limits. No Tock bug was found, so no upstream issue is applicable. This is not a speed or whole-kernel claim. |
 
 ## Changelog
+
+- **2026-07-25 — repaired symbolic `(Seq Int)` element injectivity.** Added
+  scoped signed-range guards around lossy 16-bit element packing, erased those
+  guards in the unbounded-UNSAT abstraction, blocked quantifier/definition
+  scope leaks, and pinned both wrong-`sat` and wrong-`unsat` directions against
+  Z3. The affected public sequence slice is verdict-stable.
 
 - **2026-07-25 — moved exact first-occurrence PyEx views without wrong
   verdicts.** Exact total semantics for before/after-first-occurrence views and

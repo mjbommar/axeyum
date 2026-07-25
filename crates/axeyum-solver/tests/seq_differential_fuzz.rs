@@ -35,12 +35,15 @@
 //!
 //! **Domain-alignment note (why the differential is sound despite the BV model).**
 //! `(Seq Int)` packs each element as a two's-complement `BitVec(16)`; an element
-//! literal outside the signed 16-bit range is *declined* (never wrapped), so the
-//! generator keeps `Int` element literals tiny. `(Seq (_ BitVec 4))` and
-//! `(Seq Bool)` are exactly representable, so those carry no domain mismatch at
-//! all. Sequence length in the generated scripts stays within the packed bound
-//! for the SAT-biased families; the length-contradiction / order-violation
-//! families produce bound-independent unsats the abstraction confirms.
+//! literal outside the signed 16-bit range is *declined* (never wrapped), while
+//! a symbolic element receives an assertion-scoped signed-range guard. That
+//! makes every returned SAT witness injective; the unbounded-UNSAT abstraction
+//! removes the guard and declines any refutation that depends on it. The
+//! generator keeps `Int` literals tiny. `(Seq (_ BitVec 4))` and `(Seq Bool)` are
+//! exactly representable, so those carry no domain mismatch at all. Sequence
+//! length in the generated scripts stays within the packed bound for the
+//! SAT-biased families; the length-contradiction / order-violation families
+//! produce bound-independent unsats the abstraction confirms.
 //!
 //! Method (mirroring `fp_differential_fuzz.rs`): a fixed-seed LCG (no clock, no OS
 //! entropy) deterministically generates hundreds of small random `QF_SEQ` scripts
@@ -601,4 +604,91 @@ fn seed_over_cap_length_is_not_wrong_unsat() {
         );
     }
     assert_agrees(text, "over-cap len 12 (axeyum unknown, Z3 sat)");
+}
+
+/// P0 regression — symbolic `(Seq Int)` elements used to be narrowed modulo
+/// 2^16 without constraining the source Int. The solver could therefore choose
+/// `b = a + 65536`, satisfy `a != b`, but make `[a]` and `[b]` identical in the
+/// packed sequence and return a wrong SAT for this public `distinct-update`
+/// shape. A guarded bounded model may still decide SAT when all elements fit;
+/// the source-UNSAT alias case must now decline or prove UNSAT, never return SAT.
+#[test]
+fn seed_seq_int_symbolic_narrowing_never_fabricates_sat() {
+    // Minimized oracle-supported core of the defect. Z3 4.13 does not accept
+    // the public file's historical `seq.update` spelling, but it does adjudicate
+    // the injectivity obligation directly.
+    let core = "(set-logic ALL)\n\
+                (declare-fun unused () (Seq Int))\n\
+                (declare-fun a () Int)\n\
+                (declare-fun b () Int)\n\
+                (assert (not (= a b)))\n\
+                (assert (= (seq.unit a) (seq.unit b)))\n\
+                (check-sat)\n";
+    assert_eq!(
+        z3_decide(core),
+        Verdict::Unsat,
+        "seq.unit is injective in the source theory"
+    );
+    assert_ne!(
+        axeyum_decide(core),
+        Verdict::Sat,
+        "a modulo-2^16 element alias must never fabricate SAT"
+    );
+
+    // The exact public `distinct-update` shape, normalized only from cvc5's
+    // legacy `str.len`-over-Seq alias to the standard `seq.len` spelling that
+    // Axeyum already supports. Its committed status is UNSAT; before this fix
+    // Axeyum returned SAT by choosing source-distinct but packed-equal elements.
+    let public = "(set-logic QF_SLIA)\n(set-info :status unsat)\n\
+                 (declare-fun x () (Seq Int))\n\
+                 (declare-fun y () (Seq Int))\n\
+                 (declare-fun z () (Seq Int))\n\
+                 (declare-fun a () Int)\n\
+                 (declare-fun b () Int)\n\
+                 (assert (= y (seq.update x 0 (seq.unit a))))\n\
+                 (assert (= z (seq.update x 0 (seq.unit b))))\n\
+                 (assert (not (= a b)))\n\
+                 (assert (= y z))\n\
+                 (assert (> (seq.len y) 0))\n\
+                 (check-sat)\n";
+    assert_ne!(
+        axeyum_decide(public),
+        Verdict::Sat,
+        "the public UNSAT regression must never return SAT"
+    );
+
+    // Positive control: restricting the bounded search must not discard normal
+    // symbolic sequence SAT models whose element is representable.
+    let sat = "(set-logic QF_SLIA)\n\
+               (declare-fun s () (Seq Int))\n\
+               (declare-fun a () Int)\n\
+               (assert (= a 7))\n\
+               (assert (= s (seq.unit a)))\n\
+               (check-sat)\n";
+    assert_eq!(z3_decide(sat), Verdict::Sat, "positive control is SAT");
+    assert_eq!(
+        axeyum_decide(sat),
+        Verdict::Sat,
+        "an in-range symbolic Seq Int witness should remain decided"
+    );
+
+    // Opposite-direction tripwire: the real theory also has out-of-range Int
+    // elements. The bounded guard may prevent such a witness internally, but
+    // that restricted UNSAT must be downgraded rather than exported.
+    let out_of_range_sat = "(set-logic QF_SLIA)\n\
+                            (declare-fun s () (Seq Int))\n\
+                            (declare-fun a () Int)\n\
+                            (assert (= a 65536))\n\
+                            (assert (= s (seq.unit a)))\n\
+                            (check-sat)\n";
+    assert_eq!(
+        z3_decide(out_of_range_sat),
+        Verdict::Sat,
+        "the unbounded source theory admits 65536 as a sequence element"
+    );
+    assert_ne!(
+        axeyum_decide(out_of_range_sat),
+        Verdict::Unsat,
+        "a range-guard-induced bounded UNSAT must downgrade to unknown"
+    );
 }
