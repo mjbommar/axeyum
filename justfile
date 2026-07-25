@@ -11,8 +11,12 @@ check: fmt clippy test moment-proofs doc qfbv-profile reflection-semantics-gate 
 fmt:
     cargo fmt --all --check
 
+# Pin +stable so local clippy matches CI's stable toolchain. Nightly clippy has
+# different lints (e.g. it missed `manual_assert_eq`, which stable -D-fails), so
+# a nightly-only local gate lets clippy breaks slip onto main. Run `rustup update
+# stable` if a lint the CI hits doesn't reproduce locally (toolchain drift).
 clippy:
-    cargo clippy --workspace --all-targets --all-features -- -D warnings
+    cargo +stable clippy --workspace --all-targets --all-features -- -D warnings
 
 test:
     cargo test --workspace --all-features
