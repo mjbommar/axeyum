@@ -6789,14 +6789,8 @@ fn string_substr(
     off: TermId,
     n: TermId,
 ) -> Result<TermId, SmtError> {
-    let off_const = match arena.node(off) {
-        TermNode::IntConst(value) => Some(*value),
-        _ => None,
-    };
-    let n_const = match arena.node(n) {
-        TermNode::IntConst(value) => Some(*value),
-        _ => None,
-    };
+    let off_const = ground_int_term(arena, off);
+    let n_const = ground_int_term(arena, n);
     // Total-function corners and exact ground folds. Performing them before the
     // bounded mux is both cheaper and bound-independent.
     if off_const.is_some_and(|value| value < 0) || n_const.is_some_and(|value| value <= 0) {
@@ -6878,6 +6872,30 @@ fn string_substr(
     // Result length: the byte count, as an `Int`, packed back into the BV field.
     let rlen = arena.int2bv(len_width(m), count_i)?;
     arena.concat(content, rlen).map_err(SmtError::Ir)
+}
+
+/// Evaluates a ground integer term built from constants and the arithmetic
+/// constructors emitted for SMT-LIB `+`, `-`, and `*`. Generated corpora often
+/// spell tiny constants as nested arithmetic (for example `(- (+ 1 1) 1)`), and
+/// recognizing those values preserves the same exact constant-index string path.
+fn ground_int_term(arena: &TermArena, term: TermId) -> Option<i128> {
+    match arena.node(term) {
+        TermNode::IntConst(value) => Some(*value),
+        TermNode::App { op, args } => match (op, args.as_ref()) {
+            (Op::IntNeg, [arg]) => ground_int_term(arena, *arg)?.checked_neg(),
+            (Op::IntAdd, [left, right]) => {
+                ground_int_term(arena, *left)?.checked_add(ground_int_term(arena, *right)?)
+            }
+            (Op::IntSub, [left, right]) => {
+                ground_int_term(arena, *left)?.checked_sub(ground_int_term(arena, *right)?)
+            }
+            (Op::IntMul, [left, right]) => {
+                ground_int_term(arena, *left)?.checked_mul(ground_int_term(arena, *right)?)
+            }
+            _ => None,
+        },
+        _ => None,
+    }
 }
 
 /// `str.update s i t` (SMT-LIB total function): the string equal to `s` except that
@@ -10956,11 +10974,39 @@ fn apply_op(
         "str.substr" => {
             need(3)?;
             let r = string_substr(arena, args[0], args[1], args[2])?;
+            let ls = lenabs.len_expr_string(arena, args[0])?;
+            let off_const = ground_int_term(arena, args[1]);
+            let count_const = ground_int_term(arena, args[2]);
+            // With ground bounds, substring length has an exact unbounded-LIA
+            // expression:
+            //
+            //   off < 0 or count <= 0  =>  0
+            //   otherwise              =>  min(count, max(len(s) - off, 0))
+            //
+            // Recording the expression (instead of only `len(r) <= len(s)`)
+            // lets StringGate refute generated fixed-slice length conflicts
+            // independently of the packed-string bound. The relation is exact
+            // SMT-LIB totality, so it is safe under negation and arbitrary
+            // Boolean structure.
+            if let (Some(off), Some(count)) = (off_const, count_const) {
+                let zero = arena.int_const(0);
+                let exact = if off < 0 || count <= 0 {
+                    zero
+                } else {
+                    let off = arena.int_const(off);
+                    let count = arena.int_const(count);
+                    let starts_past_end = arena.int_le(ls, off)?;
+                    let remaining = arena.int_sub(ls, off)?;
+                    let truncated = arena.int_le(remaining, count)?;
+                    let clipped = arena.ite(truncated, remaining, count)?;
+                    arena.ite(starts_past_end, zero, clipped)?
+                };
+                lenabs.note_len(r, exact);
+            }
             // P2.7 A.2: a substring is never longer than its string —
             // universally true, so a pinned over-bound substring result trips
             // the bite detector instead of a bound-induced `unsat`.
             let lr = lenabs.len_expr_string(arena, r)?;
-            let ls = lenabs.len_expr_string(arena, args[0])?;
             let fact = arena.int_le(lr, ls)?;
             lenabs.facts.borrow_mut().push(fact);
             r
