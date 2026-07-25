@@ -1,7 +1,7 @@
 # SMT-COMP credited full-population F2 live-capture R4 plan
 
-Status: implemented and focused-gated; the final full gate, integration, and
-live F2 remain prohibited
+Status: implemented, fully gated, and pushed; integration and live F2 remain
+prohibited
 
 Date: 2026-07-25
 
@@ -136,7 +136,11 @@ authorizes live F2. The integration owner must land the complete corrected
 stack on repaired green exact main before C0 may run, and C5 remains separately
 authorized after that gate.
 
-## Implementation checkpoint
+## Implementation and closure result
+
+The preregistration is pushed as `8b6a11f4`. The implementation is pushed as
+`30287148852bdfe4485eda490d14569e926bbe72` and makes only the registered
+correction.
 
 The implementation constructs the positive allow-list from the effective uid,
 canonical Cargo/Rustup homes, fixed system paths, and an observed canonical
@@ -154,7 +158,28 @@ passes the Python, aggregate, solver-library, and solver-Clippy routes. A real
 invocation of the registered `check-smtcomp-resume.sh` through `run_gate`
 exited zero under the constructed 19-key environment and emitted a sealed v2
 observation; links also pass. The complete `just check` and post-gate clean-tree
-proof remain open before this implementation is integration-ready.
+proof then passed through the same constructed environment from the clean,
+pushed implementation commit.
+
+The final full gate ran the exact logical command `just check` through
+`run_gate`. It exited zero and emitted a v2 gate observation bound to commit
+`30287148852bdfe4485eda490d14569e926bbe72`:
+
+| Field | Sealed value |
+|---|---|
+| executable path | `/home/mjbommar/.cargo/bin/just` |
+| executable SHA-256 | `8a4c6f2def1922823287aa93042be584306280a8f5c4c37a84d68a21338d10c3` |
+| environment SHA-256 | `4b8f6ae1923199dbf6265d70ec50912da50abf6ae1bbf534ab505b22eb6f453f` |
+| stdout | 478,004 bytes; SHA-256 `1d7ebd52aaacfd81b4479f53ec161ed52de0e1ea94b280d4d22f93b716728049` |
+| stderr | 59,752 bytes; SHA-256 `7b667e5aa794f9b4eba4b1c1f1a3b34af6247b6cdb2a32e8d2d3dcf5762c3186` |
+
+After terminal exit, `git status --porcelain=v1` was empty and
+`git diff --exit-code -- bench-results/frontier` passed. Local, tracking, and
+live remote topic refs all equaled the tested implementation commit. R4 is
+therefore ready for integration only as part of the complete corrected stack.
+Exact repaired green main and an integrated combined full gate remain required
+before C0 can run; C5 and every live host, sentinel, NAS, admission, allocation,
+and solver-wave action remain prohibited.
 
 ## Stop conditions
 
