@@ -35,6 +35,17 @@ fn config() -> SolverConfig {
     SolverConfig::new().with_timeout(Duration::from_secs(10))
 }
 
+fn solve_first_occurrence(assertions: &str) -> CheckResult {
+    let text = format!(
+        "(set-logic QF_SLIA)\
+         (declare-const s String)(declare-const pad String)\
+         (assert (= pad \"abcdefghijklm\")){assertions}(check-sat)"
+    );
+    solve_smtlib(&text, &config())
+        .expect("first-occurrence word fallback should parse")
+        .result
+}
+
 /// `issue6520` verbatim — a single pure word equation `(= (str.++ "AB" b c)
 /// (str.++ c "B" a))`, declared `sat`. Its bounded result width (`2 + 12 + 12 = 26`)
 /// exceeds `STRING_BOUND_CAP = 24`, so the bounded parse rejects it; the fallback's
@@ -159,4 +170,72 @@ fn bounded_representable_is_untouched() {
                 (assert (= x (str.++ \"ab\" \"cd\")))(check-sat)";
     let outcome = solve_smtlib(text, &config()).expect("bounded path decides");
     assert!(matches!(outcome.result, CheckResult::Sat(_)));
+}
+
+#[test]
+fn after_first_occurrence_preserves_smtlib_absence_totality() {
+    let after = "(str.substr s (+ (str.indexof s \"=\" 0) 1) \
+                 (- (str.len s) (+ (str.indexof s \"=\" 0) 1)))";
+    let absent = solve_first_occurrence(&format!(
+        "(assert (= s \"abc\"))(assert (str.contains {after} \"a\"))"
+    ));
+    assert!(matches!(absent, CheckResult::Sat(_)));
+
+    let present = solve_first_occurrence(&format!(
+        "(assert (= s \"a=bc\"))\
+         (assert (str.contains {after} \"b\"))\
+         (assert (= (str.at {after} 0) \"b\"))\
+         (assert (= (str.at {after} (- (str.len {after}) 1)) \"c\"))"
+    ));
+    assert!(matches!(present, CheckResult::Sat(_)));
+
+    let contradiction = solve_first_occurrence(&format!(
+        "(assert (= s \"a=bc\"))(assert (not (str.contains {after} \"b\")))"
+    ));
+    assert_eq!(contradiction, CheckResult::Unsat);
+}
+
+#[test]
+fn before_first_occurrence_is_empty_when_the_delimiter_is_absent() {
+    let before = "(str.substr s 0 (- (str.indexof s \"=\" 0) 0))";
+    let present = solve_first_occurrence(&format!(
+        "(assert (= s \"ab=cd\"))\
+         (assert (str.contains {before} \"a\"))\
+         (assert (= (str.at {before} 0) \"a\"))\
+         (assert (= (str.at {before} (- (str.len {before}) 1)) \"b\"))"
+    ));
+    assert!(matches!(present, CheckResult::Sat(_)));
+
+    let absent = solve_first_occurrence(&format!(
+        "(assert (= s \"abcd\"))(assert (str.contains {before} \"a\"))"
+    ));
+    assert_eq!(absent, CheckResult::Unsat);
+}
+
+#[test]
+fn first_occurrence_index_guard_is_exact_membership() {
+    let present = solve_first_occurrence(
+        "(assert (= s \"a=b\"))(assert (>= (- (str.indexof s \"=\" 0) 0) 0))",
+    );
+    assert!(matches!(present, CheckResult::Sat(_)));
+
+    let absent = solve_first_occurrence(
+        "(assert (= s \"ab\"))(assert (>= (- (str.indexof s \"=\" 0) 0) 0))",
+    );
+    assert_eq!(absent, CheckResult::Unsat);
+}
+
+#[test]
+fn deeply_nested_optional_fallback_declines_instead_of_aborting() {
+    let mut text = "(set-logic QF_SLIA)(declare-const s String)\
+                    (assert (= s \"abcdefghijklm\"))(assert "
+        .to_owned();
+    text.push_str(&"(and true ".repeat(2_049));
+    text.push_str("true");
+    text.push_str(&")".repeat(2_049));
+    text.push_str(")(check-sat)");
+    assert!(matches!(
+        solve_smtlib(&text, &config()),
+        Err(SolverError::Parse(_))
+    ));
 }
