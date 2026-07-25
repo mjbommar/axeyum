@@ -2000,6 +2000,27 @@ fn string_rewrite_identities_close_noetzli_regressions() {
 (assert (not (= (str.++ x (str.++ "" y)) (str.++ x y))))
 (check-sat)
 "#,
+        r"
+(set-logic QF_SLIA)
+(declare-const x String)
+(declare-const z Int)
+(assert (not (= (str.at x (- z 0)) (str.at x z))))
+(check-sat)
+",
+        r#"
+(set-logic QF_SLIA)
+(declare-const z Int)
+(assert (not (= (str.at "B" (- z z)) "B")))
+(check-sat)
+"#,
+        r"
+(set-logic QF_SLIA)
+(declare-const x String)
+(declare-const z Int)
+(assert (not (= (str.substr x (str.indexof x x 0) z)
+                (str.substr x 0 z))))
+(check-sat)
+",
     ];
     for text in regressions {
         assert_eq!(run(text).result, CheckResult::Unsat, "{text}");
