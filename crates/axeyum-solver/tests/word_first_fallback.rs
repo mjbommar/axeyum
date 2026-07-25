@@ -1,8 +1,8 @@
 //! Word-first parse fallback (T-B.4d) at the full front door (`solve_smtlib`).
 //!
 //! The bounded ADR-0029 string encoder rejects a whole class of scripts *at
-//! parse*: a string literal over the length cap (`STRING_MAX_LEN = 8`), a
-//! `str.++` whose bounded result width exceeds the cap (`STRING_BOUND_CAP = 16`),
+//! parse*: a string literal over the length cap (`STRING_MAX_LEN = 12`), a
+//! `str.++` whose bounded result width exceeds the cap (`STRING_BOUND_CAP = 24`),
 //! or another bounded-encoder capacity limit. These caps are an artifact of the
 //! *bounded* encoding — a pure word-equation problem is decidable unbounded no
 //! matter how long its literals or how wide its concats. The word-first fallback
@@ -36,8 +36,8 @@ fn config() -> SolverConfig {
 }
 
 /// `issue6520` verbatim — a single pure word equation `(= (str.++ "AB" b c)
-/// (str.++ c "B" a))`, declared `sat`. Its bounded result width (`2 + 8 + 8 = 18`)
-/// exceeds `STRING_BOUND_CAP = 16`, so the bounded parse rejects it; the fallback's
+/// (str.++ c "B" a))`, declared `sat`. Its bounded result width (`2 + 12 + 12 = 26`)
+/// exceeds `STRING_BOUND_CAP = 24`, so the bounded parse rejects it; the fallback's
 /// word route decides it. `b`/`c` recur on both sides (a quadratic system), so the
 /// search *may* burn its Skolem cap to `unknown` — acceptable — but it must never
 /// return a wrong `unsat` or a bounded parse error.
@@ -75,24 +75,24 @@ fn issue6681_decides_via_fallback() {
     );
 }
 
-/// An **over-long literal** (12 bytes > `STRING_MAX_LEN = 8`): the bounded parse
+/// An **over-long literal** (13 bytes > `STRING_MAX_LEN = 12`): the bounded parse
 /// rejects the literal wholesale, and only the word-first fallback can decide the
 /// (linear, hence easy) equation. The witness is fully concrete, so it is `sat`.
 #[test]
 fn over_long_literal_linear_decides() {
     let text = "(set-logic QF_S)\
                 (declare-const x String)(declare-const y String)\
-                (assert (= x (str.++ \"abcdefghijkl\" y)))(assert (= y \"mnop\"))(check-sat)";
+                (assert (= x (str.++ \"abcdefghijklm\" y)))(assert (= y \"nopq\"))(check-sat)";
     let outcome = solve_smtlib(text, &config()).expect("fallback decides the over-long literal");
     assert!(
         matches!(outcome.result, CheckResult::Sat(_)),
-        "x = \"abcdefghijklmnop\" is sat; got {:?}",
+        "x = \"abcdefghijklmnopq\" is sat; got {:?}",
         outcome.result
     );
 }
 
-/// A **wide variable concat** whose bounded result width (`8 + 8 + 8 = 24`) exceeds
-/// `STRING_BOUND_CAP = 16` even with only 8-byte literals. The bounded parse
+/// A **wide variable concat** whose bounded result width (`8 + 12 + 12 = 32`) exceeds
+/// `STRING_BOUND_CAP = 24`. The bounded parse
 /// rejects it at the width cap; the fallback decides the linear system `sat`.
 #[test]
 fn wide_variable_concat_decides() {
@@ -118,7 +118,7 @@ fn wide_variable_concat_decides() {
 fn non_word_fragment_reproduces_original_error() {
     let text = "(set-info :status sat)(set-logic QF_SLIA)\
                 (declare-const i0 Int)(declare-const s1 String)(declare-const s2 String)\
-                (assert (= (str.++ s1 \"ijruldtzyp\") s2))\
+                (assert (= (str.++ s1 \"ijruldtzypabc\") s2))\
                 (assert (= (str.indexof s2 \"z\" 0) i0))(check-sat)";
     match solve_smtlib(text, &config()) {
         Err(SolverError::Parse(msg)) => {

@@ -6395,10 +6395,11 @@ fn combine_match(
 
 /// Maximum bounded string length in bytes for a **declared symbol or a literal**.
 /// Concatenation may grow a *result* up to `STRING_BOUND_CAP`.
-const STRING_MAX_LEN: u32 = 8;
-/// Hard cap on any packed string's `max_len` (the 128-bit content ceiling), so
-/// `len_width(16) + 8·16 = 5 + 128 = 133` bits stays a representable BV width.
-pub(crate) const STRING_BOUND_CAP: u32 = 16;
+const STRING_MAX_LEN: u32 = 12;
+/// Hard cap on any packed string's `max_len`. Declared strings stay at
+/// [`STRING_MAX_LEN`]; concatenation can temporarily double that bound without
+/// truncating either operand.
+pub(crate) const STRING_BOUND_CAP: u32 = 24;
 
 /// Bits holding a length in `0..=m` for a string of maximum length `m`.
 pub(crate) const fn len_width(m: u32) -> u32 {
@@ -7962,11 +7963,10 @@ const FROM_INT_MAX_DIGITS: u32 = 10;
 /// Position 0 is the most-significant digit, so the fold
 /// `acc ← acc·10 + digit(s[p])` over the *present* positions (`p < len(s)`)
 /// builds the value left-to-right; positions `p ≥ len(s)` contribute nothing
-/// (`acc·1 + 0`). The maximum value is `10^m − 1`; for `m = STRING_MAX_LEN = 8`
-/// that is `99_999_999 < 2^31`, so the value always fits the default bounded
-/// integer width and the op is **complete** within the bound (and sound for any
-/// `m`: an over-wide Horner value simply overflows the int-blast and replay
-/// returns `Unknown`, never a wrong verdict).
+/// (`acc·1 + 0`). The maximum value is `10^m − 1`. At the current
+/// `STRING_MAX_LEN = 12`, values above the default signed width are deliberately
+/// incomplete: an over-wide Horner value overflows the int blast and original-
+/// query replay returns `Unknown`, never a wrong verdict.
 fn string_to_int(arena: &mut TermArena, s: TermId) -> Result<TermId, SmtError> {
     let m = string_max_len(arena, s)?;
     let len_field = string_len_field(arena, s, m)?;

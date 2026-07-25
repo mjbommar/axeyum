@@ -9,8 +9,10 @@ fundamentally length-capped.
 - **Representation:** each string is `(len, content)` where `len` is a
   `BitVec(len_width)` holding the actual length (constrained `len ≤ max_len`), and
   `content` is a `BitVec(max_len × 8)` with byte `i` at bits `[8i, 8i+7]`.
-- **Bounds:** `max_len ∈ [1, 16]` (enforced at construction); content width
-  capped at **128 bits** (the IR BV ceiling); `len_width = 32 − leading_zeros(max_len)`.
+- **Bounds:** the Rust `BoundedString` API keeps `max_len ∈ [1, 16]`. The
+  SMT-LIB packed front door uses 12 bytes for declared strings/literals and up
+  to 24 bytes for temporary concatenation results; `len_width = 32 −
+  leading_zeros(max_len)`.
 - **Well-formedness:** `len ≤ max_len` asserted per declared variable.
 - This is the **HAMPI/Kaluza bounded** approach: everything lowers to a pure
   bit-vector / Boolean formula, solved by the existing BV→SAT path. Models replay
@@ -24,7 +26,8 @@ fundamentally length-capped.
 - **Replace:** `replace` (first occurrence; result sort `BoundedString(2·max_len)`),
   `replace_all` (non-overlapping L→R; result sort `BoundedString(max_len²)`),
   `replace_same_len`.
-- **Concat** `str.++` (result sort `BoundedString(max_len_x + max_len_y)`, capped 16).
+- **Concat** `str.++` (result bound `max_len_x + max_len_y`; Rust API cap 16,
+  SMT-LIB packed front-door cap 24).
 - **Comparison:** lexicographic `<`, `≤`.
 - **Symbolic:** `take`/`drop` (symbolic byte count).
 - **Regex** `str.in_re`: Thompson NFA simulation.
@@ -58,7 +61,7 @@ adversarial `str_differential_fuzz` vs Z3 is **DISAGREE=0 over 371 instances**.
 
 | Area | Decide today | Assurance | Boundary to close |
 |---|---|---|---|
-| Bounded ops | all `str.*` within `max_len ≤ 16`, with exact correlated bounds for generated fixed-position splices | validated (replay + DRAT) | **unbounded length** |
+| Bounded ops | all `str.*` within the API cap 16 / SMT-LIB declared cap 12 and concat cap 24, with exact correlated bounds for generated fixed-position splices | validated (replay + DRAT) | **unbounded length** |
 | Word equality | unbounded Seq equations plus UNSAT-only opaque fixed-splice equality/constant conflicts | checked UNSAT; abstract SAT forbidden | Nielsen arrangements and semantic splice relations |
 | Regex | Thompson NFA; Boolean top-level only | validated | nested Boolean; symbolic-derivative regex; complement under concat |
 | `str.len` + LIA | unbounded replay-checked SAT bridge, including exact integer-indicator recovery (ADR-0052); broader coupled content/length is incomplete | sound | unbounded word/length reasoning in later P2.7 phases |

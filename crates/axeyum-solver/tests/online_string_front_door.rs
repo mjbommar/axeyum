@@ -498,20 +498,20 @@ fn front_door_conbyte_negative_start_substr_is_empty() {
 
 #[test]
 fn front_door_conbyte_over_bound_fixed_substr_stays_unknown() {
-    // A real length-10 model satisfies both constraints. The packed encoder cannot
+    // A real length-14 model satisfies both constraints. The packed encoder cannot
     // witness it, and the unbounded substring-length relation must not turn that
     // bounded limitation into a false UNSAT.
     let s = r#"(set-logic QF_SLIA)
 (declare-fun s () String)
-(assert (= (str.len (str.substr s 9 1)) 1))
-(assert (= (str.len (str.substr s 10 1)) 0))
+(assert (= (str.len (str.substr s 13 1)) 1))
+(assert (= (str.len (str.substr s 14 1)) 0))
 (check-sat)"#;
     assert!(matches!(verdict(s), CheckResult::Unknown(_)));
 }
 
 // ---------- over-cap (word-first fallback) disjunctive shapes ----------
 //
-// String literals over `STRING_MAX_LEN` (8) make the *bounded* parse decline, so
+// String literals over `STRING_MAX_LEN` (12) make the *bounded* parse decline, so
 // the script arrives via the word-first fallback with an empty flat view and a
 // `word_skeleton`-only side channel. The online route (through
 // `decide_word_only_script`) decides it — a verdict the bounded encoder never
@@ -522,8 +522,8 @@ fn front_door_overcap_disjunction_unsat() {
     let s = r#"(set-logic QF_S)
 (declare-const x String)
 (declare-const y String)
-(assert (or (= x (str.++ y "aaaaaaaaaa")) (= x (str.++ y "bbbbbbbbbb"))))
-(assert (= x (str.++ y "cccccccccc")))
+(assert (or (= x (str.++ y "aaaaaaaaaaaaa")) (= x (str.++ y "bbbbbbbbbbbbb"))))
+(assert (= x (str.++ y "ccccccccccccc")))
 (check-sat)"#;
     assert_eq!(verdict(s), CheckResult::Unsat);
     // And directly through the word-first-fallback harness surface.
