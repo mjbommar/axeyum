@@ -2,8 +2,8 @@
 
 **This folder is the single entry point for the SMT-COMP measurement,
 full-library inventory, and gap-closing lane.** Updated 2026-07-25 after the
-no-launch F2 live-capture R3 gate-output-isolation correction was
-preregistered. Implementation and live capture remain prohibited.
+no-launch F2 live-capture R3 gate-output-isolation correction was implemented,
+fully gated, and pushed. Integration and live capture remain prohibited.
 
 The goal is an honest, reproducible per-logic decide/decline/**wrong** map over
 a source-balanced SMT-COMP-style population, followed by a measured and ranked
@@ -437,9 +437,12 @@ gate.
    itself rewrites tracked hardware-relative frontier timing JSON. The
    source-first
    [R3 correction](../smtcomp-credited-full-preparation-f2-live-capture-r3-plan-2026-07-25.md)
-   preregisters a temporary artifact destination for readiness gates without
-   changing the exact gate, ratchets, or clean-tree requirement. Implement and
-   integrate R3 before the separately authorized live capture.
+   is implemented and pushed through `fe32194d`: readiness gates use a unique
+   external temporary artifact destination without changing the exact gate,
+   ratchets, or clean-tree requirement. Focused tests, the 160-test resume
+   aggregate, the scoped gate, and the full `just check` pass; the terminal
+   full gate left the source worktree and tracked frontier artifacts clean.
+   Integrate R3 before the separately authorized live capture.
 
 The same implementation rule continues to apply: prove each new mechanism and
 its destructive/interruption tests on a tiny corpus before spending the full
@@ -602,11 +605,13 @@ NAS (shared, corpus read-only in practice):
    remained absent. It reduces input-drift uncertainty but does not satisfy C0
    or replace C5's full selected-byte rehash. A subsequent clean reproduction
    found that the registered `just check` mutates tracked progress-frontier
-   timing JSON and therefore cannot satisfy the operator's mandatory post-gate
-   clean-tree check. Implement and integrate the source-first
+   timing JSON and therefore could not satisfy the operator's mandatory
+   post-gate clean-tree check. The implemented source-first
    [R3 correction](../smtcomp-credited-full-preparation-f2-live-capture-r3-plan-2026-07-25.md)
-   before treating C0 as executable. Only after that correction and all prior
-   integration and green-main conditions hold may the reviewed operator
+   now isolates those five volatile artifacts outside the repository, passes
+   the full gate, and leaves the tracked baselines byte-clean. Integrate that
+   exact topic and satisfy all prior green-main conditions before treating C0
+   as executable. Only then may the reviewed operator
    publish a process-free
    `launch_authorized=false` root inside its frozen 30-minute window. Integrate
    and explicitly accept that exact root before constructing Axeyum admission.

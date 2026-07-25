@@ -911,9 +911,14 @@ twenty-four is fully gated, pushed, integrated byte-for-byte, and documented.
 > tracked hardware-relative frontier timing JSON, so the readiness operator's
 > mandatory post-gate clean-tree check rejects. The source-first
 > [R3 plan](docs/plan/smtcomp-credited-full-preparation-f2-live-capture-r3-plan-2026-07-25.md)
-> preregisters a temporary artifact destination that preserves the exact gate
-> and ratchets without restoring repository bytes. Implement and integrate R3
-> before any live C5 action.
+> is now implemented and pushed through `fe32194d`: readiness gates replace
+> any inherited frontier destination with a unique external temporary path,
+> preserve the exact command and ratchets, and never restore repository bytes.
+> Focused tests, the 160-test SMT-COMP aggregate, `just check-scope
+> origin/main`, and the complete workspace `just check` pass; the terminal
+> full gate left the worktree and tracked frontier artifacts clean and ended
+> with `all links ok`. Integrate R3 and repair exact main before any live C5
+> action.
 > The candidate is not
 > official selection evidence:
 > it still lacks the complete eligibility/status/difficulty policy, official

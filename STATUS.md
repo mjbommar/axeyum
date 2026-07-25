@@ -383,8 +383,8 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
-- **2026-07-25 — F2 R3 preregisters isolation for a gate-generated tracked-file
-  mutation; no live action is authorized.** A clean targeted reproduction
+- **2026-07-25 — F2 R3 gate-output isolation is implemented, fully gated, and
+  pushed; no live action is authorized.** A clean targeted reproduction
   passed the `frontier_bv_reduction` test at 40 over baseline 30, then changed
   39 timing rows in the tracked `bv_reduction.json`. The complete R2 gate had
   likewise rewritten all five frontier timing artifacts before their manual
@@ -394,8 +394,16 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   [R3 plan](docs/plan/smtcomp-credited-full-preparation-f2-live-capture-r3-plan-2026-07-25.md)
   freezes an explicit temporary frontier-artifact destination for readiness
   gates while preserving the exact command, frontier ratchets, output, and
-  clean-tree rule. Implementation, integration, green main, and live C5 all
-  remain open; the NAS attempt namespace is still absent.
+  clean-tree rule. Commits `6919ec77` and `fe32194d` implement that contract.
+  Forty-seven focused Python tests, the nine-test frontier suite, the 160-test
+  resume aggregate, `just check-scope origin/main`, and the complete workspace
+  `just check` pass. The full gate produced exactly five external temporary
+  JSON files, left the tracked frontier artifacts byte-clean and the worktree
+  clean, passed both ignored CAS proofs, and ended with `all links ok`.
+  Integration and green main remain open: exact main is `08af3665`, docs CI is
+  green, main CI run `30122366840` is still red on the separately owned lint
+  and seed-111 resource-limit failures, and no topic PR exists. Live C5 remains
+  prohibited; the NAS attempt namespace is still absent.
 
 - **2026-07-24 — the frozen C5 external inputs pass a comprehensive read-only
   audit; this is not launch authority.** The

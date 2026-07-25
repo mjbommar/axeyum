@@ -177,3 +177,28 @@ both oracle binaries, and all three sentinel inputs. The F2 attempt namespace
 remained absent. This reduces input-drift uncertainty only; it deliberately
 did not build or run Axeyum, rehash the 15.1 GB selected payload, probe hosts,
 or run sentinels, and therefore does not satisfy C0 or C5.
+
+## R3 gate-output-isolation closure
+
+The source-first
+[R3 correction](smtcomp-credited-full-preparation-f2-live-capture-r3-plan-2026-07-25.md)
+is implemented and pushed through
+`fe32194dc43eceb5dc67137819862dc949cc3c6d`. The readiness runner now gives
+the unchanged registered gates a unique external destination for volatile
+progress-frontier timing JSON, replaces any inherited destination, and still
+rejects every source mutation without cleaning it up.
+
+The final evidence includes 47 focused Python tests, the complete nine-test
+frontier suite, the 160-test SMT-COMP aggregate with one expected live-host
+skip, `just check-scope origin/main`, and a terminal exit-zero full
+`just check`. The full gate passed both registered ignored CAS families,
+generated resources/contracts, parity documentation, and links. It created
+exactly the five expected JSON files under the external temporary directory,
+left `bench-results/frontier` byte-clean, left the topic worktree clean, and
+ended with `all links ok`; the temporary files were then removed explicitly.
+
+This closes the owned C0 gate-output-isolation defect only. Exact remote main
+remains `08af3665`, main CI `30122366840` remains red on separately owned
+failures, and no pull request exists for the topic. No host probe, sentinel,
+NAS mutation, F2 attempt, admission, allocation, or solver wave was performed
+or authorized.
