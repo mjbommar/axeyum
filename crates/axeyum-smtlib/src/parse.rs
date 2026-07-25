@@ -6898,6 +6898,47 @@ fn ground_int_term(arena: &TermArena, term: TermId) -> Option<i128> {
     }
 }
 
+/// Inverts an integer-valued Boolean indicator compared with a constant.
+///
+/// Generated symbolic-execution corpora routinely encode a Boolean `c` as
+/// `(ite c 1 0)` and immediately compare it with `0` or `1`. When both branches
+/// and the comparison target are integer constants, the equality is exactly one
+/// of `true`, `false`, `c`, or `not c`; recovering that Boolean before string
+/// gating exposes the original predicate without any bounded-theory assumption.
+fn int_ite_const_equality(
+    arena: &mut TermArena,
+    candidate: TermId,
+    target: TermId,
+) -> Result<Option<TermId>, SmtError> {
+    let target_value = match arena.node(target) {
+        TermNode::IntConst(value) => *value,
+        _ => return Ok(None),
+    };
+    let (condition, then_term, else_term) = match arena.node(candidate) {
+        TermNode::App { op: Op::Ite, args } => match args.as_ref() {
+            [condition, then_term, else_term] => (*condition, *then_term, *else_term),
+            _ => return Ok(None),
+        },
+        _ => return Ok(None),
+    };
+    let then_value = match arena.node(then_term) {
+        TermNode::IntConst(value) => *value,
+        _ => return Ok(None),
+    };
+    let else_value = match arena.node(else_term) {
+        TermNode::IntConst(value) => *value,
+        _ => return Ok(None),
+    };
+    let then_matches = then_value == target_value;
+    let else_matches = else_value == target_value;
+    Ok(Some(match (then_matches, else_matches) {
+        (true, true) => arena.bool_const(true),
+        (false, false) => arena.bool_const(false),
+        (true, false) => condition,
+        (false, true) => arena.not(condition)?,
+    }))
+}
+
 /// `str.update s i t` (SMT-LIB total function): the string equal to `s` except that
 /// the `len(t)` bytes starting at position `i` are overwritten by `t` — but ONLY when
 /// `0 ≤ i < len(s)` (otherwise the result is `s` unchanged), and the overwrite is
@@ -11212,6 +11253,12 @@ fn apply_op(
                 |arena: &mut TermArena, p: TermId, q: TermId| -> Result<TermId, SmtError> {
                     if p == q {
                         return Ok(arena.bool_const(true));
+                    }
+                    if let Some(result) = int_ite_const_equality(arena, p, q)? {
+                        return Ok(result);
+                    }
+                    if let Some(result) = int_ite_const_equality(arena, q, p)? {
+                        return Ok(result);
                     }
                     // P2.7 A.2: `x = y ⟹ len(x) = len(y)` (unbounded). Sound
                     // even for a string-*shaped* user bit-vector (equal BVs have

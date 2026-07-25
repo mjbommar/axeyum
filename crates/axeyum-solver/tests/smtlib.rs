@@ -2045,6 +2045,30 @@ fn string_rewrite_identities_close_noetzli_regressions() {
     }
 }
 
+/// PyEx-style symbolic execution encodes a Boolean string predicate as the
+/// integer indicator `(ite predicate 1 0)`. Comparing that indicator with `0`
+/// or `1` must expose the original predicate before the bounded-string gate, so
+/// contradictory indicator tests close instead of declining.
+#[test]
+fn integer_ite_indicators_expose_string_predicates() {
+    let unsat = r"
+(set-logic QF_SLIA)
+(declare-const s String)
+(assert (not (= (ite (= (str.len s) 8) 1 0) 0)))
+(assert (= 0 (ite (= (str.len s) 8) 1 0)))
+(check-sat)
+";
+    assert_eq!(run(unsat).result, CheckResult::Unsat);
+
+    let sat = r"
+(set-logic QF_SLIA)
+(declare-const s String)
+(assert (= (ite (= (str.len s) 8) 7 9) 9))
+(check-sat)
+";
+    assert!(matches!(run(sat).result, CheckResult::Sat(_)));
+}
+
 /// A satisfiable retained subset cannot justify `sat` when a dropped conjunct
 /// exists. Here the dropped self-disequality makes the full script unsatisfiable;
 /// the membership-only route must decline rather than expose its local witness.
