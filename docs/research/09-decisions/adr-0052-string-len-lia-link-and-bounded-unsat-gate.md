@@ -230,3 +230,20 @@ handling in step 2 and is deferred with the rest.
   `substr`-family length implications) — then ADR-0029's contract holds in full.
 - The regex-content residual (inclusion/intersection emptiness across separate
   `in_re` atoms) is closed by a regex-automata decision (Phase A.3 / Phase B).
+
+## Follow-up (2026-07-25): exact integer-indicator recovery
+
+The faithful `length_skeleton` now applies the same exact integer-indicator
+inversion as the bounded parser. An equality between `(ite p a b)` and an
+integer constant `k`, with literal `a`, `b`, and `k`, is exactly `true`, `false`,
+`p`, or `not p` according to which branches equal `k`. This is a Boolean
+identity, not a bounded-string approximation; unsupported conditions still
+decline the all-or-nothing skeleton.
+
+This closes a measured PyExZ3 parser mismatch: the bounded route exposed these
+predicates, while the unbounded length route silently discarded the whole
+skeleton. On the retained 71-row Leetcode residual, the extension moves seven
+prior `unknown`s to replay-checked `sat` (all five `findAnagrams` rows and both
+`addStrings` rows). Z3 4.13.3 and the retained cvc5 1.3.4 results independently
+report `sat` on all seven. No prior verdict flips; two concurrent outer-wall
+losses replay `unsat` alone under the same 250 ms internal budget.

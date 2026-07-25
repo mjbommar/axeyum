@@ -1348,21 +1348,7 @@ fn length_bool(
         }
         // `(= a b …)` — a chained equality that is **either** all `Seq` words or all
         // `Int` expressions. Try the `Seq` reading first (word operands), then `Int`.
-        "=" if items.len() >= 3 => {
-            let terms = match word_terms(arena, &items[1..], seq_vars) {
-                Some(terms) => terms,
-                None => length_int_terms(arena, &items[1..], seq_vars, int_vars, saw_len)?,
-            };
-            let mut acc: Option<TermId> = None;
-            for &t in &terms[1..] {
-                let atom = arena.eq(terms[0], t).ok()?;
-                acc = Some(match acc {
-                    None => atom,
-                    Some(prev) => arena.and(prev, atom).ok()?,
-                });
-            }
-            acc
-        }
+        "=" if items.len() >= 3 => length_equality(arena, &items[1..], seq_vars, int_vars, saw_len),
         // `(distinct a b …)` — pairwise disequality over `Seq` words or `Int` exprs.
         "distinct" if items.len() >= 3 => {
             let terms = match word_terms(arena, &items[1..], seq_vars) {
@@ -1402,6 +1388,69 @@ fn length_bool(
             acc
         }
         _ => None,
+    }
+}
+
+fn length_equality(
+    arena: &mut TermArena,
+    operands: &[SExpr],
+    seq_vars: &BTreeMap<String, (SymbolId, TermId)>,
+    int_vars: &BTreeMap<String, (SymbolId, TermId)>,
+    saw_len: &mut bool,
+) -> Option<TermId> {
+    if let [left, right] = operands {
+        if let Some(indicator) =
+            length_int_ite_const_equality(arena, left, right, seq_vars, int_vars, saw_len)
+        {
+            return Some(indicator);
+        }
+        if let Some(indicator) =
+            length_int_ite_const_equality(arena, right, left, seq_vars, int_vars, saw_len)
+        {
+            return Some(indicator);
+        }
+    }
+    let terms = match word_terms(arena, operands, seq_vars) {
+        Some(terms) => terms,
+        None => length_int_terms(arena, operands, seq_vars, int_vars, saw_len)?,
+    };
+    let mut acc: Option<TermId> = None;
+    for &term in &terms[1..] {
+        let atom = arena.eq(terms[0], term).ok()?;
+        acc = Some(match acc {
+            None => atom,
+            Some(previous) => arena.and(previous, atom).ok()?,
+        });
+    }
+    acc
+}
+
+/// Inverts an integer-valued Boolean indicator for the length/LIA side channel.
+/// This is the S-expression counterpart of [`int_ite_const_equality`]: generated
+/// scripts commonly wrap a length predicate as `(ite p 1 0)` and immediately
+/// compare it with a constant. Exact constant branches reduce the equality to
+/// `true`, `false`, `p`, or `not p`, preserving the original Boolean formula.
+fn length_int_ite_const_equality(
+    arena: &mut TermArena,
+    candidate: &SExpr,
+    target: &SExpr,
+    seq_vars: &BTreeMap<String, (SymbolId, TermId)>,
+    int_vars: &BTreeMap<String, (SymbolId, TermId)>,
+    saw_len: &mut bool,
+) -> Option<TermId> {
+    let target_value = parse_int_literal(target)?;
+    let ite = candidate.list()?;
+    if ite.len() != 4 || ite[0].atom() != Some("ite") {
+        return None;
+    }
+    let then_value = parse_int_literal(&ite[2])?;
+    let else_value = parse_int_literal(&ite[3])?;
+    let condition = length_bool(arena, &ite[1], seq_vars, int_vars, saw_len)?;
+    match (then_value == target_value, else_value == target_value) {
+        (true, true) => Some(arena.bool_const(true)),
+        (false, false) => Some(arena.bool_const(false)),
+        (true, false) => Some(condition),
+        (false, true) => arena.not(condition).ok(),
     }
 }
 
