@@ -383,6 +383,19 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-25 — the stale s4 bug-discovery stream finished, but remains
+  zero-credit.** A final read-only audit found no surviving runner or solver;
+  all eight logs reach their exact 8,044/8,043 shard cardinalities and publish
+  eight parseable raw objects. Their 64,345 unique keys exactly cover the
+  frozen selected list. The raw census is 15,337 `sat`, 12,035 `unsat`, 31,119
+  `unknown`, and 5,854 untyped null statuses. The 56 wrong markers remain
+  unchanged at 25 expected-`sat`/reported-`unsat` and 31 in the other
+  direction. The
+  [final artifact audit](docs/plan/smtcomp-stale-s4-final-artifact-audit-2026-07-25.md)
+  binds all 16 external file hashes and keeps the stale binary, legacy
+  selection, missing E1--E3 evidence, absent typed terminals, and absent model
+  replay outside every correctness, coverage, timing, F3/F4, and parity claim.
+
 - **2026-07-25 — F2 R3 gate-output isolation is implemented, fully gated, and
   pushed; no live action is authorized.** A clean targeted reproduction
   passed the `frontier_bv_reduction` test at 40 over baseline 30, then changed

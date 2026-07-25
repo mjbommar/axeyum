@@ -77,8 +77,13 @@ The measurement lane is **not ready for another credited 64,345-file run**.
 
 The old s4 run remains useful only as a bug-discovery stream. It predates both
 soundness repairs, uses end-of-shard raw output, and does not satisfy E1-E3. It
-was later resumed outside the credited workstream, remains active without a
-raw shard artifact, and receives zero measurement credit.
+was later resumed outside the credited workstream and has now finished all
+eight shards. The final
+[read-only audit](../smtcomp-stale-s4-final-artifact-audit-2026-07-25.md)
+binds the eight logs and eight raw JSON files, exact 64,345-key selected-list
+coverage, 56 unchanged wrong markers, and 5,854 untyped null-status rows. No
+process remains. The entire run still receives zero measurement and
+correctness credit.
 
 ---
 
@@ -207,10 +212,16 @@ A later read-only 2026-07-24 audit found that the historical stream had been
 resumed outside this workstream's credited execution path. All eight
 `compete.py` shards were active. Their latest indices were 6,851, 6,847, 7,466,
 6,857, 6,877, 6,875, 7,553, and 6,829 (sum 56,155), with 56 literal
-`<<< WRONG` markers still present and no `raw_*.json` shard published. This
-updates only the process/log snapshot. The run still predates both soundness
-repairs and E1--E3, so it remains bug-discovery input with zero correctness,
-coverage, or measurement credit.
+`<<< WRONG` markers still present and no `raw_*.json` shard published.
+
+The final read-only 2026-07-25 audit found no surviving runner or solver. Every
+log reaches 8,044/8,044 for shard 0 or 8,043/8,043 for shards 1--7 and ends by
+naming its raw artifact. The eight parseable raw objects contain 64,345 unique
+benchmark keys whose set exactly equals `selected.txt`; the wrong-marker split
+remains 25 expected-`sat`/reported-`unsat` and 31 in the other direction. The
+[final artifact audit](../smtcomp-stale-s4-final-artifact-audit-2026-07-25.md)
+records all hashes and the legacy status census. This is completion of a stale
+diagnostic stream, not completion of any credited F milestone.
 
 Run identity:
 
@@ -456,6 +467,8 @@ Repository:
 
 - active harness: `scripts/smtcomp_repro/`;
 - aggregate gate: `scripts/check-smtcomp-resume.sh`;
+- stale s4 final zero-credit artifact audit:
+  `docs/plan/smtcomp-stale-s4-final-artifact-audit-2026-07-25.md`;
 - v2 contract source and generated view:
   `docs/plan/smtcomp-resumable-run-contract-v2.json` and
   `docs/plan/generated/smtcomp-resumable-run-contract.{json,md}`;
@@ -557,8 +570,11 @@ NAS (shared, corpus read-only in practice):
    ADR-0344.
 2. Work in a dedicated `agent/smtcomp/*` worktree; never mutate the integration
    checkout or another lane's NAS output.
-3. Confirm the old s4 process/log state and count literal `WRONG` lines without
-   treating the stale run as evidence.
+3. Confirm the old s4 stream remains process-free and that the 16 external
+   files still match the
+   [final audit](../smtcomp-stale-s4-final-artifact-audit-2026-07-25.md).
+   Do not treat its 64,345 raw rows or 56 literal `WRONG` lines as credited
+   evidence.
 4. Treat the accepted S4 root as immutable. S5/S5.1 admission and the repaired
    P0-S1 v2 preparation, Axeyum closure, and cvc5 execution are complete.
    Bitwuzla's sole retry and process-free evidence closure are complete. Its

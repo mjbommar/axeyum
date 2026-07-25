@@ -919,6 +919,12 @@ twenty-four is fully gated, pushed, integrated byte-for-byte, and documented.
 > full gate left the worktree and tracked frontier artifacts clean and ended
 > with `all links ok`. Integrate R3 and repair exact main before any live C5
 > action.
+> Separately, the historical s4 discovery stream has now finished all eight
+> stale end-of-shard outputs. Its
+> [final read-only audit](docs/plan/smtcomp-stale-s4-final-artifact-audit-2026-07-25.md)
+> binds exact 64,345-key selection coverage, all 16 file hashes, the unchanged
+> 56 wrong markers, and 5,854 untyped null-status rows. It remains zero-credit
+> and must not enter F3/F4, parity, correctness, or performance claims.
 > The candidate is not
 > official selection evidence:
 > it still lacks the complete eligibility/status/difficulty policy, official
