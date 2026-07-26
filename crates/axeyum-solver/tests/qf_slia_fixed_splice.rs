@@ -1652,3 +1652,72 @@ fn exact_source_boolean_paths_decline_correlated_empty_controls() {
         );
     }
 }
+
+#[test]
+fn exact_source_affine_substr_views_refute_noetzli_families() {
+    for assertion in [
+        r#"(not (= (str.substr "A" 0 (+ z z)) (str.substr "A" 0 z)))"#,
+        r#"(not (= (str.substr "B" 0 (+ z z)) (str.substr "B" 0 z)))"#,
+        r#"(not (= (str.substr "A" z (+ 1 z)) (str.at "A" z)))"#,
+        r#"(not (= (str.substr "B" z (+ 1 z)) (str.at "B" z)))"#,
+        r#"(not (= (str.substr "A" (- z 1) z) (str.at "A" (- 1 z))))"#,
+        r#"(not (= (str.substr "B" (- z 1) z) (str.at "B" (- 1 z))))"#,
+        r#"(not (= (str.substr (str.substr y 0 1) 0 1)
+                    (str.at (str.replace x x y) 0)))"#,
+        r#"(not (= (str.substr (str.substr y 1 1) 0 1)
+                    (str.at (str.replace x x y) 1)))"#,
+        r#"(not (= (str.substr (str.substr y z 1) 0 1)
+                    (str.at (str.replace x x y) z)))"#,
+    ] {
+        let input = format!(
+            r#"(set-logic QF_SLIA)
+(declare-fun x () String)
+(declare-fun y () String)
+(declare-fun z () Int)
+(assert {assertion})
+(check-sat)
+"#
+        );
+        let script = parse_script(&input).expect("parse affine one-code-point theorem");
+        assert!(
+            script.source_string_semantic_unsat,
+            "affine one-code-point view must refute {assertion}"
+        );
+        assert_eq!(
+            solve_smtlib(&input, &config())
+                .expect("solve affine one-code-point theorem")
+                .result,
+            CheckResult::Unsat,
+            "affine one-code-point view must survive the bounded-string gate: {assertion}"
+        );
+    }
+}
+
+#[test]
+fn exact_source_affine_substr_views_decline_satisfiable_controls() {
+    for assertion in [
+        r#"(not (= (str.substr "A" 0 (+ z z 1)) (str.substr "A" 0 z)))"#,
+        r#"(not (= (str.substr "A" z z) (str.at "A" z)))"#,
+        r#"(not (= (str.substr "A" (- z 1) (- z 1)) (str.at "A" (- 1 z))))"#,
+    ] {
+        let input = format!(
+            r#"(set-logic QF_SLIA)
+(declare-fun z () Int)
+(assert {assertion})
+(check-sat)
+"#
+        );
+        let script = parse_script(&input).expect("parse affine one-code-point control");
+        assert!(
+            !script.source_string_semantic_unsat,
+            "satisfiable affine one-code-point control must decline: {assertion}"
+        );
+        assert_ne!(
+            solve_smtlib(&input, &config())
+                .expect("solve affine one-code-point control")
+                .result,
+            CheckResult::Unsat,
+            "satisfiable affine one-code-point control must not become UNSAT: {assertion}"
+        );
+    }
+}
