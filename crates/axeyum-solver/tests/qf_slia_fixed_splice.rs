@@ -1987,3 +1987,115 @@ fn exact_source_one_code_point_deletion_languages_decline_satisfiable_controls()
         );
     }
 }
+
+#[test]
+fn exact_source_replace_emptiness_boolean_normalization_refutes_noetzli_families() {
+    let assertions = [
+        r#"(not (= (= "" (str.replace x y "B")) (= "" (str.replace x y "A"))))"#,
+        r#"(not (= (str.contains "" (str.replace x y "B")) (= "" (str.replace x y "A"))))"#,
+        r#"(not (= (= "" (str.replace x "B" "A")) (= x "")))"#,
+        r#"(not (= (str.replace (str.replace "B" x "") "B" "A") (str.replace "A" (str.replace "B" x "A") "")))"#,
+        r#"(not (= (str.replace "A" (str.at "B" z) "A") (str.replace "A" (str.at "A" z) "A")))"#,
+        r#"(not (= (str.replace "A" (str.substr "B" 0 z) "A") (str.replace "A" (str.substr "A" 0 z) "A")))"#,
+        r#"(not (= (str.replace "A" (str.replace x y "B") "A") (str.replace "A" (str.replace x y "A") "A")))"#,
+        r#"(not (= (str.replace "A" (str.replace "A" x "A") x) (str.++ x (str.replace "" x "A"))))"#,
+        r#"(not (= (str.replace "A" (str.replace "A" x "A") y) (str.replace y (str.++ x y) "A")))"#,
+        r#"(not (= (str.replace "A" (str.replace "A" x "B") "") (str.at "A" (str.indexof "A" x 0))))"#,
+        r#"(not (= (str.replace "A" (str.replace "B" x y) y) "A"))"#,
+        r#"(not (= (str.replace "A" (str.replace "" x y) "") (str.replace "A" (str.++ x y) x)))"#,
+        r#"(not (= (str.replace "A" (str.replace "" x "B") y) (str.replace "A" (str.replace "" x y) y)))"#,
+        r#"(not (= (str.replace "B" (str.at "B" z) "B") (str.replace "B" (str.at "A" z) "B")))"#,
+        r#"(not (= (str.replace "B" (str.substr "B" 0 z) "B") (str.replace "B" (str.substr "A" 0 z) "B")))"#,
+        r#"(not (= (str.replace "B" (str.replace x y "B") "B") (str.replace "B" (str.replace x y "A") "B")))"#,
+        r#"(not (= (str.replace "B" (str.replace "A" x y) y) "B"))"#,
+        r#"(not (= (str.replace "B" (str.replace "B" x "A") x) (str.++ x (str.replace "" x "B"))))"#,
+        r#"(not (= (str.replace "B" (str.replace "B" x "A") "") (str.at "B" (str.indexof "B" x 0))))"#,
+        r#"(not (= (str.replace "B" (str.replace "B" x "B") y) (str.replace y (str.++ x y) "B")))"#,
+        r#"(not (= (str.replace "B" (str.replace "" x y) "") (str.replace "B" (str.++ x y) x)))"#,
+        r#"(not (= (str.replace "B" (str.replace "" x "A") y) (str.replace "B" (str.replace "" x y) y)))"#,
+        r#"(not (= (str.replace "" (str.at "A" z) "A") (str.replace "A" (str.at "A" z) "")))"#,
+        r#"(not (= (str.replace "" (str.at "A" z) "B") (str.replace "B" (str.at "B" z) "")))"#,
+        r#"(not (= (str.replace "" (str.at "B" z) x) (str.replace "" (str.at "A" z) x)))"#,
+        r#"(not (= (str.replace "" (str.replace x y "A") x) ""))"#,
+        r#"(not (= (str.replace "" (str.replace x y "A") y) (str.replace "" x y)))"#,
+        r#"(not (= (str.replace "" (str.replace x y "B") x) ""))"#,
+        r#"(not (= (str.replace "" (str.replace x y "B") y) (str.replace "" x y)))"#,
+        r#"(not (= (str.replace "" (str.replace x y "B") "A") (str.replace "" (str.replace x y "A") "A")))"#,
+        r#"(not (= (str.replace "" (str.replace x y "B") "B") (str.replace "" (str.replace x y "A") "B")))"#,
+        r#"(not (= (str.replace "" (str.replace x "A" y) y) (str.replace "" x y)))"#,
+        r#"(not (= (str.replace "" (str.replace x "A" "B") y) (str.replace "" x y)))"#,
+        r#"(not (= (str.replace "" (str.replace x "B" y) y) (str.replace "" x y)))"#,
+        r#"(not (= (str.replace "" (str.replace x "B" "A") y) (str.replace "" x y)))"#,
+        r#"(not (= (str.replace "" (str.replace y x "") y) (str.replace "" (str.replace x y "") x)))"#,
+        r#"(not (= (str.replace "" (str.replace "A" x y) x) (str.replace "" (str.replace x "A" y) x)))"#,
+        r#"(not (= (str.replace "" (str.replace "A" x y) y) ""))"#,
+        r#"(not (= (str.replace "" (str.replace "A" x y) "A") (str.replace "" (str.replace x "A" y) x)))"#,
+        r#"(not (= (str.replace "" (str.replace "B" x y) x) (str.replace "" (str.replace x "B" y) x)))"#,
+        r#"(not (= (str.replace "" (str.replace "B" x y) y) ""))"#,
+        r#"(not (= (str.replace "" (str.replace "B" x y) "B") (str.replace "" (str.replace x "B" y) x)))"#,
+        r#"(not (= (str.replace "" (str.replace "" x y) x) x))"#,
+        r#"(not (= (str.replace "" (str.replace "" x y) y) (str.replace y (str.++ x y) x)))"#,
+        r#"(not (= (str.replace "" (str.replace "" x "A") y) (str.replace "" (str.replace "" x y) y)))"#,
+        r#"(not (= (str.replace "" (str.replace "" x "B") y) (str.replace "" (str.replace "" x y) y)))"#,
+        r#"(not (= (str.replace (str.replace "A" x "") "A" "B") (str.replace "B" (str.replace "A" x "B") "")))"#,
+    ];
+
+    assert_eq!(assertions.len(), 47);
+    for (index, assertion) in assertions.into_iter().enumerate() {
+        let input = format!(
+            r#"(set-logic QF_SLIA)
+(declare-fun x () String)
+(declare-fun y () String)
+(declare-fun z () Int)
+(assert {assertion})
+(check-sat)
+"#
+        );
+        let script = parse_script(&input).expect("parse replacement-emptiness theorem");
+        assert!(
+            script.source_string_semantic_unsat,
+            "replacement-emptiness theorem must refute {assertion}"
+        );
+        if matches!(index, 0 | 25 | 46) {
+            assert_eq!(
+                solve_smtlib(&input, &config())
+                    .expect("solve replacement-emptiness theorem")
+                    .result,
+                CheckResult::Unsat,
+                "replacement-emptiness theorem must survive the bounded-string gate: {assertion}"
+            );
+        }
+    }
+}
+
+#[test]
+fn exact_source_replace_emptiness_boolean_normalization_declines_satisfiable_controls() {
+    for assertion in [
+        r#"(not (= (= "" (str.replace x y r)) (= x "")))"#,
+        r#"(not (= (str.replace "" (str.replace x y "") x) ""))"#,
+        r#"(not (= (= x "") (= x "A")))"#,
+        r#"(not (= (str.replace "" (str.replace "" x "A") y) y))"#,
+    ] {
+        let input = format!(
+            r#"(set-logic QF_SLIA)
+(declare-fun x () String)
+(declare-fun y () String)
+(declare-fun r () String)
+(assert {assertion})
+(check-sat)
+"#
+        );
+        let script = parse_script(&input).expect("parse replacement-emptiness control");
+        assert!(
+            !script.source_string_semantic_unsat,
+            "satisfiable replacement-emptiness control must decline: {assertion}"
+        );
+        assert_ne!(
+            solve_smtlib(&input, &config())
+                .expect("solve replacement-emptiness control")
+                .result,
+            CheckResult::Unsat,
+            "satisfiable replacement-emptiness control must not become UNSAT: {assertion}"
+        );
+    }
+}
