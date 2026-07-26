@@ -13001,6 +13001,14 @@ fn guaranteed_boolean_literal_conflict(conjuncts: &[&SExpr]) -> bool {
         }
     }
 
+    exact_boundary_literal_conflict(boundary_literals, &nonempty_views, &at_most_one_views)
+}
+
+fn exact_boundary_literal_conflict<'a>(
+    mut boundary_literals: Vec<(&'a SExpr, bool, Vec<u32>, bool)>,
+    nonempty_views: &[&'a SExpr],
+    at_most_one_views: &[&'a SExpr],
+) -> bool {
     let original_boundary_literals = boundary_literals.clone();
     for (view, first, literal, equal) in original_boundary_literals {
         if !first || (!equal && !nonempty_views.contains(&view)) {
@@ -20508,123 +20516,143 @@ mod string_escape_tests {
         }
     }
 
+    fn assert_boolean_path_conflicts(scripts: &[&str], expected: bool) {
+        for script in scripts {
+            let expressions = read_all(script).expect("read Boolean path fixture");
+            assert_eq!(
+                guaranteed_boolean_literal_conflict(&guaranteed_top_level_conjuncts(&expressions)),
+                expected,
+                "{script}"
+            );
+        }
+    }
+
     #[test]
     fn contradictory_boolean_path_literals_are_exact_and_fail_closed() {
-        for script in [
-            r#"(declare-const s String)
+        assert_boolean_path_conflicts(
+            &[
+                r#"(declare-const s String)
 (assert (not (= (ite (str.contains s "A") 1 0) 0)))
 (assert (= (ite (str.contains s "A") 1 0) 0))
 (check-sat)"#,
-            r#"(declare-const s String)
+                r#"(declare-const s String)
 (assert (str.contains s "A"))
 (assert (not (str.contains s "A")))
 (check-sat)"#,
-            r#"(declare-const s String)
+                r#"(declare-const s String)
 (assert (str.contains s "A"))
 (assert (= (str.indexof s "A" 0) (- 1)))
 (check-sat)"#,
-            r#"(declare-const s String)
+                r#"(declare-const s String)
 (assert (not (= (ite (not (= (str.indexof s "A" 0) (- 1))) 1 0) 0)))
 (assert (not (str.contains s "A")))
 (check-sat)"#,
-            r#"(declare-const s String)
+                r#"(declare-const s String)
 (assert (= (str.len s) 0))
 (assert (not (= (str.indexof s "A" 0) (- 1))))
 (check-sat)"#,
-            r#"(declare-const s String)
+                r#"(declare-const s String)
 (assert (= (str.len s) 0))
 (assert (= (str.at s 7) "A"))
 (check-sat)"#,
-            r#"(declare-const s String)
+                r#"(declare-const s String)
 (assert (= (str.at s 7) "A"))
 (assert (not (str.contains s "A")))
 (check-sat)"#,
-            r#"(declare-const s String)
+            ],
+            true,
+        );
+
+        assert_boolean_path_conflicts(
+            &[
+                r#"(declare-const s String)
+(assert (not (= (ite (str.contains s "A") 1 0) 0)))
+(assert (= (ite (str.contains s "B") 1 0) 0))
+(check-sat)"#,
+                r#"(declare-const s String)
+(assert (str.contains s "A"))
+(assert (not (not (str.contains s "A"))))
+(check-sat)"#,
+                r#"(declare-const s String)
+(assert (str.contains s "A"))
+(assert (= (str.indexof s "B" 0) (- 1)))
+(check-sat)"#,
+                r#"(declare-const s String)
+(assert (str.contains s "A"))
+(assert (= (str.indexof s "A" 1) (- 1)))
+(check-sat)"#,
+                r#"(declare-const s String)
+(assert (= (str.len s) 0))
+(assert (= (str.indexof s "A" 0) (- 1)))
+(check-sat)"#,
+                r#"(declare-const s String)
+(assert (= (str.at s 7) "A"))
+(assert (not (str.contains s "B")))
+(check-sat)"#,
+                r#"(declare-const s String)
+(assert (not (= (str.at s 7) "A")))
+(assert (not (str.contains s "A")))
+(check-sat)"#,
+            ],
+            false,
+        );
+    }
+
+    #[test]
+    fn one_code_point_boundary_paths_are_exact_and_fail_closed() {
+        assert_boolean_path_conflicts(
+            &[
+                r#"(declare-const s String)
 (assert (= (str.len (str.substr s 0 (- (str.len s) 1))) 0))
 (assert (= (str.at s 0) "A"))
 (assert (not (= (str.at s (- (str.len s) 1)) "A")))
 (check-sat)"#,
-            r#"(declare-const s String)
+                r#"(declare-const s String)
 (assert (= (str.len (str.substr s 0 (- (str.len s) 1))) 0))
 (assert (= (str.at s 0) "A"))
 (assert (= (str.at s (- (str.len s) 1)) "B"))
 (check-sat)"#,
-            r#"(declare-const s String)
+                r#"(declare-const s String)
 (assert (= (str.at (str.substr s 0 (- (str.len s) 1)) 0) "A"))
 (assert (not (= (str.at s 0) "A")))
 (check-sat)"#,
-            r#"(declare-const s String)
+                r#"(declare-const s String)
 (assert (not (= (str.len (str.substr s 0 (- (str.len s) 1))) 0)))
 (assert (not (= (str.at (str.substr s 0 (- (str.len s) 1)) 0) "A")))
 (assert (= (str.at s 0) "A"))
 (check-sat)"#,
-        ] {
-            let expressions = read_all(script).expect("read contradictory Boolean path");
-            assert!(
-                guaranteed_boolean_literal_conflict(&guaranteed_top_level_conjuncts(&expressions)),
-                "{script}"
-            );
-        }
+            ],
+            true,
+        );
 
-        for script in [
-            r#"(declare-const s String)
-(assert (not (= (ite (str.contains s "A") 1 0) 0)))
-(assert (= (ite (str.contains s "B") 1 0) 0))
-(check-sat)"#,
-            r#"(declare-const s String)
-(assert (str.contains s "A"))
-(assert (not (not (str.contains s "A"))))
-(check-sat)"#,
-            r#"(declare-const s String)
-(assert (str.contains s "A"))
-(assert (= (str.indexof s "B" 0) (- 1)))
-(check-sat)"#,
-            r#"(declare-const s String)
-(assert (str.contains s "A"))
-(assert (= (str.indexof s "A" 1) (- 1)))
-(check-sat)"#,
-            r#"(declare-const s String)
-(assert (= (str.len s) 0))
-(assert (= (str.indexof s "A" 0) (- 1)))
-(check-sat)"#,
-            r#"(declare-const s String)
-(assert (= (str.at s 7) "A"))
-(assert (not (str.contains s "B")))
-(check-sat)"#,
-            r#"(declare-const s String)
-(assert (not (= (str.at s 7) "A")))
-(assert (not (str.contains s "A")))
-(check-sat)"#,
-            r#"(declare-const s String)
+        assert_boolean_path_conflicts(
+            &[
+                r#"(declare-const s String)
 (assert (= (str.len (str.substr s 0 (- (str.len s) 1))) 0))
 (assert (= (str.at s 0) "A"))
 (assert (not (= (str.at s (- (str.len s) 1)) "B")))
 (check-sat)"#,
-            r#"(declare-const s String)
+                r#"(declare-const s String)
 (assert (= (str.len (str.substr s 0 (- (str.len s) 1))) 0))
 (assert (not (= (str.at s 0) "A")))
 (assert (not (= (str.at s (- (str.len s) 1)) "A")))
 (check-sat)"#,
-            r#"(declare-const s String)
+                r#"(declare-const s String)
 (assert (= (str.len (str.substr s 0 (- (str.len s) 2))) 0))
 (assert (= (str.at s 0) "A"))
 (assert (= (str.at s (- (str.len s) 1)) "B"))
 (check-sat)"#,
-            r#"(declare-const s String)
+                r#"(declare-const s String)
 (assert (not (= (str.at (str.substr s 0 (- (str.len s) 1)) 0) "A")))
 (assert (= (str.at s 0) "A"))
 (check-sat)"#,
-            r#"(declare-const s String)
+                r#"(declare-const s String)
 (assert (= (str.at (str.substr s 1 (- (str.len s) 1)) 0) "A"))
 (assert (not (= (str.at s 0) "A")))
 (check-sat)"#,
-        ] {
-            let expressions = read_all(script).expect("read satisfiable Boolean path control");
-            assert!(
-                !guaranteed_boolean_literal_conflict(&guaranteed_top_level_conjuncts(&expressions)),
-                "{script}"
-            );
-        }
+            ],
+            false,
+        );
     }
 
     #[test]
