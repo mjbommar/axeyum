@@ -9447,6 +9447,15 @@ fn exact_rewrite_app(head: &str, args: Vec<ExactRewriteTerm>) -> ExactRewriteTer
             }
         }
         ("str.from_int", [Int(value)]) => return String(decimal_code_points(*value)),
+        ("str.from_int", [IndexOfSelf(offset)]) => {
+            // `indexof(x,x,i)` is zero exactly at `i = 0` and `-1`
+            // otherwise. `from_int` therefore spells the same one-code-point
+            // view as indexing the decimal word `"0"` at `i`.
+            return exact_rewrite_app(
+                "str.at",
+                vec![String(vec![u32::from(b'0')]), *offset.clone()],
+            );
+        }
         ("str.to_int", [String(value)]) => {
             if let Some(integer) = to_int_of_code_points(value) {
                 return Int(integer);
@@ -9472,8 +9481,89 @@ fn exact_rewrite_app(head: &str, args: Vec<ExactRewriteTerm>) -> ExactRewriteTer
         ("str.substr", [String(value), _, _]) if value.is_empty() => {
             return String(Vec::new());
         }
+        ("str.substr", [subject, App(indexof, index_args), length])
+            if exact_string_max_len(subject, 0).is_some_and(|maximum| maximum <= 1)
+                && indexof == "str.indexof"
+                && matches!(index_args.as_slice(), [_, _, index_offset]
+                    if index_offset == length) =>
+        {
+            // A nonnegative `indexof` result is at least its start. At start
+            // zero the requested length is zero; above zero the result starts
+            // beyond a one-code-point word. Negative starts return `-1`.
+            return String(Vec::new());
+        }
+        ("str.substr", [subject, App(indexof, index_args), _])
+            if exact_string_max_len(subject, 0).is_some_and(|maximum| maximum <= 1)
+                && indexof == "str.indexof"
+                && matches!(index_args.as_slice(), [_, _, Int(index_offset)]
+                    if *index_offset >= 1) =>
+        {
+            return String(Vec::new());
+        }
         ("str.substr", [String(value), offset, length]) if value.len() <= 1 && offset == length => {
             return String(Vec::new());
+        }
+        ("str.substr", [subject, App(indexof, index_args), offset])
+            if indexof == "str.indexof"
+                && matches!(index_args.as_slice(), [_, String(needle), index_offset]
+                    if needle.is_empty() && index_offset == offset) =>
+        {
+            // `indexof(s,"",i)` is either `i` or `-1`. In the first case the
+            // two views are identical; in the second one has a negative start
+            // and the other a negative length, so both are empty.
+            return exact_rewrite_app(
+                "str.substr",
+                vec![
+                    subject.clone(),
+                    offset.clone(),
+                    App(indexof.clone(), index_args.clone()),
+                ],
+            );
+        }
+        ("str.substr", [subject, offset, App(indexof, index_args)])
+            if indexof == "str.indexof"
+                && matches!(index_args.as_slice(), [index_subject, String(needle), index_offset]
+                    if index_subject == subject && needle.is_empty() && index_offset == offset) =>
+        {
+            return exact_rewrite_app(
+                "str.substr",
+                vec![subject.clone(), offset.clone(), offset.clone()],
+            );
+        }
+        ("str.substr", [subject, offset, App(indexof, index_args)])
+            if indexof == "str.indexof"
+                && matches!(index_args.as_slice(), [index_subject, String(needle), Int(1)]
+                    if index_subject == subject && needle.is_empty()) =>
+        {
+            // `indexof(subject,"",1)` is one exactly when `subject` is
+            // nonempty and `-1` otherwise, so this is the one-code-point view
+            // at `offset` in both cases.
+            return exact_rewrite_app("str.at", vec![subject.clone(), offset.clone()]);
+        }
+        ("str.substr", [subject, offset, App(indexof, index_args)])
+            if exact_string_max_len(subject, 0).is_some_and(|maximum| maximum <= 1)
+                && indexof == "str.indexof"
+                && matches!(index_args.as_slice(), [_, String(needle), Int(1)]
+                    if needle.is_empty()) =>
+        {
+            return exact_rewrite_app(
+                "str.substr",
+                vec![
+                    subject.clone(),
+                    offset.clone(),
+                    exact_rewrite_app("str.len", vec![index_args[0].clone()]),
+                ],
+            );
+        }
+        ("str.substr", [subject, Int(1), App(indexof, index_args)])
+            if indexof == "str.indexof"
+                && matches!(index_args.as_slice(), [_, String(needle), Int(1)]
+                    if needle.is_empty()) =>
+        {
+            return exact_rewrite_app(
+                "str.at",
+                vec![subject.clone(), App(indexof.clone(), index_args.clone())],
+            );
         }
         ("str.substr", [subject, offset, length])
             if exact_string_max_len(subject, 0).is_some_and(|maximum| maximum <= 1)
@@ -9531,6 +9621,22 @@ fn exact_rewrite_app(head: &str, args: Vec<ExactRewriteTerm>) -> ExactRewriteTer
                 .map_or_else(Vec::new, |code_point| vec![code_point]);
             return String(result);
         }
+        ("str.at", [subject, App(indexof, index_args)])
+            if exact_string_max_len(subject, 0).is_some_and(|maximum| maximum <= 1)
+                && indexof == "str.indexof"
+                && matches!(index_args.as_slice(), [_, _, Int(index_offset)]
+                    if *index_offset >= 1) =>
+        {
+            return String(Vec::new());
+        }
+        ("str.at", [subject, App(indexof, index_args)])
+            if exact_string_max_len(subject, 0).is_some_and(|maximum| maximum <= 1)
+                && indexof == "str.indexof"
+                && matches!(index_args.as_slice(), [_, String(needle), _]
+                    if needle.is_empty()) =>
+        {
+            return exact_rewrite_app("str.at", vec![subject.clone(), index_args[2].clone()]);
+        }
         ("str.at", [_, _])
             if args.iter().any(exact_is_ite)
                 && args.iter().map(exact_ite_count).sum::<u32>() <= 6 =>
@@ -9543,6 +9649,37 @@ fn exact_rewrite_app(head: &str, args: Vec<ExactRewriteTerm>) -> ExactRewriteTer
             if exact_string_max_len(subject, 0).is_some_and(|maximum| maximum <= 1) =>
         {
             return exact_rewrite_app("str.at", vec![subject.clone(), *offset.clone()]);
+        }
+        ("str.at", [subject, IndexOfSelf(offset)]) => {
+            return exact_rewrite_app(
+                "str.at",
+                vec![
+                    exact_rewrite_app("str.at", vec![subject.clone(), *offset.clone()]),
+                    *offset.clone(),
+                ],
+            );
+        }
+        ("str.at", [App(from_int, from_int_args), index])
+            if from_int == "str.from_int"
+                && matches!(from_int_args.as_slice(), [value] if value == index) =>
+        {
+            // For a nonnegative integer `i`, its decimal representation has
+            // at most `i` code points unless `i = 0`; negative inputs produce
+            // the empty word. Thus only index zero can return a code point.
+            return exact_rewrite_app("str.at", vec![String(vec![u32::from(b'0')]), index.clone()]);
+        }
+        ("str.at", [App(inner, inner_args), index])
+            if inner == "str.at"
+                && index != &Int(0)
+                && matches!(inner_args.as_slice(), [_, inner_index] if inner_index == index) =>
+        {
+            return exact_rewrite_app(
+                "str.at",
+                vec![
+                    exact_rewrite_app("str.at", vec![inner_args[0].clone(), Int(0)]),
+                    index.clone(),
+                ],
+            );
         }
         ("str.at", [String(value), index]) if value.len() == 1 => {
             let in_range = exact_rewrite_app("=", vec![index.clone(), Int(0)]);
@@ -16326,7 +16463,7 @@ fn apply_parameterized(
 #[cfg(test)]
 mod string_escape_tests {
     use super::{
-        ExactEqualityFacts, ExactRewriteTerm, decode_string_code_points,
+        ExactEqualityFacts, ExactRewriteTerm, decimal_code_points, decode_string_code_points,
         exact_affine_equalities_equal, exact_affine_zero_forces_nonpositive, exact_rewrite_app,
         exact_rewrite_equality, exact_rewrite_small_subject_indexof, exact_rewrite_term,
         exact_rewrite_under_assignments, replace_first_code_points, substr_code_points,
@@ -16654,6 +16791,130 @@ mod string_escape_tests {
                     );
                 }
             }
+        }
+    }
+
+    #[test]
+    fn exact_index_totality_views_match_reference_semantics_exhaustively() {
+        let mut words = vec![Vec::new()];
+        for length in 1..=3 {
+            for bits in 0..(1_usize << length) {
+                words.push(
+                    (0..length)
+                        .map(|shift| u32::from(if bits & (1 << shift) == 0 { b'A' } else { b'B' }))
+                        .collect(),
+                );
+            }
+        }
+        let indexof = |subject: &[u32], needle: &[u32], offset: i128| {
+            let Ok(offset) = usize::try_from(offset) else {
+                return -1;
+            };
+            if offset > subject.len() {
+                return -1;
+            }
+            if needle.is_empty() {
+                return i128::try_from(offset).expect("small offset");
+            }
+            subject[offset..]
+                .windows(needle.len())
+                .position(|candidate| candidate == needle)
+                .and_then(|position| i128::try_from(offset + position).ok())
+                .unwrap_or(-1)
+        };
+        let at = |subject: &[u32], index: i128| substr_code_points(subject, index, 1);
+        let one = [u32::from(b'A')];
+
+        for subject in &words {
+            for needle in &words {
+                for offset in -2_i128..=5 {
+                    let index = indexof(subject, needle, offset);
+                    if offset >= 1 {
+                        assert!(at(&one, index).is_empty());
+                        assert!(substr_code_points(&one, index, 3).is_empty());
+                    }
+                    assert!(substr_code_points(&one, index, offset).is_empty());
+                    if needle.is_empty() {
+                        assert_eq!(at(&one, index), at(&one, offset));
+                        assert_eq!(
+                            substr_code_points(subject, index, offset),
+                            substr_code_points(subject, offset, index)
+                        );
+                        if offset == 1 {
+                            for start in -2_i128..=5 {
+                                assert_eq!(
+                                    substr_code_points(subject, start, index),
+                                    at(subject, start)
+                                );
+                                assert_eq!(
+                                    substr_code_points(&one, start, index),
+                                    substr_code_points(
+                                        &one,
+                                        start,
+                                        i128::try_from(subject.len()).expect("small length")
+                                    )
+                                );
+                            }
+                            assert_eq!(substr_code_points(subject, 1, index), at(subject, index));
+                        }
+                    }
+                }
+            }
+            for offset in -2_i128..=5 {
+                let self_index = indexof(subject, subject, offset);
+                assert_eq!(at(subject, self_index), at(&at(subject, offset), offset));
+            }
+        }
+
+        for value in
+            (-20_i128..=10_000).chain([i128::MAX, i128::MIN, 10_i128.pow(37), 10_i128.pow(38)])
+        {
+            let self_index = if value == 0 { 0 } else { -1 };
+            assert_eq!(
+                decimal_code_points(self_index),
+                at(&decimal_code_points(0), value)
+            );
+            assert_eq!(
+                at(&decimal_code_points(value), value),
+                at(&decimal_code_points(0), value)
+            );
+        }
+    }
+
+    #[test]
+    fn exact_index_totality_symbolic_forms_close_and_near_misses_decline() {
+        for text in [
+            r#"(= (str.at "A" (str.indexof x "" z)) (str.at "A" z))"#,
+            r"(= (str.at (str.at x 0) 0) (str.at x 0))",
+            r#"(= (str.substr x z (str.indexof x "" 1)) (str.at x z))"#,
+            r#"(= (str.substr x (str.indexof y "" z) z)
+                   (str.substr x z (str.indexof y "" z)))"#,
+            r#"(= (str.from_int (str.indexof x x z)) (str.at "0" z))"#,
+        ] {
+            let expression = read_all(text)
+                .expect("read exact index-totality identity")
+                .pop()
+                .expect("one index-totality identity");
+            assert_eq!(
+                exact_rewrite_term(&expression, 0),
+                ExactRewriteTerm::Bool(true),
+                "{text}"
+            );
+        }
+        for text in [
+            r#"(= (str.at "AB" (str.indexof x "" z)) (str.at "AB" z))"#,
+            r#"(= (str.substr "AB" z (str.indexof x "" 1))
+                   (str.substr "AB" z (str.len x)))"#,
+        ] {
+            let expression = read_all(text)
+                .expect("read exact index-totality control")
+                .pop()
+                .expect("one index-totality control");
+            assert_ne!(
+                exact_rewrite_term(&expression, 0),
+                ExactRewriteTerm::Bool(true),
+                "{text}"
+            );
         }
     }
 

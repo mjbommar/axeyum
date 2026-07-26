@@ -1148,6 +1148,77 @@ fn exact_source_one_code_point_word_boundaries_decline_unbounded_words() {
 }
 
 #[test]
+fn exact_source_index_totality_views_refute_noetzli_families() {
+    for assertion in [
+        r#"(not (= (str.at "A" (str.indexof x y 1)) ""))"#,
+        r"(not (= (str.at (str.at x 0) 0) (str.at x 0)))",
+        r#"(not (= (str.at "B" (str.indexof x "" z)) (str.at "B" z)))"#,
+        r"(not (= (str.at (str.at x z) z) (str.at x (str.indexof x x z))))",
+        r#"(not (= (str.substr x z (str.indexof x "" 1)) (str.at x z)))"#,
+        r#"(not (= (str.substr x z (str.indexof x "" z)) (str.substr x z z)))"#,
+        r#"(not (= (str.substr x (str.indexof y "" z) z)
+                    (str.substr x z (str.indexof y "" z))))"#,
+        r#"(not (= (str.substr "A" (str.indexof x y z) z) ""))"#,
+        r#"(not (= (str.substr "B" z (str.indexof x "" 1))
+                    (str.substr "B" z (str.len x))))"#,
+        r"(not (= (str.at (str.from_int z) z)
+                    (str.from_int (str.indexof x x z))))",
+    ] {
+        let input = format!(
+            r#"(set-logic QF_SLIA)
+(declare-fun x () String)
+(declare-fun y () String)
+(declare-fun z () Int)
+(assert {assertion})
+(check-sat)
+"#
+        );
+        let script = parse_script(&input).expect("parse exact index-totality theorem");
+        assert!(
+            script.source_string_semantic_unsat,
+            "index-totality theorem must refute {assertion}"
+        );
+        assert_eq!(
+            solve_smtlib(&input, &config())
+                .expect("solve exact index-totality theorem")
+                .result,
+            CheckResult::Unsat,
+            "index-totality theorem must survive the bounded-string gate: {assertion}"
+        );
+    }
+}
+
+#[test]
+fn exact_source_index_totality_views_decline_long_word_controls() {
+    for assertion in [
+        r#"(not (= (str.at "AB" (str.indexof x "" z)) (str.at "AB" z)))"#,
+        r#"(not (= (str.substr "AB" z (str.indexof x "" 1))
+                    (str.substr "AB" z (str.len x))))"#,
+    ] {
+        let input = format!(
+            r#"(set-logic QF_SLIA)
+(declare-fun x () String)
+(declare-fun z () Int)
+(assert {assertion})
+(check-sat)
+"#
+        );
+        let script = parse_script(&input).expect("parse exact index-totality control");
+        assert!(
+            !script.source_string_semantic_unsat,
+            "long-word index-totality near miss must decline: {assertion}"
+        );
+        assert_ne!(
+            solve_smtlib(&input, &config())
+                .expect("solve exact index-totality control")
+                .result,
+            CheckResult::Unsat,
+            "satisfiable long-word index-totality control must not become UNSAT: {assertion}"
+        );
+    }
+}
+
+#[test]
 fn exact_source_small_subject_indexof_refutes_view_families() {
     for assertion in [
         r#"(not (= (str.at x (str.indexof "A" x 1)) ""))"#,
