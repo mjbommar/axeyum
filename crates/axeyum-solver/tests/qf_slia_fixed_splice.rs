@@ -583,3 +583,73 @@ fn exact_source_relations_decline_nearby_non_theorems() {
         );
     }
 }
+
+#[test]
+fn exact_source_alphabets_refute_disjoint_rewrite_families() {
+    for assertion in [
+        r#"(not (= (= "A" (str.from_int z)) false))"#,
+        r#"(not (= (= "A" (str.at "B" z)) false))"#,
+        r#"(not (= (str.prefixof "A" (str.substr "B" 0 z)) false))"#,
+        r#"(not (= (str.contains (str.from_int z) "A") false))"#,
+        r#"(not (= (str.replace "A" (str.from_int z) "") "A"))"#,
+        r#"(not (= (str.replace "A" (str.at "B" z) "") "A"))"#,
+        r"(not (= (str.at (str.at x z) 0) (str.at x z)))",
+        r#"(not (= (str.at "" z) ""))"#,
+    ] {
+        let input = format!(
+            r"(set-logic QF_SLIA)
+(declare-fun x () String)
+(declare-fun z () Int)
+(assert {assertion})
+(check-sat)
+"
+        );
+        let script = parse_script(&input).expect("parse exact alphabet relation");
+        assert!(
+            script.source_string_semantic_unsat,
+            "source alphabet must refute {assertion}"
+        );
+        assert_eq!(
+            solve_smtlib(&input, &config())
+                .expect("solve exact alphabet relation")
+                .result,
+            CheckResult::Unsat,
+            "source alphabet result must survive the bounded-string gate: {assertion}"
+        );
+    }
+}
+
+#[test]
+fn exact_source_alphabets_decline_overlapping_or_nullable_controls() {
+    for assertion in [
+        // Decimal strings can contain decimal characters.
+        r#"(not (= "1" (str.from_int z)))"#,
+        // An empty needle is always contained, including in a disjoint alphabet.
+        r#"(not (str.contains "A" (str.at "B" z)))"#,
+        // A nullable disjoint needle prefixes its replacement when nonempty.
+        r#"(not (= (str.replace "A" (str.at "B" z) "C") "A"))"#,
+        // An unknown source may contain the supposedly disjoint literal.
+        r#"(not (= x "A"))"#,
+    ] {
+        let input = format!(
+            r"(set-logic QF_SLIA)
+(declare-fun x () String)
+(declare-fun z () Int)
+(assert {assertion})
+(check-sat)
+"
+        );
+        let script = parse_script(&input).expect("parse alphabet non-theorem");
+        assert!(
+            !script.source_string_semantic_unsat,
+            "source alphabet must decline {assertion}"
+        );
+        assert_ne!(
+            solve_smtlib(&input, &config())
+                .expect("solve alphabet non-theorem")
+                .result,
+            CheckResult::Unsat,
+            "satisfiable alphabet control must not become UNSAT: {assertion}"
+        );
+    }
+}
