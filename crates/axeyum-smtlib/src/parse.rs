@@ -9366,7 +9366,13 @@ fn exact_rewrite_term(expression: &SExpr, depth: u32) -> ExactRewriteTerm {
         .iter()
         .map(|arg| exact_rewrite_term(arg, depth + 1))
         .collect();
-    exact_rewrite_app(head, args)
+    let rewritten = exact_rewrite_app(head, args);
+    if head == "not"
+        && let Some(value) = exact_boolean_constant(&rewritten)
+    {
+        return ExactRewriteTerm::Bool(value);
+    }
+    rewritten
 }
 
 /// Canonicalizes exact views whose inner one-code-point replacement would
@@ -10171,28 +10177,75 @@ fn exact_rewrite_app(head: &str, args: Vec<ExactRewriteTerm>) -> ExactRewriteTer
     App(head.to_owned(), args)
 }
 
+fn exact_rewrite_replace_emptiness(
+    replacement: &ExactRewriteTerm,
+    other: &ExactRewriteTerm,
+) -> Option<ExactRewriteTerm> {
+    if !matches!(other, ExactRewriteTerm::String(value) if value.is_empty()) {
+        return None;
+    }
+    if let Some((subject, _)) = exact_self_replacement(replacement) {
+        // Replacing a factor of a word by the whole word preserves emptiness.
+        // Keep this stronger identity canonical ahead of the general theorem.
+        return Some(exact_rewrite_app(
+            "=",
+            vec![subject.clone(), ExactRewriteTerm::String(Vec::new())],
+        ));
+    }
+    let ExactRewriteTerm::App(head, args) = replacement else {
+        return None;
+    };
+    let [subject, needle, value] = args.as_slice() else {
+        return None;
+    };
+    if head != "str.replace" {
+        return None;
+    }
+
+    // Replacing the first occurrence yields the empty word exactly for an
+    // empty source with either a nonempty needle or an empty replacement, or
+    // for a source equal to the needle with an empty replacement.
+    let empty = ExactRewriteTerm::String(Vec::new());
+    let subject_empty = exact_rewrite_app("=", vec![subject.clone(), empty.clone()]);
+    let needle_empty = exact_rewrite_app("=", vec![needle.clone(), empty.clone()]);
+    let replacement_empty = exact_rewrite_app("=", vec![value.clone(), empty]);
+    Some(exact_rewrite_app(
+        "or",
+        vec![
+            exact_rewrite_app(
+                "and",
+                vec![
+                    subject_empty,
+                    exact_rewrite_app(
+                        "or",
+                        vec![
+                            exact_rewrite_app("not", vec![needle_empty]),
+                            replacement_empty.clone(),
+                        ],
+                    ),
+                ],
+            ),
+            exact_rewrite_app(
+                "and",
+                vec![
+                    exact_rewrite_app("=", vec![subject.clone(), needle.clone()]),
+                    replacement_empty,
+                ],
+            ),
+        ],
+    ))
+}
+
 fn exact_rewrite_equality(left: &ExactRewriteTerm, right: &ExactRewriteTerm) -> ExactRewriteTerm {
     if left == right {
         return ExactRewriteTerm::Bool(true);
     }
+    if let Some(rewritten) = exact_rewrite_replace_emptiness(left, right)
+        .or_else(|| exact_rewrite_replace_emptiness(right, left))
+    {
+        return rewritten;
+    }
     for (replacement, other) in [(left, right), (right, left)] {
-        if matches!(other, ExactRewriteTerm::String(value) if value.is_empty())
-            && let ExactRewriteTerm::App(head, args) = replacement
-            && head == "str.replace"
-            && let [subject, needle, ExactRewriteTerm::String(value)] = args.as_slice()
-            && value.is_empty()
-        {
-            // Deleting the first occurrence yields the empty word exactly when
-            // the source was already empty or consisted solely of the needle.
-            let empty = ExactRewriteTerm::String(Vec::new());
-            return exact_rewrite_app(
-                "or",
-                vec![
-                    exact_rewrite_equality(subject, &empty),
-                    exact_rewrite_equality(subject, needle),
-                ],
-            );
-        }
         if let ExactRewriteTerm::String(target) = other
             && target.len() == 1
             && let ExactRewriteTerm::App(head, args) = replacement
@@ -10865,6 +10918,65 @@ fn exact_piecewise_terms_equal(left: &ExactRewriteTerm, right: &ExactRewriteTerm
         }
     }
     compared
+}
+
+const EXACT_BOOLEAN_ATOM_CAP: usize = 10;
+
+/// Proves a small normalized Boolean term constant by exhaustively checking
+/// its primitive atoms. Equality-inconsistent assignments are unreachable and
+/// discarded; every other assignment must reduce to the same Boolean. Treating
+/// non-equality predicates as independent atoms is conservative.
+fn exact_boolean_constant(term: &ExactRewriteTerm) -> Option<bool> {
+    let mut atoms = Vec::new();
+    if !exact_collect_boolean_atoms(term, &mut atoms) || atoms.len() > EXACT_BOOLEAN_ATOM_CAP {
+        return None;
+    }
+    let mut result = None;
+    for mask in 0_u64..(1_u64 << atoms.len()) {
+        let assignments = atoms
+            .iter()
+            .enumerate()
+            .map(|(index, atom)| (atom.clone(), mask & (1_u64 << index) != 0))
+            .collect::<Vec<_>>();
+        if ExactEqualityFacts::from_assignments(&assignments).conflict {
+            continue;
+        }
+        let ExactRewriteTerm::Bool(value) = exact_rewrite_under_assignments(term, &assignments, 0)
+        else {
+            return None;
+        };
+        if result.is_some_and(|prior| prior != value) {
+            return None;
+        }
+        result = Some(value);
+    }
+    result
+}
+
+fn exact_collect_boolean_atoms(term: &ExactRewriteTerm, atoms: &mut Vec<ExactRewriteTerm>) -> bool {
+    use ExactRewriteTerm::{App, Bool};
+
+    match term {
+        Bool(_) => true,
+        App(head, args) if head == "not" && args.len() == 1 => {
+            exact_collect_boolean_atoms(&args[0], atoms)
+        }
+        App(head, args) if matches!(head.as_str(), "and" | "or") => args
+            .iter()
+            .all(|argument| exact_collect_boolean_atoms(argument, atoms)),
+        App(head, args) if head == "ite" && args.len() == 3 => args
+            .iter()
+            .all(|argument| exact_collect_boolean_atoms(argument, atoms)),
+        atom => {
+            if !atoms
+                .iter()
+                .any(|candidate| exact_conditions_equal(candidate, atom))
+            {
+                atoms.push(atom.clone());
+            }
+            atoms.len() <= EXACT_BOOLEAN_ATOM_CAP
+        }
+    }
 }
 
 fn exact_rewrite_under_assignments(
@@ -17063,6 +17175,70 @@ mod string_escape_tests {
         exact_rewrite_under_assignments, replace_first_code_points, substr_code_points,
     };
     use crate::sexpr::read_all;
+
+    #[test]
+    fn replace_emptiness_matches_reference_semantics_exhaustively() {
+        let mut words = vec![Vec::new()];
+        for length in 1..=4 {
+            for bits in 0..(1_usize << length) {
+                words.push(
+                    (0..length)
+                        .map(|shift| u32::from(if bits & (1 << shift) == 0 { b'A' } else { b'B' }))
+                        .collect(),
+                );
+            }
+        }
+
+        for subject in &words {
+            for needle in &words {
+                for replacement in &words {
+                    let actual = replace_first_code_points(subject, needle, replacement).is_empty();
+                    let characterized = (subject.is_empty()
+                        && (!needle.is_empty() || replacement.is_empty()))
+                        || (subject == needle && replacement.is_empty());
+                    assert_eq!(
+                        actual, characterized,
+                        "subject={subject:?}, needle={needle:?}, replacement={replacement:?}"
+                    );
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn replace_emptiness_boolean_forms_normalize_only_when_tautological() {
+        for text in [
+            r#"(not (= (= "" (str.replace x y "B")) (= "" (str.replace x y "A"))))"#,
+            r#"(not (= (str.replace "" (str.replace x y "A") y) (str.replace "" x y)))"#,
+            r#"(not (= (str.replace "" (str.replace x y "A") x) ""))"#,
+        ] {
+            let expression = read_all(text)
+                .expect("read replacement-emptiness theorem")
+                .pop()
+                .expect("one replacement-emptiness theorem");
+            assert_eq!(
+                exact_rewrite_term(&expression, 0),
+                ExactRewriteTerm::Bool(false),
+                "{text}"
+            );
+        }
+
+        for text in [
+            r#"(not (= (= "" (str.replace x y r)) (= x "")))"#,
+            r#"(not (= (str.replace "" (str.replace x y "") x) ""))"#,
+            r#"(not (= (= x "") (= x "A")))"#,
+        ] {
+            let expression = read_all(text)
+                .expect("read replacement-emptiness control")
+                .pop()
+                .expect("one replacement-emptiness control");
+            assert_ne!(
+                exact_rewrite_term(&expression, 0),
+                ExactRewriteTerm::Bool(false),
+                "{text}"
+            );
+        }
+    }
 
     #[test]
     fn exact_rewriter_separates_decimal_and_letter_alphabets() {
