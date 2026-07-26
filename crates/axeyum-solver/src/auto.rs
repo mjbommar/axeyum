@@ -52,8 +52,9 @@ fn checked_quantified_fast_path(
     arena: &mut TermArena,
     assertions: &[TermId],
     config: &SolverConfig,
+    is_quantified: bool,
 ) -> Result<Option<CheckResult>, SolverError> {
-    if !has_quantifier(arena, assertions) {
+    if !is_quantified {
         return Ok(None);
     }
     if let Some(result) =
@@ -95,6 +96,61 @@ fn checked_quantified_fast_path(
         return Ok(Some(CheckResult::Unsat));
     }
     Ok(None)
+}
+
+/// Tries a strict quantifier-free subset of a quantified conjunction before the
+/// more expensive quantifier portfolio. If the unconditional ground conjuncts
+/// are already inconsistent, that refutes the complete query; every other
+/// outcome is ignored. The probe receives only one tenth of a finite query
+/// budget, so it cannot starve the quantified routes it is meant to precede.
+fn ground_subset_refutes_quantified_query(
+    arena: &mut TermArena,
+    assertions: &[TermId],
+    config: &SolverConfig,
+) -> Result<bool, SolverError> {
+    let Some(total) = config.timeout else {
+        return Ok(false);
+    };
+    let probe_budget = total / 10;
+    if probe_budget.is_zero() {
+        return Ok(false);
+    }
+
+    let probe_deadline = Instant::now().checked_add(probe_budget);
+    let mut conjuncts = Vec::new();
+    for &assertion in assertions {
+        collect_top_conjuncts(arena, assertion, &mut conjuncts);
+    }
+    let mut ground = Vec::new();
+    let mut quantified_conjuncts = 0usize;
+    for conjunct in conjuncts {
+        match contains_quantifier_within(arena, &[conjunct], probe_deadline) {
+            Some(true) => quantified_conjuncts += 1,
+            Some(false) => ground.push(conjunct),
+            None => return Ok(false),
+        }
+    }
+    // On small quantified conjunctions the established portfolio is cheap and
+    // can already finish close to its deadline. Reserve this probe for large
+    // axiom sets, where repeatedly scanning all quantified conjuncts dominates
+    // and a strict ground core is a materially smaller problem.
+    const MIN_QUANTIFIED_CONJUNCTS: usize = 32;
+    if quantified_conjuncts < MIN_QUANTIFIED_CONJUNCTS || ground.is_empty() {
+        return Ok(false);
+    }
+
+    let Some(probe) = config_with_remaining_timeout(config, probe_deadline) else {
+        return Ok(false);
+    };
+    match check_auto(arena, &ground, &probe) {
+        Ok(CheckResult::Unsat) => Ok(true),
+        Ok(CheckResult::Sat(_) | CheckResult::Unknown(_)) | Err(SolverError::Unsupported(_)) => {
+            Ok(false)
+        }
+        // This is an optional accelerator. It must never turn a query the
+        // established portfolio can handle into an operational error.
+        Err(_) => Ok(false),
+    }
 }
 
 /// Clones a query configuration with only the wall-clock time remaining before
@@ -198,7 +254,11 @@ pub fn solve(
     let deadline = config
         .timeout
         .and_then(|timeout| Instant::now().checked_add(timeout));
-    if let Some(result) = checked_quantified_fast_path(arena, assertions, config)? {
+    let is_quantified = has_quantifier(arena, assertions);
+    if is_quantified && ground_subset_refutes_quantified_query(arena, assertions, config)? {
+        return Ok(CheckResult::Unsat);
+    }
+    if let Some(result) = checked_quantified_fast_path(arena, assertions, config, is_quantified)? {
         return Ok(result);
     }
     if deadline.is_some_and(|deadline| Instant::now() >= deadline) {
@@ -6830,6 +6890,36 @@ mod tests {
         // Re-lifting an identical slice remains stable and reuses its helper.
         lift_uninterpreted_sort_ite(&mut arena, &[first_assertion])
             .expect("the same ITE must remain reusable");
+    }
+
+    #[test]
+    fn quantified_ground_subset_refutation_ignores_only_quantified_conjuncts() {
+        let mut arena = TermArena::new();
+        let x = arena.int_var("ground_subset_x").unwrap();
+        let zero = arena.int_const(0);
+        let one = arena.int_const(1);
+        let x_is_zero = arena.eq(x, zero).unwrap();
+        let x_is_one = arena.eq(x, one).unwrap();
+
+        let binder = arena.declare("ground_subset_binder", Sort::Int).unwrap();
+        let binder_variable = arena.var(binder);
+        let quantified_body = arena.eq(binder_variable, binder_variable).unwrap();
+        let quantified = arena.forall(binder, quantified_body).unwrap();
+        let mut assertions = vec![x_is_zero, x_is_one];
+        assertions.extend(std::iter::repeat_n(quantified, 32));
+        let config = SolverConfig::new().with_timeout(Duration::from_secs(1));
+
+        assert!(
+            ground_subset_refutes_quantified_query(&mut arena, &assertions, &config).unwrap(),
+            "the contradictory unconditional ground subset refutes the full query"
+        );
+
+        let mut satisfiable = vec![x_is_zero];
+        satisfiable.extend(std::iter::repeat_n(quantified, 32));
+        assert!(
+            !ground_subset_refutes_quantified_query(&mut arena, &satisfiable, &config).unwrap(),
+            "a satisfiable ground subset says nothing about the quantified query"
+        );
     }
 
     #[test]
