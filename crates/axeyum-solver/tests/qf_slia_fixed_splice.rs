@@ -448,6 +448,60 @@ fn exact_source_rewrite_refutes_noetzli_term_and_predicate_families() {
 }
 
 #[test]
+fn singleton_replace_inverse_refutes_public_nested_replace_families() {
+    for assertion in [
+        r#"(not (= (= "A" (str.replace x "A" "B")) false))"#,
+        r#"(not (= (str.contains "A" (str.replace x "A" "B")) (= x "")))"#,
+        r#"(not (= (= "B" (str.replace x "A" "B"))
+                    (= "A" (str.replace x "B" "A"))))"#,
+        r#"(not (= (str.contains "B" (str.replace x "A" "B"))
+                    (str.contains "A" (str.replace x "B" "A"))))"#,
+        r#"(not (= (str.replace "A" (str.replace x y x) x) "A"))"#,
+        r#"(not (= (str.replace "A" (str.replace x y x) "")
+                    (str.replace "A" x (str.replace "" y x))))"#,
+        r#"(not (= (str.replace "A" (str.replace x "A" "B") y)
+                    (str.++ (str.replace "" x y) "A")))"#,
+        r#"(not (= (str.replace "A" (str.replace y x "A") y)
+                    (str.replace "A" (str.replace x y "A") x)))"#,
+        r#"(not (= (str.replace "A" (str.replace "B" x "A") x)
+                    (str.replace "A" (str.replace x "B" "A") x)))"#,
+        r#"(not (= (str.replace "B" (str.replace x y x) x) "B"))"#,
+        r#"(not (= (str.replace "" x (str.replace "" y "A"))
+                    (str.replace "" x (str.replace x y "A"))))"#,
+        r#"(not (= (str.replace "" (str.++ x y) "B")
+                    (str.replace "" x (str.replace x y "B"))))"#,
+    ] {
+        let input = format!(
+            r"(set-logic QF_SLIA)
+(declare-fun x () String)
+(declare-fun y () String)
+(assert {assertion})
+(check-sat)
+"
+        );
+        let script = parse_script(&input).expect("parse singleton inverse theorem");
+        assert!(
+            script.source_string_semantic_unsat,
+            "source singleton inverse must refute {assertion}"
+        );
+    }
+
+    let front_door = r#"(set-logic QF_SLIA)
+(declare-fun x () String)
+(declare-fun y () String)
+(assert (not (= (str.replace "A" (str.replace x y x) x) "A")))
+(check-sat)
+"#;
+    assert_eq!(
+        solve_smtlib(front_door, &config())
+            .expect("solve representative singleton inverse theorem")
+            .result,
+        CheckResult::Unsat,
+        "the source singleton inverse must survive the bounded gate"
+    );
+}
+
+#[test]
 fn exact_source_rewrite_does_not_assume_the_packed_string_bound() {
     for assertion in [
         // A longer unbounded string can carry `A` at index 100.
