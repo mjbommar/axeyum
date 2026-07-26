@@ -383,6 +383,24 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-26 — first-occurrence predicate algebra moves the last ten UNSAT
+  Noetzli residuals.** Committed `7b6260ac` extends the exact algebra with five
+  unbounded predicate schemas: singleton boundary commutation, replaced-source
+  occurrence versus suffix, distinct inserted-character preservation,
+  exchanged-needle containment, and delete-suffix versus self-expansion-prefix.
+  The fixed 1,880-row population moves **1,863→1,873 decisions (99.6%)**—19 SAT
+  / 1,854 UNSAT / 7 unknown—with exactly ten predicate `unknown`→`unsat` gains
+  and no loss or verdict flip. Z3 4.13.3 confirms rows 725/732 at five seconds;
+  the other eight time out and are covered by 24,066 direct reference
+  equalities over every binary word through length five. Five concrete ground
+  counterexamples remain SAT, including the one remaining decimal predicate.
+  All 73 SMT-LIB library tests, 87 SMT-LIB front-door tests, 79 fixed-splice
+  tests, both deadline tests, both standing wrong-UNSAT guards, and
+  `just check-scope` (226 affected library tests plus warning-denied Clippy)
+  pass. The final rebuilt-release replay is fully monotone across all 1,880
+  rows. The seven residuals are all satisfiable counterexample queries; no
+  further UNSAT identity remains in this population.
+
 - **2026-07-26 — exact first-occurrence algebra moves 23 Noetzli term rows.**
   Committed `ae9da605` recognizes ten reusable unbounded theorem schemas before
   nested `str.replace` terms expand into unrelated condition trees: empty-
@@ -9368,6 +9386,16 @@ plan is built and committed on the current branch:
 | P5.5 | External target, measured | **DONE (bounded v1, ADR-0323--0338):** authenticated Tock capture plus eight rechecked dual-DRAT proofs and six replayed controls, UNKNOWN=0, DISAGREE=0. Query time 12.700 s; fresh outer wall 50.745 s; peak RSS 1,256,496 KiB; zero OOM deltas. The committed case study compares exact target validation, universal coverage, trust, effort, artifact boundaries, and limits. No Tock bug was found, so no upstream issue is applicable. This is not a speed or whole-kernel claim. |
 
 ## Changelog
+
+- **2026-07-26 — moved the last ten first-occurrence predicate identities.**
+  Committed `7b6260ac` with five unbounded predicate schemas, 24,066 direct
+  reference equalities, and five concrete SAT controls. The fixed population
+  rises 1,863→1,873/1,880 (99.6%): ten predicate `unknown`→`unsat` gains, zero
+  losses or verdict flips. Z3 confirms two at five seconds; direct semantics
+  cover the eight timeouts. The final rebuilt-release replay is 19 SAT / 1,854
+  UNSAT / 7 unknown with only the 106 cumulative `unknown`→`unsat` transitions
+  from the retained baseline. The affected string targets, deadline and wrong-
+  UNSAT guards, and `just check-scope` are green.
 
 - **2026-07-26 — moved 23 exact first-occurrence algebra rows.** Committed
   `ae9da605` with ten unbounded replacement-algebra schemas, 65,457 direct
