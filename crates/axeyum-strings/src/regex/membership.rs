@@ -134,11 +134,41 @@ impl Membership {
         const MAX_BASE_CANDIDATES: usize = 64;
 
         let mut bases = vec![Vec::new()];
+        // A single unconstrained code point is the smallest witness for the very
+        // common `w != ""` shape (represented as a negative membership in
+        // `{epsilon}`). It also supplies neutral filler when pairwise composition
+        // must extend a required prefix/infix. Acceptance still goes through the
+        // complete replay below.
+        if let Some(word) = simple_structural_witness(&Regex::any_char(), max_len, 0) {
+            bases.push(word);
+        }
         for regex in &self.positives {
             if budget.past_deadline() {
                 return None;
             }
             let Some(word) = simple_structural_witness(regex, max_len, 0) else {
+                continue;
+            };
+            if !bases.contains(&word) {
+                bases.push(word);
+                if bases.len() == MAX_BASE_CANDIDATES {
+                    break;
+                }
+            }
+        }
+        // A negative membership in a complemented language is itself a positive
+        // requirement: `w ∉ ∁R` iff `w ∈ R`. Generated QF_SLIA formulas
+        // commonly encode `contains` this way (negating an `indexof = -1` atom).
+        // Seed the same structural candidates from `R`; the full problem replay
+        // below remains the sole acceptance gate, so this can only find SAT sooner.
+        for regex in &self.negatives {
+            if budget.past_deadline() {
+                return None;
+            }
+            let Regex::Comp(inner) = regex else {
+                continue;
+            };
+            let Some(word) = simple_structural_witness(inner, max_len, 0) else {
                 continue;
             };
             if !bases.contains(&word) {
@@ -890,6 +920,35 @@ mod tests {
             m.quick_witness(&budget(), 256),
             Some(vec![u32::from(b' '), u32::from(b'Z')])
         );
+    }
+
+    #[test]
+    fn quick_witness_seeds_a_nonempty_neutral_character() {
+        // `w != ""` is a negative membership in the singleton epsilon language.
+        // The smallest useful filler must also respect the positive `no '='`
+        // language and the excluded comma.
+        let m = Membership {
+            positives: vec![Regex::comp(contains_lit("="))],
+            negatives: vec![
+                Regex::repeat(Regex::any_char(), 0, Some(0)),
+                contains_lit(","),
+            ],
+            ..Membership::default()
+        };
+        assert_eq!(m.quick_witness(&budget(), 256), Some(vec![0]));
+    }
+
+    #[test]
+    fn quick_witness_uses_a_negated_complement_as_a_positive_seed() {
+        // `w notin complement(contains("="))` is exactly `contains(w,"=")`.
+        // Candidate generation may exploit that equivalence because replay over
+        // the complete constraint set remains the acceptance gate.
+        let m = Membership {
+            positives: vec![Regex::comp(contains_lit(","))],
+            negatives: vec![Regex::comp(contains_lit("="))],
+            ..Membership::default()
+        };
+        assert_eq!(m.quick_witness(&budget(), 256), Some(vec![u32::from(b'=')]));
     }
 
     #[test]
