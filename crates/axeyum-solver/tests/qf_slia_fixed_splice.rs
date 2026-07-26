@@ -871,3 +871,71 @@ fn exact_source_small_subject_indexof_declines_nonidentities() {
         );
     }
 }
+
+#[test]
+fn exact_source_one_code_point_views_refute_noetzli_families() {
+    for assertion in [
+        r#"(not (= (= "B" (str.at "B" z)) (= "A" (str.at "A" z))))"#,
+        r#"(not (= (= "B" (str.substr "B" 0 z))
+                    (= "A" (str.substr "A" 0 z))))"#,
+        r#"(not (= (str.at (str.substr "A" 0 z) 0)
+                    (str.substr "A" 0 z)))"#,
+        r#"(not (= (str.substr "A" z 2) (str.at "A" z)))"#,
+        r#"(not (= (str.replace (str.at "A" z) "A" "B")
+                    (str.at "B" z)))"#,
+        r#"(not (= (str.replace (str.substr "B" 0 z) "B" x)
+                    (str.replace (str.substr "A" 0 z) "A" x)))"#,
+    ] {
+        let input = format!(
+            r"(set-logic QF_SLIA)
+(declare-fun x () String)
+(declare-fun z () Int)
+(assert {assertion})
+(check-sat)
+"
+        );
+        let script = parse_script(&input).expect("parse exact one-code-point view");
+        assert!(
+            script.source_string_semantic_unsat,
+            "one-code-point view must refute {assertion}"
+        );
+        assert_eq!(
+            solve_smtlib(&input, &config())
+                .expect("solve exact one-code-point view")
+                .result,
+            CheckResult::Unsat,
+            "one-code-point view must survive the bounded-string gate: {assertion}"
+        );
+    }
+}
+
+#[test]
+fn exact_source_one_code_point_views_decline_nonidentities() {
+    for assertion in [
+        r#"(not (= (str.at "A" z) "A"))"#,
+        r#"(not (= (str.substr "A" z x) (str.at "A" z)))"#,
+        r#"(not (= (str.replace (str.at "A" z) "A" "B")
+                    (str.at "C" z)))"#,
+    ] {
+        let input = format!(
+            r"(set-logic QF_SLIA)
+(declare-fun x () Int)
+(declare-fun z () Int)
+(assert {assertion})
+(check-sat)
+"
+        );
+        let script = parse_script(&input).expect("parse one-code-point view control");
+        assert!(
+            !script.source_string_semantic_unsat,
+            "one-code-point view must decline {assertion}"
+        );
+        assert_ne!(
+            solve_smtlib(&input, &config())
+                .expect("solve one-code-point view control")
+                .result,
+            CheckResult::Unsat,
+            "satisfiable one-code-point control must not become UNSAT: {assertion}"
+        );
+    }
+}
