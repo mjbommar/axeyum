@@ -9326,6 +9326,7 @@ enum ExactRewriteTerm {
     Bool(bool),
     Int(i128),
     String(Vec<u32>),
+    IndexOfSelf(Box<ExactRewriteTerm>),
     Opaque(SExpr),
     App(String, Vec<ExactRewriteTerm>),
 }
@@ -9364,7 +9365,7 @@ fn exact_rewrite_term(expression: &SExpr, depth: u32) -> ExactRewriteTerm {
 
 #[allow(clippy::too_many_lines)] // One explicit allow-list of exact SMT-LIB identities.
 fn exact_rewrite_app(head: &str, args: Vec<ExactRewriteTerm>) -> ExactRewriteTerm {
-    use ExactRewriteTerm::{App, Bool, Int, String};
+    use ExactRewriteTerm::{App, Bool, IndexOfSelf, Int, String};
 
     match (head, args.as_slice()) {
         ("not", [Bool(value)]) => return Bool(!value),
@@ -9450,11 +9451,32 @@ fn exact_rewrite_app(head: &str, args: Vec<ExactRewriteTerm>) -> ExactRewriteTer
         ("str.substr", [String(value), offset, length]) if value.len() <= 1 && offset == length => {
             return String(Vec::new());
         }
+        ("str.substr", [App(inner, inner_args), Int(0), length])
+            if inner == "str.substr"
+                && matches!(inner_args.as_slice(), [_, _, inner_length] if inner_length == length) =>
+        {
+            return App(inner.clone(), inner_args.clone());
+        }
         ("str.substr", [subject, Int(0), App(length, length_args)])
             if length == "str.len"
                 && matches!(length_args.as_slice(), [length_subject] if length_subject == subject) =>
         {
             return subject.clone();
+        }
+        ("str.substr", [subject, offset, length])
+            if exact_substr_is_empty(subject, offset, length) =>
+        {
+            return String(Vec::new());
+        }
+        ("str.substr", [subject, App(indexof, index_args), length])
+            if indexof == "str.indexof"
+                && matches!(index_args.as_slice(), [index_subject, String(needle), offset]
+                    if index_subject == subject && needle.is_empty()) =>
+        {
+            return exact_rewrite_app(
+                "str.substr",
+                vec![subject.clone(), index_args[2].clone(), length.clone()],
+            );
         }
         ("str.substr", [subject, offset, Int(1)]) => {
             return App("str.at".to_owned(), vec![subject.clone(), offset.clone()]);
@@ -9475,11 +9497,33 @@ fn exact_rewrite_app(head: &str, args: Vec<ExactRewriteTerm>) -> ExactRewriteTer
         ("str.at", [App(inner, _), Int(index)]) if inner == "str.at" && *index >= 1 => {
             return String(Vec::new());
         }
+        ("str.at", [subject, index]) if exact_view_index_is_out_of_range(subject, index) => {
+            return String(Vec::new());
+        }
+        ("str.at", [subject, App(indexof, index_args)])
+            if indexof == "str.indexof"
+                && matches!(index_args.as_slice(), [index_subject, String(needle), _]
+                    if index_subject == subject && needle.is_empty()) =>
+        {
+            return exact_rewrite_app("str.at", vec![subject.clone(), index_args[2].clone()]);
+        }
+        ("str.at", [subject, IndexOfSelf(offset)])
+            if exact_string_max_len(subject, 0).is_some_and(|maximum| maximum <= 1) =>
+        {
+            return exact_rewrite_app("str.at", vec![subject.clone(), *offset.clone()]);
+        }
         ("str.indexof", [subject, needle]) => {
             return exact_rewrite_indexof(subject, needle, Some(0))
                 .map_or_else(|| App(head.to_owned(), args), Int);
         }
         ("str.indexof", [subject, needle, offset]) => {
+            if subject == needle {
+                return match offset {
+                    Int(0) => Int(0),
+                    Int(_) => Int(-1),
+                    offset => IndexOfSelf(Box::new(offset.clone())),
+                };
+            }
             let offset = match offset {
                 Int(offset) => Some(*offset),
                 _ => None,
@@ -9755,6 +9799,142 @@ fn exact_string_max_len(term: &ExactRewriteTerm, depth: u32) -> Option<usize> {
         }
         _ => None,
     }
+}
+
+fn exact_int_lower_bound(term: &ExactRewriteTerm, depth: u32) -> Option<i128> {
+    use ExactRewriteTerm::{App, IndexOfSelf, Int};
+
+    if depth > 32 {
+        return None;
+    }
+    match term {
+        Int(value) => Some(*value),
+        IndexOfSelf(_) => Some(-1),
+        App(head, _) if head == "str.indexof" => Some(-1),
+        App(head, args) if matches!(head.as_str(), "str.len" | "seq.len") => {
+            i128::try_from(exact_string_min_len(args.first()?, depth + 1)?).ok()
+        }
+        App(head, values) if head == "+" => values.iter().try_fold(0_i128, |sum, value| {
+            sum.checked_add(exact_int_lower_bound(value, depth + 1)?)
+        }),
+        App(head, args) if head == "-" => match args.as_slice() {
+            [value] => exact_int_upper_bound(value, depth + 1)?.checked_neg(),
+            [left, right] => exact_int_lower_bound(left, depth + 1)?
+                .checked_sub(exact_int_upper_bound(right, depth + 1)?),
+            _ => None,
+        },
+        _ => None,
+    }
+}
+
+fn exact_int_upper_bound(term: &ExactRewriteTerm, depth: u32) -> Option<i128> {
+    use ExactRewriteTerm::{App, IndexOfSelf, Int};
+
+    if depth > 32 {
+        return None;
+    }
+    match term {
+        Int(value) => Some(*value),
+        IndexOfSelf(_) => Some(0),
+        App(head, args) if matches!(head.as_str(), "str.len" | "seq.len") => {
+            i128::try_from(exact_string_max_len(args.first()?, depth + 1)?).ok()
+        }
+        App(head, args) if head == "str.indexof" => {
+            let [subject, _, offset] = args.as_slice() else {
+                return None;
+            };
+            let maximum = exact_string_max_len(subject, depth + 1)?;
+            if maximum == 0 || (maximum <= 1 && offset == &Int(0)) {
+                Some(0)
+            } else {
+                i128::try_from(maximum).ok()
+            }
+        }
+        App(head, values) if head == "+" => values.iter().try_fold(0_i128, |sum, value| {
+            sum.checked_add(exact_int_upper_bound(value, depth + 1)?)
+        }),
+        App(head, args) if head == "-" => match args.as_slice() {
+            [value] => exact_int_lower_bound(value, depth + 1)?.checked_neg(),
+            [left, right] => exact_int_upper_bound(left, depth + 1)?
+                .checked_sub(exact_int_lower_bound(right, depth + 1)?),
+            _ => None,
+        },
+        _ => None,
+    }
+}
+
+fn exact_is_length_of(term: &ExactRewriteTerm, subject: &ExactRewriteTerm) -> bool {
+    matches!(
+        term,
+        ExactRewriteTerm::App(head, args)
+            if matches!(head.as_str(), "str.len" | "seq.len")
+                && matches!(args.as_slice(), [length_subject] if length_subject == subject)
+    )
+}
+
+fn exact_negates(left: &ExactRewriteTerm, right: &ExactRewriteTerm) -> bool {
+    matches!(
+        right,
+        ExactRewriteTerm::App(head, args)
+            if head == "-" && matches!(args.as_slice(), [ExactRewriteTerm::Int(0), value]
+                if value == left)
+    )
+}
+
+fn exact_substr_is_empty(
+    subject: &ExactRewriteTerm,
+    offset: &ExactRewriteTerm,
+    length: &ExactRewriteTerm,
+) -> bool {
+    use ExactRewriteTerm::{App, IndexOfSelf};
+
+    if exact_int_upper_bound(length, 0).is_some_and(|upper| upper <= 0)
+        || exact_is_length_of(offset, subject)
+        || exact_negates(offset, length)
+        || exact_negates(length, offset)
+        || matches!((offset, length), (IndexOfSelf(argument), value) if argument.as_ref() == value)
+    {
+        return true;
+    }
+    if let (Some(maximum), Some(lower)) = (
+        exact_string_max_len(subject, 0),
+        exact_int_lower_bound(offset, 0),
+    ) && i128::try_from(maximum).is_ok_and(|maximum| lower >= maximum)
+    {
+        return true;
+    }
+    if exact_string_max_len(subject, 0).is_some_and(|maximum| maximum <= 1) && offset == length {
+        return true;
+    }
+    matches!(
+        subject,
+        App(head, args)
+            if head == "str.substr"
+                && matches!(args.as_slice(), [_, _, inner_length] if inner_length == offset)
+    )
+}
+
+fn exact_view_index_is_out_of_range(subject: &ExactRewriteTerm, index: &ExactRewriteTerm) -> bool {
+    use ExactRewriteTerm::App;
+
+    if exact_int_upper_bound(index, 0).is_some_and(|upper| upper < 0)
+        || exact_is_length_of(index, subject)
+    {
+        return true;
+    }
+    if let (Some(maximum), Some(lower)) = (
+        exact_string_max_len(subject, 0),
+        exact_int_lower_bound(index, 0),
+    ) && i128::try_from(maximum).is_ok_and(|maximum| lower >= maximum)
+    {
+        return true;
+    }
+    matches!(
+        subject,
+        App(head, args)
+            if head == "str.substr"
+                && matches!(args.as_slice(), [_, _, inner_length] if inner_length == index)
+    )
 }
 
 /// Returns a conservative finite set containing every code point a term can
