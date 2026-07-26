@@ -781,7 +781,6 @@ fn apply_online_string_route(
         &memberships,
         config,
     ) {
-        result @ CheckResult::Unsat => result,
         CheckResult::Sat(_) if script.word_skeleton_opaque_terms > 0 => {
             let detail = if reason.detail.is_empty() {
                 "online CDCL(T) string relaxation found sat; opaque fixed-splice \
@@ -799,7 +798,7 @@ fn apply_online_string_route(
                 detail,
             })
         }
-        result @ CheckResult::Sat(_) => result,
+        result @ (CheckResult::Sat(_) | CheckResult::Unsat) => result,
         // Online route declined: preserve the prior `unknown`, recording the decline.
         CheckResult::Unknown(online) => {
             let detail = if reason.detail.is_empty() {
