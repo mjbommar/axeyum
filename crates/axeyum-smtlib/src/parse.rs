@@ -9432,22 +9432,14 @@ fn exact_rewrite_app(head: &str, args: Vec<ExactRewriteTerm>) -> ExactRewriteTer
                 return Int(value);
             }
         }
-        ("and", values) => {
-            if values.iter().any(|value| value == &Bool(false)) {
-                return Bool(false);
-            }
-            if values.iter().all(|value| value == &Bool(true)) {
-                return Bool(true);
-            }
-        }
-        ("or", values) => {
-            if values.iter().any(|value| value == &Bool(true)) {
-                return Bool(true);
-            }
-            if values.iter().all(|value| value == &Bool(false)) {
-                return Bool(false);
-            }
-        }
+        ("<", [Int(left), Int(right)]) => return Bool(left < right),
+        ("<=", [Int(left), Int(right)]) => return Bool(left <= right),
+        (">", [Int(left), Int(right)]) => return Bool(left > right),
+        (">=", [Int(left), Int(right)]) => return Bool(left >= right),
+        ("<", [left, right]) | (">", [right, left]) if left == right => return Bool(false),
+        ("<=", [left, right]) | (">=", [right, left]) if left == right => return Bool(true),
+        ("and", values) => return exact_rewrite_boolean_nary("and", values),
+        ("or", values) => return exact_rewrite_boolean_nary("or", values),
         ("str.++" | "seq.++", values) => return exact_rewrite_concat(values),
         ("str.len" | "seq.len", [String(value)]) => {
             if let Ok(length) = i128::try_from(value.len()) {
@@ -9463,6 +9455,13 @@ fn exact_rewrite_app(head: &str, args: Vec<ExactRewriteTerm>) -> ExactRewriteTer
         ("str.substr", [String(value), Int(offset), Int(length)]) => {
             return String(substr_code_points(value, *offset, *length));
         }
+        ("str.substr", [_, _, _])
+            if args.iter().any(exact_is_ite)
+                && args.iter().map(exact_ite_count).sum::<u32>() <= 6 =>
+        {
+            return exact_distribute_app_ite(head, &args)
+                .expect("a bounded ite argument must distribute");
+        }
         ("str.substr", [_, Int(offset), _]) if *offset < 0 => return String(Vec::new()),
         ("str.substr", [_, _, Int(length)]) if *length <= 0 => return String(Vec::new()),
         ("str.substr", [String(value), Int(offset), _])
@@ -9475,6 +9474,19 @@ fn exact_rewrite_app(head: &str, args: Vec<ExactRewriteTerm>) -> ExactRewriteTer
         }
         ("str.substr", [String(value), offset, length]) if value.len() <= 1 && offset == length => {
             return String(Vec::new());
+        }
+        ("str.substr", [String(value), offset, length]) if value.len() == 1 => {
+            let in_range = exact_rewrite_app(
+                "and",
+                vec![
+                    exact_rewrite_app("=", vec![offset.clone(), Int(0)]),
+                    exact_rewrite_app(">", vec![length.clone(), Int(0)]),
+                ],
+            );
+            return exact_rewrite_app(
+                "ite",
+                vec![in_range, String(value.clone()), String(Vec::new())],
+            );
         }
         ("str.substr", [App(inner, inner_args), Int(0), length])
             if inner == "str.substr"
@@ -9513,7 +9525,26 @@ fn exact_rewrite_app(head: &str, args: Vec<ExactRewriteTerm>) -> ExactRewriteTer
                 .map_or_else(Vec::new, |code_point| vec![code_point]);
             return String(result);
         }
+        ("str.at", [_, _])
+            if args.iter().any(exact_is_ite)
+                && args.iter().map(exact_ite_count).sum::<u32>() <= 6 =>
+        {
+            return exact_distribute_app_ite(head, &args)
+                .expect("a bounded ite argument must distribute");
+        }
         ("str.at", [String(value), _]) if value.is_empty() => return String(Vec::new()),
+        ("str.at", [subject, IndexOfSelf(offset)])
+            if exact_string_max_len(subject, 0).is_some_and(|maximum| maximum <= 1) =>
+        {
+            return exact_rewrite_app("str.at", vec![subject.clone(), *offset.clone()]);
+        }
+        ("str.at", [String(value), index]) if value.len() == 1 => {
+            let in_range = exact_rewrite_app("=", vec![index.clone(), Int(0)]);
+            return exact_rewrite_app(
+                "ite",
+                vec![in_range, String(value.clone()), String(Vec::new())],
+            );
+        }
         ("str.at", [App(inner, inner_args), Int(0)])
             if inner == "str.at" && inner_args.len() == 2 =>
         {
@@ -9531,11 +9562,6 @@ fn exact_rewrite_app(head: &str, args: Vec<ExactRewriteTerm>) -> ExactRewriteTer
                     if index_subject == subject && needle.is_empty()) =>
         {
             return exact_rewrite_app("str.at", vec![subject.clone(), index_args[2].clone()]);
-        }
-        ("str.at", [subject, IndexOfSelf(offset)])
-            if exact_string_max_len(subject, 0).is_some_and(|maximum| maximum <= 1) =>
-        {
-            return exact_rewrite_app("str.at", vec![subject.clone(), *offset.clone()]);
         }
         ("str.indexof", [subject, needle]) => {
             if let Some(index) = exact_rewrite_indexof(subject, needle, Some(0)) {
@@ -10531,6 +10557,36 @@ fn exact_contained_view(subject: &ExactRewriteTerm, needle: &ExactRewriteTerm) -
             if matches!(head.as_str(), "str.++" | "seq.++")
                 && parts.iter().any(|part| part == needle)
     )
+}
+
+/// Flattens associative Boolean connectives, removes their identity element,
+/// and deduplicates repeated operands. These are exact Boolean-algebra laws;
+/// retaining first-occurrence order keeps the normal form deterministic without
+/// requiring an ordering over opaque source expressions.
+fn exact_rewrite_boolean_nary(head: &str, values: &[ExactRewriteTerm]) -> ExactRewriteTerm {
+    use ExactRewriteTerm::{App, Bool};
+
+    let (absorbing, identity) = match head {
+        "and" => (false, true),
+        "or" => (true, false),
+        _ => return App(head.to_owned(), values.to_vec()),
+    };
+    let mut terms = Vec::new();
+    let mut pending: Vec<_> = values.iter().rev().cloned().collect();
+    while let Some(value) = pending.pop() {
+        match value {
+            Bool(value) if value == absorbing => return Bool(absorbing),
+            Bool(value) if value == identity => {}
+            App(inner, nested) if inner == head => pending.extend(nested.into_iter().rev()),
+            value if !terms.contains(&value) => terms.push(value),
+            _ => {}
+        }
+    }
+    match terms.as_slice() {
+        [] => Bool(identity),
+        [single] => single.clone(),
+        _ => App(head.to_owned(), terms),
+    }
 }
 
 fn exact_rewrite_sum(values: &[ExactRewriteTerm]) -> ExactRewriteTerm {
@@ -15545,8 +15601,9 @@ fn apply_parameterized(
 #[cfg(test)]
 mod string_escape_tests {
     use super::{
-        ExactRewriteTerm, decode_string_code_points, exact_rewrite_small_subject_indexof,
-        exact_rewrite_term, replace_first_code_points,
+        ExactRewriteTerm, decode_string_code_points, exact_rewrite_app,
+        exact_rewrite_small_subject_indexof, exact_rewrite_term, exact_rewrite_under_assignments,
+        replace_first_code_points,
     };
     use crate::sexpr::read_all;
 
@@ -15618,6 +15675,68 @@ mod string_escape_tests {
                         "subject={subject:?}, needle={needle:?}, offset={offset}"
                     );
                 }
+            }
+        }
+    }
+
+    #[test]
+    fn symbolic_one_code_point_views_match_reference_semantics_exhaustively() {
+        let symbol = |name: &str| {
+            let expression = read_all(name)
+                .expect("read symbolic view argument")
+                .pop()
+                .expect("one symbolic argument");
+            exact_rewrite_term(&expression, 0)
+        };
+        let index = symbol("index");
+        let length = symbol("length");
+        let subject = ExactRewriteTerm::String(vec![u32::from(b'A')]);
+        let at = exact_rewrite_app("str.at", vec![subject.clone(), index.clone()]);
+        let substr = exact_rewrite_app(
+            "str.substr",
+            vec![subject.clone(), index.clone(), length.clone()],
+        );
+
+        for concrete_index in -2_i128..=3 {
+            let index_assignment = (
+                exact_rewrite_app(
+                    "=",
+                    vec![index.clone(), ExactRewriteTerm::Int(concrete_index)],
+                ),
+                true,
+            );
+            let expected_at = if concrete_index == 0 {
+                subject.clone()
+            } else {
+                ExactRewriteTerm::String(Vec::new())
+            };
+            assert_eq!(
+                exact_rewrite_under_assignments(&at, std::slice::from_ref(&index_assignment), 0),
+                expected_at,
+                "index={concrete_index}"
+            );
+
+            for concrete_length in -2_i128..=3 {
+                let assignments = [
+                    index_assignment.clone(),
+                    (
+                        exact_rewrite_app(
+                            "=",
+                            vec![length.clone(), ExactRewriteTerm::Int(concrete_length)],
+                        ),
+                        true,
+                    ),
+                ];
+                let expected_substr = if concrete_index == 0 && concrete_length > 0 {
+                    subject.clone()
+                } else {
+                    ExactRewriteTerm::String(Vec::new())
+                };
+                assert_eq!(
+                    exact_rewrite_under_assignments(&substr, &assignments, 0),
+                    expected_substr,
+                    "index={concrete_index}, length={concrete_length}"
+                );
             }
         }
     }
