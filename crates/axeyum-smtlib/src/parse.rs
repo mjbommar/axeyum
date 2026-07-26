@@ -11400,6 +11400,65 @@ impl ExactEqualityFacts {
             _ => None,
         }
     }
+
+    /// Whether exact string equalities force a class containing a fixed word
+    /// to be longer than that word.  Lower bounds flow only through
+    /// concatenation and equality classes; an unknown string contributes zero.
+    fn string_length_conflict(&self) -> bool {
+        use ExactRewriteTerm::{App, String};
+
+        fn lower_bound(
+            facts: &ExactEqualityFacts,
+            term: &ExactRewriteTerm,
+            bounds: &[usize],
+            depth: u32,
+        ) -> usize {
+            if depth > 32 {
+                return 0;
+            }
+            match term {
+                String(value) => value.len(),
+                App(head, parts) if matches!(head.as_str(), "str.++" | "seq.++") => {
+                    parts.iter().fold(0_usize, |sum, part| {
+                        sum.saturating_add(lower_bound(facts, part, bounds, depth + 1))
+                    })
+                }
+                App(head, args) if head == "ite" => {
+                    let [_, then_term, else_term] = args.as_slice() else {
+                        return 0;
+                    };
+                    lower_bound(facts, then_term, bounds, depth + 1).min(lower_bound(
+                        facts,
+                        else_term,
+                        bounds,
+                        depth + 1,
+                    ))
+                }
+                _ => facts
+                    .index_of(term)
+                    .map_or(0, |index| bounds[facts.root(index)]),
+            }
+        }
+
+        let mut bounds = vec![0_usize; self.terms.len()];
+        for _ in 0..self.terms.len() {
+            let mut changed = false;
+            for (index, term) in self.terms.iter().enumerate() {
+                let root = self.root(index);
+                let candidate = lower_bound(self, term, &bounds, 0);
+                if candidate > bounds[root] {
+                    bounds[root] = candidate;
+                    changed = true;
+                }
+            }
+            if !changed {
+                break;
+            }
+        }
+        self.terms.iter().enumerate().any(
+            |(index, term)| matches!(term, String(value) if bounds[self.root(index)] > value.len()),
+        )
+    }
 }
 
 /// Compares two bounded `ite` decision trees without requiring their branch
@@ -12906,11 +12965,13 @@ fn exact_rewrite_contradiction(conjuncts: &[&SExpr]) -> bool {
 /// Symbolic-execution generators commonly spell one path condition as
 /// `T = condition; assert T`.  Looking at either conjunct alone misses direct
 /// contradictions such as two aliases requiring `s = ""` and `s != ""`.
-/// This pass only follows Boolean-valued symbol definitions and the truth
-/// tables of `not`, required `and`, and forbidden `or`; every queued assignment
-/// is therefore forced by the asserted conjunction.  The final equality check
-/// remains deliberately limited to congruence classes and explicit
-/// disequalities.
+/// This pass follows Boolean-valued symbol definitions, selected top-level
+/// `ite` branches, strict-order disequalities, and exact string emptiness/concat
+/// length consequences; every queued assignment is therefore forced by the
+/// asserted conjunction.  The final equality check remains deliberately
+/// limited to congruence classes, explicit disequalities, and nonnegative
+/// string-length lower bounds.
+#[allow(clippy::too_many_lines)] // One auditable, fail-closed path-propagation pass.
 fn exact_boolean_alias_contradiction(terms: &[ExactRewriteTerm]) -> bool {
     use ExactRewriteTerm::{App, Bool, Opaque};
 
@@ -12942,6 +13003,18 @@ fn exact_boolean_alias_contradiction(terms: &[ExactRewriteTerm]) -> bool {
     if aliases.is_empty() {
         return false;
     }
+    let guarded_branches: Vec<_> = terms
+        .iter()
+        .filter_map(|term| match term {
+            App(head, args) if head == "ite" => {
+                let [guard, then_term, else_term] = args.as_slice() else {
+                    return None;
+                };
+                Some((guard.clone(), then_term.clone(), else_term.clone()))
+            }
+            _ => None,
+        })
+        .collect();
 
     let mut assignments: Vec<(ExactRewriteTerm, bool)> = Vec::new();
     let mut pending: Vec<_> = terms.iter().cloned().map(|term| (term, true)).collect();
@@ -12970,6 +13043,24 @@ fn exact_boolean_alias_contradiction(terms: &[ExactRewriteTerm]) -> bool {
             }
             _ => {}
         }
+        if !required {
+            pending.push((exact_rewrite_app("not", vec![condition.clone()]), true));
+            if let App(head, args) = &condition
+                && head == "="
+                && let [left, right] = args.as_slice()
+            {
+                pending.push((
+                    exact_rewrite_app(
+                        "not",
+                        vec![exact_rewrite_app("=", vec![right.clone(), left.clone()])],
+                    ),
+                    true,
+                ));
+            }
+        }
+        if let Some(disequality) = exact_order_disequality(&condition, required) {
+            pending.push((disequality, false));
+        }
         if let Some(consequence) =
             exact_length_emptiness_consequence(&condition, required, &length_aliases)
         {
@@ -12979,6 +13070,18 @@ fn exact_boolean_alias_contradiction(terms: &[ExactRewriteTerm]) -> bool {
                     exact_rewrite_app("=", vec![subject, ExactRewriteTerm::String(Vec::new())]),
                     empty,
                 )),
+            }
+        }
+        for (guard, then_term, else_term) in &guarded_branches {
+            if exact_conditions_equal(&condition, guard) {
+                pending.push((
+                    if required {
+                        then_term.clone()
+                    } else {
+                        else_term.clone()
+                    },
+                    true,
+                ));
             }
         }
 
@@ -12991,7 +13094,25 @@ fn exact_boolean_alias_contradiction(terms: &[ExactRewriteTerm]) -> bool {
         }
     }
 
-    ExactEqualityFacts::from_assignments(&assignments).conflict
+    let facts = ExactEqualityFacts::from_assignments(&assignments);
+    facts.conflict || facts.string_length_conflict()
+}
+
+/// A strict order known true, or a non-strict order known false, forces its
+/// operands to differ.  No converse or integrality-specific inference is used.
+fn exact_order_disequality(
+    condition: &ExactRewriteTerm,
+    required: bool,
+) -> Option<ExactRewriteTerm> {
+    let ExactRewriteTerm::App(relation, args) = condition else {
+        return None;
+    };
+    let [left, right] = args.as_slice() else {
+        return None;
+    };
+    ((required && matches!(relation.as_str(), "<" | ">"))
+        || (!required && matches!(relation.as_str(), "<=" | ">=")))
+    .then(|| exact_rewrite_app("=", vec![left.clone(), right.clone()]))
 }
 
 enum ExactLengthEmptiness {
@@ -20832,6 +20953,57 @@ mod string_escape_tests {
 (check-sat)"#,
         ] {
             let expressions = read_all(script).expect("read satisfiable length alias control");
+            assert!(
+                !source_string_semantic_facts(&expressions).conflict,
+                "{script}"
+            );
+        }
+    }
+
+    #[test]
+    fn selected_string_path_propagates_nonempty_concat_conflicts() {
+        let contradictory = read_all(
+            r#"(declare-const input String)
+(declare-const prefix String)
+(declare-const position Int)
+(declare-const selected Bool)
+(assert (= input ""))
+(assert (= selected (not (= position (- 1)))))
+(assert (ite selected
+  (= input (str.++ prefix "GASO="))
+  (= position (- 1))))
+(assert (< (- 1) position))
+(check-sat)"#,
+        )
+        .expect("read selected concat conflict");
+        assert!(source_string_semantic_facts(&contradictory).conflict);
+
+        for script in [
+            r#"(declare-const input String)
+(declare-const prefix String)
+(declare-const position Int)
+(declare-const selected Bool)
+(assert (= input ""))
+(assert (= position (- 1)))
+(assert (= selected (not (= position (- 1)))))
+(assert (ite selected
+  (= input (str.++ prefix "GASO="))
+  (= position (- 1))))
+(check-sat)"#,
+            r#"(declare-const input String)
+(declare-const prefix String)
+(declare-const position Int)
+(declare-const selected Bool)
+(assert (= input "GASO="))
+(assert (= prefix ""))
+(assert (= selected (not (= position (- 1)))))
+(assert (ite selected
+  (= input (str.++ prefix "GASO="))
+  (= position (- 1))))
+(assert (< (- 1) position))
+(check-sat)"#,
+        ] {
+            let expressions = read_all(script).expect("read selected concat control");
             assert!(
                 !source_string_semantic_facts(&expressions).conflict,
                 "{script}"
