@@ -383,6 +383,20 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-25 — one shared quantified deadline removes 473 hard UFLIA
+  overruns and moves two strict-budget decisions.** The top-level quantified
+  pipeline, valid-universal loop, e-graph QF probes/replays, and retained online
+  clause-session construction now consume one remaining wall-clock budget
+  instead of restarting the full timeout at each stage or assertion. On the
+  exact 765-file cvc5-UNSAT/Axeyum-gap selection with both the internal and
+  external limits fixed at 250 ms, UNSAT decisions move **73→75**, hard outer
+  timeouts fall **484→11**, and SAT remains zero. With a loose 2 s safety cap,
+  the candidate reports 75 UNSAT, 690 honest `unknown`, and zero outer
+  timeouts. The one 156-row baseline result that is `unknown` at a strict
+  250 ms still decides UNSAT at 500 ms; the old binary also needed about
+  300 ms despite claiming a 250 ms internal budget, so this is enforcement of
+  the stated boundary rather than a verdict regression.
+
 - **2026-07-25 — collision-free UF abstraction moves 87 public UFLIA
   decisions.** Repeated auto-dispatch probes recreated `!fn_app_0` for unrelated
   applications, either aliasing same-sort helpers or erroring when result sorts
@@ -390,7 +404,10 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   Function abstraction now keys each internal helper by its original application
   term, so repeated probes reuse only the same application and distinct terms
   remain disjoint. On the exact 765-file cvc5-UNSAT/Axeyum-gap selection, a
-  same-source pre/post run moves **21→108 UNSAT** (`+87`), with no SAT verdict.
+  same-source pre/post diagnostic with a loose 2 s outer safety cap moves
+  **21→108 UNSAT** (`+87`), with no SAT verdict. Those results exposed work
+  running past the nominal 250 ms internal budget; after the shared-deadline
+  repair above, the honest hard-250 ms credited count is 75 UNSAT.
   The fixed full 1,412-file UFLIA run reports 263 UNSAT + one SAT and
   **WRONG=0**; all 156 retained-baseline UNSAT decisions remain UNSAT when
   checked individually. The retained cvc5 result is still 921 UNSAT. Exact
@@ -8873,7 +8890,8 @@ plan is built and committed on the current branch:
 ### Track 1 — Engine & Performance
 | Phase | Title | Status |
 |---|---|---|
-| P2.6c | Stable UF abstraction identity across solver probes | **DONE:** abstraction helpers are keyed by original application term instead of a per-pass counter, preventing cross-application alias/sort collisions while safely reusing the same application across repeated auto-dispatch probes. The exact 765-file cvc5-UNSAT gap selection moves 21→108 UNSAT (`+87`) on a same-source pre/post run; the fixed full 1,412-file run has WRONG=0 and retains every baseline UNSAT individually. cvc5's retained 921 UNSAT plus shared-deadline overruns remain P2.6 work |
+| P2.6d | Shared quantified wall-clock deadline | **DONE for the current quantified pipeline:** top-level routing, valid-universal subchecks, e-graph QF probes/replays, and online clause-session construction consume one remaining budget. On the exact 765-file cvc5-UNSAT gap selection at a hard 250 ms, decisions move 73→75 UNSAT, outer timeouts fall 484→11, and SAT remains zero; with a 2 s safety cap there are zero outer timeouts. Finer cooperative polling inside individual recursive encoders remains performance-hardening work |
+| P2.6c | Stable UF abstraction identity across solver probes | **DONE:** abstraction helpers are keyed by original application term instead of a per-pass counter, preventing cross-application alias/sort collisions while safely reusing the same application across repeated auto-dispatch probes. The exact 765-file cvc5-UNSAT gap selection moves 21→108 UNSAT (`+87`) in a same-source diagnostic with a loose 2 s outer cap; after P2.6d enforces the nominal 250 ms budget, the hard-cap credited count is 75. The fixed full 1,412-file run has WRONG=0 and retains every baseline UNSAT individually. cvc5's retained 921 UNSAT remains P2.6 work |
 | P2.6b | Guarded declared-sort MBQI model | **DONE for the accepted ADR-0359 extension:** disconnected ground UF/LIA components seed an untrusted model; a constant-distinct unary `Int -> U` guard is independently checked over the exact source and the full model replays. Public UFLIA `TwoSquares` moves `unknown`→`sat`; broader quantified carrier models remain P2.6 work |
 | P2.6a | Exact source-term BV Skolem depth | **DONE for the ADR-0141 slice:** a single direct BV existential may use one exact source-reachable QF term over leading universals; modular/bitwise/total-UF terms replay only after untouched-source reflexivity. General multiple/piecewise Skolems, free parameters, function-valued models, and SAT Lean export remain P2.6 work |
 | P1.6w | Retained warm nested array-valued UF parameters | **DONE (ADR-0094)** — supported array-valued `Apply` terms can key retained array-valued UF parents directly or under supported structural keys. Direct nested keys encode by the inner application's private projection symbol; structural nested keys encode by replay-safe rewritten structural terms, with private projection/owner symbols excluded from public array-key synthesis. The focused warm array-UF parent suite covers direct nested-key SAT replay, asserted nested-key equality UNSAT, and structural keys with nested application bases. Nested/extended arrays, proofs, and low-load aggregate timing remain |
@@ -9003,11 +9021,20 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
+- **2026-07-25 — enforced one quantified deadline and removed 473 hard outer
+  timeouts.** The quantified auto route and its valid-universal/e-graph
+  subsolves no longer reset the full wall-clock allowance. On the exact
+  765-file cvc5-UNSAT gap selection at a strict 250 ms, UNSAT moves 73→75,
+  outer timeouts fall 484→11, and SAT remains zero. A loose 2 s safety cap now
+  sees zero outer timeouts. The earlier 21→108 UF-identity result is retained
+  as a loose-outer diagnostic, not misreported as hard-250 ms credit.
+
 - **2026-07-25 — moved 87 public UFLIA rows by eliminating UF-helper
   collisions across repeated probes.** Original application term ids now name
   abstraction helpers, so independent applications cannot alias and repeated
   elimination of the same application remains stable. The exact 765-file
-  cvc5-UNSAT gap selection moves 21→108 UNSAT on a same-source pre/post run.
+  cvc5-UNSAT gap selection moves 21→108 UNSAT on a same-source pre/post
+  diagnostic with a loose 2 s outer safety cap.
   The fixed full 1,412-file run reports 263 UNSAT + one SAT, retains all 156
   baseline UNSATs individually, and has WRONG=0.
 

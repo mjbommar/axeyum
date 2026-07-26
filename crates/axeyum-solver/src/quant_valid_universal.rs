@@ -40,7 +40,13 @@ use std::collections::HashMap;
 use axeyum_ir::{Op, TermArena, TermId, TermNode};
 use axeyum_rewrite::replace_subterms;
 
-use crate::auto::check_auto;
+// Native uses the std clock; wasm uses the `web_time` drop-in (ADR-0017).
+#[cfg(not(target_arch = "wasm32"))]
+use std::time::Instant;
+#[cfg(target_arch = "wasm32")]
+use web_time::Instant;
+
+use crate::auto::{check_auto, config_with_remaining_timeout};
 use crate::backend::{CheckResult, SolverConfig, SolverError};
 
 /// Rewrites every top-level universal `∀x. body` whose body is quantifier-free
@@ -70,8 +76,15 @@ pub fn eliminate_valid_universals(
     let mut out = Vec::with_capacity(assertions.len());
     let mut rewrote = false;
     let mut fresh = 0u32;
-    for &assertion in assertions {
-        match try_eliminate(arena, assertion, config, &mut fresh)? {
+    let deadline = config
+        .timeout
+        .and_then(|timeout| Instant::now().checked_add(timeout));
+    for (index, &assertion) in assertions.iter().enumerate() {
+        let Some(attempt_config) = config_with_remaining_timeout(config, deadline) else {
+            out.extend_from_slice(&assertions[index..]);
+            break;
+        };
+        match try_eliminate(arena, assertion, &attempt_config, &mut fresh)? {
             Some(simplified) => {
                 rewrote = true;
                 out.push(simplified);
@@ -185,4 +198,33 @@ fn contains_quantifier(arena: &TermArena, term: TermId) -> bool {
         }
     }
     false
+}
+
+#[cfg(test)]
+mod tests {
+    use std::time::Duration;
+
+    use axeyum_ir::{Sort, TermArena};
+
+    use super::eliminate_valid_universals;
+    use crate::SolverConfig;
+
+    #[test]
+    fn expired_shared_budget_skips_validity_subsolves() {
+        let mut arena = TermArena::new();
+        let binder = arena.declare("expired_validity_x", Sort::Int).unwrap();
+        let variable = arena.var(binder);
+        let body = arena.eq(variable, variable).unwrap();
+        let universal = arena.forall(binder, body).unwrap();
+        let assertions = vec![universal; 64];
+        let symbols_before = arena.symbols().count();
+        let config = SolverConfig::new().with_timeout(Duration::ZERO);
+
+        let (rewritten, changed) =
+            eliminate_valid_universals(&mut arena, &assertions, &config).unwrap();
+
+        assert!(!changed);
+        assert_eq!(rewritten, assertions);
+        assert_eq!(arena.symbols().count(), symbols_before);
+    }
 }

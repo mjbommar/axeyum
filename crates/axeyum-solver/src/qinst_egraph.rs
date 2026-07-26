@@ -42,7 +42,7 @@ use std::time::Instant;
 #[cfg(target_arch = "wasm32")]
 use web_time::Instant;
 
-use crate::auto::check_auto;
+use crate::auto::{check_auto, config_with_remaining_timeout};
 use crate::backend::{CheckResult, SolverConfig, SolverError, UnknownKind, UnknownReason};
 use crate::cdclt::{CdclT, Lit as CdcltLit, Outcome as CdcltOutcome};
 use crate::euf_egraph::{Encoder as EufEncoder, EufTheory, collect_eq_atoms};
@@ -119,22 +119,23 @@ fn prove_quantified_unsat_via_egraph_impl(
     enable_candidate_equalities: bool,
     stats: &mut QuantifierLoopStats,
 ) -> Result<CheckResult, SolverError> {
+    let deadline = config
+        .timeout
+        .and_then(|timeout| Instant::now().checked_add(timeout));
     let (mut ground, foralls) = partition_top_level_foralls(arena, assertions);
     if foralls.is_empty() {
-        return quantifier_qf_check(arena, &ground, config, stats);
+        return quantifier_qf_check(arena, &ground, config, deadline, stats);
     }
 
-    if try_closed_universal_refutations(arena, &foralls, config)? {
+    if try_closed_universal_refutations(arena, &foralls, config, deadline)? {
         return Ok(CheckResult::Unsat);
     }
 
-    if try_targeted_quantifier_refutations(arena, &ground, &foralls, config, stats)? {
+    if try_targeted_quantifier_refutations(arena, &ground, &foralls, config, deadline, stats)? {
         return Ok(CheckResult::Unsat);
     }
 
-    // Honor the wall-clock budget + a deterministic ground-size cap so an exploding
-    // instantiation degrades to a graceful `unknown`, never spins (the "never hang" rule).
-    let deadline = config.timeout.and_then(|t| Instant::now().checked_add(t));
+    // Share the wall clock and cap ground growth so explosion declines cleanly.
     let mut seen: HashSet<TermId> = ground.iter().copied().collect();
     let mut ground_derivations: HashMap<TermId, QuantifierGroundDerivation> = HashMap::new();
     let mut matcher = IncrementalEmatchSession::new(arena, &foralls);
@@ -143,43 +144,34 @@ fn prove_quantified_unsat_via_egraph_impl(
     let mut candidate_equalities_enabled = enable_candidate_equalities;
     for _ in 0..MAX_INSTANTIATION_ROUNDS {
         if deadline.is_some_and(|d| Instant::now() >= d) {
-            return Ok(CheckResult::Unknown(UnknownReason {
-                kind: UnknownKind::ResourceLimit,
-                detail: "e-matching: instantiation time budget exhausted".to_owned(),
-            }));
+            return Ok(egraph_timeout());
         }
         if ground.len() > MAX_GROUND_TERMS {
             if matches!(
-                quantifier_qf_check(arena, &ground, config, stats)?,
+                quantifier_qf_check(arena, &ground, config, deadline, stats)?,
                 CheckResult::Unsat
             ) {
                 return Ok(CheckResult::Unsat);
             }
-            return Ok(CheckResult::Unknown(UnknownReason {
-                kind: UnknownKind::ResourceLimit,
-                detail: "e-matching: ground-term count budget exhausted".to_owned(),
-            }));
+            return Ok(egraph_ground_limit());
         }
-        // The first round and every accelerator fallback use the full QF route.
-        // While retained CDCL(T) is live, generated checked clauses are tested
-        // there directly and only a candidate refutation pays for full replay.
+        // The first round and accelerator fallbacks use the full QF route.
         if online_clauses.is_none() {
             if matches!(
-                quantifier_qf_check(arena, &ground, config, stats)?,
+                quantifier_qf_check(arena, &ground, config, deadline, stats)?,
                 CheckResult::Unsat
             ) {
                 return Ok(CheckResult::Unsat);
+            }
+            if deadline.is_some_and(|deadline| Instant::now() >= deadline) {
+                return Ok(egraph_timeout());
             }
             if !online_attempted {
                 online_clauses = OnlineQuantifierClauseSession::new(arena, &ground, deadline);
                 online_attempted = true;
             }
         }
-        // Instantiate every universal over the current ground terms. Conflict and
-        // unit-like clauses are scheduled globally before unresolved/non-clausal
-        // instances; otherwise one noisy quantifier could hide another's immediate
-        // refutation in the same round. Already-true clauses are monotone redundant
-        // under this equality-only context and need not enter the ground query.
+        // Schedule conflict/unit-like instances globally before noisier clauses.
         let mut admitted = admit_next_source_batch(
             arena,
             assertions,
@@ -198,6 +190,7 @@ fn prove_quantified_unsat_via_egraph_impl(
                 &mut online_clauses,
                 &mut seen,
                 &mut ground_derivations,
+                deadline,
                 stats,
             )? {
                 CandidateFixpointStep::Refuted => return Ok(CheckResult::Unsat),
@@ -220,7 +213,7 @@ fn prove_quantified_unsat_via_egraph_impl(
         });
         match online_outcome {
             Some(CdcltOutcome::Unsat) => {
-                if replay_online_refutation(arena, &ground, config, stats)? {
+                if replay_online_refutation(arena, &ground, config, deadline, stats)? {
                     return Ok(CheckResult::Unsat);
                 }
                 online_clauses = None;
@@ -229,7 +222,21 @@ fn prove_quantified_unsat_via_egraph_impl(
             Some(CdcltOutcome::Unknown) | None => online_clauses = None,
         }
     }
-    finish_quantified_ground_check(arena, &ground, config, stats)
+    finish_quantified_ground_check(arena, &ground, config, deadline, stats)
+}
+
+fn egraph_timeout() -> CheckResult {
+    CheckResult::Unknown(UnknownReason {
+        kind: UnknownKind::ResourceLimit,
+        detail: "e-matching: instantiation time budget exhausted".to_owned(),
+    })
+}
+
+fn egraph_ground_limit() -> CheckResult {
+    CheckResult::Unknown(UnknownReason {
+        kind: UnknownKind::ResourceLimit,
+        detail: "e-matching: ground-term count budget exhausted".to_owned(),
+    })
 }
 
 enum CandidateFixpointStep {
@@ -249,6 +256,7 @@ fn scoped_candidate_fixpoint_step(
     online_clauses: &mut Option<OnlineQuantifierClauseSession>,
     seen: &mut HashSet<TermId>,
     ground_derivations: &mut HashMap<TermId, QuantifierGroundDerivation>,
+    deadline: Option<Instant>,
     stats: &mut QuantifierLoopStats,
 ) -> Result<CandidateFixpointStep, SolverError> {
     let Some(session) = online_clauses.as_mut() else {
@@ -264,7 +272,7 @@ fn scoped_candidate_fixpoint_step(
     };
     match outcome {
         CdcltOutcome::Unsat => {
-            if replay_online_refutation(arena, ground, config, stats)? {
+            if replay_online_refutation(arena, ground, config, deadline, stats)? {
                 return Ok(CandidateFixpointStep::Refuted);
             }
             *online_clauses = None;
@@ -307,10 +315,11 @@ fn replay_online_refutation(
     arena: &mut TermArena,
     ground: &[TermId],
     config: &SolverConfig,
+    deadline: Option<Instant>,
     stats: &mut QuantifierLoopStats,
 ) -> Result<bool, SolverError> {
     Ok(matches!(
-        quantifier_qf_check(arena, ground, config, stats)?,
+        quantifier_qf_check(arena, ground, config, deadline, stats)?,
         CheckResult::Unsat
     ))
 }
@@ -332,9 +341,13 @@ fn try_closed_universal_refutations(
     arena: &mut TermArena,
     foralls: &[TermId],
     config: &SolverConfig,
+    deadline: Option<Instant>,
 ) -> Result<bool, SolverError> {
     for &quantifier in foralls {
-        if let Some(CheckResult::Unsat) = refute_closed_universal(arena, quantifier, config)? {
+        let Some(remaining) = config_with_remaining_timeout(config, deadline) else {
+            return Ok(false);
+        };
+        if let Some(CheckResult::Unsat) = refute_closed_universal(arena, quantifier, &remaining)? {
             return Ok(true);
         }
     }
@@ -351,6 +364,7 @@ fn try_targeted_quantifier_refutations(
     ground: &[TermId],
     foralls: &[TermId],
     config: &SolverConfig,
+    deadline: Option<Instant>,
     stats: &mut QuantifierLoopStats,
 ) -> Result<bool, SolverError> {
     for &quantifier in foralls {
@@ -360,7 +374,7 @@ fn try_targeted_quantifier_refutations(
             let mut probe = ground.to_vec();
             probe.push(instance);
             if matches!(
-                quantifier_qf_check(arena, &probe, config, stats)?,
+                quantifier_qf_check(arena, &probe, config, deadline, stats)?,
                 CheckResult::Unsat
             ) {
                 return Ok(true);
@@ -375,7 +389,7 @@ fn try_targeted_quantifier_refutations(
             let mut probe = ground.to_vec();
             probe.push(instance);
             if matches!(
-                quantifier_qf_check(arena, &probe, config, stats)?,
+                quantifier_qf_check(arena, &probe, config, deadline, stats)?,
                 CheckResult::Unsat
             ) {
                 return Ok(true);
@@ -390,7 +404,7 @@ fn try_targeted_quantifier_refutations(
             let mut probe = ground.to_vec();
             probe.extend(instances);
             if matches!(
-                quantifier_qf_check(arena, &probe, config, stats)?,
+                quantifier_qf_check(arena, &probe, config, deadline, stats)?,
                 CheckResult::Unsat
             ) {
                 return Ok(true);
@@ -404,10 +418,14 @@ fn quantifier_qf_check(
     arena: &mut TermArena,
     ground: &[TermId],
     config: &SolverConfig,
+    deadline: Option<Instant>,
     stats: &mut QuantifierLoopStats,
 ) -> Result<CheckResult, SolverError> {
     stats.qf_checks += 1;
-    check_auto(arena, ground, config)
+    let Some(remaining) = config_with_remaining_timeout(config, deadline) else {
+        return Ok(egraph_timeout());
+    };
+    check_auto(arena, ground, &remaining)
 }
 
 fn admit_next_source_batch(
@@ -527,9 +545,15 @@ impl OnlineQuantifierClauseSession {
         deadline: Option<Instant>,
         limits: OnlineQuantifierLimits,
     ) -> Option<Self> {
+        if deadline.is_some_and(|deadline| Instant::now() >= deadline) {
+            return None;
+        }
         let mut atom_terms = Vec::new();
         let mut seen = HashSet::new();
         for &assertion in ground {
+            if deadline.is_some_and(|deadline| Instant::now() >= deadline) {
+                return None;
+            }
             collect_eq_atoms(arena, assertion, &mut atom_terms, &mut seen);
         }
         let atom_variables: HashMap<TermId, usize> = atom_terms
@@ -541,6 +565,9 @@ impl OnlineQuantifierClauseSession {
         let mut encoder = EufEncoder::new(&atom_terms);
         let mut clauses = Vec::new();
         for &assertion in ground {
+            if deadline.is_some_and(|deadline| Instant::now() >= deadline) {
+                return None;
+            }
             let top = encoder.encode(arena, assertion, &mut clauses)?;
             clauses.push(vec![crate::euf_egraph::Lit {
                 var: top,
@@ -746,9 +773,10 @@ fn finish_quantified_ground_check(
     arena: &mut TermArena,
     ground: &[TermId],
     config: &SolverConfig,
+    deadline: Option<Instant>,
     stats: &mut QuantifierLoopStats,
 ) -> Result<CheckResult, SolverError> {
-    match quantifier_qf_check(arena, ground, config, stats)? {
+    match quantifier_qf_check(arena, ground, config, deadline, stats)? {
         CheckResult::Unsat => Ok(CheckResult::Unsat),
         _ => Ok(CheckResult::Unknown(UnknownReason {
             kind: UnknownKind::Incomplete,
@@ -3658,6 +3686,19 @@ mod tests {
     use super::*;
     use axeyum_ir::Sort;
 
+    #[test]
+    fn expired_online_deadline_declines_before_encoding() {
+        let mut arena = TermArena::new();
+        let value = arena.int_var("expired_online_value").unwrap();
+        let zero = arena.int_const(0);
+        let equality = arena.eq(value, zero).unwrap();
+        let deadline = Instant::now()
+            .checked_sub(std::time::Duration::from_millis(1))
+            .unwrap();
+
+        assert!(OnlineQuantifierClauseSession::new(&arena, &[equality], Some(deadline)).is_none());
+    }
+
     /// Builds `∀x. (= (f x) c)` and ground terms mentioning `f(a)`, `f(b)`.
     #[allow(clippy::many_single_char_names, clippy::too_many_lines)]
     fn setup() -> (
@@ -5278,6 +5319,7 @@ mod tests {
                 &mut arena,
                 &ground,
                 &SolverConfig::default(),
+                None,
                 &mut replay_stats,
             )
             .unwrap()
@@ -5287,6 +5329,7 @@ mod tests {
                 &mut arena,
                 &[a_eq_b],
                 &SolverConfig::default(),
+                None,
                 &mut replay_stats,
             )
             .unwrap(),
