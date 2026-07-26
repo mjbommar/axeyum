@@ -9585,6 +9585,11 @@ fn exact_rewrite_app(head: &str, args: Vec<ExactRewriteTerm>) -> ExactRewriteTer
             {
                 return String(replace_first_code_points(subject, needle, replacement));
             }
+            if let Some(rewritten) =
+                exact_rewrite_concat_subject_replace(subject, needle, replacement)
+            {
+                return rewritten;
+            }
             if let String(subject) = subject
                 && subject.len() <= 1
             {
@@ -9780,12 +9785,26 @@ fn exact_rewrite_under_assignments(
         }
     }
     match term {
-        App(head, args) => exact_rewrite_app(
-            head,
-            args.iter()
+        App(head, args) => {
+            let args: Vec<_> = args
+                .iter()
                 .map(|arg| exact_rewrite_under_assignments(arg, assignments, depth + 1))
-                .collect(),
-        ),
+                .collect();
+            if head == "str.replace"
+                && let [subject, needle, _] = args.as_slice()
+                && exact_string_min_len(needle, 0).is_some_and(|length| length > 0)
+                && exact_assignment_value(
+                    &App(
+                        "str.contains".to_owned(),
+                        vec![subject.clone(), needle.clone()],
+                    ),
+                    assignments,
+                ) == Some(false)
+            {
+                return subject.clone();
+            }
+            exact_rewrite_app(head, args)
+        }
         IndexOfSelf(argument) => IndexOfSelf(Box::new(exact_rewrite_under_assignments(
             argument,
             assignments,
@@ -9793,6 +9812,15 @@ fn exact_rewrite_under_assignments(
         ))),
         _ => term.clone(),
     }
+}
+
+fn exact_assignment_value(
+    condition: &ExactRewriteTerm,
+    assignments: &[(ExactRewriteTerm, bool)],
+) -> Option<bool> {
+    assignments
+        .iter()
+        .find_map(|(candidate, value)| (candidate == condition).then_some(*value))
 }
 
 fn exact_is_literal(term: &ExactRewriteTerm) -> bool {
@@ -9932,6 +9960,46 @@ fn exact_rewrite_small_subject_replace(
             nonempty_case,
         ],
     )
+}
+
+fn exact_rewrite_concat_subject_replace(
+    subject: &ExactRewriteTerm,
+    needle: &ExactRewriteTerm,
+    replacement: &ExactRewriteTerm,
+) -> Option<ExactRewriteTerm> {
+    use ExactRewriteTerm::{App, String};
+
+    let App(head, parts) = subject else {
+        return None;
+    };
+    if !matches!(head.as_str(), "str.++" | "seq.++") || parts.len() < 2 {
+        return None;
+    }
+    let prefix = &parts[0];
+    let suffix = exact_rewrite_concat(&parts[1..]);
+    if prefix == needle {
+        return Some(exact_rewrite_concat(&[replacement.clone(), suffix]));
+    }
+    if !matches!(needle, String(value) if value.len() == 1) {
+        return None;
+    }
+    let condition = exact_rewrite_app("str.contains", vec![prefix.clone(), needle.clone()]);
+    let replace_prefix = exact_rewrite_app(
+        "str.replace",
+        vec![prefix.clone(), needle.clone(), replacement.clone()],
+    );
+    let replace_suffix = exact_rewrite_app(
+        "str.replace",
+        vec![suffix.clone(), needle.clone(), replacement.clone()],
+    );
+    Some(exact_rewrite_app(
+        "ite",
+        vec![
+            condition,
+            exact_rewrite_concat(&[replace_prefix, suffix]),
+            exact_rewrite_concat(&[prefix.clone(), replace_suffix]),
+        ],
+    ))
 }
 
 fn exact_ite_count(term: &ExactRewriteTerm) -> u32 {
@@ -15413,7 +15481,9 @@ fn apply_parameterized(
 
 #[cfg(test)]
 mod string_escape_tests {
-    use super::{ExactRewriteTerm, decode_string_code_points, exact_rewrite_term};
+    use super::{
+        ExactRewriteTerm, decode_string_code_points, exact_rewrite_term, replace_first_code_points,
+    };
     use crate::sexpr::read_all;
 
     #[test]
@@ -15426,6 +15496,63 @@ mod string_escape_tests {
             exact_rewrite_term(&expression, 0),
             ExactRewriteTerm::Bool(false)
         );
+    }
+
+    #[test]
+    fn concat_replace_decomposition_matches_reference_semantics_exhaustively() {
+        let mut words = vec![Vec::new()];
+        for _ in 0..3 {
+            let prior = words.clone();
+            for word in prior {
+                for code_point in [u32::from(b'A'), u32::from(b'B')] {
+                    let mut extended = word.clone();
+                    extended.push(code_point);
+                    words.push(extended);
+                }
+            }
+        }
+
+        for prefix in &words {
+            for suffix in &words {
+                let mut subject = prefix.clone();
+                subject.extend(suffix);
+                for replacement in &words {
+                    for needle in [[u32::from(b'A')], [u32::from(b'B')]] {
+                        let expected = replace_first_code_points(&subject, &needle, replacement);
+                        let mut decomposed = if prefix.contains(&needle[0]) {
+                            replace_first_code_points(prefix, &needle, replacement)
+                        } else {
+                            prefix.clone()
+                        };
+                        if prefix.contains(&needle[0]) {
+                            decomposed.extend(suffix);
+                        } else {
+                            decomposed.extend(replace_first_code_points(
+                                suffix,
+                                &needle,
+                                replacement,
+                            ));
+                        }
+                        assert_eq!(decomposed, expected);
+                    }
+                }
+            }
+        }
+
+        for needle in &words {
+            for suffix in &words {
+                let mut subject = needle.clone();
+                subject.extend(suffix);
+                for replacement in &words {
+                    let mut expected = replacement.clone();
+                    expected.extend(suffix);
+                    assert_eq!(
+                        replace_first_code_points(&subject, needle, replacement),
+                        expected
+                    );
+                }
+            }
+        }
     }
 
     #[test]
