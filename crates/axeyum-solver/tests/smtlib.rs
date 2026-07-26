@@ -2038,6 +2038,23 @@ fn regex_membership_decides_literal_disequalities() {
     assert!(matches!(run(sat).result, CheckResult::Sat(_)));
 }
 
+#[test]
+fn regex_membership_keeps_cheap_length_refutation_with_huge_exclusion() {
+    let text = r#"
+(set-logic QF_SLIA)
+(declare-const x String)
+(assert (str.in_re x (str.to_re "abc")))
+(assert (= (str.len x) 2))
+(assert (not (= x "this exclusion is intentionally much longer than two")))
+(check-sat)
+"#;
+    let mut script = parse_script(text).expect("length contradiction parses");
+    assert_eq!(
+        membership_verdict(&mut script, &config()),
+        Some(CheckResult::Unsat)
+    );
+}
+
 /// Exact variable equalities form one membership class. Contradictory languages
 /// are refuted, while SAT binds every alias to the same replay-checked witness.
 #[test]

@@ -517,12 +517,20 @@ impl Builder<'_> {
         let Some(cps) = literal_code_points(lit) else {
             return false;
         };
-        self.per_var
-            .entry(var)
-            .or_default()
-            .membership
-            .negatives
-            .push(literal_regex(&cps));
+        let state = self.per_var.entry(var).or_default();
+        let literal_len = u32::try_from(cps.len()).unwrap_or(u32::MAX);
+        if literal_len < state.membership.len_lo
+            || state
+                .membership
+                .len_hi
+                .is_some_and(|high| literal_len > high)
+        {
+            // This literal is already outside the class's length language, so
+            // its exclusion is exact but redundant. Avoid injecting a huge
+            // singleton into an otherwise cheap derivative intersection.
+            return true;
+        }
+        state.membership.negatives.push(literal_regex(&cps));
         true
     }
 
