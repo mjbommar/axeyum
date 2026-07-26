@@ -13142,7 +13142,157 @@ fn exact_boolean_alias_contradiction(terms: &[ExactRewriteTerm]) -> bool {
     let facts = ExactEqualityFacts::from_assignments(&assignments);
     facts.conflict
         || exact_order_assignments_conflict(&assignments, &facts)
+        || exact_fixed_segment_overlap_conflict(&facts)
         || facts.string_length_conflict()
+}
+
+struct ExactFixedSegment {
+    source: usize,
+    position: usize,
+    value: Vec<u32>,
+}
+
+/// Finds conflicting fixed words anchored at exact offsets in two equal concat
+/// decompositions of the same source.  If one segment starts `k` code points
+/// after another and lies wholly inside it, their overlapping code points must
+/// agree.  All source, position, and prefix-length links come from equality
+/// classes; an unproved offset or partial overlap is a decline.
+#[allow(clippy::too_many_lines)] // One auditable fail-closed overlap proof.
+fn exact_fixed_segment_overlap_conflict(facts: &ExactEqualityFacts) -> bool {
+    use ExactRewriteTerm::{App, String};
+
+    fn append_segment(out: &mut Vec<ExactRewriteTerm>, segment: ExactRewriteTerm) {
+        match (out.last_mut(), segment) {
+            (_, String(value)) if value.is_empty() => {}
+            (Some(String(left)), String(right)) => left.extend(right),
+            (_, segment) => out.push(segment),
+        }
+    }
+
+    fn expand(
+        facts: &ExactEqualityFacts,
+        term: &ExactRewriteTerm,
+        visited: &mut BTreeSet<usize>,
+        depth: u32,
+    ) -> Vec<ExactRewriteTerm> {
+        if depth > 32 {
+            return vec![term.clone()];
+        }
+        if let Some(String(value)) = facts.literal_for(term) {
+            return (!value.is_empty())
+                .then_some(String(value))
+                .into_iter()
+                .collect();
+        }
+        let Some(index) = facts.index_of(term) else {
+            return vec![term.clone()];
+        };
+        let root = facts.root(index);
+        if !visited.insert(root) {
+            return vec![term.clone()];
+        }
+        let concat = facts
+            .terms
+            .iter()
+            .enumerate()
+            .find(|(candidate, candidate_term)| {
+                facts.root(*candidate) == root
+                    && matches!(candidate_term, App(head, _)
+                        if matches!(head.as_str(), "str.++" | "seq.++"))
+            })
+            .map(|(_, term)| term);
+        let Some(App(_, parts)) = concat else {
+            visited.remove(&root);
+            return vec![term.clone()];
+        };
+        let mut out = Vec::new();
+        for part in parts {
+            for segment in expand(facts, part, visited, depth + 1) {
+                append_segment(&mut out, segment);
+            }
+        }
+        visited.remove(&root);
+        out
+    }
+
+    fn position_delta(facts: &ExactEqualityFacts, later: usize, earlier: usize) -> Option<i128> {
+        for (later_index, later_term) in facts.terms.iter().enumerate() {
+            if facts.root(later_index) != later {
+                continue;
+            }
+            for (earlier_index, earlier_term) in facts.terms.iter().enumerate() {
+                if facts.root(earlier_index) != earlier {
+                    continue;
+                }
+                let Some(difference) = exact_affine_difference(later_term, earlier_term) else {
+                    continue;
+                };
+                if difference.terms.is_empty() {
+                    return Some(difference.constant);
+                }
+            }
+        }
+        None
+    }
+
+    let mut segments = Vec::new();
+    for (index, term) in facts.terms.iter().enumerate() {
+        let App(head, parts) = term else {
+            continue;
+        };
+        if !matches!(head.as_str(), "str.++" | "seq.++") {
+            continue;
+        }
+        let mut expanded = Vec::new();
+        let mut visited = BTreeSet::new();
+        for part in parts {
+            for segment in expand(facts, part, &mut visited, 0) {
+                append_segment(&mut expanded, segment);
+            }
+        }
+        for (segment_index, segment) in expanded.iter().enumerate() {
+            let String(value) = segment else {
+                continue;
+            };
+            if value.is_empty() {
+                continue;
+            }
+            let prefix = exact_rewrite_concat(&expanded[..segment_index]);
+            let prefix_length = exact_rewrite_app("str.len", vec![prefix]);
+            let Some(position) = facts.index_of(&prefix_length) else {
+                continue;
+            };
+            segments.push(ExactFixedSegment {
+                source: facts.root(index),
+                position: facts.root(position),
+                value: value.clone(),
+            });
+        }
+    }
+
+    segments.iter().enumerate().any(|(index, earlier)| {
+        segments[index + 1..].iter().any(|later| {
+            if earlier.source != later.source {
+                return false;
+            }
+            for (earlier, later) in [(earlier, later), (later, earlier)] {
+                let Some(offset) = position_delta(facts, later.position, earlier.position)
+                    .and_then(|offset| usize::try_from(offset).ok())
+                else {
+                    continue;
+                };
+                let Some(end) = offset.checked_add(later.value.len()) else {
+                    continue;
+                };
+                if end <= earlier.value.len()
+                    && &earlier.value[offset..end] != later.value.as_slice()
+                {
+                    return true;
+                }
+            }
+            false
+        })
+    })
 }
 
 /// Whether two required linear-order atoms form an opposite cycle with at
@@ -21190,6 +21340,71 @@ mod string_escape_tests {
 (check-sat)"#,
         ] {
             let expressions = read_all(script).expect("read selected concat control");
+            assert!(
+                !source_string_semantic_facts(&expressions).conflict,
+                "{script}"
+            );
+        }
+    }
+
+    #[test]
+    fn fixed_segments_at_exact_relative_offsets_must_overlap_consistently() {
+        let contradictory = read_all(
+            r#"(declare-const source String)
+(declare-const prefix String)
+(declare-const suffix String)
+(declare-const before String)
+(declare-const after String)
+(declare-const first Int)
+(declare-const second Int)
+(declare-const active Bool)
+(assert (= source (str.++ prefix "ABC" suffix)))
+(assert (= first (str.len prefix)))
+(assert (= second (+ first 1)))
+(assert (= source (str.++ before "X" after)))
+(assert (= second (str.len before)))
+(assert (= active (not (= source ""))))
+(assert active)
+(check-sat)"#,
+        )
+        .expect("read conflicting fixed overlap");
+        assert!(source_string_semantic_facts(&contradictory).conflict);
+
+        for script in [
+            r#"(declare-const source String)
+(declare-const prefix String)
+(declare-const suffix String)
+(declare-const before String)
+(declare-const after String)
+(declare-const first Int)
+(declare-const second Int)
+(declare-const active Bool)
+(assert (= source (str.++ prefix "ABC" suffix)))
+(assert (= first (str.len prefix)))
+(assert (= second (+ first 1)))
+(assert (= source (str.++ before "B" after)))
+(assert (= second (str.len before)))
+(assert (= active (not (= source ""))))
+(assert active)
+(check-sat)"#,
+            r#"(declare-const source String)
+(declare-const prefix String)
+(declare-const suffix String)
+(declare-const before String)
+(declare-const after String)
+(declare-const first Int)
+(declare-const second Int)
+(declare-const active Bool)
+(assert (= source (str.++ prefix "ABC" suffix)))
+(assert (= first (str.len prefix)))
+(assert (= second (+ first 3)))
+(assert (= source (str.++ before "X" after)))
+(assert (= second (str.len before)))
+(assert (= active (not (= source ""))))
+(assert active)
+(check-sat)"#,
+        ] {
+            let expressions = read_all(script).expect("read satisfiable fixed overlap control");
             assert!(
                 !source_string_semantic_facts(&expressions).conflict,
                 "{script}"
