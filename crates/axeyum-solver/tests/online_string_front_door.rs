@@ -511,7 +511,7 @@ fn front_door_conbyte_over_bound_fixed_substr_stays_unknown() {
 
 // ---------- over-cap (word-first fallback) disjunctive shapes ----------
 //
-// String literals over `STRING_MAX_LEN` (12) make the *bounded* parse decline, so
+// String literals over the adaptive 13-byte cap make the bounded parse decline, so
 // the script arrives via the word-first fallback with an empty flat view and a
 // `word_skeleton`-only side channel. The online route (through
 // `decide_word_only_script`) decides it — a verdict the bounded encoder never
@@ -522,8 +522,8 @@ fn front_door_overcap_disjunction_unsat() {
     let s = r#"(set-logic QF_S)
 (declare-const x String)
 (declare-const y String)
-(assert (or (= x (str.++ y "aaaaaaaaaaaaa")) (= x (str.++ y "bbbbbbbbbbbbb"))))
-(assert (= x (str.++ y "ccccccccccccc")))
+(assert (or (= x (str.++ y "aaaaaaaaaaaaaa")) (= x (str.++ y "bbbbbbbbbbbbbb"))))
+(assert (= x (str.++ y "cccccccccccccc")))
 (check-sat)"#;
     assert_eq!(verdict(s), CheckResult::Unsat);
     // And directly through the word-first-fallback harness surface.

@@ -585,7 +585,8 @@ pub fn parse_script(input: &str) -> Result<Script, SmtError> {
     match parse_script_bounded(input) {
         Ok(script) => Ok(script),
         // Word-first parse fallback (T-B.4d). The bounded ADR-0029 string encoder
-        // declined the script *wholesale* — a string literal over `STRING_MAX_LEN`,
+        // declined the script *wholesale* — a string literal over
+        // `STRING_LITERAL_MAX_LEN`,
         // a `str.++` result over `STRING_BOUND_CAP`, a sequence element over the
         // packed-sort ceiling, or another bounded-encoder capacity/unsupported limit
         // (all surfaced as [`SmtError::Unsupported`], or an [`SmtError::Ir`] width
@@ -667,7 +668,7 @@ fn word_only_fallback_within_stack_budget(input: &str) -> bool {
 }
 
 /// The bounded ADR-0029 parse: the full slice parser (string literals ≤
-/// `STRING_MAX_LEN`, concats ≤ `STRING_BOUND_CAP`, packed-BV string model).
+/// `STRING_LITERAL_MAX_LEN`, concats ≤ `STRING_BOUND_CAP`, packed-BV model).
 /// A capacity/unsupported decline here is what triggers the word-first fallback in
 /// [`parse_script`].
 fn parse_script_bounded(input: &str) -> Result<Script, SmtError> {
@@ -694,6 +695,11 @@ fn parse_script_bounded(input: &str) -> Result<Script, SmtError> {
     // sequence-free scripts. A `(Seq E)` over an unsupported element sort makes
     // this a clean [`SmtError::Unsupported`].
     let seq = build_seq_info(&exprs)?;
+    // Keep the ordinary 12-byte symbolic window unless a declaration is compared
+    // directly with a representable 13-byte literal. This avoids making every
+    // unrelated string variable/CNF one byte wider just because one path names a
+    // protocol token such as "cache-control".
+    let string_symbol_bounds = inferred_string_symbol_bounds(&exprs);
     // Finite fields (QF_FF): build the modeled-width → prime registry for every
     // `(_ FiniteField p)` sort (directly and via `define-sort`), once, up front
     // (mirroring [`build_seq_info`]). A modulus over the bit-width cap, a non-prime
@@ -725,6 +731,7 @@ fn parse_script_bounded(input: &str) -> Result<Script, SmtError> {
             &seq,
             &ff,
             &lenabs,
+            &string_symbol_bounds,
             command,
         )?;
     }
@@ -832,6 +839,54 @@ fn scan_fp_usage(exprs: &[SExpr]) -> FpUsage {
         }
     }
     usage
+}
+
+/// Per-declaration string bounds justified by a direct literal comparison.
+fn inferred_string_symbol_bounds(exprs: &[SExpr]) -> BTreeMap<String, u32> {
+    let declared: BTreeSet<&str> = exprs.iter().filter_map(declared_string_var).collect();
+    let mut bounds = BTreeMap::new();
+    let mut stack: Vec<&SExpr> = exprs
+        .iter()
+        .filter_map(|expression| {
+            let [head, body] = expression.list()? else {
+                return None;
+            };
+            (head.atom() == Some("assert")).then_some(body)
+        })
+        .collect();
+    while let Some(expression) = stack.pop() {
+        let Some(items) = expression.list() else {
+            continue;
+        };
+        if items.first().and_then(SExpr::atom) == Some("=") {
+            for left in 1..items.len() {
+                for right in left + 1..items.len() {
+                    for (symbol, literal) in
+                        [(&items[left], &items[right]), (&items[right], &items[left])]
+                    {
+                        if let Some(name) = symbol.atom().filter(|name| declared.contains(name))
+                            && let Some(length) = adaptive_string_literal_len(literal)
+                        {
+                            bounds.insert(name.to_owned(), length);
+                        }
+                    }
+                }
+            }
+        }
+        stack.extend(items);
+    }
+    bounds
+}
+
+fn adaptive_string_literal_len(expression: &SExpr) -> Option<u32> {
+    let value = literal_pattern_cps(expression)?;
+    let length = u32::try_from(value.len()).ok()?;
+    (length > STRING_MAX_LEN
+        && length <= STRING_LITERAL_MAX_LEN
+        && value
+            .iter()
+            .all(|&code_point| u8::try_from(code_point).is_ok()))
+    .then_some(length)
 }
 
 /// Classifies a single atom for [`scan_fp_usage`]: records an FP operator into
@@ -4834,6 +4889,7 @@ fn parse_command<'a>(
     seq: &SeqInfo,
     ff: &FfInfo,
     lenabs: &LenAbs,
+    string_symbol_bounds: &BTreeMap<String, u32>,
     command: &'a SExpr,
 ) -> Result<(), SmtError> {
     let items = command
@@ -5013,8 +5069,12 @@ fn parse_command<'a>(
             script.check_sats += 1;
             script.commands.push(ScriptCommand::CheckSat);
         }
-        "declare-fun" => parse_declare_fun(script, sort_aliases, ff, items)?,
-        "declare-const" => parse_declare_const(script, sort_aliases, ff, items)?,
+        "declare-fun" => {
+            parse_declare_fun(script, sort_aliases, ff, string_symbol_bounds, items)?;
+        }
+        "declare-const" => {
+            parse_declare_const(script, sort_aliases, ff, string_symbol_bounds, items)?;
+        }
         "declare-datatype" => parse_declare_datatype(script, sort_aliases, items)?,
         "declare-datatypes" => parse_declare_datatypes(script, sort_aliases, items)?,
         "define-fun" => {
@@ -5141,6 +5201,7 @@ fn parse_declare_fun(
     script: &mut Script,
     sort_aliases: &HashMap<String, Sort>,
     ff: &FfInfo,
+    string_symbol_bounds: &BTreeMap<String, u32>,
     items: &[SExpr],
 ) -> Result<(), SmtError> {
     exact_len(items, 4, "declare-fun")?;
@@ -5155,7 +5216,14 @@ fn parse_declare_fun(
     // `BitVec(STRING_TOTAL)` sort) so a genuine `(_ BitVec 68)` constant is never
     // forced into the string well-formedness shape.
     if args.is_empty() && sexpr_at(items, 3)?.atom() == Some("String") {
-        declare_string_symbol(script, name)?;
+        declare_string_symbol(
+            script,
+            name,
+            string_symbol_bounds
+                .get(name)
+                .copied()
+                .unwrap_or(STRING_MAX_LEN),
+        )?;
         return Ok(());
     }
     // A 0-ary `RoundingMode` constant: a `BitVec(3)` plus its `≤ 4` constraint,
@@ -5306,6 +5374,7 @@ fn parse_declare_const(
     script: &mut Script,
     sort_aliases: &HashMap<String, Sort>,
     ff: &FfInfo,
+    string_symbol_bounds: &BTreeMap<String, u32>,
     items: &[SExpr],
 ) -> Result<(), SmtError> {
     exact_len(items, 3, "declare-const")?;
@@ -5314,7 +5383,14 @@ fn parse_declare_const(
     // bit-vector plus its canonical well-formedness constraint, asserted in both
     // the flat and incremental views so equality/disequality decide via the BV path.
     if sexpr_at(items, 2)?.atom() == Some("String") {
-        return declare_string_symbol(script, name);
+        return declare_string_symbol(
+            script,
+            name,
+            string_symbol_bounds
+                .get(name)
+                .copied()
+                .unwrap_or(STRING_MAX_LEN),
+        );
     }
     // A `RoundingMode` constant: a `BitVec(3)` plus its `≤ 4` well-formedness
     // constraint, so it can only take one of the 5 SMT-LIB rounding-mode tokens.
@@ -5390,12 +5466,14 @@ fn declare_seq_symbol(script: &mut Script, name: &str, ew: u32) -> Result<(), Sm
 /// asserted in both the flat and incremental views so equality/disequality and
 /// the `str.*` operators decide via the BV path (ADR-0029). Shared by
 /// `declare-const ... String` and 0-ary `declare-fun ... String`.
-fn declare_string_symbol(script: &mut Script, name: &str) -> Result<(), SmtError> {
+fn declare_string_symbol(script: &mut Script, name: &str, max_len: u32) -> Result<(), SmtError> {
     script.uses_bounded_strings = true;
-    let sym = script.arena.declare(name, Sort::BitVec(STRING_TOTAL))?;
+    let sym = script
+        .arena
+        .declare(name, Sort::BitVec(string_total(max_len)))?;
     record_model_symbol(script, sym);
     let v = script.arena.var(sym);
-    let wf = string_wellformed(&mut script.arena, v)?;
+    let wf = string_wellformed_m(&mut script.arena, v, max_len)?;
     script.assertions.push(wf);
     script.assertion_names.push(None);
     script.commands.push(ScriptCommand::Assert(wf));
@@ -6868,13 +6946,16 @@ fn combine_match(
 // it. When the summed bound exceeds `STRING_BOUND_CAP` the concat is a clean
 // `Unsupported` (Unknown to the consumer) — never a wrong verdict.
 
-/// Maximum bounded string length in bytes for a **declared symbol or a literal**.
-/// Concatenation may grow a *result* up to `STRING_BOUND_CAP`.
+/// Default maximum bounded string length in bytes for a declared symbol or literal.
+/// A directly compared symbol/literal pair may use [`STRING_LITERAL_MAX_LEN`].
 const STRING_MAX_LEN: u32 = 12;
-/// Hard cap on any packed string's `max_len`. Declared strings stay at
-/// [`STRING_MAX_LEN`]; concatenation can temporarily double that bound without
-/// truncating either operand.
-pub(crate) const STRING_BOUND_CAP: u32 = 24;
+/// Maximum adaptive bound for a literal and a directly-compared declared symbol.
+/// Keeping this separate from [`STRING_MAX_LEN`] avoids widening every symbolic
+/// string and its CNF because one path names a 13-byte protocol token.
+const STRING_LITERAL_MAX_LEN: u32 = 13;
+/// Hard cap on any packed string's `max_len`. Concatenation can temporarily double
+/// the largest adaptively-bounded declaration without truncating either operand.
+pub(crate) const STRING_BOUND_CAP: u32 = 26;
 
 /// Bits holding a length in `0..=m` for a string of maximum length `m`.
 pub(crate) const fn len_width(m: u32) -> u32 {
@@ -6889,7 +6970,7 @@ pub(crate) const fn string_total(m: u32) -> u32 {
     len_width(m) + m * 8
 }
 
-/// Total packed width for a declared symbol / literal (`STRING_MAX_LEN` bytes).
+/// Total packed width for the default `STRING_MAX_LEN` layout.
 const STRING_TOTAL: u32 = string_total(STRING_MAX_LEN);
 
 /// Recovers a packed string's maximum length `m` from its bit-vector width `w`
@@ -7434,18 +7515,22 @@ fn string_literal_bytes(inner: &str) -> Result<Vec<u8>, SmtError> {
 }
 
 fn pack_string_literal(arena: &mut TermArena, bytes: &[u8]) -> Result<TermId, SmtError> {
-    if bytes.len() > STRING_MAX_LEN as usize {
+    if bytes.len() > STRING_LITERAL_MAX_LEN as usize {
         return Err(SmtError::Unsupported(format!(
-            "string literal longer than the bounded length {STRING_MAX_LEN} (ADR-0029)"
+            "string literal longer than the bounded length {STRING_LITERAL_MAX_LEN} (ADR-0029)"
         )));
     }
+    let max_len =
+        STRING_MAX_LEN.max(u32::try_from(bytes.len()).expect("literal length is bounded"));
     let mut content: u128 = 0;
     for (i, &b) in bytes.iter().enumerate() {
         content |= u128::from(b) << (8 * i);
     }
-    let packed = u128::from(u32::try_from(bytes.len()).expect("len ≤ STRING_MAX_LEN"))
-        | (content << len_width(STRING_MAX_LEN));
-    arena.bv_const(STRING_TOTAL, packed).map_err(SmtError::Ir)
+    let packed = u128::from(u32::try_from(bytes.len()).expect("literal length is bounded"))
+        | (content << len_width(max_len));
+    arena
+        .bv_const(string_total(max_len), packed)
+        .map_err(SmtError::Ir)
 }
 
 /// The length field (a `BitVec(len_width(m))`) of a packed string of max length
@@ -9522,11 +9607,6 @@ fn string_wellformed_m(arena: &mut TermArena, v: TermId, m: u32) -> Result<TermI
         wf = arena.and(wf, ok)?;
     }
     Ok(wf)
-}
-
-/// Well-formedness for a declared `String` symbol (the `STRING_MAX_LEN` layout).
-fn string_wellformed(arena: &mut TermArena, v: TermId) -> Result<TermId, SmtError> {
-    string_wellformed_m(arena, v, STRING_MAX_LEN)
 }
 
 /// Semantic string equality (equal length, equal bytes below the length, padding
