@@ -1089,6 +1089,65 @@ fn exact_source_self_expanded_needles_decline_near_misses() {
 }
 
 #[test]
+fn exact_source_one_code_point_word_boundaries_refute_noetzli_families() {
+    for assertion in [
+        r#"(not (= (str.prefixof x (str.replace "A" x "B")) (= x "")))"#,
+        r#"(not (= (str.suffixof x (str.replace "B" x "A")) (= x "")))"#,
+        r#"(not (= (str.prefixof y (str.replace "A" x y))
+                    (str.prefixof x (str.replace "A" y x))))"#,
+        r#"(not (= (str.contains (str.replace "B" x "A") x) (= x "")))"#,
+        r#"(not (= (not (str.prefixof x "A"))
+                    (= "A" (str.replace "A" x "B"))))"#,
+    ] {
+        let input = format!(
+            r#"(set-logic QF_SLIA)
+(declare-fun x () String)
+(declare-fun y () String)
+(assert {assertion})
+(check-sat)
+"#
+        );
+        let script = parse_script(&input).expect("parse one-code-point word-boundary theorem");
+        assert!(
+            script.source_string_semantic_unsat,
+            "one-code-point word-boundary theorem must refute {assertion}"
+        );
+        assert_eq!(
+            solve_smtlib(&input, &config())
+                .expect("solve one-code-point word-boundary theorem")
+                .result,
+            CheckResult::Unsat,
+            "boundary theorem must survive the bounded-string gate: {assertion}"
+        );
+    }
+}
+
+#[test]
+fn exact_source_one_code_point_word_boundaries_decline_unbounded_words() {
+    let assertion = r#"(not (= (str.prefixof x y) (or (= x "") (= x y))))"#;
+    let input = format!(
+        r#"(set-logic QF_SLIA)
+(declare-fun x () String)
+(declare-fun y () String)
+(assert {assertion})
+(check-sat)
+"#
+    );
+    let script = parse_script(&input).expect("parse unbounded word-boundary control");
+    assert!(
+        !script.source_string_semantic_unsat,
+        "unbounded word-boundary near miss must decline"
+    );
+    assert_ne!(
+        solve_smtlib(&input, &config())
+            .expect("solve unbounded word-boundary control")
+            .result,
+        CheckResult::Unsat,
+        "satisfiable unbounded word-boundary control must not become UNSAT"
+    );
+}
+
+#[test]
 fn exact_source_small_subject_indexof_refutes_view_families() {
     for assertion in [
         r#"(not (= (str.at x (str.indexof "A" x 1)) ""))"#,
