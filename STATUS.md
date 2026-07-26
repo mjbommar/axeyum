@@ -383,21 +383,24 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
-- **2026-07-26 — exact selected-path propagation moves 226 Kaluza rows without
-  trusting directory labels.** Commits `09841e23`, `ef78ca7b`, and `fca80291`
-  propagate only forced Boolean aliases, selected top-level `ite` branches,
-  strict-order disequalities, and exact nonnegative string-length lower bounds.
+- **2026-07-26 — exact selected-path propagation moves 244 Kaluza rows without
+  trusting directory labels.** Commits `09841e23`, `ef78ca7b`, `fca80291`, and
+  `29bc62c4` propagate only forced Boolean aliases, selected top-level `ite`
+  branches, strict-order disequalities, exact nonnegative string-length lower
+  bounds, and the exact `concat(parts) = ""` iff every part is empty identity.
   Parent-`24df64b9` A/B measurements attribute +159 decisions to the 342-row
   long-literal bucket (4→163 UNSAT), +60 to the 104-row empty-parse bucket
-  (0→60), and +7 to the 39-row `IntNeg` residual. The latest mechanism alone
-  contributes +111 (+102/+2/+7 respectively); both Z3 and cvc5 independently
-  return UNSAT on all 111. All 14 dual-oracle-SAT `IntNeg` controls remain
-  non-decisions, so the improvement does not over-refute them. This check
+  (0→60), and +25 to the 39-row `IntNeg` residual (0→25). The selected-path
+  mechanism contributes +111 (+102/+2/+7 respectively), and concat-emptiness
+  closes the remaining 18 dual-oracle-UNSAT `IntNeg` rows. Both Z3 and cvc5
+  independently return UNSAT on all 129 latest gains. All 14 dual-oracle-SAT
+  `IntNeg` controls remain non-decisions, so the improvement does not
+  over-refute them. This check
   deliberately ignores misleading corpus `sat/`/`unsat/` directory names. The
   complete 282-test SMT-LIB crate and `just check-scope` pass (73 SMT-LIB
   library tests, 21 solver library tests, and warning-denied Clippy). Next:
-  cluster the remaining 18 jointly oracle-UNSAT `IntNeg` declines and implement
-  only the next shared, independently verified family mechanism.
+  rescan the disjoint Kaluza blocker inventory at current HEAD, then select the
+  largest remaining jointly adjudicated family.
 
 - **2026-07-26 — dense Boolean path conflicts move 41 public PyEx rows with no
   carried regression.** Pushed `b44c506e` recognizes exact opposite-polarity
@@ -9363,6 +9366,19 @@ plan is built and committed on the current branch:
 | P5.5 | External target, measured | **DONE (bounded v1, ADR-0323--0338):** authenticated Tock capture plus eight rechecked dual-DRAT proofs and six replayed controls, UNKNOWN=0, DISAGREE=0. Query time 12.700 s; fresh outer wall 50.745 s; peak RSS 1,256,496 KiB; zero OOM deltas. The committed case study compares exact target validation, universal coverage, trust, effort, artifact boundaries, and limits. No Tock bug was found, so no upstream issue is applicable. This is not a speed or whole-kernel claim. |
 
 ## Changelog
+
+- **2026-07-26 — closed the remaining 18 oracle-UNSAT Kaluza `IntNeg` rows.**
+  Committed `29bc62c4`. Equality classes now propagate the exact free-monoid
+  emptiness identity in both directions: a concat equals the empty string iff
+  every component is empty. This bridges Kaluza's generated `concat("", input)`
+  temporaries to the already-selected fixed-suffix contradiction. All 18 prior
+  Unknown/timeouts now return UNSAT, independently confirmed by both Z3 and
+  cvc5; all seven previously decided UNSAT controls remain UNSAT, and all 14
+  dual-oracle-SAT controls remain non-decisions. The cumulative Kaluza gain over
+  parent `24df64b9` is 244 decisions. A corpus-shaped alias-chain regression,
+  its satisfiable near-misses, all 282 SMT-LIB crate tests, and
+  `just check-scope` (73 SMT-LIB library tests, 21 solver library tests,
+  warning-denied Clippy) pass.
 
 - **2026-07-26 — closed 111 selected Kaluza concat paths.** Committed
   `fca80291`. Exact forced guards now select asserted top-level `ite` branches;
