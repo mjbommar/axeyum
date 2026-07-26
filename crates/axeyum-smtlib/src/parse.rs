@@ -9678,6 +9678,9 @@ fn exact_rewrite_equality(left: &ExactRewriteTerm, right: &ExactRewriteTerm) -> 
     {
         return exact_rewrite_equality(right, left);
     }
+    if exact_piecewise_terms_equal(left, right) {
+        return ExactRewriteTerm::Bool(true);
+    }
     if let Some(rewritten) = exact_rewrite_ite_equality(left, right) {
         return rewritten;
     }
@@ -9693,6 +9696,165 @@ fn exact_rewrite_equality(left: &ExactRewriteTerm, right: &ExactRewriteTerm) -> 
         }
     }
     ExactRewriteTerm::App("=".to_owned(), vec![left.clone(), right.clone()])
+}
+
+const EXACT_ITE_CASE_CAP: usize = 64;
+
+struct ExactIteCase {
+    assignments: Vec<(ExactRewriteTerm, bool)>,
+    value: ExactRewriteTerm,
+}
+
+/// Compares two bounded `ite` decision trees without requiring their branch
+/// conditions to appear in the same order. Conditions are treated as
+/// independent Boolean atoms, so checking every syntactically compatible pair
+/// of leaves is conservative: logical relationships between distinct atoms can
+/// only make this decline an identity, never prove a false one.
+fn exact_piecewise_terms_equal(left: &ExactRewriteTerm, right: &ExactRewriteTerm) -> bool {
+    if !exact_is_ite(left) && !exact_is_ite(right) {
+        return false;
+    }
+    let mut left_cases = Vec::new();
+    let mut right_cases = Vec::new();
+    if !exact_collect_ite_cases(left, &mut Vec::new(), &mut left_cases)
+        || !exact_collect_ite_cases(right, &mut Vec::new(), &mut right_cases)
+    {
+        return false;
+    }
+    let mut compared = false;
+    for left_case in &left_cases {
+        for right_case in &right_cases {
+            if !exact_ite_assignments_compatible(&left_case.assignments, &right_case.assignments) {
+                continue;
+            }
+            compared = true;
+            let mut assignments = left_case.assignments.clone();
+            for assignment in &right_case.assignments {
+                if !assignments
+                    .iter()
+                    .any(|(condition, _)| condition == &assignment.0)
+                {
+                    assignments.push(assignment.clone());
+                }
+            }
+            let left_value = exact_rewrite_under_assignments(&left_case.value, &assignments, 0);
+            let right_value = exact_rewrite_under_assignments(&right_case.value, &assignments, 0);
+            if exact_rewrite_equality(&left_value, &right_value) != ExactRewriteTerm::Bool(true) {
+                return false;
+            }
+        }
+    }
+    compared
+}
+
+fn exact_rewrite_under_assignments(
+    term: &ExactRewriteTerm,
+    assignments: &[(ExactRewriteTerm, bool)],
+    depth: u32,
+) -> ExactRewriteTerm {
+    use ExactRewriteTerm::{App, Bool, IndexOfSelf};
+
+    if depth > EXACT_REWRITE_DEPTH_CAP {
+        return term.clone();
+    }
+    if let Some((_, value)) = assignments.iter().find(|(condition, _)| condition == term) {
+        return Bool(*value);
+    }
+    for (condition, value) in assignments {
+        if !value {
+            continue;
+        }
+        let App(head, sides) = condition else {
+            continue;
+        };
+        let [left, right] = sides.as_slice() else {
+            continue;
+        };
+        if head == "=" {
+            if term == left && exact_is_literal(right) {
+                return right.clone();
+            }
+            if term == right && exact_is_literal(left) {
+                return left.clone();
+            }
+        }
+    }
+    match term {
+        App(head, args) => exact_rewrite_app(
+            head,
+            args.iter()
+                .map(|arg| exact_rewrite_under_assignments(arg, assignments, depth + 1))
+                .collect(),
+        ),
+        IndexOfSelf(argument) => IndexOfSelf(Box::new(exact_rewrite_under_assignments(
+            argument,
+            assignments,
+            depth + 1,
+        ))),
+        _ => term.clone(),
+    }
+}
+
+fn exact_is_literal(term: &ExactRewriteTerm) -> bool {
+    matches!(
+        term,
+        ExactRewriteTerm::Bool(_) | ExactRewriteTerm::Int(_) | ExactRewriteTerm::String(_)
+    )
+}
+
+fn exact_is_ite(term: &ExactRewriteTerm) -> bool {
+    matches!(term, ExactRewriteTerm::App(head, args) if head == "ite" && args.len() == 3)
+}
+
+fn exact_collect_ite_cases(
+    term: &ExactRewriteTerm,
+    assignments: &mut Vec<(ExactRewriteTerm, bool)>,
+    cases: &mut Vec<ExactIteCase>,
+) -> bool {
+    use ExactRewriteTerm::App;
+
+    if let App(head, args) = term
+        && head == "ite"
+        && let [condition, then_term, else_term] = args.as_slice()
+    {
+        for (value, branch) in [(true, then_term), (false, else_term)] {
+            if let Some((_, prior)) = assignments
+                .iter()
+                .find(|(candidate, _)| candidate == condition)
+            {
+                if *prior == value && !exact_collect_ite_cases(branch, assignments, cases) {
+                    return false;
+                }
+                continue;
+            }
+            assignments.push((condition.clone(), value));
+            if !exact_collect_ite_cases(branch, assignments, cases) {
+                return false;
+            }
+            assignments.pop();
+        }
+        return true;
+    }
+    if cases.len() >= EXACT_ITE_CASE_CAP {
+        return false;
+    }
+    cases.push(ExactIteCase {
+        assignments: assignments.clone(),
+        value: term.clone(),
+    });
+    true
+}
+
+fn exact_ite_assignments_compatible(
+    left: &[(ExactRewriteTerm, bool)],
+    right: &[(ExactRewriteTerm, bool)],
+) -> bool {
+    left.iter().all(|(condition, value)| {
+        right
+            .iter()
+            .find(|(candidate, _)| candidate == condition)
+            .is_none_or(|(_, other)| value == other)
+    })
 }
 
 fn exact_rewrite_ite_equality(

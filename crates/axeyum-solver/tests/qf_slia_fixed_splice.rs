@@ -738,6 +738,10 @@ fn exact_source_conditional_replace_refutes_noetzli_families() {
                     (str.++ "A" x)))"#,
         r#"(not (= (str.replace (str.replace "B" x "A") "B" "A")
                     (str.replace "A" x "A")))"#,
+        r#"(not (= (str.replace (str.replace "B" x y) x y)
+                    (str.replace "B" x (str.replace y x y))))"#,
+        r#"(not (= (str.replace (str.replace "" x y) x "A")
+                    (str.replace "" x (str.++ "A" y))))"#,
     ] {
         let input = format!(
             r"(set-logic QF_SLIA)
@@ -768,6 +772,8 @@ fn exact_source_conditional_replace_declines_branch_sensitive_controls() {
         r#"(not (= (str.replace "" x y) y))"#,
         r#"(not (= (str.replace "A" x y) "A"))"#,
         r#"(not (= (str.replace "B" x "A") (str.replace "A" x "A")))"#,
+        r#"(not (= (str.replace "" x y) (str.replace "" y x)))"#,
+        r#"(not (= (str.replace "B" x y) (str.replace "B" y x)))"#,
     ] {
         let input = format!(
             r"(set-logic QF_SLIA)
