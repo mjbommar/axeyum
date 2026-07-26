@@ -10014,11 +10014,8 @@ fn exact_rewrite_app(head: &str, args: Vec<ExactRewriteTerm>) -> ExactRewriteTer
         }
         // `if let` guard is unstable (>MSRV 1.88); boolean guard + recompute so the
         // arm still falls through to later arms when the rewrite is None.
-        ("str.at", [subject, index])
-            if exact_rewrite_concat_at(subject, index).is_some() =>
-        {
-            return exact_rewrite_concat_at(subject, index)
-                .expect("guard just checked is_some");
+        ("str.at", [subject, index]) if exact_rewrite_concat_at(subject, index).is_some() => {
+            return exact_rewrite_concat_at(subject, index).expect("guard just checked is_some");
         }
         ("str.at", [String(value), _]) if value.is_empty() => return String(Vec::new()),
         ("str.at", [subject, IndexOfSelf(offset)])
