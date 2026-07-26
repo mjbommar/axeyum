@@ -97,6 +97,85 @@ fn checked_quantified_fast_path(
     Ok(None)
 }
 
+/// Clones a query configuration with only the wall-clock time remaining before
+/// `deadline`. `None` means the shared query budget has already expired.
+pub(crate) fn config_with_remaining_timeout(
+    config: &SolverConfig,
+    deadline: Option<Instant>,
+) -> Option<SolverConfig> {
+    let mut remaining = config.clone();
+    if let Some(deadline) = deadline {
+        let duration = deadline.checked_duration_since(Instant::now())?;
+        if duration.is_zero() {
+            return None;
+        }
+        remaining.timeout = Some(duration);
+    }
+    Some(remaining)
+}
+
+fn quantified_timeout(stage: &str) -> CheckResult {
+    CheckResult::Unknown(UnknownReason {
+        kind: UnknownKind::ResourceLimit,
+        detail: format!("quantified solve time budget exhausted after {stage}"),
+    })
+}
+
+fn finish_quantified_solve(
+    arena: &mut TermArena,
+    assertions: &[TermId],
+    original_assertions: &[TermId],
+    config: &SolverConfig,
+    deadline: Option<Instant>,
+) -> Result<CheckResult, SolverError> {
+    let Some(witness_config) = config_with_remaining_timeout(config, deadline) else {
+        return Ok(quantified_timeout("quantifier normalization"));
+    };
+    if let Some(result) = crate::quant_exists_witness::decide_forall_exists_by_witness(
+        arena,
+        assertions,
+        &witness_config,
+    )? {
+        return Ok(result);
+    }
+
+    let Some(finite_config) = config_with_remaining_timeout(config, deadline) else {
+        return Ok(quantified_timeout("forall-exists witness search"));
+    };
+    match check_with_quantifiers(arena, assertions, &finite_config) {
+        Ok(CheckResult::Unknown(_)) | Err(SolverError::Unsupported(_)) => {
+            let Some(egraph_config) = config_with_remaining_timeout(config, deadline) else {
+                return Ok(quantified_timeout("finite quantifier expansion"));
+            };
+            match prove_quantified_unsat_via_egraph(arena, assertions, &egraph_config) {
+                Ok(CheckResult::Unsat) => return Ok(CheckResult::Unsat),
+                Ok(CheckResult::Sat(_) | CheckResult::Unknown(_)) => {}
+                Err(SolverError::Unsupported(_))
+                    if mbqi_source_shape_supported(arena, assertions) => {}
+                Err(error) => return Err(error),
+            }
+            let Some(mbqi_config) = config_with_remaining_timeout(config, deadline) else {
+                return Ok(quantified_timeout("e-matching"));
+            };
+            match prove_unsat_by_mbqi(arena, assertions, &mbqi_config)? {
+                CheckResult::Sat(model)
+                    if crate::check_model(arena, original_assertions, &model)? =>
+                {
+                    Ok(CheckResult::Sat(model))
+                }
+                CheckResult::Sat(_) => Ok(CheckResult::Unknown(UnknownReason {
+                    kind: UnknownKind::Incomplete,
+                    detail:
+                        "MBQI candidate lacks a checked model for the original assertion sequence"
+                            .to_owned(),
+                })),
+                other => Ok(other),
+            }
+        }
+        other => other,
+    }
+}
+
 /// The unified front door: decides any supported query — quantifier-free or
 /// quantified, over any combination of the supported theories.
 ///
@@ -116,8 +195,14 @@ pub fn solve(
     assertions: &[TermId],
     config: &SolverConfig,
 ) -> Result<CheckResult, SolverError> {
+    let deadline = config
+        .timeout
+        .and_then(|timeout| Instant::now().checked_add(timeout));
     if let Some(result) = checked_quantified_fast_path(arena, assertions, config)? {
         return Ok(result);
+    }
+    if deadline.is_some_and(|deadline| Instant::now() >= deadline) {
+        return Ok(quantified_timeout("checked fast paths"));
     }
     let original_assertions = assertions.to_vec();
 
@@ -138,7 +223,10 @@ pub fn solve(
     }
 
     if !has_quantifier(arena, assertions) {
-        return check_auto(arena, assertions, config);
+        let Some(remaining) = config_with_remaining_timeout(config, deadline) else {
+            return Ok(quantified_timeout("existential skolemization"));
+        };
+        return check_auto(arena, assertions, &remaining);
     }
 
     // Valid-universal elimination (sat-side universal-closure validity check):
@@ -151,13 +239,22 @@ pub fn solve(
     // instantiation/MBQI fallback — which can only conclude `unsat`/`unknown` —
     // never reaches. The sub-checks dispatch to the quantifier-free decider only,
     // so this hook cannot re-enter itself.
+    let Some(valid_config) = config_with_remaining_timeout(config, deadline) else {
+        return Ok(quantified_timeout("existential skolemization"));
+    };
     let eliminated =
-        crate::quant_valid_universal::eliminate_valid_universals(arena, assertions, config)?;
+        crate::quant_valid_universal::eliminate_valid_universals(arena, assertions, &valid_config)?;
+    if deadline.is_some_and(|deadline| Instant::now() >= deadline) {
+        return Ok(quantified_timeout("valid-universal elimination"));
+    }
     let assertions: &[TermId] = &eliminated.0;
     // If every universal was eliminated, the residual is quantifier-free and the
     // ordinary QF dispatch decides it directly.
     if eliminated.1 && !has_quantifier(arena, assertions) {
-        return check_auto(arena, assertions, config);
+        let Some(remaining) = config_with_remaining_timeout(config, deadline) else {
+            return Ok(quantified_timeout("valid-universal elimination"));
+        };
+        return check_auto(arena, assertions, &remaining);
     }
 
     // Vacuous-universal elimination: a top-level `∀x. body` (QF body) in which the
@@ -171,7 +268,10 @@ pub fn solve(
     let vacuous = crate::quant_vacuous_universal::eliminate_vacuous_universals(arena, assertions)?;
     let assertions: &[TermId] = &vacuous.0;
     if vacuous.1 && !has_quantifier(arena, assertions) {
-        return check_auto(arena, assertions, config);
+        let Some(remaining) = config_with_remaining_timeout(config, deadline) else {
+            return Ok(quantified_timeout("vacuous-universal elimination"));
+        };
+        return check_auto(arena, assertions, &remaining);
     }
 
     // Exact finite equality partition (ADR-0101): a closed Bool/Int formula in
@@ -271,7 +371,10 @@ pub fn solve(
         assertions
     };
     if fm_changed && !has_quantifier(arena, fm_assertions) {
-        return check_auto(arena, fm_assertions, config);
+        let Some(remaining) = config_with_remaining_timeout(config, deadline) else {
+            return Ok(quantified_timeout("Fourier-Motzkin elimination"));
+        };
+        return check_auto(arena, fm_assertions, &remaining);
     }
     let assertions = fm_assertions;
 
@@ -287,46 +390,7 @@ pub fn solve(
     // validated witness and otherwise declines (never `unsat`, never a wrong `sat`),
     // so it is safe to try before the refutation fallbacks. The validity sub-check
     // dispatches to the quantifier-free decider only, so it cannot re-enter here.
-    if let Some(result) =
-        crate::quant_exists_witness::decide_forall_exists_by_witness(arena, assertions, config)?
-    {
-        return Ok(result);
-    }
-
-    match check_with_quantifiers(arena, assertions, config) {
-        // A finite-expansion `unknown` or an unsupported domain both leave room
-        // for the sound refutation fallbacks. Try congruence-aware e-matching on
-        // the e-graph keystone first (Track 2, P2.6): it instantiates inferred
-        // triggers *modulo the ground congruence*, so equalities the bespoke loop
-        // misses fire here. Its result is only ever `unsat` (sound — instances are
-        // implied) or `unknown`; on `unknown` the model-based instantiation loop
-        // (MBQI, which itself defers to the trigger-based family) takes over.
-        Ok(CheckResult::Unknown(_)) | Err(SolverError::Unsupported(_)) => {
-            match prove_quantified_unsat_via_egraph(arena, assertions, config) {
-                Ok(CheckResult::Unsat) => return Ok(CheckResult::Unsat),
-                Ok(CheckResult::Sat(_) | CheckResult::Unknown(_)) => {}
-                Err(SolverError::Unsupported(_))
-                    if mbqi_source_shape_supported(arena, assertions) => {}
-                Err(error) => return Err(error),
-            }
-            let result = prove_unsat_by_mbqi(arena, assertions, config)?;
-            match result {
-                CheckResult::Sat(model) => {
-                    if crate::check_model(arena, &original_assertions, &model)? {
-                        Ok(CheckResult::Sat(model))
-                    } else {
-                        Ok(CheckResult::Unknown(UnknownReason {
-                            kind: UnknownKind::Incomplete,
-                            detail: "MBQI candidate lacks a checked model for the original assertion sequence"
-                                .to_owned(),
-                        }))
-                    }
-                }
-                other => Ok(other),
-            }
-        }
-        other => other,
-    }
+    finish_quantified_solve(arena, assertions, &original_assertions, config, deadline)
 }
 
 /// Extracts a **minimal unsatisfiable core** of `assertions`: the indices of a
