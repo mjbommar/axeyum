@@ -33,6 +33,9 @@
 //!   literal language from `X`;
 //! * `(= X Y)` between declared string variables — merges their constraints
 //!   into one membership class and binds both names to the same checked witness;
+//! * `(str.prefixof "lit" X)` / `(str.prefixof X "lit")` and their negations —
+//!   respectively the literal-prefix cone and the finite language of literal
+//!   prefixes;
 //! * `(= OUT (str.++ X Y …))` (or symmetric) when `OUT` occurs nowhere else and
 //!   every input variable has retained membership constraints — a model-defining
 //!   concatenation evaluated after the input witnesses are checked;
@@ -392,12 +395,19 @@ impl Builder<'_> {
                 complete
             }
             "str.in_re" if items.len() == 3 => self.membership_atom(&items[1], &items[2], true),
+            "str.prefixof" if items.len() == 3 => {
+                self.literal_prefix_atom(&items[1], &items[2], true)
+            }
             "not" if items.len() == 2 => {
                 let Some(inner) = items[1].list() else {
                     return false;
                 };
                 if inner.first().and_then(SExpr::atom) == Some("str.in_re") && inner.len() == 3 {
                     self.membership_atom(&inner[1], &inner[2], false)
+                } else if inner.first().and_then(SExpr::atom) == Some("str.prefixof")
+                    && inner.len() == 3
+                {
+                    self.literal_prefix_atom(&inner[1], &inner[2], false)
                 } else if inner.first().and_then(SExpr::atom) == Some("=") && inner.len() == 3 {
                     if let Some(truth) = ground_numeral_relation("=", &inner[1], &inner[2]) {
                         self.retain_ground_boolean(!truth);
@@ -494,6 +504,38 @@ impl Builder<'_> {
         } else {
             false
         }
+    }
+
+    /// Literal/variable `str.prefixof` in either operand orientation. A literal
+    /// prefix of a variable is `lit · Σ*`; a variable prefix of a literal is the
+    /// finite union of all literal prefixes. Negation becomes negative membership.
+    fn literal_prefix_atom(&mut self, prefix: &SExpr, word: &SExpr, positive: bool) -> bool {
+        self.saw_membership = true;
+        let (name, regex) = match (
+            literal_code_points(prefix),
+            variable_name(prefix, self.vars),
+            literal_code_points(word),
+            variable_name(word, self.vars),
+        ) {
+            (Some(prefix), None, None, Some(name)) => (
+                name,
+                Regex::concat(literal_regex(&prefix), Regex::star(Regex::any_char())),
+            ),
+            (None, Some(name), Some(word), None) => (name, prefixes_regex(&word)),
+            (Some(prefix), None, Some(word), None) => {
+                let truth = word.starts_with(&prefix);
+                self.retain_ground_boolean(if positive { truth } else { !truth });
+                return true;
+            }
+            _ => return false,
+        };
+        let state = self.per_var.entry(name).or_default();
+        if positive {
+            state.membership.positives.push(regex);
+        } else {
+            state.membership.negatives.push(regex);
+        }
+        true
     }
 
     /// Retains a ground Boolean conjunct. `false` becomes a matcher-rechecked
@@ -1160,6 +1202,16 @@ fn literal_regex(cps: &[u32]) -> Regex {
         });
     }
     acc.unwrap_or(Regex::Empty)
+}
+
+/// The finite language containing every prefix of `word`, including `ε` and the
+/// complete word.
+fn prefixes_regex(word: &[u32]) -> Regex {
+    let mut language = Regex::empty();
+    for end in 1..=word.len() {
+        language = Regex::union(language, literal_regex(&word[..end]));
+    }
+    language
 }
 
 #[cfg(test)]
