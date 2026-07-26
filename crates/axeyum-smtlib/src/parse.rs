@@ -9576,6 +9576,12 @@ fn exact_rewrite_app(head: &str, args: Vec<ExactRewriteTerm>) -> ExactRewriteTer
         {
             return String(Vec::new());
         }
+        ("str.substr", [subject, offset, length])
+            if exact_string_max_len(subject, 0).is_some_and(|maximum| maximum <= 1)
+                && exact_affine_zero_forces_positive(offset, length) =>
+        {
+            return exact_rewrite_app("str.at", vec![subject.clone(), offset.clone()]);
+        }
         ("str.substr", [String(value), offset, length]) if value.len() == 1 => {
             let in_range = exact_rewrite_app(
                 "and",
@@ -10221,7 +10227,63 @@ fn exact_affine_equalities_equal(left: &ExactRewriteTerm, right: &ExactRewriteTe
 }
 
 fn exact_conditions_equal(left: &ExactRewriteTerm, right: &ExactRewriteTerm) -> bool {
-    left == right || exact_affine_equalities_equal(left, right)
+    left == right
+        || exact_affine_equalities_equal(left, right)
+        || exact_affine_orderings_equal(left, right)
+}
+
+/// Checks whether two affine order atoms have the same strictness and their
+/// normalized differences differ only by a positive rational scalar.
+fn exact_affine_orderings_equal(left: &ExactRewriteTerm, right: &ExactRewriteTerm) -> bool {
+    let relation = |term: &ExactRewriteTerm| {
+        let ExactRewriteTerm::App(head, args) = term else {
+            return None;
+        };
+        let [left, right] = args.as_slice() else {
+            return None;
+        };
+        let (strict, left, right) = match head.as_str() {
+            ">" => (true, left, right),
+            "<" => (true, right, left),
+            ">=" => (false, left, right),
+            "<=" => (false, right, left),
+            _ => return None,
+        };
+        exact_affine_difference(left, right).map(|form| (strict, form))
+    };
+    let (Some((left_strict, left)), Some((right_strict, right))) =
+        (relation(left), relation(right))
+    else {
+        return false;
+    };
+    if left_strict != right_strict || !left.used_arithmetic || !right.used_arithmetic {
+        return false;
+    }
+    let mut components = vec![(left.constant, right.constant)];
+    for (term, coefficient) in &left.terms {
+        components.push((*coefficient, right.coefficient(term)));
+    }
+    for (term, coefficient) in &right.terms {
+        if left.coefficient(term) == 0 {
+            components.push((0, *coefficient));
+        }
+    }
+    let Some((left_scale, right_scale)) = components
+        .iter()
+        .copied()
+        .find(|(left, right)| *left != 0 || *right != 0)
+    else {
+        return false;
+    };
+    if left_scale == 0 || right_scale == 0 || left_scale.is_positive() != right_scale.is_positive()
+    {
+        return false;
+    }
+    components.into_iter().all(|(left, right)| {
+        left.checked_mul(right_scale)
+            .zip(right.checked_mul(left_scale))
+            .is_some_and(|(left, right)| left == right)
+    })
 }
 
 fn exact_u128_gcd(mut left: u128, mut right: u128) -> u128 {
@@ -10296,6 +10358,72 @@ fn exact_affine_zero_forces_nonpositive(
         numerator <= 0
     } else {
         numerator >= 0
+    }
+}
+
+/// Proves `length > 0` whenever `offset = 0` for affine integer terms. Over a
+/// word of length at most one, that makes `substr(word, offset, length)` exactly
+/// the same total-function view as `at(word, offset)`.
+fn exact_affine_zero_forces_positive(offset: &ExactRewriteTerm, length: &ExactRewriteTerm) -> bool {
+    let zero = ExactRewriteTerm::Int(0);
+    let (Some(offset), Some(length)) = (
+        exact_affine_difference(offset, &zero),
+        exact_affine_difference(length, &zero),
+    ) else {
+        return false;
+    };
+    if !offset.used_arithmetic || !length.used_arithmetic {
+        return false;
+    }
+    if offset.terms.is_empty() {
+        return offset.constant != 0 || (length.terms.is_empty() && length.constant > 0);
+    }
+    let coefficient_gcd = offset.terms.iter().fold(0_u128, |gcd, (_, coefficient)| {
+        exact_u128_gcd(gcd, coefficient.unsigned_abs())
+    });
+    if coefficient_gcd != 0 && offset.constant.unsigned_abs() % coefficient_gcd != 0 {
+        return true;
+    }
+    if length.terms.is_empty() {
+        return length.constant > 0;
+    }
+    let Some((offset_scale, length_scale)) =
+        offset.terms.iter().find_map(|(term, offset_scale)| {
+            let length_scale = length.coefficient(term);
+            (length_scale != 0).then_some((*offset_scale, length_scale))
+        })
+    else {
+        return false;
+    };
+    if length
+        .terms
+        .iter()
+        .any(|(term, _)| offset.coefficient(term) == 0)
+    {
+        return false;
+    }
+    let proportional = offset.terms.iter().all(|(term, offset_coefficient)| {
+        let length_coefficient = length.coefficient(term);
+        length_coefficient
+            .checked_mul(offset_scale)
+            .zip(offset_coefficient.checked_mul(length_scale))
+            .is_some_and(|(left, right)| left == right)
+    });
+    if !proportional {
+        return false;
+    }
+    let Some(numerator) = length
+        .constant
+        .checked_mul(offset_scale)
+        .zip(length_scale.checked_mul(offset.constant))
+        .and_then(|(left, right)| left.checked_sub(right))
+    else {
+        return false;
+    };
+    if offset_scale > 0 {
+        numerator > 0
+    } else {
+        numerator < 0
     }
 }
 
@@ -16697,11 +16825,11 @@ fn apply_parameterized(
 mod string_escape_tests {
     use super::{
         ExactEqualityFacts, ExactFixedWordLanguage, ExactRewriteTerm, decimal_code_points,
-        decode_string_code_points, exact_affine_equalities_equal,
-        exact_affine_zero_forces_nonpositive, exact_rewrite_app, exact_rewrite_concat_at,
-        exact_rewrite_concat_substr, exact_rewrite_equality, exact_rewrite_fixed_word_language,
-        exact_rewrite_small_subject_indexof, exact_rewrite_term, exact_rewrite_under_assignments,
-        replace_first_code_points, substr_code_points,
+        decode_string_code_points, exact_affine_equalities_equal, exact_affine_orderings_equal,
+        exact_affine_zero_forces_nonpositive, exact_affine_zero_forces_positive, exact_rewrite_app,
+        exact_rewrite_concat_at, exact_rewrite_concat_substr, exact_rewrite_equality,
+        exact_rewrite_fixed_word_language, exact_rewrite_small_subject_indexof, exact_rewrite_term,
+        exact_rewrite_under_assignments, replace_first_code_points, substr_code_points,
     };
     use crate::sexpr::read_all;
 
@@ -16966,6 +17094,75 @@ mod string_escape_tests {
                     "value={value}, offset={offset}, length={length}"
                 );
             }
+        }
+    }
+
+    #[test]
+    fn affine_substr_views_match_integer_semantics_exhaustively() {
+        let term = |text: &str| {
+            let expression = read_all(text)
+                .expect("read affine expression")
+                .pop()
+                .expect("one affine expression");
+            exact_rewrite_term(&expression, 0)
+        };
+        for (left, right) in [
+            (r"(> (+ z z) 0)", r"(> z 0)"),
+            (r"(< 0 (+ z z))", r"(> z 0)"),
+            (r"(<= (+ z z) 0)", r"(<= z 0)"),
+            (r"(>= 0 (+ z z))", r"(<= z 0)"),
+        ] {
+            assert!(exact_affine_orderings_equal(&term(left), &term(right)));
+        }
+        for (left, right) in [
+            (r"(> (+ z z) 0)", r"(> (- 0 z) 0)"),
+            (r"(> (+ z z) 0)", r"(>= z 0)"),
+            (r"(> (+ z 1) 0)", r"(> z 0)"),
+        ] {
+            assert!(!exact_affine_orderings_equal(&term(left), &term(right)));
+        }
+        for (offset, length) in [("z", "(+ z 1)"), ("(- z 1)", "z")] {
+            assert!(exact_affine_zero_forces_positive(
+                &term(offset),
+                &term(length)
+            ));
+        }
+        assert!(!exact_affine_zero_forces_positive(&term("z"), &term("z")));
+
+        for text in [
+            r#"(= (str.substr "A" 0 (+ z z)) (str.substr "A" 0 z))"#,
+            r#"(= (str.substr "A" z (+ 1 z)) (str.at "A" z))"#,
+            r#"(= (str.substr "A" (- z 1) z) (str.at "A" (- 1 z)))"#,
+            r"(= (str.substr (str.substr y 0 1) 0 1)
+                   (str.at (str.replace x x y) 0))",
+            r"(= (str.substr (str.substr y 1 1) 0 1)
+                   (str.at (str.replace x x y) 1))",
+            r"(= (str.substr (str.substr y z 1) 0 1)
+                   (str.at (str.replace x x y) z))",
+        ] {
+            assert_eq!(term(text), ExactRewriteTerm::Bool(true), "{text}");
+        }
+        for text in [
+            r#"(= (str.substr "A" 0 (+ z z 1)) (str.substr "A" 0 z))"#,
+            r#"(= (str.substr "A" z z) (str.at "A" z))"#,
+            r#"(= (str.substr "A" (- z 1) (- z 1)) (str.at "A" (- 1 z)))"#,
+        ] {
+            assert_ne!(term(text), ExactRewriteTerm::Bool(true), "{text}");
+        }
+        let one = [u32::from(b'A')];
+        for value in -8_i128..=8 {
+            assert_eq!(
+                substr_code_points(&one, 0, value * 2),
+                substr_code_points(&one, 0, value)
+            );
+            assert_eq!(
+                substr_code_points(&one, value, value + 1),
+                substr_code_points(&one, value, 1)
+            );
+            assert_eq!(
+                substr_code_points(&one, value - 1, value),
+                substr_code_points(&one, value - 1, 1)
+            );
         }
     }
 
