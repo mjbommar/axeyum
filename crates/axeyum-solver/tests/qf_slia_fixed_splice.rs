@@ -104,10 +104,18 @@ fn split_replace_rejoin_uses_the_base_bound() {
   "zz"))
 (check-sat)
 "#;
+    let unequal = parse_script(unequal_lengths)
+        .expect("the source SAT fallback retains the unequal-length pipeline");
+    assert!(unequal.word_only_fallback.is_some());
+    assert!(unequal.source_string_sat_problem.is_some());
     assert!(
-        parse_script(unequal_lengths).is_err(),
-        "an unequal-length pipeline outside the modeled word fragment must decline; \
-         equality-class pinning must not erase its defining equality"
+        matches!(
+            solve_smtlib(unequal_lengths, &config())
+                .expect("solve unequal-length pipeline")
+                .result,
+            CheckResult::Sat(_)
+        ),
+        "s = \"A\" is a replayed witness for the unequal-length pipeline"
     );
 }
 
@@ -2696,4 +2704,140 @@ fn exact_source_first_occurrence_predicates_decline_ground_counterexamples() {
             "ground predicate counterexample must remain SAT: {assertion}"
         );
     }
+}
+
+/// The last seven Noetzli residuals are satisfiable counterexample queries, not
+/// missing UNSAT identities. The bounded source-witness probe must find a small
+/// model and its returned assignment must replay every original parsed assertion.
+#[test]
+fn bounded_source_witness_closes_last_noetzli_counterexamples() {
+    let assertions = [
+        r#"(not (= (str.contains (str.from_int z) x) (str.suffixof x (str.from_int z))))"#,
+        r#"(not (= (str.replace x (str.replace y "A" y) y) x))"#,
+        r#"(not (= (str.replace x (str.replace y "B" y) y) x))"#,
+        r#"(not (= (str.replace (str.replace x y x) y x) (str.replace x y (str.replace x y x))))"#,
+        r#"(not (= (str.replace (str.replace x y x) y "A") (str.replace x y (str.replace x y "A"))))"#,
+        r#"(not (= (str.replace (str.replace x y x) y "B") (str.replace x y (str.replace x y "B"))))"#,
+        r#"(not (= (str.replace (str.replace x y x) y "") (str.replace x y (str.replace x y ""))))"#,
+    ];
+    let fast = SolverConfig::new().with_timeout(Duration::from_millis(250));
+    for assertion in assertions {
+        let input = format!(
+            r#"(set-logic QF_SLIA)
+(declare-fun x () String)
+(declare-fun y () String)
+(declare-fun z () Int)
+(assert {assertion})
+(check-sat)
+"#
+        );
+        let outcome = solve_smtlib(&input, &fast).expect("solve Noetzli SAT residual");
+        let CheckResult::Sat(model) = outcome.result else {
+            panic!("Noetzli counterexample must decide SAT: {assertion}");
+        };
+
+        // Reparse independently, rerun the bounded source search, and replay its
+        // witness through the exact source evaluator. The returned model must carry
+        // those same Seq/Int bindings.
+        let parsed = parse_script(&input).expect("reparse Noetzli SAT residual");
+        let problem = parsed
+            .source_string_sat_problem
+            .as_ref()
+            .expect("Noetzli residual has a source SAT problem");
+        let witness = problem
+            .bounded_witness(20_000, 4, 4)
+            .expect("Noetzli residual has a bounded source witness");
+        assert!(problem.replays(&witness));
+        for (symbol, code_points) in witness.strings {
+            assert_eq!(
+                model.get(symbol),
+                Some(axeyum_ir::Value::Seq(
+                    code_points
+                        .into_iter()
+                        .map(|code_point| {
+                            axeyum_ir::Value::from_scalar_code(
+                                axeyum_ir::Sort::BitVec(axeyum_ir::Sort::STRING_ELEM_WIDTH),
+                                u128::from(code_point),
+                            )
+                        })
+                        .collect()
+                )),
+                "returned model must carry the replayed string witness for {assertion}"
+            );
+        }
+        for (symbol, value) in witness.integers {
+            assert_eq!(model.get(symbol), Some(axeyum_ir::Value::Int(value)));
+        }
+    }
+}
+
+#[test]
+fn bounded_source_witness_is_capped_and_replay_fail_closed() {
+    let replay_input = r#"(set-logic QF_SLIA)
+(declare-fun x () String)
+(declare-fun y () String)
+(declare-fun z () Int)
+(assert (not (= (str.contains (str.from_int z) x) (str.suffixof x (str.from_int z)))))
+(check-sat)
+"#;
+    let replay_script = parse_script(replay_input).expect("parse replay control");
+    let replay_problem = replay_script
+        .source_string_sat_problem
+        .as_ref()
+        .expect("replay control has source SAT problem");
+    let witness = replay_problem
+        .bounded_witness(20_000, 4, 4)
+        .expect("replay control has a witness");
+    assert!(replay_problem.replays(&witness));
+
+    let mut duplicate = witness.clone();
+    duplicate.strings.push(duplicate.strings[0].clone());
+    assert!(
+        !replay_problem.replays(&duplicate),
+        "a duplicate source binding must fail replay"
+    );
+    let mut missing = witness.clone();
+    missing.integers.clear();
+    assert!(
+        !replay_problem.replays(&missing),
+        "a missing source binding must fail replay"
+    );
+    let mut mutated = witness;
+    mutated.strings[0].1.clear();
+    assert!(
+        !replay_problem.replays(&mutated),
+        "a mutated source witness must fail replay"
+    );
+
+    let capped_input = r#"(set-logic QF_SLIA)
+(declare-fun x () String)
+(declare-fun y () String)
+(declare-fun z () String)
+(assert (not (= (str.replace x y z) x)))
+(check-sat)
+"#;
+    let capped_script = parse_script(capped_input).expect("parse assignment-cap control");
+    let capped_problem = capped_script
+        .source_string_sat_problem
+        .as_ref()
+        .expect("assignment-cap control has source SAT problem");
+    assert!(
+        capped_problem.bounded_witness(20_000, 4, 4).is_none(),
+        "31^3 assignments must exceed the 20,000-step source-witness cap"
+    );
+
+    let false_input = r#"(set-logic QF_SLIA)
+(declare-fun x () String)
+(assert (and (= x x) false))
+(check-sat)
+"#;
+    let false_script = parse_script(false_input).expect("parse false-query control");
+    let false_problem = false_script
+        .source_string_sat_problem
+        .as_ref()
+        .expect("false-query control has source SAT problem");
+    assert!(
+        false_problem.bounded_witness(20_000, 4, 4).is_none(),
+        "the SAT-only source probe must not fabricate a witness"
+    );
 }
