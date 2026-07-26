@@ -9383,6 +9383,31 @@ fn exact_rewrite_app(head: &str, args: Vec<ExactRewriteTerm>) -> ExactRewriteTer
         ("=", [left, right]) => return exact_rewrite_equality(left, right),
         ("ite", [Bool(true), then_term, _]) => return then_term.clone(),
         ("ite", [Bool(false), _, else_term]) => return else_term.clone(),
+        ("ite", [_, then_term, else_term]) if then_term == else_term => return then_term.clone(),
+        ("ite", [condition, Bool(true), Bool(false)]) => return condition.clone(),
+        ("ite", [condition, Bool(false), Bool(true)]) => {
+            return exact_rewrite_app("not", vec![condition.clone()]);
+        }
+        ("ite", [condition, App(inner, inner_args), else_term])
+            if inner == "ite"
+                && matches!(inner_args.as_slice(), [inner_condition, _, _]
+                    if inner_condition == condition) =>
+        {
+            return exact_rewrite_app(
+                "ite",
+                vec![condition.clone(), inner_args[1].clone(), else_term.clone()],
+            );
+        }
+        ("ite", [condition, then_term, App(inner, inner_args)])
+            if inner == "ite"
+                && matches!(inner_args.as_slice(), [inner_condition, _, _]
+                    if inner_condition == condition) =>
+        {
+            return exact_rewrite_app(
+                "ite",
+                vec![condition.clone(), then_term.clone(), inner_args[2].clone()],
+            );
+        }
         ("-", [Int(value)]) => {
             if let Some(value) = value.checked_neg() {
                 return Int(value);
@@ -9560,6 +9585,14 @@ fn exact_rewrite_app(head: &str, args: Vec<ExactRewriteTerm>) -> ExactRewriteTer
             {
                 return String(replace_first_code_points(subject, needle, replacement));
             }
+            if let String(subject) = subject
+                && subject.len() <= 1
+            {
+                return exact_rewrite_small_subject_replace(subject, needle, replacement);
+            }
+            if let Some(distributed) = exact_distribute_replace_ite(&args) {
+                return distributed;
+            }
         }
         ("str.prefixof", [left, right]) => {
             if left == right || matches!(left, String(value) if value.is_empty()) {
@@ -9641,6 +9674,13 @@ fn exact_rewrite_equality(left: &ExactRewriteTerm, right: &ExactRewriteTerm) -> 
     if left == right {
         return ExactRewriteTerm::Bool(true);
     }
+    if matches!(left, ExactRewriteTerm::String(_)) && !matches!(right, ExactRewriteTerm::String(_))
+    {
+        return exact_rewrite_equality(right, left);
+    }
+    if let Some(rewritten) = exact_rewrite_ite_equality(left, right) {
+        return rewritten;
+    }
     for (base, candidate) in [(left, right), (right, left)] {
         if let Some(residual) = exact_concat_residual(base, candidate) {
             return exact_rewrite_equality(&residual, &ExactRewriteTerm::String(Vec::new()));
@@ -9653,6 +9693,125 @@ fn exact_rewrite_equality(left: &ExactRewriteTerm, right: &ExactRewriteTerm) -> 
         }
     }
     ExactRewriteTerm::App("=".to_owned(), vec![left.clone(), right.clone()])
+}
+
+fn exact_rewrite_ite_equality(
+    left: &ExactRewriteTerm,
+    right: &ExactRewriteTerm,
+) -> Option<ExactRewriteTerm> {
+    use ExactRewriteTerm::App;
+
+    if let App(head, left_args) = left
+        && head == "ite"
+        && let [condition, left_then, left_else] = left_args.as_slice()
+    {
+        if let App(right_head, right_args) = right
+            && right_head == "ite"
+            && let [right_condition, right_then, right_else] = right_args.as_slice()
+            && right_condition == condition
+        {
+            return Some(exact_rewrite_app(
+                "ite",
+                vec![
+                    condition.clone(),
+                    exact_rewrite_equality(left_then, right_then),
+                    exact_rewrite_equality(left_else, right_else),
+                ],
+            ));
+        }
+        return Some(exact_rewrite_app(
+            "ite",
+            vec![
+                condition.clone(),
+                exact_rewrite_equality(left_then, right),
+                exact_rewrite_equality(left_else, right),
+            ],
+        ));
+    }
+    if let App(head, right_args) = right
+        && head == "ite"
+        && let [condition, right_then, right_else] = right_args.as_slice()
+    {
+        return Some(exact_rewrite_app(
+            "ite",
+            vec![
+                condition.clone(),
+                exact_rewrite_equality(left, right_then),
+                exact_rewrite_equality(left, right_else),
+            ],
+        ));
+    }
+    None
+}
+
+fn exact_rewrite_small_subject_replace(
+    subject: &[u32],
+    needle: &ExactRewriteTerm,
+    replacement: &ExactRewriteTerm,
+) -> ExactRewriteTerm {
+    use ExactRewriteTerm::String;
+
+    let subject = String(subject.to_vec());
+    let empty = String(Vec::new());
+    let empty_needle = exact_rewrite_equality(needle, &empty);
+    if matches!(&subject, String(value) if value.is_empty()) {
+        return exact_rewrite_app("ite", vec![empty_needle, replacement.clone(), empty]);
+    }
+    let equal_needle = exact_rewrite_equality(needle, &subject);
+    let nonempty_case = exact_rewrite_app(
+        "ite",
+        vec![equal_needle, replacement.clone(), subject.clone()],
+    );
+    exact_rewrite_app(
+        "ite",
+        vec![
+            empty_needle,
+            exact_rewrite_concat(&[replacement.clone(), subject]),
+            nonempty_case,
+        ],
+    )
+}
+
+fn exact_ite_count(term: &ExactRewriteTerm) -> u32 {
+    match term {
+        ExactRewriteTerm::App(head, args) => {
+            args.iter().fold(u32::from(head == "ite"), |sum, arg| {
+                sum.saturating_add(exact_ite_count(arg))
+            })
+        }
+        ExactRewriteTerm::IndexOfSelf(argument) => exact_ite_count(argument),
+        _ => 0,
+    }
+}
+
+fn exact_distribute_replace_ite(args: &[ExactRewriteTerm]) -> Option<ExactRewriteTerm> {
+    use ExactRewriteTerm::App;
+
+    if args.iter().map(exact_ite_count).sum::<u32>() > 6 {
+        return None;
+    }
+    let (index, condition, then_term, else_term) =
+        args.iter().enumerate().find_map(|(index, argument)| {
+            let App(head, ite_args) = argument else {
+                return None;
+            };
+            let [condition, then_term, else_term] = ite_args.as_slice() else {
+                return None;
+            };
+            (head == "ite").then_some((index, condition, then_term, else_term))
+        })?;
+    let mut then_args = args.to_vec();
+    then_args[index] = then_term.clone();
+    let mut else_args = args.to_vec();
+    else_args[index] = else_term.clone();
+    Some(exact_rewrite_app(
+        "ite",
+        vec![
+            condition.clone(),
+            exact_rewrite_app("str.replace", then_args),
+            exact_rewrite_app("str.replace", else_args),
+        ],
+    ))
 }
 
 fn exact_concat_residual(
@@ -9763,6 +9922,15 @@ fn exact_string_min_len(term: &ExactRewriteTerm, depth: u32) -> Option<usize> {
                 sum.checked_add(exact_string_min_len(part, depth + 1)?)
             })
         }
+        App(head, args) if head == "ite" => {
+            let [_, then_term, else_term] = args.as_slice() else {
+                return None;
+            };
+            Some(
+                exact_string_min_len(then_term, depth + 1)?
+                    .min(exact_string_min_len(else_term, depth + 1)?),
+            )
+        }
         _ => None,
     }
 }
@@ -9781,6 +9949,15 @@ fn exact_string_max_len(term: &ExactRewriteTerm, depth: u32) -> Option<usize> {
             parts.iter().try_fold(0_usize, |sum, part| {
                 sum.checked_add(exact_string_max_len(part, depth + 1)?)
             })
+        }
+        App(head, args) if head == "ite" => {
+            let [_, then_term, else_term] = args.as_slice() else {
+                return None;
+            };
+            Some(
+                exact_string_max_len(then_term, depth + 1)?
+                    .max(exact_string_max_len(else_term, depth + 1)?),
+            )
         }
         App(head, args) if head == "str.replace" => {
             let [subject, needle, replacement] = args.as_slice() else {
@@ -9960,6 +10137,14 @@ fn exact_string_alphabet(term: &ExactRewriteTerm, depth: u32) -> Option<BTreeSet
                     alphabet.extend(exact_string_alphabet(part, depth + 1)?);
                     Some(alphabet)
                 })
+        }
+        App(head, args) if head == "ite" => {
+            let [_, then_term, else_term] = args.as_slice() else {
+                return None;
+            };
+            let mut alphabet = exact_string_alphabet(then_term, depth + 1)?;
+            alphabet.extend(exact_string_alphabet(else_term, depth + 1)?);
+            Some(alphabet)
         }
         App(head, args) if head == "str.replace" => {
             let [subject, _, replacement] = args.as_slice() else {
