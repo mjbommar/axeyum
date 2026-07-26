@@ -1721,3 +1721,87 @@ fn exact_source_affine_substr_views_decline_satisfiable_controls() {
         );
     }
 }
+
+#[test]
+fn exact_source_boolean_ac_views_refute_noetzli_families() {
+    let mut assertions = Vec::new();
+    for literal in [r#""A""#, r#""B""#] {
+        assertions.push(format!(
+            r#"(not (= (= {literal} (str.++ y x)) (= {literal} (str.++ x y))))"#
+        ));
+        assertions.push(format!(
+            r#"(not (= (str.contains {literal} (str.++ y x))
+                       (str.contains {literal} (str.++ x y))))"#
+        ));
+        assertions.push(format!(
+            r#"(not (= (= {literal} (str.replace x "" y))
+                       (= {literal} (str.++ x y))))"#
+        ));
+        assertions.push(format!(
+            r#"(not (= (str.contains {literal} (str.replace x "" y))
+                       (str.contains {literal} (str.++ x y))))"#
+        ));
+        for replacement in ["x", r#""""#, r#""A""#, r#""B""#] {
+            assertions.push(format!(
+                r#"(not (= (str.replace {literal} (str.++ y x) {replacement})
+                           (str.replace {literal} (str.++ x y) {replacement})))"#
+            ));
+        }
+    }
+
+    assert_eq!(assertions.len(), 16);
+    for assertion in assertions {
+        let input = format!(
+            r#"(set-logic QF_SLIA)
+(declare-fun x () String)
+(declare-fun y () String)
+(assert {assertion})
+(check-sat)
+"#
+        );
+        let script = parse_script(&input).expect("parse Boolean AC string theorem");
+        assert!(
+            script.source_string_semantic_unsat,
+            "Boolean AC string theorem must refute {assertion}"
+        );
+        assert_eq!(
+            solve_smtlib(&input, &config())
+                .expect("solve Boolean AC string theorem")
+                .result,
+            CheckResult::Unsat,
+            "Boolean AC string theorem must survive the bounded-string gate: {assertion}"
+        );
+    }
+}
+
+#[test]
+fn exact_source_boolean_ac_views_decline_satisfiable_controls() {
+    for assertion in [
+        r#"(not (= (= "AB" (str.++ y x)) (= "AB" (str.++ x y))))"#,
+        r#"(not (= (str.contains "AB" (str.++ y x))
+                   (str.contains "AB" (str.++ x y))))"#,
+        r#"(not (= (str.replace "AB" (str.++ y x) "")
+                   (str.replace "AB" (str.++ x y) "")))"#,
+    ] {
+        let input = format!(
+            r#"(set-logic QF_SLIA)
+(declare-fun x () String)
+(declare-fun y () String)
+(assert {assertion})
+(check-sat)
+"#
+        );
+        let script = parse_script(&input).expect("parse Boolean AC string control");
+        assert!(
+            !script.source_string_semantic_unsat,
+            "satisfiable Boolean AC string control must decline: {assertion}"
+        );
+        assert_ne!(
+            solve_smtlib(&input, &config())
+                .expect("solve Boolean AC string control")
+                .result,
+            CheckResult::Unsat,
+            "satisfiable Boolean AC string control must not become UNSAT: {assertion}"
+        );
+    }
+}
