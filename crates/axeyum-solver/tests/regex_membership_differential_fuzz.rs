@@ -16,8 +16,8 @@
 //! 1..=3 string variables, positive **and** negative `str.in_re` atoms carrying
 //! depth-≤4 regexes (concat / union / intersection / complement / star / plus /
 //! opt / native `re.loop` / `re.range` / `re.allchar` / `re.all` / `re.none`),
-//! occasional length bounds, exact ground `str.to_int` values, literal pins and
-//! disequalities, and exact variable-equality membership classes. Two oracle
+//! occasional length bounds, exact ground `str.to_int` values and comparisons,
+//! literal pins and disequalities, and exact variable-equality membership classes. Two oracle
 //! fronts adjudicate the same generator:
 //! the system **Z3** binary (behind the
 //! `z3` feature) and the **cvc5** binary (always, when installed).
@@ -158,8 +158,20 @@ fn generate(rng: &mut Lcg) -> String {
         // Exact decimal-preimage constraint. Most generated regexes use {a,b}, so
         // this deliberately exercises certified-empty intersections; the dedicated
         // regression covers a satisfiable leading-zero witness.
-        if rng.below(6) == 0 {
-            let _ = writeln!(text, "(assert (= (str.to_int v{i}) {}))", rng.below(20));
+        match rng.below(8) {
+            0 => {
+                let _ = writeln!(text, "(assert (= (str.to_int v{i}) {}))", rng.below(20));
+            }
+            1 => {
+                let op = ["<", "<=", ">", ">="][rng.below(4)];
+                let bound = rng.below(20);
+                if rng.below(2) == 0 {
+                    let _ = writeln!(text, "(assert ({op} (str.to_int v{i}) {bound}))");
+                } else {
+                    let _ = writeln!(text, "(assert ({op} {bound} (str.to_int v{i})))");
+                }
+            }
+            _ => {}
         }
         // Occasional literal pin.
         if rng.below(5) == 0 {

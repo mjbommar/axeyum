@@ -2133,6 +2133,64 @@ fn regex_membership_decides_variable_equality_classes() {
     assert!(matches!(run(sat).result, CheckResult::Sat(_)));
 }
 
+/// Ordered `str.to_int` constraints are exact regular-language preimages. The
+/// SAT control over a non-decimal language pins the SMT-LIB `-1` convention.
+#[test]
+fn regex_membership_decides_to_int_comparisons() {
+    let nondigit_gt = r#"
+(set-logic QF_SLIA)
+(declare-const x String)
+(assert (str.in_re x (re.+ (str.to_re "word"))))
+(assert (> (str.to_int x) 2))
+(check-sat)
+"#;
+    let mut script = parse_script(nondigit_gt).expect("non-decimal greater-than parses");
+    assert_eq!(
+        membership_verdict(&mut script, &config()),
+        Some(CheckResult::Unsat)
+    );
+    assert_eq!(run(nondigit_gt).result, CheckResult::Unsat);
+
+    let decimal_gt = r#"
+(set-logic QF_SLIA)
+(declare-const x String)
+(assert (str.in_re x (re.+ (re.range "0" "9"))))
+(assert (< 2 (str.to_int x)))
+(check-sat)
+"#;
+    let mut script = parse_script(decimal_gt).expect("decimal greater-than parses");
+    assert!(matches!(
+        membership_verdict(&mut script, &config()),
+        Some(CheckResult::Sat(_))
+    ));
+
+    let nondigit_le = r#"
+(set-logic QF_SLIA)
+(declare-const x String)
+(assert (str.in_re x (str.to_re "not-a-number")))
+(assert (<= (str.to_int x) 2))
+(check-sat)
+"#;
+    let mut script = parse_script(nondigit_le).expect("non-decimal less-than parses");
+    assert!(matches!(
+        membership_verdict(&mut script, &config()),
+        Some(CheckResult::Sat(_))
+    ));
+
+    let too_large = r#"
+(set-logic QF_SLIA)
+(declare-const x String)
+(assert (str.in_re x (str.to_re "12")))
+(assert (> 2 (str.to_int x)))
+(check-sat)
+"#;
+    let mut script = parse_script(too_large).expect("reversed less-than parses");
+    assert_eq!(
+        membership_verdict(&mut script, &config()),
+        Some(CheckResult::Unsat)
+    );
+}
+
 /// The Noetzli small-rewrite corpus asserts the negation of exact SMT-LIB string
 /// identities. Normalize these before the bounded encoder expands them: each row
 /// is a genuine, bound-independent contradiction.
