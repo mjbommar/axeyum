@@ -25,6 +25,9 @@
 //!   `X`;
 //! * `(= (str.to_int X) n)` / `(= n (str.to_int X))` for a non-negative numeral
 //!   `n` — the exact decimal language of `n`, including leading zeroes;
+//! * `(≷ (str.to_int X) n)` / `(≷ n (str.to_int X))` for
+//!   `≷ ∈ {<, <=, >, >=}` and a non-negative numeral `n` — the exact comparison
+//!   preimage, including SMT-LIB's `-1` value for non-decimal strings;
 //! * `(= X "lit")` / `(= "lit" X)` — pins `X` to a string literal;
 //! * `(not (= X "lit"))` / `(not (= "lit" X))` — excludes the singleton
 //!   literal language from `X`;
@@ -423,7 +426,21 @@ impl Builder<'_> {
                 }
             }
             "<" | "<=" | ">" | ">=" if items.len() == 3 => {
-                self.length_atom(head, &items[1], &items[2])
+                if self.length_atom(head, &items[1], &items[2]) {
+                    true
+                } else if let Some((name, op, bound)) =
+                    to_int_comparison(head, &items[1], &items[2], self.vars)
+                {
+                    self.per_var
+                        .entry(name)
+                        .or_default()
+                        .membership
+                        .positives
+                        .push(decimal_comparison_regex(&op, bound));
+                    true
+                } else {
+                    false
+                }
             }
             _ => false,
         }
@@ -570,6 +587,20 @@ fn to_int_equality(
     }
 }
 
+/// A comparison between `(str.to_int X)` and a non-negative numeral, normalized
+/// so the string conversion is on the left.
+fn to_int_comparison(
+    op: &str,
+    left: &SExpr,
+    right: &SExpr,
+    vars: &BTreeMap<String, SymbolId>,
+) -> Option<(String, String, u32)> {
+    match (str_to_int_var(left, vars), numeral(right)) {
+        (Some(name), Some(bound)) => Some((name, op.to_owned(), bound)),
+        _ => Some((str_to_int_var(right, vars)?, flip_op(op), numeral(left)?)),
+    }
+}
+
 /// The declared string variable inside `(str.to_int X)`.
 fn str_to_int_var(e: &SExpr, vars: &BTreeMap<String, SymbolId>) -> Option<String> {
     let items = e.list()?;
@@ -587,6 +618,132 @@ fn decimal_value_regex(value: u32) -> Regex {
     } else {
         let digits: Vec<u32> = value.to_string().bytes().map(u32::from).collect();
         Regex::concat(Regex::star(zero), literal_regex(&digits))
+    }
+}
+
+/// Exact preimage of an ordered comparison against SMT-LIB `str.to_int`.
+/// Non-empty ASCII decimal strings map to their mathematical value (leading
+/// zeroes allowed); every other string maps to `-1`.
+fn decimal_comparison_regex(op: &str, bound: u32) -> Regex {
+    let digit = Regex::char_range(u32::from(b'0'), u32::from(b'9'));
+    let non_decimal = Regex::comp(Regex::plus(digit));
+    match op {
+        ">" => decimal_at_least_regex(bound, false),
+        ">=" => decimal_at_least_regex(bound, true),
+        "<" if bound == 0 => non_decimal,
+        "<" => Regex::union(non_decimal, decimal_at_most_regex(bound - 1)),
+        "<=" => Regex::union(non_decimal, decimal_at_most_regex(bound)),
+        _ => Regex::none(),
+    }
+}
+
+/// Non-empty decimal strings whose numeric value is at most `bound`.
+fn decimal_at_most_regex(bound: u32) -> Regex {
+    let zero = Regex::character(u32::from(b'0'));
+    let mut language = Regex::plus(zero.clone());
+    if bound == 0 {
+        return language;
+    }
+
+    let digits = bound.to_string().into_bytes();
+    let mut canonical = Regex::none();
+    // Every positive canonical decimal with fewer digits is smaller.
+    for width in 1..digits.len() {
+        canonical = Regex::union(canonical, positive_decimal_width(width));
+    }
+    // Same-width values: first smaller digit after an equal prefix, or equality.
+    for index in 0..digits.len() {
+        let lower = if index == 0 { b'1' } else { b'0' };
+        if digits[index] > lower {
+            let branch = Regex::concat(
+                literal_regex(
+                    &digits[..index]
+                        .iter()
+                        .map(|&b| u32::from(b))
+                        .collect::<Vec<_>>(),
+                ),
+                Regex::concat(
+                    Regex::char_range(u32::from(lower), u32::from(digits[index] - 1)),
+                    decimal_suffix(digits.len() - index - 1, false),
+                ),
+            );
+            canonical = Regex::union(canonical, branch);
+        }
+    }
+    canonical = Regex::union(
+        canonical,
+        literal_regex(&digits.iter().map(|&b| u32::from(b)).collect::<Vec<_>>()),
+    );
+    language = Regex::union(language, Regex::concat(Regex::star(zero), canonical));
+    language
+}
+
+/// Non-empty decimal strings whose numeric value is greater than `bound`, or
+/// greater than-or-equal when `include_equal` is true.
+fn decimal_at_least_regex(bound: u32, include_equal: bool) -> Regex {
+    let digit = Regex::char_range(u32::from(b'0'), u32::from(b'9'));
+    if bound == 0 && include_equal {
+        return Regex::plus(digit);
+    }
+
+    let digits = bound.to_string().into_bytes();
+    let mut canonical = Regex::none();
+    // Every positive canonical decimal with more digits is larger.
+    canonical = Regex::union(
+        canonical,
+        Regex::concat(
+            Regex::char_range(u32::from(b'1'), u32::from(b'9')),
+            decimal_suffix(digits.len(), true),
+        ),
+    );
+    // Same-width values: first larger digit after an equal prefix.
+    for index in 0..digits.len() {
+        if digits[index] < b'9' {
+            let branch = Regex::concat(
+                literal_regex(
+                    &digits[..index]
+                        .iter()
+                        .map(|&b| u32::from(b))
+                        .collect::<Vec<_>>(),
+                ),
+                Regex::concat(
+                    Regex::char_range(u32::from(digits[index] + 1), u32::from(b'9')),
+                    decimal_suffix(digits.len() - index - 1, false),
+                ),
+            );
+            canonical = Regex::union(canonical, branch);
+        }
+    }
+    if include_equal {
+        canonical = Regex::union(
+            canonical,
+            literal_regex(&digits.iter().map(|&b| u32::from(b)).collect::<Vec<_>>()),
+        );
+    }
+    Regex::concat(Regex::star(Regex::character(u32::from(b'0'))), canonical)
+}
+
+/// Canonical positive decimal strings of exactly `width` digits.
+fn positive_decimal_width(width: usize) -> Regex {
+    debug_assert!(width > 0);
+    Regex::concat(
+        Regex::char_range(u32::from(b'1'), u32::from(b'9')),
+        decimal_suffix(width - 1, false),
+    )
+}
+
+/// An exact-width decimal suffix, optionally followed by arbitrary extra digits.
+fn decimal_suffix(width: usize, unbounded_tail: bool) -> Regex {
+    let digit = Regex::char_range(u32::from(b'0'), u32::from(b'9'));
+    let exact = Regex::repeat(
+        digit.clone(),
+        u32::try_from(width).expect("u32 threshold width fits"),
+        Some(u32::try_from(width).expect("u32 threshold width fits")),
+    );
+    if unbounded_tail {
+        Regex::concat(exact, Regex::star(digit))
+    } else {
+        exact
     }
 }
 
@@ -944,4 +1101,79 @@ fn literal_regex(cps: &[u32]) -> Regex {
         });
     }
     acc.unwrap_or(Regex::Empty)
+}
+
+#[cfg(test)]
+mod tests {
+    use axeyum_strings::regex::matches;
+
+    use super::decimal_comparison_regex;
+
+    fn strings(alphabet: &[u32], max_len: usize) -> Vec<Vec<u32>> {
+        fn extend(
+            alphabet: &[u32],
+            remaining: usize,
+            prefix: &mut Vec<u32>,
+            out: &mut Vec<Vec<u32>>,
+        ) {
+            out.push(prefix.clone());
+            if remaining == 0 {
+                return;
+            }
+            for &cp in alphabet {
+                prefix.push(cp);
+                extend(alphabet, remaining - 1, prefix, out);
+                prefix.pop();
+            }
+        }
+        let mut out = Vec::new();
+        extend(alphabet, max_len, &mut Vec::new(), &mut out);
+        out
+    }
+
+    fn reference_to_int(input: &[u32]) -> i64 {
+        if input.is_empty()
+            || input
+                .iter()
+                .any(|cp| !(u32::from(b'0')..=u32::from(b'9')).contains(cp))
+        {
+            return -1;
+        }
+        input.iter().fold(0i64, |value, cp| {
+            value * 10 + i64::from(*cp - u32::from(b'0'))
+        })
+    }
+
+    #[test]
+    fn decimal_comparison_preimages_match_reference_exhaustively() {
+        let inputs = strings(
+            &[
+                u32::from(b'0'),
+                u32::from(b'1'),
+                u32::from(b'2'),
+                u32::from(b'a'),
+            ],
+            4,
+        );
+        for bound in 0..=25u32 {
+            for op in ["<", "<=", ">", ">="] {
+                let regex = decimal_comparison_regex(op, bound);
+                for input in &inputs {
+                    let value = reference_to_int(input);
+                    let expected = match op {
+                        "<" => value < i64::from(bound),
+                        "<=" => value <= i64::from(bound),
+                        ">" => value > i64::from(bound),
+                        ">=" => value >= i64::from(bound),
+                        _ => unreachable!(),
+                    };
+                    assert_eq!(
+                        matches(&regex, input),
+                        expected,
+                        "op={op}, bound={bound}, input={input:?}, value={value}"
+                    );
+                }
+            }
+        }
+    }
 }

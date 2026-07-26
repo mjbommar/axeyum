@@ -4491,6 +4491,31 @@ fn regex_membership_merges_transitive_variable_equalities() {
 }
 
 #[test]
+fn regex_membership_retains_to_int_comparisons() {
+    for comparison in [
+        "(> (str.to_int x) 2)",
+        "(< 2 (str.to_int x))",
+        "(<= (str.to_int x) 11)",
+        "(>= 11 (str.to_int x))",
+    ] {
+        let text = format!(
+            "(set-logic QF_SLIA)\n\
+             (declare-const x String)\n\
+             (assert (str.in_re x re.all))\n\
+             (assert {comparison})\n\
+             (check-sat)\n"
+        );
+        let script = parse_script(&text).expect("to_int comparison membership script parses");
+        let problem = script
+            .membership_problem
+            .expect("membership side channel is retained");
+        assert!(problem.complete, "to_int comparison is represented exactly");
+        assert_eq!(problem.vars.len(), 1);
+        assert_eq!(problem.vars[0].membership.positives.len(), 2);
+    }
+}
+
+#[test]
 fn regex_inter_matches_intersection() {
     // (re.inter (re.* (re.range "a" "z")) (str.to_re "ab")): lowercase-only ∩ {"ab"} = {"ab"}.
     let text = "(declare-fun s () String)\n\

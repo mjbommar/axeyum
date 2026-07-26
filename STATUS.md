@@ -383,7 +383,7 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
-- **2026-07-26 — exact regex-length, disequality, and alias classes move 94
+- **2026-07-26 — exact regex-length, alias, and `str.to_int` classes move 105
   StringFuzz residuals.**
   The regex-membership side channel documented `(= (str.len X) n)` as part of
   its exact fragment, but the equality parser skipped the existing length-bound
@@ -394,18 +394,22 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   become exact negative singleton-language constraints in the same checked
   membership class. Exact equalities between declared string variables now merge
   their regex, length, pin, and exclusion constraints transitively and bind every
-  alias to the same checked witness. On the fixed 128-row current StringFuzz
-  residual, the stacked mechanisms decide **94 rows at 250 ms: 77 UNSAT and 17
-  replay-checked SAT**, up from 79 by 15, with **WRONG=0** against declared corpus
-  status. Z3's generated 700-script differential front jointly decides 696
-  scripts with 696 agreements (128 SAT, 572 UNSAT, zero Axeyum declines, four Z3
-  declines), zero disagreements. The fixed-row adjudication found Z3 4.13.3 and
+  alias to the same checked witness. Ordered `str.to_int` constraints now compile
+  to exact decimal regular-language preimages, including leading zeroes and the
+  SMT-LIB `-1` result for empty/non-decimal strings. On the fixed 128-row current
+  StringFuzz residual, the stacked mechanisms decide **105 rows at 250 ms: 88
+  UNSAT and 17 replay-checked SAT**, up from 79 by 26, with **WRONG=0** against
+  declared corpus status. The comparison construction matches a reference
+  evaluator on all 35,464 combinations of four operators, bounds 0–25, and every
+  `{0,1,2,a}` string through length four. Z3's generated 700-script differential
+  front jointly decides all 700 with 700 agreements (129 SAT, 571 UNSAT), zero
+  declines and zero disagreements. The fixed-row adjudication found Z3 4.13.3 and
   cvc5 agreement on every newly moved row with a dual-oracle result. Both literal
-  orientations, transitive aliases, conflicting pins, empty intersections, and
-  shared SAT-model witnesses are pinned at the parser and front door; the complete
-  212-test SMT-LIB parser suite and 90-test affected solver front door pass. Next:
-  target exact `str.to_int` comparison preimages, now the largest remaining shared
-  StringFuzz mechanism; the 58-row
+  orientations, transitive aliases, conflicting pins, comparison orientations,
+  non-decimal `-1`, empty intersections, and shared SAT-model witnesses are pinned
+  at the parser and front door; the complete 213-test SMT-LIB parser suite and
+  91-test affected solver front door pass. Next: classify the remaining 23
+  StringFuzz rows before selecting the next shared mechanism; the 58-row
   Kepler cluster is a genuine Nielsen/length case-analysis gap, and a tested
   finite-monoid shortcut moved zero rows.
 
