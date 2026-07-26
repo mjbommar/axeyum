@@ -4557,6 +4557,28 @@ fn regex_membership_retains_ground_false_with_unsupported_regex() {
 }
 
 #[test]
+fn regex_membership_retains_literal_prefix_languages() {
+    for assertion in [
+        "(str.prefixof \"ab\" x)",
+        "(str.prefixof x \"ab\")",
+        "(not (str.prefixof \"ab\" x))",
+        "(not (str.prefixof x \"ab\"))",
+    ] {
+        let text = format!(
+            "(set-logic QF_SLIA)\n\
+             (declare-const x String)\n\
+             (assert (str.in_re x re.all))\n\
+             (assert {assertion})\n\
+             (check-sat)\n"
+        );
+        let script = parse_script(&text).expect("literal-prefix membership parses");
+        let problem = script.membership_problem.expect("membership side channel");
+        assert!(problem.complete);
+        assert_eq!(problem.vars.len(), 1);
+    }
+}
+
+#[test]
 fn regex_inter_matches_intersection() {
     // (re.inter (re.* (re.range "a" "z")) (str.to_re "ab")): lowercase-only ∩ {"ab"} = {"ab"}.
     let text = "(declare-fun s () String)\n\

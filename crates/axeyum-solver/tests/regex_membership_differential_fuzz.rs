@@ -186,6 +186,21 @@ fn generate(rng: &mut Lcg) -> String {
                 let _ = writeln!(text, "(assert (not (= \"{literal}\" v{i})))");
             }
         }
+        // Exact literal-prefix language, with random operand orientation and
+        // polarity. The membership witness remains the SAT replay gate.
+        if rng.below(8) == 0 {
+            let literal = gen_literal(rng);
+            let atom = if rng.below(2) == 0 {
+                format!("(str.prefixof \"{literal}\" v{i})")
+            } else {
+                format!("(str.prefixof v{i} \"{literal}\")")
+            };
+            if rng.below(2) == 0 {
+                let _ = writeln!(text, "(assert {atom})");
+            } else {
+                let _ = writeln!(text, "(assert (not {atom}))");
+            }
+        }
     }
     // Occasional exact variable–variable equality merges both membership classes
     // and requires the returned model to bind them to one checked witness.

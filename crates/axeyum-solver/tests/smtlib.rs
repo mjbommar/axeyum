@@ -2207,6 +2207,49 @@ fn regex_membership_ground_false_refutes_unsupported_dynamic_regex() {
     );
 }
 
+#[test]
+fn regex_membership_decides_literal_prefix_languages() {
+    let incompatible = r#"
+(set-logic QF_SLIA)
+(declare-const x String)
+(assert (str.in_re x (re.* (re.range "a" "b"))))
+(assert (str.prefixof "1" x))
+(check-sat)
+"#;
+    let mut script = parse_script(incompatible).expect("prefix contradiction parses");
+    assert_eq!(
+        membership_verdict(&mut script, &config()),
+        Some(CheckResult::Unsat)
+    );
+
+    let variable_prefix_sat = r#"
+(set-logic QF_SLIA)
+(declare-const x String)
+(assert (str.in_re x re.all))
+(assert (str.prefixof x "ab"))
+(assert (not (= x "a")))
+(check-sat)
+"#;
+    let mut script = parse_script(variable_prefix_sat).expect("finite prefix language parses");
+    assert!(matches!(
+        membership_verdict(&mut script, &config()),
+        Some(CheckResult::Sat(_))
+    ));
+
+    let negated = r#"
+(set-logic QF_SLIA)
+(declare-const x String)
+(assert (str.in_re x (str.to_re "abc")))
+(assert (not (str.prefixof "ab" x)))
+(check-sat)
+"#;
+    let mut script = parse_script(negated).expect("negated prefix language parses");
+    assert_eq!(
+        membership_verdict(&mut script, &config()),
+        Some(CheckResult::Unsat)
+    );
+}
+
 /// The Noetzli small-rewrite corpus asserts the negation of exact SMT-LIB string
 /// identities. Normalize these before the bounded encoder expands them: each row
 /// is a genuine, bound-independent contradiction.

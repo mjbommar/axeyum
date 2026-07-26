@@ -383,7 +383,7 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
-- **2026-07-26 — exact regex-length, alias, and `str.to_int` classes move 110
+- **2026-07-26 — exact regex-length, alias, prefix, and `str.to_int` classes move 112
   StringFuzz residuals.**
   The regex-membership side channel documented `(= (str.len X) n)` as part of
   its exact fragment, but the equality parser skipped the existing length-bound
@@ -400,12 +400,13 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   Ground numeral relations are also retained exactly, so a false conjunct can
   refute an otherwise unsupported dynamic-regex script while a true conjunct
   leaves it declined. On the fixed 128-row current StringFuzz residual, the stacked
-  mechanisms decide **110 rows at 250 ms: 93 UNSAT and 17 replay-checked SAT**,
-  up from 79 by 31, with **WRONG=0** against
+  Literal-prefix predicates in either operand orientation and either polarity are
+  exact membership languages. The stacked mechanisms decide **112 rows at 250 ms:
+  95 UNSAT and 17 replay-checked SAT**, up from 79 by 33, with **WRONG=0** against
   declared corpus status. The comparison construction matches a reference
   evaluator on all 35,464 combinations of four operators, bounds 0–25, and every
   `{0,1,2,a}` string through length four. Z3's generated 700-script differential
-  front jointly decides all 700 with 700 agreements (129 SAT, 571 UNSAT), zero
+  front jointly decides all 700 with 700 agreements (128 SAT, 572 UNSAT), zero
   declines and zero disagreements. The fixed-row adjudication found Z3 4.13.3 and
   cvc5 agreement on every newly moved row with a dual-oracle result. Both literal
   orientations, transitive aliases, conflicting pins, comparison orientations,
@@ -414,8 +415,8 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   huge, length-impossible literal exclusions is repaired by exact redundancy
   elimination: the real row recovers from a 1.7 s decline to 10–20 ms UNSAT at the
   250 ms cap. Unsupported-only regex scripts retain their prior hard-decline
-  behavior. The complete 215-test SMT-LIB parser suite and 93-test affected solver
-  front door pass. Next: classify the remaining 18 StringFuzz rows before
+  behavior. The complete 216-test SMT-LIB parser suite and 94-test affected solver
+  front door pass. Next: classify the remaining 16 StringFuzz rows before
   selecting the next shared mechanism; the 58-row
   Kepler cluster is a genuine Nielsen/length case-analysis gap, and a tested
   finite-monoid shortcut moved zero rows.
