@@ -9708,6 +9708,18 @@ fn exact_rewrite_app(head: &str, args: Vec<ExactRewriteTerm>) -> ExactRewriteTer
             if exact_string_length_le(right, left, 0) {
                 return exact_rewrite_equality(left, right);
             }
+            if !exact_is_ite(left)
+                && exact_string_max_len(right, 0).is_some_and(|maximum| maximum <= 1)
+            {
+                let empty = String(Vec::new());
+                return exact_rewrite_app(
+                    "or",
+                    vec![
+                        exact_rewrite_equality(left, &empty),
+                        exact_rewrite_equality(left, right),
+                    ],
+                );
+            }
         }
         ("str.suffixof", [left, right]) => {
             if left == right || matches!(left, String(value) if value.is_empty()) {
@@ -16436,6 +16448,57 @@ mod string_escape_tests {
             .expect("read self-expanded needle control")
             .pop()
             .expect("one self-expanded needle control");
+        assert_ne!(
+            exact_rewrite_term(&near_miss, 0),
+            ExactRewriteTerm::Bool(true)
+        );
+    }
+
+    #[test]
+    fn one_code_point_word_boundaries_match_reference_semantics_exhaustively() {
+        let mut prefixes = vec![Vec::new()];
+        for length in 1..=4 {
+            for bits in 0..(1_usize << length) {
+                prefixes.push(
+                    (0..length)
+                        .map(|shift| u32::from(if bits & (1 << shift) == 0 { b'A' } else { b'B' }))
+                        .collect(),
+                );
+            }
+        }
+        for word in [Vec::new(), vec![u32::from(b'A')], vec![u32::from(b'B')]] {
+            for boundary in &prefixes {
+                let empty_or_equal = boundary.is_empty() || boundary == &word;
+                assert_eq!(
+                    word.starts_with(boundary),
+                    empty_or_equal,
+                    "prefix={boundary:?}, word={word:?}"
+                );
+                assert_eq!(
+                    word.ends_with(boundary),
+                    empty_or_equal,
+                    "suffix={boundary:?}, word={word:?}"
+                );
+            }
+        }
+
+        for head in ["str.prefixof", "str.suffixof"] {
+            let identity = read_all(&format!(
+                "(= ({head} x (str.at y z)) (or (= x \"\") (= x (str.at y z))))"
+            ))
+            .expect("read one-code-point boundary identity")
+            .pop()
+            .expect("one boundary identity");
+            assert_eq!(
+                exact_rewrite_term(&identity, 0),
+                ExactRewriteTerm::Bool(true),
+                "{head}"
+            );
+        }
+        let near_miss = read_all(r#"(= (str.prefixof x y) (or (= x "") (= x y)))"#)
+            .expect("read unbounded boundary control")
+            .pop()
+            .expect("one unbounded boundary control");
         assert_ne!(
             exact_rewrite_term(&near_miss, 0),
             ExactRewriteTerm::Bool(true)
