@@ -12,11 +12,11 @@
 //! is replayed against the original term through the ground evaluator.
 
 use axeyum_cnf::{check_alethe, write_alethe};
-use std::collections::{BTreeMap, HashMap, VecDeque};
+use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet, VecDeque};
 
 use axeyum_ir::{
-    ArraySortKey, FuncValue, Op, Sort, SymbolId, TermArena, TermId, TermNode, Value, render,
-    well_founded_default,
+    ArraySortKey, Assignment, FuncValue, Op, Sort, SymbolId, TermArena, TermId, TermNode, Value,
+    eval, render, well_founded_default,
 };
 use axeyum_smtlib::{
     IntBound, IntBoundKind, MemberVar, MembershipProblem, Script, ScriptCommand, WordObligation,
@@ -52,6 +52,329 @@ fn apply_source_string_semantic_unsat(script: &Script, result: CheckResult) -> C
     } else {
         result
     }
+}
+
+/// Deterministic candidate-evaluation cap for the bounded string SAT probe.
+///
+/// The probe is a replay-gated accelerator, not a complete decision procedure:
+/// exhausting this count preserves `unknown`. A step count, rather than elapsed
+/// time, keeps its result independent of host load.
+const BOUNDED_STRING_WITNESS_EVALUATIONS: usize = 40_000;
+const BOUNDED_STRING_WITNESS_BEAM: usize = 8;
+const BOUNDED_STRING_WITNESS_ROUNDS: usize = 4;
+
+/// Finds a short model for independent packed-string path constraints.
+///
+/// Generated symbolic-execution rows often constrain several string variables
+/// independently with literals, `contains`, `indexof`, `substr`, and boundary
+/// observations. Bit-blasting the whole formula spends most of a competition
+/// budget rediscovering a tiny witness. This probe derives a small alphabet from
+/// the query's packed string constants, performs a bounded per-variable beam
+/// search, and returns `sat` only when the complete original bounded assertion
+/// stack evaluates to true. It has no UNSAT arm.
+fn bounded_string_witness_probe(script: &Script, assertions: &[TermId]) -> Option<Model> {
+    if !script.uses_bounded_strings
+        || script.model_symbols.is_empty()
+        || !script.model_functions.is_empty()
+        || script.model_symbols.len() > 8
+    {
+        return None;
+    }
+
+    let mut string_symbols = Vec::new();
+    for &symbol in &script.model_symbols {
+        let (_, Sort::BitVec(width)) = script.arena.symbol(symbol) else {
+            return None;
+        };
+        let max_len = packed_string_max_len(width)?;
+        if width > 128 {
+            return None;
+        }
+        string_symbols.push((symbol, width, max_len));
+    }
+
+    let mut features = packed_string_literals(&script.arena, assertions);
+    for code in [0_u32, 1, 33, 35, 47, 59, 91, 92, 93, 95, 126] {
+        features.push(vec![code]);
+    }
+    for word in features.clone() {
+        for code in word {
+            features.push(vec![code]);
+        }
+    }
+    features.retain(|word| !word.is_empty());
+    features.sort();
+    features.dedup();
+
+    let symbol_set: HashSet<SymbolId> = string_symbols.iter().map(|&(s, _, _)| s).collect();
+    let conjuncts = flattened_boolean_conjuncts(&script.arena, assertions);
+    let mut local: BTreeMap<SymbolId, Vec<TermId>> = BTreeMap::new();
+    for conjunct in conjuncts {
+        let referenced = referenced_symbols(&script.arena, conjunct, &symbol_set);
+        if let [symbol] = referenced.as_slice() {
+            local.entry(*symbol).or_default().push(conjunct);
+        }
+    }
+
+    let mut assignment = Assignment::new();
+    for (symbol, _, sort) in script.arena.symbols() {
+        assignment.set(symbol, well_founded_default(&script.arena, sort)?);
+    }
+    let mut evaluations = 0_usize;
+    for &(symbol, width, max_len) in &string_symbols {
+        let atoms = local.get(&symbol)?;
+        let word = search_bounded_string_word(
+            &script.arena,
+            atoms,
+            &assignment,
+            symbol,
+            width,
+            max_len,
+            &features,
+            &mut evaluations,
+        )?;
+        assignment.set(symbol, pack_bounded_string(width, max_len, &word)?);
+    }
+
+    if !assertions.iter().all(|&assertion| {
+        matches!(
+            eval(&script.arena, assertion, &assignment),
+            Ok(Value::Bool(true))
+        )
+    }) {
+        return None;
+    }
+
+    let mut model = Model::new();
+    for (symbol, _, _) in script.arena.symbols() {
+        model.set(symbol, assignment.get(symbol)?);
+    }
+    Some(model)
+}
+
+fn search_bounded_string_word(
+    arena: &TermArena,
+    atoms: &[TermId],
+    assignment: &Assignment,
+    symbol: SymbolId,
+    width: u32,
+    max_len: u32,
+    features: &[Vec<u32>],
+    evaluations: &mut usize,
+) -> Option<Vec<u32>> {
+    let max_len = usize::try_from(max_len).ok()?;
+    let mut initial = vec![Vec::new()];
+    initial.extend(
+        features
+            .iter()
+            .filter(|word| word.len() <= max_len)
+            .cloned(),
+    );
+    let mut beam = score_string_candidates(
+        arena,
+        atoms,
+        assignment,
+        symbol,
+        width,
+        max_len,
+        initial,
+        evaluations,
+    );
+    if let Some((_, word)) = beam.iter().find(|(score, _)| *score == atoms.len()) {
+        return Some(word.clone());
+    }
+
+    for _ in 0..BOUNDED_STRING_WITNESS_ROUNDS {
+        let mut expanded = Vec::new();
+        for (_, prior) in &beam {
+            for feature in features {
+                let Some(new_len) = prior.len().checked_add(feature.len()) else {
+                    continue;
+                };
+                if new_len > max_len {
+                    continue;
+                }
+                for position in 0..=prior.len() {
+                    let mut candidate = Vec::with_capacity(new_len);
+                    candidate.extend_from_slice(&prior[..position]);
+                    candidate.extend_from_slice(feature);
+                    candidate.extend_from_slice(&prior[position..]);
+                    expanded.push(candidate);
+                }
+            }
+        }
+        if expanded.is_empty() || *evaluations >= BOUNDED_STRING_WITNESS_EVALUATIONS {
+            break;
+        }
+        beam = score_string_candidates(
+            arena,
+            atoms,
+            assignment,
+            symbol,
+            width,
+            max_len,
+            expanded,
+            evaluations,
+        );
+        if let Some((_, word)) = beam.iter().find(|(score, _)| *score == atoms.len()) {
+            return Some(word.clone());
+        }
+    }
+    None
+}
+
+#[allow(clippy::too_many_arguments)] // Search state is explicit and locally auditable.
+fn score_string_candidates(
+    arena: &TermArena,
+    atoms: &[TermId],
+    assignment: &Assignment,
+    symbol: SymbolId,
+    width: u32,
+    max_len: usize,
+    candidates: Vec<Vec<u32>>,
+    evaluations: &mut usize,
+) -> Vec<(usize, Vec<u32>)> {
+    let mut unique = BTreeSet::new();
+    let mut scored = Vec::new();
+    for word in candidates {
+        if word.len() > max_len
+            || !unique.insert(word.clone())
+            || *evaluations >= BOUNDED_STRING_WITNESS_EVALUATIONS
+        {
+            continue;
+        }
+        let mut trial = assignment.clone();
+        let Some(value) = pack_bounded_string(
+            width,
+            u32::try_from(max_len).expect("packed string length fits u32"),
+            &word,
+        ) else {
+            continue;
+        };
+        trial.set(symbol, value);
+        *evaluations += 1;
+        let score = atoms
+            .iter()
+            .filter(|&&atom| matches!(eval(arena, atom, &trial), Ok(Value::Bool(true))))
+            .count();
+        scored.push((score, word));
+    }
+    scored.sort_by(|(left_score, left_word), (right_score, right_word)| {
+        right_score
+            .cmp(left_score)
+            .then_with(|| left_word.len().cmp(&right_word.len()))
+            .then_with(|| left_word.cmp(right_word))
+    });
+    scored.truncate(BOUNDED_STRING_WITNESS_BEAM);
+    scored
+}
+
+fn packed_string_max_len(width: u32) -> Option<u32> {
+    (1..=26).find(|&max_len| packed_string_width(max_len) == width)
+}
+
+const fn packed_string_width(max_len: u32) -> u32 {
+    (32 - max_len.leading_zeros()) + 8 * max_len
+}
+
+fn pack_bounded_string(width: u32, max_len: u32, word: &[u32]) -> Option<Value> {
+    if word.len() > usize::try_from(max_len).ok()? || width > 128 {
+        return None;
+    }
+    let len_width = 32 - max_len.leading_zeros();
+    let mut value = u128::try_from(word.len()).ok()?;
+    for (index, &code) in word.iter().enumerate() {
+        let byte = u8::try_from(code).ok()?;
+        value |= u128::from(byte) << (len_width + 8 * u32::try_from(index).ok()?);
+    }
+    Some(Value::Bv { width, value })
+}
+
+fn packed_string_literals(arena: &TermArena, assertions: &[TermId]) -> Vec<Vec<u32>> {
+    let mut words = Vec::new();
+    let mut visited = HashSet::new();
+    let mut stack = assertions.to_vec();
+    while let Some(term) = stack.pop() {
+        if !visited.insert(term) {
+            continue;
+        }
+        match arena.node(term) {
+            TermNode::BvConst { width, value } => {
+                if let Some(word) = unpack_bounded_string(*width, *value) {
+                    words.push(word);
+                }
+            }
+            TermNode::App { args, .. } => stack.extend(args.iter().copied()),
+            _ => {}
+        }
+    }
+    words.sort();
+    words.dedup();
+    words
+}
+
+fn unpack_bounded_string(width: u32, value: u128) -> Option<Vec<u32>> {
+    let max_len = packed_string_max_len(width)?;
+    if width > 128 {
+        return None;
+    }
+    let len_width = 32 - max_len.leading_zeros();
+    let len_mask = (1_u128 << len_width) - 1;
+    let len = usize::try_from(value & len_mask).ok()?;
+    if len > usize::try_from(max_len).ok()? {
+        return None;
+    }
+    let mut word = Vec::with_capacity(len);
+    for index in 0..usize::try_from(max_len).ok()? {
+        let code =
+            u32::try_from((value >> (len_width + 8 * u32::try_from(index).ok()?)) & 0xff).ok()?;
+        if index < len {
+            word.push(code);
+        } else if code != 0 {
+            return None;
+        }
+    }
+    Some(word)
+}
+
+fn flattened_boolean_conjuncts(arena: &TermArena, assertions: &[TermId]) -> Vec<TermId> {
+    let mut conjuncts = Vec::new();
+    let mut stack = assertions.to_vec();
+    while let Some(term) = stack.pop() {
+        if let TermNode::App {
+            op: Op::BoolAnd,
+            args,
+        } = arena.node(term)
+        {
+            stack.extend(args.iter().copied());
+        } else {
+            conjuncts.push(term);
+        }
+    }
+    conjuncts
+}
+
+fn referenced_symbols(
+    arena: &TermArena,
+    root: TermId,
+    selected: &HashSet<SymbolId>,
+) -> Vec<SymbolId> {
+    let mut found = BTreeSet::new();
+    let mut visited = HashSet::new();
+    let mut stack = vec![root];
+    while let Some(term) = stack.pop() {
+        if !visited.insert(term) {
+            continue;
+        }
+        match arena.node(term) {
+            TermNode::Symbol(symbol) if selected.contains(symbol) => {
+                found.insert(*symbol);
+            }
+            TermNode::App { args, .. } => stack.extend(args.iter().copied()),
+            _ => {}
+        }
+    }
+    found.into_iter().collect()
 }
 
 /// The word-equation second-chance route (ADR-0053, T-B.4b).
@@ -1668,6 +1991,7 @@ pub fn solve_smtlib(input: &str, config: &SolverConfig) -> Result<SmtLibOutcome,
             expected_status: script.status,
         });
     }
+    let query = smtlib_single_query(&script)?;
     // A complete word skeleton is an exact source-level view, and the dense PyEx
     // membership families are materially faster there than after the large packed
     // encoding. Give that view first refusal; it may return only replay-checked SAT
@@ -1685,7 +2009,6 @@ pub fn solve_smtlib(input: &str, config: &SolverConfig) -> Result<SmtLibOutcome,
             expected_status: script.status,
         });
     }
-    let query = smtlib_single_query(&script)?;
     let gate = StringGate::from_script(&script);
     let result = solve(&mut script.arena, &query.assertions, config)?;
     let result = gate.confirm(&mut script.arena, &query.assertions, config, result)?;
@@ -1738,6 +2061,18 @@ pub fn solve_smtlib(input: &str, config: &SolverConfig) -> Result<SmtLibOutcome,
     // length-capped ≤ MAX_LEN, every Int provably < 2^31) and upgrades it to a
     // real `unsat`. Only ever turns that specific `unknown` into `unsat`.
     let result = apply_bounded_completeness_unsat(input, result);
+    // Short-model search is deliberately the final fallback: it is useful on
+    // dense symbolic-execution paths, but must never consume time ahead of an
+    // established route that already decides the query. Its sole verdict is a
+    // model replayed against the complete original bounded assertion stack.
+    let result = if !script.source_string_semantic_unsat
+        && matches!(result, CheckResult::Unknown(_))
+        && let Some(model) = bounded_string_witness_probe(&script, &query.assertions)
+    {
+        CheckResult::Sat(model)
+    } else {
+        result
+    };
     Ok(SmtLibOutcome {
         result,
         logic: script.logic,

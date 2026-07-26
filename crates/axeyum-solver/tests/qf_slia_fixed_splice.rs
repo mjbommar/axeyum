@@ -2554,3 +2554,55 @@ fn exact_boolean_path_conflicts_decline_satisfiable_near_misses() {
         );
     }
 }
+
+#[test]
+fn bounded_string_witness_probe_replays_multi_variable_pyex_path() {
+    let input = r#"(set-logic QF_SLIA)
+(declare-fun key1 () String)
+(declare-fun key2 () String)
+(declare-fun value1 () String)
+(declare-fun value2 () String)
+(assert (= key1 "cache-control"))
+(assert (= key2 "cache-control"))
+(assert (str.contains value1 "="))
+(assert (> (str.indexof value1 "=" 0) 0))
+(assert (> (- (str.len value1) (+ (str.indexof value1 "=" 0) 1)) 0))
+(assert (= (str.at value1 0) "\u{9}"))
+(assert (not (str.contains value1 ",")))
+(assert (not (= (str.len value2) 0)))
+(assert (= (str.indexof value2 "=" 0) (- 1)))
+(assert (not (str.contains value2 "A")))
+(assert (not (str.contains value2 "B")))
+(assert (not (= (str.at value2 0) " ")))
+(assert (not (= (str.at value2 (- (str.len value2) 1)) "\u{d}")))
+(check-sat)
+"#;
+    assert!(
+        matches!(
+            solve_smtlib(input, &config())
+                .expect("solve replay-gated bounded-string witness")
+                .result,
+            CheckResult::Sat(_)
+        ),
+        "the short independent PyEx witnesses must replay against the original formula"
+    );
+}
+
+#[test]
+fn bounded_string_witness_probe_cannot_override_an_unsat_path() {
+    let input = r#"(set-logic QF_SLIA)
+(declare-fun key () String)
+(declare-fun value () String)
+(assert (= key "cache-control"))
+(assert (str.contains value "="))
+(assert (= (str.indexof value "=" 0) (- 1)))
+(check-sat)
+"#;
+    assert_eq!(
+        solve_smtlib(input, &config())
+            .expect("solve contradictory bounded-string witness control")
+            .result,
+        CheckResult::Unsat,
+        "a candidate that fails full replay must never escape as SAT"
+    );
+}
