@@ -9855,6 +9855,12 @@ fn exact_rewrite_app(head: &str, args: Vec<ExactRewriteTerm>) -> ExactRewriteTer
             if exact_string_length_le(right, left, 0) {
                 return exact_rewrite_equality(left, right);
             }
+            if matches!(left, String(word) if word.len() == 1) {
+                return exact_rewrite_equality(
+                    &exact_rewrite_app("str.at", vec![right.clone(), Int(0)]),
+                    left,
+                );
+            }
             if !exact_is_ite(left)
                 && exact_string_max_len(right, 0).is_some_and(|maximum| maximum <= 1)
             {
@@ -9866,6 +9872,12 @@ fn exact_rewrite_app(head: &str, args: Vec<ExactRewriteTerm>) -> ExactRewriteTer
                         exact_rewrite_equality(left, right),
                     ],
                 );
+            }
+            if let String(word) = right
+                && let Some(rewritten) =
+                    exact_rewrite_fixed_word_language(word, left, ExactFixedWordLanguage::Prefixes)
+            {
+                return rewritten;
             }
         }
         ("str.suffixof", [left, right]) => {
@@ -9896,6 +9908,12 @@ fn exact_rewrite_app(head: &str, args: Vec<ExactRewriteTerm>) -> ExactRewriteTer
             }
             if exact_string_max_len(right, 0).is_some_and(|maximum| maximum <= 1) {
                 return exact_rewrite_app("str.prefixof", vec![left.clone(), right.clone()]);
+            }
+            if let String(word) = right
+                && let Some(rewritten) =
+                    exact_rewrite_fixed_word_language(word, left, ExactFixedWordLanguage::Suffixes)
+            {
+                return rewritten;
             }
         }
         ("str.contains", [subject, needle]) => {
@@ -9936,8 +9954,24 @@ fn exact_rewrite_app(head: &str, args: Vec<ExactRewriteTerm>) -> ExactRewriteTer
             if exact_string_length_le(subject, needle, 0) {
                 return exact_rewrite_equality(subject, needle);
             }
+            if exact_is_ite(needle) && exact_ite_count(needle) <= 6 {
+                // Preserve the generic bounded ITE distribution before the
+                // one-code-point fallback returns a finite prefix language.
+                // Each branch can then use the ordinary containment rules.
+                return exact_distribute_app_ite(head, &args)
+                    .expect("a bounded ite needle must distribute");
+            }
             if exact_string_max_len(subject, 0).is_some_and(|maximum| maximum <= 1) {
                 return exact_rewrite_app("str.prefixof", vec![needle.clone(), subject.clone()]);
+            }
+            if let String(word) = subject
+                && let Some(rewritten) = exact_rewrite_fixed_word_language(
+                    word,
+                    needle,
+                    ExactFixedWordLanguage::Substrings,
+                )
+            {
+                return rewritten;
             }
         }
         _ => {}
@@ -10890,6 +10924,46 @@ fn exact_rewrite_small_concat_equality(
     Some(exact_rewrite_app("or", choices))
 }
 
+#[derive(Clone, Copy)]
+enum ExactFixedWordLanguage {
+    Prefixes,
+    Suffixes,
+    Substrings,
+}
+
+/// Expands membership in the finite prefix, suffix, or substring language of a
+/// fixed small word. These are complete source-theory languages, independent
+/// of the packed-string bound; the cap controls only normal-form size.
+fn exact_rewrite_fixed_word_language(
+    word: &[u32],
+    candidate: &ExactRewriteTerm,
+    language: ExactFixedWordLanguage,
+) -> Option<ExactRewriteTerm> {
+    if word.len() > 4 {
+        return None;
+    }
+    let words = match language {
+        ExactFixedWordLanguage::Prefixes => (0..=word.len())
+            .map(|end| word[..end].to_vec())
+            .collect::<BTreeSet<_>>(),
+        ExactFixedWordLanguage::Suffixes => (0..=word.len())
+            .map(|start| word[start..].to_vec())
+            .collect::<BTreeSet<_>>(),
+        ExactFixedWordLanguage::Substrings => (0..=word.len())
+            .flat_map(|start| (start..=word.len()).map(move |end| word[start..end].to_vec()))
+            .collect::<BTreeSet<_>>(),
+    };
+    Some(exact_rewrite_app(
+        "or",
+        words
+            .into_iter()
+            .map(|word| {
+                exact_rewrite_app("=", vec![candidate.clone(), ExactRewriteTerm::String(word)])
+            })
+            .collect(),
+    ))
+}
+
 /// Routes a fixed index through a concatenation when the leading component has
 /// an exact source-theory length. Index zero also commutes with repeated copies
 /// of the same possibly-empty component.
@@ -11579,6 +11653,18 @@ fn exact_rewrite_boolean_nary(head: &str, values: &[ExactRewriteTerm]) -> ExactR
             value if !terms.contains(&value) => terms.push(value),
             _ => {}
         }
+    }
+    if head == "and"
+        && ExactEqualityFacts::from_assignments(
+            &terms
+                .iter()
+                .cloned()
+                .map(|condition| (condition, true))
+                .collect::<Vec<_>>(),
+        )
+        .conflict
+    {
+        return Bool(false);
     }
     match terms.as_slice() {
         [] => Bool(identity),
@@ -16599,9 +16685,10 @@ fn apply_parameterized(
 #[cfg(test)]
 mod string_escape_tests {
     use super::{
-        ExactEqualityFacts, ExactRewriteTerm, decimal_code_points, decode_string_code_points,
-        exact_affine_equalities_equal, exact_affine_zero_forces_nonpositive, exact_rewrite_app,
-        exact_rewrite_concat_at, exact_rewrite_concat_substr, exact_rewrite_equality,
+        ExactEqualityFacts, ExactFixedWordLanguage, ExactRewriteTerm, decimal_code_points,
+        decode_string_code_points, exact_affine_equalities_equal,
+        exact_affine_zero_forces_nonpositive, exact_rewrite_app, exact_rewrite_concat_at,
+        exact_rewrite_concat_substr, exact_rewrite_equality, exact_rewrite_fixed_word_language,
         exact_rewrite_small_subject_indexof, exact_rewrite_term, exact_rewrite_under_assignments,
         replace_first_code_points, substr_code_points,
     };
@@ -17436,6 +17523,144 @@ mod string_escape_tests {
                             "head={head}, left={left_word:?}, right={right_word:?}, view={view:?}"
                         );
                     }
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn fixed_word_languages_match_reference_semantics_exhaustively() {
+        let mut words = vec![Vec::new()];
+        for length in 1..=5 {
+            for bits in 0..(1_usize << length) {
+                words.push(
+                    (0..length)
+                        .map(|shift| u32::from(if bits & (1 << shift) == 0 { b'A' } else { b'B' }))
+                        .collect(),
+                );
+            }
+        }
+
+        for word in words.iter().filter(|word| word.len() <= 4) {
+            for candidate in &words {
+                for (name, language, expected) in [
+                    (
+                        "prefix",
+                        ExactFixedWordLanguage::Prefixes,
+                        word.starts_with(candidate),
+                    ),
+                    (
+                        "suffix",
+                        ExactFixedWordLanguage::Suffixes,
+                        word.ends_with(candidate),
+                    ),
+                    (
+                        "substring",
+                        ExactFixedWordLanguage::Substrings,
+                        candidate.is_empty()
+                            || word
+                                .windows(candidate.len())
+                                .any(|window| window == candidate),
+                    ),
+                ] {
+                    assert_eq!(
+                        exact_rewrite_fixed_word_language(
+                            word,
+                            &ExactRewriteTerm::String(candidate.clone()),
+                            language,
+                        ),
+                        Some(ExactRewriteTerm::Bool(expected)),
+                        "language={name}, word={word:?}, candidate={candidate:?}"
+                    );
+                }
+            }
+        }
+        assert!(
+            exact_rewrite_fixed_word_language(
+                &[u32::from(b'A'); 5],
+                &ExactRewriteTerm::String(Vec::new()),
+                ExactFixedWordLanguage::Substrings,
+            )
+            .is_none()
+        );
+    }
+
+    #[test]
+    fn fixed_word_languages_close_symbolic_forms_and_conflicting_paths() {
+        for text in [
+            r#"(= (str.suffixof x "AA") (str.prefixof x "AA"))"#,
+            r#"(= (str.contains "AA" x) (str.prefixof x "AA"))"#,
+            r#"(= (str.prefixof "A" (str.at x 0)) (str.prefixof "A" x))"#,
+            r#"(= (str.contains "A" (str.++ x x)) (= x ""))"#,
+            r#"(= (str.contains (str.replace "A" x "A") y)
+                   (str.prefixof y (str.replace "A" x "A")))"#,
+            r#"(= (str.contains "A" (str.replace "A" x "")) true)"#,
+            r#"(= (str.replace "A" (str.++ x x) x) "A")"#,
+            r#"(= (str.replace "A" (str.++ x x) y)
+                   (str.++ (str.replace "" x y) "A"))"#,
+            r#"(and (= x "A") (= x "B"))"#,
+            r#"(and (= x y) (= y "A") (= x "B"))"#,
+        ] {
+            let expression = read_all(text)
+                .expect("read fixed-word language theorem")
+                .pop()
+                .expect("one fixed-word language theorem");
+            let expected = if text.starts_with("(and") {
+                ExactRewriteTerm::Bool(false)
+            } else {
+                ExactRewriteTerm::Bool(true)
+            };
+            assert_eq!(exact_rewrite_term(&expression, 0), expected, "{text}");
+        }
+
+        for text in [
+            r#"(= (str.suffixof x "AB") (str.prefixof x "AB"))"#,
+            r#"(= (str.contains "AB" x) (str.prefixof x "AB"))"#,
+            r#"(= (str.prefixof "AB" x) (= (str.at x 0) "AB"))"#,
+        ] {
+            let expression = read_all(text)
+                .expect("read fixed-word language control")
+                .pop()
+                .expect("one fixed-word language control");
+            assert_ne!(
+                exact_rewrite_term(&expression, 0),
+                ExactRewriteTerm::Bool(true),
+                "{text}"
+            );
+        }
+        let consistent = read_all(r#"(and (= x "A") (not (= x "B")))"#)
+            .expect("read consistent equality conjunction")
+            .pop()
+            .expect("one consistent equality conjunction");
+        assert_ne!(
+            exact_rewrite_term(&consistent, 0),
+            ExactRewriteTerm::Bool(false)
+        );
+
+        let mut needles = vec![Vec::new()];
+        for length in 1..=4 {
+            for bits in 0..(1_usize << length) {
+                needles.push(
+                    (0..length)
+                        .map(|shift| u32::from(if bits & (1 << shift) == 0 { b'A' } else { b'B' }))
+                        .collect(),
+                );
+            }
+        }
+        for subject in [vec![u32::from(b'A')], vec![u32::from(b'B')]] {
+            for needle in &needles {
+                let doubled_needle = [needle.as_slice(), needle.as_slice()].concat();
+                for replacement in &needles {
+                    let left = replace_first_code_points(&subject, &doubled_needle, replacement);
+                    let right = [
+                        replace_first_code_points(&[], needle, replacement).as_slice(),
+                        subject.as_slice(),
+                    ]
+                    .concat();
+                    assert_eq!(
+                        left, right,
+                        "subject={subject:?}, needle={needle:?}, replacement={replacement:?}"
+                    );
                 }
             }
         }
