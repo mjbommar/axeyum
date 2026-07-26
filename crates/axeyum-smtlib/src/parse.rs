@@ -12915,6 +12915,7 @@ fn exact_boolean_alias_contradiction(terms: &[ExactRewriteTerm]) -> bool {
     use ExactRewriteTerm::{App, Bool, Opaque};
 
     let mut aliases = Vec::new();
+    let mut length_aliases = Vec::new();
     for term in terms {
         let App(head, args) = term else {
             continue;
@@ -12926,10 +12927,15 @@ fn exact_boolean_alias_contradiction(terms: &[ExactRewriteTerm]) -> bool {
             continue;
         }
         for (symbol, condition) in [(left, right), (right, left)] {
-            if matches!(symbol, Opaque(expression) if expression.atom().is_some())
-                && exact_term_is_boolean(condition)
-            {
-                aliases.push((symbol.clone(), condition.clone()));
+            if matches!(symbol, Opaque(expression) if expression.atom().is_some()) {
+                if exact_term_is_boolean(condition) {
+                    aliases.push((symbol.clone(), condition.clone()));
+                }
+                if matches!(condition, App(head, args)
+                    if matches!(head.as_str(), "str.len" | "seq.len") && args.len() == 1)
+                {
+                    length_aliases.push((symbol.clone(), condition.clone()));
+                }
             }
         }
     }
@@ -12964,6 +12970,17 @@ fn exact_boolean_alias_contradiction(terms: &[ExactRewriteTerm]) -> bool {
             }
             _ => {}
         }
+        if let Some(consequence) =
+            exact_length_emptiness_consequence(&condition, required, &length_aliases)
+        {
+            match consequence {
+                ExactLengthEmptiness::Conflict => pending.push((Bool(false), true)),
+                ExactLengthEmptiness::Requires { subject, empty } => pending.push((
+                    exact_rewrite_app("=", vec![subject, ExactRewriteTerm::String(Vec::new())]),
+                    empty,
+                )),
+            }
+        }
 
         for (symbol, definition) in &aliases {
             if exact_conditions_equal(&condition, symbol) {
@@ -12975,6 +12992,120 @@ fn exact_boolean_alias_contradiction(terms: &[ExactRewriteTerm]) -> bool {
     }
 
     ExactEqualityFacts::from_assignments(&assignments).conflict
+}
+
+enum ExactLengthEmptiness {
+    Conflict,
+    Requires {
+        subject: ExactRewriteTerm,
+        empty: bool,
+    },
+}
+
+/// Extracts only those integral string-length comparisons that force
+/// emptiness or nonemptiness.  String length is a nonnegative integer, so the
+/// boundary between the two cases is exact at zero/one; wider bounds are used
+/// only when one polarity still forces the same side of that boundary.
+fn exact_length_emptiness_consequence(
+    condition: &ExactRewriteTerm,
+    required: bool,
+    aliases: &[(ExactRewriteTerm, ExactRewriteTerm)],
+) -> Option<ExactLengthEmptiness> {
+    use ExactLengthEmptiness::{Conflict, Requires};
+    use ExactRewriteTerm::{App, Int};
+
+    let App(relation, args) = condition else {
+        return None;
+    };
+    let [left, right] = args.as_slice() else {
+        return None;
+    };
+    let direct_length_subject = |term: &ExactRewriteTerm| match term {
+        App(head, args) if matches!(head.as_str(), "str.len" | "seq.len") => {
+            let [subject] = args.as_slice() else {
+                return None;
+            };
+            Some(subject.clone())
+        }
+        _ => None,
+    };
+    let length_subject = |term: &ExactRewriteTerm| {
+        direct_length_subject(term).or_else(|| {
+            aliases.iter().find_map(|(symbol, length)| {
+                exact_conditions_equal(term, symbol)
+                    .then(|| direct_length_subject(length))
+                    .flatten()
+            })
+        })
+    };
+    let (relation, subject, bound) =
+        if let (Some(subject), Int(bound)) = (length_subject(left), right) {
+            (relation.as_str(), subject, *bound)
+        } else if let (Int(bound), Some(subject)) = (left, length_subject(right)) {
+            let relation = match relation.as_str() {
+                "<" => ">",
+                "<=" => ">=",
+                ">" => "<",
+                ">=" => "<=",
+                "=" => "=",
+                _ => return None,
+            };
+            (relation, subject, *bound)
+        } else {
+            return None;
+        };
+
+    let empty = match relation {
+        "=" if required => {
+            if bound < 0 {
+                return Some(Conflict);
+            }
+            bound == 0
+        }
+        "=" if bound == 0 => false,
+        "<" if required => {
+            if bound <= 0 {
+                return Some(Conflict);
+            }
+            if bound != 1 {
+                return None;
+            }
+            true
+        }
+        "<" if bound >= 1 => false,
+        "<=" if required => {
+            if bound < 0 {
+                return Some(Conflict);
+            }
+            if bound != 0 {
+                return None;
+            }
+            true
+        }
+        "<=" if bound >= 0 => false,
+        ">" if required && bound >= 0 => false,
+        ">" if !required => {
+            if bound < 0 {
+                return Some(Conflict);
+            }
+            if bound != 0 {
+                return None;
+            }
+            true
+        }
+        ">=" if required && bound >= 1 => false,
+        ">=" if !required => {
+            if bound <= 0 {
+                return Some(Conflict);
+            }
+            if bound != 1 {
+                return None;
+            }
+            true
+        }
+        _ => return None,
+    };
+    Some(Requires { subject, empty })
 }
 
 // This path is intentionally population-gated. The exact condition comparison
@@ -18242,10 +18373,11 @@ mod string_escape_tests {
     use std::collections::BTreeSet;
 
     use super::{
-        ExactEqualityFacts, ExactFixedWordLanguage, ExactRewriteTerm, decimal_code_points,
-        decode_string_code_points, eval_pinned_word_semantics, exact_affine_equalities_equal,
-        exact_affine_orderings_equal, exact_affine_zero_forces_nonpositive,
-        exact_affine_zero_forces_positive, exact_from_int_empty_condition, exact_rewrite_app,
+        ExactEqualityFacts, ExactFixedWordLanguage, ExactLengthEmptiness, ExactRewriteTerm,
+        decimal_code_points, decode_string_code_points, eval_pinned_word_semantics,
+        exact_affine_equalities_equal, exact_affine_orderings_equal,
+        exact_affine_zero_forces_nonpositive, exact_affine_zero_forces_positive,
+        exact_from_int_empty_condition, exact_length_emptiness_consequence, exact_rewrite_app,
         exact_rewrite_concat_at, exact_rewrite_concat_substr, exact_rewrite_equality,
         exact_rewrite_fixed_word_language, exact_rewrite_prefix_substr_emptiness,
         exact_rewrite_replace_preserves_subject, exact_rewrite_replace_singleton_equality,
@@ -20654,6 +20786,100 @@ mod string_escape_tests {
         .expect("exact contradiction should survive the packed capacity decline");
         assert!(script.word_only_fallback.is_some());
         assert!(script.source_string_semantic_unsat);
+    }
+
+    #[test]
+    fn aliased_length_and_emptiness_paths_share_one_exact_boundary() {
+        for script in [
+            r#"(declare-const s String)
+(declare-const n Int)
+(declare-const nonempty Bool)
+(declare-const no_positive_length Bool)
+(assert (= nonempty (not (= s ""))))
+(assert nonempty)
+(assert (= n (str.len s)))
+(assert (= no_positive_length (not (< 0 n))))
+(assert no_positive_length)
+(check-sat)"#,
+            r#"(declare-const s String)
+(declare-const n Int)
+(declare-const at_least_four Bool)
+(assert (= s ""))
+(assert (= n (str.len s)))
+(assert (= at_least_four (not (< n 4))))
+(assert at_least_four)
+(check-sat)"#,
+        ] {
+            let expressions = read_all(script).expect("read contradictory length alias path");
+            assert!(
+                source_string_semantic_facts(&expressions).conflict,
+                "{script}"
+            );
+        }
+
+        for script in [
+            r#"(declare-const s String)
+(declare-const nonempty Bool)
+(assert (= nonempty (< 0 (str.len s))))
+(assert nonempty)
+(assert (not (= s "")))
+(check-sat)"#,
+            r#"(declare-const s String)
+(declare-const empty Bool)
+(assert (= empty (<= (str.len s) 0)))
+(assert empty)
+(assert (= s ""))
+(check-sat)"#,
+        ] {
+            let expressions = read_all(script).expect("read satisfiable length alias control");
+            assert!(
+                !source_string_semantic_facts(&expressions).conflict,
+                "{script}"
+            );
+        }
+    }
+
+    #[test]
+    fn length_emptiness_consequences_are_exhaustively_sound_at_small_thresholds() {
+        use ExactLengthEmptiness::{Conflict, Requires};
+        use ExactRewriteTerm::{App, Int, Opaque};
+
+        let subject = Opaque(SExpr::Atom("s".to_owned()));
+        let length = App("str.len".to_owned(), vec![subject.clone()]);
+        for relation in ["=", "<", "<=", ">", ">="] {
+            for bound in -2_i128..=3 {
+                let condition = App(relation.to_owned(), vec![length.clone(), Int(bound)]);
+                for required in [false, true] {
+                    let consequence = exact_length_emptiness_consequence(&condition, required, &[]);
+                    for length in 0_i128..=6 {
+                        let actual = match relation {
+                            "=" => length == bound,
+                            "<" => length < bound,
+                            "<=" => length <= bound,
+                            ">" => length > bound,
+                            ">=" => length >= bound,
+                            _ => unreachable!(),
+                        };
+                        if actual != required {
+                            continue;
+                        }
+                        match &consequence {
+                            Some(Conflict) => {
+                                panic!("{length} satisfies len {relation} {bound} = {required}")
+                            }
+                            Some(Requires {
+                                subject: derived,
+                                empty,
+                            }) => {
+                                assert_eq!(derived, &subject);
+                                assert_eq!(*empty, length == 0);
+                            }
+                            None => {}
+                        }
+                    }
+                }
+            }
+        }
     }
 
     fn assert_boolean_path_conflicts(scripts: &[&str], expected: bool) {
