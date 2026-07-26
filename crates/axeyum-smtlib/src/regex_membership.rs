@@ -302,7 +302,10 @@ impl Builder<'_> {
                 }
             }
             "=" if items.len() == 3 => {
-                if let Some((name, value)) = to_int_equality(&items[1], &items[2], self.vars) {
+                if self.length_atom(head, &items[1], &items[2]) {
+                    true
+                } else if let Some((name, value)) = to_int_equality(&items[1], &items[2], self.vars)
+                {
                     self.per_var
                         .entry(name)
                         .or_default()
@@ -381,7 +384,7 @@ impl Builder<'_> {
     }
 
     /// A length atom `(op (str.len X) n)` or `(op n (str.len X))` for
-    /// `op ∈ {<,<=,>,>=}` and a non-negative numeral `n`.
+    /// `op ∈ {=,<,<=,>,>=}` and a non-negative numeral `n`.
     fn length_atom(&mut self, op: &str, lhs: &SExpr, rhs: &SExpr) -> bool {
         // Identify which side is `(str.len X)` and which is the numeral, and
         // normalize `op` so the variable is on the left.
@@ -396,6 +399,10 @@ impl Builder<'_> {
         let mem = &mut state.membership;
         // len(X) `op` bound, all bounds inclusive on `[len_lo, len_hi]`.
         match op.as_str() {
+            "=" => {
+                mem.len_lo = mem.len_lo.max(bound);
+                mem.len_hi = Some(mem.len_hi.map_or(bound, |high| high.min(bound)));
+            }
             ">=" => mem.len_lo = mem.len_lo.max(bound),
             ">" => mem.len_lo = mem.len_lo.max(bound.saturating_add(1)),
             "<=" => mem.len_hi = Some(mem.len_hi.map_or(bound, |h| h.min(bound))),

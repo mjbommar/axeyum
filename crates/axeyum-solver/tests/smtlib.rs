@@ -1965,6 +1965,43 @@ fn regex_membership_to_int_keeps_leading_zero_witness() {
     ));
 }
 
+/// Fixed string lengths are exact membership constraints in either equality
+/// orientation.  The derivative route may therefore refute a length that the
+/// regex cannot generate, while retaining a replay-checked satisfiable control.
+#[test]
+fn regex_membership_decides_exact_length_equalities() {
+    for length_assertion in ["(= (str.len x) 3)", "(= 3 (str.len x))"] {
+        let text = format!(
+            "(set-logic QF_SLIA)\n\
+             (declare-const x String)\n\
+             (assert (str.in_re x (re.* (str.to_re \"ab\"))))\n\
+             (assert {length_assertion})\n\
+             (check-sat)\n"
+        );
+        assert_eq!(run(&text).result, CheckResult::Unsat);
+
+        let mut script = parse_script(&text).expect("exact-length membership script parses");
+        assert_eq!(
+            membership_verdict(&mut script, &config()),
+            Some(CheckResult::Unsat),
+            "the certified membership route must own the refutation"
+        );
+    }
+
+    let sat = r#"
+(set-logic QF_SLIA)
+(declare-const x String)
+(assert (str.in_re x (re.* (str.to_re "ab"))))
+(assert (= (str.len x) 4))
+(check-sat)
+"#;
+    let mut script = parse_script(sat).expect("satisfiable exact-length script parses");
+    assert!(matches!(
+        membership_verdict(&mut script, &config()),
+        Some(CheckResult::Sat(_))
+    ));
+}
+
 /// The Noetzli small-rewrite corpus asserts the negation of exact SMT-LIB string
 /// identities. Normalize these before the bounded encoder expands them: each row
 /// is a genuine, bound-independent contradiction.

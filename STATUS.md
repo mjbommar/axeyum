@@ -383,6 +383,23 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-26 — exact regex-length equalities move 79 StringFuzz residuals.**
+  The regex-membership side channel documented `(= (str.len X) n)` as part of
+  its exact fragment, but the equality parser skipped the existing length-bound
+  handler.  Both equality orientations now retain the exact singleton interval
+  `[n,n]`, allowing the existing derivative-closure checker to certify empty
+  regex/length intersections and the reference matcher to replay concrete
+  witnesses.  On the fixed 128-row current StringFuzz residual, 79 rows move
+  from unknown to decided at 250 ms: **71 UNSAT and eight replay-checked SAT**.
+  Z3 4.13.3 and cvc5 independently agree on all 79, with zero unresolved oracle
+  calls and zero disagreements.  Both orientations and an inhabited control are
+  pinned at the parser and front door; the complete 285-test SMT-LIB crate, the
+  88-test affected solver front door, both historical string decide-rate guards,
+  and both standing wrong-UNSAT guards pass.  Next: checkpoint and hand off this
+  22-commit branch, then rank the remaining non-Kaluza residuals; the 58-row
+  Kepler cluster is a genuine Nielsen/length case-analysis gap, and a tested
+  finite-monoid shortcut moved zero rows.
+
 - **2026-07-26 — exact selected-path propagation moves 262 Kaluza rows without
   trusting directory labels.** Commits `09841e23`, `ef78ca7b`, `fca80291`, and
   `29bc62c4`, `72624888`, and `08fffefd` propagate only forced Boolean aliases,
