@@ -6197,14 +6197,21 @@ fn lift_ite_matching(
     let err = |e: axeyum_ir::IrError| SolverError::Backend(e.to_string());
     let mut map: HashMap<TermId, TermId> = HashMap::new();
     let mut constraints: Vec<TermId> = Vec::new();
-    for (k, t) in ites.iter().enumerate() {
+    for t in &ites {
         let TermNode::App { args, .. } = arena.node(*t) else {
             continue;
         };
         let (c, a, b) = (args[0], args[1], args[2]);
         let sort = arena.sort_of(*t);
         let sym = arena
-            .declare_internal(&format!("!ite_{k}"), sort)
+            // `check_auto` can be called repeatedly on the same arena while a
+            // quantified search checks different ground slices. A call-local
+            // ordinal (`!ite_0`, `!ite_1`, ...) aliases unrelated ITEs from
+            // different slices and becomes a sort conflict when their result
+            // sorts differ. The arena term id is stable and globally unique
+            // within that arena, while repeated lifting of the same ITE still
+            // reuses the same helper.
+            .declare_internal(&format!("!ite_{}", t.index()), sort)
             .map_err(err)?;
         let tv = arena.var(sym);
         map.insert(*t, tv);
@@ -6794,6 +6801,36 @@ impl Features {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn ite_lifting_is_collision_free_across_repeated_mixed_sort_slices() {
+        let mut arena = TermArena::new();
+        let condition = arena.bool_var("ite_slice_condition").unwrap();
+        let first_sort = Sort::Uninterpreted(arena.declare_uninterpreted_sort("IteSliceFirst"));
+        let second_sort = Sort::Uninterpreted(arena.declare_uninterpreted_sort("IteSliceSecond"));
+
+        let first_then = arena.declare("first_then", first_sort).unwrap();
+        let first_else = arena.declare("first_else", first_sort).unwrap();
+        let first_then = arena.var(first_then);
+        let first_else = arena.var(first_else);
+        let first_ite = arena.ite(condition, first_then, first_else).unwrap();
+        let first_assertion = arena.eq(first_ite, first_then).unwrap();
+
+        let second_then = arena.declare("second_then", second_sort).unwrap();
+        let second_else = arena.declare("second_else", second_sort).unwrap();
+        let second_then = arena.var(second_then);
+        let second_else = arena.var(second_else);
+        let second_ite = arena.ite(condition, second_then, second_else).unwrap();
+        let second_assertion = arena.eq(second_ite, second_then).unwrap();
+
+        lift_uninterpreted_sort_ite(&mut arena, &[first_assertion]).expect("first slice must lift");
+        lift_uninterpreted_sort_ite(&mut arena, &[second_assertion])
+            .expect("a later mixed-sort slice must mint a distinct helper");
+
+        // Re-lifting an identical slice remains stable and reuses its helper.
+        lift_uninterpreted_sort_ite(&mut arena, &[first_assertion])
+            .expect("the same ITE must remain reusable");
+    }
 
     #[test]
     fn mbqi_free_int_symbol_policy_uses_exact_source_and_excludes_binders() {
