@@ -511,3 +511,75 @@ fn exact_source_rewrite_does_not_use_assertions_after_check_sat() {
         CheckResult::Sat(_)
     ));
 }
+
+#[test]
+fn exact_source_relations_refute_noetzli_predicate_families() {
+    for assertion in [
+        r"(not (= (str.contains x (str.at x z)) true))",
+        r"(not (= (str.suffixof y (str.at x z))
+                    (str.prefixof y (str.at x z))))",
+        r#"(not (= (str.prefixof x (str.replace x "A" "B"))
+                    (= x (str.replace x "A" "B"))))"#,
+        r"(not (= (= x (str.++ y x)) (= x (str.++ x y))))",
+        r#"(not (= (= x (str.substr x z z)) (= x "")))"#,
+        r"(not (str.suffixof (str.substr x z (- (str.len x) z)) x))",
+    ] {
+        let input = format!(
+            r"(set-logic QF_SLIA)
+(declare-fun x () String)
+(declare-fun y () String)
+(declare-fun z () Int)
+(assert {assertion})
+(check-sat)
+"
+        );
+        let script = parse_script(&input).expect("parse exact source relation");
+        assert!(
+            script.source_string_semantic_unsat,
+            "source relation must refute {assertion}"
+        );
+        assert_eq!(
+            solve_smtlib(&input, &config())
+                .expect("solve exact source relation")
+                .result,
+            CheckResult::Unsat,
+            "source relation must survive the bounded-string gate: {assertion}"
+        );
+    }
+}
+
+#[test]
+fn exact_source_relations_decline_nearby_non_theorems() {
+    for assertion in [
+        // Prefix and suffix differ once the subject may have length two.
+        r#"(not (= (str.suffixof "A" "AB") (str.prefixof "A" "AB")))"#,
+        // An `at` view of a different source need not occur in `x`.
+        r"(not (str.contains x (str.at y z)))",
+        // Offset zero can preserve a nonempty source exactly.
+        r#"(not (= (= x (str.substr x 0 z)) (= x "")))"#,
+        // No cancellation is valid when neither concat component is the peer.
+        r"(not (= x (str.++ y y)))",
+    ] {
+        let input = format!(
+            r"(set-logic QF_SLIA)
+(declare-fun x () String)
+(declare-fun y () String)
+(declare-fun z () Int)
+(assert {assertion})
+(check-sat)
+"
+        );
+        let script = parse_script(&input).expect("parse relational non-theorem");
+        assert!(
+            !script.source_string_semantic_unsat,
+            "source relation must decline {assertion}"
+        );
+        assert_ne!(
+            solve_smtlib(&input, &config())
+                .expect("solve relational non-theorem")
+                .result,
+            CheckResult::Unsat,
+            "satisfiable relational control must not become UNSAT: {assertion}"
+        );
+    }
+}
