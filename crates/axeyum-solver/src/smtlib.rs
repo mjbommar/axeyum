@@ -652,7 +652,27 @@ fn word_route_budget(config: &SolverConfig) -> SearchBudget {
     }
 }
 
-/// Decides a **word-first-fallback** [`Script`] (T-B.4d) by the word route alone.
+/// Runs the source-level string decision ladder without consulting the packed
+/// assertion view. Every returned verdict is independently sound: SAT witnesses
+/// replay at the `Seq` level; UNSAT comes from checked/certified refutation.
+fn source_string_route_verdict(script: &mut Script, config: &SolverConfig) -> Option<CheckResult> {
+    let seed = CheckResult::Unknown(UnknownReason {
+        kind: UnknownKind::Incomplete,
+        detail: "source-level string routes".to_owned(),
+    });
+    let result = apply_fixed_splice_semantic_unsat(script, seed);
+    let result = apply_word_route(script, config, result);
+    let result = apply_online_string_route(script, config, result);
+    let result = apply_membership_route(script, config, result);
+    let result = apply_length_lia_route(script, config, result);
+    match result {
+        decided @ (CheckResult::Sat(_) | CheckResult::Unsat) => Some(decided),
+        CheckResult::Unknown(_) => None,
+    }
+}
+
+/// Decides a **word-first-fallback** [`Script`] (T-B.4d) by source-level routes
+/// alone.
 ///
 /// The bounded ADR-0029 encoder declined this script *at parse* (a literal over
 /// the length cap, a `str.++` over the width cap, …), so
@@ -671,38 +691,8 @@ fn decide_word_only(
     script: &mut Script,
     config: &SolverConfig,
 ) -> Result<CheckResult, SolverError> {
-    let base = CheckResult::Unknown(UnknownReason {
-        kind: UnknownKind::Incomplete,
-        detail: "word-first fallback: bounded string encoder declined at parse; deciding via \
-                 the word-equation route (T-B.4d)"
-            .to_owned(),
-    });
-    // The fallback parser also preserves exact whole-conjunction contradictions
-    // (for example, generated path conditions requiring both `T = U` and
-    // `T != U`). Apply that source-level refuter before the partial word routes;
-    // otherwise a script outside every side channel reproduces the old parse
-    // decline even though the original formula is already exactly refuted.
-    let base = apply_fixed_splice_semantic_unsat(script, base);
-    let after_word = apply_word_route(script, config, base);
-    // Online CDCL(T) string route (P1.5b): the disjunction-aware second chance for a
-    // word-first-fallback script too — a Boolean-structured word problem whose
-    // *bounded* parse declined at a length/width cap is still decidable here.
-    let after_online = apply_online_string_route(script, config, after_word);
-    // Regex-membership route (P2.7 T-C.5): a pure `str.in_re` problem whose bounded
-    // parse declined at a length/loop cap is decidable by symbolic derivatives.
-    let after_mem = apply_membership_route(script, config, after_online);
-    // Length↔LIA route (P2.7 Phase A): a `str.len`-coupled problem whose bounded parse
-    // declined at a length/width cap may still have a `sat` witness the length↔LIA
-    // route builds (strings exceeding the bounded length cap).
-    match apply_length_lia_route(script, config, after_mem) {
-        // A replay-checked `sat` or a certified-derivation `unsat` is a real verdict.
-        result @ (CheckResult::Sat(_) | CheckResult::Unsat) => Ok(result),
-        // Decline (both routes returned `unknown`): reproduce the original bounded
-        // parse error verbatim.
-        _ => Err(SolverError::Parse(
-            script.word_only_fallback.clone().unwrap_or_default(),
-        )),
-    }
+    source_string_route_verdict(script, config)
+        .ok_or_else(|| SolverError::Parse(script.word_only_fallback.clone().unwrap_or_default()))
 }
 
 /// Harness-parity surface (T-B.4d): decides a **word-first-fallback**
@@ -1789,6 +1779,21 @@ pub fn solve_smtlib(input: &str, config: &SolverConfig) -> Result<SmtLibOutcome,
     // assertion view.
     if script.word_only_fallback.is_some() {
         let result = decide_word_only(&mut script, config)?;
+        return Ok(SmtLibOutcome {
+            result,
+            logic: script.logic,
+            expected_status: script.status,
+        });
+    }
+    // Admitting PyEx's exact split/replace/rejoin into the packed encoder must not
+    // make its historically faster source-level decision routes pay for a large
+    // bounded solve first. Preserve the old route order for exactly that syntax;
+    // a source route may return only replay-checked SAT or checked/certified UNSAT.
+    // If all source routes decline, the newly available bounded encoding remains a
+    // second chance below.
+    if script.prefer_source_string_routes
+        && let Some(result) = source_string_route_verdict(&mut script, config)
+    {
         return Ok(SmtLibOutcome {
             result,
             logic: script.logic,
