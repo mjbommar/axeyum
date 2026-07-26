@@ -9359,6 +9359,9 @@ fn exact_rewrite_term(expression: &SExpr, depth: u32) -> ExactRewriteTerm {
     if let Some(rewritten) = exact_rewrite_one_code_point_replace_view(items, depth + 1) {
         return rewritten;
     }
+    if let Some(rewritten) = exact_rewrite_one_code_point_deletion_view(items, depth + 1) {
+        return rewritten;
+    }
     let args: Vec<_> = items[1..]
         .iter()
         .map(|arg| exact_rewrite_term(arg, depth + 1))
@@ -9469,6 +9472,65 @@ fn exact_rewrite_one_code_point_replace_view(
                 ],
             ));
         }
+    }
+    None
+}
+
+/// Canonicalizes boundary observations of deleting one exact code point. The
+/// raw shape is required because rewriting the inner replacement first would
+/// hide the correlation between its needle and the outer observation.
+fn exact_rewrite_one_code_point_deletion_view(
+    items: &[SExpr],
+    depth: u32,
+) -> Option<ExactRewriteTerm> {
+    use ExactRewriteTerm::String;
+
+    let head = items.first()?.atom()?;
+    if !matches!(head, "str.prefixof" | "str.suffixof") || items.len() != 3 {
+        return None;
+    }
+    let boundary = exact_rewrite_term(&items[1], depth);
+    let replace = items[2].list()?;
+    if replace.len() != 4 || replace[0].atom() != Some("str.replace") {
+        return None;
+    }
+    let subject = exact_rewrite_term(&replace[1], depth);
+    let needle = exact_rewrite_term(&replace[2], depth);
+    let replacement = exact_rewrite_term(&replace[3], depth);
+    if head == "str.suffixof"
+        && boundary == needle
+        && exact_string_min_len(&needle, 0) == Some(1)
+        && exact_string_max_len(&needle, 0) == Some(1)
+        && exact_string_min_len(&replacement, 0) == Some(1)
+        && exact_string_max_len(&replacement, 0) == Some(1)
+        && exact_string_alphabets_disjoint(&needle, &replacement)
+    {
+        return Some(exact_rewrite_app(
+            "str.suffixof",
+            vec![
+                boundary,
+                exact_rewrite_app("str.replace", vec![subject, needle, String(Vec::new())]),
+            ],
+        ));
+    }
+    if !matches!(replacement, String(word) if word.is_empty()) {
+        return None;
+    }
+    if head == "str.prefixof"
+        && boundary == needle
+        && exact_string_min_len(&needle, 0) == Some(1)
+        && exact_string_max_len(&needle, 0) == Some(1)
+    {
+        return Some(exact_rewrite_app(
+            "str.prefixof",
+            vec![exact_rewrite_concat(&[needle.clone(), needle]), subject],
+        ));
+    }
+    if boundary == needle
+        && exact_string_min_len(&subject, 0) == Some(1)
+        && exact_string_max_len(&subject, 0) == Some(1)
+    {
+        return Some(exact_rewrite_equality(&needle, &String(Vec::new())));
     }
     None
 }
@@ -10112,6 +10174,58 @@ fn exact_rewrite_app(head: &str, args: Vec<ExactRewriteTerm>) -> ExactRewriteTer
 fn exact_rewrite_equality(left: &ExactRewriteTerm, right: &ExactRewriteTerm) -> ExactRewriteTerm {
     if left == right {
         return ExactRewriteTerm::Bool(true);
+    }
+    for (replacement, other) in [(left, right), (right, left)] {
+        if matches!(other, ExactRewriteTerm::String(value) if value.is_empty())
+            && let ExactRewriteTerm::App(head, args) = replacement
+            && head == "str.replace"
+            && let [subject, needle, ExactRewriteTerm::String(value)] = args.as_slice()
+            && value.is_empty()
+        {
+            // Deleting the first occurrence yields the empty word exactly when
+            // the source was already empty or consisted solely of the needle.
+            let empty = ExactRewriteTerm::String(Vec::new());
+            return exact_rewrite_app(
+                "or",
+                vec![
+                    exact_rewrite_equality(subject, &empty),
+                    exact_rewrite_equality(subject, needle),
+                ],
+            );
+        }
+        if let ExactRewriteTerm::String(target) = other
+            && target.len() == 1
+            && let ExactRewriteTerm::App(head, args) = replacement
+            && head == "str.replace"
+            && let [
+                subject,
+                ExactRewriteTerm::String(needle),
+                ExactRewriteTerm::String(value),
+            ] = args.as_slice()
+            && needle.len() == 1
+            && value.is_empty()
+        {
+            // Deleting one fixed code point yields `target` only from target
+            // itself (when distinct), needle+target, or target+needle. When
+            // needle==target only the doubled word remains.
+            let mut sources = BTreeSet::new();
+            if needle == target {
+                sources.insert([needle.as_slice(), target.as_slice()].concat());
+            } else {
+                sources.insert(target.clone());
+                sources.insert([needle.as_slice(), target.as_slice()].concat());
+                sources.insert([target.as_slice(), needle.as_slice()].concat());
+            }
+            return exact_rewrite_app(
+                "or",
+                sources
+                    .into_iter()
+                    .map(|source| {
+                        exact_rewrite_equality(subject, &ExactRewriteTerm::String(source))
+                    })
+                    .collect(),
+            );
+        }
     }
     if matches!(left, ExactRewriteTerm::String(_)) && !matches!(right, ExactRewriteTerm::String(_))
     {
@@ -16938,6 +17052,8 @@ fn apply_parameterized(
 
 #[cfg(test)]
 mod string_escape_tests {
+    use std::collections::BTreeSet;
+
     use super::{
         ExactEqualityFacts, ExactFixedWordLanguage, ExactRewriteTerm, decimal_code_points,
         decode_string_code_points, exact_affine_equalities_equal, exact_affine_orderings_equal,
@@ -18096,6 +18212,78 @@ mod string_escape_tests {
                         substr_code_points(&replacement, indexof(&needle, source, 0), 1)
                     );
                 }
+            }
+        }
+    }
+
+    #[test]
+    fn one_code_point_deletion_languages_match_reference_semantics_exhaustively() {
+        let mut words = vec![Vec::new()];
+        for length in 1..=4 {
+            for bits in 0..(1_usize << length) {
+                words.push(
+                    (0..length)
+                        .map(|shift| u32::from(if bits & (1 << shift) == 0 { b'A' } else { b'B' }))
+                        .collect(),
+                );
+            }
+        }
+
+        for source in &words {
+            for needle_code in *b"AB" {
+                let needle = vec![u32::from(needle_code)];
+                let deleted = replace_first_code_points(source, &needle, &[]);
+                assert_eq!(deleted.is_empty(), source.is_empty() || source == &needle);
+                for target_code in *b"AB" {
+                    let target = vec![u32::from(target_code)];
+                    let mut sources = BTreeSet::new();
+                    if needle == target {
+                        sources.insert([needle.as_slice(), target.as_slice()].concat());
+                    } else {
+                        sources.insert(target.clone());
+                        sources.insert([needle.as_slice(), target.as_slice()].concat());
+                        sources.insert([target.as_slice(), needle.as_slice()].concat());
+                    }
+                    assert_eq!(deleted == target, sources.contains(source));
+                    assert_eq!(
+                        deleted.is_empty() || deleted == target,
+                        source.is_empty() || source == &needle || sources.contains(source)
+                    );
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn one_code_point_deletion_boundaries_match_reference_semantics_exhaustively() {
+        let mut words = vec![Vec::new()];
+        for length in 1..=4 {
+            for bits in 0..(1_usize << length) {
+                words.push(
+                    (0..length)
+                        .map(|shift| u32::from(if bits & (1 << shift) == 0 { b'A' } else { b'B' }))
+                        .collect(),
+                );
+            }
+        }
+
+        for needle in &words {
+            for base_code in *b"AB" {
+                let base = [u32::from(base_code)];
+                let deleted = replace_first_code_points(&base, needle, &[]);
+                assert_eq!(deleted.starts_with(needle), needle.is_empty());
+                assert_eq!(deleted.ends_with(needle), needle.is_empty());
+            }
+        }
+        for source in &words {
+            for needle_code in *b"AB" {
+                let needle = vec![u32::from(needle_code)];
+                let doubled = [needle.as_slice(), needle.as_slice()].concat();
+                let deleted = replace_first_code_points(source, &needle, &[]);
+                assert_eq!(deleted.starts_with(&needle), source.starts_with(&doubled));
+                let replacement = vec![u32::from(if needle_code == b'A' { b'B' } else { b'A' })];
+                let replaced = replace_first_code_points(source, &needle, &replacement);
+                assert_eq!(deleted.ends_with(&needle), replaced.ends_with(&needle));
             }
         }
     }
