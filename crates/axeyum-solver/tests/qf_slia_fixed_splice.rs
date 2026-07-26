@@ -1523,3 +1523,72 @@ fn exact_source_concat_routes_decline_satisfiable_controls() {
         );
     }
 }
+
+#[test]
+fn exact_source_fixed_word_languages_refute_noetzli_families() {
+    for assertion in [
+        r#"(not (= (str.suffixof x "AA") (str.prefixof x "AA")))"#,
+        r#"(not (= (str.suffixof x (str.replace "A" y "A"))
+                    (str.prefixof x (str.replace "A" y "A"))))"#,
+        r#"(not (= (str.prefixof "A" (str.at x 0)) (str.prefixof "A" x)))"#,
+        r#"(not (= (str.contains "A" (str.++ x x)) (= x "")))"#,
+        r#"(not (= (str.contains "AA" x) (str.prefixof x "AA")))"#,
+        r#"(not (= (str.contains (str.replace "A" x "A") y)
+                    (str.prefixof y (str.replace "A" x "A"))))"#,
+        r#"(not (= (str.contains "A" (str.replace "A" x "")) true))"#,
+        r#"(not (= (str.replace "A" (str.++ x x) x) "A"))"#,
+        r#"(not (= (str.replace "A" (str.++ x x) y)
+                    (str.++ (str.replace "" x y) "A")))"#,
+    ] {
+        let input = format!(
+            r"(set-logic QF_SLIA)
+(declare-fun x () String)
+(declare-fun y () String)
+(declare-fun z () Int)
+(assert {assertion})
+(check-sat)
+"
+        );
+        let script = parse_script(&input).expect("parse fixed-word language theorem");
+        assert!(
+            script.source_string_semantic_unsat,
+            "fixed-word language must refute {assertion}"
+        );
+        assert_eq!(
+            solve_smtlib(&input, &config())
+                .expect("solve fixed-word language theorem")
+                .result,
+            CheckResult::Unsat,
+            "fixed-word language must survive the bounded-string gate: {assertion}"
+        );
+    }
+}
+
+#[test]
+fn exact_source_fixed_word_languages_decline_satisfiable_controls() {
+    for assertion in [
+        r#"(not (= (str.suffixof x "AB") (str.prefixof x "AB")))"#,
+        r#"(not (= (str.contains "AB" x) (str.prefixof x "AB")))"#,
+        r#"(not (= (str.prefixof "AB" x) (= (str.at x 0) "AB")))"#,
+    ] {
+        let input = format!(
+            r"(set-logic QF_SLIA)
+(declare-fun x () String)
+(assert {assertion})
+(check-sat)
+"
+        );
+        let script = parse_script(&input).expect("parse fixed-word language control");
+        assert!(
+            !script.source_string_semantic_unsat,
+            "satisfiable fixed-word language control must decline: {assertion}"
+        );
+        assert_ne!(
+            solve_smtlib(&input, &config())
+                .expect("solve fixed-word language control")
+                .result,
+            CheckResult::Unsat,
+            "satisfiable fixed-word language control must not become UNSAT: {assertion}"
+        );
+    }
+}
