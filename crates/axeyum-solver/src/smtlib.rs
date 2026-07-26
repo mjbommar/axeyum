@@ -127,9 +127,7 @@ fn bounded_string_witness_probe(script: &Script, assertions: &[TermId]) -> Optio
             &script.arena,
             atoms,
             &assignment,
-            symbol,
-            width,
-            max_len,
+            (symbol, width, max_len),
             &features,
             &mut evaluations,
         )?;
@@ -156,12 +154,11 @@ fn search_bounded_string_word(
     arena: &TermArena,
     atoms: &[TermId],
     assignment: &Assignment,
-    symbol: SymbolId,
-    width: u32,
-    max_len: u32,
+    string_symbol: (SymbolId, u32, u32),
     features: &[Vec<u32>],
     evaluations: &mut usize,
 ) -> Option<Vec<u32>> {
+    let (symbol, width, max_len) = string_symbol;
     let max_len = usize::try_from(max_len).ok()?;
     let mut initial = vec![Vec::new()];
     initial.extend(

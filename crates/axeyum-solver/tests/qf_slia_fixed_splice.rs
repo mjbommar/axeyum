@@ -2493,12 +2493,12 @@ fn exact_boolean_path_conflicts_refute_before_optional_string_routes() {
 (assert (= (str.at s 0) "A"))"#,
     ] {
         let input = format!(
-            r#"(set-logic QF_SLIA)
+            r"(set-logic QF_SLIA)
 (declare-fun s () String)
 {dense_path}
 {assertions}
 (check-sat)
-"#
+"
         );
         let script = parse_script(&input).expect("parse exact Boolean path conflict");
         assert!(script.source_string_semantic_unsat, "{assertions}");
@@ -2536,12 +2536,12 @@ fn exact_boolean_path_conflicts_decline_satisfiable_near_misses() {
 (assert (not (= (str.at s 0) "A")))"#,
     ] {
         let input = format!(
-            r#"(set-logic QF_SLIA)
+            r"(set-logic QF_SLIA)
 (declare-fun s () String)
 {dense_path}
 {assertions}
 (check-sat)
-"#
+"
         );
         let script = parse_script(&input).expect("parse Boolean path near miss");
         assert!(!script.source_string_semantic_unsat, "{assertions}");
