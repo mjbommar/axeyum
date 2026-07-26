@@ -2176,6 +2176,37 @@ fn regex_membership_decides_to_int_comparisons() {
     );
 }
 
+#[test]
+fn regex_membership_ground_false_refutes_unsupported_dynamic_regex() {
+    let unsat = r#"
+(set-logic QF_SLIA)
+(declare-const x String)
+(declare-const y String)
+(assert (str.in_re x (str.to_re (str.++ x y))))
+(assert (= 0 6))
+(check-sat)
+"#;
+    let mut script = parse_script(unsat).expect("ground contradiction parses");
+    assert_eq!(
+        membership_verdict(&mut script, &config()),
+        Some(CheckResult::Unsat)
+    );
+    assert_eq!(run(unsat).result, CheckResult::Unsat);
+
+    let incomplete_sat_control = r#"
+(set-logic QF_SLIA)
+(declare-const x String)
+(declare-const y String)
+(assert (str.in_re x (str.to_re (str.++ x y))))
+(assert (= 6 6))
+(check-sat)
+"#;
+    assert!(
+        parse_script(incomplete_sat_control).is_err(),
+        "a true ground fact must not make an unsupported membership claimable"
+    );
+}
+
 /// The Noetzli small-rewrite corpus asserts the negation of exact SMT-LIB string
 /// identities. Normalize these before the bounded encoder expands them: each row
 /// is a genuine, bound-independent contradiction.

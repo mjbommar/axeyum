@@ -383,7 +383,7 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
-- **2026-07-26 — exact regex-length, alias, and `str.to_int` classes move 106
+- **2026-07-26 — exact regex-length, alias, and `str.to_int` classes move 110
   StringFuzz residuals.**
   The regex-membership side channel documented `(= (str.len X) n)` as part of
   its exact fragment, but the equality parser skipped the existing length-bound
@@ -397,8 +397,11 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   alias to the same checked witness. Ordered `str.to_int` constraints now compile
   to exact decimal regular-language preimages, including leading zeroes and the
   SMT-LIB `-1` result for empty/non-decimal strings. On the fixed 128-row current
-  StringFuzz residual, the stacked mechanisms decide **106 rows at 250 ms: 89
-  UNSAT and 17 replay-checked SAT**, up from 79 by 27, with **WRONG=0** against
+  Ground numeral relations are also retained exactly, so a false conjunct can
+  refute an otherwise unsupported dynamic-regex script while a true conjunct
+  leaves it declined. On the fixed 128-row current StringFuzz residual, the stacked
+  mechanisms decide **110 rows at 250 ms: 93 UNSAT and 17 replay-checked SAT**,
+  up from 79 by 31, with **WRONG=0** against
   declared corpus status. The comparison construction matches a reference
   evaluator on all 35,464 combinations of four operators, bounds 0–25, and every
   `{0,1,2,a}` string through length four. Z3's generated 700-script differential
@@ -410,8 +413,9 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   at the parser and front door. A detected decide-rate regression from intersecting
   huge, length-impossible literal exclusions is repaired by exact redundancy
   elimination: the real row recovers from a 1.7 s decline to 10–20 ms UNSAT at the
-  250 ms cap. The complete 214-test SMT-LIB parser suite and 92-test affected
-  solver front door pass. Next: classify the remaining 22 StringFuzz rows before
+  250 ms cap. Unsupported-only regex scripts retain their prior hard-decline
+  behavior. The complete 215-test SMT-LIB parser suite and 93-test affected solver
+  front door pass. Next: classify the remaining 18 StringFuzz rows before
   selecting the next shared mechanism; the 58-row
   Kepler cluster is a genuine Nielsen/length case-analysis gap, and a tested
   finite-monoid shortcut moved zero rows.

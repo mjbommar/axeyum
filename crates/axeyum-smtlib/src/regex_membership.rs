@@ -191,6 +191,13 @@ impl MembershipProblem {
         if !builder.saw_membership {
             return None;
         }
+        // Merely observing an unsupported membership atom does not create a side
+        // channel: preserve the parser's established Unsupported result unless at
+        // least one exact constraint was actually retained. A ground `false`
+        // conjunct supplies such a constraint; ground `true` does not.
+        if builder.per_var.is_empty() && builder.grounds.is_empty() {
+            return None;
+        }
 
         // A concatenation equality is model-defining only when its output is a
         // fresh existential sink and every input already receives a checked
@@ -392,13 +399,21 @@ impl Builder<'_> {
                 if inner.first().and_then(SExpr::atom) == Some("str.in_re") && inner.len() == 3 {
                     self.membership_atom(&inner[1], &inner[2], false)
                 } else if inner.first().and_then(SExpr::atom) == Some("=") && inner.len() == 3 {
-                    self.literal_disequality_atom(&inner[1], &inner[2])
+                    if let Some(truth) = ground_numeral_relation("=", &inner[1], &inner[2]) {
+                        self.retain_ground_boolean(!truth);
+                        true
+                    } else {
+                        self.literal_disequality_atom(&inner[1], &inner[2])
+                    }
                 } else {
                     false
                 }
             }
             "=" if items.len() == 3 => {
-                if self.length_atom(head, &items[1], &items[2]) {
+                if let Some(truth) = ground_numeral_relation(head, &items[1], &items[2]) {
+                    self.retain_ground_boolean(truth);
+                    true
+                } else if self.length_atom(head, &items[1], &items[2]) {
                     true
                 } else if let Some((name, value)) = to_int_equality(&items[1], &items[2], self.vars)
                 {
@@ -426,7 +441,10 @@ impl Builder<'_> {
                 }
             }
             "<" | "<=" | ">" | ">=" if items.len() == 3 => {
-                if self.length_atom(head, &items[1], &items[2]) {
+                if let Some(truth) = ground_numeral_relation(head, &items[1], &items[2]) {
+                    self.retain_ground_boolean(truth);
+                    true
+                } else if self.length_atom(head, &items[1], &items[2]) {
                     true
                 } else if let Some((name, op, bound)) =
                     to_int_comparison(head, &items[1], &items[2], self.vars)
@@ -449,10 +467,13 @@ impl Builder<'_> {
     /// `(str.in_re operand R)` (or its negation): `operand` is a declared variable
     /// (per-variable constraint) or a string literal (ground atom).
     fn membership_atom(&mut self, operand: &SExpr, re: &SExpr, positive: bool) -> bool {
+        // This is a genuine membership script even when the particular regex is
+        // outside the retained fragment. Other exact conjuncts may still refute
+        // the full conjunction; subset SAT will decline because `complete=false`.
+        self.saw_membership = true;
         let Some(regex) = translate_regex_with_defs(re, self.regex_defs) else {
             return false;
         };
-        self.saw_membership = true;
         if let Some(name) = variable_name(operand, self.vars) {
             let state = self.per_var.entry(name).or_default();
             if positive {
@@ -473,6 +494,22 @@ impl Builder<'_> {
         } else {
             false
         }
+    }
+
+    /// Retains a ground Boolean conjunct. `false` becomes a matcher-rechecked
+    /// impossible fixed membership; `true` adds no constraint. This lets an exact
+    /// false subset refute a script whose regex atom itself remains unsupported,
+    /// while the incomplete-problem gate still forbids a SAT claim.
+    fn retain_ground_boolean(&mut self, truth: bool) {
+        if truth {
+            return;
+        }
+        let impossible = Membership {
+            len_lo: 1,
+            len_hi: Some(0),
+            ..Membership::default()
+        };
+        self.grounds.push((impossible, Vec::new()));
     }
 
     /// `(= X "lit")` / `(= "lit" X)`: pins the variable `X` to the literal.
@@ -920,6 +957,20 @@ fn numeral(e: &SExpr) -> Option<u32> {
     } else {
         None
     }
+}
+
+/// Exact ground relation between two non-negative numerals.
+fn ground_numeral_relation(op: &str, left: &SExpr, right: &SExpr) -> Option<bool> {
+    let left = numeral(left)?;
+    let right = numeral(right)?;
+    Some(match op {
+        "=" => left == right,
+        "<" => left < right,
+        "<=" => left <= right,
+        ">" => left > right,
+        ">=" => left >= right,
+        _ => return None,
+    })
 }
 
 /// The comparison operator with its arguments swapped (`a op b` ⟺ `b flip(op) a`).
