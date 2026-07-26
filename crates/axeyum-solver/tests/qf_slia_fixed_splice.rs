@@ -2467,3 +2467,71 @@ fn exact_source_from_int_views_decline_satisfiable_controls() {
         );
     }
 }
+
+#[test]
+fn exact_source_correlated_substring_index_views_refute_noetzli_family() {
+    let assertions = [
+        r"(not (= (str.substr x z (- 1 z)) (str.at x (str.indexof x x z))))",
+        r#"(not (= (str.substr x (- 1 z) z) (str.substr x 0 (str.indexof "A" "" z))))"#,
+        r#"(not (= (str.substr "A" 0 (str.indexof x "A" 1))
+                    (str.at x (str.indexof x "A" 1))))"#,
+        r#"(not (= (str.substr "B" 0 (str.indexof x "B" 1))
+                    (str.at x (str.indexof x "B" 1))))"#,
+        r"(not (= (str.substr (str.substr x 0 z) 1 z) (str.substr x 1 (- z 1))))",
+    ];
+
+    for assertion in assertions {
+        let input = format!(
+            r#"(set-logic QF_SLIA)
+(declare-fun x () String)
+(declare-fun z () Int)
+(assert {assertion})
+(check-sat)
+"#
+        );
+        let script = parse_script(&input).expect("parse correlated substring/index theorem");
+        assert!(
+            script.source_string_semantic_unsat,
+            "correlated substring/index theorem must refute {assertion}"
+        );
+        assert_eq!(
+            solve_smtlib(&input, &config())
+                .expect("solve correlated substring/index theorem")
+                .result,
+            CheckResult::Unsat,
+            "correlated substring/index theorem must survive the bounded-string gate: {assertion}"
+        );
+    }
+}
+
+#[test]
+fn exact_source_correlated_substring_index_views_decline_satisfiable_controls() {
+    for assertion in [
+        r"(not (= (str.substr x z (- 2 z)) (str.at x (str.indexof x x z))))",
+        r#"(not (= (str.substr x (- 1 z) z) (str.substr x 0 (str.indexof "AA" "" z))))"#,
+        r#"(not (= (str.substr "A" 0 (str.indexof x "B" 1))
+                    (str.at x (str.indexof x "B" 1))))"#,
+        r"(not (= (str.substr (str.substr x 1 z) 1 z) (str.substr x 1 (- z 1))))",
+    ] {
+        let input = format!(
+            r#"(set-logic QF_SLIA)
+(declare-fun x () String)
+(declare-fun z () Int)
+(assert {assertion})
+(check-sat)
+"#
+        );
+        let script = parse_script(&input).expect("parse correlated substring/index control");
+        assert!(
+            !script.source_string_semantic_unsat,
+            "satisfiable correlated substring/index control must decline: {assertion}"
+        );
+        assert_ne!(
+            solve_smtlib(&input, &config())
+                .expect("solve correlated substring/index control")
+                .result,
+            CheckResult::Unsat,
+            "satisfiable correlated substring/index control must not become UNSAT: {assertion}"
+        );
+    }
+}

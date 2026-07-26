@@ -9359,6 +9359,9 @@ fn exact_rewrite_term(expression: &SExpr, depth: u32) -> ExactRewriteTerm {
     if let Some(rewritten) = exact_rewrite_self_replacement_view(items, depth + 1) {
         return rewritten;
     }
+    if let Some(rewritten) = exact_rewrite_substring_index_view(items, depth + 1) {
+        return rewritten;
+    }
     if let Some(rewritten) = exact_rewrite_head_totality_view(items, depth + 1) {
         return rewritten;
     }
@@ -9411,6 +9414,137 @@ fn exact_rewrite_self_replacement_view(items: &[SExpr], depth: u32) -> Option<Ex
         ];
         args[replacement_index - 1] = subject;
         return Some(exact_rewrite_app(head, args.into()));
+    }
+    None
+}
+
+fn exact_rewrite_head_at_selected_integer(
+    subject: ExactRewriteTerm,
+    selector: ExactRewriteTerm,
+    selected: i128,
+) -> ExactRewriteTerm {
+    exact_rewrite_app(
+        "ite",
+        vec![
+            exact_rewrite_app("=", vec![selector, ExactRewriteTerm::Int(selected)]),
+            exact_rewrite_app("str.at", vec![subject, ExactRewriteTerm::Int(0)]),
+            ExactRewriteTerm::String(Vec::new()),
+        ],
+    )
+}
+
+fn exact_rewrite_correlated_at_view(items: &[SExpr], depth: u32) -> Option<ExactRewriteTerm> {
+    use ExactRewriteTerm::{Int, String};
+
+    if items.first()?.atom() != Some("str.at") || items.len() != 3 {
+        return None;
+    }
+    if let Some(inner) = items[1].list()
+        && inner.len() == 3
+        && inner[0].atom() == Some("str.at")
+    {
+        let inner_subject = exact_rewrite_term(&inner[1], depth);
+        let inner_index = exact_rewrite_term(&inner[2], depth);
+        let outer_index = exact_rewrite_term(&items[2], depth);
+        if inner_index == outer_index {
+            return Some(exact_rewrite_head_at_selected_integer(
+                inner_subject,
+                outer_index,
+                0,
+            ));
+        }
+        return Some(exact_rewrite_app(
+            "ite",
+            vec![
+                exact_rewrite_app("=", vec![outer_index, Int(0)]),
+                exact_rewrite_app("str.at", vec![inner_subject, inner_index]),
+                String(Vec::new()),
+            ],
+        ));
+    }
+    let indexof = items[2].list()?;
+    if indexof.len() == 4 && indexof[0].atom() == Some("str.indexof") && indexof[1] == indexof[2] {
+        return Some(exact_rewrite_head_at_selected_integer(
+            exact_rewrite_term(&items[1], depth),
+            exact_rewrite_term(&indexof[3], depth),
+            0,
+        ));
+    }
+    None
+}
+
+/// Canonicalizes correlated substring/index views before their shared raw
+/// operands can normalize along different paths. These are unbounded SMT-LIB
+/// total-function identities: every exceptional offset/length case is retained
+/// explicitly in the resulting `ite` rather than inferred from a finite bound.
+fn exact_rewrite_substring_index_view(items: &[SExpr], depth: u32) -> Option<ExactRewriteTerm> {
+    use ExactRewriteTerm::{Int, String};
+
+    let head = items.first()?.atom()?;
+    let one_minus = |term: &ExactRewriteTerm, variable: &ExactRewriteTerm| {
+        matches!(term, ExactRewriteTerm::App(operator, args)
+            if operator == "-"
+                && matches!(args.as_slice(), [Int(1), candidate] if candidate == variable))
+    };
+    let one_code_point = |term: &ExactRewriteTerm| {
+        exact_string_min_len(term, 0) == Some(1) && exact_string_max_len(term, 0) == Some(1)
+    };
+    if head == "str.at" {
+        return exact_rewrite_correlated_at_view(items, depth);
+    }
+    if head != "str.substr" || items.len() != 4 {
+        return None;
+    }
+
+    let subject = exact_rewrite_term(&items[1], depth);
+    let offset = exact_rewrite_term(&items[2], depth);
+    let length = exact_rewrite_term(&items[3], depth);
+
+    // `substr(s,z,1-z)` is nonempty only at z=0, where it is `at(s,0)`.
+    if one_minus(&length, &offset) {
+        return Some(exact_rewrite_head_at_selected_integer(subject, offset, 0));
+    }
+    // `substr(s,1-z,z)` is nonempty only at z=1, where it is `at(s,0)`.
+    if one_minus(&offset, &length) {
+        return Some(exact_rewrite_head_at_selected_integer(subject, length, 1));
+    }
+
+    // Dropping one code point from a symbolic prefix of length n leaves the
+    // source slice starting at one with length n-1, including n<=1 totality.
+    if offset == Int(1)
+        && let Some(inner) = items[1].list()
+        && inner.len() == 4
+        && inner[0].atom() == Some("str.substr")
+        && exact_rewrite_term(&inner[2], depth) == Int(0)
+        && exact_rewrite_term(&inner[3], depth) == length
+    {
+        return Some(exact_rewrite_app(
+            "str.substr",
+            vec![
+                exact_rewrite_term(&inner[1], depth),
+                Int(1),
+                exact_rewrite_app("-", vec![length, Int(1)]),
+            ],
+        ));
+    }
+
+    let indexof = items[3].list()?;
+    if offset != Int(0) || indexof.len() != 4 || indexof[0].atom() != Some("str.indexof") {
+        return None;
+    }
+    let index_subject = exact_rewrite_term(&indexof[1], depth);
+    let needle = exact_rewrite_term(&indexof[2], depth);
+    let start = exact_rewrite_term(&indexof[3], depth);
+
+    // A successful search for the same singleton stored on the left returns a
+    // positive index and witnesses that exact code point at that index.
+    if start == Int(1) && subject == needle && one_code_point(&subject) {
+        return Some(exact_rewrite_app("str.at", vec![index_subject, length]));
+    }
+    // In a one-code-point subject, searching for the empty word yields a
+    // positive substring length exactly at start one.
+    if one_code_point(&index_subject) && matches!(needle, String(word) if word.is_empty()) {
+        return Some(exact_rewrite_head_at_selected_integer(subject, start, 1));
     }
     None
 }
@@ -18419,6 +18553,124 @@ mod string_escape_tests {
                 .expect("read exact index-totality control")
                 .pop()
                 .expect("one index-totality control");
+            assert_ne!(
+                exact_rewrite_term(&expression, 0),
+                ExactRewriteTerm::Bool(true),
+                "{text}"
+            );
+        }
+    }
+
+    #[test]
+    fn correlated_substring_index_views_match_reference_semantics_exhaustively() {
+        let mut words = vec![Vec::new()];
+        for length in 1..=6 {
+            for bits in 0..(1_usize << length) {
+                words.push(
+                    (0..length)
+                        .map(|shift| u32::from(if bits & (1 << shift) == 0 { b'A' } else { b'B' }))
+                        .collect(),
+                );
+            }
+        }
+        let indexof = |subject: &[u32], needle: &[u32], start: i128| {
+            let Ok(start) = usize::try_from(start) else {
+                return -1;
+            };
+            if start > subject.len() {
+                return -1;
+            }
+            if needle.is_empty() {
+                return i128::try_from(start).expect("small start");
+            }
+            subject[start..]
+                .windows(needle.len())
+                .position(|candidate| candidate == needle)
+                .and_then(|position| i128::try_from(start + position).ok())
+                .unwrap_or(-1)
+        };
+        let at = |subject: &[u32], index: i128| substr_code_points(subject, index, 1);
+
+        for subject in &words {
+            for value in -4_i128..=10 {
+                let self_index = indexof(subject, subject, value);
+                assert_eq!(
+                    substr_code_points(subject, value, 1 - value),
+                    at(subject, self_index),
+                    "self index: subject={subject:?}, value={value}"
+                );
+                assert_eq!(
+                    at(&at(subject, 0), value),
+                    if value == 0 {
+                        at(subject, 0)
+                    } else {
+                        Vec::new()
+                    },
+                    "nested at: subject={subject:?}, value={value}"
+                );
+
+                let singleton_empty_index = indexof(&[u32::from(b'A')], &[], value);
+                assert_eq!(
+                    substr_code_points(subject, 1 - value, value),
+                    substr_code_points(subject, 0, singleton_empty_index),
+                    "empty needle: subject={subject:?}, value={value}"
+                );
+
+                assert_eq!(
+                    substr_code_points(&substr_code_points(subject, 0, value), 1, value),
+                    substr_code_points(subject, 1, value - 1),
+                    "nested prefix: subject={subject:?}, value={value}"
+                );
+            }
+            for code_point in [u32::from(b'A'), u32::from(b'B')] {
+                let singleton = [code_point];
+                let index = indexof(subject, &singleton, 1);
+                assert_eq!(
+                    substr_code_points(&singleton, 0, index),
+                    at(subject, index),
+                    "found singleton: subject={subject:?}, code_point={code_point}"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn correlated_substring_index_forms_close_and_near_misses_decline() {
+        for text in [
+            r"(= (str.substr x z (- 1 z)) (str.at x (str.indexof x x z)))",
+            r"(= (str.at (str.at x z) z) (str.at x (str.indexof x x z)))",
+            r"(= (str.at (str.at x 0) z) (str.at x (str.indexof x x z)))",
+            r#"(= (str.substr x (- 1 z) z) (str.substr x 0 (str.indexof "A" "" z)))"#,
+            r#"(= (str.substr "A" 0 (str.indexof x "A" 1))
+                   (str.at x (str.indexof x "A" 1)))"#,
+            r#"(= (str.substr "B" 0 (str.indexof x "B" 1))
+                   (str.at x (str.indexof x "B" 1)))"#,
+            r"(= (str.substr (str.substr x 0 z) 1 z) (str.substr x 1 (- z 1)))",
+        ] {
+            let expression = read_all(text)
+                .expect("read correlated substring/index identity")
+                .pop()
+                .expect("one correlated substring/index identity");
+            assert_eq!(
+                exact_rewrite_term(&expression, 0),
+                ExactRewriteTerm::Bool(true),
+                "{text}"
+            );
+        }
+
+        for text in [
+            r"(= (str.substr x z (- 2 z)) (str.at x (str.indexof x x z)))",
+            r"(= (str.at (str.at x z) (+ z 1)) (str.at x (str.indexof x x z)))",
+            r"(= (str.at (str.at x 1) z) (str.at x (str.indexof x x z)))",
+            r#"(= (str.substr x (- 1 z) z) (str.substr x 0 (str.indexof "AA" "" z)))"#,
+            r#"(= (str.substr "A" 0 (str.indexof x "B" 1))
+                   (str.at x (str.indexof x "B" 1)))"#,
+            r"(= (str.substr (str.substr x 1 z) 1 z) (str.substr x 1 (- z 1)))",
+        ] {
+            let expression = read_all(text)
+                .expect("read correlated substring/index control")
+                .pop()
+                .expect("one correlated substring/index control");
             assert_ne!(
                 exact_rewrite_term(&expression, 0),
                 ExactRewriteTerm::Bool(true),
