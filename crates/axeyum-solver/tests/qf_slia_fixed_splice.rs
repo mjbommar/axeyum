@@ -812,6 +812,62 @@ fn exact_source_conditional_replace_declines_branch_sensitive_controls() {
 }
 
 #[test]
+fn exact_source_length_dominated_replace_refutes_noetzli_families() {
+    for assertion in [
+        r"(not (= (str.replace x (str.++ x x) x) x))",
+        r"(not (= (str.replace x (str.replace x y x) x) x))",
+        r"(not (= (str.contains x (str.replace x y x))
+                    (= x (str.replace x y x))))",
+    ] {
+        let input = format!(
+            r"(set-logic QF_SLIA)
+(declare-fun x () String)
+(declare-fun y () String)
+(assert {assertion})
+(check-sat)
+"
+        );
+        let script = parse_script(&input).expect("parse length-dominated replace theorem");
+        assert!(
+            script.source_string_semantic_unsat,
+            "length-dominated replace must refute {assertion}"
+        );
+        assert_eq!(
+            solve_smtlib(&input, &config())
+                .expect("solve length-dominated replace theorem")
+                .result,
+            CheckResult::Unsat,
+            "length-dominated replace must survive the bounded-string gate: {assertion}"
+        );
+    }
+}
+
+#[test]
+fn exact_source_length_dominated_replace_declines_unordered_control() {
+    let assertion = r"(not (= (str.replace x y x) x))";
+    let input = format!(
+        r"(set-logic QF_SLIA)
+(declare-fun x () String)
+(declare-fun y () String)
+(assert {assertion})
+(check-sat)
+"
+    );
+    let script = parse_script(&input).expect("parse unordered replace control");
+    assert!(
+        !script.source_string_semantic_unsat,
+        "unordered replace must decline {assertion}"
+    );
+    assert_ne!(
+        solve_smtlib(&input, &config())
+            .expect("solve unordered replace control")
+            .result,
+        CheckResult::Unsat,
+        "satisfiable unordered replace control must not become UNSAT: {assertion}"
+    );
+}
+
+#[test]
 fn exact_source_small_subject_indexof_refutes_view_families() {
     for assertion in [
         r#"(not (= (str.at x (str.indexof "A" x 1)) ""))"#,

@@ -9636,6 +9636,18 @@ fn exact_rewrite_app(head: &str, args: Vec<ExactRewriteTerm>) -> ExactRewriteTer
             if let Some(distributed) = exact_distribute_app_ite(head, &args) {
                 return distributed;
             }
+            // If the needle is at least as long as the subject, its only possible
+            // occurrence is the whole subject. Preserve both branches explicitly.
+            if exact_string_length_le(subject, needle, 0) {
+                return exact_rewrite_app(
+                    "ite",
+                    vec![
+                        exact_rewrite_equality(subject, needle),
+                        replacement.clone(),
+                        subject.clone(),
+                    ],
+                );
+            }
         }
         ("str.prefixof", [left, right]) => {
             if left == right || matches!(left, String(value) if value.is_empty()) {
@@ -10395,7 +10407,9 @@ fn exact_string_length_le(
         App(head, args) if head == "str.replace" => {
             if let [subject, needle, replacement] = args.as_slice()
                 && subject == shorter
-                && exact_string_length_le(needle, replacement, depth + 1)
+                // Replacing inside `subject` by all of `subject` cannot shorten it.
+                && (replacement == subject
+                    || exact_string_length_le(needle, replacement, depth + 1))
             {
                 return true;
             }
@@ -16064,6 +16078,100 @@ mod string_escape_tests {
                         replace_first_code_points(&subject, needle, replacement),
                         expected
                     );
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn length_dominated_replace_matches_reference_semantics_exhaustively() {
+        let symbol = |name: &str| {
+            let expression = read_all(name)
+                .expect("read symbolic replace argument")
+                .pop()
+                .expect("one symbolic argument");
+            exact_rewrite_term(&expression, 0)
+        };
+        let subject = symbol("subject");
+        let needle_part = symbol("needle_part");
+        let replacement = symbol("replacement");
+        let needles = [
+            exact_rewrite_app("str.++", vec![subject.clone(), needle_part.clone()]),
+            exact_rewrite_app(
+                "str.replace",
+                vec![subject.clone(), needle_part.clone(), subject.clone()],
+            ),
+        ];
+        let rewritten = needles.map(|needle| {
+            exact_rewrite_app(
+                "str.replace",
+                vec![subject.clone(), needle, replacement.clone()],
+            )
+        });
+        let mut words = vec![Vec::new()];
+        for _ in 0..2 {
+            let prior = words.clone();
+            for word in prior {
+                for code_point in [u32::from(b'A'), u32::from(b'B')] {
+                    let mut extended = word.clone();
+                    extended.push(code_point);
+                    words.push(extended);
+                }
+            }
+        }
+
+        for subject_word in &words {
+            for needle_part_word in &words {
+                for replacement_word in &words {
+                    let assignments = [
+                        (
+                            exact_rewrite_app(
+                                "=",
+                                vec![
+                                    subject.clone(),
+                                    ExactRewriteTerm::String(subject_word.clone()),
+                                ],
+                            ),
+                            true,
+                        ),
+                        (
+                            exact_rewrite_app(
+                                "=",
+                                vec![
+                                    needle_part.clone(),
+                                    ExactRewriteTerm::String(needle_part_word.clone()),
+                                ],
+                            ),
+                            true,
+                        ),
+                        (
+                            exact_rewrite_app(
+                                "=",
+                                vec![
+                                    replacement.clone(),
+                                    ExactRewriteTerm::String(replacement_word.clone()),
+                                ],
+                            ),
+                            true,
+                        ),
+                    ];
+                    let mut concat_needle = subject_word.clone();
+                    concat_needle.extend(needle_part_word);
+                    let self_replace_needle =
+                        replace_first_code_points(subject_word, needle_part_word, subject_word);
+                    for (expression, concrete_needle) in
+                        rewritten.iter().zip([concat_needle, self_replace_needle])
+                    {
+                        assert_eq!(
+                            exact_rewrite_under_assignments(expression, &assignments, 0),
+                            ExactRewriteTerm::String(replace_first_code_points(
+                                subject_word,
+                                &concrete_needle,
+                                replacement_word,
+                            )),
+                            "subject={subject_word:?}, needle={concrete_needle:?}, replacement={replacement_word:?}"
+                        );
+                    }
                 }
             }
         }
