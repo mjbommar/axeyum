@@ -13140,7 +13140,50 @@ fn exact_boolean_alias_contradiction(terms: &[ExactRewriteTerm]) -> bool {
     }
 
     let facts = ExactEqualityFacts::from_assignments(&assignments);
-    facts.conflict || facts.string_length_conflict()
+    facts.conflict
+        || exact_order_assignments_conflict(&assignments, &facts)
+        || facts.string_length_conflict()
+}
+
+/// Whether two required linear-order atoms form an opposite cycle with at
+/// least one strict edge.  Over a total arithmetic order, `a <= b` and
+/// `b <= a` may meet at equality, while any strict edge makes the pair
+/// contradictory.  Equality endpoints are compared through exact classes only.
+fn exact_order_assignments_conflict(
+    assignments: &[(ExactRewriteTerm, bool)],
+    facts: &ExactEqualityFacts,
+) -> bool {
+    fn constraint(
+        condition: &ExactRewriteTerm,
+        required: bool,
+    ) -> Option<(&ExactRewriteTerm, &ExactRewriteTerm, bool)> {
+        let ExactRewriteTerm::App(relation, args) = condition else {
+            return None;
+        };
+        let [left, right] = args.as_slice() else {
+            return None;
+        };
+        match (relation.as_str(), required) {
+            ("<", true) | (">=", false) => Some((left, right, true)),
+            ("<", false) | (">=", true) => Some((right, left, false)),
+            ("<=", true) | (">", false) => Some((left, right, false)),
+            ("<=", false) | (">", true) => Some((right, left, true)),
+            _ => None,
+        }
+    }
+
+    let constraints: Vec<_> = assignments
+        .iter()
+        .filter_map(|(condition, required)| constraint(condition, *required))
+        .collect();
+    constraints.iter().enumerate().any(|(index, first)| {
+        (first.2 && facts.equal(first.0, first.1))
+            || constraints[index + 1..].iter().any(|second| {
+                (first.2 || second.2)
+                    && facts.equal(first.0, second.1)
+                    && facts.equal(first.1, second.0)
+            })
+    })
 }
 
 /// A strict order known true, or a non-strict order known false, forces its
@@ -18543,13 +18586,14 @@ mod string_escape_tests {
         decimal_code_points, decode_string_code_points, eval_pinned_word_semantics,
         exact_affine_equalities_equal, exact_affine_orderings_equal,
         exact_affine_zero_forces_nonpositive, exact_affine_zero_forces_positive,
-        exact_from_int_empty_condition, exact_length_emptiness_consequence, exact_rewrite_app,
-        exact_rewrite_concat_at, exact_rewrite_concat_substr, exact_rewrite_equality,
-        exact_rewrite_fixed_word_language, exact_rewrite_prefix_substr_emptiness,
-        exact_rewrite_replace_preserves_subject, exact_rewrite_replace_singleton_equality,
-        exact_rewrite_small_subject_indexof, exact_rewrite_term, exact_rewrite_under_assignments,
-        guaranteed_boolean_literal_conflict, guaranteed_top_level_conjuncts, parse_script,
-        replace_first_code_points, source_string_semantic_facts, substr_code_points,
+        exact_from_int_empty_condition, exact_length_emptiness_consequence,
+        exact_order_assignments_conflict, exact_rewrite_app, exact_rewrite_concat_at,
+        exact_rewrite_concat_substr, exact_rewrite_equality, exact_rewrite_fixed_word_language,
+        exact_rewrite_prefix_substr_emptiness, exact_rewrite_replace_preserves_subject,
+        exact_rewrite_replace_singleton_equality, exact_rewrite_small_subject_indexof,
+        exact_rewrite_term, exact_rewrite_under_assignments, guaranteed_boolean_literal_conflict,
+        guaranteed_top_level_conjuncts, parse_script, replace_first_code_points,
+        source_string_semantic_facts, substr_code_points,
     };
     use crate::sexpr::{SExpr, read_all};
 
@@ -18879,6 +18923,80 @@ mod string_escape_tests {
                 );
             }
         }
+    }
+
+    #[test]
+    fn opposite_order_cycles_are_exact_and_exhaustively_sound() {
+        use ExactRewriteTerm::{App, Opaque};
+
+        let x = Opaque(SExpr::Atom("x".to_owned()));
+        let y = Opaque(SExpr::Atom("y".to_owned()));
+        let descriptors: Vec<_> = ["<", "<=", ">", ">="]
+            .into_iter()
+            .flat_map(|relation| {
+                [false, true].into_iter().flat_map(move |reversed| {
+                    [false, true]
+                        .into_iter()
+                        .map(move |required| (relation, reversed, required))
+                })
+            })
+            .collect();
+        let atom = |relation: &str, reversed: bool| {
+            App(
+                relation.to_owned(),
+                if reversed {
+                    vec![y.clone(), x.clone()]
+                } else {
+                    vec![x.clone(), y.clone()]
+                },
+            )
+        };
+        let evaluate = |relation: &str, reversed: bool, left: i128, right: i128| {
+            let (left, right) = if reversed {
+                (right, left)
+            } else {
+                (left, right)
+            };
+            match relation {
+                "<" => left < right,
+                "<=" => left <= right,
+                ">" => left > right,
+                ">=" => left >= right,
+                _ => unreachable!(),
+            }
+        };
+
+        for first in &descriptors {
+            for second in &descriptors {
+                let assignments = vec![
+                    (atom(first.0, first.1), first.2),
+                    (atom(second.0, second.1), second.2),
+                ];
+                let facts = ExactEqualityFacts::from_assignments(&assignments);
+                if exact_order_assignments_conflict(&assignments, &facts) {
+                    assert!(
+                        !(-2_i128..=2).any(|left| (-2_i128..=2).any(|right| {
+                            evaluate(first.0, first.1, left, right) == first.2
+                                && evaluate(second.0, second.1, left, right) == second.2
+                        })),
+                        "first={first:?}, second={second:?}"
+                    );
+                }
+            }
+        }
+
+        let contradictory = read_all(
+            r"(declare-const p Int)
+(declare-const negative Bool)
+(declare-const positive Bool)
+(assert (= negative (not (<= 0 p))))
+(assert negative)
+(assert (= positive (< 0 p)))
+(assert positive)
+(check-sat)",
+        )
+        .expect("read opposite-order contradiction");
+        assert!(source_string_semantic_facts(&contradictory).conflict);
     }
 
     #[test]
