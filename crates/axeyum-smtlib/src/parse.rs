@@ -178,13 +178,16 @@ pub struct Script {
     /// `sat` models need not realize the omitted splice semantics and must be
     /// discarded by the solver front door.
     pub word_skeleton_opaque_terms: usize,
-    /// A contradiction proved directly from guaranteed top-level fixed-splice
-    /// equalities/disequalities and exact string constants. This side fact is
+    /// A contradiction proved directly from guaranteed top-level string rewrite
+    /// identities, fixed-splice equalities/disequalities, and exact constants.
+    /// The proof is computed over the raw SMT-LIB expressions, before bounded
+    /// packed-string lowering, so it is valid for unbounded source semantics.
+    /// This side fact is
     /// independent of [`Script::word_skeleton`]: an unrelated unsupported atom may
-    /// make that all-or-nothing skeleton empty while the fixed-splice contradiction
+    /// make that all-or-nothing skeleton empty while the source contradiction
     /// remains a valid refutation of the complete asserted conjunction. It is never
     /// populated for incremental or macro-bearing scripts.
-    pub fixed_splice_semantic_unsat: bool,
+    pub source_string_semantic_unsat: bool,
     /// The parser-side **regex-membership side channel** (P2.7 T-C.5, ADR-0054):
     /// a translation of the script's `str.in_re` fragment into single-variable
     /// [`MembershipProblem`](crate::MembershipProblem) constraints over the
@@ -786,7 +789,7 @@ fn parse_script_bounded(input: &str) -> Result<Script, SmtError> {
     // "only ever add sat" invariant sound). `parse_sort`/`(Seq E)` are untouched.
     if script.uses_bounded_strings {
         script.prefer_source_string_routes = split_replace_rejoin_count > 0;
-        script.fixed_splice_semantic_unsat = fixed_splice_semantic_facts(&exprs).conflict;
+        script.source_string_semantic_unsat = source_string_semantic_facts(&exprs).conflict;
         script.word_problem = build_word_problem(&mut script.arena, &exprs);
         // Parser-side Boolean-structured word skeleton (P1.5b): the superset the
         // online CDCL(T) route decides — `or`/negated word problems the flat
@@ -977,8 +980,8 @@ fn parse_word_only(input: &str, allow_semantic_refuter: bool) -> Option<Script> 
     // used to rebuild the word routes but silently dropped the same exact fact.
     // Dense PyEx paths can then spend their whole budget in a weaker side channel
     // despite already requiring both `T = U` and `T != U`.
-    script.fixed_splice_semantic_unsat =
-        allow_semantic_refuter && fixed_splice_semantic_facts(&exprs).conflict;
+    script.source_string_semantic_unsat =
+        allow_semantic_refuter && source_string_semantic_facts(&exprs).conflict;
     // The flat conjunction side channel (may decline on `or`/negation) and the
     // Boolean-structured skeleton (P1.5b, decides the `or`/negated shapes). The
     // fallback is accepted when **either** is representable — a purely disjunctive
@@ -1005,7 +1008,7 @@ fn parse_word_only(input: &str, allow_semantic_refuter: bool) -> Option<Script> 
         && script.word_skeleton.is_empty()
         && script.membership_problem.is_none()
         && script.length_skeleton.is_empty()
-        && !script.fixed_splice_semantic_unsat
+        && !script.source_string_semantic_unsat
     {
         // No decision route recognizes the script — not a word-equation/membership
         // problem and no exact whole-conjunction contradiction; decline so the
@@ -1314,7 +1317,7 @@ fn build_word_skeleton(arena: &mut TermArena, exprs: &[SExpr]) -> Option<WordSke
     // Translate every `assert` body into a Bool term over `Seq` equality and
     // `str.in_re` membership atoms; a single unrepresentable atom aborts the whole
     // skeleton. `mem` accumulates the membership theory atoms (deduplicated).
-    let semantic_facts = fixed_splice_semantic_facts(exprs);
+    let semantic_facts = source_string_semantic_facts(exprs);
     let mut assertions: Vec<TermId> = Vec::new();
     let mut saw_seq_atom = semantic_facts.conflict;
     if semantic_facts.conflict {
@@ -9305,48 +9308,381 @@ fn fixed_splice_parts(items: &[SExpr]) -> Option<FixedSpliceParts<'_>> {
     })
 }
 
-/// Guaranteed fixed-splice consequences used by the UNSAT-only word skeleton.
+/// Guaranteed source-string consequences used by the UNSAT-only word skeleton.
 #[derive(Default)]
-struct FixedSpliceSemanticFacts {
+struct SourceStringSemanticFacts {
     pinned_words: Vec<(SExpr, Vec<u32>)>,
     derived_equalities: Vec<(SExpr, SExpr)>,
     conflict: bool,
+}
+
+/// A bound-independent normal form for the small SMT-LIB rewrite language used
+/// by the Noetzli string-rewrite corpus. Unknown terms stay structural; only
+/// SMT-LIB total-function identities and fully-ground operations are folded.
+/// Consequently equality of two normal forms proves equality in the unbounded
+/// source theory and never depends on the packed-string implementation bound.
+#[derive(Clone, Debug, PartialEq, Eq)]
+enum ExactRewriteTerm {
+    Bool(bool),
+    Int(i128),
+    String(Vec<u32>),
+    Opaque(SExpr),
+    App(String, Vec<ExactRewriteTerm>),
+}
+
+const EXACT_REWRITE_DEPTH_CAP: u32 = 64;
+
+fn exact_rewrite_term(expression: &SExpr, depth: u32) -> ExactRewriteTerm {
+    if depth > EXACT_REWRITE_DEPTH_CAP {
+        return ExactRewriteTerm::Opaque(expression.clone());
+    }
+    if let Some(value) = literal_pattern_cps(expression) {
+        return ExactRewriteTerm::String(value);
+    }
+    if let Some(atom) = expression.atom() {
+        return match atom {
+            "true" => ExactRewriteTerm::Bool(true),
+            "false" => ExactRewriteTerm::Bool(false),
+            _ => atom.parse::<i128>().map_or_else(
+                |_| ExactRewriteTerm::Opaque(expression.clone()),
+                ExactRewriteTerm::Int,
+            ),
+        };
+    }
+    let Some(items) = expression.list() else {
+        return ExactRewriteTerm::Opaque(expression.clone());
+    };
+    let Some(head) = items.first().and_then(SExpr::atom) else {
+        return ExactRewriteTerm::Opaque(expression.clone());
+    };
+    let args: Vec<_> = items[1..]
+        .iter()
+        .map(|arg| exact_rewrite_term(arg, depth + 1))
+        .collect();
+    exact_rewrite_app(head, args)
+}
+
+#[allow(clippy::too_many_lines)] // One explicit allow-list of exact SMT-LIB identities.
+fn exact_rewrite_app(head: &str, args: Vec<ExactRewriteTerm>) -> ExactRewriteTerm {
+    use ExactRewriteTerm::{App, Bool, Int, String};
+
+    match (head, args.as_slice()) {
+        ("not", [Bool(value)]) => return Bool(!value),
+        ("=", [left, right]) if left == right => return Bool(true),
+        ("=", [Bool(left), Bool(right)]) => return Bool(left == right),
+        ("=", [Int(left), Int(right)]) => return Bool(left == right),
+        ("=", [String(left), String(right)]) => return Bool(left == right),
+        ("ite", [Bool(true), then_term, _]) => return then_term.clone(),
+        ("ite", [Bool(false), _, else_term]) => return else_term.clone(),
+        ("-", [Int(value)]) => {
+            if let Some(value) = value.checked_neg() {
+                return Int(value);
+            }
+        }
+        ("-", [left, right]) if left == right => return Int(0),
+        ("-", [Int(left), Int(right)]) => {
+            if let Some(value) = left.checked_sub(*right) {
+                return Int(value);
+            }
+        }
+        ("+", values) => return exact_rewrite_sum(values),
+        ("-", [left, Int(0)]) => return left.clone(),
+        ("*", values) if values.iter().all(|value| matches!(value, Int(_))) => {
+            if let Some(value) = values
+                .iter()
+                .try_fold(1_i128, |product, value| match value {
+                    Int(value) => product.checked_mul(*value),
+                    _ => None,
+                })
+            {
+                return Int(value);
+            }
+        }
+        ("and", values) => {
+            if values.iter().any(|value| value == &Bool(false)) {
+                return Bool(false);
+            }
+            if values.iter().all(|value| value == &Bool(true)) {
+                return Bool(true);
+            }
+        }
+        ("or", values) => {
+            if values.iter().any(|value| value == &Bool(true)) {
+                return Bool(true);
+            }
+            if values.iter().all(|value| value == &Bool(false)) {
+                return Bool(false);
+            }
+        }
+        ("str.++" | "seq.++", values) => return exact_rewrite_concat(values),
+        ("str.len" | "seq.len", [String(value)]) => {
+            if let Ok(length) = i128::try_from(value.len()) {
+                return Int(length);
+            }
+        }
+        ("str.from_int", [Int(value)]) => return String(decimal_code_points(*value)),
+        ("str.to_int", [String(value)]) => {
+            if let Some(integer) = to_int_of_code_points(value) {
+                return Int(integer);
+            }
+        }
+        ("str.substr", [String(value), Int(offset), Int(length)]) => {
+            return String(substr_code_points(value, *offset, *length));
+        }
+        ("str.substr", [_, Int(offset), _]) if *offset < 0 => return String(Vec::new()),
+        ("str.substr", [_, _, Int(length)]) if *length <= 0 => return String(Vec::new()),
+        ("str.substr", [String(value), Int(offset), _])
+            if usize::try_from(*offset).map_or(true, |offset| offset >= value.len()) =>
+        {
+            return String(Vec::new());
+        }
+        ("str.substr", [String(value), _, _]) if value.is_empty() => {
+            return String(Vec::new());
+        }
+        ("str.substr", [String(value), offset, length]) if value.len() <= 1 && offset == length => {
+            return String(Vec::new());
+        }
+        ("str.substr", [subject, offset, Int(1)]) => {
+            return App("str.at".to_owned(), vec![subject.clone(), offset.clone()]);
+        }
+        ("str.at", [String(value), Int(index)]) => {
+            let result = usize::try_from(*index)
+                .ok()
+                .and_then(|index| value.get(index).copied())
+                .map_or_else(Vec::new, |code_point| vec![code_point]);
+            return String(result);
+        }
+        ("str.at", [App(inner, _), Int(index)]) if inner == "str.at" && *index >= 1 => {
+            return String(Vec::new());
+        }
+        ("str.indexof", [subject, needle]) => {
+            return exact_rewrite_indexof(subject, needle, Some(0))
+                .map_or_else(|| App(head.to_owned(), args), Int);
+        }
+        ("str.indexof", [subject, needle, offset]) => {
+            let offset = match offset {
+                Int(offset) => Some(*offset),
+                _ => None,
+            };
+            return exact_rewrite_indexof(subject, needle, offset)
+                .map_or_else(|| App(head.to_owned(), args), Int);
+        }
+        ("str.replace", [subject, needle, replacement]) => {
+            if subject == needle {
+                return replacement.clone();
+            }
+            if needle == replacement {
+                return subject.clone();
+            }
+            if matches!(needle, String(value) if value.is_empty()) {
+                return exact_rewrite_concat(&[replacement.clone(), subject.clone()]);
+            }
+            if let (String(subject), String(needle)) = (subject, needle)
+                && !needle.is_empty()
+                && !subject
+                    .windows(needle.len())
+                    .any(|candidate| candidate == needle)
+            {
+                return String(subject.clone());
+            }
+            if let (String(subject), String(needle), String(replacement)) =
+                (subject, needle, replacement)
+            {
+                return String(replace_first_code_points(subject, needle, replacement));
+            }
+        }
+        ("str.prefixof", [left, right]) => {
+            if left == right || matches!(left, String(value) if value.is_empty()) {
+                return Bool(true);
+            }
+            if let (String(left), String(right)) = (left, right) {
+                return Bool(right.starts_with(left));
+            }
+        }
+        ("str.suffixof", [left, right]) => {
+            if left == right || matches!(left, String(value) if value.is_empty()) {
+                return Bool(true);
+            }
+            if let (String(left), String(right)) = (left, right) {
+                return Bool(right.ends_with(left));
+            }
+        }
+        ("str.contains", [subject, needle]) => {
+            if subject == needle || matches!(needle, String(value) if value.is_empty()) {
+                return Bool(true);
+            }
+            if let (String(subject), String(needle)) = (subject, needle) {
+                return Bool(
+                    needle.is_empty()
+                        || subject
+                            .windows(needle.len())
+                            .any(|candidate| candidate == needle),
+                );
+            }
+        }
+        _ => {}
+    }
+    App(head.to_owned(), args)
+}
+
+fn exact_rewrite_sum(values: &[ExactRewriteTerm]) -> ExactRewriteTerm {
+    use ExactRewriteTerm::{App, Int};
+
+    let mut terms = Vec::new();
+    let mut constant = 0_i128;
+    for value in values {
+        match value {
+            Int(value) => {
+                let Some(sum) = constant.checked_add(*value) else {
+                    return App("+".to_owned(), values.to_vec());
+                };
+                constant = sum;
+            }
+            App(head, nested) if head == "+" => terms.extend(nested.iter().cloned()),
+            value => terms.push(value.clone()),
+        }
+    }
+    if constant != 0 || terms.is_empty() {
+        terms.push(Int(constant));
+    }
+    match terms.as_slice() {
+        [single] => single.clone(),
+        _ => App("+".to_owned(), terms),
+    }
+}
+
+fn exact_rewrite_concat(values: &[ExactRewriteTerm]) -> ExactRewriteTerm {
+    use ExactRewriteTerm::{App, String};
+
+    let mut out = Vec::new();
+    for value in values {
+        match value {
+            String(value) if value.is_empty() => {}
+            App(head, nested) if matches!(head.as_str(), "str.++" | "seq.++") => {
+                out.extend(nested.iter().cloned());
+            }
+            value => out.push(value.clone()),
+        }
+    }
+    let mut merged = Vec::new();
+    for value in out {
+        match (merged.last_mut(), value) {
+            (Some(String(left)), String(right)) => left.extend(right),
+            (_, value) => merged.push(value),
+        }
+    }
+    match merged.as_slice() {
+        [] => String(Vec::new()),
+        [single] => single.clone(),
+        _ => App("str.++".to_owned(), merged),
+    }
+}
+
+fn exact_rewrite_indexof(
+    subject: &ExactRewriteTerm,
+    needle: &ExactRewriteTerm,
+    offset: Option<i128>,
+) -> Option<i128> {
+    use ExactRewriteTerm::String;
+
+    if offset.is_some_and(|offset| offset < 0) {
+        return Some(-1);
+    }
+    if offset == Some(0) && subject == needle {
+        return Some(0);
+    }
+    let (String(subject), String(needle)) = (subject, needle) else {
+        return (offset == Some(0) && matches!(needle, String(value) if value.is_empty()))
+            .then_some(0);
+    };
+    if !needle.is_empty()
+        && !subject
+            .windows(needle.len())
+            .any(|candidate| candidate == needle)
+    {
+        return Some(-1);
+    }
+    let offset = offset?;
+    let Ok(offset) = usize::try_from(offset) else {
+        return Some(-1);
+    };
+    if offset > subject.len() {
+        return Some(-1);
+    }
+    if needle.is_empty() {
+        return i128::try_from(offset).ok();
+    }
+    subject[offset..]
+        .windows(needle.len())
+        .position(|candidate| candidate == needle)
+        .and_then(|position| i128::try_from(offset + position).ok())
+        .or(Some(-1))
+}
+
+fn replace_first_code_points(subject: &[u32], needle: &[u32], replacement: &[u32]) -> Vec<u32> {
+    if needle.is_empty() {
+        let mut result = replacement.to_vec();
+        result.extend_from_slice(subject);
+        return result;
+    }
+    let Some(position) = subject
+        .windows(needle.len())
+        .position(|candidate| candidate == needle)
+    else {
+        return subject.to_vec();
+    };
+    let mut result = Vec::with_capacity(subject.len() - needle.len() + replacement.len());
+    result.extend_from_slice(&subject[..position]);
+    result.extend_from_slice(replacement);
+    result.extend_from_slice(&subject[position + needle.len()..]);
+    result
+}
+
+fn exact_rewrite_contradiction(conjuncts: &[&SExpr]) -> bool {
+    conjuncts
+        .iter()
+        .any(|conjunct| exact_rewrite_term(conjunct, 0) == ExactRewriteTerm::Bool(false))
 }
 
 /// Computes exact constant propagation and the distinct-index splice theorem over
 /// guaranteed top-level equality paths. Every fact is a consequence of the whole
 /// asserted conjunction, so adding it to the word relaxation preserves UNSAT.
 #[allow(clippy::too_many_lines)] // One auditable, fail-closed semantic analysis pass.
-fn fixed_splice_semantic_facts(exprs: &[SExpr]) -> FixedSpliceSemanticFacts {
+fn source_string_semantic_facts(exprs: &[SExpr]) -> SourceStringSemanticFacts {
     // These facts describe the conjunction of every assertion in the script. They
     // cannot be applied to one scoped query or across a macro expansion whose
     // source-level equality path is not represented here.
     let mut check_sats = 0_u32;
+    let mut saw_check_sat = false;
     for expression in exprs {
-        if expression
+        let head = expression
             .list()
             .and_then(|items| items.first())
-            .and_then(SExpr::atom)
-            == Some("check-sat")
-        {
+            .and_then(SExpr::atom);
+        if head == Some("check-sat") {
             check_sats = check_sats.saturating_add(1);
+            saw_check_sat = true;
+        }
+        // The single-result front door solves the assertion stack *at* check-sat;
+        // a later assertion is not part of that query. Decline the whole source
+        // fact rather than smuggling a post-query contradiction into the verdict.
+        if saw_check_sat && head == Some("assert") {
+            return SourceStringSemanticFacts::default();
         }
         if let Some(
             "push" | "pop" | "check-sat-assuming" | "reset-assertions" | "define-fun"
             | "define-fun-rec" | "define-funs-rec" | "define-sort",
-        ) = expression
-            .list()
-            .and_then(|items| items.first())
-            .and_then(SExpr::atom)
+        ) = head
         {
-            return FixedSpliceSemanticFacts::default();
+            return SourceStringSemanticFacts::default();
         }
     }
     if check_sats > 1 {
-        return FixedSpliceSemanticFacts::default();
+        return SourceStringSemanticFacts::default();
     }
 
     let conjuncts = guaranteed_top_level_conjuncts(exprs);
+    let exact_rewrite_conflict = exact_rewrite_contradiction(&conjuncts);
     let equalities: Vec<(&SExpr, &SExpr)> = conjuncts
         .iter()
         .filter_map(|conjunct| positive_word_equality(conjunct))
@@ -9356,7 +9692,10 @@ fn fixed_splice_semantic_facts(exprs: &[SExpr]) -> FixedSpliceSemanticFacts {
         .filter_map(|conjunct| negative_word_equality(conjunct))
         .collect();
     if equalities.is_empty() && disequalities.is_empty() {
-        return FixedSpliceSemanticFacts::default();
+        return SourceStringSemanticFacts {
+            conflict: exact_rewrite_conflict,
+            ..SourceStringSemanticFacts::default()
+        };
     }
 
     let mut nodes: Vec<SExpr> = Vec::new();
@@ -9383,7 +9722,7 @@ fn fixed_splice_semantic_facts(exprs: &[SExpr]) -> FixedSpliceSemanticFacts {
     }
 
     let mut class_values: Vec<Option<Vec<u32>>> = vec![None; nodes.len()];
-    let mut conflict = false;
+    let mut conflict = exact_rewrite_conflict;
     for (i, node) in nodes.iter().enumerate() {
         if let Some(value) = literal_pattern_cps(node) {
             set_class_value(&mut class_values, parent[i], value, &mut conflict);
@@ -9484,7 +9823,7 @@ fn fixed_splice_semantic_facts(exprs: &[SExpr]) -> FixedSpliceSemanticFacts {
         }
     }
 
-    FixedSpliceSemanticFacts {
+    SourceStringSemanticFacts {
         pinned_words,
         derived_equalities,
         conflict,

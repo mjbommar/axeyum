@@ -41,13 +41,13 @@ use crate::optimize::{OptOutcome, maximize_bv, maximize_lia, minimize_bv, minimi
 /// first-class `unknown`.
 const WORD_ROUTE_MAX_NODES: u64 = 200_000;
 
-/// Applies the parser's exact fixed-splice contradiction fact to an otherwise
-/// undecided query. The parser records this only for a non-incremental conjunction
-/// and only after evaluating equality classes, literal pins, and SMT-LIB splice
-/// totality exactly. Consequently this route may add `unsat` to `unknown`, but
-/// never overrides a decided result or produces `sat`.
-fn apply_fixed_splice_semantic_unsat(script: &Script, result: CheckResult) -> CheckResult {
-    if script.fixed_splice_semantic_unsat && matches!(result, CheckResult::Unknown(_)) {
+/// Applies the parser's bound-independent source-string contradiction fact to an
+/// otherwise undecided query. The parser records this only for a non-incremental
+/// conjunction and only after exact SMT-LIB rewrite normalization, equality-class
+/// propagation, and fixed-splice totality. Consequently this route may add `unsat`
+/// to `unknown`, but never overrides a decided result or produces `sat`.
+fn apply_source_string_semantic_unsat(script: &Script, result: CheckResult) -> CheckResult {
+    if script.source_string_semantic_unsat && matches!(result, CheckResult::Unknown(_)) {
         CheckResult::Unsat
     } else {
         result
@@ -660,7 +660,7 @@ fn source_string_route_verdict(script: &mut Script, config: &SolverConfig) -> Op
         kind: UnknownKind::Incomplete,
         detail: "source-level string routes".to_owned(),
     });
-    let result = apply_fixed_splice_semantic_unsat(script, seed);
+    let result = apply_source_string_semantic_unsat(script, seed);
     let result = apply_word_route(script, config, result);
     let result = apply_online_string_route(script, config, result);
     let result = apply_membership_route(script, config, result);
@@ -1514,7 +1514,7 @@ pub fn confirm_bounded_string_verdict(
 ) -> Result<CheckResult, SolverError> {
     let gate = StringGate::from_script(script);
     let confirmed = gate.confirm(&mut script.arena, assertions, config, result)?;
-    let confirmed = apply_fixed_splice_semantic_unsat(script, confirmed);
+    let confirmed = apply_source_string_semantic_unsat(script, confirmed);
     // Word-equation second-chance route (ADR-0053, T-B.4b), same as the
     // `solve_smtlib` front door: adds `sat` only where the verdict is `unknown`.
     Ok(apply_word_route(script, config, confirmed))
@@ -1548,7 +1548,7 @@ pub fn upgrade_bounded_string_unknown(
         detail: String::new(),
     });
     let confirmed = gate.confirm(&mut script.arena, assertions, config, unknown)?;
-    Ok(apply_fixed_splice_semantic_unsat(script, confirmed))
+    Ok(apply_source_string_semantic_unsat(script, confirmed))
 }
 
 /// Whether `t` has any `Int`-sorted subterm — used by the step-1a LIA
@@ -1690,7 +1690,7 @@ pub fn solve_smtlib(input: &str, config: &SolverConfig) -> Result<SmtLibOutcome,
     let gate = StringGate::from_script(&script);
     let result = solve(&mut script.arena, &query.assertions, config)?;
     let result = gate.confirm(&mut script.arena, &query.assertions, config, result)?;
-    let result = apply_fixed_splice_semantic_unsat(&script, result);
+    let result = apply_source_string_semantic_unsat(&script, result);
     // Word-equation second-chance route (ADR-0053, T-B.4b): may only add `sat`
     // where the bounded path + gate left an `unknown`.
     let result = if source_string_routes_tried {

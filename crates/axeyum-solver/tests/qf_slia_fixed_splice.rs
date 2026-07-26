@@ -249,7 +249,7 @@ fn out_of_range_equal_splices_do_not_imply_the_base() {
         online_string_verdict(&mut script, &config()),
         Some(CheckResult::Unsat)
     );
-    assert!(!script.fixed_splice_semantic_unsat);
+    assert!(!script.source_string_semantic_unsat);
 }
 
 #[test]
@@ -265,7 +265,7 @@ fn exact_splice_conflict_survives_an_unrelated_skeleton_decline() {
 "#;
     let script = parse_script(input).expect("parse independent fixed-splice conflict");
     assert!(script.word_skeleton.is_empty());
-    assert!(script.fixed_splice_semantic_unsat);
+    assert!(script.source_string_semantic_unsat);
     assert_eq!(
         solve_smtlib(input, &config())
             .expect("solve independent fixed-splice conflict")
@@ -287,7 +287,7 @@ fn exact_splice_disequality_conflict_survives_an_unrelated_skeleton_decline() {
 "#;
     let script = parse_script(input).expect("parse independent fixed-splice disequality");
     assert!(script.word_skeleton.is_empty());
-    assert!(script.fixed_splice_semantic_unsat);
+    assert!(script.source_string_semantic_unsat);
     assert_eq!(
         solve_smtlib(input, &config())
             .expect("solve independent fixed-splice disequality")
@@ -306,7 +306,7 @@ fn exact_pinned_view_content_conflict_sets_the_semantic_refuter() {
 (check-sat)
 "#;
     let script = parse_script(input).expect("parse pinned-view content conflict");
-    assert!(script.fixed_splice_semantic_unsat);
+    assert!(script.source_string_semantic_unsat);
     assert_eq!(
         solve_smtlib(input, &config())
             .expect("solve pinned-view content conflict")
@@ -324,7 +324,7 @@ fn exact_pinned_view_content_mutation_stays_satisfiable() {
 (check-sat)
 "#;
     let script = parse_script(input).expect("parse pinned-view content model");
-    assert!(!script.fixed_splice_semantic_unsat);
+    assert!(!script.source_string_semantic_unsat);
     assert_ne!(
         solve_smtlib(input, &config())
             .expect("solve pinned-view content model")
@@ -346,7 +346,7 @@ fn word_only_fallback_retains_exact_path_conflicts() {
 "#;
     let script = parse_script(input).expect("parse word-only fallback conflict");
     assert!(script.word_only_fallback.is_some());
-    assert!(script.fixed_splice_semantic_unsat);
+    assert!(script.source_string_semantic_unsat);
     assert_eq!(
         solve_smtlib(input, &config())
             .expect("solve word-only fallback conflict")
@@ -382,7 +382,7 @@ fn satisfiable_splice_mutation_does_not_set_the_semantic_refuter() {
 "#;
     let script = parse_script(input).expect("parse satisfiable fixed-splice mutation");
     assert!(script.word_skeleton.is_empty());
-    assert!(!script.fixed_splice_semantic_unsat);
+    assert!(!script.source_string_semantic_unsat);
     assert_ne!(
         solve_smtlib(input, &config())
             .expect("solve satisfiable fixed-splice mutation")
@@ -404,11 +404,110 @@ fn scoped_splice_conflict_does_not_escape_a_pop() {
 (check-sat)
 "#;
     let script = parse_script(input).expect("parse scoped fixed-splice mutation");
-    assert!(!script.fixed_splice_semantic_unsat);
+    assert!(!script.source_string_semantic_unsat);
     assert_ne!(
         solve_smtlib(input, &config())
             .expect("solve scoped fixed-splice mutation")
             .result,
         CheckResult::Unsat
     );
+}
+
+#[test]
+fn exact_source_rewrite_refutes_noetzli_term_and_predicate_families() {
+    for assertion in [
+        r#"(not (= (str.contains x (str.substr "A" z z)) true))"#,
+        r#"(not (= (str.replace "A" y (str.replace y y x))
+                    (str.replace x x (str.replace "A" y x))))"#,
+        r#"(not (= (str.substr x z 1) (str.at x z)))"#,
+        r#"(not (= (str.substr x 0 (str.indexof "A" "B" z)) ""))"#,
+        r#"(not (= (str.from_int (+ 0 z)) (str.from_int z)))"#,
+    ] {
+        let input = format!(
+            r#"(set-logic QF_SLIA)
+(declare-fun x () String)
+(declare-fun y () String)
+(declare-fun z () Int)
+(assert {assertion})
+(check-sat)
+"#
+        );
+        let script = parse_script(&input).expect("parse exact source rewrite");
+        assert!(
+            script.source_string_semantic_unsat,
+            "source normalizer must refute {assertion}"
+        );
+        assert_eq!(
+            solve_smtlib(&input, &config())
+                .expect("solve exact source rewrite")
+                .result,
+            CheckResult::Unsat,
+            "exact source rewrite must survive the bounded-string gate: {assertion}"
+        );
+    }
+}
+
+#[test]
+fn exact_source_rewrite_does_not_assume_the_packed_string_bound() {
+    for assertion in [
+        // A longer unbounded string can carry `A` at index 100.
+        r#"(= (str.at x 100) "A")"#,
+        // A string longer than the packed bound differs from its first 8 chars.
+        r#"(not (= (str.substr x 0 8) x))"#,
+    ] {
+        let input = format!(
+            r#"(set-logic QF_SLIA)
+(declare-fun x () String)
+(assert {assertion})
+(check-sat)
+"#
+        );
+        let script = parse_script(&input).expect("parse bound-sensitive model");
+        assert!(
+            !script.source_string_semantic_unsat,
+            "source normalizer must not use the packed bound: {assertion}"
+        );
+        assert_ne!(
+            solve_smtlib(&input, &config())
+                .expect("solve bound-sensitive model")
+                .result,
+            CheckResult::Unsat,
+            "a satisfiable beyond-bound formula must not become UNSAT: {assertion}"
+        );
+    }
+}
+
+#[test]
+fn exact_source_rewrite_declines_nonidentity_symbolic_terms() {
+    let input = r#"(set-logic QF_SLIA)
+(declare-fun x () String)
+(declare-fun y () String)
+(assert (not (= (str.++ x y) (str.++ y x))))
+(check-sat)
+"#;
+    let script = parse_script(input).expect("parse nonidentity terms");
+    assert!(!script.source_string_semantic_unsat);
+    assert_ne!(
+        solve_smtlib(input, &config())
+            .expect("solve nonidentity terms")
+            .result,
+        CheckResult::Unsat
+    );
+}
+
+#[test]
+fn exact_source_rewrite_does_not_use_assertions_after_check_sat() {
+    let input = r#"(set-logic QF_SLIA)
+(declare-fun x () String)
+(check-sat)
+(assert (not (= (str.replace x x x) x)))
+"#;
+    let script = parse_script(input).expect("parse post-query assertion");
+    assert!(!script.source_string_semantic_unsat);
+    assert!(matches!(
+        solve_smtlib(input, &config())
+            .expect("solve assertion stack at check-sat")
+            .result,
+        CheckResult::Sat(_)
+    ));
 }

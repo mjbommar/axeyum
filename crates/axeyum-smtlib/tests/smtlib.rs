@@ -2202,12 +2202,22 @@ fn string_to_int_symbolic_eval() {
 }
 
 #[test]
-fn string_to_int_over_length_literal_declines() {
-    // A string literal longer than STRING_MAX_LEN declines at pack time, so
-    // (str.to_int "<24 digits>") is a clean Unsupported (never a wrapped value).
-    let err =
+fn string_to_int_over_length_literal_requires_an_exact_source_refutation() {
+    // The literal cannot enter the packed representation, but its exact source
+    // value still proves this equality false without any bound assumption.
+    let script =
         parse_script("(assert (= (str.to_int \"783914785582390527685649\") 5))\n(check-sat)\n")
-            .expect_err("over-length string literal declines");
+            .expect("source-level contradiction bypasses packing");
+    assert!(script.word_only_fallback.is_some());
+    assert!(script.source_string_semantic_unsat);
+
+    // No contradiction means no bypass: the identical over-bound literal still
+    // declines instead of being truncated or otherwise forced into the encoding.
+    let err = parse_script(
+        "(assert (= (str.to_int \"783914785582390527685649\") \
+         783914785582390527685649))\n(check-sat)\n",
+    )
+    .expect_err("over-length source model remains outside the packed fragment");
     assert!(matches!(err, SmtError::Unsupported(_)), "got {err:?}");
 }
 
