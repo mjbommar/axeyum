@@ -724,3 +724,72 @@ fn exact_source_view_bounds_decline_nearby_in_range_controls() {
         );
     }
 }
+
+#[test]
+fn exact_source_conditional_replace_refutes_noetzli_families() {
+    for assertion in [
+        r#"(not (= (str.contains "" x) (= x "")))"#,
+        r#"(not (= (str.replace "" y "") ""))"#,
+        r#"(not (= (str.replace (str.replace "" x y) "A" "B")
+                    (str.replace "" x (str.replace y "A" "B"))))"#,
+        r#"(not (= (str.replace (str.replace "" x "A") "A" y)
+                    (str.replace "" x y)))"#,
+        r#"(not (= (str.replace x (str.replace "" y "") "A")
+                    (str.++ "A" x)))"#,
+        r#"(not (= (str.replace (str.replace "B" x "A") "B" "A")
+                    (str.replace "A" x "A")))"#,
+    ] {
+        let input = format!(
+            r"(set-logic QF_SLIA)
+(declare-fun x () String)
+(declare-fun y () String)
+(assert {assertion})
+(check-sat)
+"
+        );
+        let script = parse_script(&input).expect("parse exact conditional replace");
+        assert!(
+            script.source_string_semantic_unsat,
+            "conditional replace must refute {assertion}"
+        );
+        assert_eq!(
+            solve_smtlib(&input, &config())
+                .expect("solve exact conditional replace")
+                .result,
+            CheckResult::Unsat,
+            "conditional replace must survive the bounded-string gate: {assertion}"
+        );
+    }
+}
+
+#[test]
+fn exact_source_conditional_replace_declines_branch_sensitive_controls() {
+    for assertion in [
+        r#"(not (= (str.replace "" x y) y))"#,
+        r#"(not (= (str.replace "A" x y) "A"))"#,
+        r#"(not (= (str.replace "B" x "A") (str.replace "A" x "A")))"#,
+    ] {
+        let input = format!(
+            r"(set-logic QF_SLIA)
+(declare-fun x () String)
+(declare-fun y () String)
+(assert {assertion})
+(check-sat)
+"
+        );
+        let script = parse_script(&input).unwrap_or_else(|error| {
+            panic!("parse conditional replace non-theorem {assertion}: {error}")
+        });
+        assert!(
+            !script.source_string_semantic_unsat,
+            "conditional replace must decline {assertion}"
+        );
+        assert_ne!(
+            solve_smtlib(&input, &config())
+                .expect("solve conditional replace non-theorem")
+                .result,
+            CheckResult::Unsat,
+            "satisfiable conditional replace control must not become UNSAT: {assertion}"
+        );
+    }
+}
