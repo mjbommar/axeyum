@@ -383,22 +383,23 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
-- **2026-07-26 — exact Boolean-alias propagation moves 57 Kaluza
-  long-literal residuals without trusting directory labels.** Committed
-  `09841e23` propagates only forced top-level Boolean aliases, `not`, required
-  `and`, and forbidden `or`, then admits UNSAT only when the resulting exact
-  equality/disequality classes conflict. On the retained 342-row Kaluza
-  long-literal residual, current HEAD moves 4→61 UNSAT decisions: the exact
-  parent-HEAD A/B leaves 57 baseline Unknowns, so the incremental gain is 57.
-  Both Z3 and cvc5 independently return UNSAT on all 61 current decisions.
-  This check deliberately ignores the corpus's misleading `sat/`/`unsat/`
-  directory names; one inspected `unsat/` control is SAT in both oracles and
-  remains Unknown in Axeyum. The complete 279-test SMT-LIB crate passes, as do
-  the focused real-corpus SAT/UNSAT controls and `just check-scope` (70 SMT-LIB
-  library tests, 21 solver library tests, and warning-denied Clippy). Next:
-  classify the 102 empty-parse Kaluza residuals by actual syntax and oracle
-  verdict, then add one shared exact parser/semantic mechanism only if it moves
-  a verified family.
+- **2026-07-26 — exact Boolean aliases plus the String↔Int emptiness bridge
+  move 115 Kaluza residuals without trusting directory labels.** Commits
+  `09841e23` and `ef78ca7b` propagate only forced top-level Boolean aliases and
+  exact string-length consequences before admitting an equality/disequality
+  conflict. Two parent-`24df64b9` A/B measurements separate the gains: the
+  342-row long-literal bucket moves 4→61 UNSAT (+57), while the 104-row
+  empty-parse bucket moves 0→58 UNSAT (+58). Both Z3 and cvc5 independently
+  return UNSAT on every current decision in both buckets. The latter bucket's
+  second increment moves exactly four aliased `len(s)=0` versus `s≠""` rows;
+  two harder oracle-UNSAT concat/indexof rows remain Unknown. This check
+  deliberately ignores the corpus's misleading `sat/`/`unsat/` directory
+  names; an inspected `unsat/` control is SAT in both oracles and remains
+  Unknown in Axeyum. The complete 281-test SMT-LIB crate passes, as do the
+  focused real-corpus controls and `just check-scope` (72 SMT-LIB library
+  tests, 21 solver library tests, and warning-denied Clippy). Next: classify
+  the 39 retained Kaluza `IntNeg` declines against current HEAD and both
+  oracles, then implement only a shared verified family mechanism.
 
 - **2026-07-26 — dense Boolean path conflicts move 41 public PyEx rows with no
   carried regression.** Pushed `b44c506e` recognizes exact opposite-polarity
@@ -9365,13 +9366,14 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
-- **2026-07-26 — moved 57 Kaluza long-literal rows through exact Boolean
-  aliases.** Committed `09841e23`. Boolean path temporaries now expose the
-  equality/disequality facts they force before bounded string capacity is
-  considered. A parent-HEAD A/B over the 61 current UNSAT results records four
-  pre-existing decisions and 57 Unknown→UNSAT gains; Z3 and cvc5 agree on all
-  61. Satisfiable alias controls, a misleading `unsat/` corpus control, all
-  279 SMT-LIB crate tests, and the scoped handoff gate remain green.
+- **2026-07-26 — moved 115 Kaluza rows through exact Boolean and length
+  aliases.** Commits `09841e23` and `ef78ca7b`. Boolean path temporaries expose
+  only the equality/disequality and string-emptiness facts they force before
+  bounded string capacity is considered. Exact parent-`24df64b9` A/B runs
+  record +57 long-literal and +58 empty-parse decisions; Z3 and cvc5 agree on
+  every current UNSAT. Satisfiable alias/length controls, exhaustive small
+  integer thresholds, all 281 SMT-LIB crate tests, and the scoped handoff gate
+  remain green.
 
 - **2026-07-26 — accelerated replayed short-string witnesses without moving
   the soundness boundary.** Committed `56c79191`. The 797-row unresolved PyEx
