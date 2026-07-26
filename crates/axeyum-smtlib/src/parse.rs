@@ -10228,6 +10228,7 @@ fn exact_affine_equalities_equal(left: &ExactRewriteTerm, right: &ExactRewriteTe
 
 fn exact_conditions_equal(left: &ExactRewriteTerm, right: &ExactRewriteTerm) -> bool {
     left == right
+        || exact_boolean_nary_terms_equal(left, right)
         || exact_affine_equalities_equal(left, right)
         || exact_affine_orderings_equal(left, right)
 }
@@ -11288,7 +11289,11 @@ fn exact_boolean_nary_terms_equal(left: &ExactRewriteTerm, right: &ExactRewriteT
         right_args
             .iter()
             .enumerate()
-            .find(|(index, right_arg)| !matched[*index] && left_arg == *right_arg)
+            .find(|(index, right_arg)| {
+                !matched[*index]
+                    && (left_arg == *right_arg
+                        || exact_boolean_nary_terms_equal(left_arg, right_arg))
+            })
             .is_some_and(|(index, _)| {
                 matched[index] = true;
                 true
@@ -17806,6 +17811,8 @@ mod string_escape_tests {
             r#"(= (str.replace "A" (str.++ x x) x) "A")"#,
             r#"(= (str.replace "A" (str.++ x x) y)
                    (str.++ (str.replace "" x y) "A"))"#,
+            r#"(= (str.replace "A" (str.++ y x) "B")
+                   (str.replace "A" (str.++ x y) "B"))"#,
             r#"(and (= x "A") (= x "B"))"#,
             r#"(and (= x y) (= y "A") (= x "B"))"#,
         ] {
@@ -17825,6 +17832,8 @@ mod string_escape_tests {
             r#"(= (str.suffixof x "AB") (str.prefixof x "AB"))"#,
             r#"(= (str.contains "AB" x) (str.prefixof x "AB"))"#,
             r#"(= (str.prefixof "AB" x) (= (str.at x 0) "AB"))"#,
+            r#"(= (str.replace "A" (str.++ x y) "B")
+                   (str.replace "A" (str.++ x x) "B"))"#,
         ] {
             let expression = read_all(text)
                 .expect("read fixed-word language control")
@@ -17869,6 +17878,42 @@ mod string_escape_tests {
                         left, right,
                         "subject={subject:?}, needle={needle:?}, replacement={replacement:?}"
                     );
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn boolean_ac_word_views_match_reference_semantics_exhaustively() {
+        let mut words = vec![Vec::new()];
+        for length in 1..=3 {
+            for bits in 0..(1_usize << length) {
+                words.push(
+                    (0..length)
+                        .map(|shift| u32::from(if bits & (1 << shift) == 0 { b'A' } else { b'B' }))
+                        .collect(),
+                );
+            }
+        }
+
+        for code_point in *b"AB" {
+            let subject = vec![u32::from(code_point)];
+            for left in &words {
+                for right in &words {
+                    let left_right = left.iter().chain(right.iter()).copied().collect::<Vec<_>>();
+                    let right_left = right.iter().chain(left.iter()).copied().collect::<Vec<_>>();
+                    assert_eq!(left_right == subject, right_left == subject);
+                    assert_eq!(
+                        left_right.contains(&u32::from(code_point)),
+                        right_left.contains(&u32::from(code_point))
+                    );
+                    for replacement in &words {
+                        assert_eq!(
+                            replace_first_code_points(&subject, &left_right, replacement),
+                            replace_first_code_points(&subject, &right_left, replacement),
+                            "subject={subject:?}, left={left:?}, right={right:?}, replacement={replacement:?}"
+                        );
+                    }
                 }
             }
         }
