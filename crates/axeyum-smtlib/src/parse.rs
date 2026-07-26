@@ -9671,10 +9671,10 @@ fn exact_string_length_le(
         return true;
     }
     match shorter {
-        App(head, args) if matches!(head.as_str(), "str.at" | "str.substr") => {
-            if args.first() == Some(longer) {
-                return true;
-            }
+        App(head, args)
+            if matches!(head.as_str(), "str.at" | "str.substr") && args.first() == Some(longer) =>
+        {
+            return true;
         }
         App(head, args) if head == "str.replace" => {
             if let [subject, needle, replacement] = args.as_slice()
@@ -9687,10 +9687,11 @@ fn exact_string_length_le(
         _ => {}
     }
     match longer {
-        App(head, parts) if matches!(head.as_str(), "str.++" | "seq.++") => {
-            if parts.iter().any(|part| part == shorter) {
-                return true;
-            }
+        App(head, parts)
+            if matches!(head.as_str(), "str.++" | "seq.++")
+                && parts.iter().any(|part| part == shorter) =>
+        {
+            return true;
         }
         App(head, args) if head == "str.replace" => {
             if let [subject, needle, replacement] = args.as_slice()
