@@ -383,6 +383,25 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-26 — correlated substring/index totality moves five more Noetzli
+  rows without carrying a capability loss.** Committed `4ad967f8` canonicalizes
+  four exact unbounded families: complementary offset/length slices, dropping
+  the head of a symbolic prefix, singleton-search witness extraction, and
+  self-`indexof`/nested-`at` totality. The fixed 1,880-row population moves
+  **1,835→1,840 decisions (97.9%)**—19 SAT / 1,821 UNSAT / 40 unknown—with
+  exactly five term `unknown`→`unsat` gains and no loss or verdict flip.
+  Exhaustive reference semantics cover every binary word through length six
+  across negative, boundary, and out-of-range indices; four satisfiable
+  near-miss families remain declines. The first full replay exposed a real
+  normalization compatibility loss on row 105 and a load-only SAT timeout on
+  row 191. Row 105 was fixed before handoff by canonicalizing both nested-`at`
+  forms, its standing regression now passes, and row 191 recovered 5/5 alone;
+  the final six-worker rebuilt-release replay is fully monotone across all
+  1,880 rows. All 68 SMT-LIB library tests, 87 SMT-LIB front-door tests, 75
+  fixed-splice tests, both deadline tests, both standing wrong-UNSAT guards,
+  and `just check-scope` (221 affected library tests plus warning-denied Clippy)
+  pass.
+
 - **2026-07-26 — symbolic decimal-string views move six more Noetzli rows.**
   Pushed `19f911b6` gives `str.from_int(i)` its exact symbolic empty condition
   (`i < 0`), uses its decimal-only alphabet for fixed nondigit containment,
@@ -9330,6 +9349,18 @@ plan is built and committed on the current branch:
 | P5.5 | External target, measured | **DONE (bounded v1, ADR-0323--0338):** authenticated Tock capture plus eight rechecked dual-DRAT proofs and six replayed controls, UNKNOWN=0, DISAGREE=0. Query time 12.700 s; fresh outer wall 50.745 s; peak RSS 1,256,496 KiB; zero OOM deltas. The committed case study compares exact target validation, universal coverage, trust, effort, artifact boundaries, and limits. No Tock bug was found, so no upstream issue is applicable. This is not a speed or whole-kernel claim. |
 
 ## Changelog
+
+- **2026-07-26 — moved five correlated substring/index rows.** Committed
+  `4ad967f8` with exact complement, nested-prefix, singleton-search, and
+  self-index totality views. The fixed population rises 1,835→1,840/1,880
+  (97.9%): five term `unknown`→`unsat` gains, zero losses or verdict flips.
+  Exhaustive binary-word reference semantics and satisfiable near-miss controls
+  back the identities. An initial full replay caught and forced repair of the
+  row-105 normalization compatibility loss before handoff; the final replay is
+  19 SAT / 1,821 UNSAT / 40 unknown with only the 73 cumulative
+  `unknown`→`unsat` transitions from the retained baseline. The affected
+  string targets, deadline and wrong-UNSAT guards, and `just check-scope` are
+  green.
 
 - **2026-07-26 — moved six symbolic `str.from_int` rows.** Pushed `19f911b6`
   with exact negative-input emptiness, decimal-only containment, negated-length
