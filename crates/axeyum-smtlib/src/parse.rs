@@ -9779,6 +9779,17 @@ fn exact_rewrite_app(head: &str, args: Vec<ExactRewriteTerm>) -> ExactRewriteTer
             if needle == replacement {
                 return subject.clone();
             }
+            if matches!(subject, String(value) if value.is_empty())
+                && let App(concat, parts) = needle
+                && matches!(concat.as_str(), "str.++" | "seq.++")
+                && parts.contains(replacement)
+            {
+                // If the concatenated needle is empty, every component—and
+                // therefore the selected replacement—is empty. Otherwise a
+                // nonempty needle cannot occur in the empty subject. Both
+                // branches return the empty word.
+                return String(Vec::new());
+            }
             if matches!(needle, String(value) if value.is_empty()) {
                 return exact_rewrite_concat(&[replacement.clone(), subject.clone()]);
             }
@@ -17660,6 +17671,64 @@ mod string_escape_tests {
                     assert_eq!(
                         left, right,
                         "subject={subject:?}, needle={needle:?}, replacement={replacement:?}"
+                    );
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn boolean_path_facts_close_correlated_empty_replacements() {
+        for text in [
+            r#"(= (str.replace "" (str.++ x y) x) "")"#,
+            r#"(= (str.replace "" (str.++ x y) y) "")"#,
+            r#"(= (str.replace "" (str.replace x "" y) x) "")"#,
+            r#"(= (str.replace "" (str.replace x "" y) y) "")"#,
+        ] {
+            let expression = read_all(text)
+                .expect("read correlated empty replacement theorem")
+                .pop()
+                .expect("one correlated empty replacement theorem");
+            assert_eq!(
+                exact_rewrite_term(&expression, 0),
+                ExactRewriteTerm::Bool(true),
+                "{text}"
+            );
+        }
+
+        for text in [
+            r#"(= (str.replace "" (str.++ x y) "A") "")"#,
+            r#"(= (str.replace "" (str.replace x "" y) "A") "")"#,
+        ] {
+            let expression = read_all(text)
+                .expect("read correlated empty replacement control")
+                .pop()
+                .expect("one correlated empty replacement control");
+            assert_ne!(
+                exact_rewrite_term(&expression, 0),
+                ExactRewriteTerm::Bool(true),
+                "{text}"
+            );
+        }
+
+        let mut words = vec![Vec::new()];
+        for length in 1..=4 {
+            for bits in 0..(1_usize << length) {
+                words.push(
+                    (0..length)
+                        .map(|shift| u32::from(if bits & (1 << shift) == 0 { b'A' } else { b'B' }))
+                        .collect(),
+                );
+            }
+        }
+        for left in &words {
+            for right in &words {
+                let needle = [left.as_slice(), right.as_slice()].concat();
+                for replacement in [left, right] {
+                    assert_eq!(
+                        replace_first_code_points(&[], &needle, replacement),
+                        Vec::<u32>::new(),
+                        "left={left:?}, right={right:?}, replacement={replacement:?}"
                     );
                 }
             }

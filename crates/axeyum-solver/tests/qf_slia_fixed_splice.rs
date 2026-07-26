@@ -1592,3 +1592,63 @@ fn exact_source_fixed_word_languages_decline_satisfiable_controls() {
         );
     }
 }
+
+#[test]
+fn exact_source_boolean_paths_refute_correlated_empty_replacements() {
+    for assertion in [
+        r#"(not (= (str.replace "" (str.++ x y) x) ""))"#,
+        r#"(not (= (str.replace "" (str.++ x y) y) ""))"#,
+        r#"(not (= (str.replace "" (str.replace x "" y) x) ""))"#,
+        r#"(not (= (str.replace "" (str.replace x "" y) y) ""))"#,
+    ] {
+        let input = format!(
+            r"(set-logic QF_SLIA)
+(declare-fun x () String)
+(declare-fun y () String)
+(assert {assertion})
+(check-sat)
+"
+        );
+        let script = parse_script(&input).expect("parse correlated empty replacement theorem");
+        assert!(
+            script.source_string_semantic_unsat,
+            "Boolean path facts must refute {assertion}"
+        );
+        assert_eq!(
+            solve_smtlib(&input, &config())
+                .expect("solve correlated empty replacement theorem")
+                .result,
+            CheckResult::Unsat,
+            "Boolean path facts must survive the bounded-string gate: {assertion}"
+        );
+    }
+}
+
+#[test]
+fn exact_source_boolean_paths_decline_correlated_empty_controls() {
+    for assertion in [
+        r#"(not (= (str.replace "" (str.++ x y) "A") ""))"#,
+        r#"(not (= (str.replace "" (str.replace x "" y) "A") ""))"#,
+    ] {
+        let input = format!(
+            r"(set-logic QF_SLIA)
+(declare-fun x () String)
+(declare-fun y () String)
+(assert {assertion})
+(check-sat)
+"
+        );
+        let script = parse_script(&input).expect("parse correlated empty replacement control");
+        assert!(
+            !script.source_string_semantic_unsat,
+            "satisfiable Boolean path control must decline: {assertion}"
+        );
+        assert_ne!(
+            solve_smtlib(&input, &config())
+                .expect("solve correlated empty replacement control")
+                .result,
+            CheckResult::Unsat,
+            "satisfiable Boolean path control must not become UNSAT: {assertion}"
+        );
+    }
+}
