@@ -478,11 +478,11 @@ fn front_door_conbyte_fixed_substr_length_conflict_is_unsat() {
 fn front_door_conbyte_truncated_fixed_substr_length_is_exact() {
     // `substr(s,2,3)` has length two exactly when |s| = 4. This exercises the
     // middle (truncated-but-nonempty) branch of SMT-LIB substring totality.
-    let s = r#"(set-logic QF_SLIA)
+    let s = r"(set-logic QF_SLIA)
 (declare-fun s () String)
 (assert (= (str.len (str.substr s 2 3)) 2))
 (assert (= (str.len s) 4))
-(check-sat)"#;
+(check-sat)";
     assert!(matches!(verdict(s), CheckResult::Sat(_)));
 }
 
@@ -501,11 +501,11 @@ fn front_door_conbyte_over_bound_fixed_substr_stays_unknown() {
     // A real length-10 model satisfies both constraints. The packed encoder cannot
     // witness it, and the unbounded substring-length relation must not turn that
     // bounded limitation into a false UNSAT.
-    let s = r#"(set-logic QF_SLIA)
+    let s = r"(set-logic QF_SLIA)
 (declare-fun s () String)
 (assert (= (str.len (str.substr s 9 1)) 1))
 (assert (= (str.len (str.substr s 10 1)) 0))
-(check-sat)"#;
+(check-sat)";
     assert!(matches!(verdict(s), CheckResult::Unknown(_)));
 }
 

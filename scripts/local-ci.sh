@@ -49,6 +49,13 @@ echo "== local-ci ${SHA} | $(date -u +%FT%TZ) | jobs=${JOBS} | target=${CARGO_TA
 run() { echo "+ $*" | tee -a "$LOG"; "$@" 2>&1 | tee -a "$LOG"; return "${PIPESTATUS[0]}"; }
 
 rc=0
+# Lint + format gates FIRST — these mirror the hosted-CI light checks. Clippy is
+# pinned to STABLE on purpose: the frontier is developed against nightly clippy,
+# which does not flag some stable lints (e.g. needless_raw_string_hashes), so a
+# lint-clean-on-nightly change can still red hosted CI. Running stable here makes
+# the pre-merge gate match hosted CI exactly, closing that gap.
+run cargo fmt --all --check || rc=$?
+run rustup run stable cargo clippy --workspace --all-targets --all-features -- -D warnings || rc=$?
 # Full parallel, full features, host-sensitive decide tests re-included (they
 # only failed on slow hosted runners) — the `local` nextest profile does that.
 run cargo nextest run --profile local --workspace --all-features --no-fail-fast || rc=$?
