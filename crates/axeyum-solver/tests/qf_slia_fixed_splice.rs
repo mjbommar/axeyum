@@ -653,3 +653,74 @@ fn exact_source_alphabets_decline_overlapping_or_nullable_controls() {
         );
     }
 }
+
+#[test]
+fn exact_source_view_bounds_refute_noetzli_index_families() {
+    for assertion in [
+        r#"(not (= (str.substr x 0 (str.indexof x x z)) ""))"#,
+        r#"(not (= (str.substr x z (- 0 z)) ""))"#,
+        r#"(not (= (str.substr x (- 0 z) z) ""))"#,
+        r#"(not (= (str.substr x (str.len x) z) ""))"#,
+        r#"(not (= (str.at x (str.len x)) ""))"#,
+        r#"(not (= (str.at (str.substr x 1 z) z) ""))"#,
+        r#"(not (= (str.substr (str.substr x 1 z) z z) ""))"#,
+        r"(not (= (str.substr (str.substr x 1 z) 0 z) (str.substr x 1 z)))",
+        r#"(not (= (str.at x (str.indexof x "" z)) (str.at x z)))"#,
+        r#"(not (= (str.at "A" (str.indexof x x z)) (str.at "A" z)))"#,
+    ] {
+        let input = format!(
+            r"(set-logic QF_SLIA)
+(declare-fun x () String)
+(declare-fun z () Int)
+(assert {assertion})
+(check-sat)
+"
+        );
+        let script = parse_script(&input).expect("parse exact view-bound relation");
+        assert!(
+            script.source_string_semantic_unsat,
+            "source view bounds must refute {assertion}"
+        );
+        assert_eq!(
+            solve_smtlib(&input, &config())
+                .expect("solve exact view-bound relation")
+                .result,
+            CheckResult::Unsat,
+            "source view-bound result must survive the bounded-string gate: {assertion}"
+        );
+    }
+}
+
+#[test]
+fn exact_source_view_bounds_decline_nearby_in_range_controls() {
+    for assertion in [
+        r#"(not (= (str.substr x 0 z) ""))"#,
+        r#"(not (= (str.substr x z (- 1 z)) ""))"#,
+        r#"(not (= (str.at x (- (str.len x) 1)) ""))"#,
+        r#"(not (= (str.at (str.substr x 0 z) 0) ""))"#,
+        r"(not (= (str.substr (str.substr x 0 z) 0 1) (str.substr x 0 z)))",
+        r#"(not (= (str.at x (str.indexof y "" z)) (str.at x z)))"#,
+    ] {
+        let input = format!(
+            r"(set-logic QF_SLIA)
+(declare-fun x () String)
+(declare-fun y () String)
+(declare-fun z () Int)
+(assert {assertion})
+(check-sat)
+"
+        );
+        let script = parse_script(&input).expect("parse view-bound non-theorem");
+        assert!(
+            !script.source_string_semantic_unsat,
+            "source view bounds must decline {assertion}"
+        );
+        assert_ne!(
+            solve_smtlib(&input, &config())
+                .expect("solve view-bound non-theorem")
+                .result,
+            CheckResult::Unsat,
+            "satisfiable view-bound control must not become UNSAT: {assertion}"
+        );
+    }
+}
