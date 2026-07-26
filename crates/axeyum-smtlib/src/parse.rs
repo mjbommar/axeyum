@@ -9356,11 +9356,121 @@ fn exact_rewrite_term(expression: &SExpr, depth: u32) -> ExactRewriteTerm {
     let Some(head) = items.first().and_then(SExpr::atom) else {
         return ExactRewriteTerm::Opaque(expression.clone());
     };
+    if let Some(rewritten) = exact_rewrite_one_code_point_replace_view(items, depth + 1) {
+        return rewritten;
+    }
     let args: Vec<_> = items[1..]
         .iter()
         .map(|arg| exact_rewrite_term(arg, depth + 1))
         .collect();
     exact_rewrite_app(head, args)
+}
+
+/// Canonicalizes exact views whose inner one-code-point replacement would
+/// otherwise expand to a differently ordered `ite` tree before the outer view
+/// can recognize it. Every case is an unbounded SMT-LIB total-function law.
+fn exact_rewrite_one_code_point_replace_view(
+    items: &[SExpr],
+    depth: u32,
+) -> Option<ExactRewriteTerm> {
+    use ExactRewriteTerm::{Int, String};
+
+    let exact_one_code_point = |term: &ExactRewriteTerm| {
+        exact_string_min_len(term, 0) == Some(1) && exact_string_max_len(term, 0) == Some(1)
+    };
+    if items.first()?.atom() == Some("str.substr") && items.len() == 4 {
+        let subject = exact_rewrite_term(&items[1], depth);
+        let offset = exact_rewrite_term(&items[2], depth);
+        let length = exact_rewrite_term(&items[3], depth);
+        if let Some(replace) = items[1].list()
+            && replace.len() == 4
+            && replace[0].atom() == Some("str.replace")
+        {
+            let base = exact_rewrite_term(&replace[1], depth);
+            let needle = exact_rewrite_term(&replace[2], depth);
+            let replacement = exact_rewrite_term(&replace[3], depth);
+            if exact_one_code_point(&base) && exact_one_code_point(&replacement) {
+                // Replacing in a one-code-point base yields `replacement+base`
+                // for an empty needle and at most one code point otherwise.
+                if offset == Int(1) {
+                    return Some(exact_rewrite_app(
+                        "str.substr",
+                        vec![base, exact_rewrite_app("str.len", vec![needle]), length],
+                    ));
+                }
+                // At equal start/length, the only nonempty case is start one
+                // after an empty needle, which selects the original base.
+                if offset == length {
+                    return Some(exact_rewrite_app(
+                        "ite",
+                        vec![
+                            exact_rewrite_app(
+                                "and",
+                                vec![
+                                    exact_rewrite_app("=", vec![offset, Int(1)]),
+                                    exact_rewrite_app("=", vec![needle, String(Vec::new())]),
+                                ],
+                            ),
+                            base,
+                            String(Vec::new()),
+                        ],
+                    ));
+                }
+            }
+        }
+        if offset == Int(0)
+            && let Some(indexof) = items[3].list()
+            && indexof.len() == 4
+            && indexof[0].atom() == Some("str.indexof")
+        {
+            let probe = exact_rewrite_term(&indexof[1], depth);
+            let needle = exact_rewrite_term(&indexof[2], depth);
+            let start = exact_rewrite_term(&indexof[3], depth);
+            if exact_one_code_point(&subject) && exact_one_code_point(&probe) {
+                // `indexof(one, needle, start)` supplies a positive substring
+                // length exactly when `start=1` and `needle` is empty.
+                return Some(exact_rewrite_app(
+                    "ite",
+                    vec![
+                        exact_rewrite_app(
+                            "and",
+                            vec![
+                                exact_rewrite_app("=", vec![start, Int(1)]),
+                                exact_rewrite_app("=", vec![needle, String(Vec::new())]),
+                            ],
+                        ),
+                        subject,
+                        String(Vec::new()),
+                    ],
+                ));
+            }
+        }
+    }
+    if items.first()?.atom() == Some("str.replace")
+        && items.len() == 4
+        && literal_pattern_cps(&items[1]).is_some_and(|subject| subject.is_empty())
+        && let Some(inner) = items[2].list()
+        && inner.len() == 4
+        && inner[0].atom() == Some("str.replace")
+        && literal_pattern_cps(&inner[3]).is_some_and(|replacement| replacement.is_empty())
+    {
+        let source = exact_rewrite_term(&inner[1], depth);
+        let needle = exact_rewrite_term(&inner[2], depth);
+        let replacement = exact_rewrite_term(&items[3], depth);
+        if exact_one_code_point(&needle) && exact_one_code_point(&replacement) {
+            // Removing one code point makes `source` empty exactly when source
+            // is empty or that code point. This is the same condition under
+            // which it occurs as a needle in the one-code-point probe.
+            return Some(exact_rewrite_app(
+                "str.at",
+                vec![
+                    replacement,
+                    exact_rewrite_app("str.indexof", vec![needle, source, Int(0)]),
+                ],
+            ));
+        }
+    }
+    None
 }
 
 #[allow(clippy::too_many_lines)] // One explicit allow-list of exact SMT-LIB identities.
@@ -17914,6 +18024,77 @@ mod string_escape_tests {
                             "subject={subject:?}, left={left:?}, right={right:?}, replacement={replacement:?}"
                         );
                     }
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn one_code_point_replace_views_match_reference_semantics_exhaustively() {
+        let mut words = vec![Vec::new()];
+        for length in 1..=3 {
+            for bits in 0..(1_usize << length) {
+                words.push(
+                    (0..length)
+                        .map(|shift| u32::from(if bits & (1 << shift) == 0 { b'A' } else { b'B' }))
+                        .collect(),
+                );
+            }
+        }
+        let indexof = |subject: &[u32], needle: &[u32], offset: i128| {
+            let Ok(offset) = usize::try_from(offset) else {
+                return -1;
+            };
+            if offset > subject.len() {
+                return -1;
+            }
+            if needle.is_empty() {
+                return i128::try_from(offset).expect("small offset");
+            }
+            subject[offset..]
+                .windows(needle.len())
+                .position(|candidate| candidate == needle)
+                .and_then(|index| i128::try_from(offset + index).ok())
+                .unwrap_or(-1)
+        };
+
+        for base_code in *b"AB" {
+            let base = vec![u32::from(base_code)];
+            for replacement_code in *b"AB" {
+                let replacement = vec![u32::from(replacement_code)];
+                for needle in &words {
+                    let replaced = replace_first_code_points(&base, needle, &replacement);
+                    for offset in -3_i128..=5 {
+                        assert_eq!(
+                            substr_code_points(&replaced, 1, offset),
+                            substr_code_points(
+                                &base,
+                                i128::try_from(needle.len()).expect("small length"),
+                                offset
+                            )
+                        );
+                        for probe_code in *b"AB" {
+                            let probe = [u32::from(probe_code)];
+                            assert_eq!(
+                                substr_code_points(&replaced, offset, offset),
+                                substr_code_points(&base, 0, indexof(&probe, needle, offset))
+                            );
+                        }
+                    }
+                }
+            }
+        }
+
+        for source in &words {
+            for needle_code in *b"AB" {
+                let needle = [u32::from(needle_code)];
+                let removed = replace_first_code_points(source, &needle, &[]);
+                for replacement_code in *b"AB" {
+                    let replacement = [u32::from(replacement_code)];
+                    assert_eq!(
+                        replace_first_code_points(&[], &removed, &replacement),
+                        substr_code_points(&replacement, indexof(&needle, source, 0), 1)
+                    );
                 }
             }
         }
