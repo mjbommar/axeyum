@@ -9356,6 +9356,9 @@ fn exact_rewrite_term(expression: &SExpr, depth: u32) -> ExactRewriteTerm {
     let Some(head) = items.first().and_then(SExpr::atom) else {
         return ExactRewriteTerm::Opaque(expression.clone());
     };
+    if let Some(rewritten) = exact_rewrite_self_replacement_view(items, depth + 1) {
+        return rewritten;
+    }
     if let Some(rewritten) = exact_rewrite_one_code_point_replace_view(items, depth + 1) {
         return rewritten;
     }
@@ -9373,6 +9376,40 @@ fn exact_rewrite_term(expression: &SExpr, depth: u32) -> ExactRewriteTerm {
         return ExactRewriteTerm::Bool(value);
     }
     rewritten
+}
+
+/// Preserves equality and word-boundary observations of replacing a factor by
+/// the whole source. The raw shape is required because normalizing the inner
+/// replacement first expands its empty-needle case into a decision tree.
+fn exact_rewrite_self_replacement_view(items: &[SExpr], depth: u32) -> Option<ExactRewriteTerm> {
+    let head = items.first()?.atom()?;
+    if !matches!(head, "=" | "str.prefixof" | "str.suffixof" | "str.contains") || items.len() != 3 {
+        return None;
+    }
+    for (replacement_index, other_index) in [(1, 2), (2, 1)] {
+        let Some(replacement) = items[replacement_index].list() else {
+            continue;
+        };
+        if replacement.len() != 4
+            || replacement[0].atom() != Some("str.replace")
+            || replacement[1] != replacement[3]
+        {
+            continue;
+        }
+        let subject = exact_rewrite_term(&replacement[1], depth);
+        let needle = exact_rewrite_term(&replacement[2], depth);
+        let other = exact_rewrite_term(&items[other_index], depth);
+        if other != needle {
+            continue;
+        }
+        let mut args = [
+            exact_rewrite_term(&items[1], depth),
+            exact_rewrite_term(&items[2], depth),
+        ];
+        args[replacement_index - 1] = subject;
+        return Some(exact_rewrite_app(head, args.into()));
+    }
+    None
 }
 
 /// Canonicalizes exact views whose inner one-code-point replacement would
@@ -10964,6 +11001,12 @@ fn exact_collect_boolean_atoms(term: &ExactRewriteTerm, atoms: &mut Vec<ExactRew
         App(head, args) if matches!(head.as_str(), "and" | "or") => args
             .iter()
             .all(|argument| exact_collect_boolean_atoms(argument, atoms)),
+        App(head, args)
+            if head == "=" && args.len() == 2 && args.iter().all(exact_term_is_boolean) =>
+        {
+            args.iter()
+                .all(|argument| exact_collect_boolean_atoms(argument, atoms))
+        }
         App(head, args) if head == "ite" && args.len() == 3 => args
             .iter()
             .all(|argument| exact_collect_boolean_atoms(argument, atoms)),
@@ -10976,6 +11019,33 @@ fn exact_collect_boolean_atoms(term: &ExactRewriteTerm, atoms: &mut Vec<ExactRew
             }
             atoms.len() <= EXACT_BOOLEAN_ATOM_CAP
         }
+    }
+}
+
+fn exact_term_is_boolean(term: &ExactRewriteTerm) -> bool {
+    use ExactRewriteTerm::{App, Bool};
+
+    match term {
+        Bool(_) => true,
+        App(head, args) if head == "ite" && args.len() == 3 => {
+            exact_term_is_boolean(&args[1]) && exact_term_is_boolean(&args[2])
+        }
+        App(head, _) => matches!(
+            head.as_str(),
+            "not"
+                | "and"
+                | "or"
+                | "="
+                | "<"
+                | "<="
+                | ">"
+                | ">="
+                | "str.prefixof"
+                | "str.suffixof"
+                | "str.contains"
+                | "str.in_re"
+        ),
+        _ => false,
     }
 }
 
@@ -18704,7 +18774,7 @@ mod string_escape_tests {
         let equals_empty =
             exact_rewrite_equality(&self_replacement, &ExactRewriteTerm::String(Vec::new()));
         let mut words = vec![Vec::new()];
-        for _ in 0..2 {
+        for _ in 0..4 {
             let prior = words.clone();
             for word in prior {
                 for code_point in [u32::from(b'A'), u32::from(b'B')] {
@@ -18740,6 +18810,37 @@ mod string_escape_tests {
                     ),
                 ];
                 let replaced = replace_first_code_points(subject_word, needle_word, subject_word);
+                let contains = |subject: &[u32], needle: &[u32]| {
+                    needle.is_empty()
+                        || subject
+                            .windows(needle.len())
+                            .any(|candidate| candidate == needle)
+                };
+                assert_eq!(replaced == *needle_word, subject_word == needle_word);
+                assert_eq!(
+                    replaced.starts_with(needle_word),
+                    subject_word.starts_with(needle_word)
+                );
+                assert_eq!(
+                    needle_word.starts_with(&replaced),
+                    needle_word.starts_with(subject_word)
+                );
+                assert_eq!(
+                    replaced.ends_with(needle_word),
+                    subject_word.ends_with(needle_word)
+                );
+                assert_eq!(
+                    needle_word.ends_with(&replaced),
+                    needle_word.ends_with(subject_word)
+                );
+                assert_eq!(
+                    contains(&replaced, needle_word),
+                    contains(subject_word, needle_word)
+                );
+                assert_eq!(
+                    contains(needle_word, &replaced),
+                    contains(needle_word, subject_word)
+                );
                 let expected_at = replaced
                     .first()
                     .copied()
@@ -18831,6 +18932,50 @@ mod string_escape_tests {
                     );
                 }
             }
+        }
+    }
+
+    #[test]
+    fn self_replacement_and_boolean_equivalence_forms_normalize_conservatively() {
+        for text in [
+            r"(not (= (= x (str.replace y x y)) (= x y)))",
+            r"(not (= (str.prefixof x (str.replace y x y)) (str.prefixof x y)))",
+            r"(not (= (str.suffixof x (str.replace y x y)) (str.suffixof x y)))",
+            r"(not (= (str.contains x (str.replace y x y)) (str.contains x y)))",
+            r"(not (= (str.prefixof (str.replace x y x) y) (str.prefixof x y)))",
+            r"(not (= (str.suffixof (str.replace x y x) y) (str.suffixof x y)))",
+            r#"(not (= (= "" (str.replace x "A" y)) (str.prefixof x (str.replace "" y "A"))))"#,
+            r#"(not (= (str.contains "" (str.replace x "A" y)) (str.prefixof x (str.replace "" y "A"))))"#,
+            r#"(not (= (= "" (str.replace x "B" y)) (str.prefixof x (str.replace "" y "B"))))"#,
+            r#"(not (= (str.contains "" (str.replace x "B" y)) (str.prefixof x (str.replace "" y "B"))))"#,
+            r#"(not (= (str.contains (str.replace "A" x "") x) (= x "")))"#,
+            r#"(not (= (str.contains (str.replace "B" x "") x) (= x "")))"#,
+        ] {
+            let expression = read_all(text)
+                .expect("read self-replacement/Boolean theorem")
+                .pop()
+                .expect("one self-replacement/Boolean theorem");
+            assert_eq!(
+                exact_rewrite_term(&expression, 0),
+                ExactRewriteTerm::Bool(false),
+                "{text}"
+            );
+        }
+
+        for text in [
+            r"(not (= (str.prefixof z (str.replace y x y)) (str.prefixof z y)))",
+            r"(not (= (= y (str.replace y x y)) (= x y)))",
+            r#"(not (= (= x "") (= x "A")))"#,
+        ] {
+            let expression = read_all(text)
+                .expect("read self-replacement/Boolean control")
+                .pop()
+                .expect("one self-replacement/Boolean control");
+            assert_ne!(
+                exact_rewrite_term(&expression, 0),
+                ExactRewriteTerm::Bool(false),
+                "{text}"
+            );
         }
     }
 
