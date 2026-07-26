@@ -9356,6 +9356,9 @@ fn exact_rewrite_term(expression: &SExpr, depth: u32) -> ExactRewriteTerm {
     let Some(head) = items.first().and_then(SExpr::atom) else {
         return ExactRewriteTerm::Opaque(expression.clone());
     };
+    if let Some(rewritten) = exact_rewrite_first_occurrence_algebra_view(items, depth + 1) {
+        return rewritten;
+    }
     if let Some(rewritten) = exact_rewrite_self_replacement_view(items, depth + 1) {
         return rewritten;
     }
@@ -9416,6 +9419,312 @@ fn exact_rewrite_self_replacement_view(items: &[SExpr], depth: u32) -> Option<Ex
         return Some(exact_rewrite_app(head, args.into()));
     }
     None
+}
+
+fn exact_raw_app<'a>(expression: &'a SExpr, head: &str, arity: usize) -> Option<&'a [SExpr]> {
+    let items = expression.list()?;
+    (items.len() == arity + 1 && items[0].atom() == Some(head)).then_some(&items[1..])
+}
+
+fn exact_raw_terms_equal(left: &SExpr, right: &SExpr, depth: u32) -> bool {
+    exact_rewrite_term(left, depth) == exact_rewrite_term(right, depth)
+}
+
+fn exact_raw_is_empty(expression: &SExpr, depth: u32) -> bool {
+    matches!(exact_rewrite_term(expression, depth), ExactRewriteTerm::String(word) if word.is_empty())
+}
+
+fn exact_raw_is_int_zero(expression: &SExpr, depth: u32) -> bool {
+    exact_rewrite_term(expression, depth) == ExactRewriteTerm::Int(0)
+}
+
+fn exact_raw_is_one_code_point(expression: &SExpr, depth: u32) -> bool {
+    let term = exact_rewrite_term(expression, depth);
+    exact_string_min_len(&term, 0) == Some(1) && exact_string_max_len(&term, 0) == Some(1)
+}
+
+fn exact_raw_are_distinct_code_points(left: &SExpr, right: &SExpr, depth: u32) -> bool {
+    let left = exact_rewrite_term(left, depth);
+    let right = exact_rewrite_term(right, depth);
+    exact_string_min_len(&left, 0) == Some(1)
+        && exact_string_max_len(&left, 0) == Some(1)
+        && exact_string_min_len(&right, 0) == Some(1)
+        && exact_string_max_len(&right, 0) == Some(1)
+        && exact_string_alphabets_disjoint(&left, &right)
+}
+
+fn exact_empty_subject_replace_commutes(left: &SExpr, right: &SExpr, depth: u32) -> bool {
+    let Some(left_concat) = exact_raw_app(left, "str.++", 2) else {
+        return false;
+    };
+    let Some(right_concat) = exact_raw_app(right, "str.++", 2) else {
+        return false;
+    };
+    if !exact_raw_terms_equal(&left_concat[0], &right_concat[1], depth)
+        || !exact_raw_terms_equal(&left_concat[1], &right_concat[0], depth)
+    {
+        return false;
+    }
+    for (replacement, peer) in [
+        (&left_concat[0], &left_concat[1]),
+        (&left_concat[1], &left_concat[0]),
+    ] {
+        let Some(args) = exact_raw_app(replacement, "str.replace", 3) else {
+            continue;
+        };
+        if exact_raw_is_empty(&args[0], depth)
+            && (exact_raw_terms_equal(peer, &args[1], depth)
+                || exact_raw_terms_equal(peer, &args[2], depth))
+        {
+            return true;
+        }
+    }
+    false
+}
+
+fn exact_replace_restores_subject(left: &SExpr, right: &SExpr, depth: u32) -> bool {
+    let Some(outer) = exact_raw_app(left, "str.replace", 3) else {
+        return false;
+    };
+    let Some(inner) = exact_raw_app(&outer[2], "str.replace", 3) else {
+        return false;
+    };
+    exact_raw_terms_equal(&outer[0], right, depth)
+        && exact_raw_terms_equal(&inner[0], &outer[1], depth)
+        && exact_raw_terms_equal(&inner[1], &outer[0], depth)
+        && exact_raw_terms_equal(&inner[2], &outer[1], depth)
+}
+
+fn exact_conjugate_replace_identity(left: &SExpr, right: &SExpr, depth: u32) -> bool {
+    let (Some(left), Some(right)) = (
+        exact_raw_app(left, "str.replace", 3),
+        exact_raw_app(right, "str.replace", 3),
+    ) else {
+        return false;
+    };
+    let (Some(left_needle), Some(right_needle)) = (
+        exact_raw_app(&left[1], "str.replace", 3),
+        exact_raw_app(&right[1], "str.replace", 3),
+    ) else {
+        return false;
+    };
+    exact_raw_terms_equal(&left[0], &right[0], depth)
+        && exact_raw_is_one_code_point(&left[2], depth)
+        && exact_raw_terms_equal(&left_needle[0], &left[2], depth)
+        && exact_raw_terms_equal(&left_needle[1], &right[2], depth)
+        && exact_raw_terms_equal(&left_needle[2], &left[0], depth)
+        && exact_raw_terms_equal(&right_needle[0], &right[2], depth)
+        && exact_raw_terms_equal(&right_needle[1], &left[2], depth)
+        && exact_raw_terms_equal(&right_needle[2], &left[0], depth)
+}
+
+fn exact_singleton_replace_commutes_with_prefix(left: &SExpr, right: &SExpr, depth: u32) -> bool {
+    let Some(left) = exact_raw_app(left, "str.replace", 3) else {
+        return false;
+    };
+    let Some(left_prefix) = exact_raw_app(&left[0], "str.substr", 3) else {
+        return false;
+    };
+    let Some(right) = exact_raw_app(right, "str.substr", 3) else {
+        return false;
+    };
+    let Some(right_source) = exact_raw_app(&right[0], "str.replace", 3) else {
+        return false;
+    };
+    exact_raw_is_one_code_point(&left[1], depth)
+        && exact_raw_is_one_code_point(&left[2], depth)
+        && exact_raw_terms_equal(&left_prefix[0], &right_source[0], depth)
+        && exact_raw_is_int_zero(&left_prefix[1], depth)
+        && exact_raw_is_int_zero(&right[1], depth)
+        && exact_raw_terms_equal(&left_prefix[2], &right[2], depth)
+        && exact_raw_terms_equal(&left[1], &right_source[1], depth)
+        && exact_raw_terms_equal(&left[2], &right_source[2], depth)
+}
+
+fn exact_prefixed_whole_source_replace(left: &SExpr, right: &SExpr, depth: u32) -> bool {
+    let Some(left) = exact_raw_app(left, "str.replace", 3) else {
+        return false;
+    };
+    let Some(source) = exact_raw_app(&left[0], "str.++", 2) else {
+        return false;
+    };
+    if !exact_raw_is_one_code_point(&source[0], depth)
+        || !exact_raw_terms_equal(&source[1], &left[1], depth)
+    {
+        return false;
+    }
+    let code_point = exact_rewrite_term(&source[0], depth);
+    let replacement = exact_rewrite_term(&left[2], depth);
+    let expected = if exact_raw_is_empty(&left[2], depth) {
+        code_point
+    } else if replacement == code_point {
+        exact_rewrite_app("str.++", vec![code_point.clone(), code_point])
+    } else {
+        return false;
+    };
+    exact_rewrite_term(right, depth) == expected
+}
+
+fn exact_nested_self_replace_identity(left: &SExpr, right: &SExpr, depth: u32) -> bool {
+    let (Some(left), Some(right)) = (
+        exact_raw_app(left, "str.replace", 3),
+        exact_raw_app(right, "str.replace", 3),
+    ) else {
+        return false;
+    };
+    let Some(left_source) = exact_raw_app(&left[0], "str.replace", 3) else {
+        return false;
+    };
+    let Some(right_needle) = exact_raw_app(&right[1], "str.replace", 3) else {
+        return false;
+    };
+    exact_raw_terms_equal(&left_source[0], &right[0], depth)
+        && exact_raw_terms_equal(&left_source[1], &left[2], depth)
+        && exact_raw_terms_equal(&left_source[2], &right[0], depth)
+        && exact_raw_terms_equal(&left[1], &right[0], depth)
+        && exact_raw_terms_equal(&right_needle[0], &right[0], depth)
+        && exact_raw_terms_equal(&right_needle[1], &left[2], depth)
+        && exact_raw_terms_equal(&right_needle[2], &right[0], depth)
+        && exact_raw_terms_equal(&right[2], &left[2], depth)
+}
+
+fn exact_singleton_self_expansion_identity(left: &SExpr, right: &SExpr, depth: u32) -> bool {
+    let (Some(left), Some(right)) = (
+        exact_raw_app(left, "str.replace", 3),
+        exact_raw_app(right, "str.replace", 3),
+    ) else {
+        return false;
+    };
+    let Some(left_source) = exact_raw_app(&left[0], "str.replace", 3) else {
+        return false;
+    };
+    let Some(right_replacement) = exact_raw_app(&right[2], "str.replace", 3) else {
+        return false;
+    };
+    exact_raw_is_one_code_point(&left[1], depth)
+        && exact_raw_terms_equal(&left_source[0], &right[0], depth)
+        && exact_raw_terms_equal(&left_source[1], &left[1], depth)
+        && exact_raw_terms_equal(&left_source[2], &right[0], depth)
+        && exact_raw_terms_equal(&right[1], &left[1], depth)
+        && exact_raw_terms_equal(&right_replacement[0], &right[0], depth)
+        && exact_raw_terms_equal(&right_replacement[1], &left[1], depth)
+        && exact_raw_terms_equal(&right_replacement[2], &left[2], depth)
+}
+
+fn exact_singleton_outer_source_identity(left: &SExpr, right: &SExpr, depth: u32) -> bool {
+    let (Some(left), Some(right)) = (
+        exact_raw_app(left, "str.replace", 3),
+        exact_raw_app(right, "str.replace", 3),
+    ) else {
+        return false;
+    };
+    let (Some(left_source), Some(right_source)) = (
+        exact_raw_app(&left[0], "str.replace", 3),
+        exact_raw_app(&right[0], "str.replace", 3),
+    ) else {
+        return false;
+    };
+    if !exact_raw_is_one_code_point(&left_source[1], depth)
+        || !exact_raw_terms_equal(&left_source[0], &right_source[0], depth)
+        || !exact_raw_terms_equal(&left_source[1], &right_source[1], depth)
+        || !exact_raw_terms_equal(&left[1], &right[1], depth)
+        || !exact_raw_terms_equal(&left[2], &right[2], depth)
+        || !exact_raw_terms_equal(&left_source[0], &left[1], depth)
+        || !exact_raw_terms_equal(&right_source[2], &right_source[0], depth)
+    {
+        return false;
+    }
+    let replacement_is_empty = exact_raw_is_empty(&left_source[2], depth);
+    let replacement_is_distinct =
+        exact_raw_are_distinct_code_points(&left_source[1], &left_source[2], depth);
+    replacement_is_empty || replacement_is_distinct
+}
+
+fn exact_distinct_singleton_deletions_commute(left: &SExpr, right: &SExpr, depth: u32) -> bool {
+    let (Some(left), Some(right)) = (
+        exact_raw_app(left, "str.replace", 3),
+        exact_raw_app(right, "str.replace", 3),
+    ) else {
+        return false;
+    };
+    let (Some(left_source), Some(right_source)) = (
+        exact_raw_app(&left[0], "str.replace", 3),
+        exact_raw_app(&right[0], "str.replace", 3),
+    ) else {
+        return false;
+    };
+    exact_raw_is_empty(&left[2], depth)
+        && exact_raw_is_empty(&right[2], depth)
+        && exact_raw_is_empty(&left_source[2], depth)
+        && exact_raw_is_empty(&right_source[2], depth)
+        && exact_raw_terms_equal(&left_source[0], &right_source[0], depth)
+        && exact_raw_terms_equal(&left_source[1], &right[1], depth)
+        && exact_raw_terms_equal(&right_source[1], &left[1], depth)
+        && exact_raw_are_distinct_code_points(&left[1], &right[1], depth)
+}
+
+fn exact_singleton_subject_replace_composition(left: &SExpr, right: &SExpr, depth: u32) -> bool {
+    let Some(left) = exact_raw_app(left, "str.replace", 3) else {
+        return false;
+    };
+    let Some(inner) = exact_raw_app(&left[0], "str.replace", 3) else {
+        return false;
+    };
+    if !exact_raw_is_one_code_point(&inner[0], depth)
+        || !exact_raw_is_one_code_point(&inner[2], depth)
+        || !exact_raw_terms_equal(&left[1], &inner[2], depth)
+    {
+        return false;
+    }
+    let subject = exact_rewrite_term(&inner[0], depth);
+    let needle = exact_rewrite_term(&inner[1], depth);
+    let replacement = exact_rewrite_term(&inner[2], depth);
+    let outer_replacement = exact_rewrite_term(&left[2], depth);
+    let expected = if subject == replacement {
+        exact_rewrite_app(
+            "str.++",
+            vec![
+                outer_replacement,
+                exact_rewrite_app(
+                    "str.replace",
+                    vec![ExactRewriteTerm::String(Vec::new()), needle, subject],
+                ),
+            ],
+        )
+    } else if exact_string_alphabets_disjoint(&subject, &replacement) {
+        exact_rewrite_app("str.replace", vec![subject, needle, outer_replacement])
+    } else {
+        return false;
+    };
+    exact_rewrite_term(right, depth) == expected
+}
+
+fn exact_first_occurrence_algebra_equal(left: &SExpr, right: &SExpr, depth: u32) -> bool {
+    exact_empty_subject_replace_commutes(left, right, depth)
+        || exact_replace_restores_subject(left, right, depth)
+        || exact_conjugate_replace_identity(left, right, depth)
+        || exact_singleton_replace_commutes_with_prefix(left, right, depth)
+        || exact_prefixed_whole_source_replace(left, right, depth)
+        || exact_nested_self_replace_identity(left, right, depth)
+        || exact_singleton_self_expansion_identity(left, right, depth)
+        || exact_singleton_outer_source_identity(left, right, depth)
+        || exact_distinct_singleton_deletions_commute(left, right, depth)
+        || exact_singleton_subject_replace_composition(left, right, depth)
+}
+
+/// Proves exact first-occurrence replacement algebra before nested replacements
+/// expand into unrelated conditional trees. Every accepted schema is valid for
+/// unbounded SMT-LIB strings; nearby non-identities remain structural.
+fn exact_rewrite_first_occurrence_algebra_view(
+    items: &[SExpr],
+    depth: u32,
+) -> Option<ExactRewriteTerm> {
+    if items.first()?.atom() != Some("=") || items.len() != 3 {
+        return None;
+    }
+    (exact_first_occurrence_algebra_equal(&items[1], &items[2], depth)
+        || exact_first_occurrence_algebra_equal(&items[2], &items[1], depth))
+    .then_some(ExactRewriteTerm::Bool(true))
 }
 
 fn exact_rewrite_head_at_selected_integer(
@@ -18673,6 +18982,212 @@ mod string_escape_tests {
                 ExactRewriteTerm::Bool(true),
                 "{text}"
             );
+        }
+    }
+
+    fn first_occurrence_algebra_words() -> Vec<Vec<u32>> {
+        let mut words = vec![Vec::new()];
+        for length in 1..=5 {
+            for bits in 0..(1_usize << length) {
+                words.push(
+                    (0..length)
+                        .map(|shift| u32::from(if bits & (1 << shift) == 0 { b'A' } else { b'B' }))
+                        .collect(),
+                );
+            }
+        }
+        words
+    }
+
+    #[test]
+    fn first_occurrence_nested_algebra_matches_reference_semantics_exhaustively() {
+        let words = first_occurrence_algebra_words();
+        let a = vec![u32::from(b'A')];
+        let b = vec![u32::from(b'B')];
+        let empty = Vec::new();
+
+        for x in &words {
+            for y in &words {
+                let empty_subject = replace_first_code_points(&empty, x, y);
+                for peer in [x, y] {
+                    let mut left = empty_subject.clone();
+                    left.extend(peer);
+                    let mut right = peer.clone();
+                    right.extend(&empty_subject);
+                    assert_eq!(left, right, "empty subject: x={x:?}, y={y:?}");
+                }
+
+                assert_eq!(
+                    replace_first_code_points(x, y, &replace_first_code_points(y, x, y),),
+                    *x,
+                    "restore subject: x={x:?}, y={y:?}"
+                );
+                let self_expanded = replace_first_code_points(x, y, x);
+                assert_eq!(
+                    replace_first_code_points(&self_expanded, x, y),
+                    replace_first_code_points(x, &self_expanded, y),
+                    "nested self: x={x:?}, y={y:?}"
+                );
+
+                for code_point in [&a, &b] {
+                    assert_eq!(
+                        replace_first_code_points(
+                            x,
+                            &replace_first_code_points(code_point, y, x),
+                            code_point,
+                        ),
+                        replace_first_code_points(
+                            x,
+                            &replace_first_code_points(y, code_point, x),
+                            y,
+                        ),
+                        "conjugate: x={x:?}, y={y:?}, code_point={code_point:?}"
+                    );
+                    assert_eq!(
+                        replace_first_code_points(
+                            &replace_first_code_points(x, code_point, x),
+                            code_point,
+                            y,
+                        ),
+                        replace_first_code_points(
+                            x,
+                            code_point,
+                            &replace_first_code_points(x, code_point, y),
+                        ),
+                        "singleton expansion: x={x:?}, y={y:?}, code_point={code_point:?}"
+                    );
+                    for replacement in [code_point, &empty] {
+                        let mut prefixed = code_point.clone();
+                        prefixed.extend(x);
+                        let actual = replace_first_code_points(&prefixed, x, replacement);
+                        let mut expected = code_point.clone();
+                        expected.extend(replacement);
+                        assert_eq!(
+                            actual, expected,
+                            "prefixed source: x={x:?}, code_point={code_point:?}, replacement={replacement:?}"
+                        );
+                    }
+                }
+
+                for (subject, replacement) in [(&a, &a), (&a, &b), (&b, &a), (&b, &b)] {
+                    let actual = replace_first_code_points(
+                        &replace_first_code_points(subject, x, replacement),
+                        replacement,
+                        y,
+                    );
+                    let expected = if subject == replacement {
+                        let mut expected = y.clone();
+                        expected.extend(replace_first_code_points(&empty, x, subject));
+                        expected
+                    } else {
+                        replace_first_code_points(subject, x, y)
+                    };
+                    assert_eq!(
+                        actual, expected,
+                        "singleton subject: subject={subject:?}, x={x:?}, replacement={replacement:?}, y={y:?}"
+                    );
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn first_occurrence_prefix_algebra_matches_reference_semantics_exhaustively() {
+        let words = first_occurrence_algebra_words();
+        let a = vec![u32::from(b'A')];
+        let b = vec![u32::from(b'B')];
+        let empty = Vec::new();
+
+        for x in &words {
+            for (needle, replacement) in [(&a, &b), (&b, &a), (&a, &empty), (&b, &empty)] {
+                assert_eq!(
+                    replace_first_code_points(
+                        &replace_first_code_points(x, needle, replacement),
+                        x,
+                        replacement,
+                    ),
+                    replace_first_code_points(
+                        &replace_first_code_points(x, needle, x),
+                        x,
+                        replacement,
+                    ),
+                    "outer source: x={x:?}, needle={needle:?}, replacement={replacement:?}"
+                );
+            }
+            assert_eq!(
+                replace_first_code_points(&replace_first_code_points(x, &b, &empty), &a, &empty,),
+                replace_first_code_points(&replace_first_code_points(x, &a, &empty), &b, &empty,),
+                "distinct deletion: x={x:?}"
+            );
+            for value in -3_i128..=9 {
+                for (needle, replacement) in [(&a, &b), (&b, &a)] {
+                    assert_eq!(
+                        replace_first_code_points(
+                            &substr_code_points(x, 0, value),
+                            needle,
+                            replacement,
+                        ),
+                        substr_code_points(
+                            &replace_first_code_points(x, needle, replacement),
+                            0,
+                            value,
+                        ),
+                        "prefix commute: x={x:?}, value={value}, needle={needle:?}, replacement={replacement:?}"
+                    );
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn first_occurrence_algebra_forms_close_and_counterexamples_decline() {
+        let term = |text: &str| {
+            let expression = read_all(text)
+                .expect("read first-occurrence algebra expression")
+                .pop()
+                .expect("one first-occurrence algebra expression");
+            exact_rewrite_term(&expression, 0)
+        };
+        for text in [
+            r#"(= (str.++ (str.replace "" x y) x) (str.++ x (str.replace "" x y)))"#,
+            r#"(= (str.++ (str.replace "" x y) y) (str.++ y (str.replace "" x y)))"#,
+            r"(= (str.replace x y (str.replace y x y)) x)",
+            r#"(= (str.replace x (str.replace "A" y x) "A") (str.replace x (str.replace y "A" x) y))"#,
+            r#"(= (str.replace x (str.replace "B" y x) "B") (str.replace x (str.replace y "B" x) y))"#,
+            r#"(= (str.replace (str.substr x 0 z) "A" "B") (str.substr (str.replace x "A" "B") 0 z))"#,
+            r#"(= (str.replace (str.substr x 0 z) "B" "A") (str.substr (str.replace x "B" "A") 0 z))"#,
+            r#"(= (str.replace (str.++ "A" x) x "A") "AA")"#,
+            r#"(= (str.replace (str.++ "A" x) x "") "A")"#,
+            r#"(= (str.replace (str.++ "B" x) x "B") "BB")"#,
+            r#"(= (str.replace (str.++ "B" x) x "") "B")"#,
+            r"(= (str.replace (str.replace x y x) x y) (str.replace x (str.replace x y x) y))",
+            r#"(= (str.replace (str.replace x "A" x) "A" y) (str.replace x "A" (str.replace x "A" y)))"#,
+            r#"(= (str.replace (str.replace x "A" "B") x "B") (str.replace (str.replace x "A" x) x "B"))"#,
+            r#"(= (str.replace (str.replace x "A" "") x "") (str.replace (str.replace x "A" x) x ""))"#,
+            r#"(= (str.replace (str.replace x "B" x) "B" y) (str.replace x "B" (str.replace x "B" y)))"#,
+            r#"(= (str.replace (str.replace x "B" "A") x "A") (str.replace (str.replace x "B" x) x "A"))"#,
+            r#"(= (str.replace (str.replace x "B" "") x "") (str.replace (str.replace x "B" x) x ""))"#,
+            r#"(= (str.replace (str.replace x "B" "") "A" "") (str.replace (str.replace x "A" "") "B" ""))"#,
+            r#"(= (str.replace (str.replace "A" x "A") "A" y) (str.++ y (str.replace "" x "A")))"#,
+            r#"(= (str.replace (str.replace "A" x "B") "B" y) (str.replace "A" x y))"#,
+            r#"(= (str.replace (str.replace "B" x "A") "A" y) (str.replace "B" x y))"#,
+            r#"(= (str.replace (str.replace "B" x "B") "B" y) (str.++ y (str.replace "" x "B")))"#,
+        ] {
+            assert_eq!(term(text), ExactRewriteTerm::Bool(true), "{text}");
+        }
+
+        for text in [
+            r#"(= (str.++ (str.replace "" x y) z) (str.++ z (str.replace "" x y)))"#,
+            r#"(= (str.replace x (str.replace y "A" y) y) x)"#,
+            r"(= (str.replace (str.replace x y x) y x) (str.replace x y (str.replace x y x)))",
+            r#"(= (str.replace (str.replace x y x) y "A") (str.replace x y (str.replace x y "A")))"#,
+            r#"(= (str.replace (str.replace x y x) y "B") (str.replace x y (str.replace x y "B")))"#,
+            r#"(= (str.replace (str.replace x y x) y "") (str.replace x y (str.replace x y "")))"#,
+            r#"(= (str.replace (str.substr x 0 z) "AB" "CD") (str.substr (str.replace x "AB" "CD") 0 z))"#,
+            r#"(= (str.replace (str.++ "A" x) x "B") "AB")"#,
+            r#"(= (str.replace (str.replace "A" x "A") "A" y) (str.replace "A" x y))"#,
+        ] {
+            assert_ne!(term(text), ExactRewriteTerm::Bool(true), "{text}");
         }
     }
 
