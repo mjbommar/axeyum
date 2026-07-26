@@ -15884,7 +15884,7 @@ mod string_escape_tests {
 
     #[test]
     fn exact_rewriter_normalizes_symmetric_equality_atoms() {
-        for text in [r#"(= (= x y) (= y x))"#, r#"(= (= x "A") (= "A" x))"#] {
+        for text in [r"(= (= x y) (= y x))", r#"(= (= x "A") (= "A" x))"#] {
             let expression = read_all(text)
                 .expect("read symmetric equality expression")
                 .pop()
@@ -15896,7 +15896,7 @@ mod string_escape_tests {
             );
         }
 
-        let control = read_all(r#"(= (str.prefixof x y) (str.prefixof y x))"#)
+        let control = read_all(r"(= (str.prefixof x y) (str.prefixof y x))")
             .expect("read asymmetric relation control")
             .pop()
             .expect("one expression");
@@ -16274,6 +16274,7 @@ mod string_escape_tests {
     }
 
     #[test]
+    #[allow(clippy::too_many_lines)]
     fn self_replacement_views_match_reference_semantics_exhaustively() {
         let symbol = |name: &str| {
             let expression = read_all(name)
