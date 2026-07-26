@@ -677,6 +677,12 @@ fn decide_word_only(
                  the word-equation route (T-B.4d)"
             .to_owned(),
     });
+    // The fallback parser also preserves exact whole-conjunction contradictions
+    // (for example, generated path conditions requiring both `T = U` and
+    // `T != U`). Apply that source-level refuter before the partial word routes;
+    // otherwise a script outside every side channel reproduces the old parse
+    // decline even though the original formula is already exactly refuted.
+    let base = apply_fixed_splice_semantic_unsat(script, base);
     let after_word = apply_word_route(script, config, base);
     // Online CDCL(T) string route (P1.5b): the disjunction-aware second chance for a
     // word-first-fallback script too — a Boolean-structured word problem whose
