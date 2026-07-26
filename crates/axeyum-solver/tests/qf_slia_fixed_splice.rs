@@ -2480,6 +2480,17 @@ fn exact_boolean_path_conflicts_refute_before_optional_string_routes() {
 (assert (not (str.contains s "A")))"#,
         r#"(assert (not (= (ite (str.contains s "A") 1 0) 0)))
 (assert (= (ite (str.contains s "A") 1 0) 0))"#,
+        r#"(assert (= (str.len (str.substr s 0 (- (str.len s) 1))) 0))
+(assert (= (str.at s 0) "A"))
+(assert (not (= (str.at s (- (str.len s) 1)) "A")))"#,
+        r#"(assert (= (str.len (str.substr s 0 (- (str.len s) 1))) 0))
+(assert (= (str.at s 0) "A"))
+(assert (= (str.at s (- (str.len s) 1)) "B"))"#,
+        r#"(assert (= (str.at (str.substr s 0 (- (str.len s) 1)) 0) "A"))
+(assert (not (= (str.at s 0) "A")))"#,
+        r#"(assert (not (= (str.len (str.substr s 0 (- (str.len s) 1))) 0)))
+(assert (not (= (str.at (str.substr s 0 (- (str.len s) 1)) 0) "A")))
+(assert (= (str.at s 0) "A"))"#,
     ] {
         let input = format!(
             r#"(set-logic QF_SLIA)
@@ -2513,6 +2524,16 @@ fn exact_boolean_path_conflicts_decline_satisfiable_near_misses() {
 (assert (= (str.indexof s "A" 0) (- 1)))"#,
         r#"(assert (= (str.at s 0) "A"))
 (assert (not (str.contains s "B")))"#,
+        r#"(assert (= (str.len (str.substr s 0 (- (str.len s) 1))) 0))
+(assert (= (str.at s 0) "A"))
+(assert (not (= (str.at s (- (str.len s) 1)) "B")))"#,
+        r#"(assert (= (str.len (str.substr s 0 (- (str.len s) 2))) 0))
+(assert (= (str.at s 0) "A"))
+(assert (= (str.at s (- (str.len s) 1)) "B"))"#,
+        r#"(assert (not (= (str.at (str.substr s 0 (- (str.len s) 1)) 0) "A")))
+(assert (= (str.at s 0) "A"))"#,
+        r#"(assert (= (str.at (str.substr s 1 (- (str.len s) 1)) 0) "A"))
+(assert (not (= (str.at s 0) "A")))"#,
     ] {
         let input = format!(
             r#"(set-logic QF_SLIA)

@@ -12918,7 +12918,10 @@ fn guaranteed_boolean_literal_conflict(conjuncts: &[&SExpr]) -> bool {
     let mut required_true = BTreeSet::new();
     let mut required_false = BTreeSet::new();
     let mut empty_views = Vec::new();
+    let mut nonempty_views = Vec::new();
     let mut contains_literals: Vec<(&SExpr, Vec<u32>, bool)> = Vec::new();
+    let mut at_most_one_views = Vec::new();
+    let mut boundary_literals: Vec<(&SExpr, bool, Vec<u32>, bool)> = Vec::new();
     for conjunct in conjuncts {
         let (condition, required) = guaranteed_boolean_condition(conjunct);
         let (same, opposite) = if required {
@@ -12931,16 +12934,21 @@ fn guaranteed_boolean_literal_conflict(conjuncts: &[&SExpr]) -> bool {
         }
         same.insert(condition);
 
-        if let Some((view, condition_means_empty)) = exact_empty_condition(condition)
-            && required == condition_means_empty
-        {
-            if contains_literals
-                .iter()
-                .any(|(seen_view, _, seen_required)| *seen_view == view && *seen_required)
-            {
-                return true;
+        if let Some((view, condition_means_empty)) = exact_empty_condition(condition) {
+            if required == condition_means_empty {
+                if contains_literals
+                    .iter()
+                    .any(|(seen_view, _, seen_required)| *seen_view == view && *seen_required)
+                {
+                    return true;
+                }
+                empty_views.push(view);
+                if let Some(base) = exact_one_code_point_bound(view) {
+                    at_most_one_views.push(base);
+                }
+            } else {
+                nonempty_views.push(view);
             }
-            empty_views.push(view);
         }
 
         if let Some((view, literal, condition_means_contains)) =
@@ -12980,8 +12988,76 @@ fn guaranteed_boolean_literal_conflict(conjuncts: &[&SExpr]) -> bool {
             }
             contains_literals.push((view, literal, true));
         }
+
+        if let Some((view, first, literal, condition_means_at_equality)) =
+            exact_boundary_at_literal_equality(condition)
+        {
+            boundary_literals.push((
+                view,
+                first,
+                literal,
+                required == condition_means_at_equality,
+            ));
+        }
+    }
+
+    let original_boundary_literals = boundary_literals.clone();
+    for (view, first, literal, equal) in original_boundary_literals {
+        if !first || (!equal && !nonempty_views.contains(&view)) {
+            continue;
+        }
+        let mut current = view;
+        while let Some(base) = exact_zero_prefix_base(current) {
+            boundary_literals.push((base, true, literal.clone(), equal));
+            current = base;
+        }
+    }
+
+    for (index, (left_view, left_first, left_literal, left_equal)) in
+        boundary_literals.iter().enumerate()
+    {
+        for (right_view, right_first, right_literal, right_equal) in &boundary_literals[index + 1..]
+        {
+            if left_view != right_view
+                || (left_first != right_first && !at_most_one_views.contains(left_view))
+            {
+                continue;
+            }
+            if (*left_equal && *right_equal && left_literal != right_literal)
+                || (left_literal == right_literal && left_equal != right_equal)
+            {
+                return true;
+            }
+        }
     }
     false
+}
+
+/// The base `W` when `view` is `substr(W, 0, len(W) - 1)`. This view is empty
+/// exactly when `W` has length at most one, including SMT-LIB's total negative-
+/// length case for the empty word.
+fn exact_one_code_point_bound(view: &SExpr) -> Option<&SExpr> {
+    let [head, subject, offset, length] = view.list()? else {
+        return None;
+    };
+    if !matches!(head.atom(), Some("str.substr" | "seq.extract"))
+        || parse_int_literal(offset) != Some(0)
+        || len_minus_constant(strip_subtracted_zero(length), subject) != Some(1)
+    {
+        return None;
+    }
+    Some(subject)
+}
+
+/// The base of any zero-offset substring. If the substring is known nonempty,
+/// its first code point is exactly the base's first code point.
+fn exact_zero_prefix_base(view: &SExpr) -> Option<&SExpr> {
+    let [head, subject, offset, _length] = view.list()? else {
+        return None;
+    };
+    (matches!(head.atom(), Some("str.substr" | "seq.extract"))
+        && parse_int_literal(offset) == Some(0))
+    .then_some(subject)
 }
 
 /// The exact empty-string condition encoded by `len(W) = 0`, allowing an
@@ -13075,6 +13151,46 @@ fn exact_at_literal_equality(mut condition: &SExpr) -> Option<(&SExpr, Vec<u32>,
         let literal = literal_pattern_cps(literal)?;
         if literal.len() == 1 {
             return Some((view, literal, !negated));
+        }
+    }
+    None
+}
+
+/// Canonicalizes a one-code-point equality at either boundary of one word:
+/// `str.at(W, 0) = C` or `str.at(W, len(W)-1) = C`.
+fn exact_boundary_at_literal_equality(
+    mut condition: &SExpr,
+) -> Option<(&SExpr, bool, Vec<u32>, bool)> {
+    let mut negated = false;
+    while let Some([head, inner]) = condition.list()
+        && head.atom() == Some("not")
+    {
+        negated = !negated;
+        condition = inner;
+    }
+    let [head, left, right] = condition.list()? else {
+        return None;
+    };
+    if head.atom() != Some("=") {
+        return None;
+    }
+    for (candidate, literal) in [(left, right), (right, left)] {
+        let Some([head, view, index]) = candidate.list() else {
+            continue;
+        };
+        if head.atom() != Some("str.at") {
+            continue;
+        }
+        let first = if parse_int_literal(index) == Some(0) {
+            true
+        } else if len_minus_constant(index, view) == Some(1) {
+            false
+        } else {
+            continue;
+        };
+        let literal = literal_pattern_cps(literal)?;
+        if literal.len() == 1 {
+            return Some((view, first, literal, !negated));
         }
     }
     None
@@ -20423,6 +20539,25 @@ mod string_escape_tests {
 (assert (= (str.at s 7) "A"))
 (assert (not (str.contains s "A")))
 (check-sat)"#,
+            r#"(declare-const s String)
+(assert (= (str.len (str.substr s 0 (- (str.len s) 1))) 0))
+(assert (= (str.at s 0) "A"))
+(assert (not (= (str.at s (- (str.len s) 1)) "A")))
+(check-sat)"#,
+            r#"(declare-const s String)
+(assert (= (str.len (str.substr s 0 (- (str.len s) 1))) 0))
+(assert (= (str.at s 0) "A"))
+(assert (= (str.at s (- (str.len s) 1)) "B"))
+(check-sat)"#,
+            r#"(declare-const s String)
+(assert (= (str.at (str.substr s 0 (- (str.len s) 1)) 0) "A"))
+(assert (not (= (str.at s 0) "A")))
+(check-sat)"#,
+            r#"(declare-const s String)
+(assert (not (= (str.len (str.substr s 0 (- (str.len s) 1))) 0)))
+(assert (not (= (str.at (str.substr s 0 (- (str.len s) 1)) 0) "A")))
+(assert (= (str.at s 0) "A"))
+(check-sat)"#,
         ] {
             let expressions = read_all(script).expect("read contradictory Boolean path");
             assert!(
@@ -20459,6 +20594,29 @@ mod string_escape_tests {
             r#"(declare-const s String)
 (assert (not (= (str.at s 7) "A")))
 (assert (not (str.contains s "A")))
+(check-sat)"#,
+            r#"(declare-const s String)
+(assert (= (str.len (str.substr s 0 (- (str.len s) 1))) 0))
+(assert (= (str.at s 0) "A"))
+(assert (not (= (str.at s (- (str.len s) 1)) "B")))
+(check-sat)"#,
+            r#"(declare-const s String)
+(assert (= (str.len (str.substr s 0 (- (str.len s) 1))) 0))
+(assert (not (= (str.at s 0) "A")))
+(assert (not (= (str.at s (- (str.len s) 1)) "A")))
+(check-sat)"#,
+            r#"(declare-const s String)
+(assert (= (str.len (str.substr s 0 (- (str.len s) 2))) 0))
+(assert (= (str.at s 0) "A"))
+(assert (= (str.at s (- (str.len s) 1)) "B"))
+(check-sat)"#,
+            r#"(declare-const s String)
+(assert (not (= (str.at (str.substr s 0 (- (str.len s) 1)) 0) "A")))
+(assert (= (str.at s 0) "A"))
+(check-sat)"#,
+            r#"(declare-const s String)
+(assert (= (str.at (str.substr s 1 (- (str.len s) 1)) 0) "A"))
+(assert (not (= (str.at s 0) "A")))
 (check-sat)"#,
         ] {
             let expressions = read_all(script).expect("read satisfiable Boolean path control");
