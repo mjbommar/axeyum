@@ -1805,3 +1805,93 @@ fn exact_source_boolean_ac_views_decline_satisfiable_controls() {
         );
     }
 }
+
+#[test]
+fn exact_source_one_code_point_replace_views_refute_noetzli_families() {
+    let mut assertions = Vec::new();
+    for base in [r#""A""#, r#""B""#] {
+        assertions.push(format!(
+            r#"(not (= (str.substr {base} 0 (str.indexof "A" "" z))
+                       (str.at {base} (- 1 z))))"#
+        ));
+        for replacement in [r#""A""#, r#""B""#] {
+            assertions.push(format!(
+                r#"(not (= (str.substr (str.replace {base} x {replacement}) 1 z)
+                           (str.substr {base} (str.len x) z)))"#
+            ));
+            assertions.push(format!(
+                r#"(not (= (str.substr (str.replace {base} x {replacement}) z z)
+                           (str.substr {base} 0 (str.indexof "A" x z))))"#
+            ));
+        }
+    }
+    for needle in [r#""A""#, r#""B""#] {
+        for replacement in [r#""A""#, r#""B""#] {
+            assertions.push(format!(
+                r#"(not (= (str.replace "" (str.replace x {needle} "") {replacement})
+                           (str.at {replacement} (str.indexof {needle} x 0))))"#
+            ));
+        }
+    }
+
+    assert_eq!(assertions.len(), 14);
+    for assertion in assertions {
+        let input = format!(
+            r#"(set-logic QF_SLIA)
+(declare-fun x () String)
+(declare-fun z () Int)
+(assert {assertion})
+(check-sat)
+"#
+        );
+        let script = parse_script(&input).expect("parse one-code-point replacement view theorem");
+        assert!(
+            script.source_string_semantic_unsat,
+            "one-code-point replacement view must refute {assertion}"
+        );
+        assert_eq!(
+            solve_smtlib(&input, &config())
+                .expect("solve one-code-point replacement view theorem")
+                .result,
+            CheckResult::Unsat,
+            "one-code-point replacement view must survive the bounded-string gate: {assertion}"
+        );
+    }
+}
+
+#[test]
+fn exact_source_one_code_point_replace_views_decline_satisfiable_controls() {
+    for assertion in [
+        r#"(not (= (str.substr (str.replace "A" x "BC") 1 z)
+                   (str.substr "A" (str.len x) z)))"#,
+        r#"(not (= (str.substr (str.replace "AB" x "C") 1 z)
+                   (str.substr "AB" (str.len x) z)))"#,
+        r#"(not (= (str.substr (str.replace "A" x "B") z z)
+                   (str.substr "A" 0 (str.indexof "AA" x z))))"#,
+        r#"(not (= (str.replace "" (str.replace x "AB" "") "C")
+                   (str.at "C" (str.indexof "AB" x 0))))"#,
+        r#"(not (= (str.replace "" (str.replace x "A" "") "BC")
+                   (str.at "BC" (str.indexof "A" x 0))))"#,
+    ] {
+        let input = format!(
+            r#"(set-logic QF_SLIA)
+(declare-fun x () String)
+(declare-fun z () Int)
+(assert {assertion})
+(check-sat)
+"#
+        );
+        let script = parse_script(&input).expect("parse one-code-point replacement view control");
+        assert!(
+            !script.source_string_semantic_unsat,
+            "satisfiable one-code-point replacement view control must decline: {assertion}"
+        );
+        assert_ne!(
+            solve_smtlib(&input, &config())
+                .expect("solve one-code-point replacement view control")
+                .result,
+            CheckResult::Unsat,
+            "satisfiable one-code-point replacement view control must not become UNSAT: {assertion}"
+        );
+    }
+}
