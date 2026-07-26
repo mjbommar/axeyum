@@ -26,7 +26,7 @@ a wider bound.
 ## Why "no free Int symbol" is necessary but NOT sufficient
 
 The tempting condition — "upgrade when the query has no free unbounded Int
-variable" — is a **wrong-unsat trap**. The bounded model has TWO incompleteness
+variable" — is a **wrong-unsat trap**. The bounded model has THREE incompleteness
 axes, and the int width is only one:
 
 1. **Int width** (≤ 32 bits). A free Int `x` with `(> x 5)` is real-sat (x =
@@ -41,8 +41,13 @@ axes, and the int width is only one:
    Both have only a `String` free var — the agent's "no free Int" test passes —
    yet upgrading to unsat is a **wrong-unsat**. The string-length bound is the
    completeness gap, independent of integers.
+3. **String alphabet** (bytes `0..=255`, versus SMT-LIB code points
+   `0..=0x2FFFF`). Even a length-one variable can require an unrepresentable
+   character: `len(x)=1 ∧ to_code(x)=300` is real-sat but byte-model-no-model.
+   Likewise `"\u{ff}" < x` has the real witness `x="\u{100}"`. An UNSAT
+   upgrade therefore also needs an alphabet-completeness proof.
 
-## The sound condition: C1 ∧ C2 ∧ C3 (bounded-completeness)
+## The sound condition: C1 ∧ C2 ∧ C3 ∧ C4 (bounded-completeness)
 
 The bounded model is **complete** for a query `Q` — i.e. `Q` real-sat ⇒ `Q`
 bounded-sat, so bounded-no-model ⇒ real-unsat — when ALL of:
@@ -74,8 +79,19 @@ bounded-sat, so bounded-no-model ⇒ real-unsat — when ALL of:
 
   Conservative default: if the analyzer cannot *prove* a quantity < 2³¹, it
   does not upgrade.
+- **C4 — the byte alphabet is complete for this query.** Reject code-point,
+  lexicographic-order, and regex-sensitive operators (`str.to_code`,
+  `str.from_code`, `str.<`, `str.<=`, and regex membership/search/replacement),
+  because they can distinguish a Unicode model from every byte model. For the
+  remaining structural word operations, require every literal to contain only
+  byte code points and conservatively require
+  `12 × free_string_count + literal_alphabet_size ≤ 256`. Any real model then
+  uses at most that many distinct code points and can be injectively renamed
+  into bytes while fixing all literal characters. Equality, disequality,
+  concat, length, `at`, `substr`, contains/prefix/suffix, `indexof`, update, and
+  literal replacement are preserved by that injection.
 
-If C1∧C2∧C3 hold, a bounded no-model is a real unsat. **Any uncertainty →
+If C1∧C2∧C3∧C4 hold, a bounded no-model is a real unsat. **Any uncertainty →
 leave `Unknown`** (never a wrong-unsat). This is a strict analysis: it decides a
 subset of the truly-unsat bounded-complete queries and declines the rest —
 soundness over completeness, per the project stance.
@@ -89,18 +105,20 @@ as guaranteed.
 
 ## Soundness argument (sketch)
 
-Let `Q` be a query satisfying C1∧C2∧C3, and suppose `Q` is real-sat with model
+Let `Q` be a query satisfying C1∧C2∧C3∧C4, and suppose `Q` is real-sat with model
 `ρ` (assigning strings and ints over the unbounded theory). By C2 every free
-string `s` has `len_ρ(s) ≤ MAX_LEN`, so `ρ(s)` is representable in the packed
-sort; derived strings are bounded by construction, so the whole string part of
-`ρ` lives in the bounded model. By C1 there is no free int to assign, and by C3
+string `s` has `len_ρ(s) ≤ MAX_LEN`. By C4 the finitely many code points used by
+those strings and literals admit an injective renaming into bytes that fixes the
+literal alphabet and preserves every allowed structural string operation. Thus
+the renamed strings are representable in the packed sorts. By C1 there is no
+free int to assign, and by C3
 every int quantity's value under `ρ` is < 2³¹, so it is representable exactly in
 the width-32 int-blast (which is exact modulo 2³²; < 2³¹ ⇒ no wraparound). Hence
 `ρ` restricts to a *bounded* model of `Q` — contradicting bounded-no-model. So
 `Q` bounded-no-model ⇒ `Q` real-unsat. ∎
 
-The crux is that all three bounds are *witnessed by the query itself* (C2's
-explicit length caps, C3's operator whitelist), not assumed.
+The crux is that all four bounds are *witnessed by the query itself* (C2's
+explicit length caps and C3/C4's operator and capacity checks), not assumed.
 
 ## Mandatory gates (P0 — wrong-unsat is the worst class)
 
@@ -111,7 +129,8 @@ explicit length caps, C3's operator whitelist), not assumed.
    deliberately emits queries which are **real-sat but bounded-no-model** — a
    free unbounded Int (`(> x 5)`), an *un*bounded free String probed past the
    cap (`(= (str.at s 100) "x")`, `(> (str.len s) 100)`), and a `str.to_int` of a
-   long concat / a non-linear length product — and asserts the detector does
+   long concat / a non-linear length product, Unicode-only `str.to_code` and
+   lexicographic witnesses, and over-cap alphabet demand — and asserts the detector does
    **NOT** upgrade any of them (they stay `Unknown` or decide `Sat`, never
    `Unsat`). Without this the analyzer is blind on exactly the axis where it
    would ship a wrong-unsat.
