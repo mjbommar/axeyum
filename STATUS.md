@@ -395,8 +395,8 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   calls and zero disagreements.  Both orientations and an inhabited control are
   pinned at the parser and front door; the complete 285-test SMT-LIB crate, the
   88-test affected solver front door, both historical string decide-rate guards,
-  and both standing wrong-UNSAT guards pass.  Next: checkpoint and hand off this
-  22-commit branch, then rank the remaining non-Kaluza residuals; the 58-row
+  and both standing wrong-UNSAT guards pass.  Next: hand off the current branch,
+  then rank the remaining non-Kaluza residuals; the 58-row
   Kepler cluster is a genuine Nielsen/length case-analysis gap, and a tested
   finite-monoid shortcut moved zero rows.
 
