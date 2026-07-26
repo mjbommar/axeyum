@@ -9372,6 +9372,7 @@ fn exact_rewrite_app(head: &str, args: Vec<ExactRewriteTerm>) -> ExactRewriteTer
         ("=", [Bool(left), Bool(right)]) => return Bool(left == right),
         ("=", [Int(left), Int(right)]) => return Bool(left == right),
         ("=", [String(left), String(right)]) => return Bool(left == right),
+        ("=", [left, right]) => return exact_rewrite_equality(left, right),
         ("ite", [Bool(true), then_term, _]) => return then_term.clone(),
         ("ite", [Bool(false), _, else_term]) => return else_term.clone(),
         ("-", [Int(value)]) => {
@@ -9442,6 +9443,12 @@ fn exact_rewrite_app(head: &str, args: Vec<ExactRewriteTerm>) -> ExactRewriteTer
         ("str.substr", [String(value), offset, length]) if value.len() <= 1 && offset == length => {
             return String(Vec::new());
         }
+        ("str.substr", [subject, Int(0), App(length, length_args)])
+            if length == "str.len"
+                && matches!(length_args.as_slice(), [length_subject] if length_subject == subject) =>
+        {
+            return subject.clone();
+        }
         ("str.substr", [subject, offset, Int(1)]) => {
             return App("str.at".to_owned(), vec![subject.clone(), offset.clone()]);
         }
@@ -9498,6 +9505,12 @@ fn exact_rewrite_app(head: &str, args: Vec<ExactRewriteTerm>) -> ExactRewriteTer
             if let (String(left), String(right)) = (left, right) {
                 return Bool(right.starts_with(left));
             }
+            if exact_prefix_view(left, right) {
+                return Bool(true);
+            }
+            if exact_string_length_le(right, left, 0) {
+                return exact_rewrite_equality(left, right);
+            }
         }
         ("str.suffixof", [left, right]) => {
             if left == right || matches!(left, String(value) if value.is_empty()) {
@@ -9505,6 +9518,15 @@ fn exact_rewrite_app(head: &str, args: Vec<ExactRewriteTerm>) -> ExactRewriteTer
             }
             if let (String(left), String(right)) = (left, right) {
                 return Bool(right.ends_with(left));
+            }
+            if exact_suffix_view(left, right) {
+                return Bool(true);
+            }
+            if exact_string_length_le(right, left, 0) {
+                return exact_rewrite_equality(left, right);
+            }
+            if exact_string_max_len(right, 0).is_some_and(|maximum| maximum <= 1) {
+                return App("str.prefixof".to_owned(), vec![left.clone(), right.clone()]);
             }
         }
         ("str.contains", [subject, needle]) => {
@@ -9519,10 +9541,257 @@ fn exact_rewrite_app(head: &str, args: Vec<ExactRewriteTerm>) -> ExactRewriteTer
                             .any(|candidate| candidate == needle),
                 );
             }
+            if exact_contained_view(subject, needle) {
+                return Bool(true);
+            }
+            if exact_string_length_le(subject, needle, 0) {
+                return exact_rewrite_equality(subject, needle);
+            }
+            if exact_string_max_len(subject, 0).is_some_and(|maximum| maximum <= 1) {
+                return App(
+                    "str.prefixof".to_owned(),
+                    vec![needle.clone(), subject.clone()],
+                );
+            }
         }
         _ => {}
     }
     App(head.to_owned(), args)
+}
+
+fn exact_rewrite_equality(left: &ExactRewriteTerm, right: &ExactRewriteTerm) -> ExactRewriteTerm {
+    if left == right {
+        return ExactRewriteTerm::Bool(true);
+    }
+    for (base, candidate) in [(left, right), (right, left)] {
+        if let Some(residual) = exact_concat_residual(base, candidate) {
+            return exact_rewrite_equality(&residual, &ExactRewriteTerm::String(Vec::new()));
+        }
+        if exact_self_view_is_strict(base, candidate) {
+            return ExactRewriteTerm::App(
+                "=".to_owned(),
+                vec![base.clone(), ExactRewriteTerm::String(Vec::new())],
+            );
+        }
+    }
+    ExactRewriteTerm::App("=".to_owned(), vec![left.clone(), right.clone()])
+}
+
+fn exact_concat_residual(
+    base: &ExactRewriteTerm,
+    candidate: &ExactRewriteTerm,
+) -> Option<ExactRewriteTerm> {
+    let ExactRewriteTerm::App(head, parts) = candidate else {
+        return None;
+    };
+    if !matches!(head.as_str(), "str.++" | "seq.++") || parts.len() != 2 {
+        return None;
+    }
+    if &parts[0] == base {
+        Some(parts[1].clone())
+    } else if &parts[1] == base {
+        Some(parts[0].clone())
+    } else {
+        None
+    }
+}
+
+fn exact_self_view_is_strict(base: &ExactRewriteTerm, candidate: &ExactRewriteTerm) -> bool {
+    use ExactRewriteTerm::{App, Int};
+
+    let App(head, args) = candidate else {
+        return false;
+    };
+    match (head.as_str(), args.as_slice()) {
+        ("str.at", [source, Int(index)]) => source == base && *index >= 1,
+        ("str.substr", [source, Int(offset), _]) => source == base && *offset >= 1,
+        ("str.substr", [source, offset, length]) => source == base && offset == length,
+        _ => false,
+    }
+}
+
+/// Proves `len(shorter) <= len(longer)` from source-theory structure alone.
+/// Every recursive case is an SMT-LIB length theorem; no declared packed bound
+/// or inferred benchmark-specific limit enters this relation.
+fn exact_string_length_le(
+    shorter: &ExactRewriteTerm,
+    longer: &ExactRewriteTerm,
+    depth: u32,
+) -> bool {
+    use ExactRewriteTerm::{App, String};
+
+    if depth > 32 || shorter == longer {
+        return shorter == longer;
+    }
+    if matches!(shorter, String(value) if value.is_empty()) {
+        return true;
+    }
+    if let (String(shorter), String(longer)) = (shorter, longer) {
+        return shorter.len() <= longer.len();
+    }
+    if let (Some(maximum), Some(minimum)) = (
+        exact_string_max_len(shorter, depth + 1),
+        exact_string_min_len(longer, depth + 1),
+    ) && maximum <= minimum
+    {
+        return true;
+    }
+    match shorter {
+        App(head, args) if matches!(head.as_str(), "str.at" | "str.substr") => {
+            if args.first() == Some(longer) {
+                return true;
+            }
+        }
+        App(head, args) if head == "str.replace" => {
+            if let [subject, needle, replacement] = args.as_slice()
+                && subject == longer
+                && exact_string_length_le(replacement, needle, depth + 1)
+            {
+                return true;
+            }
+        }
+        _ => {}
+    }
+    match longer {
+        App(head, parts) if matches!(head.as_str(), "str.++" | "seq.++") => {
+            if parts.iter().any(|part| part == shorter) {
+                return true;
+            }
+        }
+        App(head, args) if head == "str.replace" => {
+            if let [subject, needle, replacement] = args.as_slice()
+                && subject == shorter
+                && exact_string_length_le(needle, replacement, depth + 1)
+            {
+                return true;
+            }
+        }
+        _ => {}
+    }
+    false
+}
+
+fn exact_string_min_len(term: &ExactRewriteTerm, depth: u32) -> Option<usize> {
+    use ExactRewriteTerm::{App, String};
+
+    if depth > 32 {
+        return None;
+    }
+    match term {
+        String(value) => Some(value.len()),
+        App(head, parts) if matches!(head.as_str(), "str.++" | "seq.++") => {
+            parts.iter().try_fold(0_usize, |sum, part| {
+                sum.checked_add(exact_string_min_len(part, depth + 1)?)
+            })
+        }
+        _ => None,
+    }
+}
+
+fn exact_string_max_len(term: &ExactRewriteTerm, depth: u32) -> Option<usize> {
+    use ExactRewriteTerm::{App, String};
+
+    if depth > 32 {
+        return None;
+    }
+    match term {
+        String(value) => Some(value.len()),
+        App(head, _) if head == "str.at" => Some(1),
+        App(head, args) if head == "str.substr" => exact_string_max_len(args.first()?, depth + 1),
+        App(head, parts) if matches!(head.as_str(), "str.++" | "seq.++") => {
+            parts.iter().try_fold(0_usize, |sum, part| {
+                sum.checked_add(exact_string_max_len(part, depth + 1)?)
+            })
+        }
+        App(head, args) if head == "str.replace" => {
+            let [subject, needle, replacement] = args.as_slice() else {
+                return None;
+            };
+            let subject_max = exact_string_max_len(subject, depth + 1)?;
+            let needle_min = exact_string_min_len(needle, depth + 1)?;
+            let replacement_max = exact_string_max_len(replacement, depth + 1)?;
+            Some(
+                subject_max.max(
+                    subject_max
+                        .saturating_sub(needle_min)
+                        .checked_add(replacement_max)?,
+                ),
+            )
+        }
+        _ => None,
+    }
+}
+
+fn exact_prefix_view(prefix: &ExactRewriteTerm, word: &ExactRewriteTerm) -> bool {
+    use ExactRewriteTerm::{App, Int};
+
+    if let App(head, parts) = word
+        && matches!(head.as_str(), "str.++" | "seq.++")
+        && parts.first() == Some(prefix)
+    {
+        return true;
+    }
+    matches!(
+        prefix,
+        App(head, args)
+            if head == "str.substr"
+                && matches!(args.as_slice(), [source, Int(0), _] if source == word)
+    ) || matches!(
+        prefix,
+        App(head, args)
+            if head == "str.at"
+                && matches!(args.as_slice(), [source, Int(0)] if source == word)
+    )
+}
+
+fn exact_suffix_view(suffix: &ExactRewriteTerm, word: &ExactRewriteTerm) -> bool {
+    use ExactRewriteTerm::{App, Int};
+
+    if let App(head, parts) = word
+        && matches!(head.as_str(), "str.++" | "seq.++")
+        && parts.last() == Some(suffix)
+    {
+        return true;
+    }
+    let App(head, args) = suffix else {
+        return false;
+    };
+    if head == "str.substr"
+        && let [source, offset, App(subtract, difference)] = args.as_slice()
+        && source == word
+        && subtract == "-"
+        && matches!(difference.as_slice(), [App(length, length_args), tail_offset]
+            if length == "str.len"
+                && matches!(length_args.as_slice(), [length_source] if length_source == source)
+                && tail_offset == offset)
+    {
+        return true;
+    }
+    head == "str.at"
+        && matches!(args.as_slice(), [source, App(subtract, difference)]
+            if source == word
+                && subtract == "-"
+                && matches!(difference.as_slice(), [App(length, length_args), Int(1)]
+                    if length == "str.len"
+                        && matches!(length_args.as_slice(), [length_source]
+                            if length_source == source)))
+}
+
+fn exact_contained_view(subject: &ExactRewriteTerm, needle: &ExactRewriteTerm) -> bool {
+    use ExactRewriteTerm::App;
+
+    if let App(head, args) = needle
+        && matches!(head.as_str(), "str.at" | "str.substr")
+        && args.first() == Some(subject)
+    {
+        return true;
+    }
+    matches!(
+        subject,
+        App(head, parts)
+            if matches!(head.as_str(), "str.++" | "seq.++")
+                && parts.iter().any(|part| part == needle)
+    )
 }
 
 fn exact_rewrite_sum(values: &[ExactRewriteTerm]) -> ExactRewriteTerm {
