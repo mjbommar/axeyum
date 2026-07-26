@@ -1669,13 +1669,15 @@ pub fn solve_smtlib(input: &str, config: &SolverConfig) -> Result<SmtLibOutcome,
             expected_status: script.status,
         });
     }
-    // Admitting PyEx's exact split/replace/rejoin into the packed encoder must not
-    // make its historically faster source-level decision routes pay for a large
-    // bounded solve first. Preserve the old route order for exactly that syntax;
-    // a source route may return only replay-checked SAT or checked/certified UNSAT.
-    // If all source routes decline, the newly available bounded encoding remains a
-    // second chance below.
-    if script.prefer_source_string_routes
+    // A complete word skeleton is an exact source-level view, and the dense PyEx
+    // membership families are materially faster there than after the large packed
+    // encoding. Give that view first refusal; it may return only replay-checked SAT
+    // or checked/certified UNSAT. If every source route declines, the bounded
+    // encoding remains a second chance below. Record that the source ladder ran so
+    // a decline is not charged the identical route budgets a second time afterward.
+    let source_string_routes_tried =
+        script.prefer_source_string_routes || !script.word_skeleton.is_empty();
+    if source_string_routes_tried
         && let Some(result) = source_string_route_verdict(&mut script, config)
     {
         return Ok(SmtLibOutcome {
@@ -1691,17 +1693,29 @@ pub fn solve_smtlib(input: &str, config: &SolverConfig) -> Result<SmtLibOutcome,
     let result = apply_fixed_splice_semantic_unsat(&script, result);
     // Word-equation second-chance route (ADR-0053, T-B.4b): may only add `sat`
     // where the bounded path + gate left an `unknown`.
-    let result = apply_word_route(&mut script, config, result);
+    let result = if source_string_routes_tried {
+        result
+    } else {
+        apply_word_route(&mut script, config, result)
+    };
     // Online CDCL(T) string route (P1.5b): the disjunction-aware second chance, run
     // strictly after the flat word route declines — decides the `or`/negated word
     // problems the conjunction side channel cannot represent. Only ever adds `sat`
     // (replay-checked) or a certified `unsat` to an `unknown`.
-    let result = apply_online_string_route(&mut script, config, result);
+    let result = if source_string_routes_tried {
+        result
+    } else {
+        apply_online_string_route(&mut script, config, result)
+    };
     // Regex-membership route (P2.7 T-C.5): the `str.in_re` second chance, run
     // strictly after the word routes decline — decides unbounded membership by
     // symbolic derivatives (witness + matcher replay for `sat`, a re-checked
     // emptiness certificate for `unsat`). Only ever adds a verdict to an `unknown`.
-    let result = apply_membership_route(&mut script, config, result);
+    let result = if source_string_routes_tried {
+        result
+    } else {
+        apply_membership_route(&mut script, config, result)
+    };
     // Lexicographic-order route (P2.7 T-C.6): the `str.<`/`str.<=` second chance, run
     // strictly after the word/online/membership routes decline — decides the reachable
     // lex fragment (a variable-independent constant fold or a transitivity +
@@ -1712,7 +1726,11 @@ pub fn solve_smtlib(input: &str, config: &SolverConfig) -> Result<SmtLibOutcome,
     // rows whose `sat` witness exceeds the bounded length cap (e.g. `str.len x = 20`)
     // by linking `str.len` to LIA. Only ever adds a replay-checked `sat` to an
     // `unknown`.
-    let result = apply_length_lia_route(&mut script, config, result);
+    let result = if source_string_routes_tried {
+        result
+    } else {
+        apply_length_lia_route(&mut script, config, result)
+    };
     // Bounded-completeness UNSAT route (P2.7, task #75): the FINAL string second
     // chance. When every prior route declined and the residual `unknown` is the
     // bounded encoder's "no model within the bounded integer width …" (which is

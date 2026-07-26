@@ -2135,7 +2135,7 @@ fn word_bool(
         }
         "not" if items.len() == 2 => {
             let inner = word_bool(arena, &items[1], vars, bool_vars, saw_seq_atom, mem)?;
-            arena.not(inner).ok()
+            word_boolean_not(arena, inner)
         }
         // `(str.in_re X R)`: a membership theory atom (negative polarity is expressed
         // by the enclosing `not`, never here — the atom itself is always positive).
@@ -2197,7 +2197,7 @@ fn word_bool(
             let c = word_bool(arena, &items[1], vars, bool_vars, saw_seq_atom, mem)?;
             let t = word_bool(arena, &items[2], vars, bool_vars, saw_seq_atom, mem)?;
             let f = word_bool(arena, &items[3], vars, bool_vars, saw_seq_atom, mem)?;
-            arena.ite(c, t, f).ok()
+            word_boolean_ite(arena, c, t, f)
         }
         // A **trivially-true length guard** (`(<= 0 (str.len W))` / `(>= (str.len W)
         // 0)`) is a tautology — replaced by `true` so the redundant `norn-*` guard does
@@ -2233,6 +2233,46 @@ fn word_bool(
         // Anything else (extended functions, `str.len`, non-string atoms, …) is
         // outside the skeleton fragment — decline the whole build.
         _ => None,
+    }
+}
+
+/// Builds negation inside the exact word skeleton while eliminating the Boolean
+/// aliases emitted by symbolic-execution front ends. This is only structural
+/// simplification: every returned term is equivalent to `not term`.
+fn word_boolean_not(arena: &mut TermArena, term: TermId) -> Option<TermId> {
+    match arena.node(term) {
+        TermNode::BoolConst(value) => Some(arena.bool_const(!value)),
+        TermNode::App {
+            op: Op::BoolNot,
+            args,
+        } => Some(args[0]),
+        _ => arena.not(term).ok(),
+    }
+}
+
+/// Builds a Boolean conditional inside the exact word skeleton, folding only
+/// identities whose branches are constants or structurally identical. `PyEx` uses
+/// integer conditionals as Boolean aliases; after [`constant_int_ite_equality`]
+/// translates those aliases, this keeps the SAT driver from searching through a
+/// fresh conditional for every underlying string predicate.
+fn word_boolean_ite(
+    arena: &mut TermArena,
+    condition: TermId,
+    when_true: TermId,
+    when_false: TermId,
+) -> Option<TermId> {
+    if when_true == when_false {
+        return Some(when_true);
+    }
+    if let TermNode::BoolConst(value) = arena.node(condition) {
+        return Some(if *value { when_true } else { when_false });
+    }
+    match (arena.node(when_true), arena.node(when_false)) {
+        (TermNode::BoolConst(true), TermNode::BoolConst(false)) => Some(condition),
+        (TermNode::BoolConst(false), TermNode::BoolConst(true)) => {
+            word_boolean_not(arena, condition)
+        }
+        _ => arena.ite(condition, when_true, when_false).ok(),
     }
 }
 
@@ -2371,14 +2411,15 @@ fn word_terms_with_opaque(
 /// Exactly translates regular string-content equalities used heavily by `PyEx`:
 ///
 /// * `len(W) = 0` iff the underlying variable has length at most its dropped prefix;
-/// * `indexof(W, C, 0) = -1` iff suffix view `W` lacks the constant word `C`;
+/// * `indexof(W, C, 0) = -1` iff suffix/before-first view `W` lacks `C`;
 /// * `at(W, 0) = C` / `at(W, len(W)-1) = C` as prefix/suffix languages.
 ///
-/// Here `W` is either `X` or the exact constant-offset suffix view
-/// `substr(X,n,len(X)-n)`. Both equality orientations are accepted. The `str.at`
-/// result is either empty or one code point, so a multi-code-point right side is
-/// exactly `false`; equality to the empty word holds exactly when `len(X) <= n`.
-/// Every non-constant, other compound-subject, or other-index shape declines.
+/// Here `W` is `X`, an exact constant-offset suffix view, or the exact prefix
+/// before the first occurrence of a one-code-point delimiter. Both equality
+/// orientations are accepted. The `str.at` result is either empty or one code
+/// point, so a multi-code-point right side is exactly `false`; equality to the
+/// empty word holds exactly when `len(X) <= n`. Every non-constant, other
+/// compound-subject, or other-index shape declines.
 fn exact_content_equality(
     arena: &mut TermArena,
     items: &[SExpr],
@@ -2421,13 +2462,46 @@ fn exact_content_equality_ordered(
             if needle.is_empty() {
                 return Some(arena.bool_const(false));
             }
-            let view = content_view_skeleton(&app[1], vars, &needle)?;
-            let contains = mem.atom(
-                arena,
-                view.operand,
-                around_exact_view(view, contains_pattern_regex(&needle)),
-            )?;
-            arena.not(contains).ok()
+            if let Some((base, delimiter)) = before_first_occurrence_parts(&app[1]) {
+                let [delimiter] = delimiter[..] else {
+                    return None;
+                };
+                let [needle] = needle[..] else { return None };
+                if delimiter == needle {
+                    return Some(arena.bool_const(true));
+                }
+                let view = content_view_skeleton(base, vars, &[delimiter, needle])?;
+                let safe_character = Regex::inter(
+                    Regex::any_char(),
+                    Regex::comp(Regex::union(
+                        Regex::character(delimiter),
+                        Regex::character(needle),
+                    )),
+                );
+                let safe_prefix = Regex::star(safe_character);
+                // When the delimiter is absent, `indexof = -1` and SMT-LIB's
+                // total `substr(base, 0, -1)` is empty, so the predicate is true
+                // regardless of whether `needle` occurs in `base`. When the
+                // delimiter is present, only the prefix before its first
+                // occurrence must avoid the needle.
+                let no_delimiter = Regex::comp(contains_pattern_regex(&[delimiter]));
+                let no_needle_before_first_delimiter = Regex::union(
+                    no_delimiter,
+                    Regex::concat(
+                        Regex::concat(safe_prefix, Regex::character(delimiter)),
+                        Regex::star(Regex::any_char()),
+                    ),
+                );
+                return mem.atom(
+                    arena,
+                    view.operand,
+                    around_exact_view(view, no_needle_before_first_delimiter),
+                );
+            }
+            let no_needle = Regex::comp(contains_pattern_regex(&needle));
+            let (operand, regex) =
+                regex_on_after_first_views(&app[1], vars, &needle, no_needle, 0)?;
+            mem.atom(arena, operand, regex)
         }
         "str.at" if app.len() == 3 => {
             let value = literal_pattern_cps(constant)?;
@@ -2986,7 +3060,7 @@ fn constant_int_ite_equality(
     let condition = word_bool(arena, &ite[1], vars, bool_vars, saw_seq_atom, mem)?;
     let when_true = arena.bool_const(then_value == expected);
     let when_false = arena.bool_const(else_value == expected);
-    arena.ite(condition, when_true, when_false).ok()
+    word_boolean_ite(arena, condition, when_true, when_false)
 }
 
 /// Translates a `(str.in_re X R)` atom into its membership proxy for [`word_bool`]
@@ -7294,6 +7368,13 @@ impl LenAbs {
     /// Hooks a content bridge (`str.to_int`, `str.indexof`, `seq.nth`, …): the
     /// `Int`-valued term maps to a wholly-free integer.
     fn note_bridge_free(&self, arena: &mut TermArena, t: TermId) -> Result<(), SmtError> {
+        // A bridge that folded to an integer literal is already exact. Replacing
+        // that shared literal by a fresh integer would also rewrite unrelated uses
+        // of the constant and can erase a source-independent contradiction such as
+        // `indexof(s, "", 0) = -1` (the left side is exactly zero).
+        if matches!(arena.node(t), TermNode::IntConst(_)) {
+            return Ok(());
+        }
         self.mark_used();
         let v = self.fresh_var(arena, Sort::Int, false)?;
         self.note_repl(t, v);
