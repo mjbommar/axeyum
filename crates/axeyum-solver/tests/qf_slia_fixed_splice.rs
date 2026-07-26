@@ -899,6 +899,71 @@ fn exact_source_symmetric_equality_atoms_refute_noetzli_families() {
 }
 
 #[test]
+fn exact_source_self_replacement_views_refute_noetzli_families() {
+    for assertion in [
+        r"(not (= (str.at (str.replace x y x) 0) (str.at x 0)))",
+        r"(not (= (str.contains (str.replace x y x) x) true))",
+        r#"(not (= (str.prefixof "A" (str.replace x y x))
+                    (str.prefixof "A" x)))"#,
+        r#"(not (= (str.replace "A" (str.replace x "A" x) y)
+                    (str.replace "A" x y)))"#,
+    ] {
+        let input = format!(
+            r"(set-logic QF_SLIA)
+(declare-fun x () String)
+(declare-fun y () String)
+(assert {assertion})
+(check-sat)
+"
+        );
+        let script = parse_script(&input).expect("parse self-replacement view theorem");
+        assert!(
+            script.source_string_semantic_unsat,
+            "self-replacement view must refute {assertion}"
+        );
+        assert_eq!(
+            solve_smtlib(&input, &config())
+                .expect("solve self-replacement view theorem")
+                .result,
+            CheckResult::Unsat,
+            "self-replacement view must survive the bounded-string gate: {assertion}"
+        );
+    }
+}
+
+#[test]
+fn exact_source_self_replacement_views_decline_wider_controls() {
+    for assertion in [
+        r#"(not (= (str.prefixof "AA" (str.replace x y x))
+                    (str.prefixof "AA" x)))"#,
+        r#"(not (= (str.contains (str.replace x y x) "AA")
+                    (str.contains x "AA")))"#,
+        r#"(not (= (= "A" (str.replace x y x)) (= x "A")))"#,
+    ] {
+        let input = format!(
+            r"(set-logic QF_SLIA)
+(declare-fun x () String)
+(declare-fun y () String)
+(assert {assertion})
+(check-sat)
+"
+        );
+        let script = parse_script(&input).expect("parse wider self-replacement control");
+        assert!(
+            !script.source_string_semantic_unsat,
+            "wider self-replacement view must decline {assertion}"
+        );
+        assert_ne!(
+            solve_smtlib(&input, &config())
+                .expect("solve wider self-replacement control")
+                .result,
+            CheckResult::Unsat,
+            "satisfiable wider self-replacement control must not become UNSAT: {assertion}"
+        );
+    }
+}
+
+#[test]
 fn exact_source_small_subject_indexof_refutes_view_families() {
     for assertion in [
         r#"(not (= (str.at x (str.indexof "A" x 1)) ""))"#,

@@ -9550,6 +9550,13 @@ fn exact_rewrite_app(head: &str, args: Vec<ExactRewriteTerm>) -> ExactRewriteTer
         {
             return App(inner.clone(), inner_args.clone());
         }
+        ("str.at", [self_replacement, Int(0)]) => {
+            if let Some((subject, _)) = exact_self_replacement(self_replacement) {
+                // Replacing a factor of `subject` by all of `subject` preserves
+                // its first code point, including the empty-word case.
+                return exact_rewrite_app("str.at", vec![subject.clone(), Int(0)]);
+            }
+        }
         ("str.at", [App(inner, _), Int(index)]) if inner == "str.at" && *index >= 1 => {
             return String(Vec::new());
         }
@@ -9659,6 +9666,13 @@ fn exact_rewrite_app(head: &str, args: Vec<ExactRewriteTerm>) -> ExactRewriteTer
             if exact_prefix_view(left, right) {
                 return Bool(true);
             }
+            if exact_string_max_len(left, 0).is_some_and(|maximum| maximum <= 1)
+                && let Some((subject, _)) = exact_self_replacement(right)
+            {
+                // The replacement result contains `subject` and introduces no
+                // new code points, so its one-code-point boundary is unchanged.
+                return exact_rewrite_app("str.prefixof", vec![left.clone(), subject.clone()]);
+            }
             if let Some(rewritten) = exact_rewrite_concat_prefix(left, right) {
                 return rewritten;
             }
@@ -9680,6 +9694,11 @@ fn exact_rewrite_app(head: &str, args: Vec<ExactRewriteTerm>) -> ExactRewriteTer
             }
             if exact_suffix_view(left, right) {
                 return Bool(true);
+            }
+            if exact_string_max_len(left, 0).is_some_and(|maximum| maximum <= 1)
+                && let Some((subject, _)) = exact_self_replacement(right)
+            {
+                return exact_rewrite_app("str.suffixof", vec![left.clone(), subject.clone()]);
             }
             if let Some(rewritten) = exact_rewrite_concat_suffix(left, right) {
                 return rewritten;
@@ -9710,6 +9729,18 @@ fn exact_rewrite_app(head: &str, args: Vec<ExactRewriteTerm>) -> ExactRewriteTer
             }
             if exact_contained_view(subject, needle) {
                 return Bool(true);
+            }
+            if let Some((base, replaced)) = exact_self_replacement(subject) {
+                // `replace(base, replaced, base)` contains `base`, preserves
+                // whether `replaced` occurs, and has exactly `base`'s alphabet.
+                if needle == base {
+                    return Bool(true);
+                }
+                if needle == replaced
+                    || exact_string_max_len(needle, 0).is_some_and(|maximum| maximum <= 1)
+                {
+                    return exact_rewrite_app("str.contains", vec![base.clone(), needle.clone()]);
+                }
             }
             if let Some(rewritten) = exact_rewrite_concat_contains(subject, needle) {
                 return rewritten;
@@ -9756,6 +9787,17 @@ fn exact_rewrite_equality(left: &ExactRewriteTerm, right: &ExactRewriteTerm) -> 
     if exact_piecewise_terms_equal(left, right) {
         return ExactRewriteTerm::Bool(true);
     }
+    for (self_replacement, other) in [(left, right), (right, left)] {
+        if let Some((subject, needle)) = exact_self_replacement(self_replacement)
+            && (matches!(other, ExactRewriteTerm::String(value) if value.is_empty())
+                || (exact_string_min_len(needle, 0).is_some_and(|minimum| minimum > 0)
+                    && exact_string_max_len(other, 0).is_some_and(|maximum| maximum <= 1)))
+        {
+            // Emptiness is preserved for every needle. With a nonempty needle,
+            // equality to a word of length at most one is preserved as well.
+            return exact_rewrite_equality(subject, other);
+        }
+    }
     if let Some(rewritten) = exact_rewrite_ite_equality(left, right) {
         return rewritten;
     }
@@ -9786,6 +9828,18 @@ fn exact_symmetric_equalities_equal(left: &ExactRewriteTerm, right: &ExactRewrit
         && matches!((left_args.as_slice(), right_args.as_slice()),
             ([left_a, left_b], [right_a, right_b])
                 if left_a == right_b && left_b == right_a)
+}
+
+fn exact_self_replacement(
+    term: &ExactRewriteTerm,
+) -> Option<(&ExactRewriteTerm, &ExactRewriteTerm)> {
+    let ExactRewriteTerm::App(head, args) = term else {
+        return None;
+    };
+    let [subject, needle, replacement] = args.as_slice() else {
+        return None;
+    };
+    (head == "str.replace" && subject == replacement).then_some((subject, needle))
 }
 
 const EXACT_ITE_CASE_CAP: usize = 64;
@@ -15810,7 +15864,7 @@ fn apply_parameterized(
 #[cfg(test)]
 mod string_escape_tests {
     use super::{
-        ExactRewriteTerm, decode_string_code_points, exact_rewrite_app,
+        ExactRewriteTerm, decode_string_code_points, exact_rewrite_app, exact_rewrite_equality,
         exact_rewrite_small_subject_indexof, exact_rewrite_term, exact_rewrite_under_assignments,
         replace_first_code_points,
     };
@@ -16214,6 +16268,166 @@ mod string_escape_tests {
                             "subject={subject_word:?}, needle={concrete_needle:?}, replacement={replacement_word:?}"
                         );
                     }
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn self_replacement_views_match_reference_semantics_exhaustively() {
+        let symbol = |name: &str| {
+            let expression = read_all(name)
+                .expect("read symbolic self-replacement argument")
+                .pop()
+                .expect("one symbolic argument");
+            exact_rewrite_term(&expression, 0)
+        };
+        let subject = symbol("subject");
+        let needle = symbol("needle");
+        let self_replacement = exact_rewrite_app(
+            "str.replace",
+            vec![subject.clone(), needle.clone(), subject.clone()],
+        );
+        let at_zero = exact_rewrite_app(
+            "str.at",
+            vec![self_replacement.clone(), ExactRewriteTerm::Int(0)],
+        );
+        let contains_subject = exact_rewrite_app(
+            "str.contains",
+            vec![self_replacement.clone(), subject.clone()],
+        );
+        let contains_needle = exact_rewrite_app(
+            "str.contains",
+            vec![self_replacement.clone(), needle.clone()],
+        );
+        let equals_empty =
+            exact_rewrite_equality(&self_replacement, &ExactRewriteTerm::String(Vec::new()));
+        let mut words = vec![Vec::new()];
+        for _ in 0..2 {
+            let prior = words.clone();
+            for word in prior {
+                for code_point in [u32::from(b'A'), u32::from(b'B')] {
+                    let mut extended = word.clone();
+                    extended.push(code_point);
+                    words.push(extended);
+                }
+            }
+        }
+
+        for subject_word in &words {
+            for needle_word in &words {
+                let assignments = [
+                    (
+                        exact_rewrite_app(
+                            "=",
+                            vec![
+                                subject.clone(),
+                                ExactRewriteTerm::String(subject_word.clone()),
+                            ],
+                        ),
+                        true,
+                    ),
+                    (
+                        exact_rewrite_app(
+                            "=",
+                            vec![
+                                needle.clone(),
+                                ExactRewriteTerm::String(needle_word.clone()),
+                            ],
+                        ),
+                        true,
+                    ),
+                ];
+                let replaced = replace_first_code_points(subject_word, needle_word, subject_word);
+                let expected_at = replaced
+                    .first()
+                    .copied()
+                    .map_or_else(Vec::new, |code_point| vec![code_point]);
+                assert_eq!(
+                    exact_rewrite_under_assignments(&at_zero, &assignments, 0),
+                    ExactRewriteTerm::String(expected_at),
+                    "at-zero subject={subject_word:?}, needle={needle_word:?}"
+                );
+                assert_eq!(
+                    exact_rewrite_under_assignments(&contains_subject, &assignments, 0),
+                    ExactRewriteTerm::Bool(true),
+                    "contains-subject subject={subject_word:?}, needle={needle_word:?}"
+                );
+                let expected_contains_needle = needle_word.is_empty()
+                    || subject_word
+                        .windows(needle_word.len())
+                        .any(|candidate| candidate == needle_word);
+                assert_eq!(
+                    exact_rewrite_under_assignments(&contains_needle, &assignments, 0),
+                    ExactRewriteTerm::Bool(expected_contains_needle),
+                    "contains-needle subject={subject_word:?}, needle={needle_word:?}"
+                );
+                assert_eq!(
+                    exact_rewrite_under_assignments(&equals_empty, &assignments, 0),
+                    ExactRewriteTerm::Bool(replaced.is_empty()),
+                    "empty subject={subject_word:?}, needle={needle_word:?}"
+                );
+
+                for view_word in [Vec::new(), vec![u32::from(b'A')], vec![u32::from(b'B')]] {
+                    let view = ExactRewriteTerm::String(view_word.clone());
+                    for (head, expected) in [
+                        ("str.prefixof", replaced.starts_with(&view_word)),
+                        ("str.suffixof", replaced.ends_with(&view_word)),
+                        (
+                            "str.contains",
+                            view_word.is_empty()
+                                || replaced
+                                    .windows(view_word.len())
+                                    .any(|candidate| candidate == view_word),
+                        ),
+                    ] {
+                        let expression = if head == "str.contains" {
+                            exact_rewrite_app(head, vec![self_replacement.clone(), view.clone()])
+                        } else {
+                            exact_rewrite_app(head, vec![view.clone(), self_replacement.clone()])
+                        };
+                        assert_eq!(
+                            exact_rewrite_under_assignments(&expression, &assignments, 0),
+                            ExactRewriteTerm::Bool(expected),
+                            "head={head}, subject={subject_word:?}, needle={needle_word:?}, view={view_word:?}"
+                        );
+                    }
+                }
+            }
+        }
+
+        for needle_word in [[u32::from(b'A')], [u32::from(b'B')]] {
+            let self_replacement = exact_rewrite_app(
+                "str.replace",
+                vec![
+                    subject.clone(),
+                    ExactRewriteTerm::String(needle_word.to_vec()),
+                    subject.clone(),
+                ],
+            );
+            for view_word in [Vec::new(), vec![u32::from(b'A')], vec![u32::from(b'B')]] {
+                let equality = exact_rewrite_equality(
+                    &self_replacement,
+                    &ExactRewriteTerm::String(view_word.clone()),
+                );
+                for subject_word in &words {
+                    let assignments = [(
+                        exact_rewrite_app(
+                            "=",
+                            vec![
+                                subject.clone(),
+                                ExactRewriteTerm::String(subject_word.clone()),
+                            ],
+                        ),
+                        true,
+                    )];
+                    let replaced =
+                        replace_first_code_points(subject_word, &needle_word, subject_word);
+                    assert_eq!(
+                        exact_rewrite_under_assignments(&equality, &assignments, 0),
+                        ExactRewriteTerm::Bool(replaced == view_word),
+                        "equality subject={subject_word:?}, needle={needle_word:?}, view={view_word:?}"
+                    );
                 }
             }
         }
