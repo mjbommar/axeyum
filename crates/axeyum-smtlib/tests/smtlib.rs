@@ -4606,6 +4606,51 @@ fn regex_membership_retains_literal_prefix_languages() {
 }
 
 #[test]
+fn regex_membership_propagates_cross_variable_length_couplings() {
+    let exact_lengths = r"
+        (set-logic QF_SLIA)
+        (declare-const x String)
+        (declare-const y String)
+        (assert (str.in_re x re.all))
+        (assert (str.in_re y re.all))
+        (assert (= (str.len x) 3))
+        (assert (= (str.len x) (str.len y)))
+        (check-sat)
+    ";
+    let script = parse_script(exact_lengths).expect("cross-length equality parses");
+    let problem = script.membership_problem.expect("membership side channel");
+    assert!(problem.complete);
+    assert_eq!(problem.vars.len(), 2);
+    assert!(
+        problem
+            .vars
+            .iter()
+            .all(|class| { class.membership.len_lo == 3 && class.membership.len_hi == Some(3) })
+    );
+
+    let unresolved_to_int = r"
+        (set-logic QF_SLIA)
+        (declare-const x String)
+        (declare-const y String)
+        (assert (str.in_re x re.all))
+        (assert (= (str.to_int x) (str.len y)))
+        (check-sat)
+    ";
+    let script = parse_script(unresolved_to_int).expect("to_int/length equality parses");
+    let problem = script.membership_problem.expect("membership side channel");
+    assert!(
+        !problem.complete,
+        "unfixed cross-value equality is UNSAT-only"
+    );
+    let decimal = problem
+        .vars
+        .iter()
+        .find(|class| class.membership.positives.len() == 2)
+        .expect("decimal class has re.all plus necessary decimal language");
+    assert_eq!(decimal.membership.positives.len(), 2);
+}
+
+#[test]
 fn regex_inter_matches_intersection() {
     // (re.inter (re.* (re.range "a" "z")) (str.to_re "ab")): lowercase-only ∩ {"ab"} = {"ab"}.
     let text = "(declare-fun s () String)\n\

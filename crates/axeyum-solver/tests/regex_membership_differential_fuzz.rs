@@ -207,6 +207,13 @@ fn generate(rng: &mut Lcg) -> String {
     if num_vars >= 2 && rng.below(6) == 0 {
         let _ = writeln!(text, "(assert (= v0 v1))");
     }
+    if num_vars >= 2 {
+        match rng.below(10) {
+            0 => text.push_str("(assert (= (str.len v0) (str.len v1)))\n"),
+            1 => text.push_str("(assert (= (str.to_int v0) (str.len v1)))\n"),
+            _ => {}
+        }
+    }
     if !saw_membership {
         let _ = writeln!(text, "(assert (str.in_re v0 (str.to_re \"a\")))");
     }
