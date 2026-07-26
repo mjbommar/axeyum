@@ -12553,8 +12553,7 @@ fn source_string_semantic_facts(exprs: &[SExpr]) -> SourceStringSemanticFacts {
         let mut changed = false;
         for (i, node) in nodes.iter().enumerate() {
             let was_unpinned = class_values[parent[i]].is_none();
-            if let Some(value) =
-                eval_pinned_splice_semantics(node, &nodes, &parent, &class_values, 0)
+            if let Some(value) = eval_pinned_word_semantics(node, &nodes, &parent, &class_values, 0)
             {
                 set_class_value(&mut class_values, parent[i], value, &mut conflict);
                 changed |= was_unpinned;
@@ -12573,8 +12572,8 @@ fn source_string_semantic_facts(exprs: &[SExpr]) -> SourceStringSemanticFacts {
             conflict = true;
             continue;
         }
-        let left_value = eval_pinned_splice(&nodes[left], &nodes, &parent, &class_values, 0);
-        let right_value = eval_pinned_splice(&nodes[right], &nodes, &parent, &class_values, 0);
+        let left_value = eval_pinned_word(&nodes[left], &nodes, &parent, &class_values, 0);
+        let right_value = eval_pinned_word(&nodes[right], &nodes, &parent, &class_values, 0);
         if left_value.is_some() && left_value == right_value {
             conflict = true;
         }
@@ -12877,8 +12876,9 @@ fn set_class_value(
     }
 }
 
-/// Evaluates a fixed-splice chain once its base class has an exact constant pin.
-fn eval_pinned_splice(
+/// Evaluates an exact string expression once its referenced equality classes
+/// have constant pins. Unsupported or symbolic operands decline.
+fn eval_pinned_word(
     expression: &SExpr,
     nodes: &[SExpr],
     parent: &[usize],
@@ -12896,22 +12896,13 @@ fn eval_pinned_splice(
     {
         return Some(value.clone());
     }
-    let splice = fixed_splice_parts(expression.list()?)?;
-    let base = eval_pinned_splice(splice.base, nodes, parent, values, depth + 1)?;
-    let mut result = substr_code_points(&base, 0, i128::from(splice.index));
-    result.extend_from_slice(&splice.replacement);
-    result.extend(substr_code_points(
-        &base,
-        i128::from(splice.split),
-        i128::try_from(base.len()).ok()? - i128::from(splice.split),
-    ));
-    Some(result)
+    eval_pinned_word_semantics(expression, nodes, parent, values, depth)
 }
 
-/// Evaluates the semantic value of a fixed splice even when the splice expression's
-/// own equality class is already pinned. Comparing this value with that class pin
-/// detects a contradiction such as `s = "lot"`, `splice(s, 0, "l") = "log"`.
-fn eval_pinned_splice_semantics(
+/// Evaluates an expression from its operands even when its own equality class is
+/// pinned. Comparing this value with that class pin detects contradictions such
+/// as `s = "abc"` together with `str.at(s, 1) = "c"`.
+fn eval_pinned_word_semantics(
     expression: &SExpr,
     nodes: &[SExpr],
     parent: &[usize],
@@ -12921,19 +12912,40 @@ fn eval_pinned_splice_semantics(
     if depth > 32 {
         return None;
     }
-    let splice = fixed_splice_parts(expression.list()?)?;
-    let base = eval_pinned_splice(splice.base, nodes, parent, values, depth + 1)?;
-    let mut result = substr_code_points(&base, 0, i128::from(splice.index));
-    result.extend_from_slice(&splice.replacement);
-    result.extend(substr_code_points(
-        &base,
-        i128::from(splice.split),
-        i128::try_from(base.len()).ok()? - i128::from(splice.split),
-    ));
-    Some(result)
+    if let Some(literal) = literal_pattern_cps(expression) {
+        return Some(literal);
+    }
+    let items = expression.list()?;
+    match items.first()?.atom()? {
+        "str.++" | "str.concat" => {
+            let mut result = Vec::new();
+            for item in &items[1..] {
+                result.extend(eval_pinned_word(item, nodes, parent, values, depth + 1)?);
+            }
+            Some(result)
+        }
+        "str.at" if items.len() == 3 => {
+            let subject = eval_pinned_word(&items[1], nodes, parent, values, depth + 1)?;
+            let index = parse_int_literal(strip_subtracted_zero(&items[2]))?;
+            Some(substr_code_points(&subject, index, 1))
+        }
+        "str.substr" if items.len() == 4 => {
+            let subject = eval_pinned_word(&items[1], nodes, parent, values, depth + 1)?;
+            let offset = parse_int_literal(strip_subtracted_zero(&items[2]))?;
+            let length = parse_int_literal(strip_subtracted_zero(&items[3]))?;
+            Some(substr_code_points(&subject, offset, length))
+        }
+        "str.replace" if items.len() == 4 => {
+            let subject = eval_pinned_word(&items[1], nodes, parent, values, depth + 1)?;
+            let needle = eval_pinned_word(&items[2], nodes, parent, values, depth + 1)?;
+            let replacement = eval_pinned_word(&items[3], nodes, parent, values, depth + 1)?;
+            Some(replace_first_code_points(&subject, &needle, &replacement))
+        }
+        _ => None,
+    }
 }
 
-/// Exact value of `str.contains` after equality-class pins.
+/// Exact value of a string predicate after equality-class pins.
 fn eval_pinned_word_predicate(
     expression: &SExpr,
     nodes: &[SExpr],
@@ -12943,8 +12955,8 @@ fn eval_pinned_word_predicate(
     let [head, left, right] = expression.list()? else {
         return None;
     };
-    let left = eval_pinned_splice(left, nodes, parent, values, 0)?;
-    let right = eval_pinned_splice(right, nodes, parent, values, 0)?;
+    let left = eval_pinned_word(left, nodes, parent, values, 0)?;
+    let right = eval_pinned_word(right, nodes, parent, values, 0)?;
     match head.atom()? {
         "str.contains" => Some(
             right.is_empty()
@@ -12952,6 +12964,8 @@ fn eval_pinned_word_predicate(
                     .windows(right.len())
                     .any(|candidate| candidate == right),
         ),
+        "str.prefixof" => Some(right.starts_with(&left)),
+        "str.suffixof" => Some(right.ends_with(&left)),
         _ => None,
     }
 }
@@ -17357,13 +17371,14 @@ mod string_escape_tests {
 
     use super::{
         ExactEqualityFacts, ExactFixedWordLanguage, ExactRewriteTerm, decimal_code_points,
-        decode_string_code_points, exact_affine_equalities_equal, exact_affine_orderings_equal,
-        exact_affine_zero_forces_nonpositive, exact_affine_zero_forces_positive, exact_rewrite_app,
-        exact_rewrite_concat_at, exact_rewrite_concat_substr, exact_rewrite_equality,
-        exact_rewrite_fixed_word_language, exact_rewrite_small_subject_indexof, exact_rewrite_term,
-        exact_rewrite_under_assignments, replace_first_code_points, substr_code_points,
+        decode_string_code_points, eval_pinned_word_semantics, exact_affine_equalities_equal,
+        exact_affine_orderings_equal, exact_affine_zero_forces_nonpositive,
+        exact_affine_zero_forces_positive, exact_rewrite_app, exact_rewrite_concat_at,
+        exact_rewrite_concat_substr, exact_rewrite_equality, exact_rewrite_fixed_word_language,
+        exact_rewrite_small_subject_indexof, exact_rewrite_term, exact_rewrite_under_assignments,
+        replace_first_code_points, source_string_semantic_facts, substr_code_points,
     };
-    use crate::sexpr::read_all;
+    use crate::sexpr::{SExpr, read_all};
 
     #[test]
     fn replace_emptiness_matches_reference_semantics_exhaustively() {
@@ -19188,6 +19203,119 @@ mod string_escape_tests {
                 exact_rewrite_term(&expression, 0),
                 ExactRewriteTerm::Bool(false),
                 "{text}"
+            );
+        }
+    }
+
+    #[test]
+    fn pinned_word_evaluator_matches_reference_semantics_exhaustively() {
+        let mut words = vec![Vec::new()];
+        for length in 1..=4 {
+            for bits in 0..(1_usize << length) {
+                words.push(
+                    (0..length)
+                        .map(|shift| u32::from(if bits & (1 << shift) == 0 { b'A' } else { b'B' }))
+                        .collect(),
+                );
+            }
+        }
+        let symbol = SExpr::Atom("s".to_owned());
+        let nodes = vec![symbol];
+        let parent = [0];
+
+        for subject in &words {
+            let values = [Some(subject.clone())];
+            for index in -2_i128..=6 {
+                let at = read_all(&format!("(str.at s {index})"))
+                    .expect("read at")
+                    .pop()
+                    .expect("one at");
+                assert_eq!(
+                    eval_pinned_word_semantics(&at, &nodes, &parent, &values, 0),
+                    Some(substr_code_points(subject, index, 1))
+                );
+                for length in -2_i128..=6 {
+                    let substr = read_all(&format!("(str.substr s {index} {length})"))
+                        .expect("read substr")
+                        .pop()
+                        .expect("one substr");
+                    assert_eq!(
+                        eval_pinned_word_semantics(&substr, &nodes, &parent, &values, 0),
+                        Some(substr_code_points(subject, index, length))
+                    );
+                }
+            }
+            for needle in &words[..7] {
+                for replacement in &words[..7] {
+                    let needle_text: String =
+                        needle.iter().filter_map(|&cp| char::from_u32(cp)).collect();
+                    let replacement_text: String = replacement
+                        .iter()
+                        .filter_map(|&cp| char::from_u32(cp))
+                        .collect();
+                    let replace = read_all(&format!(
+                        "(str.replace s \"{needle_text}\" \"{replacement_text}\")"
+                    ))
+                    .expect("read replace")
+                    .pop()
+                    .expect("one replace");
+                    assert_eq!(
+                        eval_pinned_word_semantics(&replace, &nodes, &parent, &values, 0),
+                        Some(replace_first_code_points(subject, needle, replacement))
+                    );
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn pinned_source_operations_refute_only_concrete_conflicts() {
+        for script in [
+            r#"(declare-const s String)
+(assert (= s "abc"))
+(assert (= (str.at s 1) "c"))
+(check-sat)"#,
+            r#"(declare-const s String)
+(assert (= s "abc"))
+(assert (= (str.substr s 1 1) "c"))
+(check-sat)"#,
+            r#"(declare-const s String)
+(assert (= s "xy"))
+(assert (str.prefixof s "abc"))
+(check-sat)"#,
+            r#"(declare-const s String)
+(assert (= s "xy"))
+(assert (str.suffixof s "abc"))
+(check-sat)"#,
+        ] {
+            let expressions = read_all(script).expect("read pinned conflict");
+            assert!(
+                source_string_semantic_facts(&expressions).conflict,
+                "{script}"
+            );
+        }
+
+        for script in [
+            r#"(declare-const s String)
+(assert (= s "abc"))
+(assert (= (str.at s 1) "b"))
+(check-sat)"#,
+            r#"(declare-const s String)
+(assert (= (str.at s 1) "c"))
+(check-sat)"#,
+            r#"(declare-const s String)
+(assert (= s "xy"))
+(assert (not (str.prefixof s "abc")))
+(check-sat)"#,
+            r#"(declare-const s String)
+(assert (= s "xy"))
+(assert (not (str.suffixof s "abc")))
+(check-sat)"#,
+        ] {
+            let expressions = read_all(script).expect("read pinned control");
+            assert!(
+                !source_string_semantic_facts(&expressions).conflict,
+                "{script}"
             );
         }
     }
