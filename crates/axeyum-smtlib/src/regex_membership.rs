@@ -36,6 +36,10 @@
 //! * `(str.prefixof "lit" X)` / `(str.prefixof X "lit")` and their negations —
 //!   respectively the literal-prefix cone and the finite language of literal
 //!   prefixes;
+//! * `(= (str.len X) (str.len Y))` when an exact length propagates across the
+//!   equality, and `(= (str.to_int X) (str.len Y))` — always retaining the exact
+//!   necessary nonempty-decimal language for `X`, and the exact decimal value
+//!   when `Y` has a fixed length;
 //! * `(= OUT (str.++ X Y …))` (or symmetric) when `OUT` occurs nowhere else and
 //!   every input variable has retained membership constraints — a model-defining
 //!   concatenation evaluated after the input witnesses are checked;
@@ -168,26 +172,15 @@ impl MembershipProblem {
             regex_defs: &regex_defs,
             per_var: BTreeMap::new(),
             equalities: Vec::new(),
+            length_equalities: Vec::new(),
+            to_int_length_equalities: Vec::new(),
             definitions: Vec::new(),
             grounds: Vec::new(),
             saw_membership: false,
             complete: true,
         };
-        for e in exprs {
-            let Some(items) = e.list() else { continue };
-            if items.first().and_then(SExpr::atom) == Some("assert") {
-                let [_, body] = items else { return None };
-                // A unique top-level RegLan definition is represented by exact
-                // substitution in every retained membership atom.
-                if concrete_regex_definition(body, &regex_vars)
-                    .is_some_and(|(name, _)| regex_defs.contains_key(&name))
-                {
-                    continue;
-                }
-                if !builder.atom(body) {
-                    builder.complete = false;
-                }
-            }
+        if !builder.collect_assertions(exprs, &regex_vars) {
+            return None;
         }
         // Require at least one genuine membership atom, else this is not a regex
         // problem this route should claim.
@@ -198,9 +191,14 @@ impl MembershipProblem {
         // channel: preserve the parser's established Unsupported result unless at
         // least one exact constraint was actually retained. A ground `false`
         // conjunct supplies such a constraint; ground `true` does not.
-        if builder.per_var.is_empty() && builder.grounds.is_empty() {
+        if !builder.has_retained_constraints() {
             return None;
         }
+
+        // Resolve exact cross-variable arithmetic consequences after every
+        // single-variable bound has been accumulated, so assertion order cannot
+        // change the retained fragment.
+        builder.resolve_length_couplings();
 
         // A concatenation equality is model-defining only when its output is a
         // fresh existential sink and every input already receives a checked
@@ -258,6 +256,11 @@ struct Builder<'a> {
     /// Exact equalities between declared string variables. They are merged after
     /// every per-name constraint has been accumulated.
     equalities: Vec<(String, String)>,
+    /// Equalities `len(left) = len(right)` awaiting exact-bound propagation.
+    length_equalities: Vec<(String, String)>,
+    /// Equalities `str.to_int(decimal) = len(length)` awaiting nonnegative-decimal
+    /// retention and, when possible, exact-value propagation.
+    to_int_length_equalities: Vec<(String, String)>,
     /// Candidate existential output definitions, validated after all membership
     /// classes and source occurrences are known.
     definitions: Vec<(String, Vec<String>)>,
@@ -265,6 +268,92 @@ struct Builder<'a> {
     grounds: Vec<(Membership, Vec<u32>)>,
     saw_membership: bool,
     complete: bool,
+}
+
+/// Propagates exact cross-variable length consequences. Returns `true` exactly
+/// when every coupling is fully represented; unresolved `str.to_int = len`
+/// equalities still retain the necessary nonempty-decimal subset, so they may
+/// prove UNSAT but can never enable SAT.
+fn resolve_length_couplings(
+    per_var: &mut BTreeMap<String, VarState>,
+    length_equalities: &[(String, String)],
+    to_int_length_equalities: &[(String, String)],
+) -> bool {
+    let mut changed = true;
+    while changed {
+        changed = false;
+        for (left, right) in length_equalities {
+            let left_exact = per_var.get(left).and_then(exact_length);
+            let right_exact = per_var.get(right).and_then(exact_length);
+            if let Some(length) = left_exact {
+                changed |=
+                    constrain_exact_length(per_var.entry(right.clone()).or_default(), length);
+            }
+            if let Some(length) = right_exact {
+                changed |= constrain_exact_length(per_var.entry(left.clone()).or_default(), length);
+            }
+        }
+    }
+
+    let mut complete = true;
+    for (left, right) in length_equalities {
+        let left_state = per_var.entry(left.clone()).or_default();
+        let left_exact = exact_length(left_state);
+        let left_impossible = length_impossible(left_state);
+        let right_state = per_var.entry(right.clone()).or_default();
+        let right_exact = exact_length(right_state);
+        let right_impossible = length_impossible(right_state);
+        complete &= left_impossible || right_impossible || left_exact == right_exact;
+        complete &= left_impossible || right_impossible || left_exact.is_some();
+    }
+
+    for (decimal, length) in to_int_length_equalities {
+        let length_state = per_var.entry(length.clone()).or_default();
+        let exact = exact_length(length_state);
+        let impossible = length_impossible(length_state);
+        let decimal_state = per_var.entry(decimal.clone()).or_default();
+        // Every string equal through str.to_int to a length has value >= 0,
+        // hence is a nonempty ASCII decimal string.
+        decimal_state
+            .membership
+            .positives
+            .push(decimal_nonnegative_regex());
+        if let Some(value) = exact {
+            decimal_state
+                .membership
+                .positives
+                .push(decimal_value_regex(value));
+        } else if !impossible {
+            complete = false;
+        }
+    }
+    complete
+}
+
+fn exact_length(state: &VarState) -> Option<u32> {
+    state
+        .membership
+        .len_hi
+        .filter(|&high| high == state.membership.len_lo)
+}
+
+fn length_impossible(state: &VarState) -> bool {
+    state
+        .membership
+        .len_hi
+        .is_some_and(|high| state.membership.len_lo > high)
+}
+
+fn constrain_exact_length(state: &mut VarState, length: u32) -> bool {
+    let old = (state.membership.len_lo, state.membership.len_hi);
+    state.membership.len_lo = state.membership.len_lo.max(length);
+    state.membership.len_hi = Some(
+        state
+            .membership
+            .len_hi
+            .map_or(length, |high| high.min(length)),
+    );
+    old != (state.membership.len_lo, state.membership.len_hi)
 }
 
 /// Merges the connected components induced by exact string-variable equalities.
@@ -375,6 +464,40 @@ fn validate_concat_definitions(
 }
 
 impl Builder<'_> {
+    fn collect_assertions(&mut self, exprs: &[SExpr], regex_vars: &BTreeSet<String>) -> bool {
+        for e in exprs {
+            let Some(items) = e.list() else { continue };
+            if items.first().and_then(SExpr::atom) != Some("assert") {
+                continue;
+            }
+            let [_, body] = items else { return false };
+            // A unique top-level RegLan definition is represented by exact
+            // substitution in every retained membership atom.
+            if concrete_regex_definition(body, regex_vars)
+                .is_some_and(|(name, _)| self.regex_defs.contains_key(&name))
+            {
+                continue;
+            }
+            if !self.atom(body) {
+                self.complete = false;
+            }
+        }
+        true
+    }
+
+    fn has_retained_constraints(&self) -> bool {
+        !self.per_var.is_empty() || !self.grounds.is_empty()
+    }
+
+    fn resolve_length_couplings(&mut self) {
+        let resolved = resolve_length_couplings(
+            &mut self.per_var,
+            &self.length_equalities,
+            &self.to_int_length_equalities,
+        );
+        self.complete &= resolved;
+    }
+
     /// Retains one asserted conjunct, returning `false` when that conjunct is
     /// outside the recognized fragment. A top-level `and` visits every child even
     /// after one child is unsupported, so later usable conjuncts are not lost.
@@ -419,37 +542,7 @@ impl Builder<'_> {
                     false
                 }
             }
-            "=" if items.len() == 3 => {
-                if let Some(truth) = ground_numeral_relation(head, &items[1], &items[2]) {
-                    self.retain_ground_boolean(truth);
-                    true
-                } else if self.length_atom(head, &items[1], &items[2]) {
-                    true
-                } else if let Some((name, value)) = to_int_equality(&items[1], &items[2], self.vars)
-                {
-                    self.per_var
-                        .entry(name)
-                        .or_default()
-                        .membership
-                        .positives
-                        .push(decimal_value_regex(value));
-                    true
-                } else if let Some((left, right)) =
-                    variable_equality(&items[1], &items[2], self.vars)
-                {
-                    // Materialize both endpoints so an otherwise unconstrained
-                    // alias still receives the shared model witness.
-                    self.per_var.entry(left.clone()).or_default();
-                    self.per_var.entry(right.clone()).or_default();
-                    self.equalities.push((left, right));
-                    true
-                } else if let Some(definition) = concat_definition(e, self.vars) {
-                    self.definitions.push(definition);
-                    true
-                } else {
-                    self.pin_atom(&items[1], &items[2])
-                }
-            }
+            "=" if items.len() == 3 => self.equality_atom(e, &items[1], &items[2]),
             "<" | "<=" | ">" | ">=" if items.len() == 3 => {
                 if let Some(truth) = ground_numeral_relation(head, &items[1], &items[2]) {
                     self.retain_ground_boolean(truth);
@@ -471,6 +564,45 @@ impl Builder<'_> {
                 }
             }
             _ => false,
+        }
+    }
+
+    fn equality_atom(&mut self, whole: &SExpr, left: &SExpr, right: &SExpr) -> bool {
+        if let Some(truth) = ground_numeral_relation("=", left, right) {
+            self.retain_ground_boolean(truth);
+            true
+        } else if self.length_atom("=", left, right) {
+            true
+        } else if let Some((name, value)) = to_int_equality(left, right, self.vars) {
+            self.per_var
+                .entry(name)
+                .or_default()
+                .membership
+                .positives
+                .push(decimal_value_regex(value));
+            true
+        } else if let Some((left, right)) = variable_equality(left, right, self.vars) {
+            // Materialize both endpoints so an otherwise unconstrained alias
+            // still receives the shared model witness.
+            self.per_var.entry(left.clone()).or_default();
+            self.per_var.entry(right.clone()).or_default();
+            self.equalities.push((left, right));
+            true
+        } else if let Some((left, right)) = length_equality(left, right, self.vars) {
+            self.per_var.entry(left.clone()).or_default();
+            self.per_var.entry(right.clone()).or_default();
+            self.length_equalities.push((left, right));
+            true
+        } else if let Some((decimal, length)) = to_int_length_equality(left, right, self.vars) {
+            self.per_var.entry(decimal.clone()).or_default();
+            self.per_var.entry(length.clone()).or_default();
+            self.to_int_length_equalities.push((decimal, length));
+            true
+        } else if let Some(definition) = concat_definition(whole, self.vars) {
+            self.definitions.push(definition);
+            true
+        } else {
+            self.pin_atom(left, right)
         }
     }
 
@@ -661,6 +793,28 @@ fn variable_equality(
     Some((variable_name(left, vars)?, variable_name(right, vars)?))
 }
 
+/// Equality between the lengths of two declared strings.
+fn length_equality(
+    left: &SExpr,
+    right: &SExpr,
+    vars: &BTreeMap<String, SymbolId>,
+) -> Option<(String, String)> {
+    Some((str_len_var(left, vars)?, str_len_var(right, vars)?))
+}
+
+/// Equality between one string's `str.to_int` value and another string's length,
+/// normalized as `(decimal_string, length_string)`.
+fn to_int_length_equality(
+    left: &SExpr,
+    right: &SExpr,
+    vars: &BTreeMap<String, SymbolId>,
+) -> Option<(String, String)> {
+    match (str_to_int_var(left, vars), str_len_var(right, vars)) {
+        (Some(decimal), Some(length)) => Some((decimal, length)),
+        _ => Some((str_to_int_var(right, vars)?, str_len_var(left, vars)?)),
+    }
+}
+
 /// An equality between `(str.to_int X)` and a non-negative numeral, accepting
 /// either orientation.
 fn to_int_equality(
@@ -706,6 +860,10 @@ fn decimal_value_regex(value: u32) -> Regex {
         let digits: Vec<u32> = value.to_string().bytes().map(u32::from).collect();
         Regex::concat(Regex::star(zero), literal_regex(&digits))
     }
+}
+
+fn decimal_nonnegative_regex() -> Regex {
+    Regex::plus(Regex::char_range(u32::from(b'0'), u32::from(b'9')))
 }
 
 /// Exact preimage of an ordered comparison against SMT-LIB `str.to_int`.

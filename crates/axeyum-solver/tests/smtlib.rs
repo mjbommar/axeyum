@@ -2250,6 +2250,56 @@ fn regex_membership_decides_literal_prefix_languages() {
     );
 }
 
+#[test]
+fn regex_membership_decides_cross_variable_length_couplings() {
+    let length_unsat = r#"
+(set-logic QF_SLIA)
+(declare-const x String)
+(declare-const y String)
+(assert (str.in_re x (re.* (str.to_re "a"))))
+(assert (str.in_re y (re.* (str.to_re "bb"))))
+(assert (= (str.len x) 3))
+(assert (= (str.len x) (str.len y)))
+(check-sat)
+"#;
+    let mut script = parse_script(length_unsat).expect("cross-length contradiction parses");
+    assert_eq!(
+        membership_verdict(&mut script, &config()),
+        Some(CheckResult::Unsat)
+    );
+
+    let nondecimal_unsat = r#"
+(set-logic QF_SLIA)
+(declare-const x String)
+(declare-const y String)
+(assert (str.in_re x (re.+ (str.to_re "letters"))))
+(assert (str.in_re y re.all))
+(assert (= (str.to_int x) (str.len y)))
+(check-sat)
+"#;
+    let mut script = parse_script(nondecimal_unsat).expect("non-decimal coupling parses");
+    assert_eq!(
+        membership_verdict(&mut script, &config()),
+        Some(CheckResult::Unsat)
+    );
+
+    let unresolved_sat = r#"
+(set-logic QF_SLIA)
+(declare-const x String)
+(declare-const y String)
+(assert (str.in_re x (re.+ (re.range "0" "9"))))
+(assert (str.in_re y re.all))
+(assert (= (str.to_int x) (str.len y)))
+(check-sat)
+"#;
+    let mut script = parse_script(unresolved_sat).expect("satisfiable coupling parses");
+    assert_eq!(
+        membership_verdict(&mut script, &config()),
+        None,
+        "necessary decimal subset must not claim SAT for an unresolved value equality"
+    );
+}
+
 /// The Noetzli small-rewrite corpus asserts the negation of exact SMT-LIB string
 /// identities. Normalize these before the bounded encoder expands them: each row
 /// is a genuine, bound-independent contradiction.
