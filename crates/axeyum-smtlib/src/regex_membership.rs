@@ -40,6 +40,8 @@
 //!   equality, and `(= (str.to_int X) (str.len Y))` — always retaining the exact
 //!   necessary nonempty-decimal language for `X`, and the exact decimal value
 //!   when `Y` has a fixed length;
+//! * `(= (str.++ X Y …) "")` (or symmetric) — fixes every concatenated variable
+//!   to length zero;
 //! * `(= OUT (str.++ X Y …))` (or symmetric) when `OUT` occurs nowhere else and
 //!   every input variable has retained membership constraints — a model-defining
 //!   concatenation evaluated after the input witnesses are checked;
@@ -598,6 +600,11 @@ impl Builder<'_> {
             self.per_var.entry(length.clone()).or_default();
             self.to_int_length_equalities.push((decimal, length));
             true
+        } else if let Some(parts) = empty_concat_equality(left, right, self.vars) {
+            for part in parts {
+                constrain_exact_length(self.per_var.entry(part).or_default(), 0);
+            }
+            true
         } else if let Some(definition) = concat_definition(whole, self.vars) {
             self.definitions.push(definition);
             true
@@ -813,6 +820,24 @@ fn to_int_length_equality(
         (Some(decimal), Some(length)) => Some((decimal, length)),
         _ => Some((str_to_int_var(right, vars)?, str_len_var(left, vars)?)),
     }
+}
+
+/// A concatenation of declared string variables equated to the empty literal.
+/// Such an equality is equivalent to every part having length zero.
+fn empty_concat_equality(
+    left: &SExpr,
+    right: &SExpr,
+    vars: &BTreeMap<String, SymbolId>,
+) -> Option<Vec<String>> {
+    for (concat, literal) in [(left, right), (right, left)] {
+        if literal_code_points(literal).is_some_and(|code_points| code_points.is_empty()) {
+            let mut parts = Vec::new();
+            if flatten_concat_vars(concat, vars, &mut parts) && parts.len() >= 2 {
+                return Some(parts);
+            }
+        }
+    }
+    None
 }
 
 /// An equality between `(str.to_int X)` and a non-negative numeral, accepting

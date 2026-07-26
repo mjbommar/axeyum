@@ -383,46 +383,42 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
-- **2026-07-26 — exact regex-length, alias, prefix, and `str.to_int` classes move 121
+- **2026-07-26 — exact regex-length, alias, prefix, and `str.to_int` classes move 122
   StringFuzz residuals.**
   The regex-membership side channel documented `(= (str.len X) n)` as part of
   its exact fragment, but the equality parser skipped the existing length-bound
-  handler.  Both equality orientations now retain the exact singleton interval
-  `[n,n]`, allowing the existing derivative-closure checker to certify empty
-  regex/length intersections and the reference matcher to replay concrete
-  witnesses. Literal disequalities `(not (= X "lit"))` in either orientation now
-  become exact negative singleton-language constraints in the same checked
-  membership class. Exact equalities between declared string variables now merge
-  their regex, length, pin, and exclusion constraints transitively and bind every
-  alias to the same checked witness. Ordered `str.to_int` constraints now compile
-  to exact decimal regular-language preimages, including leading zeroes and the
-  SMT-LIB `-1` result for empty/non-decimal strings. On the fixed 128-row current
-  Ground numeral relations are also retained exactly, so a false conjunct can
-  refute an otherwise unsupported dynamic-regex script while a true conjunct
-  leaves it declined. On the fixed 128-row current StringFuzz residual, the stacked
-  Literal-prefix predicates in either operand orientation and either polarity are
-  exact membership languages. Exact `len(X) = len(Y)` propagates fixed lengths,
-  while `str.to_int(X) = len(Y)` retains the necessary nonnegative-decimal
-  language and an exact value whenever `len(Y)` is fixed; unresolved value
-  couplings stay UNSAT-only. The stacked mechanisms decide **121 rows at 250 ms:
-  104 UNSAT and 17 replay-checked SAT**, up from 79 by 42, with **WRONG=0** against
-  declared corpus status. The comparison construction matches a reference
-  evaluator on all 35,464 combinations of four operators, bounds 0–25, and every
-  `{0,1,2,a}` string through length four. Z3's generated 700-script differential
-  front jointly decides 696 scripts with 696 agreements (119 SAT, 577 UNSAT), four
-  honest Axeyum declines and zero disagreements. The fixed-row adjudication found Z3 4.13.3 and
-  cvc5 agreement on every newly moved row with a dual-oracle result. Both literal
-  orientations, transitive aliases, conflicting pins, comparison orientations,
-  non-decimal `-1`, empty intersections, and shared SAT-model witnesses are pinned
-  at the parser and front door. A detected decide-rate regression from intersecting
-  huge, length-impossible literal exclusions is repaired by exact redundancy
-  elimination: the real row recovers from a 1.7 s decline to 10–20 ms UNSAT at the
-  250 ms cap. Unsupported-only regex scripts retain their prior hard-decline
-  behavior. The complete 217-test SMT-LIB parser suite and 95-test affected solver
-  front door pass. Next: classify the remaining seven StringFuzz rows before
-  selecting the next shared mechanism; the 58-row
-  Kepler cluster is a genuine Nielsen/length case-analysis gap, and a tested
-  finite-monoid shortcut moved zero rows.
+  handler. Both orientations now retain `[n,n]`. Literal disequalities become
+  negative singleton languages; variable equalities merge constraint classes and
+  bind every alias to one replay-checked witness; literal-prefix predicates become
+  exact languages in either orientation and polarity. Ordered `str.to_int`
+  constraints compile to exact decimal preimages, including leading zeroes and the
+  SMT-LIB `-1` result for empty/non-decimal strings. Exact `len(X) = len(Y)`
+  propagates fixed lengths, while `str.to_int(X) = len(Y)` retains the necessary
+  nonnegative-decimal language and an exact value when `len(Y)` is fixed;
+  unresolved value couplings stay UNSAT-only. Ground numeral relations retain
+  false conjuncts without letting true subsets claim SAT, and empty-concat equality
+  fixes every part to length zero.
+
+  On the fixed 128-row current StringFuzz residual, these mechanisms decide
+  **122 rows at 250 ms: 105 UNSAT and 17 replay-checked SAT**, up from 79 by 43,
+  with **WRONG=0** against declared corpus status. The comparison construction
+  matches a reference evaluator on all 35,464 combinations of four operators,
+  bounds 0–25, and every `{0,1,2,a}` string through length four. Z3's generated
+  700-script differential front jointly decides 696 with 696 agreements (119 SAT,
+  577 UNSAT), four honest Axeyum declines, and zero disagreements. The fixed-row
+  adjudication found Z3 4.13.3 and cvc5 agreement on every newly moved row with a
+  dual-oracle result.
+
+  A detected decide-rate regression from intersecting huge, length-impossible
+  literal exclusions is repaired by exact redundancy elimination: the real row
+  recovers from a 1.7 s decline to 10–20 ms UNSAT at the 250 ms cap.
+  Unsupported-only regex scripts retain their prior hard-decline behavior. The
+  complete 218-test SMT-LIB parser suite and 96-test affected solver front door
+  pass. The remaining six StringFuzz rows are all deep-regex SAT performance cases
+  (cvc5 SAT; Z3 timed out under the adjudication cap), not missing semantic
+  constraints. Next: profile their derivative/search state growth before selecting
+  the next shared mechanism. Separately, the 58-row Kepler cluster is a genuine
+  Nielsen/length case-analysis gap; a tested finite-monoid shortcut moved zero rows.
 
 - **2026-07-26 — exact selected-path propagation moves 262 Kaluza rows without
   trusting directory labels.** Commits `09841e23`, `ef78ca7b`, `fca80291`, and

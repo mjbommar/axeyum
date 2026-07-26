@@ -2300,6 +2300,38 @@ fn regex_membership_decides_cross_variable_length_couplings() {
     );
 }
 
+#[test]
+fn regex_membership_refutes_nonempty_part_of_empty_concat() {
+    let text = r#"
+(set-logic QF_SLIA)
+(declare-const x String)
+(declare-const y String)
+(assert (str.in_re x re.all))
+(assert (= (str.++ x y) ""))
+(assert (= (str.len y) 1))
+(check-sat)
+"#;
+    let mut script = parse_script(text).expect("empty concatenation contradiction parses");
+    assert_eq!(
+        membership_verdict(&mut script, &config()),
+        Some(CheckResult::Unsat)
+    );
+
+    let sat = r#"
+(set-logic QF_SLIA)
+(declare-const x String)
+(declare-const y String)
+(assert (str.in_re x re.all))
+(assert (= "" (str.++ x y)))
+(check-sat)
+"#;
+    let mut script = parse_script(sat).expect("satisfiable empty concatenation parses");
+    assert!(matches!(
+        membership_verdict(&mut script, &config()),
+        Some(CheckResult::Sat(_))
+    ));
+}
+
 /// The Noetzli small-rewrite corpus asserts the negation of exact SMT-LIB string
 /// identities. Normalize these before the bounded encoder expands them: each row
 /// is a genuine, bound-independent contradiction.
