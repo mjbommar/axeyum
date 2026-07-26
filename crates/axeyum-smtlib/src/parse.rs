@@ -9475,6 +9475,12 @@ fn exact_rewrite_app(head: &str, args: Vec<ExactRewriteTerm>) -> ExactRewriteTer
         ("str.substr", [String(value), offset, length]) if value.len() <= 1 && offset == length => {
             return String(Vec::new());
         }
+        ("str.substr", [subject, offset, length])
+            if exact_string_max_len(subject, 0).is_some_and(|maximum| maximum <= 1)
+                && exact_affine_zero_forces_nonpositive(offset, length) =>
+        {
+            return String(Vec::new());
+        }
         ("str.substr", [String(value), offset, length]) if value.len() == 1 => {
             let in_range = exact_rewrite_app(
                 "and",
@@ -9830,6 +9836,244 @@ fn exact_symmetric_equalities_equal(left: &ExactRewriteTerm, right: &ExactRewrit
                 if left_a == right_b && left_b == right_a)
 }
 
+#[derive(Default)]
+struct ExactAffineForm {
+    constant: i128,
+    terms: Vec<(ExactRewriteTerm, i128)>,
+    used_arithmetic: bool,
+}
+
+impl ExactAffineForm {
+    fn add_constant(&mut self, value: i128) -> bool {
+        let Some(sum) = self.constant.checked_add(value) else {
+            return false;
+        };
+        self.constant = sum;
+        true
+    }
+
+    fn add_term(&mut self, term: &ExactRewriteTerm, coefficient: i128) -> bool {
+        if coefficient == 0 {
+            return true;
+        }
+        if let Some((_, prior)) = self.terms.iter_mut().find(|(prior, _)| prior == term) {
+            let Some(sum) = prior.checked_add(coefficient) else {
+                return false;
+            };
+            *prior = sum;
+            self.terms.retain(|(_, coefficient)| *coefficient != 0);
+        } else {
+            self.terms.push((term.clone(), coefficient));
+        }
+        true
+    }
+
+    fn coefficient(&self, term: &ExactRewriteTerm) -> i128 {
+        self.terms
+            .iter()
+            .find_map(|(candidate, coefficient)| (candidate == term).then_some(*coefficient))
+            .unwrap_or(0)
+    }
+}
+
+fn exact_collect_affine(
+    term: &ExactRewriteTerm,
+    scale: i128,
+    form: &mut ExactAffineForm,
+    depth: u32,
+) -> bool {
+    use ExactRewriteTerm::{App, Bool, Int, String};
+
+    if depth > 32 {
+        return false;
+    }
+    match term {
+        Int(value) => {
+            form.used_arithmetic = true;
+            value
+                .checked_mul(scale)
+                .is_some_and(|value| form.add_constant(value))
+        }
+        Bool(_) | String(_) => false,
+        App(head, args) if head == "+" => {
+            form.used_arithmetic = true;
+            args.iter()
+                .all(|argument| exact_collect_affine(argument, scale, form, depth + 1))
+        }
+        App(head, args) if head == "-" => {
+            form.used_arithmetic = true;
+            match args.as_slice() {
+                [value] => scale
+                    .checked_neg()
+                    .is_some_and(|scale| exact_collect_affine(value, scale, form, depth + 1)),
+                [left, right] => {
+                    exact_collect_affine(left, scale, form, depth + 1)
+                        && scale.checked_neg().is_some_and(|scale| {
+                            exact_collect_affine(right, scale, form, depth + 1)
+                        })
+                }
+                _ => false,
+            }
+        }
+        App(head, args) if head == "*" => {
+            let scaled = match args.as_slice() {
+                [Int(factor), value] | [value, Int(factor)] => {
+                    scale.checked_mul(*factor).map(|scale| (value, scale))
+                }
+                _ => None,
+            };
+            if let Some((value, scale)) = scaled {
+                form.used_arithmetic = true;
+                exact_collect_affine(value, scale, form, depth + 1)
+            } else {
+                form.add_term(term, scale)
+            }
+        }
+        _ => form.add_term(term, scale),
+    }
+}
+
+fn exact_affine_difference(
+    left: &ExactRewriteTerm,
+    right: &ExactRewriteTerm,
+) -> Option<ExactAffineForm> {
+    let mut form = ExactAffineForm::default();
+    if !exact_collect_affine(left, 1, &mut form, 0)
+        || !exact_collect_affine(right, -1, &mut form, 0)
+    {
+        return None;
+    }
+    Some(form)
+}
+
+/// Checks whether two affine equality atoms differ only by multiplication by
+/// a nonzero rational scalar. Checked arithmetic makes overflow a decline.
+fn exact_affine_equalities_equal(left: &ExactRewriteTerm, right: &ExactRewriteTerm) -> bool {
+    let (
+        ExactRewriteTerm::App(left_head, left_args),
+        ExactRewriteTerm::App(right_head, right_args),
+    ) = (left, right)
+    else {
+        return false;
+    };
+    let ([left_a, left_b], [right_a, right_b]) = (left_args.as_slice(), right_args.as_slice())
+    else {
+        return false;
+    };
+    if left_head != "=" || right_head != "=" {
+        return false;
+    }
+    let (Some(left), Some(right)) = (
+        exact_affine_difference(left_a, left_b),
+        exact_affine_difference(right_a, right_b),
+    ) else {
+        return false;
+    };
+    if !left.used_arithmetic || !right.used_arithmetic {
+        return false;
+    }
+    let mut components = vec![(left.constant, right.constant)];
+    for (term, coefficient) in &left.terms {
+        components.push((*coefficient, right.coefficient(term)));
+    }
+    for (term, coefficient) in &right.terms {
+        if left.coefficient(term) == 0 {
+            components.push((0, *coefficient));
+        }
+    }
+    let Some((left_scale, right_scale)) = components.iter().copied().find(|(left, _)| *left != 0)
+    else {
+        return components.iter().all(|(_, right)| *right == 0);
+    };
+    if right_scale == 0 {
+        return false;
+    }
+    components.into_iter().all(|(left, right)| {
+        left.checked_mul(right_scale)
+            .zip(right.checked_mul(left_scale))
+            .is_some_and(|(left, right)| left == right)
+    })
+}
+
+fn exact_conditions_equal(left: &ExactRewriteTerm, right: &ExactRewriteTerm) -> bool {
+    left == right || exact_affine_equalities_equal(left, right)
+}
+
+fn exact_u128_gcd(mut left: u128, mut right: u128) -> u128 {
+    while right != 0 {
+        (left, right) = (right, left % right);
+    }
+    left
+}
+
+/// Proves `length <= 0` whenever `offset = 0` for affine integer terms. This
+/// is exactly the condition needed to prove a one-code-point substring empty.
+fn exact_affine_zero_forces_nonpositive(
+    offset: &ExactRewriteTerm,
+    length: &ExactRewriteTerm,
+) -> bool {
+    let zero = ExactRewriteTerm::Int(0);
+    let (Some(offset), Some(length)) = (
+        exact_affine_difference(offset, &zero),
+        exact_affine_difference(length, &zero),
+    ) else {
+        return false;
+    };
+    if !offset.used_arithmetic || !length.used_arithmetic {
+        return false;
+    }
+    if offset.terms.is_empty() {
+        return offset.constant != 0 || (length.terms.is_empty() && length.constant <= 0);
+    }
+    let coefficient_gcd = offset.terms.iter().fold(0_u128, |gcd, (_, coefficient)| {
+        exact_u128_gcd(gcd, coefficient.unsigned_abs())
+    });
+    if coefficient_gcd != 0 && offset.constant.unsigned_abs() % coefficient_gcd != 0 {
+        return true;
+    }
+    if length.terms.is_empty() {
+        return length.constant <= 0;
+    }
+    let Some((offset_scale, length_scale)) =
+        offset.terms.iter().find_map(|(term, offset_scale)| {
+            let length_scale = length.coefficient(term);
+            (length_scale != 0).then_some((*offset_scale, length_scale))
+        })
+    else {
+        return false;
+    };
+    if length
+        .terms
+        .iter()
+        .any(|(term, _)| offset.coefficient(term) == 0)
+    {
+        return false;
+    }
+    let proportional = offset.terms.iter().all(|(term, offset_coefficient)| {
+        let length_coefficient = length.coefficient(term);
+        length_coefficient
+            .checked_mul(offset_scale)
+            .zip(offset_coefficient.checked_mul(length_scale))
+            .is_some_and(|(left, right)| left == right)
+    });
+    if !proportional {
+        return false;
+    }
+    let Some(numerator) = length
+        .constant
+        .checked_mul(offset_scale)
+        .zip(length_scale.checked_mul(offset.constant))
+        .and_then(|(left, right)| left.checked_sub(right))
+    else {
+        return false;
+    };
+    if offset_scale > 0 {
+        numerator <= 0
+    } else {
+        numerator >= 0
+    }
+}
+
 fn exact_self_replacement(
     term: &ExactRewriteTerm,
 ) -> Option<(&ExactRewriteTerm, &ExactRewriteTerm)> {
@@ -9876,7 +10120,7 @@ fn exact_piecewise_terms_equal(left: &ExactRewriteTerm, right: &ExactRewriteTerm
             for assignment in &right_case.assignments {
                 if !assignments
                     .iter()
-                    .any(|(condition, _)| condition == &assignment.0)
+                    .any(|(condition, _)| exact_conditions_equal(condition, &assignment.0))
                 {
                     assignments.push(assignment.clone());
                 }
@@ -9901,7 +10145,10 @@ fn exact_rewrite_under_assignments(
     if depth > EXACT_REWRITE_DEPTH_CAP {
         return term.clone();
     }
-    if let Some((_, value)) = assignments.iter().find(|(condition, _)| condition == term) {
+    if let Some((_, value)) = assignments
+        .iter()
+        .find(|(condition, _)| exact_conditions_equal(condition, term))
+    {
         return Bool(*value);
     }
     for (condition, value) in assignments {
@@ -9957,9 +10204,9 @@ fn exact_assignment_value(
     condition: &ExactRewriteTerm,
     assignments: &[(ExactRewriteTerm, bool)],
 ) -> Option<bool> {
-    assignments
-        .iter()
-        .find_map(|(candidate, value)| (candidate == condition).then_some(*value))
+    assignments.iter().find_map(|(candidate, value)| {
+        exact_conditions_equal(candidate, condition).then_some(*value)
+    })
 }
 
 fn exact_is_literal(term: &ExactRewriteTerm) -> bool {
@@ -9987,7 +10234,7 @@ fn exact_collect_ite_cases(
         for (value, branch) in [(true, then_term), (false, else_term)] {
             if let Some((_, prior)) = assignments
                 .iter()
-                .find(|(candidate, _)| candidate == condition)
+                .find(|(candidate, _)| exact_conditions_equal(candidate, condition))
             {
                 if *prior == value && !exact_collect_ite_cases(branch, assignments, cases) {
                     return false;
@@ -10019,7 +10266,7 @@ fn exact_ite_assignments_compatible(
     left.iter().all(|(condition, value)| {
         right
             .iter()
-            .find(|(candidate, _)| candidate == condition)
+            .find(|(candidate, _)| exact_conditions_equal(candidate, condition))
             .is_none_or(|(_, other)| value == other)
     })
 }
@@ -10037,7 +10284,7 @@ fn exact_rewrite_ite_equality(
         if let App(right_head, right_args) = right
             && right_head == "ite"
             && let [right_condition, right_then, right_else] = right_args.as_slice()
-            && right_condition == condition
+            && exact_conditions_equal(right_condition, condition)
         {
             return Some(exact_rewrite_app(
                 "ite",
@@ -15864,9 +16111,10 @@ fn apply_parameterized(
 #[cfg(test)]
 mod string_escape_tests {
     use super::{
-        ExactRewriteTerm, decode_string_code_points, exact_rewrite_app, exact_rewrite_equality,
+        ExactRewriteTerm, decode_string_code_points, exact_affine_equalities_equal,
+        exact_affine_zero_forces_nonpositive, exact_rewrite_app, exact_rewrite_equality,
         exact_rewrite_small_subject_indexof, exact_rewrite_term, exact_rewrite_under_assignments,
-        replace_first_code_points,
+        replace_first_code_points, substr_code_points,
     };
     use crate::sexpr::read_all;
 
@@ -15904,6 +16152,98 @@ mod string_escape_tests {
             exact_rewrite_term(&control, 0),
             ExactRewriteTerm::Bool(true)
         );
+    }
+
+    #[test]
+    fn affine_one_code_point_views_match_integer_semantics_exhaustively() {
+        let term = |text: &str| {
+            let expression = read_all(text)
+                .expect("read affine expression")
+                .pop()
+                .expect("one affine expression");
+            exact_rewrite_term(&expression, 0)
+        };
+        for (left, right) in [
+            (r"(= (- 0 z) 0)", r"(= z 0)"),
+            (r"(= (- z 1) 0)", r"(= (- 1 z) 0)"),
+            (r"(= (+ z z) 0)", r"(= z 0)"),
+            (r"(= (+ (* 2 z) 4) 0)", r"(= (+ z 2) 0)"),
+        ] {
+            let left = term(left);
+            let right = term(right);
+            assert!(exact_affine_equalities_equal(&left, &right));
+            for value in -8_i128..=8 {
+                let assignment = [(
+                    exact_rewrite_app("=", vec![term("z"), ExactRewriteTerm::Int(value)]),
+                    true,
+                )];
+                assert_eq!(
+                    exact_rewrite_under_assignments(&left, &assignment, 0),
+                    exact_rewrite_under_assignments(&right, &assignment, 0),
+                    "value={value}, left={left:?}, right={right:?}"
+                );
+            }
+        }
+        for (left, right) in [
+            (r"(= (+ z 1) 0)", r"(= z 0)"),
+            (r"(= (+ z z) 1)", r"(= z 0)"),
+        ] {
+            assert!(!exact_affine_equalities_equal(&term(left), &term(right)));
+        }
+        assert!(exact_affine_equalities_equal(
+            &term("(= (+ (* 2 x) (* 4 y) 6) 0)"),
+            &term("(= (+ x (* 2 y) 3) 0)")
+        ));
+        assert!(!exact_affine_equalities_equal(
+            &term("(= (+ x y) 0)"),
+            &term("(= (+ x (* 2 y)) 0)")
+        ));
+        let overflow = format!("(= (* {} (+ z z)) 0)", i128::MAX);
+        assert!(!exact_affine_equalities_equal(
+            &term(&overflow),
+            &term("(= z 0)")
+        ));
+
+        for (offset, length) in [
+            ("z", "(- z 1)"),
+            ("z", "(+ z z)"),
+            ("(+ 1 z)", "z"),
+            ("(+ z z)", "z"),
+        ] {
+            assert!(exact_affine_zero_forces_nonpositive(
+                &term(offset),
+                &term(length)
+            ));
+        }
+        assert!(!exact_affine_zero_forces_nonpositive(
+            &term("z"),
+            &term("(+ z 1)")
+        ));
+        assert!(exact_affine_zero_forces_nonpositive(
+            &term("(+ x y)"),
+            &term("(+ (* 2 x) (* 2 y) -1)")
+        ));
+        assert!(!exact_affine_zero_forces_nonpositive(
+            &term("(+ x y)"),
+            &term("(+ (* 2 x) (* 2 y) 1)")
+        ));
+        assert!(exact_affine_zero_forces_nonpositive(
+            &term("(+ (* 2 z) 1)"),
+            &term("(+ w 1)")
+        ));
+        for value in -8_i128..=8 {
+            for (offset, length) in [
+                (value, value - 1),
+                (value, value * 2),
+                (value + 1, value),
+                (value * 2, value),
+            ] {
+                assert!(
+                    substr_code_points(&[u32::from(b'A')], offset, length).is_empty(),
+                    "value={value}, offset={offset}, length={length}"
+                );
+            }
+        }
     }
 
     #[test]

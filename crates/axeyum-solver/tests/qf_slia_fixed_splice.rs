@@ -964,6 +964,64 @@ fn exact_source_self_replacement_views_decline_wider_controls() {
 }
 
 #[test]
+fn exact_source_affine_one_code_point_views_refute_noetzli_families() {
+    for assertion in [
+        r#"(not (= (str.at "A" (- 0 z)) (str.at "A" z)))"#,
+        r#"(not (= (str.at "B" (+ z z)) (str.at "B" z)))"#,
+        r#"(not (= (str.substr "A" z (- z 1)) ""))"#,
+        r#"(not (= (str.substr "B" (+ z z) z) ""))"#,
+    ] {
+        let input = format!(
+            r"(set-logic QF_SLIA)
+(declare-fun z () Int)
+(assert {assertion})
+(check-sat)
+"
+        );
+        let script = parse_script(&input).expect("parse affine one-code-point theorem");
+        assert!(
+            script.source_string_semantic_unsat,
+            "affine one-code-point view must refute {assertion}"
+        );
+        assert_eq!(
+            solve_smtlib(&input, &config())
+                .expect("solve affine one-code-point theorem")
+                .result,
+            CheckResult::Unsat,
+            "affine one-code-point view must survive the bounded-string gate: {assertion}"
+        );
+    }
+}
+
+#[test]
+fn exact_source_affine_one_code_point_views_decline_near_misses() {
+    for assertion in [
+        r#"(not (= (str.at "A" (+ z 1)) (str.at "A" z)))"#,
+        r#"(not (= (str.substr "A" z (+ z 1)) ""))"#,
+    ] {
+        let input = format!(
+            r"(set-logic QF_SLIA)
+(declare-fun z () Int)
+(assert {assertion})
+(check-sat)
+"
+        );
+        let script = parse_script(&input).expect("parse affine one-code-point control");
+        assert!(
+            !script.source_string_semantic_unsat,
+            "affine one-code-point near miss must decline {assertion}"
+        );
+        assert_ne!(
+            solve_smtlib(&input, &config())
+                .expect("solve affine one-code-point control")
+                .result,
+            CheckResult::Unsat,
+            "satisfiable affine one-code-point control must not become UNSAT: {assertion}"
+        );
+    }
+}
+
+#[test]
 fn exact_source_small_subject_indexof_refutes_view_families() {
     for assertion in [
         r#"(not (= (str.at x (str.indexof "A" x 1)) ""))"#,
