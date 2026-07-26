@@ -12890,9 +12890,91 @@ fn replace_first_code_points(subject: &[u32], needle: &[u32], replacement: &[u32
 }
 
 fn exact_rewrite_contradiction(conjuncts: &[&SExpr]) -> bool {
-    conjuncts
+    let terms: Vec<_> = conjuncts
         .iter()
-        .any(|conjunct| exact_rewrite_term(conjunct, 0) == ExactRewriteTerm::Bool(false))
+        .map(|conjunct| exact_rewrite_term(conjunct, 0))
+        .collect();
+    terms
+        .iter()
+        .any(|term| term == &ExactRewriteTerm::Bool(false))
+        || exact_boolean_alias_contradiction(&terms)
+}
+
+/// Propagates exact top-level Boolean aliases before checking their induced
+/// equality facts.
+///
+/// Symbolic-execution generators commonly spell one path condition as
+/// `T = condition; assert T`.  Looking at either conjunct alone misses direct
+/// contradictions such as two aliases requiring `s = ""` and `s != ""`.
+/// This pass only follows Boolean-valued symbol definitions and the truth
+/// tables of `not`, required `and`, and forbidden `or`; every queued assignment
+/// is therefore forced by the asserted conjunction.  The final equality check
+/// remains deliberately limited to congruence classes and explicit
+/// disequalities.
+fn exact_boolean_alias_contradiction(terms: &[ExactRewriteTerm]) -> bool {
+    use ExactRewriteTerm::{App, Bool, Opaque};
+
+    let mut aliases = Vec::new();
+    for term in terms {
+        let App(head, args) = term else {
+            continue;
+        };
+        let [left, right] = args.as_slice() else {
+            continue;
+        };
+        if head != "=" {
+            continue;
+        }
+        for (symbol, condition) in [(left, right), (right, left)] {
+            if matches!(symbol, Opaque(expression) if expression.atom().is_some())
+                && exact_term_is_boolean(condition)
+            {
+                aliases.push((symbol.clone(), condition.clone()));
+            }
+        }
+    }
+    if aliases.is_empty() {
+        return false;
+    }
+
+    let mut assignments: Vec<(ExactRewriteTerm, bool)> = Vec::new();
+    let mut pending: Vec<_> = terms.iter().cloned().map(|term| (term, true)).collect();
+    while let Some((condition, required)) = pending.pop() {
+        if let Some((_, prior)) = assignments
+            .iter()
+            .find(|(candidate, _)| exact_conditions_equal(candidate, &condition))
+        {
+            if *prior != required {
+                return true;
+            }
+            continue;
+        }
+        assignments.push((condition.clone(), required));
+
+        match &condition {
+            Bool(actual) if *actual != required => return true,
+            App(head, args) if head == "not" && args.len() == 1 => {
+                pending.push((args[0].clone(), !required));
+            }
+            App(head, args) if head == "and" && required => {
+                pending.extend(args.iter().cloned().map(|argument| (argument, true)));
+            }
+            App(head, args) if head == "or" && !required => {
+                pending.extend(args.iter().cloned().map(|argument| (argument, false)));
+            }
+            _ => {}
+        }
+
+        for (symbol, definition) in &aliases {
+            if exact_conditions_equal(&condition, symbol) {
+                pending.push((definition.clone(), required));
+            } else if exact_conditions_equal(&condition, definition) {
+                pending.push((symbol.clone(), required));
+            }
+        }
+    }
+
+    ExactEqualityFacts::from_assignments(&assignments).conflict
 }
 
 // This path is intentionally population-gated. The exact condition comparison
@@ -18168,7 +18250,7 @@ mod string_escape_tests {
         exact_rewrite_fixed_word_language, exact_rewrite_prefix_substr_emptiness,
         exact_rewrite_replace_preserves_subject, exact_rewrite_replace_singleton_equality,
         exact_rewrite_small_subject_indexof, exact_rewrite_term, exact_rewrite_under_assignments,
-        guaranteed_boolean_literal_conflict, guaranteed_top_level_conjuncts,
+        guaranteed_boolean_literal_conflict, guaranteed_top_level_conjuncts, parse_script,
         replace_first_code_points, source_string_semantic_facts, substr_code_points,
     };
     use crate::sexpr::{SExpr, read_all};
@@ -20514,6 +20596,64 @@ mod string_escape_tests {
                 "{script}"
             );
         }
+    }
+
+    #[test]
+    fn top_level_boolean_aliases_expose_only_forced_equality_conflicts() {
+        let contradictory = read_all(
+            r#"(declare-const s String)
+(declare-const empty_path Bool)
+(declare-const nonempty_path Bool)
+(assert (= empty_path (= s "")))
+(assert empty_path)
+(assert (= nonempty_path (not (= s ""))))
+(assert nonempty_path)
+(check-sat)"#,
+        )
+        .expect("read contradictory alias path");
+        assert!(source_string_semantic_facts(&contradictory).conflict);
+
+        for script in [
+            r#"(declare-const s String)
+(declare-const path Bool)
+(assert (= path (not (= s ""))))
+(assert path)
+(check-sat)"#,
+            r#"(declare-const s String)
+(declare-const left Bool)
+(declare-const right Bool)
+(assert (= left (= s "long-enough-to-exceed-the-packed-bound")))
+(assert left)
+(assert (= right (not (= s ""))))
+(assert right)
+(check-sat)"#,
+        ] {
+            let expressions = read_all(script).expect("read satisfiable alias control");
+            assert!(
+                !source_string_semantic_facts(&expressions).conflict,
+                "{script}"
+            );
+        }
+    }
+
+    #[test]
+    fn boolean_alias_conflict_survives_long_literal_capacity_fallback() {
+        let script = parse_script(
+            r#"(set-logic QF_SLIA)
+(declare-const s String)
+(declare-const unrelated String)
+(declare-const empty_path Bool)
+(declare-const nonempty_path Bool)
+(assert (= unrelated "long-enough-to-exceed-the-packed-bound"))
+(assert (= empty_path (= s "")))
+(assert empty_path)
+(assert (= nonempty_path (not (= s ""))))
+(assert nonempty_path)
+(check-sat)"#,
+        )
+        .expect("exact contradiction should survive the packed capacity decline");
+        assert!(script.word_only_fallback.is_some());
+        assert!(script.source_string_semantic_unsat);
     }
 
     fn assert_boolean_path_conflicts(scripts: &[&str], expected: bool) {
