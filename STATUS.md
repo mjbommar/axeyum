@@ -383,6 +383,23 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-26 — exact Boolean-alias propagation moves 57 Kaluza
+  long-literal residuals without trusting directory labels.** Committed
+  `09841e23` propagates only forced top-level Boolean aliases, `not`, required
+  `and`, and forbidden `or`, then admits UNSAT only when the resulting exact
+  equality/disequality classes conflict. On the retained 342-row Kaluza
+  long-literal residual, current HEAD moves 4→61 UNSAT decisions: the exact
+  parent-HEAD A/B leaves 57 baseline Unknowns, so the incremental gain is 57.
+  Both Z3 and cvc5 independently return UNSAT on all 61 current decisions.
+  This check deliberately ignores the corpus's misleading `sat/`/`unsat/`
+  directory names; one inspected `unsat/` control is SAT in both oracles and
+  remains Unknown in Axeyum. The complete 279-test SMT-LIB crate passes, as do
+  the focused real-corpus SAT/UNSAT controls and `just check-scope` (70 SMT-LIB
+  library tests, 21 solver library tests, and warning-denied Clippy). Next:
+  classify the 102 empty-parse Kaluza residuals by actual syntax and oracle
+  verdict, then add one shared exact parser/semantic mechanism only if it moves
+  a verified family.
+
 - **2026-07-26 — dense Boolean path conflicts move 41 public PyEx rows with no
   carried regression.** Pushed `b44c506e` recognizes exact opposite-polarity
   path conditions, `contains`/offset-zero `indexof = -1` equivalence, and
@@ -9347,6 +9364,14 @@ plan is built and committed on the current branch:
 | P5.5 | External target, measured | **DONE (bounded v1, ADR-0323--0338):** authenticated Tock capture plus eight rechecked dual-DRAT proofs and six replayed controls, UNKNOWN=0, DISAGREE=0. Query time 12.700 s; fresh outer wall 50.745 s; peak RSS 1,256,496 KiB; zero OOM deltas. The committed case study compares exact target validation, universal coverage, trust, effort, artifact boundaries, and limits. No Tock bug was found, so no upstream issue is applicable. This is not a speed or whole-kernel claim. |
 
 ## Changelog
+
+- **2026-07-26 — moved 57 Kaluza long-literal rows through exact Boolean
+  aliases.** Committed `09841e23`. Boolean path temporaries now expose the
+  equality/disequality facts they force before bounded string capacity is
+  considered. A parent-HEAD A/B over the 61 current UNSAT results records four
+  pre-existing decisions and 57 Unknown→UNSAT gains; Z3 and cvc5 agree on all
+  61. Satisfiable alias controls, a misleading `unsat/` corpus control, all
+  279 SMT-LIB crate tests, and the scoped handoff gate remain green.
 
 - **2026-07-26 — accelerated replayed short-string witnesses without moving
   the soundness boundary.** Committed `56c79191`. The 797-row unresolved PyEx
