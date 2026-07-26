@@ -383,23 +383,25 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
-- **2026-07-26 — exact selected-path propagation moves 258 Kaluza rows without
+- **2026-07-26 — exact selected-path propagation moves 262 Kaluza rows without
   trusting directory labels.** Commits `09841e23`, `ef78ca7b`, `fca80291`, and
-  `29bc62c4`, plus `72624888`, propagate only forced Boolean aliases, selected
-  top-level `ite` branches, strict-order disequalities, exact nonnegative
-  string-length lower bounds, the exact `concat(parts) = ""` iff every part is
-  empty identity, and opposite arithmetic-order cycles. Parent-`24df64b9` A/B
-  measurements attribute +173 decisions to the 342-row long-literal bucket
-  (4→177 UNSAT), +60 to the 104-row empty-parse bucket
+  `29bc62c4`, `72624888`, and `08fffefd` propagate only forced Boolean aliases,
+  selected top-level `ite` branches, strict-order disequalities, exact
+  nonnegative string-length lower bounds, the exact `concat(parts) = ""` iff
+  every part is empty identity, opposite arithmetic-order cycles, and
+  fixed-segment consistency at exact relative offsets. Parent-`24df64b9` A/B
+  measurements attribute +177 decisions to the 342-row long-literal bucket
+  (4→181 UNSAT), +60 to the 104-row empty-parse bucket
   (0→60), and +25 to the 39-row `IntNeg` residual (0→25). The selected-path
   mechanism contributes +111 (+102/+2/+7 respectively), and concat-emptiness
   adds 31 more (+13 long-literal and the remaining 18 dual-oracle-UNSAT
-  `IntNeg` rows); the order rule adds one. Both Z3 and cvc5 independently return
-  UNSAT on all 143 latest gains. All 14 dual-oracle-SAT
+  `IntNeg` rows); the order rule adds one; and fixed-segment overlap adds four.
+  Both Z3 and cvc5 independently return UNSAT on all 147 latest gains. All 14
+  dual-oracle-SAT
   `IntNeg` controls remain non-decisions, so the improvement does not
   over-refute them. This check
   deliberately ignores misleading corpus `sat/`/`unsat/` directory names. The
-  complete 283-test SMT-LIB crate and `just check-scope` pass (74 SMT-LIB
+  complete 284-test SMT-LIB crate and `just check-scope` pass (75 SMT-LIB
   library tests, 21 solver library tests, and warning-denied Clippy). Next:
   rescan the disjoint Kaluza blocker inventory at current HEAD, then select the
   largest remaining jointly adjudicated family.
@@ -9368,6 +9370,21 @@ plan is built and committed on the current branch:
 | P5.5 | External target, measured | **DONE (bounded v1, ADR-0323--0338):** authenticated Tock capture plus eight rechecked dual-DRAT proofs and six replayed controls, UNKNOWN=0, DISAGREE=0. Query time 12.700 s; fresh outer wall 50.745 s; peak RSS 1,256,496 KiB; zero OOM deltas. The committed case study compares exact target validation, universal coverage, trust, effort, artifact boundaries, and limits. No Tock bug was found, so no upstream issue is applicable. This is not a speed or whole-kernel claim. |
 
 ## Changelog
+
+- **2026-07-26 — closed four exact fixed-segment overlap contradictions.**
+  Committed `08fffefd`. Equal concat decompositions now expose fixed segments
+  whose positions are exactly linked to prefix lengths; when a proved relative
+  offset puts one segment wholly inside another, differing code points refute
+  the path. Unproved offsets and partial overlaps decline. This moves four
+  jointly oracle-UNSAT long-literal residuals identified by the bounded
+  adjudication (`15802`, `19318`, `19419`, `19541`) to UNSAT. A full 179-row
+  residual replay yields exactly 18
+  current gains across concat emptiness, opposite orders, and fixed overlaps;
+  Z3 and cvc5 independently confirm all 18. The adjudicated residue is otherwise
+  SAT-dominated: the final 38-row tranche is 38/38 jointly SAT. Positive and
+  satisfiable overlap controls, all 284 SMT-LIB crate tests, and
+  `just check-scope` (75 SMT-LIB library tests, 21 solver library tests,
+  warning-denied Clippy) pass.
 
 - **2026-07-26 — closed an aliased opposite-order Kaluza contradiction.**
   Committed `72624888`. Required arithmetic comparisons now form exact directed
