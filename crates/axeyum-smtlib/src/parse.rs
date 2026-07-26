@@ -1172,6 +1172,23 @@ fn build_word_skeleton(arena: &mut TermArena, exprs: &[SExpr]) -> Option<WordSke
         }
     }
 
+    // A generated path can assert both that one exact string view is empty and
+    // that the same view contains a non-empty literal. This is a complete,
+    // source-level contradiction independent of the view's construction. Catch it
+    // before compiling hundreds of overlapping regular languages: the dense PyEx
+    // `entry-disposition` family otherwise spends the full query budget rediscovering
+    // this two-atom conflict through general derivative intersection.
+    if guaranteed_empty_contains_conflict(exprs) {
+        let empty = arena.seq_empty(ArraySortKey::BitVec(Sort::STRING_ELEM_WIDTH));
+        let reflexive = arena.eq(empty, empty).ok()?;
+        let contradiction = arena.not(reflexive).ok()?;
+        return Some(WordSkeleton {
+            assertions: vec![contradiction],
+            memberships: Vec::new(),
+            opaque_terms: 0,
+        });
+    }
+
     // Declared string variables → the shared fresh `Seq`-sorted symbols (idempotent
     // with `build_word_problem`: `TermArena::declare` returns the existing symbol for
     // a matching name+sort, so the two builds share `!weq!<name>`).
@@ -9133,6 +9150,82 @@ fn guaranteed_top_level_conjuncts(exprs: &[SExpr]) -> Vec<&SExpr> {
     out
 }
 
+/// Whether guaranteed top-level path conditions require the same string-valued
+/// expression to be both empty and to contain a non-empty literal.
+///
+/// `PyEx` encodes Boolean conditions as `(= (ite C 1 0) 0)` and wraps them in
+/// varying numbers of `not`s. [`guaranteed_boolean_condition`] recovers the exact
+/// required truth value of `C`; no inference is made through disjunctions or
+/// implications. Syntactic identity of the string view is deliberate and
+/// fail-closed: `len(W) = 0 ∧ contains(W, C)` is contradictory for every SMT-LIB
+/// string expression `W` when literal `C` is non-empty.
+fn guaranteed_empty_contains_conflict(exprs: &[SExpr]) -> bool {
+    let mut empty_views = Vec::new();
+    let mut nonempty_contains_views = Vec::new();
+    for conjunct in guaranteed_top_level_conjuncts(exprs) {
+        let (condition, required) = guaranteed_boolean_condition(conjunct);
+        if !required {
+            continue;
+        }
+        if let Some(view) = empty_string_view(condition) {
+            empty_views.push(view);
+        }
+        if let Some(view) = nonempty_literal_contains_view(condition) {
+            nonempty_contains_views.push(view);
+        }
+    }
+    empty_views
+        .iter()
+        .any(|empty| nonempty_contains_views.contains(empty))
+}
+
+/// The underlying condition and truth value required by one asserted conjunct.
+fn guaranteed_boolean_condition(mut expression: &SExpr) -> (&SExpr, bool) {
+    let mut negated = false;
+    while let Some([head, inner]) = expression.list()
+        && head.atom() == Some("not")
+    {
+        negated = !negated;
+        expression = inner;
+    }
+    if let Some(condition) = pyex_indicator_condition(expression) {
+        // The indicator is `not condition`; an outer odd negation therefore
+        // requires `condition`, while an even count requires its complement.
+        (condition, negated)
+    } else {
+        (expression, !negated)
+    }
+}
+
+/// `W` from the exact condition `(= (str.len W) 0)` (either orientation).
+fn empty_string_view(condition: &SExpr) -> Option<&SExpr> {
+    let [equal, left, right] = condition.list()? else {
+        return None;
+    };
+    if equal.atom() != Some("=") {
+        return None;
+    }
+    for (candidate, zero) in [(left, right), (right, left)] {
+        let Some([len, view]) = candidate.list() else {
+            continue;
+        };
+        if matches!(len.atom(), Some("str.len" | "seq.len")) && parse_int_literal(zero) == Some(0) {
+            return Some(view);
+        }
+    }
+    None
+}
+
+/// `W` from the exact condition `(str.contains W C)` for a non-empty literal `C`.
+fn nonempty_literal_contains_view(condition: &SExpr) -> Option<&SExpr> {
+    let [contains, view, literal] = condition.list()? else {
+        return None;
+    };
+    (contains.atom() == Some("str.contains")
+        && literal_pattern_cps(literal).is_some_and(|value| !value.is_empty()))
+    .then_some(view)
+}
+
 /// A string equality known true either directly or through an odd-negated
 /// `PyEx` indicator `(= (ite (= X Y) 1 0) 0)`.
 fn positive_word_equality(expression: &SExpr) -> Option<(&SExpr, &SExpr)> {
@@ -9176,6 +9269,15 @@ fn negative_word_equality(expression: &SExpr) -> Option<(&SExpr, &SExpr)> {
 /// The underlying word equality in a generated `PyEx` Boolean indicator. The
 /// indicator itself is true exactly when this equality is false.
 fn pyex_word_indicator_equality(expression: &SExpr) -> Option<(&SExpr, &SExpr)> {
+    let condition = pyex_indicator_condition(expression)?;
+    let [condition_head, left, right] = condition.list()? else {
+        return None;
+    };
+    (condition_head.atom() == Some("=")).then_some((left, right))
+}
+
+/// `C` from the exact generated Boolean indicator `(= (ite C 1 0) 0)`.
+fn pyex_indicator_condition(expression: &SExpr) -> Option<&SExpr> {
     let [equal, ite, zero] = expression.list()? else {
         return None;
     };
@@ -9185,16 +9287,10 @@ fn pyex_word_indicator_equality(expression: &SExpr) -> Option<(&SExpr, &SExpr)> 
     let [ite_head, condition, one, branch_zero] = ite.list()? else {
         return None;
     };
-    if ite_head.atom() != Some("ite")
-        || parse_int_literal(one) != Some(1)
-        || parse_int_literal(branch_zero) != Some(0)
-    {
-        return None;
-    }
-    let [condition_head, left, right] = condition.list()? else {
-        return None;
-    };
-    (condition_head.atom() == Some("=")).then_some((left, right))
+    (ite_head.atom() == Some("ite")
+        && parse_int_literal(one) == Some(1)
+        && parse_int_literal(branch_zero) == Some(0))
+    .then_some(condition)
 }
 
 /// A guaranteed `len(base) >= k` generated guard.

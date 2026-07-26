@@ -213,6 +213,23 @@ fn before_first_occurrence_is_empty_when_the_delimiter_is_absent() {
 }
 
 #[test]
+fn pyex_empty_view_cannot_contain_a_nonempty_literal() {
+    let before = "(str.substr s 0 (- (str.indexof s \"=\" 0) 0))";
+    let contradiction = solve_first_occurrence(&format!(
+        "(assert (and\
+           (not (not (not (= (ite (str.contains {before} \"L\") 1 0) 0))))\
+           (not (= (ite (= (str.len {before}) 0) 1 0) 0))))"
+    ));
+    assert_eq!(contradiction, CheckResult::Unsat);
+
+    let consistent = solve_first_occurrence(&format!(
+        "(assert (= (str.len {before}) 0))\
+         (assert (not (str.contains {before} \"L\")))"
+    ));
+    assert!(matches!(consistent, CheckResult::Sat(_)));
+}
+
+#[test]
 fn first_occurrence_index_guard_is_exact_membership() {
     let present = solve_first_occurrence(
         "(assert (= s \"a=b\"))(assert (>= (- (str.indexof s \"=\" 0) 0) 0))",
