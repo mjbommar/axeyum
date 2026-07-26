@@ -28,13 +28,25 @@
 //!   `≥ 2^20` (a large literal can wrap the width-32 int-blast and *fabricate* a
 //!   bounded-unsat), and no binder/definition (`let`/`define-fun`/quantifier/
 //!   `match`) that could hide unbounded structure.
+//! - **C4** — the query is alphabet-complete for the byte encoding: it uses no
+//!   code-point-, order-, or regex-sensitive string operator, every literal is
+//!   byte-representable, and the maximum number of code points across all free
+//!   strings plus the literal alphabet fits the 256-byte alphabet. Under those
+//!   conditions any real model can be injectively renamed into the byte alphabet
+//!   while preserving the supported structural string operations.
 
+use std::collections::BTreeSet;
+
+use crate::parse::decode_string_code_points;
 use crate::sexpr::{SExpr, read_all};
 
 /// Packed per-symbol string length cap (mirrors `parse.rs::STRING_MAX_LEN`). A
 /// declared string is representable iff its length is `≤` this, so a C2 length
 /// bound must pin the var at or below it.
 const STRING_MAX_LEN: i128 = 12;
+
+const BYTE_ALPHABET_CARDINALITY: usize = 256;
+const BYTE_MAX_CODE_POINT: u32 = 255;
 
 /// Any integer literal of at least this magnitude is rejected (C3). The int-blast
 /// is exact only below `2^31`; a larger literal (or one that, added to a bounded
@@ -45,7 +57,7 @@ const STRING_MAX_LEN: i128 = 12;
 const MAX_SAFE_INT_LITERAL: i128 = 1 << 20;
 
 /// Returns `true` iff the raw SMT-LIB `input` is provably bounded-complete under
-/// the conservative C1∧C2∧C3 test — i.e. a bounded-encoding `unsat` of it is a
+/// the conservative C1∧C2∧C3∧C4 test — i.e. a bounded-encoding `unsat` of it is a
 /// real `unsat`. Declines (`false`) on parse failure or any unrecognised
 /// construct (the sound default).
 #[must_use]
@@ -74,6 +86,28 @@ fn analyze(exprs: &[SExpr]) -> bool {
             DeclKind::StringVar(name) => string_vars.push(name),
             DeclKind::Bool | DeclKind::NotADecl => {}
         }
+    }
+
+    // C4: structural string operations are invariant under an injective
+    // code-point renaming. Reserve every literal byte, then conservatively
+    // reserve one distinct byte for every possible position of every free
+    // string. If that total fits, any real structural model has a byte-model
+    // image. Alphabet-observing operators were rejected by the first scan.
+    let Some(literal_alphabet) = literal_byte_alphabet(exprs) else {
+        return false;
+    };
+    let Ok(max_len) = usize::try_from(STRING_MAX_LEN) else {
+        return false;
+    };
+    let Some(required_alphabet) = string_vars
+        .len()
+        .checked_mul(max_len)
+        .and_then(|slots| slots.checked_add(literal_alphabet.len()))
+    else {
+        return false;
+    };
+    if required_alphabet > BYTE_ALPHABET_CARDINALITY {
+        return false;
     }
 
     // C2: every declared String var needs a top-level asserted upper length bound
@@ -326,13 +360,50 @@ fn has_unsafe_construct(e: &SExpr) -> bool {
     }
 }
 
-/// Heads that disqualify the query (C3). `str.to_int`/`str.from_int` can reach
+/// The distinct byte values fixed by string literals, or `None` when a literal
+/// contains a real SMT-LIB code point outside the packed byte alphabet.
+fn literal_byte_alphabet(exprs: &[SExpr]) -> Option<BTreeSet<u32>> {
+    fn collect(e: &SExpr, alphabet: &mut BTreeSet<u32>) -> Option<()> {
+        match e {
+            SExpr::Atom(atom) => {
+                if let Some(inner) = atom.strip_prefix('"').and_then(|s| s.strip_suffix('"')) {
+                    for code_point in decode_string_code_points(inner)? {
+                        if code_point > BYTE_MAX_CODE_POINT {
+                            return None;
+                        }
+                        alphabet.insert(code_point);
+                    }
+                }
+                Some(())
+            }
+            SExpr::List(items) => items.iter().try_for_each(|item| collect(item, alphabet)),
+        }
+    }
+
+    let mut alphabet = BTreeSet::new();
+    exprs
+        .iter()
+        .try_for_each(|expr| collect(expr, &mut alphabet))?;
+    Some(alphabet)
+}
+
+/// Heads that disqualify the query (C3/C4). `str.to_int`/`str.from_int` can reach
 /// `10^len ≥ 2^31`; `*`/`div`/`mod`/`rem` are nonlinear (a product of bounded
 /// quantities can exceed `2^31`); the binders/definitions can hide an unbounded
-/// Int or String behind a name or quantifier.
+/// Int or String behind a name or quantifier. Code conversion, lexicographic
+/// order, and regex operations observe the Unicode alphabet rather than only
+/// structural word identities, so the byte model is not complete for them.
 const FORBIDDEN_HEADS: &[&str] = &[
+    "str.to_code",
     "str.to_int",
+    "str.from_code",
     "str.from_int",
+    "str.<",
+    "str.<=",
+    "str.in_re",
+    "str.indexof_re",
+    "str.replace_re",
+    "str.replace_re_all",
     "*",
     "div",
     "mod",
@@ -364,6 +435,8 @@ fn integer_literal_too_large(a: &str) -> bool {
 
 #[cfg(test)]
 mod tests {
+    use std::fmt::Write as _;
+
     use super::is_bounded_complete;
 
     // --- POSITIVE: provably bounded-complete → true --------------------------
@@ -490,6 +563,36 @@ mod tests {
             "(set-logic QF_SLIA)\n(declare-fun s () String)\n\
              (assert (<= (str.len s) 8))\n(assert (> (str.to_int s) 5))\n(check-sat)\n"
         ));
+    }
+
+    #[test]
+    fn unicode_alphabet_observers_decline() {
+        for assertion in [
+            "(= (str.to_code s) 300)",
+            r#"(str.< "\u{ff}" s)"#,
+            r#"(str.in_re s (re.comp (str.to_re "A")))"#,
+            r#"(str.contains s "\u{100}")"#,
+        ] {
+            let input = format!(
+                "(set-logic QF_SLIA)\n(declare-fun s () String)\n\
+                 (assert (= (str.len s) 1))\n(assert {assertion})\n(check-sat)\n"
+            );
+            assert!(!is_bounded_complete(&input), "must decline {assertion}");
+        }
+    }
+
+    #[test]
+    fn excessive_free_string_alphabet_capacity_declines() {
+        let mut input = "(set-logic QF_S)\n".to_owned();
+        for index in 0..22 {
+            write!(
+                &mut input,
+                "(declare-fun s{index} () String)\n(assert (<= (str.len s{index}) 12))\n"
+            )
+            .expect("write bounded-completeness capacity case");
+        }
+        input.push_str("(check-sat)\n");
+        assert!(!is_bounded_complete(&input));
     }
 
     #[test]

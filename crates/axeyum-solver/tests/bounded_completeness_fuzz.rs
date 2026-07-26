@@ -16,6 +16,8 @@
 
 use axeyum_smtlib::is_bounded_complete;
 
+const STRING_MAX_LEN: u64 = 12;
+
 struct Lcg(u64);
 impl Lcg {
     fn new(seed: u64) -> Self {
@@ -88,7 +90,7 @@ fn dangerous(rng: &mut Lcg) -> String {
         _ => format!(
             "(set-logic QF_S)\n(declare-fun s () String)\n\
              (assert (<= (str.len s) {}))\n(assert (str.contains s \"{l}\"))\n(check-sat)\n",
-            9 + rng.below(20)
+            STRING_MAX_LEN + 1 + rng.below(20)
         ),
     }
 }
@@ -96,7 +98,7 @@ fn dangerous(rng: &mut Lcg) -> String {
 /// Build a genuinely bounded-complete query (positive control) — must be accepted.
 fn safe(rng: &mut Lcg) -> String {
     let l = lit(rng);
-    let k = rng.below(9); // 0..=8 ≤ STRING_MAX_LEN
+    let k = rng.below(STRING_MAX_LEN + 1);
     match rng.below(3) {
         0 => format!(
             "(set-logic QF_S)\n(declare-fun s () String)\n\

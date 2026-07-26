@@ -107,6 +107,21 @@ fn code_bridge_does_not_over_refute_above_byte_range() {
 }
 
 #[test]
+fn unicode_lexicographic_witness_does_not_become_bounded_unsat() {
+    // U+0100 is a real one-character witness greater than U+00FF. The byte
+    // model cannot represent it, so its local no-model result must stay unknown.
+    let t = r#"(set-logic QF_SLIA)
+(declare-fun x () String)
+(assert (= (str.len x) 1))
+(assert (str.< "\u{ff}" x))
+(check-sat)"#;
+    assert!(
+        !is_unsat(t),
+        "a Unicode witness above the byte alphabet must not be over-refuted"
+    );
+}
+
+#[test]
 fn code_range_satisfiable_is_not_unsat() {
     // A genuinely satisfiable code problem: two distinct chars whose codes sum to
     // a reachable value. Must never be refuted by the abstraction upgrade.
