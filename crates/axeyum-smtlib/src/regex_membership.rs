@@ -28,6 +28,8 @@
 //! * `(= X "lit")` / `(= "lit" X)` — pins `X` to a string literal;
 //! * `(not (= X "lit"))` / `(not (= "lit" X))` — excludes the singleton
 //!   literal language from `X`;
+//! * `(= X Y)` between declared string variables — merges their constraints
+//!   into one membership class and binds both names to the same checked witness;
 //! * `(= OUT (str.++ X Y …))` (or symmetric) when `OUT` occurs nowhere else and
 //!   every input variable has retained membership constraints — a model-defining
 //!   concatenation evaluated after the input witnesses are checked;
@@ -92,6 +94,9 @@ pub struct MemberVar {
     /// The `!weq!<name>` `Seq`-sorted symbol a returned model binds, or `None`
     /// for a synthetic ground atom (nothing to bind).
     pub sym: Option<SymbolId>,
+    /// Other declared string symbols equated to [`Self::sym`]. Every alias is
+    /// bound to the same checked witness in a satisfiable model.
+    pub aliases: Vec<SymbolId>,
     /// The source variable name (or a synthetic `!const!k` for a ground atom).
     pub name: String,
     /// The translated membership constraints.
@@ -156,6 +161,7 @@ impl MembershipProblem {
             vars: &vars,
             regex_defs: &regex_defs,
             per_var: BTreeMap::new(),
+            equalities: Vec::new(),
             definitions: Vec::new(),
             grounds: Vec::new(),
             saw_membership: false,
@@ -200,19 +206,22 @@ impl MembershipProblem {
             definitions,
             complete: builder.complete,
         };
-        for name in &order {
-            if let Some(state) = builder.per_var.remove(name) {
-                out.vars.push(MemberVar {
-                    sym: Some(vars[name]),
-                    name: name.clone(),
-                    membership: state.membership,
-                    pinned: state.pinned,
-                });
-            }
+        for (names, state) in
+            merge_equality_classes(&order, &builder.equalities, &mut builder.per_var)
+        {
+            let primary = &names[0];
+            out.vars.push(MemberVar {
+                sym: Some(vars[primary]),
+                aliases: names[1..].iter().map(|name| vars[name]).collect(),
+                name: primary.clone(),
+                membership: state.membership,
+                pinned: state.pinned,
+            });
         }
         for (i, g) in builder.grounds.into_iter().enumerate() {
             out.vars.push(MemberVar {
                 sym: None,
+                aliases: Vec::new(),
                 name: format!("!const!{i}"),
                 membership: g.0,
                 pinned: Some(g.1),
@@ -233,6 +242,9 @@ struct Builder<'a> {
     vars: &'a BTreeMap<String, SymbolId>,
     regex_defs: &'a BTreeMap<String, Regex>,
     per_var: BTreeMap<String, VarState>,
+    /// Exact equalities between declared string variables. They are merged after
+    /// every per-name constraint has been accumulated.
+    equalities: Vec<(String, String)>,
     /// Candidate existential output definitions, validated after all membership
     /// classes and source occurrences are known.
     definitions: Vec<(String, Vec<String>)>,
@@ -240,6 +252,83 @@ struct Builder<'a> {
     grounds: Vec<(Membership, Vec<u32>)>,
     saw_membership: bool,
     complete: bool,
+}
+
+/// Merges the connected components induced by exact string-variable equalities.
+/// Components and their primary names follow declaration order, keeping model
+/// construction deterministic.
+fn merge_equality_classes(
+    order: &[String],
+    equalities: &[(String, String)],
+    per_var: &mut BTreeMap<String, VarState>,
+) -> Vec<(Vec<String>, VarState)> {
+    let mut adjacency: BTreeMap<String, BTreeSet<String>> = BTreeMap::new();
+    for (left, right) in equalities {
+        adjacency
+            .entry(left.clone())
+            .or_default()
+            .insert(right.clone());
+        adjacency
+            .entry(right.clone())
+            .or_default()
+            .insert(left.clone());
+    }
+
+    let mut visited = BTreeSet::new();
+    let mut classes = Vec::new();
+    for name in order {
+        if visited.contains(name) || !per_var.contains_key(name) {
+            continue;
+        }
+        let mut component = BTreeSet::new();
+        let mut pending = vec![name.clone()];
+        while let Some(current) = pending.pop() {
+            if !component.insert(current.clone()) {
+                continue;
+            }
+            if let Some(neighbors) = adjacency.get(&current) {
+                pending.extend(neighbors.iter().cloned());
+            }
+        }
+        visited.extend(component.iter().cloned());
+        let names: Vec<String> = order
+            .iter()
+            .filter(|candidate| component.contains(*candidate))
+            .cloned()
+            .collect();
+
+        let mut merged = VarState::default();
+        for member in &names {
+            let Some(mut state) = per_var.remove(member) else {
+                continue;
+            };
+            merged
+                .membership
+                .positives
+                .append(&mut state.membership.positives);
+            merged
+                .membership
+                .negatives
+                .append(&mut state.membership.negatives);
+            merged.membership.len_lo = merged.membership.len_lo.max(state.membership.len_lo);
+            merged.membership.len_hi = match (merged.membership.len_hi, state.membership.len_hi) {
+                (Some(left), Some(right)) => Some(left.min(right)),
+                (left @ Some(_), None) | (None, left @ Some(_)) => left,
+                (None, None) => None,
+            };
+            match (&merged.pinned, state.pinned) {
+                (None, pin) => merged.pinned = pin,
+                (Some(left), Some(right)) if *left != right => {
+                    // Conflicting pins inside one equality class are impossible.
+                    merged.membership.len_lo = 1;
+                    merged.membership.len_hi = Some(0);
+                }
+                _ => {}
+            }
+        }
+        classes.push((names, merged));
+    }
+    classes
 }
 
 /// Validates candidate existential concatenation sinks after every asserted
@@ -316,6 +405,15 @@ impl Builder<'_> {
                         .membership
                         .positives
                         .push(decimal_value_regex(value));
+                    true
+                } else if let Some((left, right)) =
+                    variable_equality(&items[1], &items[2], self.vars)
+                {
+                    // Materialize both endpoints so an otherwise unconstrained
+                    // alias still receives the shared model witness.
+                    self.per_var.entry(left.clone()).or_default();
+                    self.per_var.entry(right.clone()).or_default();
+                    self.equalities.push((left, right));
                     true
                 } else if let Some(definition) = concat_definition(e, self.vars) {
                     self.definitions.push(definition);
@@ -448,6 +546,15 @@ impl Builder<'_> {
         }
         true
     }
+}
+
+/// Equality between two declared string variables.
+fn variable_equality(
+    left: &SExpr,
+    right: &SExpr,
+    vars: &BTreeMap<String, SymbolId>,
+) -> Option<(String, String)> {
+    Some((variable_name(left, vars)?, variable_name(right, vars)?))
 }
 
 /// An equality between `(str.to_int X)` and a non-negative numeral, accepting

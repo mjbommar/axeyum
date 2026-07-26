@@ -2070,6 +2070,69 @@ fn regex_membership_decides_literal_disequalities() {
     assert!(matches!(run(sat).result, CheckResult::Sat(_)));
 }
 
+/// Exact variable equalities form one membership class. Contradictory languages
+/// are refuted, while SAT binds every alias to the same replay-checked witness.
+#[test]
+fn regex_membership_decides_variable_equality_classes() {
+    let unsat = r#"
+(set-logic QF_SLIA)
+(declare-const x String)
+(declare-const y String)
+(declare-const z String)
+(assert (str.in_re x (str.to_re "a")))
+(assert (= x y))
+(assert (= z y))
+(assert (str.in_re z (str.to_re "b")))
+(check-sat)
+"#;
+    let mut script = parse_script(unsat).expect("incompatible equality class parses");
+    assert_eq!(
+        membership_verdict(&mut script, &config()),
+        Some(CheckResult::Unsat)
+    );
+    assert_eq!(run(unsat).result, CheckResult::Unsat);
+
+    let conflicting_pins = r#"
+(set-logic QF_SLIA)
+(declare-const x String)
+(declare-const y String)
+(assert (str.in_re x re.all))
+(assert (= x "a"))
+(assert (= x y))
+(assert (= y "b"))
+(check-sat)
+"#;
+    let mut script = parse_script(conflicting_pins).expect("conflicting alias pins parse");
+    assert_eq!(
+        membership_verdict(&mut script, &config()),
+        Some(CheckResult::Unsat)
+    );
+
+    let sat = r#"
+(set-logic QF_SLIA)
+(declare-const x String)
+(declare-const y String)
+(assert (str.in_re x (re.union (str.to_re "a") (str.to_re "b"))))
+(assert (str.in_re y (str.to_re "b")))
+(assert (= x y))
+(check-sat)
+"#;
+    let mut script = parse_script(sat).expect("satisfiable equality class parses");
+    let class = &script
+        .membership_problem
+        .as_ref()
+        .expect("membership problem")
+        .vars[0];
+    let primary = class.sym.expect("declared primary symbol");
+    let alias = class.aliases[0];
+    let Some(CheckResult::Sat(model)) = membership_verdict(&mut script, &config()) else {
+        panic!("equality class must have a checked witness");
+    };
+    assert_eq!(model.get(primary), model.get(alias));
+    assert!(model.get(primary).is_some(), "both aliases must be bound");
+    assert!(matches!(run(sat).result, CheckResult::Sat(_)));
+}
+
 /// The Noetzli small-rewrite corpus asserts the negation of exact SMT-LIB string
 /// identities. Normalize these before the bounded encoder expands them: each row
 /// is a genuine, bound-independent contradiction.

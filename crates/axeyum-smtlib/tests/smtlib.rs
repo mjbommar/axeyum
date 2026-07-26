@@ -4491,6 +4491,33 @@ fn regex_membership_retains_literal_disequalities() {
 }
 
 #[test]
+fn regex_membership_merges_transitive_variable_equalities() {
+    let text = r#"
+        (set-logic QF_SLIA)
+        (declare-const x String)
+        (declare-const y String)
+        (declare-const z String)
+        (assert (str.in_re x (re.union (str.to_re "a") (str.to_re "b"))))
+        (assert (= x y))
+        (assert (= z y))
+        (assert (= (str.len z) 1))
+        (assert (not (= z "b")))
+        (check-sat)
+    "#;
+    let script = parse_script(text).expect("transitive membership aliases parse");
+    let problem = script
+        .membership_problem
+        .expect("membership side channel is retained");
+    assert!(problem.complete, "every equality-class constraint is exact");
+    assert_eq!(problem.vars.len(), 1, "x, y, and z form one class");
+    assert_eq!(problem.vars[0].aliases.len(), 2);
+    assert_eq!(problem.vars[0].membership.positives.len(), 1);
+    assert_eq!(problem.vars[0].membership.negatives.len(), 1);
+    assert_eq!(problem.vars[0].membership.len_lo, 1);
+    assert_eq!(problem.vars[0].membership.len_hi, Some(1));
+}
+
+#[test]
 fn regex_inter_matches_intersection() {
     // (re.inter (re.* (re.range "a" "z")) (str.to_re "ab")): lowercase-only ∩ {"ab"} = {"ab"}.
     let text = "(declare-fun s () String)\n\

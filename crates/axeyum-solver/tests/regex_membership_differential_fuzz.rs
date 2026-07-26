@@ -17,9 +17,8 @@
 //! depth-≤4 regexes (concat / union / intersection / complement / star / plus /
 //! opt / native `re.loop` / `re.range` / `re.allchar` / `re.all` / `re.none`),
 //! occasional length bounds, exact ground `str.to_int` values, literal pins and
-//! disequalities, and the odd variable–variable equality (which makes the retained
-//! subset incomplete: subset `unsat` may still decide, subset `sat` declines).
-//! Two oracle fronts adjudicate the same generator:
+//! disequalities, and exact variable-equality membership classes. Two oracle
+//! fronts adjudicate the same generator:
 //! the system **Z3** binary (behind the
 //! `z3` feature) and the **cvc5** binary (always, when installed).
 //!
@@ -176,8 +175,8 @@ fn generate(rng: &mut Lcg) -> String {
             }
         }
     }
-    // Occasional variable–variable equality: the retained membership subset is
-    // incomplete, so it may prove UNSAT but can never return SAT.
+    // Occasional exact variable–variable equality merges both membership classes
+    // and requires the returned model to bind them to one checked witness.
     if num_vars >= 2 && rng.below(6) == 0 {
         let _ = writeln!(text, "(assert (= v0 v1))");
     }
