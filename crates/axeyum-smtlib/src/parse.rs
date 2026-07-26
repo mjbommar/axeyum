@@ -9608,6 +9608,24 @@ fn exact_rewrite_app(head: &str, args: Vec<ExactRewriteTerm>) -> ExactRewriteTer
             }
         }
         ("str.replace", [subject, needle, replacement]) => {
+            if let Some((expanded_needle, inner_subject)) = exact_self_replacement(needle)
+                && inner_subject == subject
+            {
+                // `replace(x, replace(y, x, y), r) = replace(x, y, r)`.
+                // If `y` occurs in `x`, then `x` cannot occur properly in `y`,
+                // so the inner replacement is `y`. If `y` does not occur in
+                // `x`, the inner result still contains `y` and therefore also
+                // cannot occur in `x`. Both outer replacements take the same
+                // first-occurrence branch, including the empty-word cases.
+                return exact_rewrite_app(
+                    "str.replace",
+                    vec![
+                        subject.clone(),
+                        expanded_needle.clone(),
+                        replacement.clone(),
+                    ],
+                );
+            }
             if subject == needle {
                 return replacement.clone();
             }
@@ -10093,6 +10111,160 @@ struct ExactIteCase {
     value: ExactRewriteTerm,
 }
 
+/// Equivalence facts for the equality atoms on one path through an exact
+/// rewrite decision tree.  Small-subject string operations introduce tests
+/// such as `x = ""`, `x = "A"`, and `x = y`; treating those tests as unrelated
+/// leaves semantically impossible path pairs alive and prevents otherwise
+/// identical decision trees from meeting.  This deliberately implements only
+/// equality closure and explicit disequality -- no word-equation inference.
+#[derive(Default)]
+struct ExactEqualityFacts {
+    terms: Vec<ExactRewriteTerm>,
+    parents: Vec<usize>,
+    disequalities: Vec<(usize, usize)>,
+    conflict: bool,
+}
+
+impl ExactEqualityFacts {
+    fn from_assignments(assignments: &[(ExactRewriteTerm, bool)]) -> Self {
+        let mut facts = Self::default();
+        for (condition, value) in assignments {
+            facts.record(condition, *value);
+        }
+        facts.finish();
+        facts
+    }
+
+    fn record(&mut self, condition: &ExactRewriteTerm, value: bool) {
+        use ExactRewriteTerm::{App, Bool};
+
+        match condition {
+            Bool(actual) => self.conflict |= *actual != value,
+            App(head, args) if head == "not" && args.len() == 1 => {
+                self.record(&args[0], !value);
+            }
+            App(head, args) if head == "=" && args.len() == 2 => {
+                let left = self.intern(args[0].clone());
+                let right = self.intern(args[1].clone());
+                if value {
+                    self.union(left, right);
+                } else {
+                    self.disequalities.push((left, right));
+                }
+            }
+            _ => {}
+        }
+    }
+
+    fn intern(&mut self, term: ExactRewriteTerm) -> usize {
+        if let Some(index) = self.terms.iter().position(|candidate| candidate == &term) {
+            return index;
+        }
+        let index = self.terms.len();
+        self.terms.push(term);
+        self.parents.push(index);
+        index
+    }
+
+    fn root(&self, mut index: usize) -> usize {
+        while self.parents[index] != index {
+            index = self.parents[index];
+        }
+        index
+    }
+
+    fn union(&mut self, left: usize, right: usize) {
+        let left = self.root(left);
+        let right = self.root(right);
+        if left != right {
+            self.parents[right] = left;
+        }
+    }
+
+    fn finish(&mut self) {
+        for (index, term) in self.terms.iter().enumerate() {
+            if !exact_is_literal(term) {
+                continue;
+            }
+            let root = self.root(index);
+            if self.terms.iter().enumerate().any(|(other_index, other)| {
+                other_index != index
+                    && exact_is_literal(other)
+                    && self.root(other_index) == root
+                    && other != term
+            }) {
+                self.conflict = true;
+                return;
+            }
+        }
+        if self
+            .disequalities
+            .iter()
+            .any(|(left, right)| self.root(*left) == self.root(*right))
+        {
+            self.conflict = true;
+        }
+    }
+
+    fn index_of(&self, term: &ExactRewriteTerm) -> Option<usize> {
+        self.terms.iter().position(|candidate| candidate == term)
+    }
+
+    fn equal(&self, left: &ExactRewriteTerm, right: &ExactRewriteTerm) -> bool {
+        left == right
+            || self
+                .index_of(left)
+                .zip(self.index_of(right))
+                .is_some_and(|(left, right)| self.root(left) == self.root(right))
+    }
+
+    fn distinct(&self, left: &ExactRewriteTerm, right: &ExactRewriteTerm) -> bool {
+        let explicitly_distinct =
+            self.index_of(left)
+                .zip(self.index_of(right))
+                .is_some_and(|(left, right)| {
+                    let left = self.root(left);
+                    let right = self.root(right);
+                    self.disequalities.iter().any(|(a, b)| {
+                        let a = self.root(*a);
+                        let b = self.root(*b);
+                        (a == left && b == right) || (a == right && b == left)
+                    })
+                });
+        explicitly_distinct || (exact_is_literal(left) && exact_is_literal(right) && left != right)
+    }
+
+    fn literal_for(&self, term: &ExactRewriteTerm) -> Option<ExactRewriteTerm> {
+        let root = self.root(self.index_of(term)?);
+        self.terms
+            .iter()
+            .enumerate()
+            .find(|(index, candidate)| exact_is_literal(candidate) && self.root(*index) == root)
+            .map(|(_, candidate)| candidate.clone())
+    }
+
+    fn condition_value(&self, condition: &ExactRewriteTerm) -> Option<bool> {
+        use ExactRewriteTerm::{App, Bool};
+
+        match condition {
+            Bool(value) => Some(*value),
+            App(head, args) if head == "not" && args.len() == 1 => {
+                self.condition_value(&args[0]).map(|value| !value)
+            }
+            App(head, args) if head == "=" && args.len() == 2 => {
+                if self.equal(&args[0], &args[1]) {
+                    Some(true)
+                } else if self.distinct(&args[0], &args[1]) {
+                    Some(false)
+                } else {
+                    None
+                }
+            }
+            _ => None,
+        }
+    }
+}
+
 /// Compares two bounded `ite` decision trees without requiring their branch
 /// conditions to appear in the same order. Conditions are treated as
 /// independent Boolean atoms, so checking every syntactically compatible pair
@@ -10140,6 +10312,19 @@ fn exact_rewrite_under_assignments(
     assignments: &[(ExactRewriteTerm, bool)],
     depth: u32,
 ) -> ExactRewriteTerm {
+    let facts = ExactEqualityFacts::from_assignments(assignments);
+    if facts.conflict {
+        return term.clone();
+    }
+    exact_rewrite_under_assignment_facts(term, assignments, &facts, depth)
+}
+
+fn exact_rewrite_under_assignment_facts(
+    term: &ExactRewriteTerm,
+    assignments: &[(ExactRewriteTerm, bool)],
+    facts: &ExactEqualityFacts,
+    depth: u32,
+) -> ExactRewriteTerm {
     use ExactRewriteTerm::{App, Bool, IndexOfSelf};
 
     if depth > EXACT_REWRITE_DEPTH_CAP {
@@ -10150,6 +10335,12 @@ fn exact_rewrite_under_assignments(
         .find(|(condition, _)| exact_conditions_equal(condition, term))
     {
         return Bool(*value);
+    }
+    if let Some(value) = facts.condition_value(term) {
+        return Bool(value);
+    }
+    if let Some(literal) = facts.literal_for(term) {
+        return literal;
     }
     for (condition, value) in assignments {
         if !value {
@@ -10174,7 +10365,7 @@ fn exact_rewrite_under_assignments(
         App(head, args) => {
             let args: Vec<_> = args
                 .iter()
-                .map(|arg| exact_rewrite_under_assignments(arg, assignments, depth + 1))
+                .map(|arg| exact_rewrite_under_assignment_facts(arg, assignments, facts, depth + 1))
                 .collect();
             if head == "str.replace"
                 && let [subject, needle, _] = args.as_slice()
@@ -10185,15 +10376,22 @@ fn exact_rewrite_under_assignments(
                         vec![subject.clone(), needle.clone()],
                     ),
                     assignments,
-                ) == Some(false)
+                )
+                .or_else(|| {
+                    facts.condition_value(&App(
+                        "str.contains".to_owned(),
+                        vec![subject.clone(), needle.clone()],
+                    ))
+                }) == Some(false)
             {
                 return subject.clone();
             }
             exact_rewrite_app(head, args)
         }
-        IndexOfSelf(argument) => IndexOfSelf(Box::new(exact_rewrite_under_assignments(
+        IndexOfSelf(argument) => IndexOfSelf(Box::new(exact_rewrite_under_assignment_facts(
             argument,
             assignments,
+            facts,
             depth + 1,
         ))),
         _ => term.clone(),
@@ -10263,12 +10461,17 @@ fn exact_ite_assignments_compatible(
     left: &[(ExactRewriteTerm, bool)],
     right: &[(ExactRewriteTerm, bool)],
 ) -> bool {
-    left.iter().all(|(condition, value)| {
+    let directly_compatible = left.iter().all(|(condition, value)| {
         right
             .iter()
             .find(|(candidate, _)| exact_conditions_equal(candidate, condition))
             .is_none_or(|(_, other)| value == other)
-    })
+    });
+    if !directly_compatible {
+        return false;
+    }
+    let assignments = left.iter().chain(right).cloned().collect::<Vec<_>>();
+    !ExactEqualityFacts::from_assignments(&assignments).conflict
 }
 
 fn exact_rewrite_ite_equality(
@@ -16111,10 +16314,10 @@ fn apply_parameterized(
 #[cfg(test)]
 mod string_escape_tests {
     use super::{
-        ExactRewriteTerm, decode_string_code_points, exact_affine_equalities_equal,
-        exact_affine_zero_forces_nonpositive, exact_rewrite_app, exact_rewrite_equality,
-        exact_rewrite_small_subject_indexof, exact_rewrite_term, exact_rewrite_under_assignments,
-        replace_first_code_points, substr_code_points,
+        ExactEqualityFacts, ExactRewriteTerm, decode_string_code_points,
+        exact_affine_equalities_equal, exact_affine_zero_forces_nonpositive, exact_rewrite_app,
+        exact_rewrite_equality, exact_rewrite_small_subject_indexof, exact_rewrite_term,
+        exact_rewrite_under_assignments, replace_first_code_points, substr_code_points,
     };
     use crate::sexpr::read_all;
 
@@ -16150,6 +16353,91 @@ mod string_escape_tests {
             .expect("one expression");
         assert_ne!(
             exact_rewrite_term(&control, 0),
+            ExactRewriteTerm::Bool(true)
+        );
+    }
+
+    #[test]
+    fn exact_equality_paths_close_transitively_and_reject_conflicts() {
+        let term = |text: &str| {
+            let expression = read_all(text)
+                .expect("read equality-path expression")
+                .pop()
+                .expect("one equality-path expression");
+            exact_rewrite_term(&expression, 0)
+        };
+        let x_equals_y = term("(= x y)");
+        let y_equals_a = term(r#"(= y "A")"#);
+        let x_equals_a = term(r#"(= x "A")"#);
+        let x_equals_b = term(r#"(= x "B")"#);
+
+        let transitive = vec![(x_equals_y, true), (y_equals_a, true)];
+        let facts = ExactEqualityFacts::from_assignments(&transitive);
+        assert!(!facts.conflict);
+        assert_eq!(
+            exact_rewrite_under_assignments(&x_equals_a, &transitive, 0),
+            ExactRewriteTerm::Bool(true)
+        );
+
+        for conflicting in [
+            vec![(x_equals_a.clone(), true), (x_equals_b, true)],
+            vec![
+                (term("(= x y)"), true),
+                (term(r#"(= x "A")"#), true),
+                (term(r#"(= y "A")"#), false),
+            ],
+        ] {
+            assert!(ExactEqualityFacts::from_assignments(&conflicting).conflict);
+        }
+        assert!(
+            !ExactEqualityFacts::from_assignments(&[
+                (term(r#"(= x "A")"#), true),
+                (term(r#"(= x "B")"#), false),
+            ])
+            .conflict
+        );
+    }
+
+    #[test]
+    fn self_expanded_replace_needles_match_reference_semantics_exhaustively() {
+        let mut words = vec![Vec::new()];
+        for length in 1..=4 {
+            for bits in 0..(1_usize << length) {
+                words.push(
+                    (0..length)
+                        .map(|shift| u32::from(if bits & (1 << shift) == 0 { b'A' } else { b'B' }))
+                        .collect(),
+                );
+            }
+        }
+        for subject in &words {
+            for expanded_needle in &words {
+                for replacement in &words {
+                    let inner =
+                        replace_first_code_points(expanded_needle, subject, expanded_needle);
+                    assert_eq!(
+                        replace_first_code_points(subject, &inner, replacement),
+                        replace_first_code_points(subject, expanded_needle, replacement),
+                        "subject={subject:?}, expanded_needle={expanded_needle:?}, replacement={replacement:?}"
+                    );
+                }
+            }
+        }
+
+        let identity = read_all("(= (str.replace x (str.replace y x y) z) (str.replace x y z))")
+            .expect("read self-expanded needle identity")
+            .pop()
+            .expect("one self-expanded needle identity");
+        assert_eq!(
+            exact_rewrite_term(&identity, 0),
+            ExactRewriteTerm::Bool(true)
+        );
+        let near_miss = read_all("(= (str.replace x (str.replace y z y) w) (str.replace x y w))")
+            .expect("read self-expanded needle control")
+            .pop()
+            .expect("one self-expanded needle control");
+        assert_ne!(
+            exact_rewrite_term(&near_miss, 0),
             ExactRewriteTerm::Bool(true)
         );
     }
