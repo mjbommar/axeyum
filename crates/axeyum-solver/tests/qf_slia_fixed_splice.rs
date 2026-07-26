@@ -2624,3 +2624,76 @@ fn exact_source_first_occurrence_algebra_declines_counterexamples() {
         );
     }
 }
+
+#[test]
+fn exact_source_first_occurrence_predicates_refute_noetzli_families() {
+    let assertions = [
+        r#"(not (= (str.prefixof x (str.++ "A" x)) (str.suffixof x (str.++ x "A"))))"#,
+        r#"(not (= (str.prefixof x (str.++ "B" x)) (str.suffixof x (str.++ x "B"))))"#,
+        r#"(not (= (str.contains (str.replace x y "A") x) (str.suffixof x (str.replace x y "A"))))"#,
+        r#"(not (= (str.contains (str.replace x y "B") x) (str.suffixof x (str.replace x y "B"))))"#,
+        r#"(not (= (str.contains (str.replace x y "") "A") (str.contains (str.replace x y "B") "A")))"#,
+        r#"(not (= (str.contains (str.replace x y "") "B") (str.contains (str.replace x y "A") "B")))"#,
+        r#"(not (= (str.contains (str.replace x "A" y) y) (str.contains (str.replace x y "A") "A")))"#,
+        r#"(not (= (str.contains (str.replace x "B" y) y) (str.contains (str.replace x y "B") "B")))"#,
+        r#"(not (= (str.suffixof (str.replace x "A" "") x) (str.prefixof x (str.replace x "A" x))))"#,
+        r#"(not (= (str.suffixof (str.replace x "B" "") x) (str.prefixof x (str.replace x "B" x))))"#,
+    ];
+
+    for (index, assertion) in assertions.into_iter().enumerate() {
+        let input = format!(
+            r#"(set-logic QF_SLIA)
+(declare-fun x () String)
+(declare-fun y () String)
+(assert {assertion})
+(check-sat)
+"#
+        );
+        let script = parse_script(&input).expect("parse first-occurrence predicate theorem");
+        assert!(
+            script.source_string_semantic_unsat,
+            "first-occurrence predicate theorem must refute {assertion}"
+        );
+        if matches!(index, 0 | 3 | 6 | 9) {
+            assert_eq!(
+                solve_smtlib(&input, &config())
+                    .expect("solve first-occurrence predicate theorem")
+                    .result,
+                CheckResult::Unsat,
+                "first-occurrence predicate theorem must survive the bounded-string gate: {assertion}"
+            );
+        }
+    }
+}
+
+#[test]
+fn exact_source_first_occurrence_predicates_decline_ground_counterexamples() {
+    for assertion in [
+        r#"(not (= (str.prefixof "A" (str.++ "A" "A")) (str.suffixof "A" (str.++ "A" "B"))))"#,
+        r#"(not (= (str.contains (str.replace "BA" "A" "AA") "BA") (str.suffixof "BA" (str.replace "BA" "A" "AA"))))"#,
+        r#"(not (= (str.contains (str.replace "" "" "") "A") (str.contains (str.replace "" "" "A") "A")))"#,
+        r#"(not (= (str.suffixof (str.replace "AB" "A" "") "AB") (str.prefixof "AB" (str.replace "AB" "B" "AB"))))"#,
+        r#"(not (= (str.contains (str.from_int 12) "1") (str.suffixof "1" (str.from_int 12))))"#,
+    ] {
+        let input = format!(
+            r#"(set-logic QF_SLIA)
+(assert {assertion})
+(check-sat)
+"#
+        );
+        let script = parse_script(&input).expect("parse first-occurrence predicate control");
+        assert!(
+            !script.source_string_semantic_unsat,
+            "ground predicate counterexample must not refute: {assertion}"
+        );
+        assert!(
+            matches!(
+                solve_smtlib(&input, &config())
+                    .expect("solve first-occurrence predicate control")
+                    .result,
+                CheckResult::Sat(_)
+            ),
+            "ground predicate counterexample must remain SAT: {assertion}"
+        );
+    }
+}
