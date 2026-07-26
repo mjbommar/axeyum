@@ -383,20 +383,26 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
-- **2026-07-26 — exact regex-length equalities move 79 StringFuzz residuals.**
+- **2026-07-26 — exact regex-length and literal-disequality constraints move 91
+  StringFuzz residuals.**
   The regex-membership side channel documented `(= (str.len X) n)` as part of
   its exact fragment, but the equality parser skipped the existing length-bound
   handler.  Both equality orientations now retain the exact singleton interval
   `[n,n]`, allowing the existing derivative-closure checker to certify empty
   regex/length intersections and the reference matcher to replay concrete
-  witnesses.  On the fixed 128-row current StringFuzz residual, 79 rows move
-  from unknown to decided at 250 ms: **71 UNSAT and eight replay-checked SAT**.
-  Z3 4.13.3 and cvc5 independently agree on all 79, with zero unresolved oracle
-  calls and zero disagreements.  Both orientations and an inhabited control are
-  pinned at the parser and front door; the complete 285-test SMT-LIB crate, the
-  88-test affected solver front door, both historical string decide-rate guards,
-  and both standing wrong-UNSAT guards pass.  Next: hand off the current branch,
-  then rank the remaining non-Kaluza residuals; the 58-row
+  witnesses. Literal disequalities `(not (= X "lit"))` in either orientation now
+  become exact negative singleton-language constraints in the same checked
+  membership class. On the fixed 128-row current StringFuzz residual, the stacked
+  mechanisms decide **91 rows at 250 ms: 74 UNSAT and 17 replay-checked SAT**, up
+  from 79 by 12, with **WRONG=0** against declared corpus status. Z3's generated
+  700-script differential front jointly decides 689 scripts with 689 agreements
+  (125 SAT, 568 UNSAT, seven Axeyum declines, four Z3 declines), zero
+  disagreements. The earlier fixed-row adjudication found Z3 4.13.3 and cvc5
+  agreement on every newly moved row with a dual-oracle result. Both orientations
+  plus empty and inhabited controls are pinned at the parser and front door; the
+  complete 211-test SMT-LIB parser suite and 89-test affected solver front door
+  pass. Next: merge exact variable-equality membership classes, the largest
+  remaining shared StringFuzz mechanism; the 58-row
   Kepler cluster is a genuine Nielsen/length case-analysis gap, and a tested
   finite-monoid shortcut moved zero rows.
 

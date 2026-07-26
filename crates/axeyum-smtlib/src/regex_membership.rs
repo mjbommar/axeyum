@@ -26,6 +26,8 @@
 //! * `(= (str.to_int X) n)` / `(= n (str.to_int X))` for a non-negative numeral
 //!   `n` — the exact decimal language of `n`, including leading zeroes;
 //! * `(= X "lit")` / `(= "lit" X)` — pins `X` to a string literal;
+//! * `(not (= X "lit"))` / `(not (= "lit" X))` — excludes the singleton
+//!   literal language from `X`;
 //! * `(= OUT (str.++ X Y …))` (or symmetric) when `OUT` occurs nowhere else and
 //!   every input variable has retained membership constraints — a model-defining
 //!   concatenation evaluated after the input witnesses are checked;
@@ -297,6 +299,8 @@ impl Builder<'_> {
                 };
                 if inner.first().and_then(SExpr::atom) == Some("str.in_re") && inner.len() == 3 {
                     self.membership_atom(&inner[1], &inner[2], false)
+                } else if inner.first().and_then(SExpr::atom) == Some("=") && inner.len() == 3 {
+                    self.literal_disequality_atom(&inner[1], &inner[2])
                 } else {
                     false
                 }
@@ -381,6 +385,30 @@ impl Builder<'_> {
                 true
             }
         }
+    }
+
+    /// `(not (= X "lit"))` / `(not (= "lit" X))`: excludes exactly one
+    /// literal from the variable's language. This is the negative-membership
+    /// analogue of [`Self::pin_atom`], so it composes exactly with regex and
+    /// length constraints without introducing a separate reasoning path.
+    fn literal_disequality_atom(&mut self, a: &SExpr, b: &SExpr) -> bool {
+        let (var, lit) = match (variable_name(a, self.vars), variable_name(b, self.vars)) {
+            (Some(name), None) => (name, b),
+            (None, Some(name)) => (name, a),
+            // Variable-variable and literal-literal disequalities remain outside
+            // this single-membership-class fragment.
+            _ => return false,
+        };
+        let Some(cps) = literal_code_points(lit) else {
+            return false;
+        };
+        self.per_var
+            .entry(var)
+            .or_default()
+            .membership
+            .negatives
+            .push(literal_regex(&cps));
+        true
     }
 
     /// A length atom `(op (str.len X) n)` or `(op n (str.len X))` for

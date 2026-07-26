@@ -2002,6 +2002,42 @@ fn regex_membership_decides_exact_length_equalities() {
     ));
 }
 
+/// Literal disequality is exactly a negative singleton-language constraint.
+/// Exercise both equality orientations, an empty intersection, and a surviving
+/// witness so the route is guarded in both verdict directions.
+#[test]
+fn regex_membership_decides_literal_disequalities() {
+    for disequality in ["(not (= x \"ab\"))", "(not (= \"ab\" x))"] {
+        let unsat = format!(
+            "(set-logic QF_SLIA)\n\
+             (declare-const x String)\n\
+             (assert (str.in_re x (str.to_re \"ab\")))\n\
+             (assert {disequality})\n\
+             (check-sat)\n"
+        );
+        let mut script = parse_script(&unsat).expect("disequality contradiction parses");
+        assert_eq!(
+            membership_verdict(&mut script, &config()),
+            Some(CheckResult::Unsat)
+        );
+        assert_eq!(run(&unsat).result, CheckResult::Unsat);
+    }
+
+    let sat = r#"
+(set-logic QF_SLIA)
+(declare-const x String)
+(assert (str.in_re x (re.union (str.to_re "ab") (str.to_re "cd"))))
+(assert (not (= x "ab")))
+(check-sat)
+"#;
+    let mut script = parse_script(sat).expect("satisfiable literal disequality parses");
+    assert!(matches!(
+        membership_verdict(&mut script, &config()),
+        Some(CheckResult::Sat(_))
+    ));
+    assert!(matches!(run(sat).result, CheckResult::Sat(_)));
+}
+
 /// The Noetzli small-rewrite corpus asserts the negation of exact SMT-LIB string
 /// identities. Normalize these before the bounded encoder expands them: each row
 /// is a genuine, bound-independent contradiction.
