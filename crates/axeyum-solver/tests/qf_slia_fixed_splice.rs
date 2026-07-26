@@ -104,13 +104,11 @@ fn split_replace_rejoin_uses_the_base_bound() {
   "zz"))
 (check-sat)
 "#;
-    let unequal =
-        parse_script(unequal_lengths).expect("unequal-length case remains a sound word fallback");
     assert!(
-        unequal.word_only_fallback.is_some(),
-        "unequal-length replacement must not receive the correlated bound"
+        parse_script(unequal_lengths).is_err(),
+        "an unequal-length pipeline outside the modeled word fragment must decline; \
+         equality-class pinning must not erase its defining equality"
     );
-    assert!(!unequal.prefer_source_string_routes);
 }
 
 #[test]

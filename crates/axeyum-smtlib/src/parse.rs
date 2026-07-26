@@ -2355,10 +2355,14 @@ fn word_terms_with_opaque(
             if let Some(term) = word_str_expr(arena, expression, vars) {
                 return Some(term);
             }
+            // Equality-class pins may only give a source-level meaning to the
+            // one compound form this relaxation explicitly models. Applying a
+            // pin to an arbitrary unsupported expression would erase the very
+            // equality being checked (`at("abc",1) = "x"` became `"x" = "x"`).
+            fixed_splice_split(expression.list()?)?;
             if let Some(value) = collector.pinned_word(expression) {
                 return seq_from_code_points(arena, &value);
             }
-            fixed_splice_split(expression.list()?)?;
             collector.opaque_word(arena, expression)
         })
         .collect()
@@ -7856,6 +7860,89 @@ fn string_at_int(arena: &mut TermArena, s: TermId, i: TermId) -> Result<TermId, 
     arena.concat(rbyte, rlen).map_err(SmtError::Ir)
 }
 
+/// Resizes a packed-string length field after a caller has proved the numeric
+/// value fits in the destination width.
+fn resize_string_len(
+    arena: &mut TermArena,
+    len: TermId,
+    from_max: u32,
+    to_max: u32,
+) -> Result<TermId, SmtError> {
+    let from = len_width(from_max);
+    let to = len_width(to_max);
+    match from.cmp(&to) {
+        std::cmp::Ordering::Less => arena.zero_ext(to - from, len).map_err(SmtError::Ir),
+        std::cmp::Ordering::Equal => Ok(len),
+        std::cmp::Ordering::Greater => arena.extract(to - 1, 0, len).map_err(SmtError::Ir),
+    }
+}
+
+/// Exact packed-BV path for `str.substr(s, 0, count)` with positive constant
+/// `count`. The generic substring builder selects every source byte through an
+/// Int-equality mux; a constant prefix instead copies each byte directly and
+/// computes `min(len(s), count)` in the length field.
+fn string_prefix_const(arena: &mut TermArena, s: TermId, count: u32) -> Result<TermId, SmtError> {
+    debug_assert!(count > 0);
+    let m = string_max_len(arena, s)?;
+    debug_assert!(count < m, "only a genuinely narrower prefix is specialized");
+    let slen = string_len_field(arena, s, m)?;
+    let count_bv = arena.bv_const(len_width(m), u128::from(count))?;
+    let shorter = arena.bv_ule(slen, count_bv)?;
+    let clipped = arena.ite(shorter, slen, count_bv)?;
+    let rlen = resize_string_len(arena, clipped, m, count)?;
+    let mut content: Option<TermId> = None;
+    for index in (0..count).rev() {
+        let byte = string_byte_m(arena, s, index, m)?;
+        content = Some(match content {
+            None => byte,
+            Some(previous) => arena.concat(previous, byte)?,
+        });
+    }
+    arena
+        .concat(content.expect("positive prefix bound"), rlen)
+        .map_err(SmtError::Ir)
+}
+
+/// Exact packed-BV path for `str.substr(s, dropped, len(s)-dropped)` when the
+/// constant offset is inside the packed bound. This is the generated "tail"
+/// idiom used throughout `PyEx`: copy bytes `dropped..m` and compute
+/// `max(len(s)-dropped, 0)` directly in BV, without an Int-index search.
+fn string_suffix_const(
+    arena: &mut TermArena,
+    s: TermId,
+    dropped: u32,
+) -> Result<Option<TermId>, SmtError> {
+    let m = string_max_len(arena, s)?;
+    if dropped == 0 {
+        return Ok(Some(s));
+    }
+    // Do not turn an offset beyond the artificial packed bound into a hard
+    // empty word. The generic path retains the length channel needed to decline
+    // rather than manufacture an unbounded-theory UNSAT.
+    if dropped >= m {
+        return Ok(None);
+    }
+    let result_max = m - dropped;
+    let slen = string_len_field(arena, s, m)?;
+    let dropped_bv = arena.bv_const(len_width(m), u128::from(dropped))?;
+    let has_suffix = arena.bv_ult(dropped_bv, slen)?;
+    let remaining = arena.bv_sub(slen, dropped_bv)?;
+    let zero = arena.bv_const(len_width(m), 0)?;
+    let clipped = arena.ite(has_suffix, remaining, zero)?;
+    let rlen = resize_string_len(arena, clipped, m, result_max)?;
+    let mut content: Option<TermId> = None;
+    for index in (0..result_max).rev() {
+        let byte = string_byte_m(arena, s, dropped + index, m)?;
+        content = Some(match content {
+            None => byte,
+            Some(previous) => arena.concat(previous, byte)?,
+        });
+    }
+    Ok(Some(
+        arena.concat(content.expect("positive suffix bound"), rlen)?,
+    ))
+}
+
 /// `str.substr s off n` (SMT-LIB total function): the substring of `s` starting
 /// at position `off` of length at most `n`. Non-empty only when `0 ≤ off < |s|`
 /// and `n > 0`; the result is `s[off .. min(off+n, |s|)]`. Any out-of-range
@@ -12831,10 +12918,28 @@ fn apply_op(
         // `off`/`n` indices may be arbitrary `Int`s (ADR-0029 slice 3).
         "str.substr" => {
             need(3)?;
-            let r = string_substr(arena, args[0], args[1], args[2])?;
-            let ls = lenabs.len_expr_string(arena, args[0])?;
             let off_const = ground_int_term(arena, args[1]);
             let count_const = ground_int_term(arena, args[2]);
+            let suffix_drop =
+                u32::try_from(parse_int_literal(strip_subtracted_zero(&items[2])).unwrap_or(-1))
+                    .ok()
+                    .filter(|&dropped| len_minus_constant(&items[3], &items[1]) == Some(dropped));
+            let r = if let Some(dropped) = suffix_drop {
+                match string_suffix_const(arena, args[0], dropped)? {
+                    Some(result) => result,
+                    None => string_substr(arena, args[0], args[1], args[2])?,
+                }
+            } else if off_const == Some(0) {
+                match count_const.and_then(|count| u32::try_from(count).ok()) {
+                    Some(count) if count > 0 && count < string_max_len(arena, args[0])? => {
+                        string_prefix_const(arena, args[0], count)?
+                    }
+                    _ => string_substr(arena, args[0], args[1], args[2])?,
+                }
+            } else {
+                string_substr(arena, args[0], args[1], args[2])?
+            };
+            let ls = lenabs.len_expr_string(arena, args[0])?;
             // With ground bounds, substring length has an exact unbounded-LIA
             // expression:
             //
@@ -12859,6 +12964,13 @@ fn apply_op(
                     let clipped = arena.ite(truncated, remaining, count)?;
                     arena.ite(starts_past_end, zero, clipped)?
                 };
+                lenabs.note_len(r, exact);
+            } else if let Some(dropped) = suffix_drop {
+                let zero = arena.int_const(0);
+                let dropped = arena.int_const(i128::from(dropped));
+                let starts_past_end = arena.int_le(ls, dropped)?;
+                let remaining = arena.int_sub(ls, dropped)?;
+                let exact = arena.ite(starts_past_end, zero, remaining)?;
                 lenabs.note_len(r, exact);
             }
             // P2.7 A.2: a substring is never longer than its string —

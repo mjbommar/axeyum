@@ -1348,23 +1348,18 @@ impl StringGate {
     ///    plus the side facts, and re-decide. The rewritten query carries *no*
     ///    encoding bound and is a relaxation of the real string semantics, so
     ///    its `unsat` transfers — the bounded `unsat` is confirmed.
-    /// 2. **Content-driven check**: relax every integer atom crossing the BV→Int
-    ///    bridge (`bv2nat`) to a fresh Boolean and re-decide. Still-`unsat`
-    ///    means the refutation never needed the bound-suspect integer channel —
-    ///    the verdict surface predating the `bv2nat` blast (whose residual
-    ///    pure-BV bound-bite class is tracked separately as the ADR-0029
-    ///    contract-repair follow-up).
-    /// 3. Otherwise the refutation leaned on the integer channel in a way the
-    ///    unbounded abstraction cannot confirm — report an honest `unknown`.
+    /// 2. Otherwise the bounded refutation is unconfirmed — report an honest
+    ///    `unknown`. Pure-BV content constraints can themselves force a witness
+    ///    past the packed bound (`prefixof("a"*M, s) ∧ contains(s, "b")`), so
+    ///    removing only the BV→Int bridge is not sufficient confirmation.
     ///
     /// It also **upgrades** an `unknown` verdict to `unsat` when the same
     /// unbounded length/code abstraction (steps 1/1a only) is itself `unsat`:
     /// because the abstraction is a sound relaxation, its `unsat` proves the
     /// original `unsat` regardless of why the bounded path was undecided (e.g. a
     /// code-point range/arithmetic conflict the bounded integer bit-blast could
-    /// not close — `str-code-unsat*`). The bite detector, coarse guard, and the
-    /// step-2 `None ⇒ unsat` shortcut stay `unsat`-input-only (they *downgrade*
-    /// or *assume* a bounded `unsat`, which an `unknown` input has not produced).
+    /// not close — `str-code-unsat*`). The bite detector and coarse guard stay
+    /// `unsat`-input-only because they only downgrade a bounded `unsat`.
     fn confirm(
         &self,
         arena: &mut TermArena,
@@ -1381,21 +1376,18 @@ impl StringGate {
             return Ok(result);
         }
         // An `unsat` input runs the full confirm/downgrade machinery (steps
-        // 1/1a/1.5/coarse/2). An `unknown` input runs *only* the sound-relaxation
+        // 1/1a/1.5/coarse). An `unknown` input runs *only* the sound-relaxation
         // refutation (steps 1/1a): the unbounded length/code abstraction being
         // itself `unsat` proves the original `unsat` no matter why the bounded
         // path was undecided (e.g. a code-arithmetic conflict the bounded integer
-        // bit-blast could not close). The bite detector, coarse guard, and the
-        // step-2 `None ⇒ unsat` shortcut are all `unsat`-input-only: they either
-        // *downgrade* a bounded `unsat` or assume one, so they must not run on an
-        // `unknown` (returning `unsat` from step 2's `None` would be unsound).
+        // bit-blast could not close). The bite detector and coarse guard are
+        // `unsat`-input-only because they only downgrade a bounded `unsat`.
         let is_unsat_input = matches!(result, CheckResult::Unsat);
         // Quantifier guard: the abstraction map replaces *atoms*, and an atom
         // inside a quantifier body may depend on the bound variable — a single
         // fresh Boolean cannot represent it for every instantiation, so the
         // rewritten query would not be a relaxation. Skip the abstraction-based
-        // steps (1/1.5) and fall through to the wholesale atom relaxation of
-        // step 2, which never descends into a quantifier.
+        // steps and conservatively downgrade an unconfirmed bounded `unsat`.
         let has_quantifier = {
             let mut seen: std::collections::HashSet<TermId> = std::collections::HashSet::new();
             let mut stack: Vec<TermId> = assertions.to_vec();
@@ -1476,8 +1468,7 @@ impl StringGate {
             }
         }
         // An `unknown` input reaches here only when the sound abstraction did not
-        // refute it — leave the honest `unknown` verdict as-is (the `unsat`-only
-        // coarse guard and step 2 below must not run on it).
+        // refute it — leave the honest `unknown` verdict as-is.
         if !is_unsat_input {
             return Ok(result);
         }
@@ -1495,21 +1486,12 @@ impl StringGate {
                     .to_owned(),
             }));
         }
-        // Step 2 — content-driven (no integer channel needed)?
-        match relax_bridge_atoms(arena, assertions)? {
-            None => Ok(CheckResult::Unsat),
-            Some(relaxed) => {
-                if matches!(solve(arena, &relaxed, config)?, CheckResult::Unsat) {
-                    return Ok(CheckResult::Unsat);
-                }
-                Ok(CheckResult::Unknown(UnknownReason {
-                    kind: UnknownKind::Incomplete,
-                    detail: "bounded-string unsat within the encoding bound; not confirmed \
-                             bound-independent by the unbounded length abstraction (P2.7 A.2)"
-                        .to_owned(),
-                }))
-            }
-        }
+        Ok(CheckResult::Unknown(UnknownReason {
+            kind: UnknownKind::Incomplete,
+            detail: "no model within the bounded integer width; bounded-string unsat was not \
+                     confirmed by the unbounded length abstraction (P2.7 A.2)"
+                .to_owned(),
+        }))
     }
 }
 
@@ -1590,104 +1572,6 @@ fn mentions_int_sort(arena: &TermArena, t: TermId) -> bool {
         b
     }
     go(arena, t, &mut HashMap::new())
-}
-
-/// Replaces every Boolean atom whose subtree crosses the BV→Int bridge
-/// (`bv2nat`) with a fresh Boolean variable, recursing only through the pure
-/// propositional connectives. Returns `Ok(None)` when no assertion contains a
-/// bridge (nothing to relax). The result is a **relaxation**: a model of the
-/// original extends by assigning each fresh Boolean its atom's truth value, so
-/// `unsat` of the relaxed query implies `unsat` of the original.
-fn relax_bridge_atoms(
-    arena: &mut TermArena,
-    assertions: &[TermId],
-) -> Result<Option<Vec<TermId>>, SolverError> {
-    fn has_bridge(arena: &TermArena, t: TermId, memo: &mut HashMap<TermId, bool>) -> bool {
-        if let Some(&b) = memo.get(&t) {
-            return b;
-        }
-        let b = match arena.node(t) {
-            TermNode::App { op, args } => {
-                matches!(op, Op::Bv2Nat) || {
-                    let args = args.clone();
-                    args.iter().any(|&a| has_bridge(arena, a, memo))
-                }
-            }
-            _ => false,
-        };
-        memo.insert(t, b);
-        b
-    }
-
-    fn relax(
-        arena: &mut TermArena,
-        t: TermId,
-        bridge_memo: &mut HashMap<TermId, bool>,
-        memo: &mut HashMap<TermId, TermId>,
-        fresh: &mut u32,
-        changed: &mut bool,
-    ) -> Result<TermId, SolverError> {
-        if let Some(&r) = memo.get(&t) {
-            return Ok(r);
-        }
-        if !has_bridge(arena, t, bridge_memo) {
-            memo.insert(t, t);
-            return Ok(t);
-        }
-        let err = |e: axeyum_ir::IrError| SolverError::Backend(e.to_string());
-        let node = arena.node(t).clone();
-        let out = match node {
-            TermNode::App { op, args }
-                if matches!(
-                    op,
-                    Op::BoolNot | Op::BoolAnd | Op::BoolOr | Op::BoolXor | Op::BoolImplies
-                ) || (matches!(op, Op::Ite | Op::Eq)
-                    && arena.sort_of(args[args.len() - 1]) == Sort::Bool) =>
-            {
-                let mut new_args = Vec::with_capacity(args.len());
-                for &a in &args {
-                    new_args.push(relax(arena, a, bridge_memo, memo, fresh, changed)?);
-                }
-                axeyum_rewrite::build_app(arena, op, &new_args).map_err(err)?
-            }
-            // Any other Boolean node containing a bridge (an Int comparison,
-            // a quantifier, …) becomes a fresh, unconstrained Boolean.
-            _ => {
-                let n = *fresh;
-                *fresh += 1;
-                let sym = arena
-                    .declare_internal(&format!("!strgate.{n}"), Sort::Bool)
-                    .map_err(err)?;
-                *changed = true;
-                arena.var(sym)
-            }
-        };
-        memo.insert(t, out);
-        Ok(out)
-    }
-
-    let mut bridge_memo = HashMap::new();
-    if !assertions
-        .iter()
-        .any(|&a| has_bridge(arena, a, &mut bridge_memo))
-    {
-        return Ok(None);
-    }
-    let mut memo = HashMap::new();
-    let mut fresh = 0u32;
-    let mut changed = false;
-    let mut out = Vec::with_capacity(assertions.len());
-    for &a in assertions {
-        out.push(relax(
-            arena,
-            a,
-            &mut bridge_memo,
-            &mut memo,
-            &mut fresh,
-            &mut changed,
-        )?);
-    }
-    Ok(Some(out))
 }
 
 fn smtlib_single_query(script: &Script) -> Result<SmtLibSingleQuery, SolverError> {

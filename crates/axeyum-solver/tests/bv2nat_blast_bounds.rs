@@ -209,6 +209,27 @@ fn lex_order_gap_beyond_bound_is_never_unsat() {
     );
 }
 
+/// Pure content constraints can also force the only real witness past the
+/// packed-string bound. A 12-`a` prefix plus a contained `b` needs at least 13
+/// characters, so Z3 reports `sat` (`"aaaaaaaaaaaab"`). The old StringGate
+/// shortcut saw no BV→Int bridge and incorrectly accepted the bounded BV
+/// contradiction as an unbounded `unsat`.
+#[test]
+fn pure_bv_content_beyond_bound_is_never_unsat() {
+    let out = run("\
+(set-logic QF_S)
+(declare-const s String)
+(assert (str.prefixof \"aaaaaaaaaaaa\" s))
+(assert (str.contains s \"b\"))
+(check-sat)
+");
+    assert!(
+        !matches!(out.result, CheckResult::Unsat),
+        "a 13-char witness exists in the real string theory; got {:?}",
+        out.result
+    );
+}
+
 /// Perf regression (found 2026-07-02 after a 9-hour scoreboard hang): a
 /// regex-complement atom encodes to a heavily-shared reach-set DAG, and the
 /// blast's Boolean-skeleton scan walked it once per root→node path —
