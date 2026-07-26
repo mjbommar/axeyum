@@ -1417,3 +1417,109 @@ fn exact_source_one_code_point_concat_views_decline_cross_boundary_controls() {
         );
     }
 }
+
+#[test]
+fn exact_source_concat_index_routes_refute_noetzli_families() {
+    for assertion in [
+        r"(not (= (str.at (str.++ x x) 0) (str.at x 0)))",
+        r#"(not (= (str.at (str.++ "A" x) 1) (str.at x 0)))"#,
+        r#"(not (= (str.at (str.replace y "" "A") 1)
+                    (str.at (str.replace x x y) 0)))"#,
+        r#"(not (= (str.substr (str.++ "A" x) 1 z)
+                    (str.substr x 0 z)))"#,
+        r#"(not (= (str.substr (str.++ "B" x) z z)
+                    (str.substr x (- z 1) z)))"#,
+        r#"(not (= (str.substr (str.replace y "" "A") 1 z)
+                    (str.substr (str.replace x x y) 0 z)))"#,
+    ] {
+        let input = format!(
+            r#"(set-logic QF_SLIA)
+(declare-fun x () String)
+(declare-fun y () String)
+(declare-fun z () Int)
+(assert {assertion})
+(check-sat)
+"#
+        );
+        let script = parse_script(&input).expect("parse exact concat index route");
+        assert!(
+            script.source_string_semantic_unsat,
+            "concat index route must refute {assertion}"
+        );
+        assert_eq!(
+            solve_smtlib(&input, &config())
+                .expect("solve exact concat index route")
+                .result,
+            CheckResult::Unsat,
+            "concat index route must survive the bounded-string gate: {assertion}"
+        );
+    }
+}
+
+#[test]
+fn exact_source_unary_concat_commutativity_refutes_noetzli_families() {
+    for assertion in [
+        r#"(not (= (str.++ (str.at "A" z) "A")
+                    (str.++ "A" (str.at "A" z))))"#,
+        r#"(not (= (str.++ (str.substr "B" 0 z) "B")
+                    (str.++ "B" (str.substr "B" 0 z))))"#,
+        r#"(not (= (str.++ (str.replace "A" x "") "A")
+                    (str.++ "A" (str.replace "A" x ""))))"#,
+        r#"(not (= (str.++ (str.replace "B" x "B") "B")
+                    (str.++ "B" (str.replace "B" x "B"))))"#,
+    ] {
+        let input = format!(
+            r#"(set-logic QF_SLIA)
+(declare-fun x () String)
+(declare-fun z () Int)
+(assert {assertion})
+(check-sat)
+"#
+        );
+        let script = parse_script(&input).expect("parse unary concat commutativity theorem");
+        assert!(
+            script.source_string_semantic_unsat,
+            "unary concat commutativity must refute {assertion}"
+        );
+        assert_eq!(
+            solve_smtlib(&input, &config())
+                .expect("solve unary concat commutativity theorem")
+                .result,
+            CheckResult::Unsat,
+            "unary concat commutativity must survive the bounded-string gate: {assertion}"
+        );
+    }
+}
+
+#[test]
+fn exact_source_concat_routes_decline_satisfiable_controls() {
+    for assertion in [
+        r"(not (= (str.++ x y) (str.++ y x)))",
+        r#"(not (= (str.++ (str.at "A" z) "B")
+                    (str.++ "B" (str.at "A" z))))"#,
+        r#"(not (= (str.substr (str.++ "A" x) 0 z)
+                    (str.substr x (- 1) z)))"#,
+    ] {
+        let input = format!(
+            r#"(set-logic QF_SLIA)
+(declare-fun x () String)
+(declare-fun y () String)
+(declare-fun z () Int)
+(assert {assertion})
+(check-sat)
+"#
+        );
+        let script = parse_script(&input).expect("parse concat route control");
+        assert!(
+            !script.source_string_semantic_unsat,
+            "satisfiable concat route control must decline: {assertion}"
+        );
+        assert_ne!(
+            solve_smtlib(&input, &config())
+                .expect("solve concat route control")
+                .result,
+            CheckResult::Unsat,
+            "satisfiable concat route control must not become UNSAT: {assertion}"
+        );
+    }
+}
