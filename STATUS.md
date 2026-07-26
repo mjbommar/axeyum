@@ -383,6 +383,22 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-26 — the advanced QF_SLIA tip is regression-clean, and the stale
+  deadline fixture is re-hardened instead of ignored.** At pushed tip
+  `bc5bef08`, both standing wrong-UNSAT guards and both reported
+  `Unsat`→`Unknown` string regressions pass. The complete affected tier is
+  green: 73 SMT-LIB parser tests, 87 SMT-LIB front-door tests, 79 exact
+  fixed-splice/source-rewrite tests, eight string/code soundness guards, and
+  both bounded-completeness detector tests. A rebuilt-release replay of all
+  1,880 public Noetzli rows is strictly monotone against the retained baseline:
+  19 SAT / 1,854 UNSAT / 7 unknown, exactly 106 `unknown`→`unsat` gains, zero
+  prior decisions lost, and zero verdict flips. The membership deadline test
+  had become stale because the optimized search can now find `Sat([86])` before
+  its 100 ms deadline; `10360788` replaces the performance-dependent
+  `Unknown` assertion with the actual safety contract: SAT must independently
+  replay, Unknown remains an allowed budget decline, UNSAT is forbidden for the
+  known-nonempty language, and the wall-clock ceiling remains enforced.
+
 - **2026-07-26 — first-occurrence predicate algebra moves the last ten UNSAT
   Noetzli residuals.** Committed `7b6260ac` extends the exact algebra with five
   unbounded predicate schemas: singleton boundary commutation, replaced-source
@@ -9386,6 +9402,16 @@ plan is built and committed on the current branch:
 | P5.5 | External target, measured | **DONE (bounded v1, ADR-0323--0338):** authenticated Tock capture plus eight rechecked dual-DRAT proofs and six replayed controls, UNKNOWN=0, DISAGREE=0. Query time 12.700 s; fresh outer wall 50.745 s; peak RSS 1,256,496 KiB; zero OOM deltas. The committed case study compares exact target validation, universal coverage, trust, effort, artifact boundaries, and limits. No Tock bug was found, so no upstream issue is applicable. This is not a speed or whole-kernel claim. |
 
 ## Changelog
+
+- **2026-07-26 — closed the frontier regression audit and re-hardened the regex
+  deadline test.** The exact pushed solver tip passes the two historical
+  wrong-UNSAT guards, the two reported string decision regressions, and all 249
+  directly affected parser/front-door/fixed-splice tests. Its rebuilt 1,880-row
+  replay retains every prior SAT/UNSAT and adds only 106 `unknown`→`unsat`
+  decisions. Committed `10360788` makes the formerly stale deadline fixture
+  validate replayed SAT or honest Unknown and reject impossible UNSAT, rather
+  than ignoring a test whose old forced-Unknown outcome was invalidated by a
+  real performance gain.
 
 - **2026-07-26 — moved the last ten first-occurrence predicate identities.**
   Committed `7b6260ac` with five unbounded predicate schemas, 24,066 direct
