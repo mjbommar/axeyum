@@ -1022,6 +1022,73 @@ fn exact_source_affine_one_code_point_views_decline_near_misses() {
 }
 
 #[test]
+fn exact_source_equality_paths_and_self_expanded_needles_refute_noetzli_families() {
+    for assertion in [
+        r#"(not (= (= y (str.replace "A" y x))
+                    (= x (str.replace "A" x y))))"#,
+        r#"(not (= (= y (str.replace "" y x))
+                    (= x (str.replace "" x y))))"#,
+        r#"(not (= (str.replace x (str.++ x "A") y) x))"#,
+        r#"(not (= (str.replace x (str.++ "B" x) y) x))"#,
+        r#"(not (= (str.replace y (str.replace "A" "" y) x)
+                    (str.replace x x y)))"#,
+        r#"(not (= (str.replace "B" x (str.replace "A" x ""))
+                    (str.replace "B" x "A")))"#,
+        r#"(not (= (str.replace x (str.replace y x y) z)
+                    (str.replace x y z)))"#,
+    ] {
+        let input = format!(
+            r#"(set-logic QF_SLIA)
+(declare-fun x () String)
+(declare-fun y () String)
+(declare-fun z () String)
+(assert {assertion})
+(check-sat)
+"#
+        );
+        let script = parse_script(&input).expect("parse equality-path replacement theorem");
+        assert!(
+            script.source_string_semantic_unsat,
+            "equality-path replacement theorem must refute {assertion}"
+        );
+        assert_eq!(
+            solve_smtlib(&input, &config())
+                .expect("solve equality-path replacement theorem")
+                .result,
+            CheckResult::Unsat,
+            "equality-path theorem must survive the bounded-string gate: {assertion}"
+        );
+    }
+}
+
+#[test]
+fn exact_source_self_expanded_needles_decline_near_misses() {
+    let assertion = r#"(not (= (str.replace x (str.replace y z y) w) (str.replace x y w)))"#;
+    let input = format!(
+        r#"(set-logic QF_SLIA)
+(declare-fun w () String)
+(declare-fun x () String)
+(declare-fun y () String)
+(declare-fun z () String)
+(assert {assertion})
+(check-sat)
+"#
+    );
+    let script = parse_script(&input).expect("parse self-expanded needle control");
+    assert!(
+        !script.source_string_semantic_unsat,
+        "self-expanded needle near miss must decline"
+    );
+    assert_ne!(
+        solve_smtlib(&input, &config())
+            .expect("solve self-expanded needle control")
+            .result,
+        CheckResult::Unsat,
+        "satisfiable self-expanded needle control must not become UNSAT"
+    );
+}
+
+#[test]
 fn exact_source_small_subject_indexof_refutes_view_families() {
     for assertion in [
         r#"(not (= (str.at x (str.indexof "A" x 1)) ""))"#,
