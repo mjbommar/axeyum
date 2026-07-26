@@ -44,6 +44,98 @@ fn fixed_splice_uses_correlated_bound_and_preserves_short_strings() {
     }
 }
 
+/// PyEx spells a first-occurrence character replacement as a prefix through the
+/// match, a replacement inside that prefix, and the untouched suffix. The two
+/// pieces have large independent packed maxima, but their lengths are correlated:
+/// equal-length needle/replacement pairs reconstruct exactly one base-length word.
+#[test]
+fn split_replace_rejoin_uses_the_base_bound() {
+    for (source, expected) in [
+        ("", ""),
+        ("bbb", "bbb"),
+        ("A", "a"),
+        ("BAAB", "BaAB"),
+        ("BAAAAAAAAAAB", "BaAAAAAAAAAB"),
+    ] {
+        let script = format!(
+            r#"(set-logic QF_SLIA)
+(declare-fun s () String)
+(assert (= s "{source}"))
+(assert (=
+  (str.++
+    (str.replace
+      (str.substr s 0 (+ (str.indexof s "A" 0) 1))
+      "A" "a")
+    (str.substr s
+      (+ (str.indexof s "A" 0) 1)
+      (- (str.len s) (+ (str.indexof s "A" 0) 1))))
+  "{expected}"))
+(check-sat)
+"#
+        );
+        let parsed = parse_script(&script)
+            .unwrap_or_else(|error| panic!("split/replace/rejoin must parse: {error:?}"));
+        assert!(
+            parsed.word_only_fallback.is_none(),
+            "the exact correlated bound must retain the bounded encoding"
+        );
+        assert!(parsed.prefer_source_string_routes);
+        assert!(
+            matches!(
+                solve_smtlib(&script, &config())
+                    .expect("solve split/replace/rejoin")
+                    .result,
+                CheckResult::Sat(_)
+            ),
+            "first A replacement over {source:?} must produce {expected:?}"
+        );
+    }
+
+    let unequal_lengths = r#"(set-logic QF_SLIA)
+(declare-fun s () String)
+(assert (=
+  (str.++
+    (str.replace
+      (str.substr s 0 (+ (str.indexof s "A" 0) 1))
+      "A" "zz")
+    (str.substr s
+      (+ (str.indexof s "A" 0) 1)
+      (- (str.len s) (+ (str.indexof s "A" 0) 1))))
+  "zz"))
+(check-sat)
+"#;
+    let unequal =
+        parse_script(unequal_lengths).expect("unequal-length case remains a sound word fallback");
+    assert!(
+        unequal.word_only_fallback.is_some(),
+        "unequal-length replacement must not receive the correlated bound"
+    );
+    assert!(!unequal.prefer_source_string_routes);
+}
+
+#[test]
+fn large_split_replace_pipeline_retains_the_fast_source_fallback() {
+    let mut script = String::from("(set-logic QF_SLIA)\n(declare-fun s () String)\n");
+    let assertion = r#"(assert (str.contains
+  (str.++
+    (str.replace
+      (str.substr s 0 (+ (str.indexof s "A" 0) 1))
+      "A" "a")
+    (str.substr s
+      (+ (str.indexof s "A" 0) 1)
+      (- (str.len s) (+ (str.indexof s "A" 0) 1))))
+  "Z"))
+"#;
+    for _ in 0..65 {
+        script.push_str(assertion);
+    }
+    script.push_str("(check-sat)\n");
+
+    let parsed = parse_script(&script).expect("large pipeline uses source-level fallback");
+    assert!(parsed.word_only_fallback.is_some());
+    assert!(!parsed.prefer_source_string_routes);
+}
+
 /// The UNSAT-only word relaxation may treat a repeated fixed splice as one opaque
 /// Seq term: every real model induces the same abstract value, so an equality plus
 /// disequality is a valid original-theory contradiction. The generated ground and

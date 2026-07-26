@@ -100,6 +100,11 @@ pub struct Script {
     /// encoding bound**; the solver front door must confirm it bound-independent
     /// (see [`Script::len_abstraction_map`]) or report `unknown` (P2.7 A.2).
     pub uses_bounded_strings: bool,
+    /// The script contains `PyEx`'s exact length-preserving split/replace/rejoin
+    /// spelling. Its source-level routes were historically reached first through
+    /// the bounded-cap fallback and can be much cheaper than the admitted packed
+    /// encoding, so the solver front door preserves that route order.
+    pub prefer_source_string_routes: bool,
     /// The unbounded length-abstraction rewrite map (P2.7 A.2): `original term →
     /// abstracted term` pairs, where a hooked string atom maps to `fresh_bool ∧
     /// implied_length_fact` and a string↔`Int` bridge term (`str.len`,
@@ -129,8 +134,9 @@ pub struct Script {
     /// disequation over `str.++` / string literals / string variables (nothing
     /// else — no `str.len`, `substr`, regex, `contains`, `ite`, or negations
     /// deeper than a single disequality). It is the second-chance route the
-    /// solver front door reaches for **strictly after** the ADR-0029 bounded
-    /// pre-check and the ADR-0052 gate return `unknown`: the word-level search
+    /// solver front door normally reaches after the ADR-0029 bounded pre-check
+    /// and ADR-0052 gate return `unknown` (or first for a selectively admitted
+    /// [`Script::prefer_source_string_routes`] pipeline): the word-level search
     /// may only ever *add* `sat`, never `unsat`, so a `None` (unrepresentable)
     /// side channel simply leaves the prior verdict untouched. Built into the
     /// same [`Script::arena`]; `String` = `Seq(BitVec(18))` with literals as the
@@ -705,11 +711,15 @@ fn parse_script_bounded(input: &str) -> Result<Script, SmtError> {
     // (mirroring [`build_seq_info`]). A modulus over the bit-width cap, a non-prime
     // "field", or a width collision makes the whole script a clean `Unsupported`.
     let ff = build_ff_info(&exprs)?;
+    let split_replace_rejoin_count = count_split_replace_rejoin(&exprs);
     // The unbounded length-abstraction builder (P2.7 A.2): string/sequence
     // operator hooks record abstraction twins as terms are built; exported on
     // the Script at the end. Interior-mutable so it threads as `&LenAbs`
     // (mirroring `SeqInfo`); a no-op for string-free scripts.
-    let lenabs = LenAbs::default();
+    let lenabs = LenAbs {
+        admit_split_replace_rejoin: split_replace_rejoin_count <= SPLIT_REPLACE_REJOIN_PACKED_LIMIT,
+        ..LenAbs::default()
+    };
     let mut script = Script::default();
     let mut aliases: HashMap<String, TermId> = HashMap::new();
     let mut macros: HashMap<String, MacroDef<'_>> = HashMap::new();
@@ -775,6 +785,7 @@ fn parse_script_bounded(input: &str) -> Result<Script, SmtError> {
     // assertions — a model of the whole is a model of any subset, keeping the
     // "only ever add sat" invariant sound). `parse_sort`/`(Seq E)` are untouched.
     if script.uses_bounded_strings {
+        script.prefer_source_string_routes = split_replace_rejoin_count > 0;
         script.fixed_splice_semantic_unsat = fixed_splice_semantic_facts(&exprs).conflict;
         script.word_problem = build_word_problem(&mut script.arena, &exprs);
         // Parser-side Boolean-structured word skeleton (P1.5b): the superset the
@@ -2667,6 +2678,13 @@ fn preserved_replace_base<'a>(e: &'a SExpr, protected: &[u32]) -> Option<&'a SEx
         return None;
     }
 
+    split_replace_rejoin_base(items, protected)
+}
+
+/// The base word of `PyEx`'s exact split/replace/rejoin spelling of a
+/// first-occurrence replacement. The needle and replacement must have equal
+/// length, so the reconstructed word has exactly the base word's length.
+fn split_replace_rejoin_base<'a>(items: &'a [SExpr], protected: &[u32]) -> Option<&'a SExpr> {
     if items.len() != 3 || items[0].atom() != Some("str.++") {
         return None;
     }
@@ -2718,6 +2736,26 @@ fn preserved_replace_base<'a>(e: &'a SExpr, protected: &[u32]) -> Option<&'a SEx
         return None;
     }
     Some(base)
+}
+
+/// Maximum number of split/replace/rejoin terms admitted into one packed query.
+/// Above this, even the correlated-width encoding creates a very large term DAG;
+/// preserving the existing source-level fallback is both faster and more robust.
+const SPLIT_REPLACE_REJOIN_PACKED_LIMIT: usize = 64;
+
+fn count_split_replace_rejoin(exprs: &[SExpr]) -> usize {
+    let mut stack: Vec<&SExpr> = exprs.iter().collect();
+    let mut count = 0;
+    while let Some(expression) = stack.pop() {
+        let Some(items) = expression.list() else {
+            continue;
+        };
+        if split_replace_rejoin_base(items, &[]).is_some() {
+            count += 1;
+        }
+        stack.extend(items);
+    }
+    count
 }
 
 /// Recognizes the exact suffix strictly after the first occurrence of `needle`:
@@ -7028,6 +7066,10 @@ fn string_max_len(arena: &TermArena, v: TermId) -> Result<u32, SmtError> {
 ///   real lengths.
 #[derive(Default)]
 struct LenAbs {
+    /// Whether this script is small enough to admit `PyEx`'s correlated
+    /// split/replace/rejoin terms into the packed encoding. Larger generated
+    /// pipelines retain the source-level fallback instead of building a huge DAG.
+    admit_split_replace_rejoin: bool,
     /// String/sequence-valued term → its abstraction-side `Int` length
     /// expression.
     len_of: std::cell::RefCell<HashMap<TermId, TermId>>,
@@ -8994,6 +9036,39 @@ fn fixed_splice_concat_bound(arena: &TermArena, items: &[SExpr], args: &[TermId]
     let split = fixed_splice_split(items)?;
     let result_max = string_max_len(arena, args[1]).ok()?;
     (split <= result_max).then_some(result_max)
+}
+
+/// Recognizes `PyEx`'s exact split/replace/rejoin spelling of a length-preserving
+/// first-occurrence replacement:
+///
+/// `replace(substr(s,0,indexof(s,n,0)+1), n, r)
+///    ++ substr(s,indexof(s,n,0)+1,len(s)-(indexof(s,n,0)+1))`.
+///
+/// For equal-length `n` and `r`, a found occurrence changes content but not
+/// length. When `n` is absent, `indexof = -1`, the prefix is empty, and the
+/// suffix is all of `s`. Thus the result always has exactly `len(s)` and fits in
+/// the suffix/base bound even though independently summing the replace and
+/// suffix maxima is much larger.
+fn split_replace_rejoin_concat_bound(
+    arena: &TermArena,
+    items: &[SExpr],
+    args: &[TermId],
+) -> Option<u32> {
+    split_replace_rejoin_base(items, &[])?;
+    string_max_len(arena, args[1]).ok()
+}
+
+fn proved_concat_bound(
+    arena: &TermArena,
+    items: &[SExpr],
+    args: &[TermId],
+    admit_split_replace_rejoin: bool,
+) -> Option<u32> {
+    fixed_splice_concat_bound(arena, items, args).or_else(|| {
+        admit_split_replace_rejoin
+            .then(|| split_replace_rejoin_concat_bound(arena, items, args))
+            .flatten()
+    })
 }
 
 /// One exact generated fixed-position splice.
@@ -12928,7 +13003,9 @@ fn apply_op(
         // `str.++` — variable concatenation grows into a wider packed sort; a run
         // of constant operands folds to a literal (ADR-0029 slice 2).
         "str.concat" | "str.++" => {
-            let r = if let Some(result_max) = fixed_splice_concat_bound(arena, items, args) {
+            let r = if let Some(result_max) =
+                proved_concat_bound(arena, items, args, lenabs.admit_split_replace_rejoin)
+            {
                 string_concat_with_proved_bound(arena, args, result_max)?
             } else {
                 string_concat(arena, args)?
