@@ -868,6 +868,37 @@ fn exact_source_length_dominated_replace_declines_unordered_control() {
 }
 
 #[test]
+fn exact_source_symmetric_equality_atoms_refute_noetzli_families() {
+    for assertion in [
+        r"(not (= (str.contains (str.at x 0) x)
+                    (= x (str.at x 0))))",
+        r"(not (= (str.prefixof (str.replace x y x) x)
+                    (= x (str.replace x y x))))",
+    ] {
+        let input = format!(
+            r"(set-logic QF_SLIA)
+(declare-fun x () String)
+(declare-fun y () String)
+(assert {assertion})
+(check-sat)
+"
+        );
+        let script = parse_script(&input).expect("parse symmetric equality theorem");
+        assert!(
+            script.source_string_semantic_unsat,
+            "symmetric equality normalization must refute {assertion}"
+        );
+        assert_eq!(
+            solve_smtlib(&input, &config())
+                .expect("solve symmetric equality theorem")
+                .result,
+            CheckResult::Unsat,
+            "symmetric equality must survive the bounded-string gate: {assertion}"
+        );
+    }
+}
+
+#[test]
 fn exact_source_small_subject_indexof_refutes_view_families() {
     for assertion in [
         r#"(not (= (str.at x (str.indexof "A" x 1)) ""))"#,

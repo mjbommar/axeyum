@@ -9747,6 +9747,9 @@ fn exact_rewrite_equality(left: &ExactRewriteTerm, right: &ExactRewriteTerm) -> 
     {
         return rewritten;
     }
+    if exact_symmetric_equalities_equal(left, right) {
+        return ExactRewriteTerm::Bool(true);
+    }
     if exact_boolean_nary_terms_equal(left, right) {
         return ExactRewriteTerm::Bool(true);
     }
@@ -9768,6 +9771,21 @@ fn exact_rewrite_equality(left: &ExactRewriteTerm, right: &ExactRewriteTerm) -> 
         }
     }
     ExactRewriteTerm::App("=".to_owned(), vec![left.clone(), right.clone()])
+}
+
+fn exact_symmetric_equalities_equal(left: &ExactRewriteTerm, right: &ExactRewriteTerm) -> bool {
+    let (
+        ExactRewriteTerm::App(left_head, left_args),
+        ExactRewriteTerm::App(right_head, right_args),
+    ) = (left, right)
+    else {
+        return false;
+    };
+    left_head == "="
+        && right_head == "="
+        && matches!((left_args.as_slice(), right_args.as_slice()),
+            ([left_a, left_b], [right_a, right_b])
+                if left_a == right_b && left_b == right_a)
 }
 
 const EXACT_ITE_CASE_CAP: usize = 64;
@@ -15807,6 +15825,30 @@ mod string_escape_tests {
         assert_eq!(
             exact_rewrite_term(&expression, 0),
             ExactRewriteTerm::Bool(false)
+        );
+    }
+
+    #[test]
+    fn exact_rewriter_normalizes_symmetric_equality_atoms() {
+        for text in [r#"(= (= x y) (= y x))"#, r#"(= (= x "A") (= "A" x))"#] {
+            let expression = read_all(text)
+                .expect("read symmetric equality expression")
+                .pop()
+                .expect("one expression");
+            assert_eq!(
+                exact_rewrite_term(&expression, 0),
+                ExactRewriteTerm::Bool(true),
+                "{text}"
+            );
+        }
+
+        let control = read_all(r#"(= (str.prefixof x y) (str.prefixof y x))"#)
+            .expect("read asymmetric relation control")
+            .pop()
+            .expect("one expression");
+        assert_ne!(
+            exact_rewrite_term(&control, 0),
+            ExactRewriteTerm::Bool(true)
         );
     }
 
