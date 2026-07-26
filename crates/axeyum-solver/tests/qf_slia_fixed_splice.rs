@@ -1895,3 +1895,95 @@ fn exact_source_one_code_point_replace_views_decline_satisfiable_controls() {
         );
     }
 }
+
+#[test]
+fn exact_source_one_code_point_deletion_languages_refute_noetzli_families() {
+    let mut assertions = Vec::new();
+    for (needle, other) in [(r#""A""#, r#""B""#), (r#""B""#, r#""A""#)] {
+        assertions.push(format!(
+            r#"(not (= (str.prefixof x (str.replace {needle} x "")) (= x "")))"#
+        ));
+        assertions.push(format!(
+            r#"(not (= (str.suffixof x (str.replace {needle} x "")) (= x "")))"#
+        ));
+        assertions.push(format!(
+            r#"(not (= (= {needle} (str.replace x {needle} ""))
+                       (= x (str.++ {needle} {needle}))))"#
+        ));
+        assertions.push(format!(
+            r#"(not (= (str.suffixof {needle} (str.replace x {needle} ""))
+                       (str.suffixof {needle} (str.replace x {needle} {other}))))"#
+        ));
+        assertions.push(format!(
+            r#"(not (= (str.contains {needle} (str.replace x {needle} ""))
+                       (str.prefixof x (str.++ {needle} {needle}))))"#
+        ));
+        assertions.push(format!(
+            r#"(not (= (= "" (str.replace x {needle} ""))
+                       (str.prefixof x {needle})))"#
+        ));
+        assertions.push(format!(
+            r#"(not (= (str.prefixof (str.++ {needle} {needle}) x)
+                       (str.prefixof {needle} (str.replace x {needle} ""))))"#
+        ));
+    }
+    assertions.push(
+        r#"(not (= (str.contains "B" (str.replace x "A" ""))
+                   (str.contains "A" (str.replace x "B" ""))))"#
+            .to_owned(),
+    );
+
+    assert_eq!(assertions.len(), 15);
+    for assertion in assertions {
+        let input = format!(
+            r#"(set-logic QF_SLIA)
+(declare-fun x () String)
+(assert {assertion})
+(check-sat)
+"#
+        );
+        let script = parse_script(&input).expect("parse one-code-point deletion theorem");
+        assert!(
+            script.source_string_semantic_unsat,
+            "one-code-point deletion theorem must refute {assertion}"
+        );
+        assert_eq!(
+            solve_smtlib(&input, &config())
+                .expect("solve one-code-point deletion theorem")
+                .result,
+            CheckResult::Unsat,
+            "one-code-point deletion theorem must survive the bounded-string gate: {assertion}"
+        );
+    }
+}
+
+#[test]
+fn exact_source_one_code_point_deletion_languages_decline_satisfiable_controls() {
+    for assertion in [
+        r#"(not (= (str.prefixof x (str.replace "AA" x "")) (= x "")))"#,
+        r#"(not (= (str.suffixof x (str.replace "AA" x "")) (= x "")))"#,
+        r#"(not (= (str.suffixof "A" (str.replace x "A" ""))
+                   (str.suffixof "A" (str.replace x "A" "BA"))))"#,
+        r#"(not (= (= "A" (str.replace x "A" "B")) (= x "AA")))"#,
+    ] {
+        let input = format!(
+            r#"(set-logic QF_SLIA)
+(declare-fun x () String)
+(assert {assertion})
+(check-sat)
+"#
+        );
+        let script = parse_script(&input).expect("parse one-code-point deletion control");
+        assert!(
+            !script.source_string_semantic_unsat,
+            "satisfiable one-code-point deletion control must decline: {assertion}"
+        );
+        assert_ne!(
+            solve_smtlib(&input, &config())
+                .expect("solve one-code-point deletion control")
+                .result,
+            CheckResult::Unsat,
+            "satisfiable one-code-point deletion control must not become UNSAT: {assertion}"
+        );
+    }
+}
