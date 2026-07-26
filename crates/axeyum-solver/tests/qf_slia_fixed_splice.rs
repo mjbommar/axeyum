@@ -2099,3 +2099,79 @@ fn exact_source_replace_emptiness_boolean_normalization_declines_satisfiable_con
         );
     }
 }
+
+#[test]
+fn exact_source_self_replacement_boolean_equivalences_refute_noetzli_families() {
+    let assertions = [
+        r"(not (= (= x (str.replace y x y)) (= x y)))",
+        r"(not (= (str.prefixof x (str.replace y x y)) (str.prefixof x y)))",
+        r"(not (= (str.suffixof x (str.replace y x y)) (str.suffixof x y)))",
+        r"(not (= (str.contains x (str.replace y x y)) (str.contains x y)))",
+        r"(not (= (str.prefixof (str.replace x y x) y) (str.prefixof x y)))",
+        r"(not (= (str.suffixof (str.replace x y x) y) (str.suffixof x y)))",
+        r#"(not (= (= "" (str.replace x "A" y)) (str.prefixof x (str.replace "" y "A"))))"#,
+        r#"(not (= (str.contains "" (str.replace x "A" y)) (str.prefixof x (str.replace "" y "A"))))"#,
+        r#"(not (= (= "" (str.replace x "B" y)) (str.prefixof x (str.replace "" y "B"))))"#,
+        r#"(not (= (str.contains "" (str.replace x "B" y)) (str.prefixof x (str.replace "" y "B"))))"#,
+        r#"(not (= (str.contains (str.replace "A" x "") x) (= x "")))"#,
+        r#"(not (= (str.contains (str.replace "B" x "") x) (= x "")))"#,
+    ];
+
+    assert_eq!(assertions.len(), 12);
+    for (index, assertion) in assertions.into_iter().enumerate() {
+        let input = format!(
+            r#"(set-logic QF_SLIA)
+(declare-fun x () String)
+(declare-fun y () String)
+(assert {assertion})
+(check-sat)
+"#
+        );
+        let script = parse_script(&input).expect("parse self-replacement/Boolean theorem");
+        assert!(
+            script.source_string_semantic_unsat,
+            "self-replacement/Boolean theorem must refute {assertion}"
+        );
+        if matches!(index, 0 | 6 | 11) {
+            assert_eq!(
+                solve_smtlib(&input, &config())
+                    .expect("solve self-replacement/Boolean theorem")
+                    .result,
+                CheckResult::Unsat,
+                "self-replacement/Boolean theorem must survive the bounded-string gate: {assertion}"
+            );
+        }
+    }
+}
+
+#[test]
+fn exact_source_self_replacement_boolean_equivalences_decline_satisfiable_controls() {
+    for assertion in [
+        r"(not (= (str.prefixof z (str.replace y x y)) (str.prefixof z y)))",
+        r"(not (= (= y (str.replace y x y)) (= x y)))",
+        r#"(not (= (= "" (str.replace x "A" y)) (= x "")))"#,
+        r#"(not (= (str.contains (str.replace "AA" x "") x) (= x "")))"#,
+    ] {
+        let input = format!(
+            r#"(set-logic QF_SLIA)
+(declare-fun x () String)
+(declare-fun y () String)
+(declare-fun z () String)
+(assert {assertion})
+(check-sat)
+"#
+        );
+        let script = parse_script(&input).expect("parse self-replacement/Boolean control");
+        assert!(
+            !script.source_string_semantic_unsat,
+            "satisfiable self-replacement/Boolean control must decline: {assertion}"
+        );
+        assert_ne!(
+            solve_smtlib(&input, &config())
+                .expect("solve self-replacement/Boolean control")
+                .result,
+            CheckResult::Unsat,
+            "satisfiable self-replacement/Boolean control must not become UNSAT: {assertion}"
+        );
+    }
+}
