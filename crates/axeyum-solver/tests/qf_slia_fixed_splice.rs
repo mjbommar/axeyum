@@ -2490,12 +2490,12 @@ fn exact_source_correlated_substring_index_views_refute_noetzli_family() {
 
     for assertion in assertions {
         let input = format!(
-            r#"(set-logic QF_SLIA)
+            r"(set-logic QF_SLIA)
 (declare-fun x () String)
 (declare-fun z () Int)
 (assert {assertion})
 (check-sat)
-"#
+"
         );
         let script = parse_script(&input).expect("parse correlated substring/index theorem");
         assert!(
@@ -2522,12 +2522,12 @@ fn exact_source_correlated_substring_index_views_decline_satisfiable_controls() 
         r"(not (= (str.substr (str.substr x 1 z) 1 z) (str.substr x 1 (- z 1))))",
     ] {
         let input = format!(
-            r#"(set-logic QF_SLIA)
+            r"(set-logic QF_SLIA)
 (declare-fun x () String)
 (declare-fun z () Int)
 (assert {assertion})
 (check-sat)
-"#
+"
         );
         let script = parse_script(&input).expect("parse correlated substring/index control");
         assert!(
@@ -2575,13 +2575,13 @@ fn exact_source_first_occurrence_algebra_refutes_noetzli_families() {
     assert_eq!(assertions.len(), 23);
     for (index, assertion) in assertions.into_iter().enumerate() {
         let input = format!(
-            r#"(set-logic QF_SLIA)
+            r"(set-logic QF_SLIA)
 (declare-fun x () String)
 (declare-fun y () String)
 (declare-fun z () Int)
 (assert {assertion})
 (check-sat)
-"#
+"
         );
         let script = parse_script(&input).expect("parse first-occurrence algebra theorem");
         assert!(
@@ -2613,10 +2613,10 @@ fn exact_source_first_occurrence_algebra_declines_counterexamples() {
         r#"(not (= (str.replace (str.replace "A" "B" "A") "A" "") (str.replace "A" "B" "")))"#,
     ] {
         let input = format!(
-            r#"(set-logic QF_SLIA)
+            r"(set-logic QF_SLIA)
 (assert {assertion})
 (check-sat)
-"#
+"
         );
         let script = parse_script(&input).expect("parse first-occurrence algebra control");
         assert!(
@@ -2650,12 +2650,12 @@ fn exact_source_first_occurrence_predicates_refute_noetzli_families() {
 
     for (index, assertion) in assertions.into_iter().enumerate() {
         let input = format!(
-            r#"(set-logic QF_SLIA)
+            r"(set-logic QF_SLIA)
 (declare-fun x () String)
 (declare-fun y () String)
 (assert {assertion})
 (check-sat)
-"#
+"
         );
         let script = parse_script(&input).expect("parse first-occurrence predicate theorem");
         assert!(
@@ -2684,10 +2684,10 @@ fn exact_source_first_occurrence_predicates_decline_ground_counterexamples() {
         r#"(not (= (str.contains (str.from_int 12) "1") (str.suffixof "1" (str.from_int 12))))"#,
     ] {
         let input = format!(
-            r#"(set-logic QF_SLIA)
+            r"(set-logic QF_SLIA)
 (assert {assertion})
 (check-sat)
-"#
+"
         );
         let script = parse_script(&input).expect("parse first-occurrence predicate control");
         assert!(
@@ -2712,10 +2712,10 @@ fn exact_source_first_occurrence_predicates_decline_ground_counterexamples() {
 #[test]
 fn bounded_source_witness_closes_last_noetzli_counterexamples() {
     let assertions = [
-        r#"(not (= (str.contains (str.from_int z) x) (str.suffixof x (str.from_int z))))"#,
+        r"(not (= (str.contains (str.from_int z) x) (str.suffixof x (str.from_int z))))",
         r#"(not (= (str.replace x (str.replace y "A" y) y) x))"#,
         r#"(not (= (str.replace x (str.replace y "B" y) y) x))"#,
-        r#"(not (= (str.replace (str.replace x y x) y x) (str.replace x y (str.replace x y x))))"#,
+        r"(not (= (str.replace (str.replace x y x) y x) (str.replace x y (str.replace x y x))))",
         r#"(not (= (str.replace (str.replace x y x) y "A") (str.replace x y (str.replace x y "A"))))"#,
         r#"(not (= (str.replace (str.replace x y x) y "B") (str.replace x y (str.replace x y "B"))))"#,
         r#"(not (= (str.replace (str.replace x y x) y "") (str.replace x y (str.replace x y ""))))"#,
@@ -2723,13 +2723,13 @@ fn bounded_source_witness_closes_last_noetzli_counterexamples() {
     let fast = SolverConfig::new().with_timeout(Duration::from_millis(250));
     for assertion in assertions {
         let input = format!(
-            r#"(set-logic QF_SLIA)
+            r"(set-logic QF_SLIA)
 (declare-fun x () String)
 (declare-fun y () String)
 (declare-fun z () Int)
 (assert {assertion})
 (check-sat)
-"#
+"
         );
         let outcome = solve_smtlib(&input, &fast).expect("solve Noetzli SAT residual");
         let CheckResult::Sat(model) = outcome.result else {
@@ -2773,13 +2773,13 @@ fn bounded_source_witness_closes_last_noetzli_counterexamples() {
 
 #[test]
 fn bounded_source_witness_is_capped_and_replay_fail_closed() {
-    let replay_input = r#"(set-logic QF_SLIA)
+    let replay_input = r"(set-logic QF_SLIA)
 (declare-fun x () String)
 (declare-fun y () String)
 (declare-fun z () Int)
 (assert (not (= (str.contains (str.from_int z) x) (str.suffixof x (str.from_int z)))))
 (check-sat)
-"#;
+";
     let replay_script = parse_script(replay_input).expect("parse replay control");
     let replay_problem = replay_script
         .source_string_sat_problem
@@ -2809,13 +2809,13 @@ fn bounded_source_witness_is_capped_and_replay_fail_closed() {
         "a mutated source witness must fail replay"
     );
 
-    let capped_input = r#"(set-logic QF_SLIA)
+    let capped_input = r"(set-logic QF_SLIA)
 (declare-fun x () String)
 (declare-fun y () String)
 (declare-fun z () String)
 (assert (not (= (str.replace x y z) x)))
 (check-sat)
-"#;
+";
     let capped_script = parse_script(capped_input).expect("parse assignment-cap control");
     let capped_problem = capped_script
         .source_string_sat_problem
@@ -2826,11 +2826,11 @@ fn bounded_source_witness_is_capped_and_replay_fail_closed() {
         "31^3 assignments must exceed the 20,000-step source-witness cap"
     );
 
-    let false_input = r#"(set-logic QF_SLIA)
+    let false_input = r"(set-logic QF_SLIA)
 (declare-fun x () String)
 (assert (and (= x x) false))
 (check-sat)
-"#;
+";
     let false_script = parse_script(false_input).expect("parse false-query control");
     let false_problem = false_script
         .source_string_sat_problem

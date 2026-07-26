@@ -11216,7 +11216,7 @@ fn exact_rewrite_app(head: &str, args: Vec<ExactRewriteTerm>) -> ExactRewriteTer
         }
         ("str.substr", [subject, App(indexof, index_args), length])
             if indexof == "str.indexof"
-                && matches!(index_args.as_slice(), [index_subject, String(needle), offset]
+                && matches!(index_args.as_slice(), [index_subject, String(needle), _offset]
                     if index_subject == subject && needle.is_empty()) =>
         {
             return exact_rewrite_app(
