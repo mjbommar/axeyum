@@ -4491,6 +4491,27 @@ fn regex_membership_retains_literal_disequalities() {
 }
 
 #[test]
+fn regex_membership_prunes_length_impossible_literal_disequality() {
+    let text = r#"
+        (set-logic QF_SLIA)
+        (declare-const x String)
+        (assert (str.in_re x (str.to_re "abc")))
+        (assert (= (str.len x) 2))
+        (assert (not (= x "this exclusion is much longer than two")))
+        (check-sat)
+    "#;
+    let script = parse_script(text).expect("redundant disequality script parses");
+    let class = &script
+        .membership_problem
+        .expect("membership side channel")
+        .vars[0];
+    assert!(
+        class.membership.negatives.is_empty(),
+        "length-impossible singleton must not inflate the derivative product"
+    );
+}
+
+#[test]
 fn regex_membership_merges_transitive_variable_equalities() {
     let text = r#"
         (set-logic QF_SLIA)
