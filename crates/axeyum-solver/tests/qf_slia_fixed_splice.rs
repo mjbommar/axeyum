@@ -810,3 +810,64 @@ fn exact_source_conditional_replace_declines_branch_sensitive_controls() {
         );
     }
 }
+
+#[test]
+fn exact_source_small_subject_indexof_refutes_view_families() {
+    for assertion in [
+        r#"(not (= (str.at x (str.indexof "A" x 1)) ""))"#,
+        r#"(not (= (str.substr x 0 (str.indexof "A" x 1)) ""))"#,
+        r#"(not (= (str.from_int (str.indexof "" x 1)) ""))"#,
+    ] {
+        let input = format!(
+            r"(set-logic QF_SLIA)
+(declare-fun x () String)
+(declare-fun z () Int)
+(assert {assertion})
+(check-sat)
+"
+        );
+        let script = parse_script(&input).expect("parse exact small-subject indexof");
+        assert!(
+            script.source_string_semantic_unsat,
+            "small-subject indexof must refute {assertion}"
+        );
+        assert_eq!(
+            solve_smtlib(&input, &config())
+                .expect("solve exact small-subject indexof")
+                .result,
+            CheckResult::Unsat,
+            "small-subject indexof must survive the bounded-string gate: {assertion}"
+        );
+    }
+}
+
+#[test]
+fn exact_source_small_subject_indexof_declines_nonidentities() {
+    for assertion in [
+        r#"(not (= (str.indexof "A" x 0) 0))"#,
+        r#"(not (= (str.at y (str.indexof "A" x 0)) (str.at y 0)))"#,
+        r#"(not (= (str.indexof "" x 0) (- 1)))"#,
+    ] {
+        let input = format!(
+            r"(set-logic QF_SLIA)
+(declare-fun x () String)
+(declare-fun y () String)
+(assert {assertion})
+(check-sat)
+"
+        );
+        let script = parse_script(&input)
+            .unwrap_or_else(|error| panic!("parse small-subject indexof control: {error}"));
+        assert!(
+            !script.source_string_semantic_unsat,
+            "small-subject indexof must decline {assertion}"
+        );
+        assert_ne!(
+            solve_smtlib(&input, &config())
+                .expect("solve small-subject indexof control")
+                .result,
+            CheckResult::Unsat,
+            "satisfiable small-subject indexof control must not become UNSAT: {assertion}"
+        );
+    }
+}
