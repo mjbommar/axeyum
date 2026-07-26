@@ -383,17 +383,18 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
-- **2026-07-26 — exact selected-path propagation moves 244 Kaluza rows without
+- **2026-07-26 — exact selected-path propagation moves 257 Kaluza rows without
   trusting directory labels.** Commits `09841e23`, `ef78ca7b`, `fca80291`, and
   `29bc62c4` propagate only forced Boolean aliases, selected top-level `ite`
   branches, strict-order disequalities, exact nonnegative string-length lower
   bounds, and the exact `concat(parts) = ""` iff every part is empty identity.
-  Parent-`24df64b9` A/B measurements attribute +159 decisions to the 342-row
-  long-literal bucket (4→163 UNSAT), +60 to the 104-row empty-parse bucket
+  Parent-`24df64b9` A/B measurements attribute +172 decisions to the 342-row
+  long-literal bucket (4→176 UNSAT), +60 to the 104-row empty-parse bucket
   (0→60), and +25 to the 39-row `IntNeg` residual (0→25). The selected-path
   mechanism contributes +111 (+102/+2/+7 respectively), and concat-emptiness
-  closes the remaining 18 dual-oracle-UNSAT `IntNeg` rows. Both Z3 and cvc5
-  independently return UNSAT on all 129 latest gains. All 14 dual-oracle-SAT
+  adds 31 more (+13 long-literal and the remaining 18 dual-oracle-UNSAT
+  `IntNeg` rows). Both Z3 and cvc5 independently return UNSAT on all 142 latest
+  gains. All 14 dual-oracle-SAT
   `IntNeg` controls remain non-decisions, so the improvement does not
   over-refute them. This check
   deliberately ignores misleading corpus `sat/`/`unsat/` directory names. The
@@ -9367,15 +9368,16 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
-- **2026-07-26 — closed the remaining 18 oracle-UNSAT Kaluza `IntNeg` rows.**
+- **2026-07-26 — moved 31 Kaluza rows through exact concat emptiness.**
   Committed `29bc62c4`. Equality classes now propagate the exact free-monoid
   emptiness identity in both directions: a concat equals the empty string iff
   every component is empty. This bridges Kaluza's generated `concat("", input)`
-  temporaries to the already-selected fixed-suffix contradiction. All 18 prior
-  Unknown/timeouts now return UNSAT, independently confirmed by both Z3 and
-  cvc5; all seven previously decided UNSAT controls remain UNSAT, and all 14
-  dual-oracle-SAT controls remain non-decisions. The cumulative Kaluza gain over
-  parent `24df64b9` is 244 decisions. A corpus-shaped alias-chain regression,
+  temporaries to the already-selected fixed-suffix contradiction. The rule
+  closes all 18 prior `IntNeg` Unknown/timeouts plus 13 long-literal residuals;
+  both Z3 and cvc5 independently confirm all 31 as UNSAT. All seven previously
+  decided `IntNeg` UNSAT controls remain UNSAT, and all 14 dual-oracle-SAT
+  controls remain non-decisions. The cumulative Kaluza gain over parent
+  `24df64b9` is 257 decisions. A corpus-shaped alias-chain regression,
   its satisfiable near-misses, all 282 SMT-LIB crate tests, and
   `just check-scope` (73 SMT-LIB library tests, 21 solver library tests,
   warning-denied Clippy) pass.
