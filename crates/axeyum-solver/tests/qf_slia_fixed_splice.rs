@@ -2175,3 +2175,89 @@ fn exact_source_self_replacement_boolean_equivalences_decline_satisfiable_contro
         );
     }
 }
+
+#[test]
+fn exact_source_head_totality_views_refute_noetzli_families() {
+    let assertions = [
+        r#"(not (= (str.prefixof "A" (str.++ x "A")) (str.contains "A" (str.at x 0))))"#,
+        r#"(not (= (str.prefixof "B" (str.++ x "B")) (str.contains "B" (str.at x 0))))"#,
+        r#"(not (= (= "" (str.at x 0)) (= x "")))"#,
+        r#"(not (= (str.contains "" (str.at x 0)) (= x "")))"#,
+        r#"(not (= (= "" (str.at x 1)) (= x (str.at x 0))))"#,
+        r#"(not (= (str.contains "" (str.at x 1)) (= x (str.at x 0))))"#,
+        r#"(not (= (str.substr "A" (str.indexof "" x 0) z) (str.substr "A" (str.len x) z)))"#,
+        r#"(not (= (str.substr "B" (str.indexof "" x 0) z) (str.substr "B" (str.len x) z)))"#,
+        r#"(not (= (str.substr (str.at x 0) 0 z) (str.at (str.substr x 0 z) 0)))"#,
+        r#"(not (= (str.substr (str.at x 1) 0 z) (str.at (str.substr x 1 z) 0)))"#,
+        r"(not (= (str.substr (str.at x z) 0 z) (str.at (str.substr x z z) 0)))",
+        r#"(not (= (str.replace x (str.at x 0) "") (str.substr x 1 (str.len x))))"#,
+        r#"(not (= (str.replace "A" (str.at x 0) "A") (str.replace "A" x "A")))"#,
+        r#"(not (= (str.at "A" (str.len x)) (str.replace "" x "A")))"#,
+        r#"(not (= (str.replace "B" (str.at x 0) "B") (str.replace "B" x "B")))"#,
+        r#"(not (= (str.replace "" (str.at x 0) x) ""))"#,
+        r#"(not (= (str.replace "" (str.at x 0) y) (str.replace "" x y)))"#,
+        r#"(not (= (str.at "B" (str.len x)) (str.replace "" x "B")))"#,
+        r#"(not (= (str.replace (str.at x 0) "A" "B") (str.at (str.replace x "A" "B") 0)))"#,
+        r#"(not (= (str.replace (str.at x 0) "B" "A") (str.at (str.replace x "B" "A") 0)))"#,
+    ];
+
+    assert_eq!(assertions.len(), 20);
+    for (index, assertion) in assertions.into_iter().enumerate() {
+        let input = format!(
+            r#"(set-logic QF_SLIA)
+(declare-fun x () String)
+(declare-fun y () String)
+(declare-fun z () Int)
+(assert {assertion})
+(check-sat)
+"#
+        );
+        let script = parse_script(&input).expect("parse head-totality theorem");
+        assert!(
+            script.source_string_semantic_unsat,
+            "head-totality theorem must refute {assertion}"
+        );
+        if matches!(index, 0 | 11 | 19) {
+            assert_eq!(
+                solve_smtlib(&input, &config())
+                    .expect("solve head-totality theorem")
+                    .result,
+                CheckResult::Unsat,
+                "head-totality theorem must survive the bounded-string gate: {assertion}"
+            );
+        }
+    }
+}
+
+#[test]
+fn exact_source_head_totality_views_decline_satisfiable_controls() {
+    for assertion in [
+        r#"(not (= (= "" (str.at x (- 1))) (= x (str.substr x 0 (- 1)))))"#,
+        r"(not (= (str.substr (str.at x i) 1 n) (str.at (str.substr x i n) 0)))",
+        r#"(not (= (str.replace x (str.at x 1) "") (str.substr x 1 (str.len x))))"#,
+        r#"(not (= (str.replace (str.at x 0) "A" "BC") (str.at (str.replace x "A" "BC") 0)))"#,
+        r"(not (= (str.len x) 1))",
+    ] {
+        let input = format!(
+            r#"(set-logic QF_SLIA)
+(declare-fun x () String)
+(declare-fun i () Int)
+(declare-fun n () Int)
+(assert {assertion})
+(check-sat)
+"#
+        );
+        let script = parse_script(&input).expect("parse head-totality control");
+        assert!(
+            !script.source_string_semantic_unsat,
+            "satisfiable head-totality control must decline: {assertion}"
+        );
+        assert_ne!(
+            solve_smtlib(&input, &config())
+                .expect("solve head-totality control")
+                .result,
+            CheckResult::Unsat,
+            "satisfiable head-totality control must not become UNSAT: {assertion}"
+        );
+    }
+}

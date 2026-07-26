@@ -9359,6 +9359,9 @@ fn exact_rewrite_term(expression: &SExpr, depth: u32) -> ExactRewriteTerm {
     if let Some(rewritten) = exact_rewrite_self_replacement_view(items, depth + 1) {
         return rewritten;
     }
+    if let Some(rewritten) = exact_rewrite_head_totality_view(items, depth + 1) {
+        return rewritten;
+    }
     if let Some(rewritten) = exact_rewrite_one_code_point_replace_view(items, depth + 1) {
         return rewritten;
     }
@@ -9408,6 +9411,75 @@ fn exact_rewrite_self_replacement_view(items: &[SExpr], depth: u32) -> Option<Ex
         ];
         args[replacement_index - 1] = subject;
         return Some(exact_rewrite_app(head, args.into()));
+    }
+    None
+}
+
+/// Canonicalizes head observations using unbounded SMT-LIB total-function
+/// identities before inner terms can expand into unrelated decision trees.
+fn exact_rewrite_head_totality_view(items: &[SExpr], depth: u32) -> Option<ExactRewriteTerm> {
+    use ExactRewriteTerm::Int;
+
+    if items.first()?.atom() == Some("str.substr")
+        && items.len() == 4
+        && exact_rewrite_term(&items[2], depth) == Int(0)
+        && let Some(at) = items[1].list()
+        && at.len() == 3
+        && at[0].atom() == Some("str.at")
+    {
+        let subject = exact_rewrite_term(&at[1], depth);
+        let index = exact_rewrite_term(&at[2], depth);
+        let length = exact_rewrite_term(&items[3], depth);
+        return Some(exact_rewrite_app(
+            "str.at",
+            vec![
+                exact_rewrite_app("str.substr", vec![subject, index, length]),
+                Int(0),
+            ],
+        ));
+    }
+    if items.first()?.atom() == Some("str.replace")
+        && items.len() == 4
+        && literal_pattern_cps(&items[3]).is_some_and(|replacement| replacement.is_empty())
+        && let Some(at) = items[2].list()
+        && at.len() == 3
+        && at[0].atom() == Some("str.at")
+        && at[1] == items[1]
+        && exact_rewrite_term(&at[2], depth) == Int(0)
+    {
+        let subject = exact_rewrite_term(&items[1], depth);
+        return Some(exact_rewrite_app(
+            "str.substr",
+            vec![
+                subject.clone(),
+                Int(1),
+                exact_rewrite_app("str.len", vec![subject]),
+            ],
+        ));
+    }
+    if items.first()?.atom() == Some("str.at")
+        && items.len() == 3
+        && exact_rewrite_term(&items[2], depth) == Int(0)
+        && let Some(replace) = items[1].list()
+        && replace.len() == 4
+        && replace[0].atom() == Some("str.replace")
+    {
+        let subject = exact_rewrite_term(&replace[1], depth);
+        let needle = exact_rewrite_term(&replace[2], depth);
+        let replacement = exact_rewrite_term(&replace[3], depth);
+        let exact_one_code_point = |term: &ExactRewriteTerm| {
+            exact_string_min_len(term, 0) == Some(1) && exact_string_max_len(term, 0) == Some(1)
+        };
+        if exact_one_code_point(&needle) && exact_one_code_point(&replacement) {
+            return Some(exact_rewrite_app(
+                "str.replace",
+                vec![
+                    exact_rewrite_app("str.at", vec![subject, Int(0)]),
+                    needle,
+                    replacement,
+                ],
+            ));
+        }
     }
     None
 }
@@ -10273,9 +10345,56 @@ fn exact_rewrite_replace_emptiness(
     ))
 }
 
+fn exact_rewrite_head_totality_equality(
+    left: &ExactRewriteTerm,
+    right: &ExactRewriteTerm,
+) -> Option<ExactRewriteTerm> {
+    for (length, other) in [(left, right), (right, left)] {
+        if other == &ExactRewriteTerm::Int(0)
+            && let ExactRewriteTerm::App(head, args) = length
+            && head == "str.len"
+            && let [subject] = args.as_slice()
+        {
+            return Some(exact_rewrite_app(
+                "=",
+                vec![subject.clone(), ExactRewriteTerm::String(Vec::new())],
+            ));
+        }
+    }
+    for (at, other) in [(left, right), (right, left)] {
+        if matches!(other, ExactRewriteTerm::String(value) if value.is_empty())
+            && let ExactRewriteTerm::App(head, args) = at
+            && head == "str.at"
+            && let [subject, ExactRewriteTerm::Int(index)] = args.as_slice()
+            && *index >= 0
+        {
+            // `at(s,k)` is empty exactly when the nonnegative prefix through
+            // `k` already contains all of `s`.
+            return Some(exact_rewrite_app(
+                "=",
+                vec![
+                    subject.clone(),
+                    exact_rewrite_app(
+                        "str.substr",
+                        vec![
+                            subject.clone(),
+                            ExactRewriteTerm::Int(0),
+                            ExactRewriteTerm::Int(*index),
+                        ],
+                    ),
+                ],
+            ));
+        }
+    }
+    None
+}
+
 fn exact_rewrite_equality(left: &ExactRewriteTerm, right: &ExactRewriteTerm) -> ExactRewriteTerm {
     if left == right {
         return ExactRewriteTerm::Bool(true);
+    }
+    if let Some(rewritten) = exact_rewrite_head_totality_equality(left, right) {
+        return rewritten;
     }
     if let Some(rewritten) = exact_rewrite_replace_emptiness(left, right)
         .or_else(|| exact_rewrite_replace_emptiness(right, left))
@@ -18459,6 +18578,100 @@ mod string_escape_tests {
                     );
                 }
             }
+        }
+    }
+
+    #[test]
+    fn head_totality_views_match_reference_semantics_exhaustively() {
+        let mut words = vec![Vec::new()];
+        for length in 1..=4 {
+            for bits in 0..(1_usize << length) {
+                words.push(
+                    (0..length)
+                        .map(|shift| u32::from(if bits & (1 << shift) == 0 { b'A' } else { b'B' }))
+                        .collect(),
+                );
+            }
+        }
+
+        for subject in &words {
+            for index in 0_i128..=6 {
+                let at = substr_code_points(subject, index, 1);
+                let prefix = substr_code_points(subject, 0, index);
+                assert_eq!(at.is_empty(), prefix == *subject);
+            }
+            for index in -2_i128..=6 {
+                for length in -2_i128..=6 {
+                    let at = substr_code_points(subject, index, 1);
+                    assert_eq!(
+                        substr_code_points(&at, 0, length),
+                        substr_code_points(&substr_code_points(subject, index, length), 0, 1),
+                        "subject={subject:?}, index={index}, length={length}"
+                    );
+                }
+            }
+
+            let head = substr_code_points(subject, 0, 1);
+            assert_eq!(
+                replace_first_code_points(subject, &head, &[]),
+                substr_code_points(
+                    subject,
+                    1,
+                    i128::try_from(subject.len()).expect("small word")
+                )
+            );
+            for needle in [[u32::from(b'A')], [u32::from(b'B')]] {
+                for replacement in [[u32::from(b'A')], [u32::from(b'B')]] {
+                    assert_eq!(
+                        substr_code_points(
+                            &replace_first_code_points(subject, &needle, &replacement),
+                            0,
+                            1
+                        ),
+                        replace_first_code_points(&head, &needle, &replacement),
+                        "subject={subject:?}, needle={needle:?}, replacement={replacement:?}"
+                    );
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn head_totality_symbolic_forms_close_and_near_misses_decline() {
+        for text in [
+            r#"(not (= (= "" (str.at x 0)) (= x "")))"#,
+            r#"(not (= (= "" (str.at x 1)) (= x (str.at x 0))))"#,
+            r"(not (= (str.substr (str.at x i) 0 n) (str.at (str.substr x i n) 0)))",
+            r#"(not (= (str.replace x (str.at x 0) "") (str.substr x 1 (str.len x))))"#,
+            r#"(not (= (str.replace (str.at x 0) "A" "B") (str.at (str.replace x "A" "B") 0)))"#,
+        ] {
+            let expression = read_all(text)
+                .expect("read head-totality theorem")
+                .pop()
+                .expect("one head-totality theorem");
+            assert_eq!(
+                exact_rewrite_term(&expression, 0),
+                ExactRewriteTerm::Bool(false),
+                "{text}"
+            );
+        }
+
+        for text in [
+            r#"(not (= (= "" (str.at x (- 1))) (= x (str.substr x 0 (- 1)))))"#,
+            r"(not (= (str.substr (str.at x i) 1 n) (str.at (str.substr x i n) 0)))",
+            r#"(not (= (str.replace x (str.at x 1) "") (str.substr x 1 (str.len x))))"#,
+            r#"(not (= (str.replace (str.at x 0) "A" "BC") (str.at (str.replace x "A" "BC") 0)))"#,
+            r"(not (= (str.len x) 1))",
+        ] {
+            let expression = read_all(text)
+                .expect("read head-totality control")
+                .pop()
+                .expect("one head-totality control");
+            assert_ne!(
+                exact_rewrite_term(&expression, 0),
+                ExactRewriteTerm::Bool(false),
+                "{text}"
+            );
         }
     }
 
