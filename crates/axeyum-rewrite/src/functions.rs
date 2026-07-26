@@ -407,7 +407,6 @@ struct Eliminator {
     groups: Vec<(FuncId, ApplyGroup)>,
     /// Flat list for model projection.
     applies: Vec<ProjectedApply>,
-    fresh_counter: usize,
 }
 
 impl Eliminator {
@@ -431,7 +430,7 @@ impl Eliminator {
                 for &arg in &args {
                     rewritten_args.push(self.rewrite(arena, arg)?);
                 }
-                self.resolve_apply(arena, func, rewritten_args)?
+                self.resolve_apply(arena, term, func, rewritten_args)?
             }
             TermNode::App { op, args } => {
                 let mut lowered = Vec::with_capacity(args.len());
@@ -450,6 +449,7 @@ impl Eliminator {
     fn resolve_apply(
         &mut self,
         arena: &mut TermArena,
+        source: TermId,
         func: FuncId,
         args: Vec<TermId>,
     ) -> Result<TermId, FuncElimError> {
@@ -457,19 +457,22 @@ impl Eliminator {
             return Ok(arena.var(fresh));
         }
         let result_sort = arena.function(func).2;
-        let fresh = self.fresh_symbol(arena, result_sort)?;
+        let fresh = Self::fresh_symbol(arena, source, result_sort)?;
         self.record_apply(func, args.clone(), fresh);
         self.apply_memo.insert((func, args), fresh);
         Ok(arena.var(fresh))
     }
 
     fn fresh_symbol(
-        &mut self,
         arena: &mut TermArena,
+        source: TermId,
         sort: Sort,
     ) -> Result<SymbolId, FuncElimError> {
-        let name = format!("!fn_app_{}", self.fresh_counter);
-        self.fresh_counter += 1;
+        // The source term id is unique inside one arena and stable across the
+        // repeated elimination probes used by auto-dispatch.  Reusing this name
+        // for the same application is safe; distinct applications can never
+        // alias merely because a new `Eliminator` restarted a local counter.
+        let name = format!("!fn_app_{}", source.index());
         Ok(arena.declare_internal(&name, sort)?)
     }
 
@@ -769,15 +772,13 @@ mod tests {
         let elim = eliminate_functions(&mut arena, &[neq]).unwrap();
         // Build a QF_BV model: assign each fresh symbol a distinct value.
         let mut bv_model = Assignment::new();
-        // Find the fresh symbols by re-deriving them: the eliminated assertion
-        // is `(not (= s0 s1))`; set them via the arena's symbol table.
-        for (sym, name, sort) in arena.symbols() {
-            if name.starts_with("!fn_app_") {
-                let Sort::BitVec(w) = sort else { continue };
-                // s0 -> 0xaa, s1 -> 0xbb (distinct, satisfying the disequality).
-                let value = if name.ends_with('0') { 0xaa } else { 0xbb };
-                bv_model.set(sym, bv(w, value));
-            }
+        // Assign distinct values in deterministic application-discovery order.
+        for (index, (_, _, fresh)) in elim.applications().into_iter().enumerate() {
+            let Sort::BitVec(width) = arena.symbol(fresh).1 else {
+                panic!("test applications have bit-vector results")
+            };
+            let value = if index == 0 { 0xaa } else { 0xbb };
+            bv_model.set(fresh, bv(width, value));
         }
         let projected = elim.project_model(&arena, &bv_model).unwrap();
         // The reconstructed f makes the original disequality true.
@@ -812,6 +813,33 @@ mod tests {
             eval(&arena, assertion, &projected).unwrap(),
             Value::Bool(true)
         );
+    }
+
+    #[test]
+    fn repeated_elimination_uses_disjoint_fresh_symbols() {
+        let mut arena = TermArena::new();
+        let bool_function = arena
+            .declare_fun("bool_function", &[Sort::Bool], Sort::Bool)
+            .unwrap();
+        let int_function = arena
+            .declare_fun("int_function", &[Sort::Int], Sort::Int)
+            .unwrap();
+        let bool_arg = arena.bool_var("bool_arg").unwrap();
+        let int_arg = arena.int_var("int_arg").unwrap();
+        let bool_app = arena.apply(bool_function, &[bool_arg]).unwrap();
+        let int_app = arena.apply(int_function, &[int_arg]).unwrap();
+
+        let first = eliminate_functions(&mut arena, &[bool_app]).unwrap();
+        let second = eliminate_functions(&mut arena, &[int_app]).unwrap();
+        let repeated = eliminate_functions(&mut arena, &[bool_app]).unwrap();
+        let (_, _, first_fresh) = first.applications()[0];
+        let (_, _, second_fresh) = second.applications()[0];
+        let (_, _, repeated_fresh) = repeated.applications()[0];
+
+        assert_ne!(first_fresh, second_fresh);
+        assert_eq!(first_fresh, repeated_fresh);
+        assert_eq!(arena.symbol(first_fresh).1, Sort::Bool);
+        assert_eq!(arena.symbol(second_fresh).1, Sort::Int);
     }
 
     /// Extends `model` with each fresh application symbol set to the true value
