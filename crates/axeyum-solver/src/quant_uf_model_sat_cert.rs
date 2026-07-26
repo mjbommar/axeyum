@@ -285,9 +285,6 @@ pub(crate) fn vacuous_unary_uf_guard(
     body: TermId,
     binder: SymbolId,
 ) -> Option<(FuncId, TermId)> {
-    if arena.symbol(binder).1 != Sort::Int {
-        return None;
-    }
     fn application_at_binder(arena: &TermArena, term: TermId, binder: SymbolId) -> Option<FuncId> {
         let TermNode::App {
             op: Op::Apply(function),
@@ -317,6 +314,10 @@ pub(crate) fn vacuous_unary_uf_guard(
             }
         }
         false
+    }
+
+    if arena.symbol(binder).1 != Sort::Int {
+        return None;
     }
 
     let TermNode::App {

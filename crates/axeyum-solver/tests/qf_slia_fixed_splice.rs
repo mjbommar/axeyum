@@ -44,7 +44,7 @@ fn fixed_splice_uses_correlated_bound_and_preserves_short_strings() {
     }
 }
 
-/// PyEx spells a first-occurrence character replacement as a prefix through the
+/// `PyEx` spells a first-occurrence character replacement as a prefix through the
 /// match, a replacement inside that prefix, and the untouched suffix. The two
 /// pieces have large independent packed maxima, but their lengths are correlated:
 /// equal-length needle/replacement pairs reconstruct exactly one base-length word.
@@ -357,12 +357,12 @@ fn word_only_fallback_retains_exact_path_conflicts() {
 
 #[test]
 fn semantic_refuter_never_masks_a_non_capacity_parse_decline() {
-    let input = r#"(set-logic QF_SLIA)
+    let input = r"(set-logic QF_SLIA)
 (declare-fun s () String)
 (assert (= (unknown.word.operator s) s))
 (assert (not (= (unknown.word.operator s) s)))
 (check-sat)
-"#;
+";
     assert!(
         parse_script(input).is_err(),
         "an untyped unsupported operator must remain a parse decline"
@@ -419,18 +419,18 @@ fn exact_source_rewrite_refutes_noetzli_term_and_predicate_families() {
         r#"(not (= (str.contains x (str.substr "A" z z)) true))"#,
         r#"(not (= (str.replace "A" y (str.replace y y x))
                     (str.replace x x (str.replace "A" y x))))"#,
-        r#"(not (= (str.substr x z 1) (str.at x z)))"#,
+        r"(not (= (str.substr x z 1) (str.at x z)))",
         r#"(not (= (str.substr x 0 (str.indexof "A" "B" z)) ""))"#,
-        r#"(not (= (str.from_int (+ 0 z)) (str.from_int z)))"#,
+        r"(not (= (str.from_int (+ 0 z)) (str.from_int z)))",
     ] {
         let input = format!(
-            r#"(set-logic QF_SLIA)
+            r"(set-logic QF_SLIA)
 (declare-fun x () String)
 (declare-fun y () String)
 (declare-fun z () Int)
 (assert {assertion})
 (check-sat)
-"#
+"
         );
         let script = parse_script(&input).expect("parse exact source rewrite");
         assert!(
@@ -453,14 +453,14 @@ fn exact_source_rewrite_does_not_assume_the_packed_string_bound() {
         // A longer unbounded string can carry `A` at index 100.
         r#"(= (str.at x 100) "A")"#,
         // A string longer than the packed bound differs from its first 8 chars.
-        r#"(not (= (str.substr x 0 8) x))"#,
+        r"(not (= (str.substr x 0 8) x))",
     ] {
         let input = format!(
-            r#"(set-logic QF_SLIA)
+            r"(set-logic QF_SLIA)
 (declare-fun x () String)
 (assert {assertion})
 (check-sat)
-"#
+"
         );
         let script = parse_script(&input).expect("parse bound-sensitive model");
         assert!(
@@ -479,12 +479,12 @@ fn exact_source_rewrite_does_not_assume_the_packed_string_bound() {
 
 #[test]
 fn exact_source_rewrite_declines_nonidentity_symbolic_terms() {
-    let input = r#"(set-logic QF_SLIA)
+    let input = r"(set-logic QF_SLIA)
 (declare-fun x () String)
 (declare-fun y () String)
 (assert (not (= (str.++ x y) (str.++ y x))))
 (check-sat)
-"#;
+";
     let script = parse_script(input).expect("parse nonidentity terms");
     assert!(!script.source_string_semantic_unsat);
     assert_ne!(
@@ -497,11 +497,11 @@ fn exact_source_rewrite_declines_nonidentity_symbolic_terms() {
 
 #[test]
 fn exact_source_rewrite_does_not_use_assertions_after_check_sat() {
-    let input = r#"(set-logic QF_SLIA)
+    let input = r"(set-logic QF_SLIA)
 (declare-fun x () String)
 (check-sat)
 (assert (not (= (str.replace x x x) x)))
-"#;
+";
     let script = parse_script(input).expect("parse post-query assertion");
     assert!(!script.source_string_semantic_unsat);
     assert!(matches!(
