@@ -9372,6 +9372,13 @@ fn exact_rewrite_app(head: &str, args: Vec<ExactRewriteTerm>) -> ExactRewriteTer
         ("=", [Bool(left), Bool(right)]) => return Bool(left == right),
         ("=", [Int(left), Int(right)]) => return Bool(left == right),
         ("=", [String(left), String(right)]) => return Bool(left == right),
+        ("=", [left, right])
+            if exact_string_alphabets_disjoint(left, right)
+                && (exact_string_min_len(left, 0).is_some_and(|length| length > 0)
+                    || exact_string_min_len(right, 0).is_some_and(|length| length > 0)) =>
+        {
+            return Bool(false);
+        }
         ("=", [left, right]) => return exact_rewrite_equality(left, right),
         ("ite", [Bool(true), then_term, _]) => return then_term.clone(),
         ("ite", [Bool(false), _, else_term]) => return else_term.clone(),
@@ -9459,6 +9466,12 @@ fn exact_rewrite_app(head: &str, args: Vec<ExactRewriteTerm>) -> ExactRewriteTer
                 .map_or_else(Vec::new, |code_point| vec![code_point]);
             return String(result);
         }
+        ("str.at", [String(value), _]) if value.is_empty() => return String(Vec::new()),
+        ("str.at", [App(inner, inner_args), Int(0)])
+            if inner == "str.at" && inner_args.len() == 2 =>
+        {
+            return App(inner.clone(), inner_args.clone());
+        }
         ("str.at", [App(inner, _), Int(index)]) if inner == "str.at" && *index >= 1 => {
             return String(Vec::new());
         }
@@ -9484,6 +9497,12 @@ fn exact_rewrite_app(head: &str, args: Vec<ExactRewriteTerm>) -> ExactRewriteTer
             if matches!(needle, String(value) if value.is_empty()) {
                 return exact_rewrite_concat(&[replacement.clone(), subject.clone()]);
             }
+            if exact_string_alphabets_disjoint(subject, needle)
+                && (exact_string_min_len(needle, 0).is_some_and(|length| length > 0)
+                    || matches!(replacement, String(value) if value.is_empty()))
+            {
+                return subject.clone();
+            }
             if let (String(subject), String(needle)) = (subject, needle)
                 && !needle.is_empty()
                 && !subject
@@ -9508,6 +9527,11 @@ fn exact_rewrite_app(head: &str, args: Vec<ExactRewriteTerm>) -> ExactRewriteTer
             if exact_prefix_view(left, right) {
                 return Bool(true);
             }
+            if exact_string_min_len(left, 0).is_some_and(|length| length > 0)
+                && exact_string_alphabets_disjoint(left, right)
+            {
+                return Bool(false);
+            }
             if exact_string_length_le(right, left, 0) {
                 return exact_rewrite_equality(left, right);
             }
@@ -9521,6 +9545,11 @@ fn exact_rewrite_app(head: &str, args: Vec<ExactRewriteTerm>) -> ExactRewriteTer
             }
             if exact_suffix_view(left, right) {
                 return Bool(true);
+            }
+            if exact_string_min_len(left, 0).is_some_and(|length| length > 0)
+                && exact_string_alphabets_disjoint(left, right)
+            {
+                return Bool(false);
             }
             if exact_string_length_le(right, left, 0) {
                 return exact_rewrite_equality(left, right);
@@ -9543,6 +9572,11 @@ fn exact_rewrite_app(head: &str, args: Vec<ExactRewriteTerm>) -> ExactRewriteTer
             }
             if exact_contained_view(subject, needle) {
                 return Bool(true);
+            }
+            if exact_string_min_len(needle, 0).is_some_and(|length| length > 0)
+                && exact_string_alphabets_disjoint(subject, needle)
+            {
+                return Bool(false);
             }
             if exact_string_length_le(subject, needle, 0) {
                 return exact_rewrite_equality(subject, needle);
@@ -9720,6 +9754,52 @@ fn exact_string_max_len(term: &ExactRewriteTerm, depth: u32) -> Option<usize> {
         }
         _ => None,
     }
+}
+
+/// Returns a conservative finite set containing every code point a term can
+/// produce. `None` means unknown; a returned set may be an over-approximation.
+/// Disjoint returned sets therefore prove that two nonempty strings differ and
+/// that a nonempty needle cannot occur in its subject.
+fn exact_string_alphabet(term: &ExactRewriteTerm, depth: u32) -> Option<BTreeSet<u32>> {
+    use ExactRewriteTerm::{App, String};
+
+    if depth > 32 {
+        return None;
+    }
+    match term {
+        String(value) => Some(value.iter().copied().collect()),
+        App(head, _) if head == "str.from_int" => Some((b'0'..=b'9').map(u32::from).collect()),
+        App(head, args) if matches!(head.as_str(), "str.at" | "str.substr") => {
+            exact_string_alphabet(args.first()?, depth + 1)
+        }
+        App(head, parts) if matches!(head.as_str(), "str.++" | "seq.++") => {
+            parts
+                .iter()
+                .try_fold(BTreeSet::new(), |mut alphabet, part| {
+                    alphabet.extend(exact_string_alphabet(part, depth + 1)?);
+                    Some(alphabet)
+                })
+        }
+        App(head, args) if head == "str.replace" => {
+            let [subject, _, replacement] = args.as_slice() else {
+                return None;
+            };
+            let mut alphabet = exact_string_alphabet(subject, depth + 1)?;
+            alphabet.extend(exact_string_alphabet(replacement, depth + 1)?);
+            Some(alphabet)
+        }
+        _ => None,
+    }
+}
+
+fn exact_string_alphabets_disjoint(left: &ExactRewriteTerm, right: &ExactRewriteTerm) -> bool {
+    let (Some(left), Some(right)) = (
+        exact_string_alphabet(left, 0),
+        exact_string_alphabet(right, 0),
+    ) else {
+        return false;
+    };
+    left.is_disjoint(&right)
 }
 
 fn exact_prefix_view(prefix: &ExactRewriteTerm, word: &ExactRewriteTerm) -> bool {
@@ -14805,7 +14885,20 @@ fn apply_parameterized(
 
 #[cfg(test)]
 mod string_escape_tests {
-    use super::decode_string_code_points;
+    use super::{ExactRewriteTerm, decode_string_code_points, exact_rewrite_term};
+    use crate::sexpr::read_all;
+
+    #[test]
+    fn exact_rewriter_separates_decimal_and_letter_alphabets() {
+        let expression = read_all(r#"(= "A" (str.from_int z))"#)
+            .expect("read exact rewrite expression")
+            .pop()
+            .expect("one expression");
+        assert_eq!(
+            exact_rewrite_term(&expression, 0),
+            ExactRewriteTerm::Bool(false)
+        );
+    }
 
     #[test]
     fn braced_escape_decodes_to_code_point() {
