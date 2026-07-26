@@ -383,6 +383,25 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-26 — exact first-occurrence algebra moves 23 Noetzli term rows.**
+  Committed `ae9da605` recognizes ten reusable unbounded theorem schemas before
+  nested `str.replace` terms expand into unrelated condition trees: empty-
+  subject commutation, subject restoration, conjugate replacement, singleton
+  prefix commutation, whole-source replacement under a one-code-point prefix,
+  self-expansion, distinct singleton deletion, and singleton-subject
+  composition. The fixed 1,880-row population moves **1,840→1,863 decisions
+  (99.1%)**—19 SAT / 1,844 UNSAT / 17 unknown—with exactly 23 term
+  `unknown`→`unsat` gains and no loss or verdict flip. Z3 4.13.3 confirms 11 at
+  five seconds; the other 12 time out and are covered by 65,457 direct
+  reference equalities over every binary word through length five, negative and
+  out-of-range prefix lengths, empty needles, and all singleton pairings.
+  Eight concrete counterexamples—including the four superficially similar
+  nested-replace rows 964–967—remain satisfiable declines. All 71 SMT-LIB
+  library tests, 87 SMT-LIB front-door tests, 77 fixed-splice tests, both
+  deadline tests, both standing wrong-UNSAT guards, and `just check-scope` (224
+  affected library tests plus warning-denied Clippy) pass. The final rebuilt-
+  release replay is fully monotone across all 1,880 rows.
+
 - **2026-07-26 — correlated substring/index totality moves five more Noetzli
   rows without carrying a capability loss.** Committed `4ad967f8` canonicalizes
   four exact unbounded families: complementary offset/length slices, dropping
@@ -9349,6 +9368,17 @@ plan is built and committed on the current branch:
 | P5.5 | External target, measured | **DONE (bounded v1, ADR-0323--0338):** authenticated Tock capture plus eight rechecked dual-DRAT proofs and six replayed controls, UNKNOWN=0, DISAGREE=0. Query time 12.700 s; fresh outer wall 50.745 s; peak RSS 1,256,496 KiB; zero OOM deltas. The committed case study compares exact target validation, universal coverage, trust, effort, artifact boundaries, and limits. No Tock bug was found, so no upstream issue is applicable. This is not a speed or whole-kernel claim. |
 
 ## Changelog
+
+- **2026-07-26 — moved 23 exact first-occurrence algebra rows.** Committed
+  `ae9da605` with ten unbounded replacement-algebra schemas, 65,457 direct
+  reference equalities, and eight concrete satisfiable counterexamples. The
+  fixed population rises 1,840→1,863/1,880 (99.1%): 23 term
+  `unknown`→`unsat` gains, zero losses or verdict flips. Z3 confirms 11 at five
+  seconds; direct semantics cover the 12 timeouts. The final rebuilt-release
+  replay is 19 SAT / 1,844 UNSAT / 17 unknown with only the 96 cumulative
+  `unknown`→`unsat` transitions from the retained baseline. The affected
+  string targets, deadline and wrong-UNSAT guards, and `just check-scope` are
+  green.
 
 - **2026-07-26 — moved five correlated substring/index rows.** Committed
   `4ad967f8` with exact complement, nested-prefix, singleton-search, and
