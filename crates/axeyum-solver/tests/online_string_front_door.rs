@@ -346,6 +346,101 @@ fn front_door_pyex_indexof_not_found_alias_sat() {
 }
 
 #[test]
+fn front_door_pyex_delimited_views_sat_within_competition_budget() {
+    // Dense `httplib2-entry-disposition` paths split a value at its first comma,
+    // require both views to avoid `=`, and require a nonempty suffix. The generated
+    // integer-ITE aliases and nested negations must collapse to the exact membership
+    // literals; `",a"` is a replaying witness. This is the reduced form of the
+    // public family whose prior source route exhausted a 250 ms budget.
+    let s = r#"(set-logic QF_SLIA)
+(declare-fun value () String)
+(assert (and
+  (not (= (ite (str.contains value ",") 1 0) 0))
+  (not (not (= (ite
+    (not (= (str.indexof
+      (str.substr value 0 (- (str.indexof value "," 0) 0)) "=" 0) (- 1)))
+    1 0) 0)))
+  (not (not (= (ite
+    (not (= (str.indexof
+      (str.substr value (+ (str.indexof value "," 0) 1)
+        (- (str.len value) (+ (str.indexof value "," 0) 1))) "=" 0) (- 1)))
+    1 0) 0)))
+  (not (not (= (ite
+    (= (str.len
+      (str.substr value (+ (str.indexof value "," 0) 1)
+        (- (str.len value) (+ (str.indexof value "," 0) 1)))) 0)
+    1 0) 0)))))
+(check-sat)"#;
+    let config = SolverConfig {
+        timeout: Some(Duration::from_millis(250)),
+        ..SolverConfig::default()
+    };
+    let mut parsed = parse_script(s).expect("parse PyEx delimited views");
+    assert!(parsed.word_skeleton_memberships.len() >= 4);
+    assert!(matches!(
+        online_string_verdict(&mut parsed, &config),
+        Some(CheckResult::Sat(_))
+    ));
+    assert!(matches!(
+        solve_smtlib(s, &config)
+            .expect("solve PyEx delimited views")
+            .result,
+        CheckResult::Sat(_)
+    ));
+}
+
+#[test]
+fn online_pyex_delimited_indexof_views_reject_wrong_witnesses() {
+    let before = r#"(set-logic QF_SLIA)
+(declare-fun value () String)
+(assert (= value "=,a"))
+(assert (= (str.indexof
+  (str.substr value 0 (- (str.indexof value "," 0) 0)) "=" 0) (- 1)))
+(check-sat)"#;
+    let after = r#"(set-logic QF_SLIA)
+(declare-fun value () String)
+(assert (= value "a,="))
+(assert (= (str.indexof
+  (str.substr value (+ (str.indexof value "," 0) 1)
+    (- (str.len value) (+ (str.indexof value "," 0) 1))) "=" 0) (- 1)))
+(check-sat)"#;
+    let same_delimiter_and_needle = r#"(set-logic QF_SLIA)
+(declare-fun value () String)
+(assert (= value "a,b"))
+(assert (not (= (str.indexof
+  (str.substr value 0 (- (str.indexof value "," 0) 0)) "," 0) (- 1))))
+(check-sat)"#;
+
+    for source in [before, after, same_delimiter_and_needle] {
+        let mut parsed = parse_script(source).expect("parse delimited indexof control");
+        assert!(!parsed.word_skeleton.is_empty());
+        assert_eq!(
+            online_string_verdict(&mut parsed, &cfg()),
+            Some(CheckResult::Unsat)
+        );
+    }
+}
+
+#[test]
+fn online_pyex_before_first_view_honors_absent_delimiter_totality() {
+    // With no comma, `indexof(value, ",", 0) = -1` and therefore
+    // `substr(value, 0, -1) = ""`. The inner search must report -1 even though
+    // the original value itself contains `=`.
+    let source = r#"(set-logic QF_SLIA)
+(declare-fun value () String)
+(assert (= value "="))
+(assert (= (str.indexof
+  (str.substr value 0 (str.indexof value "," 0)) "=" 0) (- 1)))
+(check-sat)"#;
+    let mut parsed = parse_script(source).expect("parse absent-delimiter control");
+    assert!(!parsed.word_skeleton.is_empty());
+    assert!(matches!(
+        online_string_verdict(&mut parsed, &cfg()),
+        Some(CheckResult::Sat(_))
+    ));
+}
+
+#[test]
 fn front_door_indexof_not_found_conflict_is_unsat() {
     let s = r#"(set-logic QF_SLIA)
 (declare-fun value () String)
