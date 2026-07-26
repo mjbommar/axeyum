@@ -2402,3 +2402,68 @@ fn exact_source_one_code_point_paths_decline_satisfiable_controls() {
         );
     }
 }
+
+#[test]
+fn exact_source_from_int_views_refute_noetzli_families() {
+    let assertions = [
+        r#"(not (= (str.contains "B" (str.from_int z)) (str.contains "A" (str.from_int z))))"#,
+        r#"(not (= (= "" (str.from_int z)) (str.contains "A" (str.from_int z))))"#,
+        r#"(not (= (str.contains "" (str.from_int z)) (str.contains "A" (str.from_int z))))"#,
+        r#"(not (= (str.substr (str.from_int z) z z) ""))"#,
+        r#"(not (= (str.replace "" (str.from_int z) "A") (str.substr "A" 0 (- 0 z))))"#,
+        r#"(not (= (str.replace "" (str.from_int z) "B") (str.substr "B" 0 (- 0 z))))"#,
+    ];
+
+    for assertion in assertions {
+        let input = format!(
+            r#"(set-logic QF_SLIA)
+(declare-fun z () Int)
+(assert {assertion})
+(check-sat)
+"#
+        );
+        let script = parse_script(&input).expect("parse symbolic from-int theorem");
+        assert!(
+            script.source_string_semantic_unsat,
+            "symbolic from-int theorem must refute {assertion}"
+        );
+        assert_eq!(
+            solve_smtlib(&input, &config())
+                .expect("solve symbolic from-int theorem")
+                .result,
+            CheckResult::Unsat,
+            "symbolic from-int theorem must survive the bounded-string gate: {assertion}"
+        );
+    }
+}
+
+#[test]
+fn exact_source_from_int_views_decline_satisfiable_controls() {
+    for assertion in [
+        r#"(not (= (str.contains "1" (str.from_int z)) (str.contains "A" (str.from_int z))))"#,
+        r"(not (= (str.contains (str.from_int z) x) (str.suffixof x (str.from_int z))))",
+        r#"(not (= (str.substr (str.from_int z) 0 z) ""))"#,
+        r#"(not (= (str.replace "" (str.from_int z) "A") (str.substr "A" 0 (- 1 z))))"#,
+    ] {
+        let input = format!(
+            r#"(set-logic QF_SLIA)
+(declare-fun x () String)
+(declare-fun z () Int)
+(assert {assertion})
+(check-sat)
+"#
+        );
+        let script = parse_script(&input).expect("parse symbolic from-int control");
+        assert!(
+            !script.source_string_semantic_unsat,
+            "satisfiable symbolic from-int control must decline: {assertion}"
+        );
+        assert_ne!(
+            solve_smtlib(&input, &config())
+                .expect("solve symbolic from-int control")
+                .result,
+            CheckResult::Unsat,
+            "satisfiable symbolic from-int control must not become UNSAT: {assertion}"
+        );
+    }
+}

@@ -9808,6 +9808,16 @@ fn exact_rewrite_app(head: &str, args: Vec<ExactRewriteTerm>) -> ExactRewriteTer
         ("str.substr", [String(value), Int(offset), Int(length)]) => {
             return String(substr_code_points(value, *offset, *length));
         }
+        ("str.substr", [App(from_int, from_int_args), offset, length])
+            if from_int == "str.from_int"
+                && matches!(from_int_args.as_slice(), [value]
+                    if value == offset && value == length) =>
+        {
+            // Negative values produce the empty word. Zero requests length
+            // zero. Every positive integer has at most that many decimal
+            // digits, so starting at the integer itself is out of range.
+            return String(Vec::new());
+        }
         ("str.substr", [_, _, _])
             if args.iter().any(exact_is_ite)
                 && args.iter().map(exact_ite_count).sum::<u32>() <= 6 =>
@@ -10289,6 +10299,16 @@ fn exact_rewrite_app(head: &str, args: Vec<ExactRewriteTerm>) -> ExactRewriteTer
                             .any(|candidate| candidate == needle),
                 );
             }
+            if let String(subject) = subject
+                && subject
+                    .iter()
+                    .all(|code_point| !(u32::from(b'0')..=u32::from(b'9')).contains(code_point))
+                && let Some(empty) = exact_from_int_empty_condition(needle)
+            {
+                // A nonempty decimal word cannot occur in a fixed word with
+                // no decimal code points; the empty word occurs everywhere.
+                return empty;
+            }
             if exact_contained_view(subject, needle) {
                 return Bool(true);
             }
@@ -10418,6 +10438,11 @@ fn exact_positive_substring_length_condition(length: &ExactRewriteTerm) -> Exact
                 vec![exact_rewrite_app(">", vec![value.clone(), Int(0)])],
             );
         }
+        if head == "-"
+            && let [Int(0), value] | [value] = args.as_slice()
+        {
+            return exact_rewrite_app("<", vec![value.clone(), Int(0)]);
+        }
         if matches!(head.as_str(), "str.len" | "seq.len")
             && let [subject] = args.as_slice()
         {
@@ -10428,6 +10453,29 @@ fn exact_positive_substring_length_condition(length: &ExactRewriteTerm) -> Exact
         }
     }
     exact_rewrite_app(">", vec![length.clone(), Int(0)])
+}
+
+/// Symbolic `str.from_int(i)` is empty exactly for negative `i`.
+fn exact_from_int_empty_condition(term: &ExactRewriteTerm) -> Option<ExactRewriteTerm> {
+    use ExactRewriteTerm::{App, Int};
+
+    let App(head, args) = term else {
+        return None;
+    };
+    let [value] = args.as_slice() else {
+        return None;
+    };
+    (head == "str.from_int").then(|| exact_rewrite_app("<", vec![value.clone(), Int(0)]))
+}
+
+fn exact_rewrite_from_int_emptiness(
+    from_int: &ExactRewriteTerm,
+    other: &ExactRewriteTerm,
+) -> Option<ExactRewriteTerm> {
+    if !matches!(other, ExactRewriteTerm::String(value) if value.is_empty()) {
+        return None;
+    }
+    exact_from_int_empty_condition(from_int)
 }
 
 /// Exact emptiness of a prefix substring.  At offset zero the result is empty
@@ -10679,6 +10727,8 @@ fn exact_rewrite_special_equality(
     right: &ExactRewriteTerm,
 ) -> Option<ExactRewriteTerm> {
     exact_rewrite_head_totality_equality(left, right)
+        .or_else(|| exact_rewrite_from_int_emptiness(left, right))
+        .or_else(|| exact_rewrite_from_int_emptiness(right, left))
         .or_else(|| exact_rewrite_prefix_substr_emptiness(left, right))
         .or_else(|| exact_rewrite_prefix_substr_emptiness(right, left))
         .or_else(|| exact_rewrite_replace_preserves_subject(left, right))
@@ -17784,12 +17834,12 @@ mod string_escape_tests {
         ExactEqualityFacts, ExactFixedWordLanguage, ExactRewriteTerm, decimal_code_points,
         decode_string_code_points, eval_pinned_word_semantics, exact_affine_equalities_equal,
         exact_affine_orderings_equal, exact_affine_zero_forces_nonpositive,
-        exact_affine_zero_forces_positive, exact_rewrite_app, exact_rewrite_concat_at,
-        exact_rewrite_concat_substr, exact_rewrite_equality, exact_rewrite_fixed_word_language,
-        exact_rewrite_prefix_substr_emptiness, exact_rewrite_replace_preserves_subject,
-        exact_rewrite_replace_singleton_equality, exact_rewrite_small_subject_indexof,
-        exact_rewrite_term, exact_rewrite_under_assignments, replace_first_code_points,
-        source_string_semantic_facts, substr_code_points,
+        exact_affine_zero_forces_positive, exact_from_int_empty_condition, exact_rewrite_app,
+        exact_rewrite_concat_at, exact_rewrite_concat_substr, exact_rewrite_equality,
+        exact_rewrite_fixed_word_language, exact_rewrite_prefix_substr_emptiness,
+        exact_rewrite_replace_preserves_subject, exact_rewrite_replace_singleton_equality,
+        exact_rewrite_small_subject_indexof, exact_rewrite_term, exact_rewrite_under_assignments,
+        replace_first_code_points, source_string_semantic_facts, substr_code_points,
     };
     use crate::sexpr::{SExpr, read_all};
 
@@ -19858,6 +19908,104 @@ mod string_escape_tests {
                     "subject={subject:?}, length={length}"
                 );
             }
+        }
+    }
+
+    #[test]
+    fn symbolic_from_int_views_close_decimal_families_conservatively() {
+        for text in [
+            r#"(not (= (str.contains "B" (str.from_int z)) (str.contains "A" (str.from_int z))))"#,
+            r#"(not (= (= "" (str.from_int z)) (str.contains "A" (str.from_int z))))"#,
+            r#"(not (= (str.contains "" (str.from_int z)) (str.contains "A" (str.from_int z))))"#,
+            r#"(not (= (str.substr (str.from_int z) z z) ""))"#,
+            r#"(not (= (str.replace "" (str.from_int z) "A") (str.substr "A" 0 (- 0 z))))"#,
+            r#"(not (= (str.replace "" (str.from_int z) "B") (str.substr "B" 0 (- 0 z))))"#,
+        ] {
+            let expression = read_all(text)
+                .expect("read symbolic from-int theorem")
+                .pop()
+                .expect("one theorem");
+            assert_eq!(
+                exact_rewrite_term(&expression, 0),
+                ExactRewriteTerm::Bool(false),
+                "{text}"
+            );
+        }
+
+        for text in [
+            r#"(not (= (str.contains "1" (str.from_int z)) (str.contains "A" (str.from_int z))))"#,
+            r"(not (= (str.contains (str.from_int z) x) (str.suffixof x (str.from_int z))))",
+            r#"(not (= (str.substr (str.from_int z) 0 z) ""))"#,
+            r#"(not (= (str.replace "" (str.from_int z) "A") (str.substr "A" 0 (- 1 z))))"#,
+        ] {
+            let expression = read_all(text)
+                .expect("read symbolic from-int control")
+                .pop()
+                .expect("one control");
+            assert_ne!(
+                exact_rewrite_term(&expression, 0),
+                ExactRewriteTerm::Bool(false),
+                "{text}"
+            );
+        }
+    }
+
+    #[test]
+    fn symbolic_from_int_views_match_reference_semantics_exhaustively() {
+        let values = (-128_i128..=2_048)
+            .chain([i128::MIN, -1, 0, 1, i128::MAX])
+            .collect::<BTreeSet<_>>();
+        for value in values {
+            let decimal = decimal_code_points(value);
+            let from_int = ExactRewriteTerm::App(
+                "str.from_int".to_owned(),
+                vec![ExactRewriteTerm::Int(value)],
+            );
+            assert_eq!(
+                exact_from_int_empty_condition(&from_int),
+                Some(ExactRewriteTerm::Bool(decimal.is_empty())),
+                "value={value}"
+            );
+            for fixed in [Vec::new(), vec![u32::from(b'A')], vec![u32::from(b'B')]] {
+                assert_eq!(
+                    exact_rewrite_app(
+                        "str.contains",
+                        vec![ExactRewriteTerm::String(fixed.clone()), from_int.clone(),],
+                    ),
+                    ExactRewriteTerm::Bool(
+                        decimal.is_empty()
+                            || fixed
+                                .windows(decimal.len())
+                                .any(|candidate| candidate == decimal),
+                    ),
+                    "value={value}, fixed={fixed:?}"
+                );
+            }
+            let replacement = vec![u32::from(b'A')];
+            assert_eq!(
+                exact_rewrite_app(
+                    "str.replace",
+                    vec![
+                        ExactRewriteTerm::String(Vec::new()),
+                        from_int.clone(),
+                        ExactRewriteTerm::String(replacement.clone()),
+                    ],
+                ),
+                ExactRewriteTerm::String(replace_first_code_points(&[], &decimal, &replacement,)),
+                "value={value}"
+            );
+            assert_eq!(
+                exact_rewrite_app(
+                    "str.substr",
+                    vec![
+                        from_int,
+                        ExactRewriteTerm::Int(value),
+                        ExactRewriteTerm::Int(value),
+                    ],
+                ),
+                ExactRewriteTerm::String(substr_code_points(&decimal, value, value)),
+                "value={value}"
+            );
         }
     }
 
