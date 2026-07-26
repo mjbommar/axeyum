@@ -9538,8 +9538,14 @@ fn exact_rewrite_app(head: &str, args: Vec<ExactRewriteTerm>) -> ExactRewriteTer
             return exact_rewrite_app("str.at", vec![subject.clone(), *offset.clone()]);
         }
         ("str.indexof", [subject, needle]) => {
-            return exact_rewrite_indexof(subject, needle, Some(0))
-                .map_or_else(|| App(head.to_owned(), args), Int);
+            if let Some(index) = exact_rewrite_indexof(subject, needle, Some(0)) {
+                return Int(index);
+            }
+            if let String(subject) = subject
+                && subject.len() <= 1
+            {
+                return exact_rewrite_small_subject_indexof(subject, needle, &Int(0));
+            }
         }
         ("str.indexof", [subject, needle, offset]) => {
             if subject == needle {
@@ -9553,8 +9559,14 @@ fn exact_rewrite_app(head: &str, args: Vec<ExactRewriteTerm>) -> ExactRewriteTer
                 Int(offset) => Some(*offset),
                 _ => None,
             };
-            return exact_rewrite_indexof(subject, needle, offset)
-                .map_or_else(|| App(head.to_owned(), args), Int);
+            if let Some(index) = exact_rewrite_indexof(subject, needle, offset) {
+                return Int(index);
+            }
+            if let String(subject) = subject
+                && subject.len() <= 1
+            {
+                return exact_rewrite_small_subject_indexof(subject, needle, &args[2]);
+            }
         }
         ("str.replace", [subject, needle, replacement]) => {
             if subject == needle {
@@ -9595,7 +9607,7 @@ fn exact_rewrite_app(head: &str, args: Vec<ExactRewriteTerm>) -> ExactRewriteTer
             {
                 return exact_rewrite_small_subject_replace(subject, needle, replacement);
             }
-            if let Some(distributed) = exact_distribute_replace_ite(&args) {
+            if let Some(distributed) = exact_distribute_app_ite(head, &args) {
                 return distributed;
             }
         }
@@ -9671,6 +9683,9 @@ fn exact_rewrite_app(head: &str, args: Vec<ExactRewriteTerm>) -> ExactRewriteTer
             }
         }
         _ => {}
+    }
+    if let Some(distributed) = exact_distribute_app_ite(head, &args) {
+        return distributed;
     }
     App(head.to_owned(), args)
 }
@@ -9962,6 +9977,54 @@ fn exact_rewrite_small_subject_replace(
     )
 }
 
+fn exact_rewrite_small_subject_indexof(
+    subject: &[u32],
+    needle: &ExactRewriteTerm,
+    offset: &ExactRewriteTerm,
+) -> ExactRewriteTerm {
+    use ExactRewriteTerm::{Int, String};
+
+    let empty = String(Vec::new());
+    let at_zero = exact_rewrite_app("=", vec![offset.clone(), Int(0)]);
+    let empty_needle = exact_rewrite_app("=", vec![needle.clone(), empty.clone()]);
+    if subject.is_empty() {
+        return exact_rewrite_app(
+            "ite",
+            vec![
+                at_zero,
+                exact_rewrite_app("ite", vec![empty_needle, Int(0), Int(-1)]),
+                Int(-1),
+            ],
+        );
+    }
+    let subject = String(subject.to_vec());
+    let matching_needle = exact_rewrite_app("=", vec![needle.clone(), subject]);
+    let zero_result = exact_rewrite_app(
+        "ite",
+        vec![
+            empty_needle.clone(),
+            Int(0),
+            exact_rewrite_app("ite", vec![matching_needle, Int(0), Int(-1)]),
+        ],
+    );
+    let one_result = exact_rewrite_app("ite", vec![empty_needle, Int(1), Int(-1)]);
+    exact_rewrite_app(
+        "ite",
+        vec![
+            at_zero,
+            zero_result,
+            exact_rewrite_app(
+                "ite",
+                vec![
+                    exact_rewrite_app("=", vec![offset.clone(), Int(1)]),
+                    one_result,
+                    Int(-1),
+                ],
+            ),
+        ],
+    )
+}
+
 fn exact_rewrite_concat_subject_replace(
     subject: &ExactRewriteTerm,
     needle: &ExactRewriteTerm,
@@ -10014,10 +10077,10 @@ fn exact_ite_count(term: &ExactRewriteTerm) -> u32 {
     }
 }
 
-fn exact_distribute_replace_ite(args: &[ExactRewriteTerm]) -> Option<ExactRewriteTerm> {
+fn exact_distribute_app_ite(head: &str, args: &[ExactRewriteTerm]) -> Option<ExactRewriteTerm> {
     use ExactRewriteTerm::App;
 
-    if args.iter().map(exact_ite_count).sum::<u32>() > 6 {
+    if head == "ite" || args.iter().map(exact_ite_count).sum::<u32>() > 6 {
         return None;
     }
     let (index, condition, then_term, else_term) =
@@ -10038,8 +10101,8 @@ fn exact_distribute_replace_ite(args: &[ExactRewriteTerm]) -> Option<ExactRewrit
         "ite",
         vec![
             condition.clone(),
-            exact_rewrite_app("str.replace", then_args),
-            exact_rewrite_app("str.replace", else_args),
+            exact_rewrite_app(head, then_args),
+            exact_rewrite_app(head, else_args),
         ],
     ))
 }
@@ -15482,7 +15545,8 @@ fn apply_parameterized(
 #[cfg(test)]
 mod string_escape_tests {
     use super::{
-        ExactRewriteTerm, decode_string_code_points, exact_rewrite_term, replace_first_code_points,
+        ExactRewriteTerm, decode_string_code_points, exact_rewrite_small_subject_indexof,
+        exact_rewrite_term, replace_first_code_points,
     };
     use crate::sexpr::read_all;
 
@@ -15496,6 +15560,66 @@ mod string_escape_tests {
             exact_rewrite_term(&expression, 0),
             ExactRewriteTerm::Bool(false)
         );
+    }
+
+    #[test]
+    fn exact_rewriter_closes_small_subject_indexof_totality() {
+        for text in [
+            r#"(= (str.from_int (str.indexof "" x 1)) "")"#,
+            r#"(= (str.at x (str.indexof "A" x 1)) "")"#,
+        ] {
+            let expression = read_all(text)
+                .expect("read small-subject indexof expression")
+                .pop()
+                .expect("one expression");
+            assert_eq!(
+                exact_rewrite_term(&expression, 0),
+                ExactRewriteTerm::Bool(true),
+                "{text}"
+            );
+        }
+    }
+
+    #[test]
+    fn small_subject_indexof_table_matches_reference_semantics_exhaustively() {
+        let subjects = [Vec::new(), vec![u32::from(b'A')], vec![u32::from(b'B')]];
+        let needles = [
+            Vec::new(),
+            vec![u32::from(b'A')],
+            vec![u32::from(b'B')],
+            vec![u32::from(b'A'), u32::from(b'A')],
+            vec![u32::from(b'A'), u32::from(b'B')],
+        ];
+        for subject in subjects {
+            for needle in &needles {
+                for offset in -2_i128..=3 {
+                    let expected = usize::try_from(offset).ok().and_then(|offset| {
+                        if offset > subject.len() {
+                            return None;
+                        }
+                        if needle.is_empty() {
+                            return Some(offset);
+                        }
+                        subject[offset..]
+                            .windows(needle.len())
+                            .position(|candidate| candidate == needle)
+                            .map(|position| offset + position)
+                    });
+                    let expected = expected
+                        .and_then(|index| i128::try_from(index).ok())
+                        .unwrap_or(-1);
+                    assert_eq!(
+                        exact_rewrite_small_subject_indexof(
+                            &subject,
+                            &ExactRewriteTerm::String(needle.clone()),
+                            &ExactRewriteTerm::Int(offset),
+                        ),
+                        ExactRewriteTerm::Int(expected),
+                        "subject={subject:?}, needle={needle:?}, offset={offset}"
+                    );
+                }
+            }
+        }
     }
 
     #[test]
