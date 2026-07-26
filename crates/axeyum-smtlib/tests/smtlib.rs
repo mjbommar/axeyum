@@ -4651,6 +4651,28 @@ fn regex_membership_propagates_cross_variable_length_couplings() {
 }
 
 #[test]
+fn regex_membership_propagates_empty_concat_lengths() {
+    let text = r#"
+        (set-logic QF_SLIA)
+        (declare-const x String)
+        (declare-const y String)
+        (assert (str.in_re x re.all))
+        (assert (= "" (str.++ x y)))
+        (check-sat)
+    "#;
+    let script = parse_script(text).expect("empty concatenation equality parses");
+    let problem = script.membership_problem.expect("membership side channel");
+    assert!(problem.complete);
+    assert_eq!(problem.vars.len(), 2);
+    assert!(
+        problem
+            .vars
+            .iter()
+            .all(|class| { class.membership.len_lo == 0 && class.membership.len_hi == Some(0) })
+    );
+}
+
+#[test]
 fn regex_inter_matches_intersection() {
     // (re.inter (re.* (re.range "a" "z")) (str.to_re "ab")): lowercase-only ∩ {"ab"} = {"ab"}.
     let text = "(declare-fun s () String)\n\
