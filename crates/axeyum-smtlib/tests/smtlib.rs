@@ -4447,6 +4447,27 @@ fn regex_membership_completes_redos_alias_and_output_definition() {
 }
 
 #[test]
+fn regex_membership_retains_exact_length_equalities() {
+    for length_assertion in ["(= (str.len x) 6)", "(= 6 (str.len x))"] {
+        let text = format!(
+            "(set-logic QF_SLIA)\n\
+             (declare-const x String)\n\
+             (assert (str.in_re x (re.* (str.to_re \"ab\"))))\n\
+             (assert {length_assertion})\n\
+             (check-sat)\n"
+        );
+        let script = parse_script(&text).expect("exact-length membership script parses");
+        let problem = script
+            .membership_problem
+            .expect("membership side channel is retained");
+        assert!(problem.complete, "exact length equality is represented");
+        assert_eq!(problem.vars.len(), 1);
+        assert_eq!(problem.vars[0].membership.len_lo, 6);
+        assert_eq!(problem.vars[0].membership.len_hi, Some(6));
+    }
+}
+
+#[test]
 fn regex_inter_matches_intersection() {
     // (re.inter (re.* (re.range "a" "z")) (str.to_re "ab")): lowercase-only ∩ {"ab"} = {"ab"}.
     let text = "(declare-fun s () String)\n\
