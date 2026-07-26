@@ -939,3 +939,74 @@ fn exact_source_one_code_point_views_decline_nonidentities() {
         );
     }
 }
+
+#[test]
+fn exact_source_one_code_point_concat_views_refute_noetzli_families() {
+    for assertion in [
+        r#"(not (= (str.prefixof "A" (str.++ x x))
+                    (str.prefixof "A" x)))"#,
+        r#"(not (= (= "A" (str.++ x "B")) false))"#,
+        r#"(not (= (str.contains (str.++ x x) "A")
+                    (str.contains x "A")))"#,
+        r#"(not (= (str.contains (str.++ y x) "B")
+                    (str.contains (str.++ x y) "B")))"#,
+        r#"(not (= (str.replace "A" (str.++ x "B") y) "A"))"#,
+        r#"(not (= (str.replace "A" (str.++ "A" x) y)
+                    (str.replace "A" (str.++ x "A") y)))"#,
+    ] {
+        let input = format!(
+            r"(set-logic QF_SLIA)
+(declare-fun x () String)
+(declare-fun y () String)
+(assert {assertion})
+(check-sat)
+"
+        );
+        let script = parse_script(&input).expect("parse exact one-code-point concat view");
+        assert!(
+            script.source_string_semantic_unsat,
+            "one-code-point concat view must refute {assertion}"
+        );
+        assert_eq!(
+            solve_smtlib(&input, &config())
+                .expect("solve exact one-code-point concat view")
+                .result,
+            CheckResult::Unsat,
+            "one-code-point concat view must survive the bounded-string gate: {assertion}"
+        );
+    }
+}
+
+#[test]
+fn exact_source_one_code_point_concat_views_decline_cross_boundary_controls() {
+    for assertion in [
+        r#"(not (= (str.contains (str.++ x y) "AB")
+                    (or (str.contains x "AB") (str.contains y "AB"))))"#,
+        r#"(not (= (str.prefixof "AB" (str.++ x y))
+                    (str.prefixof "AB" x)))"#,
+        r#"(not (= (= "AB" (str.++ x y))
+                    (and (= x "A") (= y "B"))))"#,
+        r#"(not (= (str.replace "A" (str.++ x "A") y) "A"))"#,
+    ] {
+        let input = format!(
+            r"(set-logic QF_SLIA)
+(declare-fun x () String)
+(declare-fun y () String)
+(assert {assertion})
+(check-sat)
+"
+        );
+        let script = parse_script(&input).expect("parse concat boundary control");
+        assert!(
+            !script.source_string_semantic_unsat,
+            "one-code-point concat view must decline {assertion}"
+        );
+        assert_ne!(
+            solve_smtlib(&input, &config())
+                .expect("solve concat boundary control")
+                .result,
+            CheckResult::Unsat,
+            "satisfiable concat boundary control must not become UNSAT: {assertion}"
+        );
+    }
+}

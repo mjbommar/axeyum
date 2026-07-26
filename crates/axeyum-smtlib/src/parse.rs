@@ -9647,6 +9647,9 @@ fn exact_rewrite_app(head: &str, args: Vec<ExactRewriteTerm>) -> ExactRewriteTer
             if exact_prefix_view(left, right) {
                 return Bool(true);
             }
+            if let Some(rewritten) = exact_rewrite_concat_prefix(left, right) {
+                return rewritten;
+            }
             if exact_string_min_len(left, 0).is_some_and(|length| length > 0)
                 && exact_string_alphabets_disjoint(left, right)
             {
@@ -9666,6 +9669,9 @@ fn exact_rewrite_app(head: &str, args: Vec<ExactRewriteTerm>) -> ExactRewriteTer
             if exact_suffix_view(left, right) {
                 return Bool(true);
             }
+            if let Some(rewritten) = exact_rewrite_concat_suffix(left, right) {
+                return rewritten;
+            }
             if exact_string_min_len(left, 0).is_some_and(|length| length > 0)
                 && exact_string_alphabets_disjoint(left, right)
             {
@@ -9675,7 +9681,7 @@ fn exact_rewrite_app(head: &str, args: Vec<ExactRewriteTerm>) -> ExactRewriteTer
                 return exact_rewrite_equality(left, right);
             }
             if exact_string_max_len(right, 0).is_some_and(|maximum| maximum <= 1) {
-                return App("str.prefixof".to_owned(), vec![left.clone(), right.clone()]);
+                return exact_rewrite_app("str.prefixof", vec![left.clone(), right.clone()]);
             }
         }
         ("str.contains", [subject, needle]) => {
@@ -9693,6 +9699,9 @@ fn exact_rewrite_app(head: &str, args: Vec<ExactRewriteTerm>) -> ExactRewriteTer
             if exact_contained_view(subject, needle) {
                 return Bool(true);
             }
+            if let Some(rewritten) = exact_rewrite_concat_contains(subject, needle) {
+                return rewritten;
+            }
             if exact_string_min_len(needle, 0).is_some_and(|length| length > 0)
                 && exact_string_alphabets_disjoint(subject, needle)
             {
@@ -9702,10 +9711,7 @@ fn exact_rewrite_app(head: &str, args: Vec<ExactRewriteTerm>) -> ExactRewriteTer
                 return exact_rewrite_equality(subject, needle);
             }
             if exact_string_max_len(subject, 0).is_some_and(|maximum| maximum <= 1) {
-                return App(
-                    "str.prefixof".to_owned(),
-                    vec![needle.clone(), subject.clone()],
-                );
+                return exact_rewrite_app("str.prefixof", vec![needle.clone(), subject.clone()]);
             }
         }
         _ => {}
@@ -9723,6 +9729,14 @@ fn exact_rewrite_equality(left: &ExactRewriteTerm, right: &ExactRewriteTerm) -> 
     if matches!(left, ExactRewriteTerm::String(_)) && !matches!(right, ExactRewriteTerm::String(_))
     {
         return exact_rewrite_equality(right, left);
+    }
+    if let Some(rewritten) = exact_rewrite_small_concat_equality(left, right)
+        .or_else(|| exact_rewrite_small_concat_equality(right, left))
+    {
+        return rewritten;
+    }
+    if exact_boolean_nary_terms_equal(left, right) {
+        return ExactRewriteTerm::Bool(true);
     }
     if exact_piecewise_terms_equal(left, right) {
         return ExactRewriteTerm::Bool(true);
@@ -10131,6 +10145,169 @@ fn exact_distribute_app_ite(head: &str, args: &[ExactRewriteTerm]) -> Option<Exa
             exact_rewrite_app(head, else_args),
         ],
     ))
+}
+
+/// For a word of length at most one, equality with a concatenation is a finite
+/// choice: exactly one component supplies that word and every other component
+/// is empty. This is an unbounded source-string theorem, independent of the
+/// packed representation's configured maximum length.
+fn exact_rewrite_small_concat_equality(
+    concat: &ExactRewriteTerm,
+    small: &ExactRewriteTerm,
+) -> Option<ExactRewriteTerm> {
+    use ExactRewriteTerm::{App, String};
+
+    if exact_string_max_len(small, 0)? > 1 {
+        return None;
+    }
+    let App(head, parts) = concat else {
+        return None;
+    };
+    if !matches!(head.as_str(), "str.++" | "seq.++") || parts.len() > 6 {
+        return None;
+    }
+    let empty = String(Vec::new());
+    let choices = parts
+        .iter()
+        .enumerate()
+        .map(|(selected, _)| {
+            let conditions = parts
+                .iter()
+                .enumerate()
+                .map(|(index, candidate)| {
+                    exact_rewrite_app(
+                        "=",
+                        vec![
+                            candidate.clone(),
+                            if index == selected {
+                                small.clone()
+                            } else {
+                                empty.clone()
+                            },
+                        ],
+                    )
+                })
+                .collect::<Vec<_>>();
+            exact_rewrite_app("and", conditions)
+        })
+        .collect::<Vec<_>>();
+    Some(exact_rewrite_app("or", choices))
+}
+
+/// A prefix of length at most one depends only on the first nonempty concat
+/// component. The recursive call strictly shortens the flattened concat.
+fn exact_rewrite_concat_prefix(
+    prefix: &ExactRewriteTerm,
+    word: &ExactRewriteTerm,
+) -> Option<ExactRewriteTerm> {
+    use ExactRewriteTerm::{App, String};
+
+    if exact_string_max_len(prefix, 0)? > 1 {
+        return None;
+    }
+    let App(head, parts) = word else {
+        return None;
+    };
+    if !matches!(head.as_str(), "str.++" | "seq.++") || parts.len() < 2 || parts.len() > 6 {
+        return None;
+    }
+    let first = &parts[0];
+    let rest = exact_rewrite_concat(&parts[1..]);
+    let first_empty = exact_rewrite_app("=", vec![first.clone(), String(Vec::new())]);
+    Some(exact_rewrite_app(
+        "ite",
+        vec![
+            first_empty,
+            exact_rewrite_app("str.prefixof", vec![prefix.clone(), rest]),
+            exact_rewrite_app("str.prefixof", vec![prefix.clone(), first.clone()]),
+        ],
+    ))
+}
+
+/// A suffix of length at most one depends only on the last nonempty concat
+/// component. The recursive call strictly shortens the flattened concat.
+fn exact_rewrite_concat_suffix(
+    suffix: &ExactRewriteTerm,
+    word: &ExactRewriteTerm,
+) -> Option<ExactRewriteTerm> {
+    use ExactRewriteTerm::{App, String};
+
+    if exact_string_max_len(suffix, 0)? > 1 {
+        return None;
+    }
+    let App(head, parts) = word else {
+        return None;
+    };
+    if !matches!(head.as_str(), "str.++" | "seq.++") || parts.len() < 2 || parts.len() > 6 {
+        return None;
+    }
+    let last = parts.last()?;
+    let rest = exact_rewrite_concat(&parts[..parts.len() - 1]);
+    let last_empty = exact_rewrite_app("=", vec![last.clone(), String(Vec::new())]);
+    Some(exact_rewrite_app(
+        "ite",
+        vec![
+            last_empty,
+            exact_rewrite_app("str.suffixof", vec![suffix.clone(), rest]),
+            exact_rewrite_app("str.suffixof", vec![suffix.clone(), last.clone()]),
+        ],
+    ))
+}
+
+/// A needle of length at most one cannot cross a concatenation boundary, so it
+/// occurs in the whole word exactly when it occurs in at least one component.
+fn exact_rewrite_concat_contains(
+    subject: &ExactRewriteTerm,
+    needle: &ExactRewriteTerm,
+) -> Option<ExactRewriteTerm> {
+    use ExactRewriteTerm::App;
+
+    if exact_string_max_len(needle, 0)? > 1 {
+        return None;
+    }
+    let App(head, parts) = subject else {
+        return None;
+    };
+    if !matches!(head.as_str(), "str.++" | "seq.++") || parts.len() > 6 {
+        return None;
+    }
+    Some(exact_rewrite_app(
+        "or",
+        parts
+            .iter()
+            .map(|part| exact_rewrite_app("str.contains", vec![part.clone(), needle.clone()]))
+            .collect(),
+    ))
+}
+
+/// Boolean conjunction and disjunction are commutative after the n-ary
+/// normalizer has flattened and deduplicated operands. Compare them as
+/// multisets so differently ordered concat decompositions meet.
+fn exact_boolean_nary_terms_equal(left: &ExactRewriteTerm, right: &ExactRewriteTerm) -> bool {
+    let (
+        ExactRewriteTerm::App(left_head, left_args),
+        ExactRewriteTerm::App(right_head, right_args),
+    ) = (left, right)
+    else {
+        return false;
+    };
+    if left_head != right_head
+        || !matches!(left_head.as_str(), "and" | "or")
+        || left_args.len() != right_args.len()
+    {
+        return false;
+    }
+    let mut matched = vec![false; right_args.len()];
+    left_args.iter().all(|left_arg| {
+        right_args
+            .iter()
+            .enumerate()
+            .find(|(index, right_arg)| !matched[*index] && left_arg == *right_arg)
+            .is_some_and(|(index, _)| {
+                matched[index] = true;
+                true
+            })
+    })
 }
 
 fn exact_concat_residual(
@@ -15737,6 +15914,100 @@ mod string_escape_tests {
                     expected_substr,
                     "index={concrete_index}, length={concrete_length}"
                 );
+            }
+        }
+    }
+
+    #[test]
+    fn exact_rewriter_closes_one_code_point_predicate_views() {
+        for text in [
+            r#"(not (= (str.contains "B" (str.at "A" z))
+                        (str.contains "A" (str.at "B" z))))"#,
+            r#"(not (= (str.contains "B" (str.substr "A" 0 z))
+                        (str.contains "A" (str.substr "B" 0 z))))"#,
+        ] {
+            let expression = read_all(text)
+                .expect("read one-code-point predicate view")
+                .pop()
+                .expect("one expression");
+            assert_eq!(
+                exact_rewrite_term(&expression, 0),
+                ExactRewriteTerm::Bool(false),
+                "{text}"
+            );
+        }
+    }
+
+    #[test]
+    fn one_code_point_concat_views_match_reference_semantics_exhaustively() {
+        let symbol = |name: &str| {
+            let expression = read_all(name)
+                .expect("read symbolic concat component")
+                .pop()
+                .expect("one symbolic component");
+            exact_rewrite_term(&expression, 0)
+        };
+        let left = symbol("left");
+        let right = symbol("right");
+        let concat = exact_rewrite_app("str.++", vec![left.clone(), right.clone()]);
+        let mut words = vec![Vec::new()];
+        for _ in 0..2 {
+            let prior = words.clone();
+            for word in prior {
+                for code_point in [u32::from(b'A'), u32::from(b'B')] {
+                    let mut extended = word.clone();
+                    extended.push(code_point);
+                    words.push(extended);
+                }
+            }
+        }
+
+        for left_word in &words {
+            for right_word in &words {
+                let mut joined = left_word.clone();
+                joined.extend(right_word);
+                let assignments = [
+                    (
+                        exact_rewrite_app(
+                            "=",
+                            vec![left.clone(), ExactRewriteTerm::String(left_word.clone())],
+                        ),
+                        true,
+                    ),
+                    (
+                        exact_rewrite_app(
+                            "=",
+                            vec![right.clone(), ExactRewriteTerm::String(right_word.clone())],
+                        ),
+                        true,
+                    ),
+                ];
+                for view_word in [Vec::new(), vec![u32::from(b'A')], vec![u32::from(b'B')]] {
+                    let view = ExactRewriteTerm::String(view_word.clone());
+                    for (head, expected) in [
+                        ("str.prefixof", joined.starts_with(&view_word)),
+                        ("str.suffixof", joined.ends_with(&view_word)),
+                        (
+                            "str.contains",
+                            view_word.is_empty()
+                                || joined
+                                    .windows(view_word.len())
+                                    .any(|candidate| candidate == view_word),
+                        ),
+                        ("=", joined == view_word),
+                    ] {
+                        let expression = if head == "str.contains" {
+                            exact_rewrite_app(head, vec![concat.clone(), view.clone()])
+                        } else {
+                            exact_rewrite_app(head, vec![view.clone(), concat.clone()])
+                        };
+                        assert_eq!(
+                            exact_rewrite_under_assignments(&expression, &assignments, 0),
+                            ExactRewriteTerm::Bool(expected),
+                            "head={head}, left={left_word:?}, right={right_word:?}, view={view:?}"
+                        );
+                    }
+                }
             }
         }
     }
