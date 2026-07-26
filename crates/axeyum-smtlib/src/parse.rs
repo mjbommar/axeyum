@@ -9471,6 +9471,11 @@ fn exact_rewrite_app(head: &str, args: Vec<ExactRewriteTerm>) -> ExactRewriteTer
             return exact_distribute_app_ite(head, &args)
                 .expect("a bounded ite argument must distribute");
         }
+        ("str.substr", [subject, offset, length])
+            if let Some(rewritten) = exact_rewrite_concat_substr(subject, offset, length) =>
+        {
+            return rewritten;
+        }
         ("str.substr", [_, Int(offset), _]) if *offset < 0 => return String(Vec::new()),
         ("str.substr", [_, _, Int(length)]) if *length <= 0 => return String(Vec::new()),
         ("str.substr", [String(value), Int(offset), _])
@@ -9643,6 +9648,11 @@ fn exact_rewrite_app(head: &str, args: Vec<ExactRewriteTerm>) -> ExactRewriteTer
         {
             return exact_distribute_app_ite(head, &args)
                 .expect("a bounded ite argument must distribute");
+        }
+        ("str.at", [subject, index])
+            if let Some(rewritten) = exact_rewrite_concat_at(subject, index) =>
+        {
+            return rewritten;
         }
         ("str.at", [String(value), _]) if value.is_empty() => return String(Vec::new()),
         ("str.at", [subject, IndexOfSelf(offset)])
@@ -9955,6 +9965,9 @@ fn exact_rewrite_equality(left: &ExactRewriteTerm, right: &ExactRewriteTerm) -> 
         return ExactRewriteTerm::Bool(true);
     }
     if exact_boolean_nary_terms_equal(left, right) {
+        return ExactRewriteTerm::Bool(true);
+    }
+    if exact_unary_concat_terms_equal(left, right) {
         return ExactRewriteTerm::Bool(true);
     }
     if exact_piecewise_terms_equal(left, right) {
@@ -10877,6 +10890,83 @@ fn exact_rewrite_small_concat_equality(
     Some(exact_rewrite_app("or", choices))
 }
 
+/// Routes a fixed index through a concatenation when the leading component has
+/// an exact source-theory length. Index zero also commutes with repeated copies
+/// of the same possibly-empty component.
+fn exact_rewrite_concat_at(
+    subject: &ExactRewriteTerm,
+    index: &ExactRewriteTerm,
+) -> Option<ExactRewriteTerm> {
+    use ExactRewriteTerm::{App, Int};
+
+    let App(head, parts) = subject else {
+        return None;
+    };
+    if !matches!(head.as_str(), "str.++" | "seq.++") || parts.len() < 2 || parts.len() > 6 {
+        return None;
+    }
+    let first = &parts[0];
+    let Int(index) = index else {
+        return None;
+    };
+    if *index == 0 && parts.iter().all(|part| part == first) {
+        return Some(exact_rewrite_app("str.at", vec![first.clone(), Int(0)]));
+    }
+    let minimum = exact_string_min_len(first, 0)?;
+    let maximum = exact_string_max_len(first, 0)?;
+    if minimum != maximum || *index < 0 {
+        return None;
+    }
+    let length = i128::try_from(minimum).ok()?;
+    if *index < length {
+        return Some(exact_rewrite_app(
+            "str.at",
+            vec![first.clone(), Int(*index)],
+        ));
+    }
+    Some(exact_rewrite_app(
+        "str.at",
+        vec![
+            exact_rewrite_concat(&parts[1..]),
+            Int(index.checked_sub(length)?),
+        ],
+    ))
+}
+
+/// Moves a substring start across one exact leading code point. The symbolic
+/// case is sound when the length is nonpositive at start zero: negative starts
+/// are empty, zero is empty by the premise, and positive starts are in the
+/// suffix with the index shifted by one.
+fn exact_rewrite_concat_substr(
+    subject: &ExactRewriteTerm,
+    offset: &ExactRewriteTerm,
+    length: &ExactRewriteTerm,
+) -> Option<ExactRewriteTerm> {
+    use ExactRewriteTerm::{App, Int};
+
+    let App(head, parts) = subject else {
+        return None;
+    };
+    if !matches!(head.as_str(), "str.++" | "seq.++") || parts.len() < 2 || parts.len() > 6 {
+        return None;
+    }
+    if exact_string_min_len(&parts[0], 0)? != 1 || exact_string_max_len(&parts[0], 0)? != 1 {
+        return None;
+    }
+    let shifted = match offset {
+        Int(offset) if *offset >= 1 => Int(offset.checked_sub(1)?),
+        Int(_) => return None,
+        offset if exact_affine_zero_forces_nonpositive(offset, length) => {
+            exact_rewrite_app("-", vec![offset.clone(), Int(1)])
+        }
+        _ => return None,
+    };
+    Some(exact_rewrite_app(
+        "str.substr",
+        vec![exact_rewrite_concat(&parts[1..]), shifted, length.clone()],
+    ))
+}
+
 /// A prefix of length at most one depends only on the first nonempty concat
 /// component. The recursive call strictly shortens the flattened concat.
 fn exact_rewrite_concat_prefix(
@@ -10986,6 +11076,52 @@ fn exact_boolean_nary_terms_equal(left: &ExactRewriteTerm, right: &ExactRewriteT
             .iter()
             .enumerate()
             .find(|(index, right_arg)| !matched[*index] && left_arg == *right_arg)
+            .is_some_and(|(index, _)| {
+                matched[index] = true;
+                true
+            })
+    })
+}
+
+/// Concatenation is commutative for words over one shared code point. Requiring
+/// the same component multiset proves equal total length without trying to
+/// infer symbolic lengths; the shared unary alphabet then proves equal content.
+fn exact_unary_concat_terms_equal(left: &ExactRewriteTerm, right: &ExactRewriteTerm) -> bool {
+    let (
+        ExactRewriteTerm::App(left_head, left_parts),
+        ExactRewriteTerm::App(right_head, right_parts),
+    ) = (left, right)
+    else {
+        return false;
+    };
+    if !matches!(left_head.as_str(), "str.++" | "seq.++")
+        || !matches!(right_head.as_str(), "str.++" | "seq.++")
+        || left_parts.len() != right_parts.len()
+    {
+        return false;
+    }
+
+    let Some(alphabet) =
+        left_parts
+            .iter()
+            .chain(right_parts)
+            .try_fold(BTreeSet::new(), |mut alphabet, part| {
+                alphabet.extend(exact_string_alphabet(part, 0)?);
+                Some(alphabet)
+            })
+    else {
+        return false;
+    };
+    if alphabet.len() > 1 {
+        return false;
+    }
+
+    let mut matched = vec![false; right_parts.len()];
+    left_parts.iter().all(|left_part| {
+        right_parts
+            .iter()
+            .enumerate()
+            .find(|(index, right_part)| !matched[*index] && left_part == *right_part)
             .is_some_and(|(index, _)| {
                 matched[index] = true;
                 true
@@ -16465,8 +16601,9 @@ mod string_escape_tests {
     use super::{
         ExactEqualityFacts, ExactRewriteTerm, decimal_code_points, decode_string_code_points,
         exact_affine_equalities_equal, exact_affine_zero_forces_nonpositive, exact_rewrite_app,
-        exact_rewrite_equality, exact_rewrite_small_subject_indexof, exact_rewrite_term,
-        exact_rewrite_under_assignments, replace_first_code_points, substr_code_points,
+        exact_rewrite_concat_at, exact_rewrite_concat_substr, exact_rewrite_equality,
+        exact_rewrite_small_subject_indexof, exact_rewrite_term, exact_rewrite_under_assignments,
+        replace_first_code_points, substr_code_points,
     };
     use crate::sexpr::read_all;
 
@@ -16910,6 +17047,236 @@ mod string_escape_tests {
                 .expect("read exact index-totality control")
                 .pop()
                 .expect("one index-totality control");
+            assert_ne!(
+                exact_rewrite_term(&expression, 0),
+                ExactRewriteTerm::Bool(true),
+                "{text}"
+            );
+        }
+    }
+
+    #[test]
+    fn exact_concat_index_routes_match_reference_semantics_exhaustively() {
+        let symbol = |name: &str| {
+            let expression = read_all(name)
+                .expect("read symbolic concat route argument")
+                .pop()
+                .expect("one symbolic concat route argument");
+            exact_rewrite_term(&expression, 0)
+        };
+        let suffix = symbol("suffix");
+        let mut words = vec![Vec::new()];
+        for length in 1..=4 {
+            for bits in 0..(1_usize << length) {
+                words.push(
+                    (0..length)
+                        .map(|shift| u32::from(if bits & (1 << shift) == 0 { b'A' } else { b'B' }))
+                        .collect(),
+                );
+            }
+        }
+
+        for prefix in [
+            vec![u32::from(b'A')],
+            vec![u32::from(b'A'), u32::from(b'B')],
+        ] {
+            let subject = ExactRewriteTerm::App(
+                "str.++".to_owned(),
+                vec![ExactRewriteTerm::String(prefix.clone()), suffix.clone()],
+            );
+            for suffix_word in &words {
+                let assignment = [(
+                    exact_rewrite_app(
+                        "=",
+                        vec![
+                            suffix.clone(),
+                            ExactRewriteTerm::String(suffix_word.clone()),
+                        ],
+                    ),
+                    true,
+                )];
+                let mut joined = prefix.clone();
+                joined.extend(suffix_word);
+                for index in 0_i128..=7 {
+                    let routed = exact_rewrite_concat_at(&subject, &ExactRewriteTerm::Int(index))
+                        .expect("fixed index routes through exact prefix length");
+                    assert_eq!(
+                        exact_rewrite_under_assignments(&routed, &assignment, 0),
+                        ExactRewriteTerm::String(substr_code_points(&joined, index, 1)),
+                        "prefix={prefix:?}, suffix={suffix_word:?}, index={index}"
+                    );
+                }
+            }
+            assert!(
+                exact_rewrite_concat_at(&subject, &ExactRewriteTerm::Int(-1)).is_none(),
+                "negative indices stay with the ordinary totality fold"
+            );
+        }
+
+        let repeated =
+            ExactRewriteTerm::App("str.++".to_owned(), vec![suffix.clone(), suffix.clone()]);
+        let routed = exact_rewrite_concat_at(&repeated, &ExactRewriteTerm::Int(0))
+            .expect("index zero routes through repeated components");
+        for suffix_word in &words {
+            let assignment = [(
+                exact_rewrite_app(
+                    "=",
+                    vec![
+                        suffix.clone(),
+                        ExactRewriteTerm::String(suffix_word.clone()),
+                    ],
+                ),
+                true,
+            )];
+            assert_eq!(
+                exact_rewrite_under_assignments(&routed, &assignment, 0),
+                ExactRewriteTerm::String(substr_code_points(suffix_word, 0, 1)),
+                "suffix={suffix_word:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn exact_concat_substr_routes_match_reference_semantics_exhaustively() {
+        let symbol = |name: &str| {
+            let expression = read_all(name)
+                .expect("read symbolic concat route argument")
+                .pop()
+                .expect("one symbolic concat route argument");
+            exact_rewrite_term(&expression, 0)
+        };
+        let suffix = symbol("suffix");
+        let mut words = vec![Vec::new()];
+        for length in 1..=4 {
+            for bits in 0..(1_usize << length) {
+                words.push(
+                    (0..length)
+                        .map(|shift| u32::from(if bits & (1 << shift) == 0 { b'A' } else { b'B' }))
+                        .collect(),
+                );
+            }
+        }
+        let one = vec![u32::from(b'A')];
+        let subject = ExactRewriteTerm::App(
+            "str.++".to_owned(),
+            vec![ExactRewriteTerm::String(one.clone()), suffix.clone()],
+        );
+        for suffix_word in &words {
+            let assignment = [(
+                exact_rewrite_app(
+                    "=",
+                    vec![
+                        suffix.clone(),
+                        ExactRewriteTerm::String(suffix_word.clone()),
+                    ],
+                ),
+                true,
+            )];
+            let mut joined = one.clone();
+            joined.extend(suffix_word);
+            for offset in 1_i128..=7 {
+                for length in -2_i128..=7 {
+                    let routed = exact_rewrite_concat_substr(
+                        &subject,
+                        &ExactRewriteTerm::Int(offset),
+                        &ExactRewriteTerm::Int(length),
+                    )
+                    .expect("positive substring start routes past one-code-point prefix");
+                    assert_eq!(
+                        exact_rewrite_under_assignments(&routed, &assignment, 0),
+                        ExactRewriteTerm::String(substr_code_points(&joined, offset, length)),
+                        "suffix={suffix_word:?}, offset={offset}, length={length}"
+                    );
+                }
+            }
+        }
+
+        let z = symbol("z");
+        let routed = exact_rewrite_concat_substr(&subject, &z, &z)
+            .expect("equal symbolic offset and length satisfy the zero boundary premise");
+        for suffix_word in &words {
+            for value in -3_i128..=7 {
+                let assignments = [
+                    (
+                        exact_rewrite_app(
+                            "=",
+                            vec![
+                                suffix.clone(),
+                                ExactRewriteTerm::String(suffix_word.clone()),
+                            ],
+                        ),
+                        true,
+                    ),
+                    (
+                        exact_rewrite_app("=", vec![z.clone(), ExactRewriteTerm::Int(value)]),
+                        true,
+                    ),
+                ];
+                let mut joined = one.clone();
+                joined.extend(suffix_word);
+                assert_eq!(
+                    exact_rewrite_under_assignments(&routed, &assignments, 0),
+                    ExactRewriteTerm::String(substr_code_points(&joined, value, value)),
+                    "suffix={suffix_word:?}, value={value}"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn exact_concat_routes_and_unary_commutativity_close_symbolic_forms() {
+        for text in [
+            r"(= (str.at (str.++ x x) 0) (str.at x 0))",
+            r#"(= (str.at (str.++ "A" x) 0) "A")"#,
+            r#"(= (str.at (str.++ "A" x) 1) (str.at x 0))"#,
+            r#"(= (str.at (str.replace y "" "A") 1)
+                   (str.at (str.replace x x y) 0))"#,
+            r#"(= (str.substr (str.++ "A" x) 1 z) (str.substr x 0 z))"#,
+            r#"(= (str.substr (str.++ "A" x) z z)
+                   (str.substr x (- z 1) z))"#,
+            r#"(= (str.++ (str.at "A" z) "A")
+                   (str.++ "A" (str.at "A" z)))"#,
+            r#"(= (str.++ (str.substr "B" 0 z) "B")
+                   (str.++ "B" (str.substr "B" 0 z)))"#,
+            r#"(= (str.++ (str.replace "A" x "") "A")
+                   (str.++ "A" (str.replace "A" x "")))"#,
+        ] {
+            let expression = read_all(text)
+                .expect("read concat routing identity")
+                .pop()
+                .expect("one concat routing identity");
+            assert_eq!(
+                exact_rewrite_term(&expression, 0),
+                ExactRewriteTerm::Bool(true),
+                "{text}"
+            );
+        }
+
+        for code_point in [u32::from(b'A'), u32::from(b'B')] {
+            for left_len in 0..=5 {
+                for right_len in 0..=5 {
+                    let left = vec![code_point; left_len];
+                    let right = vec![code_point; right_len];
+                    let mut left_then_right = left.clone();
+                    left_then_right.extend(&right);
+                    let mut right_then_left = right;
+                    right_then_left.extend(&left);
+                    assert_eq!(left_then_right, right_then_left);
+                }
+            }
+        }
+
+        for text in [
+            r"(= (str.++ x y) (str.++ y x))",
+            r#"(= (str.++ (str.at "A" z) "B")
+                   (str.++ "B" (str.at "A" z)))"#,
+            r#"(= (str.substr (str.++ "A" x) 0 z)
+                   (str.substr x (- 1) z))"#,
+        ] {
+            let expression = read_all(text)
+                .expect("read concat routing control")
+                .pop()
+                .expect("one concat routing control");
             assert_ne!(
                 exact_rewrite_term(&expression, 0),
                 ExactRewriteTerm::Bool(true),
