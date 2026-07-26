@@ -248,7 +248,7 @@ fn word_only_fallback_retains_exact_path_conflicts() {
     let input = r#"(set-logic QF_SLIA)
 (declare-fun s () String)
 (declare-fun pad () String)
-(assert (= pad "abcdefghijklm"))
+(assert (= pad "abcdefghijklmn"))
 (assert (= (str.indexof s "x" 0) 0))
 (assert (not (not (not (= (ite (= (str.len s) 0) 1 0) 0)))))
 (assert (not (not (= (ite (= (str.len s) 0) 1 0) 0))))

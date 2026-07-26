@@ -1,7 +1,7 @@
 //! Word-first parse fallback (T-B.4d) at the full front door (`solve_smtlib`).
 //!
 //! The bounded ADR-0029 string encoder rejects a whole class of scripts *at
-//! parse*: a string literal over the length cap (`STRING_MAX_LEN = 12`), a
+//! parse*: a string literal over the adaptive length cap (13 bytes), a
 //! `str.++` whose bounded result width exceeds the cap (`STRING_BOUND_CAP = 24`),
 //! or another bounded-encoder capacity limit. These caps are an artifact of the
 //! *bounded* encoding — a pure word-equation problem is decidable unbounded no
@@ -39,7 +39,7 @@ fn solve_first_occurrence(assertions: &str) -> CheckResult {
     let text = format!(
         "(set-logic QF_SLIA)\
          (declare-const s String)(declare-const pad String)\
-         (assert (= pad \"abcdefghijklm\")){assertions}(check-sat)"
+         (assert (= pad \"abcdefghijklmn\")){assertions}(check-sat)"
     );
     solve_smtlib(&text, &config())
         .expect("first-occurrence word fallback should parse")
@@ -86,18 +86,18 @@ fn issue6681_decides_via_fallback() {
     );
 }
 
-/// An **over-long literal** (13 bytes > `STRING_MAX_LEN = 12`): the bounded parse
+/// An **over-long literal** (14 bytes > the adaptive 13-byte cap): the bounded parse
 /// rejects the literal wholesale, and only the word-first fallback can decide the
 /// (linear, hence easy) equation. The witness is fully concrete, so it is `sat`.
 #[test]
 fn over_long_literal_linear_decides() {
     let text = "(set-logic QF_S)\
                 (declare-const x String)(declare-const y String)\
-                (assert (= x (str.++ \"abcdefghijklm\" y)))(assert (= y \"nopq\"))(check-sat)";
+                (assert (= x (str.++ \"abcdefghijklmn\" y)))(assert (= y \"nopq\"))(check-sat)";
     let outcome = solve_smtlib(text, &config()).expect("fallback decides the over-long literal");
     assert!(
         matches!(outcome.result, CheckResult::Sat(_)),
-        "x = \"abcdefghijklmnopq\" is sat; got {:?}",
+        "x = \"abcdefghijklmnopqr\" is sat; got {:?}",
         outcome.result
     );
 }
@@ -129,7 +129,7 @@ fn wide_variable_concat_decides() {
 fn non_word_fragment_reproduces_original_error() {
     let text = "(set-info :status sat)(set-logic QF_SLIA)\
                 (declare-const i0 Int)(declare-const s1 String)(declare-const s2 String)\
-                (assert (= (str.++ s1 \"ijruldtzypabc\") s2))\
+                (assert (= (str.++ s1 \"ijruldtzypabcd\") s2))\
                 (assert (= (str.indexof s2 \"z\" 0) i0))(check-sat)";
     match solve_smtlib(text, &config()) {
         Err(SolverError::Parse(msg)) => {
@@ -245,7 +245,7 @@ fn first_occurrence_index_guard_is_exact_membership() {
 #[test]
 fn deeply_nested_optional_fallback_declines_instead_of_aborting() {
     let mut text = "(set-logic QF_SLIA)(declare-const s String)\
-                    (assert (= s \"abcdefghijklm\"))(assert "
+                    (assert (= s \"abcdefghijklmn\"))(assert "
         .to_owned();
     text.push_str(&"(and true ".repeat(2_049));
     text.push_str("true");
