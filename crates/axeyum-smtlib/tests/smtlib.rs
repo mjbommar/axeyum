@@ -4564,6 +4564,26 @@ fn regex_membership_retains_to_int_comparisons() {
 }
 
 #[test]
+fn regex_membership_retains_ground_false_with_unsupported_regex() {
+    let text = r"
+        (set-logic QF_SLIA)
+        (declare-const x String)
+        (declare-const y String)
+        (assert (str.in_re x (str.to_re (str.++ x y))))
+        (assert (= 0 6))
+        (check-sat)
+    ";
+    let script = parse_script(text).expect("ground contradiction script parses");
+    let problem = script
+        .membership_problem
+        .expect("exact false subset is retained");
+    assert!(!problem.complete, "dynamic str.to_re remains unsupported");
+    assert_eq!(problem.vars.len(), 1, "ground contradiction is retained");
+    assert!(problem.vars[0].sym.is_none());
+    assert!(!problem.vars[0].membership.accepts(&[]));
+}
+
+#[test]
 fn regex_inter_matches_intersection() {
     // (re.inter (re.* (re.range "a" "z")) (str.to_re "ab")): lowercase-only ∩ {"ab"} = {"ab"}.
     let text = "(declare-fun s () String)\n\
