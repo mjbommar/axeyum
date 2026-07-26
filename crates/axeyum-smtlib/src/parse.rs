@@ -605,13 +605,16 @@ pub fn parse_script(input: &str) -> Result<Script, SmtError> {
         {
             Err(error)
         }
-        Err(error @ (SmtError::Unsupported(_) | SmtError::Ir(_))) => match parse_word_only(input) {
-            Some(mut script) => {
-                script.word_only_fallback = Some(error.to_string());
-                Ok(script)
+        Err(error @ (SmtError::Unsupported(_) | SmtError::Ir(_))) => {
+            let allow_semantic_refuter = bounded_capacity_decline(&error);
+            match parse_word_only(input, allow_semantic_refuter) {
+                Some(mut script) => {
+                    script.word_only_fallback = Some(error.to_string());
+                    Ok(script)
+                }
+                None => Err(error),
             }
-            None => Err(error),
-        },
+        }
         Err(error) => Err(error),
     }
 }
@@ -893,7 +896,7 @@ fn classify_fp_atom(atom: &str, usage: &mut FpUsage) {
 /// `logic`/`status` are recovered by a light scan so the front door still reports
 /// the benchmark's own `:status`. [`Script::word_only_fallback`] is set by the
 /// caller.
-fn parse_word_only(input: &str) -> Option<Script> {
+fn parse_word_only(input: &str, allow_semantic_refuter: bool) -> Option<Script> {
     // Re-tokenize and re-run the same s-expression desugars the bounded parse
     // applies before term construction. A set/const-array desugar failure means
     // the script is not a pure word-equation problem, so decline (bounded error
@@ -903,6 +906,13 @@ fn parse_word_only(input: &str) -> Option<Script> {
     desugar_const_arrays(&mut exprs);
 
     let mut script = Script::default();
+    // Preserve whole-conjunction semantic contradictions across the bounded-parser
+    // decline. The ordinary parse records this flag before solving; the fallback
+    // used to rebuild the word routes but silently dropped the same exact fact.
+    // Dense PyEx paths can then spend their whole budget in a weaker side channel
+    // despite already requiring both `T = U` and `T != U`.
+    script.fixed_splice_semantic_unsat =
+        allow_semantic_refuter && fixed_splice_semantic_facts(&exprs).conflict;
     // The flat conjunction side channel (may decline on `or`/negation) and the
     // Boolean-structured skeleton (P1.5b, decides the `or`/negated shapes). The
     // fallback is accepted when **either** is representable — a purely disjunctive
@@ -929,9 +939,11 @@ fn parse_word_only(input: &str) -> Option<Script> {
         && script.word_skeleton.is_empty()
         && script.membership_problem.is_none()
         && script.length_skeleton.is_empty()
+        && !script.fixed_splice_semantic_unsat
     {
-        // No route recognizes the script — not a word-equation/membership problem;
-        // decline so the original bounded error stands.
+        // No decision route recognizes the script — not a word-equation/membership
+        // problem and no exact whole-conjunction contradiction; decline so the
+        // original bounded error stands.
         return None;
     }
     // The word channel *is* the bounded-string surface for this script; flag it so
@@ -960,6 +972,19 @@ fn parse_word_only(input: &str) -> Option<Script> {
         }
     }
     Some(script)
+}
+
+/// Whether the bounded parser failed only because a represented string/sequence
+/// exceeded a deliberate packing cap. In that case, exact source-level semantic
+/// refutation is a valid fallback even when no partial word route accepts the rest
+/// of the formula. Other unsupported or IR errors must retain their parse decline:
+/// the fallback has not type-checked their terms.
+fn bounded_capacity_decline(error: &SmtError) -> bool {
+    let SmtError::Unsupported(message) = error else {
+        return false;
+    };
+    message.starts_with("string literal longer than the bounded length")
+        || message.contains("result of bounded max length") && message.contains("exceeds the cap")
 }
 
 // --- word-equation dual build (ADR-0053, T-B.4b) -----------------------------
@@ -9071,6 +9096,20 @@ fn fixed_splice_semantic_facts(exprs: &[SExpr]) -> FixedSpliceSemanticFacts {
         }
     }
 
+    // Evaluate content predicates whose operands are exact after equality-class
+    // propagation. This catches generated paths such as `view = "http"` together
+    // with a required `contains(view, "A")`, including a compound `view` that the
+    // general Boolean word skeleton deliberately declines. Only a fully concrete
+    // predicate can set the UNSAT flag; every partial case remains untouched.
+    for conjunct in &conjuncts {
+        let (condition, required) = guaranteed_boolean_condition(conjunct);
+        if eval_pinned_word_predicate(condition, &nodes, &parent, &class_values)
+            .is_some_and(|actual| actual != required)
+        {
+            conflict = true;
+        }
+    }
+
     let pinned_words = nodes
         .iter()
         .enumerate()
@@ -9408,6 +9447,29 @@ fn eval_pinned_splice_semantics(
         i128::try_from(base.len()).ok()? - i128::from(splice.split),
     ));
     Some(result)
+}
+
+/// Exact value of `str.contains` after equality-class pins.
+fn eval_pinned_word_predicate(
+    expression: &SExpr,
+    nodes: &[SExpr],
+    parent: &[usize],
+    values: &[Option<Vec<u32>>],
+) -> Option<bool> {
+    let [head, left, right] = expression.list()? else {
+        return None;
+    };
+    let left = eval_pinned_splice(left, nodes, parent, values, 0)?;
+    let right = eval_pinned_splice(right, nodes, parent, values, 0)?;
+    match head.atom()? {
+        "str.contains" => Some(
+            right.is_empty()
+                || left
+                    .windows(right.len())
+                    .any(|candidate| candidate == right),
+        ),
+        _ => None,
+    }
 }
 
 /// Evaluates an arbitrary fixed-splice chain from the exact expression pins

@@ -207,6 +207,79 @@ fn exact_splice_disequality_conflict_survives_an_unrelated_skeleton_decline() {
 }
 
 #[test]
+fn exact_pinned_view_content_conflict_sets_the_semantic_refuter() {
+    let input = r#"(set-logic QF_SLIA)
+(declare-fun url () String)
+(assert (= (str.substr url 0 (str.indexof url ":" 0)) "http"))
+(assert (not (not (not (= (ite
+  (str.contains (str.substr url 0 (str.indexof url ":" 0)) "A") 1 0) 0)))))
+(check-sat)
+"#;
+    let script = parse_script(input).expect("parse pinned-view content conflict");
+    assert!(script.fixed_splice_semantic_unsat);
+    assert_eq!(
+        solve_smtlib(input, &config())
+            .expect("solve pinned-view content conflict")
+            .result,
+        CheckResult::Unsat
+    );
+}
+
+#[test]
+fn exact_pinned_view_content_mutation_stays_satisfiable() {
+    let input = r#"(set-logic QF_SLIA)
+(declare-fun url () String)
+(assert (= (str.substr url 0 (str.indexof url ":" 0)) "http"))
+(assert (str.contains (str.substr url 0 (str.indexof url ":" 0)) "t"))
+(check-sat)
+"#;
+    let script = parse_script(input).expect("parse pinned-view content model");
+    assert!(!script.fixed_splice_semantic_unsat);
+    assert_ne!(
+        solve_smtlib(input, &config())
+            .expect("solve pinned-view content model")
+            .result,
+        CheckResult::Unsat
+    );
+}
+
+#[test]
+fn word_only_fallback_retains_exact_path_conflicts() {
+    let input = r#"(set-logic QF_SLIA)
+(declare-fun s () String)
+(declare-fun pad () String)
+(assert (= pad "abcdefghijklm"))
+(assert (= (str.indexof s "x" 0) 0))
+(assert (not (not (not (= (ite (= (str.len s) 0) 1 0) 0)))))
+(assert (not (not (= (ite (= (str.len s) 0) 1 0) 0))))
+(check-sat)
+"#;
+    let script = parse_script(input).expect("parse word-only fallback conflict");
+    assert!(script.word_only_fallback.is_some());
+    assert!(script.fixed_splice_semantic_unsat);
+    assert_eq!(
+        solve_smtlib(input, &config())
+            .expect("solve word-only fallback conflict")
+            .result,
+        CheckResult::Unsat
+    );
+}
+
+#[test]
+fn semantic_refuter_never_masks_a_non_capacity_parse_decline() {
+    let input = r#"(set-logic QF_SLIA)
+(declare-fun s () String)
+(assert (= (unknown.word.operator s) s))
+(assert (not (= (unknown.word.operator s) s)))
+(check-sat)
+"#;
+    assert!(
+        parse_script(input).is_err(),
+        "an untyped unsupported operator must remain a parse decline"
+    );
+}
+
+#[test]
 fn satisfiable_splice_mutation_does_not_set_the_semantic_refuter() {
     let input = r#"(set-logic QF_SLIA)
 (declare-fun s () String)
