@@ -742,6 +742,12 @@ fn exact_source_conditional_replace_refutes_noetzli_families() {
                     (str.replace "B" x (str.replace y x y))))"#,
         r#"(not (= (str.replace (str.replace "" x y) x "A")
                     (str.replace "" x (str.++ "A" y))))"#,
+        r#"(not (= (str.replace (str.++ x x) "A" y)
+                    (str.++ (str.replace x "A" y) x)))"#,
+        r#"(not (= (str.replace (str.++ x "A") "B" y)
+                    (str.++ (str.replace x "B" y) "A")))"#,
+        r#"(not (= (str.replace (str.++ x y) x "A")
+                    (str.++ "A" y)))"#,
     ] {
         let input = format!(
             r"(set-logic QF_SLIA)
@@ -774,6 +780,11 @@ fn exact_source_conditional_replace_declines_branch_sensitive_controls() {
         r#"(not (= (str.replace "B" x "A") (str.replace "A" x "A")))"#,
         r#"(not (= (str.replace "" x y) (str.replace "" y x)))"#,
         r#"(not (= (str.replace "B" x y) (str.replace "B" y x)))"#,
+        r#"(not (= (str.replace (str.++ (str.at x 0) "A") "A" "B")
+                    (str.++ (str.replace (str.at x 0) "A" "B") "A")))"#,
+        r#"(not (= (str.replace (str.++ (str.at x 0) (str.at y 0))
+                                (str.at y 0) "A")
+                    (str.++ (str.at x 0) "A")))"#,
     ] {
         let input = format!(
             r"(set-logic QF_SLIA)
