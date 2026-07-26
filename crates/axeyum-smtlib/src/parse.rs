@@ -788,8 +788,19 @@ fn parse_script_bounded(input: &str) -> Result<Script, SmtError> {
     // assertions — a model of the whole is a model of any subset, keeping the
     // "only ever add sat" invariant sound). `parse_sort`/`(Seq E)` are untouched.
     if script.uses_bounded_strings {
-        script.prefer_source_string_routes = split_replace_rejoin_count > 0;
-        script.source_string_semantic_unsat = source_string_semantic_facts(&exprs).conflict;
+        let source_facts = source_string_semantic_facts(&exprs);
+        script.source_string_semantic_unsat = source_facts.conflict;
+        script.prefer_source_string_routes =
+            split_replace_rejoin_count > 0 || script.source_string_semantic_unsat;
+        // The complete bounded parse above has already syntax- and sort-checked
+        // every command. Once the exact source analysis proves the active
+        // conjunction contradictory, no optional word/membership/lex/length side
+        // channel can change that verdict. Return the validated flat script now so
+        // the front door consumes the source certificate immediately instead of
+        // spending the remaining budget constructing fallback machinery.
+        if source_facts.eager_boolean_path_conflict {
+            return Ok(script);
+        }
         script.word_problem = build_word_problem(&mut script.arena, &exprs);
         // Parser-side Boolean-structured word skeleton (P1.5b): the superset the
         // online CDCL(T) route decides — `or`/negated word problems the flat
@@ -9314,6 +9325,7 @@ struct SourceStringSemanticFacts {
     pinned_words: Vec<(SExpr, Vec<u32>)>,
     derived_equalities: Vec<(SExpr, SExpr)>,
     conflict: bool,
+    eager_boolean_path_conflict: bool,
 }
 
 /// A bound-independent normal form for the small SMT-LIB rewrite language used
@@ -12883,6 +12895,191 @@ fn exact_rewrite_contradiction(conjuncts: &[&SExpr]) -> bool {
         .any(|conjunct| exact_rewrite_term(conjunct, 0) == ExactRewriteTerm::Bool(false))
 }
 
+// This path is intentionally population-gated. The exact condition comparison
+// is useful on dense symbolic-execution paths, but charging every small string
+// query for it can consume a meaningful fraction of a sub-second solve budget.
+// The measured PyEx family starts at 131 flattened guaranteed conjuncts; 64
+// leaves ample headroom while excluding the 26-conjunct retained control that
+// exposed the overhead regression.
+const BOOLEAN_PATH_MIN_CONJUNCTS: usize = 64;
+
+/// Whether unconditional path literals require one exact Boolean condition both
+/// true and false.
+///
+/// Symbolic-execution corpora commonly re-encode a predicate `p` as
+/// `(= (ite p 1 0) 0)` and wrap that indicator in varying numbers of `not`s.
+/// [`guaranteed_boolean_condition`] recovers the original condition and required
+/// polarity. A structural match is deliberately strict: no algebraic equivalence
+/// or implication is assumed, so a positive/negative collision is a direct
+/// propositional contradiction for every theory interpretation.
+#[cold]
+#[inline(never)]
+fn guaranteed_boolean_literal_conflict(conjuncts: &[&SExpr]) -> bool {
+    let mut required_true = BTreeSet::new();
+    let mut required_false = BTreeSet::new();
+    let mut empty_views = Vec::new();
+    let mut contains_literals: Vec<(&SExpr, Vec<u32>, bool)> = Vec::new();
+    for conjunct in conjuncts {
+        let (condition, required) = guaranteed_boolean_condition(conjunct);
+        let (same, opposite) = if required {
+            (&mut required_true, &required_false)
+        } else {
+            (&mut required_false, &required_true)
+        };
+        if opposite.contains(condition) {
+            return true;
+        }
+        same.insert(condition);
+
+        if let Some((view, condition_means_empty)) = exact_empty_condition(condition)
+            && required == condition_means_empty
+        {
+            if contains_literals
+                .iter()
+                .any(|(seen_view, _, seen_required)| *seen_view == view && *seen_required)
+            {
+                return true;
+            }
+            empty_views.push(view);
+        }
+
+        if let Some((view, literal, condition_means_contains)) =
+            exact_contains_literal_condition(condition)
+        {
+            let required_contains = required == condition_means_contains;
+            if required_contains && empty_views.contains(&view) {
+                return true;
+            }
+            if contains_literals
+                .iter()
+                .any(|(seen_view, seen_literal, seen_required)| {
+                    *seen_view == view
+                        && *seen_literal == literal
+                        && *seen_required != required_contains
+                })
+            {
+                return true;
+            }
+            contains_literals.push((view, literal, required_contains));
+        }
+
+        if let Some((view, literal, condition_means_at_equality)) =
+            exact_at_literal_equality(condition)
+            && required == condition_means_at_equality
+        {
+            // `str.at(W, i) = C` for one code point proves both that W is
+            // nonempty and that W contains C, at every integer i.
+            if empty_views.contains(&view)
+                || contains_literals
+                    .iter()
+                    .any(|(seen_view, seen_literal, seen_required)| {
+                        *seen_view == view && *seen_literal == literal && !*seen_required
+                    })
+            {
+                return true;
+            }
+            contains_literals.push((view, literal, true));
+        }
+    }
+    false
+}
+
+/// The exact empty-string condition encoded by `len(W) = 0`, allowing an
+/// arbitrary number of structural negations around the equality.
+fn exact_empty_condition(mut condition: &SExpr) -> Option<(&SExpr, bool)> {
+    let mut negated = false;
+    while let Some([head, inner]) = condition.list()
+        && head.atom() == Some("not")
+    {
+        negated = !negated;
+        condition = inner;
+    }
+    empty_string_view(condition).map(|view| (view, !negated))
+}
+
+/// Canonicalizes exact `contains`/`indexof` path predicates to
+/// `(view, nonempty literal, condition means contains)`.
+///
+/// At offset zero SMT-LIB totality gives
+/// `indexof(W, C, 0) = -1` iff `not contains(W, C)` for every nonempty literal
+/// `C`. Accepting only the same structural `W`, the same decoded literal, and
+/// equality with `-1` keeps this cross-spelling comparison exact and fail closed.
+fn exact_contains_literal_condition(mut condition: &SExpr) -> Option<(&SExpr, Vec<u32>, bool)> {
+    let mut negated = false;
+    while let Some([head, inner]) = condition.list()
+        && head.atom() == Some("not")
+    {
+        negated = !negated;
+        condition = inner;
+    }
+
+    if let Some([head, view, literal]) = condition.list()
+        && head.atom() == Some("str.contains")
+    {
+        let literal = literal_pattern_cps(literal)?;
+        if literal.is_empty() {
+            return None;
+        }
+        return Some((view, literal, !negated));
+    }
+
+    let [head, left, right] = condition.list()? else {
+        return None;
+    };
+    if head.atom() != Some("=") {
+        return None;
+    }
+    let indexof = if parse_int_literal(right) == Some(-1) {
+        left
+    } else if parse_int_literal(left) == Some(-1) {
+        right
+    } else {
+        return None;
+    };
+    let [head, view, literal, offset] = indexof.list()? else {
+        return None;
+    };
+    if head.atom() != Some("str.indexof") || parse_int_literal(offset) != Some(0) {
+        return None;
+    }
+    let literal = literal_pattern_cps(literal)?;
+    if literal.is_empty() {
+        return None;
+    }
+    Some((view, literal, negated))
+}
+
+/// Canonicalizes `str.at(W, i) = C` for a one-code-point literal C, returning
+/// whether the surrounding condition means the equality or its negation.
+fn exact_at_literal_equality(mut condition: &SExpr) -> Option<(&SExpr, Vec<u32>, bool)> {
+    let mut negated = false;
+    while let Some([head, inner]) = condition.list()
+        && head.atom() == Some("not")
+    {
+        negated = !negated;
+        condition = inner;
+    }
+    let [head, left, right] = condition.list()? else {
+        return None;
+    };
+    if head.atom() != Some("=") {
+        return None;
+    }
+    for (candidate, literal) in [(left, right), (right, left)] {
+        let Some([head, view, _index]) = candidate.list() else {
+            continue;
+        };
+        if head.atom() != Some("str.at") {
+            continue;
+        }
+        let literal = literal_pattern_cps(literal)?;
+        if literal.len() == 1 {
+            return Some((view, literal, !negated));
+        }
+    }
+    None
+}
+
 /// Computes exact constant propagation and the distinct-index splice theorem over
 /// guaranteed top-level equality paths. Every fact is a consequence of the whole
 /// asserted conjunction, so adding it to the word relaxation preserves UNSAT.
@@ -12921,7 +13118,10 @@ fn source_string_semantic_facts(exprs: &[SExpr]) -> SourceStringSemanticFacts {
     }
 
     let conjuncts = guaranteed_top_level_conjuncts(exprs);
-    let exact_rewrite_conflict = exact_rewrite_contradiction(&conjuncts);
+    let eager_boolean_path_conflict = conjuncts.len() >= BOOLEAN_PATH_MIN_CONJUNCTS
+        && guaranteed_boolean_literal_conflict(&conjuncts);
+    let exact_rewrite_conflict =
+        eager_boolean_path_conflict || exact_rewrite_contradiction(&conjuncts);
     let equalities: Vec<(&SExpr, &SExpr)> = conjuncts
         .iter()
         .filter_map(|conjunct| positive_word_equality(conjunct))
@@ -12933,6 +13133,7 @@ fn source_string_semantic_facts(exprs: &[SExpr]) -> SourceStringSemanticFacts {
     if equalities.is_empty() && disequalities.is_empty() {
         return SourceStringSemanticFacts {
             conflict: exact_rewrite_conflict,
+            eager_boolean_path_conflict,
             ..SourceStringSemanticFacts::default()
         };
     }
@@ -13065,6 +13266,7 @@ fn source_string_semantic_facts(exprs: &[SExpr]) -> SourceStringSemanticFacts {
         pinned_words,
         derived_equalities,
         conflict,
+        eager_boolean_path_conflict,
     }
 }
 
@@ -17842,6 +18044,7 @@ mod string_escape_tests {
         exact_rewrite_fixed_word_language, exact_rewrite_prefix_substr_emptiness,
         exact_rewrite_replace_preserves_subject, exact_rewrite_replace_singleton_equality,
         exact_rewrite_small_subject_indexof, exact_rewrite_term, exact_rewrite_under_assignments,
+        guaranteed_boolean_literal_conflict, guaranteed_top_level_conjuncts,
         replace_first_code_points, source_string_semantic_facts, substr_code_points,
     };
     use crate::sexpr::{SExpr, read_all};
@@ -20184,6 +20387,83 @@ mod string_escape_tests {
             let expressions = read_all(script).expect("read pinned control");
             assert!(
                 !source_string_semantic_facts(&expressions).conflict,
+                "{script}"
+            );
+        }
+    }
+
+    #[test]
+    fn contradictory_boolean_path_literals_are_exact_and_fail_closed() {
+        for script in [
+            r#"(declare-const s String)
+(assert (not (= (ite (str.contains s "A") 1 0) 0)))
+(assert (= (ite (str.contains s "A") 1 0) 0))
+(check-sat)"#,
+            r#"(declare-const s String)
+(assert (str.contains s "A"))
+(assert (not (str.contains s "A")))
+(check-sat)"#,
+            r#"(declare-const s String)
+(assert (str.contains s "A"))
+(assert (= (str.indexof s "A" 0) (- 1)))
+(check-sat)"#,
+            r#"(declare-const s String)
+(assert (not (= (ite (not (= (str.indexof s "A" 0) (- 1))) 1 0) 0)))
+(assert (not (str.contains s "A")))
+(check-sat)"#,
+            r#"(declare-const s String)
+(assert (= (str.len s) 0))
+(assert (not (= (str.indexof s "A" 0) (- 1))))
+(check-sat)"#,
+            r#"(declare-const s String)
+(assert (= (str.len s) 0))
+(assert (= (str.at s 7) "A"))
+(check-sat)"#,
+            r#"(declare-const s String)
+(assert (= (str.at s 7) "A"))
+(assert (not (str.contains s "A")))
+(check-sat)"#,
+        ] {
+            let expressions = read_all(script).expect("read contradictory Boolean path");
+            assert!(
+                guaranteed_boolean_literal_conflict(&guaranteed_top_level_conjuncts(&expressions)),
+                "{script}"
+            );
+        }
+
+        for script in [
+            r#"(declare-const s String)
+(assert (not (= (ite (str.contains s "A") 1 0) 0)))
+(assert (= (ite (str.contains s "B") 1 0) 0))
+(check-sat)"#,
+            r#"(declare-const s String)
+(assert (str.contains s "A"))
+(assert (not (not (str.contains s "A"))))
+(check-sat)"#,
+            r#"(declare-const s String)
+(assert (str.contains s "A"))
+(assert (= (str.indexof s "B" 0) (- 1)))
+(check-sat)"#,
+            r#"(declare-const s String)
+(assert (str.contains s "A"))
+(assert (= (str.indexof s "A" 1) (- 1)))
+(check-sat)"#,
+            r#"(declare-const s String)
+(assert (= (str.len s) 0))
+(assert (= (str.indexof s "A" 0) (- 1)))
+(check-sat)"#,
+            r#"(declare-const s String)
+(assert (= (str.at s 7) "A"))
+(assert (not (str.contains s "B")))
+(check-sat)"#,
+            r#"(declare-const s String)
+(assert (not (= (str.at s 7) "A")))
+(assert (not (str.contains s "A")))
+(check-sat)"#,
+        ] {
+            let expressions = read_all(script).expect("read satisfiable Boolean path control");
+            assert!(
+                !guaranteed_boolean_literal_conflict(&guaranteed_top_level_conjuncts(&expressions)),
                 "{script}"
             );
         }

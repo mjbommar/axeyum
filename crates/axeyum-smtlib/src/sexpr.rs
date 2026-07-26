@@ -6,7 +6,7 @@
 use crate::SmtError;
 
 /// A parsed s-expression.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub enum SExpr {
     /// An atomic token: symbol, keyword, numeral, `#x`/`#b` literal, or
     /// `"string"` (kept verbatim including quotes).

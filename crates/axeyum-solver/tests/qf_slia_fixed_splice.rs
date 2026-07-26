@@ -2467,3 +2467,69 @@ fn exact_source_from_int_views_decline_satisfiable_controls() {
         );
     }
 }
+
+#[test]
+fn exact_boolean_path_conflicts_refute_before_optional_string_routes() {
+    let dense_path = "(assert true)\n".repeat(64);
+    for assertions in [
+        r#"(assert (str.contains s "A"))
+(assert (= (str.indexof s "A" 0) (- 1)))"#,
+        r#"(assert (= (str.len s) 0))
+(assert (= (str.at s 7) "A"))"#,
+        r#"(assert (= (str.at s 7) "A"))
+(assert (not (str.contains s "A")))"#,
+        r#"(assert (not (= (ite (str.contains s "A") 1 0) 0)))
+(assert (= (ite (str.contains s "A") 1 0) 0))"#,
+    ] {
+        let input = format!(
+            r#"(set-logic QF_SLIA)
+(declare-fun s () String)
+{dense_path}
+{assertions}
+(check-sat)
+"#
+        );
+        let script = parse_script(&input).expect("parse exact Boolean path conflict");
+        assert!(script.source_string_semantic_unsat, "{assertions}");
+        assert!(script.prefer_source_string_routes, "{assertions}");
+        assert!(script.word_skeleton.is_empty(), "{assertions}");
+        assert_eq!(
+            solve_smtlib(&input, &config())
+                .expect("solve exact Boolean path conflict")
+                .result,
+            CheckResult::Unsat,
+            "{assertions}"
+        );
+    }
+}
+
+#[test]
+fn exact_boolean_path_conflicts_decline_satisfiable_near_misses() {
+    let dense_path = "(assert true)\n".repeat(64);
+    for assertions in [
+        r#"(assert (str.contains s "A"))
+(assert (= (str.indexof s "B" 0) (- 1)))"#,
+        r#"(assert (= (str.len s) 0))
+(assert (= (str.indexof s "A" 0) (- 1)))"#,
+        r#"(assert (= (str.at s 0) "A"))
+(assert (not (str.contains s "B")))"#,
+    ] {
+        let input = format!(
+            r#"(set-logic QF_SLIA)
+(declare-fun s () String)
+{dense_path}
+{assertions}
+(check-sat)
+"#
+        );
+        let script = parse_script(&input).expect("parse Boolean path near miss");
+        assert!(!script.source_string_semantic_unsat, "{assertions}");
+        assert_ne!(
+            solve_smtlib(&input, &config())
+                .expect("solve Boolean path near miss")
+                .result,
+            CheckResult::Unsat,
+            "{assertions}"
+        );
+    }
+}
