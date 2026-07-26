@@ -16,10 +16,10 @@
 //! 1..=3 string variables, positive **and** negative `str.in_re` atoms carrying
 //! depth-≤4 regexes (concat / union / intersection / complement / star / plus /
 //! opt / native `re.loop` / `re.range` / `re.allchar` / `re.all` / `re.none`),
-//! occasional length bounds, exact ground `str.to_int` values, literal pins, and
-//! the odd variable–variable equality (which makes the retained subset incomplete:
-//! subset `unsat` may still decide, subset `sat` declines). Two oracle fronts
-//! adjudicate the same generator:
+//! occasional length bounds, exact ground `str.to_int` values, literal pins and
+//! disequalities, and the odd variable–variable equality (which makes the retained
+//! subset incomplete: subset `unsat` may still decide, subset `sat` declines).
+//! Two oracle fronts adjudicate the same generator:
 //! the system **Z3** binary (behind the
 //! `z3` feature) and the **cvc5** binary (always, when installed).
 //!
@@ -165,6 +165,15 @@ fn generate(rng: &mut Lcg) -> String {
         // Occasional literal pin.
         if rng.below(5) == 0 {
             let _ = writeln!(text, "(assert (= v{i} \"{}\"))", gen_literal(rng));
+        }
+        // Exact negative singleton-language constraint, in either orientation.
+        if rng.below(5) == 0 {
+            let literal = gen_literal(rng);
+            if rng.below(2) == 0 {
+                let _ = writeln!(text, "(assert (not (= v{i} \"{literal}\")))");
+            } else {
+                let _ = writeln!(text, "(assert (not (= \"{literal}\" v{i})))");
+            }
         }
     }
     // Occasional variable–variable equality: the retained membership subset is

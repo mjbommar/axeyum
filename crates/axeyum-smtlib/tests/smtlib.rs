@@ -4468,6 +4468,29 @@ fn regex_membership_retains_exact_length_equalities() {
 }
 
 #[test]
+fn regex_membership_retains_literal_disequalities() {
+    for disequality in ["(not (= x \"ab\"))", "(not (= \"ab\" x))"] {
+        let text = format!(
+            "(set-logic QF_SLIA)\n\
+             (declare-const x String)\n\
+             (assert (str.in_re x (re.* (str.to_re \"ab\"))))\n\
+             (assert {disequality})\n\
+             (check-sat)\n"
+        );
+        let script = parse_script(&text).expect("literal-disequality membership script parses");
+        let problem = script
+            .membership_problem
+            .expect("membership side channel is retained");
+        assert!(
+            problem.complete,
+            "literal disequality is represented exactly"
+        );
+        assert_eq!(problem.vars.len(), 1);
+        assert_eq!(problem.vars[0].membership.negatives.len(), 1);
+    }
+}
+
+#[test]
 fn regex_inter_matches_intersection() {
     // (re.inter (re.* (re.range "a" "z")) (str.to_re "ab")): lowercase-only ∩ {"ab"} = {"ab"}.
     let text = "(declare-fun s () String)\n\
