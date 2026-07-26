@@ -11319,6 +11319,7 @@ impl ExactEqualityFacts {
     }
 
     fn finish(&mut self) {
+        self.propagate_empty_concats();
         for (index, term) in self.terms.iter().enumerate() {
             if !exact_is_literal(term) {
                 continue;
@@ -11340,6 +11341,50 @@ impl ExactEqualityFacts {
             .any(|(left, right)| self.root(*left) == self.root(*right))
         {
             self.conflict = true;
+        }
+    }
+
+    /// Propagates the exact free-monoid identity
+    /// `concat(parts) = ""` iff every part is empty.  The rule activates only
+    /// in an equality class already connected to the fixed empty string, so it
+    /// cannot infer content or collapse a merely unknown component.
+    fn propagate_empty_concats(&mut self) {
+        use ExactRewriteTerm::{App, String};
+
+        let empty = self.intern(String(Vec::new()));
+        let mut concats = Vec::new();
+        for (term_index, term) in self.terms.clone().into_iter().enumerate() {
+            let App(head, parts) = term else {
+                continue;
+            };
+            if !matches!(head.as_str(), "str.++" | "seq.++") {
+                continue;
+            }
+            let parts: Vec<usize> = parts.into_iter().map(|part| self.intern(part)).collect();
+            concats.push((term_index, parts));
+        }
+
+        for _ in 0..self.terms.len() {
+            let mut changed = false;
+            for (concat, parts) in &concats {
+                if self.root(*concat) == self.root(empty) {
+                    for part in parts {
+                        if self.root(*part) != self.root(empty) {
+                            self.union(*part, empty);
+                            changed = true;
+                        }
+                    }
+                } else if parts
+                    .iter()
+                    .all(|part| self.root(*part) == self.root(empty))
+                {
+                    self.union(*concat, empty);
+                    changed = true;
+                }
+            }
+            if !changed {
+                break;
+            }
         }
     }
 
@@ -20962,7 +21007,7 @@ mod string_escape_tests {
 
     #[test]
     fn selected_string_path_propagates_nonempty_concat_conflicts() {
-        let contradictory = read_all(
+        for script in [
             r#"(declare-const input String)
 (declare-const prefix String)
 (declare-const position Int)
@@ -20974,9 +21019,32 @@ mod string_escape_tests {
   (= position (- 1))))
 (assert (< (- 1) position))
 (check-sat)"#,
-        )
-        .expect("read selected concat conflict");
-        assert!(source_string_semantic_facts(&contradictory).conflict);
+            r#"(declare-const input String)
+(declare-const empty-view String)
+(declare-const branch-view String)
+(declare-const prefix String)
+(declare-const position Int)
+(declare-const selected Bool)
+(declare-const empty Bool)
+(declare-const positive Bool)
+(assert (= empty-view (str.++ "" input)))
+(assert (= empty (= "" empty-view)))
+(assert empty)
+(assert (= branch-view (str.++ "" input)))
+(assert (= selected (not (= position (- 1)))))
+(assert (ite selected
+  (= branch-view (str.++ prefix "GASO="))
+  (= position (- 1))))
+(assert (= positive (< (- 1) position)))
+(assert positive)
+(check-sat)"#,
+        ] {
+            let contradictory = read_all(script).expect("read selected concat conflict");
+            assert!(
+                source_string_semantic_facts(&contradictory).conflict,
+                "{script}"
+            );
+        }
 
         for script in [
             r#"(declare-const input String)
