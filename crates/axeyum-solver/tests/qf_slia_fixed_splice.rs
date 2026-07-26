@@ -2535,3 +2535,92 @@ fn exact_source_correlated_substring_index_views_decline_satisfiable_controls() 
         );
     }
 }
+
+#[test]
+fn exact_source_first_occurrence_algebra_refutes_noetzli_families() {
+    let assertions = [
+        r#"(not (= (str.++ (str.replace "" x y) x) (str.++ x (str.replace "" x y))))"#,
+        r#"(not (= (str.++ (str.replace "" x y) y) (str.++ y (str.replace "" x y))))"#,
+        r"(not (= (str.replace x y (str.replace y x y)) x))",
+        r#"(not (= (str.replace x (str.replace "A" y x) "A") (str.replace x (str.replace y "A" x) y)))"#,
+        r#"(not (= (str.replace x (str.replace "B" y x) "B") (str.replace x (str.replace y "B" x) y)))"#,
+        r#"(not (= (str.replace (str.substr x 0 z) "A" "B") (str.substr (str.replace x "A" "B") 0 z)))"#,
+        r#"(not (= (str.replace (str.substr x 0 z) "B" "A") (str.substr (str.replace x "B" "A") 0 z)))"#,
+        r#"(not (= (str.replace (str.++ "A" x) x "A") "AA"))"#,
+        r#"(not (= (str.replace (str.++ "A" x) x "") "A"))"#,
+        r#"(not (= (str.replace (str.++ "B" x) x "B") "BB"))"#,
+        r#"(not (= (str.replace (str.++ "B" x) x "") "B"))"#,
+        r"(not (= (str.replace (str.replace x y x) x y) (str.replace x (str.replace x y x) y)))",
+        r#"(not (= (str.replace (str.replace x "A" x) "A" y) (str.replace x "A" (str.replace x "A" y))))"#,
+        r#"(not (= (str.replace (str.replace x "A" "B") x "B") (str.replace (str.replace x "A" x) x "B")))"#,
+        r#"(not (= (str.replace (str.replace x "A" "") x "") (str.replace (str.replace x "A" x) x "")))"#,
+        r#"(not (= (str.replace (str.replace x "B" x) "B" y) (str.replace x "B" (str.replace x "B" y))))"#,
+        r#"(not (= (str.replace (str.replace x "B" "A") x "A") (str.replace (str.replace x "B" x) x "A")))"#,
+        r#"(not (= (str.replace (str.replace x "B" "") x "") (str.replace (str.replace x "B" x) x "")))"#,
+        r#"(not (= (str.replace (str.replace x "B" "") "A" "") (str.replace (str.replace x "A" "") "B" "")))"#,
+        r#"(not (= (str.replace (str.replace "A" x "A") "A" y) (str.++ y (str.replace "" x "A"))))"#,
+        r#"(not (= (str.replace (str.replace "A" x "B") "B" y) (str.replace "A" x y)))"#,
+        r#"(not (= (str.replace (str.replace "B" x "A") "A" y) (str.replace "B" x y)))"#,
+        r#"(not (= (str.replace (str.replace "B" x "B") "B" y) (str.++ y (str.replace "" x "B"))))"#,
+    ];
+
+    assert_eq!(assertions.len(), 23);
+    for (index, assertion) in assertions.into_iter().enumerate() {
+        let input = format!(
+            r#"(set-logic QF_SLIA)
+(declare-fun x () String)
+(declare-fun y () String)
+(declare-fun z () Int)
+(assert {assertion})
+(check-sat)
+"#
+        );
+        let script = parse_script(&input).expect("parse first-occurrence algebra theorem");
+        assert!(
+            script.source_string_semantic_unsat,
+            "first-occurrence algebra theorem must refute {assertion}"
+        );
+        if matches!(index, 0 | 4 | 10 | 18 | 22) {
+            assert_eq!(
+                solve_smtlib(&input, &config())
+                    .expect("solve first-occurrence algebra theorem")
+                    .result,
+                CheckResult::Unsat,
+                "first-occurrence algebra theorem must survive the bounded-string gate: {assertion}"
+            );
+        }
+    }
+}
+
+#[test]
+fn exact_source_first_occurrence_algebra_declines_counterexamples() {
+    for assertion in [
+        r#"(not (= (str.replace "AAA" (str.replace "AA" "A" "AA") "AA") "AAA"))"#,
+        r#"(not (= (str.replace (str.replace "ABBA" "BA" "ABBA") "BA" "ABBA") (str.replace "ABBA" "BA" (str.replace "ABBA" "BA" "ABBA"))))"#,
+        r#"(not (= (str.replace (str.replace "ABBA" "BA" "ABBA") "BA" "A") (str.replace "ABBA" "BA" (str.replace "ABBA" "BA" "A"))))"#,
+        r#"(not (= (str.replace (str.replace "ABBA" "BA" "ABBA") "BA" "B") (str.replace "ABBA" "BA" (str.replace "ABBA" "BA" "B"))))"#,
+        r#"(not (= (str.replace (str.replace "ABBA" "BA" "ABBA") "BA" "") (str.replace "ABBA" "BA" (str.replace "ABBA" "BA" ""))))"#,
+        r#"(not (= (str.replace (str.substr "AB" 0 1) "AB" "CD") (str.substr (str.replace "AB" "AB" "CD") 0 1)))"#,
+        r#"(not (= (str.replace (str.++ "A" "") "" "B") "AB"))"#,
+        r#"(not (= (str.replace (str.replace "A" "B" "A") "A" "") (str.replace "A" "B" "")))"#,
+    ] {
+        let input = format!(
+            r#"(set-logic QF_SLIA)
+(assert {assertion})
+(check-sat)
+"#
+        );
+        let script = parse_script(&input).expect("parse first-occurrence algebra control");
+        assert!(
+            !script.source_string_semantic_unsat,
+            "satisfiable first-occurrence algebra control must decline: {assertion}"
+        );
+        assert_ne!(
+            solve_smtlib(&input, &config())
+                .expect("solve first-occurrence algebra control")
+                .result,
+            CheckResult::Unsat,
+            "satisfiable first-occurrence algebra control must not become UNSAT: {assertion}"
+        );
+    }
+}
