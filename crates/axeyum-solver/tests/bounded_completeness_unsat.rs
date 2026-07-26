@@ -39,7 +39,7 @@ fn ground_string_unsat_decides_unsat() {
     assert_eq!(verdict(text), CheckResult::Unsat);
 }
 
-/// PyEx encodes a taken Boolean path as an integer indicator. The odd `not`
+/// `PyEx` encodes a taken Boolean path as an integer indicator. The odd `not`
 /// polarity below is exactly `len(s) - 1 <= 0`, so the packed search is complete;
 /// the character disequality is impossible when the non-empty string has length 1.
 #[test]

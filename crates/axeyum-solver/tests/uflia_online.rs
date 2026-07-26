@@ -40,7 +40,7 @@ fn verdict(result: &CheckResult) -> Option<bool> {
 
 #[test]
 fn function_free_carrier_disequality_combines_with_lia_sat() {
-    let script = r#"
+    let script = r"
         (set-logic QF_UFLIA)
         (declare-sort U 0)
         (declare-const a U)
@@ -49,14 +49,14 @@ fn function_free_carrier_disequality_combines_with_lia_sat() {
         (assert (not (= a b)))
         (assert (> x 0))
         (check-sat)
-    "#;
+    ";
     let outcome = solve_smtlib(script, &SolverConfig::default()).expect("solve mixed carrier/LIA");
     assert!(matches!(outcome.result, CheckResult::Sat(_)));
 }
 
 #[test]
 fn function_free_carrier_equality_boolean_couples_to_lia_unsat() {
-    let script = r#"
+    let script = r"
         (set-logic QF_UFLIA)
         (declare-sort U 0)
         (declare-const a U)
@@ -66,7 +66,7 @@ fn function_free_carrier_equality_boolean_couples_to_lia_unsat() {
         (assert (or (= a b) (> x 0)))
         (assert (<= x 0))
         (check-sat)
-    "#;
+    ";
     let outcome = solve_smtlib(script, &SolverConfig::default()).expect("solve mixed carrier/LIA");
     assert_eq!(outcome.result, CheckResult::Unsat);
 }

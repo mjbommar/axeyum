@@ -1880,6 +1880,9 @@ fn dispatch_arith_uf_overbound_probe_before_lia(
 /// `Ok(None)` so the dispatcher falls through to the array / bit-blast tail.
 /// Verdict logic is verbatim the inlined original; `rec` only annotates the
 /// existing sites.
+// 107/100 lines: a cohesive verbatim-inlined UF fast-path dispatcher; splitting
+// it would obscure the fall-through verdict logic. (solver lane: refactor if desired.)
+#[allow(clippy::too_many_lines)]
 fn dispatch_uf_fast_paths(
     arena: &mut TermArena,
     assertions: &[TermId],

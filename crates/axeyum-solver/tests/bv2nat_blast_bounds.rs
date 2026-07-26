@@ -211,7 +211,7 @@ fn lex_order_gap_beyond_bound_is_never_unsat() {
 
 /// Pure content constraints can also force the only real witness past the
 /// packed-string bound. A 12-`a` prefix plus a contained `b` needs at least 13
-/// characters, so Z3 reports `sat` (`"aaaaaaaaaaaab"`). The old StringGate
+/// characters, so Z3 reports `sat` (`"aaaaaaaaaaaab"`). The old `StringGate`
 /// shortcut saw no BV→Int bridge and incorrectly accepted the bounded BV
 /// contradiction as an unbounded `unsat`.
 #[test]

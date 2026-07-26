@@ -1088,17 +1088,17 @@ fn exact_source_equality_paths_and_self_expanded_needles_refute_noetzli_families
                     (str.replace x x y)))"#,
         r#"(not (= (str.replace "B" x (str.replace "A" x ""))
                     (str.replace "B" x "A")))"#,
-        r#"(not (= (str.replace x (str.replace y x y) z)
-                    (str.replace x y z)))"#,
+        r"(not (= (str.replace x (str.replace y x y) z)
+                    (str.replace x y z)))",
     ] {
         let input = format!(
-            r#"(set-logic QF_SLIA)
+            r"(set-logic QF_SLIA)
 (declare-fun x () String)
 (declare-fun y () String)
 (declare-fun z () String)
 (assert {assertion})
 (check-sat)
-"#
+"
         );
         let script = parse_script(&input).expect("parse equality-path replacement theorem");
         assert!(
@@ -1117,16 +1117,16 @@ fn exact_source_equality_paths_and_self_expanded_needles_refute_noetzli_families
 
 #[test]
 fn exact_source_self_expanded_needles_decline_near_misses() {
-    let assertion = r#"(not (= (str.replace x (str.replace y z y) w) (str.replace x y w)))"#;
+    let assertion = r"(not (= (str.replace x (str.replace y z y) w) (str.replace x y w)))";
     let input = format!(
-        r#"(set-logic QF_SLIA)
+        r"(set-logic QF_SLIA)
 (declare-fun w () String)
 (declare-fun x () String)
 (declare-fun y () String)
 (declare-fun z () String)
 (assert {assertion})
 (check-sat)
-"#
+"
     );
     let script = parse_script(&input).expect("parse self-expanded needle control");
     assert!(
@@ -1154,12 +1154,12 @@ fn exact_source_one_code_point_word_boundaries_refute_noetzli_families() {
                     (= "A" (str.replace "A" x "B"))))"#,
     ] {
         let input = format!(
-            r#"(set-logic QF_SLIA)
+            r"(set-logic QF_SLIA)
 (declare-fun x () String)
 (declare-fun y () String)
 (assert {assertion})
 (check-sat)
-"#
+"
         );
         let script = parse_script(&input).expect("parse one-code-point word-boundary theorem");
         assert!(
@@ -1180,12 +1180,12 @@ fn exact_source_one_code_point_word_boundaries_refute_noetzli_families() {
 fn exact_source_one_code_point_word_boundaries_decline_unbounded_words() {
     let assertion = r#"(not (= (str.prefixof x y) (or (= x "") (= x y))))"#;
     let input = format!(
-        r#"(set-logic QF_SLIA)
+        r"(set-logic QF_SLIA)
 (declare-fun x () String)
 (declare-fun y () String)
 (assert {assertion})
 (check-sat)
-"#
+"
     );
     let script = parse_script(&input).expect("parse unbounded word-boundary control");
     assert!(
@@ -1219,13 +1219,13 @@ fn exact_source_index_totality_views_refute_noetzli_families() {
                     (str.from_int (str.indexof x x z))))",
     ] {
         let input = format!(
-            r#"(set-logic QF_SLIA)
+            r"(set-logic QF_SLIA)
 (declare-fun x () String)
 (declare-fun y () String)
 (declare-fun z () Int)
 (assert {assertion})
 (check-sat)
-"#
+"
         );
         let script = parse_script(&input).expect("parse exact index-totality theorem");
         assert!(
@@ -1250,12 +1250,12 @@ fn exact_source_index_totality_views_decline_long_word_controls() {
                     (str.substr "AB" z (str.len x))))"#,
     ] {
         let input = format!(
-            r#"(set-logic QF_SLIA)
+            r"(set-logic QF_SLIA)
 (declare-fun x () String)
 (declare-fun z () Int)
 (assert {assertion})
 (check-sat)
-"#
+"
         );
         let script = parse_script(&input).expect("parse exact index-totality control");
         assert!(
@@ -1487,13 +1487,13 @@ fn exact_source_concat_index_routes_refute_noetzli_families() {
                     (str.substr (str.replace x x y) 0 z)))"#,
     ] {
         let input = format!(
-            r#"(set-logic QF_SLIA)
+            r"(set-logic QF_SLIA)
 (declare-fun x () String)
 (declare-fun y () String)
 (declare-fun z () Int)
 (assert {assertion})
 (check-sat)
-"#
+"
         );
         let script = parse_script(&input).expect("parse exact concat index route");
         assert!(
@@ -1523,12 +1523,12 @@ fn exact_source_unary_concat_commutativity_refutes_noetzli_families() {
                     (str.++ "B" (str.replace "B" x "B"))))"#,
     ] {
         let input = format!(
-            r#"(set-logic QF_SLIA)
+            r"(set-logic QF_SLIA)
 (declare-fun x () String)
 (declare-fun z () Int)
 (assert {assertion})
 (check-sat)
-"#
+"
         );
         let script = parse_script(&input).expect("parse unary concat commutativity theorem");
         assert!(
@@ -1555,13 +1555,13 @@ fn exact_source_concat_routes_decline_satisfiable_controls() {
                     (str.substr x (- 1) z)))"#,
     ] {
         let input = format!(
-            r#"(set-logic QF_SLIA)
+            r"(set-logic QF_SLIA)
 (declare-fun x () String)
 (declare-fun y () String)
 (declare-fun z () Int)
 (assert {assertion})
 (check-sat)
-"#
+"
         );
         let script = parse_script(&input).expect("parse concat route control");
         assert!(
@@ -1716,21 +1716,21 @@ fn exact_source_affine_substr_views_refute_noetzli_families() {
         r#"(not (= (str.substr "B" z (+ 1 z)) (str.at "B" z)))"#,
         r#"(not (= (str.substr "A" (- z 1) z) (str.at "A" (- 1 z))))"#,
         r#"(not (= (str.substr "B" (- z 1) z) (str.at "B" (- 1 z))))"#,
-        r#"(not (= (str.substr (str.substr y 0 1) 0 1)
-                    (str.at (str.replace x x y) 0)))"#,
-        r#"(not (= (str.substr (str.substr y 1 1) 0 1)
-                    (str.at (str.replace x x y) 1)))"#,
-        r#"(not (= (str.substr (str.substr y z 1) 0 1)
-                    (str.at (str.replace x x y) z)))"#,
+        r"(not (= (str.substr (str.substr y 0 1) 0 1)
+                    (str.at (str.replace x x y) 0)))",
+        r"(not (= (str.substr (str.substr y 1 1) 0 1)
+                    (str.at (str.replace x x y) 1)))",
+        r"(not (= (str.substr (str.substr y z 1) 0 1)
+                    (str.at (str.replace x x y) z)))",
     ] {
         let input = format!(
-            r#"(set-logic QF_SLIA)
+            r"(set-logic QF_SLIA)
 (declare-fun x () String)
 (declare-fun y () String)
 (declare-fun z () Int)
 (assert {assertion})
 (check-sat)
-"#
+"
         );
         let script = parse_script(&input).expect("parse affine one-code-point theorem");
         assert!(
@@ -1755,11 +1755,11 @@ fn exact_source_affine_substr_views_decline_satisfiable_controls() {
         r#"(not (= (str.substr "A" (- z 1) (- z 1)) (str.at "A" (- 1 z))))"#,
     ] {
         let input = format!(
-            r#"(set-logic QF_SLIA)
+            r"(set-logic QF_SLIA)
 (declare-fun z () Int)
 (assert {assertion})
 (check-sat)
-"#
+"
         );
         let script = parse_script(&input).expect("parse affine one-code-point control");
         assert!(
@@ -1781,11 +1781,11 @@ fn exact_source_boolean_ac_views_refute_noetzli_families() {
     let mut assertions = Vec::new();
     for literal in [r#""A""#, r#""B""#] {
         assertions.push(format!(
-            r#"(not (= (= {literal} (str.++ y x)) (= {literal} (str.++ x y))))"#
+            r"(not (= (= {literal} (str.++ y x)) (= {literal} (str.++ x y))))"
         ));
         assertions.push(format!(
-            r#"(not (= (str.contains {literal} (str.++ y x))
-                       (str.contains {literal} (str.++ x y))))"#
+            r"(not (= (str.contains {literal} (str.++ y x))
+                       (str.contains {literal} (str.++ x y))))"
         ));
         assertions.push(format!(
             r#"(not (= (= {literal} (str.replace x "" y))
@@ -1797,8 +1797,8 @@ fn exact_source_boolean_ac_views_refute_noetzli_families() {
         ));
         for replacement in ["x", r#""""#, r#""A""#, r#""B""#] {
             assertions.push(format!(
-                r#"(not (= (str.replace {literal} (str.++ y x) {replacement})
-                           (str.replace {literal} (str.++ x y) {replacement})))"#
+                r"(not (= (str.replace {literal} (str.++ y x) {replacement})
+                           (str.replace {literal} (str.++ x y) {replacement})))"
             ));
         }
     }
@@ -1806,12 +1806,12 @@ fn exact_source_boolean_ac_views_refute_noetzli_families() {
     assert_eq!(assertions.len(), 16);
     for assertion in assertions {
         let input = format!(
-            r#"(set-logic QF_SLIA)
+            r"(set-logic QF_SLIA)
 (declare-fun x () String)
 (declare-fun y () String)
 (assert {assertion})
 (check-sat)
-"#
+"
         );
         let script = parse_script(&input).expect("parse Boolean AC string theorem");
         assert!(
@@ -1838,12 +1838,12 @@ fn exact_source_boolean_ac_views_decline_satisfiable_controls() {
                    (str.replace "AB" (str.++ x y) "")))"#,
     ] {
         let input = format!(
-            r#"(set-logic QF_SLIA)
+            r"(set-logic QF_SLIA)
 (declare-fun x () String)
 (declare-fun y () String)
 (assert {assertion})
 (check-sat)
-"#
+"
         );
         let script = parse_script(&input).expect("parse Boolean AC string control");
         assert!(
@@ -1870,8 +1870,8 @@ fn exact_source_one_code_point_replace_views_refute_noetzli_families() {
         ));
         for replacement in [r#""A""#, r#""B""#] {
             assertions.push(format!(
-                r#"(not (= (str.substr (str.replace {base} x {replacement}) 1 z)
-                           (str.substr {base} (str.len x) z)))"#
+                r"(not (= (str.substr (str.replace {base} x {replacement}) 1 z)
+                           (str.substr {base} (str.len x) z)))"
             ));
             assertions.push(format!(
                 r#"(not (= (str.substr (str.replace {base} x {replacement}) z z)
@@ -1891,12 +1891,12 @@ fn exact_source_one_code_point_replace_views_refute_noetzli_families() {
     assert_eq!(assertions.len(), 14);
     for assertion in assertions {
         let input = format!(
-            r#"(set-logic QF_SLIA)
+            r"(set-logic QF_SLIA)
 (declare-fun x () String)
 (declare-fun z () Int)
 (assert {assertion})
 (check-sat)
-"#
+"
         );
         let script = parse_script(&input).expect("parse one-code-point replacement view theorem");
         assert!(
@@ -1928,12 +1928,12 @@ fn exact_source_one_code_point_replace_views_decline_satisfiable_controls() {
                    (str.at "BC" (str.indexof "A" x 0))))"#,
     ] {
         let input = format!(
-            r#"(set-logic QF_SLIA)
+            r"(set-logic QF_SLIA)
 (declare-fun x () String)
 (declare-fun z () Int)
 (assert {assertion})
 (check-sat)
-"#
+"
         );
         let script = parse_script(&input).expect("parse one-code-point replacement view control");
         assert!(
@@ -1990,11 +1990,11 @@ fn exact_source_one_code_point_deletion_languages_refute_noetzli_families() {
     assert_eq!(assertions.len(), 15);
     for assertion in assertions {
         let input = format!(
-            r#"(set-logic QF_SLIA)
+            r"(set-logic QF_SLIA)
 (declare-fun x () String)
 (assert {assertion})
 (check-sat)
-"#
+"
         );
         let script = parse_script(&input).expect("parse one-code-point deletion theorem");
         assert!(
@@ -2021,11 +2021,11 @@ fn exact_source_one_code_point_deletion_languages_decline_satisfiable_controls()
         r#"(not (= (= "A" (str.replace x "A" "B")) (= x "AA")))"#,
     ] {
         let input = format!(
-            r#"(set-logic QF_SLIA)
+            r"(set-logic QF_SLIA)
 (declare-fun x () String)
 (assert {assertion})
 (check-sat)
-"#
+"
         );
         let script = parse_script(&input).expect("parse one-code-point deletion control");
         assert!(
@@ -2097,13 +2097,13 @@ fn exact_source_replace_emptiness_boolean_normalization_refutes_noetzli_families
     assert_eq!(assertions.len(), 47);
     for (index, assertion) in assertions.into_iter().enumerate() {
         let input = format!(
-            r#"(set-logic QF_SLIA)
+            r"(set-logic QF_SLIA)
 (declare-fun x () String)
 (declare-fun y () String)
 (declare-fun z () Int)
 (assert {assertion})
 (check-sat)
-"#
+"
         );
         let script = parse_script(&input).expect("parse replacement-emptiness theorem");
         assert!(
@@ -2131,13 +2131,13 @@ fn exact_source_replace_emptiness_boolean_normalization_declines_satisfiable_con
         r#"(not (= (str.replace "" (str.replace "" x "A") y) y))"#,
     ] {
         let input = format!(
-            r#"(set-logic QF_SLIA)
+            r"(set-logic QF_SLIA)
 (declare-fun x () String)
 (declare-fun y () String)
 (declare-fun r () String)
 (assert {assertion})
 (check-sat)
-"#
+"
         );
         let script = parse_script(&input).expect("parse replacement-emptiness control");
         assert!(
@@ -2174,12 +2174,12 @@ fn exact_source_self_replacement_boolean_equivalences_refute_noetzli_families() 
     assert_eq!(assertions.len(), 12);
     for (index, assertion) in assertions.into_iter().enumerate() {
         let input = format!(
-            r#"(set-logic QF_SLIA)
+            r"(set-logic QF_SLIA)
 (declare-fun x () String)
 (declare-fun y () String)
 (assert {assertion})
 (check-sat)
-"#
+"
         );
         let script = parse_script(&input).expect("parse self-replacement/Boolean theorem");
         assert!(
@@ -2207,13 +2207,13 @@ fn exact_source_self_replacement_boolean_equivalences_decline_satisfiable_contro
         r#"(not (= (str.contains (str.replace "AA" x "") x) (= x "")))"#,
     ] {
         let input = format!(
-            r#"(set-logic QF_SLIA)
+            r"(set-logic QF_SLIA)
 (declare-fun x () String)
 (declare-fun y () String)
 (declare-fun z () String)
 (assert {assertion})
 (check-sat)
-"#
+"
         );
         let script = parse_script(&input).expect("parse self-replacement/Boolean control");
         assert!(
@@ -2241,8 +2241,8 @@ fn exact_source_head_totality_views_refute_noetzli_families() {
         r#"(not (= (str.contains "" (str.at x 1)) (= x (str.at x 0))))"#,
         r#"(not (= (str.substr "A" (str.indexof "" x 0) z) (str.substr "A" (str.len x) z)))"#,
         r#"(not (= (str.substr "B" (str.indexof "" x 0) z) (str.substr "B" (str.len x) z)))"#,
-        r#"(not (= (str.substr (str.at x 0) 0 z) (str.at (str.substr x 0 z) 0)))"#,
-        r#"(not (= (str.substr (str.at x 1) 0 z) (str.at (str.substr x 1 z) 0)))"#,
+        r"(not (= (str.substr (str.at x 0) 0 z) (str.at (str.substr x 0 z) 0)))",
+        r"(not (= (str.substr (str.at x 1) 0 z) (str.at (str.substr x 1 z) 0)))",
         r"(not (= (str.substr (str.at x z) 0 z) (str.at (str.substr x z z) 0)))",
         r#"(not (= (str.replace x (str.at x 0) "") (str.substr x 1 (str.len x))))"#,
         r#"(not (= (str.replace "A" (str.at x 0) "A") (str.replace "A" x "A")))"#,
@@ -2258,13 +2258,13 @@ fn exact_source_head_totality_views_refute_noetzli_families() {
     assert_eq!(assertions.len(), 20);
     for (index, assertion) in assertions.into_iter().enumerate() {
         let input = format!(
-            r#"(set-logic QF_SLIA)
+            r"(set-logic QF_SLIA)
 (declare-fun x () String)
 (declare-fun y () String)
 (declare-fun z () Int)
 (assert {assertion})
 (check-sat)
-"#
+"
         );
         let script = parse_script(&input).expect("parse head-totality theorem");
         assert!(
@@ -2293,13 +2293,13 @@ fn exact_source_head_totality_views_decline_satisfiable_controls() {
         r"(not (= (str.len x) 1))",
     ] {
         let input = format!(
-            r#"(set-logic QF_SLIA)
+            r"(set-logic QF_SLIA)
 (declare-fun x () String)
 (declare-fun i () Int)
 (declare-fun n () Int)
 (assert {assertion})
 (check-sat)
-"#
+"
         );
         let script = parse_script(&input).expect("parse head-totality control");
         assert!(
@@ -2347,12 +2347,12 @@ fn exact_source_one_code_point_paths_refute_noetzli_families() {
     assert_eq!(assertions.len(), 20);
     for (index, assertion) in assertions.into_iter().enumerate() {
         let input = format!(
-            r#"(set-logic QF_SLIA)
+            r"(set-logic QF_SLIA)
 (declare-fun x () String)
 (declare-fun z () Int)
 (assert {assertion})
 (check-sat)
-"#
+"
         );
         let script = parse_script(&input).expect("parse one-code-point path theorem");
         assert!(
@@ -2380,13 +2380,13 @@ fn exact_source_one_code_point_paths_decline_satisfiable_controls() {
         r#"(not (= (str.replace "A" (str.++ x "A") x) (str.substr "A" 0 (str.len y))))"#,
     ] {
         let input = format!(
-            r#"(set-logic QF_SLIA)
+            r"(set-logic QF_SLIA)
 (declare-fun x () String)
 (declare-fun y () String)
 (declare-fun z () Int)
 (assert {assertion})
 (check-sat)
-"#
+"
         );
         let script = parse_script(&input).expect("parse one-code-point path control");
         assert!(
@@ -2416,11 +2416,11 @@ fn exact_source_from_int_views_refute_noetzli_families() {
 
     for assertion in assertions {
         let input = format!(
-            r#"(set-logic QF_SLIA)
+            r"(set-logic QF_SLIA)
 (declare-fun z () Int)
 (assert {assertion})
 (check-sat)
-"#
+"
         );
         let script = parse_script(&input).expect("parse symbolic from-int theorem");
         assert!(
@@ -2446,12 +2446,12 @@ fn exact_source_from_int_views_decline_satisfiable_controls() {
         r#"(not (= (str.replace "" (str.from_int z) "A") (str.substr "A" 0 (- 1 z))))"#,
     ] {
         let input = format!(
-            r#"(set-logic QF_SLIA)
+            r"(set-logic QF_SLIA)
 (declare-fun x () String)
 (declare-fun z () Int)
 (assert {assertion})
 (check-sat)
-"#
+"
         );
         let script = parse_script(&input).expect("parse symbolic from-int control");
         assert!(

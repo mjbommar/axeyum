@@ -600,7 +600,7 @@ fn front_door_conbyte_over_bound_fixed_substr_stays_unknown() {
 (declare-fun s () String)
 (assert (= (str.len (str.substr s 13 1)) 1))
 (assert (= (str.len (str.substr s 14 1)) 0))
-(check-sat)"#;
+(check-sat)";
     assert!(matches!(verdict(s), CheckResult::Unknown(_)));
 }
 
