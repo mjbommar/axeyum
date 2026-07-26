@@ -383,22 +383,23 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
-- **2026-07-26 — exact selected-path propagation moves 257 Kaluza rows without
+- **2026-07-26 — exact selected-path propagation moves 258 Kaluza rows without
   trusting directory labels.** Commits `09841e23`, `ef78ca7b`, `fca80291`, and
-  `29bc62c4` propagate only forced Boolean aliases, selected top-level `ite`
-  branches, strict-order disequalities, exact nonnegative string-length lower
-  bounds, and the exact `concat(parts) = ""` iff every part is empty identity.
-  Parent-`24df64b9` A/B measurements attribute +172 decisions to the 342-row
-  long-literal bucket (4→176 UNSAT), +60 to the 104-row empty-parse bucket
+  `29bc62c4`, plus `72624888`, propagate only forced Boolean aliases, selected
+  top-level `ite` branches, strict-order disequalities, exact nonnegative
+  string-length lower bounds, the exact `concat(parts) = ""` iff every part is
+  empty identity, and opposite arithmetic-order cycles. Parent-`24df64b9` A/B
+  measurements attribute +173 decisions to the 342-row long-literal bucket
+  (4→177 UNSAT), +60 to the 104-row empty-parse bucket
   (0→60), and +25 to the 39-row `IntNeg` residual (0→25). The selected-path
   mechanism contributes +111 (+102/+2/+7 respectively), and concat-emptiness
   adds 31 more (+13 long-literal and the remaining 18 dual-oracle-UNSAT
-  `IntNeg` rows). Both Z3 and cvc5 independently return UNSAT on all 142 latest
-  gains. All 14 dual-oracle-SAT
+  `IntNeg` rows); the order rule adds one. Both Z3 and cvc5 independently return
+  UNSAT on all 143 latest gains. All 14 dual-oracle-SAT
   `IntNeg` controls remain non-decisions, so the improvement does not
   over-refute them. This check
   deliberately ignores misleading corpus `sat/`/`unsat/` directory names. The
-  complete 282-test SMT-LIB crate and `just check-scope` pass (73 SMT-LIB
+  complete 283-test SMT-LIB crate and `just check-scope` pass (74 SMT-LIB
   library tests, 21 solver library tests, and warning-denied Clippy). Next:
   rescan the disjoint Kaluza blocker inventory at current HEAD, then select the
   largest remaining jointly adjudicated family.
@@ -9367,6 +9368,17 @@ plan is built and committed on the current branch:
 | P5.5 | External target, measured | **DONE (bounded v1, ADR-0323--0338):** authenticated Tock capture plus eight rechecked dual-DRAT proofs and six replayed controls, UNKNOWN=0, DISAGREE=0. Query time 12.700 s; fresh outer wall 50.745 s; peak RSS 1,256,496 KiB; zero OOM deltas. The committed case study compares exact target validation, universal coverage, trust, effort, artifact boundaries, and limits. No Tock bug was found, so no upstream issue is applicable. This is not a speed or whole-kernel claim. |
 
 ## Changelog
+
+- **2026-07-26 — closed an aliased opposite-order Kaluza contradiction.**
+  Committed `72624888`. Required arithmetic comparisons now form exact directed
+  non-strict/strict edges; a two-edge reverse cycle is contradictory iff at
+  least one edge is strict. This moves `18403.corecstrs.readable.smt2` from
+  Unknown to UNSAT, confirmed independently by Z3 and cvc5. Exhaustive operand
+  orientation, relation, and polarity controls reject every satisfiable pair.
+  A full replay of the 179 prior long-literal residuals finds no other new
+  verdict, and all 14 current UNSAT gains in that residual are dual-oracle
+  confirmed. All 283 SMT-LIB crate tests and `just check-scope` pass (74
+  SMT-LIB library tests, 21 solver library tests, warning-denied Clippy).
 
 - **2026-07-26 — moved 31 Kaluza rows through exact concat emptiness.**
   Committed `29bc62c4`. Equality classes now propagate the exact free-monoid
