@@ -10345,6 +10345,123 @@ fn exact_rewrite_replace_emptiness(
     ))
 }
 
+/// Characterizes exactly when one first-occurrence replacement is a fixed
+/// one-code-point word.  The result has only four nonempty-needle shapes:
+/// the needle is absent from the one-code-point source, it consumes the whole
+/// source, or it consumes everything before/after the surviving code point.
+/// This is an inverse-image rule over the unbounded SMT-LIB string semantics;
+/// it does not enumerate or bound the symbolic operands.
+fn exact_rewrite_replace_singleton_equality(
+    replacement: &ExactRewriteTerm,
+    other: &ExactRewriteTerm,
+) -> Option<ExactRewriteTerm> {
+    use ExactRewriteTerm::{App, String};
+
+    let String(target) = other else {
+        return None;
+    };
+    if target.len() != 1 {
+        return None;
+    }
+    let App(head, args) = replacement else {
+        return None;
+    };
+    let [subject, needle, value] = args.as_slice() else {
+        return None;
+    };
+    if head != "str.replace" {
+        return None;
+    }
+
+    let empty = String(Vec::new());
+    let target = String(target.clone());
+    let needle_empty = exact_rewrite_app("=", vec![needle.clone(), empty.clone()]);
+    let needle_nonempty = exact_rewrite_app("not", vec![needle_empty.clone()]);
+    let value_empty = exact_rewrite_app("=", vec![value.clone(), empty.clone()]);
+    let empty_needle_case = exact_rewrite_app(
+        "and",
+        vec![
+            needle_empty,
+            exact_rewrite_app(
+                "=",
+                vec![
+                    exact_rewrite_concat(&[value.clone(), subject.clone()]),
+                    target.clone(),
+                ],
+            ),
+        ],
+    );
+    let nonempty_case = exact_rewrite_app(
+        "or",
+        vec![
+            // The only nonempty substring of a one-code-point source is the
+            // source itself.  A different nonempty needle is therefore absent.
+            exact_rewrite_app(
+                "and",
+                vec![
+                    exact_rewrite_app("=", vec![subject.clone(), target.clone()]),
+                    exact_rewrite_app(
+                        "not",
+                        vec![exact_rewrite_app("=", vec![needle.clone(), target.clone()])],
+                    ),
+                ],
+            ),
+            // The first occurrence consumes the whole source.
+            exact_rewrite_app(
+                "and",
+                vec![
+                    exact_rewrite_app("=", vec![subject.clone(), needle.clone()]),
+                    exact_rewrite_app("=", vec![value.clone(), target.clone()]),
+                ],
+            ),
+            // The target code point survives after the replaced occurrence.
+            exact_rewrite_app(
+                "and",
+                vec![
+                    value_empty.clone(),
+                    exact_rewrite_app(
+                        "=",
+                        vec![
+                            subject.clone(),
+                            exact_rewrite_concat(&[needle.clone(), target.clone()]),
+                        ],
+                    ),
+                ],
+            ),
+            // Or it survives before the occurrence.  Excluding a prefix
+            // occurrence makes this the actual leftmost occurrence; commuting
+            // cases are already covered by the preceding suffix shape.
+            exact_rewrite_app(
+                "and",
+                vec![
+                    value_empty,
+                    exact_rewrite_app(
+                        "=",
+                        vec![
+                            subject.clone(),
+                            exact_rewrite_concat(&[target.clone(), needle.clone()]),
+                        ],
+                    ),
+                    exact_rewrite_app(
+                        "not",
+                        vec![exact_rewrite_app(
+                            "str.prefixof",
+                            vec![needle.clone(), subject.clone()],
+                        )],
+                    ),
+                ],
+            ),
+        ],
+    );
+    Some(exact_rewrite_app(
+        "or",
+        vec![
+            empty_needle_case,
+            exact_rewrite_app("and", vec![needle_nonempty, nonempty_case]),
+        ],
+    ))
+}
+
 fn exact_rewrite_head_totality_equality(
     left: &ExactRewriteTerm,
     right: &ExactRewriteTerm,
@@ -10398,6 +10515,11 @@ fn exact_rewrite_equality(left: &ExactRewriteTerm, right: &ExactRewriteTerm) -> 
     }
     if let Some(rewritten) = exact_rewrite_replace_emptiness(left, right)
         .or_else(|| exact_rewrite_replace_emptiness(right, left))
+    {
+        return rewritten;
+    }
+    if let Some(rewritten) = exact_rewrite_replace_singleton_equality(left, right)
+        .or_else(|| exact_rewrite_replace_singleton_equality(right, left))
     {
         return rewritten;
     }
@@ -11191,6 +11313,10 @@ fn exact_rewrite_under_assignment_facts(
     if depth > EXACT_REWRITE_DEPTH_CAP {
         return term.clone();
     }
+    let semantic = exact_rewrite_under_equality_facts(term, facts, depth);
+    if semantic != *term {
+        return exact_rewrite_under_assignment_facts(&semantic, assignments, facts, depth + 1);
+    }
     if let Some((_, value)) = assignments
         .iter()
         .find(|(condition, _)| exact_conditions_equal(condition, term))
@@ -11252,6 +11378,40 @@ fn exact_rewrite_under_assignment_facts(
         IndexOfSelf(argument) => IndexOfSelf(Box::new(exact_rewrite_under_assignment_facts(
             argument,
             assignments,
+            facts,
+            depth + 1,
+        ))),
+        _ => term.clone(),
+    }
+}
+
+/// Re-evaluates compound exact terms after path equalities pin any of their
+/// operands.  This runs before treating a remaining predicate as an independent
+/// Boolean atom: an assignment such as `x = "BA"` must make
+/// `at(x, 0) = "A"` false rather than allowing an impossible path that assigns
+/// both atoms true.  Unsupported terms remain structural.
+fn exact_rewrite_under_equality_facts(
+    term: &ExactRewriteTerm,
+    facts: &ExactEqualityFacts,
+    depth: u32,
+) -> ExactRewriteTerm {
+    use ExactRewriteTerm::{App, IndexOfSelf};
+
+    if depth > EXACT_REWRITE_DEPTH_CAP {
+        return term.clone();
+    }
+    if let Some(literal) = facts.literal_for(term) {
+        return literal;
+    }
+    match term {
+        App(head, args) => exact_rewrite_app(
+            head,
+            args.iter()
+                .map(|argument| exact_rewrite_under_equality_facts(argument, facts, depth + 1))
+                .collect(),
+        ),
+        IndexOfSelf(argument) => IndexOfSelf(Box::new(exact_rewrite_under_equality_facts(
+            argument,
             facts,
             depth + 1,
         ))),
@@ -12323,17 +12483,45 @@ fn exact_rewrite_boolean_nary(head: &str, values: &[ExactRewriteTerm]) -> ExactR
             _ => {}
         }
     }
-    if head == "and"
-        && ExactEqualityFacts::from_assignments(
-            &terms
-                .iter()
-                .cloned()
-                .map(|condition| (condition, true))
-                .collect::<Vec<_>>(),
-        )
-        .conflict
-    {
-        return Bool(false);
+    if head == "and" {
+        let assignments = terms
+            .iter()
+            .cloned()
+            .map(|condition| (condition, true))
+            .collect::<Vec<_>>();
+        let facts = ExactEqualityFacts::from_assignments(&assignments);
+        if facts.conflict {
+            return Bool(false);
+        }
+        if terms.len() <= EXACT_BOOLEAN_ATOM_CAP {
+            let mut semantic_terms = Vec::new();
+            for (index, term) in terms.iter().enumerate() {
+                // Rewrite one conjunct only from the *other* conjuncts.  Using
+                // the conjunct itself as an assumption would erase every
+                // condition as trivially true and is not equivalent.
+                let other_assignments = terms
+                    .iter()
+                    .enumerate()
+                    .filter(|(other, _)| *other != index)
+                    .map(|(_, condition)| (condition.clone(), true))
+                    .collect::<Vec<_>>();
+                let other_facts = ExactEqualityFacts::from_assignments(&other_assignments);
+                if other_facts.conflict {
+                    return Bool(false);
+                }
+                match exact_rewrite_under_equality_facts(term, &other_facts, 0) {
+                    Bool(false) => return Bool(false),
+                    Bool(true) => {}
+                    rewritten if !semantic_terms.contains(&rewritten) => {
+                        semantic_terms.push(rewritten);
+                    }
+                    _ => {}
+                }
+            }
+            if semantic_terms != terms {
+                return exact_rewrite_boolean_nary(head, &semantic_terms);
+            }
+        }
     }
     match terms.as_slice() {
         [] => Bool(identity),
@@ -12926,13 +13114,13 @@ fn eval_pinned_word_semantics(
         }
         "str.at" if items.len() == 3 => {
             let subject = eval_pinned_word(&items[1], nodes, parent, values, depth + 1)?;
-            let index = parse_int_literal(strip_subtracted_zero(&items[2]))?;
+            let index = eval_pinned_int(&items[2], nodes, parent, values, depth + 1)?;
             Some(substr_code_points(&subject, index, 1))
         }
         "str.substr" if items.len() == 4 => {
             let subject = eval_pinned_word(&items[1], nodes, parent, values, depth + 1)?;
-            let offset = parse_int_literal(strip_subtracted_zero(&items[2]))?;
-            let length = parse_int_literal(strip_subtracted_zero(&items[3]))?;
+            let offset = eval_pinned_int(&items[2], nodes, parent, values, depth + 1)?;
+            let length = eval_pinned_int(&items[3], nodes, parent, values, depth + 1)?;
             Some(substr_code_points(&subject, offset, length))
         }
         "str.replace" if items.len() == 4 => {
@@ -12941,6 +13129,48 @@ fn eval_pinned_word_semantics(
             let replacement = eval_pinned_word(&items[3], nodes, parent, values, depth + 1)?;
             Some(replace_first_code_points(&subject, &needle, &replacement))
         }
+        _ => None,
+    }
+}
+
+/// Evaluates the exact integer fragment used by pinned string views.  Checked
+/// arithmetic and all-or-nothing operand evaluation make overflow or a symbolic
+/// value a decline.  This lets equality pins flow through `str.len`-based splice
+/// indices without imposing any bound on the source string.
+fn eval_pinned_int(
+    expression: &SExpr,
+    nodes: &[SExpr],
+    parent: &[usize],
+    values: &[Option<Vec<u32>>],
+    depth: u32,
+) -> Option<i128> {
+    if depth > 32 {
+        return None;
+    }
+    if let Some(value) = parse_int_literal(expression) {
+        return Some(value);
+    }
+    let items = expression.list()?;
+    match items.first()?.atom()? {
+        "str.len" | "seq.len" if items.len() == 2 => {
+            i128::try_from(eval_pinned_word(&items[1], nodes, parent, values, depth + 1)?.len())
+                .ok()
+        }
+        "+" if items.len() >= 2 => items[1..].iter().try_fold(0_i128, |sum, item| {
+            sum.checked_add(eval_pinned_int(item, nodes, parent, values, depth + 1)?)
+        }),
+        "-" if items.len() == 2 => {
+            eval_pinned_int(&items[1], nodes, parent, values, depth + 1)?.checked_neg()
+        }
+        "-" if items.len() >= 3 => {
+            let first = eval_pinned_int(&items[1], nodes, parent, values, depth + 1)?;
+            items[2..].iter().try_fold(first, |difference, item| {
+                difference.checked_sub(eval_pinned_int(item, nodes, parent, values, depth + 1)?)
+            })
+        }
+        "*" if items.len() >= 2 => items[1..].iter().try_fold(1_i128, |product, item| {
+            product.checked_mul(eval_pinned_int(item, nodes, parent, values, depth + 1)?)
+        }),
         _ => None,
     }
 }
@@ -17375,8 +17605,9 @@ mod string_escape_tests {
         exact_affine_orderings_equal, exact_affine_zero_forces_nonpositive,
         exact_affine_zero_forces_positive, exact_rewrite_app, exact_rewrite_concat_at,
         exact_rewrite_concat_substr, exact_rewrite_equality, exact_rewrite_fixed_word_language,
-        exact_rewrite_small_subject_indexof, exact_rewrite_term, exact_rewrite_under_assignments,
-        replace_first_code_points, source_string_semantic_facts, substr_code_points,
+        exact_rewrite_replace_singleton_equality, exact_rewrite_small_subject_indexof,
+        exact_rewrite_term, exact_rewrite_under_assignments, replace_first_code_points,
+        source_string_semantic_facts, substr_code_points,
     };
     use crate::sexpr::{SExpr, read_all};
 
@@ -19208,6 +19439,96 @@ mod string_escape_tests {
     }
 
     #[test]
+    fn singleton_replace_inverse_closes_symbolic_families_conservatively() {
+        for text in [
+            r#"(not (= (str.replace "A" (str.replace x y x) x) "A"))"#,
+            r#"(not (= (str.replace "A" (str.replace x y "B") x) "A"))"#,
+            r#"(not (= (str.replace "A" (str.replace x "A" "B") y) (str.++ (str.replace "" x y) "A")))"#,
+            r#"(not (= (= "A" (str.replace x "A" "B")) false))"#,
+            r#"(not (= (str.contains "A" (str.replace x "A" "B")) (= x "")))"#,
+            r#"(not (= (str.contains "B" (str.replace x "A" ""))
+                        (str.contains "A" (str.replace x "B" ""))))"#,
+        ] {
+            let expression = read_all(text)
+                .expect("read singleton inverse theorem")
+                .pop()
+                .expect("one singleton inverse theorem");
+            assert_eq!(
+                exact_rewrite_term(&expression, 0),
+                ExactRewriteTerm::Bool(false),
+                "{text}"
+            );
+        }
+
+        for text in [
+            // Replacing a larger self-containing needle can change the source.
+            r#"(not (= (str.replace x (str.replace y "A" y) y) x))"#,
+            r#"(not (= (str.replace x (str.replace y "B" y) y) x))"#,
+            r"(not (= (str.replace (str.replace x y x) y x)
+                       (str.replace x y (str.replace x y x))))",
+            r#"(not (= (str.replace (str.replace x y x) y "")
+                        (str.replace x y (str.replace x y ""))))"#,
+            // The inverse rule is deliberately restricted to a fixed singleton.
+            r#"(not (= (str.replace x y z) "AB"))"#,
+            // A different singleton target is not an identity.
+            r#"(not (= (str.replace "A" (str.replace x y x) x) "B"))"#,
+        ] {
+            let expression = read_all(text)
+                .expect("read singleton inverse control")
+                .pop()
+                .expect("one singleton inverse control");
+            assert_ne!(
+                exact_rewrite_term(&expression, 0),
+                ExactRewriteTerm::Bool(false),
+                "{text}"
+            );
+        }
+    }
+
+    #[test]
+    fn singleton_replace_inverse_matches_reference_semantics_exhaustively() {
+        let mut words = vec![Vec::new()];
+        for length in 1..=4 {
+            for bits in 0..(1_usize << length) {
+                words.push(
+                    (0..length)
+                        .map(|shift| u32::from(if bits & (1 << shift) == 0 { b'A' } else { b'B' }))
+                        .collect(),
+                );
+            }
+        }
+
+        for target in [vec![u32::from(b'A')], vec![u32::from(b'B')]] {
+            for subject in &words {
+                for needle in &words {
+                    for replacement in &words {
+                        let replace = ExactRewriteTerm::App(
+                            "str.replace".to_owned(),
+                            vec![
+                                ExactRewriteTerm::String(subject.clone()),
+                                ExactRewriteTerm::String(needle.clone()),
+                                ExactRewriteTerm::String(replacement.clone()),
+                            ],
+                        );
+                        let characterized = exact_rewrite_replace_singleton_equality(
+                            &replace,
+                            &ExactRewriteTerm::String(target.clone()),
+                        )
+                        .expect("a singleton target must be characterized");
+                        assert_eq!(
+                            characterized,
+                            ExactRewriteTerm::Bool(
+                                replace_first_code_points(subject, needle, replacement) == target
+                            ),
+                            "subject={subject:?}, needle={needle:?}, replacement={replacement:?}, target={target:?}"
+                        );
+                    }
+                }
+            }
+        }
+    }
+
+    #[test]
     fn pinned_word_evaluator_matches_reference_semantics_exhaustively() {
         let mut words = vec![Vec::new()];
         for length in 1..=4 {
@@ -19245,6 +19566,27 @@ mod string_escape_tests {
                     );
                 }
             }
+            let tail = read_all("(str.substr s 1 (- (str.len s) 1))")
+                .expect("read length-relative tail")
+                .pop()
+                .expect("one length-relative tail");
+            assert_eq!(
+                eval_pinned_word_semantics(&tail, &nodes, &parent, &values, 0),
+                Some(substr_code_points(
+                    subject,
+                    1,
+                    i128::try_from(subject.len()).expect("small length") - 1,
+                ))
+            );
+            let rebuilt =
+                read_all("(str.++ (str.substr s 0 1) (str.substr s 1 (- (str.len s) 1)))")
+                    .expect("read length-relative reconstruction")
+                    .pop()
+                    .expect("one length-relative reconstruction");
+            assert_eq!(
+                eval_pinned_word_semantics(&rebuilt, &nodes, &parent, &values, 0),
+                Some(subject.clone())
+            );
             for needle in &words[..7] {
                 for replacement in &words[..7] {
                     let needle_text: String =
