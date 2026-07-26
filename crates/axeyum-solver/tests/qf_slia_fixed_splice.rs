@@ -2315,3 +2315,90 @@ fn exact_source_head_totality_views_decline_satisfiable_controls() {
         );
     }
 }
+
+#[test]
+fn exact_source_one_code_point_paths_refute_noetzli_families() {
+    let assertions = [
+        r#"(not (= (str.replace "A" (str.substr "A" 0 z) "") (str.substr "A" 0 (- 1 z))))"#,
+        r#"(not (= (str.replace "" (str.substr "A" 0 z) x) (str.replace "" (str.substr x 0 z) x)))"#,
+        r#"(not (= (str.replace "A" (str.++ x "A") x) (str.substr "A" 0 (str.len x))))"#,
+        r#"(not (= (str.replace "" (str.replace "" x "A") "B") (str.substr "B" 0 (str.len x))))"#,
+        r#"(not (= (= x (str.replace x "A" "")) (= x (str.replace x "A" "B"))))"#,
+        r#"(not (= (= x (str.replace x "B" "")) (= x (str.replace x "B" "A"))))"#,
+        r#"(not (= (not (str.contains x "A")) (= x (str.replace x "A" "B"))))"#,
+        r#"(not (= (not (str.contains x "B")) (= x (str.replace x "B" "A"))))"#,
+        r#"(not (= (str.prefixof "A" (str.replace x "A" "B")) false))"#,
+        r#"(not (= (str.prefixof "B" (str.replace x "A" "B"))
+                    (str.prefixof "A" (str.replace x "B" "A"))))"#,
+        r#"(not (= (str.prefixof "B" (str.replace x "B" "A")) false))"#,
+        r#"(not (= (str.replace x (str.replace x "A" "B") "A")
+                    (str.replace x (str.replace x "A" x) "A")))"#,
+        r#"(not (= (str.replace x (str.replace x "B" "A") "B")
+                    (str.replace x (str.replace x "B" x) "B")))"#,
+        r#"(not (= (str.replace "A" (str.++ x "A") "") (str.substr "A" 0 (str.len x))))"#,
+        r#"(not (= (str.replace "B" (str.substr "B" 0 z) "") (str.substr "B" 0 (- 1 z))))"#,
+        r#"(not (= (str.replace "B" (str.++ x "B") x) (str.substr "B" 0 (str.len x))))"#,
+        r#"(not (= (str.replace "B" (str.++ x "B") "") (str.substr "B" 0 (str.len x))))"#,
+        r#"(not (= (str.replace "" (str.substr "A" 0 z) "A") (str.substr "A" 0 (- 1 z))))"#,
+        r#"(not (= (str.replace "" (str.substr "A" 0 z) "B") (str.substr "B" 0 (- 1 z))))"#,
+        r#"(not (= (str.replace "" (str.substr "B" 0 z) x) (str.replace "" (str.substr x 0 z) x)))"#,
+    ];
+
+    assert_eq!(assertions.len(), 20);
+    for (index, assertion) in assertions.into_iter().enumerate() {
+        let input = format!(
+            r#"(set-logic QF_SLIA)
+(declare-fun x () String)
+(declare-fun z () Int)
+(assert {assertion})
+(check-sat)
+"#
+        );
+        let script = parse_script(&input).expect("parse one-code-point path theorem");
+        assert!(
+            script.source_string_semantic_unsat,
+            "one-code-point path theorem must refute {assertion}"
+        );
+        if matches!(index, 0 | 4 | 9 | 19) {
+            assert_eq!(
+                solve_smtlib(&input, &config())
+                    .expect("solve one-code-point path theorem")
+                    .result,
+                CheckResult::Unsat,
+                "one-code-point path theorem must survive the bounded-string gate: {assertion}"
+            );
+        }
+    }
+}
+
+#[test]
+fn exact_source_one_code_point_paths_decline_satisfiable_controls() {
+    for assertion in [
+        r#"(not (= (= x (str.replace x "A" "")) (= x (str.replace x "B" ""))))"#,
+        r#"(not (= (str.prefixof "A" (str.replace x "A" "A")) false))"#,
+        r#"(not (= (str.replace "A" (str.substr "A" 1 z) "") (str.substr "A" 0 (- 1 z))))"#,
+        r#"(not (= (str.replace "A" (str.++ x "A") x) (str.substr "A" 0 (str.len y))))"#,
+    ] {
+        let input = format!(
+            r#"(set-logic QF_SLIA)
+(declare-fun x () String)
+(declare-fun y () String)
+(declare-fun z () Int)
+(assert {assertion})
+(check-sat)
+"#
+        );
+        let script = parse_script(&input).expect("parse one-code-point path control");
+        assert!(
+            !script.source_string_semantic_unsat,
+            "satisfiable one-code-point path control must decline: {assertion}"
+        );
+        assert_ne!(
+            solve_smtlib(&input, &config())
+                .expect("solve one-code-point path control")
+                .result,
+            CheckResult::Unsat,
+            "satisfiable one-code-point path control must not become UNSAT: {assertion}"
+        );
+    }
+}

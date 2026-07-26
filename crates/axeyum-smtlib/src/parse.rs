@@ -9487,6 +9487,55 @@ fn exact_rewrite_head_totality_view(items: &[SExpr], depth: u32) -> Option<Exact
 /// Canonicalizes exact views whose inner one-code-point replacement would
 /// otherwise expand to a differently ordered `ite` tree before the outer view
 /// can recognize it. Every case is an unbounded SMT-LIB total-function law.
+fn exact_rewrite_singleton_prefix_replace_view(
+    items: &[SExpr],
+    depth: u32,
+) -> Option<ExactRewriteTerm> {
+    use ExactRewriteTerm::{Bool, String};
+
+    if items.first()?.atom() != Some("str.prefixof") || items.len() != 3 {
+        return None;
+    }
+    let probe = literal_pattern_cps(&items[1])?;
+    let replace = items[2].list()?;
+    let (Some(needle), Some(replacement)) = (
+        replace.get(2).and_then(literal_pattern_cps),
+        replace.get(3).and_then(literal_pattern_cps),
+    ) else {
+        return None;
+    };
+    if probe.len() != 1
+        || replace.len() != 4
+        || replace[0].atom() != Some("str.replace")
+        || needle.len() != 1
+        || replacement.len() != 1
+        || needle == replacement
+    {
+        return None;
+    }
+    let source = exact_rewrite_term(&replace[1], depth);
+    let probe = String(probe);
+    let needle = String(needle);
+    let replacement = String(replacement);
+    if probe == needle {
+        // The first needle code point, if any, is replaced; an earlier source
+        // head therefore cannot be the needle either.
+        return Some(Bool(false));
+    }
+    if probe == replacement {
+        // The replacement code point heads the result exactly when it or the
+        // replaced needle headed the source.
+        return Some(exact_rewrite_app(
+            "or",
+            vec![
+                exact_rewrite_app("str.prefixof", vec![needle, source.clone()]),
+                exact_rewrite_app("str.prefixof", vec![replacement, source]),
+            ],
+        ));
+    }
+    Some(exact_rewrite_app("str.prefixof", vec![probe, source]))
+}
+
 fn exact_rewrite_one_code_point_replace_view(
     items: &[SExpr],
     depth: u32,
@@ -9496,6 +9545,9 @@ fn exact_rewrite_one_code_point_replace_view(
     let exact_one_code_point = |term: &ExactRewriteTerm| {
         exact_string_min_len(term, 0) == Some(1) && exact_string_max_len(term, 0) == Some(1)
     };
+    if let Some(rewritten) = exact_rewrite_singleton_prefix_replace_view(items, depth) {
+        return Some(rewritten);
+    }
     if items.first()?.atom() == Some("str.substr") && items.len() == 4 {
         let subject = exact_rewrite_term(&items[1], depth);
         let offset = exact_rewrite_term(&items[2], depth);
@@ -9656,6 +9708,11 @@ fn exact_rewrite_app(head: &str, args: Vec<ExactRewriteTerm>) -> ExactRewriteTer
 
     match (head, args.as_slice()) {
         ("not", [Bool(value)]) => return Bool(!value),
+        ("not", [App(inner, inner_args)])
+            if inner == "not" && matches!(inner_args.as_slice(), [_]) =>
+        {
+            return inner_args[0].clone();
+        }
         ("=", [left, right]) if left == right => return Bool(true),
         ("=", [Bool(left), Bool(right)]) => return Bool(left == right),
         ("=", [Int(left), Int(right)]) => return Bool(left == right),
@@ -9874,7 +9931,7 @@ fn exact_rewrite_app(head: &str, args: Vec<ExactRewriteTerm>) -> ExactRewriteTer
                 "and",
                 vec![
                     exact_rewrite_app("=", vec![offset.clone(), Int(0)]),
-                    exact_rewrite_app(">", vec![length.clone(), Int(0)]),
+                    exact_positive_substring_length_condition(length),
                 ],
             );
             return exact_rewrite_app(
@@ -10345,6 +10402,117 @@ fn exact_rewrite_replace_emptiness(
     ))
 }
 
+/// Canonical truth condition for a positive SMT-LIB substring length in the
+/// exact string rewrite fragment.  The two specialized forms expose the
+/// integer and string-totality complements used by one-code-point views:
+/// `1 - n > 0` iff `n <= 0`, and `len(s) > 0` iff `s != ""`.
+fn exact_positive_substring_length_condition(length: &ExactRewriteTerm) -> ExactRewriteTerm {
+    use ExactRewriteTerm::{App, Int, String};
+
+    if let App(head, args) = length {
+        if head == "-"
+            && let [Int(1), value] = args.as_slice()
+        {
+            return exact_rewrite_app(
+                "not",
+                vec![exact_rewrite_app(">", vec![value.clone(), Int(0)])],
+            );
+        }
+        if matches!(head.as_str(), "str.len" | "seq.len")
+            && let [subject] = args.as_slice()
+        {
+            return exact_rewrite_app(
+                "not",
+                vec![exact_rewrite_equality(subject, &String(Vec::new()))],
+            );
+        }
+    }
+    exact_rewrite_app(">", vec![length.clone(), Int(0)])
+}
+
+/// Exact emptiness of a prefix substring.  At offset zero the result is empty
+/// exactly when the requested length is nonpositive or the source is empty.
+fn exact_rewrite_prefix_substr_emptiness(
+    substring: &ExactRewriteTerm,
+    other: &ExactRewriteTerm,
+) -> Option<ExactRewriteTerm> {
+    use ExactRewriteTerm::{App, Int, String};
+
+    if !matches!(other, String(value) if value.is_empty()) {
+        return None;
+    }
+    let App(head, args) = substring else {
+        return None;
+    };
+    let [subject, Int(0), length] = args.as_slice() else {
+        return None;
+    };
+    if head != "str.substr" {
+        return None;
+    }
+    Some(exact_rewrite_app(
+        "or",
+        vec![
+            exact_rewrite_app(
+                "not",
+                vec![exact_positive_substring_length_condition(length)],
+            ),
+            exact_rewrite_equality(subject, &String(Vec::new())),
+        ],
+    ))
+}
+
+/// Exact condition under which first-occurrence replacement preserves its
+/// source. For an empty needle this requires an empty inserted prefix. For a
+/// nonempty needle, the source is unchanged exactly when the needle is absent
+/// or the replacement is the needle itself.
+fn exact_rewrite_replace_preserves_subject(
+    replacement: &ExactRewriteTerm,
+    other: &ExactRewriteTerm,
+) -> Option<ExactRewriteTerm> {
+    use ExactRewriteTerm::{App, String};
+
+    let App(head, args) = replacement else {
+        return None;
+    };
+    let [subject, needle, value] = args.as_slice() else {
+        return None;
+    };
+    if head != "str.replace" || subject != other {
+        return None;
+    }
+    let empty = String(Vec::new());
+    let needle_empty = exact_rewrite_equality(needle, &empty);
+    Some(exact_rewrite_app(
+        "or",
+        vec![
+            exact_rewrite_app(
+                "and",
+                vec![needle_empty.clone(), exact_rewrite_equality(value, &empty)],
+            ),
+            exact_rewrite_app(
+                "and",
+                vec![
+                    exact_rewrite_app("not", vec![needle_empty]),
+                    exact_rewrite_app(
+                        "or",
+                        vec![
+                            exact_rewrite_app(
+                                "not",
+                                vec![exact_rewrite_app(
+                                    "str.contains",
+                                    vec![subject.clone(), needle.clone()],
+                                )],
+                            ),
+                            exact_rewrite_equality(needle, value),
+                        ],
+                    ),
+                ],
+            ),
+        ],
+    ))
+}
+
 /// Characterizes exactly when one first-occurrence replacement is a fixed
 /// one-code-point word.  The result has only four nonempty-needle shapes:
 /// the needle is absent from the one-code-point source, it consumes the whole
@@ -10506,21 +10674,34 @@ fn exact_rewrite_head_totality_equality(
     None
 }
 
+fn exact_rewrite_special_equality(
+    left: &ExactRewriteTerm,
+    right: &ExactRewriteTerm,
+) -> Option<ExactRewriteTerm> {
+    exact_rewrite_head_totality_equality(left, right)
+        .or_else(|| exact_rewrite_prefix_substr_emptiness(left, right))
+        .or_else(|| exact_rewrite_prefix_substr_emptiness(right, left))
+        .or_else(|| exact_rewrite_replace_preserves_subject(left, right))
+        .or_else(|| exact_rewrite_replace_preserves_subject(right, left))
+        .or_else(|| exact_rewrite_replace_emptiness(left, right))
+        .or_else(|| exact_rewrite_replace_emptiness(right, left))
+        .or_else(|| exact_rewrite_replace_singleton_equality(left, right))
+        .or_else(|| exact_rewrite_replace_singleton_equality(right, left))
+}
+
 fn exact_rewrite_equality(left: &ExactRewriteTerm, right: &ExactRewriteTerm) -> ExactRewriteTerm {
     if left == right {
         return ExactRewriteTerm::Bool(true);
     }
-    if let Some(rewritten) = exact_rewrite_head_totality_equality(left, right) {
-        return rewritten;
+    if matches!(
+        (left, right),
+        (ExactRewriteTerm::Bool(_), ExactRewriteTerm::Bool(_))
+            | (ExactRewriteTerm::Int(_), ExactRewriteTerm::Int(_))
+            | (ExactRewriteTerm::String(_), ExactRewriteTerm::String(_))
+    ) {
+        return ExactRewriteTerm::Bool(false);
     }
-    if let Some(rewritten) = exact_rewrite_replace_emptiness(left, right)
-        .or_else(|| exact_rewrite_replace_emptiness(right, left))
-    {
-        return rewritten;
-    }
-    if let Some(rewritten) = exact_rewrite_replace_singleton_equality(left, right)
-        .or_else(|| exact_rewrite_replace_singleton_equality(right, left))
-    {
+    if let Some(rewritten) = exact_rewrite_special_equality(left, right) {
         return rewritten;
     }
     for (replacement, other) in [(left, right), (right, left)] {
@@ -17605,6 +17786,7 @@ mod string_escape_tests {
         exact_affine_orderings_equal, exact_affine_zero_forces_nonpositive,
         exact_affine_zero_forces_positive, exact_rewrite_app, exact_rewrite_concat_at,
         exact_rewrite_concat_substr, exact_rewrite_equality, exact_rewrite_fixed_word_language,
+        exact_rewrite_prefix_substr_emptiness, exact_rewrite_replace_preserves_subject,
         exact_rewrite_replace_singleton_equality, exact_rewrite_small_subject_indexof,
         exact_rewrite_term, exact_rewrite_under_assignments, replace_first_code_points,
         source_string_semantic_facts, substr_code_points,
@@ -19482,6 +19664,200 @@ mod string_escape_tests {
                 ExactRewriteTerm::Bool(false),
                 "{text}"
             );
+        }
+    }
+
+    #[test]
+    fn one_code_point_path_normalization_closes_symbolic_families_conservatively() {
+        for text in [
+            r#"(not (= (str.replace "A" (str.substr "A" 0 z) "") (str.substr "A" 0 (- 1 z))))"#,
+            r#"(not (= (str.replace "" (str.substr "A" 0 z) x) (str.replace "" (str.substr x 0 z) x)))"#,
+            r#"(not (= (str.replace "A" (str.++ x "A") x) (str.substr "A" 0 (str.len x))))"#,
+            r#"(not (= (str.replace "" (str.replace "" x "A") "B") (str.substr "B" 0 (str.len x))))"#,
+            r#"(not (= (= x (str.replace x "A" "")) (= x (str.replace x "A" "B"))))"#,
+            r#"(not (= (= x (str.replace x "B" "")) (= x (str.replace x "B" "A"))))"#,
+            r#"(not (= (not (str.contains x "A")) (= x (str.replace x "A" "B"))))"#,
+            r#"(not (= (not (str.contains x "B")) (= x (str.replace x "B" "A"))))"#,
+            r#"(not (= (str.prefixof "A" (str.replace x "A" "B")) false))"#,
+            r#"(not (= (str.prefixof "B" (str.replace x "A" "B"))
+                        (str.prefixof "A" (str.replace x "B" "A"))))"#,
+            r#"(not (= (str.prefixof "B" (str.replace x "B" "A")) false))"#,
+            r#"(not (= (str.replace x (str.replace x "A" "B") "A")
+                        (str.replace x (str.replace x "A" x) "A")))"#,
+            r#"(not (= (str.replace x (str.replace x "B" "A") "B")
+                        (str.replace x (str.replace x "B" x) "B")))"#,
+            r#"(not (= (str.replace "A" (str.++ x "A") "") (str.substr "A" 0 (str.len x))))"#,
+            r#"(not (= (str.replace "B" (str.substr "B" 0 z) "") (str.substr "B" 0 (- 1 z))))"#,
+            r#"(not (= (str.replace "B" (str.++ x "B") x) (str.substr "B" 0 (str.len x))))"#,
+            r#"(not (= (str.replace "B" (str.++ x "B") "") (str.substr "B" 0 (str.len x))))"#,
+            r#"(not (= (str.replace "" (str.substr "A" 0 z) "A") (str.substr "A" 0 (- 1 z))))"#,
+            r#"(not (= (str.replace "" (str.substr "A" 0 z) "B") (str.substr "B" 0 (- 1 z))))"#,
+            r#"(not (= (str.replace "" (str.substr "B" 0 z) x) (str.replace "" (str.substr x 0 z) x)))"#,
+        ] {
+            let expression = read_all(text)
+                .expect("read one-code-point theorem")
+                .pop()
+                .expect("one theorem");
+            assert_eq!(
+                exact_rewrite_term(&expression, 0),
+                ExactRewriteTerm::Bool(false),
+                "{text}"
+            );
+        }
+
+        for text in [
+            r#"(not (= (= x (str.replace x "A" "")) (= x (str.replace x "B" ""))))"#,
+            r#"(not (= (str.prefixof "A" (str.replace x "A" "A")) false))"#,
+            r#"(not (= (str.replace "A" (str.substr "A" 1 z) "") (str.substr "A" 0 (- 1 z))))"#,
+            r#"(not (= (str.replace "A" (str.++ x "A") x) (str.substr "A" 0 (str.len y))))"#,
+        ] {
+            let expression = read_all(text)
+                .expect("read one-code-point control")
+                .pop()
+                .expect("one control");
+            assert_ne!(
+                exact_rewrite_term(&expression, 0),
+                ExactRewriteTerm::Bool(false),
+                "{text}"
+            );
+        }
+    }
+
+    #[test]
+    fn replacement_preservation_matches_reference_semantics_exhaustively() {
+        let mut words = vec![Vec::new()];
+        for length in 1..=4 {
+            for bits in 0..(1_usize << length) {
+                words.push(
+                    (0..length)
+                        .map(|shift| u32::from(if bits & (1 << shift) == 0 { b'A' } else { b'B' }))
+                        .collect(),
+                );
+            }
+        }
+
+        for subject in &words {
+            for needle in &words {
+                for value in &words {
+                    let replacement = ExactRewriteTerm::App(
+                        "str.replace".to_owned(),
+                        vec![
+                            ExactRewriteTerm::String(subject.clone()),
+                            ExactRewriteTerm::String(needle.clone()),
+                            ExactRewriteTerm::String(value.clone()),
+                        ],
+                    );
+                    assert_eq!(
+                        exact_rewrite_replace_preserves_subject(
+                            &replacement,
+                            &ExactRewriteTerm::String(subject.clone()),
+                        ),
+                        Some(ExactRewriteTerm::Bool(
+                            replace_first_code_points(subject, needle, value) == *subject
+                        )),
+                        "subject={subject:?}, needle={needle:?}, value={value:?}"
+                    );
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn nested_replacement_needles_match_reference_semantics_exhaustively() {
+        let mut words = vec![Vec::new()];
+        for length in 1..=8 {
+            for bits in 0..(1_usize << length) {
+                words.push(
+                    (0..length)
+                        .map(|shift| u32::from(if bits & (1 << shift) == 0 { b'A' } else { b'B' }))
+                        .collect(),
+                );
+            }
+        }
+
+        for subject in &words {
+            for (needle, alternate) in [(b'A', b'B'), (b'B', b'A')] {
+                let needle = [u32::from(needle)];
+                let alternate = [u32::from(alternate)];
+                let changed_needle = replace_first_code_points(subject, &needle, &alternate);
+                let expanded_needle = replace_first_code_points(subject, &needle, subject);
+                assert_eq!(
+                    replace_first_code_points(subject, &changed_needle, &needle),
+                    replace_first_code_points(subject, &expanded_needle, &needle),
+                    "subject={subject:?}, needle={needle:?}, alternate={alternate:?}"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn singleton_prefix_replacement_matches_reference_semantics_exhaustively() {
+        let mut words = vec![String::new()];
+        for length in 1..=4 {
+            for bits in 0..(1_usize << length) {
+                words.push(
+                    (0..length)
+                        .map(|shift| if bits & (1 << shift) == 0 { 'A' } else { 'B' })
+                        .collect(),
+                );
+            }
+        }
+        for subject in &words {
+            for (needle, replacement) in [('A', 'B'), ('B', 'A')] {
+                for probe in ['A', 'B', 'C'] {
+                    let text = format!(
+                        r#"(str.prefixof "{probe}" (str.replace "{subject}" "{needle}" "{replacement}"))"#
+                    );
+                    let expression = read_all(&text)
+                        .expect("read singleton-prefix expression")
+                        .pop()
+                        .expect("one expression");
+                    let expected = subject
+                        .replacen(needle, &replacement.to_string(), 1)
+                        .starts_with(probe);
+                    assert_eq!(
+                        exact_rewrite_term(&expression, 0),
+                        ExactRewriteTerm::Bool(expected),
+                        "{text}"
+                    );
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn prefix_substring_emptiness_matches_reference_semantics_exhaustively() {
+        let mut words = vec![Vec::new()];
+        for length in 1..=4 {
+            for bits in 0..(1_usize << length) {
+                words.push(
+                    (0..length)
+                        .map(|shift| u32::from(if bits & (1 << shift) == 0 { b'A' } else { b'B' }))
+                        .collect(),
+                );
+            }
+        }
+        for subject in &words {
+            for length in -4_i128..=6 {
+                let substring = ExactRewriteTerm::App(
+                    "str.substr".to_owned(),
+                    vec![
+                        ExactRewriteTerm::String(subject.clone()),
+                        ExactRewriteTerm::Int(0),
+                        ExactRewriteTerm::Int(length),
+                    ],
+                );
+                assert_eq!(
+                    exact_rewrite_prefix_substr_emptiness(
+                        &substring,
+                        &ExactRewriteTerm::String(Vec::new()),
+                    ),
+                    Some(ExactRewriteTerm::Bool(
+                        substr_code_points(subject, 0, length).is_empty()
+                    )),
+                    "subject={subject:?}, length={length}"
+                );
+            }
         }
     }
 
