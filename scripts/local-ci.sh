@@ -56,6 +56,10 @@ rc=0
 # the pre-merge gate match hosted CI exactly, closing that gap.
 run cargo fmt --all --check || rc=$?
 run rustup run stable cargo clippy --workspace --all-targets --all-features -- -D warnings || rc=$?
+# MSRV build (default features) — the frontier's nightly toolchain accepts unstable
+# syntax (e.g. `if let` guards) that stable 1.88 rejects, so a change can pass the
+# stable clippy/test path above and still red the hosted MSRV job. Mirror it here.
+run rustup run 1.88.0 cargo check --workspace || rc=$?
 # Full parallel, full features, host-sensitive decide tests re-included (they
 # only failed on slow hosted runners) — the `local` nextest profile does that.
 run cargo nextest run --profile local --workspace --all-features --no-fail-fast || rc=$?

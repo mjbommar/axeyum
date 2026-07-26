@@ -9825,10 +9825,13 @@ fn exact_rewrite_app(head: &str, args: Vec<ExactRewriteTerm>) -> ExactRewriteTer
             return exact_distribute_app_ite(head, &args)
                 .expect("a bounded ite argument must distribute");
         }
+        // `if let` guards are unstable (>MSRV 1.88); use a boolean guard + recompute
+        // so the arm still falls through to later arms when the rewrite is None.
         ("str.substr", [subject, offset, length])
-            if let Some(rewritten) = exact_rewrite_concat_substr(subject, offset, length) =>
+            if exact_rewrite_concat_substr(subject, offset, length).is_some() =>
         {
-            return rewritten;
+            return exact_rewrite_concat_substr(subject, offset, length)
+                .expect("guard just checked is_some");
         }
         ("str.substr", [_, Int(offset), _]) if *offset < 0 => return String(Vec::new()),
         ("str.substr", [_, _, Int(length)]) if *length <= 0 => return String(Vec::new()),
@@ -10009,10 +10012,13 @@ fn exact_rewrite_app(head: &str, args: Vec<ExactRewriteTerm>) -> ExactRewriteTer
             return exact_distribute_app_ite(head, &args)
                 .expect("a bounded ite argument must distribute");
         }
+        // `if let` guard is unstable (>MSRV 1.88); boolean guard + recompute so the
+        // arm still falls through to later arms when the rewrite is None.
         ("str.at", [subject, index])
-            if let Some(rewritten) = exact_rewrite_concat_at(subject, index) =>
+            if exact_rewrite_concat_at(subject, index).is_some() =>
         {
-            return rewritten;
+            return exact_rewrite_concat_at(subject, index)
+                .expect("guard just checked is_some");
         }
         ("str.at", [String(value), _]) if value.is_empty() => return String(Vec::new()),
         ("str.at", [subject, IndexOfSelf(offset)])
