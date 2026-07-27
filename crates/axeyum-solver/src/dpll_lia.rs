@@ -1922,6 +1922,7 @@ fn skeleton_bool_value(arena: &TermArena, term: TermId, propositional: &Model) -
 
 /// Builds the combined model (integers from the integer simplex, reals from the
 /// real engine, Booleans from the skeleton) and replays the original assertions.
+#[allow(clippy::unnecessary_wraps)] // returns Result for API uniformity with sibling finishers
 fn finish_sat(
     arena: &mut TermArena,
     assertions: &[TermId],

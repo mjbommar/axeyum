@@ -103,6 +103,9 @@ fn checked_quantified_fast_path(
 /// are already inconsistent, that refutes the complete query; every other
 /// outcome is ignored. The probe receives only one tenth of a finite query
 /// budget, so it cannot starve the quantified routes it is meant to precede.
+// dispatch-family fn: keeps `Result` for uniformity with sibling routes, and the
+// const-after-statements placement is intentional (co-located with its use).
+#[allow(clippy::unnecessary_wraps, clippy::items_after_statements)]
 fn ground_subset_refutes_quantified_query(
     arena: &mut TermArena,
     assertions: &[TermId],
@@ -532,6 +535,7 @@ fn skolemize_top_existentials(
     let mut k = 0u32;
     for &a in assertions {
         let mut current = a;
+        #[allow(clippy::while_let_loop)] // explicit loop reads clearer with the let-else below
         loop {
             let TermNode::App {
                 op: Op::Exists(sym),
