@@ -425,3 +425,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [0368](adr-0368-preregister-smt-binary79-add-mul.md) | Accept operator-specific SMT `(15,64)` add/sub/mul admission behind an all-mode independent oracle sweep | accepted |
 | [0369](adr-0369-preregister-smt-binary79-division.md) | Accept SMT `(15,64)` symbolic division behind a separate all-mode independent oracle sweep | accepted |
 | [0370](adr-0370-preregister-smt-binary79-sqrt.md) | Accept SMT `(15,64)` symbolic sqrt behind an exact all-mode dyadic rounding oracle | accepted |
+| [0371](adr-0371-preregister-combined-definite-deadline-retention.md) | Reject definite-result retention across the combined-theory deadline after zero selected-row gain | rejected |

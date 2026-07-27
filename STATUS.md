@@ -448,8 +448,11 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   binary79 set is 4 SAT / 4 UNSAT, 8/8 against Z3. The fresh ESBMC gate is 34/34
   after one contention timeout passes immediately in isolation. The frozen
   108-family diagnostic is 88 correct / 18 unknown / two process timeouts /
-  zero wrong. Next: classify those 20 non-decisions by front-door reason and
-  cost. Keep FMA closed: the selection contains no binary79 FMA demand.
+  zero wrong. The 20 non-decisions all reach pure BV after FP lowering; a
+  proposed post-deadline definite-result retention policy produced zero paired
+  decision gain and is rejected by ADR-0371. Next: profile the scalar BV
+  search/encoding cost on the near-threshold rows. Keep FMA closed: the
+  selection contains no binary79 FMA demand.
 
 - **2026-07-27 — the selected QF_BVFP ESBMC hard tail is 34/34 decided; rotate
   back to the measured SMT-LIB residue map.** Commit `b6c3d486` and ADR-0367 add
@@ -9465,6 +9468,13 @@ plan is built and committed on the current branch:
 | P5.5 | External target, measured | **DONE (bounded v1, ADR-0323--0338):** authenticated Tock capture plus eight rechecked dual-DRAT proofs and six replayed controls, UNKNOWN=0, DISAGREE=0. Query time 12.700 s; fresh outer wall 50.745 s; peak RSS 1,256,496 KiB; zero OOM deltas. The committed case study compares exact target validation, universal coverage, trust, effort, artifact boundaries, and limits. No Tock bug was found, so no upstream issue is applicable. This is not a speed or whole-kernel claim. |
 
 ## Changelog
+
+- **2026-07-27 — rejected post-deadline combined-result retention.** ADR-0371's
+  candidate and deterministic tests behaved as designed, but the frozen
+  108-family diagnostic stayed 88 correct / 18 unknown / two outer timeouts /
+  zero wrong. An immutable-baseline serial A/B produced identical verdicts on
+  all seven near-threshold rows. Production/test edits were removed; the next
+  work targets scalar BV encoding/search rather than the deadline wrapper.
 
 - **2026-07-27 — validated SMT `(15,64)` symbolic square root.** Commit
   `ab4b5803` and accepted ADR-0370: an exact dyadic oracle accepts 2,620 structured/random all-mode cases
