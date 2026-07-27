@@ -60,9 +60,20 @@ exit-criteria'd tracks we advance one increment at a time.
 - **P2.8 SMT `(15,64)` symbolic division (2026-07-27):** ADR-0369 admits only
   division after 3,280 independent all-mode oracle cases. The two exact public
   boundaries now decide UNSAT in 47.973 and 50.344 ms; the combined binary79 set
-  is 2 SAT / 4 UNSAT, 6/6 against Z3 with replay intact. Sqrt and FMA remain
-  fail-closed. The standalone ESBMC process gate remains 34/34 correct. See the
+  is 2 SAT / 4 UNSAT, 6/6 against Z3 with replay intact. Sqrt is now covered by
+  ADR-0370 below; FMA remains fail-closed. The standalone ESBMC process gate
+  remains 34/34 correct. See the
   [result note](docs/plan/fp-smt-binary79-division-result-2026-07-27.md).
+- **P2.8 SMT `(15,64)` symbolic square root (2026-07-27):** ADR-0370 admits
+  only sqrt after an exact dyadic all-mode oracle accepts 2,620 cases and
+  rejects neighboring encodings. Two selected `sqr_longdouble` rows now decide
+  replay-checked SAT; the combined binary79 set is 4 SAT / 4 UNSAT, 8/8 against
+  Z3. A fresh serial ESBMC gate retains 34/34 UNSAT after isolating one
+  host-contention outer timeout. The 108-family diagnostic is 88 correct / 18
+  unknown / two outer timeouts / zero wrong, with only the two exact sqrt gains
+  credited. FMA remains fail-closed because the frozen selection contains no
+  binary79 FMA demand. See the
+  [result note](docs/plan/fp-smt-binary79-sqrt-result-2026-07-27.md).
 - **Soundness:** the legacy 35 measured baselines remain at `DISAGREE = 0`, but
   the 2026-07-22 full-library run found a real QF_ABVFP/QF_BVFP wrong-`sat`:
   exact FP cancellation under RTN was incorrectly forced to `+0`. The add/FMA
@@ -430,15 +441,15 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
-- **2026-07-27 — SMT `(15,64)` division is validated; sqrt is the next distinct
-  operator boundary.** Commit `0f406ad4` and ADR-0369 add one division-specific
-  gate, backed by 3,280 independent all-mode `rustc_apfloat` comparisons. Two
-  selected rows move from unsupported to UNSAT in about 50 ms; the combined
-  binary79 set is 2 SAT / 4 UNSAT, 6/6 against Z3 with replay intact. Symbolic
-  sqrt and FMA remain directly tested unsupported. The isolated ESBMC no-loss
-  gate is 34/34; a concurrent contention run's two outer timeouts are explicitly
-  rejected as evidence. Next: preregister the exact rounding-interval oracle for
-  `(15,64)` sqrt while keeping FMA closed and retaining both no-loss sets.
+- **2026-07-27 — SMT `(15,64)` sqrt is validated; reclassify the measured
+  residuals before widening arithmetic.** Commit `ab4b5803` and ADR-0370 add one sqrt-specific gate,
+  backed by 2,620 exact all-mode dyadic checks plus neighboring-result rejection.
+  Two selected rows move from unsupported to replay-checked SAT; the retained
+  binary79 set is 4 SAT / 4 UNSAT, 8/8 against Z3. The fresh ESBMC gate is 34/34
+  after one contention timeout passes immediately in isolation. The frozen
+  108-family diagnostic is 88 correct / 18 unknown / two process timeouts /
+  zero wrong. Next: classify those 20 non-decisions by front-door reason and
+  cost. Keep FMA closed: the selection contains no binary79 FMA demand.
 
 - **2026-07-27 — the selected QF_BVFP ESBMC hard tail is 34/34 decided; rotate
   back to the measured SMT-LIB residue map.** Commit `b6c3d486` and ADR-0367 add
@@ -9454,6 +9465,14 @@ plan is built and committed on the current branch:
 | P5.5 | External target, measured | **DONE (bounded v1, ADR-0323--0338):** authenticated Tock capture plus eight rechecked dual-DRAT proofs and six replayed controls, UNKNOWN=0, DISAGREE=0. Query time 12.700 s; fresh outer wall 50.745 s; peak RSS 1,256,496 KiB; zero OOM deltas. The committed case study compares exact target validation, universal coverage, trust, effort, artifact boundaries, and limits. No Tock bug was found, so no upstream issue is applicable. This is not a speed or whole-kernel claim. |
 
 ## Changelog
+
+- **2026-07-27 — validated SMT `(15,64)` symbolic square root.** Commit
+  `ab4b5803` and accepted ADR-0370: an exact dyadic oracle accepts 2,620 structured/random all-mode cases
+  and rejects adjacent encodings. Two `sqr_longdouble` rows move from unsupported
+  to replay-checked SAT; the combined binary79 set is 8/8 against Z3. The fresh
+  ESBMC process gate retains 34/34 decisions after one host-contention timeout
+  passes in 4.01 s alone. Full FP tests, Clippy, fmt, and links pass; FMA remains
+  directly tested unsupported.
 
 - **2026-07-27 — validated SMT `(15,64)` symbolic division.** Accepted ADR-0369
   and committed `0f406ad4`: 3,280 structured/random all-mode oracle cases match

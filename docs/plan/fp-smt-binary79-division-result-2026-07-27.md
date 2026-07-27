@@ -79,8 +79,8 @@ UNSAT, and credited full-library completion are not claimed.
 
 ## Next bounded step
 
-Selected `sqr_longdouble` rows now stop at symbolic `(15,64)` sqrt. Sqrt needs
-the exact rounding-interval oracle used for F128 because `rustc_apfloat` exposes
-no square-root operator. It therefore requires a separate preregistration and
-must retain the six-row binary79 set plus the 34-file ESBMC gate. FMA remains a
-later ternary-oracle increment.
+ADR-0370 subsequently accepted symbolic `(15,64)` sqrt after an exact all-mode
+rounding-interval sweep, moving both selected `sqr_longdouble` rows to SAT while
+retaining this six-row set and the 34-file ESBMC gate. See the
+[sqrt result](fp-smt-binary79-sqrt-result-2026-07-27.md). FMA remains
+fail-closed and has no selected demand in the frozen family sample.
