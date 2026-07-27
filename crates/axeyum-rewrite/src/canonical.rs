@@ -717,7 +717,18 @@ fn rewrite_app(
 ) -> Result<LocalRewrite, IrError> {
     if all_constant(arena, args) {
         let rebuilt = build_app(arena, op, args)?;
+        let result_sort = arena.sort_of(rebuilt);
         let folded = value_to_term(arena, eval(arena, rebuilt, &Assignment::new())?)?;
+        // `Value` deliberately represents Float and RoundingMode values by their
+        // bit patterns. Restore the original finite-domain sort after folding;
+        // otherwise `FpFromBits(const)`/`RoundingModeFromBits(const)` silently
+        // become plain bit-vectors and an enclosing well-sorted equality or ITE
+        // fails to rebuild.
+        let folded = match result_sort {
+            Sort::Float { exp, sig } => arena.fp_from_bits(folded, exp, sig)?,
+            Sort::RoundingMode => arena.rounding_mode_from_bits(folded)?,
+            _ => folded,
+        };
         let rule_id = match arena.sort_of(folded) {
             Sort::Bool => BOOL_CONST_FOLD,
             // `all_constant` matches only Bool/BV constants, so a folded term is
@@ -2230,6 +2241,39 @@ mod commutative_tests {
         BV_EXTRACT_ITE, BV_EXTRACT_NESTED, Canonicalizer, RewriteReport, canonicalize,
         canonicalize_root_bounded, is_extract_distributive_bitwise, mask,
     };
+
+    #[test]
+    fn finite_domain_constant_folds_preserve_float_and_rounding_mode_sorts() {
+        let mut arena = TermArena::new();
+
+        let one32 = arena.bv_const(32, 1).unwrap();
+        let two32 = arena.bv_const(32, 2).unwrap();
+        let sum32 = arena.bv_add(one32, two32).unwrap();
+        let float = arena.fp_from_bits(sum32, 8, 24).unwrap();
+        let float_symbol = arena.declare("f", Sort::Float { exp: 8, sig: 24 }).unwrap();
+        let float_var = arena.var(float_symbol);
+        let float_eq = arena.eq(float, float_var).unwrap();
+        let folded_float_eq = canonicalize(&mut arena, float_eq).unwrap().term;
+        let TermNode::App { op: Op::Eq, args } = arena.node(folded_float_eq) else {
+            panic!("float equality must remain an equality");
+        };
+        assert_eq!(arena.sort_of(args[0]), Sort::Float { exp: 8, sig: 24 });
+        assert_eq!(arena.sort_of(args[1]), Sort::Float { exp: 8, sig: 24 });
+
+        let one3 = arena.bv_const(3, 1).unwrap();
+        let two3 = arena.bv_const(3, 2).unwrap();
+        let sum3 = arena.bv_add(one3, two3).unwrap();
+        let mode = arena.rounding_mode_from_bits(sum3).unwrap();
+        let mode_symbol = arena.declare("rm", Sort::RoundingMode).unwrap();
+        let mode_var = arena.var(mode_symbol);
+        let mode_eq = arena.eq(mode, mode_var).unwrap();
+        let folded_mode_eq = canonicalize(&mut arena, mode_eq).unwrap().term;
+        let TermNode::App { op: Op::Eq, args } = arena.node(folded_mode_eq) else {
+            panic!("rounding-mode equality must remain an equality");
+        };
+        assert_eq!(arena.sort_of(args[0]), Sort::RoundingMode);
+        assert_eq!(arena.sort_of(args[1]), Sort::RoundingMode);
+    }
 
     #[test]
     fn bvadd_constant_chain_combines_and_wraps_constants() {

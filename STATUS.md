@@ -25,6 +25,13 @@ exit-criteria'd tracks we advance one increment at a time.
   slice refresh remains open because the separate standard-F32
   `Float-no-simp3-main.smt2` row exceeded bounded current-state construction
   runs. See the [result note](docs/plan/fp-ground-custom-division-result-2026-07-27.md).
+- **P2.8 finite-domain preprocessing repair (2026-07-27):** Float/RoundingMode
+  constant folds now preserve their finite-domain sorts, and ground-evaluable
+  scalar definitions use the existing reconstruction trail. The current-main
+  `Float-no-simp3` regression moves from >48 s direct / >5 min slice attempts to
+  18.025 ms cold; the eight-file slice completes 7/8 with only the separate
+  custom-format row unsupported, DISAGREE=0, and zero replay failures. See the
+  [result note](docs/plan/fp-finite-domain-preprocess-result-2026-07-27.md).
 - **Soundness:** the legacy 35 measured baselines remain at `DISAGREE = 0`, but
   the 2026-07-22 full-library run found a real QF_ABVFP/QF_BVFP wrong-`sat`:
   exact FP cancellation under RTN was incorrectly forced to `+0`. The add/FMA
@@ -9394,6 +9401,14 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
+- **2026-07-27 — restored finite-domain preprocessing and the QF_BVFP slice
+  runtime.** Preserved Float/RoundingMode wrapper sorts after constant folding
+  and propagated ground-evaluable scalar definitions with model reconstruction.
+  The exact `Float-no-simp3` row now decides `unsat` in 18.025 ms; the eight-file
+  slice finishes 7/8, DISAGREE=0, with only the independently owned custom-format
+  row unsupported. All 115 rewrite tests, the focused front-door regression, and
+  warning-denied Clippy pass.
+
 - **2026-07-27 — decided the final ground custom-format QF_BVFP residual.**
   Added exact arbitrary-precision ground `fp.div` for otherwise-unvalidated
   IEEE-style formats while keeping symbolic custom formats fail-closed and the
@@ -9403,7 +9418,6 @@ plan is built and committed on the current branch:
   isolated row is 1/1 decided with DISAGREE=0 and replay intact; the full eight-
   file refresh is honestly pending a separate `Float-no-simp3` construction-
   time investigation.
-
 - **2026-07-26 — moved four quantified theorem-counterexample rows.** Exact
   top-level `not (A => B)` normalization plus quantifier-prefix negation and
   complete leading-existential Skolemization let the existing checked

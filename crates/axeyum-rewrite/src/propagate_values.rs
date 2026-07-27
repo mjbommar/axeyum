@@ -22,7 +22,9 @@
 
 use std::collections::{HashMap, HashSet};
 
-use axeyum_ir::{IrError, Op, SymbolId, TermArena, TermId, TermNode};
+use axeyum_ir::{
+    Assignment, IrError, Op, Sort, SymbolId, TermArena, TermId, TermNode, Value, eval,
+};
 
 use crate::canonical::replace_subterms;
 use crate::reconstruct::ModelReconstructionTrail;
@@ -74,11 +76,38 @@ fn is_constant(node: &TermNode) -> bool {
     )
 }
 
+/// Reifies a ground evaluator result while preserving finite-domain wrapper
+/// sorts whose runtime representation is a bit-vector.
+fn ground_constant(arena: &mut TermArena, term: TermId) -> Option<TermId> {
+    if is_constant(arena.node(term)) {
+        return Some(term);
+    }
+    let sort = arena.sort_of(term);
+    let value = eval(arena, term, &Assignment::new()).ok()?;
+    match (sort, value) {
+        (Sort::Bool, Value::Bool(value)) => Some(arena.bool_const(value)),
+        (Sort::BitVec(width), Value::Bv { width: got, value }) if width == got => {
+            arena.bv_const(width, value).ok()
+        }
+        (Sort::Float { exp, sig }, Value::Bv { width, value }) if width == exp + sig => {
+            let bits = arena.bv_const(width, value).ok()?;
+            arena.fp_from_bits(bits, exp, sig).ok()
+        }
+        (Sort::RoundingMode, Value::Bv { width: 3, value }) => {
+            let bits = arena.bv_const(3, value).ok()?;
+            arena.rounding_mode_from_bits(bits).ok()
+        }
+        (Sort::Int, Value::Int(value)) => Some(arena.int_const(value)),
+        (Sort::Real, Value::Real(value)) => Some(arena.real_const(value)),
+        _ => None,
+    }
+}
+
 /// Detects a top-level `variable = constant` fact in assertion `a`, returning the
 /// eliminated symbol and the constant term it equals. `bool_true`/`bool_false` are
 /// the interned Boolean constants used for bare-literal assertions.
 fn detect_fact(
-    arena: &TermArena,
+    arena: &mut TermArena,
     a: TermId,
     bool_true: TermId,
     bool_false: TermId,
@@ -95,15 +124,15 @@ fn detect_fact(
             // `(= x c)` / `(= c x)` with one side a variable and the other a constant.
             Op::Eq if args.len() == 2 => {
                 let (l, r) = (args[0], args[1]);
-                if let TermNode::Symbol(s) = arena.node(l)
-                    && is_constant(arena.node(r))
+                if let TermNode::Symbol(s) = arena.node(l).clone()
+                    && let Some(constant) = ground_constant(arena, r)
                 {
-                    return Some((*s, r));
+                    return Some((s, constant));
                 }
-                if let TermNode::Symbol(s) = arena.node(r)
-                    && is_constant(arena.node(l))
+                if let TermNode::Symbol(s) = arena.node(r).clone()
+                    && let Some(constant) = ground_constant(arena, l)
                 {
-                    return Some((*s, l));
+                    return Some((s, constant));
                 }
                 None
             }
@@ -132,11 +161,15 @@ pub fn propagate_values(
 
     loop {
         // Find the first assertion that pins an as-yet-undefined variable.
-        let found = current.iter().enumerate().find_map(|(i, &a)| {
-            detect_fact(arena, a, bool_true, bool_false)
-                .filter(|(s, _)| !defined.contains(s))
-                .map(|(s, c)| (i, s, c))
-        });
+        let mut found = None;
+        for (index, &assertion) in current.iter().enumerate() {
+            if let Some((symbol, constant)) = detect_fact(arena, assertion, bool_true, bool_false)
+                && !defined.contains(&symbol)
+            {
+                found = Some((index, symbol, constant));
+                break;
+            }
+        }
         let Some((index, sym, constant)) = found else {
             break;
         };
@@ -233,6 +266,30 @@ mod tests {
         assert_eq!(full.get(x), Some(Value::Bv { width: 8, value: 5 }));
         assert_eq!(full.get(y), Some(Value::Bv { width: 8, value: 5 }));
         assert_satisfies(&arena, &originals, &full);
+    }
+
+    #[test]
+    fn propagates_ground_evaluable_float_definition_without_losing_its_sort() {
+        let mut arena = TermArena::new();
+        let symbol = arena.declare("f", Sort::Float { exp: 8, sig: 24 }).unwrap();
+        let variable = arena.var(symbol);
+        let one = arena.bv_const(32, 1).unwrap();
+        let two = arena.bv_const(32, 2).unwrap();
+        let sum = arena.bv_add(one, two).unwrap();
+        let ground_float = arena.fp_from_bits(sum, 8, 24).unwrap();
+        let definition = arena.eq(variable, ground_float).unwrap();
+
+        let out = propagate_values(&mut arena, &[definition]).unwrap();
+        assert_eq!(out.eliminated(), 1);
+        assert!(out.assertions().is_empty());
+        let reconstructed = out.trail().reconstruct(&arena, &Assignment::new()).unwrap();
+        assert_eq!(
+            reconstructed.get(symbol),
+            Some(Value::Bv {
+                width: 32,
+                value: 3,
+            })
+        );
     }
 
     #[test]
