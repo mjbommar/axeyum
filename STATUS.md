@@ -383,7 +383,7 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
-- **2026-07-26 — exact regex-length, alias, prefix, and `str.to_int` classes move 122
+- **2026-07-26 — exact regex-length, alias, prefix, and `str.to_int` classes move 128
   StringFuzz residuals.**
   The regex-membership side channel documented `(= (str.len X) n)` as part of
   its exact fragment, but the equality parser skipped the existing length-bound
@@ -397,10 +397,12 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   nonnegative-decimal language and an exact value when `len(Y)` is fixed;
   unresolved value couplings stay UNSAT-only. Ground numeral relations retain
   false conjuncts without letting true subsets claim SAT, and empty-concat equality
-  fixes every part to length zero.
+  fixes every part to length zero. For deep nullable regexes, bounded candidate
+  generation now fills the asserted length floor from concrete character
+  predicates and authorizes SAT only after complete independent membership replay.
 
   On the fixed 128-row current StringFuzz residual, these mechanisms decide
-  **122 rows at 250 ms: 105 UNSAT and 17 replay-checked SAT**, up from 79 by 43,
+  **128 rows at 250 ms: 105 UNSAT and 23 replay-checked SAT**, up from 79 by 49,
   with **WRONG=0** against declared corpus status. The comparison construction
   matches a reference evaluator on all 35,464 combinations of four operators,
   bounds 0–25, and every `{0,1,2,a}` string through length four. Z3's generated
@@ -413,12 +415,14 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   literal exclusions is repaired by exact redundancy elimination: the real row
   recovers from a 1.7 s decline to 10–20 ms UNSAT at the 250 ms cap.
   Unsupported-only regex scripts retain their prior hard-decline behavior. The
-  complete 218-test SMT-LIB parser suite and 96-test affected solver front door
-  pass. The remaining six StringFuzz rows are all deep-regex SAT performance cases
-  (cvc5 SAT; Z3 timed out under the adjudication cap), not missing semantic
-  constraints. Next: profile their derivative/search state growth before selecting
-  the next shared mechanism. Separately, the 58-row Kepler cluster is a genuine
-  Nielsen/length case-analysis gap; a tested finite-monoid shortcut moved zero rows.
+  complete 218-test SMT-LIB parser suite, 96-test affected solver front door, and
+  22-test string-engine library pass. The final six deep-regex SAT cases had timed
+  out even at 5 s; replay-checked length-floor candidates now decide all six in
+  10–40 ms at the 250 ms cap. cvc5 adjudicated those six SAT while Z3 timed out
+  under the oracle cap. The fixed StringFuzz residual is therefore exhausted.
+  Next: move to the next census-ranked QF_SLIA family. Separately, the 58-row
+  Kepler cluster is a genuine Nielsen/length case-analysis gap; a tested
+  finite-monoid shortcut moved zero rows.
 
 - **2026-07-26 — exact selected-path propagation moves 262 Kaluza rows without
   trusting directory labels.** Commits `09841e23`, `ef78ca7b`, `fca80291`, and

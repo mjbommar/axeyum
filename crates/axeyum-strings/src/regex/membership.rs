@@ -188,26 +188,26 @@ impl Membership {
                 return Some(word);
             }
         }
-        for left in &bases {
-            for right in &bases {
-                if budget.past_deadline() {
-                    return None;
-                }
-                let Some(len) = left.len().checked_add(right.len()) else {
-                    continue;
-                };
-                if len > max_len {
-                    continue;
-                }
-                let mut candidate = Vec::with_capacity(len);
-                candidate.extend(left);
-                candidate.extend(right);
-                if let Some(word) =
-                    self.consider_quick_candidate(candidate, &mut best, &mut best_misses)
-                {
-                    return Some(word);
-                }
-            }
+
+        // Deep generated regexes often have a trivially extensible language but
+        // a nullable structural witness: nested `star`/`plus` nodes collapse the
+        // seed above to epsilon even when a length lower bound requires a long
+        // word. Try constant words made from concrete character predicates in
+        // the positive language. This is only candidate generation; complete
+        // independent replay remains the SAT gate.
+        if let Some(word) = self.quick_length_floor_witness(
+            budget,
+            max_len,
+            MAX_BASE_CANDIDATES,
+            &mut best,
+            &mut best_misses,
+        ) {
+            return Some(word);
+        }
+        if let Some(word) =
+            self.quick_pairwise_witness(budget, max_len, &bases, &mut best, &mut best_misses)
+        {
+            return Some(word);
         }
 
         // A few PyEx paths need three independent features (for example contains
@@ -240,6 +240,69 @@ impl Membership {
             }
             if best_misses >= prior_misses {
                 break;
+            }
+        }
+        None
+    }
+
+    fn quick_pairwise_witness(
+        &self,
+        budget: &SearchBudget,
+        max_len: usize,
+        bases: &[Vec<u32>],
+        best: &mut Vec<u32>,
+        best_misses: &mut usize,
+    ) -> Option<Vec<u32>> {
+        for left in bases {
+            for right in bases {
+                if budget.past_deadline() {
+                    return None;
+                }
+                let Some(len) = left.len().checked_add(right.len()) else {
+                    continue;
+                };
+                if len > max_len {
+                    continue;
+                }
+                let mut candidate = Vec::with_capacity(len);
+                candidate.extend(left);
+                candidate.extend(right);
+                if let Some(word) = self.consider_quick_candidate(candidate, best, best_misses) {
+                    return Some(word);
+                }
+            }
+        }
+        None
+    }
+
+    fn quick_length_floor_witness(
+        &self,
+        budget: &SearchBudget,
+        max_len: usize,
+        max_candidates: usize,
+        best: &mut Vec<u32>,
+        best_misses: &mut usize,
+    ) -> Option<Vec<u32>> {
+        if self.len_lo <= 1 {
+            return None;
+        }
+        let target_len = usize::try_from(self.len_lo).ok()?;
+        if target_len > max_len {
+            return None;
+        }
+
+        let mut chars = Vec::new();
+        for regex in &self.positives {
+            collect_predicate_witnesses(regex, &mut chars, max_candidates, 0);
+        }
+        for character in chars {
+            if budget.past_deadline() {
+                return None;
+            }
+            if let Some(word) =
+                self.consider_quick_candidate(vec![character; target_len], best, best_misses)
+            {
+                return Some(word);
             }
         }
         None
@@ -541,6 +604,29 @@ impl Membership {
         }
         self.positives.iter().all(|p| matches(p, w))
             && self.negatives.iter().all(|n| !matches(n, w))
+    }
+}
+
+fn collect_predicate_witnesses(regex: &Regex, witnesses: &mut Vec<u32>, cap: usize, depth: usize) {
+    if depth > CONSTRUCT_MAX_DEPTH || witnesses.len() == cap {
+        return;
+    }
+    match regex {
+        Regex::Pred(pred) => {
+            if let Some(character) = pred.witness()
+                && !witnesses.contains(&character)
+            {
+                witnesses.push(character);
+            }
+        }
+        Regex::Concat(left, right) | Regex::Union(left, right) | Regex::Inter(left, right) => {
+            collect_predicate_witnesses(left, witnesses, cap, depth + 1);
+            collect_predicate_witnesses(right, witnesses, cap, depth + 1);
+        }
+        Regex::Comp(inner) | Regex::Star(inner) | Regex::Loop { inner, .. } => {
+            collect_predicate_witnesses(inner, witnesses, cap, depth + 1);
+        }
+        Regex::Empty | Regex::None => {}
     }
 }
 
@@ -961,6 +1047,29 @@ mod tests {
         let witness = m
             .quick_witness(&budget(), 256)
             .expect("three-feature replayed witness");
+        assert!(m.accepts(&witness));
+    }
+
+    #[test]
+    fn quick_witness_fills_a_deep_nullable_language_to_its_length_floor() {
+        // StringFuzz regex-deep formulas commonly wrap every concrete token in
+        // nullable star/plus structure. Their minimal structural witness is then
+        // epsilon even though the formula requires a long word. A concrete leaf
+        // character can fill that floor, but only complete membership replay may
+        // authorize the candidate as SAT.
+        let language = Regex::concat(
+            Regex::star(Regex::union(lit("a"), lit("bb"))),
+            Regex::star(lit("c")),
+        );
+        let m = Membership {
+            positives: vec![language],
+            len_lo: 15,
+            ..Membership::default()
+        };
+        let witness = m
+            .quick_witness(&budget(), 256)
+            .expect("replayed length-floor witness");
+        assert_eq!(witness.len(), 15);
         assert!(m.accepts(&witness));
     }
 
