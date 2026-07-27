@@ -30,6 +30,14 @@ exit-criteria'd tracks we advance one increment at a time.
   19.100 ms cold in the integrated artifact; the eight-file slice completes 8/8,
   DISAGREE=0, with zero replay failures. See the
   [result note](docs/plan/fp-finite-domain-preprocess-result-2026-07-27.md).
+- **P1.2 batched value propagation (2026-07-27):** independent top-level
+  constant definitions now share one DAG rebuild per fixpoint round while
+  retaining first-definition conflicts and the model-reconstruction trail. On
+  the exact QF_BVFP ESBMC conversion alarm, propagation fell from 4.02 s to
+  50.38 ms and five clean release runs completed in 0.20--0.35 s. The 34-file
+  ESBMC population is 30/34 decided with DISAGREE=0 and zero replay failures;
+  four paired `Float4`/`Float-no-simp2` rows are the next hard-tail cluster. See
+  the [result note](docs/plan/fp-batched-value-propagation-result-2026-07-27.md).
 - **Soundness:** the legacy 35 measured baselines remain at `DISAGREE = 0`, but
   the 2026-07-22 full-library run found a real QF_ABVFP/QF_BVFP wrong-`sat`:
   exact FP cancellation under RTN was incorrectly forced to `+0`. The add/FMA
@@ -396,6 +404,20 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 > Full lane history archived: [docs/status-archive/process-documentation-lane-through-2026-07-06.md](docs/status-archive/process-documentation-lane-through-2026-07-06.md)
 
 ## Current focus
+
+- **2026-07-27 — QF_BVFP value propagation is linear by independent fact
+  layer; four ESBMC timeouts are the next FP hard tail.** Commit `6b5b42ac`
+  batches independent ground definitions into one shared substitution pass and
+  retains iterative dependency discovery, conflict assertions, model
+  reconstruction, and original-query replay. The exact stale conversion alarm
+  now returns `unsat` in 0.20--0.35 s across five clean release runs; its
+  propagation phase is 50.38 ms versus the retained 4.02 s predecessor. A
+  140-row operator-stratified QF_FP census is 140/140 correct with no declines
+  or timeouts. The complete 34-row public QF_BVFP ESBMC population is 30/34
+  decided, DISAGREE=0, replay failures=0; Z3 returns the declared `unsat` on all
+  34. Next: census the repeated structure in `Float4{,_1}` and
+  `Float-no-simp2{,_1}` before changing another pass; do not claim a credited
+  selected-slice rerun from this diagnostic population.
 
 - **2026-07-26 — top-level quantified theorem counterexamples move four more
   public UFLIA rows.** The exact equivalence `not (A => B) = A and not B` now
@@ -9398,6 +9420,15 @@ plan is built and committed on the current branch:
 | P5.5 | External target, measured | **DONE (bounded v1, ADR-0323--0338):** authenticated Tock capture plus eight rechecked dual-DRAT proofs and six replayed controls, UNKNOWN=0, DISAGREE=0. Query time 12.700 s; fresh outer wall 50.745 s; peak RSS 1,256,496 KiB; zero OOM deltas. The committed case study compares exact target validation, universal coverage, trust, effort, artifact boundaries, and limits. No Tock bug was found, so no upstream issue is applicable. This is not a speed or whole-kernel claim. |
 
 ## Changelog
+
+- **2026-07-27 — batched independent value propagation on the FP hard tail.**
+  Replaced one-full-DAG-rebuild-per-symbol with one shared rebuild per independent
+  fact layer, preserving deterministic first definitions, later conflicts,
+  fixpoint chains, and model reconstruction. The exact 197-assertion ESBMC
+  conversion row's propagation phase falls 4.02 s→50.38 ms; clean end-to-end
+  release runs are 0.20--0.35 s and remain `unsat`. The 34-row source population
+  is 30 decided / 4 timeout, DISAGREE=0, replay failures=0; all 34 are `unsat`
+  in Z3. Rewrite 114+2 tests, focused FP 1+3 tests, Clippy, and fmt pass.
 
 - **2026-07-27 — restored finite-domain preprocessing and the QF_BVFP slice
   runtime.** Preserved Float/RoundingMode wrapper sorts after constant folding
