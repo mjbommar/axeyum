@@ -65,7 +65,8 @@ returns `sat` under the Z3 4.13.3 CLI.
 ## Focused performance and coverage evidence
 
 The final one-row product-backend artifact used a 10-second safety timeout and
-one job. It reports:
+one job. It records clean source revision
+`17e2704cc5b63a8409f263fd942024588f1550b6` and reports:
 
 | measure | result |
 |---|---:|
@@ -74,7 +75,7 @@ one job. It reports:
 | unsupported / disagree | 0 / 0 |
 | model replay failures | 0 |
 | post-parse DAG nodes | 1 |
-| cold total | 1.288 ms |
+| cold total | 1.313 ms |
 | model replay | 0.046 ms |
 
 The timing is a single local debug-build observation, not a competitive
