@@ -22,7 +22,7 @@
 //! supported-width IEEE formats, other arithmetic as *constant folds* over F32/F64
 //! (`add`/`sub`/`mul`/`div`/`sqrt`/`fma`/`rem`/`roundToIntegral`) and as
 //! *validated symbolic* bit-blasters (`add`/`mul`/`div`/`sqrt`/`roundToIntegral`,
-//! with add/sub/mul/div also validated for SMT `(15,64)`, checked against independent
+//! with add/sub/mul/div/sqrt also validated for SMT `(15,64)`, checked against independent
 //! native/arbitrary-precision arithmetic); and int/real conversions. `fp.rem` is the
 //! exact IEEE remainder (no rounding). **Not** yet here: symbolic `fp.rem`, and
 //! symbolic conversions between FP and the `Real` sort.
@@ -971,6 +971,12 @@ fn div_format_supported(fmt: FloatFormat) -> bool {
     arithmetic_format_supported(fmt) || is_smt_binary79(fmt)
 }
 
+/// Operator-specific validation gate for square root. FMA intentionally retains
+/// [`arithmetic_format_supported`] until separately swept.
+fn sqrt_format_supported(fmt: FloatFormat) -> bool {
+    arithmetic_format_supported(fmt) || is_smt_binary79(fmt)
+}
+
 /// Normalizes a (possibly subnormal) significand so its leading one sits at bit
 /// `sb-1` (a full `sb`-bit significand), decreasing the LSB exponent to match —
 /// the `value = sig·2^e` product is preserved. A zero significand (the operand
@@ -1031,10 +1037,11 @@ fn unpack_operand(
 /// bit-vector formula; solves and replays on the existing path.
 ///
 /// Works for **F16/F32/F64** (working width ≤ 128, validated against native
-/// `f32`/`f64` `sqrt`) and **F128** (234 bits, via the wide path). F128 has no
-/// native or `rustc_apfloat` sqrt oracle, so it is validated against an exact
-/// correct-rounding checker (the rounding-interval property over `WideUint`
-/// integers) that is itself validated against native `f64::sqrt` — ADR-0028.
+/// `f32`/`f64` `sqrt`), SMT `(15,64)` (138 bits), and **F128** (234 bits) via
+/// the wide path. The wide formats have no native or `rustc_apfloat` sqrt oracle,
+/// so they are validated against an exact correct-rounding checker (the
+/// rounding-interval property over `WideUint` integers) that is itself validated
+/// against native `f64::sqrt` — ADR-0028/0370.
 ///
 /// # Errors
 ///
@@ -1047,7 +1054,7 @@ pub fn sqrt(
     x: TermId,
     mode: RoundingMode,
 ) -> Result<TermId, IrError> {
-    if !arithmetic_format_supported(fmt) {
+    if !sqrt_format_supported(fmt) {
         return Err(IrError::Unsupported("fp.sqrt: unvalidated format"));
     }
     fmt.check(arena, x)?;
@@ -1060,12 +1067,12 @@ pub fn sqrt(
     if w % 2 != 0 {
         w += 1; // isqrt needs an even width
     }
-    // F16/F32/F64 keep `w ≤ 128`; F128 (234 bits) runs through the wide path,
+    // F16/F32/F64 keep `w ≤ 128`; SMT (15,64) and F128 run through the wide path,
     // validated against an exact correct-rounding oracle (ADR-0028 —
     // `rustc_apfloat` has no sqrt, so the oracle checks the rounding-interval
     // property and is itself validated against native `f64::sqrt`). Other wide
     // formats stay `unsupported` (sound).
-    if w > 128 && fmt != FloatFormat::F128 {
+    if w > 128 && !is_smt_binary79(fmt) && fmt != FloatFormat::F128 {
         return Err(IrError::InvalidWidth(w));
     }
 
@@ -6470,19 +6477,15 @@ mod smt_binary79_apfloat_tests {
     }
 
     #[test]
-    fn smt_binary79_other_arithmetic_remains_unsupported() {
+    fn smt_binary79_fma_remains_unsupported() {
         let mut arena = TermArena::new();
         let sx = arena.declare("x", Sort::BitVec(79)).unwrap();
         let sy = arena.declare("y", Sort::BitVec(79)).unwrap();
         let sz = arena.declare("z", Sort::BitVec(79)).unwrap();
         let (x, y, z) = (arena.var(sx), arena.var(sy), arena.var(sz));
 
-        for error in [
-            sqrt(&mut arena, FORMAT, x, RoundingMode::NearestEven).unwrap_err(),
-            fma(&mut arena, FORMAT, x, y, z, RoundingMode::NearestEven).unwrap_err(),
-        ] {
-            assert!(matches!(error, IrError::Unsupported(_)));
-        }
+        let error = fma(&mut arena, FORMAT, x, y, z, RoundingMode::NearestEven).unwrap_err();
+        assert!(matches!(error, IrError::Unsupported(_)));
     }
 }
 
@@ -6855,9 +6858,15 @@ mod sqrt_correct_rounding_oracle {
         }
     }
 
-    /// True iff `rbits` is the round-nearest-ties-to-even `sqrt` of `xbits` in
-    /// format `(eb, sb)`.
-    fn correctly_rounded_sqrt(eb: u32, sb: u32, xbits: u128, rbits: u128) -> bool {
+    /// True iff `rbits` is the correctly rounded `sqrt` of `xbits` in format
+    /// `(eb, sb)` under `mode`.
+    fn correctly_rounded_sqrt(
+        eb: u32,
+        sb: u32,
+        xbits: u128,
+        rbits: u128,
+        mode: RoundingMode,
+    ) -> bool {
         let (xsign, _, _) = field(xbits, eb, sb);
         // Special cases (mirror IEEE / the circuit): sqrt(NaN) and sqrt(x<0) are
         // NaN; sqrt(±0) = ±0; sqrt(+inf) = +inf.
@@ -6885,36 +6894,47 @@ mod sqrt_correct_rounding_oracle {
         };
         let vr = decode(rbits, eb, sb);
         let vp = decode(rbits - 1, eb, sb); // predecessor (or +0 at the bottom)
-        let r_even = (vr.0 & 1) == 0;
-
-        // Lower endpoint: (pred + r)/2, squared, vs x.
-        let lower_sq = {
-            let (m, e) = add(vp, vr);
-            square((m, e - 1)) // /2
-        };
-        let lower_ok = match cmp(&lower_sq, &vx) {
-            Ordering::Less => true,     // pred-midpoint strictly below x ⇒ inside
-            Ordering::Equal => r_even,  // exact tie pred|r ⇒ rounds to even
-            Ordering::Greater => false, // √x below the interval ⇒ r too big
-        };
-
-        // Upper endpoint: (r + succ)/2, squared, vs x. A succ of +inf imposes no
-        // upper bound (never happens for a real sqrt result, handled for safety).
         let succ = rbits + 1;
-        let upper_ok = if is_inf(succ, eb, sb) {
-            true
-        } else {
-            let upper_sq = {
-                let (m, e) = add(vr, decode(succ, eb, sb));
-                square((m, e - 1))
-            };
-            match cmp(&upper_sq, &vx) {
-                Ordering::Greater => true, // succ-midpoint strictly above x ⇒ inside
-                Ordering::Equal => r_even, // exact tie r|succ ⇒ rounds to even
-                Ordering::Less => false,   // √x above the interval ⇒ r too small
+        match mode {
+            RoundingMode::NearestEven | RoundingMode::NearestAway => {
+                let r_even = (vr.0 & 1) == 0;
+                // Lower endpoint: (pred + r)/2, squared, vs x.
+                let lower_sq = {
+                    let (m, e) = add(vp, vr);
+                    square((m, e - 1)) // /2
+                };
+                let lower_ok = match cmp(&lower_sq, &vx) {
+                    Ordering::Less => true,
+                    Ordering::Equal => mode == RoundingMode::NearestAway || r_even,
+                    Ordering::Greater => false,
+                };
+
+                // Upper endpoint: (r + succ)/2, squared, vs x. A succ of +inf
+                // imposes no upper bound (handled for completeness).
+                let upper_ok = if is_inf(succ, eb, sb) {
+                    true
+                } else {
+                    let upper_sq = {
+                        let (m, e) = add(vr, decode(succ, eb, sb));
+                        square((m, e - 1))
+                    };
+                    match cmp(&upper_sq, &vx) {
+                        Ordering::Greater => true,
+                        Ordering::Equal => mode == RoundingMode::NearestEven && r_even,
+                        Ordering::Less => false,
+                    }
+                };
+                lower_ok && upper_ok
             }
-        };
-        lower_ok && upper_ok
+            RoundingMode::TowardPositive => {
+                cmp(&square(vr), &vx) != Ordering::Less && cmp(&square(vp), &vx) == Ordering::Less
+            }
+            RoundingMode::TowardNegative | RoundingMode::TowardZero => {
+                !is_inf(succ, eb, sb)
+                    && cmp(&square(vr), &vx) != Ordering::Greater
+                    && cmp(&square(decode(succ, eb, sb)), &vx) == Ordering::Greater
+            }
+        }
     }
 
     fn rng(state: &mut u64) -> u64 {
@@ -6932,7 +6952,13 @@ mod sqrt_correct_rounding_oracle {
             let xf = f64::from_bits(xb);
             let r = xf.sqrt().to_bits();
             assert!(
-                correctly_rounded_sqrt(11, 53, u128::from(xb), u128::from(r)),
+                correctly_rounded_sqrt(
+                    11,
+                    53,
+                    u128::from(xb),
+                    u128::from(r),
+                    RoundingMode::NearestEven,
+                ),
                 "oracle rejected native sqrt({xb:#x}) = {r:#x}"
             );
             // Neighbours must be rejected (only meaningful for positive finite x,
@@ -6941,7 +6967,13 @@ mod sqrt_correct_rounding_oracle {
                 for nb in [r.wrapping_sub(1), r.wrapping_add(1)] {
                     if !is_nan(u128::from(nb), 11, 53) && !is_inf(u128::from(nb), 11, 53) {
                         assert!(
-                            !correctly_rounded_sqrt(11, 53, u128::from(xb), u128::from(nb)),
+                            !correctly_rounded_sqrt(
+                                11,
+                                53,
+                                u128::from(xb),
+                                u128::from(nb),
+                                RoundingMode::NearestEven,
+                            ),
                             "oracle accepted wrong neighbour {nb:#x} for sqrt({xb:#x})"
                         );
                     }
@@ -6968,6 +7000,93 @@ mod sqrt_correct_rounding_oracle {
         let mut state = 0x1234_5678_9abc_def0u64;
         for _ in 0..20000 {
             check(rng(&mut state));
+        }
+    }
+
+    // SMT `(15,64)` field layout helpers (sign at 78, exponent at 63..=77).
+    fn q79(sign: bool, exp: u32, fraction: u128) -> u128 {
+        (u128::from(sign) << 78) | (u128::from(exp) << 63) | (fraction & ((1u128 << 63) - 1))
+    }
+
+    #[test]
+    fn symbolic_smt_binary79_sqrt_matches_exact_oracle_all_modes() {
+        let format = FloatFormat {
+            exp_bits: 15,
+            sig_bits: 64,
+        };
+        let modes = [
+            RoundingMode::NearestEven,
+            RoundingMode::NearestAway,
+            RoundingMode::TowardPositive,
+            RoundingMode::TowardNegative,
+            RoundingMode::TowardZero,
+        ];
+        let structured = [
+            q79(false, 0, 0),
+            q79(true, 0, 0),
+            q79(false, 0x3fff, 0),
+            q79(false, 0x4000, 0),
+            q79(false, 0x4001, 0),
+            q79(false, 0x7fff, 0),
+            q79(true, 0x7fff, 0),
+            q79(false, 0x7fff, 1),
+            q79(true, 0x3fff, 0),
+            q79(false, 0, 1),
+            q79(false, 1, 0),
+            q79(false, 0x4000, 0x1234_5678_9abc_def0),
+        ];
+        let mut random = Vec::with_capacity(512);
+        let mut state = 0xa409_3822_299f_31d0u64;
+        for _ in 0..512 {
+            let bits = ((u128::from(rng(&mut state)) << 64) | u128::from(rng(&mut state)))
+                & ((1u128 << 79) - 1);
+            random.push(bits);
+        }
+
+        for mode in modes {
+            let mut arena = TermArena::new();
+            let symbol = arena.declare("x", Sort::BitVec(79)).unwrap();
+            let x = arena.var(symbol);
+            let term = sqrt(&mut arena, format, x, mode).unwrap();
+            let check = |bits: u128| {
+                let mut assignment = Assignment::new();
+                assignment.set(
+                    symbol,
+                    Value::Bv {
+                        width: 79,
+                        value: bits,
+                    },
+                );
+                let Value::Bv { value: got, .. } =
+                    eval(&arena, term, &assignment).expect("binary79 sqrt circuit evaluates")
+                else {
+                    panic!("binary79 sqrt result must be a narrow bit-vector");
+                };
+                assert!(
+                    correctly_rounded_sqrt(15, 64, bits, got, mode),
+                    "binary79 sqrt({bits:#x},{mode:?}) = {got:#x} is not correctly rounded"
+                );
+                let (negative, _, _) = field(bits, 15, 64);
+                if !negative
+                    && !is_zero(bits, 15, 64)
+                    && !is_inf(bits, 15, 64)
+                    && !is_nan(bits, 15, 64)
+                {
+                    for neighbour in [got - 1, got + 1] {
+                        assert!(
+                            !correctly_rounded_sqrt(15, 64, bits, neighbour, mode),
+                            "binary79 sqrt oracle accepted neighbour {neighbour:#x} of {got:#x} \
+                             for {bits:#x} under {mode:?}"
+                        );
+                    }
+                }
+            };
+            for &bits in &structured {
+                check(bits);
+            }
+            for &bits in &random {
+                check(bits);
+            }
         }
     }
 
@@ -6998,7 +7117,7 @@ mod sqrt_correct_rounding_oracle {
                 other => panic!("{other:?}"),
             };
             assert!(
-                correctly_rounded_sqrt(15, 113, xb, got),
+                correctly_rounded_sqrt(15, 113, xb, got, RoundingMode::NearestEven),
                 "F128 sqrt({xb:#034x}) = {got:#034x} is not correctly rounded"
             );
         };
