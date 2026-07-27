@@ -383,6 +383,20 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-26 — top-level quantified theorem counterexamples move two more
+  public UFLIA rows.** The exact equivalence `not (A => B) = A and not B` now
+  exposes the antecedent and pushes the consequent negation through its leading
+  quantifier prefix; all resulting leading existential witnesses are
+  Skolemized before the established checked e-matching/QF refutation. TPTP rows
+  `0764.smt2` and `0765.smt2` move immediate `unknown`→`unsat` at 250 ms. A
+  satisfiable stronger-consequent near miss remains `Unknown`. The prior 128
+  retained rows remain 128/128 and the predecessor-recurrence row remains
+  UNSAT, so the deterministic frontier is now 131 with no retained loss. The
+  full 765-row run has zero wrong verdicts and exactly these two gains against
+  its immediate predecessor; one non-retained load-sensitive row declined in
+  the aggregate run but recovered UNSAT 5/5 in isolation at 30–40 ms, so it is
+  neither credited nor classified as a capability regression.
+
 - **2026-07-26 — a checked predecessor-recurrence sign route moves one more
   public UFLIA row without carrying a loss.** Exact original-IR matching now
   recognizes `f(0)=b` with `forall x>0. f(x)=c*f(x-1)` and refutes only a
@@ -9237,7 +9251,7 @@ plan is built and committed on the current branch:
 ### Track 1 — Engine & Performance
 | Phase | Title | Status |
 |---|---|---|
-| P2.6e | Bounded checked refutation for quantified UNSAT gaps | **DONE for the measured public slices:** large quantified axiom sets (at least 32 quantified conjuncts) spend at most 10% of the existing shared deadline on their unconditional quantifier-free subset; only definitive ground UNSAT transfers, and every other result declines. The exact 765-row cvc5-UNSAT gap moves 46→128 UNSAT (+82: 59 Tokeneer, 17 Simplify2, six Sledgehammer), retaining all 46 prior decisions with zero disagreement/error; the final 128-row retained-plus-gains replay is 128/128. An exact bounded sign checker for `f(0)=b ∧ ∀x>0. f(x)=c*f(x-1)` adds one deterministic bignumber recurrence decision; the prior 128 remain 128/128. A smaller Boogie edge decision caught by the unguarded prototype is retained 3/3 after the deterministic structural gate. Mixed-sort ITE helper identity is collision-free across repeated quantified subsolves; ten public operational errors become honest declines, and a later arithmetic-DPLL replay miss is likewise first-class `Unknown`. Broader quantified SAT/model construction remains P2.6 work |
+| P2.6e | Bounded checked refutation for quantified UNSAT gaps | **DONE for the measured public slices:** large quantified axiom sets (at least 32 quantified conjuncts) spend at most 10% of the existing shared deadline on their unconditional quantifier-free subset; only definitive ground UNSAT transfers, and every other result declines. The exact 765-row cvc5-UNSAT gap moves 46→128 UNSAT (+82: 59 Tokeneer, 17 Simplify2, six Sledgehammer), retaining all 46 prior decisions with zero disagreement/error; the final 128-row retained-plus-gains replay is 128/128. An exact bounded sign checker for `f(0)=b ∧ ∀x>0. f(x)=c*f(x-1)` adds one deterministic bignumber recurrence decision, and exact top-level theorem-counterexample normalization adds two TPTP decisions; the deterministic retained frontier is 131. A smaller Boogie edge decision caught by the unguarded prototype is retained 3/3 after the deterministic structural gate. Mixed-sort ITE helper identity is collision-free across repeated quantified subsolves; ten public operational errors become honest declines, and a later arithmetic-DPLL replay miss is likewise first-class `Unknown`. Broader quantified SAT/model construction remains P2.6 work |
 | P2.6d | Shared quantified wall-clock deadline | **DONE for the current quantified pipeline:** top-level routing, valid-universal subchecks, e-graph QF probes/replays, and online clause-session construction consume one remaining budget. On the exact 765-file cvc5-UNSAT gap selection at a hard 250 ms, decisions move 73→75 UNSAT, outer timeouts fall 484→11, and SAT remains zero; with a 2 s safety cap there are zero outer timeouts. Finer cooperative polling inside individual recursive encoders remains performance-hardening work |
 | P2.6c | Stable UF abstraction identity across solver probes | **DONE:** abstraction helpers are keyed by original application term instead of a per-pass counter, preventing cross-application alias/sort collisions while safely reusing the same application across repeated auto-dispatch probes. The exact 765-file cvc5-UNSAT gap selection moves 21→108 UNSAT (`+87`) in a same-source diagnostic with a loose 2 s outer cap; after P2.6d enforces the nominal 250 ms budget, the hard-cap credited count is 75. The fixed full 1,412-file run has WRONG=0 and retains every baseline UNSAT individually. cvc5's retained 921 UNSAT remains P2.6 work |
 | P2.6b | Guarded declared-sort MBQI model | **DONE for the accepted ADR-0359 extension:** disconnected ground UF/LIA components seed an untrusted model; a constant-distinct unary `Int -> U` guard is independently checked over the exact source and the full model replays. Public UFLIA `TwoSquares` moves `unknown`→`sat`; broader quantified carrier models remain P2.6 work |
@@ -9368,6 +9382,14 @@ plan is built and committed on the current branch:
 | P5.5 | External target, measured | **DONE (bounded v1, ADR-0323--0338):** authenticated Tock capture plus eight rechecked dual-DRAT proofs and six replayed controls, UNKNOWN=0, DISAGREE=0. Query time 12.700 s; fresh outer wall 50.745 s; peak RSS 1,256,496 KiB; zero OOM deltas. The committed case study compares exact target validation, universal coverage, trust, effort, artifact boundaries, and limits. No Tock bug was found, so no upstream issue is applicable. This is not a speed or whole-kernel claim. |
 
 ## Changelog
+
+- **2026-07-26 — moved two quantified theorem-counterexample rows.** Exact
+  top-level `not (A => B)` normalization plus quantifier-prefix negation and
+  complete leading-existential Skolemization let the existing checked
+  e-matching/QF route refute TPTP rows `0764.smt2` and `0765.smt2` at 250 ms.
+  The prior 128 retained decisions and the recurrence gain remain UNSAT; a
+  satisfiable stronger-consequent control declines, and the full fixed
+  selection has zero wrong verdicts.
 
 - **2026-07-26 — moved one bounded predecessor-recurrence UFLIA row and made
   arithmetic replay misses honest.** Exact source matching and sign induction
