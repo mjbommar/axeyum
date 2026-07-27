@@ -266,10 +266,18 @@ pub fn solve(
     }
     let original_assertions = assertions.to_vec();
 
+    // Expose the exact counterexample form `not (A => B)` as `A` plus `not B`,
+    // and push that negation through a leading quantifier prefix. This turns a
+    // theorem-negation benchmark into the ordinary conjunction of source
+    // universals and existential counterexample witnesses that the established
+    // skolemization/e-matching pipeline handles. The rewrite is logical
+    // equivalence; all other assertion shapes remain byte-identical.
+    let normalized = normalize_top_level_quantified_counterexamples(arena, assertions)?;
+
     // Skolemize top-level existential assertions: `∃x. body` is equisatisfiable
     // with `body[x := fresh]` (the solver picks the witness), so this is exact and
     // — unlike finite expansion — decides infinite-domain existentials too.
-    let skolemized = skolemize_top_existentials(arena, assertions)?;
+    let skolemized = skolemize_top_existentials(arena, &normalized)?;
     let assertions = &skolemized;
 
     // Lazy bit-blasting strategy (P2.1, opt-in via `SolverConfig::lazy_bv`):
@@ -523,11 +531,15 @@ fn skolemize_top_existentials(
     let mut out = Vec::with_capacity(assertions.len());
     let mut k = 0u32;
     for &a in assertions {
-        if let TermNode::App {
-            op: Op::Exists(sym),
-            args,
-        } = arena.node(a)
-        {
+        let mut current = a;
+        loop {
+            let TermNode::App {
+                op: Op::Exists(sym),
+                args,
+            } = arena.node(current)
+            else {
+                break;
+            };
             let (sym, body) = (*sym, args[0]);
             let sort = arena.symbol(sym).1;
             let skolem = arena
@@ -539,12 +551,81 @@ fn skolemize_top_existentials(
             let mut map: HashMap<TermId, TermId> = HashMap::new();
             map.insert(bound, fresh);
             let mut memo: HashMap<TermId, TermId> = HashMap::new();
-            out.push(replace_subterms(arena, body, &map, &mut memo).map_err(err)?);
-        } else {
-            out.push(a);
+            current = replace_subterms(arena, body, &map, &mut memo).map_err(err)?;
         }
+        out.push(current);
     }
     Ok(out)
+}
+
+fn normalize_top_level_quantified_counterexamples(
+    arena: &mut TermArena,
+    assertions: &[TermId],
+) -> Result<Vec<TermId>, SolverError> {
+    let err = |e: axeyum_ir::IrError| SolverError::Backend(e.to_string());
+    let mut out = Vec::with_capacity(assertions.len() + 1);
+    for &assertion in assertions {
+        let implication = match arena.node(assertion) {
+            TermNode::App {
+                op: Op::BoolNot,
+                args,
+            } => Some(args[0]),
+            _ => None,
+        };
+        let Some(implication) = implication else {
+            out.push(assertion);
+            continue;
+        };
+        let sides = match arena.node(implication) {
+            TermNode::App {
+                op: Op::BoolImplies,
+                args,
+            } if args.len() == 2 => Some((args[0], args[1])),
+            _ => None,
+        };
+        let Some((antecedent, consequent)) = sides else {
+            out.push(assertion);
+            continue;
+        };
+        out.push(antecedent);
+        out.push(negate_quantifier_prefix(arena, consequent).map_err(err)?);
+    }
+    Ok(out)
+}
+
+fn negate_quantifier_prefix(
+    arena: &mut TermArena,
+    mut term: TermId,
+) -> Result<TermId, axeyum_ir::IrError> {
+    let mut prefix = Vec::new();
+    loop {
+        match arena.node(term) {
+            TermNode::App {
+                op: Op::Forall(symbol),
+                args,
+            } => {
+                prefix.push((true, *symbol));
+                term = args[0];
+            }
+            TermNode::App {
+                op: Op::Exists(symbol),
+                args,
+            } => {
+                prefix.push((false, *symbol));
+                term = args[0];
+            }
+            _ => break,
+        }
+    }
+    let mut negated = arena.not(term)?;
+    for (was_forall, symbol) in prefix.into_iter().rev() {
+        negated = if was_forall {
+            arena.exists(symbol, negated)?
+        } else {
+            arena.forall(symbol, negated)?
+        };
+    }
+    Ok(negated)
 }
 
 /// Whether any assertion contains a quantifier.
@@ -6861,6 +6942,93 @@ impl Features {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn negated_quantified_implication_exposes_counterexample_witness() {
+        let mut arena = TermArena::new();
+        let function = arena
+            .declare_fun("counterexample_f", &[Sort::Int], Sort::Int)
+            .unwrap();
+
+        let x = arena.declare("counterexample_x", Sort::Int).unwrap();
+        let xv = arena.var(x);
+        let f_x = arena.apply(function, &[xv]).unwrap();
+        let antecedent_body = arena.int_gt(f_x, xv).unwrap();
+        let antecedent = arena.forall(x, antecedent_body).unwrap();
+
+        let y = arena.declare("counterexample_y", Sort::Int).unwrap();
+        let yv = arena.var(y);
+        let minus_y = arena.int_neg(yv).unwrap();
+        let f_minus_y = arena.apply(function, &[minus_y]).unwrap();
+        let minus_f_minus_y = arena.int_neg(f_minus_y).unwrap();
+        let f_y = arena.apply(function, &[yv]).unwrap();
+        let consequent_body = arena.int_lt(minus_f_minus_y, f_y).unwrap();
+        let consequent = arena.forall(y, consequent_body).unwrap();
+        let implication = arena.implies(antecedent, consequent).unwrap();
+        let theorem_counterexample = arena.not(implication).unwrap();
+
+        let normalized =
+            normalize_top_level_quantified_counterexamples(&mut arena, &[theorem_counterexample])
+                .unwrap();
+        assert_eq!(normalized.len(), 2);
+        assert!(matches!(
+            arena.node(normalized[0]),
+            TermNode::App {
+                op: Op::Forall(_),
+                ..
+            }
+        ));
+        assert!(matches!(
+            arena.node(normalized[1]),
+            TermNode::App {
+                op: Op::Exists(_),
+                ..
+            }
+        ));
+
+        let config = SolverConfig::new().with_timeout(Duration::from_secs(1));
+        assert_eq!(
+            solve(&mut arena, &[theorem_counterexample], &config).unwrap(),
+            CheckResult::Unsat
+        );
+    }
+
+    #[test]
+    fn negated_quantified_implication_near_miss_is_not_refuted() {
+        let mut arena = TermArena::new();
+        let function = arena
+            .declare_fun("counterexample_near_miss_f", &[Sort::Int], Sort::Int)
+            .unwrap();
+
+        let x = arena
+            .declare("counterexample_near_miss_x", Sort::Int)
+            .unwrap();
+        let xv = arena.var(x);
+        let f_x = arena.apply(function, &[xv]).unwrap();
+        let antecedent_body = arena.int_gt(f_x, xv).unwrap();
+        let antecedent = arena.forall(x, antecedent_body).unwrap();
+
+        let y = arena
+            .declare("counterexample_near_miss_y", Sort::Int)
+            .unwrap();
+        let yv = arena.var(y);
+        let f_y = arena.apply(function, &[yv]).unwrap();
+        let one = arena.int_const(1);
+        let y_plus_one = arena.int_add(yv, one).unwrap();
+        let stronger_body = arena.int_gt(f_y, y_plus_one).unwrap();
+        let stronger = arena.forall(y, stronger_body).unwrap();
+        let implication = arena.implies(antecedent, stronger).unwrap();
+        let counterexample = arena.not(implication).unwrap();
+
+        let normalized =
+            normalize_top_level_quantified_counterexamples(&mut arena, &[counterexample]).unwrap();
+        let skolemized = skolemize_top_existentials(&mut arena, &normalized).unwrap();
+        let config = SolverConfig::new().with_timeout(Duration::from_secs(1));
+        assert!(matches!(
+            prove_quantified_unsat_via_egraph(&mut arena, &skolemized, &config).unwrap(),
+            CheckResult::Unknown(_)
+        ));
+    }
 
     #[test]
     fn ite_lifting_is_collision_free_across_repeated_mixed_sort_slices() {
