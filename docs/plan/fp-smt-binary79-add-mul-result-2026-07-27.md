@@ -13,6 +13,10 @@ refusal to definite declared/Z3-matching results: two SAT and two UNSAT, with
 zero disagreement, error, or model-replay failure. Symbolic `(15,64)` division,
 sqrt, and FMA remain fail-closed and are directly regression-tested as such.
 
+Follow-up: ADR-0369 subsequently validated symbolic `(15,64)` division and
+moved two more rows. Sqrt and FMA remain fail-closed; see the
+[division result](fp-smt-binary79-division-result-2026-07-27.md).
+
 ## Selection
 
 After closing the 34-file ESBMC hard tail, a new diagnostic selected one file

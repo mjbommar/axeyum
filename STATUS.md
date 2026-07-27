@@ -52,10 +52,17 @@ exit-criteria'd tracks we advance one increment at a time.
   `rustc_apfloat` oracle matched 6,560 structured/random all-mode cases. Four
   deterministic QF_BVFP representatives move from unsupported to two SAT / two
   UNSAT in 0.145--1.284 s, all matching declared status and Z3 with replay
-  intact. Div/sqrt/FMA remain fail-closed. The frozen 108-family diagnostic is
+  intact. At that increment div/sqrt/FMA remained fail-closed; division is now
+  covered by ADR-0369 below. The frozen 108-family diagnostic is
   83 correct / 23 unknown / two process timeouts / zero wrong, but only the four
   exact format-boundary gains are credited. See the
   [result note](docs/plan/fp-smt-binary79-add-mul-result-2026-07-27.md).
+- **P2.8 SMT `(15,64)` symbolic division (2026-07-27):** ADR-0369 admits only
+  division after 3,280 independent all-mode oracle cases. The two exact public
+  boundaries now decide UNSAT in 47.973 and 50.344 ms; the combined binary79 set
+  is 2 SAT / 4 UNSAT, 6/6 against Z3 with replay intact. Sqrt and FMA remain
+  fail-closed. The standalone ESBMC process gate remains 34/34 correct. See the
+  [result note](docs/plan/fp-smt-binary79-division-result-2026-07-27.md).
 - **Soundness:** the legacy 35 measured baselines remain at `DISAGREE = 0`, but
   the 2026-07-22 full-library run found a real QF_ABVFP/QF_BVFP wrong-`sat`:
   exact FP cancellation under RTN was incorrectly forced to `+0`. The add/FMA
@@ -423,15 +430,15 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
-- **2026-07-27 — SMT `(15,64)` add/sub/mul are validated; division is the next
-  distinct format boundary.** Commit `73f91fee` and ADR-0368 add only the
-  operator-specific add/mul gate (sub via add+neg), backed by 6,560 independent
-  all-mode `rustc_apfloat` comparisons. Four selected rows now decide: two SAT,
-  two UNSAT, all declared/Z3-agreeing with zero replay failures. Symbolic div,
-  sqrt, and FMA remain directly tested unsupported. The process-isolated ESBMC
-  no-loss gate remains 34/34 correct. Next: preregister `(15,64)` symbolic
-  division separately and keep sqrt/FMA closed; retain both four-row gains and
-  ESBMC as no-loss gates, and do not count load-sensitive breadth recoveries.
+- **2026-07-27 — SMT `(15,64)` division is validated; sqrt is the next distinct
+  operator boundary.** Commit `0f406ad4` and ADR-0369 add one division-specific
+  gate, backed by 3,280 independent all-mode `rustc_apfloat` comparisons. Two
+  selected rows move from unsupported to UNSAT in about 50 ms; the combined
+  binary79 set is 2 SAT / 4 UNSAT, 6/6 against Z3 with replay intact. Symbolic
+  sqrt and FMA remain directly tested unsupported. The isolated ESBMC no-loss
+  gate is 34/34; a concurrent contention run's two outer timeouts are explicitly
+  rejected as evidence. Next: preregister the exact rounding-interval oracle for
+  `(15,64)` sqrt while keeping FMA closed and retaining both no-loss sets.
 
 - **2026-07-27 — the selected QF_BVFP ESBMC hard tail is 34/34 decided; rotate
   back to the measured SMT-LIB residue map.** Commit `b6c3d486` and ADR-0367 add
@@ -9447,6 +9454,14 @@ plan is built and committed on the current branch:
 | P5.5 | External target, measured | **DONE (bounded v1, ADR-0323--0338):** authenticated Tock capture plus eight rechecked dual-DRAT proofs and six replayed controls, UNKNOWN=0, DISAGREE=0. Query time 12.700 s; fresh outer wall 50.745 s; peak RSS 1,256,496 KiB; zero OOM deltas. The committed case study compares exact target validation, universal coverage, trust, effort, artifact boundaries, and limits. No Tock bug was found, so no upstream issue is applicable. This is not a speed or whole-kernel claim. |
 
 ## Changelog
+
+- **2026-07-27 — validated SMT `(15,64)` symbolic division.** Accepted ADR-0369
+  and committed `0f406ad4`: 3,280 structured/random all-mode oracle cases match
+  exactly by bits or NaN class. `units_meter_ft/query.116` and
+  `nan_longdouble/query.07` move from unsupported to UNSAT in 50.344 and
+  47.973 ms. The retained binary79 set is 6/6 against Z3 with replay intact;
+  the standalone ESBMC gate remains 34/34. Full FP tests, Clippy, fmt, and links
+  pass; sqrt/FMA remain fail-closed.
 
 - **2026-07-27 — validated SMT `(15,64)` add/sub/mul.** Accepted ADR-0368 and
   committed `73f91fee`: a private 79-bit implicit-significand
