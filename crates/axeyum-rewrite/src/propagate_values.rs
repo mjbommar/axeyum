@@ -6,6 +6,8 @@
 //! substitutes that constant for the variable throughout the remaining assertions,
 //! drops the now-redundant defining assertion, and repeats to a fixpoint (a
 //! substitution can expose a fresh fact, e.g. `(= y x)` once `x` is known).
+//! Independent facts are applied together in one DAG rebuild per fixpoint round;
+//! this avoids quadratic intermediate terms on definition-heavy generated input.
 //!
 //! Every eliminated variable is recorded in a [`ModelReconstructionTrail`], so the
 //! pass is **model-sound**: the backend solves the smaller, variable-reduced
@@ -160,30 +162,48 @@ pub fn propagate_values(
     let mut defined: HashSet<SymbolId> = HashSet::new();
 
     loop {
-        // Find the first assertion that pins an as-yet-undefined variable.
-        let mut found = None;
+        // Select the first defining assertion for every as-yet-undefined symbol.
+        // All selected right-hand sides are ground constants, so their
+        // substitutions are independent and can share one DAG rebuild. Facts
+        // exposed by these substitutions are picked up in the next round.
+        let mut selected = vec![false; current.len()];
+        let mut round_definitions = Vec::new();
+        let mut round_symbols = HashSet::new();
         for (index, &assertion) in current.iter().enumerate() {
             if let Some((symbol, constant)) = detect_fact(arena, assertion, bool_true, bool_false)
                 && !defined.contains(&symbol)
+                && round_symbols.insert(symbol)
             {
-                found = Some((index, symbol, constant));
-                break;
+                selected[index] = true;
+                round_definitions.push((symbol, constant));
             }
         }
-        let Some((index, sym, constant)) = found else {
+        if round_definitions.is_empty() {
             break;
-        };
-
-        trail.define(sym, constant);
-        defined.insert(sym);
-        // Drop the defining assertion; substitute the constant into the rest.
-        current.remove(index);
-        let var_term = arena.var(sym);
-        let replacements = HashMap::from([(var_term, constant)]);
-        let mut memo: HashMap<TermId, TermId> = HashMap::new();
-        for a in &mut current {
-            *a = replace_subterms(arena, *a, &replacements, &mut memo)?;
         }
+
+        let mut replacements = HashMap::with_capacity(round_definitions.len());
+        for (symbol, constant) in round_definitions {
+            trail.define(symbol, constant);
+            defined.insert(symbol);
+            replacements.insert(arena.var(symbol), constant);
+        }
+
+        // Drop each selected defining assertion and apply every independent
+        // substitution while sharing one memo across the remaining roots.
+        let mut memo: HashMap<TermId, TermId> = HashMap::new();
+        let mut next = Vec::with_capacity(current.len() - selected.iter().filter(|&&x| x).count());
+        for (index, assertion) in current.into_iter().enumerate() {
+            if !selected[index] {
+                next.push(replace_subterms(
+                    arena,
+                    assertion,
+                    &replacements,
+                    &mut memo,
+                )?);
+            }
+        }
+        current = next;
     }
 
     Ok(ValuePropagation {
@@ -266,6 +286,44 @@ mod tests {
         assert_eq!(full.get(x), Some(Value::Bv { width: 8, value: 5 }));
         assert_eq!(full.get(y), Some(Value::Bv { width: 8, value: 5 }));
         assert_satisfies(&arena, &originals, &full);
+    }
+
+    #[test]
+    fn batches_independent_definitions_without_quadratic_dag_growth() {
+        let mut arena = TermArena::new();
+        let zero = arena.bv_const(16, 0).unwrap();
+        let mut assertions = Vec::new();
+        let mut sum = zero;
+        let mut expected = 0u64;
+
+        for index in 0..64u64 {
+            let name = format!("x{index}");
+            let symbol = arena.declare(&name, Sort::BitVec(16)).unwrap();
+            let variable = arena.var(symbol);
+            let constant = arena.bv_const(16, u128::from(index)).unwrap();
+            assertions.push(arena.eq(variable, constant).unwrap());
+            sum = arena.bv_add(sum, variable).unwrap();
+            expected += index;
+        }
+        let expected = arena.bv_const(16, u128::from(expected)).unwrap();
+        assertions.push(arena.eq(sum, expected).unwrap());
+
+        let before = arena.len();
+        let out = propagate_values(&mut arena, &assertions).unwrap();
+        let growth = arena.len() - before;
+
+        assert_eq!(out.eliminated(), 64);
+        assert_eq!(out.assertions().len(), 1);
+        assert_eq!(
+            eval(&arena, out.assertions()[0], &Assignment::new()).unwrap(),
+            Value::Bool(true)
+        );
+        assert!(
+            growth < 128,
+            "one batched rebuild should stay linear; added {growth} arena nodes"
+        );
+        let full = out.trail().reconstruct(&arena, &Assignment::new()).unwrap();
+        assert_satisfies(&arena, &assertions, &full);
     }
 
     #[test]
