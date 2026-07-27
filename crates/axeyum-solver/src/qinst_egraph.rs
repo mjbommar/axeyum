@@ -354,11 +354,11 @@ fn try_closed_universal_refutations(
     Ok(false)
 }
 
-/// Runs the narrow ADR-0095/0097/0099 instance proposers. The independent
-/// original-IR theorem checker must recognize the source universal before a
-/// proposal is tested, and the ordinary QF solver must then refute the resulting
-/// ground query. Neither the search matcher nor its synthesized probe is trusted
-/// on its own.
+/// Runs narrow checked refuters and ADR-0095/0097/0099 instance proposers. The
+/// predecessor-recurrence route proves its sign result directly from exact
+/// original-IR structure; the remaining routes require an independent theorem
+/// checker to recognize the source universal before the ordinary QF solver tests
+/// a proposed instance. No untrusted match is itself a verdict.
 fn try_targeted_quantifier_refutations(
     arena: &mut TermArena,
     ground: &[TermId],
@@ -367,6 +367,11 @@ fn try_targeted_quantifier_refutations(
     deadline: Option<Instant>,
     stats: &mut QuantifierLoopStats,
 ) -> Result<bool, SolverError> {
+    for &quantifier in foralls {
+        if predecessor_recurrence_sign_refutation(arena, ground, quantifier) {
+            return Ok(true);
+        }
+    }
     for &quantifier in foralls {
         if crate::quant_nested_xor_cert::int_nested_xor_refutation(arena, &[quantifier]).is_some()
             && let Some(instance) = nested_xor_discriminator_instance(arena, quantifier)?
@@ -412,6 +417,213 @@ fn try_targeted_quantifier_refutations(
         }
     }
     Ok(false)
+}
+
+const MAX_PREDECESSOR_RECURRENCE_INDEX: i128 = 64;
+
+/// Proves a bounded sign contradiction for
+/// `f(0)=b ∧ ∀x>0. f(x)=c*f(x-1)`. Integer induction gives
+/// `sign(f(n)) = sign(b) * sign(c)^n` (with zero absorbing), so a contrary
+/// strict sign assertion is impossible. Every source term is matched exactly;
+/// no expanded `c^n` value is computed, avoiding overflow on bignumber rows.
+fn predecessor_recurrence_sign_refutation(
+    arena: &TermArena,
+    ground: &[TermId],
+    quantifier: TermId,
+) -> bool {
+    let (binders, body) = peel_foralls(arena, quantifier);
+    let [binder] = binders.as_slice() else {
+        return false;
+    };
+    if arena.symbol(*binder).1 != Sort::Int {
+        return false;
+    }
+    let Some((function, coefficient)) = match_predecessor_recurrence(arena, body, *binder) else {
+        return false;
+    };
+
+    let mut bases = Vec::new();
+    let mut sign_targets = Vec::new();
+    for &assertion in ground {
+        if let Some(base) = match_recurrence_base(arena, assertion, function) {
+            bases.push(base);
+        }
+        if let Some(target) = match_recurrence_sign_target(arena, assertion, function) {
+            sign_targets.push(target);
+        }
+    }
+    for base in bases {
+        for &(index, requires_positive) in &sign_targets {
+            let sign = if coefficient == 0 {
+                0
+            } else if coefficient < 0 && index % 2 != 0 {
+                -base.signum()
+            } else {
+                base.signum()
+            };
+            if (requires_positive && sign <= 0) || (!requires_positive && sign >= 0) {
+                return true;
+            }
+        }
+    }
+    false
+}
+
+fn is_binder_predecessor(arena: &TermArena, term: TermId, binder: SymbolId) -> bool {
+    let TermNode::App { op, args } = arena.node(term) else {
+        return false;
+    };
+    match op {
+        Op::IntSub if args.len() == 2 => {
+            matches!(arena.node(args[0]), TermNode::Symbol(symbol) if *symbol == binder)
+                && search_int_constant(arena, args[1]) == Some(1)
+        }
+        Op::IntAdd if args.len() == 2 => {
+            (matches!(arena.node(args[0]), TermNode::Symbol(symbol) if *symbol == binder)
+                && search_int_constant(arena, args[1]) == Some(-1))
+                || (matches!(arena.node(args[1]), TermNode::Symbol(symbol) if *symbol == binder)
+                    && search_int_constant(arena, args[0]) == Some(-1))
+        }
+        _ => false,
+    }
+}
+
+fn match_predecessor_recurrence(
+    arena: &TermArena,
+    body: TermId,
+    binder: SymbolId,
+) -> Option<(FuncId, i128)> {
+    let TermNode::App {
+        op: Op::BoolImplies,
+        args,
+    } = arena.node(body)
+    else {
+        return None;
+    };
+    let [guard, equation] = &**args else {
+        return None;
+    };
+    if !is_positive_binder_guard(arena, *guard, binder) {
+        return None;
+    }
+    let TermNode::App { op: Op::Eq, args } = arena.node(*equation) else {
+        return None;
+    };
+    let [left, right] = &**args else {
+        return None;
+    };
+    match_recurrence_equation_sides(arena, *left, *right, binder)
+        .or_else(|| match_recurrence_equation_sides(arena, *right, *left, binder))
+}
+
+fn match_recurrence_equation_sides(
+    arena: &TermArena,
+    direct: TermId,
+    product: TermId,
+    binder: SymbolId,
+) -> Option<(FuncId, i128)> {
+    let (function, argument) = as_unary_apply(arena, direct)?;
+    if !matches!(arena.node(argument), TermNode::Symbol(symbol) if *symbol == binder) {
+        return None;
+    }
+    let TermNode::App {
+        op: Op::IntMul,
+        args,
+    } = arena.node(product)
+    else {
+        return None;
+    };
+    let [left, right] = &**args else {
+        return None;
+    };
+    for (constant, recurrence) in [(*left, *right), (*right, *left)] {
+        let Some(coefficient) = search_int_constant(arena, constant) else {
+            continue;
+        };
+        let Some((found, predecessor)) = as_unary_apply(arena, recurrence) else {
+            continue;
+        };
+        if found == function && is_binder_predecessor(arena, predecessor, binder) {
+            return Some((function, coefficient));
+        }
+    }
+    None
+}
+
+fn is_positive_binder_guard(arena: &TermArena, term: TermId, binder: SymbolId) -> bool {
+    let TermNode::App { op, args } = arena.node(term) else {
+        return false;
+    };
+    let [left, right] = &**args else {
+        return false;
+    };
+    match op {
+        Op::IntGt => {
+            matches!(arena.node(*left), TermNode::Symbol(symbol) if *symbol == binder)
+                && search_int_constant(arena, *right) == Some(0)
+        }
+        Op::IntLt => {
+            search_int_constant(arena, *left) == Some(0)
+                && matches!(arena.node(*right), TermNode::Symbol(symbol) if *symbol == binder)
+        }
+        _ => false,
+    }
+}
+
+fn match_recurrence_base(arena: &TermArena, term: TermId, function: FuncId) -> Option<i128> {
+    let TermNode::App { op: Op::Eq, args } = arena.node(term) else {
+        return None;
+    };
+    let [left, right] = &**args else {
+        return None;
+    };
+    for (application, value) in [(*left, *right), (*right, *left)] {
+        let Some((found, argument)) = as_unary_apply(arena, application) else {
+            continue;
+        };
+        if found == function && search_int_constant(arena, argument) == Some(0) {
+            return search_int_constant(arena, value);
+        }
+    }
+    None
+}
+
+fn match_recurrence_sign_target(
+    arena: &TermArena,
+    term: TermId,
+    function: FuncId,
+) -> Option<(i128, bool)> {
+    let TermNode::App { op, args } = arena.node(term) else {
+        return None;
+    };
+    let [left, right] = &**args else {
+        return None;
+    };
+    let (application, requires_positive) = match op {
+        Op::IntLt if search_int_constant(arena, *right) == Some(0) => (*left, false),
+        Op::IntLt if search_int_constant(arena, *left) == Some(0) => (*right, true),
+        Op::IntGt if search_int_constant(arena, *right) == Some(0) => (*left, true),
+        Op::IntGt if search_int_constant(arena, *left) == Some(0) => (*right, false),
+        _ => return None,
+    };
+    let (found, argument) = as_unary_apply(arena, application)?;
+    let index = search_int_constant(arena, argument)?;
+    (found == function && (1..=MAX_PREDECESSOR_RECURRENCE_INDEX).contains(&index))
+        .then_some((index, requires_positive))
+}
+
+fn as_unary_apply(arena: &TermArena, term: TermId) -> Option<(FuncId, TermId)> {
+    let TermNode::App {
+        op: Op::Apply(function),
+        args,
+    } = arena.node(term)
+    else {
+        return None;
+    };
+    let [argument] = &**args else {
+        return None;
+    };
+    Some((*function, *argument))
 }
 
 fn quantifier_qf_check(
@@ -3683,8 +3895,84 @@ impl InstBridge {
 
 #[cfg(test)]
 mod tests {
+    use std::time::Duration;
+
     use super::*;
     use axeyum_ir::Sort;
+
+    #[test]
+    fn chained_integer_recurrence_reaches_its_ground_base() {
+        let mut arena = TermArena::new();
+        let function = arena.declare_fun("f", &[Sort::Int], Sort::Int).unwrap();
+        let zero = arena.int_const(0);
+        let one = arena.int_const(1);
+        let twenty = arena.int_const(20);
+        let minus_thousand = arena.int_const(-1000);
+
+        let f_zero = arena.apply(function, &[zero]).unwrap();
+        let base = arena.eq(f_zero, one).unwrap();
+        let x = arena.declare("x", Sort::Int).unwrap();
+        let xv = arena.var(x);
+        let positive = arena.int_gt(xv, zero).unwrap();
+        let predecessor = arena.int_sub(xv, one).unwrap();
+        let f_predecessor = arena.apply(function, &[predecessor]).unwrap();
+        let recurrence_value = arena.int_mul(minus_thousand, f_predecessor).unwrap();
+        let f_x = arena.apply(function, &[xv]).unwrap();
+        let recurrence = arena.eq(f_x, recurrence_value).unwrap();
+        let guarded = arena.implies(positive, recurrence).unwrap();
+        let universal = arena.forall(x, guarded).unwrap();
+        let f_twenty = arena.apply(function, &[twenty]).unwrap();
+        let negative_twentieth = arena.int_lt(f_twenty, zero).unwrap();
+
+        assert!(predecessor_recurrence_sign_refutation(
+            &arena,
+            &[base, negative_twentieth],
+            universal,
+        ));
+        let positive_twentieth = arena.int_gt(f_twenty, zero).unwrap();
+        assert!(
+            !predecessor_recurrence_sign_refutation(
+                &arena,
+                &[base, positive_twentieth],
+                universal,
+            ),
+            "the expected positive sign is satisfiable and must not be refuted"
+        );
+        let nineteen = arena.int_const(19);
+        let f_nineteen = arena.apply(function, &[nineteen]).unwrap();
+        let negative_nineteenth = arena.int_lt(f_nineteen, zero).unwrap();
+        assert!(
+            !predecessor_recurrence_sign_refutation(
+                &arena,
+                &[base, negative_nineteenth],
+                universal,
+            ),
+            "the expected negative sign at an odd index must remain satisfiable"
+        );
+        let sixty_five = arena.int_const(65);
+        let f_sixty_five = arena.apply(function, &[sixty_five]).unwrap();
+        let positive_sixty_fifth = arena.int_gt(f_sixty_five, zero).unwrap();
+        assert!(
+            !predecessor_recurrence_sign_refutation(
+                &arena,
+                &[base, positive_sixty_fifth],
+                universal,
+            ),
+            "indices beyond the deterministic checker cap must decline"
+        );
+        let config = SolverConfig::new().with_timeout(Duration::from_secs(10));
+        let result = prove_quantified_unsat_via_egraph(
+            &mut arena,
+            &[base, universal, negative_twentieth],
+            &config,
+        )
+        .unwrap();
+        assert_eq!(
+            result,
+            CheckResult::Unsat,
+            "twenty deterministic predecessor instances reach f(0) and refute the sign"
+        );
+    }
 
     #[test]
     fn expired_online_deadline_declines_before_encoding() {
