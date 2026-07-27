@@ -35,7 +35,7 @@ use axeyum_cnf::{
     xor_gauss_drat_refutation, xor_propagate,
 };
 use axeyum_ir::{
-    Assignment, IrError, Sort, SortId, TermArena, TermId, TermStats, Value, eval,
+    Assignment, IrError, Op, Sort, SortId, TermArena, TermId, TermNode, TermStats, Value, eval,
     well_founded_default,
 };
 use axeyum_query::{Query, QueryPlan, QueryReplayFailure};
@@ -76,6 +76,18 @@ impl SatBvBackend {
         replay_plan: Option<&QueryPlan>,
         config: &SolverConfig,
     ) -> Result<CheckResult, SolverError> {
+        self.check_with_replay_internal(arena, assertions, replay_plan, config, true)
+    }
+
+    #[allow(clippy::too_many_lines)]
+    fn check_with_replay_internal(
+        &mut self,
+        arena: &TermArena,
+        assertions: &[TermId],
+        replay_plan: Option<&QueryPlan>,
+        config: &SolverConfig,
+        allow_shared_guard_split: bool,
+    ) -> Result<CheckResult, SolverError> {
         self.stats = None;
         let deadline = config
             .timeout
@@ -110,6 +122,14 @@ impl SatBvBackend {
 
         if let Some(result) = oversized_encoding_refusal(arena, assertions, config) {
             return Ok(result);
+        }
+
+        if allow_shared_guard_split
+            && replay_plan.is_none()
+            && let Some(deadline) = deadline
+            && let Some(branches) = shared_guard_split_branches(arena, assertions, shape.dag_nodes)
+        {
+            return self.check_shared_guard_split(arena, assertions, &branches, config, deadline);
         }
 
         let mut stats = SolveStats {
@@ -277,6 +297,197 @@ impl SatBvBackend {
         self.stats = Some(stats);
         result
     }
+
+    fn check_shared_guard_split(
+        &mut self,
+        arena: &TermArena,
+        assertions: &[TermId],
+        branches: &[TermId],
+        config: &SolverConfig,
+        deadline: Instant,
+    ) -> Result<CheckResult, SolverError> {
+        let mut combined = SolveStats {
+            assertion_count: assertions.len() as u64,
+            ..SolveStats::default()
+        };
+        let total_branches = branches.len();
+
+        for (index, &branch) in branches.iter().enumerate() {
+            let remaining = deadline.saturating_duration_since(Instant::now());
+            if remaining.is_zero() {
+                record_split_progress(&mut combined, total_branches, index);
+                self.stats = Some(combined);
+                return Ok(CheckResult::Unknown(UnknownReason {
+                    kind: UnknownKind::Timeout,
+                    detail: "shared-guard disjunction split exhausted its deadline".to_owned(),
+                }));
+            }
+            let remaining_branches = total_branches - index;
+            let fair_share = remaining / u32::try_from(remaining_branches).unwrap_or(u32::MAX);
+            let branch_timeout = remaining.min(fair_share.max(Duration::from_secs(1)));
+            let branch_config = config.clone().with_timeout(branch_timeout);
+            let mut backend = Self::new();
+            let result = backend.check_with_replay_internal(
+                arena,
+                &[branch],
+                None,
+                &branch_config,
+                false,
+            )?;
+            if let Some(stats) = backend.last_stats() {
+                merge_split_stats(&mut combined, stats);
+            }
+
+            match result {
+                CheckResult::Unsat => {}
+                CheckResult::Sat(mut model) => {
+                    for (symbol, _name, sort) in arena.symbols() {
+                        if model.get(symbol).is_none() {
+                            let Some(value) = well_founded_default(arena, sort) else {
+                                record_split_progress(&mut combined, total_branches, index + 1);
+                                self.stats = Some(combined);
+                                return Ok(CheckResult::Unknown(UnknownReason {
+                                    kind: UnknownKind::Incomplete,
+                                    detail: "shared-guard split SAT branch could not complete an \
+                                             uninhabited symbol sort"
+                                        .to_owned(),
+                                }));
+                            };
+                            model.set(symbol, value);
+                        }
+                    }
+                    let assignment = model.to_assignment();
+                    if assertions.iter().all(|&assertion| {
+                        matches!(eval(arena, assertion, &assignment), Ok(Value::Bool(true)))
+                    }) {
+                        record_split_progress(&mut combined, total_branches, index + 1);
+                        push_count(&mut combined, "shared_guard_split_sat", 1);
+                        self.stats = Some(combined);
+                        return Ok(CheckResult::Sat(model));
+                    }
+                    record_split_progress(&mut combined, total_branches, index + 1);
+                    self.stats = Some(combined);
+                    return Ok(CheckResult::Unknown(UnknownReason {
+                        kind: UnknownKind::Incomplete,
+                        detail: "shared-guard split SAT model did not replay against the original \
+                                 disjunction"
+                            .to_owned(),
+                    }));
+                }
+                CheckResult::Unknown(reason) => {
+                    record_split_progress(&mut combined, total_branches, index + 1);
+                    self.stats = Some(combined);
+                    return Ok(CheckResult::Unknown(reason));
+                }
+            }
+        }
+
+        record_split_progress(&mut combined, total_branches, total_branches);
+        push_count(&mut combined, "shared_guard_split_unsat", 1);
+        self.stats = Some(combined);
+        Ok(CheckResult::Unsat)
+    }
+}
+
+const MIN_SHARED_GUARD_SPLIT_DAG_NODES: u64 = 5_000;
+const MIN_SHARED_GUARD_SPLIT_BRANCHES: usize = 4;
+const MAX_SHARED_GUARD_SPLIT_BRANCHES: usize = 16;
+
+/// Recognizes one large disjunction of negated obligations with an identical
+/// implication antecedent. Splitting this exact shape is denotation-preserving:
+/// `or(not(A => C_i))` is satisfiable iff at least one branch is satisfiable,
+/// and it is unsatisfiable iff every branch is unsatisfiable.
+fn shared_guard_split_branches(
+    arena: &TermArena,
+    assertions: &[TermId],
+    dag_nodes: u64,
+) -> Option<Vec<TermId>> {
+    if assertions.len() != 1 || dag_nodes < MIN_SHARED_GUARD_SPLIT_DAG_NODES {
+        return None;
+    }
+
+    let mut stack = vec![assertions[0]];
+    let mut branches = BTreeSet::new();
+    while let Some(term) = stack.pop() {
+        match arena.node(term) {
+            TermNode::App {
+                op: Op::BoolOr,
+                args,
+            } if args.len() == 2 => {
+                stack.push(args[1]);
+                stack.push(args[0]);
+            }
+            TermNode::BoolConst(false) => {}
+            _ => {
+                branches.insert(term);
+            }
+        }
+    }
+    if !(MIN_SHARED_GUARD_SPLIT_BRANCHES..=MAX_SHARED_GUARD_SPLIT_BRANCHES)
+        .contains(&branches.len())
+    {
+        return None;
+    }
+
+    let mut common_antecedent = None;
+    for &branch in &branches {
+        let TermNode::App {
+            op: Op::BoolNot,
+            args: not_args,
+        } = arena.node(branch)
+        else {
+            return None;
+        };
+        if not_args.len() != 1 {
+            return None;
+        }
+        let TermNode::App {
+            op: Op::BoolImplies,
+            args: implies_args,
+        } = arena.node(not_args[0])
+        else {
+            return None;
+        };
+        if implies_args.len() != 2 {
+            return None;
+        }
+        match common_antecedent {
+            None => common_antecedent = Some(implies_args[0]),
+            Some(antecedent) if antecedent == implies_args[0] => {}
+            Some(_) => return None,
+        }
+    }
+
+    Some(branches.into_iter().collect())
+}
+
+fn merge_split_stats(combined: &mut SolveStats, branch: &SolveStats) {
+    combined.translate += branch.translate;
+    combined.solve += branch.solve;
+    combined.model_lift += branch.model_lift;
+    combined.terms_translated = combined
+        .terms_translated
+        .saturating_add(branch.terms_translated);
+    for (name, value) in &branch.backend {
+        if let Some((_, total)) = combined.backend.iter_mut().find(|(key, _)| key == name) {
+            *total += value;
+        } else {
+            combined.backend.push((name.clone(), *value));
+        }
+    }
+}
+
+fn record_split_progress(stats: &mut SolveStats, branches: usize, completed: usize) {
+    push_count(
+        stats,
+        "shared_guard_split_branches",
+        u64::try_from(branches).expect("shared-guard branch cap fits u64"),
+    );
+    push_count(
+        stats,
+        "shared_guard_split_completed",
+        u64::try_from(completed).expect("shared-guard branch cap fits u64"),
+    );
 }
 
 impl SolverBackend for SatBvBackend {
@@ -1886,6 +2097,113 @@ mod tests {
             .iter()
             .find(|(n, _)| n == name)
             .map(|(_, v)| *v)
+    }
+
+    fn guarded_counterexample(arena: &mut TermArena, guard: TermId, consequent: TermId) -> TermId {
+        let implication = arena.implies(guard, consequent).unwrap();
+        arena.not(implication).unwrap()
+    }
+
+    fn or_all(arena: &mut TermArena, terms: &[TermId]) -> TermId {
+        terms
+            .iter()
+            .copied()
+            .reduce(|left, right| arena.or(left, right).unwrap())
+            .unwrap()
+    }
+
+    #[test]
+    fn shared_guard_split_requires_one_common_antecedent() {
+        let mut arena = TermArena::new();
+        let guard = arena.bool_var("guard").unwrap();
+        let other_guard = arena.bool_var("other_guard").unwrap();
+        let consequents = (0..4)
+            .map(|index| arena.bool_var(&format!("c{index}")).unwrap())
+            .collect::<Vec<_>>();
+        let branches = consequents
+            .iter()
+            .map(|&consequent| guarded_counterexample(&mut arena, guard, consequent))
+            .collect::<Vec<_>>();
+        let root = or_all(&mut arena, &branches);
+
+        assert_eq!(
+            shared_guard_split_branches(&arena, &[root], MIN_SHARED_GUARD_SPLIT_DAG_NODES),
+            Some(branches.clone())
+        );
+        assert!(
+            shared_guard_split_branches(&arena, &[root], MIN_SHARED_GUARD_SPLIT_DAG_NODES - 1)
+                .is_none()
+        );
+
+        let mismatched = guarded_counterexample(&mut arena, other_guard, consequents[0]);
+        let mut mixed = branches;
+        mixed[0] = mismatched;
+        let mixed_root = or_all(&mut arena, &mixed);
+        assert!(
+            shared_guard_split_branches(&arena, &[mixed_root], MIN_SHARED_GUARD_SPLIT_DAG_NODES)
+                .is_none()
+        );
+    }
+
+    #[test]
+    fn shared_guard_split_transfers_unsat_and_replays_sat() {
+        let mut arena = TermArena::new();
+        let guard = arena.bool_var("guard").unwrap();
+        let extras = (0..4)
+            .map(|index| arena.bool_var(&format!("extra{index}")).unwrap())
+            .collect::<Vec<_>>();
+
+        let unsat_branches = extras
+            .iter()
+            .map(|&extra| {
+                let consequent = arena.or(guard, extra).unwrap();
+                guarded_counterexample(&mut arena, guard, consequent)
+            })
+            .collect::<Vec<_>>();
+        let unsat_root = or_all(&mut arena, &unsat_branches);
+        let config = SolverConfig::new().with_timeout(Duration::from_secs(1));
+        let mut backend = SatBvBackend::new();
+        let unsat = backend
+            .check_shared_guard_split(
+                &arena,
+                &[unsat_root],
+                &unsat_branches,
+                &config,
+                Instant::now() + Duration::from_secs(1),
+            )
+            .unwrap();
+        assert_eq!(unsat, CheckResult::Unsat);
+        assert_eq!(
+            stat(backend.last_stats().unwrap(), "shared_guard_split_unsat"),
+            Some(1.0)
+        );
+
+        let false_term = arena.bool_const(false);
+        let sat_branch = guarded_counterexample(&mut arena, guard, false_term);
+        let mut sat_branches = unsat_branches;
+        sat_branches.push(sat_branch);
+        let sat_root = or_all(&mut arena, &sat_branches);
+        let mut backend = SatBvBackend::new();
+        let sat = backend
+            .check_shared_guard_split(
+                &arena,
+                &[sat_root],
+                &sat_branches,
+                &config,
+                Instant::now() + Duration::from_secs(1),
+            )
+            .unwrap();
+        let CheckResult::Sat(model) = sat else {
+            panic!("one satisfiable branch must produce a replayed SAT model");
+        };
+        assert_eq!(
+            eval(&arena, sat_root, &model.to_assignment()).unwrap(),
+            Value::Bool(true)
+        );
+        assert_eq!(
+            stat(backend.last_stats().unwrap(), "shared_guard_split_sat"),
+            Some(1.0)
+        );
     }
 
     #[test]
