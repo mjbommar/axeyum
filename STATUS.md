@@ -383,6 +383,21 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-26 — a checked predecessor-recurrence sign route moves one more
+  public UFLIA row without carrying a loss.** Exact original-IR matching now
+  recognizes `f(0)=b` with `forall x>0. f(x)=c*f(x-1)` and refutes only a
+  contrary strict sign assertion at a positive integer index up to 64. The
+  checker computes signs rather than `c^n`, so the bignumber benchmark
+  `0095.smt2` moves `unknown`→`unsat` in 0.01 s without overflow. Positive,
+  odd-parity, and over-cap controls decline. The prior retained population is
+  still 128/128 UNSAT, making this the deterministic 129th decision with zero
+  losses. A same-selection run observed 153 UNSAT and zero wrong/error
+  outcomes, but an A/B control reproduced 24 of the 25 apparent changes with
+  the new route disconnected; only this one row is credited. Separately, an
+  arithmetic-DPLL candidate that fails full source-model replay now returns
+  first-class `Unknown` instead of a backend error. Focused quantifier and
+  arithmetic-DPLL suites plus the scoped gate cover the handoff.
+
 - **2026-07-26 — large quantified ground cores move 82 public UFLIA rows, and
   mixed-sort ITE lifting no longer errors.** Pushed `12d902e8` replaces
   call-local ITE-helper ordinals with arena-stable term identities; the ten
@@ -9222,7 +9237,7 @@ plan is built and committed on the current branch:
 ### Track 1 — Engine & Performance
 | Phase | Title | Status |
 |---|---|---|
-| P2.6e | Bounded strict-ground refutation for large quantified conjunctions | **DONE for the measured public slice:** large quantified axiom sets (at least 32 quantified conjuncts) spend at most 10% of the existing shared deadline on their unconditional quantifier-free subset; only definitive ground UNSAT transfers, and every other result declines. The exact 765-row cvc5-UNSAT gap moves 46→128 UNSAT (+82: 59 Tokeneer, 17 Simplify2, six Sledgehammer), retaining all 46 prior decisions with zero disagreement/error; the final 128-row retained-plus-gains replay is 128/128. A smaller Boogie edge decision caught by the unguarded prototype is retained 3/3 after the deterministic structural gate. Mixed-sort ITE helper identity is collision-free across repeated quantified subsolves; ten public operational errors become honest declines. Broader quantified SAT/model construction remains P2.6 work |
+| P2.6e | Bounded checked refutation for quantified UNSAT gaps | **DONE for the measured public slices:** large quantified axiom sets (at least 32 quantified conjuncts) spend at most 10% of the existing shared deadline on their unconditional quantifier-free subset; only definitive ground UNSAT transfers, and every other result declines. The exact 765-row cvc5-UNSAT gap moves 46→128 UNSAT (+82: 59 Tokeneer, 17 Simplify2, six Sledgehammer), retaining all 46 prior decisions with zero disagreement/error; the final 128-row retained-plus-gains replay is 128/128. An exact bounded sign checker for `f(0)=b ∧ ∀x>0. f(x)=c*f(x-1)` adds one deterministic bignumber recurrence decision; the prior 128 remain 128/128. A smaller Boogie edge decision caught by the unguarded prototype is retained 3/3 after the deterministic structural gate. Mixed-sort ITE helper identity is collision-free across repeated quantified subsolves; ten public operational errors become honest declines, and a later arithmetic-DPLL replay miss is likewise first-class `Unknown`. Broader quantified SAT/model construction remains P2.6 work |
 | P2.6d | Shared quantified wall-clock deadline | **DONE for the current quantified pipeline:** top-level routing, valid-universal subchecks, e-graph QF probes/replays, and online clause-session construction consume one remaining budget. On the exact 765-file cvc5-UNSAT gap selection at a hard 250 ms, decisions move 73→75 UNSAT, outer timeouts fall 484→11, and SAT remains zero; with a 2 s safety cap there are zero outer timeouts. Finer cooperative polling inside individual recursive encoders remains performance-hardening work |
 | P2.6c | Stable UF abstraction identity across solver probes | **DONE:** abstraction helpers are keyed by original application term instead of a per-pass counter, preventing cross-application alias/sort collisions while safely reusing the same application across repeated auto-dispatch probes. The exact 765-file cvc5-UNSAT gap selection moves 21→108 UNSAT (`+87`) in a same-source diagnostic with a loose 2 s outer cap; after P2.6d enforces the nominal 250 ms budget, the hard-cap credited count is 75. The fixed full 1,412-file run has WRONG=0 and retains every baseline UNSAT individually. cvc5's retained 921 UNSAT remains P2.6 work |
 | P2.6b | Guarded declared-sort MBQI model | **DONE for the accepted ADR-0359 extension:** disconnected ground UF/LIA components seed an untrusted model; a constant-distinct unary `Int -> U` guard is independently checked over the exact source and the full model replays. Public UFLIA `TwoSquares` moves `unknown`→`sat`; broader quantified carrier models remain P2.6 work |
@@ -9353,6 +9368,15 @@ plan is built and committed on the current branch:
 | P5.5 | External target, measured | **DONE (bounded v1, ADR-0323--0338):** authenticated Tock capture plus eight rechecked dual-DRAT proofs and six replayed controls, UNKNOWN=0, DISAGREE=0. Query time 12.700 s; fresh outer wall 50.745 s; peak RSS 1,256,496 KiB; zero OOM deltas. The committed case study compares exact target validation, universal coverage, trust, effort, artifact boundaries, and limits. No Tock bug was found, so no upstream issue is applicable. This is not a speed or whole-kernel claim. |
 
 ## Changelog
+
+- **2026-07-26 — moved one bounded predecessor-recurrence UFLIA row and made
+  arithmetic replay misses honest.** Exact source matching and sign induction
+  move `0095.smt2` from `unknown` to `unsat` in 0.01 s; satisfiable parity and
+  over-cap controls decline, and all 128 prior retained decisions remain
+  UNSAT. Although a current-host full selection observed 153 UNSAT with zero
+  wrong/error outcomes, controlled ablation attributes only this one gain to
+  the change. Failed full arithmetic-DPLL model replay now returns `Unknown`
+  rather than a backend error.
 
 - **2026-07-26 — moved 82 public UFLIA rows and removed ten ITE-lift errors.**
   Pushed `12d902e8` with arena-stable mixed-sort ITE helper identities and
