@@ -22,7 +22,8 @@
 //! supported-width IEEE formats, other arithmetic as *constant folds* over F32/F64
 //! (`add`/`sub`/`mul`/`div`/`sqrt`/`fma`/`rem`/`roundToIntegral`) and as
 //! *validated symbolic* bit-blasters (`add`/`mul`/`div`/`sqrt`/`roundToIntegral`,
-//! checked against native arithmetic); and int/real conversions. `fp.rem` is the
+//! with add/sub/mul also validated for SMT `(15,64)`, checked against independent
+//! native/arbitrary-precision arithmetic); and int/real conversions. `fp.rem` is the
 //! exact IEEE remainder (no rounding). **Not** yet here: symbolic `fp.rem`, and
 //! symbolic conversions between FP and the `Real` sort.
 //!
@@ -503,7 +504,7 @@ pub fn neg(arena: &mut TermArena, fmt: FloatFormat, x: TermId) -> Result<TermId,
 /// Symbolic `fp.sub` — `a − b`, via the exact IEEE identity
 /// `fp.sub(a, b) = fp.add(a, fp.neg(b))` (which holds for every case, including
 /// NaN/∞ and signed zeros: `a − (+0) = a + (−0)`, `a − (−0) = a + (+0)`). Same
-/// format support as [`add`] (F16/F32/F64).
+/// format support as [`add`] (including SMT `(15,64)`).
 ///
 /// # Errors
 ///
@@ -846,8 +847,9 @@ pub fn pack_value(
 /// (specials, subnormals, and products that overflow/underflow).
 ///
 /// **Format support.** The intermediate is `2·sig_bits + 3` bits. **F16/F32/F64**
-/// (≤ 109 bits) use the `u128` path; **F128** (229 bits) runs through the wide
-/// bit-vector path, validated against `rustc_apfloat`'s quad (ADR-0028). Other
+/// (≤ 109 bits) use the `u128` path; SMT `(15,64)` (133 bits) and **F128**
+/// (229 bits) run through the wide bit-vector path, validated against private
+/// `rustc_apfloat` IEEE semantics and quad respectively (ADR-0368/0028). Other
 /// wide formats return [`IrError::InvalidWidth`].
 ///
 /// # Errors
@@ -863,7 +865,7 @@ pub fn mul(
     b: TermId,
     mode: RoundingMode,
 ) -> Result<TermId, IrError> {
-    if !arithmetic_format_supported(fmt) {
+    if !add_mul_format_supported(fmt) {
         return Err(IrError::Unsupported("fp.mul: unvalidated format"));
     }
     fmt.check(arena, a)?;
@@ -874,13 +876,14 @@ pub fn mul(
     // normalizing left shift (a product of significands has its leading bit at
     // index ≥ sb−1 whenever the result is normal), so `pack_value` only ever
     // rounds *down* — 2·sb + 3 bits suffice, which fits F16/F32/F64 in 128 bits.
-    // F128 (229 bits) runs through the wide path, validated against `Quad`
-    // (ADR-0028); other wide formats stay `unsupported` (sound) pending a sweep.
+    // SMT (15,64) and F128 run through the wide path, validated against private
+    // `rustc_apfloat` IEEE semantics and `Quad` respectively (ADR-0368/0028);
+    // other wide formats stay `unsupported` (sound) pending a sweep.
     // `pack_value`'s exponent arithmetic also runs at this width, so it must hold
     // the biased exponent (`max ~ 2^eb`): grow to `eb + 4` for formats whose
     // exponent is large relative to the significand (a no-op when `eb < 2·sb`).
     let w = (2 * sb + 3).max(eb + 4);
-    if w > 128 && fmt != FloatFormat::F128 {
+    if w > 128 && !is_smt_binary79(fmt) && fmt != FloatFormat::F128 {
         return Err(IrError::InvalidWidth(w));
     }
 
@@ -948,6 +951,18 @@ fn arithmetic_format_supported(fmt: FloatFormat) -> bool {
             || fmt == FloatFormat::F32
             || fmt == FloatFormat::F64
             || fmt == FloatFormat::F128)
+}
+
+/// The SMT-LIB `(15,64)` IEEE layout: 79 encoded bits with an implicit integer
+/// bit. This is deliberately not x87's 80-bit explicit-integer-bit encoding.
+fn is_smt_binary79(fmt: FloatFormat) -> bool {
+    fmt.exp_bits == 15 && fmt.sig_bits == 64
+}
+
+/// Operator-specific validation gate for add/sub/mul. Division, sqrt, and FMA
+/// intentionally retain [`arithmetic_format_supported`] until separately swept.
+fn add_mul_format_supported(fmt: FloatFormat) -> bool {
+    arithmetic_format_supported(fmt) || is_smt_binary79(fmt)
 }
 
 /// Normalizes a (possibly subnormal) significand so its leading one sits at bit
@@ -1636,7 +1651,8 @@ fn zero_sum_is_negative(
 /// result has no catastrophic cancellation (its leading bit is the larger
 /// operand's, ±1), so the sticky always lands strictly below the round position
 /// and never corrupts a guard/round bit. The `2·sb + 5`-bit intermediate fits
-/// **F16/F32/F64** in 128 bits; **F128** (231 bits) runs through the wide path.
+/// **F16/F32/F64** in 128 bits; SMT `(15,64)` (133 bits) and **F128** (231 bits)
+/// run through the wide path.
 ///
 /// This is a validated — not formally proven — bit-blaster: differentially
 /// validated against native `f32`/`f64` addition and `rustc_apfloat`'s quad
@@ -1655,7 +1671,7 @@ pub fn add(
     b: TermId,
     mode: RoundingMode,
 ) -> Result<TermId, IrError> {
-    if !arithmetic_format_supported(fmt) {
+    if !add_mul_format_supported(fmt) {
         return Err(IrError::Unsupported("fp.add: unvalidated format"));
     }
     fmt.check(arena, a)?;
@@ -1666,9 +1682,10 @@ pub fn add(
     // for formats whose exponent is large relative to the significand (a no-op
     // when `eb < 2·sb`, i.e. all standard formats).
     let w = (2 * sb + 5).max(eb + 4);
-    // F16/F32/F64 fit `u128`; F128 (231 bits) runs through the wide path,
-    // validated against `Quad` (ADR-0028). Other wide formats stay `unsupported`.
-    if w > 128 && fmt != FloatFormat::F128 {
+    // F16/F32/F64 fit `u128`; SMT (15,64) and F128 run through the wide path,
+    // validated against private `rustc_apfloat` IEEE semantics and `Quad`
+    // respectively (ADR-0368/0028). Other wide formats stay `unsupported`.
+    if w > 128 && !is_smt_binary79(fmt) && fmt != FloatFormat::F128 {
         return Err(IrError::InvalidWidth(w));
     }
     let guard = sb + 2;
@@ -6290,6 +6307,176 @@ mod fma_f64_const_tests {
 
 #[cfg(test)]
 #[allow(clippy::many_single_char_names)]
+mod smt_binary79_apfloat_tests {
+    use super::*;
+    use axeyum_ir::{Assignment, Value, eval};
+    use rustc_apfloat::{
+        Float, Round,
+        ieee::{IeeeFloat, Semantics},
+    };
+
+    struct Binary79Semantics;
+
+    impl Semantics for Binary79Semantics {
+        const BITS: usize = 79;
+        const EXP_BITS: usize = 15;
+    }
+
+    type Binary79 = IeeeFloat<Binary79Semantics>;
+
+    const FORMAT: FloatFormat = FloatFormat {
+        exp_bits: 15,
+        sig_bits: 64,
+    };
+    const EXP_SHIFT: u32 = 63;
+    const EXP_ONES: u128 = 0x7fff;
+    const FRAC_MASK: u128 = (1u128 << 63) - 1;
+    const VALUE_MASK: u128 = (1u128 << 79) - 1;
+
+    fn bits(sign: bool, exponent: u32, fraction: u128) -> u128 {
+        (u128::from(sign) << 78) | (u128::from(exponent) << EXP_SHIFT) | (fraction & FRAC_MASK)
+    }
+
+    fn is_nan(value: u128) -> bool {
+        ((value >> EXP_SHIFT) & EXP_ONES) == EXP_ONES && (value & FRAC_MASK) != 0
+    }
+
+    fn structured() -> [u128; 12] {
+        [
+            bits(false, 0, 0),
+            bits(true, 0, 0),
+            bits(false, 0x3fff, 0),
+            bits(true, 0x3fff, 0),
+            bits(false, 0x4000, 0),
+            bits(false, 0x3ffe, 0),
+            bits(false, 0x7fff, 0),
+            bits(true, 0x7fff, 0),
+            bits(false, 0x7fff, 1),
+            bits(false, 0, 1),
+            bits(false, 0x7ffe, FRAC_MASK),
+            bits(false, 0x4000, 0x1234_5678_9abc_def0),
+        ]
+    }
+
+    fn random_bits(state: &mut u64) -> u128 {
+        let mut next = || {
+            *state = state
+                .wrapping_mul(6_364_136_223_846_793_005)
+                .wrapping_add(1_442_695_040_888_963_407);
+            *state
+        };
+        ((u128::from(next()) << 64) | u128::from(next())) & VALUE_MASK
+    }
+
+    fn validate_binop(
+        build: impl Fn(
+            &mut TermArena,
+            FloatFormat,
+            TermId,
+            TermId,
+            RoundingMode,
+        ) -> Result<TermId, IrError>,
+        oracle: impl Fn(Binary79, Binary79, Round) -> Binary79,
+        name: &str,
+    ) {
+        let modes = [
+            (RoundingMode::NearestEven, Round::NearestTiesToEven),
+            (RoundingMode::NearestAway, Round::NearestTiesToAway),
+            (RoundingMode::TowardPositive, Round::TowardPositive),
+            (RoundingMode::TowardNegative, Round::TowardNegative),
+            (RoundingMode::TowardZero, Round::TowardZero),
+        ];
+        let structured = structured();
+        let mut random = Vec::with_capacity(512);
+        let mut state = 0x243f_6a88_85a3_08d3u64;
+        for _ in 0..512 {
+            random.push((random_bits(&mut state), random_bits(&mut state)));
+        }
+
+        for (mode, oracle_mode) in modes {
+            let mut arena = TermArena::new();
+            let sx = arena.declare("a", Sort::BitVec(79)).unwrap();
+            let sy = arena.declare("b", Sort::BitVec(79)).unwrap();
+            let x = arena.var(sx);
+            let y = arena.var(sy);
+            let term = build(&mut arena, FORMAT, x, y, mode).unwrap();
+            let check = |a_bits: u128, b_bits: u128| {
+                let mut assignment = Assignment::new();
+                assignment.set(
+                    sx,
+                    Value::Bv {
+                        width: 79,
+                        value: a_bits,
+                    },
+                );
+                assignment.set(
+                    sy,
+                    Value::Bv {
+                        width: 79,
+                        value: b_bits,
+                    },
+                );
+                let Value::Bv { value: got, .. } =
+                    eval(&arena, term, &assignment).expect("binary79 circuit evaluates")
+                else {
+                    panic!("binary79 result must be a narrow bit-vector");
+                };
+                let want = oracle(
+                    Binary79::from_bits(a_bits),
+                    Binary79::from_bits(b_bits),
+                    oracle_mode,
+                )
+                .to_bits();
+                if Binary79::from_bits(want).is_nan() {
+                    assert!(
+                        is_nan(got),
+                        "{name}({a_bits:#x},{b_bits:#x},{mode:?}) want NaN, got {got:#x}"
+                    );
+                } else {
+                    assert_eq!(got, want, "{name}({a_bits:#x},{b_bits:#x},{mode:?})");
+                }
+            };
+            for &a_bits in &structured {
+                for &b_bits in &structured {
+                    check(a_bits, b_bits);
+                }
+            }
+            for &(a_bits, b_bits) in &random {
+                check(a_bits, b_bits);
+            }
+        }
+    }
+
+    #[test]
+    fn symbolic_smt_binary79_add_matches_apfloat_all_modes() {
+        validate_binop(add, |a, b, mode| a.add_r(b, mode).value, "binary79 add");
+    }
+
+    #[test]
+    fn symbolic_smt_binary79_mul_matches_apfloat_all_modes() {
+        validate_binop(mul, |a, b, mode| a.mul_r(b, mode).value, "binary79 mul");
+    }
+
+    #[test]
+    fn smt_binary79_other_arithmetic_remains_unsupported() {
+        let mut arena = TermArena::new();
+        let sx = arena.declare("x", Sort::BitVec(79)).unwrap();
+        let sy = arena.declare("y", Sort::BitVec(79)).unwrap();
+        let sz = arena.declare("z", Sort::BitVec(79)).unwrap();
+        let (x, y, z) = (arena.var(sx), arena.var(sy), arena.var(sz));
+
+        for error in [
+            div(&mut arena, FORMAT, x, y, RoundingMode::NearestEven).unwrap_err(),
+            sqrt(&mut arena, FORMAT, x, RoundingMode::NearestEven).unwrap_err(),
+            fma(&mut arena, FORMAT, x, y, z, RoundingMode::NearestEven).unwrap_err(),
+        ] {
+            assert!(matches!(error, IrError::Unsupported(_)));
+        }
+    }
+}
+
+#[cfg(test)]
+#[allow(clippy::many_single_char_names)]
 mod fma_f128_apfloat_tests {
     use super::*;
     use axeyum_ir::{Assignment, Value, eval};
@@ -6879,8 +7066,9 @@ mod small_format_arithmetic_validation {
 
     #[test]
     fn unvalidated_symbolic_formats_are_refused_not_silently_wrong() {
-        // Formats outside the validated set must not build a symbolic circuit.
-        // Exact ground division is a separate, arbitrary-precision path.
+        // Formats outside every operator-specific validated set must not build a
+        // symbolic circuit. SMT (15,64) add/mul has its dedicated all-mode oracle
+        // test above; exact ground division is a separate arbitrary-precision path.
         let mut a = TermArena::new();
         let unvalidated = [
             FloatFormat {
@@ -6891,10 +7079,6 @@ mod small_format_arithmetic_validation {
                 exp_bits: 11,
                 sig_bits: 5,
             }, // eb > 10, not standard
-            FloatFormat {
-                exp_bits: 15,
-                sig_bits: 64,
-            }, // wide, not F128
             FloatFormat::FP8_E4M3, // non-IEEE
         ];
         for (index, fmt) in unvalidated.into_iter().enumerate() {

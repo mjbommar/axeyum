@@ -422,3 +422,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [0365](adr-0365-preregister-lean-quotient-package.md) | Preregister atomic canonical Lean quotient-package admission, reduction, import, and identity | proposed |
 | [0366](adr-0366-preregister-lean-string-literal-semantics.md) | Preregister checked Lean String-literal typing and exact Unicode-scalar constructor conversion across defeq, projection, recursors, and import | proposed |
 | [0367](adr-0367-narrow-shared-guard-disjunction-split.md) | Accept a bounded SAT-BV split for large disjunctions of negated obligations with one shared antecedent | accepted |
+| [0368](adr-0368-preregister-smt-binary79-add-mul.md) | Accept operator-specific SMT `(15,64)` add/sub/mul admission behind an all-mode independent oracle sweep | accepted |
