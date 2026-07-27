@@ -427,3 +427,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [0370](adr-0370-preregister-smt-binary79-sqrt.md) | Accept SMT `(15,64)` symbolic sqrt behind an exact all-mode dyadic rounding oracle | accepted |
 | [0371](adr-0371-preregister-combined-definite-deadline-retention.md) | Reject definite-result retention across the combined-theory deadline after zero selected-row gain | rejected |
 | [0372](adr-0372-preregister-negated-conjunction-branch-split.md) | Reject serial negated-conjunction splitting after the hard branch exceeded the monolithic solve | rejected |
+| [0373](adr-0373-preregister-source-fp-prefix-monotonicity.md) | Accept one fail-closed source-level RNE nonnegative FP prefix refuter | accepted |

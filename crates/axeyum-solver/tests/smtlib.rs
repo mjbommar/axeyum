@@ -52,6 +52,38 @@ fn decides_unsat_bitvector_script() {
     assert_eq!(outcome.result, CheckResult::Unsat);
 }
 
+/// ADR-0373 retains the source FP prefix boundary before eager FP-to-BV
+/// expansion. The semantic refuter runs before SAT search, so even a 1 ms search
+/// budget decides this nonnegative RNE prefix counterexample.
+#[test]
+fn source_fp_prefix_monotonicity_refutes_before_bitblast_search() {
+    let text = r"
+(set-info :status unsat)
+(set-logic QF_FP)
+(declare-fun p () Float32)
+(declare-fun d () Float32)
+(assert (not (fp.isNaN p)))
+(assert (not (fp.lt p (_ +zero 8 24))))
+(assert (not (fp.isNaN d)))
+(assert (not (fp.lt d (_ +zero 8 24))))
+(assert (let ((s (fp.add RNE p d)))
+  (not (and (not (fp.isNaN s))
+            (not (fp.isNaN p))
+            (not (fp.lt s p))))))
+(check-sat)
+";
+    let parsed = parse_script(text).unwrap();
+    assert!(parsed.source_fp_prefix_monotonic_unsat);
+
+    let outcome = solve_smtlib(
+        text,
+        &SolverConfig::new().with_timeout(Duration::from_millis(1)),
+    )
+    .unwrap();
+    assert_eq!(outcome.result, CheckResult::Unsat);
+    assert_eq!(outcome.expected_status.as_deref(), Some("unsat"));
+}
+
 /// cvc5's `:arrays-exp` `eqrange` extension lowers to finite pointwise array
 /// equalities when the bounds are constant. This is the shape of the AUFLIA
 /// `eqrange3` regression row.

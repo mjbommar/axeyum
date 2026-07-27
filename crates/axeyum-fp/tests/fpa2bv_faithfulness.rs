@@ -58,6 +58,8 @@
 //!   verbatim* (`min(NaN,y)=y`), so that case is compared to the other input's
 //!   exact bits, not to a reference round-trip (which would canonicalize the NaN).
 
+use std::cmp::Ordering;
+
 use axeyum_fp::{FloatFormat, RoundingMode, abs, add, eq, leq, lt, max, min, mul, neg, sub};
 use axeyum_ir::{Assignment, Sort, TermArena, TermId, Value, eval};
 use rustc_apfloat::Float;
@@ -223,6 +225,36 @@ fn exhaustive_arith(
 #[test]
 fn fp8_e5m2_add_faithful_exhaustive() {
     exhaustive_arith(add, |a, b| a.add_r(b, RNE).value, "fp.add");
+}
+
+/// ADR-0373's sole source-level semantic theorem, checked independently of the
+/// Axeyum circuit over all 65,536 FP8 E5M2 operand pairs. For non-NaN,
+/// nonnegative operands, correctly-rounded RNE addition stays non-NaN and cannot
+/// be smaller than either operand (including infinities, subnormals, and both
+/// signed zeros).
+#[test]
+fn fp8_e5m2_rne_nonnegative_addition_is_monotone_exhaustive() {
+    let zero = r_from(0);
+    for xb in 0..N {
+        for yb in 0..N {
+            let x = r_from(xb);
+            let y = r_from(yb);
+            if x.is_nan() || y.is_nan() || x < zero || y < zero {
+                continue;
+            }
+            let sum = x.add_r(y, RNE).value;
+            assert!(
+                !sum.is_nan(),
+                "nonnegative add became NaN: x={xb:#04x}, y={yb:#04x}"
+            );
+            assert!(
+                !matches!(sum.partial_cmp(&x), Some(Ordering::Less))
+                    && !matches!(sum.partial_cmp(&y), Some(Ordering::Less)),
+                "nonnegative add decreased: x={xb:#04x}, y={yb:#04x}, sum={:#04x}",
+                sum.to_bits()
+            );
+        }
+    }
 }
 
 #[test]

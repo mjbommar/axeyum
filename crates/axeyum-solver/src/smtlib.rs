@@ -54,6 +54,16 @@ fn apply_source_string_semantic_unsat(script: &Script, result: CheckResult) -> C
     }
 }
 
+/// The parser's exact source-level nonnegative RNE prefix contradiction
+/// (ADR-0373). Unlike a second-chance route, this runs before BV SAT search: the
+/// source proof exists specifically because eager FP lowering destroys the small
+/// semantic boundary and creates the avoidable circuit mountain.
+fn source_fp_prefix_monotonic_result(script: &Script) -> Option<CheckResult> {
+    script
+        .source_fp_prefix_monotonic_unsat
+        .then_some(CheckResult::Unsat)
+}
+
 /// The word-equation second-chance route (ADR-0053, T-B.4b).
 ///
 /// Runs **strictly after** the ADR-0029 bounded pre-check and the ADR-0052
@@ -1662,6 +1672,13 @@ pub fn solve_smtlib(input: &str, config: &SolverConfig) -> Result<SmtLibOutcome,
     // assertion view.
     if script.word_only_fallback.is_some() {
         let result = decide_word_only(&mut script, config)?;
+        return Ok(SmtLibOutcome {
+            result,
+            logic: script.logic,
+            expected_status: script.status,
+        });
+    }
+    if let Some(result) = source_fp_prefix_monotonic_result(&script) {
         return Ok(SmtLibOutcome {
             result,
             logic: script.logic,

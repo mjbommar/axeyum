@@ -188,6 +188,16 @@ pub struct Script {
     /// remains a valid refutation of the complete asserted conjunction. It is never
     /// populated for incremental or macro-bearing scripts.
     pub source_string_semantic_unsat: bool,
+    /// A contradiction proved from one exact source-level floating-point shape:
+    /// an RNE prefix of non-NaN, nonnegative addends whose final asserted
+    /// counterexample requires a prefix to become NaN or decrease (ADR-0373).
+    ///
+    /// FP arithmetic is eagerly expanded to BV during parsing, so this semantic
+    /// boundary is otherwise absent from [`Script::assertions`]. The raw-source
+    /// analysis is fail-closed: non-incremental and macro-free only, bounded
+    /// `let` normalization, exact expression identity, and no result other than a
+    /// proved whole-conjunction contradiction.
+    pub source_fp_prefix_monotonic_unsat: bool,
     /// The parser-side **regex-membership side channel** (P2.7 T-C.5, ADR-0054):
     /// a translation of the script's `str.in_re` fragment into single-variable
     /// [`MembershipProblem`](crate::MembershipProblem) constraints over the
@@ -759,6 +769,7 @@ fn parse_script_bounded(input: &str) -> Result<Script, SmtError> {
     // a certified trust step. Conservative over the raw (already set/const-array
     // desugared) s-expressions — see [`scan_fp_usage`].
     script.fp_usage = scan_fp_usage(&exprs);
+    script.source_fp_prefix_monotonic_unsat = source_fp_prefix_monotonic_unsat(&exprs);
     // Eager `seq.nth` Ackermann congruence (ADR-0029 slice 2): two `seq.nth`
     // applications with provably-equal sequence and index operands must return the
     // same (otherwise-unconstrained) out-of-bounds value. The constraints only pin
@@ -12883,6 +12894,322 @@ fn exact_rewrite_contradiction(conjuncts: &[&SExpr]) -> bool {
         .any(|conjunct| exact_rewrite_term(conjunct, 0) == ExactRewriteTerm::Bool(false))
 }
 
+const SOURCE_FP_MAX_NORMALIZED_NODES: usize = 512;
+const SOURCE_FP_MAX_NORMALIZE_DEPTH: u32 = 64;
+const SOURCE_FP_MAX_FIXPOINT_ROUNDS: usize = 32;
+
+/// Proves one source-level IEEE-754 prefix-sum contradiction before eager FP
+/// lowering erases the arithmetic boundary (ADR-0373).
+///
+/// This is deliberately a tiny abstract interpreter, not a general FP rewrite
+/// engine. It tracks only `non_nan`, `nonnegative`, and `not_lt` facts over exact
+/// normalized S-expressions and uses one semantic rule: RNE addition of two
+/// non-NaN, nonnegative operands is non-NaN, nonnegative, and no smaller than
+/// either operand. A verdict is produced only when all leaves of one
+/// asserted two- or three-leaf negated conjunction are independently re-derived.
+fn source_fp_prefix_monotonic_unsat(exprs: &[SExpr]) -> bool {
+    if !source_fp_conjunction_is_eligible(exprs) {
+        return false;
+    }
+
+    let mut conjuncts = Vec::new();
+    for expression in exprs {
+        let Some([head, body]) = expression.list() else {
+            continue;
+        };
+        if head.atom() != Some("assert") {
+            continue;
+        }
+        let Some(normalized) = normalize_source_fp_expr(body, &HashMap::new(), 0) else {
+            return false;
+        };
+        if source_expr_node_count(&normalized) > SOURCE_FP_MAX_NORMALIZED_NODES {
+            return false;
+        }
+        flatten_source_bool_and(&normalized, &mut conjuncts);
+    }
+
+    let mut non_nan = Vec::<SExpr>::new();
+    let mut nonnegative = Vec::<SExpr>::new();
+    let mut not_lt = Vec::<(SExpr, SExpr)>::new();
+    let mut asserted_not_lt = Vec::<(SExpr, SExpr)>::new();
+    let mut additions = Vec::<(SExpr, SExpr, SExpr)>::new();
+
+    for conjunct in &conjuncts {
+        if let Some(term) = source_not_is_nan(conjunct) {
+            push_source_fact(&mut non_nan, term.clone());
+        }
+        if let Some((left, right)) = source_not_fp_lt(conjunct) {
+            let pair = (left.clone(), right.clone());
+            push_source_pair(&mut asserted_not_lt, pair.clone());
+            push_source_pair(&mut not_lt, pair);
+        }
+        collect_source_rne_additions(conjunct, &mut additions);
+    }
+
+    for _ in 0..SOURCE_FP_MAX_FIXPOINT_ROUNDS {
+        let before = non_nan.len() + nonnegative.len() + not_lt.len();
+
+        for (left, right) in &asserted_not_lt {
+            if source_fp_is_positive_zero(right) && source_contains(&non_nan, left) {
+                push_source_fact(&mut nonnegative, left.clone());
+            }
+            if source_contains(&non_nan, left)
+                && source_contains(&non_nan, right)
+                && source_contains(&nonnegative, right)
+            {
+                push_source_fact(&mut nonnegative, left.clone());
+            }
+        }
+
+        for (sum, left, right) in &additions {
+            if source_contains(&non_nan, left)
+                && source_contains(&non_nan, right)
+                && source_contains(&nonnegative, left)
+                && source_contains(&nonnegative, right)
+            {
+                push_source_fact(&mut non_nan, sum.clone());
+                push_source_fact(&mut nonnegative, sum.clone());
+                push_source_pair(&mut not_lt, (sum.clone(), left.clone()));
+                push_source_pair(&mut not_lt, (sum.clone(), right.clone()));
+            }
+        }
+
+        if non_nan.len() + nonnegative.len() + not_lt.len() == before {
+            break;
+        }
+    }
+
+    conjuncts.iter().any(|conjunct| {
+        let Some(inner) = source_bool_not(conjunct) else {
+            return false;
+        };
+        let mut leaves = Vec::new();
+        flatten_source_bool_and(inner, &mut leaves);
+        (2..=3).contains(&leaves.len())
+            && source_expr_contains_rne_add(inner)
+            && leaves
+                .iter()
+                .all(|leaf| source_fp_fact_is_proved(leaf, &non_nan, &not_lt))
+    })
+}
+
+/// Whole-conjunction source facts are invalid across scopes, assumptions,
+/// macros, multiple queries, or assertions after the query point.
+fn source_fp_conjunction_is_eligible(exprs: &[SExpr]) -> bool {
+    let mut check_sats = 0_u32;
+    let mut saw_check_sat = false;
+    for expression in exprs {
+        let head = expression
+            .list()
+            .and_then(|items| items.first())
+            .and_then(SExpr::atom);
+        if head == Some("check-sat") {
+            check_sats = check_sats.saturating_add(1);
+            saw_check_sat = true;
+        }
+        if saw_check_sat && head == Some("assert") {
+            return false;
+        }
+        if let Some(
+            "push" | "pop" | "check-sat-assuming" | "reset-assertions" | "define-fun"
+            | "define-fun-rec" | "define-funs-rec" | "define-sort",
+        ) = head
+        {
+            return false;
+        }
+    }
+    check_sats <= 1
+}
+
+/// Expands simultaneous SMT-LIB `let` bindings under a strict source-size cap.
+fn normalize_source_fp_expr(
+    expression: &SExpr,
+    environment: &HashMap<String, SExpr>,
+    depth: u32,
+) -> Option<SExpr> {
+    if depth > SOURCE_FP_MAX_NORMALIZE_DEPTH {
+        return None;
+    }
+    match expression {
+        SExpr::Atom(atom) => Some(
+            environment
+                .get(atom)
+                .cloned()
+                .unwrap_or_else(|| expression.clone()),
+        ),
+        SExpr::List(items) if items.first().and_then(SExpr::atom) == Some("let") => {
+            let [_, bindings, body] = items.as_slice() else {
+                return None;
+            };
+            let mut values = Vec::new();
+            for binding in bindings.list()? {
+                let [name, value] = binding.list()? else {
+                    return None;
+                };
+                let name = name.atom()?.to_owned();
+                let value = normalize_source_fp_expr(value, environment, depth + 1)?;
+                values.push((name, value));
+            }
+            let mut extended = environment.clone();
+            for (name, value) in values {
+                extended.insert(name, value);
+            }
+            normalize_source_fp_expr(body, &extended, depth + 1)
+        }
+        SExpr::List(items) => {
+            let normalized = items
+                .iter()
+                .map(|item| normalize_source_fp_expr(item, environment, depth + 1))
+                .collect::<Option<Vec<_>>>()?;
+            Some(SExpr::List(normalized))
+        }
+    }
+}
+
+fn source_expr_node_count(expression: &SExpr) -> usize {
+    let mut count = 0_usize;
+    let mut stack = vec![expression];
+    while let Some(term) = stack.pop() {
+        count = count.saturating_add(1);
+        if count > SOURCE_FP_MAX_NORMALIZED_NODES {
+            break;
+        }
+        if let SExpr::List(items) = term {
+            stack.extend(items);
+        }
+    }
+    count
+}
+
+fn flatten_source_bool_and(expression: &SExpr, out: &mut Vec<SExpr>) {
+    let mut stack = vec![expression];
+    while let Some(term) = stack.pop() {
+        if let Some(items) = term.list()
+            && items.first().and_then(SExpr::atom) == Some("and")
+        {
+            for item in items[1..].iter().rev() {
+                stack.push(item);
+            }
+        } else {
+            out.push(term.clone());
+        }
+    }
+}
+
+fn source_bool_not(expression: &SExpr) -> Option<&SExpr> {
+    let [head, inner] = expression.list()? else {
+        return None;
+    };
+    (head.atom() == Some("not")).then_some(inner)
+}
+
+fn source_not_is_nan(expression: &SExpr) -> Option<&SExpr> {
+    let inner = source_bool_not(expression)?;
+    let [head, term] = inner.list()? else {
+        return None;
+    };
+    (head.atom() == Some("fp.isNaN")).then_some(term)
+}
+
+fn source_not_fp_lt(expression: &SExpr) -> Option<(&SExpr, &SExpr)> {
+    let inner = source_bool_not(expression)?;
+    let [head, left, right] = inner.list()? else {
+        return None;
+    };
+    (head.atom() == Some("fp.lt")).then_some((left, right))
+}
+
+fn source_fp_is_positive_zero(expression: &SExpr) -> bool {
+    if let Some([underscore, zero, _, _]) = expression.list()
+        && underscore.atom() == Some("_")
+        && zero.atom() == Some("+zero")
+    {
+        return true;
+    }
+    let Some([head, bits]) = expression.list() else {
+        return false;
+    };
+    let Some([underscore, to_fp, _, _]) = head.list() else {
+        return false;
+    };
+    let Some([bits_underscore, zero, _]) = bits.list() else {
+        return false;
+    };
+    underscore.atom() == Some("_")
+        && to_fp.atom() == Some("to_fp")
+        && bits_underscore.atom() == Some("_")
+        && zero.atom() == Some("bv0")
+}
+
+fn source_rne_add(expression: &SExpr) -> Option<(&SExpr, &SExpr)> {
+    let [head, mode, left, right] = expression.list()? else {
+        return None;
+    };
+    (head.atom() == Some("fp.add") && matches!(mode.atom(), Some("RNE" | "roundNearestTiesToEven")))
+        .then_some((left, right))
+}
+
+fn collect_source_rne_additions(expression: &SExpr, out: &mut Vec<(SExpr, SExpr, SExpr)>) {
+    let mut stack = vec![expression];
+    while let Some(term) = stack.pop() {
+        if let Some((left, right)) = source_rne_add(term) {
+            let addition = (term.clone(), left.clone(), right.clone());
+            if !out.contains(&addition) {
+                out.push(addition);
+            }
+        }
+        if let SExpr::List(items) = term {
+            stack.extend(items);
+        }
+    }
+}
+
+fn source_expr_contains_rne_add(expression: &SExpr) -> bool {
+    let mut stack = vec![expression];
+    while let Some(term) = stack.pop() {
+        if source_rne_add(term).is_some() {
+            return true;
+        }
+        if let SExpr::List(items) = term {
+            stack.extend(items);
+        }
+    }
+    false
+}
+
+fn source_fp_fact_is_proved(
+    expression: &SExpr,
+    non_nan: &[SExpr],
+    not_lt: &[(SExpr, SExpr)],
+) -> bool {
+    if let Some(term) = source_not_is_nan(expression) {
+        return source_contains(non_nan, term);
+    }
+    if let Some((left, right)) = source_not_fp_lt(expression) {
+        return not_lt
+            .iter()
+            .any(|(known_left, known_right)| known_left == left && known_right == right);
+    }
+    false
+}
+
+fn source_contains(facts: &[SExpr], expression: &SExpr) -> bool {
+    facts.iter().any(|fact| fact == expression)
+}
+
+fn push_source_fact(facts: &mut Vec<SExpr>, fact: SExpr) {
+    if !facts.contains(&fact) {
+        facts.push(fact);
+    }
+}
+
+fn push_source_pair(facts: &mut Vec<(SExpr, SExpr)>, fact: (SExpr, SExpr)) {
+    if !facts.contains(&fact) {
+        facts.push(fact);
+    }
+}
+
 /// Computes exact constant propagation and the distinct-index splice theorem over
 /// guaranteed top-level equality paths. Every fact is a consequence of the whole
 /// asserted conjunction, so adding it to the word relaxation preserves UNSAT.
@@ -17827,6 +18154,96 @@ fn apply_parameterized(
         }
         other => return Err(SmtError::Unsupported(format!("indexed operator `{other}`"))),
     })
+}
+
+#[cfg(test)]
+mod source_fp_tests {
+    use super::{SOURCE_FP_MAX_NORMALIZE_DEPTH, parse_script, source_fp_prefix_monotonic_unsat};
+    use crate::sexpr::read_all;
+
+    const PREFIX: &str = r"
+(set-logic QF_FP)
+(declare-fun p () Float32)
+(declare-fun d () Float32)
+(assert (not (fp.isNaN p)))
+(assert (not (fp.lt p (_ +zero 8 24))))
+(assert (not (fp.isNaN d)))
+(assert (not (fp.lt d (_ +zero 8 24))))
+(assert (let ((s (fp.add RNE p d)))
+  (not (and (not (fp.isNaN s))
+            (not (fp.isNaN p))
+            (not (fp.lt s p))))))
+(check-sat)
+";
+
+    #[test]
+    fn source_fp_prefix_monotonicity_recognizes_rne_spellings_and_operand_order() {
+        let parsed = parse_script(PREFIX).unwrap();
+        assert!(parsed.source_fp_prefix_monotonic_unsat);
+
+        for variant in [
+            PREFIX.replace("RNE", "roundNearestTiesToEven"),
+            PREFIX.replace("(fp.add RNE p d)", "(fp.add RNE d p)"),
+            PREFIX.replace(
+                "(and (not (fp.isNaN s))\n            (not (fp.isNaN p))\n            (not (fp.lt s p)))",
+                "(and (not (fp.isNaN s))\n            (not (fp.lt s p)))",
+            ),
+        ] {
+            let parsed = parse_script(&variant).unwrap();
+            assert!(parsed.source_fp_prefix_monotonic_unsat, "{variant}");
+        }
+    }
+
+    #[test]
+    fn source_fp_prefix_monotonicity_rejects_semantic_near_misses() {
+        let missing_non_nan = PREFIX.replace("(assert (not (fp.isNaN d)))", "");
+        let negative_addend = PREFIX.replace(
+            "(assert (not (fp.lt d (_ +zero 8 24))))",
+            "(assert (fp.lt d (_ +zero 8 24)))",
+        );
+        let disjunctive_guard = PREFIX.replace(
+            "(assert (not (fp.lt d (_ +zero 8 24))))",
+            "(assert (or (not (fp.lt d (_ +zero 8 24))) false))",
+        );
+        for variant in [
+            PREFIX.replace("RNE", "RTN"),
+            missing_non_nan,
+            negative_addend,
+            disjunctive_guard,
+        ] {
+            let expressions = read_all(&variant).unwrap();
+            assert!(!source_fp_prefix_monotonic_unsat(&expressions), "{variant}");
+        }
+    }
+
+    #[test]
+    fn source_fp_prefix_monotonicity_rejects_nonconjunctive_command_streams() {
+        for variant in [
+            PREFIX.replace(
+                "(declare-fun p () Float32)",
+                "(define-fun p () Float32 (_ +zero 8 24))",
+            ),
+            PREFIX.replace(
+                "(assert (not (fp.isNaN p)))",
+                "(push 1)\n(assert (not (fp.isNaN p)))",
+            ),
+            PREFIX.replace("(check-sat)", "(check-sat)\n(assert false)"),
+        ] {
+            let expressions = read_all(&variant).unwrap();
+            assert!(!source_fp_prefix_monotonic_unsat(&expressions), "{variant}");
+        }
+    }
+
+    #[test]
+    fn source_fp_prefix_monotonicity_rejects_overdeep_let_normalization() {
+        let mut body = "p".to_owned();
+        for index in 0..=SOURCE_FP_MAX_NORMALIZE_DEPTH {
+            body = format!("(let ((x{index} {body})) x{index})");
+        }
+        let script = format!("(assert {body})\n(check-sat)");
+        let expressions = read_all(&script).unwrap();
+        assert!(!source_fp_prefix_monotonic_unsat(&expressions));
+    }
 }
 
 #[cfg(test)]
