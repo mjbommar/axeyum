@@ -36,8 +36,17 @@ exit-criteria'd tracks we advance one increment at a time.
   the exact QF_BVFP ESBMC conversion alarm, propagation fell from 4.02 s to
   50.38 ms and five clean release runs completed in 0.20--0.35 s. The 34-file
   ESBMC population is 30/34 decided with DISAGREE=0 and zero replay failures;
-  four paired `Float4`/`Float-no-simp2` rows are the next hard-tail cluster. See
+  four paired `Float4`/`Float-no-simp2` rows selected the shared-guard split
+  result below. See
   the [result note](docs/plan/fp-batched-value-propagation-result-2026-07-27.md).
+- **P1.2 narrow SAT-BV shared-guard split (2026-07-27):** ADR-0367 admits only
+  large single disjunctions of 4--16 unique `not(implies(A, C_i))` obligations
+  with one exact antecedent, shares one deadline, disables recursion, and
+  replay-checks any SAT model against the original root. The serial five-second
+  ESBMC population is now 34/34 declared/Z3 UNSAT, DISAGREE=0, with zero errors
+  or replay failures; the four former residuals take 1.609--3.948 s. Parallel
+  throughput remains unclaimed under current host contention. See the
+  [result note](docs/plan/fp-shared-guard-split-result-2026-07-27.md).
 - **Soundness:** the legacy 35 measured baselines remain at `DISAGREE = 0`, but
   the 2026-07-22 full-library run found a real QF_ABVFP/QF_BVFP wrong-`sat`:
   exact FP cancellation under RTN was incorrectly forced to `+0`. The add/FMA
@@ -405,19 +414,18 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
-- **2026-07-27 — QF_BVFP value propagation is linear by independent fact
-  layer; four ESBMC timeouts are the next FP hard tail.** Commit `6b5b42ac`
-  batches independent ground definitions into one shared substitution pass and
-  retains iterative dependency discovery, conflict assertions, model
-  reconstruction, and original-query replay. The exact stale conversion alarm
-  now returns `unsat` in 0.20--0.35 s across five clean release runs; its
-  propagation phase is 50.38 ms versus the retained 4.02 s predecessor. A
-  140-row operator-stratified QF_FP census is 140/140 correct with no declines
-  or timeouts. The complete 34-row public QF_BVFP ESBMC population is 30/34
-  decided, DISAGREE=0, replay failures=0; Z3 returns the declared `unsat` on all
-  34. Next: census the repeated structure in `Float4{,_1}` and
-  `Float-no-simp2{,_1}` before changing another pass; do not claim a credited
-  selected-slice rerun from this diagnostic population.
+- **2026-07-27 — the selected QF_BVFP ESBMC hard tail is 34/34 decided; rotate
+  back to the measured SMT-LIB residue map.** Commit `b6c3d486` and ADR-0367 add
+  a fail-closed shared-antecedent disjunction split to SAT-BV: one large root,
+  4--16 unique negated implications, one common guard, one global deadline, no
+  recursion, and mandatory original-root replay for SAT. The serial five-second
+  population moves 30→34 UNSAT with all 34 matching declared status and Z3;
+  errors, disagreements, and replay failures remain zero. The former residuals
+  complete in 1.609--3.948 s. Two parallel attempts were invalidated by current
+  host contention and produced no artifact, so parallel throughput is not
+  claimed. Next: preserve this 34/34 set as a no-loss gate and select the next
+  distinct current-code residue cluster; do not widen the split or treat this as
+  the credited selected QF_FP/QF_BVFP/QF_ABVFP rerun.
 
 - **2026-07-26 — top-level quantified theorem counterexamples move four more
   public UFLIA rows.** The exact equivalence `not (A => B) = A and not B` now
@@ -9420,6 +9428,15 @@ plan is built and committed on the current branch:
 | P5.5 | External target, measured | **DONE (bounded v1, ADR-0323--0338):** authenticated Tock capture plus eight rechecked dual-DRAT proofs and six replayed controls, UNKNOWN=0, DISAGREE=0. Query time 12.700 s; fresh outer wall 50.745 s; peak RSS 1,256,496 KiB; zero OOM deltas. The committed case study compares exact target validation, universal coverage, trust, effort, artifact boundaries, and limits. No Tock bug was found, so no upstream issue is applicable. This is not a speed or whole-kernel claim. |
 
 ## Changelog
+
+- **2026-07-27 — closed the four-row QF_BVFP ESBMC SAT hard tail.** Accepted
+  ADR-0367 and committed `b6c3d486`: SAT-BV now splits only large disjunctions
+  of 4--16 negated obligations with one identical antecedent, under one shared
+  deadline and with original-root SAT replay. The serial five-second population
+  moves 30/34→34/34 declared/Z3 UNSAT, DISAGREE=0, errors=0, replay failures=0;
+  former residuals complete in 1.609--3.948 s. Focused tests, warning-denied
+  solver Clippy, fmt, and documentation links pass. Parallel performance and the
+  full selected-library rerun remain unclaimed.
 
 - **2026-07-27 — batched independent value propagation on the FP hard tail.**
   Replaced one-full-DAG-rebuild-per-symbol with one shared rebuild per independent
