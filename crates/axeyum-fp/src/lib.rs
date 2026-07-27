@@ -22,7 +22,7 @@
 //! supported-width IEEE formats, other arithmetic as *constant folds* over F32/F64
 //! (`add`/`sub`/`mul`/`div`/`sqrt`/`fma`/`rem`/`roundToIntegral`) and as
 //! *validated symbolic* bit-blasters (`add`/`mul`/`div`/`sqrt`/`roundToIntegral`,
-//! with add/sub/mul also validated for SMT `(15,64)`, checked against independent
+//! with add/sub/mul/div also validated for SMT `(15,64)`, checked against independent
 //! native/arbitrary-precision arithmetic); and int/real conversions. `fp.rem` is the
 //! exact IEEE remainder (no rounding). **Not** yet here: symbolic `fp.rem`, and
 //! symbolic conversions between FP and the `Real` sort.
@@ -965,6 +965,12 @@ fn add_mul_format_supported(fmt: FloatFormat) -> bool {
     arithmetic_format_supported(fmt) || is_smt_binary79(fmt)
 }
 
+/// Operator-specific validation gate for division. Sqrt and FMA intentionally
+/// retain [`arithmetic_format_supported`] until separately swept.
+fn div_format_supported(fmt: FloatFormat) -> bool {
+    arithmetic_format_supported(fmt) || is_smt_binary79(fmt)
+}
+
 /// Normalizes a (possibly subnormal) significand so its leading one sits at bit
 /// `sb-1` (a full `sb`-bit significand), decreasing the LSB exponent to match —
 /// the `value = sig·2^e` product is preserved. A zero significand (the operand
@@ -1511,10 +1517,10 @@ fn constant_division_bits(fmt: FloatFormat, a: u128, b: u128, mode: RoundingMode
 /// (NaN for `0/0` and `∞/∞`, `∞` for `x/0` and `∞/finite`, `0` for `finite/∞`).
 /// A pure bit-vector formula; solves and replays on the existing path.
 ///
-/// Works for **F16/F32/F64** (the `2·sb + 5`-bit intermediate fits 128 bits) and
-/// **F128** (231 bits, via the wide path). Validated, not proven: differentially
-/// validated against native `f32`/`f64` division and `rustc_apfloat`'s quad
-/// (ADR-0028).
+/// Works for **F16/F32/F64** (the `2·sb + 5`-bit intermediate fits 128 bits),
+/// SMT `(15,64)` (133 bits), and **F128** (231 bits) through the wide path.
+/// Validated, not proven: differentially validated against native `f32`/`f64`
+/// division and private/quad `rustc_apfloat` semantics (ADR-0369/0028).
 ///
 /// # Errors
 ///
@@ -1530,7 +1536,7 @@ pub fn div(
 ) -> Result<TermId, IrError> {
     fmt.check(arena, a)?;
     fmt.check(arena, b)?;
-    if !arithmetic_format_supported(fmt) {
+    if !div_format_supported(fmt) {
         if let (Some(a_bits), Some(b_bits)) = (const_bits(arena, a), const_bits(arena, b))
             && let Some(bits) = constant_division_bits(fmt, a_bits, b_bits, mode)
         {
@@ -1544,9 +1550,10 @@ pub fn div(
     // for formats whose exponent is large relative to the significand (a no-op
     // when `eb < 2·sb`, i.e. all standard formats).
     let w = (2 * sb + 5).max(eb + 4);
-    // F16/F32/F64 fit `u128`; F128 (231 bits) runs through the wide path,
-    // validated against `Quad` (ADR-0028). Other wide formats stay `unsupported`.
-    if w > 128 && fmt != FloatFormat::F128 {
+    // F16/F32/F64 fit `u128`; SMT (15,64) and F128 run through the wide path,
+    // validated against private `rustc_apfloat` IEEE semantics and `Quad`
+    // respectively (ADR-0369/0028). Other wide formats stay `unsupported`.
+    if w > 128 && !is_smt_binary79(fmt) && fmt != FloatFormat::F128 {
         return Err(IrError::InvalidWidth(w));
     }
     let frac = sb + 3; // quotient fractional bits
@@ -6458,6 +6465,11 @@ mod smt_binary79_apfloat_tests {
     }
 
     #[test]
+    fn symbolic_smt_binary79_div_matches_apfloat_all_modes() {
+        validate_binop(div, |a, b, mode| a.div_r(b, mode).value, "binary79 div");
+    }
+
+    #[test]
     fn smt_binary79_other_arithmetic_remains_unsupported() {
         let mut arena = TermArena::new();
         let sx = arena.declare("x", Sort::BitVec(79)).unwrap();
@@ -6466,7 +6478,6 @@ mod smt_binary79_apfloat_tests {
         let (x, y, z) = (arena.var(sx), arena.var(sy), arena.var(sz));
 
         for error in [
-            div(&mut arena, FORMAT, x, y, RoundingMode::NearestEven).unwrap_err(),
             sqrt(&mut arena, FORMAT, x, RoundingMode::NearestEven).unwrap_err(),
             fma(&mut arena, FORMAT, x, y, z, RoundingMode::NearestEven).unwrap_err(),
         ] {

@@ -423,3 +423,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [0366](adr-0366-preregister-lean-string-literal-semantics.md) | Preregister checked Lean String-literal typing and exact Unicode-scalar constructor conversion across defeq, projection, recursors, and import | proposed |
 | [0367](adr-0367-narrow-shared-guard-disjunction-split.md) | Accept a bounded SAT-BV split for large disjunctions of negated obligations with one shared antecedent | accepted |
 | [0368](adr-0368-preregister-smt-binary79-add-mul.md) | Accept operator-specific SMT `(15,64)` add/sub/mul admission behind an all-mode independent oracle sweep | accepted |
+| [0369](adr-0369-preregister-smt-binary79-division.md) | Accept SMT `(15,64)` symbolic division behind a separate all-mode independent oracle sweep | accepted |
