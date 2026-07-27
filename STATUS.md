@@ -47,6 +47,15 @@ exit-criteria'd tracks we advance one increment at a time.
   or replay failures; the four former residuals take 1.609--3.948 s. Parallel
   throughput remains unclaimed under current host contention. See the
   [result note](docs/plan/fp-shared-guard-split-result-2026-07-27.md).
+- **P2.8 SMT `(15,64)` add/sub/mul (2026-07-27):** ADR-0368 admits those three
+  symbolic operators through the existing wide-BV path after a private 79-bit
+  `rustc_apfloat` oracle matched 6,560 structured/random all-mode cases. Four
+  deterministic QF_BVFP representatives move from unsupported to two SAT / two
+  UNSAT in 0.145--1.284 s, all matching declared status and Z3 with replay
+  intact. Div/sqrt/FMA remain fail-closed. The frozen 108-family diagnostic is
+  83 correct / 23 unknown / two process timeouts / zero wrong, but only the four
+  exact format-boundary gains are credited. See the
+  [result note](docs/plan/fp-smt-binary79-add-mul-result-2026-07-27.md).
 - **Soundness:** the legacy 35 measured baselines remain at `DISAGREE = 0`, but
   the 2026-07-22 full-library run found a real QF_ABVFP/QF_BVFP wrong-`sat`:
   exact FP cancellation under RTN was incorrectly forced to `+0`. The add/FMA
@@ -413,6 +422,16 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 > Full lane history archived: [docs/status-archive/process-documentation-lane-through-2026-07-06.md](docs/status-archive/process-documentation-lane-through-2026-07-06.md)
 
 ## Current focus
+
+- **2026-07-27 — SMT `(15,64)` add/sub/mul are validated; division is the next
+  distinct format boundary.** Commit `73f91fee` and ADR-0368 add only the
+  operator-specific add/mul gate (sub via add+neg), backed by 6,560 independent
+  all-mode `rustc_apfloat` comparisons. Four selected rows now decide: two SAT,
+  two UNSAT, all declared/Z3-agreeing with zero replay failures. Symbolic div,
+  sqrt, and FMA remain directly tested unsupported. The process-isolated ESBMC
+  no-loss gate remains 34/34 correct. Next: preregister `(15,64)` symbolic
+  division separately and keep sqrt/FMA closed; retain both four-row gains and
+  ESBMC as no-loss gates, and do not count load-sensitive breadth recoveries.
 
 - **2026-07-27 — the selected QF_BVFP ESBMC hard tail is 34/34 decided; rotate
   back to the measured SMT-LIB residue map.** Commit `b6c3d486` and ADR-0367 add
@@ -9428,6 +9447,14 @@ plan is built and committed on the current branch:
 | P5.5 | External target, measured | **DONE (bounded v1, ADR-0323--0338):** authenticated Tock capture plus eight rechecked dual-DRAT proofs and six replayed controls, UNKNOWN=0, DISAGREE=0. Query time 12.700 s; fresh outer wall 50.745 s; peak RSS 1,256,496 KiB; zero OOM deltas. The committed case study compares exact target validation, universal coverage, trust, effort, artifact boundaries, and limits. No Tock bug was found, so no upstream issue is applicable. This is not a speed or whole-kernel claim. |
 
 ## Changelog
+
+- **2026-07-27 — validated SMT `(15,64)` add/sub/mul.** Accepted ADR-0368 and
+  committed `73f91fee`: a private 79-bit implicit-significand
+  `rustc_apfloat` semantics matches the pure-Rust circuits on 6,560
+  structured/random all-mode pairs. Four deterministic QF_BVFP rows move from
+  unsupported to two SAT / two UNSAT in 0.145--1.284 s, 4/4 against Z3 with
+  replay intact. Div/sqrt/FMA remain fail-closed. The full FP crate, Clippy,
+  fmt, links, and the 34/34 process-isolated ESBMC no-loss gate pass.
 
 - **2026-07-27 — closed the four-row QF_BVFP ESBMC SAT hard tail.** Accepted
   ADR-0367 and committed `b6c3d486`: SAT-BV now splits only large disjunctions
