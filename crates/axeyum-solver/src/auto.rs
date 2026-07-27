@@ -584,7 +584,17 @@ fn normalize_top_level_quantified_counterexamples(
             _ => None,
         };
         let Some((antecedent, consequent)) = sides else {
-            out.push(assertion);
+            if matches!(
+                arena.node(implication),
+                TermNode::App {
+                    op: Op::Forall(_) | Op::Exists(_),
+                    ..
+                }
+            ) {
+                out.push(negate_quantifier_prefix(arena, implication).map_err(err)?);
+            } else {
+                out.push(assertion);
+            }
             continue;
         };
         out.push(antecedent);
@@ -7028,6 +7038,32 @@ mod tests {
             prove_quantified_unsat_via_egraph(&mut arena, &skolemized, &config).unwrap(),
             CheckResult::Unknown(_)
         ));
+    }
+
+    #[test]
+    fn top_level_negated_universal_exposes_counterexample_witness() {
+        let mut arena = TermArena::new();
+        let function = arena
+            .declare_fun("negated_universal_f", &[Sort::Int], Sort::Int)
+            .unwrap();
+        let x = arena.declare("negated_universal_x", Sort::Int).unwrap();
+        let xv = arena.var(x);
+        let f_x = arena.apply(function, &[xv]).unwrap();
+        let axiom_body = arena.eq(f_x, xv).unwrap();
+        let axiom = arena.forall(x, axiom_body).unwrap();
+
+        let y = arena.declare("negated_universal_y", Sort::Int).unwrap();
+        let yv = arena.var(y);
+        let f_y = arena.apply(function, &[yv]).unwrap();
+        let goal_body = arena.eq(f_y, yv).unwrap();
+        let goal = arena.forall(y, goal_body).unwrap();
+        let counterexample = arena.not(goal).unwrap();
+
+        let config = SolverConfig::new().with_timeout(Duration::from_secs(1));
+        assert_eq!(
+            solve(&mut arena, &[axiom, counterexample], &config).unwrap(),
+            CheckResult::Unsat
+        );
     }
 
     #[test]
