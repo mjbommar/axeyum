@@ -9,9 +9,10 @@ The last unsupported row in the committed eight-file
 of its exact equality returns `unsat`.
 
 This is one bounded P2.8 coverage increment, not general floating-point parity.
-The committed baseline before this change remains 7/8 decided with zero known-
-status disagreements. The affected residual alone is now 1/1 decided with zero
-disagreement and zero model-replay failures.
+The committed baseline before this change was 7/8 decided. Combined with the
+finite-domain preprocessing repair, tested commit
+`a3c4b04f9729defe1ebf496ee3d92d6decab24bb` is 8/8 decided with zero known-
+status disagreements and zero model-replay failures.
 
 ## Design and soundness boundary
 
@@ -64,31 +65,27 @@ returns `sat` under the Z3 4.13.3 CLI.
 
 ## Focused performance and coverage evidence
 
-The final one-row product-backend artifact used a 10-second safety timeout and
-one job. It records clean source revision
-`17e2704cc5b63a8409f263fd942024588f1550b6` and reports:
+The final integrated product-backend artifact used a 10-second safety timeout
+and four jobs. It records clean source revision
+`a3c4b04f9729defe1ebf496ee3d92d6decab24bb` and reports:
 
 | measure | result |
 |---|---:|
-| files / decided | 1 / 1 (100%) |
+| files / decided | 8 / 8 (100%) |
 | expected / outcome | `sat` / `sat` |
 | unsupported / disagree | 0 / 0 |
 | model replay failures | 0 |
 | post-parse DAG nodes | 1 |
-| cold total | 1.313 ms |
-| model replay | 0.046 ms |
+| cold total | 1.381 ms |
+| model replay | 0.049 ms |
 
 The timing is a single local debug-build observation, not a competitive
 performance claim. The important structural result is that the fully ground
 assertion folds to one Boolean DAG node.
 
-The full eight-file refresh was not promoted to a canonical artifact. Bounded
-`jobs=4` and serial attempts did not finish because the pre-existing
-`Float-no-simp3-main.smt2` row exceeded the construction bound; isolated 20-second
-runs decided the other seven rows, including `issue130`. The standard F32 path
-is unchanged by this increment, and a post-narrowing direct run of that row also
-exceeded 48 seconds. That current-state performance regression needs its own
-baseline/bisection increment; it is not reported as green here.
+The integrated eight-file refresh completes at 5 SAT / 3 UNSAT, 100% decided,
+DISAGREE=0, and zero replay failures. Z3 compares 7/8 with zero disagreement;
+the custom row's independent evidence remains the direct raw-SMT Z3 battery.
 
 ## Reproduction
 

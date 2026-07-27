@@ -20,17 +20,15 @@ exit-criteria'd tracks we advance one increment at a time.
   in the committed eight-file QF_BVFP Bitwuzla regression slice now decides
   `sat`; its negation decides `unsat`. The exact ground-only `(4,12)` route has
   6,825 `rustc_apfloat` all-mode checks plus 100 direct Z3 custom-format checks;
-  symbolic custom formats remain fail-closed. The residual benchmark is 1/1,
-  DISAGREE=0, with a one-node post-parse DAG and model replay. A canonical full-
-  slice refresh remains open because the separate standard-F32
-  `Float-no-simp3-main.smt2` row exceeded bounded current-state construction
-  runs. See the [result note](docs/plan/fp-ground-custom-division-result-2026-07-27.md).
+  symbolic custom formats remain fail-closed. The integrated eight-file slice is
+  now 8/8 decided (5 SAT / 3 UNSAT), DISAGREE=0, with zero replay failures. See
+  the [result note](docs/plan/fp-ground-custom-division-result-2026-07-27.md).
 - **P2.8 finite-domain preprocessing repair (2026-07-27):** Float/RoundingMode
   constant folds now preserve their finite-domain sorts, and ground-evaluable
   scalar definitions use the existing reconstruction trail. The current-main
   `Float-no-simp3` regression moves from >48 s direct / >5 min slice attempts to
-  18.025 ms cold; the eight-file slice completes 7/8 with only the separate
-  custom-format row unsupported, DISAGREE=0, and zero replay failures. See the
+  19.100 ms cold in the integrated artifact; the eight-file slice completes 8/8,
+  DISAGREE=0, with zero replay failures. See the
   [result note](docs/plan/fp-finite-domain-preprocess-result-2026-07-27.md).
 - **Soundness:** the legacy 35 measured baselines remain at `DISAGREE = 0`, but
   the 2026-07-22 full-library run found a real QF_ABVFP/QF_BVFP wrong-`sat`:
@@ -9404,9 +9402,9 @@ plan is built and committed on the current branch:
 - **2026-07-27 — restored finite-domain preprocessing and the QF_BVFP slice
   runtime.** Preserved Float/RoundingMode wrapper sorts after constant folding
   and propagated ground-evaluable scalar definitions with model reconstruction.
-  The exact `Float-no-simp3` row now decides `unsat` in 18.025 ms; the eight-file
-  slice finishes 7/8, DISAGREE=0, with only the independently owned custom-format
-  row unsupported. All 115 rewrite tests, the focused front-door regression, and
+  The exact `Float-no-simp3` row now decides `unsat` in 19.100 ms in the combined
+  artifact; the eight-file slice finishes 8/8, DISAGREE=0, with zero replay
+  failures. All 115 rewrite tests, the focused front-door regression, and
   warning-denied Clippy pass.
 
 - **2026-07-27 — decided the final ground custom-format QF_BVFP residual.**
@@ -9415,9 +9413,7 @@ plan is built and committed on the current branch:
   validated standard-format circuits unchanged. The public `(4,12)` issue130
   row is `sat`, its negation is `unsat`, 6,825 `rustc_apfloat` and 100 raw-SMT
   Z3 comparisons pass, and both affected Clippy gates are warning-clean. The
-  isolated row is 1/1 decided with DISAGREE=0 and replay intact; the full eight-
-  file refresh is honestly pending a separate `Float-no-simp3` construction-
-  time investigation.
+  integrated slice is 8/8 decided with DISAGREE=0 and replay intact.
 - **2026-07-26 — moved four quantified theorem-counterexample rows.** Exact
   top-level `not (A => B)` normalization plus quantifier-prefix negation and
   complete leading-existential Skolemization let the existing checked

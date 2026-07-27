@@ -36,6 +36,7 @@ needs no new ADR or rewrite rule.
 - `Float-no-simp3-main.smt2` records 18.025 ms cold total in that debug artifact,
   versus bounded current-main runs exceeding 48 seconds/five minutes.
 
-The remaining 1/8 unsupported row is a separate ground custom-format division
-increment. The two isolated commits must be measured together after integration;
-8/8 is not inferred here as a green artifact.
+Combined with the separate ground custom-format division increment, clean source
+revision `a3c4b04f9729defe1ebf496ee3d92d6decab24bb` measures 8/8 decided (5 SAT,
+3 UNSAT), DISAGREE=0, and zero model-replay failures. In that integrated run this
+row records 19.100 ms cold total.
