@@ -1930,11 +1930,14 @@ fn finish_sat(
     lits: &[TermId],
 ) -> Result<CheckResult, SolverError> {
     let all_indices = (0..ctx.atoms.len()).collect::<Vec<_>>();
-    try_finish_sat(arena, assertions, ctx, propositional, lits, &all_indices).ok_or_else(|| {
-        SolverError::Backend(
-            "arith dpll sat model replay failed after full theory check".to_owned(),
-        )
-    })
+    Ok(try_finish_sat(arena, assertions, ctx, propositional, lits, &all_indices).unwrap_or_else(
+        || {
+            CheckResult::Unknown(UnknownReason {
+                kind: UnknownKind::Incomplete,
+                detail: "arith DPLL candidate failed full model replay".to_owned(),
+            })
+        },
+    ))
 }
 
 fn try_finish_sat(
@@ -1950,7 +1953,7 @@ fn try_finish_sat(
     // the caller boundary: every failure to produce a checkable model degrades to a
     // first-class `Unknown` (returned as `Some(Unknown)`), never a hard error — so this
     // returns a bare `Option` (`None` = this atom subset did not replay `true`; retry
-    // or, at full indices, an internal-invariant miss the caller reports).
+    // or, at full indices, a replay miss the caller degrades to `Unknown`).
     let int_lits: Vec<TermId> = atom_lits(ctx, lits, indices, Theory::Int);
     let real_lits: Vec<TermId> = atom_lits(ctx, lits, indices, Theory::Real);
     // Re-decoding a theory's model can fail when a concrete theory solver rejects a
@@ -3816,6 +3819,22 @@ mod tests {
         let finished = finish_sat(&mut arena, &[assertion], &ctx, &propositional, &lits)
             .expect("finish_sat must surface Unknown, not a backend error");
         assert!(matches!(finished, CheckResult::Unknown(_)));
+    }
+
+    #[test]
+    fn false_full_replay_candidate_is_unknown_not_backend_error() {
+        let mut arena = TermArena::new();
+        let assertion = arena.bool_const(false);
+        let ctx = ArithAbstractor::default();
+        let propositional = Model::new();
+
+        assert!(
+            try_finish_sat(&mut arena, &[assertion], &ctx, &propositional, &[], &[]).is_none(),
+            "the deliberately false candidate must miss full replay"
+        );
+        let result = finish_sat(&mut arena, &[assertion], &ctx, &propositional, &[])
+            .expect("a failed SAT replay is a first-class Unknown, never a backend error");
+        assert!(matches!(result, CheckResult::Unknown(_)));
     }
 
     #[test]
