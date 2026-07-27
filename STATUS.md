@@ -383,6 +383,26 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-26 — one-code-point prefixed self-needle replacement moves four
+  Noetzli rows.** For a one-code-point word `c`, the exact identities
+  `replace(c ++ x, x, "") = c` and `replace(c ++ x, x, c) = c ++ c` hold even
+  when the first occurrence of `x` overlaps the prefix: that overlap forces
+  nonempty `x` to be a power of `c`; empty `x` is the SMT-LIB insertion-at-zero
+  case. The raw exact rewriter now applies only those two identities and rejects
+  multi-code-point prefixes or different replacements.
+
+  On the current 45-row residual of the retained Noetzli 113-row tail, term rows
+  953, 954, 958, and 959 move `unknown`→`unsat`; the tail becomes **72 UNSAT / 41
+  unknown, WRONG=0**. Exhaustive `{A,B}` words through length six prove both
+  identities against the reference first-occurrence evaluator; three near-miss
+  controls cover the known multi-code-point overlap counterexample and a
+  different replacement. Z3 4.13.3 confirms rows 954 and 959 at five seconds
+  and times out on 953 and 958. A complete 1,880-row replay under the concurrent
+  full-library load has **WRONG=0**; 14 previously replayed SATs hit the 250 ms
+  cutoff and are not counted as losses or a new endpoint. Next: continue the 34
+  expected-UNSAT Noetzli residual by recurring theorem family, while preserving
+  all expected-SAT declines.
+
 - **2026-07-26 — exact regex-length, alias, prefix, and `str.to_int` classes move 128
   StringFuzz residuals.**
   The regex-membership side channel documented `(= (str.len X) n)` as part of

@@ -9368,6 +9368,9 @@ fn exact_rewrite_term(expression: &SExpr, depth: u32) -> ExactRewriteTerm {
     let Some(head) = items.first().and_then(SExpr::atom) else {
         return ExactRewriteTerm::Opaque(expression.clone());
     };
+    if let Some(rewritten) = exact_rewrite_prefixed_self_needle(items) {
+        return rewritten;
+    }
     if let Some(rewritten) = exact_rewrite_self_replacement_view(items, depth + 1) {
         return rewritten;
     }
@@ -9391,6 +9394,37 @@ fn exact_rewrite_term(expression: &SExpr, depth: u32) -> ExactRewriteTerm {
         return ExactRewriteTerm::Bool(value);
     }
     rewritten
+}
+
+/// Rewrites the exact one-code-point identities
+/// `replace(c ++ x, x, "") = c` and `replace(c ++ x, x, c) = c ++ c`.
+///
+/// If the leftmost occurrence of nonempty `x` begins inside the one-code-point
+/// prefix, `x` must be a nonempty power of `c`; replacing that occurrence has
+/// the same result as replacing the explicit suffix occurrence. Empty `x` is
+/// the SMT-LIB insertion-at-zero case and yields the same two results.
+fn exact_rewrite_prefixed_self_needle(items: &[SExpr]) -> Option<ExactRewriteTerm> {
+    use ExactRewriteTerm::String;
+
+    if items.first()?.atom() != Some("str.replace") || items.len() != 4 {
+        return None;
+    }
+    let concat = items[1].list()?;
+    if concat.len() != 3 || concat[0].atom() != Some("str.++") || concat[2] != items[2] {
+        return None;
+    }
+    let prefix = literal_pattern_cps(&concat[1])?;
+    if prefix.len() != 1 {
+        return None;
+    }
+    let replacement = literal_pattern_cps(&items[3])?;
+    if replacement.is_empty() {
+        return Some(String(prefix));
+    }
+    if replacement == prefix {
+        return Some(String(prefix.repeat(2)));
+    }
+    None
 }
 
 /// Preserves equality and word-boundary observations of replacing a factor by
@@ -20645,6 +20679,74 @@ mod string_escape_tests {
                 ExactRewriteTerm::Bool(false),
                 "{text}"
             );
+        }
+    }
+
+    #[test]
+    fn one_code_point_prefixed_self_needles_normalize_conservatively() {
+        for text in [
+            r#"(not (= (str.replace (str.++ "A" x) x "A") (str.++ "A" "A")))"#,
+            r#"(not (= (str.replace (str.++ "A" x) x "") "A"))"#,
+            r#"(not (= (str.replace (str.++ "B" x) x "B") (str.++ "B" "B")))"#,
+            r#"(not (= (str.replace (str.++ "B" x) x "") "B"))"#,
+        ] {
+            let expression = read_all(text)
+                .expect("read one-code-point prefixed-self theorem")
+                .pop()
+                .expect("one theorem");
+            assert_eq!(
+                exact_rewrite_term(&expression, 0),
+                ExactRewriteTerm::Bool(false),
+                "{text}"
+            );
+        }
+
+        for text in [
+            // A multi-code-point prefix may contain an earlier overlapping x.
+            r#"(not (= (str.replace (str.++ "AB" x) x "") "AB"))"#,
+            r#"(not (= (str.replace (str.++ "AB" x) x "AB") "ABAB"))"#,
+            // A different replacement does not commute with an overlap.
+            r#"(not (= (str.replace (str.++ "A" x) x "B") "AB"))"#,
+        ] {
+            let expression = read_all(text)
+                .expect("read prefixed-self near miss")
+                .pop()
+                .expect("one control");
+            assert_ne!(
+                exact_rewrite_term(&expression, 0),
+                ExactRewriteTerm::Bool(false),
+                "{text}"
+            );
+        }
+    }
+
+    #[test]
+    fn one_code_point_prefixed_self_needles_match_reference_semantics_exhaustively() {
+        let mut words = vec![Vec::new()];
+        for length in 1..=6 {
+            for bits in 0..(1_usize << length) {
+                words.push(
+                    (0..length)
+                        .map(|shift| u32::from(if bits & (1 << shift) == 0 { b'A' } else { b'B' }))
+                        .collect(),
+                );
+            }
+        }
+
+        for prefix in [[u32::from(b'A')], [u32::from(b'B')]] {
+            for needle in &words {
+                let subject = [prefix.as_slice(), needle].concat();
+                assert_eq!(
+                    replace_first_code_points(&subject, needle, &[]),
+                    prefix,
+                    "delete prefix={prefix:?}, needle={needle:?}"
+                );
+                assert_eq!(
+                    replace_first_code_points(&subject, needle, &prefix),
+                    prefix.repeat(2),
+                    "replace prefix={prefix:?}, needle={needle:?}"
+                );
+            }
         }
     }
 
