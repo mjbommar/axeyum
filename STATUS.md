@@ -16,6 +16,15 @@ legacy baselines sound, full-library P0 fixed on `main` with slice revalidation
 open; parity not yet reached, the road there fully mapped.** The remaining
 decide-rate / performance / proof-coverage work is decomposed into sized,
 exit-criteria'd tracks we advance one increment at a time.
+- **P2.8 ground custom-format division (2026-07-27):** the sole unsupported row
+  in the committed eight-file QF_BVFP Bitwuzla regression slice now decides
+  `sat`; its negation decides `unsat`. The exact ground-only `(4,12)` route has
+  6,825 `rustc_apfloat` all-mode checks plus 100 direct Z3 custom-format checks;
+  symbolic custom formats remain fail-closed. The residual benchmark is 1/1,
+  DISAGREE=0, with a one-node post-parse DAG and model replay. A canonical full-
+  slice refresh remains open because the separate standard-F32
+  `Float-no-simp3-main.smt2` row exceeded bounded current-state construction
+  runs. See the [result note](docs/plan/fp-ground-custom-division-result-2026-07-27.md).
 - **Soundness:** the legacy 35 measured baselines remain at `DISAGREE = 0`, but
   the 2026-07-22 full-library run found a real QF_ABVFP/QF_BVFP wrong-`sat`:
   exact FP cancellation under RTN was incorrectly forced to `+0`. The add/FMA
@@ -9385,6 +9394,16 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
+- **2026-07-27 — decided the final ground custom-format QF_BVFP residual.**
+  Added exact arbitrary-precision ground `fp.div` for otherwise-unvalidated
+  IEEE-style formats while keeping symbolic custom formats fail-closed and the
+  validated standard-format circuits unchanged. The public `(4,12)` issue130
+  row is `sat`, its negation is `unsat`, 6,825 `rustc_apfloat` and 100 raw-SMT
+  Z3 comparisons pass, and both affected Clippy gates are warning-clean. The
+  isolated row is 1/1 decided with DISAGREE=0 and replay intact; the full eight-
+  file refresh is honestly pending a separate `Float-no-simp3` construction-
+  time investigation.
+
 - **2026-07-26 — moved four quantified theorem-counterexample rows.** Exact
   top-level `not (A => B)` normalization plus quantifier-prefix negation and
   complete leading-existential Skolemization let the existing checked
@@ -9412,7 +9431,6 @@ plan is built and committed on the current branch:
   retained-plus-gains replay is 128/128; the budget-edge Boogie regression
   found in the first prototype is removed and passes 3/3 at 250 ms. Focused
   helper, arithmetic-ITE, and quantified guard-model tests pass.
-
 - **2026-07-26 — moved six symbolic `str.from_int` rows.** Pushed `19f911b6`
   with exact negative-input emptiness, decimal-only containment, negated-length
   normalization, and self-indexed decimal substring semantics. The fixed

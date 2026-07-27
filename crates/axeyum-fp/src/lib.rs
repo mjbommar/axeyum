@@ -18,7 +18,8 @@
 //!
 //! What is here: classification (`isNaN`/`isInfinite`/`isZero`/`isNormal`/
 //! `isSubnormal`/`isNegative`/`isPositive`), `abs`/`neg`, `eq`, the four
-//! comparisons, `min`/`max`; arithmetic as *constant folds* over F32/F64
+//! comparisons, `min`/`max`; exact ground division for otherwise-unvalidated,
+//! supported-width IEEE formats, other arithmetic as *constant folds* over F32/F64
 //! (`add`/`sub`/`mul`/`div`/`sqrt`/`fma`/`rem`/`roundToIntegral`) and as
 //! *validated symbolic* bit-blasters (`add`/`mul`/`div`/`sqrt`/`roundToIntegral`,
 //! checked against native arithmetic); and int/real conversions. `fp.rem` is the
@@ -1303,9 +1304,194 @@ pub fn from_real(
     }
 }
 
-/// Symbolic `fp.div` (round-nearest-ties-to-even): the IEEE 754 division
-/// bit-blaster. Computes the quotient of the significands to `sb + 3` fractional
-/// bits via `bv_udiv` (with the `bv_urem` remainder folded into a sticky bit),
+/// Rounds the exact positive rational `numerator / denominator * 2^binary_shift`
+/// to `fmt`. Both operands are arbitrary-precision so a large exponent delta
+/// cannot overflow before the quotient is rounded back to at most `sig_bits`
+/// significant bits.
+fn round_big_scaled_ratio(
+    fmt: FloatFormat,
+    mode: RoundingMode,
+    negative: bool,
+    numerator: &BigUint,
+    denominator: &BigUint,
+    binary_shift: i64,
+) -> Option<u128> {
+    if numerator == &BigUint::from(0u8)
+        || denominator == &BigUint::from(0u8)
+        || fmt.exp_bits <= 1
+        || fmt.exp_bits >= 63
+        || fmt.sig_bits <= 1
+        || fmt.width() > 128
+    {
+        return None;
+    }
+
+    let bias = (1i64 << (fmt.exp_bits - 1)) - 1;
+    let emin = 1 - bias;
+    let emax = bias;
+    let fraction_width = fmt.sig_bits - 1;
+    let implicit = 1u128 << fraction_width;
+    let sign = u128::from(negative) << (fmt.width() - 1);
+
+    // `bits(n) - bits(d)` is either floor(log2(n/d)) or one above it.
+    let mut ratio_exp =
+        i64::try_from(numerator.bits()).ok()? - i64::try_from(denominator.bits()).ok()?;
+    let ratio_at_least = if ratio_exp >= 0 {
+        numerator >= &(denominator << u32::try_from(ratio_exp).ok()?)
+    } else {
+        &(numerator << u32::try_from(-ratio_exp).ok()?) >= denominator
+    };
+    if !ratio_at_least {
+        ratio_exp -= 1;
+    }
+    let exact_exp = ratio_exp.checked_add(binary_shift)?;
+
+    let round_at = |result_exp: i64| -> Option<u128> {
+        // Scale the exact quotient so its leading bit is stored at
+        // `fraction_width`, then round the discarded rational remainder once.
+        let scale = binary_shift
+            .checked_add(i64::from(fraction_width))?
+            .checked_sub(result_exp)?;
+        let (scaled_num, scaled_den) = if scale >= 0 {
+            (numerator << u32::try_from(scale).ok()?, denominator.clone())
+        } else {
+            (
+                numerator.clone(),
+                denominator << u32::try_from(-scale).ok()?,
+            )
+        };
+        let quotient = &scaled_num / &scaled_den;
+        let remainder = &scaled_num % &scaled_den;
+        let round_up = if remainder == BigUint::from(0u8) {
+            false
+        } else {
+            match mode {
+                RoundingMode::NearestEven => {
+                    let complement = &scaled_den - &remainder;
+                    remainder > complement || (remainder == complement && quotient.bit(0))
+                }
+                RoundingMode::NearestAway => remainder >= (&scaled_den - &remainder),
+                RoundingMode::TowardZero => false,
+                RoundingMode::TowardPositive => !negative,
+                RoundingMode::TowardNegative => negative,
+            }
+        };
+        let rounded = quotient + BigUint::from(u8::from(round_up));
+        biguint_to_u128(&rounded)
+    };
+
+    if exact_exp < emin {
+        // On the subnormal grid the scaled quotient's binary exponent is
+        // `exact_exp + fraction_width - emin`. If it is below -1, the value is
+        // strictly less than half the least subnormal. Handle that directly so
+        // exotic formats with a huge exponent range never request an enormous
+        // BigUint shift merely to round a nonzero value to zero (or one ulp in
+        // the outward directed mode).
+        let subnormal_grid_exp = exact_exp
+            .checked_add(i64::from(fraction_width))?
+            .checked_sub(emin)?;
+        let rounded = if subnormal_grid_exp < -1 {
+            u128::from(match mode {
+                RoundingMode::TowardPositive => !negative,
+                RoundingMode::TowardNegative => negative,
+                RoundingMode::NearestEven
+                | RoundingMode::NearestAway
+                | RoundingMode::TowardZero => false,
+            })
+        } else {
+            round_at(emin)?
+        };
+        if rounded == 0 {
+            return Some(sign);
+        }
+        if rounded >= implicit {
+            // Carry from the subnormal grid into the smallest normal.
+            return Some(sign | implicit | (rounded - implicit));
+        }
+        return Some(sign | rounded);
+    }
+
+    let mut rounded = round_at(exact_exp)?;
+    let mut result_exp = exact_exp;
+    if rounded == (1u128 << fmt.sig_bits) {
+        rounded = implicit;
+        result_exp = result_exp.checked_add(1)?;
+    }
+    if result_exp > emax {
+        return Some(overflow_bits(
+            fmt.exp_bits,
+            fmt.sig_bits,
+            negative,
+            mode,
+            sign,
+        ));
+    }
+    let exp_field = u128::try_from(result_exp.checked_add(bias)?).ok()?;
+    Some(sign | (exp_field << fraction_width) | (rounded - implicit))
+}
+
+/// Exact constant `fp.div` for any IEEE-style format whose complete bit pattern
+/// fits the IR's 128-bit scalar constant. This path is independent of the
+/// symbolic circuit's per-format validation allowlist: constants are decoded as
+/// exact dyadic integers and rounded once with arbitrary-precision arithmetic.
+fn constant_division_bits(fmt: FloatFormat, a: u128, b: u128, mode: RoundingMode) -> Option<u128> {
+    if !fmt.is_ieee()
+        || fmt.width() > 128
+        || fmt.exp_bits <= 1
+        || fmt.exp_bits >= 63
+        || fmt.sig_bits <= 1
+    {
+        return None;
+    }
+    let (eb, sb, width) = (fmt.exp_bits, fmt.sig_bits, fmt.width());
+    let exp_mask = (1u128 << eb) - 1;
+    let trailing_mask = (1u128 << (sb - 1)) - 1;
+    let classify = |bits: u128| {
+        let exp = (bits >> (sb - 1)) & exp_mask;
+        let trailing = bits & trailing_mask;
+        (
+            exp == exp_mask && trailing != 0,
+            exp == exp_mask && trailing == 0,
+            exp == 0 && trailing == 0,
+        )
+    };
+    let (a_nan, a_inf, a_zero) = classify(a);
+    let (b_nan, b_inf, b_zero) = classify(b);
+    let negative = ((a ^ b) >> (width - 1)) & 1 == 1;
+    let sign = u128::from(negative) << (width - 1);
+    let infinity = sign | (exp_mask << (sb - 1));
+    let canonical_nan = (exp_mask << (sb - 1)) | (1u128 << (sb - 2));
+
+    if a_nan || b_nan || (a_zero && b_zero) || (a_inf && b_inf) {
+        return Some(canonical_nan);
+    }
+    if a_inf || b_zero {
+        return Some(infinity);
+    }
+    if a_zero || b_inf {
+        return Some(sign);
+    }
+
+    let (_, a_magnitude, a_exponent) = decode_finite_dyadic(fmt, a)?;
+    let (_, b_magnitude, b_exponent) = decode_finite_dyadic(fmt, b)?;
+    round_big_scaled_ratio(
+        fmt,
+        mode,
+        negative,
+        &a_magnitude,
+        &b_magnitude,
+        a_exponent.checked_sub(b_exponent)?,
+    )
+}
+
+/// Symbolic `fp.div`: the IEEE 754 division bit-blaster. For formats outside the
+/// symbolic validation allowlist, ground operands take the exact integer path;
+/// symbolic operands retain the fail-closed format boundary. Validated standard
+/// formats continue through the established circuit so its oracle coverage and
+/// performance characteristics do not change.
+///
+/// The symbolic circuit computes the quotient of the significands to `sb + 3`
+/// fractional bits via `bv_udiv` (with the `bv_urem` remainder folded into a sticky bit),
 /// subtracts exponents, rounds via [`pack_value`], and muxes the special cases
 /// (NaN for `0/0` and `∞/∞`, `∞` for `x/0` and `∞/finite`, `0` for `finite/∞`).
 /// A pure bit-vector formula; solves and replays on the existing path.
@@ -1327,11 +1513,16 @@ pub fn div(
     b: TermId,
     mode: RoundingMode,
 ) -> Result<TermId, IrError> {
-    if !arithmetic_format_supported(fmt) {
-        return Err(IrError::Unsupported("fp.div: unvalidated format"));
-    }
     fmt.check(arena, a)?;
     fmt.check(arena, b)?;
+    if !arithmetic_format_supported(fmt) {
+        if let (Some(a_bits), Some(b_bits)) = (const_bits(arena, a), const_bits(arena, b))
+            && let Some(bits) = constant_division_bits(fmt, a_bits, b_bits, mode)
+        {
+            return arena.bv_const(fmt.width(), bits);
+        }
+        return Err(IrError::Unsupported("fp.div: unvalidated symbolic format"));
+    }
     let (eb, sb) = (fmt.exp_bits, fmt.sig_bits);
     let total = fmt.width();
     // `eb + 4` headroom so `pack_value`'s exponent arithmetic doesn't overflow
@@ -3793,6 +3984,13 @@ mod tests {
     use super::*;
     use axeyum_ir::{Assignment, Value, eval};
 
+    fn ground_bits(arena: &TermArena, term: TermId) -> u128 {
+        match eval(arena, term, &Assignment::new()).expect("ground term evaluates") {
+            Value::Bv { value, .. } => value,
+            other => panic!("expected Bv, got {other:?}"),
+        }
+    }
+
     #[test]
     fn rational_to_format_dyadic_matches_native_f32_and_f64() {
         // Dyadic rationals round to exactly the native cast (the only rounding is
@@ -4827,6 +5025,155 @@ mod tests {
                 .wrapping_mul(6_364_136_223_846_793_005)
                 .wrapping_add(1_442_695_040_888_963_407);
             check64(&mut a, x, s);
+        }
+    }
+
+    /// The final public `QF_BVFP` residual uses a nonstandard but IEEE-style
+    /// `(eb=4, sb=12)` format and only ground operands. Exact constant division
+    /// must cover it without admitting the unvalidated symbolic circuit.
+    #[test]
+    fn ground_custom_format_division_matches_public_issue130() {
+        let fmt = FloatFormat {
+            exp_bits: 4,
+            sig_bits: 12,
+        };
+        let mut arena = TermArena::new();
+        let lhs_bits = (1u128 << 15) | (0xe << 11) | 0x7ff;
+        let rhs_bits = (1u128 << 15) | (0xb << 11) | 0x300;
+        let expected = (0xa << 11) | 0x3a2;
+        let lhs = arena.bv_const(16, lhs_bits).unwrap();
+        let rhs = arena.bv_const(16, rhs_bits).unwrap();
+        let quotient = div(&mut arena, fmt, lhs, rhs, RoundingMode::NearestAway).unwrap();
+        assert_eq!(ground_bits(&arena, quotient), expected);
+
+        let symbolic = arena.declare("custom", Sort::BitVec(16)).unwrap();
+        let symbolic = arena.var(symbolic);
+        assert!(matches!(
+            div(&mut arena, fmt, symbolic, rhs, RoundingMode::NearestAway,),
+            Err(IrError::Unsupported(_))
+        ));
+    }
+
+    #[test]
+    fn ground_division_extreme_exponent_range_fails_neither_open_nor_large() {
+        let fmt = FloatFormat {
+            exp_bits: 62,
+            sig_bits: 2,
+        };
+        let exp_ones = (1u128 << 62) - 1;
+        let max_finite = ((exp_ones - 1) << 1) | 1;
+        let min_subnormal = 1;
+        let sign = 1u128 << 63;
+
+        let divide = |a_bits, b_bits, mode| {
+            let mut arena = TermArena::new();
+            let a = arena.bv_const(64, a_bits).unwrap();
+            let b = arena.bv_const(64, b_bits).unwrap();
+            let result = div(&mut arena, fmt, a, b, mode).unwrap();
+            ground_bits(&arena, result)
+        };
+
+        assert_eq!(
+            divide(min_subnormal, max_finite, RoundingMode::NearestEven),
+            0
+        );
+        assert_eq!(
+            divide(min_subnormal, max_finite, RoundingMode::TowardPositive),
+            min_subnormal
+        );
+        assert_eq!(
+            divide(
+                sign | min_subnormal,
+                max_finite,
+                RoundingMode::TowardNegative
+            ),
+            sign | min_subnormal
+        );
+        assert_eq!(
+            divide(max_finite, min_subnormal, RoundingMode::NearestEven),
+            exp_ones << 1
+        );
+        assert_eq!(
+            divide(max_finite, min_subnormal, RoundingMode::TowardZero),
+            max_finite
+        );
+    }
+
+    /// The exact ground path is checked independently against software IEEE
+    /// arithmetic across every rounding mode, including signed zeros,
+    /// subnormals, infinities, and random finite/special patterns.
+    #[test]
+    fn ground_division_all_modes_matches_apfloat() {
+        use rustc_apfloat::Float;
+        use rustc_apfloat::ieee::Single;
+
+        let modes = [
+            (
+                RoundingMode::NearestEven,
+                rustc_apfloat::Round::NearestTiesToEven,
+            ),
+            (
+                RoundingMode::NearestAway,
+                rustc_apfloat::Round::NearestTiesToAway,
+            ),
+            (RoundingMode::TowardZero, rustc_apfloat::Round::TowardZero),
+            (
+                RoundingMode::TowardPositive,
+                rustc_apfloat::Round::TowardPositive,
+            ),
+            (
+                RoundingMode::TowardNegative,
+                rustc_apfloat::Round::TowardNegative,
+            ),
+        ];
+        let structured = [
+            0x0000_0000u32,
+            0x8000_0000,
+            0x3f80_0000,
+            0xbf80_0000,
+            0x4000_0000,
+            0x3f00_0000,
+            0x7f80_0000,
+            0xff80_0000,
+            0x7fc0_0000,
+            0x0080_0000,
+            0x0000_0001,
+            0x7f7f_ffff,
+        ];
+        let mut state = 0xa5a5_0123_dead_beefu64;
+        let mut cases = structured
+            .iter()
+            .flat_map(|&a| structured.iter().map(move |&b| (a, b)))
+            .collect::<Vec<_>>();
+        for _ in 0..1_000 {
+            state = state
+                .wrapping_mul(6_364_136_223_846_793_005)
+                .wrapping_add(1_442_695_040_888_963_407);
+            cases.push((state as u32, (state >> 32) as u32));
+        }
+
+        for (mode, oracle_mode) in modes {
+            for &(a_bits, b_bits) in &cases {
+                let got = constant_division_bits(
+                    FloatFormat::F32,
+                    u128::from(a_bits),
+                    u128::from(b_bits),
+                    mode,
+                )
+                .unwrap();
+                let want = Single::from_bits(u128::from(a_bits))
+                    .div_r(Single::from_bits(u128::from(b_bits)), oracle_mode)
+                    .value
+                    .to_bits();
+                if Single::from_bits(want).is_nan() {
+                    assert!(
+                        (got >> 23) & 0xff == 0xff && got & 0x7f_ffff != 0,
+                        "div({a_bits:#010x},{b_bits:#010x},{mode:?}) want NaN, got {got:#010x}"
+                    );
+                } else {
+                    assert_eq!(got, want, "div({a_bits:#010x},{b_bits:#010x},{mode:?})");
+                }
+            }
         }
     }
 
@@ -6087,6 +6434,42 @@ mod fma_f128_apfloat_tests {
     }
 
     #[test]
+    fn ground_f128_div_matches_apfloat_in_all_rounding_modes() {
+        let modes = [
+            (RoundingMode::NearestEven, Round::NearestTiesToEven),
+            (RoundingMode::NearestAway, Round::NearestTiesToAway),
+            (RoundingMode::TowardZero, Round::TowardZero),
+            (RoundingMode::TowardPositive, Round::TowardPositive),
+            (RoundingMode::TowardNegative, Round::TowardNegative),
+        ];
+        let structured = structured();
+        let mut state = 0x3141_5926_5358_9793u64;
+        let mut cases = structured
+            .iter()
+            .flat_map(|&a| structured.iter().map(move |&b| (a, b)))
+            .collect::<Vec<_>>();
+        for _ in 0..100 {
+            cases.push((rng128(&mut state), rng128(&mut state)));
+        }
+
+        for (mode, oracle_mode) in modes {
+            for &(a_bits, b_bits) in &cases {
+                let got = constant_division_bits(FloatFormat::F128, a_bits, b_bits, mode)
+                    .expect("F128 exact ground division");
+                let want = Quad::from_bits(a_bits)
+                    .div_r(Quad::from_bits(b_bits), oracle_mode)
+                    .value
+                    .to_bits();
+                if Quad::from_bits(want).is_nan() {
+                    assert!(is_f128_nan(got));
+                } else {
+                    assert_eq!(got, want, "f128 div({a_bits:#x},{b_bits:#x},{mode:?})");
+                }
+            }
+        }
+    }
+
+    #[test]
     fn symbolic_f128_fma_matches_apfloat() {
         // Symbolic F128 operands force the 344-bit wide circuit (no constant
         // fold). It must equal `rustc_apfloat`'s correctly-rounded quad fma
@@ -6495,9 +6878,9 @@ mod small_format_arithmetic_validation {
     }
 
     #[test]
-    fn unvalidated_formats_are_refused_not_silently_wrong() {
-        // Formats outside the validated set must return `Unsupported`, never a
-        // silently-unvalidated (possibly wrong) circuit — enabled ⟹ validated.
+    fn unvalidated_symbolic_formats_are_refused_not_silently_wrong() {
+        // Formats outside the validated set must not build a symbolic circuit.
+        // Exact ground division is a separate, arbitrary-precision path.
         let mut a = TermArena::new();
         let unvalidated = [
             FloatFormat {
@@ -6514,10 +6897,16 @@ mod small_format_arithmetic_validation {
             }, // wide, not F128
             FloatFormat::FP8_E4M3, // non-IEEE
         ];
-        for fmt in unvalidated {
+        for (index, fmt) in unvalidated.into_iter().enumerate() {
             let w = fmt.width();
             let x = a.bv_const(w, 0).unwrap();
             let y = a.bv_const(w, 0).unwrap();
+            let left_name = format!("unvalidated_div_x_{index}");
+            let right_name = format!("unvalidated_div_y_{index}");
+            let left_symbol = a.declare(&left_name, Sort::BitVec(w)).unwrap();
+            let right_symbol = a.declare(&right_name, Sort::BitVec(w)).unwrap();
+            let left_term = a.var(left_symbol);
+            let right_term = a.var(right_symbol);
             assert!(
                 matches!(
                     add(&mut a, fmt, x, y, RoundingMode::NearestEven),
@@ -6534,11 +6923,23 @@ mod small_format_arithmetic_validation {
             );
             assert!(
                 matches!(
-                    div(&mut a, fmt, x, y, RoundingMode::NearestEven),
+                    div(
+                        &mut a,
+                        fmt,
+                        left_term,
+                        right_term,
+                        RoundingMode::NearestEven,
+                    ),
                     Err(IrError::Unsupported(_))
                 ),
-                "div {fmt:?}"
+                "symbolic div {fmt:?}"
             );
+            if fmt.is_ieee() {
+                assert!(
+                    div(&mut a, fmt, x, y, RoundingMode::NearestEven).is_ok(),
+                    "ground div {fmt:?}"
+                );
+            }
             assert!(
                 matches!(
                     sqrt(&mut a, fmt, x, RoundingMode::NearestEven),
