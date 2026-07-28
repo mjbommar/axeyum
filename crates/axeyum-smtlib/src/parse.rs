@@ -146,11 +146,10 @@ pub struct Script {
     /// parsed through the **word-first fallback** (T-B.4d): the bounded ADR-0029
     /// string encoder declined this script wholesale (a literal over
     /// `STRING_MAX_LEN`, a `str.++` result over `STRING_BOUND_CAP`, or another
-    /// bounded-encoder capacity/unsupported limit), but the script *is* a pure
-    /// word-equation problem, so only the unbounded [`Script::word_problem`] side
-    /// channel is populated — [`Script::assertions`]/[`Script::commands`] are empty
-    /// and no packed-BV terms exist. The solver front door decides such a script by
-    /// the word route alone; on a word-route decline it reproduces this original
+    /// bounded-encoder capacity limit), but a checked source-level route still
+    /// recognizes it. Only those source side channels are populated —
+    /// [`Script::assertions`]/[`Script::commands`] are empty and no packed-BV terms
+    /// exist. If every source route declines, the solver reproduces this original
     /// error, so a previously-`unsupported` script never silently becomes a bare
     /// `unknown`/`sat`.
     pub word_only_fallback: Option<String>,
@@ -188,6 +187,15 @@ pub struct Script {
     /// remains a valid refutation of the complete asserted conjunction. It is never
     /// populated for incremental or macro-bearing scripts.
     pub source_string_semantic_unsat: bool,
+    /// A bounded, deterministic SAT-only probe over the original source string
+    /// expressions. It enumerates small concrete String/Int assignments derived
+    /// from source literals and re-evaluates every original assertion using exact
+    /// SMT-LIB string semantics. A hit is therefore a replay-checked witness; a
+    /// miss, unsupported expression, or assignment-cap exhaustion is only a
+    /// decline. This side channel also survives a packed-encoder capacity failure,
+    /// allowing short concrete models of syntactically wide `str.replace` terms
+    /// without treating the bounded encoding as complete.
+    pub source_string_sat_problem: Option<SourceStringSatProblem>,
     /// The parser-side **regex-membership side channel** (P2.7 T-C.5, ADR-0054):
     /// a translation of the script's `str.in_re` fragment into single-variable
     /// [`MembershipProblem`](crate::MembershipProblem) constraints over the
@@ -393,7 +401,8 @@ impl Script {
     /// the bounded encoder declined wholesale, whose [`Script::assertions`] view is
     /// **empty** and whose real content lives only in the parser side channels
     /// ([`Script::word_problem`] / [`Script::word_skeleton`] /
-    /// [`Script::word_skeleton_memberships`]).
+    /// [`Script::word_skeleton_memberships`] /
+    /// [`Script::source_string_sat_problem`]).
     ///
     /// # Why this matters (a soundness trap)
     ///
@@ -518,6 +527,50 @@ pub struct WordProblem {
     pub int_pins: Vec<(SymbolId, i128)>,
 }
 
+/// A small, deterministic SAT-only search problem over original SMT-LIB String
+/// and Int expressions. The expressions remain as source s-expressions so the
+/// probe is independent of the bounded packed-string lowering that may have
+/// declined on a syntactically wide intermediate.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SourceStringSatProblem {
+    assertions: Vec<SExpr>,
+    strings: Vec<SourceStringVariable>,
+    integers: Vec<SourceIntVariable>,
+    active_strings: Vec<usize>,
+    active_integers: Vec<usize>,
+    literals: Vec<Vec<u32>>,
+    alphabet: Vec<u32>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct SourceStringVariable {
+    name: String,
+    symbol: SymbolId,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct SourceIntVariable {
+    name: String,
+    symbol: SymbolId,
+}
+
+/// A concrete source-level witness produced only after every original assertion
+/// evaluates to `true` under exact SMT-LIB string semantics.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SourceStringWitness {
+    /// `Seq(BitVec(18))` model bindings for every declared String variable.
+    pub strings: Vec<(SymbolId, Vec<u32>)>,
+    /// Integer model bindings for every declared Int variable.
+    pub integers: Vec<(SymbolId, i128)>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+enum SourceValue {
+    Bool(bool),
+    Int(i128),
+    String(Vec<u32>),
+}
+
 /// A relational operator for a linear integer bound `var ⋈ const` (task #78).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum IntBoundKind {
@@ -600,13 +653,12 @@ pub fn parse_script(input: &str) -> Result<Script, SmtError> {
         // packed-sort ceiling, or another bounded-encoder capacity/unsupported limit
         // (all surfaced as [`SmtError::Unsupported`], or an [`SmtError::Ir`] width
         // error from packing). These caps are an artifact of the *bounded* encoding,
-        // not of the string theory: a pure word-equation problem is decidable
-        // unbounded regardless of literal length or concat width. So retry with a
-        // word-level-only parse that builds **only** the unbounded
-        // [`Script::word_problem`] side channel (no packed-BV terms, no flat
-        // assertions). On success the front door decides it by the word route; on
-        // failure (not a pure word-equation fragment) the original bounded error is
-        // returned unchanged, so bench/consumer classification stays honest.
+        // not of the string theory: checked source-level routes remain sound
+        // regardless of literal length or concat width. So retry with a source-only
+        // parse that builds no packed-BV terms and no flat assertions. On success
+        // the front door runs only independently checked source routes; on failure
+        // the original bounded error is returned unchanged, so bench/consumer
+        // classification stays honest.
         //
         // A [`SmtError::Syntax`] is malformed input — never a capacity decline — so
         // it is propagated as-is (no fallback).
@@ -790,6 +842,8 @@ fn parse_script_bounded(input: &str) -> Result<Script, SmtError> {
     if script.uses_bounded_strings {
         script.prefer_source_string_routes = split_replace_rejoin_count > 0;
         script.source_string_semantic_unsat = source_string_semantic_facts(&exprs).conflict;
+        script.source_string_sat_problem =
+            build_source_string_sat_problem(&mut script.arena, &exprs);
         script.word_problem = build_word_problem(&mut script.arena, &exprs);
         // Parser-side Boolean-structured word skeleton (P1.5b): the superset the
         // online CDCL(T) route decides — `or`/negated word problems the flat
@@ -953,15 +1007,14 @@ fn classify_fp_atom(atom: &str, usage: &mut FpUsage) {
     }
 }
 
-/// The word-first fallback parse (T-B.4d): build **only** the unbounded
-/// [`WordProblem`] side channel, with no bounded caps (any literal length, any
-/// concat width — the `Seq(BitVec(18))` IR is unbounded). Returns `Some(script)`
-/// only when the script is the pure word-equation fragment that
-/// [`build_word_problem`] recognizes; otherwise `None`, so [`parse_script`] can
-/// surface the original bounded error unchanged.
+/// The source-first fallback parse (T-B.4d): build only the unbounded and
+/// replay-checked source side channels, with no bounded packed-string terms.
+/// Returns `Some(script)` only when at least one source route recognizes the
+/// script; otherwise `None`, so [`parse_script`] can surface the original bounded
+/// error unchanged.
 ///
 /// The returned [`Script`] carries an **empty** flat/incremental assertion view
-/// (no packed-BV terms are ever built) and the populated [`Script::word_problem`];
+/// (no packed-BV terms are ever built) and the applicable source side channels;
 /// `logic`/`status` are recovered by a light scan so the front door still reports
 /// the benchmark's own `:status`. [`Script::word_only_fallback`] is set by the
 /// caller.
@@ -1004,10 +1057,14 @@ fn parse_word_only(input: &str, allow_semantic_refuter: bool) -> Option<Script> 
     if let Some(skeleton) = build_length_skeleton(&mut script.arena, &exprs) {
         script.length_skeleton = skeleton;
     }
+    script.source_string_sat_problem = allow_semantic_refuter
+        .then(|| build_source_string_sat_problem(&mut script.arena, &exprs))
+        .flatten();
     if script.word_problem.is_none()
         && script.word_skeleton.is_empty()
         && script.membership_problem.is_none()
         && script.length_skeleton.is_empty()
+        && script.source_string_sat_problem.is_none()
         && !script.source_string_semantic_unsat
     {
         // No decision route recognizes the script — not a word-equation/membership
@@ -1041,6 +1098,643 @@ fn parse_word_only(input: &str, allow_semantic_refuter: bool) -> Option<Script> 
         }
     }
     Some(script)
+}
+
+fn build_source_string_sat_problem(
+    arena: &mut TermArena,
+    exprs: &[SExpr],
+) -> Option<SourceStringSatProblem> {
+    let mut assertions = Vec::new();
+    let mut string_names = Vec::new();
+    let mut int_names = Vec::new();
+    let mut check_sats = 0u32;
+    for expression in exprs {
+        if let Some(name) = declared_string_var(expression) {
+            string_names.push(name.to_owned());
+        }
+        if let Some(name) = declared_int_var(expression) {
+            int_names.push(name.to_owned());
+        }
+        let Some(items) = expression.list() else {
+            continue;
+        };
+        match items.first().and_then(SExpr::atom) {
+            Some("assert") if items.len() == 2 => assertions.push(items[1].clone()),
+            Some("check-sat") => check_sats = check_sats.saturating_add(1),
+            Some("push" | "pop" | "reset" | "reset-assertions" | "check-sat-assuming") => {
+                return None;
+            }
+            _ => {}
+        }
+    }
+    let unique_string_names: BTreeSet<&str> = string_names.iter().map(String::as_str).collect();
+    let unique_int_names: BTreeSet<&str> = int_names.iter().map(String::as_str).collect();
+    if string_names.is_empty()
+        || assertions.is_empty()
+        || check_sats != 1
+        || unique_string_names.len() != string_names.len()
+        || unique_int_names.len() != int_names.len()
+        || !unique_string_names.is_disjoint(&unique_int_names)
+    {
+        return None;
+    }
+
+    let mut strings = Vec::with_capacity(string_names.len());
+    for (index, name) in string_names.into_iter().enumerate() {
+        let internal_name = format!("!source_sat!{index}");
+        let symbol = arena
+            .find_internal_symbol(&internal_name)
+            .or_else(|| arena.declare_internal(&internal_name, Sort::string()).ok())?;
+        strings.push(SourceStringVariable { name, symbol });
+    }
+    let mut integers = Vec::with_capacity(int_names.len());
+    for name in int_names {
+        let symbol = arena
+            .find_symbol(&name)
+            .or_else(|| arena.declare(&name, Sort::Int).ok())?;
+        integers.push(SourceIntVariable { name, symbol });
+    }
+
+    let declared_strings: BTreeSet<&str> = strings.iter().map(|var| var.name.as_str()).collect();
+    let declared_ints: BTreeSet<&str> = integers.iter().map(|var| var.name.as_str()).collect();
+    let mut referenced_strings = BTreeSet::<String>::new();
+    let mut referenced_ints = BTreeSet::<String>::new();
+    let mut literals = Vec::<Vec<u32>>::new();
+    let mut uses_from_int = false;
+    for assertion in &assertions {
+        collect_source_sat_facts(
+            assertion,
+            &declared_strings,
+            &declared_ints,
+            &mut referenced_strings,
+            &mut referenced_ints,
+            &mut literals,
+            &mut uses_from_int,
+        );
+    }
+    literals.sort();
+    literals.dedup();
+
+    let active_strings = strings
+        .iter()
+        .enumerate()
+        .filter_map(|(index, var)| referenced_strings.contains(&var.name).then_some(index))
+        .collect();
+    let active_integers = integers
+        .iter()
+        .enumerate()
+        .filter_map(|(index, var)| referenced_ints.contains(&var.name).then_some(index))
+        .collect();
+    let mut alphabet = Vec::new();
+    for &code_point in literals.iter().flatten() {
+        push_unique_code_point(&mut alphabet, code_point);
+    }
+    for code_point in [u32::from(b'A'), u32::from(b'B')] {
+        push_unique_code_point(&mut alphabet, code_point);
+    }
+    if uses_from_int {
+        for code_point in [u32::from(b'0'), u32::from(b'1')] {
+            push_unique_code_point(&mut alphabet, code_point);
+        }
+    }
+
+    Some(SourceStringSatProblem {
+        assertions,
+        strings,
+        integers,
+        active_strings,
+        active_integers,
+        literals,
+        alphabet,
+    })
+}
+
+#[allow(clippy::too_many_arguments)]
+fn collect_source_sat_facts(
+    expression: &SExpr,
+    declared_strings: &BTreeSet<&str>,
+    declared_ints: &BTreeSet<&str>,
+    referenced_strings: &mut BTreeSet<String>,
+    referenced_ints: &mut BTreeSet<String>,
+    literals: &mut Vec<Vec<u32>>,
+    uses_from_int: &mut bool,
+) {
+    match expression {
+        SExpr::Atom(atom) => {
+            if declared_strings.contains(atom.as_str()) {
+                referenced_strings.insert(atom.clone());
+            }
+            if declared_ints.contains(atom.as_str()) {
+                referenced_ints.insert(atom.clone());
+            }
+            if atom.len() >= 2 && atom.starts_with('"') && atom.ends_with('"') {
+                let inner = atom[1..atom.len() - 1].replace("\"\"", "\"");
+                if let Some(value) = decode_string_code_points(&inner) {
+                    literals.push(value);
+                }
+            }
+        }
+        SExpr::List(items) => {
+            if items.first().and_then(SExpr::atom) == Some("str.from_int") {
+                *uses_from_int = true;
+            }
+            for item in items {
+                collect_source_sat_facts(
+                    item,
+                    declared_strings,
+                    declared_ints,
+                    referenced_strings,
+                    referenced_ints,
+                    literals,
+                    uses_from_int,
+                );
+            }
+        }
+    }
+}
+
+fn push_unique_code_point(alphabet: &mut Vec<u32>, code_point: u32) {
+    if !alphabet.contains(&code_point) {
+        alphabet.push(code_point);
+    }
+}
+
+impl SourceStringSatProblem {
+    /// Searches a deterministic bounded candidate population and returns the first
+    /// assignment that makes every retained original source assertion true.
+    ///
+    /// The search is incomplete by design: exceeding `max_assignments`, using an
+    /// expression outside the exact evaluator, or finding no candidate returns
+    /// `None`. It never derives UNSAT. Every `Some` has been replayed over all
+    /// source assertions and is therefore a sound SAT witness.
+    #[must_use]
+    pub fn bounded_witness(
+        &self,
+        max_assignments: usize,
+        max_word_len: usize,
+        max_alphabet: usize,
+    ) -> Option<SourceStringWitness> {
+        if max_assignments == 0 || max_alphabet == 0 {
+            return None;
+        }
+        let alphabet = &self.alphabet[..self.alphabet.len().min(max_alphabet)];
+        let word_candidates = source_word_candidates(&self.literals, alphabet, max_word_len);
+        let int_candidates = source_int_candidates();
+
+        let mut domain_sizes = Vec::new();
+        domain_sizes.extend(self.active_strings.iter().map(|_| word_candidates.len()));
+        domain_sizes.extend(self.active_integers.iter().map(|_| int_candidates.len()));
+        if domain_sizes.is_empty() || domain_sizes.contains(&0) {
+            return None;
+        }
+        let assignments = domain_sizes
+            .iter()
+            .try_fold(1usize, |product, size| product.checked_mul(*size))?;
+        if assignments > max_assignments {
+            return None;
+        }
+
+        let mut string_values = vec![Vec::<u32>::new(); self.strings.len()];
+        let mut int_values = vec![0i128; self.integers.len()];
+        for ordinal in 0..assignments {
+            let mut mixed_radix = ordinal;
+            for &index in &self.active_strings {
+                let candidate = mixed_radix % word_candidates.len();
+                mixed_radix /= word_candidates.len();
+                string_values[index].clone_from(&word_candidates[candidate]);
+            }
+            for &index in &self.active_integers {
+                let candidate = mixed_radix % int_candidates.len();
+                mixed_radix /= int_candidates.len();
+                int_values[index] = int_candidates[candidate];
+            }
+            if self.assertions.iter().all(|assertion| {
+                self.eval(assertion, &string_values, &int_values, 0)
+                    == Some(SourceValue::Bool(true))
+            }) {
+                return Some(SourceStringWitness {
+                    strings: self
+                        .strings
+                        .iter()
+                        .enumerate()
+                        .map(|(index, var)| (var.symbol, string_values[index].clone()))
+                        .collect(),
+                    integers: self
+                        .integers
+                        .iter()
+                        .enumerate()
+                        .map(|(index, var)| (var.symbol, int_values[index]))
+                        .collect(),
+                });
+            }
+        }
+        None
+    }
+
+    /// Independently re-evaluates every retained source assertion under a
+    /// complete witness. Missing/duplicate-sort bindings and unsupported source
+    /// expressions fail closed.
+    #[must_use]
+    pub fn replays(&self, witness: &SourceStringWitness) -> bool {
+        let string_symbols: BTreeSet<SymbolId> =
+            witness.strings.iter().map(|(symbol, _)| *symbol).collect();
+        let integer_symbols: BTreeSet<SymbolId> =
+            witness.integers.iter().map(|(symbol, _)| *symbol).collect();
+        if witness.strings.len() != self.strings.len()
+            || string_symbols.len() != self.strings.len()
+            || witness.integers.len() != self.integers.len()
+            || integer_symbols.len() != self.integers.len()
+        {
+            return false;
+        }
+        let Some(string_values) = self
+            .strings
+            .iter()
+            .map(|var| {
+                witness
+                    .strings
+                    .iter()
+                    .find(|(symbol, _)| *symbol == var.symbol)
+                    .map(|(_, value)| value.clone())
+            })
+            .collect::<Option<Vec<_>>>()
+        else {
+            return false;
+        };
+        let Some(int_values) = self
+            .integers
+            .iter()
+            .map(|var| {
+                witness
+                    .integers
+                    .iter()
+                    .find(|(symbol, _)| *symbol == var.symbol)
+                    .map(|(_, value)| *value)
+            })
+            .collect::<Option<Vec<_>>>()
+        else {
+            return false;
+        };
+        self.assertions.iter().all(|assertion| {
+            self.eval(assertion, &string_values, &int_values, 0) == Some(SourceValue::Bool(true))
+        })
+    }
+}
+
+impl SourceStringSatProblem {
+    #[allow(clippy::too_many_lines)] // Keep the exact operator table together for semantic audit.
+    fn eval(
+        &self,
+        expression: &SExpr,
+        strings: &[Vec<u32>],
+        integers: &[i128],
+        depth: u32,
+    ) -> Option<SourceValue> {
+        if depth > 256 {
+            return None;
+        }
+        if let Some(atom) = expression.atom() {
+            return self.eval_atom(atom, strings, integers);
+        }
+        let items = expression.list()?;
+        let head = items.first().and_then(SExpr::atom)?;
+        let next = depth + 1;
+        match head {
+            "!" if items.len() >= 2 => self.eval(&items[1], strings, integers, next),
+            "not" if items.len() == 2 => Some(SourceValue::Bool(!source_bool(
+                self.eval(&items[1], strings, integers, next)?,
+            )?)),
+            "and" => {
+                let mut value = true;
+                for item in &items[1..] {
+                    value &= source_bool(self.eval(item, strings, integers, next)?)?;
+                }
+                Some(SourceValue::Bool(value))
+            }
+            "or" => {
+                let mut value = false;
+                for item in &items[1..] {
+                    value |= source_bool(self.eval(item, strings, integers, next)?)?;
+                }
+                Some(SourceValue::Bool(value))
+            }
+            "xor" if items.len() >= 3 => {
+                let mut value = false;
+                for item in &items[1..] {
+                    value ^= source_bool(self.eval(item, strings, integers, next)?)?;
+                }
+                Some(SourceValue::Bool(value))
+            }
+            "=>" if items.len() >= 3 => {
+                let mut value = source_bool(self.eval(items.last()?, strings, integers, next)?)?;
+                for item in items[1..items.len() - 1].iter().rev() {
+                    let antecedent = source_bool(self.eval(item, strings, integers, next)?)?;
+                    value = !antecedent || value;
+                }
+                Some(SourceValue::Bool(value))
+            }
+            "ite" if items.len() == 4 => {
+                let condition = source_bool(self.eval(&items[1], strings, integers, next)?)?;
+                let when_true = self.eval(&items[2], strings, integers, next)?;
+                let when_false = self.eval(&items[3], strings, integers, next)?;
+                source_values_same_sort(&when_true, &when_false).then_some(if condition {
+                    when_true
+                } else {
+                    when_false
+                })
+            }
+            "=" if items.len() >= 3 => {
+                let values = items[1..]
+                    .iter()
+                    .map(|item| self.eval(item, strings, integers, next))
+                    .collect::<Option<Vec<_>>>()?;
+                let first = values.first()?;
+                Some(SourceValue::Bool(
+                    values[1..].iter().all(|value| value == first),
+                ))
+            }
+            "distinct" if items.len() >= 3 => {
+                let values = items[1..]
+                    .iter()
+                    .map(|item| self.eval(item, strings, integers, next))
+                    .collect::<Option<Vec<_>>>()?;
+                for left in 0..values.len() {
+                    if values[left + 1..].contains(&values[left]) {
+                        return Some(SourceValue::Bool(false));
+                    }
+                }
+                Some(SourceValue::Bool(true))
+            }
+            "+" if items.len() >= 2 => {
+                let mut sum = 0i128;
+                for item in &items[1..] {
+                    sum =
+                        sum.checked_add(source_int(self.eval(item, strings, integers, next)?)?)?;
+                }
+                Some(SourceValue::Int(sum))
+            }
+            "-" if items.len() >= 2 => {
+                let first = source_int(self.eval(&items[1], strings, integers, next)?)?;
+                if items.len() == 2 {
+                    Some(SourceValue::Int(first.checked_neg()?))
+                } else {
+                    let mut value = first;
+                    for item in &items[2..] {
+                        value = value
+                            .checked_sub(source_int(self.eval(item, strings, integers, next)?)?)?;
+                    }
+                    Some(SourceValue::Int(value))
+                }
+            }
+            "*" if items.len() >= 2 => {
+                let mut product = 1i128;
+                for item in &items[1..] {
+                    product = product
+                        .checked_mul(source_int(self.eval(item, strings, integers, next)?)?)?;
+                }
+                Some(SourceValue::Int(product))
+            }
+            "<" | "<=" | ">" | ">=" if items.len() >= 3 => {
+                let values = items[1..]
+                    .iter()
+                    .map(|item| source_int(self.eval(item, strings, integers, next)?))
+                    .collect::<Option<Vec<_>>>()?;
+                let holds = values.windows(2).all(|pair| match head {
+                    "<" => pair[0] < pair[1],
+                    "<=" => pair[0] <= pair[1],
+                    ">" => pair[0] > pair[1],
+                    _ => pair[0] >= pair[1],
+                });
+                Some(SourceValue::Bool(holds))
+            }
+            "str.++" if items.len() >= 2 => {
+                let mut value = Vec::new();
+                for item in &items[1..] {
+                    value.extend(source_string(self.eval(item, strings, integers, next)?)?);
+                }
+                Some(SourceValue::String(value))
+            }
+            "str.len" if items.len() == 2 => {
+                let value = source_string(self.eval(&items[1], strings, integers, next)?)?;
+                Some(SourceValue::Int(i128::try_from(value.len()).ok()?))
+            }
+            "str.contains" if items.len() == 3 => {
+                let haystack = source_string(self.eval(&items[1], strings, integers, next)?)?;
+                let needle = source_string(self.eval(&items[2], strings, integers, next)?)?;
+                Some(SourceValue::Bool(
+                    first_occurrence(&haystack, &needle).is_some(),
+                ))
+            }
+            "str.prefixof" if items.len() == 3 => {
+                let prefix = source_string(self.eval(&items[1], strings, integers, next)?)?;
+                let word = source_string(self.eval(&items[2], strings, integers, next)?)?;
+                Some(SourceValue::Bool(word.starts_with(&prefix)))
+            }
+            "str.suffixof" if items.len() == 3 => {
+                let suffix = source_string(self.eval(&items[1], strings, integers, next)?)?;
+                let word = source_string(self.eval(&items[2], strings, integers, next)?)?;
+                Some(SourceValue::Bool(word.ends_with(&suffix)))
+            }
+            "str.replace" if items.len() == 4 => {
+                let haystack = source_string(self.eval(&items[1], strings, integers, next)?)?;
+                let needle = source_string(self.eval(&items[2], strings, integers, next)?)?;
+                let replacement = source_string(self.eval(&items[3], strings, integers, next)?)?;
+                Some(SourceValue::String(source_replace(
+                    &haystack,
+                    &needle,
+                    &replacement,
+                )))
+            }
+            "str.substr" if items.len() == 4 => {
+                let word = source_string(self.eval(&items[1], strings, integers, next)?)?;
+                let offset = source_int(self.eval(&items[2], strings, integers, next)?)?;
+                let len = source_int(self.eval(&items[3], strings, integers, next)?)?;
+                Some(SourceValue::String(substr_code_points(&word, offset, len)))
+            }
+            "str.at" if items.len() == 3 => {
+                let word = source_string(self.eval(&items[1], strings, integers, next)?)?;
+                let index = source_int(self.eval(&items[2], strings, integers, next)?)?;
+                let value = usize::try_from(index)
+                    .ok()
+                    .and_then(|index| word.get(index).copied())
+                    .into_iter()
+                    .collect();
+                Some(SourceValue::String(value))
+            }
+            "str.indexof" if items.len() == 4 => {
+                let word = source_string(self.eval(&items[1], strings, integers, next)?)?;
+                let needle = source_string(self.eval(&items[2], strings, integers, next)?)?;
+                let offset = source_int(self.eval(&items[3], strings, integers, next)?)?;
+                Some(SourceValue::Int(source_indexof(&word, &needle, offset)))
+            }
+            "str.from_int" if items.len() == 2 => {
+                let value = source_int(self.eval(&items[1], strings, integers, next)?)?;
+                Some(SourceValue::String(decimal_code_points(value)))
+            }
+            "str.to_int" if items.len() == 2 => {
+                let value = source_string(self.eval(&items[1], strings, integers, next)?)?;
+                Some(SourceValue::Int(to_int_of_code_points(&value)?))
+            }
+            "str.to_code" if items.len() == 2 => {
+                let value = source_string(self.eval(&items[1], strings, integers, next)?)?;
+                Some(SourceValue::Int(if value.len() == 1 {
+                    i128::from(value[0])
+                } else {
+                    -1
+                }))
+            }
+            "str.from_code" if items.len() == 2 => {
+                let value = source_int(self.eval(&items[1], strings, integers, next)?)?;
+                let word = u32::try_from(value)
+                    .ok()
+                    .filter(|&code_point| code_point <= 0x2ffff)
+                    .into_iter()
+                    .collect();
+                Some(SourceValue::String(word))
+            }
+            "str.is_digit" if items.len() == 2 => {
+                let value = source_string(self.eval(&items[1], strings, integers, next)?)?;
+                Some(SourceValue::Bool(
+                    value.len() == 1 && (u32::from(b'0')..=u32::from(b'9')).contains(&value[0]),
+                ))
+            }
+            "str.<" | "str.<=" if items.len() == 3 => {
+                let left = source_string(self.eval(&items[1], strings, integers, next)?)?;
+                let right = source_string(self.eval(&items[2], strings, integers, next)?)?;
+                Some(SourceValue::Bool(if head == "str.<" {
+                    left < right
+                } else {
+                    left <= right
+                }))
+            }
+            _ => None,
+        }
+    }
+
+    fn eval_atom(
+        &self,
+        atom: &str,
+        strings: &[Vec<u32>],
+        integers: &[i128],
+    ) -> Option<SourceValue> {
+        match atom {
+            "true" => return Some(SourceValue::Bool(true)),
+            "false" => return Some(SourceValue::Bool(false)),
+            _ => {}
+        }
+        if atom.len() >= 2 && atom.starts_with('"') && atom.ends_with('"') {
+            let inner = atom[1..atom.len() - 1].replace("\"\"", "\"");
+            return decode_string_code_points(&inner).map(SourceValue::String);
+        }
+        if let Ok(value) = atom.parse::<i128>() {
+            return Some(SourceValue::Int(value));
+        }
+        if let Some(index) = self.strings.iter().position(|var| var.name == atom) {
+            return Some(SourceValue::String(strings.get(index)?.clone()));
+        }
+        if let Some(index) = self.integers.iter().position(|var| var.name == atom) {
+            return Some(SourceValue::Int(*integers.get(index)?));
+        }
+        None
+    }
+}
+
+#[allow(clippy::needless_pass_by_value)] // Consume the tagged value at the sort boundary.
+fn source_bool(value: SourceValue) -> Option<bool> {
+    let SourceValue::Bool(value) = value else {
+        return None;
+    };
+    Some(value)
+}
+
+#[allow(clippy::needless_pass_by_value)] // Consume the tagged value at the sort boundary.
+fn source_int(value: SourceValue) -> Option<i128> {
+    let SourceValue::Int(value) = value else {
+        return None;
+    };
+    Some(value)
+}
+
+fn source_string(value: SourceValue) -> Option<Vec<u32>> {
+    let SourceValue::String(value) = value else {
+        return None;
+    };
+    Some(value)
+}
+
+fn source_values_same_sort(left: &SourceValue, right: &SourceValue) -> bool {
+    matches!(
+        (left, right),
+        (SourceValue::Bool(_), SourceValue::Bool(_))
+            | (SourceValue::Int(_), SourceValue::Int(_))
+            | (SourceValue::String(_), SourceValue::String(_))
+    )
+}
+
+fn source_word_candidates(
+    literals: &[Vec<u32>],
+    alphabet: &[u32],
+    max_word_len: usize,
+) -> Vec<Vec<u32>> {
+    let mut words = BTreeSet::new();
+    words.insert(Vec::new());
+    words.extend(literals.iter().cloned());
+    let max_word_len = max_word_len.min(8);
+    for len in 1..=max_word_len {
+        let Some(count) = alphabet
+            .len()
+            .checked_pow(u32::try_from(len).unwrap_or(u32::MAX))
+        else {
+            break;
+        };
+        for ordinal in 0..count {
+            let mut digits = ordinal;
+            let mut word = vec![0; len];
+            for code_point in &mut word {
+                *code_point = alphabet[digits % alphabet.len()];
+                digits /= alphabet.len();
+            }
+            words.insert(word);
+        }
+    }
+    let mut words: Vec<Vec<u32>> = words.into_iter().collect();
+    words.sort_by(|left, right| left.len().cmp(&right.len()).then(left.cmp(right)));
+    words
+}
+
+fn source_int_candidates() -> Vec<i128> {
+    let mut values = vec![0, 1, -1];
+    values.extend(2..=16);
+    values
+}
+
+fn source_replace(haystack: &[u32], needle: &[u32], replacement: &[u32]) -> Vec<u32> {
+    let Some(index) = first_occurrence(haystack, needle) else {
+        return haystack.to_vec();
+    };
+    let mut value = Vec::with_capacity(
+        haystack
+            .len()
+            .saturating_sub(needle.len())
+            .saturating_add(replacement.len()),
+    );
+    value.extend_from_slice(&haystack[..index]);
+    value.extend_from_slice(replacement);
+    value.extend_from_slice(&haystack[index + needle.len()..]);
+    value
+}
+
+fn source_indexof(word: &[u32], needle: &[u32], offset: i128) -> i128 {
+    let Ok(offset) = usize::try_from(offset) else {
+        return -1;
+    };
+    if offset > word.len() {
+        return -1;
+    }
+    let Some(relative) = first_occurrence(&word[offset..], needle) else {
+        return -1;
+    };
+    i128::try_from(offset + relative).unwrap_or(-1)
 }
 
 /// Whether the bounded parser failed only because a represented string/sequence
@@ -9356,7 +10050,13 @@ fn exact_rewrite_term(expression: &SExpr, depth: u32) -> ExactRewriteTerm {
     let Some(head) = items.first().and_then(SExpr::atom) else {
         return ExactRewriteTerm::Opaque(expression.clone());
     };
+    if let Some(rewritten) = exact_rewrite_first_occurrence_algebra_view(items, depth + 1) {
+        return rewritten;
+    }
     if let Some(rewritten) = exact_rewrite_self_replacement_view(items, depth + 1) {
+        return rewritten;
+    }
+    if let Some(rewritten) = exact_rewrite_substring_index_view(items, depth + 1) {
         return rewritten;
     }
     if let Some(rewritten) = exact_rewrite_head_totality_view(items, depth + 1) {
@@ -9411,6 +10111,551 @@ fn exact_rewrite_self_replacement_view(items: &[SExpr], depth: u32) -> Option<Ex
         ];
         args[replacement_index - 1] = subject;
         return Some(exact_rewrite_app(head, args.into()));
+    }
+    None
+}
+
+fn exact_raw_app<'a>(expression: &'a SExpr, head: &str, arity: usize) -> Option<&'a [SExpr]> {
+    let items = expression.list()?;
+    (items.len() == arity + 1 && items[0].atom() == Some(head)).then_some(&items[1..])
+}
+
+fn exact_raw_terms_equal(left: &SExpr, right: &SExpr, depth: u32) -> bool {
+    exact_rewrite_term(left, depth) == exact_rewrite_term(right, depth)
+}
+
+fn exact_raw_is_empty(expression: &SExpr, depth: u32) -> bool {
+    matches!(exact_rewrite_term(expression, depth), ExactRewriteTerm::String(word) if word.is_empty())
+}
+
+fn exact_raw_is_int_zero(expression: &SExpr, depth: u32) -> bool {
+    exact_rewrite_term(expression, depth) == ExactRewriteTerm::Int(0)
+}
+
+fn exact_raw_is_one_code_point(expression: &SExpr, depth: u32) -> bool {
+    let term = exact_rewrite_term(expression, depth);
+    exact_string_min_len(&term, 0) == Some(1) && exact_string_max_len(&term, 0) == Some(1)
+}
+
+fn exact_raw_are_distinct_code_points(left: &SExpr, right: &SExpr, depth: u32) -> bool {
+    let left = exact_rewrite_term(left, depth);
+    let right = exact_rewrite_term(right, depth);
+    exact_string_min_len(&left, 0) == Some(1)
+        && exact_string_max_len(&left, 0) == Some(1)
+        && exact_string_min_len(&right, 0) == Some(1)
+        && exact_string_max_len(&right, 0) == Some(1)
+        && exact_string_alphabets_disjoint(&left, &right)
+}
+
+fn exact_empty_subject_replace_commutes(left: &SExpr, right: &SExpr, depth: u32) -> bool {
+    let Some(left_concat) = exact_raw_app(left, "str.++", 2) else {
+        return false;
+    };
+    let Some(right_concat) = exact_raw_app(right, "str.++", 2) else {
+        return false;
+    };
+    if !exact_raw_terms_equal(&left_concat[0], &right_concat[1], depth)
+        || !exact_raw_terms_equal(&left_concat[1], &right_concat[0], depth)
+    {
+        return false;
+    }
+    for (replacement, peer) in [
+        (&left_concat[0], &left_concat[1]),
+        (&left_concat[1], &left_concat[0]),
+    ] {
+        let Some(args) = exact_raw_app(replacement, "str.replace", 3) else {
+            continue;
+        };
+        if exact_raw_is_empty(&args[0], depth)
+            && (exact_raw_terms_equal(peer, &args[1], depth)
+                || exact_raw_terms_equal(peer, &args[2], depth))
+        {
+            return true;
+        }
+    }
+    false
+}
+
+fn exact_replace_restores_subject(left: &SExpr, right: &SExpr, depth: u32) -> bool {
+    let Some(outer) = exact_raw_app(left, "str.replace", 3) else {
+        return false;
+    };
+    let Some(inner) = exact_raw_app(&outer[2], "str.replace", 3) else {
+        return false;
+    };
+    exact_raw_terms_equal(&outer[0], right, depth)
+        && exact_raw_terms_equal(&inner[0], &outer[1], depth)
+        && exact_raw_terms_equal(&inner[1], &outer[0], depth)
+        && exact_raw_terms_equal(&inner[2], &outer[1], depth)
+}
+
+fn exact_conjugate_replace_identity(left: &SExpr, right: &SExpr, depth: u32) -> bool {
+    let (Some(left), Some(right)) = (
+        exact_raw_app(left, "str.replace", 3),
+        exact_raw_app(right, "str.replace", 3),
+    ) else {
+        return false;
+    };
+    let (Some(left_needle), Some(right_needle)) = (
+        exact_raw_app(&left[1], "str.replace", 3),
+        exact_raw_app(&right[1], "str.replace", 3),
+    ) else {
+        return false;
+    };
+    exact_raw_terms_equal(&left[0], &right[0], depth)
+        && exact_raw_is_one_code_point(&left[2], depth)
+        && exact_raw_terms_equal(&left_needle[0], &left[2], depth)
+        && exact_raw_terms_equal(&left_needle[1], &right[2], depth)
+        && exact_raw_terms_equal(&left_needle[2], &left[0], depth)
+        && exact_raw_terms_equal(&right_needle[0], &right[2], depth)
+        && exact_raw_terms_equal(&right_needle[1], &left[2], depth)
+        && exact_raw_terms_equal(&right_needle[2], &left[0], depth)
+}
+
+fn exact_singleton_replace_commutes_with_prefix(left: &SExpr, right: &SExpr, depth: u32) -> bool {
+    let Some(left) = exact_raw_app(left, "str.replace", 3) else {
+        return false;
+    };
+    let Some(left_prefix) = exact_raw_app(&left[0], "str.substr", 3) else {
+        return false;
+    };
+    let Some(right) = exact_raw_app(right, "str.substr", 3) else {
+        return false;
+    };
+    let Some(right_source) = exact_raw_app(&right[0], "str.replace", 3) else {
+        return false;
+    };
+    exact_raw_is_one_code_point(&left[1], depth)
+        && exact_raw_is_one_code_point(&left[2], depth)
+        && exact_raw_terms_equal(&left_prefix[0], &right_source[0], depth)
+        && exact_raw_is_int_zero(&left_prefix[1], depth)
+        && exact_raw_is_int_zero(&right[1], depth)
+        && exact_raw_terms_equal(&left_prefix[2], &right[2], depth)
+        && exact_raw_terms_equal(&left[1], &right_source[1], depth)
+        && exact_raw_terms_equal(&left[2], &right_source[2], depth)
+}
+
+fn exact_prefixed_whole_source_replace(left: &SExpr, right: &SExpr, depth: u32) -> bool {
+    let Some(left) = exact_raw_app(left, "str.replace", 3) else {
+        return false;
+    };
+    let Some(source) = exact_raw_app(&left[0], "str.++", 2) else {
+        return false;
+    };
+    if !exact_raw_is_one_code_point(&source[0], depth)
+        || !exact_raw_terms_equal(&source[1], &left[1], depth)
+    {
+        return false;
+    }
+    let code_point = exact_rewrite_term(&source[0], depth);
+    let replacement = exact_rewrite_term(&left[2], depth);
+    let expected = if exact_raw_is_empty(&left[2], depth) {
+        code_point
+    } else if replacement == code_point {
+        exact_rewrite_app("str.++", vec![code_point.clone(), code_point])
+    } else {
+        return false;
+    };
+    exact_rewrite_term(right, depth) == expected
+}
+
+fn exact_nested_self_replace_identity(left: &SExpr, right: &SExpr, depth: u32) -> bool {
+    let (Some(left), Some(right)) = (
+        exact_raw_app(left, "str.replace", 3),
+        exact_raw_app(right, "str.replace", 3),
+    ) else {
+        return false;
+    };
+    let Some(left_source) = exact_raw_app(&left[0], "str.replace", 3) else {
+        return false;
+    };
+    let Some(right_needle) = exact_raw_app(&right[1], "str.replace", 3) else {
+        return false;
+    };
+    exact_raw_terms_equal(&left_source[0], &right[0], depth)
+        && exact_raw_terms_equal(&left_source[1], &left[2], depth)
+        && exact_raw_terms_equal(&left_source[2], &right[0], depth)
+        && exact_raw_terms_equal(&left[1], &right[0], depth)
+        && exact_raw_terms_equal(&right_needle[0], &right[0], depth)
+        && exact_raw_terms_equal(&right_needle[1], &left[2], depth)
+        && exact_raw_terms_equal(&right_needle[2], &right[0], depth)
+        && exact_raw_terms_equal(&right[2], &left[2], depth)
+}
+
+fn exact_singleton_self_expansion_identity(left: &SExpr, right: &SExpr, depth: u32) -> bool {
+    let (Some(left), Some(right)) = (
+        exact_raw_app(left, "str.replace", 3),
+        exact_raw_app(right, "str.replace", 3),
+    ) else {
+        return false;
+    };
+    let Some(left_source) = exact_raw_app(&left[0], "str.replace", 3) else {
+        return false;
+    };
+    let Some(right_replacement) = exact_raw_app(&right[2], "str.replace", 3) else {
+        return false;
+    };
+    exact_raw_is_one_code_point(&left[1], depth)
+        && exact_raw_terms_equal(&left_source[0], &right[0], depth)
+        && exact_raw_terms_equal(&left_source[1], &left[1], depth)
+        && exact_raw_terms_equal(&left_source[2], &right[0], depth)
+        && exact_raw_terms_equal(&right[1], &left[1], depth)
+        && exact_raw_terms_equal(&right_replacement[0], &right[0], depth)
+        && exact_raw_terms_equal(&right_replacement[1], &left[1], depth)
+        && exact_raw_terms_equal(&right_replacement[2], &left[2], depth)
+}
+
+fn exact_singleton_outer_source_identity(left: &SExpr, right: &SExpr, depth: u32) -> bool {
+    let (Some(left), Some(right)) = (
+        exact_raw_app(left, "str.replace", 3),
+        exact_raw_app(right, "str.replace", 3),
+    ) else {
+        return false;
+    };
+    let (Some(left_source), Some(right_source)) = (
+        exact_raw_app(&left[0], "str.replace", 3),
+        exact_raw_app(&right[0], "str.replace", 3),
+    ) else {
+        return false;
+    };
+    if !exact_raw_is_one_code_point(&left_source[1], depth)
+        || !exact_raw_terms_equal(&left_source[0], &right_source[0], depth)
+        || !exact_raw_terms_equal(&left_source[1], &right_source[1], depth)
+        || !exact_raw_terms_equal(&left[1], &right[1], depth)
+        || !exact_raw_terms_equal(&left[2], &right[2], depth)
+        || !exact_raw_terms_equal(&left_source[0], &left[1], depth)
+        || !exact_raw_terms_equal(&right_source[2], &right_source[0], depth)
+    {
+        return false;
+    }
+    let replacement_is_empty = exact_raw_is_empty(&left_source[2], depth);
+    let replacement_is_distinct =
+        exact_raw_are_distinct_code_points(&left_source[1], &left_source[2], depth);
+    replacement_is_empty || replacement_is_distinct
+}
+
+fn exact_distinct_singleton_deletions_commute(left: &SExpr, right: &SExpr, depth: u32) -> bool {
+    let (Some(left), Some(right)) = (
+        exact_raw_app(left, "str.replace", 3),
+        exact_raw_app(right, "str.replace", 3),
+    ) else {
+        return false;
+    };
+    let (Some(left_source), Some(right_source)) = (
+        exact_raw_app(&left[0], "str.replace", 3),
+        exact_raw_app(&right[0], "str.replace", 3),
+    ) else {
+        return false;
+    };
+    exact_raw_is_empty(&left[2], depth)
+        && exact_raw_is_empty(&right[2], depth)
+        && exact_raw_is_empty(&left_source[2], depth)
+        && exact_raw_is_empty(&right_source[2], depth)
+        && exact_raw_terms_equal(&left_source[0], &right_source[0], depth)
+        && exact_raw_terms_equal(&left_source[1], &right[1], depth)
+        && exact_raw_terms_equal(&right_source[1], &left[1], depth)
+        && exact_raw_are_distinct_code_points(&left[1], &right[1], depth)
+}
+
+fn exact_singleton_subject_replace_composition(left: &SExpr, right: &SExpr, depth: u32) -> bool {
+    let Some(left) = exact_raw_app(left, "str.replace", 3) else {
+        return false;
+    };
+    let Some(inner) = exact_raw_app(&left[0], "str.replace", 3) else {
+        return false;
+    };
+    if !exact_raw_is_one_code_point(&inner[0], depth)
+        || !exact_raw_is_one_code_point(&inner[2], depth)
+        || !exact_raw_terms_equal(&left[1], &inner[2], depth)
+    {
+        return false;
+    }
+    let subject = exact_rewrite_term(&inner[0], depth);
+    let needle = exact_rewrite_term(&inner[1], depth);
+    let replacement = exact_rewrite_term(&inner[2], depth);
+    let outer_replacement = exact_rewrite_term(&left[2], depth);
+    let expected = if subject == replacement {
+        exact_rewrite_app(
+            "str.++",
+            vec![
+                outer_replacement,
+                exact_rewrite_app(
+                    "str.replace",
+                    vec![ExactRewriteTerm::String(Vec::new()), needle, subject],
+                ),
+            ],
+        )
+    } else if exact_string_alphabets_disjoint(&subject, &replacement) {
+        exact_rewrite_app("str.replace", vec![subject, needle, outer_replacement])
+    } else {
+        return false;
+    };
+    exact_rewrite_term(right, depth) == expected
+}
+
+fn exact_boundary_commutation_identity(left: &SExpr, right: &SExpr, depth: u32) -> bool {
+    let (Some(prefix), Some(suffix)) = (
+        exact_raw_app(left, "str.prefixof", 2),
+        exact_raw_app(right, "str.suffixof", 2),
+    ) else {
+        return false;
+    };
+    let (Some(prefix_subject), Some(suffix_subject)) = (
+        exact_raw_app(&prefix[1], "str.++", 2),
+        exact_raw_app(&suffix[1], "str.++", 2),
+    ) else {
+        return false;
+    };
+    exact_raw_terms_equal(&prefix[0], &suffix[0], depth)
+        && exact_raw_is_one_code_point(&prefix_subject[0], depth)
+        && exact_raw_terms_equal(&prefix_subject[0], &suffix_subject[1], depth)
+        && exact_raw_terms_equal(&prefix_subject[1], &prefix[0], depth)
+        && exact_raw_terms_equal(&suffix_subject[0], &suffix[0], depth)
+}
+
+fn exact_replaced_source_occurrence_identity(left: &SExpr, right: &SExpr, depth: u32) -> bool {
+    let (Some(contains), Some(suffix)) = (
+        exact_raw_app(left, "str.contains", 2),
+        exact_raw_app(right, "str.suffixof", 2),
+    ) else {
+        return false;
+    };
+    let Some(replace) = exact_raw_app(&contains[0], "str.replace", 3) else {
+        return false;
+    };
+    exact_raw_is_one_code_point(&replace[2], depth)
+        && exact_raw_terms_equal(&contains[0], &suffix[1], depth)
+        && exact_raw_terms_equal(&contains[1], &replace[0], depth)
+        && exact_raw_terms_equal(&suffix[0], &replace[0], depth)
+}
+
+fn exact_distinct_insertion_preserves_contains(left: &SExpr, right: &SExpr, depth: u32) -> bool {
+    let (Some(left), Some(right)) = (
+        exact_raw_app(left, "str.contains", 2),
+        exact_raw_app(right, "str.contains", 2),
+    ) else {
+        return false;
+    };
+    let (Some(deletion), Some(insertion)) = (
+        exact_raw_app(&left[0], "str.replace", 3),
+        exact_raw_app(&right[0], "str.replace", 3),
+    ) else {
+        return false;
+    };
+    exact_raw_is_empty(&deletion[2], depth)
+        && exact_raw_terms_equal(&deletion[0], &insertion[0], depth)
+        && exact_raw_terms_equal(&deletion[1], &insertion[1], depth)
+        && exact_raw_terms_equal(&left[1], &right[1], depth)
+        && exact_raw_are_distinct_code_points(&left[1], &insertion[2], depth)
+}
+
+fn exact_exchanged_contains_identity(left: &SExpr, right: &SExpr, depth: u32) -> bool {
+    let (Some(left), Some(right)) = (
+        exact_raw_app(left, "str.contains", 2),
+        exact_raw_app(right, "str.contains", 2),
+    ) else {
+        return false;
+    };
+    let (Some(left_replace), Some(right_replace)) = (
+        exact_raw_app(&left[0], "str.replace", 3),
+        exact_raw_app(&right[0], "str.replace", 3),
+    ) else {
+        return false;
+    };
+    exact_raw_is_one_code_point(&left_replace[1], depth)
+        && exact_raw_terms_equal(&left_replace[0], &right_replace[0], depth)
+        && exact_raw_terms_equal(&left_replace[1], &right_replace[2], depth)
+        && exact_raw_terms_equal(&left_replace[2], &right_replace[1], depth)
+        && exact_raw_terms_equal(&left[1], &left_replace[2], depth)
+        && exact_raw_terms_equal(&right[1], &left_replace[1], depth)
+}
+
+fn exact_delete_suffix_self_expand_prefix_identity(
+    left: &SExpr,
+    right: &SExpr,
+    depth: u32,
+) -> bool {
+    let (Some(suffix), Some(prefix)) = (
+        exact_raw_app(left, "str.suffixof", 2),
+        exact_raw_app(right, "str.prefixof", 2),
+    ) else {
+        return false;
+    };
+    let (Some(deletion), Some(expansion)) = (
+        exact_raw_app(&suffix[0], "str.replace", 3),
+        exact_raw_app(&prefix[1], "str.replace", 3),
+    ) else {
+        return false;
+    };
+    exact_raw_is_one_code_point(&deletion[1], depth)
+        && exact_raw_is_empty(&deletion[2], depth)
+        && exact_raw_terms_equal(&deletion[0], &suffix[1], depth)
+        && exact_raw_terms_equal(&deletion[0], &prefix[0], depth)
+        && exact_raw_terms_equal(&deletion[0], &expansion[0], depth)
+        && exact_raw_terms_equal(&deletion[1], &expansion[1], depth)
+        && exact_raw_terms_equal(&expansion[0], &expansion[2], depth)
+}
+
+fn exact_first_occurrence_algebra_equal(left: &SExpr, right: &SExpr, depth: u32) -> bool {
+    exact_empty_subject_replace_commutes(left, right, depth)
+        || exact_replace_restores_subject(left, right, depth)
+        || exact_conjugate_replace_identity(left, right, depth)
+        || exact_singleton_replace_commutes_with_prefix(left, right, depth)
+        || exact_prefixed_whole_source_replace(left, right, depth)
+        || exact_nested_self_replace_identity(left, right, depth)
+        || exact_singleton_self_expansion_identity(left, right, depth)
+        || exact_singleton_outer_source_identity(left, right, depth)
+        || exact_distinct_singleton_deletions_commute(left, right, depth)
+        || exact_singleton_subject_replace_composition(left, right, depth)
+        || exact_boundary_commutation_identity(left, right, depth)
+        || exact_replaced_source_occurrence_identity(left, right, depth)
+        || exact_distinct_insertion_preserves_contains(left, right, depth)
+        || exact_exchanged_contains_identity(left, right, depth)
+        || exact_delete_suffix_self_expand_prefix_identity(left, right, depth)
+}
+
+/// Proves exact first-occurrence replacement algebra before nested replacements
+/// expand into unrelated conditional trees. Every accepted schema is valid for
+/// unbounded SMT-LIB strings; nearby non-identities remain structural.
+fn exact_rewrite_first_occurrence_algebra_view(
+    items: &[SExpr],
+    depth: u32,
+) -> Option<ExactRewriteTerm> {
+    if items.first()?.atom() != Some("=") || items.len() != 3 {
+        return None;
+    }
+    (exact_first_occurrence_algebra_equal(&items[1], &items[2], depth)
+        || exact_first_occurrence_algebra_equal(&items[2], &items[1], depth))
+    .then_some(ExactRewriteTerm::Bool(true))
+}
+
+fn exact_rewrite_head_at_selected_integer(
+    subject: ExactRewriteTerm,
+    selector: ExactRewriteTerm,
+    selected: i128,
+) -> ExactRewriteTerm {
+    exact_rewrite_app(
+        "ite",
+        vec![
+            exact_rewrite_app("=", vec![selector, ExactRewriteTerm::Int(selected)]),
+            exact_rewrite_app("str.at", vec![subject, ExactRewriteTerm::Int(0)]),
+            ExactRewriteTerm::String(Vec::new()),
+        ],
+    )
+}
+
+fn exact_rewrite_correlated_at_view(items: &[SExpr], depth: u32) -> Option<ExactRewriteTerm> {
+    use ExactRewriteTerm::{Int, String};
+
+    if items.first()?.atom() != Some("str.at") || items.len() != 3 {
+        return None;
+    }
+    if let Some(inner) = items[1].list()
+        && inner.len() == 3
+        && inner[0].atom() == Some("str.at")
+    {
+        let inner_subject = exact_rewrite_term(&inner[1], depth);
+        let inner_index = exact_rewrite_term(&inner[2], depth);
+        let outer_index = exact_rewrite_term(&items[2], depth);
+        if inner_index == outer_index {
+            return Some(exact_rewrite_head_at_selected_integer(
+                inner_subject,
+                outer_index,
+                0,
+            ));
+        }
+        return Some(exact_rewrite_app(
+            "ite",
+            vec![
+                exact_rewrite_app("=", vec![outer_index, Int(0)]),
+                exact_rewrite_app("str.at", vec![inner_subject, inner_index]),
+                String(Vec::new()),
+            ],
+        ));
+    }
+    let indexof = items[2].list()?;
+    if indexof.len() == 4 && indexof[0].atom() == Some("str.indexof") && indexof[1] == indexof[2] {
+        return Some(exact_rewrite_head_at_selected_integer(
+            exact_rewrite_term(&items[1], depth),
+            exact_rewrite_term(&indexof[3], depth),
+            0,
+        ));
+    }
+    None
+}
+
+/// Canonicalizes correlated substring/index views before their shared raw
+/// operands can normalize along different paths. These are unbounded SMT-LIB
+/// total-function identities: every exceptional offset/length case is retained
+/// explicitly in the resulting `ite` rather than inferred from a finite bound.
+fn exact_rewrite_substring_index_view(items: &[SExpr], depth: u32) -> Option<ExactRewriteTerm> {
+    use ExactRewriteTerm::{Int, String};
+
+    let head = items.first()?.atom()?;
+    let one_minus = |term: &ExactRewriteTerm, variable: &ExactRewriteTerm| {
+        matches!(term, ExactRewriteTerm::App(operator, args)
+            if operator == "-"
+                && matches!(args.as_slice(), [Int(1), candidate] if candidate == variable))
+    };
+    let one_code_point = |term: &ExactRewriteTerm| {
+        exact_string_min_len(term, 0) == Some(1) && exact_string_max_len(term, 0) == Some(1)
+    };
+    if head == "str.at" {
+        return exact_rewrite_correlated_at_view(items, depth);
+    }
+    if head != "str.substr" || items.len() != 4 {
+        return None;
+    }
+
+    let subject = exact_rewrite_term(&items[1], depth);
+    let offset = exact_rewrite_term(&items[2], depth);
+    let length = exact_rewrite_term(&items[3], depth);
+
+    // `substr(s,z,1-z)` is nonempty only at z=0, where it is `at(s,0)`.
+    if one_minus(&length, &offset) {
+        return Some(exact_rewrite_head_at_selected_integer(subject, offset, 0));
+    }
+    // `substr(s,1-z,z)` is nonempty only at z=1, where it is `at(s,0)`.
+    if one_minus(&offset, &length) {
+        return Some(exact_rewrite_head_at_selected_integer(subject, length, 1));
+    }
+
+    // Dropping one code point from a symbolic prefix of length n leaves the
+    // source slice starting at one with length n-1, including n<=1 totality.
+    if offset == Int(1)
+        && let Some(inner) = items[1].list()
+        && inner.len() == 4
+        && inner[0].atom() == Some("str.substr")
+        && exact_rewrite_term(&inner[2], depth) == Int(0)
+        && exact_rewrite_term(&inner[3], depth) == length
+    {
+        return Some(exact_rewrite_app(
+            "str.substr",
+            vec![
+                exact_rewrite_term(&inner[1], depth),
+                Int(1),
+                exact_rewrite_app("-", vec![length, Int(1)]),
+            ],
+        ));
+    }
+
+    let indexof = items[3].list()?;
+    if offset != Int(0) || indexof.len() != 4 || indexof[0].atom() != Some("str.indexof") {
+        return None;
+    }
+    let index_subject = exact_rewrite_term(&indexof[1], depth);
+    let needle = exact_rewrite_term(&indexof[2], depth);
+    let start = exact_rewrite_term(&indexof[3], depth);
+
+    // A successful search for the same singleton stored on the left returns a
+    // positive index and witnesses that exact code point at that index.
+    if start == Int(1) && subject == needle && one_code_point(&subject) {
+        return Some(exact_rewrite_app("str.at", vec![index_subject, length]));
+    }
+    // In a one-code-point subject, searching for the empty word yields a
+    // positive substring length exactly at start one.
+    if one_code_point(&index_subject) && matches!(needle, String(word) if word.is_empty()) {
+        return Some(exact_rewrite_head_at_selected_integer(subject, start, 1));
     }
     None
 }
@@ -9971,7 +11216,7 @@ fn exact_rewrite_app(head: &str, args: Vec<ExactRewriteTerm>) -> ExactRewriteTer
         }
         ("str.substr", [subject, App(indexof, index_args), length])
             if indexof == "str.indexof"
-                && matches!(index_args.as_slice(), [index_subject, String(needle), offset]
+                && matches!(index_args.as_slice(), [index_subject, String(needle), _offset]
                     if index_subject == subject && needle.is_empty()) =>
         {
             return exact_rewrite_app(
@@ -17834,17 +19079,77 @@ mod string_escape_tests {
     use std::collections::BTreeSet;
 
     use super::{
-        ExactEqualityFacts, ExactFixedWordLanguage, ExactRewriteTerm, decimal_code_points,
-        decode_string_code_points, eval_pinned_word_semantics, exact_affine_equalities_equal,
-        exact_affine_orderings_equal, exact_affine_zero_forces_nonpositive,
-        exact_affine_zero_forces_positive, exact_from_int_empty_condition, exact_rewrite_app,
-        exact_rewrite_concat_at, exact_rewrite_concat_substr, exact_rewrite_equality,
-        exact_rewrite_fixed_word_language, exact_rewrite_prefix_substr_emptiness,
-        exact_rewrite_replace_preserves_subject, exact_rewrite_replace_singleton_equality,
-        exact_rewrite_small_subject_indexof, exact_rewrite_term, exact_rewrite_under_assignments,
-        replace_first_code_points, source_string_semantic_facts, substr_code_points,
+        ExactEqualityFacts, ExactFixedWordLanguage, ExactRewriteTerm, SourceValue,
+        build_source_string_sat_problem, decimal_code_points, decode_string_code_points,
+        eval_pinned_word_semantics, exact_affine_equalities_equal, exact_affine_orderings_equal,
+        exact_affine_zero_forces_nonpositive, exact_affine_zero_forces_positive,
+        exact_from_int_empty_condition, exact_rewrite_app, exact_rewrite_concat_at,
+        exact_rewrite_concat_substr, exact_rewrite_equality, exact_rewrite_fixed_word_language,
+        exact_rewrite_prefix_substr_emptiness, exact_rewrite_replace_preserves_subject,
+        exact_rewrite_replace_singleton_equality, exact_rewrite_small_subject_indexof,
+        exact_rewrite_term, exact_rewrite_under_assignments, replace_first_code_points,
+        source_string_semantic_facts, substr_code_points,
     };
     use crate::sexpr::{SExpr, read_all};
+    use axeyum_ir::TermArena;
+
+    #[test]
+    fn source_sat_evaluator_matches_reference_string_semantics_exhaustively() {
+        let declarations = read_all(
+            r"(declare-fun x () String)
+(declare-fun y () String)
+(declare-fun z () Int)
+(assert true)
+(check-sat)",
+        )
+        .expect("read source SAT evaluator declarations");
+        let mut arena = TermArena::new();
+        let problem = build_source_string_sat_problem(&mut arena, &declarations)
+            .expect("build source SAT evaluator control");
+        let replace = read_all("(str.replace x y x)")
+            .expect("read replace")
+            .pop()
+            .expect("one replace");
+        let predicate = read_all(
+            "(not (= (str.contains (str.from_int z) x) (str.suffixof x (str.from_int z))))",
+        )
+        .expect("read predicate")
+        .pop()
+        .expect("one predicate");
+
+        let mut words = vec![Vec::new()];
+        for length in 1..=3 {
+            for bits in 0..(1_usize << length) {
+                words.push(
+                    (0..length)
+                        .map(|shift| u32::from(if bits & (1 << shift) == 0 { b'A' } else { b'B' }))
+                        .collect(),
+                );
+            }
+        }
+        for x in &words {
+            for y in &words {
+                assert_eq!(
+                    problem.eval(&replace, &[x.clone(), y.clone()], &[0], 0),
+                    Some(SourceValue::String(replace_first_code_points(x, y, x))),
+                    "x={x:?}, y={y:?}"
+                );
+            }
+        }
+        let decimal_needles = [Vec::new(), vec![u32::from(b'0')], vec![u32::from(b'1')]];
+        for z in -1..=16 {
+            let decimal = decimal_code_points(z);
+            for x in &decimal_needles {
+                let contains = super::first_occurrence(&decimal, x).is_some();
+                let suffix = decimal.ends_with(x);
+                assert_eq!(
+                    problem.eval(&predicate, &[x.clone(), Vec::new()], &[z], 0),
+                    Some(SourceValue::Bool(contains != suffix)),
+                    "x={x:?}, z={z}"
+                );
+            }
+        }
+    }
 
     #[test]
     fn replace_emptiness_matches_reference_semantics_exhaustively() {
@@ -18424,6 +19729,424 @@ mod string_escape_tests {
                 ExactRewriteTerm::Bool(true),
                 "{text}"
             );
+        }
+    }
+
+    #[test]
+    fn correlated_substring_index_views_match_reference_semantics_exhaustively() {
+        let mut words = vec![Vec::new()];
+        for length in 1..=6 {
+            for bits in 0..(1_usize << length) {
+                words.push(
+                    (0..length)
+                        .map(|shift| u32::from(if bits & (1 << shift) == 0 { b'A' } else { b'B' }))
+                        .collect(),
+                );
+            }
+        }
+        let indexof = |subject: &[u32], needle: &[u32], start: i128| {
+            let Ok(start) = usize::try_from(start) else {
+                return -1;
+            };
+            if start > subject.len() {
+                return -1;
+            }
+            if needle.is_empty() {
+                return i128::try_from(start).expect("small start");
+            }
+            subject[start..]
+                .windows(needle.len())
+                .position(|candidate| candidate == needle)
+                .and_then(|position| i128::try_from(start + position).ok())
+                .unwrap_or(-1)
+        };
+        let at = |subject: &[u32], index: i128| substr_code_points(subject, index, 1);
+
+        for subject in &words {
+            for value in -4_i128..=10 {
+                let self_index = indexof(subject, subject, value);
+                assert_eq!(
+                    substr_code_points(subject, value, 1 - value),
+                    at(subject, self_index),
+                    "self index: subject={subject:?}, value={value}"
+                );
+                assert_eq!(
+                    at(&at(subject, 0), value),
+                    if value == 0 {
+                        at(subject, 0)
+                    } else {
+                        Vec::new()
+                    },
+                    "nested at: subject={subject:?}, value={value}"
+                );
+
+                let singleton_empty_index = indexof(&[u32::from(b'A')], &[], value);
+                assert_eq!(
+                    substr_code_points(subject, 1 - value, value),
+                    substr_code_points(subject, 0, singleton_empty_index),
+                    "empty needle: subject={subject:?}, value={value}"
+                );
+
+                assert_eq!(
+                    substr_code_points(&substr_code_points(subject, 0, value), 1, value),
+                    substr_code_points(subject, 1, value - 1),
+                    "nested prefix: subject={subject:?}, value={value}"
+                );
+            }
+            for code_point in [u32::from(b'A'), u32::from(b'B')] {
+                let singleton = [code_point];
+                let index = indexof(subject, &singleton, 1);
+                assert_eq!(
+                    substr_code_points(&singleton, 0, index),
+                    at(subject, index),
+                    "found singleton: subject={subject:?}, code_point={code_point}"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn correlated_substring_index_forms_close_and_near_misses_decline() {
+        for text in [
+            r"(= (str.substr x z (- 1 z)) (str.at x (str.indexof x x z)))",
+            r"(= (str.at (str.at x z) z) (str.at x (str.indexof x x z)))",
+            r"(= (str.at (str.at x 0) z) (str.at x (str.indexof x x z)))",
+            r#"(= (str.substr x (- 1 z) z) (str.substr x 0 (str.indexof "A" "" z)))"#,
+            r#"(= (str.substr "A" 0 (str.indexof x "A" 1))
+                   (str.at x (str.indexof x "A" 1)))"#,
+            r#"(= (str.substr "B" 0 (str.indexof x "B" 1))
+                   (str.at x (str.indexof x "B" 1)))"#,
+            r"(= (str.substr (str.substr x 0 z) 1 z) (str.substr x 1 (- z 1)))",
+        ] {
+            let expression = read_all(text)
+                .expect("read correlated substring/index identity")
+                .pop()
+                .expect("one correlated substring/index identity");
+            assert_eq!(
+                exact_rewrite_term(&expression, 0),
+                ExactRewriteTerm::Bool(true),
+                "{text}"
+            );
+        }
+
+        for text in [
+            r"(= (str.substr x z (- 2 z)) (str.at x (str.indexof x x z)))",
+            r"(= (str.at (str.at x z) (+ z 1)) (str.at x (str.indexof x x z)))",
+            r"(= (str.at (str.at x 1) z) (str.at x (str.indexof x x z)))",
+            r#"(= (str.substr x (- 1 z) z) (str.substr x 0 (str.indexof "AA" "" z)))"#,
+            r#"(= (str.substr "A" 0 (str.indexof x "B" 1))
+                   (str.at x (str.indexof x "B" 1)))"#,
+            r"(= (str.substr (str.substr x 1 z) 1 z) (str.substr x 1 (- z 1)))",
+        ] {
+            let expression = read_all(text)
+                .expect("read correlated substring/index control")
+                .pop()
+                .expect("one correlated substring/index control");
+            assert_ne!(
+                exact_rewrite_term(&expression, 0),
+                ExactRewriteTerm::Bool(true),
+                "{text}"
+            );
+        }
+    }
+
+    fn first_occurrence_algebra_words() -> Vec<Vec<u32>> {
+        let mut words = vec![Vec::new()];
+        for length in 1..=5 {
+            for bits in 0..(1_usize << length) {
+                words.push(
+                    (0..length)
+                        .map(|shift| u32::from(if bits & (1 << shift) == 0 { b'A' } else { b'B' }))
+                        .collect(),
+                );
+            }
+        }
+        words
+    }
+
+    #[test]
+    fn first_occurrence_nested_algebra_matches_reference_semantics_exhaustively() {
+        let words = first_occurrence_algebra_words();
+        let a = vec![u32::from(b'A')];
+        let b = vec![u32::from(b'B')];
+        let empty = Vec::new();
+
+        for x in &words {
+            for y in &words {
+                let empty_subject = replace_first_code_points(&empty, x, y);
+                for peer in [x, y] {
+                    let mut left = empty_subject.clone();
+                    left.extend(peer);
+                    let mut right = peer.clone();
+                    right.extend(&empty_subject);
+                    assert_eq!(left, right, "empty subject: x={x:?}, y={y:?}");
+                }
+
+                assert_eq!(
+                    replace_first_code_points(x, y, &replace_first_code_points(y, x, y),),
+                    *x,
+                    "restore subject: x={x:?}, y={y:?}"
+                );
+                let self_expanded = replace_first_code_points(x, y, x);
+                assert_eq!(
+                    replace_first_code_points(&self_expanded, x, y),
+                    replace_first_code_points(x, &self_expanded, y),
+                    "nested self: x={x:?}, y={y:?}"
+                );
+
+                for code_point in [&a, &b] {
+                    assert_eq!(
+                        replace_first_code_points(
+                            x,
+                            &replace_first_code_points(code_point, y, x),
+                            code_point,
+                        ),
+                        replace_first_code_points(
+                            x,
+                            &replace_first_code_points(y, code_point, x),
+                            y,
+                        ),
+                        "conjugate: x={x:?}, y={y:?}, code_point={code_point:?}"
+                    );
+                    assert_eq!(
+                        replace_first_code_points(
+                            &replace_first_code_points(x, code_point, x),
+                            code_point,
+                            y,
+                        ),
+                        replace_first_code_points(
+                            x,
+                            code_point,
+                            &replace_first_code_points(x, code_point, y),
+                        ),
+                        "singleton expansion: x={x:?}, y={y:?}, code_point={code_point:?}"
+                    );
+                    for replacement in [code_point, &empty] {
+                        let mut prefixed = code_point.clone();
+                        prefixed.extend(x);
+                        let actual = replace_first_code_points(&prefixed, x, replacement);
+                        let mut expected = code_point.clone();
+                        expected.extend(replacement);
+                        assert_eq!(
+                            actual, expected,
+                            "prefixed source: x={x:?}, code_point={code_point:?}, replacement={replacement:?}"
+                        );
+                    }
+                }
+
+                for (subject, replacement) in [(&a, &a), (&a, &b), (&b, &a), (&b, &b)] {
+                    let actual = replace_first_code_points(
+                        &replace_first_code_points(subject, x, replacement),
+                        replacement,
+                        y,
+                    );
+                    let expected = if subject == replacement {
+                        let mut expected = y.clone();
+                        expected.extend(replace_first_code_points(&empty, x, subject));
+                        expected
+                    } else {
+                        replace_first_code_points(subject, x, y)
+                    };
+                    assert_eq!(
+                        actual, expected,
+                        "singleton subject: subject={subject:?}, x={x:?}, replacement={replacement:?}, y={y:?}"
+                    );
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn first_occurrence_prefix_algebra_matches_reference_semantics_exhaustively() {
+        let words = first_occurrence_algebra_words();
+        let a = vec![u32::from(b'A')];
+        let b = vec![u32::from(b'B')];
+        let empty = Vec::new();
+
+        for x in &words {
+            for (needle, replacement) in [(&a, &b), (&b, &a), (&a, &empty), (&b, &empty)] {
+                assert_eq!(
+                    replace_first_code_points(
+                        &replace_first_code_points(x, needle, replacement),
+                        x,
+                        replacement,
+                    ),
+                    replace_first_code_points(
+                        &replace_first_code_points(x, needle, x),
+                        x,
+                        replacement,
+                    ),
+                    "outer source: x={x:?}, needle={needle:?}, replacement={replacement:?}"
+                );
+            }
+            assert_eq!(
+                replace_first_code_points(&replace_first_code_points(x, &b, &empty), &a, &empty,),
+                replace_first_code_points(&replace_first_code_points(x, &a, &empty), &b, &empty,),
+                "distinct deletion: x={x:?}"
+            );
+            for value in -3_i128..=9 {
+                for (needle, replacement) in [(&a, &b), (&b, &a)] {
+                    assert_eq!(
+                        replace_first_code_points(
+                            &substr_code_points(x, 0, value),
+                            needle,
+                            replacement,
+                        ),
+                        substr_code_points(
+                            &replace_first_code_points(x, needle, replacement),
+                            0,
+                            value,
+                        ),
+                        "prefix commute: x={x:?}, value={value}, needle={needle:?}, replacement={replacement:?}"
+                    );
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn first_occurrence_algebra_forms_close_and_counterexamples_decline() {
+        let term = |text: &str| {
+            let expression = read_all(text)
+                .expect("read first-occurrence algebra expression")
+                .pop()
+                .expect("one first-occurrence algebra expression");
+            exact_rewrite_term(&expression, 0)
+        };
+        for text in [
+            r#"(= (str.++ (str.replace "" x y) x) (str.++ x (str.replace "" x y)))"#,
+            r#"(= (str.++ (str.replace "" x y) y) (str.++ y (str.replace "" x y)))"#,
+            r"(= (str.replace x y (str.replace y x y)) x)",
+            r#"(= (str.replace x (str.replace "A" y x) "A") (str.replace x (str.replace y "A" x) y))"#,
+            r#"(= (str.replace x (str.replace "B" y x) "B") (str.replace x (str.replace y "B" x) y))"#,
+            r#"(= (str.replace (str.substr x 0 z) "A" "B") (str.substr (str.replace x "A" "B") 0 z))"#,
+            r#"(= (str.replace (str.substr x 0 z) "B" "A") (str.substr (str.replace x "B" "A") 0 z))"#,
+            r#"(= (str.replace (str.++ "A" x) x "A") "AA")"#,
+            r#"(= (str.replace (str.++ "A" x) x "") "A")"#,
+            r#"(= (str.replace (str.++ "B" x) x "B") "BB")"#,
+            r#"(= (str.replace (str.++ "B" x) x "") "B")"#,
+            r"(= (str.replace (str.replace x y x) x y) (str.replace x (str.replace x y x) y))",
+            r#"(= (str.replace (str.replace x "A" x) "A" y) (str.replace x "A" (str.replace x "A" y)))"#,
+            r#"(= (str.replace (str.replace x "A" "B") x "B") (str.replace (str.replace x "A" x) x "B"))"#,
+            r#"(= (str.replace (str.replace x "A" "") x "") (str.replace (str.replace x "A" x) x ""))"#,
+            r#"(= (str.replace (str.replace x "B" x) "B" y) (str.replace x "B" (str.replace x "B" y)))"#,
+            r#"(= (str.replace (str.replace x "B" "A") x "A") (str.replace (str.replace x "B" x) x "A"))"#,
+            r#"(= (str.replace (str.replace x "B" "") x "") (str.replace (str.replace x "B" x) x ""))"#,
+            r#"(= (str.replace (str.replace x "B" "") "A" "") (str.replace (str.replace x "A" "") "B" ""))"#,
+            r#"(= (str.replace (str.replace "A" x "A") "A" y) (str.++ y (str.replace "" x "A")))"#,
+            r#"(= (str.replace (str.replace "A" x "B") "B" y) (str.replace "A" x y))"#,
+            r#"(= (str.replace (str.replace "B" x "A") "A" y) (str.replace "B" x y))"#,
+            r#"(= (str.replace (str.replace "B" x "B") "B" y) (str.++ y (str.replace "" x "B")))"#,
+        ] {
+            assert_eq!(term(text), ExactRewriteTerm::Bool(true), "{text}");
+        }
+
+        for text in [
+            r#"(= (str.++ (str.replace "" x y) z) (str.++ z (str.replace "" x y)))"#,
+            r#"(= (str.replace x (str.replace y "A" y) y) x)"#,
+            r"(= (str.replace (str.replace x y x) y x) (str.replace x y (str.replace x y x)))",
+            r#"(= (str.replace (str.replace x y x) y "A") (str.replace x y (str.replace x y "A")))"#,
+            r#"(= (str.replace (str.replace x y x) y "B") (str.replace x y (str.replace x y "B")))"#,
+            r#"(= (str.replace (str.replace x y x) y "") (str.replace x y (str.replace x y "")))"#,
+            r#"(= (str.replace (str.substr x 0 z) "AB" "CD") (str.substr (str.replace x "AB" "CD") 0 z))"#,
+            r#"(= (str.replace (str.++ "A" x) x "B") "AB")"#,
+            r#"(= (str.replace (str.replace "A" x "A") "A" y) (str.replace "A" x y))"#,
+        ] {
+            assert_ne!(term(text), ExactRewriteTerm::Bool(true), "{text}");
+        }
+    }
+
+    #[test]
+    fn first_occurrence_predicate_algebra_matches_reference_semantics_exhaustively() {
+        let words = first_occurrence_algebra_words();
+        let a = vec![u32::from(b'A')];
+        let b = vec![u32::from(b'B')];
+        let empty = Vec::new();
+        let contains = |subject: &[u32], needle: &[u32]| {
+            needle.is_empty()
+                || subject
+                    .windows(needle.len())
+                    .any(|candidate| candidate == needle)
+        };
+
+        for x in &words {
+            for code_point in [&a, &b] {
+                let mut prefixed = code_point.clone();
+                prefixed.extend(x);
+                let mut suffixed = x.clone();
+                suffixed.extend(code_point);
+                assert_eq!(
+                    prefixed.starts_with(x),
+                    suffixed.ends_with(x),
+                    "boundary commute: x={x:?}, code_point={code_point:?}"
+                );
+
+                let deletion = replace_first_code_points(x, code_point, &empty);
+                let expansion = replace_first_code_points(x, code_point, x);
+                assert_eq!(
+                    x.ends_with(&deletion),
+                    expansion.starts_with(x),
+                    "delete/expand: x={x:?}, code_point={code_point:?}"
+                );
+            }
+
+            for y in &words {
+                for code_point in [&a, &b] {
+                    let replaced = replace_first_code_points(x, y, code_point);
+                    assert_eq!(
+                        contains(&replaced, x),
+                        replaced.ends_with(x),
+                        "source occurrence: x={x:?}, y={y:?}, code_point={code_point:?}"
+                    );
+
+                    let other = if code_point == &a { &b } else { &a };
+                    assert_eq!(
+                        contains(&replace_first_code_points(x, y, &empty), code_point),
+                        contains(&replace_first_code_points(x, y, other), code_point),
+                        "distinct insertion: x={x:?}, y={y:?}, code_point={code_point:?}"
+                    );
+                    assert_eq!(
+                        contains(&replace_first_code_points(x, code_point, y), y),
+                        contains(&replace_first_code_points(x, y, code_point), code_point),
+                        "exchanged contains: x={x:?}, y={y:?}, code_point={code_point:?}"
+                    );
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn first_occurrence_predicate_forms_close_and_controls_decline() {
+        let term = |text: &str| {
+            let expression = read_all(text)
+                .expect("read first-occurrence predicate expression")
+                .pop()
+                .expect("one first-occurrence predicate expression");
+            exact_rewrite_term(&expression, 0)
+        };
+        for text in [
+            r#"(= (str.prefixof x (str.++ "A" x)) (str.suffixof x (str.++ x "A")))"#,
+            r#"(= (str.prefixof x (str.++ "B" x)) (str.suffixof x (str.++ x "B")))"#,
+            r#"(= (str.contains (str.replace x y "A") x) (str.suffixof x (str.replace x y "A")))"#,
+            r#"(= (str.contains (str.replace x y "B") x) (str.suffixof x (str.replace x y "B")))"#,
+            r#"(= (str.contains (str.replace x y "") "A") (str.contains (str.replace x y "B") "A"))"#,
+            r#"(= (str.contains (str.replace x y "") "B") (str.contains (str.replace x y "A") "B"))"#,
+            r#"(= (str.contains (str.replace x "A" y) y) (str.contains (str.replace x y "A") "A"))"#,
+            r#"(= (str.contains (str.replace x "B" y) y) (str.contains (str.replace x y "B") "B"))"#,
+            r#"(= (str.suffixof (str.replace x "A" "") x) (str.prefixof x (str.replace x "A" x)))"#,
+            r#"(= (str.suffixof (str.replace x "B" "") x) (str.prefixof x (str.replace x "B" x)))"#,
+        ] {
+            assert_eq!(term(text), ExactRewriteTerm::Bool(true), "{text}");
+        }
+        for text in [
+            r#"(= (str.prefixof x (str.++ "A" x)) (str.suffixof x (str.++ x "B")))"#,
+            r#"(= (str.contains (str.replace x y "AA") x) (str.suffixof x (str.replace x y "AA")))"#,
+            r#"(= (str.contains (str.replace x y "") "A") (str.contains (str.replace x y "A") "A"))"#,
+            r#"(= (str.contains (str.replace x "AA" y) y) (str.contains (str.replace x y "AA") "AA"))"#,
+            r#"(= (str.suffixof (str.replace x "A" "") x) (str.prefixof x (str.replace x "B" x)))"#,
+            r"(= (str.contains (str.from_int z) x) (str.suffixof x (str.from_int z)))",
+        ] {
+            assert_ne!(term(text), ExactRewriteTerm::Bool(true), "{text}");
         }
     }
 

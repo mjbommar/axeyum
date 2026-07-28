@@ -41,6 +41,21 @@ use crate::optimize::{OptOutcome, maximize_bv, maximize_lia, minimize_bv, minimi
 /// first-class `unknown`.
 const WORD_ROUTE_MAX_NODES: u64 = 200_000;
 
+/// Maximum number of concrete assignments tried by the bounded source-witness
+/// probe. The probe is SAT-only and replay-gated; exhausting this deterministic
+/// step cap leaves the existing `unknown` untouched.
+const SOURCE_WITNESS_MAX_ASSIGNMENTS: usize = 20_000;
+
+/// Maximum generated word length for the bounded source-witness probe. Explicit
+/// source literals are retained even when longer; this cap applies only to the
+/// small alphabet product used to discover counterexamples.
+const SOURCE_WITNESS_MAX_WORD_LEN: usize = 4;
+
+/// Maximum source-derived alphabet size used for generated words. A larger
+/// alphabet would make the length-four Cartesian product dominate the bounded
+/// probe; the assignment cap remains the final guard.
+const SOURCE_WITNESS_MAX_ALPHABET: usize = 4;
+
 /// Applies the parser's bound-independent source-string contradiction fact to an
 /// otherwise undecided query. The parser records this only for a non-incremental
 /// conjunction and only after exact SMT-LIB rewrite normalization, equality-class
@@ -665,6 +680,7 @@ fn source_string_route_verdict(script: &mut Script, config: &SolverConfig) -> Op
     let result = apply_online_string_route(script, config, result);
     let result = apply_membership_route(script, config, result);
     let result = apply_length_lia_route(script, config, result);
+    let result = apply_source_string_sat_problem(script, result);
     match result {
         decided @ (CheckResult::Sat(_) | CheckResult::Unsat) => Some(decided),
         CheckResult::Unknown(_) => None,
@@ -678,15 +694,15 @@ fn source_string_route_verdict(script: &mut Script, config: &SolverConfig) -> Op
 /// the length cap, a `str.++` over the width cap, …), so
 /// [`Script::word_only_fallback`] is set and the flat assertion view is **empty**.
 /// The empty view must never be handed to [`crate::solve`] — that would answer a
-/// vacuous `sat` unrelated to the word problem. Instead the sat-only, replay-
-/// checked `apply_word_route` is the sole decider, seeded from a synthetic
-/// `unknown`. On a word-route decline the **original** bounded parse error is
-/// reproduced as [`SolverError::Parse`], so a script that was `unsupported` before
-/// this fallback existed never silently becomes a bare `unknown`/`sat`.
+/// vacuous `sat` unrelated to the source problem. Instead only the checked
+/// source-level ladder runs, seeded from a synthetic `unknown`. If every source
+/// route declines, the **original** bounded parse error is reproduced as
+/// [`SolverError::Parse`], so a script that was `unsupported` before this fallback
+/// existed never silently becomes a bare `unknown`/`sat`.
 ///
-/// The word route may now also decide `unsat` — but only through the independently
-/// re-checked derivation of ADR-0053 T-B.7 — so a re-checked `unsat` is likewise a
-/// real verdict here, not a decline.
+/// The ladder may decide `unsat` only through independently re-checked source
+/// derivations. Its bounded source evaluator may decide only `sat`, and only after
+/// replaying every original source assertion under the concrete witness.
 fn decide_word_only(
     script: &mut Script,
     config: &SolverConfig,
@@ -696,12 +712,11 @@ fn decide_word_only(
 }
 
 /// Harness-parity surface (T-B.4d): decides a **word-first-fallback**
-/// [`Script`] exactly as the `solve_smtlib` front door does — the sat-only,
-/// replay-checked word route is the sole decider (the flat assertion view is
-/// empty and must never be solved), and a decline reproduces the original
-/// bounded parse error as [`SolverError::Parse`]. Exposed for `axeyum-bench`,
-/// which otherwise classifies these scripts `unsupported` without ever
-/// consulting the solver.
+/// [`Script`] exactly as the `solve_smtlib` front door does — only independently
+/// checked source routes may decide (the flat assertion view is empty and must
+/// never be solved), and a decline reproduces the original bounded parse error as
+/// [`SolverError::Parse`]. Exposed for `axeyum-bench`, which otherwise classifies
+/// these scripts `unsupported` without ever consulting the solver.
 ///
 /// # Errors
 ///
@@ -880,6 +895,35 @@ fn seq_value(codepoints: &[u32]) -> Value {
             })
             .collect(),
     )
+}
+
+/// Applies the parser's source-level bounded SAT probe to an otherwise undecided
+/// string query. The probe evaluates every original source assertion under each
+/// candidate using exact Unicode string semantics before returning a witness. It
+/// is strictly SAT-only: unsupported expressions, a missed witness, or an
+/// exhausted deterministic assignment cap preserve the prior `unknown`.
+fn apply_source_string_sat_problem(script: &Script, result: CheckResult) -> CheckResult {
+    let CheckResult::Unknown(_) = &result else {
+        return result;
+    };
+    let Some(problem) = &script.source_string_sat_problem else {
+        return result;
+    };
+    let Some(witness) = problem.bounded_witness(
+        SOURCE_WITNESS_MAX_ASSIGNMENTS,
+        SOURCE_WITNESS_MAX_WORD_LEN,
+        SOURCE_WITNESS_MAX_ALPHABET,
+    ) else {
+        return result;
+    };
+    let mut model = Model::new();
+    for (symbol, code_points) in witness.strings {
+        model.set(symbol, seq_value(&code_points));
+    }
+    for (symbol, value) in witness.integers {
+        model.set(symbol, Value::Int(value));
+    }
+    CheckResult::Sat(model)
 }
 
 /// Maximum concrete output length materialized while lifting checked membership
@@ -1657,9 +1701,9 @@ fn smtlib_single_query(script: &Script) -> Result<SmtLibSingleQuery, SolverError
 ///   an internal backend failure).
 pub fn solve_smtlib(input: &str, config: &SolverConfig) -> Result<SmtLibOutcome, SolverError> {
     let mut script = parse_script(input).map_err(|error| SolverError::Parse(error.to_string()))?;
-    // Word-first parse fallback (T-B.4d): the bounded encoder declined this script
-    // at parse, so decide it by the word route alone — never solve its (empty) flat
-    // assertion view.
+    // Source-first parse fallback (T-B.4d): the bounded encoder declined this
+    // script at parse, so use only the checked source-level ladder — never solve
+    // its empty flat assertion view.
     if script.word_only_fallback.is_some() {
         let result = decide_word_only(&mut script, config)?;
         return Ok(SmtLibOutcome {
@@ -1730,6 +1774,13 @@ pub fn solve_smtlib(input: &str, config: &SolverConfig) -> Result<SmtLibOutcome,
     } else {
         apply_length_lia_route(&mut script, config, result)
     };
+    // Bounded concrete source-witness probe: the residual small-variable string
+    // formulas may be satisfiable even when every symbolic route above declines.
+    // Enumerate a deterministic source-derived candidate set, retain its
+    // source-variable bindings, and accept SAT only after the source evaluator
+    // confirms every original assertion. The finite probe never emits UNSAT; a
+    // miss or a budget excess preserves the prior Unknown.
+    let result = apply_source_string_sat_problem(&script, result);
     // Bounded-completeness UNSAT route (P2.7, task #75): the FINAL string second
     // chance. When every prior route declined and the residual `unknown` is the
     // bounded encoder's "no model within the bounded integer width …" (which is
@@ -2386,9 +2437,9 @@ pub fn solve_smtlib_incremental(
     config: &SolverConfig,
 ) -> Result<Vec<CheckResult>, SolverError> {
     let mut script = parse_script(input).map_err(|error| SolverError::Parse(error.to_string()))?;
-    // Word-first parse fallback (T-B.4d): a word-only script is non-incremental by
-    // construction (`build_word_problem` declines push/pop/check-sat-assuming), so
-    // it has exactly one implicit `check-sat`. Decide it by the word route alone.
+    // Source-first parse fallback (T-B.4d): fallback scripts are non-incremental
+    // by construction, so decide their one query through only the checked
+    // source-level ladder.
     if script.word_only_fallback.is_some() {
         return Ok(vec![decide_word_only(&mut script, config)?]);
     }
