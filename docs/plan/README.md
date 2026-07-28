@@ -12,11 +12,25 @@ Start at the root [`PLAN.md`](../../PLAN.md) (map + standing rules) and
 
 ## Layout
 
+- [`agent-program-2026-07-28/`](agent-program-2026-07-28/README.md) — **the
+  current dispatch layer.** Turns the ranked gap-closing program into seven
+  parallel, exit-criteria'd lanes (integration, quantifiers, strings, floating
+  point, measurement, Lean/evidence, engine) with a worktree/branch assignment,
+  a crate-ownership map, and per-lane task briefs. Start here when assigning
+  work to multiple agents; the phase files under `track-*/` remain the semantic
+  authority for each task.
 - [`00-north-star.md`](00-north-star.md) — the long-horizon reference targets;
   operational status uses the separate parity axes below rather than one
   "Z3 + Lean" percentage.
 - [`01-dependency-dag.md`](01-dependency-dag.md) — the cross-track dependency DAG,
   the two keystones, the critical paths, and the recommended execution order.
+- [`smtcomp-2025-parity-targets-2026-07-28.md`](smtcomp-2025-parity-targets-2026-07-28.md) —
+  per-division SMT-COMP **2025** results and the 2024→2025 delta, refreshing the
+  competitive anchors the gap-closing plan states in 2024 terms. Three findings
+  change how parity is phrased: plain Z3 did not compete in 2025 (base entries
+  only), Lean's `bv_decide` did compete in QF_BV and is our honest peer, and
+  there is still no proof-production track — Model-Validation checks `sat`,
+  Unsat-Core validates only by solver-majority vote.
 - [`gap-analysis-z3-lean-2026-07-21.md`](gap-analysis-z3-lean-2026-07-21.md) —
   **current** scoped evidence map and ranked research program. It separates
   fragment decision parity, production Z3 replacement, certified-result
