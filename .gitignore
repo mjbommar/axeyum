@@ -22,6 +22,17 @@ __pycache__/
 # Public corpus tier (fetched, not committed)
 /corpus/public/
 
+# Local staging copy of the ACCESS-CONTROLLED Glaurung QF_BV representative
+# capture. The `glaurung-qfbv-regular` gate auto-discovers the pinned NAS
+# source (/nas4/.../glaurung-captures/) and otherwise SKIPs; point it at a
+# local copy with AXEYUM_GLAURUNG_QFBV_REPRESENTATIVE_DIR. Never commit the
+# capture itself — it is not public corpus data.
+/corpus/glaurung-qfbv/
+
+# Local CI transcript logs (regenerable; the committed evidence is the
+# artifact JSON under bench-results/, not the log)
+/artifacts/local-ci/
+
 # mdBook generated site + mermaid runtime assets
 # (regenerate: `cargo install mdbook mdbook-mermaid && mdbook-mermaid install . && mdbook build`)
 /book/
