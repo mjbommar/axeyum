@@ -14197,8 +14197,11 @@ fn source_fp_prefix_monotonic_unsat(exprs: &[SExpr]) -> bool {
             continue;
         }
         let mut budget = SOURCE_FP_MAX_NORMALIZE_WORK;
-        let Some(normalized) = normalize_source_fp_expr(body, &HashMap::new(), 0, &mut budget)
-        else {
+        let root = SourceFpScope {
+            bindings: Vec::new(),
+            parent: None,
+        };
+        let Some(normalized) = normalize_source_fp_expr(body, &root, 0, &mut budget) else {
             return false;
         };
         if source_expr_node_count(&normalized) > SOURCE_FP_MAX_NORMALIZED_NODES {
@@ -14300,10 +14303,42 @@ fn source_fp_conjunction_is_eligible(exprs: &[SExpr]) -> bool {
     check_sats <= 1
 }
 
-/// Expands simultaneous SMT-LIB `let` bindings under a strict source-size cap.
+/// One `let` scope, chained to its enclosing scope.
+///
+/// A cloned `HashMap` per scope is what made the old normalizer explode. With a
+/// depth cap of [`SOURCE_FP_MAX_NORMALIZE_DEPTH`] and a value set bounded only
+/// by the emit budget, cloning at every level put `depth * budget` nodes live at
+/// once — megabytes of source became gigabytes of resident memory before any
+/// per-node charge could refuse it. Chaining borrows instead: entering a scope
+/// costs the bindings it actually introduces and nothing more.
+struct SourceFpScope<'parent> {
+    bindings: Vec<(String, SExpr)>,
+    parent: Option<&'parent SourceFpScope<'parent>>,
+}
+
+impl SourceFpScope<'_> {
+    /// Innermost binding for `name`, shadowing outward.
+    fn lookup(&self, name: &str) -> Option<&SExpr> {
+        let mut scope = Some(self);
+        while let Some(current) = scope {
+            if let Some((_, value)) = current
+                .bindings
+                .iter()
+                .rev()
+                .find(|(bound, _)| bound == name)
+            {
+                return Some(value);
+            }
+            scope = current.parent;
+        }
+        None
+    }
+}
+
+/// Expands simultaneous SMT-LIB `let` bindings under a strict emit budget.
 fn normalize_source_fp_expr(
     expression: &SExpr,
-    environment: &HashMap<String, SExpr>,
+    scope: &SourceFpScope<'_>,
     depth: u32,
     budget: &mut usize,
 ) -> Option<SExpr> {
@@ -14312,14 +14347,23 @@ fn normalize_source_fp_expr(
     }
     match expression {
         SExpr::Atom(atom) => {
-            let emitted = environment
-                .get(atom)
-                .cloned()
-                .unwrap_or_else(|| expression.clone());
-            // Substituting a bound name emits that value's whole subtree, so it
-            // is charged by size. This is the edge the exponential rides on.
-            *budget = budget.checked_sub(source_expr_node_count(&emitted))?;
-            Some(emitted)
+            // Charge BEFORE allocating. Substituting a bound name emits that
+            // value's whole subtree, and that subtree is the edge the
+            // exponential rides on: `k` nested bindings each mentioning the
+            // previous one twice double the emitted size per level. Counting the
+            // borrowed value first means an unaffordable substitution is refused
+            // without ever materializing it — charging afterwards still pays the
+            // allocation it was meant to prevent.
+            if let Some(bound) = scope.lookup(atom) {
+                // Counted against the REAL remaining budget, not against the
+                // eligibility cap — see `source_expr_node_count_within`.
+                let cost = source_expr_node_count_within(bound, *budget)?;
+                *budget -= cost;
+                Some(bound.clone())
+            } else {
+                *budget = budget.checked_sub(1)?;
+                Some(expression.clone())
+            }
         }
         SExpr::List(items) if items.first().and_then(SExpr::atom) == Some("let") => {
             let [_, bindings, body] = items.as_slice() else {
@@ -14331,20 +14375,22 @@ fn normalize_source_fp_expr(
                     return None;
                 };
                 let name = name.atom()?.to_owned();
-                let value = normalize_source_fp_expr(value, environment, depth + 1, budget)?;
+                // SMT-LIB `let` is simultaneous: binding values see the enclosing
+                // scope, never their siblings.
+                let value = normalize_source_fp_expr(value, scope, depth + 1, budget)?;
                 values.push((name, value));
             }
-            let mut extended = environment.clone();
-            for (name, value) in values {
-                extended.insert(name, value);
-            }
-            normalize_source_fp_expr(body, &extended, depth + 1, budget)
+            let inner = SourceFpScope {
+                bindings: values,
+                parent: Some(scope),
+            };
+            normalize_source_fp_expr(body, &inner, depth + 1, budget)
         }
         SExpr::List(items) => {
             *budget = budget.checked_sub(1)?;
             let normalized = items
                 .iter()
-                .map(|item| normalize_source_fp_expr(item, environment, depth + 1, budget))
+                .map(|item| normalize_source_fp_expr(item, scope, depth + 1, budget))
                 .collect::<Option<Vec<_>>>()?;
             Some(SExpr::List(normalized))
         }
@@ -14356,7 +14402,7 @@ fn normalize_source_fp_expr(
 /// [`source_fp_prefix_monotonic_unsat`] runs on every parsed script, and its
 /// eligibility gate requires no floating-point content at all — so without this
 /// check every single-query, macro-free script pays a full normalizing clone of
-/// each assertion body. That is the common shape of QF_BV/QF_ABV bounded-model
+/// each assertion body. That is the common shape of `QF_BV`/`QF_ABV` bounded-model
 /// checking and symbolic-execution output, which never contains `fp.add` and
 /// can never satisfy the rule. Rule 4 is the only one that introduces an
 /// addition fact, so a source without `fp.add` cannot reach a verdict.
@@ -14368,6 +14414,34 @@ fn source_mentions_fp_add(exprs: &[SExpr]) -> bool {
         }
     }
     exprs.iter().any(walk)
+}
+
+/// Node count, or `None` once it provably exceeds `limit`.
+///
+/// [`source_expr_node_count`] saturates at
+/// [`SOURCE_FP_MAX_NORMALIZED_NODES`], which is right for an eligibility test
+/// that only needs to know the cap was passed — but catastrophic as a *charge*.
+/// Billing a substitution through it under-charges every subtree above the cap
+/// by an unbounded factor: a 500,000-node value costs 513, so an exponential
+/// expansion drains the budget linearly while the tree it is meant to bound
+/// doubles, and the process dies before the budget ever refuses anything.
+///
+/// This counts against the caller's real remaining budget instead, and stops as
+/// soon as the answer cannot matter — so it is `O(min(size, limit))` and never
+/// walks a runaway tree to the end.
+fn source_expr_node_count_within(expression: &SExpr, limit: usize) -> Option<usize> {
+    let mut count = 0_usize;
+    let mut stack = vec![expression];
+    while let Some(term) = stack.pop() {
+        count += 1;
+        if count > limit {
+            return None;
+        }
+        if let SExpr::List(items) = term {
+            stack.extend(items);
+        }
+    }
+    Some(count)
 }
 
 fn source_expr_node_count(expression: &SExpr) -> usize {
@@ -19524,18 +19598,22 @@ mod source_fp_tests {
     /// nodes. Depth alone cannot bound that: `k` far below
     /// [`SOURCE_FP_MAX_NORMALIZE_DEPTH`] already exhausts memory, and the
     /// [`SOURCE_FP_MAX_NORMALIZED_NODES`] check runs only after the tree is
-    /// fully materialized. Before [`SOURCE_FP_MAX_NORMALIZE_WORK`] was charged
-    /// during construction, a 769-byte file with 24 such bindings took 19.1 s
-    /// and 17.3 GB of RSS, and 26 exhausted the host — at *parse* time, where
-    /// the solver timeout does not apply.
+    /// fully materialized. A 769-byte file with 24 such bindings took 19.1 s and
+    /// 17.3 GB of RSS, and 26 exhausted the host — at *parse* time, where the
+    /// solver timeout does not apply.
     ///
-    /// This must terminate quickly with a decline for every depth, including
-    /// ones far past the point where the old code would have died.
+    /// Three things were needed to bound it, and the third is the subtle one:
+    /// charge [`SOURCE_FP_MAX_NORMALIZE_WORK`] during construction rather than
+    /// after; chain scopes instead of cloning the environment at every level;
+    /// and charge through [`source_expr_node_count_within`] rather than
+    /// [`source_expr_node_count`], which saturates at the eligibility cap and so
+    /// billed a 500,000-node substitution as 513 — draining the budget linearly
+    /// while the tree it was meant to bound doubled.
+    ///
+    /// 60 bindings now decline in about 0.05 s under a 4 GiB cap.
     #[test]
     fn source_fp_prefix_monotonicity_declines_exponential_let_expansion() {
-        // NOTE: capped at 20 because the bound is INCOMPLETE — see the
-        // `#[ignore]`d companion test and the WIP note in the commit message.
-        for bindings in [4_usize, 8, 12, 16, 20] {
+        for bindings in [4_usize, 8, 12, 16, 20, 24, 32, 48, 60] {
             let mut body = String::from("(fp.add RNE p d)");
             for index in 0..bindings {
                 body = format!("(let ((v{index} {body})) (fp.add RNE v{index} v{index}))");
