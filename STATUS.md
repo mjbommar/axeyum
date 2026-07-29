@@ -441,6 +441,40 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-28 — Phase 0 integration landed a P0 wrong-`unsat`, then fixed it;
+  the Noetzli slice is verified on `main` and two gate holes are closed.** Full
+  record: [Phase 0 result](docs/plan/phase0-integration-result-2026-07-28.md).
+  The merge of `agent/solver/uflia-main-next` (`bbe5628c`) *introduced* a
+  wrong-`unsat` reachable from a four-line file through the public
+  `solve_smtlib` front door:
+  `exact_singleton_outer_source_identity` accepted
+  `(= (str.replace (str.replace S a r) S X) (str.replace (str.replace S a S) S X))`
+  without requiring `X == r`, which the identity needs. cvc5 1.3.4 and z3 both
+  answer `sat` on the minimized case; axeyum answered `unsat`. Fixed, with four
+  mutants pinned as soundness-negative controls. **Neither existing gate could
+  have caught it**: the exhaustive identity test instantiates the schema with one
+  `replacement` reused in both positions — exactly the case the matcher may
+  accept — so it validated the mathematics, not the accept/decline boundary; and
+  the string differential fuzz emits `str.replace` only with *literal* needle and
+  replacement, so it structurally cannot generate the nested-needle shape. This
+  is the `a946f925` pattern again. The fix costs nothing: the fixed 1,880-file
+  Noetzli population is unchanged at **1,880/1,880 decided (26 SAT / 1,854
+  UNSAT / 0 unknown)**, and because that corpus declares `:status unknown` on
+  every file — making the declared-status check vacuous — all 26 SAT rows plus a
+  300-row UNSAT sample were adjudicated against two independent oracles: cvc5
+  agreed on 315/326, z3 on 318/326, **zero contradictions**, with five rows
+  decided by axeyum that neither oracle decided in 10 s. Separately,
+  `gen-scoreboard.py --check` was a silent no-op (no argument parsing at all, so
+  it rewrote the file and exited 0); it is now real and in `parity-docs`, and it
+  immediately caught a `bv_reduction` frontier gain of **+10** that had been in
+  the committed source artifact but never in the generated table. And
+  `just check` was already red on `main` since `fe8ba9af` because the Lean
+  complete-parity manifest content-addresses `ci.yml`. Next: fix the
+  exponential-`let` parse bound before landing ADR-0373 (a 769-byte file costs
+  19.1 s / 17.3 GB at parse time, where the solver timeout does not apply), then
+  integrate `agent/solver/qfslia-regex-length-next` — audited as **not** a stale
+  duplicate but ~3.6k lines of unique dual-oracle-confirmed capability.
+
 - **2026-07-27 — SMT `(15,64)` sqrt is validated; reclassify the measured
   residuals before widening arithmetic.** Commit `ab4b5803` and ADR-0370 add one sqrt-specific gate,
   backed by 2,620 exact all-mode dyadic checks plus neighboring-result rejection.
