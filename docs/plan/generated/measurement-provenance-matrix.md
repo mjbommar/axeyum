@@ -8,7 +8,7 @@ This is one vocabulary over **two separate measurement regimes**, not one merged
 
 | Regime | Rows | Raw cases | File-backed | Unique paths | Unique bytes | Aggregate-only | Exact alias groups | Decided | Neutral rows |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| Curated/regression scoreboard | 35 | 992 | 927 | 837 | 778 | 65 | 58 | 753 | 0 |
+| Curated/regression scoreboard | 35 | 992 | 927 | 837 | 778 | 65 | 58 | 762 | 0 |
 | Partial public inventory | 18 | 228 | 228 | 228 | 228 | 0 | 0 | 82 | 0 |
 
 The public inventory's legacy 82/228 scorer field contains **78 known-status agreements** and **4 unadjudicated decisions**. Its 83 benchmarks without known status do not inherit benchmark-status correctness credit.
@@ -42,9 +42,9 @@ The regimes overlap on **99 exact contents**: 43.4% of the 228-file inventory an
 | scoreboard | `QF_NIA` / `qf-nia-curated-iand` | `decide-strong` | 3 | 3 | 3 | 0 | 1 | 2 | 0 | 0 | 10 | 0.003 | `:status` | absent |
 | scoreboard | `QF_NIA` / `qf-nia-cvc5-regress-clean` | `decide-strong` | 39 | 39 | 39 | 0 | 18 | 15 | 6 | 0 | 10 | 2.730 | `z3-binary` | absent |
 | scoreboard | `QF_NRA` / `qf-nra-cvc5-regress-clean` | `decide-strong` | 38 | 38 | 38 | 0 | 18 | 14 | 6 | 0 | 10 | 3.169 | `z3-binary` | absent |
-| scoreboard | `QF_S` / `qf-s-cvc5-regress-clean` | `partial` | 134 | 134 | 133 | 0 | 59 | 28 | 47 | 0 | 10 | 1.323 | `z3-library+binary` | absent |
-| scoreboard | `QF_SEQ` / `qf-seq-cvc5-regress-clean` | `partial` | 33 | 33 | 33 | 0 | 21 | 5 | 7 | 0 | 10 | 3.752 | `z3-library+binary` | absent |
-| scoreboard | `QF_SLIA` / `qf-slia-cvc5-regress-clean` | `partial` | 50 | 50 | 50 | 0 | 10 | 8 | 32 | 0 | 10 | 3.650 | `z3-library+binary` | absent |
+| scoreboard | `QF_S` / `qf-s-cvc5-regress-clean` | `partial` | 134 | 134 | 133 | 0 | 67 | 26 | 41 | 0 | 10 | 1.886 | `z3-binary` | absent |
+| scoreboard | `QF_SEQ` / `qf-seq-cvc5-regress-clean` | `partial` | 33 | 33 | 33 | 0 | 21 | 1 | 11 | 0 | 10 | 6.252 | `z3-binary` | absent |
+| scoreboard | `QF_SLIA` / `qf-slia-cvc5-regress-clean` | `partial` | 50 | 50 | 50 | 0 | 15 | 10 | 25 | 0 | 10 | 2.844 | `z3-binary` | absent |
 | scoreboard | `QF_UF` / `qf-uf-cvc5-regress-clean-bounded` | `partial` | 82 | 82 | 82 | 0 | 29 | 15 | 37 | 0 | 10 | 4.845 | `z3-library+binary` | absent |
 | scoreboard | `QF_UF` / `qf-uf-cvc5-regress-clean-bounded-uninterp-sorts` | `partial` | 82 | 82 | 82 | 0 | 29 | 15 | 37 | 0 | 10 | 4.845 | `z3-library+binary` | absent |
 | scoreboard | `QF_UF` / `qf-uf-cvc5-regress-clean-overbound-uninterp-sorts` | `partial` | 6 | 6 | 6 | 0 | 1 | 3 | 2 | 0 | 10 | 7.489 | `z3-binary` | absent |
