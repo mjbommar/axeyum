@@ -181,10 +181,56 @@ That is the correct default; do not relax it opportunistically.
 > the repaired binary (Rank 0 exit), and the QF_FP residual is being chosen from
 > a measured library census rather than from the two clusters already optimized.
 
+## C0 — Finish the ADR-0373 bound (blocks the route landing)
+
+**Status: merged onto `integration/fp-adr0373-20260728` (`0a37ef2b`), held off
+`main`.** Full detail in the
+[Phase 0 result note](../phase0-integration-result-2026-07-28.md#6-why-fp-ground-div-did-not-land).
+
+The route's **soundness core is clean** — top-level conjuncts only, `Unsat`-only,
+a checked `non_nan` precondition before `nonnegative` (closing the vacuous-truth
+trap for NaN), and RNE-only with no subtraction and no mixed signs, which makes
+the 2026-07-22 exact-cancellation P0 class structurally unreachable. An
+independent 1,800-case differential fuzz against z3 fired 86 times, agreed 86/86.
+
+It is held on **availability**. `normalize_source_fp_expr` substitutes each
+`let`-bound value at every use, so `k` nested bindings that each mention the
+previous one twice emit `2^k` nodes. This is at *parse* time, where the solver
+timeout does not apply.
+
+A partial fix is on the branch: a work budget charged during construction, plus
+a `source_mentions_fp_add` pre-gate so QF_BV/QF_ABV BMC output stops paying a
+normalizing clone. Measured under a 6 GiB `mem-run.sh` cap, 4/8/12/16/20 nested
+bindings now decline cleanly — but **24 still aborts on allocation** from a
+1,928-byte script.
+
+**Where to pick it up.** Instrumentation shows the four small assertions
+normalize with 99,990 of 100,000 budget remaining, and the fifth dies *inside*
+`normalize_source_fp_expr` without returning — the `checked_sub` charge is not on
+the path that allocates. Two suspects, in order:
+
+1. `let mut extended = environment.clone()` runs at every `let` level, never
+   charged.
+2. `environment.get(atom).cloned()` materializes the subtree *before* the budget
+   is charged. Charge must precede allocation: look up, count, charge, then clone.
+
+The committed test is capped at 20 bindings so it passes honestly. **Do not raise
+that cap or land the branch until 24+ declines.**
+
+Then also address, from the same review: duplicate `:named` bindings are silently
+rebound (`parse.rs:6184`), which this route turns into a wrong `unsat` on
+non-conforming input; the negative controls assert only the internal flag and
+never an end-to-end `sat` verdict; and there is no fuzz generator for the route.
+
+---
+
 ## In-flight declarations
 
 *(`parse.rs` FP-region announcements go here. Lane B holds priority on
 conflicts.)*
 
-- ADR-0373 source FP prefix monotonicity — lands via Phase 0 T0.2; touches
-  `parse.rs` (+417) and `axeyum-solver/src/smtlib.rs` (+17).
+- ADR-0373 source FP prefix monotonicity — **held**, see C0. Lives on
+  `integration/fp-adr0373-20260728`; touches `parse.rs` and
+  `axeyum-solver/src/smtlib.rs`. Its `parse.rs` conflict against the landed
+  strings work was exactly one `Script` field insertion, resolved by keeping
+  both fields.
