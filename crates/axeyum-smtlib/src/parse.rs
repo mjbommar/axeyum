@@ -10325,6 +10325,19 @@ fn exact_singleton_outer_source_identity(left: &SExpr, right: &SExpr, depth: u32
         || !exact_raw_terms_equal(&left[2], &right[2], depth)
         || !exact_raw_terms_equal(&left_source[0], &left[1], depth)
         || !exact_raw_terms_equal(&right_source[2], &right_source[0], depth)
+        // The outer replacement must be the SAME term as the inner one. Writing
+        // the schema out with `U = replace(S, a, r)` and `V = replace(S, a, S)`:
+        // when `a` occurs in `S` at first index `i`, `U` cannot contain `S` (it
+        // is shorter when `r` is empty, and differs at `i` when `r` is a
+        // distinct code point), so the left side is `U` itself, namely
+        // `S[0..i] ++ r ++ S[i+1..]`. `V` does contain `S`, first at exactly
+        // `i`, so the right side is `S[0..i] ++ X ++ S[i+1..]`. Those agree iff
+        // `X == r`. Without this guard the matcher folds a satisfiable
+        // disequality to `true`: for `x = "A"`,
+        //   (= (str.replace (str.replace x "A" "") x "B")
+        //      (str.replace (str.replace x "A" x) x "B"))
+        // is "" = "B", which is false.
+        || !exact_raw_terms_equal(&left[2], &left_source[2], depth)
     {
         return false;
     }

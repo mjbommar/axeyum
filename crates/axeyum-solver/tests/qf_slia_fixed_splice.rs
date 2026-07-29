@@ -2633,6 +2633,68 @@ fn exact_source_first_occurrence_algebra_declines_counterexamples() {
     }
 }
 
+/// Soundness-negative gate for `exact_singleton_outer_source_identity`.
+///
+/// The schema `replace(replace(S, a, r), S, X) = replace(replace(S, a, S), S, X)`
+/// is valid **only when `X == r`**. When `a` occurs in `S` at first index `i`,
+/// `replace(S, a, r)` cannot contain `S`, so the left side stays
+/// `S[0..i] ++ r ++ S[i+1..]`; `replace(S, a, S)` does contain `S` at exactly
+/// `i`, so the right side is `S[0..i] ++ X ++ S[i+1..]`. They agree iff
+/// `X == r`.
+///
+/// The matcher originally omitted that condition and folded these four
+/// satisfiable disequalities to `true`, producing a wrong `unsat` through the
+/// public `solve_smtlib` front door. cvc5 1.3.4 and z3 both answer `sat` on
+/// every case below.
+///
+/// The exhaustive identity test could not catch this: it instantiates the
+/// schema with one `replacement` binding reused in both positions, which is
+/// exactly the `X == r` case the matcher is allowed to accept. Only perturbing
+/// an *accepted* schema away from its side condition exposes the gap.
+#[test]
+fn singleton_outer_source_identity_declines_mismatched_replacements() {
+    for (assertion, witness) in [
+        (
+            r#"(not (= (str.replace (str.replace x "A" "") x "B") (str.replace (str.replace x "A" x) x "B")))"#,
+            "A",
+        ),
+        (
+            r#"(not (= (str.replace (str.replace x "A" "B") x "") (str.replace (str.replace x "A" x) x "")))"#,
+            "A",
+        ),
+        (
+            r#"(not (= (str.replace (str.replace x "B" "") x "A") (str.replace (str.replace x "B" x) x "A")))"#,
+            "B",
+        ),
+        (
+            r#"(not (= (str.replace (str.replace x "B" "A") x "") (str.replace (str.replace x "B" x) x "")))"#,
+            "B",
+        ),
+    ] {
+        let input = format!(
+            r"(set-logic QF_SLIA)
+(declare-fun x () String)
+(assert {assertion})
+(check-sat)
+"
+        );
+        let script = parse_script(&input).expect("parse mismatched-replacement mutant");
+        assert!(
+            !script.source_string_semantic_unsat,
+            "mismatched outer/inner replacement must not fold to true \
+             (satisfiable at x = {witness:?}): {assertion}"
+        );
+        assert_ne!(
+            solve_smtlib(&input, &config())
+                .expect("solve mismatched-replacement mutant")
+                .result,
+            CheckResult::Unsat,
+            "mismatched outer/inner replacement must never return UNSAT \
+             (satisfiable at x = {witness:?}): {assertion}"
+        );
+    }
+}
+
 #[test]
 fn exact_source_first_occurrence_predicates_refute_noetzli_families() {
     let assertions = [
