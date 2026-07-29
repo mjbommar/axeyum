@@ -35,7 +35,7 @@ equally complete, certified, fast, or exposed through conformant SMT-LIB text.
 The committed regression scoreboard currently contains 35 rows over 24 logic
 labels:
 
-- **753 / 992** files are decided and **680 oracle-compared** decisions have
+- **762 / 992** files are decided and **674 oracle-compared** decisions have
   **0 recorded disagreements**.
 - **25 / 35** rows meet the project's `>= 80%` decide-strong threshold.
 - **23 / 35** audited rows meet their complete dominance definition; a paired

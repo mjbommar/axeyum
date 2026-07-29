@@ -6139,7 +6139,30 @@ mod run {
         // / disagreement gate needs.
         let mut z3_binary: Option<Z3BinaryResult> = None;
         let mut oracle_outcome = oracle_solve.outcome;
-        if oracle_solve.outcome == "unsupported"
+        // A bounded-string script's parsed assertions are the **packed-BV
+        // encoding** (ADR-0029), not the source semantics. The encoding carries a
+        // length cap, so a satisfiable string problem whose every witness is
+        // longer than the cap encodes to something genuinely unsatisfiable. The
+        // in-repo oracle solves those assertions and answers confidently — but it
+        // is answering a different question, and it does not decline, so the
+        // `unsupported` fallback below never fires for it.
+        //
+        // Observed on `QF_S/.../r1_QF_SLIA_pattern1.smt2`, where every satisfying
+        // `x` exceeds 30 characters: the in-repo oracle returned `unsat` in 0 ms
+        // while the declared `:status`, the Z3 binary, cvc5, and axeyum all
+        // answer `sat`. Comparing that produced a false soundness alarm. The same
+        // defect can equally produce false *agreement*, which is why the verdict
+        // is discarded rather than merely reported.
+        //
+        // So: never adjudicate a bounded-string query with the in-repo oracle.
+        // Fall back to the Z3 binary, which reads the original file and therefore
+        // answers the source semantics; if it is unavailable, do not compare.
+        let encoded_string_boundary = script.uses_bounded_strings;
+        if encoded_string_boundary {
+            oracle_outcome = "unsupported";
+            oracle_decided = false;
+        }
+        if (oracle_solve.outcome == "unsupported" || encoded_string_boundary)
             && let Some(result) = run_z3_binary(file, config.timeout)
         {
             if let Some(verdict) = result.verdict {
@@ -6188,7 +6211,15 @@ mod run {
         let mut record = json!({
             "enabled": true,
             "backend_kind": if z3_binary.is_some() { "z3-binary" } else { "z3" },
-            "query_boundary": "original parsed assertions",
+            // Name the boundary honestly: "original parsed assertions" is the
+            // packed-BV encoding for a bounded-string script, not the source.
+            "query_boundary": if z3_binary.is_some() {
+                "original source file"
+            } else if encoded_string_boundary {
+                "bounded-string encoding (not adjudicated)"
+            } else {
+                "original parsed assertions"
+            },
             "outcome": oracle_outcome,
             "decision_population": population,
             "decision_compared": compared,

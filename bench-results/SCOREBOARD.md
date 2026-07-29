@@ -15,7 +15,7 @@ A single-glance, honest view of where the pure-Rust axeyum solver stands against
 ## Headline
 
 - **35 division baselines** measured vs z3 4.13.3, spanning **24 logic fragments** (BV, LIA, QF_ABV, QF_ALIA, QF_AUFBV, QF_AUFLIA, QF_AX, QF_BV, QF_BVFP, QF_DT, QF_FF, QF_FP, QF_LIA, QF_LRA, QF_NIA, QF_NRA, QF_S, QF_SEQ, QF_SLIA, QF_UF, QF_UFBV, QF_UFFF, QF_UFLIA, UF).
-- **DISAGREE = 0 across all baselines** — zero wrong verdicts over 680 oracle-compared instances (992 files total, 753 decided).
+- **DISAGREE = 0 across all baselines** — zero wrong verdicts over 674 oracle-compared instances (992 files total, 762 decided).
 - Decide-rate ranges **0%–100%** across divisions — that spread *is* the capability frontier; DISAGREE = 0 is the soundness floor that holds everywhere.
 
 ## Divisions vs Z3
@@ -45,9 +45,9 @@ Sorted by logic, then by descending decide-rate. Every committed `*solver-vs-z3*
 | QF_NIA | `qf-nia-cvc5-regress-clean` | 39 | 33 | 85% | 5 | 1 | 23 | 0 | z3-binary | 2.730 |
 | QF_NRA | `qf-nra-synthetic-graduated` | 33 | 30 | 91% | 3 | 0 | 30 | 0 | z3-binary | 5.455 |
 | QF_NRA | `qf-nra-cvc5-regress-clean` | 38 | 32 | 84% | 6 | 0 | 32 | 0 | z3-binary | 3.169 |
-| QF_S | `qf-s-cvc5-regress-clean` | 134 | 87 | 65% | 6 | 41 | 82 | 0 | z3-library+binary | 1.323 |
-| QF_SEQ | `qf-seq-cvc5-regress-clean` | 33 | 26 | 79% | 6 | 1 | 15 | 0 | z3-library+binary | 3.752 |
-| QF_SLIA | `qf-slia-cvc5-regress-clean` | 50 | 18 | 36% | 4 | 28 | 16 | 0 | z3-library+binary | 3.650 |
+| QF_S | `qf-s-cvc5-regress-clean` | 134 | 93 | 69% | 9 | 32 | 79 | 0 | z3-binary | 1.886 |
+| QF_SEQ | `qf-seq-cvc5-regress-clean` | 33 | 22 | 67% | 10 | 1 | 10 | 0 | z3-binary | 6.252 |
+| QF_SLIA | `qf-slia-cvc5-regress-clean` | 50 | 25 | 50% | 4 | 21 | 18 | 0 | z3-binary | 2.844 |
 | QF_UF | `qf-uf-cvc5-regress-clean-overbound-uninterp-sorts` | 6 | 4 | 67% | 2 | 0 | 4 | 0 | z3-binary | 7.489 |
 | QF_UF | `qf-uf-cvc5-regress-clean-bounded` | 82 | 44 | 54% | 13 | 24 | 37 | 0 | z3-library+binary | 4.845 |
 | QF_UF | `qf-uf-cvc5-regress-clean-bounded-uninterp-sorts` | 82 | 44 | 54% | 13 | 24 | 37 | 0 | z3-library+binary | 4.845 |
@@ -60,7 +60,7 @@ Sorted by logic, then by descending decide-rate. Every committed `*solver-vs-z3*
 | QF_UFLIA | `qf-uflia-cvc5-regress-clean-overbound-uninterp-sorts` | 2 | 2 | 100% | 0 | 0 | 2 | 0 | z3-binary | 2.294 |
 | UF | `uf-cvc5-regress-clean-quantified` | 5 | 0 | 0% | 0 | 5 | 0 | 0 | :status | 0.000 |
 
-**Totals:** 992 files, 753 decided, 680 oracle-compared, **0 disagreements.**
+**Totals:** 992 files, 762 decided, 674 oracle-compared, **0 disagreements.**
 
 <!-- NOTES:BEGIN (hand-written attribution notes — preserved by the generator) -->
 ### QF_S row re-measured 2026-07-07 (P2.7 task #49 — `str.in_re` over a symbolic `str.++`, and membership coupled with `str.++` word equations)

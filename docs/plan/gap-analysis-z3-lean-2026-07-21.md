@@ -41,8 +41,12 @@ unqualified speed leadership.
 
 The division scoreboard contains 35 rows across 24 logic labels:
 
-- **753 / 992** files decided; **680 oracle-compared**; zero recorded
-  disagreements.
+- **762 / 992** files decided; **674 oracle-compared**; zero recorded
+  disagreements. (Updated 2026-07-29: the QF_SLIA/QF_S/QF_SEQ rows were
+  re-measured at their committed configs and the string rows now adjudicate
+  through the Z3 **binary** on the original file rather than the in-repo oracle
+  on the bounded encoding, which is why `compared` falls while `decided` rises —
+  see [`strings-remeasurement-2026-07-29.md`](strings-remeasurement-2026-07-29.md).)
 - **25 / 35 rows** meet the scoreboard's `>= 80%` decide-strong threshold.
 - All 35 dominance audits are complete. **23 / 35 audited rows** are fully
   dominant under the registered row definition; **594 / 753 decisions** are

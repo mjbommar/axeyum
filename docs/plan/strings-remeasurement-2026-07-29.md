@@ -52,11 +52,11 @@ measured; the regression likewise predates it. The honest read is that the
 Noetzli work is **population-specific**, and no claim about it should be
 generalised to QF_SLIA/QF_S/QF_SEQ without a measurement on those slices.
 
-## Why the baselines were NOT updated
+## The oracle boundary defect found on the way — and fixed
 
-The fresh artifacts are committed as dated evidence, **not** promoted into
-`bench-results/baselines/`, because doing so would write a false disagreement
-into the authoritative scoreboard.
+Promoting these rows was initially blocked, because regenerating from the fresh
+QF_S artifact wrote **DISAGREE = 1** into the authoritative scoreboard and broke
+the `DISAGREE = 0 everywhere` headline.
 
 Re-measuring QF_S raises `SOUNDNESS ALARM: primary backend disagrees with Z3
 oracle` on `r1_QF_SLIA_pattern1.smt2`, and regenerating from it puts
@@ -80,21 +80,50 @@ Note also that `summary.disagree` read **0** while
 `triage.soundness.oracle_disagreements` read **1** — a content grep of the
 summary line alone would have missed this entirely.
 
-**Promoting these rows into the baselines is blocked on fixing that boundary.**
 False alarms are the benign direction; the same defect can equally produce false
-*agreement* that masks a genuine bug, which is why it is worth fixing before any
-string row is re-baselined.
+*agreement* that masks a genuine bug — so it was fixed rather than annotated.
+
+**The fix:** a bounded-string script never adjudicates through the in-repo
+oracle. `compare_with_oracle` now discards that verdict and falls back to the Z3
+**binary**, which reads the original file and therefore answers the source
+semantics; if the binary is unavailable the row is simply not compared. The
+`query_boundary` field also stops claiming `"original parsed assertions"` for
+these rows, since that is precisely what they are not.
+
+The previous fallback only fired when the in-repo oracle returned
+`unsupported` — and on a bounded-string encoding it does not decline, it answers
+confidently about the wrong query, which is why the defect survived.
+
+After the fix the same run reports `oracle_disagreements: 0`, and the offending
+row records `backend_kind: "z3-binary"`, `query_boundary: "original source
+file"`, `outcome: "sat"`, `decision_agrees: true`. **Axeyum's verdicts are
+byte-identical before and after** — this changed only who adjudicates them.
+
+## Baselines updated
+
+With the boundary corrected, all three rows were re-run and promoted into
+`bench-results/baselines/`, and `SCOREBOARD.md` regenerated:
+
+- Totals move **753 → 762 decided** over the same 992 files, **DISAGREE = 0**
+  preserved.
+- `Cmp` falls (QF_S 82 → 79, QF_SEQ 15 → 10) because bounded-string rows now
+  adjudicate through the binary and some are no longer comparable at all. That
+  is the honest number: fewer comparisons, but every one of them against the
+  query actually asked.
+- The ground-truth column for all three rows changes from `z3-library+binary` to
+  `z3-binary`.
 
 ## Next
 
-1. Fix the oracle boundary: decline rather than compare when the query reaching
-   the in-process oracle is a bounded-string encoding, or route string logics to
-   the external z3 binary (which reads the original text); and propagate
-   `oracle_disagreements` into `summary.disagree` so an alarm cannot be dropped.
-2. Re-run these three rows and promote them into `bench-results/baselines/`,
-   regenerating `SCOREBOARD.md`.
-3. Re-scope Lane B against this data rather than against the Noetzli figure. The
+1. Re-scope Lane B against this data rather than against the Noetzli figure. The
    residual is now known: QF_SLIA 21 unsupported + 4 unknown, QF_S 32
    unsupported + 9 unknown, QF_SEQ 10 unknown — and the QF_SEQ unknowns are
    concentrated in the A.2 bounded-unsat gate, which is a concrete mechanism to
    attack rather than a diffuse gap.
+2. Recover the four QF_SEQ `unsat` decisions properly. They are gated, not
+   broken: the A.2 gate declines a bounded `unsat` that is not confirmed
+   bound-independent. A bound-independence argument would return them *with*
+   evidence.
+3. Audit whether any other division's committed baseline is similarly stale.
+   Three of three string rows were wrong, in both directions, which is not a
+   reassuring sample.
