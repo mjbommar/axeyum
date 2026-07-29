@@ -1920,16 +1920,43 @@ fn string_replace_symbolic_s_eval() {
 
 #[test]
 fn string_replace_over_cap_declines() {
-    // A replace whose result max length (m_s + m_b) exceeds STRING_BOUND_CAP (16)
-    // is a clean Unsupported — never truncated to a wrong string. Concatenating
-    // two length-8 strings into `b` makes m_b = 16, so m_s(8) + m_b(16) = 24 > 16.
-    let err = parse_script(
+    // A replace whose result max length (m_s + m_b) exceeds STRING_BOUND_CAP is
+    // never truncated to a wrong string — the bounded ADR-0029 encoder refuses
+    // it outright.
+    //
+    // That refusal used to surface as a hard `SmtError::Unsupported` from
+    // `parse_script`. Since the bounded source-witness SAT route landed, it no
+    // longer does: the word-first fallback returns a `Script` that carries the
+    // original bounded error in `word_only_fallback`, and the SAT-only source
+    // side channel may be populated alongside it. That widening is deliberate
+    // and is gated at the solver, not here — if every source route declines,
+    // `decide_word_only` reproduces the bounded error, so no previously
+    // unsupported script silently becomes a bare `unknown` or `sat`.
+    //
+    // The soundness property is unchanged, and it is what this test pins: **no
+    // packed-BV flat assertions are built from the over-cap term**, so nothing
+    // can ever be decided from a truncated encoding. Checked end-to-end while
+    // updating this test: the script answers `unknown`, while cvc5 1.3.4 and z3
+    // both answer `sat` — an honest decline, not a wrong verdict.
+    let script = parse_script(
         "(declare-fun s () String)\n\
          (declare-fun b1 () String)\n(declare-fun b2 () String)\n\
          (assert (= (str.replace s \"a\" (str.++ b1 b2)) s))\n(check-sat)\n",
     )
-    .expect_err("over-cap replace declines");
-    assert!(matches!(err, SmtError::Unsupported(_)), "got {err:?}");
+    .expect("an over-cap replace reaches the word-first fallback, not a hard error");
+    let fallback = script
+        .word_only_fallback
+        .as_deref()
+        .expect("the bounded parse declined, so this is a word-first fallback script");
+    assert!(
+        fallback.contains("exceeds the cap"),
+        "the fallback preserves the original bounded over-cap error: {fallback}"
+    );
+    assert!(
+        script.assertions.is_empty(),
+        "an over-cap replace must build no packed-BV assertions: {:?}",
+        script.assertions
+    );
 }
 
 #[test]
