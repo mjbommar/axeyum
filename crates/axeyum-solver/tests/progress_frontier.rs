@@ -74,6 +74,7 @@
 //!   all): an UNSAT blind spot, captured as a tracking row.
 #![cfg(feature = "full")]
 
+use std::ffi::OsString;
 use std::fmt::Write as _;
 use std::path::{Path, PathBuf};
 use std::sync::mpsc;
@@ -93,6 +94,14 @@ const BUDGET: Duration = Duration::from_secs(4);
 /// How far past the frontier we keep sweeping, to log the shape of the fall-off
 /// (decided → undecided) rather than stopping the instant we hit the wall.
 const OVERSHOOT: u32 = 3;
+
+/// Optional destination for volatile hardware-relative timing curves.
+///
+/// The SMT-COMP readiness gate sets this to a unique temporary directory so
+/// an otherwise successful `just check` cannot dirty the exact-main worktree.
+/// Ordinary developer and measurement runs retain the historical committed
+/// artifact location when the variable is absent.
+const FRONTIER_ARTIFACT_DIR_ENV: &str = "AXEYUM_PROGRESS_FRONTIER_ARTIFACT_DIR";
 
 // ---------------------------------------------------------------------------
 // Committed baselines — the measured current frontier per family.
@@ -390,9 +399,24 @@ fn write_curve_json(family: &str, baseline: u32, frontier: u32, curve: &[CurvePo
 }
 
 fn artifact_dir() -> PathBuf {
+    artifact_dir_from_override(std::env::var_os(FRONTIER_ARTIFACT_DIR_ENV))
+        .unwrap_or_else(|message| panic!("{message}"))
+}
+
+fn artifact_dir_from_override(override_dir: Option<OsString>) -> Result<PathBuf, &'static str> {
+    if let Some(value) = override_dir {
+        if value.is_empty() {
+            return Err("AXEYUM_PROGRESS_FRONTIER_ARTIFACT_DIR must not be empty");
+        }
+        let path = PathBuf::from(value);
+        if !path.is_absolute() {
+            return Err("AXEYUM_PROGRESS_FRONTIER_ARTIFACT_DIR must be absolute");
+        }
+        return Ok(path);
+    }
     // Tests run with CWD = crate dir (crates/axeyum-solver); artifacts live at
     // the workspace root under bench-results/.
-    Path::new(env!("CARGO_MANIFEST_DIR")).join("../../bench-results/frontier")
+    Ok(Path::new(env!("CARGO_MANIFEST_DIR")).join("../../bench-results/frontier"))
 }
 
 // ===========================================================================
@@ -1050,6 +1074,26 @@ fn scenario_to_instance(scenario: &Scenario) -> Instance {
 // ===========================================================================
 // Tests.
 // ===========================================================================
+
+#[test]
+fn artifact_directory_override_is_explicit_and_absolute() {
+    let historical = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../bench-results/frontier");
+    assert_eq!(artifact_dir_from_override(None).unwrap(), historical);
+
+    let absolute = std::env::temp_dir().join("axeyum-frontier-artifact-test");
+    assert_eq!(
+        artifact_dir_from_override(Some(absolute.clone().into_os_string())).unwrap(),
+        absolute
+    );
+    assert_eq!(
+        artifact_dir_from_override(Some(OsString::new())),
+        Err("AXEYUM_PROGRESS_FRONTIER_ARTIFACT_DIR must not be empty")
+    );
+    assert_eq!(
+        artifact_dir_from_override(Some(OsString::from("relative/frontier"))),
+        Err("AXEYUM_PROGRESS_FRONTIER_ARTIFACT_DIR must be absolute")
+    );
+}
 
 #[test]
 fn frontier_bv_reduction() {
