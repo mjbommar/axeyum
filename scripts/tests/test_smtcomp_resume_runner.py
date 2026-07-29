@@ -67,6 +67,7 @@ class Layout:
         hang: bool = False,
         marker: Path | None = None,
         solver_environment: dict[str, str] | None = None,
+        wall_limit_ms: int = 50,
     ):
         self.root = root
         family = root / "corpus" / "non-incremental" / "QF_BV" / "fixture"
@@ -104,7 +105,12 @@ class Layout:
         if marker is not None:
             self.command_template.append(str(marker))
         self.memory_limit_bytes = 512 * 1024**2
-        self.wall_limit_ms = 50
+        # 50 ms is deliberately tighter than the fake solver's own startup, so a
+        # non-hanging case times out immediately. A test that needs the solver to
+        # *report a verdict first* must raise this: the fake solver is a Python
+        # script, and interpreter startup alone can exceed 50 ms under load, so
+        # the verdict would race the kill. See the `hang=True` callers.
+        self.wall_limit_ms = wall_limit_ms
         run = fixture_run_manifest(
             repository_root=ROOT,
             source_root=SMTCOMP,
@@ -659,7 +665,15 @@ class ResumeRunnerTests(unittest.TestCase):
     def test_cli_retains_timeout_verdict_exports_only_after_sidecar_validation(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
-            layout = Layout(root, hang=True)
+            # This test asserts the runner RETAINS a verdict the solver reported
+            # before the wall limit fired, so the verdict must be observed
+            # deterministically. The fake solver prints `sat` and then sleeps 60 s,
+            # so the wall-timeout is guaranteed by the sleep regardless of this
+            # limit — it only has to be comfortably longer than Python interpreter
+            # startup. At the 50 ms default the two raced, and this test failed
+            # inside a full `just check` with `observed_status = None` while
+            # passing in isolation.
+            layout = Layout(root, hang=True, wall_limit_ms=3000)
             run_dir = root / "run"
             raw = root / "raw.json"
             completed = subprocess.run(

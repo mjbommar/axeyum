@@ -428,3 +428,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [0371](adr-0371-preregister-combined-definite-deadline-retention.md) | Reject definite-result retention across the combined-theory deadline after zero selected-row gain | rejected |
 | [0372](adr-0372-preregister-negated-conjunction-branch-split.md) | Reject serial negated-conjunction splitting after the hard branch exceeded the monolithic solve | rejected |
 | [0373](adr-0373-preregister-source-fp-prefix-monotonicity.md) | Accept one fail-closed source-level RNE nonnegative FP prefix refuter | accepted |
+| [0374](adr-0374-bool-free-symbols-in-quantified-bv-certificates.md) | Admit Bool free symbols in quantified-BV model certificates and certify skolemized negated universals | accepted |

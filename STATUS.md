@@ -441,6 +441,60 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-29 — the curated strings rows are re-measured, and a harness oracle
+  was adjudicating the wrong query.** Full record:
+  [strings re-measurement](docs/plan/strings-remeasurement-2026-07-29.md).
+  QF_SLIA **18→25 / 50 (36%→50%)**, QF_S **87→93 / 134 (65%→69%)**, QF_SEQ
+  **26→22 / 33 (79%→67%)**; totals move **753→762 decided** over the same 992
+  files with **DISAGREE = 0** preserved. Two findings, and the second contradicts
+  a working assumption of the agent program. (1) The committed baselines were
+  stale in **both** directions — QF_SEQ had been claiming four `unsat` decisions
+  the code no longer makes, all four landing in the P2.7 A.2 bounded-unsat gate.
+  A stale generated view is not automatically conservative. (2) Every row is
+  **identical at `ffc466b4` and at current `main`**, so the Phase 0 Noetzli work
+  moved these curated rows by **exactly zero**; the gains and the regression both
+  predate it. The Noetzli 1,880/1,880 result is population-specific and must not
+  be generalised to QF_SLIA/QF_S/QF_SEQ. Re-measuring also exposed a harness
+  defect: `compare_with_oracle` handed the in-repo Z3 oracle `script.assertions`,
+  which for a bounded-string script is the packed-BV **encoding** (ADR-0029), not
+  the source. On `r1_QF_SLIA_pattern1.smt2` that oracle returned `unsat` in 0 ms
+  while the declared `:status`, the Z3 binary, cvc5 1.3.4, and axeyum all answer
+  `sat` — a false soundness alarm, and the same defect can equally produce false
+  *agreement*. A bounded-string query now never adjudicates through the in-repo
+  oracle; it falls back to the Z3 binary on the original file, or is not compared.
+  Axeyum's verdicts are byte-identical before and after — only the adjudicator
+  changed. Next: re-scope Lane B against the now-known residual (QF_SLIA 21
+  unsupported + 4 unknown, QF_S 32 + 9, QF_SEQ 10 unknown concentrated in the
+  A.2 gate), and audit whether other divisions' baselines are similarly stale —
+  three of three string rows were wrong, which is not a reassuring sample.
+
+- **2026-07-29 — `just check` is GREEN on `main` (ADR-0374 closed the last
+  blocker).** Verified by content, not by exit code: 0 compile errors, 0 failed
+  tests, 0 panics, 0 clippy warnings, **467 test suites ok**, all 13 gate stages
+  present, `disagree=0`. The pre-existing quantified-BV blocker recorded on
+  2026-07-28 is fixed. Root cause, established empirically: `normalize` rewrites
+  `not (forall x. B)` to `exists x. not B`, `skolemize_top_existentials` replaces
+  it with `not B[x := s]`, and the query is then quantifier-free — so `solve`
+  returned that `sat` **directly**. The model interprets the Skolem constant, so
+  it *is* the existential witness, but nothing recorded it, and `check_model`
+  replays against the **original** assertion where discharging `forall x` means
+  enumerating the domain: feasible at 1/2/8/16 bits, impossible at 32, which is
+  exactly the width where it failed. So the verdict and the model were both
+  correct and only the **evidence** was missing. The
+  `NegatedUniversalWitness` certificate (ADR-0130/0131) already existed for this
+  shape, but `source_shape` admitted a certificate only when every free symbol
+  was `BitVec`, and the assertion carries a free `Bool`. ADR-0374 admits `Bool`
+  free symbols (the proofs are evaluation-based, so a `Bool` free value is
+  checked exactly as strongly as a `BitVec` one), lets the witness search pin a
+  `Bool`, and attaches the certificate to the skolemized `sat`. The discharge
+  differential moves from a panic to **certified_sat=32 / agreed_unsat=16 /
+  safe_controls=16**, and `progress_frontier` is 9/9 with all five frontier
+  values unchanged. **This is an evidence-coverage gain, not a decide-rate
+  gain** — results that were correct but unverifiable are now verifiable, and no
+  benchmark moves from `unknown` to a verdict. Next: re-measure the curated
+  QF_SLIA / QF_S / QF_SEQ SCOREBOARD rows, which have not been regenerated since
+  the Noetzli mechanisms landed.
+
 - **2026-07-28 — Phase 0 integration landed a P0 wrong-`unsat`, then fixed it;
   the Noetzli slice is verified on `main` and two gate holes are closed.** Full
   record: [Phase 0 result](docs/plan/phase0-integration-result-2026-07-28.md).
@@ -474,6 +528,29 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   19.1 s / 17.3 GB at parse time, where the solver timeout does not apply), then
   integrate `agent/solver/qfslia-regex-length-next` — audited as **not** a stale
   duplicate but ~3.6k lines of unique dual-oracle-confirmed capability.
+
+- **2026-07-28 — `just check` is red on `main` for a PRE-EXISTING quantified-BV
+  wrong-`sat`-model, and this is now the top P0.** The full gate run exposed
+  `quantified_bv_differential_fuzz.rs:1037`
+  (`boolean_discharge_of_opaque_bv_closures_matches_z3`, negative-control branch
+  `(3, Ok(Sat(model)), SatResult::Sat)`): axeyum returns `Sat` with a model and
+  z3 agrees `Sat`, but `check_model(&arena, &[assertion], model)` returns
+  `Ok(false)` — the lifted model does **not** satisfy the original assertion,
+  violating the rule that every `sat` must replay against the original term. The
+  fuzz runs on a fixed-seed LCG, so it is deterministic rather than flaky.
+  **Verified pre-existing**: built and ran the same test at `ffc466b4` (the
+  pre-merge baseline) and it fails with the identical assertion at the identical
+  line. The 2026-07-28 session touched no quantified-BV or BV source, and this
+  fuzz builds terms through the arena rather than the SMT-LIB front door. It had
+  been masked because the earlier gate failure (`string_replace_over_cap_declines`
+  in `axeyum-smtlib`, which sorts first) aborted the run before reaching it, and
+  because the Lean complete-parity manifest had independently been failing
+  `parity-docs` since `fe8ba9af`. Both maskers are now fixed, so this is the
+  single remaining `just check` blocker. Next: the seed is fixed, so instrument
+  the failing case index/width, dump the assertion and model, and establish
+  whether the model is incomplete (an unbound symbol that `check_model` reads as
+  unsatisfied) or genuinely wrong. Owner: the quantified-BV boolean-discharge
+  path.
 
 - **2026-07-27 — SMT `(15,64)` sqrt is validated; reclassify the measured
   residuals before widening arithmetic.** Commit `ab4b5803` and ADR-0370 add one sqrt-specific gate,

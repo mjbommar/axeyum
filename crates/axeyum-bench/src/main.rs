@@ -6103,6 +6103,68 @@ mod run {
     }
 
     #[allow(clippy::too_many_arguments)]
+    /// Which verdict, if any, may adjudicate the primary result.
+    struct OracleVerdict {
+        outcome: &'static str,
+        decided: bool,
+        z3_binary: Option<Z3BinaryResult>,
+    }
+
+    /// Chooses the adjudicating oracle for one instance.
+    ///
+    /// Two reasons the in-repo `Z3Backend` cannot adjudicate:
+    ///
+    /// 1. It supports only `QF_BV`, returning `unsupported` for
+    ///    UF/arithmetic/datatypes/quantifiers/FP — so on most of the divisions
+    ///    this keystone exists to measure it gives no head-to-head at all.
+    /// 2. **A bounded-string script's parsed assertions are the packed-BV
+    ///    encoding (ADR-0029), not the source semantics.** That encoding carries
+    ///    a length cap, so a satisfiable string problem whose every witness is
+    ///    longer than the cap encodes to something genuinely unsatisfiable. The
+    ///    in-repo oracle solves those assertions and answers *confidently* — it
+    ///    does not decline — so case 1's fallback never fires for it.
+    ///
+    /// Case 2 was observed on `QF_S/.../r1_QF_SLIA_pattern1.smt2`, where every
+    /// satisfying `x` exceeds 30 characters: the in-repo oracle returned `unsat`
+    /// in 0 ms while the declared `:status`, the Z3 binary, cvc5 1.3.4, and
+    /// axeyum all answer `sat`. Comparing the two produced a false soundness
+    /// alarm. The same defect can equally produce false *agreement* that masks a
+    /// genuine bug, which is why the verdict is discarded rather than annotated.
+    ///
+    /// In both cases fall back to the **Z3 binary** on the original file — the
+    /// verdict a Z3 user would get, against the query actually asked. If the
+    /// binary is unavailable, the instance is simply not compared.
+    fn resolve_oracle_verdict(
+        in_repo_outcome: &'static str,
+        encoded_string_boundary: bool,
+        file: &Path,
+        timeout: Option<Duration>,
+    ) -> OracleVerdict {
+        let mut verdict = if encoded_string_boundary {
+            OracleVerdict {
+                outcome: "unsupported",
+                decided: false,
+                z3_binary: None,
+            }
+        } else {
+            OracleVerdict {
+                outcome: in_repo_outcome,
+                decided: matches!(in_repo_outcome, "sat" | "unsat"),
+                z3_binary: None,
+            }
+        };
+        if (in_repo_outcome == "unsupported" || encoded_string_boundary)
+            && let Some(result) = run_z3_binary(file, timeout)
+        {
+            if let Some(binary_verdict) = result.verdict {
+                verdict.outcome = binary_verdict;
+                verdict.decided = true;
+            }
+            verdict.z3_binary = Some(result);
+        }
+        verdict
+    }
+
     fn compare_with_oracle(
         oracle: &mut dyn SolverBackend,
         file: &Path,
@@ -6128,26 +6190,17 @@ mod run {
             None,
         );
         let primary_decided = matches!(primary.outcome, "sat" | "unsat");
-        let mut oracle_decided = matches!(oracle_solve.outcome, "sat" | "unsat");
-        // The in-repo `Z3Backend` oracle only supports `QF_BV` (it returns
-        // `unsupported` for UF/arithmetic/datatypes/quantifiers/FP). So for the
-        // non-BV divisions this keystone exists to measure, it cannot give a
-        // head-to-head. When it declines, fall back to the **Z3 binary** run on the
-        // original file — the same verdict a Z3 user would get — so the oracle
-        // agree/disagree counters carry a true comparison. This is a verdict-only
-        // cross-check (no model lift), which is exactly what a soundness `:status`
-        // / disagreement gate needs.
-        let mut z3_binary: Option<Z3BinaryResult> = None;
-        let mut oracle_outcome = oracle_solve.outcome;
-        if oracle_solve.outcome == "unsupported"
-            && let Some(result) = run_z3_binary(file, config.timeout)
-        {
-            if let Some(verdict) = result.verdict {
-                oracle_outcome = verdict;
-                oracle_decided = true;
-            }
-            z3_binary = Some(result);
-        }
+        let encoded_string_boundary = script.uses_bounded_strings;
+        let OracleVerdict {
+            outcome: oracle_outcome,
+            decided: oracle_decided,
+            z3_binary,
+        } = resolve_oracle_verdict(
+            oracle_solve.outcome,
+            encoded_string_boundary,
+            file,
+            config.timeout,
+        );
 
         let compared = primary_decided && oracle_decided;
         let population = record_oracle_population(summary, primary_decided, oracle_decided);
@@ -6188,7 +6241,15 @@ mod run {
         let mut record = json!({
             "enabled": true,
             "backend_kind": if z3_binary.is_some() { "z3-binary" } else { "z3" },
-            "query_boundary": "original parsed assertions",
+            // Name the boundary honestly: "original parsed assertions" is the
+            // packed-BV encoding for a bounded-string script, not the source.
+            "query_boundary": if z3_binary.is_some() {
+                "original source file"
+            } else if encoded_string_boundary {
+                "bounded-string encoding (not adjudicated)"
+            } else {
+                "original parsed assertions"
+            },
             "outcome": oracle_outcome,
             "decision_population": population,
             "decision_compared": compared,

@@ -158,16 +158,33 @@ not done until every applicable line is true.
    cargo test --workspace --lib                            # ~30s, any solver change
    cargo test -p axeyum-solver --test progress_frontier    # ~60s, any decider/dispatch change
    just check-scope                                        # scoped gate vs main
-   just check                                              # full gate before a merge to main
+   just check                                              # REQUIRED before a merge to main
    ```
-7. **Build caps on this host:** `CARGO_BUILD_JOBS=1`, `--jobs 1`, inside a user
-   cgroup with aggregate `MemoryMax=4G`. Never Cargo's host-default parallelism.
-8. **ADR before public surface.** New operator, rewrite class, encoding,
+   **The first three are not sufficient for a merge.** They are change-class
+   gates. `cargo test --workspace --lib` covers **lib targets only**, so every
+   integration test under `crates/*/tests/` is invisible to it — and on
+   2026-07-28 exactly that gap let a merge land on `main` that broke
+   `string_replace_over_cap_declines` in `crates/axeyum-smtlib/tests/smtlib.rs`.
+   Run the full `just check` **before** the merge, not after.
+7. **Verify gate output by content, never by exit code.** A piped exit code is
+   the pipe's, not the gate's — `just check 2>&1 | tail -40` once reported
+   success from `tail` while `parity-docs` had failed. A backgrounded wrapper's
+   exit code is likewise the wrapper's: on 2026-07-28 a task notification
+   reported "exit code 0" for a `just check` that had actually failed with 101.
+   Write the real status into the log (`echo "EXIT=$?" >> log`) and grep the log
+   for `^error`, `test result: FAILED`, and `panicked`.
+8. **Build caps on this host:** `CARGO_BUILD_JOBS=1`, `--jobs 1`, and **one
+   cargo invocation at a time**. `CARGO_BUILD_JOBS` bounds parallelism *within*
+   a single cargo, not across two — running a `just check` and a test build
+   concurrently OOM-killed this host on 2026-07-28. Run anything that might blow
+   up under `MEM_LIMIT_GB=<n> scripts/mem-run.sh …` so it aborts cleanly at the
+   cap with a usable diagnostic instead of taking the machine.
+9. **ADR before public surface.** New operator, rewrite class, encoding,
    backend, evidence artifact, or logic fragment ⇒ an ADR in
    `docs/research/09-decisions/` first. Decisions are not made silently in code.
-9. **Record the result.** Every increment lands a dated result note under
-   `docs/plan/` and updates its STATUS phase row + a *Current focus* bullet.
-10. **Do not sweep the 41 GB public corpus to "make progress."** Measure once on
+10. **Record the result.** Every increment lands a dated result note under
+    `docs/plan/` and updates its STATUS phase row + a *Current focus* bullet.
+11. **Do not sweep the 41 GB public corpus to "make progress."** Measure once on
     a committed slice, then stop.
 
 ---

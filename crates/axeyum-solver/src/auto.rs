@@ -297,7 +297,13 @@ pub fn solve(
         let Some(remaining) = config_with_remaining_timeout(config, deadline) else {
             return Ok(quantified_timeout("existential skolemization"));
         };
-        return check_auto(arena, assertions, &remaining);
+        let result = check_auto(arena, assertions, &remaining)?;
+        return Ok(certify_skolemized_negated_universals(
+            arena,
+            &original_assertions,
+            result,
+            &remaining,
+        ));
     }
 
     // Valid-universal elimination (sat-side universal-closure validity check):
@@ -526,6 +532,73 @@ pub fn unsat_core(
 /// for a fresh constant `s` of `x`'s sort — equisatisfiable, and (unlike finite
 /// expansion) complete for infinite domains. Non-existential assertions and
 /// existentials in non-top-level positions are left unchanged.
+/// Attaches a checked witness certificate to a `sat` that top-level
+/// skolemization decided.
+///
+/// `∃x. B` is replaced by `B[x := s]` for a fresh constant, which is
+/// equisatisfiable and lets the quantifier-free dispatch decide it. The model
+/// that comes back interprets `s`, so it *is* the existential witness — but it
+/// is a model of the **skolemized** query, and `check_model` replays against the
+/// **original**. For a directly negated universal `¬∀x. B` (the normalized form
+/// of a counterexample query) that replay has to enumerate `x`'s whole domain,
+/// which is fine at 8 or 16 bits and impossible at 32. The verdict and the model
+/// were both correct; only the evidence was missing, so a caller could not tell
+/// an unverifiable `sat` from a verified one.
+///
+/// This re-derives the witness through the same checked route the certified
+/// search uses, so the returned `sat` carries evidence `check_model` accepts at
+/// every width. It is strictly additive: a shape that does not match, or a
+/// witness that fails its own check, leaves the result exactly as it was.
+fn certify_skolemized_negated_universals(
+    arena: &TermArena,
+    original_assertions: &[TermId],
+    result: CheckResult,
+    config: &SolverConfig,
+) -> CheckResult {
+    let CheckResult::Sat(mut model) = result else {
+        return result;
+    };
+    let assignment = model.to_assignment();
+    for &assertion in original_assertions {
+        if model
+            .quantified_bv_model_sat_certificate(assertion)
+            .is_some()
+            || crate::quant_bv_model_sat_cert::direct_negated_universal(arena, assertion).is_none()
+        {
+            continue;
+        }
+        let Some(free) = crate::quant_bv_model_sat_cert::admitted_free_bv_symbols(arena, assertion)
+        else {
+            continue;
+        };
+        let Some(free_values) = free
+            .iter()
+            .map(|&symbol| assignment.get(symbol).map(|value| (symbol, value)))
+            .collect::<Option<Vec<_>>>()
+        else {
+            continue;
+        };
+        // The witness search pins exactly these free values, so `all_values` and
+        // `free_values` coincide here; the certified search passes a wider
+        // candidate assignment.
+        // A declined or failed witness search is not a soundness event: the
+        // verdict stands on skolemization, which is trusted. Leave the model as
+        // it was rather than weakening a correct answer.
+        if let Ok(Some(certificate)) =
+            crate::quant_bv_model_sat_search::find_negated_universal_witness(
+                arena,
+                assertion,
+                free_values.clone(),
+                &free_values,
+                config,
+            )
+        {
+            model.set_quantified_bv_model_sat_certificate(certificate);
+        }
+    }
+    CheckResult::Sat(model)
+}
+
 fn skolemize_top_existentials(
     arena: &mut TermArena,
     assertions: &[TermId],
