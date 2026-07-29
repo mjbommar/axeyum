@@ -181,11 +181,33 @@ That is the correct default; do not relax it opportunistically.
 > the repaired binary (Rank 0 exit), and the QF_FP residual is being chosen from
 > a measured library census rather than from the two clusters already optimized.
 
-## C0 — Finish the ADR-0373 bound (blocks the route landing)
+## C0 — Finish the ADR-0373 bound — **DONE (2026-07-29, on `main`)**
 
-**Status: merged onto `integration/fp-adr0373-20260728` (`0a37ef2b`), held off
-`main`.** Full detail in the
+**Status: landed.** The route is on `main` and the parse-time blowup is bounded.
+Full detail in the
 [Phase 0 result note](../phase0-integration-result-2026-07-28.md#6-why-fp-ground-div-did-not-land).
+
+The fix needed three parts, and the third is the transferable lesson: the emit
+budget must be charged *during* construction; scopes must be chained rather than
+the environment cloned per `let` level; and the charge must use a counter that
+**does not saturate**. `source_expr_node_count` early-breaks at the 512-node
+eligibility cap, which is right for "did it exceed the cap" and catastrophic as a
+charge — it billed a 500,000-node substitution as 513, so the budget drained
+linearly while the tree doubled. Two earlier attempts failed on that alone, and
+only instrumenting the per-level sizes exposed it (pinned at 513 while memory
+climbed).
+
+Measured: 60 nested duplicating bindings decline in ~0.05 s under a 4 GiB cap;
+end-to-end wall time tracks the deadline (0.40 s at 250 ms → 2.40 s at 2000 ms)
+at 99 MB RSS; k=24 went from 19.1 s / 17.3 GB to 5.61 s / 303 MB.
+
+**Still open from the same review** (non-blocking, carried forward): duplicate
+`:named` bindings are silently rebound (`parse.rs`), which this route turns into a
+wrong `unsat` on non-conforming input; the negative controls assert only the
+internal flag and never an end-to-end `sat` verdict; and there is no fuzz
+generator for the route.
+
+### Historical detail (kept — the failure mode is instructive)
 
 The route's **soundness core is clean** — top-level conjuncts only, `Unsat`-only,
 a checked `non_nan` precondition before `nonnegative` (closing the vacuous-truth

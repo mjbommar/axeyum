@@ -247,6 +247,33 @@ and its eligibility gate requires no FP content, so every single-query
 macro-free script — the common shape of QF_BV/QF_ABV BMC output — pays a full
 clone of every assertion body.
 
+> **RESOLVED 2026-07-29 — ADR-0373 is now on `main`.** The bound is closed and
+> the route landed. Three things were needed, and the third is why two earlier
+> attempts failed:
+>
+> 1. Charge the emit budget *during* construction, not after — charging
+>    afterwards still pays the allocation it was meant to prevent.
+> 2. Chain scopes instead of cloning the environment at every `let` level. With a
+>    depth cap of 64 and a value set bounded only by the budget, cloning put
+>    `depth × budget` nodes live at once.
+> 3. **Charge through a counter that does not saturate.** The existing
+>    `source_expr_node_count` early-breaks at the 512-node eligibility cap —
+>    correct for a test that only needs to know the cap was passed, catastrophic
+>    as a charge: it billed a 500,000-node substitution as **513**, so the budget
+>    drained linearly while the tree it was meant to bound doubled. A new
+>    `source_expr_node_count_within` counts against the caller's real remaining
+>    budget and stops as soon as the answer cannot matter.
+>
+> Only instrumenting the actual per-level sizes found (3) — they sat pinned at
+> 513 while memory climbed, which no amount of reasoning about the clone sites
+> would have revealed. Measured after: 60 nested duplicating bindings decline in
+> ~0.05 s under a 4 GiB cap; end-to-end wall time now tracks the configured
+> deadline (0.40 s at 250 ms → 2.40 s at 2000 ms) at 99 MB RSS for the tightest
+> budget, so the path degrades under a deterministic bound as the standing rule
+> requires. k=24 went from 19.1 s / 17.3 GB to 5.61 s / 303 MB.
+>
+> The historical account below is kept because the failure mode is instructive.
+
 **The obvious fix was attempted and is not sufficient.** The merge itself is
 done and clean on `integration/fp-adr0373-20260728` (`0a37ef2b`) — the single
 conflict is the `Script` field, resolved by keeping both. On top of it,

@@ -441,6 +441,33 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-29 — ADR-0373 is on `main`: the source FP prefix refuter lands with
+  its parse-time blowup bounded.** The route was held since 2026-07-28 on an
+  availability defect, not a soundness one — its core reviewed clean (top-level
+  conjuncts only, `Unsat`-only, checked `non_nan` before `nonnegative`, RNE-only
+  with no subtraction or mixed signs so the exact-cancellation P0 class is
+  structurally unreachable, 86/86 against z3 on an 1,800-case fuzz).
+  `normalize_source_fp_expr` substituted each `let`-bound value at every use, so
+  `k` nested bindings each mentioning the previous one twice emitted `2^k` nodes
+  **at parse time, where the solver timeout does not apply** — a 769-byte file
+  with 24 bindings cost 19.1 s / 17.3 GB and 26 exhausted the host, across *all*
+  logics since the route ran unconditionally. Three fixes were needed and the
+  third is the transferable one: charge the emit budget *during* construction;
+  chain scopes instead of cloning the environment per level; and charge through a
+  counter that **does not saturate**. `source_expr_node_count` early-breaks at
+  the 512-node eligibility cap — right for "did it exceed the cap", catastrophic
+  as a charge, because it billed a 500,000-node substitution as **513** and so
+  the budget drained linearly while the tree doubled. Two earlier attempts failed
+  on that alone; only instrumenting the per-level sizes found it, pinned at 513
+  while memory climbed. A `source_mentions_fp_add` pre-gate also keeps
+  QF_BV/QF_ABV bounded-model-checking output off the path entirely. Measured: 60
+  nested bindings decline in ~0.05 s under a 4 GiB cap, and end-to-end wall time
+  now tracks the configured deadline (0.40 s at 250 ms → 2.40 s at 2000 ms) at
+  99 MB RSS — a deterministic bound, as the standing rule requires. Carried
+  forward from the same review, non-blocking: duplicate `:named` bindings are
+  silently rebound, the negative controls never assert an end-to-end `sat`, and
+  the route has no fuzz generator.
+
 - **2026-07-29 — the curated strings rows are re-measured, and a harness oracle
   was adjudicating the wrong query.** Full record:
   [strings re-measurement](docs/plan/strings-remeasurement-2026-07-29.md).
