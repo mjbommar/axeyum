@@ -210,10 +210,38 @@ and its eligibility gate requires no FP content, so every single-query
 macro-free script — the common shape of QF_BV/QF_ABV BMC output — pays a full
 clone of every assertion body.
 
-The fix is ~15 lines (thread a node budget so the existing 512-node cap actually
-binds; pre-gate on the source containing `fp.add`). When unblocked, the merge is
-one conflict: both branches add a `Script` field after
-`source_string_semantic_unsat` — keep both.
+**The obvious fix was attempted and is not sufficient.** The merge itself is
+done and clean on `integration/fp-adr0373-20260728` (`0a37ef2b`) — the single
+conflict is the `Script` field, resolved by keeping both. On top of it,
+`SOURCE_FP_MAX_NORMALIZE_WORK` is now charged *during* construction (sized well
+above the 512-node eligibility cap, so no currently-eligible script loses
+capability) plus a `source_mentions_fp_add` pre-gate, with tests for both.
+
+Measured under a 6 GiB `scripts/mem-run.sh` cap: **4, 8, 12, 16 and 20 nested
+duplicating bindings now decline cleanly**, where 24 previously cost 19.1 s and
+17.3 GB. But **24 still aborts on allocation**, from a 1,928-byte script.
+
+Instrumentation localizes it precisely: the four small assertions normalize with
+the budget essentially untouched (99,990 of 100,000 remaining), and the fifth
+dies *inside* `normalize_source_fp_expr` **without ever returning** — so the
+`checked_sub` charge is not on the path that allocates. Two concrete suspects,
+in order:
+
+1. `let mut extended = environment.clone()` runs at **every** `let` level and is
+   never charged at all.
+2. `environment.get(atom).cloned()` **materializes** the substituted subtree
+   *before* the budget is charged for it. Charging must precede the allocation:
+   look the value up, count its nodes, charge, and only then clone.
+
+The committed test is deliberately capped at 20 bindings so it passes honestly
+rather than appearing to prove a bound that does not hold. Do not raise that cap
+or land the branch until 24+ declines.
+
+> Process note: the first attempt to measure this OOM-killed the host, because
+> two cargo invocations were run concurrently without `scripts/mem-run.sh`.
+> `CARGO_BUILD_JOBS=1` bounds parallelism *within* one cargo, not across two.
+> Every subsequent run was serialized and capped, which is why the failure above
+> is a clean 6 GiB abort with a usable diagnostic instead of a dead machine.
 
 ---
 
