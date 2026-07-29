@@ -441,6 +441,33 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-29 — the curated strings rows are re-measured, and a harness oracle
+  was adjudicating the wrong query.** Full record:
+  [strings re-measurement](docs/plan/strings-remeasurement-2026-07-29.md).
+  QF_SLIA **18→25 / 50 (36%→50%)**, QF_S **87→93 / 134 (65%→69%)**, QF_SEQ
+  **26→22 / 33 (79%→67%)**; totals move **753→762 decided** over the same 992
+  files with **DISAGREE = 0** preserved. Two findings, and the second contradicts
+  a working assumption of the agent program. (1) The committed baselines were
+  stale in **both** directions — QF_SEQ had been claiming four `unsat` decisions
+  the code no longer makes, all four landing in the P2.7 A.2 bounded-unsat gate.
+  A stale generated view is not automatically conservative. (2) Every row is
+  **identical at `ffc466b4` and at current `main`**, so the Phase 0 Noetzli work
+  moved these curated rows by **exactly zero**; the gains and the regression both
+  predate it. The Noetzli 1,880/1,880 result is population-specific and must not
+  be generalised to QF_SLIA/QF_S/QF_SEQ. Re-measuring also exposed a harness
+  defect: `compare_with_oracle` handed the in-repo Z3 oracle `script.assertions`,
+  which for a bounded-string script is the packed-BV **encoding** (ADR-0029), not
+  the source. On `r1_QF_SLIA_pattern1.smt2` that oracle returned `unsat` in 0 ms
+  while the declared `:status`, the Z3 binary, cvc5 1.3.4, and axeyum all answer
+  `sat` — a false soundness alarm, and the same defect can equally produce false
+  *agreement*. A bounded-string query now never adjudicates through the in-repo
+  oracle; it falls back to the Z3 binary on the original file, or is not compared.
+  Axeyum's verdicts are byte-identical before and after — only the adjudicator
+  changed. Next: re-scope Lane B against the now-known residual (QF_SLIA 21
+  unsupported + 4 unknown, QF_S 32 + 9, QF_SEQ 10 unknown concentrated in the
+  A.2 gate), and audit whether other divisions' baselines are similarly stale —
+  three of three string rows were wrong, which is not a reassuring sample.
+
 - **2026-07-29 — `just check` is GREEN on `main` (ADR-0374 closed the last
   blocker).** Verified by content, not by exit code: 0 compile errors, 0 failed
   tests, 0 panics, 0 clippy warnings, **467 test suites ok**, all 13 gate stages
