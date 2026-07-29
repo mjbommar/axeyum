@@ -441,6 +441,33 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-29 — `just check` is GREEN on `main` (ADR-0374 closed the last
+  blocker).** Verified by content, not by exit code: 0 compile errors, 0 failed
+  tests, 0 panics, 0 clippy warnings, **467 test suites ok**, all 13 gate stages
+  present, `disagree=0`. The pre-existing quantified-BV blocker recorded on
+  2026-07-28 is fixed. Root cause, established empirically: `normalize` rewrites
+  `not (forall x. B)` to `exists x. not B`, `skolemize_top_existentials` replaces
+  it with `not B[x := s]`, and the query is then quantifier-free — so `solve`
+  returned that `sat` **directly**. The model interprets the Skolem constant, so
+  it *is* the existential witness, but nothing recorded it, and `check_model`
+  replays against the **original** assertion where discharging `forall x` means
+  enumerating the domain: feasible at 1/2/8/16 bits, impossible at 32, which is
+  exactly the width where it failed. So the verdict and the model were both
+  correct and only the **evidence** was missing. The
+  `NegatedUniversalWitness` certificate (ADR-0130/0131) already existed for this
+  shape, but `source_shape` admitted a certificate only when every free symbol
+  was `BitVec`, and the assertion carries a free `Bool`. ADR-0374 admits `Bool`
+  free symbols (the proofs are evaluation-based, so a `Bool` free value is
+  checked exactly as strongly as a `BitVec` one), lets the witness search pin a
+  `Bool`, and attaches the certificate to the skolemized `sat`. The discharge
+  differential moves from a panic to **certified_sat=32 / agreed_unsat=16 /
+  safe_controls=16**, and `progress_frontier` is 9/9 with all five frontier
+  values unchanged. **This is an evidence-coverage gain, not a decide-rate
+  gain** — results that were correct but unverifiable are now verifiable, and no
+  benchmark moves from `unknown` to a verdict. Next: re-measure the curated
+  QF_SLIA / QF_S / QF_SEQ SCOREBOARD rows, which have not been regenerated since
+  the Noetzli mechanisms landed.
+
 - **2026-07-28 — Phase 0 integration landed a P0 wrong-`unsat`, then fixed it;
   the Noetzli slice is verified on `main` and two gate holes are closed.** Full
   record: [Phase 0 result](docs/plan/phase0-integration-result-2026-07-28.md).
