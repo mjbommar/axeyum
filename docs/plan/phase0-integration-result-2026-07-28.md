@@ -105,7 +105,44 @@ decided within 10 s.
 **Gates.** `corpus_regression`, `cargo test --workspace --lib`, and
 `progress_frontier` all pass on the merged tree, and the tree stays clean
 afterwards (see §4). All 82 `qf_slia_fixed_splice` tests pass. All ten
-generated-artifact `--check` gates pass.
+generated-artifact `--check` gates pass, and all 209 `axeyum-smtlib` integration
+tests pass.
+
+### `just check` is still red — for a pre-existing reason
+
+**It was red before this session started, for two independent causes.** One is
+fixed here (the stale Lean manifest, §4). The other is not mine and is not
+fixed:
+
+`quantified_bv_differential_fuzz.rs:1037`, test
+`boolean_discharge_of_opaque_bv_closures_matches_z3`, negative-control branch
+`(3, Ok(Sat(model)), SatResult::Sat)`: axeyum returns `Sat` with a model and z3
+agrees `Sat`, but `check_model(&arena, &[assertion], model)` returns
+`Ok(false)` — **the lifted model does not satisfy the original assertion.** That
+violates the standing rule that every `sat` must be checkable by evaluating the
+original term against the lifted model. The fuzz is driven by a fixed-seed LCG,
+so it is deterministic, not flaky.
+
+Verified pre-existing by building and running that test at `ffc466b4`, the
+pre-merge baseline: **identical assertion, identical line.** This session touched
+no quantified-BV or BV source at all — only `axeyum-smtlib` parse/lib,
+`axeyum-solver/src/smtlib.rs` (the SMT-LIB text front door for strings), and test
+files — and this fuzz builds terms directly through the arena rather than routing
+through that front door.
+
+It is a live wrong-`sat`-model class in quantified BV and is P0 under the
+project's own rules. It belongs to the quantified-BV boolean-discharge path
+(Lane A or Lane F). Because the fuzz is fixed-seed, the next step is cheap:
+instrument the failing case index and width, dump the assertion and model, and
+establish whether the model is *incomplete* (a symbol left unbound that
+`check_model` treats as unsatisfied) or genuinely wrong.
+
+**So this note does not claim a green `main`.** It claims: the two failures this
+session was responsible for are fixed, one pre-existing failure is fixed, and one
+pre-existing P0-class failure is now *identified, attributed, and reproducible*
+rather than buried behind an earlier gate failure — the first `just check` never
+reached it, dying earlier on the `axeyum-smtlib` test that sorts before
+`axeyum-solver`.
 
 ---
 

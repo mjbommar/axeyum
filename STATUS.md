@@ -475,6 +475,29 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   integrate `agent/solver/qfslia-regex-length-next` — audited as **not** a stale
   duplicate but ~3.6k lines of unique dual-oracle-confirmed capability.
 
+- **2026-07-28 — `just check` is red on `main` for a PRE-EXISTING quantified-BV
+  wrong-`sat`-model, and this is now the top P0.** The full gate run exposed
+  `quantified_bv_differential_fuzz.rs:1037`
+  (`boolean_discharge_of_opaque_bv_closures_matches_z3`, negative-control branch
+  `(3, Ok(Sat(model)), SatResult::Sat)`): axeyum returns `Sat` with a model and
+  z3 agrees `Sat`, but `check_model(&arena, &[assertion], model)` returns
+  `Ok(false)` — the lifted model does **not** satisfy the original assertion,
+  violating the rule that every `sat` must replay against the original term. The
+  fuzz runs on a fixed-seed LCG, so it is deterministic rather than flaky.
+  **Verified pre-existing**: built and ran the same test at `ffc466b4` (the
+  pre-merge baseline) and it fails with the identical assertion at the identical
+  line. The 2026-07-28 session touched no quantified-BV or BV source, and this
+  fuzz builds terms through the arena rather than the SMT-LIB front door. It had
+  been masked because the earlier gate failure (`string_replace_over_cap_declines`
+  in `axeyum-smtlib`, which sorts first) aborted the run before reaching it, and
+  because the Lean complete-parity manifest had independently been failing
+  `parity-docs` since `fe8ba9af`. Both maskers are now fixed, so this is the
+  single remaining `just check` blocker. Next: the seed is fixed, so instrument
+  the failing case index/width, dump the assertion and model, and establish
+  whether the model is incomplete (an unbound symbol that `check_model` reads as
+  unsatisfied) or genuinely wrong. Owner: the quantified-BV boolean-discharge
+  path.
+
 - **2026-07-27 — SMT `(15,64)` sqrt is validated; reclassify the measured
   residuals before widening arithmetic.** Commit `ab4b5803` and ADR-0370 add one sqrt-specific gate,
   backed by 2,620 exact all-mode dyadic checks plus neighboring-result rejection.
