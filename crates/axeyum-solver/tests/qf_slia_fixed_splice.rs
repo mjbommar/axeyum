@@ -104,10 +104,18 @@ fn split_replace_rejoin_uses_the_base_bound() {
   "zz"))
 (check-sat)
 "#;
+    let unequal = parse_script(unequal_lengths)
+        .expect("the source SAT fallback retains the unequal-length pipeline");
+    assert!(unequal.word_only_fallback.is_some());
+    assert!(unequal.source_string_sat_problem.is_some());
     assert!(
-        parse_script(unequal_lengths).is_err(),
-        "an unequal-length pipeline outside the modeled word fragment must decline; \
-         equality-class pinning must not erase its defining equality"
+        matches!(
+            solve_smtlib(unequal_lengths, &config())
+                .expect("solve unequal-length pipeline")
+                .result,
+            CheckResult::Sat(_)
+        ),
+        "s = \"A\" is a replayed witness for the unequal-length pipeline"
     );
 }
 
@@ -2466,4 +2474,370 @@ fn exact_source_from_int_views_decline_satisfiable_controls() {
             "satisfiable symbolic from-int control must not become UNSAT: {assertion}"
         );
     }
+}
+
+#[test]
+fn exact_source_correlated_substring_index_views_refute_noetzli_family() {
+    let assertions = [
+        r"(not (= (str.substr x z (- 1 z)) (str.at x (str.indexof x x z))))",
+        r#"(not (= (str.substr x (- 1 z) z) (str.substr x 0 (str.indexof "A" "" z))))"#,
+        r#"(not (= (str.substr "A" 0 (str.indexof x "A" 1))
+                    (str.at x (str.indexof x "A" 1))))"#,
+        r#"(not (= (str.substr "B" 0 (str.indexof x "B" 1))
+                    (str.at x (str.indexof x "B" 1))))"#,
+        r"(not (= (str.substr (str.substr x 0 z) 1 z) (str.substr x 1 (- z 1))))",
+    ];
+
+    for assertion in assertions {
+        let input = format!(
+            r"(set-logic QF_SLIA)
+(declare-fun x () String)
+(declare-fun z () Int)
+(assert {assertion})
+(check-sat)
+"
+        );
+        let script = parse_script(&input).expect("parse correlated substring/index theorem");
+        assert!(
+            script.source_string_semantic_unsat,
+            "correlated substring/index theorem must refute {assertion}"
+        );
+        assert_eq!(
+            solve_smtlib(&input, &config())
+                .expect("solve correlated substring/index theorem")
+                .result,
+            CheckResult::Unsat,
+            "correlated substring/index theorem must survive the bounded-string gate: {assertion}"
+        );
+    }
+}
+
+#[test]
+fn exact_source_correlated_substring_index_views_decline_satisfiable_controls() {
+    for assertion in [
+        r"(not (= (str.substr x z (- 2 z)) (str.at x (str.indexof x x z))))",
+        r#"(not (= (str.substr x (- 1 z) z) (str.substr x 0 (str.indexof "AA" "" z))))"#,
+        r#"(not (= (str.substr "A" 0 (str.indexof x "B" 1))
+                    (str.at x (str.indexof x "B" 1))))"#,
+        r"(not (= (str.substr (str.substr x 1 z) 1 z) (str.substr x 1 (- z 1))))",
+    ] {
+        let input = format!(
+            r"(set-logic QF_SLIA)
+(declare-fun x () String)
+(declare-fun z () Int)
+(assert {assertion})
+(check-sat)
+"
+        );
+        let script = parse_script(&input).expect("parse correlated substring/index control");
+        assert!(
+            !script.source_string_semantic_unsat,
+            "satisfiable correlated substring/index control must decline: {assertion}"
+        );
+        assert_ne!(
+            solve_smtlib(&input, &config())
+                .expect("solve correlated substring/index control")
+                .result,
+            CheckResult::Unsat,
+            "satisfiable correlated substring/index control must not become UNSAT: {assertion}"
+        );
+    }
+}
+
+#[test]
+fn exact_source_first_occurrence_algebra_refutes_noetzli_families() {
+    let assertions = [
+        r#"(not (= (str.++ (str.replace "" x y) x) (str.++ x (str.replace "" x y))))"#,
+        r#"(not (= (str.++ (str.replace "" x y) y) (str.++ y (str.replace "" x y))))"#,
+        r"(not (= (str.replace x y (str.replace y x y)) x))",
+        r#"(not (= (str.replace x (str.replace "A" y x) "A") (str.replace x (str.replace y "A" x) y)))"#,
+        r#"(not (= (str.replace x (str.replace "B" y x) "B") (str.replace x (str.replace y "B" x) y)))"#,
+        r#"(not (= (str.replace (str.substr x 0 z) "A" "B") (str.substr (str.replace x "A" "B") 0 z)))"#,
+        r#"(not (= (str.replace (str.substr x 0 z) "B" "A") (str.substr (str.replace x "B" "A") 0 z)))"#,
+        r#"(not (= (str.replace (str.++ "A" x) x "A") "AA"))"#,
+        r#"(not (= (str.replace (str.++ "A" x) x "") "A"))"#,
+        r#"(not (= (str.replace (str.++ "B" x) x "B") "BB"))"#,
+        r#"(not (= (str.replace (str.++ "B" x) x "") "B"))"#,
+        r"(not (= (str.replace (str.replace x y x) x y) (str.replace x (str.replace x y x) y)))",
+        r#"(not (= (str.replace (str.replace x "A" x) "A" y) (str.replace x "A" (str.replace x "A" y))))"#,
+        r#"(not (= (str.replace (str.replace x "A" "B") x "B") (str.replace (str.replace x "A" x) x "B")))"#,
+        r#"(not (= (str.replace (str.replace x "A" "") x "") (str.replace (str.replace x "A" x) x "")))"#,
+        r#"(not (= (str.replace (str.replace x "B" x) "B" y) (str.replace x "B" (str.replace x "B" y))))"#,
+        r#"(not (= (str.replace (str.replace x "B" "A") x "A") (str.replace (str.replace x "B" x) x "A")))"#,
+        r#"(not (= (str.replace (str.replace x "B" "") x "") (str.replace (str.replace x "B" x) x "")))"#,
+        r#"(not (= (str.replace (str.replace x "B" "") "A" "") (str.replace (str.replace x "A" "") "B" "")))"#,
+        r#"(not (= (str.replace (str.replace "A" x "A") "A" y) (str.++ y (str.replace "" x "A"))))"#,
+        r#"(not (= (str.replace (str.replace "A" x "B") "B" y) (str.replace "A" x y)))"#,
+        r#"(not (= (str.replace (str.replace "B" x "A") "A" y) (str.replace "B" x y)))"#,
+        r#"(not (= (str.replace (str.replace "B" x "B") "B" y) (str.++ y (str.replace "" x "B"))))"#,
+    ];
+
+    assert_eq!(assertions.len(), 23);
+    for (index, assertion) in assertions.into_iter().enumerate() {
+        let input = format!(
+            r"(set-logic QF_SLIA)
+(declare-fun x () String)
+(declare-fun y () String)
+(declare-fun z () Int)
+(assert {assertion})
+(check-sat)
+"
+        );
+        let script = parse_script(&input).expect("parse first-occurrence algebra theorem");
+        assert!(
+            script.source_string_semantic_unsat,
+            "first-occurrence algebra theorem must refute {assertion}"
+        );
+        if matches!(index, 0 | 4 | 10 | 18 | 22) {
+            assert_eq!(
+                solve_smtlib(&input, &config())
+                    .expect("solve first-occurrence algebra theorem")
+                    .result,
+                CheckResult::Unsat,
+                "first-occurrence algebra theorem must survive the bounded-string gate: {assertion}"
+            );
+        }
+    }
+}
+
+#[test]
+fn exact_source_first_occurrence_algebra_declines_counterexamples() {
+    for assertion in [
+        r#"(not (= (str.replace "AAA" (str.replace "AA" "A" "AA") "AA") "AAA"))"#,
+        r#"(not (= (str.replace (str.replace "ABBA" "BA" "ABBA") "BA" "ABBA") (str.replace "ABBA" "BA" (str.replace "ABBA" "BA" "ABBA"))))"#,
+        r#"(not (= (str.replace (str.replace "ABBA" "BA" "ABBA") "BA" "A") (str.replace "ABBA" "BA" (str.replace "ABBA" "BA" "A"))))"#,
+        r#"(not (= (str.replace (str.replace "ABBA" "BA" "ABBA") "BA" "B") (str.replace "ABBA" "BA" (str.replace "ABBA" "BA" "B"))))"#,
+        r#"(not (= (str.replace (str.replace "ABBA" "BA" "ABBA") "BA" "") (str.replace "ABBA" "BA" (str.replace "ABBA" "BA" ""))))"#,
+        r#"(not (= (str.replace (str.substr "AB" 0 1) "AB" "CD") (str.substr (str.replace "AB" "AB" "CD") 0 1)))"#,
+        r#"(not (= (str.replace (str.++ "A" "") "" "B") "AB"))"#,
+        r#"(not (= (str.replace (str.replace "A" "B" "A") "A" "") (str.replace "A" "B" "")))"#,
+    ] {
+        let input = format!(
+            r"(set-logic QF_SLIA)
+(assert {assertion})
+(check-sat)
+"
+        );
+        let script = parse_script(&input).expect("parse first-occurrence algebra control");
+        assert!(
+            !script.source_string_semantic_unsat,
+            "satisfiable first-occurrence algebra control must decline: {assertion}"
+        );
+        assert_ne!(
+            solve_smtlib(&input, &config())
+                .expect("solve first-occurrence algebra control")
+                .result,
+            CheckResult::Unsat,
+            "satisfiable first-occurrence algebra control must not become UNSAT: {assertion}"
+        );
+    }
+}
+
+#[test]
+fn exact_source_first_occurrence_predicates_refute_noetzli_families() {
+    let assertions = [
+        r#"(not (= (str.prefixof x (str.++ "A" x)) (str.suffixof x (str.++ x "A"))))"#,
+        r#"(not (= (str.prefixof x (str.++ "B" x)) (str.suffixof x (str.++ x "B"))))"#,
+        r#"(not (= (str.contains (str.replace x y "A") x) (str.suffixof x (str.replace x y "A"))))"#,
+        r#"(not (= (str.contains (str.replace x y "B") x) (str.suffixof x (str.replace x y "B"))))"#,
+        r#"(not (= (str.contains (str.replace x y "") "A") (str.contains (str.replace x y "B") "A")))"#,
+        r#"(not (= (str.contains (str.replace x y "") "B") (str.contains (str.replace x y "A") "B")))"#,
+        r#"(not (= (str.contains (str.replace x "A" y) y) (str.contains (str.replace x y "A") "A")))"#,
+        r#"(not (= (str.contains (str.replace x "B" y) y) (str.contains (str.replace x y "B") "B")))"#,
+        r#"(not (= (str.suffixof (str.replace x "A" "") x) (str.prefixof x (str.replace x "A" x))))"#,
+        r#"(not (= (str.suffixof (str.replace x "B" "") x) (str.prefixof x (str.replace x "B" x))))"#,
+    ];
+
+    for (index, assertion) in assertions.into_iter().enumerate() {
+        let input = format!(
+            r"(set-logic QF_SLIA)
+(declare-fun x () String)
+(declare-fun y () String)
+(assert {assertion})
+(check-sat)
+"
+        );
+        let script = parse_script(&input).expect("parse first-occurrence predicate theorem");
+        assert!(
+            script.source_string_semantic_unsat,
+            "first-occurrence predicate theorem must refute {assertion}"
+        );
+        if matches!(index, 0 | 3 | 6 | 9) {
+            assert_eq!(
+                solve_smtlib(&input, &config())
+                    .expect("solve first-occurrence predicate theorem")
+                    .result,
+                CheckResult::Unsat,
+                "first-occurrence predicate theorem must survive the bounded-string gate: {assertion}"
+            );
+        }
+    }
+}
+
+#[test]
+fn exact_source_first_occurrence_predicates_decline_ground_counterexamples() {
+    for assertion in [
+        r#"(not (= (str.prefixof "A" (str.++ "A" "A")) (str.suffixof "A" (str.++ "A" "B"))))"#,
+        r#"(not (= (str.contains (str.replace "BA" "A" "AA") "BA") (str.suffixof "BA" (str.replace "BA" "A" "AA"))))"#,
+        r#"(not (= (str.contains (str.replace "" "" "") "A") (str.contains (str.replace "" "" "A") "A")))"#,
+        r#"(not (= (str.suffixof (str.replace "AB" "A" "") "AB") (str.prefixof "AB" (str.replace "AB" "B" "AB"))))"#,
+        r#"(not (= (str.contains (str.from_int 12) "1") (str.suffixof "1" (str.from_int 12))))"#,
+    ] {
+        let input = format!(
+            r"(set-logic QF_SLIA)
+(assert {assertion})
+(check-sat)
+"
+        );
+        let script = parse_script(&input).expect("parse first-occurrence predicate control");
+        assert!(
+            !script.source_string_semantic_unsat,
+            "ground predicate counterexample must not refute: {assertion}"
+        );
+        assert!(
+            matches!(
+                solve_smtlib(&input, &config())
+                    .expect("solve first-occurrence predicate control")
+                    .result,
+                CheckResult::Sat(_)
+            ),
+            "ground predicate counterexample must remain SAT: {assertion}"
+        );
+    }
+}
+
+/// The last seven Noetzli residuals are satisfiable counterexample queries, not
+/// missing UNSAT identities. The bounded source-witness probe must find a small
+/// model and its returned assignment must replay every original parsed assertion.
+#[test]
+fn bounded_source_witness_closes_last_noetzli_counterexamples() {
+    let assertions = [
+        r"(not (= (str.contains (str.from_int z) x) (str.suffixof x (str.from_int z))))",
+        r#"(not (= (str.replace x (str.replace y "A" y) y) x))"#,
+        r#"(not (= (str.replace x (str.replace y "B" y) y) x))"#,
+        r"(not (= (str.replace (str.replace x y x) y x) (str.replace x y (str.replace x y x))))",
+        r#"(not (= (str.replace (str.replace x y x) y "A") (str.replace x y (str.replace x y "A"))))"#,
+        r#"(not (= (str.replace (str.replace x y x) y "B") (str.replace x y (str.replace x y "B"))))"#,
+        r#"(not (= (str.replace (str.replace x y x) y "") (str.replace x y (str.replace x y ""))))"#,
+    ];
+    let fast = SolverConfig::new().with_timeout(Duration::from_millis(250));
+    for assertion in assertions {
+        let input = format!(
+            r"(set-logic QF_SLIA)
+(declare-fun x () String)
+(declare-fun y () String)
+(declare-fun z () Int)
+(assert {assertion})
+(check-sat)
+"
+        );
+        let outcome = solve_smtlib(&input, &fast).expect("solve Noetzli SAT residual");
+        let CheckResult::Sat(model) = outcome.result else {
+            panic!("Noetzli counterexample must decide SAT: {assertion}");
+        };
+
+        // Reparse independently, rerun the bounded source search, and replay its
+        // witness through the exact source evaluator. The returned model must carry
+        // those same Seq/Int bindings.
+        let parsed = parse_script(&input).expect("reparse Noetzli SAT residual");
+        let problem = parsed
+            .source_string_sat_problem
+            .as_ref()
+            .expect("Noetzli residual has a source SAT problem");
+        let witness = problem
+            .bounded_witness(20_000, 4, 4)
+            .expect("Noetzli residual has a bounded source witness");
+        assert!(problem.replays(&witness));
+        for (symbol, code_points) in witness.strings {
+            assert_eq!(
+                model.get(symbol),
+                Some(axeyum_ir::Value::Seq(
+                    code_points
+                        .into_iter()
+                        .map(|code_point| {
+                            axeyum_ir::Value::from_scalar_code(
+                                axeyum_ir::Sort::BitVec(axeyum_ir::Sort::STRING_ELEM_WIDTH),
+                                u128::from(code_point),
+                            )
+                        })
+                        .collect()
+                )),
+                "returned model must carry the replayed string witness for {assertion}"
+            );
+        }
+        for (symbol, value) in witness.integers {
+            assert_eq!(model.get(symbol), Some(axeyum_ir::Value::Int(value)));
+        }
+    }
+}
+
+#[test]
+fn bounded_source_witness_is_capped_and_replay_fail_closed() {
+    let replay_input = r"(set-logic QF_SLIA)
+(declare-fun x () String)
+(declare-fun y () String)
+(declare-fun z () Int)
+(assert (not (= (str.contains (str.from_int z) x) (str.suffixof x (str.from_int z)))))
+(check-sat)
+";
+    let replay_script = parse_script(replay_input).expect("parse replay control");
+    let replay_problem = replay_script
+        .source_string_sat_problem
+        .as_ref()
+        .expect("replay control has source SAT problem");
+    let witness = replay_problem
+        .bounded_witness(20_000, 4, 4)
+        .expect("replay control has a witness");
+    assert!(replay_problem.replays(&witness));
+
+    let mut duplicate = witness.clone();
+    duplicate.strings.push(duplicate.strings[0].clone());
+    assert!(
+        !replay_problem.replays(&duplicate),
+        "a duplicate source binding must fail replay"
+    );
+    let mut missing = witness.clone();
+    missing.integers.clear();
+    assert!(
+        !replay_problem.replays(&missing),
+        "a missing source binding must fail replay"
+    );
+    let mut mutated = witness;
+    mutated.strings[0].1.clear();
+    assert!(
+        !replay_problem.replays(&mutated),
+        "a mutated source witness must fail replay"
+    );
+
+    let capped_input = r"(set-logic QF_SLIA)
+(declare-fun x () String)
+(declare-fun y () String)
+(declare-fun z () String)
+(assert (not (= (str.replace x y z) x)))
+(check-sat)
+";
+    let capped_script = parse_script(capped_input).expect("parse assignment-cap control");
+    let capped_problem = capped_script
+        .source_string_sat_problem
+        .as_ref()
+        .expect("assignment-cap control has source SAT problem");
+    assert!(
+        capped_problem.bounded_witness(20_000, 4, 4).is_none(),
+        "31^3 assignments must exceed the 20,000-step source-witness cap"
+    );
+
+    let false_input = r"(set-logic QF_SLIA)
+(declare-fun x () String)
+(assert (and (= x x) false))
+(check-sat)
+";
+    let false_script = parse_script(false_input).expect("parse false-query control");
+    let false_problem = false_script
+        .source_string_sat_problem
+        .as_ref()
+        .expect("false-query control has source SAT problem");
+    assert!(
+        false_problem.bounded_witness(20_000, 4, 4).is_none(),
+        "the SAT-only source probe must not fabricate a witness"
+    );
 }
