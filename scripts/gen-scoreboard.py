@@ -21,9 +21,11 @@ Writes:
     bench-results/SCOREBOARD.md
 """
 
+import argparse
 import glob
 import json
 import os
+import sys
 
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 BASELINES_DIR = os.path.join(REPO_ROOT, "bench-results", "baselines")
@@ -432,18 +434,48 @@ def build_markdown(div_rows, synth_rows, frontier_rows):
 
 
 def main():
+    parser = argparse.ArgumentParser(
+        description=(
+            "Generate bench-results/SCOREBOARD.md from the committed measured "
+            "baselines. With --check, verify the committed file matches what "
+            "the baselines produce and write nothing."
+        )
+    )
+    parser.add_argument(
+        "--check",
+        action="store_true",
+        help="fail if the committed SCOREBOARD.md is stale; do not rewrite it",
+    )
+    args = parser.parse_args()
+
     div_rows = load_division_baselines()
     synth_rows = load_synthetic_baselines()
     frontier_rows = load_frontiers()
     md = build_markdown(div_rows, synth_rows, frontier_rows)
-    with open(OUT_PATH, "w") as fh:
-        fh.write(md)
+
+    if args.check:
+        current = None
+        if os.path.isfile(OUT_PATH):
+            with open(OUT_PATH) as fh:
+                current = fh.read()
+        if current != md:
+            print(
+                f"ERROR: {rel(OUT_PATH)} is stale relative to the committed "
+                f"baselines; run `python3 scripts/gen-scoreboard.py`",
+                file=sys.stderr,
+            )
+            return 1
+    else:
+        with open(OUT_PATH, "w") as fh:
+            fh.write(md)
+
     print(
-        f"wrote {rel(OUT_PATH)}: "
+        f"{'checked' if args.check else 'wrote'} {rel(OUT_PATH)}: "
         f"{len(div_rows) + len(synth_rows)} divisions, "
         f"{len(frontier_rows)} frontiers"
     )
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

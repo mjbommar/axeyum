@@ -206,6 +206,7 @@ parity-docs:
     python3 scripts/gen-proof-gap-shape-census.py --check
     python3 scripts/gen-smtlib-api-conformance.py --check
     python3 scripts/gen-smtlib-session-contract.py --check
+    python3 scripts/gen-scoreboard.py --check
     python3 scripts/check-parity-docs.py
 
 # ADR-0344 E0-E2: contract generation, immutable filesystem recovery, active
