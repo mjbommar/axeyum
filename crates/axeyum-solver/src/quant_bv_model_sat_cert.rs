@@ -152,9 +152,15 @@ fn source_shape(arena: &TermArena, root: TermId) -> Option<SourceShape> {
         }
     }
     let free = symbols.difference(&binders).copied().collect::<Vec<_>>();
+    // Free symbols may be `Bool` as well as `BitVec` (ADR-0374). The proofs below
+    // are evaluation-based: a free value is only ever written into an
+    // `Assignment` and the body is then evaluated, so a `Bool` free symbol is
+    // checked exactly as strongly as a `BitVec` one. `checked_free_values`
+    // independently enforces that every supplied value's sort matches its
+    // symbol's declared sort, and binders remain restricted above.
     if free
         .iter()
-        .any(|symbol| !matches!(arena.symbol(*symbol).1, Sort::BitVec(_)))
+        .any(|symbol| !matches!(arena.symbol(*symbol).1, Sort::Bool | Sort::BitVec(_)))
     {
         return None;
     }

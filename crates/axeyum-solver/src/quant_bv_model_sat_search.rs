@@ -300,7 +300,7 @@ fn check_candidate(
     }
 }
 
-fn find_negated_universal_witness(
+pub(crate) fn find_negated_universal_witness(
     arena: &TermArena,
     assertion: TermId,
     free_values: Vec<(SymbolId, Value)>,
@@ -354,8 +354,11 @@ fn value_term(arena: &mut TermArena, value: &Value) -> Result<TermId, SolverErro
             .bv_const(*width, *value)
             .map_err(|error| SolverError::Backend(error.to_string())),
         Value::WideBv(value) => Ok(arena.wide_bv_const(value.clone())),
+        // `Bool` free symbols are admitted alongside `BitVec` (ADR-0374), so the
+        // witness search must be able to pin one to a constant.
+        Value::Bool(value) => Ok(arena.bool_const(*value)),
         _ => Err(SolverError::Backend(
-            "quantified-BV candidate carried a non-BV value".to_owned(),
+            "quantified-BV candidate carried a non-Bool/BV value".to_owned(),
         )),
     }
 }
