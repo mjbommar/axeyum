@@ -286,3 +286,44 @@ freshness against `declare_internal` / `declare_internal_fun` must use
 Fourth-order method note: the top bucket has now changed identity **three**
 times — search-quality → structural → backend → flat. Each change was visible
 only after the previous increment landed.
+
+## UFLIA census — and a hypothesis that failed
+
+UFLIA did not move all session (67 decided, `DISAGREE = 0`). Two corrections came
+out of censusing it.
+
+**It is not a feature gap.** The 122 `unsupported` files are not parse or feature
+failures — that label covers a *decline*, and the reasons underneath are
+overwhelmingly time:
+
+| n | reason (declared-status files) |
+|---|---|
+| 47 | budget exhausted after **valid-universal elimination** |
+| 30 | budget exhausted after **checked fast paths** |
+| 7 | quantifiers instantiation does not reach |
+| ~9 | uninterpreted sort / `Forall` reaching the BV backend |
+| 3 | budget exhausted after e-matching |
+
+Also a denominator correction: **234** of the 300 UFLIA files carry a declared
+`sat`/`unsat`, so the honest rate is **67/234 = 28.6 %**, not the 67/300 = 22.3 %
+quoted earlier. cvc5 took 58.1 %.
+
+**The obvious fix does not work.** Those reasons point somewhere specific, and
+the code agrees: `eliminate_valid_universals`,
+`ground_subset_refutes_quantified_query` and `checked_quantified_fast_path` each
+receive the **full** remaining timeout, and nothing reserves budget for the
+refutation route after them. All three are optional and strictly additive, so
+bounding them is safe. Bounding all three to a quarter of the remaining deadline
+and re-running the 79 budget-limited files: **0 decided, exactly as before.** The
+reason distribution shifted (unknown 74 → 32, unsupported 5 → 47) without
+producing a single verdict, so the change was reverted rather than shipped with a
+comment asserting a fix it does not deliver.
+
+So budget *scheduling* is not the UFLIA lever. Whether raw budget is remains
+**unanswered**: a 20 s control run over those 79 files was killed by a 45-minute
+cap. That is not a pathological overrun — measured one file at a time, the mean
+wall is 3.6 s against a 2 s budget (worst 11.7 s, all in `simplify2`), and at a
+20 s budget wall time tracks the deadline closely. 79 files × ~36 s ≈ 47 minutes
+is simply more than the cap. Re-run it with a correct allowance before choosing
+any UFLIA mechanism — for UF, the same experiment bought exactly 0 and redirected
+the entire track.
