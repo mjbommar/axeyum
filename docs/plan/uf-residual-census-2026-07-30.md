@@ -152,3 +152,48 @@ The `2b4b6934` root cause took four failed attempts by deduction and three
 `eprintln` phase probes by measurement. Every conclusion above is a measured
 verdict count, not an inference from reading the code. When the next increment
 touches this route, probe first.
+
+## Outcome — the reachability lever, landed
+
+`fdfb910b` implements the ordering this census argued for: NNF + Skolemization
+(Skolem **functions** over the enclosing universals) + prenexing, wired into the
+residual-quantifier decline path.
+
+| | before | after |
+|---|---|---|
+| UF correct (of 159 declared-status) | 8 | **23** |
+| UF percentage | 5.0 % | **14.5 %** |
+| wrong verdicts | 0 | **0** |
+| errors | 0 | 0 |
+| UFLIA decided | 67 | 67 *(unchanged, DISAGREE = 0)* |
+
+All three steps turned out to be necessary, and each intermediate state was
+measured rather than assumed:
+
+1. **Skolemization alone** — fired (`changed = true`) and instantiation *still*
+   reported a residual quantifier, because discharging the existentials leaves
+   the universals exactly where they were.
+2. **Adding NNF + prenexing** — still residual: 7 assertions out of 379 hit the
+   polarity-mixing bail-out, and **one** abandoned assertion is enough to make
+   the whole query undecidable by instantiation.
+3. **Expanding Bool-sorted `xor`/`=`/`ite`** into polarity-pure equivalents
+   instead of bailing — `residual = false`, and the verdicts move.
+
+A latent bug surfaced on the way: `skolemize_top_existentials` numbered its
+symbols with a per-call counter against an arena-lifetime namespace, so a second
+call reused `!sk_3`. It hard-errored once the new pass began declaring symbols
+first — and would otherwise have silently made two unrelated existentials share
+one witness. Both skolemizers now probe for an unused name.
+
+### Method note, third order
+
+Three consecutive runs measured "no change" against a **stale binary**:
+`cargo build --release -p axeyum-bench --example smtcomp_cli` builds only the
+example, not the `axeyum-bench` binary the sweep actually runs. The fix that was
+already working looked inert for three iterations. Rebuild `-p axeyum-bench`
+without `--example` before benching, and be suspicious of a byte-identical
+result table.
+
+The 3 saturated-but-unproven files remain the MBQI/trigger population, and it is
+now worth re-running this census: with 126 files newly reaching instantiation,
+the residual has a different shape than it did this morning.
