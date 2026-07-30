@@ -936,6 +936,22 @@ fn apply_source_string_sat_problem(script: &Script, result: CheckResult) -> Chec
     CheckResult::Sat(model)
 }
 
+/// Binds every name in one exact membership-equality class to the same checked
+/// witness. The per-symbol witness map also makes concatenation lifting respect
+/// aliases without any secondary model completion.
+fn bind_membership_witness(
+    model: &mut Model,
+    witnesses: &mut BTreeMap<SymbolId, Vec<u32>>,
+    var: &MemberVar,
+    witness: &[u32],
+) {
+    let value = seq_value(witness);
+    for sym in var.sym.into_iter().chain(var.aliases.iter().copied()) {
+        model.set(sym, value.clone());
+        witnesses.insert(sym, witness.to_vec());
+    }
+}
+
 /// Maximum concrete output length materialized while lifting checked membership
 /// witnesses through an existential concatenation definition.
 const MEMBERSHIP_MAX_LIFTED_WITNESS_LEN: usize = 4_000_000;
@@ -1000,19 +1016,13 @@ fn apply_membership_route(
             if !var.membership.accepts(pin) {
                 return CheckResult::Unsat;
             }
-            if let Some(sym) = var.sym {
-                model.set(sym, seq_value(pin));
-                witnesses.insert(sym, pin.clone());
-            }
+            bind_membership_witness(&mut model, &mut witnesses, var, pin);
             continue;
         }
         match var.membership.solve(&budget) {
             MembershipOutcome::Unsat => return CheckResult::Unsat,
             MembershipOutcome::Sat(witness) => {
-                if let Some(sym) = var.sym {
-                    model.set(sym, seq_value(&witness));
-                    witnesses.insert(sym, witness);
-                }
+                bind_membership_witness(&mut model, &mut witnesses, var, &witness);
             }
             MembershipOutcome::Unknown => undecided = true,
         }

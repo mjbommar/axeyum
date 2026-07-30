@@ -4447,6 +4447,232 @@ fn regex_membership_completes_redos_alias_and_output_definition() {
 }
 
 #[test]
+fn regex_membership_retains_exact_length_equalities() {
+    for length_assertion in ["(= (str.len x) 6)", "(= 6 (str.len x))"] {
+        let text = format!(
+            "(set-logic QF_SLIA)\n\
+             (declare-const x String)\n\
+             (assert (str.in_re x (re.* (str.to_re \"ab\"))))\n\
+             (assert {length_assertion})\n\
+             (check-sat)\n"
+        );
+        let script = parse_script(&text).expect("exact-length membership script parses");
+        let problem = script
+            .membership_problem
+            .expect("membership side channel is retained");
+        assert!(problem.complete, "exact length equality is represented");
+        assert_eq!(problem.vars.len(), 1);
+        assert_eq!(problem.vars[0].membership.len_lo, 6);
+        assert_eq!(problem.vars[0].membership.len_hi, Some(6));
+    }
+}
+
+#[test]
+fn regex_membership_retains_literal_disequalities() {
+    for disequality in ["(not (= x \"ab\"))", "(not (= \"ab\" x))"] {
+        let text = format!(
+            "(set-logic QF_SLIA)\n\
+             (declare-const x String)\n\
+             (assert (str.in_re x (re.* (str.to_re \"ab\"))))\n\
+             (assert {disequality})\n\
+             (check-sat)\n"
+        );
+        let script = parse_script(&text).expect("literal-disequality membership script parses");
+        let problem = script
+            .membership_problem
+            .expect("membership side channel is retained");
+        assert!(
+            problem.complete,
+            "literal disequality is represented exactly"
+        );
+        assert_eq!(problem.vars.len(), 1);
+        assert_eq!(problem.vars[0].membership.negatives.len(), 1);
+    }
+}
+
+#[test]
+fn regex_membership_prunes_length_impossible_literal_disequality() {
+    let text = r#"
+        (set-logic QF_SLIA)
+        (declare-const x String)
+        (assert (str.in_re x (str.to_re "abc")))
+        (assert (= (str.len x) 2))
+        (assert (not (= x "this exclusion is much longer than two")))
+        (check-sat)
+    "#;
+    let script = parse_script(text).expect("redundant disequality script parses");
+    let class = &script
+        .membership_problem
+        .expect("membership side channel")
+        .vars[0];
+    assert!(
+        class.membership.negatives.is_empty(),
+        "length-impossible singleton must not inflate the derivative product"
+    );
+}
+
+#[test]
+fn regex_membership_merges_transitive_variable_equalities() {
+    let text = r#"
+        (set-logic QF_SLIA)
+        (declare-const x String)
+        (declare-const y String)
+        (declare-const z String)
+        (assert (str.in_re x (re.union (str.to_re "a") (str.to_re "b"))))
+        (assert (= x y))
+        (assert (= z y))
+        (assert (= (str.len z) 1))
+        (assert (not (= z "b")))
+        (check-sat)
+    "#;
+    let script = parse_script(text).expect("transitive membership aliases parse");
+    let problem = script
+        .membership_problem
+        .expect("membership side channel is retained");
+    assert!(problem.complete, "every equality-class constraint is exact");
+    assert_eq!(problem.vars.len(), 1, "x, y, and z form one class");
+    assert_eq!(problem.vars[0].aliases.len(), 2);
+    assert_eq!(problem.vars[0].membership.positives.len(), 1);
+    assert_eq!(problem.vars[0].membership.negatives.len(), 1);
+    assert_eq!(problem.vars[0].membership.len_lo, 1);
+    assert_eq!(problem.vars[0].membership.len_hi, Some(1));
+}
+
+#[test]
+fn regex_membership_retains_to_int_comparisons() {
+    for comparison in [
+        "(> (str.to_int x) 2)",
+        "(< 2 (str.to_int x))",
+        "(<= (str.to_int x) 11)",
+        "(>= 11 (str.to_int x))",
+    ] {
+        let text = format!(
+            "(set-logic QF_SLIA)\n\
+             (declare-const x String)\n\
+             (assert (str.in_re x re.all))\n\
+             (assert {comparison})\n\
+             (check-sat)\n"
+        );
+        let script = parse_script(&text).expect("to_int comparison membership script parses");
+        let problem = script
+            .membership_problem
+            .expect("membership side channel is retained");
+        assert!(problem.complete, "to_int comparison is represented exactly");
+        assert_eq!(problem.vars.len(), 1);
+        assert_eq!(problem.vars[0].membership.positives.len(), 2);
+    }
+}
+
+#[test]
+fn regex_membership_retains_ground_false_with_unsupported_regex() {
+    let text = r"
+        (set-logic QF_SLIA)
+        (declare-const x String)
+        (declare-const y String)
+        (assert (str.in_re x (str.to_re (str.++ x y))))
+        (assert (= 0 6))
+        (check-sat)
+    ";
+    let script = parse_script(text).expect("ground contradiction script parses");
+    let problem = script
+        .membership_problem
+        .expect("exact false subset is retained");
+    assert!(!problem.complete, "dynamic str.to_re remains unsupported");
+    assert_eq!(problem.vars.len(), 1, "ground contradiction is retained");
+    assert!(problem.vars[0].sym.is_none());
+    assert!(!problem.vars[0].membership.accepts(&[]));
+}
+
+#[test]
+fn regex_membership_retains_literal_prefix_languages() {
+    for assertion in [
+        "(str.prefixof \"ab\" x)",
+        "(str.prefixof x \"ab\")",
+        "(not (str.prefixof \"ab\" x))",
+        "(not (str.prefixof x \"ab\"))",
+    ] {
+        let text = format!(
+            "(set-logic QF_SLIA)\n\
+             (declare-const x String)\n\
+             (assert (str.in_re x re.all))\n\
+             (assert {assertion})\n\
+             (check-sat)\n"
+        );
+        let script = parse_script(&text).expect("literal-prefix membership parses");
+        let problem = script.membership_problem.expect("membership side channel");
+        assert!(problem.complete);
+        assert_eq!(problem.vars.len(), 1);
+    }
+}
+
+#[test]
+fn regex_membership_propagates_cross_variable_length_couplings() {
+    let exact_lengths = r"
+        (set-logic QF_SLIA)
+        (declare-const x String)
+        (declare-const y String)
+        (assert (str.in_re x re.all))
+        (assert (str.in_re y re.all))
+        (assert (= (str.len x) 3))
+        (assert (= (str.len x) (str.len y)))
+        (check-sat)
+    ";
+    let script = parse_script(exact_lengths).expect("cross-length equality parses");
+    let problem = script.membership_problem.expect("membership side channel");
+    assert!(problem.complete);
+    assert_eq!(problem.vars.len(), 2);
+    assert!(
+        problem
+            .vars
+            .iter()
+            .all(|class| { class.membership.len_lo == 3 && class.membership.len_hi == Some(3) })
+    );
+
+    let unresolved_to_int = r"
+        (set-logic QF_SLIA)
+        (declare-const x String)
+        (declare-const y String)
+        (assert (str.in_re x re.all))
+        (assert (= (str.to_int x) (str.len y)))
+        (check-sat)
+    ";
+    let script = parse_script(unresolved_to_int).expect("to_int/length equality parses");
+    let problem = script.membership_problem.expect("membership side channel");
+    assert!(
+        !problem.complete,
+        "unfixed cross-value equality is UNSAT-only"
+    );
+    let decimal = problem
+        .vars
+        .iter()
+        .find(|class| class.membership.positives.len() == 2)
+        .expect("decimal class has re.all plus necessary decimal language");
+    assert_eq!(decimal.membership.positives.len(), 2);
+}
+
+#[test]
+fn regex_membership_propagates_empty_concat_lengths() {
+    let text = r#"
+        (set-logic QF_SLIA)
+        (declare-const x String)
+        (declare-const y String)
+        (assert (str.in_re x re.all))
+        (assert (= "" (str.++ x y)))
+        (check-sat)
+    "#;
+    let script = parse_script(text).expect("empty concatenation equality parses");
+    let problem = script.membership_problem.expect("membership side channel");
+    assert!(problem.complete);
+    assert_eq!(problem.vars.len(), 2);
+    assert!(
+        problem
+            .vars
+            .iter()
+            .all(|class| { class.membership.len_lo == 0 && class.membership.len_hi == Some(0) })
+    );
+}
+
+#[test]
 fn regex_inter_matches_intersection() {
     // (re.inter (re.* (re.range "a" "z")) (str.to_re "ab")): lowercase-only ∩ {"ab"} = {"ab"}.
     let text = "(declare-fun s () String)\n\

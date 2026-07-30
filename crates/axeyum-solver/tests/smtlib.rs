@@ -1997,6 +1997,373 @@ fn regex_membership_to_int_keeps_leading_zero_witness() {
     ));
 }
 
+/// Fixed string lengths are exact membership constraints in either equality
+/// orientation.  The derivative route may therefore refute a length that the
+/// regex cannot generate, while retaining a replay-checked satisfiable control.
+#[test]
+fn regex_membership_decides_exact_length_equalities() {
+    for length_assertion in ["(= (str.len x) 3)", "(= 3 (str.len x))"] {
+        let text = format!(
+            "(set-logic QF_SLIA)\n\
+             (declare-const x String)\n\
+             (assert (str.in_re x (re.* (str.to_re \"ab\"))))\n\
+             (assert {length_assertion})\n\
+             (check-sat)\n"
+        );
+        assert_eq!(run(&text).result, CheckResult::Unsat);
+
+        let mut script = parse_script(&text).expect("exact-length membership script parses");
+        assert_eq!(
+            membership_verdict(&mut script, &config()),
+            Some(CheckResult::Unsat),
+            "the certified membership route must own the refutation"
+        );
+    }
+
+    let sat = r#"
+(set-logic QF_SLIA)
+(declare-const x String)
+(assert (str.in_re x (re.* (str.to_re "ab"))))
+(assert (= (str.len x) 4))
+(check-sat)
+"#;
+    let mut script = parse_script(sat).expect("satisfiable exact-length script parses");
+    assert!(matches!(
+        membership_verdict(&mut script, &config()),
+        Some(CheckResult::Sat(_))
+    ));
+}
+
+/// Literal disequality is exactly a negative singleton-language constraint.
+/// Exercise both equality orientations, an empty intersection, and a surviving
+/// witness so the route is guarded in both verdict directions.
+#[test]
+fn regex_membership_decides_literal_disequalities() {
+    for disequality in ["(not (= x \"ab\"))", "(not (= \"ab\" x))"] {
+        let unsat = format!(
+            "(set-logic QF_SLIA)\n\
+             (declare-const x String)\n\
+             (assert (str.in_re x (str.to_re \"ab\")))\n\
+             (assert {disequality})\n\
+             (check-sat)\n"
+        );
+        let mut script = parse_script(&unsat).expect("disequality contradiction parses");
+        assert_eq!(
+            membership_verdict(&mut script, &config()),
+            Some(CheckResult::Unsat)
+        );
+        assert_eq!(run(&unsat).result, CheckResult::Unsat);
+    }
+
+    let sat = r#"
+(set-logic QF_SLIA)
+(declare-const x String)
+(assert (str.in_re x (re.union (str.to_re "ab") (str.to_re "cd"))))
+(assert (not (= x "ab")))
+(check-sat)
+"#;
+    let mut script = parse_script(sat).expect("satisfiable literal disequality parses");
+    assert!(matches!(
+        membership_verdict(&mut script, &config()),
+        Some(CheckResult::Sat(_))
+    ));
+    assert!(matches!(run(sat).result, CheckResult::Sat(_)));
+}
+
+#[test]
+fn regex_membership_keeps_cheap_length_refutation_with_huge_exclusion() {
+    let text = r#"
+(set-logic QF_SLIA)
+(declare-const x String)
+(assert (str.in_re x (str.to_re "abc")))
+(assert (= (str.len x) 2))
+(assert (not (= x "this exclusion is intentionally much longer than two")))
+(check-sat)
+"#;
+    let mut script = parse_script(text).expect("length contradiction parses");
+    assert_eq!(
+        membership_verdict(&mut script, &config()),
+        Some(CheckResult::Unsat)
+    );
+}
+
+/// Exact variable equalities form one membership class. Contradictory languages
+/// are refuted, while SAT binds every alias to the same replay-checked witness.
+#[test]
+fn regex_membership_decides_variable_equality_classes() {
+    let unsat = r#"
+(set-logic QF_SLIA)
+(declare-const x String)
+(declare-const y String)
+(declare-const z String)
+(assert (str.in_re x (str.to_re "a")))
+(assert (= x y))
+(assert (= z y))
+(assert (str.in_re z (str.to_re "b")))
+(check-sat)
+"#;
+    let mut script = parse_script(unsat).expect("incompatible equality class parses");
+    assert_eq!(
+        membership_verdict(&mut script, &config()),
+        Some(CheckResult::Unsat)
+    );
+    assert_eq!(run(unsat).result, CheckResult::Unsat);
+
+    let conflicting_pins = r#"
+(set-logic QF_SLIA)
+(declare-const x String)
+(declare-const y String)
+(assert (str.in_re x re.all))
+(assert (= x "a"))
+(assert (= x y))
+(assert (= y "b"))
+(check-sat)
+"#;
+    let mut script = parse_script(conflicting_pins).expect("conflicting alias pins parse");
+    assert_eq!(
+        membership_verdict(&mut script, &config()),
+        Some(CheckResult::Unsat)
+    );
+
+    let sat = r#"
+(set-logic QF_SLIA)
+(declare-const x String)
+(declare-const y String)
+(assert (str.in_re x (re.union (str.to_re "a") (str.to_re "b"))))
+(assert (str.in_re y (str.to_re "b")))
+(assert (= x y))
+(check-sat)
+"#;
+    let mut script = parse_script(sat).expect("satisfiable equality class parses");
+    let class = &script
+        .membership_problem
+        .as_ref()
+        .expect("membership problem")
+        .vars[0];
+    let primary = class.sym.expect("declared primary symbol");
+    let alias = class.aliases[0];
+    let Some(CheckResult::Sat(model)) = membership_verdict(&mut script, &config()) else {
+        panic!("equality class must have a checked witness");
+    };
+    assert_eq!(model.get(primary), model.get(alias));
+    assert!(model.get(primary).is_some(), "both aliases must be bound");
+    assert!(matches!(run(sat).result, CheckResult::Sat(_)));
+}
+
+/// Ordered `str.to_int` constraints are exact regular-language preimages. The
+/// SAT control over a non-decimal language pins the SMT-LIB `-1` convention.
+#[test]
+fn regex_membership_decides_to_int_comparisons() {
+    let nondigit_gt = r#"
+(set-logic QF_SLIA)
+(declare-const x String)
+(assert (str.in_re x (re.+ (str.to_re "word"))))
+(assert (> (str.to_int x) 2))
+(check-sat)
+"#;
+    let mut script = parse_script(nondigit_gt).expect("non-decimal greater-than parses");
+    assert_eq!(
+        membership_verdict(&mut script, &config()),
+        Some(CheckResult::Unsat)
+    );
+    assert_eq!(run(nondigit_gt).result, CheckResult::Unsat);
+
+    let decimal_gt = r#"
+(set-logic QF_SLIA)
+(declare-const x String)
+(assert (str.in_re x (re.+ (re.range "0" "9"))))
+(assert (< 2 (str.to_int x)))
+(check-sat)
+"#;
+    let mut script = parse_script(decimal_gt).expect("decimal greater-than parses");
+    assert!(matches!(
+        membership_verdict(&mut script, &config()),
+        Some(CheckResult::Sat(_))
+    ));
+
+    let nondigit_le = r#"
+(set-logic QF_SLIA)
+(declare-const x String)
+(assert (str.in_re x (str.to_re "not-a-number")))
+(assert (<= (str.to_int x) 2))
+(check-sat)
+"#;
+    let mut script = parse_script(nondigit_le).expect("non-decimal less-than parses");
+    assert!(matches!(
+        membership_verdict(&mut script, &config()),
+        Some(CheckResult::Sat(_))
+    ));
+
+    let too_large = r#"
+(set-logic QF_SLIA)
+(declare-const x String)
+(assert (str.in_re x (str.to_re "12")))
+(assert (> 2 (str.to_int x)))
+(check-sat)
+"#;
+    let mut script = parse_script(too_large).expect("reversed less-than parses");
+    assert_eq!(
+        membership_verdict(&mut script, &config()),
+        Some(CheckResult::Unsat)
+    );
+}
+
+#[test]
+fn regex_membership_ground_false_refutes_unsupported_dynamic_regex() {
+    let unsat = r"
+(set-logic QF_SLIA)
+(declare-const x String)
+(declare-const y String)
+(assert (str.in_re x (str.to_re (str.++ x y))))
+(assert (= 0 6))
+(check-sat)
+";
+    let mut script = parse_script(unsat).expect("ground contradiction parses");
+    assert_eq!(
+        membership_verdict(&mut script, &config()),
+        Some(CheckResult::Unsat)
+    );
+    assert_eq!(run(unsat).result, CheckResult::Unsat);
+
+    let incomplete_sat_control = r"
+(set-logic QF_SLIA)
+(declare-const x String)
+(declare-const y String)
+(assert (str.in_re x (str.to_re (str.++ x y))))
+(assert (= 6 6))
+(check-sat)
+";
+    assert!(
+        parse_script(incomplete_sat_control).is_err(),
+        "a true ground fact must not make an unsupported membership claimable"
+    );
+}
+
+#[test]
+fn regex_membership_decides_literal_prefix_languages() {
+    let incompatible = r#"
+(set-logic QF_SLIA)
+(declare-const x String)
+(assert (str.in_re x (re.* (re.range "a" "b"))))
+(assert (str.prefixof "1" x))
+(check-sat)
+"#;
+    let mut script = parse_script(incompatible).expect("prefix contradiction parses");
+    assert_eq!(
+        membership_verdict(&mut script, &config()),
+        Some(CheckResult::Unsat)
+    );
+
+    let variable_prefix_sat = r#"
+(set-logic QF_SLIA)
+(declare-const x String)
+(assert (str.in_re x re.all))
+(assert (str.prefixof x "ab"))
+(assert (not (= x "a")))
+(check-sat)
+"#;
+    let mut script = parse_script(variable_prefix_sat).expect("finite prefix language parses");
+    assert!(matches!(
+        membership_verdict(&mut script, &config()),
+        Some(CheckResult::Sat(_))
+    ));
+
+    let negated = r#"
+(set-logic QF_SLIA)
+(declare-const x String)
+(assert (str.in_re x (str.to_re "abc")))
+(assert (not (str.prefixof "ab" x)))
+(check-sat)
+"#;
+    let mut script = parse_script(negated).expect("negated prefix language parses");
+    assert_eq!(
+        membership_verdict(&mut script, &config()),
+        Some(CheckResult::Unsat)
+    );
+}
+
+#[test]
+fn regex_membership_decides_cross_variable_length_couplings() {
+    let length_unsat = r#"
+(set-logic QF_SLIA)
+(declare-const x String)
+(declare-const y String)
+(assert (str.in_re x (re.* (str.to_re "a"))))
+(assert (str.in_re y (re.* (str.to_re "bb"))))
+(assert (= (str.len x) 3))
+(assert (= (str.len x) (str.len y)))
+(check-sat)
+"#;
+    let mut script = parse_script(length_unsat).expect("cross-length contradiction parses");
+    assert_eq!(
+        membership_verdict(&mut script, &config()),
+        Some(CheckResult::Unsat)
+    );
+
+    let nondecimal_unsat = r#"
+(set-logic QF_SLIA)
+(declare-const x String)
+(declare-const y String)
+(assert (str.in_re x (re.+ (str.to_re "letters"))))
+(assert (str.in_re y re.all))
+(assert (= (str.to_int x) (str.len y)))
+(check-sat)
+"#;
+    let mut script = parse_script(nondecimal_unsat).expect("non-decimal coupling parses");
+    assert_eq!(
+        membership_verdict(&mut script, &config()),
+        Some(CheckResult::Unsat)
+    );
+
+    let unresolved_sat = r#"
+(set-logic QF_SLIA)
+(declare-const x String)
+(declare-const y String)
+(assert (str.in_re x (re.+ (re.range "0" "9"))))
+(assert (str.in_re y re.all))
+(assert (= (str.to_int x) (str.len y)))
+(check-sat)
+"#;
+    let mut script = parse_script(unresolved_sat).expect("satisfiable coupling parses");
+    assert_eq!(
+        membership_verdict(&mut script, &config()),
+        None,
+        "necessary decimal subset must not claim SAT for an unresolved value equality"
+    );
+}
+
+#[test]
+fn regex_membership_refutes_nonempty_part_of_empty_concat() {
+    let text = r#"
+(set-logic QF_SLIA)
+(declare-const x String)
+(declare-const y String)
+(assert (str.in_re x re.all))
+(assert (= (str.++ x y) ""))
+(assert (= (str.len y) 1))
+(check-sat)
+"#;
+    let mut script = parse_script(text).expect("empty concatenation contradiction parses");
+    assert_eq!(
+        membership_verdict(&mut script, &config()),
+        Some(CheckResult::Unsat)
+    );
+
+    let sat = r#"
+(set-logic QF_SLIA)
+(declare-const x String)
+(declare-const y String)
+(assert (str.in_re x re.all))
+(assert (= "" (str.++ x y)))
+(check-sat)
+"#;
+    let mut script = parse_script(sat).expect("satisfiable empty concatenation parses");
+    assert!(matches!(
+        membership_verdict(&mut script, &config()),
+        Some(CheckResult::Sat(_))
+    ));
+}
+
 /// The Noetzli small-rewrite corpus asserts the negation of exact SMT-LIB string
 /// identities. Normalize these before the bounded encoder expands them: each row
 /// is a genuine, bound-independent contradiction.

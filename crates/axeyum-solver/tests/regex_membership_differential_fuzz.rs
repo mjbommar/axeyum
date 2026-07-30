@@ -16,10 +16,9 @@
 //! 1..=3 string variables, positive **and** negative `str.in_re` atoms carrying
 //! depth-≤4 regexes (concat / union / intersection / complement / star / plus /
 //! opt / native `re.loop` / `re.range` / `re.allchar` / `re.all` / `re.none`),
-//! occasional length bounds, exact ground `str.to_int` values, literal pins, and
-//! the odd variable–variable equality (which makes the retained subset incomplete:
-//! subset `unsat` may still decide, subset `sat` declines). Two oracle fronts
-//! adjudicate the same generator:
+//! occasional length bounds, exact ground `str.to_int` values and comparisons,
+//! literal pins and disequalities, and exact variable-equality membership classes. Two oracle
+//! fronts adjudicate the same generator:
 //! the system **Z3** binary (behind the
 //! `z3` feature) and the **cvc5** binary (always, when installed).
 //!
@@ -65,12 +64,44 @@ impl Lcg {
     }
 }
 
-/// A short literal over the tiny alphabet `{a, b}` (0..=2 chars).
+/// A short literal (0..=2 characters) over an alphabet wide enough to reach the
+/// routes this harness adjudicates.
+///
+/// This deliberately spans **digits**, an `\u{...}` escape, and a code point
+/// above `0xFF` as well as the original `{a, b}`. CLAUDE.md makes that a hard
+/// rule after `ba0d9149`, where every string generator omitted escapes and a
+/// wrong-verdict class hid for weeks — and the rule became load-bearing again
+/// here: the newly landed membership routes decide **ordered `str.to_int`**
+/// membership, so an alphabet of `{a, b}` structurally cannot emit a single
+/// numeral, leaving the decimal-comparison arm adjudicated by a generator that
+/// can never exercise it.
+///
+/// Every non-ASCII code point is emitted as an **escape**, never as a raw
+/// character, because the escape *is* the portable spelling. SMT-LIB 2.6 string
+/// literals hold printable ASCII plus `\u{...}`; a raw multi-byte character is
+/// ill-formed, and the two oracles disagree about it rather than about the
+/// theory. Measured while writing this: on `(= v "<raw U+1D11E>")` with
+/// `(>= (str.len v) 3)`, **cvc5 refuses to parse** ("Non-printable character in
+/// string literal") while **z3 answers `sat`**, reading the four UTF-8 bytes as
+/// four characters; with `"\u{1d11e}"` z3 answers `unsat`, which is the correct
+/// one-code-point semantics. A generator emitting raw bytes therefore does not
+/// widen coverage — it manufactures a disagreement on ill-formed input and would
+/// report it as a wrong verdict.
 fn gen_literal(rng: &mut Lcg) -> String {
+    const ALPHABET: [&str; 8] = [
+        "a",
+        "b", // the original two, kept so prior coverage is not lost
+        "0",
+        "1",
+        "9",          // numerals: reach the ordered `str.to_int` routes
+        "\\u{7f}",    // escape, boundary of printable ASCII
+        "\\u{e9}",    // escape, above 0x7f
+        "\\u{1d11e}", // escape, above 0xFF (astral plane)
+    ];
     let len = rng.below(3);
-    let mut s = String::with_capacity(len);
+    let mut s = String::new();
     for _ in 0..len {
-        s.push(if rng.below(2) == 0 { 'a' } else { 'b' });
+        s.push_str(ALPHABET[rng.below(ALPHABET.len() as u64)]);
     }
     s
 }
@@ -159,18 +190,61 @@ fn generate(rng: &mut Lcg) -> String {
         // Exact decimal-preimage constraint. Most generated regexes use {a,b}, so
         // this deliberately exercises certified-empty intersections; the dedicated
         // regression covers a satisfiable leading-zero witness.
-        if rng.below(6) == 0 {
-            let _ = writeln!(text, "(assert (= (str.to_int v{i}) {}))", rng.below(20));
+        match rng.below(8) {
+            0 => {
+                let _ = writeln!(text, "(assert (= (str.to_int v{i}) {}))", rng.below(20));
+            }
+            1 => {
+                let op = ["<", "<=", ">", ">="][rng.below(4)];
+                let bound = rng.below(20);
+                if rng.below(2) == 0 {
+                    let _ = writeln!(text, "(assert ({op} (str.to_int v{i}) {bound}))");
+                } else {
+                    let _ = writeln!(text, "(assert ({op} {bound} (str.to_int v{i})))");
+                }
+            }
+            _ => {}
         }
         // Occasional literal pin.
         if rng.below(5) == 0 {
             let _ = writeln!(text, "(assert (= v{i} \"{}\"))", gen_literal(rng));
         }
+        // Exact negative singleton-language constraint, in either orientation.
+        if rng.below(5) == 0 {
+            let literal = gen_literal(rng);
+            if rng.below(2) == 0 {
+                let _ = writeln!(text, "(assert (not (= v{i} \"{literal}\")))");
+            } else {
+                let _ = writeln!(text, "(assert (not (= \"{literal}\" v{i})))");
+            }
+        }
+        // Exact literal-prefix language, with random operand orientation and
+        // polarity. The membership witness remains the SAT replay gate.
+        if rng.below(8) == 0 {
+            let literal = gen_literal(rng);
+            let atom = if rng.below(2) == 0 {
+                format!("(str.prefixof \"{literal}\" v{i})")
+            } else {
+                format!("(str.prefixof v{i} \"{literal}\")")
+            };
+            if rng.below(2) == 0 {
+                let _ = writeln!(text, "(assert {atom})");
+            } else {
+                let _ = writeln!(text, "(assert (not {atom}))");
+            }
+        }
     }
-    // Occasional variable–variable equality: the retained membership subset is
-    // incomplete, so it may prove UNSAT but can never return SAT.
+    // Occasional exact variable–variable equality merges both membership classes
+    // and requires the returned model to bind them to one checked witness.
     if num_vars >= 2 && rng.below(6) == 0 {
         let _ = writeln!(text, "(assert (= v0 v1))");
+    }
+    if num_vars >= 2 {
+        match rng.below(10) {
+            0 => text.push_str("(assert (= (str.len v0) (str.len v1)))\n"),
+            1 => text.push_str("(assert (= (str.to_int v0) (str.len v1)))\n"),
+            _ => {}
+        }
     }
     if !saw_membership {
         let _ = writeln!(text, "(assert (str.in_re v0 (str.to_re \"a\")))");

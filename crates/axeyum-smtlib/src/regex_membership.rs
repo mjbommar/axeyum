@@ -25,7 +25,23 @@
 //!   `X`;
 //! * `(= (str.to_int X) n)` / `(= n (str.to_int X))` for a non-negative numeral
 //!   `n` — the exact decimal language of `n`, including leading zeroes;
+//! * `(≷ (str.to_int X) n)` / `(≷ n (str.to_int X))` for
+//!   `≷ ∈ {<, <=, >, >=}` and a non-negative numeral `n` — the exact comparison
+//!   preimage, including SMT-LIB's `-1` value for non-decimal strings;
 //! * `(= X "lit")` / `(= "lit" X)` — pins `X` to a string literal;
+//! * `(not (= X "lit"))` / `(not (= "lit" X))` — excludes the singleton
+//!   literal language from `X`;
+//! * `(= X Y)` between declared string variables — merges their constraints
+//!   into one membership class and binds both names to the same checked witness;
+//! * `(str.prefixof "lit" X)` / `(str.prefixof X "lit")` and their negations —
+//!   respectively the literal-prefix cone and the finite language of literal
+//!   prefixes;
+//! * `(= (str.len X) (str.len Y))` when an exact length propagates across the
+//!   equality, and `(= (str.to_int X) (str.len Y))` — always retaining the exact
+//!   necessary nonempty-decimal language for `X`, and the exact decimal value
+//!   when `Y` has a fixed length;
+//! * `(= (str.++ X Y …) "")` (or symmetric) — fixes every concatenated variable
+//!   to length zero;
 //! * `(= OUT (str.++ X Y …))` (or symmetric) when `OUT` occurs nowhere else and
 //!   every input variable has retained membership constraints — a model-defining
 //!   concatenation evaluated after the input witnesses are checked;
@@ -90,6 +106,9 @@ pub struct MemberVar {
     /// The `!weq!<name>` `Seq`-sorted symbol a returned model binds, or `None`
     /// for a synthetic ground atom (nothing to bind).
     pub sym: Option<SymbolId>,
+    /// Other declared string symbols equated to [`Self::sym`]. Every alias is
+    /// bound to the same checked witness in a satisfiable model.
+    pub aliases: Vec<SymbolId>,
     /// The source variable name (or a synthetic `!const!k` for a ground atom).
     pub name: String,
     /// The translated membership constraints.
@@ -154,32 +173,34 @@ impl MembershipProblem {
             vars: &vars,
             regex_defs: &regex_defs,
             per_var: BTreeMap::new(),
+            equalities: Vec::new(),
+            length_equalities: Vec::new(),
+            to_int_length_equalities: Vec::new(),
             definitions: Vec::new(),
             grounds: Vec::new(),
             saw_membership: false,
             complete: true,
         };
-        for e in exprs {
-            let Some(items) = e.list() else { continue };
-            if items.first().and_then(SExpr::atom) == Some("assert") {
-                let [_, body] = items else { return None };
-                // A unique top-level RegLan definition is represented by exact
-                // substitution in every retained membership atom.
-                if concrete_regex_definition(body, &regex_vars)
-                    .is_some_and(|(name, _)| regex_defs.contains_key(&name))
-                {
-                    continue;
-                }
-                if !builder.atom(body) {
-                    builder.complete = false;
-                }
-            }
+        if !builder.collect_assertions(exprs, &regex_vars) {
+            return None;
         }
         // Require at least one genuine membership atom, else this is not a regex
         // problem this route should claim.
         if !builder.saw_membership {
             return None;
         }
+        // Merely observing an unsupported membership atom does not create a side
+        // channel: preserve the parser's established Unsupported result unless at
+        // least one exact constraint was actually retained. A ground `false`
+        // conjunct supplies such a constraint; ground `true` does not.
+        if !builder.has_retained_constraints() {
+            return None;
+        }
+
+        // Resolve exact cross-variable arithmetic consequences after every
+        // single-variable bound has been accumulated, so assertion order cannot
+        // change the retained fragment.
+        builder.resolve_length_couplings();
 
         // A concatenation equality is model-defining only when its output is a
         // fresh existential sink and every input already receives a checked
@@ -198,19 +219,22 @@ impl MembershipProblem {
             definitions,
             complete: builder.complete,
         };
-        for name in &order {
-            if let Some(state) = builder.per_var.remove(name) {
-                out.vars.push(MemberVar {
-                    sym: Some(vars[name]),
-                    name: name.clone(),
-                    membership: state.membership,
-                    pinned: state.pinned,
-                });
-            }
+        for (names, state) in
+            merge_equality_classes(&order, &builder.equalities, &mut builder.per_var)
+        {
+            let primary = &names[0];
+            out.vars.push(MemberVar {
+                sym: Some(vars[primary]),
+                aliases: names[1..].iter().map(|name| vars[name]).collect(),
+                name: primary.clone(),
+                membership: state.membership,
+                pinned: state.pinned,
+            });
         }
         for (i, g) in builder.grounds.into_iter().enumerate() {
             out.vars.push(MemberVar {
                 sym: None,
+                aliases: Vec::new(),
                 name: format!("!const!{i}"),
                 membership: g.0,
                 pinned: Some(g.1),
@@ -231,6 +255,14 @@ struct Builder<'a> {
     vars: &'a BTreeMap<String, SymbolId>,
     regex_defs: &'a BTreeMap<String, Regex>,
     per_var: BTreeMap<String, VarState>,
+    /// Exact equalities between declared string variables. They are merged after
+    /// every per-name constraint has been accumulated.
+    equalities: Vec<(String, String)>,
+    /// Equalities `len(left) = len(right)` awaiting exact-bound propagation.
+    length_equalities: Vec<(String, String)>,
+    /// Equalities `str.to_int(decimal) = len(length)` awaiting nonnegative-decimal
+    /// retention and, when possible, exact-value propagation.
+    to_int_length_equalities: Vec<(String, String)>,
     /// Candidate existential output definitions, validated after all membership
     /// classes and source occurrences are known.
     definitions: Vec<(String, Vec<String>)>,
@@ -238,6 +270,169 @@ struct Builder<'a> {
     grounds: Vec<(Membership, Vec<u32>)>,
     saw_membership: bool,
     complete: bool,
+}
+
+/// Propagates exact cross-variable length consequences. Returns `true` exactly
+/// when every coupling is fully represented; unresolved `str.to_int = len`
+/// equalities still retain the necessary nonempty-decimal subset, so they may
+/// prove UNSAT but can never enable SAT.
+fn resolve_length_couplings(
+    per_var: &mut BTreeMap<String, VarState>,
+    length_equalities: &[(String, String)],
+    to_int_length_equalities: &[(String, String)],
+) -> bool {
+    let mut changed = true;
+    while changed {
+        changed = false;
+        for (left, right) in length_equalities {
+            let left_exact = per_var.get(left).and_then(exact_length);
+            let right_exact = per_var.get(right).and_then(exact_length);
+            if let Some(length) = left_exact {
+                changed |=
+                    constrain_exact_length(per_var.entry(right.clone()).or_default(), length);
+            }
+            if let Some(length) = right_exact {
+                changed |= constrain_exact_length(per_var.entry(left.clone()).or_default(), length);
+            }
+        }
+    }
+
+    let mut complete = true;
+    for (left, right) in length_equalities {
+        let left_state = per_var.entry(left.clone()).or_default();
+        let left_exact = exact_length(left_state);
+        let left_impossible = length_impossible(left_state);
+        let right_state = per_var.entry(right.clone()).or_default();
+        let right_exact = exact_length(right_state);
+        let right_impossible = length_impossible(right_state);
+        complete &= left_impossible || right_impossible || left_exact == right_exact;
+        complete &= left_impossible || right_impossible || left_exact.is_some();
+    }
+
+    for (decimal, length) in to_int_length_equalities {
+        let length_state = per_var.entry(length.clone()).or_default();
+        let exact = exact_length(length_state);
+        let impossible = length_impossible(length_state);
+        let decimal_state = per_var.entry(decimal.clone()).or_default();
+        // Every string equal through str.to_int to a length has value >= 0,
+        // hence is a nonempty ASCII decimal string.
+        decimal_state
+            .membership
+            .positives
+            .push(decimal_nonnegative_regex());
+        if let Some(value) = exact {
+            decimal_state
+                .membership
+                .positives
+                .push(decimal_value_regex(value));
+        } else if !impossible {
+            complete = false;
+        }
+    }
+    complete
+}
+
+fn exact_length(state: &VarState) -> Option<u32> {
+    state
+        .membership
+        .len_hi
+        .filter(|&high| high == state.membership.len_lo)
+}
+
+fn length_impossible(state: &VarState) -> bool {
+    state
+        .membership
+        .len_hi
+        .is_some_and(|high| state.membership.len_lo > high)
+}
+
+fn constrain_exact_length(state: &mut VarState, length: u32) -> bool {
+    let old = (state.membership.len_lo, state.membership.len_hi);
+    state.membership.len_lo = state.membership.len_lo.max(length);
+    state.membership.len_hi = Some(
+        state
+            .membership
+            .len_hi
+            .map_or(length, |high| high.min(length)),
+    );
+    old != (state.membership.len_lo, state.membership.len_hi)
+}
+
+/// Merges the connected components induced by exact string-variable equalities.
+/// Components and their primary names follow declaration order, keeping model
+/// construction deterministic.
+fn merge_equality_classes(
+    order: &[String],
+    equalities: &[(String, String)],
+    per_var: &mut BTreeMap<String, VarState>,
+) -> Vec<(Vec<String>, VarState)> {
+    let mut adjacency: BTreeMap<String, BTreeSet<String>> = BTreeMap::new();
+    for (left, right) in equalities {
+        adjacency
+            .entry(left.clone())
+            .or_default()
+            .insert(right.clone());
+        adjacency
+            .entry(right.clone())
+            .or_default()
+            .insert(left.clone());
+    }
+
+    let mut visited = BTreeSet::new();
+    let mut classes = Vec::new();
+    for name in order {
+        if visited.contains(name) || !per_var.contains_key(name) {
+            continue;
+        }
+        let mut component = BTreeSet::new();
+        let mut pending = vec![name.clone()];
+        while let Some(current) = pending.pop() {
+            if !component.insert(current.clone()) {
+                continue;
+            }
+            if let Some(neighbors) = adjacency.get(&current) {
+                pending.extend(neighbors.iter().cloned());
+            }
+        }
+        visited.extend(component.iter().cloned());
+        let names: Vec<String> = order
+            .iter()
+            .filter(|candidate| component.contains(*candidate))
+            .cloned()
+            .collect();
+
+        let mut merged = VarState::default();
+        for member in &names {
+            let Some(mut state) = per_var.remove(member) else {
+                continue;
+            };
+            merged
+                .membership
+                .positives
+                .append(&mut state.membership.positives);
+            merged
+                .membership
+                .negatives
+                .append(&mut state.membership.negatives);
+            merged.membership.len_lo = merged.membership.len_lo.max(state.membership.len_lo);
+            merged.membership.len_hi = match (merged.membership.len_hi, state.membership.len_hi) {
+                (Some(left), Some(right)) => Some(left.min(right)),
+                (left @ Some(_), None) | (None, left @ Some(_)) => left,
+                (None, None) => None,
+            };
+            match (&merged.pinned, state.pinned) {
+                (None, pin) => merged.pinned = pin,
+                (Some(left), Some(right)) if *left != right => {
+                    // Conflicting pins inside one equality class are impossible.
+                    merged.membership.len_lo = 1;
+                    merged.membership.len_hi = Some(0);
+                }
+                _ => {}
+            }
+        }
+        classes.push((names, merged));
+    }
+    classes
 }
 
 /// Validates candidate existential concatenation sinks after every asserted
@@ -271,6 +466,40 @@ fn validate_concat_definitions(
 }
 
 impl Builder<'_> {
+    fn collect_assertions(&mut self, exprs: &[SExpr], regex_vars: &BTreeSet<String>) -> bool {
+        for e in exprs {
+            let Some(items) = e.list() else { continue };
+            if items.first().and_then(SExpr::atom) != Some("assert") {
+                continue;
+            }
+            let [_, body] = items else { return false };
+            // A unique top-level RegLan definition is represented by exact
+            // substitution in every retained membership atom.
+            if concrete_regex_definition(body, regex_vars)
+                .is_some_and(|(name, _)| self.regex_defs.contains_key(&name))
+            {
+                continue;
+            }
+            if !self.atom(body) {
+                self.complete = false;
+            }
+        }
+        true
+    }
+
+    fn has_retained_constraints(&self) -> bool {
+        !self.per_var.is_empty() || !self.grounds.is_empty()
+    }
+
+    fn resolve_length_couplings(&mut self) {
+        let resolved = resolve_length_couplings(
+            &mut self.per_var,
+            &self.length_equalities,
+            &self.to_int_length_equalities,
+        );
+        self.complete &= resolved;
+    }
+
     /// Retains one asserted conjunct, returning `false` when that conjunct is
     /// outside the recognized fragment. A top-level `and` visits every child even
     /// after one child is unsupported, so later usable conjuncts are not lost.
@@ -291,46 +520,109 @@ impl Builder<'_> {
                 complete
             }
             "str.in_re" if items.len() == 3 => self.membership_atom(&items[1], &items[2], true),
+            "str.prefixof" if items.len() == 3 => {
+                self.literal_prefix_atom(&items[1], &items[2], true)
+            }
             "not" if items.len() == 2 => {
                 let Some(inner) = items[1].list() else {
                     return false;
                 };
                 if inner.first().and_then(SExpr::atom) == Some("str.in_re") && inner.len() == 3 {
                     self.membership_atom(&inner[1], &inner[2], false)
+                } else if inner.first().and_then(SExpr::atom) == Some("str.prefixof")
+                    && inner.len() == 3
+                {
+                    self.literal_prefix_atom(&inner[1], &inner[2], false)
+                } else if inner.first().and_then(SExpr::atom) == Some("=") && inner.len() == 3 {
+                    if let Some(truth) = ground_numeral_relation("=", &inner[1], &inner[2]) {
+                        self.retain_ground_boolean(!truth);
+                        true
+                    } else {
+                        self.literal_disequality_atom(&inner[1], &inner[2])
+                    }
                 } else {
                     false
                 }
             }
-            "=" if items.len() == 3 => {
-                if let Some((name, value)) = to_int_equality(&items[1], &items[2], self.vars) {
+            "=" if items.len() == 3 => self.equality_atom(e, &items[1], &items[2]),
+            "<" | "<=" | ">" | ">=" if items.len() == 3 => {
+                if let Some(truth) = ground_numeral_relation(head, &items[1], &items[2]) {
+                    self.retain_ground_boolean(truth);
+                    true
+                } else if self.length_atom(head, &items[1], &items[2]) {
+                    true
+                } else if let Some((name, op, bound)) =
+                    to_int_comparison(head, &items[1], &items[2], self.vars)
+                {
                     self.per_var
                         .entry(name)
                         .or_default()
                         .membership
                         .positives
-                        .push(decimal_value_regex(value));
-                    true
-                } else if let Some(definition) = concat_definition(e, self.vars) {
-                    self.definitions.push(definition);
+                        .push(decimal_comparison_regex(&op, bound));
                     true
                 } else {
-                    self.pin_atom(&items[1], &items[2])
+                    false
                 }
             }
-            "<" | "<=" | ">" | ">=" if items.len() == 3 => {
-                self.length_atom(head, &items[1], &items[2])
-            }
             _ => false,
+        }
+    }
+
+    fn equality_atom(&mut self, whole: &SExpr, left: &SExpr, right: &SExpr) -> bool {
+        if let Some(truth) = ground_numeral_relation("=", left, right) {
+            self.retain_ground_boolean(truth);
+            true
+        } else if self.length_atom("=", left, right) {
+            true
+        } else if let Some((name, value)) = to_int_equality(left, right, self.vars) {
+            self.per_var
+                .entry(name)
+                .or_default()
+                .membership
+                .positives
+                .push(decimal_value_regex(value));
+            true
+        } else if let Some((left, right)) = variable_equality(left, right, self.vars) {
+            // Materialize both endpoints so an otherwise unconstrained alias
+            // still receives the shared model witness.
+            self.per_var.entry(left.clone()).or_default();
+            self.per_var.entry(right.clone()).or_default();
+            self.equalities.push((left, right));
+            true
+        } else if let Some((left, right)) = length_equality(left, right, self.vars) {
+            self.per_var.entry(left.clone()).or_default();
+            self.per_var.entry(right.clone()).or_default();
+            self.length_equalities.push((left, right));
+            true
+        } else if let Some((decimal, length)) = to_int_length_equality(left, right, self.vars) {
+            self.per_var.entry(decimal.clone()).or_default();
+            self.per_var.entry(length.clone()).or_default();
+            self.to_int_length_equalities.push((decimal, length));
+            true
+        } else if let Some(parts) = empty_concat_equality(left, right, self.vars) {
+            for part in parts {
+                constrain_exact_length(self.per_var.entry(part).or_default(), 0);
+            }
+            true
+        } else if let Some(definition) = concat_definition(whole, self.vars) {
+            self.definitions.push(definition);
+            true
+        } else {
+            self.pin_atom(left, right)
         }
     }
 
     /// `(str.in_re operand R)` (or its negation): `operand` is a declared variable
     /// (per-variable constraint) or a string literal (ground atom).
     fn membership_atom(&mut self, operand: &SExpr, re: &SExpr, positive: bool) -> bool {
+        // This is a genuine membership script even when the particular regex is
+        // outside the retained fragment. Other exact conjuncts may still refute
+        // the full conjunction; subset SAT will decline because `complete=false`.
+        self.saw_membership = true;
         let Some(regex) = translate_regex_with_defs(re, self.regex_defs) else {
             return false;
         };
-        self.saw_membership = true;
         if let Some(name) = variable_name(operand, self.vars) {
             let state = self.per_var.entry(name).or_default();
             if positive {
@@ -351,6 +643,54 @@ impl Builder<'_> {
         } else {
             false
         }
+    }
+
+    /// Literal/variable `str.prefixof` in either operand orientation. A literal
+    /// prefix of a variable is `lit · Σ*`; a variable prefix of a literal is the
+    /// finite union of all literal prefixes. Negation becomes negative membership.
+    fn literal_prefix_atom(&mut self, prefix: &SExpr, word: &SExpr, positive: bool) -> bool {
+        self.saw_membership = true;
+        let (name, regex) = match (
+            literal_code_points(prefix),
+            variable_name(prefix, self.vars),
+            literal_code_points(word),
+            variable_name(word, self.vars),
+        ) {
+            (Some(prefix), None, None, Some(name)) => (
+                name,
+                Regex::concat(literal_regex(&prefix), Regex::star(Regex::any_char())),
+            ),
+            (None, Some(name), Some(word), None) => (name, prefixes_regex(&word)),
+            (Some(prefix), None, Some(word), None) => {
+                let truth = word.starts_with(&prefix);
+                self.retain_ground_boolean(if positive { truth } else { !truth });
+                return true;
+            }
+            _ => return false,
+        };
+        let state = self.per_var.entry(name).or_default();
+        if positive {
+            state.membership.positives.push(regex);
+        } else {
+            state.membership.negatives.push(regex);
+        }
+        true
+    }
+
+    /// Retains a ground Boolean conjunct. `false` becomes a matcher-rechecked
+    /// impossible fixed membership; `true` adds no constraint. This lets an exact
+    /// false subset refute a script whose regex atom itself remains unsupported,
+    /// while the incomplete-problem gate still forbids a SAT claim.
+    fn retain_ground_boolean(&mut self, truth: bool) {
+        if truth {
+            return;
+        }
+        let impossible = Membership {
+            len_lo: 1,
+            len_hi: Some(0),
+            ..Membership::default()
+        };
+        self.grounds.push((impossible, Vec::new()));
     }
 
     /// `(= X "lit")` / `(= "lit" X)`: pins the variable `X` to the literal.
@@ -380,8 +720,40 @@ impl Builder<'_> {
         }
     }
 
+    /// `(not (= X "lit"))` / `(not (= "lit" X))`: excludes exactly one
+    /// literal from the variable's language. This is the negative-membership
+    /// analogue of [`Self::pin_atom`], so it composes exactly with regex and
+    /// length constraints without introducing a separate reasoning path.
+    fn literal_disequality_atom(&mut self, a: &SExpr, b: &SExpr) -> bool {
+        let (var, lit) = match (variable_name(a, self.vars), variable_name(b, self.vars)) {
+            (Some(name), None) => (name, b),
+            (None, Some(name)) => (name, a),
+            // Variable-variable and literal-literal disequalities remain outside
+            // this single-membership-class fragment.
+            _ => return false,
+        };
+        let Some(cps) = literal_code_points(lit) else {
+            return false;
+        };
+        let state = self.per_var.entry(var).or_default();
+        let literal_len = u32::try_from(cps.len()).unwrap_or(u32::MAX);
+        if literal_len < state.membership.len_lo
+            || state
+                .membership
+                .len_hi
+                .is_some_and(|high| literal_len > high)
+        {
+            // This literal is already outside the class's length language, so
+            // its exclusion is exact but redundant. Avoid injecting a huge
+            // singleton into an otherwise cheap derivative intersection.
+            return true;
+        }
+        state.membership.negatives.push(literal_regex(&cps));
+        true
+    }
+
     /// A length atom `(op (str.len X) n)` or `(op n (str.len X))` for
-    /// `op ∈ {<,<=,>,>=}` and a non-negative numeral `n`.
+    /// `op ∈ {=,<,<=,>,>=}` and a non-negative numeral `n`.
     fn length_atom(&mut self, op: &str, lhs: &SExpr, rhs: &SExpr) -> bool {
         // Identify which side is `(str.len X)` and which is the numeral, and
         // normalize `op` so the variable is on the left.
@@ -396,6 +768,10 @@ impl Builder<'_> {
         let mem = &mut state.membership;
         // len(X) `op` bound, all bounds inclusive on `[len_lo, len_hi]`.
         match op.as_str() {
+            "=" => {
+                mem.len_lo = mem.len_lo.max(bound);
+                mem.len_hi = Some(mem.len_hi.map_or(bound, |high| high.min(bound)));
+            }
             ">=" => mem.len_lo = mem.len_lo.max(bound),
             ">" => mem.len_lo = mem.len_lo.max(bound.saturating_add(1)),
             "<=" => mem.len_hi = Some(mem.len_hi.map_or(bound, |h| h.min(bound))),
@@ -415,6 +791,55 @@ impl Builder<'_> {
     }
 }
 
+/// Equality between two declared string variables.
+fn variable_equality(
+    left: &SExpr,
+    right: &SExpr,
+    vars: &BTreeMap<String, SymbolId>,
+) -> Option<(String, String)> {
+    Some((variable_name(left, vars)?, variable_name(right, vars)?))
+}
+
+/// Equality between the lengths of two declared strings.
+fn length_equality(
+    left: &SExpr,
+    right: &SExpr,
+    vars: &BTreeMap<String, SymbolId>,
+) -> Option<(String, String)> {
+    Some((str_len_var(left, vars)?, str_len_var(right, vars)?))
+}
+
+/// Equality between one string's `str.to_int` value and another string's length,
+/// normalized as `(decimal_string, length_string)`.
+fn to_int_length_equality(
+    left: &SExpr,
+    right: &SExpr,
+    vars: &BTreeMap<String, SymbolId>,
+) -> Option<(String, String)> {
+    match (str_to_int_var(left, vars), str_len_var(right, vars)) {
+        (Some(decimal), Some(length)) => Some((decimal, length)),
+        _ => Some((str_to_int_var(right, vars)?, str_len_var(left, vars)?)),
+    }
+}
+
+/// A concatenation of declared string variables equated to the empty literal.
+/// Such an equality is equivalent to every part having length zero.
+fn empty_concat_equality(
+    left: &SExpr,
+    right: &SExpr,
+    vars: &BTreeMap<String, SymbolId>,
+) -> Option<Vec<String>> {
+    for (concat, literal) in [(left, right), (right, left)] {
+        if literal_code_points(literal).is_some_and(|code_points| code_points.is_empty()) {
+            let mut parts = Vec::new();
+            if flatten_concat_vars(concat, vars, &mut parts) && parts.len() >= 2 {
+                return Some(parts);
+            }
+        }
+    }
+    None
+}
+
 /// An equality between `(str.to_int X)` and a non-negative numeral, accepting
 /// either orientation.
 fn to_int_equality(
@@ -425,6 +850,20 @@ fn to_int_equality(
     match (str_to_int_var(left, vars), numeral(right)) {
         (Some(name), Some(value)) => Some((name, value)),
         _ => Some((str_to_int_var(right, vars)?, numeral(left)?)),
+    }
+}
+
+/// A comparison between `(str.to_int X)` and a non-negative numeral, normalized
+/// so the string conversion is on the left.
+fn to_int_comparison(
+    op: &str,
+    left: &SExpr,
+    right: &SExpr,
+    vars: &BTreeMap<String, SymbolId>,
+) -> Option<(String, String, u32)> {
+    match (str_to_int_var(left, vars), numeral(right)) {
+        (Some(name), Some(bound)) => Some((name, op.to_owned(), bound)),
+        _ => Some((str_to_int_var(right, vars)?, flip_op(op), numeral(left)?)),
     }
 }
 
@@ -445,6 +884,136 @@ fn decimal_value_regex(value: u32) -> Regex {
     } else {
         let digits: Vec<u32> = value.to_string().bytes().map(u32::from).collect();
         Regex::concat(Regex::star(zero), literal_regex(&digits))
+    }
+}
+
+fn decimal_nonnegative_regex() -> Regex {
+    Regex::plus(Regex::char_range(u32::from(b'0'), u32::from(b'9')))
+}
+
+/// Exact preimage of an ordered comparison against SMT-LIB `str.to_int`.
+/// Non-empty ASCII decimal strings map to their mathematical value (leading
+/// zeroes allowed); every other string maps to `-1`.
+fn decimal_comparison_regex(op: &str, bound: u32) -> Regex {
+    let digit = Regex::char_range(u32::from(b'0'), u32::from(b'9'));
+    let non_decimal = Regex::comp(Regex::plus(digit));
+    match op {
+        ">" => decimal_at_least_regex(bound, false),
+        ">=" => decimal_at_least_regex(bound, true),
+        "<" if bound == 0 => non_decimal,
+        "<" => Regex::union(non_decimal, decimal_at_most_regex(bound - 1)),
+        "<=" => Regex::union(non_decimal, decimal_at_most_regex(bound)),
+        _ => Regex::none(),
+    }
+}
+
+/// Non-empty decimal strings whose numeric value is at most `bound`.
+fn decimal_at_most_regex(bound: u32) -> Regex {
+    let zero = Regex::character(u32::from(b'0'));
+    let mut language = Regex::plus(zero.clone());
+    if bound == 0 {
+        return language;
+    }
+
+    let digits = bound.to_string().into_bytes();
+    let mut canonical = Regex::none();
+    // Every positive canonical decimal with fewer digits is smaller.
+    for width in 1..digits.len() {
+        canonical = Regex::union(canonical, positive_decimal_width(width));
+    }
+    // Same-width values: first smaller digit after an equal prefix, or equality.
+    for index in 0..digits.len() {
+        let lower = if index == 0 { b'1' } else { b'0' };
+        if digits[index] > lower {
+            let branch = Regex::concat(
+                literal_regex(
+                    &digits[..index]
+                        .iter()
+                        .map(|&b| u32::from(b))
+                        .collect::<Vec<_>>(),
+                ),
+                Regex::concat(
+                    Regex::char_range(u32::from(lower), u32::from(digits[index] - 1)),
+                    decimal_suffix(digits.len() - index - 1, false),
+                ),
+            );
+            canonical = Regex::union(canonical, branch);
+        }
+    }
+    canonical = Regex::union(
+        canonical,
+        literal_regex(&digits.iter().map(|&b| u32::from(b)).collect::<Vec<_>>()),
+    );
+    language = Regex::union(language, Regex::concat(Regex::star(zero), canonical));
+    language
+}
+
+/// Non-empty decimal strings whose numeric value is greater than `bound`, or
+/// greater than-or-equal when `include_equal` is true.
+fn decimal_at_least_regex(bound: u32, include_equal: bool) -> Regex {
+    let digit = Regex::char_range(u32::from(b'0'), u32::from(b'9'));
+    if bound == 0 && include_equal {
+        return Regex::plus(digit);
+    }
+
+    let digits = bound.to_string().into_bytes();
+    let mut canonical = Regex::none();
+    // Every positive canonical decimal with more digits is larger.
+    canonical = Regex::union(
+        canonical,
+        Regex::concat(
+            Regex::char_range(u32::from(b'1'), u32::from(b'9')),
+            decimal_suffix(digits.len(), true),
+        ),
+    );
+    // Same-width values: first larger digit after an equal prefix.
+    for index in 0..digits.len() {
+        if digits[index] < b'9' {
+            let branch = Regex::concat(
+                literal_regex(
+                    &digits[..index]
+                        .iter()
+                        .map(|&b| u32::from(b))
+                        .collect::<Vec<_>>(),
+                ),
+                Regex::concat(
+                    Regex::char_range(u32::from(digits[index] + 1), u32::from(b'9')),
+                    decimal_suffix(digits.len() - index - 1, false),
+                ),
+            );
+            canonical = Regex::union(canonical, branch);
+        }
+    }
+    if include_equal {
+        canonical = Regex::union(
+            canonical,
+            literal_regex(&digits.iter().map(|&b| u32::from(b)).collect::<Vec<_>>()),
+        );
+    }
+    Regex::concat(Regex::star(Regex::character(u32::from(b'0'))), canonical)
+}
+
+/// Canonical positive decimal strings of exactly `width` digits.
+fn positive_decimal_width(width: usize) -> Regex {
+    debug_assert!(width > 0);
+    Regex::concat(
+        Regex::char_range(u32::from(b'1'), u32::from(b'9')),
+        decimal_suffix(width - 1, false),
+    )
+}
+
+/// An exact-width decimal suffix, optionally followed by arbitrary extra digits.
+fn decimal_suffix(width: usize, unbounded_tail: bool) -> Regex {
+    let digit = Regex::char_range(u32::from(b'0'), u32::from(b'9'));
+    let exact = Regex::repeat(
+        digit.clone(),
+        u32::try_from(width).expect("u32 threshold width fits"),
+        Some(u32::try_from(width).expect("u32 threshold width fits")),
+    );
+    if unbounded_tail {
+        Regex::concat(exact, Regex::star(digit))
+    } else {
+        exact
     }
 }
 
@@ -613,6 +1182,20 @@ fn numeral(e: &SExpr) -> Option<u32> {
     } else {
         None
     }
+}
+
+/// Exact ground relation between two non-negative numerals.
+fn ground_numeral_relation(op: &str, left: &SExpr, right: &SExpr) -> Option<bool> {
+    let left = numeral(left)?;
+    let right = numeral(right)?;
+    Some(match op {
+        "=" => left == right,
+        "<" => left < right,
+        "<=" => left <= right,
+        ">" => left > right,
+        ">=" => left >= right,
+        _ => return None,
+    })
 }
 
 /// The comparison operator with its arguments swapped (`a op b` ⟺ `b flip(op) a`).
@@ -802,4 +1385,89 @@ fn literal_regex(cps: &[u32]) -> Regex {
         });
     }
     acc.unwrap_or(Regex::Empty)
+}
+
+/// The finite language containing every prefix of `word`, including `ε` and the
+/// complete word.
+fn prefixes_regex(word: &[u32]) -> Regex {
+    let mut language = Regex::empty();
+    for end in 1..=word.len() {
+        language = Regex::union(language, literal_regex(&word[..end]));
+    }
+    language
+}
+
+#[cfg(test)]
+mod tests {
+    use axeyum_strings::regex::matches;
+
+    use super::decimal_comparison_regex;
+
+    fn strings(alphabet: &[u32], max_len: usize) -> Vec<Vec<u32>> {
+        fn extend(
+            alphabet: &[u32],
+            remaining: usize,
+            prefix: &mut Vec<u32>,
+            out: &mut Vec<Vec<u32>>,
+        ) {
+            out.push(prefix.clone());
+            if remaining == 0 {
+                return;
+            }
+            for &cp in alphabet {
+                prefix.push(cp);
+                extend(alphabet, remaining - 1, prefix, out);
+                prefix.pop();
+            }
+        }
+        let mut out = Vec::new();
+        extend(alphabet, max_len, &mut Vec::new(), &mut out);
+        out
+    }
+
+    fn reference_to_int(input: &[u32]) -> i64 {
+        if input.is_empty()
+            || input
+                .iter()
+                .any(|cp| !(u32::from(b'0')..=u32::from(b'9')).contains(cp))
+        {
+            return -1;
+        }
+        input.iter().fold(0i64, |value, cp| {
+            value * 10 + i64::from(*cp - u32::from(b'0'))
+        })
+    }
+
+    #[test]
+    fn decimal_comparison_preimages_match_reference_exhaustively() {
+        let inputs = strings(
+            &[
+                u32::from(b'0'),
+                u32::from(b'1'),
+                u32::from(b'2'),
+                u32::from(b'a'),
+            ],
+            4,
+        );
+        for bound in 0..=25u32 {
+            for op in ["<", "<=", ">", ">="] {
+                let regex = decimal_comparison_regex(op, bound);
+                for input in &inputs {
+                    let value = reference_to_int(input);
+                    let expected = match op {
+                        "<" => value < i64::from(bound),
+                        "<=" => value <= i64::from(bound),
+                        ">" => value > i64::from(bound),
+                        ">=" => value >= i64::from(bound),
+                        _ => unreachable!(),
+                    };
+                    assert_eq!(
+                        matches(&regex, input),
+                        expected,
+                        "op={op}, bound={bound}, input={input:?}, value={value}"
+                    );
+                }
+            }
+        }
+    }
 }
