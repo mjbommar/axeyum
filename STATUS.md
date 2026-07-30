@@ -441,6 +441,33 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-30 — two flaky gates fixed, and the source-witness `sat` now replays
+  before export.** Three items, all of them about the *gate* rather than the
+  solver. (1) `apply_source_string_sat_problem` took the witness straight from
+  `bounded_witness` and returned `Sat`; `replays()` existed, was documented as an
+  independent re-evaluation, and was called only from tests. The two checks are
+  **not** the same check: the search evaluates the *positional* candidate arrays
+  it iterates, while `replays` re-resolves each variable out of the emitted
+  **symbol-keyed** witness — the exact mapping that reaches the `Model` — and
+  additionally rejects incomplete, duplicated, or sort-crossed bindings. A
+  mis-keyed symbol in the array-to-witness conversion passed the search and would
+  have failed `replays`. It is now wired in, declining to `unknown` on failure;
+  the 1,880-file Noetzli population is unchanged at **1,880/1,880 (26 SAT /
+  1,854 UNSAT)**, so it rejects nothing legitimate. (2) The smtcomp
+  resume-runner's retained-timeout test had a 50 ms wall limit racing Python
+  interpreter startup — the wall-timeout is guaranteed by the fixture's own 60 s
+  sleep, so the tightness bought nothing and cost determinism; now 3 s, verified
+  3/3 under 16-way contention. (3) The UFLIA model-finder ratchet asserted an
+  **exact** `sat`/`unsat`/`unknown` split on a deadline-bounded search, so any
+  jitter failed the gate; it now pins the bucket total exactly (genuinely
+  invariant) and the decided count against a floor, verified 3/3 under 26-way
+  contention. Measured equal 5/5 samples either side of ADR-0374 first, to rule
+  out my own change as the cause. The standing point: the repository already
+  refuses to treat a load-sensitive decline as a regression when reading
+  benchmark rows, and a *gate* that treats it as one just trains people to re-run
+  until green — which is how the Lean manifest staleness sat unfixed behind a
+  non-blocking CI check.
+
 - **2026-07-29 — the qfslia regex-membership half is on `main` with a
   deliberately narrow claim, and the fuzz that adjudicates it was blind on its
   own axis.** Ten commits from `agent/solver/qfslia-regex-length-next` land
