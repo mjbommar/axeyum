@@ -242,3 +242,47 @@ Third-order method note: this is the second time the top bucket changed identity
 after an increment landed (search-quality → structural → backend). Re-census
 before choosing a mechanism, every time; a distribution measured before a fix is
 evidence about a solver that no longer exists.
+
+## Re-census #3, after the uninterpreted-sort encoding (`142ab435`)
+
+The bit-blast bucket is **gone**, and UF roughly doubled again.
+
+| bucket | census 1 | census 2 | census 3 |
+|---|---|---|---|
+| **decided** | 8 | 23 | **48–49** |
+| uninterpreted sort not bit-blastable | 6 | **51** | **0** |
+| quantifiers instantiation never reaches | 126 | 38 | 31 |
+| lazy function-consistency CEGAR declined | — | — | **29** |
+| instantiation saturated, universal unproven (MBQI) | 3 | 21 | 21 |
+| quantified time budget exhausted | 14 | 14 | 19 |
+| dispatch timeout | 1 | 11 | 9 |
+
+**UF is now ~30 % (48–49 of 159), from 5.0 % this morning**, with `DISAGREE = 0`
+and `errors = 0` at every step. cvc5 took 40.5 % of the SMT-COMP UF selection.
+
+Two runs returned 49 and 48; at a 2 s budget the last file or two is
+timing-sensitive, so the honest figure is a range, not a point.
+
+The residual has no dominant bucket any more — 31 / 29 / 21 / 19 is flat, where
+the first census had a single bucket holding 126. That is a different kind of
+problem than the one this note opened with, and it means the next increment
+should expect a smaller, more incremental payoff than the last two.
+
+### The bug this increment surfaced
+
+Freshness probes used `TermArena::find_symbol`, which searches only the
+**user-declared** namespace. `declare_internal` mints into a deliberately
+disjoint internal namespace — the crate documents it as a soundness firewall —
+so every probe reported "free" and the check did nothing.
+
+Here it failed loudly: 228 `symbol ... already declared with sort (_ BitVec 1),
+requested (_ BitVec 2)` errors across the slice. In the two skolemizers shipped
+in `fdfb910b` it failed **silently**, because a reuse whose sorts happen to agree
+just makes two unrelated existentials share one witness — precisely the hazard
+that commit's own message described while introducing it. Anything checking
+freshness against `declare_internal` / `declare_internal_fun` must use
+`find_internal_symbol` / `find_internal_function`.
+
+Fourth-order method note: the top bucket has now changed identity **three**
+times — search-quality → structural → backend → flat. Each change was visible
+only after the previous increment landed.

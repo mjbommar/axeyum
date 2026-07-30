@@ -441,6 +441,30 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-30 — UF is ~30 %, up from 5.0 % this morning, with `DISAGREE = 0`
+  throughout.** Lane A / A1. Commits `2b4b6934`, `f34790a7`, `fdfb910b`,
+  `142ab435`; full record in the
+  [UF residual census](docs/plan/uf-residual-census-2026-07-30.md). Four
+  increments, each chosen from a *re-measured* decline distribution rather than
+  from the previous one: bound the unbounded e-matching (memory, then time),
+  make nested quantifiers reachable (NNF + Skolemization + prenexing), then
+  encode uninterpreted sorts as bit-vectors by the finite model property. UF
+  went 8 → 23 → 48–49 of the 159 declared-status files; UFLIA held at 67/300
+  the whole way. cvc5 took 40.5 % of the SMT-COMP UF selection, so the gap is
+  now roughly 10 points rather than 35.
+  The residual is **flat** for the first time — 31 unreached quantifiers, 29
+  lazy-CEGAR declines, 21 saturated-but-unproven (the MBQI population), 19
+  budget — where this morning one bucket held 126. Expect the next increment to
+  pay less than the last two.
+  A latent bug worth remembering surfaced here: freshness probes used
+  `find_symbol`, which searches only the **user** namespace and is blind to
+  everything `declare_internal` mints (the two namespaces are a documented
+  soundness firewall). It was loud in the new encoder — 228 sort-conflict errors
+  — and **silent** in the two skolemizers shipped hours earlier, where a
+  sort-agreeing reuse makes two unrelated existentials share one witness. Use
+  `find_internal_symbol` / `find_internal_function` for anything declared
+  internally.
+
 - **2026-07-30 — nested quantifiers are now reachable: UF 5.0 % → 14.5 %.**
   Lane A / A1. Commit `fdfb910b`; record in the
   [UF residual census](docs/plan/uf-residual-census-2026-07-30.md). Trigger
