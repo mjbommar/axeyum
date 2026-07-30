@@ -197,3 +197,48 @@ result table.
 The 3 saturated-but-unproven files remain the MBQI/trigger population, and it is
 now worth re-running this census: with 126 files newly reaching instantiation,
 the residual has a different shape than it did this morning.
+
+## Re-census after the reachability fix — the lever moved again
+
+Same command, same slice, after `fdfb910b`. Counting the 159 declared-status
+files:
+
+| bucket | before | after |
+|---|---|---|
+| **uninterpreted sort the BV backend cannot bit-blast** | 6 | **51** |
+| quantifiers instantiation never reaches | 126 | 38 |
+| **decided** | 8 | **23** |
+| instantiation saturated, universal unproven (the MBQI population) | 3 | **21** |
+| quantified time budget exhausted | 14 | 14 |
+| dispatch timeout | 1 | 11 |
+| Ackermann admission bound | 1 | 1 |
+
+Two things this says that could not have been predicted from the earlier table:
+
+**The new top bucket is a backend gap, not a search gap.** Making quantifiers
+reachable pushed 51 files *past* instantiation and straight into the pure-Rust BV
+backend, which declines them: `term #N has sort (Uninterpreted k) that the
+pure-Rust BV backend cannot bit-blast`. These are UF files — uninterpreted
+functions over uninterpreted sorts, no bit-vectors anywhere — so bit-blasting is
+simply being handed a sort it has no encoding for. At 51 of 159 that is **32 % of
+the parity-relevant set**, and it is a bounded feature gap rather than a
+search-quality problem.
+
+The machinery to build on already exists: `euf.rs` eliminates uninterpreted
+*functions* by eager Ackermann reduction (ADR-0013), and `euf_egraph.rs` does
+congruence closure. What is missing is an encoding for uninterpreted **sorts**.
+The standard route is the finite model property: an EUF formula containing `n`
+terms of an uninterpreted sort is satisfiable iff it is satisfiable over a domain
+of size ≤ `n`, so each such sort can be encoded as a bit-vector of width
+`ceil(log2(n))` and handed to the existing pipeline. `ufbv_finite.rs` already has
+`finite_sort_cardinality`, and it returns `None` for `Sort::Uninterpreted(_)` —
+that is the precise hole.
+
+**The MBQI population grew 7×, from 3 to 21.** Instance selection was correctly
+*not* the first lever, and it is now a real one rather than a rounding error. It
+is still second: 51 > 21, and the backend gap is the more mechanical of the two.
+
+Third-order method note: this is the second time the top bucket changed identity
+after an increment landed (search-quality → structural → backend). Re-census
+before choosing a mechanism, every time; a distribution measured before a fix is
+evidence about a solver that no longer exists.
