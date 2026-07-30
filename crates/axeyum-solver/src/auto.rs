@@ -619,10 +619,19 @@ fn skolemize_top_existentials(
             };
             let (sym, body) = (*sym, args[0]);
             let sort = arena.symbol(sym).1;
-            let skolem = arena
-                .declare_internal(&format!("!sk_{k}"), sort)
-                .map_err(err)?;
-            k += 1;
+            // `k` restarts on every call while `declare_internal` persists for the
+            // life of the arena, so a second call over the same arena would reuse
+            // `!sk_3` — hard-erroring when the sorts differ, and silently making
+            // two unrelated existentials share one witness when they match. Probe
+            // for an unused name instead; this stays deterministic because it
+            // depends only on the arena contents and the traversal order.
+            let skolem = loop {
+                let candidate = format!("!sk_{k}");
+                k += 1;
+                if arena.find_symbol(&candidate).is_none() {
+                    break arena.declare_internal(&candidate, sort).map_err(err)?;
+                }
+            };
             let bound = arena.var(sym);
             let fresh = arena.var(skolem);
             let mut map: HashMap<TermId, TermId> = HashMap::new();
@@ -6331,7 +6340,35 @@ pub fn prove_unsat_by_ematching(
 ) -> Result<CheckResult, SolverError> {
     let instantiation = instantiate_with_triggers(arena, assertions)
         .map_err(|error| SolverError::Backend(error.to_string()))?;
-    decide_instantiation(arena, &instantiation, config)
+    if !instantiation.residual_quantifier {
+        return decide_instantiation(arena, &instantiation, config);
+    }
+    // A residual quantifier used to end the attempt here. Rewriting to NNF,
+    // Skolemizing the existential-in-force quantifiers, and hoisting the
+    // surviving universals to the front puts them where trigger instantiation can
+    // see them. This is the largest measured gap in UF: 126 of the 159
+    // declared-status files in the 300-file slice declined exactly here.
+    let skolemized = crate::quant_skolemize::skolemize_assertions(arena, assertions)?;
+    if !skolemized.changed {
+        return decide_instantiation(arena, &instantiation, config);
+    }
+    let retried = instantiate_with_triggers(arena, &skolemized.assertions)
+        .map_err(|error| SolverError::Backend(error.to_string()))?;
+    // Skolemization preserves satisfiability, not equivalence, so only `unsat`
+    // transfers back to the original query. In particular the "no universal was
+    // weakened, so the result is exact" shortcut inside `decide_instantiation`
+    // must NOT be allowed to hand back a `sat` here: that model interprets Skolem
+    // symbols the original does not contain, so it could not replay against it.
+    match decide_instantiation(arena, &retried, config)? {
+        CheckResult::Unsat => Ok(CheckResult::Unsat),
+        CheckResult::Sat(_) => Ok(CheckResult::Unknown(UnknownReason {
+            kind: UnknownKind::Incomplete,
+            detail: "skolemized query is satisfiable; satisfiability does not transfer \
+                     back through skolemization"
+                .to_owned(),
+        })),
+        CheckResult::Unknown(reason) => Ok(CheckResult::Unknown(reason)),
+    }
 }
 
 /// Shared back half of the instantiation-based refutation entries: decides the
