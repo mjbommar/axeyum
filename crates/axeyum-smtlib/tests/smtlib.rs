@@ -2248,6 +2248,42 @@ fn string_to_int_over_length_literal_requires_an_exact_source_refutation() {
     assert!(matches!(err, SmtError::Unsupported(_)), "got {err:?}");
 }
 
+/// An `Int` numeral beyond `i128` **declines**; it is not a syntax error.
+///
+/// SMT-LIB `Int` is unbounded, so such a literal is well-formed input we cannot
+/// represent — `Value::Int` is an `i128`. Classifying it as `Syntax` claimed the
+/// benchmark was broken, which made a valid file surface as an operational
+/// `parse-error`: the measurement harness refuses to count those and raises an
+/// integrity alarm, and `unknown` is supposed to be first-class rather than an
+/// error.
+///
+/// The value below is `2^256 - 1`, max `uint256`. It is not synthetic — it comes
+/// from `UFLIA/20230314-Jaroslav-Bendik-Certora`, which verifies Ethereum
+/// contracts, so this classification governs whether the crypto and
+/// smart-contract corner of the library is reported as *undecided* or as
+/// *malformed*.
+#[test]
+fn oversized_int_literal_declines_and_is_not_a_syntax_error() {
+    const MAX_UINT256: &str =
+        "115792089237316195423570985008687907853269984665640564039457584007913129639935";
+    let err = parse_script(&format!(
+        "(declare-fun n () Int)\n(assert (= n {MAX_UINT256}))\n(check-sat)\n"
+    ))
+    .expect_err("an Int literal beyond i128 is outside the modeled range");
+    assert!(
+        matches!(err, SmtError::Unsupported(_)),
+        "a well-formed numeral must DECLINE, never report as malformed input: {err:?}"
+    );
+
+    // The boundary itself still parses, so the decline is about representation
+    // and not about long numerals in general.
+    let ok = parse_script(&format!(
+        "(declare-fun n () Int)\n(assert (= n {}))\n(check-sat)\n",
+        i128::MAX
+    ));
+    assert!(ok.is_ok(), "i128::MAX must still parse: {ok:?}");
+}
+
 #[test]
 fn string_from_int_constant_corners_eval() {
     // str.from_int: i ≥ 0 → canonical decimal (no leading zeros, 0 → "0"); i < 0 → "".

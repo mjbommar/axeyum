@@ -15339,9 +15339,24 @@ fn parse_atom(
     }
     // A bare numeral is a non-negative integer literal (negatives are `(- n)`).
     if a.bytes().all(|b| b.is_ascii_digit()) {
-        let value = a
-            .parse::<i128>()
-            .map_err(|_| SmtError::Syntax(format!("integer literal `{a}` out of range")))?;
+        // SMT-LIB `Int` is unbounded, but `Value::Int` is an `i128`, so a numeral
+        // above that range is *representationally* out of reach — it is not
+        // malformed input. Reporting `Syntax` here claimed the benchmark was
+        // ill-formed, which turned a well-formed file into an operational
+        // `parse-error`: the measurement harness then refused to count it at all
+        // and raised an integrity alarm, and `unknown` is supposed to be
+        // first-class rather than an error.
+        //
+        // Real cost, not hypothetical: `UFLIA/20230314-Jaroslav-Bendik-Certora`
+        // carries `2^256 - 1` (max `uint256`) because Certora verifies Ethereum
+        // contracts, so the whole family — and by extension the crypto and
+        // smart-contract corner of the library — reported as a syntax error.
+        // Declining is honest; claiming the input is broken is not.
+        let value = a.parse::<i128>().map_err(|_| {
+            SmtError::Unsupported(format!(
+                "integer literal `{a}` exceeds the modeled `Int` range"
+            ))
+        })?;
         return Ok(arena.int_const(value));
     }
     // A decimal literal `d.ddd` is a non-negative real (ADR-0015).
