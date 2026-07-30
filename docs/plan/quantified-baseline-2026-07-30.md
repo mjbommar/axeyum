@@ -186,7 +186,35 @@ The module is not unbounded by neglect — it has `MAX_INSTANTIATION_ROUNDS = 8`
 gap is that `admit_next_source_batch` takes **no deadline parameter at all**, so
 a round-level clock check is useless when one round never returns.
 
-### Two fixes attempted, both reverted — and why that matters
+### Drilled four levels; each bound revealed the next
+
+The unbounded work was chased down by instrumentation, one level at a time. Every
+level was measured, not reasoned about — and at every level the natural guess was
+wrong:
+
+| Level | Candidate | Verdict | Evidence |
+|---|---|---|---|
+| 1 | `expand_quantifiers` finite expansion | **refuted** | `MAX_EXPAND_INSTANCES` 1<<20 → 1<<12 (256×): unchanged, 2/2. Later confirmed it completes in ~0 ms. |
+| 2 | between the phases of `admit_next_source_batch` | **inert** | deadline polled before/between/after both phases: 5/5 still 100 s / 15.8 GB |
+| 3 | the `lazy_clause_batches` drain loop in `collect_generated_ground` | **inert** | per-batch deadline poll: 5/5 still 100 s / 15.8 GB |
+| 4 | **a single `lazy_clause_batches` iterator step** | **remaining** | see below |
+
+Level 4 follows from level 3's failure rather than from a further guess. The
+per-batch poll sits *inside* that loop and would fire at the 2.0 s budget, and it
+does not — while batch generation itself is demonstrably fast (`elapsed` frozen at
+1.40 s across batches 200→350, and three complete calls at 0.000 s / 0.002 s /
+1.429 s before the fourth never returns). If the loop were iterating, the poll
+would trip. It therefore never gets back from one `next()`: **a single iterator
+step spans more than 38 seconds.**
+
+So the missing bound is inside `IncrementalEmatchSession::lazy_clause_batches`
+itself, below the granularity any caller can poll. That is a deadline-discipline
+change in the e-matching session — the generator has to become interruptible —
+rather than another guard at a call site. It is exactly the "finer cooperative
+polling inside individual recursive encoders" P2.6d records as open, and it is
+now pinned to one iterator with a 55 KB reproducer.
+
+### Fixes attempted, all reverted — and why that matters
 
 **Refuted #1: finite-domain expansion.** `expand_quantifiers` bounds itself with
 `MAX_EXPAND_INSTANCES = 1 << 20`, and a million materialized instances plainly
