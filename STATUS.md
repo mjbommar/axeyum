@@ -441,6 +441,41 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-30 — first measured quantified baseline: UFLIA is 67/300 = 22.3 %,
+  and UF is blocked by an unbounded route.** Lane A / A1. Full record:
+  [quantified baseline](docs/plan/quantified-baseline-2026-07-30.md). UFLIA had
+  **no honest row at all** — the only quantified SCOREBOARD entries were LIA 0/12
+  and UF 0/5, both from the cvc5 regression suite rather than the library. A
+  deterministic stratified 300-file slice across 14 real families
+  ([`scripts/select-quantified-slice.py`](scripts/select-quantified-slice.py), no
+  clock/RNG/seed, even stride not prefix) gives **67 decided, DISAGREE = 0, 0
+  errors**. Three things estimates could not have told us: **(1) every decision is
+  `unsat` — zero `sat`**, confirming on the real library that the general sat
+  direction is the hole; **(2) `unsupported` (141) outweighs `unknown` (92)**, so
+  ~half the slice is a feature/parse gap rather than a search gap, and
+  cheap-encoding-first applies before any MBQI investment; **(3) the families
+  split by failure mode and the split is actionable** — `tokeneer` 85 % decided,
+  `boogie` 0 % but 97 % `unknown` (parsed, supported, undecided → *search*
+  target), `simplify` 0 % and 100 % `unsupported` (→ *feature* target). One
+  aggregate number hides all of that. Scale honesty: cvc5's 58.1 % is on the
+  SMT-COMP selection, which strips everything all solvers solve under a second,
+  so the gap is real and large but is **not** 36 points on identical inputs.
+  Two defects found by measuring: an oversized `Int` literal (`2^256 - 1`, from a
+  Certora Ethereum family) reported `Syntax` and surfaced as an operational
+  `parse-error` tripping the integrity alarm — SMT-LIB `Int` is unbounded so the
+  input is well-formed and `Value::Int` is an `i128`, so it now declines
+  `Unsupported` (errors 1 → 0); and **UF cannot be measured at all** because 6/300
+  files exceed 4 GiB at a 2 s timeout and abort the whole run at 32 GiB. On one
+  55 KB file, wall/RSS track *available address space* rather than the deadline
+  (6 GiB → 3.3 s/305 MB completes; 24 GiB → 150 s/15.8 GB still growing, 3/3),
+  i.e. 75× over a 2-second budget — the same class as the ADR-0373 blowup, and
+  the concrete real-library reproducer P2.6d's polling note lacked. Narrowed to
+  the quantified portfolio in `solve` (`check_auto` declines the same file in
+  0.10 s/11 MB); **finite-domain expansion is ruled out** — lowering
+  `MAX_EXPAND_INSTANCES` 256× reproduced it unchanged. Next: bound that route
+  before any further UF work, then UF (cvc5 wins it with only 40.5 % and 59 % is
+  unsolved by anyone), then split UFLIA by failure mode.
+
 - **2026-07-30 — two flaky gates fixed, and the source-witness `sat` now replays
   before export.** Three items, all of them about the *gate* rather than the
   solver. (1) `apply_source_string_sat_problem` took the witness straight from
