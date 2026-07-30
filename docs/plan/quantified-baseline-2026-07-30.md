@@ -154,6 +154,62 @@ while `explain_corpus` calls `check_auto` (the quantifier-free dispatcher). With
 415 `forall` and 57 `declare-sort`, the runaway is inside the quantified
 portfolio.
 
+### Localized by instrumentation to a single call
+
+Direct checkpoint instrumentation through `solve` → `finish_quantified_solve` →
+`prove_quantified_unsat_via_egraph_impl` (env-gated elapsed prints, added
+temporarily and fully reverted) walks straight to it:
+
+```
+0.000s  enter                     0.175s  fm_loop_start        (all 466 assertions, then exits)
+0.009s  skolemize_top             0.000s  FQS forall_exists_witness
+0.175s  vacuous_universal_elim    0.000s  FQS check_with_quantifiers
+0.175s  unsat_universal           0.000s  FQS egraph_ematching   ← never returns
+```
+
+and inside the e-matching route:
+
+```
+0.003s  EG admit_next_source_batch   0.010s  EG round_top
+0.008s  EG online_add_batch          0.010s  EG admit_next_source_batch
+0.010s  EG round_top                 1.453s  EG online_add_batch
+                                     1.461s  EG round_top
+                                     1.461s  EG admit_next_source_batch  ← never returns
+```
+
+**The culprit is `admit_next_source_batch`** in
+`crates/axeyum-solver/src/qinst_egraph.rs`. Round 2's batch took 1.42 s and
+round 3's call never came back.
+
+The module is not unbounded by neglect — it has `MAX_INSTANTIATION_ROUNDS = 8`,
+`MAX_GROUND_TERMS = 8192`, and a deadline check *at the top of each round*. The
+gap is that `admit_next_source_batch` takes **no deadline parameter at all**, so
+a round-level clock check is useless when one round never returns.
+
+### Two fixes attempted, both reverted — and why that matters
+
+**Refuted #1: finite-domain expansion.** `expand_quantifiers` bounds itself with
+`MAX_EXPAND_INSTANCES = 1 << 20`, and a million materialized instances plainly
+cannot fit in 2 seconds — so it looked like a termination bound masquerading as a
+resource bound. Lowering it to `1 << 12`, a **256× reduction**, reproduced
+150 s / 15.8 GB unchanged, 2/2. The instrumentation later confirmed expansion
+(`check_with_quantifiers`) completes in ~0 ms.
+
+**Inert #2: polling the deadline *between* phases of
+`admit_next_source_batch`.** Threading `deadline` in and checking it before
+`extend_ground_with_derivations`, between it and `collect_generated_ground`, and
+before the deferred pass — **5/5 still ran to 100 s / 15.8 GB**. The unbounded
+work is *inside* one of those two calls, so a check between them never fires. The
+change was reverted rather than landed: an inert modification to a
+soundness-adjacent route earns nothing, and the project credits measured gains
+only.
+
+So the remaining work is precisely cooperative polling **inside**
+`IncrementalEmatchSession::extend_ground_with_derivations` or
+`collect_generated_ground` — exactly the "finer cooperative polling inside
+individual recursive encoders" that P2.6d already lists as open, now with a named
+function and a 55 KB reproducer instead of a general note.
+
 ### One hypothesis tested and REFUTED — do not repeat it
 
 The obvious suspect was finite-domain expansion. `expand_quantifiers`
