@@ -441,6 +441,34 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-30 — nested quantifiers are now reachable: UF 5.0 % → 14.5 %.**
+  Lane A / A1. Commit `fdfb910b`; record in the
+  [UF residual census](docs/plan/uf-residual-census-2026-07-30.md). Trigger
+  instantiation only ever saw *top-level* universals, so anything nested was
+  declined `Incomplete` before search began — **126 of the 159 declared-status
+  files** in the UF slice (83 % of the residual), against **3** in the
+  saturated-but-unproven state that instance *selection* would serve. A new
+  `quant_skolemize` pass does polarity-aware **NNF + Skolemization + prenexing**,
+  emitting Skolem **functions** over the enclosing universals because 109 of the
+  126 have an `exists` under a `forall`. Result: **8/159 → 23/159 correct, 0
+  wrong, 0 errors**, with UFLIA unchanged at 67/300 and DISAGREE = 0 throughout.
+  All three steps were *measured* necessary, not assumed: Skolemization alone
+  still left a residual quantifier (it discharges existentials but leaves the
+  universals nested); adding NNF/prenexing still left 7 assertions of 379 hitting
+  the polarity-mixing bail-out — and **one** abandoned assertion is enough to make
+  the whole query undecidable; only expanding Bool-sorted `xor`/`=`/`ite` into
+  polarity-pure equivalents cleared it. Soundness is refutation-only by
+  construction: skolemization preserves satisfiability, not equivalence, so the
+  caller suppresses `sat` (including `decide_instantiation`'s "result is exact"
+  shortcut) because such a model interprets Skolem symbols the original query
+  does not contain. It also fixed a **latent** bug in the existing
+  `skolemize_top_existentials`, whose per-call counter ran against an
+  arena-lifetime namespace: it reused `!sk_3`, which hard-errored once the new
+  pass declared symbols first and would otherwise have silently made two
+  unrelated existentials share one witness. Next: re-run the census — with 126
+  files newly reaching instantiation the residual has a different shape, and the
+  MBQI/trigger population is no longer 3.
+
 - **2026-07-30 — the unbounded route is fixed, UF has its first baseline (5.0 %),
   and the census rules out every budget lever.** Lane A / A1. Full record:
   [UF residual census](docs/plan/uf-residual-census-2026-07-30.md), commits
