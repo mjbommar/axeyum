@@ -32,6 +32,44 @@
 use std::collections::{BTreeSet, HashMap, HashSet};
 use std::sync::atomic::{AtomicU64, Ordering};
 
+/// Cap on the partial-substitution frontier carried between argument positions
+/// while matching one application node.
+///
+/// E-matching an `n`-argument pattern is a cross product: the frontier is
+/// extended once per argument position, so a pattern whose variables range over
+/// large e-classes multiplies rather than adds. Left uncapped this is unbounded
+/// in both time and memory, and the memory arrives first because every partial
+/// substitution is materialized in a `Vec` before the next position consumes it.
+///
+/// This is not hypothetical. On `UFLIA/sledgehammer__FFT__uf.556474.smt2` (55 KB,
+/// 466 asserts, 398 compiled universals) the frontier growth made a 2-second
+/// budget irrelevant: the run consumed whatever address space it was given —
+/// 15.8 GB and 150 s under a 24 GiB `ulimit`, but a clean 305 MB and 3.3 s under
+/// 6 GiB — because it died on allocation rather than finishing. Six files in a
+/// 300-file UF sample behaved the same way, which aborted the whole measurement
+/// and is why the UF division had no baseline. The e-matching happens *before*
+/// the instantiation loop's deadline poll can run, so a wall-clock guard at the
+/// call site cannot help; the bound has to live here.
+///
+/// A deterministic count is used rather than a clock deliberately: this crate is
+/// wasm-safe and clock-free, and determinism is a public API promise, so results
+/// must not depend on how fast the host ran.
+///
+/// Truncating loses matches, which costs only **completeness**: fewer matches
+/// means fewer instantiations, so a refutation this route might have found
+/// degrades to `unknown`. It cannot manufacture one, so no `unsat` can become
+/// wrong. The kept prefix is deterministic because the frontier is built in
+/// index order.
+const MAX_MATCH_FRONTIER: usize = 4096;
+
+/// Cap on substitutions returned for one pattern across all of its candidate
+/// application nodes.
+///
+/// [`MAX_MATCH_FRONTIER`] bounds a single candidate node; this bounds their sum,
+/// so a pattern with many individually-modest candidates cannot blow up in
+/// aggregate. Same soundness argument: dropping matches costs completeness only.
+const MAX_CANDIDATE_SUBSTITUTIONS: usize = 65_536;
+
 static NEXT_EGRAPH_ID: AtomicU64 = AtomicU64::new(1);
 
 /// A lifetime-free `Copy` handle to an e-node.
@@ -587,6 +625,10 @@ impl EGraph {
             let args: Vec<ENodeId> = node.args.iter().map(|&arg| self.root(arg)).collect();
             let blank = vec![None; nvars];
             results.extend(self.match_sequence(subs, &args, blank, class_index));
+            if results.len() >= MAX_CANDIDATE_SUBSTITUTIONS {
+                results.truncate(MAX_CANDIDATE_SUBSTITUTIONS);
+                break;
+            }
         }
         results.sort();
         results.dedup();
@@ -665,6 +707,10 @@ impl EGraph {
             let mut next = Vec::new();
             for partial in current {
                 next.extend(self.match_in_class(sub, arg_root, partial, index));
+                if next.len() >= MAX_MATCH_FRONTIER {
+                    next.truncate(MAX_MATCH_FRONTIER);
+                    break;
+                }
             }
             current = next;
             if current.is_empty() {
