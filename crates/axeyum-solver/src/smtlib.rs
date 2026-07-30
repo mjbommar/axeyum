@@ -910,8 +910,9 @@ fn seq_value(codepoints: &[u32]) -> Value {
 /// Applies the parser's source-level bounded SAT probe to an otherwise undecided
 /// string query. The probe evaluates every original source assertion under each
 /// candidate using exact Unicode string semantics before returning a witness. It
-/// is strictly SAT-only: unsupported expressions, a missed witness, or an
-/// exhausted deterministic assignment cap preserve the prior `unknown`.
+/// is strictly SAT-only: unsupported expressions, a missed witness, an exhausted
+/// deterministic assignment cap, or a witness that fails its independent replay
+/// all preserve the prior `unknown`.
 fn apply_source_string_sat_problem(script: &Script, result: CheckResult) -> CheckResult {
     let CheckResult::Unknown(_) = &result else {
         return result;
@@ -926,6 +927,22 @@ fn apply_source_string_sat_problem(script: &Script, result: CheckResult) -> Chec
     ) else {
         return result;
     };
+    // Re-check the witness before exporting it, even though the search already
+    // required every assertion to hold. The two checks are not the same check:
+    // `bounded_witness` evaluates the *positional* candidate arrays it is
+    // iterating, while `replays` re-resolves each declared variable's value out
+    // of the emitted symbol-keyed witness and only then re-evaluates. It also
+    // rejects a witness whose bindings are incomplete, duplicated, or
+    // sort-crossed.
+    //
+    // So this closes the gap between what was searched and what is handed to the
+    // caller: a fault in the array-to-witness conversion — a mis-keyed symbol, a
+    // dropped binding — passes the search and fails here. `Unknown` is
+    // first-class, so a failed replay declines rather than exporting a `sat`
+    // whose model does not demonstrably satisfy the source.
+    if !problem.replays(&witness) {
+        return result;
+    }
     let mut model = Model::new();
     for (symbol, code_points) in witness.strings {
         model.set(symbol, seq_value(&code_points));
