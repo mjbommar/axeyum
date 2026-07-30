@@ -147,8 +147,37 @@ euf-offline: declined (incomplete: boolean skeleton undecided)
 ufbv-declared-sort-lazy: declined (unsupported)
 ```
 
-So the runaway is on a path `solve_smtlib` takes and `check_auto` does not. That
-is a narrow place to look, and it is where the next pass should start.
+So the runaway is on a path `solve_smtlib` takes and `check_auto` does not. The
+difference is the entry point: `solve_smtlib` calls **`solve`** (the
+quantifier-aware entry — normalization, skolemization, the quantified portfolio),
+while `explain_corpus` calls `check_auto` (the quantifier-free dispatcher). With
+415 `forall` and 57 `declare-sort`, the runaway is inside the quantified
+portfolio.
+
+### One hypothesis tested and REFUTED — do not repeat it
+
+The obvious suspect was finite-domain expansion. `expand_quantifiers`
+(`crates/axeyum-rewrite/src/quantifiers.rs`) bounds itself with
+`MAX_EXPAND_INSTANCES = 1 << 20`, and a million materialized instances plainly
+cannot fit in 2 seconds or a few hundred megabytes — so the bound looked like a
+*termination* bound rather than a *resource* bound, which would explain
+everything.
+
+It is not the cause. Lowering `MAX_EXPAND_INSTANCES` from `1 << 20` to `1 << 12`
+— a 256× reduction — rebuilt and re-measured gave **150 s / 15.8 GB again, 2/2,
+byte-for-byte the same behaviour**. The experiment was reverted.
+
+That eliminates expansion and leaves the rest of the quantified portfolio:
+instantiation/e-matching rounds, MBQI model construction, or the valid-universal
+subchecks. Recording the refutation because the hypothesis is the one any reader
+would form first, and it costs a build plus two runs to re-disprove.
+
+Profiling was attempted and did not work in this environment: `perf record`
+produced a zero-byte file (restricted `perf_event_paranoid`), and `gdb -p … -batch
+-ex bt` returned no frames. The next attempt should either fix the profiling
+permissions or instrument the portfolio's route boundaries directly with
+timing/allocation prints, which is what actually localized the ADR-0373 blowup
+after two failed rounds of reasoning.
 
 ## Next, in order
 
