@@ -15,9 +15,53 @@ Authority order (where these conflict, the earlier wins):
 
 Base commit for the whole program: **`ffc466b4`** on `main`.
 
+> ## Phase 0 is COMPLETE (2026-07-30). Read this before the tables below.
+>
+> `just check` is **green on `main`**, content-verified — and it was **red before
+> this program started**, for two independent pre-existing reasons.
+>
+> **The §1 table below is the 2026-07-28 snapshot and is now stale in three
+> places.** Corrected:
+>
+> | Axis | Was stated | Actually measured |
+> |---|---|---|
+> | Curated decide-rate | 753 / 992 | **762 / 992**, DISAGREE = 0 |
+> | QF_SLIA curated | 18 / 50 = 36 % | **25 / 50 = 50 %** |
+> | QF_S curated | 87 / 134 = 65 % | **93 / 134 = 69 %** |
+> | QF_SEQ curated | 26 / 33 = 79 % | **22 / 33 = 67 %** (baseline was *over*-stating) |
+> | Noetzli 1,880 | "not on `main`" | **on `main`**, 1,880/1,880 |
+> | `string_bound` frontier | 8 | **12** (baseline 8) |
+>
+> **The single most important correction is to fact 2 in §1.** It assumed the
+> stale SCOREBOARD hid gains the Phase 0 strings work would reveal. Re-measuring
+> at both `ffc466b4` and current `main` gave **identical** numbers on all three
+> curated rows, so the Noetzli work moved them by **exactly zero** — the gains and
+> the QF_SEQ regression both predate it. **Lane B must be re-scoped against the
+> measured residual, not against the Noetzli figure**: QF_SLIA 21 unsupported + 4
+> unknown, QF_S 32 + 9, QF_SEQ 10 unknown concentrated in the P2.7 A.2
+> bounded-unsat gate. Full record:
+> [`strings-remeasurement-2026-07-29.md`](../strings-remeasurement-2026-07-29.md).
+>
+> Landed beyond the two live lanes: **ADR-0374** (quantified-BV skolemized
+> negated universals now carry a witness certificate — an *evidence*-coverage
+> gain, not decide-rate), **ADR-0373** (source FP prefix refuter, with its
+> parse-time `2^k` blowup bounded), and the **qfslia regex-membership half**
+> (credited at zero movement / zero loss; its Kaluza/PyEx claims are
+> [deliberately uncredited](../string-corpus-provenance-2026-07-30.md)).
+>
+> Defects found and fixed that nothing was catching: one **P0 wrong-`unsat`**
+> introduced by the Phase 0 merge itself; one **pre-existing uncertified
+> quantified-BV `sat`**; a `gen-scoreboard.py --check` that was a **silent
+> no-op**; three **generated views drifted from their own sources**; a harness
+> oracle **adjudicating the bounded encoding instead of the source**; and **two
+> flaky gates**. Worktrees 21 → 5.
+>
+> Rules 6–8 in §4 were rewritten from these failures. Read them before running
+> anything.
+
 ---
 
-## 1. Where we actually are (measured, 2026-07-28)
+## 1. Where we actually are (measured, 2026-07-28 — see the correction above)
 
 | Axis | Committed number | Source |
 |---|---|---|
