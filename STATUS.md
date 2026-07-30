@@ -441,6 +441,31 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-30 — UFLIA censused: not a feature gap, and budget *scheduling* is
+  ruled out.** Lane A / A1. Record in the
+  [UF residual census](docs/plan/uf-residual-census-2026-07-30.md), commit
+  `3469ba2f`. Two corrections to earlier claims in this file's own history.
+  (1) UFLIA's 122 `unsupported` files are **not** a parse/feature gap — that
+  label covers a *decline*, and the reasons underneath are overwhelmingly time:
+  47 exhaust the budget after valid-universal elimination, 30 after the checked
+  fast paths. (2) The honest denominator is the **234** files carrying a declared
+  status, so the rate is **67/234 = 28.6 %**, not the 67/300 = 22.3 % quoted
+  earlier; cvc5 took 58.1 %.
+  One hypothesis was implemented, measured and **reverted**, so it is not
+  retried: `eliminate_valid_universals`,
+  `ground_subset_refutes_quantified_query` and `checked_quantified_fast_path`
+  each receive the *full* remaining timeout with nothing reserved for the
+  refutation route behind them — true as a code fact, and bounding all three to a
+  quarter of the deadline still decided **0 of the 79** budget-limited files. The
+  reason distribution moved (unknown 74 → 32) without producing a verdict, so the
+  change was reverted rather than shipped under a comment claiming a fix.
+  Also retracted: a first reading that UFLIA suffered the severe deadline
+  overrun UF had. Measured per file, mean wall is **3.6 s against a 2 s budget**
+  (worst 11.7 s, all `simplify2`) and tracks the deadline closely at 20 s, so the
+  killed 20 s control was arithmetic — 79 × ~36 s beat its 45-minute cap — not a
+  defect. Open: whether UFLIA is budget-limited at all, which needs that control
+  re-run with a correct allowance.
+
 - **2026-07-30 — UF is ~30 %, up from 5.0 % this morning, with `DISAGREE = 0`
   throughout.** Lane A / A1. Commits `2b4b6934`, `f34790a7`, `fdfb910b`,
   `142ab435`; full record in the
