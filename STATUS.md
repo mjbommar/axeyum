@@ -441,6 +441,38 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-30 — the unbounded route is fixed, UF has its first baseline (5.0 %),
+  and the census rules out every budget lever.** Lane A / A1. Full record:
+  [UF residual census](docs/plan/uf-residual-census-2026-07-30.md), commits
+  `2b4b6934` (fix) and `a1f78cd5` (census). The blocker named in the row below is
+  closed: the unbounded work was `EGraph::match_sequence`, which builds a
+  **cross product** of partial substitutions, extending a materialized frontier
+  once per argument position. Bounding it (deterministic counts, not a clock —
+  this crate is wasm-safe and clock-free) takes the 55 KB reproducer from
+  **150 s / 15.8 GB to 2.41 s / 81 MB**, honors its 2 s budget, and returns the
+  same verdict under a 6 GiB cap as under 24 GiB. Truncation costs completeness
+  only: fewer matches → fewer instantiations → `unknown`, never a wrong `unsat`.
+  Method note worth keeping — four guard placements deduced from reading the code
+  were all **inert and reverted**, because `lazy_clause_batches` returns a
+  materialized `Vec` and runs its e-matching *before* returning, so every guard at
+  or below that call site is downstream of the work; three `eprintln` phase probes
+  found it in one sitting.
+  That unblocks **UF: 8/159 correct, 0 wrong = 5.0 %** — our weakest division
+  (cvc5 takes 40.5 %). The census then rules out the obvious next moves with
+  measurements rather than argument: quantifier count **does not discriminate**
+  (the solves include files with 456/458/521 `forall`); **15× the time decides 0
+  of 60**; **8× the rounds decides 0 of 60**; 29/30 decline as `rounds_exhausted`
+  while instantiation is still *productive*. Raising the cap resolves the
+  apparent contradiction — the run saturates at 8192 ground terms with `admitted`
+  falling to 0 and *still* does not refute. So the generated instances are not the
+  ones the proof needs. **Next mechanism is instance *selection* — trigger
+  quality, relevance filtering, MBQI — not instance volume.** Two caveats recorded
+  against over-reading it: the ground-limit check is strict-greater so a plateau
+  at exactly 8192 misreports the decline reason, and the `admitted → 0` plateau
+  may be the new frontier caps binding rather than a true fixpoint. Still open:
+  three `sledgehammer` files overrun a 2 s budget by 20–30× with *bounded* memory
+  (a separate defect from the one fixed here).
+
 - **2026-07-30 — first measured quantified baseline: UFLIA is 67/300 = 22.3 %,
   and UF is blocked by an unbounded route.** Lane A / A1. Full record:
   [quantified baseline](docs/plan/quantified-baseline-2026-07-30.md). UFLIA had
