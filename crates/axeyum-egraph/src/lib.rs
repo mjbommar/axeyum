@@ -62,6 +62,40 @@ use std::sync::atomic::{AtomicU64, Ordering};
 /// index order.
 const MAX_MATCH_FRONTIER: usize = 4096;
 
+/// Cap on **matching work** performed by one batch e-matching call, shared
+/// across every pattern in that batch.
+///
+/// This bounds a different quantity from [`MAX_MATCH_FRONTIER`] and
+/// [`MAX_CANDIDATE_SUBSTITUTIONS`], and the distinction is the whole point: those
+/// two cap the substitutions *produced*, which does nothing when the cost is
+/// **failed** matching. A batch can visit tens of thousands of candidate nodes,
+/// explore a deep frontier under each, and return almost nothing — paying the
+/// full cost while staying far under any output cap.
+///
+/// That is not hypothetical either. On
+/// `UF/sledgehammer__Fundamental_Theorem_Algebra__uf.580248.smt2`, one batch of
+/// 123 patterns over 54,810 candidate nodes spent **44 seconds** against a **2
+/// second** budget and produced 3905 tuples. An output-based batch budget was
+/// implemented against this exact file first and measured completely inert,
+/// because 3905 results never approaches an output cap. Counting work is what
+/// separates the pathological batch from a healthy one: the batches preceding it
+/// in the same run cost 10 K, 19 K, 321 K, and 2.3 M units, and then the next one
+/// costs **2.44 billion** — a thousandfold cliff, not a gradient.
+///
+/// The cap sits an order of magnitude above the largest healthy batch observed,
+/// so it does not bind on work that was going anywhere. Note also that files this
+/// route *solves* never reach the candidate path at all (they are served by the
+/// full indexed path), so this cannot starve a working refutation.
+///
+/// A deterministic count, not a clock, for the same reason as
+/// [`MAX_MATCH_FRONTIER`]: this crate is wasm-safe and clock-free, and
+/// determinism is a public API promise.
+///
+/// Soundness is the same argument once more: stopping early yields fewer
+/// matches, hence fewer instantiations, hence at worst `unknown`. It cannot
+/// manufacture a refutation, so no `unsat` can become wrong.
+const MAX_MATCH_WORK_PER_BATCH: usize = 20_000_000;
+
 /// Cap on substitutions returned for one pattern across all of its candidate
 /// application nodes.
 ///
@@ -478,10 +512,16 @@ impl EGraph {
         index: &mut EMatchIndex,
     ) -> Vec<Vec<Substitution>> {
         self.refresh_match_index(index);
+        let mut work = 0usize;
         patterns
             .iter()
             .map(|pattern| {
-                self.ematch_indexed(pattern, &index.class_index, &index.application_nodes)
+                self.ematch_indexed(
+                    pattern,
+                    &index.class_index,
+                    &index.application_nodes,
+                    &mut work,
+                )
             })
             .collect()
     }
@@ -507,11 +547,12 @@ impl EGraph {
     ) -> Vec<Vec<Substitution>> {
         assert_eq!(patterns.len(), candidates.len());
         self.refresh_match_index(index);
+        let mut work = 0usize;
         patterns
             .iter()
             .zip(candidates)
             .map(|(pattern, candidates)| {
-                self.ematch_candidates(pattern, candidates, &index.class_index)
+                self.ematch_candidates(pattern, candidates, &index.class_index, &mut work)
             })
             .collect()
     }
@@ -592,6 +633,7 @@ impl EGraph {
         pattern: &Pattern,
         class_index: &HashMap<ENodeId, Vec<ENodeId>>,
         application_nodes: &HashMap<u32, Vec<ENodeId>>,
+        work: &mut usize,
     ) -> Vec<Substitution> {
         let Pattern::App(decl, _) = pattern else {
             return Vec::new(); // a bare variable is not a usable trigger
@@ -603,6 +645,7 @@ impl EGraph {
                 .map(Vec::as_slice)
                 .unwrap_or_default(),
             class_index,
+            work,
         )
     }
 
@@ -611,6 +654,7 @@ impl EGraph {
         pattern: &Pattern,
         candidates: &[ENodeId],
         class_index: &HashMap<ENodeId, Vec<ENodeId>>,
+        work: &mut usize,
     ) -> Vec<Substitution> {
         let Pattern::App(decl, subs) = pattern else {
             return Vec::new();
@@ -623,8 +667,11 @@ impl EGraph {
                 continue;
             }
             let args: Vec<ENodeId> = node.args.iter().map(|&arg| self.root(arg)).collect();
+            if *work >= MAX_MATCH_WORK_PER_BATCH {
+                break;
+            }
             let blank = vec![None; nvars];
-            results.extend(self.match_sequence(subs, &args, blank, class_index));
+            results.extend(self.match_sequence(subs, &args, blank, class_index, work));
             if results.len() >= MAX_CANDIDATE_SUBSTITUTIONS {
                 results.truncate(MAX_CANDIDATE_SUBSTITUTIONS);
                 break;
@@ -701,12 +748,17 @@ impl EGraph {
         arg_roots: &[ENodeId],
         subst: Substitution,
         index: &HashMap<ENodeId, Vec<ENodeId>>,
+        work: &mut usize,
     ) -> Vec<Substitution> {
         let mut current = vec![subst];
         for (sub, &arg_root) in subs.iter().zip(arg_roots) {
             let mut next = Vec::new();
             for partial in current {
-                next.extend(self.match_in_class(sub, arg_root, partial, index));
+                if *work >= MAX_MATCH_WORK_PER_BATCH {
+                    break;
+                }
+                *work += 1;
+                next.extend(self.match_in_class(sub, arg_root, partial, index, work));
                 if next.len() >= MAX_MATCH_FRONTIER {
                     next.truncate(MAX_MATCH_FRONTIER);
                     break;
@@ -728,6 +780,7 @@ impl EGraph {
         class_root: ENodeId,
         subst: Substitution,
         index: &HashMap<ENodeId, Vec<ENodeId>>,
+        work: &mut usize,
     ) -> Vec<Substitution> {
         match pattern {
             Pattern::Var(v) => {
@@ -753,7 +806,13 @@ impl EGraph {
                         continue;
                     }
                     let arg_roots: Vec<ENodeId> = node.args.iter().map(|&a| self.root(a)).collect();
-                    results.extend(self.match_sequence(subs, &arg_roots, subst.clone(), index));
+                    if *work >= MAX_MATCH_WORK_PER_BATCH {
+                        break;
+                    }
+                    *work += 1;
+                    results.extend(
+                        self.match_sequence(subs, &arg_roots, subst.clone(), index, work),
+                    );
                 }
                 results
             }
