@@ -304,11 +304,19 @@ impl SkolemState {
     /// silently succeeding and making two unrelated existentials share one
     /// witness. Probing keeps the choice deterministic: it depends only on the
     /// arena contents and the traversal order.
+    ///
+    /// The probe must consult the **internal** namespace. `find_symbol` only sees
+    /// user-declared names and is blind to everything `declare_internal` minted,
+    /// so probing with it reports "free" every time and defeats the check. Both
+    /// the symbol and function tables are checked because this prefix pool feeds
+    /// `declare_internal` and `declare_internal_fun` alike.
     fn fresh_name(&mut self, arena: &TermArena, prefix: &str) -> String {
         loop {
             let candidate = format!("{prefix}{}", self.next);
             self.next += 1;
-            if arena.find_symbol(&candidate).is_none() {
+            if arena.find_internal_symbol(&candidate).is_none()
+                && arena.find_internal_function(&candidate).is_none()
+            {
                 return candidate;
             }
         }

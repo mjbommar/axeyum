@@ -624,11 +624,13 @@ fn skolemize_top_existentials(
             // `!sk_3` — hard-erroring when the sorts differ, and silently making
             // two unrelated existentials share one witness when they match. Probe
             // for an unused name instead; this stays deterministic because it
-            // depends only on the arena contents and the traversal order.
+            // depends only on the arena contents and the traversal order. The
+            // probe must be `find_internal_symbol` -- `find_symbol` only sees
+            // user-declared names, so it is blind to everything declared here.
             let skolem = loop {
                 let candidate = format!("!sk_{k}");
                 k += 1;
-                if arena.find_symbol(&candidate).is_none() {
+                if arena.find_internal_symbol(&candidate).is_none() {
                     break arena.declare_internal(&candidate, sort).map_err(err)?;
                 }
             };

@@ -450,8 +450,35 @@ pub fn check_qf_ufbv_lazy<B: SolverBackend>(
     assertions: &[TermId],
     config: &SolverConfig,
 ) -> Result<CheckResult, SolverError> {
-    check_with_function_consistency(arena, assertions, |a, asserts| {
-        backend.check(a, asserts, config)
+    // After `abstract_functions` the only terms left at an uninterpreted sort are
+    // free symbols, so they can be encoded as bit-vectors by the finite model
+    // property and handed to the backend, which otherwise refuses the query
+    // outright. `unsat` transfers because the encoded domain is wide enough to
+    // keep every symbol distinct; `sat` does not, because the model assigns
+    // bit-vector values to symbols the original query holds at an uninterpreted
+    // sort and so could not replay against the original term.
+    let mut encoded_uninterpreted_sorts = false;
+    let result = check_with_function_consistency(arena, assertions, |a, asserts| {
+        match crate::uninterpreted_bv::encode_uninterpreted_symbols(a, asserts)? {
+            None => backend.check(a, asserts, config),
+            Some(encoded) => {
+                encoded_uninterpreted_sorts = true;
+                backend.check(a, &encoded, config)
+            }
+        }
+    })?;
+    if !encoded_uninterpreted_sorts {
+        return Ok(result);
+    }
+    Ok(match result {
+        CheckResult::Sat(_) => CheckResult::Unknown(UnknownReason {
+            kind: UnknownKind::Incomplete,
+            detail: "uninterpreted sorts were encoded as bit-vectors; satisfiability does \
+                     not transfer back because the model interprets the encoding, not the \
+                     original sort"
+                .to_owned(),
+        }),
+        other => other,
     })
 }
 
