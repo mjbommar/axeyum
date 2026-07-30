@@ -441,6 +441,35 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-29 — the qfslia regex-membership half is on `main` with a
+  deliberately narrow claim, and the fuzz that adjudicates it was blind on its
+  own axis.** Ten commits from `agent/solver/qfslia-regex-length-next` land
+  (`c7123d34`); `5c2e5e0a` is dropped as superseded by `main`'s more general
+  `exact_prefixed_whole_source_replace`; the `parse.rs` UNSAT families stay on
+  the branch because they carry the one genuinely semantic conflict (an early
+  return that would skip `build_source_string_sat_problem`) plus the
+  `exact_fixed_segment_overlap_conflict` family the review said to hold until it
+  has an exhaustive reference test. **Credited: zero measured movement, zero
+  loss.** QF_SLIA 25/50, QF_S 93/134, QF_SEQ 22/33, and 296/300 on a
+  `20230327-stringfuzz-lu` sample — identical to `main`, DISAGREE = 0 on all
+  four, verified with genuinely distinct binaries after an initial comparison
+  accidentally reused one build. **Not credited:** the branch's claimed Kaluza
+  +262 / PyEx +69 cannot be measured here — Kaluza is absent from the staged
+  library and the only PyEx tree is `QF_SNIA`, a different logic — so no
+  Kaluza/PyEx number may be quoted until those corpora are committed as curated
+  slices. Landing anyway is deliberate: zero-loss, nine new exhaustive-reference
+  unit tests, and both lanes rewrite `parse.rs` at ~1,800 lines per increment so
+  the conflict decays fast. Separately, these routes decide ordered
+  `str.to_int` membership while `gen_literal` emitted only `{a, b}` —
+  structurally unable to produce a numeral, the `ba0d9149` pattern again. The
+  alphabet now spans numerals plus escapes at the printable-ASCII boundary,
+  above `0x7f`, and above `0xFF`. **Escapes, not raw characters**: a first
+  attempt with raw `é`/`𝄞` reported a false WRONG-UNSAT, because raw multi-byte
+  characters are ill-formed SMT-LIB — cvc5 refuses to parse them, z3 reads the
+  UTF-8 bytes as separate characters, and with `\u{1d11e}` z3 gives the correct
+  one-code-point `unsat`. Widened harness: **693 jointly decided, 0
+  disagreements**, both z3 and cvc5 arms.
+
 - **2026-07-29 — ADR-0373 is on `main`: the source FP prefix refuter lands with
   its parse-time blowup bounded.** The route was held since 2026-07-28 on an
   availability defect, not a soundness one — its core reviewed clean (top-level
