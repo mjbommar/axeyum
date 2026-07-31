@@ -113,3 +113,18 @@ not a score.
 | benchmark list | `bench-results/parity-lists/UF.txt` (sha256 ab432240d2f7, 200 files) |
 | solver commit | `5323ee12` |
 
+## QF_BV — 2026-07-31T15:28:10Z
+
+| field | value |
+|---|---|
+| axeyum solved | 175/200 |
+| reference solved | 194/200 |
+| **ratio (axeyum / reference)** | **90.2%** |
+| **disagreements** | **0** |
+| soundness | SOUND |
+| both / axeyum-only / reference-only | 175 / 0 / 19 |
+| reference | `0.9.1` |
+| protocol | 24s wall, 8GiB, per-file |
+| benchmark list | `bench-results/parity-lists/QF_BV.txt` (sha256 6f873e15b191, 200 files) |
+| solver commit | `669c952c` |
+
