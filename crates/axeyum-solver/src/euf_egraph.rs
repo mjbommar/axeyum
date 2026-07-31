@@ -107,6 +107,13 @@ pub struct EufTheory {
     diseqs: Vec<(usize, ENodeId, ENodeId)>,
     /// Backtrack trail: per [`EufTheory::push`], the `(diseqs, assigned_log)` lengths.
     trail: Vec<(usize, usize)>,
+    /// Optional wall-clock bound for the *detection* scans (conflict search and
+    /// propagation). Past the deadline both scans return "nothing found" —
+    /// sound and conservative: a missed conflict can only delay the search
+    /// (the driver's own deadline check then ends it as `Unknown`, and `sat`
+    /// is replay-gated), never manufacture a verdict — so a large atom set
+    /// cannot run its per-assert scans deadline-blind.
+    deadline: Option<Instant>,
 }
 
 /// A sound theory propagation: a literal the theory entails under the current
@@ -154,7 +161,15 @@ impl EufTheory {
             assigned_log: Vec::new(),
             diseqs: Vec::new(),
             trail: Vec::new(),
+            deadline: None,
         }
+    }
+
+    /// Bounds the detection scans by `deadline` (see the `deadline` field).
+    #[must_use]
+    pub(crate) fn with_deadline(mut self, deadline: Option<Instant>) -> Self {
+        self.deadline = deadline;
+        self
     }
 
     /// Appends an atom whose equality sides were pre-registered as observed
@@ -263,6 +278,10 @@ impl EufTheory {
     /// deferred.)
     #[must_use]
     pub fn propagate(&self) -> Vec<TheoryProp> {
+        // Sound early-out past the deadline: propagation is optional.
+        if self.deadline.is_some_and(|d| Instant::now() >= d) {
+            return Vec::new();
+        }
         let mut out = Vec::new();
         for (atom, sides) in self.atoms.iter().enumerate() {
             if self.assigned[atom].is_some() {
@@ -295,6 +314,12 @@ impl EufTheory {
     /// is the asserted literals (recovered via [`EGraph::explain`]) whose
     /// conjunction is refuted.
     fn first_conflict(&self) -> Option<Vec<TheoryLit>> {
+        // Sound early-out past the deadline: reporting no conflict is
+        // conservative (see the `deadline` field) and bounds the per-assert
+        // scan cost once the budget is gone.
+        if self.deadline.is_some_and(|d| Instant::now() >= d) {
+            return None;
+        }
         // An asserted disequality whose sides are now congruent.
         for &(atom, a, b) in &self.diseqs {
             if self.bridge.egraph.equal(a, b) {
@@ -604,7 +629,7 @@ pub fn check_qf_uf_online_cdclt(
 
     let eq_count = atom_terms.len();
     let deadline = config.timeout.and_then(|t| Instant::now().checked_add(t));
-    let mut theory = EufTheory::new(arena, &atom_terms);
+    let mut theory = EufTheory::new(arena, &atom_terms).with_deadline(deadline);
     let mut solver = CdclT::new(enc.var_count, eq_count, driver_clauses, deadline);
     match solver.solve(&mut theory) {
         Outcome::Unsat => CheckResult::Unsat,
@@ -800,8 +825,11 @@ fn build_model(arena: &TermArena, bridge: &Bridge) -> Option<Model> {
 
     let mut model = Model::new();
     // `BTreeMap` + term-ordered pushes keep function-table construction (and
-    // thus the emitted model) independent of hash iteration order.
+    // thus the emitted model) independent of hash iteration order. Congruent
+    // applications share an argument-code key and (by congruence) a result
+    // code, so duplicate keys are dropped at collection.
     let mut tables: BTreeMap<FuncId, Vec<(Vec<u128>, u128)>> = BTreeMap::new();
+    let mut table_keys: HashSet<(FuncId, Vec<u128>)> = HashSet::new();
     for &(term, node) in &term_nodes {
         let code = class_code[&bridge.egraph.root(node)];
         match arena.node(term) {
@@ -816,7 +844,9 @@ fn build_model(arena: &TermArena, bridge: &Bridge) -> Option<Model> {
                     .iter()
                     .map(|&a| class_code[&bridge.egraph.root(bridge.term_to_node[&a])])
                     .collect();
-                tables.entry(*func).or_default().push((arg_codes, code));
+                if table_keys.insert((*func, arg_codes.clone())) {
+                    tables.entry(*func).or_default().push((arg_codes, code));
+                }
             }
             _ => {}
         }
@@ -839,7 +869,9 @@ fn build_model(arena: &TermArena, bridge: &Bridge) -> Option<Model> {
                     .collect();
                 fv = fv.define_value(&arg_values, value_from_code(result, res));
             } else {
-                fv = fv.define(&args, res);
+                // In place: the persistent `define` clones the whole table per
+                // entry, which is quadratic across thousands of applications.
+                fv.define_in_place(&args, res);
             }
         }
         model.set_function(func, fv);
@@ -882,6 +914,11 @@ fn assign_class_codes(
             used.entry(class_sort[&root]).or_default().insert(code);
         }
     }
+    // Fresh codes are assigned monotonically per sort (each next candidate
+    // starts where the previous search ended, skipping constant-pinned codes),
+    // which yields exactly the same smallest-unused-first codes as a scan from
+    // zero would, without the quadratic rescan across thousands of classes.
+    let mut next_free: HashMap<Sort, u128> = HashMap::new();
     for &(_, node) in term_nodes {
         let root = bridge.egraph.root(node);
         if class_code.contains_key(&root) {
@@ -896,14 +933,18 @@ fn assign_class_codes(
             Sort::Uninterpreted(_) => u128::MAX,
             _ => return None,
         };
-        let mut v = 0u128;
+        let mut v = next_free.get(&sort).copied().unwrap_or(0);
         while set.contains(&v) {
             if v == max {
                 return None; // too many distinct classes for this width
             }
             v += 1;
         }
+        if v > max {
+            return None; // too many distinct classes for this width
+        }
         set.insert(v);
+        next_free.insert(sort, v.saturating_add(1));
         class_code.insert(root, v);
     }
     Some(class_code)

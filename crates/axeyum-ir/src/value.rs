@@ -484,6 +484,30 @@ impl FuncValue {
         }
     }
 
+    /// In-place variant of [`FuncValue::define`] for bulk table construction:
+    /// the persistent variant clones the whole entry map per definition, which
+    /// is quadratic across a large application set (e.g. an EUF model with
+    /// thousands of applications of one function).
+    ///
+    /// # Panics
+    ///
+    /// Panics if `args` does not match the declared arity, or if this is a
+    /// full-value-storage interpretation (use [`FuncValue::define_value`]).
+    pub fn define_in_place(&mut self, args: &[u128], result: u128) {
+        let key = self.normalize_key(args);
+        let result = encode_to(self.result, result);
+        let FuncStorage::Scalar { default, entries } = &mut self.storage else {
+            panic!(
+                "FuncValue::define_in_place on a full-value-storage function (use define_value)"
+            );
+        };
+        if result == *default {
+            entries.remove(&key);
+        } else {
+            entries.insert(key, result);
+        }
+    }
+
     /// Returns a copy of this full-value function with the `args` tuple mapped to
     /// `result` (full [`Value`] keys/results). An entry equal to the default is
     /// dropped (normalization); redefining an existing tuple replaces it

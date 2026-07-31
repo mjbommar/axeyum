@@ -58,6 +58,18 @@ const MAX_INSTANTIATION_ROUNDS: usize = 8;
 /// deterministic (the "never hang" rule) when neither is configured.
 const MAX_EXTENDED_INSTANTIATION_ROUNDS: usize = 512;
 
+/// Mid-loop (extended-cadence) ground checks run under `remaining / divisor`
+/// of the shared budget, so a single check whose inner routes would spend the
+/// whole remaining wall clock cannot starve later rounds or the final check.
+const MID_LOOP_CHECK_BUDGET_DIVISOR: u32 = 4;
+
+/// A new instantiation round is started only when the remaining budget is at
+/// least this multiple of the previous round's duration: per-round work has
+/// grown 10x+ round-over-round on real corpora, and the e-matcher runs with
+/// no internal deadline, so starting a round without growth headroom risks a
+/// deadline overshoot as large as the round itself.
+const ROUND_GROWTH_HEADROOM: u32 = 8;
+
 /// Deterministic cap on accumulated ground terms: e-matching a universal whose
 /// instances generate ever-deeper terms (e.g. `∀x.(x≤y ∨ x≥y+1)` ⇒ `y, y+1, y+2, …`)
 /// can explode a single round's `check_auto`, so the loop bails to `unknown` past this
@@ -211,6 +223,24 @@ fn quantifier_qf_refutation_check(
     quantifier_qf_check(arena, &subset, config, deadline, stats)
 }
 
+/// A tighter deadline reserving `1/divisor` of the remaining budget: mid-loop
+/// interleaved checks run under this so no single check (whose inner routes
+/// spend their whole remaining budget on a large skeleton) can starve the
+/// remaining rounds and the final ground check. `divisor <= 1` or no deadline
+/// keeps the shared deadline unchanged.
+fn fractional_deadline(deadline: Option<Instant>, divisor: u32) -> Option<Instant> {
+    let d = deadline?;
+    if divisor <= 1 {
+        return Some(d);
+    }
+    let now = Instant::now();
+    // An already-expired deadline stays expired (never unbounded).
+    let Some(remaining) = d.checked_duration_since(now) else {
+        return Some(d);
+    };
+    Some(now.checked_add(remaining / divisor).unwrap_or(d))
+}
+
 #[allow(clippy::too_many_lines)]
 fn prove_quantified_unsat_via_egraph_impl(
     arena: &mut TermArena,
@@ -244,9 +274,24 @@ fn prove_quantified_unsat_via_egraph_impl(
     let mut online_clauses = None;
     let mut online_attempted = !enable_online_clauses;
     let mut candidate_equalities_enabled = enable_candidate_equalities;
+    let mut last_round_duration = std::time::Duration::ZERO;
     for round in 0..MAX_EXTENDED_INSTANTIATION_ROUNDS {
-        if deadline.is_some_and(|d| Instant::now() >= d) {
+        let round_started = Instant::now();
+        if deadline.is_some_and(|d| round_started >= d) {
             return Ok(egraph_timeout());
+        }
+        // One matching/admission round is the loop's largest deadline-blind
+        // unit: the e-matcher has no internal deadline, and per-round work has
+        // grown 10x+ round-over-round on real corpora (a 4s round forecasting
+        // a 40s+ successor). Do not start a round the remaining budget cannot
+        // plausibly fit with growth headroom — break to the final ground
+        // check instead, which both bounds the overshoot and keeps the
+        // refutation-completing step inside the budget.
+        if let Some(d) = deadline
+            && d.checked_duration_since(round_started)
+                .is_none_or(|remaining| remaining < last_round_duration * ROUND_GROWTH_HEADROOM)
+        {
+            break;
         }
         if ground.len() > MAX_GROUND_TERMS {
             if matches!(
@@ -269,13 +314,21 @@ fn prove_quantified_unsat_via_egraph_impl(
         // rounds throttle to the exponential cadence so re-deciding a large,
         // barely-grown ground set does not dominate the added rounds.
         if online_clauses.is_none() {
+            // Historical rounds keep the full shared deadline; the extended
+            // cadence runs under a fractional budget so one large mid-loop
+            // check cannot starve later rounds and the final ground check.
+            let check_deadline = if round < MAX_INSTANTIATION_ROUNDS {
+                deadline
+            } else {
+                fractional_deadline(deadline, MID_LOOP_CHECK_BUDGET_DIVISOR)
+            };
             if interleaved_check_due(round)
                 && matches!(
                     quantifier_qf_refutation_check(
                         arena,
                         &ground,
                         config,
-                        deadline,
+                        check_deadline,
                         stats,
                         &mut quantifier_cache
                     )?,
@@ -301,6 +354,7 @@ fn prove_quantified_unsat_via_egraph_impl(
             }
         }
         // Schedule conflict/unit-like instances globally before noisier clauses.
+        let work_started = Instant::now();
         let mut admitted = admit_next_source_batch(
             arena,
             assertions,
@@ -358,6 +412,11 @@ fn prove_quantified_unsat_via_egraph_impl(
             Some(CdcltOutcome::Sat) => {}
             Some(CdcltOutcome::Unknown) | None => online_clauses = None,
         }
+        // Record the matching/admission/session work only — the ground checks
+        // run under their own (fractional) budgets, and counting them here
+        // would make the headroom guard forecast check cost as round cost and
+        // cut the extended rounds off after their first check.
+        last_round_duration = work_started.elapsed();
         // Interleaved ground refutation checks at exponentially spaced rounds
         // (8, 16, 32, …): the retained CDCL(T) session skips the per-round QF
         // check while it stays satisfiable, so without these the extended
@@ -373,7 +432,7 @@ fn prove_quantified_unsat_via_egraph_impl(
                     arena,
                     &ground,
                     config,
-                    deadline,
+                    fractional_deadline(deadline, MID_LOOP_CHECK_BUDGET_DIVISOR),
                     stats,
                     &mut quantifier_cache
                 )?,
@@ -915,6 +974,10 @@ struct OnlineQuantifierClauseSession {
     solve_calls: usize,
     last_outcome: Option<CdcltOutcome>,
     limits: OnlineQuantifierLimits,
+    /// The loop's wall-clock bound. Batch admission re-checks thousands of
+    /// derivations per round; without a per-term deadline check that single
+    /// unit can overrun the whole budget on predicate-heavy files.
+    deadline: Option<Instant>,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -983,7 +1046,7 @@ impl OnlineQuantifierClauseSession {
                     .collect()
             })
             .collect();
-        let theory = EufTheory::new(arena, &atom_terms);
+        let theory = EufTheory::new(arena, &atom_terms).with_deadline(deadline);
         let solver = CdclT::new(encoder.var_count, atom_terms.len(), clauses, deadline);
         Some(Self {
             solver,
@@ -995,6 +1058,7 @@ impl OnlineQuantifierClauseSession {
             solve_calls: 0,
             last_outcome: None,
             limits,
+            deadline,
         })
     }
 
@@ -1009,6 +1073,16 @@ impl OnlineQuantifierClauseSession {
     ) -> Option<CdcltOutcome> {
         self.solver.backtrack_to_root(&mut self.theory);
         for &term in terms {
+            // Deadline-bound the per-term derivation re-checks: a multi-
+            // thousand-instance batch is otherwise a deadline-blind unit that
+            // can overrun the whole budget. Expiry only disables the
+            // accelerator; the fresh-QF fallback stays live.
+            if self
+                .deadline
+                .is_some_and(|deadline| Instant::now() >= deadline)
+            {
+                return None;
+            }
             let derivation = derivations.get(&term)?;
             if !check_quantifier_ground_derivation(arena, assertions, derivation) {
                 return None;

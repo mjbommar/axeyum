@@ -534,8 +534,24 @@ impl CdclT {
     fn unit_propagate<T: TheorySolver>(&mut self, theory: &mut T) -> Result<(), Conflict> {
         let mut changed = true;
         while changed {
+            // Deadline check per pass: this propagation is a whole-database
+            // scan per fixpoint iteration, so on a very large skeleton (e.g.
+            // the EUF predicate-atom encoding of thousands of conjuncts) a
+            // single call is otherwise the search's largest deadline-blind
+            // unit. Returning early is sound: the caller's loop re-checks the
+            // deadline immediately and degrades to `Unknown`.
+            if self.timed_out() {
+                return Ok(());
+            }
             changed = false;
             for ci in 0..self.clauses.len() {
+                // Intra-pass deadline check: each unit assignment pays the
+                // theory's per-assert cost (EUF scans its asserted
+                // disequalities), so one pass over a very large database can
+                // otherwise run deadline-blind for tens of seconds.
+                if ci % 1024 == 0 && self.timed_out() {
+                    return Ok(());
+                }
                 if self.deleted[ci] {
                     continue;
                 }
@@ -597,6 +613,11 @@ impl CdclT {
             let props = theory.propagate();
             let mut progress = false;
             for prop in props {
+                // Intra-batch deadline check (see `unit_propagate`): each
+                // applied propagation pays the theory's per-assert cost.
+                if self.timed_out() {
+                    return Ok(());
+                }
                 let Some(var) = self.theory_variable(prop.lit.atom) else {
                     continue;
                 };
