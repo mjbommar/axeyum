@@ -212,12 +212,28 @@ fn finish_quantified_solve(
             // only an independently certified model, and is re-gated by the
             // standard `check_model` — it can only turn an eventual `unknown`
             // into a checked `sat`, never `unsat`. The certificates bind to
-            // the ORIGINAL assertions, which is why it runs on those.
+            // the ORIGINAL assertions, which is why it runs on those. The
+            // probe-sized instance cap keeps this call from ever building a
+            // ground round big enough to starve the refutation family below
+            // (a measured failure mode: a 3 s ground refutation of a large
+            // declared-unsat file became a wall-clock kill when the probe
+            // was allowed full-sized rounds).
+            // The finder runs on a THROWAWAY CLONE of the arena: its bounded
+            // expansions intern thousands of encoding symbols and selector
+            // terms, and letting those leak into the shared arena measurably
+            // derailed the e-graph refutation downstream (a 3 s ground
+            // refutation of a large declared-unsat file became `unknown`
+            // with the polluted arena, and refuted again the moment the
+            // probe was skipped). Term/symbol IDs coincide between the clone
+            // and the original, so the returned model and its certificates
+            // bind to the original assertions, and `check_model` re-gates
+            // against the ORIGINAL arena.
             if let Some(probe_config) = config_with_remaining_timeout(config, deadline)
                 && let Some(model) = crate::uf_fmf::find_uf_finite_model(
-                    arena,
+                    &mut arena.clone(),
                     original_assertions,
                     &probe_budget(&probe_config),
+                    crate::uf_fmf::UF_FMF_PROBE_SOLVE_ASSERTIONS,
                 )?
                 && crate::check_model(arena, original_assertions, &model)?
             {
@@ -262,12 +278,16 @@ fn finish_quantified_solve(
                     // re-validates before the verdict is emitted. It can only
                     // turn this `unknown` into a checked `sat` — never
                     // `unsat`, never an unchecked model.
+                    // Same throwaway-clone isolation as the probe above: the
+                    // arena outlives this solve, so the caller's next queries
+                    // must not inherit the expansion junk either.
                     if matches!(other, CheckResult::Unknown(_))
                         && let Some(fmf_config) = config_with_remaining_timeout(config, deadline)
                         && let Some(model) = crate::uf_fmf::find_uf_finite_model(
-                            arena,
+                            &mut arena.clone(),
                             original_assertions,
                             &fmf_config,
+                            crate::uf_fmf::UF_FMF_FULL_SOLVE_ASSERTIONS,
                         )?
                         && crate::check_model(arena, original_assertions, &model)?
                     {
