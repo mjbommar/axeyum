@@ -1,0 +1,230 @@
+#!/usr/bin/env bash
+# Head-to-head parity measurement against the division's reference solver.
+#
+# WHY THIS EXISTS
+# ---------------
+# "Are we at parity?" had been answered with prose over numbers the reporter
+# chose after seeing the data. Every one of these knobs was used at least once
+# in this repo's history to make a gap look smaller than it is:
+#
+#   * hand-picked benchmark slices instead of an external list
+#   * a file-size cap that happened to exclude the reference's best cases
+#   * a 2-second budget, where both solvers time out and distance collapses
+#   * a denominator quietly narrowed to "files with a declared :status"
+#   * a weaker reference (a language binding, or an in-process oracle)
+#   * retargeting mid-report from the division winner to an easier peer
+#   * reporting the delta ("5% -> 30%") instead of the level ("30% vs 40.5%")
+#
+# None of that requires a false statement, which is exactly why the honest
+# reporting rule has to be mechanical rather than cultural. This script fixes
+# every choice BEFORE the run and prints four numbers. Nothing here is
+# selected after the data is visible.
+#
+# THE RULES
+# ---------
+#   1. The benchmark list is a committed file. This script never samples.
+#   2. The budget is a protocol constant, not a flag you tune per run.
+#   3. The reference is the division winner's real binary, same machine,
+#      same budget. Never a binding, never an in-process oracle.
+#   4. The denominator is the whole list. unknown / unsupported / timeout /
+#      crash / OOM / parse failure all count as NOT SOLVED.
+#   5. Any disagreement -- with a declared :status, or with the reference --
+#      is an immediate FAIL. It is not a footnote and not a percentage.
+#
+# Results append to bench-results/PARITY.md. That file is history: entries are
+# never edited or removed, so a number going down stays visible.
+#
+# Usage:
+#   scripts/parity-run.sh <division>
+#
+# Reads: bench-results/parity-lists/<division>.txt   (one benchmark path per line)
+# Env:
+#   PARITY_BUDGET_S   per-file wall budget, default 24 (SMT-COMP publishes a
+#                     24s score precisely so short runs are comparable)
+#   PARITY_MEM_GB     per-file memory cap, default 8
+set -uo pipefail
+
+cd "$(dirname "$0")/.."
+
+division="${1:-}"
+if [[ -z "$division" ]]; then
+  echo "usage: scripts/parity-run.sh <division>" >&2
+  exit 2
+fi
+
+budget_s="${PARITY_BUDGET_S:-24}"
+mem_gb="${PARITY_MEM_GB:-8}"
+list="bench-results/parity-lists/${division}.txt"
+out="bench-results/PARITY.md"
+
+if [[ ! -f "$list" ]]; then
+  echo "FAIL: no committed benchmark list at $list" >&2
+  echo "      Create it deliberately and commit it BEFORE running." >&2
+  exit 2
+fi
+
+# The reference solver per division: the actual winner's binary.
+case "$division" in
+  QF_BV|QF_ABV|QF_AUFBV|QF_FP|QF_BVFP|QF_ABVFP)
+    reference_bin="/nas3/data/axeyum/harness/bin/bitwuzla" ;;
+  UF|UFLIA|UFNIA|QF_UF|QF_SLIA|QF_S|QF_SEQ|QF_DT|QF_AUFLIA)
+    reference_bin="/nas3/data/axeyum/harness/bin/cvc5" ;;
+  *)
+    reference_bin="/usr/bin/z3" ;;
+esac
+
+axeyum_bin="target/release/examples/smtcomp_cli"
+for bin in "$axeyum_bin" "$reference_bin"; do
+  if [[ ! -x "$bin" ]]; then
+    echo "FAIL: missing binary $bin" >&2
+    exit 2
+  fi
+done
+
+solver_sha="$(git rev-parse --short HEAD)"
+dirty=""
+git diff --quiet || dirty=" (DIRTY WORKTREE — result not reproducible)"
+list_sha="$(sha256sum "$list" | cut -c1-12)"
+reference_version="$("$reference_bin" --version 2>&1 | head -1 | tr -d '\n')"
+total=$(grep -cve '^\s*$' "$list")
+
+# Declared :status, when the benchmark carries one. Absent is not an excuse to
+# drop the file from the denominator -- it only means we cannot catch a wrong
+# answer on it from the file alone; the cross-check against the reference still
+# applies.
+declared_status() {
+  grep -m1 ':status' "$1" 2>/dev/null \
+    | grep -oE '\b(unsat|sat|unknown)\b' | head -1
+}
+
+# One run, hard-capped in both time and memory. Anything that is not a clean
+# sat/unsat prints "unsolved" -- crashes, OOMs and timeouts included.
+#
+# Each solver gets ITS OWN budget flag. Passing axeyum's `--timeout-ms` to z3
+# made z3 score 0/3 in the first smoke test: it rejects the unknown flag and
+# exits. That error inflates our ratio, which is precisely the direction this
+# script exists to guard against -- so the external `timeout` is the real
+# enforcement and the native flag is only a courtesy to let a solver exit
+# cleanly and report `unknown` rather than be killed.
+run_one() {
+  local bin="$1" file="$2" verdict
+  local -a cmd
+  case "$(basename "$bin")" in
+    smtcomp_cli) cmd=("$bin" "$file" --timeout-ms "$((budget_s * 1000))") ;;
+    z3)          cmd=("$bin" "-T:${budget_s}" "$file") ;;
+    cvc5)        cmd=("$bin" "--tlimit=$((budget_s * 1000))" "$file") ;;
+    bitwuzla)    cmd=("$bin" "--time-limit=${budget_s}" "$file") ;;
+    *)           cmd=("$bin" "$file") ;;
+  esac
+  verdict=$(MEM_LIMIT_GB="$mem_gb" timeout "$((budget_s + 5))" \
+            ./scripts/mem-run.sh "${cmd[@]}" 2>/dev/null \
+            | grep -oE '^(sat|unsat)$' | tail -1)
+  echo "${verdict:-unsolved}"
+}
+
+# Fail loudly if the reference cannot run at all. A reference scoring zero
+# because of a bad invocation looks like a win; it is a broken measurement.
+smoke_reference() {
+  local probe verdict
+  probe=$(grep -m1 -ve '^\s*$' "$list")
+  [[ -f "$probe" ]] || return 0
+  verdict=$(run_one "$reference_bin" "$probe")
+  if [[ "$verdict" == "unsolved" ]]; then
+    echo "WARNING: reference produced no verdict on the first benchmark." >&2
+    echo "         Verify the invocation before trusting any ratio below." >&2
+  fi
+}
+
+smoke_reference
+
+axeyum_solved=0
+reference_solved=0
+both=0
+axeyum_only=0
+reference_only=0
+disagreements=0
+disagreement_log=""
+
+while IFS= read -r file; do
+  [[ -z "$file" ]] && continue
+  if [[ ! -f "$file" ]]; then
+    disagreements=$((disagreements + 1))
+    disagreement_log+=$'\n'"    MISSING BENCHMARK: $file"
+    continue
+  fi
+
+  a=$(run_one "$axeyum_bin" "$file")
+  r=$(run_one "$reference_bin" "$file")
+  expected=$(declared_status "$file")
+
+  [[ "$a" != "unsolved" ]] && axeyum_solved=$((axeyum_solved + 1))
+  [[ "$r" != "unsolved" ]] && reference_solved=$((reference_solved + 1))
+  if [[ "$a" != "unsolved" && "$r" != "unsolved" ]]; then both=$((both + 1))
+  elif [[ "$a" != "unsolved" ]]; then axeyum_only=$((axeyum_only + 1))
+  elif [[ "$r" != "unsolved" ]]; then reference_only=$((reference_only + 1))
+  fi
+
+  # Soundness. Either cross-check firing is a hard failure of the whole run.
+  if [[ "$a" != "unsolved" && -n "$expected" && "$expected" != "unknown" && "$a" != "$expected" ]]; then
+    disagreements=$((disagreements + 1))
+    disagreement_log+=$'\n'"    vs :status — $file: axeyum=$a declared=$expected"
+  fi
+  if [[ "$a" != "unsolved" && "$r" != "unsolved" && "$a" != "$r" ]]; then
+    disagreements=$((disagreements + 1))
+    disagreement_log+=$'\n'"    vs reference — $file: axeyum=$a reference=$r"
+  fi
+done < "$list"
+
+ratio="n/a"
+if (( reference_solved > 0 )); then
+  ratio=$(awk -v a="$axeyum_solved" -v r="$reference_solved" 'BEGIN{printf "%.1f", 100*a/r}')
+fi
+
+verdict="FAIL"
+if (( disagreements == 0 )); then verdict="SOUND"; fi
+
+mkdir -p "$(dirname "$out")"
+if [[ ! -f "$out" ]]; then
+  cat > "$out" <<'HEADER'
+# Parity ledger
+
+Append-only. Written by `scripts/parity-run.sh`; entries are never edited or
+removed, so a number that goes down stays visible.
+
+Read the **ratio** — axeyum solved as a percentage of what the reference solved
+on the identical list, same machine, same budget. It is the only headline.
+`DISAGREEMENTS > 0` voids the entry regardless of the ratio: a wrong answer is
+not a score.
+
+HEADER
+fi
+
+{
+  echo "## ${division} — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+  echo
+  echo "| field | value |"
+  echo "|---|---|"
+  echo "| axeyum solved | ${axeyum_solved}/${total} |"
+  echo "| reference solved | ${reference_solved}/${total} |"
+  echo "| **ratio (axeyum / reference)** | **${ratio}%** |"
+  echo "| **disagreements** | **${disagreements}** |"
+  echo "| soundness | ${verdict} |"
+  echo "| both / axeyum-only / reference-only | ${both} / ${axeyum_only} / ${reference_only} |"
+  echo "| reference | \`${reference_version}\` |"
+  echo "| protocol | ${budget_s}s wall, ${mem_gb}GiB, per-file |"
+  echo "| benchmark list | \`${list}\` (sha256 ${list_sha}, ${total} files) |"
+  echo "| solver commit | \`${solver_sha}\`${dirty} |"
+  if (( disagreements > 0 )); then
+    echo
+    echo "DISAGREEMENTS:"
+    echo '```'
+    echo "${disagreement_log}"
+    echo '```'
+  fi
+  echo
+} >> "$out"
+
+echo "${division}: axeyum ${axeyum_solved}/${total}, reference ${reference_solved}/${total}, ratio ${ratio}%, disagreements ${disagreements} (${verdict})"
+echo "appended to ${out}"
+
+(( disagreements == 0 ))
