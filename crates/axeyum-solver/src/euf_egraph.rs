@@ -107,6 +107,13 @@ pub struct EufTheory {
     diseqs: Vec<(usize, ENodeId, ENodeId)>,
     /// Backtrack trail: per [`EufTheory::push`], the `(diseqs, assigned_log)` lengths.
     trail: Vec<(usize, usize)>,
+    /// Optional wall-clock bound for the *detection* scans (conflict search and
+    /// propagation). Past the deadline both scans return "nothing found" —
+    /// sound and conservative: a missed conflict can only delay the search
+    /// (the driver's own deadline check then ends it as `Unknown`, and `sat`
+    /// is replay-gated), never manufacture a verdict — so a large atom set
+    /// cannot run its per-assert scans deadline-blind.
+    deadline: Option<Instant>,
 }
 
 /// A sound theory propagation: a literal the theory entails under the current
@@ -140,15 +147,7 @@ impl EufTheory {
         let mut bridge = Bridge::new();
         let mut atoms = Vec::with_capacity(atom_terms.len());
         for &t in atom_terms {
-            let sides = match arena.node(t) {
-                TermNode::App { op: Op::Eq, args } if args.len() == 2 => {
-                    let (l, r) = (args[0], args[1]);
-                    let a = bridge.node(arena, l);
-                    let b = bridge.node(arena, r);
-                    Some((a, b))
-                }
-                _ => None,
-            };
+            let sides = euf_atom_sides(&mut bridge, arena, t);
             atoms.push(sides);
         }
         for &term in observed_terms {
@@ -162,7 +161,15 @@ impl EufTheory {
             assigned_log: Vec::new(),
             diseqs: Vec::new(),
             trail: Vec::new(),
+            deadline: None,
         }
+    }
+
+    /// Bounds the detection scans by `deadline` (see the `deadline` field).
+    #[must_use]
+    pub(crate) fn with_deadline(mut self, deadline: Option<Instant>) -> Self {
+        self.deadline = deadline;
+        self
     }
 
     /// Appends an atom whose equality sides were pre-registered as observed
@@ -210,16 +217,11 @@ impl EufTheory {
         if !self.trail.is_empty() {
             return Err("dynamic EUF atom insertion requires the root scope");
         }
-        let sides = match arena.node(atom_term) {
-            TermNode::App { op: Op::Eq, args } if args.len() == 2 => {
-                let left = self.bridge.node(arena, args[0]);
-                let right = self.bridge.node(arena, args[1]);
-                Some((left, right))
-            }
-            _ => return Err("dynamic EUF atom is not a binary equality"),
+        let Some(sides) = euf_atom_sides(&mut self.bridge, arena, atom_term) else {
+            return Err("dynamic EUF atom is not a binary equality or Boolean application");
         };
         let atom = self.atoms.len();
-        self.atoms.push(sides);
+        self.atoms.push(Some(sides));
         self.assigned.push(None);
         Ok(atom)
     }
@@ -276,6 +278,10 @@ impl EufTheory {
     /// deferred.)
     #[must_use]
     pub fn propagate(&self) -> Vec<TheoryProp> {
+        // Sound early-out past the deadline: propagation is optional.
+        if self.deadline.is_some_and(|d| Instant::now() >= d) {
+            return Vec::new();
+        }
         let mut out = Vec::new();
         for (atom, sides) in self.atoms.iter().enumerate() {
             if self.assigned[atom].is_some() {
@@ -308,6 +314,12 @@ impl EufTheory {
     /// is the asserted literals (recovered via [`EGraph::explain`]) whose
     /// conjunction is refuted.
     fn first_conflict(&self) -> Option<Vec<TheoryLit>> {
+        // Sound early-out past the deadline: reporting no conflict is
+        // conservative (see the `deadline` field) and bounds the per-assert
+        // scan cost once the budget is gone.
+        if self.deadline.is_some_and(|d| Instant::now() >= d) {
+            return None;
+        }
         // An asserted disequality whose sides are now congruent.
         for &(atom, a, b) in &self.diseqs {
             if self.bridge.egraph.equal(a, b) {
@@ -575,18 +587,19 @@ pub fn check_qf_uf_online_cdclt(
     assertions: &[TermId],
     config: &SolverConfig,
 ) -> CheckResult {
-    // Distinct equality atoms — the theory's atom indices and the first
+    // Distinct EUF atoms (data-sorted equalities plus Boolean predicate
+    // applications) — the theory's atom indices and the first
     // `atom_terms.len()` skeleton variables.
     let mut atom_terms: Vec<TermId> = Vec::new();
     let mut seen = HashSet::new();
     for &a in assertions {
-        collect_eq_atoms(arena, a, &mut atom_terms, &mut seen);
+        collect_euf_atoms(arena, a, &mut atom_terms, &mut seen);
     }
     if atom_terms.is_empty() {
         return CheckResult::Unknown(unknown("no equality atoms for the online CDCL(T) path"));
     }
 
-    let mut enc = Encoder::new(&atom_terms);
+    let mut enc = Encoder::new(&atom_terms).with_bool_apply_atoms();
     let mut clauses: Vec<Vec<Lit>> = Vec::new();
     for &assertion in assertions {
         let Some(top) = enc.encode(arena, assertion, &mut clauses) else {
@@ -616,7 +629,7 @@ pub fn check_qf_uf_online_cdclt(
 
     let eq_count = atom_terms.len();
     let deadline = config.timeout.and_then(|t| Instant::now().checked_add(t));
-    let mut theory = EufTheory::new(arena, &atom_terms);
+    let mut theory = EufTheory::new(arena, &atom_terms).with_deadline(deadline);
     let mut solver = CdclT::new(enc.var_count, eq_count, driver_clauses, deadline);
     match solver.solve(&mut theory) {
         Outcome::Unsat => CheckResult::Unsat,
@@ -808,50 +821,15 @@ fn build_model(arena: &TermArena, bridge: &Bridge) -> Option<Model> {
         }
     }
 
-    // Class codes: constants pin their class, the rest get fresh distinct codes.
-    let mut class_code: HashMap<ENodeId, u128> = HashMap::new();
-    let mut used: HashMap<Sort, HashSet<u128>> = HashMap::new();
-    for &(term, node) in &term_nodes {
-        if is_constant(arena.node(term)) {
-            let root = bridge.egraph.root(node);
-            let value = eval(arena, term, &Assignment::new()).ok()?;
-            let code = euf_model_code(&value)?;
-            class_code.insert(root, code);
-            used.entry(class_sort[&root]).or_default().insert(code);
-        }
-    }
-    // Assign fresh distinct codes to the remaining classes in term order (the
-    // first term that maps to an as-yet-uncoded root fixes that root's code), so
-    // the value each uninterpreted class receives is deterministic.
-    for &(_, node) in &term_nodes {
-        let root = bridge.egraph.root(node);
-        if class_code.contains_key(&root) {
-            continue;
-        }
-        let sort = class_sort[&root];
-        let set = used.entry(sort).or_default();
-        let max = match sort {
-            Sort::Bool => 1,
-            Sort::BitVec(width) if width >= 128 => u128::MAX,
-            Sort::BitVec(width) => (1u128 << width) - 1,
-            Sort::Uninterpreted(_) => u128::MAX,
-            _ => return None,
-        };
-        let mut v = 0u128;
-        while set.contains(&v) {
-            if v == max {
-                return None; // too many distinct classes for this width
-            }
-            v += 1;
-        }
-        set.insert(v);
-        class_code.insert(root, v);
-    }
+    let class_code = assign_class_codes(arena, bridge, &term_nodes, &mut class_sort)?;
 
     let mut model = Model::new();
     // `BTreeMap` + term-ordered pushes keep function-table construction (and
-    // thus the emitted model) independent of hash iteration order.
+    // thus the emitted model) independent of hash iteration order. Congruent
+    // applications share an argument-code key and (by congruence) a result
+    // code, so duplicate keys are dropped at collection.
     let mut tables: BTreeMap<FuncId, Vec<(Vec<u128>, u128)>> = BTreeMap::new();
+    let mut table_keys: HashSet<(FuncId, Vec<u128>)> = HashSet::new();
     for &(term, node) in &term_nodes {
         let code = class_code[&bridge.egraph.root(node)];
         match arena.node(term) {
@@ -866,7 +844,9 @@ fn build_model(arena: &TermArena, bridge: &Bridge) -> Option<Model> {
                     .iter()
                     .map(|&a| class_code[&bridge.egraph.root(bridge.term_to_node[&a])])
                     .collect();
-                tables.entry(*func).or_default().push((arg_codes, code));
+                if table_keys.insert((*func, arg_codes.clone())) {
+                    tables.entry(*func).or_default().push((arg_codes, code));
+                }
             }
             _ => {}
         }
@@ -889,12 +869,85 @@ fn build_model(arena: &TermArena, bridge: &Bridge) -> Option<Model> {
                     .collect();
                 fv = fv.define_value(&arg_values, value_from_code(result, res));
             } else {
-                fv = fv.define(&args, res);
+                // In place: the persistent `define` clones the whole table per
+                // entry, which is quadratic across thousands of applications.
+                fv.define_in_place(&args, res);
             }
         }
         model.set_function(func, fv);
     }
     Some(model)
+}
+
+/// Class codes for [`build_model`]: constants pin their class, the
+/// distinguished `true` node (when predicate atoms created it) pins its class
+/// to `true`, and the remaining classes get fresh distinct codes in term order
+/// (the first term that maps to an as-yet-uncoded root fixes that root's code),
+/// so the value each uninterpreted class receives is deterministic.
+fn assign_class_codes(
+    arena: &TermArena,
+    bridge: &Bridge,
+    term_nodes: &[(TermId, ENodeId)],
+    class_sort: &mut HashMap<ENodeId, Sort>,
+) -> Option<HashMap<ENodeId, u128>> {
+    let mut class_code: HashMap<ENodeId, u128> = HashMap::new();
+    let mut used: HashMap<Sort, HashSet<u128>> = HashMap::new();
+    // The distinguished `true` node backing predicate atoms has no term of its
+    // own; pin its class to `true` so predicates merged with it model true.
+    if let Some(node) = bridge.bool_true {
+        let root = bridge.egraph.root(node);
+        if let Some(&sort) = class_sort.get(&root)
+            && sort != Sort::Bool
+        {
+            return None;
+        }
+        class_sort.insert(root, Sort::Bool);
+        class_code.insert(root, 1);
+        used.entry(Sort::Bool).or_default().insert(1);
+    }
+    for &(term, node) in term_nodes {
+        if is_constant(arena.node(term)) {
+            let root = bridge.egraph.root(node);
+            let value = eval(arena, term, &Assignment::new()).ok()?;
+            let code = euf_model_code(&value)?;
+            class_code.insert(root, code);
+            used.entry(class_sort[&root]).or_default().insert(code);
+        }
+    }
+    // Fresh codes are assigned monotonically per sort (each next candidate
+    // starts where the previous search ended, skipping constant-pinned codes),
+    // which yields exactly the same smallest-unused-first codes as a scan from
+    // zero would, without the quadratic rescan across thousands of classes.
+    let mut next_free: HashMap<Sort, u128> = HashMap::new();
+    for &(_, node) in term_nodes {
+        let root = bridge.egraph.root(node);
+        if class_code.contains_key(&root) {
+            continue;
+        }
+        let sort = class_sort[&root];
+        let set = used.entry(sort).or_default();
+        let max = match sort {
+            Sort::Bool => 1,
+            Sort::BitVec(width) if width >= 128 => u128::MAX,
+            Sort::BitVec(width) => (1u128 << width) - 1,
+            Sort::Uninterpreted(_) => u128::MAX,
+            _ => return None,
+        };
+        let mut v = next_free.get(&sort).copied().unwrap_or(0);
+        while set.contains(&v) {
+            if v == max {
+                return None; // too many distinct classes for this width
+            }
+            v += 1;
+        }
+        if v > max {
+            return None; // too many distinct classes for this width
+        }
+        set.insert(v);
+        next_free.insert(sort, v.saturating_add(1));
+        class_code.insert(root, v);
+    }
+    Some(class_code)
 }
 
 /// Whether a term node is a literal constant of any sort.
@@ -968,6 +1021,37 @@ pub(crate) fn collect_eq_atoms(
         let args = args.clone();
         for a in args {
             collect_eq_atoms(arena, a, out, seen);
+        }
+    }
+}
+
+/// Collects the distinct EUF theory atoms of `term` into `out`: the data-sorted
+/// equality atoms of [`collect_eq_atoms`] **plus** Boolean-sorted uninterpreted
+/// predicate applications `p(args)` (each registered by the theory as the
+/// equation `p(args) = true`, so congruence carries predicate truth across
+/// equal arguments). `seen` doubles as the visited-term memo, so shared
+/// subgraphs are walked once.
+pub(crate) fn collect_euf_atoms(
+    arena: &TermArena,
+    term: TermId,
+    out: &mut Vec<TermId>,
+    seen: &mut std::collections::HashSet<TermId>,
+) {
+    if !seen.insert(term) {
+        return;
+    }
+    if let TermNode::App { op, args } = arena.node(term) {
+        let is_atom = match op {
+            Op::Eq => args.len() == 2 && !matches!(arena.sort_of(args[0]), Sort::Bool),
+            Op::Apply(_) => arena.sort_of(term) == Sort::Bool,
+            _ => false,
+        };
+        if is_atom {
+            out.push(term);
+        }
+        let args = args.clone();
+        for a in args {
+            collect_euf_atoms(arena, a, out, seen);
         }
     }
 }
@@ -1158,6 +1242,11 @@ pub(crate) struct Encoder {
     /// shared subterms share a variable.
     pub(crate) term_var: HashMap<TermId, usize>,
     pub(crate) var_count: usize,
+    /// Opt-in EUF-predicate mode: Boolean-sorted `Op::Apply` applications become
+    /// atoms/opaque variables and Boolean-sorted `Op::Eq` becomes the `iff`
+    /// connective. Off by default so the arithmetic/string routes that share
+    /// this encoder keep their exact accepted fragment.
+    bool_apply_atoms: bool,
 }
 
 impl Encoder {
@@ -1169,7 +1258,14 @@ impl Encoder {
         Self {
             term_var,
             var_count: atom_terms.len(),
+            bool_apply_atoms: false,
         }
+    }
+
+    /// Enables the EUF-predicate skeleton extension (see `bool_apply_atoms`).
+    pub(crate) fn with_bool_apply_atoms(mut self) -> Self {
+        self.bool_apply_atoms = true;
+        self
     }
 
     /// A fresh auxiliary variable index.
@@ -1195,6 +1291,13 @@ impl Encoder {
             // A registered equality atom is handled by the map lookup above; a leaf
             // Boolean symbol becomes its own variable.
             TermNode::Symbol(_) if arena.sort_of(t) == Sort::Bool => self.fresh(),
+            // EUF-predicate mode: a Boolean predicate application not already
+            // registered as a theory atom is still a legal opaque skeleton
+            // variable (an abstraction that only weakens the formula, so it
+            // cannot manufacture a refutation; `sat` is replay-gated).
+            TermNode::App {
+                op: Op::Apply(_), ..
+            } if self.bool_apply_atoms && arena.sort_of(t) == Sort::Bool => self.fresh(),
             TermNode::BoolConst(b) => {
                 let value = *b;
                 let g = self.fresh();
@@ -1272,6 +1375,17 @@ impl Encoder {
                 clauses.push(vec![gl.negate(), a.negate(), b.negate()]);
                 clauses.push(vec![gl, a.negate(), *b]);
                 clauses.push(vec![gl, *a, b.negate()]);
+            }
+            // EUF-predicate mode only: a Boolean-sorted equality is the `iff`
+            // connective (a data-sorted equality is an atom and never reaches
+            // this arm: it is either in the atom map or its children fail to
+            // encode).
+            (Op::Eq, [a, b]) if self.bool_apply_atoms && arena.sort_of(args[0]) == Sort::Bool => {
+                // g <-> (a <-> b)
+                clauses.push(vec![gl.negate(), a.negate(), *b]);
+                clauses.push(vec![gl.negate(), *a, b.negate()]);
+                clauses.push(vec![gl, *a, *b]);
+                clauses.push(vec![gl, a.negate(), b.negate()]);
             }
             (Op::Ite, [c, x, y]) => {
                 // g <-> (c ? x : y), over Boolean branches only.
@@ -1858,6 +1972,16 @@ struct Bridge {
     decls: HashMap<DeclKey, u32>,
     /// Literal-constant e-nodes (kept pairwise distinct).
     constants: Vec<ENodeId>,
+    /// Declaration ids already registered in `constants`. Registration is
+    /// per-declaration (one entry per literal value): a later lookup of the
+    /// same constant can return a merge-moved root id, and pushing that root
+    /// as a second "distinct" constant would fabricate a conflict.
+    constant_decls: HashSet<u32>,
+    /// The distinguished `true` e-node backing Boolean predicate atoms, once
+    /// created (see [`Bridge::true_node`]). Tracked so model construction can
+    /// pin its class to the value `true` even when no genuine `BoolConst(true)`
+    /// term maps into the class.
+    bool_true: Option<ENodeId>,
     next_decl: u32,
 }
 
@@ -1870,6 +1994,38 @@ enum DeclKey {
     Const(String),
 }
 
+/// The congruence sides registered for one EUF theory atom, or `None` for a
+/// shape congruence ignores. An equality atom `(= s t)` registers its two
+/// sides. A **Boolean predicate application** `p(args)` registers as the
+/// equation `p(args) = true` against the bridge's distinguished `true`
+/// constant node: asserting it true merges the application with `true` (so
+/// congruent applications propagate their truth), asserting it false records
+/// the disequality, and a conflict (`p(a)` true, `p(b)` false, `a = b`) is an
+/// ordinary congruent-disequality conflict over the same `EGraph::explain`
+/// machinery equality atoms already rely on — no new inference surface.
+fn euf_atom_sides(
+    bridge: &mut Bridge,
+    arena: &TermArena,
+    atom_term: TermId,
+) -> Option<(ENodeId, ENodeId)> {
+    match arena.node(atom_term) {
+        TermNode::App { op: Op::Eq, args } if args.len() == 2 => {
+            let (l, r) = (args[0], args[1]);
+            let a = bridge.node(arena, l);
+            let b = bridge.node(arena, r);
+            Some((a, b))
+        }
+        TermNode::App {
+            op: Op::Apply(_), ..
+        } if arena.sort_of(atom_term) == Sort::Bool => {
+            let application = bridge.node(arena, atom_term);
+            let true_node = bridge.true_node();
+            Some((application, true_node))
+        }
+        _ => None,
+    }
+}
+
 impl Bridge {
     fn new() -> Self {
         Self {
@@ -1877,8 +2033,28 @@ impl Bridge {
             term_to_node: HashMap::new(),
             decls: HashMap::new(),
             constants: Vec::new(),
+            constant_decls: HashSet::new(),
+            bool_true: None,
             next_decl: 0,
         }
+    }
+
+    /// The distinguished e-node for the literal `true`. It shares its
+    /// `DeclKey` with any genuine `BoolConst(true)` term, so both name one
+    /// hash-consed node, and it is registered as a literal constant so merging
+    /// it with `false` (or any other constant) is a conflict.
+    fn true_node(&mut self) -> ENodeId {
+        if let Some(node) = self.bool_true {
+            return node;
+        }
+        let key = DeclKey::Const(format!("{:?}", TermNode::BoolConst(true)));
+        let decl = self.decl(key);
+        let node = self.egraph.add(decl, &[]);
+        if self.constant_decls.insert(decl) {
+            self.constants.push(node);
+        }
+        self.bool_true = Some(node);
+        node
     }
 
     /// A stable `decl` id for `key`.
@@ -1911,7 +2087,7 @@ impl Bridge {
                 let key = DeclKey::Const(format!("{:?}", arena.node(term)));
                 let decl = self.decl(key);
                 let node = self.egraph.add(decl, &[]);
-                if !self.constants.contains(&node) {
+                if self.constant_decls.insert(decl) {
                     self.constants.push(node);
                 }
                 node
@@ -3024,5 +3200,113 @@ mod tests {
         let config_sat = check_qf_uf_with_config(&mut arena2, &[x_ne_y], &generous);
         assert!(matches!(default_sat, CheckResult::Sat(_)));
         assert!(matches!(config_sat, CheckResult::Sat(_)));
+    }
+
+    /// Boolean predicate applications are EUF atoms (`p(args) = true` against
+    /// the distinguished `true` node): congruence must carry predicate truth
+    /// across equal arguments and refute `p(a) ∧ ¬p(b) ∧ a = b`.
+    #[test]
+    #[allow(clippy::many_single_char_names)]
+    fn online_cdclt_refutes_boolean_predicate_congruence() {
+        let mut arena = TermArena::new();
+        let u = arena.declare_uninterpreted_sort("U");
+        let sort = Sort::Uninterpreted(u);
+        let a = arena.declare("a", sort).unwrap();
+        let b = arena.declare("b", sort).unwrap();
+        let (av, bv) = (arena.var(a), arena.var(b));
+        let p = arena.declare_fun("p", &[sort], Sort::Bool).unwrap();
+        let pa = arena.apply(p, &[av]).unwrap();
+        let pb = arena.apply(p, &[bv]).unwrap();
+        let not_pb = arena.not(pb).unwrap();
+        let a_eq_b = arena.eq(av, bv).unwrap();
+        assert_eq!(
+            check_qf_uf_online_cdclt(&mut arena, &[pa, not_pb, a_eq_b], &SolverConfig::default()),
+            CheckResult::Unsat
+        );
+    }
+
+    /// SOUNDNESS NEGATIVE: with `a` and `b` unrelated, `p(a) ∧ ¬p(b)` is
+    /// satisfiable and must never refute.
+    #[test]
+    #[allow(clippy::many_single_char_names)]
+    fn online_cdclt_does_not_refute_independent_predicates() {
+        let mut arena = TermArena::new();
+        let u = arena.declare_uninterpreted_sort("U");
+        let sort = Sort::Uninterpreted(u);
+        let a = arena.declare("a", sort).unwrap();
+        let b = arena.declare("b", sort).unwrap();
+        let (av, bv) = (arena.var(a), arena.var(b));
+        let p = arena.declare_fun("p", &[sort], Sort::Bool).unwrap();
+        let pa = arena.apply(p, &[av]).unwrap();
+        let pb = arena.apply(p, &[bv]).unwrap();
+        let not_pb = arena.not(pb).unwrap();
+        let result = check_qf_uf_online_cdclt(&mut arena, &[pa, not_pb], &SolverConfig::default());
+        assert!(
+            !matches!(result, CheckResult::Unsat),
+            "independent predicate literals were wrongly refuted: {result:?}"
+        );
+    }
+
+    /// Boolean equality is the `iff` connective in the extended skeleton;
+    /// combined with predicate congruence it refutes
+    /// `(p(a) ⇔ q(a)) ∧ p(a) ∧ ¬q(b) ∧ a = b`.
+    #[test]
+    #[allow(clippy::many_single_char_names)]
+    fn online_cdclt_refutes_through_predicate_iff_and_congruence() {
+        let mut arena = TermArena::new();
+        let u = arena.declare_uninterpreted_sort("U");
+        let sort = Sort::Uninterpreted(u);
+        let a = arena.declare("a", sort).unwrap();
+        let b = arena.declare("b", sort).unwrap();
+        let (av, bv) = (arena.var(a), arena.var(b));
+        let p = arena.declare_fun("p", &[sort], Sort::Bool).unwrap();
+        let q = arena.declare_fun("q", &[sort], Sort::Bool).unwrap();
+        let pa = arena.apply(p, &[av]).unwrap();
+        let qa = arena.apply(q, &[av]).unwrap();
+        let qb = arena.apply(q, &[bv]).unwrap();
+        let iff = arena.eq(pa, qa).unwrap();
+        let not_qb = arena.not(qb).unwrap();
+        let a_eq_b = arena.eq(av, bv).unwrap();
+        assert_eq!(
+            check_qf_uf_online_cdclt(
+                &mut arena,
+                &[iff, pa, not_qb, a_eq_b],
+                &SolverConfig::default()
+            ),
+            CheckResult::Unsat
+        );
+    }
+
+    /// SOUNDNESS NEGATIVE for the equation-against-`true` encoding: asserting
+    /// a predicate FALSE must record a disequality, not merge with a `false`
+    /// node that could over-merge two unrelated false predicates. `¬p(a) ∧
+    /// ¬q(b) ∧ (f(p(a)) ≠ f(q(b)))` over a Bool-argument function is
+    /// satisfiable and must never refute.
+    #[test]
+    #[allow(clippy::many_single_char_names)]
+    fn online_cdclt_false_predicates_are_not_identified() {
+        let mut arena = TermArena::new();
+        let u = arena.declare_uninterpreted_sort("U");
+        let sort = Sort::Uninterpreted(u);
+        let a = arena.declare("a", sort).unwrap();
+        let b = arena.declare("b", sort).unwrap();
+        let (av, bv) = (arena.var(a), arena.var(b));
+        let p = arena.declare_fun("p", &[sort], Sort::Bool).unwrap();
+        let q = arena.declare_fun("q", &[sort], Sort::Bool).unwrap();
+        let f = arena.declare_fun("f", &[Sort::Bool], sort).unwrap();
+        let pa = arena.apply(p, &[av]).unwrap();
+        let qb = arena.apply(q, &[bv]).unwrap();
+        let not_pa = arena.not(pa).unwrap();
+        let not_qb = arena.not(qb).unwrap();
+        let f_pa = arena.apply(f, &[pa]).unwrap();
+        let f_qb = arena.apply(f, &[qb]).unwrap();
+        let feq = arena.eq(f_pa, f_qb).unwrap();
+        let fne = arena.not(feq).unwrap();
+        let result =
+            check_qf_uf_online_cdclt(&mut arena, &[not_pa, not_qb, fne], &SolverConfig::default());
+        assert!(
+            !matches!(result, CheckResult::Unsat),
+            "two unrelated false predicates were wrongly identified: {result:?}"
+        );
     }
 }

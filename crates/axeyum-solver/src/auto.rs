@@ -2326,12 +2326,23 @@ fn dispatch_uf_fast_paths(
         &lifted_euf
     };
 
+    // One shared deadline for this UF ladder: each route below derives its own
+    // internal deadline from its config's `timeout`, so passing the entry
+    // config to consecutive routes re-spends the same wall-clock budget once
+    // per route (measured at 2-3x the intended budget on large predicate
+    // skeletons). Re-deriving the remaining timeout before each heavy route
+    // keeps the whole ladder inside the caller's budget.
+    let ladder_deadline = config.timeout.and_then(|t| Instant::now().checked_add(t));
+
     // Try the **online** CDCL(T) decider on the backtrackable e-graph first: it
     // keeps one incremental congruence graph across the Boolean search and honors
     // the caller's timeout. Both its `sat` (replay-checked) and `unsat`
     // (congruence-conflict-derived) verdicts are sound. On `unknown` fall through
     // to the offline enumeration, then bit-blast.
-    match crate::euf_egraph::check_qf_uf_online_cdclt(arena, euf_assertions, config) {
+    let Some(euf_online_config) = config_with_remaining_timeout(config, ladder_deadline) else {
+        return Ok(None);
+    };
+    match crate::euf_egraph::check_qf_uf_online_cdclt(arena, euf_assertions, &euf_online_config) {
         CheckResult::Sat(model) => {
             with_recorder(rec, |t| t.record_decided("euf-online", Verdict::Sat));
             return Ok(Some(CheckResult::Sat(model)));
@@ -2356,7 +2367,10 @@ fn dispatch_uf_fast_paths(
     if let Some(result) = dispatch_ufbv_online(arena, assertions, config, features, rec)? {
         return Ok(Some(result));
     }
-    match crate::euf_egraph::check_qf_uf_with_config(arena, euf_assertions, config) {
+    let Some(euf_offline_config) = config_with_remaining_timeout(config, ladder_deadline) else {
+        return Ok(None);
+    };
+    match crate::euf_egraph::check_qf_uf_with_config(arena, euf_assertions, &euf_offline_config) {
         CheckResult::Sat(model) => {
             with_recorder(rec, |t| t.record_decided("euf-offline", Verdict::Sat));
             return Ok(Some(CheckResult::Sat(model)));
