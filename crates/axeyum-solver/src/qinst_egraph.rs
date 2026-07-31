@@ -122,16 +122,21 @@ fn prove_quantified_unsat_via_egraph_impl(
     let deadline = config
         .timeout
         .and_then(|timeout| Instant::now().checked_add(timeout));
-    let (mut ground, foralls) = partition_top_level_foralls(arena, assertions);
+
+    let prepared = prepare_quantifier_partition(arena, assertions)?;
+    let working: &[TermId] = prepared.working(assertions);
+    let (mut ground, foralls, skolemized) = (
+        prepared.ground.clone(),
+        prepared.foralls.clone(),
+        prepared.skolemized,
+    );
+
     if foralls.is_empty() {
-        return quantifier_qf_check(arena, &ground, config, deadline, stats);
+        let result = quantifier_qf_check(arena, &ground, config, deadline, stats)?;
+        return Ok(suppress_skolemized_sat(result, skolemized));
     }
 
-    if try_closed_universal_refutations(arena, &foralls, config, deadline)? {
-        return Ok(CheckResult::Unsat);
-    }
-
-    if try_targeted_quantifier_refutations(arena, &ground, &foralls, config, deadline, stats)? {
+    if try_early_refutations(arena, &ground, &foralls, config, deadline, stats)? {
         return Ok(CheckResult::Unsat);
     }
 
@@ -174,7 +179,7 @@ fn prove_quantified_unsat_via_egraph_impl(
         // Schedule conflict/unit-like instances globally before noisier clauses.
         let mut admitted = admit_next_source_batch(
             arena,
-            assertions,
+            working,
             &mut matcher,
             &mut seen,
             &mut ground,
@@ -183,7 +188,7 @@ fn prove_quantified_unsat_via_egraph_impl(
         if admitted.is_empty() && candidate_equalities_enabled {
             match scoped_candidate_fixpoint_step(
                 arena,
-                assertions,
+                working,
                 &mut ground,
                 config,
                 &mut matcher,
@@ -203,8 +208,7 @@ fn prove_quantified_unsat_via_egraph_impl(
             break; // source and scoped-candidate instantiation fixpoint
         }
         let online_outcome = online_clauses.as_mut().and_then(|session| {
-            let outcome =
-                session.add_checked_batch(arena, assertions, &admitted, &ground_derivations);
+            let outcome = session.add_checked_batch(arena, working, &admitted, &ground_derivations);
             if outcome.is_some() {
                 stats.online_solves += 1;
                 stats.online_clauses = session.inserted_clauses;
@@ -222,7 +226,10 @@ fn prove_quantified_unsat_via_egraph_impl(
             Some(CdcltOutcome::Unknown) | None => online_clauses = None,
         }
     }
-    finish_quantified_ground_check(arena, &ground, config, deadline, stats)
+    // Every other exit is `Unsat` or a decline; this is the one remaining path
+    // that can carry a model, so it gets the same skolemized-sat suppression.
+    let result = finish_quantified_ground_check(arena, &ground, config, deadline, stats)?;
+    Ok(suppress_skolemized_sat(result, skolemized))
 }
 
 fn egraph_timeout() -> CheckResult {
@@ -322,6 +329,155 @@ fn replay_online_refutation(
         quantifier_qf_check(arena, ground, config, deadline, stats)?,
         CheckResult::Unsat
     ))
+}
+
+/// Degrades a `sat` to `unknown` when the query was Skolemized on the way in.
+///
+/// Skolemization preserves satisfiability, so the *verdict* is not wrong — but
+/// the accompanying model assigns values to Skolem symbols that the original
+/// assertions never mention, so it cannot be replayed against the original term.
+/// This project requires every `sat` to replay, so the model is not exportable
+/// and the honest answer is `unknown`. `unsat` is unaffected: it transfers.
+fn suppress_skolemized_sat(result: CheckResult, skolemized: bool) -> CheckResult {
+    match result {
+        CheckResult::Sat(_) if skolemized => CheckResult::Unknown(UnknownReason {
+            kind: UnknownKind::Incomplete,
+            detail: "query was skolemized to expose nested quantifiers; the model \
+                     interprets Skolem symbols absent from the original assertions, \
+                     so it cannot replay against them"
+                .to_owned(),
+        }),
+        other => other,
+    }
+}
+
+/// The two cheap refutations attempted before the instantiation loop: a closed
+/// universal decided on its own, and the targeted shapes. Either one refuting is
+/// enough to answer `unsat`.
+fn try_early_refutations(
+    arena: &mut TermArena,
+    ground: &[TermId],
+    foralls: &[TermId],
+    config: &SolverConfig,
+    deadline: Option<Instant>,
+    stats: &mut QuantifierLoopStats,
+) -> Result<bool, SolverError> {
+    if try_closed_universal_refutations(arena, foralls, config, deadline)? {
+        return Ok(true);
+    }
+    try_targeted_quantifier_refutations(arena, ground, foralls, config, deadline, stats)
+}
+
+/// The partition this route instantiates over, normalizing only if it must.
+struct PreparedPartition {
+    ground: Vec<TermId>,
+    foralls: Vec<TermId>,
+    /// Kept alive because `working` borrows from it.
+    normalized: Option<crate::quant_skolemize::Skolemized>,
+    skolemized: bool,
+}
+
+impl PreparedPartition {
+    /// The assertions to instantiate over: the normalized form when the
+    /// Skolemization fallback fired, otherwise the originals.
+    fn working<'a>(&'a self, assertions: &'a [TermId]) -> &'a [TermId] {
+        match (&self.normalized, self.skolemized) {
+            (Some(normalized), true) => &normalized.assertions,
+            _ => assertions,
+        }
+    }
+}
+
+/// Partitions `assertions`, falling back to Skolemization when the query has
+/// quantifiers [`partition_top_level_foralls`] cannot see.
+fn prepare_quantifier_partition(
+    arena: &mut TermArena,
+    assertions: &[TermId],
+) -> Result<PreparedPartition, SolverError> {
+    let (ground, foralls) = partition_top_level_foralls(arena, assertions);
+    if !foralls.is_empty() || !contains_quantifier_anywhere(arena, assertions) {
+        return Ok(PreparedPartition {
+            ground,
+            foralls,
+            normalized: None,
+            skolemized: false,
+        });
+    }
+    let normalized = crate::quant_skolemize::skolemize_assertions(arena, assertions)?;
+    let (ground, foralls, skolemized) =
+        reachable_quantifier_partition(arena, &normalized, ground, foralls);
+    Ok(PreparedPartition {
+        ground,
+        foralls,
+        normalized: Some(normalized),
+        skolemized,
+    })
+}
+
+/// Partition after normalizing, used only when the query has quantifiers that
+/// [`partition_top_level_foralls`] cannot see.
+///
+/// That partition recognizes a quantifier ONLY as an assertion's root node, so
+/// anything nested — under a connective, under a negation, an existential, an
+/// alternating prefix — is classified as *ground* and never instantiated. That is
+/// the largest measured UF bucket: 31 of the 159 declared-status files decline
+/// with "quantifiers instantiation does not reach", and the division scores a
+/// 34.4 % parity ratio against cvc5.
+///
+/// [`crate::quant_skolemize::skolemize_assertions`] produces exactly the root
+/// shape the partition wants (polarity-aware NNF, Skolem functions for the
+/// existential-in-force quantifiers, surviving universals hoisted to the root).
+/// It was only ever wired into `prove_unsat_by_ematching`, so this route never
+/// saw it.
+///
+/// # Why this is a fallback and not unconditional
+///
+/// Not caution — a measured requirement. Normalizing every query REGRESSED two
+/// refutations this route previously found
+/// (`chained_integer_recurrence_reaches_its_ground_base` and
+/// `nested_xor_instantiation_refutes_issue4433`, both `Unsat` → "did not refute
+/// within the round budget"). NNF rewrites the term shapes trigger selection was
+/// tuned against, and the Bool-`xor` expansion duplicates subterms, spending the
+/// round budget on a larger formula. Falling back only when there is otherwise
+/// nothing to instantiate keeps every existing refutation and can only add reach.
+///
+/// Returns the original partition unchanged if normalization did not expose a
+/// root-level universal.
+fn reachable_quantifier_partition(
+    arena: &TermArena,
+    normalized: &crate::quant_skolemize::Skolemized,
+    ground: Vec<TermId>,
+    foralls: Vec<TermId>,
+) -> (Vec<TermId>, Vec<TermId>, bool) {
+    if !normalized.changed {
+        return (ground, foralls, false);
+    }
+    let (g, f) = partition_top_level_foralls(arena, &normalized.assertions);
+    if f.is_empty() {
+        return (ground, foralls, false);
+    }
+    (g, f, true)
+}
+
+/// Whether any assertion contains a quantifier at any depth.
+///
+/// Used to distinguish "quantifier-free query" (nothing to do) from "quantified
+/// query whose quantifiers this route cannot see" (the fallback case).
+fn contains_quantifier_anywhere(arena: &TermArena, assertions: &[TermId]) -> bool {
+    let mut stack: Vec<TermId> = assertions.to_vec();
+    let mut seen: HashSet<TermId> = HashSet::new();
+    while let Some(current) = stack.pop() {
+        if !seen.insert(current) {
+            continue;
+        }
+        if let TermNode::App { op, args } = arena.node(current) {
+            if matches!(op, Op::Forall(_) | Op::Exists(_)) {
+                return true;
+            }
+            stack.extend(args.iter().copied());
+        }
+    }
+    false
 }
 
 fn partition_top_level_foralls(
@@ -3931,11 +4087,7 @@ mod tests {
         ));
         let positive_twentieth = arena.int_gt(f_twenty, zero).unwrap();
         assert!(
-            !predecessor_recurrence_sign_refutation(
-                &arena,
-                &[base, positive_twentieth],
-                universal,
-            ),
+            !predecessor_recurrence_sign_refutation(&arena, &[base, positive_twentieth], universal,),
             "the expected positive sign is satisfiable and must not be refuted"
         );
         let nineteen = arena.int_const(19);
