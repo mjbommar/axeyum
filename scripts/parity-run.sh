@@ -161,6 +161,15 @@ smoke_reference() {
 
 smoke_reference
 
+# Per-file record. Without this, the only per-file decline data available came
+# from a DIFFERENT, ad-hoc census slice -- and reasoning across the two corpora
+# produced a lever ("28 UF files decline through the reduction path") whose 28
+# files turned out to have ZERO overlap with this scored list. Target levers from
+# the corpus that is actually scored.
+sidecar="bench-results/parity-details/${division}.tsv"
+mkdir -p "$(dirname "$sidecar")"
+printf 'file\taxeyum\treference\tdeclared\n' > "$sidecar"
+
 axeyum_solved=0
 reference_solved=0
 both=0
@@ -180,6 +189,8 @@ while IFS= read -r file; do
   a=$(run_one "$axeyum_bin" "$file")
   r=$(run_one "$reference_bin" "$file")
   expected=$(declared_status "$file")
+
+  printf '%s\t%s\t%s\t%s\n' "$(basename "$file")" "$a" "$r" "${expected:-none}" >> "$sidecar"
 
   [[ "$a" != "unsolved" ]] && axeyum_solved=$((axeyum_solved + 1))
   [[ "$r" != "unsolved" ]] && reference_solved=$((reference_solved + 1))
@@ -238,6 +249,7 @@ fi
   echo "| protocol | ${budget_s}s wall, ${mem_gb}GiB, per-file |"
   echo "| benchmark list | \`${list}\` (sha256 ${list_sha}, ${total} files) |"
   echo "| solver commit | \`${solver_sha}\`${dirty} |"
+  echo "| per-file detail | \`${sidecar}\` |"
   if (( disagreements > 0 )); then
     echo
     echo "DISAGREEMENTS:"
