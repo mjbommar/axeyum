@@ -91,26 +91,32 @@ fn split_replace_rejoin_uses_the_base_bound() {
         );
     }
 
-    let unequal_lengths = r#"(set-logic QF_SLIA)
+    // An unequal-length replacement over the 256-byte literal cap still declines
+    // the bounded parse (the historic 2-byte "zz" shape now parses bounded), so
+    // the source SAT fallback must still carry the pipeline.
+    let zz = "z".repeat(300);
+    let unequal_lengths = format!(
+        r#"(set-logic QF_SLIA)
 (declare-fun s () String)
 (assert (=
   (str.++
     (str.replace
       (str.substr s 0 (+ (str.indexof s "A" 0) 1))
-      "A" "zz")
+      "A" "{zz}")
     (str.substr s
       (+ (str.indexof s "A" 0) 1)
       (- (str.len s) (+ (str.indexof s "A" 0) 1))))
-  "zz"))
+  "{zz}"))
 (check-sat)
-"#;
-    let unequal = parse_script(unequal_lengths)
+"#
+    );
+    let unequal = parse_script(&unequal_lengths)
         .expect("the source SAT fallback retains the unequal-length pipeline");
     assert!(unequal.word_only_fallback.is_some());
     assert!(unequal.source_string_sat_problem.is_some());
     assert!(
         matches!(
-            solve_smtlib(unequal_lengths, &config())
+            solve_smtlib(&unequal_lengths, &config())
                 .expect("solve unequal-length pipeline")
                 .result,
             CheckResult::Sat(_)
@@ -137,9 +143,23 @@ fn large_split_replace_pipeline_retains_the_fast_source_fallback() {
     }
     script.push_str("(check-sat)\n");
 
-    let parsed = parse_script(&script).expect("large pipeline uses source-level fallback");
-    assert!(parsed.word_only_fallback.is_some());
-    assert!(!parsed.prefer_source_string_routes);
+    // Under the original 13/26-byte caps this over-limit pipeline declined the
+    // bounded parse entirely (word-only fallback). With the 256/512-byte caps it
+    // parses bounded; the fast-source property survives as
+    // `prefer_source_string_routes`, which hands the source-level ladder first
+    // refusal before the packed DAG is ever solved.
+    let parsed = parse_script(&script).expect("large pipeline parses bounded under the wide caps");
+    assert!(parsed.word_only_fallback.is_none());
+    assert!(parsed.prefer_source_string_routes);
+    assert!(
+        matches!(
+            solve_smtlib(&script, &config())
+                .expect("solve large pipeline")
+                .result,
+            CheckResult::Sat(_)
+        ),
+        "s = \"Z\" (contains needs no \"A\") is a replayed witness"
+    );
 }
 
 /// The UNSAT-only word relaxation may treat a repeated fixed splice as one opaque
@@ -343,15 +363,21 @@ fn exact_pinned_view_content_mutation_stays_satisfiable() {
 
 #[test]
 fn word_only_fallback_retains_exact_path_conflicts() {
-    let input = r#"(set-logic QF_SLIA)
+    // The pad literal must exceed the 256-byte cap so the bounded parse still
+    // declines into the word-only fallback (the historic 14-byte pad now parses).
+    let pad = "abcdefghijklmn".repeat(19); // 266 bytes > 256
+    let input = format!(
+        r#"(set-logic QF_SLIA)
 (declare-fun s () String)
 (declare-fun pad () String)
-(assert (= pad "abcdefghijklmn"))
+(assert (= pad "{pad}"))
 (assert (= (str.indexof s "x" 0) 0))
 (assert (not (not (not (= (ite (= (str.len s) 0) 1 0) 0)))))
 (assert (not (not (= (ite (= (str.len s) 0) 1 0) 0))))
 (check-sat)
-"#;
+"#
+    );
+    let input = input.as_str();
     let script = parse_script(input).expect("parse word-only fallback conflict");
     assert!(script.word_only_fallback.is_some());
     assert!(script.source_string_semantic_unsat);

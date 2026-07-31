@@ -2220,6 +2220,23 @@ fn length_bool(
     int_vars: &BTreeMap<String, (SymbolId, TermId)>,
     saw_len: &mut bool,
 ) -> Option<TermId> {
+    length_bool_at(arena, e, seq_vars, int_vars, saw_len, 0)
+}
+
+/// Depth-tracked body of [`length_bool`]: a pathologically deep Boolean skeleton
+/// declines the length side channel (all-or-nothing, sound) instead of
+/// exhausting the native stack (see [`WORD_ATOM_MAX_DEPTH`]).
+fn length_bool_at(
+    arena: &mut TermArena,
+    e: &SExpr,
+    seq_vars: &BTreeMap<String, (SymbolId, TermId)>,
+    int_vars: &BTreeMap<String, (SymbolId, TermId)>,
+    saw_len: &mut bool,
+    depth: u32,
+) -> Option<TermId> {
+    if depth > WORD_ATOM_MAX_DEPTH {
+        return None;
+    }
     match e.atom() {
         Some("true") => return Some(arena.bool_const(true)),
         Some("false") => return Some(arena.bool_const(false)),
@@ -2229,9 +2246,9 @@ fn length_bool(
     let head = items.first().and_then(SExpr::atom)?;
     match head {
         "and" | "or" | "xor" if items.len() >= 2 => {
-            let mut acc = length_bool(arena, &items[1], seq_vars, int_vars, saw_len)?;
+            let mut acc = length_bool_at(arena, &items[1], seq_vars, int_vars, saw_len, depth + 1)?;
             for it in &items[2..] {
-                let next = length_bool(arena, it, seq_vars, int_vars, saw_len)?;
+                let next = length_bool_at(arena, it, seq_vars, int_vars, saw_len, depth + 1)?;
                 acc = match head {
                     "and" => arena.and(acc, next).ok()?,
                     "or" => arena.or(acc, next).ok()?,
@@ -2241,21 +2258,22 @@ fn length_bool(
             Some(acc)
         }
         "=>" if items.len() >= 3 => {
-            let mut acc = length_bool(arena, items.last()?, seq_vars, int_vars, saw_len)?;
+            let mut acc =
+                length_bool_at(arena, items.last()?, seq_vars, int_vars, saw_len, depth + 1)?;
             for it in items[1..items.len() - 1].iter().rev() {
-                let ante = length_bool(arena, it, seq_vars, int_vars, saw_len)?;
+                let ante = length_bool_at(arena, it, seq_vars, int_vars, saw_len, depth + 1)?;
                 acc = arena.implies(ante, acc).ok()?;
             }
             Some(acc)
         }
         "not" if items.len() == 2 => {
-            let inner = length_bool(arena, &items[1], seq_vars, int_vars, saw_len)?;
+            let inner = length_bool_at(arena, &items[1], seq_vars, int_vars, saw_len, depth + 1)?;
             arena.not(inner).ok()
         }
         "ite" if items.len() == 4 => {
-            let c = length_bool(arena, &items[1], seq_vars, int_vars, saw_len)?;
-            let t = length_bool(arena, &items[2], seq_vars, int_vars, saw_len)?;
-            let f = length_bool(arena, &items[3], seq_vars, int_vars, saw_len)?;
+            let c = length_bool_at(arena, &items[1], seq_vars, int_vars, saw_len, depth + 1)?;
+            let t = length_bool_at(arena, &items[2], seq_vars, int_vars, saw_len, depth + 1)?;
+            let f = length_bool_at(arena, &items[3], seq_vars, int_vars, saw_len, depth + 1)?;
             arena.ite(c, t, f).ok()
         }
         // `(= a b …)` — a chained equality that is **either** all `Seq` words or all
@@ -2547,7 +2565,23 @@ fn lex_bool(
     atoms: &mut Vec<axeyum_strings::LexAtom>,
     saw_lex: &mut bool,
 ) -> Option<axeyum_strings::LexFormula> {
+    lex_bool_at(e, vars, atoms, saw_lex, 0)
+}
+
+/// Depth-tracked body of [`lex_bool`]: a pathologically deep Boolean skeleton
+/// declines the lex side channel (all-or-nothing, sound) instead of exhausting
+/// the native stack (see [`WORD_ATOM_MAX_DEPTH`]).
+fn lex_bool_at(
+    e: &SExpr,
+    vars: &BTreeSet<String>,
+    atoms: &mut Vec<axeyum_strings::LexAtom>,
+    saw_lex: &mut bool,
+    depth: u32,
+) -> Option<axeyum_strings::LexFormula> {
     use axeyum_strings::{LexAtom, LexFormula};
+    if depth > WORD_ATOM_MAX_DEPTH {
+        return None;
+    }
     match e.atom() {
         Some("true") => return Some(LexFormula::Const(true)),
         Some("false") => return Some(LexFormula::Const(false)),
@@ -2559,7 +2593,7 @@ fn lex_bool(
         "and" | "or" if items.len() >= 2 => {
             let mut children = Vec::with_capacity(items.len() - 1);
             for it in &items[1..] {
-                children.push(lex_bool(it, vars, atoms, saw_lex)?);
+                children.push(lex_bool_at(it, vars, atoms, saw_lex, depth + 1)?);
             }
             Some(if head == "and" {
                 LexFormula::And(children)
@@ -2568,29 +2602,29 @@ fn lex_bool(
             })
         }
         "xor" if items.len() >= 2 => {
-            let mut acc = lex_bool(&items[1], vars, atoms, saw_lex)?;
+            let mut acc = lex_bool_at(&items[1], vars, atoms, saw_lex, depth + 1)?;
             for it in &items[2..] {
-                let next = lex_bool(it, vars, atoms, saw_lex)?;
+                let next = lex_bool_at(it, vars, atoms, saw_lex, depth + 1)?;
                 acc = LexFormula::Xor(Box::new(acc), Box::new(next));
             }
             Some(acc)
         }
         "=>" if items.len() >= 3 => {
-            let mut acc = lex_bool(items.last()?, vars, atoms, saw_lex)?;
+            let mut acc = lex_bool_at(items.last()?, vars, atoms, saw_lex, depth + 1)?;
             for it in items[1..items.len() - 1].iter().rev() {
-                let ante = lex_bool(it, vars, atoms, saw_lex)?;
+                let ante = lex_bool_at(it, vars, atoms, saw_lex, depth + 1)?;
                 acc = LexFormula::Implies(Box::new(ante), Box::new(acc));
             }
             Some(acc)
         }
         "not" if items.len() == 2 => {
-            let inner = lex_bool(&items[1], vars, atoms, saw_lex)?;
+            let inner = lex_bool_at(&items[1], vars, atoms, saw_lex, depth + 1)?;
             Some(LexFormula::Not(Box::new(inner)))
         }
         "ite" if items.len() == 4 => {
-            let c = lex_bool(&items[1], vars, atoms, saw_lex)?;
-            let t = lex_bool(&items[2], vars, atoms, saw_lex)?;
-            let f = lex_bool(&items[3], vars, atoms, saw_lex)?;
+            let c = lex_bool_at(&items[1], vars, atoms, saw_lex, depth + 1)?;
+            let t = lex_bool_at(&items[2], vars, atoms, saw_lex, depth + 1)?;
+            let f = lex_bool_at(&items[3], vars, atoms, saw_lex, depth + 1)?;
             Some(LexFormula::Ite(Box::new(c), Box::new(t), Box::new(f)))
         }
         "str.<" | "str.<=" if items.len() == 3 => {
@@ -4097,6 +4131,28 @@ fn word_atom(
     next_k: &mut u32,
     opaque: &mut OpaqueCtx,
 ) -> bool {
+    word_atom_at(arena, e, vars, wp, next_k, opaque, 0)
+}
+
+/// Depth-tracked body of [`word_atom`]. The only recursion is through top-level
+/// `and`; a pathologically deep conjunction declines the whole word side channel
+/// (all-or-nothing, sound) instead of exhausting the native stack — this is
+/// reachable now that long-literal scripts parse bounded rather than being
+/// rejected before the side channels are built.
+const WORD_ATOM_MAX_DEPTH: u32 = 512;
+
+fn word_atom_at(
+    arena: &mut TermArena,
+    e: &SExpr,
+    vars: &BTreeMap<String, (SymbolId, TermId)>,
+    wp: &mut WordProblem,
+    next_k: &mut u32,
+    opaque: &mut OpaqueCtx,
+    depth: u32,
+) -> bool {
+    if depth > WORD_ATOM_MAX_DEPTH {
+        return false;
+    }
     // `true` is a trivial conjunct.
     if e.atom() == Some("true") {
         return true;
@@ -4129,7 +4185,7 @@ fn word_atom(
     match head {
         "and" => items[1..]
             .iter()
-            .all(|c| word_atom(arena, c, vars, wp, next_k, opaque)),
+            .all(|c| word_atom_at(arena, c, vars, wp, next_k, opaque, depth + 1)),
         // `(= a b …)` — chained equality over ≥2 string expressions.
         "=" if items.len() >= 3 => {
             let Some(terms) = word_terms_flat(arena, &items[1..], vars, wp, opaque) else {
@@ -7775,11 +7831,17 @@ fn combine_match(
 const STRING_MAX_LEN: u32 = 12;
 /// Maximum adaptive bound for a literal and a directly-compared declared symbol.
 /// Keeping this separate from [`STRING_MAX_LEN`] avoids widening every symbolic
-/// string and its CNF because one path names a 13-byte protocol token.
-const STRING_LITERAL_MAX_LEN: u32 = 13;
-/// Hard cap on any packed string's `max_len`. Concatenation can temporarily double
-/// the largest adaptively-bounded declaration without truncating either operand.
-pub(crate) const STRING_BOUND_CAP: u32 = 26;
+/// string and its CNF because one path names a long protocol token. Literals
+/// beyond 15 bytes pack into wide (`> 128`-bit) constants; the packed layout is
+/// identical, so every helper decodes them uniformly. Scripts whose literals all
+/// fit the old 13-byte cap produce byte-identical encodings — raising this cap
+/// only admits scripts that previously failed to parse at all (ADR-0029).
+const STRING_LITERAL_MAX_LEN: u32 = 256;
+/// Hard cap on any packed string's `max_len`. Concatenation sums operand bounds,
+/// so chains over long adaptively-bounded operands need headroom above
+/// [`STRING_LITERAL_MAX_LEN`]; past the cap the op is a clean `Unsupported`,
+/// never a wrong verdict.
+pub(crate) const STRING_BOUND_CAP: u32 = 512;
 
 /// Bits holding a length in `0..=m` for a string of maximum length `m`.
 pub(crate) const fn len_width(m: u32) -> u32 {
@@ -8233,16 +8295,11 @@ fn string_shaped(arena: &TermArena, t: TermId) -> bool {
     matches!(arena.sort_of(t), Sort::BitVec(w) if string_max_len_of(w).is_some())
 }
 
-/// The exact length of a **constant** packed string, decoded from its low
-/// length-field bits; `None` for non-constants, wide constants, or a value
-/// whose decoded length exceeds its own bound (not a valid packed string).
+/// The exact length of a **constant** packed string (narrow or wide), decoded
+/// from its low length-field bits; `None` for non-constants or a value whose
+/// decoded length exceeds its own bound (not a valid packed string).
 fn packed_string_len(arena: &TermArena, t: TermId) -> Option<u32> {
-    let TermNode::BvConst { width, value } = arena.node(t) else {
-        return None;
-    };
-    let m = string_max_len_of(*width)?;
-    let len = u32::try_from(value & ((1u128 << len_width(m)) - 1)).ok()?;
-    (len <= m).then_some(len)
+    string_const_bytes(arena, t).map(|bytes| u32::try_from(bytes.len()).expect("len fits u32"))
 }
 
 /// The code point (single content byte, `0..=255`) of a **single-character**
@@ -8251,15 +8308,10 @@ fn packed_string_len(arena: &TermArena, t: TermId) -> Option<u32> {
 /// give a single-char string literal a code expression for the code↔equality
 /// link ([`LenAbs::note_code_eq_link`]).
 fn single_char_code(arena: &TermArena, t: TermId) -> Option<u8> {
-    if packed_string_len(arena, t) != Some(1) {
-        return None;
+    match string_const_bytes(arena, t)?.as_slice() {
+        [byte] => Some(*byte),
+        _ => None,
     }
-    let TermNode::BvConst { width, value } = arena.node(t) else {
-        return None;
-    };
-    let m = string_max_len_of(*width)?;
-    let byte = (value >> len_width(m)) & 0xFF;
-    u8::try_from(byte).ok()
 }
 
 /// Packs a string literal's bytes into the canonical bit-vector representation
@@ -8355,17 +8407,30 @@ fn pack_string_literal(arena: &mut TermArena, bytes: &[u8]) -> Result<TermId, Sm
             "string literal longer than the bounded length {STRING_LITERAL_MAX_LEN} (ADR-0029)"
         )));
     }
-    let max_len =
-        STRING_MAX_LEN.max(u32::try_from(bytes.len()).expect("literal length is bounded"));
-    let mut content: u128 = 0;
-    for (i, &b) in bytes.iter().enumerate() {
-        content |= u128::from(b) << (8 * i);
+    let len = u32::try_from(bytes.len()).expect("literal length is bounded");
+    let max_len = STRING_MAX_LEN.max(len);
+    let total = string_total(max_len);
+    let lw = len_width(max_len);
+    if total <= 128 {
+        let mut content: u128 = 0;
+        for (i, &b) in bytes.iter().enumerate() {
+            content |= u128::from(b) << (8 * i);
+        }
+        let packed = u128::from(len) | (content << lw);
+        return arena.bv_const(total, packed).map_err(SmtError::Ir);
     }
-    let packed = u128::from(u32::try_from(bytes.len()).expect("literal length is bounded"))
-        | (content << len_width(max_len));
-    arena
-        .bv_const(string_total(max_len), packed)
-        .map_err(SmtError::Ir)
+    // Wider than 128 bits: build the exact packed value bit-by-bit (LSB-first:
+    // the length field, then each content byte; padding above stays zero).
+    let mut bits = vec![false; total as usize];
+    for i in 0..lw {
+        bits[i as usize] = (len >> i) & 1 == 1;
+    }
+    for (i, &b) in bytes.iter().enumerate() {
+        for j in 0..8usize {
+            bits[lw as usize + 8 * i + j] = (b >> j) & 1 == 1;
+        }
+    }
+    Ok(arena.wide_bv_const(WideUint::from_lsb_bits(&bits)))
 }
 
 /// The length field (a `BitVec(len_width(m))`) of a packed string of max length
@@ -9697,22 +9762,39 @@ fn string_le(arena: &mut TermArena, x: TermId, y: TermId) -> Result<TermId, SmtE
 /// `None` if `arg` is not a string constant (so a mixed const/variable `str.++`
 /// folds the constant runs and concatenates the variable spans symbolically).
 fn string_const_bytes(arena: &TermArena, arg: TermId) -> Option<Vec<u8>> {
-    let (width, value) = match arena.node(arg) {
-        TermNode::BvConst { width, value } => (*width, *value),
-        _ => return None,
-    };
-    let m = string_max_len_of(width)?;
-    let lwm = len_width(m);
-    let len = usize::try_from(value & ((1u128 << lwm) - 1)).ok()?;
-    if len > m as usize {
-        return None; // not well-formed as a string of this max length
+    match arena.node(arg) {
+        TermNode::BvConst { width, value } => {
+            let (width, value) = (*width, *value);
+            let m = string_max_len_of(width)?;
+            let lwm = len_width(m);
+            let len = usize::try_from(value & ((1u128 << lwm) - 1)).ok()?;
+            if len > m as usize {
+                return None; // not well-formed as a string of this max length
+            }
+            let content = value >> lwm;
+            let mut bytes = Vec::with_capacity(len);
+            for i in 0..len {
+                bytes.push(u8::try_from((content >> (8 * i)) & 0xff).expect("byte fits u8"));
+            }
+            Some(bytes)
+        }
+        TermNode::WideBvConst(value) => {
+            let m = string_max_len_of(value.width())?;
+            let lwm = len_width(m);
+            let len = u32::try_from(value.extract(lwm - 1, 0).to_u128()).ok()?;
+            if len > m {
+                return None; // not well-formed as a string of this max length
+            }
+            let mut bytes = Vec::with_capacity(len as usize);
+            for i in 0..len {
+                let lo = lwm + 8 * i;
+                bytes
+                    .push(u8::try_from(value.extract(lo + 7, lo).to_u128()).expect("byte fits u8"));
+            }
+            Some(bytes)
+        }
+        _ => None,
     }
-    let content = value >> lwm;
-    let mut bytes = Vec::with_capacity(len);
-    for i in 0..len {
-        bytes.push(u8::try_from((content >> (8 * i)) & 0xff).expect("byte fits u8"));
-    }
-    Some(bytes)
 }
 
 /// `str.++` of two **packed-string** operands (constant or variable). Produces a

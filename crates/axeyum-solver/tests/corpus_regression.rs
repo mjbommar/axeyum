@@ -79,6 +79,26 @@ fn solve_capped(text: String, script: axeyum_smtlib::Script) -> Option<CheckResu
                 solve_smtlib(&text, &SolverConfig::default())
                     .ok()
                     .map(|o| o.result)
+            } else if script.uses_bounded_strings {
+                // A bounded-string flat view decides only *within* the ADR-0029
+                // encoding bound, so a raw `check_auto` unsat may be a bound
+                // artifact (a real model may need longer strings than the packed
+                // cap). Apply the P2.7 A.2 gate exactly as `axeyum-bench` and the
+                // `solve_smtlib` front door do — the flat view is never compared
+                // to `:status` ungated.
+                let mut script = script;
+                let config = SolverConfig::default();
+                let assertions = script.assertions.clone();
+                check_auto(&mut script.arena, &assertions, &config)
+                    .and_then(|r| {
+                        axeyum_solver::confirm_bounded_string_verdict(
+                            &mut script,
+                            &assertions,
+                            &config,
+                            r,
+                        )
+                    })
+                    .ok()
             } else {
                 let mut script = script;
                 check_auto(
