@@ -484,6 +484,7 @@ pub fn instantiate_with_triggers(
         &collect_ground_equalities(arena, assertions),
     );
 
+    let probe = std::env::var_os("AXEYUM_QPROBE").is_some();
     let mut out = Vec::with_capacity(assertions.len());
     let mut instantiated = false;
     for &assertion in assertions {
@@ -493,14 +494,23 @@ pub fn instantiate_with_triggers(
             // modulo congruence, including triggers that bind several of the
             // chain's variables at once (e.g. `g(x, y)` against `g(f(c), h(c))`).
             let per_var = trigger_per_var_bindings(arena, body, &vars, &leaves, &egraph);
-            match instantiate_chain(arena, &vars, body, &per_var)? {
-                Some(term) => {
-                    instantiated = true;
-                    out.push(term);
+            if let Some(term) = instantiate_chain(arena, &vars, body, &per_var)? {
+                instantiated = true;
+                out.push(term);
+            } else {
+                if probe {
+                    let counts: Vec<usize> = per_var.iter().map(Vec::len).collect();
+                    eprintln!("QPROBE cap-overflow vars={} per_var={counts:?}", vars.len());
                 }
-                None => out.push(assertion),
+                out.push(assertion);
             }
             continue;
+        }
+        if probe && contains_quantifier(arena, assertion) {
+            eprintln!(
+                "QPROBE peel-fail {}",
+                describe_residual_shape(arena, assertion)
+            );
         }
         out.push(assertion);
     }
@@ -511,6 +521,53 @@ pub fn instantiate_with_triggers(
         instantiated,
         residual_quantifier,
     })
+}
+
+/// Debug-probe classification (`AXEYUM_QPROBE`) of an assertion that
+/// `peel_universals` rejected: names the root operator and where the quantifier
+/// sits so census probes can bucket the residual shapes.
+fn describe_residual_shape(arena: &TermArena, assertion: TermId) -> String {
+    // Peel the leading forall prefix, then describe what stopped the peel.
+    let mut prefix = 0usize;
+    let mut current = assertion;
+    while let TermNode::App {
+        op: Op::Forall(_),
+        args,
+    } = arena.node(current)
+    {
+        prefix += 1;
+        current = args[0];
+    }
+    let root = match arena.node(current) {
+        TermNode::App { op, .. } => format!("{op:?}"),
+        other => format!("{other:?}"),
+    };
+    // Find the operator immediately above each residual quantifier.
+    let mut parents: Vec<String> = Vec::new();
+    let mut stack = vec![current];
+    let mut seen = std::collections::HashSet::new();
+    while let Some(t) = stack.pop() {
+        if !seen.insert(t) {
+            continue;
+        }
+        if let TermNode::App { op, args } = arena.node(t) {
+            for &arg in args {
+                if let TermNode::App { op: child_op, .. } = arena.node(arg)
+                    && matches!(child_op, Op::Forall(_) | Op::Exists(_))
+                {
+                    let quant = match child_op {
+                        Op::Forall(_) => "forall",
+                        _ => "exists",
+                    };
+                    parents.push(format!("{quant}-under-{op:?}"));
+                }
+                stack.push(arg);
+            }
+        }
+    }
+    parents.sort();
+    parents.dedup();
+    format!("prefix={prefix} root={root} quants=[{}]", parents.join(","))
 }
 
 /// Per-variable instantiation bindings for a universal chain over `vars`: each

@@ -6490,6 +6490,9 @@ pub fn prove_unsat_by_ematching(
     assertions: &[TermId],
     config: &SolverConfig,
 ) -> Result<CheckResult, SolverError> {
+    let deadline = config
+        .timeout
+        .and_then(|timeout| Instant::now().checked_add(timeout));
     let instantiation = instantiate_with_triggers(arena, assertions)
         .map_err(|error| SolverError::Backend(error.to_string()))?;
     if !instantiation.residual_quantifier {
@@ -6502,10 +6505,69 @@ pub fn prove_unsat_by_ematching(
     // declared-status files in the 300-file slice declined exactly here.
     let skolemized = crate::quant_skolemize::skolemize_assertions(arena, assertions)?;
     if !skolemized.changed {
+        if std::env::var_os("AXEYUM_QPROBE").is_some() {
+            eprintln!("QPROBE ematch skolemize-unchanged (residual before skolemize)");
+        }
         return decide_instantiation(arena, &instantiation, config);
     }
     let retried = instantiate_with_triggers(arena, &skolemized.assertions)
         .map_err(|error| SolverError::Backend(error.to_string()))?;
+    if std::env::var_os("AXEYUM_QPROBE").is_some() {
+        eprintln!(
+            "QPROBE ematch retried residual={} instantiated={}",
+            retried.residual_quantifier, retried.instantiated
+        );
+    }
+    // Measured shape (the whole residual bucket on the scored UF corpus): the
+    // skolemizer succeeds on every assertion, and the retry is blocked ONLY by
+    // prenex chains whose hoisted variable count makes the cartesian instance
+    // product exceed `CHAIN_INSTANCE_CAP` — those chains are left as `forall`s,
+    // `residual_quantifier` comes back true, and the whole query was declined
+    // even though every other assertion instantiated fine. The one-shot
+    // cartesian retry is the wrong tool for those chains (a measured 366-
+    // conjunct instantiation blob also just times out in dispatch); the
+    // incremental e-graph loop is the machinery built for them — multi-pattern
+    // joins instead of cartesian products, interleaved quantifier-free ground
+    // refutation checks, round/deadline discipline. It never saw these files
+    // usefully before because it ran only on the ORIGINAL non-prenex
+    // assertions, whose nested quantifiers reduce its instances to junk the
+    // QF-subset filter drops. Unsat-only: the loop's refutation of the
+    // skolemized set transfers back through skolemization; any other outcome
+    // falls through to the established decline. Half the remaining budget, so
+    // the callers' later SAT-only stages are not starved.
+    if retried.residual_quantifier
+        && let Some(mut loop_config) = config_with_remaining_timeout(config, deadline)
+    {
+        if let Some(timeout) = loop_config.timeout {
+            loop_config.timeout = Some(timeout / 2);
+        }
+        let probe = std::env::var_os("AXEYUM_QPROBE").is_some();
+        let started = Instant::now();
+        // The skolemized set alone, NOT its union with the originals: the
+        // union was measured strictly worse (doubling the universal partition
+        // with the originals' junk-instance chains drove ground to its cap by
+        // round 10 and LOST a refutation the skolemized-only run finds).
+        let loop_result = crate::qinst_egraph::prove_quantified_unsat_via_egraph(
+            arena,
+            &skolemized.assertions,
+            &loop_config,
+        )?;
+        if probe {
+            eprintln!(
+                "QPROBE skolemized-egraph budget={:?} elapsed={:?} result={}",
+                loop_config.timeout,
+                started.elapsed(),
+                match &loop_result {
+                    CheckResult::Unsat => "unsat",
+                    CheckResult::Sat(_) => "sat",
+                    CheckResult::Unknown(r) => &r.detail,
+                }
+            );
+        }
+        if matches!(loop_result, CheckResult::Unsat) {
+            return Ok(CheckResult::Unsat);
+        }
+    }
     // Skolemization preserves satisfiability, not equivalence, so only `unsat`
     // transfers back to the original query. In particular the "no universal was
     // weakened, so the result is exact" shortcut inside `decide_instantiation`
@@ -8457,5 +8519,98 @@ mod tests {
             }
             IntBoxProof::Decline => panic!("expected a proven finite box, got Decline"),
         }
+    }
+
+    /// Builds the measured UF residual shape: a nested assertion whose NNF +
+    /// skolemization yields a 6-variable prenex chain over an uninterpreted
+    /// sort with enough ground leaves that the one-shot cartesian retry
+    /// overflows `CHAIN_INSTANCE_CAP` and leaves a residual quantifier. When
+    /// `contradict` is set, the ground facts refute the chain's instance at
+    /// `x := c1` (unsat); otherwise the query is satisfiable.
+    fn cap_overflow_chain_query(contradict: bool) -> (TermArena, Vec<TermId>) {
+        let mut arena = TermArena::new();
+        let sort = Sort::Uninterpreted(arena.declare_uninterpreted_sort("QChainS"));
+        let consts: Vec<TermId> = (1..=6)
+            .map(|i| {
+                let sym = arena.declare(&format!("qchain_c{i}"), sort).unwrap();
+                arena.var(sym)
+            })
+            .collect();
+        let d_const = {
+            let sym = arena.declare("qchain_d", sort).unwrap();
+            arena.var(sym)
+        };
+        let func_f = arena.declare_fun("qchain_f", &[sort], sort).unwrap();
+        let func_p = arena.declare_fun("qchain_p", &[sort], Sort::Bool).unwrap();
+        let func_g = arena
+            .declare_fun("qchain_g", &[sort, sort, sort, sort, sort], sort)
+            .unwrap();
+
+        // Ground facts: p(f(c1)) is false (or true), and g(c2..c6) = d.
+        let f_c1 = arena.apply(func_f, &[consts[0]]).unwrap();
+        let p_f_c1 = arena.apply(func_p, &[f_c1]).unwrap();
+        let fact = if contradict {
+            arena.not(p_f_c1).unwrap()
+        } else {
+            p_f_c1
+        };
+        let g_ground = arena
+            .apply(
+                func_g,
+                &[consts[1], consts[2], consts[3], consts[4], consts[5]],
+            )
+            .unwrap();
+        let g_eq_d = arena.eq(g_ground, d_const).unwrap();
+
+        // not (exists x. not (forall y1..y5. g(y1..y5) = d => p(f(x)))):
+        // NNF-skolemizes to the prenex chain forall x, y1..y5 over 7 ground
+        // leaves of the sort (7^6 cartesian instances >> the 4096 chain cap).
+        let x_sym = arena.declare("qchain_x", sort).unwrap();
+        let ys: Vec<_> = (1..=5)
+            .map(|i| arena.declare(&format!("qchain_y{i}"), sort).unwrap())
+            .collect();
+        let y_vars: Vec<TermId> = ys.iter().map(|&y| arena.var(y)).collect();
+        let g_y = arena.apply(func_g, &y_vars).unwrap();
+        let g_y_eq_d = arena.eq(g_y, d_const).unwrap();
+        let xv = arena.var(x_sym);
+        let f_x = arena.apply(func_f, &[xv]).unwrap();
+        let p_f_x = arena.apply(func_p, &[f_x]).unwrap();
+        let body = arena.implies(g_y_eq_d, p_f_x).unwrap();
+        let mut chain = body;
+        for &y in ys.iter().rev() {
+            chain = arena.forall(y, chain).unwrap();
+        }
+        let not_chain = arena.not(chain).unwrap();
+        let exists = arena.exists(x_sym, not_chain).unwrap();
+        let nested = arena.not(exists).unwrap();
+
+        (arena, vec![fact, g_eq_d, nested])
+    }
+
+    #[test]
+    fn cap_overflowing_skolemized_chain_is_refuted_via_the_egraph_loop() {
+        // Before the loop retry, this exact shape (the whole measured UF
+        // residual bucket) declined as "query has quantifiers instantiation
+        // does not reach": the skolemized retry's only blocker is the chain
+        // cap, and one overflowing chain declined the whole query.
+        let (mut arena, assertions) = cap_overflow_chain_query(true);
+        let config = SolverConfig::new().with_timeout(Duration::from_secs(10));
+        assert_eq!(
+            prove_unsat_by_ematching(&mut arena, &assertions, &config).unwrap(),
+            CheckResult::Unsat
+        );
+    }
+
+    #[test]
+    fn cap_overflowing_skolemized_chain_never_reports_sat() {
+        // The satisfiable variant must stay `unknown`: the retry ran on the
+        // SKOLEMIZED query, so neither the loop nor the decider may hand back
+        // a `sat` that could not replay against the original assertions.
+        let (mut arena, assertions) = cap_overflow_chain_query(false);
+        let config = SolverConfig::new().with_timeout(Duration::from_secs(10));
+        assert!(matches!(
+            prove_unsat_by_ematching(&mut arena, &assertions, &config).unwrap(),
+            CheckResult::Unknown(_)
+        ));
     }
 }

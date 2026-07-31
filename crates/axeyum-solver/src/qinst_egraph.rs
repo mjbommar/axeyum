@@ -384,6 +384,20 @@ fn prove_quantified_unsat_via_egraph_impl(
             }
         }
         if admitted.is_empty() {
+            if std::env::var_os("AXEYUM_QPROBE").is_some() {
+                let triggerless = matcher
+                    .quantifiers
+                    .iter()
+                    .filter(|q| q.pattern_indices.is_empty() && !q.vars.is_empty())
+                    .count();
+                eprintln!(
+                    "QPROBE egraph-fixpoint round={round} ground={} foralls={} \
+                     patterns={} triggerless={triggerless}",
+                    ground.len(),
+                    matcher.quantifiers.len(),
+                    matcher.patterns.len(),
+                );
+            }
             break; // source and scoped-candidate instantiation fixpoint
         }
         let online_outcome = online_clauses.as_mut().and_then(|session| {
