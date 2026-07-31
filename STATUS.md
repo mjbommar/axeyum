@@ -441,6 +441,63 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-31 — parity is now MEASURED, not argued: QF_BV 90.2 %, QF_SLIA 90.7 %,
+  UF 58.1 %, zero disagreements throughout.** The ledger is
+  [`bench-results/PARITY.md`](bench-results/PARITY.md), written by
+  [`scripts/parity-run.sh`](scripts/parity-run.sh) — committed benchmark lists
+  (200 files each, deterministic stride over the *whole* division, **no size
+  cap**), a 24 s protocol constant, the division winner's real binary as
+  reference, the whole list as denominator, and **any** disagreement failing the
+  run outright. Append-only, so a number going down stays visible.
+  Today's certified movement: UF **34.4 → 47.3 → 58.1 %**, QF_BV **84.5 → 90.2 %**,
+  QF_SLIA **85.6 → 90.7 %**.
+
+  **What produced the gains — and it is not subtle.** Four levers moved numbers
+  and four measured inert. Every inert one was targeted from *reading source* or
+  from *a different corpus*; every successful one was targeted from a probe of
+  the **scored** benchmarks:
+  - *inert*: nested-quantifier reach (199/200 scored files already have a
+    root-level `forall`, so the fallback never fired); entailment filtering
+    (6.4 % of admitted instances already entailed, against a 50 % threshold);
+    the reduction AIG guard *on UF* (its 28 target files had **zero** overlap
+    with the scored list — they came from an older census slice).
+  - *worked*: finite model finding (+12.9 pts; a 2-minute `cvc5
+    --finite-model-find` probe showed max cardinality 5 before any code was
+    written); its widening; EUF predicate atoms; the bounded-string cap widening
+    (+4.7 pts on QF_SLIA — found by censusing the scored corpus, which
+    **contradicted** the architecture review that had explicitly rejected
+    touching those caps).
+  `parity-run.sh` now writes `bench-results/parity-details/<div>.tsv` per run, so
+  targeting starts from the scored corpus by default rather than by discipline.
+
+- **2026-07-31 — verdicts are NON-MONOTONIC in the time budget, and it may be
+  worth ~20 UF files.** On a scored UF file, deterministic, twice per budget:
+  500 ms → `unsat` in 0.61 s; 2 s, 5 s, 10 s → `unknown`; 24 s → `unsat` in
+  20.54 s. Parse is 0.12 s, so parsing is not the cost, and the parsed assertion
+  count matches `axeyum-bench` exactly (357/357 — nothing is dropped). The same
+  file takes `solve_ms = 736` through the bench route, which decides **74/200** of
+  the scored UF list where `smtcomp_cli` decides **54/200**. So the front-door gap
+  is a solver defect, not a harness artifact: **more resources must never lose a
+  verdict.** Suspected mechanism is route admission sized off the *remaining*
+  budget (`config_with_remaining_timeout` / `config_with_budget_share`
+  throughout `auto.rs`) — a mid-size budget admits an expensive route that eats
+  everything, where a small budget picks a cheap one that succeeds. cvc5 avoids
+  this with an effort ladder that stops on the first lemma. Under repair; the
+  deliverable includes a monotonicity invariant check across budgets.
+
+- **2026-07-31 — two gate defects, one of which could have ratcheted the project
+  down.** `progress_frontier` reports **false** REGRESSIONs under machine load
+  (`lia_cuts` failed in-suite at load 19.8 and passed standalone twice on the
+  same commit, with no artifact moving) — and its failure text invites *lowering
+  the committed baseline*, so a loaded run could have ratcheted a capability
+  floor down on noise. Serialized in both gates (`ec0ef5e8`), though serializing
+  the tests is **not** sufficient when the machine itself is busy. Separately,
+  `cargo +stable clippy --workspace -- -D warnings` had been red since well
+  before this session: `#![allow(clippy::manual_assert_eq)]` names a lint that
+  does not exist in clippy 0.1.97, and an unknown lint is itself an error under
+  `-D warnings` (`451f9c50`). It was invisible locally because the default
+  toolchain is nightly.
+
 - **2026-07-31 — pure-UF finite model finding lands: the first checked UF
   `sat` verdicts in the project's history.** Commit `c36e3ee3`. Before it,
   every UF verdict axeyum had ever emitted was `unsat` (the quantified-UF sat
