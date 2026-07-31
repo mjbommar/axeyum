@@ -256,6 +256,10 @@ impl SkolemState {
                 // guess a witness: being wrong here would be an unsound
                 // refutation, not a missed one.
                 if contains_quantifier(arena, term) {
+                    if std::env::var_os("AXEYUM_QPROBE").is_some() {
+                        let sort = arena.sort_of(term);
+                        eprintln!("QPROBE skolem-bail op={op:?} sort={sort:?}");
+                    }
                     self.bailed = true;
                     return Ok(term);
                 }
