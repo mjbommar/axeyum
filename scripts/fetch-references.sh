@@ -35,6 +35,11 @@ repos=(
   https://github.com/msoos/cryptominisat
   # Word-level formats
   https://github.com/Boolector/btor2tools
+  # String/automata solver references (QF_SLIA parity work)
+  # Z3-Noodler won QF_SLIA at SMT-COMP 2025 with 99.6%; its stabilization-based
+  # procedure and the MATA automata library are the state of the art to study.
+  https://github.com/VeriFIT/z3-noodler
+  https://github.com/VeriFIT/mata
   # General reasoning / proving horizon
   https://github.com/cvc5/cvc5
   https://github.com/vprover/vampire

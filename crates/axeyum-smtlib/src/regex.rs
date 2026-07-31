@@ -334,14 +334,25 @@ pub(crate) enum RegexSexpr<'a> {
     List(&'a str, Vec<RegexSexpr<'a>>),
 }
 
-/// Converts a parser [`SExpr`] into a [`RegexSexpr`]. An application whose head
-/// is **not** a plain atom — e.g. the indexed `((_ re.loop 0 2) R)` form — has no
-/// supported regex op, so it is mapped to an unrecognized `List` head that
-/// [`parse_regex_app`] declines cleanly.
+/// Converts a parser [`SExpr`] into a [`RegexSexpr`].
+///
+/// An **indexed** head `(_ op i …)` — the SMT-LIB form of `re.loop` and `re.^` —
+/// is flattened to `RegexSexpr::List(op, [i …, args …])`, so the index literals
+/// arrive as ordinary leading arguments and [`parse_regex_app`] can dispatch on
+/// `op` like any other operator. Without this the head is not a plain atom, the
+/// whole application is unrecognized, and the assertion is dropped: that alone
+/// accounted for **15 of the 66 undecided curated string files**, which reported
+/// `0 assertions parsed` and were declined as vacuous.
+///
+/// Any other non-atom head stays unrecognized and is declined cleanly by
+/// [`parse_regex_app`].
 fn from_sexpr(e: &SExpr) -> RegexSexpr<'_> {
     match e {
         SExpr::Atom(a) => RegexSexpr::Atom(a),
         SExpr::List(items) => {
+            if let Some(flattened) = indexed_head(items) {
+                return flattened;
+            }
             let head = items
                 .first()
                 .and_then(SExpr::atom)
@@ -350,6 +361,23 @@ fn from_sexpr(e: &SExpr) -> RegexSexpr<'_> {
             RegexSexpr::List(head, args)
         }
     }
+}
+
+/// Flattens `((_ op i …) arg …)` into `List(op, [i …, arg …])`.
+fn indexed_head(items: &[SExpr]) -> Option<RegexSexpr<'_>> {
+    let SExpr::List(head) = items.first()? else {
+        return None;
+    };
+    let [underscore, operator, indices @ ..] = head.as_slice() else {
+        return None;
+    };
+    if underscore.atom() != Some("_") {
+        return None;
+    }
+    let op = operator.atom()?;
+    let mut args: Vec<RegexSexpr<'_>> = indices.iter().map(from_sexpr).collect();
+    args.extend(items[1..].iter().map(from_sexpr));
+    Some(RegexSexpr::List(op, args))
 }
 
 /// The outcome of decoding a string-literal s-expression atom into SMT-LIB
@@ -637,6 +665,27 @@ fn parse_regex_app(head: &str, args: &[RegexSexpr<'_>]) -> Result<Regex, SmtErro
                 Box::new(parse_regex(r2)?),
             ))
         }
+        // `((_ re.loop l u) R)` and `((_ re.^ n) R)`, flattened by `indexed_head`
+        // so the index literals lead the argument list. There is no native
+        // bounded-repetition node in this NFA-building AST, so both desugar
+        // exactly: `R{l,u} = R^l · (R?)^(u-l)` and `R^n = R{n,n}`.
+        "re.loop" => {
+            let [lo, hi, rest @ ..] = args else {
+                return Err(SmtError::Unsupported(
+                    "re.loop expects two index literals and one regex".to_owned(),
+                ));
+            };
+            expand_loop(loop_index(lo)?, Some(loop_index(hi)?), rest)
+        }
+        "re.^" => {
+            let [n, rest @ ..] = args else {
+                return Err(SmtError::Unsupported(
+                    "re.^ expects one index literal and one regex".to_owned(),
+                ));
+            };
+            let n = loop_index(n)?;
+            expand_loop(n, Some(n), rest)
+        }
         "re.*" => Ok(Regex::Star(Box::new(parse_regex_one(args)?))),
         "re.+" => Ok(Regex::Plus(Box::new(parse_regex_one(args)?))),
         "re.opt" => Ok(Regex::Opt(Box::new(parse_regex_one(args)?))),
@@ -644,6 +693,66 @@ fn parse_regex_app(head: &str, args: &[RegexSexpr<'_>]) -> Result<Regex, SmtErro
             "regex operator `{other}` is outside the wired bounded subset (ADR-0029)"
         ))),
     }
+}
+
+/// Reads a non-negative index literal from `((_ re.loop l u) …)`.
+fn loop_index(arg: &RegexSexpr<'_>) -> Result<u32, SmtError> {
+    let RegexSexpr::Atom(a) = arg else {
+        return Err(SmtError::Unsupported(
+            "re.loop/re.^ index must be a numeral".to_owned(),
+        ));
+    };
+    a.parse::<u32>()
+        .map_err(|_| SmtError::Unsupported(format!("re.loop/re.^ index `{a}` is not a numeral")))
+}
+
+/// The largest number of copies [`expand_loop`] will materialize.
+///
+/// Desugaring is exact but *linear in the repetition count*, so an unbounded
+/// index would blow up the NFA. Declining past the cap is a clean `Unsupported`
+/// — never a wrong verdict — and matches how the rest of this module treats
+/// constructs outside the wired subset (ADR-0029).
+const MAX_LOOP_EXPANSION: u32 = 256;
+
+/// Expands `R{lo,hi}` into concatenation: `lo` mandatory copies followed by
+/// `hi - lo` optional ones (or a Kleene star when `hi` is absent).
+///
+/// Per the SMT-LIB UnicodeStrings theory, `lo > hi` denotes the empty language.
+fn expand_loop(lo: u32, hi: Option<u32>, rest: &[RegexSexpr<'_>]) -> Result<Regex, SmtError> {
+    let inner = parse_regex_one(rest)?;
+    if let Some(hi) = hi {
+        if lo > hi {
+            return Ok(Regex::None);
+        }
+        if hi > MAX_LOOP_EXPANSION {
+            return Err(SmtError::Unsupported(format!(
+                "re.loop upper bound {hi} exceeds the expansion cap {MAX_LOOP_EXPANSION} \
+                 (ADR-0029)"
+            )));
+        }
+    } else if lo > MAX_LOOP_EXPANSION {
+        return Err(SmtError::Unsupported(format!(
+            "re.loop lower bound {lo} exceeds the expansion cap {MAX_LOOP_EXPANSION} (ADR-0029)"
+        )));
+    }
+    let mut parts: Vec<Regex> = Vec::new();
+    for _ in 0..lo {
+        parts.push(inner.clone());
+    }
+    match hi {
+        Some(hi) => {
+            for _ in lo..hi {
+                parts.push(Regex::Opt(Box::new(inner.clone())));
+            }
+        }
+        // `((_ re.loop l) R)` (one index) is `R^l · R*`.
+        None => parts.push(Regex::Star(Box::new(inner.clone()))),
+    }
+    Ok(match parts.len() {
+        0 => Regex::Empty,
+        1 => parts.pop().expect("one part"),
+        _ => Regex::Concat(parts),
+    })
 }
 
 /// Parses each argument as a regex (for the n-ary `re.++`/`re.union`/`re.inter`).

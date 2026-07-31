@@ -5608,17 +5608,25 @@ fn bounded_string_and_seq_sorts_stay_packed_bv() {
 
 #[test]
 fn solvable_flat_view_is_none_for_word_first_fallback() {
-    // A bounded-unsupported regex (`re.loop`) makes the bounded encoder decline the
-    // whole script, so it parses through the word-first fallback: the flat view is
+    // A construct the bounded encoder cannot take makes it decline the whole
+    // script, so it parses through the word-first fallback: the flat view is
     // empty and MUST NOT be solved directly (that is a vacuous `sat`).
+    //
+    // This used to use `re.loop`, which the regex parser now supports natively —
+    // so it no longer triggers the fallback and no longer exercises this
+    // invariant. The vehicle must be something the bounded encoder declines on
+    // *capacity* while the word-only reparse still succeeds; a string literal
+    // past the bounded length cap is exactly that. (A hard-unsupported operator
+    // like `str.replace_re` is not usable here: it fails the word-only reparse
+    // too, so the whole parse errors instead of falling back.)
     let fallback = "(set-logic QF_S)\n\
                     (declare-const s0 String)\n\
-                    (assert (str.in_re s0 ((_ re.loop 2 3) (str.to_re \"a\"))))\n\
+                    (assert (= s0 \"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\"))\n\
                     (check-sat)";
     let script = parse_script(fallback).unwrap();
     assert!(
         script.word_only_fallback.is_some(),
-        "re.loop script should take the word-first fallback"
+        "a bounded-unsupported script should take the word-first fallback"
     );
     assert!(
         script.solvable_flat_view().is_none(),
@@ -5663,7 +5671,7 @@ fn checked_flat_view_returns_assertions_for_ordinary_script() {
 fn checked_flat_view_trips_the_guard_on_word_first_fallback() {
     let fallback = "(set-logic QF_S)\n\
                     (declare-const s0 String)\n\
-                    (assert (str.in_re s0 ((_ re.loop 2 3) (str.to_re \"a\"))))\n\
+                    (assert (= s0 \"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\"))\n\
                     (check-sat)";
     let script = parse_script(fallback).unwrap();
     assert!(script.word_only_fallback.is_some());
