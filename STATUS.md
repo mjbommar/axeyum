@@ -441,6 +441,39 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-31 — pure-UF finite model finding lands: the first checked UF
+  `sat` verdicts in the project's history.** Commit `c36e3ee3`. Before it,
+  every UF verdict axeyum had ever emitted was `unsat` (the quantified-UF sat
+  certificate rejected every non-`Int`/`Real` binder; the MBQI model finder
+  declined every scalar-storage interpretation). The new `uf_fmf` route
+  deepens per-sort carrier bounds `k = 1..8`, encodes each uninterpreted sort
+  as `BitVec(w)` with `k` domain-representative *variables* (duplicates
+  allowed — "model of size <= k", monotone in `k` — with `D_i <= i` symmetry
+  breaking), asserts closure axioms over free symbols and function values,
+  expands `forall`/`exists` (any nesting/polarity, `Bool` binders included)
+  over the representatives, and decides the ground QF_UFBV expansion on the
+  lazy-Ackermann bit-blast route under a deadline-clamping adapter. `sat` is
+  emitted only through the extended independent checker
+  (`check_quantified_uf_model_sat` finite-carrier route: exhaustive
+  re-evaluation over model-recorded cardinalities, failing closed on missing
+  cardinality or any out-of-carrier token) plus the standard `check_model`
+  replay on the original assertions. A cvc5 `--finite-model-find` probe
+  justified the design first: 18/22 declared-sat public UF parity files have
+  models with per-sort cardinality <= 5. Measured on the 200-file UF parity
+  list at 24 s: declared-sat solves move **0 -> 13** (all replay-checked),
+  declared-unsat solves stay 7 (a same-host base-commit rerun over every
+  unsolved declared-unsat file confirms **zero** losses from the halved
+  refutation budget), and the sweep has **zero wrong verdicts**. An
+  oracle-free differential fuzz (brute-force finite-structure enumerator, up
+  to size 3) plus pinned degenerate shapes (size-1 carriers,
+  exact-upper-bound universals, exists-under-forall, `Bool` binders, aliased
+  free/bound symbols) is the new seed-class gate. Known frontier: ~8
+  declared-sat files still decline (bounds/instance budget or ground-solve
+  cost at `k >= 3`; four of them also SIGTERM cvc5 at 30 s), and one
+  declared-unknown file's non-preemptible final blast round overshoots the
+  wall budget. Next: per-sort (non-uniform) deepening guided by unsat cores,
+  and a warm-start for the per-`k` ground solves.
+
 - **2026-07-27 — SMT `(15,64)` sqrt is validated; reclassify the measured
   residuals before widening arithmetic.** Commit `ab4b5803` and ADR-0370 add one sqrt-specific gate,
   backed by 2,620 exact all-mode dyadic checks plus neighboring-result rejection.
