@@ -87,6 +87,15 @@ git diff --quiet || dirty=" (DIRTY WORKTREE — result not reproducible)"
 list_sha="$(sha256sum "$list" | cut -c1-12)"
 reference_version="$("$reference_bin" --version 2>&1 | head -1 | tr -d '\n')"
 total=$(grep -cve '^\s*$' "$list")
+# Load at start AND end. The 24s budget is WALL CLOCK on a machine shared with
+# other users, so contention silently costs files: a scored UF file decides at
+# 20.54s of its 24s budget when the box is quiet, and anything above that band is
+# a coin flip. Observed 38.8 load average on 24 cores with six unrelated `java`
+# processes burning ~1100% CPU. Without this recorded, a depressed run is
+# indistinguishable after the fact from a real regression.
+# The bias is one-directional -- contention only LOSES files and cannot produce a
+# wrong verdict -- so every ratio here is a LOWER BOUND.
+load_start=$(cut -d' ' -f1-3 /proc/loadavg 2>/dev/null || echo "?")
 
 # Declared :status, when the benchmark carries one. Absent is not an excuse to
 # drop the file from the denominator -- it only means we cannot catch a wrong
@@ -249,6 +258,7 @@ fi
   echo "| protocol | ${budget_s}s wall, ${mem_gb}GiB, per-file |"
   echo "| benchmark list | \`${list}\` (sha256 ${list_sha}, ${total} files) |"
   echo "| solver commit | \`${solver_sha}\`${dirty} |"
+  echo "| load average (start / end) | ${load_start} / $(cut -d' ' -f1-3 /proc/loadavg 2>/dev/null || echo '?') — 24 cores; a high load DEPRESSES this result |"
   echo "| per-file detail | \`${sidecar}\` |"
   if (( disagreements > 0 )); then
     echo
