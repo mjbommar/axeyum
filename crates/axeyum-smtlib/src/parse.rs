@@ -7928,6 +7928,16 @@ struct LenAbs {
     /// ([`LenAbs::note_code_bridge`]); consulted by the single-char code↔
     /// equality link ([`LenAbs::note_code_eq_link`]).
     code_of: std::cell::RefCell<HashMap<TermId, TermId>>,
+    /// Packed `str.substr` result with **ground** offset/count → `(base, off,
+    /// count)`. A semantic memo (structural identity implies denotational
+    /// identity, so any hash-cons hit is a valid view): lets `str.at` fold
+    /// `at(substr(X, i, k), j)` with ground `j < k`, `i ≥ 0`, `j ≥ 0` to
+    /// `at(X, i + j)` — SMT-LIB-exact (in-range positions agree; every
+    /// out-of-range case is `""` on both sides), and spelling-immune where a
+    /// syntactic matcher is not. Generated corpora (`full_str_int`) hide
+    /// `A ∧ ¬A` contradictions behind different prefix widths of the same
+    /// base at the same absolute position.
+    substr_view: std::cell::RefCell<HashMap<TermId, (TermId, i128, i128)>>,
     /// Globally-true side facts (`len(v) ≥ 0`, …).
     facts: std::cell::RefCell<Vec<TermId>>,
     /// **Encoding-bound** facts (`len(v) ≤ max_len`) — true of the *bounded
@@ -8148,6 +8158,74 @@ impl LenAbs {
         self.mark_used();
         let v = self.fresh_var(arena, Sort::Int, false)?;
         self.note_repl(t, v);
+        Ok(())
+    }
+
+    /// Hooks the **decimal-value bridge** `str.to_int s` (result term `r`): a
+    /// fresh `Int` `t` standing for the value, tied to the abstraction-side
+    /// length `len(s)` by *universally-true* facts (cvc5
+    /// `StringsPreprocess::reduce` `STRING_STOI` / Z3 `seq_axioms` give the same
+    /// SMT-LIB semantics; these are their sound linear LIA consequences):
+    ///
+    /// ```text
+    /// t ≥ -1
+    /// len(s) = 0 → t = -1
+    /// len(s) ≤ k → t ≤ 10^k - 1        (k = 1..=9)
+    /// ```
+    ///
+    /// Soundness (relaxation): assign `t := value(str.to_int s)` in any real
+    /// model. SMT-LIB `str.to_int` is `-1` unless `s` is a non-empty all-digit
+    /// string (leading zeros allowed), whose value is `< 10^len(s)` — so every
+    /// fact holds of the real pair (`-1` is below every bound). Only the value's
+    /// *coupling to the length* is pinned; the value itself stays free, so the
+    /// abstraction can never refute a really-satisfiable query. The family stops
+    /// at `k = 9` to keep every constant below `2³¹` (the bounded integer
+    /// bit-blast width the abstraction solve may fall back to).
+    ///
+    /// Unlike [`LenAbs::note_bridge_free`] (a wholly-free integer), this lets
+    /// the unbounded abstraction refute the `full_str_int`-style conflicts
+    /// (`to_int(str.at s i) ≥ 10` with `len(str.at s i) ≤ 1`) that the bounded
+    /// integer bit-blast leaves at "no model within the bounded width".
+    fn note_stoi_bridge(
+        &self,
+        arena: &mut TermArena,
+        s: TermId,
+        r: TermId,
+    ) -> Result<(), SmtError> {
+        // A `str.to_int` of a constant already folded to an exact integer
+        // literal — replacing the shared constant would rewrite unrelated uses.
+        if matches!(arena.node(r), TermNode::IntConst(_)) {
+            return Ok(());
+        }
+        self.mark_used();
+        // Idempotent per result term: `str.to_int s` is hash-consed, so a
+        // repeat hook must reuse the first twin (a second fresh twin would
+        // decouple the recorded facts from the exported replacement).
+        if self.repl.borrow().iter().any(|&(o, _)| o == r) {
+            return Ok(());
+        }
+        let ls = self.len_expr_string(arena, s)?;
+        // `t` may be `-1`, so it is *not* declared non-negative.
+        let t = self.fresh_var(arena, Sort::Int, false)?;
+        let neg_one = arena.int_const(-1);
+        let zero = arena.int_const(0);
+        let ge_neg1 = arena.int_le(neg_one, t)?;
+        self.facts.borrow_mut().push(ge_neg1);
+        let len_zero = arena.eq(ls, zero)?;
+        let t_neg1 = arena.eq(t, neg_one)?;
+        let empty_fact = arena.implies(len_zero, t_neg1)?;
+        self.facts.borrow_mut().push(empty_fact);
+        let mut pow = 1i128;
+        for k in 1..=9i128 {
+            pow *= 10;
+            let kc = arena.int_const(k);
+            let len_le_k = arena.int_le(ls, kc)?;
+            let cap = arena.int_const(pow - 1);
+            let t_le_cap = arena.int_le(t, cap)?;
+            let fact = arena.implies(len_le_k, t_le_cap)?;
+            self.facts.borrow_mut().push(fact);
+        }
+        self.note_repl(r, t);
         Ok(())
     }
 
@@ -18174,6 +18252,46 @@ fn constant_int_value(arena: &TermArena, term: TermId) -> Option<i128> {
     }
 }
 
+/// Whether `count` is exactly the packed `str.len` bridge of `s` minus `off`
+/// (by term identity, so any constant-folded spelling matches): the semantic
+/// `substr(s, d, len(s) - d)` suffix view. Building the candidate terms is
+/// side-effect-free modulo hash-consing.
+fn semantic_suffix_count(
+    arena: &mut TermArena,
+    s: TermId,
+    off: TermId,
+    count: TermId,
+) -> Result<bool, SmtError> {
+    let m = string_max_len(arena, s)?;
+    let len_field = string_len_field(arena, s, m)?;
+    let len_term = arena.bv2nat(len_field)?;
+    let candidate = arena.int_sub(len_term, off)?;
+    Ok(candidate == count)
+}
+
+/// Folds an all-`IntConst` operand list to a single `IntConst` with the checked
+/// binary op `f` (left-associative, SMT-LIB chain semantics), or `None` when any
+/// operand is symbolic or the checked arithmetic overflows (the caller then
+/// builds the symbolic term as before). Exact constant folding is
+/// denotation-preserving; its point is hash-consing — generated corpora spell
+/// the same constant many ways, and unfolded spellings keep otherwise-identical
+/// atoms from ever comparing equal.
+fn ground_int_fold(
+    arena: &mut TermArena,
+    terms: &[TermId],
+    f: impl Fn(i128, i128) -> Option<i128>,
+) -> Option<TermId> {
+    let mut values = terms.iter().map(|&t| match arena.node(t) {
+        TermNode::IntConst(v) => Some(*v),
+        _ => None,
+    });
+    let mut acc = values.next()??;
+    for v in values {
+        acc = f(acc, v?)?;
+    }
+    Some(arena.int_const(acc))
+}
+
 fn constant_int_bound(arena: &TermArena, term: TermId, context: &str) -> Result<i128, SmtError> {
     match constant_int_value(arena, term) {
         Some(value) => Ok(value),
@@ -18418,7 +18536,26 @@ fn apply_op(
         "str.at" => {
             need(2)?;
             let r = match ground_int_term(arena, args[1]) {
-                Some(index) => string_at_const(arena, args[0], index)?,
+                Some(index) => {
+                    // `at(substr(X, i, k), j)` with ground `i ≥ 0`, `0 ≤ j < k`
+                    // is exactly `at(X, i + j)` (in-range positions agree, and
+                    // every out-of-range case is `""` on both sides — see
+                    // [`LenAbs::substr_view`]). Folding through the view makes
+                    // the same absolute position reached through different
+                    // prefix widths hash-cons to one term.
+                    let view = lenabs.substr_view.borrow().get(&args[0]).copied();
+                    match view {
+                        Some((base, off, count))
+                            if off >= 0
+                                && index >= 0
+                                && index < count
+                                && off.checked_add(index).is_some() =>
+                        {
+                            string_at_const(arena, base, off + index)?
+                        }
+                        _ => string_at_const(arena, args[0], index)?,
+                    }
+                }
                 None => string_at_int(arena, args[0], args[1])?,
             };
             // P2.7 A.2: `len(str.at s k) ≤ 1` universally (empty when
@@ -18455,6 +18592,16 @@ fn apply_op(
             } else {
                 string_substr(arena, args[0], args[1], args[2])?
             };
+            // Record the semantic view for `str.at`-over-substr folding
+            // ([`LenAbs::substr_view`]); first recording wins (any hash-cons
+            // alias is an equally valid description).
+            if let (Some(off), Some(count)) = (off_const, count_const) {
+                lenabs
+                    .substr_view
+                    .borrow_mut()
+                    .entry(r)
+                    .or_insert((args[0], off, count));
+            }
             let ls = lenabs.len_expr_string(arena, args[0])?;
             // With ground bounds, substring length has an exact unbounded-LIA
             // expression:
@@ -18484,6 +18631,26 @@ fn apply_op(
             } else if let Some(dropped) = suffix_drop {
                 let zero = arena.int_const(0);
                 let dropped = arena.int_const(i128::from(dropped));
+                let starts_past_end = arena.int_le(ls, dropped)?;
+                let remaining = arena.int_sub(ls, dropped)?;
+                let exact = arena.ite(starts_past_end, zero, remaining)?;
+                lenabs.note_len(r, exact);
+            } else if let Some(off) = off_const
+                && off >= 0
+                && semantic_suffix_count(arena, args[0], args[1], args[2])?
+            {
+                // Semantic suffix view `substr(s, d, len(s) - d)`, `d ≥ 0`
+                // ground: the syntactic `suffix_drop` matcher above requires the
+                // literal spelling `(- (str.len s) d)` with a literal `d`, but
+                // generated corpora (full_str_int) spell `d` as compound
+                // constant arithmetic. Matching the *packed terms* (the count
+                // operand is exactly the `str.len` bridge of the operand minus
+                // the same ground offset, by hash-consing) is spelling-immune.
+                // The length is the same exact SMT-LIB totality expression the
+                // syntactic arm records: 0 when the offset is at-or-past the
+                // end, else `len(s) - d`.
+                let zero = arena.int_const(0);
+                let dropped = arena.int_const(off);
                 let starts_past_end = arena.int_le(ls, dropped)?;
                 let remaining = arena.int_sub(ls, dropped)?;
                 let exact = arena.ite(starts_past_end, zero, remaining)?;
@@ -18611,7 +18778,10 @@ fn apply_op(
         "str.to_int" => {
             need(1)?;
             let r = string_to_int(arena, args[0])?;
-            lenabs.note_bridge_free(arena, r)?;
+            // P2.7 A.2 (to_int↔LIA): a value/length-coupled abstraction (not a
+            // wholly-free bridge), so the unbounded abstraction refutes the
+            // `full_str_int`-style to_int range conflicts.
+            lenabs.note_stoi_bridge(arena, args[0], r)?;
             r
         }
         // `str.from_int i` — the canonical decimal string of `i ≥ 0` (no leading
@@ -19002,6 +19172,14 @@ fn apply_op(
                 if a.is_empty() {
                     return Err(SmtError::Syntax("`+` expects >= 1 argument".to_owned()));
                 }
+                // Ground operands fold exactly. Generated corpora (PyEx,
+                // full_str_int) spell the same constant many ways — `(+ (+ 1 1)
+                // (+ (+ 1 1) 1))` vs `(+ (+ (+ 1 1) (+ 1 1)) 1)` — and without
+                // folding, otherwise-identical atoms fail to hash-cons, hiding
+                // `A ∧ ¬A` contradictions from every downstream route.
+                if let Some(v) = ground_int_fold(arena, &a, i128::checked_add) {
+                    return Ok(v);
+                }
                 let nonzero = a
                     .iter()
                     .copied()
@@ -19019,6 +19197,9 @@ fn apply_op(
             if real {
                 fold_args(arena, &a, op, TermArena::real_mul)?
             } else {
+                if let Some(v) = ground_int_fold(arena, &a, i128::checked_mul) {
+                    return Ok(v);
+                }
                 fold_args(arena, &a, op, TermArena::int_mul)?
             }
         }
@@ -19026,9 +19207,20 @@ fn apply_op(
             let (real, a) = numeric_args(arena, args)?;
             match a.len() {
                 1 if real => arena.real_neg(a[0])?,
-                1 => arena.int_neg(a[0])?,
+                1 => {
+                    if let TermNode::IntConst(v) = arena.node(a[0])
+                        && let Some(neg) = v.checked_neg()
+                    {
+                        arena.int_const(neg)
+                    } else {
+                        arena.int_neg(a[0])?
+                    }
+                }
                 0 => return Err(SmtError::Syntax("`-` expects >= 1 argument".to_owned())),
                 _ => {
+                    if let Some(v) = ground_int_fold(arena, &a, i128::checked_sub) {
+                        return Ok(v);
+                    }
                     let mut acc = a[0];
                     for &next in &a[1..] {
                         acc = if real {
