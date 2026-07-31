@@ -52,10 +52,27 @@ use crate::model::Model;
 /// per-sort cardinality 5; 8 leaves margin without inviting blowup.
 const MAX_DOMAIN_SIZE: u32 = 8;
 
-/// Total ground-instance budget for one expansion (quantifier
+/// Ground-instance work budget for one expansion build (quantifier
 /// instantiations, closure axioms, table entries, functionality lemmas, and
-/// selector leaves). Exceeding it stops the deepening loop.
-const MAX_GROUND_INSTANCES: usize = 200_000;
+/// selector-leaf visits). Exceeding it triggers the per-sort backoff
+/// descent; once every bound is at its floor, the deepening loop stops.
+const MAX_GROUND_INSTANCES: usize = 64_000;
+
+/// Cap on the built expansion's ASSERTION count the pre-refutation probe is
+/// willing to hand to the SAT solve. Deliberately small: every model
+/// certified on the UF parity slice came from a sub-1k-assertion build,
+/// while 30k+-assertion rounds only produced slow unknowns whose
+/// non-preemptible blasts starved the refutation family on declared-unsat
+/// files (measured: a 3 s base refutation became a wall-clock kill when the
+/// probe was allowed big rounds — the backoff descent would otherwise keep
+/// shrinking a huge file until something expensive fits). An over-cap build
+/// triggers the same descent as an over-budget one.
+pub(crate) const UF_FMF_PROBE_SOLVE_ASSERTIONS: usize = 2_000;
+
+/// No solve-size cap for the post-refutation call: everything else has
+/// already ended in `unknown`, so a large round costs nothing but its own
+/// chance of success (bounded by the work budget and the shared deadline).
+pub(crate) const UF_FMF_FULL_SOLVE_ASSERTIONS: usize = usize::MAX;
 
 /// Admission bound on the source DAG size — the expander is DAG-linear per
 /// instantiation, so a huge source formula is refused before any work.
@@ -75,6 +92,13 @@ const MAX_EXPANSION_BACKOFFS: usize = 512;
 /// exhausted, or no finite model found within the bounds) so the caller keeps
 /// its own verdict — this routine never turns a decline into `unsat`.
 ///
+/// `max_solve_assertions` caps the assertion count of any built expansion
+/// this call may hand to the SAT solve:
+/// [`UF_FMF_PROBE_SOLVE_ASSERTIONS`] for the pre-refutation probe (cheap,
+/// cannot starve the refutation family), [`UF_FMF_FULL_SOLVE_ASSERTIONS`]
+/// once every other route has ended in `unknown`. An over-cap build triggers
+/// the same per-sort backoff as an over-budget one.
+///
 /// # Errors
 ///
 /// Propagates [`SolverError`] from the inner quantifier-free dispatcher.
@@ -83,6 +107,7 @@ pub(crate) fn find_uf_finite_model(
     arena: &mut TermArena,
     assertions: &[TermId],
     config: &SolverConfig,
+    max_solve_assertions: usize,
 ) -> Result<Option<Model>, SolverError> {
     // Diagnostics only (never a behavior switch): AXEYUM_UF_FMF_DEBUG=1
     // traces the deepening loop on stderr.
@@ -141,7 +166,8 @@ pub(crate) fn find_uf_finite_model(
             }
             let (estimate, tallies) = estimate_expansion(arena, assertions, &shape, &bounds);
             if estimate <= MAX_GROUND_INSTANCES as u64
-                && let Some(built) = build_expansion(arena, assertions, &shape, &bounds)
+                && let Some(built) =
+                    build_expansion(arena, assertions, &shape, &bounds, max_solve_assertions)
             {
                 expansion = Some(built);
                 break;
@@ -580,13 +606,16 @@ fn quantifier_cost(
 }
 
 /// Builds the size-bounded, BV-encoded ground expansion, or `None` when the
-/// instance budget is exceeded (or an internal builder declines).
+/// work budget or the caller's solve-size cap (`max_solve_assertions`, an
+/// early abort so over-cap candidates stay cheap to reject) is exceeded, or
+/// an internal builder declines.
 #[allow(clippy::too_many_lines)]
 fn build_expansion(
     arena: &mut TermArena,
     assertions: &[TermId],
     shape: &PureUfShape,
     bounds_list: &[u32],
+    max_solve_assertions: usize,
 ) -> Option<BvExpansion> {
     let mut bounds: BTreeMap<SortId, u32> = BTreeMap::new();
     let mut widths: BTreeMap<SortId, u32> = BTreeMap::new();
@@ -614,6 +643,9 @@ fn build_expansion(
         let mut symbols = Vec::with_capacity(bound as usize);
         let mut terms = Vec::with_capacity(bound as usize);
         for index in 0..bound {
+            if expanded.len() >= max_solve_assertions {
+                return None;
+            }
             let symbol = arena
                 .declare_internal(
                     &format!("!uf_fmf.{tag}.s{}.d{index}", sort.index()),
@@ -637,6 +669,9 @@ fn build_expansion(
     // ordinary free symbols by the time they reach this route.
     let mut symbol_map: BTreeMap<SymbolId, SymbolId> = BTreeMap::new();
     for &(symbol, sort) in &shape.free_symbols {
+        if expanded.len() >= max_solve_assertions {
+            return None;
+        }
         let width = widths[&sort];
         let encoded = arena
             .declare_internal(
@@ -691,6 +726,9 @@ fn build_expansion(
         let mut entries = Vec::with_capacity(tuples.len());
         for (ordinal, tuple) in tuples.into_iter().enumerate() {
             budget = budget.checked_sub(1)?;
+            if expanded.len() >= max_solve_assertions {
+                return None;
+            }
             let symbol = arena
                 .declare_internal(
                     &format!("!uf_fmf.{tag}.fn{}.e{ordinal}", function.index()),
@@ -723,6 +761,9 @@ fn build_expansion(
     // through the application memo).
     let mut apply_memo: BTreeMap<(FuncId, Vec<TermId>), TermId> = BTreeMap::new();
     for &assertion in assertions {
+        if expanded.len() >= max_solve_assertions {
+            return None;
+        }
         let mut env: BTreeMap<SymbolId, TermId> = BTreeMap::new();
         expanded.push(translate(
             arena,
@@ -776,6 +817,11 @@ fn build_expansion(
                 let Some(remaining) = budget.checked_sub(1) else {
                     break 'pairs;
                 };
+                if expanded.len() >= max_solve_assertions {
+                    // The solve cap is a stop condition here, not a failure:
+                    // the semantic expansion is already complete.
+                    break 'pairs;
+                }
                 budget = remaining;
                 let mut antecedent: Option<TermId> = None;
                 for (left, right) in equalities {
@@ -1268,7 +1314,13 @@ mod tests {
         let p_c = arena.apply(predicate, &[c]).unwrap();
         let not_p_c = arena.not(p_c).unwrap();
 
-        let result = find_uf_finite_model(&mut arena, &[universal, not_p_c], &config()).unwrap();
+        let result = find_uf_finite_model(
+            &mut arena,
+            &[universal, not_p_c],
+            &config(),
+            UF_FMF_FULL_SOLVE_ASSERTIONS,
+        )
+        .unwrap();
         assert!(result.is_none());
     }
 
@@ -1284,9 +1336,14 @@ mod tests {
         let p_x = arena.apply(predicate, &[x]).unwrap();
         let universal = arena.forall(binder, p_x).unwrap();
 
-        let model = find_uf_finite_model(&mut arena, &[universal], &config())
-            .unwrap()
-            .expect("a one-element model exists");
+        let model = find_uf_finite_model(
+            &mut arena,
+            &[universal],
+            &config(),
+            UF_FMF_FULL_SOLVE_ASSERTIONS,
+        )
+        .unwrap()
+        .expect("a one-element model exists");
         assert_eq!(model.uninterpreted_cardinality(carrier), Some(1));
         assert!(crate::check_model(&arena, &[universal], &model).unwrap());
     }
@@ -1309,9 +1366,14 @@ mod tests {
         let not_p_c = arena.not(p_c).unwrap();
         let assertions = [existential, not_p_c];
 
-        let model = find_uf_finite_model(&mut arena, &assertions, &config())
-            .unwrap()
-            .expect("a two-element model exists");
+        let model = find_uf_finite_model(
+            &mut arena,
+            &assertions,
+            &config(),
+            UF_FMF_FULL_SOLVE_ASSERTIONS,
+        )
+        .unwrap()
+        .expect("a two-element model exists");
         assert!(model.uninterpreted_cardinality(carrier).unwrap_or(0) >= 2);
         assert!(crate::check_model(&arena, &assertions, &model).unwrap());
     }
@@ -1333,9 +1395,14 @@ mod tests {
         let existential = arena.exists(inner, body).unwrap();
         let universal = arena.forall(outer, existential).unwrap();
 
-        let model = find_uf_finite_model(&mut arena, &[universal], &config())
-            .unwrap()
-            .expect("satisfiable at size one");
+        let model = find_uf_finite_model(
+            &mut arena,
+            &[universal],
+            &config(),
+            UF_FMF_FULL_SOLVE_ASSERTIONS,
+        )
+        .unwrap()
+        .expect("satisfiable at size one");
         assert!(crate::check_model(&arena, &[universal], &model).unwrap());
     }
 
@@ -1372,9 +1439,14 @@ mod tests {
         let agrees = arena.forall(binder, same).unwrap();
 
         let assertions = [never_c, agrees];
-        let model = find_uf_finite_model(&mut arena, &assertions, &config())
-            .unwrap()
-            .expect("satisfiable with two carrier elements and p constantly false");
+        let model = find_uf_finite_model(
+            &mut arena,
+            &assertions,
+            &config(),
+            UF_FMF_FULL_SOLVE_ASSERTIONS,
+        )
+        .unwrap()
+        .expect("satisfiable with two carrier elements and p constantly false");
         assert!(model.uninterpreted_cardinality(carrier).unwrap_or(0) >= 2);
         assert!(crate::check_model(&arena, &assertions, &model).unwrap());
     }
@@ -1408,9 +1480,14 @@ mod tests {
         let pinned = arena.eq(y, b_term).unwrap();
         assertions.push(arena.forall(binder, pinned).unwrap());
 
-        let model = find_uf_finite_model(&mut arena, &assertions, &config())
-            .unwrap()
-            .expect("three wide elements and a singleton narrow carrier");
+        let model = find_uf_finite_model(
+            &mut arena,
+            &assertions,
+            &config(),
+            UF_FMF_FULL_SOLVE_ASSERTIONS,
+        )
+        .unwrap()
+        .expect("three wide elements and a singleton narrow carrier");
         assert!(model.uninterpreted_cardinality(wide).unwrap_or(0) >= 3);
         assert_eq!(model.uninterpreted_cardinality(narrow), Some(1));
         assert!(crate::check_model(&arena, &assertions, &model).unwrap());
@@ -1431,7 +1508,13 @@ mod tests {
         let zero = arena.int_const(0);
         let ground = arena.int_ge(n, zero).unwrap();
 
-        let result = find_uf_finite_model(&mut arena, &[universal, ground], &config()).unwrap();
+        let result = find_uf_finite_model(
+            &mut arena,
+            &[universal, ground],
+            &config(),
+            UF_FMF_FULL_SOLVE_ASSERTIONS,
+        )
+        .unwrap();
         assert!(result.is_none());
     }
 }
