@@ -113,7 +113,12 @@ run_one() {
     smtcomp_cli) cmd=("$bin" "$file" --timeout-ms "$((budget_s * 1000))") ;;
     z3)          cmd=("$bin" "-T:${budget_s}" "$file") ;;
     cvc5)        cmd=("$bin" "--tlimit=$((budget_s * 1000))" "$file") ;;
-    bitwuzla)    cmd=("$bin" "--time-limit=${budget_s}" "$file") ;;
+    # NOTE THE UNITS: bitwuzla's --time-limit is MILLISECONDS, like cvc5's
+    # --tlimit, while z3's -T: is SECONDS. Passing seconds here gave the
+    # reference a 24 ms budget -- a ~1000x handicap that inflates our ratio by
+    # making the reference look useless. Caught by smoke_reference on the very
+    # first real run.
+    bitwuzla)    cmd=("$bin" "--time-limit" "$((budget_s * 1000))" "$file") ;;
     *)           cmd=("$bin" "$file") ;;
   esac
   verdict=$(MEM_LIMIT_GB="$mem_gb" timeout "$((budget_s + 5))" \
@@ -130,8 +135,14 @@ smoke_reference() {
   [[ -f "$probe" ]] || return 0
   verdict=$(run_one "$reference_bin" "$probe")
   if [[ "$verdict" == "unsolved" ]]; then
-    echo "WARNING: reference produced no verdict on the first benchmark." >&2
-    echo "         Verify the invocation before trusting any ratio below." >&2
+    echo "FAIL: the reference produced no verdict on the first benchmark." >&2
+    echo "      $reference_bin" >&2
+    echo "      A crippled reference reads as a win for us, so this ABORTS" >&2
+    echo "      rather than warns -- the first version only warned, and the run" >&2
+    echo "      sailed past it with bitwuzla on a 24 ms budget." >&2
+    echo "      Verify the invocation. Set PARITY_ALLOW_WEAK_REFERENCE=1 only" >&2
+    echo "      if the first benchmark is genuinely beyond the reference." >&2
+    [[ "${PARITY_ALLOW_WEAK_REFERENCE:-0}" == "1" ]] || exit 2
   fi
 }
 
