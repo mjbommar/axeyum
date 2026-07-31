@@ -1,9 +1,11 @@
 //! Word-first parse fallback (T-B.4d) at the full front door (`solve_smtlib`).
 //!
 //! The bounded ADR-0029 string encoder rejects a whole class of scripts *at
-//! parse*: a string literal over the adaptive length cap (13 bytes), a
-//! `str.++` whose bounded result width exceeds the cap (`STRING_BOUND_CAP = 24`),
-//! or another bounded-encoder capacity limit. These caps are an artifact of the
+//! parse*: a string literal over the adaptive length cap
+//! (`STRING_LITERAL_MAX_LEN`, 256 bytes), a `str.++` whose bounded result width
+//! exceeds the cap (`STRING_BOUND_CAP`, 512 bytes), or another bounded-encoder
+//! capacity limit. (The caps were 13/26 when this fallback landed; the historic
+//! issue shapes below now parse bounded and must still decide.) These caps are an artifact of the
 //! *bounded* encoding — a pure word-equation problem is decidable unbounded no
 //! matter how long its literals or how wide its concats. The word-first fallback
 //! retries such a declined parse with a word-level-only build (unbounded
@@ -127,11 +129,16 @@ fn wide_variable_concat_decides() {
 /// the word route cannot legitimately upgrade.
 #[test]
 fn non_word_fragment_reproduces_original_error() {
-    let text = "(set-info :status sat)(set-logic QF_SLIA)\
-                (declare-const i0 Int)(declare-const s1 String)(declare-const s2 String)\
-                (assert (= (str.++ s1 \"ijruldtzypabcd\") s2))\
-                (assert (= (str.indexof s2 \"z\" 0) i0))(check-sat)";
-    match solve_smtlib(text, &config()) {
+    // The literal must exceed STRING_LITERAL_MAX_LEN (256 bytes) so the bounded
+    // parse still declines; `str.indexof` keeps it outside the word fragment.
+    let long = "ijruldtzypabcd".repeat(19); // 266 bytes > 256
+    let text = format!(
+        "(set-info :status sat)(set-logic QF_SLIA)\
+         (declare-const i0 Int)(declare-const s1 String)(declare-const s2 String)\
+         (assert (= (str.++ s1 \"{long}\") s2))\
+         (assert (= (str.indexof s2 \"z\" 0) i0))(check-sat)"
+    );
+    match solve_smtlib(&text, &config()) {
         Err(SolverError::Parse(msg)) => {
             // The *bounded* encoder's original decline — surfaced unchanged.
             assert!(
@@ -244,9 +251,14 @@ fn first_occurrence_index_guard_is_exact_membership() {
 
 #[test]
 fn deeply_nested_optional_fallback_declines_instead_of_aborting() {
-    let mut text = "(set-logic QF_SLIA)(declare-const s String)\
-                    (assert (= s \"abcdefghijklmn\"))(assert "
-        .to_owned();
+    // Over-cap literal (> 256 bytes) → the bounded parse declines and the
+    // word-first fallback runs; its depth budget must decline the deep nesting
+    // (reproducing the original bounded error) instead of exhausting the stack.
+    let mut text = format!(
+        "(set-logic QF_SLIA)(declare-const s String)\
+         (assert (= s \"{}\"))(assert ",
+        "abcdefghijklmn".repeat(19) // 266 bytes > 256
+    );
     text.push_str(&"(and true ".repeat(2_049));
     text.push_str("true");
     text.push_str(&")".repeat(2_049));
@@ -255,4 +267,25 @@ fn deeply_nested_optional_fallback_declines_instead_of_aborting() {
         solve_smtlib(&text, &config()),
         Err(SolverError::Parse(_))
     ));
+}
+
+/// The historic 14-byte-literal deep-nesting shape (over the ORIGINAL 13-byte
+/// cap, under the current 256-byte one) now parses bounded; the parser-side
+/// side-channel builders must decline the 2,049-deep conjunction within their
+/// depth budgets — never abort — and the bounded route decides it.
+#[test]
+fn deeply_nested_within_cap_decides_without_aborting() {
+    let mut text = "(set-logic QF_SLIA)(declare-const s String)\
+                    (assert (= s \"abcdefghijklmn\"))(assert "
+        .to_owned();
+    text.push_str(&"(and true ".repeat(2_049));
+    text.push_str("true");
+    text.push_str(&")".repeat(2_049));
+    text.push_str(")(check-sat)");
+    let outcome = solve_smtlib(&text, &config()).expect("parses bounded and must not abort");
+    assert!(
+        matches!(outcome.result, CheckResult::Sat(_)),
+        "s = the 14-byte literal satisfies the deep trivial conjunction; got {:?}",
+        outcome.result
+    );
 }

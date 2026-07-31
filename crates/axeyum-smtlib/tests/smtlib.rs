@@ -1697,19 +1697,26 @@ fn two_full_width_declared_strings_can_form_a_24_byte_concat() {
 #[test]
 fn variable_concat_over_bound_routes_to_word_first_fallback() {
     // Two declared strings are max_len 12 each, so a++b is max_len 24 (fits the cap).
-    // A *third* concat would be max_len 36 > the 24-byte cap, so the *bounded*
-    // ADR-0029 encoder declines it. But this is a pure word equation, so the
-    // word-first parse fallback (T-B.4d) catches the bounded decline and returns a
-    // word-only `Script`: the bounded caps are an encoding artifact, not a theory
-    // limit. `word_only_fallback` carries the original bounded error (for honest
-    // reproduction on a word-route decline) and `word_problem` is populated; no
-    // packed-BV flat assertions are built.
-    let script = parse_script(
-        "(declare-fun a () String)\n\
-         (declare-fun b () String)\n\
-         (declare-fun c () String)\n\
-         (assert (= (str.++ (str.++ a b) c) \"z\"))\n(check-sat)\n",
-    )
+    // Enough concatenated symbols push the summed max_len over `STRING_BOUND_CAP`
+    // (512 bytes; 43 × 12 = 516), so the *bounded* ADR-0029 encoder declines it.
+    // But this is a pure word equation, so the word-first parse fallback (T-B.4d)
+    // catches the bounded decline and returns a word-only `Script`: the bounded
+    // caps are an encoding artifact, not a theory limit. `word_only_fallback`
+    // carries the original bounded error (for honest reproduction on a word-route
+    // decline) and `word_problem` is populated; no packed-BV flat assertions are
+    // built.
+    use std::fmt::Write as _;
+    let decls: String = (0..43).fold(String::new(), |mut acc, i| {
+        let _ = writeln!(acc, "(declare-fun v{i} () String)");
+        acc
+    });
+    let concat: String = (0..43).fold(String::new(), |mut acc, i| {
+        let _ = write!(acc, " v{i}");
+        acc
+    });
+    let script = parse_script(&format!(
+        "{decls}(assert (= (str.++{concat}) \"z\"))\n(check-sat)\n"
+    ))
     .expect("pure word equation reaches the word-first fallback, not a hard error");
     let fallback = script
         .word_only_fallback
@@ -1938,11 +1945,21 @@ fn string_replace_over_cap_declines() {
     // can ever be decided from a truncated encoding. Checked end-to-end while
     // updating this test: the script answers `unknown`, while cvc5 1.3.4 and z3
     // both answer `sat` — an honest decline, not a wrong verdict.
-    let script = parse_script(
+    // 42 concatenated symbols make the replacement's max_len 504, so the replace
+    // result bound is 12 + 504 = 516 > `STRING_BOUND_CAP` (512).
+    use std::fmt::Write as _;
+    let decls: String = (0..42).fold(String::new(), |mut acc, i| {
+        let _ = writeln!(acc, "(declare-fun b{i} () String)");
+        acc
+    });
+    let concat: String = (0..42).fold(String::new(), |mut acc, i| {
+        let _ = write!(acc, " b{i}");
+        acc
+    });
+    let script = parse_script(&format!(
         "(declare-fun s () String)\n\
-         (declare-fun b1 () String)\n(declare-fun b2 () String)\n\
-         (assert (= (str.replace s \"a\" (str.++ b1 b2)) s))\n(check-sat)\n",
-    )
+         {decls}(assert (= (str.replace s \"a\" (str.++{concat})) s))\n(check-sat)\n"
+    ))
     .expect("an over-cap replace reaches the word-first fallback, not a hard error");
     let fallback = script
         .word_only_fallback
@@ -2230,22 +2247,33 @@ fn string_to_int_symbolic_eval() {
 
 #[test]
 fn string_to_int_over_length_literal_requires_an_exact_source_refutation() {
-    // The literal cannot enter the packed representation, but its exact source
-    // value still proves this equality false without any bound assumption.
-    let script =
-        parse_script("(assert (= (str.to_int \"783914785582390527685649\") 5))\n(check-sat)\n")
-            .expect("source-level contradiction bypasses packing");
+    // A literal over `STRING_LITERAL_MAX_LEN` (256 bytes) cannot enter the packed
+    // representation, but its exact source value still proves this equality false
+    // without any bound assumption: a non-digit string has `str.to_int` exactly
+    // `-1`, never `5`.
+    let long = "a".repeat(300);
+    let script = parse_script(&format!(
+        "(assert (= (str.to_int \"{long}\") 5))\n(check-sat)\n"
+    ))
+    .expect("source-level contradiction bypasses packing");
     assert!(script.word_only_fallback.is_some());
     assert!(script.source_string_semantic_unsat);
 
     // No contradiction means no bypass: the identical over-bound literal still
-    // declines instead of being truncated or otherwise forced into the encoding.
-    let err = parse_script(
-        "(assert (= (str.to_int \"783914785582390527685649\") \
-         783914785582390527685649))\n(check-sat)\n",
-    )
+    // declines instead of being truncated or otherwise forced into the encoding
+    // (`to_int` of a non-digit string IS `-1`, so this is satisfiable).
+    let err = parse_script(&format!(
+        "(assert (= (str.to_int \"{long}\") (- 1)))\n(check-sat)\n"
+    ))
     .expect_err("over-length source model remains outside the packed fragment");
     assert!(matches!(err, SmtError::Unsupported(_)), "got {err:?}");
+
+    // The historic 24-digit shape (over the original 13-byte cap, within the
+    // current 256-byte one) now parses through the packed front door instead.
+    let script =
+        parse_script("(assert (= (str.to_int \"783914785582390527685649\") 5))\n(check-sat)\n")
+            .expect("a 24-byte literal is within the packed cap now");
+    assert!(script.word_only_fallback.is_none());
 }
 
 /// An `Int` numeral beyond `i128` **declines**; it is not a syntax error.
@@ -5619,11 +5647,14 @@ fn solvable_flat_view_is_none_for_word_first_fallback() {
     // past the bounded length cap is exactly that. (A hard-unsupported operator
     // like `str.replace_re` is not usable here: it fails the word-only reparse
     // too, so the whole parse errors instead of falling back.)
-    let fallback = "(set-logic QF_S)\n\
-                    (declare-const s0 String)\n\
-                    (assert (= s0 \"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\"))\n\
-                    (check-sat)";
-    let script = parse_script(fallback).unwrap();
+    let fallback = format!(
+        "(set-logic QF_S)\n\
+         (declare-const s0 String)\n\
+         (assert (= s0 \"{}\"))\n\
+         (check-sat)",
+        "a".repeat(300) // over STRING_LITERAL_MAX_LEN (256 bytes)
+    );
+    let script = parse_script(&fallback).unwrap();
     assert!(
         script.word_only_fallback.is_some(),
         "a bounded-unsupported script should take the word-first fallback"
@@ -5669,11 +5700,14 @@ fn checked_flat_view_returns_assertions_for_ordinary_script() {
 #[test]
 #[should_panic(expected = "word-first-fallback script")]
 fn checked_flat_view_trips_the_guard_on_word_first_fallback() {
-    let fallback = "(set-logic QF_S)\n\
-                    (declare-const s0 String)\n\
-                    (assert (= s0 \"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\"))\n\
-                    (check-sat)";
-    let script = parse_script(fallback).unwrap();
+    let fallback = format!(
+        "(set-logic QF_S)\n\
+         (declare-const s0 String)\n\
+         (assert (= s0 \"{}\"))\n\
+         (check-sat)",
+        "a".repeat(300) // over STRING_LITERAL_MAX_LEN (256 bytes)
+    );
+    let script = parse_script(&fallback).unwrap();
     assert!(script.word_only_fallback.is_some());
     // This access must panic: a fallback script has no solvable flat view.
     let _ = script.checked_flat_view();
