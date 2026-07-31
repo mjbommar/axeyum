@@ -1,6 +1,6 @@
 //! Models: satisfying assignments keyed by Axeyum symbols.
 
-use axeyum_ir::{Assignment, FuncId, FuncValue, Rational, SymbolId, Value};
+use axeyum_ir::{Assignment, FuncId, FuncValue, Rational, SortId, SymbolId, Value};
 
 #[cfg(feature = "full")]
 use crate::{
@@ -40,6 +40,14 @@ pub struct Model {
     /// deterministic iteration; an empty map is exactly the total `x/0 = 0`
     /// evaluator convention. Mirrors [`Assignment::set_real_div_zero`].
     real_div_zero: Vec<(Rational, Rational)>,
+    /// Declared finite carrier size per uninterpreted sort (finite model
+    /// finding, pure UF). An entry `(s, k)` asserts this model is a structure
+    /// whose carrier for `s` is exactly the canonical token domain `0..k`;
+    /// every [`Value::Uninterpreted`] token this model carries for `s` must
+    /// then be `< k` (the independent quantified-UF checker enforces this and
+    /// fails closed otherwise). Kept sorted by [`SortId`] for deterministic
+    /// iteration.
+    uninterpreted_cardinalities: Vec<(SortId, u32)>,
     /// Lazily allocated checked quantified certificates, grouped behind one
     /// pointer so adding a certificate family does not inflate every model.
     #[cfg(feature = "full")]
@@ -123,6 +131,38 @@ impl Model {
     /// (`numerator -> quotient`) in the deterministic key order.
     pub fn real_div_zeros(&self) -> impl Iterator<Item = (Rational, Rational)> + '_ {
         self.real_div_zero.iter().copied()
+    }
+
+    /// Declares the finite carrier size of uninterpreted sort `sort` as the
+    /// canonical token domain `0..cardinality` (finite model finding). A zero
+    /// cardinality is meaningless (an empty carrier is not a first-order
+    /// structure) and is ignored.
+    pub fn set_uninterpreted_cardinality(&mut self, sort: SortId, cardinality: u32) {
+        if cardinality == 0 {
+            return;
+        }
+        match self
+            .uninterpreted_cardinalities
+            .binary_search_by_key(&sort, |&(s, _)| s)
+        {
+            Ok(i) => self.uninterpreted_cardinalities[i].1 = cardinality,
+            Err(i) => self
+                .uninterpreted_cardinalities
+                .insert(i, (sort, cardinality)),
+        }
+    }
+
+    /// The declared finite carrier size for `sort`, if this model records one.
+    pub fn uninterpreted_cardinality(&self, sort: SortId) -> Option<u32> {
+        self.uninterpreted_cardinalities
+            .binary_search_by_key(&sort, |&(s, _)| s)
+            .ok()
+            .map(|i| self.uninterpreted_cardinalities[i].1)
+    }
+
+    /// Iterates over `(sort, cardinality)` entries in sort order.
+    pub fn uninterpreted_cardinalities(&self) -> impl Iterator<Item = (SortId, u32)> + '_ {
+        self.uninterpreted_cardinalities.iter().copied()
     }
 
     /// Inserts or replaces the checked Skolem certificate for its original

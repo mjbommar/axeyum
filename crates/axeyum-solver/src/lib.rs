@@ -175,6 +175,7 @@ macro_rules! full_modules {
         mod toy_bv_vm;
         pub mod trust;
         mod uf_arith;
+        mod uf_fmf;
         mod ufbv_finite;
         mod ufbv_online;
         mod uflia_interpolant;

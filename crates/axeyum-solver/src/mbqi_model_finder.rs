@@ -68,10 +68,15 @@ pub(crate) fn repair_and_certify_all_universals(
         if !matches!(result, Sort::Int | Sort::Real | Sort::Uninterpreted(_)) {
             return None;
         }
+        // The interpretation's storage mode must match its declared signature:
+        // pure-UF (scalar-codable) functions legitimately use scalar storage,
+        // so requiring full-value storage here would decline every pure-UF
+        // candidate. A signature/storage mismatch still declines.
         if let Some(interpretation) = model.function(function)
             && (interpretation.params() != params
                 || interpretation.result() != result
-                || !interpretation.uses_value_storage())
+                || interpretation.uses_value_storage()
+                    != FuncValue::uses_value_storage_for(params, result))
         {
             return None;
         }
@@ -388,18 +393,26 @@ fn candidate_defaults(model: &Model, result: Sort) -> Option<Vec<Value>> {
         }
     }
     for (_, interpretation) in model.functions() {
-        if interpretation.result() != result || !interpretation.uses_value_storage() {
+        if interpretation.result() != result {
             continue;
         }
         push_candidate(&mut values, interpretation.default_value())?;
-        for (_, value) in interpretation.value_entries() {
-            push_candidate(&mut values, value.clone())?;
+        if interpretation.uses_value_storage() {
+            for (_, value) in interpretation.value_entries() {
+                push_candidate(&mut values, value.clone())?;
+            }
+        } else {
+            // Scalar storage (the pure-UF path): decode each entry's result
+            // code back to a full value.
+            for (_, code) in interpretation.entries() {
+                push_candidate(&mut values, Value::from_scalar_code(result, code))?;
+            }
         }
     }
 
     let seeds = values.clone();
     for value in seeds {
-        for neighbor in checked_neighbors(&value) {
+        for neighbor in checked_neighbors(model, &value) {
             push_candidate(&mut values, neighbor)?;
         }
     }
@@ -415,7 +428,7 @@ fn zero_value(sort: Sort) -> Option<Value> {
     }
 }
 
-fn checked_neighbors(value: &Value) -> Vec<Value> {
+fn checked_neighbors(model: &Model, value: &Value) -> Vec<Value> {
     match value {
         Value::Int(integer) => [integer.checked_sub(1), integer.checked_add(1)]
             .into_iter()
@@ -430,6 +443,20 @@ fn checked_neighbors(value: &Value) -> Vec<Value> {
                 .map(Value::Real)
                 .collect()
         }
+        // A finite uninterpreted carrier declared by the model: the "neighbors"
+        // of one token are the other canonical domain elements `0..k`.
+        Value::Uninterpreted { sort, value } => model
+            .uninterpreted_cardinality(*sort)
+            .map(|cardinality| {
+                (0..u128::from(cardinality))
+                    .filter(|token| token != value)
+                    .map(|token| Value::Uninterpreted {
+                        sort: *sort,
+                        value: token,
+                    })
+                    .collect()
+            })
+            .unwrap_or_default(),
         _ => Vec::new(),
     }
 }
@@ -447,13 +474,28 @@ fn push_candidate(values: &mut Vec<Value>, value: Value) -> Option<()> {
 
 fn with_default(arena: &TermArena, model: &Model, function: FuncId, default: Value) -> FuncValue {
     let (_, params, result) = arena.function(function);
-    let mut repaired = FuncValue::constant_value(params.to_vec(), result, default);
-    if let Some(existing) = model.function(function) {
-        for (arguments, value) in existing.value_entries() {
-            repaired = repaired.define_value(arguments, value.clone());
+    if FuncValue::uses_value_storage_for(params, result) {
+        let mut repaired = FuncValue::constant_value(params.to_vec(), result, default);
+        if let Some(existing) = model.function(function) {
+            for (arguments, value) in existing.value_entries() {
+                repaired = repaired.define_value(arguments, value.clone());
+            }
         }
+        repaired
+    } else {
+        // Scalar-codable signature (the pure-UF path): `FuncValue::constant`
+        // is the only storage the value layer accepts here, so the
+        // full-value constructor's assert is unreachable through this branch.
+        let mut repaired = FuncValue::constant(params.to_vec(), result, default.scalar_code());
+        if let Some(existing) = model.function(function)
+            && !existing.uses_value_storage()
+        {
+            for (arguments, value) in existing.entries() {
+                repaired = repaired.define(arguments, value);
+            }
+        }
+        repaired
     }
-    repaired
 }
 
 fn search_default_repairs(

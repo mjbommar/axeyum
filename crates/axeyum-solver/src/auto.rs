@@ -203,6 +203,26 @@ fn finish_quantified_solve(
     };
     match check_with_quantifiers(arena, assertions, &finite_config) {
         Ok(CheckResult::Unknown(_)) | Err(SolverError::Unsupported(_)) => {
+            // Pure-UF finite model finding, probed BEFORE the refutation
+            // family on half the remaining budget (the `probe_budget`
+            // pattern): the refutation loops below reliably consume their
+            // entire budget on satisfiable pure-UF queries, so a post-only
+            // placement would starve. The finder applies only to the pure-UF
+            // fragment (everything else declines in one cheap scan), returns
+            // only an independently certified model, and is re-gated by the
+            // standard `check_model` — it can only turn an eventual `unknown`
+            // into a checked `sat`, never `unsat`. The certificates bind to
+            // the ORIGINAL assertions, which is why it runs on those.
+            if let Some(probe_config) = config_with_remaining_timeout(config, deadline)
+                && let Some(model) = crate::uf_fmf::find_uf_finite_model(
+                    arena,
+                    original_assertions,
+                    &probe_budget(&probe_config),
+                )?
+                && crate::check_model(arena, original_assertions, &model)?
+            {
+                return Ok(CheckResult::Sat(model));
+            }
             let Some(egraph_config) = config_with_remaining_timeout(config, deadline) else {
                 return Ok(quantified_timeout("finite quantifier expansion"));
             };
@@ -228,7 +248,33 @@ fn finish_quantified_solve(
                         "MBQI candidate lacks a checked model for the original assertion sequence"
                             .to_owned(),
                 })),
-                other => Ok(other),
+                other => {
+                    // Pure-UF finite model finding, the SAT-side complement of
+                    // the refutation family above. Every route so far —
+                    // finite expansion, the e-graph refuter, MBQI, and its
+                    // terminal E-matching/instantiation fallbacks (including
+                    // the "instantiation is satisfiable" decline) — has ended
+                    // in `unknown`. The finder runs on the ORIGINAL
+                    // assertions (so its closure axioms see every free
+                    // symbol, and its certificates bind to the exact source
+                    // terms), returns only an independently certified model
+                    // or nothing, and the standard `check_model` gate
+                    // re-validates before the verdict is emitted. It can only
+                    // turn this `unknown` into a checked `sat` — never
+                    // `unsat`, never an unchecked model.
+                    if matches!(other, CheckResult::Unknown(_))
+                        && let Some(fmf_config) = config_with_remaining_timeout(config, deadline)
+                        && let Some(model) = crate::uf_fmf::find_uf_finite_model(
+                            arena,
+                            original_assertions,
+                            &fmf_config,
+                        )?
+                        && crate::check_model(arena, original_assertions, &model)?
+                    {
+                        return Ok(CheckResult::Sat(model));
+                    }
+                    Ok(other)
+                }
             }
         }
         other => other,
