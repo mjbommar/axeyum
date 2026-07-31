@@ -1,4 +1,11 @@
-#![allow(clippy::manual_assert_eq)] // assert!(a==b) is required inside #[verify] bodies (assert_eq! does not lower)
+// `assert!(a == b)` is required inside `#[verify]` bodies (`assert_eq!` does not
+// lower). `unknown_lints` must come FIRST and is not optional: the clippy lint
+// named below does not exist in clippy 0.1.97 (neither the stable nor the
+// nightly build installed here), and an unknown lint is itself an error under
+// `-D warnings` — which is why `cargo +stable clippy --workspace -- -D warnings`
+// has been failing on these five test files independently of any solver change.
+#![allow(unknown_lints)]
+#![allow(clippy::manual_assert_eq)]
 //! End-to-end worked examples driven by the real `#[axeyum::verify]` macro.
 //!
 //! Each `#[verify]` fn expands to (1) the original fn, (2) a hidden
