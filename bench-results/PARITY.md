@@ -68,3 +68,18 @@ not a score.
 | benchmark list | `bench-results/parity-lists/UF.txt` (sha256 ab432240d2f7, 200 files) |
 | solver commit | `8e306c48` (DIRTY WORKTREE — result not reproducible) |
 
+## UF — 2026-07-31T12:17:41Z
+
+| field | value |
+|---|---|
+| axeyum solved | 32/200 |
+| reference solved | 93/200 |
+| **ratio (axeyum / reference)** | **34.4%** |
+| **disagreements** | **0** |
+| soundness | SOUND |
+| both / axeyum-only / reference-only | 31 / 1 / 62 |
+| reference | `cvc5 1.3.4 [git f3b21c4 on branch HEAD]` |
+| protocol | 24s wall, 8GiB, per-file |
+| benchmark list | `bench-results/parity-lists/UF.txt` (sha256 ab432240d2f7, 200 files) |
+| solver commit | `c264a725` |
+
