@@ -159,3 +159,19 @@ not a score.
 | solver commit | `aa97f3dc` |
 | per-file detail | `bench-results/parity-details/UF.tsv` |
 
+## QF_SLIA — 2026-07-31T20:25:20Z
+
+| field | value |
+|---|---|
+| axeyum solved | 175/200 |
+| reference solved | 193/200 |
+| **ratio (axeyum / reference)** | **90.7%** |
+| **disagreements** | **0** |
+| soundness | SOUND |
+| both / axeyum-only / reference-only | 168 / 7 / 25 |
+| reference | `cvc5 1.3.4 [git f3b21c4 on branch HEAD]` |
+| protocol | 24s wall, 8GiB, per-file |
+| benchmark list | `bench-results/parity-lists/QF_SLIA.txt` (sha256 7d539c0182a6, 200 files) |
+| solver commit | `09e0d895` |
+| per-file detail | `bench-results/parity-details/QF_SLIA.tsv` |
+
