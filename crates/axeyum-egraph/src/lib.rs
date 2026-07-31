@@ -810,9 +810,13 @@ impl EGraph {
                         break;
                     }
                     *work += 1;
-                    results.extend(
-                        self.match_sequence(subs, &arg_roots, subst.clone(), index, work),
-                    );
+                    results.extend(self.match_sequence(
+                        subs,
+                        &arg_roots,
+                        subst.clone(),
+                        index,
+                        work,
+                    ));
                 }
                 results
             }

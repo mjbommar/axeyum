@@ -176,13 +176,13 @@ macro_rules! full_modules {
         mod toy_bv_vm;
         pub mod trust;
         mod uf_arith;
-        mod uninterpreted_bv;
         mod ufbv_finite;
         mod ufbv_online;
         mod uflia_interpolant;
         mod uflia_online;
         mod uflra_interpolant;
         mod uflra_online;
+        mod uninterpreted_bv;
         mod word_alethe;
         mod word_reconstruct;
         #[cfg(feature = "z3")]
