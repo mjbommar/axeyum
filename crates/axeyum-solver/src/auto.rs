@@ -1244,9 +1244,19 @@ fn check_auto_with_recorder(
         // ORIGINAL unreduced query. Preprocessing is only ever an optimization, never
         // a correctness dependency, so a failure must degrade, not propagate.
         let preprocessed = match preprocess_reduce(arena, assertions, deadline) {
-            Ok(Some((reduced, trail))) => {
+            Ok(Some((reduced, trail)))
+                if reduction_shrinks_encoding(arena, assertions, &reduced, deadline) =>
+            {
                 dispatch_reduced(arena, assertions, &reduced, &trail, config, deadline, rec)
             }
+            // The reduction made the *encoding* bigger, so solve the original
+            // instead. See `reduction_shrinks_encoding`.
+            Ok(Some(_)) => check_auto_dispatch(
+                arena,
+                assertions,
+                &config_with_remaining_deadline(config, deadline),
+                rec,
+            ),
             Ok(None) => {
                 // Telemetry: record the budget decline so a trace never ends
                 // with only the probe entry under an ultra-tight budget.
@@ -1459,6 +1469,66 @@ fn preprocess_reduce(
 /// replay against the **original** assertions — the checkable-`sat` discipline of
 /// [`crate::check_with_preprocessing`]. `unsat` of the equisatisfiable reduction
 /// transfers directly.
+/// Whether the reduced query is worth dispatching, judged by the size it
+/// **bit-blasts to** rather than by its term count.
+///
+/// `solve_eqs` and `elim_unconstrained` substitute terms, and substitution
+/// duplicates structure the term DAG was *sharing*. The bit-blaster then pays for
+/// every copy, so a reduction that looks free at the term level can hand the SAT
+/// backend a much larger circuit.
+///
+/// Measured on three files the raw `SatBvBackend` path decides and the reduced
+/// dispatch does not:
+///
+/// | benchmark | term DAG | AIG nodes |
+/// |---|---|---|
+/// | `021-bench_11651` | 148 → 179 | 2 939 → 3 563 (+21 %) |
+/// | `062-bench_2195` | 1 375 → **1 215** | 35 329 → 51 724 (+46 %) |
+/// | `058-bench_165` | — | 1 223 291 → 1 887 781 (+54 %) |
+///
+/// Note `062`: the term DAG **shrank** while the AIG grew 46 %. The term count is
+/// not merely a weak proxy, it points the wrong way — which is why this compares
+/// lowered sizes and nothing else.
+///
+/// Cost is one extra lowering (0.36 ms for `021`) against a 24 s timeout on the
+/// files this rescues. When either side cannot be lowered (not a pure bit-vector
+/// query) the reduction is kept, preserving the previous behaviour: the
+/// reduction genuinely helps some queries — `025-bench_250` is decided by the
+/// reduced path and *not* by the raw backend — so this only declines to use it
+/// when it demonstrably inflates the circuit.
+fn reduction_shrinks_encoding(
+    arena: &mut TermArena,
+    original: &[TermId],
+    reduced: &[TermId],
+    deadline: Option<Instant>,
+) -> bool {
+    // `lower_terms` does not return an error for a non-bit-vector query — it
+    // PANICS (`unreachable!("integer terms are rejected before bit lowering
+    // (ADR-0014)")`, axeyum-bv/src/lib.rs:1890). So the query has to be screened
+    // for bit-blastability first; a `let Ok(..) else` guard is not protection.
+    // Five arithmetic tests died on exactly that.
+    let bit_blastable = |terms: &[TermId]| {
+        Features::scan_within(arena, terms, deadline).is_some_and(|f| {
+            !f.has_int
+                && !f.has_real
+                && !f.has_datatype
+                && !f.has_function
+                && !f.has_uninterpreted_sort
+                && !f.has_array
+        })
+    };
+    if !bit_blastable(original) || !bit_blastable(reduced) {
+        return true;
+    }
+    let Ok(reduced_lowering) = axeyum_bv::lower_terms(arena, reduced) else {
+        return true;
+    };
+    let Ok(original_lowering) = axeyum_bv::lower_terms(arena, original) else {
+        return true;
+    };
+    reduced_lowering.aig().node_count() <= original_lowering.aig().node_count()
+}
+
 fn dispatch_reduced(
     arena: &mut TermArena,
     assertions: &[TermId],
