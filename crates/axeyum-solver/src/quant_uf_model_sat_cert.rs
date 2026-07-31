@@ -6,7 +6,10 @@
 
 use std::collections::{BTreeMap, BTreeSet, HashMap};
 
-use axeyum_ir::{FuncId, Op, Rational, Sort, SymbolId, TermArena, TermId, TermNode, Value, eval};
+use axeyum_ir::{
+    Assignment, FuncId, Op, Rational, Sort, SortId, SymbolId, TermArena, TermId, TermNode, Value,
+    eval,
+};
 
 use crate::Model;
 
@@ -51,6 +54,16 @@ pub fn check_quantified_uf_model_sat(
 ) -> bool {
     if certificate.assertion != assertion {
         return false;
+    }
+    // Finite-carrier route (pure uninterpreted domains): when every binder in
+    // the assertion ranges over an uninterpreted sort and the model declares a
+    // finite carrier for each, the assertion is checked exhaustively over the
+    // canonical token domains. `Some(verdict)` is final; `None` falls through
+    // to the established `Int`/`Real` finite-profile route unchanged.
+    if let Some(verdict) =
+        check_finite_uninterpreted_domains(arena, assertion, model, certificate.binder)
+    {
+        return verdict;
     }
     let Some((binders, body)) = universal_prefix(arena, assertion) else {
         return false;
@@ -141,6 +154,291 @@ fn universal_prefix(arena: &TermArena, assertion: TermId) -> Option<(Vec<SymbolI
     Some((binders, matrix))
 }
 
+/// Exhaustively checks a quantified assertion whose binders all range over
+/// **uninterpreted sorts with model-declared finite carriers** (finite model
+/// finding, pure UF).
+///
+/// Returns `None` only when this route does not apply (the top node is not a
+/// quantifier, or some binder ranges over a non-uninterpreted sort) so the
+/// established `Int`/`Real` finite-profile route keeps its exact behavior.
+/// Everything else is a final verdict, and every failure mode is closed:
+///
+/// * a binder whose sort has **no recorded cardinality** fails;
+/// * a model carrying any uninterpreted token `>= k` for a recorded sort fails
+///   (the model would not be a genuine structure on the declared carrier, and
+///   quantifier enumeration over `0..k` would not be exact — the wrong-`sat`
+///   hole);
+/// * exceeding the profile/binder caps fails;
+/// * any evaluation error or non-Boolean result fails.
+///
+/// With the closure check passed, the model **is** a finite structure whose
+/// carrier for each recorded sort is exactly `0..k`, so `forall` is a finite
+/// conjunction and `exists` a finite disjunction over those tokens — the
+/// evaluation below is the exact truth value of the assertion in that
+/// structure. Both quantifier polarities and arbitrary nesting are handled.
+fn check_finite_uninterpreted_domains(
+    arena: &TermArena,
+    assertion: TermId,
+    model: &Model,
+    outer_binder: SymbolId,
+) -> Option<bool> {
+    // Route applicability: the assertion contains at least one
+    // uninterpreted-sorted binder (its quantifiers may sit anywhere in the
+    // Boolean structure — the expansion and this check are polarity-exact, so
+    // quantifiers under negation are fine), and every binder is
+    // uninterpreted- or `Bool`-sorted (`Bool` is the fixed two-element
+    // carrier). Any other binder sort defers to the established routes.
+    let binders = collect_all_binders(arena, assertion);
+    if !binders
+        .iter()
+        .any(|&b| matches!(arena.symbol(b).1, Sort::Uninterpreted(_)))
+        || binders
+            .iter()
+            .any(|&b| !matches!(arena.symbol(b).1, Sort::Uninterpreted(_) | Sort::Bool))
+    {
+        return None;
+    }
+    // From here on every outcome is final: fail closed. The redundant
+    // source-binding check: the certificate must name the first binder of the
+    // assertion (its outer binder when the assertion is a quantifier, the
+    // deterministic first-visited binder otherwise).
+    if binders[0] != outer_binder || binders.len() > QUANTIFIED_UF_BINDER_CAP {
+        return Some(false);
+    }
+    let mut cardinalities: BTreeMap<SortId, u32> = BTreeMap::new();
+    for &b in &binders {
+        match arena.symbol(b).1 {
+            Sort::Uninterpreted(sort) => {
+                let Some(k) = model.uninterpreted_cardinality(sort) else {
+                    // A binder over a carrier the model does not declare
+                    // finite cannot be enumerated: fail closed.
+                    return Some(false);
+                };
+                if k == 0 {
+                    return Some(false);
+                }
+                cardinalities.insert(sort, k);
+            }
+            Sort::Bool => {}
+            _ => return Some(false),
+        }
+    }
+    // Model closure: every uninterpreted token the model carries for a
+    // recorded sort must lie inside the declared carrier `0..k` — otherwise
+    // the model is not a structure on that carrier and enumeration would be
+    // unsound.
+    if !model_closed_over_declared_carriers(model) {
+        return Some(false);
+    }
+    let assignment = model.to_assignment();
+    let mut budget = QUANTIFIED_UF_PROFILE_CAP;
+    match eval_finite_uninterpreted(arena, assertion, &cardinalities, &assignment, &mut budget) {
+        Some(verdict) => Some(verdict),
+        None => Some(false),
+    }
+}
+
+/// Every binder symbol of every quantifier reachable from `root`, in
+/// deterministic first-visit order.
+fn collect_all_binders(arena: &TermArena, root: TermId) -> Vec<SymbolId> {
+    let mut binders = Vec::new();
+    let mut seen = BTreeSet::new();
+    let mut stack = vec![root];
+    while let Some(term) = stack.pop() {
+        if !seen.insert(term) {
+            continue;
+        }
+        if let TermNode::App { op, args } = arena.node(term) {
+            if let Op::Forall(binder) | Op::Exists(binder) = op
+                && !binders.contains(binder)
+            {
+                binders.push(*binder);
+            }
+            stack.extend(args.iter().copied());
+        }
+    }
+    binders
+}
+
+/// Whether every [`Value::Uninterpreted`] token the model carries (symbol
+/// values, function defaults, and function table keys/results) for a sort with
+/// a **declared** cardinality `k` is `< k`. Sorts without a declared
+/// cardinality are unconstrained (no quantifier enumerates them).
+fn model_closed_over_declared_carriers(model: &Model) -> bool {
+    let closed_value = |value: &Value| match value {
+        Value::Uninterpreted { sort, value } => model
+            .uninterpreted_cardinality(*sort)
+            .is_none_or(|k| *value < u128::from(k)),
+        _ => true,
+    };
+    if !model.iter().all(|(_, value)| closed_value(&value)) {
+        return false;
+    }
+    for (_, interpretation) in model.functions() {
+        if !closed_value(&interpretation.default_value()) {
+            return false;
+        }
+        if interpretation.uses_value_storage() {
+            for (key, result) in interpretation.value_entries() {
+                if !key.iter().all(&closed_value) || !closed_value(result) {
+                    return false;
+                }
+            }
+        } else {
+            let params = interpretation.params().to_vec();
+            let result_sort = interpretation.result();
+            for (key, result) in interpretation.entries() {
+                if key.len() != params.len() {
+                    return false;
+                }
+                for (&sort, &code) in params.iter().zip(key) {
+                    if !closed_value(&Value::from_scalar_code(sort, code)) {
+                        return false;
+                    }
+                }
+                if !closed_value(&Value::from_scalar_code(result_sort, result)) {
+                    return false;
+                }
+            }
+        }
+    }
+    true
+}
+
+/// Exact finite evaluation of a Boolean term whose quantifiers all range over
+/// declared finite uninterpreted carriers. `forall` is a conjunction and
+/// `exists` a disjunction over the canonical tokens `0..k`; quantifier-free
+/// subtrees delegate to the ground evaluator. `None` is a closed failure
+/// (budget exhausted, unsupported shape, or evaluation error).
+///
+/// Each quantifier binding evaluates its body under a **cloned** assignment
+/// (the same discipline as the trust-anchor evaluator's `eval_quantifier`), so
+/// a binder can never leak a stale value into an enclosing scope — shadowed
+/// binders and symbols occurring both free and bound stay exact.
+#[allow(clippy::too_many_lines, reason = "one structural match per operator")]
+fn eval_finite_uninterpreted(
+    arena: &TermArena,
+    term: TermId,
+    cardinalities: &BTreeMap<SortId, u32>,
+    assignment: &Assignment,
+    budget: &mut usize,
+) -> Option<bool> {
+    if !contains_quantifier(arena, term) {
+        *budget = budget.checked_sub(1)?;
+        return match eval(arena, term, assignment) {
+            Ok(Value::Bool(value)) => Some(value),
+            _ => None,
+        };
+    }
+    let TermNode::App { op, args } = arena.node(term) else {
+        return None;
+    };
+    match op {
+        Op::Forall(binder) | Op::Exists(binder) => {
+            let is_forall = matches!(op, Op::Forall(_));
+            let [body] = &**args else {
+                return None;
+            };
+            let carrier: Vec<Value> = match arena.symbol(*binder).1 {
+                Sort::Uninterpreted(sort) => {
+                    let k = *cardinalities.get(&sort)?;
+                    (0..u128::from(k))
+                        .map(|token| Value::Uninterpreted { sort, value: token })
+                        .collect()
+                }
+                Sort::Bool => vec![Value::Bool(false), Value::Bool(true)],
+                _ => return None,
+            };
+            let (binder, body) = (*binder, *body);
+            for value in carrier {
+                *budget = budget.checked_sub(1)?;
+                let mut bound = assignment.clone();
+                bound.set(binder, value);
+                let outcome =
+                    eval_finite_uninterpreted(arena, body, cardinalities, &bound, budget)?;
+                if outcome != is_forall {
+                    return Some(outcome);
+                }
+            }
+            Some(is_forall)
+        }
+        Op::BoolNot => {
+            let [inner] = &**args else {
+                return None;
+            };
+            eval_finite_uninterpreted(arena, *inner, cardinalities, assignment, budget)
+                .map(|value| !value)
+        }
+        Op::BoolAnd => {
+            let args = args.clone();
+            for &arg in &*args {
+                if !eval_finite_uninterpreted(arena, arg, cardinalities, assignment, budget)? {
+                    return Some(false);
+                }
+            }
+            Some(true)
+        }
+        Op::BoolOr => {
+            let args = args.clone();
+            for &arg in &*args {
+                if eval_finite_uninterpreted(arena, arg, cardinalities, assignment, budget)? {
+                    return Some(true);
+                }
+            }
+            Some(false)
+        }
+        Op::BoolImplies => {
+            let [antecedent, consequent] = &**args else {
+                return None;
+            };
+            let (antecedent, consequent) = (*antecedent, *consequent);
+            if !eval_finite_uninterpreted(arena, antecedent, cardinalities, assignment, budget)? {
+                return Some(true);
+            }
+            eval_finite_uninterpreted(arena, consequent, cardinalities, assignment, budget)
+        }
+        Op::BoolXor => {
+            let [left, right] = &**args else {
+                return None;
+            };
+            let (left, right) = (*left, *right);
+            let left = eval_finite_uninterpreted(arena, left, cardinalities, assignment, budget)?;
+            let right = eval_finite_uninterpreted(arena, right, cardinalities, assignment, budget)?;
+            Some(left ^ right)
+        }
+        Op::Eq if args.len() == 2 && arena.sort_of(args[0]) == Sort::Bool => {
+            let [left, right] = &**args else {
+                return None;
+            };
+            let (left, right) = (*left, *right);
+            let left = eval_finite_uninterpreted(arena, left, cardinalities, assignment, budget)?;
+            let right = eval_finite_uninterpreted(arena, right, cardinalities, assignment, budget)?;
+            Some(left == right)
+        }
+        Op::Ite if arena.sort_of(term) == Sort::Bool => {
+            let [condition, then_branch, else_branch] = &**args else {
+                return None;
+            };
+            let (condition, then_branch, else_branch) = (*condition, *then_branch, *else_branch);
+            let branch = if eval_finite_uninterpreted(
+                arena,
+                condition,
+                cardinalities,
+                assignment,
+                budget,
+            )? {
+                then_branch
+            } else {
+                else_branch
+            };
+            eval_finite_uninterpreted(arena, branch, cardinalities, assignment, budget)
+        }
+        // A quantifier below any other operator (a non-Boolean position) is
+        // outside the supported shape: fail closed.
+        _ => None,
+    }
+}
+
 fn representatives_for_binder(
     arena: &TermArena,
     model: &Model,
@@ -220,17 +518,17 @@ pub(crate) fn certify_quantified_uf_model_sat(
     assertion: TermId,
     model: &Model,
 ) -> Option<QuantifiedUfModelSatCertificate> {
-    let TermNode::App {
-        op: Op::Forall(binder),
-        ..
-    } = arena.node(assertion)
-    else {
-        return None;
+    let binder = match arena.node(assertion) {
+        TermNode::App {
+            op: Op::Forall(binder) | Op::Exists(binder),
+            ..
+        } => *binder,
+        // Quantifiers nested in Boolean structure (the finite
+        // uninterpreted-carrier route): bind the deterministic first-visited
+        // binder, mirroring the checker's redundant source-binding test.
+        _ => *collect_all_binders(arena, assertion).first()?,
     };
-    let certificate = QuantifiedUfModelSatCertificate {
-        assertion,
-        binder: *binder,
-    };
+    let certificate = QuantifiedUfModelSatCertificate { assertion, binder };
     check_quantified_uf_model_sat(arena, assertion, model, &certificate).then_some(certificate)
 }
 
@@ -243,6 +541,23 @@ pub(crate) fn quantified_uf_model_functions(
     arena: &TermArena,
     assertion: TermId,
 ) -> Option<BTreeSet<FuncId>> {
+    // Mirror of the finite uninterpreted-carrier route: every binder ranges
+    // over an uninterpreted sort (the quantifiers may sit anywhere in the
+    // Boolean structure). Discovery returns every applied function of the
+    // assertion; acceptance stays with the exhaustive checker.
+    {
+        let binders = collect_all_binders(arena, assertion);
+        if binders
+            .iter()
+            .any(|&binder| matches!(arena.symbol(binder).1, Sort::Uninterpreted(_)))
+            && binders.iter().all(|&binder| {
+                matches!(arena.symbol(binder).1, Sort::Uninterpreted(_) | Sort::Bool)
+            })
+        {
+            let functions = applied_functions(arena, assertion);
+            return (!functions.is_empty()).then_some(functions);
+        }
+    }
     let (binders, body) = universal_prefix(arena, assertion)?;
     if let [binder] = binders.as_slice()
         && let Some((function, _)) = vacuous_unary_uf_guard(arena, body, *binder)
@@ -259,9 +574,15 @@ pub(crate) fn quantified_uf_model_functions(
         }
     }
 
+    let functions = applied_functions(arena, body);
+    (!functions.is_empty()).then_some(functions)
+}
+
+/// Every uninterpreted function applied anywhere under `root`.
+fn applied_functions(arena: &TermArena, root: TermId) -> BTreeSet<FuncId> {
     let mut functions = BTreeSet::new();
     let mut seen = BTreeSet::new();
-    let mut stack = vec![body];
+    let mut stack = vec![root];
     while let Some(term) = stack.pop() {
         if !seen.insert(term) {
             continue;
@@ -273,7 +594,7 @@ pub(crate) fn quantified_uf_model_functions(
             stack.extend(args.iter().copied());
         }
     }
-    (!functions.is_empty()).then_some(functions)
+    functions
 }
 
 /// Recognizes `f(x) = ground` as the antecedent of a top-level implication.
@@ -535,7 +856,67 @@ fn substitute_terms(
 
 #[cfg(test)]
 mod tests {
+    use axeyum_ir::FuncValue;
+
     use super::*;
+
+    /// A symbol occurring both free and bound must not have the quantifier's
+    /// last binding leak into the free occurrence's evaluation (the checker
+    /// clones the assignment per binding). Here `x`'s model value falsifies
+    /// `not p(x)` while the universal's final enumeration token would satisfy
+    /// it — accepting would be a wrong `sat`.
+    #[test]
+    fn finite_domain_check_does_not_leak_binder_into_free_occurrence() {
+        let mut arena = TermArena::new();
+        let carrier = arena.declare_uninterpreted_sort("LeakCarrier");
+        let sort = Sort::Uninterpreted(carrier);
+        let predicate = arena.declare_fun("leak_p", &[sort], Sort::Bool).unwrap();
+        let symbol = arena.declare("leak_x", sort).unwrap();
+        let variable = arena.var(symbol);
+        let p_x = arena.apply(predicate, &[variable]).unwrap();
+        let not_p_x = arena.not(p_x).unwrap();
+        let tautology = arena.or(p_x, not_p_x).unwrap();
+        let universal = arena.forall(symbol, tautology).unwrap();
+        // `forall x. (p(x) or not p(x))` first, then the free occurrence.
+        let assertion = arena.and(universal, not_p_x).unwrap();
+
+        let mut model = Model::new();
+        model.set(
+            symbol,
+            Value::Uninterpreted {
+                sort: carrier,
+                value: 0,
+            },
+        );
+        model.set_function(
+            predicate,
+            FuncValue::constant(vec![sort], Sort::Bool, 0).define(&[0], 1),
+        );
+        model.set_uninterpreted_cardinality(carrier, 2);
+
+        // p(0) = true, so `not p(x)` with x := 0 is false: the assertion is
+        // false under this model and the checker must reject it even though
+        // the universal's last enumerated token (1) has p(1) = false.
+        assert!(certify_quantified_uf_model_sat(&arena, assertion, &model).is_none());
+
+        // The complementary model (x := 1, p(1) = false) genuinely satisfies
+        // the assertion and must certify.
+        model.set(
+            symbol,
+            Value::Uninterpreted {
+                sort: carrier,
+                value: 1,
+            },
+        );
+        let certificate = certify_quantified_uf_model_sat(&arena, assertion, &model)
+            .expect("the aliased-free-occurrence model genuinely satisfies the assertion");
+        assert!(check_quantified_uf_model_sat(
+            &arena,
+            assertion,
+            &model,
+            &certificate
+        ));
+    }
 
     #[test]
     fn position_gate_accepts_direct_and_repeated_arguments() {

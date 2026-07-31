@@ -441,343 +441,38 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
-- **2026-07-30 — UFLIA censused: not a feature gap, and budget *scheduling* is
-  ruled out.** Lane A / A1. Record in the
-  [UF residual census](docs/plan/uf-residual-census-2026-07-30.md), commit
-  `3469ba2f`. Two corrections to earlier claims in this file's own history.
-  (1) UFLIA's 122 `unsupported` files are **not** a parse/feature gap — that
-  label covers a *decline*, and the reasons underneath are overwhelmingly time:
-  47 exhaust the budget after valid-universal elimination, 30 after the checked
-  fast paths. (2) The honest denominator is the **234** files carrying a declared
-  status, so the rate is **67/234 = 28.6 %**, not the 67/300 = 22.3 % quoted
-  earlier; cvc5 took 58.1 %.
-  One hypothesis was implemented, measured and **reverted**, so it is not
-  retried: `eliminate_valid_universals`,
-  `ground_subset_refutes_quantified_query` and `checked_quantified_fast_path`
-  each receive the *full* remaining timeout with nothing reserved for the
-  refutation route behind them — true as a code fact, and bounding all three to a
-  quarter of the deadline still decided **0 of the 79** budget-limited files. The
-  reason distribution moved (unknown 74 → 32) without producing a verdict, so the
-  change was reverted rather than shipped under a comment claiming a fix.
-  Also retracted: a first reading that UFLIA suffered the severe deadline
-  overrun UF had. Measured per file, mean wall is **3.6 s against a 2 s budget**
-  (worst 11.7 s, all `simplify2`) and tracks the deadline closely at 20 s, so the
-  killed 20 s control was arithmetic — 79 × ~36 s beat its 45-minute cap — not a
-  defect. Open: whether UFLIA is budget-limited at all, which needs that control
-  re-run with a correct allowance.
-
-- **2026-07-30 — UF is ~30 %, up from 5.0 % this morning, with `DISAGREE = 0`
-  throughout.** Lane A / A1. Commits `2b4b6934`, `f34790a7`, `fdfb910b`,
-  `142ab435`; full record in the
-  [UF residual census](docs/plan/uf-residual-census-2026-07-30.md). Four
-  increments, each chosen from a *re-measured* decline distribution rather than
-  from the previous one: bound the unbounded e-matching (memory, then time),
-  make nested quantifiers reachable (NNF + Skolemization + prenexing), then
-  encode uninterpreted sorts as bit-vectors by the finite model property. UF
-  went 8 → 23 → 48–49 of the 159 declared-status files; UFLIA held at 67/300
-  the whole way. cvc5 took 40.5 % of the SMT-COMP UF selection, so the gap is
-  now roughly 10 points rather than 35.
-  The residual is **flat** for the first time — 31 unreached quantifiers, 29
-  lazy-CEGAR declines, 21 saturated-but-unproven (the MBQI population), 19
-  budget — where this morning one bucket held 126. Expect the next increment to
-  pay less than the last two.
-  A latent bug worth remembering surfaced here: freshness probes used
-  `find_symbol`, which searches only the **user** namespace and is blind to
-  everything `declare_internal` mints (the two namespaces are a documented
-  soundness firewall). It was loud in the new encoder — 228 sort-conflict errors
-  — and **silent** in the two skolemizers shipped hours earlier, where a
-  sort-agreeing reuse makes two unrelated existentials share one witness. Use
-  `find_internal_symbol` / `find_internal_function` for anything declared
-  internally.
-
-- **2026-07-30 — nested quantifiers are now reachable: UF 5.0 % → 14.5 %.**
-  Lane A / A1. Commit `fdfb910b`; record in the
-  [UF residual census](docs/plan/uf-residual-census-2026-07-30.md). Trigger
-  instantiation only ever saw *top-level* universals, so anything nested was
-  declined `Incomplete` before search began — **126 of the 159 declared-status
-  files** in the UF slice (83 % of the residual), against **3** in the
-  saturated-but-unproven state that instance *selection* would serve. A new
-  `quant_skolemize` pass does polarity-aware **NNF + Skolemization + prenexing**,
-  emitting Skolem **functions** over the enclosing universals because 109 of the
-  126 have an `exists` under a `forall`. Result: **8/159 → 23/159 correct, 0
-  wrong, 0 errors**, with UFLIA unchanged at 67/300 and DISAGREE = 0 throughout.
-  All three steps were *measured* necessary, not assumed: Skolemization alone
-  still left a residual quantifier (it discharges existentials but leaves the
-  universals nested); adding NNF/prenexing still left 7 assertions of 379 hitting
-  the polarity-mixing bail-out — and **one** abandoned assertion is enough to make
-  the whole query undecidable; only expanding Bool-sorted `xor`/`=`/`ite` into
-  polarity-pure equivalents cleared it. Soundness is refutation-only by
-  construction: skolemization preserves satisfiability, not equivalence, so the
-  caller suppresses `sat` (including `decide_instantiation`'s "result is exact"
-  shortcut) because such a model interprets Skolem symbols the original query
-  does not contain. It also fixed a **latent** bug in the existing
-  `skolemize_top_existentials`, whose per-call counter ran against an
-  arena-lifetime namespace: it reused `!sk_3`, which hard-errored once the new
-  pass declared symbols first and would otherwise have silently made two
-  unrelated existentials share one witness. Next: re-run the census — with 126
-  files newly reaching instantiation the residual has a different shape, and the
-  MBQI/trigger population is no longer 3.
-
-- **2026-07-30 — the unbounded route is fixed, UF has its first baseline (5.0 %),
-  and the census rules out every budget lever.** Lane A / A1. Full record:
-  [UF residual census](docs/plan/uf-residual-census-2026-07-30.md), commits
-  `2b4b6934` (fix) and `a1f78cd5` (census). The blocker named in the row below is
-  closed: the unbounded work was `EGraph::match_sequence`, which builds a
-  **cross product** of partial substitutions, extending a materialized frontier
-  once per argument position. Bounding it (deterministic counts, not a clock —
-  this crate is wasm-safe and clock-free) takes the 55 KB reproducer from
-  **150 s / 15.8 GB to 2.41 s / 81 MB**, honors its 2 s budget, and returns the
-  same verdict under a 6 GiB cap as under 24 GiB. Truncation costs completeness
-  only: fewer matches → fewer instantiations → `unknown`, never a wrong `unsat`.
-  Method note worth keeping — four guard placements deduced from reading the code
-  were all **inert and reverted**, because `lazy_clause_batches` returns a
-  materialized `Vec` and runs its e-matching *before* returning, so every guard at
-  or below that call site is downstream of the work; three `eprintln` phase probes
-  found it in one sitting.
-  That unblocks **UF: 8/159 correct, 0 wrong = 5.0 %** — our weakest division
-  (cvc5 takes 40.5 %). The census then rules out the obvious next moves with
-  measurements rather than argument: quantifier count **does not discriminate**
-  (the solves include files with 456/458/521 `forall`); **15× the time decides 0
-  of 60**; **8× the rounds decides 0 of 60**; 29/30 decline as `rounds_exhausted`
-  while instantiation is still *productive*. Raising the cap resolves the
-  apparent contradiction — the run saturates at 8192 ground terms with `admitted`
-  falling to 0 and *still* does not refute. So the generated instances are not the
-  ones the proof needs. **Next mechanism is instance *selection* — trigger
-  quality, relevance filtering, MBQI — not instance volume.** Two caveats recorded
-  against over-reading it: the ground-limit check is strict-greater so a plateau
-  at exactly 8192 misreports the decline reason, and the `admitted → 0` plateau
-  may be the new frontier caps binding rather than a true fixpoint. Still open:
-  three `sledgehammer` files overrun a 2 s budget by 20–30× with *bounded* memory
-  (a separate defect from the one fixed here).
-
-- **2026-07-30 — first measured quantified baseline: UFLIA is 67/300 = 22.3 %,
-  and UF is blocked by an unbounded route.** Lane A / A1. Full record:
-  [quantified baseline](docs/plan/quantified-baseline-2026-07-30.md). UFLIA had
-  **no honest row at all** — the only quantified SCOREBOARD entries were LIA 0/12
-  and UF 0/5, both from the cvc5 regression suite rather than the library. A
-  deterministic stratified 300-file slice across 14 real families
-  ([`scripts/select-quantified-slice.py`](scripts/select-quantified-slice.py), no
-  clock/RNG/seed, even stride not prefix) gives **67 decided, DISAGREE = 0, 0
-  errors**. Three things estimates could not have told us: **(1) every decision is
-  `unsat` — zero `sat`**, confirming on the real library that the general sat
-  direction is the hole; **(2) `unsupported` (141) outweighs `unknown` (92)**, so
-  ~half the slice is a feature/parse gap rather than a search gap, and
-  cheap-encoding-first applies before any MBQI investment; **(3) the families
-  split by failure mode and the split is actionable** — `tokeneer` 85 % decided,
-  `boogie` 0 % but 97 % `unknown` (parsed, supported, undecided → *search*
-  target), `simplify` 0 % and 100 % `unsupported` (→ *feature* target). One
-  aggregate number hides all of that. Scale honesty: cvc5's 58.1 % is on the
-  SMT-COMP selection, which strips everything all solvers solve under a second,
-  so the gap is real and large but is **not** 36 points on identical inputs.
-  Two defects found by measuring: an oversized `Int` literal (`2^256 - 1`, from a
-  Certora Ethereum family) reported `Syntax` and surfaced as an operational
-  `parse-error` tripping the integrity alarm — SMT-LIB `Int` is unbounded so the
-  input is well-formed and `Value::Int` is an `i128`, so it now declines
-  `Unsupported` (errors 1 → 0); and **UF cannot be measured at all** because 6/300
-  files exceed 4 GiB at a 2 s timeout and abort the whole run at 32 GiB. On one
-  55 KB file, wall/RSS track *available address space* rather than the deadline
-  (6 GiB → 3.3 s/305 MB completes; 24 GiB → 150 s/15.8 GB still growing, 3/3),
-  i.e. 75× over a 2-second budget — the same class as the ADR-0373 blowup, and
-  the concrete real-library reproducer P2.6d's polling note lacked. Narrowed to
-  the quantified portfolio in `solve` (`check_auto` declines the same file in
-  0.10 s/11 MB); **finite-domain expansion is ruled out** — lowering
-  `MAX_EXPAND_INSTANCES` 256× reproduced it unchanged. Next: bound that route
-  before any further UF work, then UF (cvc5 wins it with only 40.5 % and 59 % is
-  unsolved by anyone), then split UFLIA by failure mode.
-
-- **2026-07-30 — two flaky gates fixed, and the source-witness `sat` now replays
-  before export.** Three items, all of them about the *gate* rather than the
-  solver. (1) `apply_source_string_sat_problem` took the witness straight from
-  `bounded_witness` and returned `Sat`; `replays()` existed, was documented as an
-  independent re-evaluation, and was called only from tests. The two checks are
-  **not** the same check: the search evaluates the *positional* candidate arrays
-  it iterates, while `replays` re-resolves each variable out of the emitted
-  **symbol-keyed** witness — the exact mapping that reaches the `Model` — and
-  additionally rejects incomplete, duplicated, or sort-crossed bindings. A
-  mis-keyed symbol in the array-to-witness conversion passed the search and would
-  have failed `replays`. It is now wired in, declining to `unknown` on failure;
-  the 1,880-file Noetzli population is unchanged at **1,880/1,880 (26 SAT /
-  1,854 UNSAT)**, so it rejects nothing legitimate. (2) The smtcomp
-  resume-runner's retained-timeout test had a 50 ms wall limit racing Python
-  interpreter startup — the wall-timeout is guaranteed by the fixture's own 60 s
-  sleep, so the tightness bought nothing and cost determinism; now 3 s, verified
-  3/3 under 16-way contention. (3) The UFLIA model-finder ratchet asserted an
-  **exact** `sat`/`unsat`/`unknown` split on a deadline-bounded search, so any
-  jitter failed the gate; it now pins the bucket total exactly (genuinely
-  invariant) and the decided count against a floor, verified 3/3 under 26-way
-  contention. Measured equal 5/5 samples either side of ADR-0374 first, to rule
-  out my own change as the cause. The standing point: the repository already
-  refuses to treat a load-sensitive decline as a regression when reading
-  benchmark rows, and a *gate* that treats it as one just trains people to re-run
-  until green — which is how the Lean manifest staleness sat unfixed behind a
-  non-blocking CI check.
-
-- **2026-07-29 — the qfslia regex-membership half is on `main` with a
-  deliberately narrow claim, and the fuzz that adjudicates it was blind on its
-  own axis.** Ten commits from `agent/solver/qfslia-regex-length-next` land
-  (`c7123d34`); `5c2e5e0a` is dropped as superseded by `main`'s more general
-  `exact_prefixed_whole_source_replace`; the `parse.rs` UNSAT families stay on
-  the branch because they carry the one genuinely semantic conflict (an early
-  return that would skip `build_source_string_sat_problem`) plus the
-  `exact_fixed_segment_overlap_conflict` family the review said to hold until it
-  has an exhaustive reference test. **Credited: zero measured movement, zero
-  loss.** QF_SLIA 25/50, QF_S 93/134, QF_SEQ 22/33, and 296/300 on a
-  `20230327-stringfuzz-lu` sample — identical to `main`, DISAGREE = 0 on all
-  four, verified with genuinely distinct binaries after an initial comparison
-  accidentally reused one build. **Not credited:** the branch's claimed Kaluza
-  +262 / PyEx +69 cannot be measured here — Kaluza is absent from the staged
-  library and the only PyEx tree is `QF_SNIA`, a different logic — so no
-  Kaluza/PyEx number may be quoted until those corpora are committed as curated
-  slices. Landing anyway is deliberate: zero-loss, nine new exhaustive-reference
-  unit tests, and both lanes rewrite `parse.rs` at ~1,800 lines per increment so
-  the conflict decays fast. Separately, these routes decide ordered
-  `str.to_int` membership while `gen_literal` emitted only `{a, b}` —
-  structurally unable to produce a numeral, the `ba0d9149` pattern again. The
-  alphabet now spans numerals plus escapes at the printable-ASCII boundary,
-  above `0x7f`, and above `0xFF`. **Escapes, not raw characters**: a first
-  attempt with raw `é`/`𝄞` reported a false WRONG-UNSAT, because raw multi-byte
-  characters are ill-formed SMT-LIB — cvc5 refuses to parse them, z3 reads the
-  UTF-8 bytes as separate characters, and with `\u{1d11e}` z3 gives the correct
-  one-code-point `unsat`. Widened harness: **693 jointly decided, 0
-  disagreements**, both z3 and cvc5 arms.
-
-- **2026-07-29 — ADR-0373 is on `main`: the source FP prefix refuter lands with
-  its parse-time blowup bounded.** The route was held since 2026-07-28 on an
-  availability defect, not a soundness one — its core reviewed clean (top-level
-  conjuncts only, `Unsat`-only, checked `non_nan` before `nonnegative`, RNE-only
-  with no subtraction or mixed signs so the exact-cancellation P0 class is
-  structurally unreachable, 86/86 against z3 on an 1,800-case fuzz).
-  `normalize_source_fp_expr` substituted each `let`-bound value at every use, so
-  `k` nested bindings each mentioning the previous one twice emitted `2^k` nodes
-  **at parse time, where the solver timeout does not apply** — a 769-byte file
-  with 24 bindings cost 19.1 s / 17.3 GB and 26 exhausted the host, across *all*
-  logics since the route ran unconditionally. Three fixes were needed and the
-  third is the transferable one: charge the emit budget *during* construction;
-  chain scopes instead of cloning the environment per level; and charge through a
-  counter that **does not saturate**. `source_expr_node_count` early-breaks at
-  the 512-node eligibility cap — right for "did it exceed the cap", catastrophic
-  as a charge, because it billed a 500,000-node substitution as **513** and so
-  the budget drained linearly while the tree doubled. Two earlier attempts failed
-  on that alone; only instrumenting the per-level sizes found it, pinned at 513
-  while memory climbed. A `source_mentions_fp_add` pre-gate also keeps
-  QF_BV/QF_ABV bounded-model-checking output off the path entirely. Measured: 60
-  nested bindings decline in ~0.05 s under a 4 GiB cap, and end-to-end wall time
-  now tracks the configured deadline (0.40 s at 250 ms → 2.40 s at 2000 ms) at
-  99 MB RSS — a deterministic bound, as the standing rule requires. Carried
-  forward from the same review, non-blocking: duplicate `:named` bindings are
-  silently rebound, the negative controls never assert an end-to-end `sat`, and
-  the route has no fuzz generator.
-
-- **2026-07-29 — the curated strings rows are re-measured, and a harness oracle
-  was adjudicating the wrong query.** Full record:
-  [strings re-measurement](docs/plan/strings-remeasurement-2026-07-29.md).
-  QF_SLIA **18→25 / 50 (36%→50%)**, QF_S **87→93 / 134 (65%→69%)**, QF_SEQ
-  **26→22 / 33 (79%→67%)**; totals move **753→762 decided** over the same 992
-  files with **DISAGREE = 0** preserved. Two findings, and the second contradicts
-  a working assumption of the agent program. (1) The committed baselines were
-  stale in **both** directions — QF_SEQ had been claiming four `unsat` decisions
-  the code no longer makes, all four landing in the P2.7 A.2 bounded-unsat gate.
-  A stale generated view is not automatically conservative. (2) Every row is
-  **identical at `ffc466b4` and at current `main`**, so the Phase 0 Noetzli work
-  moved these curated rows by **exactly zero**; the gains and the regression both
-  predate it. The Noetzli 1,880/1,880 result is population-specific and must not
-  be generalised to QF_SLIA/QF_S/QF_SEQ. Re-measuring also exposed a harness
-  defect: `compare_with_oracle` handed the in-repo Z3 oracle `script.assertions`,
-  which for a bounded-string script is the packed-BV **encoding** (ADR-0029), not
-  the source. On `r1_QF_SLIA_pattern1.smt2` that oracle returned `unsat` in 0 ms
-  while the declared `:status`, the Z3 binary, cvc5 1.3.4, and axeyum all answer
-  `sat` — a false soundness alarm, and the same defect can equally produce false
-  *agreement*. A bounded-string query now never adjudicates through the in-repo
-  oracle; it falls back to the Z3 binary on the original file, or is not compared.
-  Axeyum's verdicts are byte-identical before and after — only the adjudicator
-  changed. Next: re-scope Lane B against the now-known residual (QF_SLIA 21
-  unsupported + 4 unknown, QF_S 32 + 9, QF_SEQ 10 unknown concentrated in the
-  A.2 gate), and audit whether other divisions' baselines are similarly stale —
-  three of three string rows were wrong, which is not a reassuring sample.
-
-- **2026-07-29 — `just check` is GREEN on `main` (ADR-0374 closed the last
-  blocker).** Verified by content, not by exit code: 0 compile errors, 0 failed
-  tests, 0 panics, 0 clippy warnings, **467 test suites ok**, all 13 gate stages
-  present, `disagree=0`. The pre-existing quantified-BV blocker recorded on
-  2026-07-28 is fixed. Root cause, established empirically: `normalize` rewrites
-  `not (forall x. B)` to `exists x. not B`, `skolemize_top_existentials` replaces
-  it with `not B[x := s]`, and the query is then quantifier-free — so `solve`
-  returned that `sat` **directly**. The model interprets the Skolem constant, so
-  it *is* the existential witness, but nothing recorded it, and `check_model`
-  replays against the **original** assertion where discharging `forall x` means
-  enumerating the domain: feasible at 1/2/8/16 bits, impossible at 32, which is
-  exactly the width where it failed. So the verdict and the model were both
-  correct and only the **evidence** was missing. The
-  `NegatedUniversalWitness` certificate (ADR-0130/0131) already existed for this
-  shape, but `source_shape` admitted a certificate only when every free symbol
-  was `BitVec`, and the assertion carries a free `Bool`. ADR-0374 admits `Bool`
-  free symbols (the proofs are evaluation-based, so a `Bool` free value is
-  checked exactly as strongly as a `BitVec` one), lets the witness search pin a
-  `Bool`, and attaches the certificate to the skolemized `sat`. The discharge
-  differential moves from a panic to **certified_sat=32 / agreed_unsat=16 /
-  safe_controls=16**, and `progress_frontier` is 9/9 with all five frontier
-  values unchanged. **This is an evidence-coverage gain, not a decide-rate
-  gain** — results that were correct but unverifiable are now verifiable, and no
-  benchmark moves from `unknown` to a verdict. Next: re-measure the curated
-  QF_SLIA / QF_S / QF_SEQ SCOREBOARD rows, which have not been regenerated since
-  the Noetzli mechanisms landed.
-
-- **2026-07-28 — Phase 0 integration landed a P0 wrong-`unsat`, then fixed it;
-  the Noetzli slice is verified on `main` and two gate holes are closed.** Full
-  record: [Phase 0 result](docs/plan/phase0-integration-result-2026-07-28.md).
-  The merge of `agent/solver/uflia-main-next` (`bbe5628c`) *introduced* a
-  wrong-`unsat` reachable from a four-line file through the public
-  `solve_smtlib` front door:
-  `exact_singleton_outer_source_identity` accepted
-  `(= (str.replace (str.replace S a r) S X) (str.replace (str.replace S a S) S X))`
-  without requiring `X == r`, which the identity needs. cvc5 1.3.4 and z3 both
-  answer `sat` on the minimized case; axeyum answered `unsat`. Fixed, with four
-  mutants pinned as soundness-negative controls. **Neither existing gate could
-  have caught it**: the exhaustive identity test instantiates the schema with one
-  `replacement` reused in both positions — exactly the case the matcher may
-  accept — so it validated the mathematics, not the accept/decline boundary; and
-  the string differential fuzz emits `str.replace` only with *literal* needle and
-  replacement, so it structurally cannot generate the nested-needle shape. This
-  is the `a946f925` pattern again. The fix costs nothing: the fixed 1,880-file
-  Noetzli population is unchanged at **1,880/1,880 decided (26 SAT / 1,854
-  UNSAT / 0 unknown)**, and because that corpus declares `:status unknown` on
-  every file — making the declared-status check vacuous — all 26 SAT rows plus a
-  300-row UNSAT sample were adjudicated against two independent oracles: cvc5
-  agreed on 315/326, z3 on 318/326, **zero contradictions**, with five rows
-  decided by axeyum that neither oracle decided in 10 s. Separately,
-  `gen-scoreboard.py --check` was a silent no-op (no argument parsing at all, so
-  it rewrote the file and exited 0); it is now real and in `parity-docs`, and it
-  immediately caught a `bv_reduction` frontier gain of **+10** that had been in
-  the committed source artifact but never in the generated table. And
-  `just check` was already red on `main` since `fe8ba9af` because the Lean
-  complete-parity manifest content-addresses `ci.yml`. Next: fix the
-  exponential-`let` parse bound before landing ADR-0373 (a 769-byte file costs
-  19.1 s / 17.3 GB at parse time, where the solver timeout does not apply), then
-  integrate `agent/solver/qfslia-regex-length-next` — audited as **not** a stale
-  duplicate but ~3.6k lines of unique dual-oracle-confirmed capability.
-
-- **2026-07-28 — `just check` is red on `main` for a PRE-EXISTING quantified-BV
-  wrong-`sat`-model, and this is now the top P0.** The full gate run exposed
-  `quantified_bv_differential_fuzz.rs:1037`
-  (`boolean_discharge_of_opaque_bv_closures_matches_z3`, negative-control branch
-  `(3, Ok(Sat(model)), SatResult::Sat)`): axeyum returns `Sat` with a model and
-  z3 agrees `Sat`, but `check_model(&arena, &[assertion], model)` returns
-  `Ok(false)` — the lifted model does **not** satisfy the original assertion,
-  violating the rule that every `sat` must replay against the original term. The
-  fuzz runs on a fixed-seed LCG, so it is deterministic rather than flaky.
-  **Verified pre-existing**: built and ran the same test at `ffc466b4` (the
-  pre-merge baseline) and it fails with the identical assertion at the identical
-  line. The 2026-07-28 session touched no quantified-BV or BV source, and this
-  fuzz builds terms through the arena rather than the SMT-LIB front door. It had
-  been masked because the earlier gate failure (`string_replace_over_cap_declines`
-  in `axeyum-smtlib`, which sorts first) aborted the run before reaching it, and
-  because the Lean complete-parity manifest had independently been failing
-  `parity-docs` since `fe8ba9af`. Both maskers are now fixed, so this is the
-  single remaining `just check` blocker. Next: the seed is fixed, so instrument
-  the failing case index/width, dump the assertion and model, and establish
-  whether the model is incomplete (an unbound symbol that `check_model` reads as
-  unsatisfied) or genuinely wrong. Owner: the quantified-BV boolean-discharge
-  path.
+- **2026-07-31 — pure-UF finite model finding lands: the first checked UF
+  `sat` verdicts in the project's history.** Commit `c36e3ee3`. Before it,
+  every UF verdict axeyum had ever emitted was `unsat` (the quantified-UF sat
+  certificate rejected every non-`Int`/`Real` binder; the MBQI model finder
+  declined every scalar-storage interpretation). The new `uf_fmf` route
+  deepens per-sort carrier bounds `k = 1..8`, encodes each uninterpreted sort
+  as `BitVec(w)` with `k` domain-representative *variables* (duplicates
+  allowed — "model of size <= k", monotone in `k` — with `D_i <= i` symmetry
+  breaking), asserts closure axioms over free symbols and function values,
+  expands `forall`/`exists` (any nesting/polarity, `Bool` binders included)
+  over the representatives, and decides the ground QF_UFBV expansion on the
+  lazy-Ackermann bit-blast route under a deadline-clamping adapter. `sat` is
+  emitted only through the extended independent checker
+  (`check_quantified_uf_model_sat` finite-carrier route: exhaustive
+  re-evaluation over model-recorded cardinalities, failing closed on missing
+  cardinality or any out-of-carrier token) plus the standard `check_model`
+  replay on the original assertions. A cvc5 `--finite-model-find` probe
+  justified the design first: 18/22 declared-sat public UF parity files have
+  models with per-sort cardinality <= 5. Measured on the 200-file UF parity
+  list at 24 s: declared-sat solves move **0 -> 13** (all replay-checked),
+  declared-unsat solves stay 7 (a same-host base-commit rerun over every
+  unsolved declared-unsat file confirms **zero** losses from the halved
+  refutation budget), and the sweep has **zero wrong verdicts**. An
+  oracle-free differential fuzz (brute-force finite-structure enumerator, up
+  to size 3) plus pinned degenerate shapes (size-1 carriers,
+  exact-upper-bound universals, exists-under-forall, `Bool` binders, aliased
+  free/bound symbols) is the new seed-class gate. Known frontier: ~8
+  declared-sat files still decline (bounds/instance budget or ground-solve
+  cost at `k >= 3`; four of them also SIGTERM cvc5 at 30 s), and one
+  declared-unknown file's non-preemptible final blast round overshoots the
+  wall budget. Next: per-sort (non-uniform) deepening guided by unsat cores,
+  and a warm-start for the per-`k` ground solves.
 
 - **2026-07-27 — SMT `(15,64)` sqrt is validated; reclassify the measured
   residuals before widening arithmetic.** Commit `ab4b5803` and ADR-0370 add one sqrt-specific gate,
@@ -861,22 +556,6 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   guard-model tests pass. Next: census the remaining large ground-core
   residuals before widening the probe or return to checked quantified SAT; do
   not lower the structural guard without a no-loss population measurement.
-- **2026-07-26 — the fixed Noetzli QF_SLIA population is complete: 1,880/1,880
-  decided with no wrong verdicts.** Fresh-main topic `agent/solver/uflia-main-next`
-  carries only the three missing exact mechanisms, the re-hardened membership
-  deadline fixture, and the bounded source-witness route (`cfdea512`). The route
-  tries at most 20,000 concrete assignments and returns SAT only after an exact
-  source evaluator replays every original assertion; unsupported syntax, a missed
-  witness, malformed bindings, or cap exhaustion remains Unknown, and it has no
-  UNSAT capability. A release replay built from this exact topic is 26 SAT /
-  1,854 UNSAT / 0 unknown. Relative to the retained baseline, the cumulative
-  changes are 106 `unknown`→`unsat` plus seven `unknown`→`sat`, with zero losses
-  or verdict flips; its 1,880 output rows are byte-identical to the validated
-  advanced-branch replay. All 74 parser tests, all 81 exact
-  fixed-splice/source tests, both historical wrong-UNSAT guards, both reported
-  decision regressions, both membership deadline tests, stable Clippy, the MSRV
-  compile, and `just check-scope` pass. Next: quantified UFLIA from this
-  current-main base; do not spend another cycle polishing the completed slice.
 
 - **2026-07-26 — symbolic decimal-string views move six more Noetzli rows.**
   Pushed `19f911b6` gives `str.from_int(i)` its exact symbolic empty condition
@@ -9758,7 +9437,7 @@ plan is built and committed on the current branch:
 | P2.5 | NRA: incremental linearization → nlsat/CAD | WIP — linear-abstraction + sign/zero lemmas + McCormick + spatial B&B + point-lemma refinement already shipped. **Added threshold-1 monotonicity lemmas** — growing (`a≥1 ∧ b≥0 ⇒ r≥b`, decides `x≥1 ∧ y≥1 ∧ x·y<1`) and shrinking (`0≤a≤1 ∧ b≥0 ⇒ r≤b`, decides `0≤x≤1 ∧ y≥0 ∧ x·y>y` where only one operand is bounded so McCormick can't apply); two-operand only — **plus a refinement overflow safety net** (`too_large_to_refine`: stop refining past a 2³¹ magnitude bound, → `unknown` not a panic; hardens the exact-rational simplex against escalating witnesses). **Sum-of-squares lemmas landed (2026-06-18)** — `sos_lemmas`: for a pair `a,b` with `a·a`/`b·b`/`a·b` all abstracted, add `(a±b)² ≥ 0` over the result vars (sound), restoring the cross-product correlation independent abstraction drops, so **`a²+b² ≥ 2ab` / AM–GM₂ is now PROVED** (the Spivak SOS-frontier test promoted prompt-`Unknown`→`Unsat`; negative test confirms `a²+b²=2ab` stays sat). 26 NRA + 5 Spivak tests. **Since then (2026-06-28…07-02, see the changelog + [SCOREBOARD](bench-results/SCOREBOARD.md)): the CAD arc landed** — bignum algebraic core in `axeyum-ir` (ADR-0044/45/46), a 2-var-complete / N-var decision-complete fuzz-gated CAD, coprime-split projection, first-class `/0` division witnesses (`124e18aa`), and five z3-gated adversarial differential fuzzes at DISAGREE=0. **2026-07-06/07 arithmetic arc (decomposition `fcbde209`): QF_NRA 21→27/38 (71%)** — `/0` witnesses + sat-witness probe + threshold-1 (`5cc63a15`, closed `issue9164-2`), the `a²=−k` even-power-equality (`631be06f`), the `nra_even_power` frontier wire-in (`e0e24085`, `nra_degree` 2→40), coordinate sat-witness for >4 reals (`80206579`, budget-marginal); **and the parallel QF_NIA arc drove cvc5 21→33/39 (85%): div/mod Euclidean linearization (`a946f925`+P0 fix `52f3b1d1`) + `iand` bit-blast (`c5a829a3`) + congruent Ackermann div/mod-by-zero (`b91dd918`, recovered div.01/minimal_unsat_core/div.08 + closed a pre-existing wrong-sat) + `int.pow2` value-table axioms (`fb2da08b`, +8).** Remaining is genuinely hard: 7/12 QF_NRA residue is multi-week CAD/nlsat/transcendental (Boolean-CAD, MetiTarski, degree-10) — the *funded engine arc* (ADR-0058 proposed), not a slice; NIA's bounded levers are now largely harvested (div/mod-0, iand, pow2 all landed). |
 | P2.6 | Quantifiers (MAM e-matching, trigger inference, MBQI, QE/MBP) | WIP — e-graph E-matching, trigger inference/MBQI/MBP, restricted checked Skolem/model/counterexample certificates, retained checked quantifier clauses, and incremental candidate-sensitive e-matching are live through ADR-0140. **Checked UNSAT routes (ADR-0095/0097/0099/0100/0101/0108/0124/0125/0126/0127/0128/0129/0134/0139/0140):** Euclidean residue, affine growth, nested XOR, concrete closed-universal counterexamples including universal falsifiers below proved-vacuous existential prefixes, exact finite equality partitions, source-instantiated free-Boolean covers, source-bound residual-QF_BV alternation counterexamples, evaluator-replayed negated-existential witnesses, premise-aware conjunctive and query-scoped positive universal instances, and paired-existential witness transfer each carry separate checks. **Checked SAT routes (ADR-0096/0098/0107/0121/0122/0123/0130/0131/0132/0133):** arena-stable affine/reflexive and guarded unit-gap Skolems, exact same-width BV identities, false outer-BV equality guards, free-Boolean Bool/Int models, Boolean-discharged opaque BV closures, and complete free-BV affine-LSB, negated-universal-witness, signed-interval negated-existential, and zero-product negated-existential models, and positive-universal residual-QF_BV free-Boolean models replay through canonical `check_model`; unresolved BV semantics never enter the LIA fallback. **Lean routes (ADR-0102 through ADR-0106, ADR-0108/0109/0124/0125/0127/0129/0135/0137/0138/0139/0140):** all eight decided LIA UNSAT rows reconstruct through genuine quantifiers and kernel-checked reasoning. Quantified LIA is 12/12, certified/rechecked/dominant 12/12, Lean UNSAT 8/8. The committed quantified-BV slice is 36 SAT / 18 UNSAT / 0 unknown / 0 unsupported, with 54/54 evidence-certified/rechecked, 50/54 dominant, and Lean UNSAT **18/18**. ADR-0137 closes the corpus-scale ADR-0134/0135 export gap, ADR-0138 constructs genuine typed witnesses for all three ADR-0126 public rows under guarded release gates, ADR-0139 applies a typed universal witness before an evaluated-AIG refutation for `qbv-simp`, ADR-0140 eliminates ADR-0128's vacuous existential prefix with genuine `Exists.rec`, ADR-0124/0125 reconstruct both source-bound alternation rows, ADR-0129 reconstructs the paired-existential public row, and ADR-0127 closes the final conjunctive-universal row through scope-checked compact CPS/RUP under 4 GiB. Remaining boundaries: broader nonvacuous existential relations and nested/alternating BV QSAT, SAT-side ADR-0130/0131/0132/0133 Lean theorem/model export, non-equality online antecedents/proof serialization, measurement-gated high-frequency callbacks, generation-cost scheduling/bytecode, quantified UF/function-valued models, multi-constant equality-partition proofs, and further open-context proof sharing; current bridge relevance is exact by construction. |
 | P2.7 | Strings (unbounded, full `str.*`, regex) | WIP — **Phase A DONE** (ADR-0051 `Sort::Seq`; ADR-0052 `len`↔LIA link + bounded-unsat gate, repaired a measured wrong-unsat class). **Phase B core LIVE both directions (ADR-0053, landed 2026-07-03):** T-B.1 normalization → T-B.4a arrangement search → T-B.4b routing + parser dual-build → extended-fn reductions → T-B.4d word-first fallback → harness parity (**QF_S 52→78 across 07-03…06** — see the generated scoreboard, oracle-verified) → **T-B.7 slices 1–2**: word `unsat` ONLY via the independent derivation checker (`check_derivation.rs`, own union-find + walkers; word fuzz **96 sat + 305 unsat, DISAGREE=0**). Phase C derivative membership (ADR-0054), Phase D reductions, lex order, code↔LIA, #49 membership-over-concat, #53 LenAbs SAT, and #55 concat emptiness/joint search are landed; QF_S is 87/134 and QF_SLIA 18/50 on the committed scoreboard. The 2026-07-25 full-library refresh measures 4,184/8,839 exact at `844ad9f7`, WRONG=0; disjoint retained follow-ups through bounded-parser/length-side integer indicators, exact fixed-splice bounds, UNSAT-only fixed-splice equality conflicts, the 12/24-byte packed window, exact PyEx path-bound recovery, and exact fixed-splice semantic propagation project 4,954/8,839, and the dense PyEx split/replace + replayed-witness mechanism adds at least 706 non-overlapping decisions for a conservative stacked projection of **5,660/8,839 (64.0%)**. Its comparable fixed PyEx selection rises 165→880 decisions: 700/715 gains agree with cvc5, one more with Z3, 14 remain oracle-unknown, and no oracle disagrees. The exact 71-row Leetcode product slice is now 71/71 with WRONG=0, and the full Leetcode slice is 76/76. The first-occurrence follow-up moves a current like-for-like 250 ms run 806→886 decisions with zero verdict flips and eliminates all 21 process aborts; eight load losses recover in isolation, and all 88 new decisions are either Z3-confirmed or replay-checked SAT on three Z3 timeouts. The exact empty-view/content contradiction and fallback/path-pin conflicts raise credited fixed-selection decisions to 1,093; selective 13-byte packing for directly compared protocol tokens raises them to 1,556, and the exact length-preserving PyEx split/replace/rejoin bound raises them again to **1,576/2,535**. The latter adds seven replay-checked SATs and 13 UNSATs, all Z3-confirmed, with no flips; two parallel-load losses recover in isolation. Pipelines above 64 transforms retain the fast source fallback. Unrelated symbols remain at 12 bytes. A broader unrestricted dynamic-`indexof` split prototype was rejected at only 2/1,008 gains, and a constant-tight concat-bound prototype was rejected after moving 1/69 Noetzli and 0/1,344 PyEx rows. The bound-independent source normalizer plus exact fixed-word, empty-concat replacement, affine-substring, recursive Boolean-condition, one-code-point replacement-view, deletion-language, replacement-emptiness/Boolean, self-replacement-observation, and head-totality-view follow-ups now move the fixed 1,880-file Noetzli population **349→1,767 decisions (+1,418, 94.0%)** with zero verdict flips; 1,767 results are 19 SAT and 1,748 UNSAT, and 113 rows remain. Z3 confirms all 20 latest gains. The alphabet-incomplete bounded-UNSAT upgrade is repaired in `d6e486ff`. Other declines include unsupported `replace_re`/`seq.*` machinery and the ADR-0063 Nielsen-arrangement class; T-B.5 F-Loop/T-B.6 eager conflicts remain performance work. The canon/derivative deadline guard is closed. |
-| P2.7a | Current QF_SLIA increment | **DONE (`cfdea512`)** — the fixed 1,880-file Noetzli population is **1,880/1,880 decided (100%)** at 250 ms internal / 750 ms outer: 26 SAT / 1,854 UNSAT / 0 unknown. Cumulative movement from the retained baseline is 106 `unknown`→`unsat` plus seven replay-checked `unknown`→`sat`, with zero losses or verdict flips. The final source-witness route is deterministic, capped at 20,000 assignments, fail-closed on unsupported expressions or malformed witnesses, and has no UNSAT capability. The fresh-main topic passes the affected tests, stable Clippy, MSRV, and the scoped gate. Next: quantified UFLIA; do not spend another cycle polishing this completed Noetzli slice. |
+| P2.7a | Current QF_SLIA increment | WIP — pushed through `19f911b6`: symbolic decimal-string emptiness/alphabet/self-indexed-substring semantics join exact source-preservation, singleton-prefix replacement, prefix-substring emptiness, positive-length complements, singleton-result inversion, equality-path semantic re-evaluation, and checked pinned `str.len` arithmetic. The fixed 1,880-file Noetzli population at 250 ms internal / 750 ms outer moves **349→1,835 decisions (+1,486 total, 97.6%)**. The latest increment is exactly six `unknown`→`unsat` rows (three predicate, three term), with zero losses or verdict flips: 19 SAT / 1,816 UNSAT / 45 unknown. Z3 confirms 5/6; one 30-second timeout has direct semantics over 2,179 integer inputs including `i128` extremes. All 87 SMT-LIB front-door tests, all 73 fixed-splice tests, both enabled deadline tests, both standing wrong-UNSAT guards, and the scoped gate pass. Predicate rows are 824/835 and term rows 1,011/1,045. Next: classify the remaining 34 term and 11 predicate rows and attack the largest exact family. |
 | P2.8 | FP polish (unspecified values, min/max ±0, lazy conversion) | WIP — the FP theory is broad already (classification, compare, abs/neg/min/max, add/sub/mul/div/fma/sqrt/rem/roundToIntegral, fp→fp resize, fp→real/ubv/sbv). min/max ±0 confirmed correct (deterministic allowed choice). **Added integer→float conversion** (`from_ubv`/`from_sbv`, 2026-06-18): rounds a w-bit unsigned/signed-two's-complement integer to a dst float under a rounding mode (reuses `pack_value`; exact 0→+0; |x| via two's-complement read unsigned, correct for INT_MIN). Differential-tested vs Rust's native `as f32`/`as f64` (i32/u32→F32, i64/u64→F64; edges + 3000-case sweep, exact). Completes the `to_fp` family on the builder side. Remaining: SMT-LIB parse wiring for `(_ to_fp …)`/`to_fp_unsigned` over bv sources (axeyum-smtlib, coordinate); `to_fp` from real constants; unspecified-value edge polish |
 | P2.9 | Datatypes lazy (e-graph splitting + occurs-check) | WIP — **structural refutation** (`prove_datatype_unsat_structurally`): acyclicity + distinctness + injectivity **+ congruence** (equal args ⇒ equal apps, e.g. `x=cons(h,a) ∧ y=cons(h,b) ∧ a=b ∧ x≠y`) + constructor exhaustiveness over a term-level union-find; also flattens top-level conjunctions and refutes top-level `or` when every branch is structurally contradictory. Sound, wired into dispatch/evidence/Lean reconstruction ahead of the eager expansion; the cvc5 QF_DT exact audit is now 3/3 dominant with Lean unsat 3/3. 13 focused tests. Remaining: e-graph constructor *splitting* (case-split `is-c` on the keystone) for SAT-side completeness; exact field guards to remove the relaxed `unknown` cases; broader datatype corpora beyond the cvc5 three-row slice |
 
@@ -9929,17 +9608,6 @@ plan is built and committed on the current branch:
   retained-plus-gains replay is 128/128; the budget-edge Boogie regression
   found in the first prototype is removed and passes 3/3 at 250 ms. Focused
   helper, arithmetic-ITE, and quantified guard-model tests pass.
-- **2026-07-26 — closed the final Noetzli gap on a fresh-main topic.** The topic
-  ports only the three post-main exact mechanisms, the replay-based deadline
-  safety fixture, and `cfdea512`'s 20,000-assignment SAT-only source evaluator.
-  The complete fresh-release population is 1,880/1,880: 26 SAT / 1,854 UNSAT /
-  0 unknown. The cumulative changes from the retained baseline are exactly 106
-  `unknown`→`unsat` and seven `unknown`→`sat`; no prior decision is lost or
-  flipped. Exhaustive reference semantics, malformed/mutated-witness rejection,
-  the assignment cap, false-query decline, capacity-only fallback, both
-  wrong-UNSAT guards, both specific decide-rate regressions, both deadline tests,
-  stable Clippy, MSRV, and the scoped gate are green.
-
 - **2026-07-26 — moved six symbolic `str.from_int` rows.** Pushed `19f911b6`
   with exact negative-input emptiness, decimal-only containment, negated-length
   normalization, and self-indexed decimal substring semantics. The fixed
