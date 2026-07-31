@@ -717,7 +717,7 @@ const MAX_LOOP_EXPANSION: u32 = 256;
 /// Expands `R{lo,hi}` into concatenation: `lo` mandatory copies followed by
 /// `hi - lo` optional ones (or a Kleene star when `hi` is absent).
 ///
-/// Per the SMT-LIB UnicodeStrings theory, `lo > hi` denotes the empty language.
+/// Per the SMT-LIB `UnicodeStrings` theory, `lo > hi` denotes the empty language.
 fn expand_loop(lo: u32, hi: Option<u32>, rest: &[RegexSexpr<'_>]) -> Result<Regex, SmtError> {
     let inner = parse_regex_one(rest)?;
     if let Some(hi) = hi {
