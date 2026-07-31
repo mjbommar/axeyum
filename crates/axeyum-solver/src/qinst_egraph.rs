@@ -45,10 +45,18 @@ use web_time::Instant;
 use crate::auto::{check_auto, config_with_remaining_timeout};
 use crate::backend::{CheckResult, SolverConfig, SolverError, UnknownKind, UnknownReason};
 use crate::cdclt::{CdclT, Lit as CdcltLit, Outcome as CdcltOutcome};
-use crate::euf_egraph::{Encoder as EufEncoder, EufTheory, collect_eq_atoms};
+use crate::euf_egraph::{Encoder as EufEncoder, EufTheory, collect_euf_atoms};
 
-/// Default e-matching instantiation rounds before giving up (`unknown`).
+/// Historical e-matching round budget. It is now the *cadence anchor* for the
+/// interleaved refutation checks: the first mid-loop ground refutation check
+/// fires after this many rounds (exactly where the loop used to exit), so every
+/// refutation the historical budget found is still found at the same cost.
 const MAX_INSTANTIATION_ROUNDS: usize = 8;
+
+/// Hard ceiling on instantiation rounds. The wall clock (deadline) and the
+/// accumulated-ground cap are the practical bounds; this keeps the loop
+/// deterministic (the "never hang" rule) when neither is configured.
+const MAX_EXTENDED_INSTANTIATION_ROUNDS: usize = 512;
 
 /// Deterministic cap on accumulated ground terms: e-matching a universal whose
 /// instances generate ever-deeper terms (e.g. `∀x.(x≤y ∨ x≥y+1)` ⇒ `y, y+1, y+2, …`)
@@ -111,6 +119,99 @@ struct QuantifierLoopStats {
     candidate_applications_scanned: usize,
 }
 
+/// Memoized "contains a quantifier" test over the shared term DAG. The
+/// instantiation loop's accumulated set is *not* always quantifier-free: an
+/// original non-top-level assertion (`(or … (forall …))`) or an instance of a
+/// universal whose matrix nests another quantifier keeps `Forall`/`Exists`
+/// nodes, and one such conjunct makes every QF backend decline the whole set.
+/// The refutation checks filter those conjuncts out (sound: the conjuncts are
+/// all asserted, so an `unsat` subset refutes the full conjunction).
+#[derive(Default)]
+struct QuantifierTermCache {
+    known: HashMap<TermId, bool>,
+}
+
+impl QuantifierTermCache {
+    fn contains_quantifier(&mut self, arena: &TermArena, root: TermId) -> bool {
+        let mut stack = vec![(root, false)];
+        while let Some((term, expanded)) = stack.pop() {
+            if !expanded && self.known.contains_key(&term) {
+                continue;
+            }
+            match arena.node(term) {
+                TermNode::App { op, args } => {
+                    if matches!(op, Op::Forall(_) | Op::Exists(_)) {
+                        self.known.insert(term, true);
+                        continue;
+                    }
+                    if expanded {
+                        let any = args
+                            .iter()
+                            .any(|arg| self.known.get(arg).copied().unwrap_or(false));
+                        self.known.insert(term, any);
+                    } else {
+                        let args = args.clone();
+                        stack.push((term, true));
+                        for arg in args {
+                            if !self.known.contains_key(&arg) {
+                                stack.push((arg, false));
+                            }
+                        }
+                    }
+                }
+                _ => {
+                    self.known.insert(term, false);
+                }
+            }
+        }
+        self.known[&root]
+    }
+
+    /// The quantifier-free conjuncts of `ground`, or `None` when every conjunct
+    /// is already quantifier-free (the caller then uses `ground` unchanged).
+    fn quantifier_free_subset(
+        &mut self,
+        arena: &TermArena,
+        ground: &[TermId],
+    ) -> Option<Vec<TermId>> {
+        let subset: Vec<TermId> = ground
+            .iter()
+            .copied()
+            .filter(|&term| !self.contains_quantifier(arena, term))
+            .collect();
+        (subset.len() != ground.len()).then_some(subset)
+    }
+}
+
+/// The loop's ground refutation check. It first runs the established check on
+/// the full accumulated set (byte-identical to the historical behavior); when
+/// that does not refute *and* the set carries quantified conjuncts — which the
+/// QF backends decline wholesale — it re-checks the quantifier-free subset.
+/// Subset `unsat` is sound: every conjunct is asserted, so refuting a subset
+/// refutes the conjunction. This is strictly additive: it can only turn an
+/// `unknown` round into `unsat`.
+fn quantifier_qf_refutation_check(
+    arena: &mut TermArena,
+    ground: &[TermId],
+    config: &SolverConfig,
+    deadline: Option<Instant>,
+    stats: &mut QuantifierLoopStats,
+    cache: &mut QuantifierTermCache,
+) -> Result<CheckResult, SolverError> {
+    let full = quantifier_qf_check(arena, ground, config, deadline, stats)?;
+    if matches!(full, CheckResult::Unsat) {
+        return Ok(full);
+    }
+    let Some(subset) = cache.quantifier_free_subset(arena, ground) else {
+        return Ok(full);
+    };
+    if deadline.is_some_and(|d| Instant::now() >= d) {
+        return Ok(full);
+    }
+    quantifier_qf_check(arena, &subset, config, deadline, stats)
+}
+
+#[allow(clippy::too_many_lines)]
 fn prove_quantified_unsat_via_egraph_impl(
     arena: &mut TermArena,
     assertions: &[TermId],
@@ -139,35 +240,63 @@ fn prove_quantified_unsat_via_egraph_impl(
     let mut seen: HashSet<TermId> = ground.iter().copied().collect();
     let mut ground_derivations: HashMap<TermId, QuantifierGroundDerivation> = HashMap::new();
     let mut matcher = IncrementalEmatchSession::new(arena, &foralls);
+    let mut quantifier_cache = QuantifierTermCache::default();
     let mut online_clauses = None;
     let mut online_attempted = !enable_online_clauses;
     let mut candidate_equalities_enabled = enable_candidate_equalities;
-    for _ in 0..MAX_INSTANTIATION_ROUNDS {
+    for round in 0..MAX_EXTENDED_INSTANTIATION_ROUNDS {
         if deadline.is_some_and(|d| Instant::now() >= d) {
             return Ok(egraph_timeout());
         }
         if ground.len() > MAX_GROUND_TERMS {
             if matches!(
-                quantifier_qf_check(arena, &ground, config, deadline, stats)?,
+                quantifier_qf_refutation_check(
+                    arena,
+                    &ground,
+                    config,
+                    deadline,
+                    stats,
+                    &mut quantifier_cache
+                )?,
                 CheckResult::Unsat
             ) {
                 return Ok(CheckResult::Unsat);
             }
             return Ok(egraph_ground_limit());
         }
-        // The first round and accelerator fallbacks use the full QF route.
+        // The first round and accelerator fallbacks use the full QF route. The
+        // historical 8-round window keeps its per-round check; the extended
+        // rounds throttle to the exponential cadence so re-deciding a large,
+        // barely-grown ground set does not dominate the added rounds.
         if online_clauses.is_none() {
-            if matches!(
-                quantifier_qf_check(arena, &ground, config, deadline, stats)?,
-                CheckResult::Unsat
-            ) {
+            if interleaved_check_due(round)
+                && matches!(
+                    quantifier_qf_refutation_check(
+                        arena,
+                        &ground,
+                        config,
+                        deadline,
+                        stats,
+                        &mut quantifier_cache
+                    )?,
+                    CheckResult::Unsat
+                )
+            {
                 return Ok(CheckResult::Unsat);
             }
             if deadline.is_some_and(|deadline| Instant::now() >= deadline) {
                 return Ok(egraph_timeout());
             }
             if !online_attempted {
-                online_clauses = OnlineQuantifierClauseSession::new(arena, &ground, deadline);
+                // The retained CDCL(T) accelerator abstracts equality clauses;
+                // quantified conjuncts make its encoder decline outright, so it
+                // sees only the quantifier-free subset (its refutations are
+                // re-validated by the full QF route either way).
+                let session_ground = quantifier_cache
+                    .quantifier_free_subset(arena, &ground)
+                    .unwrap_or_else(|| ground.clone());
+                online_clauses =
+                    OnlineQuantifierClauseSession::new(arena, &session_ground, deadline);
                 online_attempted = true;
             }
         }
@@ -192,6 +321,7 @@ fn prove_quantified_unsat_via_egraph_impl(
                 &mut ground_derivations,
                 deadline,
                 stats,
+                &mut quantifier_cache,
             )? {
                 CandidateFixpointStep::Refuted => return Ok(CheckResult::Unsat),
                 CandidateFixpointStep::Added(terms) => admitted = terms,
@@ -213,7 +343,14 @@ fn prove_quantified_unsat_via_egraph_impl(
         });
         match online_outcome {
             Some(CdcltOutcome::Unsat) => {
-                if replay_online_refutation(arena, &ground, config, deadline, stats)? {
+                if replay_online_refutation(
+                    arena,
+                    &ground,
+                    config,
+                    deadline,
+                    stats,
+                    &mut quantifier_cache,
+                )? {
                     return Ok(CheckResult::Unsat);
                 }
                 online_clauses = None;
@@ -221,8 +358,47 @@ fn prove_quantified_unsat_via_egraph_impl(
             Some(CdcltOutcome::Sat) => {}
             Some(CdcltOutcome::Unknown) | None => online_clauses = None,
         }
+        // Interleaved ground refutation checks at exponentially spaced rounds
+        // (8, 16, 32, …): the retained CDCL(T) session skips the per-round QF
+        // check while it stays satisfiable, so without these the extended
+        // rounds would defer the only refutation-completing step to the final
+        // check — which a deadline exit skips. The first check fires exactly
+        // where the historical 8-round loop exited, preserving its reach.
+        if online_clauses.is_some()
+            && round + 1 >= MAX_INSTANTIATION_ROUNDS
+            && (round + 1).is_power_of_two()
+            && deadline.is_none_or(|d| Instant::now() < d)
+            && matches!(
+                quantifier_qf_refutation_check(
+                    arena,
+                    &ground,
+                    config,
+                    deadline,
+                    stats,
+                    &mut quantifier_cache
+                )?,
+                CheckResult::Unsat
+            )
+        {
+            return Ok(CheckResult::Unsat);
+        }
     }
-    finish_quantified_ground_check(arena, &ground, config, deadline, stats)
+    finish_quantified_ground_check(
+        arena,
+        &ground,
+        config,
+        deadline,
+        stats,
+        &mut quantifier_cache,
+    )
+}
+
+/// Whether the session-less per-round ground check is due: every round inside
+/// the historical [`MAX_INSTANTIATION_ROUNDS`] window, then rounds whose
+/// 1-based index is a power of two (the same cadence as the retained-session
+/// interleaved checks).
+fn interleaved_check_due(round: usize) -> bool {
+    round < MAX_INSTANTIATION_ROUNDS || (round + 1).is_power_of_two()
 }
 
 fn egraph_timeout() -> CheckResult {
@@ -258,6 +434,7 @@ fn scoped_candidate_fixpoint_step(
     ground_derivations: &mut HashMap<TermId, QuantifierGroundDerivation>,
     deadline: Option<Instant>,
     stats: &mut QuantifierLoopStats,
+    cache: &mut QuantifierTermCache,
 ) -> Result<CandidateFixpointStep, SolverError> {
     let Some(session) = online_clauses.as_mut() else {
         return Ok(CandidateFixpointStep::NoProgress);
@@ -272,7 +449,7 @@ fn scoped_candidate_fixpoint_step(
     };
     match outcome {
         CdcltOutcome::Unsat => {
-            if replay_online_refutation(arena, ground, config, deadline, stats)? {
+            if replay_online_refutation(arena, ground, config, deadline, stats, cache)? {
                 return Ok(CandidateFixpointStep::Refuted);
             }
             *online_clauses = None;
@@ -283,7 +460,7 @@ fn scoped_candidate_fixpoint_step(
             Ok(CandidateFixpointStep::NoProgress)
         }
         CdcltOutcome::Sat => {
-            let candidate_equalities = session.true_equality_terms();
+            let candidate_equalities = session.true_equality_terms(arena);
             stats.candidate_checks += 1;
             stats.candidate_equalities += candidate_equalities.len();
             let Some(candidate) = matcher.scoped_candidate_instances(arena, &candidate_equalities)
@@ -317,9 +494,10 @@ fn replay_online_refutation(
     config: &SolverConfig,
     deadline: Option<Instant>,
     stats: &mut QuantifierLoopStats,
+    cache: &mut QuantifierTermCache,
 ) -> Result<bool, SolverError> {
     Ok(matches!(
-        quantifier_qf_check(arena, ground, config, deadline, stats)?,
+        quantifier_qf_refutation_check(arena, ground, config, deadline, stats, cache)?,
         CheckResult::Unsat
     ))
 }
@@ -766,7 +944,7 @@ impl OnlineQuantifierClauseSession {
             if deadline.is_some_and(|deadline| Instant::now() >= deadline) {
                 return None;
             }
-            collect_eq_atoms(arena, assertion, &mut atom_terms, &mut seen);
+            collect_euf_atoms(arena, assertion, &mut atom_terms, &mut seen);
         }
         let atom_variables: HashMap<TermId, usize> = atom_terms
             .iter()
@@ -774,7 +952,7 @@ impl OnlineQuantifierClauseSession {
             .enumerate()
             .map(|(variable, term)| (term, variable))
             .collect();
-        let mut encoder = EufEncoder::new(&atom_terms);
+        let mut encoder = EufEncoder::new(&atom_terms).with_bool_apply_atoms();
         let mut clauses = Vec::new();
         for &assertion in ground {
             if deadline.is_some_and(|deadline| Instant::now() >= deadline) {
@@ -848,8 +1026,10 @@ impl OnlineQuantifierClauseSession {
     }
 
     /// Equality atoms true in the current complete SAT candidate, in stable
-    /// theory-atom order. Non-SAT states expose no candidate facts.
-    fn true_equality_terms(&self) -> Vec<TermId> {
+    /// theory-atom order. Predicate atoms are excluded — the scoped candidate
+    /// matcher merges equality endpoints only. Non-SAT states expose no
+    /// candidate facts.
+    fn true_equality_terms(&self, arena: &TermArena) -> Vec<TermId> {
         if self.last_outcome != Some(CdcltOutcome::Sat) {
             return Vec::new();
         }
@@ -858,6 +1038,10 @@ impl OnlineQuantifierClauseSession {
             .copied()
             .enumerate()
             .filter_map(|(atom, term)| {
+                if !matches!(arena.node(term), TermNode::App { op: Op::Eq, args } if args.len() == 2)
+                {
+                    return None;
+                }
                 let variable = self.solver.theory_variable(atom)?;
                 (self.solver.value(variable) == Some(true)).then_some(term)
             })
@@ -922,7 +1106,9 @@ enum OnlineClauseShape {
 }
 
 /// Classifies a generated term as an unsupported shape, a tautology, or an
-/// equality clause represented by underlying atom terms and polarities.
+/// equality/predicate clause represented by underlying atom terms and
+/// polarities. Atoms are data-sorted equalities and Boolean predicate
+/// applications — exactly the shapes [`EufTheory`] registers.
 fn equality_clause_atoms(arena: &TermArena, term: TermId) -> OnlineClauseShape {
     let mut literals = Vec::new();
     collect_clause_literals(arena, term, &mut literals);
@@ -931,24 +1117,33 @@ fn equality_clause_atoms(arena: &TermArena, term: TermId) -> OnlineClauseShape {
         match arena.node(literal) {
             TermNode::BoolConst(true) => return OnlineClauseShape::Tautology,
             TermNode::BoolConst(false) => {}
-            TermNode::App { op: Op::Eq, args } if args.len() == 2 => {
-                atoms.push((literal, true));
-            }
             TermNode::App {
                 op: Op::BoolNot,
                 args,
-            } if args.len() == 1
-                && matches!(
-                    arena.node(args[0]),
-                    TermNode::App { op: Op::Eq, args } if args.len() == 2
-                ) =>
-            {
+            } if args.len() == 1 && online_clause_atom(arena, args[0]) => {
                 atoms.push((args[0], false));
+            }
+            _ if online_clause_atom(arena, literal) => {
+                atoms.push((literal, true));
             }
             _ => return OnlineClauseShape::Unsupported,
         }
     }
     OnlineClauseShape::Atoms(atoms)
+}
+
+/// Whether `term` is an atom shape the online session's [`EufTheory`] registers:
+/// a binary equality (Boolean equality merges its sides, which is sound: `iff`
+/// is Boolean equality and congruence respects it — the historical session
+/// behavior) or a Boolean-sorted predicate application.
+fn online_clause_atom(arena: &TermArena, term: TermId) -> bool {
+    match arena.node(term) {
+        TermNode::App { op: Op::Eq, args } => args.len() == 2,
+        TermNode::App {
+            op: Op::Apply(_), ..
+        } => arena.sort_of(term) == Sort::Bool,
+        _ => false,
+    }
 }
 
 fn collect_generated_ground(
@@ -987,8 +1182,9 @@ fn finish_quantified_ground_check(
     config: &SolverConfig,
     deadline: Option<Instant>,
     stats: &mut QuantifierLoopStats,
+    cache: &mut QuantifierTermCache,
 ) -> Result<CheckResult, SolverError> {
-    match quantifier_qf_check(arena, ground, config, deadline, stats)? {
+    match quantifier_qf_refutation_check(arena, ground, config, deadline, stats, cache)? {
         CheckResult::Unsat => Ok(CheckResult::Unsat),
         _ => Ok(CheckResult::Unknown(UnknownReason {
             kind: UnknownKind::Incomplete,
@@ -3931,11 +4127,7 @@ mod tests {
         ));
         let positive_twentieth = arena.int_gt(f_twenty, zero).unwrap();
         assert!(
-            !predecessor_recurrence_sign_refutation(
-                &arena,
-                &[base, positive_twentieth],
-                universal,
-            ),
+            !predecessor_recurrence_sign_refutation(&arena, &[base, positive_twentieth], universal,),
             "the expected positive sign is satisfiable and must not be refuted"
         );
         let nineteen = arena.int_const(19);
@@ -5602,6 +5794,7 @@ mod tests {
             CheckResult::Unsat
         );
         let mut replay_stats = QuantifierLoopStats::default();
+        let mut replay_cache = QuantifierTermCache::default();
         assert!(
             replay_online_refutation(
                 &mut arena,
@@ -5609,6 +5802,7 @@ mod tests {
                 &SolverConfig::default(),
                 None,
                 &mut replay_stats,
+                &mut replay_cache,
             )
             .unwrap()
         );
@@ -5619,6 +5813,7 @@ mod tests {
                 &SolverConfig::default(),
                 None,
                 &mut replay_stats,
+                &mut replay_cache,
             )
             .unwrap(),
             "an online outcome cannot bypass a non-refuting final QF query"
