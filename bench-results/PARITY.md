@@ -83,3 +83,18 @@ not a score.
 | benchmark list | `bench-results/parity-lists/UF.txt` (sha256 ab432240d2f7, 200 files) |
 | solver commit | `c264a725` |
 
+## UF — 2026-07-31T13:48:14Z
+
+| field | value |
+|---|---|
+| axeyum solved | 44/200 |
+| reference solved | 93/200 |
+| **ratio (axeyum / reference)** | **47.3%** |
+| **disagreements** | **0** |
+| soundness | SOUND |
+| both / axeyum-only / reference-only | 31 / 13 / 62 |
+| reference | `cvc5 1.3.4 [git f3b21c4 on branch HEAD]` |
+| protocol | 24s wall, 8GiB, per-file |
+| benchmark list | `bench-results/parity-lists/UF.txt` (sha256 ab432240d2f7, 200 files) |
+| solver commit | `a6a4181c` |
+
