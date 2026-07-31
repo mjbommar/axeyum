@@ -6,20 +6,40 @@ default:
 # Run every check CI runs (except cargo-deny, which needs the tool installed).
 # This is the THOROUGH pre-merge/CI gate (whole workspace, ~tens of minutes).
 # While iterating, use `just check-scope` instead — it gates only what changed.
-check: fmt clippy test moment-proofs doc qfbv-profile reflection-semantics-gate benchmark-repetition-tests glaurung-qfbv-regular foundational-resources rules-as-code smtcomp-resume parity-docs links
+check: fmt clippy test frontier moment-proofs doc qfbv-profile reflection-semantics-gate benchmark-repetition-tests glaurung-qfbv-regular foundational-resources rules-as-code smtcomp-resume parity-docs links
 
 fmt:
     cargo fmt --all --check
 
-# Pin +stable so local clippy matches CI's stable toolchain. Nightly clippy has
-# different lints (e.g. it missed `manual_assert_eq`, which stable -D-fails), so
-# a nightly-only local gate lets clippy breaks slip onto main. Run `rustup update
-# stable` if a lint the CI hits doesn't reproduce locally (toolchain drift).
+# Pin +stable so local clippy matches CI's stable toolchain: nightly and stable
+# carry different lints, so a nightly-only local gate lets clippy breaks slip
+# onto main. Run `rustup update stable` if a lint CI hits doesn't reproduce
+# locally (toolchain drift).
+#
+# The example this comment used to give (`manual_assert_eq`) was wrong and is
+# instructive: as of clippy 0.1.97 NEITHER the stable nor the nightly build here
+# knows that lint, so the `#![allow(clippy::manual_assert_eq)]` in
+# crates/axeyum-verify/tests/ was itself an `unknown lint` ERROR under
+# `-D warnings` and had been failing this gate. Fixed in 451f9c50 by adding
+# `#![allow(unknown_lints)]` ahead of it, which is toolchain-agnostic in both
+# directions.
 clippy:
     cargo +stable clippy --workspace --all-targets --all-features -- -D warnings
 
+# `frontier_*` is skipped here and run by `frontier` instead. Those ratchets
+# measure "the largest N decided within a fixed WALL-CLOCK budget", so running
+# them alongside the rest of the workspace suite lets CPU contention shrink the
+# measured frontier and report a false REGRESSION. That is worse than an ordinary
+# flake: the failure text invites lowering the committed baseline, so a loaded
+# run could ratchet the project down on a measurement artifact. Measured
+# 2026-07-30 -- lia_cuts reported 24 < 26 under `check.sh` and passed 9/9
+# standalone on the same commit, with no artifact actually moving.
 test:
-    cargo test --workspace --all-features
+    cargo test --workspace --all-features -- --skip frontier_
+
+# The capability ratchets, serialized and alone. Run nothing else concurrently.
+frontier:
+    cargo test -p axeyum-solver --test progress_frontier --features full -- --test-threads=1
 
 # Same as `test`, but under a hard 64 GiB memory cap (scripts/mem-run.sh) so a
 # runaway allocation (e.g. an unbounded NRA / wide bit-blast blowup) aborts the

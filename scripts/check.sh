@@ -25,7 +25,11 @@ step() {
 
 step fmt    cargo fmt --all --check
 step clippy cargo clippy --workspace --all-targets --all-features -- -D warnings
-step test   cargo test --workspace --all-features
+# `frontier_*` runs in its own serialized step below: those ratchets are
+# wall-clock-budget based, so contention from the rest of the suite shrinks the
+# measured frontier and reports a false REGRESSION (measured 2026-07-30).
+step test   cargo test --workspace --all-features -- --skip frontier_
+step frontier cargo test -p axeyum-solver --test progress_frontier --features full -- --test-threads=1
 export RUSTDOCFLAGS="-D warnings" # match CI's deny-warnings rustdoc
 step doc    cargo doc --workspace --all-features --no-deps
 step lean-u2-test-authority-tests python3 -m unittest scripts.tests.test_lean_u2_test_authority
