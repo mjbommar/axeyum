@@ -127,21 +127,34 @@ run_one() {
   echo "${verdict:-unsolved}"
 }
 
-# Fail loudly if the reference cannot run at all. A reference scoring zero
-# because of a bad invocation looks like a win; it is a broken measurement.
+# Fail loudly if the reference cannot run AT ALL. A reference scoring zero
+# because of a bad invocation looks like a win for us, so this aborts rather
+# than warns -- the first version only warned, and a run sailed past it for
+# minutes with bitwuzla on a 24 ms budget.
+#
+# Probe SEVERAL benchmarks, not just the first. Probing one conflates "the
+# reference is broken" with "the first file is hard", and that is not
+# hypothetical: the first UF benchmark is 196 KB, carries `:status unknown`,
+# and cvc5 cannot decide it in 24 s or even 30 s. A single-file probe aborted
+# the whole UF division over a legitimately hard instance. Abort only when the
+# reference decides NONE of the probes, which still catches a crippled
+# invocation (a 24 ms budget solves none of them either).
 smoke_reference() {
-  local probe verdict
-  probe=$(grep -m1 -ve '^\s*$' "$list")
-  [[ -f "$probe" ]] || return 0
-  verdict=$(run_one "$reference_bin" "$probe")
-  if [[ "$verdict" == "unsolved" ]]; then
-    echo "FAIL: the reference produced no verdict on the first benchmark." >&2
+  local probes=0 solved=0 verdict
+  while IFS= read -r probe && (( probes < 5 )); do
+    [[ -f "$probe" ]] || continue
+    probes=$((probes + 1))
+    verdict=$(run_one "$reference_bin" "$probe")
+    [[ "$verdict" != "unsolved" ]] && solved=$((solved + 1))
+  done < "$list"
+  if (( probes > 0 && solved == 0 )); then
+    echo "FAIL: the reference decided 0 of $probes probe benchmarks." >&2
     echo "      $reference_bin" >&2
-    echo "      A crippled reference reads as a win for us, so this ABORTS" >&2
-    echo "      rather than warns -- the first version only warned, and the run" >&2
-    echo "      sailed past it with bitwuzla on a 24 ms budget." >&2
-    echo "      Verify the invocation. Set PARITY_ALLOW_WEAK_REFERENCE=1 only" >&2
-    echo "      if the first benchmark is genuinely beyond the reference." >&2
+    echo "      A crippled reference reads as a win for us, so this ABORTS." >&2
+    echo "      Verify the invocation (check the BUDGET UNITS -- bitwuzla and" >&2
+    echo "      cvc5 take milliseconds, z3 takes seconds)." >&2
+    echo "      Set PARITY_ALLOW_WEAK_REFERENCE=1 only if the reference really" >&2
+    echo "      is beaten by all $probes." >&2
     [[ "${PARITY_ALLOW_WEAK_REFERENCE:-0}" == "1" ]] || exit 2
   fi
 }

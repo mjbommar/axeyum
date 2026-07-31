@@ -41,3 +41,4 @@ __pycache__/
 
 # WASM playground bundle (regenerate: `wasm-pack build crates/axeyum-wasm --target web --out-dir docs/playground/pkg`)
 /docs/playground/pkg/
+.claude/
