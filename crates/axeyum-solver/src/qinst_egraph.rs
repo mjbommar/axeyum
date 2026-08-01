@@ -468,6 +468,7 @@ fn prove_quantified_unsat_via_egraph_impl(
     let deadline = config
         .timeout
         .and_then(|timeout| Instant::now().checked_add(timeout));
+    let trace_start = Instant::now();
     let (mut ground, foralls) = partition_top_level_foralls(arena, assertions);
     if foralls.is_empty() {
         return quantifier_qf_check(arena, &ground, config, deadline, stats);
@@ -476,10 +477,12 @@ fn prove_quantified_unsat_via_egraph_impl(
     if try_closed_universal_refutations(arena, &foralls, config, deadline)? {
         return Ok(CheckResult::Unsat);
     }
+    crate::auto::qtrace("egraph-seg", trace_start, "closed-universal done");
 
     if try_targeted_quantifier_refutations(arena, &ground, &foralls, config, deadline, stats)? {
         return Ok(CheckResult::Unsat);
     }
+    crate::auto::qtrace("egraph-seg", trace_start, "targeted done");
 
     // Share the wall clock and cap ground growth so explosion declines cleanly.
     let mut seen: HashSet<TermId> = ground.iter().copied().collect();
@@ -547,20 +550,24 @@ fn prove_quantified_unsat_via_egraph_impl(
             } else {
                 fractional_deadline(deadline, MID_LOOP_CHECK_BUDGET_DIVISOR)
             };
-            if interleaved_check_due(round)
-                && matches!(
-                    quantifier_qf_refutation_check(
-                        arena,
-                        &ground,
-                        config,
-                        check_deadline,
-                        stats,
-                        &mut quantifier_cache
-                    )?,
-                    CheckResult::Unsat
-                )
-            {
-                return Ok(CheckResult::Unsat);
+            if interleaved_check_due(round) {
+                let seg = Instant::now();
+                let check = quantifier_qf_refutation_check(
+                    arena,
+                    &ground,
+                    config,
+                    check_deadline,
+                    stats,
+                    &mut quantifier_cache,
+                )?;
+                crate::auto::qtrace(
+                    "egraph-seg",
+                    seg,
+                    &format!("qf-check round={round} ground={}", ground.len()),
+                );
+                if matches!(check, CheckResult::Unsat) {
+                    return Ok(CheckResult::Unsat);
+                }
             }
             if deadline.is_some_and(|deadline| Instant::now() >= deadline) {
                 return Ok(egraph_timeout());
@@ -588,6 +595,12 @@ fn prove_quantified_unsat_via_egraph_impl(
             &mut ground,
             &mut ground_derivations,
             &mut generations,
+            deadline,
+        );
+        crate::auto::qtrace(
+            "egraph-seg",
+            work_started,
+            &format!("admit-batch round={round} ground={}", ground.len()),
         );
         if admitted.is_empty() && candidate_equalities_enabled {
             match scoped_candidate_fixpoint_step(
@@ -847,7 +860,8 @@ fn scoped_candidate_fixpoint_step(
             let candidate_equalities = session.true_equality_terms(arena);
             stats.candidate_checks += 1;
             stats.candidate_equalities += candidate_equalities.len();
-            let Some(candidate) = matcher.scoped_candidate_instances(arena, &candidate_equalities)
+            let Some(candidate) =
+                matcher.scoped_candidate_instances(arena, &candidate_equalities, deadline)
             else {
                 return Ok(CandidateFixpointStep::Disable);
             };
@@ -1212,6 +1226,7 @@ fn admit_next_source_batch(
     ground: &mut Vec<TermId>,
     retained: &mut HashMap<TermId, QuantifierGroundDerivation>,
     generations: &mut TermGenerations,
+    deadline: Option<Instant>,
 ) -> Vec<TermId> {
     matcher.extend_ground_with_derivations(arena, ground, retained);
     let GeneratedGroundBatch {
@@ -1219,7 +1234,7 @@ fn admit_next_source_batch(
         units,
         mut deferred,
         derivations,
-    } = collect_generated_ground(matcher, arena, assertions);
+    } = collect_generated_ground(matcher, arena, assertions, deadline);
     urgent.sort_by_key(|term| term.index());
     urgent.dedup();
     deferred.sort_by_key(|term| term.index());
@@ -1761,13 +1776,14 @@ fn collect_generated_ground(
     matcher: &mut IncrementalEmatchSession,
     arena: &mut TermArena,
     assertions: &[TermId],
+    deadline: Option<Instant>,
 ) -> GeneratedGroundBatch {
     let mut urgent = Vec::new();
     let mut units = Vec::new();
     let mut deferred = Vec::new();
     let mut propagations = Vec::new();
     let mut derivations = HashMap::new();
-    for batch in matcher.lazy_clause_batches(arena) {
+    for batch in matcher.lazy_clause_batches(arena, deadline) {
         urgent.extend(batch.urgent);
         units.extend(batch.units);
         propagations.extend(batch.propagations);
@@ -2892,12 +2908,14 @@ impl IncrementalEmatchSession {
         &mut self,
         arena: &mut TermArena,
         equality_terms: &[TermId],
+        deadline: Option<Instant>,
     ) -> Option<ScopedCandidateBatch> {
         self.scoped_candidate_instances_with_limits(
             arena,
             equality_terms,
             MAX_CANDIDATE_EQUALITIES,
             MAX_CANDIDATE_APPLICATIONS,
+            deadline,
         )
     }
 
@@ -2907,6 +2925,7 @@ impl IncrementalEmatchSession {
         equality_terms: &[TermId],
         equality_limit: usize,
         application_limit: usize,
+        deadline: Option<Instant>,
     ) -> Option<ScopedCandidateBatch> {
         if equality_terms.len() > equality_limit {
             return None;
@@ -2989,6 +3008,7 @@ impl IncrementalEmatchSession {
                 &self.pattern_matches,
                 Some(&scoped_matches),
                 remaining,
+                deadline,
             );
             let tuples = joined.map(|(tuples, consumed)| {
                 remaining = remaining.saturating_sub(consumed);
@@ -3049,17 +3069,36 @@ impl IncrementalEmatchSession {
         }
     }
 
-    fn lazy_clause_batches(&mut self, arena: &mut TermArena) -> Vec<LazyClauseBatch> {
-        let tuple_batches = self.match_witness_tuples();
-        self.quantifiers
-            .iter()
-            .zip(tuple_batches)
-            .map(|(quantifier, tuples)| {
-                let Some(tuples) = tuples else {
-                    return LazyClauseBatch::default();
-                };
+    fn lazy_clause_batches(
+        &mut self,
+        arena: &mut TermArena,
+        deadline: Option<Instant>,
+    ) -> Vec<LazyClauseBatch> {
+        let tuple_batches = self.match_witness_tuples(deadline);
+        // Deadline discipline: instance materialization below is O(tuples ×
+        // body size), so consult the clock at coarse tuple granularity. An
+        // expired clock truncates to the batches built so far — instances are
+        // monotone hints (never a verdict by themselves), so truncation is
+        // sound, and the caller's round-top deadline check exits cleanly.
+        let mut tuples_since_clock_check = 0usize;
+        let mut expired = deadline.is_some_and(|deadline| Instant::now() >= deadline);
+        let mut batches = Vec::with_capacity(self.quantifiers.len());
+        for (quantifier, tuples) in self.quantifiers.iter().zip(tuple_batches) {
+            let (Some(tuples), false) = (tuples, expired) else {
+                batches.push(LazyClauseBatch::default());
+                continue;
+            };
+            {
                 let mut batch = LazyClauseBatch::default();
                 for tuple in &tuples {
+                    tuples_since_clock_check += 1;
+                    if tuples_since_clock_check >= 64 {
+                        tuples_since_clock_check = 0;
+                        if deadline.is_some_and(|deadline| Instant::now() >= deadline) {
+                            expired = true;
+                            break;
+                        }
+                    }
                     let replacements: HashMap<TermId, TermId> = quantifier
                         .var_terms
                         .iter()
@@ -3109,9 +3148,10 @@ impl IncrementalEmatchSession {
                 });
                 batch.deferred.sort_by_key(|term| term.index());
                 batch.deferred.dedup();
-                batch
-            })
-            .collect()
+                batches.push(batch);
+            }
+        }
+        batches
     }
 
     fn detached_propagation(
@@ -3261,49 +3301,59 @@ impl IncrementalEmatchSession {
         self.source_ground.contains(&term) || self.ground_derivations.contains_key(&term)
     }
 
-    fn match_witness_tuples(&mut self) -> Vec<Option<Vec<Vec<TermId>>>> {
+    fn match_witness_tuples(&mut self, deadline: Option<Instant>) -> Vec<Option<Vec<Vec<TermId>>>> {
+        // Deadline discipline: pattern execution and substitution joining are
+        // the dominant per-round costs (measured: one deadline-blind matching
+        // round overran a 500 ms budget by more than a minute), so the clock is
+        // consulted between individual pattern matches and — via
+        // `witness_tuples_with_overrides` — between bounded merge-attempt
+        // blocks. An expired clock stops matching early and leaves unprocessed
+        // patterns queued (still dirty / pending), so no match state is lost;
+        // the truncation only defers instances, which are monotone hints,
+        // never a verdict by themselves.
+        let expired = |deadline: Option<Instant>| -> bool {
+            deadline.is_some_and(|deadline| Instant::now() >= deadline)
+        };
         if !self.dirty_patterns.is_empty() {
             let dirty: Vec<usize> = self.dirty_patterns.iter().copied().collect();
-            let patterns: Vec<Pattern> = dirty
-                .iter()
-                .map(|&index| self.patterns[index].clone())
-                .collect();
-            let matches = self
-                .bridge
-                .egraph
-                .ematch_many_indexed(&patterns, &mut self.match_index);
-            for (index, matches) in dirty.iter().copied().zip(matches) {
-                self.pattern_matches[index] = matches;
+            for index in dirty {
+                if expired(deadline) {
+                    break;
+                }
+                let pattern = std::slice::from_ref(&self.patterns[index]);
+                let mut matches = self
+                    .bridge
+                    .egraph
+                    .ematch_many_indexed(pattern, &mut self.match_index);
+                self.pattern_matches[index] = matches.pop().unwrap_or_default();
+                self.pattern_executions += 1;
+                self.candidate_patterns.remove(&index);
+                self.dirty_patterns.remove(&index);
             }
-            self.pattern_executions += dirty.len();
-            for index in &dirty {
-                self.candidate_patterns.remove(index);
-            }
-            self.dirty_patterns.clear();
         }
-        if !self.candidate_patterns.is_empty() {
-            let pending = std::mem::take(&mut self.candidate_patterns);
-            let dirty: Vec<usize> = pending.keys().copied().collect();
-            let patterns: Vec<Pattern> = dirty
-                .iter()
-                .map(|&index| self.patterns[index].clone())
-                .collect();
-            let candidates: Vec<Vec<ENodeId>> = pending
-                .into_values()
-                .map(|candidates| candidates.into_iter().collect())
-                .collect();
-            let matches = self.bridge.egraph.ematch_many_candidates_indexed(
-                &patterns,
-                &candidates,
-                &mut self.match_index,
-            );
-            for (index, matches) in dirty.iter().copied().zip(matches) {
+        if !self.candidate_patterns.is_empty() && !expired(deadline) {
+            let pending_indices: Vec<usize> = self.candidate_patterns.keys().copied().collect();
+            for index in pending_indices {
+                if expired(deadline) {
+                    break;
+                }
+                let Some(candidates) = self.candidate_patterns.remove(&index) else {
+                    continue;
+                };
+                let candidates: Vec<ENodeId> = candidates.into_iter().collect();
+                let pattern = std::slice::from_ref(&self.patterns[index]);
+                let mut matches = self.bridge.egraph.ematch_many_candidates_indexed(
+                    pattern,
+                    std::slice::from_ref(&candidates),
+                    &mut self.match_index,
+                );
+                let matches = matches.pop().unwrap_or_default();
                 self.pattern_matches[index].extend(matches);
                 self.pattern_matches[index].sort_unstable();
                 self.pattern_matches[index].dedup();
+                self.pattern_executions += 1;
+                self.candidate_applications_scanned += candidates.len();
             }
-            self.pattern_executions += dirty.len();
-            self.candidate_applications_scanned += candidates.iter().map(Vec::len).sum::<usize>();
         }
         self.match_rounds += 1;
         let mut remaining = MAX_JOINED_SUBSTITUTIONS_PER_ROUND;
@@ -3312,12 +3362,17 @@ impl IncrementalEmatchSession {
             self.join_stats = vec![(0usize, 0usize); self.quantifiers.len()];
         }
         for (index, quantifier) in self.quantifiers.iter().enumerate() {
+            if expired(deadline) {
+                batches.push(None);
+                continue;
+            }
             let before = remaining;
             let joined = self.witness_tuples_with_overrides(
                 quantifier,
                 &self.pattern_matches,
                 None,
                 remaining,
+                deadline,
             );
             let tuples = joined.map(|(tuples, consumed)| {
                 remaining = remaining.saturating_sub(consumed);
@@ -3356,6 +3411,7 @@ impl IncrementalEmatchSession {
             pattern_matches,
             None,
             MAX_JOINED_SUBSTITUTIONS_PER_ROUND,
+            None,
         )
         .map(|(tuples, _)| tuples)
     }
@@ -3366,6 +3422,7 @@ impl IncrementalEmatchSession {
         pattern_matches: &[Vec<Substitution>],
         overrides: Option<&BTreeMap<usize, Vec<Substitution>>>,
         join_budget: usize,
+        deadline: Option<Instant>,
     ) -> Option<(Vec<Vec<TermId>>, usize)> {
         if join_budget == 0 || quantifier.vars.is_empty() || quantifier.pattern_indices.is_empty() {
             return None;
@@ -3373,6 +3430,11 @@ impl IncrementalEmatchSession {
         let nvars = quantifier.vars.len();
         let mut joined: Vec<Vec<Option<ENodeId>>> = vec![vec![None; nvars]];
         let mut remaining = join_budget;
+        // The `join_budget` counts only *successful* merges, so a sparse join
+        // can scan |joined| × |matches| pairs without consuming it. Count
+        // attempts and consult the wall clock at a coarse block size so this
+        // loop cannot silently overrun the shared query deadline.
+        let mut attempts_since_clock_check = 0usize;
         for &pattern_index in &quantifier.pattern_indices {
             let matches = overrides
                 .and_then(|matches| matches.get(&pattern_index))
@@ -3380,6 +3442,13 @@ impl IncrementalEmatchSession {
             let mut next = Vec::new();
             for partial in &joined {
                 for matched in matches {
+                    attempts_since_clock_check += 1;
+                    if attempts_since_clock_check >= 8192 {
+                        attempts_since_clock_check = 0;
+                        if deadline.is_some_and(|deadline| Instant::now() >= deadline) {
+                            return None;
+                        }
+                    }
                     if let Some(merged) =
                         merge_substitutions_modulo(&self.bridge.egraph, partial, matched)
                     {
@@ -5871,7 +5940,7 @@ mod tests {
         );
         session.extend_ground(&shared_arena, &shared_ground);
         let shared_tuples: Vec<Vec<Vec<TermId>>> = session
-            .match_witness_tuples()
+            .match_witness_tuples(None)
             .into_iter()
             .map(|tuples| tuples.expect("every shared pattern matches"))
             .collect();
@@ -5902,7 +5971,7 @@ mod tests {
 
         let mut session = IncrementalEmatchSession::new(&mut arena, &foralls);
         session.extend_ground(&arena, &ground);
-        assert_eq!(session.match_witness_tuples(), vec![None]);
+        assert_eq!(session.match_witness_tuples(None), vec![None]);
     }
 
     #[test]
@@ -5919,7 +5988,10 @@ mod tests {
 
         queued.extend_ground(&arena, &ground);
         full.extend_ground(&arena, &ground);
-        assert_eq!(queued.match_witness_tuples(), full.match_witness_tuples());
+        assert_eq!(
+            queued.match_witness_tuples(None),
+            full.match_witness_tuples(None)
+        );
         assert_eq!(queued.pattern_executions, PATTERNS);
 
         let mut extended_ground = ground;
@@ -5930,7 +6002,7 @@ mod tests {
         let queued_before = queued.pattern_executions;
         let queued_candidates_before = queued.candidate_applications_scanned;
         let queued_started = Instant::now();
-        let queued_tuples = queued.match_witness_tuples();
+        let queued_tuples = queued.match_witness_tuples(None);
         let queued_elapsed = queued_started.elapsed();
         assert_eq!(queued.pattern_executions - queued_before, 1);
         assert_eq!(
@@ -5945,7 +6017,7 @@ mod tests {
         full.dirty_patterns.extend(0..full.patterns.len());
         let full_before = full.pattern_executions;
         let full_started = Instant::now();
-        let full_tuples = full.match_witness_tuples();
+        let full_tuples = full.match_witness_tuples(None);
         let full_elapsed = full_started.elapsed();
 
         assert_eq!(full.pattern_executions - full_before, PATTERNS);
@@ -5982,7 +6054,10 @@ mod tests {
 
         queued.extend_ground(&arena, &ground);
         full.extend_ground(&arena, &ground);
-        assert_eq!(queued.match_witness_tuples(), full.match_witness_tuples());
+        assert_eq!(
+            queued.match_witness_tuples(None),
+            full.match_witness_tuples(None)
+        );
         assert_eq!(queued.pattern_executions, PATTERNS);
 
         let mut extended_ground = ground;
@@ -5991,7 +6066,7 @@ mod tests {
         let queued_candidates_before = queued.candidate_applications_scanned;
         let queued_started = Instant::now();
         queued.extend_ground(&arena, &extended_ground);
-        let queued_tuples = queued.match_witness_tuples();
+        let queued_tuples = queued.match_witness_tuples(None);
         let queued_elapsed = queued_started.elapsed();
         assert_eq!(queued.merge_invalidations, 1);
         assert_eq!(queued.merge_affected_patterns, 1);
@@ -6006,7 +6081,7 @@ mod tests {
         full.extend_ground_with_full_merge_invalidation(&arena, &extended_ground);
         // ADR-0112 rebuilt its root-keyed index after every merge.
         full.match_index = full.bridge.egraph.new_match_index();
-        let full_tuples = full.match_witness_tuples();
+        let full_tuples = full.match_witness_tuples(None);
         let full_elapsed = full_started.elapsed();
 
         assert_eq!(full.pattern_executions - full_before, PATTERNS);
@@ -6045,8 +6120,8 @@ mod tests {
         exact.extend_ground(&arena, &ground);
         declarations.extend_ground(&arena, &ground);
         assert_eq!(
-            exact.match_witness_tuples(),
-            declarations.match_witness_tuples()
+            exact.match_witness_tuples(None),
+            declarations.match_witness_tuples(None)
         );
 
         let mut extended_ground = ground;
@@ -6054,13 +6129,13 @@ mod tests {
         let exact_before = exact.pattern_executions;
         let exact_started = Instant::now();
         exact.extend_ground(&arena, &extended_ground);
-        let exact_tuples = exact.match_witness_tuples();
+        let exact_tuples = exact.match_witness_tuples(None);
         let exact_elapsed = exact_started.elapsed();
 
         let declaration_before = declarations.pattern_executions;
         let declaration_started = Instant::now();
         declarations.extend_ground_with_declaration_merge_invalidation(&arena, &extended_ground);
-        let declaration_tuples = declarations.match_witness_tuples();
+        let declaration_tuples = declarations.match_witness_tuples(None);
         let declaration_elapsed = declaration_started.elapsed();
 
         assert_eq!(exact.pattern_executions - exact_before, 1);
@@ -6164,7 +6239,7 @@ mod tests {
             session.extend_ground(&arena, &ground);
             assert!(
                 session
-                    .match_witness_tuples()
+                    .match_witness_tuples(None)
                     .into_iter()
                     .all(|tuples| tuples.is_none())
             );
@@ -6180,7 +6255,7 @@ mod tests {
             &extended_ground,
             PatternFilterMode::Unfiltered,
         );
-        let unfiltered_tuples = unfiltered.match_witness_tuples();
+        let unfiltered_tuples = unfiltered.match_witness_tuples(None);
         let unfiltered_elapsed = unfiltered_started.elapsed();
 
         let class_before = class_only.pattern_executions;
@@ -6190,7 +6265,7 @@ mod tests {
             &extended_ground,
             PatternFilterMode::ClassOnly,
         );
-        let class_tuples = class_only.match_witness_tuples();
+        let class_tuples = class_only.match_witness_tuples(None);
         let class_elapsed = class_started.elapsed();
 
         let ground_before = ground_only.pattern_executions;
@@ -6200,13 +6275,13 @@ mod tests {
             &extended_ground,
             PatternFilterMode::GroundOnly,
         );
-        let ground_tuples = ground_only.match_witness_tuples();
+        let ground_tuples = ground_only.match_witness_tuples(None);
         let ground_elapsed = ground_started.elapsed();
 
         let combined_before = combined.pattern_executions;
         let combined_started = Instant::now();
         combined.extend_ground(&arena, &extended_ground);
-        let combined_tuples = combined.match_witness_tuples();
+        let combined_tuples = combined.match_witness_tuples(None);
         let combined_elapsed = combined_started.elapsed();
 
         assert_eq!(unfiltered.pattern_executions - unfiltered_before, PATTERNS);
@@ -6241,7 +6316,10 @@ mod tests {
         let mut delta = IncrementalEmatchSession::new(&mut arena, &[forall]);
         full.extend_ground(&arena, &ground);
         delta.extend_ground(&arena, &ground);
-        assert_eq!(full.match_witness_tuples(), delta.match_witness_tuples());
+        assert_eq!(
+            full.match_witness_tuples(None),
+            delta.match_witness_tuples(None)
+        );
 
         let mut extended_ground = ground;
         extended_ground.push(merge_equality);
@@ -6249,14 +6327,14 @@ mod tests {
         let full_before = full.pattern_executions;
         let full_started = Instant::now();
         full.extend_ground_with_full_pattern_path_invalidation(&arena, &extended_ground);
-        let full_tuples = full.match_witness_tuples();
+        let full_tuples = full.match_witness_tuples(None);
         let full_elapsed = full_started.elapsed();
 
         let delta_before = delta.pattern_executions;
         let candidate_before = delta.candidate_applications_scanned;
         let delta_started = Instant::now();
         delta.extend_ground(&arena, &extended_ground);
-        let delta_tuples = delta.match_witness_tuples();
+        let delta_tuples = delta.match_witness_tuples(None);
         let delta_elapsed = delta_started.elapsed();
 
         assert_eq!(full_tuples, delta_tuples);
@@ -6298,14 +6376,14 @@ mod tests {
 
         let mut session = IncrementalEmatchSession::new(&mut arena, &[forall]);
         session.extend_ground(&arena, &ground);
-        assert_eq!(session.match_witness_tuples(), vec![None]);
+        assert_eq!(session.match_witness_tuples(None), vec![None]);
         ground.push(arena.eq(outer_argument, ga).unwrap());
         session.extend_ground(&arena, &ground);
         assert_eq!(session.dirty_patterns.len(), 0);
         assert_eq!(session.candidate_patterns.len(), 1);
         assert_eq!(session.candidate_patterns.values().next().unwrap().len(), 1);
         assert_eq!(session.merge_affected_patterns, 1);
-        let tuples = session.match_witness_tuples();
+        let tuples = session.match_witness_tuples(None);
         let fresh = witness_tuples_via_egraph(&mut arena, &ground, forall)
             .expect("the merge enables the nested trigger")
             .2;
@@ -6337,13 +6415,13 @@ mod tests {
 
         let mut session = IncrementalEmatchSession::new(&mut arena, &[forall]);
         session.extend_ground(&arena, &ground);
-        assert_eq!(session.match_witness_tuples(), vec![None]);
+        assert_eq!(session.match_witness_tuples(None), vec![None]);
         ground.push(arena.eq(pattern_constant, ground_constant).unwrap());
         session.extend_ground(&arena, &ground);
         assert_eq!(session.dirty_patterns.len(), 0);
         assert_eq!(session.candidate_patterns.len(), 1);
         assert_eq!(session.candidate_patterns.values().next().unwrap().len(), 1);
-        let tuples = session.match_witness_tuples();
+        let tuples = session.match_witness_tuples(None);
         let fresh = witness_tuples_via_egraph(&mut arena, &ground, forall)
             .expect("the merge enables the ground subpattern")
             .2;
@@ -6381,7 +6459,7 @@ mod tests {
 
         let mut session = IncrementalEmatchSession::new(&mut arena, &[forall_f, forall_u]);
         session.extend_ground(&arena, &ground);
-        session.match_witness_tuples();
+        session.match_witness_tuples(None);
 
         let uc = arena.apply(added_function, &[added_argument]).unwrap();
         let uc_eq_zero = arena.eq(uc, zero).unwrap();
@@ -6397,7 +6475,7 @@ mod tests {
                 .all(|candidates| candidates.len() == 1)
         );
         assert_eq!(session.merge_affected_patterns, 1);
-        let tuples = session.match_witness_tuples();
+        let tuples = session.match_witness_tuples(None);
         assert_eq!(tuples[0].as_ref().unwrap().len(), 1);
         assert_eq!(tuples[1].as_ref().unwrap().len(), 1);
     }
@@ -6443,14 +6521,14 @@ mod tests {
 
         let mut session = IncrementalEmatchSession::new(&mut arena, &[forall]);
         session.extend_ground(&arena, &ground);
-        let before = session.match_witness_tuples();
+        let before = session.match_witness_tuples(None);
         assert_eq!(before[0].as_ref().unwrap().len(), 2);
         let executions = session.pattern_executions;
 
         ground.push(arena.eq(left_app, right_app).unwrap());
         session.extend_ground(&arena, &ground);
         assert!(session.dirty_patterns.is_empty());
-        let cached = session.match_witness_tuples();
+        let cached = session.match_witness_tuples(None);
         assert_eq!(session.pattern_executions, executions);
         let fresh = witness_tuples_via_egraph(&mut arena, &ground, forall)
             .expect("both unequal arguments remain valid trigger bindings")
@@ -6519,7 +6597,7 @@ mod tests {
         );
         let mut retained = IncrementalEmatchSession::new(&mut arena, &[forall]);
         retained.extend_ground(&arena, &ground);
-        let retained_batch = retained.lazy_clause_batches(&mut arena).remove(0);
+        let retained_batch = retained.lazy_clause_batches(&mut arena, None).remove(0);
         assert_eq!(retained_batch.redundant, batch.redundant);
         assert_eq!(retained_batch.urgent, batch.urgent);
         assert_eq!(retained_batch.deferred, batch.deferred);
@@ -6585,7 +6663,7 @@ mod tests {
 
         let mut session = IncrementalEmatchSession::new(&mut arena, &[forall]);
         session.extend_ground(&arena, &ground);
-        let batch = session.lazy_clause_batches(&mut arena).remove(0);
+        let batch = session.lazy_clause_batches(&mut arena, None).remove(0);
         assert!(batch.urgent.is_empty());
         assert!(batch.deferred.is_empty());
         assert_eq!(batch.propagations.len(), 1);
@@ -6717,7 +6795,7 @@ mod tests {
 
         let mut session = IncrementalEmatchSession::new(&mut arena, &[forall]);
         session.extend_ground(&arena, &ground);
-        let batch = session.lazy_clause_batches(&mut arena).remove(0);
+        let batch = session.lazy_clause_batches(&mut arena, None).remove(0);
         assert_eq!(batch.propagations.len(), 1);
         let certificate = &batch.propagations[0];
         assert!(certificate.false_siblings[0].reasons.contains(&a_eq_b));
@@ -6736,7 +6814,7 @@ mod tests {
         congruent_assertions.push(congruent_forall);
         let mut congruent = IncrementalEmatchSession::new(&mut arena, &[congruent_forall]);
         congruent.extend_ground(&arena, &ground);
-        let batch = congruent.lazy_clause_batches(&mut arena).remove(0);
+        let batch = congruent.lazy_clause_batches(&mut arena, None).remove(0);
         assert_eq!(batch.propagations.len(), 1);
         assert_eq!(
             batch.propagations[0].false_siblings[0].reasons,
@@ -6844,14 +6922,14 @@ mod tests {
 
         let mut session = IncrementalEmatchSession::new(&mut arena, &[generator, consumer]);
         session.extend_ground(&arena, &ground);
-        let first = session.lazy_clause_batches(&mut arena);
+        let first = session.lazy_clause_batches(&mut arena, None);
         assert_eq!(first[0].units.len(), 1);
         assert!(first[1].propagations.is_empty());
         assert_eq!(first[1].deferred.len(), 1);
         ground.push(first[0].units[0]);
 
         session.extend_ground(&arena, &ground);
-        let second = session.lazy_clause_batches(&mut arena);
+        let second = session.lazy_clause_batches(&mut arena, None);
         assert!(second[1].propagations.is_empty());
         assert_eq!(second[1].units.len(), 1);
         let fa_eq_one = arena.eq(fa, one).unwrap();
@@ -6908,7 +6986,7 @@ mod tests {
         let mut session = IncrementalEmatchSession::new(&mut arena, &[generator, consumer]);
         let derivations = HashMap::new();
         session.extend_ground_with_derivations(&arena, &ground, &derivations);
-        let first = session.lazy_clause_batches(&mut arena);
+        let first = session.lazy_clause_batches(&mut arena, None);
         let instance = first[0].units[0];
         let instance_certificate = first[0].instance_certificates[&instance].clone();
         assert_eq!(
@@ -6927,7 +7005,7 @@ mod tests {
             QuantifierGroundDerivation::Instance(instance_certificate.clone()),
         );
         session.extend_ground_with_derivations(&arena, &ground, &derivations);
-        let second = session.lazy_clause_batches(&mut arena);
+        let second = session.lazy_clause_batches(&mut arena, None);
         assert_eq!(second[1].propagations.len(), 1);
         let propagation = &second[1].propagations[0];
         assert_eq!(
@@ -7359,12 +7437,12 @@ mod tests {
         let mut matcher = IncrementalEmatchSession::new(&mut arena, &[universal]);
         matcher.extend_ground(&arena, &ground);
         assert!(
-            matcher.lazy_clause_batches(&mut arena)[0]
+            matcher.lazy_clause_batches(&mut arena, None)[0]
                 .instance_certificates
                 .is_empty()
         );
         let scoped = matcher
-            .scoped_candidate_instances(&mut arena, &[a_eq_gb, fa_eq_c])
+            .scoped_candidate_instances(&mut arena, &[a_eq_gb, fa_eq_c], None)
             .unwrap();
         assert_eq!(scoped.batch.urgent.len(), 1);
         let a_node = matcher.bridge.term_to_node[&a];
@@ -7374,7 +7452,7 @@ mod tests {
             "candidate equality must be popped before an instance leaves the matcher"
         );
         assert!(
-            matcher.lazy_clause_batches(&mut arena)[0]
+            matcher.lazy_clause_batches(&mut arena, None)[0]
                 .instance_certificates
                 .is_empty()
         );
@@ -7385,6 +7463,7 @@ mod tests {
                     &[a_eq_gb],
                     MAX_CANDIDATE_EQUALITIES,
                     0,
+                    None,
                 )
                 .is_none()
         );
@@ -7395,6 +7474,7 @@ mod tests {
                     &[a_eq_gb],
                     0,
                     MAX_CANDIDATE_APPLICATIONS,
+                    None,
                 )
                 .is_none()
         );
@@ -7498,7 +7578,7 @@ mod tests {
         let candidate_binding = candidate_binding.unwrap();
         let mut matcher = IncrementalEmatchSession::new(&mut arena, &universals);
         matcher.extend_ground(&arena, &ground);
-        let initial = matcher.lazy_clause_batches(&mut arena);
+        let initial = matcher.lazy_clause_batches(&mut arena, None);
         assert!(
             initial
                 .iter()
@@ -7506,7 +7586,7 @@ mod tests {
         );
 
         let scoped = matcher
-            .scoped_candidate_instances(&mut arena, &[candidate_equality])
+            .scoped_candidate_instances(&mut arena, &[candidate_equality], None)
             .unwrap();
         assert_eq!(scoped.pattern_executions, 1);
         assert_eq!(scoped.applications_scanned, 1);
@@ -7544,7 +7624,7 @@ mod tests {
         let exact_started = Instant::now();
         for _ in 0..REPEATS {
             let result = matcher
-                .scoped_candidate_instances(&mut arena, &[candidate_equality])
+                .scoped_candidate_instances(&mut arena, &[candidate_equality], None)
                 .unwrap();
             std::hint::black_box(result.batch.urgent.len());
         }
@@ -7633,7 +7713,7 @@ mod tests {
         let mut session = IncrementalEmatchSession::new(&mut arena, &universals);
         let no_derivations = HashMap::new();
         session.extend_ground_with_derivations(&arena, &ground, &no_derivations);
-        let first = session.lazy_clause_batches(&mut arena);
+        let first = session.lazy_clause_batches(&mut arena, None);
         let equality_instance = first[0].units[0];
         let disequality_instance = first[1].units[0];
         let equality_certificate = first[0].instance_certificates[&equality_instance].clone();
@@ -7649,7 +7729,7 @@ mod tests {
         );
         ground.extend([equality_instance, disequality_instance]);
         session.extend_ground_with_derivations(&arena, &ground, &derivations);
-        let second = session.lazy_clause_batches(&mut arena);
+        let second = session.lazy_clause_batches(&mut arena, None);
         let certificate = second[2].propagations[0].clone();
         assert_eq!(certificate.derived_reasons.len(), 2);
         assert!(matches!(
@@ -7785,7 +7865,7 @@ mod tests {
         let mut certificates = Vec::new();
         for stage in 0..3 {
             session.extend_ground_with_derivations(&arena, &ground, &derivations);
-            let batches = session.lazy_clause_batches(&mut arena);
+            let batches = session.lazy_clause_batches(&mut arena, None);
             let certificate = batches[stage].propagations[0].clone();
             assert_eq!(certificate.propagated_literal, equalities[stage + 1]);
             assert_eq!(certificate.derived_reasons.len(), usize::from(stage > 0));
@@ -7927,7 +8007,7 @@ mod tests {
         let mut session = IncrementalEmatchSession::new(&mut arena, &universals);
         for stage in 0..STAGES {
             session.extend_ground_with_derivations(&arena, &retained_ground, &retained_derivations);
-            let batches = session.lazy_clause_batches(&mut arena);
+            let batches = session.lazy_clause_batches(&mut arena, None);
             let certificate = batches[stage].propagations[0].clone();
             assert!(check_quantifier_clause_propagation(
                 &mut arena,
@@ -8054,7 +8134,7 @@ mod tests {
 
         for stage in 0..STAGES {
             session.extend_ground_with_derivations(&arena, &ground, &derivations);
-            let batches = session.lazy_clause_batches(&mut arena);
+            let batches = session.lazy_clause_batches(&mut arena, None);
             let certificate = batches[stage].propagations[0].clone();
             assert_eq!(
                 check_quantifier_clause_propagation(&mut arena, &assertions, &certificate),
@@ -8149,7 +8229,7 @@ mod tests {
         let detached_total_started = Instant::now();
         let mut session = IncrementalEmatchSession::new(&mut arena, &[forall]);
         session.extend_ground(&arena, &ground);
-        let batch = session.lazy_clause_batches(&mut arena).remove(0);
+        let batch = session.lazy_clause_batches(&mut arena, None).remove(0);
         assert!(batch.urgent.is_empty());
         assert!(batch.deferred.is_empty());
         assert_eq!(batch.propagations.len(), MATCHES);
@@ -8508,7 +8588,7 @@ mod tests {
         let mut retained_ground = vec![fa_ne_0];
         let mut session = IncrementalEmatchSession::new(&mut arena, &[forall_fg, forall_g0]);
         session.extend_ground(&arena, &retained_ground);
-        let first_round = session.lazy_clause_batches(&mut arena);
+        let first_round = session.lazy_clause_batches(&mut arena, None);
         assert_eq!(first_round[0].units.len(), 1);
         assert!(first_round[1].urgent.is_empty() && first_round[1].units.is_empty());
         let first_pattern_executions = session.pattern_executions;
@@ -8525,7 +8605,7 @@ mod tests {
             1,
             "only the newly added g-root pattern needs delta matching"
         );
-        let second_round = session.lazy_clause_batches(&mut arena);
+        let second_round = session.lazy_clause_batches(&mut arena, None);
         assert_eq!(
             session.pattern_executions - first_pattern_executions,
             1,
