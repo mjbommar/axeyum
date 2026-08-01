@@ -36,8 +36,13 @@ while read -r _local_ref local_sha _remote_ref remote_sha; do
   fi
   if [ -n "$(git diff --name-only "$base" "$local_sha" -- '*.rs' '*.toml' | head -1)" ]; then
     shas_to_gate+=("$local_sha")
+    # Kept for the path-conditional suites below, which need the diff range and
+    # not just the tip SHA.
+    PREPUSH_BASE="$base"
+    PREPUSH_TIP="$local_sha"
   fi
 done
+export PREPUSH_BASE PREPUSH_TIP
 
 if [ "${#shas_to_gate[@]}" -eq 0 ]; then
   exit 0 # docs/bench-results/scripts-only push — no cargo gate needed
@@ -63,14 +68,47 @@ git -C "$REPO_ROOT" worktree add --detach --quiet "$tmp_wt" "$target_sha"
 export CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-$REPO_ROOT/target}"
 (
   cd "$tmp_wt"
+
+  # Runs a cargo test step and FAILS IF IT RAN NOTHING. `cargo test` exits 0 on
+  # an empty test binary, so a suite that has been `#![cfg]`-ed out of the
+  # selected feature set is indistinguishable from a passing one by exit status
+  # alone — which is exactly how the corpus sweep below sat inert for 15 days
+  # (see its comment). Mechanism over vigilance: any future feature gate that
+  # empties a suite now breaks the push instead of quietly passing it.
+  gated_test() {
+    local label="$1"
+    shift
+    local out
+    if ! out="$(MEM_LIMIT_GB="${MEM_LIMIT_GB:-64}" ./scripts/mem-run.sh "$@" 2>&1)"; then
+      printf '%s\n' "$out" >&2
+      echo "pre-push: FAILED — $label" >&2
+      return 1
+    fi
+    if ! printf '%s\n' "$out" | grep -qE '^running [1-9]'; then
+      printf '%s\n' "$out" >&2
+      echo "pre-push: FAILED — $label ran ZERO tests (a feature gate has emptied" \
+           "it; this step is inert, not passing)" >&2
+      return 1
+    fi
+  }
+
   MEM_LIMIT_GB="${MEM_LIMIT_GB:-64}" ./scripts/mem-run.sh cargo check --workspace --quiet
   cargo fmt --all --check
   # The oracle-free :status corpus sweep (~6s warm): CI's copy caught a
   # vacuous-sat harness hole (f5b00c72) only AFTER the SHA was public —
   # a wrong verdict must never leave the machine when a 6-second local
   # sweep can catch it.
-  MEM_LIMIT_GB="${MEM_LIMIT_GB:-64}" ./scripts/mem-run.sh \
-    cargo test -p axeyum-solver --test corpus_regression --quiet
+  #
+  # `--features full` is LOAD-BEARING and its absence made THIS GATE ITSELF
+  # VACUOUS for 15 days: `4464dae2` (2026-07-17, "make qfbv the audited
+  # deployment default") put `#![cfg(feature = "full")]` on the suite, so from
+  # that commit until 2026-08-01 this step compiled an empty test binary and
+  # printed "running 0 tests ... ok". A gate built to catch a vacuous-sat hole
+  # had itself become vacuous, and it looked green the entire time. Every
+  # `--test <name>` line in this hook must be spot-checked for a nonzero test
+  # count, not merely for a zero exit status.
+  gated_test "corpus :status sweep" \
+    cargo test -p axeyum-solver --features full --test corpus_regression --quiet
   # The WORKSPACE unit sweep (~40s warm): a wrong-unsat unit test
   # (int_mod_by_zero_underspecification, 52f3b1d1) shipped to main because a
   # lane ran targeted `--test <file>` + fuzzes but not `--lib` — the corpus
@@ -81,7 +119,49 @@ export CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-$REPO_ROOT/target}"
   # half-measure — a soundness hole reachable only through a rewrite/strings/bv
   # unit test would still slip. ("full sweep catches what per-commit --test
   # misses", enforced workspace-wide at the push boundary.)
-  MEM_LIMIT_GB="${MEM_LIMIT_GB:-64}" ./scripts/mem-run.sh \
+  gated_test "workspace unit sweep" \
     cargo test --workspace --lib --quiet
+
+  # ...and the step above runs on DEFAULT features, under which `axeyum-solver`
+  # compiles **23** of its **968** unit tests (measured 2026-08-01): everything
+  # behind `#[cfg(feature = "full")]` — the whole multi-theory surface, strings,
+  # e-graph, FP, smtlib — silently vanishes. The wrong-unsat that motivated the
+  # sweep above would have been caught either way, but a soundness hole in any
+  # `full`-gated module would sail through a "green" workspace sweep. `full` is
+  # pure Rust (the C/C++ z3 backend is a separate feature), so requiring it here
+  # keeps the no-C-dependency promise intact.
+  gated_test "solver unit sweep (full)" \
+    cargo test -p axeyum-solver --lib --features full --quiet
+
+  # `--lib` compiles ONLY lib targets, so it skips every integration suite in
+  # `tests/*.rs`. Two front-door string tests stayed broken across several
+  # merges (2026-08-01) because every lane gated on `--lib` plus a targeted
+  # `--test <file>`; only the aggregate `just check` caught them. Running all
+  # 272 solver integration suites at the push boundary is not viable, so gate
+  # the string front door on the diff: if the push touches the parser or the
+  # string/regex route, its front-door suites must pass. Everything else keeps
+  # the hook's fast default.
+  if [ -n "$(git diff --name-only "$PREPUSH_BASE" "$PREPUSH_TIP" -- \
+      'crates/axeyum-smtlib/**' \
+      'crates/axeyum-solver/src/smtlib.rs' \
+      'crates/axeyum-solver/src/*string*' \
+      'crates/axeyum-solver/src/*regex*' \
+      'crates/axeyum-solver/src/*str*' | head -1)" ]; then
+    echo "pre-push: parser/string route changed — front-door integration suites" >&2
+    # `--features full` is LOAD-BEARING: all four suites are `#![cfg(feature =
+    # "full")]`, so without it each one compiles to an empty binary and reports
+    # "running 0 tests ... ok" — an inert gate that is indistinguishable from a
+    # passing one. (Caught here by running it: 0 tests without the feature, 155
+    # with it.)
+    # One invocation PER SUITE so each is individually checked for a nonzero
+    # test count: a single `cargo test --test a --test b` call would still pass
+    # the emptiness check if only one of the four had been gated out. They share
+    # the build, so the extra invocations cost effectively nothing.
+    for suite in online_string_front_door word_first_fallback \
+                 qf_slia_fixed_splice stoi_len_abstraction; do
+      gated_test "string front door: $suite" \
+        cargo test -p axeyum-solver --features full --quiet --test "$suite"
+    done
+  fi
 )
 echo "pre-push: gate green (pushed SHA compiles, is formatted, corpus- and unit-sound)" >&2
