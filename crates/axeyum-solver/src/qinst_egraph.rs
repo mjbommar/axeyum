@@ -94,6 +94,52 @@ const ONLINE_QUANTIFIER_LIMITS: OnlineQuantifierLimits = OnlineQuantifierLimits 
 const MAX_CANDIDATE_EQUALITIES: usize = 4096;
 const MAX_CANDIDATE_APPLICATIONS: usize = 16_384;
 
+/// Term-invention caps for the **term-starved** fixpoint class (measured on
+/// the scored UF corpus, e.g. `Arrow_Order/uf.616692`: the loop reaches its
+/// instantiation fixpoint in *microseconds* with `ground=2` because no ground
+/// application of any trigger's function exists — every application in the
+/// file sits under a binder, so e-matching has nothing to match and no
+/// selection policy can help; the terms a refutation needs must be BUILT,
+/// not found). Invention substitutes seed constants (free symbols anywhere
+/// in the assertions, including Skolem constants inside universal bodies,
+/// plus ground application terms the e-graph already holds) into the
+/// compiled triggers, staged by digit-sum depth, and seeds the resulting
+/// ground terms into the **matcher's e-graph only** — never into the
+/// asserted ground set — so it asserts no facts and merges no classes.
+/// Instances found by matching invented terms flow through the unchanged
+/// [`QuantifierInstanceCertificate`] admission gate, so invention adds no
+/// trust surface.
+const MAX_INVENTED_TERMS_TOTAL: usize = 2048;
+/// New invented terms per fixpoint step (across all patterns). Deliberately
+/// small: one 64-term step measured on `Arrow_Order/uf.616692` blasted the
+/// joined-instance admission from 2 to 4098 ground terms in a single round,
+/// drowning the (about nine) refuting instances; small steps keep each
+/// admission wave small and the interleaved ground checks meaningful.
+const MAX_INVENTED_TERMS_PER_STEP: usize = 32;
+/// New invented terms per pattern per fixpoint step.
+const MAX_INVENTED_TERMS_PER_PATTERN_STEP: usize = 4;
+/// Enumerated (visited) seed tuples per pattern per fixpoint step; bounds the
+/// re-enumeration cost on wide prefixes independently of how many tuples are
+/// new.
+const MAX_INVENTION_TUPLE_VISITS_PER_PATTERN_STEP: usize = 512;
+/// Seed terms considered per sort (constants first, then existing ground
+/// application representatives, both in deterministic term order).
+const MAX_INVENTION_SEEDS_PER_SORT: usize = 12;
+/// Invention runs only while the accumulated ground set is comfortably below
+/// [`MAX_GROUND_TERMS`]: the flood class (fixpoint-free files that drive
+/// ground to the cap) must not gain extra term traffic from this route.
+const INVENTION_GROUND_CEILING: usize = MAX_GROUND_TERMS / 2;
+/// Direct staged instances for universals the matching/join schedules starve
+/// completely (measured on `Arrow_Order/uf.616692`: the 4-var universal's
+/// 9^4 cartesian consumes the whole shared per-round join budget every
+/// round, so the 6-var universal the refutation actually needs emitted ZERO
+/// tuples across 12 rounds — `starved_joins=12, admitted=0`). Only
+/// universals with no admitted instance at an invention step get direct
+/// tuples, each flowing through the unchanged certificate admission gate.
+const MAX_DIRECT_INSTANCES_TOTAL: usize = 1024;
+const MAX_DIRECT_INSTANCES_PER_UNIVERSAL_STEP: usize = 8;
+const MAX_DIRECT_TUPLE_VISITS_PER_UNIVERSAL_STEP: usize = 512;
+
 /// Tries to refute a (possibly quantified) conjunction by **e-matching
 /// instantiation on the e-graph** (Track 2, P2.6): it separates the ground
 /// assertions from the universals, and repeatedly instantiates each universal over
@@ -116,7 +162,102 @@ pub fn prove_quantified_unsat_via_egraph(
     config: &SolverConfig,
 ) -> Result<CheckResult, SolverError> {
     let mut stats = QuantifierLoopStats::default();
-    prove_quantified_unsat_via_egraph_impl(arena, assertions, config, true, true, &mut stats)
+    // Distribute top-level universals over conjunctions when that shrinks a
+    // binder prefix (`∀x⃗.(A ∧ B)` ⟺ `(∀x⃗∩vars(A). A) ∧ (∀x⃗∩vars(B). B)` — a
+    // logical equivalence, so unsat transfers exactly). The prenexed chains
+    // the skolemizer produces glue INDEPENDENT conjunct universals into one
+    // wide prefix (measured on `Arrow_Order/uf.616692`: a 6-var chain that is
+    // really a 3-var + 1-var + 2-var conjunction), and every schedule
+    // downstream — trigger cover, join products, staged tuple enumeration —
+    // pays the cartesian price of the glued prefix. The split assertions are
+    // the loop's trust anchor exactly as the skolemized assertions already
+    // are: instance certificates bind to them syntactically.
+    let split = split_universal_conjunctions(arena, assertions);
+    prove_quantified_unsat_via_egraph_impl(arena, &split, config, true, true, &mut stats)
+}
+
+/// Applies the shrinking `forall`-over-`and` distribution to every top-level
+/// universal; assertions it cannot improve are passed through untouched. A
+/// universal is split only when at least one conjunct of its (flattened)
+/// conjunction body uses a proper subset of the binder prefix, so files
+/// outside the glued-prefix shape keep byte-identical behavior.
+fn split_universal_conjunctions(arena: &mut TermArena, assertions: &[TermId]) -> Vec<TermId> {
+    let mut out = Vec::with_capacity(assertions.len());
+    for &assertion in assertions {
+        let (vars, body) = peel_foralls(arena, assertion);
+        if vars.is_empty() {
+            out.push(assertion);
+            continue;
+        }
+        let mut conjuncts = Vec::new();
+        flatten_conjunction(arena, body, &mut conjuncts);
+        if conjuncts.len() < 2 {
+            out.push(assertion);
+            continue;
+        }
+        let var_index: HashMap<SymbolId, u32> = vars
+            .iter()
+            .enumerate()
+            .map(|(index, &var)| (var, u32::try_from(index).unwrap_or(u32::MAX)))
+            .collect();
+        let used_per_conjunct: Vec<HashSet<SymbolId>> = conjuncts
+            .iter()
+            .map(|&conjunct| {
+                let mut used = HashSet::new();
+                collect_vars(arena, conjunct, &var_index, &mut used);
+                used
+            })
+            .collect();
+        if used_per_conjunct
+            .iter()
+            .all(|used| used.len() == vars.len())
+        {
+            out.push(assertion);
+            continue;
+        }
+        let mut split_ok = true;
+        let mut split_terms = Vec::with_capacity(conjuncts.len());
+        for (&conjunct, used) in conjuncts.iter().zip(&used_per_conjunct) {
+            let mut rebuilt = conjunct;
+            for &var in vars.iter().rev() {
+                if used.contains(&var) {
+                    if let Ok(term) = arena.forall(var, rebuilt) {
+                        rebuilt = term;
+                    } else {
+                        split_ok = false;
+                        break;
+                    }
+                }
+            }
+            if !split_ok {
+                break;
+            }
+            split_terms.push(rebuilt);
+        }
+        if split_ok {
+            out.extend(split_terms);
+        } else {
+            out.push(assertion);
+        }
+    }
+    out
+}
+
+/// Flattens a `BoolAnd` spine into its conjuncts (a non-conjunction is its
+/// own single conjunct).
+fn flatten_conjunction(arena: &TermArena, term: TermId, out: &mut Vec<TermId>) {
+    match arena.node(term) {
+        TermNode::App {
+            op: Op::BoolAnd,
+            args,
+        } => {
+            let args = args.clone();
+            for arg in args {
+                flatten_conjunction(arena, arg, out);
+            }
+        }
+        _ => out.push(term),
+    }
 }
 
 #[derive(Debug, Default, Clone, Copy)]
@@ -274,6 +415,7 @@ fn prove_quantified_unsat_via_egraph_impl(
     let mut online_clauses = None;
     let mut online_attempted = !enable_online_clauses;
     let mut candidate_equalities_enabled = enable_candidate_equalities;
+    let mut invention = TermInventionState::default();
     let mut last_round_duration = std::time::Duration::ZERO;
     for round in 0..MAX_EXTENDED_INSTANTIATION_ROUNDS {
         let round_started = Instant::now();
@@ -384,21 +526,98 @@ fn prove_quantified_unsat_via_egraph_impl(
             }
         }
         if admitted.is_empty() {
-            if std::env::var_os("AXEYUM_QPROBE").is_some() {
-                let triggerless = matcher
-                    .quantifiers
-                    .iter()
-                    .filter(|q| q.pattern_indices.is_empty() && !q.vars.is_empty())
-                    .count();
-                eprintln!(
-                    "QPROBE egraph-fixpoint round={round} ground={} foralls={} \
-                     patterns={} triggerless={triggerless}",
-                    ground.len(),
-                    matcher.quantifiers.len(),
-                    matcher.patterns.len(),
+            // TERM INVENTION for the starved fixpoint: the schedules above
+            // only *match* existing terms, so a file whose applications all
+            // sit under binders reaches this point with a near-empty e-graph
+            // and no way forward (measured class: fixpoint in microseconds
+            // with ground=2). Seed ground trigger instances over the free
+            // constants (Skolems included) into the matcher's e-graph — no
+            // asserted fact, no merge, no new trust surface — and give the
+            // matching schedules another round over them. Bounded by the
+            // invention caps and gated away from the flood class by the
+            // ground ceiling.
+            // The ceiling is a hard gate, both on starting and on continuing:
+            // a file that floods ground without help must not get extra term
+            // traffic, and — measured on `QEpres/smtlib.678332` — an active
+            // route allowed past the ceiling turns a ground=2 starved file
+            // into a self-inflicted 8192-term flood (150+ invention steps
+            // seeding joins that admit thousands of irrelevant instances
+            // while the budget drains). The refutations this route wins are
+            // small-ground refutations; past the ceiling the final ground
+            // check is the better spend.
+            if ground.len() <= INVENTION_GROUND_CEILING
+                && deadline.is_none_or(|d| Instant::now() < d)
+            {
+                let seeded =
+                    matcher.invent_starved_trigger_terms(arena, assertions, &mut invention);
+                let direct = matcher.invent_starved_universal_instances(
+                    arena,
+                    assertions,
+                    &mut invention,
+                    &mut seen,
+                    &mut ground,
+                    &mut ground_derivations,
                 );
+                if std::env::var_os("AXEYUM_QPROBE").is_some() && (seeded > 0 || !direct.is_empty())
+                {
+                    eprintln!(
+                        "QPROBE term-invention round={round} seeded={seeded} direct={} \
+                         totals={}/{} ground={}",
+                        direct.len(),
+                        invention.invented_total,
+                        invention.direct_total,
+                        ground.len(),
+                    );
+                }
+                if !direct.is_empty() {
+                    // Direct instances flow through the same downstream path
+                    // as matched ones (online session insertion, interleaved
+                    // ground checks).
+                    admitted = direct;
+                } else if seeded > 0 {
+                    last_round_duration = work_started.elapsed();
+                    continue;
+                }
             }
-            break; // source and scoped-candidate instantiation fixpoint
+            if admitted.is_empty() {
+                if std::env::var_os("AXEYUM_QPROBE").is_some() {
+                    let triggerless = matcher
+                        .quantifiers
+                        .iter()
+                        .filter(|q| q.pattern_indices.is_empty() && !q.vars.is_empty())
+                        .count();
+                    eprintln!(
+                        "QPROBE egraph-fixpoint round={round} ground={} foralls={} \
+                         patterns={} triggerless={triggerless}",
+                        ground.len(),
+                        matcher.quantifiers.len(),
+                        matcher.patterns.len(),
+                    );
+                    let mut admitted_per_universal: Vec<usize> = vec![0; matcher.quantifiers.len()];
+                    for derivation in matcher.ground_derivations.values() {
+                        if let QuantifierGroundDerivation::Instance(certificate) = derivation
+                            && let Some(index) = matcher
+                                .quantifiers
+                                .iter()
+                                .position(|q| q.assertion == certificate.assertion)
+                        {
+                            admitted_per_universal[index] += 1;
+                        }
+                    }
+                    for (index, quantifier) in matcher.quantifiers.iter().enumerate() {
+                        let (emitted, starved) =
+                            matcher.join_stats.get(index).copied().unwrap_or((0, 0));
+                        eprintln!(
+                            "QPROBE   universal[{index}] vars={} patterns={} joined={emitted} \
+                             starved_joins={starved} admitted={}",
+                            quantifier.vars.len(),
+                            quantifier.pattern_indices.len(),
+                            admitted_per_universal[index],
+                        );
+                    }
+                }
+                break; // source, scoped-candidate, and invention fixpoint
+            }
         }
         let online_outcome = online_clauses.as_mut().and_then(|session| {
             let outcome =
@@ -1368,6 +1587,16 @@ struct CompiledUniversal {
     pattern_indices: Vec<usize>,
 }
 
+/// The source trigger a compiled [`Pattern`] came from, kept so term invention
+/// can build ground trigger instances by substitution. `var_terms` are the
+/// owning universal's bound-variable terms occurring in `trigger`, in
+/// first-occurrence order.
+#[derive(Debug, Clone)]
+struct PatternTrigger {
+    trigger: TermId,
+    var_terms: Vec<TermId>,
+}
+
 /// Named facts that replay one false sibling of a detached quantified clause.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct QuantifierFalseSiblingJustification {
@@ -1936,6 +2165,10 @@ enum MergeInvalidationMode {
 struct IncrementalEmatchSession {
     bridge: InstBridge,
     patterns: Vec<Pattern>,
+    /// Source trigger per pattern index (the first universal that compiled the
+    /// pattern), for term invention. `None` only if a pattern was registered
+    /// without a source trigger.
+    pattern_triggers: Vec<Option<PatternTrigger>>,
     patterns_by_root: HashMap<u32, Vec<usize>>,
     quantifiers_by_pattern: HashMap<usize, Vec<usize>>,
     merge_paths: PatternPathIndex,
@@ -1959,12 +2192,16 @@ struct IncrementalEmatchSession {
     merge_invalidations: usize,
     merge_affected_patterns: usize,
     extensions: usize,
+    /// Per-universal `(emitted joined tuples, starved joins)` — diagnostics
+    /// for the `AXEYUM_QPROBE` fixpoint report only.
+    join_stats: Vec<(usize, usize)>,
 }
 
 impl IncrementalEmatchSession {
     fn new(arena: &mut TermArena, foralls: &[TermId]) -> Self {
         let mut bridge = InstBridge::new();
         let mut patterns = Vec::new();
+        let mut pattern_triggers: Vec<Option<PatternTrigger>> = Vec::new();
         let mut pattern_ids: HashMap<Pattern, usize> = HashMap::new();
         let mut quantifiers = Vec::with_capacity(foralls.len());
 
@@ -1985,6 +2222,14 @@ impl IncrementalEmatchSession {
                     } else {
                         let index = patterns.len();
                         patterns.push(pattern.clone());
+                        let mut trigger_vars = std::collections::HashSet::new();
+                        collect_vars(arena, trigger, &var_index, &mut trigger_vars);
+                        let mut ordered: Vec<SymbolId> = trigger_vars.into_iter().collect();
+                        ordered.sort_by_key(|symbol| var_index[symbol]);
+                        pattern_triggers.push(Some(PatternTrigger {
+                            trigger,
+                            var_terms: ordered.iter().map(|&var| arena.var(var)).collect(),
+                        }));
                         pattern_ids.insert(pattern, index);
                         index
                     };
@@ -2029,6 +2274,7 @@ impl IncrementalEmatchSession {
         Self {
             bridge,
             patterns,
+            pattern_triggers,
             patterns_by_root,
             quantifiers_by_pattern,
             merge_paths,
@@ -2049,6 +2295,7 @@ impl IncrementalEmatchSession {
             merge_invalidations: 0,
             merge_affected_patterns: 0,
             extensions: 0,
+            join_stats: Vec::new(),
         }
     }
 
@@ -2715,7 +2962,11 @@ impl IncrementalEmatchSession {
         self.match_rounds += 1;
         let mut remaining = MAX_JOINED_SUBSTITUTIONS_PER_ROUND;
         let mut batches = Vec::with_capacity(self.quantifiers.len());
-        for quantifier in &self.quantifiers {
+        if self.join_stats.is_empty() {
+            self.join_stats = vec![(0usize, 0usize); self.quantifiers.len()];
+        }
+        for (index, quantifier) in self.quantifiers.iter().enumerate() {
+            let before = remaining;
             let joined = self.witness_tuples_with_overrides(
                 quantifier,
                 &self.pattern_matches,
@@ -2726,6 +2977,23 @@ impl IncrementalEmatchSession {
                 remaining = remaining.saturating_sub(consumed);
                 tuples
             });
+            let matchable = !quantifier.pattern_indices.is_empty()
+                && quantifier.pattern_indices.iter().all(|&pattern| {
+                    self.pattern_matches
+                        .get(pattern)
+                        .is_some_and(|matches| !matches.is_empty())
+                });
+            if let Some(stats) = self.join_stats.get_mut(index) {
+                match &tuples {
+                    Some(emitted) => stats.0 += emitted.len(),
+                    // Every pattern has matches yet the join produced nothing:
+                    // the shared per-round budget (or a merge conflict wipe)
+                    // starved this universal. `before` disambiguates the
+                    // fully-starved case.
+                    None if matchable || before == 0 => stats.1 += 1,
+                    None => {}
+                }
+            }
             batches.push(tuples);
         }
         batches
@@ -2809,6 +3077,333 @@ impl IncrementalEmatchSession {
         });
         tuples.dedup();
         Some((tuples, join_budget - remaining))
+    }
+
+    /// Per-sort seed lists for term invention: the prepared constant seeds
+    /// (Skolem-first) extended with ground application terms the e-graph
+    /// already holds (admitted-instance subterms and earlier inventions), in
+    /// deterministic term order, capped per sort.
+    fn build_invention_seed_lists(
+        &self,
+        arena: &TermArena,
+        state: &mut TermInventionState,
+        needed: &HashSet<Sort>,
+    ) -> HashMap<Sort, Vec<TermId>> {
+        let mut known_terms: Vec<TermId> = self.bridge.term_to_node.keys().copied().collect();
+        known_terms.sort_by_key(|term| term.index());
+        let mut seed_lists: HashMap<Sort, Vec<TermId>> = HashMap::new();
+        for sort in needed {
+            let mut seeds = state.constant_seeds.get(sort).cloned().unwrap_or_default();
+            for &term in &known_terms {
+                if seeds.len() >= MAX_INVENTION_SEEDS_PER_SORT {
+                    break;
+                }
+                if matches!(
+                    arena.node(term),
+                    TermNode::App {
+                        op: Op::Apply(_),
+                        ..
+                    }
+                ) && arena.sort_of(term) == *sort
+                    && !seeds.contains(&term)
+                    && state.is_binder_free(arena, term)
+                {
+                    seeds.push(term);
+                }
+            }
+            seeds.truncate(MAX_INVENTION_SEEDS_PER_SORT);
+            seed_lists.insert(*sort, seeds);
+        }
+        seed_lists
+    }
+
+    /// Direct staged instances for universals the matching/join schedules have
+    /// starved completely (no admitted instance at this fixpoint): enumerates
+    /// binder tuples over the invention seed lists by digit sum, builds each
+    /// instance, and admits it through the standard
+    /// [`QuantifierInstanceCertificate`] gate — the same checked, entailed
+    /// instances matching would have produced had the joins reached them.
+    /// Returns the admitted instance terms.
+    #[allow(clippy::too_many_arguments)]
+    #[allow(
+        clippy::too_many_lines,
+        reason = "one staged enumeration with its eligibility gate"
+    )]
+    fn invent_starved_universal_instances(
+        &mut self,
+        arena: &mut TermArena,
+        assertions: &[TermId],
+        state: &mut TermInventionState,
+        seen: &mut HashSet<TermId>,
+        ground: &mut Vec<TermId>,
+        retained: &mut HashMap<TermId, QuantifierGroundDerivation>,
+    ) -> Vec<TermId> {
+        if state.direct_total >= MAX_DIRECT_INSTANCES_TOTAL {
+            return Vec::new();
+        }
+        // Universals whose retained instances exceed what this route fed them
+        // are being served by the ordinary matching schedules; only starved
+        // ones (matching has produced nothing of their own) get direct tuples.
+        let mut retained_counts = vec![0usize; self.quantifiers.len()];
+        for derivation in retained.values() {
+            if let QuantifierGroundDerivation::Instance(certificate) = derivation
+                && let Some(index) = self
+                    .quantifiers
+                    .iter()
+                    .position(|q| q.assertion == certificate.assertion)
+            {
+                retained_counts[index] += 1;
+            }
+        }
+        let served: Vec<bool> = self
+            .quantifiers
+            .iter()
+            .enumerate()
+            .map(|(index, quantifier)| {
+                let direct = state
+                    .direct_per_universal
+                    .get(&quantifier.assertion)
+                    .copied()
+                    .unwrap_or(0);
+                retained_counts[index] > direct
+            })
+            .collect();
+        let mut needed: HashSet<Sort> = HashSet::new();
+        for (index, quantifier) in self.quantifiers.iter().enumerate() {
+            if served[index] || quantifier.vars.is_empty() {
+                continue;
+            }
+            for &var in &quantifier.var_terms {
+                needed.insert(arena.sort_of(var));
+            }
+        }
+        if needed.is_empty() {
+            return Vec::new();
+        }
+        let seed_lists = self.build_invention_seed_lists(arena, state, &needed);
+        let universals: Vec<(TermId, Vec<TermId>, TermId)> = self
+            .quantifiers
+            .iter()
+            .enumerate()
+            .filter(|(index, quantifier)| !served[*index] && !quantifier.vars.is_empty())
+            .map(|(_, quantifier)| {
+                (
+                    quantifier.assertion,
+                    quantifier.var_terms.clone(),
+                    quantifier.body,
+                )
+            })
+            .collect();
+
+        let mut order: Vec<TermId> = Vec::new();
+        let mut candidates: HashMap<TermId, QuantifierGroundDerivation> = HashMap::new();
+        for (assertion, var_terms, body) in universals {
+            if state.direct_total >= MAX_DIRECT_INSTANCES_TOTAL {
+                break;
+            }
+            let lists: Vec<Vec<TermId>> = var_terms
+                .iter()
+                .map(|&var| {
+                    seed_lists
+                        .get(&arena.sort_of(var))
+                        .cloned()
+                        .unwrap_or_default()
+                })
+                .collect();
+            if lists.iter().any(Vec::is_empty) {
+                continue;
+            }
+            let lens: Vec<usize> = lists.iter().map(Vec::len).collect();
+            let max_sum: usize = lens.iter().map(|&len| len - 1).sum();
+            let mut visits = 0usize;
+            let mut created = 0usize;
+            'stages: for stage in 0..=max_sum {
+                let mut done = false;
+                for_each_tuple_with_sum(&lens, stage, &mut Vec::new(), &mut |digits| {
+                    visits += 1;
+                    let bindings: Vec<TermId> = digits
+                        .iter()
+                        .enumerate()
+                        .map(|(slot, &digit)| lists[slot][digit])
+                        .collect();
+                    let replacements: HashMap<TermId, TermId> = var_terms
+                        .iter()
+                        .copied()
+                        .zip(bindings.iter().copied())
+                        .collect();
+                    let mut memo = HashMap::new();
+                    if let Ok(instance) = replace_subterms(arena, body, &replacements, &mut memo)
+                        && !seen.contains(&instance)
+                        && !candidates.contains_key(&instance)
+                    {
+                        candidates.insert(
+                            instance,
+                            QuantifierGroundDerivation::Instance(QuantifierInstanceCertificate {
+                                assertion,
+                                bindings,
+                                instance,
+                            }),
+                        );
+                        order.push(instance);
+                        created += 1;
+                        state.direct_total += 1;
+                        *state.direct_per_universal.entry(assertion).or_default() += 1;
+                    }
+                    let stop = visits >= MAX_DIRECT_TUPLE_VISITS_PER_UNIVERSAL_STEP
+                        || created >= MAX_DIRECT_INSTANCES_PER_UNIVERSAL_STEP
+                        || state.direct_total >= MAX_DIRECT_INSTANCES_TOTAL;
+                    done = stop;
+                    !stop
+                });
+                if done {
+                    break 'stages;
+                }
+            }
+        }
+        admit_generated_ground(
+            arena,
+            assertions,
+            order,
+            seen,
+            ground,
+            retained,
+            &candidates,
+        )
+    }
+
+    /// Adds one invented ground term to the matcher's e-graph (nodes only —
+    /// no assertion, no merge) and registers its new applications as match
+    /// candidates for the affected patterns. Returns `false` when the term is
+    /// already known to the e-graph.
+    fn seed_invented_term(&mut self, arena: &TermArena, term: TermId) -> bool {
+        if self.bridge.term_to_node.contains_key(&term) {
+            return false;
+        }
+        let node_start = self.bridge.egraph.len();
+        self.bridge.add_term(arena, term);
+        for application in self.bridge.egraph.application_nodes_since(node_start) {
+            if let Some(patterns) = self
+                .patterns_by_root
+                .get(&self.bridge.egraph.decl(application))
+            {
+                for &pattern in patterns {
+                    self.candidate_patterns
+                        .entry(pattern)
+                        .or_default()
+                        .insert(application);
+                }
+            }
+        }
+        true
+    }
+
+    /// One term-invention step for the starved fixpoint (see the
+    /// `MAX_INVENTED_TERMS_*` constants): substitutes per-sort seed terms into
+    /// each usable compiled trigger, staged by digit-sum over the seed
+    /// indices, and seeds every NEW ground trigger instance into the matcher's
+    /// e-graph so the next matching round can produce certified universal
+    /// instances over it. Returns the number of freshly seeded terms; `0`
+    /// means the route is exhausted and the caller should stop.
+    fn invent_starved_trigger_terms(
+        &mut self,
+        arena: &mut TermArena,
+        assertions: &[TermId],
+        state: &mut TermInventionState,
+    ) -> usize {
+        if !state.prepared {
+            state.prepare(arena, assertions, &self.pattern_triggers);
+        }
+        if state.invented_total >= MAX_INVENTED_TERMS_TOTAL {
+            return 0;
+        }
+        // Sorts any usable pattern actually binds; nothing else needs seeds.
+        let mut needed: HashSet<Sort> = HashSet::new();
+        for (index, usable) in state.pattern_usable.iter().enumerate() {
+            if !usable {
+                continue;
+            }
+            if let Some(trigger) = &self.pattern_triggers[index] {
+                for &var in &trigger.var_terms {
+                    needed.insert(arena.sort_of(var));
+                }
+            }
+        }
+        if needed.is_empty() {
+            return 0;
+        }
+        let seed_lists = self.build_invention_seed_lists(arena, state, &needed);
+
+        let mut invented_this_step = 0usize;
+        for pattern_index in 0..self.patterns.len() {
+            if invented_this_step >= MAX_INVENTED_TERMS_PER_STEP
+                || state.invented_total >= MAX_INVENTED_TERMS_TOTAL
+            {
+                break;
+            }
+            if !state
+                .pattern_usable
+                .get(pattern_index)
+                .copied()
+                .unwrap_or(false)
+            {
+                continue;
+            }
+            let Some(trigger) = self.pattern_triggers[pattern_index].clone() else {
+                continue;
+            };
+            if trigger.var_terms.is_empty() {
+                continue;
+            }
+            let lists: Vec<Vec<TermId>> = trigger
+                .var_terms
+                .iter()
+                .map(|&var| {
+                    seed_lists
+                        .get(&arena.sort_of(var))
+                        .cloned()
+                        .unwrap_or_default()
+                })
+                .collect();
+            if lists.iter().any(Vec::is_empty) {
+                continue;
+            }
+            let lens: Vec<usize> = lists.iter().map(Vec::len).collect();
+            let max_sum: usize = lens.iter().map(|&len| len - 1).sum();
+            let mut visits = 0usize;
+            let mut created = 0usize;
+            'stages: for stage in 0..=max_sum {
+                let mut done = false;
+                for_each_tuple_with_sum(&lens, stage, &mut Vec::new(), &mut |digits| {
+                    visits += 1;
+                    let replacements: HashMap<TermId, TermId> = trigger
+                        .var_terms
+                        .iter()
+                        .copied()
+                        .enumerate()
+                        .map(|(slot, var)| (var, lists[slot][digits[slot]]))
+                        .collect();
+                    let mut memo = HashMap::new();
+                    if let Ok(instance) =
+                        replace_subterms(arena, trigger.trigger, &replacements, &mut memo)
+                        && self.seed_invented_term(arena, instance)
+                    {
+                        created += 1;
+                        invented_this_step += 1;
+                        state.invented_total += 1;
+                    }
+                    let stop = visits >= MAX_INVENTION_TUPLE_VISITS_PER_PATTERN_STEP
+                        || created >= MAX_INVENTED_TERMS_PER_PATTERN_STEP
+                        || invented_this_step >= MAX_INVENTED_TERMS_PER_STEP
+                        || state.invented_total >= MAX_INVENTED_TERMS_TOTAL;
+                    done = stop;
+                    !stop
+                });
+                if done {
+                    break 'stages;
+                }
+            }
+        }
+        invented_this_step
     }
 
     /// Conservative equality lookup over terms already registered from the
@@ -4031,6 +4626,186 @@ fn collect_vars(
     }
 }
 
+/// Retained term-invention state for one e-graph refutation attempt. Prepared
+/// lazily at the first starved fixpoint; all fields are bookkeeping for a
+/// bounded, deterministic enumeration — none of them carries proof content.
+#[derive(Default)]
+struct TermInventionState {
+    prepared: bool,
+    /// Every symbol bound by a `forall`/`exists` anywhere in the assertions.
+    /// An occurrence of one of these is not ground and never usable as a seed.
+    binders: HashSet<SymbolId>,
+    /// Free constant symbols per sort, in symbol order — deliberately
+    /// collected from the WHOLE assertion DAG including universal bodies, so
+    /// Skolem constants that occur only under a binder become seeds.
+    constant_seeds: HashMap<Sort, Vec<TermId>>,
+    /// Whether each pattern's source trigger is usable for invention:
+    /// quantifier-free and mentioning no binder symbol beyond its own
+    /// variables (a foreign bound variable would make the "ground" instance
+    /// spurious).
+    pattern_usable: Vec<bool>,
+    /// Total terms this attempt has invented, against
+    /// [`MAX_INVENTED_TERMS_TOTAL`].
+    invented_total: usize,
+    /// Total direct instances generated for starved universals, against
+    /// [`MAX_DIRECT_INSTANCES_TOTAL`].
+    direct_total: usize,
+    /// Direct instances generated per universal assertion, so a universal fed
+    /// only by this route stays eligible (its retained count never exceeding
+    /// its direct count means matching has produced nothing for it).
+    direct_per_universal: HashMap<TermId, usize>,
+    /// Memoized binder-free / quantifier-free classification per term.
+    ground_cache: HashMap<TermId, bool>,
+}
+
+impl TermInventionState {
+    fn prepare(
+        &mut self,
+        arena: &mut TermArena,
+        assertions: &[TermId],
+        pattern_triggers: &[Option<PatternTrigger>],
+    ) {
+        self.prepared = true;
+        // One DFS over the assertion DAG: binder symbols and symbol
+        // occurrences (first-visit order; the sort grouping below re-sorts by
+        // symbol index for determinism).
+        let mut seen: HashSet<TermId> = HashSet::new();
+        let mut stack: Vec<TermId> = assertions.to_vec();
+        let mut symbols: Vec<SymbolId> = Vec::new();
+        while let Some(term) = stack.pop() {
+            if !seen.insert(term) {
+                continue;
+            }
+            match arena.node(term) {
+                TermNode::Symbol(symbol) => symbols.push(*symbol),
+                TermNode::App { op, args } => {
+                    if let Op::Forall(binder) | Op::Exists(binder) = op {
+                        self.binders.insert(*binder);
+                    }
+                    stack.extend(args.iter().copied());
+                }
+                _ => {}
+            }
+        }
+        // Skolem/internal witnesses (reserved `!…` names) FIRST: the
+        // refutations this class needs bind mostly to the negated-conclusion
+        // Skolem constants, and the digit-sum staging reaches early seeds
+        // exponentially sooner than late ones.
+        symbols.sort_by_key(|symbol| (!arena.symbol(*symbol).0.starts_with('!'), symbol.index()));
+        symbols.dedup();
+        for symbol in symbols {
+            if self.binders.contains(&symbol) {
+                continue;
+            }
+            let sort = arena.symbol(symbol).1;
+            let seeds = self.constant_seeds.entry(sort).or_default();
+            if seeds.len() < MAX_INVENTION_SEEDS_PER_SORT {
+                seeds.push(arena.var(symbol));
+            }
+        }
+        self.pattern_usable = pattern_triggers
+            .iter()
+            .map(|entry| {
+                entry.as_ref().is_some_and(|trigger| {
+                    let own: HashSet<TermId> = trigger.var_terms.iter().copied().collect();
+                    self.trigger_usable(arena, trigger.trigger, &own)
+                })
+            })
+            .collect();
+    }
+
+    /// A trigger is usable when it contains no quantifier and every symbol in
+    /// it is either one of its own bound variables or not a binder at all.
+    fn trigger_usable(
+        &self,
+        arena: &TermArena,
+        trigger: TermId,
+        own_vars: &HashSet<TermId>,
+    ) -> bool {
+        let mut seen: HashSet<TermId> = HashSet::new();
+        let mut stack = vec![trigger];
+        while let Some(term) = stack.pop() {
+            if !seen.insert(term) {
+                continue;
+            }
+            match arena.node(term) {
+                TermNode::Symbol(symbol) => {
+                    if self.binders.contains(symbol) && !own_vars.contains(&term) {
+                        return false;
+                    }
+                }
+                TermNode::App { op, args } => {
+                    if matches!(op, Op::Forall(_) | Op::Exists(_)) {
+                        return false;
+                    }
+                    stack.extend(args.iter().copied());
+                }
+                _ => {}
+            }
+        }
+        true
+    }
+
+    /// Memoized: `term` mentions no binder symbol and no quantifier, so it is
+    /// a genuinely ground seed candidate.
+    fn is_binder_free(&mut self, arena: &TermArena, term: TermId) -> bool {
+        if let Some(&known) = self.ground_cache.get(&term) {
+            return known;
+        }
+        let free = match arena.node(term) {
+            TermNode::Symbol(symbol) => !self.binders.contains(symbol),
+            TermNode::App { op, args } => {
+                if matches!(op, Op::Forall(_) | Op::Exists(_)) {
+                    false
+                } else {
+                    let args = args.clone();
+                    args.iter().all(|&arg| self.is_binder_free(arena, arg))
+                }
+            }
+            _ => true,
+        };
+        self.ground_cache.insert(term, free);
+        free
+    }
+}
+
+/// Enumerates every index tuple over `lens` whose digit sum equals
+/// `remaining`, in lexicographic order; the visitor returns `false` to stop
+/// the whole enumeration. Staging tuples by digit sum yields the
+/// smallest-seed combinations first (all-zeros, then single steps, …), the
+/// same cheap relevance order cvc5's enumerative modes use.
+fn for_each_tuple_with_sum(
+    lens: &[usize],
+    remaining: usize,
+    prefix: &mut Vec<usize>,
+    visit: &mut impl FnMut(&[usize]) -> bool,
+) -> bool {
+    let position = prefix.len();
+    if position == lens.len() {
+        if remaining == 0 {
+            return visit(prefix);
+        }
+        return true;
+    }
+    let suffix_capacity: usize = lens[position..]
+        .iter()
+        .map(|&len| len.saturating_sub(1))
+        .sum();
+    if remaining > suffix_capacity {
+        return true;
+    }
+    let max_digit = lens[position].saturating_sub(1).min(remaining);
+    for digit in 0..=max_digit {
+        prefix.push(digit);
+        let keep_going = for_each_tuple_with_sum(lens, remaining - digit, prefix, visit);
+        prefix.pop();
+        if !keep_going {
+            return false;
+        }
+    }
+    true
+}
+
 /// Bridges ground IR terms to the e-graph for instantiation: it builds e-nodes,
 /// assigns each symbol/function/constant a `decl`, and remembers a representative
 /// ground term per class (to substitute back on a match).
@@ -4183,6 +4958,122 @@ mod tests {
 
     use super::*;
     use axeyum_ir::Sort;
+
+    /// The term-starved class in miniature: `∀x:S. p(f(x))` against
+    /// `∀y:T. ¬p(y)` with the only S-sorted constants living in a ground
+    /// disequality. No application term exists anywhere in the ground set, so
+    /// matching alone reaches an immediate fixpoint; term invention must
+    /// build `f(d)` (and the trigger instance over it) for the refutation.
+    #[test]
+    fn term_invention_refutes_a_term_starved_contradiction() {
+        let mut arena = TermArena::new();
+        let carrier_s = arena.declare_uninterpreted_sort("TiS");
+        let carrier_t = arena.declare_uninterpreted_sort("TiT");
+        let sort_s = Sort::Uninterpreted(carrier_s);
+        let sort_t = Sort::Uninterpreted(carrier_t);
+        let image_fn = arena.declare_fun("ti_f", &[sort_s], sort_t).unwrap();
+        let predicate = arena.declare_fun("ti_p", &[sort_t], Sort::Bool).unwrap();
+        let left_const = arena.declare("ti_d", sort_s).unwrap();
+        let right_const = arena.declare("ti_e", sort_s).unwrap();
+
+        let binder_x = arena.declare("ti_x", sort_s).unwrap();
+        let xv = arena.var(binder_x);
+        let f_x = arena.apply(image_fn, &[xv]).unwrap();
+        let p_f_x = arena.apply(predicate, &[f_x]).unwrap();
+        let all_imaged = arena.forall(binder_x, p_f_x).unwrap();
+
+        let binder_y = arena.declare("ti_y", sort_t).unwrap();
+        let yv = arena.var(binder_y);
+        let p_y = arena.apply(predicate, &[yv]).unwrap();
+        let not_p_y = arena.not(p_y).unwrap();
+        let none_p = arena.forall(binder_y, not_p_y).unwrap();
+
+        let dv = arena.var(left_const);
+        let ev = arena.var(right_const);
+        let d_eq_e = arena.eq(dv, ev).unwrap();
+        let ground = arena.not(d_eq_e).unwrap();
+
+        let assertions = vec![all_imaged, none_p, ground];
+        let config = SolverConfig::new().with_timeout(Duration::from_secs(10));
+        assert!(matches!(
+            prove_quantified_unsat_via_egraph(&mut arena, &assertions, &config).unwrap(),
+            CheckResult::Unsat
+        ));
+    }
+
+    /// Skolem-seeded variant: the only constant of the binder sort occurs
+    /// INSIDE a universal body (the position a Skolem constant lands in after
+    /// skolemization), never in any ground assertion. Invention must collect
+    /// it from the body and still build the refuting terms.
+    #[test]
+    fn term_invention_seeds_constants_from_universal_bodies() {
+        let mut arena = TermArena::new();
+        let carrier_s = arena.declare_uninterpreted_sort("TiBodyS");
+        let carrier_t = arena.declare_uninterpreted_sort("TiBodyT");
+        let sort_s = Sort::Uninterpreted(carrier_s);
+        let sort_t = Sort::Uninterpreted(carrier_t);
+        let image_fn = arena.declare_fun("tib_f", &[sort_s], sort_t).unwrap();
+        let predicate = arena.declare_fun("tib_p", &[sort_t], Sort::Bool).unwrap();
+        let skolem = arena.declare("tib_sk", sort_s).unwrap();
+
+        let binder_x = arena.declare("tib_x", sort_s).unwrap();
+        let xv = arena.var(binder_x);
+        let f_x = arena.apply(image_fn, &[xv]).unwrap();
+        let p_f_x = arena.apply(predicate, &[f_x]).unwrap();
+        let all_imaged = arena.forall(binder_x, p_f_x).unwrap();
+
+        // `∀y:T. ¬p(y) ∨ ¬(y = f(sk))` — unsat against the first universal at
+        // y := f(sk); the constant `sk` occurs only here, under the binder.
+        let binder_y = arena.declare("tib_y", sort_t).unwrap();
+        let yv = arena.var(binder_y);
+        let p_y = arena.apply(predicate, &[yv]).unwrap();
+        let not_p_y = arena.not(p_y).unwrap();
+        let sk = arena.var(skolem);
+        let f_sk = arena.apply(image_fn, &[sk]).unwrap();
+        let y_is_witness = arena.eq(yv, f_sk).unwrap();
+        let y_not_witness = arena.not(y_is_witness).unwrap();
+        let clause = arena.or(not_p_y, y_not_witness).unwrap();
+        let none_witnessed = arena.forall(binder_y, clause).unwrap();
+
+        let assertions = vec![all_imaged, none_witnessed];
+        let config = SolverConfig::new().with_timeout(Duration::from_secs(10));
+        assert!(matches!(
+            prove_quantified_unsat_via_egraph(&mut arena, &assertions, &config).unwrap(),
+            CheckResult::Unsat
+        ));
+    }
+
+    /// Soundness control: invention on a satisfiable query must never
+    /// manufacture a refutation — the invented terms are nodes, not facts.
+    #[test]
+    fn term_invention_never_refutes_a_satisfiable_query() {
+        let mut arena = TermArena::new();
+        let carrier_s = arena.declare_uninterpreted_sort("TiSatS");
+        let carrier_t = arena.declare_uninterpreted_sort("TiSatT");
+        let sort_s = Sort::Uninterpreted(carrier_s);
+        let sort_t = Sort::Uninterpreted(carrier_t);
+        let image_fn = arena.declare_fun("tis_f", &[sort_s], sort_t).unwrap();
+        let predicate = arena.declare_fun("tis_p", &[sort_t], Sort::Bool).unwrap();
+        let control_pred = arena.declare_fun("tis_q", &[sort_s], Sort::Bool).unwrap();
+        let left_const = arena.declare("tis_d", sort_s).unwrap();
+
+        let binder_x = arena.declare("tis_x", sort_s).unwrap();
+        let xv = arena.var(binder_x);
+        let f_x = arena.apply(image_fn, &[xv]).unwrap();
+        let p_f_x = arena.apply(predicate, &[f_x]).unwrap();
+        let all_imaged = arena.forall(binder_x, p_f_x).unwrap();
+
+        let dv = arena.var(left_const);
+        let q_d = arena.apply(control_pred, &[dv]).unwrap();
+        let ground = arena.not(q_d).unwrap();
+
+        let assertions = vec![all_imaged, ground];
+        let config = SolverConfig::new().with_timeout(Duration::from_secs(10));
+        assert!(!matches!(
+            prove_quantified_unsat_via_egraph(&mut arena, &assertions, &config).unwrap(),
+            CheckResult::Unsat
+        ));
+    }
 
     #[test]
     fn chained_integer_recurrence_reaches_its_ground_base() {
@@ -6020,7 +6911,14 @@ mod tests {
         )
         .unwrap();
         let baseline_elapsed = baseline_started.elapsed();
-        assert!(matches!(baseline, CheckResult::Unknown(_)));
+        // Historically the baseline (scoped candidate equalities disabled)
+        // stayed `Unknown`: the nested trigger `f(g(x))` had no ground
+        // application to match. Term invention now seeds `f(g(b))` from the
+        // free constants at the fixpoint, so the baseline refutes too — the
+        // candidate arm below still verifies the scoped-candidate machinery
+        // (its stats prove the candidate schedule ran and admitted the
+        // instance before invention was ever consulted).
+        assert_eq!(baseline, CheckResult::Unsat);
 
         let mut candidate_arena = arena.clone();
         let mut candidate_stats = QuantifierLoopStats::default();
