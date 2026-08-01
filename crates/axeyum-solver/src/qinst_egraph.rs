@@ -3304,58 +3304,68 @@ impl IncrementalEmatchSession {
     fn match_witness_tuples(&mut self, deadline: Option<Instant>) -> Vec<Option<Vec<Vec<TermId>>>> {
         // Deadline discipline: pattern execution and substitution joining are
         // the dominant per-round costs (measured: one deadline-blind matching
-        // round overran a 500 ms budget by more than a minute), so the clock is
-        // consulted between individual pattern matches and — via
-        // `witness_tuples_with_overrides` — between bounded merge-attempt
-        // blocks. An expired clock stops matching early and leaves unprocessed
-        // patterns queued (still dirty / pending), so no match state is lost;
-        // the truncation only defers instances, which are monotone hints,
-        // never a verdict by themselves.
+        // round overran a 500 ms budget by more than a minute), so the clock
+        // is consulted between the two batched match phases, per quantifier in
+        // the join loop, and — via `witness_tuples_with_overrides` — between
+        // bounded merge-attempt blocks. The batched `ematch_many_*` calls are
+        // kept intact deliberately: a per-pattern split measurably perturbed
+        // the loop's admission schedule and cost a scored refutation, so the
+        // batch itself stays a single unit and the growth-forecast round gate
+        // bounds it. An expired clock skips the candidate phase and the
+        // remaining joins; the truncation only defers instances, which are
+        // monotone hints, never a verdict by themselves.
         let expired = |deadline: Option<Instant>| -> bool {
             deadline.is_some_and(|deadline| Instant::now() >= deadline)
         };
         if !self.dirty_patterns.is_empty() {
+            let seg = Instant::now();
             let dirty: Vec<usize> = self.dirty_patterns.iter().copied().collect();
-            for index in dirty {
-                if expired(deadline) {
-                    break;
-                }
-                let pattern = std::slice::from_ref(&self.patterns[index]);
-                let mut matches = self
-                    .bridge
-                    .egraph
-                    .ematch_many_indexed(pattern, &mut self.match_index);
-                self.pattern_matches[index] = matches.pop().unwrap_or_default();
-                self.pattern_executions += 1;
-                self.candidate_patterns.remove(&index);
-                self.dirty_patterns.remove(&index);
+            let patterns: Vec<Pattern> = dirty
+                .iter()
+                .map(|&index| self.patterns[index].clone())
+                .collect();
+            let matches = self
+                .bridge
+                .egraph
+                .ematch_many_indexed(&patterns, &mut self.match_index);
+            for (index, matches) in dirty.iter().copied().zip(matches) {
+                self.pattern_matches[index] = matches;
             }
+            self.pattern_executions += dirty.len();
+            for index in &dirty {
+                self.candidate_patterns.remove(index);
+            }
+            self.dirty_patterns.clear();
+            crate::auto::qtrace("match-seg", seg, &format!("dirty n={}", dirty.len()));
         }
         if !self.candidate_patterns.is_empty() && !expired(deadline) {
-            let pending_indices: Vec<usize> = self.candidate_patterns.keys().copied().collect();
-            for index in pending_indices {
-                if expired(deadline) {
-                    break;
-                }
-                let Some(candidates) = self.candidate_patterns.remove(&index) else {
-                    continue;
-                };
-                let candidates: Vec<ENodeId> = candidates.into_iter().collect();
-                let pattern = std::slice::from_ref(&self.patterns[index]);
-                let mut matches = self.bridge.egraph.ematch_many_candidates_indexed(
-                    pattern,
-                    std::slice::from_ref(&candidates),
-                    &mut self.match_index,
-                );
-                let matches = matches.pop().unwrap_or_default();
+            let seg = Instant::now();
+            let pending = std::mem::take(&mut self.candidate_patterns);
+            let dirty: Vec<usize> = pending.keys().copied().collect();
+            let patterns: Vec<Pattern> = dirty
+                .iter()
+                .map(|&index| self.patterns[index].clone())
+                .collect();
+            let candidates: Vec<Vec<ENodeId>> = pending
+                .into_values()
+                .map(|candidates| candidates.into_iter().collect())
+                .collect();
+            let matches = self.bridge.egraph.ematch_many_candidates_indexed(
+                &patterns,
+                &candidates,
+                &mut self.match_index,
+            );
+            for (index, matches) in dirty.iter().copied().zip(matches) {
                 self.pattern_matches[index].extend(matches);
                 self.pattern_matches[index].sort_unstable();
                 self.pattern_matches[index].dedup();
-                self.pattern_executions += 1;
-                self.candidate_applications_scanned += candidates.len();
             }
+            self.pattern_executions += dirty.len();
+            self.candidate_applications_scanned += candidates.iter().map(Vec::len).sum::<usize>();
+            crate::auto::qtrace("match-seg", seg, &format!("candidates n={}", dirty.len()));
         }
         self.match_rounds += 1;
+        let join_seg = Instant::now();
         let mut remaining = MAX_JOINED_SUBSTITUTIONS_PER_ROUND;
         let mut batches = Vec::with_capacity(self.quantifiers.len());
         if self.join_stats.is_empty() {
@@ -3397,6 +3407,7 @@ impl IncrementalEmatchSession {
             }
             batches.push(tuples);
         }
+        crate::auto::qtrace("match-seg", join_seg, "join done");
         batches
     }
 

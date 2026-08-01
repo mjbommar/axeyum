@@ -2684,7 +2684,15 @@ fn mbqi_first_refusal(
     let Some(quick_config) = mbqi_first_refusal_budget(&quick_config) else {
         return Ok(None);
     };
-    match prove_unsat_by_mbqi(arena, assertions, &quick_config) {
+    // THROWAWAY CLONE isolation (same rationale as the uf_fmf probe above):
+    // MBQI interns skolems and instantiation terms, and letting that traffic
+    // leak into the shared arena measurably derails the e-graph refutation
+    // downstream (measured: a 3.5 s e-graph `unsat` on a scored UF file became
+    // a 24 s `unknown` with the polluted arena). Term/symbol IDs coincide
+    // between the clone and the original, so an `unsat` on the clone refutes
+    // the same assertion set, and a `sat` model is re-checked against the
+    // ORIGINAL arena before it is accepted.
+    match prove_unsat_by_mbqi(&mut arena.clone(), assertions, &quick_config) {
         Ok(CheckResult::Sat(model)) if crate::check_model(arena, original_assertions, &model)? => {
             qtrace("mbqi-quick", t0, "sat");
             Ok(Some(CheckResult::Sat(model)))
