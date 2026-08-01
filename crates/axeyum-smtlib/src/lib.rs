@@ -22,7 +22,7 @@ mod write;
 pub use bounded_completeness::is_bounded_complete;
 pub use parse::{
     FpUsage, IntBound, IntBoundKind, Script, ScriptCommand, SourceStringSatProblem,
-    SourceStringWitness, WordObligation, WordProblem, parse_script,
+    SourceStringWitness, WordObligation, WordProblem, parse_script, parse_script_with_string_bound,
 };
 pub use regex_membership::{MemberConcatDefinition, MemberVar, MembershipProblem};
 pub use sexpr::{SExpr, read_all};

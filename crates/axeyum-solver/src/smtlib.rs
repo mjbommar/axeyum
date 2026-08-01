@@ -20,7 +20,7 @@ use axeyum_ir::{
 };
 use axeyum_smtlib::{
     IntBound, IntBoundKind, MemberVar, MembershipProblem, Script, ScriptCommand, WordObligation,
-    parse_script,
+    parse_script, parse_script_with_string_bound,
 };
 use axeyum_strings::{
     MembershipOutcome, RefuteOutcome, SearchBudget, SearchOutcome, refute_word_equations,
@@ -1781,7 +1781,130 @@ fn smtlib_single_query(script: &Script) -> Result<SmtLibSingleQuery, SolverError
 /// - any [`SolverError`] from [`crate::solve`] (e.g. a non-Boolean assertion or
 ///   an internal backend failure).
 pub fn solve_smtlib(input: &str, config: &SolverConfig) -> Result<SmtLibOutcome, SolverError> {
-    let mut script = parse_script(input).map_err(|error| SolverError::Parse(error.to_string()))?;
+    // One deadline for the WHOLE front door, taken before the first attempt: the
+    // ladder below must share `config.timeout` with the default rung, never start a
+    // fresh full budget of its own.
+    let deadline = config
+        .timeout
+        .and_then(|t| std::time::Instant::now().checked_add(t));
+    let outcome = solve_smtlib_at_string_bound(input, config, DEFAULT_STRING_BOUND)?;
+    Ok(apply_string_bound_ladder(input, config, deadline, outcome))
+}
+
+/// The declared-string window the ordinary front door parses at — `axeyum_smtlib`'s
+/// `STRING_MAX_LEN`. Named here (rather than re-exported) because the solver only
+/// needs it as the ladder's *first rung*: passing it to
+/// [`parse_script_with_string_bound`] reproduces [`parse_script`] exactly, and the
+/// clamp inside that function keeps a drifted value sound (it can only widen).
+const DEFAULT_STRING_BOUND: u32 = 12;
+
+/// Wider declared-string windows tried by [`apply_string_bound_ladder`], in order.
+///
+/// Chosen by measurement over the `QF_SLIA` parity residual, not by taste: on the
+/// committed 200-file stride, rung 24 first decides two `pyex` files, rung 32 adds
+/// a `kaluza` file, and rung 48 adds a `stringfuzz` file. Rungs are sparse because
+/// the packed encoding is `len_width(m) + 8m` bits wide per string symbol, so the
+/// CNF grows linearly in the rung and the solve super-linearly — the same
+/// "dense-then-sparse, hard cap" discipline as the integer width ladder.
+const STRING_BOUND_LADDER: [u32; 3] = [24, 32, 48];
+
+/// Least remaining budget worth entering a ladder rung with. A rung starting on a
+/// sliver of budget cannot decide anything but still pays a full re-parse and
+/// re-encode, and the interior routes only sample their deadline at coarse points,
+/// so a near-zero start is the shape most likely to overshoot `config.timeout`.
+const MIN_RUNG_BUDGET: std::time::Duration = std::time::Duration::from_millis(250);
+
+/// **String-bound ladder** — the last second chance in the text front door.
+///
+/// The packed ADR-0029 encoding models each declared `String` as a fixed
+/// `DEFAULT_STRING_BOUND`-byte window. A query that is genuinely `sat`, but whose
+/// every witness needs a longer string, therefore encodes as a bounded `unsat`
+/// and surfaces as the `Unknown` "no model within the bounded integer width …"
+/// (or, when the P2.7 A.2 gate declined to certify that bounded `unsat`, one of
+/// its sibling reasons). This re-parses at successively wider windows and returns
+/// the first **`Sat`**.
+///
+/// # Why this is strictly additive
+///
+/// * It fires **only** on an `Unknown` whose reason is the bounded-window one —
+///   a `sat`, an `unsat`, or any other `unknown` is returned untouched, so no
+///   decided verdict can change.
+/// * It accepts **only `Sat`**. Every model of a wider bounded encoding is a model
+///   of the original query (a string of length ≤ 48 is a string), which is exactly
+///   the argument that makes the default window's `sat` sound — and the accepted
+///   model has already been replayed against that rung's assertions by
+///   [`crate::solve`] / the string gate. A wider-window `unsat` is still a bound
+///   artifact, so it is discarded and the original `Unknown` is preserved. In
+///   particular [`apply_bounded_completeness_unsat`]'s upgrade — whose
+///   `is_bounded_complete` premise is stated against the *default* window — can
+///   never escape a wider rung.
+/// * Every rung is guarded by the remaining wall-clock budget, so a file that
+///   already spends its budget declining never enters the ladder, and the rungs
+///   cannot run past `config.timeout`.
+///
+/// Cost is therefore paid only on queries that are currently *undecided*.
+fn apply_string_bound_ladder(
+    input: &str,
+    config: &SolverConfig,
+    deadline: Option<std::time::Instant>,
+    outcome: SmtLibOutcome,
+) -> SmtLibOutcome {
+    if !is_string_window_decline(&outcome.result) {
+        return outcome;
+    }
+    for rung in STRING_BOUND_LADDER {
+        // Budget REMAINING to the front door's shared deadline, so the ladder can
+        // never run past `config.timeout`. An exhausted budget ends the ladder.
+        let remaining = match deadline {
+            None => None,
+            Some(at) => match at.checked_duration_since(std::time::Instant::now()) {
+                Some(left) if left >= MIN_RUNG_BUDGET => Some(left),
+                _ => return outcome,
+            },
+        };
+        let mut rung_config = config.clone();
+        rung_config.timeout = remaining;
+        // A rung that errors (a wider window can exceed a packed-width cap and
+        // become a clean `Unsupported`) is not a failure of the query: keep the
+        // original `Unknown` and try the next rung.
+        if let Ok(wider) = solve_smtlib_at_string_bound(input, &rung_config, rung)
+            && matches!(wider.result, CheckResult::Sat(_))
+        {
+            return wider;
+        }
+    }
+    outcome
+}
+
+/// Whether `result` is the bounded-string-window `Unknown` the ladder exists to
+/// retry: the bounded encoding found no model inside the default window, either
+/// reported directly or after the P2.7 A.2 gate declined to certify it as a real
+/// `unsat`. Any other `unknown` (a resource limit, an unsupported operator, an
+/// out-of-range integer constant) is left alone — widening the string window
+/// cannot help it.
+fn is_string_window_decline(result: &CheckResult) -> bool {
+    let CheckResult::Unknown(reason) = result else {
+        return false;
+    };
+    if reason.kind != UnknownKind::Incomplete {
+        return false;
+    }
+    let detail = &reason.detail;
+    detail.contains("no model within the bounded integer width")
+        || detail.contains("bounded-string unsat with a coarsely-abstracted atom")
+        || detail.contains("bounded-string unsat is an encoding-bound artifact")
+}
+
+/// [`solve_smtlib`] at an explicit declared-string window (`string_bound`); see
+/// [`parse_script_with_string_bound`]. The default rung is byte-identical to the
+/// historical front door.
+fn solve_smtlib_at_string_bound(
+    input: &str,
+    config: &SolverConfig,
+    string_bound: u32,
+) -> Result<SmtLibOutcome, SolverError> {
+    let mut script = parse_script_with_string_bound(input, string_bound)
+        .map_err(|error| SolverError::Parse(error.to_string()))?;
     // Source-first parse fallback (T-B.4d): the bounded encoder declined this
     // script at parse, so use only the checked source-level ladder — never solve
     // its empty flat assertion view.

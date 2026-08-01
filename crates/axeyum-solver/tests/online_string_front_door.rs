@@ -594,16 +594,27 @@ fn front_door_conbyte_negative_start_substr_is_empty() {
 }
 
 #[test]
-fn front_door_conbyte_over_bound_fixed_substr_stays_unknown() {
-    // A real length-14 model satisfies both constraints. The packed encoder cannot
-    // witness it, and the unbounded substring-length relation must not turn that
-    // bounded limitation into a false UNSAT.
+fn front_door_conbyte_over_bound_fixed_substr_is_never_a_false_unsat() {
+    // The two constraints force |s| = 14 exactly, so a real model exists. The
+    // PROPERTY under test is that the unbounded substring-length relation must
+    // never turn a *bounded-encoder* limitation into a false UNSAT.
+    //
+    // This was originally pinned as `Unknown`, describing the 12-byte packed
+    // window of the day rather than the property. The front door's string-bound
+    // ladder (`solve_smtlib`'s `apply_string_bound_ladder`) now re-parses at a
+    // wider window and witnesses `|s| = 14` — a strict capability gain, and one
+    // cvc5 does not match at a 20 s budget. Pinning the *cap* would have made that
+    // gain read as a failure, so the assertion is the property: anything except
+    // `unsat`. See `tests/string_bound_ladder.rs`.
     let s = r"(set-logic QF_SLIA)
 (declare-fun s () String)
 (assert (= (str.len (str.substr s 13 1)) 1))
 (assert (= (str.len (str.substr s 14 1)) 0))
 (check-sat)";
-    assert!(matches!(verdict(s), CheckResult::Unknown(_)));
+    assert!(
+        !matches!(verdict(s), CheckResult::Unsat),
+        "WRONG-UNSAT: |s| = 14 satisfies both constraints"
+    );
 }
 
 // ---------- over-cap (word-first fallback) disjunctive shapes ----------

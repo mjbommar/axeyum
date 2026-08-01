@@ -654,7 +654,40 @@ pub enum WordObligation {
 /// constructs outside the `QF_BV` benchmark slice, and sort errors surfaced
 /// as [`SmtError::Ir`].
 pub fn parse_script(input: &str) -> Result<Script, SmtError> {
-    match parse_script_bounded(input) {
+    parse_script_with_string_bound(input, STRING_MAX_LEN)
+}
+
+/// Parses an SMT-LIB script, widening **every declared `String` symbol** to at
+/// least `floor` bytes.
+///
+/// [`parse_script`] passes `floor = STRING_MAX_LEN` (12) and is byte-identical to
+/// the historical behaviour. A larger `floor` is the parse half of the front
+/// door's **string-bound ladder**: the packed ADR-0029 encoding models a declared
+/// string as a fixed `max_len`-byte window, so a satisfiable query whose only
+/// witnesses need a longer string encodes as a bounded `unsat` and is reported
+/// `unknown` ("no model within the bounded integer width …"). Re-parsing at a
+/// wider floor is the standard way to look for that witness.
+///
+/// Only *declared* symbols move. Literals keep their own adaptive bound
+/// (`STRING_LITERAL_MAX_LEN`, 256) and a symbol whose bound was already inferred
+/// wider from a direct literal comparison keeps the larger of the two, so the
+/// floor can only widen a window, never narrow one. Widening is
+/// **soundness-neutral in the `sat` direction**: every model of the wider bounded
+/// encoding is a model of the original query (a string of length ≤ `floor` is a
+/// string), which is the same argument that makes the default bound's `sat`
+/// sound. A wider-bound `unsat` remains an artifact of the bound and is *not* a
+/// query `unsat` — the caller must keep treating it as `unknown`.
+///
+/// `floor` is clamped to the crate's packed-string cap (`STRING_BOUND_CAP`, 512);
+/// a `floor` below the default is
+/// raised to the default (this API only ever widens).
+///
+/// # Errors
+///
+/// As [`parse_script`].
+pub fn parse_script_with_string_bound(input: &str, floor: u32) -> Result<Script, SmtError> {
+    let floor = floor.clamp(STRING_MAX_LEN, STRING_BOUND_CAP);
+    match parse_script_bounded_with_string_bound(input, floor) {
         Ok(script) => Ok(script),
         // Word-first parse fallback (T-B.4d). The bounded ADR-0029 string encoder
         // declined the script *wholesale* — a string literal over
@@ -742,7 +775,7 @@ fn word_only_fallback_within_stack_budget(input: &str) -> bool {
 /// `STRING_LITERAL_MAX_LEN`, concats ≤ `STRING_BOUND_CAP`, packed-BV model).
 /// A capacity/unsupported decline here is what triggers the word-first fallback in
 /// [`parse_script`].
-fn parse_script_bounded(input: &str) -> Result<Script, SmtError> {
+fn parse_script_bounded_with_string_bound(input: &str, floor: u32) -> Result<Script, SmtError> {
     let mut exprs = read_all(input)?;
     // Finite-set theory: model every `(Set E)` as a `BitVec(W)` over the finite
     // element domain and rewrite the sound subset of set operations to bit-vector
@@ -770,7 +803,19 @@ fn parse_script_bounded(input: &str) -> Result<Script, SmtError> {
     // directly with a representable 13-byte literal. This avoids making every
     // unrelated string variable/CNF one byte wider just because one path names a
     // protocol token such as "cache-control".
-    let string_symbol_bounds = inferred_string_symbol_bounds(&exprs);
+    let mut string_symbol_bounds = inferred_string_symbol_bounds(&exprs);
+    // String-bound ladder rung (`parse_script_with_string_bound`): raise every
+    // declared `String` symbol to at least `floor`. At the default floor this is a
+    // no-op, so the ordinary parse is byte-identical. Iteration is over the
+    // deterministic declaration order of `exprs`, and the destination is a
+    // `BTreeMap`, so the resulting bounds are order-stable.
+    if floor > STRING_MAX_LEN {
+        for name in exprs.iter().filter_map(declared_string_var) {
+            let slot = string_symbol_bounds.entry(name.to_owned()).or_insert(floor);
+            *slot = (*slot).max(floor);
+        }
+    }
+    let string_symbol_bounds = string_symbol_bounds;
     // Finite fields (QF_FF): build the modeled-width → prime registry for every
     // `(_ FiniteField p)` sort (directly and via `define-sort`), once, up front
     // (mirroring [`build_seq_info`]). A modulus over the bit-width cap, a non-prime
