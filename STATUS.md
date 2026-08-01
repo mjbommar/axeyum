@@ -16,11 +16,42 @@ legacy baselines sound, full-library P0 fixed on `main` with slice revalidation
 open; parity not yet reached, the road there fully mapped.** The remaining
 decide-rate / performance / proof-coverage work is decomposed into sized,
 exit-criteria'd tracks we advance one increment at a time.
+- **RESUME HERE (2026-08-01, end of session — the shell tool died mid-flight).**
+  The Bash/shell tool failed harness-wide: every command, including a bare
+  `echo`, returns exit 1 with no output, for the main session *and* for
+  subagents. It is **not** resource exhaustion — `/proc/meminfo` showed 66 GB
+  available and `/proc/loadavg` 3.38 at the time. Nothing is lost: every change
+  is committed to local `main`. Two things were left undone and need a working
+  shell:
+  1. **Finish the post-merge gates on `main`.** The solver unit sweep already
+     passed (**975 passed / 0 failed**) — do not redo it. Still to run:
+     `cargo test -p axeyum-solver --features full --test corpus_regression`,
+     `cargo test -p axeyum-solver --test progress_frontier --features full -- --test-threads=1`,
+     and `cargo test --workspace --lib`. Do **not** run
+     `cargo clippy --all-targets` or `cargo doc` in the main checkout: another
+     lane's uncommitted `crates/axeyum-bench/examples/explain_corpus.rs` does not
+     compile, so `--all-targets` fails for unrelated reasons. Run clippy in a
+     clean detached worktree instead.
+  2. **Re-run parity from a CLEAN worktree.** The QF_BV entry below is stamped
+     `DIRTY WORKTREE — result not reproducible`, because another lane's
+     uncommitted 234-line `crates/axeyum-solver/src/route_trace.rs` change sits
+     inside `axeyum-solver` and was compiled into the measured binary.
+     `git worktree add --detach /tmp/axeyum-parity-clean HEAD`, then
+     `cargo build --release -p axeyum-bench --example smtcomp_cli` (note:
+     `--features full` is NOT a valid flag on `axeyum-bench` and errors), then
+     `./scripts/parity-run.sh QF_BV` and `./scripts/parity-run.sh UF`
+     sequentially inside it, and copy the entries + `parity-details/*.tsv` back.
+     UF must be genuinely re-measured, not inherited: four CEGAR commits and the
+     `fold_to_real` fix landed after its last certified run.
 - **Head-to-head division parity, certified (2026-08-01):** `scripts/parity-run.sh`
   measures axeyum against each division's SMT-COMP 2025 winner over a committed
   200-file deterministic stride of the *full* division (no size cap), 24 s per
   file, whole-list denominator, any disagreement failing the run outright.
-  Standing result, ledger [`bench-results/PARITY.md`](bench-results/PARITY.md):
+  Standing result, ledger [`bench-results/PARITY.md`](bench-results/PARITY.md).
+  **QF_BV was re-measured later the same day at 184/194 = 94.8 %** after the
+  `fold_to_real` abort fix (`fcc8760d`) — see the resume note above; that entry
+  is stamped `DIRTY WORKTREE` and needs a clean re-run. The certified line as of
+  the first sweep:
   **QF_BV 175/194 = 90.2 %** (vs Bitwuzla), **UF 78/93 = 83.9 %** (vs cvc5),
   **QF_SLIA 187/194 = 96.4 %** (vs cvc5) — **0 disagreements in every run**.
   Day's arc: UF 34.4 → 83.9 %, QF_BV 84.5 → 90.2 %, QF_SLIA 85.6 → 96.4 %.
