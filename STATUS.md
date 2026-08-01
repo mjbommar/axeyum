@@ -16,6 +16,28 @@ legacy baselines sound, full-library P0 fixed on `main` with slice revalidation
 open; parity not yet reached, the road there fully mapped.** The remaining
 decide-rate / performance / proof-coverage work is decomposed into sized,
 exit-criteria'd tracks we advance one increment at a time.
+- **Head-to-head division parity, certified (2026-08-01):** `scripts/parity-run.sh`
+  measures axeyum against each division's SMT-COMP 2025 winner over a committed
+  200-file deterministic stride of the *full* division (no size cap), 24 s per
+  file, whole-list denominator, any disagreement failing the run outright.
+  Standing result, ledger [`bench-results/PARITY.md`](bench-results/PARITY.md):
+  **QF_BV 175/194 = 90.2 %** (vs Bitwuzla), **UF 78/93 = 83.9 %** (vs cvc5),
+  **QF_SLIA 187/194 = 96.4 %** (vs cvc5) — **0 disagreements in every run**.
+  Day's arc: UF 34.4 → 83.9 %, QF_BV 84.5 → 90.2 %, QF_SLIA 85.6 → 96.4 %.
+  Two caveats belong with the number, not under it: the UF reference is **plain
+  cvc5, not its competition portfolio**, which flatters us on exactly the files
+  finite-model finding wins (they are the ones needing `--finite-model-find`);
+  and on QF_BV **axeyum-only = 0**, so 90.2 % there is a strict subset of
+  Bitwuzla's decided set, not independent strength. UF is the opposite case —
+  24 files we decide that the reference does not. All runs are wall-clock timed
+  on a shared, externally loaded box, so every ratio is a lower bound.
+  What moved UF, each found by probing the scored benchmarks rather than by
+  reading source: finite model finding (the first checked pure-UF `sat` verdicts
+  in the project's history — the sat certificate previously accepted only
+  `Int`/`Real` binders while every UF binder is an uninterpreted sort); EUF
+  predicate atoms (Tseitin rejected `Op::Apply` at Bool position, so
+  uninterpreted *predicates* had no CDCL(T) session at all); term invention; and
+  Z3-style generation-cost flood throttling.
 - **P2.8 ground custom-format division (2026-07-27):** the sole unsupported row
   in the committed eight-file QF_BVFP Bitwuzla regression slice now decides
   `sat`; its negation decides `unsat`. The exact ground-only `(4,12)` route has
