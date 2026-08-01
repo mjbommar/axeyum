@@ -356,11 +356,11 @@ pub(crate) fn project_replay_build<P: FunctionModelProjection>(
             outcome @ (Ok(_) | Err(_)) => {
                 if std::env::var_os("AXEYUM_FLOODPROBE").is_some() {
                     let rendered = axeyum_ir::render(arena, assertion);
+                    let clipped: String = rendered.chars().take(400).collect();
                     eprintln!(
-                        "FLOODPROBE euf-replay-fail term=#{} outcome={:?} shape={}",
+                        "FLOODPROBE euf-replay-fail term=#{} outcome={:?} shape={clipped}",
                         assertion.index(),
                         outcome.map(|_| ()),
-                        &rendered[..rendered.len().min(400)],
                     );
                 }
                 return CheckResult::Unknown(crate::backend::UnknownReason {
