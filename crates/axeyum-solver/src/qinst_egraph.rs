@@ -76,6 +76,34 @@ const ROUND_GROWTH_HEADROOM: u32 = 8;
 /// many ground terms even with no wall-clock budget (the "never hang" rule).
 const MAX_GROUND_TERMS: usize = 8192;
 
+/// Flood-regime budget for one round's *non-conflict* admissions (the unit
+/// and deferred pools; conflict instances stay eager and unbudgeted, Z3's
+/// `qi.promote_unsat` analogue). The measured flood mechanism (2026-08-01,
+/// `AXEYUM_FLOODPROBE` on the UF parity residual): once a round had no
+/// conflict traffic the loop dumped the WHOLE deferred pool — geometric pools
+/// of 34 -> 57 -> 129 -> ... -> 5957 candidates per round — reaching
+/// [`MAX_GROUND_TERMS`] around round 9-15 with almost entirely inert traffic
+/// (`dl_copy_invariant_19_2`: 8164 of 8166 admitted instances still
+/// undetermined at the cap, 8080 of them derived-from-derived), and unit
+/// traffic flooded the same way where it dominated (`uf.1158058`: 4230 unit
+/// candidates in one round, all entailed by cap time). Above this budget a
+/// pool is admitted in ascending instantiation-generation order (Z3
+/// `qi_queue.cpp` cost `(+ weight generation)`), `FLOOD_ROUND_ADMISSION_CAP`
+/// per round, so shallow-derivation instances flow while deep derived noise
+/// waits — it is re-materialized and re-classified (possibly as a conflict by
+/// then) on every later round, never dropped. Pools at or under the budget
+/// keep the historical admit-everything behavior byte-identical.
+const FLOOD_ROUND_ADMISSION_CAP: usize = 256;
+
+/// The generation-layered final-check lever engages only when the accumulated
+/// ground set is at least this large (the measured wall: a final check over
+/// 8192 conjuncts burned 26.7s on `uf.1158058` and returned unknown).
+const FLOOD_FINAL_SUBSET_CHECK_MIN_GROUND: usize = 2048;
+
+/// Generation ceiling for the subset-first final refutation check: sources
+/// (generation 0) plus instances derived purely from source terms.
+const FLOOD_FINAL_SUBSET_MAX_GENERATION: u32 = 1;
+
 /// Internal tuple-join cap per retained matching round. This prevents a
 /// multi-pattern Cartesian product from allocating beyond the solver's own
 /// accumulated-ground budget. The public one-shot witness API remains complete.
@@ -351,6 +379,35 @@ fn quantifier_qf_refutation_check(
     stats: &mut QuantifierLoopStats,
     cache: &mut QuantifierTermCache,
 ) -> Result<CheckResult, SolverError> {
+    let probe_started = floodprobe_enabled().then(Instant::now);
+    let result = quantifier_qf_refutation_check_impl(arena, ground, config, deadline, stats, cache);
+    if let Some(started) = probe_started {
+        let detail = match &result {
+            Ok(CheckResult::Unknown(reason)) => format!(" unknown_detail={:?}", reason.detail),
+            _ => String::new(),
+        };
+        eprintln!(
+            "FLOODPROBE qf-check ground={} result={:?} ms={}{detail}",
+            ground.len(),
+            result.as_ref().map(|r| match r {
+                CheckResult::Unsat => "unsat",
+                CheckResult::Sat(_) => "sat",
+                CheckResult::Unknown(_) => "unknown",
+            }),
+            started.elapsed().as_millis(),
+        );
+    }
+    result
+}
+
+fn quantifier_qf_refutation_check_impl(
+    arena: &mut TermArena,
+    ground: &[TermId],
+    config: &SolverConfig,
+    deadline: Option<Instant>,
+    stats: &mut QuantifierLoopStats,
+    cache: &mut QuantifierTermCache,
+) -> Result<CheckResult, SolverError> {
     let full = quantifier_qf_check(arena, ground, config, deadline, stats)?;
     if matches!(full, CheckResult::Unsat) {
         return Ok(full);
@@ -416,6 +473,11 @@ fn prove_quantified_unsat_via_egraph_impl(
     let mut online_attempted = !enable_online_clauses;
     let mut candidate_equalities_enabled = enable_candidate_equalities;
     let mut invention = TermInventionState::default();
+    // Seed from the full assertion list (not just the ground partition): a
+    // constant that first occurs under a binder is still a source-vocabulary
+    // term, and its appearance inside an instance must not inflate that
+    // instance's subterm generations.
+    let mut generations = TermGenerations::seed_sources(arena, assertions);
     let mut last_round_duration = std::time::Duration::ZERO;
     for round in 0..MAX_EXTENDED_INSTANTIATION_ROUNDS {
         let round_started = Instant::now();
@@ -436,6 +498,10 @@ fn prove_quantified_unsat_via_egraph_impl(
             break;
         }
         if ground.len() > MAX_GROUND_TERMS {
+            if floodprobe_enabled() {
+                eprintln!("FLOODPROBE cap-hit round={round} ground={}", ground.len());
+                floodprobe_cap_census(arena, &matcher, &ground_derivations, assertions);
+            }
             if matches!(
                 quantifier_qf_refutation_check(
                     arena,
@@ -504,6 +570,7 @@ fn prove_quantified_unsat_via_egraph_impl(
             &mut seen,
             &mut ground,
             &mut ground_derivations,
+            &mut generations,
         );
         if admitted.is_empty() && candidate_equalities_enabled {
             match scoped_candidate_fixpoint_step(
@@ -515,6 +582,7 @@ fn prove_quantified_unsat_via_egraph_impl(
                 &mut online_clauses,
                 &mut seen,
                 &mut ground_derivations,
+                &mut generations,
                 deadline,
                 stats,
                 &mut quantifier_cache,
@@ -557,6 +625,7 @@ fn prove_quantified_unsat_via_egraph_impl(
                     &mut seen,
                     &mut ground,
                     &mut ground_derivations,
+                    &mut generations,
                 );
                 if std::env::var_os("AXEYUM_QPROBE").is_some() && (seeded > 0 || !direct.is_empty())
                 {
@@ -615,6 +684,10 @@ fn prove_quantified_unsat_via_egraph_impl(
                             admitted_per_universal[index],
                         );
                     }
+                }
+                if floodprobe_enabled() {
+                    eprintln!("FLOODPROBE fixpoint round={round} ground={}", ground.len());
+                    floodprobe_cap_census(arena, &matcher, &ground_derivations, assertions);
                 }
                 break; // source, scoped-candidate, and invention fixpoint
             }
@@ -682,6 +755,7 @@ fn prove_quantified_unsat_via_egraph_impl(
         deadline,
         stats,
         &mut quantifier_cache,
+        &generations,
     )
 }
 
@@ -724,6 +798,7 @@ fn scoped_candidate_fixpoint_step(
     online_clauses: &mut Option<OnlineQuantifierClauseSession>,
     seen: &mut HashSet<TermId>,
     ground_derivations: &mut HashMap<TermId, QuantifierGroundDerivation>,
+    generations: &mut TermGenerations,
     deadline: Option<Instant>,
     stats: &mut QuantifierLoopStats,
     cache: &mut QuantifierTermCache,
@@ -775,6 +850,7 @@ fn scoped_candidate_fixpoint_step(
                 ground,
                 ground_derivations,
                 &derivations,
+                generations,
             )))
         }
     }
@@ -1110,6 +1186,7 @@ fn quantifier_qf_check(
     check_auto(arena, ground, &remaining)
 }
 
+#[allow(clippy::too_many_arguments)]
 fn admit_next_source_batch(
     arena: &mut TermArena,
     assertions: &[TermId],
@@ -1117,18 +1194,27 @@ fn admit_next_source_batch(
     seen: &mut HashSet<TermId>,
     ground: &mut Vec<TermId>,
     retained: &mut HashMap<TermId, QuantifierGroundDerivation>,
+    generations: &mut TermGenerations,
 ) -> Vec<TermId> {
     matcher.extend_ground_with_derivations(arena, ground, retained);
     let GeneratedGroundBatch {
         mut urgent,
+        mut units,
         mut deferred,
         derivations,
     } = collect_generated_ground(matcher, arena, assertions);
     urgent.sort_by_key(|term| term.index());
     urgent.dedup();
+    units.sort_by_key(|term| term.index());
+    units.dedup();
     deferred.sort_by_key(|term| term.index());
     deferred.dedup();
 
+    let urgent_candidates = urgent.len();
+    let unit_candidates = units.len();
+    let deferred_candidates = deferred.len();
+    // Conflict instances (their equality clause is already false) are always
+    // admitted eagerly and unbudgeted — Z3's `qi.promote_unsat` analogue.
     let mut admitted = admit_generated_ground(
         arena,
         assertions,
@@ -1137,10 +1223,28 @@ fn admit_next_source_batch(
         ground,
         retained,
         &derivations,
+        generations,
     );
+    // Unit/propagation traffic drives the e-graph forward but is exactly what
+    // floods generation-deep files (measured 4230 unit candidates in one round
+    // on `uf.1158058`, every one entailed by the time the cap was hit); above
+    // the budget it flows shallow-first.
+    units = budget_flood_slice(units, seen, &derivations, generations);
+    admitted.extend(admit_generated_ground(
+        arena,
+        assertions,
+        units,
+        seen,
+        ground,
+        retained,
+        &derivations,
+        generations,
+    ));
+    let mut pool = "urgent";
     // Once urgent traffic is exhausted, release unresolved clauses so mutually
     // constraining instances preserve the legacy loop's reach.
     if admitted.is_empty() {
+        deferred = budget_flood_slice(deferred, seen, &derivations, generations);
         admitted = admit_generated_ground(
             arena,
             assertions,
@@ -1149,11 +1253,188 @@ fn admit_next_source_batch(
             ground,
             retained,
             &derivations,
+            generations,
+        );
+        pool = "deferred";
+    }
+    if floodprobe_enabled() {
+        eprintln!(
+            "FLOODPROBE round-admit urgent_cand={urgent_candidates} unit_cand={unit_candidates} \
+             deferred_cand={deferred_candidates} admitted={} pool={pool} ground={}",
+            admitted.len(),
+            ground.len(),
         );
     }
     admitted
 }
 
+/// Flood-regime slicing for a non-conflict admission pool: pools at or under
+/// [`FLOOD_ROUND_ADMISSION_CAP`] pass through untouched (byte-identical
+/// historical admission); larger pools are narrowed to the shallowest-
+/// generation slice of the candidates NOT yet admitted (the pool
+/// re-materializes already-admitted instances every round; without the `seen`
+/// filter the shallow prefix is all stale and the loop reaches a false
+/// fixpoint with thousands of unseen candidates waiting). The remainder is
+/// never dropped — the retained matcher re-materializes and re-classifies it
+/// (possibly as a conflict by then) on every later round.
+fn budget_flood_slice(
+    pool: Vec<TermId>,
+    seen: &HashSet<TermId>,
+    derivations: &HashMap<TermId, QuantifierGroundDerivation>,
+    generations: &TermGenerations,
+) -> Vec<TermId> {
+    if pool.len() <= FLOOD_ROUND_ADMISSION_CAP {
+        return pool;
+    }
+    let mut scored: Vec<(u32, TermId)> = pool
+        .into_iter()
+        .filter(|term| !seen.contains(term))
+        .map(|term| {
+            let generation = derivations.get(&term).map_or(u32::MAX, |derivation| {
+                generations.derivation_generation(derivation)
+            });
+            (generation, term)
+        })
+        .collect();
+    scored.sort_by_key(|&(generation, term)| (generation, term.index()));
+    scored.truncate(FLOOD_ROUND_ADMISSION_CAP);
+    scored.into_iter().map(|(_, term)| term).collect()
+}
+
+fn floodprobe_enabled() -> bool {
+    std::env::var_os("AXEYUM_FLOODPROBE").is_some()
+}
+
+/// Z3-style instantiation generations (T2.6.4; `qi_queue.cpp` cost
+/// `(+ weight generation)`): subterms of the original assertions are
+/// generation 0, and every term first introduced by an admitted instance
+/// carries `1 + max(generation of the instance's binding tuple)`. Generations
+/// only ORDER and BUDGET deferred admission in the flood regime and select the
+/// subset-first final check — they never drop an instance outright, so the
+/// admission fixpoint's reach on sub-flood files is unchanged.
+struct TermGenerations {
+    by_term: HashMap<TermId, u32>,
+}
+
+impl TermGenerations {
+    fn seed_sources(arena: &TermArena, assertions: &[TermId]) -> Self {
+        let mut by_term = HashMap::new();
+        let mut stack: Vec<TermId> = assertions.to_vec();
+        while let Some(term) = stack.pop() {
+            if by_term.insert(term, 0).is_some() {
+                continue;
+            }
+            if let TermNode::App { args, .. } = arena.node(term) {
+                stack.extend(args.iter().copied());
+            }
+        }
+        Self { by_term }
+    }
+
+    fn generation(&self, term: TermId) -> u32 {
+        self.by_term.get(&term).copied().unwrap_or(0)
+    }
+
+    /// The generation an admitted term derived by `derivation` carries:
+    /// one past the deepest binding in its witness tuple.
+    fn derivation_generation(&self, derivation: &QuantifierGroundDerivation) -> u32 {
+        let bindings = match derivation {
+            QuantifierGroundDerivation::Instance(certificate) => &certificate.bindings,
+            QuantifierGroundDerivation::Propagation(propagation) => &propagation.bindings,
+        };
+        bindings
+            .iter()
+            .map(|&binding| self.generation(binding))
+            .max()
+            .unwrap_or(0)
+            .saturating_add(1)
+    }
+
+    /// Records `generation` for every subterm of an admitted term that has no
+    /// generation yet (earlier-assigned subterms keep their shallower value).
+    fn record_admitted(&mut self, arena: &TermArena, term: TermId, generation: u32) {
+        let mut stack = vec![term];
+        while let Some(term) = stack.pop() {
+            if self.by_term.contains_key(&term) {
+                continue;
+            }
+            self.by_term.insert(term, generation);
+            if let TermNode::App { args, .. } = arena.node(term) {
+                stack.extend(args.iter().copied());
+            }
+        }
+    }
+}
+
+/// `AXEYUM_FLOODPROBE` diagnostics at the ground-cap exit: how much of the
+/// admitted instance traffic was ever *determined* by the equality reasoning
+/// (an instance whose clause value is still `Undetermined` against the final
+/// e-graph never interacted with any refutation attempt's equality core), and
+/// how deep the derivation chain ran (`gen1` = every binding is a subterm of
+/// the original assertions; `deeper` = at least one binding was itself created
+/// by instantiation — Z3's "generation" axis).
+fn floodprobe_cap_census(
+    arena: &TermArena,
+    matcher: &IncrementalEmatchSession,
+    retained: &HashMap<TermId, QuantifierGroundDerivation>,
+    assertions: &[TermId],
+) {
+    let mut source_subterms: HashSet<TermId> = HashSet::new();
+    let mut stack: Vec<TermId> = assertions.to_vec();
+    while let Some(term) = stack.pop() {
+        if !source_subterms.insert(term) {
+            continue;
+        }
+        if let TermNode::App { args, .. } = arena.node(term) {
+            stack.extend(args.iter().copied());
+        }
+    }
+    let (mut instances, mut propagations) = (0usize, 0usize);
+    let (mut val_true, mut val_false, mut val_unit, mut val_undet) =
+        (0usize, 0usize, 0usize, 0usize);
+    let (mut gen1, mut deeper) = (0usize, 0usize);
+    let mut per_universal: HashMap<TermId, usize> = HashMap::new();
+    for derivation in retained.values() {
+        let QuantifierGroundDerivation::Instance(certificate) = derivation else {
+            propagations += 1;
+            continue;
+        };
+        instances += 1;
+        *per_universal.entry(certificate.assertion).or_default() += 1;
+        if certificate
+            .bindings
+            .iter()
+            .all(|binding| source_subterms.contains(binding))
+        {
+            gen1 += 1;
+        } else {
+            deeper += 1;
+        }
+        match evaluate_equality_clause_with(arena, certificate.instance, &mut |lhs, rhs| {
+            matcher.equality(lhs, rhs)
+        }) {
+            Some(ClauseValue::True) => val_true += 1,
+            Some(ClauseValue::False) => val_false += 1,
+            Some(ClauseValue::Unit) => val_unit += 1,
+            Some(ClauseValue::Undetermined) | None => val_undet += 1,
+        }
+    }
+    eprintln!(
+        "FLOODPROBE cap-census instances={instances} propagations={propagations} \
+         clause_true={val_true} clause_false={val_false} clause_unit={val_unit} \
+         clause_undet={val_undet} gen1={gen1} deeper={deeper}"
+    );
+    let mut per: Vec<(TermId, usize)> = per_universal.into_iter().collect();
+    per.sort_by_key(|(term, _)| term.index());
+    for (assertion, count) in per {
+        eprintln!(
+            "FLOODPROBE   universal assertion_term={} instances={count}",
+            assertion.index()
+        );
+    }
+}
+
+#[allow(clippy::too_many_arguments)]
 fn admit_generated_ground(
     arena: &mut TermArena,
     assertions: &[TermId],
@@ -1162,6 +1443,7 @@ fn admit_generated_ground(
     ground: &mut Vec<TermId>,
     retained: &mut HashMap<TermId, QuantifierGroundDerivation>,
     candidates: &HashMap<TermId, QuantifierGroundDerivation>,
+    generations: &mut TermGenerations,
 ) -> Vec<TermId> {
     let mut added = Vec::new();
     for term in terms {
@@ -1175,6 +1457,8 @@ fn admit_generated_ground(
             continue;
         }
         if seen.insert(term) {
+            let generation = generations.derivation_generation(derivation);
+            generations.record_admitted(arena, term, generation);
             retained.insert(term, derivation.clone());
             ground.push(term);
             added.push(term);
@@ -1185,6 +1469,9 @@ fn admit_generated_ground(
 
 struct GeneratedGroundBatch {
     urgent: Vec<TermId>,
+    /// Unit-clause instances and checked propagation literals: e-graph-driving
+    /// equality traffic, budgeted shallow-first in the flood regime.
+    units: Vec<TermId>,
     deferred: Vec<TermId>,
     derivations: HashMap<TermId, QuantifierGroundDerivation>,
 }
@@ -1459,11 +1746,13 @@ fn collect_generated_ground(
     assertions: &[TermId],
 ) -> GeneratedGroundBatch {
     let mut urgent = Vec::new();
+    let mut units = Vec::new();
     let mut deferred = Vec::new();
     let mut propagations = Vec::new();
     let mut derivations = HashMap::new();
     for batch in matcher.lazy_clause_batches(arena) {
         urgent.extend(batch.urgent);
+        units.extend(batch.units);
         propagations.extend(batch.propagations);
         deferred.extend(batch.deferred);
         for (instance, certificate) in batch.instance_certificates {
@@ -1473,16 +1762,18 @@ fn collect_generated_ground(
         }
     }
     for (term, derivation) in checked_propagation_additions(arena, assertions, &propagations) {
-        urgent.push(term);
+        units.push(term);
         derivations.entry(term).or_insert(derivation);
     }
     GeneratedGroundBatch {
         urgent,
+        units,
         deferred,
         derivations,
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 fn finish_quantified_ground_check(
     arena: &mut TermArena,
     ground: &[TermId],
@@ -1490,7 +1781,38 @@ fn finish_quantified_ground_check(
     deadline: Option<Instant>,
     stats: &mut QuantifierLoopStats,
     cache: &mut QuantifierTermCache,
+    generations: &TermGenerations,
 ) -> Result<CheckResult, SolverError> {
+    // Flood regime: the full-set final check over a near-cap conjunction is
+    // itself a wall (measured 26.7s-then-unknown over 8192 conjuncts on
+    // `uf.1158058`). First try the shallow-generation subset — sources plus
+    // instances derived purely from source terms — under a fractional budget;
+    // subset unsat refutes the conjunction (every conjunct is asserted or an
+    // admitted instance of an asserted universal), so this is strictly
+    // additive: it can only turn an unknown into unsat.
+    if ground.len() >= FLOOD_FINAL_SUBSET_CHECK_MIN_GROUND {
+        let subset: Vec<TermId> = ground
+            .iter()
+            .copied()
+            .filter(|&term| generations.generation(term) <= FLOOD_FINAL_SUBSET_MAX_GENERATION)
+            .collect();
+        if subset.len() < ground.len()
+            && deadline.is_none_or(|d| Instant::now() < d)
+            && matches!(
+                quantifier_qf_refutation_check(
+                    arena,
+                    &subset,
+                    config,
+                    fractional_deadline(deadline, MID_LOOP_CHECK_BUDGET_DIVISOR),
+                    stats,
+                    cache,
+                )?,
+                CheckResult::Unsat
+            )
+        {
+            return Ok(CheckResult::Unsat);
+        }
+    }
     match quantifier_qf_refutation_check(arena, ground, config, deadline, stats, cache)? {
         CheckResult::Unsat => Ok(CheckResult::Unsat),
         _ => Ok(CheckResult::Unknown(UnknownReason {
@@ -1566,13 +1888,16 @@ pub fn instantiate_forall_via_egraph(
 
 /// One round of conservative lazy clause evaluation (ADR-0110).
 ///
-/// `urgent` contains complete source instances whose equality clause is false or
-/// has at most one undetermined literal. `deferred` contains multi-undetermined
-/// clauses and every shape outside the supported clause fragment. Clauses already
-/// true in the recorded ground equality context are omitted.
+/// `urgent` contains complete source instances whose equality clause is
+/// already false (conflicts). `units` contains instances with exactly one
+/// undetermined literal whose detached propagation could not be certified.
+/// `deferred` contains multi-undetermined clauses and every shape outside the
+/// supported clause fragment. Clauses already true in the recorded ground
+/// equality context are omitted.
 #[derive(Debug, Default)]
 struct LazyClauseBatch {
     urgent: Vec<TermId>,
+    units: Vec<TermId>,
     propagations: Vec<QuantifierClausePropagationCertificate>,
     deferred: Vec<TermId>,
     instance_certificates: BTreeMap<TermId, QuantifierInstanceCertificate>,
@@ -2586,6 +2911,7 @@ impl IncrementalEmatchSession {
             return Some(ScopedCandidateBatch {
                 batch: GeneratedGroundBatch {
                     urgent: Vec::new(),
+                    units: Vec::new(),
                     deferred: Vec::new(),
                     derivations: HashMap::new(),
                 },
@@ -2700,6 +3026,7 @@ impl IncrementalEmatchSession {
         urgent.dedup();
         GeneratedGroundBatch {
             urgent,
+            units: Vec::new(),
             deferred: Vec::new(),
             derivations,
         }
@@ -2744,7 +3071,7 @@ impl IncrementalEmatchSession {
                         Some(ClauseValue::Unit) => {
                             match self.detached_propagation(arena, quantifier, tuple, instance) {
                                 Some(propagation) => batch.propagations.push(propagation),
-                                None => batch.urgent.push(instance),
+                                None => batch.units.push(instance),
                             }
                         }
                         Some(ClauseValue::Undetermined) | None => batch.deferred.push(instance),
@@ -2752,6 +3079,8 @@ impl IncrementalEmatchSession {
                 }
                 batch.urgent.sort_by_key(|term| term.index());
                 batch.urgent.dedup();
+                batch.units.sort_by_key(|term| term.index());
+                batch.units.dedup();
                 batch.propagations.sort_by_key(|propagation| {
                     (
                         propagation.propagated_literal.index(),
@@ -3129,6 +3458,7 @@ impl IncrementalEmatchSession {
         clippy::too_many_lines,
         reason = "one staged enumeration with its eligibility gate"
     )]
+    #[allow(clippy::too_many_arguments)]
     fn invent_starved_universal_instances(
         &mut self,
         arena: &mut TermArena,
@@ -3137,6 +3467,7 @@ impl IncrementalEmatchSession {
         seen: &mut HashSet<TermId>,
         ground: &mut Vec<TermId>,
         retained: &mut HashMap<TermId, QuantifierGroundDerivation>,
+        generations: &mut TermGenerations,
     ) -> Vec<TermId> {
         if state.direct_total >= MAX_DIRECT_INSTANCES_TOTAL {
             return Vec::new();
@@ -3268,6 +3599,7 @@ impl IncrementalEmatchSession {
             ground,
             retained,
             &candidates,
+            generations,
         )
     }
 
@@ -6496,20 +6828,20 @@ mod tests {
         let mut session = IncrementalEmatchSession::new(&mut arena, &[generator, consumer]);
         session.extend_ground(&arena, &ground);
         let first = session.lazy_clause_batches(&mut arena);
-        assert_eq!(first[0].urgent.len(), 1);
+        assert_eq!(first[0].units.len(), 1);
         assert!(first[1].propagations.is_empty());
         assert_eq!(first[1].deferred.len(), 1);
-        ground.push(first[0].urgent[0]);
+        ground.push(first[0].units[0]);
 
         session.extend_ground(&arena, &ground);
         let second = session.lazy_clause_batches(&mut arena);
         assert!(second[1].propagations.is_empty());
-        assert_eq!(second[1].urgent.len(), 1);
+        assert_eq!(second[1].units.len(), 1);
         let fa_eq_one = arena.eq(fa, one).unwrap();
         let fa_ne_one = arena.not(fa_eq_one).unwrap();
         let ha_eq_one = arena.eq(ha, one).unwrap();
         let expected = arena.or(fa_ne_one, ha_eq_one).unwrap();
-        assert_eq!(second[1].urgent[0], expected);
+        assert_eq!(second[1].units[0], expected);
     }
 
     #[test]
@@ -6560,7 +6892,7 @@ mod tests {
         let derivations = HashMap::new();
         session.extend_ground_with_derivations(&arena, &ground, &derivations);
         let first = session.lazy_clause_batches(&mut arena);
-        let instance = first[0].urgent[0];
+        let instance = first[0].units[0];
         let instance_certificate = first[0].instance_certificates[&instance].clone();
         assert_eq!(
             instance_certificate,
@@ -6674,6 +7006,7 @@ mod tests {
         let mut seen = HashSet::new();
         let mut ground = Vec::new();
         let mut retained = HashMap::new();
+        let mut generations = TermGenerations::seed_sources(&arena, &assertions);
 
         assert_eq!(
             admit_generated_ground(
@@ -6684,6 +7017,7 @@ mod tests {
                 &mut ground,
                 &mut retained,
                 &candidates,
+                &mut generations,
             ),
             vec![instance_one]
         );
@@ -6691,6 +7025,60 @@ mod tests {
         assert_eq!(seen, HashSet::from([instance_one]));
         assert_eq!(retained.len(), 1);
         assert!(retained.contains_key(&instance_one));
+    }
+
+    /// Z3-style instantiation generations (T2.6.4, `qi_queue.cpp` cost
+    /// `(+ weight generation)`): source-assertion subterms are generation 0 —
+    /// including constants that only occur under a binder — an instance bound
+    /// over source terms is generation 1, and an instance bound over a term
+    /// first introduced by a generation-1 instance is generation 2. This is
+    /// the ordering key that keeps flood-regime deferred admission
+    /// shallow-first (see [`FLOOD_ROUND_ADMISSION_CAP`]).
+    #[test]
+    fn term_generations_stage_derived_instances_behind_source_instances() {
+        let mut arena = TermArena::new();
+        let carrier = arena.declare_uninterpreted_sort("GenS");
+        let sort = Sort::Uninterpreted(carrier);
+        let map_fn = arena.declare_fun("gen_f", &[sort], sort).unwrap();
+        let left = arena.declare("gen_c", sort).unwrap();
+        let right = arena.declare("gen_d", sort).unwrap();
+        let binder = arena.declare("gen_x", sort).unwrap();
+        let xv = arena.var(binder);
+        let f_x = arena.apply(map_fn, &[xv]).unwrap();
+        let body = arena.eq(f_x, xv).unwrap();
+        let forall = arena.forall(binder, body).unwrap();
+        let cv = arena.var(left);
+        let dv = arena.var(right);
+        let c_eq_d = arena.eq(cv, dv).unwrap();
+        let ground = arena.not(c_eq_d).unwrap();
+
+        let assertions = vec![forall, ground];
+        let mut generations = TermGenerations::seed_sources(&arena, &assertions);
+        assert_eq!(generations.generation(cv), 0);
+        // A constant living only under the binder is still source vocabulary.
+        assert_eq!(generations.generation(f_x), 0);
+
+        let f_c = arena.apply(map_fn, &[cv]).unwrap();
+        let instance_one = arena.eq(f_c, cv).unwrap();
+        let first = QuantifierGroundDerivation::Instance(QuantifierInstanceCertificate {
+            assertion: forall,
+            bindings: vec![cv],
+            instance: instance_one,
+        });
+        assert_eq!(generations.derivation_generation(&first), 1);
+        generations.record_admitted(&arena, instance_one, 1);
+        assert_eq!(generations.generation(f_c), 1);
+        // Source subterms keep their shallower generation on re-encounter.
+        assert_eq!(generations.generation(cv), 0);
+
+        let f_f_c = arena.apply(map_fn, &[f_c]).unwrap();
+        let instance_two = arena.eq(f_f_c, f_c).unwrap();
+        let second = QuantifierGroundDerivation::Instance(QuantifierInstanceCertificate {
+            assertion: forall,
+            bindings: vec![f_c],
+            instance: instance_two,
+        });
+        assert_eq!(generations.derivation_generation(&second), 2);
     }
 
     #[test]
@@ -7229,8 +7617,8 @@ mod tests {
         let no_derivations = HashMap::new();
         session.extend_ground_with_derivations(&arena, &ground, &no_derivations);
         let first = session.lazy_clause_batches(&mut arena);
-        let equality_instance = first[0].urgent[0];
-        let disequality_instance = first[1].urgent[0];
+        let equality_instance = first[0].units[0];
+        let disequality_instance = first[1].units[0];
         let equality_certificate = first[0].instance_certificates[&equality_instance].clone();
         let disequality_certificate = first[1].instance_certificates[&disequality_instance].clone();
         let mut derivations = HashMap::new();
@@ -8104,11 +8492,11 @@ mod tests {
         let mut session = IncrementalEmatchSession::new(&mut arena, &[forall_fg, forall_g0]);
         session.extend_ground(&arena, &retained_ground);
         let first_round = session.lazy_clause_batches(&mut arena);
-        assert_eq!(first_round[0].urgent.len(), 1);
-        assert!(first_round[1].urgent.is_empty());
+        assert_eq!(first_round[0].units.len(), 1);
+        assert!(first_round[1].urgent.is_empty() && first_round[1].units.is_empty());
         let first_pattern_executions = session.pattern_executions;
         assert_eq!(first_pattern_executions, session.patterns.len());
-        let first_instance = first_round[0].urgent[0];
+        let first_instance = first_round[0].units[0];
         retained_ground.push(first_instance);
         let first_node_count = session.bridge.egraph.len();
 

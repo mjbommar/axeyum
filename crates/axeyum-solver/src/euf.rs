@@ -353,7 +353,16 @@ pub(crate) fn project_replay_build<P: FunctionModelProjection>(
     for &assertion in assertions {
         match eval(arena, assertion, &projected) {
             Ok(Value::Bool(true)) => {}
-            Ok(_) | Err(_) => {
+            outcome @ (Ok(_) | Err(_)) => {
+                if std::env::var_os("AXEYUM_FLOODPROBE").is_some() {
+                    let rendered = axeyum_ir::render(arena, assertion);
+                    eprintln!(
+                        "FLOODPROBE euf-replay-fail term=#{} outcome={:?} shape={}",
+                        assertion.index(),
+                        outcome.map(|_| ()),
+                        &rendered[..rendered.len().min(400)],
+                    );
+                }
                 return CheckResult::Unknown(crate::backend::UnknownReason {
                     kind: crate::backend::UnknownKind::Incomplete,
                     detail: format!(
