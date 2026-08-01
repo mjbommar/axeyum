@@ -192,3 +192,20 @@ not a score.
 | load average (start / end) | 11.79 16.96 19.18 / 7.88 7.59 13.39 — 24 cores; a high load DEPRESSES this result |
 | per-file detail | `bench-results/parity-details/QF_SLIA.tsv` |
 
+## QF_BV — 2026-08-01T17:31:23Z
+
+| field | value |
+|---|---|
+| axeyum solved | 175/200 |
+| reference solved | 194/200 |
+| **ratio (axeyum / reference)** | **90.2%** |
+| **disagreements** | **0** |
+| soundness | SOUND |
+| both / axeyum-only / reference-only | 175 / 0 / 19 |
+| reference | `0.9.1` |
+| protocol | 24s wall, 8GiB, per-file |
+| benchmark list | `bench-results/parity-lists/QF_BV.txt` (sha256 6f873e15b191, 200 files) |
+| solver commit | `19e7284f` |
+| load average (start / end) | 6.81 6.37 3.67 / 8.21 6.85 5.36 — 24 cores; a high load DEPRESSES this result |
+| per-file detail | `bench-results/parity-details/QF_BV.tsv` |
+
