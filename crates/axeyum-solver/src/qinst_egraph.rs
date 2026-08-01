@@ -76,24 +76,41 @@ const ROUND_GROWTH_HEADROOM: u32 = 8;
 /// many ground terms even with no wall-clock budget (the "never hang" rule).
 const MAX_GROUND_TERMS: usize = 8192;
 
-/// Flood-regime budget for one round's *non-conflict* admissions (the unit
-/// and deferred pools; conflict instances stay eager and unbudgeted, Z3's
-/// `qi.promote_unsat` analogue). The measured flood mechanism (2026-08-01,
-/// `AXEYUM_FLOODPROBE` on the UF parity residual): once a round had no
-/// conflict traffic the loop dumped the WHOLE deferred pool — geometric pools
-/// of 34 -> 57 -> 129 -> ... -> 5957 candidates per round — reaching
-/// [`MAX_GROUND_TERMS`] around round 9-15 with almost entirely inert traffic
-/// (`dl_copy_invariant_19_2`: 8164 of 8166 admitted instances still
-/// undetermined at the cap, 8080 of them derived-from-derived), and unit
-/// traffic flooded the same way where it dominated (`uf.1158058`: 4230 unit
-/// candidates in one round, all entailed by cap time). Above this budget a
-/// pool is admitted in ascending instantiation-generation order (Z3
-/// `qi_queue.cpp` cost `(+ weight generation)`), `FLOOD_ROUND_ADMISSION_CAP`
-/// per round, so shallow-derivation instances flow while deep derived noise
-/// waits — it is re-materialized and re-classified (possibly as a conflict by
-/// then) on every later round, never dropped. Pools at or under the budget
-/// keep the historical admit-everything behavior byte-identical.
+/// Flood-regime budget for one round's *deferred* (undetermined-clause)
+/// admissions; conflict and unit instances stay eager and unbudgeted. The
+/// measured flood mechanism (2026-08-01, `AXEYUM_FLOODPROBE` on the UF parity
+/// residual): once a round had no conflict/unit traffic the loop dumped the
+/// WHOLE deferred pool — geometric pools of 34 -> 57 -> 129 -> ... -> 5957
+/// candidates per round — reaching [`MAX_GROUND_TERMS`] around round 9-15
+/// with almost entirely inert traffic (`dl_copy_invariant_19_2`: 8164 of
+/// 8166 admitted instances still undetermined at the cap, 8080 of them
+/// derived-from-derived). Above this budget the pool is admitted in ascending
+/// instantiation-generation order (Z3 `qi_queue.cpp` cost
+/// `(+ weight generation)`), `FLOOD_ROUND_ADMISSION_CAP` per round, so
+/// shallow-derivation instances flow while deep derived noise waits — it is
+/// re-materialized and re-classified (possibly as a conflict by then) on
+/// every later round, never dropped. Pools at or under the budget keep the
+/// historical admit-everything behavior byte-identical. Budgeting the UNIT
+/// pool the same way was measured net-negative (three ~3s unit-heavy
+/// refuters lost, no unit-flood file won) and reverted.
 const FLOOD_ROUND_ADMISSION_CAP: usize = 256;
+
+/// Z3's `qi.eager_threshold` analogue on the generation axis: deferred
+/// instances at or under this generation are admitted eagerly even in the
+/// flood regime — delaying them was measured to LOSE refuters main wins by
+/// dumping the pool fast (`x2015..1276224`: an early 418-candidate deferred
+/// dump carries the refutation; capping it to 256 turned a 4s unsat into
+/// unknown). Only deeper-derived traffic waits for the budget.
+const FLOOD_EAGER_GENERATION_MAX: u32 = 1;
+
+/// The deferred throttle engages only once the accumulated ground set is at
+/// least this large — below it every release behaves exactly like the
+/// historical dump-everything admission. Early dumps are cheap and often
+/// carry the refutation outright (`uf.1001519`: a ~7000-candidate release at
+/// ground=1150 is what main refutes from in 4.4s; throttling its deep tail
+/// changed WHICH instances filled the 8192 cap and lost the file). Flood
+/// prevention only needs to act when the cap is actually at risk.
+const FLOOD_THROTTLE_MIN_GROUND: usize = 2048;
 
 /// The generation-layered final-check lever engages only when the accumulated
 /// ground set is at least this large (the measured wall: a final check over
@@ -1199,22 +1216,28 @@ fn admit_next_source_batch(
     matcher.extend_ground_with_derivations(arena, ground, retained);
     let GeneratedGroundBatch {
         mut urgent,
-        mut units,
+        units,
         mut deferred,
         derivations,
     } = collect_generated_ground(matcher, arena, assertions);
     urgent.sort_by_key(|term| term.index());
     urgent.dedup();
-    units.sort_by_key(|term| term.index());
-    units.dedup();
     deferred.sort_by_key(|term| term.index());
     deferred.dedup();
 
     let urgent_candidates = urgent.len();
     let unit_candidates = units.len();
     let deferred_candidates = deferred.len();
-    // Conflict instances (their equality clause is already false) are always
-    // admitted eagerly and unbudgeted — Z3's `qi.promote_unsat` analogue.
+    // Conflict AND unit/propagation traffic is admitted eagerly and
+    // unbudgeted, exactly as the historical single urgent pool (index-sorted
+    // merge). A measured attempt to budget the unit pool shallow-first
+    // regressed three unit-heavy refuters that main solves in ~3s by dumping
+    // units fast (uf.590503, uf.651233, x2015..1276224 all went
+    // unsat -> unknown) while flipping none of the unit-flood files — the
+    // unit budget was net-negative, so only the deferred pool is budgeted.
+    urgent.extend(units);
+    urgent.sort_by_key(|term| term.index());
+    urgent.dedup();
     let mut admitted = admit_generated_ground(
         arena,
         assertions,
@@ -1225,26 +1248,13 @@ fn admit_next_source_batch(
         &derivations,
         generations,
     );
-    // Unit/propagation traffic drives the e-graph forward but is exactly what
-    // floods generation-deep files (measured 4230 unit candidates in one round
-    // on `uf.1158058`, every one entailed by the time the cap was hit); above
-    // the budget it flows shallow-first.
-    units = budget_flood_slice(units, seen, &derivations, generations);
-    admitted.extend(admit_generated_ground(
-        arena,
-        assertions,
-        units,
-        seen,
-        ground,
-        retained,
-        &derivations,
-        generations,
-    ));
     let mut pool = "urgent";
     // Once urgent traffic is exhausted, release unresolved clauses so mutually
     // constraining instances preserve the legacy loop's reach.
     if admitted.is_empty() {
-        deferred = budget_flood_slice(deferred, seen, &derivations, generations);
+        if ground.len() >= FLOOD_THROTTLE_MIN_GROUND {
+            deferred = budget_flood_slice(deferred, seen, &derivations, generations);
+        }
         admitted = admit_generated_ground(
             arena,
             assertions,
@@ -1268,14 +1278,18 @@ fn admit_next_source_batch(
     admitted
 }
 
-/// Flood-regime slicing for a non-conflict admission pool: pools at or under
+/// Flood-regime slicing for the deferred admission pool: pools at or under
 /// [`FLOOD_ROUND_ADMISSION_CAP`] pass through untouched (byte-identical
-/// historical admission); larger pools are narrowed to the shallowest-
-/// generation slice of the candidates NOT yet admitted (the pool
+/// historical admission). Larger pools keep every candidate at or under
+/// [`FLOOD_EAGER_GENERATION_MAX`] eagerly, in the historical index order
+/// (Z3's `qi.eager_threshold`: shallow-derivation instances are never
+/// delayed — delaying them was measured to lose ~3-4s refuters that win off
+/// the dump itself), and narrow only the deeper-derived remainder to the
+/// shallowest-generation slice of the candidates NOT yet admitted (the pool
 /// re-materializes already-admitted instances every round; without the `seen`
-/// filter the shallow prefix is all stale and the loop reaches a false
-/// fixpoint with thousands of unseen candidates waiting). The remainder is
-/// never dropped — the retained matcher re-materializes and re-classifies it
+/// filter the deep prefix is all stale and the loop reaches a false fixpoint
+/// with thousands of unseen candidates waiting). The deep remainder is never
+/// dropped — the retained matcher re-materializes and re-classifies it
 /// (possibly as a conflict by then) on every later round.
 fn budget_flood_slice(
     pool: Vec<TermId>,
@@ -1286,19 +1300,22 @@ fn budget_flood_slice(
     if pool.len() <= FLOOD_ROUND_ADMISSION_CAP {
         return pool;
     }
-    let mut scored: Vec<(u32, TermId)> = pool
-        .into_iter()
-        .filter(|term| !seen.contains(term))
-        .map(|term| {
-            let generation = derivations.get(&term).map_or(u32::MAX, |derivation| {
-                generations.derivation_generation(derivation)
-            });
-            (generation, term)
-        })
-        .collect();
-    scored.sort_by_key(|&(generation, term)| (generation, term.index()));
-    scored.truncate(FLOOD_ROUND_ADMISSION_CAP);
-    scored.into_iter().map(|(_, term)| term).collect()
+    let mut eager = Vec::new();
+    let mut deep: Vec<(u32, TermId)> = Vec::new();
+    for term in pool {
+        let generation = derivations.get(&term).map_or(u32::MAX, |derivation| {
+            generations.derivation_generation(derivation)
+        });
+        if generation <= FLOOD_EAGER_GENERATION_MAX {
+            eager.push(term);
+        } else if !seen.contains(&term) {
+            deep.push((generation, term));
+        }
+    }
+    deep.sort_by_key(|&(generation, term)| (generation, term.index()));
+    deep.truncate(FLOOD_ROUND_ADMISSION_CAP);
+    eager.extend(deep.into_iter().map(|(_, term)| term));
+    eager
 }
 
 fn floodprobe_enabled() -> bool {
