@@ -173,6 +173,20 @@ pub(crate) fn config_with_remaining_timeout(
     Some(remaining)
 }
 
+/// Env-gated stage tracing for the quantified portfolio (`AXEYUM_QTRACE=1`):
+/// prints each dispatch stage with its wall-clock cost to stderr. Diagnostic
+/// only — never alters routing, budgets, or verdicts. The flag is read once,
+/// so disabled tracing costs a single cached load per call site.
+pub(crate) fn qtrace(stage: &str, since: Instant, note: &str) {
+    static ENABLED: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+    if *ENABLED.get_or_init(|| std::env::var_os("AXEYUM_QTRACE").is_some()) {
+        eprintln!(
+            "[qtrace] {stage} +{:.3}s {note}",
+            since.elapsed().as_secs_f64()
+        );
+    }
+}
+
 fn quantified_timeout(stage: &str) -> CheckResult {
     CheckResult::Unknown(UnknownReason {
         kind: UnknownKind::ResourceLimit,
@@ -187,6 +201,7 @@ fn finish_quantified_solve(
     config: &SolverConfig,
     deadline: Option<Instant>,
 ) -> Result<CheckResult, SolverError> {
+    let t0 = Instant::now();
     let Some(witness_config) = config_with_remaining_timeout(config, deadline) else {
         return Ok(quantified_timeout("quantifier normalization"));
     };
@@ -195,14 +210,17 @@ fn finish_quantified_solve(
         assertions,
         &witness_config,
     )? {
+        qtrace("forall-exists-witness", t0, "decided");
         return Ok(result);
     }
+    qtrace("forall-exists-witness", t0, "declined");
 
     let Some(finite_config) = config_with_remaining_timeout(config, deadline) else {
         return Ok(quantified_timeout("forall-exists witness search"));
     };
     match check_with_quantifiers(arena, assertions, &finite_config) {
         Ok(CheckResult::Unknown(_)) | Err(SolverError::Unsupported(_)) => {
+            qtrace("finite-expansion", t0, "declined");
             // Pure-UF finite model finding, probed BEFORE the refutation
             // family on half the remaining budget (the `probe_budget`
             // pattern): the refutation loops below reliably consume their
@@ -237,22 +255,58 @@ fn finish_quantified_solve(
                 )?
                 && crate::check_model(arena, original_assertions, &model)?
             {
+                qtrace("uf-fmf-probe", t0, "sat");
                 return Ok(CheckResult::Sat(model));
+            }
+            qtrace("uf-fmf-probe", t0, "declined");
+            // Effort ladder (budget-monotone dispatch, after cvc5's
+            // QuantifiersEngine effort passes): the model-based refuter is a
+            // few *milliseconds* when its first ground candidate already
+            // violates a universal, while the e-graph instantiation loop
+            // reliably consumes every second it is given. Handing the e-graph
+            // the full remaining budget therefore made mid-range budgets
+            // strictly worse than small ones (measured: the same UF file is
+            // `unsat` in 0.5 s at a 500 ms budget and `unsat` at 24 s, but
+            // `unknown` at 2/5/10 s — the e-graph ate the whole window,
+            // whether the 13 ms MBQI refutation ever ran depended on the
+            // e-graph's own round-forecast quirks, and at 2-10 s it never did).
+            // The fix is a bounded **first-refusal MBQI rung on 1/8 of the
+            // remaining budget** before the e-graph pass. The e-graph then
+            // keeps its established full-remaining-budget slice, so every
+            // verdict it finds today it still finds; the quick rung only
+            // spends a bounded fraction. The slice is a *fraction of the
+            // remaining budget*, so a larger total budget gives the rung at
+            // least as much time — a verdict found at budget B is not lost at
+            // B' > B by rung starvation.
+            if let Some(result) =
+                mbqi_first_refusal(arena, assertions, original_assertions, config, deadline)?
+            {
+                return Ok(result);
             }
             let Some(egraph_config) = config_with_remaining_timeout(config, deadline) else {
                 return Ok(quantified_timeout("finite quantifier expansion"));
             };
             match prove_quantified_unsat_via_egraph(arena, assertions, &egraph_config) {
-                Ok(CheckResult::Unsat) => return Ok(CheckResult::Unsat),
-                Ok(CheckResult::Sat(_) | CheckResult::Unknown(_)) => {}
+                Ok(CheckResult::Unsat) => {
+                    qtrace("egraph", t0, "unsat");
+                    return Ok(CheckResult::Unsat);
+                }
+                Ok(CheckResult::Sat(_) | CheckResult::Unknown(_)) => {
+                    qtrace("egraph", t0, "declined");
+                }
                 Err(SolverError::Unsupported(_))
-                    if mbqi_source_shape_supported(arena, assertions) => {}
+                    if mbqi_source_shape_supported(arena, assertions) =>
+                {
+                    qtrace("egraph", t0, "unsupported->mbqi");
+                }
                 Err(error) => return Err(error),
             }
             let Some(mbqi_config) = config_with_remaining_timeout(config, deadline) else {
                 return Ok(quantified_timeout("e-matching"));
             };
-            match prove_unsat_by_mbqi(arena, assertions, &mbqi_config)? {
+            let mbqi_result = prove_unsat_by_mbqi(arena, assertions, &mbqi_config)?;
+            qtrace("mbqi", t0, "returned");
+            match mbqi_result {
                 CheckResult::Sat(model)
                     if crate::check_model(arena, original_assertions, &model)? =>
                 {
@@ -291,13 +345,18 @@ fn finish_quantified_solve(
                         )?
                         && crate::check_model(arena, original_assertions, &model)?
                     {
+                        qtrace("uf-fmf-full", t0, "sat");
                         return Ok(CheckResult::Sat(model));
                     }
+                    qtrace("uf-fmf-full", t0, "declined");
                     Ok(other)
                 }
             }
         }
-        other => other,
+        other => {
+            qtrace("finite-expansion", t0, "decided");
+            other
+        }
     }
 }
 
@@ -2594,6 +2653,55 @@ fn probe_budget(config: &SolverConfig) -> SolverConfig {
         probe.timeout = Some(t / 2);
     }
     probe
+}
+
+/// The first-refusal MBQI rung of the quantified effort ladder: 1/8 of the
+/// remaining wall budget. Returns `None` for unbounded configurations — with no
+/// clock to share there is no starvation to prevent, and the established
+/// engine order (e-graph loop first) keeps byte-identical behavior.
+fn mbqi_first_refusal_budget(config: &SolverConfig) -> Option<SolverConfig> {
+    let timeout = config.timeout?;
+    let mut quick = config.clone();
+    quick.timeout = Some(timeout / 8);
+    Some(quick)
+}
+
+/// Runs the bounded first-refusal MBQI rung. `Ok(Some(_))` carries only a
+/// fully anchored verdict (a replay-checked `sat` or the refuter's `unsat`);
+/// every other outcome — including an unsupported shape — declines with
+/// `Ok(None)` so the established rungs below run unchanged.
+fn mbqi_first_refusal(
+    arena: &mut TermArena,
+    assertions: &[TermId],
+    original_assertions: &[TermId],
+    config: &SolverConfig,
+    deadline: Option<Instant>,
+) -> Result<Option<CheckResult>, SolverError> {
+    let t0 = Instant::now();
+    let Some(quick_config) = config_with_remaining_timeout(config, deadline) else {
+        return Ok(None);
+    };
+    let Some(quick_config) = mbqi_first_refusal_budget(&quick_config) else {
+        return Ok(None);
+    };
+    match prove_unsat_by_mbqi(arena, assertions, &quick_config) {
+        Ok(CheckResult::Sat(model)) if crate::check_model(arena, original_assertions, &model)? => {
+            qtrace("mbqi-quick", t0, "sat");
+            Ok(Some(CheckResult::Sat(model)))
+        }
+        Ok(CheckResult::Unsat) => {
+            qtrace("mbqi-quick", t0, "unsat");
+            Ok(Some(CheckResult::Unsat))
+        }
+        // A first-refusal pass must not fail the whole solve: an unsupported
+        // shape or an unchecked candidate falls through to the established
+        // rungs.
+        Ok(CheckResult::Sat(_) | CheckResult::Unknown(_)) | Err(SolverError::Unsupported(_)) => {
+            qtrace("mbqi-quick", t0, "declined");
+            Ok(None)
+        }
+        Err(error) => Err(error),
+    }
 }
 
 fn pre_lia_uf_probe_budget(config: &SolverConfig) -> SolverConfig {
