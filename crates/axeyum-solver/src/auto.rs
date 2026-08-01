@@ -6728,20 +6728,69 @@ fn fold_to_real_sums(
     Ok(out)
 }
 
+/// One frame of the explicit post-order walk in [`fold_to_real_rec`].
+enum FoldToRealStep {
+    /// Visit `t`: memo-hit, or schedule its children then its own rebuild.
+    Enter(TermId),
+    /// Rebuild `t` from children that are guaranteed to be in the memo already.
+    Build(TermId),
+}
+
+/// Bottom-up `to_real` fold over one assertion.
+///
+/// # Why this is an explicit worklist and not native recursion
+///
+/// [`fold_to_real_sums`] runs on **every** query the auto-dispatcher sees — a
+/// pure `QF_BV` query included, where the fold is the identity — and the walk's
+/// recursion depth is the term DAG's *depth*, not its size. Native recursion
+/// therefore aborted the whole process with a stack overflow on deep BV
+/// operand chains: nine scored `QF_BV/sage/app7` benchmarks in
+/// `bench-results/parity-lists/QF_BV.txt` died in `fold_to_real_rec` (confirmed
+/// by backtrace) before any BV route was ever reached, and all nine decide
+/// `unsat` in 8-16 s of the 24 s budget once the depth limit is gone.
+///
+/// A stack overflow is strictly worse than an `unknown`: it is an abort, so the
+/// solver cannot report a first-class `unknown` and a harness reads it as a
+/// crash. The memo keeps the walk linear in DAG size regardless.
 fn fold_to_real_rec(
     arena: &mut TermArena,
     term: TermId,
     memo: &mut HashMap<TermId, TermId>,
 ) -> Result<TermId, axeyum_ir::IrError> {
-    if let Some(&c) = memo.get(&term) {
-        return Ok(c);
-    }
-    let result = match arena.node(term) {
-        TermNode::App { op, args } => {
+    let mut work = vec![FoldToRealStep::Enter(term)];
+    while let Some(step) = work.pop() {
+        let t = match step {
+            FoldToRealStep::Enter(t) => {
+                if memo.contains_key(&t) {
+                    continue;
+                }
+                let TermNode::App { args, .. } = arena.node(t) else {
+                    // Leaves (constants, variables) fold to themselves.
+                    memo.insert(t, t);
+                    continue;
+                };
+                let args = args.clone();
+                // `Build(t)` sits *below* its children, so every descendant is
+                // in the memo by the time it pops.
+                work.push(FoldToRealStep::Build(t));
+                work.extend(args.iter().rev().map(|a| FoldToRealStep::Enter(*a)));
+                continue;
+            }
+            FoldToRealStep::Build(t) => t,
+        };
+        // A shared subterm can be scheduled by several parents; the first
+        // rebuild wins and the rest are memo hits.
+        if memo.contains_key(&t) {
+            continue;
+        }
+        let result = {
+            let TermNode::App { op, args } = arena.node(t) else {
+                unreachable!("Build is only pushed for App nodes")
+            };
             let (op, args) = (*op, args.clone());
             let mut new_args = Vec::with_capacity(args.len());
             for arg in &args {
-                new_args.push(fold_to_real_rec(arena, *arg, memo)?);
+                new_args.push(memo[arg]);
             }
             let to_real_arg = |arena: &TermArena, t: TermId| match arena.node(t) {
                 TermNode::App {
@@ -6791,11 +6840,10 @@ fn fold_to_real_rec(
             } else {
                 build_app(arena, op, &new_args)?
             }
-        }
-        _ => term,
-    };
-    memo.insert(term, result);
-    Ok(result)
+        };
+        memo.insert(t, result);
+    }
+    Ok(memo[&term])
 }
 
 /// Rewrites comparisons between `to_real(i)` and a rational constant into the
@@ -7280,6 +7328,75 @@ impl Features {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// A deep BV operand chain must not blow the stack in the `to_real` fold.
+    ///
+    /// `fold_to_real_sums` runs on **every** query the auto-dispatcher sees,
+    /// so a native-recursion walk made the process abort with a stack overflow
+    /// on deep pure-BV terms — before any BV route was reached. Nine scored
+    /// `QF_BV/sage/app7` parity benchmarks died exactly here; each decides
+    /// `unsat` well inside the 24 s budget once the depth limit is gone.
+    ///
+    /// The chain depth is far past what any recursive frame survives on the
+    /// test harness's default thread stack, so a regression aborts the test
+    /// binary rather than failing quietly.
+    #[test]
+    fn fold_to_real_survives_a_deep_bv_chain() {
+        const DEPTH: usize = 100_000;
+        let mut arena = TermArena::new();
+        let x = arena.declare("deep_x", Sort::BitVec(8)).unwrap();
+        let mut acc = arena.var(x);
+        for i in 0..DEPTH {
+            let k = arena.bv_const(8, (i % 251) as u128).unwrap();
+            acc = arena.bv_add(acc, k).unwrap();
+        }
+        let zero = arena.bv_const(8, 0).unwrap();
+        let assertion = arena.eq(acc, zero).unwrap();
+
+        // Pure BV carries no `to_real`, so the fold is the identity — the point
+        // is that it *terminates* rather than aborting the process.
+        let folded = fold_to_real_sums(&mut arena, &[assertion]).unwrap();
+        assert_eq!(folded, vec![assertion]);
+    }
+
+    /// The iterative walk must still perform the folds it exists for:
+    /// `to_real(a) + to_real(b)` collapses to one coercion, and a coercion of
+    /// a ground integer folds to a real constant.
+    #[test]
+    fn fold_to_real_still_collapses_coerced_sums() {
+        let mut arena = TermArena::new();
+        let i = arena.declare("fold_i", Sort::Int).unwrap();
+        let j = arena.declare("fold_j", Sort::Int).unwrap();
+        let (iv, jv) = (arena.var(i), arena.var(j));
+        let (ri, rj) = (
+            arena.int_to_real(iv).unwrap(),
+            arena.int_to_real(jv).unwrap(),
+        );
+        let sum = arena.real_add(ri, rj).unwrap();
+
+        // `to_real(3)` is a coercion of a ground integer: it folds to `3.0`.
+        let three = arena.int_const(3);
+        let r_three = arena.int_to_real(three).unwrap();
+        let cmp = arena.real_le(sum, r_three).unwrap();
+
+        let folded = fold_to_real_sums(&mut arena, &[cmp]).unwrap();
+        assert_eq!(folded.len(), 1);
+        let TermNode::App { op, args } = arena.node(folded[0]) else {
+            panic!("expected an application");
+        };
+        assert_eq!(*op, Op::RealLe);
+        let (lhs, rhs) = (args[0], args[1]);
+        // Left: one `to_real` over an integer sum, not a sum of two coercions.
+        assert!(matches!(
+            arena.node(lhs),
+            TermNode::App {
+                op: Op::IntToReal,
+                ..
+            }
+        ));
+        // Right: the ground coercion became a real constant.
+        assert!(matches!(arena.node(rhs), TermNode::RealConst(_)));
+    }
 
     #[test]
     fn negated_quantified_implication_exposes_counterexample_witness() {
