@@ -482,13 +482,39 @@ pub fn check_qf_ufbv_lazy<B: SolverBackend>(
     // the loop then adds is an ordinary Ackermann lemma over original terms —
     // re-encoded wholesale on the next round, so no mixed-vocabulary assertion
     // set ever reaches the backend.
+    // A single shared deadline for the WHOLE CEGAR loop (the same contract as
+    // `check_with_uf_arithmetic_lazy`): without it, each refinement round's
+    // `backend.check` would honor the full `config.timeout` independently, so N
+    // rounds could run N×budget — unbounded in aggregate. This was masked while
+    // the vocabulary gap kept the loop at one round; with real refinement it
+    // surfaced as multi-minute runs past a 24 s budget. With the shared deadline
+    // every round gets only the *remaining* budget and an exhausted deadline
+    // ends the loop with a graceful `Unknown` — never a hang (the standing hard
+    // rule). `timeout == None` keeps the loop bounded only by its finite
+    // refinement count, as before.
+    let deadline = config.timeout.map(|t| Instant::now() + t);
     let mut encoded_uninterpreted_sorts = false;
     let result = check_with_function_consistency(arena, assertions, |a, asserts| {
+        let round_config = match deadline {
+            Some(d) => {
+                let now = Instant::now();
+                if now >= d {
+                    return Ok(CheckResult::Unknown(UnknownReason {
+                        kind: UnknownKind::ResourceLimit,
+                        detail: "lazy UF function-consistency exhausted the configured timeout \
+                                 before converging"
+                            .to_string(),
+                    }));
+                }
+                config.clone().with_timeout(d - now)
+            }
+            None => config.clone(),
+        };
         match crate::uninterpreted_bv::encode_uninterpreted_symbols(a, asserts)? {
-            None => backend.check(a, asserts, config),
+            None => backend.check(a, asserts, &round_config),
             Some(encoding) => {
                 encoded_uninterpreted_sorts = true;
-                match backend.check(a, &encoding.assertions, config)? {
+                match backend.check(a, &encoding.assertions, &round_config)? {
                     CheckResult::Sat(model) => Ok(CheckResult::Sat(
                         crate::uninterpreted_bv::lift_encoded_model(&model, &encoding),
                     )),
