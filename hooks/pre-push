@@ -63,9 +63,21 @@ trap cleanup EXIT
 echo "pre-push: Rust/TOML changed — compile + fmt gate on pushed SHA ${target_sha:0:12} (mem-capped)" >&2
 git -C "$REPO_ROOT" worktree add --detach --quiet "$tmp_wt" "$target_sha"
 
-# Reuse this checkout's target dir so the check is warm (~seconds hot), and run
-# under the same memory cap the rest of the toolchain uses.
-export CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-$REPO_ROOT/target}"
+# A DEDICATED target dir for the gate — persistent, so it stays warm across
+# pushes, but NOT shared with the main checkout's.
+#
+# Sharing `$REPO_ROOT/target` poisoned the main checkout (observed 2026-08-01):
+# this gate compiles inside a throwaway `/tmp/axeyum-prepush.XXXX` worktree, so
+# the test binaries it produces bake THAT path into `CARGO_MANIFEST_DIR`. Cargo
+# then considers the artifact fresh for the main checkout too — same package,
+# same features — and the main checkout silently reuses a binary whose manifest
+# dir no longer exists. The symptom is a corpus test failing with
+# `read_dir(/tmp/axeyum-prepush.ll4jFr/...): No such file or directory` on a
+# tree that is perfectly fine, and `cargo test -p <pkg> --lib` passing while
+# `cargo test --workspace --lib` fails (different feature unification selects a
+# different cached binary). Recovery was `cargo clean -p axeyum-cnf`; the fix is
+# to never let this gate write artifacts the main build will pick up.
+export CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-$REPO_ROOT/target/prepush-gate}"
 (
   cd "$tmp_wt"
 
