@@ -178,10 +178,12 @@ fn front_door_re_loop_cong_fallback_membership_unsat() {
 (assert (str.in_re X (str.to_re \"//cdmax/Ui\\u{0a}\")))\n\
 (check-sat)";
     assert_eq!(verdict(s), CheckResult::Unsat);
-    // The fallback parse leaves the flat view empty but populates the membership
-    // skeleton — the route the front door consults.
+    // This used to parse only through the fallback, leaving the flat view empty.
+    // With `re.loop` now parsed natively (788c6f68) and the packed caps raised
+    // (9f47bd01) the script parses directly, so `assertions` is populated. What
+    // matters for the front door is that the membership skeleton is still built —
+    // that is the route it consults — and that the verdict above is unchanged.
     let script = parse_script(s).expect("parse re-loop fallback");
-    assert!(script.assertions.is_empty());
     assert!(!script.word_skeleton_memberships.is_empty());
 }
 
@@ -621,9 +623,12 @@ fn front_door_overcap_disjunction_unsat() {
 (assert (= x (str.++ y "cccccccccccccc")))
 (check-sat)"#;
     assert_eq!(verdict(s), CheckResult::Unsat);
-    // And directly through the word-first-fallback harness surface.
+    // These 14-character literals used to exceed the ADR-0029 packed cap and so
+    // reached the solver through the word-first fallback. Since the caps were
+    // raised to 256/512 (9f47bd01) the script parses directly, so the fallback is
+    // no longer involved and asserting on it would pin a limitation that is gone.
+    // The verdict above is the property this test exists for; it is unchanged.
     let mut script = parse_script(s).expect("parse over-cap word-first fallback");
-    assert!(script.word_only_fallback.is_some());
     assert!(!script.word_skeleton.is_empty());
     assert_eq!(
         decide_word_only_script(&mut script, &cfg()).expect("decide word-only"),
