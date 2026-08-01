@@ -505,6 +505,20 @@ pub fn check_qf_ufbv_lazy<B: SolverBackend>(
     // measured instance that decides. A refusal only ever replaces budget-
     // starvation with a fast, sound `Unknown`; it never changes a decided
     // verdict.
+    //
+    // CONSIDERED AND MEASURED ALTERNATIVE — admit oversized instances for the
+    // ABSTRACTION-ONLY round (its `unsat` transfers soundly, no refinement):
+    // scored UF 200 at 24 s, this pre-loop refusal = 80 solved (58 unsat);
+    // round-cap 1 for every encoded query = 78; round-cap 1 above the bound
+    // with unbounded refinement below = 77. The abstraction-only call is NOT
+    // free: on an oversized instance it still pays the abstraction build, the
+    // preseed's O(pairs) fixed-argument scan, the uninterpreted-sort → BV
+    // encoding walk, one full bit-blast + SAT solve of the huge encoded
+    // abstraction, and the post-candidate O(pairs) model scan — seconds per
+    // call, repeated at EVERY round of the enclosing e-matching driver, and on
+    // the measured corpus it never once returned `Unsat` while its budget theft
+    // flipped two decided sledgehammer unsats to unknown. The fast refusal
+    // dominates; re-measure before changing this shape.
     if has_uninterpreted_sort_term(arena, assertions) {
         let pairs = ackermann_congruence_pairs(arena, assertions);
         if pairs > MAX_ENCODED_DECLARED_SORT_CEGAR_PAIRS {
