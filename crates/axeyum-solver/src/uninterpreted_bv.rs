@@ -49,9 +49,55 @@
 
 use std::collections::{HashMap, HashSet};
 
-use axeyum_ir::{Sort, SymbolId, TermArena, TermId, TermNode};
+use axeyum_ir::{Sort, SortId, SymbolId, TermArena, TermId, TermNode, Value};
 
 use crate::backend::SolverError;
+use crate::model::Model;
+
+/// One round's uninterpreted-sort → bit-vector encoding: the rewritten
+/// assertions plus the symbol correspondence needed to translate the backend's
+/// model **back** into the original vocabulary.
+///
+/// The correspondence is load-bearing for the lazy CEGAR loop
+/// ([`crate::euf::check_qf_ufbv_lazy`]): the loop's candidate-model inspectors
+/// (`args_tuples_equal` / `results_differ`) and the final replay all reason over
+/// ORIGINAL terms, while the backend's assignment is keyed by the fresh encoded
+/// `!us*` symbols. Without translating the assignment back, every original
+/// uninterpreted symbol keeps the backend's *distinct-by-construction*
+/// completion default, no argument tuples ever compare equal, zero congruence
+/// lemmas are produced, and the loop declines — the measured
+/// `pair_checks=22197, equal_arg_pairs=0` completeness gap.
+pub(crate) struct UninterpretedEncoding {
+    /// The assertions with every uninterpreted-sort symbol replaced by its
+    /// bit-vector encoding.
+    pub(crate) assertions: Vec<TermId>,
+    /// `(original symbol, encoded bit-vector symbol, uninterpreted sort)` for
+    /// every replaced symbol, in deterministic first-encounter order.
+    pub(crate) symbols: Vec<(SymbolId, SymbolId, SortId)>,
+}
+
+/// Translates a backend model over the ENCODED vocabulary back onto the
+/// ORIGINAL uninterpreted-sort symbols: each original symbol receives
+/// `Value::Uninterpreted` whose token is its encoded symbol's bit-vector value.
+///
+/// Equality is the only operation on an uninterpreted carrier, and the token map
+/// is value-preserving on equality (equal bit-vector values ⇔ equal tokens), so
+/// evaluating an original term under the translated assignment agrees with
+/// evaluating its encoding under the backend's assignment. Symbols the backend
+/// left without a scalar value are skipped (conservative: the CEGAR loop treats
+/// an unresolved argument as *not provably equal* and adds no lemma).
+pub(crate) fn lift_encoded_model(model: &Model, encoding: &UninterpretedEncoding) -> Model {
+    let mut out = model.clone();
+    for &(original, encoded, sort) in &encoding.symbols {
+        let token = match model.get(encoded) {
+            Some(Value::Bv { value, .. }) => value,
+            Some(Value::Bool(b)) => u128::from(b),
+            _ => continue,
+        };
+        out.set(original, Value::Uninterpreted { sort, value: token });
+    }
+    out
+}
 
 /// Encodes every uninterpreted-sort symbol in `assertions` as a bit-vector.
 ///
@@ -65,7 +111,7 @@ use crate::backend::SolverError;
 pub(crate) fn encode_uninterpreted_symbols(
     arena: &mut TermArena,
     assertions: &[TermId],
-) -> Result<Option<Vec<TermId>>, SolverError> {
+) -> Result<Option<UninterpretedEncoding>, SolverError> {
     let err = |e: axeyum_ir::IrError| SolverError::Backend(e.to_string());
 
     // Group the uninterpreted-sort symbols by sort, in first-encounter order so
@@ -96,9 +142,13 @@ pub(crate) fn encode_uninterpreted_symbols(
     }
 
     let mut replacements: HashMap<TermId, TermId> = HashMap::new();
+    let mut symbol_map: Vec<(SymbolId, SymbolId, SortId)> = Vec::new();
     for sort in &order {
         let symbols = &by_sort[sort];
         let width = domain_width(symbols.len());
+        let Sort::Uninterpreted(sort_id) = *sort else {
+            unreachable!("only uninterpreted sorts are collected above");
+        };
         for (index, &symbol) in symbols.iter().enumerate() {
             let name = fresh_name(arena, &format!("!us{}_{index}_", sort_index(*sort)));
             let encoded = arena
@@ -107,6 +157,7 @@ pub(crate) fn encode_uninterpreted_symbols(
             let original = arena.var(symbol);
             let replacement = arena.var(encoded);
             replacements.insert(original, replacement);
+            symbol_map.push((symbol, encoded, sort_id));
         }
     }
 
@@ -118,7 +169,10 @@ pub(crate) fn encode_uninterpreted_symbols(
                 .map_err(err)?,
         );
     }
-    Ok(Some(out))
+    Ok(Some(UninterpretedEncoding {
+        assertions: out,
+        symbols: symbol_map,
+    }))
 }
 
 /// The bit width whose domain holds `count` distinct elements: the smallest `w`
@@ -249,13 +303,25 @@ mod tests {
         let (av, bv) = (arena.var(a), arena.var(b));
         let assertion = arena.eq(av, bv).unwrap();
 
-        let encoded = encode_uninterpreted_symbols(&mut arena, &[assertion])
+        let encoding = encode_uninterpreted_symbols(&mut arena, &[assertion])
             .unwrap()
             .expect("an uninterpreted sort is present");
+        let encoded = &encoding.assertions;
 
-        assert_eq!(uninterpreted_symbol_count(&arena, &encoded), 0);
+        assert_eq!(uninterpreted_symbol_count(&arena, encoded), 0);
         // Two symbols need a domain of 2, i.e. one bit.
         assert_eq!(arena.sort_of(encoded[0]), Sort::Bool); // `=` is still Bool
+        // The symbol correspondence covers exactly the replaced symbols, so a
+        // backend model can be translated back.
+        let mut originals = encoding
+            .symbols
+            .iter()
+            .map(|&(original, _, _)| original)
+            .collect::<Vec<_>>();
+        originals.sort();
+        let mut expected = vec![a, b];
+        expected.sort();
+        assert_eq!(originals, expected);
     }
 
     #[test]
@@ -271,7 +337,8 @@ mod tests {
 
         let encoded = encode_uninterpreted_symbols(&mut arena, &[assertion])
             .unwrap()
-            .unwrap();
+            .unwrap()
+            .assertions;
 
         let TermNode::App { args, .. } = arena.node(encoded[0]).clone() else {
             panic!("expected an equality application");
@@ -293,7 +360,8 @@ mod tests {
 
         let encoded = encode_uninterpreted_symbols(&mut arena, &[left, right])
             .unwrap()
-            .unwrap();
+            .unwrap()
+            .assertions;
 
         assert_eq!(uninterpreted_symbol_count(&arena, &encoded), 0);
         assert_eq!(encoded.len(), 2);
@@ -316,7 +384,50 @@ mod tests {
             .unwrap()
             .unwrap();
 
-        assert_eq!(uninterpreted_symbol_count(&arena, &first), 0);
-        assert_eq!(uninterpreted_symbol_count(&arena, &second), 0);
+        assert_eq!(uninterpreted_symbol_count(&arena, &first.assertions), 0);
+        assert_eq!(uninterpreted_symbol_count(&arena, &second.assertions), 0);
+    }
+
+    #[test]
+    fn lift_encoded_model_translates_tokens_back_to_original_symbols() {
+        // The completeness anchor for the lazy CEGAR loop: the backend's model is
+        // keyed by the encoded `!us*` symbols, and the loop inspects ORIGINAL
+        // symbols. The lift must carry the backend's equality structure back:
+        // equal bit-vector values become equal tokens, distinct stay distinct.
+        let mut arena = TermArena::new();
+        let sort_id = arena.declare_uninterpreted_sort("S");
+        let sort = Sort::Uninterpreted(sort_id);
+        let a = arena.declare("a", sort).unwrap();
+        let b = arena.declare("b", sort).unwrap();
+        let c = arena.declare("c", sort).unwrap();
+        let (av, bv, cv) = (arena.var(a), arena.var(b), arena.var(c));
+        let ab = arena.eq(av, bv).unwrap();
+        let bc = arena.eq(bv, cv).unwrap();
+
+        let encoding = encode_uninterpreted_symbols(&mut arena, &[ab, bc])
+            .unwrap()
+            .unwrap();
+        assert_eq!(encoding.symbols.len(), 3);
+
+        // A backend model that identifies a and b but separates c.
+        let mut backend_model = Model::new();
+        let width = match arena.symbol(encoding.symbols[0].1).1 {
+            Sort::BitVec(w) => w,
+            other => panic!("encoded symbol must be a bit-vector, got {other}"),
+        };
+        backend_model.set(encoding.symbols[0].1, Value::Bv { width, value: 1 });
+        backend_model.set(encoding.symbols[1].1, Value::Bv { width, value: 1 });
+        backend_model.set(encoding.symbols[2].1, Value::Bv { width, value: 0 });
+
+        let lifted = lift_encoded_model(&backend_model, &encoding);
+        let token = |symbol| match lifted.get(symbol) {
+            Some(Value::Uninterpreted { sort, value }) => {
+                assert_eq!(sort, sort_id);
+                value
+            }
+            other => panic!("expected an uninterpreted token, got {other:?}"),
+        };
+        assert_eq!(token(a), token(b), "equal encodings must lift equal");
+        assert_ne!(token(a), token(c), "distinct encodings must stay distinct");
     }
 }

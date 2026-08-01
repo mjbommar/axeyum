@@ -466,13 +466,34 @@ pub fn check_qf_ufbv_lazy<B: SolverBackend>(
     // keep every symbol distinct; `sat` does not, because the model assigns
     // bit-vector values to symbols the original query holds at an uninterpreted
     // sort and so could not replay against the original term.
+    //
+    // VOCABULARY CONTRACT: the CEGAR loop around this closure reasons entirely
+    // over ORIGINAL terms (`args_tuples_equal` / `results_differ` / the final
+    // replay), while the backend's assignment is keyed by the fresh encoded
+    // `!us*` symbols. The candidate model must therefore be translated BACK onto
+    // the original symbols (`lift_encoded_model`) before the loop sees it.
+    // Without that lift, every original uninterpreted symbol keeps the backend's
+    // distinct-by-construction completion default, no argument tuples ever
+    // compare equal, zero congruence lemmas are produced, and the loop declines
+    // in milliseconds with `equal_arg_pairs=0` — the measured completeness gap
+    // on the ground-instantiated UF corpus. The lift is equality-preserving
+    // (equal bit-vector values ⇔ equal tokens), so the lifted candidate violates
+    // a congruence pair exactly when the encoded candidate does, and each lemma
+    // the loop then adds is an ordinary Ackermann lemma over original terms —
+    // re-encoded wholesale on the next round, so no mixed-vocabulary assertion
+    // set ever reaches the backend.
     let mut encoded_uninterpreted_sorts = false;
     let result = check_with_function_consistency(arena, assertions, |a, asserts| {
         match crate::uninterpreted_bv::encode_uninterpreted_symbols(a, asserts)? {
             None => backend.check(a, asserts, config),
-            Some(encoded) => {
+            Some(encoding) => {
                 encoded_uninterpreted_sorts = true;
-                backend.check(a, &encoded, config)
+                match backend.check(a, &encoding.assertions, config)? {
+                    CheckResult::Sat(model) => Ok(CheckResult::Sat(
+                        crate::uninterpreted_bv::lift_encoded_model(&model, &encoding),
+                    )),
+                    other => Ok(other),
+                }
             }
         }
     })?;
@@ -1928,6 +1949,119 @@ mod tests {
         let result =
             check_qf_ufbv_lazy(&mut backend, &mut arena, &[fa_ne_fb, a_eq_b], &config).unwrap();
         assert_eq!(result, CheckResult::Unsat);
+    }
+
+    #[test]
+    fn lazy_declared_sort_refutes_congruence_violation() {
+        // The same congruence refutation over a DECLARED (uninterpreted) sort:
+        // f(a) != f(b) AND a = b  =>  UNSAT. The closure encodes the working set
+        // as bit-vectors each round; without lifting the backend's model back to
+        // the original symbols, `args_tuples_equal` can never observe a = b, no
+        // lemma is ever added, and this declines with `equal_arg_pairs=0` — the
+        // ground-instantiated UF completeness gap this test pins closed.
+        let mut arena = TermArena::new();
+        let sort = Sort::Uninterpreted(arena.declare_uninterpreted_sort("S"));
+        let f = arena.declare_fun("f", &[sort], sort).unwrap();
+        let a = arena.declare("a", sort).unwrap();
+        let b = arena.declare("b", sort).unwrap();
+        let (av, bv) = (arena.var(a), arena.var(b));
+        let fa = arena.apply(f, &[av]).unwrap();
+        let fb = arena.apply(f, &[bv]).unwrap();
+        let fa_ne_fb = {
+            let eq = arena.eq(fa, fb).unwrap();
+            arena.not(eq).unwrap()
+        };
+        let a_eq_b = arena.eq(av, bv).unwrap();
+
+        let mut backend = SatBvBackend::new();
+        let config = SolverConfig::default();
+        let result =
+            check_qf_ufbv_lazy(&mut backend, &mut arena, &[fa_ne_fb, a_eq_b], &config).unwrap();
+        assert_eq!(result, CheckResult::Unsat);
+    }
+
+    #[test]
+    fn lazy_declared_sort_refutes_nested_congruence_violation() {
+        // Nested applications over a declared sort: f(f(a)) != a AND f(a) = a
+        // => UNSAT (needs a lemma relating the inner and outer applications
+        // through the candidate model, i.e. genuine CEGAR refinement, not just
+        // the preseed).
+        let mut arena = TermArena::new();
+        let sort = Sort::Uninterpreted(arena.declare_uninterpreted_sort("S"));
+        let f = arena.declare_fun("f", &[sort], sort).unwrap();
+        let a = arena.declare("a", sort).unwrap();
+        let av = arena.var(a);
+        let fa = arena.apply(f, &[av]).unwrap();
+        let ffa = arena.apply(f, &[fa]).unwrap();
+        let ffa_ne_a = {
+            let eq = arena.eq(ffa, av).unwrap();
+            arena.not(eq).unwrap()
+        };
+        let fa_eq_a = arena.eq(fa, av).unwrap();
+
+        let mut backend = SatBvBackend::new();
+        let config = SolverConfig::default();
+        let result =
+            check_qf_ufbv_lazy(&mut backend, &mut arena, &[ffa_ne_a, fa_eq_a], &config).unwrap();
+        assert_eq!(result, CheckResult::Unsat);
+    }
+
+    #[test]
+    fn lazy_declared_sort_encoded_sat_never_escapes_as_sat() {
+        // SOUNDNESS-NEGATIVE (the anchor near `project_replay_build`): when the
+        // uninterpreted-sort encoding fired, a satisfiable query must NOT come
+        // back `Sat` from this route — the candidate model interprets the finite
+        // bit-vector encoding, and the route's contract degrades it to a sound
+        // `Unknown`. The model-lift that closes the completeness gap must not
+        // reopen this: f(a) = b is satisfiable, the loop converges with no
+        // violated pairs, replay may even confirm — and the result must still be
+        // degraded, never an escaped `Sat`.
+        let mut arena = TermArena::new();
+        let sort = Sort::Uninterpreted(arena.declare_uninterpreted_sort("S"));
+        let f = arena.declare_fun("f", &[sort], sort).unwrap();
+        let a = arena.declare("a", sort).unwrap();
+        let b = arena.declare("b", sort).unwrap();
+        let (av, bv) = (arena.var(a), arena.var(b));
+        let fa = arena.apply(f, &[av]).unwrap();
+        let fa_eq_b = arena.eq(fa, bv).unwrap();
+
+        let mut backend = SatBvBackend::new();
+        let config = SolverConfig::default();
+        let result = check_qf_ufbv_lazy(&mut backend, &mut arena, &[fa_eq_b], &config).unwrap();
+        assert!(
+            !matches!(result, CheckResult::Sat(_)),
+            "an encoded-domain candidate model must never escape as Sat, got {result:?}"
+        );
+    }
+
+    #[test]
+    fn lazy_declared_sort_distinct_chain_stays_non_sat_and_sound() {
+        // A satisfiable declared-sort query whose encoding pressure is real
+        // (three symbols forced pairwise distinct, domain width must be >= 2):
+        // must not produce a wrong `unsat` (the domain-width soundness rule) and
+        // must not leak an encoded `Sat`.
+        let mut arena = TermArena::new();
+        let sort = Sort::Uninterpreted(arena.declare_uninterpreted_sort("S"));
+        let f = arena.declare_fun("f", &[sort], sort).unwrap();
+        let a = arena.declare("a", sort).unwrap();
+        let b = arena.declare("b", sort).unwrap();
+        let c = arena.declare("c", sort).unwrap();
+        let (av, bv, cv) = (arena.var(a), arena.var(b), arena.var(c));
+        let fa = arena.apply(f, &[av]).unwrap();
+        let mut assertions = vec![arena.eq(fa, cv).unwrap()];
+        for (x, y) in [(av, bv), (bv, cv), (av, cv)] {
+            let eq = arena.eq(x, y).unwrap();
+            assertions.push(arena.not(eq).unwrap());
+        }
+
+        let mut backend = SatBvBackend::new();
+        let config = SolverConfig::default();
+        let result = check_qf_ufbv_lazy(&mut backend, &mut arena, &assertions, &config).unwrap();
+        assert!(
+            !matches!(result, CheckResult::Sat(_) | CheckResult::Unsat),
+            "satisfiable declared-sort query must neither leak encoded Sat nor \
+             wrongly refute, got {result:?}"
+        );
     }
 
     #[test]
