@@ -45,8 +45,24 @@ if [ -n "$crates" ]; then
              --skip squared_binomial_falling_moment_family_is_checked)
     echo "check-scope: axeyum-cas touched but not moment code — skipping the ~15-min moment proofs."
   fi
-  run cargo test "${pkgs[@]}" --lib "${skip[@]}"
-  run cargo clippy "${pkgs[@]}" --all-targets -- -D warnings
+  # Enable each touched package's `full` feature. Without this the gate runs on
+  # DEFAULT features, under which `axeyum-solver` compiles 23 of its 968 unit
+  # tests (measured 2026-08-01) — everything behind `#[cfg(feature = "full")]`
+  # is never built, so neither the tests NOR clippy ever see the multi-theory
+  # surface, strings, e-graph, FP, or smtlib. An iteration gate that silently
+  # skips 97% of a package's unit tests trains exactly the wrong reflex. `full`
+  # is pure Rust (the C/C++ z3 backend is a separate feature), so this keeps the
+  # no-C-dependency promise. Package-qualified (`-F pkg/full`) because a bare
+  # `--features full` is ambiguous across a multi-package selection.
+  feats=()
+  for c in $crates; do
+    name="${c#crates/}"
+    if [ -f "$c/Cargo.toml" ] && grep -qE '^full[[:space:]]*=' "$c/Cargo.toml"; then
+      feats+=(-F "$name/full")
+    fi
+  done
+  run cargo test "${pkgs[@]}" "${feats[@]}" --lib "${skip[@]}"
+  run cargo clippy "${pkgs[@]}" "${feats[@]}" --all-targets -- -D warnings
 fi
 
 # ---- Python (scripts/*.py): touched test modules + the owning lane gate ----
