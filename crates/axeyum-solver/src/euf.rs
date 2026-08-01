@@ -178,6 +178,33 @@ pub(crate) const MAX_LAZY_DEPTH: u64 = 65_536;
 const MAX_PRESEEDED_FUNCTION_CONSISTENCY_LEMMAS: usize = 256;
 const MAX_POST_CANDIDATE_SIBLING_LEMMAS: usize = 1;
 
+/// Deterministic admission bound on the congruence-pair count for the
+/// **encoded declared-sort** lazy CEGAR case of [`check_qf_ufbv_lazy`] (the
+/// uninterpreted-sort → bit-vector route; scalar `QF_UFBV` is not affected).
+/// Rationale and the measured evidence live at the check site in
+/// [`check_qf_ufbv_lazy`].
+const MAX_ENCODED_DECLARED_SORT_CEGAR_PAIRS: usize = 64;
+
+/// Whether any term reachable from `assertions` has a declared (uninterpreted)
+/// sort — the trigger for the encoded declared-sort CEGAR admission bound.
+/// Iterative walk with a visited set; never recurses.
+fn has_uninterpreted_sort_term(arena: &TermArena, assertions: &[TermId]) -> bool {
+    let mut visited: HashSet<TermId> = HashSet::new();
+    let mut stack: Vec<TermId> = assertions.to_vec();
+    while let Some(term) = stack.pop() {
+        if !visited.insert(term) {
+            continue;
+        }
+        if matches!(arena.sort_of(term), Sort::Uninterpreted(_)) {
+            return true;
+        }
+        if let TermNode::App { args, .. } = arena.node(term) {
+            stack.extend(args.iter().copied());
+        }
+    }
+    false
+}
+
 /// Whether an over-eager-bound instance is *also* beyond the secondary
 /// (pathological-input) bounds for the lazy route — in which case even the lazy
 /// CEGAR path cannot help (its one eager abstraction build / recursive rewrite
@@ -459,6 +486,39 @@ pub fn check_qf_ufbv_lazy<B: SolverBackend>(
     assertions: &[TermId],
     config: &SolverConfig,
 ) -> Result<CheckResult, SolverError> {
+    // Deterministic admission bound for the ENCODED (declared-sort) CEGAR case
+    // only — scalar `QF_UFBV` queries are untouched. Measured on the scored UF
+    // 200 (24 s): the ground queries the quantifier-instantiation driver hands
+    // this route carry 401 – 1 549 516 congruence pairs, and **zero of the 28**
+    // such instances converged to a decision within budget — a 153 810-pair
+    // instance converged only at 61 s, and then to a functionally-consistent
+    // model whose satisfiability cannot transfer back through the encoding
+    // (degraded `Unknown` by contract below). Meanwhile the unbounded
+    // refinement consumed the enclosing e-matching driver's budget and SIX
+    // previously-decided `unsat` files regressed to `unknown`. Above the bound
+    // the route therefore declines in milliseconds (the same budget profile
+    // under which those six decided), and below it the loop keeps the real new
+    // capability: small declared-sort congruence refutations now decide `Unsat`
+    // (see `lazy_declared_sort_refutes_congruence_violation`). `64` mirrors
+    // [`MAX_ACKERMANN_CONGRUENCE_PAIRS`], whose documented measured frontier of
+    // decidable in-tree instances tops out at 40 pairs; raise it only with a
+    // measured instance that decides. A refusal only ever replaces budget-
+    // starvation with a fast, sound `Unknown`; it never changes a decided
+    // verdict.
+    if has_uninterpreted_sort_term(arena, assertions) {
+        let pairs = ackermann_congruence_pairs(arena, assertions);
+        if pairs > MAX_ENCODED_DECLARED_SORT_CEGAR_PAIRS {
+            return Ok(CheckResult::Unknown(UnknownReason {
+                kind: UnknownKind::ResourceLimit,
+                detail: format!(
+                    "declared-sort lazy CEGAR refuses {pairs} congruence pairs (bound \
+                     {MAX_ENCODED_DECLARED_SORT_CEGAR_PAIRS}): measured refinement over the \
+                     bit-vector encoding does not converge within realistic budgets at this \
+                     size and starves the enclosing instantiation search"
+                ),
+            }));
+        }
+    }
     // After `abstract_functions` the only terms left at an uninterpreted sort are
     // free symbols, so they can be encoded as bit-vectors by the finite model
     // property and handed to the backend, which otherwise refuses the query
@@ -2057,6 +2117,52 @@ mod tests {
         assert!(
             !matches!(result, CheckResult::Sat(_)),
             "an encoded-domain candidate model must never escape as Sat, got {result:?}"
+        );
+    }
+
+    #[test]
+    fn lazy_declared_sort_oversized_pairs_refuse_fast() {
+        // The encoded declared-sort CEGAR admission bound: an instance whose
+        // congruence-pair count exceeds the bound must decline immediately with
+        // a ResourceLimit `Unknown` (measured: such instances never converge
+        // within realistic budgets and starve the enclosing instantiation
+        // search), never enter the refinement loop, and never a wrong verdict.
+        let mut arena = TermArena::new();
+        let sort = Sort::Uninterpreted(arena.declare_uninterpreted_sort("S"));
+        let f = arena.declare_fun("f", &[sort], sort).unwrap();
+        // 100 distinct applications = 4950 pairs, far over the bound of 64.
+        let mut assertions = Vec::new();
+        let mut previous = None;
+        for i in 0..100 {
+            let x = arena.declare(&format!("x{i}"), sort).unwrap();
+            let xv = arena.var(x);
+            let fx = arena.apply(f, &[xv]).unwrap();
+            if let Some(prev) = previous {
+                let eq = arena.eq(prev, fx).unwrap();
+                assertions.push(arena.not(eq).unwrap());
+            }
+            previous = Some(fx);
+        }
+
+        let mut backend = SatBvBackend::new();
+        let config = SolverConfig::default();
+        let started = std::time::Instant::now();
+        let result = check_qf_ufbv_lazy(&mut backend, &mut arena, &assertions, &config).unwrap();
+        match result {
+            CheckResult::Unknown(reason) => {
+                assert_eq!(reason.kind, UnknownKind::ResourceLimit);
+                assert!(
+                    reason.detail.contains("declared-sort lazy CEGAR refuses"),
+                    "unexpected detail: {}",
+                    reason.detail
+                );
+            }
+            other => panic!("expected a fast ResourceLimit refusal, got {other:?}"),
+        }
+        assert!(
+            started.elapsed() < std::time::Duration::from_secs(2),
+            "the refusal must be immediate, took {:?}",
+            started.elapsed()
         );
     }
 
