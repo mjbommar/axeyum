@@ -209,3 +209,20 @@ not a score.
 | load average (start / end) | 6.81 6.37 3.67 / 8.21 6.85 5.36 — 24 cores; a high load DEPRESSES this result |
 | per-file detail | `bench-results/parity-details/QF_BV.tsv` |
 
+## UF — 2026-08-01T22:12:43Z
+
+| field | value |
+|---|---|
+| axeyum solved | 78/200 |
+| reference solved | 93/200 |
+| **ratio (axeyum / reference)** | **83.9%** |
+| **disagreements** | **0** |
+| soundness | SOUND |
+| both / axeyum-only / reference-only | 54 / 24 / 39 |
+| reference | `cvc5 1.3.4 [git f3b21c4 on branch HEAD]` |
+| protocol | 24s wall, 8GiB, per-file |
+| benchmark list | `bench-results/parity-lists/UF.txt` (sha256 ab432240d2f7, 200 files) |
+| solver commit | `9ef67040` |
+| load average (start / end) | 5.40 6.21 6.91 / 7.22 9.36 9.60 — 24 cores; a high load DEPRESSES this result |
+| per-file detail | `bench-results/parity-details/UF.tsv` |
+
