@@ -69,6 +69,20 @@ impl<'a> Iterator for Descendants<'a> {
     }
 }
 
+/// Whether a quoted symbol's inner text must keep its pipes to stay
+/// distinguishable from a non-symbol token.
+///
+/// True exactly when the text could not be the body of a *simple* symbol:
+/// empty, or starting with a character no simple symbol may start with — an
+/// ASCII digit (numeral / decimal), `#` (`#x`/`#b`/`#f` literal), `"` (string),
+/// or `:` (keyword). See the call site for why the distinction is load-bearing.
+fn needs_quoting(inner: &str) -> bool {
+    match inner.as_bytes().first() {
+        None => true,
+        Some(&b) => b.is_ascii_digit() || matches!(b, b'#' | b'"' | b':'),
+    }
+}
+
 /// Reads every top-level s-expression in `input`.
 ///
 /// # Errors
@@ -149,12 +163,34 @@ pub fn read_all(input: &str) -> Result<Vec<SExpr>, SmtError> {
                     )));
                 }
                 i += 1;
-                // Strip the pipes; the inner text is the symbol name.
-                emit(
-                    &mut stack,
-                    &mut top,
-                    SExpr::Atom(input[start + 1..i - 1].to_owned()),
-                );
+                let inner = &input[start + 1..i - 1];
+                // Normally the pipes are stripped: SMT-LIB says `|x|` and `x`
+                // denote the SAME symbol whenever the inner text is a valid
+                // *simple* symbol, and every downstream consumer keys on the
+                // bare name.
+                //
+                // That equivalence does NOT hold when the inner text could not
+                // have been lexed as a simple symbol at all — a numeral, a
+                // decimal, a `#x`/`#b`/`#f` literal, a string, a keyword, or the
+                // empty symbol. There the unquoted token is a *literal*, never a
+                // symbol reference, so collapsing `|1633|` to `1633` makes a
+                // declared symbol capture every occurrence of the numeral 1633.
+                // Real cost: `QF_LIA/2019-cmodelsdiff` and `2019-ezsmt` declare
+                // `(declare-fun |1633| () Bool)` and then assert
+                // `(>= 1633 |lr2355|)`; the numeral resolved to the Bool symbol
+                // and the whole file was rejected with
+                // `sort mismatch: expected Int, found Bool`.
+                //
+                // For those tokens the pipes are KEPT, so the atom text is
+                // unreachable from any unquoted token and declaration/use still
+                // agree (both go through this branch). Behaviour for every
+                // quotable-but-simple symbol is byte-identical to before.
+                let atom = if needs_quoting(inner) {
+                    input[start..i].to_owned()
+                } else {
+                    inner.to_owned()
+                };
+                emit(&mut stack, &mut top, SExpr::Atom(atom));
             }
             _ => {
                 let start = i;
@@ -258,5 +294,42 @@ mod tests {
 
         let deep = nested(200_000);
         assert_eq!(deep.descendants().count(), 2 * 200_000 + 1);
+    }
+
+    /// A quoted symbol whose text is a valid *simple* symbol keeps collapsing to
+    /// the bare name — SMT-LIB says `|x|` and `x` are the same symbol.
+    #[test]
+    fn quoted_simple_symbol_collapses_to_its_bare_name() {
+        for source in [
+            "|x|",
+            "|lr2355|",
+            "|required(ezcsp__geq(a,b))|",
+            "|hello world|",
+        ] {
+            let read = read_all(source).expect("one quoted symbol");
+            let expected = &source[1..source.len() - 1];
+            assert_eq!(read[0].atom(), Some(expected), "source {source}");
+        }
+    }
+
+    /// ...but a quoted symbol that could be mistaken for a literal KEEPS its
+    /// pipes, so it can never capture the unquoted token.
+    ///
+    /// Regression: `QF_LIA/2019-cmodelsdiff` declares `|1633|` as a `Bool` and
+    /// then asserts `(>= 1633 |lr2355|)`. With the pipes stripped, the numeral
+    /// `1633` resolved to that `Bool` symbol and the whole benchmark was
+    /// rejected with `sort mismatch: expected Int, found Bool`.
+    #[test]
+    fn literal_shaped_quoted_symbol_stays_distinct_from_the_literal() {
+        for source in [
+            "|1633|", "|0|", "|12.5|", "|#x1f|", "|\"s\"|", "|:kw|", "||",
+        ] {
+            let read = read_all(source).expect("one quoted symbol");
+            assert_eq!(read[0].atom(), Some(source), "source {source}");
+        }
+        // The two tokens must not collide.
+        let read = read_all("(>= 1633 |1633|)").expect("balanced");
+        let atoms: Vec<&str> = read[0].descendants().filter_map(SExpr::atom).collect();
+        assert_eq!(atoms, vec![">=", "1633", "|1633|"]);
     }
 }

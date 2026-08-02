@@ -134,13 +134,28 @@ impl Rational {
     }
 
     /// Exact addition, returning `None` on `i128` overflow.
+    ///
+    /// Adds over the **least** common denominator rather than the product one:
+    /// with `g = gcd(b, d)`, `a/b + c/d = (a·(d/g) + c·(b/g)) / ((b/g)·d)`. The
+    /// naive `(a·d + c·b)/(b·d)` overflows on intermediates whose reduced result
+    /// fits comfortably, which in the exact-rational simplex is not academic:
+    /// a single overflow inside `pivot_and_update` abandons the whole
+    /// branch-and-bound tree as `unknown` (it was the true cause of the `QF_LIA`
+    /// `CAV_2009_benchmarks` residual, misreported as a node-budget exhaustion).
     #[must_use]
     pub fn checked_add(self, other: Self) -> Option<Self> {
-        // a/b + c/d = (a*d + c*b) / (b*d)
-        let ad = self.num.checked_mul(other.den)?;
-        let cb = other.num.checked_mul(self.den)?;
+        // Both operands are in lowest terms with positive denominators.
+        let g = gcd(self.den.unsigned_abs(), other.den.unsigned_abs());
+        #[allow(clippy::cast_possible_wrap)]
+        let g = g as i128;
+        // g divides both denominators exactly and g >= 1.
+        let b1 = self.den / g;
+        let d1 = other.den / g;
+        let ad = self.num.checked_mul(d1)?;
+        let cb = other.num.checked_mul(b1)?;
         let num = ad.checked_add(cb)?;
-        let den = self.den.checked_mul(other.den)?;
+        // The least common denominator: b1 * d == lcm(b, d).
+        let den = b1.checked_mul(other.den)?;
         Self::checked_new(num, den)
     }
 
@@ -151,11 +166,36 @@ impl Rational {
     }
 
     /// Exact multiplication, returning `None` on `i128` overflow.
+    ///
+    /// **Cross-cancels before multiplying** — `gcd(a, d)` and `gcd(c, b)` are
+    /// divided out of `(a/b)·(c/d)` first — so only the *reduced* product has to
+    /// fit in `i128`. Multiplying first and reducing after loses every product
+    /// whose unreduced form overflows even though the answer is small; see
+    /// [`Self::checked_add`] for why that mattered.
     #[must_use]
     pub fn checked_mul(self, other: Self) -> Option<Self> {
-        let num = self.num.checked_mul(other.num)?;
-        let den = self.den.checked_mul(other.den)?;
-        Self::checked_new(num, den)
+        let negative = (self.num < 0) != (other.num < 0);
+        let mut a = self.num.unsigned_abs();
+        let mut b = self.den.unsigned_abs();
+        let mut c = other.num.unsigned_abs();
+        let mut d = other.den.unsigned_abs();
+        let g1 = gcd(a, d);
+        if g1 > 1 {
+            a /= g1;
+            d /= g1;
+        }
+        let g2 = gcd(c, b);
+        if g2 > 1 {
+            c /= g2;
+            b /= g2;
+        }
+        // Both operands were in lowest terms, so after cross-cancellation the
+        // product is too — but `checked_new` still canonicalizes the zero case.
+        let num = a.checked_mul(c)?;
+        let den = b.checked_mul(d)?;
+        let num = i128::try_from(num).ok()?;
+        let den = i128::try_from(den).ok()?;
+        Self::checked_new(if negative { num.checked_neg()? } else { num }, den)
     }
 
     /// Exact division, returning `None` on division by zero or `i128` overflow.
@@ -171,8 +211,20 @@ impl Rational {
     /// cross-multiplication comparison, instead of panicking.
     #[must_use]
     pub fn checked_cmp(&self, other: &Self) -> Option<core::cmp::Ordering> {
-        let lhs = self.num.checked_mul(other.den)?;
-        let rhs = other.num.checked_mul(self.den)?;
+        // Cheap exact shortcuts that never multiply.
+        if self.den == other.den {
+            return Some(self.num.cmp(&other.num));
+        }
+        if (self.num < 0) != (other.num < 0) {
+            return Some(self.num.cmp(&other.num));
+        }
+        // Compare over the least common denominator (both denominators are
+        // positive, so the direction is preserved) — see `checked_add`.
+        let g = gcd(self.den.unsigned_abs(), other.den.unsigned_abs());
+        #[allow(clippy::cast_possible_wrap)]
+        let g = g as i128;
+        let lhs = self.num.checked_mul(other.den / g)?;
+        let rhs = other.num.checked_mul(self.den / g)?;
         Some(lhs.cmp(&rhs))
     }
 }
@@ -216,21 +268,7 @@ impl core::ops::Add for Rational {
     ///
     /// Panics on `i128` overflow.
     fn add(self, other: Self) -> Self {
-        // a/b + c/d = (a*d + c*b) / (b*d)
-        let ad = self
-            .num
-            .checked_mul(other.den)
-            .expect("rational add overflow");
-        let cb = other
-            .num
-            .checked_mul(self.den)
-            .expect("rational add overflow");
-        let num = ad.checked_add(cb).expect("rational add overflow");
-        let den = self
-            .den
-            .checked_mul(other.den)
-            .expect("rational add overflow");
-        Self::new(num, den)
+        self.checked_add(other).expect("rational add overflow")
     }
 }
 
@@ -256,15 +294,7 @@ impl core::ops::Mul for Rational {
     ///
     /// Panics on `i128` overflow.
     fn mul(self, other: Self) -> Self {
-        let num = self
-            .num
-            .checked_mul(other.num)
-            .expect("rational mul overflow");
-        let den = self
-            .den
-            .checked_mul(other.den)
-            .expect("rational mul overflow");
-        Self::new(num, den)
+        self.checked_mul(other).expect("rational mul overflow")
     }
 }
 
@@ -276,16 +306,8 @@ impl PartialOrd for Rational {
 
 impl Ord for Rational {
     fn cmp(&self, other: &Self) -> core::cmp::Ordering {
-        // Denominators are positive, so compare a/b vs c/d by a*d vs c*b.
-        let lhs = self
-            .num
-            .checked_mul(other.den)
-            .expect("rational comparison overflow");
-        let rhs = other
-            .num
-            .checked_mul(self.den)
-            .expect("rational comparison overflow");
-        lhs.cmp(&rhs)
+        self.checked_cmp(other)
+            .expect("rational comparison overflow")
     }
 }
 

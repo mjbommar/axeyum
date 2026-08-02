@@ -232,6 +232,15 @@ fn fresh_def_name(t: TermId, used_names: &mut HashSet<String>) -> String {
 fn symbol_syntax(name: &str) -> String {
     if is_simple_symbol(name) {
         name.to_owned()
+    } else if name.len() >= 2
+        && name.starts_with('|')
+        && name.ends_with('|')
+        && !name[1..name.len() - 1].contains('|')
+    {
+        // Already in quoted form: the reader keeps the pipes for symbols whose
+        // inner text would otherwise lex as a literal (`|1633|` vs the numeral
+        // `1633`, see `sexpr::needs_quoting`). Re-wrapping would emit `||1633||`.
+        name.to_owned()
     } else {
         format!("|{}|", name.replace('|', "\\|"))
     }

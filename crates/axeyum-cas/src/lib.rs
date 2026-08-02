@@ -20492,15 +20492,27 @@ mod tests {
             }
         }
 
+        // `Rational::checked_div` cross-cancels before multiplying, so a quotient
+        // whose *reduced* value fits `i128` is computed exactly even though the
+        // naive numerator·denominator product does not. This input used to
+        // overflow and is kept as the regression witness for that fix.
         let large = (1i128 << 120) + 1;
         let denominator = 1i128 << 20;
         let coefficient = Rational::new(large, denominator);
         let divisor = Rational::new(1, denominator);
-        assert!(coefficient.checked_div(divisor).is_none());
+        assert_eq!(
+            coefficient.checked_div(divisor),
+            Some(Rational::integer(large))
+        );
         assert_eq!(
             divide_rational_coefficients_big(&[coefficient], divisor),
             Some(vec![Rational::integer(large)])
         );
+        // The `i128` range is still finite: when the quotient *itself* is out of
+        // range, both routes decline rather than wrap.
+        let tiny = Rational::new(1, 1 << 20);
+        assert!(Rational::integer(large).checked_div(tiny).is_none());
+        assert!(divide_rational_coefficients_big(&[Rational::integer(large)], tiny).is_none());
     }
 
     #[test]

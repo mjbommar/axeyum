@@ -1181,8 +1181,42 @@ fn unsupported(what: &str) -> SolverError {
 // verdict.
 // ---------------------------------------------------------------------------
 
-/// Node budget for LIA branch-and-bound; on exhaustion the result is `unknown`.
+/// Node budget for LIA branch-and-bound when the caller set **no** wall clock;
+/// on exhaustion the result is `unknown`.
+///
+/// This is the deterministic backstop for deadline-free callers (the proof and
+/// interpolant routes, unit tests): with no clock to bound the search, the node
+/// count is the only reproducible stop.
 const MAX_LIA_BNB_NODES: u64 = 50_000;
+
+/// Node budget for LIA branch-and-bound when the caller **did** set a wall clock.
+///
+/// A fixed 50 000-node cap is a deadline in a node-count costume: on the `QF_LIA`
+/// `CAV_2009_benchmarks` family it fired after 0.11–0.31 s of a 24 s budget —
+/// about 1% used — and the `Unknown` it produces short-circuits the rest of
+/// `dispatch_int_linear_refuters`, so the remaining 99% of the budget bought
+/// nothing at all. When a deadline exists it is the meaningful resource bound
+/// (`lia_branch_and_bound` polls it at every node), so the node cap steps back
+/// to a pure runaway-memory backstop.
+const MAX_LIA_BNB_NODES_DEADLINED: u64 = 20_000_000;
+
+/// The `unknown` a branch-and-bound run owes its caller, naming the stop that
+/// actually fired (see [`LiaBnb::Unknown`]).
+fn lia_bnb_undecided(cause: &'static str, node_cap: u64) -> CheckResult {
+    CheckResult::Unknown(UnknownReason {
+        kind: UnknownKind::Incomplete,
+        detail: format!("QF_LIA branch-and-bound undecided: {cause} (node cap {node_cap})"),
+    })
+}
+
+/// The branch-and-bound node budget for a caller with (or without) a wall clock.
+fn lia_bnb_node_cap(deadline: Option<Instant>) -> u64 {
+    if deadline.is_some() {
+        MAX_LIA_BNB_NODES_DEADLINED
+    } else {
+        MAX_LIA_BNB_NODES
+    }
+}
 
 /// Decides a conjunctive `QF_LIA` query by branch-and-bound over the
 /// exact-rational simplex.
@@ -1332,18 +1366,16 @@ fn lia_simplex_with_options(
     // A Gomory `Sat` is still replayed below (the shared trust anchor): a
     // reconstruction slip can only ever cause a (rejected, alarmed) replay
     // failure, never an unsound `sat`.
+    let node_cap = lia_bnb_node_cap(deadline);
     let outcome = if let Some(decided) = lia_gomory_cuts(&constraints, nvars, deadline) {
         decided
     } else {
-        let mut budget = MAX_LIA_BNB_NODES;
+        let mut budget = node_cap;
         lia_branch_and_bound(&mut constraints, nvars, &mut budget, deadline)
     };
     match outcome {
         LiaBnb::Unsat => Ok(CheckResult::Unsat),
-        LiaBnb::Unknown => Ok(CheckResult::Unknown(UnknownReason {
-            kind: UnknownKind::Incomplete,
-            detail: format!("QF_LIA branch-and-bound exceeded {MAX_LIA_BNB_NODES} nodes"),
-        })),
+        LiaBnb::Unknown(cause) => Ok(lia_bnb_undecided(cause, node_cap)),
         LiaBnb::Sat(values) => {
             if has_opaque_vars {
                 return Ok(CheckResult::Unknown(UnknownReason {
@@ -1548,7 +1580,16 @@ fn minimize_lp_relaxation_core(
 enum LiaBnb {
     Sat(Vec<Rational>),
     Unsat,
-    Unknown,
+    /// Undecided, carrying the *actual* stop that fired.
+    ///
+    /// This used to be a bare variant and every route out of it reported
+    /// "branch-and-bound exceeded N nodes". That message is what a diagnosis
+    /// lane reads, and it named the wrong lever: on the `QF_LIA`
+    /// `CAV_2009_benchmarks` residual the node budget was never touched — an
+    /// `i128` overflow inside `pivot_and_update` abandoned the tree after a few
+    /// hundred nodes. An `unknown` that misattributes its own cause is worse
+    /// than an opaque one, so the cause travels with the variant.
+    Unknown(&'static str),
 }
 
 /// Branch-and-bound over the simplex relaxation. `constraints` is used as a
@@ -1565,15 +1606,22 @@ fn lia_branch_and_bound(
     // shifted fractional points — grinding toward the node budget with each node's
     // simplex over an ever-deeper constraint stack. The wall-clock deadline keeps it
     // honoring `config.timeout` (the node budget alone is the deterministic backstop).
-    if *budget == 0 || past_deadline(deadline) {
-        return LiaBnb::Unknown;
+    if *budget == 0 {
+        return LiaBnb::Unknown("node budget exhausted");
+    }
+    if past_deadline(deadline) {
+        return LiaBnb::Unknown("wall-clock deadline passed");
     }
     *budget -= 1;
 
     let values = match simplex_feasible(constraints, nvars) {
         Some(SimplexOutcome::Sat(values)) => values,
         Some(SimplexOutcome::Unsat(_)) => return LiaBnb::Unsat,
-        None => return LiaBnb::Unknown,
+        None => {
+            return LiaBnb::Unknown(
+                "exact-rational simplex declined (i128 overflow or iteration backstop)",
+            );
+        }
     };
     let Some(branch_var) = (0..nvars).find(|&i| !values[i].is_integer()) else {
         return LiaBnb::Sat(values);
@@ -1586,7 +1634,7 @@ fn lia_branch_and_bound(
     // (a colossal fractional coordinate) makes them overflow `i128`. Degrade to a
     // graceful `unknown` rather than panic (never a wrong verdict).
     let (Some(neg_floor), Some(next)) = (floor.checked_neg(), floor.checked_add(1)) else {
-        return LiaBnb::Unknown;
+        return LiaBnb::Unknown("branch constant out of i128 range");
     };
 
     // Left branch: x_i <= floor, i.e. `1*x_i + (-floor) <= 0`.
@@ -1597,7 +1645,7 @@ fn lia_branch_and_bound(
     ));
     let left = lia_branch_and_bound(constraints, nvars, budget, deadline);
     constraints.pop();
-    if let LiaBnb::Sat(_) | LiaBnb::Unknown = left {
+    if let LiaBnb::Sat(_) | LiaBnb::Unknown(_) = left {
         return left;
     }
 
@@ -2785,7 +2833,7 @@ mod gomory_internal_tests {
         let mut budget = 300u64;
         let outcome = lia_branch_and_bound(&mut constraints, 2, &mut budget, None);
         assert!(
-            matches!(outcome, LiaBnb::Unknown),
+            matches!(outcome, LiaBnb::Unknown(_)),
             "B&B alone must stall to Unknown on x+y=1/2, got a decision"
         );
         assert_eq!(budget, 0, "B&B should have consumed its whole node budget");
@@ -2802,7 +2850,7 @@ mod gomory_internal_tests {
             outcome.map(|o| match o {
                 LiaBnb::Sat(_) => "Sat",
                 LiaBnb::Unsat => "Unsat",
-                LiaBnb::Unknown => "Unknown",
+                LiaBnb::Unknown(_) => "Unknown",
             })
         );
     }
