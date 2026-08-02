@@ -23,6 +23,8 @@
 
 use std::time::Duration;
 
+use axeyum_solver::{Value, solve_smtlib_get_value};
+
 use axeyum_ir::Sort;
 use axeyum_smtlib::{parse_script, parse_script_with_string_bound};
 use axeyum_solver::{CheckResult, SolverConfig, solve_smtlib};
@@ -216,4 +218,54 @@ fn escapes_and_wide_code_points_never_produce_a_wrong_verdict() {
         CheckResult::Unsat,
         "WRONG-UNSAT: `x = \"\\u{{1F600}}\"` is trivially satisfiable"
     );
+}
+
+/// `(get-value)` on a declared `String` renders a string, and a genuine
+/// bit-vector of the SAME width is left alone.
+///
+/// Measured defect 2026-08-02: `(get-value (x))` on `(declare-fun x () String)`
+/// returned `Bv { width: 100, value: 271378 }` instead of `"AB"` — ADR-0029
+/// packs a String into a bit-vector and nothing decoded it on the way out. A
+/// consumer cannot read that, and SMT-COMP's Model Validation track would
+/// reject it.
+///
+/// The negative half is the load-bearing one: decoding on WIDTH would render a
+/// real `(_ BitVec 100)` as a bogus string, turning a representation bug into a
+/// wrong model — strictly worse than an unreadable one.
+#[test]
+fn get_value_renders_a_declared_string_and_spares_a_same_width_bitvector() {
+    let cfg = SolverConfig::new().with_timeout(Duration::from_secs(30));
+
+    let values = solve_smtlib_get_value(
+        "(set-logic QF_SLIA)\n(declare-fun x () String)\n(assert (= x \"AB\"))\n(check-sat)\n(get-value (x))\n",
+        &cfg,
+    )
+    .expect("string get-value solves")
+    .expect("a model exists");
+    match &values[..] {
+        [Value::Seq(elems)] => {
+            let bytes: Vec<u128> = elems
+                .iter()
+                .map(|e| match e {
+                    Value::Bv { value, .. } => *value,
+                    other => panic!("a string element must be a code point, got {other:?}"),
+                })
+                .collect();
+            assert_eq!(bytes, vec![65, 66], "\"AB\" must render as its code points");
+        }
+        other => panic!("a declared String must render as a Seq, got {other:?}"),
+    }
+
+    let values = solve_smtlib_get_value(
+        "(set-logic QF_BV)\n(declare-fun b () (_ BitVec 100))\n(assert (= b (_ bv271378 100)))\n(check-sat)\n(get-value (b))\n",
+        &cfg,
+    )
+    .expect("bitvector get-value solves")
+    .expect("a model exists");
+    match &values[..] {
+        [Value::Bv { width, value }] => {
+            assert_eq!((*width, *value), (100, 271378), "a genuine BV is untouched");
+        }
+        other => panic!("a same-width bit-vector must NOT be decoded, got {other:?}"),
+    }
 }

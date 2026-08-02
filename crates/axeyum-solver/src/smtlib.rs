@@ -2158,9 +2158,46 @@ pub fn solve_smtlib_get_value(
     for &term in &script.get_value_terms {
         let value = axeyum_ir::eval(&script.arena, term, &assignment)
             .map_err(|e| SolverError::Backend(format!("get-value evaluation failed: {e}")))?;
-        values.push(value);
+        values.push(render_string_value(&script, term, value));
     }
     Ok(Some(values))
+}
+
+/// Renders a declared `String`'s packed bit-vector value as a user-facing
+/// string, leaving every other value untouched.
+///
+/// ADR-0029 gives a declared `String` the IR sort `(_ BitVec string_total(m))`,
+/// so evaluation legitimately yields a `Bv` — and until this existed nothing
+/// turned it back, so `(get-value (x))` on `(declare-fun x () String)` handed a
+/// consumer `Bv { width: 100, value: 271378 }` instead of `"AB"`. That is not a
+/// lifted model, and the standing rule is that every `sat` must be checkable by
+/// evaluating the ORIGINAL term against the LIFTED model.
+///
+/// Only a term that IS one of the script's declared `String` symbols is
+/// rewritten — never any bit-vector that merely happens to share the width.
+/// `Script::declared_strings` exists precisely because the sort alone cannot
+/// distinguish them, and decoding on width would render a genuine
+/// `(_ BitVec 100)` as a bogus string: a wrong model, which is strictly worse
+/// than an unreadable one. A packing the decoder rejects as malformed is left
+/// as the raw `Bv` for the same reason.
+///
+/// The rendered shape matches [`seq_value`], so the packed route and the
+/// bounded-source witness route hand a consumer the same thing.
+fn render_string_value(script: &Script, term: TermId, value: Value) -> Value {
+    let Value::Bv { width, value: bits } = value else {
+        return value;
+    };
+    let TermNode::Symbol(symbol) = script.arena.node(term) else {
+        return Value::Bv { width, value: bits };
+    };
+    let symbol = *symbol;
+    if !script.declared_strings.iter().any(|&(s, _)| s == symbol) {
+        return Value::Bv { width, value: bits };
+    }
+    match axeyum_smtlib::decode_packed_string(width, bits) {
+        Some(bytes) => seq_value(&bytes.iter().map(|&b| u32::from(b)).collect::<Vec<_>>()),
+        None => Value::Bv { width, value: bits },
+    }
 }
 
 /// Evaluates active top-level `:named` assertions for an SMT-LIB
