@@ -66,12 +66,73 @@
 //! `auto::skolemize_top_existentials` so the two skolemizers cannot interfere,
 //! and each name is probed for freshness (see `fresh_name`) so the output stays
 //! deterministic without ever reusing a symbol.
+//!
+//! # The prenex cost, and the opt-in [`QuantifierLayout::Nested`] alternative
+//!
+//! Hoisting is not free: it destroys *trigger locality*. A controlled probe
+//! (2026-08-02) ran cvc5 with `--prenex-quant=norm` — precisely what this pass
+//! does unconditionally — over five of the undecided UF files and turned **5 of
+//! 5** unsat verdicts into unknown/timeout, while `--prenex-quant=none` kept all
+//! five. Attribution on the same five isolated *plain, shallow e-matching* as the
+//! closing mechanism (only `--no-e-matching` broke them; `--no-enum-inst`,
+//! `--no-cbqi`, `--no-miniscope-quant`, `--no-relational-triggers` and
+//! `--no-quant-alpha-equiv` all stayed unsat), closing in 16-268 ms with 5-332
+//! instantiations. The reason a flat prefix hurts is mechanical: e-matching must
+//! land ONE joint substitution over the whole variable tuple, instead of
+//! instantiating an outer quantifier and then re-triggering on the smaller inner
+//! quantifier with *its own* triggers.
+//!
+//! [`QuantifierLayout::Nested`] therefore keeps the nesting structure: NNF and
+//! Skolemization run exactly as before (same polarity rules, same bail-outs, same
+//! fresh-name discipline), but a universal-in-force quantifier is re-attached **in
+//! place** rather than collected for the front. It is opt-in behind
+//! `AXEYUM_NESTED_QUANT` and OFF by default, so the shipped route and every
+//! recorded baseline keep their meaning.
+//!
+//! Renaming still happens in nested layout even though in-place re-attachment
+//! does not strictly require it. It costs nothing and it keeps one invariant the
+//! downstream registration relies on: every binder symbol in the output is
+//! distinct, so an inner universal's body can never accidentally capture an
+//! enclosing binder of the same name.
 
 use std::collections::HashMap;
 
 use axeyum_ir::{Op, Sort, SymbolId, TermArena, TermId, TermNode};
 
 use crate::backend::SolverError;
+
+/// How [`skolemize_assertions_with_layout`] places the universals that survive
+/// NNF and Skolemization.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum QuantifierLayout {
+    /// Hoist every surviving universal into one flat prefix per assertion. The
+    /// shipped default.
+    Prenex,
+    /// Re-attach each surviving universal exactly where it occurred, keeping the
+    /// nesting structure for the instantiation driver (opt-in, slice 1).
+    Nested,
+}
+
+/// Whether the nested-quantifier representation is enabled for this process
+/// (`AXEYUM_NESTED_QUANT=1`). Default **off**: the prenexing path stays the
+/// shipped route so every recorded baseline keeps its meaning. Read once and
+/// cached, so a disabled flag costs one atomic load per call site.
+pub(crate) fn nested_quantifiers_enabled() -> bool {
+    static ENABLED: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+    *ENABLED.get_or_init(|| {
+        std::env::var_os("AXEYUM_NESTED_QUANT")
+            .is_some_and(|value| !value.is_empty() && value != "0")
+    })
+}
+
+/// The layout selected by the environment for this process.
+pub(crate) fn configured_layout() -> QuantifierLayout {
+    if nested_quantifiers_enabled() {
+        QuantifierLayout::Nested
+    } else {
+        QuantifierLayout::Prenex
+    }
+}
 
 /// Result of [`skolemize_assertions`].
 pub(crate) struct Skolemized {
@@ -93,14 +154,42 @@ pub(crate) struct Skolemized {
 ///
 /// Returns [`SolverError::Backend`] if declaring a symbol or rebuilding a term
 /// fails in the arena.
+#[allow(
+    dead_code,
+    reason = "the prenex entry point; dispatch now selects the layout explicitly, \
+              but this is the documented shorthand and the unit tests' anchor"
+)]
 pub(crate) fn skolemize_assertions(
     arena: &mut TermArena,
     assertions: &[TermId],
+) -> Result<Skolemized, SolverError> {
+    skolemize_assertions_with_layout(arena, assertions, QuantifierLayout::Prenex)
+}
+
+/// [`skolemize_assertions`] with an explicit universal placement.
+///
+/// [`QuantifierLayout::Prenex`] is byte-identical to [`skolemize_assertions`].
+/// [`QuantifierLayout::Nested`] performs the same NNF and the same Skolemization
+/// — every witness still depends on exactly the universals enclosing it, which is
+/// what makes Skolemization sound — but leaves each surviving universal where it
+/// was instead of hoisting it. The soundness contract is unchanged and identical
+/// for both layouts: equisatisfiable, so `unsat` transfers back and `sat` does
+/// not.
+///
+/// # Errors
+///
+/// Returns [`SolverError::Backend`] if declaring a symbol or rebuilding a term
+/// fails in the arena.
+pub(crate) fn skolemize_assertions_with_layout(
+    arena: &mut TermArena,
+    assertions: &[TermId],
+    layout: QuantifierLayout,
 ) -> Result<Skolemized, SolverError> {
     let mut state = SkolemState {
         next: 0,
         changed: false,
         bailed: false,
+        layout,
     };
     let mut out = Vec::with_capacity(assertions.len());
     for &assertion in assertions {
@@ -124,7 +213,9 @@ pub(crate) fn skolemize_assertions(
             continue;
         }
         // Re-attach the hoisted universals at the front, innermost last so the
-        // original nesting order is preserved.
+        // original nesting order is preserved. In `Nested` layout `universals` is
+        // empty by construction — every binder was already re-attached in place —
+        // so this loop is a no-op there.
         let mut wrapped = rewritten;
         for &symbol in universals.iter().rev() {
             wrapped = arena
@@ -143,6 +234,7 @@ struct SkolemState {
     next: u32,
     changed: bool,
     bailed: bool,
+    layout: QuantifierLayout,
 }
 
 impl SkolemState {
@@ -268,8 +360,8 @@ impl SkolemState {
         }
     }
 
-    /// Renames a universal-in-force variable, records it for hoisting, and drops
-    /// the quantifier node.
+    /// Renames a universal-in-force variable and either records it for hoisting
+    /// (dropping the quantifier node) or re-attaches it in place, per the layout.
     #[allow(clippy::too_many_arguments)]
     fn hoist_universal(
         &mut self,
@@ -290,12 +382,22 @@ impl SkolemState {
         let replacement = arena.var(renamed);
         let shadowed = subst.insert(symbol, replacement);
         enclosing.push(renamed);
-        hoisted.push(renamed);
+        if matches!(self.layout, QuantifierLayout::Prenex) {
+            hoisted.push(renamed);
+        }
         let rewritten = self.walk(arena, body, positive, enclosing, subst, hoisted);
         enclosing.pop();
         Self::restore(subst, symbol, shadowed);
         self.changed = true;
-        rewritten
+        match self.layout {
+            QuantifierLayout::Prenex => rewritten,
+            // Nested layout: put the binder back exactly where it was. The body
+            // has already been walked under `enclosing` containing `renamed`, so
+            // any Skolem function minted below it takes this variable as an
+            // argument -- the same dependency the prenex prefix would have
+            // recorded, which is what keeps the two layouts equisatisfiable.
+            QuantifierLayout::Nested => arena.forall(renamed, rewritten?).map_err(err),
+        }
     }
 
     /// A name of the form `<prefix><n>` that is not yet present in the arena.
@@ -679,6 +781,201 @@ mod tests {
         assert_ne!(
             out.assertions[0], out.assertions[1],
             "separate existentials must not share a witness"
+        );
+    }
+
+    // --- Nested layout (slice 1) -------------------------------------------
+
+    /// Collects the binder symbols of every `Forall` node, with its depth.
+    fn forall_depths(arena: &TermArena, term: TermId) -> Vec<(usize, SymbolId)> {
+        let mut out = Vec::new();
+        let mut stack = vec![(0usize, term)];
+        let mut seen = std::collections::HashSet::new();
+        while let Some((depth, current)) = stack.pop() {
+            if !seen.insert(current) {
+                continue;
+            }
+            if let TermNode::App { op, args } = arena.node(current) {
+                if let Op::Forall(symbol) = op {
+                    out.push((depth, *symbol));
+                }
+                for &arg in args {
+                    stack.push((depth + 1, arg));
+                }
+            }
+        }
+        out
+    }
+
+    #[test]
+    fn nested_layout_keeps_a_universal_under_a_connective_in_place() {
+        // The exact property the prenex layout destroys. `q ∧ (forall x. p(x))`
+        // must keep the `and` outermost, so the universal is a *nested* binder
+        // the driver can register with its own body-derived triggers instead of
+        // one flat prefix over the whole conjunction.
+        let mut arena = TermArena::new();
+        let x = arena.declare("x", Sort::Bool).unwrap();
+        let q = arena.declare("q", Sort::Bool).unwrap();
+        let body = arena.var(x);
+        let inner = arena.forall(x, body).unwrap();
+        let other = arena.var(q);
+        let assertion = arena.and(other, inner).unwrap();
+
+        let out =
+            skolemize_assertions_with_layout(&mut arena, &[assertion], QuantifierLayout::Nested)
+                .unwrap();
+
+        assert!(out.changed, "the binder is still renamed");
+        assert!(
+            matches!(
+                arena.node(out.assertions[0]),
+                TermNode::App {
+                    op: Op::BoolAnd,
+                    ..
+                }
+            ),
+            "nested layout must NOT hoist the universal above the `and`"
+        );
+        assert_eq!(quantifiers(&arena, out.assertions[0]), 1);
+        // ...and the prenex layout, on the same input, does hoist it.
+        let prenex = skolemize_assertions(&mut arena, &[assertion]).unwrap();
+        assert!(matches!(
+            arena.node(prenex.assertions[0]),
+            TermNode::App {
+                op: Op::Forall(_),
+                ..
+            }
+        ));
+    }
+
+    #[test]
+    fn nested_layout_keeps_a_universal_under_a_disjunction_nested() {
+        // `(forall x. p(x)) ∨ q` — the shape whose instances are NOT entailed,
+        // so the representation must keep it distinguishable from a top-level
+        // universal.
+        let mut arena = TermArena::new();
+        let x = arena.declare("x", Sort::Bool).unwrap();
+        let q = arena.declare("q", Sort::Bool).unwrap();
+        let body = arena.var(x);
+        let inner = arena.forall(x, body).unwrap();
+        let other = arena.var(q);
+        let assertion = arena.or(inner, other).unwrap();
+
+        let out =
+            skolemize_assertions_with_layout(&mut arena, &[assertion], QuantifierLayout::Nested)
+                .unwrap();
+
+        assert!(matches!(
+            arena.node(out.assertions[0]),
+            TermNode::App { op: Op::BoolOr, .. }
+        ));
+        let depths = forall_depths(&arena, out.assertions[0]);
+        assert_eq!(depths.len(), 1);
+        assert!(depths[0].0 > 0, "the universal must stay below the `or`");
+    }
+
+    #[test]
+    fn nested_layout_skolem_witness_still_depends_on_the_enclosing_universal() {
+        // SOUNDNESS: not hoisting must not change *which* universals a Skolem
+        // function ranges over. `forall u. exists e. (u = e)` still needs
+        // `e := sk(u)`; a constant witness here would be an unsound
+        // strengthening (it would assert one `e` works for every `u`).
+        let mut arena = TermArena::new();
+        let u = arena.declare("u", Sort::Int).unwrap();
+        let e = arena.declare("e", Sort::Int).unwrap();
+        let (uv, ev) = (arena.var(u), arena.var(e));
+        let body = arena.eq(uv, ev).unwrap();
+        let inner = arena.exists(e, body).unwrap();
+        let assertion = arena.forall(u, inner).unwrap();
+
+        let out =
+            skolemize_assertions_with_layout(&mut arena, &[assertion], QuantifierLayout::Nested)
+                .unwrap();
+
+        assert!(out.changed);
+        assert_eq!(quantifiers(&arena, out.assertions[0]), 1);
+        assert!(
+            has_skolem_application(&arena, out.assertions[0]),
+            "the witness must depend on the enclosing universal, hoisting or not"
+        );
+    }
+
+    #[test]
+    fn nested_layout_gives_two_reused_binders_distinct_symbols() {
+        // SOUNDNESS: `(forall x. A) ∨ (forall x. B)` must not conflate the two
+        // `x`s. In-place re-attachment does not need renaming for capture
+        // avoidance, but the driver registers each binder separately and must
+        // never see the same symbol twice.
+        let mut arena = TermArena::new();
+        let x = arena.declare("x", Sort::Bool).unwrap();
+        let body = arena.var(x);
+        let left = arena.forall(x, body).unwrap();
+        let right = arena.forall(x, body).unwrap();
+        let assertion = arena.or(left, right).unwrap();
+
+        let out =
+            skolemize_assertions_with_layout(&mut arena, &[assertion], QuantifierLayout::Nested)
+                .unwrap();
+
+        let depths = forall_depths(&arena, out.assertions[0]);
+        assert_eq!(depths.len(), 2);
+        assert_ne!(depths[0].1, depths[1].1, "binders must stay distinct");
+    }
+
+    #[test]
+    fn nested_layout_abandons_a_non_bool_mixing_position_exactly_as_prenex_does() {
+        // SOUNDNESS: the bail-out is a refusal to guess a witness. Changing the
+        // placement of surviving universals must not weaken it.
+        let mut arena = TermArena::new();
+        let x = arena.declare("x", Sort::Bool).unwrap();
+        let body = arena.var(x);
+        let condition = arena.exists(x, body).unwrap();
+        let one = arena.int_const(1);
+        let two = arena.int_const(2);
+        let chosen = arena.ite(condition, one, two).unwrap();
+        let assertion = arena.eq(chosen, one).unwrap();
+
+        let out =
+            skolemize_assertions_with_layout(&mut arena, &[assertion], QuantifierLayout::Nested)
+                .unwrap();
+
+        assert!(!out.changed);
+        assert_eq!(out.assertions[0], assertion);
+    }
+
+    #[test]
+    fn nested_layout_skolemizes_the_same_binders_as_prenex() {
+        // SOUNDNESS: layout must change only *placement*. The set of binders
+        // discharged to witnesses (existential in force) must be identical, so
+        // both layouts are equisatisfiable with the original.
+        let mut arena = TermArena::new();
+        let u = arena.declare("u", Sort::Int).unwrap();
+        let e = arena.declare("e", Sort::Int).unwrap();
+        let v = arena.declare("v", Sort::Int).unwrap();
+        let (uv, ev, vv) = (arena.var(u), arena.var(e), arena.var(v));
+        let inner_body = arena.eq(uv, ev).unwrap();
+        let exists = arena.exists(e, inner_body).unwrap();
+        let other = arena.eq(vv, uv).unwrap();
+        let all_v = arena.forall(v, other).unwrap();
+        let disjunction = arena.or(exists, all_v).unwrap();
+        let assertion = arena.forall(u, disjunction).unwrap();
+
+        let nested =
+            skolemize_assertions_with_layout(&mut arena, &[assertion], QuantifierLayout::Nested)
+                .unwrap();
+        let prenex = skolemize_assertions(&mut arena, &[assertion]).unwrap();
+
+        assert!(nested.changed && prenex.changed);
+        // Two universals in force (u and v), one existential discharged.
+        assert_eq!(quantifiers(&arena, nested.assertions[0]), 2);
+        assert_eq!(quantifiers(&arena, prenex.assertions[0]), 2);
+        assert!(has_skolem_application(&arena, nested.assertions[0]));
+        assert!(has_skolem_application(&arena, prenex.assertions[0]));
+        // ...but only the prenex form puts both binders in one flat prefix.
+        let nested_depths = forall_depths(&arena, nested.assertions[0]);
+        assert!(
+            nested_depths.iter().any(|&(depth, _)| depth > 1),
+            "nested layout must keep the `or`-side universal below the outer one"
         );
     }
 }

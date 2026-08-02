@@ -6627,7 +6627,14 @@ pub fn prove_unsat_by_ematching(
     // surviving universals to the front puts them where trigger instantiation can
     // see them. This is the largest measured gap in UF: 126 of the 159
     // declared-status files in the 300-file slice declined exactly here.
-    let skolemized = crate::quant_skolemize::skolemize_assertions(arena, assertions)?;
+    // `AXEYUM_NESTED_QUANT` (default off) swaps the flat prefix for the nesting-
+    // preserving layout, which keeps each surviving universal where it occurred
+    // so the instantiation driver can give it its own body-derived triggers.
+    let skolemized = crate::quant_skolemize::skolemize_assertions_with_layout(
+        arena,
+        assertions,
+        crate::quant_skolemize::configured_layout(),
+    )?;
     if !skolemized.changed {
         if std::env::var_os("AXEYUM_QPROBE").is_some() {
             eprintln!("QPROBE ematch skolemize-unchanged (residual before skolemize)");

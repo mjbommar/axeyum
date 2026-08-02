@@ -217,8 +217,183 @@ pub fn prove_quantified_unsat_via_egraph(
     // pays the cartesian price of the glued prefix. The split assertions are
     // the loop's trust anchor exactly as the skolemized assertions already
     // are: instance certificates bind to them syntactically.
+    if crate::quant_skolemize::nested_quantifiers_enabled() {
+        // Slice 2: the nesting-preserving layout needs a nesting-aware
+        // decomposition. `split_universal_conjunctions` only reaches conjuncts
+        // directly under one top-level prefix; `extract_nested_universals`
+        // descends the whole conjunctive skeleton and additionally *registers*
+        // the universals sitting in non-entailed (disjunctive) positions.
+        let extraction = extract_nested_universals(arena, assertions);
+        return prove_quantified_unsat_via_egraph_impl(
+            arena,
+            &extraction.assertions,
+            &extraction.nested,
+            config,
+            true,
+            true,
+            &mut stats,
+        );
+    }
     let split = split_universal_conjunctions(arena, assertions);
-    prove_quantified_unsat_via_egraph_impl(arena, &split, config, true, true, &mut stats)
+    prove_quantified_unsat_via_egraph_impl(arena, &split, &[], config, true, true, &mut stats)
+}
+
+/// One universal occurring at a position the assertion set does **not** entail
+/// standalone — under a disjunction, so `∀x⃗. body` is not itself a consequence.
+///
+/// It is registered in the driver (own binder prefix, own body, own triggers
+/// derived from that body) so matching state exists for it, but no instance of it
+/// is ever admitted to the ground set: `A ∨ (∀y. B(y))` does not entail `B(t)`.
+/// Turning a registration into asserted instances requires knowing the enclosing
+/// clause is otherwise false, which is the lazy-activation slice, not this one.
+#[derive(Debug, Clone)]
+struct NestedRegistration {
+    /// Synthesized `∀vars. body`, for identity and tracing only. Never asserted.
+    quantifier: TermId,
+    vars: Vec<SymbolId>,
+    body: TermId,
+}
+
+/// The nesting-aware decomposition of an assertion list.
+#[derive(Debug, Default)]
+struct UniversalExtraction {
+    /// Assertions that are logically **equivalent** to the input list: the
+    /// conjunctive skeleton is flattened and each universal chain is re-attached
+    /// over only the binders its body actually uses. These are the loop's trust
+    /// anchor exactly as the split assertions already are — instance certificates
+    /// bind to them syntactically.
+    assertions: Vec<TermId>,
+    /// Universals in non-entailed positions (see [`NestedRegistration`]).
+    nested: Vec<NestedRegistration>,
+}
+
+/// Decomposes each assertion along its **conjunctive** skeleton (top-level
+/// `forall` chains and `and` spines), emitting one assertion per leaf with a
+/// minimized binder prefix, and registering every universal found in a
+/// non-entailed position.
+///
+/// Only conjunctive descent is used, so every emitted assertion is entailed by
+/// (in fact equivalent to) the input:
+/// `∀x⃗.(A ∧ B) ⟺ (∀x⃗. A) ∧ (∀x⃗. B)`, and dropping a binder the body does not
+/// mention is vacuous. Any arena failure abandons that assertion's decomposition
+/// and keeps the original untouched.
+fn extract_nested_universals(arena: &mut TermArena, assertions: &[TermId]) -> UniversalExtraction {
+    let mut out = UniversalExtraction::default();
+    for &assertion in assertions {
+        let mut local = UniversalExtraction::default();
+        let mut prefix = Vec::new();
+        if extract_entailed(arena, assertion, &mut prefix, &mut local) {
+            out.assertions.append(&mut local.assertions);
+            out.nested.append(&mut local.nested);
+        } else {
+            out.assertions.push(assertion);
+        }
+    }
+    out
+}
+
+/// Conjunctive descent; returns `false` if the arena refused a rebuild, in which
+/// case the caller keeps the original assertion.
+fn extract_entailed(
+    arena: &mut TermArena,
+    term: TermId,
+    prefix: &mut Vec<SymbolId>,
+    out: &mut UniversalExtraction,
+) -> bool {
+    if let Some((var, body)) = as_forall(arena, term) {
+        prefix.push(var);
+        let ok = extract_entailed(arena, body, prefix, out);
+        prefix.pop();
+        return ok;
+    }
+    if let TermNode::App {
+        op: Op::BoolAnd,
+        args,
+    } = arena.node(term)
+    {
+        let args = args.clone();
+        return args
+            .into_iter()
+            .all(|arg| extract_entailed(arena, arg, prefix, out));
+    }
+    // A leaf of the conjunctive skeleton. Universals inside it (necessarily under
+    // a disjunction or another non-conjunctive connective) are registered, not
+    // asserted.
+    collect_nested_registrations(arena, term, &mut prefix.clone(), out);
+    let used = used_prefix(arena, term, prefix);
+    match wrap_foralls(arena, term, &used) {
+        Some(wrapped) => {
+            out.assertions.push(wrapped);
+            true
+        }
+        None => false,
+    }
+}
+
+/// Registers every universal reachable inside a non-conjunctive leaf.
+fn collect_nested_registrations(
+    arena: &mut TermArena,
+    term: TermId,
+    prefix: &mut Vec<SymbolId>,
+    out: &mut UniversalExtraction,
+) {
+    let node = arena.node(term).clone();
+    let TermNode::App { op, args } = node else {
+        return;
+    };
+    if matches!(op, Op::Forall(_)) {
+        let (inner_vars, inner_body) = peel_foralls(arena, term);
+        // The enclosing binders this body actually uses, then its own — the
+        // smallest prefix under which the body is closed with respect to the
+        // universals above it.
+        let mut vars = used_prefix(arena, inner_body, prefix);
+        vars.extend(inner_vars.iter().copied());
+        if let Some(quantifier) = wrap_foralls(arena, inner_body, &vars) {
+            out.nested.push(NestedRegistration {
+                quantifier,
+                vars,
+                body: inner_body,
+            });
+        }
+        // Keep descending: a universal may nest further universals, and those
+        // see this chain's binders too.
+        let depth = prefix.len();
+        prefix.extend(inner_vars);
+        collect_nested_registrations(arena, inner_body, prefix, out);
+        prefix.truncate(depth);
+        return;
+    }
+    for arg in args {
+        collect_nested_registrations(arena, arg, prefix, out);
+    }
+}
+
+/// The members of `prefix` that occur free in `term`, in prefix order.
+fn used_prefix(arena: &TermArena, term: TermId, prefix: &[SymbolId]) -> Vec<SymbolId> {
+    if prefix.is_empty() {
+        return Vec::new();
+    }
+    let index: HashMap<SymbolId, u32> = prefix
+        .iter()
+        .enumerate()
+        .map(|(position, &var)| (var, u32::try_from(position).unwrap_or(u32::MAX)))
+        .collect();
+    let mut used = HashSet::new();
+    collect_vars(arena, term, &index, &mut used);
+    prefix
+        .iter()
+        .copied()
+        .filter(|var| used.contains(var))
+        .collect()
+}
+
+/// Re-attaches `vars` over `body`, outermost first. `None` on an arena failure.
+fn wrap_foralls(arena: &mut TermArena, body: TermId, vars: &[SymbolId]) -> Option<TermId> {
+    let mut wrapped = body;
+    for &var in vars.iter().rev() {
+        wrapped = arena.forall(var, wrapped).ok()?;
+    }
+    Some(wrapped)
 }
 
 /// Applies the shrinking `forall`-over-`and` distribution to every top-level
@@ -425,11 +600,25 @@ fn quantifier_qf_refutation_check_impl(
     stats: &mut QuantifierLoopStats,
     cache: &mut QuantifierTermCache,
 ) -> Result<CheckResult, SolverError> {
-    let full = quantifier_qf_check(arena, ground, config, deadline, stats)?;
+    let subset = cache.quantifier_free_subset(arena, ground);
+    let full = match quantifier_qf_check(arena, ground, config, deadline, stats) {
+        Ok(result) => result,
+        // Some routes *reject* a quantified conjunct outright rather than
+        // declining it, and that must not abort the loop: `unknown` is a first
+        // class result here and the quantifier-free subset below is still a
+        // sound refutation attempt. Narrow on purpose — with no quantified
+        // conjunct there is no subset to retry, and the error propagates exactly
+        // as it always has.
+        Err(_) if subset.is_some() => CheckResult::Unknown(UnknownReason {
+            kind: UnknownKind::Incomplete,
+            detail: "ground check declined a quantified conjunct".to_owned(),
+        }),
+        Err(error) => return Err(error),
+    };
     if matches!(full, CheckResult::Unsat) {
         return Ok(full);
     }
-    let Some(subset) = cache.quantifier_free_subset(arena, ground) else {
+    let Some(subset) = subset else {
         return Ok(full);
     };
     if deadline.is_some_and(|d| Instant::now() >= d) {
@@ -460,6 +649,7 @@ fn fractional_deadline(deadline: Option<Instant>, divisor: u32) -> Option<Instan
 fn prove_quantified_unsat_via_egraph_impl(
     arena: &mut TermArena,
     assertions: &[TermId],
+    nested: &[NestedRegistration],
     config: &SolverConfig,
     enable_online_clauses: bool,
     enable_candidate_equalities: bool,
@@ -471,7 +661,26 @@ fn prove_quantified_unsat_via_egraph_impl(
     let trace_start = Instant::now();
     let (mut ground, foralls) = partition_top_level_foralls(arena, assertions);
     if foralls.is_empty() {
-        return quantifier_qf_check(arena, &ground, config, deadline, stats);
+        if nested.is_empty() {
+            return quantifier_qf_check(arena, &ground, config, deadline, stats);
+        }
+        // A registration always comes from an assertion that still carries a
+        // quantifier, so the "ground" set here is not quantifier-free and its
+        // verdict is not the query's. Refute on the quantifier-free subset only:
+        // dropping a conjunct weakens, so `unsat` transfers back and nothing
+        // else does.
+        let mut cache = QuantifierTermCache::default();
+        let result =
+            quantifier_qf_refutation_check(arena, &ground, config, deadline, stats, &mut cache)?;
+        return Ok(match result {
+            CheckResult::Unsat => CheckResult::Unsat,
+            _ => CheckResult::Unknown(UnknownReason {
+                kind: UnknownKind::Incomplete,
+                detail: "e-matching: no universal is asserted; the nested \
+                         quantifiers present are registered, not instantiated"
+                    .to_owned(),
+            }),
+        });
     }
 
     if try_closed_universal_refutations(arena, &foralls, config, deadline)? {
@@ -487,7 +696,32 @@ fn prove_quantified_unsat_via_egraph_impl(
     // Share the wall clock and cap ground growth so explosion declines cleanly.
     let mut seen: HashSet<TermId> = ground.iter().copied().collect();
     let mut ground_derivations: HashMap<TermId, QuantifierGroundDerivation> = HashMap::new();
-    let mut matcher = IncrementalEmatchSession::new(arena, &foralls);
+    let mut matcher = IncrementalEmatchSession::new_with_nested(arena, &foralls, nested);
+    if !nested.is_empty() {
+        let detail: Vec<String> = matcher
+            .quantifiers
+            .iter()
+            .filter(|quantifier| !quantifier.active)
+            .map(|quantifier| {
+                format!(
+                    "vars={} triggers={}",
+                    quantifier.vars.len(),
+                    quantifier.pattern_indices.len()
+                )
+            })
+            .collect();
+        crate::auto::qtrace(
+            "nested-quant",
+            trace_start,
+            &format!(
+                "registered active={} nested={} patterns={} | {}",
+                foralls.len(),
+                nested.len(),
+                matcher.patterns.len(),
+                detail.join(" | ")
+            ),
+        );
+    }
     let mut quantifier_cache = QuantifierTermCache::default();
     let mut online_clauses = None;
     let mut online_attempted = !enable_online_clauses;
@@ -777,6 +1011,27 @@ fn prove_quantified_unsat_via_egraph_impl(
         {
             return Ok(CheckResult::Unsat);
         }
+    }
+    if !nested.is_empty() {
+        let detail: Vec<String> = matcher
+            .quantifiers
+            .iter()
+            .enumerate()
+            .filter(|(_, quantifier)| !quantifier.active)
+            .map(|(index, quantifier)| {
+                let (emitted, starved) = matcher.join_stats.get(index).copied().unwrap_or((0, 0));
+                format!(
+                    "vars={} triggers={} tuples={emitted} starved={starved}",
+                    quantifier.vars.len(),
+                    quantifier.pattern_indices.len(),
+                )
+            })
+            .collect();
+        crate::auto::qtrace(
+            "nested-quant",
+            trace_start,
+            &format!("nested-activity | {}", detail.join(" | ")),
+        );
     }
     finish_quantified_ground_check(
         arena,
@@ -1943,6 +2198,13 @@ struct CompiledUniversal {
     var_terms: Vec<TermId>,
     body: TermId,
     pattern_indices: Vec<usize>,
+    /// Whether instances of this universal may be **asserted**. `true` for every
+    /// universal that is itself an assertion (the historical case, and the only
+    /// case when the nested layout is off). `false` for a [`NestedRegistration`]:
+    /// its triggers are compiled and matched so the driver holds first-class
+    /// state for it, but `A ∨ (∀y. B(y))` does not entail `B(t)`, so nothing it
+    /// produces may enter the ground set or a certificate.
+    active: bool,
 }
 
 /// The source trigger a compiled [`Pattern`] came from, kept so term invention
@@ -2556,15 +2818,53 @@ struct IncrementalEmatchSession {
 }
 
 impl IncrementalEmatchSession {
+    #[allow(
+        dead_code,
+        reason = "the no-registration shorthand; the loop now always passes a \
+                  (usually empty) registration slice, the unit tests use this"
+    )]
     fn new(arena: &mut TermArena, foralls: &[TermId]) -> Self {
+        Self::new_with_nested(arena, foralls, &[])
+    }
+
+    /// [`Self::new`] plus first-class registration of universals that occur in
+    /// non-entailed positions. Each registration is compiled exactly like an
+    /// asserted universal — own binder prefix, own body, triggers selected from
+    /// that body — but carries `active: false`, so no instance of it is ever
+    /// admitted or certified. With an empty `nested` slice this is byte-identical
+    /// to the historical constructor.
+    #[allow(
+        clippy::too_many_lines,
+        reason = "one constructor: compile universals, intern patterns, build indices"
+    )]
+    fn new_with_nested(
+        arena: &mut TermArena,
+        foralls: &[TermId],
+        nested: &[NestedRegistration],
+    ) -> Self {
         let mut bridge = InstBridge::new();
         let mut patterns = Vec::new();
         let mut pattern_triggers: Vec<Option<PatternTrigger>> = Vec::new();
         let mut pattern_ids: HashMap<Pattern, usize> = HashMap::new();
-        let mut quantifiers = Vec::with_capacity(foralls.len());
+        let mut quantifiers = Vec::with_capacity(foralls.len() + nested.len());
 
-        for &forall_term in foralls {
-            let (vars, body) = peel_foralls(arena, forall_term);
+        let compiled: Vec<(TermId, Vec<SymbolId>, TermId, bool)> = foralls
+            .iter()
+            .map(|&forall_term| {
+                let (vars, body) = peel_foralls(arena, forall_term);
+                (forall_term, vars, body, true)
+            })
+            .chain(nested.iter().map(|registration| {
+                (
+                    registration.quantifier,
+                    registration.vars.clone(),
+                    registration.body,
+                    false,
+                )
+            }))
+            .collect();
+
+        for (assertion, vars, body, active) in compiled {
             let var_terms = vars.iter().map(|&var| arena.var(var)).collect();
             let var_index: HashMap<SymbolId, u32> = vars
                 .iter()
@@ -2595,11 +2895,12 @@ impl IncrementalEmatchSession {
                 }
             }
             quantifiers.push(CompiledUniversal {
-                assertion: forall_term,
+                assertion,
                 vars,
                 var_terms,
                 body,
                 pattern_indices,
+                active,
             });
         }
 
@@ -3036,6 +3337,10 @@ impl IncrementalEmatchSession {
                 continue;
             };
             let quantifier = &self.quantifiers[quantifier_index];
+            // Registrations are matched, never asserted (see `active`).
+            if !quantifier.active {
+                continue;
+            }
             for tuple in tuples {
                 let replacements: HashMap<TermId, TermId> = quantifier
                     .var_terms
@@ -3088,6 +3393,13 @@ impl IncrementalEmatchSession {
                 batches.push(LazyClauseBatch::default());
                 continue;
             };
+            // Registrations are matched, never asserted (see `active`). The
+            // tuples were still joined, and `join_stats` recorded them, so the
+            // trace shows the nested trigger firing.
+            if !quantifier.active {
+                batches.push(LazyClauseBatch::default());
+                continue;
+            }
             {
                 let mut batch = LazyClauseBatch::default();
                 for tuple in &tuples {
@@ -3588,6 +3900,11 @@ impl IncrementalEmatchSession {
             .iter()
             .enumerate()
             .map(|(index, quantifier)| {
+                // Registrations never receive direct instances either: an
+                // instance of one is not a consequence of the assertions.
+                if !quantifier.active {
+                    return true;
+                }
                 let direct = state
                     .direct_per_universal
                     .get(&quantifier.assertion)
@@ -4980,6 +5297,17 @@ fn collect_app_candidates(
     out: &mut Vec<(TermId, HashSet<u32>)>,
 ) {
     if let TermNode::App { op, args } = arena.node(term) {
+        // With the nesting-preserving layout a body can still contain binders.
+        // An application under one mentions variables this universal does not
+        // bind, so compiling it as a trigger would freeze those into ground
+        // constants that never match — a trigger that covers a variable on paper
+        // and matches nothing in practice, which starves the universal entirely.
+        // Each nested binder is registered separately with its own triggers.
+        if matches!(op, Op::Forall(_) | Op::Exists(_))
+            && crate::quant_skolemize::nested_quantifiers_enabled()
+        {
+            return;
+        }
         if matches!(op, Op::Apply(_)) {
             let mut seen = HashSet::new();
             collect_vars(arena, term, vars, &mut seen);
@@ -7350,6 +7678,7 @@ mod tests {
             prove_quantified_unsat_via_egraph_impl(
                 &mut arena,
                 &assertions,
+                &[],
                 &SolverConfig::default(),
                 true,
                 true,
@@ -7398,6 +7727,7 @@ mod tests {
         let baseline = prove_quantified_unsat_via_egraph_impl(
             &mut baseline_arena,
             &assertions,
+            &[],
             &SolverConfig::default(),
             true,
             false,
@@ -7420,6 +7750,7 @@ mod tests {
         let candidate = prove_quantified_unsat_via_egraph_impl(
             &mut candidate_arena,
             &assertions,
+            &[],
             &SolverConfig::default(),
             true,
             true,
@@ -8064,6 +8395,7 @@ mod tests {
         let fresh_result = prove_quantified_unsat_via_egraph_impl(
             &mut fresh_arena,
             &assertions,
+            &[],
             &SolverConfig::default(),
             false,
             false,
@@ -8077,6 +8409,7 @@ mod tests {
         let online_result = prove_quantified_unsat_via_egraph_impl(
             &mut online_arena,
             &assertions,
+            &[],
             &SolverConfig::default(),
             true,
             true,
@@ -9117,5 +9450,309 @@ mod tests {
         let body = arena.or(xv, p).unwrap();
         let forall = arena.forall(x, body).unwrap();
         assert!(instantiate_forall_via_egraph(&mut arena, &[p], forall).is_empty());
+    }
+
+    // --- Nested quantifier registration (slice 2) --------------------------
+
+    #[test]
+    fn conjunctive_nesting_is_extracted_into_independent_universals() {
+        // `∀x. (p(x) ∧ ∀y. q(x, y))` — the conjunctive skeleton is entailed all
+        // the way down, so both universals become assertions with their own
+        // (minimized) prefixes and therefore their own body-derived triggers.
+        // Nothing lands in the non-entailed registration bucket.
+        let mut arena = TermArena::new();
+        let p = arena.declare_fun("p", &[Sort::Int], Sort::Bool).unwrap();
+        let q = arena
+            .declare_fun("q", &[Sort::Int, Sort::Int], Sort::Bool)
+            .unwrap();
+        let x = arena.declare("x", Sort::Int).unwrap();
+        let y = arena.declare("y", Sort::Int).unwrap();
+        let (xv, yv) = (arena.var(x), arena.var(y));
+        let px = arena.apply(p, &[xv]).unwrap();
+        let qxy = arena.apply(q, &[xv, yv]).unwrap();
+        let inner = arena.forall(y, qxy).unwrap();
+        let conjunction = arena.and(px, inner).unwrap();
+        let assertion = arena.forall(x, conjunction).unwrap();
+
+        let extraction = extract_nested_universals(&mut arena, &[assertion]);
+
+        assert!(
+            extraction.nested.is_empty(),
+            "a conjunctive position is entailed, so nothing is merely registered"
+        );
+        assert_eq!(extraction.assertions.len(), 2);
+        let prefixes: Vec<usize> = extraction
+            .assertions
+            .iter()
+            .map(|&term| peel_foralls(&arena, term).0.len())
+            .collect();
+        assert_eq!(
+            prefixes,
+            vec![1, 2],
+            "`p(x)` keeps one binder; `q(x, y)` gets both -- neither is glued to \
+             the other's variables"
+        );
+    }
+
+    #[test]
+    fn a_universal_under_a_disjunction_is_registered_but_not_asserted() {
+        // `∀x. (p(x) ∨ ∀y. q(x, y))` — `∀x∀y. q(x, y)` is NOT a consequence, so
+        // the inner universal must land in the registration bucket, keeping its
+        // own binder prefix and its own body.
+        let mut arena = TermArena::new();
+        let p = arena.declare_fun("p", &[Sort::Int], Sort::Bool).unwrap();
+        let q = arena
+            .declare_fun("q", &[Sort::Int, Sort::Int], Sort::Bool)
+            .unwrap();
+        let x = arena.declare("x", Sort::Int).unwrap();
+        let y = arena.declare("y", Sort::Int).unwrap();
+        let (xv, yv) = (arena.var(x), arena.var(y));
+        let px = arena.apply(p, &[xv]).unwrap();
+        let qxy = arena.apply(q, &[xv, yv]).unwrap();
+        let inner = arena.forall(y, qxy).unwrap();
+        let disjunction = arena.or(px, inner).unwrap();
+        let assertion = arena.forall(x, disjunction).unwrap();
+
+        let extraction = extract_nested_universals(&mut arena, &[assertion]);
+
+        assert_eq!(extraction.assertions, vec![assertion]);
+        assert_eq!(extraction.nested.len(), 1);
+        assert_eq!(extraction.nested[0].vars, vec![x, y]);
+        assert_eq!(extraction.nested[0].body, qxy);
+
+        // The registration is first class in the driver: it is compiled with a
+        // trigger taken from `q(x, y)` -- its own body -- not from the
+        // disjunction it sits in.
+        let session =
+            IncrementalEmatchSession::new_with_nested(&mut arena, &[assertion], &extraction.nested);
+        let registered = session
+            .quantifiers
+            .iter()
+            .find(|quantifier| !quantifier.active)
+            .expect("the nested universal is registered");
+        assert_eq!(registered.body, qxy);
+        assert_eq!(
+            registered.pattern_indices.len(),
+            1,
+            "one trigger, `q(x, y)`, covering both of its variables"
+        );
+    }
+
+    #[test]
+    fn a_registered_universal_matches_but_produces_no_instance() {
+        // The registration is *triggered* (its pattern joins a tuple over the
+        // ground terms) yet contributes nothing to the ground set, which is the
+        // exact soundness contract of slice 2.
+        let mut arena = TermArena::new();
+        let q_fun = arena
+            .declare_fun("q", &[Sort::Int, Sort::Int], Sort::Bool)
+            .unwrap();
+        let a_sym = arena.declare("a", Sort::Int).unwrap();
+        let b_sym = arena.declare("b", Sort::Int).unwrap();
+        let x_sym = arena.declare("x", Sort::Int).unwrap();
+        let y_sym = arena.declare("y", Sort::Int).unwrap();
+        let (av, bv, xv, yv) = (
+            arena.var(a_sym),
+            arena.var(b_sym),
+            arena.var(x_sym),
+            arena.var(y_sym),
+        );
+        let qxy = arena.apply(q_fun, &[xv, yv]).unwrap();
+        let qab = arena.apply(q_fun, &[av, bv]).unwrap();
+        let registration = NestedRegistration {
+            quantifier: {
+                let inner = arena.forall(y_sym, qxy).unwrap();
+                arena.forall(x_sym, inner).unwrap()
+            },
+            vars: vec![x_sym, y_sym],
+            body: qxy,
+        };
+        let ground = vec![qab];
+
+        let mut session =
+            IncrementalEmatchSession::new_with_nested(&mut arena, &[], &[registration]);
+        session.extend_ground(&arena, &ground);
+        let tuples = session.match_witness_tuples(None);
+
+        assert_eq!(tuples.len(), 1);
+        assert_eq!(
+            tuples[0].as_deref(),
+            Some([vec![av, bv]].as_slice()),
+            "the registration's own trigger fires on the ground application"
+        );
+        let batches = session.lazy_clause_batches(&mut arena, None);
+        assert_eq!(batches.len(), 1);
+        assert!(
+            batches[0].urgent.is_empty()
+                && batches[0].units.is_empty()
+                && batches[0].deferred.is_empty()
+                && batches[0].instance_certificates.is_empty(),
+            "a registration must never yield an instance or a certificate"
+        );
+    }
+
+    #[test]
+    fn registered_instances_must_not_refute_a_satisfiable_query() {
+        // SOUNDNESS-NEGATIVE. `f(a) = 1` together with `g = 1 ∨ ∀y. f(y) = 0` is
+        // satisfiable (take the left disjunct). Were the registration's instance
+        // `f(a) = 0` asserted, the ground set would be `unsat` -- so this returns
+        // anything BUT `unsat`.
+        let mut arena = TermArena::new();
+        let f = arena.declare_fun("f", &[Sort::Int], Sort::Int).unwrap();
+        let a = arena.declare("a", Sort::Int).unwrap();
+        let g = arena.declare("g", Sort::Int).unwrap();
+        let y = arena.declare("y", Sort::Int).unwrap();
+        let (av, gv, yv) = (arena.var(a), arena.var(g), arena.var(y));
+        let zero = arena.int_const(0);
+        let one = arena.int_const(1);
+        let fa = arena.apply(f, &[av]).unwrap();
+        let fa_is_one = arena.eq(fa, one).unwrap();
+        let fy = arena.apply(f, &[yv]).unwrap();
+        let fy_is_zero = arena.eq(fy, zero).unwrap();
+        let inner = arena.forall(y, fy_is_zero).unwrap();
+        let g_is_one = arena.eq(gv, one).unwrap();
+        let disjunction = arena.or(g_is_one, inner).unwrap();
+        let assertions = vec![fa_is_one, disjunction];
+
+        let extraction = extract_nested_universals(&mut arena, &assertions);
+        assert_eq!(
+            extraction.nested.len(),
+            1,
+            "the disjunct universal is registered, never asserted"
+        );
+
+        let mut stats = QuantifierLoopStats::default();
+        let result = prove_quantified_unsat_via_egraph_impl(
+            &mut arena,
+            &extraction.assertions,
+            &extraction.nested,
+            &SolverConfig::default(),
+            true,
+            true,
+            &mut stats,
+        )
+        .unwrap();
+
+        assert!(
+            !matches!(result, CheckResult::Unsat),
+            "a registration's instances are not consequences; refuting here would \
+             be a wrong `unsat`, got {result:?}"
+        );
+    }
+
+    #[test]
+    fn extraction_keeps_a_genuine_top_level_refutation() {
+        // The decomposition must not lose reach: `f(a) = 1 ∧ ∀y. f(y) = 0` is
+        // still refuted after extraction (the universal is in a conjunctive,
+        // hence entailed, position).
+        let mut arena = TermArena::new();
+        let f = arena.declare_fun("f", &[Sort::Int], Sort::Int).unwrap();
+        let a = arena.declare("a", Sort::Int).unwrap();
+        let y = arena.declare("y", Sort::Int).unwrap();
+        let (av, yv) = (arena.var(a), arena.var(y));
+        let zero = arena.int_const(0);
+        let one = arena.int_const(1);
+        let fa = arena.apply(f, &[av]).unwrap();
+        let fa_is_one = arena.eq(fa, one).unwrap();
+        let fy = arena.apply(f, &[yv]).unwrap();
+        let fy_is_zero = arena.eq(fy, zero).unwrap();
+        let universal = arena.forall(y, fy_is_zero).unwrap();
+        let conjunction = arena.and(fa_is_one, universal).unwrap();
+
+        let extraction = extract_nested_universals(&mut arena, &[conjunction]);
+        assert!(extraction.nested.is_empty());
+
+        let mut stats = QuantifierLoopStats::default();
+        let result = prove_quantified_unsat_via_egraph_impl(
+            &mut arena,
+            &extraction.assertions,
+            &extraction.nested,
+            &SolverConfig::default(),
+            true,
+            true,
+            &mut stats,
+        )
+        .unwrap();
+
+        assert!(matches!(result, CheckResult::Unsat), "got {result:?}");
+    }
+
+    #[test]
+    fn nested_layout_and_registration_compose_without_refuting_a_satisfiable_query() {
+        // SOUNDNESS-NEGATIVE, slice 1 + slice 2 together.
+        //
+        //   p(a),  ¬q(a, c),  ∀x. (p(x) ∨ ∃z. ∀y. r(x, z, y) ∧ q(x, y))
+        //
+        // is satisfiable: interpret `p` as true everywhere and the disjunction
+        // never needs its right side. The registered `∀y` is exactly the binder
+        // whose instance `q(a, c)` would contradict `¬q(a, c)`, so any leak from
+        // registration into the asserted ground set shows up here as a wrong
+        // `unsat`. It also exercises the layout's Skolem dependency: `z` becomes
+        // a function of `x`, under the preserved nesting.
+        let mut arena = TermArena::new();
+        let p_fun = arena.declare_fun("p", &[Sort::Int], Sort::Bool).unwrap();
+        let q_fun = arena
+            .declare_fun("q", &[Sort::Int, Sort::Int], Sort::Bool)
+            .unwrap();
+        let r_fun = arena
+            .declare_fun("r", &[Sort::Int, Sort::Int, Sort::Int], Sort::Bool)
+            .unwrap();
+        let a_sym = arena.declare("a", Sort::Int).unwrap();
+        let c_sym = arena.declare("c", Sort::Int).unwrap();
+        let x_sym = arena.declare("x", Sort::Int).unwrap();
+        let y_sym = arena.declare("y", Sort::Int).unwrap();
+        let z_sym = arena.declare("z", Sort::Int).unwrap();
+        let (av, cv, xv, yv, zv) = (
+            arena.var(a_sym),
+            arena.var(c_sym),
+            arena.var(x_sym),
+            arena.var(y_sym),
+            arena.var(z_sym),
+        );
+        let pa = arena.apply(p_fun, &[av]).unwrap();
+        let qac = arena.apply(q_fun, &[av, cv]).unwrap();
+        let not_qac = arena.not(qac).unwrap();
+        let px = arena.apply(p_fun, &[xv]).unwrap();
+        let rxzy = arena.apply(r_fun, &[xv, zv, yv]).unwrap();
+        let qxy = arena.apply(q_fun, &[xv, yv]).unwrap();
+        let inner_body = arena.and(rxzy, qxy).unwrap();
+        let all_y = arena.forall(y_sym, inner_body).unwrap();
+        let some_z = arena.exists(z_sym, all_y).unwrap();
+        let disjunction = arena.or(px, some_z).unwrap();
+        let all_x = arena.forall(x_sym, disjunction).unwrap();
+
+        let skolemized = crate::quant_skolemize::skolemize_assertions_with_layout(
+            &mut arena,
+            &[all_x],
+            crate::quant_skolemize::QuantifierLayout::Nested,
+        )
+        .unwrap();
+        assert!(skolemized.changed);
+
+        let mut assertions = vec![pa, not_qac];
+        assertions.extend(skolemized.assertions.iter().copied());
+        let extraction = extract_nested_universals(&mut arena, &assertions);
+        assert_eq!(
+            extraction.nested.len(),
+            1,
+            "the `∀y` under the disjunction is registered, not asserted"
+        );
+
+        let mut stats = QuantifierLoopStats::default();
+        let result = prove_quantified_unsat_via_egraph_impl(
+            &mut arena,
+            &extraction.assertions,
+            &extraction.nested,
+            &SolverConfig::default(),
+            true,
+            true,
+            &mut stats,
+        )
+        .unwrap();
+
+        assert!(
+            !matches!(result, CheckResult::Unsat),
+            "the query is satisfiable; got {result:?}"
+        );
     }
 }
