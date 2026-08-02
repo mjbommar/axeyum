@@ -22,6 +22,13 @@ use std::time::Duration;
 
 use axeyum_solver::{CheckResult, SolverConfig, solve_smtlib};
 
+/// Extra wall clock the watchdog allows past the configured timeout, so the
+/// solver's own soft stop always wins the race when it can see the deadline.
+const WATCHDOG_GRACE: Duration = Duration::from_secs(1);
+/// Worker stack, sized like `axeyum-bench`'s pool: a deeply-nested input must
+/// not turn a timeout into a stack-overflow abort (`deep_nesting_no_abort`).
+const WORKER_STACK_BYTES: usize = 512 * 1024 * 1024;
+
 fn main() -> ExitCode {
     let mut args = std::env::args().skip(1);
     let mut path: Option<String> = None;
@@ -86,17 +93,62 @@ fn main() -> ExitCode {
         config = config.with_cnf_inprocessing(true).with_cnf_vivify(true);
     }
 
-    // A parse or solver error is reported as `unknown` — never a wrong verdict,
-    // and never a crash that the harness would read as an abort.
-    let verdict = match solve_smtlib(&input, &config) {
-        Ok(outcome) => match outcome.result {
-            CheckResult::Sat(_) => "sat",
-            CheckResult::Unsat => "unsat",
-            CheckResult::Unknown(_) => "unknown",
-        },
+    // The configured timeout is a SOFT stop: the deadline is polled inside the
+    // solve, but NOT during SMT-LIB ingest (parsing `stp/testcase15.stp.smt2`,
+    // 58 MB, alone takes ~54 s). With only the soft stop, the harness's external
+    // `timeout` killed the process mid-parse and no verdict was ever printed —
+    // an abort, which is strictly worse than the first-class `unknown` a
+    // resource-exhausted solver owes its caller.
+    //
+    // So run the whole pipeline — ingest included — on a worker thread and let
+    // the main thread enforce the wall clock. The grace period keeps the normal
+    // path byte-identical: when the internal soft stop fires (it returns at
+    // ~`timeout_ms`), it always wins the race, and this watchdog only speaks for
+    // the stages the soft stop cannot see.
+    //
+    // The worker gets an explicit large stack for the same reason
+    // `axeyum-bench`'s pool does: a deeply-nested input must not turn a timeout
+    // into a stack-overflow abort (see `deep_nesting_no_abort`), and a spawned
+    // thread's default stack is far smaller than the main thread's.
+    let solve = move || -> &'static str {
+        // A parse or solver error is reported as `unknown` — never a wrong
+        // verdict, and never a crash that the harness would read as an abort.
+        match solve_smtlib(&input, &config) {
+            Ok(outcome) => match outcome.result {
+                CheckResult::Sat(_) => "sat",
+                CheckResult::Unsat => "unsat",
+                CheckResult::Unknown(_) => "unknown",
+            },
+            Err(_) => "unknown",
+        }
+    };
+
+    let Some(ms) = timeout_ms else {
+        // No wall clock configured: nothing to enforce, so stay on the main
+        // thread (its stack is the largest one available).
+        println!("{}", solve());
+        return ExitCode::SUCCESS;
+    };
+
+    let (tx, rx) = std::sync::mpsc::channel();
+    let worker = std::thread::Builder::new()
+        .stack_size(WORKER_STACK_BYTES)
+        .spawn(move || {
+            // A closed channel means the watchdog already answered; drop quietly.
+            let _ = tx.send(solve());
+        });
+    let verdict = match worker {
+        Ok(_) => rx
+            .recv_timeout(Duration::from_millis(ms) + WATCHDOG_GRACE)
+            .unwrap_or("unknown"),
+        // Could not spawn a worker: a resource failure, which is `unknown` —
+        // never a guess and never a crash.
         Err(_) => "unknown",
     };
 
     println!("{verdict}");
-    ExitCode::SUCCESS
+    // The worker may still be inside ingest; the verdict is already printed and
+    // correct, so exit rather than block on a thread that has no deadline.
+    std::io::Write::flush(&mut std::io::stdout()).ok();
+    std::process::exit(0);
 }
