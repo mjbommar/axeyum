@@ -23,7 +23,7 @@
 
 use std::time::Duration;
 
-use axeyum_solver::{Value, solve_smtlib_get_value};
+use axeyum_solver::{Value, solve_smtlib_get_model, solve_smtlib_get_value};
 
 use axeyum_ir::Sort;
 use axeyum_smtlib::{parse_script, parse_script_with_string_bound};
@@ -267,5 +267,41 @@ fn get_value_renders_a_declared_string_and_spares_a_same_width_bitvector() {
             assert_eq!((*width, *value), (100, 271378), "a genuine BV is untouched");
         }
         other => panic!("a same-width bit-vector must NOT be decoded, got {other:?}"),
+    }
+}
+
+/// `(get-model)` renders a declared `String` as a string too, not just
+/// `(get-value)`.
+///
+/// The two are separate export paths, and fixing one first did NOT fix the
+/// other — a distinction that cost a wrong assumption when this defect was
+/// being tracked. Same rule on both: rewrite only what `declared_strings`
+/// lists, so a genuine bit-vector of the same width is untouched.
+#[test]
+fn get_model_renders_a_declared_string() {
+    let cfg = SolverConfig::new().with_timeout(Duration::from_secs(30));
+    let model = solve_smtlib_get_model(
+        "(set-logic QF_SLIA)\n(declare-fun x () String)\n(assert (= x \"AB\"))\n(check-sat)\n(get-model)\n",
+        &cfg,
+    )
+    .expect("string get-model solves")
+    .expect("a model exists");
+    let (_, value) = model
+        .constants
+        .iter()
+        .find(|(name, _)| name == "x")
+        .expect("x appears in the model");
+    match value {
+        Value::Seq(elements) => {
+            let bytes: Vec<u128> = elements
+                .iter()
+                .map(|e| match e {
+                    Value::Bv { value, .. } => *value,
+                    other => panic!("a string element must be a code point, got {other:?}"),
+                })
+                .collect();
+            assert_eq!(bytes, vec![65, 66], "\"AB\" must render as its code points");
+        }
+        other => panic!("a declared String must render as a Seq in get-model, got {other:?}"),
     }
 }

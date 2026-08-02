@@ -2236,6 +2236,26 @@ fn bind_readable_string_values(script: &Script, result: CheckResult) -> CheckRes
     CheckResult::Sat(model)
 }
 
+/// [`render_string_value`] keyed by SYMBOL rather than by term.
+///
+/// `(get-value)` evaluates arbitrary terms and so dispatches on the term; the
+/// `(get-model)` path already holds the symbol, and going through a term would
+/// mean fabricating one. Both share the same rule: rewrite only what
+/// [`Script::declared_strings`] lists, and leave a malformed packing as its raw
+/// bit-vector rather than guessing at it.
+fn render_string_value_for(script: &Script, symbol: SymbolId, value: Value) -> Value {
+    let Value::Bv { width, value: bits } = value else {
+        return value;
+    };
+    if !script.declared_strings.iter().any(|&(s, _)| s == symbol) {
+        return Value::Bv { width, value: bits };
+    }
+    match axeyum_smtlib::decode_packed_string(width, bits) {
+        Some(bytes) => seq_value(&bytes.iter().map(|&b| u32::from(b)).collect::<Vec<_>>()),
+        None => Value::Bv { width, value: bits },
+    }
+}
+
 /// Renders a declared `String`'s packed bit-vector value as a user-facing
 /// string, leaving every other value untouched.
 ///
@@ -2579,6 +2599,13 @@ fn solve_parsed_smtlib_model(
                     "get-model could not complete symbol `{name}` of sort {sort:?}"
                 )));
             };
+            // Same lift `(get-value)` applies: a declared `String` is packed into
+            // a bit-vector by ADR-0029, so without this `(get-model)` reports
+            // `Bv { width: 100, .. }` for a variable the user declared `String`.
+            // Keyed on `Script::declared_strings`, never on the width — a genuine
+            // `(_ BitVec 100)` must come back untouched, since decoding one would
+            // be a WRONG model rather than merely an unreadable one.
+            let value = render_string_value_for(&script, symbol, value);
             Ok((name.to_owned(), value))
         })
         .collect::<Result<Vec<_>, SolverError>>()?;
