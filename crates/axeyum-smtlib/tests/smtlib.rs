@@ -5851,3 +5851,41 @@ fn packed_string_values_round_trip_to_bytes() {
     // A length field above the layout's maximum is malformed, not a short string.
     assert_eq!(axeyum_smtlib::decode_packed_string(width, 13), None);
 }
+
+/// A declared `String` is recorded in the registry, so the export path can tell
+/// it apart from a genuine bit-vector of the same width.
+///
+/// Without this, `(get-value (x))` on a `String` returns the raw packing —
+/// measured 2026-08-02 as `Bv { width: 100, value: 271378 }` for `"AB"` — and
+/// the only alternative is decoding every 100-bit bit-vector, which would turn
+/// a representation bug into a wrong model.
+#[test]
+fn declared_string_symbols_are_recorded_for_model_export() {
+    let script = axeyum_smtlib::parse_script(
+        "(set-logic QF_SLIA)\n(declare-fun x () String)\n(declare-fun b () (_ BitVec 100))\n(assert (= x \"AB\"))\n(check-sat)\n",
+    )
+    .expect("parses");
+    let x = script.arena.find_symbol("x").expect("x is declared");
+    let b = script.arena.find_symbol("b").expect("b is declared");
+    let recorded: Vec<_> = script.declared_strings.iter().map(|&(s, _)| s).collect();
+    assert!(
+        recorded.contains(&x),
+        "the declared String must be recorded"
+    );
+    assert!(
+        !recorded.contains(&b),
+        "a genuine bit-vector of the same width must NOT be recorded"
+    );
+    // The recorded max length must be the one its packing was sized for, so the
+    // decoder reads the right number of content bytes.
+    let (_, max_len) = script
+        .declared_strings
+        .iter()
+        .find(|&&(s, _)| s == x)
+        .expect("x recorded");
+    assert_eq!(
+        axeyum_smtlib::packed_string_max_len(100),
+        Some(*max_len),
+        "the registry's max length must match the packed width"
+    );
+}

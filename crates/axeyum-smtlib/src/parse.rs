@@ -100,6 +100,20 @@ pub struct Script {
     /// encoding bound**; the solver front door must confirm it bound-independent
     /// (see [`Script::len_abstraction_map`]) or report `unknown` (P2.7 A.2).
     pub uses_bounded_strings: bool,
+    /// Every declared `String` symbol and the maximum length its packing was
+    /// sized for, in declaration order.
+    ///
+    /// ADR-0029 gives a declared `String` the IR sort `(_ BitVec string_total(m))`,
+    /// so by model-export time it is INDISTINGUISHABLE from a genuine bit-vector
+    /// of the same width — and `uses_bounded_strings` is script-wide, which
+    /// cannot tell you *which* symbol to decode. Without this registry
+    /// `(get-value (x))` on a `String` hands the consumer
+    /// `Bv { width: 100, value: 271378 }` instead of `"AB"`, and the only
+    /// alternative would be decoding every 100-bit bit-vector on the way out —
+    /// exactly the guess that would turn a representation bug into a wrong model.
+    ///
+    /// Pair with [`decode_packed_string`] to render a user-facing value.
+    pub declared_strings: Vec<(SymbolId, u32)>,
     /// The script contains `PyEx`'s exact length-preserving split/replace/rejoin
     /// spelling. Its source-level routes were historically reached first through
     /// the bounded-cap fallback and can be much cheaper than the admitted packed
@@ -6395,6 +6409,9 @@ fn declare_string_symbol(script: &mut Script, name: &str, max_len: u32) -> Resul
         .arena
         .declare(name, Sort::BitVec(string_total(max_len)))?;
     record_model_symbol(script, sym);
+    // The single choke point where a declared `String` acquires its packed
+    // bit-vector sort, so the registry is complete by construction.
+    script.declared_strings.push((sym, max_len));
     let v = script.arena.var(sym);
     let wf = string_wellformed_m(&mut script.arena, v, max_len)?;
     script.assertions.push(wf);
