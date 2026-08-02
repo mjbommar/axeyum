@@ -10241,8 +10241,64 @@ enum ExactRewriteTerm {
 
 const EXACT_REWRITE_DEPTH_CAP: u32 = 64;
 
+/// Node visits one **top-level** [`exact_rewrite_term`] normalization may spend.
+///
+/// The depth cap alone does not bound the work. Every `exact_rewrite_*_view`
+/// probe re-normalizes the *same* operand subtrees before the generic argument
+/// recursion normalizes them again, so a node reachable by `k` distinct probe
+/// paths is visited a multiple of `k` times *per level* — the cost is
+/// exponential in nesting depth even though the s-expression tree is finite and
+/// materialized. Generated concolic corpora hit this directly: the `PyEx`
+/// `ip_int_from_string` rows are ~1 MB of `str.indexof`/`str.substr` written
+/// with no `let` sharing and a doubling assertion structure, and normalizing
+/// their 17 top-level conjuncts took **22 s** — the single largest cost in the
+/// whole parse, paid twice (`build_word_skeleton` re-derives the same facts).
+///
+/// The budget is charged per visit and reset at each `depth == 0` entry, so
+/// every top-level normalization starts whole and no small input's behaviour
+/// changes. Exhaustion is fail-closed: the traversal degrades to
+/// [`ExactRewriteTerm::Opaque`] *and* raises [`exact_rewrite_work_exhausted`],
+/// which [`exact_rewrite_contradiction`] consumes so a **truncated** normal form
+/// can never be read as a proof. Declining a source fact only removes an
+/// optional `unsat` shortcut; it can never invent one.
+const EXACT_REWRITE_WORK_BUDGET: u32 = 250_000;
+
+thread_local! {
+    /// Node visits remaining in the current top-level normalization.
+    static EXACT_REWRITE_WORK: std::cell::Cell<u32> =
+        const { std::cell::Cell::new(EXACT_REWRITE_WORK_BUDGET) };
+    /// Whether the current top-level normalization ran out of budget.
+    static EXACT_REWRITE_EXHAUSTED: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
+}
+
+/// Whether the most recent top-level [`exact_rewrite_term`] call was truncated by
+/// [`EXACT_REWRITE_WORK_BUDGET`] (and so its normal form is not a proof).
+fn exact_rewrite_work_exhausted() -> bool {
+    EXACT_REWRITE_EXHAUSTED.with(std::cell::Cell::get)
+}
+
+/// Charges one node visit; `false` once the budget for this normalization is gone.
+fn exact_rewrite_charge() -> bool {
+    EXACT_REWRITE_WORK.with(|work| {
+        let remaining = work.get();
+        if remaining == 0 {
+            EXACT_REWRITE_EXHAUSTED.with(|flag| flag.set(true));
+            return false;
+        }
+        work.set(remaining - 1);
+        true
+    })
+}
+
 fn exact_rewrite_term(expression: &SExpr, depth: u32) -> ExactRewriteTerm {
-    if depth > EXACT_REWRITE_DEPTH_CAP {
+    if depth == 0 {
+        // A top-level entry starts with the whole budget and a clean flag, so the
+        // result of one conjunct never depends on how much work a previous one
+        // spent (determinism is a public API promise).
+        EXACT_REWRITE_WORK.with(|work| work.set(EXACT_REWRITE_WORK_BUDGET));
+        EXACT_REWRITE_EXHAUSTED.with(|flag| flag.set(false));
+    }
+    if depth > EXACT_REWRITE_DEPTH_CAP || !exact_rewrite_charge() {
         return ExactRewriteTerm::Opaque(expression.clone());
     }
     if let Some(value) = literal_pattern_cps(expression) {
@@ -14350,9 +14406,14 @@ fn replace_first_code_points(subject: &[u32], needle: &[u32], replacement: &[u32
 }
 
 fn exact_rewrite_contradiction(conjuncts: &[&SExpr]) -> bool {
-    conjuncts
-        .iter()
-        .any(|conjunct| exact_rewrite_term(conjunct, 0) == ExactRewriteTerm::Bool(false))
+    conjuncts.iter().any(|conjunct| {
+        // Order matters: `exact_rewrite_work_exhausted` reports on the call just
+        // made, and a truncated normal form is not a proof (see
+        // `EXACT_REWRITE_WORK_BUDGET`). `&&` short-circuits only when the term did
+        // not fold to `false`, in which case the flag is irrelevant anyway.
+        exact_rewrite_term(conjunct, 0) == ExactRewriteTerm::Bool(false)
+            && !exact_rewrite_work_exhausted()
+    })
 }
 
 const SOURCE_FP_MAX_NORMALIZED_NODES: usize = 512;
@@ -20020,11 +20081,12 @@ mod string_escape_tests {
         eval_pinned_word_semantics, exact_affine_equalities_equal, exact_affine_orderings_equal,
         exact_affine_zero_forces_nonpositive, exact_affine_zero_forces_positive,
         exact_from_int_empty_condition, exact_rewrite_app, exact_rewrite_concat_at,
-        exact_rewrite_concat_substr, exact_rewrite_equality, exact_rewrite_fixed_word_language,
-        exact_rewrite_prefix_substr_emptiness, exact_rewrite_replace_preserves_subject,
-        exact_rewrite_replace_singleton_equality, exact_rewrite_small_subject_indexof,
-        exact_rewrite_term, exact_rewrite_under_assignments, replace_first_code_points,
-        source_string_semantic_facts, substr_code_points,
+        exact_rewrite_concat_substr, exact_rewrite_contradiction, exact_rewrite_equality,
+        exact_rewrite_fixed_word_language, exact_rewrite_prefix_substr_emptiness,
+        exact_rewrite_replace_preserves_subject, exact_rewrite_replace_singleton_equality,
+        exact_rewrite_small_subject_indexof, exact_rewrite_term, exact_rewrite_under_assignments,
+        exact_rewrite_work_exhausted, replace_first_code_points, source_string_semantic_facts,
+        substr_code_points,
     };
     use crate::sexpr::{SExpr, read_all};
     use axeyum_ir::TermArena;
@@ -21584,6 +21646,51 @@ mod string_escape_tests {
             exact_rewrite_term(&consistent, 0),
             ExactRewriteTerm::Bool(false)
         );
+        // The work budget must not trip on the ordinary language above: a
+        // conflict found there is still reported.
+        assert!(!exact_rewrite_work_exhausted());
+        let conflict = read_all(r#"(and (= x "A") (= x "B"))"#)
+            .expect("read conflicting equality conjunction")
+            .pop()
+            .expect("one conflicting equality conjunction");
+        assert!(exact_rewrite_contradiction(&[&conflict]));
+    }
+
+    /// The exact-rewrite normalizer is bounded on deeply nested source terms, and a
+    /// truncated normal form is never read as an `unsat` proof.
+    ///
+    /// Every `exact_rewrite_*_view` probe re-normalizes the same operand subtrees
+    /// before the generic argument recursion normalizes them again, so the cost is
+    /// exponential in nesting depth on a tree that is only linear in text. Without
+    /// [`EXACT_REWRITE_WORK_BUDGET`] this exact shape does not terminate in any
+    /// practical time; the generated `PyEx` `ip_int_from_string` rows hit it for
+    /// real (22 s of a 24 s budget spent here, twice, before the query was even
+    /// encoded).
+    #[test]
+    fn exact_rewrite_bounds_deeply_nested_source_terms() {
+        // Linear in text (48 nested applications), exponential to normalize.
+        let mut text = String::from("x");
+        for _ in 0..48 {
+            text = format!(r#"(str.replace (str.substr {text} 0 1) "a" "b")"#);
+        }
+        let nested = read_all(&format!("(= {text} \"\")"))
+            .expect("read nested rewrite term")
+            .pop()
+            .expect("one nested rewrite term");
+
+        let started = std::time::Instant::now();
+        let normalized = exact_rewrite_term(&nested, 0);
+        let elapsed = started.elapsed();
+
+        // The budget stopped the traversal — the whole point of the guard.
+        assert!(exact_rewrite_work_exhausted(), "budget was not reached");
+        // Generous: the unbounded traversal runs for hours on this input, so any
+        // sane machine finishes the bounded one far inside this.
+        assert!(elapsed < std::time::Duration::from_secs(20), "{elapsed:?}");
+        // Fail-closed: a truncated normal form never becomes a source `unsat`,
+        // whatever it folded to.
+        assert!(!exact_rewrite_contradiction(&[&nested]));
+        let _ = normalized;
 
         let mut needles = vec![Vec::new()];
         for length in 1..=4 {
