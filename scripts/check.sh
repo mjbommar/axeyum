@@ -30,6 +30,11 @@ step clippy cargo clippy --workspace --all-targets --all-features -- -D warnings
 # measured frontier and reports a false REGRESSION (measured 2026-07-30).
 step test   cargo test --workspace --all-features -- --skip frontier_
 step frontier cargo test -p axeyum-solver --test progress_frontier --features full -- --test-threads=1
+# The gate-liveness ratchet: proves the gates above still RUN something. A suite
+# emptied by a new `#![cfg(feature = ...)]` exits 0 and prints "running 0 tests
+# ... ok"; the corpus `:status` sweep sat inert that way for 15 days. Compiles
+# but does not execute (`--list`), so it is cheap.
+step gate-liveness ./scripts/check-gate-liveness.sh
 export RUSTDOCFLAGS="-D warnings" # match CI's deny-warnings rustdoc
 step doc    cargo doc --workspace --all-features --no-deps
 step lean-u2-test-authority-tests python3 -m unittest scripts.tests.test_lean_u2_test_authority

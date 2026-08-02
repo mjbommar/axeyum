@@ -41,6 +41,14 @@ test:
 frontier:
     cargo test -p axeyum-solver --test progress_frontier --features full -- --test-threads=1
 
+# Proves the gates above still RUN something. `cargo test` exits 0 on an empty
+# test binary, so a suite a new `#![cfg(feature = ...)]` has emptied looks
+# exactly like a passing one -- the corpus `:status` sweep was inert that way for
+# 15 days. This pins a MINIMUM test count per suite; `--list` compiles without
+# executing, so it is cheap.
+gate-liveness:
+    ./scripts/check-gate-liveness.sh
+
 # Same as `test`, but under a hard 64 GiB memory cap (scripts/mem-run.sh) so a
 # runaway allocation (e.g. an unbounded NRA / wide bit-blast blowup) aborts the
 # test process instead of OOM-killing the host. Prefer this when touching solving
