@@ -126,6 +126,22 @@ const FLOOD_FINAL_SUBSET_MAX_GENERATION: u32 = 1;
 /// accumulated-ground budget. The public one-shot witness API remains complete.
 const MAX_JOINED_SUBSTITUTIONS_PER_ROUND: usize = MAX_GROUND_TERMS;
 
+/// Slice-3 lazy-discovery caps (`AXEYUM_NESTED_QUANT` only; all zero-effect
+/// with the flag off). Discovery adds *formulas*, not just terms, so it is
+/// budgeted separately from the ground ceiling: a registration whose join
+/// emits ten thousand tuples must not convert the whole budget into positive
+/// replacements before the ordinary schedules get a round.
+const MAX_POSITIVE_TUPLES_PER_ROUND: usize = 256;
+/// Total positive replacements admitted or promoted over one attempt.
+const MAX_POSITIVE_INSTANCES: usize = 4096;
+/// Registrations discovered inside admitted formulas, over one attempt.
+const MAX_DISCOVERED_REGISTRATIONS: usize = 256;
+/// Universals promoted from a positive replacement that kept binders.
+const MAX_PROMOTED_UNIVERSALS: usize = 64;
+/// Matcher rebuilds triggered by discovery. A rebuild re-compiles patterns and
+/// re-ingests the ground set, so the count is what bounds discovery's overhead.
+const MAX_DISCOVERY_REBUILDS: usize = 8;
+
 /// Deterministic retained-CDCL(T) admission caps (ADR-0119). Exceeding one
 /// disables only the accelerator; the established fresh-QF route remains live.
 const ONLINE_QUANTIFIER_LIMITS: OnlineQuantifierLimits = OnlineQuantifierLimits {
@@ -243,15 +259,50 @@ pub fn prove_quantified_unsat_via_egraph(
 ///
 /// It is registered in the driver (own binder prefix, own body, own triggers
 /// derived from that body) so matching state exists for it, but no instance of it
-/// is ever admitted to the ground set: `A ∨ (∀y. B(y))` does not entail `B(t)`.
-/// Turning a registration into asserted instances requires knowing the enclosing
-/// clause is otherwise false, which is the lazy-activation slice, not this one.
+/// is ever admitted to the ground set on its own: `A ∨ (∀y. B(y))` does not
+/// entail `B(t)`.
+///
+/// What **is** entailed — and what slice 3 admits — is the *enclosing formula
+/// with the universal replaced by its instance*: `A ∨ (∀y. B(y)) ⊨ A ∨ B(t)`,
+/// because the universal sits at a positive (monotone) position of an NNF
+/// formula. That replacement needs the enclosing formula and the exact position,
+/// which [`PositiveContext`] carries.
 #[derive(Debug, Clone)]
 struct NestedRegistration {
     /// Synthesized `∀vars. body`, for identity and tracing only. Never asserted.
     quantifier: TermId,
     vars: Vec<SymbolId>,
     body: TermId,
+    /// The positive-position replacement context, when the universal is reachable
+    /// from its owner's matrix through `and`/`or` arguments only. `None` when a
+    /// binder sits on the path (see [`PositiveContext`]) — such a registration
+    /// stays inert exactly as in slice 2.
+    context: Option<PositiveContext>,
+}
+
+/// Where a [`NestedRegistration`] sits inside a formula that is already trusted
+/// (an original assertion, or a ground term admitted with a checked derivation).
+///
+/// `owner` is `∀outer⃗. matrix`; `path` is the sequence of argument indices from
+/// `matrix` down to the registered `forall` node. **Every step is a `BoolAnd` or
+/// `BoolOr` argument** — never a `Forall` body, and never a negation, an
+/// implication, an `ite`, or a boolean `=`/`xor`. Two consequences, both
+/// load-bearing for soundness:
+///
+/// * `and`/`or` are monotone, so a path made only of them lands on a positive
+///   position of a formula that is asserted true, and replacing the subformula
+///   there by anything it implies keeps the owner's truth: `∀y.B(y) → B(t)`,
+///   hence `owner ⊨ owner[∀y.B(y) := B(t)]`. This does not depend on the input
+///   being in NNF — the whitelist is what establishes monotonicity, so a
+///   negation anywhere off the path is irrelevant.
+/// * Forbidding `Forall` steps is not conservatism, it blocks a real unsoundness:
+///   in `A ∨ ∀u.(B(u) ∨ ∀y.Q(u,y))` a positive replacement that also substituted
+///   `u := c` would yield `A ∨ ∀u.(B(u) ∨ Q(c,d))`, which the original does *not*
+///   entail (it only entails the `u := c` instance of that disjunct).
+#[derive(Debug, Clone)]
+struct PositiveContext {
+    owner: TermId,
+    path: Vec<u32>,
 }
 
 /// The nesting-aware decomposition of an assertion list.
@@ -319,23 +370,42 @@ fn extract_entailed(
     // A leaf of the conjunctive skeleton. Universals inside it (necessarily under
     // a disjunction or another non-conjunctive connective) are registered, not
     // asserted.
-    collect_nested_registrations(arena, term, &mut prefix.clone(), out);
     let used = used_prefix(arena, term, prefix);
-    match wrap_foralls(arena, term, &used) {
-        Some(wrapped) => {
-            out.assertions.push(wrapped);
-            true
-        }
-        None => false,
-    }
+    let Some(wrapped) = wrap_foralls(arena, term, &used) else {
+        return false;
+    };
+    // The owner of every registration below is the emitted leaf assertion, so
+    // the positive-replacement certificate names a formula the checker already
+    // trusts. `used` is exactly the prefix `wrapped` re-attaches, and `term` is
+    // its matrix — so paths are rooted at `term`.
+    collect_nested_registrations(
+        arena,
+        term,
+        &mut prefix.clone(),
+        wrapped,
+        &mut Vec::new(),
+        true,
+        &mut out.nested,
+    );
+    out.assertions.push(wrapped);
+    true
 }
 
 /// Registers every universal reachable inside a non-conjunctive leaf.
+///
+/// `path` accumulates the argument indices walked from `owner`'s matrix. While
+/// `positive` holds, every step so far has been an `and`/`or` argument, so the
+/// current position admits the positive replacement of [`PositiveContext`]; once
+/// a `forall` body is entered the flag clears permanently for that subtree and
+/// the deeper registrations are recorded without a context (inert, as in slice 2).
 fn collect_nested_registrations(
     arena: &mut TermArena,
     term: TermId,
     prefix: &mut Vec<SymbolId>,
-    out: &mut UniversalExtraction,
+    owner: TermId,
+    path: &mut Vec<u32>,
+    positive: bool,
+    out: &mut Vec<NestedRegistration>,
 ) {
     let node = arena.node(term).clone();
     let TermNode::App { op, args } = node else {
@@ -349,23 +419,411 @@ fn collect_nested_registrations(
         let mut vars = used_prefix(arena, inner_body, prefix);
         vars.extend(inner_vars.iter().copied());
         if let Some(quantifier) = wrap_foralls(arena, inner_body, &vars) {
-            out.nested.push(NestedRegistration {
+            out.push(NestedRegistration {
                 quantifier,
                 vars,
                 body: inner_body,
+                context: positive.then(|| PositiveContext {
+                    owner,
+                    path: path.clone(),
+                }),
             });
         }
         // Keep descending: a universal may nest further universals, and those
-        // see this chain's binders too.
+        // see this chain's binders too. The path would now cross this binder, so
+        // positivity is dropped (see `PositiveContext`).
         let depth = prefix.len();
         prefix.extend(inner_vars);
-        collect_nested_registrations(arena, inner_body, prefix, out);
+        collect_nested_registrations(arena, inner_body, prefix, owner, path, false, out);
         prefix.truncate(depth);
         return;
     }
-    for arg in args {
-        collect_nested_registrations(arena, arg, prefix, out);
+    let step_positive = positive && matches!(op, Op::BoolAnd | Op::BoolOr);
+    for (index, arg) in args.into_iter().enumerate() {
+        path.push(u32::try_from(index).unwrap_or(u32::MAX));
+        collect_nested_registrations(arena, arg, prefix, owner, path, step_positive, out);
+        path.pop();
     }
+}
+
+/// The trusted constructor **and** checker for **positive-position universal
+/// instantiation**, the one inference slice 3 adds.
+///
+/// Read the arguments as a certificate: from `owner` (already trusted), the
+/// universal at `owner`'s positive position `path` is replaced by its instance
+/// under `vars ↦ bindings`, and any `owner` binder named in `vars` is
+/// instantiated with the same substitution. The returned term is the conclusion.
+///
+/// It re-derives the conclusion from nothing but `(owner, path, vars, bindings)`
+/// and enforces every side condition, returning `None` on any violation:
+///
+/// * the path reaches the universal through `BoolAnd`/`BoolOr` arguments only —
+///   monotone connectives in NNF, so the position is positive, and no binder is
+///   crossed (crossing one is genuinely unsound, see [`PositiveContext`]);
+/// * every binder of the reached universal is instantiated (a partially
+///   instantiated universal leaves free symbols, which is *not* entailed);
+/// * every named variable is actually in scope, sorts match, and no binding
+///   mentions any bound symbol (no capture);
+/// * only `owner`'s own binders are substituted outside the replaced position —
+///   an inner binder's name occurring elsewhere in the matrix is a free symbol
+///   there and keeps its identity;
+/// * `owner` binders left uninstantiated stay universally quantified.
+///
+/// Producer and admission both call this; admission additionally requires
+/// `owner` to be in the trusted set and the recomputed conclusion to equal the
+/// recorded one.
+fn positive_instance_formula(
+    arena: &mut TermArena,
+    owner: TermId,
+    path: &[u32],
+    vars: &[SymbolId],
+    bindings: &[TermId],
+) -> Option<TermId> {
+    if vars.is_empty() || vars.len() != bindings.len() {
+        return None;
+    }
+    let (outer, matrix) = peel_foralls(arena, owner);
+    let mut node = matrix;
+    let mut spine: Vec<(Op, Vec<TermId>, usize)> = Vec::new();
+    for &step in path {
+        let TermNode::App { op, args } = arena.node(node).clone() else {
+            return None;
+        };
+        if !matches!(op, Op::BoolAnd | Op::BoolOr) {
+            return None;
+        }
+        let index = usize::try_from(step).ok()?;
+        let next = *args.get(index)?;
+        spine.push((op, args.to_vec(), index));
+        node = next;
+    }
+    let (inner, inner_body) = peel_foralls(arena, node);
+    if inner.is_empty() {
+        return None;
+    }
+    let outer_set: HashSet<SymbolId> = outer.iter().copied().collect();
+    let named: HashSet<SymbolId> = vars.iter().copied().collect();
+    if named.len() != vars.len() || !inner.iter().all(|var| named.contains(var)) {
+        return None;
+    }
+    let mut bound = outer_set.clone();
+    bound.extend(inner.iter().copied());
+    if !vars.iter().all(|var| bound.contains(var)) {
+        return None;
+    }
+    let mut full: HashMap<TermId, TermId> = HashMap::new();
+    let mut outer_only: HashMap<TermId, TermId> = HashMap::new();
+    for (&var, &binding) in vars.iter().zip(bindings) {
+        if arena.symbol(var).1 != arena.sort_of(binding)
+            || contains_any_symbol(arena, binding, &bound)
+        {
+            return None;
+        }
+        let var_term = arena.var(var);
+        full.insert(var_term, binding);
+        if outer_set.contains(&var) {
+            outer_only.insert(var_term, binding);
+        }
+    }
+    // `replace_subterms` is binder-blind: it rewrites a variable term wherever it
+    // occurs, including under a `forall` that re-binds the same symbol. The
+    // skolemizer renames apart so shadowing should never reach here, but a
+    // shadowed name would make the substitution capture, so refuse it outright
+    // rather than rely on an upstream invariant.
+    if binds_any_symbol(arena, inner_body, &named) {
+        return None;
+    }
+    let mut memo = HashMap::new();
+    let mut rebuilt = replace_subterms(arena, inner_body, &full, &mut memo).ok()?;
+    for (op, mut args, index) in spine.into_iter().rev() {
+        args[index] = rebuilt;
+        rebuilt = axeyum_rewrite::build_app(arena, op, &args).ok()?;
+    }
+    let outer_named: HashSet<SymbolId> = outer_set.intersection(&named).copied().collect();
+    if binds_any_symbol(arena, rebuilt, &outer_named) {
+        return None;
+    }
+    let mut memo = HashMap::new();
+    let instantiated = replace_subterms(arena, rebuilt, &outer_only, &mut memo).ok()?;
+    let remaining: Vec<SymbolId> = outer
+        .into_iter()
+        .filter(|var| !named.contains(var))
+        .collect();
+    let used = used_prefix(arena, instantiated, &remaining);
+    wrap_foralls(arena, instantiated, &used)
+}
+
+/// Slice-3 lazy discovery: the staging state that makes a nested registration
+/// productive, and that finds the quantifiers an *instantiation* exposes.
+///
+/// Two mechanisms, one trust discipline:
+///
+/// * **Positive replacement.** Every registration's matched tuple is turned into
+///   `owner[∀y⃗.B := B(t⃗)]` by [`positive_instance_formula`], which re-derives the
+///   conclusion from the certificate fields alone and refuses anything outside
+///   the entailed shape. A binder-free conclusion is admitted to the ground set;
+///   a conclusion that kept binders is *promoted* to a full universal.
+/// * **Lazy discovery.** Every formula that becomes trusted — an admitted
+///   instance, an admitted replacement, a promoted universal — is scanned for
+///   universals at its own positive positions, which become new registrations.
+///   This is the staging a flat prefix cannot express: the inner quantifier of
+///   `∀x.(¬P(x) ∨ ∀y.Q(x,y))` only becomes reachable *after* `x := a` is
+///   instantiated, and only then does `¬P(a) ∨ Q(a,b)` exist to be admitted.
+///
+/// `trusted` is the induction hypothesis: it starts as the assertion list and
+/// only ever gains formulas that were checked at the moment they were added, so
+/// every owner named by a replacement is a consequence of the input.
+#[derive(Debug, Default)]
+struct NestedDiscovery {
+    /// Formulas already scanned for positive-position universals.
+    scanned: HashSet<TermId>,
+    /// Formulas usable as a replacement `owner`. Grows only via checked steps.
+    trusted: HashSet<TermId>,
+    /// Conclusions already produced, so a re-fired trigger is not re-derived.
+    produced: HashSet<TermId>,
+    pending_registrations: Vec<NestedRegistration>,
+    positive_instances: usize,
+    discovered_registrations: usize,
+    promoted: usize,
+    admitted_ground: usize,
+    rebuilds: usize,
+    /// Replacements the checker refused. Non-zero is a defect signal, not a
+    /// soundness one — a refusal is always fail-closed.
+    rejected: usize,
+}
+
+impl NestedDiscovery {
+    fn new(assertions: &[TermId]) -> Self {
+        Self {
+            // The extraction already registered every assertion-level nested
+            // universal, so the assertions are trusted but not re-scanned.
+            scanned: assertions.iter().copied().collect(),
+            trusted: assertions.iter().copied().collect(),
+            ..Self::default()
+        }
+    }
+
+    fn is_trusted(
+        &self,
+        term: TermId,
+        retained: &HashMap<TermId, QuantifierGroundDerivation>,
+    ) -> bool {
+        // `retained` holds only terms whose derivation passed
+        // `check_quantifier_ground_derivation` at admission.
+        self.trusted.contains(&term) || retained.contains_key(&term)
+    }
+
+    /// Registers the universals sitting at positive positions of each trusted
+    /// formula not yet scanned. Returns how many registrations were added.
+    fn scan(
+        &mut self,
+        arena: &mut TermArena,
+        formulas: &[TermId],
+        retained: &HashMap<TermId, QuantifierGroundDerivation>,
+    ) -> usize {
+        let mut added = 0;
+        for &formula in formulas {
+            if self.discovered_registrations >= MAX_DISCOVERED_REGISTRATIONS {
+                break;
+            }
+            if !self.is_trusted(formula, retained) || !self.scanned.insert(formula) {
+                continue;
+            }
+            let (prefix, matrix) = peel_foralls(arena, formula);
+            let mut found = Vec::new();
+            collect_nested_registrations(
+                arena,
+                matrix,
+                &mut prefix.clone(),
+                formula,
+                &mut Vec::new(),
+                true,
+                &mut found,
+            );
+            for registration in found {
+                if registration.context.is_none()
+                    || self.discovered_registrations >= MAX_DISCOVERED_REGISTRATIONS
+                {
+                    continue;
+                }
+                self.discovered_registrations += 1;
+                added += 1;
+                self.pending_registrations.push(registration);
+            }
+        }
+        added
+    }
+
+    /// Turns every registration tuple the matcher produced this round into its
+    /// entailed positive replacement. Binder-free conclusions land in `ground`;
+    /// conclusions that kept binders are queued for promotion to universals.
+    /// Returns `(newly admitted ground formulas, newly promoted universals)`.
+    #[allow(
+        clippy::too_many_arguments,
+        reason = "one staging step over the loop's admission state"
+    )]
+    fn stage(
+        &mut self,
+        arena: &mut TermArena,
+        matcher: &mut IncrementalEmatchSession,
+        retained: &HashMap<TermId, QuantifierGroundDerivation>,
+        seen: &mut HashSet<TermId>,
+        ground: &mut Vec<TermId>,
+        generations: &mut TermGenerations,
+    ) -> (Vec<TermId>, Vec<TermId>) {
+        let pending = std::mem::take(&mut matcher.pending_positive);
+        let mut admitted = Vec::new();
+        let mut promoted = Vec::new();
+        for (index, tuple) in pending {
+            if self.positive_instances >= MAX_POSITIVE_INSTANCES {
+                break;
+            }
+            let Some(quantifier) = matcher.quantifiers.get(index) else {
+                continue;
+            };
+            let Some(context) = quantifier.context.clone() else {
+                continue;
+            };
+            let vars = quantifier.vars.clone();
+            if vars.len() != tuple.len() || !self.is_trusted(context.owner, retained) {
+                self.rejected += 1;
+                continue;
+            }
+            let Some(formula) =
+                positive_instance_formula(arena, context.owner, &context.path, &vars, &tuple)
+            else {
+                self.rejected += 1;
+                continue;
+            };
+            self.positive_instances += 1;
+            if !self.produced.insert(formula) {
+                continue;
+            }
+            // The conclusion is a checked consequence either way, so it is a
+            // legitimate owner for further replacements from here on.
+            self.trusted.insert(formula);
+            let generation = tuple
+                .iter()
+                .map(|&binding| generations.generation(binding))
+                .max()
+                .unwrap_or(0)
+                .saturating_add(1);
+            if peel_foralls(arena, formula).0.is_empty() {
+                if ground.len() < MAX_GROUND_TERMS && seen.insert(formula) {
+                    generations.record_admitted(arena, formula, generation);
+                    ground.push(formula);
+                    self.admitted_ground += 1;
+                    admitted.push(formula);
+                }
+            } else if self.promoted < MAX_PROMOTED_UNIVERSALS {
+                self.promoted += 1;
+                generations.record_admitted(arena, formula, generation);
+                promoted.push(formula);
+            }
+        }
+        (admitted, promoted)
+    }
+}
+
+/// What one [`nested_discovery_step`] contributed to the round.
+struct DiscoveryOutcome {
+    /// Ground formulas admitted by positive replacement this round.
+    admitted: Vec<TermId>,
+    /// Whether the matcher was rebuilt over a grown universal/registration set.
+    rebuilt: bool,
+}
+
+/// One lazy-discovery step: stage the registrations' tuples, scan everything
+/// newly trusted for further nested universals, and — when the compiled set
+/// actually grew — rebuild the matcher over it.
+///
+/// Rebuilding is the coarse but honest way to add a universal mid-attempt: the
+/// pattern set, the index, and the join plans are all derived from the compiled
+/// set at construction. `ground`, `seen`, `retained`, and the generation table
+/// all survive, and the fresh session re-ingests the ground set on its next
+/// round, so no admitted work is lost — only matching state is recomputed.
+#[allow(
+    clippy::too_many_arguments,
+    reason = "the discovery step reads and extends the loop's whole admission state"
+)]
+fn nested_discovery_step(
+    arena: &mut TermArena,
+    discovery: &mut NestedDiscovery,
+    matcher: &mut IncrementalEmatchSession,
+    assertions: &mut Vec<TermId>,
+    foralls: &mut Vec<TermId>,
+    nested: &mut Vec<NestedRegistration>,
+    admitted: &[TermId],
+    retained: &HashMap<TermId, QuantifierGroundDerivation>,
+    seen: &mut HashSet<TermId>,
+    ground: &mut Vec<TermId>,
+    generations: &mut TermGenerations,
+) -> DiscoveryOutcome {
+    let (staged, promoted) = discovery.stage(arena, matcher, retained, seen, ground, generations);
+    let mut found = discovery.scan(arena, admitted, retained);
+    found += discovery.scan(arena, &staged, retained);
+    // A promoted universal joins the trust anchor *before* it is scanned or
+    // compiled, so its own instances take the ordinary certificate route. Past
+    // the rebuild budget it is never compiled and is simply inert: it is a
+    // checked consequence, so its presence in the anchor is sound either way.
+    for &universal in &promoted {
+        assertions.push(universal);
+        foralls.push(universal);
+    }
+    found += discovery.scan(arena, &promoted, retained);
+    let grew = !discovery.pending_registrations.is_empty() || !promoted.is_empty();
+    let mut rebuilt = false;
+    if grew && discovery.rebuilds < MAX_DISCOVERY_REBUILDS {
+        nested.append(&mut discovery.pending_registrations);
+        *matcher = IncrementalEmatchSession::new_with_nested(arena, foralls, nested);
+        discovery.rebuilds += 1;
+        rebuilt = true;
+    }
+    if !staged.is_empty() || found > 0 || !promoted.is_empty() {
+        crate::auto::qtrace(
+            "nested-quant",
+            Instant::now(),
+            &format!(
+                "discovery staged={} promoted={} registered={found} rebuilds={} \
+                 totals: positive={} ground={} regs={} rejected={}",
+                staged.len(),
+                promoted.len(),
+                discovery.rebuilds,
+                discovery.positive_instances,
+                discovery.admitted_ground,
+                discovery.discovered_registrations,
+                discovery.rejected,
+            ),
+        );
+    }
+    DiscoveryOutcome {
+        admitted: staged,
+        rebuilt,
+    }
+}
+
+/// Whether any `forall`/`exists` inside `term` binds a symbol in `symbols` —
+/// i.e. whether substituting for that symbol would capture.
+fn binds_any_symbol(arena: &TermArena, term: TermId, symbols: &HashSet<SymbolId>) -> bool {
+    if symbols.is_empty() {
+        return false;
+    }
+    let mut seen = HashSet::new();
+    let mut stack = vec![term];
+    while let Some(term) = stack.pop() {
+        if !seen.insert(term) {
+            continue;
+        }
+        if let TermNode::App { op, args } = arena.node(term) {
+            if let Op::Forall(var) | Op::Exists(var) = op
+                && symbols.contains(var)
+            {
+                return true;
+            }
+            stack.extend(args.iter().copied());
+        }
+    }
+    false
 }
 
 /// The members of `prefix` that occur free in `term`, in prefix order.
@@ -659,7 +1117,13 @@ fn prove_quantified_unsat_via_egraph_impl(
         .timeout
         .and_then(|timeout| Instant::now().checked_add(timeout));
     let trace_start = Instant::now();
-    let (mut ground, foralls) = partition_top_level_foralls(arena, assertions);
+    // Slice 3 grows this list: a universal *promoted* from a positive-position
+    // replacement is a checked consequence of the input, so it joins the trust
+    // anchor and its instances take the ordinary certificate route unchanged.
+    // With discovery off (`AXEYUM_NESTED_QUANT` unset) nothing is ever appended
+    // and this is the input list verbatim.
+    let mut assertions: Vec<TermId> = assertions.to_vec();
+    let (mut ground, mut foralls) = partition_top_level_foralls(arena, &assertions);
     if foralls.is_empty() {
         if nested.is_empty() {
             return quantifier_qf_check(arena, &ground, config, deadline, stats);
@@ -696,7 +1160,15 @@ fn prove_quantified_unsat_via_egraph_impl(
     // Share the wall clock and cap ground growth so explosion declines cleanly.
     let mut seen: HashSet<TermId> = ground.iter().copied().collect();
     let mut ground_derivations: HashMap<TermId, QuantifierGroundDerivation> = HashMap::new();
-    let mut matcher = IncrementalEmatchSession::new_with_nested(arena, &foralls, nested);
+    // Slice 3 grows the registration set as instantiation exposes quantifiers.
+    let mut nested: Vec<NestedRegistration> = nested.to_vec();
+    // Discovery is exactly as live as registration is. A registration can only
+    // exist under the nested layout, and a substitution instance cannot *create*
+    // a `forall` that the assertion set did not already carry in a non-entailed
+    // position — so an empty registration set means there is nothing to discover,
+    // and the default (prenexed) path never allocates this at all.
+    let mut discovery = (!nested.is_empty()).then(|| NestedDiscovery::new(&assertions));
+    let mut matcher = IncrementalEmatchSession::new_with_nested(arena, &foralls, &nested);
     if !nested.is_empty() {
         let detail: Vec<String> = matcher
             .quantifiers
@@ -731,7 +1203,7 @@ fn prove_quantified_unsat_via_egraph_impl(
     // constant that first occurs under a binder is still a source-vocabulary
     // term, and its appearance inside an instance must not inflate that
     // instance's subterm generations.
-    let mut generations = TermGenerations::seed_sources(arena, assertions);
+    let mut generations = TermGenerations::seed_sources(arena, &assertions);
     let mut last_round_duration = std::time::Duration::ZERO;
     for round in 0..MAX_EXTENDED_INSTANTIATION_ROUNDS {
         let round_started = Instant::now();
@@ -754,7 +1226,7 @@ fn prove_quantified_unsat_via_egraph_impl(
         if ground.len() > MAX_GROUND_TERMS {
             if floodprobe_enabled() {
                 eprintln!("FLOODPROBE cap-hit round={round} ground={}", ground.len());
-                floodprobe_cap_census(arena, &matcher, &ground_derivations, assertions);
+                floodprobe_cap_census(arena, &matcher, &ground_derivations, &assertions);
             }
             if matches!(
                 quantifier_qf_refutation_check(
@@ -823,7 +1295,7 @@ fn prove_quantified_unsat_via_egraph_impl(
         let work_started = Instant::now();
         let mut admitted = admit_next_source_batch(
             arena,
-            assertions,
+            &assertions,
             &mut matcher,
             &mut seen,
             &mut ground,
@@ -836,10 +1308,38 @@ fn prove_quantified_unsat_via_egraph_impl(
             work_started,
             &format!("admit-batch round={round} ground={}", ground.len()),
         );
+        if let Some(discovery) = discovery.as_mut() {
+            let outcome = nested_discovery_step(
+                arena,
+                discovery,
+                &mut matcher,
+                &mut assertions,
+                &mut foralls,
+                &mut nested,
+                &admitted,
+                &ground_derivations,
+                &mut seen,
+                &mut ground,
+                &mut generations,
+            );
+            // Staged replacements are ordinary ground facts from here on: they
+            // feed the e-graph, the online session, and the interleaved checks
+            // exactly as matched instances do. A rebuild alone is progress too —
+            // the fresh triggers have not run yet, so the round must not be
+            // read as a fixpoint.
+            let rebuilt = outcome.rebuilt;
+            admitted.extend(outcome.admitted);
+            admitted.sort_by_key(|term| term.index());
+            admitted.dedup();
+            if admitted.is_empty() && rebuilt {
+                last_round_duration = work_started.elapsed();
+                continue;
+            }
+        }
         if admitted.is_empty() && candidate_equalities_enabled {
             match scoped_candidate_fixpoint_step(
                 arena,
-                assertions,
+                &assertions,
                 &mut ground,
                 config,
                 &mut matcher,
@@ -881,10 +1381,10 @@ fn prove_quantified_unsat_via_egraph_impl(
                 && deadline.is_none_or(|d| Instant::now() < d)
             {
                 let seeded =
-                    matcher.invent_starved_trigger_terms(arena, assertions, &mut invention);
+                    matcher.invent_starved_trigger_terms(arena, &assertions, &mut invention);
                 let direct = matcher.invent_starved_universal_instances(
                     arena,
-                    assertions,
+                    &assertions,
                     &mut invention,
                     &mut seen,
                     &mut ground,
@@ -951,14 +1451,14 @@ fn prove_quantified_unsat_via_egraph_impl(
                 }
                 if floodprobe_enabled() {
                     eprintln!("FLOODPROBE fixpoint round={round} ground={}", ground.len());
-                    floodprobe_cap_census(arena, &matcher, &ground_derivations, assertions);
+                    floodprobe_cap_census(arena, &matcher, &ground_derivations, &assertions);
                 }
                 break; // source, scoped-candidate, and invention fixpoint
             }
         }
         let online_outcome = online_clauses.as_mut().and_then(|session| {
             let outcome =
-                session.add_checked_batch(arena, assertions, &admitted, &ground_derivations);
+                session.add_checked_batch(arena, &assertions, &admitted, &ground_derivations);
             if outcome.is_some() {
                 stats.online_solves += 1;
                 stats.online_clauses = session.inserted_clauses;
@@ -2205,6 +2705,11 @@ struct CompiledUniversal {
     /// state for it, but `A ∨ (∀y. B(y))` does not entail `B(t)`, so nothing it
     /// produces may enter the ground set or a certificate.
     active: bool,
+    /// For a registration (`active == false`), where it sits inside its trusted
+    /// owner. Present exactly when the positive replacement `owner ⊨
+    /// owner[∀y.B := B(t)]` applies; the driver turns each matched tuple into
+    /// that replacement instead of the (unentailed) bare instance.
+    context: Option<PositiveContext>,
 }
 
 /// The source trigger a compiled [`Pattern`] came from, kept so term invention
@@ -2782,6 +3287,11 @@ enum MergeInvalidationMode {
 /// roots reached through transitive e-graph parent paths. Generated top-level
 /// terms retain exact-instance or checked-propagation derivations for later
 /// false-sibling explanations.
+/// `(assertion, binder prefix, body, admissible, positive-replacement context)`
+/// — the per-universal input [`IncrementalEmatchSession::new_with_nested`]
+/// compiles, before triggers are selected.
+type CompiledUniversalSpec = (TermId, Vec<SymbolId>, TermId, bool, Option<PositiveContext>);
+
 struct IncrementalEmatchSession {
     bridge: InstBridge,
     patterns: Vec<Pattern>,
@@ -2815,6 +3325,11 @@ struct IncrementalEmatchSession {
     /// Per-universal `(emitted joined tuples, starved joins)` — diagnostics
     /// for the `AXEYUM_QPROBE` fixpoint report only.
     join_stats: Vec<(usize, usize)>,
+    /// Slice 3: `(quantifier index, witness tuple)` for every registration whose
+    /// triggers fired this round. The driver drains these and turns each into the
+    /// entailed positive replacement of the owner formula; the matcher itself
+    /// never asserts anything for a registration.
+    pending_positive: Vec<(usize, Vec<TermId>)>,
 }
 
 impl IncrementalEmatchSession {
@@ -2848,11 +3363,11 @@ impl IncrementalEmatchSession {
         let mut pattern_ids: HashMap<Pattern, usize> = HashMap::new();
         let mut quantifiers = Vec::with_capacity(foralls.len() + nested.len());
 
-        let compiled: Vec<(TermId, Vec<SymbolId>, TermId, bool)> = foralls
+        let compiled: Vec<CompiledUniversalSpec> = foralls
             .iter()
             .map(|&forall_term| {
                 let (vars, body) = peel_foralls(arena, forall_term);
-                (forall_term, vars, body, true)
+                (forall_term, vars, body, true, None)
             })
             .chain(nested.iter().map(|registration| {
                 (
@@ -2860,11 +3375,12 @@ impl IncrementalEmatchSession {
                     registration.vars.clone(),
                     registration.body,
                     false,
+                    registration.context.clone(),
                 )
             }))
             .collect();
 
-        for (assertion, vars, body, active) in compiled {
+        for (assertion, vars, body, active, context) in compiled {
             let var_terms = vars.iter().map(|&var| arena.var(var)).collect();
             let var_index: HashMap<SymbolId, u32> = vars
                 .iter()
@@ -2901,6 +3417,7 @@ impl IncrementalEmatchSession {
                 body,
                 pattern_indices,
                 active,
+                context,
             });
         }
 
@@ -2955,6 +3472,7 @@ impl IncrementalEmatchSession {
             merge_affected_patterns: 0,
             extensions: 0,
             join_stats: Vec::new(),
+            pending_positive: Vec::new(),
         }
     }
 
@@ -3388,15 +3906,28 @@ impl IncrementalEmatchSession {
         let mut tuples_since_clock_check = 0usize;
         let mut expired = deadline.is_some_and(|deadline| Instant::now() >= deadline);
         let mut batches = Vec::with_capacity(self.quantifiers.len());
-        for (quantifier, tuples) in self.quantifiers.iter().zip(tuple_batches) {
+        let mut pending_positive: Vec<(usize, Vec<TermId>)> = Vec::new();
+        for (index, (quantifier, tuples)) in self.quantifiers.iter().zip(tuple_batches).enumerate()
+        {
             let (Some(tuples), false) = (tuples, expired) else {
                 batches.push(LazyClauseBatch::default());
                 continue;
             };
             // Registrations are matched, never asserted (see `active`). The
             // tuples were still joined, and `join_stats` recorded them, so the
-            // trace shows the nested trigger firing.
+            // trace shows the nested trigger firing. Slice 3: a registration
+            // with a positive-replacement context hands its tuples to the
+            // driver, which admits the *owner with the universal replaced* —
+            // entailed — rather than the bare instance, which is not.
             if !quantifier.active {
+                if quantifier.context.is_some() {
+                    for tuple in tuples {
+                        if pending_positive.len() >= MAX_POSITIVE_TUPLES_PER_ROUND {
+                            break;
+                        }
+                        pending_positive.push((index, tuple));
+                    }
+                }
                 batches.push(LazyClauseBatch::default());
                 continue;
             }
@@ -3463,6 +3994,7 @@ impl IncrementalEmatchSession {
                 batches.push(batch);
             }
         }
+        self.pending_positive.extend(pending_positive);
         batches
     }
 
@@ -9566,6 +10098,7 @@ mod tests {
             },
             vars: vec![x_sym, y_sym],
             body: qxy,
+            context: None,
         };
         let ground = vec![qab];
 
@@ -9754,5 +10287,360 @@ mod tests {
             !matches!(result, CheckResult::Unsat),
             "the query is satisfiable; got {result:?}"
         );
+    }
+
+    /// `(∀x. ¬p(x) ∨ ∀y. q(x, y))`, `p(a)`, `¬q(a, b)` — plus the symbols the
+    /// caller asks for. The refutation exists only through the inner `∀y`, which
+    /// no top-level prefix reaches: it is exposed by instantiating `x := a`.
+    fn staged_nested_shape() -> (TermArena, TermId, TermId, TermId, SymbolId, SymbolId) {
+        let mut arena = TermArena::new();
+        let p_fun = arena.declare_fun("p", &[Sort::Int], Sort::Bool).unwrap();
+        let q_fun = arena
+            .declare_fun("q", &[Sort::Int, Sort::Int], Sort::Bool)
+            .unwrap();
+        let a_sym = arena.declare("a", Sort::Int).unwrap();
+        let b_sym = arena.declare("b", Sort::Int).unwrap();
+        let x_sym = arena.declare("x", Sort::Int).unwrap();
+        let y_sym = arena.declare("y", Sort::Int).unwrap();
+        let (av, bv, xv, yv) = (
+            arena.var(a_sym),
+            arena.var(b_sym),
+            arena.var(x_sym),
+            arena.var(y_sym),
+        );
+        let pa = arena.apply(p_fun, &[av]).unwrap();
+        let qab = arena.apply(q_fun, &[av, bv]).unwrap();
+        let not_qab = arena.not(qab).unwrap();
+        let px = arena.apply(p_fun, &[xv]).unwrap();
+        let not_px = arena.not(px).unwrap();
+        let qxy = arena.apply(q_fun, &[xv, yv]).unwrap();
+        let all_y = arena.forall(y_sym, qxy).unwrap();
+        let disjunction = arena.or(not_px, all_y).unwrap();
+        let all_x = arena.forall(x_sym, disjunction).unwrap();
+        (arena, all_x, pa, not_qab, x_sym, y_sym)
+    }
+
+    #[test]
+    fn positive_replacement_builds_the_entailed_clause_not_the_bare_instance() {
+        // `∀x. (¬p(x) ∨ ∀y. q(x, y))` with `x := a, y := b` yields the clause
+        // `¬p(a) ∨ q(a, b)` — entailed. The bare instance `q(a, b)` is NOT, and
+        // the constructor must never produce it.
+        let (mut arena, owner, _, _, x_sym, y_sym) = staged_nested_shape();
+        let a_sym = arena.declare("a", Sort::Int).unwrap();
+        let b_sym = arena.declare("b", Sort::Int).unwrap();
+        let (av, bv) = (arena.var(a_sym), arena.var(b_sym));
+
+        let formula =
+            positive_instance_formula(&mut arena, owner, &[1], &[x_sym, y_sym], &[av, bv])
+                .expect("the disjunctive position is positive");
+
+        let p_fun = arena.find_function("p").unwrap();
+        let q_fun = arena.find_function("q").unwrap();
+        let pa = arena.apply(p_fun, &[av]).unwrap();
+        let not_pa = arena.not(pa).unwrap();
+        let qab = arena.apply(q_fun, &[av, bv]).unwrap();
+        let expected = arena.or(not_pa, qab).unwrap();
+        assert_eq!(formula, expected);
+        assert_ne!(formula, qab, "the bare instance is not a consequence");
+    }
+
+    #[test]
+    fn positive_replacement_keeps_uninstantiated_owner_binders_quantified() {
+        // `∀x∀z. (¬p(x) ∨ ¬p(z) ∨ ∀y. q(x, y))` instantiated at `x := a, y := b`
+        // must keep `z` universally quantified: dropping it would assert a
+        // stronger formula than the owner entails.
+        let mut arena = TermArena::new();
+        let p_fun = arena.declare_fun("p", &[Sort::Int], Sort::Bool).unwrap();
+        let q_fun = arena
+            .declare_fun("q", &[Sort::Int, Sort::Int], Sort::Bool)
+            .unwrap();
+        let a_sym = arena.declare("a", Sort::Int).unwrap();
+        let b_sym = arena.declare("b", Sort::Int).unwrap();
+        let x_sym = arena.declare("x", Sort::Int).unwrap();
+        let y_sym = arena.declare("y", Sort::Int).unwrap();
+        let z_sym = arena.declare("z", Sort::Int).unwrap();
+        let (av, bv, xv, yv, zv) = (
+            arena.var(a_sym),
+            arena.var(b_sym),
+            arena.var(x_sym),
+            arena.var(y_sym),
+            arena.var(z_sym),
+        );
+        let not_px = {
+            let px = arena.apply(p_fun, &[xv]).unwrap();
+            arena.not(px).unwrap()
+        };
+        let z_disjunct = {
+            let pz = arena.apply(p_fun, &[zv]).unwrap();
+            arena.not(pz).unwrap()
+        };
+        let qxy = arena.apply(q_fun, &[xv, yv]).unwrap();
+        let all_y = arena.forall(y_sym, qxy).unwrap();
+        let inner_or = arena.or(z_disjunct, all_y).unwrap();
+        let body = arena.or(not_px, inner_or).unwrap();
+        let owner = {
+            let inner = arena.forall(z_sym, body).unwrap();
+            arena.forall(x_sym, inner).unwrap()
+        };
+
+        let formula =
+            positive_instance_formula(&mut arena, owner, &[1, 1], &[x_sym, y_sym], &[av, bv])
+                .expect("the doubly nested disjunction is still positive");
+        let (remaining, _) = peel_foralls(&arena, formula);
+        assert_eq!(remaining, vec![z_sym], "z must stay universally quantified");
+    }
+
+    #[test]
+    fn positive_replacement_refuses_a_path_that_crosses_a_binder() {
+        // SOUNDNESS-NEGATIVE. `A ∨ ∀u. (¬p(u) ∨ ∀y. q(u, y))` does NOT entail
+        // `A ∨ ∀u. (¬p(u) ∨ q(c, d))`: substituting the path binder `u` is only
+        // licensed for the `u := c` instance of that disjunct. The walk therefore
+        // refuses any step through a `forall`.
+        let mut arena = TermArena::new();
+        let p_fun = arena.declare_fun("p", &[Sort::Int], Sort::Bool).unwrap();
+        let q_fun = arena
+            .declare_fun("q", &[Sort::Int, Sort::Int], Sort::Bool)
+            .unwrap();
+        let flag = arena.declare("flag", Sort::Bool).unwrap();
+        let c_sym = arena.declare("c", Sort::Int).unwrap();
+        let d_sym = arena.declare("d", Sort::Int).unwrap();
+        let u_sym = arena.declare("u", Sort::Int).unwrap();
+        let y_sym = arena.declare("y", Sort::Int).unwrap();
+        let (flagv, cv, dv, uv, yv) = (
+            arena.var(flag),
+            arena.var(c_sym),
+            arena.var(d_sym),
+            arena.var(u_sym),
+            arena.var(y_sym),
+        );
+        let not_pu = {
+            let pu = arena.apply(p_fun, &[uv]).unwrap();
+            arena.not(pu).unwrap()
+        };
+        let quy = arena.apply(q_fun, &[uv, yv]).unwrap();
+        let all_y = arena.forall(y_sym, quy).unwrap();
+        let inner_or = arena.or(not_pu, all_y).unwrap();
+        let all_u = arena.forall(u_sym, inner_or).unwrap();
+        let owner = arena.or(flagv, all_u).unwrap();
+
+        // The `∀y` sits at owner argument 1, then *through the `∀u` binder*, then
+        // at argument 1 again — a path the constructor must not walk.
+        assert!(
+            positive_instance_formula(&mut arena, owner, &[1, 0, 1], &[u_sym, y_sym], &[cv, dv])
+                .is_none(),
+            "a replacement under a path binder is not entailed",
+        );
+    }
+
+    #[test]
+    fn positive_replacement_refuses_partial_and_capturing_substitutions() {
+        // SOUNDNESS-NEGATIVE. `∀x∀y. q(x, y)` at a positive position entails an
+        // instance only when EVERY inner binder is instantiated (otherwise the
+        // remaining name becomes a free symbol, which is not a consequence), and
+        // never when a binding mentions a symbol still bound at that position.
+        let (mut arena, owner, _, _, x_sym, y_sym) = staged_nested_shape();
+        let a_sym = arena.find_symbol("a").unwrap();
+        let av = arena.var(a_sym);
+        let xv = arena.var(x_sym);
+
+        assert!(
+            positive_instance_formula(&mut arena, owner, &[1], &[x_sym], &[av]).is_none(),
+            "the inner binder y was left free",
+        );
+        assert!(
+            positive_instance_formula(&mut arena, owner, &[1], &[x_sym, y_sym], &[av, xv])
+                .is_none(),
+            "binding y to the still-bound x captures",
+        );
+        assert!(
+            positive_instance_formula(&mut arena, owner, &[0], &[x_sym, y_sym], &[av, av])
+                .is_none(),
+            "argument 0 of the disjunction is not a universal",
+        );
+        let true_term = arena.bool_const(true);
+        assert!(
+            positive_instance_formula(&mut arena, owner, &[1], &[x_sym, y_sym], &[av, true_term])
+                .is_none(),
+            "a Bool binding for an Int binder is a sort violation",
+        );
+    }
+
+    #[test]
+    fn positive_replacement_refuses_a_shadowed_binder() {
+        // SOUNDNESS-NEGATIVE. Substitution here is binder-blind, so a name that
+        // is re-bound *inside* the region being substituted would capture:
+        // `∀x. (¬p(x) ∨ ∀y. (q(x, y) ∧ ∀x. r(x)))` at `x := a` must not rewrite
+        // the inner `∀x`'s occurrences. The constructor refuses the shape.
+        let mut arena = TermArena::new();
+        let p_fun = arena.declare_fun("p", &[Sort::Int], Sort::Bool).unwrap();
+        let q_fun = arena
+            .declare_fun("q", &[Sort::Int, Sort::Int], Sort::Bool)
+            .unwrap();
+        let r_fun = arena.declare_fun("r", &[Sort::Int], Sort::Bool).unwrap();
+        let a_sym = arena.declare("a", Sort::Int).unwrap();
+        let b_sym = arena.declare("b", Sort::Int).unwrap();
+        let x_sym = arena.declare("x", Sort::Int).unwrap();
+        let y_sym = arena.declare("y", Sort::Int).unwrap();
+        let (av, bv, xv, yv) = (
+            arena.var(a_sym),
+            arena.var(b_sym),
+            arena.var(x_sym),
+            arena.var(y_sym),
+        );
+        let not_px = {
+            let px = arena.apply(p_fun, &[xv]).unwrap();
+            arena.not(px).unwrap()
+        };
+        let qxy = arena.apply(q_fun, &[xv, yv]).unwrap();
+        let rx = arena.apply(r_fun, &[xv]).unwrap();
+        let shadowed = arena.forall(x_sym, rx).unwrap();
+        let inner_body = arena.and(qxy, shadowed).unwrap();
+        let all_y = arena.forall(y_sym, inner_body).unwrap();
+        let disjunction = arena.or(not_px, all_y).unwrap();
+        let owner = arena.forall(x_sym, disjunction).unwrap();
+
+        assert!(
+            positive_instance_formula(&mut arena, owner, &[1], &[x_sym, y_sym], &[av, bv])
+                .is_none(),
+            "the inner `∀x` shadows the binder being substituted",
+        );
+    }
+
+    #[test]
+    fn lazy_discovery_refutes_through_a_quantifier_exposed_by_an_instantiation() {
+        // The keystone shape. `∀x. (¬p(x) ∨ ∀y. q(x, y))`, `p(a)`, `¬q(a, b)` is
+        // unsat, and the only route runs through the inner `∀y` — which is not a
+        // consequence on its own and is not reachable until `x := a` is
+        // instantiated. Slice 2 registered it and produced nothing; slice 3
+        // stages `¬p(a) ∨ q(a, b)` and closes it.
+        let (mut arena, all_x, pa, not_qab, _, _) = staged_nested_shape();
+        let extraction = extract_nested_universals(&mut arena, &[all_x, pa, not_qab]);
+        assert_eq!(extraction.nested.len(), 1);
+        assert!(
+            extraction.nested[0].context.is_some(),
+            "the `∀y` sits under an `or`, a positive position",
+        );
+
+        let mut stats = QuantifierLoopStats::default();
+        let result = prove_quantified_unsat_via_egraph_impl(
+            &mut arena,
+            &extraction.assertions,
+            &extraction.nested,
+            &SolverConfig::default(),
+            true,
+            true,
+            &mut stats,
+        )
+        .unwrap();
+        assert!(matches!(result, CheckResult::Unsat), "got {result:?}");
+    }
+
+    #[test]
+    fn lazy_discovery_registers_the_universal_an_instantiation_exposes() {
+        // The registration `∀y. q(a, y)` does not exist in the assertion set: it
+        // appears only inside the instance `¬p(a) ∨ ∀y. q(a, y)`. Scanning that
+        // admitted instance is what registers it — the staging a flat prefix
+        // cannot express.
+        let (mut arena, all_x, pa, not_qab, _, _) = staged_nested_shape();
+        let assertions = vec![all_x, pa, not_qab];
+        let extraction = extract_nested_universals(&mut arena, &assertions);
+
+        // The instance the active universal produces at `x := a`.
+        let instance =
+            instantiate_forall_via_egraph(&mut arena, &[pa, not_qab], extraction.assertions[0])
+                .into_iter()
+                .find(|&term| matches!(arena.node(term), TermNode::App { op: Op::BoolOr, .. }))
+                .expect("x := a is matched by p(a)");
+
+        let mut discovery = NestedDiscovery::new(&extraction.assertions);
+        let mut retained = HashMap::new();
+        retained.insert(
+            instance,
+            QuantifierGroundDerivation::Instance(QuantifierInstanceCertificate {
+                assertion: extraction.assertions[0],
+                bindings: vec![arena.var(arena.find_symbol("a").unwrap())],
+                instance,
+            }),
+        );
+        let found = discovery.scan(&mut arena, &[instance], &retained);
+
+        assert_eq!(found, 1, "the exposed `∀y. q(a, y)` is registered");
+        let registration = &discovery.pending_registrations[0];
+        assert_eq!(
+            registration.context.as_ref().map(|context| context.owner),
+            Some(instance),
+            "its owner is the instance that exposed it, not an original assertion",
+        );
+        assert!(peel_foralls(&arena, registration.quantifier).0.len() == 1);
+    }
+
+    #[test]
+    fn discovery_never_refutes_a_satisfiable_query_through_a_lazily_found_universal() {
+        // SOUNDNESS-NEGATIVE for lazy discovery specifically.
+        //
+        //   ∀x. (¬p(x) ∨ ∀y. q(x, y)),  ¬p(a),  ¬q(a, b)
+        //
+        // is satisfiable (nothing forces `q`, because `p` is false at `a`). The
+        // lazily discovered `∀y. q(a, y)` sits inside the instance
+        // `¬p(a) ∨ ∀y. q(a, y)` and its BARE instance `q(a, b)` would contradict
+        // `¬q(a, b)`. Only the clause `¬p(a) ∨ q(a, b)` is entailed, and it is
+        // satisfied by `¬p(a)` — so any leak of the bare instance out of
+        // discovery shows up right here as a wrong `unsat`.
+        let (mut arena, all_x, pa, not_qab, _, _) = staged_nested_shape();
+        let not_pa = arena.not(pa).unwrap();
+        let extraction = extract_nested_universals(&mut arena, &[all_x, not_pa, not_qab]);
+
+        let mut stats = QuantifierLoopStats::default();
+        let result = prove_quantified_unsat_via_egraph_impl(
+            &mut arena,
+            &extraction.assertions,
+            &extraction.nested,
+            &SolverConfig::default(),
+            true,
+            true,
+            &mut stats,
+        )
+        .unwrap();
+        assert!(
+            !matches!(result, CheckResult::Unsat),
+            "the query is satisfiable; got {result:?}"
+        );
+    }
+
+    #[test]
+    fn discovery_refuses_an_owner_outside_the_trusted_set() {
+        // SOUNDNESS-NEGATIVE. Staging is only ever licensed from a formula the
+        // loop already checked. An owner that is neither an assertion nor a
+        // retained derivation must be refused outright — fail-closed, counted.
+        let (mut arena, all_x, pa, not_qab, x_sym, y_sym) = staged_nested_shape();
+        let extraction = extract_nested_universals(&mut arena, &[all_x, pa, not_qab]);
+        let mut matcher =
+            IncrementalEmatchSession::new_with_nested(&mut arena, &[], &extraction.nested);
+        // A forged tuple attributed to the registration, with the owner removed
+        // from every trust source.
+        matcher.pending_positive.push((
+            0,
+            vec![
+                arena.var(arena.find_symbol("a").unwrap()),
+                arena.var(arena.find_symbol("b").unwrap()),
+            ],
+        ));
+        assert_eq!(matcher.quantifiers[0].vars, vec![x_sym, y_sym]);
+
+        let mut discovery = NestedDiscovery::new(&[]);
+        let mut seen = HashSet::new();
+        let mut ground = Vec::new();
+        let mut generations = TermGenerations::seed_sources(&arena, &[]);
+        let (admitted, promoted) = discovery.stage(
+            &mut arena,
+            &mut matcher,
+            &HashMap::new(),
+            &mut seen,
+            &mut ground,
+            &mut generations,
+        );
+        assert!(admitted.is_empty() && promoted.is_empty());
+        assert_eq!(discovery.rejected, 1, "the untrusted owner was refused");
+        assert!(ground.is_empty());
     }
 }
