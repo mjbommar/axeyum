@@ -69,6 +69,16 @@ case "$division" in
     reference_bin="/nas3/data/axeyum/harness/bin/bitwuzla" ;;
   UF|UFLIA|UFNIA|QF_UF|QF_SLIA|QF_S|QF_SEQ|QF_DT|QF_AUFLIA)
     reference_bin="/nas3/data/axeyum/harness/bin/cvc5" ;;
+  # QF_LIA's SMT-COMP 2025 winner is OpenSMT (4,579/4,825 = 94.9 %), which is
+  # NOT on this machine. cvc5 is the strongest reference we actually have: it
+  # placed *2nd in this very division* (4,443/4,825 = 92.1 %), 136 benchmarks
+  # behind the winner. The fallthrough would have used `/usr/bin/z3` 4.13.3,
+  # which **did not compete in SMT-COMP 2025 at all** -- picking it would be
+  # exactly the "a weaker reference" knob this script's header lists. Choosing
+  # cvc5 makes our ratio HARDER, which is the correct direction for a knob we
+  # are allowed to set. If OpenSMT is ever installed, move this arm to it.
+  QF_LIA|QF_ALIA|QF_LRA|QF_LIRA)
+    reference_bin="/nas3/data/axeyum/harness/bin/cvc5" ;;
   *)
     reference_bin="/usr/bin/z3" ;;
 esac
@@ -196,13 +206,54 @@ run_one() {
 # the whole UF division over a legitimately hard instance. Abort only when the
 # reference decides NONE of the probes, which still catches a crippled
 # invocation (a 24 ms budget solves none of them either).
+#
+# ...EXCEPT IT DOES NOT, AND THAT WAS MEASURED, NOT REASONED (2026-08-02, adding
+# QF_LIA). The "solves none of them either" clause is a QF_BV/UF observation
+# generalised without checking. On QF_LIA the first two committed benchmarks are
+# decided by cvc5 in ~0.1 s, so a deliberately crippled `--tlimit=24` (seconds
+# passed where milliseconds are expected -- a 1000x handicap) still scored 2/5
+# and the guard stayed silent. The whole run then proceeds against a reference
+# that cannot solve anything hard, and the inflated ratio reads as a win for us.
+#
+# So the count test is necessary but NOT sufficient, and the second test below
+# targets the unit bug directly rather than through its side effect. A reference
+# given its real budget BURNS that budget on a file it cannot decide; a reference
+# given 24 ms returns "unsolved" almost immediately. Measured on the same five
+# QF_LIA probes: at `--tlimit=24000` the undecided probes ran the full ~24 s wall,
+# at `--tlimit=24` they returned in 2.3 s (parse time alone). That gap is the
+# signature, and it does not depend on how easy the division's easy files are.
+#
+# The rule is "EVERY undecided probe came back early", not "any", so one fast
+# unsupported-logic or OOM exit cannot trip it. When the reference decides all
+# five probes there is nothing to time and the test abstains -- and a reference
+# going 5/5 is self-evidently not crippled.
+#
+# TIMING PRIMITIVE: bash's `EPOCHREALTIME`, deliberately NOT `date +%s%3N`. On
+# this machine `date` is uutils coreutils 0.8.0, whose `%3N` is broken -- it
+# returns an 18-digit value (`178567738728633065`) rather than a 13-digit
+# millisecond stamp. The first version of this check used it, computed a garbage
+# elapsed time, and silently never fired: a guard that cannot fail is worse than
+# no guard. EPOCHREALTIME is a bash builtin with exactly 6 decimal places, so
+# stripping the dot yields microseconds with no subprocess and no `date` variant
+# to trip over.
+now_ms() { local us="${EPOCHREALTIME/./}"; echo $(( 10#$us / 1000 )); }
+
 smoke_reference() {
-  local probes=0 solved=0 verdict
+  local probes=0 solved=0 verdict start elapsed
+  local unsolved_probes=0 unsolved_fast=0
+  local floor_ms=$(( budget_s * 1000 / 2 ))
   while IFS= read -r probe && (( probes < 5 )); do
     [[ -f "$probe" ]] || continue
     probes=$((probes + 1))
+    start=$(now_ms)
     verdict=$(run_one "$reference_bin" "$probe")
-    [[ "$verdict" != "unsolved" ]] && solved=$((solved + 1))
+    elapsed=$(( $(now_ms) - start ))
+    if [[ "$verdict" != "unsolved" ]]; then
+      solved=$((solved + 1))
+    else
+      unsolved_probes=$((unsolved_probes + 1))
+      (( elapsed < floor_ms )) && unsolved_fast=$((unsolved_fast + 1))
+    fi
   done < "$list"
   if (( probes > 0 && solved == 0 )); then
     echo "FAIL: the reference decided 0 of $probes probe benchmarks." >&2
@@ -212,6 +263,19 @@ smoke_reference() {
     echo "      cvc5 take milliseconds, z3 takes seconds)." >&2
     echo "      Set PARITY_ALLOW_WEAK_REFERENCE=1 only if the reference really" >&2
     echo "      is beaten by all $probes." >&2
+    [[ "${PARITY_ALLOW_WEAK_REFERENCE:-0}" == "1" ]] || exit 2
+  fi
+  if (( unsolved_probes > 0 && unsolved_fast == unsolved_probes )); then
+    echo "FAIL: the reference did not USE its ${budget_s}s budget." >&2
+    echo "      $reference_bin" >&2
+    echo "      All ${unsolved_probes} undecided probe(s) returned in under" >&2
+    echo "      $(( floor_ms / 1000 ))s. A correctly budgeted solver burns the" >&2
+    echo "      whole budget before giving up, so the budget is not reaching it." >&2
+    echo "      CHECK THE UNITS: bitwuzla --time-limit and cvc5 --tlimit are" >&2
+    echo "      MILLISECONDS; z3 -T: is SECONDS. Passing seconds as milliseconds" >&2
+    echo "      is a ~1000x handicap that inflates our ratio." >&2
+    echo "      Set PARITY_ALLOW_WEAK_REFERENCE=1 only after verifying the" >&2
+    echo "      invocation by hand." >&2
     [[ "${PARITY_ALLOW_WEAK_REFERENCE:-0}" == "1" ]] || exit 2
   fi
 }
