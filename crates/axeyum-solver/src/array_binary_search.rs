@@ -370,16 +370,14 @@ fn match_const_select(arena: &TermArena, term: TermId) -> Option<ConstSelect> {
 }
 
 fn collect_bv_and_operands(arena: &TermArena, term: TermId, out: &mut Vec<TermId>) {
-    match arena.node(term) {
-        TermNode::App {
-            op: Op::BvAnd,
-            args,
-        } if args.len() == 2 && arena.sort_of(term) == Sort::BitVec(1) => {
-            collect_bv_and_operands(arena, args[0], out);
-            collect_bv_and_operands(arena, args[1], out);
+    // Shared iterative walker: this exact function was copy-pasted into six
+    // array modules, each recursing on the BV1 `bvand` chain's depth.
+    crate::term_walk::flatten_binary_spine(arena, term, out, |arena, t| {
+        if arena.sort_of(t) != Sort::BitVec(1) {
+            return None;
         }
-        _ => out.push(term),
-    }
+        crate::term_walk::binary_op_operands(arena, t, Op::BvAnd)
+    });
 }
 
 fn match_negated_bv1_zero_equality(arena: &TermArena, term: TermId) -> Option<TermId> {
