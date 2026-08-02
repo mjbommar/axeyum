@@ -42,6 +42,26 @@
 #   PARITY_BUDGET_S   per-file wall budget, default 24 (SMT-COMP publishes a
 #                     24s score precisely so short runs are comparable)
 #   PARITY_MEM_GB     per-file memory cap, default 8
+#
+# EVIDENCE MODE (off by default)
+# ------------------------------
+#   PARITY_EVIDENCE=1            run axeyum with AXEYUM_EVIDENCE=1 and record a
+#                                `certified / unsat` cell per division.
+#   PARITY_EVIDENCE_BUDGET_S     axeyum's per-file budget in evidence mode only
+#                                (default: PARITY_BUDGET_S). Producing and
+#                                re-checking a proof costs real time ON TOP OF
+#                                deciding, so measuring evidence at the plain
+#                                budget would silently trade decided files for
+#                                certified ones and understate BOTH numbers.
+#
+# Decide-rate is measured per file and moved because every file was visible.
+# The second front -- "every unsat/valid carries a machine-checkable proof" --
+# had no such column, so nobody could state what fraction of our unsats are
+# actually certified. This makes that a number on the same population.
+#
+# Evidence-mode entries are STAMPED as such in the ledger and their ratio is NOT
+# comparable to a default entry: the axeyum budget may differ and the evidence
+# front door is a different route. The ratio itself is computed identically.
 set -uo pipefail
 
 cd "$(dirname "$0")/.."
@@ -54,6 +74,15 @@ fi
 
 budget_s="${PARITY_BUDGET_S:-24}"
 mem_gb="${PARITY_MEM_GB:-8}"
+evidence_mode="${PARITY_EVIDENCE:-0}"
+# axeyum's budget. Identical to the protocol budget unless evidence mode asks for
+# more; the REFERENCE always runs at the protocol budget, so it is never handed a
+# handicap by this knob.
+axeyum_budget_s="$budget_s"
+if [[ "$evidence_mode" == "1" ]]; then
+  axeyum_budget_s="${PARITY_EVIDENCE_BUDGET_S:-$budget_s}"
+  export AXEYUM_EVIDENCE=1
+fi
 list="bench-results/parity-lists/${division}.txt"
 out="bench-results/PARITY.md"
 
@@ -173,13 +202,20 @@ declared_status() {
 # script exists to guard against -- so the external `timeout` is the real
 # enforcement and the native flag is only a courtesy to let a solver exit
 # cleanly and report `unknown` rather than be killed.
+#
+# `last_evidence` is a side channel, set ONLY on the evidence-mode axeyum path.
+# It carries the `; evidence …` line the CLI prints (see smtcomp_cli.rs) so the
+# caller can score `certified / unsat` without a second run.
+last_evidence=""
 run_one() {
-  local bin="$1" file="$2" verdict
+  local bin="$1" file="$2" verdict raw
+  local b="$budget_s"
+  [[ "$(basename "$bin")" == "smtcomp_cli" ]] && b="$axeyum_budget_s"
   local -a cmd
   case "$(basename "$bin")" in
-    smtcomp_cli) cmd=("$bin" "$file" --timeout-ms "$((budget_s * 1000))") ;;
-    z3)          cmd=("$bin" "-T:${budget_s}" "$file") ;;
-    cvc5)        cmd=("$bin" "--tlimit=$((budget_s * 1000))" "$file") ;;
+    smtcomp_cli) cmd=("$bin" "$file" --timeout-ms "$((b * 1000))") ;;
+    z3)          cmd=("$bin" "-T:${b}" "$file") ;;
+    cvc5)        cmd=("$bin" "--tlimit=$((b * 1000))" "$file") ;;
     # NOTE THE UNITS: bitwuzla's --time-limit is MILLISECONDS, like cvc5's
     # --tlimit, while z3's -T: is SECONDS. Passing seconds here gave the
     # reference a 24 ms budget -- a ~1000x handicap that inflates our ratio by
@@ -188,9 +224,23 @@ run_one() {
     bitwuzla)    cmd=("$bin" "--time-limit" "$((budget_s * 1000))" "$file") ;;
     *)           cmd=("$bin" "$file") ;;
   esac
-  verdict=$(MEM_LIMIT_GB="$mem_gb" timeout "$((budget_s + 5))" \
-            ./scripts/mem-run.sh "${cmd[@]}" 2>/dev/null \
-            | grep -oE '^(sat|unsat)$' | tail -1)
+  # DEFAULT PATH — byte-identical to what every recorded baseline measured.
+  # Evidence mode takes the branch below instead; it is never on by default.
+  if [[ "$evidence_mode" != "1" || "$(basename "$bin")" != "smtcomp_cli" ]]; then
+    verdict=$(MEM_LIMIT_GB="$mem_gb" timeout "$((b + 5))" \
+              ./scripts/mem-run.sh "${cmd[@]}" 2>/dev/null \
+              | grep -oE '^(sat|unsat)$' | tail -1)
+    echo "${verdict:-unsolved}"
+    return
+  fi
+
+  # Evidence mode: capture stdout whole so the `; evidence …` line survives
+  # alongside the verdict. The verdict is extracted with the SAME expression as
+  # above, so what counts as solved does not change.
+  raw=$(MEM_LIMIT_GB="$mem_gb" timeout "$((b + 5))" \
+        ./scripts/mem-run.sh "${cmd[@]}" 2>/dev/null)
+  verdict=$(printf '%s\n' "$raw" | grep -oE '^(sat|unsat)$' | tail -1)
+  last_evidence=$(printf '%s\n' "$raw" | grep -m1 '^; evidence ' || true)
   echo "${verdict:-unsolved}"
 }
 
@@ -289,8 +339,16 @@ smoke_reference
 # the corpus that is actually scored.
 sidecar="bench-results/parity-details/${division}.tsv"
 mkdir -p "$(dirname "$sidecar")"
-printf 'file\taxeyum\treference\tdeclared\n' > "$sidecar"
+if [[ "$evidence_mode" == "1" ]]; then
+  printf 'file\taxeyum\treference\tdeclared\tevidence_kind\tcertified\trecheck\n' > "$sidecar"
+else
+  printf 'file\taxeyum\treference\tdeclared\n' > "$sidecar"
+fi
 
+unsat_count=0
+certified_unsats=0
+rechecked_unsats=0
+bad_certificates=0
 axeyum_solved=0
 reference_solved=0
 both=0
@@ -307,11 +365,35 @@ while IFS= read -r file; do
     continue
   fi
 
+  last_evidence=""
   a=$(run_one "$axeyum_bin" "$file")
   r=$(run_one "$reference_bin" "$file")
   expected=$(declared_status "$file")
 
-  printf '%s\t%s\t%s\t%s\n' "$(basename "$file")" "$a" "$r" "${expected:-none}" >> "$sidecar"
+  if [[ "$evidence_mode" == "1" ]]; then
+    # Parse the CLI's single `; evidence kind=… certified=… recheck=… ms=…` line.
+    # Absent (crash / timeout / kill) means NO evidence -- scored as uncertified,
+    # never as missing data.
+    ev_kind=$(sed -n 's/.*kind=\([^ ]*\).*/\1/p' <<< "$last_evidence")
+    ev_certified=$(sed -n 's/.*certified=\([^ ]*\).*/\1/p' <<< "$last_evidence")
+    ev_recheck=$(sed -n 's/.*recheck=\([^ ]*\).*/\1/p' <<< "$last_evidence")
+    printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\n' "$(basename "$file")" "$a" "$r" \
+      "${expected:-none}" "${ev_kind:-none}" "${ev_certified:-0}" "${ev_recheck:-none}" >> "$sidecar"
+    if [[ "$a" == "unsat" ]]; then
+      unsat_count=$((unsat_count + 1))
+      [[ "$ev_certified" == "1" ]] && certified_unsats=$((certified_unsats + 1))
+      [[ "$ev_recheck" == "ok" ]] && rechecked_unsats=$((rechecked_unsats + 1))
+    fi
+    # A certificate that does not re-check is a soundness alarm, not a statistic.
+    # It voids the entry the same way a wrong verdict does.
+    if [[ "$ev_recheck" == "FAIL" ]]; then
+      bad_certificates=$((bad_certificates + 1))
+      disagreements=$((disagreements + 1))
+      disagreement_log+=$'\n'"    CERTIFICATE FAILED TO RE-CHECK — $file (kind=${ev_kind:-none})"
+    fi
+  else
+    printf '%s\t%s\t%s\t%s\n' "$(basename "$file")" "$a" "$r" "${expected:-none}" >> "$sidecar"
+  fi
 
   [[ "$a" != "unsolved" ]] && axeyum_solved=$((axeyum_solved + 1))
   [[ "$r" != "unsolved" ]] && reference_solved=$((reference_solved + 1))
@@ -339,6 +421,16 @@ fi
 verdict="FAIL"
 if (( disagreements == 0 )); then verdict="SOUND"; fi
 
+# `certified / unsat` -- the Lean-parity front made a number on the SAME
+# population the decide-rate is measured on. Denominator is every `unsat` axeyum
+# produced in this run; nothing is dropped for being hard or uncertified.
+certified_ratio="n/a"
+rechecked_ratio="n/a"
+if (( unsat_count > 0 )); then
+  certified_ratio=$(awk -v c="$certified_unsats" -v u="$unsat_count" 'BEGIN{printf "%.1f", 100*c/u}')
+  rechecked_ratio=$(awk -v c="$rechecked_unsats" -v u="$unsat_count" 'BEGIN{printf "%.1f", 100*c/u}')
+fi
+
 mkdir -p "$(dirname "$out")"
 if [[ ! -f "$out" ]]; then
   cat > "$out" <<'HEADER'
@@ -355,9 +447,22 @@ not a score.
 HEADER
 fi
 
+entry_title="## ${division} — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+if [[ "$evidence_mode" == "1" ]]; then
+  entry_title+=" — EVIDENCE MODE"
+fi
+
 {
-  echo "## ${division} — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+  echo "$entry_title"
   echo
+  if [[ "$evidence_mode" == "1" ]]; then
+    echo "Evidence mode (\`PARITY_EVIDENCE=1\` → \`AXEYUM_EVIDENCE=1\`). axeyum routed"
+    echo "through the evidence front door, which produces AND re-checks a certificate"
+    echo "on top of deciding. The **ratio here is NOT comparable to a default entry**"
+    echo "(different route, and axeyum ran at ${axeyum_budget_s}s vs the ${budget_s}s protocol"
+    echo "budget). The headline for this entry is \`certified / unsat\`."
+    echo
+  fi
   echo "| field | value |"
   echo "|---|---|"
   echo "| axeyum solved | ${axeyum_solved}/${total} |"
@@ -365,6 +470,12 @@ fi
   echo "| **ratio (axeyum / reference)** | **${ratio}%** |"
   echo "| **disagreements** | **${disagreements}** |"
   echo "| soundness | ${verdict} |"
+  if [[ "$evidence_mode" == "1" ]]; then
+    echo "| **certified / unsat** | **${certified_unsats}/${unsat_count} = ${certified_ratio}%** |"
+    echo "| re-checked here (text-only) / unsat | ${rechecked_unsats}/${unsat_count} = ${rechecked_ratio}% |"
+    echo "| certificates that FAILED to re-check | ${bad_certificates} |"
+    echo "| axeyum budget (evidence) | ${axeyum_budget_s}s |"
+  fi
   echo "| both / axeyum-only / reference-only | ${both} / ${axeyum_only} / ${reference_only} |"
   echo "| reference | \`${reference_version}\` |"
   echo "| protocol | ${budget_s}s wall, ${mem_gb}GiB, per-file |"
@@ -383,6 +494,9 @@ fi
 } >> "$out"
 
 echo "${division}: axeyum ${axeyum_solved}/${total}, reference ${reference_solved}/${total}, ratio ${ratio}%, disagreements ${disagreements} (${verdict})"
+if [[ "$evidence_mode" == "1" ]]; then
+  echo "${division}: certified ${certified_unsats}/${unsat_count} unsats = ${certified_ratio}% (re-checked here ${rechecked_unsats}/${unsat_count} = ${rechecked_ratio}%, bad certs ${bad_certificates})"
+fi
 echo "appended to ${out}"
 
 (( disagreements == 0 ))
