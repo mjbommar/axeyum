@@ -20,7 +20,7 @@ use axeyum_ir::{
 };
 use axeyum_smtlib::{
     IntBound, IntBoundKind, MemberVar, MembershipProblem, Script, ScriptCommand, WordObligation,
-    parse_script, parse_script_with_string_bound,
+    parse_script,
 };
 use axeyum_strings::{
     MembershipOutcome, RefuteOutcome, SearchBudget, SearchOutcome, refute_word_equations,

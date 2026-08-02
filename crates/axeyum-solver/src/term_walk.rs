@@ -104,3 +104,80 @@ mod tests {
         assert_eq!(duplicates, vec![p, p]);
     }
 }
+
+/// Flattens a right- or left-nested binary spine ITERATIVELY, leaves left to
+/// right, given a predicate that recognises a spine node and yields its two
+/// operands.
+///
+/// The family this generalises is large — `and`/`or` conjunct and disjunct
+/// collectors appear across `array_axiom`, `abv`, `quant_residue_cert` and
+/// `quant_bv_model_sat_cert`, each independently written as native recursion
+/// over the spine's depth. That depth is attacker- and generator-controlled: an
+/// SMT-LIB front end reproduces `(and (and (and …) p) q)` verbatim, so a 50k
+/// conjunct source is 50k frames. Eleven such sites were found aborting the
+/// process on real benchmarks; converting them one at a time invites the next
+/// one to be written recursively again, so new spine walkers should call this.
+///
+/// Order is preserved exactly: the right operand is pushed first so operands
+/// pop left to right, matching what the recursive form produced. Callers index
+/// into `out`, so this is a correctness property, not a cosmetic one.
+pub(crate) fn flatten_binary_spine<F>(
+    arena: &TermArena,
+    term: TermId,
+    out: &mut Vec<TermId>,
+    spine_operands: F,
+) where
+    F: Fn(&TermArena, TermId) -> Option<(TermId, TermId)>,
+{
+    let mut stack = vec![term];
+    while let Some(current) = stack.pop() {
+        match spine_operands(arena, current) {
+            Some((left, right)) => {
+                stack.push(right);
+                stack.push(left);
+            }
+            None => out.push(current),
+        }
+    }
+}
+
+/// The operands of a binary `op` application, if `term` is one.
+///
+/// The common predicate for [`flatten_binary_spine`]; a caller needing extra
+/// conditions (a sort check, a polarity check) writes its own closure.
+pub(crate) fn binary_op_operands(
+    arena: &TermArena,
+    term: TermId,
+    op: Op,
+) -> Option<(TermId, TermId)> {
+    match arena.node(term) {
+        TermNode::App { op: found, args } if *found == op && args.len() == 2 => {
+            Some((args[0], args[1]))
+        }
+        _ => None,
+    }
+}
+
+/// Flattens an N-ARY `op` spine iteratively, leaves left to right.
+///
+/// The sibling of [`flatten_binary_spine`] for the plain case: no extra
+/// condition, any arity. `BoolAnd`/`BoolOr` are variadic in this IR, so a
+/// collector written for arity 2 silently treats a 3-argument `or` as a leaf —
+/// which is a correctness bug on top of the stack-depth one, and why these are
+/// two functions rather than one with an arity assumption baked in.
+///
+/// Operands are pushed in reverse so they pop left to right, matching the
+/// recursive form callers replaced.
+pub(crate) fn flatten_op_spine(arena: &TermArena, term: TermId, out: &mut Vec<TermId>, op: Op) {
+    let mut stack = vec![term];
+    while let Some(current) = stack.pop() {
+        match arena.node(current) {
+            TermNode::App { op: found, args } if *found == op => {
+                for &arg in args.iter().rev() {
+                    stack.push(arg);
+                }
+            }
+            _ => out.push(current),
+        }
+    }
+}

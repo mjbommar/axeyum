@@ -597,17 +597,15 @@ fn parse_interval_implication(
 }
 
 fn flatten_and(arena: &TermArena, term: TermId, out: &mut Vec<TermId>) {
-    if let TermNode::App {
-        op: Op::BoolAnd,
-        args,
-    } = arena.node(term)
-        && let [left, right] = &**args
-    {
-        flatten_and(arena, *left, out);
-        flatten_and(arena, *right, out);
-    } else {
-        out.push(term);
-    }
+    // Depth-safe, and deliberately still ARITY-2 ONLY. `BoolAnd` is variadic in
+    // this IR, so a 3-argument `and` is treated as a leaf here — arguably a bug,
+    // but this is a certificate checker and widening what it flattens changes
+    // what it accepts. Fixing the abort is separable from changing acceptance,
+    // so only the abort is fixed; use `flatten_op_spine` if the arity behaviour
+    // is ever deliberately widened, with its own test.
+    crate::term_walk::flatten_binary_spine(arena, term, out, |arena, t| {
+        crate::term_walk::binary_op_operands(arena, t, Op::BoolAnd)
+    });
 }
 
 fn is_symbol(arena: &TermArena, term: TermId, symbol: SymbolId) -> bool {

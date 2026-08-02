@@ -136,17 +136,7 @@ fn peel_foralls(arena: &TermArena, mut term: TermId) -> Option<(Vec<SymbolId>, T
 }
 
 fn flatten_or(arena: &TermArena, term: TermId, out: &mut Vec<TermId>) {
-    if let TermNode::App {
-        op: Op::BoolOr,
-        args,
-    } = arena.node(term)
-    {
-        for &arg in args {
-            flatten_or(arena, arg, out);
-        }
-    } else {
-        out.push(term);
-    }
+    crate::term_walk::flatten_op_spine(arena, term, out, Op::BoolOr);
 }
 
 fn match_negated_recomposition(

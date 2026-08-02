@@ -850,16 +850,14 @@ fn collect_top_conjuncts(arena: &TermArena, term: TermId, out: &mut Vec<TermId>)
 }
 
 fn collect_bv1_conjuncts(arena: &TermArena, term: TermId, out: &mut Vec<TermId>) {
-    match arena.node(term) {
-        TermNode::App {
-            op: Op::BvAnd,
-            args,
-        } if args.len() == 2 && arena.sort_of(term) == Sort::BitVec(1) => {
-            collect_bv1_conjuncts(arena, args[0], out);
-            collect_bv1_conjuncts(arena, args[1], out);
+    // Iterative via the shared spine walker: the depth here is the BV1 `bvand`
+    // chain's nesting, which a generated benchmark controls.
+    crate::term_walk::flatten_binary_spine(arena, term, out, |arena, t| {
+        if arena.sort_of(t) != Sort::BitVec(1) {
+            return None;
         }
-        _ => out.push(term),
-    }
+        crate::term_walk::binary_op_operands(arena, t, Op::BvAnd)
+    });
 }
 
 fn match_disequality(arena: &TermArena, term: TermId) -> Option<(TermId, TermId)> {

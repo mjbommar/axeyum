@@ -850,10 +850,6 @@ fn word_only_fallback_within_stack_budget(input: &str) -> bool {
 /// `STRING_LITERAL_MAX_LEN`, concats ≤ `STRING_BOUND_CAP`, packed-BV model).
 /// A capacity/unsupported decline here is what triggers the word-first fallback in
 /// [`parse_script`].
-fn parse_script_bounded_with_string_bound(input: &str, floor: u32) -> Result<Script, SmtError> {
-    parse_script_bounded_inner(input, floor, None)
-}
-
 fn parse_script_bounded_inner(
     input: &str,
     floor: u32,
@@ -1504,6 +1500,7 @@ impl SourceStringSatProblem {
         self.strings.iter().map(|v| (v.name.as_str(), v.symbol))
     }
 
+    /// Whether `witness` re-evaluates every original source assertion to true.
     pub fn replays(&self, witness: &SourceStringWitness) -> bool {
         let string_symbols: BTreeSet<SymbolId> =
             witness.strings.iter().map(|(symbol, _)| *symbol).collect();
