@@ -1861,17 +1861,7 @@ fn noop_store_parts(arena: &TermArena, term: TermId) -> Option<(TermId, TermId, 
 }
 
 fn collect_positive_conjuncts(arena: &TermArena, term: TermId, out: &mut Vec<TermId>) {
-    match arena.node(term) {
-        TermNode::App {
-            op: Op::BoolAnd,
-            args,
-        } => {
-            for &arg in args {
-                collect_positive_conjuncts(arena, arg, out);
-            }
-        }
-        _ => out.push(term),
-    }
+    crate::term_walk::flatten_op_spine(arena, term, out, Op::BoolAnd);
 }
 
 fn store_equality(arena: &TermArena, term: TermId) -> Option<StoreEquality> {
@@ -3833,17 +3823,7 @@ fn replay_failed_eq_details(
 }
 
 fn collect_positive_disjuncts(arena: &TermArena, term: TermId, out: &mut Vec<TermId>) {
-    match arena.node(term) {
-        TermNode::App {
-            op: Op::BoolOr,
-            args,
-        } => {
-            for &arg in args {
-                collect_positive_disjuncts(arena, arg, out);
-            }
-        }
-        _ => out.push(term),
-    }
+    crate::term_walk::flatten_op_spine(arena, term, out, Op::BoolOr);
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
