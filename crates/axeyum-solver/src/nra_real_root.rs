@@ -5902,23 +5902,31 @@ fn real_symbols_of(arena: &TermArena, assertions: &[TermId]) -> BTreeSet<SymbolI
 /// Multivariate analogue of [`collect_conjuncts`]: flatten a Boolean assertion
 /// into multivariate polynomial comparisons, **allowing multiple variables**.
 /// Declines (`None`) on any non-conjunctive structure or non-polynomial atom.
+///
+/// The `and` spine is flattened with an explicit stack, not recursion: its depth
+/// is the assertion's nesting depth, which an SMT-LIB source controls directly
+/// (`(and (and (and …)))`), so a recursive walk **aborted** the process with a
+/// stack overflow instead of letting the solver report a first-class `unknown`
+/// (the failure mode fixed in `fcc8760d`). `work` is a stack, so conjuncts are
+/// still visited — and `atoms` still filled — left to right.
 fn collect_multi_conjuncts(
     arena: &TermArena,
     assertion: TermId,
     atoms: &mut Vec<MultiAtom>,
 ) -> Option<()> {
-    if let TermNode::App {
-        op: Op::BoolAnd,
-        args,
-    } = arena.node(assertion)
-    {
-        for &c in args {
-            collect_multi_conjuncts(arena, c, atoms)?;
+    let mut work = vec![assertion];
+    while let Some(term) = work.pop() {
+        if let TermNode::App {
+            op: Op::BoolAnd,
+            args,
+        } = arena.node(term)
+        {
+            work.extend(args.iter().rev().copied());
+            continue;
         }
-        return Some(());
+        let (cmp, poly) = match_multi_constraint(arena, term)?;
+        atoms.push(MultiAtom { cmp, poly });
     }
-    let (cmp, poly) = match_multi_constraint(arena, assertion)?;
-    atoms.push(MultiAtom { cmp, poly });
     Some(())
 }
 
@@ -6180,23 +6188,31 @@ fn atom_as_ge(atom: &MultiAtom) -> Option<MultiPoly> {
 /// Integer analogue of [`collect_multi_conjuncts`]: flatten `and`, collect each
 /// leaf as an integer polynomial comparison. `None` on any non-integer /
 /// non-polynomial leaf.
+///
+/// The `and` spine is flattened with an explicit stack, not recursion: its depth
+/// is the assertion's nesting depth, which an SMT-LIB source controls directly
+/// (`(and (and (and …)))`), so a recursive walk **aborted** the process with a
+/// stack overflow instead of letting the solver report a first-class `unknown`
+/// (the failure mode fixed in `fcc8760d`). `work` is a stack, so conjuncts are
+/// still visited — and `atoms` still filled — left to right.
 fn collect_int_multi_conjuncts(
     arena: &TermArena,
     assertion: TermId,
     atoms: &mut Vec<MultiAtom>,
 ) -> Option<()> {
-    if let TermNode::App {
-        op: Op::BoolAnd,
-        args,
-    } = arena.node(assertion)
-    {
-        for &c in args {
-            collect_int_multi_conjuncts(arena, c, atoms)?;
+    let mut work = vec![assertion];
+    while let Some(term) = work.pop() {
+        if let TermNode::App {
+            op: Op::BoolAnd,
+            args,
+        } = arena.node(term)
+        {
+            work.extend(args.iter().rev().copied());
+            continue;
         }
-        return Some(());
+        let (cmp, poly) = match_int_multi_constraint(arena, term)?;
+        atoms.push(MultiAtom { cmp, poly });
     }
-    let (cmp, poly) = match_int_multi_constraint(arena, assertion)?;
-    atoms.push(MultiAtom { cmp, poly });
     Some(())
 }
 
@@ -6249,39 +6265,88 @@ fn collect_int_multi_diff(arena: &TermArena, lhs: TermId, rhs: TermId) -> Option
     collect_int_multi(arena, lhs)?.sub(&collect_int_multi(arena, rhs)?)
 }
 
-/// Recursively collect an `Int`-sorted term into a multivariate rational
-/// polynomial over `{+, −, ·, neg, IntConst, symbol}`. `+`/`·` are folded over
-/// all arguments (n-ary tolerant); anything else declines.
+/// One frame of the explicit post-order walk in [`collect_int_multi`].
+enum IntMultiStep {
+    /// Visit `t`: memo-hit, or schedule its children then its own combine.
+    Enter(TermId),
+    /// Combine `t` from children guaranteed to be in the memo already.
+    Combine(TermId),
+}
+
+/// Collect an `Int`-sorted term into a multivariate rational polynomial over
+/// `{+, −, ·, neg, IntConst, symbol}`. `+`/`·` are folded over all arguments
+/// (n-ary tolerant); anything else declines.
+///
+/// # Why this is an explicit worklist and not native recursion
+///
+/// `integer_algebraic_refutation` runs this on every `Unknown` the
+/// auto-dispatcher produces, so its walk depth is the assertion's term depth.
+/// Native recursion aborted the process with a stack overflow on a deep
+/// left-associated `(+ (+ (+ x 1) 1) 1)` spine — an abort, so no first-class
+/// `unknown` and a harness reads a crash (the failure mode of `fcc8760d`). The
+/// memo additionally collapses shared subterms, which the recursive form
+/// re-collected once per parent.
 fn collect_int_multi(arena: &TermArena, t: TermId) -> Option<MultiPoly> {
-    if arena.sort_of(t) != Sort::Int {
-        return None;
-    }
-    match arena.node(t) {
-        TermNode::IntConst(i) => Some(MultiPoly::constant(Rational::integer(*i))),
-        TermNode::Symbol(s) => Some(MultiPoly::var(*s)),
-        TermNode::App { op, args } => match op {
-            Op::IntNeg | Op::IntSub if args.len() == 1 => collect_int_multi(arena, args[0])?.neg(),
-            Op::IntSub if args.len() == 2 => {
-                collect_int_multi(arena, args[0])?.sub(&collect_int_multi(arena, args[1])?)
+    let mut memo: BTreeMap<TermId, MultiPoly> = BTreeMap::new();
+    let mut work = vec![IntMultiStep::Enter(t)];
+    while let Some(step) = work.pop() {
+        let node = match step {
+            IntMultiStep::Enter(t) => {
+                if memo.contains_key(&t) {
+                    continue;
+                }
+                if arena.sort_of(t) != Sort::Int {
+                    return None;
+                }
+                match arena.node(t) {
+                    TermNode::IntConst(i) => {
+                        memo.insert(t, MultiPoly::constant(Rational::integer(*i)));
+                        continue;
+                    }
+                    TermNode::Symbol(s) => {
+                        memo.insert(t, MultiPoly::var(*s));
+                        continue;
+                    }
+                    TermNode::App { op, args }
+                        if matches!(op, Op::IntNeg | Op::IntSub | Op::IntAdd | Op::IntMul) =>
+                    {
+                        // `Combine(t)` sits *below* its children, so every
+                        // operand is in the memo by the time it pops.
+                        let args: Vec<TermId> = args.to_vec();
+                        work.push(IntMultiStep::Combine(t));
+                        work.extend(args.into_iter().rev().map(IntMultiStep::Enter));
+                        continue;
+                    }
+                    _ => return None,
+                }
             }
+            IntMultiStep::Combine(t) => t,
+        };
+        let TermNode::App { op, args } = arena.node(node) else {
+            unreachable!("Combine is only pushed for arithmetic App nodes")
+        };
+        let poly = match op {
+            Op::IntNeg | Op::IntSub if args.len() == 1 => memo[&args[0]].neg()?,
+            Op::IntSub if args.len() == 2 => memo[&args[0]].sub(&memo[&args[1]])?,
             Op::IntAdd => {
                 let mut acc = MultiPoly::zero();
-                for &a in args {
-                    acc = acc.add(&collect_int_multi(arena, a)?)?;
+                for a in args {
+                    acc = acc.add(&memo[a])?;
                 }
-                Some(acc)
+                acc
             }
             Op::IntMul => {
                 let mut acc = MultiPoly::constant(Rational::integer(1));
-                for &a in args {
-                    acc = acc.mul(&collect_int_multi(arena, a)?)?;
+                for a in args {
+                    acc = acc.mul(&memo[a])?;
                 }
-                Some(acc)
+                acc
             }
-            _ => None,
-        },
-        _ => None,
+            _ => return None,
+        };
+        memo.insert(node, poly);
     }
+    memo.remove(&t)
 }
 
 // ============================================================================
@@ -6957,6 +7022,55 @@ mod tests {
 
     fn ipoly(coeffs: &[i128]) -> Vec<i128> {
         coeffs.to_vec()
+    }
+
+    /// A deep integer operand spine must not blow the stack.
+    ///
+    /// `integer_algebraic_refutation` runs on every `Unknown` the
+    /// auto-dispatcher produces, so `collect_int_multi`'s walk depth is the
+    /// assertion's term depth — which an SMT-LIB source controls directly with a
+    /// left-associated `(+ (+ (+ n 1) 1) 1)` spine. A natively recursive walk
+    /// aborts the process with a stack overflow instead of letting the solver
+    /// report a first-class `unknown`, so a regression aborts the test binary
+    /// rather than failing quietly.
+    #[test]
+    fn collect_int_multi_survives_a_deep_sum_spine() {
+        const DEPTH: usize = 100_000;
+        let mut arena = TermArena::new();
+        let n = arena.declare("deep_n", Sort::Int).expect("declare n");
+        let mut acc = arena.var(n);
+        let one = arena.int_const(1);
+        for _ in 0..DEPTH {
+            acc = arena.int_add(acc, one).expect("int add");
+        }
+
+        let poly = collect_int_multi(&arena, acc).expect("a sum spine is a polynomial");
+        // `n + 1 + 1 + …` is the linear polynomial `n + DEPTH`.
+        assert_eq!(
+            poly.terms.get(&Vec::new()),
+            Some(&Rational::integer(i128::try_from(DEPTH).unwrap())),
+            "constant term is the number of `+ 1` steps"
+        );
+        assert_eq!(poly.terms.len(), 2, "one monomial for `n`, one constant");
+    }
+
+    /// The same for the `and`-spine flattener, which sits directly above it.
+    #[test]
+    fn collect_int_multi_conjuncts_survives_a_deep_and_spine() {
+        const DEPTH: usize = 100_000;
+        let mut arena = TermArena::new();
+        let n = arena.declare("deep_and_n", Sort::Int).expect("declare n");
+        let nv = arena.var(n);
+        let zero = arena.int_const(0);
+        let leaf = arena.int_le(nv, zero).expect("n <= 0");
+        let mut acc = leaf;
+        for _ in 0..DEPTH {
+            acc = arena.and(acc, leaf).expect("and");
+        }
+
+        let mut atoms = Vec::new();
+        collect_int_multi_conjuncts(&arena, acc, &mut atoms).expect("every leaf is polynomial");
+        assert_eq!(atoms.len(), DEPTH + 1);
     }
 
     #[test]

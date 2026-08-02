@@ -3933,18 +3933,26 @@ fn disjunctive_value_set_bounds(
 /// other connective (`or`/`not`/`ite`/`=>`) is NOT unconditional and is skipped
 /// (its truth is not guaranteed in every model), so every collected term is a
 /// fact — the soundness basis for reading bounds off them.
+///
+/// # Why this is an explicit worklist and not native recursion
+///
+/// The `and` spine's depth is the source's: an SMT-LIB assertion written
+/// `(and (and (and …) p) q)` nests once per conjunct, and the front door
+/// reproduces that verbatim. A recursive flattener therefore **aborted** the
+/// process with a stack overflow, which is strictly worse than an `unknown` —
+/// the solver cannot report a first-class `unknown` and a harness reads the exit
+/// as a crash (the failure mode fixed in `fcc8760d`). `work` is a stack, so
+/// conjuncts are still collected left to right.
 fn collect_top_conjuncts(arena: &TermArena, term: TermId, out: &mut Vec<TermId>) {
-    match arena.node(term) {
-        TermNode::App {
-            op: Op::BoolAnd,
-            args,
-        } => {
-            let args = args.clone();
-            for arg in args {
-                collect_top_conjuncts(arena, arg, out);
-            }
+    let mut work = vec![term];
+    while let Some(t) = work.pop() {
+        match arena.node(t) {
+            TermNode::App {
+                op: Op::BoolAnd,
+                args,
+            } => work.extend(args.iter().rev().copied()),
+            _ => out.push(t),
         }
-        _ => out.push(term),
     }
 }
 
@@ -7444,6 +7452,30 @@ impl Features {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// A deep `and` spine must not blow the stack in the top-conjunct scan.
+    ///
+    /// `collect_top_conjuncts` reads the unconditional facts off an assertion on
+    /// the dispatch path, and its walk depth is the conjunction's nesting depth
+    /// — which an SMT-LIB source controls directly. A natively recursive walk
+    /// aborted the process on a 20k-conjunct source spine (found by backtrace),
+    /// so a regression aborts the test binary rather than failing quietly.
+    #[test]
+    fn collect_top_conjuncts_survives_a_deep_and_spine() {
+        const DEPTH: usize = 100_000;
+        let mut arena = TermArena::new();
+        let p = arena.declare("deep_conj_p", Sort::Bool).unwrap();
+        let leaf = arena.var(p);
+        let mut acc = leaf;
+        for _ in 0..DEPTH {
+            acc = arena.and(acc, leaf).unwrap();
+        }
+
+        let mut out = Vec::new();
+        collect_top_conjuncts(&arena, acc, &mut out);
+        assert_eq!(out.len(), DEPTH + 1);
+        assert!(out.iter().all(|&c| c == leaf));
+    }
 
     /// A deep BV operand chain must not blow the stack in the `to_real` fold.
     ///

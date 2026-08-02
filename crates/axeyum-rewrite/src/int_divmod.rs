@@ -212,30 +212,41 @@ struct Collector {
 }
 
 impl Collector {
+    /// Pre-order scan over the assertion DAG.
+    ///
+    /// The walk is an explicit stack, not native recursion: its depth would
+    /// otherwise be the term DAG's *depth*, which an SMT-LIB source controls
+    /// directly with a left-associated `(+ (+ (+ n 1) 1) 1)` spine. A recursive
+    /// walk **aborted** the process with a stack overflow there — strictly worse
+    /// than an `unknown`, since the solver cannot then report a first-class
+    /// `unknown` and a harness reads the exit as a crash (`fcc8760d`).
+    /// Arguments are pushed in reverse so nodes are still visited left to right,
+    /// keeping the collected `Vec` order — and hence the rewrite — unchanged.
     fn scan(&mut self, arena: &TermArena, term: TermId) {
-        if !self.seen.insert(term) {
-            return;
-        }
-        let TermNode::App { op, args } = arena.node(term) else {
-            return;
-        };
-        let (op, args) = (*op, args.clone());
-        match op {
-            Op::IntDiv | Op::IntMod => {
-                if let TermNode::IntConst(c) = arena.node(args[1]) {
-                    let entry = self.divmod.entry((args[0], *c)).or_default();
-                    if op == Op::IntDiv {
-                        entry.div.push(term);
-                    } else {
-                        entry.mod_.push(term);
+        let mut work = vec![term];
+        while let Some(term) = work.pop() {
+            if !self.seen.insert(term) {
+                continue;
+            }
+            let TermNode::App { op, args } = arena.node(term) else {
+                continue;
+            };
+            let (op, args) = (*op, args.clone());
+            match op {
+                Op::IntDiv | Op::IntMod => {
+                    if let TermNode::IntConst(c) = arena.node(args[1]) {
+                        let entry = self.divmod.entry((args[0], *c)).or_default();
+                        if op == Op::IntDiv {
+                            entry.div.push(term);
+                        } else {
+                            entry.mod_.push(term);
+                        }
                     }
                 }
+                Op::IntAbs => self.abs.entry(args[0]).or_default().push(term),
+                _ => {}
             }
-            Op::IntAbs => self.abs.entry(args[0]).or_default().push(term),
-            _ => {}
-        }
-        for arg in args {
-            self.scan(arena, arg);
+            work.extend(args.iter().rev().copied());
         }
     }
 }

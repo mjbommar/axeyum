@@ -2222,58 +2222,106 @@ impl IntCollector {
         });
     }
 
+    /// Turns an integer term into a linear expression over the tracked columns.
+    ///
+    /// # Why this is an explicit worklist and not native recursion
+    ///
+    /// The walk's depth is the term's *nesting* depth, which an SMT-LIB source
+    /// controls directly with a left-associated `(+ (+ (+ n 1) 1) 1)` spine.
+    /// A recursive walk **aborted** the process with a stack overflow there,
+    /// which is strictly worse than declining: the solver cannot report a
+    /// first-class `unknown` and a harness reads the exit as a crash (the
+    /// failure mode fixed in `fcc8760d`). Operands are entered left to right, so
+    /// column indices are still assigned in the order the recursive walk
+    /// assigned them.
     fn linearize(&mut self, arena: &TermArena, term: TermId) -> Result<LinExpr, SolverError> {
-        match arena.node(term) {
-            TermNode::IntConst(value) => Ok(LinExpr::constant(Rational::integer(*value))),
-            TermNode::Symbol(symbol) if is_int(arena, term) => {
-                Ok(LinExpr::var(self.index_of(*symbol)))
-            }
-            TermNode::App {
-                op: Op::Apply(_), ..
-            } if self.allow_opaque_apps && is_int(arena, term) => {
-                Ok(LinExpr::var(self.index_of_opaque(term)))
-            }
-            TermNode::App {
-                op: Op::IntNeg,
-                args,
-            } => {
-                let a = self.linearize(arena, args[0])?;
-                Ok(self.guard(a.neg()))
-            }
-            TermNode::App {
-                op: Op::IntAdd,
-                args,
-            } => {
-                let a = self.linearize(arena, args[0])?;
-                let b = self.linearize(arena, args[1])?;
-                Ok(self.guard(a.add(&b)))
-            }
-            TermNode::App {
-                op: Op::IntSub,
-                args,
-            } => {
-                let a = self.linearize(arena, args[0])?;
-                let b = self.linearize(arena, args[1])?;
-                Ok(self.guard(a.sub(&b)))
-            }
-            TermNode::App {
-                op: Op::IntMul,
-                args,
-            } => {
-                let a = self.linearize(arena, args[0])?;
-                let b = self.linearize(arena, args[1])?;
-                if a.is_constant() {
-                    Ok(self.guard(b.scale(a.constant)))
-                } else if b.is_constant() {
-                    Ok(self.guard(a.scale(b.constant)))
-                } else {
-                    Err(unsupported_lia("nonlinear integer multiplication"))
+        enum Step {
+            Enter(TermId),
+            Build(TermId),
+        }
+        let mut work = vec![Step::Enter(term)];
+        // Operand results, in completion order; a `Build` pops exactly its own.
+        let mut values: Vec<LinExpr> = Vec::new();
+        while let Some(step) = work.pop() {
+            match step {
+                Step::Enter(t) => match arena.node(t) {
+                    TermNode::IntConst(value) => {
+                        values.push(LinExpr::constant(Rational::integer(*value)));
+                    }
+                    TermNode::Symbol(symbol) if is_int(arena, t) => {
+                        let index = self.index_of(*symbol);
+                        values.push(LinExpr::var(index));
+                    }
+                    TermNode::App {
+                        op: Op::Apply(_), ..
+                    } if self.allow_opaque_apps && is_int(arena, t) => {
+                        let index = self.index_of_opaque(t);
+                        values.push(LinExpr::var(index));
+                    }
+                    TermNode::App {
+                        op: Op::IntNeg,
+                        args,
+                    } => {
+                        let arg = args[0];
+                        work.push(Step::Build(t));
+                        work.push(Step::Enter(arg));
+                    }
+                    TermNode::App {
+                        op: Op::IntAdd | Op::IntSub | Op::IntMul,
+                        args,
+                    } => {
+                        let (left, right) = (args[0], args[1]);
+                        work.push(Step::Build(t));
+                        // Pushed right-first so the left operand is entered
+                        // first and lands first in `values`.
+                        work.push(Step::Enter(right));
+                        work.push(Step::Enter(left));
+                    }
+                    _ => {
+                        return Err(unsupported_lia(
+                            "non-linear or non-integer subterm in a constraint",
+                        ));
+                    }
+                },
+                Step::Build(t) => {
+                    let TermNode::App { op, .. } = arena.node(t) else {
+                        unreachable!("Build is only pushed for integer applications")
+                    };
+                    let built = match op {
+                        Op::IntNeg => {
+                            let a = values.pop().expect("one operand");
+                            self.guard(a.neg())
+                        }
+                        Op::IntAdd => {
+                            let b = values.pop().expect("right operand");
+                            let a = values.pop().expect("left operand");
+                            self.guard(a.add(&b))
+                        }
+                        Op::IntSub => {
+                            let b = values.pop().expect("right operand");
+                            let a = values.pop().expect("left operand");
+                            self.guard(a.sub(&b))
+                        }
+                        Op::IntMul => {
+                            let b = values.pop().expect("right operand");
+                            let a = values.pop().expect("left operand");
+                            if a.is_constant() {
+                                self.guard(b.scale(a.constant))
+                            } else if b.is_constant() {
+                                self.guard(a.scale(b.constant))
+                            } else {
+                                return Err(unsupported_lia("nonlinear integer multiplication"));
+                            }
+                        }
+                        _ => {
+                            unreachable!("Build is only pushed for the arithmetic operators above")
+                        }
+                    };
+                    values.push(built);
                 }
             }
-            _ => Err(unsupported_lia(
-                "non-linear or non-integer subterm in a constraint",
-            )),
         }
+        Ok(values.pop().expect("the root's value"))
     }
 }
 

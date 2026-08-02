@@ -334,6 +334,38 @@ pub(crate) enum RegexSexpr<'a> {
     List(&'a str, Vec<RegexSexpr<'a>>),
 }
 
+/// The deepest `RegLan` s-expression nesting the regex front end will convert.
+///
+/// Everything downstream of [`from_sexpr`] — the `SExpr` → [`RegexSexpr`] view,
+/// [`parse_regex`], the [`Regex`] AST's own drop glue, and the NFA compiler —
+/// walks the regex tree with *native recursion*, so its stack depth is the
+/// source's nesting depth. Past this cap the process would **abort** with a
+/// stack overflow, which is strictly worse than a decline: the solver cannot
+/// report a first-class `unknown` and a harness reads the exit as a crash
+/// (the failure mode fixed in `fcc8760d`).
+///
+/// The cap is two orders of magnitude above any nesting a real benchmark uses —
+/// SMT-LIB's `re.++`/`re.union` are n-ary, so a wide alternation is one flat
+/// list, not a spine — and a regex over it declines through the *existing*
+/// `Unsupported`/`None` route, never as the empty language.
+const MAX_REGEX_SEXPR_DEPTH: usize = 1024;
+
+/// Whether `e` nests deeper than [`MAX_REGEX_SEXPR_DEPTH`].
+///
+/// Measured with an explicit stack, so the guard itself cannot overflow.
+fn regex_sexpr_too_deep(e: &SExpr) -> bool {
+    let mut work: Vec<(&SExpr, usize)> = vec![(e, 1)];
+    while let Some((node, depth)) = work.pop() {
+        if depth > MAX_REGEX_SEXPR_DEPTH {
+            return true;
+        }
+        if let SExpr::List(items) = node {
+            work.extend(items.iter().map(|i| (i, depth + 1)));
+        }
+    }
+    false
+}
+
 /// Converts a parser [`SExpr`] into a [`RegexSexpr`].
 ///
 /// An **indexed** head `(_ op i …)` — the SMT-LIB form of `re.loop` and `re.^` —
@@ -500,6 +532,10 @@ fn literal_regex(bytes: &[u8]) -> Regex {
 /// only true-of-every-word bounds are ever produced (`Comp` → `min 0`/no max,
 /// `Diff(a, b)` → `a`'s interval, `Inter` → max-of-mins / min-of-maxes).
 pub(crate) fn in_re_length_interval(re: &crate::sexpr::SExpr) -> Option<(u64, Option<u64>)> {
+    if regex_sexpr_too_deep(re) {
+        // No fact is derived, exactly as for any other declined regex.
+        return None;
+    }
     let view = from_sexpr(re);
     let regex = parse_regex(&view).ok()?;
     regex_len_interval(&regex)
@@ -1019,6 +1055,11 @@ pub(crate) fn encode_in_re(
     s: TermId,
     re: &SExpr,
 ) -> Result<TermId, SmtError> {
+    if regex_sexpr_too_deep(re) {
+        return Err(SmtError::Unsupported(format!(
+            "regex nested deeper than {MAX_REGEX_SEXPR_DEPTH}"
+        )));
+    }
     let view = from_sexpr(re);
     let regex = parse_regex(&view)?;
     let nfa = build_nfa(&regex)?;
@@ -1091,6 +1132,11 @@ impl CompiledRegex {
 /// substring matching. Declines (clean [`SmtError::Unsupported`]) the same
 /// constructs [`encode_in_re`] declines, including a DFA/NFA over the state cap.
 pub(crate) fn compile_regex(re: &SExpr) -> Result<CompiledRegex, SmtError> {
+    if regex_sexpr_too_deep(re) {
+        return Err(SmtError::Unsupported(format!(
+            "regex nested deeper than {MAX_REGEX_SEXPR_DEPTH}"
+        )));
+    }
     let view = from_sexpr(re);
     let regex = parse_regex(&view)?;
     let nfa = build_nfa(&regex)?;
@@ -1237,4 +1283,65 @@ fn encode_match(arena: &mut TermArena, s: TermId, nfa: &Nfa, m: u32) -> Result<T
 fn packed_byte(arena: &mut TermArena, s: TermId, pos: u32, m: u32) -> Result<TermId, SmtError> {
     let lo = crate::parse::len_width(m) + pos * 8;
     arena.extract(lo + 7, lo, s).map_err(SmtError::Ir)
+}
+
+#[cfg(test)]
+mod deep_nesting_tests {
+    use super::{
+        MAX_REGEX_SEXPR_DEPTH, compile_regex, in_re_length_interval, regex_sexpr_too_deep,
+    };
+    use crate::sexpr::read_all;
+
+    /// Builds `(re.++ (re.++ … (str.to_re "a")) (str.to_re "b"))`, nested
+    /// `depth` deep.
+    fn nested_regex_source(depth: usize) -> String {
+        let mut re = String::from("(str.to_re \"a\")");
+        for _ in 0..depth {
+            re = format!("(re.++ {re} (str.to_re \"b\"))");
+        }
+        re
+    }
+
+    fn read_one(text: &str) -> crate::sexpr::SExpr {
+        read_all(text).expect("balanced").pop().expect("one expr")
+    }
+
+    /// An over-deep regex **declines**; it must never abort the process.
+    ///
+    /// Everything below [`from_sexpr`](super::from_sexpr) walks the regex tree
+    /// with native recursion, so without the guard a nesting this deep
+    /// overflowed the stack — an abort, which is strictly worse than a decline
+    /// because the solver cannot then report a first-class `unknown`. The depth
+    /// is far past what any recursive frame survives on the harness's thread
+    /// stack, so a regression aborts the test binary rather than failing
+    /// quietly.
+    #[test]
+    fn an_over_deep_regex_declines_instead_of_aborting() {
+        let e = read_one(&nested_regex_source(40_000));
+        assert!(regex_sexpr_too_deep(&e));
+        assert!(
+            compile_regex(&e).is_err(),
+            "over-deep regex declines cleanly"
+        );
+        assert!(
+            in_re_length_interval(&e).is_none(),
+            "no length fact is derived from a declined regex"
+        );
+    }
+
+    /// A regex well inside the cap is unaffected: the guard must not turn
+    /// ordinary benchmarks into declines.
+    #[test]
+    fn an_ordinary_regex_is_untouched_by_the_depth_guard() {
+        let e = read_one(&nested_regex_source(16));
+        assert!(!regex_sexpr_too_deep(&e));
+        assert!(compile_regex(&e).is_ok(), "16-deep regex still compiles");
+        assert_eq!(
+            in_re_length_interval(&e),
+            Some((17, Some(17))),
+            "`a` followed by 16 `b`s: every word has length 17"
+        );
+        // The cap is generous relative to anything a benchmark writes.
+        assert!(MAX_REGEX_SEXPR_DEPTH >= 1024);
+    }
 }

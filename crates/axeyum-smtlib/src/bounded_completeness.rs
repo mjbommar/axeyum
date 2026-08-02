@@ -191,13 +191,22 @@ fn assert_body(e: &SExpr) -> Option<&SExpr> {
 /// `(! X …)` annotations are unwrapped. Disjunctions / `ite` / `not` are opaque
 /// (their inner facts are NOT guaranteed), so we do not descend into them.
 fn guaranteed_conjuncts(phi: &SExpr) -> Vec<&SExpr> {
-    let phi = unwrap_annot(phi);
-    if let SExpr::List(items) = phi
-        && items.first().and_then(SExpr::atom) == Some("and")
-    {
-        return items[1..].iter().flat_map(guaranteed_conjuncts).collect();
+    // Explicit worklist rather than recursion: the `and` spine's depth is the
+    // source's, so a left-associated `(and (and (and …)))` aborted the process.
+    // `work` is a stack, so conjuncts come out in source order.
+    let mut out = Vec::new();
+    let mut work = vec![phi];
+    while let Some(node) = work.pop() {
+        let node = unwrap_annot(node);
+        if let SExpr::List(items) = node
+            && items.first().and_then(SExpr::atom) == Some("and")
+        {
+            work.extend(items[1..].iter().rev());
+        } else {
+            out.push(node);
+        }
     }
-    vec![phi]
+    out
 }
 
 /// Unwrap a `(! X :key val …)` annotation to `X` (e.g. `:named`).
@@ -347,17 +356,15 @@ fn nonneg_int_literal(e: &SExpr) -> Option<i128> {
 /// `true` if `e` (recursively) contains any construct that breaks the C3
 /// "every Int quantity < 2^31" guarantee or hides unbounded structure.
 fn has_unsafe_construct(e: &SExpr) -> bool {
-    match e {
+    // Iterative scan: see [`SExpr::descendants`]. A recursive one aborts the
+    // process on a deeply nested source instead of returning an answer.
+    e.descendants().any(|n| match n {
         SExpr::Atom(a) => integer_literal_too_large(a),
-        SExpr::List(items) => {
-            if let Some(head) = items.first().and_then(SExpr::atom)
-                && FORBIDDEN_HEADS.contains(&head)
-            {
-                return true;
-            }
-            items.iter().any(has_unsafe_construct)
-        }
-    }
+        SExpr::List(items) => items
+            .first()
+            .and_then(SExpr::atom)
+            .is_some_and(|head| FORBIDDEN_HEADS.contains(&head)),
+    })
 }
 
 /// The distinct byte values fixed by string literals, or `None` when a literal

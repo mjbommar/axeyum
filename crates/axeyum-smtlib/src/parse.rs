@@ -4897,14 +4897,14 @@ fn desugar_const_arrays(exprs: &mut Vec<SExpr>) {
 
 /// Whether `e` mentions an `(as const …)` constant-array head anywhere.
 fn mentions_const_array(e: &SExpr) -> bool {
-    match e {
+    // Iterative scan: see [`SExpr::descendants`].
+    e.descendants().any(|n| match n {
         SExpr::Atom(_) => false,
         SExpr::List(items) => {
-            (items.first().and_then(SExpr::atom) == Some("as")
-                && items.get(1).and_then(SExpr::atom) == Some("const"))
-                || items.iter().any(mentions_const_array)
+            items.first().and_then(SExpr::atom) == Some("as")
+                && items.get(1).and_then(SExpr::atom) == Some("const")
         }
-    }
+    })
 }
 
 /// Whether `e` is a constant-array *expression*: a literal `((as const A) v)`, or
@@ -5276,23 +5276,21 @@ fn desugar_sets(exprs: &mut [SExpr]) -> Result<(), SmtError> {
 
 /// Whether `e` mentions the `Set` sort head or any `set.*` operator anywhere.
 fn mentions_sets(e: &SExpr) -> bool {
-    match e {
+    // Iterative scan: see [`SExpr::descendants`] — a recursive one aborts the
+    // process on a deeply nested source instead of returning an answer.
+    e.descendants().any(|n| match n {
         SExpr::Atom(a) => a.starts_with("set."),
-        SExpr::List(items) => {
-            items.first().and_then(SExpr::atom) == Some("Set") || items.iter().any(mentions_sets)
-        }
-    }
+        SExpr::List(items) => items.first().and_then(SExpr::atom) == Some("Set"),
+    })
 }
 
 /// Whether `e` uses the `(set.card ...)` operator anywhere.
 fn uses_set_card(e: &SExpr) -> bool {
-    match e {
+    // Iterative scan: see [`SExpr::descendants`].
+    e.descendants().any(|n| match n {
         SExpr::Atom(_) => false,
-        SExpr::List(items) => {
-            items.first().and_then(SExpr::atom) == Some("set.card")
-                || items.iter().any(uses_set_card)
-        }
-    }
+        SExpr::List(items) => items.first().and_then(SExpr::atom) == Some("set.card"),
+    })
 }
 
 /// The slack-universe width `N` for a script that uses `set.card` (see the module
@@ -14612,13 +14610,11 @@ fn normalize_source_fp_expr(
 /// can never satisfy the rule. Rule 4 is the only one that introduces an
 /// addition fact, so a source without `fp.add` cannot reach a verdict.
 fn source_mentions_fp_add(exprs: &[SExpr]) -> bool {
-    fn walk(expression: &SExpr) -> bool {
-        match expression {
-            SExpr::Atom(atom) => atom == "fp.add",
-            SExpr::List(items) => items.iter().any(walk),
-        }
-    }
-    exprs.iter().any(walk)
+    // Iterative scan: see [`SExpr::descendants`].
+    exprs
+        .iter()
+        .flat_map(SExpr::descendants)
+        .any(|n| n.atom() == Some("fp.add"))
 }
 
 /// Node count, or `None` once it provably exceeds `limit`.
@@ -16307,12 +16303,11 @@ impl SeqInfo {
 /// (the fast-path guard: a script with no sequences skips [`build_seq_info`] and
 /// threads an empty table).
 fn mentions_seq(e: &SExpr) -> bool {
-    match e {
+    // Iterative scan: see [`SExpr::descendants`].
+    e.descendants().any(|n| match n {
         SExpr::Atom(a) => a.starts_with("seq."),
-        SExpr::List(items) => {
-            items.first().and_then(SExpr::atom) == Some("Seq") || items.iter().any(mentions_seq)
-        }
-    }
+        SExpr::List(items) => items.first().and_then(SExpr::atom) == Some("Seq"),
+    })
 }
 
 /// Builds the packed-width → element-width registry for a script by scanning every
@@ -16495,13 +16490,11 @@ impl FfInfo {
 /// anywhere (the fast-path guard: a script with no finite fields skips
 /// [`build_ff_info`]).
 fn mentions_ff(e: &SExpr) -> bool {
-    match e {
+    // Iterative scan: see [`SExpr::descendants`].
+    e.descendants().any(|n| match n {
         SExpr::Atom(a) => a.starts_with("ff.") || a.starts_with("#f"),
-        SExpr::List(items) => {
-            items.get(1).and_then(SExpr::atom) == Some("FiniteField")
-                || items.iter().any(mentions_ff)
-        }
-    }
+        SExpr::List(items) => items.get(1).and_then(SExpr::atom) == Some("FiniteField"),
+    })
 }
 
 /// Parses the modulus of a `(_ FiniteField p)` sort s-expr. Returns the prime as

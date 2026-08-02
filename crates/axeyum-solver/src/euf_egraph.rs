@@ -2069,39 +2069,76 @@ impl Bridge {
     }
 
     /// The e-node for `term`, creating it (and its subterms) on first use.
+    ///
+    /// # Why this is an explicit worklist and not native recursion
+    ///
+    /// The walk's depth is the term DAG's *depth*, so a deep operand spine — a
+    /// `(store (store (store a i v) …) …)` chain, or any left-associated n-ary
+    /// operator the SMT-LIB front door reproduces verbatim — overflowed the
+    /// stack and **aborted** the process, which is strictly worse than an
+    /// `unknown`: the solver cannot report a first-class `unknown` and a harness
+    /// reads the exit as a crash (the failure mode fixed in `fcc8760d`).
+    /// `term_to_node` is the memo, so the walk stays linear in DAG size, and the
+    /// post-order `decl` assignment order is unchanged.
     fn node(&mut self, arena: &TermArena, term: TermId) -> ENodeId {
-        if let Some(&n) = self.term_to_node.get(&term) {
-            return n;
+        enum Step {
+            Enter(TermId),
+            Build(TermId),
         }
-        let n = match arena.node(term) {
-            TermNode::Symbol(s) => {
-                let decl = self.decl(DeclKey::Symbol(s.index()));
-                self.egraph.add(decl, &[])
-            }
-            TermNode::BoolConst(_)
-            | TermNode::BvConst { .. }
-            | TermNode::WideBvConst(_)
-            | TermNode::IntConst(_)
-            | TermNode::RealConst(_) => {
-                // Each distinct literal value is a distinct constant node.
-                let key = DeclKey::Const(format!("{:?}", arena.node(term)));
-                let decl = self.decl(key);
-                let node = self.egraph.add(decl, &[]);
-                if self.constant_decls.insert(decl) {
-                    self.constants.push(node);
+        let mut work = vec![Step::Enter(term)];
+        while let Some(step) = work.pop() {
+            let (t, n) = match step {
+                Step::Enter(t) => {
+                    if self.term_to_node.contains_key(&t) {
+                        continue;
+                    }
+                    match arena.node(t) {
+                        TermNode::Symbol(s) => {
+                            let decl = self.decl(DeclKey::Symbol(s.index()));
+                            (t, self.egraph.add(decl, &[]))
+                        }
+                        TermNode::BoolConst(_)
+                        | TermNode::BvConst { .. }
+                        | TermNode::WideBvConst(_)
+                        | TermNode::IntConst(_)
+                        | TermNode::RealConst(_) => {
+                            // Each distinct literal value is a distinct constant node.
+                            let key = DeclKey::Const(format!("{:?}", arena.node(t)));
+                            let decl = self.decl(key);
+                            let node = self.egraph.add(decl, &[]);
+                            if self.constant_decls.insert(decl) {
+                                self.constants.push(node);
+                            }
+                            (t, node)
+                        }
+                        TermNode::App { args, .. } => {
+                            // `Build(t)` sits *below* its children, so every
+                            // operand is in `term_to_node` by the time it pops,
+                            // and `decl` ids are still assigned post-order.
+                            let args = args.clone();
+                            work.push(Step::Build(t));
+                            work.extend(args.iter().rev().map(|&a| Step::Enter(a)));
+                            continue;
+                        }
+                    }
                 }
-                node
-            }
-            TermNode::App { op, args } => {
-                let key = DeclKey::Op(format!("{op:?}"));
-                let args = args.clone();
-                let child_nodes: Vec<ENodeId> = args.iter().map(|&a| self.node(arena, a)).collect();
-                let decl = self.decl(key);
-                self.egraph.add(decl, &child_nodes)
-            }
-        };
-        self.term_to_node.insert(term, n);
-        n
+                Step::Build(t) => {
+                    if self.term_to_node.contains_key(&t) {
+                        continue;
+                    }
+                    let TermNode::App { op, args } = arena.node(t) else {
+                        unreachable!("Build is only pushed for App nodes")
+                    };
+                    let key = DeclKey::Op(format!("{op:?}"));
+                    let child_nodes: Vec<ENodeId> =
+                        args.iter().map(|a| self.term_to_node[a]).collect();
+                    let decl = self.decl(key);
+                    (t, self.egraph.add(decl, &child_nodes))
+                }
+            };
+            self.term_to_node.insert(t, n);
+        }
+        self.term_to_node[&term]
     }
 
     /// Collects definite eq/diseq atoms reachable from `term` asserted with
@@ -2210,6 +2247,35 @@ impl Bridge {
 mod tests {
     use super::*;
     use axeyum_ir::{Sort, TermArena};
+
+    /// A deep term spine must not blow the stack when it enters the e-graph.
+    ///
+    /// `Bridge::node` interns a term and *all* its subterms, so its walk depth is
+    /// the term DAG's depth — which an SMT-LIB source controls directly with a
+    /// `(store (store (store a i v) …) …)` chain or any left-associated n-ary
+    /// operator. A natively recursive walk aborts the process with a stack
+    /// overflow instead of letting the solver report a first-class `unknown`, so
+    /// a regression aborts the test binary rather than failing quietly.
+    #[test]
+    fn bridge_node_survives_a_deep_term_spine() {
+        const DEPTH: usize = 100_000;
+        let mut arena = TermArena::new();
+        let x = arena
+            .declare("deep_bx", Sort::BitVec(8))
+            .expect("declare x");
+        let mut acc = arena.var(x);
+        let one = arena.bv_const(8, 1).expect("const");
+        for _ in 0..DEPTH {
+            acc = arena.bv_add(acc, one).expect("bvadd");
+        }
+
+        let mut bridge = Bridge::new();
+        let node = bridge.node(&arena, acc);
+        // Interning is memoized: a second pass is a lookup, not a rebuild.
+        assert_eq!(bridge.node(&arena, acc), node);
+        // Every distinct subterm on the spine has its own e-node.
+        assert!(bridge.term_to_node.len() >= DEPTH);
+    }
 
     /// Whether the conjunction of equality literals `lits` (each `(atom_term, value)`,
     /// `value=true` meaning the equality holds, `false` a disequality) is UNSAT by

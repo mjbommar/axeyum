@@ -117,26 +117,33 @@ fn occurrences(arena: &TermArena, roots: &[TermId]) -> Occurrences {
 
 /// Collects the symbols occurring free in `term` (memoized so a shared DAG is
 /// walked once).
+///
+/// The walk is an explicit worklist, not native recursion: its depth would
+/// otherwise be the term DAG's *depth*, so a deep operand chain — e.g. a
+/// left-associated `(+ (+ (+ x 1) 1) 1)` spine, which SMT-LIB sources produce
+/// routinely — aborted the process with a stack overflow instead of letting the
+/// solver report a first-class `unknown` (compare `fcc8760d`). `seen` keeps the
+/// walk linear in DAG size either way.
 fn free_symbols(
     arena: &TermArena,
     term: TermId,
     out: &mut HashSet<SymbolId>,
     seen: &mut HashSet<TermId>,
 ) {
-    if !seen.insert(term) {
-        return;
-    }
-    match arena.node(term) {
-        TermNode::Symbol(s) => {
-            out.insert(*s);
+    let mut work = vec![term];
+    while let Some(t) = work.pop() {
+        if !seen.insert(t) {
+            continue;
         }
-        TermNode::App { args, .. } => {
-            let args = args.clone();
-            for a in args {
-                free_symbols(arena, a, out, seen);
+        match arena.node(t) {
+            TermNode::Symbol(s) => {
+                out.insert(*s);
             }
+            TermNode::App { args, .. } => {
+                work.extend(args.iter().copied());
+            }
+            _ => {}
         }
-        _ => {}
     }
 }
 
@@ -390,6 +397,33 @@ pub fn elim_unconstrained(
 mod tests {
     use super::*;
     use axeyum_ir::{Assignment, Value, eval};
+
+    /// A deep operand spine must not blow the stack in the free-symbol scan.
+    ///
+    /// `free_symbols` runs over every assertion this pass sees, and its walk
+    /// depth is the term DAG's depth — which an SMT-LIB source controls
+    /// directly with a left-associated `(bvadd (bvadd (bvadd x 1) 1) 1)` spine.
+    /// A natively recursive walk aborts the process with a stack overflow
+    /// instead of letting the solver report a first-class `unknown`, so a
+    /// regression aborts the test binary rather than failing quietly.
+    #[test]
+    fn free_symbols_survives_a_deep_operand_spine() {
+        const DEPTH: usize = 100_000;
+        let mut arena = TermArena::new();
+        let x = arena.declare("deep_x", Sort::BitVec(8)).expect("declare x");
+        let mut acc = arena.var(x);
+        let one = arena.bv_const(8, 1).expect("const");
+        for _ in 0..DEPTH {
+            acc = arena.bv_add(acc, one).expect("bvadd");
+        }
+
+        let mut out = HashSet::new();
+        let mut seen = HashSet::new();
+        free_symbols(&arena, acc, &mut out, &mut seen);
+
+        assert_eq!(out.len(), 1, "only `deep_x` occurs free");
+        assert!(out.contains(&x));
+    }
 
     fn bv8(v: u128) -> Value {
         Value::Bv { width: 8, value: v }
