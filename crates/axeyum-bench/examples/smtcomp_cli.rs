@@ -63,11 +63,11 @@ const WORKER_STACK_BYTES: usize = 512 * 1024 * 1024;
 ///
 /// * `ok`   — re-checked here and it holds.
 /// * `FAIL` — a certificate is attached but does NOT re-check. A soundness alarm;
-///            it is reported, never swallowed.
+///   it is reported, never swallowed.
 /// * `na`   — no text-only re-check is available for this evidence kind from this
-///            process (the certificate's checker needs the term arena, which the
-///            text front door does not hand back). Deliberately NOT counted as a
-///            success: the whole point is to stop overstating coverage.
+///   process (the certificate's checker needs the term arena, which the
+///   text front door does not hand back). Deliberately NOT counted as a
+///   success: the whole point is to stop overstating coverage.
 fn evidence_report_line(evidence: &Evidence, elapsed_ms: u128) -> (&'static str, String) {
     let verdict = match evidence {
         Evidence::Sat(_) => "sat",

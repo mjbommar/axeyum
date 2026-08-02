@@ -10571,7 +10571,7 @@ mod tests {
             Some(instance),
             "its owner is the instance that exposed it, not an original assertion",
         );
-        assert!(peel_foralls(&arena, registration.quantifier).0.len() == 1);
+        assert_eq!(peel_foralls(&arena, registration.quantifier).0.len(), 1);
     }
 
     #[test]
