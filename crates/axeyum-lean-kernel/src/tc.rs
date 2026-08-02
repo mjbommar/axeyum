@@ -1613,7 +1613,7 @@ impl Kernel {
     /// The fallback is the ordinary infer-then-definitional-equality rule. This
     /// is extensionally the same judgment, but it avoids constructing a second
     /// copy of a large dependent lambda telescope solely to compare it.
-    fn check_core(
+    pub(crate) fn check_core(
         &mut self,
         expression: ExprId,
         expected: ExprId,

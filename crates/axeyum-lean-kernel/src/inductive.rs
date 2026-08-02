@@ -1211,6 +1211,14 @@ impl Kernel {
         }
 
         let parameter_args = candidate.args[..candidate.num_params].to_vec();
+        // Families of the group under declaration are not yet in the
+        // environment; the parameter-domain check below skips positions that
+        // mention them.
+        let active_names = expansion
+            .families
+            .iter()
+            .map(|family| family.name)
+            .collect::<Vec<_>>();
         let first_source = expansion.families[0].name;
         let mut pending = Vec::with_capacity(container_group.len());
         let mut reserved_names = self.nested_expansion_surface_names(expansion);
@@ -1264,6 +1272,8 @@ impl Kernel {
                 specialized_family_ty,
                 &parameter_args,
                 original_family,
+                outer_binders,
+                &active_names,
             )?;
             let auxiliary_ty = self.abstr_pi_telescope(outer_binders, specialized_family_ty);
 
@@ -1301,6 +1311,8 @@ impl Kernel {
                     constructor_ty,
                     &parameter_args,
                     original_family,
+                    outer_binders,
+                    &active_names,
                 )?;
                 let constructor_ty = self.abstr_pi_telescope(outer_binders, constructor_ty);
                 constructors.push((auxiliary_constructor, constructor_ty));
@@ -1330,16 +1342,56 @@ impl Kernel {
         })
     }
 
+    /// Consume the container's parameter telescope, checking each argument
+    /// against its binder domain before substituting it.
+    ///
+    /// The domain check is defense in depth against the erasure route of Lean
+    /// kernel bug #14576. Specialization instantiates the container's
+    /// parameters, so a parameter that occurs in no constructor field — a
+    /// *phantom* parameter — disappears from the auxiliary family and from
+    /// every auxiliary constructor. Nothing in the temporary expanded group can
+    /// then reject an ill-typed argument in that slot. Restoration re-infers
+    /// the published surface and does reject it (see
+    /// [`Self::ensure_nested_published_type`]), but that leaves the only gate
+    /// far from the substitution that erased the argument. Checking here fails
+    /// at the point of erasure instead.
+    ///
+    /// A position mentioning a family of the group under declaration is not yet
+    /// resolvable: its constants are inserted only after the expanded group is
+    /// checked. Those are exactly the recursive nesting positions, which
+    /// positivity checking and restoration cover, so they are skipped rather
+    /// than reported as unknown declarations. The same applies when an outer
+    /// binder's type mentions such a family, which would make the local context
+    /// itself unresolvable. Skipping keeps this check strictly additive: it can
+    /// reject more, never accept more.
     fn instantiate_nested_parameter_prefix(
         &mut self,
         mut expression: ExprId,
         parameters: &[ExprId],
         container: NameId,
+        outer_binders: &[LocalDecl],
+        active_names: &[NameId],
     ) -> Result<ExprId, KernelError> {
+        let context_is_resolvable = outer_binders
+            .iter()
+            .all(|binder| !self.mentions_names(binder.ty, active_names));
+        let mut ctx = LocalContext::new();
+        if context_is_resolvable {
+            for binder in outer_binders {
+                ctx.bump_fresh_above(binder.fvar);
+                ctx.push(*binder);
+            }
+        }
         for &parameter in parameters {
-            let ExprNode::Pi(_, _, body, _) = self.expr_node(expression).clone() else {
+            let ExprNode::Pi(_, domain, body, _) = self.expr_node(expression).clone() else {
                 return Err(KernelError::NestedInductiveMalformedContainer { container });
             };
+            if context_is_resolvable
+                && !self.mentions_names(parameter, active_names)
+                && !self.mentions_names(domain, active_names)
+            {
+                self.check_core(parameter, domain, &mut ctx)?;
+            }
             expression = self.instantiate(body, &[parameter]);
         }
         Ok(expression)
