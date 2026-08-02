@@ -5894,6 +5894,8 @@ fn declared_string_symbols_are_recorded_for_model_export() {
         Some(*max_len),
         "the registry's max length must match the packed width"
     );
+}
+
 /// An ingest deadline that has ALREADY passed must decline, not parse.
 ///
 /// The regression this pins: the parser polled no clock at all, so a 24 s budget

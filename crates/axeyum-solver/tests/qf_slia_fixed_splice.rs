@@ -2808,15 +2808,12 @@ fn bounded_source_witness_closes_last_noetzli_counterexamples() {
         r#"(not (= (str.replace (str.replace x y x) y "B") (str.replace x y (str.replace x y "B"))))"#,
         r#"(not (= (str.replace (str.replace x y x) y "") (str.replace x y (str.replace x y ""))))"#,
     ];
-    // 2026-08-02: this was 250 ms, and it only ever passed because INGEST
-    // ignored the budget. Now that `solve_smtlib` shares its deadline with the
-    // parser, a 250 ms budget correctly declines these queries under parallel
-    // test load — ingest alone can exceed it, and the string-bound ladder
-    // re-parses on each rung. The assertion is unchanged (these must still
-    // decide SAT with a replayable witness); only the budget is corrected to one
-    // that actually permits the work it demands. A test whose budget is enforced
-    // is worth more than a tighter number that was never honoured.
-    let fast = SolverConfig::new().with_timeout(Duration::from_secs(10));
+    // A TIGHT budget on purpose: it is what exercises the bounded-source
+    // fallback, which only runs when the primary route returns Unknown. The
+    // assertion below is route-agnostic, so a slower box that lets the packed
+    // route win no longer flips this test — which is what a larger budget was
+    // briefly used to paper over.
+    let fast = SolverConfig::new().with_timeout(Duration::from_millis(250));
     for assertion in assertions {
         let input = format!(
             r"(set-logic QF_SLIA)
