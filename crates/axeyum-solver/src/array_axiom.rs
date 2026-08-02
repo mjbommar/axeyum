@@ -816,20 +816,34 @@ fn match_bit_literal(arena: &TermArena, bit: TermId) -> Option<BitLiteral> {
     None
 }
 
+/// Flattens a top-level `and` spine, ITERATIVELY.
+///
+/// Native recursion here was unbounded in the spine's depth, which is the crash
+/// class that aborted nine scored QF_BV files before it was found: a stack
+/// overflow is strictly worse than a timeout, because the solver cannot report
+/// the first-class `unknown` it owes its caller and a harness reads the exit as
+/// a crash. A 20k-conjunct source is ordinary in generated benchmarks.
+///
+/// The stack pushes the RIGHT operand first so operands pop left-to-right,
+/// preserving the original traversal order exactly — downstream code indexes
+/// into `out`.
 fn collect_top_conjuncts(arena: &TermArena, term: TermId, out: &mut Vec<TermId>) {
-    match arena.node(term) {
-        TermNode::App {
-            op: Op::BoolAnd,
-            args,
-        } if args.len() == 2 => {
-            collect_top_conjuncts(arena, args[0], out);
-            collect_top_conjuncts(arena, args[1], out);
-        }
-        _ => {
-            if let Some(bit) = match_bv1_asserted_true(arena, term) {
-                collect_bv1_conjuncts(arena, bit, out);
-            } else {
-                out.push(term);
+    let mut stack = vec![term];
+    while let Some(current) = stack.pop() {
+        match arena.node(current) {
+            TermNode::App {
+                op: Op::BoolAnd,
+                args,
+            } if args.len() == 2 => {
+                stack.push(args[1]);
+                stack.push(args[0]);
+            }
+            _ => {
+                if let Some(bit) = match_bv1_asserted_true(arena, current) {
+                    collect_bv1_conjuncts(arena, bit, out);
+                } else {
+                    out.push(current);
+                }
             }
         }
     }
@@ -4165,5 +4179,35 @@ mod tests {
         let cert =
             array_axiom_refutation(&arena, &[diseq]).expect("store-ite-select axiom refutes");
         assert_eq!(cert.kind, ArrayAxiomKind::StoreIteSelect);
+    }
+
+    /// A deep `and` spine must not overflow the stack, and must flatten in the
+    /// same left-to-right order the recursive version produced.
+    ///
+    /// This is the crash class that aborted nine scored QF_BV files: an abort is
+    /// strictly worse than a timeout, because the solver cannot report the
+    /// first-class `unknown` it owes its caller. Reverse-apply the worklist to
+    /// confirm this is a real gate — the recursive form aborts here.
+    #[test]
+    fn collect_top_conjuncts_survives_a_deep_and_spine() {
+        let mut arena = TermArena::new();
+        let mut leaves = Vec::new();
+        for i in 0..50_000u32 {
+            let symbol = arena
+                .declare(&format!("p{i}"), Sort::Bool)
+                .expect("declare Bool");
+            leaves.push(arena.var(symbol));
+        }
+        // Right-nested: and(p0, and(p1, and(p2, ...))) — depth 50k.
+        let mut spine = *leaves.last().expect("at least one leaf");
+        for &leaf in leaves.iter().rev().skip(1) {
+            spine = arena.and(leaf, spine).expect("and");
+        }
+
+        let mut out = Vec::new();
+        collect_top_conjuncts(&arena, spine, &mut out);
+
+        assert_eq!(out.len(), leaves.len(), "every conjunct is collected");
+        assert_eq!(out, leaves, "flattening preserves left-to-right order");
     }
 }
