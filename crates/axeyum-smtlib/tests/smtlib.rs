@@ -5712,3 +5712,114 @@ fn checked_flat_view_trips_the_guard_on_word_first_fallback() {
     // This access must panic: a fallback script has no solvable flat view.
     let _ = script.checked_flat_view();
 }
+
+/// `(_ bv<decimal> <width>)` with a decimal value WIDER than `u128`.
+///
+/// The parser used to do `num.parse::<u128>()` inside a let-chain: on overflow
+/// the chain silently fell through to the `Unsupported` arm and the whole file
+/// became a parse error. Three public `QF_BV` benchmarks (the `dualexecution*`
+/// family, widths 156 and 272) are exactly this shape, so the wide path must
+/// build the literal — not reject the file.
+#[test]
+fn wide_decimal_bv_literals_parse_and_evaluate() {
+    // 0xfffffbffbffbffbffbffbffbffbffbffbfe3ffa, 156 bits — from
+    // `dualexecution_affine.t1.i12.955644ef.smt2`.
+    let text = "\
+        (set-logic QF_BV)\n\
+        (declare-const x (_ BitVec 156))\n\
+        (assert (= x (_ bv91343830549791739073324302986679021916909355002 156)))\n\
+        (check-sat)";
+    let script = parse_script(text).unwrap();
+    assert_eq!(script.assertions.len(), 1);
+    // The literal must denote exactly the hex spelling of the same number.
+    let hex = "\
+        (set-logic QF_BV)\n\
+        (declare-const x (_ BitVec 156))\n\
+        (assert (= x #xfffffbffbffbffbffbffbffbffbffbffbfe3ffa))\n\
+        (check-sat)";
+    assert_eq!(
+        write_script(&script.arena, &script.assertions),
+        {
+            let h = parse_script(hex).unwrap();
+            write_script(&h.arena, &h.assertions)
+        },
+        "the decimal and hex spellings of the same 156-bit value must intern identically"
+    );
+}
+
+/// A wide decimal literal at a width `≤ 128` still lands on the narrow
+/// representation, and one that does not fit its declared width is rejected
+/// exactly as the `u128` path rejects `(_ bv256 8)`.
+#[test]
+fn wide_decimal_bv_literals_respect_the_declared_width() {
+    // 2^128 exactly: fits 129 bits, not 128.
+    let fits = "\
+        (set-logic QF_BV)\n\
+        (declare-const x (_ BitVec 129))\n\
+        (assert (= x (_ bv340282366920938463463374607431768211456 129)))\n\
+        (check-sat)";
+    assert!(parse_script(fits).is_ok());
+    let overflows = "\
+        (set-logic QF_BV)\n\
+        (declare-const x (_ BitVec 128))\n\
+        (assert (= x (_ bv340282366920938463463374607431768211456 128)))\n\
+        (check-sat)";
+    assert!(
+        matches!(parse_script(overflows), Err(SmtError::Syntax(_))),
+        "a literal wider than its declared width must be a syntax error, not a silent wrap"
+    );
+    // A wide decimal that happens to fit a narrow width parses on the u128 path
+    // and denotes the same value as the equivalent hex literal.
+    let narrow = "\
+        (set-logic QF_BV)\n\
+        (declare-const x (_ BitVec 130))\n\
+        (assert (= x (_ bv00000000000000000000000000000000000000255 130)))\n\
+        (check-sat)";
+    let script = parse_script(narrow).unwrap();
+    assert_eq!(script.assertions.len(), 1);
+}
+
+/// `#x` / `#b` literals WIDER than 128 bits.
+///
+/// Same class as the decimal hole: `u128::from_str_radix` caps at 32 hex / 128
+/// binary digits, so a wider literal — whose width is its own length, and which
+/// therefore always fits exactly — was reported as a bad literal.
+#[test]
+fn wide_hex_and_binary_literals_parse_at_their_own_width() {
+    // 160 bits = 40 hex digits.
+    let hex = "\
+        (set-logic QF_BV)\n\
+        (declare-const x (_ BitVec 160))\n\
+        (assert (= x #x00000000000000000000000000000000ffffffff))\n\
+        (assert (distinct x #x0000000000000000000000000000000100000000))\n\
+        (check-sat)";
+    let script = parse_script(hex).unwrap();
+    assert_eq!(script.assertions.len(), 2);
+    // 160 bits as binary must denote the SAME value as the hex spelling.
+    let bin_digits = format!("{}{}", "0".repeat(128), "1".repeat(32));
+    let bin = format!(
+        "(set-logic QF_BV)\n\
+         (declare-const x (_ BitVec 160))\n\
+         (assert (= x #b{bin_digits}))\n\
+         (check-sat)"
+    );
+    let from_bin = parse_script(&bin).unwrap();
+    let hex_one = "\
+        (set-logic QF_BV)\n\
+        (declare-const x (_ BitVec 160))\n\
+        (assert (= x #x00000000000000000000000000000000ffffffff))\n\
+        (check-sat)";
+    let from_hex = parse_script(hex_one).unwrap();
+    assert_eq!(
+        write_script(&from_bin.arena, &from_bin.assertions),
+        write_script(&from_hex.arena, &from_hex.assertions),
+        "the 160-bit binary and hex spellings of the same value must agree"
+    );
+    // A malformed wide literal is still a syntax error, not a silent value.
+    let bad = "\
+        (set-logic QF_BV)\n\
+        (declare-const x (_ BitVec 160))\n\
+        (assert (= x #x0000000000000000000000000000000gffffffff))\n\
+        (check-sat)";
+    assert!(matches!(parse_script(bad), Err(SmtError::Syntax(_))));
+}

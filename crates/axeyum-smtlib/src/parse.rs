@@ -15556,22 +15556,15 @@ fn parse_atom(
         _ => {}
     }
     if let Some(hex) = a.strip_prefix("#x") {
-        let value = u128::from_str_radix(hex, 16)
-            .map_err(|_| SmtError::Syntax(format!("bad hex literal `{a}`")))?;
-        return Ok(arena.bv_const(
-            4 * u32::try_from(hex.len())
-                .map_err(|_| SmtError::Syntax("literal too wide".to_owned()))?,
-            value,
-        )?);
+        // `u128::from_str_radix` caps at 32 hex digits; the literal's width is its
+        // own length, so anything wider took the error arm and lost a parseable
+        // file. Digits are accumulated LSB-first so any width is exact.
+        return radix_bv_const(arena, hex, 4)
+            .ok_or_else(|| SmtError::Syntax(format!("bad hex literal `{a}`")));
     }
     if let Some(bin) = a.strip_prefix("#b") {
-        let value = u128::from_str_radix(bin, 2)
-            .map_err(|_| SmtError::Syntax(format!("bad binary literal `{a}`")))?;
-        return Ok(arena.bv_const(
-            u32::try_from(bin.len())
-                .map_err(|_| SmtError::Syntax("literal too wide".to_owned()))?,
-            value,
-        )?);
+        return radix_bv_const(arena, bin, 1)
+            .ok_or_else(|| SmtError::Syntax(format!("bad binary literal `{a}`")));
     }
     // A finite-field literal `#fKmM` (value `K` mod prime `M`, QF_FF): a canonical
     // residue `BitVec(ff_width(M))` constant. Self-describing (the modulus is in
@@ -16020,14 +16013,98 @@ fn rounding_mode_select(
     Ok(acc)
 }
 
+/// A `#x` / `#b` bit-vector literal of ANY width (`bits_per_digit` is 4 or 1).
+///
+/// The width is the literal's own length, so the value always fits exactly and
+/// no range check is needed — but it may exceed `u128`, which the previous
+/// `u128::from_str_radix` route rejected as a syntax error. Returns `None` for
+/// an empty literal, a non-digit character, or a width past [`MAX_BV_WIDTH`].
+fn radix_bv_const(arena: &mut TermArena, digits: &str, bits_per_digit: u32) -> Option<TermId> {
+    let width = u32::try_from(digits.len())
+        .ok()?
+        .checked_mul(bits_per_digit)
+        .filter(|w| (1..=MAX_BV_WIDTH).contains(w))?;
+    let mut bits = vec![false; width as usize];
+    // LSB-first: the LAST digit occupies the lowest `bits_per_digit` bits.
+    for (index, byte) in digits.bytes().rev().enumerate() {
+        let value = char::from(byte).to_digit(1 << bits_per_digit)?;
+        let base = u32::try_from(index).ok()? * bits_per_digit;
+        for offset in 0..bits_per_digit {
+            bits[(base + offset) as usize] = (value >> offset) & 1 == 1;
+        }
+    }
+    let wide = WideUint::from_lsb_bits(&bits);
+    if width <= 128 {
+        return arena.bv_const(width, wide.to_u128()).ok();
+    }
+    Some(arena.wide_bv_const(wide))
+}
+
+/// `(_ bv<decimal> <width>)` whose decimal value exceeds `u128`.
+///
+/// The digits are accumulated with [`WideUint`] arithmetic in a scratch width
+/// wide enough to hold the whole literal exactly (`4·digits + 1` bits bounds
+/// `10^digits`), so the range check below is exact rather than a wrapped
+/// comparison. Out-of-range is rejected with the same strictness the `≤ 128`
+/// path gets from [`TermArena::bv_const`] (`IrError::ValueOutOfRange`).
+fn wide_decimal_bv_const(
+    arena: &mut TermArena,
+    digits: &str,
+    width: u32,
+) -> Result<TermId, SmtError> {
+    if width == 0 || width > MAX_BV_WIDTH {
+        return Err(SmtError::Syntax(format!(
+            "bit-vector width {width} outside 1..={MAX_BV_WIDTH}"
+        )));
+    }
+    let digit_count = u32::try_from(digits.len())
+        .ok()
+        .filter(|d| d.checked_mul(4).is_some_and(|b| b < MAX_BV_WIDTH))
+        .ok_or_else(|| {
+            SmtError::Syntax(format!(
+                "bit-vector literal with {} decimal digits exceeds the implementation cap",
+                digits.len()
+            ))
+        })?;
+    // `10^d < 2^(4d)`, so `4d + 1` bits hold the accumulator without wrapping.
+    let scratch = (4 * digit_count + 1).max(width + 1).min(MAX_BV_WIDTH);
+    let ten = WideUint::from_u128(10, scratch);
+    let mut acc = WideUint::zero(scratch);
+    for byte in digits.bytes() {
+        let digit = u128::from(byte - b'0');
+        acc = acc.mul(&ten).add(&WideUint::from_u128(digit, scratch));
+    }
+    // Exact range check: every bit at or above `width` must be clear.
+    if !acc.lshr(width).is_zero() {
+        return Err(SmtError::Syntax(format!(
+            "bit-vector literal bv{digits} does not fit {width} bits"
+        )));
+    }
+    let value = acc.extract(width - 1, 0);
+    if width <= 128 {
+        return Ok(arena.bv_const(width, value.to_u128())?);
+    }
+    Ok(arena.wide_bv_const(value))
+}
+
 fn parse_indexed_constant(arena: &mut TermArena, items: &[SExpr]) -> Result<TermId, SmtError> {
     if items.len() == 3
         && let Some(name) = items[1].atom()
         && let Some(num) = name.strip_prefix("bv")
-        && let (Ok(value), Some(Ok(width))) =
-            (num.parse::<u128>(), items[2].atom().map(str::parse::<u32>))
+        && !num.is_empty()
+        && num.bytes().all(|b| b.is_ascii_digit())
+        && let Some(Ok(width)) = items[2].atom().map(str::parse::<u32>)
     {
-        return Ok(arena.bv_const(width, value)?);
+        // The common case fits a `u128`. A decimal literal WIDER than `u128`
+        // (e.g. `(_ bv91343830549791739073324302986679021916909355002 156)`,
+        // which real QF_BV benchmarks contain) must NOT fall through to the
+        // `Unsupported` arm below — that turned three parseable files into
+        // parse failures. The IR carries wide constants natively
+        // (`wide_bv_const` / `WideUint`), so accumulate the digits there.
+        if let Ok(value) = num.parse::<u128>() {
+            return Ok(arena.bv_const(width, value)?);
+        }
+        return wide_decimal_bv_const(arena, num, width);
     }
     // FP special constants `(_ <name> eb sb)` → the matching bit pattern in a
     // BitVec(eb+sb) (FP values are bit-vectors; ADR-0023).
