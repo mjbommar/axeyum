@@ -3859,18 +3859,10 @@ fn as_var_eq_const(arena: &TermArena, term: TermId) -> Option<(SymbolId, i128)> 
 /// built as nested binary `(or (or … e_{k-1}) e_k)`, so we recurse through every
 /// `BoolOr` node; a non-`or` node is a leaf disjunct.
 fn flatten_disjuncts(arena: &TermArena, term: TermId, out: &mut Vec<TermId>) {
-    match arena.node(term) {
-        TermNode::App {
-            op: Op::BoolOr,
-            args,
-        } => {
-            let args = args.clone();
-            for arg in args {
-                flatten_disjuncts(arena, arg, out);
-            }
-        }
-        _ => out.push(term),
-    }
+    // N-ary and unconditional, so this is a straight delegation; the shared
+    // walker also drops the per-node `args.clone()` the recursive form needed to
+    // release the arena borrow before recursing.
+    crate::term_walk::flatten_op_spine(arena, term, out, Op::BoolOr);
 }
 
 /// Recognizes a **disjunctive finite-value-set bound**: a top-level
