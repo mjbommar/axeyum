@@ -256,8 +256,7 @@ mod tests {
         let atoms: Vec<&str> = flat.descendants().filter_map(SExpr::atom).collect();
         assert_eq!(atoms, vec!["f", "g", "x", "y"]);
 
-        const DEPTH: usize = 200_000;
-        let deep = nested(DEPTH);
-        assert_eq!(deep.descendants().count(), 2 * DEPTH + 1);
+        let deep = nested(200_000);
+        assert_eq!(deep.descendants().count(), 2 * 200_000 + 1);
     }
 }

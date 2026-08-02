@@ -18,6 +18,7 @@
 //! emit.
 #![cfg(feature = "full")]
 
+use std::fmt::Write as _;
 use std::time::Duration;
 
 use axeyum_ir::{ArraySortKey, Rational, Sort, TermArena, TermId};
@@ -202,7 +203,7 @@ fn deep_not_source_returns() {
 fn deep_let_source_returns() {
     let mut opens = String::new();
     for i in 1..TEXT_DEPTH {
-        opens.push_str(&format!("(let ((v{i} (bvadd v{} (_ bv1 8)))) ", i - 1));
+        write!(opens, "(let ((v{i} (bvadd v{} (_ bv1 8)))) ", i - 1).unwrap();
     }
     let text = format!(
         "(set-logic QF_BV)\n(declare-const v0 (_ BitVec 8))\n(assert (= {opens}v{}{} (_ bv0 8)))\n(check-sat)\n",
@@ -212,7 +213,7 @@ fn deep_let_source_returns() {
     returns_from_solve_smtlib(&text);
 }
 
-/// A `store` chain as source (the QF_ABV route).
+/// A `store` chain as source (the `QF_ABV` route).
 #[test]
 fn deep_store_source_returns() {
     let mut body = String::from("a");
@@ -261,9 +262,10 @@ fn deep_and_source_parses() {
     for i in 0..TEXT_DEPTH {
         body = format!("(and {body} p{})", i % 8);
     }
-    let decls: String = (0..8)
-        .map(|i| format!("(declare-const p{i} Bool)\n"))
-        .collect();
+    let mut decls = String::new();
+    for i in 0..8 {
+        writeln!(decls, "(declare-const p{i} Bool)").unwrap();
+    }
     let text = format!("(set-logic QF_UF)\n{decls}(assert {body})\n(check-sat)\n");
     let script = parse_script(&text).expect("a deep conjunction still parses");
     assert_eq!(script.assertions.len(), 1);
