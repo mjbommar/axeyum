@@ -319,3 +319,20 @@ readers to ignore it — and this stamp matters precisely because it is rare.
 
 The three results stand as measured: QF_BV 184/194 = 94.8%, UF 81/93 = 87.1%,
 QF_SLIA 191/193 = 99.0%, 0 disagreements in all three.
+## QF_LIA — 2026-08-02T14:34:39Z
+
+| field | value |
+|---|---|
+| axeyum solved | 111/200 |
+| reference solved | 139/200 |
+| **ratio (axeyum / reference)** | **79.9%** |
+| **disagreements** | **0** |
+| soundness | SOUND |
+| both / axeyum-only / reference-only | 110 / 1 / 29 |
+| reference | `cvc5 1.3.4 [git f3b21c4 on branch HEAD]` |
+| protocol | 24s wall, 8GiB, per-file |
+| benchmark list | `bench-results/parity-lists/QF_LIA.txt` (sha256 9ede4b69b2ec, 200 files) |
+| solver commit | `0b6490363` |
+| load average (start / end) | 10.22 11.37 10.95 / 3.41 4.96 5.26 — 24 cores; a high load DEPRESSES this result |
+| per-file detail | `bench-results/parity-details/QF_LIA.tsv` |
+
