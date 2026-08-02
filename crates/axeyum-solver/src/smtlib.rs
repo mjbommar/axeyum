@@ -1992,6 +1992,7 @@ fn solve_smtlib_at_string_bound(
     // confirms every original assertion. The finite probe never emits UNSAT; a
     // miss or a budget excess preserves the prior Unknown.
     let result = apply_source_string_sat_problem(&script, result);
+    let result = bind_readable_string_values(&script, result);
     // Bounded-completeness UNSAT route (P2.7, task #75): the FINAL string second
     // chance. When every prior route declined and the residual `unknown` is the
     // bounded encoder's "no model within the bounded integer width …" (which is
@@ -2161,6 +2162,52 @@ pub fn solve_smtlib_get_value(
         values.push(render_string_value(&script, term, value));
     }
     Ok(Some(values))
+}
+
+/// Adds readable `Seq` bindings for a `sat` model produced by the PACKED route,
+/// so both string routes hand a consumer the same thing.
+///
+/// Measured 2026-08-02: the bounded-source fallback binds the source problem's
+/// own symbols (`SymbolId(8)`/`SymbolId(9)`) with user-facing `Seq` values,
+/// while the packed route binds the declared symbols (`SymbolId(0)`/`(1)`) with
+/// packed `Bv` values. Since the fallback only runs when the primary route
+/// returned `Unknown`, a FASTER solve produced a model a consumer could not
+/// read — the string half of the budget non-monotonicity this codebase has now
+/// hit three times.
+///
+/// This ADDS bindings and never replaces one. The declared symbol keeps its
+/// bit-vector value on purpose: a `sat` is checked by replaying it against the
+/// ORIGINAL term through the ground evaluator, and that term genuinely is packed
+/// (`(_ BitVec 100)` under ADR-0029), so rebinding it to a `Seq` would leave
+/// replay unable to evaluate — trading a readability defect for a broken
+/// soundness check.
+///
+/// Declared and source symbols are paired BY NAME, which is the only thing they
+/// share. A packing the decoder rejects as malformed is skipped rather than
+/// guessed at.
+fn bind_readable_string_values(script: &Script, result: CheckResult) -> CheckResult {
+    let CheckResult::Sat(mut model) = result else {
+        return result;
+    };
+    let Some(problem) = &script.source_string_sat_problem else {
+        return CheckResult::Sat(model);
+    };
+    for (name, source_symbol) in problem.string_variables() {
+        if model.get(source_symbol).is_some() {
+            continue; // the fallback already bound it
+        }
+        let Some(declared) = script.arena.find_symbol(name) else {
+            continue;
+        };
+        let Some(Value::Bv { width, value }) = model.get(declared) else {
+            continue;
+        };
+        if let Some(bytes) = axeyum_smtlib::decode_packed_string(width, value) {
+            let code_points: Vec<u32> = bytes.iter().map(|&b| u32::from(b)).collect();
+            model.set(source_symbol, seq_value(&code_points));
+        }
+    }
+    CheckResult::Sat(model)
 }
 
 /// Renders a declared `String`'s packed bit-vector value as a user-facing

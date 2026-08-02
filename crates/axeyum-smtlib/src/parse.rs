@@ -1405,6 +1405,23 @@ impl SourceStringSatProblem {
     /// complete witness. Missing/duplicate-sort bindings and unsupported source
     /// expressions fail closed.
     #[must_use]
+    /// The source-level String variables as `(name, symbol)` pairs.
+    ///
+    /// These symbols are the problem's OWN, distinct from the packed declared
+    /// symbols of the same names: measured 2026-08-02, `x`/`y` declare as
+    /// `SymbolId(0)`/`SymbolId(1)` while this problem binds `SymbolId(8)`/
+    /// `SymbolId(9)`. A consumer holding the parsed script therefore cannot name
+    /// what a bounded-source witness binds without this pairing, which is why a
+    /// model from the fallback route and a model from the packed route look
+    /// nothing alike for the same query.
+    ///
+    /// Exposed so the front door can bind BOTH: the packed declared symbol keeps
+    /// its bit-vector value (the ground-evaluator replay needs it — the original
+    /// term really is packed), and the source symbol gains the readable `Seq`.
+    pub fn string_variables(&self) -> impl Iterator<Item = (&str, SymbolId)> {
+        self.strings.iter().map(|v| (v.name.as_str(), v.symbol))
+    }
+
     pub fn replays(&self, witness: &SourceStringWitness) -> bool {
         let string_symbols: BTreeSet<SymbolId> =
             witness.strings.iter().map(|(symbol, _)| *symbol).collect();
