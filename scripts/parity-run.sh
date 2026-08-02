@@ -381,6 +381,36 @@ smoke_reference
 # the corpus that is actually scored.
 sidecar="bench-results/parity-details/${division}.tsv"
 mkdir -p "$(dirname "$sidecar")"
+
+# RESUME: reuse per-file verdicts already measured for this division.
+#
+# A full division is 200 files at up to 24s x2 solvers -- long enough that an
+# interruption is not an edge case. Three UF sweeps were lost today: two reaped
+# by the task runner within minutes, one killed with the session, each throwing
+# away ~40 minutes of correct per-file work that was already sitting in the
+# sidecar. Chunking does not help, because every invocation restarts the list
+# from the top.
+#
+# With PARITY_RESUME=1 a file whose row is already in the sidecar reuses that
+# row's verdicts instead of re-running both solvers. Nothing else changes: the
+# loop still visits every file in the committed list, so the denominator, the
+# disagreement rules and the summary are computed exactly as in a single run.
+#
+# Off by default -- a resumed entry mixes measurements from different moments
+# (and so different machine load), which is fine for finishing an interrupted
+# sweep but is not what you want when establishing a fresh baseline. The entry
+# records that it was resumed.
+declare -A cached_row=()
+resumed_files=0
+if [[ "${PARITY_RESUME:-0}" == "1" && -f "$sidecar" ]]; then
+  while IFS=$'\t' read -r f a_v r_v d_v _rest; do
+    [[ "$f" == "file" || -z "$f" ]] && continue
+    cached_row["$f"]="${a_v}"$'\t'"${r_v}"$'\t'"${d_v}"
+    resumed_files=$((resumed_files + 1))
+  done < "$sidecar"
+  echo "parity-run: resuming — ${resumed_files} files already measured in ${sidecar}" >&2
+fi
+
 if [[ "$evidence_mode" == "1" ]]; then
   printf 'file\taxeyum\treference\tdeclared\tevidence_verdict\tevidence_kind\tcertified\trecheck\tevidence_ms\n' > "$sidecar"
 else
@@ -411,9 +441,17 @@ while IFS= read -r file; do
   # Evidence mode does NOT replace it -- it adds a second run below. Everything
   # the ledger scores (solved counts, ratio, disagreements) comes from this one,
   # so an evidence entry stays directly comparable to a default entry.
-  a=$(run_one "$axeyum_bin" "$file")
-  r=$(run_one "$reference_bin" "$file")
+  # A cached row short-circuits BOTH solver runs. `expected` is re-read from the
+  # benchmark rather than trusted from the cache, so a corrupted sidecar cannot
+  # silence a declared-status disagreement.
+  cache_key="$(basename "$file")"
   expected=$(declared_status "$file")
+  if [[ -n "${cached_row[$cache_key]:-}" ]]; then
+    IFS=$'\t' read -r a r _cached_declared <<<"${cached_row[$cache_key]}"
+  else
+    a=$(run_one "$axeyum_bin" "$file")
+    r=$(run_one "$reference_bin" "$file")
+  fi
 
   if [[ "$evidence_mode" == "1" ]]; then
     : > "$evidence_sink"
@@ -546,6 +584,9 @@ fi
   echo "| reference | \`${reference_version}\` |"
   echo "| reference options | \`${reference_options:-<none — plain invocation, NOT a competition portfolio>}\` |"
   echo "| axeyum options | \`${axeyum_options}\` |"
+  if (( resumed_files > 0 )); then
+    echo "| resumed | ${resumed_files} of ${total} files reused from a prior interrupted sweep (mixed load) |"
+  fi
   echo "| protocol | ${budget_s}s wall, ${mem_gb}GiB, per-file |"
   echo "| benchmark list | \`${list}\` (sha256 ${list_sha}, ${total} files) |"
   echo "| solver commit | \`${solver_sha}\`${dirty} |"
