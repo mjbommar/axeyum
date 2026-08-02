@@ -203,10 +203,16 @@ declared_status() {
 # enforcement and the native flag is only a courtesy to let a solver exit
 # cleanly and report `unknown` rather than be killed.
 #
-# `last_evidence` is a side channel, set ONLY on the evidence-mode axeyum path.
-# It carries the `; evidence …` line the CLI prints (see smtcomp_cli.rs) so the
-# caller can score `certified / unsat` without a second run.
-last_evidence=""
+# `evidence_sink` is a side channel, written ONLY on the evidence-mode axeyum
+# path. It carries the `; evidence …` line the CLI prints (see smtcomp_cli.rs)
+# so the caller can score `certified / unsat` without a second run.
+#
+# It is a FILE, not a variable, on purpose: `run_one` is invoked as `$(run_one …)`,
+# a command substitution, so it runs in a SUBSHELL and any variable it assigns is
+# discarded on return. The first version of this used a global and silently scored
+# 0/5 certified on a smoke list whose files each printed `certified=1`.
+evidence_sink="$(mktemp)"
+trap 'rm -f "$evidence_sink"' EXIT
 run_one() {
   local bin="$1" file="$2" verdict raw
   local b="$budget_s"
@@ -240,7 +246,7 @@ run_one() {
   raw=$(MEM_LIMIT_GB="$mem_gb" timeout "$((b + 5))" \
         ./scripts/mem-run.sh "${cmd[@]}" 2>/dev/null)
   verdict=$(printf '%s\n' "$raw" | grep -oE '^(sat|unsat)$' | tail -1)
-  last_evidence=$(printf '%s\n' "$raw" | grep -m1 '^; evidence ' || true)
+  printf '%s\n' "$raw" | grep -m1 '^; evidence ' > "$evidence_sink" || : > "$evidence_sink"
   echo "${verdict:-unsolved}"
 }
 
@@ -365,8 +371,9 @@ while IFS= read -r file; do
     continue
   fi
 
-  last_evidence=""
+  : > "$evidence_sink"
   a=$(run_one "$axeyum_bin" "$file")
+  last_evidence=$(cat "$evidence_sink")
   r=$(run_one "$reference_bin" "$file")
   expected=$(declared_status "$file")
 
