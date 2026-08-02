@@ -700,12 +700,6 @@ fn corpus_smoke_ingests_local_benchmarks_when_present() {
             // classified outcome until arrays land (Phase 7).
             Err(SmtError::Unsupported(_) | SmtError::Ir(_)) => unsupported += 1,
             Err(SmtError::Syntax(e)) => panic!("syntax error on {entry:?}: {e}"),
-            // `parse_script` passes no deadline, so this is unreachable here. It
-            // is spelled out rather than wildcarded so that a future variant
-            // still breaks this match instead of being silently absorbed.
-            Err(SmtError::DeadlineExceeded(phase)) => {
-                panic!("deadline-free parse_script reported a deadline in {phase}")
-            }
         }
     }
     eprintln!("corpus smoke: {parsed} parsed, {unsupported} unsupported of {tried}");
@@ -5828,41 +5822,4 @@ fn wide_hex_and_binary_literals_parse_at_their_own_width() {
         (assert (= x #x0000000000000000000000000000000gffffffff))\n\
         (check-sat)";
     assert!(matches!(parse_script(bad), Err(SmtError::Syntax(_))));
-}
-
-/// An ingest deadline that has ALREADY passed must decline, not parse.
-///
-/// The regression this pins: the parser polled no clock at all, so a 24 s budget
-/// produced measured 39.9 s / 49.4 s / 66 s runs and the harness killed the
-/// process mid-parse. A kill is strictly worse than a decline — `unknown` is a
-/// first-class result and an abort is not.
-#[test]
-fn an_expired_ingest_deadline_declines_instead_of_parsing() {
-    let script =
-        "(set-logic QF_BV)\n(declare-fun x () (_ BitVec 8))\n(assert (= x #x01))\n(check-sat)\n";
-    let expired = std::time::Instant::now() - std::time::Duration::from_secs(1);
-    match axeyum_smtlib::parse_script_within(script, Some(expired)) {
-        Err(axeyum_smtlib::SmtError::DeadlineExceeded(phase)) => {
-            assert!(!phase.is_empty(), "the declining phase must be named");
-        }
-        other => panic!("expected DeadlineExceeded, got {other:?}"),
-    }
-}
-
-/// `deadline = None` must be byte-identical to the deadline-free entry, and a
-/// deadline far in the future must not perturb an ordinary parse.
-#[test]
-fn an_unexpired_ingest_deadline_parses_identically() {
-    let script =
-        "(set-logic QF_BV)\n(declare-fun x () (_ BitVec 8))\n(assert (= x #x01))\n(check-sat)\n";
-    let baseline = axeyum_smtlib::parse_script(script).expect("baseline parses");
-    let none = axeyum_smtlib::parse_script_within(script, None).expect("None parses");
-    let far = axeyum_smtlib::parse_script_within(
-        script,
-        Some(std::time::Instant::now() + std::time::Duration::from_secs(3600)),
-    )
-    .expect("a far deadline parses");
-    assert_eq!(baseline.assertions.len(), none.assertions.len());
-    assert_eq!(baseline.assertions.len(), far.assertions.len());
-    assert_eq!(baseline.logic, far.logic);
 }
