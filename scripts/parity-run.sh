@@ -129,6 +129,28 @@ done
 
 solver_sha="$(git rev-parse --short HEAD)"
 
+# RECORD THE CONFIGURATION THAT WAS MEASURED.
+#
+# Every A/B lever in `smtcomp_cli` is an env var, so a sweep run with a lever on
+# produced an entry indistinguishable from a default-config one. That is exactly
+# the "reporting a number obtained under conditions the reader cannot see"
+# failure this script exists to prevent, and it was one env var away from
+# happening the first time a default-off solver flag looked good.
+#
+# The reference side gets the same treatment: the UF entries on this board were
+# measured against PLAIN cvc5, not its competition portfolio (which enables
+# finite model finding — precisely what wins the files our own FMF work wins).
+# Recording "<none>" makes that visible in the entry instead of in a footnote
+# someone has to remember.
+axeyum_options=""
+for lever in AXEYUM_NESTED_QUANT AXEYUM_CNF_INPROCESSING AXEYUM_CNF_VIVIFY \
+             AXEYUM_EVIDENCE AXEYUM_TIMEOUT_MS AXEYUM_MAX_GROUND_TERMS; do
+  if [[ -n "${!lever:-}" ]]; then
+    axeyum_options+="${axeyum_options:+ }${lever}=${!lever}"
+  fi
+done
+axeyum_options="${axeyum_options:-<none — shipped default configuration>}"
+
 # REFUSE a run whose binary cannot be reproduced from the recorded SHA.
 #
 # The old behaviour was to stamp the ledger entry "DIRTY WORKTREE — result not
@@ -522,6 +544,8 @@ fi
   fi
   echo "| both / axeyum-only / reference-only | ${both} / ${axeyum_only} / ${reference_only} |"
   echo "| reference | \`${reference_version}\` |"
+  echo "| reference options | \`${reference_options:-<none — plain invocation, NOT a competition portfolio>}\` |"
+  echo "| axeyum options | \`${axeyum_options}\` |"
   echo "| protocol | ${budget_s}s wall, ${mem_gb}GiB, per-file |"
   echo "| benchmark list | \`${list}\` (sha256 ${list_sha}, ${total} files) |"
   echo "| solver commit | \`${solver_sha}\`${dirty} |"
