@@ -213,10 +213,17 @@ declared_status() {
 # 0/5 certified on a smoke list whose files each printed `certified=1`.
 evidence_sink="$(mktemp)"
 trap 'rm -f "$evidence_sink"' EXIT
+#
+# `$3` selects the EVIDENCE run: an EXTRA axeyum invocation, at its own budget,
+# with AXEYUM_EVIDENCE=1. It never replaces the scored run -- see the loop.
 run_one() {
-  local bin="$1" file="$2" verdict raw
+  local bin="$1" file="$2" mode="${3:-plain}" verdict raw
   local b="$budget_s"
-  [[ "$(basename "$bin")" == "smtcomp_cli" ]] && b="$axeyum_budget_s"
+  local -a pre=()
+  if [[ "$mode" == "evidence" ]]; then
+    b="$axeyum_budget_s"
+    pre=(env AXEYUM_EVIDENCE=1)
+  fi
   local -a cmd
   case "$(basename "$bin")" in
     smtcomp_cli) cmd=("$bin" "$file" --timeout-ms "$((b * 1000))") ;;
@@ -230,9 +237,9 @@ run_one() {
     bitwuzla)    cmd=("$bin" "--time-limit" "$((budget_s * 1000))" "$file") ;;
     *)           cmd=("$bin" "$file") ;;
   esac
-  # DEFAULT PATH — byte-identical to what every recorded baseline measured.
-  # Evidence mode takes the branch below instead; it is never on by default.
-  if [[ "$evidence_mode" != "1" || "$(basename "$bin")" != "smtcomp_cli" ]]; then
+  # SCORED PATH — byte-identical to what every recorded baseline measured, and
+  # it is what BOTH solvers take even when evidence mode is on.
+  if [[ "$mode" != "evidence" ]]; then
     verdict=$(MEM_LIMIT_GB="$mem_gb" timeout "$((b + 5))" \
               ./scripts/mem-run.sh "${cmd[@]}" 2>/dev/null \
               | grep -oE '^(sat|unsat)$' | tail -1)
@@ -240,11 +247,11 @@ run_one() {
     return
   fi
 
-  # Evidence mode: capture stdout whole so the `; evidence …` line survives
+  # Evidence run: capture stdout whole so the `; evidence …` line survives
   # alongside the verdict. The verdict is extracted with the SAME expression as
   # above, so what counts as solved does not change.
   raw=$(MEM_LIMIT_GB="$mem_gb" timeout "$((b + 5))" \
-        ./scripts/mem-run.sh "${cmd[@]}" 2>/dev/null)
+        "${pre[@]}" ./scripts/mem-run.sh "${cmd[@]}" 2>/dev/null)
   verdict=$(printf '%s\n' "$raw" | grep -oE '^(sat|unsat)$' | tail -1)
   printf '%s\n' "$raw" | grep -m1 '^; evidence ' > "$evidence_sink" || : > "$evidence_sink"
   echo "${verdict:-unsolved}"
@@ -346,7 +353,7 @@ smoke_reference
 sidecar="bench-results/parity-details/${division}.tsv"
 mkdir -p "$(dirname "$sidecar")"
 if [[ "$evidence_mode" == "1" ]]; then
-  printf 'file\taxeyum\treference\tdeclared\tevidence_kind\tcertified\trecheck\n' > "$sidecar"
+  printf 'file\taxeyum\treference\tdeclared\tevidence_verdict\tevidence_kind\tcertified\trecheck\tevidence_ms\n' > "$sidecar"
 else
   printf 'file\taxeyum\treference\tdeclared\n' > "$sidecar"
 fi
@@ -371,25 +378,40 @@ while IFS= read -r file; do
     continue
   fi
 
-  : > "$evidence_sink"
+  # The SCORED axeyum run, at the protocol budget, on the shipped default route.
+  # Evidence mode does NOT replace it -- it adds a second run below. Everything
+  # the ledger scores (solved counts, ratio, disagreements) comes from this one,
+  # so an evidence entry stays directly comparable to a default entry.
   a=$(run_one "$axeyum_bin" "$file")
-  last_evidence=$(cat "$evidence_sink")
   r=$(run_one "$reference_bin" "$file")
   expected=$(declared_status "$file")
 
   if [[ "$evidence_mode" == "1" ]]; then
+    : > "$evidence_sink"
+    ae=$(run_one "$axeyum_bin" "$file" evidence)
+    last_evidence=$(cat "$evidence_sink")
     # Parse the CLI's single `; evidence kind=… certified=… recheck=… ms=…` line.
     # Absent (crash / timeout / kill) means NO evidence -- scored as uncertified,
     # never as missing data.
     ev_kind=$(sed -n 's/.*kind=\([^ ]*\).*/\1/p' <<< "$last_evidence")
     ev_certified=$(sed -n 's/.*certified=\([^ ]*\).*/\1/p' <<< "$last_evidence")
     ev_recheck=$(sed -n 's/.*recheck=\([^ ]*\).*/\1/p' <<< "$last_evidence")
-    printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\n' "$(basename "$file")" "$a" "$r" \
-      "${expected:-none}" "${ev_kind:-none}" "${ev_certified:-0}" "${ev_recheck:-none}" >> "$sidecar"
+    ev_ms=$(sed -n 's/.*ms=\([^ ]*\).*/\1/p' <<< "$last_evidence")
+    printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n' "$(basename "$file")" "$a" "$r" \
+      "${expected:-none}" "$ae" "${ev_kind:-none}" "${ev_certified:-0}" \
+      "${ev_recheck:-none}" "${ev_ms:-}" >> "$sidecar"
+    # THE DENOMINATOR IS EVERY UNSAT WE ACTUALLY PRODUCE -- the scored run's,
+    # not the evidence run's. Scoring `certified / (unsats the evidence route
+    # itself decided)` reads 100% while a third of our unsats carry nothing,
+    # because the files the evidence route cannot afford drop out of the
+    # denominator along with their missing certificates. That is precisely the
+    # "denominator quietly narrowed" failure this script's header names.
     if [[ "$a" == "unsat" ]]; then
       unsat_count=$((unsat_count + 1))
-      [[ "$ev_certified" == "1" ]] && certified_unsats=$((certified_unsats + 1))
-      [[ "$ev_recheck" == "ok" ]] && rechecked_unsats=$((rechecked_unsats + 1))
+      if [[ "$ae" == "unsat" && "$ev_certified" == "1" ]]; then
+        certified_unsats=$((certified_unsats + 1))
+        [[ "$ev_recheck" == "ok" ]] && rechecked_unsats=$((rechecked_unsats + 1))
+      fi
     fi
     # A certificate that does not re-check is a soundness alarm, not a statistic.
     # It voids the entry the same way a wrong verdict does.
@@ -397,6 +419,11 @@ while IFS= read -r file; do
       bad_certificates=$((bad_certificates + 1))
       disagreements=$((disagreements + 1))
       disagreement_log+=$'\n'"    CERTIFICATE FAILED TO RE-CHECK — $file (kind=${ev_kind:-none})"
+    fi
+    # Two axeyum routes on one file are a free differential cross-check.
+    if [[ "$a" != "unsolved" && "$ae" != "unsolved" && "$a" != "$ae" ]]; then
+      disagreements=$((disagreements + 1))
+      disagreement_log+=$'\n'"    axeyum default vs evidence route — $file: default=$a evidence=$ae"
     fi
   else
     printf '%s\t%s\t%s\t%s\n' "$(basename "$file")" "$a" "$r" "${expected:-none}" >> "$sidecar"
@@ -429,8 +456,8 @@ verdict="FAIL"
 if (( disagreements == 0 )); then verdict="SOUND"; fi
 
 # `certified / unsat` -- the Lean-parity front made a number on the SAME
-# population the decide-rate is measured on. Denominator is every `unsat` axeyum
-# produced in this run; nothing is dropped for being hard or uncertified.
+# population the decide-rate is measured on. Denominator is every `unsat` the
+# SCORED axeyum run produced; nothing is dropped for being hard or uncertified.
 certified_ratio="n/a"
 rechecked_ratio="n/a"
 if (( unsat_count > 0 )); then
@@ -463,11 +490,14 @@ fi
   echo "$entry_title"
   echo
   if [[ "$evidence_mode" == "1" ]]; then
-    echo "Evidence mode (\`PARITY_EVIDENCE=1\` → \`AXEYUM_EVIDENCE=1\`). axeyum routed"
-    echo "through the evidence front door, which produces AND re-checks a certificate"
-    echo "on top of deciding. The **ratio here is NOT comparable to a default entry**"
-    echo "(different route, and axeyum ran at ${axeyum_budget_s}s vs the ${budget_s}s protocol"
-    echo "budget). The headline for this entry is \`certified / unsat\`."
+    echo "Evidence mode (\`PARITY_EVIDENCE=1\`). Every scored number above and below is"
+    echo "from the SAME default-route run at the ${budget_s}s protocol budget as any other"
+    echo "entry -- evidence mode only ADDS a second axeyum run per file"
+    echo "(\`AXEYUM_EVIDENCE=1\`, ${axeyum_budget_s}s) that produces and re-checks a certificate."
+    echo
+    echo "\`certified / unsat\` counts, over every \`unsat\` THE SCORED RUN PRODUCED, how many"
+    echo "the evidence run also decided \`unsat\` **and** returned a checkable certificate for."
+    echo "A file we can refute but cannot certify counts against us; it is not dropped."
     echo
   fi
   echo "| field | value |"
@@ -481,7 +511,7 @@ fi
     echo "| **certified / unsat** | **${certified_unsats}/${unsat_count} = ${certified_ratio}%** |"
     echo "| re-checked here (text-only) / unsat | ${rechecked_unsats}/${unsat_count} = ${rechecked_ratio}% |"
     echo "| certificates that FAILED to re-check | ${bad_certificates} |"
-    echo "| axeyum budget (evidence) | ${axeyum_budget_s}s |"
+    echo "| axeyum evidence-run budget | ${axeyum_budget_s}s (scored run stays at ${budget_s}s) |"
   fi
   echo "| both / axeyum-only / reference-only | ${both} / ${axeyum_only} / ${reference_only} |"
   echo "| reference | \`${reference_version}\` |"
