@@ -63,6 +63,29 @@ fn main() -> ExitCode {
         config = config.with_timeout(Duration::from_millis(ms));
     }
 
+    // A/B levers for head-to-head probing, OFF unless explicitly asked for, so
+    // the default invocation `scripts/parity-run.sh` uses stays exactly the
+    // shipped configuration and recorded baselines keep their meaning.
+    //
+    // `cnf_inprocessing` (subsumption + BVE) and `cnf_vivify` already exist in
+    // `axeyum-cnf` and are sound (model-preserving / equisatisfiable with a
+    // reconstruction stack, and every `sat` is still replay-checked against the
+    // original terms) — but they default to `false`, and this binary had no way
+    // to turn them on, so EVERY parity measurement to date ran with them off.
+    // The 2026-07-07 gap analysis puts ~9 of the residual QF_BV files in the
+    // "search-bound" bucket, which is exactly what these passes target, and it
+    // says the first step there is a MEASUREMENT, not a build. This makes that
+    // measurement a one-line env change instead of a code edit.
+    let enabled = |name: &str| std::env::var(name).is_ok_and(|v| v == "1");
+    if enabled("AXEYUM_CNF_INPROCESSING") {
+        config = config.with_cnf_inprocessing(true);
+    }
+    if enabled("AXEYUM_CNF_VIVIFY") {
+        // A no-op unless inprocessing is also on; turn both on together so the
+        // flag cannot silently do nothing.
+        config = config.with_cnf_inprocessing(true).with_cnf_vivify(true);
+    }
+
     // A parse or solver error is reported as `unknown` — never a wrong verdict,
     // and never a crash that the harness would read as an abort.
     let verdict = match solve_smtlib(&input, &config) {
