@@ -335,4 +335,33 @@ QF_SLIA 191/193 = 99.0%, 0 disagreements in all three.
 | solver commit | `0b6490363` |
 | load average (start / end) | 10.22 11.37 10.95 / 3.41 4.96 5.26 — 24 cores; a high load DEPRESSES this result |
 | per-file detail | `bench-results/parity-details/QF_LIA.tsv` |
+## QF_BV — 2026-08-02T16:24:39Z — EVIDENCE MODE
+
+Evidence mode (`PARITY_EVIDENCE=1`). Every scored number above and below is
+from the SAME default-route run at the 24s protocol budget as any other
+entry -- evidence mode only ADDS a second axeyum run per file
+(`AXEYUM_EVIDENCE=1`, 60s) that produces and re-checks a certificate.
+
+`certified / unsat` counts, over every `unsat` THE SCORED RUN PRODUCED, how many
+the evidence run also decided `unsat` **and** returned a checkable certificate for.
+A file we can refute but cannot certify counts against us; it is not dropped.
+
+| field | value |
+|---|---|
+| axeyum solved | 187/200 |
+| reference solved | 194/200 |
+| **ratio (axeyum / reference)** | **96.4%** |
+| **disagreements** | **0** |
+| soundness | SOUND |
+| **certified / unsat** | **92/130 = 70.8%** |
+| re-checked here (text-only) / unsat | 78/130 = 60.0% |
+| certificates that FAILED to re-check | 0 |
+| axeyum evidence-run budget | 60s (scored run stays at 24s) |
+| both / axeyum-only / reference-only | 187 / 0 / 7 |
+| reference | `0.9.1` |
+| protocol | 24s wall, 8GiB, per-file |
+| benchmark list | `bench-results/parity-lists/QF_BV.txt` (sha256 6f873e15b191, 200 files) |
+| solver commit | `b32e83f81` |
+| load average (start / end) | 10.39 10.70 9.91 / 14.58 14.09 10.39 — 24 cores; a high load DEPRESSES this result |
+| per-file detail | `bench-results/parity-details/QF_BV.tsv` |
 
