@@ -118,8 +118,20 @@ if ! git diff --quiet -- crates Cargo.toml Cargo.lock 2>/dev/null; then
   echo "parity-run: PARITY_ALLOW_DIRTY=1 — measuring an uncommitted tree" >&2
 fi
 
+# The informational stamp, scoped to what can actually change the RESULT.
+#
+# It used to test `git diff --quiet` over the WHOLE tree, which made it lie: this
+# script appends to `bench-results/PARITY.md` and rewrites
+# `bench-results/parity-details/<div>.tsv`, so after the first division in a
+# worktree the tree is dirty BY THIS SCRIPT'S OWN DOING, and every subsequent run
+# was stamped "not reproducible". Observed 2026-08-02: three sweeps in one clean
+# detached worktree at `44fe20862` produced a clean QF_BV entry and falsely
+# stamped UF and QF_SLIA — same commit, same binary, same worktree. A warning
+# that fires on its own side effects trains readers to ignore it, which is worse
+# than not having it, because the stamp matters exactly when it is rare.
 dirty=""
-git diff --quiet || dirty=" (DIRTY WORKTREE — result not reproducible)"
+git diff --quiet -- crates Cargo.toml Cargo.lock scripts \
+  || dirty=" (DIRTY WORKTREE — result not reproducible)"
 list_sha="$(sha256sum "$list" | cut -c1-12)"
 reference_version="$("$reference_bin" --version 2>&1 | head -1 | tr -d '\n')"
 total=$(grep -cve '^\s*$' "$list")

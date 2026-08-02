@@ -243,3 +243,79 @@ not a score.
 | load average (start / end) | 8.27 10.33 11.39 / 10.50 11.03 11.02 — 24 cores; a high load DEPRESSES this result |
 | per-file detail | `bench-results/parity-details/QF_BV.tsv` |
 
+## QF_BV — 2026-08-02T01:17:42Z
+
+| field | value |
+|---|---|
+| axeyum solved | 184/200 |
+| reference solved | 194/200 |
+| **ratio (axeyum / reference)** | **94.8%** |
+| **disagreements** | **0** |
+| soundness | SOUND |
+| both / axeyum-only / reference-only | 184 / 0 / 10 |
+| reference | `0.9.1` |
+| protocol | 24s wall, 8GiB, per-file |
+| benchmark list | `bench-results/parity-lists/QF_BV.txt` (sha256 6f873e15b191, 200 files) |
+| solver commit | `44fe20862` |
+| load average (start / end) | 6.34 4.65 4.08 / 2.06 2.68 3.16 — 24 cores; a high load DEPRESSES this result |
+| per-file detail | `bench-results/parity-details/QF_BV.tsv` |
+
+## UF — 2026-08-02T02:40:33Z
+
+| field | value |
+|---|---|
+| axeyum solved | 81/200 |
+| reference solved | 93/200 |
+| **ratio (axeyum / reference)** | **87.1%** |
+| **disagreements** | **0** |
+| soundness | SOUND |
+| both / axeyum-only / reference-only | 57 / 24 / 36 |
+| reference | `cvc5 1.3.4 [git f3b21c4 on branch HEAD]` |
+| protocol | 24s wall, 8GiB, per-file |
+| benchmark list | `bench-results/parity-lists/UF.txt` (sha256 ab432240d2f7, 200 files) |
+| solver commit | `44fe20862` (DIRTY WORKTREE — result not reproducible) |
+| load average (start / end) | 2.06 2.68 3.16 / 4.78 5.48 3.98 — 24 cores; a high load DEPRESSES this result |
+| per-file detail | `bench-results/parity-details/UF.tsv` |
+
+## QF_SLIA — 2026-08-02T02:50:14Z
+
+| field | value |
+|---|---|
+| axeyum solved | 191/200 |
+| reference solved | 193/200 |
+| **ratio (axeyum / reference)** | **99.0%** |
+| **disagreements** | **0** |
+| soundness | SOUND |
+| both / axeyum-only / reference-only | 184 / 7 / 9 |
+| reference | `cvc5 1.3.4 [git f3b21c4 on branch HEAD]` |
+| protocol | 24s wall, 8GiB, per-file |
+| benchmark list | `bench-results/parity-lists/QF_SLIA.txt` (sha256 7d539c0182a6, 200 files) |
+| solver commit | `44fe20862` (DIRTY WORKTREE — result not reproducible) |
+| load average (start / end) | 4.78 5.48 3.98 / 6.51 5.27 4.25 — 24 cores; a high load DEPRESSES this result |
+| per-file detail | `bench-results/parity-details/QF_SLIA.tsv` |
+
+
+## Correction — 2026-08-02: a spurious DIRTY stamp on the two entries above
+
+The `UF — 2026-08-02T02:40:33Z` and `QF_SLIA — 2026-08-02T02:50:14Z` entries
+carry `(DIRTY WORKTREE — result not reproducible)`. **That stamp is wrong on
+both**, and the ledger is append-only, so it is corrected here rather than
+edited above.
+
+All three sweeps ran back-to-back in one **clean detached worktree** at
+`44fe20862`, from one binary built there, with nothing uncommitted under
+`crates/` at any point. The stamp fired because it tested `git diff --quiet`
+over the *whole tree*, and this script appends to `PARITY.md` and rewrites
+`parity-details/<div>.tsv` — so from the second division onward the tree was
+dirty **by the harness's own side effects**. The proof is in the entries
+themselves: the `QF_BV — 2026-08-02T01:17:42Z` entry, first of the three, is
+clean at the same commit from the same worktree; only the runs that followed a
+ledger write are stamped.
+
+Fixed by scoping the stamp to what can change the result (`crates`,
+`Cargo.toml`, `Cargo.lock`, `scripts`), matching the scope of the hard refusal
+added earlier the same day. A warning that fires on its own side effects trains
+readers to ignore it — and this stamp matters precisely because it is rare.
+
+The three results stand as measured: QF_BV 184/194 = 94.8%, UF 81/93 = 87.1%,
+QF_SLIA 191/193 = 99.0%, 0 disagreements in all three.
