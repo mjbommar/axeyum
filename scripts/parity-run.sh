@@ -81,8 +81,15 @@ evidence_mode="${PARITY_EVIDENCE:-0}"
 axeyum_budget_s="$budget_s"
 if [[ "$evidence_mode" == "1" ]]; then
   axeyum_budget_s="${PARITY_EVIDENCE_BUDGET_S:-$budget_s}"
-  export AXEYUM_EVIDENCE=1
 fi
+# AXEYUM_EVIDENCE is passed PER INVOCATION (see `run_one`), never exported here.
+# An earlier version exported it, which silently put the SCORED run on the
+# evidence route too: the entry read `axeyum solved 147/200` against a 184/200
+# baseline, and `certified/unsat` was again computed over a route-narrowed
+# denominator. The scored run must be the shipped default configuration, so
+# `run_one` also `env -u`s the variable out of the scored invocation -- an
+# inherited `AXEYUM_EVIDENCE=1` from the caller's shell cannot change what this
+# script scores either.
 list="bench-results/parity-lists/${division}.txt"
 out="bench-results/PARITY.md"
 
@@ -219,7 +226,7 @@ trap 'rm -f "$evidence_sink"' EXIT
 run_one() {
   local bin="$1" file="$2" mode="${3:-plain}" verdict raw
   local b="$budget_s"
-  local -a pre=()
+  local -a pre=(env -u AXEYUM_EVIDENCE)
   if [[ "$mode" == "evidence" ]]; then
     b="$axeyum_budget_s"
     pre=(env AXEYUM_EVIDENCE=1)
@@ -241,7 +248,7 @@ run_one() {
   # it is what BOTH solvers take even when evidence mode is on.
   if [[ "$mode" != "evidence" ]]; then
     verdict=$(MEM_LIMIT_GB="$mem_gb" timeout "$((b + 5))" \
-              ./scripts/mem-run.sh "${cmd[@]}" 2>/dev/null \
+              "${pre[@]}" ./scripts/mem-run.sh "${cmd[@]}" 2>/dev/null \
               | grep -oE '^(sat|unsat)$' | tail -1)
     echo "${verdict:-unsolved}"
     return
