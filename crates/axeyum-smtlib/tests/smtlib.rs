@@ -5823,3 +5823,31 @@ fn wide_hex_and_binary_literals_parse_at_their_own_width() {
         (check-sat)";
     assert!(matches!(parse_script(bad), Err(SmtError::Syntax(_))));
 }
+
+/// A packed bounded-string value round-trips back to its bytes.
+///
+/// Pins the conformance defect measured 2026-08-02: `(get-value (x))` on a
+/// `(declare-fun x () String)` returned `Bv { width: 100, value: 271378 }`
+/// instead of `"AB"`, because ADR-0029 packs a String into a bit-vector and
+/// nothing decoded it on the way out.
+#[test]
+fn packed_string_values_round_trip_to_bytes() {
+    // The default layout: max length 12, 4 length bits + 96 content bits.
+    let width = 100;
+    assert_eq!(axeyum_smtlib::packed_string_max_len(width), Some(12));
+    // "AB" = len 2, then 'A' (65) then 'B' (66), LSB-first above the length.
+    let packed = 2u128 | ((65u128 | (66u128 << 8)) << 4);
+    assert_eq!(
+        axeyum_smtlib::decode_packed_string(width, packed).as_deref(),
+        Some(b"AB".as_slice())
+    );
+    // The empty string is a length of zero, whatever the content bits hold.
+    assert_eq!(
+        axeyum_smtlib::decode_packed_string(width, 0).as_deref(),
+        Some(b"".as_slice())
+    );
+    // A width that is not a packed-string total is not a packed string.
+    assert_eq!(axeyum_smtlib::decode_packed_string(99, 0), None);
+    // A length field above the layout's maximum is malformed, not a short string.
+    assert_eq!(axeyum_smtlib::decode_packed_string(width, 13), None);
+}

@@ -23069,3 +23069,46 @@ mod string_escape_tests {
         assert_eq!(decode_string_code_points("\\u{30000}"), None);
     }
 }
+
+/// Decodes a packed bounded-string bit-vector value back to its bytes.
+///
+/// ADR-0029 models a `String` as a fixed-width bit-vector: LSB-first, a
+/// `len_width(m)`-bit length field, then `m` content bytes, then zero padding.
+/// The IR sort of a declared `String` symbol really *is* `(_ BitVec total)`, so
+/// a solver model binds it to a `Bv` — and until this existed nothing turned it
+/// back, so `(get-value (x))` on `(declare-fun x () String)` handed a consumer
+/// `Bv { width: 100, value: 271378 }` instead of `"AB"`. That is not a lifted
+/// model: SMT-COMP's Model Validation track would reject it, and the standing
+/// rule here is that every `sat` must be checkable by evaluating the ORIGINAL
+/// term against the LIFTED model.
+///
+/// `width` must be the packed total for some maximum length `m` (i.e.
+/// `string_total(m) == width`); anything else is not a packed string and
+/// returns `None` rather than guessing. A length field above `m`, or content
+/// bits set above the declared length, likewise returns `None` — a malformed
+/// packing must not be silently rendered as a shorter string.
+#[must_use]
+pub fn decode_packed_string(width: u32, value: u128) -> Option<Vec<u8>> {
+    let max_len = packed_string_max_len(width)?;
+    let lw = len_width(max_len);
+    let len = u32::try_from(value & ((1u128 << lw) - 1)).ok()?;
+    if len > max_len {
+        return None;
+    }
+    let content = value >> lw;
+    let mut bytes = Vec::with_capacity(len as usize);
+    for i in 0..len {
+        bytes.push(u8::try_from((content >> (8 * i)) & 0xff).ok()?);
+    }
+    Some(bytes)
+}
+
+/// The maximum length `m` whose packed layout is exactly `width` bits, if any.
+///
+/// `string_total` is strictly increasing in `m`, so the inverse is unique when
+/// it exists. Searching rather than solving keeps this honest about the layout
+/// actually used by `pack_string_literal` instead of duplicating its arithmetic.
+#[must_use]
+pub fn packed_string_max_len(width: u32) -> Option<u32> {
+    (0..=STRING_BOUND_CAP).find(|&m| string_total(m) == width)
+}
