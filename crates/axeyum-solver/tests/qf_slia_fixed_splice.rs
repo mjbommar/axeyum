@@ -2808,12 +2808,22 @@ fn bounded_source_witness_closes_last_noetzli_counterexamples() {
         r#"(not (= (str.replace (str.replace x y x) y "B") (str.replace x y (str.replace x y "B"))))"#,
         r#"(not (= (str.replace (str.replace x y x) y "") (str.replace x y (str.replace x y ""))))"#,
     ];
-    // A TIGHT budget on purpose: it is what exercises the bounded-source
-    // fallback, which only runs when the primary route returns Unknown. The
-    // assertion below is route-agnostic, so a slower box that lets the packed
-    // route win no longer flips this test — which is what a larger budget was
-    // briefly used to paper over.
-    let fast = SolverConfig::new().with_timeout(Duration::from_millis(250));
+    // Generous on purpose. Two constraints meet here:
+    //
+    //   * Ingest now HONOURS the caller's deadline, so a 250 ms budget can
+    //     legitimately decline under parallel load — the pre-push gate caught
+    //     exactly that, failing while the same suite passed single-threaded at
+    //     load 1.2. A capability test must not be a stopwatch.
+    //   * A larger budget used to change WHICH route won and so what the model
+    //     looked like. That was the string budget non-monotonicity, and it is
+    //     fixed: the packed route now binds a readable model too, and the
+    //     assertion below is route-agnostic. So a large budget is safe now in a
+    //     way it demonstrably was not before.
+    //
+    // Wall-clock frontiers belong in `progress_frontier`, which is serialized
+    // for that reason. This test asserts a CAPABILITY: these Noetzli
+    // counterexamples decide SAT with a model a consumer can read.
+    let fast = SolverConfig::new().with_timeout(Duration::from_secs(60));
     for assertion in assertions {
         let input = format!(
             r"(set-logic QF_SLIA)
