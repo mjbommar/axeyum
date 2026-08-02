@@ -113,15 +113,37 @@ pub(crate) enum QuantifierLayout {
     Nested,
 }
 
-/// Whether the nested-quantifier representation is enabled for this process
-/// (`AXEYUM_NESTED_QUANT=1`). Default **off**: the prenexing path stays the
-/// shipped route so every recorded baseline keeps its meaning. Read once and
-/// cached, so a disabled flag costs one atomic load per call site.
+/// Whether the nested-quantifier representation is enabled for this process.
+///
+/// Default **ON** as of 2026-08-02 (slice 4). Set `AXEYUM_NESTED_QUANT=0` to
+/// fall back to prenexing.
+///
+/// The flip is a measured decision, not a preference. Prenexing destroys trigger
+/// locality: running cvc5 with `--prenex-quant=norm` — exactly what this module
+/// used to do unconditionally — turns 5 of 5 of the scored UF files it refutes
+/// into unknown/timeout, while `--prenex-quant=none` keeps all 5 unsat. We were
+/// reproducing another solver's known failure mode. Head-to-head on the
+/// committed 200-file UF list through `scripts/parity-run.sh`:
+///
+/// | layout  | axeyum solved | ratio vs cvc5 | disagreements |
+/// |---------|---------------|---------------|---------------|
+/// | prenex  | 81/200        | 87.1 %        | 0             |
+/// | nested  | 85/200        | 91.4 %        | 0             |
+///
+/// Slices 1–2 alone were net **−4** on the broader declared-status set: the
+/// layout moved `A ∨ ∀y.B` out of the top-level `foralls` bucket into `ground`,
+/// where the quantifier-free check dropped it and reach was lost outright. Slice
+/// 3's lazy discovery restores that reach by admitting `A ∨ B(t)`, turning the
+/// trade into net **+4**. Do not re-flip this on intuition — re-measure.
+///
+/// Read once and cached, so the check costs one atomic load per call site.
 pub(crate) fn nested_quantifiers_enabled() -> bool {
     static ENABLED: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
     *ENABLED.get_or_init(|| {
+        // Absent variable means ON. Only an explicit `0`/empty disables, so the
+        // opt-out is deliberate rather than accidental.
         std::env::var_os("AXEYUM_NESTED_QUANT")
-            .is_some_and(|value| !value.is_empty() && value != "0")
+            .is_none_or(|value| !value.is_empty() && value != "0")
     })
 }
 
