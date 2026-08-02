@@ -14,6 +14,34 @@ use crate::{
     ModelProjection, Preservation, RewriteManifest, RewriteRule, RewriteRuleId, RewriteTestRoute,
 };
 
+/// Widest AC operand multiset that is flattened, sorted, and rebuilt as a
+/// balanced tree. Past this, the caller's association is kept verbatim.
+///
+/// Rebuilding a *wide* chain destroys the sharing the source had. A
+/// symbolic-execution front end emits a left-associated accumulator
+/// (`s1 = a+b`, `s2 = s1+c`, …) and then asserts a bound on MANY of the
+/// prefixes; each prefix is one extra adder on top of the previous one, so the
+/// whole family costs one chain. Flattening every prefix and rebuilding it as
+/// a balanced tree over sorted operands gives each prefix its own tree, and the
+/// prefix relationship the SAT solver would have propagated along is gone.
+///
+/// Measured on `QF_BV/Sage2/bench_6444.smt2` (a 200-term accumulator with 163
+/// prefix bounds, declared `unsat`): rebuilt, the CNF is 13 556 vars / 53 598
+/// clauses and is UNSOLVED at 60 s — `CaDiCaL` does not crack that same CNF in
+/// 120 s either, so it is the encoding, not our SAT core. Association
+/// preserved, the CNF is *larger* (29 189 vars / 101 984 clauses) and solves in
+/// **8.5 ms**. Bitwuzla's own preprocessing keeps the chain for exactly this
+/// reason (its output hoists the constants out and leaves `defN+1 = x + defN`).
+///
+/// The value is **measured, not guessed**. Narrow chains are where the
+/// canonical form pays for itself (`(= (a+(b+c)) (c+(a+b)))` folds to `true`
+/// with no bit-blasting), so the cap must sit above every width that benefits.
+/// A cap of `16` bought `bench_6444` but cost `QF_BV/float/div3.c.50.smt2`
+/// (`sat` 20.4 s uncapped → `unknown` past the 24 s budget capped); `64` keeps
+/// both, and in fact decides `div3.c.50` in 10.7 s — better than either. A
+/// full 200-file `QF_BV` parity sweep at this cap moved no other verdict.
+const AC_REBUILD_MAX_OPERANDS: usize = 64;
+
 const BOOL_CONST_FOLD: &str = "bool.const_fold.v1";
 const BOOL_DOUBLE_NOT: &str = "bool.double_not.v1";
 const BOOL_AND_IDENTITY: &str = "bool.and_identity.v1";
@@ -771,27 +799,35 @@ fn rewrite_app(
     let add_chain_enabled = op == Op::BvAdd && enabled.contains(BV_ADD_CONSTANT_CHAIN);
     let args = if is_ac(op) && (enabled.contains(COMMUTATIVE_ORDER) || add_chain_enabled) {
         let mut flat = flatten_ac(arena, op, args);
-        if add_chain_enabled {
-            let (normalized, folded) = fold_bv_add_constant_chain(arena, flat)?;
-            flat = normalized;
-            if folded {
-                let term = if flat.len() == 1 {
-                    flat[0]
-                } else {
-                    rebuild_balanced(arena, op, &flat)?
-                };
-                return Ok(applied(term, BV_ADD_CONSTANT_CHAIN));
-            }
-        }
-        // A single operand or already-sorted flat list of the same length is a
-        // no-op; only treat as a rewrite when the flattened/sorted operands
-        // differ from the raw `args`.
-        if !enabled.contains(COMMUTATIVE_ORDER) || flat.as_slice() == args {
+        if flat.len() > AC_REBUILD_MAX_OPERANDS {
+            // Wide chain: keep the caller's association verbatim (see
+            // `AC_REBUILD_MAX_OPERANDS`). Falling through with the original
+            // `args` re-runs every op-specific rule below exactly as before —
+            // only the flatten/sort/rebuild is skipped.
             args
         } else {
-            normalized_args = flat;
-            reordered = true;
-            normalized_args.as_slice()
+            if add_chain_enabled {
+                let (normalized, folded) = fold_bv_add_constant_chain(arena, flat)?;
+                flat = normalized;
+                if folded {
+                    let term = if flat.len() == 1 {
+                        flat[0]
+                    } else {
+                        rebuild_balanced(arena, op, &flat)?
+                    };
+                    return Ok(applied(term, BV_ADD_CONSTANT_CHAIN));
+                }
+            }
+            // A single operand or already-sorted flat list of the same length is a
+            // no-op; only treat as a rewrite when the flattened/sorted operands
+            // differ from the raw `args`.
+            if !enabled.contains(COMMUTATIVE_ORDER) || flat.as_slice() == args {
+                args
+            } else {
+                normalized_args = flat;
+                reordered = true;
+                normalized_args.as_slice()
+            }
         }
     } else if is_commutative(op) && args.len() == 2 && args[0] > args[1] {
         normalized_args = vec![args[1], args[0]];
@@ -2237,9 +2273,10 @@ mod commutative_tests {
     use axeyum_ir::{Assignment, Op, Sort, TermArena, TermId, TermNode, Value, WideUint, eval};
 
     use super::{
-        BV_ADD_CONSTANT_CHAIN, BV_CONCAT_EXTRACT, BV_EQ_ADD_CONSTANT_CANCEL, BV_EXTRACT_BITWISE,
-        BV_EXTRACT_ITE, BV_EXTRACT_NESTED, Canonicalizer, RewriteReport, canonicalize,
-        canonicalize_root_bounded, is_extract_distributive_bitwise, mask,
+        AC_REBUILD_MAX_OPERANDS, BV_ADD_CONSTANT_CHAIN, BV_CONCAT_EXTRACT,
+        BV_EQ_ADD_CONSTANT_CANCEL, BV_EXTRACT_BITWISE, BV_EXTRACT_ITE, BV_EXTRACT_NESTED,
+        Canonicalizer, RewriteReport, canonicalize, canonicalize_root_bounded,
+        is_extract_distributive_bitwise, mask,
     };
 
     #[test]
@@ -2737,6 +2774,69 @@ mod commutative_tests {
 
         let outcome = canonicalize(&mut a, goal).unwrap();
         assert_eq!(outcome.term, a.bool_const(true));
+    }
+
+    /// A `bvadd` accumulator WIDER than [`AC_REBUILD_MAX_OPERANDS`] keeps its
+    /// input association, so every prefix stays a subterm of the next one.
+    ///
+    /// This is the sharing the `QF_BV/Sage2` family depends on: the source
+    /// asserts a bound on many prefixes of one accumulator, and rebuilding each
+    /// prefix as its own balanced tree over sorted operands gave each of them a
+    /// private adder tree — a CNF that neither our SAT core nor `CaDiCaL` cracked
+    /// (`bench_6444.smt2`: unsolved at 60 s rebuilt, 8.5 ms preserved).
+    ///
+    /// The check is structural *and* denotational: the wide chain's prefixes
+    /// must still be shared, and canonicalization must not change any value.
+    #[test]
+    fn wide_bv_add_chains_keep_their_association_and_prefix_sharing() {
+        let mut a = TermArena::new();
+        let width = 8;
+        let syms: Vec<_> = (0..AC_REBUILD_MAX_OPERANDS + 4)
+            .map(|i| a.declare(&format!("v{i}"), Sort::BitVec(width)).unwrap())
+            .collect();
+        // Left-associated accumulator; remember every prefix.
+        let mut prefixes = vec![a.var(syms[0])];
+        for &sym in &syms[1..] {
+            let next = a.var(sym);
+            let sum = a.bv_add(*prefixes.last().unwrap(), next).unwrap();
+            prefixes.push(sum);
+        }
+        let canonical: Vec<_> = prefixes
+            .iter()
+            .map(|&t| canonicalize(&mut a, t).unwrap().term)
+            .collect();
+
+        // Structural: past the cap, prefix k+1 must literally contain prefix k.
+        for k in AC_REBUILD_MAX_OPERANDS..prefixes.len() - 1 {
+            let TermNode::App { op, args } = a.node(canonical[k + 1]).clone() else {
+                panic!("prefix {} is not an application", k + 1);
+            };
+            assert_eq!(op, Op::BvAdd);
+            assert!(
+                args.contains(&canonical[k]),
+                "canonicalizing a {}-operand chain dropped the prefix sharing at k={k}",
+                prefixes.len()
+            );
+        }
+
+        // Denotational: canonicalization changes no value, at or past the cap.
+        let mut asg = Assignment::new();
+        for (i, &sym) in syms.iter().enumerate() {
+            asg.set(
+                sym,
+                Value::Bv {
+                    width,
+                    value: (i as u128 * 37 + 11) % 256,
+                },
+            );
+        }
+        for (&orig, &canon) in prefixes.iter().zip(&canonical) {
+            assert_eq!(
+                eval(&a, orig, &asg).unwrap(),
+                eval(&a, canon, &asg).unwrap(),
+                "wide-chain canonicalization changed a value"
+            );
+        }
     }
 
     /// AC-flattening must preserve denotation: original and canonical agree under
