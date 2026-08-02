@@ -82,6 +82,42 @@ for bin in "$axeyum_bin" "$reference_bin"; do
 done
 
 solver_sha="$(git rev-parse --short HEAD)"
+
+# REFUSE a run whose binary cannot be reproduced from the recorded SHA.
+#
+# The old behaviour was to stamp the ledger entry "DIRTY WORKTREE — result not
+# reproducible" and run anyway. That is honest but arrives far too late: the
+# sweep has already cost hours of machine time and the number it produces cannot
+# be defended. It happened on 2026-08-01 — a QF_BV run was measured with another
+# lane's uncommitted 234-line `route_trace.rs` compiled into the binary.
+#
+# Scoped to what actually reaches the binary (`crates/`, the manifests), NOT the
+# whole tree: this is a shared checkout where a docs lane always has something
+# dirty, and refusing on that would train people to set the override reflexively.
+# The whole-tree stamp below is kept as informational for exactly that case.
+#
+# Escape hatch `PARITY_ALLOW_DIRTY=1` exists for deliberate A/B of an uncommitted
+# change; it still stamps the entry, so the ledger stays honest either way.
+if ! git diff --quiet -- crates Cargo.toml Cargo.lock 2>/dev/null; then
+  if [[ "${PARITY_ALLOW_DIRTY:-0}" != "1" ]]; then
+    echo "FAIL: uncommitted changes under crates/ or the manifests — the binary" >&2
+    echo "      this would measure cannot be rebuilt from ${solver_sha}, so the" >&2
+    echo "      ledger entry would be unreproducible." >&2
+    echo >&2
+    echo "      Measure a clean tree instead:" >&2
+    echo "        git worktree add --detach /tmp/axeyum-parity-clean HEAD" >&2
+    echo "        cd /tmp/axeyum-parity-clean" >&2
+    echo "        cargo build --release -p axeyum-bench --example smtcomp_cli" >&2
+    echo "        ./scripts/parity-run.sh $division" >&2
+    echo >&2
+    echo "      (\`--features full\` is NOT valid on axeyum-bench and will error.)" >&2
+    echo "      Deliberate uncommitted A/B: re-run with PARITY_ALLOW_DIRTY=1." >&2
+    git diff --stat -- crates Cargo.toml Cargo.lock >&2
+    exit 2
+  fi
+  echo "parity-run: PARITY_ALLOW_DIRTY=1 — measuring an uncommitted tree" >&2
+fi
+
 dirty=""
 git diff --quiet || dirty=" (DIRTY WORKTREE — result not reproducible)"
 list_sha="$(sha256sum "$list" | cut -c1-12)"
