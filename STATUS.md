@@ -9,6 +9,16 @@ session. Status legend: `TODO` · `WIP` · `DONE` · `BLOCKED`.
 > so the two never edit the same lines. See
 > [PLAN.md § Consumer-track integration](PLAN.md#consumer-track-integration-2026-06-27-converge-the-apps-onto-main).
 
+> **Exploration track (proposed 2026-08-01) tracks its own state elsewhere.**
+> [`docs/plan/exploration-track/STATUS.md`](docs/plan/exploration-track/STATUS.md)
+> is the authority for that track's 96 tasks — it is deliberately not mirrored
+> here, so this file stays owned by the two lanes above. Landed so far: the Lean
+> reconstruction-prelude axiom ledger is fully classified (65 rows, zero
+> `unclassified`; 17 primitive-interface / 41 external-assumption / 7
+> derivable-theorem), and `RouteTrace::to_json` makes dispatch order persistable.
+> The track is ADR-gated throughout and **does not preempt the QF_BVFP/binary79
+> focus or the paused CAS lane**.
+
 ## Project reality check (updated 2026-07-21)
 
 **Measured status vs the [north star](PLAN.md#where-we-are-vs-the-north-star--measured-reality-check-2026-06-28):
@@ -16,6 +26,48 @@ legacy baselines sound, full-library P0 fixed on `main` with slice revalidation
 open; parity not yet reached, the road there fully mapped.** The remaining
 decide-rate / performance / proof-coverage work is decomposed into sized,
 exit-criteria'd tracks we advance one increment at a time.
+- **Seven divisions certified (2026-08-02).** Every entry measured through
+  `scripts/parity-run.sh` against the division's real reference binary, same
+  box, same 24 s budget, whole-list denominator, any disagreement failing the
+  run outright. Ledger: [`bench-results/PARITY.md`](bench-results/PARITY.md).
+  **Zero disagreements in every run, all day.**
+
+  | division | axeyum / reference | ratio | reference |
+  |---|---|---|---|
+  | QF_SLIA | 192/193 | **99.5 %** | cvc5 |
+  | QF_BV | 187/194 | **96.4 %** | bitwuzla |
+  | UF | 85/93 | **91.4 %** | cvc5 (plain, *not* the portfolio) |
+  | QF_ABV | 176/196 | **89.8 %** | bitwuzla |
+  | QF_LIA | 117/139 | **84.2 %** | cvc5 |
+  | QF_UF | 151/200 | **75.5 %** | cvc5 — which scores a **perfect 200/200** |
+  | QF_LRA | 73/137 | **53.3 %** | cvc5 |
+
+  Read the weak end first: **QF_LRA at 53.3 % is the largest gap on the board**,
+  and QF_UF is measured against a reference with no residual at all. On QF_BV
+  `axeyum-only = 0` — we are a strict subset of bitwuzla, so that 96.4 % is not
+  independent strength. UF and QF_SLIA are the opposite (24 and 7 files the
+  reference misses). Four divisions of the seven were added today; 77 of
+  SMT-LIB's 84 non-incremental divisions remain unmeasured, and breadth — not
+  decide-rate on the measured seven — is the dominant distance to the goal.
+
+  **Proof coverage got its first number ever: 92/130 = 70.8 % of QF_BV unsats
+  certified**, 60.0 % re-checked in-process from serialized text alone, **0
+  certificates that failed to re-check**. All 38 bare unsats are one shape — the
+  evidence route could not decide them within 60 s — so none is "no certificate
+  format exists for this fragment".
+
+  Landed today besides the measurements: nested quantifiers are now the
+  **default** (prenexing destroyed trigger locality — cvc5 with
+  `--prenex-quant=norm` reproduces our exact failure mode on 5 of 5 files);
+  11 stack-overflow crash sites converted to worklists; a `(get-value)`
+  conformance fix (a declared `String` returned its raw packed bit-vector);
+  and the string budget non-monotonicity closed. **Four gates were found inert
+  or self-poisoning** — the oracle-free corpus `:status` sweep had run *zero
+  tests for 15 days*, and `core.hooksPath` was never set so the pre-push hook
+  had **never run at all**. Both are fixed, with a `gated_test` wrapper and a
+  committed per-suite minimum-count ratchet so a silently-emptied suite now
+  breaks the build.
+
 - **RESUME HERE (2026-08-01, end of session — the shell tool died mid-flight).**
   The Bash/shell tool failed harness-wide: every command, including a bare
   `echo`, returns exit 1 with no output, for the main session *and* for
