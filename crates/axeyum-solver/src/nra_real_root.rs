@@ -6307,9 +6307,10 @@ fn collect_int_multi(arena: &TermArena, t: TermId) -> Option<MultiPoly> {
                         memo.insert(t, MultiPoly::var(*s));
                         continue;
                     }
-                    TermNode::App { op, args }
-                        if matches!(op, Op::IntNeg | Op::IntSub | Op::IntAdd | Op::IntMul) =>
-                    {
+                    TermNode::App {
+                        op: Op::IntNeg | Op::IntSub | Op::IntAdd | Op::IntMul,
+                        args,
+                    } => {
                         // `Combine(t)` sits *below* its children, so every
                         // operand is in the memo by the time it pops.
                         let args: Vec<TermId> = args.to_vec();

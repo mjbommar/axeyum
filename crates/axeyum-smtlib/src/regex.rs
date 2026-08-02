@@ -1342,6 +1342,6 @@ mod deep_nesting_tests {
             "`a` followed by 16 `b`s: every word has length 17"
         );
         // The cap is generous relative to anything a benchmark writes.
-        assert!(MAX_REGEX_SEXPR_DEPTH >= 1024);
+        const { assert!(MAX_REGEX_SEXPR_DEPTH >= 1024) };
     }
 }
