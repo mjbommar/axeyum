@@ -232,6 +232,23 @@ let-chains are used workspace-wide) check. Edition 2024, resolver 3.
 
 ## Gotchas
 
+- **`explain_corpus` can print a WRONG VERDICT. Never use it as an oracle.**
+  It calls `check_auto_explained` on the *flat* view, which bypasses
+  `StringGate::confirm`, so on `regex-032-…-fuzz` it prints `unsat` for a file
+  that is genuinely `sat` (cvc5 agrees, and the shipped front door returns
+  `sat`). The solver is correct; only the diagnostic lies. This matters because
+  agents are routinely pointed at it for string triage — a whole lever can get
+  built on a fabricated `unsat`. Cross-check any verdict it reports against the
+  reference binary and the file's declared `:status` before believing it.
+- **Tools in this repo have lied more often than the solver has been weak.**
+  In one session: a corpus gate that ran zero tests for 15 days while exiting 0;
+  a pre-push hook that had never run because `core.hooksPath` was unset; a
+  `DIRTY WORKTREE` stamp that fired on the harness's own side effects; a
+  reference-solver smoke probe blind to a 1000× budget-unit error; an error
+  message naming a node cap when the real cause was an i128 overflow; and a doc
+  comment claiming a witness binds "every declared String variable" when it
+  binds the source problem's private symbol ids. Prefer a measurement over a
+  message, an exit status, or a comment — including the ones you just wrote.
 - The `z3` crate ≥ 0.20 removed the old `'ctx` lifetime API; `Solver::new()`
   takes no arguments and contexts are managed internally
   (`with_z3_context`/`with_z3_config`). Don't copy pre-0.20 examples.
