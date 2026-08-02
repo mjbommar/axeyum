@@ -1903,8 +1903,34 @@ fn solve_smtlib_at_string_bound(
     config: &SolverConfig,
     string_bound: u32,
 ) -> Result<SmtLibOutcome, SolverError> {
-    let mut script = parse_script_with_string_bound(input, string_bound)
-        .map_err(|error| SolverError::Parse(error.to_string()))?;
+    // Ingest shares the caller's budget. Without this a 24s budget produced
+    // measured 39.9s / 49.4s / 66s runs, and the harness KILLED the process
+    // mid-parse -- strictly worse than a decline, because `unknown` is a
+    // first-class result and an abort is not.
+    let parse_deadline = config
+        .timeout
+        .and_then(|t| std::time::Instant::now().checked_add(t));
+    let mut script = match axeyum_smtlib::parse_script_with_string_bound_within(
+        input,
+        string_bound,
+        parse_deadline,
+    ) {
+        Ok(script) => script,
+        // A resource limit is NOT an error: report the first-class `unknown` the
+        // hard rule requires, carrying the phase that ran out so a profile can
+        // find it.
+        Err(axeyum_smtlib::SmtError::DeadlineExceeded(phase)) => {
+            return Ok(SmtLibOutcome {
+                result: CheckResult::Unknown(UnknownReason {
+                    kind: UnknownKind::ResourceLimit,
+                    detail: format!("ingest exceeded the configured timeout during {phase}"),
+                }),
+                logic: None,
+                expected_status: None,
+            });
+        }
+        Err(error) => return Err(SolverError::Parse(error.to_string())),
+    };
     // Source-first parse fallback (T-B.4d): the bounded encoder declined this
     // script at parse, so use only the checked source-level ladder — never solve
     // its empty flat assertion view.
