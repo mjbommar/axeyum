@@ -657,6 +657,44 @@ pub fn parse_script(input: &str) -> Result<Script, SmtError> {
     parse_script_with_string_bound(input, STRING_MAX_LEN)
 }
 
+/// Parses an SMT-LIB script, aborting with [`SmtError::DeadlineExceeded`] if
+/// `deadline` passes during ingest.
+///
+/// Ingest is a *phase*, not an instant. Reading a 58 MB benchmark takes ~54 s,
+/// and semantic analysis on a deeply nested source has been measured at 66 s —
+/// so with no deadline here a 24 s budget produced real runs of 39.9 s, 49.4 s
+/// and 66 s. The external harness then KILLS the process, and a kill scores
+/// strictly worse than the first-class `unknown` a resource-exhausted solver
+/// owes its caller (`unknown` is first-class; an abort is not).
+///
+/// `deadline = None` is byte-identical to [`parse_script`] — no clock is read.
+///
+/// The deadline is checked between top-level commands and before each of the
+/// two measured-expensive semantic phases, so the granularity is one command or
+/// one phase, not one token. That is enough to convert a multi-minute ingest
+/// into a prompt decline without putting a clock read in the hot lexer loop.
+///
+/// # Errors
+///
+/// As [`parse_script`], plus [`SmtError::DeadlineExceeded`]. A caller must map
+/// that variant to `unknown` — it is a resource limit, never a verdict.
+pub fn parse_script_within(
+    input: &str,
+    deadline: Option<std::time::Instant>,
+) -> Result<Script, SmtError> {
+    parse_script_bounded_inner(input, STRING_MAX_LEN, deadline)
+}
+
+/// Returns `Err(DeadlineExceeded)` when `deadline` has passed.
+fn check_deadline(deadline: Option<std::time::Instant>, phase: &str) -> Result<(), SmtError> {
+    if let Some(d) = deadline
+        && std::time::Instant::now() >= d
+    {
+        return Err(SmtError::DeadlineExceeded(phase.to_string()));
+    }
+    Ok(())
+}
+
 /// Parses an SMT-LIB script, widening **every declared `String` symbol** to at
 /// least `floor` bytes.
 ///
@@ -686,8 +724,31 @@ pub fn parse_script(input: &str) -> Result<Script, SmtError> {
 ///
 /// As [`parse_script`].
 pub fn parse_script_with_string_bound(input: &str, floor: u32) -> Result<Script, SmtError> {
+    parse_script_with_string_bound_within(input, floor, None)
+}
+
+/// [`parse_script_with_string_bound`] with an ingest deadline.
+///
+/// `deadline = None` is byte-identical to [`parse_script_with_string_bound`].
+/// See [`parse_script_within`] for why ingest needs a deadline at all, and note
+/// that the string-bound ladder makes it acute: a rung is a full RE-PARSE, and a
+/// rung-24 re-parse of one measured 1.1 MB benchmark costs 107 s on its own.
+///
+/// # Errors
+///
+/// As [`parse_script_with_string_bound`], plus [`SmtError::DeadlineExceeded`],
+/// which a caller must map to `unknown`.
+pub fn parse_script_with_string_bound_within(
+    input: &str,
+    floor: u32,
+    deadline: Option<std::time::Instant>,
+) -> Result<Script, SmtError> {
     let floor = floor.clamp(STRING_MAX_LEN, STRING_BOUND_CAP);
-    match parse_script_bounded_with_string_bound(input, floor) {
+    match parse_script_bounded_inner(input, floor, deadline) {
+        // A deadline is a resource limit, not a parse failure: do NOT fall through
+        // to the word-first retry, which would re-parse the whole script and spend
+        // budget the caller has already run out of.
+        Err(e @ SmtError::DeadlineExceeded(_)) => Err(e),
         Ok(script) => Ok(script),
         // Word-first parse fallback (T-B.4d). The bounded ADR-0029 string encoder
         // declined the script *wholesale* — a string literal over
@@ -776,7 +837,16 @@ fn word_only_fallback_within_stack_budget(input: &str) -> bool {
 /// A capacity/unsupported decline here is what triggers the word-first fallback in
 /// [`parse_script`].
 fn parse_script_bounded_with_string_bound(input: &str, floor: u32) -> Result<Script, SmtError> {
+    parse_script_bounded_inner(input, floor, None)
+}
+
+fn parse_script_bounded_inner(
+    input: &str,
+    floor: u32,
+    deadline: Option<std::time::Instant>,
+) -> Result<Script, SmtError> {
     let mut exprs = read_all(input)?;
+    check_deadline(deadline, "after read_all")?;
     // Finite-set theory: model every `(Set E)` as a `BitVec(W)` over the finite
     // element domain and rewrite the sound subset of set operations to bit-vector
     // operations *in place* on the s-expression tree, before any term is built.
@@ -841,7 +911,12 @@ fn parse_script_bounded_with_string_bound(input: &str, floor: u32) -> Result<Scr
     // `parse_atom`), so a real declaration never gets shadowed by a `:named`.
     let mut named: HashMap<String, TermId> = HashMap::new();
 
-    for command in &exprs {
+    for (command_index, command) in exprs.iter().enumerate() {
+        // One clock read per 64 commands: enough to cut a runaway ingest short,
+        // cheap enough to be invisible on ordinary scripts.
+        if command_index % 64 == 0 {
+            check_deadline(deadline, "parse_command_loop")?;
+        }
         parse_command(
             &mut script,
             &mut aliases,
@@ -897,10 +972,17 @@ fn parse_script_bounded_with_string_bound(input: &str, floor: u32) -> Result<Scr
     // "only ever add sat" invariant sound). `parse_sort`/`(Seq E)` are untouched.
     if script.uses_bounded_strings {
         script.prefer_source_string_routes = split_replace_rejoin_count > 0;
+        // The two measured-expensive ingest phases. On a 1.1 MB string benchmark
+        // these dominated a 66 s parse: `source_string_semantic_facts` 22.0 s and
+        // `build_word_skeleton` 21.7 s (which re-derives the same facts). Checking
+        // the deadline before each converts a budget overrun into a prompt
+        // `unknown` instead of an external kill.
+        check_deadline(deadline, "source_string_semantic_facts")?;
         script.source_string_semantic_unsat = source_string_semantic_facts(&exprs).conflict;
         script.source_string_sat_problem =
             build_source_string_sat_problem(&mut script.arena, &exprs);
         script.word_problem = build_word_problem(&mut script.arena, &exprs);
+        check_deadline(deadline, "build_word_skeleton")?;
         // Parser-side Boolean-structured word skeleton (P1.5b): the superset the
         // online CDCL(T) route decides — `or`/negated word problems the flat
         // conjunction side channel above cannot represent. Same all-or-nothing
