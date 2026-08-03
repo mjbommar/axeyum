@@ -4,13 +4,25 @@
 //! while this probe shows which files moved and which route declined.
 //!
 //! ```text
-//! cargo run -p axeyum-bench --example explain_corpus -- <dir> [timeout_ms]
+//! cargo run -p axeyum-bench --example explain_corpus -- <dir> [timeout_ms] [--json]
 //! ```
+//!
+//! With `--json` the probe emits one JSON object per line (JSONL) instead of
+//! prose, embedding the route trace via
+//! [`RouteTrace::to_json`](axeyum_solver::route_trace::RouteTrace::to_json).
+//! That is the persistable form the bridge-catalogue replay validator consumes:
+//! it needs the observed dispatch order as data, not as `Display` text.
+//!
+//! Every line has `file` and `status`; `status` is one of `decided`,
+//! `word-first-fallback`, `skipped-scoped`, `read-error`, `parse-error`, or
+//! `error`. `verdict` is present on the two decided statuses, `trace` only on
+//! `decided`, and `detail` only on `error`.
 
 use std::path::{Path, PathBuf};
 use std::time::Duration;
 
 use axeyum_smtlib::parse_script;
+use axeyum_solver::route_trace::push_json_string;
 use axeyum_solver::{CheckResult, SolverConfig, check_auto_explained, solve_smtlib};
 
 fn collect_smt2(dir: &Path, out: &mut Vec<PathBuf>) {
@@ -36,13 +48,38 @@ fn verdict(result: &CheckResult) -> &'static str {
     }
 }
 
+/// Emits one JSONL record. `extra` is pre-rendered JSON (already-escaped
+/// members such as `"verdict":"sat","trace":{…}`) appended verbatim; only the
+/// caller-supplied `file` and `status` are escaped here, using the solver's own
+/// escaper so this example cannot drift from `RouteTrace::to_json`.
+fn emit_json(file: &str, status: &str, extra: &str) {
+    let mut line = String::from("{\"file\":");
+    push_json_string(&mut line, file);
+    line.push_str(",\"status\":");
+    push_json_string(&mut line, status);
+    line.push_str(extra);
+    line.push('}');
+    println!("{line}");
+}
+
+/// Renders `,"detail":"…"` for an error record.
+fn detail_member(detail: &str) -> String {
+    let mut out = String::from(",\"detail\":");
+    push_json_string(&mut out, detail);
+    out
+}
+
 fn main() {
-    let args: Vec<String> = std::env::args().collect();
+    let raw: Vec<String> = std::env::args().collect();
+    // `--json` may appear anywhere; strip it before positional parsing so the
+    // existing `<dir> [timeout_ms]` call sites keep working unchanged.
+    let json = raw.iter().any(|arg| arg == "--json");
+    let args: Vec<String> = raw.into_iter().filter(|arg| arg != "--json").collect();
     let dir = args
         .get(1)
         .cloned()
         .unwrap_or_else(|| {
-            eprintln!("usage: explain_corpus <dir> [timeout_ms]");
+            eprintln!("usage: explain_corpus <dir> [timeout_ms] [--json]");
             std::process::exit(2);
         })
         .into();
@@ -59,18 +96,30 @@ fn main() {
             .and_then(|name| name.to_str())
             .unwrap_or("<non-utf8>");
         let Ok(text) = std::fs::read_to_string(&path) else {
-            println!("{short}: read-error");
+            if json {
+                emit_json(short, "read-error", "");
+            } else {
+                println!("{short}: read-error");
+            }
             continue;
         };
         if ["reset-assertions", "(reset", "(push", "(pop"]
             .iter()
             .any(|kw| text.contains(kw))
         {
-            println!("{short}: skipped-scoped");
+            if json {
+                emit_json(short, "skipped-scoped", "");
+            } else {
+                println!("{short}: skipped-scoped");
+            }
             continue;
         }
         let Ok(mut script) = parse_script(&text) else {
-            println!("{short}: parse-error");
+            if json {
+                emit_json(short, "parse-error", "");
+            } else {
+                println!("{short}: parse-error");
+            }
             continue;
         };
         // A word-first-fallback parse has an EMPTY flat view whose content lives in
@@ -79,23 +128,54 @@ fn main() {
         // door, which consults the word / online / membership routes soundly.
         let Some(assertions) = script.solvable_flat_view() else {
             match solve_smtlib(&text, &config) {
-                Ok(outcome) => println!(
-                    "{short}: {} (word-first fallback)",
-                    verdict(&outcome.result)
-                ),
-                Err(error) => println!("{short}: error: {error} (word-first fallback)"),
+                Ok(outcome) => {
+                    let verdict = verdict(&outcome.result);
+                    if json {
+                        emit_json(
+                            short,
+                            "word-first-fallback",
+                            &format!(",\"verdict\":\"{verdict}\""),
+                        );
+                    } else {
+                        println!("{short}: {verdict} (word-first fallback)");
+                    }
+                }
+                Err(error) => {
+                    if json {
+                        emit_json(short, "error", &detail_member(&error.to_string()));
+                    } else {
+                        println!("{short}: error: {error} (word-first fallback)");
+                    }
+                }
             }
             continue;
         };
         let assertions = assertions.to_vec();
         match check_auto_explained(&mut script.arena, &assertions, &config) {
             Ok((result, trace)) => {
-                println!("{short}: {}", verdict(&result));
-                for attempt in trace.attempts() {
-                    println!("  {attempt}");
+                let verdict = verdict(&result);
+                if json {
+                    // `verdict` is a fixed literal and `to_json` is already
+                    // valid JSON, so neither needs escaping here.
+                    emit_json(
+                        short,
+                        "decided",
+                        &format!(",\"verdict\":\"{verdict}\",\"trace\":{}", trace.to_json()),
+                    );
+                } else {
+                    println!("{short}: {verdict}");
+                    for attempt in trace.attempts() {
+                        println!("  {attempt}");
+                    }
                 }
             }
-            Err(error) => println!("{short}: error: {error}"),
+            Err(error) => {
+                if json {
+                    emit_json(short, "error", &detail_member(&error.to_string()));
+                } else {
+                    println!("{short}: error: {error}");
+                }
+            }
         }
     }
 }

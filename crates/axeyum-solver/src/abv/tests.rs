@@ -3,10 +3,9 @@ use super::{
     array_value_from_entries, check_qf_abv_lazy, check_with_array_elimination,
     collect_base_array_entries, complete_assignment, const_array_default_mismatch_refutation,
     cross_store_array_disequality_refutation, default_value_for_symbol,
-    first_false_replay_conjunct, first_projected_replay_failure,
-    positive_replay_conjunct_count, positive_replay_false_count, project_online_row_assignment,
-    project_replay_ext_candidate, prove_unsat_by_symmetric_swap_chain,
-    repair_projected_branch_as_candidate,
+    first_false_replay_conjunct, first_projected_replay_failure, positive_replay_conjunct_count,
+    positive_replay_false_count, project_online_row_assignment, project_replay_ext_candidate,
+    prove_unsat_by_symmetric_swap_chain, repair_projected_branch_as_candidate,
     repair_projected_branch_best_candidate_with_scalar_closure_guard,
     repair_projected_branch_disjunctions, repair_projected_branch_scalar_choice_candidate,
     repair_projected_branch_schedule, repair_projected_replay_branch_beam,
@@ -144,8 +143,7 @@ fn lazy_abv_refutes_select_congruence() {
 
     let mut backend = SatBvBackend::new();
     let config = SolverConfig::default();
-    let result =
-        check_qf_abv_lazy(&mut backend, &mut arena, &[reads_ne, i_eq_j], &config).unwrap();
+    let result = check_qf_abv_lazy(&mut backend, &mut arena, &[reads_ne, i_eq_j], &config).unwrap();
     assert_eq!(result, CheckResult::Unsat);
 }
 
@@ -468,10 +466,9 @@ fn lazy_ext_branch_beam_allows_temporary_uphill_schedule() {
         "strict pair repair should reject the temporary two-false state"
     );
 
-    let stats =
-        repair_projected_replay_branch_beam(&arena, &originals, first_or, &mut projected)
-            .unwrap()
-            .expect("beam should find the final improving branch schedule");
+    let stats = repair_projected_replay_branch_beam(&arena, &originals, first_or, &mut projected)
+        .unwrap()
+        .expect("beam should find the final improving branch schedule");
     assert!(stats.branch_symbol_changes >= 4);
     assert_eq!(
         positive_replay_false_count(&arena, &originals, &projected).unwrap(),
@@ -598,10 +595,9 @@ fn lazy_ext_replay_failure_reports_branch_pair_candidate_diagnostics() {
     )
     .unwrap()
     .expect("expected first OR replay failure");
-    let failure = replay_failure_with_branch_candidate_diagnostics(
-        &arena, &originals, &projected, failure,
-    )
-    .unwrap();
+    let failure =
+        replay_failure_with_branch_candidate_diagnostics(&arena, &originals, &projected, failure)
+            .unwrap();
     let note = failure.note();
     assert!(note.contains("branch_pair_candidate_diagnostics=["));
     assert!(note.contains("#1->1#0:init=1,status=candidate"), "{note}");
@@ -661,10 +657,9 @@ fn lazy_ext_replay_failure_reports_branch_select_candidate_diagnostics() {
     )
     .unwrap()
     .expect("expected first OR replay failure");
-    let failure = replay_failure_with_branch_candidate_diagnostics(
-        &arena, &originals, &projected, failure,
-    )
-    .unwrap();
+    let failure =
+        replay_failure_with_branch_candidate_diagnostics(&arena, &originals, &projected, failure)
+            .unwrap();
     let note = failure.note();
     assert!(note.contains("branch_select_candidate_diagnostics=["));
     assert!(note.contains("#0->1:direct,status=candidate"), "{note}");
@@ -749,10 +744,9 @@ fn lazy_ext_branch_select_cycle_repair_forces_alternate_or_branch() {
     )
     .unwrap()
     .expect("expected first OR replay failure");
-    let failure = replay_failure_with_branch_candidate_diagnostics(
-        &arena, &originals, &projected, failure,
-    )
-    .unwrap();
+    let failure =
+        replay_failure_with_branch_candidate_diagnostics(&arena, &originals, &projected, failure)
+            .unwrap();
     let note = failure.note();
     assert!(
         note.contains("branch_select_candidate_diagnostics=["),
@@ -768,14 +762,10 @@ fn lazy_ext_branch_select_cycle_repair_forces_alternate_or_branch() {
         note.contains("global_false_or_best_branch_false_literals=1"),
         "{note}"
     );
-    let stats = repair_projected_replay_branch_select_cycle(
-        &arena,
-        &originals,
-        branch_or,
-        &mut projected,
-    )
-    .unwrap()
-    .expect("expected branch/select cycle repair");
+    let stats =
+        repair_projected_replay_branch_select_cycle(&arena, &originals, branch_or, &mut projected)
+            .unwrap()
+            .expect("expected branch/select cycle repair");
     assert!(stats.branch_symbol_changes >= 2, "{stats:?}");
     assert!(stats.array_changes >= 1, "{stats:?}");
     assert_eq!(projected.get(*q_symbol), Some(Value::Bool(true)));
@@ -840,10 +830,9 @@ fn lazy_ext_branch_select_cycle_repairs_same_branch_store_residual() {
     )
     .unwrap()
     .expect("expected first OR replay failure");
-    let failure = replay_failure_with_branch_candidate_diagnostics(
-        &arena, &originals, &projected, failure,
-    )
-    .unwrap();
+    let failure =
+        replay_failure_with_branch_candidate_diagnostics(&arena, &originals, &projected, failure)
+            .unwrap();
     let note = failure.note();
     assert!(
         note.contains("chain+same_branch_store_target,status=candidate"),
@@ -851,14 +840,10 @@ fn lazy_ext_branch_select_cycle_repairs_same_branch_store_residual() {
     );
     assert!(note.contains("total_false=0"), "{note}");
 
-    let stats = repair_projected_replay_branch_select_cycle(
-        &arena,
-        &originals,
-        branch_or,
-        &mut projected,
-    )
-    .unwrap()
-    .expect("expected same-branch store residual repair");
+    let stats =
+        repair_projected_replay_branch_select_cycle(&arena, &originals, branch_or, &mut projected)
+            .unwrap()
+            .expect("expected same-branch store residual repair");
     assert!(stats.branch_symbol_changes >= 2, "{stats:?}");
     assert!(stats.array_changes >= 1, "{stats:?}");
     assert_eq!(
@@ -941,10 +926,9 @@ fn lazy_ext_replay_failure_reports_residual_followup_or_diagnostic() {
     )
     .unwrap()
     .expect("expected first OR replay failure");
-    let failure = replay_failure_with_branch_candidate_diagnostics(
-        &arena, &originals, &projected, failure,
-    )
-    .unwrap();
+    let failure =
+        replay_failure_with_branch_candidate_diagnostics(&arena, &originals, &projected, failure)
+            .unwrap();
     let note = failure.note();
     assert!(
         note.contains("chain+same_branch_store_target,status=candidate"),
@@ -1010,14 +994,10 @@ fn lazy_ext_branch_select_cycle_repairs_residual_followup_or_chain() {
         positive_replay_false_count(&arena, &originals, &projected).unwrap(),
         2
     );
-    let stats = repair_projected_replay_branch_select_cycle(
-        &arena,
-        &originals,
-        first_or,
-        &mut projected,
-    )
-    .unwrap()
-    .expect("expected residual follow-up OR repair");
+    let stats =
+        repair_projected_replay_branch_select_cycle(&arena, &originals, first_or, &mut projected)
+            .unwrap()
+            .expect("expected residual follow-up OR repair");
     assert!(stats.branch_symbol_changes >= 3, "{stats:?}");
     assert_eq!(
         positive_replay_false_count(&arena, &originals, &projected).unwrap(),
@@ -1070,14 +1050,10 @@ fn lazy_ext_scalar_branch_choice_prefers_replay_safe_direction() {
     let mut projected = Assignment::new();
     projected.set(*u_symbol, Value::Int(0));
     projected.set(*v_symbol, Value::Int(1));
-    let stats = repair_projected_branch_scalar_choice_candidate(
-        &arena,
-        &originals,
-        u_eq_v,
-        &mut projected,
-    )
-    .unwrap()
-    .expect("expected scalar choice repair");
+    let stats =
+        repair_projected_branch_scalar_choice_candidate(&arena, &originals, u_eq_v, &mut projected)
+            .unwrap()
+            .expect("expected scalar choice repair");
     assert_eq!(stats.branch_symbol_changes, 1);
     assert_eq!(projected.get(*u_symbol), Some(Value::Int(0)));
     assert_eq!(projected.get(*v_symbol), Some(Value::Int(0)));
@@ -1190,10 +1166,9 @@ fn lazy_ext_branch_schedule_rejects_scalar_closure_loop() {
     let originals = [assertion];
 
     let mut raw_schedule = projected.clone();
-    let raw_stats =
-        repair_projected_branch_schedule(&arena, &originals, branch, &mut raw_schedule)
-            .unwrap()
-            .expect("expected raw schedule to force the branch");
+    let raw_stats = repair_projected_branch_schedule(&arena, &originals, branch, &mut raw_schedule)
+        .unwrap()
+        .expect("expected raw schedule to force the branch");
     assert!(raw_stats.branch_symbol_changes >= 2, "{raw_stats:?}");
     assert_eq!(
         positive_replay_false_count(&arena, &originals, &raw_schedule).unwrap(),
@@ -1534,10 +1509,9 @@ fn lazy_ext_scalar_candidate_reports_returned_or_stabilization() {
     .unwrap()
     .expect("expected scalar replay failure");
     assert_eq!(failure.conjunct_term, y_eq_z);
-    let enriched = replay_failure_with_branch_candidate_diagnostics(
-        &arena, &originals, &projected, failure,
-    )
-    .unwrap();
+    let enriched =
+        replay_failure_with_branch_candidate_diagnostics(&arena, &originals, &projected, failure)
+            .unwrap();
     let note = enriched.note();
     assert!(
         note.contains(&format!(
@@ -1603,10 +1577,9 @@ fn lazy_ext_replay_failure_reports_scalar_candidate_diagnostics() {
     .expect("expected scalar replay failure");
     assert_eq!(failure.conjunct_term, y_eq_three);
 
-    let enriched = replay_failure_with_branch_candidate_diagnostics(
-        &arena, &originals, &projected, failure,
-    )
-    .unwrap();
+    let enriched =
+        replay_failure_with_branch_candidate_diagnostics(&arena, &originals, &projected, failure)
+            .unwrap();
     let note = enriched.note();
     assert!(note.contains("scalar_candidate_diagnostics=["), "{note}");
     assert!(note.contains("literal_true=true"), "{note}");
@@ -1659,10 +1632,9 @@ fn lazy_ext_scalar_candidate_reports_followup_or_diagnostic() {
     .expect("expected scalar replay failure");
     assert_eq!(failure.conjunct_term, x_eq_y);
 
-    let enriched = replay_failure_with_branch_candidate_diagnostics(
-        &arena, &originals, &projected, failure,
-    )
-    .unwrap();
+    let enriched =
+        replay_failure_with_branch_candidate_diagnostics(&arena, &originals, &projected, failure)
+            .unwrap();
     let note = enriched.note();
     assert!(note.contains("scalar_candidate_diagnostics=["), "{note}");
     assert!(
@@ -1720,10 +1692,9 @@ fn lazy_ext_scalar_candidate_reports_followup_or_closure_loop() {
     .expect("expected scalar replay failure");
     assert_eq!(failure.conjunct_term, x_eq_y);
 
-    let enriched = replay_failure_with_branch_candidate_diagnostics(
-        &arena, &originals, &projected, failure,
-    )
-    .unwrap();
+    let enriched =
+        replay_failure_with_branch_candidate_diagnostics(&arena, &originals, &projected, failure)
+            .unwrap();
     let note = enriched.note();
     assert!(
         note.contains(&format!("followup_or_term={}", followup_or.index())),
@@ -1800,10 +1771,9 @@ fn lazy_ext_scalar_candidate_reports_followup_two_or_cycle() {
     .expect("expected scalar replay failure");
     assert_eq!(failure.conjunct_term, x_eq_y);
 
-    let enriched = replay_failure_with_branch_candidate_diagnostics(
-        &arena, &originals, &projected, failure,
-    )
-    .unwrap();
+    let enriched =
+        replay_failure_with_branch_candidate_diagnostics(&arena, &originals, &projected, failure)
+            .unwrap();
     let note = enriched.note();
     assert!(
         note.contains(&format!("followup_or_term={}", first_or.index())),
@@ -2011,10 +1981,9 @@ fn lazy_ext_replay_failure_reports_scalar_choice_side_effects() {
     )
     .unwrap()
     .expect("expected scalar OR replay failure");
-    let failure = replay_failure_with_branch_candidate_diagnostics(
-        &arena, &originals, &projected, failure,
-    )
-    .unwrap();
+    let failure =
+        replay_failure_with_branch_candidate_diagnostics(&arena, &originals, &projected, failure)
+            .unwrap();
     let note = failure.note();
     assert!(
         note.contains("failed_or_best_branch_false_literal_details=["),
@@ -2084,10 +2053,9 @@ fn lazy_ext_replay_failure_reports_select_candidate_diagnostics() {
     )
     .unwrap()
     .expect("expected select replay failure");
-    let failure = replay_failure_with_branch_candidate_diagnostics(
-        &arena, &originals, &projected, failure,
-    )
-    .unwrap();
+    let failure =
+        replay_failure_with_branch_candidate_diagnostics(&arena, &originals, &projected, failure)
+            .unwrap();
     let note = failure.note();
     assert!(note.contains("select_candidate_diagnostics=["));
     assert!(note.contains("chain:status=candidate"), "{note}");
@@ -2950,8 +2918,7 @@ fn lazy_ext_projection_repairs_selected_array_equality_component() {
         }
     }
 
-    let arrays =
-        collect_base_array_entries(&arena, &ctx, &candidate, "test projection").unwrap();
+    let arrays = collect_base_array_entries(&arena, &ctx, &candidate, "test projection").unwrap();
     let mut projected = complete_assignment(&arena, &candidate);
     for (&array, entries) in &arrays {
         projected.set(

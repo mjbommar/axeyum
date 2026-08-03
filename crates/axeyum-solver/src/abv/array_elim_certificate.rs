@@ -1,8 +1,8 @@
 //! Re-checkable eager array-elimination UNSAT evidence.
 
 use super::{
-    ArrayElimination, SolverError, SymbolId, TermArena, TermId, eliminate_arrays,
-    map_elim_error, select_congruence_lemma,
+    ArrayElimination, SolverError, SymbolId, TermArena, TermId, eliminate_arrays, map_elim_error,
+    select_congruence_lemma,
 };
 
 // ===========================================================================
