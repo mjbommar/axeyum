@@ -213,6 +213,28 @@ total=$(grep -cve '^\s*$' "$list")
 # wrong verdict -- so every ratio here is a LOWER BOUND.
 load_start=$(cut -d' ' -f1-3 /proc/loadavg 2>/dev/null || echo "?")
 
+# WARN when the box is already loaded enough to cost files.
+#
+# Every ratio here is a LOWER bound -- contention only ever loses files and
+# cannot produce a wrong verdict -- but "lower bound" stops being a footnote and
+# starts being the headline once the load is high. Measured on 2026-08-02: the
+# same UF list was swept at load 2 and at load 32 on this box, and a scored file
+# that decides at 20.5s of its 24s budget when quiet is a coin flip when loaded.
+#
+# This warns rather than refuses on purpose. Refusing would make the harness
+# unusable on a shared machine, and an operator who knowingly measures under
+# load and reads the recorded number as a floor is doing something legitimate.
+# What is NOT legitimate is discovering the load afterwards, so the threshold
+# speaks up front and the entry keeps the numbers either way.
+load_one=$(cut -d' ' -f1 /proc/loadavg 2>/dev/null || echo 0)
+cores=$(nproc 2>/dev/null || echo 1)
+if awk -v l="$load_one" -v c="$cores" 'BEGIN { exit !(l > c / 2) }'; then
+  echo "parity-run: WARNING — load ${load_one} on ${cores} cores before the sweep." >&2
+  echo "            Contention only LOSES files, so the ratio you get is a floor," >&2
+  echo "            not an estimate. Re-run on a quiet box before treating a" >&2
+  echo "            regression here as real. The entry records the load." >&2
+fi
+
 # Declared :status, when the benchmark carries one. Absent is not an excuse to
 # drop the file from the denominator -- it only means we cannot catch a wrong
 # answer on it from the file alone; the cross-check against the reference still
