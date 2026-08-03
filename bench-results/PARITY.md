@@ -385,3 +385,42 @@ A file we can refute but cannot certify counts against us; it is not dropped.
 | load average (start / end) | 1.85 5.16 7.05 / 7.92 7.26 11.69 — 24 cores; a high load DEPRESSES this result |
 | per-file detail | `bench-results/parity-details/UF.tsv` |
 
+
+## UF — 2026-08-03T02:36:57Z
+
+| field | value |
+|---|---|
+| axeyum solved | 85/200 |
+| reference solved | 91/200 |
+| **ratio (axeyum / reference)** | **93.4%** |
+| **disagreements** | **0** |
+| soundness | SOUND |
+| both / axeyum-only / reference-only | 77 / 8 / 14 |
+| reference | `cvc5 1.3.4 [git f3b21c4 on branch HEAD]` |
+| reference options | `--finite-model-find --enum-inst` |
+| axeyum options | `<none — shipped default configuration>` |
+| protocol | 24s wall, 8GiB, per-file |
+| benchmark list | `bench-results/parity-lists/UF.txt` (sha256 ab432240d2f7, 200 files) |
+| solver commit | `726e9d3f3` |
+| load average (start / end) | 2.64 1.27 0.96 / 3.33 4.40 5.39 — 24 cores; a high load DEPRESSES this result |
+| per-file detail | `bench-results/parity-details/UF.tsv` |
+
+## QF_IDL — 2026-08-03T03:54:13Z
+
+| field | value |
+|---|---|
+| axeyum solved | 51/200 |
+| reference solved | 123/200 |
+| **ratio (axeyum / reference)** | **41.5%** |
+| **disagreements** | **0** |
+| soundness | SOUND |
+| both / axeyum-only / reference-only | 51 / 0 / 72 |
+| reference | `cvc5 1.3.4 [git f3b21c4 on branch HEAD]` |
+| reference options | `<none — plain invocation, NOT a competition portfolio>` |
+| axeyum options | `<none — shipped default configuration>` |
+| resumed | 3 of 200 files reused from a prior interrupted sweep (mixed load) |
+| protocol | 24s wall, 8GiB, per-file |
+| benchmark list | `bench-results/parity-lists/QF_IDL.txt` (sha256 d7c9713a0280, 200 files) |
+| solver commit | `346a7cd58` |
+| load average (start / end) | 8.02 6.01 3.60 / 9.87 7.70 7.92 — 24 cores; a high load DEPRESSES this result |
+| per-file detail | `bench-results/parity-details/QF_IDL.tsv` |
