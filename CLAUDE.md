@@ -110,6 +110,16 @@ cargo test -p axeyum-solver --lib --features full
 # `--test qf_slia_fixed_splice`, `--test stoi_len_abstraction`) or just run
 # `./scripts/check.sh`, which has now caught three classes of defect the
 # per-crate gates missed.
+# PRE-MERGE GATE for any LINEAR-ARITHMETIC change (simplex, LRA/LIA theory,
+# difference logic): the differential fuzzes against the z3 oracle. These are the
+# ONLY checks that compare our verdicts against an independent solver, and they
+# compile to ZERO tests without `--features z3` — the same silent-inertness trap
+# as the corpus sweep. Confirmed 2026-08-03: 0 tests without the feature, 5+1+1
+# with it. `z3` is a C/C++ leaf dependency so it cannot be a default gate
+# (ADR-0002), which is exactly why it has to be run deliberately.
+cargo test -p axeyum-solver --features z3 --test qf_lra_differential_fuzz
+cargo test -p axeyum-solver --features z3 --test simplex_lra_fallback_differential
+cargo test -p axeyum-solver --features z3 --test qf_uflra_differential_fuzz
 # PRE-MERGE GATE for any solver/decider/dispatch change: the capability
 # ratchets (~60s when healthy). A 17-point nia_unsat frontier regression once
 # shipped and needed an 829-commit bisect because only full sweeps ran this.

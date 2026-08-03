@@ -23,6 +23,17 @@
 # It uses `cargo test -- --list`, which COMPILES but does not RUN the tests, so
 # the whole check is cheap enough to sit in the aggregate gate.
 #
+# NOT COVERED HERE, and worth knowing: three differential fuzzes against the z3
+# oracle — `qf_lra_differential_fuzz`, `simplex_lra_fallback_differential`,
+# `qf_uflra_differential_fuzz` — compile to ZERO tests without `--features z3`,
+# exactly like the corpus sweep did. They are omitted from the manifest because
+# `z3` is a C/C++ leaf dependency and the default build must not require it
+# (ADR-0002), so a floor here would fail on a machine without libz3. They are
+# instead listed in CLAUDE.md as gates a LINEAR-ARITHMETIC change must run
+# explicitly: they are the only checks that compare our verdicts against an
+# independent solver, so a soundness bug in the simplex or LRA theory is exactly
+# what they exist to catch and exactly what their silence would hide.
+#
 # Raising a floor is expected as suites grow — that is the ratchet working.
 # LOWERING one requires a reason in the commit message: a legitimately deleted
 # test is fine, a suite that silently stopped compiling is not.
