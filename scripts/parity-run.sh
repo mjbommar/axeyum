@@ -379,6 +379,24 @@ smoke_reference() {
   local probes=0 solved=0 verdict start elapsed
   local unsolved_probes=0 unsolved_fast=0
   local floor_ms=$(( budget_s * 1000 / 2 ))
+  # Sample the probes SPREAD ACROSS the list, not the first five.
+  #
+  # The list is a sorted stride, so its first five files all come from whichever
+  # directory sorts first — one family, and often a systematically hard one.
+  # Measured 2026-08-03: QF_UFLIA and QF_NIA both aborted with "the reference
+  # decided 0 of 5", and cvc5 does genuinely time out on those five at 24s
+  # standalone. The reference was fine; the SAMPLE was not, and the guard read a
+  # hard corner of one family as a broken reference.
+  #
+  # Five evenly spaced files cross family boundaries, so "the reference decides
+  # nothing" means what it is supposed to mean. This weakens the guard slightly
+  # against a reference that fails only on the divisions's hardest family — an
+  # acceptable trade against aborting valid sweeps, and the whole-list result
+  # would expose that case anyway.
+  local total_probe_lines
+  total_probe_lines=$(grep -cve '^\s*$' "$list")
+  local probe_step=$(( total_probe_lines / 5 ))
+  (( probe_step < 1 )) && probe_step=1
   while IFS= read -r probe && (( probes < 5 )); do
     [[ -f "$probe" ]] || continue
     probes=$((probes + 1))
@@ -391,7 +409,7 @@ smoke_reference() {
       unsolved_probes=$((unsolved_probes + 1))
       (( elapsed < floor_ms )) && unsolved_fast=$((unsolved_fast + 1))
     fi
-  done < "$list"
+  done < <(awk -v st="$probe_step" 'NR % st == 1 || st == 1' "$list")
   if (( probes > 0 && solved == 0 )); then
     echo "FAIL: the reference decided 0 of $probes probe benchmarks." >&2
     echo "      $reference_bin" >&2
