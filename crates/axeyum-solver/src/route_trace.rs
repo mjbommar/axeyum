@@ -376,6 +376,21 @@ impl RouteTrace {
     }
 }
 
+/// An optional route-trace recorder threaded through the dispatch.
+///
+/// The auto-dispatcher takes a `Recorder` so the *same* code path serves both
+/// [`crate::check_auto`] (no recorder) and [`crate::check_auto_explained`] (a
+/// recorder). The methods are no-ops when the recorder is absent, so threading
+/// one in never changes a branch condition — the verdict-invariance guarantee.
+pub(crate) type Recorder<'a> = Option<&'a mut RouteTrace>;
+
+/// Records `f` against an optional recorder, doing nothing when absent.
+pub(crate) fn with_recorder(rec: &mut Recorder<'_>, f: impl FnOnce(&mut RouteTrace)) {
+    if let Some(trace) = rec.as_deref_mut() {
+        f(trace);
+    }
+}
+
 #[cfg(test)]
 mod json_tests {
     use super::*;
@@ -460,20 +475,5 @@ mod json_tests {
         let first = rendered.find("first").expect("first route present");
         let second = rendered.find("second").expect("second route present");
         assert!(first < second, "attempts must keep dispatch order");
-    }
-}
-
-/// An optional route-trace recorder threaded through the dispatch.
-///
-/// The auto-dispatcher takes a `Recorder` so the *same* code path serves both
-/// [`crate::check_auto`] (no recorder) and [`crate::check_auto_explained`] (a
-/// recorder). The methods are no-ops when the recorder is absent, so threading
-/// one in never changes a branch condition — the verdict-invariance guarantee.
-pub(crate) type Recorder<'a> = Option<&'a mut RouteTrace>;
-
-/// Records `f` against an optional recorder, doing nothing when absent.
-pub(crate) fn with_recorder(rec: &mut Recorder<'_>, f: impl FnOnce(&mut RouteTrace)) {
-    if let Some(trace) = rec.as_deref_mut() {
-        f(trace);
     }
 }
