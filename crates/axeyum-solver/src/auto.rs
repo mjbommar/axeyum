@@ -2966,6 +2966,81 @@ fn dispatch_uf_nra(
     }
 }
 
+/// The **difference-logic** probe (`QF_IDL` / `QF_RDL`): when every relational
+/// atom is a difference constraint `x - y ⋈ c` the query is decidable in
+/// polynomial time by negative-cycle detection, and a negative cycle is a
+/// *minimal* explanation — exactly what the generic linear-arithmetic cores do
+/// badly here (measured: thousands of blocking rounds with cores in the
+/// hundreds of literals on the `QF_IDL` residuals). It runs ahead of the
+/// LIRA / NRA / LIA-DPLL chain because on its own fragment it dominates them.
+///
+/// **Conservative by construction.** [`crate::dl_online::try_check_qf_dl`]
+/// returns `None` — leaving every route below to run byte-identically — unless
+/// the *whole* query is single-sorted numeric plus a propositional skeleton the
+/// encoder covers and every atom normalizes to `x - y ⋈ c` with unit
+/// coefficients. A non-unit coefficient, a product, a `div`/`mod`, a mixed
+/// `Int`/`Real` query, an uninterpreted application, a connective outside the
+/// skeleton encoder, or any normalization overflow all decline. Every `sat` it
+/// returns is replayed against the ORIGINAL assertions, and every theory
+/// conflict is re-checked by `FarkasCertificate::verify` before it can become a
+/// lemma.
+///
+/// Returns `Some(verdict)` only for a decision; a budget-exhausted or
+/// non-replaying run returns `None` so the established routes still get their
+/// reserved slice of the budget (see [`dl_probe_budget`]).
+fn dispatch_difference_logic(
+    arena: &mut TermArena,
+    assertions: &[TermId],
+    config: &SolverConfig,
+    rec: &mut Recorder<'_>,
+) -> Option<CheckResult> {
+    match crate::dl_online::try_check_qf_dl(arena, assertions, &dl_probe_budget(config)) {
+        Some(result) => {
+            with_recorder(rec, |t| t.record_result("dl-online", &result));
+            match &result {
+                CheckResult::Sat(_) | CheckResult::Unsat => return Some(result),
+                // A budget-exhausted or non-replaying difference-logic run still
+                // falls through to the established routes: the probe only ever
+                // adds decisions.
+                CheckResult::Unknown(_) => {}
+            }
+        }
+        None => {
+            with_recorder(rec, |t| {
+                t.record_declined("dl-online", DeclineReason::NotApplicable);
+            });
+        }
+    }
+    None
+}
+
+/// The budget handed to the difference-logic probe: the caller's, minus a
+/// reserved slice, so a probe that runs out of time still leaves the routes
+/// *below* it enough budget to decide the query.
+///
+/// Without this reservation the probe is not a probe — it is a commitment. It
+/// runs ahead of the whole linear-arithmetic chain, and a query that is
+/// difference-shaped but hard for negative-cycle search would burn the entire
+/// budget and hand the established routes zero milliseconds. That is measured,
+/// not hypothetical: `QF_IDL/sal/lpsat/lpsat-goal-18` is decided `unsat` by
+/// `lia-dpll` in 4.2 s, and an unreserved probe turned it into `unknown`.
+///
+/// The reserve is `min(timeout / 4, 6 s)`: a quarter on tight budgets, and a
+/// flat 6 s once the budget is large enough that a fixed slice is the cheaper
+/// insurance. Measured cost on the 24 s competition budget: two `fischer`
+/// refutations that needed more than 18 s of cycle search. Measured benefit:
+/// the dispatcher stays *strictly additive*, which is a property of every
+/// query — including the ones not in the corpus — rather than of a sample.
+fn dl_probe_budget(config: &SolverConfig) -> SolverConfig {
+    /// Ceiling on the slice held back for the routes below the probe.
+    const DL_FALLBACK_RESERVE: Duration = Duration::from_secs(6);
+    let mut probe = config.clone();
+    probe.timeout = config
+        .timeout
+        .map(|t| t.saturating_sub((t / 4).min(DL_FALLBACK_RESERVE)));
+    probe
+}
+
 /// The theory dispatcher (coercions already relaxed away by [`check_auto`]).
 /// `rec` records each route attempt + outcome at the existing decide/decline
 /// sites; it is a side effect only, never a branch condition (verdict invariance).
@@ -3032,6 +3107,9 @@ fn check_auto_dispatch(
             }
             Err(other) => return Err(other),
         }
+    }
+    if let Some(result) = dispatch_difference_logic(arena, assertions, config, rec) {
+        return Ok(result);
     }
     if features.has_real && features.has_int {
         // Combined linear arithmetic (QF_LIRA): the lazy-SMT loop theory-checks

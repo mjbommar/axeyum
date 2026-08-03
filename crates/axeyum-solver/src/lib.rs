@@ -71,6 +71,7 @@ macro_rules! full_modules {
         mod datatype_elim;
         mod datatype_native;
         mod distinct;
+        mod dl_online;
         mod dpll_lia;
         mod dpll_t;
         mod enums;
