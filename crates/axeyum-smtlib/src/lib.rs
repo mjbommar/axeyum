@@ -46,7 +46,7 @@ pub enum SmtError {
     /// Parsing is a *phase*, not an instant: a 58 MB benchmark takes ~54 s to
     /// read, and an adversarially nested source can spend minutes in semantic
     /// analysis. With no deadline in the parser, a 24 s budget produced measured
-    /// runs of 39.9 s, 49.4 s and 66 s — and under SMT-COMP those are SIGKILLed
+    /// runs of 39.9 s, 49.4 s and 66 s — and under SMT-COMP those are `SIGKILL`ed
     /// processes, which score strictly worse than the first-class `unknown` a
     /// resource-exhausted solver owes its caller.
     ///

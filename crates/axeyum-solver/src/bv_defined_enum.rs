@@ -133,7 +133,7 @@ fn collect_required_constraints(arena: &TermArena, term: TermId, out: &mut Vec<T
 /// They were MUTUALLY recursive over the formula's structure, so the depth was
 /// the nesting depth of an `and`/`or`/`implies` tree that an SMT-LIB front end
 /// reproduces verbatim from the source — the same unbounded-depth crash class
-/// that aborted nine scored QF_BV benchmarks before any route was reached. A
+/// that aborted nine scored `QF_BV` benchmarks before any route was reached. A
 /// stack tagged with the polarity replaces the call stack; the plain spine
 /// walkers in `term_walk` do not fit here because this is not one spine but two
 /// alternating ones with custom `not`/`implies` cases.
