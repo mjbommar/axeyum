@@ -445,6 +445,26 @@ smoke_reference
 sidecar="bench-results/parity-details/${division}.tsv"
 mkdir -p "$(dirname "$sidecar")"
 
+# REFUSE to run two sweeps of the same division in the same worktree at once.
+#
+# Both would append to the same sidecar, interleaving rows from two runs into a
+# file that looks plausible and is unusable: observed 2026-08-03, a
+# double-launched QF_UFLIA left 401 rows for 200 benchmarks, every file twice.
+# The ledger SUMMARIES survive that (each process counts its own loop), but the
+# sidecar is what lanes read to find residuals, so a corrupted one silently
+# misdirects the next piece of work.
+#
+# A directory is the lock because mkdir is atomic; the trap releases it on any
+# exit path including the disagreement abort.
+lockdir="${sidecar}.lock"
+if ! mkdir "$lockdir" 2>/dev/null; then
+  echo "FAIL: another ${division} sweep is already running in this worktree" >&2
+  echo "      (lock: $lockdir). Two sweeps would interleave rows into one" >&2
+  echo "      sidecar. Wait for it, or run in a separate worktree." >&2
+  exit 2
+fi
+trap 'rmdir "$lockdir" 2>/dev/null' EXIT
+
 # RESUME: reuse per-file verdicts already measured for this division.
 #
 # A full division is 200 files at up to 24s x2 solvers -- long enough that an
