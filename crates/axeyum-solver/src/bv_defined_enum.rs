@@ -117,56 +117,99 @@ pub fn bv_defined_enum_refutation(
     })
 }
 
-fn collect_required_constraints(arena: &TermArena, term: TermId, out: &mut Vec<TermId>) {
-    match arena.node(term) {
-        TermNode::App {
-            op: Op::BoolAnd,
-            args,
-        } if args.len() == 2 => {
-            collect_required_constraints(arena, args[0], out);
-            collect_required_constraints(arena, args[1], out);
-        }
-        TermNode::App {
-            op: Op::BoolNot,
-            args,
-        } if args.len() == 1 => {
-            if let TermNode::App {
-                op: Op::BoolImplies,
-                args: inner_args,
-            } = arena.node(args[0])
-                && inner_args.len() == 2
-            {
-                collect_required_constraints(arena, inner_args[0], out);
-                collect_negated_required_constraints(arena, inner_args[1], out);
-                return;
-            }
-            out.push(term);
-        }
-        _ => out.push(term),
-    }
+/// Which polarity a pending term is visited under.
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum RequiredPolarity {
+    Positive,
+    Negated,
 }
 
-fn collect_negated_required_constraints(arena: &TermArena, term: TermId, out: &mut Vec<TermId>) {
-    match arena.node(term) {
-        TermNode::App {
-            op: Op::BoolImplies,
-            args,
-        } if args.len() == 2 => {
-            collect_required_constraints(arena, args[0], out);
-            collect_negated_required_constraints(arena, args[1], out);
+fn collect_required_constraints(arena: &TermArena, term: TermId, out: &mut Vec<TermId>) {
+    collect_required_with_polarity(arena, term, out, RequiredPolarity::Positive);
+}
+
+/// The two collectors above, iteratively, as one polarity-tagged worklist.
+///
+/// They were MUTUALLY recursive over the formula's structure, so the depth was
+/// the nesting depth of an `and`/`or`/`implies` tree that an SMT-LIB front end
+/// reproduces verbatim from the source — the same unbounded-depth crash class
+/// that aborted nine scored QF_BV benchmarks before any route was reached. A
+/// stack tagged with the polarity replaces the call stack; the plain spine
+/// walkers in `term_walk` do not fit here because this is not one spine but two
+/// alternating ones with custom `not`/`implies` cases.
+///
+/// Operands are pushed in REVERSE of visit order so they pop in the original
+/// order, and each arm reproduces its recursive counterpart exactly, including
+/// the `Negated` arm's silent drop of anything unrecognised.
+fn collect_required_with_polarity(
+    arena: &TermArena,
+    term: TermId,
+    out: &mut Vec<TermId>,
+    polarity: RequiredPolarity,
+) {
+    let mut stack = vec![(term, polarity)];
+    while let Some((current, polarity)) = stack.pop() {
+        match polarity {
+            RequiredPolarity::Positive => {
+                // `and(a, b)` — both conjuncts stay required.
+                if let TermNode::App {
+                    op: Op::BoolAnd,
+                    args,
+                } = arena.node(current)
+                    && args.len() == 2
+                {
+                    let (a, b) = (args[0], args[1]);
+                    stack.push((b, RequiredPolarity::Positive));
+                    stack.push((a, RequiredPolarity::Positive));
+                    continue;
+                }
+                // `not(implies(a, b))` — `a` is required and `b` is refuted.
+                if let TermNode::App {
+                    op: Op::BoolNot,
+                    args,
+                } = arena.node(current)
+                    && args.len() == 1
+                    && let TermNode::App {
+                        op: Op::BoolImplies,
+                        args: inner,
+                    } = arena.node(args[0])
+                    && inner.len() == 2
+                {
+                    let (a, b) = (inner[0], inner[1]);
+                    stack.push((b, RequiredPolarity::Negated));
+                    stack.push((a, RequiredPolarity::Positive));
+                    continue;
+                }
+                out.push(current);
+            }
+            RequiredPolarity::Negated => match arena.node(current) {
+                // Refuting `implies(a, b)` requires `a` and refutes `b`.
+                TermNode::App {
+                    op: Op::BoolImplies,
+                    args,
+                } if args.len() == 2 => {
+                    let (a, b) = (args[0], args[1]);
+                    stack.push((b, RequiredPolarity::Negated));
+                    stack.push((a, RequiredPolarity::Positive));
+                }
+                // Refuting `not(a)` requires `a`.
+                TermNode::App {
+                    op: Op::BoolNot,
+                    args,
+                } if args.len() == 1 => stack.push((args[0], RequiredPolarity::Positive)),
+                // Refuting `or(a, b)` refutes both.
+                TermNode::App {
+                    op: Op::BoolOr,
+                    args,
+                } if args.len() == 2 => {
+                    let (a, b) = (args[0], args[1]);
+                    stack.push((b, RequiredPolarity::Negated));
+                    stack.push((a, RequiredPolarity::Negated));
+                }
+                // Anything else contributes no requirement, exactly as before.
+                _ => {}
+            },
         }
-        TermNode::App {
-            op: Op::BoolNot,
-            args,
-        } if args.len() == 1 => collect_required_constraints(arena, args[0], out),
-        TermNode::App {
-            op: Op::BoolOr,
-            args,
-        } if args.len() == 2 => {
-            collect_negated_required_constraints(arena, args[0], out);
-            collect_negated_required_constraints(arena, args[1], out);
-        }
-        _ => {}
     }
 }
 
