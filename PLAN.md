@@ -8846,6 +8846,33 @@ DAG, keystones, critical paths), and
 Z3, cvc5, bitwuzla, CaDiCaL/Kissat, Carcara, lean4/nanoda, lean-smt that this
 plan is built on).
 
+**Exploration track (2026-08-01) — PROPOSED, not accepted.**
+[`docs/plan/exploration-track/`](docs/plan/exploration-track/README.md) is
+cross-cutting rather than a numbered track: it reifies the reduction space
+currently compiled into `auto.rs` (~45 route labels) as a validated artifact,
+licenses composed verdicts through a machine-readable soundness direction,
+searches that space with a measured policy instead of a hand-tuned order, widens
+it with lateral CAS bridges, and points the result at open mathematical
+problems. Ten phases, 96 tasks, three measurement gates. It touches Track 1
+(dispatch/strategy), Track 2 (new decision routes from lateral bridges), and
+Track 3 (the evidence ladder), so read it alongside them rather than instead.
+
+Authored from nine independent branch reviews, **none of which returned "sound
+as proposed"** — the eight corrections are in
+[`00-review-synthesis.md`](docs/plan/exploration-track/00-review-synthesis.md)
+and several invalidate first-instinct designs (the bridge graph is not the 14
+`TrustId`s; `RouteTrace` was never persistable; direction is per-instantiation,
+not per-reduction; `axeyum-egraph` is congruence closure, not equality
+saturation; the example packs carry excellent labels but no difficulty
+gradient, so there is no learning signal yet).
+
+Live state — including what has actually landed — is
+[`exploration-track/STATUS.md`](docs/plan/exploration-track/STATUS.md), which is
+the authority for this track; every phase is ADR-gated
+([`adr-queue.md`](docs/plan/exploration-track/adr-queue.md): 8 blocking, 19
+structural, 10 deferred). **It does not preempt the active QF_BVFP/binary79
+focus or the paused CAS lane.**
+
 ## Consumer-track integration (2026-06-27): converge the apps onto `main`
 
 The demand-pull consumer track (apps that *use* axeyum to hunt bugs / prove

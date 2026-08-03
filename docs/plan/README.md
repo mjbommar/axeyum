@@ -863,6 +863,18 @@ Start at the root [`PLAN.md`](../../PLAN.md) (map + standing rules) and
 - [`references/`](references/README.md) — the distilled top-down review of the
   reference solvers this plan is built on (Z3, cvc5, bitwuzla, CaDiCaL, Kissat,
   Carcara, lean4, nanoda_lib, lean-smt, drat-trim).
+- [`exploration-track/`](exploration-track/README.md) — **proposed, not
+  accepted.** Reify the reduction space currently compiled into `auto.rs` as a
+  validated artifact, license composed verdicts through a machine-readable
+  soundness direction, search it with a measured policy instead of a hand-tuned
+  order, widen it with lateral CAS bridges, and point the result at open
+  mathematical problems. Ten phases, 96 tasks, three measurement gates, authored
+  2026-08-01 from nine independent branch reviews — **none of which returned
+  "sound as proposed"**; the eight resulting corrections are in
+  [`00-review-synthesis.md`](exploration-track/00-review-synthesis.md). Live
+  state in [`exploration-track/STATUS.md`](exploration-track/STATUS.md); every
+  phase is ADR-gated ([`adr-queue.md`](exploration-track/adr-queue.md)) and the
+  track does not preempt the active QF_BVFP focus or the paused CAS lane.
 
 ## Conventions
 

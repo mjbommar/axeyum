@@ -838,6 +838,17 @@ are tracked concretely in the [parity plan](../../../PLAN.md) (tracks/phases) an
   [P4.7](../../../docs/plan/track-4-usecases-frontend/P4.7-synthesis.md)). General
   SyGuS remains absent and separately demand-gated.
 
+- **Searched bridge composition (proposed 2026-08-01, not accepted):** the
+  reduction space is currently a hand-tuned fixed order compiled into `auto.rs`
+  (~45 route labels). The
+  [exploration track](../../plan/exploration-track/README.md) proposes reifying
+  it as a validated artifact, licensing composed verdicts through a
+  machine-readable soundness direction, searching it with a measured policy,
+  widening it with lateral CAS bridges, and pointing the result at open
+  mathematical problems. Cross-cutting over tracks 1/2/3; live state in
+  [`exploration-track/STATUS.md`](../../plan/exploration-track/STATUS.md), and
+  it may not preempt an active foundation lane.
+
 Entering any horizon item gets its own ADR with prerequisites and exit
 criteria; none may begin while it would starve a foundation phase.
 

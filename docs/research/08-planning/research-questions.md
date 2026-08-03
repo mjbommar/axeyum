@@ -1019,6 +1019,66 @@ Out of scope:
 - [ ] Should optional native backends be separate crates or features?
 - [ ] Is `no_std` relevant for any low-level crate?
 
+### Exploration Track: Searched Bridge Composition (added 2026-08-01)
+
+Opened by the proposed
+[exploration track](../../plan/exploration-track/README.md). These are its
+**blocking** questions — a phase may not start until its question is closed. The
+full register (8 blocking, 19 structural, 10 deferred, each with the phase it
+gates) is
+[`adr-queue.md`](../../plan/exploration-track/adr-queue.md); only the blocking
+set is mirrored here so the standing register stays the entry point.
+
+- [ ] **Direction algebra scope.** Is the composed-verdict lattice the
+      four-element verdict-preserving one (`Equivalence`/`OverApprox`/
+      `UnderApprox`/`Heuristic` under intersection), or the general monoid of
+      partial verdict *maps* under composition? Decided by whether the search
+      alphabet will ever contain negation/duality edges (validity via unsat of
+      `¬φ`, interpolation, abduction side-queries), which break
+      verdict-preserving composition outright. MVP recommendation: make such
+      edges unrepresentable and record the restriction explicitly.
+- [ ] **Bridge boundary and dependency direction.** Where do CAS certificate
+      types and checkers live, given `axeyum-solver` must not depend on the
+      47k-line `axeyum-cas` search crate and ADR-0301 deliberately points the
+      dependency the other way? Options: extract a small shared polynomial
+      kernel; a certificate-only module in `axeyum-solver`; CAS as
+      out-of-process search (the `polyrith` model, whose Sage backend was later
+      shut down — so the search half must be replaceable without invalidating
+      already-checked certificates).
+- [ ] **External CDCL as an untrusted conquer engine.** May kissat/CaDiCaL be
+      invoked as *subprocesses* over a DIMACS-in/proof-out boundary, with every
+      proof independently rechecked natively? The argument that this is already
+      licensed: no linking (the default build stays C/C++-free literally), no
+      trust transfer (UNSAT needs a natively checked proof, SAT needs native
+      model replay), nothing added to ADR-0002's *trusted* Z3 reliance, and two
+      accepted precedents (the GPU untrusted-search note; `cnf_core_bench.rs`
+      already shells kissat).
+- [ ] **Policy artifact contract.** If dispatch order is ever searched rather
+      than hand-written, the emitted policy becomes a new *public determinism
+      surface*: format, versioning, hash-pinning, regeneration gate, and the
+      rule that learning happens only in offline releases (never at solve time,
+      which would make verdicts depend on query arrival order).
+- [ ] **Agentic-loop boundary.** Where would an LLM-in-the-loop driver live,
+      is an HTTP client acceptable inside the workspace versus a script outside
+      the crate graph, and how is "no default build or gate contacts a network"
+      stated normatively?
+- [ ] **Open-problem artifact family and claim labels.** A new
+      `artifacts/open-problems/` tree versus reuse of the math example packs;
+      the `shadow.json` schema; and the bounded-sweep display row for
+      `CLAIM-LABEL-MATRIX.md` whose *do-not-claim* text must forbid reading "no
+      counterexample below N" as support for a conjecture.
+- [ ] **Extend `axeyum-egraph` versus adopt egg/egglog** for equality
+      saturation, plus driver placement and whether rewrite chains earn a
+      `TrustId`. Recommendation on the evidence: extend — egglog has **no proof
+      production**, which is disqualifying for a certificate-first stack, and
+      egg lacks the backtracking scopes, theory variables, and determinism
+      guarantees this kernel already has.
+- [ ] **Second-kernel program scope.** Adopt the `nanoda_bin` contract and enter
+      the Lean Kernel Arena? Includes the export-format pin policy (exact string
+      versus 3.1.x range), the decline taxonomy, and the claim language — axeyum's
+      kernel ports nanoda's semantics (ADR-0036), so any diversity claim must say
+      *independent code, shared lineage*, never independent derivation.
+
 ## Resolution Process
 
 When a question is answered, write a decision record in
