@@ -14,8 +14,8 @@
 //! ## Wrap, don't rewrite
 //! The heavy lifting is the already-validated [`LraTheory`] from
 //! [`crate::lra_online`]: it *is* a [`TheorySolver`] (`assert` re-decides real
-//! feasibility of the live asserted set by exact-rational Fourier–Motzkin
-//! elimination; `push`/`pop` snapshot the assert stack in lockstep; conflict cores
+//! feasibility of the live asserted set on the warm exact-rational simplex;
+//! `push`/`pop` snapshot the assert stack in lockstep; conflict cores
 //! are the Farkas-participating subset of asserted atoms). So this slice adds **no**
 //! new arithmetic reasoning. The only gap between [`LraTheory`] and the generic
 //! driver is the driver's documented *trigger-literal precondition*: its 1-UIP
@@ -27,8 +27,9 @@
 //! - **Per-assert consistency (eager).** The wrapped [`LraTheory`] re-decides
 //!   feasibility of the live set on every theory-atom assignment. This makes the
 //!   theory **complete per assert**: a wrong `sat` is impossible because every total
-//!   Boolean assignment is theory-checked. Fourier–Motzkin always terminates under
-//!   the deterministic row cap, but can still be expensive, so the caller's absolute
+//!   Boolean assignment is theory-checked. The simplex always terminates under
+//!   Bland's rule and a deterministic pivot budget, but a check can still be
+//!   expensive, so the caller's absolute
 //!   deadline is threaded into every feasibility, propagation, and model-rebuild
 //!   pass. Termination of the *driver* is the standard argument (each conflict,
 //!   carrying its trigger literal, forces a strict backjump), with deadline/step
@@ -48,8 +49,8 @@
 //!   clause database is standard, model-independent inference. Tests gate every
 //!   online `unsat` against those offline routes.
 //! - `sat` is **not** trusted from the driver: a candidate real model is
-//!   reconstructed from the live atoms ([`LraTheory::real_model`], re-running the
-//!   trusted Fourier–Motzkin reconstruction), Boolean skeleton leaves are injected
+//!   reconstructed from the live atoms ([`LraTheory::real_model`], materialized from
+//!   the simplex's feasible point), Boolean skeleton leaves are injected
 //!   from the driver trail, and the model is **replayed** against the original
 //!   assertions — a non-replay yields [`CheckResult::Unknown`], never a wrong `sat`.
 //! - Deadline-bounded (`config.timeout`) with the driver's step budget as the
@@ -71,9 +72,24 @@ use crate::euf_egraph::{TheoryLit, TheoryProp, TheorySolver};
 use crate::lra_online::{Encoder, Lit, LraTheory, collect_lra_atoms, replays};
 use crate::model::Model;
 
-/// The eager per-assert Fourier–Motzkin theory is not an efficient or stack-safe
-/// online choice above this many distinct atoms. Larger formulas return a
-/// first-class resource-limit result before atom normalization.
+/// Distinct-atom ceiling for the online route, applied **before** atom
+/// normalization. Larger formulas return a first-class resource-limit result.
+///
+/// # Why this stayed at 1024 after the simplex rewiring
+///
+/// [`LraTheory`] now decides feasibility on the warm simplex, not Fourier–Motzkin,
+/// so the *feasibility* argument for this cap is gone — and raising it was
+/// measured, not assumed. On the committed 200-file `QF_LRA` parity list, 64 files
+/// carry more than 1024 atoms; raising the cap to 16384 changed the verdict on
+/// **none** of them, cost one file 24s of budget it used to decline in 0.12s, and
+/// made `QF_LRA/sc/sc-39.base.cvc.smt2` (1492 atoms) abort at the 8 GiB memory cap
+/// — the cost there is `AtomBuilder` normalization (a dense `LinExpr` per atom
+/// polarity over ~700 variables), which the simplex rewiring does not touch. A
+/// decline at least leaves budget for another route; an abort leaves nothing.
+///
+/// So the ceiling is a *normalization* budget now, not a feasibility one. Lifting
+/// it is a real ratchet, but it needs the atom-normalization memory addressed
+/// first — not this cap edited.
 const MAX_ONLINE_LRA_ATOMS: usize = 1_024;
 
 /// Adapts the validated online [`LraTheory`] to the generic [`CdclT`] driver's
@@ -237,8 +253,8 @@ pub fn check_qf_lra_online_cdclt(
             detail: "timeout in the online CDCL(T) LRA driver".to_owned(),
         })),
         Outcome::Sat => {
-            // Reconstruct a real model from the live atoms (via the trusted
-            // Fourier–Motzkin reconstruction), inject Boolean skeleton leaves from
+            // Reconstruct a real model from the live atoms (the simplex's feasible
+            // point, materialized), inject Boolean skeleton leaves from
             // the driver trail, and replay against the originals — the soundness gate.
             let Some(mut model) = theory.inner().real_model() else {
                 return Ok(CheckResult::Unknown(unknown(
@@ -325,6 +341,49 @@ mod tests {
         };
         assert_eq!(reason.kind, UnknownKind::ResourceLimit);
         assert!(reason.detail.contains("atom cap exceeded"));
+    }
+
+    /// The cap is a **normalization** budget, not a feasibility one: the warm
+    /// simplex is the engine now, but atom normalization still costs a dense
+    /// `LinExpr` per atom polarity, and raising the ceiling was measured to buy
+    /// nothing and to cost one corpus file an 8 GiB abort. This pins the decline so
+    /// a future raise has to be a deliberate, re-measured change — see the
+    /// [`MAX_ONLINE_LRA_ATOMS`] docs for the numbers.
+    #[test]
+    fn atoms_over_the_cap_decline_fast_rather_than_normalize() {
+        let mut arena = TermArena::new();
+        let zero = rconst(&mut arena, 0);
+        let mut assertions = Vec::with_capacity(MAX_ONLINE_LRA_ATOMS + 1);
+        for index in 0..=MAX_ONLINE_LRA_ATOMS {
+            let x = rvar(&mut arena, &format!("x{index}"));
+            assertions.push(arena.real_ge(x, zero).expect("x>=0"));
+        }
+        let CheckResult::Unknown(reason) =
+            check_qf_lra_online_cdclt(&arena, &assertions, &SolverConfig::default())
+                .expect("result")
+        else {
+            panic!("an over-cap query must decline");
+        };
+        assert_eq!(reason.kind, UnknownKind::ResourceLimit);
+
+        // Just UNDER the cap the route runs — the decline must be the cap, not a
+        // blanket refusal that would make the whole online LRA route inert.
+        let mut arena = TermArena::new();
+        let zero = rconst(&mut arena, 0);
+        let mut assertions = Vec::new();
+        for index in 0..MAX_ONLINE_LRA_ATOMS {
+            let x = rvar(&mut arena, &format!("x{index}"));
+            assertions.push(arena.real_ge(x, zero).expect("x>=0"));
+        }
+        let under = check_qf_lra_online_cdclt(&arena, &assertions, &SolverConfig::default())
+            .expect("result");
+        if let CheckResult::Unknown(reason) = &under {
+            assert_ne!(
+                reason.kind,
+                UnknownKind::ResourceLimit,
+                "a query one atom under the cap must not hit the cap"
+            );
+        }
     }
 
     /// The wrapper must always fold the just-asserted (current-level) literal into a

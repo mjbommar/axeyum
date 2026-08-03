@@ -23,10 +23,18 @@
 //!
 //! All of `≤`, `≥`, `=`, `<`, `>` — strict rows are exact via the **δ-relaxation**
 //! (values in the ordered field `ℚ(δ)`; see [`Delta`]), and a `Feasible` verdict
-//! materializes a concrete rational witness by choosing `δ` small enough. Still to
-//! come (P1.9 · T1.9.2+): routing into [`crate::lra`] behind a size threshold, and
-//! Farkas-certificate *extraction* from the tableau (T1.9.3; the verifier
-//! [`check_farkas`] is already here).
+//! materializes a concrete rational witness by choosing `δ` small enough.
+//!
+//! # Two entry points
+//!
+//! - [`feasible`] — the one-shot decision over a fixed constraint list (the
+//!   offline [`crate::lra`] overflow fallback).
+//! - [`Incremental`] — the **warm** engine a `DPLL(T)` theory drives: the tableau
+//!   structure is built **once** over every row the theory could ever assert, and
+//!   `assert`/`retract` only move *bounds*, so a re-check resumes from the previous
+//!   basis (Dutertre–de Moura §4). This is what [`crate::lra_online::LraTheory`]
+//!   decides feasibility with; the doubly-exponential Fourier–Motzkin core it used
+//!   before survives only as the over-cap fallback.
 //!
 //! # Soundness
 //!
@@ -38,14 +46,33 @@
 //!   [`check_farkas`] here in tests): a bad certificate cannot masquerade as a
 //!   sound `unsat`.
 
+use std::time::Instant;
+
 use axeyum_ir::Rational;
+
+/// Hard ceiling on the dense tableau [`Incremental::new`] will build (rows ×
+/// columns). A `Rational` is two `i128`s, so 4M cells is ~128 MB — past that the
+/// dense general simplex is the wrong data structure and the caller keeps whatever
+/// engine it had. Purely structural (no clock), so the decline is deterministic.
+pub(crate) const MAX_TABLEAU_CELLS: usize = 4_000_000;
+
+/// Pivot ceiling for a single [`feasible`] / [`Incremental::check`] call. Bland's
+/// rule already guarantees termination; this is the deterministic belt so a run
+/// with **no** wall-clock deadline still cannot spin unboundedly on a pathological
+/// instance. Exhaustion yields [`SimplexOutcome::Unknown`] — sound, never a verdict.
+const MAX_PIVOTS: u64 = 2_000_000;
+
+/// Whether a caller-owned absolute deadline has passed.
+fn past_deadline(deadline: Option<Instant>) -> bool {
+    deadline.is_some_and(|d| Instant::now() >= d)
+}
 
 /// The comparator of a constraint row `Σ aⱼ·xⱼ ⋈ b`.
 ///
-/// The full set is part of the feasibility API (and exercised by the tests); the
-/// current sole in-tree caller — the LRA fallback in [`crate::lra`] — normalizes
-/// every atom to a `≤`/`<` row, so it only constructs `Le`/`Lt`. Keep the complete
-/// enum for the direct-`Constraint` API and the coming callers (T1.9.2+).
+/// The full set is part of the feasibility API (and exercised by the tests); both
+/// in-tree callers — the LRA fallback in [`crate::lra`] and the online
+/// [`crate::lra_online::LraTheory`] — normalize every atom to a `≤`/`<` row, so
+/// they only construct `Le`/`Lt`.
 #[allow(dead_code)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Rel {
@@ -168,10 +195,33 @@ pub fn feasible(nvars: usize, constraints: &[Constraint]) -> SimplexOutcome {
     for c in constraints {
         assert_eq!(c.coeffs.len(), nvars, "constraint arity mismatch");
     }
-    match Tableau::new(nvars, constraints).solve() {
-        Ok(outcome) => outcome,
-        Err(Overflow) => SimplexOutcome::Unknown,
+    let mut tableau = Tableau::new(nvars, constraints);
+    match tableau.run(None, MAX_PIVOTS) {
+        Ok(RunOutcome::Feasible) => match tableau.materialize() {
+            Ok(point) => SimplexOutcome::Feasible(point),
+            Err(Overflow) => SimplexOutcome::Unknown,
+        },
+        Ok(RunOutcome::Infeasible(y)) => SimplexOutcome::Infeasible(y),
+        Ok(RunOutcome::Unknown) | Err(Overflow) => SimplexOutcome::Unknown,
     }
+}
+
+/// What the pivot loop concluded, without materializing a witness (the warm engine
+/// re-checks thousands of times and only needs a point at the very end).
+enum RunOutcome {
+    Feasible,
+    Infeasible(Vec<Rational>),
+    Unknown,
+}
+
+/// Convert a dense coefficient vector to the sparse row form the tableau stores.
+fn densify_to_sparse(coeffs: &[Rational]) -> Vec<(usize, Rational)> {
+    coeffs
+        .iter()
+        .enumerate()
+        .filter(|(_, a)| !a.is_zero())
+        .map(|(j, &a)| (j, a))
+        .collect()
 }
 
 /// The general-simplex tableau.
@@ -200,65 +250,143 @@ struct Tableau {
     upper: Vec<Option<Delta>>,
     /// Whether each variable is currently basic.
     is_basic: Vec<bool>,
-    /// The original input constraints, retained for concrete-witness materialization.
-    constraints: Vec<Constraint>,
+    /// Sparse coefficients of every input row over the problem variables. The row
+    /// *structure* is fixed for the tableau's life — only [`Tableau::rel_rhs`] moves.
+    rows_sparse: Vec<Vec<(usize, Rational)>>,
+    /// Per input row: the relation and right-hand side currently imposed, or `None`
+    /// when the row carries **no bound at all** (the [`Incremental`] engine's "this
+    /// atom is not asserted" state). An unbounded slack can never violate a bound
+    /// and — being always an eligible entering variable — can never appear in a
+    /// Farkas certificate; [`farkas_holds`] rejects any candidate that puts a
+    /// nonzero multiplier on one.
+    rel_rhs: Vec<Option<(Rel, Rational)>>,
 }
 
 impl Tableau {
-    fn new(nvars: usize, constraints: &[Constraint]) -> Tableau {
-        let m = constraints.len();
+    /// A tableau over `rows_sparse` with **no** bounds imposed (every row inactive).
+    fn new_rows(nvars: usize, rows_sparse: Vec<Vec<(usize, Rational)>>) -> Tableau {
+        let m = rows_sparse.len();
         let n = nvars + m;
-        let mut lower = vec![None; n];
-        let mut upper = vec![None; n];
-        let mut row = vec![vec![Rational::zero(); n]; m];
-        let mut basic = vec![0usize; m];
-        let mut is_basic = vec![false; n];
-
-        for (i, c) in constraints.iter().enumerate() {
-            let slack = nvars + i;
-            basic[i] = slack;
-            is_basic[slack] = true;
-            // slackᵢ = Σ aᵢⱼ·xⱼ  ⇒ row over the (nonbasic) problem vars.
-            for (j, &a) in c.coeffs.iter().enumerate() {
-                row[i][j] = a;
-            }
-            // Bounds from the comparator: slackᵢ ⋈ bᵢ, in ℚ(δ). Strict `<`/`>`
-            // shrink the bound by one infinitesimal: `x < b` ⇔ `x ≤ b − δ`.
-            let b = Delta::num(c.rhs);
-            let b_minus_d = Delta {
-                c: c.rhs,
-                k: Rational::integer(-1),
-            };
-            let b_plus_d = Delta {
-                c: c.rhs,
-                k: Rational::integer(1),
-            };
-            match c.rel {
-                Rel::Le => upper[slack] = Some(b),
-                Rel::Ge => lower[slack] = Some(b),
-                Rel::Eq => {
-                    lower[slack] = Some(b);
-                    upper[slack] = Some(b);
-                }
-                Rel::Lt => upper[slack] = Some(b_minus_d),
-                Rel::Gt => lower[slack] = Some(b_plus_d),
-            }
-        }
-
-        // Initial assignment: nonbasic problem vars = 0; each slack = Σ aᵢⱼ·0 = 0.
-        let value = vec![Delta::zero(); n];
-        Tableau {
+        let rel_rhs = vec![None; m];
+        let mut t = Tableau {
             n,
             nvars,
             m,
-            basic,
-            row,
-            value,
-            lower,
-            upper,
-            is_basic,
-            constraints: constraints.to_vec(),
+            basic: vec![0usize; m],
+            row: vec![Vec::new(); m],
+            value: vec![Delta::zero(); n],
+            lower: vec![None; n],
+            upper: vec![None; n],
+            is_basic: vec![false; n],
+            rows_sparse,
+            rel_rhs,
+        };
+        t.reset_structure();
+        t
+    }
+
+    /// Restores the pristine basis: every slack basic in its own row, every problem
+    /// variable nonbasic at `0`, so `slackᵢ = Σ aᵢⱼ·0 = 0`. Bounds ([`Self::rel_rhs`]
+    /// and the derived `lower`/`upper`) are **not** touched — this is the recovery
+    /// path after an arithmetic overflow left the cached values inconsistent.
+    fn reset_structure(&mut self) {
+        for i in 0..self.m {
+            let mut dense = vec![Rational::zero(); self.n];
+            for &(j, a) in &self.rows_sparse[i] {
+                dense[j] = a;
+            }
+            self.row[i] = dense;
+            self.basic[i] = self.nvars + i;
         }
+        self.is_basic.iter_mut().for_each(|b| *b = false);
+        for i in 0..self.m {
+            self.is_basic[self.nvars + i] = true;
+        }
+        self.value.iter_mut().for_each(|v| *v = Delta::zero());
+    }
+
+    fn new(nvars: usize, constraints: &[Constraint]) -> Tableau {
+        let rows_sparse: Vec<Vec<(usize, Rational)>> = constraints
+            .iter()
+            .map(|c| densify_to_sparse(&c.coeffs))
+            .collect();
+        let mut t = Tableau::new_rows(nvars, rows_sparse);
+        for (i, c) in constraints.iter().enumerate() {
+            t.set_row_bound(i, Some((c.rel, c.rhs)));
+        }
+        t
+    }
+
+    /// Imposes (or removes, with `None`) the bound of input row `i`, rewriting the
+    /// slack's `lower`/`upper` in `ℚ(δ)`. Strict `<`/`>` shrink the bound by one
+    /// infinitesimal: `x < b` ⇔ `x ≤ b − δ`. **Values are not touched** — the caller
+    /// repairs them (nonbasic: [`Tableau::clamp_nonbasic`]; basic: the pivot loop).
+    fn set_row_bound(&mut self, i: usize, rr: Option<(Rel, Rational)>) {
+        let slack = self.nvars + i;
+        self.rel_rhs[i] = rr;
+        self.lower[slack] = None;
+        self.upper[slack] = None;
+        let Some((rel, rhs)) = rr else { return };
+        let b = Delta::num(rhs);
+        let b_minus_d = Delta {
+            c: rhs,
+            k: Rational::integer(-1),
+        };
+        let b_plus_d = Delta {
+            c: rhs,
+            k: Rational::integer(1),
+        };
+        match rel {
+            Rel::Le => self.upper[slack] = Some(b),
+            Rel::Ge => self.lower[slack] = Some(b),
+            Rel::Eq => {
+                self.lower[slack] = Some(b);
+                self.upper[slack] = Some(b);
+            }
+            Rel::Lt => self.upper[slack] = Some(b_minus_d),
+            Rel::Gt => self.lower[slack] = Some(b_plus_d),
+        }
+    }
+
+    /// Dutertre–de Moura `update`: move **nonbasic** `v` to `target` and carry the
+    /// change into every basic variable's value (`basicᵢ += rowᵢ[v]·Δ`). O(m·nnz-free
+    /// column scan) — the reason a bound assertion does not cost a full recompute.
+    fn update_nonbasic(&mut self, v: usize, target: Delta) -> R<()> {
+        debug_assert!(!self.is_basic[v]);
+        let delta = target.sub(self.value[v])?;
+        if delta.c.is_zero() && delta.k.is_zero() {
+            return Ok(());
+        }
+        for i in 0..self.m {
+            let coeff = self.row[i][v];
+            if coeff.is_zero() {
+                continue;
+            }
+            let b = self.basic[i];
+            self.value[b] = self.value[b].add(delta.scale(coeff)?)?;
+        }
+        self.value[v] = target;
+        Ok(())
+    }
+
+    /// Pulls nonbasic `v` back inside its bounds if the bound just imposed on it
+    /// excludes its current value (a no-op for a basic variable — the pivot loop
+    /// repairs those).
+    fn clamp_nonbasic(&mut self, v: usize) -> R<()> {
+        if self.is_basic[v] {
+            return Ok(());
+        }
+        if let Some(hi) = self.upper[v]
+            && self.value[v].cmp(hi)? == core::cmp::Ordering::Greater
+        {
+            return self.update_nonbasic(v, hi);
+        }
+        if let Some(lo) = self.lower[v]
+            && self.value[v].cmp(lo)? == core::cmp::Ordering::Less
+        {
+            return self.update_nonbasic(v, lo);
+        }
+        Ok(())
     }
 
     /// Whether `v`'s value is below its lower bound.
@@ -292,9 +420,24 @@ impl Tableau {
     }
 
     /// The main feasibility loop (Bland's rule on the basic variable, then on the
-    /// entering nonbasic variable).
-    fn solve(mut self) -> R<SimplexOutcome> {
+    /// entering nonbasic variable). Resumes from whatever basis/assignment the
+    /// tableau currently holds — which is what makes [`Incremental`] warm.
+    ///
+    /// `budget` bounds the pivot count and `deadline` the wall clock; exhausting
+    /// either yields [`SimplexOutcome::Unknown`] (sound, never a verdict).
+    fn run(&mut self, deadline: Option<Instant>, budget: u64) -> R<RunOutcome> {
+        let mut pivots: u64 = 0;
         loop {
+            // Polled on entry too, so an already-expired deadline does no work at
+            // all and reports `Unknown` rather than a verdict the caller did not
+            // budget for.
+            if pivots.is_multiple_of(64) && past_deadline(deadline) {
+                return Ok(RunOutcome::Unknown);
+            }
+            if pivots >= budget {
+                return Ok(RunOutcome::Unknown);
+            }
+            pivots += 1;
             // Smallest-index basic variable that violates a bound.
             let mut viol: Option<(usize, bool)> = None; // (row, too_low)
             for i in 0..self.m {
@@ -309,9 +452,8 @@ impl Tableau {
                 }
             }
             let Some((r, too_low)) = viol else {
-                // All bounds satisfied → feasible. Materialize a concrete rational
-                // point from the δ-assignment (choose δ small enough).
-                return Ok(SimplexOutcome::Feasible(self.materialize()?));
+                // All bounds satisfied → feasible.
+                return Ok(RunOutcome::Feasible);
             };
 
             let b = self.basic[r];
@@ -319,7 +461,7 @@ impl Tableau {
             let entering = self.select_entering(r, too_low)?;
             let Some(j) = entering else {
                 // No way to repair row `r` → infeasible. Build the Farkas cert.
-                return Ok(SimplexOutcome::Infeasible(self.farkas(r, too_low)?));
+                return Ok(RunOutcome::Infeasible(self.farkas(r, too_low)?));
             };
 
             // Target value for the leaving basic variable: its violated bound.
@@ -396,6 +538,9 @@ impl Tableau {
         let enter_new = self.value[enter].add(theta)?;
 
         // Substitute `enter`'s new expression into every OTHER row and update values.
+        // The pivot row is cloned ONCE, not per affected row — at a few thousand
+        // columns the per-row clone was the dominant cost of a pivot.
+        let base = self.row[r].clone();
         for i in 0..self.m {
             if i == r {
                 continue;
@@ -405,7 +550,6 @@ impl Tableau {
                 continue;
             }
             // row_i := row_i + coeff · new_row (eliminating `enter`'s column).
-            let base = self.row[r].clone();
             for v in 0..self.n {
                 let delta = mul(coeff, base[v])?;
                 self.row[i][v] = add(self.row[i][v], delta)?;
@@ -446,20 +590,21 @@ impl Tableau {
     /// binds).
     fn materialize(&self) -> R<Vec<Rational>> {
         let mut eps = Rational::integer(1);
-        for c in &self.constraints {
+        for (i, sparse) in self.rows_sparse.iter().enumerate() {
+            // Rows carrying no bound constrain nothing.
+            let Some((rel, rhs)) = self.rel_rhs[i] else {
+                continue;
+            };
             // Row δ-value (C, K) over the problem variables.
             let mut cc = Rational::zero();
             let mut kk = Rational::zero();
-            for (j, &a) in c.coeffs.iter().enumerate() {
-                if a.is_zero() {
-                    continue;
-                }
+            for &(j, a) in sparse {
                 cc = add(cc, mul(a, self.value[j].c)?)?;
                 kk = add(kk, mul(a, self.value[j].k)?)?;
             }
             // `margin = |b − C|`; the row binds ε only when C is strictly inside the
             // bound (margin > 0) and K pushes toward it. Then ε < margin / |K|.
-            let margin = sub(c.rhs, cc)?; // b − C
+            let margin = sub(rhs, cc)?; // b − C
             if margin.is_zero() || kk.is_zero() {
                 continue;
             }
@@ -467,7 +612,7 @@ impl Tableau {
             // b; for a lower bound (Ge/Gt) K<0 pushes down toward b. When margin and
             // the push have the shape that could cross, cap ε.
             let k_pos = cmp(kk, Rational::zero())? == core::cmp::Ordering::Greater;
-            let toward = match c.rel {
+            let toward = match rel {
                 Rel::Le | Rel::Lt => k_pos,  // rising toward an upper bound
                 Rel::Ge | Rel::Gt => !k_pos, // falling toward a lower bound
                 Rel::Eq => true,             // any drift off an equality must be capped
@@ -547,11 +692,143 @@ impl Tableau {
             y[v - self.nvars] = mul(sub(Rational::zero(), sign)?, a)?;
         }
         // Self-check: return the certificate only if it genuinely refutes the input.
-        if check_farkas(self.nvars, &self.constraints, &y) {
+        if farkas_holds(self.nvars, &self.rows_sparse, &self.rel_rhs, &y) {
             Ok(y)
         } else {
             Ok(Vec::new())
         }
+    }
+}
+
+/// Status of one [`Incremental::check`].
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) enum Status {
+    /// The currently-bounded rows are jointly feasible; [`Incremental::point`]
+    /// materializes the witness.
+    Feasible,
+    /// Infeasible. The payload is the set of **bounded row indices carrying a
+    /// nonzero, self-verified Farkas multiplier** — the refutation's support. It is
+    /// **empty** when no closed-form certificate could be extracted *and verified*:
+    /// the infeasibility verdict itself is still sound (a basic variable is pinned
+    /// outside its bound with no eligible entering variable), but the caller gets no
+    /// minimized support and must fall back to a coarse explanation.
+    Infeasible(Vec<usize>),
+    /// Exact `i128` arithmetic overflowed, or the pivot/deadline budget ran out —
+    /// a sound "don't know", never a verdict.
+    Unknown,
+}
+
+/// The **warm** general simplex a `DPLL(T)` theory drives (Dutertre–de Moura §4).
+///
+/// The tableau structure is built **once** over every row the theory could ever
+/// assert (`slackᵢ = Σ aᵢⱼ·xⱼ`); asserting or retracting an atom only moves that
+/// row's *bound*, so [`Incremental::check`] resumes from the previous basis and
+/// assignment instead of re-deciding the whole system. That is the whole point:
+/// the Fourier–Motzkin core it replaces is doubly exponential in the variable
+/// count and re-ran from scratch on every assert.
+///
+/// # Scope and soundness
+///
+/// Rows carry **upper** bounds only (`Σ a·x ≤ rhs`, strict on request) — the shape
+/// [`crate::lra_online`] normalizes every atom polarity into. Consequently no
+/// variable ever has a lower bound, so the "lower > upper" immediate conflict of
+/// the general algorithm cannot arise and every infeasibility is found by the
+/// pivot loop, which is where the Farkas certificate comes from.
+///
+/// Every `Infeasible` support is self-verified by [`farkas_holds`] before it is
+/// handed back; a candidate that fails verification is **discarded** (empty
+/// support), never trusted. An arithmetic overflow poisons the cached assignment,
+/// which the next [`Incremental::check`] repairs by rebuilding from the pristine
+/// basis; while poisoned the engine answers [`Status::Unknown`].
+pub(crate) struct Incremental {
+    tab: Tableau,
+    /// Set when an overflow left [`Tableau::value`] inconsistent; the next `check`
+    /// rebuilds before deciding anything.
+    poisoned: bool,
+}
+
+impl Incremental {
+    /// Builds the warm engine over `nvars` problem variables and one row per
+    /// `rows_sparse` entry, all rows initially **unbounded**.
+    ///
+    /// Returns `None` when the dense tableau would exceed [`MAX_TABLEAU_CELLS`] —
+    /// a deterministic, purely structural decline that leaves the caller on
+    /// whatever engine it had.
+    pub(crate) fn new(nvars: usize, rows_sparse: Vec<Vec<(usize, Rational)>>) -> Option<Self> {
+        let m = rows_sparse.len();
+        let n = nvars.checked_add(m)?;
+        if m.checked_mul(n)? > MAX_TABLEAU_CELLS {
+            return None;
+        }
+        Some(Incremental {
+            tab: Tableau::new_rows(nvars, rows_sparse),
+            poisoned: false,
+        })
+    }
+
+    /// Number of rows the engine was built over.
+    pub(crate) fn rows(&self) -> usize {
+        self.tab.m
+    }
+
+    /// Imposes `Σ aᵢⱼ·xⱼ ⋈ rhs` on row `i` and pulls the slack back inside the new
+    /// bound if it is nonbasic. O(m), not O(m·n) — this is the operation a theory
+    /// `assert` costs.
+    ///
+    /// A row carries **at most one** bound at a time: an order atom's row takes an
+    /// upper bound when the atom is asserted true and a lower bound when it is
+    /// asserted false, and the two polarities are mutually exclusive. So `lower` and
+    /// `upper` on one variable can never cross, and every infeasibility is found by
+    /// the pivot loop (which is where the Farkas certificate comes from).
+    pub(crate) fn assert_bound(&mut self, i: usize, rel: Rel, rhs: Rational) {
+        self.tab.set_row_bound(i, Some((rel, rhs)));
+        if self.tab.clamp_nonbasic(self.tab.nvars + i).is_err() {
+            self.poisoned = true;
+        }
+    }
+
+    /// Removes row `i`'s bound. Relaxing can never invalidate the current
+    /// assignment, so this needs no value repair.
+    pub(crate) fn retract(&mut self, i: usize) {
+        self.tab.set_row_bound(i, None);
+    }
+
+    /// Re-decides feasibility of the currently-bounded rows, warm-starting from the
+    /// present basis.
+    pub(crate) fn check(&mut self, deadline: Option<Instant>) -> Status {
+        if self.poisoned {
+            // Recover: pristine basis, bounds preserved, values recomputed.
+            self.tab.reset_structure();
+            for v in 0..self.tab.n {
+                if self.tab.clamp_nonbasic(v).is_err() {
+                    return Status::Unknown;
+                }
+            }
+            self.poisoned = false;
+        }
+        match self.tab.run(deadline, MAX_PIVOTS) {
+            Ok(RunOutcome::Feasible) => Status::Feasible,
+            Ok(RunOutcome::Infeasible(y)) => Status::Infeasible(
+                y.iter()
+                    .enumerate()
+                    .filter(|(_, m)| !m.is_zero())
+                    .map(|(i, _)| i)
+                    .collect(),
+            ),
+            Ok(RunOutcome::Unknown) => Status::Unknown,
+            Err(Overflow) => {
+                self.poisoned = true;
+                Status::Unknown
+            }
+        }
+    }
+
+    /// A concrete rational point for the problem variables after a
+    /// [`Status::Feasible`] check, or `None` on overflow. The caller replays it
+    /// against the original assertions — that replay, not this function, is what
+    /// makes a `sat` trustworthy.
+    pub(crate) fn point(&self) -> Option<Vec<Rational>> {
+        self.tab.materialize().ok()
     }
 }
 
@@ -561,17 +838,50 @@ impl Tableau {
 /// combined right-hand side refutes — `Σ yᵢ·bᵢ < 0`, or `= 0` when a strict (`<`/`>`)
 /// row is used (the δ-aware `0 < 0`). Used by the tests here and by any caller
 /// before trusting an `Infeasible` verdict.
+// The dense public verifier is the module's *contract* surface: the in-tree callers
+// verify differently ([`crate::lra`] rebuilds its own `FarkasCertificate`, the warm
+// engine self-checks over the sparse rows), so nothing but the tests calls this.
+#[allow(dead_code)]
 #[must_use]
 pub fn check_farkas(nvars: usize, constraints: &[Constraint], y: &[Rational]) -> bool {
-    if y.len() != constraints.len() || y.iter().all(|v| v.is_zero()) {
+    if y.len() != constraints.len() {
         return false;
     }
-    // Sign discipline per row.
-    for (yi, c) in y.iter().zip(constraints) {
+    let rows: Vec<Vec<(usize, Rational)>> = constraints
+        .iter()
+        .map(|c| densify_to_sparse(&c.coeffs))
+        .collect();
+    let rel_rhs: Vec<Option<(Rel, Rational)>> =
+        constraints.iter().map(|c| Some((c.rel, c.rhs))).collect();
+    farkas_holds(nvars, &rows, &rel_rhs, y)
+}
+
+/// The single implementation behind [`check_farkas`] and the tableau's own
+/// certificate self-check, over the sparse row form.
+///
+/// A row with `rel_rhs[i] == None` carries **no bound**, so it states nothing and
+/// cannot participate: a nonzero multiplier on such a row is rejected outright.
+fn farkas_holds(
+    nvars: usize,
+    rows: &[Vec<(usize, Rational)>],
+    rel_rhs: &[Option<(Rel, Rational)>],
+    y: &[Rational],
+) -> bool {
+    if y.len() != rows.len() || y.len() != rel_rhs.len() || y.iter().all(|v| v.is_zero()) {
+        return false;
+    }
+    // Sign discipline per row (and: an unbounded row states nothing).
+    for (yi, rr) in y.iter().zip(rel_rhs) {
+        let Some((rel, _)) = rr else {
+            if !yi.is_zero() {
+                return false;
+            }
+            continue;
+        };
         let Some(s) = yi.checked_cmp(&Rational::zero()) else {
             return false;
         };
-        match c.rel {
+        match rel {
             // `≤`/`<` rows take a ≥0 multiplier; `≥`/`>` rows a ≤0 one; `=` is free.
             Rel::Le | Rel::Lt if s == core::cmp::Ordering::Less => return false,
             Rel::Ge | Rel::Gt if s == core::cmp::Ordering::Greater => return false,
@@ -579,20 +889,26 @@ pub fn check_farkas(nvars: usize, constraints: &[Constraint], y: &[Rational]) ->
         }
     }
     // Column sums must vanish.
-    for j in 0..nvars {
-        let mut acc = Rational::zero();
-        for (yi, c) in y.iter().zip(constraints) {
-            let Some(t) = yi.checked_mul(c.coeffs[j]) else {
+    let mut acc = vec![Rational::zero(); nvars];
+    for (yi, sparse) in y.iter().zip(rows) {
+        if yi.is_zero() {
+            continue;
+        }
+        for &(j, a) in sparse {
+            if j >= nvars {
+                return false;
+            }
+            let Some(t) = yi.checked_mul(a) else {
                 return false;
             };
-            let Some(s) = acc.checked_add(t) else {
+            let Some(s) = acc[j].checked_add(t) else {
                 return false;
             };
-            acc = s;
+            acc[j] = s;
         }
-        if !acc.is_zero() {
-            return false;
-        }
+    }
+    if acc.iter().any(|a| !a.is_zero()) {
+        return false;
     }
     // Combined rhs, and whether a strict (`<`/`>`) row is actually used. The
     // refutation is the derived relation `0 ⋈ Σy·rhs` in `ℚ(δ)`: with the combined
@@ -600,21 +916,22 @@ pub fn check_farkas(nvars: usize, constraints: &[Constraint], y: &[Rational]) ->
     // contributes a `−δ`). It refutes iff that is false:
     //   * `Σy·rhs < 0`               — false regardless of δ; or
     //   * `Σy·rhs == 0` AND a strict row is used — the `0 < 0` case.
-    let mut rhs = Rational::zero();
+    let mut total = Rational::zero();
     let mut strict_used = false;
-    for (yi, c) in y.iter().zip(constraints) {
-        let Some(t) = yi.checked_mul(c.rhs) else {
+    for (yi, rr) in y.iter().zip(rel_rhs) {
+        let Some((rel, rhs)) = rr else { continue };
+        let Some(t) = yi.checked_mul(*rhs) else {
             return false;
         };
-        let Some(s) = rhs.checked_add(t) else {
+        let Some(s) = total.checked_add(t) else {
             return false;
         };
-        rhs = s;
-        if !yi.is_zero() && matches!(c.rel, Rel::Lt | Rel::Gt) {
+        total = s;
+        if !yi.is_zero() && matches!(rel, Rel::Lt | Rel::Gt) {
             strict_used = true;
         }
     }
-    match rhs.checked_cmp(&Rational::zero()) {
+    match total.checked_cmp(&Rational::zero()) {
         Some(core::cmp::Ordering::Less) => true,
         Some(core::cmp::Ordering::Equal) => strict_used,
         _ => false,
@@ -956,6 +1273,341 @@ mod tests {
         assert!(
             agreements > 200,
             "too few jointly-decided systems ({agreements}); differential not exercised"
+        );
+    }
+
+    // --- the warm incremental engine (P1.9 · T1.9.2) -----------------------------
+
+    /// Sparse row form of a dense coefficient list, for the incremental engine.
+    fn sparse(coeffs: &[i128]) -> Vec<(usize, Rational)> {
+        coeffs
+            .iter()
+            .enumerate()
+            .filter(|&(_, &c)| c != 0)
+            .map(|(j, &c)| (j, r(c)))
+            .collect()
+    }
+
+    /// The one-shot `Constraint` list corresponding to an active-bound set.
+    fn active_constraints(
+        nvars: usize,
+        rows: &[Vec<i128>],
+        active: &[(usize, i128, Rel)],
+    ) -> Vec<Constraint> {
+        active
+            .iter()
+            .map(|&(i, rhs, rel)| Constraint {
+                coeffs: (0..nvars).map(|j| r(rows[i][j])).collect(),
+                rel,
+                rhs: r(rhs),
+            })
+            .collect()
+    }
+
+    /// Build a warm engine over `rows`, impose `active`, and decide.
+    fn incremental_verdict(
+        nvars: usize,
+        rows: &[Vec<i128>],
+        active: &[(usize, i128, Rel)],
+    ) -> (Status, Option<Vec<Rational>>) {
+        let mut eng = Incremental::new(nvars, rows.iter().map(|row| sparse(row)).collect())
+            .expect("tiny tableau is under the cell cap");
+        for &(i, rhs, rel) in active {
+            eng.assert_bound(i, rel, r(rhs));
+        }
+        let status = eng.check(None);
+        let point = if status == Status::Feasible {
+            eng.point()
+        } else {
+            None
+        };
+        (status, point)
+    }
+
+    /// **Soundness-negative, the headline one**: on random upper-bound systems the
+    /// warm engine must never call a *satisfiable* set unsat, and never call an
+    /// *unsatisfiable* set sat. The one-shot [`feasible`] over the same active rows
+    /// is the reference (itself already gated against Fourier–Motzkin above), and a
+    /// `Feasible` point must replay against the active rows.
+    #[test]
+    fn incremental_agrees_with_one_shot_and_never_reports_a_false_unsat() {
+        let mut decided = 0u32;
+        let mut infeasible_seen = 0u32;
+        for seed in 0..500u64 {
+            let mut rng = Lcg(seed
+                .wrapping_mul(6_364_136_223_846_793_005)
+                .wrapping_add(1_442_695_040_888_963_407));
+            let nvars = usize::try_from(rng.in_range(1, 3)).unwrap();
+            let nrows = usize::try_from(rng.in_range(2, 6)).unwrap();
+            let rows: Vec<Vec<i128>> = (0..nrows)
+                .map(|_| (0..nvars).map(|_| rng.in_range(-3, 3)).collect())
+                .collect();
+            // A random *subset* of rows carries a bound — the shape the theory
+            // produces, where unasserted atoms leave their rows unbounded.
+            let mut active: Vec<(usize, i128, Rel)> = Vec::new();
+            for (i, _) in rows.iter().enumerate() {
+                if rng.in_range(0, 2) != 0 {
+                    // Order atoms now produce LOWER bounds too (the `when_false`
+                    // polarity rides its `when_true` slack), so the fuzz must cover
+                    // `≥`/`>` as well as `≤`/`<`.
+                    let rel = match rng.in_range(0, 3) {
+                        0 => Rel::Le,
+                        1 => Rel::Lt,
+                        2 => Rel::Ge,
+                        _ => Rel::Gt,
+                    };
+                    active.push((i, rng.in_range(-5, 5), rel));
+                }
+            }
+            if active.is_empty() {
+                continue;
+            }
+
+            let cs = active_constraints(nvars, &rows, &active);
+            let (status, point) = incremental_verdict(nvars, &rows, &active);
+            let reference = feasible(nvars, &cs);
+
+            match (&status, &reference) {
+                (Status::Feasible, SimplexOutcome::Infeasible(_)) => {
+                    panic!("seed {seed}: warm engine said SAT where the one-shot refutes: {cs:?}")
+                }
+                (Status::Infeasible(support), SimplexOutcome::Feasible(x)) => panic!(
+                    "seed {seed}: WRONG UNSAT — warm engine refuted a system with witness {x:?}; \
+                     support={support:?} rows={cs:?}"
+                ),
+                (Status::Feasible, SimplexOutcome::Feasible(_)) => {
+                    let x = point.expect("a feasible warm check materializes a point");
+                    assert!(
+                        satisfies(&cs, &x),
+                        "seed {seed}: warm Feasible point does not replay: {cs:?} @ {x:?}"
+                    );
+                    decided += 1;
+                }
+                (Status::Infeasible(support), SimplexOutcome::Infeasible(_)) => {
+                    // The named support must itself be infeasible — a genuine core,
+                    // not a padded one. (An empty support is the sound "no verified
+                    // certificate" case the caller widens.)
+                    if !support.is_empty() {
+                        let sub: Vec<(usize, i128, Rel)> = support
+                            .iter()
+                            .map(|&row| {
+                                *active
+                                    .iter()
+                                    .find(|(i, _, _)| *i == row)
+                                    .expect("support names a bounded row")
+                            })
+                            .collect();
+                        let sub_cs = active_constraints(nvars, &rows, &sub);
+                        assert!(
+                            matches!(feasible(nvars, &sub_cs), SimplexOutcome::Infeasible(_)),
+                            "seed {seed}: the named core is NOT infeasible on its own: {sub_cs:?}"
+                        );
+                        infeasible_seen += 1;
+                    }
+                    decided += 1;
+                }
+                (Status::Unknown, _) | (_, SimplexOutcome::Unknown) => {}
+            }
+        }
+        assert!(decided > 300, "too few decided systems ({decided})");
+        assert!(
+            infeasible_seen > 20,
+            "too few verified cores ({infeasible_seen}); the refutation path is not exercised"
+        );
+    }
+
+    /// **Soundness-negative for the warm start.** The whole point of the engine is
+    /// that a check resumes from the previous basis; a stale basis or a stale value
+    /// cache would be exactly the way a wrong verdict enters. Drive a random
+    /// assert/retract *sequence* and require the verdict after every step to equal
+    /// the one a **cold** engine gives for the same active set.
+    #[test]
+    fn warm_start_after_retraction_matches_a_cold_engine() {
+        for seed in 0..200u64 {
+            let mut rng = Lcg(seed
+                .wrapping_mul(2_862_933_555_777_941_757)
+                .wrapping_add(3_037_000_493));
+            let nvars = usize::try_from(rng.in_range(1, 3)).unwrap();
+            let nrows = usize::try_from(rng.in_range(3, 6)).unwrap();
+            let rows: Vec<Vec<i128>> = (0..nrows)
+                .map(|_| (0..nvars).map(|_| rng.in_range(-3, 3)).collect())
+                .collect();
+            let mut warm = Incremental::new(nvars, rows.iter().map(|row| sparse(row)).collect())
+                .expect("tiny tableau");
+            let mut active: Vec<(usize, i128, Rel)> = Vec::new();
+
+            for _ in 0..12 {
+                if !active.is_empty() && rng.in_range(0, 2) == 0 {
+                    let (row, _, _) = active.pop().expect("non-empty");
+                    warm.retract(row);
+                } else {
+                    let row = usize::try_from(rng.in_range(0, i128::try_from(nrows).unwrap() - 1))
+                        .unwrap();
+                    if active.iter().any(|(i, _, _)| *i == row) {
+                        continue;
+                    }
+                    let rel = match rng.in_range(0, 3) {
+                        0 => Rel::Le,
+                        1 => Rel::Lt,
+                        2 => Rel::Ge,
+                        _ => Rel::Gt,
+                    };
+                    let entry = (row, rng.in_range(-5, 5), rel);
+                    warm.assert_bound(row, rel, r(entry.1));
+                    active.push(entry);
+                }
+                if active.is_empty() {
+                    continue;
+                }
+                let warm_status = warm.check(None);
+                let (cold_status, _) = incremental_verdict(nvars, &rows, &active);
+                let sat_of = |s: &Status| match s {
+                    Status::Feasible => Some(true),
+                    Status::Infeasible(_) => Some(false),
+                    Status::Unknown => None,
+                };
+                if let (Some(a), Some(b)) = (sat_of(&warm_status), sat_of(&cold_status)) {
+                    assert_eq!(
+                        a, b,
+                        "seed {seed}: warm-start verdict {a} disagrees with a cold engine {b} \
+                         on active={active:?} rows={rows:?}"
+                    );
+                }
+            }
+        }
+    }
+
+    /// The δ-relaxation through the warm engine: `x ≤ y ∧ y ≤ x` is feasible at
+    /// `x = y`, but making **either** side strict empties it. A bug that dropped the
+    /// infinitesimal would report the strict systems feasible (a wrong `sat`), and
+    /// one that treated `≤` as `<` would refute the first (a wrong `unsat`).
+    #[test]
+    fn incremental_strict_vs_nonstrict_boundary() {
+        // Rows over (x, y):  r0 = x − y,  r1 = y − x.
+        let rows = vec![vec![1i128, -1], vec![-1i128, 1]];
+        for (a_strict, b_strict, expect_feasible) in [
+            (false, false, true), // x ≤ y ∧ y ≤ x     ⇒ x = y
+            (true, false, false), // x < y ∧ y ≤ x     ⇒ empty
+            (false, true, false), // x ≤ y ∧ y < x     ⇒ empty
+            (true, true, false),  // x < y ∧ y < x     ⇒ empty
+        ] {
+            let rel = |strict: bool| if strict { Rel::Lt } else { Rel::Le };
+            let active = [
+                (0usize, 0i128, rel(a_strict)),
+                (1usize, 0i128, rel(b_strict)),
+            ];
+            let (status, point) = incremental_verdict(2, &rows, &active);
+            if expect_feasible {
+                assert_eq!(
+                    status,
+                    Status::Feasible,
+                    "x<=y & y<=x must be feasible at x=y"
+                );
+                let cs = active_constraints(2, &rows, &active);
+                assert!(
+                    satisfies(&cs, &point.expect("witness")),
+                    "boundary witness replays"
+                );
+            } else {
+                assert!(
+                    matches!(status, Status::Infeasible(_)),
+                    "strict({a_strict},{b_strict}) must be refuted, got {status:?}"
+                );
+            }
+        }
+    }
+
+    /// **A certificate that fails verification must be discarded, not trusted.** An
+    /// unbounded row states nothing, so a multiplier on it can never be part of a
+    /// refutation; and the sign / vanishing-LHS / refuting-RHS rules must each
+    /// reject on their own.
+    #[test]
+    fn farkas_holds_rejects_tampered_certificates() {
+        // Rows over x:  r0 = x (bounded x ≤ 1), r1 = x (UNBOUNDED), r2 = −x (x ≥ 3,
+        // written as −x ≤ −3).
+        let rows = vec![
+            vec![(0usize, r(1))],
+            vec![(0usize, r(1))],
+            vec![(0usize, r(-1))],
+        ];
+        let bounded = vec![Some((Rel::Le, r(1))), None, Some((Rel::Le, r(-3)))];
+        // The genuine refutation: x ≤ 1 and −x ≤ −3 sum to 0 ≤ −2.
+        assert!(
+            farkas_holds(1, &rows, &bounded, &[r(1), r(0), r(1)]),
+            "the genuine certificate must verify"
+        );
+        // Leaning on the UNBOUNDED row is not a refutation of anything.
+        assert!(
+            !farkas_holds(1, &rows, &bounded, &[r(0), r(1), r(1)]),
+            "a multiplier on an unbounded row must be rejected"
+        );
+        // Negative multiplier on a `≤` row — wrong sign.
+        assert!(
+            !farkas_holds(1, &rows, &bounded, &[r(-1), r(0), r(-1)]),
+            "wrong-sign multipliers must be rejected"
+        );
+        // The left-hand side does not vanish.
+        assert!(
+            !farkas_holds(1, &rows, &bounded, &[r(2), r(0), r(1)]),
+            "a non-vanishing lhs must be rejected"
+        );
+        // All-zero is not a refutation.
+        assert!(
+            !farkas_holds(1, &rows, &bounded, &[r(0), r(0), r(0)]),
+            "the zero certificate must be rejected"
+        );
+        // Non-strict rows that sum to exactly 0 are `0 ≤ 0` — feasible, not a
+        // refutation (only a strict row buys the δ-aware `0 < 0`).
+        let touching = vec![Some((Rel::Le, r(1))), None, Some((Rel::Le, r(-1)))];
+        assert!(
+            !farkas_holds(1, &rows, &touching, &[r(1), r(0), r(1)]),
+            "0 <= 0 is feasible (x = 1) and must be rejected"
+        );
+        let strict = vec![Some((Rel::Lt, r(1))), None, Some((Rel::Le, r(-1)))];
+        assert!(
+            farkas_holds(1, &rows, &strict, &[r(1), r(0), r(1)]),
+            "the delta-aware 0 < 0 refutation must verify"
+        );
+    }
+
+    /// The dense public [`check_farkas`] and the sparse engine-internal
+    /// [`farkas_holds`] are one implementation; this pins that they cannot drift.
+    #[test]
+    fn dense_and_sparse_farkas_verifiers_agree() {
+        let cs = [con(&[1, 0], Rel::Ge, 3), con(&[1, 1], Rel::Le, 1)];
+        let rows: Vec<Vec<(usize, Rational)>> =
+            cs.iter().map(|c| densify_to_sparse(&c.coeffs)).collect();
+        let rel_rhs: Vec<Option<(Rel, Rational)>> =
+            cs.iter().map(|c| Some((c.rel, c.rhs))).collect();
+        for y in [
+            [r(-1), r(1)],
+            [r(1), r(1)],
+            [r(0), r(0)],
+            [r(-1), r(2)],
+            [r(-2), r(2)],
+        ] {
+            assert_eq!(
+                check_farkas(2, &cs, &y),
+                farkas_holds(2, &rows, &rel_rhs, &y),
+                "verifiers disagree on {y:?}"
+            );
+        }
+    }
+
+    /// A tableau over more cells than [`MAX_TABLEAU_CELLS`] is declined
+    /// structurally, so the caller can keep a cheaper engine rather than pay for a
+    /// tableau that will not fit.
+    #[test]
+    fn oversized_tableau_declines() {
+        let rows: Vec<Vec<(usize, Rational)>> = (0..3_000).map(|_| vec![(0usize, r(1))]).collect();
+        assert!(
+            Incremental::new(3_000, rows).is_none(),
+            "3000 rows x 6000 columns is over the cell cap and must decline"
+        );
+        let ok: Vec<Vec<(usize, Rational)>> = (0..8).map(|_| vec![(0usize, r(1))]).collect();
+        assert!(
+            Incremental::new(4, ok).is_some(),
+            "a small tableau is built"
         );
     }
 }

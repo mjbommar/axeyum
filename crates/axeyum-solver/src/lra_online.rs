@@ -14,7 +14,13 @@
 //! [`LraTheory`] implements [`TheorySolver`]:
 //! - [`LraTheory::assert`] asserts an order/equality atom (true or false) by
 //!   pushing its normalized `expr {<,<=} 0` constraint(s) onto the trail and
-//!   re-deciding feasibility by Fourier–Motzkin. On infeasibility it returns the
+//!   re-deciding feasibility on the **warm general simplex**
+//!   ([`crate::simplex::Incremental`], Dutertre–de Moura): the tableau is built
+//!   once over every registered atom, an assert only moves a *bound*, and a check
+//!   resumes from the previous basis. (Fourier–Motzkin, which re-eliminated every
+//!   variable of the whole live system on every assert and is doubly exponential in
+//!   the variable count, survives only for instances whose tableau exceeds
+//!   [`crate::simplex::MAX_TABLEAU_CELLS`].) On infeasibility it returns the
 //!   **explained conflict**: the subset of asserted atoms whose constraints carry
 //!   a nonzero Farkas multiplier in the derived contradiction — a genuine,
 //!   typically small core (mirroring [`crate::euf_egraph::EufTheory`]'s explained
@@ -23,9 +29,11 @@
 //!   length, so a backtrack drops exactly the constraints and atom assignments
 //!   added since the matching `push`.
 //! - [`LraTheory::propagate`] probes each unassigned order atom's opposite
-//!   polarity; an infeasible probe yields an asserted-literal explanation for
-//!   the entailed atom. Deadline or arithmetic-budget exhaustion emits no
-//!   propagation, a sound under-approximation.
+//!   polarity — on the warm engine that is one speculative bound plus a re-check,
+//!   not a snapshot-and-re-eliminate; an infeasible probe yields an
+//!   asserted-literal explanation for the entailed atom. Deadline or
+//!   arithmetic-budget exhaustion emits no propagation, a sound
+//!   under-approximation.
 //!
 //! [`check_qf_lra_online`] wires [`LraTheory`] into a self-contained `DPLL(T)`
 //! search over the Boolean skeleton (the same shape as
@@ -46,6 +54,7 @@
 //! a conservative [`CheckResult::Unknown`] verdict. Caller deadlines cover atom
 //! normalization, feasibility, propagation, and model reconstruction.
 
+use std::cell::RefCell;
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use std::fmt;
 use std::time::Instant;
@@ -57,6 +66,7 @@ use axeyum_ir::{
 use crate::backend::{CheckResult, SolverConfig, SolverError, UnknownKind, UnknownReason};
 use crate::euf_egraph::{TheoryLit, TheoryProp, TheorySolver};
 use crate::model::Model;
+use crate::simplex;
 
 /// Hard ceiling on constraints produced by a single Fourier–Motzkin elimination
 /// step inside an incremental feasibility check. Mirrors the offline
@@ -173,6 +183,17 @@ struct Constraint {
     mult: Vec<Rational>,
     /// The registered atom index this constraint came from.
     atom: usize,
+    /// This constraint template's fixed row in the warm simplex tableau
+    /// ([`SimplexEngine`]) and the bound asserting it imposes on that row.
+    ///
+    /// An order atom needs **one** row, not two: its `when_false` constraint is the
+    /// exact negation of its `when_true` one, so the same slack `s = Σ aⱼ·xⱼ` serves
+    /// both — `when_true` bounds it above, `when_false` below (Dutertre–de Moura
+    /// §4). That is a 4× cut in tableau cells versus a row per polarity.
+    ///
+    /// `None` for a constraint that is not a registered template (the intermediate
+    /// constraints Fourier–Motzkin derives, which the tableau never sees).
+    row: Option<(usize, simplex::Rel, Rational)>,
 }
 
 /// Outcome of an incremental feasibility check over the asserted constraints.
@@ -208,14 +229,98 @@ enum AtomKind {
     Unsupported,
 }
 
+/// The warm general-simplex engine [`LraTheory`] decides feasibility with, plus the
+/// bookkeeping that maps its rows back to atoms.
+///
+/// One tableau **row per constraint template** (`(atom, polarity slot)`) is built
+/// once, at theory construction, over every registered atom — so asserting or
+/// retracting an atom only moves that row's bound and a re-check warm-starts from
+/// the previous basis. Contrast the Fourier–Motzkin core this replaces, which
+/// re-eliminated every variable of the whole live system on *every* assert and is
+/// doubly exponential in the variable count.
+struct SimplexEngine {
+    inner: simplex::Incremental,
+    /// Row → the registered atom that owns it (the conflict-core map).
+    row_atom: Vec<usize>,
+    /// The `(row, rel, rhs)` bounds currently imposed, positionally aligned with
+    /// [`LraTheory::live`] — the stack [`SimplexEngine::sync`] reconciles before
+    /// every check.
+    active: Vec<(usize, simplex::Rel, Rational)>,
+    /// Whether each row currently carries a bound. A row holds **one** bound at a
+    /// time, so this is the invariant guard: an attempt to bound an already-bounded
+    /// row means the live system is not representable here and [`SimplexEngine::sync`]
+    /// declines rather than silently dropping the earlier bound.
+    row_bounded: Vec<bool>,
+}
+
+impl SimplexEngine {
+    /// Brings the engine's bound stack in line with `live` (which the theory grows
+    /// by `assert` and truncates by `pop`). Diverging suffixes are retracted and the
+    /// remainder asserted, so the engine's state is a pure function of `live` — no
+    /// hidden coupling to the order the theory happened to call things in.
+    ///
+    /// Returns `false` if any live constraint has no registered row, which would
+    /// mean the engine does not see the whole live system — the caller must then
+    /// **not** trust a refutation from it.
+    fn sync(&mut self, live: &[Constraint]) -> bool {
+        // The shared prefix must match on the WHOLE bound, not just the row: an
+        // order atom's two polarities ride the same slack, so `pop` + re-assert at
+        // the opposite value keeps the row index and changes only the relation.
+        // Comparing row indices alone left the old bound in place — a stale-bound
+        // wrong `unsat` (caught by `push_assert_pop_restores_feasibility`).
+        let mut shared = 0usize;
+        while shared < self.active.len()
+            && shared < live.len()
+            && live[shared].row == Some(self.active[shared])
+        {
+            shared += 1;
+        }
+        while self.active.len() > shared {
+            let (row, _, _) = self
+                .active
+                .pop()
+                .expect("non-empty above the shared prefix");
+            self.inner.retract(row);
+            self.row_bounded[row] = false;
+        }
+        for c in &live[shared..] {
+            let Some((row, rel, rhs)) = c.row else {
+                return false;
+            };
+            if self.row_bounded[row] {
+                return false;
+            }
+            self.inner.assert_bound(row, rel, rhs);
+            self.row_bounded[row] = true;
+            self.active.push((row, rel, rhs));
+        }
+        true
+    }
+
+    /// Maps tableau row indices back to indices into `live` (the shape
+    /// [`Feasibility::Unsat`] promises). Rows that are not currently bounded cannot
+    /// appear in a verified certificate, so they are simply skipped.
+    fn live_indices(&self, rows: &[usize]) -> Vec<usize> {
+        let mut out = Vec::with_capacity(rows.len());
+        for (index, &(row, _, _)) in self.active.iter().enumerate() {
+            if rows.contains(&row) {
+                out.push(index);
+            }
+        }
+        out
+    }
+}
+
 /// Online (incremental, backtrackable) `QF_LRA` theory solver over a stack of
 /// asserted linear-real atoms. Implements [`TheorySolver`] so a `DPLL(T)` loop
 /// drives it: the SAT search asserts atoms as its trail grows, backtracks in
 /// lockstep via [`push`](TheorySolver::push) / [`pop`](TheorySolver::pop), and
 /// learns the explained conflict on infeasibility.
 ///
-/// Feasibility is re-decided by an exact-rational Fourier–Motzkin elimination
-/// over the currently-asserted constraints; on infeasibility the Farkas
+/// Feasibility is re-decided on the **warm exact-rational simplex**
+/// (`simplex::Incremental`) over the currently-asserted constraints —
+/// Fourier–Motzkin survives only for instances whose dense tableau exceeds the
+/// module's cell cap. On infeasibility the self-verified Farkas
 /// multipliers name the participating atoms (the conflict core).
 pub struct LraTheory {
     /// Per registered atom: how asserting it true/false translates to
@@ -243,6 +348,13 @@ pub struct LraTheory {
     /// Caller-owned absolute deadline for incremental feasibility, propagation,
     /// and model reconstruction. `None` preserves the original untimed behavior.
     deadline: Option<Instant>,
+    /// The warm simplex engine — the feasibility decision procedure. `None` only
+    /// when the dense tableau would exceed [`simplex::MAX_TABLEAU_CELLS`] or a
+    /// template's right-hand side overflowed `i128`; the Fourier–Motzkin core then
+    /// decides, exactly as before. Interior mutability because the tableau is
+    /// *mutated* by a check (it warm-starts) while [`LraTheory::propagate`] and
+    /// [`LraTheory::model`] hold only `&self`.
+    simplex: Option<RefCell<SimplexEngine>>,
 }
 
 impl LraTheory {
@@ -285,6 +397,7 @@ impl LraTheory {
         }
         let nvars = builder.vars.len();
         let count = atoms.len();
+        let simplex = build_simplex_engine(&mut atoms, nvars).map(RefCell::new);
         Some(Self {
             atoms,
             nvars,
@@ -294,7 +407,20 @@ impl LraTheory {
             trail: Vec::new(),
             vars: builder.vars,
             deadline,
+            simplex,
         })
+    }
+
+    /// Whether feasibility is decided by the warm simplex rather than the
+    /// Fourier–Motzkin fallback. Test-only: it exists so the rewiring cannot
+    /// silently become inert (see
+    /// `tests::ordinary_atom_sets_are_decided_by_the_warm_simplex`) — nothing in the
+    /// solve path branches on it, because the fallback is a pure implementation
+    /// detail of [`Self::feasibility`].
+    #[cfg(test)]
+    #[must_use]
+    pub(crate) fn uses_simplex(&self) -> bool {
+        self.simplex.is_some()
     }
 
     /// Bounds every Fourier–Motzkin pass performed by this incremental theory by
@@ -328,10 +454,34 @@ impl LraTheory {
             .is_some_and(|a| !matches!(a, AtomKind::Unsupported))
     }
 
-    /// Re-decides feasibility of the live constraints by Fourier–Motzkin.
+    /// Re-decides feasibility of the live constraints on the **warm simplex**
+    /// (P1.9 · T1.9.2), falling back to Fourier–Motzkin only when the engine
+    /// declined to exist.
+    ///
+    /// The `Unsat` payload keeps its contract — indices into [`Self::live`] — so
+    /// [`Self::rows_to_core`] is unchanged. Only rows carrying a **self-verified**
+    /// Farkas multiplier are named; when the certificate could not be extracted and
+    /// verified the payload is empty and `rows_to_core` widens to the full asserted
+    /// set (sound, just coarser), exactly as it already did for a degenerate
+    /// Fourier–Motzkin refutation.
     fn feasibility(&self) -> Feasibility {
         if self.live.is_empty() {
             return Feasibility::Sat;
+        }
+        if let Some(cell) = &self.simplex {
+            let mut engine = cell.borrow_mut();
+            if engine.sync(&self.live) {
+                return match engine.inner.check(self.deadline) {
+                    simplex::Status::Feasible => Feasibility::Sat,
+                    simplex::Status::Infeasible(rows) => {
+                        Feasibility::Unsat(engine.live_indices(&rows))
+                    }
+                    simplex::Status::Unknown => Feasibility::Unknown,
+                };
+            }
+            // The engine does not see the whole live system; never trust a
+            // refutation from a partial view.
+            return Feasibility::Unknown;
         }
         solve(&self.live, self.nvars, self.deadline)
     }
@@ -414,7 +564,19 @@ impl LraTheory {
     /// overflows — the caller then yields `Unknown`, never a wrong `sat`.
     #[must_use]
     fn model(&self, builder_vars: &[SymbolId]) -> Option<Model> {
-        let values = solve_values(&self.live, self.nvars, self.deadline)?;
+        let values = match &self.simplex {
+            Some(cell) => {
+                let mut engine = cell.borrow_mut();
+                if !engine.sync(&self.live) {
+                    return None;
+                }
+                match engine.inner.check(self.deadline) {
+                    simplex::Status::Feasible => engine.inner.point()?,
+                    simplex::Status::Infeasible(_) | simplex::Status::Unknown => return None,
+                }
+            }
+            None => solve_values(&self.live, self.nvars, self.deadline)?,
+        };
         let mut model = Model::new();
         for (index, &symbol) in builder_vars.iter().enumerate() {
             model.set(symbol, Value::Real(values[index]));
@@ -423,8 +585,8 @@ impl LraTheory {
     }
 
     /// Sound `LRA` theory propagation by the **negation probe**: for each
-    /// unassigned tracked order atom, snapshot the live Fourier–Motzkin system,
-    /// add the constraint for the atom's *opposite* polarity, and re-decide. If
+    /// unassigned tracked order atom, speculatively impose the bound for the atom's
+    /// *opposite* polarity on the live system, and re-decide. If
     /// that augmented system is infeasible, the atom is **entailed** at the tested
     /// polarity under the currently-asserted constraints — emit it as a
     /// [`TheoryProp`] whose `reason` is the **asserted-only** Farkas core (the
@@ -477,6 +639,40 @@ impl LraTheory {
     /// asserted-only Farkas core (the entailment's explanation); otherwise `None`
     /// (feasible, inconclusive, or no asserted support — never a fabrication).
     fn probe_entails(&self, probe_constraint: &Constraint, atom: usize) -> Option<Vec<TheoryLit>> {
+        if let Some(cell) = &self.simplex {
+            let mut engine = cell.borrow_mut();
+            let (row, rel, rhs) = probe_constraint.row?;
+            if !engine.sync(&self.live) || engine.row_bounded[row] {
+                return None;
+            }
+            // The probed atom is unassigned, so its row is not in `active`; bounding
+            // it speculatively and retracting it afterwards leaves the engine's state
+            // a pure function of `live` again.
+            engine.inner.assert_bound(row, rel, rhs);
+            let status = engine.inner.check(self.deadline);
+            engine.inner.retract(row);
+            let simplex::Status::Infeasible(rows) = status else {
+                return None;
+            };
+            // Asserted-only explanation: the speculative row is excluded by
+            // construction, and every other named row must belong to an atom the
+            // search has actually assigned.
+            let mut seen: BTreeSet<usize> = BTreeSet::new();
+            let mut core = Vec::new();
+            for &row in &rows {
+                let owner = engine.row_atom[row];
+                if owner == atom {
+                    continue;
+                }
+                let Some(value) = self.assigned.get(owner).copied().flatten() else {
+                    continue;
+                };
+                if seen.insert(owner) {
+                    core.push(TheoryLit { atom: owner, value });
+                }
+            }
+            return if core.is_empty() { None } else { Some(core) };
+        }
         let mut probe = self.live.clone();
         probe.push(tag(probe_constraint, atom));
         match solve(&probe, self.nvars, self.deadline) {
@@ -548,6 +744,107 @@ impl TheorySolver for LraTheory {
     }
 }
 
+/// Assigns every constraint template of every registered atom a fixed tableau row
+/// (mutating the templates in place so [`tag`] carries the row onto each asserted
+/// copy) and builds the warm simplex over them.
+///
+/// Returns `None` — leaving the theory on Fourier–Motzkin, unchanged — when a
+/// template's right-hand side overflows `i128` or the dense tableau would exceed
+/// [`simplex::MAX_TABLEAU_CELLS`]. Both declines are structural and deterministic.
+fn build_simplex_engine(atoms: &mut [AtomKind], nvars: usize) -> Option<SimplexEngine> {
+    /// Opens a fresh row for `c` and records the **upper** bound asserting it
+    /// imposes: `expr {<,≤} 0` with `expr = Σ aⱼ·xⱼ + k` is the row `Σ aⱼ·xⱼ {<,≤} −k`.
+    fn open_row(
+        c: &mut Constraint,
+        atom: usize,
+        rows: &mut Vec<Vec<(usize, Rational)>>,
+        owners: &mut Vec<usize>,
+    ) -> Option<()> {
+        let rhs = c.expr.constant.checked_neg()?;
+        let rel = if c.strict {
+            simplex::Rel::Lt
+        } else {
+            simplex::Rel::Le
+        };
+        c.row = Some((rows.len(), rel, rhs));
+        rows.push(
+            c.expr
+                .coeffs
+                .iter()
+                .filter(|(_, a)| !a.is_zero())
+                .map(|(&j, &a)| (j, a))
+                .collect(),
+        );
+        owners.push(atom);
+        Some(())
+    }
+
+    let mut rows_sparse: Vec<Vec<(usize, Rational)>> = Vec::new();
+    let mut row_atom: Vec<usize> = Vec::new();
+
+    for (atom, kind) in atoms.iter_mut().enumerate() {
+        match kind {
+            AtomKind::Order {
+                when_true,
+                when_false,
+            } => {
+                open_row(when_true, atom, &mut rows_sparse, &mut row_atom)?;
+                let (row, _, rhs) = when_true.row.expect("just opened");
+                // `when_false` is the exact negation of `when_true`, so it rides the
+                // SAME slack as a *lower* bound at the same rhs:
+                //   −(Σ aⱼ·xⱼ + k) {<,≤} 0  ⇔  Σ aⱼ·xⱼ {>,≥} −k.
+                // Verified, not assumed — if the normalizer ever produced something
+                // else, `when_false` simply gets its own row and nothing is lost.
+                if negates(&when_true.expr, &when_false.expr) {
+                    let rel = if when_false.strict {
+                        simplex::Rel::Gt
+                    } else {
+                        simplex::Rel::Ge
+                    };
+                    when_false.row = Some((row, rel, rhs));
+                } else {
+                    open_row(when_false, atom, &mut rows_sparse, &mut row_atom)?;
+                }
+            }
+            AtomKind::Equality { when_true } => {
+                // `a = b` is `a − b ≤ 0 ∧ b − a ≤ 0` — BOTH go live at once, so they
+                // need separate rows: a tableau row holds one bound at a time, and
+                // the sharing trick above works only because an order atom's two
+                // polarities are mutually exclusive.
+                open_row(&mut when_true[0], atom, &mut rows_sparse, &mut row_atom)?;
+                open_row(&mut when_true[1], atom, &mut rows_sparse, &mut row_atom)?;
+            }
+            AtomKind::Unsupported => {}
+        }
+    }
+    if rows_sparse.is_empty() {
+        return None;
+    }
+    let inner = simplex::Incremental::new(nvars, rows_sparse)?;
+    debug_assert_eq!(inner.rows(), row_atom.len());
+    let row_bounded = vec![false; row_atom.len()];
+    Some(SimplexEngine {
+        inner,
+        row_atom,
+        active: Vec::new(),
+        row_bounded,
+    })
+}
+
+/// Whether `b` is exactly `−a` on the *variable* coefficients (the constants are
+/// handled by the shared right-hand side).
+fn negates(a: &LinExpr, b: &LinExpr) -> bool {
+    let nonzero = |e: &LinExpr| e.coeffs.iter().filter(|(_, c)| !c.is_zero()).count();
+    if nonzero(a) != nonzero(b) {
+        return false;
+    }
+    a.coeffs.iter().all(|(&i, &c)| {
+        c.is_zero()
+            || c.checked_neg()
+                .is_some_and(|neg| b.coeff(i).checked_cmp(&neg) == Some(core::cmp::Ordering::Equal))
+    })
+}
+
 /// Attaches an empty `mult` (seeded by [`solve`] once the live row count is known)
 /// and the source `atom` to a template constraint.
 fn tag(template: &Constraint, atom: usize) -> Constraint {
@@ -556,6 +853,7 @@ fn tag(template: &Constraint, atom: usize) -> Constraint {
         strict: template.strict,
         mult: Vec::new(),
         atom,
+        row: template.row,
     }
 }
 
@@ -644,12 +942,14 @@ impl AtomBuilder {
                             strict: false,
                             mult: Vec::new(),
                             atom: 0,
+                            row: None,
                         },
                         Constraint {
                             expr: diff_neg,
                             strict: false,
                             mult: Vec::new(),
                             atom: 0,
+                            row: None,
                         },
                     ],
                 }
@@ -743,6 +1043,7 @@ fn normalize(op: Op, left: &LinExpr, right: &LinExpr) -> Option<Constraint> {
         strict,
         mult: Vec::new(),
         atom: 0,
+        row: None,
     })
 }
 
@@ -796,6 +1097,7 @@ fn solve(constraints: &[Constraint], nvars: usize, deadline: Option<Instant>) ->
             strict: c.strict,
             mult: unit_vec(n, i),
             atom: c.atom,
+            row: c.row,
         });
     }
 
@@ -922,6 +1224,7 @@ fn eliminate(
                 strict: p.strict || q.strict,
                 mult,
                 atom: p.atom,
+                row: None,
             });
         }
     }
@@ -2674,6 +2977,8 @@ fn run_online_diag(arena: &TermArena, assertions: &[TermId]) -> Option<OnlineDia
         .map(|&t| builder.build(arena, t))
         .collect();
     let nvars = builder.vars.len();
+    let mut atoms = atoms;
+    let simplex = build_simplex_engine(&mut atoms, nvars).map(RefCell::new);
     let mut theory = LraTheory {
         atoms,
         nvars,
@@ -2683,6 +2988,7 @@ fn run_online_diag(arena: &TermArena, assertions: &[TermId]) -> Option<OnlineDia
         trail: Vec::new(),
         vars: builder.vars,
         deadline: None,
+        simplex,
     };
     let mut solver = Dpll::new(enc.var_count, atom_count, clauses);
     let _ = solver.solve(&mut theory);
@@ -2742,6 +3048,63 @@ mod tests {
         assert!(matches!(theory.feasibility(), Feasibility::Unknown));
         assert!(theory.real_model().is_none());
         assert!(theory.propagate().is_empty());
+    }
+
+    /// The rewiring must not be inert: an ordinary `QF_LRA` atom set is decided by
+    /// the **warm simplex**, not by the Fourier–Motzkin fallback. Without this the
+    /// engine could silently stop being built and every measurement would be a
+    /// measurement of Fourier–Motzkin again.
+    #[test]
+    fn ordinary_atom_sets_are_decided_by_the_warm_simplex() {
+        let mut arena = TermArena::new();
+        let x = rvar(&mut arena, "x");
+        let y = rvar(&mut arena, "y");
+        let zero = rconst(&mut arena, 0);
+        let a = arena.real_ge(x, zero).expect("x>=0");
+        let b = arena.real_lt(y, zero).expect("y<0");
+        let theory = LraTheory::new(&arena, &[a, b]);
+        assert!(
+            theory.uses_simplex(),
+            "the warm simplex must be the engine for a small LRA atom set"
+        );
+        // One row per (atom, polarity slot).
+        let engine = theory.simplex.as_ref().expect("engine").borrow();
+        // One row per ORDER atom (both polarities share the slack).
+        assert_eq!(engine.row_atom, vec![0, 1]);
+    }
+
+    /// **Soundness-negative through the theory API**: a *satisfiable* live set must
+    /// never come back as a conflict, and the strict/non-strict boundary must be
+    /// respected exactly (the δ-relaxation) — `x ≤ y ∧ y ≤ x` is satisfiable at
+    /// `x = y` while `x < y ∧ y ≤ x` is not.
+    #[test]
+    fn strict_boundary_through_the_theory_never_refutes_a_satisfiable_set() {
+        let mut arena = TermArena::new();
+        let x = rvar(&mut arena, "x");
+        let y = rvar(&mut arena, "y");
+        let le = arena.real_le(x, y).expect("x<=y");
+        let ge = arena.real_le(y, x).expect("y<=x");
+        let lt = arena.real_lt(x, y).expect("x<y");
+
+        // x ≤ y ∧ y ≤ x — satisfiable at x = y; a conflict here would be a wrong unsat.
+        let mut feasible_theory = LraTheory::new(&arena, &[le, ge]);
+        assert!(feasible_theory.assert(0, true).is_ok());
+        assert!(
+            feasible_theory.assert(1, true).is_ok(),
+            "x<=y and y<=x is satisfiable at x=y and must NOT be refuted"
+        );
+        assert!(
+            feasible_theory.real_model().is_some(),
+            "a satisfiable set must reconstruct a witness"
+        );
+
+        // x < y ∧ y ≤ x — empty; the theory must refute it and name a core.
+        let mut strict_theory = LraTheory::new(&arena, &[lt, ge]);
+        assert!(strict_theory.assert(0, true).is_ok());
+        let Err(core) = strict_theory.assert(1, true) else {
+            panic!("x<y and y<=x is empty and must be refuted");
+        };
+        assert!(!core.is_empty(), "a refutation must name asserted literals");
     }
 
     #[test]
@@ -3459,6 +3822,8 @@ mod tests {
             .map(|&t| builder.build(arena, t))
             .collect();
         let nvars = builder.vars.len();
+        let mut atoms = atoms;
+        let simplex = build_simplex_engine(&mut atoms, nvars).map(RefCell::new);
         let theory = LraTheory {
             atoms,
             nvars,
@@ -3468,6 +3833,7 @@ mod tests {
             trail: Vec::new(),
             vars: builder.vars,
             deadline: None,
+            simplex,
         };
         let solver = Dpll::new(enc.var_count, atom_count, clauses);
         (solver, theory)
