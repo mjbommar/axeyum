@@ -541,3 +541,41 @@ A file we can refute but cannot certify counts against us; it is not dropped.
 | solver commit | `abb31d1ab` |
 | load average (start / end) | 20.48 13.01 9.11 / 2.15 2.36 2.78 — 24 cores; a high load DEPRESSES this result |
 | per-file detail | `bench-results/parity-details/QF_NIA.tsv` |
+
+## QF_RDL — 2026-08-03T20:24:24Z
+
+| field | value |
+|---|---|
+| axeyum solved | 105/200 |
+| reference solved | 153/200 |
+| **ratio (axeyum / reference)** | **68.6%** |
+| **disagreements** | **0** |
+| soundness | SOUND |
+| both / axeyum-only / reference-only | 105 / 0 / 48 |
+| reference | `cvc5 1.3.4 [git f3b21c4 on branch HEAD]` |
+| reference options | `<none — plain invocation, NOT a competition portfolio>` |
+| axeyum options | `<none — shipped default configuration>` |
+| protocol | 24s wall, 8GiB, per-file |
+| benchmark list | `bench-results/parity-lists/QF_RDL.txt` (sha256 9dc32e2c5dfb, 200 files) |
+| solver commit | `359dd65ef` |
+| load average (start / end) | 2.51 4.42 4.17 / 5.38 7.40 8.36 — 24 cores; a high load DEPRESSES this result |
+| per-file detail | `bench-results/parity-details/QF_RDL.tsv` |
+
+## QF_IDL — 2026-08-03T22:03:54Z
+
+| field | value |
+|---|---|
+| axeyum solved | 66/200 |
+| reference solved | 123/200 |
+| **ratio (axeyum / reference)** | **53.7%** |
+| **disagreements** | **0** |
+| soundness | SOUND |
+| both / axeyum-only / reference-only | 66 / 0 / 57 |
+| reference | `cvc5 1.3.4 [git f3b21c4 on branch HEAD]` |
+| reference options | `<none — plain invocation, NOT a competition portfolio>` |
+| axeyum options | `<none — shipped default configuration>` |
+| protocol | 24s wall, 8GiB, per-file |
+| benchmark list | `bench-results/parity-lists/QF_IDL.txt` (sha256 d7c9713a0280, 200 files) |
+| solver commit | `359dd65ef` |
+| load average (start / end) | 5.38 7.40 8.36 / 1.15 1.85 4.59 — 24 cores; a high load DEPRESSES this result |
+| per-file detail | `bench-results/parity-details/QF_IDL.tsv` |
