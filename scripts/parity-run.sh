@@ -115,6 +115,14 @@ case "$division" in
   # are allowed to set. If OpenSMT is ever installed, move this arm to it.
   QF_LIA|QF_ALIA|QF_LRA|QF_LIRA)
     reference_bin="/nas3/data/axeyum/harness/bin/cvc5" ;;
+  # Same reasoning as QF_LIA above: the fallthrough is `/usr/bin/z3` 4.13.3,
+  # which did NOT compete in SMT-COMP 2025, so using it would be the "weaker
+  # reference" knob this script's header warns about. cvc5 is the strongest
+  # binary actually installed here and is a serious entrant in both divisions,
+  # which makes our ratio harder — the correct direction for a knob we are
+  # allowed to set.
+  QF_IDL|QF_RDL|QF_UFLIA|QF_UFNIA|QF_NIA|QF_NRA)
+    reference_bin="/nas3/data/axeyum/harness/bin/cvc5" ;;
   *)
     reference_bin="/usr/bin/z3" ;;
 esac
