@@ -2605,7 +2605,7 @@ fn solve_parsed_smtlib_model(
             // Keyed on `Script::declared_strings`, never on the width — a genuine
             // `(_ BitVec 100)` must come back untouched, since decoding one would
             // be a WRONG model rather than merely an unreadable one.
-            let value = render_string_value_for(&script, symbol, value);
+            let value = render_string_value_for(script, symbol, value);
             Ok((name.to_owned(), value))
         })
         .collect::<Result<Vec<_>, SolverError>>()?;

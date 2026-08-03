@@ -1479,10 +1479,6 @@ impl SourceStringSatProblem {
         None
     }
 
-    /// Independently re-evaluates every retained source assertion under a
-    /// complete witness. Missing/duplicate-sort bindings and unsupported source
-    /// expressions fail closed.
-    #[must_use]
     /// The source-level String variables as `(name, symbol)` pairs.
     ///
     /// These symbols are the problem's OWN, distinct from the packed declared

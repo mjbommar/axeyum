@@ -819,7 +819,7 @@ fn match_bit_literal(arena: &TermArena, bit: TermId) -> Option<BitLiteral> {
 /// Flattens a top-level `and` spine, ITERATIVELY.
 ///
 /// Native recursion here was unbounded in the spine's depth, which is the crash
-/// class that aborted nine scored QF_BV files before it was found: a stack
+/// class that aborted nine scored `QF_BV` files before it was found: a stack
 /// overflow is strictly worse than a timeout, because the solver cannot report
 /// the first-class `unknown` it owes its caller and a harness reads the exit as
 /// a crash. A 20k-conjunct source is ordinary in generated benchmarks.
@@ -4182,7 +4182,7 @@ mod tests {
     /// A deep `and` spine must not overflow the stack, and must flatten in the
     /// same left-to-right order the recursive version produced.
     ///
-    /// This is the crash class that aborted nine scored QF_BV files: an abort is
+    /// This is the crash class that aborted nine scored `QF_BV` files: an abort is
     /// strictly worse than a timeout, because the solver cannot report the
     /// first-class `unknown` it owes its caller. Reverse-apply the worklist to
     /// confirm this is a real gate — the recursive form aborts here.

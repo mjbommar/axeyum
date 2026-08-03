@@ -5842,6 +5842,7 @@ fn packed_string_values_round_trip_to_bytes() {
     let width = 100;
     assert_eq!(axeyum_smtlib::packed_string_max_len(width), Some(12));
     // "AB" = len 2, then 'A' (65) then 'B' (66), LSB-first above the length.
+    #[allow(clippy::decimal_bitwise_operands)] // ASCII code points, kept decimal for readability
     let packed = 2u128 | ((65u128 | (66u128 << 8)) << 4);
     assert_eq!(
         axeyum_smtlib::decode_packed_string(width, packed).as_deref(),
@@ -5906,7 +5907,9 @@ fn declared_string_symbols_are_recorded_for_model_export() {
 fn an_expired_ingest_deadline_declines_instead_of_parsing() {
     let script =
         "(set-logic QF_BV)\n(declare-fun x () (_ BitVec 8))\n(assert (= x #x01))\n(check-sat)\n";
-    let expired = std::time::Instant::now() - std::time::Duration::from_secs(1);
+    let expired = std::time::Instant::now()
+        .checked_sub(std::time::Duration::from_secs(1))
+        .expect("monotonic clock is at least 1s past boot");
     match axeyum_smtlib::parse_script_within(script, Some(expired)) {
         Err(axeyum_smtlib::SmtError::DeadlineExceeded(phase)) => {
             assert!(!phase.is_empty(), "the declining phase must be named");

@@ -36,74 +36,6 @@ pub(crate) fn collect_top_binary_conjuncts(arena: &TermArena, term: TermId, out:
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use axeyum_ir::{Sort, TermArena};
-
-    use super::collect_top_binary_conjuncts;
-
-    #[test]
-    fn flattens_nested_binary_conjunctions_left_to_right() {
-        let mut arena = TermArena::new();
-        let p_symbol = arena.declare("p", Sort::Bool).expect("declare p");
-        let q_symbol = arena.declare("q", Sort::Bool).expect("declare q");
-        let r_symbol = arena.declare("r", Sort::Bool).expect("declare r");
-        let p = arena.var(p_symbol);
-        let q = arena.var(q_symbol);
-        let r = arena.var(r_symbol);
-        let q_and_r = arena.and(q, r).expect("q and r");
-        let root = arena.and(p, q_and_r).expect("p and (q and r)");
-
-        let mut conjuncts = Vec::new();
-        collect_top_binary_conjuncts(&arena, root, &mut conjuncts);
-
-        assert_eq!(conjuncts, vec![p, q, r]);
-    }
-
-    /// A deep left-associated `and` spine must not blow the stack.
-    ///
-    /// The nesting depth of a conjunction is under the benchmark author's
-    /// control — an SMT-LIB `(and (and (and …) p) q)` nests once per conjunct —
-    /// so a natively recursive flattener aborts the process instead of letting
-    /// the solver report a first-class `unknown`. The chain is far past what
-    /// any recursive frame survives on the harness's thread stack, so a
-    /// regression aborts the test binary rather than failing quietly.
-    #[test]
-    fn survives_a_deep_conjunction_spine() {
-        const DEPTH: usize = 100_000;
-        let mut arena = TermArena::new();
-        let p_symbol = arena.declare("deep_p", Sort::Bool).expect("declare p");
-        let p = arena.var(p_symbol);
-        let mut acc = p;
-        for _ in 0..DEPTH {
-            acc = arena.and(acc, p).expect("and");
-        }
-
-        let mut conjuncts = Vec::new();
-        collect_top_binary_conjuncts(&arena, acc, &mut conjuncts);
-
-        // Every leaf is `p`, and there is one per `and` plus the innermost one.
-        assert_eq!(conjuncts.len(), DEPTH + 1);
-        assert!(conjuncts.iter().all(|&c| c == p));
-    }
-
-    #[test]
-    fn preserves_non_conjunctions_and_duplicate_leaves() {
-        let mut arena = TermArena::new();
-        let p_symbol = arena.declare("p", Sort::Bool).expect("declare p");
-        let p = arena.var(p_symbol);
-        let not_p = arena.not(p).expect("not p");
-        let repeated = arena.and(p, p).expect("p and p");
-
-        let mut leaf = Vec::new();
-        collect_top_binary_conjuncts(&arena, not_p, &mut leaf);
-        assert_eq!(leaf, vec![not_p]);
-
-        let mut duplicates = Vec::new();
-        collect_top_binary_conjuncts(&arena, repeated, &mut duplicates);
-        assert_eq!(duplicates, vec![p, p]);
-    }
-}
 
 /// Flattens a right- or left-nested binary spine ITERATIVELY, leaves left to
 /// right, given a predicate that recognises a spine node and yields its two
@@ -179,5 +111,75 @@ pub(crate) fn flatten_op_spine(arena: &TermArena, term: TermId, out: &mut Vec<Te
             }
             _ => out.push(current),
         }
+    }
+}
+
+
+#[cfg(test)]
+mod tests {
+    use axeyum_ir::{Sort, TermArena};
+
+    use super::collect_top_binary_conjuncts;
+
+    #[test]
+    fn flattens_nested_binary_conjunctions_left_to_right() {
+        let mut arena = TermArena::new();
+        let p_symbol = arena.declare("p", Sort::Bool).expect("declare p");
+        let q_symbol = arena.declare("q", Sort::Bool).expect("declare q");
+        let r_symbol = arena.declare("r", Sort::Bool).expect("declare r");
+        let p = arena.var(p_symbol);
+        let q = arena.var(q_symbol);
+        let r = arena.var(r_symbol);
+        let q_and_r = arena.and(q, r).expect("q and r");
+        let root = arena.and(p, q_and_r).expect("p and (q and r)");
+
+        let mut conjuncts = Vec::new();
+        collect_top_binary_conjuncts(&arena, root, &mut conjuncts);
+
+        assert_eq!(conjuncts, vec![p, q, r]);
+    }
+
+    /// A deep left-associated `and` spine must not blow the stack.
+    ///
+    /// The nesting depth of a conjunction is under the benchmark author's
+    /// control — an SMT-LIB `(and (and (and …) p) q)` nests once per conjunct —
+    /// so a natively recursive flattener aborts the process instead of letting
+    /// the solver report a first-class `unknown`. The chain is far past what
+    /// any recursive frame survives on the harness's thread stack, so a
+    /// regression aborts the test binary rather than failing quietly.
+    #[test]
+    fn survives_a_deep_conjunction_spine() {
+        const DEPTH: usize = 100_000;
+        let mut arena = TermArena::new();
+        let p_symbol = arena.declare("deep_p", Sort::Bool).expect("declare p");
+        let p = arena.var(p_symbol);
+        let mut acc = p;
+        for _ in 0..DEPTH {
+            acc = arena.and(acc, p).expect("and");
+        }
+
+        let mut conjuncts = Vec::new();
+        collect_top_binary_conjuncts(&arena, acc, &mut conjuncts);
+
+        // Every leaf is `p`, and there is one per `and` plus the innermost one.
+        assert_eq!(conjuncts.len(), DEPTH + 1);
+        assert!(conjuncts.iter().all(|&c| c == p));
+    }
+
+    #[test]
+    fn preserves_non_conjunctions_and_duplicate_leaves() {
+        let mut arena = TermArena::new();
+        let p_symbol = arena.declare("p", Sort::Bool).expect("declare p");
+        let p = arena.var(p_symbol);
+        let not_p = arena.not(p).expect("not p");
+        let repeated = arena.and(p, p).expect("p and p");
+
+        let mut leaf = Vec::new();
+        collect_top_binary_conjuncts(&arena, not_p, &mut leaf);
+        assert_eq!(leaf, vec![not_p]);
+
+        let mut duplicates = Vec::new();
+        collect_top_binary_conjuncts(&arena, repeated, &mut duplicates);
+        assert_eq!(duplicates, vec![p, p]);
     }
 }

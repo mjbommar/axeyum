@@ -264,7 +264,11 @@ fn get_value_renders_a_declared_string_and_spares_a_same_width_bitvector() {
     .expect("a model exists");
     match &values[..] {
         [Value::Bv { width, value }] => {
-            assert_eq!((*width, *value), (100, 271378), "a genuine BV is untouched");
+            assert_eq!(
+                (*width, *value),
+                (100, 271_378),
+                "a genuine BV is untouched"
+            );
         }
         other => panic!("a same-width bit-vector must NOT be decoded, got {other:?}"),
     }
