@@ -119,6 +119,21 @@ case "$division" in
     reference_bin="/usr/bin/z3" ;;
 esac
 
+# Extra flags handed to the REFERENCE, e.g. its competition portfolio.
+#
+# The UF entries on this board were measured against PLAIN cvc5, and that
+# flatters us on exactly the files our finite-model-finding work wins: SMT-COMP
+# runs cvc5 with a portfolio that enables `--finite-model-find`. Measuring
+# against the plain binary and reporting the ratio is not false, but it is the
+# "a weaker reference" knob this script's header lists, so the option exists to
+# make the harder comparison runnable — and the entry RECORDS what was passed,
+# so a portfolio run can never be mistaken for a plain one.
+#
+# Word-split deliberately (not an array) so a caller can pass several flags in
+# one variable; the values here are solver flags, never paths.
+read -r -a reference_extra_opts <<<"${PARITY_REFERENCE_OPTS:-}"
+reference_options="${PARITY_REFERENCE_OPTS:-}"
+
 axeyum_bin="target/release/examples/smtcomp_cli"
 for bin in "$axeyum_bin" "$reference_bin"; do
   if [[ ! -x "$bin" ]]; then
@@ -279,7 +294,7 @@ run_one() {
   case "$(basename "$bin")" in
     smtcomp_cli) cmd=("$bin" "$file" --timeout-ms "$((b * 1000))") ;;
     z3)          cmd=("$bin" "-T:${b}" "$file") ;;
-    cvc5)        cmd=("$bin" "--tlimit=$((b * 1000))" "$file") ;;
+    cvc5)        cmd=("$bin" "--tlimit=$((b * 1000))" "${reference_extra_opts[@]}" "$file") ;;
     # NOTE THE UNITS: bitwuzla's --time-limit is MILLISECONDS, like cvc5's
     # --tlimit, while z3's -T: is SECONDS. Passing seconds here gave the
     # reference a 24 ms budget -- a ~1000x handicap that inflates our ratio by
