@@ -151,9 +151,29 @@ fn main() {
             continue;
         };
         let assertions = assertions.to_vec();
+        // Whether a verdict from the FLAT view can be trusted for this script.
+        //
+        // `check_auto_explained` decides the flat assertion view, which bypasses
+        // the ADR-0052 `StringGate` the shipped front door applies. On a bounded
+        // string script that gate is what downgrades a bounded-encoding `unsat`
+        // to `unknown` when bound-independence is not confirmed — so without it
+        // this tool printed `unsat` for `regex-032-…-fuzz`, a file that is
+        // genuinely `sat` (cvc5 agrees, and `solve_smtlib` returns `sat`).
+        //
+        // The solver was never wrong; only this diagnostic was. That matters
+        // because agents are routinely pointed here for string triage, and a
+        // fabricated `unsat` is a foundation someone builds a whole lever on.
+        // A diagnostic that declines to confirm is useful; one that states a
+        // wrong verdict is worse than silence.
+        let flat_verdict_is_trustworthy = !script.uses_bounded_strings;
         match check_auto_explained(&mut script.arena, &assertions, &config) {
             Ok((result, trace)) => {
-                let verdict = verdict(&result);
+                let verdict = match (&result, flat_verdict_is_trustworthy) {
+                    // Only the `unsat` direction is at risk: the gate downgrades
+                    // a bounded `unsat`, it never promotes a `sat`.
+                    (CheckResult::Unsat, false) => "unsat-UNCONFIRMED",
+                    _ => verdict(&result),
+                };
                 if json {
                     // `verdict` is a fixed literal and `to_json` is already
                     // valid JSON, so neither needs escaping here.
