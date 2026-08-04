@@ -145,6 +145,19 @@ export CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-$REPO_ROOT/target/prepush-gate}"
   gated_test "solver unit sweep (full)" \
     cargo test -p axeyum-solver --lib --features full --quiet
 
+  # The CAPABILITY RATCHET. It exists because a 17-point `nia_unsat` frontier
+  # regression once shipped and needed an 829-commit bisect to find; it is the
+  # only gate that notices we got WEAKER without getting WRONG. It was not in
+  # this hook at all until 2026-08-04, and CLAUDE.md's documented invocation of
+  # it omitted `--features full` — `tests/progress_frontier.rs:75` is
+  # `#![cfg(feature = "full")]`, so the form agents were told to run compiled an
+  # empty binary and exited 0. `--test-threads=1`: the frontier counts decided
+  # files under a wall-clock budget, so parallel load makes it report false
+  # REGRESSIONs (task #40).
+  gated_test "capability frontier ratchet" \
+    cargo test -p axeyum-solver --test progress_frontier --features full --quiet \
+    -- --test-threads=1
+
   # The ALWAYS-ON integration slice: four cheap `tests/*.rs` suites (measured
   # 2026-08-04: 0.00s + 0.01s + 0.00s + 0.82s warm) that no fast gate ran.
   #

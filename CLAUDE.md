@@ -123,7 +123,14 @@ cargo test -p axeyum-solver --features z3 --test qf_uflra_differential_fuzz
 # PRE-MERGE GATE for any solver/decider/dispatch change: the capability
 # ratchets (~60s when healthy). A 17-point nia_unsat frontier regression once
 # shipped and needed an 829-commit bisect because only full sweeps ran this.
-cargo test -p axeyum-solver --test progress_frontier
+#
+# `--features full` IS MANDATORY HERE TOO — and this very line lacked it until
+# 2026-08-04, so the documented form of our capability ratchet printed
+# "running 0 tests ... ok" and exited 0. `tests/progress_frontier.rs:75` is
+# `#![cfg(feature = "full")]`. `scripts/check.sh` and the `justfile` always had
+# the flag; only the copy agents are pointed at did not, and a NIA probe lane
+# ran the inert form as its "gate passed" evidence. Confirm a NONZERO count (9).
+cargo test -p axeyum-solver --test progress_frontier --features full -- --test-threads=1
 cargo doc --workspace --all-features --no-deps    # RUSTDOCFLAGS="-D warnings" in CI
 cargo deny check                                  # needs cargo-deny installed
 ./scripts/check-links.sh                          # docs relative-link check (CI job)
