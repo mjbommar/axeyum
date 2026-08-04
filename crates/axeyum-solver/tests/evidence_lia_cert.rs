@@ -12,7 +12,7 @@
 
 use std::time::Duration;
 
-use axeyum_ir::{Sort, TermArena};
+use axeyum_ir::{Rational, Sort, TermArena};
 use axeyum_solver::{Evidence, SolverConfig, TrustId, produce_evidence};
 
 fn config() -> SolverConfig {
@@ -20,7 +20,18 @@ fn config() -> SolverConfig {
 }
 
 /// `x > 0 ∧ x < 0` (i.e. `x >= 1 ∧ x <= -1`): the canonical `QF_LIA` conflict.
-/// Was a bare `Unsat(None)`; now a certified arithmetic Alethe proof.
+/// Was a bare `Unsat(None)`; now a certified arithmetic certificate.
+///
+/// The exact route moved once more: this conflict is a *conjunctive difference
+/// logic* query (both atoms are unit-coefficient one-variable bounds), so
+/// `dl_conjunctive_farkas_report` (`1b60a79ac`) now exports the negative cycle
+/// as an `Evidence::UnsatFarkas` ahead of the Alethe path. Both are certified
+/// and both re-derive their refutation inside `Evidence::check` — the Farkas one
+/// through the same exact-rational `FarkasCertificate::verify` `QF_LRA` uses —
+/// so the intent of this test (a certified, self-checking LIA refutation whose
+/// Farkas step is re-derived rather than trusted) is unchanged. The Alethe route
+/// itself stays pinned by `produce_evidence_certifies_multi_constraint_lia_unsat`
+/// below, whose two-variable conflict is outside the difference-logic fragment.
 #[test]
 fn produce_evidence_certifies_simple_lia_unsat() {
     let mut arena = TermArena::new();
@@ -31,12 +42,15 @@ fn produce_evidence_certifies_simple_lia_unsat() {
     let assertions = [gt0, lt0];
 
     let report = produce_evidence(&mut arena, &assertions, &config()).unwrap();
-    let Evidence::UnsatArithAletheProof(_) = &report.evidence else {
+    if !matches!(
+        &report.evidence,
+        Evidence::UnsatArithAletheProof(_) | Evidence::UnsatFarkas(_)
+    ) {
         panic!(
-            "expected an arithmetic-Alethe-certified LIA unsat, got {:?}",
+            "expected a certified arithmetic LIA unsat (Alethe or Farkas), got {:?}",
             report.evidence
         );
-    };
+    }
     assert!(report.evidence.is_certified());
     // The certificate re-validates through the arithmetic-aware checker.
     assert!(report.evidence.check(&arena, &assertions).unwrap());
@@ -87,14 +101,24 @@ fn produce_evidence_certifies_multi_constraint_lia_unsat() {
 /// Tampering with the proof must make `Evidence::check` reject it: a real cert
 /// re-validates only a genuine refutation. We drop the final resolution step that
 /// closes to the empty clause, so the proof no longer derives `(cl)`.
+///
+/// The query is the TWO-VARIABLE conflict deliberately: since `1b60a79ac` the
+/// one-variable `x > 0 ∧ x < 0` shape is claimed by the conjunctive
+/// difference-logic Farkas export, and there would be no Alethe proof left to
+/// tamper with. That new route gets its own soundness-negative test in
+/// `tampered_dl_farkas_evidence_fails_its_own_check`.
 #[test]
 fn tampered_lia_arith_evidence_fails_its_own_check() {
     let mut arena = TermArena::new();
     let x = arena.int_var("x").unwrap();
-    let zero = arena.int_const(0);
-    let gt0 = arena.int_gt(x, zero).unwrap();
-    let lt0 = arena.int_lt(x, zero).unwrap();
-    let assertions = [gt0, lt0];
+    let y = arena.int_var("y").unwrap();
+    let one = arena.int_const(1);
+    let three = arena.int_const(3);
+    let sum = arena.int_add(x, y).unwrap();
+    let sum_ge3 = arena.int_ge(sum, three).unwrap();
+    let x_le1 = arena.int_le(x, one).unwrap();
+    let y_le1 = arena.int_le(y, one).unwrap();
+    let assertions = [sum_ge3, x_le1, y_le1];
 
     let report = produce_evidence(&mut arena, &assertions, &config()).unwrap();
     let Evidence::UnsatArithAletheProof(proof) = &report.evidence else {
@@ -115,6 +139,45 @@ fn tampered_lia_arith_evidence_fails_its_own_check() {
         !matches!(bogus.check(&arena, &assertions), Ok(true)),
         "tampered arithmetic Alethe proof was accepted — check is not real"
     );
+}
+
+/// The soundness-negative twin for the route that now claims the one-variable
+/// LIA conflict: a tampered difference-logic Farkas certificate must be rejected
+/// by `Evidence::check`.
+///
+/// A new certifying route with no negative test is exactly the gap that lets a
+/// `check` that always answers `true` look healthy. We scale one multiplier to
+/// zero, which breaks the "at least one positive multiplier, coefficients
+/// cancel" combination the exact-rational verifier re-derives.
+#[test]
+fn tampered_dl_farkas_evidence_fails_its_own_check() {
+    let mut arena = TermArena::new();
+    let x = arena.int_var("x").unwrap();
+    let zero = arena.int_const(0);
+    let gt0 = arena.int_gt(x, zero).unwrap();
+    let lt0 = arena.int_lt(x, zero).unwrap();
+    let assertions = [gt0, lt0];
+
+    let report = produce_evidence(&mut arena, &assertions, &config()).unwrap();
+    let Evidence::UnsatFarkas(certificate) = &report.evidence else {
+        panic!(
+            "expected the conjunctive difference-logic Farkas cert, got {:?}",
+            report.evidence
+        );
+    };
+    // The genuine certificate checks.
+    assert!(report.evidence.check(&arena, &assertions).unwrap());
+    assert!(!certificate.multipliers.is_empty());
+
+    for index in 0..certificate.multipliers.len() {
+        let mut tampered = certificate.clone();
+        tampered.multipliers[index] = Rational::zero();
+        let bogus = Evidence::UnsatFarkas(tampered);
+        assert!(
+            !matches!(bogus.check(&arena, &assertions), Ok(true)),
+            "a Farkas cert with multiplier {index} zeroed was accepted — check is not real"
+        );
+    }
 }
 
 /// Regression: a pure `QF_BV` unsat still gets its bit-blast Alethe (or term-level)

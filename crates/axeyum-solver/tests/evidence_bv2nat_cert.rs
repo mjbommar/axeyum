@@ -170,7 +170,10 @@ fn sat_bv2nat_query_is_not_reported_unsat() {
 /// of the older Farkas Alethe path — both are internally re-checkable (Carcara
 /// has no `lia_generic`, so neither was externally checkable for integers), so
 /// the intent of this regression (checked cert, no `IntBlast` hole) is
-/// unchanged.
+/// unchanged. It upgraded once more in `1b60a79ac`: this shape is a conjunctive
+/// difference-logic query, so the negative cycle is now exported as the same
+/// `Evidence::UnsatFarkas` `QF_LRA` emits and re-checked by the exact-rational
+/// `FarkasCertificate::verify` — still a checked cert with no `IntBlast` hole.
 #[test]
 fn plain_qf_lia_unsat_evidence_unchanged() {
     let mut arena = TermArena::new();
@@ -184,11 +187,14 @@ fn plain_qf_lia_unsat_evidence_unchanged() {
     assert!(
         matches!(
             report.evidence,
-            Evidence::UnsatArithDpll(_) | Evidence::UnsatArithAletheProof(_)
+            Evidence::UnsatArithDpll(_)
+                | Evidence::UnsatArithAletheProof(_)
+                | Evidence::UnsatFarkas(_)
         ),
         "expected a checked QF_LIA arith cert, got {:?}",
         report.evidence
     );
+    assert!(report.evidence.is_certified());
     assert!(report.evidence.check(&arena, &assertions).unwrap());
     assert!(
         !report

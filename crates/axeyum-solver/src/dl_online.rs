@@ -200,22 +200,6 @@ struct LinForm {
 }
 
 impl LinForm {
-    fn constant(value: Rational) -> Self {
-        Self {
-            coeffs: BTreeMap::new(),
-            constant: value,
-        }
-    }
-
-    fn vertex(index: usize) -> Self {
-        let mut coeffs = BTreeMap::new();
-        coeffs.insert(index, Rational::integer(1));
-        Self {
-            coeffs,
-            constant: Rational::zero(),
-        }
-    }
-
     fn checked_add(mut self, other: &Self) -> Option<Self> {
         for (&index, &coeff) in &other.coeffs {
             let entry = self.coeffs.entry(index).or_insert_with(Rational::zero);
@@ -235,6 +219,25 @@ impl LinForm {
 
     fn checked_sub(self, other: &Self) -> Option<Self> {
         self.checked_add(&other.clone().checked_neg()?)
+    }
+
+    /// Accumulates `±value` into the constant in place.
+    ///
+    /// The in-place accumulators exist so [`ScanState::linear`] can flatten an
+    /// additive spine with an explicit worklist instead of native recursion;
+    /// they carry the sign rather than building an intermediate form per node.
+    fn add_constant(&mut self, value: Rational, negated: bool) -> Option<()> {
+        let delta = if negated { value.checked_neg()? } else { value };
+        self.constant = self.constant.checked_add(delta)?;
+        Some(())
+    }
+
+    /// Accumulates `±1` into the coefficient of `index` in place.
+    fn add_vertex(&mut self, index: usize, negated: bool) -> Option<()> {
+        let delta = Rational::integer(if negated { -1 } else { 1 });
+        let entry = self.coeffs.entry(index).or_insert_with(Rational::zero);
+        *entry = entry.checked_add(delta)?;
+        Some(())
     }
 }
 
@@ -353,37 +356,55 @@ impl ScanState {
     /// Parses a numeric term into a linear form over vertices, refusing every
     /// operator outside `+ - neg` and plain leaves. Deliberately narrow: a term
     /// this cannot parse makes the whole query fall through to another route.
+    ///
+    /// # Why this is an explicit worklist and not native recursion
+    ///
+    /// The `+`/`-`/`neg` spine's depth is copied verbatim from the SMT-LIB
+    /// source — `(+ (+ (+ … ) 1) 2)` nests once per summand, which
+    /// symbolic-execution and BMC front ends emit by the thousand. A recursive
+    /// descent therefore aborted the process with a stack overflow instead of
+    /// returning the first-class `unknown` the caller is owed (the same failure
+    /// class as `crates/axeyum-solver/src/term_walk.rs` documents). The sign is
+    /// carried on the worklist and accumulated in place, so the whole spine
+    /// costs one `LinForm`.
     fn linear(&mut self, arena: &TermArena, term: TermId) -> Option<LinForm> {
-        match arena.node(term) {
-            TermNode::IntConst(value) => Some(LinForm::constant(Rational::integer(*value))),
-            TermNode::RealConst(value) if self.mode == Mode::Real => {
-                Some(LinForm::constant(*value))
+        let mut acc = LinForm::default();
+        // `(term, negated)`; order of accumulation is irrelevant because the
+        // result is a sum, so a plain stack is enough.
+        let mut work = vec![(term, false)];
+        while let Some((current, negated)) = work.pop() {
+            match arena.node(current) {
+                TermNode::IntConst(value) => {
+                    acc.add_constant(Rational::integer(*value), negated)?;
+                }
+                TermNode::RealConst(value) if self.mode == Mode::Real => {
+                    acc.add_constant(*value, negated)?;
+                }
+                TermNode::Symbol(_) => {
+                    let index = self.vertex(arena, current)?;
+                    acc.add_vertex(index, negated)?;
+                }
+                TermNode::App { op, args } => match op {
+                    Op::IntAdd | Op::RealAdd => {
+                        for &arg in &**args {
+                            work.push((arg, negated));
+                        }
+                    }
+                    Op::IntSub | Op::RealSub if !args.is_empty() => {
+                        work.push((args[0], negated));
+                        for &arg in &args[1..] {
+                            work.push((arg, !negated));
+                        }
+                    }
+                    Op::IntNeg | Op::RealNeg if args.len() == 1 => {
+                        work.push((args[0], !negated));
+                    }
+                    _ => return None,
+                },
+                _ => return None,
             }
-            TermNode::Symbol(_) => self.vertex(arena, term).map(LinForm::vertex),
-            TermNode::App { op, args } => match op {
-                Op::IntAdd | Op::RealAdd => {
-                    let mut acc = LinForm::default();
-                    for &arg in &**args {
-                        let part = self.linear(arena, arg)?;
-                        acc = acc.checked_add(&part)?;
-                    }
-                    Some(acc)
-                }
-                Op::IntSub | Op::RealSub if !args.is_empty() => {
-                    let mut acc = self.linear(arena, args[0])?;
-                    for &arg in &args[1..] {
-                        let part = self.linear(arena, arg)?;
-                        acc = acc.checked_sub(&part)?;
-                    }
-                    Some(acc)
-                }
-                Op::IntNeg | Op::RealNeg if args.len() == 1 => {
-                    self.linear(arena, args[0])?.checked_neg()
-                }
-                _ => None,
-            },
-            _ => None,
         }
+        Some(acc)
     }
 
     /// Normalizes a form `Σ coeff·x + constant ⋈ 0` into

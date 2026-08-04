@@ -37,6 +37,16 @@
 # Raising a floor is expected as suites grow — that is the ratchet working.
 # LOWERING one requires a reason in the commit message: a legitimately deleted
 # test is fine, a suite that silently stopped compiling is not.
+#
+# LIMIT, stated plainly so nobody mistakes a green run here for a green suite:
+# `--list` COMPILES but does not RUN. This ratchet catches a suite that has been
+# emptied; it CANNOT catch one that runs and fails. On 2026-08-04 five suites
+# (`capabilities`, `deep_nesting_no_abort`, `evidence`, `evidence_bv2nat_cert`,
+# `evidence_lia_cert`) were failing on `main` — one of them with a STACK
+# OVERFLOW — and every fast gate was blind because none of them RAN these
+# suites. The counterpart fix is in `hooks/pre-push`, which now executes them;
+# their presence in this manifest is the second half (an emptied suite there
+# would otherwise look green too).
 set -uo pipefail
 
 cd "$(dirname "$0")/.."
@@ -55,6 +65,11 @@ axeyum-solver|test:word_first_fallback|full|10
 axeyum-solver|test:qf_slia_fixed_splice|full|75
 axeyum-solver|test:stoi_len_abstraction|full|10
 axeyum-solver|test:string_bound_ladder|full|10
+axeyum-solver|test:capabilities|full|2
+axeyum-solver|test:evidence|full|60
+axeyum-solver|test:evidence_bv2nat_cert|full|5
+axeyum-solver|test:evidence_lia_cert|full|5
+axeyum-solver|test:deep_nesting_no_abort|full|12
 axeyum-cnf|lib||300
 axeyum-rewrite|lib||1
 EOF

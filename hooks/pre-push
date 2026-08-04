@@ -145,6 +145,53 @@ export CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-$REPO_ROOT/target/prepush-gate}"
   gated_test "solver unit sweep (full)" \
     cargo test -p axeyum-solver --lib --features full --quiet
 
+  # The ALWAYS-ON integration slice: four cheap `tests/*.rs` suites (measured
+  # 2026-08-04: 0.00s + 0.01s + 0.00s + 0.82s warm) that no fast gate ran.
+  #
+  # All four were FAILING on main on 2026-08-04, one of them
+  # (`deep_nesting_no_abort::deep_int_add_source_returns`) with a STACK
+  # OVERFLOW — an abort, which is strictly worse than a timeout because the
+  # solver cannot report the first-class `unknown` it owes its caller and a
+  # harness reads the exit as a crash. They failed identically at older commits,
+  # so this was accumulated drift, invisible because every fast gate is `--lib`
+  # (which skips `tests/*.rs` entirely) and the only gate that would have caught
+  # them, `./scripts/check.sh --workspace --all-features`, needs libz3 and tens
+  # of minutes. Cheap suites that pin a load-bearing invariant belong here, not
+  # only in the aggregate gate.
+  #
+  #   capabilities            — the capability-matrix golden; the trust metadata
+  #                             users read must equal what the ledger renders.
+  #   deep_nesting_no_abort   — the no-abort ratchet for source-controlled
+  #                             nesting depth (`unknown` is a hard-rule result;
+  #                             SIGABRT is not a result at all).
+  #   evidence_lia_cert       — arithmetic UNSAT certificates re-check, and a
+  #   evidence_bv2nat_cert      tampered one is REJECTED.
+  #
+  # `--features full` is LOAD-BEARING on every one: all four are
+  # `#![cfg(feature = "full")]`, so without it each compiles to an empty binary
+  # that prints "running 0 tests ... ok". `gated_test` fails on a zero count, so
+  # that trap is mechanised rather than remembered.
+  for suite in capabilities deep_nesting_no_abort \
+               evidence_lia_cert evidence_bv2nat_cert; do
+    gated_test "integration: $suite" \
+      cargo test -p axeyum-solver --features full --quiet --test "$suite"
+  done
+
+  # The `evidence` suite itself is the load-bearing one — `bench-results/PARITY.md`
+  # carries a measured `certified / unsat` column, so an evidence route that
+  # stops certifying is a headline regression — but it takes ~66s warm, which
+  # would roughly double this hook. Gate it on the diff instead: any change under
+  # a crate that can move an evidence route must pass it. That is broad by
+  # design; the 2026-08-04 drift came from `dl_online.rs`, a file whose name has
+  # nothing to do with evidence, and a narrower path filter would have missed it.
+  if [ -n "$(git diff --name-only "$PREPUSH_BASE" "$PREPUSH_TIP" -- \
+      'crates/axeyum-solver/src/**' \
+      'crates/axeyum-rewrite/src/**' | head -1)" ]; then
+    echo "pre-push: solver/rewrite source changed — evidence suite" >&2
+    gated_test "integration: evidence" \
+      cargo test -p axeyum-solver --features full --quiet --test evidence
+  fi
+
   # `--lib` compiles ONLY lib targets, so it skips every integration suite in
   # `tests/*.rs`. Two front-door string tests stayed broken across several
   # merges (2026-08-01) because every lane gated on `--lib` plus a targeted

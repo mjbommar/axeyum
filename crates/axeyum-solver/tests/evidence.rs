@@ -978,8 +978,17 @@ fn pure_real_identity_contradiction_uses_term_identity_evidence() {
     assert!(report.evidence.check(&script.arena, &assertions).unwrap());
 }
 
+/// The two `QF_LIA` audit misses get a **certified** arithmetic refutation.
+///
+/// Both rows are conjunctive difference-logic queries, so since `1b60a79ac` the
+/// negative cycle is exported as the `Evidence::UnsatFarkas` `QF_LRA` already
+/// emits, ahead of the arith-DPLL theory enumeration that used to claim them.
+/// Both variants are certified and re-derive their refutation in
+/// `Evidence::check`; the Farkas one records its (certified) `Farkas` trust
+/// step, so the assertion here is that no step is left *un*certified rather than
+/// that the step list is empty.
 #[test]
-fn qf_lia_audit_misses_use_arith_dpll_evidence() {
+fn qf_lia_audit_misses_use_certified_arith_evidence() {
     for input in [
         include_str!(
             "../../../corpus/public-curated/non-incremental/QF_LIA/cvc5-regress-clean-bounded/cli__regress0__dump-unsat-core-full.smt2"
@@ -992,12 +1001,19 @@ fn qf_lia_audit_misses_use_arith_dpll_evidence() {
         let assertions = script.assertions.clone();
         let report = produce_evidence(&mut script.arena, &assertions, &config()).unwrap();
         assert!(
-            matches!(report.evidence, Evidence::UnsatArithDpll(_)),
-            "expected arith-DPLL evidence, got {:?}",
+            matches!(
+                report.evidence,
+                Evidence::UnsatArithDpll(_) | Evidence::UnsatFarkas(_)
+            ),
+            "expected certified arith evidence (arith-DPLL or Farkas), got {:?}",
             report.evidence
         );
         assert!(report.evidence.is_certified());
-        assert!(report.trusted_steps.is_empty());
+        assert!(
+            report.trusted_steps.iter().all(|step| step.certified),
+            "an audit-miss refutation must leave no uncertified trust step: {:?}",
+            report.trusted_steps
+        );
         assert!(report.evidence.check(&script.arena, &assertions).unwrap());
     }
 }

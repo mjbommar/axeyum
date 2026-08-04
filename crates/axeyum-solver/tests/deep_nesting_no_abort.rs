@@ -284,3 +284,22 @@ fn deep_int_add_source_returns() {
         "(set-logic QF_LIA)\n(declare-const n Int)\n(assert (<= {body} 0))\n(check-sat)\n"
     ));
 }
+
+/// The same `+` spine, but OUTSIDE the difference-logic fragment.
+///
+/// The plain spine above is claimed by `dl_online`'s scan, so on its own it only
+/// proves that *one* route survives the depth. A non-unit coefficient makes
+/// `scan_dl` decline and every route below it walk the same spine — which is
+/// where the pre-`dl_online` version of this shape used to go. Without both, a
+/// recursion reintroduced below the difference-logic gate stays invisible for as
+/// long as that gate keeps claiming the query.
+#[test]
+fn deep_int_add_source_outside_dl_returns() {
+    let mut body = String::from("(* 2 n)");
+    for i in 0..TEXT_DEPTH {
+        body = format!("(+ {body} {})", i % 7);
+    }
+    returns_from_solve_smtlib(&format!(
+        "(set-logic QF_LIA)\n(declare-const n Int)\n(assert (<= {body} 0))\n(check-sat)\n"
+    ));
+}
