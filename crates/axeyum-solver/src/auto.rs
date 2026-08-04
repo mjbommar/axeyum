@@ -3031,7 +3031,7 @@ fn dispatch_difference_logic(
 /// refutations that needed more than 18 s of cycle search. Measured benefit:
 /// the dispatcher stays *strictly additive*, which is a property of every
 /// query — including the ones not in the corpus — rather than of a sample.
-fn dl_probe_budget(config: &SolverConfig) -> SolverConfig {
+pub(crate) fn dl_probe_budget(config: &SolverConfig) -> SolverConfig {
     /// Ceiling on the slice held back for the routes below the probe.
     const DL_FALLBACK_RESERVE: Duration = Duration::from_secs(6);
     let mut probe = config.clone();

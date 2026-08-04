@@ -1747,6 +1747,96 @@ fn assertion_dag_within(arena: &TermArena, assertions: &[TermId], cap: usize) ->
     true
 }
 
+/// Query-level evidence for a **conjunctive** difference-logic (`QF_IDL` /
+/// `QF_RDL`) `unsat`: the negative cycle the online theory finds, exported once
+/// for the whole query as the existing [`FarkasCertificate`].
+///
+/// Before this, a difference-logic refutation was rebuilt and
+/// [`FarkasCertificate::verify`]-checked **per theory conflict** inside
+/// `dl_online` and then dropped, so the front door saw a bare `unsat`. This is
+/// the same certificate object `QF_LRA` already emits — no new evidence format,
+/// and `Evidence::check` re-runs the same independent exact-rational verifier.
+///
+/// **Scope, stated honestly.** Conjunctive queries only. With Boolean structure
+/// the refutation is a resolution over many theory lemmas, which a single Farkas
+/// combination cannot express; that case keeps whatever the routes below produce.
+/// The producer also declines any refutation that depends on the integer
+/// tightening `< c ⇒ ≤ ⌈c⌉ - 1`, because the emitted atoms are the query's
+/// verbatim relations (see [`crate::dl_online::conjunctive_farkas_certificate`]).
+fn dl_conjunctive_farkas_report(
+    arena: &mut TermArena,
+    assertions: &[TermId],
+    provenance: &Provenance,
+) -> Option<EvidenceReport> {
+    let certificate = crate::dl_online::conjunctive_farkas_certificate(arena, assertions)?;
+    Some(EvidenceReport {
+        evidence: Evidence::UnsatFarkas(certificate),
+        provenance: Provenance {
+            backend: "dl-online-negative-cycle-farkas".to_owned(),
+            prove_unsat: true,
+            ..provenance.clone()
+        },
+        trusted_steps: trust_steps(&[(TrustId::Farkas, true)]),
+    })
+}
+
+/// The **correct-verdict** difference-logic fallback for queries the conjunctive
+/// certificate does not cover.
+///
+/// Measured, and the reason this exists: on the committed 200-file `QF_RDL`
+/// parity list the evidence front door decided **2** files while the solver front
+/// door decided 105. `evidence_route` sends a pure-real query to `PureReal`,
+/// whose lazy-SMT / Farkas engine is the *only* thing it tries — it never reaches
+/// the auto dispatcher, so the difference-logic procedure that decides those
+/// files in milliseconds was never run and the report came back `unknown`. A
+/// correct verdict with an honest bare `unsat` strictly dominates an `unknown`.
+///
+/// It runs under [`crate::auto::dl_probe_budget`] — the same reservation the
+/// solver dispatcher uses — so a probe that runs out of time leaves the routes
+/// below it a usable slice instead of consuming the whole budget. `sat` is the
+/// procedure's own model, already replayed through the ground evaluator against
+/// the ORIGINAL assertions; `unsat` came from Farkas-verified negative cycles.
+/// A `None`/`unknown` is a clean fall-through, leaving every route below
+/// byte-identical.
+///
+/// **Size-gated so it never downgrades a certificate.** Small queries are left to
+/// the certifying routes below (which can emit `UnsatLraDpll` /
+/// `UnsatArithAletheProof` for a Boolean-structured refutation); this only takes
+/// over above `PRE_SOLVE_ALETHE_MAX_NODES`, where those routes return `unknown`
+/// in practice. The conjunctive certificate path
+/// ([`dl_conjunctive_farkas_report`]) is unaffected by the gate — it runs at
+/// every size, because it *is* a certificate.
+fn dl_decided_report(
+    arena: &mut TermArena,
+    assertions: &[TermId],
+    config: &SolverConfig,
+    provenance: &Provenance,
+) -> Option<EvidenceReport> {
+    if assertion_dag_within(arena, assertions, PRE_SOLVE_ALETHE_MAX_NODES) {
+        return None;
+    }
+    let evidence = match crate::dl_online::try_check_qf_dl(
+        arena,
+        assertions,
+        &crate::auto::dl_probe_budget(config),
+    )? {
+        CheckResult::Sat(model) => Evidence::Sat(model),
+        // Correct, and honestly recorded as uncertified: the Boolean-structured
+        // refutation is a resolution over theory lemmas that no single Farkas
+        // combination expresses (see `dl_conjunctive_farkas_report`).
+        CheckResult::Unsat => Evidence::Unsat(None),
+        CheckResult::Unknown(_) => return None,
+    };
+    Some(EvidenceReport {
+        evidence,
+        provenance: Provenance {
+            backend: "dl-online".to_owned(),
+            ..provenance.clone()
+        },
+        trusted_steps: Vec::new(),
+    })
+}
+
 fn residue_evidence(arena: &TermArena, assertions: &[TermId]) -> Option<Evidence> {
     crate::quant_residue_cert::int_euclidean_residue_refutation(arena, assertions)
         .map(Evidence::UnsatIntEuclideanResidue)
@@ -2369,6 +2459,25 @@ pub fn produce_evidence(
         cnf_clause_budget: config.cnf_clause_budget,
         prove_unsat: false,
     };
+    // A CONJUNCTIVE difference-logic refutation is a negative cycle, i.e. a Farkas
+    // combination with unit multipliers over the query's own relations. It is
+    // polynomial to find and independently re-checkable, so it runs ahead of the
+    // route split: `QF_RDL` would otherwise reach `PureReal` (whose DPLL(T)/Farkas
+    // engine times out on the very instances difference logic decides in
+    // milliseconds) and `QF_IDL` would reach the `Other` chain and land as a bare
+    // `unsat`. It declines — on the first non-numeric sort, so a `QF_BV` query pays
+    // two loop iterations — for anything outside pure difference logic, anything
+    // with Boolean structure, and any refutation needing the integer tightening.
+    if let Some(report) = dl_conjunctive_farkas_report(arena, assertions, &provenance) {
+        return Ok(report);
+    }
+    // Above the certifying routes' practical size, the difference-logic DECISION
+    // itself is what the front door is missing (see `dl_decided_report`): an
+    // honest bare `unsat` beats the `unknown` a timed-out certificate attempt
+    // returns. Small queries skip this and keep their certificate chain.
+    if let Some(report) = dl_decided_report(arena, assertions, config, &provenance) {
+        return Ok(report);
+    }
     match evidence_route(arena, assertions) {
         // Pure QF_BV/Boolean: the bit-blast → DRAT route gives a checkable `unsat`.
         EvidenceRoute::QfBv => return produce_qf_bv_evidence(arena, assertions, config),

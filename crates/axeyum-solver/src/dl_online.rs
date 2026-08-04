@@ -278,6 +278,13 @@ struct DlScan {
     atom_terms: Vec<TermId>,
     /// Per atom index, its normalized form.
     atoms: Vec<AtomKind>,
+    /// Per atom index, the **untightened** exact-rational normalization
+    /// `x_head - x_tail ⋈ bound`. [`AtomKind`] carries the graph's *tightened*
+    /// integer form, which is an `ℤ`-consequence of the query rather than the
+    /// query's own constraint; the query-level certificate export
+    /// ([`conjunctive_farkas_certificate`]) cites these verbatim relations
+    /// instead, so the emitted [`FarkasAtom`]s really are the asserted ones.
+    raw: Vec<RawAtom>,
     /// Vertex index → symbol; `symbols[ZERO_VERTEX]` is the fresh zero symbol.
     symbols: Vec<SymbolId>,
     /// The common denominator every [`Weight::c`] is expressed in.
@@ -788,6 +795,7 @@ fn scan_dl(arena: &mut TermArena, assertions: &[TermId]) -> Option<DlScan> {
         mode,
         atom_terms: state.atom_terms,
         atoms,
+        raw: state.raw,
         symbols: state.symbols,
         scale,
         eq_gates: state.eq_gates,
@@ -1091,6 +1099,254 @@ fn cycle_certificate(steps: &[CycleStep], symbols: &[SymbolId]) -> Option<Farkas
         atoms,
         vars: symbols.to_vec(),
     })
+}
+
+// ---------------------------------------------------------------------------
+// Query-level certificate export (conjunctive fragment)
+// ---------------------------------------------------------------------------
+
+/// One top-level conjunct of a purely conjunctive difference-logic query: the
+/// atom it asserts, the polarity it asserts it at, and the index of the
+/// assertion it came from.
+#[derive(Debug, Clone, Copy)]
+struct Unit {
+    atom: usize,
+    value: bool,
+    /// Index into the caller's `assertions` slice — the [`FarkasCertificate`]
+    /// `origins` contract.
+    origin: usize,
+}
+
+/// The **verbatim** [`FarkasAtom`] a unit asserts, in the exact rationals of the
+/// query (never the integer-tightened form the graph searches over).
+///
+/// - Asserted **true**: `x_head - x_tail ⋈ bound`.
+/// - Asserted **false**: `¬(a - b ≤ c)` is `b - a < -c`, and `¬(a - b < c)` is
+///   `b - a ≤ -c`.
+///
+/// A `FarkasAtom` is normalized to `Σ coeff·x + constant ⋈ 0`, so the constant is
+/// the negated bound. The zero vertex is **dropped** rather than emitted as a
+/// variable: a single-variable bound `x ⋈ c` is the query's own constraint, not
+/// `x - z ⋈ c` for an internal `z`. Dropping it cannot break the cancellation a
+/// Farkas check needs — an extracted cycle is simple, so it passes through the
+/// zero vertex at most once and that vertex's `+1`/`-1` pair vanishes with or
+/// without the column.
+fn exact_farkas_atom(raw: RawAtom, value: bool) -> Option<FarkasAtom> {
+    let (head, tail, bound, strict) = if value {
+        (raw.head, raw.tail, raw.bound, raw.rel == Rel::Lt)
+    } else {
+        (
+            raw.tail,
+            raw.head,
+            raw.bound.checked_neg()?,
+            raw.rel == Rel::Le,
+        )
+    };
+    let mut coeffs: Vec<(usize, Rational)> = Vec::with_capacity(2);
+    if head != ZERO_VERTEX {
+        coeffs.push((head, Rational::integer(1)));
+    }
+    if tail != ZERO_VERTEX {
+        coeffs.push((tail, Rational::integer(-1)));
+    }
+    coeffs.sort_by_key(|(index, _)| *index);
+    Some(FarkasAtom {
+        coeffs,
+        constant: bound.checked_neg()?,
+        strict,
+    })
+}
+
+/// Flattens `term` into the units of a purely **conjunctive** difference-logic
+/// query, returning `false` as soon as it meets Boolean structure that is not a
+/// conjunction of literals.
+///
+/// `positive` is the polarity the term is asserted at, so `not` is handled by
+/// flipping it rather than by rewriting. A numeric equality is a conjunction of
+/// its two expanded bounds when asserted positively, and a *disjunction* when
+/// asserted negatively — the negative case declines.
+fn collect_units(
+    arena: &TermArena,
+    term: TermId,
+    positive: bool,
+    origin: usize,
+    atom_index: &HashMap<TermId, usize>,
+    eq_pairs: &HashMap<TermId, (usize, usize)>,
+    units: &mut Vec<Unit>,
+) -> bool {
+    if let Some(&(le, ge)) = eq_pairs.get(&term) {
+        if !positive {
+            return false; // `a ≠ b` is a disjunction, not a conjunctive unit
+        }
+        units.push(Unit {
+            atom: le,
+            value: true,
+            origin,
+        });
+        units.push(Unit {
+            atom: ge,
+            value: true,
+            origin,
+        });
+        return true;
+    }
+    if let Some(&atom) = atom_index.get(&term) {
+        units.push(Unit {
+            atom,
+            value: positive,
+            origin,
+        });
+        return true;
+    }
+    let (op, args) = match arena.node(term) {
+        TermNode::BoolConst(value) => return *value == positive,
+        TermNode::App { op, args } => (*op, args.clone()),
+        _ => return false,
+    };
+    // `and` under a positive polarity (and `or` under a negative one, by De
+    // Morgan) keeps the query conjunctive; every other connective does not.
+    let children_positive = match op {
+        Op::BoolNot if args.len() == 1 => {
+            return collect_units(
+                arena, args[0], !positive, origin, atom_index, eq_pairs, units,
+            );
+        }
+        Op::BoolAnd if positive => true,
+        Op::BoolOr if !positive => false,
+        _ => return false,
+    };
+    for &arg in &*args {
+        if !collect_units(
+            arena,
+            arg,
+            children_positive,
+            origin,
+            atom_index,
+            eq_pairs,
+            units,
+        ) {
+            return false;
+        }
+    }
+    true
+}
+
+/// Exports a **conjunctive** difference-logic refutation as a query-level
+/// [`FarkasCertificate`] — the same shape `QF_LRA` already emits, never a new
+/// evidence format.
+///
+/// Returns `Some` only when all of the following hold, and `None` (a clean
+/// decline, leaving every other evidence route byte-identical) otherwise:
+///
+/// 1. [`scan_dl`] accepts the query as pure difference logic;
+/// 2. every assertion flattens into a **conjunction of difference literals** —
+///    no disjunction, implication, `xor`, `ite`, Boolean variable, or Boolean
+///    equality survives (see [`collect_units`]);
+/// 3. asserting those units in order closes a negative cycle; and
+/// 4. the cycle, re-expressed over the **verbatim** query relations, passes the
+///    independent [`FarkasCertificate::verify`].
+///
+/// # Why conjunctive only
+///
+/// With Boolean structure the refutation is a *resolution* over many theory
+/// lemmas, not one Farkas combination; `FarkasCertificate` cannot express that,
+/// and inventing a format for it is a separate decision. Scoping to the
+/// conjunctive case is what is soundly achievable in this shape today.
+///
+/// # Why step 4 is the honest gate, not a formality
+///
+/// In integer mode the graph searches over *tightened* edges (`< c` becomes
+/// `≤ ⌈c⌉ - 1`), which are `ℤ`-consequences of the query rather than the query's
+/// own constraints. The certificate therefore cites [`DlScan::raw`] — the
+/// untightened relations — so a refutation that genuinely *needs* the integer
+/// tightening does not verify and is declined rather than misdescribed. The
+/// certificate that comes back is always a real-arithmetic refutation of the
+/// literal asserted constraints.
+pub(crate) fn conjunctive_farkas_certificate(
+    arena: &mut TermArena,
+    assertions: &[TermId],
+) -> Option<FarkasCertificate> {
+    let scan = scan_dl(arena, assertions)?;
+    let atom_index: HashMap<TermId, usize> = scan
+        .atom_terms
+        .iter()
+        .enumerate()
+        .map(|(index, &term)| (term, index))
+        .collect();
+    let eq_pairs: HashMap<TermId, (usize, usize)> = scan
+        .eq_gates
+        .iter()
+        .map(|&(term, le, ge)| (term, (le, ge)))
+        .collect();
+
+    let mut units: Vec<Unit> = Vec::new();
+    for (origin, &assertion) in assertions.iter().enumerate() {
+        if !collect_units(
+            arena,
+            assertion,
+            true,
+            origin,
+            &atom_index,
+            &eq_pairs,
+            &mut units,
+        ) {
+            return None;
+        }
+    }
+
+    let mut graph = DlGraph::new(scan.symbols.len());
+    let mut scratch = Scratch::new(scan.symbols.len());
+    for (position, unit) in units.iter().enumerate() {
+        let spec = match &scan.atoms[unit.atom] {
+            // A conjunct fixed false by normalization alone (`x - x < -1`) is an
+            // `unsat` with nothing linear to certify: decline to the bare route.
+            AtomKind::Const(fixed) => {
+                if *fixed == unit.value {
+                    continue;
+                }
+                return None;
+            }
+            AtomKind::Diff { pos, neg } => {
+                if unit.value {
+                    *pos
+                } else {
+                    *neg
+                }
+            }
+        };
+        // The trail literal carries the unit's **position**, not a theory atom
+        // index: that is what recovers both the verbatim relation and the origin
+        // assertion when a cycle closes. `value` is unused on this path.
+        let lit = TheoryLit {
+            atom: position,
+            value: true,
+        };
+        match graph.add(spec, lit, None, &mut scratch) {
+            AddOutcome::Ok => {}
+            // Exact arithmetic ran out of headroom: never a verdict.
+            AddOutcome::Overflow => return None,
+            AddOutcome::Cycle(steps) => {
+                let mut atoms = Vec::with_capacity(steps.len());
+                let mut origins = Vec::with_capacity(steps.len());
+                for step in &steps {
+                    let at = step
+                        .index
+                        .map_or(position, |index| graph.edges[index].lit.atom);
+                    let unit = *units.get(at)?;
+                    atoms.push(exact_farkas_atom(*scan.raw.get(unit.atom)?, unit.value)?);
+                    origins.push(unit.origin);
+                }
+                let certificate = FarkasCertificate {
+                    multipliers: vec![Rational::integer(1); atoms.len()],
+                    origins,
+                    atoms,
+                    vars: scan.symbols.clone(),
+                };
+                return certificate.verify().then_some(certificate);
+            }
+        }
+    }
+    None
 }
 
 // ---------------------------------------------------------------------------

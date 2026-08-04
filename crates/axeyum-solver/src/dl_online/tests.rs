@@ -800,3 +800,295 @@ fn weight_order_is_the_delta_rational_order() {
     assert!(!Weight { c: 0, d: 1 }.is_negative(), "0 + δ > 0");
     assert!(Weight { c: -1, d: 5 }.is_negative(), "-1 + 5δ < 0");
 }
+
+// -------------------------------------------------------------------------
+// Query-level certificate export (conjunctive fragment)
+//
+// The soundness bar here is that the exported certificate refutes the
+// query's OWN relations: it must independently `verify`, its atoms must be
+// the verbatim asserted constraints (never the integer-tightened search
+// form), and it must decline rather than misdescribe anything else.
+// -------------------------------------------------------------------------
+
+fn certificate(arena: &mut TermArena, assertions: &[TermId]) -> Option<FarkasCertificate> {
+    conjunctive_farkas_certificate(arena, assertions)
+}
+
+/// The two-edge negative cycle exports a verified unit-multiplier certificate
+/// whose `origins` point back at the asserting top-level assertions.
+#[test]
+fn conjunctive_real_cycle_exports_a_verified_certificate() {
+    let mut arena = TermArena::new();
+    let x = real(&mut arena, "x");
+    let y = real(&mut arena, "y");
+    let m1 = arena.real_const(Rational::integer(-1));
+    let a = arena.real_sub(x, y).expect("x-y");
+    let b = arena.real_sub(y, x).expect("y-x");
+    let c1 = arena.real_le(a, m1).expect("x-y<=-1");
+    let c2 = arena.real_le(b, m1).expect("y-x<=-1");
+    let cert = certificate(&mut arena, &[c1, c2]).expect("certificate");
+    assert!(cert.verify(), "the exported certificate must re-check");
+    assert_eq!(cert.atoms.len(), 2);
+    assert!(
+        cert.multipliers.iter().all(|m| *m == Rational::integer(1)),
+        "a negative cycle is a UNIT-multiplier Farkas combination"
+    );
+    let mut origins = cert.origins.clone();
+    origins.sort_unstable();
+    assert_eq!(origins, vec![0, 1], "origins index the assertions slice");
+}
+
+/// A single-variable bound `x ⋈ c` is the query's own constraint, so the
+/// exported atom carries ONE coefficient — the internal zero vertex is not
+/// leaked into the certificate as a variable.
+#[test]
+fn single_variable_bounds_do_not_cite_the_zero_vertex() {
+    let mut arena = TermArena::new();
+    let x = real(&mut arena, "x");
+    let one = arena.real_const(Rational::integer(1));
+    let three = arena.real_const(Rational::integer(3));
+    let lo = arena.real_ge(x, three).expect("x>=3");
+    let hi = arena.real_le(x, one).expect("x<=1");
+    let cert = certificate(&mut arena, &[lo, hi]).expect("certificate");
+    assert!(cert.verify());
+    assert!(
+        cert.atoms.iter().all(|atom| atom.coeffs.len() == 1),
+        "a one-variable bound must stay a one-variable atom: {:?}",
+        cert.atoms
+    );
+}
+
+/// The strict/non-strict boundary is exact in the exported object too: a
+/// zero-weight cycle refutes only because one cited relation is strict.
+#[test]
+fn zero_weight_cycle_exports_a_strict_certificate() {
+    let mut arena = TermArena::new();
+    let x = real(&mut arena, "x");
+    let y = real(&mut arena, "y");
+    let zero = arena.real_const(Rational::zero());
+    let a = arena.real_sub(x, y).expect("x-y");
+    let b = arena.real_sub(y, x).expect("y-x");
+    let c1 = arena.real_lt(a, zero).expect("x-y<0");
+    let c2 = arena.real_le(b, zero).expect("y-x<=0");
+    let cert = certificate(&mut arena, &[c1, c2]).expect("certificate");
+    assert!(cert.verify());
+    assert!(
+        cert.atoms.iter().any(|atom| atom.strict),
+        "the refutation is `0 < 0`, so a cited relation must be strict"
+    );
+}
+
+/// A negated atom is a conjunctive unit and is cited at the polarity asserted.
+#[test]
+fn negated_atom_unit_is_exported() {
+    let mut arena = TermArena::new();
+    let x = real(&mut arena, "x");
+    let y = real(&mut arena, "y");
+    let zero = arena.real_const(Rational::zero());
+    let d = arena.real_sub(x, y).expect("x-y");
+    let atom = arena.real_ge(d, zero).expect("x-y>=0");
+    let negated = arena.not(atom).expect("not");
+    assert_eq!(
+        check(&mut arena, &[atom, negated]),
+        Some(CheckResult::Unsat)
+    );
+    let cert = certificate(&mut arena, &[atom, negated]).expect("certificate");
+    assert!(cert.verify());
+}
+
+/// A numeric equality conjunct contributes BOTH expanded bounds under the one
+/// origin the `FarkasCertificate` contract allows.
+#[test]
+fn equality_conjunct_shares_one_origin() {
+    let mut arena = TermArena::new();
+    let x = int(&mut arena, "x");
+    let y = int(&mut arena, "y");
+    let m1 = arena.int_const(-1);
+    let eq = arena.eq(x, y).expect("x=y");
+    let d = arena.int_sub(x, y).expect("x-y");
+    let lt = arena.int_le(d, m1).expect("x-y<=-1");
+    let cert = certificate(&mut arena, &[eq, lt]).expect("certificate");
+    assert!(cert.verify());
+    assert!(
+        cert.origins.iter().all(|&o| o < 2),
+        "origins stay inside the assertions slice"
+    );
+}
+
+/// A satisfiable conjunction exports nothing (there is no refutation to cite).
+#[test]
+fn satisfiable_conjunction_exports_no_certificate() {
+    let mut arena = TermArena::new();
+    let x = real(&mut arena, "x");
+    let y = real(&mut arena, "y");
+    let m1 = arena.real_const(Rational::integer(-1));
+    let p3 = arena.real_const(Rational::integer(3));
+    let a = arena.real_sub(x, y).expect("x-y");
+    let b = arena.real_sub(y, x).expect("y-x");
+    let c1 = arena.real_le(a, m1).expect("x-y<=-1");
+    let c2 = arena.real_le(b, p3).expect("y-x<=3");
+    assert!(certificate(&mut arena, &[c1, c2]).is_none());
+}
+
+/// Boolean structure is OUT of scope: with a disjunction the refutation is a
+/// resolution over theory lemmas, which one Farkas combination cannot express,
+/// so the export declines rather than overreach.
+#[test]
+fn boolean_structure_declines_the_export() {
+    let mut arena = TermArena::new();
+    let x = real(&mut arena, "x");
+    let y = real(&mut arena, "y");
+    let m1 = arena.real_const(Rational::integer(-1));
+    let a = arena.real_sub(x, y).expect("x-y");
+    let b = arena.real_sub(y, x).expect("y-x");
+    let c1 = arena.real_le(a, m1).expect("x-y<=-1");
+    let c2 = arena.real_le(b, m1).expect("y-x<=-1");
+    // `(c1 ∨ c1) ∧ c2` is still unsat, but the refutation is not conjunctive.
+    let disjunction = arena.or(c1, c1).expect("or");
+    assert_eq!(
+        check(&mut arena, &[disjunction, c2]),
+        Some(CheckResult::Unsat)
+    );
+    assert!(certificate(&mut arena, &[disjunction, c2]).is_none());
+}
+
+/// THE honesty test. `x - y < 1 ∧ y - x < 0` is real-FEASIBLE and
+/// integer-infeasible: the decision procedure is right to report `unsat`, but
+/// the refutation depends on the integer tightening `< c ⇒ ≤ ⌈c⌉ - 1`. The
+/// certificate cites the query's verbatim relations, so it does not verify and
+/// the export declines instead of shipping a certificate that describes a
+/// system the query never asserted.
+#[test]
+fn integer_tightening_refutation_declines_the_export() {
+    let mut arena = TermArena::new();
+    let x = int(&mut arena, "x");
+    let y = int(&mut arena, "y");
+    let zero = arena.int_const(0);
+    let one = arena.int_const(1);
+    let a = arena.int_sub(x, y).expect("x-y");
+    let b = arena.int_sub(y, x).expect("y-x");
+    let c1 = arena.int_lt(a, one).expect("x-y<1");
+    let c2 = arena.int_lt(b, zero).expect("y-x<0");
+    assert_eq!(check(&mut arena, &[c1, c2]), Some(CheckResult::Unsat));
+    assert!(
+        certificate(&mut arena, &[c1, c2]).is_none(),
+        "a tightening-dependent refutation must not be exported as a Farkas \
+         certificate over the untightened relations"
+    );
+}
+
+/// An integer refutation that needs NO tightening still exports.
+#[test]
+fn integer_untightened_refutation_exports() {
+    let mut arena = TermArena::new();
+    let x = int(&mut arena, "x");
+    let y = int(&mut arena, "y");
+    let m1 = arena.int_const(-1);
+    let a = arena.int_sub(x, y).expect("x-y");
+    let b = arena.int_sub(y, x).expect("y-x");
+    let c1 = arena.int_le(a, m1).expect("x-y<=-1");
+    let c2 = arena.int_le(b, m1).expect("y-x<=-1");
+    let cert = certificate(&mut arena, &[c1, c2]).expect("certificate");
+    assert!(cert.verify());
+}
+
+/// Nothing outside difference logic is touched: a non-unit coefficient makes
+/// the export decline exactly like the decision procedure does.
+#[test]
+fn out_of_fragment_declines_the_export() {
+    let mut arena = TermArena::new();
+    let x = real(&mut arena, "x");
+    let y = real(&mut arena, "y");
+    let zero = arena.real_const(Rational::zero());
+    let two_x = arena.real_add(x, x).expect("x+x");
+    let d = arena.real_sub(two_x, y).expect("2x-y");
+    let c = arena.real_le(d, zero).expect("2x-y<=0");
+    assert!(certificate(&mut arena, &[c]).is_none());
+}
+
+/// The front door reports it: a conjunctive `QF_RDL` refutation now reaches
+/// `produce_evidence` as a CERTIFIED `unsat`, not a bare one.
+#[test]
+fn front_door_reports_a_certified_difference_logic_unsat() {
+    let mut arena = TermArena::new();
+    let x = real(&mut arena, "x");
+    let y = real(&mut arena, "y");
+    let m1 = arena.real_const(Rational::integer(-1));
+    let a = arena.real_sub(x, y).expect("x-y");
+    let b = arena.real_sub(y, x).expect("y-x");
+    let c1 = arena.real_le(a, m1).expect("x-y<=-1");
+    let c2 = arena.real_le(b, m1).expect("y-x<=-1");
+    let report =
+        crate::evidence::produce_evidence(&mut arena, &[c1, c2], &config()).expect("evidence");
+    assert!(
+        matches!(report.evidence, crate::Evidence::UnsatFarkas(_)),
+        "expected a Farkas certificate, got {:?}",
+        report.evidence.kind_label()
+    );
+    assert!(report.evidence.is_certified());
+    assert!(
+        report.evidence.check(&arena, &[c1, c2]).expect("re-check"),
+        "the front door's certificate must re-check"
+    );
+}
+
+/// Builds an `unsat` real difference-logic chain `x_1 - x_0 ≤ -1 ∧ … ∧
+/// x_0 - x_n ≤ 0` with enough nodes to exceed the evidence front door's
+/// certifying-route size gate.
+fn large_unsat_chain(arena: &mut TermArena, n: usize) -> Vec<TermId> {
+    let vars: Vec<TermId> = (0..=n)
+        .map(|i| real(arena, &format!("chain_x{i}")))
+        .collect();
+    let m1 = arena.real_const(Rational::integer(-1));
+    let zero = arena.real_const(Rational::zero());
+    let mut assertions = Vec::with_capacity(n + 1);
+    for i in 0..n {
+        let d = arena.real_sub(vars[i + 1], vars[i]).expect("difference");
+        assertions.push(arena.real_le(d, m1).expect("bound"));
+    }
+    let close = arena.real_sub(vars[0], vars[n]).expect("difference");
+    assertions.push(arena.real_le(close, zero).expect("bound"));
+    assertions
+}
+
+/// A LARGE conjunctive refutation is still CERTIFIED: the size gate that lets the
+/// bare-decision fallback take over must not apply to the certificate path.
+#[test]
+fn large_conjunctive_refutation_stays_certified() {
+    let mut arena = TermArena::new();
+    let assertions = large_unsat_chain(&mut arena, 800);
+    let report =
+        crate::evidence::produce_evidence(&mut arena, &assertions, &config()).expect("evidence");
+    assert!(
+        matches!(report.evidence, crate::Evidence::UnsatFarkas(_)),
+        "expected a Farkas certificate, got {}",
+        report.evidence.kind_label()
+    );
+    assert!(
+        report
+            .evidence
+            .check(&arena, &assertions)
+            .expect("re-check")
+    );
+}
+
+/// The same large query with Boolean structure is OUT of the certificate's
+/// scope, but the front door must still report the CORRECT verdict rather than
+/// the `unknown` the certifying real routes return on it.
+#[test]
+fn large_boolean_structured_refutation_is_decided_not_unknown() {
+    let mut arena = TermArena::new();
+    let mut assertions = large_unsat_chain(&mut arena, 800);
+    // `(or a a)` is logically `a`, so the query is unchanged — but the refutation
+    // is no longer a conjunction of literals.
+    let first = assertions[0];
+    assertions[0] = arena.or(first, first).expect("or");
+    let report =
+        crate::evidence::produce_evidence(&mut arena, &assertions, &config()).expect("evidence");
+    assert!(
+        matches!(report.evidence, crate::Evidence::Unsat(_)),
+        "expected an unsat verdict, got {}",
+        report.evidence.kind_label()
+    );
+    assert_eq!(report.provenance.backend, "dl-online");
+}

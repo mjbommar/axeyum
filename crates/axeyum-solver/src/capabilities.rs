@@ -516,6 +516,59 @@ pub const CAPABILITIES: &[Capability] = &[
         reference: "ADR-0047",
     },
     Capability {
+        area: "QF_IDL / QF_RDL",
+        feature: "DIFFERENCE LOGIC by incremental negative-cycle detection (dl_online::try_check_qf_dl): \
+                  a maintained feasible potential with Cotton–Maler Dijkstra-over-reduced-costs detection, \
+                  driven as a cdclt::TheorySolver. Numeric `a = b` is expanded into `a ≤ b ∧ a ≥ b` under a \
+                  Tseitin `and` gate and Boolean `p = q` gets an XNOR gate, so the SKELETON owns every \
+                  disequality split (without the Boolean case the whole fischer family fell out of the \
+                  fragment). Integer mode TIGHTENS `< c` to `≤ ⌈c⌉ - 1`; real mode carries an exact \
+                  infinitesimal δ instead of guessing an epsilon. BOUNDARY: the dispatch gate (scan_dl) \
+                  declines — and every route below then runs BYTE-IDENTICALLY — unless every atom \
+                  normalizes to `x - y ⋈ c` with coefficients exactly ±1, the query is single-sorted \
+                  numeric, and every connective is one the skeleton encoder covers; a non-unit \
+                  coefficient, product, div/mod, uninterpreted application, mixed Int/Real, or \
+                  normalization overflow all fall through",
+        assurance: Assurance::Validated,
+        evidence: "every `sat` is lifted from the vertex potentials and REPLAYED through the ground \
+                   evaluator against the ORIGINAL assertions (non-replay ⇒ unknown); every theory \
+                   conflict is rebuilt as a FarkasCertificate with unit multipliers and must pass the \
+                   independent FarkasCertificate::verify before it can become a lemma (a cycle that does \
+                   not verify is DISCARDED — costs completeness, never soundness). Differential vs cvc5 \
+                   1.3.4 on the committed 200-file parity lists, 24s/file: QF_RDL 6.6% → 68.6%, QF_IDL \
+                   41.5% → 53.7%, 0 disagreements. The probe gets timeout − min(timeout/4, 6s) so an \
+                   unreserved probe cannot starve the routes below it. The EVIDENCE front door \
+                   (produce_evidence) reaches it too, above the certifying routes' practical size — \
+                   measured, the pure-real evidence route decided 2 of the 200 QF_RDL parity files while \
+                   the solver route decided 105, because it never ran this procedure. No per-query \
+                   certificate for the Boolean-structured case (see the conjunctive row) ⇒ Validated, \
+                   not Checked",
+        reference: "ADR-0375",
+    },
+    Capability {
+        area: "QF_IDL / QF_RDL",
+        feature: "CERTIFIED CONJUNCTIVE difference-logic UNSAT (dl_online::conjunctive_farkas_certificate): \
+                  the negative cycle exported ONCE for the whole query as the EXISTING FarkasCertificate \
+                  (Evidence::UnsatFarkas — no new evidence format), with unit multipliers and `origins` \
+                  indexing the assertions slice. BOUNDARY 1: conjunctive queries only — with Boolean \
+                  structure the refutation is a RESOLUTION over many theory lemmas, which one Farkas \
+                  combination cannot express, so that case declines and keeps its bare unsat. BOUNDARY 2: \
+                  the cited atoms are the query's VERBATIM untightened relations (and a one-variable \
+                  bound stays one-variable — the internal zero vertex is dropped), so a refutation that \
+                  NEEDS the integer tightening fails verify and is declined rather than misdescribed",
+        assurance: Assurance::Checked,
+        evidence: "the emitted certificate is re-checked by the same independent exact-rational \
+                   FarkasCertificate::verify that QF_LRA's Evidence::UnsatFarkas uses (all multipliers \
+                   nonnegative, one positive, every variable coefficient cancels, the residual constant \
+                   relation false), and is only returned when that verify passes. Soundness-negative \
+                   tests: a satisfiable conjunction exports nothing, a disjunctive query declines, an \
+                   out-of-fragment coefficient declines, and `x - y < 1 ∧ y - x < 0` over Int is decided \
+                   unsat while the export DECLINES (its refutation depends on integer tightening). \
+                   recheck at the text front door stays `na` exactly as for QF_LRA: verifying the algebra \
+                   does not re-derive the binding from the cited atoms to the query text",
+        reference: "ADR-0375",
+    },
+    Capability {
         area: "QF_UFLRA",
         feature: "ONLINE Nelson–Oppen combination (check_qf_uflra_online): the online EufTheory + the \
                   online LraTheory combined by model-based equality sharing (interface-equality \

@@ -429,3 +429,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [0372](adr-0372-preregister-negated-conjunction-branch-split.md) | Reject serial negated-conjunction splitting after the hard branch exceeded the monolithic solve | rejected |
 | [0373](adr-0373-preregister-source-fp-prefix-monotonicity.md) | Accept one fail-closed source-level RNE nonnegative FP prefix refuter | accepted |
 | [0374](adr-0374-bool-free-symbols-in-quantified-bv-certificates.md) | Admit Bool free symbols in quantified-BV model certificates and certify skolemized negated universals | accepted |
+| [0375](adr-0375-difference-logic-decision-procedure.md) | Difference logic as a first-class fragment, with conjunctive Farkas evidence | accepted |

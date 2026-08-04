@@ -240,6 +240,22 @@ pub const SUPPORT_MATRIX: &[SupportRow] = &[
                + Lean too). ADR-0015",
     },
     SupportRow {
+        fragment: "QF_IDL / QF_RDL (difference logic)",
+        parser: ParserStatus::Accepted,
+        ir: IrStatus::Modeled,
+        solver: SolverStatus::Decides,
+        proof: ProofStatus::PartialTrust,
+        note: "incremental negative-cycle detection over a maintained feasible \
+               potential (Cotton–Maler) driven as a CDCL(T) theory decides both \
+               directions on the fragment `x - y ⋈ c` with ±1 coefficients; sat is \
+               replayed against the original assertions and every conflict is \
+               Farkas-verified before it becomes a lemma. A CONJUNCTIVE unsat carries \
+               the query-level FarkasCertificate (checked); the Boolean-structured \
+               case is a resolution over theory lemmas and stays a bare unsat, so the \
+               row is partial-trust. Anything outside the fragment falls through to \
+               the linear-arithmetic routes unchanged. ADR-0375",
+    },
+    SupportRow {
         fragment: "QF_NIA (nonlinear integer)",
         parser: ParserStatus::Accepted,
         ir: IrStatus::Modeled,
