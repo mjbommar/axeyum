@@ -617,3 +617,22 @@ A file we can refute but cannot certify counts against us; it is not dropped.
 | solver commit | `fa5af54ee` |
 | load average (start / end) | 2.42 2.79 2.89 / 2.70 3.70 3.94 — 24 cores; a high load DEPRESSES this result |
 | per-file detail | `bench-results/parity-details/QF_LRA.tsv` |
+
+## QF_UFLIA — 2026-08-04T12:44:23Z
+
+| field | value |
+|---|---|
+| axeyum solved | 94/200 |
+| reference solved | 180/200 |
+| **ratio (axeyum / reference)** | **52.2%** |
+| **disagreements** | **0** |
+| soundness | SOUND |
+| both / axeyum-only / reference-only | 94 / 0 / 86 |
+| reference | `cvc5 1.3.4 [git f3b21c4 on branch HEAD]` |
+| reference options | `<none — plain invocation, NOT a competition portfolio>` |
+| axeyum options | `<none — shipped default configuration>` |
+| protocol | 24s wall, 8GiB, per-file |
+| benchmark list | `bench-results/parity-lists/QF_UFLIA.txt` (sha256 f88e67890fae, 200 files) |
+| solver commit | `fa5af54ee` |
+| load average (start / end) | 2.70 3.70 3.94 / 3.00 3.41 3.23 — 24 cores; a high load DEPRESSES this result |
+| per-file detail | `bench-results/parity-details/QF_UFLIA.tsv` |
