@@ -69,6 +69,7 @@ fn detail_member(detail: &str) -> String {
     out
 }
 
+#[allow(clippy::too_many_lines)] // linear CLI driver: arg parsing + per-file loop + summary
 fn main() {
     let raw: Vec<String> = std::env::args().collect();
     // `--json` may appear anywhere; strip it before positional parsing so the
