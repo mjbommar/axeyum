@@ -90,6 +90,7 @@ use axeyum_ir::{Assignment, Op, SymbolId, TermArena, TermId, TermNode, Value, ev
 
 use crate::backend::{CheckResult, SolverError};
 use crate::model::Model;
+use crate::route_trace::DeclineReason;
 
 /// Above this magnitude for any coefficient the pass declines (returns `None`)
 /// rather than risk `i128` overflow in `b²`, `4·a·c`, `isqrt`, the `f(k)`
@@ -310,6 +311,10 @@ impl Poly {
 /// coefficient out of the safe range, or a query with any number of assertions
 /// other than one. Declining is always sound.
 ///
+/// `why` is a **write-only** telemetry channel that records the decline reason for
+/// the route trace (the route used to decline silently). The verdict never depends
+/// on it.
+///
 /// # Errors
 ///
 /// Returns [`SolverError`] to match the dispatcher's `?`-chained call site; the
@@ -319,30 +324,37 @@ impl Poly {
     clippy::unnecessary_wraps,
     reason = "signature matches the ?-chained auto.rs dispatch contract"
 )]
-pub fn decide_int_square_constraint(
+pub(crate) fn decide_int_square_constraint_explained(
     arena: &TermArena,
     assertions: &[TermId],
+    why: &mut Option<DeclineReason>,
 ) -> Result<Option<CheckResult>, SolverError> {
     // The pass fires only when the WHOLE query is exactly one assertion. A second
     // assertion could otherwise constrain `x` (e.g. `x*x = 4 ∧ x = 2`), so we must
     // not decide the polynomial in isolation — decline and let the NIA dispatch see
     // all constraints together.
     let [assertion] = assertions else {
+        *why = Some(DeclineReason::NotApplicable);
         return Ok(None);
     };
     let Some((var, cmp, poly)) = match_poly_constraint(arena, *assertion) else {
+        *why = Some(DeclineReason::NotApplicable);
         return Ok(None);
     };
 
     // Degree must be ≥ 1: a constant (degree 0) is exact LIA territory — decline.
     let degree = poly.degree();
     if degree == 0 || degree > MAX_DEGREE {
+        *why = Some(DeclineReason::NotApplicable);
         return Ok(None);
     }
 
     // Overflow guard: only decide coefficients whose magnitude keeps the quadratic
     // arithmetic and the Horner evaluations within `i128`. Larger ones decline.
     if !poly.coeffs_in_guard() {
+        *why = Some(DeclineReason::Budget(
+            "single-variable polynomial coefficients exceed the i128 safety guard".into(),
+        ));
         return Ok(None);
     }
 
@@ -352,6 +364,10 @@ pub fn decide_int_square_constraint(
         decide_high_degree(cmp, &poly)
     };
     let Some(verdict) = verdict else {
+        *why = Some(DeclineReason::Incomplete(crate::backend::UnknownReason {
+            kind: crate::backend::UnknownKind::Incomplete,
+            detail: "no exact decision for this degree/comparison shape".into(),
+        }));
         return Ok(None);
     };
 
@@ -366,6 +382,9 @@ pub fn decide_int_square_constraint(
                 // The witness did not satisfy the original assertion. This must not
                 // happen for the case analysis above, but soundness comes first:
                 // decline rather than emit an unchecked `sat`.
+                *why = Some(DeclineReason::VerifierRejected(
+                    "square-constraint witness failed ground-evaluator replay".into(),
+                ));
                 return Ok(None);
             }
             let mut model = Model::new();

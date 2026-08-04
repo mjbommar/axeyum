@@ -889,23 +889,64 @@ pub fn check_auto(
     // sites — it never participates in a branch condition — so this returns
     // byte-for-byte the verdict `check_auto_explained` does (verdict invariance,
     // pinned by `tests/route_trace.rs`).
+    // The caller's budget is a WALL-CLOCK deadline for the whole call, not a fresh
+    // allowance per fallback rung (see `fallback_deadline`).
+    let deadline = fallback_deadline(config);
     let result = check_auto_with_recorder(arena, assertions, config, &mut None)?;
     if matches!(result, CheckResult::Unknown(_)) {
         // Integer-algebraic identity refutation (QF_NIA): cheap, exact, unsat-only.
         if crate::nra_real_root::integer_algebraic_refutation(arena, assertions) {
             return Ok(CheckResult::Unsat);
         }
-        if let Some(unsat) = try_conjunct_refutation(arena, assertions, config)? {
+        if let Some(unsat) = try_conjunct_refutation(arena, assertions, config, deadline)? {
             return Ok(unsat);
         }
-        if let Some(verdict) = try_disjunct_refutation(arena, assertions, config)? {
+        if let Some(verdict) = try_disjunct_refutation(arena, assertions, config, deadline)? {
             return Ok(verdict);
         }
-        if let Some(verdict) = try_finite_domain_split(arena, assertions, config)? {
+        if let Some(verdict) = try_finite_domain_split(arena, assertions, config, deadline)? {
             return Ok(verdict);
         }
     }
     Ok(result)
+}
+
+/// The wall-clock deadline the post-dispatch fallback chain
+/// ([`try_conjunct_refutation`], [`try_disjunct_refutation`],
+/// [`try_finite_domain_split`]) must respect, taken at ENTRY so it covers the main
+/// dispatch too.
+///
+/// Each rung used to read `config.timeout` directly, i.e. to award itself a FRESH
+/// full budget after the main solve had already spent one — and the rungs recurse
+/// into `check_auto`, which re-enters the chain. Measured, a caller asking for 24 s
+/// could burn well over 60 s (one file took 400 s) while a sibling front end that
+/// enforced its own limit finished on time. `check_auto`/`check_auto_explained` are
+/// public API, so every consumer inherited the overrun. This is the same defect
+/// class as a phase ignoring the caller's parse deadline, and the fix is the same:
+/// one deadline, taken once, threaded down.
+///
+/// The per-rung SHARE is still sized from the caller's original budget (so a rung
+/// reached with plenty of time left behaves exactly as before), but every
+/// individual sub-solve is additionally clamped to what remains before the
+/// deadline, and the chain stops the moment it passes. Bounding the total instead
+/// of shrinking the share is what keeps the rungs' existing solving power.
+///
+/// `None` (an unbounded query) keeps the existing behaviour: the rungs decline
+/// outright rather than launch unbounded sub-solves.
+fn fallback_deadline(config: &SolverConfig) -> Option<Instant> {
+    config.timeout.and_then(|t| Instant::now().checked_add(t))
+}
+
+/// The budget still available before `deadline`, or `None` when it has passed (or
+/// was never set). Every fallback sub-solve is clamped to this, so the chain as a
+/// whole cannot outlive the caller's request.
+fn remaining_before(deadline: Option<Instant>) -> Option<Duration> {
+    let remaining = deadline?.checked_duration_since(Instant::now())?;
+    if remaining.is_zero() {
+        None
+    } else {
+        Some(remaining)
+    }
 }
 
 /// Last-resort refutation for a `unknown` verdict: flatten the top-level
@@ -922,10 +963,14 @@ fn try_conjunct_refutation(
     arena: &mut TermArena,
     assertions: &[TermId],
     config: &SolverConfig,
+    deadline: Option<Instant>,
 ) -> Result<Option<CheckResult>, SolverError> {
     let Some(total) = config.timeout else {
         return Ok(None); // unbounded ⇒ skip (avoid runaway sub-solves)
     };
+    if remaining_before(deadline).is_none() {
+        return Ok(None); // the caller's budget (plus grace) is already gone
+    }
     let mut conjuncts: Vec<TermId> = Vec::new();
     for &a in assertions {
         collect_top_conjuncts(arena, a, &mut conjuncts);
@@ -942,8 +987,14 @@ fn try_conjunct_refutation(
     if per.is_zero() {
         return Ok(None);
     }
-    let sub = config.clone().with_timeout(per);
     for &c in &conjuncts {
+        // Each sub-solve keeps its per-conjunct share, additionally clamped to what
+        // is left of the caller's deadline — so the CHAIN is bounded even though the
+        // share itself is sized from the original budget.
+        let Some(left) = remaining_before(deadline) else {
+            return Ok(None); // out of the caller's budget ⇒ stop, never overrun
+        };
+        let sub = config.clone().with_timeout(per.min(left));
         if matches!(check_auto(arena, &[c], &sub)?, CheckResult::Unsat) {
             return Ok(Some(CheckResult::Unsat));
         }
@@ -960,10 +1011,14 @@ fn try_disjunct_refutation(
     arena: &mut TermArena,
     assertions: &[TermId],
     config: &SolverConfig,
+    deadline: Option<Instant>,
 ) -> Result<Option<CheckResult>, SolverError> {
     let Some(total) = config.timeout else {
         return Ok(None); // unbounded ⇒ skip (avoid runaway sub-solves)
     };
+    if remaining_before(deadline).is_none() {
+        return Ok(None); // the caller's budget is already gone
+    }
     let mut conjuncts: Vec<TermId> = Vec::new();
     for &a in assertions {
         collect_top_conjuncts(arena, a, &mut conjuncts);
@@ -994,7 +1049,6 @@ fn try_disjunct_refutation(
     if per.is_zero() {
         return Ok(None);
     }
-    let sub = config.clone().with_timeout(per);
     let mut idx = vec![0usize; disjunctions.len()];
     let mut all_unsat = true;
     loop {
@@ -1003,6 +1057,12 @@ fn try_disjunct_refutation(
             branch.push(d[idx[di]]);
         }
         branch.extend_from_slice(&rest);
+        // Out of the caller's budget with branches unexplored: those branches are
+        // UNDECIDED, so `all_unsat` is not established — decline.
+        let Some(left) = remaining_before(deadline) else {
+            return Ok(None);
+        };
+        let sub = config.clone().with_timeout(per.min(left));
         match check_auto(arena, &branch, &sub)? {
             CheckResult::Sat(model) => {
                 if matches!(crate::check_model(arena, assertions, &model), Ok(true)) {
@@ -1104,10 +1164,14 @@ fn try_finite_domain_split(
     arena: &mut TermArena,
     assertions: &[TermId],
     config: &SolverConfig,
+    deadline: Option<Instant>,
 ) -> Result<Option<CheckResult>, SolverError> {
     let Some(total) = config.timeout else {
         return Ok(None); // unbounded ⇒ skip (avoid runaway sub-solves)
     };
+    if remaining_before(deadline).is_none() {
+        return Ok(None); // the caller's budget is already gone
+    }
     let mut conjuncts: Vec<TermId> = Vec::new();
     for &a in assertions {
         collect_top_conjuncts(arena, a, &mut conjuncts);
@@ -1142,7 +1206,6 @@ fn try_finite_domain_split(
     if per.is_zero() {
         return Ok(None);
     }
-    let sub = config.clone().with_timeout(per);
     // Enumerate the cartesian product via a mixed-radix index vector.
     let mut idx = vec![0usize; disjunctions.len()];
     let mut all_unsat = true;
@@ -1152,6 +1215,12 @@ fn try_finite_domain_split(
             branch.push(d[idx[di]]);
         }
         branch.extend_from_slice(&rest);
+        // Out of the caller's budget with branches unexplored: those branches are
+        // UNDECIDED, so `all_unsat` is not established — decline.
+        let Some(left) = remaining_before(deadline) else {
+            return Ok(None);
+        };
+        let sub = config.clone().with_timeout(per.min(left));
         match check_auto(arena, &branch, &sub)? {
             CheckResult::Sat(model) => {
                 if matches!(crate::check_model(arena, assertions, &model), Ok(true)) {
@@ -1198,6 +1267,8 @@ pub fn check_auto_explained(
     config: &SolverConfig,
 ) -> Result<(CheckResult, RouteTrace), SolverError> {
     let mut trace = RouteTrace::new();
+    // One deadline for the whole call, taken at entry — see `fallback_deadline`.
+    let deadline = fallback_deadline(config);
     let result = check_auto_with_recorder(arena, assertions, config, &mut Some(&mut trace))?;
     // Conjunct-split refutation fallback (mirrors `check_auto` for verdict
     // invariance), recorded as a `Decided` route so the trace's terminal entry
@@ -1209,12 +1280,12 @@ pub fn check_auto_explained(
         trace.record_decided("integer-algebraic-refutation", Verdict::Unsat);
         CheckResult::Unsat
     } else if matches!(result, CheckResult::Unknown(_))
-        && let Some(unsat) = try_conjunct_refutation(arena, assertions, config)?
+        && let Some(unsat) = try_conjunct_refutation(arena, assertions, config, deadline)?
     {
         trace.record_decided("conjunct-refutation", Verdict::Unsat);
         unsat
     } else if matches!(result, CheckResult::Unknown(_))
-        && let Some(verdict) = try_disjunct_refutation(arena, assertions, config)?
+        && let Some(verdict) = try_disjunct_refutation(arena, assertions, config, deadline)?
     {
         let recorded = if matches!(verdict, CheckResult::Sat(_)) {
             Verdict::Sat
@@ -1224,7 +1295,7 @@ pub fn check_auto_explained(
         trace.record_decided("disjunct-refutation", recorded);
         verdict
     } else if matches!(result, CheckResult::Unknown(_))
-        && let Some(verdict) = try_finite_domain_split(arena, assertions, config)?
+        && let Some(verdict) = try_finite_domain_split(arena, assertions, config, deadline)?
     {
         let v = if matches!(verdict, CheckResult::Sat(_)) {
             Verdict::Sat
@@ -3425,6 +3496,18 @@ fn dispatch_uf_pigeonhole(
     Some(CheckResult::Unsat)
 }
 
+/// Records that a `QF_NIA` route declined, with the reason the route reported.
+///
+/// Before this hook existed the three nonlinear-integer routes (`nia-square`,
+/// `nia-linearize`, `nia-bounded-blast`) declined **silently**: a route trace on
+/// an undecided `QF_NIA` query showed only `int-blast-ladder`, so diagnosing why the
+/// query was never refuted took a dedicated route-tracing pass. Telemetry only —
+/// `rec` never participates in a branch, so the verdict is unchanged.
+fn record_nia_decline(rec: &mut Recorder<'_>, route: &'static str, why: Option<DeclineReason>) {
+    let reason = why.unwrap_or(DeclineReason::NotApplicable);
+    with_recorder(rec, |t| t.record_declined(route, reason));
+}
+
 /// The pure-integer nonlinear tail of [`check_auto_dispatch`] (`features.has_int`
 /// after the EUF/array fast paths). Split out for length; the verdict logic is
 /// verbatim the inlined original, `rec` only annotates the existing sites.
@@ -3446,10 +3529,14 @@ fn dispatch_nonlinear_int_tail(
         // is replay-checked against the original assertion, and its `Unsat` is exact
         // by the perfect-square / sign analysis, so it can never produce a wrong
         // verdict; strictly additive (`Unknown` → decision).
-        if let Some(result) = crate::nia_square::decide_int_square_constraint(arena, assertions)? {
+        let mut why = None;
+        if let Some(result) =
+            crate::nia_square::decide_int_square_constraint_explained(arena, assertions, &mut why)?
+        {
             with_recorder(rec, |t| t.record_result("nia-square", &result));
             return Ok(result);
         }
+        record_nia_decline(rec, "nia-square", why);
         // Bounded integer bit-blasting at a single width is fragile for *nonlinear*
         // integer goals: a modular witness (e.g. `x` with `x*x ≡ 4 (mod 2^32)` but
         // `x*x ≠ 4` over the integers) satisfies the blasted query yet fails the
@@ -3492,19 +3579,27 @@ fn dispatch_nonlinear_int_tail(
         // Strictly additive: `unsat` transfers soundly from the relaxation, `sat`
         // is accepted only after replay against the original, and it declines
         // (`None`) on everything else.
-        if let Some(result) = crate::nia_linearize::check_with_nia(arena, assertions, config)? {
+        let mut why = None;
+        if let Some(result) =
+            crate::nia_linearize::check_with_nia(arena, assertions, config, &mut why)?
+        {
             with_recorder(rec, |t| t.record_result("nia-linearize", &result));
             return Ok(result);
         }
+        record_nia_decline(rec, "nia-linearize", why);
         // **Bound-aware EXACT int-blast** (closes the QF_NIA UNSAT blind spot):
         // when every free `Int` variable is provably confined to a finite box,
         // blasting at a box-covering width is EXACT, so a bit-vector `Unsat` is a
         // genuine integer `Unsat` — the one thing the width ladder never trusts.
         // Gated on the all-bounded proof; see `decide_bounded_int_blast`.
-        if let Some(result) = decide_bounded_int_blast(arena, assertions, config)? {
+        let mut why = None;
+        if let Some(result) =
+            decide_bounded_int_blast_explained(arena, assertions, config, &mut why)?
+        {
             with_recorder(rec, |t| t.record_result("nia-bounded-blast", &result));
             return Ok(result);
         }
+        record_nia_decline(rec, "nia-bounded-blast", why);
         let result = dispatch_int_blast_width_ladder(arena, assertions, config)?;
         with_recorder(rec, |t| t.record_result("int-blast-ladder", &result));
         // The integer nonlinear decider (`check_with_nia`) already ran *before* the
@@ -4080,10 +4175,11 @@ const MAX_INT_BOX_ENUM_CASES: u128 = 1_000_000;
 /// `Unsat`. A `Sat` is independently replay-checked against the *original*
 /// assertions by `check_with_all_theories`, so a mis-analysis can only cause a
 /// declined `Unknown`, never a wrong verdict.
-fn decide_bounded_int_blast(
+fn decide_bounded_int_blast_explained(
     arena: &mut TermArena,
     assertions: &[TermId],
     config: &SolverConfig,
+    why: &mut Option<DeclineReason>,
 ) -> Result<Option<CheckResult>, SolverError> {
     // Steps 1–6: prove a finite, exactly-encodable box for every free Int
     // variable (shared with the certificate emitter `certify_bounded_int_blast`).
@@ -4091,7 +4187,10 @@ fn decide_bounded_int_blast(
         IntBoxProof::Box(b) => b,
         // Contradictory direct bounds (`lo > hi`): UNSAT on these literals alone.
         IntBoxProof::TriviallyUnsat => return Ok(Some(CheckResult::Unsat)),
-        IntBoxProof::Decline => return Ok(None),
+        IntBoxProof::Decline => {
+            *why = Some(DeclineReason::NotApplicable);
+            return Ok(None);
+        }
     };
 
     if let Some(result) =
@@ -4129,12 +4228,15 @@ fn decide_bounded_int_blast(
     //    half-budget expired on a hard nonlinear box) — the exact exhaustive
     //    evaluation is the trusted last decider for the proven box, and now has
     //    the reserved budget to finish.
-    Ok(decide_int_box_by_evaluation(
-        arena,
-        assertions,
-        &proven,
-        MAX_INT_BOX_ENUM_CASES,
-    ))
+    let enumerated =
+        decide_int_box_by_evaluation(arena, assertions, &proven, MAX_INT_BOX_ENUM_CASES);
+    if enumerated.is_none() {
+        *why = Some(DeclineReason::Budget(
+            "exact box blast declined and the proven int box exceeds the exhaustive-enumeration cap"
+                .into(),
+        ));
+    }
+    Ok(enumerated)
 }
 
 fn decide_bounded_int_box_by_evaluation(
@@ -8608,7 +8710,8 @@ mod tests {
         let config = SolverConfig::default().with_timeout(Duration::from_secs(1));
 
         let Some(CheckResult::Sat(model)) =
-            try_disjunct_refutation(&mut arena, &assertions, &config).unwrap()
+            try_disjunct_refutation(&mut arena, &assertions, &config, fallback_deadline(&config))
+                .unwrap()
         else {
             panic!("a satisfiable disjunctive branch should produce a replayed model");
         };

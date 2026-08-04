@@ -100,13 +100,21 @@ fn exists_x_squared_eq_4_is_sat_consistency() {
 }
 
 #[test]
-fn ground_x_squared_eq_2_stays_unknown_not_unsat() {
-    // `x*x = 2` has no integer root. Proving that `unsat` needs genuine NIA
-    // reasoning beyond bounded blasting, so the sound outcome is `Unknown` —
-    // crucially **not** a wrong `Unsat`.
+fn ground_x_squared_eq_2_is_refuted_never_sat() {
+    // `x*x = 2 ∧ x > 0` has no integer root, so `Unsat` is the TRUE answer and
+    // `Sat` would be the wrong verdict. This used to assert `Unknown`, recording a
+    // capability limit: proving it needs NIA reasoning beyond bounded blasting.
+    // The entailed-bound product lemmas now close it — `x > 0` entails `x ≥ 1`, so
+    // the McCormick row `r ≥ 1·x + 1·x − 1` forces `x ≤ 1` at `r = 2`, and the
+    // tangent plane at `x = 1` refutes `r = 2`. `Unknown` remains acceptable (it is
+    // always sound); `Sat` is the only failure.
     let result = solve_ground(2, true);
     assert!(
-        matches!(result, CheckResult::Unknown(_)),
-        "x*x = 2 ∧ x > 0 must be Unknown (sound), never Unsat/Sat, got {result:?}"
+        !matches!(result, CheckResult::Sat(_)),
+        "x*x = 2 ∧ x > 0 has no integer solution — Sat is a wrong verdict, got {result:?}"
+    );
+    assert!(
+        matches!(result, CheckResult::Unsat),
+        "expected the (correct) Unsat now that the bound lemmas close it, got {result:?}"
     );
 }
