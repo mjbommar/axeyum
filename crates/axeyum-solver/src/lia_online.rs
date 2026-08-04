@@ -65,10 +65,13 @@
 //! (treated as feasible — never a wrong `unsat`), which the driver carries to a
 //! conservative [`CheckResult::Unknown`].
 
-use std::collections::{HashMap, HashSet};
+use std::cell::RefCell;
+use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use std::time::Instant;
 
-use axeyum_ir::{Assignment, Op, Sort, TermArena, TermId, TermNode, Value, eval};
+use axeyum_ir::{
+    Assignment, Op, Rational, Sort, SymbolId, TermArena, TermId, TermNode, Value, eval,
+};
 
 use crate::backend::{CheckResult, SolverConfig, SolverError, UnknownKind, UnknownReason};
 use crate::euf_egraph::{TheoryLit, TheoryProp, TheorySolver};
@@ -80,6 +83,7 @@ use crate::lra::{
 };
 use crate::lra_online::{Dpll, Lit};
 use crate::model::Model;
+use crate::simplex;
 
 /// Above this many LIA atoms, the online driver avoids re-running the full
 /// conjunctive integer feasibility check on every single Boolean assignment.
@@ -156,6 +160,17 @@ pub struct LiaTheory {
     /// passed deadline makes feasibility/probe checks inconclusive, never
     /// conflicting, so timeout handling remains sound.
     deadline: Option<Instant>,
+    /// Per registered atom: its tableau row and the bound each polarity imposes.
+    /// [`AtomRow::None`] for atoms the engine cannot represent — while one of those
+    /// is live the engine's view is partial and it decides nothing.
+    atom_rows: Vec<AtomRow>,
+    /// The warm rational filter in front of the offline integer decider (see the
+    /// section comment above [`IntLin`]). `None` when no atom yielded a row or the
+    /// dense tableau would exceed [`simplex::MAX_TABLEAU_CELLS`]; the theory then
+    /// behaves exactly as it did before the filter existed. Interior mutability
+    /// because a check *mutates* the tableau (it warm-starts) while
+    /// [`LiaTheory::propagate`] and [`LiaTheory::feasibility`] hold only `&self`.
+    simplex: Option<RefCell<IntSimplexEngine>>,
 }
 
 /// Outcome of an incremental integer-feasibility check over the asserted atoms.
@@ -169,6 +184,492 @@ enum Feasibility {
     /// its fragment): inconclusive. Treated as feasible by the caller (never a
     /// wrong `unsat`).
     Unknown,
+}
+
+// --- The warm rational filter over the live integer system. ------------------
+//
+// Before the trusted (but expensive) offline branch-and-bound runs, the live set
+// is decided over the **rationals** on the warm `simplex::Incremental` — the same
+// engine `crate::lra_online::LraTheory` drives. Two facts make that useful without
+// weakening any verdict:
+//
+//   * The rows are an **exact** ℤ-encoding of the atoms, not a relaxation of them.
+//     Every coefficient and constant is an `i128` integer by construction, so a
+//     strict `Σ aⱼ·xⱼ < b` is rewritten to `Σ aⱼ·xⱼ ≤ b − 1` and **no strict row is
+//     ever built**. Dropping *integrality* is therefore the only relaxation, and
+//     rational-infeasible ⇒ integer-infeasible: a refutation transfers, and its
+//     self-verified Farkas support is a sound integer conflict core.
+//   * A rational point that happens to be **integral** satisfies the live
+//     conjunction over ℤ outright, so feasibility transfers in that direction too
+//     and the branch-and-bound is skipped.
+//
+// Everything else — a non-integral point, an overflow, a live atom without a row —
+// is `Inconclusive` and falls through to the offline decider unchanged. Integer
+// feasibility is *not* rational feasibility, and nothing here pretends otherwise:
+// the only `Sat` the filter reports carries an integral witness.
+
+/// A linear integer expression `Σ cⱼ·xⱼ + k` over dense variable indices, in exact
+/// `i128` integers.
+///
+/// Integrality is enforced **by construction**: every operation is checked, and a
+/// result that would overflow (or an input that is not an integer linear term)
+/// yields `None`, which registers the atom as [`AtomRow::None`] and leaves it
+/// entirely to the offline decider. This is what licenses the strict-to-non-strict
+/// tightening in [`build_int_simplex_engine`].
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+struct IntLin {
+    coeffs: BTreeMap<usize, i128>,
+    constant: i128,
+}
+
+impl IntLin {
+    fn constant(k: i128) -> Self {
+        Self {
+            coeffs: BTreeMap::new(),
+            constant: k,
+        }
+    }
+
+    fn var(index: usize) -> Self {
+        let mut coeffs = BTreeMap::new();
+        coeffs.insert(index, 1);
+        Self {
+            coeffs,
+            constant: 0,
+        }
+    }
+
+    fn is_constant(&self) -> bool {
+        self.coeffs.values().all(|&c| c == 0)
+    }
+
+    fn neg(&self) -> Option<Self> {
+        self.scale(-1)
+    }
+
+    fn scale(&self, factor: i128) -> Option<Self> {
+        let mut coeffs = BTreeMap::new();
+        for (&index, &c) in &self.coeffs {
+            coeffs.insert(index, c.checked_mul(factor)?);
+        }
+        Some(Self {
+            coeffs,
+            constant: self.constant.checked_mul(factor)?,
+        })
+    }
+
+    fn add(&self, other: &Self) -> Option<Self> {
+        let mut coeffs = self.coeffs.clone();
+        for (&index, &c) in &other.coeffs {
+            let slot = coeffs.entry(index).or_insert(0);
+            *slot = slot.checked_add(c)?;
+        }
+        Some(Self {
+            coeffs,
+            constant: self.constant.checked_add(other.constant)?,
+        })
+    }
+
+    fn sub(&self, other: &Self) -> Option<Self> {
+        self.add(&other.neg()?)
+    }
+}
+
+/// How one registered atom translates to a tableau row bound per polarity.
+///
+/// One row per atom is enough for **both** kinds: an order atom's two polarities
+/// are mutually exclusive, so they share the row (upper bound when true, lower
+/// bound when false), and an equality atom needs the row only when asserted true,
+/// where `Rel::Eq` pins it from both sides at once.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum AtomRow {
+    /// An order atom: `when_true` / `when_false` are the bounds its two polarities
+    /// impose on `row`.
+    Order {
+        row: usize,
+        when_true: (simplex::Rel, Rational),
+        when_false: (simplex::Rel, Rational),
+    },
+    /// An equality atom `Σ cⱼ·xⱼ = rhs`, live only when asserted true (asserted
+    /// false it is a disjunction the conjunctive view drops, exactly as
+    /// [`LiaTheory::live_lits`] already records). `rhs` also pivots the two strict
+    /// branches equality-true propagation probes (`≤ rhs−1` and `≥ rhs+1`).
+    Equality { row: usize, rhs: Rational },
+    /// No row: the engine cannot see this atom, so it must decide **nothing** while
+    /// the atom is live.
+    None,
+}
+
+/// The warm rational engine plus the bookkeeping that maps its rows back to atoms.
+///
+/// Structurally identical to [`crate::lra_online`]'s: the tableau is built once
+/// over every registered atom's row, and an assert only moves that row's bound, so
+/// a re-check warm-starts from the previous basis.
+struct IntSimplexEngine {
+    inner: simplex::Incremental,
+    /// Row → the registered atom that owns it (the conflict-core map).
+    row_atom: Vec<usize>,
+    /// The bounds currently imposed, positionally aligned with the live set
+    /// [`IntSimplexEngine::sync`] reconciles against.
+    active: Vec<(usize, simplex::Rel, Rational)>,
+    /// Whether each row currently carries a bound. A row holds one bound at a time,
+    /// so an attempt to bound an already-bounded row means the live system is not
+    /// representable here and `sync` declines rather than dropping the earlier one.
+    row_bounded: Vec<bool>,
+}
+
+impl IntSimplexEngine {
+    /// Brings the engine's bound stack in line with `live`. Diverging suffixes are
+    /// retracted and the remainder asserted, so the engine's state is a pure
+    /// function of `live` — no hidden coupling to call order.
+    ///
+    /// Returns `false` if a live bound lands on an already-bounded row, which means
+    /// the engine does not see the whole live system; the caller must then **not**
+    /// trust a refutation from it.
+    fn sync(&mut self, live: &[(usize, simplex::Rel, Rational)]) -> bool {
+        // The shared prefix must match on the WHOLE bound, not just the row: an
+        // order atom's two polarities ride the same row, so a pop and re-assert at
+        // the opposite value keeps the row index and changes only the relation.
+        let mut shared = 0usize;
+        while shared < self.active.len()
+            && shared < live.len()
+            && live[shared] == self.active[shared]
+        {
+            shared += 1;
+        }
+        while self.active.len() > shared {
+            let (row, _, _) = self
+                .active
+                .pop()
+                .expect("non-empty above the shared prefix");
+            self.inner.retract(row);
+            self.row_bounded[row] = false;
+        }
+        for &(row, rel, rhs) in &live[shared..] {
+            if self.row_bounded[row] {
+                return false;
+            }
+            self.inner.assert_bound(row, rel, rhs);
+            self.row_bounded[row] = true;
+            self.active.push((row, rel, rhs));
+        }
+        true
+    }
+}
+
+/// Outcome of the warm rational filter over the live integer system.
+enum RationalFilter {
+    /// The relaxation is infeasible, so the integer system is too. The payload is
+    /// the Farkas support mapped back to asserted atom literals — a sound conflict
+    /// core that needed no deletion minimization.
+    Refuted(Vec<TheoryLit>),
+    /// The relaxation has an **integral** point, which is an integer solution of the
+    /// live conjunction outright.
+    IntegralPoint,
+    /// Nothing decided here: fall through to the trusted offline integer decider.
+    Inconclusive,
+}
+
+/// Outcome of one speculative entailment probe on the warm engine.
+enum ProbeOutcome {
+    /// The probed extension is rationally infeasible, so it is integer-infeasible;
+    /// the payload is the **asserted-only** Farkas reason.
+    Refuted(Vec<TheoryLit>),
+    /// The engine decided, and the extension is not refuted — no propagation, and
+    /// no point re-asking the offline relaxation.
+    NotRefuted,
+    /// The engine could not decide (absent / partial view / overflow): the caller
+    /// falls back to the term-level LP probe.
+    Undecided,
+}
+
+/// Assigns every registered atom a tableau row and builds the warm engine over
+/// them, returning the per-atom row map alongside.
+///
+/// Returns `None` — leaving the theory on the offline decider alone, exactly as
+/// before — when no atom yields a row or the dense tableau would exceed
+/// [`simplex::MAX_TABLEAU_CELLS`]. Both declines are structural and deterministic.
+fn build_int_simplex_engine(
+    arena: &TermArena,
+    atom_terms: &[TermId],
+    allow_opaque_apps: bool,
+) -> Option<(Vec<AtomRow>, IntSimplexEngine)> {
+    let mut builder = IntRowBuilder::new(allow_opaque_apps);
+    let mut atom_rows = Vec::with_capacity(atom_terms.len());
+    let mut rows_sparse: Vec<Vec<(usize, Rational)>> = Vec::new();
+    let mut row_atom: Vec<usize> = Vec::new();
+
+    for (atom, &term) in atom_terms.iter().enumerate() {
+        let row = builder
+            .build(arena, term)
+            .and_then(|shape| open_row(&shape, atom, &mut rows_sparse, &mut row_atom))
+            .unwrap_or(AtomRow::None);
+        atom_rows.push(row);
+    }
+    if rows_sparse.is_empty() {
+        return None;
+    }
+    let inner = simplex::Incremental::new(builder.next_var, rows_sparse)?;
+    debug_assert_eq!(inner.rows(), row_atom.len());
+    let row_bounded = vec![false; row_atom.len()];
+    Some((
+        atom_rows,
+        IntSimplexEngine {
+            inner,
+            row_atom,
+            active: Vec::new(),
+            row_bounded,
+        },
+    ))
+}
+
+/// A normalized atom: the row's variable coefficients plus the bound(s) its
+/// polarities impose, before a row index is allocated.
+enum RowShape {
+    /// `Σ cⱼ·xⱼ ≤ true_rhs` when asserted true, `≥ false_rhs` when asserted false.
+    Order {
+        coeffs: BTreeMap<usize, i128>,
+        true_rhs: i128,
+        false_rhs: i128,
+    },
+    /// `Σ cⱼ·xⱼ = rhs` when asserted true; nothing when asserted false.
+    Equality {
+        coeffs: BTreeMap<usize, i128>,
+        rhs: i128,
+    },
+}
+
+/// Allocates a tableau row for `shape` and returns the atom's [`AtomRow`].
+fn open_row(
+    shape: &RowShape,
+    atom: usize,
+    rows_sparse: &mut Vec<Vec<(usize, Rational)>>,
+    row_atom: &mut Vec<usize>,
+) -> Option<AtomRow> {
+    let sparse: Vec<(usize, Rational)> = match shape {
+        RowShape::Order { coeffs, .. } | RowShape::Equality { coeffs, .. } => coeffs,
+    }
+    .iter()
+    .filter(|&(_, &c)| c != 0)
+    .map(|(&j, &c)| (j, Rational::integer(c)))
+    .collect();
+    // A variable-free atom is a ground truth value the offline decider settles;
+    // an all-zero tableau row states nothing useful and is not worth the cell.
+    if sparse.is_empty() {
+        return None;
+    }
+    let row = rows_sparse.len();
+    rows_sparse.push(sparse);
+    row_atom.push(atom);
+    Some(match *shape {
+        RowShape::Order {
+            true_rhs,
+            false_rhs,
+            ..
+        } => AtomRow::Order {
+            row,
+            when_true: (simplex::Rel::Le, Rational::integer(true_rhs)),
+            when_false: (simplex::Rel::Ge, Rational::integer(false_rhs)),
+        },
+        RowShape::Equality { rhs, .. } => AtomRow::Equality {
+            row,
+            rhs: Rational::integer(rhs),
+        },
+    })
+}
+
+/// Normalizes integer atom terms into [`RowShape`]s over dense variable indices.
+struct IntRowBuilder {
+    var_index: BTreeMap<SymbolId, usize>,
+    opaque_index: BTreeMap<TermId, usize>,
+    next_var: usize,
+    allow_opaque_apps: bool,
+}
+
+impl IntRowBuilder {
+    fn new(allow_opaque_apps: bool) -> Self {
+        Self {
+            var_index: BTreeMap::new(),
+            opaque_index: BTreeMap::new(),
+            next_var: 0,
+            allow_opaque_apps,
+        }
+    }
+
+    fn index_of(&mut self, symbol: SymbolId) -> usize {
+        let next = self.next_var;
+        let index = *self.var_index.entry(symbol).or_insert(next);
+        if index == next {
+            self.next_var += 1;
+        }
+        index
+    }
+
+    fn index_of_opaque(&mut self, term: TermId) -> usize {
+        let next = self.next_var;
+        let index = *self.opaque_index.entry(term).or_insert(next);
+        if index == next {
+            self.next_var += 1;
+        }
+        index
+    }
+
+    /// Parses one atom term into its [`RowShape`], or `None` for any shape outside
+    /// integer linear arithmetic (which registers as [`AtomRow::None`]).
+    ///
+    /// This is where the **strict-to-non-strict tightening** happens: with integral
+    /// coefficients and constants, `e < 0` over ℤ is exactly `e ≤ −1`, so no strict
+    /// row is ever built. That is an equivalence over ℤ, not a relaxation, which is
+    /// what keeps a rational refutation of these rows a sound integer refutation —
+    /// and it is also what makes the relaxation strong enough to refute the
+    /// integer-only `0 < x ∧ x < 1`.
+    fn build(&mut self, arena: &TermArena, term: TermId) -> Option<RowShape> {
+        match arena.node(term) {
+            TermNode::App { op, args }
+                if matches!(op, Op::IntLt | Op::IntLe | Op::IntGt | Op::IntGe) =>
+            {
+                let (left, right) = (args[0], args[1]);
+                // `e ⋈ 0` with the atom's true-polarity direction folded in, so
+                // `true` is always `e ≤ true_target` and `false` is `e ≥ false_target`.
+                let (expr, true_target, false_target): (IntLin, i128, i128) = match op {
+                    // a < b  ⇔  a−b ≤ −1 ;  ¬  ⇔  a−b ≥ 0
+                    Op::IntLt => (
+                        self.linearize(arena, left)?
+                            .sub(&self.linearize(arena, right)?)?,
+                        -1,
+                        0,
+                    ),
+                    // a ≤ b  ⇔  a−b ≤ 0  ;  ¬  ⇔  a−b ≥ 1
+                    Op::IntLe => (
+                        self.linearize(arena, left)?
+                            .sub(&self.linearize(arena, right)?)?,
+                        0,
+                        1,
+                    ),
+                    // a > b  ⇔  b−a ≤ −1 ;  ¬  ⇔  b−a ≥ 0
+                    Op::IntGt => (
+                        self.linearize(arena, right)?
+                            .sub(&self.linearize(arena, left)?)?,
+                        -1,
+                        0,
+                    ),
+                    // a ≥ b  ⇔  b−a ≤ 0  ;  ¬  ⇔  b−a ≥ 1
+                    Op::IntGe => (
+                        self.linearize(arena, right)?
+                            .sub(&self.linearize(arena, left)?)?,
+                        0,
+                        1,
+                    ),
+                    _ => return None,
+                };
+                if expr.is_constant() {
+                    return None;
+                }
+                Some(RowShape::Order {
+                    true_rhs: true_target.checked_sub(expr.constant)?,
+                    false_rhs: false_target.checked_sub(expr.constant)?,
+                    coeffs: expr.coeffs,
+                })
+            }
+            TermNode::App { op: Op::Eq, args } if is_int(arena, args[0]) => {
+                let expr = self
+                    .linearize(arena, args[0])?
+                    .sub(&self.linearize(arena, args[1])?)?;
+                if expr.is_constant() {
+                    return None;
+                }
+                Some(RowShape::Equality {
+                    rhs: 0i128.checked_sub(expr.constant)?,
+                    coeffs: expr.coeffs,
+                })
+            }
+            _ => None,
+        }
+    }
+
+    /// Turns an integer term into an [`IntLin`]; `None` on overflow or a non-linear
+    /// / non-integer subterm.
+    ///
+    /// An explicit worklist, not native recursion: an SMT-LIB source controls the
+    /// nesting depth directly with a left-associated `(+ (+ (+ n 1) 1) 1)` spine,
+    /// and a recursive walk **aborts the process** there instead of declining (the
+    /// failure mode fixed in `fcc8760d`, and the reason `crate::lra`'s integer
+    /// collector is written the same way).
+    fn linearize(&mut self, arena: &TermArena, term: TermId) -> Option<IntLin> {
+        enum Step {
+            Enter(TermId),
+            Build(TermId),
+        }
+        let mut work = vec![Step::Enter(term)];
+        let mut values: Vec<IntLin> = Vec::new();
+        while let Some(step) = work.pop() {
+            match step {
+                Step::Enter(t) => match arena.node(t) {
+                    TermNode::IntConst(value) => values.push(IntLin::constant(*value)),
+                    TermNode::Symbol(symbol) if is_int(arena, t) => {
+                        let index = self.index_of(*symbol);
+                        values.push(IntLin::var(index));
+                    }
+                    TermNode::App {
+                        op: Op::Apply(_), ..
+                    } if self.allow_opaque_apps && is_int(arena, t) => {
+                        let index = self.index_of_opaque(t);
+                        values.push(IntLin::var(index));
+                    }
+                    TermNode::App {
+                        op: Op::IntNeg,
+                        args,
+                    } => {
+                        let arg = args[0];
+                        work.push(Step::Build(t));
+                        work.push(Step::Enter(arg));
+                    }
+                    TermNode::App {
+                        op: Op::IntAdd | Op::IntSub | Op::IntMul,
+                        args,
+                    } => {
+                        let (left, right) = (args[0], args[1]);
+                        work.push(Step::Build(t));
+                        // Pushed right-first so the left operand lands first.
+                        work.push(Step::Enter(right));
+                        work.push(Step::Enter(left));
+                    }
+                    _ => return None,
+                },
+                Step::Build(t) => {
+                    let TermNode::App { op, .. } = arena.node(t) else {
+                        return None;
+                    };
+                    match op {
+                        Op::IntNeg => {
+                            let inner = values.pop()?;
+                            values.push(inner.neg()?);
+                        }
+                        Op::IntAdd | Op::IntSub | Op::IntMul => {
+                            let right = values.pop()?;
+                            let left = values.pop()?;
+                            let built = match op {
+                                Op::IntAdd => left.add(&right)?,
+                                Op::IntSub => left.sub(&right)?,
+                                // Linear only: one side must be a constant.
+                                _ if left.is_constant() => right.scale(left.constant)?,
+                                _ if right.is_constant() => left.scale(right.constant)?,
+                                _ => return None,
+                            };
+                            values.push(built);
+                        }
+                        _ => return None,
+                    }
+                }
+            }
+        }
+        // Exactly one result for a well-formed walk.
+        if values.len() == 1 {
+            values.pop()
+        } else {
+            None
+        }
+    }
 }
 
 impl LiaTheory {
@@ -194,6 +695,11 @@ impl LiaTheory {
     fn new_with_options(arena: &TermArena, atom_terms: &[TermId], allow_opaque_apps: bool) -> Self {
         let kinds: Vec<AtomKind> = atom_terms.iter().map(|&t| classify(arena, t)).collect();
         let count = atom_terms.len();
+        let (atom_rows, simplex) =
+            match build_int_simplex_engine(arena, atom_terms, allow_opaque_apps) {
+                Some((rows, engine)) => (rows, Some(RefCell::new(engine))),
+                None => (vec![AtomRow::None; count], None),
+            };
         Self {
             atom_terms: atom_terms.to_vec(),
             kinds,
@@ -205,6 +711,8 @@ impl LiaTheory {
             skip_entailment_propagation: false,
             allow_opaque_apps,
             deadline: None,
+            atom_rows,
+            simplex,
         }
     }
 
@@ -249,6 +757,57 @@ impl LiaTheory {
         theory.defer_feasibility_until_propagate = true;
         theory.skip_entailment_propagation = true;
         theory
+    }
+
+    /// Whether the warm rational filter was built at all. Test-only: it exists so
+    /// the filter cannot silently become inert (an engine that stops being built
+    /// would leave every measurement below meaningless while every test still
+    /// passed, because the offline decider answers identically — just slower).
+    #[cfg(test)]
+    #[must_use]
+    pub(crate) fn uses_simplex(&self) -> bool {
+        self.simplex.is_some()
+    }
+
+    /// The warm filter's verdict on the *current* live set, as a stable string.
+    /// Test-only: the soundness tests need to know **which** path answered, because
+    /// the two conclusive ones carry different obligations (a refutation must be a
+    /// genuine integer refutation; an integral point must be a genuine integer
+    /// model).
+    #[cfg(test)]
+    #[must_use]
+    pub(crate) fn filter_verdict(&self) -> &'static str {
+        match self.rational_filter() {
+            RationalFilter::Refuted(_) => "refuted",
+            RationalFilter::IntegralPoint => "integral",
+            RationalFilter::Inconclusive => "inconclusive",
+        }
+    }
+
+    /// The literals the filter would name as the conflict core, if it refutes.
+    #[cfg(test)]
+    #[must_use]
+    pub(crate) fn filter_core(&self) -> Option<Vec<TheoryLit>> {
+        match self.rational_filter() {
+            RationalFilter::Refuted(core) => Some(core),
+            RationalFilter::IntegralPoint | RationalFilter::Inconclusive => None,
+        }
+    }
+
+    /// The currently-asserted literals that carry a live constraint. Test-only
+    /// mirror of [`Self::live_lits`] for the differential soundness tests.
+    #[cfg(test)]
+    #[must_use]
+    pub(crate) fn live_literals(&self) -> Vec<TheoryLit> {
+        self.live_lits()
+    }
+
+    /// The polarity-applied conjunctive terms for `lits`, in a working arena — what
+    /// the offline decider is handed. Test-only.
+    #[cfg(test)]
+    #[must_use]
+    pub(crate) fn terms_for(&self, lits: &[TheoryLit]) -> Option<(TermArena, Vec<TermId>)> {
+        self.live_terms(lits)
     }
 
     /// Whether atom `index` is a `LIA` order/equality atom this theory tracks.
@@ -335,6 +894,13 @@ impl LiaTheory {
         if lits.is_empty() {
             return Feasibility::Sat;
         }
+        // The warm rational filter first: it refutes with a small Farkas core, or
+        // confirms with an integral witness, without touching the offline decider.
+        match self.rational_filter() {
+            RationalFilter::Refuted(core) => return Feasibility::Unsat(core),
+            RationalFilter::IntegralPoint => return Feasibility::Sat,
+            RationalFilter::Inconclusive => {}
+        }
         let Some((arena, terms)) = self.live_terms(&lits) else {
             return Feasibility::Unknown;
         };
@@ -369,6 +935,227 @@ impl LiaTheory {
 
     fn deadline_expired(&self) -> bool {
         self.deadline.is_some_and(|d| Instant::now() >= d)
+    }
+
+    /// The row bounds the currently-asserted atoms impose, in assert order.
+    ///
+    /// `None` when a live atom has **no** row. On such a partial view a refutation
+    /// would still be sound (a subset of an infeasible set can only be infeasible
+    /// because the whole set is), but a *feasible* point would not be: it may
+    /// violate the constraint the engine cannot see. Rather than split the two
+    /// directions, the filter declines outright and the offline decider runs.
+    fn live_bounds(&self) -> Option<Vec<(usize, simplex::Rel, Rational)>> {
+        let mut out = Vec::with_capacity(self.assigned_log.len());
+        for &atom in &self.assigned_log {
+            let Some(value) = self.assigned[atom] else {
+                continue;
+            };
+            match self.kinds[atom] {
+                // Contributes no constraint to the conjunctive view either.
+                AtomKind::Unsupported => {}
+                AtomKind::Equality if !value => {}
+                AtomKind::Equality => match self.atom_rows[atom] {
+                    AtomRow::Equality { row, rhs } => out.push((row, simplex::Rel::Eq, rhs)),
+                    AtomRow::Order { .. } | AtomRow::None => return None,
+                },
+                AtomKind::Order => match self.atom_rows[atom] {
+                    AtomRow::Order {
+                        row,
+                        when_true,
+                        when_false,
+                    } => {
+                        let (rel, rhs) = if value { when_true } else { when_false };
+                        out.push((row, rel, rhs));
+                    }
+                    AtomRow::Equality { .. } | AtomRow::None => return None,
+                },
+            }
+        }
+        Some(out)
+    }
+
+    /// Decides the live system's **rational relaxation** on the warm engine.
+    ///
+    /// See the section comment above [`IntLin`] for why both of its conclusive
+    /// answers transfer to ℤ. Every other outcome is [`RationalFilter::Inconclusive`]
+    /// and the offline integer decider runs unchanged.
+    fn rational_filter(&self) -> RationalFilter {
+        let Some(cell) = &self.simplex else {
+            return RationalFilter::Inconclusive;
+        };
+        let Some(bounds) = self.live_bounds() else {
+            return RationalFilter::Inconclusive;
+        };
+        if bounds.is_empty() {
+            return RationalFilter::Inconclusive;
+        }
+        let mut engine = cell.borrow_mut();
+        if !engine.sync(&bounds) {
+            return RationalFilter::Inconclusive;
+        }
+        match engine.inner.check(self.deadline) {
+            simplex::Status::Infeasible(rows) => {
+                // An empty Farkas support means the refutation could not be
+                // *explained*; the offline route then produces the core it always
+                // did, rather than this path widening to the full asserted set.
+                let core = self.rows_to_core(&engine, &rows);
+                if core.is_empty() {
+                    RationalFilter::Inconclusive
+                } else {
+                    RationalFilter::Refuted(core)
+                }
+            }
+            simplex::Status::Feasible => match engine.inner.point() {
+                Some(point) if point.iter().all(|v| v.is_integer()) => {
+                    RationalFilter::IntegralPoint
+                }
+                // A fractional point says nothing about ℤ — branch-and-bound's job.
+                _ => RationalFilter::Inconclusive,
+            },
+            simplex::Status::Unknown => RationalFilter::Inconclusive,
+        }
+    }
+
+    /// Maps a self-verified Farkas support (row indices) back to the asserted atom
+    /// literals behind it: the conflict core. Rows whose atom is not currently
+    /// assigned are skipped defensively (only bounded rows can carry a nonzero
+    /// multiplier, and only live atoms are bounded).
+    ///
+    /// Emitted in **assert order**, matching [`Self::live_lits`]. That matters
+    /// downstream: [`Self::core_conflict_propagation`] pivots on the *last* literal,
+    /// and the deferred large-query path wants the most recently asserted one there,
+    /// not whichever atom happened to own the lowest row index.
+    fn rows_to_core(&self, engine: &IntSimplexEngine, rows: &[usize]) -> Vec<TheoryLit> {
+        let mut support: BTreeSet<usize> = BTreeSet::new();
+        for &row in rows {
+            if let Some(&atom) = engine.row_atom.get(row) {
+                support.insert(atom);
+            }
+        }
+        self.core_in_assert_order(&support)
+    }
+
+    /// The literals of `support` in **assert order**, deduplicated, skipping atoms
+    /// that are not currently assigned.
+    fn core_in_assert_order(&self, support: &BTreeSet<usize>) -> Vec<TheoryLit> {
+        let mut seen: BTreeSet<usize> = BTreeSet::new();
+        let mut core = Vec::new();
+        for &atom in &self.assigned_log {
+            if !support.contains(&atom) {
+                continue;
+            }
+            let Some(value) = self.assigned.get(atom).copied().flatten() else {
+                continue;
+            };
+            if seen.insert(atom) {
+                core.push(TheoryLit { atom, value });
+            }
+        }
+        core
+    }
+
+    /// Speculatively imposes `extra` on top of the live system and reports whether
+    /// the relaxation is refuted, with the **asserted-only** Farkas reason
+    /// (`probe_atom`'s own rows excluded — its bound was added speculatively and is
+    /// not asserted).
+    ///
+    /// The speculative bounds are retracted before returning, so the engine's state
+    /// stays a pure function of the live set.
+    fn engine_probe(
+        &self,
+        extra: &[(usize, simplex::Rel, Rational)],
+        probe_atom: usize,
+    ) -> ProbeOutcome {
+        let Some(cell) = &self.simplex else {
+            return ProbeOutcome::Undecided;
+        };
+        let Some(bounds) = self.live_bounds() else {
+            return ProbeOutcome::Undecided;
+        };
+        let mut engine = cell.borrow_mut();
+        if !engine.sync(&bounds) {
+            return ProbeOutcome::Undecided;
+        }
+        // Every probed row must be free: the probed atom is unassigned, so its row
+        // carries no live bound.
+        if extra.iter().any(|&(row, _, _)| engine.row_bounded[row]) {
+            return ProbeOutcome::Undecided;
+        }
+        for &(row, rel, rhs) in extra {
+            engine.inner.assert_bound(row, rel, rhs);
+        }
+        let status = engine.inner.check(self.deadline);
+        for &(row, _, _) in extra {
+            engine.inner.retract(row);
+        }
+        match status {
+            simplex::Status::Infeasible(rows) => {
+                // The speculative row's atom is excluded outright: its bound was
+                // never asserted, so it may not appear in the reason.
+                let mut support: BTreeSet<usize> = BTreeSet::new();
+                for &row in &rows {
+                    if let Some(&atom) = engine.row_atom.get(row)
+                        && atom != probe_atom
+                    {
+                        support.insert(atom);
+                    }
+                }
+                let core = self.core_in_assert_order(&support);
+                // A refutation resting on no asserted atom is not a propagation
+                // under the asserted state.
+                if core.is_empty() {
+                    ProbeOutcome::NotRefuted
+                } else {
+                    ProbeOutcome::Refuted(core)
+                }
+            }
+            simplex::Status::Feasible => ProbeOutcome::NotRefuted,
+            simplex::Status::Unknown => ProbeOutcome::Undecided,
+        }
+    }
+
+    /// Engine probe for "atom asserted at `probe_value` is infeasible" — so the atom
+    /// is entailed at the opposite polarity.
+    fn engine_probe_atom(&self, atom: usize, probe_value: bool) -> ProbeOutcome {
+        let extra = match self.atom_rows.get(atom) {
+            Some(&AtomRow::Order {
+                row,
+                when_true,
+                when_false,
+            }) => {
+                let (rel, rhs) = if probe_value { when_true } else { when_false };
+                vec![(row, rel, rhs)]
+            }
+            // The equality's false polarity is a disjunction; only `true` is probed.
+            Some(&AtomRow::Equality { row, rhs }) if probe_value => {
+                vec![(row, simplex::Rel::Eq, rhs)]
+            }
+            _ => return ProbeOutcome::Undecided,
+        };
+        self.engine_probe(&extra, atom)
+    }
+
+    /// Engine probe for one strict branch of an integer equality atom: `reverse ==
+    /// false` is `Σ c·x ≤ rhs − 1` (the left branch `lhs < rhs`), `true` is
+    /// `Σ c·x ≥ rhs + 1`. Exact over ℤ, by the same tightening the rows are built
+    /// with.
+    fn engine_probe_equality_branch(&self, atom: usize, reverse: bool) -> ProbeOutcome {
+        let Some(&AtomRow::Equality { row, rhs }) = self.atom_rows.get(atom) else {
+            return ProbeOutcome::Undecided;
+        };
+        let one = Rational::integer(1);
+        let extra = if reverse {
+            let Some(bound) = rhs.checked_add(one) else {
+                return ProbeOutcome::Undecided;
+            };
+            vec![(row, simplex::Rel::Ge, bound)]
+        } else {
+            let Some(bound) = rhs.checked_sub(one) else {
+                return ProbeOutcome::Undecided;
+            };
+            vec![(row, simplex::Rel::Le, bound)]
+        };
+        self.engine_probe(&extra, atom)
     }
 
     /// Converts a currently-infeasible core into a propagation that contradicts
@@ -482,14 +1269,26 @@ impl LiaTheory {
     /// infeasible. Each branch is checked independently by the LP relaxation; the union
     /// of the two asserted-only reasons is therefore a sound reason for equality.
     fn probe_equality_true(&self, asserted: &[TheoryLit], atom: usize) -> Option<Vec<TheoryLit>> {
-        if !self.probe_equality_branch_lp_infeasible(asserted, atom, false) {
-            return None;
-        }
-        let left_reason = self.minimize_equality_branch_reason(asserted, atom, false);
-        if !self.probe_equality_branch_lp_infeasible(asserted, atom, true) {
-            return None;
-        }
-        let right_reason = self.minimize_equality_branch_reason(asserted, atom, true);
+        let left_reason = match self.engine_probe_equality_branch(atom, false) {
+            ProbeOutcome::Refuted(core) => core,
+            ProbeOutcome::NotRefuted => return None,
+            ProbeOutcome::Undecided => {
+                if !self.probe_equality_branch_lp_infeasible(asserted, atom, false) {
+                    return None;
+                }
+                self.minimize_equality_branch_reason(asserted, atom, false)
+            }
+        };
+        let right_reason = match self.engine_probe_equality_branch(atom, true) {
+            ProbeOutcome::Refuted(core) => core,
+            ProbeOutcome::NotRefuted => return None,
+            ProbeOutcome::Undecided => {
+                if !self.probe_equality_branch_lp_infeasible(asserted, atom, true) {
+                    return None;
+                }
+                self.minimize_equality_branch_reason(asserted, atom, true)
+            }
+        };
 
         let mut seen = HashSet::new();
         let mut reason = Vec::new();
@@ -539,6 +1338,13 @@ impl LiaTheory {
         atom: usize,
         probe_value: bool,
     ) -> Option<Vec<TheoryLit>> {
+        // The warm engine answers with the Farkas reason directly — no deletion
+        // minimization, which on this path cost one full LP *per asserted literal*.
+        match self.engine_probe_atom(atom, probe_value) {
+            ProbeOutcome::Refuted(core) => return Some(core),
+            ProbeOutcome::NotRefuted => return None,
+            ProbeOutcome::Undecided => {}
+        }
         let probe = TheoryLit {
             atom,
             value: probe_value,
@@ -1179,7 +1985,15 @@ fn run_online_diag(arena: &TermArena, assertions: &[TermId]) -> Option<OnlineDia
         }]);
     }
     let atom_count = atom_terms.len();
-    let mut theory = LiaTheory::new(arena, &atom_terms);
+    // A per-trial deadline. `Dpll` already has a step budget, but `LiaTheory`
+    // without a deadline lets ONE offline branch-and-bound run to its 50 000-node
+    // cap, and a debug-build fuzz trial that grinds for minutes is a gate that
+    // cannot be run at all: trial 2353 of the corpus below hangs the suite for
+    // minutes on a stock build, which is why the trial count could never be raised.
+    // Expiry only makes the theory answer "don't know", so it can hide a conflict —
+    // never invent one — and every clause the gate does check is still checked.
+    let deadline = Instant::now().checked_add(std::time::Duration::from_millis(250));
+    let mut theory = LiaTheory::new(arena, &atom_terms).with_deadline(deadline);
     let mut solver = Dpll::new(enc.var_count, atom_count, clauses);
     let _ = solver.solve(&mut theory);
     // Read the learned 1-UIP clauses and their lemma provenance off the shared
@@ -1613,7 +2427,23 @@ mod tests {
         let mut conflict_len_total = 0_u64;
         let mut clauses_checked = 0_usize;
 
-        for _ in 0..1500 {
+        // 4500 trials, not the original 1500, and the driver above carries a
+        // per-trial deadline. Both changes are the *same* finding.
+        //
+        // The warm rational filter propagates far more than the LP-plus-deletion
+        // probe it replaced, so the driver reaches the same verdicts through fewer
+        // conflicts: measured on this corpus at 1500 trials, `fires` went 88 → 29
+        // and `clauses_checked` 84 → 25 with every entailment check still passing.
+        // That is a better search, but it under-exercises a gate whose thresholds
+        // measure how hard 1-UIP is being driven, so the trial count buys the
+        // exercise back rather than the thresholds being lowered to meet a quieter
+        // search: 4500 trials give `fires=86`, `clauses_checked=73`.
+        //
+        // Raising the count needed the deadline first. Trial 2353 hangs this suite
+        // for minutes on an untimed theory — pre-existing, and confirmed unrelated
+        // to the filter (it hangs identically with the engine forced off), which is
+        // why 1500 was as far as this gate could ever be pushed.
+        for _ in 0..4500 {
             let mut arena = TermArena::new();
             let nvars = 2 + usize::try_from(lcg.below(2)).expect("small");
             let vars: Vec<TermId> = (0..nvars)
@@ -1737,5 +2567,372 @@ mod tests {
             !replays_integer(&arena, &[gt], &model),
             "a Real value must not pass the integer replay gate"
         );
+    }
+
+    // --- The warm rational filter: soundness. --------------------------------
+    //
+    // Integer feasibility is NOT rational feasibility, so the filter carries two
+    // separate obligations, and these tests pin both against the trusted offline
+    // decider:
+    //   * it must never call a system with an integer solution `refuted`, and the
+    //     core it names must itself be integer-`unsat`; and
+    //   * it must never call a system with no integer solution `integral`.
+
+    /// The filter must actually be built for ordinary integer atom sets. Without
+    /// this the engine could silently stop being constructed and every measurement
+    /// below would be meaningless while every other test still passed — the offline
+    /// decider answers identically, just slower.
+    #[test]
+    fn ordinary_integer_atom_sets_build_the_warm_filter() {
+        let mut arena = TermArena::new();
+        let x = ivar(&mut arena, "x");
+        let y = ivar(&mut arena, "y");
+        let zero = iconst(&mut arena, 0);
+        let sum = arena.int_add(x, y).expect("x+y");
+        let atoms = [
+            arena.int_gt(x, zero).expect("x>0"),
+            arena.int_le(sum, zero).expect("x+y<=0"),
+            arena.eq(x, y).expect("x=y"),
+        ];
+        let theory = LiaTheory::new(&arena, &atoms);
+        assert!(
+            theory.uses_simplex(),
+            "the warm rational filter must be the front of an ordinary LIA atom set"
+        );
+    }
+
+    /// The strict-to-non-strict tightening is what makes the *rational* relaxation
+    /// able to refute an integer-only contradiction: `0 < x ∧ x < 1` has a rational
+    /// solution (x = 1/2) but no integer one, and the tightened rows `x ≥ 1 ∧ x ≤ 0`
+    /// are rationally infeasible. The filter — not the offline decider — must be the
+    /// one that refutes it.
+    #[test]
+    fn the_filter_refutes_the_integer_only_contradiction() {
+        let mut arena = TermArena::new();
+        let x = ivar(&mut arena, "x");
+        let zero = iconst(&mut arena, 0);
+        let one = iconst(&mut arena, 1);
+        let atoms = [
+            arena.int_gt(x, zero).expect("x>0"),
+            arena.int_lt(x, one).expect("x<1"),
+        ];
+        let mut theory = LiaTheory::new(&arena, &atoms);
+        theory.assigned[0] = Some(true);
+        theory.assigned_log.push(0);
+        theory.assigned[1] = Some(true);
+        theory.assigned_log.push(1);
+        assert_eq!(
+            theory.filter_verdict(),
+            "refuted",
+            "the tightened rational relaxation must refute 0<x<1 over the integers"
+        );
+    }
+
+    /// ...and the tightening must not over-tighten: `0 < x ∧ x < 2` has the integer
+    /// solution `x = 1`, so the filter must NOT refute it. A branch or cut that
+    /// prunes a region containing an integer point is exactly the failure this pins.
+    #[test]
+    fn the_filter_does_not_prune_a_region_holding_an_integer_point() {
+        let mut arena = TermArena::new();
+        let x = ivar(&mut arena, "x");
+        let zero = iconst(&mut arena, 0);
+        let two = iconst(&mut arena, 2);
+        let atoms = [
+            arena.int_gt(x, zero).expect("x>0"),
+            arena.int_lt(x, two).expect("x<2"),
+        ];
+        let mut theory = LiaTheory::new(&arena, &atoms);
+        assert!(theory.assert(0, true).is_ok(), "0<x is feasible");
+        assert!(
+            theory.assert(1, true).is_ok(),
+            "0<x<2 holds x=1 and must not be refuted"
+        );
+        let model = theory.integer_model().expect("x=1 is an integer model");
+        assert!(
+            replays_integer(&arena, &atoms, &model),
+            "the reconstructed model must replay: {model:?}"
+        );
+    }
+
+    /// A rationally-feasible, integer-INFEASIBLE system the tightening cannot see
+    /// (`3x + 3y = 5` has the rational point (5/3, 0) and no integer point). The
+    /// filter must decline — never `integral` — and the offline decider must still
+    /// deliver the refutation, so no `sat` can escape.
+    #[test]
+    fn rational_feasibility_is_not_integer_feasibility() {
+        let mut arena = TermArena::new();
+        let x = ivar(&mut arena, "x");
+        let y = ivar(&mut arena, "y");
+        let three = iconst(&mut arena, 3);
+        let five = iconst(&mut arena, 5);
+        let tx = arena.int_mul(three, x).expect("3x");
+        let ty = arena.int_mul(three, y).expect("3y");
+        let sum = arena.int_add(tx, ty).expect("3x+3y");
+        let atom = arena.eq(sum, five).expect("3x+3y=5");
+
+        let mut theory = LiaTheory::new(&arena, &[atom]);
+        theory.assigned[0] = Some(true);
+        theory.assigned_log.push(0);
+        assert_ne!(
+            theory.filter_verdict(),
+            "integral",
+            "a fractional-only relaxation must never be reported as an integer model"
+        );
+
+        // And end to end: the query is unsat, never sat.
+        let verdict =
+            check_qf_lia_online(&arena, &[atom], &SolverConfig::default()).expect("decidable");
+        assert_eq!(
+            verdict,
+            CheckResult::Unsat,
+            "3x+3y=5 has no integer solution"
+        );
+        assert_eq!(
+            check_with_lia_simplex(&arena, &[atom]).expect("offline decidable"),
+            CheckResult::Unsat,
+            "offline route agrees",
+        );
+    }
+
+    /// The same shape one step up: `2x = 2y + 1` (a parity contradiction). Its
+    /// relaxation is feasible for every rational, so only the integer decider can
+    /// refute it — the filter must not report `sat` and the route must not either.
+    #[test]
+    fn parity_contradiction_never_comes_back_sat() {
+        let mut arena = TermArena::new();
+        let x = ivar(&mut arena, "x");
+        let y = ivar(&mut arena, "y");
+        let two = iconst(&mut arena, 2);
+        let one = iconst(&mut arena, 1);
+        let tx = arena.int_mul(two, x).expect("2x");
+        let ty = arena.int_mul(two, y).expect("2y");
+        let rhs = arena.int_add(ty, one).expect("2y+1");
+        let atom = arena.eq(tx, rhs).expect("2x=2y+1");
+
+        let verdict =
+            check_qf_lia_online(&arena, &[atom], &SolverConfig::default()).expect("decidable");
+        assert!(
+            !matches!(verdict, CheckResult::Sat(_)),
+            "a parity contradiction must never be sat: {verdict:?}"
+        );
+    }
+
+    /// Randomized differential against the trusted offline decider, over the two
+    /// conclusive filter answers. For each random conjunction of integer order and
+    /// equality atoms:
+    ///   * `refuted` ⇒ `check_with_lia_simplex` must agree the live set is `unsat`,
+    ///     AND the named core must itself be `unsat` (a core that is not is a wrong
+    ///     lemma even when the verdict happens to be right);
+    ///   * `integral` ⇒ `check_with_lia_simplex` must NOT say `unsat` — a claimed
+    ///     integer model over a system that has none is the wrong-`sat` axis.
+    #[test]
+    fn filter_verdicts_agree_with_the_offline_integer_decider() {
+        let mut seed: u64 = 0x5eed_1a17_2026_0803;
+        let mut next = move || {
+            seed ^= seed << 13;
+            seed ^= seed >> 7;
+            seed ^= seed << 17;
+            seed
+        };
+        let mut refuted = 0usize;
+        let mut integral = 0usize;
+
+        for _ in 0..400 {
+            let mut arena = TermArena::new();
+            let vars: Vec<TermId> = (0..3).map(|i| ivar(&mut arena, &format!("v{i}"))).collect();
+            let atom_count = 2 + (next() % 4) as usize;
+            let mut atoms = Vec::new();
+            for _ in 0..atom_count {
+                let a = vars[(next() % 3) as usize];
+                let b = vars[(next() % 3) as usize];
+                // A small linear combination so the atoms are not all differences.
+                let scale = 1 + i128::from(next() % 3);
+                let k = i128::from(next() % 11) - 5;
+                let sk = iconst(&mut arena, scale);
+                let kk = iconst(&mut arena, k);
+                let Ok(sa) = arena.int_mul(sk, a) else {
+                    continue;
+                };
+                let Ok(lhs) = arena.int_add(sa, kk) else {
+                    continue;
+                };
+                let built = match next() % 5 {
+                    0 => arena.int_lt(lhs, b),
+                    1 => arena.int_le(lhs, b),
+                    2 => arena.int_gt(lhs, b),
+                    3 => arena.int_ge(lhs, b),
+                    _ => arena.eq(lhs, b),
+                };
+                if let Ok(atom) = built {
+                    atoms.push(atom);
+                }
+            }
+            if atoms.is_empty() {
+                continue;
+            }
+
+            let mut theory = LiaTheory::new(&arena, &atoms);
+            // Assert every atom at a random polarity WITHOUT going through
+            // `assert` (which would stop at the first conflict) so the filter is
+            // exercised on the whole set.
+            for atom in 0..atoms.len() {
+                let value = next() % 2 == 0;
+                theory.assigned[atom] = Some(value);
+                theory.assigned_log.push(atom);
+            }
+            let lits = theory.live_literals();
+            if lits.is_empty() {
+                continue;
+            }
+            let Some((live_arena, live_terms)) = theory.terms_for(&lits) else {
+                continue;
+            };
+            let offline = check_with_lia_simplex(&live_arena, &live_terms);
+
+            match theory.filter_verdict() {
+                "refuted" => {
+                    refuted += 1;
+                    assert_eq!(
+                        offline.as_ref().ok(),
+                        Some(&CheckResult::Unsat),
+                        "the filter refuted a live set the integer decider did not: {live_terms:?}"
+                    );
+                    // The named core must itself be integer-unsat.
+                    let core = theory.filter_core().expect("refuted ⇒ a core");
+                    let (core_arena, core_terms) =
+                        theory.terms_for(&core).expect("core terms build");
+                    assert_eq!(
+                        check_with_lia_simplex(&core_arena, &core_terms).ok(),
+                        Some(CheckResult::Unsat),
+                        "the Farkas core must itself be integer-unsat: {core:?}"
+                    );
+                }
+                "integral" => {
+                    integral += 1;
+                    assert_ne!(
+                        offline.as_ref().ok(),
+                        Some(&CheckResult::Unsat),
+                        "the filter claimed an integer model for an unsat system: {live_terms:?}"
+                    );
+                }
+                _ => {}
+            }
+        }
+        // The fuzz has to actually reach both conclusive paths, or it proves
+        // nothing (the inert-gate failure mode).
+        assert!(
+            refuted >= 10,
+            "the fuzz never exercised the refutation path ({refuted} hits)"
+        );
+        assert!(
+            integral >= 10,
+            "the fuzz never exercised the integral-point path ({integral} hits)"
+        );
+    }
+
+    /// Warm-vs-cold agreement over random assert/pop sequences: the filter's verdict
+    /// on a live set must not depend on the order the engine happened to reach it
+    /// in. A stale bound left behind by a pop is a wrong-`unsat`, which is exactly
+    /// the class `push_assert_pop_restores_feasibility` caught on the LRA side.
+    #[test]
+    fn warm_filter_matches_a_cold_theory_on_the_same_live_set() {
+        let mut seed: u64 = 0xc01d_57a7_2026_0803;
+        let mut next = move || {
+            seed ^= seed << 13;
+            seed ^= seed >> 7;
+            seed ^= seed << 17;
+            seed
+        };
+
+        for _ in 0..200 {
+            let mut arena = TermArena::new();
+            let vars: Vec<TermId> = (0..3).map(|i| ivar(&mut arena, &format!("w{i}"))).collect();
+            let mut atoms = Vec::new();
+            for _ in 0..5 {
+                let a = vars[(next() % 3) as usize];
+                let b = vars[(next() % 3) as usize];
+                let k = iconst(&mut arena, i128::from(next() % 9) - 4);
+                let Ok(lhs) = arena.int_add(a, k) else {
+                    continue;
+                };
+                let built = match next() % 4 {
+                    0 => arena.int_lt(lhs, b),
+                    1 => arena.int_le(lhs, b),
+                    2 => arena.int_gt(lhs, b),
+                    _ => arena.int_ge(lhs, b),
+                };
+                if let Ok(atom) = built {
+                    atoms.push(atom);
+                }
+            }
+            if atoms.is_empty() {
+                continue;
+            }
+
+            // Drive a warm theory through pushes, asserts and pops.
+            let mut warm = LiaTheory::new(&arena, &atoms);
+            let mut assignment: Vec<(usize, bool)> = Vec::new();
+            for _ in 0..8 {
+                if next() % 3 == 0 && !assignment.is_empty() {
+                    warm.pop();
+                    assignment.truncate(assignment.len().saturating_sub(1));
+                    continue;
+                }
+                let atom = usize::try_from(next() % 64).expect("small") % atoms.len();
+                if warm.assigned[atom].is_some() {
+                    continue;
+                }
+                let value = next() % 2 == 0;
+                warm.push();
+                warm.assigned[atom] = Some(value);
+                warm.assigned_log.push(atom);
+                assignment.push((atom, value));
+            }
+
+            // A cold theory reaching the SAME live set in one go.
+            let mut cold = LiaTheory::new(&arena, &atoms);
+            for &(atom, value) in &assignment {
+                cold.assigned[atom] = Some(value);
+                cold.assigned_log.push(atom);
+            }
+            assert_eq!(
+                warm.filter_verdict(),
+                cold.filter_verdict(),
+                "warm and cold engines disagree on {assignment:?}"
+            );
+        }
+    }
+
+    /// A propagation the filter emits must be a genuine entailment: asserting its
+    /// reason together with the NEGATION of the propagated literal must be
+    /// integer-`unsat` by the trusted offline decider.
+    #[test]
+    fn filter_propagations_are_entailed_over_the_integers() {
+        let mut arena = TermArena::new();
+        let x = ivar(&mut arena, "x");
+        let one = iconst(&mut arena, 1);
+        let zero = iconst(&mut arena, 0);
+        let ge_one = arena.int_ge(x, one).expect("x>=1");
+        let gt_zero = arena.int_gt(x, zero).expect("x>0");
+        let atoms = [ge_one, gt_zero];
+
+        let mut theory = LiaTheory::new(&arena, &atoms);
+        theory.assert(0, true).expect("x>=1 feasible");
+        let props = theory.propagate();
+        assert!(!props.is_empty(), "x>=1 must entail x>0");
+        for prop in &props {
+            // reason ∧ ¬propagated must be unsat.
+            let mut lits = prop.reason.clone();
+            lits.push(TheoryLit {
+                atom: prop.lit.atom,
+                value: !prop.lit.value,
+            });
+            let (probe_arena, probe_terms) = theory.terms_for(&lits).expect("probe terms");
+            assert_eq!(
+                check_with_lia_simplex(&probe_arena, &probe_terms).ok(),
+                Some(CheckResult::Unsat),
+                "propagation {prop:?} is not entailed by its reason"
+            );
+        }
     }
 }

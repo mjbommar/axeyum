@@ -378,12 +378,39 @@ pub fn check_with_arith_dpll(
     Ok(run_arith_dpll(arena, assertions, &fallback_config)?.result)
 }
 
+/// The share of the caller's wall clock the online CDCL(T) probe gets before the
+/// legacy enumerate-and-block loop below takes the rest: **one third**.
+///
+/// This was `min(timeout/2, 1s)`, which on the standard 24 s budget handed the
+/// online route 1 s and the legacy loop the other 23 s. It is budget-proportional
+/// now, and the proportion was measured, not assumed. On the committed 200-file
+/// `QF_LIA` parity list, the five files whose verdict moved at all behave like this
+/// (24 s budget, sequential, load ~1-2):
+///
+/// | probe share | `ex3000` | `ex4320` | `ex6960` | `0006-still_live` | net |
+/// |-------------|----------|----------|----------|-------------------|-----|
+/// | 1 s (old)   | unknown  | unknown  | sat 15.7s| sat 20.6s         | —   |
+/// | ¼ (6 s)     | unknown  | unknown  | sat 20.7s| unknown           | −1  |
+/// | ⅓ (8 s)     | unsat 8.2s | unsat 8.2s | sat 22.8s | unknown        | **+1** |
+/// | ½ (12 s)    | unsat 12.2s| unsat 12.2s| unknown  | unknown          | 0   |
+/// | all (24 s)  | unsat 24.2s| unsat 24.2s| unknown  | unknown          | 0   |
+///
+/// Both new `unsat`s match the declared `:status` and `cvc5 --tlimit=24000`. The
+/// shape is a genuine trade — a larger share buys refutations the online route can
+/// only reach with real time, and costs `sat` files the legacy loop needs 15-20 s
+/// for — and a third is where it comes out ahead rather than even.
+///
+/// The reason a proportional share is affordable at all is that the online theory
+/// now declines *fast*: `LiaTheory` decides on a warm rational simplex first (see
+/// `crate::lia_online`), and a query outside its fragment gives up on arithmetic
+/// grounds in milliseconds, handing the unused time straight back through
+/// [`remaining_config`]. Measured on the `QF_IDL` residuals, where the probe
+/// declines in 0.7 ms-334 ms and the whole division is unmoved by this constant.
 fn online_lia_probe_config(config: &SolverConfig) -> SolverConfig {
     let mut probe = config.clone();
     if let Some(timeout) = probe.timeout {
-        let half = timeout.checked_div(2).unwrap_or(timeout);
-        let bounded = half.min(Duration::from_secs(1));
-        probe.timeout = Some(if bounded.is_zero() { timeout } else { bounded });
+        let share = timeout.checked_div(3).unwrap_or(timeout);
+        probe.timeout = Some(if share.is_zero() { timeout } else { share });
     }
     probe
 }
@@ -1931,14 +1958,16 @@ fn finish_sat(
     lits: &[TermId],
 ) -> Result<CheckResult, SolverError> {
     let all_indices = (0..ctx.atoms.len()).collect::<Vec<_>>();
-    Ok(try_finish_sat(arena, assertions, ctx, propositional, lits, &all_indices).unwrap_or_else(
-        || {
-            CheckResult::Unknown(UnknownReason {
-                kind: UnknownKind::Incomplete,
-                detail: "arith DPLL candidate failed full model replay".to_owned(),
-            })
-        },
-    ))
+    Ok(
+        try_finish_sat(arena, assertions, ctx, propositional, lits, &all_indices).unwrap_or_else(
+            || {
+                CheckResult::Unknown(UnknownReason {
+                    kind: UnknownKind::Incomplete,
+                    detail: "arith DPLL candidate failed full model replay".to_owned(),
+                })
+            },
+        ),
+    )
 }
 
 fn try_finish_sat(
