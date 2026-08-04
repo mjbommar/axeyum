@@ -92,6 +92,15 @@ fn int_products(arena: &TermArena, roots: &[TermId]) -> BTreeSet<TermId> {
     products
 }
 
+/// Whether any assertion reachable from `roots` contains a genuinely nonlinear
+/// integer product (both operands non-constant) — the exact predicate
+/// [`int_products`] uses, exposed so the arithmetic dispatcher can tell a
+/// nonlinear-integer query from a linear one *before* spending budget on a
+/// purely-linear decision procedure that structurally cannot decide it.
+pub(crate) fn has_nonlinear_int_product(arena: &TermArena, roots: &[TermId]) -> bool {
+    !int_products(arena, roots).is_empty()
+}
+
 /// The valid integer sign/zero lemmas for `r = a·b` (each is a consequence of the
 /// abstracted equality, so adding them only restricts the relaxation's models).
 /// Deliberately kept to the six cheap sign/zero facts — they suffice for the

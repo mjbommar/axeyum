@@ -3508,6 +3508,25 @@ fn record_nia_decline(rec: &mut Recorder<'_>, route: &'static str, why: Option<D
     with_recorder(rec, |t| t.record_declined(route, reason));
 }
 
+/// The share of the caller's wall clock the real-relaxation refuter
+/// (`int_real_relax::refute_int_via_real_relaxation`) is asked to stay inside:
+/// **one sixth**, leaving the remaining five sixths for the nonlinear routes that
+/// follow it. `None` (an unbounded caller budget) stays `None` — this only ever
+/// divides an existing budget, never invents one.
+const INT_REAL_RELAX_BUDGET_SHARE: u32 = 6;
+
+/// `config` with the real-relaxation refuter's budget share applied.
+fn int_real_relax_budget(config: &SolverConfig) -> SolverConfig {
+    let Some(timeout) = config.timeout else {
+        return config.clone();
+    };
+    let share = timeout / INT_REAL_RELAX_BUDGET_SHARE;
+    if share.is_zero() {
+        return config.clone();
+    }
+    config.clone().with_timeout(share)
+}
+
 /// The pure-integer nonlinear tail of [`check_auto_dispatch`] (`features.has_int`
 /// after the EUF/array fast paths). Split out for length; the verdict logic is
 /// verbatim the inlined original, `rec` only annotates the existing sites.
@@ -3566,7 +3585,26 @@ fn dispatch_nonlinear_int_tail(
         // ladder still decides; it only fast-paths (and avoids hanging on) the
         // real-refutable cases. The relaxation runs on a clone of the arena and
         // never leaks a symbol or term back.
-        if crate::int_real_relax::refute_int_via_real_relaxation(arena, assertions, config)? {
+        //
+        // BUDGET SHARE. This refuter is a *fast path*, not the decider of record —
+        // when it declines, `check_with_nia` below is the route that can actually
+        // decide the query, and it needs wall clock to do it. Handing the refuter
+        // the caller's whole `config.timeout` means a declining file spends 100% of
+        // its budget here and `check_with_nia` is never entered at all; that is what
+        // it did on 9 of the 12 `QF_NIA` parity files measured at the standard 24 s
+        // budget. One sixth is what the probe lane measured as the point where the
+        // refuter still lands its `unsat`s and the tail gets a usable remainder.
+        //
+        // NOTE, honestly: this is a *requested* budget, not an enforced one. The NRA
+        // engine underneath honors a deadline only at the entry points listed in
+        // `docs/research/05-algorithms/arithmetic-deadline-bounding-ceiling.md`, and
+        // on this same parity slice a 4 s share was measured overrunning to 8.8 s,
+        // 15.2 s, and (on four files) past the full 24 s. The share is still worth
+        // taking — it is exact on the files the NRA polls reach — but it does not by
+        // itself bound this stage.
+        let relax_config = int_real_relax_budget(config);
+        if crate::int_real_relax::refute_int_via_real_relaxation(arena, assertions, &relax_config)?
+        {
             with_recorder(rec, |t| t.record_decided("int-real-relax", Verdict::Unsat));
             return Ok(CheckResult::Unsat);
         }

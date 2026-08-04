@@ -17,13 +17,15 @@
 //! `sat`/`unsat` into a wrong verdict, and fast queries still decide unchanged.
 #![cfg(feature = "full")]
 
+use std::fmt::Write as _;
 use std::time::{Duration, Instant};
 
 use axeyum_ir::{Rational, Sort, TermArena, TermId};
 use axeyum_smtlib::parse_script;
 use axeyum_solver::{
     CheckResult, SatBvBackend, SolverBackend, SolverConfig, UnknownKind, check_auto,
-    check_qf_aufbv_online_cdclt, check_qf_uflra_online, check_with_uf_arithmetic,
+    check_qf_aufbv_online_cdclt, check_qf_uflra_online, check_with_arith_dpll,
+    check_with_uf_arithmetic,
 };
 
 /// Public cvc5 regression whose five 1024-bit dividers exposed deadline-blind
@@ -337,5 +339,111 @@ fn uflra_fuzz_grinder_honors_config_timeout() {
             );
         }
         _ => {}
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Lazy linear-arithmetic (`dpll_lia`) round-interior deadline gate.
+//
+// `IncrementalArithDpll::solve` polled `config.timeout` only at the TOP of each
+// refinement round. Everything a round then does — the conjunctive theory
+// oracles, the quadratic cheap-core scans, the deletion-minimization loop (one
+// oracle call per atom), and the two full theory re-decisions that reconstruct a
+// `sat` model — ran to completion with no interruption point. So the loop's
+// worst case is not "budget + epsilon", it is "budget + one whole round", and a
+// round has no bound of its own.
+//
+// Measured on the `QF_NIA` parity list this cost a few percent per call, which
+// is why it hid. Measured on the shape below it costs three orders of
+// magnitude: a 3x20 market-split system (binary variables, LP-feasible,
+// integer-infeasible — the classic branch-and-bound grinder) returned in
+// **109.6 s against a 200 ms budget**, i.e. 548x over. The phase breakdown was
+// 54.9 s in `try_finish_sat` plus 54.9 s in `finish_sat`, both of them
+// deadline-free `check_with_lia_simplex` re-decisions of the same cube.
+//
+// SMT-COMP scores an overrun as a kill, so this converts would-be-solved files
+// into zeros, and it silently corrupts every budget-share calculation made
+// upstream of this entry point.
+//
+// The fix threads the solve's absolute deadline through every oracle call and
+// scan inside a round. Expiry only ever produces a *weaker* answer (a coarser
+// conflict core, or `Unknown`), never a different verdict: a `sat` still has to
+// pass the full model replay against the original assertions.
+const MARKET_SPLIT_ROWS: usize = 3;
+const MARKET_SPLIT_COLS: usize = 20;
+
+/// Deterministic 64-bit LCG (same constants as the other fuzz gates here) so the
+/// grinder instance is byte-identical on every run and every machine.
+fn market_split_rand(state: &mut u64) -> u64 {
+    *state = state
+        .wrapping_mul(6_364_136_223_846_793_005)
+        .wrapping_add(1_442_695_040_888_963_407);
+    *state >> 33
+}
+
+/// A market-split feasibility system: `rows` dense equalities over `cols` 0/1
+/// integer variables whose right-hand sides are set just off the achievable
+/// half-split. The LP relaxation is feasible and the integer system is not, so
+/// branch-and-bound cannot prune and grinds — a single conjunctive
+/// `check_with_lia_simplex` on this system measured 46 s with no deadline.
+fn market_split_smt2(rows: usize, cols: usize, seed: u64) -> String {
+    let mut state = seed;
+    let mut text = String::from("(set-logic QF_LIA)\n");
+    for j in 0..cols {
+        let _ = write!(
+            text,
+            "(declare-fun v{j} () Int)\n(assert (>= v{j} 0))\n(assert (<= v{j} 1))\n"
+        );
+    }
+    // One genuinely Boolean-structured assertion, so the query is a lazy-SMT
+    // problem (a `check_with_arith_dpll` round) and not a bare conjunction.
+    text.push_str("(declare-fun g () Int)\n(assert (or (= g 0) (= g 1)))\n");
+    for _ in 0..rows {
+        let coeffs: Vec<u64> = (0..cols)
+            .map(|_| market_split_rand(&mut state) % 99 + 1)
+            .collect();
+        let rhs = coeffs.iter().sum::<u64>() / 2 + 1;
+        text.push_str("(assert (= (+");
+        for (j, c) in coeffs.iter().enumerate() {
+            let _ = write!(text, " (* {c} v{j})");
+        }
+        let _ = writeln!(text, " g) {rhs}))");
+    }
+    text.push_str("(check-sat)\n");
+    text
+}
+
+#[test]
+fn lazy_lia_round_interior_honors_config_timeout() {
+    let budget = Duration::from_millis(200);
+    let cfg = SolverConfig::default().with_timeout(budget);
+
+    for seed in [1_u64, 7] {
+        let text = market_split_smt2(MARKET_SPLIT_ROWS, MARKET_SPLIT_COLS, seed);
+        let mut script = parse_script(&text).expect("generated market-split parses");
+        let assertions = script.checked_flat_view().to_vec();
+
+        let start = Instant::now();
+        let result = check_with_arith_dpll(&mut script.arena, &assertions, &cfg)
+            .expect("lazy arithmetic has no operational error on a pure QF_LIA query");
+        let elapsed = start.elapsed();
+
+        // Pre-fix this was 548x (seed 1) and 445x (seed 7) over budget. 20x is
+        // loose enough to survive a loaded box and three orders of magnitude
+        // tighter than the defect.
+        assert!(
+            elapsed < budget * 20,
+            "lazy LIA overran its {budget:?} budget on the market-split grinder \
+             (seed {seed}): elapsed {elapsed:?} ({:.0}x), result {result:?}",
+            elapsed.as_secs_f64() / budget.as_secs_f64()
+        );
+
+        // Only a *wrong* verdict would be a soundness bug. The instance is
+        // genuinely `unsat`; at this budget the engine is expected to decline.
+        assert!(
+            !matches!(result, CheckResult::Sat(_)),
+            "market-split system {MARKET_SPLIT_ROWS}x{MARKET_SPLIT_COLS} (seed {seed}) is \
+             integer-infeasible, so a `sat` here is a wrong verdict: {result:?}"
+        );
     }
 }

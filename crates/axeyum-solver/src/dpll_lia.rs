@@ -33,7 +33,8 @@ use axeyum_ir::{
 
 use crate::backend::{CheckResult, SolverConfig, SolverError, UnknownKind, UnknownReason};
 use crate::lra::{
-    check_with_lia_opaque_apps, check_with_lia_simplex, check_with_lra,
+    check_with_lia_opaque_apps, check_with_lia_opaque_apps_within_node_cap,
+    check_with_lia_simplex_within, check_with_lra, check_with_lra_within,
     lia_lp_relaxation_unsat_core,
 };
 use crate::model::Model;
@@ -353,6 +354,33 @@ pub fn check_with_arith_dpll(
              that may be zero needs an explicit SMT-LIB underspecification encoding"
                 .to_owned(),
         ));
+    }
+    // NONLINEAR GUARD. A query carrying a genuinely nonlinear integer product is
+    // outside this entry point's fragment: the legacy loop below rejects it in
+    // well under a millisecond (`lra.rs`, "unsupported arithmetic atom: QF_LIA:
+    // nonlinear integer multiplication"), because the abstractor cannot build a
+    // simplex row for `x·y`. The online CDCL(T) probe has no such guard —
+    // `lia_online::is_lia_atom` accepts `(<= (* x y) c)` and `classify` then marks
+    // it `AtomKind::Unsupported`, which contributes NO row, so asserting it is a
+    // no-op, no theory conflict is ever produced, and the driver enumerates until
+    // its deadline. Measured on the committed `QF_NIA` parity list at the standard
+    // 24 s budget: the probe spent 1.7-8.0 s per file reaching `Unknown`, and the
+    // legacy rejection that follows it costs 0.2-0.6 ms. Running the cheap
+    // rejection FIRST hands that time back to the nonlinear tail
+    // (`nia_linearize::check_with_nia`), which is the only route that can decide
+    // these at all.
+    //
+    // This is a *routing* change, not a fragment change: the outcome is identical
+    // to today's whenever the probe declines, which is what it did on every file
+    // measured. What it gives up is the case where the probe refutes a nonlinear
+    // query from its purely-linear live subset alone (an unsupported atom
+    // contributes no constraint, so the theory decides a relaxation and a
+    // relaxation `unsat` transfers soundly). That is a real capability, so the
+    // guard is ratcheted by `tests/progress_frontier.rs` (`nia_unsat`) rather than
+    // argued: it is only taken when the *whole* query is nonlinear-integer, and any
+    // frontier movement means it is too aggressive.
+    if crate::nia_linearize::has_nonlinear_int_product(arena, assertions) {
+        return Ok(run_arith_dpll(arena, assertions, config)?.result);
     }
     // Prefer the shared CDCL(T) spine for pure-integer arithmetic
     // searches: it has 1-UIP learning, non-chronological backjumping, restarts,
@@ -815,9 +843,7 @@ impl IncrementalArithDpll {
                     &self.ctx,
                     &lits,
                     &support,
-                    Theory::Int,
-                    check_with_lia_opaque_apps,
-                    enable_affine_bound_cores,
+                    TheoryProbe::int(enable_affine_bound_cores, deadline),
                 )?;
                 if !int_conflicts.is_empty() {
                     self.support_stats.conflict_batches += 1;
@@ -842,9 +868,7 @@ impl IncrementalArithDpll {
                     &self.ctx,
                     &lits,
                     &support,
-                    Theory::Real,
-                    check_with_lra,
-                    enable_affine_bound_cores,
+                    TheoryProbe::real(enable_affine_bound_cores, deadline),
                 )?;
                 if !real_conflicts.is_empty() {
                     self.support_stats.conflict_batches += 1;
@@ -873,6 +897,7 @@ impl IncrementalArithDpll {
                         &propositional,
                         &lits,
                         &support,
+                        deadline,
                     ) {
                         return Ok(result);
                     }
@@ -887,9 +912,7 @@ impl IncrementalArithDpll {
                 arena,
                 &self.ctx,
                 &lits,
-                Theory::Int,
-                check_with_lia_opaque_apps,
-                enable_affine_bound_cores,
+                TheoryProbe::int(enable_affine_bound_cores, deadline),
             )?;
             if !int_conflicts.is_empty() {
                 let mut learn = ArithLearnState {
@@ -912,9 +935,7 @@ impl IncrementalArithDpll {
                 arena,
                 &self.ctx,
                 &lits,
-                Theory::Real,
-                check_with_lra,
-                enable_affine_bound_cores,
+                TheoryProbe::real(enable_affine_bound_cores, deadline),
             )?;
             if !real_conflicts.is_empty() {
                 let mut learn = ArithLearnState {
@@ -942,7 +963,14 @@ impl IncrementalArithDpll {
                         .to_owned(),
                 }));
             }
-            return finish_sat(arena, assertions, &self.ctx, &propositional, &lits);
+            return finish_sat(
+                arena,
+                assertions,
+                &self.ctx,
+                &propositional,
+                &lits,
+                deadline,
+            );
         }
 
         Ok(CheckResult::Unknown(UnknownReason {
@@ -1017,29 +1045,103 @@ fn record_conflict_batch(
     Ok(())
 }
 
+/// A conjunctive theory decision procedure that honors an absolute wall-clock
+/// `deadline`.
+///
+/// The lazy loop's per-round work is dominated by these calls, and a *single*
+/// one of them can run for tens of seconds (measured: 46 s on a 3×20
+/// market-split conjunction) — far past the caller's whole budget — because the
+/// round-top deadline poll cannot interrupt work already in flight. Every oracle
+/// the loop drives therefore takes the deadline, and expiry degrades it to
+/// `Unknown`, which the loop treats exactly as "no conflict found" (sound: a
+/// missed conflict can only cost completeness, and a `sat` is still gated by the
+/// full model replay in [`try_finish_sat`]).
+type DeadlinedTheoryOracle =
+    fn(&TermArena, &[TermId], Option<Instant>) -> Result<CheckResult, SolverError>;
+
+/// The integer oracle the lazy loop drives: opaque-UF-tolerant conjunctive
+/// `QF_LIA`, deadline-bounded, and keeping the deterministic node backstop (see
+/// [`check_with_lia_opaque_apps_within_node_cap`]).
+fn int_theory_oracle(
+    arena: &TermArena,
+    conj: &[TermId],
+    deadline: Option<Instant>,
+) -> Result<CheckResult, SolverError> {
+    check_with_lia_opaque_apps_within_node_cap(arena, conj, deadline)
+}
+
+/// The integer oracle used for **sat-model reconstruction**: the plain conjunctive
+/// `QF_LIA` decision (which returns a model), deadline-bounded. Distinct from
+/// [`int_theory_oracle`], which tolerates opaque UF applications and therefore
+/// never returns a `Sat` model.
+fn int_model_oracle(
+    arena: &TermArena,
+    conj: &[TermId],
+    deadline: Option<Instant>,
+) -> Result<CheckResult, SolverError> {
+    check_with_lia_simplex_within(arena, conj, deadline)
+}
+
+/// The real oracle the lazy loop drives: conjunctive `QF_LRA`, deadline-bounded.
+fn real_theory_oracle(
+    arena: &TermArena,
+    conj: &[TermId],
+    deadline: Option<Instant>,
+) -> Result<CheckResult, SolverError> {
+    check_with_lra_within(arena, conj, deadline)
+}
+
+/// Whether `deadline` (if set) has passed.
+fn past_deadline(deadline: Option<Instant>) -> bool {
+    deadline.is_some_and(|d| Instant::now() >= d)
+}
+
+/// One theory's side of a conflict scan: which theory, the deadline-bounded
+/// conjunctive decision procedure for it, whether the affine-bound core
+/// extractor is enabled this solve, and the absolute wall-clock deadline that
+/// bounds every oracle call and quadratic scan below.
+#[derive(Clone, Copy)]
+struct TheoryProbe {
+    theory: Theory,
+    oracle: DeadlinedTheoryOracle,
+    enable_affine_bound_cores: bool,
+    deadline: Option<Instant>,
+}
+
+impl TheoryProbe {
+    /// The integer probe: opaque-UF-tolerant conjunctive `QF_LIA`.
+    fn int(enable_affine_bound_cores: bool, deadline: Option<Instant>) -> Self {
+        Self {
+            theory: Theory::Int,
+            oracle: int_theory_oracle,
+            enable_affine_bound_cores,
+            deadline,
+        }
+    }
+
+    /// The real probe: conjunctive `QF_LRA`.
+    fn real(enable_affine_bound_cores: bool, deadline: Option<Instant>) -> Self {
+        Self {
+            theory: Theory::Real,
+            oracle: real_theory_oracle,
+            enable_affine_bound_cores,
+            deadline,
+        }
+    }
+}
+
 /// Checks one theory's conjunction; on `unsat`, returns one or more conflict
-/// cores as global atom indices. `oracle` is the conjunctive decision procedure
-/// for the theory.
+/// cores as global atom indices.
 fn theory_conflicts(
     arena: &TermArena,
     ctx: &ArithAbstractor,
     lits: &[TermId],
-    theory: Theory,
-    oracle: fn(&TermArena, &[TermId]) -> Result<CheckResult, SolverError>,
-    enable_affine_bound_cores: bool,
+    probe: TheoryProbe,
 ) -> Result<Vec<ArithConflictCore>, SolverError> {
     let indices: Vec<usize> = (0..ctx.atoms.len())
-        .filter(|&i| ctx.atoms[i].theory == theory)
+        .filter(|&i| ctx.atoms[i].theory == probe.theory)
         .collect();
-    theory_conflicts_for_indices(
-        arena,
-        ctx,
-        lits,
-        &indices,
-        theory,
-        oracle,
-        enable_affine_bound_cores,
-    )
+    theory_conflicts_for_indices(arena, ctx, lits, &indices, probe)
 }
 
 fn theory_conflicts_for_indices(
@@ -1047,10 +1149,14 @@ fn theory_conflicts_for_indices(
     ctx: &ArithAbstractor,
     lits: &[TermId],
     indices: &[usize],
-    theory: Theory,
-    oracle: fn(&TermArena, &[TermId]) -> Result<CheckResult, SolverError>,
-    enable_affine_bound_cores: bool,
+    probe: TheoryProbe,
 ) -> Result<Vec<ArithConflictCore>, SolverError> {
+    let TheoryProbe {
+        theory,
+        oracle,
+        enable_affine_bound_cores,
+        deadline,
+    } = probe;
     let indices: Vec<usize> = indices
         .iter()
         .copied()
@@ -1060,11 +1166,11 @@ fn theory_conflicts_for_indices(
         return Ok(Vec::new());
     }
     let conj: Vec<TermId> = indices.iter().map(|&i| lits[i]).collect();
-    if !matches!(oracle(arena, &conj)?, CheckResult::Unsat) {
+    if !matches!(oracle(arena, &conj, deadline)?, CheckResult::Unsat) {
         return Ok(Vec::new());
     }
     if theory == Theory::Int {
-        let bound_cores = cheap_int_bound_conflict_cores(arena, ctx, lits, &indices);
+        let bound_cores = cheap_int_bound_conflict_cores(arena, ctx, lits, &indices, deadline);
         if !bound_cores.is_empty() {
             return Ok(bound_cores
                 .into_iter()
@@ -1078,7 +1184,8 @@ fn theory_conflicts_for_indices(
             )]);
         }
         if enable_affine_bound_cores {
-            let affine_cores = cheap_int_affine_bound_conflict_cores(arena, ctx, lits, &indices);
+            let affine_cores =
+                cheap_int_affine_bound_conflict_cores(arena, ctx, lits, &indices, deadline);
             if !affine_cores.is_empty() {
                 return Ok(affine_cores
                     .into_iter()
@@ -1086,14 +1193,22 @@ fn theory_conflicts_for_indices(
                     .collect());
             }
         }
-        if let Some(core) = lp_relaxation_conflict_core(arena, lits, &indices)? {
+        // A whole extra LP solve plus core extraction, and purely a core-quality
+        // improvement — skip it once the caller is out of time.
+        if !past_deadline(deadline)
+            && let Some(core) = lp_relaxation_conflict_core(arena, lits, &indices)?
+        {
             return Ok(vec![ArithConflictCore::new(
                 ArithCoreSource::LpRelaxation,
                 core,
             )]);
         }
     }
-    if indices.len() > MAX_MINIMIZED_THEORY_CORE_ATOMS {
+    // Deletion minimization costs up to one oracle call per atom. Past the
+    // deadline that is exactly the work the caller no longer has time for, and the
+    // unminimized index set is already a valid conflict core — so hand it back as
+    // `Large` rather than spending another `indices.len()` theory checks.
+    if indices.len() > MAX_MINIMIZED_THEORY_CORE_ATOMS || past_deadline(deadline) {
         return Ok(vec![ArithConflictCore::new(
             ArithCoreSource::Large,
             indices,
@@ -1101,7 +1216,7 @@ fn theory_conflicts_for_indices(
     }
     Ok(vec![ArithConflictCore::new(
         ArithCoreSource::Minimized,
-        minimize_core(arena, &indices, lits, oracle)?,
+        minimize_core(arena, &indices, lits, oracle, deadline)?,
     )])
 }
 
@@ -1133,6 +1248,7 @@ fn cheap_int_bound_conflict_cores(
     ctx: &ArithAbstractor,
     lits: &[TermId],
     indices: &[usize],
+    deadline: Option<Instant>,
 ) -> Vec<Vec<usize>> {
     let mut bounds = Vec::new();
     for &idx in indices {
@@ -1149,6 +1265,13 @@ fn cheap_int_bound_conflict_cores(
     let mut conflicts = Vec::new();
     let mut seen = HashSet::new();
     for i in 0..bounds.len() {
+        // `bounds` grows with the atom count (700+ on the measured `QF_NIA` rows),
+        // so this pair scan is quadratic and runs inside a single lazy round.
+        // Returning the cores found so far is sound — each is independently a
+        // conflict — and only costs the loop some learned clauses.
+        if past_deadline(deadline) {
+            return conflicts;
+        }
         for j in (i + 1)..bounds.len() {
             let Some((lower, upper)) = conflicting_bounds(&bounds[i], &bounds[j]) else {
                 continue;
@@ -1257,6 +1380,7 @@ fn cheap_int_affine_bound_conflict_cores(
     ctx: &ArithAbstractor,
     lits: &[TermId],
     indices: &[usize],
+    deadline: Option<Instant>,
 ) -> Vec<Vec<usize>> {
     let mut bounds = Vec::new();
     for &idx in indices {
@@ -1271,6 +1395,11 @@ fn cheap_int_affine_bound_conflict_cores(
     let mut conflicts = Vec::new();
     let mut seen = HashSet::new();
     for i in 0..bounds.len() {
+        // Same quadratic pair scan as `cheap_int_bound_conflict_cores`, same
+        // sound early return.
+        if past_deadline(deadline) {
+            return conflicts;
+        }
         for j in (i + 1)..bounds.len() {
             let Some(core) = conflicting_affine_bounds(&bounds[i], &bounds[j]) else {
                 continue;
@@ -1692,10 +1821,20 @@ fn minimize_core(
     arena: &TermArena,
     indices: &[usize],
     lits: &[TermId],
-    oracle: fn(&TermArena, &[TermId]) -> Result<CheckResult, SolverError>,
+    oracle: DeadlinedTheoryOracle,
+    deadline: Option<Instant>,
 ) -> Result<Vec<usize>, SolverError> {
     let mut core: Vec<usize> = indices.to_vec();
     for &candidate in indices {
+        // Up to `indices.len()` conjunctive theory solves, each of which can be
+        // slow: this is the loop that turns one lazy round into a multi-second
+        // budget overrun. Stopping early keeps the *current* `core`, which is
+        // always a valid conflict core (it starts as the full inconsistent set and
+        // only ever drops atoms whose removal was re-verified `unsat`) — so the
+        // deadline degrades core quality, never soundness.
+        if past_deadline(deadline) {
+            break;
+        }
         if !core.contains(&candidate) {
             continue;
         }
@@ -1704,7 +1843,7 @@ fn minimize_core(
             .filter(|&&i| i != candidate)
             .map(|&i| lits[i])
             .collect();
-        if !trial.is_empty() && matches!(oracle(arena, &trial)?, CheckResult::Unsat) {
+        if !trial.is_empty() && matches!(oracle(arena, &trial, deadline)?, CheckResult::Unsat) {
             core.retain(|&i| i != candidate);
         }
     }
@@ -1956,18 +2095,24 @@ fn finish_sat(
     ctx: &ArithAbstractor,
     propositional: &Model,
     lits: &[TermId],
+    deadline: Option<Instant>,
 ) -> Result<CheckResult, SolverError> {
     let all_indices = (0..ctx.atoms.len()).collect::<Vec<_>>();
-    Ok(
-        try_finish_sat(arena, assertions, ctx, propositional, lits, &all_indices).unwrap_or_else(
-            || {
-                CheckResult::Unknown(UnknownReason {
-                    kind: UnknownKind::Incomplete,
-                    detail: "arith DPLL candidate failed full model replay".to_owned(),
-                })
-            },
-        ),
+    Ok(try_finish_sat(
+        arena,
+        assertions,
+        ctx,
+        propositional,
+        lits,
+        &all_indices,
+        deadline,
     )
+    .unwrap_or_else(|| {
+        CheckResult::Unknown(UnknownReason {
+            kind: UnknownKind::Incomplete,
+            detail: "arith DPLL candidate failed full model replay".to_owned(),
+        })
+    }))
 }
 
 fn try_finish_sat(
@@ -1977,6 +2122,7 @@ fn try_finish_sat(
     propositional: &Model,
     lits: &[TermId],
     indices: &[usize],
+    deadline: Option<Instant>,
 ) -> Option<CheckResult> {
     // Re-decide each theory's conjunction to recover its model (the loop only
     // learned that they are *consistent*). Sat-model reconstruction is INFALLIBLE at
@@ -1992,11 +2138,18 @@ fn try_finish_sat(
     // *real* application reaches `check_with_lra` here). That is "no checkable model",
     // not an internal error: degrade to a first-class `Unknown`, never a hard error and
     // never an unchecked `sat`.
-    let int_model = match theory_model(arena, &int_lits, check_with_lia_simplex) {
+    //
+    // Both re-decisions are DEADLINE-BOUNDED. They are full conjunctive solves,
+    // and a single one of them measured **55 s** on a market-split cube under a
+    // 200 ms budget — the largest single overrun in this loop, and invisible to
+    // the round-top poll because it happens inside the round. Expiry yields no
+    // model, the replay below then fails, and the caller degrades to `Unknown`:
+    // the deadline can cost a `sat`, never fabricate one.
+    let int_model = match theory_model(arena, &int_lits, int_model_oracle, deadline) {
         Ok(model) => model,
         Err(error) => return Some(sat_reconstruction_unknown("integer", &error)),
     };
-    let real_model = match theory_model(arena, &real_lits, check_with_lra) {
+    let real_model = match theory_model(arena, &real_lits, real_theory_oracle, deadline) {
         Ok(model) => model,
         Err(error) => return Some(sat_reconstruction_unknown("real", &error)),
     };
@@ -2075,12 +2228,13 @@ fn atom_lits(
 fn theory_model(
     arena: &TermArena,
     lits: &[TermId],
-    oracle: fn(&TermArena, &[TermId]) -> Result<CheckResult, SolverError>,
+    oracle: DeadlinedTheoryOracle,
+    deadline: Option<Instant>,
 ) -> Result<Option<Model>, SolverError> {
     if lits.is_empty() {
         return Ok(None);
     }
-    match oracle(arena, lits)? {
+    match oracle(arena, lits, deadline)? {
         CheckResult::Sat(model) => Ok(Some(model)),
         // The loop already established consistency, so this is unreachable; treat
         // as no extra bindings rather than failing.
@@ -3392,6 +3546,7 @@ fn is_known_nonzero_real(arena: &TermArena, term: TermId) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::lra::check_with_lia_simplex;
 
     #[test]
     fn abstractor_reuses_reversed_order_atoms() {
@@ -3765,17 +3920,9 @@ mod tests {
         let lits = ctx.atoms.iter().map(|atom| atom.term).collect::<Vec<_>>();
         let all = (0..ctx.atoms.len()).collect::<Vec<_>>();
         assert!(
-            !theory_conflicts_for_indices(
-                &arena,
-                &ctx,
-                &lits,
-                &all,
-                Theory::Int,
-                check_with_lia_opaque_apps,
-                true,
-            )
-            .unwrap()
-            .is_empty(),
+            !theory_conflicts_for_indices(&arena, &ctx, &lits, &all, TheoryProbe::int(true, None),)
+                .unwrap()
+                .is_empty(),
             "the full arbitrary SAT assignment is theory-inconsistent"
         );
         assert!(
@@ -3784,9 +3931,7 @@ mod tests {
                 &ctx,
                 &lits,
                 &support,
-                Theory::Int,
-                check_with_lia_opaque_apps,
-                true,
+                TheoryProbe::int(true, None),
             )
             .unwrap()
             .is_empty(),
@@ -3800,6 +3945,7 @@ mod tests {
                 &propositional,
                 &lits,
                 &support,
+                None,
             ),
             Some(CheckResult::Sat(_))
         ));
@@ -3840,13 +3986,21 @@ mod tests {
 
         // `try_finish_sat` is infallible now: a replay/re-decode failure is a
         // `Some(Unknown)`, never a hard error.
-        let outcome = try_finish_sat(&mut arena, &[assertion], &ctx, &propositional, &lits, &all);
+        let outcome = try_finish_sat(
+            &mut arena,
+            &[assertion],
+            &ctx,
+            &propositional,
+            &lits,
+            &all,
+            None,
+        );
         assert!(
             matches!(outcome, Some(CheckResult::Unknown(_))),
             "an unevaluable opaque-UF replay degrades to Unknown, got {outcome:?}"
         );
         // And the wrapping `finish_sat` propagates the same `Unknown` (not an `Err`).
-        let finished = finish_sat(&mut arena, &[assertion], &ctx, &propositional, &lits)
+        let finished = finish_sat(&mut arena, &[assertion], &ctx, &propositional, &lits, None)
             .expect("finish_sat must surface Unknown, not a backend error");
         assert!(matches!(finished, CheckResult::Unknown(_)));
     }
@@ -3859,10 +4013,19 @@ mod tests {
         let propositional = Model::new();
 
         assert!(
-            try_finish_sat(&mut arena, &[assertion], &ctx, &propositional, &[], &[]).is_none(),
+            try_finish_sat(
+                &mut arena,
+                &[assertion],
+                &ctx,
+                &propositional,
+                &[],
+                &[],
+                None
+            )
+            .is_none(),
             "the deliberately false candidate must miss full replay"
         );
-        let result = finish_sat(&mut arena, &[assertion], &ctx, &propositional, &[])
+        let result = finish_sat(&mut arena, &[assertion], &ctx, &propositional, &[], None)
             .expect("a failed SAT replay is a first-class Unknown, never a backend error");
         assert!(matches!(result, CheckResult::Unknown(_)));
     }
@@ -4063,7 +4226,7 @@ mod tests {
         lits[upper_one_idx] = not_x_le_one;
 
         let indices = vec![upper_zero_idx, upper_one_idx];
-        let mut core = cheap_int_bound_conflict_cores(&arena, &ctx, &lits, &indices)
+        let mut core = cheap_int_bound_conflict_cores(&arena, &ctx, &lits, &indices, None)
             .into_iter()
             .next()
             .unwrap();
@@ -4109,7 +4272,7 @@ mod tests {
         lits[y_le_one_idx] = arena.not(ctx.atoms[y_le_one_idx].term).unwrap();
 
         let indices = vec![x_le_zero_idx, x_le_one_idx, y_le_zero_idx, y_le_one_idx];
-        let mut cores = cheap_int_bound_conflict_cores(&arena, &ctx, &lits, &indices);
+        let mut cores = cheap_int_bound_conflict_cores(&arena, &ctx, &lits, &indices, None);
         for core in &mut cores {
             core.sort_unstable();
         }
@@ -4189,7 +4352,7 @@ mod tests {
             "this regression must exercise the general affine extractor, not the old unit-difference path"
         );
 
-        let mut cores = cheap_int_affine_bound_conflict_cores(&arena, &ctx, &lits, &indices);
+        let mut cores = cheap_int_affine_bound_conflict_cores(&arena, &ctx, &lits, &indices, None);
         assert_eq!(cores.len(), 1);
         let mut core = cores.pop().unwrap();
         core.sort_unstable();

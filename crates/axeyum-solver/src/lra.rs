@@ -1273,6 +1273,31 @@ pub(crate) fn check_with_lia_opaque_apps_within(
     lia_simplex_with_options(arena, assertions, deadline, true)
 }
 
+/// Deadline-aware variant of [`check_with_lia_opaque_apps`] that KEEPS the
+/// deterministic [`MAX_LIA_BNB_NODES`] backstop instead of the deadline-relaxed
+/// [`MAX_LIA_BNB_NODES_DEADLINED`] one.
+///
+/// This exists for the *inner* oracle of a lazy-SMT loop
+/// ([`crate::dpll_lia`]), where the caller's deadline bounds the **whole**
+/// refinement loop rather than this single conjunctive check. Handing that
+/// oracle the deadline-relaxed node cap would let one theory check spend the
+/// entire remaining budget and starve every later round; keeping the fixed cap
+/// makes the deadline a *pure addition* to the existing stop, so this call can
+/// only ever return sooner than [`check_with_lia_opaque_apps`] does — never
+/// later, and never with a different verdict.
+///
+/// It is a real bound, not a formality: a 3×20 market-split conjunction (binary
+/// variables, LP-feasible, integer-infeasible) measured **46 s** inside one such
+/// oracle call on this machine, entirely inside a single lazy round, which is
+/// why the round-top deadline poll alone could not hold the budget.
+pub(crate) fn check_with_lia_opaque_apps_within_node_cap(
+    arena: &TermArena,
+    assertions: &[TermId],
+    deadline: Option<Instant>,
+) -> Result<CheckResult, SolverError> {
+    lia_simplex_capped(arena, assertions, deadline, true, MAX_LIA_BNB_NODES)
+}
+
 fn lia_simplex_within(
     arena: &TermArena,
     assertions: &[TermId],
@@ -1286,6 +1311,19 @@ fn lia_simplex_with_options(
     assertions: &[TermId],
     deadline: Option<Instant>,
     allow_opaque_apps: bool,
+) -> Result<CheckResult, SolverError> {
+    let node_cap = lia_bnb_node_cap(deadline);
+    lia_simplex_capped(arena, assertions, deadline, allow_opaque_apps, node_cap)
+}
+
+/// [`lia_simplex_with_options`] with the branch-and-bound node budget supplied
+/// explicitly rather than derived from `deadline.is_some()`.
+fn lia_simplex_capped(
+    arena: &TermArena,
+    assertions: &[TermId],
+    deadline: Option<Instant>,
+    allow_opaque_apps: bool,
+    node_cap: u64,
 ) -> Result<CheckResult, SolverError> {
     let mut ctx = IntCollector::new(allow_opaque_apps);
     for (index, &assertion) in assertions.iter().enumerate() {
@@ -1366,7 +1404,6 @@ fn lia_simplex_with_options(
     // A Gomory `Sat` is still replayed below (the shared trust anchor): a
     // reconstruction slip can only ever cause a (rejected, alarmed) replay
     // failure, never an unsound `sat`.
-    let node_cap = lia_bnb_node_cap(deadline);
     let outcome = if let Some(decided) = lia_gomory_cuts(&constraints, nvars, deadline) {
         decided
     } else {
