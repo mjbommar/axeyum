@@ -3,8 +3,8 @@
 Status: proposed track (2026-08-01). Not yet accepted; every phase below carries
 its own ADR gate. This folder is the plan, not a commitment.
 
-Owner: unassigned. Does **not** preempt the active QF_BVFP/binary79 focus in
-[STATUS.md](../../../STATUS.md) or the paused CAS lane
+Owner: unassigned. Does **not** preempt the active priorities in root
+[PLAN.md](../../../PLAN.md) or the paused CAS lane
 ([handoff](../cas-parity-handoff-2026-07-22.md)).
 
 ## Thesis
@@ -28,9 +28,10 @@ checking.** This track is an argument that the search half has been hand-written
 where it should be searched, and that the checking half is the asset that makes
 searching safe.
 
-**[STATUS.md](STATUS.md)** is this track's live tracker — current focus, gate
-state, and per-task state for all 96 tasks. This file is the map; that one is
-where we are.
+Root **[PLAN.md](../../../PLAN.md)** is the only current project tracker. This
+file and the phase/task files define the proposal and its exit contracts;
+[STATUS.md](STATUS.md) is a compatibility pointer to the dependency-correct
+current order.
 
 ## Read this first
 

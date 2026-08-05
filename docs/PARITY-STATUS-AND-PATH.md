@@ -8,7 +8,7 @@
 A from-scratch reader's map: **what axeyum is, where it actually stands against
 Z3/cvc5/Lean (measured, not asserted), and the exact remaining path to parity.**
 This complements — does not replace — [`PLAN.md`](../PLAN.md) (the engineering
-roadmap + standing rules), [`STATUS.md`](../STATUS.md) (the live tracker), and the
+roadmap, live tracker, and standing rules), and the
 auto-generated [`bench-results/SCOREBOARD.md`](../bench-results/SCOREBOARD.md) (the
 measured numbers). When those disagree with prose, **the scoreboard is the truth.**
 

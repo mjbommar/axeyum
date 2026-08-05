@@ -6,17 +6,18 @@ artifacts; the heavy inputs below are **gitignored** and must be re-fetched.
 
 ## 0. Get the code (the only thing that holds this session's work)
 
-All plan work lives on the branch **`docs/readme-plan-parity-roadmap`** (pushed to
-`origin` = `github.com/mjbommar/axeyum.git`). On the new host:
+Current work lives on **`main`** at `origin` =
+`github.com/mjbommar/axeyum.git`. On the new host:
 
 ```sh
 git clone https://github.com/mjbommar/axeyum.git
 cd axeyum
-git checkout docs/readme-plan-parity-roadmap
+git checkout main
+git pull --ff-only origin main
 ```
 
-Then read [`STATUS.md`](../../STATUS.md) for the current focus and
-[`PLAN.md`](../../PLAN.md) for the map. (Alternatively, `rsync` the whole working
+Then read [`PLAN.md`](../../PLAN.md) for current status, ordered work, and the
+resume protocol. (Alternatively, `rsync` the whole working
 tree to skip the re-fetches in steps 2–3 — ~43 GB including `references/` +
 `corpus/public/`.)
 
@@ -86,7 +87,6 @@ until the CPU foundation (P1.1–P1.5) is measured.
 
 ## Transition summary (do before leaving the old host)
 
-1. Commit all pending work. 2. **Push** `docs/readme-plan-parity-roadmap` to
-   `origin` (else the session's work — the whole plan, P3.0/T1.1.1/T1.1.2,
-   ADR-0031 — is lost; it is a local branch). 3. On s4: clone, checkout the
-   branch, run steps 1–5, then resume from [`STATUS.md`](../../STATUS.md).
+1. Commit all pending owned work on a topic branch. 2. Push the topic branch,
+   integrate through a green `main`, and push `main`. 3. On the new host: clone,
+   check out `main`, run steps 1–5, then resume from [`PLAN.md`](../../PLAN.md).

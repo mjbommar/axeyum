@@ -108,6 +108,7 @@ step rules-as-code-query-adjacent python3 scripts/query-rules-as-code.py familie
 step rules-as-code-query-quality-rows python3 scripts/query-rules-as-code.py rows --pack procurement_scoring_v0 --family quality_monotonicity_adjacent --limit 3 --require-any
 step rules-as-code-generated-clean git diff --exit-code docs/rules-as-code/generated
 step smtcomp-resume ./scripts/check-smtcomp-resume.sh
+step plan-authority python3 scripts/check-plan-authority.py
 step links         ./scripts/check-links.sh
 
 if [ "$fail" -ne 0 ]; then

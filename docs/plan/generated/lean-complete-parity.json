@@ -4,7 +4,7 @@
   "source_identities": [
     {
       "path": ".github/workflows/ci.yml",
-      "sha256": "c36974d572b92f51d65b473ee2534060aa2995b193e744bdc8d42c0a51f6e706"
+      "sha256": "131ad47825907a8c22ae7951891635ba3081ad50529dd27b0da2ecf0dde89cdf"
     },
     {
       "path": "docs/plan/generated/lean-execution-evidence.md",
@@ -44,7 +44,7 @@
     },
     {
       "path": "docs/plan/lean-axiom-ledger-v1.json",
-      "sha256": "4caabe6609a6250801eb05822a33fdaa492668040d94aa07dbe6b693481c7697"
+      "sha256": "0c2acede073be25dd89d01c4d9f4a4536cc6cb86570eccf92284325397a199f8"
     },
     {
       "path": "docs/plan/lean-compatibility-v1.json",
@@ -88,7 +88,7 @@
     },
     {
       "path": "docs/plan/lean-system-implementation-plan-2026-07-21.md",
-      "sha256": "391e6b3f567daa5ff0f89b115bdbe1109f8837cfe7567de0aaab27e26e311787"
+      "sha256": "614e558aed37ad4d2a819e2ad9b3104aaaa9037a001887a667d13485cf0011e8"
     },
     {
       "path": "docs/plan/lean-u2-matched-execution-tl0.6.5-axis-coverage-r5-plan-2026-07-23.md",
@@ -668,10 +668,13 @@
     "axiom_ledger": {
       "rows": 65,
       "classifications": {
-        "unclassified": 65
+        "derivable-theorem": 7,
+        "external-assumption": 41,
+        "primitive-interface": 17
       },
       "discharge_statuses": {
-        "unreviewed": 65
+        "planned": 7,
+        "retained": 58
       }
     },
     "u2_test_authority": {

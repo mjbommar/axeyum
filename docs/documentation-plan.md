@@ -351,8 +351,7 @@ Recommended order:
 
 ## Current Pointers
 
-- Current live tracker: [STATUS.md](../STATUS.md)
-- Master plan: [PLAN.md](../PLAN.md)
+- Current live tracker and master plan: [PLAN.md](../PLAN.md)
 - Full engineering plan: [docs/plan/README.md](plan/README.md)
 - Research index: [docs/research/README.md](research/README.md)
 - Capability matrix: [docs/research/08-planning/capability-matrix.md](research/08-planning/capability-matrix.md)
