@@ -5,8 +5,8 @@ Status: **strategy note** (2026-07-09). A traversal-strategy analysis over the
 [foundation roadmap](roadmap.md): what a breadth-first build looks like, what a
 depth-first build looks like, and the rank-ordered hybrid that maximizes quality
 (trusted small checking / Lean parity) and efficiency (unblock-most-first, no
-rework, measurement-gated). Does **not** replace PLAN.md/STATUS.md (the live
-mutable state); it reframes their ordering as an explicit DAG traversal.
+rework, measurement-gated). Does **not** replace root `PLAN.md` (the single live
+mutable state); it reframes that file's ordering as an explicit DAG traversal.
 
 ## 1. The DAG, distilled to what's left
 

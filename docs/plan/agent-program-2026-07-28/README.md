@@ -9,7 +9,8 @@ task here points back to an existing phase in
 Authority order (where these conflict, the earlier wins):
 
 1. [`bench-results/SCOREBOARD.md`](../../../bench-results/SCOREBOARD.md) — generated, measured, authoritative for decide-rate.
-2. [`STATUS.md`](../../../STATUS.md) — live tracker, current focus, phase table.
+2. [`PLAN.md`](../../../PLAN.md) — the single live tracker, current focus, and
+   ordered work queue.
 3. [`docs/plan/full-library-gap-closing-plan-2026-07-22.md`](../full-library-gap-closing-plan-2026-07-22.md) — the ranked program (Rank 0–8) this dispatch layer implements.
 4. This folder — sequencing, ownership, and per-agent briefs.
 
@@ -167,9 +168,10 @@ region they are editing in their lane brief's "in-flight" section before the
 first commit touching it, and rebase on `main` before every push. If both need
 the same function, C yields (B carries more volume).
 
-**Shared mutable files.** `STATUS.md` and `PLAN.md` are append-oriented and
-contended. Each lane appends only to its own bullet block under *Current focus*
-and its own phase row; nobody rewrites another lane's lines. `bench-results/
+**Shared mutable file.** Root `PLAN.md` is the only project-level mutable
+tracker and is integration-owner managed. Topic lanes record detail in owned
+result notes and propose a bounded PLAN update at handoff; they do not append
+competing live queues. `bench-results/
 frontier/*.json` is **volatile gate output** — the benchmark gates rewrite it;
 revert gate jitter before landing (see Phase 0 T0.4).
 
@@ -227,7 +229,7 @@ not done until every applicable line is true.
    backend, evidence artifact, or logic fragment ⇒ an ADR in
    `docs/research/09-decisions/` first. Decisions are not made silently in code.
 10. **Record the result.** Every increment lands a dated result note under
-    `docs/plan/` and updates its STATUS phase row + a *Current focus* bullet.
+    `docs/plan/` and updates the owned row/current evidence in root `PLAN.md`.
 11. **Do not sweep the 41 GB public corpus to "make progress."** Measure once on
     a committed slice, then stop.
 

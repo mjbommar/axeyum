@@ -547,7 +547,7 @@ Two concrete borrowings worth acting on:
    cost, not a feature.
 2. **Checking speed as a design gate.** MM0 treats verifier throughput as a
    headline property. We should have a number for "time to kernel-check the
-   corpus" in STATUS.md and defend it, the same way we defend PAR-2.
+   corpus" in root PLAN.md and defend it, the same way we defend PAR-2.
 
 ---
 

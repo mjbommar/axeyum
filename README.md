@@ -294,8 +294,9 @@ by use (each is accepted in an ADR).
   a searchable mdBook site with Mermaid diagrams).
 - [docs/research/](docs/research/README.md) — the research foundation, and
   [09-decisions/](docs/research/09-decisions/README.md), the ADRs.
-- [PLAN.md](PLAN.md) / [STATUS.md](STATUS.md) — the detailed roadmap and mutable
-  engineering log for maintainers resuming work.
+- [PLAN.md](PLAN.md) — the single current status, ordered roadmap, blockers,
+  and resume protocol for maintainers. [STATUS.md](STATUS.md) is a compatibility
+  pointer only.
 
 | You are… | Start here |
 |---|---|

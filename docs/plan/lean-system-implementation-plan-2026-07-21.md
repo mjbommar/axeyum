@@ -640,7 +640,7 @@ parallel lane:
 
 Before work:
 
-1. read `PLAN.md`, `STATUS.md`, this file, and the owning ADR/task file;
+1. read root `PLAN.md`, this file, and the owning ADR/task file;
 2. verify branch/local/tracking/remote identity and preserve unrelated changes;
 3. select the first unblocked queue item, its positive fixture, negative
    mutation, resource limit, and exact exit artifact;
@@ -660,6 +660,6 @@ Before ending:
 1. run the task-specific positive/negative/differential gates;
 2. run formatting, focused Clippy/tests, docs links, parity/docs consistency,
    and `git diff --check`;
-3. update `STATUS.md` with exact evidence and the next unblocked task;
+3. update root `PLAN.md` with exact evidence and the next unblocked task;
 4. stage only owned paths, commit, push, and verify local/tracking/remote heads;
 5. leave unsupported states and remaining blockers explicit.

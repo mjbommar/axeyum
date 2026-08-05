@@ -7,8 +7,10 @@ over weeks/months. Read the short [Project State](../PROJECT-STATE.md) first if
 you are evaluating the current implementation rather than resuming engineering
 work.
 
-Start at the root [`PLAN.md`](../../PLAN.md) (map + standing rules) and
-[`STATUS.md`](../../STATUS.md) (live state). Then this folder.
+Start at root [`PLAN.md`](../../PLAN.md), the single current status, ordered
+queue, standing-rules, and resume document. Then use this folder for detailed
+phase contracts and retained result evidence. Root [`STATUS.md`](../../STATUS.md)
+is a compatibility pointer only.
 
 ## Layout
 
@@ -871,8 +873,9 @@ Start at the root [`PLAN.md`](../../PLAN.md) (map + standing rules) and
   mathematical problems. Ten phases, 96 tasks, three measurement gates, authored
   2026-08-01 from nine independent branch reviews — **none of which returned
   "sound as proposed"**; the eight resulting corrections are in
-  [`00-review-synthesis.md`](exploration-track/00-review-synthesis.md). Live
-  state in [`exploration-track/STATUS.md`](exploration-track/STATUS.md); every
+  [`00-review-synthesis.md`](exploration-track/00-review-synthesis.md). Current
+  priority and state are in root [`PLAN.md`](../../PLAN.md); the track's
+  [`STATUS.md`](exploration-track/STATUS.md) is a compatibility pointer. Every
   phase is ADR-gated ([`adr-queue.md`](exploration-track/adr-queue.md)) and the
   track does not preempt the active QF_BVFP focus or the paused CAS lane.
 
@@ -886,8 +889,8 @@ Start at the root [`PLAN.md`](../../PLAN.md) (map + standing rules) and
 - Reference file paths are given relative to the repo root (e.g.
   `references/z3/src/sat/sat_solver.cpp`) so they are clickable and exact.
 - **Sizing:** `S` ≈ ≤2 days · `M` ≈ ~1 week · `L` ≈ ~2–4 weeks · `XL` ≈ multi-month.
-- **Status:** `TODO` / `WIP` / `DONE` / `BLOCKED` (tracked in
-  [`STATUS.md`](../../STATUS.md), not duplicated here).
+- **Status:** `TODO` / `WIP` / `DONE` / `BLOCKED` (tracked in root
+  [`PLAN.md`](../../PLAN.md), not duplicated here).
 
 ## Principles carried from the project identity
 

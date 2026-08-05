@@ -6,7 +6,7 @@ default:
 # Run every check CI runs (except cargo-deny, which needs the tool installed).
 # This is the THOROUGH pre-merge/CI gate (whole workspace, ~tens of minutes).
 # While iterating, use `just check-scope` instead — it gates only what changed.
-check: fmt clippy test frontier moment-proofs doc qfbv-profile reflection-semantics-gate benchmark-repetition-tests glaurung-qfbv-regular foundational-resources rules-as-code smtcomp-resume parity-docs links
+check: fmt clippy test frontier moment-proofs doc qfbv-profile reflection-semantics-gate benchmark-repetition-tests glaurung-qfbv-regular foundational-resources rules-as-code smtcomp-resume parity-docs plan-authority links
 
 fmt:
     cargo fmt --all --check
@@ -243,6 +243,10 @@ parity-docs:
 # scoring pipeline.
 smtcomp-resume:
     ./scripts/check-smtcomp-resume.sh
+
+# Prevent PLAN/STATUS/TODO from becoming competing project-level authorities.
+plan-authority:
+    python3 scripts/check-plan-authority.py
 
 # Current official construct-matrix product boundary: the direct-recursive
 # control precedes each remaining typed decline, and all five rows repeat.

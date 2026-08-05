@@ -39,9 +39,9 @@ verifiable increment at a time, relentlessly. Adopt a builder's mentality:
   re-validate what they produce; commit; continue.
 - **Measure what matters.** Z3 parity is a *measured* claim — keep the head-to-head
   honest (Track 1, the public corpora). Lean parity is *every unsat/valid carries a
-  machine-checkable proof*. Drive both fronts; record the pulse in STATUS.md.
+  machine-checkable proof*. Drive both fronts; record the pulse in PLAN.md.
 
-Keep STATUS.md framed as an **active work queue**, never as an "exhausted frontier."
+Keep PLAN.md framed as an **active work queue**, never as an "exhausted frontier."
 If you catch yourself concluding the work is done for now, you're wrong — re-read
 PLAN.md and pick the next task.
 

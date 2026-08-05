@@ -11,8 +11,9 @@ evidence, executable gates, decision anchors, and the next safe action.
    explicitly not claimed.
 2. [Measured-gap ownership map](gap-ownership.md) — the owning module, evidence,
    checker, ADR, and next action for G0-G10.
-3. [PLAN.md](../../PLAN.md) and [STATUS.md](../../STATUS.md) — standing rules,
-   live focus, and the engineering record.
+3. [PLAN.md](../../PLAN.md) — the single current status, ordered work queue,
+   standing rules, and resume protocol. [STATUS.md](../../STATUS.md) is a
+   compatibility pointer only.
 4. [docs/plan/01-dependency-dag.md](../plan/01-dependency-dag.md) — what depends on what.
 5. The foundational DAG before adding operators/encodings/logics:
    [foundational-dag.md](../research/08-planning/foundational-dag.md).

@@ -1553,7 +1553,7 @@ Exit criteria:
 10. Add `finite-probability-v0` and `descriptive-statistics-v0` as the
     probability/statistics bridge.
 
-Each commit should update `STATUS.md`, run the relevant validator, and keep the
+Each project-level increment should update root `PLAN.md`, run the relevant validator, and keep the
 docs link checker clean.
 
 Progress: items 1-10, Phase M3 `proof-methods-patterns-v0`, `finite-sets-v0`,

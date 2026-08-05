@@ -216,8 +216,8 @@ deliberately gitignored paths.
 
 1. Create the six lane worktrees from the new `main` (table in
    [README §5](README.md#5-worktree-and-branch-assignment)).
-2. Append one *Current focus* bullet to `STATUS.md` recording the Phase 0
-   landing, and add a pointer to this program folder from
+2. Update root `PLAN.md`'s workstream state and recent-change table with the
+   Phase 0 landing, and add a pointer to this program folder from
    [`docs/plan/README.md`](../README.md).
 3. Confirm each lane brief's "first task" is unambiguous before handing off.
 

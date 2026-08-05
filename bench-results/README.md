@@ -127,7 +127,7 @@ fuzzers** (not by committed JSON artifacts — these are fuzz-measured decide ra
   surfaced and fixed **three wrong-unsat bugs** the unit tests missed — exactly the
   "test it harder" discipline, not avoidance.
 
-> Note: the canonical live tracker for this front is [STATUS.md](../STATUS.md)
+> Note: the canonical live tracker for this front is [PLAN.md](../PLAN.md)
 > (owned by the arithmetic/CAD work in flight); this section is the benchmark-side
 > snapshot only.
 

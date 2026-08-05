@@ -163,7 +163,7 @@ Full inventory: [`references/axeyum-current-state.md`](references/axeyum-current
 
 **Size:** `S` ≈ ≤2 days · `M` ≈ ~1 week · `L` ≈ ~2–4 weeks · `XL` ≈ multi-month.
 
-**Status** (tracked in [STATUS.md](../../STATUS.md)): `TODO` · `WIP` · `DONE` ·
+**Status** (tracked in [PLAN.md](../../PLAN.md)): `TODO` · `WIP` · `DONE` ·
 `BLOCKED`.
 
 **Assurance** (capability ledger): `checked` (independent per-query certificate) ·

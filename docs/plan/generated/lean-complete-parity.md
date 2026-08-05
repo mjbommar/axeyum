@@ -25,7 +25,7 @@ These facts are regenerated from existing manifests. They are scoped evidence, n
   - `K5-runtime`: 0/1 rows satisfy that bounded profile.
   - `K6-ecosystem`: 0/1 rows satisfy that bounded profile.
 - Selected construct matrix: 7 rows; 6 official accepts, 1 official rejects, 6 independently admitted, 4 computation-checked, and 0 current declines.
-- Axiom ledger: 65 rows; `unclassified`=65.
+- Axiom ledger: 65 rows; `derivable-theorem`=7, `external-assumption`=41, `primitive-interface`=17.
 - U2 registration authority: 3678 default and 3723 full-Lake CTest cases; 0 official executions, 0 Axeyum executions, and 0 paired cells. This is bounded registration evidence, not complete U2 authority.
 - U2 official CI profiles: 17 contexts, 153 cells, 111 not-run CTest attempts, and 8 exact selection sets; 0 official executions and zero parity credit.
 - U2 child-shard derivation: 5 distinct ordered memberships, 289 physical shards, 461 selection-expanded shard occurrences, and 6,451 attempt-expanded shard occurrences. All 111 attempt bindings remain not-run; execution, pairing, performance, and parity credit remain zero.

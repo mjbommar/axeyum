@@ -1,8 +1,8 @@
 # Roadmap
 
-Status: **foundation phases (0–7) landed**; active execution has moved to the
-multi-track Z3 + Lean parity plan.
-Last updated: 2026-07-23
+Status: **foundation phases (0–7) landed**; active execution is ordered in the
+single root project tracker.
+Last updated: 2026-08-05
 
 > **Where the live plan is now.** This file is the *research/foundation* roadmap
 > (Phases 0–7 — the decidable finite-domain + arithmetic foundation, now built).
@@ -845,8 +845,8 @@ are tracked concretely in the [parity plan](../../../PLAN.md) (tracks/phases) an
   it as a validated artifact, licensing composed verdicts through a
   machine-readable soundness direction, searching it with a measured policy,
   widening it with lateral CAS bridges, and pointing the result at open
-  mathematical problems. Cross-cutting over tracks 1/2/3; live state in
-  [`exploration-track/STATUS.md`](../../plan/exploration-track/STATUS.md), and
+  mathematical problems. Cross-cutting over tracks 1/2/3; live state and
+  dependency order are in root [`PLAN.md`](../../../PLAN.md), and
   it may not preempt an active foundation lane.
 
 Entering any horizon item gets its own ADR with prerequisites and exit

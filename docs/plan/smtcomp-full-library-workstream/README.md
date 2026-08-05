@@ -532,7 +532,7 @@ NAS (shared, corpus read-only in practice):
    `origin/main` is branch-wide red. The active solver
    capability checkpoint is
    [`../checked-multi-binder-quantified-uf-models-2026-07-22.md`](../checked-multi-binder-quantified-uf-models-2026-07-22.md).
-5. Update `STATUS.md` and this file before handoff; push only a green topic
+5. Update root `PLAN.md` and this file before handoff; push only a green topic
    branch for the integration owner.
 
 *Owner: SMT-COMP measurement/full-library lane. Next measurement milestone:
