@@ -24,7 +24,7 @@
 //! [`axeyum_solver::solve_smtlib`] and prints ONE extra line before the verdict:
 //!
 //! ```text
-//! ; evidence kind=unsat-drat certified=1 recheck=ok ms=412
+//! ; evidence kind=unsat-drat certified=1 recheck=ok arena=ok ms=412
 //! ```
 //!
 //! The line starts with `;` (the SMT-LIB comment character) and can never match
@@ -35,6 +35,15 @@
 //! this process re-validated that certificate **from its serialized text alone**
 //! (`UnsatProof::recheck`: re-parse the DIMACS + DRAT/LRAT and re-derive the
 //! empty clause), which is exactly what an external `drat-trim` would do.
+//!
+//! `arena=ok` is the second, broader re-validation: [`axeyum_solver::Evidence::check`]
+//! against a **fresh parse of the original file**. Most certificate kinds have no
+//! serialized form, so `recheck` can only say `na` for them — the `QF_BV` board shows
+//! the gap as `certified 70.8 %` against `re-checked (text-only) 60.0 %`. Those
+//! files are un-*text*-checkable, not uncheckable, and `arena` says so without
+//! letting either claim borrow the other's strength. It is kept a SEPARATE field
+//! for exactly that reason: `recheck` still means what every recorded entry says
+//! it means.
 //!
 //! Off by default on purpose: producing and re-checking a proof costs real time
 //! on top of deciding, so turning it on silently would invalidate every recorded
@@ -68,7 +77,29 @@ const WORKER_STACK_BYTES: usize = 512 * 1024 * 1024;
 ///   process (the certificate's checker needs the term arena, which the
 ///   text front door does not hand back). Deliberately NOT counted as a
 ///   success: the whole point is to stop overstating coverage.
-fn evidence_report_line(evidence: &Evidence, elapsed_ms: u128) -> (&'static str, String) {
+///
+/// `arena` is the SECOND, weaker-but-broader re-validation, reported as its own
+/// field so it can never be mistaken for `recheck`. Most certificate kinds have
+/// no serialized form at all — their checker ([`Evidence::check`]) needs the term
+/// arena — so `recheck` reports `na` for them and the `QF_BV` board records the
+/// gap directly: `certified 92/130 = 70.8 %` against `re-checked here (text-only)
+/// 78/130 = 60.0 %`. Those 14 files are not uncheckable, only un-*text*-checkable:
+/// the arena is recoverable by RE-PARSING the original file, which is what this
+/// field does. It is a genuinely independent check — the fresh parse shares no
+/// state with the producing solve — but it is weaker than `recheck` because it
+/// re-runs our own checker against our own re-parse rather than replaying a
+/// serialized artifact the way an external `drat-trim` would. Two fields, two
+/// claims; neither is allowed to borrow the other's strength.
+///
+/// * `ok`   — the certificate re-validated against a fresh parse of the file.
+/// * `FAIL` — it did not. A soundness alarm, reported and never swallowed.
+/// * `na`   — the file did not re-parse, or the checker errored (an unbounded
+///   re-enumeration, a certificate that will not re-read). Never a success.
+fn evidence_report_line(
+    input: &str,
+    evidence: &Evidence,
+    elapsed_ms: u128,
+) -> (&'static str, String) {
     let verdict = match evidence {
         Evidence::Sat(_) => "sat",
         Evidence::Unknown(_) => "unknown",
@@ -94,11 +125,26 @@ fn evidence_report_line(evidence: &Evidence, elapsed_ms: u128) -> (&'static str,
         },
         _ => "na",
     };
+    // Arena-backed re-validation against a FRESH PARSE of the original file. The
+    // producing solve's arena is deliberately not reused — re-reading the file is
+    // what makes this independent of anything that run kept in memory.
+    let arena = match evidence {
+        Evidence::Unknown(_) => "na",
+        _ => match axeyum_smtlib::parse_script(input) {
+            Ok(script) => match evidence.check(&script.arena, &script.assertions) {
+                Ok(true) => "ok",
+                Ok(false) => "FAIL",
+                // A checker that ERRORS has not validated anything; `na`, never `ok`.
+                Err(_) => "na",
+            },
+            Err(_) => "na",
+        },
+    };
     let certified = u8::from(evidence.is_certified() && verdict != "unknown");
     (
         verdict,
         format!(
-            "; evidence kind={} certified={certified} recheck={recheck} ms={elapsed_ms}",
+            "; evidence kind={} certified={certified} recheck={recheck} arena={arena} ms={elapsed_ms}",
             evidence.kind_label()
         ),
     )
@@ -198,14 +244,17 @@ fn main() -> ExitCode {
             // that errors must not be silently scored as an uncertified decide.
             return match produce_evidence_smtlib(&input, &config) {
                 Ok(report) => {
-                    let (verdict, line) =
-                        evidence_report_line(&report.evidence, started.elapsed().as_millis());
+                    let (verdict, line) = evidence_report_line(
+                        &input,
+                        &report.evidence,
+                        started.elapsed().as_millis(),
+                    );
                     (verdict, Some(line))
                 }
                 Err(_) => (
                     "unknown",
                     Some(format!(
-                        "; evidence kind=unknown certified=0 recheck=na ms={}",
+                        "; evidence kind=unknown certified=0 recheck=na arena=na ms={}",
                         started.elapsed().as_millis()
                     )),
                 ),
