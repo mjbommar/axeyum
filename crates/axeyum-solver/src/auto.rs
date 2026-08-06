@@ -194,6 +194,55 @@ fn quantified_timeout(stage: &str) -> CheckResult {
     })
 }
 
+/// Retains an already-classified finite-expansion `unknown` so narrower
+/// quantified fallbacks cannot replace it with an operational shape error.
+/// A genuinely unsupported finite front door remains an error unless a later
+/// route decides the query.
+fn retained_finite_unknown(
+    result: Result<CheckResult, SolverError>,
+) -> Option<CheckResult> {
+    match result {
+        Ok(result @ CheckResult::Unknown(_)) => Some(result),
+        Err(SolverError::Unsupported(_)) => None,
+        _ => unreachable!("finite-result pattern admits only unknown or unsupported"),
+    }
+}
+
+fn run_egraph_quantified_fallback(
+    arena: &mut TermArena,
+    assertions: &[TermId],
+    config: &SolverConfig,
+    deadline: Option<Instant>,
+    finite_unknown: Option<CheckResult>,
+    started: Instant,
+) -> Result<Option<CheckResult>, SolverError> {
+    let Some(egraph_config) = config_with_remaining_timeout(config, deadline) else {
+        return Ok(Some(quantified_timeout("finite quantifier expansion")));
+    };
+    match prove_quantified_unsat_via_egraph(arena, assertions, &egraph_config) {
+        Ok(CheckResult::Unsat) => {
+            qtrace("egraph", started, "unsat");
+            Ok(Some(CheckResult::Unsat))
+        }
+        Ok(CheckResult::Sat(_) | CheckResult::Unknown(_)) => {
+            qtrace("egraph", started, "declined");
+            Ok(None)
+        }
+        Err(error @ SolverError::Unsupported(_)) => {
+            if mbqi_source_shape_supported(arena, assertions) {
+                qtrace("egraph", started, "unsupported->mbqi");
+                Ok(None)
+            } else if let Some(result) = finite_unknown {
+                qtrace("egraph", started, "unsupported->finite-unknown");
+                Ok(Some(result))
+            } else {
+                Err(error)
+            }
+        }
+        Err(error) => Err(error),
+    }
+}
+
 fn finish_quantified_solve(
     arena: &mut TermArena,
     assertions: &[TermId],
@@ -219,7 +268,9 @@ fn finish_quantified_solve(
         return Ok(quantified_timeout("forall-exists witness search"));
     };
     match check_with_quantifiers(arena, assertions, &finite_config) {
-        Ok(CheckResult::Unknown(_)) | Err(SolverError::Unsupported(_)) => {
+        finite_result
+        @ (Ok(CheckResult::Unknown(_)) | Err(SolverError::Unsupported(_))) => {
+            let finite_unknown = retained_finite_unknown(finite_result);
             qtrace("finite-expansion", t0, "declined");
             // Pure-UF finite model finding, probed BEFORE the refutation
             // family on half the remaining budget (the `probe_budget`
@@ -283,23 +334,15 @@ fn finish_quantified_solve(
             {
                 return Ok(result);
             }
-            let Some(egraph_config) = config_with_remaining_timeout(config, deadline) else {
-                return Ok(quantified_timeout("finite quantifier expansion"));
-            };
-            match prove_quantified_unsat_via_egraph(arena, assertions, &egraph_config) {
-                Ok(CheckResult::Unsat) => {
-                    qtrace("egraph", t0, "unsat");
-                    return Ok(CheckResult::Unsat);
-                }
-                Ok(CheckResult::Sat(_) | CheckResult::Unknown(_)) => {
-                    qtrace("egraph", t0, "declined");
-                }
-                Err(SolverError::Unsupported(_))
-                    if mbqi_source_shape_supported(arena, assertions) =>
-                {
-                    qtrace("egraph", t0, "unsupported->mbqi");
-                }
-                Err(error) => return Err(error),
+            if let Some(result) = run_egraph_quantified_fallback(
+                arena,
+                assertions,
+                config,
+                deadline,
+                finite_unknown,
+                t0,
+            )? {
+                return Ok(result);
             }
             let Some(mbqi_config) = config_with_remaining_timeout(config, deadline) else {
                 return Ok(quantified_timeout("e-matching"));
@@ -1155,11 +1198,13 @@ fn as_equality_disjunction(arena: &TermArena, term: TermId) -> Option<Vec<TermId
 /// Restricting to EQUALITY disjuncts keeps each branch cheap (see
 /// [`as_equality_disjunction`]): e.g. `rewriting-sums` (`x∈{5,7,9}`, `y∈{x+1,x+2}`,
 /// `z∈{y+5,y+10}`, `z²>10⁹`) splits into 12 branches, each of which propagates to
-/// a concrete `z` and refutes `z²>10⁹`. Fires ONLY on an `Unknown` verdict (never
-/// slowing the decided fast path) and only for a small branch product; each branch
-/// re-enters `check_auto` with no equality-disjunction left, so the recursion
-/// bottoms out. Sound: it never emits a wrong `unsat` (a branch it cannot decide
-/// forces a decline) and its `sat` is a genuine model of the original.
+/// a concrete `z` and refutes `z²>10⁹`. The bounded route runs before nonlinear
+/// dispatch so an honestly enforced shared deadline cannot starve it, and remains
+/// available as a post-dispatch fallback for callers that reach it with budget
+/// left. It fires only for a small branch product; each branch re-enters
+/// `check_auto` with no equality-disjunction left, so the recursion bottoms out.
+/// Sound: it never emits a wrong `unsat` (a branch it cannot decide forces a
+/// decline) and its `sat` is a genuine model of the original.
 fn try_finite_domain_split(
     arena: &mut TermArena,
     assertions: &[TermId],
@@ -1376,6 +1421,36 @@ fn check_auto_with_recorder(
         with_recorder(rec, |t| t.record_result("int-box-eval", &result));
         return Ok(result);
     }
+
+    // A finite-domain fallback placed only *after* nonlinear dispatch is
+    // unreachable when that dispatch honestly consumes the caller's shared
+    // absolute deadline. Run this already-bounded route first for genuinely
+    // nonlinear integer products only. The restriction avoids intercepting
+    // partially modeled mixed-theory front ends (notably word/Int coupling),
+    // while covering the starvation case this placement repairs. It spends at
+    // most half of the original budget across a capped branch product; following
+    // work receives only the time left before this entry's deadline.
+    if features.has_int
+        && !has_quantifier
+        && crate::nia_linearize::has_nonlinear_int_product(arena, assertions)
+        && let Some(verdict) = try_finite_domain_split(arena, assertions, config, deadline)?
+    {
+        let recorded = if matches!(verdict, CheckResult::Sat(_)) {
+            Verdict::Sat
+        } else {
+            Verdict::Unsat
+        };
+        with_recorder(rec, |t| {
+            t.record_decided("finite-domain-split", recorded);
+        });
+        return Ok(verdict);
+    }
+
+    // The early finite-domain probe is part of this call's wall-clock budget.
+    // Clamp preprocessing and ordinary dispatch to what remains rather than
+    // silently handing either path a fresh copy of `config.timeout`.
+    let remaining_config = config_with_remaining_deadline(config, deadline);
+    let config = &remaining_config;
 
     // Word-level preprocessing (P1.2) is owned here, at the default-path entry, when
     // `config.preprocess` is set; otherwise dispatch directly. The full model-sound
@@ -5466,7 +5541,9 @@ fn dispatch_int_blast_width_ladder(
 ///
 /// # Errors
 ///
-/// Returns [`SolverError::Unsupported`] for a non-enumerable quantifier domain
+/// Returns [`CheckResult::Unknown`] when a mathematically finite quantifier
+/// domain exceeds the eager expansion budget. Returns
+/// [`SolverError::Unsupported`] for a genuinely non-enumerable quantifier domain
 /// or a query outside the supported fragment, or [`SolverError`] from the chosen
 /// engine; a `sat` model that fails to replay is a [`SolverError::Backend`].
 pub fn check_with_quantifiers(
@@ -5506,12 +5583,27 @@ pub fn check_with_quantifiers(
         guard_expanded
     };
 
-    let expanded = expand_quantifiers(arena, &replay_base).map_err(|error| match error {
-        QuantExpandError::UnsupportedDomain(sort) => {
-            SolverError::Unsupported(format!("quantifier over non-enumerable domain {sort}"))
+    let expanded = match expand_quantifiers(arena, &replay_base) {
+        Ok(expanded) => expanded,
+        Err(QuantExpandError::UnsupportedDomain(
+            sort @ (Sort::Bool | Sort::BitVec(_) | Sort::Float { .. }),
+        )) => {
+            return Ok(CheckResult::Unknown(UnknownReason {
+                kind: UnknownKind::ResourceLimit,
+                detail: format!(
+                    "finite quantifier domain {sort} exceeds the eager expansion budget"
+                ),
+            }));
         }
-        QuantExpandError::Ir(inner) => SolverError::Backend(inner.to_string()),
-    })?;
+        Err(QuantExpandError::UnsupportedDomain(sort)) => {
+            return Err(SolverError::Unsupported(format!(
+                "quantifier over non-enumerable domain {sort}"
+            )));
+        }
+        Err(QuantExpandError::Ir(inner)) => {
+            return Err(SolverError::Backend(inner.to_string()));
+        }
+    };
 
     // `unsat`/`unknown` of the equivalent quantifier-free formula carries over
     // to the original (expansion is equivalence-preserving).

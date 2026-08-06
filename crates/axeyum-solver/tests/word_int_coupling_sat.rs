@@ -132,12 +132,12 @@ fn from_int_arith_bound_non_digit_suffix_is_unknown() {
     );
 }
 
-/// Soundness trap (task #78): the arithmetic bounds on the `str.from_int` argument are
-/// **jointly unsatisfiable** (`i >= 420 ∧ i <= 5`). The intersected integer range is
-/// empty, so no candidate exists and no witness can be built — the route must stay
-/// `unknown` (never a wrong `sat` from ignoring one of the bounds, and never `unsat`).
+/// The arithmetic bounds on the `str.from_int` argument are jointly unsatisfiable
+/// (`i >= 420 ∧ i <= 5`). The arithmetic front door can prove that contradiction
+/// before the conservative word-coupling fallback runs, so this is `unsat` (and in
+/// particular can never become a wrong `sat` by ignoring one of the bounds).
 #[test]
-fn from_int_unsat_arith_range_is_unknown_not_sat() {
+fn from_int_unsat_arith_range_is_unsat() {
     let src = r#"(set-logic QF_SLIA)
 (declare-fun x () String)
 (declare-fun y () String)
@@ -150,14 +150,10 @@ fn from_int_unsat_arith_range_is_unknown_not_sat() {
 (assert (not (= y "")))
 (assert (not (= z "")))
 (check-sat)"#;
-    assert!(
-        !is_sat(src),
-        "an empty from_int bound range must never yield a wrong sat"
-    );
-    assert!(
-        is_unknown(src),
-        "the empty-range from_int trap must stay unknown"
-    );
+    let result = solve_smtlib(src, &SolverConfig::default())
+        .expect("solve empty from_int range")
+        .result;
+    assert_eq!(result, CheckResult::Unsat);
 }
 
 /// A `str.from_int(i)` under an **equality** bound `(= i 700)` coupled to a word

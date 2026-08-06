@@ -15,7 +15,22 @@
 
 use std::time::Duration;
 
-use axeyum_solver::{CheckResult, SolverConfig, solve_smtlib};
+use axeyum_smtlib::parse_script;
+use axeyum_solver::{
+    CheckResult, RouteOutcome, SolverConfig, Verdict, check_auto_explained, solve_smtlib,
+};
+
+const REWRITING_SUMS: &str = r"
+(set-logic QF_NIA)
+(declare-fun x () Int)
+(declare-fun y () Int)
+(declare-fun z () Int)
+(assert (or (= x 5) (= x 7) (= x 9)))
+(assert (or (= y (+ x 1)) (= y (+ x 2))))
+(assert (or (= z (+ y 5)) (= z (+ y 10))))
+(assert (> (* z z) 1000000000))
+(check-sat)
+";
 
 fn verdict(text: &str) -> CheckResult {
     let config = SolverConfig::default().with_timeout(Duration::from_secs(5));
@@ -27,18 +42,27 @@ fn verdict(text: &str) -> CheckResult {
 /// All 12 finite-domain branches propagate to a concrete z and refute the bound.
 #[test]
 fn rewriting_sums_is_unsat() {
-    let text = r"
-(set-logic QF_NIA)
-(declare-fun x () Int)
-(declare-fun y () Int)
-(declare-fun z () Int)
-(assert (or (= x 5) (= x 7) (= x 9)))
-(assert (or (= y (+ x 1)) (= y (+ x 2))))
-(assert (or (= z (+ y 5)) (= z (+ y 10))))
-(assert (> (* z z) 1000000000))
-(check-sat)
-";
-    assert_eq!(verdict(text), CheckResult::Unsat);
+    assert_eq!(verdict(REWRITING_SUMS), CheckResult::Unsat);
+}
+
+/// The finite-domain route must run while the caller still has budget. If it is
+/// moved behind the timeout-consuming nonlinear tail again, this exact trace
+/// degrades to the post-preprocessing timeout that regressed the aggregate gate.
+#[test]
+fn rewriting_sums_uses_the_budgeted_finite_domain_route() {
+    let mut script = parse_script(REWRITING_SUMS).expect("parse rewriting-sums");
+    let assertions = script.assertions.clone();
+    let config = SolverConfig::default().with_timeout(Duration::from_secs(5));
+    let (result, trace) =
+        check_auto_explained(&mut script.arena, &assertions, &config).expect("solve explained");
+
+    assert_eq!(result, CheckResult::Unsat);
+    let last = trace.last().expect("non-empty route trace");
+    assert_eq!(last.route, "finite-domain-split", "trace:\n{trace}");
+    assert!(matches!(
+        last.outcome,
+        RouteOutcome::Decided(Verdict::Unsat)
+    ));
 }
 
 /// A finite-domain SAT: one branch (x=9) satisfies the nonlinear bound the

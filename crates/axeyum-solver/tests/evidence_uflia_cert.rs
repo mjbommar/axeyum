@@ -12,7 +12,8 @@
 //!
 //! These tests pin: the mixed certificate is emitted and re-checks (Int and Real),
 //! tampering breaks the check, a 2-ary UF works, and the existing routes are
-//! unregressed (`QF_UFBV` still BV zero-trust, `QF_LIA` still gap-E certified, a
+//! unregressed (`QF_UFBV` still BV zero-trust, pure `QF_LIA` still receives the
+//! exact certificate selected by the difference-logic/arithmetic route boundary, a
 //! `QF_UFLRA` *sat* still solves with no false unsat).
 #![cfg(feature = "full")]
 
@@ -196,11 +197,11 @@ fn qf_ufbv_unsat_still_bv_zero_trust() {
     assert!(report.trusted_steps.is_empty());
 }
 
-/// Regression: a pure `QF_LIA` unsat (no UF) still gets its gap-E `lia_generic`
-/// certificate — the UFLIA emitter declines (no UF applications), so the pure
-/// arithmetic path still fires with the Farkas trust step recorded.
+/// Regression: a pure `QF_LIA` unsat (no UF) still bypasses the UFLIA emitter.
+/// This particular query is also conjunctive difference logic, so ADR-0375 gives
+/// it to the negative-cycle Farkas route ahead of the general arithmetic route.
 #[test]
-fn pure_lia_unsat_still_gap_e_certified() {
+fn pure_lia_difference_logic_overlap_keeps_farkas_cert() {
     let mut arena = TermArena::new();
     let x = arena.int_var("x").unwrap();
     let zero = arena.int_const(0);
@@ -209,21 +210,23 @@ fn pure_lia_unsat_still_gap_e_certified() {
     let assertions = [gt0, lt0];
 
     let report = produce_evidence(&mut arena, &assertions, &config()).unwrap();
-    let Evidence::UnsatArithAletheProof(_) = &report.evidence else {
+    let Evidence::UnsatFarkas(_) = &report.evidence else {
         panic!(
-            "expected the gap-E LIA arithmetic cert, got {:?}",
+            "expected the conjunctive difference-logic Farkas cert, got {:?}",
             report.evidence
         );
     };
+    assert_eq!(report.provenance.backend, "dl-online-negative-cycle-farkas");
+    assert!(report.evidence.is_certified());
     assert!(report.evidence.check(&arena, &assertions).unwrap());
-    // The pure-LIA path records the Farkas trust step as certified (distinct from
-    // the UFLIA route, which records no trust steps).
+    // The pure-LIA overlap records the exact Farkas reduction as certified
+    // (distinct from the UFLIA route, which records no trust steps).
     assert!(
         report
             .trusted_steps
             .iter()
             .any(|s| s.id == TrustId::Farkas && s.certified),
-        "pure LIA unsat must keep its gap-E Farkas-certified route"
+        "pure LIA/difference-logic overlap must keep its certified Farkas route"
     );
 }
 

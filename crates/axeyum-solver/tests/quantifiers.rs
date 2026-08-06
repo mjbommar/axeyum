@@ -96,3 +96,19 @@ fn quantifier_over_infinite_domain_is_unsupported() {
         Err(SolverError::Unsupported(_))
     ));
 }
+
+#[test]
+fn finite_domain_over_expansion_budget_is_unknown() {
+    let mut arena = TermArena::new();
+    let x_sym = arena.declare("x", Sort::BitVec(16)).unwrap();
+    let x = arena.var(x_sym);
+    let body = arena.eq(x, x).unwrap();
+    let all = arena.forall(x_sym, body).unwrap();
+    let result = check_with_quantifiers(&mut arena, &[all], &config())
+        .expect("finite but over-budget domains are undecided, not unsupported");
+    assert!(matches!(
+        result,
+        CheckResult::Unknown(ref reason)
+            if reason.kind == axeyum_solver::UnknownKind::ResourceLimit
+    ));
+}

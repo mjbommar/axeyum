@@ -6018,10 +6018,10 @@ impl TermInventionState {
                 continue;
             }
             match arena.node(term) {
-                TermNode::Symbol(symbol) => {
-                    if self.binders.contains(symbol) && !own_vars.contains(&term) {
-                        return false;
-                    }
+                TermNode::Symbol(symbol)
+                    if self.binders.contains(symbol) && !own_vars.contains(&term) =>
+                {
+                    return false;
                 }
                 TermNode::App { op, args } => {
                     if matches!(op, Op::Forall(_) | Op::Exists(_)) {

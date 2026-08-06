@@ -42,15 +42,13 @@ fn produce_evidence_certifies_simple_lia_unsat() {
     let assertions = [gt0, lt0];
 
     let report = produce_evidence(&mut arena, &assertions, &config()).unwrap();
-    if !matches!(
-        &report.evidence,
-        Evidence::UnsatArithAletheProof(_) | Evidence::UnsatFarkas(_)
-    ) {
+    let Evidence::UnsatFarkas(_) = &report.evidence else {
         panic!(
-            "expected a certified arithmetic LIA unsat (Alethe or Farkas), got {:?}",
+            "expected the conjunctive difference-logic Farkas cert, got {:?}",
             report.evidence
         );
-    }
+    };
+    assert_eq!(report.provenance.backend, "dl-online-negative-cycle-farkas");
     assert!(report.evidence.is_certified());
     // The certificate re-validates through the arithmetic-aware checker.
     assert!(report.evidence.check(&arena, &assertions).unwrap());
