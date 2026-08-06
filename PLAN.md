@@ -5,7 +5,7 @@ for current project status, ordered work, blockers, and resume guidance. Read it
 first and update it before ending a project-level work session.
 
 - Last consolidated: **2026-08-05**
-- State audited at: `cc3fadaf8308b2a49532673ca2f7b35dd69d236a`
+- State audited at: `751066210a70dd9198a3ffea79817cec792c508d`
 - Expected integration state: clean `main`, equal to `origin/main`
 - Latest integrated increment: `0ccb4ce48c73de1766b4d7fbea96f07130fa044e`
   via merge `cc3fadaf8308b2a49532673ca2f7b35dd69d236a`
@@ -30,48 +30,41 @@ evidence routes, broad but uneven theory support, an independent Lean-core
 checker/importer, and several consumers. It is not yet a drop-in Z3 replacement
 or a replacement for the Lean system.
 
-The audited code integration commit is `cc3fadaf8`; this tracker update is its
-documentation-only descendant on clean `main`. The exact merge SHA passed the
-fail-closed pre-push compile, format, corpus, workspace-unit, full-feature
-solver-unit, capability-frontier, focused integration, and evidence gates.
-GitHub CI run `31066926771` and docs run `31066926761` are in progress for that
-merge; their state is pending, not green. No benchmark, solver, or measurement
-process is authorized by this tracker.
+The audited integration state is clean `main` at `751066210`, equal to
+`origin/main`. GitHub CI `31066926771` and docs `31066926761` for code merge
+`cc3fadaf8`, plus docs `31067318237` for its canonical-plan descendant, are
+terminal green. No benchmark, solver, or measurement process is authorized by
+this tracker.
 
-The consolidation repair increment is complete and locally validated on
-`agent/evidence/qflia-route-gate`. It resolves five baseline-contract defects:
+The next A1 increment is committed locally as `96ff85930` on
+`agent/arith/a1-deadline-ceilings`, based directly on `751066210`. It is not yet
+pushed or integrated. It resolves the two measured arithmetic resource defects:
 
-1. ADR-0375 deliberately routes conjunctive difference-logic/QF_LIA overlap to
-   exact Farkas evidence before general arithmetic. Tests now pin
-   `dl-online-negative-cycle-farkas` for overlap, retain an Alethe non-DL
-   control, and keep independent tamper checks.
-2. `finite_domain_split::rewriting_sums_is_unsat` was starved after nonlinear
-   dispatch spent the shared deadline. The already-capped split now runs before
-   genuinely nonlinear integer search and later work receives only the original
-   remaining budget. Five finite-domain, five deadline, and twelve route-trace
-   tests pass; the decisive trace is `finite-domain-split`.
-3. Finite quantified Bool/BV/Float domains that exceed eager expansion now
-   return first-class `Unknown(ResourceLimit)` instead of leaking an operational
-   unsupported-operator error through a narrower e-graph fallback. The six-case
-   direct quantifier suite and nine-case quantified-BV differential matrix pass.
-4. Two stale string expectations now match the proved semantics: distinct
-   equal-length strings carry a replay-checked SAT model, while contradictory
-   `str.from_int` integer bounds are UNSAT before the conservative word fallback.
-5. Current stable Clippy's `collapsible_match` diagnosis in the quantified
-   e-graph trigger scan is repaired without changing behavior.
+1. ADR-0377 makes arithmetic timeout query-global across sequential exact-real,
+   NRA, real-relaxation, NIA-linearization, bounded-blast, and width-ladder
+   routes. The same absolute deadline is polled inside solver-local CAD
+   polynomial, projection, determinant, exact-division, and rational-cell loops.
+   The public QF_NIA `ext-rew-aggr-test` now returns `Unknown(Timeout)` in 0.30 s
+   for a 250 ms optimized request instead of 1.10 s; a committed debug regression
+   finishes in 0.28 s and requires less than 1 s.
+2. Online LRA normalization now has deterministic node, coefficient-work, and
+   retained-cache ceilings. Production entry points distinguish deadline expiry
+   from resource exhaustion and return `Unknown(Timeout)` or
+   `Unknown(ResourceLimit)` rather than constructing a partial theory. The
+   existing 1,024-atom front-door cap remains; current `sc-39.base.cvc.smt2`
+   declines in 0.10 s at roughly 13 MiB instead of reproducing the historical
+   8 GiB abort seen when that cap was experimentally raised.
 
-`CARGO_BUILD_JOBS=1 CARGO_INCREMENTAL=0 just check` ran every code, solver,
-fuzz, proof, doctest, documentation, benchmark, and resource stage successfully,
-including 1,072 solver unit tests, the 572-second variable-divisor differential
-gate, the 437-second UFLIA differential gate, and both order-255 CAS proofs
-(2/2 in 901 seconds). Its final parity-docs stage correctly failed because the
-serialized frontier run had refreshed five committed frontier artifacts while
-`SCOREBOARD.md` was still stale. After deterministic scoreboard regeneration,
-`just parity-docs` is green: 35 rows, 24 logics, 992 files, 762 decided, 674
-oracle-compared, and zero disagreements. This is a composite local green state;
-the original monolithic command's exit code remains recorded as 1, not relabeled
-as a pass. The repair commit and merge are integrated and pushed; new remote
-CI/docs remain pending until GitHub reports terminal results.
+Focused A1 gates are green: deadline 6/6, online-LRA 7/7, CAD 37/37, the
+normalization exhausted/near-miss unit, full all-feature solver Clippy, format,
+and documentation links. The terminal aggregate solver gate
+`CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --all-features --quiet --
+--test-threads=2` passed 1,073 library tests and every integration/doctest bin,
+including the 397.85-second UFLIA and 286.00-second word-equation differential
+tests. `just parity-docs` is independently green at 35 rows, 24 logics, 992
+files, 762 decided, 674 oracle-compared, and zero disagreements; its unrelated,
+load-sensitive frontier refresh was discarded. These gates validate the bounded
+implementation, but they do not replace A1's six retained division runs.
 
 ### Current evidence snapshot
 
@@ -112,6 +105,7 @@ CI/docs remain pending until GitHub reports terminal results.
 
 | Date | Commit | Result |
 |---|---|---|
+| 2026-08-05 | `96ff85930` (local branch) | Shared one arithmetic deadline across sequential routes, added CAD cancellation polls and deterministic LRA normalization ceilings, and added public regression/ADR evidence. |
 | 2026-08-05 | `803c08439` | Added independent fresh-arena checking for all 92 certified QF_BV UNSAT rows; 78 retain the stronger text-only recheck claim. |
 | 2026-08-04 | `3777a3b2c` / `8f4458fb1` | Repaired the load-sensitive frontier ratchet and refreshed honest curves without raising baselines. |
 | 2026-08-04 | `1c419f6b1` | Fixed a lazy-LIA operation that exceeded a 200 ms budget by 548x; exposed remaining NRA and normalization ceilings. |
@@ -126,13 +120,11 @@ CI/docs remain pending until GitHub reports terminal results.
 Work in this order unless new evidence reveals a wrong verdict, crash, data-loss
 risk, or invalid gate. Those are P0 and preempt the queue.
 
-**Immediate action.** Confirm terminal GitHub CI/docs for `cc3fadaf8`, then
-continue A1 with the NRA/CAD absolute-deadline and normalization-ceiling slice.
-Preserve the exact gate record above: the comprehensive run passed every
-substantive stage but exited 1 on the subsequently repaired stale scoreboard;
-the repaired `parity-docs` target and the exact-merge pre-push gate are
-independently green. A wrong verdict, crash, or renewed deadline overrun
-preempts the queue.
+**Immediate action.** Push and integrate the green `96ff85930` A1 resource slice,
+verify exact remote refs and terminal CI/docs, then run the complete retained
+QF_NIA, QF_LIA, QF_LRA, QF_RDL, QF_IDL, and QF_UFLIA lists from clean integrated
+main. A wrong verdict, crash, retained verdict loss/disagreement, or renewed
+deadline overrun preempts the queue.
 
 ### A1 — Complete arithmetic deadline and resource enforcement (`WIP`, P0)
 
@@ -140,10 +132,11 @@ preempts the queue.
 audit still observed NRA calls exceeding their shares by 8.8–15.2 seconds and a
 QF_LRA normalization path aborting at the 8 GiB cap.
 
-**Next slice.** With the bounded finite-domain split now reachable, thread one
-absolute deadline through NRA/CAD refinement and all
-re-decisions; add explicit node/allocation ceilings to term normalization and
-`AtomBuilder`; reproduce each existing overrun before changing it.
+**Next slice.** The deadline/ceiling implementation and aggregate local solver
+gate are complete on `96ff85930`. Integrate that exact commit, then run the six
+retained arithmetic divisions and compare their current clean sidecars with the
+credited baselines. Diagnose any loss before appending ledger entries or moving
+to A2.
 
 **Exit.** Reverse-apply tests prove the old code overruns or aborts; fixed code
 returns `Unknown` within bounded cleanup time. QF_NIA, QF_LIA, QF_LRA, QF_RDL,
@@ -297,8 +290,8 @@ errors remain atomic, and API helpers and text mode share one semantic core.
 
 | Workstream | State | Current boundary / next action |
 |---|---|---|
-| Integration and gates | `WIP`; integrated at `cc3fadaf8` | Exact-merge pre-push gates and remote-ref verification are green; GitHub CI/docs are pending and must not be reported green before terminal success. |
-| Arithmetic deadline reliability | `WIP` | The bounded finite-domain fallback is reachable under the shared absolute deadline; A1 continues through NRA/CAD and normalization ceilings after integration. |
+| Integration and gates | `WIP`; main at `751066210` | Prior CI/docs are terminal green. A1 commit `96ff85930` is locally green but not yet pushed or integrated. |
+| Arithmetic deadline reliability | `WIP` | Shared deadline, CAD polls, and LRA normalization ceilings are implemented and aggregate-tested; six retained arithmetic divisions remain before A1 exit. |
 | Full-library measurement | `TODO` | A2; no live run and no launch authority. |
 | QF_NIA breadth | `WIP` | Two uncredited gains landed; A3 owns clean remeasurement. |
 | QF_UFLIA breadth | `WIP` | 94/180; A4 owns causal residual partition. |
