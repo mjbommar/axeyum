@@ -2864,7 +2864,7 @@ class FullCaptureOperatorTests(unittest.TestCase):
         self.assertFalse(calls[0][2].exists())
         with self.assertRaisesRegex(ContractError, "outside repository"):
             full_readiness_module._gate_environment(
-                (ROOT / "target").resolve(strict=True),
+                ROOT.resolve(strict=True),
                 repository_root=ROOT,
             )
 
