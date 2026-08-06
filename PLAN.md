@@ -5,9 +5,10 @@ for current project status, ordered work, blockers, and resume guidance. Read it
 first and update it before ending a project-level work session.
 
 - Last consolidated: **2026-08-05**
-- State audited at: `3957ae2a225f97677eea2030e40623a45b289289`
+- State audited at: `cc3fadaf8308b2a49532673ca2f7b35dd69d236a`
 - Expected integration state: clean `main`, equal to `origin/main`
-- Active validated increment: `agent/evidence/qflia-route-gate` (integration pending)
+- Latest integrated increment: `0ccb4ce48c73de1766b4d7fbea96f07130fa044e`
+  via merge `cc3fadaf8308b2a49532673ca2f7b35dd69d236a`
 - Status vocabulary: `TODO` · `WIP` · `BLOCKED` · `DONE`
 
 `STATUS.md` is now a compatibility pointer. There is intentionally no root
@@ -29,9 +30,13 @@ evidence routes, broad but uneven theory support, an independent Lean-core
 checker/importer, and several consumers. It is not yet a drop-in Z3 replacement
 or a replacement for the Lean system.
 
-The audited integration head is clean and exactly matches `origin/main`. GitHub
-CI and docs completed successfully for `3957ae2a2` on 2026-08-05. No benchmark,
-solver, or measurement process is authorized by this tracker.
+The audited code integration commit is `cc3fadaf8`; this tracker update is its
+documentation-only descendant on clean `main`. The exact merge SHA passed the
+fail-closed pre-push compile, format, corpus, workspace-unit, full-feature
+solver-unit, capability-frontier, focused integration, and evidence gates.
+GitHub CI run `31066926771` and docs run `31066926761` are in progress for that
+merge; their state is pending, not green. No benchmark, solver, or measurement
+process is authorized by this tracker.
 
 The consolidation repair increment is complete and locally validated on
 `agent/evidence/qflia-route-gate`. It resolves five baseline-contract defects:
@@ -65,7 +70,8 @@ serialized frontier run had refreshed five committed frontier artifacts while
 `just parity-docs` is green: 35 rows, 24 logics, 992 files, 762 decided, 674
 oracle-compared, and zero disagreements. This is a composite local green state;
 the original monolithic command's exit code remains recorded as 1, not relabeled
-as a pass. Commit, integration, push, and new remote CI remain pending.
+as a pass. The repair commit and merge are integrated and pushed; new remote
+CI/docs remain pending until GitHub reports terminal results.
 
 ### Current evidence snapshot
 
@@ -120,14 +126,13 @@ as a pass. Commit, integration, push, and new remote CI remain pending.
 Work in this order unless new evidence reveals a wrong verdict, crash, data-loss
 risk, or invalid gate. Those are P0 and preempt the queue.
 
-**Immediate gate repair.** Finish the active
-`agent/evidence/qflia-route-gate` increment: run plan-authority/link/diff checks,
-commit and push the owned paths, conflict-preview against current `origin/main`,
-integrate, push `main`, and verify remote refs plus CI/docs. Preserve the exact
-gate record above: the comprehensive run passed every substantive stage but
-exited 1 on the subsequently repaired stale scoreboard; the repaired
-`parity-docs` target is independently green. This is the entry condition for
-continuing the remaining A1 work and for starting A2–A10.
+**Immediate action.** Confirm terminal GitHub CI/docs for `cc3fadaf8`, then
+continue A1 with the NRA/CAD absolute-deadline and normalization-ceiling slice.
+Preserve the exact gate record above: the comprehensive run passed every
+substantive stage but exited 1 on the subsequently repaired stale scoreboard;
+the repaired `parity-docs` target and the exact-merge pre-push gate are
+independently green. A wrong verdict, crash, or renewed deadline overrun
+preempts the queue.
 
 ### A1 — Complete arithmetic deadline and resource enforcement (`WIP`, P0)
 
@@ -292,7 +297,7 @@ errors remain atomic, and API helpers and text mode share one semantic core.
 
 | Workstream | State | Current boundary / next action |
 |---|---|---|
-| Integration and gates | `WIP` locally; remote green for `3957ae2a2` | Comprehensive local stages are green after scoreboard regeneration; commit/push, integration, and new remote gates remain. |
+| Integration and gates | `WIP`; integrated at `cc3fadaf8` | Exact-merge pre-push gates and remote-ref verification are green; GitHub CI/docs are pending and must not be reported green before terminal success. |
 | Arithmetic deadline reliability | `WIP` | The bounded finite-domain fallback is reachable under the shared absolute deadline; A1 continues through NRA/CAD and normalization ceilings after integration. |
 | Full-library measurement | `TODO` | A2; no live run and no launch authority. |
 | QF_NIA breadth | `WIP` | Two uncredited gains landed; A3 owns clean remeasurement. |
