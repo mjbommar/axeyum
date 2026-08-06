@@ -3171,12 +3171,11 @@ fn dispatch_difference_logic(
 /// not hypothetical: `QF_IDL/sal/lpsat/lpsat-goal-18` is decided `unsat` by
 /// `lia-dpll` in 4.2 s, and an unreserved probe turned it into `unknown`.
 ///
-/// The reserve is `min(timeout / 4, 6 s)`: a quarter on tight budgets, and a
-/// flat 6 s once the budget is large enough that a fixed slice is the cheaper
-/// insurance. Measured cost on the 24 s competition budget: two `fischer`
-/// refutations that needed more than 18 s of cycle search. Measured benefit:
-/// the dispatcher stays *strictly additive*, which is a property of every
-/// query — including the ones not in the corpus — rather than of a sample.
+/// The default reserve is `min(timeout / 4, 6 s)`: a quarter on tight budgets,
+/// and a flat 6 s once the budget is large enough that a fixed slice is the
+/// cheaper insurance. [`crate::dl_online::try_check_qf_dl`] may shorten that
+/// maximum probe budget for a preregistered equality-heavy shape, but it may
+/// never exceed it. The dispatcher therefore stays *strictly additive*.
 pub(crate) fn dl_probe_budget(config: &SolverConfig) -> SolverConfig {
     /// Ceiling on the slice held back for the routes below the probe.
     const DL_FALLBACK_RESERVE: Duration = Duration::from_secs(6);
@@ -7794,6 +7793,22 @@ impl Features {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn difference_logic_probe_preserves_the_fallback_slice() {
+        let cases = [
+            (Duration::ZERO, Duration::ZERO),
+            (Duration::from_secs(3), Duration::from_millis(2_250)),
+            (Duration::from_secs(12), Duration::from_secs(9)),
+            (Duration::from_secs(24), Duration::from_secs(18)),
+            (Duration::from_secs(60), Duration::from_secs(54)),
+        ];
+        for (timeout, expected_probe) in cases {
+            let config = SolverConfig::new().with_timeout(timeout);
+            assert_eq!(dl_probe_budget(&config).timeout, Some(expected_probe));
+        }
+        assert_eq!(dl_probe_budget(&SolverConfig::new()).timeout, None);
+    }
 
     /// A deep `and` spine must not blow the stack in the top-conjunct scan.
     ///

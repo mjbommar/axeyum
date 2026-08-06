@@ -536,7 +536,7 @@ pub const CAPABILITIES: &[Capability] = &[
                    independent FarkasCertificate::verify before it can become a lemma (a cycle that does \
                    not verify is DISCARDED — costs completeness, never soundness). Differential vs cvc5 \
                    1.3.4 on the committed 200-file parity lists, 24s/file: QF_RDL 6.6% → 68.6%, QF_IDL \
-                   41.5% → 53.7%, 0 disagreements. The probe gets timeout − min(timeout/4, 6s) so an \
+                   41.5% → 53.7%, 0 disagreements. The probe gets at most timeout − min(timeout/4, 6s) so an \
                    unreserved probe cannot starve the routes below it. The EVIDENCE front door \
                    (produce_evidence) reaches it too, above the certifying routes' practical size — \
                    measured, the pure-real evidence route decided 2 of the 200 QF_RDL parity files while \

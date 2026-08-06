@@ -81,7 +81,7 @@
 
 use std::cmp::{Ordering, Reverse};
 use std::collections::{BTreeMap, BinaryHeap, HashMap, HashSet};
-use std::time::Instant;
+use std::time::{Duration, Instant};
 
 use axeyum_ir::{Op, Rational, Sort, SymbolId, TermArena, TermId, TermNode, Value, eval};
 
@@ -367,12 +367,22 @@ impl ScanState {
     /// class as `crates/axeyum-solver/src/term_walk.rs` documents). The sign is
     /// carried on the worklist and accumulated in place, so the whole spine
     /// costs one `LinForm`.
-    fn linear(&mut self, arena: &TermArena, term: TermId) -> Option<LinForm> {
+    fn linear(
+        &mut self,
+        arena: &TermArena,
+        term: TermId,
+        deadline: Option<Instant>,
+    ) -> Option<LinForm> {
         let mut acc = LinForm::default();
         // `(term, negated)`; order of accumulation is irrelevant because the
         // result is a sum, so a plain stack is enough.
         let mut work = vec![(term, false)];
+        let mut steps = 0_usize;
         while let Some((current, negated)) = work.pop() {
+            steps += 1;
+            if steps.is_multiple_of(1024) && past_deadline(deadline) {
+                return None;
+            }
             match arena.node(current) {
                 TermNode::IntConst(value) => {
                     acc.add_constant(Rational::integer(*value), negated)?;
@@ -442,7 +452,12 @@ impl ScanState {
 
     /// Registers `term` as a difference atom, returning its index. Returns
     /// `None` for anything not provably difference-shaped.
-    fn atom(&mut self, arena: &TermArena, term: TermId) -> Option<usize> {
+    fn atom(
+        &mut self,
+        arena: &TermArena,
+        term: TermId,
+        deadline: Option<Instant>,
+    ) -> Option<usize> {
         if let Some(&index) = self.atom_index.get(&term) {
             return Some(index);
         }
@@ -463,8 +478,8 @@ impl ScanState {
             Op::IntGe | Op::RealGe => (Rel::Le, right, left),
             _ => return None,
         };
-        let lf = self.linear(arena, lo)?;
-        let rf = self.linear(arena, hi)?;
+        let lf = self.linear(arena, lo, deadline)?;
+        let rf = self.linear(arena, hi, deadline)?;
         let diff = lf.checked_sub(&rf)?;
         let (head, tail, bound) = Self::difference(&diff)?;
         if self.raw.len() >= MAX_DL_ATOMS {
@@ -497,7 +512,12 @@ impl ScanState {
     /// `collect`'s `seen` set already guarantees one call per distinct term, so
     /// this does no de-duplication scan of its own (which would be quadratic on
     /// a query with thousands of equalities).
-    fn expand_equality(&mut self, arena: &mut TermArena, term: TermId) -> bool {
+    fn expand_equality(
+        &mut self,
+        arena: &mut TermArena,
+        term: TermId,
+        deadline: Option<Instant>,
+    ) -> bool {
         let TermNode::App { args, .. } = arena.node(term) else {
             return false;
         };
@@ -512,7 +532,10 @@ impl ScanState {
         let (Ok(le), Ok(ge)) = (le, ge) else {
             return false;
         };
-        let (Some(le_index), Some(ge_index)) = (self.atom(arena, le), self.atom(arena, ge)) else {
+        let (Some(le_index), Some(ge_index)) = (
+            self.atom(arena, le, deadline),
+            self.atom(arena, ge, deadline),
+        ) else {
             return false;
         };
         self.eq_gates.push((term, le_index, ge_index));
@@ -564,15 +587,19 @@ fn collect(
     term: TermId,
     state: &mut ScanState,
     seen: &mut HashSet<TermId>,
+    deadline: Option<Instant>,
 ) -> bool {
+    if past_deadline(deadline) {
+        return false;
+    }
     if !seen.insert(term) {
         return true;
     }
     if is_numeric_relational(arena, term) {
         return if matches!(arena.node(term), TermNode::App { op: Op::Eq, .. }) {
-            state.expand_equality(arena, term)
+            state.expand_equality(arena, term, deadline)
         } else {
-            state.atom(arena, term).is_some()
+            state.atom(arena, term, deadline).is_some()
         };
     }
     // A Boolean equality is pure skeleton: descend both operands first, then
@@ -583,7 +610,9 @@ fn collect(
         && arena.sort_of(args[0]) == Sort::Bool
     {
         let (lhs, rhs) = (args[0], args[1]);
-        if !collect(arena, lhs, state, seen) || !collect(arena, rhs, state, seen) {
+        if !collect(arena, lhs, state, seen, deadline)
+            || !collect(arena, rhs, state, seen, deadline)
+        {
             return false;
         }
         state.bool_eq_gates.push((term, lhs, rhs));
@@ -600,7 +629,7 @@ fn collect(
     }
     let args = args.clone();
     for &arg in &*args {
-        if !collect(arena, arg, state, seen) {
+        if !collect(arena, arg, state, seen, deadline) {
             return false;
         }
     }
@@ -713,14 +742,19 @@ fn fresh_zero_name(arena: &TermArena) -> String {
 
 /// The conservative front gate. Returns the normalized problem, or `None` when
 /// the query is not provably pure difference logic.
-fn scan_dl(arena: &mut TermArena, assertions: &[TermId]) -> Option<DlScan> {
-    // Decide the mode from the declared sorts alone, and refuse mixed queries
-    // and every non-arithmetic theory.
+fn numeric_mode(
+    arena: &TermArena,
+    assertions: &[TermId],
+    deadline: Option<Instant>,
+) -> Option<Mode> {
     let mut has_int = false;
     let mut has_real = false;
     let mut stack: Vec<TermId> = assertions.to_vec();
     let mut visited: HashSet<TermId> = HashSet::new();
     while let Some(term) = stack.pop() {
+        if past_deadline(deadline) {
+            return None;
+        }
         if !visited.insert(term) {
             continue;
         }
@@ -734,18 +768,24 @@ fn scan_dl(arena: &mut TermArena, assertions: &[TermId]) -> Option<DlScan> {
             if matches!(op, Op::Apply(_)) {
                 return None;
             }
-            for &arg in &**args {
-                stack.push(arg);
-            }
+            stack.extend(args.iter().copied());
         }
     }
-    let mode = match (has_int, has_real) {
-        (true, false) => Mode::Integer,
-        (false, true) => Mode::Real,
-        // No numeric sort is pure SAT (another route's job); both is outside
-        // this fragment.
-        _ => return None,
-    };
+    match (has_int, has_real) {
+        (true, false) => Some(Mode::Integer),
+        (false, true) => Some(Mode::Real),
+        _ => None,
+    }
+}
+
+fn scan_dl(
+    arena: &mut TermArena,
+    assertions: &[TermId],
+    deadline: Option<Instant>,
+) -> Option<DlScan> {
+    // Decide the mode from the declared sorts alone, and refuse mixed queries
+    // and every non-arithmetic theory.
+    let mode = numeric_mode(arena, assertions, deadline)?;
 
     let zero_sort = match mode {
         Mode::Integer => Sort::Int,
@@ -761,7 +801,7 @@ fn scan_dl(arena: &mut TermArena, assertions: &[TermId]) -> Option<DlScan> {
         if arena.sort_of(assertion) != Sort::Bool {
             return None;
         }
-        if !collect(arena, assertion, &mut state, &mut seen) {
+        if !collect(arena, assertion, &mut state, &mut seen, deadline) {
             return None;
         }
     }
@@ -776,6 +816,9 @@ fn scan_dl(arena: &mut TermArena, assertions: &[TermId]) -> Option<DlScan> {
         Mode::Real => {
             let mut acc: i128 = 1;
             for raw in &state.raw {
+                if past_deadline(deadline) {
+                    return None;
+                }
                 acc = lcm(acc, raw.bound.denominator())?;
                 if acc > MAX_SCALE || acc <= 0 {
                     return None;
@@ -787,6 +830,9 @@ fn scan_dl(arena: &mut TermArena, assertions: &[TermId]) -> Option<DlScan> {
 
     let mut atoms = Vec::with_capacity(state.raw.len());
     for raw in &state.raw {
+        if past_deadline(deadline) {
+            return None;
+        }
         let RawAtom {
             head,
             tail,
@@ -1287,7 +1333,7 @@ pub(crate) fn conjunctive_farkas_certificate(
     arena: &mut TermArena,
     assertions: &[TermId],
 ) -> Option<FarkasCertificate> {
-    let scan = scan_dl(arena, assertions)?;
+    let scan = scan_dl(arena, assertions, None)?;
     let atom_index: HashMap<TermId, usize> = scan
         .atom_terms
         .iter()
@@ -1681,30 +1727,16 @@ fn unknown(detail: &str) -> UnknownReason {
     }
 }
 
-/// Decides a **pure difference-logic** query (`QF_IDL` / `QF_RDL`) through the
-/// generic CDCL(T) driver with negative-cycle detection as the theory.
-///
-/// Returns `Ok(None)` — leaving the query to the established routes — unless
-/// every relational atom is provably difference-shaped and the whole query is
-/// single-sorted numeric plus a propositional skeleton the encoder covers. See
-/// the module docs for the exact refusal conditions.
-///
-/// There is deliberately no error channel: every give-up is either `None` (not
-/// our fragment) or a conservative [`CheckResult::Unknown`].
-pub(crate) fn try_check_qf_dl(
-    arena: &mut TermArena,
-    assertions: &[TermId],
-    config: &SolverConfig,
-) -> Option<CheckResult> {
-    let scan = scan_dl(arena, assertions)?;
-
-    let mut enc = Encoder::new(&scan.atom_terms);
-    let mut clauses: Vec<Vec<Lit>> = Vec::new();
-    // Tseitin `g ⟺ le ∧ ge` for every expanded numeric equality, so the
-    // skeleton — not the theory — owns the disjunctive negation. Gate variables
-    // follow the registered atoms, leaving atom indices aligned with the
-    // theory's numbering.
+fn encode_numeric_equalities(
+    scan: &DlScan,
+    enc: &mut Encoder,
+    clauses: &mut Vec<Vec<Lit>>,
+    deadline: Option<Instant>,
+) -> bool {
     for &(term, le_index, ge_index) in &scan.eq_gates {
+        if past_deadline(deadline) {
+            return false;
+        }
         let gate = enc.var_count;
         enc.var_count += 1;
         let g = Lit {
@@ -1724,15 +1756,26 @@ pub(crate) fn try_check_qf_dl(
         clauses.push(vec![le.negate(), ge.negate(), g]);
         enc.term_var.insert(term, gate);
     }
-    // Tseitin `g ⟺ (a ⟺ b)` for every Boolean equality, in the post-order the
-    // scan recorded, so a nested equality already has its variable.
+    true
+}
+
+fn encode_boolean_equalities(
+    arena: &TermArena,
+    scan: &DlScan,
+    enc: &mut Encoder,
+    clauses: &mut Vec<Vec<Lit>>,
+    deadline: Option<Instant>,
+) -> Option<bool> {
     for &(term, lhs, rhs) in &scan.bool_eq_gates {
+        if past_deadline(deadline) {
+            return Some(false);
+        }
         let a = Lit {
-            var: enc.encode(arena, lhs, &mut clauses)?,
+            var: enc.encode(arena, lhs, clauses)?,
             positive: true,
         };
         let b = Lit {
-            var: enc.encode(arena, rhs, &mut clauses)?,
+            var: enc.encode(arena, rhs, clauses)?,
             positive: true,
         };
         let g = Lit {
@@ -1746,12 +1789,91 @@ pub(crate) fn try_check_qf_dl(
         clauses.push(vec![g, a.negate(), b.negate()]);
         enc.term_var.insert(term, g.var);
     }
+    Some(true)
+}
+
+fn encode_assertions(
+    arena: &TermArena,
+    assertions: &[TermId],
+    enc: &mut Encoder,
+    clauses: &mut Vec<Vec<Lit>>,
+    deadline: Option<Instant>,
+) -> Option<bool> {
     for &assertion in assertions {
-        let top = enc.encode(arena, assertion, &mut clauses)?;
+        if past_deadline(deadline) {
+            return Some(false);
+        }
+        let top = enc.encode(arena, assertion, clauses)?;
         clauses.push(vec![Lit {
             var: top,
             positive: true,
         }]);
+    }
+    Some(true)
+}
+
+/// Decides a **pure difference-logic** query (`QF_IDL` / `QF_RDL`) through the
+/// generic CDCL(T) driver with negative-cycle detection as the theory.
+///
+/// Returns `Ok(None)` — leaving the query to the established routes — unless
+/// every relational atom is provably difference-shaped and the whole query is
+/// single-sorted numeric plus a propositional skeleton the encoder covers. See
+/// the module docs for the exact refusal conditions.
+///
+/// There is deliberately no error channel: every give-up is either `None` (not
+/// our fragment) or a conservative [`CheckResult::Unknown`].
+pub(crate) fn try_check_qf_dl(
+    arena: &mut TermArena,
+    assertions: &[TermId],
+    config: &SolverConfig,
+) -> Option<CheckResult> {
+    let probe_started = Instant::now();
+    // The probe budget covers the entire route, including the conservative
+    // fragment scan and skeleton encoding. Starting this deadline after those
+    // stages let a large front end consume the fallback's reserved slice before
+    // the supposedly bounded DL search even began.
+    let maximum_deadline = config
+        .timeout
+        .and_then(|timeout| probe_started.checked_add(timeout));
+    let scan = scan_dl(arena, assertions, maximum_deadline)?;
+    let deadline = equality_fallback_probe_timeout(
+        config.timeout,
+        scan.atom_terms.len(),
+        scan.eq_gates.len(),
+    )
+    .and_then(|timeout| probe_started.checked_add(timeout));
+    if past_deadline(deadline) {
+        return Some(CheckResult::Unknown(UnknownReason {
+            kind: UnknownKind::Timeout,
+            detail: "budget exhausted in the difference-logic front end".to_owned(),
+        }));
+    }
+
+    let mut enc = Encoder::new(&scan.atom_terms);
+    let mut clauses: Vec<Vec<Lit>> = Vec::new();
+    // Tseitin `g ⟺ le ∧ ge` for every expanded numeric equality, so the
+    // skeleton — not the theory — owns the disjunctive negation. Gate variables
+    // follow the registered atoms, leaving atom indices aligned with the
+    // theory's numbering.
+    if !encode_numeric_equalities(&scan, &mut enc, &mut clauses, deadline) {
+        return Some(CheckResult::Unknown(UnknownReason {
+            kind: UnknownKind::Timeout,
+            detail: "budget exhausted encoding difference-logic equalities".to_owned(),
+        }));
+    }
+    // Tseitin `g ⟺ (a ⟺ b)` for every Boolean equality, in the post-order the
+    // scan recorded, so a nested equality already has its variable.
+    if !encode_boolean_equalities(arena, &scan, &mut enc, &mut clauses, deadline)? {
+        return Some(CheckResult::Unknown(UnknownReason {
+            kind: UnknownKind::Timeout,
+            detail: "budget exhausted encoding difference-logic Boolean equalities".to_owned(),
+        }));
+    }
+    if !encode_assertions(arena, assertions, &mut enc, &mut clauses, deadline)? {
+        return Some(CheckResult::Unknown(UnknownReason {
+            kind: UnknownKind::Timeout,
+            detail: "budget exhausted encoding difference-logic assertions".to_owned(),
+        }));
     }
     let driver_clauses: Vec<Vec<CdcltLit>> = clauses
         .iter()
@@ -1766,8 +1888,13 @@ pub(crate) fn try_check_qf_dl(
         })
         .collect();
 
+    if past_deadline(deadline) {
+        return Some(CheckResult::Unknown(UnknownReason {
+            kind: UnknownKind::Timeout,
+            detail: "budget exhausted materializing difference-logic clauses".to_owned(),
+        }));
+    }
     let atom_count = scan.atom_terms.len();
-    let deadline = config.timeout.and_then(|t| Instant::now().checked_add(t));
     let mut theory = DlTheory::new(&scan, deadline);
     let mut solver = CdclT::new(enc.var_count, atom_count, driver_clauses, deadline);
     match solver.solve(&mut theory) {
@@ -1792,6 +1919,30 @@ pub(crate) fn try_check_qf_dl(
             }
         }
     }
+}
+
+/// Shortens the maximum DL probe only for a moderate equality-expanded query.
+///
+/// Numeric equalities become two theory atoms plus a Boolean gate. On the
+/// measured medium shape the generic LIA fallback is competitive and needs a
+/// larger slice; on a large equality skeleton it is not, while compact
+/// gate-free DL searches need the default probe allowance. These thresholds
+/// were preregistered from the 2026-08-06 loss/control census and are guarded by
+/// the complete retained `QF_IDL/QF_RDL` decision set.
+fn equality_fallback_probe_timeout(
+    maximum: Option<Duration>,
+    atom_count: usize,
+    equality_gate_count: usize,
+) -> Option<Duration> {
+    const MIN_EQUALITY_GATES: usize = 128;
+    const MAX_MODERATE_ATOMS: usize = 1024;
+    maximum.map(|timeout| {
+        if equality_gate_count >= MIN_EQUALITY_GATES && atom_count <= MAX_MODERATE_ATOMS {
+            timeout * 2 / 3
+        } else {
+            timeout
+        }
+    })
 }
 
 #[cfg(test)]
