@@ -980,34 +980,45 @@ fn pure_real_identity_contradiction_uses_term_identity_evidence() {
 
 /// The two `QF_LIA` audit misses get a **certified** arithmetic refutation.
 ///
-/// Both rows are conjunctive difference-logic queries, so since `1b60a79ac` the
-/// negative cycle is exported as the `Evidence::UnsatFarkas` `QF_LRA` already
-/// emits, ahead of the arith-DPLL theory enumeration that used to claim them.
-/// Both variants are certified and re-derive their refutation in
-/// `Evidence::check`; the Farkas one records its (certified) `Farkas` trust
-/// step, so the assertion here is that no step is left *un*certified rather than
-/// that the step list is empty.
+/// The first row is conjunctive difference logic and receives the exact Farkas
+/// route; the second row's Boolean skeleton is certified by arithmetic DPLL.
+/// Both variants re-derive their refutation in `Evidence::check`, and every
+/// recorded trust step must be certified.
 #[test]
 fn qf_lia_audit_misses_use_certified_arith_evidence() {
-    for input in [
-        include_str!(
-            "../../../corpus/public-curated/non-incremental/QF_LIA/cvc5-regress-clean-bounded/cli__regress0__dump-unsat-core-full.smt2"
+    for (input, expected) in [
+        (
+            include_str!(
+                "../../../corpus/public-curated/non-incremental/QF_LIA/cvc5-regress-clean-bounded/cli__regress0__dump-unsat-core-full.smt2"
+            ),
+            "farkas",
         ),
-        include_str!(
-            "../../../corpus/public-curated/non-incremental/QF_LIA/cvc5-regress-clean-bounded/cli__regress0__named-expr-use.smt2"
+        (
+            include_str!(
+                "../../../corpus/public-curated/non-incremental/QF_LIA/cvc5-regress-clean-bounded/cli__regress0__named-expr-use.smt2"
+            ),
+            "arith-dpll",
         ),
     ] {
         let mut script = parse_script(input).expect("QF_LIA audit row parses");
         let assertions = script.assertions.clone();
         let report = produce_evidence(&mut script.arena, &assertions, &config()).unwrap();
-        assert!(
-            matches!(
-                report.evidence,
-                Evidence::UnsatArithDpll(_) | Evidence::UnsatFarkas(_)
+        match expected {
+            "arith-dpll" => assert!(
+                matches!(report.evidence, Evidence::UnsatArithDpll(_)),
+                "expected arithmetic-DPLL evidence, got {:?}",
+                report.evidence
             ),
-            "expected certified arith evidence (arith-DPLL or Farkas), got {:?}",
-            report.evidence
-        );
+            "farkas" => {
+                assert!(
+                    matches!(report.evidence, Evidence::UnsatFarkas(_)),
+                    "expected difference-logic Farkas evidence, got {:?}",
+                    report.evidence
+                );
+                assert_eq!(report.provenance.backend, "dl-online-negative-cycle-farkas");
+            }
+            _ => unreachable!(),
+        }
         assert!(report.evidence.is_certified());
         assert!(
             report.trusted_steps.iter().all(|step| step.certified),

@@ -423,7 +423,9 @@ fn guarded_int_universal_sat_not_reported_unsat() {
 
 #[test]
 fn qf_lia_unsat_cert_unchanged() {
-    // `x>=1 ∧ x<=-1` — pure QF_LIA unsat, must keep its arithmetic Alethe cert.
+    // `x>=1 ∧ x<=-1` is both QF_LIA and conjunctive difference logic. ADR-0375
+    // deliberately gives that exact overlap to the negative-cycle Farkas route;
+    // pin the precise certified route so quantified evidence cannot shadow it.
     let mut arena = TermArena::new();
     let x = arena.declare("x", Sort::Int).unwrap();
     let xv = arena.var(x);
@@ -435,10 +437,41 @@ fn qf_lia_unsat_cert_unchanged() {
     let asserts = [ge, le];
     let report = produce_evidence(&mut arena, &asserts, &config).expect("decides");
     assert!(
-        matches!(report.evidence, Evidence::UnsatArithAletheProof(_)),
-        "QF_LIA unsat must keep its arithmetic Alethe cert, got {:?}",
+        matches!(report.evidence, Evidence::UnsatFarkas(_)),
+        "the QF_LIA/difference-logic overlap must keep its Farkas cert, got {:?}",
         report.evidence
     );
+    assert_eq!(report.provenance.backend, "dl-online-negative-cycle-farkas");
+    assert!(report.evidence.is_certified());
+    assert_eq!(report.evidence.check(&arena, &asserts), Ok(true));
+}
+
+#[test]
+fn qf_lia_non_dl_unsat_keeps_arithmetic_alethe_cert() {
+    // `x+y>=3 ∧ x<=1 ∧ y<=1` is QF_LIA but not difference logic because the
+    // first atom has two variables with the same sign. It must continue through
+    // the arithmetic Alethe route, independently pinning the non-overlap side of
+    // the dispatch boundary.
+    let mut arena = TermArena::new();
+    let x = arena.declare("x", Sort::Int).unwrap();
+    let y = arena.declare("y", Sort::Int).unwrap();
+    let xv = arena.var(x);
+    let yv = arena.var(y);
+    let one = arena.int_const(1);
+    let three = arena.int_const(3);
+    let sum = arena.int_add(xv, yv).unwrap();
+    let sum_ge_three = arena.int_ge(sum, three).unwrap();
+    let x_le_one = arena.int_le(xv, one).unwrap();
+    let y_le_one = arena.int_le(yv, one).unwrap();
+    let asserts = [sum_ge_three, x_le_one, y_le_one];
+
+    let report = produce_evidence(&mut arena, &asserts, &SolverConfig::default()).expect("decides");
+    assert!(
+        matches!(report.evidence, Evidence::UnsatArithAletheProof(_)),
+        "non-difference QF_LIA must keep its arithmetic Alethe cert, got {:?}",
+        report.evidence
+    );
+    assert!(report.evidence.is_certified());
     assert_eq!(report.evidence.check(&arena, &asserts), Ok(true));
 }
 

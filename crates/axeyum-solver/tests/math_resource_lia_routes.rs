@@ -276,14 +276,14 @@ fn assert_resource_lia_checked(label: &str, smt2: &str) {
 
     let report = produce_evidence(&mut script.arena, &assertions, &SolverConfig::default())
         .unwrap_or_else(|error| panic!("{label}: evidence production failed: {error}"));
-    assert!(
-        matches!(
-            report.evidence,
-            Evidence::UnsatArithDpll(_) | Evidence::UnsatArithAletheProof(_)
+    match &report.evidence {
+        Evidence::UnsatFarkas(_) => assert_eq!(
+            report.provenance.backend, "dl-online-negative-cycle-farkas",
+            "{label}: difference-logic evidence must carry exact route provenance"
         ),
-        "{label}: expected certified QF_LIA arithmetic evidence, got {:?}",
-        report.evidence
-    );
+        Evidence::UnsatArithDpll(_) | Evidence::UnsatArithAletheProof(_) => {}
+        other => panic!("{label}: expected certified QF_LIA arithmetic evidence, got {other:?}"),
+    }
     assert!(report.evidence.is_certified());
     assert!(
         report.evidence.check(&script.arena, &assertions).unwrap(),

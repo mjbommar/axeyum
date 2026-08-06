@@ -185,15 +185,11 @@ fn plain_qf_lia_unsat_evidence_unchanged() {
 
     let report = produce_evidence(&mut arena, &assertions, &config()).unwrap();
     assert!(
-        matches!(
-            report.evidence,
-            Evidence::UnsatArithDpll(_)
-                | Evidence::UnsatArithAletheProof(_)
-                | Evidence::UnsatFarkas(_)
-        ),
-        "expected a checked QF_LIA arith cert, got {:?}",
+        matches!(report.evidence, Evidence::UnsatFarkas(_)),
+        "expected the conjunctive difference-logic Farkas cert, got {:?}",
         report.evidence
     );
+    assert_eq!(report.provenance.backend, "dl-online-negative-cycle-farkas");
     assert!(report.evidence.is_certified());
     assert!(report.evidence.check(&arena, &assertions).unwrap());
     assert!(

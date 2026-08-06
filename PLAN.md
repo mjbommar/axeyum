@@ -5,8 +5,9 @@ for current project status, ordered work, blockers, and resume guidance. Read it
 first and update it before ending a project-level work session.
 
 - Last consolidated: **2026-08-05**
-- State audited at: `803c08439586041ff317f2fb58261832499029eb`
+- State audited at: `3957ae2a225f97677eea2030e40623a45b289289`
 - Expected integration state: clean `main`, equal to `origin/main`
+- Active validated increment: `agent/evidence/qflia-route-gate` (integration pending)
 - Status vocabulary: `TODO` · `WIP` · `BLOCKED` · `DONE`
 
 `STATUS.md` is now a compatibility pointer. There is intentionally no root
@@ -29,17 +30,42 @@ checker/importer, and several consumers. It is not yet a drop-in Z3 replacement
 or a replacement for the Lean system.
 
 The audited integration head is clean and exactly matches `origin/main`. GitHub
-CI and docs completed successfully for `803c08439` on 2026-08-05. No solver or
-measurement process was live during this consolidation audit.
+CI and docs completed successfully for `3957ae2a2` on 2026-08-05. No benchmark,
+solver, or measurement process is authorized by this tracker.
 
-The 2026-08-05 consolidation branch's full local `just check` is **not green**.
-It stopped in `evidence_quant_cert::qf_lia_unsat_cert_unchanged`: the test
-requires `UnsatArithAlethe`, while current routing returns a self-checking
-`UnsatFarkas` certificate. The exact focused test fails identically on untouched
-`main` at `803c08439`, so this is a confirmed baseline gate/contract drift, not
-a documentation regression. Resolve which evidence-route invariant is intended
-and restore the gate before beginning A1 implementation; do not weaken the test
-merely to accept any UNSAT result.
+The consolidation repair increment is complete and locally validated on
+`agent/evidence/qflia-route-gate`. It resolves five baseline-contract defects:
+
+1. ADR-0375 deliberately routes conjunctive difference-logic/QF_LIA overlap to
+   exact Farkas evidence before general arithmetic. Tests now pin
+   `dl-online-negative-cycle-farkas` for overlap, retain an Alethe non-DL
+   control, and keep independent tamper checks.
+2. `finite_domain_split::rewriting_sums_is_unsat` was starved after nonlinear
+   dispatch spent the shared deadline. The already-capped split now runs before
+   genuinely nonlinear integer search and later work receives only the original
+   remaining budget. Five finite-domain, five deadline, and twelve route-trace
+   tests pass; the decisive trace is `finite-domain-split`.
+3. Finite quantified Bool/BV/Float domains that exceed eager expansion now
+   return first-class `Unknown(ResourceLimit)` instead of leaking an operational
+   unsupported-operator error through a narrower e-graph fallback. The six-case
+   direct quantifier suite and nine-case quantified-BV differential matrix pass.
+4. Two stale string expectations now match the proved semantics: distinct
+   equal-length strings carry a replay-checked SAT model, while contradictory
+   `str.from_int` integer bounds are UNSAT before the conservative word fallback.
+5. Current stable Clippy's `collapsible_match` diagnosis in the quantified
+   e-graph trigger scan is repaired without changing behavior.
+
+`CARGO_BUILD_JOBS=1 CARGO_INCREMENTAL=0 just check` ran every code, solver,
+fuzz, proof, doctest, documentation, benchmark, and resource stage successfully,
+including 1,072 solver unit tests, the 572-second variable-divisor differential
+gate, the 437-second UFLIA differential gate, and both order-255 CAS proofs
+(2/2 in 901 seconds). Its final parity-docs stage correctly failed because the
+serialized frontier run had refreshed five committed frontier artifacts while
+`SCOREBOARD.md` was still stale. After deterministic scoreboard regeneration,
+`just parity-docs` is green: 35 rows, 24 logics, 992 files, 762 decided, 674
+oracle-compared, and zero disagreements. This is a composite local green state;
+the original monolithic command's exit code remains recorded as 1, not relabeled
+as a pass. Commit, integration, push, and new remote CI remain pending.
 
 ### Current evidence snapshot
 
@@ -48,6 +74,10 @@ merely to accept any UNSAT result.
   recorded disagreements**. This is bounded regression evidence, not universal
   soundness or representative SMT-LIB coverage. See
   [`bench-results/SCOREBOARD.md`](bench-results/SCOREBOARD.md).
+- The refreshed 4-second frontier artifacts report BV reduction **38**
+  (baseline 30), LIA cuts **35** (baseline 26), NIA UNSAT **40** (baseline 40),
+  NRA degree **40** (baseline 40), and string bound **40** (baseline 8). These
+  are load-sensitive local frontier measurements; they do not raise baselines.
 - The append-only head-to-head ledger currently covers **eleven divisions**.
   Its weak measured edges are QF_NIA **21/85 = 24.7%**, QF_UFLIA
   **94/180 = 52.2%**, QF_IDL **66/123 = 53.7%**, QF_LRA
@@ -90,20 +120,23 @@ merely to accept any UNSAT result.
 Work in this order unless new evidence reveals a wrong verdict, crash, data-loss
 risk, or invalid gate. Those are P0 and preempt the queue.
 
-**Immediate gate repair.** Reproduce with
-`cargo test -p axeyum-solver --all-features --test evidence_quant_cert
-qf_lia_unsat_cert_unchanged -- --exact --nocapture`, determine whether routing
-or the stale assertion is wrong, add a route-specific regression, then rerun
-`just check`. This does not renumber or displace the ten strategic actions
-below; it is the entry condition for starting them.
+**Immediate gate repair.** Finish the active
+`agent/evidence/qflia-route-gate` increment: run plan-authority/link/diff checks,
+commit and push the owned paths, conflict-preview against current `origin/main`,
+integrate, push `main`, and verify remote refs plus CI/docs. Preserve the exact
+gate record above: the comprehensive run passed every substantive stage but
+exited 1 on the subsequently repaired stale scoreboard; the repaired
+`parity-docs` target is independently green. This is the entry condition for
+continuing the remaining A1 work and for starting A2–A10.
 
-### A1 — Complete arithmetic deadline and resource enforcement (`TODO`, P0)
+### A1 — Complete arithmetic deadline and resource enforcement (`WIP`, P0)
 
 **Why now.** A fixed lazy-LIA path ran 548x past its requested budget. The same
 audit still observed NRA calls exceeding their shares by 8.8–15.2 seconds and a
 QF_LRA normalization path aborting at the 8 GiB cap.
 
-**Next slice.** Thread one absolute deadline through NRA/CAD refinement and all
+**Next slice.** With the bounded finite-domain split now reachable, thread one
+absolute deadline through NRA/CAD refinement and all
 re-decisions; add explicit node/allocation ceilings to term normalization and
 `AtomBuilder`; reproduce each existing overrun before changing it.
 
@@ -259,8 +292,8 @@ errors remain atomic, and API helpers and text mode share one semantic core.
 
 | Workstream | State | Current boundary / next action |
 |---|---|---|
-| Integration and gates | `BLOCKED` locally; remote green for `803c08439` | Local all-features test currently fails on the stale QF_LIA evidence-route invariant described above. Reconcile it and rerun `just check`; keep remote CI as separate evidence. |
-| Arithmetic deadline reliability | `TODO` | A1 is the immediate implementation task. |
+| Integration and gates | `WIP` locally; remote green for `3957ae2a2` | Comprehensive local stages are green after scoreboard regeneration; commit/push, integration, and new remote gates remain. |
+| Arithmetic deadline reliability | `WIP` | The bounded finite-domain fallback is reachable under the shared absolute deadline; A1 continues through NRA/CAD and normalization ceilings after integration. |
 | Full-library measurement | `TODO` | A2; no live run and no launch authority. |
 | QF_NIA breadth | `WIP` | Two uncredited gains landed; A3 owns clean remeasurement. |
 | QF_UFLIA breadth | `WIP` | 94/180; A4 owns causal residual partition. |

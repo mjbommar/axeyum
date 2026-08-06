@@ -11,15 +11,14 @@
 //!   model is `Seq`-level replay-checked by construction (`solve_smtlib` `Sat`);
 //! - an `unsat` length-coupled query still decides `unsat` (the ADR-0052 `StringGate`
 //!   owns that; the length route is strictly additive and must not regress it);
-//! - a `sat` query the `'a'`-fill cannot witness (content-distinct equal-length
-//!   strings) degrades to `unknown` — **never** a wrong `unsat` and never a wrong
-//!   `sat`.
+//! - a content-distinct equal-length query returns `sat` only with a model that
+//!   replays against the untouched source assertions.
 #![cfg(feature = "full")]
 
 use std::time::Duration;
 
-use axeyum_smtlib::parse_script;
-use axeyum_solver::{CheckResult, SolverConfig, length_lia_verdict, solve_smtlib};
+use axeyum_smtlib::{parse_script, parse_script_with_string_bound};
+use axeyum_solver::{CheckResult, SolverConfig, check_model, length_lia_verdict, solve_smtlib};
 
 fn cfg() -> SolverConfig {
     SolverConfig::new().with_timeout(Duration::from_secs(5))
@@ -173,12 +172,11 @@ fn unsat_length_query_still_decides_unsat() {
     }
 }
 
-/// A `sat` query the `'a'`-fill cannot witness — two content-distinct strings of the
-/// same over-cap length (`x ≠ y ∧ len x = 20 ∧ len y = 20`, really `sat` with
-/// e.g. `x = a…a`, `y = a…ab`). The route must **decline to `unknown`**, never a wrong
-/// `unsat` and never a wrong `sat`.
+/// Two content-distinct strings of the same over-cap length are satisfiable. This
+/// used to be a sound `unknown`; the widened packed-string ladder now finds a
+/// genuine witness, which must replay against the untouched source assertions.
 #[test]
-fn content_distinct_equal_length_declines_to_unknown() {
+fn content_distinct_equal_length_sat_model_replays() {
     let s = "(set-logic QF_SLIA)\n\
              (declare-fun x () String)\n\
              (declare-fun y () String)\n\
@@ -187,11 +185,20 @@ fn content_distinct_equal_length_declines_to_unknown() {
              (assert (= (str.len y) 20))\n\
              (check-sat)\n";
     let out = solve_smtlib(s, &cfg()).expect("solve");
-    assert!(
-        matches!(out.result, CheckResult::Unknown(_)),
-        "content-distinct equal-length query must decline to unknown (a sound miss), \
-         got {:?}",
-        out.result
+    let CheckResult::Sat(model) = out.result else {
+        panic!(
+            "content-distinct equal-length query must return its genuine witness, got {:?}",
+            out.result
+        );
+    };
+    // Length 20 is first representable at the ladder's 24-code-point rung. Reparse
+    // the same source at that declared window so the lifted packed values have the
+    // identical sort width used by the deciding run.
+    let script = parse_script_with_string_bound(s, 24).expect("reparse source at deciding rung");
+    assert_eq!(
+        check_model(&script.arena, &script.assertions, &model),
+        Ok(true),
+        "the widened packed-string witness must replay against the source query"
     );
 }
 
