@@ -31,8 +31,9 @@ evidence routes, broad but uneven theory support, an independent Lean-core
 checker/importer, and several consumers. It is not yet a drop-in Z3 replacement
 or a replacement for the Lean system.
 
-The audited integration state is clean `main` at `ebbabb34c`, equal to
-`origin/main`. The IDL repair branch completed terminal
+The audited solver/integration parent is `ebbabb34c`; the current tracker-only
+increment sits on top of that state. Local `main` and `origin/main` must remain
+equal under the resume protocol below. The IDL repair branch completed terminal
 `CARGO_BUILD_JOBS=2 just check`; merge `198f2dc1b` passed its immutable-SHA
 pre-push workspace-library, progress-frontier, and evidence gates. Integrated
 main then passed the focused DL suite 46/46 and the explicit auto-dispatch
@@ -354,7 +355,7 @@ or remove dirty/unmerged state to meet a free-space target.
 
 | Workstream | State | Current boundary / next action |
 |---|---|---|
-| Integration and gates | `WIP`; main at `ebbabb34c` | Local/remote refs are equal; topic full gate, merge-SHA pre-push gate, and focused post-merge tests are green. Current GitHub CI/docs runs are not yet observed; last full remote CI is `31076938255` at `94082977d`. |
+| Integration and gates | `WIP`; audited code parent `ebbabb34c` | Topic full gate, merge-SHA pre-push gate, and focused post-merge tests are green. Verify current local/remote ref equality on resume. Current GitHub CI/docs runs are not yet observed; last full remote CI is `31076938255` at `94082977d`. |
 | Arithmetic deadline reliability | `DONE` | Shared deadline, CAD polls, LRA ceilings, bounded DL probing, exact resume identity, and six fresh retained divisions are complete; see the 2026-08-06 closure note. |
 | Full-library measurement | `TODO` | A2; no live run and no launch authority. |
 | QF_NIA breadth | `WIP` | Current clean result is 34/200 versus 89/200; A3 owns the 67-case reference-only census and next bounded cluster. |
