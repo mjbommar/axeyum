@@ -1,7 +1,7 @@
 # Benchmarking And Performance Methodology
 
 Status: draft
-Last updated: 2026-07-19
+Last updated: 2026-08-06
 
 ## Purpose
 
@@ -63,6 +63,23 @@ records the contract and the first measured baselines.
 - Encoding size: term nodes in/out of rewriter, AIG nodes, CNF vars/clauses.
 - SAT internals: propagations, conflicts, decisions, learned/deleted clauses.
 - Peak memory per phase.
+
+## Parity Sweep Resume Identity
+
+`scripts/parity-run.sh` may reuse an interrupted sweep only when every cached
+row maps to one exact path in the committed division list. New
+`bench-results/parity-details/*.tsv` rows therefore store the full list path,
+not a basename. The resume validator rejects duplicate sidecar rows, rows
+outside the current population, duplicate list paths, and legacy basename-only
+rows that match more than one benchmark. Legacy rows remain usable when their
+basename is unique in the current list.
+
+This is a correctness constraint, not merely provenance polish: SMT-LIB
+divisions can contain identically named files in different families. Reusing a
+basename-keyed verdict for the wrong file can manufacture a solved count or
+hide a disagreement while leaving the ledger syntactically plausible. A
+rejected legacy sidecar must be replaced by a fresh run; it must not be edited
+until resume happens to accept it.
 
 ## Decision Gates
 

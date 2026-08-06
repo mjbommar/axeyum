@@ -156,6 +156,7 @@ rules-as-code:
 # the measurements it checks.
 parity-docs:
     python3 -m unittest scripts.tests.test_parity_evidence
+    python3 -m unittest scripts.tests.test_parity_resume
     python3 -m unittest scripts.tests.test_prototype_lean4export_reader
     python3 -m unittest scripts.tests.test_lean_compatibility
     python3 -m unittest scripts.tests.test_lean_u2_test_authority

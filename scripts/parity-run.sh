@@ -474,10 +474,13 @@ trap 'rmdir "$lockdir" 2>/dev/null' EXIT
 # sidecar. Chunking does not help, because every invocation restarts the list
 # from the top.
 #
-# With PARITY_RESUME=1 a file whose row is already in the sidecar reuses that
-# row's verdicts instead of re-running both solvers. Nothing else changes: the
-# loop still visits every file in the committed list, so the denominator, the
-# disagreement rules and the summary are computed exactly as in a single run.
+# With PARITY_RESUME=1 a file whose exact committed-list path is already in the
+# sidecar reuses that row's verdicts instead of re-running both solvers. Legacy
+# basename-only sidecars are accepted only when every reused basename is unique
+# in the current list; ambiguity, duplicate rows and population drift fail
+# closed. Nothing else changes: the loop still visits every file in the
+# committed list, so the denominator, disagreement rules and summary are
+# computed exactly as in a single run.
 #
 # Off by default -- a resumed entry mixes measurements from different moments
 # (and so different machine load), which is fine for finishing an interrupted
@@ -486,11 +489,16 @@ trap 'rmdir "$lockdir" 2>/dev/null' EXIT
 declare -A cached_row=()
 resumed_files=0
 if [[ "${PARITY_RESUME:-0}" == "1" && -f "$sidecar" ]]; then
-  while IFS=$'\t' read -r f a_v r_v d_v _rest; do
-    [[ "$f" == "file" || -z "$f" ]] && continue
+  resume_rows=$(mktemp)
+  if ! python3 scripts/parity_resume.py "$list" "$sidecar" > "$resume_rows"; then
+    rm -f "$resume_rows"
+    exit 2
+  fi
+  while IFS=$'\t' read -r f a_v r_v d_v; do
     cached_row["$f"]="${a_v}"$'\t'"${r_v}"$'\t'"${d_v}"
     resumed_files=$((resumed_files + 1))
-  done < "$sidecar"
+  done < "$resume_rows"
+  rm -f "$resume_rows"
   echo "parity-run: resuming — ${resumed_files} files already measured in ${sidecar}" >&2
 fi
 
@@ -527,7 +535,7 @@ while IFS= read -r file; do
   # A cached row short-circuits BOTH solver runs. `expected` is re-read from the
   # benchmark rather than trusted from the cache, so a corrupted sidecar cannot
   # silence a declared-status disagreement.
-  cache_key="$(basename "$file")"
+  cache_key="$file"
   expected=$(declared_status "$file")
   if [[ -n "${cached_row[$cache_key]:-}" ]]; then
     IFS=$'\t' read -r a r _cached_declared <<<"${cached_row[$cache_key]}"
@@ -547,7 +555,7 @@ while IFS= read -r file; do
     ev_certified=$(sed -n 's/.*certified=\([^ ]*\).*/\1/p' <<< "$last_evidence")
     ev_recheck=$(sed -n 's/.*recheck=\([^ ]*\).*/\1/p' <<< "$last_evidence")
     ev_ms=$(sed -n 's/.*ms=\([^ ]*\).*/\1/p' <<< "$last_evidence")
-    printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n' "$(basename "$file")" "$a" "$r" \
+    printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n' "$file" "$a" "$r" \
       "${expected:-none}" "$ae" "${ev_kind:-none}" "${ev_certified:-0}" \
       "${ev_recheck:-none}" "${ev_ms:-}" >> "$sidecar"
     # THE DENOMINATOR IS EVERY UNSAT WE ACTUALLY PRODUCE -- the scored run's,
@@ -576,7 +584,7 @@ while IFS= read -r file; do
       disagreement_log+=$'\n'"    axeyum default vs evidence route — $file: default=$a evidence=$ae"
     fi
   else
-    printf '%s\t%s\t%s\t%s\n' "$(basename "$file")" "$a" "$r" "${expected:-none}" >> "$sidecar"
+    printf '%s\t%s\t%s\t%s\n' "$file" "$a" "$r" "${expected:-none}" >> "$sidecar"
   fi
 
   [[ "$a" != "unsolved" ]] && axeyum_solved=$((axeyum_solved + 1))
