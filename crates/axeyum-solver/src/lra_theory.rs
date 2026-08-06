@@ -69,7 +69,9 @@ use axeyum_ir::{Sort, TermArena, TermId, TermNode, Value};
 use crate::backend::{CheckResult, SolverConfig, SolverError, UnknownKind, UnknownReason};
 use crate::cdclt::{CdclT, Lit as CdcltLit, Outcome};
 use crate::euf_egraph::{TheoryLit, TheoryProp, TheorySolver};
-use crate::lra_online::{Encoder, Lit, LraTheory, collect_lra_atoms, replays};
+use crate::lra_online::{
+    Encoder, Lit, LraTheory, LraTheoryBuildStop, collect_lra_atoms, replays,
+};
 use crate::model::Model;
 
 /// Distinct-atom ceiling for the online route, applied **before** atom
@@ -119,9 +121,13 @@ struct CdcltLraTheory {
 impl CdcltLraTheory {
     /// Wraps a fresh [`LraTheory`] over `atom_terms` (per-assert exact-rational
     /// feasibility), bounded by the online driver's absolute `deadline`.
-    fn new(arena: &TermArena, atom_terms: &[TermId], deadline: Option<Instant>) -> Option<Self> {
-        Some(Self {
-            inner: LraTheory::new_with_deadline(arena, atom_terms, deadline)?,
+    fn new(
+        arena: &TermArena,
+        atom_terms: &[TermId],
+        deadline: Option<Instant>,
+    ) -> Result<Self, LraTheoryBuildStop> {
+        Ok(Self {
+            inner: LraTheory::try_new_with_deadline(arena, atom_terms, deadline)?,
         })
     }
 
@@ -239,11 +245,22 @@ pub fn check_qf_lra_online_cdclt(
         .collect();
 
     let atom_count = atom_terms.len();
-    let Some(mut theory) = CdcltLraTheory::new(arena, &atom_terms, deadline) else {
-        return Ok(CheckResult::Unknown(UnknownReason {
-            kind: UnknownKind::Timeout,
-            detail: "timeout in the online CDCL(T) LRA driver".to_owned(),
-        }));
+    let mut theory = match CdcltLraTheory::new(arena, &atom_terms, deadline) {
+        Ok(theory) => theory,
+        Err(LraTheoryBuildStop::Deadline) => {
+            return Ok(CheckResult::Unknown(UnknownReason {
+                kind: UnknownKind::Timeout,
+                detail: "timeout in the online CDCL(T) LRA driver while constructing its theory"
+                    .to_owned(),
+            }));
+        }
+        Err(LraTheoryBuildStop::ResourceLimit) => {
+            return Ok(CheckResult::Unknown(UnknownReason {
+                kind: UnknownKind::ResourceLimit,
+                detail: "online CDCL(T) LRA normalization node/coefficient ceiling exceeded"
+                    .to_owned(),
+            }));
+        }
     };
     let mut solver = CdclT::new(enc.var_count, atom_count, driver_clauses, deadline);
     match solver.solve(&mut theory) {

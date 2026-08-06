@@ -357,6 +357,14 @@ pub struct LraTheory {
     simplex: Option<RefCell<SimplexEngine>>,
 }
 
+/// Why construction of an online LRA theory stopped before all atoms were
+/// normalized. Both outcomes are conservative solver declines, never errors.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(crate) enum LraTheoryBuildStop {
+    Deadline,
+    ResourceLimit,
+}
+
 impl LraTheory {
     /// Builds an online `LRA` theory over the given atom terms. Each `(< a b)` /
     /// `(<= a b)` / `(> a b)` / `(>= a b)` and each real `(= a b)` registers its
@@ -368,37 +376,53 @@ impl LraTheory {
     ///
     /// # Panics
     ///
-    /// Only if the untimed construction path reports a timeout, which is
-    /// unreachable because its deadline is `None`.
+    /// If a caller uses this low-level convenience constructor on an adversarial
+    /// atom set that exceeds the deterministic normalization ceiling. Production
+    /// solver routes use [`Self::try_new_with_deadline`] and return
+    /// `Unknown(ResourceLimit)` instead.
     #[must_use]
     pub fn new(arena: &TermArena, atom_terms: &[TermId]) -> Self {
-        Self::new_with_deadline(arena, atom_terms, None)
-            .expect("an unbounded LRA theory construction cannot time out")
+        Self::try_new_with_deadline(arena, atom_terms, None)
+            .expect("test-sized unbounded LRA theory construction exceeded its resource ceiling")
     }
 
-    /// Builds the theory while honoring a caller-owned absolute deadline during
-    /// atom normalization. Returns `None` only when that deadline expires.
+    /// Builds the theory while honoring the absolute deadline and deterministic
+    /// normalization ceilings. `None` means either conservative stop; callers that
+    /// expose the reason use [`Self::try_new_with_deadline`].
     #[must_use]
     pub(crate) fn new_with_deadline(
         arena: &TermArena,
         atom_terms: &[TermId],
         deadline: Option<Instant>,
     ) -> Option<Self> {
+        Self::try_new_with_deadline(arena, atom_terms, deadline).ok()
+    }
+
+    /// Resource-aware construction used by top-level solver routes that must
+    /// distinguish a deterministic normalization ceiling from wall-clock expiry.
+    pub(crate) fn try_new_with_deadline(
+        arena: &TermArena,
+        atom_terms: &[TermId],
+        deadline: Option<Instant>,
+    ) -> Result<Self, LraTheoryBuildStop> {
         let mut builder = AtomBuilder::with_deadline(deadline);
         let mut atoms = Vec::with_capacity(atom_terms.len());
         for &term in atom_terms {
             if past_deadline(deadline) {
-                return None;
+                return Err(LraTheoryBuildStop::Deadline);
             }
             atoms.push(builder.build(arena, term));
+            if let Some(stop) = builder.stop {
+                return Err(stop);
+            }
             if past_deadline(deadline) {
-                return None;
+                return Err(LraTheoryBuildStop::Deadline);
             }
         }
         let nvars = builder.vars.len();
         let count = atoms.len();
         let simplex = build_simplex_engine(&mut atoms, nvars).map(RefCell::new);
-        Some(Self {
+        Ok(Self {
             atoms,
             nvars,
             live: Vec::new(),
@@ -858,18 +882,58 @@ fn tag(template: &Constraint, atom: usize) -> Constraint {
 }
 
 /// Builds the dense-indexed atom translations and tracks the variable order.
+///
+/// These ceilings bound adversarial shared/nested sums before the builder can
+/// retain a quadratic number of dense coefficient maps. They count deterministic
+/// semantic work, so the same term graph is admitted or refused independently of
+/// machine speed.
+const MAX_LRA_NORMALIZATION_NODES: usize = 1_000_000;
+const MAX_LRA_COEFFICIENT_WORK: usize = 4_000_000;
+const MAX_LRA_CACHED_COEFFICIENTS: usize = 262_144;
+
+#[derive(Clone, Copy)]
+struct NormalizationLimits {
+    nodes: usize,
+    coefficient_work: usize,
+    cached_coefficients: usize,
+}
+
+impl Default for NormalizationLimits {
+    fn default() -> Self {
+        Self {
+            nodes: MAX_LRA_NORMALIZATION_NODES,
+            coefficient_work: MAX_LRA_COEFFICIENT_WORK,
+            cached_coefficients: MAX_LRA_CACHED_COEFFICIENTS,
+        }
+    }
+}
+
 #[derive(Default)]
 struct AtomBuilder {
     var_index: BTreeMap<SymbolId, usize>,
     vars: Vec<SymbolId>,
     linearized: HashMap<TermId, Option<LinExpr>>,
     deadline: Option<Instant>,
+    node_visits: usize,
+    coefficient_work: usize,
+    cached_coefficients: usize,
+    stop: Option<LraTheoryBuildStop>,
+    limits: NormalizationLimits,
 }
 
 impl AtomBuilder {
     fn with_deadline(deadline: Option<Instant>) -> Self {
         Self {
             deadline,
+            ..Self::default()
+        }
+    }
+
+    #[cfg(test)]
+    fn with_limits(deadline: Option<Instant>, limits: NormalizationLimits) -> Self {
+        Self {
+            deadline,
+            limits,
             ..Self::default()
         }
     }
@@ -884,10 +948,39 @@ impl AtomBuilder {
         index
     }
 
+    fn check_deadline(&mut self) -> bool {
+        if past_deadline(self.deadline) {
+            self.stop = Some(LraTheoryBuildStop::Deadline);
+            false
+        } else {
+            true
+        }
+    }
+
+    fn charge_node(&mut self) -> bool {
+        self.node_visits = self.node_visits.saturating_add(1);
+        if self.node_visits > self.limits.nodes {
+            self.stop = Some(LraTheoryBuildStop::ResourceLimit);
+            false
+        } else {
+            true
+        }
+    }
+
+    fn charge_coefficients(&mut self, count: usize) -> bool {
+        self.coefficient_work = self.coefficient_work.saturating_add(count);
+        if self.coefficient_work > self.limits.coefficient_work {
+            self.stop = Some(LraTheoryBuildStop::ResourceLimit);
+            false
+        } else {
+            true
+        }
+    }
+
     /// Parses one atom term into its [`AtomKind`]. Any overflow or non-LRA shape
     /// yields [`AtomKind::Unsupported`] (a registered no-op), never a panic.
     fn build(&mut self, arena: &TermArena, term: TermId) -> AtomKind {
-        if past_deadline(self.deadline) {
+        if !self.check_deadline() {
             return AtomKind::Unsupported;
         }
         match arena.node(term) {
@@ -900,11 +993,18 @@ impl AtomBuilder {
                 ) else {
                     return AtomKind::Unsupported;
                 };
-                if past_deadline(self.deadline) {
+                if !self.check_deadline()
+                    || !self.charge_coefficients(
+                        left.coeffs
+                            .len()
+                            .saturating_add(right.coeffs.len())
+                            .saturating_mul(2),
+                    )
+                {
                     return AtomKind::Unsupported;
                 }
                 let when_true = normalize(*op, &left, &right);
-                if past_deadline(self.deadline) {
+                if !self.check_deadline() {
                     return AtomKind::Unsupported;
                 }
                 match (when_true, normalize(negate_op(*op), &left, &right)) {
@@ -923,13 +1023,20 @@ impl AtomBuilder {
                     return AtomKind::Unsupported;
                 };
                 // a == b  <=>  a - b <= 0  AND  b - a <= 0.
-                if past_deadline(self.deadline) {
+                if !self.check_deadline()
+                    || !self.charge_coefficients(
+                        left.coeffs
+                            .len()
+                            .saturating_add(right.coeffs.len())
+                            .saturating_mul(2),
+                    )
+                {
                     return AtomKind::Unsupported;
                 }
                 let Some(diff) = left.sub(&right) else {
                     return AtomKind::Unsupported;
                 };
-                if past_deadline(self.deadline) {
+                if !self.check_deadline() {
                     return AtomKind::Unsupported;
                 }
                 let Some(diff_neg) = diff.neg() else {
@@ -961,11 +1068,13 @@ impl AtomBuilder {
     /// Converts a real-sorted term into a [`LinExpr`]; `None` on overflow or a
     /// non-linear / non-real subterm (→ unsupported atom).
     fn linearize(&mut self, arena: &TermArena, term: TermId) -> Option<LinExpr> {
-        if past_deadline(self.deadline) {
+        if !self.check_deadline() || !self.charge_node() {
             return None;
         }
         if let Some(cached) = self.linearized.get(&term) {
-            return cached.clone();
+            let cached = cached.clone();
+            let cost = cached.as_ref().map_or(0, |expr| expr.coeffs.len());
+            return self.charge_coefficients(cost).then_some(cached).flatten();
         }
         let result = match arena.node(term) {
             TermNode::RealConst(value) => Some(LinExpr::constant(*value)),
@@ -977,7 +1086,7 @@ impl AtomBuilder {
                 args,
             } => {
                 let inner = self.linearize(arena, args[0])?;
-                if past_deadline(self.deadline) {
+                if !self.check_deadline() || !self.charge_coefficients(inner.coeffs.len()) {
                     return None;
                 }
                 inner.neg()
@@ -988,7 +1097,9 @@ impl AtomBuilder {
             } => {
                 let a = self.linearize(arena, args[0])?;
                 let b = self.linearize(arena, args[1])?;
-                if past_deadline(self.deadline) {
+                if !self.check_deadline()
+                    || !self.charge_coefficients(a.coeffs.len().saturating_add(b.coeffs.len()))
+                {
                     return None;
                 }
                 a.add(&b)
@@ -999,7 +1110,9 @@ impl AtomBuilder {
             } => {
                 let a = self.linearize(arena, args[0])?;
                 let b = self.linearize(arena, args[1])?;
-                if past_deadline(self.deadline) {
+                if !self.check_deadline()
+                    || !self.charge_coefficients(a.coeffs.len().saturating_add(b.coeffs.len()))
+                {
                     return None;
                 }
                 a.sub(&b)
@@ -1010,7 +1123,9 @@ impl AtomBuilder {
             } => {
                 let a = self.linearize(arena, args[0])?;
                 let b = self.linearize(arena, args[1])?;
-                if past_deadline(self.deadline) {
+                if !self.check_deadline()
+                    || !self.charge_coefficients(a.coeffs.len().saturating_add(b.coeffs.len()))
+                {
                     return None;
                 }
                 if a.is_constant() {
@@ -1023,7 +1138,15 @@ impl AtomBuilder {
             }
             _ => None,
         };
-        self.linearized.insert(term, result.clone());
+        if let Some(expr) = &result {
+            let cache_cost = expr.coeffs.len();
+            if self.cached_coefficients.saturating_add(cache_cost)
+                <= self.limits.cached_coefficients
+            {
+                self.cached_coefficients += cache_cost;
+                self.linearized.insert(term, result.clone());
+            }
+        }
         result
     }
 }
@@ -2859,11 +2982,20 @@ pub fn check_qf_lra_online(
     }
 
     let atom_count = atom_terms.len();
-    let Some(mut theory) = LraTheory::new_with_deadline(arena, &atom_terms, deadline) else {
-        return Ok(CheckResult::Unknown(UnknownReason {
-            kind: UnknownKind::Timeout,
-            detail: "timeout while constructing the online LRA theory".to_owned(),
-        }));
+    let mut theory = match LraTheory::try_new_with_deadline(arena, &atom_terms, deadline) {
+        Ok(theory) => theory,
+        Err(LraTheoryBuildStop::Deadline) => {
+            return Ok(CheckResult::Unknown(UnknownReason {
+                kind: UnknownKind::Timeout,
+                detail: "timeout while constructing the online LRA theory".to_owned(),
+            }));
+        }
+        Err(LraTheoryBuildStop::ResourceLimit) => {
+            return Ok(CheckResult::Unknown(UnknownReason {
+                kind: UnknownKind::ResourceLimit,
+                detail: "online LRA normalization node/coefficient ceiling exceeded".to_owned(),
+            }));
+        }
     };
 
     let mut solver = Dpll::new(enc.var_count, atom_count, clauses);
@@ -3032,6 +3164,40 @@ mod tests {
     fn rvar(arena: &mut TermArena, name: &str) -> TermId {
         let s = arena.declare(name, Sort::Real).expect("declare real");
         arena.var(s)
+    }
+
+    #[test]
+    fn atom_normalization_ceiling_declines_and_near_miss_is_admitted() {
+        let mut arena = TermArena::new();
+        let vars: Vec<TermId> = (0..4)
+            .map(|i| rvar(&mut arena, &format!("x{i}")))
+            .collect();
+        let sum01 = arena.real_add(vars[0], vars[1]).expect("linear sum");
+        let sum012 = arena.real_add(sum01, vars[2]).expect("linear sum");
+        let sum = arena.real_add(sum012, vars[3]).expect("linear sum");
+        let zero = rconst(&mut arena, 0);
+        let atom = arena.real_ge(sum, zero).expect("linear atom");
+
+        let limits = NormalizationLimits {
+            nodes: 64,
+            coefficient_work: 8,
+            cached_coefficients: 64,
+        };
+        let mut exhausted = AtomBuilder::with_limits(None, limits);
+        assert!(matches!(
+            exhausted.build(&arena, atom),
+            AtomKind::Unsupported
+        ));
+        assert_eq!(exhausted.stop, Some(LraTheoryBuildStop::ResourceLimit));
+
+        let limits = NormalizationLimits {
+            coefficient_work: 32,
+            ..limits
+        };
+        let mut admitted = AtomBuilder::with_limits(None, limits);
+        assert!(matches!(admitted.build(&arena, atom), AtomKind::Order { .. }));
+        assert_eq!(admitted.stop, None);
+        assert!(admitted.cached_coefficients <= limits.cached_coefficients);
     }
 
     #[test]

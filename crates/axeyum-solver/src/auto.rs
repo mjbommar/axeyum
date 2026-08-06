@@ -3286,7 +3286,10 @@ fn check_auto_dispatch(
         // non-UF real route byte-identical), and `None` — falling through unchanged —
         // for everything else (linear UF, over the eager admission bound, or an
         // out-of-fragment elimination).
-        if let Some(result) = dispatch_uf_nra(arena, assertions, config, &features, rec)? {
+        let real_config = config_with_remaining_deadline(config, dispatch_deadline);
+        if let Some(result) =
+            dispatch_uf_nra(arena, assertions, &real_config, &features, rec)?
+        {
             return Ok(result);
         }
         // Conjunction of single-variable nonlinear-real polynomial constraints
@@ -3306,14 +3309,15 @@ fn check_auto_dispatch(
         // a rational witness via the ground evaluator) and every `Unsat` is exact
         // by exhaustive sign-cell coverage of the single variable, so it can never
         // produce a wrong verdict; strictly additive (`Unknown` → decision).
-        if has_nonlinear_real(arena, assertions) {
-            let poly_deadline = config.timeout.and_then(|t| Instant::now().checked_add(t));
-            if let Some(result) =
-                crate::nra_real_root::decide_real_poly_constraint(arena, assertions, poly_deadline)?
-            {
-                with_recorder(rec, |t| t.record_result("nra-real-root", &result));
-                return Ok(result);
-            }
+        if has_nonlinear_real(arena, assertions)
+            && let Some(result) = crate::nra_real_root::decide_real_poly_constraint(
+                arena,
+                assertions,
+                dispatch_deadline,
+            )?
+        {
+            with_recorder(rec, |t| t.record_result("nra-real-root", &result));
+            return Ok(result);
         }
         with_recorder(rec, |t| {
             t.record_declined("nra-real-root", DeclineReason::NotApplicable);
@@ -3331,7 +3335,13 @@ fn check_auto_dispatch(
         // EUF + linear-arithmetic combination (`check_with_uf_arithmetic`, which
         // decides QF_UFLRA the same way it does QF_UFLIA) instead of propagating the
         // error — upholding "`unknown` is never an error" and unlocking EUF+LRA.
-        match crate::nra::check_with_nra(arena, assertions, config) {
+        if past_deadline(dispatch_deadline) {
+            return Ok(CheckResult::Unknown(timeout_reason(
+                "auto-dispatch timeout after exact real-polynomial route",
+            )));
+        }
+        let nra_config = config_with_remaining_deadline(config, dispatch_deadline);
+        match crate::nra::check_with_nra(arena, assertions, &nra_config) {
             Ok(result) => {
                 with_recorder(rec, |t| t.record_result("nra", &result));
                 return Ok(result);
@@ -3455,7 +3465,13 @@ fn check_auto_dispatch(
     }
 
     if features.has_int {
-        return dispatch_nonlinear_int_tail(arena, assertions, config, rec);
+        return dispatch_nonlinear_int_tail(
+            arena,
+            assertions,
+            config,
+            dispatch_deadline,
+            rec,
+        );
     }
 
     let mut backend = SatBvBackend::new();
@@ -3609,6 +3625,7 @@ fn dispatch_nonlinear_int_tail(
     arena: &mut TermArena,
     assertions: &[TermId],
     config: &SolverConfig,
+    deadline: Option<Instant>,
     rec: &mut Recorder<'_>,
 ) -> Result<CheckResult, SolverError> {
     {
@@ -3670,18 +3687,21 @@ fn dispatch_nonlinear_int_tail(
         // budget. One sixth is what the probe lane measured as the point where the
         // refuter still lands its `unsat`s and the tail gets a usable remainder.
         //
-        // NOTE, honestly: this is a *requested* budget, not an enforced one. The NRA
-        // engine underneath honors a deadline only at the entry points listed in
-        // `docs/research/05-algorithms/arithmetic-deadline-bounding-ceiling.md`, and
-        // on this same parity slice a 4 s share was measured overrunning to 8.8 s,
-        // 15.2 s, and (on four files) past the full 24 s. The share is still worth
-        // taking — it is exact on the files the NRA polls reach — but it does not by
-        // itself bound this stage.
-        let relax_config = int_real_relax_budget(config);
+        // ADR-0377 makes this a share of the caller's REMAINING absolute deadline,
+        // not a fresh allowance. The NRA/CAD inner loops poll the same deadline;
+        // after a decline the boundary check below prevents a subsequent route from
+        // resetting the clock.
+        let remaining_config = config_with_remaining_deadline(config, deadline);
+        let relax_config = int_real_relax_budget(&remaining_config);
         if crate::int_real_relax::refute_int_via_real_relaxation(arena, assertions, &relax_config)?
         {
             with_recorder(rec, |t| t.record_decided("int-real-relax", Verdict::Unsat));
             return Ok(CheckResult::Unsat);
+        }
+        if past_deadline(deadline) {
+            return Ok(CheckResult::Unknown(timeout_reason(
+                "auto-dispatch timeout after nonlinear integer real relaxation",
+            )));
         }
         // **Integer nonlinear decider** (Phase E first slice): linearize
         // variable-divisor `div`/`mod` into their `≠0`-guarded Euclidean form,
@@ -3693,27 +3713,40 @@ fn dispatch_nonlinear_int_tail(
         // is accepted only after replay against the original, and it declines
         // (`None`) on everything else.
         let mut why = None;
+        let nia_config = config_with_remaining_deadline(config, deadline);
         if let Some(result) =
-            crate::nia_linearize::check_with_nia(arena, assertions, config, &mut why)?
+            crate::nia_linearize::check_with_nia(arena, assertions, &nia_config, &mut why)?
         {
             with_recorder(rec, |t| t.record_result("nia-linearize", &result));
             return Ok(result);
         }
         record_nia_decline(rec, "nia-linearize", why);
+        if past_deadline(deadline) {
+            return Ok(CheckResult::Unknown(timeout_reason(
+                "auto-dispatch timeout after nonlinear integer linearization",
+            )));
+        }
         // **Bound-aware EXACT int-blast** (closes the QF_NIA UNSAT blind spot):
         // when every free `Int` variable is provably confined to a finite box,
         // blasting at a box-covering width is EXACT, so a bit-vector `Unsat` is a
         // genuine integer `Unsat` — the one thing the width ladder never trusts.
         // Gated on the all-bounded proof; see `decide_bounded_int_blast`.
         let mut why = None;
+        let bounded_config = config_with_remaining_deadline(config, deadline);
         if let Some(result) =
-            decide_bounded_int_blast_explained(arena, assertions, config, &mut why)?
+            decide_bounded_int_blast_explained(arena, assertions, &bounded_config, &mut why)?
         {
             with_recorder(rec, |t| t.record_result("nia-bounded-blast", &result));
             return Ok(result);
         }
         record_nia_decline(rec, "nia-bounded-blast", why);
-        let result = dispatch_int_blast_width_ladder(arena, assertions, config)?;
+        if past_deadline(deadline) {
+            return Ok(CheckResult::Unknown(timeout_reason(
+                "auto-dispatch timeout after exact bounded integer blast",
+            )));
+        }
+        let ladder_config = config_with_remaining_deadline(config, deadline);
+        let result = dispatch_int_blast_width_ladder(arena, assertions, &ladder_config)?;
         with_recorder(rec, |t| t.record_result("int-blast-ladder", &result));
         // The integer nonlinear decider (`check_with_nia`) already ran *before* the
         // width ladder above — its product/sign-lemma relaxation and variable-
