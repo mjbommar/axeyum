@@ -5,10 +5,10 @@ for current project status, ordered work, blockers, and resume guidance. Read it
 first and update it before ending a project-level work session.
 
 - Last consolidated: **2026-08-05**
-- State audited at: `77901e5241000c18c7a95ee6754ec097c1fcce40`
+- State audited at: `ae03e1cc954ab06ef8578d9f423647ecff3c496b`
 - Expected integration state: clean `main`, equal to `origin/main`
-- Latest integrated increment: `96ff85930437f285822796136e8158684d9fe334`
-  via merge `14f80a2bfde60bbb6b0c8bafbf9f5b33ba58d18f`
+- Latest integrated increment: `e2eed63b19fbc7915a4792365d53c1fae669c216`
+  via merge `ae03e1cc954ab06ef8578d9f423647ecff3c496b`
 - Status vocabulary: `TODO` · `WIP` · `BLOCKED` · `DONE`
 
 `STATUS.md` is now a compatibility pointer. There is intentionally no root
@@ -30,15 +30,16 @@ evidence routes, broad but uneven theory support, an independent Lean-core
 checker/importer, and several consumers. It is not yet a drop-in Z3 replacement
 or a replacement for the Lean system.
 
-The audited integration state is clean remote `main` at `77901e524`; exact
-remote refs and the immutable-SHA pre-push gate are green. Docs run
+The audited remote state is `main` at `77901e524`; exact remote refs and the
+immutable-SHA pre-push gate are green. Docs run
 `31074220215` is terminal green, but CI `31074220229` is terminal red solely
 because stable rustdoc rejected a public comment's link to the crate-private
 `LraTheory::try_new_with_deadline`. All other CI jobs passed. The minimal link
-repair is committed locally as `e2eed63b1` on `agent/ci/rustdoc-lra-link`; the
-exact failing rustdoc command is green locally, but the repair is not yet pushed
-or integrated. No benchmark, solver, or measurement process is authorized by
-this tracker.
+repair `e2eed63b1` and tracker commit `6edd6123b` are pushed on
+`agent/ci/rustdoc-lra-link`, whose immutable-SHA pre-push gate is green, and are
+locally integrated by merge `ae03e1cc9`. The merge and this tracker descendant
+still require their main push and replacement CI/docs. No benchmark, solver, or
+measurement process is authorized by this tracker.
 
 The A1 resource increment `96ff85930` is pushed on
 `agent/arith/a1-deadline-ceilings` and locally integrated by merge `14f80a2bf`.
@@ -115,7 +116,7 @@ must not be appended or scored.
 
 | Date | Commit | Result |
 |---|---|---|
-| 2026-08-05 | `e2eed63b1` (local branch) | Removed the public-to-private rustdoc link that was the sole failure in CI `31074220229`; exact stable rustdoc is green locally. |
+| 2026-08-05 | `e2eed63b1` / `ae03e1cc9` | Removed the public-to-private rustdoc link that was the sole failure in CI `31074220229`; exact stable rustdoc and immutable-SHA branch gates are green. |
 | 2026-08-05 | `96ff85930` / `14f80a2bf` | Shared one arithmetic deadline across sequential routes, added CAD cancellation polls and deterministic LRA normalization ceilings, and added public regression/ADR evidence. |
 | 2026-08-05 | `803c08439` | Added independent fresh-arena checking for all 92 certified QF_BV UNSAT rows; 78 retain the stronger text-only recheck claim. |
 | 2026-08-04 | `3777a3b2c` / `8f4458fb1` | Repaired the load-sensitive frontier ratchet and refreshed honest curves without raising baselines. |
@@ -131,8 +132,8 @@ must not be appended or scored.
 Work in this order unless new evidence reveals a wrong verdict, crash, data-loss
 risk, or invalid gate. Those are P0 and preempt the queue.
 
-**Immediate action.** Push and integrate `e2eed63b1`, verify exact remote refs
-and terminal CI/docs, then resume QF_NIA from its 30/200 checkpoint and complete
+**Immediate action.** Push local merge `ae03e1cc9`, verify exact remote refs and
+terminal replacement CI/docs, then resume QF_NIA from its 30/200 checkpoint and complete
 the retained QF_LIA, QF_LRA, QF_RDL, QF_IDL, and QF_UFLIA lists from clean
 integrated main. A wrong verdict, crash, retained verdict loss/disagreement, or
 renewed deadline overrun preempts the queue.
@@ -301,7 +302,7 @@ errors remain atomic, and API helpers and text mode share one semantic core.
 
 | Workstream | State | Current boundary / next action |
 |---|---|---|
-| Integration and gates | `WIP`; remote main at `77901e524` | Docs are green; CI is red only on the repaired private rustdoc link. Push/integrate `e2eed63b1`, then require terminal replacement CI/docs. |
+| Integration and gates | `WIP`; local main at `ae03e1cc9` | The repair branch and gate are green; main push, exact remote-ref verification, and replacement CI/docs remain pending. |
 | Arithmetic deadline reliability | `WIP` | Shared deadline, CAD polls, and LRA normalization ceilings are integrated and aggregate-tested; QF_NIA is resumable at 30/200 and all six retained arithmetic divisions remain incomplete. |
 | Full-library measurement | `TODO` | A2; no live run and no launch authority. |
 | QF_NIA breadth | `WIP` | Two uncredited gains landed; A3 owns clean remeasurement. |
