@@ -95,17 +95,33 @@ the entire `fischer` family.
 
 ### The probe budget is RESERVED
 
-`dl_probe_budget` hands the probe the caller's timeout minus
+`dl_probe_budget` hands the probe at most the caller's timeout minus
 `min(timeout / 4, 6 s)`. Without that reservation the probe **is not a probe — it
 is a commitment**: it runs ahead of the whole linear-arithmetic chain, and a
 query that is difference-shaped but hard for negative-cycle search would burn the
 entire budget and hand the established routes zero milliseconds. Measured, not
-hypothetical: `QF_IDL/sal/lpsat/lpsat-goal-18` is decided `unsat` by `lia-dpll`
-in 4.2 s, and an unreserved probe turned it into `unknown`. The measured cost of
-the reserve is two `fischer` refutations that needed more than 18 s of cycle
-search on the 24 s budget; the benefit is that the dispatcher stays **strictly
-additive** — a property of every query, including the ones not in the corpus,
-rather than of a sample.
+hypothetical: `QF_IDL/sal/lpsat/lpsat-goal-18` is decided `unsat` by `lia-dpll`,
+and an unreserved probe turned it into `unknown`. A fresh 2026-08-06 isolated
+fallback needed 7.41 seconds, so the original six-second reserve was no longer
+sufficient for that shape. Global 8- and 12-second reserves were rejected: the
+12/12 candidate lost five of 171 current decisions. The accepted policy shortens
+the maximum 18-second probe to 12 seconds only when scanning finds at least 128
+numeric-equality gates and at most 1,024 difference atoms. The causal row is
+906/350; compact gate-free controls are 489–1,011/0, and the large equality
+control is 7,095/2,028. Every other query retains 18/6. The dispatcher stays
+**strictly additive**, and the complete retained QF_IDL/QF_RDL decision set is
+the acceptance gate.
+
+**2026-08-06 deadline correction.** The initial implementation created the
+probe deadline only *after* `scan_dl` and skeleton encoding. A 268,862-byte
+QF_IDL query could therefore spend the reserved fallback slice in the unbounded
+front end, then receive a fresh 18 seconds in CDCL(T). The retained run lost
+`lpsat-goal-18`; three current-main and three exact-credited-revision reruns each
+returned `unknown`, while an audit-only DL bypass restored `unsat` in 7.41
+seconds. The deadline now starts at `try_check_qf_dl` entry and is polled through
+the sort/DAG scan, linearization, equality collection, skeleton encoding, clause
+materialization, and CDCL(T). The adaptive split and its end-to-end scope are
+covered by focused regressions and the retained-decision A/B control.
 
 ### The evidence export, scoped honestly
 

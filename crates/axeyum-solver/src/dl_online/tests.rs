@@ -6,6 +6,7 @@
 //! be exact, and integer tightening must be right for a **negative** bound.
 
 use super::*;
+use std::time::Duration;
 
 fn real(arena: &mut TermArena, name: &str) -> TermId {
     let symbol = arena.declare(name, Sort::Real).expect("declare real");
@@ -23,6 +24,37 @@ fn config() -> SolverConfig {
 
 fn check(arena: &mut TermArena, assertions: &[TermId]) -> Option<CheckResult> {
     try_check_qf_dl(arena, assertions, &config())
+}
+
+#[test]
+fn zero_budget_expires_before_the_difference_logic_front_end() {
+    let mut arena = TermArena::new();
+    let x = int(&mut arena, "deadline_x");
+    let zero = arena.int_const(0);
+    let assertion = arena.int_le(x, zero).expect("x <= 0");
+    let config = SolverConfig::new().with_timeout(Duration::ZERO);
+
+    assert_eq!(try_check_qf_dl(&mut arena, &[assertion], &config), None);
+}
+
+#[test]
+fn equality_fallback_budget_is_narrowly_structural() {
+    let maximum = Some(Duration::from_secs(18));
+    assert_eq!(
+        equality_fallback_probe_timeout(maximum, 906, 350),
+        Some(Duration::from_secs(12))
+    );
+    assert_eq!(
+        equality_fallback_probe_timeout(maximum, 1_011, 0),
+        maximum,
+        "compact gate-free DL keeps the full probe"
+    );
+    assert_eq!(
+        equality_fallback_probe_timeout(maximum, 7_095, 2_028),
+        maximum,
+        "large equality skeleton keeps the full probe"
+    );
+    assert_eq!(equality_fallback_probe_timeout(None, 906, 350), None);
 }
 
 // -------------------------------------------------------------------------
@@ -641,7 +673,7 @@ fn pop_restores_feasibility() {
     let yx = arena.real_sub(y, x).expect("y-x");
     let a = arena.real_le(xy, m1).expect("x-y<=-1");
     let b = arena.real_le(yx, m1).expect("y-x<=-1");
-    let scan = scan_dl(&mut arena, &[a, b]).expect("pure difference logic");
+    let scan = scan_dl(&mut arena, &[a, b], None).expect("pure difference logic");
     let mut theory = DlTheory::new(&scan, None);
 
     let a_index = scan
@@ -684,7 +716,8 @@ fn conflicts_carry_the_trigger_literal() {
     let first = arena.int_le(xy, minus_one).expect("x-y<=-1");
     let second = arena.int_le(yz, minus_one).expect("y-z<=-1");
     let third = arena.int_le(zx, minus_one).expect("z-x<=-1");
-    let scan = scan_dl(&mut arena, &[first, second, third]).expect("pure difference logic");
+    let scan =
+        scan_dl(&mut arena, &[first, second, third], None).expect("pure difference logic");
     let mut theory = DlTheory::new(&scan, None);
     let index = |t: TermId| {
         scan.atom_terms
@@ -721,7 +754,7 @@ fn propagation_is_entailed_and_explained() {
     let xy = arena.int_sub(x, y).expect("x-y");
     let a = arena.int_le(xy, m5).expect("x-y<=-5");
     let b = arena.int_le(xy, m1).expect("x-y<=-1");
-    let scan = scan_dl(&mut arena, &[a, b]).expect("pure difference logic");
+    let scan = scan_dl(&mut arena, &[a, b], None).expect("pure difference logic");
     let mut theory = DlTheory::new(&scan, None);
     let index = |t: TermId| {
         scan.atom_terms
