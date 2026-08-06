@@ -673,3 +673,21 @@ A file we can refute but cannot certify counts against us; it is not dropped.
 | solver commit | `a505e67e7` |
 | load average (start / end) | 3.78 4.08 4.81 / 5.43 5.63 6.41 — 24 cores; a high load DEPRESSES this result |
 | per-file detail | `bench-results/parity-details/QF_LIA.tsv` |
+## QF_LRA — 2026-08-06T12:44:30Z
+
+| field | value |
+|---|---|
+| axeyum solved | 86/200 |
+| reference solved | 146/200 |
+| **ratio (axeyum / reference)** | **58.9%** |
+| **disagreements** | **0** |
+| soundness | SOUND |
+| both / axeyum-only / reference-only | 86 / 0 / 60 |
+| reference | `cvc5 1.3.4 [git f3b21c4 on branch HEAD]` |
+| reference options | `<none — plain invocation, NOT a competition portfolio>` |
+| axeyum options | `<none — shipped default configuration>` |
+| protocol | 24s wall, 8GiB, per-file |
+| benchmark list | `bench-results/parity-lists/QF_LRA.txt` (sha256 b636239947db, 200 files) |
+| solver commit | `8ea6a7cad` |
+| load average (start / end) | 5.50 5.68 5.97 / 4.03 4.91 5.47 — 24 cores; a high load DEPRESSES this result |
+| per-file detail | `bench-results/parity-details/QF_LRA.tsv` |
