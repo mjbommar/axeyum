@@ -4,11 +4,12 @@
 for current project status, ordered work, blockers, and resume guidance. Read it
 first and update it before ending a project-level work session.
 
-- Last consolidated: **2026-08-05**
-- State audited at: `94082977d5a704da24cf9444ae8099e1aa68a147`
+- Last consolidated: **2026-08-06**
+- State audited at: `ebbabb34c9e2aa213a5e7aa7f1634acc68b2e374`
 - Expected integration state: clean `main`, equal to `origin/main`
-- Latest integrated increment: `e2eed63b19fbc7915a4792365d53c1fae669c216`
-  via merge `ae03e1cc954ab06ef8578d9f423647ecff3c496b`
+- Latest integrated code increment: `4477f2bb9d762c56e04048186641a31031c9ec4b`
+  via merge `198f2dc1be35657418d0533a5131cff5135b0e5e`
+- Latest retained-result increment: `ebbabb34c9e2aa213a5e7aa7f1634acc68b2e374`
 - Status vocabulary: `TODO` · `WIP` · `BLOCKED` · `DONE`
 
 `STATUS.md` is now a compatibility pointer. There is intentionally no root
@@ -30,18 +31,30 @@ evidence routes, broad but uneven theory support, an independent Lean-core
 checker/importer, and several consumers. It is not yet a drop-in Z3 replacement
 or a replacement for the Lean system.
 
-The audited integration state is clean `main` at `94082977d`, equal to
-`origin/main`; exact remote refs and the immutable-SHA pre-push gate are green.
-Replacement CI `31076938255` and docs `31076938134` are terminal green,
-including stable rustdoc, Clippy, MSRV, format, wasm, MIR, reflection, official
-Lean cross-check, micro corpus, and generated-resource/link gates. They supersede
-CI `31074220229`, whose only failure was the repaired public-to-private rustdoc
-link. No benchmark, solver, or measurement process is authorized by this
-tracker.
+The audited integration state is clean `main` at `ebbabb34c`, equal to
+`origin/main`. The IDL repair branch completed terminal
+`CARGO_BUILD_JOBS=2 just check`; merge `198f2dc1b` passed its immutable-SHA
+pre-push workspace-library, progress-frontier, and evidence gates. Integrated
+main then passed the focused DL suite 46/46 and the explicit auto-dispatch
+fallback regression 1/1. The first broad post-merge command failed while
+linking with only 585 MiB free (`No space left on device`), and a later
+documentation aggregate was deliberately interrupted for the requested disk
+cleanup. These are environmental/interrupted attempts, not green full-main
+gates. The completed topic full gate, merge-SHA pre-push gate, and focused
+post-merge tests are reported separately.
 
-The A1 resource increment `96ff85930` is pushed on
-`agent/arith/a1-deadline-ceilings` and locally integrated by merge `14f80a2bf`.
-It resolves the two measured arithmetic resource defects:
+Remote CI `31076938255` and docs `31076938134` at `94082977d` are terminal
+green, including stable rustdoc, Clippy, MSRV, format, wasm, MIR, reflection,
+official Lean cross-check, micro corpus, and generated-resource/link gates.
+Docs run `31108211479` at `54b366517` is also terminal green. No GitHub workflow
+run was visible at consolidation time for `198f2dc1b`, `71ca85d9f`, or
+`ebbabb34c`; current remote gates are therefore unobserved/pending, not green.
+No solver or measurement process is running.
+
+### A1 arithmetic resource closure
+
+A1 is **DONE**. Resource increment `96ff85930` (merge `14f80a2bf`) resolves the
+two measured arithmetic resource defects:
 
 1. ADR-0377 makes arithmetic timeout query-global across sequential exact-real,
    NRA, real-relaxation, NIA-linearization, bounded-blast, and width-ladder
@@ -58,7 +71,7 @@ It resolves the two measured arithmetic resource defects:
    declines in 0.10 s at roughly 13 MiB instead of reproducing the historical
    8 GiB abort seen when that cap was experimentally raised.
 
-Focused A1 gates are green: deadline 6/6, online-LRA 7/7, CAD 37/37, the
+Focused resource gates are green: deadline 6/6, online-LRA 7/7, CAD 37/37, the
 normalization exhausted/near-miss unit, full all-feature solver Clippy, format,
 and documentation links. The terminal aggregate solver gate
 `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --all-features --quiet --
@@ -66,14 +79,34 @@ and documentation links. The terminal aggregate solver gate
 including the 397.85-second UFLIA and 286.00-second word-equation differential
 tests. `just parity-docs` is independently green at 35 rows, 24 logics, 992
 files, 762 decided, 674 oracle-compared, and zero disagreements; its unrelated,
-load-sensitive frontier refresh was discarded. These gates validate the bounded
-implementation, but they do not replace A1's six retained division runs.
+load-sensitive frontier refresh was discarded.
 
-The `77901e524` QF_NIA retained run was preempted by the red remote gate after
-30/200 rows and emitted no disagreement. Its release executable hash was
-`6ff63ea71f5f`; the clean `94082977d` rebuild is `1cb0bdb17be4`, so the partial
-sidecar must not be resumed, appended, or scored under the new revision. Start
-the retained gate from row 1.
+All six required retained lists were rerun fresh from row 1. Results are QF_NIA
+34/200 versus 89, QF_LIA 117/200 versus 140, QF_LRA 86/200 versus 146, QF_RDL
+105/200 versus 155, QF_IDL 68/200 versus 124, and QF_UFLIA 94/200 versus 180;
+all have zero disagreements. The sole lower whole-sweep decision, one QF_LIA
+`ex3000...` UNSAT, reproduced 3/3 in isolation at about 8.1 seconds under the
+24-second protocol and is classified as load-sensitive sweep timing, not a
+semantic loss. The ledger honestly retains 117.
+
+The QF_IDL run exposed and then closed a real fallback-reservation regression.
+Commit `4477f2bb9` bounds every probe-front-end phase and uses a measured 12/12
+probe/fallback split only for 128–1,024-atom numeric equality gates; a global
+12/12 split was rejected after losing five controls. A 171-case QF_IDL/QF_RDL
+A/B was monotone. The final full sweep recovers `lpsat-goal-18.smt2` as UNSAT,
+retains the BubbleSort gain, adds one SAT graph case, and has no Axeyum loss.
+
+Commit `5ce07c55e` (merge `8ea6a7cad`) also makes parity resume identity
+fail-closed: exact committed-list paths are canonical; ambiguous legacy
+basenames, duplicate rows, and population drift are rejected. The six accepted
+A1 runs were fresh and non-resumed. Full evidence, sidecar hashes, rejected IDL
+policies, and gate separation are retained in
+[`docs/plan/arithmetic-a1-retained-result-2026-08-06.md`](docs/plan/arithmetic-a1-retained-result-2026-08-06.md).
+
+Disk cleanup removed only Cargo artifacts and clean merged worktree checkouts;
+dirty/unmerged worktrees and all branches were preserved. Free space recovered
+from 585 MiB to 885 GiB (882 GiB after measurement), the agent-target cache is
+81 MiB, and registered worktrees fell from 62 to 44.
 
 ### Current evidence snapshot
 
@@ -87,9 +120,9 @@ the retained gate from row 1.
   NRA degree **40** (baseline 40), and string bound **40** (baseline 8). These
   are load-sensitive local frontier measurements; they do not raise baselines.
 - The append-only head-to-head ledger currently covers **eleven divisions**.
-  Its weak measured edges are QF_NIA **21/85 = 24.7%**, QF_UFLIA
-  **94/180 = 52.2%**, QF_IDL **66/123 = 53.7%**, QF_LRA
-  **86/147 = 58.5%**, and QF_RDL **105/153 = 68.6%**. Every credited entry has
+  Its weak measured edges are QF_NIA **34/89 = 38.2%**, QF_UFLIA
+  **94/180 = 52.2%**, QF_IDL **68/124 = 54.8%**, QF_LRA
+  **86/146 = 58.9%**, and QF_RDL **105/155 = 67.7%**. Every credited entry has
   zero disagreements. Read the latest entry per division in
   [`bench-results/PARITY.md`](bench-results/PARITY.md); never copy an older
   entry merely because it has a higher score.
@@ -114,6 +147,10 @@ the retained gate from row 1.
 
 | Date | Commit | Result |
 |---|---|---|
+| 2026-08-06 | `ebbabb34c` | Retained the fresh QF_UFLIA 94/200 versus 180/200 run; its complete normalized status matrix is identical to the accepted baseline and has zero disagreements. |
+| 2026-08-06 | `4477f2bb9` / `198f2dc1b` / `71ca85d9f` | Bounded the complete DL probe front end, preserved fallback time, passed full topic and exact-SHA gates, and retained QF_IDL 68/200 versus 124/200 with zero losses or disagreements. |
+| 2026-08-06 | `5ce07c55e` / `8ea6a7cad` | Made parity resume identity exact-path and fail-closed for duplicate, ambiguous, or drifted populations. |
+| 2026-08-06 | `c5d617c10` / `b353419e7` / `54b366517` | Retained fresh QF_NIA 34/200, QF_LIA 117/200, QF_LRA 86/200, and QF_RDL 105/200 runs, all with zero disagreements. |
 | 2026-08-05 | `e2eed63b1` / `ae03e1cc9` | Removed the public-to-private rustdoc link that was the sole failure in CI `31074220229`; exact stable rustdoc and immutable-SHA branch gates are green. |
 | 2026-08-05 | `96ff85930` / `14f80a2bf` | Shared one arithmetic deadline across sequential routes, added CAD cancellation polls and deterministic LRA normalization ceilings, and added public regression/ADR evidence. |
 | 2026-08-05 | `803c08439` | Added independent fresh-arena checking for all 92 certified QF_BV UNSAT rows; 78 retain the stronger text-only recheck claim. |
@@ -130,29 +167,22 @@ the retained gate from row 1.
 Work in this order unless new evidence reveals a wrong verdict, crash, data-loss
 risk, or invalid gate. Those are P0 and preempt the queue.
 
-**Immediate action.** From clean integrated main, rebuild the release CLI and
-run fresh complete retained QF_NIA, QF_LIA, QF_LRA, QF_RDL, QF_IDL, and QF_UFLIA
-lists. Do not resume the incompatible `77901e524` QF_NIA sidecar. A wrong verdict,
-crash, retained verdict loss/disagreement, or renewed deadline overrun preempts
-the queue.
+The next ten active priorities are A2 through A11. A1 remains here only as the
+closed prerequisite and evidence boundary for the queue.
 
-### A1 — Complete arithmetic deadline and resource enforcement (`WIP`, P0)
+**Immediate action.** Begin A2 from clean current `origin/main`: re-audit
+`agent/smtcomp/full-preparation-live`, classify its unique commits, and port
+only process-free readiness work into a fresh owned worktree. Do not launch a
+solver fleet. A wrong verdict, crash, data-loss risk, invalid gate, or renewed
+resource overrun still preempts the queue.
 
-**Why now.** A fixed lazy-LIA path ran 548x past its requested budget. The same
-audit still observed NRA calls exceeding their shares by 8.8–15.2 seconds and a
-QF_LRA normalization path aborting at the 8 GiB cap.
+### A1 — Complete arithmetic deadline and resource enforcement (`DONE`, P0)
 
-**Next slice.** The deadline/ceiling implementation and aggregate local solver
-gate are complete, and `96ff85930` is locally integrated by `14f80a2bf`. Push
-and remotely verify the merge, then run the six retained arithmetic divisions
-and compare their current clean sidecars with the credited baselines. Diagnose
-any loss before appending ledger entries or moving to A2.
-
-**Exit.** Reverse-apply tests prove the old code overruns or aborts; fixed code
-returns `Unknown` within bounded cleanup time. QF_NIA, QF_LIA, QF_LRA, QF_RDL,
-QF_IDL, and QF_UFLIA retained lists have no verdict loss or disagreement.
-
-**Stop.** Do not widen theory admission or raise memory caps to hide the defect.
+Shared deadlines, CAD cancellation, deterministic LRA normalization ceilings,
+the DL fallback-reservation repair, exact resume identity, six fresh retained
+division runs, and their ledger commits are complete. See the closure note
+linked above. The one QF_LIA whole-sweep miss is retained honestly and bounded
+by a 3/3 isolated UNSAT reproduction well inside the protocol budget.
 
 ### A2 — Rebase and finish credited full-library readiness (`TODO`, P0)
 
@@ -176,19 +206,21 @@ an unaccepted root. Follow
 
 ### A3 — Re-certify and deepen QF_NIA (`TODO`, P1)
 
-**Why now.** The credited parity entry remains 21/85 at `abb31d1ab`; later NIA
-work reports two additional full-list residual wins but has no current clean
-ledger entry.
+**Why now.** The current clean entry is 34/200 versus 89/200 (38.2%), a material
+gain over the former 21-decision entry but still the weakest retained arithmetic
+ratio. Twelve Axeyum-only decisions also make replay and causal classification
+important, not just score growth.
 
-**Next slice.** Run the complete committed QF_NIA list from a clean worktree on
-current main after A1. Use persisted route traces to partition every remaining
-reference-only file by the first causal decline.
+**Next slice.** Use the retained current sidecar and persisted route traces to
+partition all 67 reference-only files by the first causal decline. Select one
+bounded cluster with satisfiable and near-miss controls before implementation.
 
-**Exit.** Append one clean, whole-list parity entry with zero disagreements;
-retain the exact sidecar; select one bounded residual cluster with satisfiable
-and near-miss controls before implementation.
+**Exit.** One preregistered cluster improves a fresh whole-list result without
+losing any of the 34 decisions; all SAT answers replay on the original terms and
+the ledger remains disagreement-free.
 
-**Stop.** Do not claim 23/85 or any later number until the full run records it.
+**Stop.** Do not optimize on the 12 Axeyum-only cases as if they were reference
+failures, and do not raise general caps to convert time into apparent breadth.
 
 ### A4 — Deepen QF_UFLIA combination (`TODO`, P1)
 
@@ -210,10 +242,11 @@ model credit.
 subsets of their references. The newest architecture has not yet received one
 cross-division residual census.
 
-**Next slice.** After A1, classify normalization failures, unsupported
+**Next slice.** Classify normalization failures, unsupported
 difference shapes, disequalities, explanation blowups, and ordinary search
-failures across the three ledgers. Repair the QF_LRA high-memory normalization
-case before adding new DL syntax.
+failures across the three current ledgers. Treat the repaired high-memory LRA
+normalization case and the rejected global 12/12 DL split as permanent controls
+before adding new DL syntax.
 
 **Exit.** A/B measurement is monotone across all three divisions, exact
 Farkas/DL evidence checks pass, deep input returns without recursion abort, and
@@ -250,7 +283,7 @@ T3.5 policy-v0 equivalence.
 covers the catalogue or records explicit gaps, legacy dispatch replays exactly,
 and G1—not enthusiasm—decides whether searched policy proceeds.
 
-**Stop.** The exploration track remains proposed and may not preempt A1–A6.
+**Stop.** The exploration track remains proposed and may not preempt A2–A6.
 See [`docs/plan/exploration-track/`](docs/plan/exploration-track/README.md).
 
 ### A8 — Implement SMT-LIB ordered command/event capture (`TODO`, P2)
@@ -296,23 +329,45 @@ family whose semantics and reset/scoping behavior are already representable.
 **Exit.** End-to-end textual fixtures compare ordered outputs and state changes,
 errors remain atomic, and API helpers and text mode share one semantic core.
 
+### A11 — Make worktree and build-cache retirement routine (`TODO`, P2)
+
+**Why now.** Accumulated per-worktree Cargo targets and the agent-target cache
+filled the filesystem until a valid post-merge build failed at 585 MiB free.
+The bounded cleanup recovered about 885 GiB without deleting dirty or unmerged
+work, but the same failure will recur without a documented retention loop.
+
+**Next slice.** Add a read-only inventory command or script that reports each
+worktree's branch, dirty/merged state, target size, last activity, and safe
+cleanup classification. Document an operator procedure that uses `cargo clean`
+before worktree removal and requires explicit review for every dirty, unmerged,
+detached, or cache-tag-missing path.
+
+**Exit.** The inventory is deterministic and tested against dirty, merged,
+unmerged, detached, missing-target, and malformed-cache fixtures. A dry run
+identifies disposable bytes without mutation; cleanup requires explicit exact
+targets and preserves branches and live work.
+
+**Stop.** Never recursively delete a worktree root, infer safety from age alone,
+or remove dirty/unmerged state to meet a free-space target.
+
 ## Workstream state
 
 | Workstream | State | Current boundary / next action |
 |---|---|---|
-| Integration and gates | `DONE`; main at `94082977d` | Exact remote refs, pre-push gate, replacement CI `31076938255`, and docs `31076938134` are terminal green. |
-| Arithmetic deadline reliability | `WIP` | Shared deadline, CAD polls, and LRA normalization ceilings are integrated and aggregate-tested; all six fresh retained arithmetic divisions remain incomplete. |
+| Integration and gates | `WIP`; main at `ebbabb34c` | Local/remote refs are equal; topic full gate, merge-SHA pre-push gate, and focused post-merge tests are green. Current GitHub CI/docs runs are not yet observed; last full remote CI is `31076938255` at `94082977d`. |
+| Arithmetic deadline reliability | `DONE` | Shared deadline, CAD polls, LRA ceilings, bounded DL probing, exact resume identity, and six fresh retained divisions are complete; see the 2026-08-06 closure note. |
 | Full-library measurement | `TODO` | A2; no live run and no launch authority. |
-| QF_NIA breadth | `WIP` | Two uncredited gains landed; A3 owns clean remeasurement. |
+| QF_NIA breadth | `WIP` | Current clean result is 34/200 versus 89/200; A3 owns the 67-case reference-only census and next bounded cluster. |
 | QF_UFLIA breadth | `WIP` | 94/180; A4 owns causal residual partition. |
-| LRA/IDL/RDL | `WIP` | Warm simplex and DL landed; A5 owns cross-division consolidation. |
-| QF_BV/QF_SLIA/UF/QF_ABV | `WIP`, strong selected cells | Preserve current ledgers; do not prioritize small score gains above A1–A6. |
+| LRA/IDL/RDL | `WIP` | Current results are 86/146, 68/124, and 105/155; A5 owns cross-division consolidation. |
+| QF_BV/QF_SLIA/UF/QF_ABV | `WIP`, strong selected cells | Preserve current ledgers; do not prioritize small score gains above A2–A6. |
 | Evidence and Lean reconstruction | `WIP` | A6 and A9; distinct certificate/check/reconstruction claims. |
 | Route exploration | `BLOCKED` beyond catalogue work | Proposed track; T0.2/T0.6/T0.1/T2.3 precede T3.5. |
 | SMT-LIB/API conformance | `WIP` | A8 then A10; S1 command/event IR first. |
 | CAS parity | `BLOCKED` by deliberate pause | Wave-24 code `01d47334` and pause commit `245d8f25` are ancestors of current main. Do not start wave 25 until the user resumes it and retained specialized gate evidence is re-audited. |
-| Consumer apps / verified systems | `WIP`, non-critical path | Existing EVM, verifier, property, reflection, and symbolic-execution slices remain useful; do not preempt A1–A6 without measured demand. |
+| Consumer apps / verified systems | `WIP`, non-critical path | Existing EVM, verifier, property, reflection, and symbolic-execution slices remain useful; do not preempt A2–A7 without measured demand. |
 | Foundational resources | `WIP`, separate content lane | Keep generated-resource gates green; record only project-level priority changes here. |
+| Worktree and build-cache hygiene | `TODO`, recovered | A11; current state is 44 worktrees, 81 MiB agent-target cache, and about 882 GiB free after bounded cleanup. |
 
 ## Resume protocol
 
