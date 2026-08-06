@@ -709,3 +709,22 @@ A file we can refute but cannot certify counts against us; it is not dropped.
 | solver commit | `b353419e7` |
 | load average (start / end) | 3.86 4.17 4.90 / 6.76 7.46 7.83 — 24 cores; a high load DEPRESSES this result |
 | per-file detail | `bench-results/parity-details/QF_RDL.tsv` |
+## QF_IDL — 2026-08-06T20:47:11Z
+
+| field | value |
+|---|---|
+| axeyum solved | 68/200 |
+| reference solved | 124/200 |
+| **ratio (axeyum / reference)** | **54.8%** |
+| **disagreements** | **0** |
+| soundness | SOUND |
+| both / axeyum-only / reference-only | 68 / 0 / 56 |
+| reference | `cvc5 1.3.4 [git f3b21c4 on branch HEAD]` |
+| reference options | `<none — plain invocation, NOT a competition portfolio>` |
+| axeyum options | `<none — shipped default configuration>` |
+| protocol | 24s wall, 8GiB, per-file |
+| benchmark list | `bench-results/parity-lists/QF_IDL.txt` (sha256 d7c9713a0280, 200 files) |
+| solver commit | `198f2dc1b` |
+| load average (start / end) | 5.40 6.87 8.72 / 11.23 10.35 7.42 — 24 cores; a high load DEPRESSES this result |
+| per-file detail | `bench-results/parity-details/QF_IDL.tsv` |
+
