@@ -5,7 +5,7 @@ for current project status, ordered work, blockers, and resume guidance. Read it
 first and update it before ending a project-level work session.
 
 - Last consolidated: **2026-08-05**
-- State audited at: `ae03e1cc954ab06ef8578d9f423647ecff3c496b`
+- State audited at: `94082977d5a704da24cf9444ae8099e1aa68a147`
 - Expected integration state: clean `main`, equal to `origin/main`
 - Latest integrated increment: `e2eed63b19fbc7915a4792365d53c1fae669c216`
   via merge `ae03e1cc954ab06ef8578d9f423647ecff3c496b`
@@ -30,16 +30,14 @@ evidence routes, broad but uneven theory support, an independent Lean-core
 checker/importer, and several consumers. It is not yet a drop-in Z3 replacement
 or a replacement for the Lean system.
 
-The audited remote state is `main` at `77901e524`; exact remote refs and the
-immutable-SHA pre-push gate are green. Docs run
-`31074220215` is terminal green, but CI `31074220229` is terminal red solely
-because stable rustdoc rejected a public comment's link to the crate-private
-`LraTheory::try_new_with_deadline`. All other CI jobs passed. The minimal link
-repair `e2eed63b1` and tracker commit `6edd6123b` are pushed on
-`agent/ci/rustdoc-lra-link`, whose immutable-SHA pre-push gate is green, and are
-locally integrated by merge `ae03e1cc9`. The merge and this tracker descendant
-still require their main push and replacement CI/docs. No benchmark, solver, or
-measurement process is authorized by this tracker.
+The audited integration state is clean `main` at `94082977d`, equal to
+`origin/main`; exact remote refs and the immutable-SHA pre-push gate are green.
+Replacement CI `31076938255` and docs `31076938134` are terminal green,
+including stable rustdoc, Clippy, MSRV, format, wasm, MIR, reflection, official
+Lean cross-check, micro corpus, and generated-resource/link gates. They supersede
+CI `31074220229`, whose only failure was the repaired public-to-private rustdoc
+link. No benchmark, solver, or measurement process is authorized by this
+tracker.
 
 The A1 resource increment `96ff85930` is pushed on
 `agent/arith/a1-deadline-ceilings` and locally integrated by merge `14f80a2bf`.
@@ -71,11 +69,11 @@ files, 762 decided, 674 oracle-compared, and zero disagreements; its unrelated,
 load-sensitive frontier refresh was discarded. These gates validate the bounded
 implementation, but they do not replace A1's six retained division runs.
 
-The current-main QF_NIA retained run was preempted by the red remote gate after
-30/200 rows. It emitted no disagreement, stopped cleanly, and its ignored
-sidecar plus `/tmp/axeyum-qf-nia-77901e524-partial.tsv` preserve the exact
-checkpoint for `PARITY_RESUME=1`. This partial run is not a parity result and
-must not be appended or scored.
+The `77901e524` QF_NIA retained run was preempted by the red remote gate after
+30/200 rows and emitted no disagreement. Its release executable hash was
+`6ff63ea71f5f`; the clean `94082977d` rebuild is `1cb0bdb17be4`, so the partial
+sidecar must not be resumed, appended, or scored under the new revision. Start
+the retained gate from row 1.
 
 ### Current evidence snapshot
 
@@ -132,11 +130,11 @@ must not be appended or scored.
 Work in this order unless new evidence reveals a wrong verdict, crash, data-loss
 risk, or invalid gate. Those are P0 and preempt the queue.
 
-**Immediate action.** Push local merge `ae03e1cc9`, verify exact remote refs and
-terminal replacement CI/docs, then resume QF_NIA from its 30/200 checkpoint and complete
-the retained QF_LIA, QF_LRA, QF_RDL, QF_IDL, and QF_UFLIA lists from clean
-integrated main. A wrong verdict, crash, retained verdict loss/disagreement, or
-renewed deadline overrun preempts the queue.
+**Immediate action.** From clean integrated main, rebuild the release CLI and
+run fresh complete retained QF_NIA, QF_LIA, QF_LRA, QF_RDL, QF_IDL, and QF_UFLIA
+lists. Do not resume the incompatible `77901e524` QF_NIA sidecar. A wrong verdict,
+crash, retained verdict loss/disagreement, or renewed deadline overrun preempts
+the queue.
 
 ### A1 — Complete arithmetic deadline and resource enforcement (`WIP`, P0)
 
@@ -302,8 +300,8 @@ errors remain atomic, and API helpers and text mode share one semantic core.
 
 | Workstream | State | Current boundary / next action |
 |---|---|---|
-| Integration and gates | `WIP`; local main at `ae03e1cc9` | The repair branch and gate are green; main push, exact remote-ref verification, and replacement CI/docs remain pending. |
-| Arithmetic deadline reliability | `WIP` | Shared deadline, CAD polls, and LRA normalization ceilings are integrated and aggregate-tested; QF_NIA is resumable at 30/200 and all six retained arithmetic divisions remain incomplete. |
+| Integration and gates | `DONE`; main at `94082977d` | Exact remote refs, pre-push gate, replacement CI `31076938255`, and docs `31076938134` are terminal green. |
+| Arithmetic deadline reliability | `WIP` | Shared deadline, CAD polls, and LRA normalization ceilings are integrated and aggregate-tested; all six fresh retained arithmetic divisions remain incomplete. |
 | Full-library measurement | `TODO` | A2; no live run and no launch authority. |
 | QF_NIA breadth | `WIP` | Two uncredited gains landed; A3 owns clean remeasurement. |
 | QF_UFLIA breadth | `WIP` | 94/180; A4 owns causal residual partition. |
