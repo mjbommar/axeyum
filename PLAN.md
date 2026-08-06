@@ -5,10 +5,10 @@ for current project status, ordered work, blockers, and resume guidance. Read it
 first and update it before ending a project-level work session.
 
 - Last consolidated: **2026-08-05**
-- State audited at: `751066210a70dd9198a3ffea79817cec792c508d`
+- State audited at: `14f80a2bfde60bbb6b0c8bafbf9f5b33ba58d18f`
 - Expected integration state: clean `main`, equal to `origin/main`
-- Latest integrated increment: `0ccb4ce48c73de1766b4d7fbea96f07130fa044e`
-  via merge `cc3fadaf8308b2a49532673ca2f7b35dd69d236a`
+- Latest integrated increment: `96ff85930437f285822796136e8158684d9fe334`
+  via merge `14f80a2bfde60bbb6b0c8bafbf9f5b33ba58d18f`
 - Status vocabulary: `TODO` · `WIP` · `BLOCKED` · `DONE`
 
 `STATUS.md` is now a compatibility pointer. There is intentionally no root
@@ -30,15 +30,17 @@ evidence routes, broad but uneven theory support, an independent Lean-core
 checker/importer, and several consumers. It is not yet a drop-in Z3 replacement
 or a replacement for the Lean system.
 
-The audited integration state is clean `main` at `751066210`, equal to
-`origin/main`. GitHub CI `31066926771` and docs `31066926761` for code merge
-`cc3fadaf8`, plus docs `31067318237` for its canonical-plan descendant, are
-terminal green. No benchmark, solver, or measurement process is authorized by
-this tracker.
+The audited local integration state is clean `main` at merge `14f80a2bf`, three
+commits ahead of `origin/main`. The exact branch tip `480313f2a` is pushed and
+its fail-closed immutable-SHA pre-push gate is terminal green; the merge commit
+and this tracker descendant still require their main push and remote CI/docs.
+Prior GitHub CI `31066926771` and docs `31066926761` for code merge `cc3fadaf8`,
+plus docs `31067318237` for its canonical-plan descendant, are terminal green.
+No benchmark, solver, or measurement process is authorized by this tracker.
 
-The next A1 increment is committed locally as `96ff85930` on
-`agent/arith/a1-deadline-ceilings`, based directly on `751066210`. It is not yet
-pushed or integrated. It resolves the two measured arithmetic resource defects:
+The A1 resource increment `96ff85930` is pushed on
+`agent/arith/a1-deadline-ceilings` and locally integrated by merge `14f80a2bf`.
+It resolves the two measured arithmetic resource defects:
 
 1. ADR-0377 makes arithmetic timeout query-global across sequential exact-real,
    NRA, real-relaxation, NIA-linearization, bounded-blast, and width-ladder
@@ -105,7 +107,7 @@ implementation, but they do not replace A1's six retained division runs.
 
 | Date | Commit | Result |
 |---|---|---|
-| 2026-08-05 | `96ff85930` (local branch) | Shared one arithmetic deadline across sequential routes, added CAD cancellation polls and deterministic LRA normalization ceilings, and added public regression/ADR evidence. |
+| 2026-08-05 | `96ff85930` / `14f80a2bf` | Shared one arithmetic deadline across sequential routes, added CAD cancellation polls and deterministic LRA normalization ceilings, and added public regression/ADR evidence. |
 | 2026-08-05 | `803c08439` | Added independent fresh-arena checking for all 92 certified QF_BV UNSAT rows; 78 retain the stronger text-only recheck claim. |
 | 2026-08-04 | `3777a3b2c` / `8f4458fb1` | Repaired the load-sensitive frontier ratchet and refreshed honest curves without raising baselines. |
 | 2026-08-04 | `1c419f6b1` | Fixed a lazy-LIA operation that exceeded a 200 ms budget by 548x; exposed remaining NRA and normalization ceilings. |
@@ -120,8 +122,8 @@ implementation, but they do not replace A1's six retained division runs.
 Work in this order unless new evidence reveals a wrong verdict, crash, data-loss
 risk, or invalid gate. Those are P0 and preempt the queue.
 
-**Immediate action.** Push and integrate the green `96ff85930` A1 resource slice,
-verify exact remote refs and terminal CI/docs, then run the complete retained
+**Immediate action.** Push local merge `14f80a2bf`, verify exact remote refs and
+terminal CI/docs, then run the complete retained
 QF_NIA, QF_LIA, QF_LRA, QF_RDL, QF_IDL, and QF_UFLIA lists from clean integrated
 main. A wrong verdict, crash, retained verdict loss/disagreement, or renewed
 deadline overrun preempts the queue.
@@ -133,10 +135,10 @@ audit still observed NRA calls exceeding their shares by 8.8–15.2 seconds and 
 QF_LRA normalization path aborting at the 8 GiB cap.
 
 **Next slice.** The deadline/ceiling implementation and aggregate local solver
-gate are complete on `96ff85930`. Integrate that exact commit, then run the six
-retained arithmetic divisions and compare their current clean sidecars with the
-credited baselines. Diagnose any loss before appending ledger entries or moving
-to A2.
+gate are complete, and `96ff85930` is locally integrated by `14f80a2bf`. Push
+and remotely verify the merge, then run the six retained arithmetic divisions
+and compare their current clean sidecars with the credited baselines. Diagnose
+any loss before appending ledger entries or moving to A2.
 
 **Exit.** Reverse-apply tests prove the old code overruns or aborts; fixed code
 returns `Unknown` within bounded cleanup time. QF_NIA, QF_LIA, QF_LRA, QF_RDL,
@@ -290,7 +292,7 @@ errors remain atomic, and API helpers and text mode share one semantic core.
 
 | Workstream | State | Current boundary / next action |
 |---|---|---|
-| Integration and gates | `WIP`; main at `751066210` | Prior CI/docs are terminal green. A1 commit `96ff85930` is locally green but not yet pushed or integrated. |
+| Integration and gates | `WIP`; local main at `14f80a2bf` | Branch tip and immutable-SHA gate are green; main push, exact remote-ref verification, and merge CI/docs remain pending. |
 | Arithmetic deadline reliability | `WIP` | Shared deadline, CAD polls, and LRA normalization ceilings are implemented and aggregate-tested; six retained arithmetic divisions remain before A1 exit. |
 | Full-library measurement | `TODO` | A2; no live run and no launch authority. |
 | QF_NIA breadth | `WIP` | Two uncredited gains landed; A3 owns clean remeasurement. |
