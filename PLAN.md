@@ -5,7 +5,7 @@ for current project status, ordered work, blockers, and resume guidance. Read it
 first and update it before ending a project-level work session.
 
 - Last consolidated: **2026-08-06**
-- State audited at: `ebbabb34c9e2aa213a5e7aa7f1634acc68b2e374`
+- State audited at: `7567ff82771fc1303f1db265fc97a560e8e924a7`
 - Expected integration state: clean `main`, equal to `origin/main`
 - Latest integrated code increment: `4477f2bb9d762c56e04048186641a31031c9ec4b`
   via merge `198f2dc1be35657418d0533a5131cff5135b0e5e`
@@ -31,9 +31,9 @@ evidence routes, broad but uneven theory support, an independent Lean-core
 checker/importer, and several consumers. It is not yet a drop-in Z3 replacement
 or a replacement for the Lean system.
 
-The audited solver/integration parent is `ebbabb34c`; the current tracker-only
-increment sits on top of that state. Local `main` and `origin/main` must remain
-equal under the resume protocol below. The IDL repair branch completed terminal
+The audited integration state is clean `main` equal to `origin/main` at
+`7567ff827`. Local `main` and `origin/main` must remain equal under the resume
+protocol below. The IDL repair branch completed terminal
 `CARGO_BUILD_JOBS=2 just check`; merge `198f2dc1b` passed its immutable-SHA
 pre-push workspace-library, progress-frontier, and evidence gates. Integrated
 main then passed the focused DL suite 46/46 and the explicit auto-dispatch
@@ -51,6 +51,18 @@ Docs run `31108211479` at `54b366517` is also terminal green. No GitHub workflow
 run was visible at consolidation time for `198f2dc1b`, `71ca85d9f`, or
 `ebbabb34c`; current remote gates are therefore unobserved/pending, not green.
 No solver or measurement process is running.
+
+A2 is now **WIP** in isolated branch `agent/smtcomp/a2-readiness-port`. The old
+`agent/smtcomp/full-preparation-live` head `3e53ca631` is 401 commits behind
+current main and was rejected as a whole. Four still-valid process-free code
+increments and their R1--R4 contracts were ported; stale root tracker changes
+were excluded. The port passes 47 focused tests, the 160-test resume aggregate
+with one expected live-host skip, the generated-contract check, and the docs
+link check. This is not live readiness: R5 exact-source build provenance is
+preregistered but unimplemented, and the current operator can still accept a
+caller-selected Axeyum executable. No host, NAS, allocation, or solver action
+was performed. See the
+[`A2 stale-branch audit`](docs/plan/smtcomp-a2-stale-branch-audit-2026-08-06.md).
 
 ### A1 arithmetic resource closure
 
@@ -171,11 +183,15 @@ risk, or invalid gate. Those are P0 and preempt the queue.
 The next ten active priorities are A2 through A11. A1 remains here only as the
 closed prerequisite and evidence boundary for the queue.
 
-**Immediate action.** Begin A2 from clean current `origin/main`: re-audit
-`agent/smtcomp/full-preparation-live`, classify its unique commits, and port
-only process-free readiness work into a fresh owned worktree. Do not launch a
-solver fleet. A wrong verdict, crash, data-loss risk, invalid gate, or renewed
-resource overrun still preempts the queue.
+**Immediate action.** Continue A2 in `agent/smtcomp/a2-readiness-port` by
+implementing the preregistered R5 exact-source build contract. Remove the live
+caller-selected Axeyum binary, build from exact clean integrated source in a
+unique external target with locked/offline dependencies and a constructed
+environment, and retain/replay every source/tool/output/binary identity edge.
+Run mutation, focused, aggregate, scope, link, and clean full gates before
+proposing integration. Do not probe hosts, run sentinels, mutate NAS state, or
+launch a solver fleet. A wrong verdict, crash, data-loss risk, invalid gate, or
+renewed resource overrun still preempts the queue.
 
 ### A1 — Complete arithmetic deadline and resource enforcement (`DONE`, P0)
 
@@ -185,17 +201,21 @@ division runs, and their ledger commits are complete. See the closure note
 linked above. The one QF_LIA whole-sweep miss is retained honestly and bounded
 by a 3/3 isolated UNSAT reproduction well inside the protocol budget.
 
-### A2 — Rebase and finish credited full-library readiness (`TODO`, P0)
+### A2 — Rebase and finish credited full-library readiness (`WIP`, P0)
 
 **Why now.** Eleven division samples are useful, but representative general
 solving-power remains unmeasured. The topic branch
 `agent/smtcomp/full-preparation-live` contains substantial process-free work
 based on older July state and must not be merged or launched as-is.
 
-**Next slice.** Re-audit that branch against current `origin/main`, classify
-each unique commit as already integrated, still valid, superseded, or unsafe;
-port only valid F2/F3 process-free readiness and coordinator work into a fresh
-owned worktree.
+**Current checkpoint.** The branch audit and R1--R4 process-free port are
+complete and focused/aggregate gates are green. The exact disposition is in
+the dated A2 audit. R5 remains the live-readiness blocker.
+
+**Next slice.** Implement R5's operator-owned exact-source release build and
+sealed build observation, including rejecting mutations for source/ref drift,
+environment/tool drift, build failure, output sidecars, staged bytes, run
+identity, and completion links.
 
 **Exit.** Current-main identity is immutable, readiness and resume gates are
 green, the published root is process-free with `launch_authorized=false`, and
@@ -355,9 +375,9 @@ or remove dirty/unmerged state to meet a free-space target.
 
 | Workstream | State | Current boundary / next action |
 |---|---|---|
-| Integration and gates | `WIP`; audited code parent `ebbabb34c` | Topic full gate, merge-SHA pre-push gate, and focused post-merge tests are green. Verify current local/remote ref equality on resume. Current GitHub CI/docs runs are not yet observed; last full remote CI is `31076938255` at `94082977d`. |
+| Integration and gates | `WIP`; audited main `7567ff827` | Local and remote main are equal. Topic full gate, merge-SHA pre-push gate, and focused post-merge tests for the preceding arithmetic increment are green. No GitHub run is visible for current main; last full remote CI is `31076938255` at `94082977d`. |
 | Arithmetic deadline reliability | `DONE` | Shared deadline, CAD polls, LRA ceilings, bounded DL probing, exact resume identity, and six fresh retained divisions are complete; see the 2026-08-06 closure note. |
-| Full-library measurement | `TODO` | A2; no live run and no launch authority. |
+| Full-library measurement | `WIP` | A2 process-free R1--R4 port is focused/aggregate green; R5 exact-source build provenance blocks integration and every live action. No live run and no launch authority. |
 | QF_NIA breadth | `WIP` | Current clean result is 34/200 versus 89/200; A3 owns the 67-case reference-only census and next bounded cluster. |
 | QF_UFLIA breadth | `WIP` | 94/180; A4 owns causal residual partition. |
 | LRA/IDL/RDL | `WIP` | Current results are 86/146, 68/124, and 105/155; A5 owns cross-division consolidation. |

@@ -1,9 +1,9 @@
 # SMT-COMP Full-Library Work Stream — RESUME HERE
 
 **This folder is the single entry point for the SMT-COMP measurement,
-full-library inventory, and gap-closing lane.** Updated 2026-07-24 after the
-no-launch F2 live-capture implementation and its R2 completion-boundary
-correction were committed, fully gated, and pushed for integration.
+full-library inventory, and gap-closing lane.** Updated 2026-08-06 after the
+stale F2 branch audit and process-free current-main port. Root `PLAN.md` remains
+the sole mutable project priority and status authority.
 
 The goal is an honest, reproducible per-logic decide/decline/**wrong** map over
 a source-balanced SMT-COMP-style population, followed by a measured and ranked
@@ -423,16 +423,26 @@ gate.
    finalization-time deadline check after artifact inventory, and an exact
    remote-main recheck at completion-last publication. The corrected 45-test
    focused suite, 158-test portable gate, scoped gate, and full workspace
-   `just check` all pass. A later clean reproduction found that `just check`
+   `just check` all passed on that historical topic. A later clean reproduction found that `just check`
    itself rewrites tracked hardware-relative frontier timing JSON. The
    source-first
    [R3 correction](../smtcomp-credited-full-preparation-f2-live-capture-r3-plan-2026-07-25.md)
    is implemented and pushed through `fe32194d`: readiness gates use a unique
    external temporary artifact destination without changing the exact gate,
    ratchets, or clean-tree requirement. Focused tests, the 160-test resume
-   aggregate, the scoped gate, and the full `just check` pass; the terminal
-   full gate left the source worktree and tracked frontier artifacts clean.
-   Integrate R3 before the separately authorized live capture.
+   aggregate, the scoped gate, and the full `just check` passed on that
+   historical topic; the terminal full gate left its source worktree and
+   tracked frontier artifacts clean. R4 then sealed a positive non-secret gate
+   environment. On 2026-08-06 the still-valid process-free implementation and
+   R1--R4 contracts were ported to current main and passed the focused 47-test
+   suite, the 160-test resume aggregate (one expected live-host skip),
+   generated-contract check, and link check. The
+   [A2 audit](../smtcomp-a2-stale-branch-audit-2026-08-06.md) records exact
+   commit disposition. This is not live readiness: the
+   [R5 correction](../smtcomp-credited-full-preparation-f2-live-capture-r5-plan-2026-07-25.md)
+   remains unimplemented and blocks live preparation because the operator can
+   still accept a caller-selected Axeyum executable without exact-source build
+   provenance.
 
 The same implementation rule continues to apply: prove each new mechanism and
 its destructive/interruption tests on a tiny corpus before spending the full
@@ -502,8 +512,14 @@ Repository:
   `docs/plan/smtcomp-credited-full-preparation-f2-live-capture-r2-plan-2026-07-24.md`;
 - credited full-population F2 live-capture R3 gate-output-isolation correction:
   `docs/plan/smtcomp-credited-full-preparation-f2-live-capture-r3-plan-2026-07-25.md`;
+- credited full-population F2 live-capture R4 gate-environment correction:
+  `docs/plan/smtcomp-credited-full-preparation-f2-live-capture-r4-plan-2026-07-25.md`;
+- credited full-population F2 live-capture R5 exact-source-build correction:
+  `docs/plan/smtcomp-credited-full-preparation-f2-live-capture-r5-plan-2026-07-25.md`;
 - credited full-population F2 live-capture implementation result:
   `docs/plan/smtcomp-credited-full-preparation-f2-live-capture-implementation-2026-07-24.md`;
+- current-main A2 stale-branch audit and process-free port:
+  `docs/plan/smtcomp-a2-stale-branch-audit-2026-08-06.md`;
 - credited full-population publication fixture:
   `docs/plan/smtcomp-credited-full-publication-fixture-2026-07-23.md`;
 - credited full-population execution-coordinator fixture:
@@ -562,24 +578,18 @@ NAS (shared, corpus read-only in practice):
    mainline-gated acceptance, admitted-wave entry point, and pre-launch
    authorization/recovery path. The Lean filesystem decoupling is also on
    current main, so the historical SMT-source pin blocker is closed. No live
-   root or canonical acceptance record has been published. The source-first
-   [F2 live-capture plan](../smtcomp-credited-full-preparation-f2-live-capture-plan-2026-07-24.md),
-   including its source-first
-   [R1 correction](../smtcomp-credited-full-preparation-f2-live-capture-r1-plan-2026-07-24.md),
-   was initially implemented by pushed topic commit `57482ad0` and recorded in the
-   [implementation result](../smtcomp-credited-full-preparation-f2-live-capture-implementation-2026-07-24.md).
-   Do not integrate that checkpoint alone. The
-   [R2 correction](../smtcomp-credited-full-preparation-f2-live-capture-r2-plan-2026-07-24.md),
-   is implemented and fully gated by pushed commit `b02c486b`; integrate the
-   exact corrected topic and result, then revalidate exact
-   local/tracking/remote `main` equality and both
-   registered gates before any host probe or NAS mutation. The separately
-   reviewed operator may publish only a process-free
-   `launch_authorized=false` root inside its frozen 30-minute window. Integrate
-   and explicitly accept that exact root before constructing Axeyum admission.
-   Do not probe hosts, mutate the NAS, or launch a solver allocation from the
-   unintegrated operator topic or while `origin/main` is branch-wide red. The
-   active solver
+   root or canonical acceptance record has been published. The old
+   `agent/smtcomp/full-preparation-live` branch is 401 commits behind the
+   audited current main and must not be merged or executed. The
+   [A2 audit](../smtcomp-a2-stale-branch-audit-2026-08-06.md) classifies all 19
+   unique commits and records the current-main process-free port. Continue only
+   on `agent/smtcomp/a2-readiness-port`: implement and mutation-test the
+   [R5 exact-source build correction](../smtcomp-credited-full-preparation-f2-live-capture-r5-plan-2026-07-25.md),
+   then run the focused, aggregate, scope, link, and clean full gates. Do not
+   probe hosts, run sentinels, mutate the NAS, publish a live preparation root,
+   construct F3 acceptance, allocate resources, or launch a solver from this
+   checkpoint. Those actions require the complete corrected stack integrated
+   on exact green main and a separate review/authorization. The active solver
    capability checkpoint is
    [`../checked-multi-binder-quantified-uf-models-2026-07-22.md`](../checked-multi-binder-quantified-uf-models-2026-07-22.md).
 5. Update root `PLAN.md` and this file before handoff; push only a green topic
