@@ -1,9 +1,54 @@
 # Deadline-bounding the NRA/NIA solve: what works, and the architectural ceiling
 
-Status: **investigation finding** (tasks #84 / #85 / #87). Records how far the
-NRA/NIA arithmetic solve can be made to honor `config.timeout`, why the last
-residual resists a clean fix, and what that means for the disjunction case-split
-lever (#87) it blocks.
+Status: **resolved deadline/resource slice** (tasks #84 / #85; ADR-0377), with
+the separate disjunction case-split lever (#87) still requiring remeasurement.
+
+## 2026-08-05 resolution
+
+The earlier diagnosis below correctly found missed polls, but incorrectly
+localized the remaining `ext-rew` cost in foundational `axeyum-ir` polynomial
+primitives. Stage timing on current main found two independent causes:
+
+1. `check_auto_dispatch` created an absolute deadline for feature scanning but
+   then passed the original timeout to sequential arithmetic routes. On the
+   public `ext-rew-aggr-test`, real relaxation declined after roughly 0.64 s and
+   `nia_linearize` then consumed another fresh roughly 1.00 s. This timeout reset
+   was the dominant top-level overrun.
+2. The exact multivariate real-root path did have a smaller solver-local polling
+   gap inside `MultiPoly` arithmetic, exact division, determinant expansion,
+   projection, and rational-cell traversal. Those operations are in
+   `axeyum-solver`, not `axeyum-ir`, so the existing thread-local deadline can be
+   polled without a cross-crate callback or foundational API change.
+
+ADR-0377 therefore makes the dispatch deadline query-global, recomputes the
+remaining duration before every sequential real/NIA route, and adds inner CAD
+polls. Optimized 8 GiB-wrapped timings for the exact public row changed as
+follows:
+
+| requested budget | before | after |
+|---:|---:|---:|
+| 250 ms | 1.10 s | 0.30 s |
+| 500 ms | 1.60 s | 0.60 s |
+| 1 s | 2.10 s | 1.10 s |
+| 3 s | 4.11 s | 3.10 s |
+
+The remaining approximately 0.10 s is process/wrapper and bounded cleanup
+overhead, not another fresh solver budget. A committed debug regression requires
+the 250 ms request to return in under 1 s and to report
+`Unknown(Timeout)`; it currently completes in 0.28 s.
+
+The same slice also closes the independent QF_LRA abort class. `AtomBuilder`
+previously retained every intermediate dense `LinExpr`; nested sums could retain
+quadratic coefficient maps and the 1,492-atom `sc-39.base.cvc.smt2` experiment
+aborted at 8 GiB when the front-door cap was raised. LRA construction now counts
+normalization nodes, coefficient work, and cached coefficient entries under
+deterministic ceilings and returns `Unknown(ResourceLimit)` on exhaustion. The
+existing 1,024-atom front-door cap remains; the new defense protects direct and
+sibling constructors rather than just that one dispatcher.
+
+The sections below are retained as historical evidence for the earlier partial
+fix and its dead-end probes. Their claim that a foundational callback was
+required is superseded by the measured resolution above.
 
 ## The problem
 
@@ -37,7 +82,7 @@ changed verdict (verified: `nra_differential_fuzz` DISAGREE=0, frontier 8/8,
 corpus_regression, `--lib` all green). Effect: `ext-rew` 16.2s → 9.6s @ 3s,
 `nl-eq-infer` now honors its budget.
 
-## The residual, and why it resists a clean fix
+## Historical residual diagnosis (superseded)
 
 `ext-rew` still overruns (~9.6s @ 3s) and `rewriting-sums` (~6.4s @ 3s). The
 remaining cost is a **single fixed-cost computation *inside* a function**, not at

@@ -431,3 +431,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [0374](adr-0374-bool-free-symbols-in-quantified-bv-certificates.md) | Admit Bool free symbols in quantified-BV model certificates and certify skolemized negated universals | accepted |
 | [0375](adr-0375-difference-logic-decision-procedure.md) | Difference logic as a first-class fragment, with conjunctive Farkas evidence | accepted |
 | [0376](adr-0376-integer-literals-wider-than-i128.md) | Integer literals wider than `i128` — measured non-cause, deferred IR widening | deferred |
+| [0377](adr-0377-shared-arithmetic-deadlines-and-normalization-ceilings.md) | Share one arithmetic deadline across fallback routes and bound LRA normalization deterministically | accepted |

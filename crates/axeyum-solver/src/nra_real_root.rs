@@ -1958,6 +1958,9 @@ impl MultiPoly {
     /// Insert `coeff * monomial`, merging into any existing term and dropping a
     /// resulting zero coefficient. `None` on overflow.
     fn add_term(&mut self, key: MonoKey, coeff: Rational) -> Option<()> {
+        if isolate_deadline_reached() {
+            return None;
+        }
         if coeff.is_zero() {
             return Some(());
         }
@@ -1988,6 +1991,9 @@ impl MultiPoly {
     fn neg(&self) -> Option<Self> {
         let mut out = MultiPoly::zero();
         for (k, &c) in &self.terms {
+            if isolate_deadline_reached() {
+                return None;
+            }
             out.terms.insert(k.clone(), c.checked_neg()?);
         }
         Some(out)
@@ -2001,6 +2007,9 @@ impl MultiPoly {
         let mut out = MultiPoly::zero();
         for (ka, &ca) in &self.terms {
             for (kb, &cb) in &other.terms {
+                if isolate_deadline_reached() {
+                    return None;
+                }
                 let coeff = ca.checked_mul(cb)?;
                 let key = mul_mono(ka, kb)?;
                 // Total-degree guard.
@@ -2051,6 +2060,9 @@ impl MultiPoly {
     fn substitute(&self, var: SymbolId, repl: &MultiPoly) -> Option<Self> {
         let mut out = MultiPoly::zero();
         for (key, &coeff) in &self.terms {
+            if isolate_deadline_reached() {
+                return None;
+            }
             // Split the monomial into the `var^e` factor and the rest.
             let mut exp = 0u32;
             let mut rest: MonoKey = Vec::new();
@@ -2069,6 +2081,9 @@ impl MultiPoly {
                 factor = factor.mul(&rp)?;
             }
             for _ in 0..exp {
+                if isolate_deadline_reached() {
+                    return None;
+                }
                 factor = factor.mul(repl)?;
             }
             out = out.add(&factor)?;
@@ -3693,6 +3708,9 @@ fn visit_rational_cells(
     selection: RationalCellSelection,
     visit: &mut dyn FnMut(&SamplePoint) -> Option<Visit>,
 ) -> Option<bool> {
+    if isolate_deadline_reached() {
+        return None;
+    }
     if vars.is_empty() {
         budget.charge()?;
         return Some(matches!(visit(partial)?, Visit::Stop));
@@ -3701,6 +3719,9 @@ fn visit_rational_cells(
         let var = *vars.iter().next().unwrap();
         let mut roots: Vec<Root> = Vec::new();
         for p in polys {
+            if isolate_deadline_reached() {
+                return None;
+            }
             if degree_in(p, var) == 0 {
                 continue;
             }
@@ -3713,6 +3734,9 @@ fn visit_rational_cells(
         let crit = dedup_sorted_roots(&roots)?;
         let samples = selection.samples(&crit)?;
         for s in samples {
+            if isolate_deadline_reached() {
+                return None;
+            }
             budget.charge()?;
             let mut pt = partial.clone();
             pt.insert(var, s);
@@ -3735,8 +3759,14 @@ fn visit_rational_cells(
         budget,
         selection,
         &mut |base_pt| {
+            if isolate_deadline_reached() {
+                return None;
+            }
             let mut roots: Vec<Root> = Vec::new();
             for p in polys {
+                if isolate_deadline_reached() {
+                    return None;
+                }
                 if degree_in(p, elim) == 0 {
                     continue;
                 }
@@ -3753,6 +3783,9 @@ fn visit_rational_cells(
             let crit = dedup_sorted_roots(&roots)?;
             let samples = selection.samples(&crit)?;
             for s in samples {
+                if isolate_deadline_reached() {
+                    return None;
+                }
                 budget.charge()?;
                 let mut pt = base_pt.clone();
                 pt.insert(elim, s);
@@ -3805,6 +3838,9 @@ fn project_strict(
     let polys: &[MultiPoly] = &split;
     let mut proj: Vec<MultiPoly> = Vec::new();
     for p in polys {
+        if isolate_deadline_reached() {
+            return None;
+        }
         if degree_in(p, elim) == 0 {
             // Constant in `elim`: its zero set is e-independent and IS a critical
             // locus in `rest` (the strict atom can flip across it). Keep it whole so
@@ -3836,6 +3872,9 @@ fn project_strict(
     // Pairwise resultants Res_elim(p, q).
     for i in 0..polys.len() {
         for j in (i + 1)..polys.len() {
+            if isolate_deadline_reached() {
+                return None;
+            }
             if degree_in(&polys[i], elim) == 0 || degree_in(&polys[j], elim) == 0 {
                 continue; // a constant-in-elim factor shares no e-root to track
             }
@@ -3850,6 +3889,9 @@ fn project_strict(
     // verify so the recursion stays well-formed (defense-in-depth — the resultant
     // already eliminates `elim`, and the inputs are restricted to `vars`).
     for q in &proj {
+        if isolate_deadline_reached() {
+            return None;
+        }
         let qv = q.vars();
         if !qv.is_subset(rest) {
             return None;
@@ -4085,6 +4127,9 @@ fn multipoly_exact_divide(dividend: &MultiPoly, divisor: &MultiPoly) -> Option<M
         .saturating_mul(dividend.terms.len().max(1))
         .saturating_add(1)
     {
+        if isolate_deadline_reached() {
+            return None;
+        }
         let Some((rlead_key, rlead_coeff)) = multipoly_leading_term_grlex(&remainder) else {
             // Remainder is zero ⇒ exact division succeeded.
             return Some(quotient);
@@ -4125,9 +4170,18 @@ fn coprime_split(polys: &[MultiPoly]) -> Vec<MultiPoly> {
         }
     }
     for _ in 0..MAX_COPRIME_SPLIT_ITERS {
+        // Returning the current set is sound: every completed split preserves the
+        // zero-set arrangement, while an unfinished split can only make a later
+        // resultant decline on a shared factor.
+        if isolate_deadline_reached() {
+            return set;
+        }
         let mut split_at: Option<(usize, MultiPoly)> = None;
         'search: for i in 0..set.len() {
             for j in 0..set.len() {
+                if isolate_deadline_reached() {
+                    return set;
+                }
                 if i == j {
                     continue;
                 }
@@ -4166,6 +4220,9 @@ fn coprime_split(polys: &[MultiPoly]) -> Vec<MultiPoly> {
 /// permutation expansion (no division — `MultiPoly` is not a field). Bounded by the
 /// caller's dimension cap. `None` on overflow during the ring arithmetic.
 fn multipoly_determinant(mat: &[Vec<MultiPoly>]) -> Option<MultiPoly> {
+    if isolate_deadline_reached() {
+        return None;
+    }
     let n = mat.len();
     if n == 0 {
         return Some(MultiPoly::constant(Rational::integer(1)));
@@ -4190,11 +4247,17 @@ fn multipoly_det_rec(
     parity: bool,
     acc: &mut MultiPoly,
 ) -> Option<()> {
+    if isolate_deadline_reached() {
+        return None;
+    }
     let n = mat.len();
     if row == n {
         // Product of the chosen entries along the permutation.
         let mut prod = MultiPoly::constant(Rational::integer(1));
         for (r, &c) in perm.iter().enumerate() {
+            if isolate_deadline_reached() {
+                return None;
+            }
             // An early-zero product short-circuits (the zero MultiPoly absorbs).
             if prod.is_zero() {
                 break;
@@ -4211,6 +4274,9 @@ fn multipoly_det_rec(
     // flips once per already-used column with a LARGER index (standard transposition
     // parity for building a permutation left-to-right).
     for col in 0..n {
+        if isolate_deadline_reached() {
+            return None;
+        }
         if col_used[col] {
             continue;
         }

@@ -36,6 +36,14 @@ const WIDE_AUFBV_DIVISION: &str = include_str!(concat!(
     "cli__regress0__unconstrained__array1.smt2"
 ));
 
+/// Public `QF_NIA` regression whose nonlinear-real relaxation and subsequent `NIA`
+/// linearization used to receive independent fresh copies of the caller timeout.
+const NIA_SEQUENTIAL_BUDGET_RESET: &str = include_str!(concat!(
+    env!("CARGO_MANIFEST_DIR"),
+    "/../../corpus/public-curated/non-incremental/QF_NIA/cvc5-regress-clean/",
+    "cli__regress1__nl__ext-rew-aggr-test.smt2"
+));
+
 const ADMITTED_AUFBV_DIVISION: &str = r"
 (set-logic QF_AUFBV)
 (declare-fun i () (_ BitVec 16))
@@ -133,6 +141,33 @@ fn admitted_wide_divisions_expire_during_lowering() {
     assert!(
         matches!(array, CheckResult::Unknown(ref reason) if reason.kind == UnknownKind::Timeout),
         "admitted canonical divider should time out during lowering, got {array:?}"
+    );
+}
+
+#[test]
+fn nonlinear_integer_routes_share_one_absolute_deadline() {
+    let budget = Duration::from_millis(250);
+    let cfg = SolverConfig::default().with_timeout(budget);
+    let mut script = parse_script(NIA_SEQUENTIAL_BUDGET_RESET).expect("public QF_NIA row parses");
+    let assertions = script.checked_flat_view().to_vec();
+
+    let start = Instant::now();
+    let result = check_auto(&mut script.arena, &assertions, &cfg)
+        .expect("automatic QF_NIA dispatch has no operational error");
+    let elapsed = start.elapsed();
+
+    // Before the shared deadline, the real relaxation consumed about 0.6 s and
+    // NIA linearization then consumed another fresh 0.5 s: 1.1 s total for this
+    // 250 ms request in an optimized build. Four times the deliberately tiny
+    // budget leaves ample loaded-CI slack while still rejecting that reset.
+    assert!(
+        elapsed < budget * 4,
+        "sequential QF_NIA routes reset a {budget:?} budget: elapsed {elapsed:?}, \
+         result {result:?}"
+    );
+    assert!(
+        matches!(result, CheckResult::Unknown(ref reason) if reason.kind == UnknownKind::Timeout),
+        "the deliberately exhausted QF_NIA budget should be a first-class timeout: {result:?}"
     );
 }
 
