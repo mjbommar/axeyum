@@ -378,8 +378,8 @@ impl LraTheory {
     ///
     /// If a caller uses this low-level convenience constructor on an adversarial
     /// atom set that exceeds the deterministic normalization ceiling. Production
-    /// solver routes use [`Self::try_new_with_deadline`] and return
-    /// `Unknown(ResourceLimit)` instead.
+    /// solver routes use the crate-private `try_new_with_deadline` constructor
+    /// and return `Unknown(ResourceLimit)` instead.
     #[must_use]
     pub fn new(arena: &TermArena, atom_terms: &[TermId]) -> Self {
         Self::try_new_with_deadline(arena, atom_terms, None)
