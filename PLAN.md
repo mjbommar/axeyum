@@ -6,14 +6,14 @@ first and update it before ending a project-level work session.
 
 - Last consolidated: **2026-08-07**
 - Integrated repository state audited at:
-  `6d881816c5669d049a97b62d6e495109b53b876b`; the latest solver-code gate
+  `6be32cb4a56e5384004715884f2960507dfa3a22`; the latest solver-code gate
   remains `3eb7eac442c64aee4b809ee059bf59d93b6160ee`, including A3 merge
   `0c31baf979d09270497b5512819fa6e8ed927de7`
 - Expected handoff state: clean local `main` equal to `origin/main`
-- Latest integrated code increment: A3 topic `ee5042deea762bb605a0c136f795399aaae47b97`
-  via merge `0c31baf979d09270497b5512819fa6e8ed927de7`
-- Latest retained-result increment: `3576e6739` (A3 explanation partition and
-  exact 52-row budget repartition)
+- Latest integrated increment: A3 attribution topic `2269488ef0318d8e8f88d4c147b2c148860d3e90`
+  via merge `6be32cb4a56e5384004715884f2960507dfa3a22`
+- Latest retained-result increment: `2269488ef` (bounded A3 clause-estimate
+  attribution closed at its exact pipeline-record gate)
 - Latest integrated A3 code increments: bounded SMT-LIB `distinct` expansion at
   `63c82a6ef`, typed arithmetic-model reconstruction at `4ff9a82c6`, and
   deterministic string/integer coupling at `db7b426e8`
@@ -39,7 +39,7 @@ checker/importer, and several consumers. It is not yet a drop-in Z3 replacement
 or a replacement for the Lean system.
 
 The audited integrated repository state is
-`6d881816c5669d049a97b62d6e495109b53b876b`; the A3 relevance-ladder and budget
+`6be32cb4a56e5384004715884f2960507dfa3a22`; the A3 relevance-ladder and budget
 partition work is documentation-only and does not alter the solver-code
 evidence at `3eb7eac442`. Local `main` is clean and
 exactly equal to `origin/main`. Topic `ee5042dee` is pushed and exactly equals
@@ -358,21 +358,16 @@ here as closed evidence boundaries. A3 remains incomplete, but all currently
 preregistered bounded mechanisms are closed negatively; A4 is now the first
 active item.
 
-**Immediate action.** Start A4 by partitioning the exact 86-row QF_UFLIA
-reference-only residual among quantifier discovery, UF model construction,
-arithmetic participation, replay, and budget routing. Freeze the current
-94/200 versus 180/200 zero-disagreement entry, exact population/sidecar hashes,
-trace protocol, work bounds, and complete-record predicate before running a
-census or editing solver code. A3's reconstruction, large-core deletion,
-relevance activation, and clause-estimate attribution routes are all closed
-negative evidence; do not revive them, raise a cap, target the UNSAT
-combined-timeout/model-overflow tail, or run a QF_NIA 200-row sweep from those
-results.
-A2 is integrated and combined-main green, but this
-does not self-authorize C0 or live F2. No host probe, sentinel, NAS mutation, F3
-acceptance, allocation, or solver fleet is permitted. A wrong
-verdict, crash, data-loss risk, invalid gate, or renewed resource overrun still
-preempts the queue.
+**Immediate action.** Recover A4's exact evidence boundary before classifying
+QF_UFLIA. The ledger names `bench-results/parity-details/QF_UFLIA.tsv` and
+records SHA-256 `921299a9…`, but that sidecar was never committed and no repo,
+stash, or NAS copy remains. Do not infer the 86 rows from aggregate prose.
+Preregister a current-main capture over list SHA-256 `f88e6789…` that commits an
+exact-path sidecar plus complete route traces and must reproduce 94/200 versus
+180/200, 86 reference-only, and zero disagreements or stop. Freeze budgets and
+the complete-record predicate before execution or solver edits. A3's negative
+routes remain closed. A2's green readiness still does not authorize C0/F2,
+host/NAS mutation, allocation, or a solver fleet. P0 failures preempt the queue.
 
 ### A1 — Complete arithmetic deadline and resource enforcement (`DONE`, P0)
 
@@ -485,8 +480,10 @@ failures, and do not raise general caps to convert time into apparent breadth.
 **Why now.** QF_UFLIA is 94/180 (52.2%) with zero Axeyum-only decisions and 86
 reference-only cases, making it the clearest combined-theory depth gap.
 
-**Next slice.** Partition the exact residuals among quantifier discovery, UF
-model construction, arithmetic participation, replay, and budget routing.
+**Next slice.** Regenerate and retain the missing exact-path sidecar together
+with complete route traces, then partition only a validated 86-row residual
+among quantifier discovery, UF model construction, arithmetic participation,
+replay, and budget routing.
 
 **Exit.** One preregistered, replay-checked cluster improves the clean full-list
 result without losing any of the 94 decisions or weakening retained controls.
@@ -623,11 +620,11 @@ or remove dirty/unmerged state to meet a free-space target.
 
 | Workstream | State | Current boundary / next action |
 |---|---|---|
-| Integration and gates | `DONE`; current checkpoint | Local and remote `main` equal `6d881816c`; topic `c92155454` remains remote. Broad stages passed, then the scoreboard rejected five in-run frontier rewrites. Exact restoration plus parity-docs, authority, links, and clean-tree checks passed. Prior docs `31198041045` are green; the latest hosted run remains a separately verified state. |
+| Integration and gates | `DONE`; current checkpoint | Local and remote `main` equal `6be32cb4a`; A3 attribution topic `2269488ef` is pushed and merged. Its exact topic and merge-SHA pre-push gates plus focused post-merge tests are green. Hosted CI remains separate evidence. |
 | Arithmetic deadline reliability | `DONE` | Shared deadline, CAD polls, LRA ceilings, bounded DL probing, exact resume identity, and six fresh retained divisions are complete; see the 2026-08-06 closure note. |
 | Full-library measurement | `WIP`; A2 readiness `DONE` | The R1--R5 readiness stack is integrated by `8ed5ad089` and focused/aggregate/scoped/topic/full-main green; the real registered offline-build smoke passed. No live run, preparation root, or launch authority exists. A later live C0/F2 step requires separate review. |
 | QF_NIA breadth | `WIP`, yielded | Current clean result remains 34/200 versus 89/200. Reconstruction, large-core deletion, relevance activation, and bounded clause-estimate attribution are closed negatively without production solver code. The final diagnostic failed its exact pipeline-boundary record gate; no mechanism or 200-row run is authorized and the 64,000,000 ceiling remains. Move to A4 unless independent new NIA evidence appears. |
-| QF_UFLIA breadth | `WIP` | 94/180; A4 owns causal residual partition. |
+| QF_UFLIA breadth | `WIP` | 94/180; A4 first regenerates the absent exact-path sidecar/trace boundary, then owns causal residual partition. |
 | LRA/IDL/RDL | `WIP` | Current results are 86/146, 68/124, and 105/155; A5 owns cross-division consolidation. |
 | QF_BV/QF_SLIA/UF/QF_ABV | `WIP`, strong selected cells | Preserve current ledgers; do not prioritize small score gains above A2–A6. |
 | Evidence and Lean reconstruction | `WIP` | A6 and A9; distinct certificate/check/reconstruction claims. |
