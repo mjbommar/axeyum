@@ -4,7 +4,7 @@
   "source_identities": [
     {
       "path": ".github/workflows/ci.yml",
-      "sha256": "7834ca9fb98bf48a4b328c022e4b4a80c69fb39a8188069c28f7d0a314a98c03"
+      "sha256": "5da5d948ef180bea8c01f6f5c30dce81281ec8a9c0e5d5d2335154793a4ad2d0"
     },
     {
       "path": "docs/plan/generated/lean-execution-evidence.md",
