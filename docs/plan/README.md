@@ -21,10 +21,14 @@ and only then a replay-preserving repair over seven SAT targets and six UNSAT
 near-miss controls. The first
 [`model-reconstruction diagnostic result`](qf-nia-a3-model-reconstruction-diagnostic-v1-result-2026-08-07.md)
 removes a lossy non-SAT-to-empty-model fallback without claiming a breadth gain.
-The next bounded experiment is the
+The rejected bounded experiment is the
 [`probe-model reuse preregistration`](qf-nia-a3-probe-model-reuse-preregistration-v1-2026-08-07.md):
 reuse only a concrete model returned for the exact selected literal slice;
-`Unknown` remains model-free and fail-closed.
+`Unknown` remains model-free and fail-closed. Its
+[`result`](qf-nia-a3-probe-model-reuse-v1-result-2026-08-07.md) records zero
+target gains, no wrong control changes, removal of the temporary code, and the
+new split between large DPLL/core-search cases and model-reconstruction
+deadline cases.
 
 ## Layout
 

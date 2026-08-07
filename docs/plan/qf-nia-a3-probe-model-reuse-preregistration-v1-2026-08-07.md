@@ -85,3 +85,10 @@ Stop on any SAT replay failure, reference-UNSAT-to-SAT change, prior-decision
 loss, memory ceiling, general cap increase, new deadline, or model reuse across
 a different literal slice.
 
+## Disposition
+
+The experiment was executed and rejected: zero of seven reference-SAT targets
+improved, all six reference-UNSAT controls remained non-SAT, and the temporary
+implementation was removed. No 200-row run was authorized. See the
+[`v1 result`](qf-nia-a3-probe-model-reuse-v1-result-2026-08-07.md) for exact
+artifact hashes, the residual causal split, and the retained-code boundary.
