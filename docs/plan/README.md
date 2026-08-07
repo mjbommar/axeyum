@@ -29,13 +29,24 @@ reuse only a concrete model returned for the exact selected literal slice;
 target gains, no wrong control changes, removal of the temporary code, and the
 new split between large DPLL/core-search cases and model-reconstruction
 deadline cases.
-The active continuation is the
+The next bounded diagnostic was the
 [`two-case reconstruction-deadline cluster preregistration`](qf-nia-a3-reconstruction-deadline-cluster-preregistration-v1-2026-08-07.md).
 Fresh exact-main traces keep `From_T2…p20015` and `SAT14/571` at the same typed
 integer-model reconstruction deadline in 4/4 observations each; the apparent
 third member is load-sensitive and remains a routing control. The first
-authorized increment is bounded diagnostic attribution, not a cap or route
-change.
+authorized increment was bounded diagnostic attribution, not a cap or route
+change. Its
+[`result`](qf-nia-a3-reconstruction-deadline-cluster-v1-result-2026-08-07.md)
+rejects the cluster: both reconstruction calls started after deadline, dense
+Gomory was size-inadmissible, B&B ran zero nodes, and a follow-up root-repair
+discriminator was route-unstable. No solver policy or temporary code is
+retained; A3 returns to direct attribution.
+That partition selects the
+[`large-core cluster preregistration`](qf-nia-a3-large-core-cluster-preregistration-v1-2026-08-07.md):
+`SAT14/1051` and `SAT14/1280` repeatedly emit hundreds of broad theory cores,
+while three differently routed SAT rows and six reference-UNSAT rows remain
+controls. Only verdict-neutral attribution is authorized until repeated
+size-admission and downstream-cause gates pass.
 
 ## Layout
 

@@ -5,8 +5,9 @@ for current project status, ordered work, blockers, and resume guidance. Read it
 first and update it before ending a project-level work session.
 
 - Last consolidated: **2026-08-07**
-- Integrated code state audited at:
-  `3eb7eac442c64aee4b809ee059bf59d93b6160ee`, including A3 merge
+- Integrated repository state audited at:
+  `bd413357cd967aed0f2f5a1281ca0a6a8f9a276b`; the latest solver-code gate
+  remains `3eb7eac442c64aee4b809ee059bf59d93b6160ee`, including A3 merge
   `0c31baf979d09270497b5512819fa6e8ed927de7`
 - Expected handoff state: clean local `main` equal to `origin/main`
 - Latest integrated code increment: A3 topic `ee5042deea762bb605a0c136f795399aaae47b97`
@@ -36,10 +37,10 @@ evidence routes, broad but uneven theory support, an independent Lean-core
 checker/importer, and several consumers. It is not yet a drop-in Z3 replacement
 or a replacement for the Lean system.
 
-The audited integrated code state is
-`3eb7eac442c64aee4b809ee059bf59d93b6160ee`; its later PLAN-only handoff does
-not alter the code evidence. Local `main` is clean and exactly equal to
-`origin/main`. Topic `ee5042dee` is pushed and exactly equals
+The audited integrated repository state is
+`bd413357cd967aed0f2f5a1281ca0a6a8f9a276b`; its later CI and PLAN changes do
+not alter the solver-code evidence at `3eb7eac442`. Local `main` is clean and
+exactly equal to `origin/main`. Topic `ee5042dee` is pushed and exactly equals
 `origin/agent/nia/a3-census`. The merge passed one uninterrupted
 external-frontier `CARGO_BUILD_JOBS=2 just check` with exit 0: format, stable
 all-target Clippy, every workspace test and doctest, 1,078 solver-library tests,
@@ -50,12 +51,13 @@ generated resources, rules-as-code, the 165-test resume aggregate in 46.002 s
 with one expected skip, every Lean/process-free contract, parity docs, plan
 authority, and links. Its five 20 KiB external frontier artifacts were removed
 after evidence capture. Hosted docs run `31190516093` and CI run `31190517748`
-started at this exact pushed SHA and are terminal failures only in the duplicated
-docs/resource job; every non-doc CI job is green. The pinned `just` action
-succeeded, but installed into a runner-temporary path excluded by the credited
-readiness environment. Topic commit `259797459` copies that pinned regular
-executable into the registered account Cargo bin and validates exact version
-1.57.0; remote confirmation is pending.
+failed only in the duplicated docs/resource job because the pinned `just`
+action installed outside the credited PATH; every non-doc CI job was green.
+Commit `259797459` copies that pinned regular executable into the registered
+account Cargo bin and validates exact version 1.57.0. Merge `bd413357c` contains
+the repair and A3 diagnostic preregistration. Exact-SHA docs run `31192792512`
+and CI run `31192792245` are terminal green, including the formerly failing
+registered full-preparation resume gate.
 Local `main` and `origin/main` are equal at handoff. The IDL repair branch completed terminal
 `CARGO_BUILD_JOBS=2 just check`; merge `198f2dc1b` passed its immutable-SHA
 pre-push workspace-library, progress-frontier, and evidence gates. Integrated
@@ -80,12 +82,12 @@ the complete local 165-test resume aggregate then passed with one expected
 skip. Exact-SHA docs run `31190516093` and CI run `31190517748` both failed at
 the later registered-executable lookup: 10 errors and two assertion failures,
 all caused by `just` being outside the contract's canonical PATH. This confirms
-that provisioning alone was insufficient. Topic repair `259797459` installs a
+that provisioning alone was insufficient. Repair `259797459` installs a
 regular copy at `$HOME/.cargo/bin/just` in both duplicated jobs; YAML,
 actionlint (apart from the repository's known future runner-label catalogue),
-an isolated install smoke, and complete-parity generation are green. Remote
-confirmation remains pending. No local solver or measurement process is
-running.
+an isolated install smoke, complete-parity generation, and both exact-SHA
+hosted runs at `bd413357c` are green. No retained solver or measurement process
+is running.
 
 A3 is **WIP** on `agent/nia/a3-census`. The repaired complete 67-row census
 classifies 52 NIA-linearization budget declines, 13 former generic model-replay
@@ -98,6 +100,11 @@ probe-model reuse experiment recovered zero of seven SAT targets, kept six
 UNSAT controls non-SAT, and was rejected without retaining its code or
 authorizing a 200-row run. The residuals are now split between five large
 DPLL/core-search targets and two integer-model reconstruction-deadline targets.
+The two-case reconstruction cluster is now rejected: both valid diagnostic
+observations entered reconstruction after the shared deadline, dense Gomory was
+size-inadmissible, and B&B ran zero nodes; a follow-up root-repair discriminator
+shifted among earlier load-sensitive stops and never produced stable mechanism
+evidence. No cap, deadline, route-order, or solver-code change was retained.
 The first aggregate A3 gate exposed one load-sensitive string/integer fixture:
 a hidden two-second default deadline could return `unknown` before the known
 `i = 500` witness under aggregate CPU contention. Commit `db7b426e8` removes
@@ -124,7 +131,8 @@ with one expected live-host skip; every Lean/process-free contract; parity docs;
 plan authority; and links. The five 20 KiB external frontier artifacts and their
 pointer were removed after recording the result. Topic `ee5042dee` was then
 pushed, merged as `0c31baf97`, and independently passed the combined-main gate
-described above. Exact-SHA hosted docs and CI remain separately in progress.
+described above. Exact-SHA hosted docs run `31192792512` and CI run
+`31192792245` at later merge `bd413357c` are separately terminal green.
 
 A2 is **DONE** on current main. The old
 `agent/smtcomp/full-preparation-live` head `3e53ca631` is 401 commits behind
@@ -221,17 +229,22 @@ A1 runs were fresh and non-resumed. Full evidence, sidecar hashes, rejected IDL
 policies, and gate separation are retained in
 [`docs/plan/arithmetic-a1-retained-result-2026-08-06.md`](docs/plan/arithmetic-a1-retained-result-2026-08-06.md).
 
-Disk cleanup removed only reproducible Cargo artifacts and clean, inactive
-worktree checkout directories; dirty worktrees and every branch were preserved.
+Disk cleanup first removed only reproducible Cargo artifacts and clean,
+inactive worktree checkout directories; dirty worktrees and every branch were
+preserved.
 The 2026-08-07 follow-up removed 14 additional clean checkouts, retained their
 13 unmerged branch tips, and reduced the registered worktree count from 39 to
 25. After A3 was pushed, merged, and fully gated, its clean 127 GiB worktree was
 retired and pruned; `cargo clean` then removed 70,833 files / 122.6 GiB from the
-main worktree. The registered count is 25 and current free space is about 934
-GiB on `/` and 27 GiB on the 62 GiB `/tmp` tmpfs. Dirty worktrees, unmerged
-branch tips, retained A3 census
-evidence, unrelated temporary projects, and legacy build directories that
-failed Cargo's cache-tag safety check were deliberately left untouched.
+main worktree. A later user-authorized cleanup salvaged every dirty delta from
+24 remaining inactive worktrees into path-labelled Git stashes, kept every
+branch tip, removed those exact checkout directories, pruned the registrations,
+and removed one inactive 1.7 GiB Axeyum session directory from `/tmp` after
+verifying it had no open file descriptors. Only clean `main` and the active A3
+diagnostic worktree remain registered. Current free space is about 929 GiB on
+`/` and 28 GiB on the 62 GiB `/tmp` tmpfs. Retained A3 census evidence,
+unrelated temporary projects, and the active A3 release target were deliberately
+left untouched.
 Four empty A3 frontier directories and their pointer file were removed after
 the failed aggregate attempts; they contained no retained evidence.
 
@@ -305,12 +318,15 @@ risk, or invalid gate. Those are P0 and preempt the queue.
 The ordered ten-item programme remains A2 through A11. A1 and A2 are retained
 here as closed evidence boundaries; A3 is now the first active item.
 
-**Immediate action.** Push and remotely confirm the registered-`just` path
-repair at `259797459`; the terminal exact-SHA docs/CI failures preempt solver
-credit until that duplicated job is green. The stable two-case integer-model
-reconstruction-deadline cluster is now preregistered; after the CI repair is
-confirmed, perform its bounded diagnostic attribution before any solver policy
-edit. A2 is integrated and combined-main green, but this
+**Immediate action.** The registered-`just` path repair at `259797459` is
+integrated and remotely confirmed by terminal-green docs run `31192792512` and
+CI run `31192792245`. The two-case reconstruction-deadline cluster is rejected
+without retaining solver code. Direct attribution over the five remaining
+reference-SAT DPLL/core-search targets selects a preregistered repeated-large-
+core pair: `SAT14/1051` and `SAT14/1280`. Add only the authorized
+verdict-neutral size-admission/deadline and downstream-stop counters; require
+two of three reproductions per row before selecting an implementation
+mechanism. A2 is integrated and combined-main green, but this
 does not self-authorize C0 or live F2. No host probe, sentinel, NAS mutation, F3
 acceptance, allocation, or solver fleet is permitted. A wrong
 verdict, crash, data-loss risk, invalid gate, or renewed resource overrun still
@@ -375,16 +391,24 @@ are repaired. Exact topic `3586c41d9` passed one uninterrupted external-frontier
 merge `0c31baf97`, and combined-main `just check` are complete and green.
 Exact-SHA docs run `31190516093` and CI run `31190517748` are terminal failures
 at the registered-`just` path lookup, while every non-doc CI job is green.
-Repair `259797459` is locally checked but not remotely confirmed and must not be
-conflated with the green solver gates.
+Repair `259797459` is integrated at `bd413357c`; exact-SHA docs run
+`31192792512` and CI run `31192792245` are terminal green. This remote gate is
+separate from the green solver gates.
+The reconstruction-deadline diagnostic then measured both targets with
+size-inadmissible dense Gomory and zero B&B nodes after deadline expiry. Its
+follow-up root-repair discriminator was route-unstable under host contention,
+so the cluster was rejected and every temporary solver edit removed. See the
+[`v1 result`](docs/plan/qf-nia-a3-reconstruction-deadline-cluster-v1-result-2026-08-07.md).
 
 **Next slice.** The
-[`reconstruction-deadline cluster preregistration`](docs/plan/qf-nia-a3-reconstruction-deadline-cluster-preregistration-v1-2026-08-07.md)
-selects the two stable targets after 4/4 direct-trace reproductions each. Add
-bounded diagnostic statistics to distinguish Gomory, branch-and-bound, and
-integral-model repair behavior. Retain SAT and UNSAT near-miss controls and
-change no general cap, deadline, or route order. A measured implementation
-mechanism requires a second preregistration.
+[`reconstruction-deadline cluster result`](docs/plan/qf-nia-a3-reconstruction-deadline-cluster-v1-result-2026-08-07.md)
+closes that population negatively. The
+[`large-core cluster preregistration`](docs/plan/qf-nia-a3-large-core-cluster-preregistration-v1-2026-08-07.md)
+selects `SAT14/1051` and `SAT14/1280` from the five remaining search/core rows.
+Split `Large` cores by the existing 128-atom admission guard versus deadline,
+record bounded core-size histograms and terminal stage, and require repeated
+shared evidence before a second implementation preregistration. Do not revive
+probe-model reuse, reserve reconstruction time, or change a core policy yet.
 
 **Exit.** One preregistered cluster improves a fresh whole-list result without
 losing any of the 34 decisions; all SAT answers replay on the original terms and
@@ -514,10 +538,11 @@ before worktree removal and requires explicit review for every dirty, unmerged,
 detached, or cache-tag-missing path.
 
 **Completed checkpoint.** The manual bounded cleanup and post-A3 retirement
-proved the safety procedure: exact clean merged worktrees and reproducible Cargo
-targets were removed, all dirty or unmerged work and all branches were retained,
-the registered count fell from 39 to 25, and `/` free space rose to about 934
-GiB. Automation and fixture coverage remain open.
+proved the safety procedure for clean merged worktrees and reproducible Cargo
+targets. The later authorized cleanup preserved all 24 dirty deltas as labelled
+stashes, retained every branch tip, removed the inactive checkout directories,
+and left two registered worktrees. `/` currently has about 929 GiB free and the
+`/tmp` tmpfs about 28 GiB free. Automation and fixture coverage remain open.
 
 **Exit.** The inventory is deterministic and tested against dirty, merged,
 unmerged, detached, missing-target, and malformed-cache fixtures. A dry run
@@ -531,10 +556,10 @@ or remove dirty/unmerged state to meet a free-space target.
 
 | Workstream | State | Current boundary / next action |
 |---|---|---|
-| Integration and gates | `WIP`; remote docs repair | Local `main` and `origin/main` are identical. Topic `ee5042dee` equals its remote, and merge `0c31baf97` passed the complete external-frontier `just check` with exit 0. Exact-code docs `31190516093` and CI `31190517748` failed only because setup-just's temporary install lay outside the credited PATH; every non-doc CI job passed. Topic repair `259797459` installs the pinned regular executable at the registered path and awaits remote confirmation. |
+| Integration and gates | `DONE`; current checkpoint | Local `main` and `origin/main` are identical at `bd413357c`. Topic `ee5042dee` equals its remote, and merge `0c31baf97` passed the complete external-frontier `just check` with exit 0. Exact-code docs `31190516093` and CI `31190517748` failed only because setup-just's temporary install lay outside the credited PATH; every non-doc CI job passed. Repair `259797459` installs the pinned regular executable at the registered path, and exact-SHA docs `31192792512` plus CI `31192792245` are terminal green. |
 | Arithmetic deadline reliability | `DONE` | Shared deadline, CAD polls, LRA ceilings, bounded DL probing, exact resume identity, and six fresh retained divisions are complete; see the 2026-08-06 closure note. |
 | Full-library measurement | `WIP`; A2 readiness `DONE` | The R1--R5 readiness stack is integrated by `8ed5ad089` and focused/aggregate/scoped/topic/full-main green; the real registered offline-build smoke passed. No live run, preparation root, or launch authority exists. A later live C0/F2 step requires separate review. |
-| QF_NIA breadth | `WIP` | Current clean result remains 34/200 versus 89/200. The complete 67-case census, giant-`distinct` resource repair, reconstruction-outcome repair, and rejected zero-gain probe-model experiment are integrated. The stable two-case reconstruction-deadline cluster is preregistered; next run bounded diagnostic attribution before selecting a mechanism. |
+| QF_NIA breadth | `WIP` | Current clean result remains 34/200 versus 89/200. The complete 67-case census, giant-`distinct` resource repair, reconstruction-outcome repair, and rejected zero-gain probe-model experiment are integrated. The two-case reconstruction-deadline cluster is also rejected without retained solver code. Direct attribution selects a preregistered repeated-large-core pair (`SAT14/1051`, `SAT14/1280`); next add only bounded source/reason/size/terminal-stage counters and require two of three reproductions per target before implementation selection. |
 | QF_UFLIA breadth | `WIP` | 94/180; A4 owns causal residual partition. |
 | LRA/IDL/RDL | `WIP` | Current results are 86/146, 68/124, and 105/155; A5 owns cross-division consolidation. |
 | QF_BV/QF_SLIA/UF/QF_ABV | `WIP`, strong selected cells | Preserve current ledgers; do not prioritize small score gains above A2–A6. |
@@ -544,7 +569,7 @@ or remove dirty/unmerged state to meet a free-space target.
 | CAS parity | `BLOCKED` by deliberate pause | Wave-24 code `01d47334` and pause commit `245d8f25` are ancestors of current main. Do not start wave 25 until the user resumes it and retained specialized gate evidence is re-audited. |
 | Consumer apps / verified systems | `WIP`, non-critical path | Existing EVM, verifier, property, reflection, and symbolic-execution slices remain useful; do not preempt A2–A7 without measured demand. |
 | Foundational resources | `WIP`, separate content lane | Keep generated-resource gates green; record only project-level priority changes here. |
-| Worktree and build-cache hygiene | `WIP`, recovered | A11; 25 registered worktrees remain. The clean merged 127 GiB A3 worktree was retired and pruned, and main `cargo clean` removed 122.6 GiB. Dirty and unmerged state was preserved. Current free space is about 934 GiB on `/` and 27 GiB on `/tmp`; old frontier artifacts and pointers were also removed after evidence capture. Next automate the deterministic read-only inventory and exact-target cleanup classification. |
+| Worktree and build-cache hygiene | `WIP`, recovered | A11; only clean `main` and the active dirty A3 diagnostic worktree remain registered. The latest cleanup stored all 24 inactive dirty deltas in labelled stashes, retained their branch tips, removed the checkout directories, and deleted one inactive 1.7 GiB Axeyum session tree from `/tmp`. Current free space is about 929 GiB on `/` and 28 GiB on `/tmp`. Next automate the deterministic read-only inventory and exact-target cleanup classification. |
 
 ## Resume protocol
 
