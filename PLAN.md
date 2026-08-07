@@ -50,7 +50,12 @@ generated resources, rules-as-code, the 165-test resume aggregate in 46.002 s
 with one expected skip, every Lean/process-free contract, parity docs, plan
 authority, and links. Its five 20 KiB external frontier artifacts were removed
 after evidence capture. Hosted docs run `31190516093` and CI run `31190517748`
-started at this exact pushed SHA and remain in progress; they are not yet green.
+started at this exact pushed SHA and are terminal failures only in the duplicated
+docs/resource job; every non-doc CI job is green. The pinned `just` action
+succeeded, but installed into a runner-temporary path excluded by the credited
+readiness environment. Topic commit `259797459` copies that pinned regular
+executable into the registered account Cargo bin and validates exact version
+1.57.0; remote confirmation is pending.
 Local `main` and `origin/main` are equal at handoff. The IDL repair branch completed terminal
 `CARGO_BUILD_JOBS=2 just check`; merge `198f2dc1b` passed its immutable-SHA
 pre-push workspace-library, progress-frontier, and evidence gates. Integrated
@@ -72,9 +77,15 @@ but the hosted docs image did not provide `just`, so 12 fixture tests failed
 before their intended assertions. Integrated commit `9f94e1873` provisions
 exact `just` 1.57.0 through a commit-pinned action in both duplicated docs jobs;
 the complete local 165-test resume aggregate then passed with one expected
-skip. Exact-SHA docs run `31190516093` is the remote confirmation boundary and
-is still in progress, not green. Exact-SHA CI run `31190517748` is separately
-in progress. No local solver or measurement process is running.
+skip. Exact-SHA docs run `31190516093` and CI run `31190517748` both failed at
+the later registered-executable lookup: 10 errors and two assertion failures,
+all caused by `just` being outside the contract's canonical PATH. This confirms
+that provisioning alone was insufficient. Topic repair `259797459` installs a
+regular copy at `$HOME/.cargo/bin/just` in both duplicated jobs; YAML,
+actionlint (apart from the repository's known future runner-label catalogue),
+an isolated install smoke, and complete-parity generation are green. Remote
+confirmation remains pending. No local solver or measurement process is
+running.
 
 A3 is **WIP** on `agent/nia/a3-census`. The repaired complete 67-row census
 classifies 52 NIA-linearization budget declines, 13 former generic model-replay
@@ -294,11 +305,12 @@ risk, or invalid gate. Those are P0 and preempt the queue.
 The ordered ten-item programme remains A2 through A11. A1 and A2 are retained
 here as closed evidence boundaries; A3 is now the first active item.
 
-**Immediate action.** Monitor exact-SHA docs run `31190516093` and CI run
-`31190517748` to terminal state without
-conflating them with the green local gate. Then use direct trace attribution to
-preregister exactly one of the two residual A3 subclusters before another
-solver-policy edit. A2 is integrated and combined-main green, but this
+**Immediate action.** Push and remotely confirm the registered-`just` path
+repair at `259797459`; the terminal exact-SHA docs/CI failures preempt solver
+credit until that duplicated job is green. The stable two-case integer-model
+reconstruction-deadline cluster is now preregistered; after the CI repair is
+confirmed, perform its bounded diagnostic attribution before any solver policy
+edit. A2 is integrated and combined-main green, but this
 does not self-authorize C0 or live F2. No host probe, sentinel, NAS mutation, F3
 acceptance, allocation, or solver fleet is permitted. A wrong
 verdict, crash, data-loss risk, invalid gate, or renewed resource overrun still
@@ -361,14 +373,18 @@ one-field stale generated CI-workflow identity at final parity-docs. Both defect
 are repaired. Exact topic `3586c41d9` passed one uninterrupted external-frontier
 `CARGO_BUILD_JOBS=2 just check` with exit 0 and a clean tracked tree. Topic push,
 merge `0c31baf97`, and combined-main `just check` are complete and green.
-Exact-SHA docs run `31190516093` and CI run `31190517748` are in progress and
-must not be conflated with those local terminal results. PLAN-only handoff
-commits may start a later docs run without changing the code gate boundary.
+Exact-SHA docs run `31190516093` and CI run `31190517748` are terminal failures
+at the registered-`just` path lookup, while every non-doc CI job is green.
+Repair `259797459` is locally checked but not remotely confirmed and must not be
+conflated with the green solver gates.
 
-**Next slice.** After checkpoint integration, use direct trace attribution to
-choose and preregister either the five-case large DPLL/core-search subgroup or
-the two-case integer-model reconstruction-deadline subgroup. Retain SAT and
-UNSAT near-miss controls and change no general cap, deadline, or route order.
+**Next slice.** The
+[`reconstruction-deadline cluster preregistration`](docs/plan/qf-nia-a3-reconstruction-deadline-cluster-preregistration-v1-2026-08-07.md)
+selects the two stable targets after 4/4 direct-trace reproductions each. Add
+bounded diagnostic statistics to distinguish Gomory, branch-and-bound, and
+integral-model repair behavior. Retain SAT and UNSAT near-miss controls and
+change no general cap, deadline, or route order. A measured implementation
+mechanism requires a second preregistration.
 
 **Exit.** One preregistered cluster improves a fresh whole-list result without
 losing any of the 34 decisions; all SAT answers replay on the original terms and
@@ -515,10 +531,10 @@ or remove dirty/unmerged state to meet a free-space target.
 
 | Workstream | State | Current boundary / next action |
 |---|---|---|
-| Integration and gates | `WIP`; code `3eb7eac44` pushed | Local `main` and `origin/main` are identical. Topic `ee5042dee` equals its remote, and merge `0c31baf97` passed the complete external-frontier `just check` with exit 0. Exact-code docs `31190516093` and CI `31190517748` are in progress; terminal remote status remains separate. Later PLAN-only commits do not change the code gate boundary. |
+| Integration and gates | `WIP`; remote docs repair | Local `main` and `origin/main` are identical. Topic `ee5042dee` equals its remote, and merge `0c31baf97` passed the complete external-frontier `just check` with exit 0. Exact-code docs `31190516093` and CI `31190517748` failed only because setup-just's temporary install lay outside the credited PATH; every non-doc CI job passed. Topic repair `259797459` installs the pinned regular executable at the registered path and awaits remote confirmation. |
 | Arithmetic deadline reliability | `DONE` | Shared deadline, CAD polls, LRA ceilings, bounded DL probing, exact resume identity, and six fresh retained divisions are complete; see the 2026-08-06 closure note. |
 | Full-library measurement | `WIP`; A2 readiness `DONE` | The R1--R5 readiness stack is integrated by `8ed5ad089` and focused/aggregate/scoped/topic/full-main green; the real registered offline-build smoke passed. No live run, preparation root, or launch authority exists. A later live C0/F2 step requires separate review. |
-| QF_NIA breadth | `WIP` | Current clean result remains 34/200 versus 89/200. The complete 67-case census, giant-`distinct` resource repair, reconstruction-outcome repair, and rejected zero-gain probe-model experiment are integrated. Next preregister one of the two residual causal subgroups. |
+| QF_NIA breadth | `WIP` | Current clean result remains 34/200 versus 89/200. The complete 67-case census, giant-`distinct` resource repair, reconstruction-outcome repair, and rejected zero-gain probe-model experiment are integrated. The stable two-case reconstruction-deadline cluster is preregistered; next run bounded diagnostic attribution before selecting a mechanism. |
 | QF_UFLIA breadth | `WIP` | 94/180; A4 owns causal residual partition. |
 | LRA/IDL/RDL | `WIP` | Current results are 86/146, 68/124, and 105/155; A5 owns cross-division consolidation. |
 | QF_BV/QF_SLIA/UF/QF_ABV | `WIP`, strong selected cells | Preserve current ledgers; do not prioritize small score gains above A2–A6. |

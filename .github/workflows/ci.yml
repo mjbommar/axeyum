@@ -227,6 +227,22 @@ jobs:
       - uses: extractions/setup-just@f8a3cce218d9f83db3a2ecd90e41ac3de6cdfd9b # v3
         with:
           just-version: 1.57.0
+      # setup-just adds a runner-temporary directory to GITHUB_PATH, while the
+      # credited readiness contract deliberately resolves tools only through
+      # the canonical account Cargo bin plus system paths. Install a regular
+      # copy at that registered path; symlinks are rejected by the contract.
+      - name: Install just at the registered readiness path
+        run: |
+          source_path="$(command -v just)"
+          destination="$HOME/.cargo/bin/just"
+          mkdir -p "$HOME/.cargo/bin"
+          if [[ "$source_path" != "$destination" ]]; then
+            install -m 0755 "$source_path" "$destination"
+          fi
+          test -f "$destination"
+          test -x "$destination"
+          test ! -L "$destination"
+          test "$("$destination" --version)" = "just 1.57.0"
       - run: ./scripts/check-foundational-resources.sh
       - run: python3 -m unittest scripts.tests.test_lean_u2_test_authority
       - run: python3 scripts/gen-lean-u2-test-authority.py --check
