@@ -794,6 +794,21 @@ def parse_reference_result(returncode: int, stdout: bytes, stderr: bytes) -> str
     return verdicts[0]
 
 
+def reference_base_command(binary: pathlib.Path, timeout_bin: str) -> list[str]:
+    """Build the frozen cvc5 invocation; per-query limits exit cleanly on timeout."""
+    return [
+        timeout_bin,
+        "--signal=TERM",
+        "--kill-after=1s",
+        str(TIMEOUT_MS // 1000 + OUTER_MARGIN_SECONDS),
+        "env",
+        f"MEM_LIMIT_GB={MEMORY_GB}",
+        str(ROOT / "scripts/mem-run.sh"),
+        str(binary),
+        f"--tlimit-per={TIMEOUT_MS}",
+    ]
+
+
 def capture_reference(
     binary: pathlib.Path,
     output: pathlib.Path,
@@ -811,17 +826,7 @@ def capture_reference(
     timeout_bin = shutil.which("timeout")
     if timeout_bin is None:
         raise CensusError("GNU timeout is required")
-    base_command = [
-        timeout_bin,
-        "--signal=TERM",
-        "--kill-after=1s",
-        str(TIMEOUT_MS // 1000 + OUTER_MARGIN_SECONDS),
-        "env",
-        f"MEM_LIMIT_GB={MEMORY_GB}",
-        str(ROOT / "scripts/mem-run.sh"),
-        str(binary),
-        f"--tlimit={TIMEOUT_MS}",
-    ]
+    base_command = reference_base_command(binary, timeout_bin)
     identity = git_capture_identity()
     command_template = [*base_command, "FILE"]
     base = metadata_base(command_template, binary, identity)

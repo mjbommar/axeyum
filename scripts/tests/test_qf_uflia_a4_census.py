@@ -118,6 +118,13 @@ def test_parse_reference_result_is_fail_closed() -> None:
         CENSUS.parse_reference_result(124, b"sat\n", b"")
 
 
+def test_reference_command_uses_clean_per_query_timeout() -> None:
+    command = CENSUS.reference_base_command(pathlib.Path("/tmp/cvc5"), "/usr/bin/timeout")
+    assert "--tlimit-per=24000" in command
+    assert "--tlimit=24000" not in command
+    assert command[-1] == "--tlimit-per=24000"
+
+
 def test_validate_and_derive_reproduces_counts_and_replay_bucket(
     tmp_path: pathlib.Path,
 ) -> None:

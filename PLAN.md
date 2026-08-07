@@ -358,11 +358,12 @@ here as closed evidence boundaries. A3 remains incomplete, but all currently
 preregistered bounded mechanisms are closed negatively; A4 is now the first
 active item.
 
-**Immediate action.** Finish A4 evidence recovery under its v2 preregistration.
+**Immediate action.** Finish A4 evidence recovery under its v3 preregistration.
 V1 correctly stopped: frozen-list rows 1--26 are valid wide-integer inputs that
 terminate at typed SMT-LIB `Unsupported`, so schema-1 dispatch traces cannot
-exist. V2 retains explicit `smtlib-ingest` provenance, keeps ADR-0376's
-zero-yield IR widening selection-ineligible, and still must commit the exact
+exist. V2 retained explicit `smtlib-ingest` provenance. Its 200-row Axeyum pass
+was valid, but cvc5 `--tlimit` aborted ambiguously at row one; v3 switches only
+to clean `--tlimit-per` and restarts both streams. It still must commit the exact
 sidecar/traces and reproduce 94/200 versus 180/200, 86 reference-only, and zero
 disagreements or stop. No solver edit or cap change is authorized. A3's negative
 routes remain closed. A2's green readiness still does not authorize C0/F2,
@@ -479,7 +480,7 @@ failures, and do not raise general caps to convert time into apparent breadth.
 **Why now.** QF_UFLIA is 94/180 (52.2%) with zero Axeyum-only decisions and 86
 reference-only cases, making it the clearest combined-theory depth gap.
 
-**Next slice.** Apply the preregistered v2 telemetry-only repair, regenerate the
+**Next slice.** Apply the preregistered v3 telemetry-only repair, regenerate the
 missing exact-path sidecar with complete dispatch-or-ingest provenance, and
 partition only a validated 86-row residual. The 26 known wide-integer ingest
 rows remain explicit ADR-0376 controls, not a revived IR-widening target.

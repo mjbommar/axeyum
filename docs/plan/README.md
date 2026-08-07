@@ -19,7 +19,10 @@ the complete-record gate: 26 valid EVM-wide integer inputs terminate before
 dispatch, so demanding schema-1 dispatch traces for all 200 was impossible.
 The [v2 amendment](qf-uflia-a4-provenance-census-v2-preregistration-2026-08-07.md)
 retains that boundary as typed `smtlib-ingest` provenance and makes the
-ADR-0376 rejected widening lever selection-ineligible.  It still requires a
+ADR-0376 rejected widening lever selection-ineligible. The
+[v3 timeout amendment](qf-uflia-a4-provenance-census-v3-preregistration-2026-08-07.md)
+uses cvc5's clean `--tlimit-per` response after v2 exposed an ambiguous
+`--tlimit` abort; both streams restart at one exact commit. It still requires a
 fresh 94/200 versus 180/200, 86-reference-only, zero-disagreement reproduction
 and authorizes no solver change.
 
