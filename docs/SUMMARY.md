@@ -68,6 +68,16 @@
   - [Benchmarks](user-guide/benchmarks.md)
   - [Versioned corpus manifests](user-guide/corpus-manifests.md)
 
+# Reference
+
+- [Reference](reference/README.md)
+  - [Public API](reference/public-api.md)
+  - [Solver configuration](reference/solver-config.md)
+  - [Supported logics](reference/supported-logics.md)
+  - [Support matrix](reference/support-matrix.md)
+  - [Trust ledger](reference/trust-ledger.md)
+  - [SMT-LIB support](reference/smtlib-support.md)
+
 # Internals
 
 - [Internals](internals/README.md)

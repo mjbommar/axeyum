@@ -8,11 +8,14 @@ installation/build profiles, first SMT-LIB and Rust use, models/replay, UNSAT
 evidence, limitations, benchmarks, corpus manifests, and a clean-environment
 validated WASM/browser workflow. The contributor guide now has executable task
 pages for setup, testing, operators, rewrites, solver routes, proof/evidence,
-and benchmark artifacts. Remaining front-door work is concentrated in stable
-and generated reference pages, several internals summaries, and crate-level
-examples. The live
+and benchmark artifacts. Remaining front-door work is concentrated in internals
+summaries and crate-level examples. The stable reference section now
+routes public API/configuration questions and indexes golden-tested/generated
+logic, support, trust, and SMT-LIB protocol authorities without copying their
+volatile tables. The live
 indexes in [`docs/README.md`](README.md), [`learn/README.md`](learn/README.md),
-and [`user-guide/README.md`](user-guide/README.md) are authoritative for what is
+[`user-guide/README.md`](user-guide/README.md), and
+[`reference/README.md`](reference/README.md) are authoritative for what is
 currently written.
 
 This plan describes how to reshape Axeyum's public documentation so it serves
