@@ -5,9 +5,9 @@ for current project status, ordered work, blockers, and resume guidance. Read it
 first and update it before ending a project-level work session.
 
 - Last consolidated: **2026-08-07**
-- State audited at: integrated A3 merge
-  `0c31baf979d09270497b5512819fa6e8ed927de7`; pre-push `origin/main` at
-  `2072483f8f1cfd4a8522c9f694abbbc800478b56`
+- State audited at: clean pushed `main`
+  `3eb7eac442c64aee4b809ee059bf59d93b6160ee`, including A3 merge
+  `0c31baf979d09270497b5512819fa6e8ed927de7`
 - Expected handoff state: clean local `main` equal to `origin/main`
 - Latest integrated code increment: A3 topic `ee5042deea762bb605a0c136f795399aaae47b97`
   via merge `0c31baf979d09270497b5512819fa6e8ed927de7`
@@ -36,9 +36,9 @@ evidence routes, broad but uneven theory support, an independent Lean-core
 checker/importer, and several consumers. It is not yet a drop-in Z3 replacement
 or a replacement for the Lean system.
 
-The audited local integration state is clean `main` at A3 merge
-`0c31baf979d09270497b5512819fa6e8ed927de7`, ahead of pre-push `origin/main`
-only by the reviewed A3 stack. Topic `ee5042dee` is pushed and exactly equals
+The audited integration state is clean `main` at
+`3eb7eac442c64aee4b809ee059bf59d93b6160ee`, pushed and exactly equal to
+`origin/main`. Topic `ee5042dee` is pushed and exactly equals
 `origin/agent/nia/a3-census`. The merge passed one uninterrupted
 external-frontier `CARGO_BUILD_JOBS=2 just check` with exit 0: format, stable
 all-target Clippy, every workspace test and doctest, 1,078 solver-library tests,
@@ -48,9 +48,9 @@ warning-denied rustdoc, QF_BV/reflection and both 162-file Glaurung policies,
 generated resources, rules-as-code, the 165-test resume aggregate in 46.002 s
 with one expected skip, every Lean/process-free contract, parity docs, plan
 authority, and links. Its five 20 KiB external frontier artifacts were removed
-after evidence capture. Main push/ref verification and hosted-CI status remain
-separate pending states. Local `main` and `origin/main` must be equal at handoff
-under the resume protocol below. The IDL repair branch completed terminal
+after evidence capture. Hosted docs run `31190516093` and CI run `31190517748`
+started at this exact pushed SHA and remain in progress; they are not yet green.
+Local `main` and `origin/main` are equal at handoff. The IDL repair branch completed terminal
 `CARGO_BUILD_JOBS=2 just check`; merge `198f2dc1b` passed its immutable-SHA
 pre-push workspace-library, progress-frontier, and evidence gates. Integrated
 main then passed the focused DL suite 46/46 and the explicit auto-dispatch
@@ -68,11 +68,12 @@ Docs run `31108211479` at `54b366517` is also terminal green. Docs runs
 `31147545402`, `31147833794`, and `31153166591` are terminal failures: the
 newly integrated readiness tests resolved registered `just check` observations,
 but the hosted docs image did not provide `just`, so 12 fixture tests failed
-before their intended assertions. Pending topic commit `9f94e1873` provisions
+before their intended assertions. Integrated commit `9f94e1873` provisions
 exact `just` 1.57.0 through a commit-pinned action in both duplicated docs jobs;
 the complete local 165-test resume aggregate then passed with one expected
-skip. Remote confirmation remains pending, not green. No solver or measurement
-process is running.
+skip. Exact-SHA docs run `31190516093` is the remote confirmation boundary and
+is still in progress, not green. Exact-SHA CI run `31190517748` is separately
+in progress. No local solver or measurement process is running.
 
 A3 is **WIP** on `agent/nia/a3-census`. The repaired complete 67-row census
 classifies 52 NIA-linearization budget declines, 13 former generic model-replay
@@ -111,7 +112,7 @@ with one expected live-host skip; every Lean/process-free contract; parity docs;
 plan authority; and links. The five 20 KiB external frontier artifacts and their
 pointer were removed after recording the result. Topic `ee5042dee` was then
 pushed, merged as `0c31baf97`, and independently passed the combined-main gate
-described above. Hosted-CI confirmation remains separate and pending.
+described above. Exact-SHA hosted docs and CI remain separately in progress.
 
 A2 is **DONE** on current main. The old
 `agent/smtcomp/full-preparation-live` head `3e53ca631` is 401 commits behind
@@ -212,10 +213,11 @@ Disk cleanup removed only reproducible Cargo artifacts and clean, inactive
 worktree checkout directories; dirty worktrees and every branch were preserved.
 The 2026-08-07 follow-up removed 14 additional clean checkouts, retained their
 13 unmerged branch tips, and reduced the registered worktree count from 39 to
-25; the later A3 worktree brings the current count to 26. Two bounded
-Cargo-artifact passes cleared about 32 GiB from `/` and 5.8 GiB from `/tmp`;
-current free space is 817 GiB on `/` and 27 GiB on the 62 GiB
-`/tmp` tmpfs. Dirty worktrees, unmerged branch tips, retained A3 census
+25. After A3 was pushed, merged, and fully gated, its clean 127 GiB worktree was
+retired and pruned; `cargo clean` then removed 70,833 files / 122.6 GiB from the
+main worktree. The registered count is 25 and current free space is about 934
+GiB on `/` and 27 GiB on the 62 GiB `/tmp` tmpfs. Dirty worktrees, unmerged
+branch tips, retained A3 census
 evidence, unrelated temporary projects, and legacy build directories that
 failed Cargo's cache-tag safety check were deliberately left untouched.
 Four empty A3 frontier directories and their pointer file were removed after
@@ -291,9 +293,10 @@ risk, or invalid gate. Those are P0 and preempt the queue.
 The ordered ten-item programme remains A2 through A11. A1 and A2 are retained
 here as closed evidence boundaries; A3 is now the first active item.
 
-**Immediate action.** Push the exact green A3 merge, verify local/remote main
-refs and the repaired hosted docs job, then use direct trace
-attribution to preregister exactly one of the two residual A3 subclusters before
+**Immediate action.** Monitor exact-SHA docs run `31190516093` and CI run
+`31190517748` to terminal state without conflating them with the green local
+gate. Then use direct trace attribution to preregister exactly one of the two
+residual A3 subclusters before
 another solver-policy edit. A2 is integrated and combined-main green, but this
 does not self-authorize C0 or live F2. No host probe, sentinel, NAS mutation, F3
 acceptance, allocation, or solver fleet is permitted. A wrong
@@ -357,8 +360,8 @@ one-field stale generated CI-workflow identity at final parity-docs. Both defect
 are repaired. Exact topic `3586c41d9` passed one uninterrupted external-frontier
 `CARGO_BUILD_JOBS=2 just check` with exit 0 and a clean tracked tree. Topic push,
 merge `0c31baf97`, and combined-main `just check` are complete and green.
-Hosted-CI confirmation remains pending and must not be conflated with those
-local terminal results.
+Exact-SHA docs run `31190516093` and CI run `31190517748` are in progress and
+must not be conflated with those local terminal results.
 
 **Next slice.** After checkpoint integration, use direct trace attribution to
 choose and preregister either the five-case large DPLL/core-search subgroup or
@@ -479,7 +482,7 @@ family whose semantics and reset/scoping behavior are already representable.
 **Exit.** End-to-end textual fixtures compare ordered outputs and state changes,
 errors remain atomic, and API helpers and text mode share one semantic core.
 
-### A11 — Make worktree and build-cache retirement routine (`TODO`, P2)
+### A11 — Make worktree and build-cache retirement routine (`WIP`, P2)
 
 **Why now.** Accumulated per-worktree Cargo targets and the agent-target cache
 filled the filesystem until a valid post-merge build failed at 585 MiB free.
@@ -491,6 +494,12 @@ worktree's branch, dirty/merged state, target size, last activity, and safe
 cleanup classification. Document an operator procedure that uses `cargo clean`
 before worktree removal and requires explicit review for every dirty, unmerged,
 detached, or cache-tag-missing path.
+
+**Completed checkpoint.** The manual bounded cleanup and post-A3 retirement
+proved the safety procedure: exact clean merged worktrees and reproducible Cargo
+targets were removed, all dirty or unmerged work and all branches were retained,
+the registered count fell from 39 to 25, and `/` free space rose to about 934
+GiB. Automation and fixture coverage remain open.
 
 **Exit.** The inventory is deterministic and tested against dirty, merged,
 unmerged, detached, missing-target, and malformed-cache fixtures. A dry run
@@ -504,7 +513,7 @@ or remove dirty/unmerged state to meet a free-space target.
 
 | Workstream | State | Current boundary / next action |
 |---|---|---|
-| Integration and gates | `WIP`; A3 merge `0c31baf97` | Topic `ee5042dee` equals its remote. Merge `0c31baf97` passed the complete external-frontier `just check` with exit 0. Three older hosted docs runs exposed missing `just`; the workflow fix passes the full local 165-test resume aggregate but is not remotely confirmed. Push main and verify refs/CI separately. |
+| Integration and gates | `WIP`; pushed `3eb7eac44` | Local `main` and `origin/main` are identical. Topic `ee5042dee` equals its remote, and merge `0c31baf97` passed the complete external-frontier `just check` with exit 0. Exact-SHA docs `31190516093` and CI `31190517748` are in progress; terminal remote status remains separate. |
 | Arithmetic deadline reliability | `DONE` | Shared deadline, CAD polls, LRA ceilings, bounded DL probing, exact resume identity, and six fresh retained divisions are complete; see the 2026-08-06 closure note. |
 | Full-library measurement | `WIP`; A2 readiness `DONE` | The R1--R5 readiness stack is integrated by `8ed5ad089` and focused/aggregate/scoped/topic/full-main green; the real registered offline-build smoke passed. No live run, preparation root, or launch authority exists. A later live C0/F2 step requires separate review. |
 | QF_NIA breadth | `WIP` | Current clean result remains 34/200 versus 89/200. The complete 67-case census, giant-`distinct` resource repair, reconstruction-outcome repair, and rejected zero-gain probe-model experiment are integrated. Next preregister one of the two residual causal subgroups. |
@@ -517,7 +526,7 @@ or remove dirty/unmerged state to meet a free-space target.
 | CAS parity | `BLOCKED` by deliberate pause | Wave-24 code `01d47334` and pause commit `245d8f25` are ancestors of current main. Do not start wave 25 until the user resumes it and retained specialized gate evidence is re-audited. |
 | Consumer apps / verified systems | `WIP`, non-critical path | Existing EVM, verifier, property, reflection, and symbolic-execution slices remain useful; do not preempt A2–A7 without measured demand. |
 | Foundational resources | `WIP`, separate content lane | Keep generated-resource gates green; record only project-level priority changes here. |
-| Worktree and build-cache hygiene | `TODO`, recovered | A11; 26 registered worktrees remain before retiring the merged A3 worktree. Dirty and unmerged state was preserved. Current free space is about 699 GiB on `/` and 27 GiB on `/tmp` after the fresh main gate; no immediate space-pressure blocker remains. Old and final topic/main frontier artifacts and their pointer files were removed after evidence capture. Retire the merged A3 worktree and its reproducible target after the main push. |
+| Worktree and build-cache hygiene | `WIP`, recovered | A11; 25 registered worktrees remain. The clean merged 127 GiB A3 worktree was retired and pruned, and main `cargo clean` removed 122.6 GiB. Dirty and unmerged state was preserved. Current free space is about 934 GiB on `/` and 27 GiB on `/tmp`; old frontier artifacts and pointers were also removed after evidence capture. Next automate the deterministic read-only inventory and exact-target cleanup classification. |
 
 ## Resume protocol
 
