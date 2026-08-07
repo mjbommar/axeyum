@@ -47,6 +47,25 @@ That partition selects the
 while three differently routed SAT rows and six reference-UNSAT rows remain
 controls. Only verdict-neutral attribution is authorized until repeated
 size-admission and downstream-cause gates pass.
+The
+[`large-core diagnostic result`](qf-nia-a3-large-core-cluster-v1-result-2026-08-07.md)
+confirms size-only admission on the selected pair, while the
+[`four-group deletion result`](qf-nia-a3-large-core-group-deletion-v2-result-2026-08-07.md)
+rejects extra exact-theory core shrinking after it decides neither target and
+moves both stops earlier. The remaining small-core pair is bounded by the
+[`relevance-activated bound-ladder preregistration`](qf-nia-a3-relevant-bound-ladders-v1-preregistration-2026-08-07.md)
+and its
+[`result`](qf-nia-a3-relevant-bound-ladders-v1-result-2026-08-07.md): hundreds
+of checked adjacent implications change search shape but produce zero target
+gains in six observations, so the temporary code is removed. The five-row
+DPLL/core-search partition is closed against these explanation-quality levers;
+A3 returns to the 52-row typed budget population. Its
+[`typed-budget partition`](qf-nia-a3-budget-partition-v1-result-2026-08-07.md)
+separates 37 width timeouts, 11 all-SAT pre-lowering estimate refusals, three
+UNSAT combined-theory timeouts, and one UNSAT replay-detected model overflow.
+The UNSAT tail is not a sound width-ladder target. The next bounded diagnostic
+starts with the two smallest all-SAT estimate refusals and must retain the
+64,000,000 pre-allocation safety ceiling.
 
 ## Layout
 
