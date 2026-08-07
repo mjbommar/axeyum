@@ -432,3 +432,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [0375](adr-0375-difference-logic-decision-procedure.md) | Difference logic as a first-class fragment, with conjunctive Farkas evidence | accepted |
 | [0376](adr-0376-integer-literals-wider-than-i128.md) | Integer literals wider than `i128` — measured non-cause, deferred IR widening | deferred |
 | [0377](adr-0377-shared-arithmetic-deadlines-and-normalization-ceilings.md) | Share one arithmetic deadline across fallback routes and bound LRA normalization deterministically | accepted |
+| [0378](adr-0378-bounded-smtlib-distinct-expansion.md) | Bound eager SMT-LIB `distinct` pair expansion, balance admitted conjunctions, and classify the ceiling as `Unknown(ResourceLimit)` | accepted |

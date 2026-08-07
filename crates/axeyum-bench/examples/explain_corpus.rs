@@ -18,15 +18,16 @@
 //! mode it is the complete list entry, so a trace can be joined to a committed
 //! benchmark population without basename ambiguity. Every line has `file` and
 //! `status`; `status` is one of `decided`,
-//! `word-first-fallback`, `skipped-scoped`, `read-error`, `parse-error`, or
-//! `error`. `verdict` is present on the two decided statuses, `trace` only on
-//! `decided`, and `detail` only on `error`.
+//! `word-first-fallback`, `ingest-resource-limit`, `skipped-scoped`,
+//! `read-error`, `parse-error`, or `error`. `verdict` is present on the two
+//! decided statuses and on `ingest-resource-limit` (always `unknown`), `trace`
+//! only on `decided`, and `detail` on resource/error records.
 
 use std::collections::BTreeSet;
 use std::path::{Path, PathBuf};
 use std::time::Duration;
 
-use axeyum_smtlib::parse_script;
+use axeyum_smtlib::{SmtError, parse_script};
 use axeyum_solver::route_trace::push_json_string;
 use axeyum_solver::{CheckResult, SolverConfig, check_auto_explained, solve_smtlib};
 
@@ -181,13 +182,28 @@ fn main() {
             }
             continue;
         }
-        let Ok(mut script) = parse_script(&text) else {
-            if json {
-                emit_json(&identity, "parse-error", "");
-            } else {
-                println!("{identity}: parse-error");
+        let mut script = match parse_script(&text) {
+            Ok(script) => script,
+            Err(SmtError::ResourceLimit(detail)) => {
+                if json {
+                    emit_json(
+                        &identity,
+                        "ingest-resource-limit",
+                        &format!(",\"verdict\":\"unknown\"{}", detail_member(&detail)),
+                    );
+                } else {
+                    println!("{identity}: unknown (ingest resource limit: {detail})");
+                }
+                continue;
             }
-            continue;
+            Err(error) => {
+                if json {
+                    emit_json(&identity, "parse-error", &detail_member(&error.to_string()));
+                } else {
+                    println!("{identity}: parse-error: {error}");
+                }
+                continue;
+            }
         };
         // A word-first-fallback parse has an EMPTY flat view whose content lives in
         // the parser side channels; solving that view directly is a vacuous `sat`

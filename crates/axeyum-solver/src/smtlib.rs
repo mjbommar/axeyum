@@ -1929,6 +1929,16 @@ fn solve_smtlib_at_string_bound(
                 expected_status: None,
             });
         }
+        Err(axeyum_smtlib::SmtError::ResourceLimit(detail)) => {
+            return Ok(SmtLibOutcome {
+                result: CheckResult::Unknown(UnknownReason {
+                    kind: UnknownKind::ResourceLimit,
+                    detail: format!("ingest resource limit: {detail}"),
+                }),
+                logic: None,
+                expected_status: None,
+            });
+        }
         Err(error) => return Err(SolverError::Parse(error.to_string())),
     };
     // Source-first parse fallback (T-B.4d): the bounded encoder declined this

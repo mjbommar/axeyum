@@ -13,13 +13,22 @@ use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 
 use axeyum_fp::{FloatFormat, RoundingMode};
 use axeyum_ir::{
-    ArraySortKey, FuncId, MAX_BV_WIDTH, Op, Rational, Sort, SymbolId, TermArena, TermId, TermNode,
-    WideUint,
+    ArraySortKey, FuncId, IrError, MAX_BV_WIDTH, Op, Rational, Sort, SymbolId, TermArena, TermId,
+    TermNode, WideUint,
 };
 use axeyum_strings::regex::Regex;
 
 use crate::SmtError;
 use crate::sexpr::{SExpr, read_all};
+
+/// Maximum number of pairwise disequalities materialized for one SMT-LIB
+/// `distinct` application.
+///
+/// The parser currently lowers `distinct(a_1, ..., a_n)` to `n(n-1)/2`
+/// equality/negation/conjunction triples. Bounding the pair count before the
+/// first pair is built prevents supported input from aborting the process while
+/// retaining ordinary all-different models, including 256-way applications.
+const MAX_DISTINCT_EXPANSION_PAIRS: usize = 65_536;
 
 /// An ordered command from an (incremental) SMT-LIB script. Commands that affect
 /// the assertion stack and its `check-sat` queries are recorded; declarations
@@ -665,8 +674,8 @@ pub enum WordObligation {
 /// # Errors
 ///
 /// [`SmtError::Syntax`] for malformed input, [`SmtError::Unsupported`] for
-/// constructs outside the `QF_BV` benchmark slice, and sort errors surfaced
-/// as [`SmtError::Ir`].
+/// constructs outside the supported slice, deterministic ingest ceilings as
+/// [`SmtError::ResourceLimit`], and sort errors as [`SmtError::Ir`].
 pub fn parse_script(input: &str) -> Result<Script, SmtError> {
     parse_script_with_string_bound(input, STRING_MAX_LEN)
 }
@@ -691,7 +700,7 @@ pub fn parse_script(input: &str) -> Result<Script, SmtError> {
 /// # Errors
 ///
 /// As [`parse_script`], plus [`SmtError::DeadlineExceeded`]. A caller must map
-/// that variant to `unknown` — it is a resource limit, never a verdict.
+/// both resource variants to `unknown` — neither is a verdict.
 pub fn parse_script_within(
     input: &str,
     deadline: Option<std::time::Instant>,
@@ -750,8 +759,8 @@ pub fn parse_script_with_string_bound(input: &str, floor: u32) -> Result<Script,
 ///
 /// # Errors
 ///
-/// As [`parse_script_with_string_bound`], plus [`SmtError::DeadlineExceeded`],
-/// which a caller must map to `unknown`.
+/// As [`parse_script_with_string_bound`], plus [`SmtError::DeadlineExceeded`].
+/// Both resource variants must map to `unknown`.
 pub fn parse_script_with_string_bound_within(
     input: &str,
     floor: u32,
@@ -762,7 +771,7 @@ pub fn parse_script_with_string_bound_within(
         // A deadline is a resource limit, not a parse failure: do NOT fall through
         // to the word-first retry, which would re-parse the whole script and spend
         // budget the caller has already run out of.
-        Err(e @ SmtError::DeadlineExceeded(_)) => Err(e),
+        Err(e @ (SmtError::DeadlineExceeded(_) | SmtError::ResourceLimit(_))) => Err(e),
         Ok(script) => Ok(script),
         // Word-first parse fallback (T-B.4d). The bounded ADR-0029 string encoder
         // declined the script *wholesale* — a string literal over
@@ -18697,6 +18706,22 @@ fn self_store_array_equality_direction(
 
 /// Applies an operator list head to evaluated arguments.
 // Flat dispatch over the operator vocabulary; length is inherent.
+fn balanced_and(arena: &mut TermArena, mut layer: Vec<TermId>) -> Result<TermId, SmtError> {
+    debug_assert!(!layer.is_empty());
+    while layer.len() > 1 {
+        let mut next = Vec::with_capacity(layer.len().div_ceil(2));
+        let mut pairs = layer.chunks_exact(2);
+        for pair in &mut pairs {
+            next.push(arena.and(pair[0], pair[1])?);
+        }
+        if let Some(&last) = pairs.remainder().first() {
+            next.push(last);
+        }
+        layer = next;
+    }
+    Ok(layer[0])
+}
+
 #[allow(clippy::too_many_lines)]
 fn apply_op(
     arena: &mut TermArena,
@@ -19181,7 +19206,49 @@ fn apply_op(
                     "`distinct` expects >= 2 arguments".to_owned(),
                 ));
             }
-            let mut acc = None;
+
+            // Type-check the complete application before any semantic
+            // shortcut. In particular, a duplicate early argument must not
+            // hide an ill-sorted later argument.
+            let expected_sort = arena.sort_of(args[0]);
+            for &arg in &args[1..] {
+                let actual_sort = arena.sort_of(arg);
+                if actual_sort != expected_sort {
+                    return Err(SmtError::Ir(IrError::SortsDiffer(
+                        expected_sort,
+                        actual_sort,
+                    )));
+                }
+            }
+
+            // Interned term identity makes a repeated argument an exact
+            // contradiction regardless of arity. Detect it in linear work so
+            // a large, trivially-false application does not consume the
+            // pair-expansion budget.
+            let mut seen = HashSet::with_capacity(args.len());
+            if args.iter().any(|arg| !seen.insert(*arg)) {
+                return Ok(arena.bool_const(false));
+            }
+
+            let pair_count = args
+                .len()
+                .checked_mul(args.len() - 1)
+                .map(|product| product / 2)
+                .ok_or_else(|| {
+                    SmtError::ResourceLimit(format!(
+                        "`distinct` pair count overflow for {} arguments",
+                        args.len()
+                    ))
+                })?;
+            if pair_count > MAX_DISTINCT_EXPANSION_PAIRS {
+                return Err(SmtError::ResourceLimit(format!(
+                    "`distinct` with {} arguments requires {pair_count} pairwise expansions; \
+                     deterministic limit is {MAX_DISTINCT_EXPANSION_PAIRS}",
+                    args.len()
+                )));
+            }
+
+            let mut disequalities = Vec::with_capacity(pair_count);
             for i in 0..args.len() {
                 for j in i + 1..args.len() {
                     // P2.7 A.2: the pairwise equality atoms enter the length
@@ -19205,13 +19272,10 @@ fn apply_op(
                         e
                     };
                     let ne = arena.not(e)?;
-                    acc = Some(match acc {
-                        Some(prev) => arena.and(prev, ne)?,
-                        None => ne,
-                    });
+                    disequalities.push(ne);
                 }
             }
-            acc.expect("args length checked")
+            balanced_and(arena, disequalities)?
         }
         "ite" => {
             need(3)?;

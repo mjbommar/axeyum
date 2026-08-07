@@ -53,6 +53,13 @@ pub enum SmtError {
     /// This is a RESOURCE limit, never a statement about the query: a caller
     /// must map it to `unknown`, never to a verdict.
     DeadlineExceeded(String),
+    /// A deterministic ingest work ceiling was exceeded.
+    ///
+    /// Unlike [`SmtError::Unsupported`], this does not mean the source uses an
+    /// unimplemented construct. The construct is supported, but its eager
+    /// representation would exceed a documented resource budget. Callers must
+    /// map this to `unknown(ResourceLimit)`, never to a verdict or parse error.
+    ResourceLimit(String),
 }
 
 impl From<IrError> for SmtError {
@@ -68,6 +75,7 @@ impl core::fmt::Display for SmtError {
             SmtError::Unsupported(s) => write!(f, "unsupported: {s}"),
             SmtError::Ir(e) => write!(f, "term error: {e}"),
             SmtError::DeadlineExceeded(s) => write!(f, "deadline exceeded during ingest: {s}"),
+            SmtError::ResourceLimit(s) => write!(f, "resource limit during ingest: {s}"),
         }
     }
 }

@@ -4,10 +4,13 @@
 //! "hand it an SMT-LIB file and get a checked answer."
 #![cfg(feature = "full")]
 
+use std::fmt::Write as _;
 use std::time::Duration;
 
 use axeyum_smtlib::parse_script;
-use axeyum_solver::{CheckResult, SmtLibOutcome, SolverConfig, membership_verdict, solve_smtlib};
+use axeyum_solver::{
+    CheckResult, SmtLibOutcome, SolverConfig, UnknownKind, membership_verdict, solve_smtlib,
+};
 
 fn config() -> SolverConfig {
     SolverConfig::new().with_timeout(Duration::from_secs(30))
@@ -15,6 +18,27 @@ fn config() -> SolverConfig {
 
 fn run(text: &str) -> SmtLibOutcome {
     solve_smtlib(text, &config()).expect("supported script decides without error")
+}
+
+#[test]
+fn distinct_ingest_ceiling_is_a_first_class_resource_unknown() {
+    let mut text = String::from("(set-logic QF_NIA)\n");
+    for index in 0..363 {
+        writeln!(text, "(declare-const x{index} Int)").expect("writing to a String cannot fail");
+    }
+    text.push_str("(assert (distinct");
+    for index in 0..363 {
+        write!(text, " x{index}").expect("writing to a String cannot fail");
+    }
+    text.push_str("))\n(check-sat)\n");
+
+    let outcome = run(&text);
+    let CheckResult::Unknown(reason) = outcome.result else {
+        panic!("over-limit ingest must decline, got {:?}", outcome.result);
+    };
+    assert_eq!(reason.kind, UnknownKind::ResourceLimit);
+    assert!(reason.detail.contains("65703"), "got: {}", reason.detail);
+    assert!(reason.detail.contains("65536"), "got: {}", reason.detail);
 }
 
 /// A `sat` decision must agree with a declared `:status sat`.
