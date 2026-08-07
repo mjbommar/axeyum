@@ -58,6 +58,14 @@ from full_capture import (  # noqa: E402
     validate_repaired_p0_authority,
 )
 import full_capture as full_capture_module  # noqa: E402
+from full_build import (  # noqa: E402
+    AxeyumBuildCapture,
+    BUILD_COMMAND,
+    capture_axeyum_build,
+    stage_axeyum_build,
+    validate_axeyum_build_observation,
+)
+import full_build as full_build_module  # noqa: E402
 from full_prepare import (  # noqa: E402
     FullSolverCell,
     compose_full_cell_manifests,
@@ -135,6 +143,53 @@ def seal_as(value: dict, field: str) -> dict:
 
 def sha256_file(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def fixture_axeyum_build_capture(
+    *,
+    repository_root: Path,
+    shared_root: Path,
+    target_dir: Path,
+    source_commit: str,
+    binary: bytes = b"axeyum fixture",
+    stdout: bytes = b"fixture build stdout\n",
+    stderr: bytes = b"",
+) -> AxeyumBuildCapture:
+    target_dir.mkdir(parents=True)
+    toolchain = target_dir.parent / "fixture-toolchain"
+    toolchain.mkdir(exist_ok=True)
+    cargo = toolchain / "cargo"
+    rustc = toolchain / "rustc"
+    for tool, payload in ((cargo, b"cargo fixture\n"), (rustc, b"rustc fixture\n")):
+        if not tool.exists():
+            tool.write_bytes(payload)
+            tool.chmod(0o755)
+    cargo = cargo.resolve(strict=True)
+    rustc = rustc.resolve(strict=True)
+    environment = full_build_module._build_environment(
+        target_dir=target_dir.resolve(strict=True),
+        rustc_path=rustc,
+    )
+    return AxeyumBuildCapture(
+        source_commit=source_commit,
+        repository_root=repository_root.resolve(strict=True),
+        shared_root=shared_root.resolve(strict=True),
+        target_dir=target_dir.resolve(strict=True),
+        command=BUILD_COMMAND,
+        environment=environment,
+        cargo_path=cargo,
+        cargo_bytes=cargo.stat().st_size,
+        cargo_sha256=sha256_file(cargo),
+        rustc_path=rustc,
+        rustc_bytes=rustc.stat().st_size,
+        rustc_sha256=sha256_file(rustc),
+        started_at_ns=2000,
+        ended_at_ns=2001,
+        exit_code=0,
+        stdout=stdout,
+        stderr=stderr,
+        binary=binary,
+    )
 
 
 def build_gate_observation(
@@ -1354,7 +1409,12 @@ class FullPopulationContractTests(unittest.TestCase):
                 binary.chmod(0o755)
                 binaries.append(binary)
             cells = [
-                FullSolverCell("axeyum", binaries[0], "fixture", 19_000),
+                FullSolverCell(
+                    "axeyum",
+                    binaries[0],
+                    f"integrated-release-{_git_head(ROOT)}",
+                    19_000,
+                ),
                 FullSolverCell("cvc5", binaries[1], "fixture"),
                 FullSolverCell("bitwuzla", binaries[2], "fixture"),
             ]
@@ -1436,6 +1496,19 @@ class FullPopulationContractTests(unittest.TestCase):
                 required_paths=("scripts/smtcomp_repro/full_population.py",),
                 fixture_only=True,
             )
+            axeyum_build, staged_axeyum, axeyum_version = stage_axeyum_build(
+                capture=fixture_axeyum_build_capture(
+                    repository_root=ROOT,
+                    shared_root=shared,
+                    target_dir=root / "private-build-target",
+                    source_commit=readiness["head_commit"],
+                    binary=binaries[0].read_bytes(),
+                ),
+                attempt_root=attempt,
+                readiness=readiness,
+            )
+            self.assertEqual(staged_axeyum, binaries[0].resolve())
+            self.assertEqual(axeyum_version, cells[0].version)
             binaries_by_solver = {
                 cell.solver_id: cell.binary for cell in cells
             }
@@ -1670,6 +1743,7 @@ class FullPopulationContractTests(unittest.TestCase):
                     composition=composition,
                     readiness=readiness,
                     preflight=preflight,
+                    axeyum_build=axeyum_build,
                     solver_cells=cells,
                     prepared_at_ns=5200,
                 )
@@ -1689,6 +1763,31 @@ class FullPopulationContractTests(unittest.TestCase):
                 )["record_sha256"],
                 completion["record_sha256"],
             )
+            completion_path = attempt / "complete.json"
+            completion_path.chmod(0o644)
+            drifted_completion = copy.deepcopy(completion)
+            drifted_completion["axeyum_build_record_sha256"] = "0" * 64
+            completion_path.write_bytes(canonical_bytes(reseal(drifted_completion)))
+            with self.assertRaisesRegex(ContractError, "component identity"):
+                validate_full_preparation(
+                    attempt,
+                    repository_root=ROOT,
+                    inspect_shared_root=False,
+                )
+            completion_path.write_bytes(canonical_bytes(completion))
+
+            build_path = attempt / "inputs" / "axeyum-build.json"
+            build_path.chmod(0o644)
+            drifted_build = copy.deepcopy(axeyum_build)
+            drifted_build["source_commit"] = "0" * 40
+            build_path.write_bytes(canonical_bytes(reseal(drifted_build)))
+            with self.assertRaisesRegex(ContractError, "source/command/result"):
+                validate_full_preparation(
+                    attempt,
+                    repository_root=ROOT,
+                    inspect_shared_root=False,
+                )
+            build_path.write_bytes(canonical_bytes(axeyum_build))
             acceptance = build_full_preparation_acceptance(
                 execution_source_commit=readiness["head_commit"],
                 preparation_record_sha256=completion["record_sha256"],
@@ -1810,6 +1909,7 @@ class FullPopulationContractTests(unittest.TestCase):
                     inspect_shared_root=False,
                 )
             sentinel_stdout.write_bytes(b"unsat\n")
+            binaries[0].chmod(0o755)
             binaries[0].write_bytes(b"mutated solver")
             with self.assertRaises(ContractError):
                 validate_full_preparation(
@@ -2480,6 +2580,339 @@ class FullCaptureOperatorTests(unittest.TestCase):
         )
         return root
 
+    @staticmethod
+    def fixture_tools(parent: Path) -> tuple[Path, Path]:
+        tools = parent / "tools"
+        tools.mkdir()
+        cargo = tools / "cargo"
+        rustc = tools / "rustc"
+        for path, payload in ((cargo, b"cargo fixture\n"), (rustc, b"rustc fixture\n")):
+            path.write_bytes(payload)
+            path.chmod(0o755)
+        return cargo.resolve(), rustc.resolve()
+
+    def test_exact_source_build_uses_closed_environment_and_replays_every_product(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            parent = Path(tmp).resolve()
+            shared = parent / "shared"
+            shared.mkdir()
+            cargo, rustc = self.fixture_tools(parent)
+            calls = []
+            clock = iter((1000, 1100))
+            source_commit = _git_head(ROOT)
+
+            def resolver(**kwargs: object) -> tuple[Path, Path]:
+                calls.append(("resolve", kwargs))
+                return cargo, rustc
+
+            def runner(**kwargs: object) -> object:
+                calls.append(("run", kwargs))
+                command = kwargs["command"]
+                environment = kwargs["environment"]
+                self.assertEqual(command, [str(cargo), *BUILD_COMMAND[1:]])
+                self.assertEqual(environment["CARGO_BUILD_JOBS"], "2")
+                self.assertEqual(environment["RUSTC"], str(rustc))
+                self.assertEqual(environment["PYTHONNOUSERSITE"], "1")
+                for forbidden in (
+                    "CC",
+                    "CFLAGS",
+                    "CARGO_ENCODED_RUSTFLAGS",
+                    "CARGO_HTTP_PROXY",
+                    "CARGO_INCREMENTAL",
+                    "HTTPS_PROXY",
+                    "LD_LIBRARY_PATH",
+                    "LD_PRELOAD",
+                    "RUSTC_WRAPPER",
+                    "RUSTFLAGS",
+                ):
+                    self.assertNotIn(forbidden, environment)
+                target = Path(environment["CARGO_TARGET_DIR"])
+                output = target / "release" / "examples" / "smtcomp_cli"
+                output.parent.mkdir(parents=True)
+                output.write_bytes(b"exact source fixture\n")
+                output.chmod(0o755)
+                return types.SimpleNamespace(
+                    returncode=0,
+                    stdout=b"build stdout\x00\n",
+                    stderr=b"build stderr\xff\n",
+                )
+
+            with mock.patch.dict(
+                os.environ,
+                {
+                    "LD_PRELOAD": "/ambient.so",
+                    "RUSTC_WRAPPER": "/ambient-wrapper",
+                    "HTTPS_PROXY": "https://ambient.invalid",
+                    "AWS_SECRET_ACCESS_KEY": "ambient-secret",
+                },
+                clear=False,
+            ):
+                capture = capture_axeyum_build(
+                    repository_root=ROOT,
+                    shared_root=shared,
+                    expected_commit=source_commit,
+                    fixture_only=True,
+                    toolchain_resolver=resolver,
+                    build_runner=runner,
+                    now_ns=lambda: next(clock),
+                )
+            self.assertEqual([row[0] for row in calls], ["resolve", "run"])
+            self.assertFalse(capture.target_dir.exists())
+            attempt = shared / "credited-full-preparations" / "fixture"
+            attempt.mkdir(parents=True)
+            readiness = {
+                "head_commit": capture.source_commit,
+                "repository_root": str(ROOT.resolve()),
+            }
+            observation, binary, version = stage_axeyum_build(
+                capture=capture,
+                attempt_root=attempt,
+                readiness=readiness,
+            )
+            self.assertEqual(binary.read_bytes(), b"exact source fixture\n")
+            self.assertEqual(version, f"integrated-release-{capture.source_commit}")
+            self.assertEqual(observation["command"], list(BUILD_COMMAND))
+            self.assertEqual(
+                validate_axeyum_build_observation(
+                    observation,
+                    attempt_root=attempt,
+                    readiness=readiness,
+                ),
+                observation,
+            )
+
+            mutations = (
+                ("source", lambda row: row.__setitem__("source_commit", "0" * 40)),
+                ("repository", lambda row: row.__setitem__("repository_root", "/other")),
+                ("shared", lambda row: row.__setitem__("shared_root", "/other")),
+                ("target", lambda row: row.__setitem__("target_dir", str(ROOT))),
+                ("command", lambda row: row["command"].append("--frozen")),
+                (
+                    "environment",
+                    lambda row: row["environment"].__setitem__("RUSTFLAGS", "-Cpanic=abort"),
+                ),
+                (
+                    "environment digest",
+                    lambda row: row.__setitem__("environment_sha256", "0" * 64),
+                ),
+                ("cargo path", lambda row: row.__setitem__("cargo_path", "/tmp/cargo")),
+                ("cargo bytes", lambda row: row.__setitem__("cargo_bytes", 0)),
+                ("cargo digest", lambda row: row.__setitem__("cargo_sha256", "0")),
+                ("rustc path", lambda row: row.__setitem__("rustc_path", "/tmp/rustc")),
+                ("rustc bytes", lambda row: row.__setitem__("rustc_bytes", 0)),
+                ("rustc digest", lambda row: row.__setitem__("rustc_sha256", "0")),
+                ("start", lambda row: row.__setitem__("started_at_ns", 0)),
+                ("end", lambda row: row.__setitem__("ended_at_ns", 999)),
+                ("exit", lambda row: row.__setitem__("exit_code", 1)),
+                ("stdout path", lambda row: row.__setitem__("stdout_path", "/tmp/out")),
+                ("stdout bytes", lambda row: row.__setitem__("stdout_bytes", 1)),
+                ("stdout digest", lambda row: row.__setitem__("stdout_sha256", "0" * 64)),
+                ("stderr path", lambda row: row.__setitem__("stderr_path", "/tmp/err")),
+                ("stderr bytes", lambda row: row.__setitem__("stderr_bytes", 1)),
+                ("stderr digest", lambda row: row.__setitem__("stderr_sha256", "0" * 64)),
+                ("binary path", lambda row: row.__setitem__("binary_path", "/tmp/bin")),
+                ("binary bytes", lambda row: row.__setitem__("binary_bytes", 1)),
+                ("binary digest", lambda row: row.__setitem__("binary_sha256", "0" * 64)),
+            )
+            for label, mutate in mutations:
+                with self.subTest(build_observation_mutation=label):
+                    mutated = copy.deepcopy(observation)
+                    mutate(mutated)
+                    with self.assertRaises(ContractError):
+                        validate_axeyum_build_observation(
+                            reseal(mutated),
+                            attempt_root=attempt,
+                            readiness=readiness,
+                        )
+            corrupted_seal = copy.deepcopy(observation)
+            corrupted_seal["record_sha256"] = "0" * 64
+            with self.assertRaisesRegex(ContractError, "seal"):
+                validate_axeyum_build_observation(
+                    corrupted_seal,
+                    attempt_root=attempt,
+                    readiness=readiness,
+                )
+
+            stdout = Path(observation["stdout_path"])
+            original_stdout = stdout.read_bytes()
+            stdout.chmod(0o644)
+            stdout.write_bytes(b"mutated output")
+            with self.assertRaisesRegex(ContractError, "stdout artifact drift"):
+                validate_axeyum_build_observation(
+                    observation,
+                    attempt_root=attempt,
+                    readiness=readiness,
+                )
+            stdout.write_bytes(original_stdout)
+            binary.chmod(0o755)
+            binary.write_bytes(b"mutated binary")
+            with self.assertRaisesRegex(ContractError, "binary artifact drift"):
+                validate_axeyum_build_observation(
+                    observation,
+                    attempt_root=attempt,
+                    readiness=readiness,
+                )
+
+    def test_exact_source_build_rejects_failures_and_unsafe_outputs(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            parent = Path(tmp).resolve()
+            shared = parent / "shared"
+            shared.mkdir()
+            cargo, rustc = self.fixture_tools(parent)
+
+            def resolver(**_kwargs: object) -> tuple[Path, Path]:
+                return cargo, rustc
+
+            for label, returncode, output_kind, message in (
+                ("nonzero", 9, "missing", "build failed"),
+                ("missing", 0, "missing", "smtcomp_cli"),
+                ("directory", 0, "directory", "smtcomp_cli"),
+                ("non-executable", 0, "non-executable", "smtcomp_cli"),
+                ("symlink", 0, "symlink", "smtcomp_cli"),
+            ):
+                with self.subTest(build_failure=label):
+                    def runner(**kwargs: object) -> object:
+                        target = Path(kwargs["environment"]["CARGO_TARGET_DIR"])
+                        output = target / "release" / "examples" / "smtcomp_cli"
+                        if output_kind != "missing":
+                            output.parent.mkdir(parents=True)
+                            if output_kind == "directory":
+                                output.mkdir()
+                            elif output_kind == "symlink":
+                                real = output.parent / "real"
+                                real.write_bytes(b"fixture")
+                                real.chmod(0o755)
+                                output.symlink_to(real)
+                            else:
+                                output.write_bytes(b"fixture")
+                                output.chmod(0o644)
+                        return types.SimpleNamespace(
+                            returncode=returncode,
+                            stdout=b"",
+                            stderr=b"failed\n" if returncode else b"",
+                        )
+
+                    with self.assertRaisesRegex(ContractError, message):
+                        capture_axeyum_build(
+                            repository_root=ROOT,
+                            shared_root=shared,
+                            expected_commit=_git_head(ROOT),
+                            fixture_only=True,
+                            toolchain_resolver=resolver,
+                            build_runner=runner,
+                            now_ns=iter((1000, 1001)).__next__,
+                        )
+            with self.assertRaisesRegex(ContractError, "registered runtime hooks"):
+                capture_axeyum_build(
+                    repository_root=ROOT,
+                    shared_root=shared,
+                    expected_commit=_git_head(ROOT),
+                    toolchain_resolver=resolver,
+                )
+
+    def test_exact_source_build_detects_source_and_tool_drift_before_shared_mutation(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            parent = Path(tmp).resolve()
+            repository = self.exact_main_repository(parent)
+            shared = parent / "shared"
+            shared.mkdir()
+            cargo, rustc = self.fixture_tools(parent)
+
+            def write_output(kwargs: dict[str, object]) -> None:
+                target = Path(kwargs["environment"]["CARGO_TARGET_DIR"])
+                output = target / "release" / "examples" / "smtcomp_cli"
+                output.parent.mkdir(parents=True)
+                output.write_bytes(b"fixture")
+                output.chmod(0o755)
+
+            def source_drift_runner(**kwargs: object) -> object:
+                write_output(kwargs)
+                (repository / "tracked.txt").write_text("dirty during build\n", encoding="utf-8")
+                return types.SimpleNamespace(returncode=0, stdout=b"", stderr=b"")
+
+            with (
+                mock.patch.object(full_build_module, "_resolve_toolchain", return_value=(cargo, rustc)),
+                mock.patch.object(full_build_module, "_execute_build", side_effect=source_drift_runner),
+                self.assertRaisesRegex(ContractError, "clean worktree"),
+            ):
+                capture_axeyum_build(
+                    repository_root=repository,
+                    shared_root=shared,
+                    expected_commit=_git_head(repository),
+                )
+            (repository / "tracked.txt").write_text("fixture\n", encoding="utf-8")
+
+            def tool_drift_runner(**kwargs: object) -> object:
+                write_output(kwargs)
+                cargo.write_bytes(b"mutated cargo\n")
+                cargo.chmod(0o755)
+                return types.SimpleNamespace(returncode=0, stdout=b"", stderr=b"")
+
+            with (
+                mock.patch.object(full_build_module, "_resolve_toolchain", return_value=(cargo, rustc)),
+                mock.patch.object(full_build_module, "_execute_build", side_effect=tool_drift_runner),
+                self.assertRaisesRegex(ContractError, "cargo executable changed"),
+            ):
+                capture_axeyum_build(
+                    repository_root=repository,
+                    shared_root=shared,
+                    expected_commit=_git_head(repository),
+                )
+            cargo.write_bytes(b"cargo fixture\n")
+            cargo.chmod(0o755)
+
+            def ref_drift_runner(**kwargs: object) -> object:
+                write_output(kwargs)
+                advanced = subprocess.check_output(
+                    [
+                        "git",
+                        "commit-tree",
+                        "HEAD^{tree}",
+                        "-p",
+                        "HEAD",
+                        "-m",
+                        "advance tracking",
+                    ],
+                    cwd=repository,
+                    text=True,
+                ).strip()
+                subprocess.run(
+                    ["git", "update-ref", "refs/remotes/origin/main", advanced],
+                    cwd=repository,
+                    check=True,
+                )
+                return types.SimpleNamespace(returncode=0, stdout=b"", stderr=b"")
+
+            with (
+                mock.patch.object(full_build_module, "_resolve_toolchain", return_value=(cargo, rustc)),
+                mock.patch.object(full_build_module, "_execute_build", side_effect=ref_drift_runner),
+                self.assertRaisesRegex(ContractError, "exact integrated remote main"),
+            ):
+                capture_axeyum_build(
+                    repository_root=repository,
+                    shared_root=shared,
+                    expected_commit=_git_head(repository),
+                )
+            subprocess.run(
+                ["git", "update-ref", "refs/remotes/origin/main", "HEAD"],
+                cwd=repository,
+                check=True,
+            )
+            self.assertFalse((shared / ATTEMPT_DIRECTORY).exists())
+
+    def test_live_cli_has_no_caller_selected_axeyum_binary(self) -> None:
+        parser = full_capture_module._parser()
+        options = {
+            option
+            for action in parser._actions
+            for option in action.option_strings
+        }
+        self.assertNotIn("--axeyum-binary", options)
+
     def test_repaired_p0_authority_requires_live_roots_and_exact_committed_result(
         self,
     ) -> None:
@@ -2576,7 +3009,8 @@ class FullCaptureOperatorTests(unittest.TestCase):
                     repaired_p0_preparation=parent / "repaired-p0",
                     attempt_id="must-not-exist",
                     solver_sources={
-                        solver_id: parent / solver_id for solver_id in SOLVER_IDS
+                        solver_id: parent / solver_id
+                        for solver_id in ("cvc5", "bitwuzla")
                     },
                     sentinel_sources={
                         sentinel_id: parent / sentinel_id
@@ -2591,6 +3025,84 @@ class FullCaptureOperatorTests(unittest.TestCase):
                     repaired_p0_validator=reject_p0,
                 )
             self.assertFalse((shared / ATTEMPT_DIRECTORY).exists())
+
+    def test_build_failure_and_caller_axeyum_input_stop_before_attempt_namespace(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            parent = Path(tmp).resolve()
+            root = self.exact_main_repository(parent)
+            shared = parent / "shared"
+            accepted = parent / "accepted"
+            corpus = parent / "corpus"
+            for directory in (shared, accepted, corpus):
+                directory.mkdir()
+            corpus_manifest = parent / "corpus.json"
+            corpus_manifest.write_bytes(canonical_bytes({"fixture": True}))
+            gates = [
+                build_gate_observation(
+                    repository_root=root,
+                    command=list(command),
+                    exit_code=0,
+                    stdout=b"green\n",
+                    stderr=b"",
+                    started_at_ns=1000 + index * 10,
+                    ended_at_ns=1001 + index * 10,
+                )
+                for index, command in enumerate(
+                    (("just", "check"), ("./scripts/check-smtcomp-resume.sh",))
+                )
+            ]
+            readiness = build_readiness(
+                repository_root=root,
+                gate_observations=gates,
+                required_paths=("tracked.txt",),
+                fixture_only=True,
+            )
+            builder = mock.Mock(side_effect=ContractError("exact-source build failed"))
+            common = {
+                "repository_root": root,
+                "source_root": root,
+                "shared_root": shared,
+                "accepted_root": accepted,
+                "corpus_root": corpus,
+                "source_corpus_manifest": corpus_manifest,
+                "repaired_p0_preparation": parent / "repaired-p0",
+                "attempt_id": "must-not-exist",
+                "sentinel_sources": {
+                    sentinel_id: parent / sentinel_id
+                    for sentinel_id in (
+                        "qf-abvfp-query-26",
+                        "qf-bvfp-query-26",
+                        "qf-auflia-pipeline-invalid",
+                    )
+                },
+                "readiness": readiness,
+                "fixture_only": True,
+                "axeyum_builder": builder,
+                "repaired_p0_validator": mock.Mock(),
+            }
+            with self.assertRaisesRegex(ContractError, "exact-source build failed"):
+                prepare_full_capture(
+                    **common,
+                    solver_sources={
+                        solver_id: parent / solver_id
+                        for solver_id in ("cvc5", "bitwuzla")
+                    },
+                )
+            self.assertFalse((shared / ATTEMPT_DIRECTORY).exists())
+            self.assertEqual(builder.call_count, 1)
+
+            builder.reset_mock()
+            with self.assertRaisesRegex(ContractError, "solver inventory"):
+                prepare_full_capture(
+                    **common,
+                    solver_sources={
+                        solver_id: parent / solver_id for solver_id in SOLVER_IDS
+                    },
+                )
+            builder.assert_not_called()
+            self.assertFalse((shared / ATTEMPT_DIRECTORY).exists())
             with self.assertRaisesRegex(ContractError, "registered runtime hooks"):
                 prepare_full_capture(
                     repository_root=root,
@@ -2602,7 +3114,8 @@ class FullCaptureOperatorTests(unittest.TestCase):
                     repaired_p0_preparation=parent / "repaired-p0",
                     attempt_id="must-not-exist-live",
                     solver_sources={
-                        solver_id: parent / solver_id for solver_id in SOLVER_IDS
+                        solver_id: parent / solver_id
+                        for solver_id in ("cvc5", "bitwuzla")
                     },
                     sentinel_sources={
                         sentinel_id: parent / sentinel_id
@@ -2613,7 +3126,8 @@ class FullCaptureOperatorTests(unittest.TestCase):
                         )
                     },
                     readiness=readiness,
-                    repaired_p0_validator=reject_p0,
+                    axeyum_builder=builder,
+                    repaired_p0_validator=mock.Mock(),
                 )
             self.assertFalse((shared / ATTEMPT_DIRECTORY).exists())
 
@@ -3223,7 +3737,7 @@ class FullCaptureOperatorTests(unittest.TestCase):
             corpus_manifest.write_bytes(canonical_bytes({"fixture": "corpus"}))
 
             solver_sources = {}
-            for solver_id in SOLVER_IDS:
+            for solver_id in ("cvc5", "bitwuzla"):
                 binary = root / f"{solver_id}-source"
                 binary.write_text(f"{solver_id} fixture\n", encoding="utf-8")
                 binary.chmod(0o755)
@@ -3287,6 +3801,18 @@ class FullCaptureOperatorTests(unittest.TestCase):
             )
             events = []
             p0_calls = []
+            build_calls = []
+
+            def fixture_builder(**kwargs: object) -> AxeyumBuildCapture:
+                build_calls.append(kwargs)
+                self.assertFalse((shared / ATTEMPT_DIRECTORY).exists())
+                return fixture_axeyum_build_capture(
+                    repository_root=ROOT,
+                    shared_root=shared,
+                    target_dir=root / "private-build-target",
+                    source_commit=readiness["head_commit"],
+                    binary=b"axeyum fixture\n",
+                )
 
             def fixture_p0_validator(
                 *, repository_root: Path, preparation_root: Path
@@ -3351,6 +3877,7 @@ class FullCaptureOperatorTests(unittest.TestCase):
                     sentinel_sources=sentinel_sources,
                     readiness=readiness,
                     fixture_only=True,
+                    axeyum_builder=fixture_builder,
                     repaired_p0_validator=fixture_p0_validator,
                     remote_probe_fn=fixture_probe,
                     thermal_probe_fn=fixture_thermal_probe,
@@ -3358,6 +3885,8 @@ class FullCaptureOperatorTests(unittest.TestCase):
                 )
             completion = read_canonical_json(attempt / "complete.json")
             self.assertEqual(p0_calls, [(ROOT.resolve(), root / "repaired-p0")])
+            self.assertEqual(len(build_calls), 1)
+            self.assertEqual(build_calls[0]["expected_commit"], readiness["head_commit"])
             self.assertEqual(
                 events[:6],
                 [

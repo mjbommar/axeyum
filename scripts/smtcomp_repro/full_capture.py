@@ -24,6 +24,11 @@ from full_population import (
     build_thermal_observation,
     validate_schedule,
 )
+from full_build import (
+    AxeyumBuildCapture,
+    capture_axeyum_build,
+    stage_axeyum_build,
+)
 from full_preflight import build_full_preflight
 from full_prepare import (
     FullSolverCell,
@@ -78,6 +83,7 @@ RemoteProbe = Callable[..., dict[str, Any]]
 RepairedP0Validator = Callable[..., None]
 SolverRunner = Callable[..., Any]
 ThermalProbe = Callable[..., bytes]
+AxeyumBuilder = Callable[..., AxeyumBuildCapture]
 
 
 def capture_live_readiness(
@@ -382,6 +388,7 @@ def prepare_full_capture(
     sentinel_sources: dict[str, Path],
     readiness: dict[str, Any],
     fixture_only: bool = False,
+    axeyum_builder: AxeyumBuilder = capture_axeyum_build,
     repaired_p0_validator: RepairedP0Validator = validate_repaired_p0_authority,
     remote_probe_fn: RemoteProbe = remote_probe,
     thermal_probe_fn: ThermalProbe = remote_thermal_sample,
@@ -400,14 +407,15 @@ def prepare_full_capture(
     if type(fixture_only) is not bool:
         raise ContractError("full capture fixture flag mismatch")
     if not fixture_only and (
-        repaired_p0_validator is not validate_repaired_p0_authority
+        axeyum_builder is not capture_axeyum_build
+        or repaired_p0_validator is not validate_repaired_p0_authority
         or remote_probe_fn is not remote_probe
         or thermal_probe_fn is not remote_thermal_sample
         or solver_runner is not run_solver
         or now_ns is not time.time_ns
     ):
         raise ContractError("live full capture requires registered runtime hooks")
-    if set(solver_sources) != set(SOLVER_IDS):
+    if set(solver_sources) != {"cvc5", "bitwuzla"}:
         raise ContractError("full capture solver inventory mismatch")
     if set(sentinel_sources) != set(SENTINEL_KIND_BY_ID):
         raise ContractError("full capture sentinel inventory mismatch")
@@ -428,6 +436,20 @@ def prepare_full_capture(
         and require_exact_integrated_main(root) != readiness["head_commit"]
     ):
         raise ContractError("integrated main changed during repaired-P0 replay")
+
+    if progress is not None:
+        progress("building exact integrated Axeyum source in a private target")
+    axeyum_capture = axeyum_builder(
+        repository_root=root,
+        shared_root=shared,
+        expected_commit=readiness["head_commit"],
+        fixture_only=fixture_only,
+    )
+    if (
+        not fixture_only
+        and require_exact_integrated_main(root) != readiness["head_commit"]
+    ):
+        raise ContractError("integrated main changed during exact-source build")
 
     attempt = _create_attempt(shared, attempt_id)
     inputs = attempt / "inputs"
@@ -457,14 +479,22 @@ def prepare_full_capture(
         destination=inputs / "corpus-audit.json",
         label="corpus manifest",
     )
+    axeyum_build, axeyum_binary, axeyum_version = stage_axeyum_build(
+        capture=axeyum_capture,
+        attempt_root=attempt,
+        readiness=readiness,
+    )
     solver_binaries = {
-        solver_id: _install_copy(
-            source=solver_sources[solver_id],
-            destination=binaries_root / solver_id,
-            label=f"{solver_id} binary",
-            executable=True,
-        )
-        for solver_id in SOLVER_IDS
+        "axeyum": axeyum_binary,
+        **{
+            solver_id: _install_copy(
+                source=solver_sources[solver_id],
+                destination=binaries_root / solver_id,
+                label=f"{solver_id} binary",
+                executable=True,
+            )
+            for solver_id in ("cvc5", "bitwuzla")
+        },
     }
     sentinel_inputs = {
         sentinel_id: _install_copy(
@@ -512,7 +542,7 @@ def prepare_full_capture(
         FullSolverCell(
             "axeyum",
             solver_binaries["axeyum"],
-            f"integrated-release-{readiness['head_commit']}",
+            axeyum_version,
             19_000,
         ),
         FullSolverCell("cvc5", solver_binaries["cvc5"], "1.3.4"),
@@ -578,6 +608,7 @@ def prepare_full_capture(
         composition=composition,
         readiness=readiness,
         preflight=preflight,
+        axeyum_build=axeyum_build,
         solver_cells=solver_cells,
         prepared_at_ns=now_ns() if fixture_only else None,
     )
@@ -604,7 +635,6 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--corpus-root", type=Path)
     parser.add_argument("--corpus-manifest", type=Path)
     parser.add_argument("--repaired-p0-preparation", type=Path)
-    parser.add_argument("--axeyum-binary", type=Path)
     parser.add_argument("--cvc5-binary", type=Path)
     parser.add_argument("--bitwuzla-binary", type=Path)
     parser.add_argument("--qf-abvfp-sentinel", type=Path)
@@ -624,7 +654,6 @@ def main(argv: list[str] | None = None) -> int:
         "corpus_root",
         "corpus_manifest",
         "repaired_p0_preparation",
-        "axeyum_binary",
         "cvc5_binary",
         "bitwuzla_binary",
         "qf_abvfp_sentinel",
@@ -669,7 +698,6 @@ def main(argv: list[str] | None = None) -> int:
             repaired_p0_preparation=args.repaired_p0_preparation,
             attempt_id=args.attempt_id or _default_attempt_id(root),
             solver_sources={
-                "axeyum": args.axeyum_binary,
                 "cvc5": args.cvc5_binary,
                 "bitwuzla": args.bitwuzla_binary,
             },
