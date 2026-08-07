@@ -1,7 +1,7 @@
 # SMT-COMP A2 stale-branch audit and process-free port
 
-Status: process-free R1--R5 topic complete through focused/scoped gates; final
-full gate, integration, live preparation, and launch remain prohibited
+Status: process-free R1--R5 topic complete through the exact-topic full gate;
+integration, live preparation, and launch remain prohibited
 
 Date: 2026-08-06
 
@@ -83,20 +83,25 @@ registered locked/offline build produced a 14,208,408-byte binary and removed
 its private target. See the
 [`R5 implementation result`](smtcomp-credited-full-preparation-f2-live-capture-r5-implementation-2026-08-06.md).
 
+The exact pushed documentation checkpoint
+`1f723bef666aaa3b90bf73aab1c94108d023b98d` then passed an uninterrupted
+R3-isolated `CARGO_BUILD_JOBS=2 just check` with exit 0. The five generated
+frontier JSON artifacts were confined to a unique external directory; the
+worktree and tracked curves remained clean, and the local and remote topic refs
+were equal.
+
 The result is not an integrated-main result, remote CI, a live F2 root, or
 launch authorization.
 
 ## Exact next slice
 
-Finish the corrected topic in this same isolated lane:
+Finish A2 through the integration lane:
 
-1. complete documentation, link, and plan-authority checks;
-2. commit and push the exact R1--R5 topic and verify the remote ref;
-3. run one final `just check` with R3's frontier destination in a unique
-   external directory, then prove the worktree and tracked curves stayed clean;
-4. hand the exact branch to the integration owner for conflict preview, review,
-   merge, and a combined exact-main gate; and
-5. require a later explicit review before C0 or any live F2 action.
+1. hand the exact branch to the integration owner for conflict preview and
+   review;
+2. merge only the reviewed R1--R5 stack;
+3. pass the combined exact-main gate before pushing main; and
+4. require a later explicit review before C0 or any live F2 action.
 
 Stop before any host probe, sentinel execution, shared-root mutation, F3
 acceptance, allocation, or solver wave. Those require a later, separately

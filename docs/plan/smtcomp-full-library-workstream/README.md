@@ -454,9 +454,11 @@ gate.
    records removal of caller-selected Axeyum input, the private exact-source
    locked/offline build, schema-v3 source/tool/output/binary/run/completion
    replay, 52 focused tests / 82 subtests, the 165-test aggregate, a green
-   scoped gate, and a successful real build smoke. Final documentation, exact
-   push/ref verification, the clean R3-isolated full topic gate, integration,
-   and combined-main gates remain. Live preparation is still prohibited.
+   scoped gate, and a successful real build smoke. The exact pushed topic
+   `1f723bef6` also passed the clean R3-isolated full gate with external
+   frontier artifacts and a clean tracked tree. Integration-owner review,
+   merge preview, and combined-main gates remain. Live preparation is still
+   prohibited.
 
 The same implementation rule continues to apply: prove each new mechanism and
 its destructive/interruption tests on a tiny corpus before spending the full
@@ -599,10 +601,10 @@ NAS (shared, corpus read-only in practice):
    audited current main and must not be merged or executed. The
    [A2 audit](../smtcomp-a2-stale-branch-audit-2026-08-06.md) classifies all 19
    unique commits and records the current-main process-free port. R5 is
-   implemented and mutation-tested on `agent/smtcomp/a2-readiness-port`; follow
-   its [implementation result](../smtcomp-credited-full-preparation-f2-live-capture-r5-implementation-2026-08-06.md)
-   to finish documentation, push/ref verification, the clean R3-isolated full
-   topic gate, integration-owner review, and combined-main gates. Do not
+   implemented, mutation-tested, pushed, and full-topic gated on
+   `agent/smtcomp/a2-readiness-port`; follow its
+   [implementation result](../smtcomp-credited-full-preparation-f2-live-capture-r5-implementation-2026-08-06.md)
+   through integration-owner review, merge preview, and combined-main gates. Do not
    probe hosts, run sentinels, mutate the NAS, publish a live preparation root,
    construct F3 acceptance, allocate resources, or launch a solver from this
    checkpoint. Those actions require the complete corrected stack integrated

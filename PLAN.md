@@ -64,17 +64,23 @@ the source/tool/output/binary/run/completion chain. The port passes 52 focused
 tests with 82 subtests, the 165-test resume aggregate with one expected
 live-host skip, the generated-contract check, and the scoped gate. A real
 fixture-boundary build smoke produced a 14,208,408-byte binary with the
-registered environment and removed its private target. A prior direct
+registered environment and removed its private target. The exact pushed topic
+`1f723bef6` then passed a clean, uninterrupted
+`AXEYUM_PROGRESS_FRONTIER_ARTIFACT_DIR=<external> CARGO_BUILD_JOBS=2 just check`
+with exit 0. All five frontier artifacts were written only to the external
+directory, the worktree and tracked curves remained clean, and the local and
+remote topic refs matched exactly. A prior direct
 `CARGO_BUILD_JOBS=2 just check` passed every
 code, solver, doctest, ignored moment-proof, rustdoc, profile, reflection,
 benchmark, foundational-resource, rules-as-code, and SMT-COMP resume stage,
 then exited 1 because its frontier stage used the historical tracked artifact
 location and the later scoreboard check correctly rejected those volatile
 curves. The exact committed curves were restored with no retained diff;
-`just parity-docs plan-authority links` then passed cleanly. This is broad local
-evidence, not the final clean full gate; it also reproduces why the port's R3
-external artifact isolation is required. R5 is implemented but not integrated,
-and no host, NAS, sentinel, allocation, or solver action was performed. See the
+`just parity-docs plan-authority links` then passed cleanly. That earlier run
+reproduces why the port's R3 external artifact isolation is required; the later
+exact-topic gate closes the topic-only gap. R5 is implemented and fully
+topic-gated but not integrated, and no host, NAS, sentinel, allocation, or
+solver action was performed. See the
 [`A2 stale-branch audit`](docs/plan/smtcomp-a2-stale-branch-audit-2026-08-06.md)
 and
 [`R5 implementation result`](docs/plan/smtcomp-credited-full-preparation-f2-live-capture-r5-implementation-2026-08-06.md).
@@ -199,15 +205,14 @@ risk, or invalid gate. Those are P0 and preempt the queue.
 The next ten active priorities are A2 through A11. A1 remains here only as the
 closed prerequisite and evidence boundary for the queue.
 
-**Immediate action.** Finish A2 in `agent/smtcomp/a2-readiness-port`. R5 is
-implemented and its focused, aggregate, scoped, and real offline-build smoke
-evidence is green. Complete documentation/link/plan-authority checks, commit
-and push the exact topic, then run one final clean `just check` with R3's
-frontier artifacts directed outside the repository. Verify the remote ref and
-hand the complete stack to the integration owner; do not self-authorize C0 or
-live F2. No host probe, sentinel, NAS mutation, F3 acceptance, allocation, or
-solver fleet is permitted. A wrong verdict, crash, data-loss risk, invalid
-gate, or renewed resource overrun still preempts the queue.
+**Immediate action.** Finish A2 integration review. R5 and the complete R1--R5
+topic are focused, aggregate, scoped, real offline-build-smoke, and exact-topic
+full-gate green; local and remote topic refs match at `1f723bef6`. Review the
+exact branch, preview the merge, and run the combined exact-main gates before
+pushing main. Do not self-authorize C0 or live F2. No host probe, sentinel, NAS
+mutation, F3 acceptance, allocation, or solver fleet is permitted. A wrong
+verdict, crash, data-loss risk, invalid gate, or renewed resource overrun still
+preempts the queue.
 
 ### A1 — Complete arithmetic deadline and resource enforcement (`DONE`, P0)
 
@@ -224,16 +229,15 @@ solving-power remains unmeasured. The topic branch
 `agent/smtcomp/full-preparation-live` contains substantial process-free work
 based on older July state and must not be merged or launched as-is.
 
-**Current checkpoint.** The branch audit and R1--R4 process-free port are
+**Current checkpoint.** The branch audit and R1--R5 process-free topic are
 complete. R5 is implemented at `e4bb854bf` with 52 focused tests / 82 subtests,
 165 aggregate tests, scoped gates, and a successful real locked/offline build
-smoke. Broad local stages from the earlier direct full command are also green;
-that command's final exit remained red only because it did not use R3's
-external frontier-artifact environment, and its clean tail replay is green.
-The exact disposition and gate separation are in the dated A2 audit and R5
-implementation result. Final documentation, push/ref verification, one clean
-R3-isolated full topic gate, integration-owner review, and combined-main gates
-remain.
+smoke. Documentation checkpoint `1f723bef6` is pushed and matches the remote
+topic ref exactly. That exact commit passed one uninterrupted R3-isolated
+`just check` with exit 0; its five volatile frontier artifacts stayed external
+and the tracked tree remained clean. The exact disposition and gate separation
+are in the dated A2 audit and R5 implementation result. Integration-owner
+review, merge preview, and combined exact-main gates remain.
 
 **Next slice.** Close the topic gates and handoff, then integrate the complete
 R1--R5 stack through the integration owner. Do not execute the constructed live
@@ -399,7 +403,7 @@ or remove dirty/unmerged state to meet a free-space target.
 |---|---|---|
 | Integration and gates | `WIP`; audited main `7567ff827` | Local and remote main are equal. Topic full gate, merge-SHA pre-push gate, and focused post-merge tests for the preceding arithmetic increment are green. No GitHub run is visible for current main; last full remote CI is `31076938255` at `94082977d`. |
 | Arithmetic deadline reliability | `DONE` | Shared deadline, CAD polls, LRA ceilings, bounded DL probing, exact resume identity, and six fresh retained divisions are complete; see the 2026-08-06 closure note. |
-| Full-library measurement | `WIP` | A2 process-free R1--R5 topic is focused/aggregate/scoped green and the real registered offline-build smoke passed. Documentation, exact push/ref verification, the final R3-isolated full topic gate, integration-owner review, and combined-main gates remain. No live run and no launch authority. |
+| Full-library measurement | `WIP` | A2 process-free R1--R5 topic is focused/aggregate/scoped/full green, the real registered offline-build smoke passed, and local/remote topic refs match at `1f723bef6`. Integration-owner review, merge preview, and combined-main gates remain. No live run and no launch authority. |
 | QF_NIA breadth | `WIP` | Current clean result is 34/200 versus 89/200; A3 owns the 67-case reference-only census and next bounded cluster. |
 | QF_UFLIA breadth | `WIP` | 94/180; A4 owns causal residual partition. |
 | LRA/IDL/RDL | `WIP` | Current results are 86/146, 68/124, and 105/155; A5 owns cross-division consolidation. |

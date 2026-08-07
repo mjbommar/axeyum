@@ -1,7 +1,7 @@
 # SMT-COMP credited full-preparation R5 implementation
 
-Status: implemented and fixture-verified on the isolated topic; integration,
-live F2, and every solver action remain prohibited
+Status: implemented and fully gated on the isolated topic; integration, live
+F2, and every solver action remain prohibited
 
 Date: 2026-08-06
 
@@ -101,6 +101,12 @@ registered build smoke, fixture boundary only
 
 just check-scope origin/main
   52 pytest cases / 82 subtests and the 165-test aggregate passed
+
+exact pushed topic 1f723bef666aaa3b90bf73aab1c94108d023b98d
+  AXEYUM_PROGRESS_FRONTIER_ARTIFACT_DIR=<external>
+  CARGO_BUILD_JOBS=2 just check
+  exit=0; five frontier JSON artifacts external; worktree clean;
+  local topic ref == remote topic ref
 ```
 
 The smoke used the real registered locked/offline command and constructed
@@ -108,19 +114,18 @@ environment but deliberately did not create or publish a preparation. Because
 the implementation worktree was not integrated exact main, it carries no live
 F2 credit.
 
-## Remaining topic and integration gate
+## Completed topic gate and remaining integration gate
 
-Before proposing integration:
+The topic-side sequence is complete:
 
-1. update the canonical tracker and workstream handoff;
-2. pass links, plan authority, and the scoped/aggregate gates from a clean
-   committed topic;
-3. push the exact topic commit and verify the remote ref;
-4. run one final `just check` with the R3 frontier-artifact destination outside
-   the repository, and verify both worktree and tracked frontier bytes remain
-   clean; and
-5. hand the branch to the integration owner for conflict preview, review,
-   merge, and a combined exact-main gate.
+1. canonical tracker and workstream handoff updated;
+2. links, plan authority, focused, scoped, and aggregate gates passed;
+3. exact topic `1f723bef6` pushed and remote equality verified; and
+4. the final R3-isolated `just check` passed exit 0 while the worktree and
+   tracked frontier bytes remained clean.
+
+The remaining A2 work is integration-owner conflict preview and review, merge,
+and a combined exact-main gate before main is pushed.
 
 Even after integration, live C0/F2 is a separate reviewed action. Do not probe
 hosts, run sentinels, mutate NAS state, construct F3 acceptance, allocate

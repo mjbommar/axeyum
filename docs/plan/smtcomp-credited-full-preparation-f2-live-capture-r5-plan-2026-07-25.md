@@ -1,7 +1,7 @@
 # SMT-COMP credited full-population F2 live-capture R5 plan
 
-Status: implemented and fixture-verified on topic `e4bb854bf`; integration and
-live F2 remain prohibited
+Status: implemented at `e4bb854bf` and fully topic-gated through exact pushed
+checkpoint `1f723bef6`; integration and live F2 remain prohibited
 
 Date: 2026-07-25
 
