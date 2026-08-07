@@ -6,13 +6,14 @@ first and update it before ending a project-level work session.
 
 - Last consolidated: **2026-08-07**
 - Integrated repository state audited at:
-  `a28560f81db34248413f27382b706ab7c5b9b60f`; the latest solver-code gate
+  `d09e6debb0466b24dbd5cd7bed382b80b35bdf1d`; the latest solver-code gate
   remains `3eb7eac442c64aee4b809ee059bf59d93b6160ee`, including A3 merge
   `0c31baf979d09270497b5512819fa6e8ed927de7`
 - Expected handoff state: clean local `main` equal to `origin/main`
 - Latest integrated code increment: A3 topic `ee5042deea762bb605a0c136f795399aaae47b97`
   via merge `0c31baf979d09270497b5512819fa6e8ed927de7`
-- Latest retained-result increment: `ebbabb34c9e2aa213a5e7aa7f1634acc68b2e374`
+- Latest retained-result increment: `3576e6739` (A3 explanation partition and
+  exact 52-row budget repartition)
 - Latest integrated A3 code increments: bounded SMT-LIB `distinct` expansion at
   `63c82a6ef`, typed arithmetic-model reconstruction at `4ff9a82c6`, and
   deterministic string/integer coupling at `db7b426e8`
@@ -38,9 +39,9 @@ checker/importer, and several consumers. It is not yet a drop-in Z3 replacement
 or a replacement for the Lean system.
 
 The audited integrated repository state is
-`a28560f81db34248413f27382b706ab7c5b9b60f`; its later CI, PLAN, and negative
-A3 diagnostic-result changes do
-not alter the solver-code evidence at `3eb7eac442`. Local `main` is clean and
+`d09e6debb0466b24dbd5cd7bed382b80b35bdf1d`; the A3 relevance-ladder and budget
+partition work is documentation-only and does not alter the solver-code
+evidence at `3eb7eac442`. Local `main` is clean and
 exactly equal to `origin/main`. Topic `ee5042dee` is pushed and exactly equals
 `origin/agent/nia/a3-census`. The merge passed one uninterrupted
 external-frontier `CARGO_BUILD_JOBS=2 just check` with exit 0: format, stable
@@ -61,6 +62,11 @@ and CI run `31192792245` are terminal green, including the formerly failing
 registered full-preparation resume gate.
 The later docs-only main checkpoint `a28560f81` is independently terminal green
 in hosted docs run `31198041045`.
+Follow-up topic `c92155454` is integrated by merge `d09e6debb`. Its broad gate
+passed every substantive code/evidence stage, then exited 1 when the scoreboard
+correctly detected five frontier JSON files regenerated earlier in that same
+command. Exact restoration plus the full parity-docs tail, plan authority,
+links, and clean-tree checks passed; this is not an aggregate exit-0 claim.
 Local `main` and `origin/main` are equal at handoff. The IDL repair branch completed terminal
 `CARGO_BUILD_JOBS=2 just check`; merge `198f2dc1b` passed its immutable-SHA
 pre-push workspace-library, progress-frontier, and evidence gates. Integrated
@@ -264,8 +270,10 @@ and removed one inactive 1.7 GiB Axeyum session directory from `/tmp` after
 verifying it had no open file descriptors. After the residual A3 evidence was
 integrated, its clean topic worktree passed exact ancestry and cleanliness
 checks; `cargo clean` removed 40,064 reproducible files / 71.0 GiB and the
-checkout was retired while preserving the branch. Only clean `main` remains
-registered. Current free space is about 926 GiB on `/` and 28 GiB on the 62 GiB
+checkout was retired while preserving the branch. The final merged A3
+explanation-partition checkout was also retired with its branch preserved,
+reclaiming about 176 GiB from its Cargo target. Only clean `main` remains
+registered. Current free space is about 902 GiB on `/` and 28 GiB on the 62 GiB
 `/tmp` tmpfs. Retained A3 census evidence and unrelated temporary projects were
 left untouched.
 Four empty A3 frontier directories and their pointer file were removed after
@@ -310,6 +318,7 @@ the failed aggregate attempts; they contained no retained evidence.
 
 | Date | Commit | Result |
 |---|---|---|
+| 2026-08-07 | `3576e6739` / `c92155454` / `d09e6debb` | Rejected relevance-activated bound ladders after 0/6 target decisions, exactly repartitioned all 52 A3 budget rows, refreshed the generated CI identity, and integrated the clean pushed evidence branch. |
 | 2026-08-07 | `3696e7dd5` | Confirmed repeated size-admission large cores on the selected QF_NIA pair, then rejected bounded four-group deletion after it shrank clauses but decided neither target; temporary solver code was removed. |
 | 2026-08-07 | `704318a5f` | Refreshed the complete-parity manifest's sole stale source identity after the pinned-`just` CI workflow change; outcomes, populations, gates, and parity credit are unchanged, and full parity-docs/authority/links pass. |
 | 2026-08-07 | `db7b426e8` | Replaced a hidden load-sensitive two-second string/integer coupling deadline with deterministic 128-candidate and 2,000-node ceilings while preserving caller timeouts; the direct budget regression, 14-test fixture, and all-target solver Clippy pass. |
@@ -594,9 +603,10 @@ targets. The later authorized cleanup preserved all 24 dirty deltas as labelled
 stashes, retained every branch tip, removed the inactive checkout directories,
 and initially left two registered worktrees. After the A3 result merged, its
 clean 71.0 GiB topic target was removed and the merged checkout retired while
-its branch remained. Only `main` is registered; `/` currently has about 926 GiB
-free and the `/tmp` tmpfs about 28 GiB free. Automation and fixture coverage
-remain open.
+its branch remained. After merge `d09e6debb`, the final clean topic checkout
+and its 176 GiB target were also retired while preserving the local and remote
+branch. Only `main` is registered; `/` currently has about 902 GiB free and the
+`/tmp` tmpfs about 28 GiB free. Automation and fixture coverage remain open.
 
 **Exit.** The inventory is deterministic and tested against dirty, merged,
 unmerged, detached, missing-target, and malformed-cache fixtures. A dry run
@@ -610,7 +620,7 @@ or remove dirty/unmerged state to meet a free-space target.
 
 | Workstream | State | Current boundary / next action |
 |---|---|---|
-| Integration and gates | `DONE`; current checkpoint | Local `main` and `origin/main` are identical at `bd413357c`. Topic `ee5042dee` equals its remote, and merge `0c31baf97` passed the complete external-frontier `just check` with exit 0. Exact-code docs `31190516093` and CI `31190517748` failed only because setup-just's temporary install lay outside the credited PATH; every non-doc CI job passed. Repair `259797459` installs the pinned regular executable at the registered path, and exact-SHA docs `31192792512` plus CI `31192792245` are terminal green. |
+| Integration and gates | `DONE`; current checkpoint | Local and remote `main` equal merge `d09e6debb`; topic `c92155454` remains remote. Broad stages passed, then the scoreboard rejected five in-run frontier rewrites. Exact restoration plus parity-docs, authority, links, and clean-tree checks passed. Prior docs `31198041045` are green; the new hosted run is unverified until terminal. |
 | Arithmetic deadline reliability | `DONE` | Shared deadline, CAD polls, LRA ceilings, bounded DL probing, exact resume identity, and six fresh retained divisions are complete; see the 2026-08-06 closure note. |
 | Full-library measurement | `WIP`; A2 readiness `DONE` | The R1--R5 readiness stack is integrated by `8ed5ad089` and focused/aggregate/scoped/topic/full-main green; the real registered offline-build smoke passed. No live run, preparation root, or launch authority exists. A later live C0/F2 step requires separate review. |
 | QF_NIA breadth | `WIP` | Current clean result remains 34/200 versus 89/200. Reconstruction, large-core deletion, and cheap relevance activation are closed negatively without retained solver code; the last emitted hundreds of checked implications but gained 0/6 target decisions. The 52 budget rows split into 37 mixed width timeouts, 11 all-SAT estimate refusals, three UNSAT combined timeouts, and one UNSAT replay overflow. Next diagnose the two lowest all-SAT estimates (`p31818`, `p6984`) without raising the 64,000,000 safety ceiling. |
@@ -623,7 +633,7 @@ or remove dirty/unmerged state to meet a free-space target.
 | CAS parity | `BLOCKED` by deliberate pause | Wave-24 code `01d47334` and pause commit `245d8f25` are ancestors of current main. Do not start wave 25 until the user resumes it and retained specialized gate evidence is re-audited. |
 | Consumer apps / verified systems | `WIP`, non-critical path | Existing EVM, verifier, property, reflection, and symbolic-execution slices remain useful; do not preempt A2–A7 without measured demand. |
 | Foundational resources | `WIP`, separate content lane | Keep generated-resource gates green; record only project-level priority changes here. |
-| Worktree and build-cache hygiene | `WIP`, recovered | A11; only clean `main` is registered. The cleanup stored all 24 inactive dirty deltas in labelled stashes, retained every branch tip, removed the inactive checkouts and one 1.7 GiB session tree, then retired the clean merged A3 topic and its 71.0 GiB Cargo target. Current free space is about 926 GiB on `/` and 28 GiB on `/tmp`. Next automate the deterministic read-only inventory and exact-target cleanup classification. |
+| Worktree and build-cache hygiene | `WIP`, recovered | A11; only clean `main` is registered. The cleanup stored all 24 inactive dirty deltas in labelled stashes, retained every branch tip, removed the inactive checkouts and one 1.7 GiB session tree, retired the earlier clean A3 target, and finally removed the merged explanation-partition checkout with its 176 GiB Cargo target. Current free space is about 902 GiB on `/` and 28 GiB on `/tmp`; all topic branches remain preserved. Next automate the deterministic read-only inventory and exact-target cleanup classification. |
 
 ## Resume protocol
 
