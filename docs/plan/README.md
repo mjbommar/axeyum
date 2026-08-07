@@ -12,6 +12,14 @@ queue, standing-rules, and resume document. Then use this folder for detailed
 phase contracts and retained result evidence. Root [`STATUS.md`](../../STATUS.md)
 is a compatibility pointer only.
 
+The active A3 QF_NIA lane is bounded by the
+[`complete causal-census result`](qf-nia-a3-causal-census-v2-result-2026-08-07.md)
+and its
+[`model-replay cluster preregistration`](qf-nia-a3-model-replay-cluster-preregistration-v1-2026-08-07.md).
+The former retains all 67 complete traces; the latter permits diagnostics first
+and only then a replay-preserving repair over seven SAT targets and six UNSAT
+near-miss controls.
+
 ## Layout
 
 - [`agent-program-2026-07-28/`](agent-program-2026-07-28/README.md) — **the
