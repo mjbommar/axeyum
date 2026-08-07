@@ -89,7 +89,8 @@ an isolated install smoke, complete-parity generation, and both exact-SHA
 hosted runs at `bd413357c` are green. No retained solver or measurement process
 is running.
 
-A3 is **WIP** on `agent/nia/a3-census`. The repaired complete 67-row census
+A3 is **WIP** on `agent/nia/a3-residual-next`; pushed result checkpoint
+`3696e7dd5` equals its remote. The repaired complete 67-row census
 classifies 52 NIA-linearization budget declines, 13 former generic model-replay
 declines, one verifier rejection, and one bounded giant-`distinct` ingest
 decline. The ingest repair replaces a 4.36 GiB expansion abort with a typed
@@ -105,6 +106,12 @@ observations entered reconstruction after the shared deadline, dense Gomory was
 size-inadmissible, and B&B ran zero nodes; a follow-up root-repair discriminator
 shifted among earlier load-sensitive stops and never produced stable mechanism
 evidence. No cap, deadline, route-order, or solver-code change was retained.
+The repeated-large-core diagnostic then confirmed size-only admission in 3/3
+direct `SAT14/1051` observations and 2/3 `SAT14/1280` observations. A separately
+preregistered, sound four-group deletion pass shrank the broad clauses but
+reduced `1051` from 192--202 to 35 lazy rounds and `1280` from 391--397 to 338,
+without deciding either target. It was rejected at the two-target gate; all
+temporary solver code was removed and no 200-row run was authorized.
 The first aggregate A3 gate exposed one load-sensitive string/integer fixture:
 a hidden two-second default deadline could return `unknown` before the known
 `i = 500` witness under aggregate CPU contention. Commit `db7b426e8` removes
@@ -287,6 +294,7 @@ the failed aggregate attempts; they contained no retained evidence.
 
 | Date | Commit | Result |
 |---|---|---|
+| 2026-08-07 | `3696e7dd5` | Confirmed repeated size-admission large cores on the selected QF_NIA pair, then rejected bounded four-group deletion after it shrank clauses but decided neither target; temporary solver code was removed. |
 | 2026-08-07 | `704318a5f` | Refreshed the complete-parity manifest's sole stale source identity after the pinned-`just` CI workflow change; outcomes, populations, gates, and parity credit are unchanged, and full parity-docs/authority/links pass. |
 | 2026-08-07 | `db7b426e8` | Replaced a hidden load-sensitive two-second string/integer coupling deadline with deterministic 128-candidate and 2,000-node ceilings while preserving caller timeouts; the direct budget regression, 14-test fixture, and all-target solver Clippy pass. |
 | 2026-08-07 | `7b35dbcb6` / `8bab16429` / `799c5c8c7` | Kept fallible DPLL oracle fixtures explicit and synchronized evidence plus representative Lean expectations with the checked Boolean-simplification route selected after bounded duplicate short-circuiting. |
@@ -320,13 +328,13 @@ here as closed evidence boundaries; A3 is now the first active item.
 
 **Immediate action.** The registered-`just` path repair at `259797459` is
 integrated and remotely confirmed by terminal-green docs run `31192792512` and
-CI run `31192792245`. The two-case reconstruction-deadline cluster is rejected
-without retaining solver code. Direct attribution over the five remaining
-reference-SAT DPLL/core-search targets selects a preregistered repeated-large-
-core pair: `SAT14/1051` and `SAT14/1280`. Add only the authorized
-verdict-neutral size-admission/deadline and downstream-stop counters; require
-two of three reproductions per row before selecting an implementation
-mechanism. A2 is integrated and combined-main green, but this
+CI run `31192792245`. Both the reconstruction-deadline cluster and the
+repeated-large-core four-group deletion experiment are rejected without
+retained solver code. Repartition the five residual DPLL/core-search rows using
+the retained v1 causal evidence, and preregister a cheaper mechanism only when
+it avoids additional full theory-oracle calls per conflict. Do not revive
+group deletion, raise a cap, or start a 200-row run from the negative result.
+A2 is integrated and combined-main green, but this
 does not self-authorize C0 or live F2. No host probe, sentinel, NAS mutation, F3
 acceptance, allocation, or solver fleet is permitted. A wrong
 verdict, crash, data-loss risk, invalid gate, or renewed resource overrun still
@@ -399,16 +407,22 @@ size-inadmissible dense Gomory and zero B&B nodes after deadline expiry. Its
 follow-up root-repair discriminator was route-unstable under host contention,
 so the cluster was rejected and every temporary solver edit removed. See the
 [`v1 result`](docs/plan/qf-nia-a3-reconstruction-deadline-cluster-v1-result-2026-08-07.md).
+The next cluster confirmed repeated size-admission broad cores on `SAT14/1051`
+(3/3) and `SAT14/1280` (2/3). Its preregistered four-group deletion mechanism
+made clauses narrower but spent up to four extra exact-theory calls per
+conflict, moved both budget stops earlier, and decided neither target. The
+implementation was rejected and fully removed. See the
+[`large-core v1 result`](docs/plan/qf-nia-a3-large-core-cluster-v1-result-2026-08-07.md)
+and
+[`group-deletion v2 result`](docs/plan/qf-nia-a3-large-core-group-deletion-v2-result-2026-08-07.md).
 
-**Next slice.** The
-[`reconstruction-deadline cluster result`](docs/plan/qf-nia-a3-reconstruction-deadline-cluster-v1-result-2026-08-07.md)
-closes that population negatively. The
-[`large-core cluster preregistration`](docs/plan/qf-nia-a3-large-core-cluster-preregistration-v1-2026-08-07.md)
-selects `SAT14/1051` and `SAT14/1280` from the five remaining search/core rows.
-Split `Large` cores by the existing 128-atom admission guard versus deadline,
-record bounded core-size histograms and terminal stage, and require repeated
-shared evidence before a second implementation preregistration. Do not revive
-probe-model reuse, reserve reconstruction time, or change a core policy yet.
+**Next slice.** Repartition the five residual DPLL/core-search rows from the
+retained causal census and direct cluster evidence. The next candidate must use
+an already-produced checked explanation or cheaper Boolean-side mechanism; it
+must not add repeated full theory-oracle calls merely to improve clause width.
+Preregister exact targets, controls, work bounds, and a removal rule before
+solver edits. Do not revive probe-model reuse or group deletion, reserve
+reconstruction time, raise general caps, or run the 200-row list yet.
 
 **Exit.** One preregistered cluster improves a fresh whole-list result without
 losing any of the 34 decisions; all SAT answers replay on the original terms and
@@ -559,7 +573,7 @@ or remove dirty/unmerged state to meet a free-space target.
 | Integration and gates | `DONE`; current checkpoint | Local `main` and `origin/main` are identical at `bd413357c`. Topic `ee5042dee` equals its remote, and merge `0c31baf97` passed the complete external-frontier `just check` with exit 0. Exact-code docs `31190516093` and CI `31190517748` failed only because setup-just's temporary install lay outside the credited PATH; every non-doc CI job passed. Repair `259797459` installs the pinned regular executable at the registered path, and exact-SHA docs `31192792512` plus CI `31192792245` are terminal green. |
 | Arithmetic deadline reliability | `DONE` | Shared deadline, CAD polls, LRA ceilings, bounded DL probing, exact resume identity, and six fresh retained divisions are complete; see the 2026-08-06 closure note. |
 | Full-library measurement | `WIP`; A2 readiness `DONE` | The R1--R5 readiness stack is integrated by `8ed5ad089` and focused/aggregate/scoped/topic/full-main green; the real registered offline-build smoke passed. No live run, preparation root, or launch authority exists. A later live C0/F2 step requires separate review. |
-| QF_NIA breadth | `WIP` | Current clean result remains 34/200 versus 89/200. The complete 67-case census, giant-`distinct` resource repair, reconstruction-outcome repair, and rejected zero-gain probe-model experiment are integrated. The two-case reconstruction-deadline cluster is also rejected without retained solver code. Direct attribution selects a preregistered repeated-large-core pair (`SAT14/1051`, `SAT14/1280`); next add only bounded source/reason/size/terminal-stage counters and require two of three reproductions per target before implementation selection. |
+| QF_NIA breadth | `WIP` | Current clean result remains 34/200 versus 89/200. The complete 67-case census, giant-`distinct` resource repair, reconstruction-outcome repair, and rejected zero-gain probe-model experiment are integrated. Reconstruction-deadline and repeated-large-core clusters are both closed negatively without retained solver code: size-admission reproduced 3/3 and 2/3, but sound four-group deletion spent too much exact-theory work and decided neither target. Next repartition the five residual DPLL/search rows and preregister only a cheaper checked-explanation or Boolean-side mechanism. |
 | QF_UFLIA breadth | `WIP` | 94/180; A4 owns causal residual partition. |
 | LRA/IDL/RDL | `WIP` | Current results are 86/146, 68/124, and 105/155; A5 owns cross-division consolidation. |
 | QF_BV/QF_SLIA/UF/QF_ABV | `WIP`, strong selected cells | Preserve current ledgers; do not prioritize small score gains above A2–A6. |
