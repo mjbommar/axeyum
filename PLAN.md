@@ -337,16 +337,9 @@ the failed aggregate attempts; they contained no retained evidence.
 | 2026-08-06 | `4477f2bb9` / `198f2dc1b` / `71ca85d9f` | Bounded the complete DL probe front end, preserved fallback time, passed full topic and exact-SHA gates, and retained QF_IDL 68/200 versus 124/200 with zero losses or disagreements. |
 | 2026-08-06 | `5ce07c55e` / `8ea6a7cad` | Made parity resume identity exact-path and fail-closed for duplicate, ambiguous, or drifted populations. |
 | 2026-08-06 | `c5d617c10` / `b353419e7` / `54b366517` | Retained fresh QF_NIA 34/200, QF_LIA 117/200, QF_LRA 86/200, and QF_RDL 105/200 runs, all with zero disagreements. |
-| 2026-08-05 | `e2eed63b1` / `ae03e1cc9` | Removed the public-to-private rustdoc link that was the sole failure in CI `31074220229`; exact stable rustdoc and immutable-SHA branch gates are green. |
-| 2026-08-05 | `96ff85930` / `14f80a2bf` | Shared one arithmetic deadline across sequential routes, added CAD cancellation polls and deterministic LRA normalization ceilings, and added public regression/ADR evidence. |
-| 2026-08-05 | `803c08439` | Added independent fresh-arena checking for all 92 certified QF_BV UNSAT rows; 78 retain the stronger text-only recheck claim. |
-| 2026-08-04 | `3777a3b2c` / `8f4458fb1` | Repaired the load-sensitive frontier ratchet and refreshed honest curves without raising baselines. |
-| 2026-08-04 | `1c419f6b1` | Fixed a lazy-LIA operation that exceeded a 200 ms budget by 548x; exposed remaining NRA and normalization ceilings. |
-| 2026-08-04 | `97e40b16d` / `721c85ae1` | Re-armed an inert capability gate and five blind suites; fixed a difference-logic stack overflow. |
-| 2026-08-04 | `e45fdb7e4` | Added bounded NIA product lemmas/refinement and route-decline telemetry; two full-list residuals improved but are not yet re-certified in the parity ledger. |
-| 2026-08-03 | `fa5af54ee` / `e62086742` | Routed online LIA/LRA through warm simplex and re-certified affected arithmetic divisions. |
-| 2026-08-03 | `359dd65ef` / `5aed68626` | Added checked difference logic; QF_RDL moved 6.6%→68.6% and QF_IDL 41.5%→53.7%. |
-| 2026-08-03 | `fc1810969` / `b60c991b1` | Made route traces persistable and added the proposed, ADR-gated exploration plan. |
+
+Older landed changes remain in Git and their dated result notes; this table is
+deliberately bounded to changes that still determine the immediate queue.
 
 ## Next Actions
 
@@ -368,6 +361,14 @@ exact-path sidecar plus complete route traces and must reproduce 94/200 versus
 the complete-record predicate before execution or solver edits. A3's negative
 routes remain closed. A2's green readiness still does not authorize C0/F2,
 host/NAS mutation, allocation, or a solver fleet. P0 failures preempt the queue.
+
+**Parallel documentation action.** Continue the user-directed public
+documentation audit without modifying A4's owned solver/evidence paths. The
+beginner sequence, installation/build profiles, model-replay guide, curated
+mdBook index, and runnable first SMT-LIB example are now refreshed on the live
+tree. Next, replace the remaining planned WASM page with a clean-environment
+validated browser build/run workflow, then audit contributor task guides,
+reference pages, internals summaries, and crate-level examples in that order.
 
 ### A1 — Complete arithmetic deadline and resource enforcement (`DONE`, P0)
 
@@ -633,6 +634,7 @@ or remove dirty/unmerged state to meet a free-space target.
 | CAS parity | `BLOCKED` by deliberate pause | Wave-24 code `01d47334` and pause commit `245d8f25` are ancestors of current main. Do not start wave 25 until the user resumes it and retained specialized gate evidence is re-audited. |
 | Consumer apps / verified systems | `WIP`, non-critical path | Existing EVM, verifier, property, reflection, and symbolic-execution slices remain useful; do not preempt A2–A7 without measured demand. |
 | Foundational resources | `WIP`, separate content lane | Keep generated-resource gates green; record only project-level priority changes here. |
+| Public documentation and examples | `WIP`, user-directed lane | Beginner chapters 01–07 and the installation/model-replay path are now substantive and indexed; the first SMT-LIB example compiles and prints the documented model. Next validate and write the WASM workflow, then close contributor/reference/internals and crate-example gaps. |
 | Worktree and build-cache hygiene | `WIP`, recovered | A11; only clean `main` is registered. The cleanup stored all 24 inactive dirty deltas in labelled stashes, retained every branch tip, removed the inactive checkouts and one 1.7 GiB session tree, retired the earlier clean A3 target, and finally removed the merged explanation-partition checkout with its 176 GiB Cargo target. Current free space is about 902 GiB on `/` and 28 GiB on `/tmp`; all topic branches remain preserved. Next automate the deterministic read-only inventory and exact-target cleanup classification. |
 
 ## Resume protocol

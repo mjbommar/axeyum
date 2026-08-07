@@ -24,6 +24,14 @@ server and nothing to install. Best for a first look.
 Axeyum is a library first. `solve_smtlib` parses a script and decides the
 conjunction of its assertions:
 
+```sh
+cargo run -p axeyum-solver --features full --example first_smtlib_query
+```
+
+The checked-in
+[`first_smtlib_query.rs`](../../crates/axeyum-solver/examples/first_smtlib_query.rs)
+is a command-faithful runnable companion. The general three-way API is:
+
 ```rust
 use std::time::Duration;
 use axeyum_solver::{solve_smtlib, CheckResult, SolverConfig};
@@ -54,6 +62,10 @@ fn main() {
 `logic`, and any `(set-info :status …)` (used only for cross-checking, never to
 decide). The returned `Sat(model)` has **already** been replayed against the
 original assertions — see [models & replay](models-and-replay.md).
+
+The SMT-LIB API requires the solver crate's `full` feature. The default `qfbv`
+profile instead exposes the typed scalar Bool/BV API without the text parser;
+see [installation and build profiles](installation.md).
 
 > The contradictory variant — assert `x = #x00` *and* `x = #x01` — returns
 > `Unsat`. With the proof-producing core enabled it also emits a DRAT proof you

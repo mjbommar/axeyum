@@ -61,3 +61,7 @@ axeyum-scenarios = { path = "../axeyum-scenarios" }
 [[example]]
 name = "geometry_portfolio"
 required-features = ["full"]
+
+[[example]]
+name = "first_smtlib_query"
+required-features = ["full"]

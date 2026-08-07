@@ -1,7 +1,16 @@
 # Documentation Plan
 
-Status: draft
-Last updated: 2026-06-20
+Status: active roadmap
+Last updated: 2026-08-07
+
+The beginner sequence is now complete, and the user guide has live pages for
+installation/build profiles, first SMT-LIB and Rust use, models/replay, UNSAT
+evidence, limitations, benchmarks, and corpus manifests. Remaining front-door
+work is concentrated in the dedicated WASM guide, contributor task guides,
+stable/generated reference pages, and several internals summaries. The live
+indexes in [`docs/README.md`](README.md), [`learn/README.md`](learn/README.md),
+and [`user-guide/README.md`](user-guide/README.md) are authoritative for what is
+currently written.
 
 This plan describes how to reshape Axeyum's public documentation so it serves
 four audiences without diluting the research and roadmap material already in the
@@ -129,7 +138,7 @@ docs/
     README.md
     installation.md
     first-smtlib-query.md
-    first-rust-query.md
+    rust-embedding.md
     models-and-replay.md
     unsat-evidence.md
     benchmarks.md
@@ -198,7 +207,7 @@ Start with:
 
 1. `docs/user-guide/installation.md`
 2. `docs/user-guide/first-smtlib-query.md`
-3. `docs/user-guide/first-rust-query.md`
+3. `docs/user-guide/rust-embedding.md`
 4. `docs/user-guide/models-and-replay.md`
 5. `docs/user-guide/limitations.md`
 

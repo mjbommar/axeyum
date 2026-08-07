@@ -46,7 +46,11 @@
 
 - [Learn: from scratch](learn/README.md)
   - [What is automated reasoning?](learn/01-what-is-automated-reasoning.md)
+  - [SAT in 15 minutes](learn/02-sat-in-15-minutes.md)
+  - [SMT and theories](learn/03-smt-and-theories.md)
+  - [Bit-vectors and bit-blasting](learn/04-bit-vectors-and-bit-blasting.md)
   - [sat, unsat, and unknown](learn/05-models-unsat-and-unknown.md)
+  - [Proofs, certificates, and trust](learn/06-proofs-certificates-and-trust.md)
   - [How Axeyum solves a query](learn/07-how-axeyum-solves-a-query.md)
   - [Math Proof Route Learner Snippets](learn/math/proof-route-learner-snippets.md)
   - [Rules/Law Trust Boundary](learn/rules-law-trust-boundary.md)
@@ -54,9 +58,14 @@
 # User Guide
 
 - [User Guide](user-guide/README.md)
+  - [Installation and build profiles](user-guide/installation.md)
   - [Your first SMT-LIB query](user-guide/first-smtlib-query.md)
+  - [Rust embedding](user-guide/rust-embedding.md)
+  - [Models and replay](user-guide/models-and-replay.md)
+  - [UNSAT evidence](user-guide/unsat-evidence.md)
   - [Limitations](user-guide/limitations.md)
   - [Benchmarks](user-guide/benchmarks.md)
+  - [Versioned corpus manifests](user-guide/corpus-manifests.md)
 
 # Internals
 

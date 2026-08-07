@@ -4,17 +4,27 @@ Axeyum's Rust API keeps construction strict: operators never guess how to
 reconcile different sorts. This catches lifter bugs at the point where they are
 introduced instead of silently changing a formula before solving it.
 
-For a scalar-QF_BV-only consumer, select the dependency-minimal profile:
+The solver crate's default profile is the dependency-minimal scalar QF_BV
+surface:
 
 ```toml
 [dependencies]
-axeyum-solver = { version = "0.1", default-features = false, features = ["qfbv"] }
+axeyum-solver = { path = "../axeyum/crates/axeyum-solver" }
 ```
 
-That profile retains the cold and warm pure-Rust QF_BV backends, models,
+That `qfbv` profile retains the cold and warm pure-Rust QF_BV backends, models,
 configuration, and DIMACS/DRAT proof APIs while excluding the e-graph,
-floating-point, Lean-kernel, SMT-LIB, and string crates. The default `full`
-profile preserves the complete existing API.
+floating-point, Lean-kernel, SMT-LIB, and string crates. Opt into the complete
+in-tree API explicitly:
+
+```toml
+[dependencies]
+axeyum-solver = { path = "../axeyum/crates/axeyum-solver", features = ["full"] }
+```
+
+The crates are not yet published to crates.io. See
+[installation and build profiles](installation.md) for Git pinning, native
+oracle features, and tested repository commands.
 
 ## Bit-vector width conventions
 

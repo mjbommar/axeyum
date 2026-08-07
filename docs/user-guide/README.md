@@ -16,10 +16,10 @@ flowchart LR
 
 | Page | What |
 |---|---|
-| installation.md *(planned)* | toolchain, `just check`, optional `z3` feature |
+| [Installation and build profiles](installation.md) | toolchain, source dependencies, `qfbv`/`full`, optional Z3, and WASM |
 | [First SMT-LIB query](first-smtlib-query.md) | run a query from SMT-LIB text |
 | [Rust embedding](rust-embedding.md) | typed builders, explicit width coercion, warm solving, models, and threads |
-| models-and-replay.md *(planned)* | read a model; what replay guarantees |
+| [Models and replay](models-and-replay.md) | read typed and named models; what replay does and does not guarantee |
 | [UNSAT evidence](unsat-evidence.md) | export DIMACS/DRAT/LRAT, recheck independently, and understand the clausal boundary |
 | [Limitations](limitations.md) | what's experimental/incomplete — read before trusting support |
 | [Benchmarks](benchmarks.md) | the measured Z3 head-to-head + how to reproduce |
