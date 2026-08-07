@@ -890,7 +890,7 @@ impl IncrementalArithDpll {
                 }
                 if !self.ctx.has_opaque_int_apps(arena) {
                     self.support_stats.model_attempts += 1;
-                    if let Some(result) = try_finish_sat(
+                    match try_finish_sat(
                         arena,
                         assertions,
                         &self.ctx,
@@ -899,9 +899,11 @@ impl IncrementalArithDpll {
                         &support,
                         deadline,
                     ) {
-                        return Ok(result);
+                        SatFinishAttempt::Result(result) => return Ok(result),
+                        SatFinishAttempt::ReplayRejected(_) => {
+                            self.support_stats.replay_failures += 1;
+                        }
                     }
-                    self.support_stats.replay_failures += 1;
                 }
             } else {
                 self.support_stats.unavailable += 1;
@@ -2098,21 +2100,78 @@ fn finish_sat(
     deadline: Option<Instant>,
 ) -> Result<CheckResult, SolverError> {
     let all_indices = (0..ctx.atoms.len()).collect::<Vec<_>>();
-    Ok(try_finish_sat(
-        arena,
-        assertions,
-        ctx,
-        propositional,
-        lits,
-        &all_indices,
-        deadline,
+    Ok(
+        match try_finish_sat(
+            arena,
+            assertions,
+            ctx,
+            propositional,
+            lits,
+            &all_indices,
+            deadline,
+        ) {
+            SatFinishAttempt::Result(result) => result,
+            SatFinishAttempt::ReplayRejected(rejection) => CheckResult::Unknown(UnknownReason {
+                kind: UnknownKind::Incomplete,
+                detail: rejection.detail(),
+            }),
+        },
     )
-    .unwrap_or_else(|| {
-        CheckResult::Unknown(UnknownReason {
-            kind: UnknownKind::Incomplete,
-            detail: "arith DPLL candidate failed full model replay".to_owned(),
-        })
-    }))
+}
+
+/// Bounded diagnostic for an arithmetic SAT candidate that evaluated one original
+/// assertion to a value other than `true`.
+///
+/// This record carries no model values and cannot affect the verdict. The support-
+/// subset fast path may still retry with the full atom set after receiving it; only
+/// [`finish_sat`] renders it when the full reconstructed model also fails replay.
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct ReplayRejection {
+    assertion_ordinal: usize,
+    assertion: TermId,
+    outcome: String,
+    bound_symbols: usize,
+    unbound_symbols: usize,
+    selected_literal_rejection: Option<SelectedLiteralRejection>,
+}
+
+#[derive(Debug)]
+enum SatFinishAttempt {
+    Result(CheckResult),
+    ReplayRejected(ReplayRejection),
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct SelectedLiteralRejection {
+    ordinal: usize,
+    literal: TermId,
+    outcome: String,
+}
+
+impl ReplayRejection {
+    fn detail(&self) -> String {
+        let selected_literal = self.selected_literal_rejection.as_ref().map_or_else(
+            || "all selected arithmetic literals replayed true".to_owned(),
+            |rejection| {
+                format!(
+                    "selected arithmetic literal ordinal {} (term #{}) {}",
+                    rejection.ordinal,
+                    rejection.literal.index(),
+                    rejection.outcome,
+                )
+            },
+        );
+        format!(
+            "arith DPLL candidate failed full model replay at assertion ordinal {} \
+             (term #{}): {}; original-symbol bindings={}/{} (unbound={}); {selected_literal}",
+            self.assertion_ordinal,
+            self.assertion.index(),
+            self.outcome,
+            self.bound_symbols,
+            self.bound_symbols + self.unbound_symbols,
+            self.unbound_symbols,
+        )
+    }
 }
 
 fn try_finish_sat(
@@ -2123,7 +2182,7 @@ fn try_finish_sat(
     lits: &[TermId],
     indices: &[usize],
     deadline: Option<Instant>,
-) -> Option<CheckResult> {
+) -> SatFinishAttempt {
     // Re-decide each theory's conjunction to recover its model (the loop only
     // learned that they are *consistent*). Sat-model reconstruction is INFALLIBLE at
     // the caller boundary: every failure to produce a checkable model degrades to a
@@ -2146,12 +2205,30 @@ fn try_finish_sat(
     // model, the replay below then fails, and the caller degrades to `Unknown`:
     // the deadline can cost a `sat`, never fabricate one.
     let int_model = match theory_model(arena, &int_lits, int_model_oracle, deadline) {
-        Ok(model) => model,
-        Err(error) => return Some(sat_reconstruction_unknown("integer", &error)),
+        Ok(TheoryModelOutcome::Empty) => None,
+        Ok(TheoryModelOutcome::Model(model)) => Some(model),
+        Ok(TheoryModelOutcome::Declined(reason)) => {
+            return SatFinishAttempt::Result(sat_reconstruction_declined("integer", &reason));
+        }
+        Ok(TheoryModelOutcome::Inconsistent) => {
+            return SatFinishAttempt::Result(sat_reconstruction_inconsistent("integer"));
+        }
+        Err(error) => {
+            return SatFinishAttempt::Result(sat_reconstruction_unknown("integer", &error));
+        }
     };
     let real_model = match theory_model(arena, &real_lits, real_theory_oracle, deadline) {
-        Ok(model) => model,
-        Err(error) => return Some(sat_reconstruction_unknown("real", &error)),
+        Ok(TheoryModelOutcome::Empty) => None,
+        Ok(TheoryModelOutcome::Model(model)) => Some(model),
+        Ok(TheoryModelOutcome::Declined(reason)) => {
+            return SatFinishAttempt::Result(sat_reconstruction_declined("real", &reason));
+        }
+        Ok(TheoryModelOutcome::Inconsistent) => {
+            return SatFinishAttempt::Result(sat_reconstruction_inconsistent("real"));
+        }
+        Err(error) => {
+            return SatFinishAttempt::Result(sat_reconstruction_unknown("real", &error));
+        }
     };
 
     let mut model = Model::new();
@@ -2173,23 +2250,104 @@ fn try_finish_sat(
         model.set(symbol, value.clone());
         assignment.set(symbol, value);
     }
-    for &assertion in assertions {
+    for (assertion_ordinal, &assertion) in assertions.iter().enumerate() {
         match eval(arena, assertion, &assignment) {
             Ok(Value::Bool(true)) => {}
-            Ok(_) => return None,
+            Ok(value) => {
+                let (bound_symbols, unbound_symbols) =
+                    replay_binding_counts(arena, assertions, ctx, &assignment);
+                return SatFinishAttempt::ReplayRejected(ReplayRejection {
+                    assertion_ordinal,
+                    assertion,
+                    outcome: match value {
+                        Value::Bool(false) => "evaluated false".to_owned(),
+                        value => format!("evaluated to non-Boolean {value}"),
+                    },
+                    bound_symbols,
+                    unbound_symbols,
+                    selected_literal_rejection: first_selected_literal_rejection(
+                        arena,
+                        lits,
+                        indices,
+                        &assignment,
+                    ),
+                });
+            }
             // The arithmetic model could not *evaluate* this assertion — e.g. it
             // contains an opaque UF application the LIA/LRA abstraction does not model.
             // As with a theory re-decode failure above, this is "no checkable model",
             // not an internal error: degrade to a first-class `Unknown`.
             Err(error) => {
-                return Some(sat_reconstruction_unknown(
-                    &format!("model replay of assertion #{}", assertion.index()),
+                let (bound_symbols, unbound_symbols) =
+                    replay_binding_counts(arena, assertions, ctx, &assignment);
+                return SatFinishAttempt::Result(sat_reconstruction_unknown(
+                    &format!(
+                        "model replay of assertion ordinal {assertion_ordinal} (term #{}) with \
+                         original-symbol bindings={}/{} (unbound={unbound_symbols})",
+                        assertion.index(),
+                        bound_symbols,
+                        bound_symbols + unbound_symbols,
+                    ),
                     &error,
                 ));
             }
         }
     }
-    Some(CheckResult::Sat(model))
+    SatFinishAttempt::Result(CheckResult::Sat(model))
+}
+
+fn first_selected_literal_rejection(
+    arena: &TermArena,
+    lits: &[TermId],
+    indices: &[usize],
+    assignment: &axeyum_ir::Assignment,
+) -> Option<SelectedLiteralRejection> {
+    indices.iter().copied().find_map(|ordinal| {
+        let literal = lits[ordinal];
+        let outcome = match eval(arena, literal, assignment) {
+            Ok(Value::Bool(true)) => return None,
+            Ok(Value::Bool(false)) => "evaluated false".to_owned(),
+            Ok(value) => format!("evaluated to non-Boolean {value}"),
+            Err(error) => format!("failed evaluation: {error}"),
+        };
+        Some(SelectedLiteralRejection {
+            ordinal,
+            literal,
+            outcome,
+        })
+    })
+}
+
+/// Counts non-abstraction symbols reachable from the replayed assertions that do
+/// and do not have a value in the reconstructed assignment.
+fn replay_binding_counts(
+    arena: &TermArena,
+    assertions: &[TermId],
+    ctx: &ArithAbstractor,
+    assignment: &axeyum_ir::Assignment,
+) -> (usize, usize) {
+    let mut symbols = BTreeSet::new();
+    let mut seen = BTreeSet::new();
+    let mut stack = assertions.to_vec();
+    while let Some(term) = stack.pop() {
+        if !seen.insert(term) {
+            continue;
+        }
+        match arena.node(term) {
+            TermNode::Symbol(symbol) if !ctx.is_atom_prop(*symbol) => {
+                symbols.insert(*symbol);
+            }
+            TermNode::App { args, .. } => stack.extend(args.iter().copied()),
+            _ => {}
+        }
+    }
+    symbols.iter().fold((0, 0), |(bound, unbound), symbol| {
+        if assignment.get(*symbol).is_some() {
+            (bound + 1, unbound)
+        } else {
+            (bound, unbound + 1)
+        }
+    })
 }
 
 /// Build the first-class `Unknown` returned when linear-arithmetic **sat-model
@@ -2209,6 +2367,26 @@ fn sat_reconstruction_unknown(stage: &str, error: &dyn std::fmt::Display) -> Che
     })
 }
 
+fn sat_reconstruction_declined(stage: &str, reason: &UnknownReason) -> CheckResult {
+    CheckResult::Unknown(UnknownReason {
+        kind: reason.kind,
+        detail: format!(
+            "linear-arithmetic sat-model reconstruction declined in the {stage} theory: {}",
+            reason.detail,
+        ),
+    })
+}
+
+fn sat_reconstruction_inconsistent(stage: &str) -> CheckResult {
+    CheckResult::Unknown(UnknownReason {
+        kind: UnknownKind::Incomplete,
+        detail: format!(
+            "linear-arithmetic sat-model reconstruction found the selected {stage} literals \
+             inconsistent after the earlier bounded consistency probe declined to refute them"
+        ),
+    })
+}
+
 /// The literals of one theory's atoms.
 fn atom_lits(
     ctx: &ArithAbstractor,
@@ -2224,21 +2402,34 @@ fn atom_lits(
         .collect()
 }
 
-/// Re-decides a consistent theory conjunction to recover its model.
+/// Outcome of re-deciding one selected theory conjunction for a concrete model.
+enum TheoryModelOutcome {
+    Empty,
+    Model(Model),
+    Declined(UnknownReason),
+    Inconsistent,
+}
+
+/// Re-decides a provisionally consistent theory conjunction to recover its model.
+///
+/// The preceding bounded conflict probe can return `Unknown`, which means only that
+/// it found no conflict within its budget—not that the conjunction was proved
+/// consistent. Preserve a reconstruction `Unknown` or `Unsat` explicitly; treating
+/// either as an empty model would fabricate well-founded defaults and erase the
+/// actual decline behind a secondary replay failure.
 fn theory_model(
     arena: &TermArena,
     lits: &[TermId],
     oracle: DeadlinedTheoryOracle,
     deadline: Option<Instant>,
-) -> Result<Option<Model>, SolverError> {
+) -> Result<TheoryModelOutcome, SolverError> {
     if lits.is_empty() {
-        return Ok(None);
+        return Ok(TheoryModelOutcome::Empty);
     }
     match oracle(arena, lits, deadline)? {
-        CheckResult::Sat(model) => Ok(Some(model)),
-        // The loop already established consistency, so this is unreachable; treat
-        // as no extra bindings rather than failing.
-        _ => Ok(None),
+        CheckResult::Sat(model) => Ok(TheoryModelOutcome::Model(model)),
+        CheckResult::Unknown(reason) => Ok(TheoryModelOutcome::Declined(reason)),
+        CheckResult::Unsat => Ok(TheoryModelOutcome::Inconsistent),
     }
 }
 
@@ -3947,7 +4138,7 @@ mod tests {
                 &support,
                 None,
             ),
-            Some(CheckResult::Sat(_))
+            SatFinishAttempt::Result(CheckResult::Sat(_))
         ));
     }
 
@@ -3996,7 +4187,7 @@ mod tests {
             None,
         );
         assert!(
-            matches!(outcome, Some(CheckResult::Unknown(_))),
+            matches!(outcome, SatFinishAttempt::Result(CheckResult::Unknown(_))),
             "an unevaluable opaque-UF replay degrades to Unknown, got {outcome:?}"
         );
         // And the wrapping `finish_sat` propagates the same `Unknown` (not an `Err`).
@@ -4012,22 +4203,84 @@ mod tests {
         let ctx = ArithAbstractor::default();
         let propositional = Model::new();
 
-        assert!(
-            try_finish_sat(
-                &mut arena,
-                &[assertion],
-                &ctx,
-                &propositional,
-                &[],
-                &[],
-                None
-            )
-            .is_none(),
-            "the deliberately false candidate must miss full replay"
+        let SatFinishAttempt::ReplayRejected(replay_rejection) = try_finish_sat(
+            &mut arena,
+            &[assertion],
+            &ctx,
+            &propositional,
+            &[],
+            &[],
+            None,
+        ) else {
+            panic!("the deliberately false candidate must miss full replay");
+        };
+        assert_eq!(
+            replay_rejection,
+            ReplayRejection {
+                assertion_ordinal: 0,
+                assertion,
+                outcome: "evaluated false".to_owned(),
+                bound_symbols: 0,
+                unbound_symbols: 0,
+                selected_literal_rejection: None,
+            }
         );
         let result = finish_sat(&mut arena, &[assertion], &ctx, &propositional, &[], None)
             .expect("a failed SAT replay is a first-class Unknown, never a backend error");
-        assert!(matches!(result, CheckResult::Unknown(_)));
+        let CheckResult::Unknown(reason) = result else {
+            panic!("expected replay rejection to remain Unknown");
+        };
+        assert_eq!(reason.kind, UnknownKind::Incomplete);
+        assert_eq!(
+            reason.detail,
+            format!(
+                "arith DPLL candidate failed full model replay at assertion ordinal 0 \
+                 (term #{}): evaluated false; original-symbol bindings=0/0 (unbound=0); \
+                 all selected arithmetic literals replayed true",
+                assertion.index(),
+            )
+        );
+    }
+
+    #[allow(clippy::unnecessary_wraps)] // matches the fallible reconstruction-oracle contract
+    fn declining_reconstruction_oracle(
+        _arena: &TermArena,
+        _lits: &[TermId],
+        _deadline: Option<Instant>,
+    ) -> Result<CheckResult, SolverError> {
+        Ok(CheckResult::Unknown(UnknownReason {
+            kind: UnknownKind::Timeout,
+            detail: "bounded reconstruction expired".to_owned(),
+        }))
+    }
+
+    #[allow(clippy::unnecessary_wraps)] // matches the fallible reconstruction-oracle contract
+    fn inconsistent_reconstruction_oracle(
+        _arena: &TermArena,
+        _lits: &[TermId],
+        _deadline: Option<Instant>,
+    ) -> Result<CheckResult, SolverError> {
+        Ok(CheckResult::Unsat)
+    }
+
+    #[test]
+    fn theory_model_preserves_decline_and_inconsistency_instead_of_defaulting() {
+        let mut arena = TermArena::new();
+        let literal = arena.bool_const(true);
+
+        let declined = theory_model(&arena, &[literal], declining_reconstruction_oracle, None)
+            .expect("the synthetic oracle returns a typed decline");
+        let TheoryModelOutcome::Declined(reason) = declined else {
+            panic!("a reconstruction decline must not become an empty model");
+        };
+        assert_eq!(reason.kind, UnknownKind::Timeout);
+        assert_eq!(reason.detail, "bounded reconstruction expired");
+
+        assert!(matches!(
+            theory_model(&arena, &[literal], inconsistent_reconstruction_oracle, None,)
+                .expect("the synthetic oracle returns an inconsistent outcome"),
+            TheoryModelOutcome::Inconsistent
+        ));
     }
 
     #[test]

@@ -280,21 +280,14 @@ fn resolve_word_obligations(
 /// decide the small-integer-witness class (the cvc5 regress shapes need a two- or
 /// three-digit integer) while keeping the worst case fast under the default
 /// (deadline-free) config. A witness must lie within this many integers of the range's
-/// lower bound; anything further stays a sound `unknown`. On native targets the
-/// internal wall-clock cap ([`WORD_INT_COUPLE_INTERNAL_MS`]) usually bites first; this
-/// count is the sole guard under `wasm32` (no deadline there).
-const WORD_INT_COUPLE_MAX_CANDIDATES: u64 = 512;
+/// lower bound; anything further stays a sound `unknown`. This deterministic count is
+/// the default guard on every target; a caller-supplied timeout remains an additional
+/// wall-clock guard.
+const WORD_INT_COUPLE_MAX_CANDIDATES: u64 = 128;
 
 /// The per-candidate branch-node cap for the [`couple_from_int_bounds`] enumeration, so
 /// one pathological pin cannot monopolize the wall-clock budget.
 const WORD_INT_COUPLE_MAX_NODES_PER_CANDIDATE: u64 = 2_000;
-
-/// The internal wall-clock cap (milliseconds) the coupling enumeration imposes when the
-/// caller's [`SolverConfig::timeout`] set no deadline. Each pinned re-solve rebuilds the
-/// arrangement classes, so a large unsat-shaped range is expensive to sweep; this bounds
-/// the whole enumeration to a fast, first-class `unknown` even with no configured
-/// timeout (native targets only — under `wasm32` the candidate count governs).
-const WORD_INT_COUPLE_INTERNAL_MS: u64 = 2_000;
 
 /// Decides a `str.from_int`-coupled word problem carrying linear integer bounds on
 /// the `from_int` argument (task #78), by Nelson-Oppen-style enumeration over the
@@ -361,8 +354,9 @@ fn couple_from_int_bounds(
         );
     };
 
-    // The per-candidate budget: a small node cap plus a wall-clock deadline (the outer
-    // one, or an internal cap when none was configured) that bounds the whole sweep.
+    // The per-candidate budget: a small node cap plus the caller's wall-clock deadline,
+    // when configured. Without a caller deadline, the deterministic candidate cap
+    // bounds the whole sweep.
     let cand_budget = enum_candidate_budget(budget);
     let mut tried: u64 = 0;
 
@@ -497,19 +491,25 @@ fn apply_int_pins(int_pins: &[(SymbolId, i128)], model: &mut Model) {
     }
 }
 
-/// Builds the per-candidate [`SearchBudget`] for the coupled enumeration: the outer
-/// budget with a per-candidate node cap, and — on native targets, when the caller set no
-/// deadline — an internal wall-clock deadline so the whole sweep stays bounded.
+/// Builds the per-candidate [`SearchBudget`] for the coupled enumeration: the caller's
+/// deadline, if any, plus a deterministic per-candidate node cap. Do not inject an
+/// implicit wall-clock deadline here: default results must not depend on host load.
 fn enum_candidate_budget(budget: &SearchBudget) -> SearchBudget {
     let mut b = budget.clone();
     b.max_nodes = b.max_nodes.min(WORD_INT_COUPLE_MAX_NODES_PER_CANDIDATE);
-    #[cfg(not(target_arch = "wasm32"))]
-    if b.deadline.is_none() {
-        b.deadline = std::time::Instant::now().checked_add(std::time::Duration::from_millis(
-            WORD_INT_COUPLE_INTERNAL_MS,
-        ));
-    }
     b
+}
+
+#[cfg(all(test, not(target_arch = "wasm32")))]
+mod enum_candidate_budget_tests {
+    use super::{SearchBudget, WORD_INT_COUPLE_MAX_NODES_PER_CANDIDATE, enum_candidate_budget};
+
+    #[test]
+    fn default_budget_has_no_load_sensitive_implicit_deadline() {
+        let budget = enum_candidate_budget(&SearchBudget::new(u64::MAX));
+        assert_eq!(budget.max_nodes, WORD_INT_COUPLE_MAX_NODES_PER_CANDIDATE);
+        assert!(budget.deadline.is_none());
+    }
 }
 
 /// Intersects a set of linear integer bounds into an inclusive range `[lo, hi]`, or
@@ -1924,6 +1924,16 @@ fn solve_smtlib_at_string_bound(
                 result: CheckResult::Unknown(UnknownReason {
                     kind: UnknownKind::ResourceLimit,
                     detail: format!("ingest exceeded the configured timeout during {phase}"),
+                }),
+                logic: None,
+                expected_status: None,
+            });
+        }
+        Err(axeyum_smtlib::SmtError::ResourceLimit(detail)) => {
+            return Ok(SmtLibOutcome {
+                result: CheckResult::Unknown(UnknownReason {
+                    kind: UnknownKind::ResourceLimit,
+                    detail: format!("ingest resource limit: {detail}"),
                 }),
                 logic: None,
                 expected_status: None,

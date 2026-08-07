@@ -222,6 +222,11 @@ jobs:
         with:
           # Store evidence validates and reads its sealed implementation commit.
           fetch-depth: 0
+      # Keep the duplicated docs gate on the same registered-command boundary
+      # as docs-ci.yml; the hosted image does not include `just`.
+      - uses: extractions/setup-just@f8a3cce218d9f83db3a2ecd90e41ac3de6cdfd9b # v3
+        with:
+          just-version: 1.57.0
       - run: ./scripts/check-foundational-resources.sh
       - run: python3 -m unittest scripts.tests.test_lean_u2_test_authority
       - run: python3 scripts/gen-lean-u2-test-authority.py --check

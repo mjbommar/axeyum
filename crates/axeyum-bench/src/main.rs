@@ -4714,6 +4714,19 @@ mod run {
                     "detail": e.to_string(),
                 }))
             }
+            Err(SmtError::ResourceLimit(detail)) => {
+                summary.unknown += 1;
+                *summary
+                    .blocker_buckets
+                    .entry("unknown:ResourceLimit".to_owned())
+                    .or_default() += 1;
+                summary.par2_seconds += 2.0 * timeout.as_secs_f64();
+                Err(json!({
+                    "file": name,
+                    "outcome": "unknown",
+                    "detail": format!("ResourceLimit: {detail}"),
+                }))
+            }
             Err(e) => {
                 summary.errors += 1;
                 Err(json!({

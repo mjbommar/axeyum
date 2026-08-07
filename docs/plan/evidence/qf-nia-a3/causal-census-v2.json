@@ -1,0 +1,3761 @@
+{
+  "buckets": [
+    {
+      "count": 52,
+      "kind": null,
+      "reason": "budget",
+      "route": "nia-linearize"
+    },
+    {
+      "count": 13,
+      "kind": "incomplete",
+      "reason": "incomplete",
+      "route": "nia-linearize"
+    },
+    {
+      "count": 1,
+      "kind": null,
+      "reason": "verifier-rejected",
+      "route": "nia-linearize"
+    },
+    {
+      "count": 1,
+      "kind": "ResourceLimit",
+      "reason": "resource-limit",
+      "route": "smtlib-ingest"
+    }
+  ],
+  "cases": [
+    {
+      "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_NIA/20170427-VeryMax/CInteger/Stroeder_15__svcomp_ex2.c__p25866_terminationG_0.smt2",
+      "first_causal_decline": {
+        "detail": "lazy linear arithmetic exhausted the configured timeout after 20 rounds this solve (solve_calls=1, total_rounds=20, atoms=1413, bound_lemmas=93, blocking_lemmas=179, core_len_last=9, core_len_min=2, core_len_max=17, core_len_avg=2.3, core_src_bound=166, core_src_diff=2, core_src_affine=0, core_src_lp=11, core_src_minimized=0, core_src_large=0, support_attempts=20, support_unavailable=0, support_conflict_batches=20, support_model_attempts=0, support_replay_failures=0, full_fallbacks=0)",
+        "reason": "budget",
+        "route": "nia-linearize"
+      },
+      "trace": {
+        "attempts": [
+          {
+            "detail": "fragment {int}",
+            "outcome": "probe",
+            "route": "probe"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "dl-online"
+          },
+          {
+            "outcome": "declined",
+            "reason": "unsupported",
+            "route": "lia-simplex"
+          },
+          {
+            "outcome": "declined",
+            "reason": "unsupported",
+            "route": "lia-dpll"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "nia-square"
+          },
+          {
+            "detail": "lazy linear arithmetic exhausted the configured timeout after 20 rounds this solve (solve_calls=1, total_rounds=20, atoms=1413, bound_lemmas=93, blocking_lemmas=179, core_len_last=9, core_len_min=2, core_len_max=17, core_len_avg=2.3, core_src_bound=166, core_src_diff=2, core_src_affine=0, core_src_lp=11, core_src_minimized=0, core_src_large=0, support_attempts=20, support_unavailable=0, support_conflict_batches=20, support_model_attempts=0, support_replay_failures=0, full_fallbacks=0)",
+            "outcome": "declined",
+            "reason": "budget",
+            "route": "nia-linearize"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "nia-bounded-blast"
+          },
+          {
+            "detail": "integer bit-blast width ladder: wall-clock timeout reached",
+            "outcome": "declined",
+            "reason": "budget",
+            "route": "int-blast-ladder"
+          }
+        ],
+        "schema_version": 1
+      },
+      "verdict": "unknown"
+    },
+    {
+      "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_NIA/20170427-VeryMax/CInteger/Ton_Chanh_15__Singapore_true-termination.c__p27347_terminationG_0.smt2",
+      "first_causal_decline": {
+        "detail": "lazy linear arithmetic exhausted the configured timeout after 157 rounds this solve (solve_calls=1, total_rounds=157, atoms=637, bound_lemmas=79, blocking_lemmas=265, core_len_last=238, core_len_min=2, core_len_max=241, core_len_avg=124.4, core_src_bound=115, core_src_diff=0, core_src_affine=0, core_src_lp=13, core_src_minimized=0, core_src_large=137, support_attempts=157, support_unavailable=0, support_conflict_batches=157, support_model_attempts=0, support_replay_failures=0, full_fallbacks=0)",
+        "reason": "budget",
+        "route": "nia-linearize"
+      },
+      "trace": {
+        "attempts": [
+          {
+            "detail": "fragment {int}",
+            "outcome": "probe",
+            "route": "probe"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "dl-online"
+          },
+          {
+            "outcome": "declined",
+            "reason": "unsupported",
+            "route": "lia-simplex"
+          },
+          {
+            "outcome": "declined",
+            "reason": "unsupported",
+            "route": "lia-dpll"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "nia-square"
+          },
+          {
+            "detail": "lazy linear arithmetic exhausted the configured timeout after 157 rounds this solve (solve_calls=1, total_rounds=157, atoms=637, bound_lemmas=79, blocking_lemmas=265, core_len_last=238, core_len_min=2, core_len_max=241, core_len_avg=124.4, core_src_bound=115, core_src_diff=0, core_src_affine=0, core_src_lp=13, core_src_minimized=0, core_src_large=137, support_attempts=157, support_unavailable=0, support_conflict_batches=157, support_model_attempts=0, support_replay_failures=0, full_fallbacks=0)",
+            "outcome": "declined",
+            "reason": "budget",
+            "route": "nia-linearize"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "nia-bounded-blast"
+          },
+          {
+            "detail": "integer bit-blast width ladder: wall-clock timeout reached",
+            "outcome": "declined",
+            "reason": "budget",
+            "route": "int-blast-ladder"
+          }
+        ],
+        "schema_version": 1
+      },
+      "verdict": "unknown"
+    },
+    {
+      "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_NIA/20170427-VeryMax/ITS/From_AProVE_2014__FlattenTreeListRec.jar-obl-10__p29567_safety_0.smt2",
+      "first_causal_decline": {
+        "detail": "lazy linear arithmetic exhausted the configured timeout after 50 rounds this solve (solve_calls=1, total_rounds=50, atoms=2420, bound_lemmas=145, blocking_lemmas=288, core_len_last=1312, core_len_min=2, core_len_max=1312, core_len_avg=52.2, core_src_bound=250, core_src_diff=1, core_src_affine=0, core_src_lp=26, core_src_minimized=0, core_src_large=11, support_attempts=50, support_unavailable=0, support_conflict_batches=50, support_model_attempts=0, support_replay_failures=0, full_fallbacks=0)",
+        "reason": "budget",
+        "route": "nia-linearize"
+      },
+      "trace": {
+        "attempts": [
+          {
+            "detail": "fragment {int}",
+            "outcome": "probe",
+            "route": "probe"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "dl-online"
+          },
+          {
+            "outcome": "declined",
+            "reason": "unsupported",
+            "route": "lia-simplex"
+          },
+          {
+            "outcome": "declined",
+            "reason": "unsupported",
+            "route": "lia-dpll"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "nia-square"
+          },
+          {
+            "detail": "lazy linear arithmetic exhausted the configured timeout after 50 rounds this solve (solve_calls=1, total_rounds=50, atoms=2420, bound_lemmas=145, blocking_lemmas=288, core_len_last=1312, core_len_min=2, core_len_max=1312, core_len_avg=52.2, core_src_bound=250, core_src_diff=1, core_src_affine=0, core_src_lp=26, core_src_minimized=0, core_src_large=11, support_attempts=50, support_unavailable=0, support_conflict_batches=50, support_model_attempts=0, support_replay_failures=0, full_fallbacks=0)",
+            "outcome": "declined",
+            "reason": "budget",
+            "route": "nia-linearize"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "nia-bounded-blast"
+          },
+          {
+            "detail": "integer bit-blast width ladder: wall-clock timeout reached",
+            "outcome": "declined",
+            "reason": "budget",
+            "route": "int-blast-ladder"
+          }
+        ],
+        "schema_version": 1
+      },
+      "verdict": "unknown"
+    },
+    {
+      "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_NIA/20170427-VeryMax/ITS/From_AProVE_2014__SortCount.jar-obl-10__terminationS_2_0.smt2",
+      "first_causal_decline": {
+        "detail": "arith DPLL candidate failed full model replay",
+        "kind": "incomplete",
+        "reason": "incomplete",
+        "route": "nia-linearize"
+      },
+      "trace": {
+        "attempts": [
+          {
+            "detail": "fragment {int}",
+            "outcome": "probe",
+            "route": "probe"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "dl-online"
+          },
+          {
+            "outcome": "declined",
+            "reason": "unsupported",
+            "route": "lia-simplex"
+          },
+          {
+            "outcome": "declined",
+            "reason": "unsupported",
+            "route": "lia-dpll"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "nia-square"
+          },
+          {
+            "detail": "arith DPLL candidate failed full model replay",
+            "kind": "incomplete",
+            "outcome": "declined",
+            "reason": "incomplete",
+            "route": "nia-linearize"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "nia-bounded-blast"
+          },
+          {
+            "detail": "estimated 150732237 CNF clauses before lowering exceeds budget 64000000 (oversized encoding refused gracefully)",
+            "outcome": "declined",
+            "reason": "budget",
+            "route": "int-blast-ladder"
+          }
+        ],
+        "schema_version": 1
+      },
+      "verdict": "unknown"
+    },
+    {
+      "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_NIA/20170427-VeryMax/ITS/From_AProVE_2014__Test6.jar-obl-13__terminationS_36_0.smt2",
+      "first_causal_decline": {
+        "detail": "nia relaxation slice expired during refinement",
+        "reason": "budget",
+        "route": "nia-linearize"
+      },
+      "trace": {
+        "attempts": [
+          {
+            "detail": "fragment {int}",
+            "outcome": "probe",
+            "route": "probe"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "dl-online"
+          },
+          {
+            "outcome": "declined",
+            "reason": "unsupported",
+            "route": "lia-simplex"
+          },
+          {
+            "outcome": "declined",
+            "reason": "unsupported",
+            "route": "lia-dpll"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "nia-square"
+          },
+          {
+            "detail": "nia relaxation slice expired during refinement",
+            "outcome": "declined",
+            "reason": "budget",
+            "route": "nia-linearize"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "nia-bounded-blast"
+          },
+          {
+            "detail": "integer bit-blast width ladder: wall-clock timeout reached",
+            "outcome": "declined",
+            "reason": "budget",
+            "route": "int-blast-ladder"
+          }
+        ],
+        "schema_version": 1
+      },
+      "verdict": "unknown"
+    },
+    {
+      "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_NIA/20170427-VeryMax/ITS/From_AProVE_2014__Velroyen08-factorial.jar-obl-8__p13829_terminationG_0.smt2",
+      "first_causal_decline": {
+        "detail": "lazy linear arithmetic exhausted the configured timeout after 64 rounds this solve (solve_calls=1, total_rounds=64, atoms=1129, bound_lemmas=145, blocking_lemmas=268, core_len_last=464, core_len_min=2, core_len_max=470, core_len_avg=46.2, core_src_bound=215, core_src_diff=5, core_src_affine=0, core_src_lp=23, core_src_minimized=0, core_src_large=25, support_attempts=64, support_unavailable=0, support_conflict_batches=64, support_model_attempts=0, support_replay_failures=0, full_fallbacks=0)",
+        "reason": "budget",
+        "route": "nia-linearize"
+      },
+      "trace": {
+        "attempts": [
+          {
+            "detail": "fragment {int}",
+            "outcome": "probe",
+            "route": "probe"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "dl-online"
+          },
+          {
+            "outcome": "declined",
+            "reason": "unsupported",
+            "route": "lia-simplex"
+          },
+          {
+            "outcome": "declined",
+            "reason": "unsupported",
+            "route": "lia-dpll"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "nia-square"
+          },
+          {
+            "detail": "lazy linear arithmetic exhausted the configured timeout after 64 rounds this solve (solve_calls=1, total_rounds=64, atoms=1129, bound_lemmas=145, blocking_lemmas=268, core_len_last=464, core_len_min=2, core_len_max=470, core_len_avg=46.2, core_src_bound=215, core_src_diff=5, core_src_affine=0, core_src_lp=23, core_src_minimized=0, core_src_large=25, support_attempts=64, support_unavailable=0, support_conflict_batches=64, support_model_attempts=0, support_replay_failures=0, full_fallbacks=0)",
+            "outcome": "declined",
+            "reason": "budget",
+            "route": "nia-linearize"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "nia-bounded-blast"
+          },
+          {
+            "detail": "integer bit-blast width ladder: wall-clock timeout reached",
+            "outcome": "declined",
+            "reason": "budget",
+            "route": "int-blast-ladder"
+          }
+        ],
+        "schema_version": 1
+      },
+      "verdict": "unknown"
+    },
+    {
+      "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_NIA/20170427-VeryMax/ITS/From_AProVE_2014__cousot_rec.jar-obl-8__p28312_terminationG_0.smt2",
+      "first_causal_decline": {
+        "detail": "lazy linear arithmetic exhausted the configured timeout after 21 rounds this solve (solve_calls=1, total_rounds=21, atoms=685, bound_lemmas=94, blocking_lemmas=142, core_len_last=324, core_len_min=2, core_len_max=324, core_len_avg=5.9, core_src_bound=128, core_src_diff=3, core_src_affine=0, core_src_lp=10, core_src_minimized=0, core_src_large=1, support_attempts=21, support_unavailable=0, support_conflict_batches=21, support_model_attempts=0, support_replay_failures=0, full_fallbacks=0)",
+        "reason": "budget",
+        "route": "nia-linearize"
+      },
+      "trace": {
+        "attempts": [
+          {
+            "detail": "fragment {int}",
+            "outcome": "probe",
+            "route": "probe"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "dl-online"
+          },
+          {
+            "outcome": "declined",
+            "reason": "unsupported",
+            "route": "lia-simplex"
+          },
+          {
+            "outcome": "declined",
+            "reason": "unsupported",
+            "route": "lia-dpll"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "nia-square"
+          },
+          {
+            "detail": "lazy linear arithmetic exhausted the configured timeout after 21 rounds this solve (solve_calls=1, total_rounds=21, atoms=685, bound_lemmas=94, blocking_lemmas=142, core_len_last=324, core_len_min=2, core_len_max=324, core_len_avg=5.9, core_src_bound=128, core_src_diff=3, core_src_affine=0, core_src_lp=10, core_src_minimized=0, core_src_large=1, support_attempts=21, support_unavailable=0, support_conflict_batches=21, support_model_attempts=0, support_replay_failures=0, full_fallbacks=0)",
+            "outcome": "declined",
+            "reason": "budget",
+            "route": "nia-linearize"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "nia-bounded-blast"
+          },
+          {
+            "detail": "integer bit-blast width ladder: wall-clock timeout reached",
+            "outcome": "declined",
+            "reason": "budget",
+            "route": "int-blast-ladder"
+          }
+        ],
+        "schema_version": 1
+      },
+      "verdict": "unknown"
+    },
+    {
+      "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_NIA/20170427-VeryMax/ITS/From_AProVE_2014__juHashMapCreate.jar-obl-10__p4943_safety_0.smt2",
+      "first_causal_decline": {
+        "detail": "arith DPLL candidate failed full model replay",
+        "kind": "incomplete",
+        "reason": "incomplete",
+        "route": "nia-linearize"
+      },
+      "trace": {
+        "attempts": [
+          {
+            "detail": "fragment {int}",
+            "outcome": "probe",
+            "route": "probe"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "dl-online"
+          },
+          {
+            "outcome": "declined",
+            "reason": "unsupported",
+            "route": "lia-simplex"
+          },
+          {
+            "outcome": "declined",
+            "reason": "unsupported",
+            "route": "lia-dpll"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "nia-square"
+          },
+          {
+            "detail": "arith DPLL candidate failed full model replay",
+            "kind": "incomplete",
+            "outcome": "declined",
+            "reason": "incomplete",
+            "route": "nia-linearize"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "nia-bounded-blast"
+          },
+          {
+            "detail": "estimated 109820226 CNF clauses before lowering exceeds budget 64000000 (oversized encoding refused gracefully)",
+            "outcome": "declined",
+            "reason": "budget",
+            "route": "int-blast-ladder"
+          }
+        ],
+        "schema_version": 1
+      },
+      "verdict": "unknown"
+    },
+    {
+      "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_NIA/20170427-VeryMax/ITS/From_AProVE_2014__juHashMapCreateClear.jar-obl-11__p30726_safety_0.smt2",
+      "first_causal_decline": {
+        "detail": "lazy linear arithmetic exhausted the configured timeout after 108 rounds this solve (solve_calls=1, total_rounds=108, atoms=6067, bound_lemmas=390, blocking_lemmas=314, core_len_last=2436, core_len_min=2, core_len_max=2436, core_len_avg=10.0, core_src_bound=213, core_src_diff=0, core_src_affine=0, core_src_lp=100, core_src_minimized=0, core_src_large=1, support_attempts=108, support_unavailable=0, support_conflict_batches=108, support_model_attempts=0, support_replay_failures=0, full_fallbacks=0)",
+        "reason": "budget",
+        "route": "nia-linearize"
+      },
+      "trace": {
+        "attempts": [
+          {
+            "detail": "fragment {int}",
+            "outcome": "probe",
+            "route": "probe"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "dl-online"
+          },
+          {
+            "outcome": "declined",
+            "reason": "unsupported",
+            "route": "lia-simplex"
+          },
+          {
+            "outcome": "declined",
+            "reason": "unsupported",
+            "route": "lia-dpll"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "nia-square"
+          },
+          {
+            "detail": "lazy linear arithmetic exhausted the configured timeout after 108 rounds this solve (solve_calls=1, total_rounds=108, atoms=6067, bound_lemmas=390, blocking_lemmas=314, core_len_last=2436, core_len_min=2, core_len_max=2436, core_len_avg=10.0, core_src_bound=213, core_src_diff=0, core_src_affine=0, core_src_lp=100, core_src_minimized=0, core_src_large=1, support_attempts=108, support_unavailable=0, support_conflict_batches=108, support_model_attempts=0, support_replay_failures=0, full_fallbacks=0)",
+            "outcome": "declined",
+            "reason": "budget",
+            "route": "nia-linearize"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "nia-bounded-blast"
+          },
+          {
+            "detail": "estimated 114749562 CNF clauses before lowering exceeds budget 64000000 (oversized encoding refused gracefully)",
+            "outcome": "declined",
+            "reason": "budget",
+            "route": "int-blast-ladder"
+          }
+        ],
+        "schema_version": 1
+      },
+      "verdict": "unknown"
+    },
+    {
+      "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_NIA/20170427-VeryMax/ITS/From_AProVE_2014__juHashMapCreateContainsKey.jar-obl-11__p31253_safety_0.smt2",
+      "first_causal_decline": {
+        "detail": "lazy linear arithmetic exhausted the configured timeout after 67 rounds this solve (solve_calls=1, total_rounds=67, atoms=2174, bound_lemmas=54, blocking_lemmas=168, core_len_last=1036, core_len_min=2, core_len_max=1036, core_len_avg=9.2, core_src_bound=108, core_src_diff=0, core_src_affine=0, core_src_lp=59, core_src_minimized=0, core_src_large=1, support_attempts=67, support_unavailable=0, support_conflict_batches=67, support_model_attempts=0, support_replay_failures=0, full_fallbacks=0)",
+        "reason": "budget",
+        "route": "nia-linearize"
+      },
+      "trace": {
+        "attempts": [
+          {
+            "detail": "fragment {int}",
+            "outcome": "probe",
+            "route": "probe"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "dl-online"
+          },
+          {
+            "outcome": "declined",
+            "reason": "unsupported",
+            "route": "lia-simplex"
+          },
+          {
+            "outcome": "declined",
+            "reason": "unsupported",
+            "route": "lia-dpll"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "nia-square"
+          },
+          {
+            "detail": "lazy linear arithmetic exhausted the configured timeout after 67 rounds this solve (solve_calls=1, total_rounds=67, atoms=2174, bound_lemmas=54, blocking_lemmas=168, core_len_last=1036, core_len_min=2, core_len_max=1036, core_len_avg=9.2, core_src_bound=108, core_src_diff=0, core_src_affine=0, core_src_lp=59, core_src_minimized=0, core_src_large=1, support_attempts=67, support_unavailable=0, support_conflict_batches=67, support_model_attempts=0, support_replay_failures=0, full_fallbacks=0)",
+            "outcome": "declined",
+            "reason": "budget",
+            "route": "nia-linearize"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "nia-bounded-blast"
+          },
+          {
+            "detail": "estimated 105646605 CNF clauses before lowering exceeds budget 64000000 (oversized encoding refused gracefully)",
+            "outcome": "declined",
+            "reason": "budget",
+            "route": "int-blast-ladder"
+          }
+        ],
+        "schema_version": 1
+      },
+      "verdict": "unknown"
+    },
+    {
+      "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_NIA/20170427-VeryMax/ITS/From_AProVE_2014__juHashMapCreateContainsKey.jar-obl-11__p31818_safety_0.smt2",
+      "first_causal_decline": {
+        "detail": "lazy linear arithmetic exhausted the configured timeout after 87 rounds this solve (solve_calls=1, total_rounds=87, atoms=3604, bound_lemmas=284, blocking_lemmas=274, core_len_last=1427, core_len_min=2, core_len_max=1427, core_len_avg=7.6, core_src_bound=195, core_src_diff=0, core_src_affine=0, core_src_lp=78, core_src_minimized=0, core_src_large=1, support_attempts=87, support_unavailable=0, support_conflict_batches=87, support_model_attempts=0, support_replay_failures=0, full_fallbacks=0)",
+        "reason": "budget",
+        "route": "nia-linearize"
+      },
+      "trace": {
+        "attempts": [
+          {
+            "detail": "fragment {int}",
+            "outcome": "probe",
+            "route": "probe"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "dl-online"
+          },
+          {
+            "outcome": "declined",
+            "reason": "unsupported",
+            "route": "lia-simplex"
+          },
+          {
+            "outcome": "declined",
+            "reason": "unsupported",
+            "route": "lia-dpll"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "nia-square"
+          },
+          {
+            "detail": "lazy linear arithmetic exhausted the configured timeout after 87 rounds this solve (solve_calls=1, total_rounds=87, atoms=3604, bound_lemmas=284, blocking_lemmas=274, core_len_last=1427, core_len_min=2, core_len_max=1427, core_len_avg=7.6, core_src_bound=195, core_src_diff=0, core_src_affine=0, core_src_lp=78, core_src_minimized=0, core_src_large=1, support_attempts=87, support_unavailable=0, support_conflict_batches=87, support_model_attempts=0, support_replay_failures=0, full_fallbacks=0)",
+            "outcome": "declined",
+            "reason": "budget",
+            "route": "nia-linearize"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "nia-bounded-blast"
+          },
+          {
+            "detail": "estimated 81482280 CNF clauses before lowering exceeds budget 64000000 (oversized encoding refused gracefully)",
+            "outcome": "declined",
+            "reason": "budget",
+            "route": "int-blast-ladder"
+          }
+        ],
+        "schema_version": 1
+      },
+      "verdict": "unknown"
+    },
+    {
+      "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_NIA/20170427-VeryMax/ITS/From_AProVE_2014__juHashMapCreateContainsValue.jar-obl-11__p32598_safety_0.smt2",
+      "first_causal_decline": {
+        "detail": "arith DPLL candidate failed full model replay",
+        "kind": "incomplete",
+        "reason": "incomplete",
+        "route": "nia-linearize"
+      },
+      "trace": {
+        "attempts": [
+          {
+            "detail": "fragment {int}",
+            "outcome": "probe",
+            "route": "probe"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "dl-online"
+          },
+          {
+            "outcome": "declined",
+            "reason": "unsupported",
+            "route": "lia-simplex"
+          },
+          {
+            "outcome": "declined",
+            "reason": "unsupported",
+            "route": "lia-dpll"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "nia-square"
+          },
+          {
+            "detail": "arith DPLL candidate failed full model replay",
+            "kind": "incomplete",
+            "outcome": "declined",
+            "reason": "incomplete",
+            "route": "nia-linearize"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "nia-bounded-blast"
+          },
+          {
+            "detail": "estimated 286797975 CNF clauses before lowering exceeds budget 64000000 (oversized encoding refused gracefully)",
+            "outcome": "declined",
+            "reason": "budget",
+            "route": "int-blast-ladder"
+          }
+        ],
+        "schema_version": 1
+      },
+      "verdict": "unknown"
+    },
+    {
+      "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_NIA/20170427-VeryMax/ITS/From_AProVE_2014__juHashMapCreateIsEmpty.jar-obl-10__p1784_safety_0.smt2",
+      "first_causal_decline": {
+        "detail": "arith DPLL candidate failed full model replay",
+        "kind": "incomplete",
+        "reason": "incomplete",
+        "route": "nia-linearize"
+      },
+      "trace": {
+        "attempts": [
+          {
+            "detail": "fragment {int}",
+            "outcome": "probe",
+            "route": "probe"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "dl-online"
+          },
+          {
+            "outcome": "declined",
+            "reason": "unsupported",
+            "route": "lia-simplex"
+          },
+          {
+            "outcome": "declined",
+            "reason": "unsupported",
+            "route": "lia-dpll"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "nia-square"
+          },
+          {
+            "detail": "arith DPLL candidate failed full model replay",
+            "kind": "incomplete",
+            "outcome": "declined",
+            "reason": "incomplete",
+            "route": "nia-linearize"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "nia-bounded-blast"
+          },
+          {
+            "detail": "estimated 74329095 CNF clauses before lowering exceeds budget 64000000 (oversized encoding refused gracefully)",
+            "outcome": "declined",
+            "reason": "budget",
+            "route": "int-blast-ladder"
+          }
+        ],
+        "schema_version": 1
+      },
+      "verdict": "unknown"
+    },
+    {
+      "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_NIA/20170427-VeryMax/ITS/From_AProVE_2014__juHashMapCreateIsEmpty.jar-obl-10__p2235_terminationG_0.smt2",
+      "first_causal_decline": {
+        "detail": "lazy linear arithmetic exhausted the configured timeout after 98 rounds this solve (solve_calls=1, total_rounds=98, atoms=4351, bound_lemmas=78, blocking_lemmas=219, core_len_last=1645, core_len_min=2, core_len_max=1645, core_len_avg=11.2, core_src_bound=127, core_src_diff=0, core_src_affine=0, core_src_lp=91, core_src_minimized=0, core_src_large=1, support_attempts=98, support_unavailable=0, support_conflict_batches=98, support_model_attempts=0, support_replay_failures=0, full_fallbacks=0)",
+        "reason": "budget",
+        "route": "nia-linearize"
+      },
+      "trace": {
+        "attempts": [
+          {
+            "detail": "fragment {int}",
+            "outcome": "probe",
+            "route": "probe"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "dl-online"
+          },
+          {
+            "outcome": "declined",
+            "reason": "unsupported",
+            "route": "lia-simplex"
+          },
+          {
+            "outcome": "declined",
+            "reason": "unsupported",
+            "route": "lia-dpll"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "nia-square"
+          },
+          {
+            "detail": "lazy linear arithmetic exhausted the configured timeout after 98 rounds this solve (solve_calls=1, total_rounds=98, atoms=4351, bound_lemmas=78, blocking_lemmas=219, core_len_last=1645, core_len_min=2, core_len_max=1645, core_len_avg=11.2, core_src_bound=127, core_src_diff=0, core_src_affine=0, core_src_lp=91, core_src_minimized=0, core_src_large=1, support_attempts=98, support_unavailable=0, support_conflict_batches=98, support_model_attempts=0, support_replay_failures=0, full_fallbacks=0)",
+            "outcome": "declined",
+            "reason": "budget",
+            "route": "nia-linearize"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "nia-bounded-blast"
+          },
+          {
+            "detail": "estimated 236225850 CNF clauses before lowering exceeds budget 64000000 (oversized encoding refused gracefully)",
+            "outcome": "declined",
+            "reason": "budget",
+            "route": "int-blast-ladder"
+          }
+        ],
+        "schema_version": 1
+      },
+      "verdict": "unknown"
+    },
+    {
+      "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_NIA/20170427-VeryMax/ITS/From_AProVE_2014__juHashMapCreateRemove.jar-obl-11__p6984_safety_0.smt2",
+      "first_causal_decline": {
+        "detail": "lazy linear arithmetic exhausted the configured timeout after 41 rounds this solve (solve_calls=1, total_rounds=41, atoms=3704, bound_lemmas=292, blocking_lemmas=259, core_len_last=2, core_len_min=2, core_len_max=4, core_len_avg=2.0, core_src_bound=226, core_src_diff=0, core_src_affine=0, core_src_lp=33, core_src_minimized=0, core_src_large=0, support_attempts=41, support_unavailable=0, support_conflict_batches=41, support_model_attempts=0, support_replay_failures=0, full_fallbacks=0)",
+        "reason": "budget",
+        "route": "nia-linearize"
+      },
+      "trace": {
+        "attempts": [
+          {
+            "detail": "fragment {int}",
+            "outcome": "probe",
+            "route": "probe"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "dl-online"
+          },
+          {
+            "outcome": "declined",
+            "reason": "unsupported",
+            "route": "lia-simplex"
+          },
+          {
+            "outcome": "declined",
+            "reason": "unsupported",
+            "route": "lia-dpll"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "nia-square"
+          },
+          {
+            "detail": "lazy linear arithmetic exhausted the configured timeout after 41 rounds this solve (solve_calls=1, total_rounds=41, atoms=3704, bound_lemmas=292, blocking_lemmas=259, core_len_last=2, core_len_min=2, core_len_max=4, core_len_avg=2.0, core_src_bound=226, core_src_diff=0, core_src_affine=0, core_src_lp=33, core_src_minimized=0, core_src_large=0, support_attempts=41, support_unavailable=0, support_conflict_batches=41, support_model_attempts=0, support_replay_failures=0, full_fallbacks=0)",
+            "outcome": "declined",
+            "reason": "budget",
+            "route": "nia-linearize"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "nia-bounded-blast"
+          },
+          {
+            "detail": "estimated 82590729 CNF clauses before lowering exceeds budget 64000000 (oversized encoding refused gracefully)",
+            "outcome": "declined",
+            "reason": "budget",
+            "route": "int-blast-ladder"
+          }
+        ],
+        "schema_version": 1
+      },
+      "verdict": "unknown"
+    },
+    {
+      "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_NIA/20170427-VeryMax/ITS/From_AProVE_2014__juHashMapCreateSize.jar-obl-10__p7265_safety_0.smt2",
+      "first_causal_decline": {
+        "detail": "lazy linear arithmetic exhausted the configured timeout after 99 rounds this solve (solve_calls=1, total_rounds=99, atoms=6377, bound_lemmas=390, blocking_lemmas=300, core_len_last=8, core_len_min=2, core_len_max=21, core_len_avg=2.7, core_src_bound=212, core_src_diff=0, core_src_affine=0, core_src_lp=88, core_src_minimized=0, core_src_large=0, support_attempts=99, support_unavailable=0, support_conflict_batches=99, support_model_attempts=0, support_replay_failures=0, full_fallbacks=0)",
+        "reason": "budget",
+        "route": "nia-linearize"
+      },
+      "trace": {
+        "attempts": [
+          {
+            "detail": "fragment {int}",
+            "outcome": "probe",
+            "route": "probe"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "dl-online"
+          },
+          {
+            "outcome": "declined",
+            "reason": "unsupported",
+            "route": "lia-simplex"
+          },
+          {
+            "outcome": "declined",
+            "reason": "unsupported",
+            "route": "lia-dpll"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "nia-square"
+          },
+          {
+            "detail": "lazy linear arithmetic exhausted the configured timeout after 99 rounds this solve (solve_calls=1, total_rounds=99, atoms=6377, bound_lemmas=390, blocking_lemmas=300, core_len_last=8, core_len_min=2, core_len_max=21, core_len_avg=2.7, core_src_bound=212, core_src_diff=0, core_src_affine=0, core_src_lp=88, core_src_minimized=0, core_src_large=0, support_attempts=99, support_unavailable=0, support_conflict_batches=99, support_model_attempts=0, support_replay_failures=0, full_fallbacks=0)",
+            "outcome": "declined",
+            "reason": "budget",
+            "route": "nia-linearize"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "nia-bounded-blast"
+          },
+          {
+            "detail": "estimated 107475720 CNF clauses before lowering exceeds budget 64000000 (oversized encoding refused gracefully)",
+            "outcome": "declined",
+            "reason": "budget",
+            "route": "int-blast-ladder"
+          }
+        ],
+        "schema_version": 1
+      },
+      "verdict": "unknown"
+    },
+    {
+      "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_NIA/20170427-VeryMax/ITS/From_AProVE_2014__juLinkedListCreateAddAllAt.jar-obl-17__p7725_safety_0.smt2",
+      "first_causal_decline": {
+        "detail": "lazy linear arithmetic exhausted the configured timeout after 23 rounds this solve (solve_calls=1, total_rounds=23, atoms=11606, bound_lemmas=174, blocking_lemmas=284, core_len_last=2, core_len_min=2, core_len_max=2, core_len_avg=2.0, core_src_bound=270, core_src_diff=0, core_src_affine=0, core_src_lp=14, core_src_minimized=0, core_src_large=0, support_attempts=23, support_unavailable=0, support_conflict_batches=23, support_model_attempts=0, support_replay_failures=0, full_fallbacks=0)",
+        "reason": "budget",
+        "route": "nia-linearize"
+      },
+      "trace": {
+        "attempts": [
+          {
+            "detail": "fragment {int}",
+            "outcome": "probe",
+            "route": "probe"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "dl-online"
+          },
+          {
+            "outcome": "declined",
+            "reason": "unsupported",
+            "route": "lia-simplex"
+          },
+          {
+            "outcome": "declined",
+            "reason": "unsupported",
+            "route": "lia-dpll"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "nia-square"
+          },
+          {
+            "detail": "lazy linear arithmetic exhausted the configured timeout after 23 rounds this solve (solve_calls=1, total_rounds=23, atoms=11606, bound_lemmas=174, blocking_lemmas=284, core_len_last=2, core_len_min=2, core_len_max=2, core_len_avg=2.0, core_src_bound=270, core_src_diff=0, core_src_affine=0, core_src_lp=14, core_src_minimized=0, core_src_large=0, support_attempts=23, support_unavailable=0, support_conflict_batches=23, support_model_attempts=0, support_replay_failures=0, full_fallbacks=0)",
+            "outcome": "declined",
+            "reason": "budget",
+            "route": "nia-linearize"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "nia-bounded-blast"
+          },
+          {
+            "detail": "integer bit-blast width ladder: wall-clock timeout reached",
+            "outcome": "declined",
+            "reason": "budget",
+            "route": "int-blast-ladder"
+          }
+        ],
+        "schema_version": 1
+      },
+      "verdict": "unknown"
+    },
+    {
+      "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_NIA/20170427-VeryMax/ITS/From_AProVE_2014__juLinkedListCreateAddAllAt.jar-obl-17__p7871_safety_0.smt2",
+      "first_causal_decline": {
+        "detail": "lazy linear arithmetic exhausted the configured timeout after 21 rounds this solve (solve_calls=1, total_rounds=21, atoms=11220, bound_lemmas=162, blocking_lemmas=266, core_len_last=5362, core_len_min=2, core_len_max=5362, core_len_avg=22.1, core_src_bound=253, core_src_diff=0, core_src_affine=0, core_src_lp=12, core_src_minimized=0, core_src_large=1, support_attempts=21, support_unavailable=0, support_conflict_batches=21, support_model_attempts=0, support_replay_failures=0, full_fallbacks=0)",
+        "reason": "budget",
+        "route": "nia-linearize"
+      },
+      "trace": {
+        "attempts": [
+          {
+            "detail": "fragment {int}",
+            "outcome": "probe",
+            "route": "probe"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "dl-online"
+          },
+          {
+            "outcome": "declined",
+            "reason": "unsupported",
+            "route": "lia-simplex"
+          },
+          {
+            "outcome": "declined",
+            "reason": "unsupported",
+            "route": "lia-dpll"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "nia-square"
+          },
+          {
+            "detail": "lazy linear arithmetic exhausted the configured timeout after 21 rounds this solve (solve_calls=1, total_rounds=21, atoms=11220, bound_lemmas=162, blocking_lemmas=266, core_len_last=5362, core_len_min=2, core_len_max=5362, core_len_avg=22.1, core_src_bound=253, core_src_diff=0, core_src_affine=0, core_src_lp=12, core_src_minimized=0, core_src_large=1, support_attempts=21, support_unavailable=0, support_conflict_batches=21, support_model_attempts=0, support_replay_failures=0, full_fallbacks=0)",
+            "outcome": "declined",
+            "reason": "budget",
+            "route": "nia-linearize"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "nia-bounded-blast"
+          },
+          {
+            "detail": "integer bit-blast width ladder: wall-clock timeout reached",
+            "outcome": "declined",
+            "reason": "budget",
+            "route": "int-blast-ladder"
+          }
+        ],
+        "schema_version": 1
+      },
+      "verdict": "unknown"
+    },
+    {
+      "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_NIA/20170427-VeryMax/ITS/From_AProVE_2014__juLinkedListCreateAddAllAt.jar-obl-17__p8261_safety_0.smt2",
+      "first_causal_decline": {
+        "detail": "lazy linear arithmetic exhausted the configured timeout after 57 rounds this solve (solve_calls=1, total_rounds=57, atoms=6720, bound_lemmas=261, blocking_lemmas=420, core_len_last=2, core_len_min=2, core_len_max=48, core_len_avg=2.1, core_src_bound=377, core_src_diff=0, core_src_affine=0, core_src_lp=43, core_src_minimized=0, core_src_large=0, support_attempts=57, support_unavailable=0, support_conflict_batches=57, support_model_attempts=0, support_replay_failures=0, full_fallbacks=0)",
+        "reason": "budget",
+        "route": "nia-linearize"
+      },
+      "trace": {
+        "attempts": [
+          {
+            "detail": "fragment {int}",
+            "outcome": "probe",
+            "route": "probe"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "dl-online"
+          },
+          {
+            "outcome": "declined",
+            "reason": "unsupported",
+            "route": "lia-simplex"
+          },
+          {
+            "outcome": "declined",
+            "reason": "unsupported",
+            "route": "lia-dpll"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "nia-square"
+          },
+          {
+            "detail": "lazy linear arithmetic exhausted the configured timeout after 57 rounds this solve (solve_calls=1, total_rounds=57, atoms=6720, bound_lemmas=261, blocking_lemmas=420, core_len_last=2, core_len_min=2, core_len_max=48, core_len_avg=2.1, core_src_bound=377, core_src_diff=0, core_src_affine=0, core_src_lp=43, core_src_minimized=0, core_src_large=0, support_attempts=57, support_unavailable=0, support_conflict_batches=57, support_model_attempts=0, support_replay_failures=0, full_fallbacks=0)",
+            "outcome": "declined",
+            "reason": "budget",
+            "route": "nia-linearize"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "nia-bounded-blast"
+          },
+          {
+            "detail": "integer bit-blast width ladder: wall-clock timeout reached",
+            "outcome": "declined",
+            "reason": "budget",
+            "route": "int-blast-ladder"
+          }
+        ],
+        "schema_version": 1
+      },
+      "verdict": "unknown"
+    },
+    {
+      "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_NIA/20170427-VeryMax/ITS/From_AProVE_2014__juLinkedListCreateAddAllAt.jar-obl-17__p8434_safety_0.smt2",
+      "first_causal_decline": {
+        "detail": "lazy linear arithmetic exhausted the configured timeout after 70 rounds this solve (solve_calls=1, total_rounds=70, atoms=4616, bound_lemmas=87, blocking_lemmas=209, core_len_last=2164, core_len_min=2, core_len_max=2164, core_len_avg=12.9, core_src_bound=144, core_src_diff=0, core_src_affine=0, core_src_lp=64, core_src_minimized=0, core_src_large=1, support_attempts=70, support_unavailable=0, support_conflict_batches=70, support_model_attempts=0, support_replay_failures=0, full_fallbacks=0)",
+        "reason": "budget",
+        "route": "nia-linearize"
+      },
+      "trace": {
+        "attempts": [
+          {
+            "detail": "fragment {int}",
+            "outcome": "probe",
+            "route": "probe"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "dl-online"
+          },
+          {
+            "outcome": "declined",
+            "reason": "unsupported",
+            "route": "lia-simplex"
+          },
+          {
+            "outcome": "declined",
+            "reason": "unsupported",
+            "route": "lia-dpll"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "nia-square"
+          },
+          {
+            "detail": "lazy linear arithmetic exhausted the configured timeout after 70 rounds this solve (solve_calls=1, total_rounds=70, atoms=4616, bound_lemmas=87, blocking_lemmas=209, core_len_last=2164, core_len_min=2, core_len_max=2164, core_len_avg=12.9, core_src_bound=144, core_src_diff=0, core_src_affine=0, core_src_lp=64, core_src_minimized=0, core_src_large=1, support_attempts=70, support_unavailable=0, support_conflict_batches=70, support_model_attempts=0, support_replay_failures=0, full_fallbacks=0)",
+            "outcome": "declined",
+            "reason": "budget",
+            "route": "nia-linearize"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "nia-bounded-blast"
+          },
+          {
+            "detail": "integer bit-blast width ladder: wall-clock timeout reached",
+            "outcome": "declined",
+            "reason": "budget",
+            "route": "int-blast-ladder"
+          }
+        ],
+        "schema_version": 1
+      },
+      "verdict": "unknown"
+    },
+    {
+      "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_NIA/20170427-VeryMax/ITS/From_AProVE_2014__juLinkedListCreateAddAllAt.jar-obl-17__p8651_safety_0.smt2",
+      "first_causal_decline": {
+        "detail": "lazy linear arithmetic exhausted the configured timeout after 154 rounds this solve (solve_calls=1, total_rounds=154, atoms=1660, bound_lemmas=100, blocking_lemmas=314, core_len_last=836, core_len_min=2, core_len_max=950, core_len_avg=14.7, core_src_bound=171, core_src_diff=1, core_src_affine=0, core_src_lp=138, core_src_minimized=0, core_src_large=4, support_attempts=154, support_unavailable=0, support_conflict_batches=154, support_model_attempts=0, support_replay_failures=0, full_fallbacks=0)",
+        "reason": "budget",
+        "route": "nia-linearize"
+      },
+      "trace": {
+        "attempts": [
+          {
+            "detail": "fragment {int}",
+            "outcome": "probe",
+            "route": "probe"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "dl-online"
+          },
+          {
+            "outcome": "declined",
+            "reason": "unsupported",
+            "route": "lia-simplex"
+          },
+          {
+            "outcome": "declined",
+            "reason": "unsupported",
+            "route": "lia-dpll"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "nia-square"
+          },
+          {
+            "detail": "lazy linear arithmetic exhausted the configured timeout after 154 rounds this solve (solve_calls=1, total_rounds=154, atoms=1660, bound_lemmas=100, blocking_lemmas=314, core_len_last=836, core_len_min=2, core_len_max=950, core_len_avg=14.7, core_src_bound=171, core_src_diff=1, core_src_affine=0, core_src_lp=138, core_src_minimized=0, core_src_large=4, support_attempts=154, support_unavailable=0, support_conflict_batches=154, support_model_attempts=0, support_replay_failures=0, full_fallbacks=0)",
+            "outcome": "declined",
+            "reason": "budget",
+            "route": "nia-linearize"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "nia-bounded-blast"
+          },
+          {
+            "detail": "integer bit-blast width ladder: wall-clock timeout reached",
+            "outcome": "declined",
+            "reason": "budget",
+            "route": "int-blast-ladder"
+          }
+        ],
+        "schema_version": 1
+      },
+      "verdict": "unknown"
+    },
+    {
+      "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_NIA/20170427-VeryMax/ITS/From_AProVE_2014__juLinkedListCreateAddAllAt.jar-obl-17__p8809_safety_0.smt2",
+      "first_causal_decline": {
+        "detail": "lazy linear arithmetic exhausted the configured timeout after 41 rounds this solve (solve_calls=1, total_rounds=41, atoms=5378, bound_lemmas=87, blocking_lemmas=170, core_len_last=2, core_len_min=2, core_len_max=70, core_len_avg=2.8, core_src_bound=136, core_src_diff=0, core_src_affine=0, core_src_lp=34, core_src_minimized=0, core_src_large=0, support_attempts=41, support_unavailable=0, support_conflict_batches=41, support_model_attempts=0, support_replay_failures=0, full_fallbacks=0)",
+        "reason": "budget",
+        "route": "nia-linearize"
+      },
+      "trace": {
+        "attempts": [
+          {
+            "detail": "fragment {int}",
+            "outcome": "probe",
+            "route": "probe"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "dl-online"
+          },
+          {
+            "outcome": "declined",
+            "reason": "unsupported",
+            "route": "lia-simplex"
+          },
+          {
+            "outcome": "declined",
+            "reason": "unsupported",
+            "route": "lia-dpll"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "nia-square"
+          },
+          {
+            "detail": "lazy linear arithmetic exhausted the configured timeout after 41 rounds this solve (solve_calls=1, total_rounds=41, atoms=5378, bound_lemmas=87, blocking_lemmas=170, core_len_last=2, core_len_min=2, core_len_max=70, core_len_avg=2.8, core_src_bound=136, core_src_diff=0, core_src_affine=0, core_src_lp=34, core_src_minimized=0, core_src_large=0, support_attempts=41, support_unavailable=0, support_conflict_batches=41, support_model_attempts=0, support_replay_failures=0, full_fallbacks=0)",
+            "outcome": "declined",
+            "reason": "budget",
+            "route": "nia-linearize"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "nia-bounded-blast"
+          },
+          {
+            "detail": "integer bit-blast width ladder: wall-clock timeout reached",
+            "outcome": "declined",
+            "reason": "budget",
+            "route": "int-blast-ladder"
+          }
+        ],
+        "schema_version": 1
+      },
+      "verdict": "unknown"
+    },
+    {
+      "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_NIA/20170427-VeryMax/ITS/From_AProVE_2014__juLinkedListCreateAddAllAt.jar-obl-17__p8992_safety_0.smt2",
+      "first_causal_decline": {
+        "detail": "lazy linear arithmetic exhausted the configured timeout after 35 rounds this solve (solve_calls=1, total_rounds=35, atoms=5094, bound_lemmas=81, blocking_lemmas=154, core_len_last=2398, core_len_min=2, core_len_max=2398, core_len_avg=18.0, core_src_bound=126, core_src_diff=0, core_src_affine=0, core_src_lp=27, core_src_minimized=0, core_src_large=1, support_attempts=35, support_unavailable=0, support_conflict_batches=35, support_model_attempts=0, support_replay_failures=0, full_fallbacks=0)",
+        "reason": "budget",
+        "route": "nia-linearize"
+      },
+      "trace": {
+        "attempts": [
+          {
+            "detail": "fragment {int}",
+            "outcome": "probe",
+            "route": "probe"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "dl-online"
+          },
+          {
+            "outcome": "declined",
+            "reason": "unsupported",
+            "route": "lia-simplex"
+          },
+          {
+            "outcome": "declined",
+            "reason": "unsupported",
+            "route": "lia-dpll"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "nia-square"
+          },
+          {
+            "detail": "lazy linear arithmetic exhausted the configured timeout after 35 rounds this solve (solve_calls=1, total_rounds=35, atoms=5094, bound_lemmas=81, blocking_lemmas=154, core_len_last=2398, core_len_min=2, core_len_max=2398, core_len_avg=18.0, core_src_bound=126, core_src_diff=0, core_src_affine=0, core_src_lp=27, core_src_minimized=0, core_src_large=1, support_attempts=35, support_unavailable=0, support_conflict_batches=35, support_model_attempts=0, support_replay_failures=0, full_fallbacks=0)",
+            "outcome": "declined",
+            "reason": "budget",
+            "route": "nia-linearize"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "nia-bounded-blast"
+          },
+          {
+            "detail": "integer bit-blast width ladder: wall-clock timeout reached",
+            "outcome": "declined",
+            "reason": "budget",
+            "route": "int-blast-ladder"
+          }
+        ],
+        "schema_version": 1
+      },
+      "verdict": "unknown"
+    },
+    {
+      "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_NIA/20170427-VeryMax/ITS/From_T2__broydn.c.i.broydn.pl.t2.fixed.t2__term_unfeasibility_3_0.smt2",
+      "first_causal_decline": {
+        "detail": "lazy linear arithmetic exhausted the configured timeout after 44 rounds this solve (solve_calls=1, total_rounds=44, atoms=8115, bound_lemmas=270, blocking_lemmas=352, core_len_last=3, core_len_min=2, core_len_max=6, core_len_avg=2.0, core_src_bound=321, core_src_diff=0, core_src_affine=0, core_src_lp=31, core_src_minimized=0, core_src_large=0, support_attempts=44, support_unavailable=0, support_conflict_batches=44, support_model_attempts=0, support_replay_failures=0, full_fallbacks=0)",
+        "reason": "budget",
+        "route": "nia-linearize"
+      },
+      "trace": {
+        "attempts": [
+          {
+            "detail": "fragment {int}",
+            "outcome": "probe",
+            "route": "probe"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "dl-online"
+          },
+          {
+            "outcome": "declined",
+            "reason": "unsupported",
+            "route": "lia-simplex"
+          },
+          {
+            "outcome": "declined",
+            "reason": "unsupported",
+            "route": "lia-dpll"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "nia-square"
+          },
+          {
+            "detail": "lazy linear arithmetic exhausted the configured timeout after 44 rounds this solve (solve_calls=1, total_rounds=44, atoms=8115, bound_lemmas=270, blocking_lemmas=352, core_len_last=3, core_len_min=2, core_len_max=6, core_len_avg=2.0, core_src_bound=321, core_src_diff=0, core_src_affine=0, core_src_lp=31, core_src_minimized=0, core_src_large=0, support_attempts=44, support_unavailable=0, support_conflict_batches=44, support_model_attempts=0, support_replay_failures=0, full_fallbacks=0)",
+            "outcome": "declined",
+            "reason": "budget",
+            "route": "nia-linearize"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "nia-bounded-blast"
+          },
+          {
+            "detail": "integer bit-blast width ladder: wall-clock timeout reached",
+            "outcome": "declined",
+            "reason": "budget",
+            "route": "int-blast-ladder"
+          }
+        ],
+        "schema_version": 1
+      },
+      "verdict": "unknown"
+    },
+    {
+      "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_NIA/20170427-VeryMax/ITS/From_T2__db2.t2_fixed__terminationS_29_0.smt2",
+      "first_causal_decline": {
+        "detail": "lazy linear arithmetic exhausted the configured timeout after 66 rounds this solve (solve_calls=1, total_rounds=66, atoms=4604, bound_lemmas=0, blocking_lemmas=152, core_len_last=5, core_len_min=2, core_len_max=2240, core_len_avg=570.8, core_src_bound=94, core_src_diff=0, core_src_affine=0, core_src_lp=19, core_src_minimized=0, core_src_large=39, support_attempts=66, support_unavailable=0, support_conflict_batches=66, support_model_attempts=0, support_replay_failures=0, full_fallbacks=0)",
+        "reason": "budget",
+        "route": "nia-linearize"
+      },
+      "trace": {
+        "attempts": [
+          {
+            "detail": "fragment {int}",
+            "outcome": "probe",
+            "route": "probe"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "dl-online"
+          },
+          {
+            "outcome": "declined",
+            "reason": "unsupported",
+            "route": "lia-simplex"
+          },
+          {
+            "outcome": "declined",
+            "reason": "unsupported",
+            "route": "lia-dpll"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "nia-square"
+          },
+          {
+            "detail": "lazy linear arithmetic exhausted the configured timeout after 66 rounds this solve (solve_calls=1, total_rounds=66, atoms=4604, bound_lemmas=0, blocking_lemmas=152, core_len_last=5, core_len_min=2, core_len_max=2240, core_len_avg=570.8, core_src_bound=94, core_src_diff=0, core_src_affine=0, core_src_lp=19, core_src_minimized=0, core_src_large=39, support_attempts=66, support_unavailable=0, support_conflict_batches=66, support_model_attempts=0, support_replay_failures=0, full_fallbacks=0)",
+            "outcome": "declined",
+            "reason": "budget",
+            "route": "nia-linearize"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "nia-bounded-blast"
+          },
+          {
+            "detail": "integer bit-blast width ladder: wall-clock timeout reached",
+            "outcome": "declined",
+            "reason": "budget",
+            "route": "int-blast-ladder"
+          }
+        ],
+        "schema_version": 1
+      },
+      "verdict": "unknown"
+    },
+    {
+      "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_NIA/20170427-VeryMax/ITS/From_T2__disj_nightmare.t2__p18944_edge_closing_0.smt2",
+      "first_causal_decline": {
+        "detail": "lazy linear arithmetic exhausted the configured timeout after 40 rounds this solve (solve_calls=1, total_rounds=40, atoms=8170, bound_lemmas=51, blocking_lemmas=445, core_len_last=4642, core_len_min=2, core_len_max=4642, core_len_avg=12.5, core_src_bound=419, core_src_diff=0, core_src_affine=0, core_src_lp=25, core_src_minimized=0, core_src_large=1, support_attempts=40, support_unavailable=0, support_conflict_batches=40, support_model_attempts=0, support_replay_failures=0, full_fallbacks=0)",
+        "reason": "budget",
+        "route": "nia-linearize"
+      },
+      "trace": {
+        "attempts": [
+          {
+            "detail": "fragment {int}",
+            "outcome": "probe",
+            "route": "probe"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "dl-online"
+          },
+          {
+            "outcome": "declined",
+            "reason": "unsupported",
+            "route": "lia-simplex"
+          },
+          {
+            "outcome": "declined",
+            "reason": "unsupported",
+            "route": "lia-dpll"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "nia-square"
+          },
+          {
+            "detail": "lazy linear arithmetic exhausted the configured timeout after 40 rounds this solve (solve_calls=1, total_rounds=40, atoms=8170, bound_lemmas=51, blocking_lemmas=445, core_len_last=4642, core_len_min=2, core_len_max=4642, core_len_avg=12.5, core_src_bound=419, core_src_diff=0, core_src_affine=0, core_src_lp=25, core_src_minimized=0, core_src_large=1, support_attempts=40, support_unavailable=0, support_conflict_batches=40, support_model_attempts=0, support_replay_failures=0, full_fallbacks=0)",
+            "outcome": "declined",
+            "reason": "budget",
+            "route": "nia-linearize"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "nia-bounded-blast"
+          },
+          {
+            "detail": "integer bit-blast width ladder: wall-clock timeout reached",
+            "outcome": "declined",
+            "reason": "budget",
+            "route": "int-blast-ladder"
+          }
+        ],
+        "schema_version": 1
+      },
+      "verdict": "unknown"
+    },
+    {
+      "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_NIA/20170427-VeryMax/ITS/From_T2__efegp.t2__p21963_edge_closing_0.smt2",
+      "first_causal_decline": {
+        "detail": "lazy linear arithmetic exhausted the configured timeout after 11 rounds this solve (solve_calls=1, total_rounds=11, atoms=2668, bound_lemmas=78, blocking_lemmas=216, core_len_last=8, core_len_min=2, core_len_max=8, core_len_avg=2.0, core_src_bound=213, core_src_diff=0, core_src_affine=0, core_src_lp=3, core_src_minimized=0, core_src_large=0, support_attempts=11, support_unavailable=0, support_conflict_batches=11, support_model_attempts=0, support_replay_failures=0, full_fallbacks=0)",
+        "reason": "budget",
+        "route": "nia-linearize"
+      },
+      "trace": {
+        "attempts": [
+          {
+            "detail": "fragment {int}",
+            "outcome": "probe",
+            "route": "probe"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "dl-online"
+          },
+          {
+            "outcome": "declined",
+            "reason": "unsupported",
+            "route": "lia-simplex"
+          },
+          {
+            "outcome": "declined",
+            "reason": "unsupported",
+            "route": "lia-dpll"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "nia-square"
+          },
+          {
+            "detail": "lazy linear arithmetic exhausted the configured timeout after 11 rounds this solve (solve_calls=1, total_rounds=11, atoms=2668, bound_lemmas=78, blocking_lemmas=216, core_len_last=8, core_len_min=2, core_len_max=8, core_len_avg=2.0, core_src_bound=213, core_src_diff=0, core_src_affine=0, core_src_lp=3, core_src_minimized=0, core_src_large=0, support_attempts=11, support_unavailable=0, support_conflict_batches=11, support_model_attempts=0, support_replay_failures=0, full_fallbacks=0)",
+            "outcome": "declined",
+            "reason": "budget",
+            "route": "nia-linearize"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "nia-bounded-blast"
+          },
+          {
+            "detail": "integer bit-blast width ladder: wall-clock timeout reached",
+            "outcome": "declined",
+            "reason": "budget",
+            "route": "int-blast-ladder"
+          }
+        ],
+        "schema_version": 1
+      },
+      "verdict": "unknown"
+    },
+    {
+      "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_NIA/20170427-VeryMax/ITS/From_T2__ex36.t2__p28763_safety_0.smt2",
+      "first_causal_decline": {
+        "detail": "lazy linear arithmetic exhausted the configured timeout after 513 rounds this solve (solve_calls=1, total_rounds=513, atoms=864, bound_lemmas=36, blocking_lemmas=560, core_len_last=410, core_len_min=1, core_len_max=437, core_len_avg=350.1, core_src_bound=53, core_src_diff=1, core_src_affine=0, core_src_lp=28, core_src_minimized=0, core_src_large=478, support_attempts=513, support_unavailable=0, support_conflict_batches=513, support_model_attempts=0, support_replay_failures=0, full_fallbacks=0)",
+        "reason": "budget",
+        "route": "nia-linearize"
+      },
+      "trace": {
+        "attempts": [
+          {
+            "detail": "fragment {int}",
+            "outcome": "probe",
+            "route": "probe"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "dl-online"
+          },
+          {
+            "outcome": "declined",
+            "reason": "unsupported",
+            "route": "lia-simplex"
+          },
+          {
+            "outcome": "declined",
+            "reason": "unsupported",
+            "route": "lia-dpll"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "nia-square"
+          },
+          {
+            "detail": "lazy linear arithmetic exhausted the configured timeout after 513 rounds this solve (solve_calls=1, total_rounds=513, atoms=864, bound_lemmas=36, blocking_lemmas=560, core_len_last=410, core_len_min=1, core_len_max=437, core_len_avg=350.1, core_src_bound=53, core_src_diff=1, core_src_affine=0, core_src_lp=28, core_src_minimized=0, core_src_large=478, support_attempts=513, support_unavailable=0, support_conflict_batches=513, support_model_attempts=0, support_replay_failures=0, full_fallbacks=0)",
+            "outcome": "declined",
+            "reason": "budget",
+            "route": "nia-linearize"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "nia-bounded-blast"
+          },
+          {
+            "detail": "integer bit-blast width ladder: wall-clock timeout reached",
+            "outcome": "declined",
+            "reason": "budget",
+            "route": "int-blast-ladder"
+          }
+        ],
+        "schema_version": 1
+      },
+      "verdict": "unknown"
+    },
+    {
+      "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_NIA/20170427-VeryMax/ITS/From_T2__ex36.t2__p29986_safety_0.smt2",
+      "first_causal_decline": {
+        "detail": "lazy linear arithmetic exhausted the configured timeout after 46 rounds this solve (solve_calls=1, total_rounds=46, atoms=524, bound_lemmas=38, blocking_lemmas=109, core_len_last=252, core_len_min=1, core_len_max=252, core_len_avg=5.4, core_src_bound=69, core_src_diff=1, core_src_affine=0, core_src_lp=38, core_src_minimized=0, core_src_large=1, support_attempts=46, support_unavailable=0, support_conflict_batches=46, support_model_attempts=0, support_replay_failures=0, full_fallbacks=0)",
+        "reason": "budget",
+        "route": "nia-linearize"
+      },
+      "trace": {
+        "attempts": [
+          {
+            "detail": "fragment {int}",
+            "outcome": "probe",
+            "route": "probe"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "dl-online"
+          },
+          {
+            "outcome": "declined",
+            "reason": "unsupported",
+            "route": "lia-simplex"
+          },
+          {
+            "outcome": "declined",
+            "reason": "unsupported",
+            "route": "lia-dpll"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "nia-square"
+          },
+          {
+            "detail": "lazy linear arithmetic exhausted the configured timeout after 46 rounds this solve (solve_calls=1, total_rounds=46, atoms=524, bound_lemmas=38, blocking_lemmas=109, core_len_last=252, core_len_min=1, core_len_max=252, core_len_avg=5.4, core_src_bound=69, core_src_diff=1, core_src_affine=0, core_src_lp=38, core_src_minimized=0, core_src_large=1, support_attempts=46, support_unavailable=0, support_conflict_batches=46, support_model_attempts=0, support_replay_failures=0, full_fallbacks=0)",
+            "outcome": "declined",
+            "reason": "budget",
+            "route": "nia-linearize"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "nia-bounded-blast"
+          },
+          {
+            "detail": "combined-theory timeout after scalar backend",
+            "outcome": "declined",
+            "reason": "budget",
+            "route": "int-blast-ladder"
+          }
+        ],
+        "schema_version": 1
+      },
+      "verdict": "unknown"
+    },
+    {
+      "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_NIA/20170427-VeryMax/ITS/From_T2__fun1b.t2__terminationS_11_0.smt2",
+      "first_causal_decline": {
+        "detail": "arith DPLL candidate failed full model replay",
+        "kind": "incomplete",
+        "reason": "incomplete",
+        "route": "nia-linearize"
+      },
+      "trace": {
+        "attempts": [
+          {
+            "detail": "fragment {int}",
+            "outcome": "probe",
+            "route": "probe"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "dl-online"
+          },
+          {
+            "outcome": "declined",
+            "reason": "unsupported",
+            "route": "lia-simplex"
+          },
+          {
+            "outcome": "declined",
+            "reason": "unsupported",
+            "route": "lia-dpll"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "nia-square"
+          },
+          {
+            "detail": "arith DPLL candidate failed full model replay",
+            "kind": "incomplete",
+            "outcome": "declined",
+            "reason": "incomplete",
+            "route": "nia-linearize"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "nia-bounded-blast"
+          },
+          {
+            "detail": "integer bit-blast width ladder: wall-clock timeout reached",
+            "outcome": "declined",
+            "reason": "budget",
+            "route": "int-blast-ladder"
+          }
+        ],
+        "schema_version": 1
+      },
+      "verdict": "unknown"
+    },
+    {
+      "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_NIA/20170427-VeryMax/ITS/From_T2__hqr.c.i.hqr.pl.t2.fixed.t2_fixed__terminationS_36_0.smt2",
+      "first_causal_decline": {
+        "detail": "lazy linear arithmetic exhausted the configured timeout after 30 rounds this solve (solve_calls=1, total_rounds=30, atoms=6054, bound_lemmas=0, blocking_lemmas=135, core_len_last=2938, core_len_min=2, core_len_max=2938, core_len_avg=154.2, core_src_bound=110, core_src_diff=0, core_src_affine=0, core_src_lp=18, core_src_minimized=0, core_src_large=7, support_attempts=30, support_unavailable=0, support_conflict_batches=30, support_model_attempts=0, support_replay_failures=0, full_fallbacks=0)",
+        "reason": "budget",
+        "route": "nia-linearize"
+      },
+      "trace": {
+        "attempts": [
+          {
+            "detail": "fragment {int}",
+            "outcome": "probe",
+            "route": "probe"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "dl-online"
+          },
+          {
+            "outcome": "declined",
+            "reason": "unsupported",
+            "route": "lia-simplex"
+          },
+          {
+            "outcome": "declined",
+            "reason": "unsupported",
+            "route": "lia-dpll"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "nia-square"
+          },
+          {
+            "detail": "lazy linear arithmetic exhausted the configured timeout after 30 rounds this solve (solve_calls=1, total_rounds=30, atoms=6054, bound_lemmas=0, blocking_lemmas=135, core_len_last=2938, core_len_min=2, core_len_max=2938, core_len_avg=154.2, core_src_bound=110, core_src_diff=0, core_src_affine=0, core_src_lp=18, core_src_minimized=0, core_src_large=7, support_attempts=30, support_unavailable=0, support_conflict_batches=30, support_model_attempts=0, support_replay_failures=0, full_fallbacks=0)",
+            "outcome": "declined",
+            "reason": "budget",
+            "route": "nia-linearize"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "nia-bounded-blast"
+          },
+          {
+            "detail": "integer bit-blast width ladder: wall-clock timeout reached",
+            "outcome": "declined",
+            "reason": "budget",
+            "route": "int-blast-ladder"
+          }
+        ],
+        "schema_version": 1
+      },
+      "verdict": "unknown"
+    },
+    {
+      "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_NIA/20170427-VeryMax/ITS/From_T2__hqr.c.i.hqr.pl.t2.nor.t2.rlgfixed.t2_fixed__terminationS_45_0.smt2",
+      "first_causal_decline": {
+        "detail": "lazy linear arithmetic SAT skeleton declined after round 2 (solve_calls=1, total_rounds=3, atoms=6002, bound_lemmas=23, blocking_lemmas=64, core_len_last=2, core_len_min=2, core_len_max=2, core_len_avg=2.0, core_src_bound=64, core_src_diff=0, core_src_affine=0, core_src_lp=0, core_src_minimized=0, core_src_large=0, support_attempts=2, support_unavailable=0, support_conflict_batches=2, support_model_attempts=0, support_replay_failures=0, full_fallbacks=0): rustsat-batsat timeout",
+        "reason": "budget",
+        "route": "nia-linearize"
+      },
+      "trace": {
+        "attempts": [
+          {
+            "detail": "fragment {int}",
+            "outcome": "probe",
+            "route": "probe"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "dl-online"
+          },
+          {
+            "outcome": "declined",
+            "reason": "unsupported",
+            "route": "lia-simplex"
+          },
+          {
+            "outcome": "declined",
+            "reason": "unsupported",
+            "route": "lia-dpll"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "nia-square"
+          },
+          {
+            "detail": "lazy linear arithmetic SAT skeleton declined after round 2 (solve_calls=1, total_rounds=3, atoms=6002, bound_lemmas=23, blocking_lemmas=64, core_len_last=2, core_len_min=2, core_len_max=2, core_len_avg=2.0, core_src_bound=64, core_src_diff=0, core_src_affine=0, core_src_lp=0, core_src_minimized=0, core_src_large=0, support_attempts=2, support_unavailable=0, support_conflict_batches=2, support_model_attempts=0, support_replay_failures=0, full_fallbacks=0): rustsat-batsat timeout",
+            "outcome": "declined",
+            "reason": "budget",
+            "route": "nia-linearize"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "nia-bounded-blast"
+          },
+          {
+            "detail": "integer bit-blast width ladder: wall-clock timeout reached",
+            "outcome": "declined",
+            "reason": "budget",
+            "route": "int-blast-ladder"
+          }
+        ],
+        "schema_version": 1
+      },
+      "verdict": "unknown"
+    },
+    {
+      "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_NIA/20170427-VeryMax/ITS/From_T2__hqr.t2_fixed__terminationS_36_0.smt2",
+      "first_causal_decline": {
+        "detail": "lazy linear arithmetic exhausted the configured timeout after 18 rounds this solve (solve_calls=1, total_rounds=18, atoms=6136, bound_lemmas=23, blocking_lemmas=172, core_len_last=3308, core_len_min=2, core_len_max=3308, core_len_avg=21.3, core_src_bound=163, core_src_diff=0, core_src_affine=0, core_src_lp=8, core_src_minimized=0, core_src_large=1, support_attempts=18, support_unavailable=0, support_conflict_batches=18, support_model_attempts=0, support_replay_failures=0, full_fallbacks=0)",
+        "reason": "budget",
+        "route": "nia-linearize"
+      },
+      "trace": {
+        "attempts": [
+          {
+            "detail": "fragment {int}",
+            "outcome": "probe",
+            "route": "probe"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "dl-online"
+          },
+          {
+            "outcome": "declined",
+            "reason": "unsupported",
+            "route": "lia-simplex"
+          },
+          {
+            "outcome": "declined",
+            "reason": "unsupported",
+            "route": "lia-dpll"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "nia-square"
+          },
+          {
+            "detail": "lazy linear arithmetic exhausted the configured timeout after 18 rounds this solve (solve_calls=1, total_rounds=18, atoms=6136, bound_lemmas=23, blocking_lemmas=172, core_len_last=3308, core_len_min=2, core_len_max=3308, core_len_avg=21.3, core_src_bound=163, core_src_diff=0, core_src_affine=0, core_src_lp=8, core_src_minimized=0, core_src_large=1, support_attempts=18, support_unavailable=0, support_conflict_batches=18, support_model_attempts=0, support_replay_failures=0, full_fallbacks=0)",
+            "outcome": "declined",
+            "reason": "budget",
+            "route": "nia-linearize"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "nia-bounded-blast"
+          },
+          {
+            "detail": "integer bit-blast width ladder: wall-clock timeout reached",
+            "outcome": "declined",
+            "reason": "budget",
+            "route": "int-blast-ladder"
+          }
+        ],
+        "schema_version": 1
+      },
+      "verdict": "unknown"
+    },
+    {
+      "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_NIA/20170427-VeryMax/ITS/From_T2__n-21.t2__p3959_terminationG_0.smt2",
+      "first_causal_decline": {
+        "detail": "lazy linear arithmetic exhausted the configured timeout after 176 rounds this solve (solve_calls=1, total_rounds=176, atoms=478, bound_lemmas=240, blocking_lemmas=192, core_len_last=272, core_len_min=2, core_len_max=274, core_len_avg=183.2, core_src_bound=21, core_src_diff=0, core_src_affine=0, core_src_lp=44, core_src_minimized=0, core_src_large=127, support_attempts=176, support_unavailable=0, support_conflict_batches=176, support_model_attempts=0, support_replay_failures=0, full_fallbacks=0)",
+        "reason": "budget",
+        "route": "nia-linearize"
+      },
+      "trace": {
+        "attempts": [
+          {
+            "detail": "fragment {int}",
+            "outcome": "probe",
+            "route": "probe"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "dl-online"
+          },
+          {
+            "outcome": "declined",
+            "reason": "unsupported",
+            "route": "lia-simplex"
+          },
+          {
+            "outcome": "declined",
+            "reason": "unsupported",
+            "route": "lia-dpll"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "nia-square"
+          },
+          {
+            "detail": "lazy linear arithmetic exhausted the configured timeout after 176 rounds this solve (solve_calls=1, total_rounds=176, atoms=478, bound_lemmas=240, blocking_lemmas=192, core_len_last=272, core_len_min=2, core_len_max=274, core_len_avg=183.2, core_src_bound=21, core_src_diff=0, core_src_affine=0, core_src_lp=44, core_src_minimized=0, core_src_large=127, support_attempts=176, support_unavailable=0, support_conflict_batches=176, support_model_attempts=0, support_replay_failures=0, full_fallbacks=0)",
+            "outcome": "declined",
+            "reason": "budget",
+            "route": "nia-linearize"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "nia-bounded-blast"
+          },
+          {
+            "detail": "integer bit-blast width ladder: wall-clock timeout reached",
+            "outcome": "declined",
+            "reason": "budget",
+            "route": "int-blast-ladder"
+          }
+        ],
+        "schema_version": 1
+      },
+      "verdict": "unknown"
+    },
+    {
+      "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_NIA/20170427-VeryMax/ITS/From_T2__n-7.t2_fixed__p4922_terminationG_0.smt2",
+      "first_causal_decline": {
+        "detail": "lazy linear arithmetic exhausted the configured timeout after 397 rounds this solve (solve_calls=1, total_rounds=397, atoms=327, bound_lemmas=159, blocking_lemmas=408, core_len_last=182, core_len_min=2, core_len_max=184, core_len_avg=156.7, core_src_bound=12, core_src_diff=0, core_src_affine=0, core_src_lp=13, core_src_minimized=0, core_src_large=383, support_attempts=397, support_unavailable=0, support_conflict_batches=397, support_model_attempts=0, support_replay_failures=0, full_fallbacks=0)",
+        "reason": "budget",
+        "route": "nia-linearize"
+      },
+      "trace": {
+        "attempts": [
+          {
+            "detail": "fragment {int}",
+            "outcome": "probe",
+            "route": "probe"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "dl-online"
+          },
+          {
+            "outcome": "declined",
+            "reason": "unsupported",
+            "route": "lia-simplex"
+          },
+          {
+            "outcome": "declined",
+            "reason": "unsupported",
+            "route": "lia-dpll"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "nia-square"
+          },
+          {
+            "detail": "lazy linear arithmetic exhausted the configured timeout after 397 rounds this solve (solve_calls=1, total_rounds=397, atoms=327, bound_lemmas=159, blocking_lemmas=408, core_len_last=182, core_len_min=2, core_len_max=184, core_len_avg=156.7, core_src_bound=12, core_src_diff=0, core_src_affine=0, core_src_lp=13, core_src_minimized=0, core_src_large=383, support_attempts=397, support_unavailable=0, support_conflict_batches=397, support_model_attempts=0, support_replay_failures=0, full_fallbacks=0)",
+            "outcome": "declined",
+            "reason": "budget",
+            "route": "nia-linearize"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "nia-bounded-blast"
+          },
+          {
+            "detail": "integer bit-blast width ladder: wall-clock timeout reached",
+            "outcome": "declined",
+            "reason": "budget",
+            "route": "int-blast-ladder"
+          }
+        ],
+        "schema_version": 1
+      },
+      "verdict": "unknown"
+    },
+    {
+      "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_NIA/20170427-VeryMax/ITS/From_T2__p-43-terminate.t2__term_unfeasibility_1_0.smt2",
+      "first_causal_decline": {
+        "detail": "lazy linear arithmetic exhausted the configured timeout after 142 rounds this solve (solve_calls=1, total_rounds=142, atoms=2192, bound_lemmas=79, blocking_lemmas=246, core_len_last=1189, core_len_min=2, core_len_max=1210, core_len_avg=398.2, core_src_bound=116, core_src_diff=0, core_src_affine=0, core_src_lp=49, core_src_minimized=0, core_src_large=81, support_attempts=142, support_unavailable=0, support_conflict_batches=142, support_model_attempts=0, support_replay_failures=0, full_fallbacks=0)",
+        "reason": "budget",
+        "route": "nia-linearize"
+      },
+      "trace": {
+        "attempts": [
+          {
+            "detail": "fragment {int}",
+            "outcome": "probe",
+            "route": "probe"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "dl-online"
+          },
+          {
+            "outcome": "declined",
+            "reason": "unsupported",
+            "route": "lia-simplex"
+          },
+          {
+            "outcome": "declined",
+            "reason": "unsupported",
+            "route": "lia-dpll"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "nia-square"
+          },
+          {
+            "detail": "lazy linear arithmetic exhausted the configured timeout after 142 rounds this solve (solve_calls=1, total_rounds=142, atoms=2192, bound_lemmas=79, blocking_lemmas=246, core_len_last=1189, core_len_min=2, core_len_max=1210, core_len_avg=398.2, core_src_bound=116, core_src_diff=0, core_src_affine=0, core_src_lp=49, core_src_minimized=0, core_src_large=81, support_attempts=142, support_unavailable=0, support_conflict_batches=142, support_model_attempts=0, support_replay_failures=0, full_fallbacks=0)",
+            "outcome": "declined",
+            "reason": "budget",
+            "route": "nia-linearize"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "nia-bounded-blast"
+          },
+          {
+            "detail": "integer bit-blast width ladder: wall-clock timeout reached",
+            "outcome": "declined",
+            "reason": "budget",
+            "route": "int-blast-ladder"
+          }
+        ],
+        "schema_version": 1
+      },
+      "verdict": "unknown"
+    },
+    {
+      "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_NIA/20170427-VeryMax/ITS/From_T2__queens.t2__term_unfeasibility_1_0.smt2",
+      "first_causal_decline": {
+        "detail": "lazy linear arithmetic exhausted the configured timeout after 122 rounds this solve (solve_calls=1, total_rounds=122, atoms=3603, bound_lemmas=45, blocking_lemmas=213, core_len_last=1959, core_len_min=2, core_len_max=1959, core_len_avg=39.0, core_src_bound=105, core_src_diff=0, core_src_affine=0, core_src_lp=104, core_src_minimized=0, core_src_large=4, support_attempts=122, support_unavailable=0, support_conflict_batches=122, support_model_attempts=0, support_replay_failures=0, full_fallbacks=0)",
+        "reason": "budget",
+        "route": "nia-linearize"
+      },
+      "trace": {
+        "attempts": [
+          {
+            "detail": "fragment {int}",
+            "outcome": "probe",
+            "route": "probe"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "dl-online"
+          },
+          {
+            "outcome": "declined",
+            "reason": "unsupported",
+            "route": "lia-simplex"
+          },
+          {
+            "outcome": "declined",
+            "reason": "unsupported",
+            "route": "lia-dpll"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "nia-square"
+          },
+          {
+            "detail": "lazy linear arithmetic exhausted the configured timeout after 122 rounds this solve (solve_calls=1, total_rounds=122, atoms=3603, bound_lemmas=45, blocking_lemmas=213, core_len_last=1959, core_len_min=2, core_len_max=1959, core_len_avg=39.0, core_src_bound=105, core_src_diff=0, core_src_affine=0, core_src_lp=104, core_src_minimized=0, core_src_large=4, support_attempts=122, support_unavailable=0, support_conflict_batches=122, support_model_attempts=0, support_replay_failures=0, full_fallbacks=0)",
+            "outcome": "declined",
+            "reason": "budget",
+            "route": "nia-linearize"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "nia-bounded-blast"
+          },
+          {
+            "detail": "integer bit-blast width ladder: wall-clock timeout reached",
+            "outcome": "declined",
+            "reason": "budget",
+            "route": "int-blast-ladder"
+          }
+        ],
+        "schema_version": 1
+      },
+      "verdict": "unknown"
+    },
+    {
+      "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_NIA/20170427-VeryMax/ITS/From_T2__s1-striped.t2__p14253_safety_0.smt2",
+      "first_causal_decline": {
+        "detail": "lazy linear arithmetic exhausted the configured timeout after 29 rounds this solve (solve_calls=1, total_rounds=29, atoms=4552, bound_lemmas=99, blocking_lemmas=211, core_len_last=1697, core_len_min=2, core_len_max=1697, core_len_avg=10.2, core_src_bound=191, core_src_diff=0, core_src_affine=0, core_src_lp=19, core_src_minimized=0, core_src_large=1, support_attempts=29, support_unavailable=0, support_conflict_batches=29, support_model_attempts=0, support_replay_failures=0, full_fallbacks=0)",
+        "reason": "budget",
+        "route": "nia-linearize"
+      },
+      "trace": {
+        "attempts": [
+          {
+            "detail": "fragment {int}",
+            "outcome": "probe",
+            "route": "probe"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "dl-online"
+          },
+          {
+            "outcome": "declined",
+            "reason": "unsupported",
+            "route": "lia-simplex"
+          },
+          {
+            "outcome": "declined",
+            "reason": "unsupported",
+            "route": "lia-dpll"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "nia-square"
+          },
+          {
+            "detail": "lazy linear arithmetic exhausted the configured timeout after 29 rounds this solve (solve_calls=1, total_rounds=29, atoms=4552, bound_lemmas=99, blocking_lemmas=211, core_len_last=1697, core_len_min=2, core_len_max=1697, core_len_avg=10.2, core_src_bound=191, core_src_diff=0, core_src_affine=0, core_src_lp=19, core_src_minimized=0, core_src_large=1, support_attempts=29, support_unavailable=0, support_conflict_batches=29, support_model_attempts=0, support_replay_failures=0, full_fallbacks=0)",
+            "outcome": "declined",
+            "reason": "budget",
+            "route": "nia-linearize"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "nia-bounded-blast"
+          },
+          {
+            "detail": "integer bit-blast width ladder: wall-clock timeout reached",
+            "outcome": "declined",
+            "reason": "budget",
+            "route": "int-blast-ladder"
+          }
+        ],
+        "schema_version": 1
+      },
+      "verdict": "unknown"
+    },
+    {
+      "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_NIA/20170427-VeryMax/ITS/From_T2__s1-striped.t2_fixed__p10785_safety_0.smt2",
+      "first_causal_decline": {
+        "detail": "lazy linear arithmetic exhausted the configured timeout after 104 rounds this solve (solve_calls=1, total_rounds=104, atoms=4097, bound_lemmas=60, blocking_lemmas=200, core_len_last=1669, core_len_min=2, core_len_max=1669, core_len_avg=14.4, core_src_bound=104, core_src_diff=0, core_src_affine=0, core_src_lp=95, core_src_minimized=0, core_src_large=1, support_attempts=104, support_unavailable=0, support_conflict_batches=104, support_model_attempts=0, support_replay_failures=0, full_fallbacks=0)",
+        "reason": "budget",
+        "route": "nia-linearize"
+      },
+      "trace": {
+        "attempts": [
+          {
+            "detail": "fragment {int}",
+            "outcome": "probe",
+            "route": "probe"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "dl-online"
+          },
+          {
+            "outcome": "declined",
+            "reason": "unsupported",
+            "route": "lia-simplex"
+          },
+          {
+            "outcome": "declined",
+            "reason": "unsupported",
+            "route": "lia-dpll"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "nia-square"
+          },
+          {
+            "detail": "lazy linear arithmetic exhausted the configured timeout after 104 rounds this solve (solve_calls=1, total_rounds=104, atoms=4097, bound_lemmas=60, blocking_lemmas=200, core_len_last=1669, core_len_min=2, core_len_max=1669, core_len_avg=14.4, core_src_bound=104, core_src_diff=0, core_src_affine=0, core_src_lp=95, core_src_minimized=0, core_src_large=1, support_attempts=104, support_unavailable=0, support_conflict_batches=104, support_model_attempts=0, support_replay_failures=0, full_fallbacks=0)",
+            "outcome": "declined",
+            "reason": "budget",
+            "route": "nia-linearize"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "nia-bounded-blast"
+          },
+          {
+            "detail": "integer bit-blast width ladder: wall-clock timeout reached",
+            "outcome": "declined",
+            "reason": "budget",
+            "route": "int-blast-ladder"
+          }
+        ],
+        "schema_version": 1
+      },
+      "verdict": "unknown"
+    },
+    {
+      "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_NIA/20170427-VeryMax/ITS/From_T2__s1-striped.t2_fixed__p11698_safety_0.smt2",
+      "first_causal_decline": {
+        "detail": "lazy linear arithmetic exhausted the configured timeout after 72 rounds this solve (solve_calls=1, total_rounds=72, atoms=275, bound_lemmas=218, blocking_lemmas=98, core_len_last=16, core_len_min=2, core_len_max=152, core_len_avg=30.1, core_src_bound=31, core_src_diff=1, core_src_affine=0, core_src_lp=50, core_src_minimized=0, core_src_large=16, support_attempts=72, support_unavailable=0, support_conflict_batches=72, support_model_attempts=0, support_replay_failures=0, full_fallbacks=0)",
+        "reason": "budget",
+        "route": "nia-linearize"
+      },
+      "trace": {
+        "attempts": [
+          {
+            "detail": "fragment {int}",
+            "outcome": "probe",
+            "route": "probe"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "dl-online"
+          },
+          {
+            "outcome": "declined",
+            "reason": "unsupported",
+            "route": "lia-simplex"
+          },
+          {
+            "outcome": "declined",
+            "reason": "unsupported",
+            "route": "lia-dpll"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "nia-square"
+          },
+          {
+            "detail": "lazy linear arithmetic exhausted the configured timeout after 72 rounds this solve (solve_calls=1, total_rounds=72, atoms=275, bound_lemmas=218, blocking_lemmas=98, core_len_last=16, core_len_min=2, core_len_max=152, core_len_avg=30.1, core_src_bound=31, core_src_diff=1, core_src_affine=0, core_src_lp=50, core_src_minimized=0, core_src_large=16, support_attempts=72, support_unavailable=0, support_conflict_batches=72, support_model_attempts=0, support_replay_failures=0, full_fallbacks=0)",
+            "outcome": "declined",
+            "reason": "budget",
+            "route": "nia-linearize"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "nia-bounded-blast"
+          },
+          {
+            "detail": "combined-theory timeout after scalar backend",
+            "outcome": "declined",
+            "reason": "budget",
+            "route": "int-blast-ladder"
+          }
+        ],
+        "schema_version": 1
+      },
+      "verdict": "unknown"
+    },
+    {
+      "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_NIA/20170427-VeryMax/ITS/From_T2__s1.t2__p18409_safety_0.smt2",
+      "first_causal_decline": {
+        "detail": "lazy linear arithmetic exhausted the configured timeout after 29 rounds this solve (solve_calls=1, total_rounds=29, atoms=333, bound_lemmas=278, blocking_lemmas=72, core_len_last=181, core_len_min=2, core_len_max=181, core_len_avg=5.1, core_src_bound=46, core_src_diff=0, core_src_affine=0, core_src_lp=25, core_src_minimized=0, core_src_large=1, support_attempts=29, support_unavailable=0, support_conflict_batches=29, support_model_attempts=0, support_replay_failures=0, full_fallbacks=0)",
+        "reason": "budget",
+        "route": "nia-linearize"
+      },
+      "trace": {
+        "attempts": [
+          {
+            "detail": "fragment {int}",
+            "outcome": "probe",
+            "route": "probe"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "dl-online"
+          },
+          {
+            "outcome": "declined",
+            "reason": "unsupported",
+            "route": "lia-simplex"
+          },
+          {
+            "outcome": "declined",
+            "reason": "unsupported",
+            "route": "lia-dpll"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "nia-square"
+          },
+          {
+            "detail": "lazy linear arithmetic exhausted the configured timeout after 29 rounds this solve (solve_calls=1, total_rounds=29, atoms=333, bound_lemmas=278, blocking_lemmas=72, core_len_last=181, core_len_min=2, core_len_max=181, core_len_avg=5.1, core_src_bound=46, core_src_diff=0, core_src_affine=0, core_src_lp=25, core_src_minimized=0, core_src_large=1, support_attempts=29, support_unavailable=0, support_conflict_batches=29, support_model_attempts=0, support_replay_failures=0, full_fallbacks=0)",
+            "outcome": "declined",
+            "reason": "budget",
+            "route": "nia-linearize"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "nia-bounded-blast"
+          },
+          {
+            "detail": "combined-theory timeout after scalar backend",
+            "outcome": "declined",
+            "reason": "budget",
+            "route": "int-blast-ladder"
+          }
+        ],
+        "schema_version": 1
+      },
+      "verdict": "unknown"
+    },
+    {
+      "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_NIA/20170427-VeryMax/ITS/From_T2__s1.t2__p19291_safety_0.smt2",
+      "first_causal_decline": {
+        "detail": "lazy linear arithmetic exhausted the configured timeout after 58 rounds this solve (solve_calls=1, total_rounds=58, atoms=3767, bound_lemmas=100, blocking_lemmas=241, core_len_last=15, core_len_min=2, core_len_max=25, core_len_avg=2.6, core_src_bound=195, core_src_diff=0, core_src_affine=0, core_src_lp=46, core_src_minimized=0, core_src_large=0, support_attempts=58, support_unavailable=0, support_conflict_batches=58, support_model_attempts=0, support_replay_failures=0, full_fallbacks=0)",
+        "reason": "budget",
+        "route": "nia-linearize"
+      },
+      "trace": {
+        "attempts": [
+          {
+            "detail": "fragment {int}",
+            "outcome": "probe",
+            "route": "probe"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "dl-online"
+          },
+          {
+            "outcome": "declined",
+            "reason": "unsupported",
+            "route": "lia-simplex"
+          },
+          {
+            "outcome": "declined",
+            "reason": "unsupported",
+            "route": "lia-dpll"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "nia-square"
+          },
+          {
+            "detail": "lazy linear arithmetic exhausted the configured timeout after 58 rounds this solve (solve_calls=1, total_rounds=58, atoms=3767, bound_lemmas=100, blocking_lemmas=241, core_len_last=15, core_len_min=2, core_len_max=25, core_len_avg=2.6, core_src_bound=195, core_src_diff=0, core_src_affine=0, core_src_lp=46, core_src_minimized=0, core_src_large=0, support_attempts=58, support_unavailable=0, support_conflict_batches=58, support_model_attempts=0, support_replay_failures=0, full_fallbacks=0)",
+            "outcome": "declined",
+            "reason": "budget",
+            "route": "nia-linearize"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "nia-bounded-blast"
+          },
+          {
+            "detail": "integer bit-blast width ladder: wall-clock timeout reached",
+            "outcome": "declined",
+            "reason": "budget",
+            "route": "int-blast-ladder"
+          }
+        ],
+        "schema_version": 1
+      },
+      "verdict": "unknown"
+    },
+    {
+      "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_NIA/20170427-VeryMax/ITS/From_T2__s1.t2__p20015_safety_0.smt2",
+      "first_causal_decline": {
+        "detail": "arith DPLL candidate failed full model replay",
+        "kind": "incomplete",
+        "reason": "incomplete",
+        "route": "nia-linearize"
+      },
+      "trace": {
+        "attempts": [
+          {
+            "detail": "fragment {int}",
+            "outcome": "probe",
+            "route": "probe"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "dl-online"
+          },
+          {
+            "outcome": "declined",
+            "reason": "unsupported",
+            "route": "lia-simplex"
+          },
+          {
+            "outcome": "declined",
+            "reason": "unsupported",
+            "route": "lia-dpll"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "nia-square"
+          },
+          {
+            "detail": "arith DPLL candidate failed full model replay",
+            "kind": "incomplete",
+            "outcome": "declined",
+            "reason": "incomplete",
+            "route": "nia-linearize"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "nia-bounded-blast"
+          },
+          {
+            "detail": "integer bit-blast width ladder: wall-clock timeout reached",
+            "outcome": "declined",
+            "reason": "budget",
+            "route": "int-blast-ladder"
+          }
+        ],
+        "schema_version": 1
+      },
+      "verdict": "unknown"
+    },
+    {
+      "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_NIA/20170427-VeryMax/ITS/From_T2__sas2.t2__terminationQ_2_0.smt2",
+      "first_causal_decline": {
+        "detail": "lazy linear arithmetic exhausted the configured timeout after 111 rounds this solve (solve_calls=1, total_rounds=111, atoms=5298, bound_lemmas=150, blocking_lemmas=223, core_len_last=1691, core_len_min=2, core_len_max=1692, core_len_avg=409.6, core_src_bound=123, core_src_diff=0, core_src_affine=0, core_src_lp=46, core_src_minimized=0, core_src_large=54, support_attempts=111, support_unavailable=0, support_conflict_batches=111, support_model_attempts=0, support_replay_failures=0, full_fallbacks=0)",
+        "reason": "budget",
+        "route": "nia-linearize"
+      },
+      "trace": {
+        "attempts": [
+          {
+            "detail": "fragment {int}",
+            "outcome": "probe",
+            "route": "probe"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "dl-online"
+          },
+          {
+            "outcome": "declined",
+            "reason": "unsupported",
+            "route": "lia-simplex"
+          },
+          {
+            "outcome": "declined",
+            "reason": "unsupported",
+            "route": "lia-dpll"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "nia-square"
+          },
+          {
+            "detail": "lazy linear arithmetic exhausted the configured timeout after 111 rounds this solve (solve_calls=1, total_rounds=111, atoms=5298, bound_lemmas=150, blocking_lemmas=223, core_len_last=1691, core_len_min=2, core_len_max=1692, core_len_avg=409.6, core_src_bound=123, core_src_diff=0, core_src_affine=0, core_src_lp=46, core_src_minimized=0, core_src_large=54, support_attempts=111, support_unavailable=0, support_conflict_batches=111, support_model_attempts=0, support_replay_failures=0, full_fallbacks=0)",
+            "outcome": "declined",
+            "reason": "budget",
+            "route": "nia-linearize"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "nia-bounded-blast"
+          },
+          {
+            "detail": "estimated 117393672 CNF clauses before lowering exceeds budget 64000000 (oversized encoding refused gracefully)",
+            "outcome": "declined",
+            "reason": "budget",
+            "route": "int-blast-ladder"
+          }
+        ],
+        "schema_version": 1
+      },
+      "verdict": "unknown"
+    },
+    {
+      "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_NIA/20170427-VeryMax/ITS/From_T2__streamserver.bug.t2__terminationS_1_0.smt2",
+      "first_causal_decline": {
+        "detail": "lazy linear arithmetic exhausted the configured timeout after 103 rounds this solve (solve_calls=1, total_rounds=103, atoms=4893, bound_lemmas=36, blocking_lemmas=173, core_len_last=2366, core_len_min=2, core_len_max=2366, core_len_avg=16.5, core_src_bound=84, core_src_diff=0, core_src_affine=0, core_src_lp=88, core_src_minimized=0, core_src_large=1, support_attempts=103, support_unavailable=0, support_conflict_batches=103, support_model_attempts=0, support_replay_failures=0, full_fallbacks=0)",
+        "reason": "budget",
+        "route": "nia-linearize"
+      },
+      "trace": {
+        "attempts": [
+          {
+            "detail": "fragment {int}",
+            "outcome": "probe",
+            "route": "probe"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "dl-online"
+          },
+          {
+            "outcome": "declined",
+            "reason": "unsupported",
+            "route": "lia-simplex"
+          },
+          {
+            "outcome": "declined",
+            "reason": "unsupported",
+            "route": "lia-dpll"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "nia-square"
+          },
+          {
+            "detail": "lazy linear arithmetic exhausted the configured timeout after 103 rounds this solve (solve_calls=1, total_rounds=103, atoms=4893, bound_lemmas=36, blocking_lemmas=173, core_len_last=2366, core_len_min=2, core_len_max=2366, core_len_avg=16.5, core_src_bound=84, core_src_diff=0, core_src_affine=0, core_src_lp=88, core_src_minimized=0, core_src_large=1, support_attempts=103, support_unavailable=0, support_conflict_batches=103, support_model_attempts=0, support_replay_failures=0, full_fallbacks=0)",
+            "outcome": "declined",
+            "reason": "budget",
+            "route": "nia-linearize"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "nia-bounded-blast"
+          },
+          {
+            "detail": "integer bit-blast width ladder: wall-clock timeout reached",
+            "outcome": "declined",
+            "reason": "budget",
+            "route": "int-blast-ladder"
+          }
+        ],
+        "schema_version": 1
+      },
+      "verdict": "unknown"
+    },
+    {
+      "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_NIA/20170427-VeryMax/ITS/From_T2__zlib-adler32.c.t2__p25902_terminationG_0.smt2",
+      "first_causal_decline": {
+        "detail": "lazy linear arithmetic exhausted the configured timeout after 87 rounds this solve (solve_calls=1, total_rounds=87, atoms=5683, bound_lemmas=132, blocking_lemmas=316, core_len_last=9, core_len_min=2, core_len_max=11, core_len_avg=2.2, core_src_bound=240, core_src_diff=0, core_src_affine=0, core_src_lp=76, core_src_minimized=0, core_src_large=0, support_attempts=87, support_unavailable=0, support_conflict_batches=87, support_model_attempts=0, support_replay_failures=0, full_fallbacks=0)",
+        "reason": "budget",
+        "route": "nia-linearize"
+      },
+      "trace": {
+        "attempts": [
+          {
+            "detail": "fragment {int}",
+            "outcome": "probe",
+            "route": "probe"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "dl-online"
+          },
+          {
+            "outcome": "declined",
+            "reason": "unsupported",
+            "route": "lia-simplex"
+          },
+          {
+            "outcome": "declined",
+            "reason": "unsupported",
+            "route": "lia-dpll"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "nia-square"
+          },
+          {
+            "detail": "lazy linear arithmetic exhausted the configured timeout after 87 rounds this solve (solve_calls=1, total_rounds=87, atoms=5683, bound_lemmas=132, blocking_lemmas=316, core_len_last=9, core_len_min=2, core_len_max=11, core_len_avg=2.2, core_src_bound=240, core_src_diff=0, core_src_affine=0, core_src_lp=76, core_src_minimized=0, core_src_large=0, support_attempts=87, support_unavailable=0, support_conflict_batches=87, support_model_attempts=0, support_replay_failures=0, full_fallbacks=0)",
+            "outcome": "declined",
+            "reason": "budget",
+            "route": "nia-linearize"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "nia-bounded-blast"
+          },
+          {
+            "detail": "integer bit-blast width ladder: wall-clock timeout reached",
+            "outcome": "declined",
+            "reason": "budget",
+            "route": "int-blast-ladder"
+          }
+        ],
+        "schema_version": 1
+      },
+      "verdict": "unknown"
+    },
+    {
+      "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_NIA/20170427-VeryMax/SAT14/1051.smt2",
+      "first_causal_decline": {
+        "detail": "arith DPLL candidate failed full model replay",
+        "kind": "incomplete",
+        "reason": "incomplete",
+        "route": "nia-linearize"
+      },
+      "trace": {
+        "attempts": [
+          {
+            "detail": "fragment {int}",
+            "outcome": "probe",
+            "route": "probe"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "dl-online"
+          },
+          {
+            "outcome": "declined",
+            "reason": "unsupported",
+            "route": "lia-simplex"
+          },
+          {
+            "outcome": "declined",
+            "reason": "unsupported",
+            "route": "lia-dpll"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "nia-square"
+          },
+          {
+            "detail": "arith DPLL candidate failed full model replay",
+            "kind": "incomplete",
+            "outcome": "declined",
+            "reason": "incomplete",
+            "route": "nia-linearize"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "nia-bounded-blast"
+          },
+          {
+            "detail": "estimated 209670018 CNF clauses before lowering exceeds budget 64000000 (oversized encoding refused gracefully)",
+            "outcome": "declined",
+            "reason": "budget",
+            "route": "int-blast-ladder"
+          }
+        ],
+        "schema_version": 1
+      },
+      "verdict": "unknown"
+    },
+    {
+      "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_NIA/20170427-VeryMax/SAT14/1280.smt2",
+      "first_causal_decline": {
+        "detail": "arith DPLL candidate failed full model replay",
+        "kind": "incomplete",
+        "reason": "incomplete",
+        "route": "nia-linearize"
+      },
+      "trace": {
+        "attempts": [
+          {
+            "detail": "fragment {int}",
+            "outcome": "probe",
+            "route": "probe"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "dl-online"
+          },
+          {
+            "outcome": "declined",
+            "reason": "unsupported",
+            "route": "lia-simplex"
+          },
+          {
+            "outcome": "declined",
+            "reason": "unsupported",
+            "route": "lia-dpll"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "nia-square"
+          },
+          {
+            "detail": "arith DPLL candidate failed full model replay",
+            "kind": "incomplete",
+            "outcome": "declined",
+            "reason": "incomplete",
+            "route": "nia-linearize"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "nia-bounded-blast"
+          },
+          {
+            "detail": "integer bit-blast width ladder: wall-clock timeout reached",
+            "outcome": "declined",
+            "reason": "budget",
+            "route": "int-blast-ladder"
+          }
+        ],
+        "schema_version": 1
+      },
+      "verdict": "unknown"
+    },
+    {
+      "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_NIA/20170427-VeryMax/SAT14/1395.smt2",
+      "first_causal_decline": {
+        "detail": "lazy linear arithmetic SAT skeleton declined after round 515 (solve_calls=1, total_rounds=516, atoms=1016, bound_lemmas=18, blocking_lemmas=559, core_len_last=575, core_len_min=2, core_len_max=578, core_len_avg=514.6, core_src_bound=46, core_src_diff=0, core_src_affine=0, core_src_lp=13, core_src_minimized=0, core_src_large=500, support_attempts=515, support_unavailable=0, support_conflict_batches=515, support_model_attempts=0, support_replay_failures=0, full_fallbacks=0): rustsat-batsat timeout",
+        "reason": "budget",
+        "route": "nia-linearize"
+      },
+      "trace": {
+        "attempts": [
+          {
+            "detail": "fragment {int}",
+            "outcome": "probe",
+            "route": "probe"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "dl-online"
+          },
+          {
+            "outcome": "declined",
+            "reason": "unsupported",
+            "route": "lia-simplex"
+          },
+          {
+            "outcome": "declined",
+            "reason": "unsupported",
+            "route": "lia-dpll"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "nia-square"
+          },
+          {
+            "detail": "lazy linear arithmetic SAT skeleton declined after round 515 (solve_calls=1, total_rounds=516, atoms=1016, bound_lemmas=18, blocking_lemmas=559, core_len_last=575, core_len_min=2, core_len_max=578, core_len_avg=514.6, core_src_bound=46, core_src_diff=0, core_src_affine=0, core_src_lp=13, core_src_minimized=0, core_src_large=500, support_attempts=515, support_unavailable=0, support_conflict_batches=515, support_model_attempts=0, support_replay_failures=0, full_fallbacks=0): rustsat-batsat timeout",
+            "outcome": "declined",
+            "reason": "budget",
+            "route": "nia-linearize"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "nia-bounded-blast"
+          },
+          {
+            "detail": "integer bit-blast width ladder: wall-clock timeout reached",
+            "outcome": "declined",
+            "reason": "budget",
+            "route": "int-blast-ladder"
+          }
+        ],
+        "schema_version": 1
+      },
+      "verdict": "unknown"
+    },
+    {
+      "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_NIA/20170427-VeryMax/SAT14/1509.smt2",
+      "first_causal_decline": {
+        "detail": "lazy linear arithmetic exhausted the configured timeout after 306 rounds this solve (solve_calls=1, total_rounds=306, atoms=1996, bound_lemmas=24, blocking_lemmas=376, core_len_last=879, core_len_min=2, core_len_max=944, core_len_avg=660.1, core_src_bound=73, core_src_diff=0, core_src_affine=0, core_src_lp=21, core_src_minimized=0, core_src_large=282, support_attempts=306, support_unavailable=0, support_conflict_batches=306, support_model_attempts=0, support_replay_failures=0, full_fallbacks=0)",
+        "reason": "budget",
+        "route": "nia-linearize"
+      },
+      "trace": {
+        "attempts": [
+          {
+            "detail": "fragment {int}",
+            "outcome": "probe",
+            "route": "probe"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "dl-online"
+          },
+          {
+            "outcome": "declined",
+            "reason": "unsupported",
+            "route": "lia-simplex"
+          },
+          {
+            "outcome": "declined",
+            "reason": "unsupported",
+            "route": "lia-dpll"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "nia-square"
+          },
+          {
+            "detail": "lazy linear arithmetic exhausted the configured timeout after 306 rounds this solve (solve_calls=1, total_rounds=306, atoms=1996, bound_lemmas=24, blocking_lemmas=376, core_len_last=879, core_len_min=2, core_len_max=944, core_len_avg=660.1, core_src_bound=73, core_src_diff=0, core_src_affine=0, core_src_lp=21, core_src_minimized=0, core_src_large=282, support_attempts=306, support_unavailable=0, support_conflict_batches=306, support_model_attempts=0, support_replay_failures=0, full_fallbacks=0)",
+            "outcome": "declined",
+            "reason": "budget",
+            "route": "nia-linearize"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "nia-bounded-blast"
+          },
+          {
+            "detail": "estimated 171663966 CNF clauses before lowering exceeds budget 64000000 (oversized encoding refused gracefully)",
+            "outcome": "declined",
+            "reason": "budget",
+            "route": "int-blast-ladder"
+          }
+        ],
+        "schema_version": 1
+      },
+      "verdict": "unknown"
+    },
+    {
+      "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_NIA/20170427-VeryMax/SAT14/1738.smt2",
+      "first_causal_decline": {
+        "detail": "lazy linear arithmetic SAT skeleton declined after round 620 (solve_calls=1, total_rounds=621, atoms=562, bound_lemmas=12, blocking_lemmas=652, core_len_last=260, core_len_min=2, core_len_max=327, core_len_avg=240.8, core_src_bound=34, core_src_diff=2, core_src_affine=0, core_src_lp=15, core_src_minimized=0, core_src_large=601, support_attempts=620, support_unavailable=0, support_conflict_batches=620, support_model_attempts=0, support_replay_failures=0, full_fallbacks=0): rustsat-batsat timeout",
+        "reason": "budget",
+        "route": "nia-linearize"
+      },
+      "trace": {
+        "attempts": [
+          {
+            "detail": "fragment {int}",
+            "outcome": "probe",
+            "route": "probe"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "dl-online"
+          },
+          {
+            "outcome": "declined",
+            "reason": "unsupported",
+            "route": "lia-simplex"
+          },
+          {
+            "outcome": "declined",
+            "reason": "unsupported",
+            "route": "lia-dpll"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "nia-square"
+          },
+          {
+            "detail": "lazy linear arithmetic SAT skeleton declined after round 620 (solve_calls=1, total_rounds=621, atoms=562, bound_lemmas=12, blocking_lemmas=652, core_len_last=260, core_len_min=2, core_len_max=327, core_len_avg=240.8, core_src_bound=34, core_src_diff=2, core_src_affine=0, core_src_lp=15, core_src_minimized=0, core_src_large=601, support_attempts=620, support_unavailable=0, support_conflict_batches=620, support_model_attempts=0, support_replay_failures=0, full_fallbacks=0): rustsat-batsat timeout",
+            "outcome": "declined",
+            "reason": "budget",
+            "route": "nia-linearize"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "nia-bounded-blast"
+          },
+          {
+            "detail": "integer bit-blast width ladder: wall-clock timeout reached",
+            "outcome": "declined",
+            "reason": "budget",
+            "route": "int-blast-ladder"
+          }
+        ],
+        "schema_version": 1
+      },
+      "verdict": "unknown"
+    },
+    {
+      "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_NIA/20170427-VeryMax/SAT14/1854.smt2",
+      "first_causal_decline": {
+        "detail": "lazy linear arithmetic exhausted the configured timeout after 274 rounds this solve (solve_calls=1, total_rounds=274, atoms=1224, bound_lemmas=18, blocking_lemmas=325, core_len_last=538, core_len_min=2, core_len_max=551, core_len_avg=422.0, core_src_bound=54, core_src_diff=0, core_src_affine=0, core_src_lp=17, core_src_minimized=0, core_src_large=254, support_attempts=274, support_unavailable=0, support_conflict_batches=274, support_model_attempts=0, support_replay_failures=0, full_fallbacks=0)",
+        "reason": "budget",
+        "route": "nia-linearize"
+      },
+      "trace": {
+        "attempts": [
+          {
+            "detail": "fragment {int}",
+            "outcome": "probe",
+            "route": "probe"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "dl-online"
+          },
+          {
+            "outcome": "declined",
+            "reason": "unsupported",
+            "route": "lia-simplex"
+          },
+          {
+            "outcome": "declined",
+            "reason": "unsupported",
+            "route": "lia-dpll"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "nia-square"
+          },
+          {
+            "detail": "lazy linear arithmetic exhausted the configured timeout after 274 rounds this solve (solve_calls=1, total_rounds=274, atoms=1224, bound_lemmas=18, blocking_lemmas=325, core_len_last=538, core_len_min=2, core_len_max=551, core_len_avg=422.0, core_src_bound=54, core_src_diff=0, core_src_affine=0, core_src_lp=17, core_src_minimized=0, core_src_large=254, support_attempts=274, support_unavailable=0, support_conflict_batches=274, support_model_attempts=0, support_replay_failures=0, full_fallbacks=0)",
+            "outcome": "declined",
+            "reason": "budget",
+            "route": "nia-linearize"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "nia-bounded-blast"
+          },
+          {
+            "detail": "integer bit-blast width ladder: wall-clock timeout reached",
+            "outcome": "declined",
+            "reason": "budget",
+            "route": "int-blast-ladder"
+          }
+        ],
+        "schema_version": 1
+      },
+      "verdict": "unknown"
+    },
+    {
+      "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_NIA/20170427-VeryMax/SAT14/227.smt2",
+      "first_causal_decline": {
+        "detail": "lazy linear arithmetic SAT skeleton declined after round 667 (solve_calls=1, total_rounds=668, atoms=364, bound_lemmas=130, blocking_lemmas=667, core_len_last=193, core_len_min=2, core_len_max=233, core_len_avg=190.4, core_src_bound=0, core_src_diff=1, core_src_affine=0, core_src_lp=8, core_src_minimized=0, core_src_large=658, support_attempts=667, support_unavailable=0, support_conflict_batches=667, support_model_attempts=0, support_replay_failures=0, full_fallbacks=0): rustsat-batsat timeout",
+        "reason": "budget",
+        "route": "nia-linearize"
+      },
+      "trace": {
+        "attempts": [
+          {
+            "detail": "fragment {int}",
+            "outcome": "probe",
+            "route": "probe"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "dl-online"
+          },
+          {
+            "outcome": "declined",
+            "reason": "unsupported",
+            "route": "lia-simplex"
+          },
+          {
+            "outcome": "declined",
+            "reason": "unsupported",
+            "route": "lia-dpll"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "nia-square"
+          },
+          {
+            "detail": "lazy linear arithmetic SAT skeleton declined after round 667 (solve_calls=1, total_rounds=668, atoms=364, bound_lemmas=130, blocking_lemmas=667, core_len_last=193, core_len_min=2, core_len_max=233, core_len_avg=190.4, core_src_bound=0, core_src_diff=1, core_src_affine=0, core_src_lp=8, core_src_minimized=0, core_src_large=658, support_attempts=667, support_unavailable=0, support_conflict_batches=667, support_model_attempts=0, support_replay_failures=0, full_fallbacks=0): rustsat-batsat timeout",
+            "outcome": "declined",
+            "reason": "budget",
+            "route": "nia-linearize"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "nia-bounded-blast"
+          },
+          {
+            "detail": "integer bit-blast width ladder: wall-clock timeout reached",
+            "outcome": "declined",
+            "reason": "budget",
+            "route": "int-blast-ladder"
+          }
+        ],
+        "schema_version": 1
+      },
+      "verdict": "unknown"
+    },
+    {
+      "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_NIA/20170427-VeryMax/SAT14/341.smt2",
+      "first_causal_decline": {
+        "detail": "lazy linear arithmetic exhausted the configured timeout after 216 rounds this solve (solve_calls=1, total_rounds=216, atoms=537, bound_lemmas=21, blocking_lemmas=273, core_len_last=247, core_len_min=2, core_len_max=248, core_len_avg=187.7, core_src_bound=61, core_src_diff=0, core_src_affine=0, core_src_lp=5, core_src_minimized=0, core_src_large=207, support_attempts=216, support_unavailable=0, support_conflict_batches=216, support_model_attempts=0, support_replay_failures=0, full_fallbacks=0)",
+        "reason": "budget",
+        "route": "nia-linearize"
+      },
+      "trace": {
+        "attempts": [
+          {
+            "detail": "fragment {int}",
+            "outcome": "probe",
+            "route": "probe"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "dl-online"
+          },
+          {
+            "outcome": "declined",
+            "reason": "unsupported",
+            "route": "lia-simplex"
+          },
+          {
+            "outcome": "declined",
+            "reason": "unsupported",
+            "route": "lia-dpll"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "nia-square"
+          },
+          {
+            "detail": "lazy linear arithmetic exhausted the configured timeout after 216 rounds this solve (solve_calls=1, total_rounds=216, atoms=537, bound_lemmas=21, blocking_lemmas=273, core_len_last=247, core_len_min=2, core_len_max=248, core_len_avg=187.7, core_src_bound=61, core_src_diff=0, core_src_affine=0, core_src_lp=5, core_src_minimized=0, core_src_large=207, support_attempts=216, support_unavailable=0, support_conflict_batches=216, support_model_attempts=0, support_replay_failures=0, full_fallbacks=0)",
+            "outcome": "declined",
+            "reason": "budget",
+            "route": "nia-linearize"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "nia-bounded-blast"
+          },
+          {
+            "detail": "integer bit-blast width ladder: wall-clock timeout reached",
+            "outcome": "declined",
+            "reason": "budget",
+            "route": "int-blast-ladder"
+          }
+        ],
+        "schema_version": 1
+      },
+      "verdict": "unknown"
+    },
+    {
+      "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_NIA/20170427-VeryMax/SAT14/456.smt2",
+      "first_causal_decline": {
+        "detail": "lazy linear arithmetic exhausted the configured timeout after 59 rounds this solve (solve_calls=1, total_rounds=59, atoms=1219, bound_lemmas=31, blocking_lemmas=138, core_len_last=533, core_len_min=2, core_len_max=541, core_len_avg=156.9, core_src_bound=84, core_src_diff=1, core_src_affine=0, core_src_lp=13, core_src_minimized=0, core_src_large=40, support_attempts=59, support_unavailable=0, support_conflict_batches=59, support_model_attempts=0, support_replay_failures=0, full_fallbacks=0)",
+        "reason": "budget",
+        "route": "nia-linearize"
+      },
+      "trace": {
+        "attempts": [
+          {
+            "detail": "fragment {int}",
+            "outcome": "probe",
+            "route": "probe"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "dl-online"
+          },
+          {
+            "outcome": "declined",
+            "reason": "unsupported",
+            "route": "lia-simplex"
+          },
+          {
+            "outcome": "declined",
+            "reason": "unsupported",
+            "route": "lia-dpll"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "nia-square"
+          },
+          {
+            "detail": "lazy linear arithmetic exhausted the configured timeout after 59 rounds this solve (solve_calls=1, total_rounds=59, atoms=1219, bound_lemmas=31, blocking_lemmas=138, core_len_last=533, core_len_min=2, core_len_max=541, core_len_avg=156.9, core_src_bound=84, core_src_diff=1, core_src_affine=0, core_src_lp=13, core_src_minimized=0, core_src_large=40, support_attempts=59, support_unavailable=0, support_conflict_batches=59, support_model_attempts=0, support_replay_failures=0, full_fallbacks=0)",
+            "outcome": "declined",
+            "reason": "budget",
+            "route": "nia-linearize"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "nia-bounded-blast"
+          },
+          {
+            "detail": "estimated 168414339 CNF clauses before lowering exceeds budget 64000000 (oversized encoding refused gracefully)",
+            "outcome": "declined",
+            "reason": "budget",
+            "route": "int-blast-ladder"
+          }
+        ],
+        "schema_version": 1
+      },
+      "verdict": "unknown"
+    },
+    {
+      "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_NIA/20170427-VeryMax/SAT14/571.smt2",
+      "first_causal_decline": {
+        "detail": "arith DPLL candidate failed full model replay",
+        "kind": "incomplete",
+        "reason": "incomplete",
+        "route": "nia-linearize"
+      },
+      "trace": {
+        "attempts": [
+          {
+            "detail": "fragment {int}",
+            "outcome": "probe",
+            "route": "probe"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "dl-online"
+          },
+          {
+            "outcome": "declined",
+            "reason": "unsupported",
+            "route": "lia-simplex"
+          },
+          {
+            "outcome": "declined",
+            "reason": "unsupported",
+            "route": "lia-dpll"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "nia-square"
+          },
+          {
+            "detail": "arith DPLL candidate failed full model replay",
+            "kind": "incomplete",
+            "outcome": "declined",
+            "reason": "incomplete",
+            "route": "nia-linearize"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "nia-bounded-blast"
+          },
+          {
+            "detail": "integer bit-blast width ladder: wall-clock timeout reached",
+            "outcome": "declined",
+            "reason": "budget",
+            "route": "int-blast-ladder"
+          }
+        ],
+        "schema_version": 1
+      },
+      "verdict": "unknown"
+    },
+    {
+      "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_NIA/20170427-VeryMax/SAT14/687.smt2",
+      "first_causal_decline": {
+        "detail": "lazy linear arithmetic exhausted the configured timeout after 77 rounds this solve (solve_calls=1, total_rounds=77, atoms=1291, bound_lemmas=32, blocking_lemmas=158, core_len_last=569, core_len_min=2, core_len_max=570, core_len_avg=220.7, core_src_bound=87, core_src_diff=0, core_src_affine=0, core_src_lp=10, core_src_minimized=0, core_src_large=61, support_attempts=77, support_unavailable=0, support_conflict_batches=77, support_model_attempts=0, support_replay_failures=0, full_fallbacks=0)",
+        "reason": "budget",
+        "route": "nia-linearize"
+      },
+      "trace": {
+        "attempts": [
+          {
+            "detail": "fragment {int}",
+            "outcome": "probe",
+            "route": "probe"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "dl-online"
+          },
+          {
+            "outcome": "declined",
+            "reason": "unsupported",
+            "route": "lia-simplex"
+          },
+          {
+            "outcome": "declined",
+            "reason": "unsupported",
+            "route": "lia-dpll"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "nia-square"
+          },
+          {
+            "detail": "lazy linear arithmetic exhausted the configured timeout after 77 rounds this solve (solve_calls=1, total_rounds=77, atoms=1291, bound_lemmas=32, blocking_lemmas=158, core_len_last=569, core_len_min=2, core_len_max=570, core_len_avg=220.7, core_src_bound=87, core_src_diff=0, core_src_affine=0, core_src_lp=10, core_src_minimized=0, core_src_large=61, support_attempts=77, support_unavailable=0, support_conflict_batches=77, support_model_attempts=0, support_replay_failures=0, full_fallbacks=0)",
+            "outcome": "declined",
+            "reason": "budget",
+            "route": "nia-linearize"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "nia-bounded-blast"
+          },
+          {
+            "detail": "estimated 201184377 CNF clauses before lowering exceeds budget 64000000 (oversized encoding refused gracefully)",
+            "outcome": "declined",
+            "reason": "budget",
+            "route": "int-blast-ladder"
+          }
+        ],
+        "schema_version": 1
+      },
+      "verdict": "unknown"
+    },
+    {
+      "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_NIA/20170427-VeryMax/SAT14/803.smt2",
+      "first_causal_decline": {
+        "detail": "lazy linear arithmetic exhausted the configured timeout after 219 rounds this solve (solve_calls=1, total_rounds=219, atoms=982, bound_lemmas=12, blocking_lemmas=251, core_len_last=425, core_len_min=2, core_len_max=432, core_len_avg=346.2, core_src_bound=34, core_src_diff=1, core_src_affine=0, core_src_lp=13, core_src_minimized=0, core_src_large=203, support_attempts=219, support_unavailable=0, support_conflict_batches=219, support_model_attempts=0, support_replay_failures=0, full_fallbacks=0)",
+        "reason": "budget",
+        "route": "nia-linearize"
+      },
+      "trace": {
+        "attempts": [
+          {
+            "detail": "fragment {int}",
+            "outcome": "probe",
+            "route": "probe"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "dl-online"
+          },
+          {
+            "outcome": "declined",
+            "reason": "unsupported",
+            "route": "lia-simplex"
+          },
+          {
+            "outcome": "declined",
+            "reason": "unsupported",
+            "route": "lia-dpll"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "nia-square"
+          },
+          {
+            "detail": "lazy linear arithmetic exhausted the configured timeout after 219 rounds this solve (solve_calls=1, total_rounds=219, atoms=982, bound_lemmas=12, blocking_lemmas=251, core_len_last=425, core_len_min=2, core_len_max=432, core_len_avg=346.2, core_src_bound=34, core_src_diff=1, core_src_affine=0, core_src_lp=13, core_src_minimized=0, core_src_large=203, support_attempts=219, support_unavailable=0, support_conflict_batches=219, support_model_attempts=0, support_replay_failures=0, full_fallbacks=0)",
+            "outcome": "declined",
+            "reason": "budget",
+            "route": "nia-linearize"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "nia-bounded-blast"
+          },
+          {
+            "detail": "estimated 164395062 CNF clauses before lowering exceeds budget 64000000 (oversized encoding refused gracefully)",
+            "outcome": "declined",
+            "reason": "budget",
+            "route": "int-blast-ladder"
+          }
+        ],
+        "schema_version": 1
+      },
+      "verdict": "unknown"
+    },
+    {
+      "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_NIA/20170427-VeryMax/SAT14/919.smt2",
+      "first_causal_decline": {
+        "detail": "lazy linear arithmetic exhausted the configured timeout after 324 rounds this solve (solve_calls=1, total_rounds=324, atoms=652, bound_lemmas=12, blocking_lemmas=356, core_len_last=388, core_len_min=2, core_len_max=392, core_len_avg=340.3, core_src_bound=34, core_src_diff=1, core_src_affine=0, core_src_lp=10, core_src_minimized=0, core_src_large=311, support_attempts=324, support_unavailable=0, support_conflict_batches=324, support_model_attempts=0, support_replay_failures=0, full_fallbacks=0)",
+        "reason": "budget",
+        "route": "nia-linearize"
+      },
+      "trace": {
+        "attempts": [
+          {
+            "detail": "fragment {int}",
+            "outcome": "probe",
+            "route": "probe"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "dl-online"
+          },
+          {
+            "outcome": "declined",
+            "reason": "unsupported",
+            "route": "lia-simplex"
+          },
+          {
+            "outcome": "declined",
+            "reason": "unsupported",
+            "route": "lia-dpll"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "nia-square"
+          },
+          {
+            "detail": "lazy linear arithmetic exhausted the configured timeout after 324 rounds this solve (solve_calls=1, total_rounds=324, atoms=652, bound_lemmas=12, blocking_lemmas=356, core_len_last=388, core_len_min=2, core_len_max=392, core_len_avg=340.3, core_src_bound=34, core_src_diff=1, core_src_affine=0, core_src_lp=10, core_src_minimized=0, core_src_large=311, support_attempts=324, support_unavailable=0, support_conflict_batches=324, support_model_attempts=0, support_replay_failures=0, full_fallbacks=0)",
+            "outcome": "declined",
+            "reason": "budget",
+            "route": "nia-linearize"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "nia-bounded-blast"
+          },
+          {
+            "detail": "integer bit-blast width ladder: wall-clock timeout reached",
+            "outcome": "declined",
+            "reason": "budget",
+            "route": "int-blast-ladder"
+          }
+        ],
+        "schema_version": 1
+      },
+      "verdict": "unknown"
+    },
+    {
+      "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_NIA/20210219-Dartagnan/ReachSafety-Loops/array_3-1-O0.smt2",
+      "first_causal_decline": {
+        "detail": "`distinct` with 16525 arguments requires 136529550 pairwise expansions; deterministic limit is 65536",
+        "kind": "ResourceLimit",
+        "reason": "resource-limit",
+        "route": "smtlib-ingest"
+      },
+      "trace": null,
+      "verdict": "unknown"
+    },
+    {
+      "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_NIA/20210219-Dartagnan/ReachSafety-Loops/geo1-u_valuebound2-O0.smt2",
+      "first_causal_decline": {
+        "detail": "arith DPLL candidate failed full model replay",
+        "kind": "incomplete",
+        "reason": "incomplete",
+        "route": "nia-linearize"
+      },
+      "trace": {
+        "attempts": [
+          {
+            "detail": "fragment {int}",
+            "outcome": "probe",
+            "route": "probe"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "dl-online"
+          },
+          {
+            "outcome": "declined",
+            "reason": "unsupported",
+            "route": "lia-simplex"
+          },
+          {
+            "outcome": "declined",
+            "reason": "unsupported",
+            "route": "lia-dpll"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "nia-square"
+          },
+          {
+            "detail": "arith DPLL candidate failed full model replay",
+            "kind": "incomplete",
+            "outcome": "declined",
+            "reason": "incomplete",
+            "route": "nia-linearize"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "nia-bounded-blast"
+          },
+          {
+            "detail": "integer constant 4294967295 does not fit the bounded width 32; widen the bound",
+            "kind": "incomplete",
+            "outcome": "declined",
+            "reason": "incomplete",
+            "route": "int-blast-ladder"
+          }
+        ],
+        "schema_version": 1
+      },
+      "verdict": "unknown"
+    },
+    {
+      "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_NIA/20210219-Dartagnan/ReachSafety-Loops/ps2-ll_unwindbound50-O0.smt2",
+      "first_causal_decline": {
+        "detail": "arith DPLL candidate failed full model replay",
+        "kind": "incomplete",
+        "reason": "incomplete",
+        "route": "nia-linearize"
+      },
+      "trace": {
+        "attempts": [
+          {
+            "detail": "fragment {int}",
+            "outcome": "probe",
+            "route": "probe"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "dl-online"
+          },
+          {
+            "outcome": "declined",
+            "reason": "unsupported",
+            "route": "lia-simplex"
+          },
+          {
+            "outcome": "declined",
+            "reason": "unsupported",
+            "route": "lia-dpll"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "nia-square"
+          },
+          {
+            "detail": "arith DPLL candidate failed full model replay",
+            "kind": "incomplete",
+            "outcome": "declined",
+            "reason": "incomplete",
+            "route": "nia-linearize"
+          }
+        ],
+        "schema_version": 1
+      },
+      "verdict": "unknown"
+    },
+    {
+      "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_NIA/AProVE/aproveSMT4687047739446499948.smt2",
+      "first_causal_decline": {
+        "detail": "arith DPLL candidate failed full model replay",
+        "kind": "incomplete",
+        "reason": "incomplete",
+        "route": "nia-linearize"
+      },
+      "trace": {
+        "attempts": [
+          {
+            "detail": "fragment {int}",
+            "outcome": "probe",
+            "route": "probe"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "dl-online"
+          },
+          {
+            "outcome": "declined",
+            "reason": "unsupported",
+            "route": "lia-simplex"
+          },
+          {
+            "outcome": "declined",
+            "reason": "unsupported",
+            "route": "lia-dpll"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "nia-square"
+          },
+          {
+            "detail": "arith DPLL candidate failed full model replay",
+            "kind": "incomplete",
+            "outcome": "declined",
+            "reason": "incomplete",
+            "route": "nia-linearize"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "nia-bounded-blast"
+          },
+          {
+            "detail": "bounded integer model overflowed at width 32 (assertion #563 is false over exact semantics); widen the bound",
+            "kind": "incomplete",
+            "outcome": "declined",
+            "reason": "incomplete",
+            "route": "int-blast-ladder"
+          }
+        ],
+        "schema_version": 1
+      },
+      "verdict": "unknown"
+    },
+    {
+      "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_NIA/AProVE/aproveSMT5048239408100334127.smt2",
+      "first_causal_decline": {
+        "detail": "arith DPLL candidate failed full model replay",
+        "kind": "incomplete",
+        "reason": "incomplete",
+        "route": "nia-linearize"
+      },
+      "trace": {
+        "attempts": [
+          {
+            "detail": "fragment {int}",
+            "outcome": "probe",
+            "route": "probe"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "dl-online"
+          },
+          {
+            "outcome": "declined",
+            "reason": "unsupported",
+            "route": "lia-simplex"
+          },
+          {
+            "outcome": "declined",
+            "reason": "unsupported",
+            "route": "lia-dpll"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "nia-square"
+          },
+          {
+            "detail": "arith DPLL candidate failed full model replay",
+            "kind": "incomplete",
+            "outcome": "declined",
+            "reason": "incomplete",
+            "route": "nia-linearize"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "nia-bounded-blast"
+          },
+          {
+            "detail": "bounded integer model overflowed at width 32 (assertion #736 is false over exact semantics); widen the bound",
+            "kind": "incomplete",
+            "outcome": "declined",
+            "reason": "incomplete",
+            "route": "int-blast-ladder"
+          }
+        ],
+        "schema_version": 1
+      },
+      "verdict": "unknown"
+    },
+    {
+      "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_NIA/AProVE/aproveSMT6461796824751951221.smt2",
+      "first_causal_decline": {
+        "detail": "lazy linear arithmetic exhausted the configured timeout after 7 rounds this solve (solve_calls=1, total_rounds=7, atoms=1807, bound_lemmas=95, blocking_lemmas=145, core_len_last=4, core_len_min=2, core_len_max=4, core_len_avg=2.0, core_src_bound=143, core_src_diff=0, core_src_affine=0, core_src_lp=2, core_src_minimized=0, core_src_large=0, support_attempts=7, support_unavailable=0, support_conflict_batches=7, support_model_attempts=0, support_replay_failures=0, full_fallbacks=0)",
+        "reason": "budget",
+        "route": "nia-linearize"
+      },
+      "trace": {
+        "attempts": [
+          {
+            "detail": "fragment {int}",
+            "outcome": "probe",
+            "route": "probe"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "dl-online"
+          },
+          {
+            "outcome": "declined",
+            "reason": "unsupported",
+            "route": "lia-simplex"
+          },
+          {
+            "outcome": "declined",
+            "reason": "unsupported",
+            "route": "lia-dpll"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "nia-square"
+          },
+          {
+            "detail": "lazy linear arithmetic exhausted the configured timeout after 7 rounds this solve (solve_calls=1, total_rounds=7, atoms=1807, bound_lemmas=95, blocking_lemmas=145, core_len_last=4, core_len_min=2, core_len_max=4, core_len_avg=2.0, core_src_bound=143, core_src_diff=0, core_src_affine=0, core_src_lp=2, core_src_minimized=0, core_src_large=0, support_attempts=7, support_unavailable=0, support_conflict_batches=7, support_model_attempts=0, support_replay_failures=0, full_fallbacks=0)",
+            "outcome": "declined",
+            "reason": "budget",
+            "route": "nia-linearize"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "nia-bounded-blast"
+          },
+          {
+            "detail": "integer bit-blast width ladder: wall-clock timeout reached",
+            "outcome": "declined",
+            "reason": "budget",
+            "route": "int-blast-ladder"
+          }
+        ],
+        "schema_version": 1
+      },
+      "verdict": "unknown"
+    },
+    {
+      "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_NIA/AProVE/aproveSMT7795667227375240089.smt2",
+      "first_causal_decline": {
+        "detail": "lazy linear arithmetic exhausted the configured timeout after 429 rounds this solve (solve_calls=1, total_rounds=429, atoms=354, bound_lemmas=228, blocking_lemmas=467, core_len_last=242, core_len_min=2, core_len_max=248, core_len_avg=217.1, core_src_bound=40, core_src_diff=0, core_src_affine=0, core_src_lp=13, core_src_minimized=0, core_src_large=414, support_attempts=429, support_unavailable=0, support_conflict_batches=429, support_model_attempts=0, support_replay_failures=0, full_fallbacks=0)",
+        "reason": "budget",
+        "route": "nia-linearize"
+      },
+      "trace": {
+        "attempts": [
+          {
+            "detail": "fragment {int}",
+            "outcome": "probe",
+            "route": "probe"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "dl-online"
+          },
+          {
+            "outcome": "declined",
+            "reason": "unsupported",
+            "route": "lia-simplex"
+          },
+          {
+            "outcome": "declined",
+            "reason": "unsupported",
+            "route": "lia-dpll"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "nia-square"
+          },
+          {
+            "detail": "lazy linear arithmetic exhausted the configured timeout after 429 rounds this solve (solve_calls=1, total_rounds=429, atoms=354, bound_lemmas=228, blocking_lemmas=467, core_len_last=242, core_len_min=2, core_len_max=248, core_len_avg=217.1, core_src_bound=40, core_src_diff=0, core_src_affine=0, core_src_lp=13, core_src_minimized=0, core_src_large=414, support_attempts=429, support_unavailable=0, support_conflict_batches=429, support_model_attempts=0, support_replay_failures=0, full_fallbacks=0)",
+            "outcome": "declined",
+            "reason": "budget",
+            "route": "nia-linearize"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "nia-bounded-blast"
+          },
+          {
+            "detail": "bounded integer model overflowed at width 32 (assertion #299 is false over exact semantics); widen the bound",
+            "kind": "incomplete",
+            "outcome": "declined",
+            "reason": "incomplete",
+            "route": "int-blast-ladder"
+          }
+        ],
+        "schema_version": 1
+      },
+      "verdict": "unknown"
+    },
+    {
+      "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_NIA/UltimateLassoRanker/LarrazOliverasRodriguez-CarbonellRubio-2013FMCAD-Fig1-alloca_unknown-termination.c.i_Iteration6_Lasso+nonterminationTemplate.smt2",
+      "first_causal_decline": {
+        "detail": "relaxation model failed ground-evaluator replay against the originals",
+        "reason": "verifier-rejected",
+        "route": "nia-linearize"
+      },
+      "trace": {
+        "attempts": [
+          {
+            "detail": "fragment {int}",
+            "outcome": "probe",
+            "route": "probe"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "dl-online"
+          },
+          {
+            "outcome": "declined",
+            "reason": "unsupported",
+            "route": "lia-simplex"
+          },
+          {
+            "outcome": "declined",
+            "reason": "unsupported",
+            "route": "lia-dpll"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "nia-square"
+          },
+          {
+            "detail": "relaxation model failed ground-evaluator replay against the originals",
+            "outcome": "declined",
+            "reason": "verifier-rejected",
+            "route": "nia-linearize"
+          },
+          {
+            "outcome": "declined",
+            "reason": "not-applicable",
+            "route": "nia-bounded-blast"
+          },
+          {
+            "detail": "integer bit-blast width ladder: wall-clock timeout reached",
+            "outcome": "declined",
+            "reason": "budget",
+            "route": "int-blast-ladder"
+          }
+        ],
+        "schema_version": 1
+      },
+      "verdict": "unknown"
+    }
+  ],
+  "classification_rule": "ingest-resource-limit maps to smtlib-ingest/resource-limit/ResourceLimit; otherwise first ordered declined attempt after probe whose reason is neither not-applicable nor unsupported",
+  "rows": 67,
+  "schema": "axeyum-qf-nia-a3-causal-census-v2",
+  "trace_jsonl_path": "/tmp/axeyum-qf-nia-a3-trace-v2.jsonl",
+  "trace_jsonl_sha256": "d38a94e41bbc5a41994fcd33f9983327f1247e164ef143fee038a10c25b7592d"
+}

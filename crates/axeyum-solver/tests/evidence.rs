@@ -1047,8 +1047,11 @@ fn qf_lia_boolean_stress_row_uses_bool_simplification_evidence() {
     assert!(report.evidence.check(&script.arena, &assertions).unwrap());
 }
 
+/// ADR-0378 detects the repeated Boolean argument in the n-ary `distinct`
+/// before pair expansion, so this row now reaches the checked Boolean-false
+/// certificate instead of the older checked pairwise term-identity route.
 #[test]
-fn qf_uf_issue3970_uses_checked_term_identity_evidence() {
+fn qf_uf_issue3970_uses_checked_bool_simplification_evidence() {
     let mut script = parse_script(include_str!(
         "../../../corpus/public-curated/non-incremental/QF_UF/cvc5-regress-clean-bounded/cli__regress1__issue3970-nl-ext-purify.smt2"
     ))
@@ -1056,8 +1059,8 @@ fn qf_uf_issue3970_uses_checked_term_identity_evidence() {
     let assertions = script.assertions.clone();
     let report = produce_evidence(&mut script.arena, &assertions, &config()).unwrap();
     assert!(
-        matches!(report.evidence, Evidence::UnsatTermIdentity(_)),
-        "expected term-identity evidence, got {:?}",
+        matches!(report.evidence, Evidence::UnsatBoolSimplification(_)),
+        "expected bool-simplification evidence, got {:?}",
         report.evidence
     );
     assert!(report.evidence.is_certified());

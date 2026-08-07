@@ -1,5 +1,7 @@
 //! Reader/writer tests: feature coverage, round trips, and corpus smoke.
 
+use std::fmt::Write as _;
+
 use axeyum_ir::{
     ArraySortKey, Assignment, GenericArrayValue, Sort, SymbolId, TermStats, Value, eval,
 };
@@ -363,6 +365,69 @@ fn nary_distinct_is_pairwise() {
     );
 }
 
+fn integer_distinct_script(arity: usize) -> String {
+    let mut text = String::from("(set-logic QF_NIA)\n");
+    for index in 0..arity {
+        writeln!(text, "(declare-const x{index} Int)").expect("writing to a String cannot fail");
+    }
+    text.push_str("(assert (distinct");
+    for index in 0..arity {
+        write!(text, " x{index}").expect("writing to a String cannot fail");
+    }
+    text.push_str("))\n(check-sat)\n");
+    text
+}
+
+#[test]
+fn distinct_pair_expansion_has_an_exact_resource_boundary() {
+    // 362 choose 2 = 65,341: the largest arity below the 65,536-pair
+    // ceiling. The resulting conjunction is balanced, so its depth remains
+    // logarithmic instead of becoming a 65k-node spine.
+    let near_miss = parse_script(&integer_distinct_script(362));
+    assert!(
+        near_miss.is_ok(),
+        "near-limit distinct must remain supported"
+    );
+
+    // 363 choose 2 = 65,703: decline before building the first pair rather
+    // than allocating a quadratic term graph.
+    let over = parse_script(&integer_distinct_script(363));
+    let Err(SmtError::ResourceLimit(detail)) = over else {
+        panic!("over-limit distinct must report ResourceLimit, got {over:?}");
+    };
+    assert!(
+        detail.contains("65703"),
+        "exact work must be observable: {detail}"
+    );
+    assert!(
+        detail.contains("65536"),
+        "limit must be observable: {detail}"
+    );
+}
+
+#[test]
+fn large_distinct_duplicate_short_circuits_after_full_type_check() {
+    let mut duplicate =
+        String::from("(set-logic QF_NIA)\n(declare-const x Int)\n(assert (distinct");
+    for _ in 0..16_525 {
+        duplicate.push_str(" x");
+    }
+    duplicate.push_str("))\n");
+    let script = parse_script(&duplicate).expect("a repeated argument is exactly false");
+    assert_eq!(
+        eval(&script.arena, script.assertions[0], &Assignment::new()).unwrap(),
+        Value::Bool(false)
+    );
+
+    let ill_sorted = r"
+        (set-logic ALL)
+        (declare-const x Int)
+        (declare-const b Bool)
+        (assert (distinct x x b))
+    ";
+    assert!(matches!(parse_script(ill_sorted), Err(SmtError::Ir(_))));
+}
+
 #[test]
 fn define_fun_aliases_expand() {
     let text = r"
@@ -686,6 +751,7 @@ fn corpus_smoke_ingests_local_benchmarks_when_present() {
     let mut tried = 0;
     let mut parsed = 0;
     let mut unsupported = 0;
+    let mut resource_limited = 0;
     for entry in walk(&dir) {
         if tried >= 25 {
             break;
@@ -699,6 +765,7 @@ fn corpus_smoke_ingests_local_benchmarks_when_present() {
             // QF_ABV files contain arrays — Unsupported is the correct,
             // classified outcome until arrays land (Phase 7).
             Err(SmtError::Unsupported(_) | SmtError::Ir(_)) => unsupported += 1,
+            Err(SmtError::ResourceLimit(_)) => resource_limited += 1,
             Err(SmtError::Syntax(e)) => panic!("syntax error on {entry:?}: {e}"),
             // `parse_script` passes no deadline, so this is unreachable here. It
             // is spelled out rather than wildcarded so that a future variant
@@ -708,7 +775,10 @@ fn corpus_smoke_ingests_local_benchmarks_when_present() {
             }
         }
     }
-    eprintln!("corpus smoke: {parsed} parsed, {unsupported} unsupported of {tried}");
+    eprintln!(
+        "corpus smoke: {parsed} parsed, {unsupported} unsupported, \
+         {resource_limited} resource-limited of {tried}"
+    );
     assert!(tried > 0);
 }
 
