@@ -5,14 +5,14 @@ for current project status, ordered work, blockers, and resume guidance. Read it
 first and update it before ending a project-level work session.
 
 - Last consolidated: **2026-08-07**
-- State audited at: A3 topic `3586c41d986ab6a2d30ed7f63f4db26bbb8bac85`;
-  integrated `main` and `origin/main` at `2072483f8f1cfd4a8522c9f694abbbc800478b56`
-- Expected integration state: clean A3 topic ahead of clean `main`; local `main`
-  equal to `origin/main`
-- Latest integrated code increment: `e4bb854bf` plus its reviewed R1--R5
-  readiness stack, via merge `8ed5ad089bd54590b590f797fe6132b21d2f47e7`
+- State audited at: integrated A3 merge
+  `0c31baf979d09270497b5512819fa6e8ed927de7`; pre-push `origin/main` at
+  `2072483f8f1cfd4a8522c9f694abbbc800478b56`
+- Expected handoff state: clean local `main` equal to `origin/main`
+- Latest integrated code increment: A3 topic `ee5042deea762bb605a0c136f795399aaae47b97`
+  via merge `0c31baf979d09270497b5512819fa6e8ed927de7`
 - Latest retained-result increment: `ebbabb34c9e2aa213a5e7aa7f1634acc68b2e374`
-- Latest pending A3 code increments: bounded SMT-LIB `distinct` expansion at
+- Latest integrated A3 code increments: bounded SMT-LIB `distinct` expansion at
   `63c82a6ef`, typed arithmetic-model reconstruction at `4ff9a82c6`, and
   deterministic string/integer coupling at `db7b426e8`
 - Status vocabulary: `TODO` · `WIP` · `BLOCKED` · `DONE`
@@ -36,11 +36,21 @@ evidence routes, broad but uneven theory support, an independent Lean-core
 checker/importer, and several consumers. It is not yet a drop-in Z3 replacement
 or a replacement for the Lean system.
 
-The audited integration state is clean local `main` at
-`2072483f8f1cfd4a8522c9f694abbbc800478b56`, equal to `origin/main`. The clean
-A3 topic is eighteen commits ahead of its remote after merging that main; it is not
-yet pushed or integrated. Local `main` and `origin/main` must remain equal at
-handoff under the resume protocol below. The IDL repair branch completed terminal
+The audited local integration state is clean `main` at A3 merge
+`0c31baf979d09270497b5512819fa6e8ed927de7`, ahead of pre-push `origin/main`
+only by the reviewed A3 stack. Topic `ee5042dee` is pushed and exactly equals
+`origin/agent/nia/a3-census`. The merge passed one uninterrupted
+external-frontier `CARGO_BUILD_JOBS=2 just check` with exit 0: format, stable
+all-target Clippy, every workspace test and doctest, 1,078 solver-library tests,
+all retained arithmetic/string/UF differentials with zero disagreement, 9/9
+frontier tests in 219.05 s, both order-255 CAS proofs in 938.58 s,
+warning-denied rustdoc, QF_BV/reflection and both 162-file Glaurung policies,
+generated resources, rules-as-code, the 165-test resume aggregate in 46.002 s
+with one expected skip, every Lean/process-free contract, parity docs, plan
+authority, and links. Its five 20 KiB external frontier artifacts were removed
+after evidence capture. Main push/ref verification and hosted-CI status remain
+separate pending states. Local `main` and `origin/main` must be equal at handoff
+under the resume protocol below. The IDL repair branch completed terminal
 `CARGO_BUILD_JOBS=2 just check`; merge `198f2dc1b` passed its immutable-SHA
 pre-push workspace-library, progress-frontier, and evidence gates. Integrated
 main then passed the focused DL suite 46/46 and the explicit auto-dispatch
@@ -99,8 +109,9 @@ reflection, and both 162-file Glaurung policies with zero disagreement;
 foundational resources; rules-as-code; the 165-test resume aggregate in 47.125 s
 with one expected live-host skip; every Lean/process-free contract; parity docs;
 plan authority; and links. The five 20 KiB external frontier artifacts and their
-pointer were removed after recording the result. Topic push, integration, the
-combined-main gate, and hosted-CI confirmation remain separate pending states.
+pointer were removed after recording the result. Topic `ee5042dee` was then
+pushed, merged as `0c31baf97`, and independently passed the combined-main gate
+described above. Hosted-CI confirmation remains separate and pending.
 
 A2 is **DONE** on current main. The old
 `agent/smtcomp/full-preparation-live` head `3e53ca631` is 401 commits behind
@@ -280,9 +291,8 @@ risk, or invalid gate. Those are P0 and preempt the queue.
 The ordered ten-item programme remains A2 through A11. A1 and A2 are retained
 here as closed evidence boundaries; A3 is now the first active item.
 
-**Immediate action.** Push the exact green A3 topic containing `3586c41d9`,
-integrate it into current main, rerun the combined-main gate, push main, and
-verify remote refs and the repaired hosted docs job. Then use direct trace
+**Immediate action.** Push the exact green A3 merge, verify local/remote main
+refs and the repaired hosted docs job, then use direct trace
 attribution to preregister exactly one of the two residual A3 subclusters before
 another solver-policy edit. A2 is integrated and combined-main green, but this
 does not self-authorize C0 or live F2. No host probe, sentinel, NAS mutation, F3
@@ -346,8 +356,9 @@ frontier, CAS, rustdoc, resource, policy, resume, and Lean suites but found a
 one-field stale generated CI-workflow identity at final parity-docs. Both defects
 are repaired. Exact topic `3586c41d9` passed one uninterrupted external-frontier
 `CARGO_BUILD_JOBS=2 just check` with exit 0 and a clean tracked tree. Topic push,
-combined-main validation, and hosted-CI confirmation remain pending and must not
-be conflated with that topic-local result.
+merge `0c31baf97`, and combined-main `just check` are complete and green.
+Hosted-CI confirmation remains pending and must not be conflated with those
+local terminal results.
 
 **Next slice.** After checkpoint integration, use direct trace attribution to
 choose and preregister either the five-case large DPLL/core-search subgroup or
@@ -493,10 +504,10 @@ or remove dirty/unmerged state to meet a free-space target.
 
 | Workstream | State | Current boundary / next action |
 |---|---|---|
-| Integration and gates | `WIP`; A3 topic `3586c41d9` | Main and origin/main are equal at `2072483f8`; A3 is clean and eighteen commits ahead of its topic remote. Exact topic `3586c41d9` passed the complete external-frontier `just check` with exit 0. Three hosted docs runs exposed missing `just`; the workflow fix passes the full local 165-test resume aggregate but is not remotely confirmed. Push the topic, merge it, run the full combined-main gate, push main, and verify refs/CI separately. |
+| Integration and gates | `WIP`; A3 merge `0c31baf97` | Topic `ee5042dee` equals its remote. Merge `0c31baf97` passed the complete external-frontier `just check` with exit 0. Three older hosted docs runs exposed missing `just`; the workflow fix passes the full local 165-test resume aggregate but is not remotely confirmed. Push main and verify refs/CI separately. |
 | Arithmetic deadline reliability | `DONE` | Shared deadline, CAD polls, LRA ceilings, bounded DL probing, exact resume identity, and six fresh retained divisions are complete; see the 2026-08-06 closure note. |
 | Full-library measurement | `WIP`; A2 readiness `DONE` | The R1--R5 readiness stack is integrated by `8ed5ad089` and focused/aggregate/scoped/topic/full-main green; the real registered offline-build smoke passed. No live run, preparation root, or launch authority exists. A later live C0/F2 step requires separate review. |
-| QF_NIA breadth | `WIP` | Current clean result remains 34/200 versus 89/200. The complete 67-case census, giant-`distinct` resource repair, reconstruction-outcome repair, and rejected zero-gain probe-model experiment are retained on the A3 topic. Next choose one of the two residual causal subgroups after integration. |
+| QF_NIA breadth | `WIP` | Current clean result remains 34/200 versus 89/200. The complete 67-case census, giant-`distinct` resource repair, reconstruction-outcome repair, and rejected zero-gain probe-model experiment are integrated. Next preregister one of the two residual causal subgroups. |
 | QF_UFLIA breadth | `WIP` | 94/180; A4 owns causal residual partition. |
 | LRA/IDL/RDL | `WIP` | Current results are 86/146, 68/124, and 105/155; A5 owns cross-division consolidation. |
 | QF_BV/QF_SLIA/UF/QF_ABV | `WIP`, strong selected cells | Preserve current ledgers; do not prioritize small score gains above A2–A6. |
@@ -506,7 +517,7 @@ or remove dirty/unmerged state to meet a free-space target.
 | CAS parity | `BLOCKED` by deliberate pause | Wave-24 code `01d47334` and pause commit `245d8f25` are ancestors of current main. Do not start wave 25 until the user resumes it and retained specialized gate evidence is re-audited. |
 | Consumer apps / verified systems | `WIP`, non-critical path | Existing EVM, verifier, property, reflection, and symbolic-execution slices remain useful; do not preempt A2–A7 without measured demand. |
 | Foundational resources | `WIP`, separate content lane | Keep generated-resource gates green; record only project-level priority changes here. |
-| Worktree and build-cache hygiene | `TODO`, recovered | A11; 26 registered worktrees remain. Dirty and unmerged state was preserved. Current free space is about 815 GiB on `/` and 27 GiB on `/tmp`; no space-pressure blocker remains. Four old empty A3 frontier directories plus the final gate's five-file external frontier and their pointer files were removed after evidence capture. |
+| Worktree and build-cache hygiene | `TODO`, recovered | A11; 26 registered worktrees remain before retiring the merged A3 worktree. Dirty and unmerged state was preserved. Current free space is about 699 GiB on `/` and 27 GiB on `/tmp` after the fresh main gate; no immediate space-pressure blocker remains. Old and final topic/main frontier artifacts and their pointer files were removed after evidence capture. Retire the merged A3 worktree and its reproducible target after the main push. |
 
 ## Resume protocol
 
