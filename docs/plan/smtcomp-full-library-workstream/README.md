@@ -436,7 +436,16 @@ gate.
    environment. On 2026-08-06 the still-valid process-free implementation and
    R1--R4 contracts were ported to current main and passed the focused 47-test
    suite, the 160-test resume aggregate (one expected live-host skip),
-   generated-contract check, and link check. The
+   generated-contract check, scoped gate, and link check. A direct full
+   workspace run passed every code, solver, doctest, ignored moment-proof,
+   rustdoc, profile, reflection, benchmark, foundational-resource,
+   rules-as-code, and SMT-COMP resume stage. It then reproduced R3's historical
+   failure mode: the unisolated frontier stage rewrote tracked timing curves,
+   so parity-docs correctly rejected the transient scoreboard mismatch. The
+   committed curves were restored exactly and the full parity-docs,
+   plan-authority, and link tail passed cleanly. This is broad local evidence,
+   not a green full-command exit; the constructed readiness gate supplies R3's
+   external artifact directory. The
    [A2 audit](../smtcomp-a2-stale-branch-audit-2026-08-06.md) records exact
    commit disposition. This is not live readiness: the
    [R5 correction](../smtcomp-credited-full-preparation-f2-live-capture-r5-plan-2026-07-25.md)

@@ -57,11 +57,19 @@ A2 is now **WIP** in isolated branch `agent/smtcomp/a2-readiness-port`. The old
 current main and was rejected as a whole. Four still-valid process-free code
 increments and their R1--R4 contracts were ported; stale root tracker changes
 were excluded. The port passes 47 focused tests, the 160-test resume aggregate
-with one expected live-host skip, the generated-contract check, and the docs
-link check. This is not live readiness: R5 exact-source build provenance is
-preregistered but unimplemented, and the current operator can still accept a
-caller-selected Axeyum executable. No host, NAS, allocation, or solver action
-was performed. See the
+with one expected live-host skip, the generated-contract check, scoped gates,
+and the docs link check. A direct `CARGO_BUILD_JOBS=2 just check` passed every
+code, solver, doctest, ignored moment-proof, rustdoc, profile, reflection,
+benchmark, foundational-resource, rules-as-code, and SMT-COMP resume stage,
+then exited 1 because its frontier stage used the historical tracked artifact
+location and the later scoreboard check correctly rejected those volatile
+curves. The exact committed curves were restored with no retained diff;
+`just parity-docs plan-authority links` then passed cleanly. This is broad local
+evidence, not a green full gate; it also reproduces why the port's R3 external
+artifact isolation is required. This is not live readiness: R5 exact-source
+build provenance is preregistered but unimplemented, and the current operator
+can still accept a caller-selected Axeyum executable. No host, NAS, allocation,
+or solver action was performed. See the
 [`A2 stale-branch audit`](docs/plan/smtcomp-a2-stale-branch-audit-2026-08-06.md).
 
 ### A1 arithmetic resource closure
@@ -209,8 +217,11 @@ solving-power remains unmeasured. The topic branch
 based on older July state and must not be merged or launched as-is.
 
 **Current checkpoint.** The branch audit and R1--R4 process-free port are
-complete and focused/aggregate gates are green. The exact disposition is in
-the dated A2 audit. R5 remains the live-readiness blocker.
+complete and focused/aggregate gates are green. Broad local stages are also
+green; the direct full command's final exit remains red only because it did not
+use R3's external frontier-artifact environment, and its clean tail replay is
+green. The exact disposition and gate separation are in the dated A2 audit.
+R5 remains the live-readiness blocker.
 
 **Next slice.** Implement R5's operator-owned exact-source release build and
 sealed build observation, including rejecting mutations for source/ref drift,
@@ -377,7 +388,7 @@ or remove dirty/unmerged state to meet a free-space target.
 |---|---|---|
 | Integration and gates | `WIP`; audited main `7567ff827` | Local and remote main are equal. Topic full gate, merge-SHA pre-push gate, and focused post-merge tests for the preceding arithmetic increment are green. No GitHub run is visible for current main; last full remote CI is `31076938255` at `94082977d`. |
 | Arithmetic deadline reliability | `DONE` | Shared deadline, CAD polls, LRA ceilings, bounded DL probing, exact resume identity, and six fresh retained divisions are complete; see the 2026-08-06 closure note. |
-| Full-library measurement | `WIP` | A2 process-free R1--R4 port is focused/aggregate green; R5 exact-source build provenance blocks integration and every live action. No live run and no launch authority. |
+| Full-library measurement | `WIP` | A2 process-free R1--R4 port is focused/aggregate/tail green. All broad local stages passed, but direct `just check` is not green because the unisolated frontier stage dirtied tracked curves before the scoreboard check; the curves were restored and R3 prevents this in the constructed gate. R5 exact-source build provenance blocks integration and every live action. No live run and no launch authority. |
 | QF_NIA breadth | `WIP` | Current clean result is 34/200 versus 89/200; A3 owns the 67-case reference-only census and next bounded cluster. |
 | QF_UFLIA breadth | `WIP` | 94/180; A4 owns causal residual partition. |
 | LRA/IDL/RDL | `WIP` | Current results are 86/146, 68/124, and 105/155; A5 owns cross-division consolidation. |

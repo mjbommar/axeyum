@@ -57,11 +57,27 @@ python3 scripts/gen-smtcomp-resume-contract.py --check
   version=2, invariants=18, scenarios=28, accept=5, reject=23
 ./scripts/check-links.sh
   all links ok
+CARGO_BUILD_JOBS=2 just check
+  every code, solver, doctest, ignored moment-proof, rustdoc, profile,
+  reflection, benchmark, foundational-resource, rules-as-code, and
+  SMT-COMP resume stage passed; the aggregate then exited 1 in parity-docs
+  after the direct frontier stage rewrote tracked hardware-relative curves
+just parity-docs plan-authority links
+  clean replay after restoring the exact committed frontier curves, exit 0
 ```
 
-These are focused and lane-aggregate results. They are not a full workspace
-`just check`, an integrated-main result, remote CI, a live F2 root, or launch
-authorization.
+The direct full-workspace run provides broad passing evidence but is not a
+green `just check`: without the R3 environment override, its frontier stage
+writes volatile timing curves to the historical tracked location, so the later
+scoreboard consistency check correctly rejects that transient state. The five
+curves were restored byte-for-byte to the branch commit and no measurement
+change was retained. The clean tail replay passed. This reproduces the exact
+failure mode that R3's external artifact directory closes in the constructed
+readiness gate.
+
+The result is not an integrated-main result, remote CI, a live F2 root, or
+launch authorization. R5 remains a hard prerequisite to executing the
+constructed readiness gate as live preparation.
 
 ## Exact next slice
 
