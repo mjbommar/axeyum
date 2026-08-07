@@ -12,7 +12,15 @@ queue, standing-rules, and resume document. Then use this folder for detailed
 phase contracts and retained result evidence. Root [`STATUS.md`](../../STATUS.md)
 is a compatibility pointer only.
 
-The active A3 QF_NIA lane is bounded by the
+The active A4 QF_UFLIA lane begins with the
+[`provenance-recovery and causal-census preregistration`](qf-uflia-a4-provenance-census-v1-preregistration-2026-08-07.md).
+It freezes the missing-sidecar repair at the exact 200-row population, requires
+complete schema-1 route traces and typed plain-cvc5 outcomes, and stops unless a
+fresh run reproduces 94/200 versus 180/200, 86 reference-only rows, and zero
+disagreements.  It authorizes no solver change; any selected mechanism needs a
+separate preregistration.
+
+The yielded A3 QF_NIA lane is bounded by the
 [`complete causal-census result`](qf-nia-a3-causal-census-v2-result-2026-08-07.md)
 and its
 [`model-replay cluster preregistration`](qf-nia-a3-model-replay-cluster-preregistration-v1-2026-08-07.md).
