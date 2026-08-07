@@ -1,10 +1,11 @@
-//! Per-file `check_auto_explained` probe for a corpus directory.
+//! Per-file `check_auto_explained` probe for a corpus directory or exact list.
 //!
 //! This complements `measure_corpus`: the measured aggregate is the scoreboard,
 //! while this probe shows which files moved and which route declined.
 //!
 //! ```text
 //! cargo run -p axeyum-bench --example explain_corpus -- <dir> [timeout_ms] [--json]
+//! cargo run -p axeyum-bench --example explain_corpus -- --list <file> [timeout_ms] [--json]
 //! ```
 //!
 //! With `--json` the probe emits one JSON object per line (JSONL) instead of
@@ -13,11 +14,15 @@
 //! That is the persistable form the bridge-catalogue replay validator consumes:
 //! it needs the observed dispatch order as data, not as `Display` text.
 //!
-//! Every line has `file` and `status`; `status` is one of `decided`,
+//! In directory mode `file` remains the historical basename. In exact-list
+//! mode it is the complete list entry, so a trace can be joined to a committed
+//! benchmark population without basename ambiguity. Every line has `file` and
+//! `status`; `status` is one of `decided`,
 //! `word-first-fallback`, `skipped-scoped`, `read-error`, `parse-error`, or
 //! `error`. `verdict` is present on the two decided statuses, `trace` only on
 //! `decided`, and `detail` only on `error`.
 
+use std::collections::BTreeSet;
 use std::path::{Path, PathBuf};
 use std::time::Duration;
 
@@ -38,6 +43,46 @@ fn collect_smt2(dir: &Path, out: &mut Vec<PathBuf>) {
             out.push(path);
         }
     }
+}
+
+fn read_exact_list(path: &Path) -> Result<Vec<PathBuf>, String> {
+    let text = std::fs::read_to_string(path)
+        .map_err(|error| format!("cannot read list {}: {error}", path.display()))?;
+    let mut seen = BTreeSet::new();
+    let mut files = Vec::new();
+    for (index, raw) in text.lines().enumerate() {
+        let entry = raw.trim();
+        if entry.is_empty() {
+            continue;
+        }
+        let file = PathBuf::from(entry);
+        if file.extension().is_none_or(|extension| extension != "smt2") {
+            return Err(format!(
+                "{}:{} is not an .smt2 path: {entry}",
+                path.display(),
+                index + 1
+            ));
+        }
+        if !file.is_file() {
+            return Err(format!(
+                "{}:{} does not name a file: {entry}",
+                path.display(),
+                index + 1
+            ));
+        }
+        if !seen.insert(file.clone()) {
+            return Err(format!(
+                "{}:{} duplicates an earlier path: {entry}",
+                path.display(),
+                index + 1
+            ));
+        }
+        files.push(file);
+    }
+    if files.is_empty() {
+        return Err(format!("list {} contains no benchmarks", path.display()));
+    }
+    Ok(files)
 }
 
 fn verdict(result: &CheckResult) -> &'static str {
@@ -76,31 +121,52 @@ fn main() {
     // existing `<dir> [timeout_ms]` call sites keep working unchanged.
     let json = raw.iter().any(|arg| arg == "--json");
     let args: Vec<String> = raw.into_iter().filter(|arg| arg != "--json").collect();
-    let dir = args
-        .get(1)
-        .cloned()
-        .unwrap_or_else(|| {
-            eprintln!("usage: explain_corpus <dir> [timeout_ms] [--json]");
+    let usage = "usage: explain_corpus <dir> [timeout_ms] [--json]\n       explain_corpus --list <file> [timeout_ms] [--json]";
+    let exact_list = args.get(1).is_some_and(|arg| arg == "--list");
+    let (input, timeout_arg) = if exact_list {
+        let Some(path) = args.get(2) else {
+            eprintln!("{usage}");
+            std::process::exit(2);
+        };
+        (PathBuf::from(path), args.get(3))
+    } else {
+        let Some(path) = args.get(1) else {
+            eprintln!("{usage}");
+            std::process::exit(2);
+        };
+        (PathBuf::from(path), args.get(2))
+    };
+    let timeout_ms: u64 = timeout_arg.and_then(|s| s.parse().ok()).unwrap_or(10_000);
+    let config = SolverConfig::default().with_timeout(Duration::from_millis(timeout_ms));
+    let files = if exact_list {
+        read_exact_list(&input).unwrap_or_else(|error| {
+            eprintln!("explain_corpus: {error}");
             std::process::exit(2);
         })
-        .into();
-    let dir: PathBuf = dir;
-    let timeout_ms: u64 = args.get(2).and_then(|s| s.parse().ok()).unwrap_or(10_000);
-    let config = SolverConfig::default().with_timeout(Duration::from_millis(timeout_ms));
-    let mut files = Vec::new();
-    collect_smt2(&dir, &mut files);
-    assert!(!files.is_empty(), "no .smt2 under {}", dir.display());
+    } else {
+        let mut files = Vec::new();
+        collect_smt2(&input, &mut files);
+        if files.is_empty() {
+            eprintln!("explain_corpus: no .smt2 under {}", input.display());
+            std::process::exit(2);
+        }
+        files
+    };
 
     for path in files {
-        let short = path
-            .file_name()
-            .and_then(|name| name.to_str())
-            .unwrap_or("<non-utf8>");
+        let identity = if exact_list {
+            path.to_string_lossy()
+        } else {
+            path.file_name()
+                .and_then(|name| name.to_str())
+                .unwrap_or("<non-utf8>")
+                .into()
+        };
         let Ok(text) = std::fs::read_to_string(&path) else {
             if json {
-                emit_json(short, "read-error", "");
+                emit_json(&identity, "read-error", "");
             } else {
-                println!("{short}: read-error");
+                println!("{identity}: read-error");
             }
             continue;
         };
@@ -109,17 +175,17 @@ fn main() {
             .any(|kw| text.contains(kw))
         {
             if json {
-                emit_json(short, "skipped-scoped", "");
+                emit_json(&identity, "skipped-scoped", "");
             } else {
-                println!("{short}: skipped-scoped");
+                println!("{identity}: skipped-scoped");
             }
             continue;
         }
         let Ok(mut script) = parse_script(&text) else {
             if json {
-                emit_json(short, "parse-error", "");
+                emit_json(&identity, "parse-error", "");
             } else {
-                println!("{short}: parse-error");
+                println!("{identity}: parse-error");
             }
             continue;
         };
@@ -133,19 +199,19 @@ fn main() {
                     let verdict = verdict(&outcome.result);
                     if json {
                         emit_json(
-                            short,
+                            &identity,
                             "word-first-fallback",
                             &format!(",\"verdict\":\"{verdict}\""),
                         );
                     } else {
-                        println!("{short}: {verdict} (word-first fallback)");
+                        println!("{identity}: {verdict} (word-first fallback)");
                     }
                 }
                 Err(error) => {
                     if json {
-                        emit_json(short, "error", &detail_member(&error.to_string()));
+                        emit_json(&identity, "error", &detail_member(&error.to_string()));
                     } else {
-                        println!("{short}: error: {error} (word-first fallback)");
+                        println!("{identity}: error: {error} (word-first fallback)");
                     }
                 }
             }
@@ -179,12 +245,12 @@ fn main() {
                     // `verdict` is a fixed literal and `to_json` is already
                     // valid JSON, so neither needs escaping here.
                     emit_json(
-                        short,
+                        &identity,
                         "decided",
                         &format!(",\"verdict\":\"{verdict}\",\"trace\":{}", trace.to_json()),
                     );
                 } else {
-                    println!("{short}: {verdict}");
+                    println!("{identity}: {verdict}");
                     for attempt in trace.attempts() {
                         println!("  {attempt}");
                     }
@@ -192,11 +258,88 @@ fn main() {
             }
             Err(error) => {
                 if json {
-                    emit_json(short, "error", &detail_member(&error.to_string()));
+                    emit_json(&identity, "error", &detail_member(&error.to_string()));
                 } else {
-                    println!("{short}: error: {error}");
+                    println!("{identity}: error: {error}");
                 }
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::read_exact_list;
+    use std::path::PathBuf;
+    use std::time::{SystemTime, UNIX_EPOCH};
+
+    fn fixture() -> PathBuf {
+        let nonce = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("clock")
+            .as_nanos();
+        let root = std::env::temp_dir().join(format!(
+            "axeyum-explain-corpus-{}-{nonce}",
+            std::process::id()
+        ));
+        std::fs::create_dir(&root).expect("create fixture");
+        root
+    }
+
+    #[test]
+    fn exact_list_preserves_paths_and_order() {
+        let root = fixture();
+        let first = root.join("first.smt2");
+        let second = root.join("second.smt2");
+        std::fs::write(&first, "(set-logic QF_NIA)\n").expect("first");
+        std::fs::write(&second, "(set-logic QF_NIA)\n").expect("second");
+        let list = root.join("list.txt");
+        std::fs::write(
+            &list,
+            format!("{}\n\n{}\n", second.display(), first.display()),
+        )
+        .expect("list");
+
+        assert_eq!(read_exact_list(&list).expect("valid list"), [second, first]);
+        std::fs::remove_dir_all(root).expect("remove fixture");
+    }
+
+    #[test]
+    fn exact_list_rejects_duplicates_before_solving() {
+        let root = fixture();
+        let benchmark = root.join("case.smt2");
+        std::fs::write(&benchmark, "(set-logic QF_NIA)\n").expect("benchmark");
+        let list = root.join("list.txt");
+        std::fs::write(
+            &list,
+            format!("{}\n{}\n", benchmark.display(), benchmark.display()),
+        )
+        .expect("list");
+
+        let error = read_exact_list(&list).expect_err("duplicate must fail");
+        assert!(error.contains("duplicates an earlier path"), "{error}");
+        std::fs::remove_dir_all(root).expect("remove fixture");
+    }
+
+    #[test]
+    fn exact_list_rejects_missing_or_non_smt2_inputs() {
+        let root = fixture();
+        let wrong_extension = root.join("case.txt");
+        std::fs::write(&wrong_extension, "not smtlib").expect("wrong extension");
+        let list = root.join("list.txt");
+        std::fs::write(&list, format!("{}\n", wrong_extension.display())).expect("list");
+        assert!(
+            read_exact_list(&list)
+                .expect_err("extension")
+                .contains("not an .smt2")
+        );
+
+        std::fs::write(&list, format!("{}\n", root.join("missing.smt2").display())).expect("list");
+        assert!(
+            read_exact_list(&list)
+                .expect_err("missing")
+                .contains("does not name a file")
+        );
+        std::fs::remove_dir_all(root).expect("remove fixture");
     }
 }
