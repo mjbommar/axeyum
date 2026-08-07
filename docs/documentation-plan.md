@@ -8,9 +8,10 @@ installation/build profiles, first SMT-LIB and Rust use, models/replay, UNSAT
 evidence, limitations, benchmarks, corpus manifests, and a clean-environment
 validated WASM/browser workflow. The contributor guide now has executable task
 pages for setup, testing, operators, rewrites, solver routes, proof/evidence,
-and benchmark artifacts. Remaining front-door work is concentrated in internals
-summaries and crate-level examples. The stable reference section now
-routes public API/configuration questions and indexes golden-tested/generated
+and benchmark artifacts. The internals sequence now documents the live IR,
+evaluation, rewriting, lowering, SAT, dispatch, evidence, and Lean boundaries.
+Remaining front-door work is concentrated in crate-level examples. The stable
+reference section now routes public API/configuration questions and indexes golden-tested/generated
 logic, support, trust, and SMT-LIB protocol authorities without copying their
 volatile tables. The live
 indexes in [`docs/README.md`](README.md), [`learn/README.md`](learn/README.md),
@@ -181,6 +182,7 @@ docs/
     solver-dispatch.md
     proof-stack.md
     lean-kernel.md
+    documentation.md
 
   curriculum/
   plan/
@@ -338,17 +340,16 @@ gradually.
 
 ## Follow-Up PRs
 
-Recommended order:
+Current sequence:
 
-1. Add the beginner SAT/SMT sequence under `docs/learn/`.
-2. Add user-guide examples for SMT-LIB, Rust API, model replay, and unsat
-   evidence.
-3. Add contributor guides for operators, rewrites, solver routes, and evidence.
-4. Add `docs/internals/` pages that summarize, not replace, the research notes.
-5. Add `docs/reference/` pages generated from the capability/support/trust
-   ledgers where possible.
-6. Add a docs CI check that validates links and prevents the README from
-   growing back into an exhaustive status document.
+1. Beginner, user-guide, contributor, reference, and internals front doors are
+   complete and indexed.
+2. Audit crate READMEs and rustdoc examples for runnable, non-duplicated entry
+   points into those guides.
+3. Keep generated capability/support/trust authorities and relative-link CI
+   green as the crate examples change.
+4. Treat a full mdBook-render CI gate as separate future work; the current
+   hosted documentation workflow does not run it.
 
 ## Documentation Quality Bar
 

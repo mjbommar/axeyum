@@ -34,7 +34,7 @@ __pycache__/
 /artifacts/local-ci/
 
 # mdBook generated site + mermaid runtime assets
-# (regenerate: `cargo install mdbook mdbook-mermaid && mdbook-mermaid install . && mdbook build`)
+# (regenerate with the pinned commands in `docs/internals/documentation.md`)
 /book/
 /mermaid.min.js
 /mermaid-init.js

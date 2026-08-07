@@ -9,7 +9,7 @@ chose over the obvious alternatives (Docusaurus, Verso, Jupyter).
 | Layer | Tool | Why |
 |---|---|---|
 | Source | **Markdown** | renders on GitHub *and* compiles to a site — one source, zero lock-in |
-| Site | **[mdBook](https://rust-lang.github.io/mdBook/)** | Rust-native (`cargo install mdbook`), built-in search + themes, matches the project's toolchain |
+| Site | **[mdBook](https://rust-lang.github.io/mdBook/)** | Rust-native, built-in search + themes, matches the project's toolchain |
 | Flow/architecture diagrams | **[Mermaid](https://mermaid.js.org/)** (```` ```mermaid ````) | text-based, diffable, version-controlled; renders natively on GitHub and via `mdbook-mermaid` |
 | Precise structural diagrams | **Graphviz `dot` → committed SVG** ([`assets/`](../assets/)) | exact control for the term-IR DAG and bit-blast circuits where Mermaid is too coarse |
 | Interactivity | **WASM solver playground** ([`playground/`](../playground/README.md)) | a *live* solver in the browser — the project already targets `wasm32` |
@@ -36,19 +36,20 @@ chose over the obvious alternatives (Docusaurus, Verso, Jupyter).
     reader runs the *real* engine, no server, no install, and the example can't
     silently drift from the code because it *is* the code.
 
-The result: the same Markdown is readable on GitHub, builds into a searchable
-mdBook site, carries maintainable text diagrams, and links to a page where the
-real solver runs in your browser.
+The result: the same Markdown is readable on GitHub, can be rendered as a
+searchable mdBook, carries maintainable text diagrams, and links to a page where
+the real solver runs in your browser.
 
 ## Building the site
 
 ```sh
-# one-time
-cargo install mdbook mdbook-mermaid
-mdbook-mermaid install .        # writes mermaid.min.js + css, wires book.toml
+# one-time local preview tools (versions exercised by this repository)
+cargo install --locked mdbook --version 0.5.0
+cargo install --locked mdbook-mermaid --version 0.17.0
 
 # build / preview
-mdbook build                    # -> book/ (static site)
+mdbook-mermaid install .       # regenerates ignored runtime assets
+mdbook build                    # -> book/ (static site; generated output)
 mdbook serve --open            # live-reload preview
 ```
 
@@ -56,6 +57,13 @@ mdbook serve --open            # live-reload preview
 [`docs/SUMMARY.md`](../SUMMARY.md). The deep `research/`, `plan/`, and `reviews/`
 trees are linked from the guide, not inlined, so the book stays a *front door*,
 not a dump of the whole repo.
+
+The hosted documentation workflow currently enforces generated-resource
+freshness and relative-link integrity. It does **not** currently gate a full
+`mdbook build`, so contributors should describe mdBook rendering as a local
+preview capability rather than evidence that a hosted render passed. The
+Mermaid runtime files and `book/` are generated and ignored, so a clean checkout
+must run `mdbook-mermaid install .` before building or serving the book.
 
 ## Building the playground
 
@@ -67,7 +75,7 @@ binding, generated web module, real SAT/UNSAT/unknown/error calls, and page
 import have been clean-environment validated; `pkg/` remains generated and is
 not committed.
 
-## Quality bar (enforced for every page)
+## Review quality bar
 
 - Every support claim links to the [capability](../research/08-planning/capability-matrix.md),
   [support](../research/08-planning/support-matrix.md), or

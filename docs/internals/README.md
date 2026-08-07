@@ -1,17 +1,26 @@
 # Internals
 
-Implementation architecture. These pages **summarize** the design; they do not
-replace the deep design record in [`research/`](../research/README.md) or the
-roadmap in [`plan/`](../plan/README.md) — they link to it.
+These pages explain the implementation contracts behind the public API. They
+summarize current code; the durable rationale remains in
+[`research/`](../research/README.md), and mutable session state remains only in
+the root [`PLAN.md`](../../PLAN.md).
 
-| Page | What |
+## Core path
+
+| Page | Contract |
 |---|---|
-| [Architecture](architecture.md) | crate graph, pipeline→crate map, hard rules |
-| term-ir.md *(planned)* | arena, hash-consing, ground evaluator |
-| bit-blasting.md *(planned)* | term → AIG → CNF |
-| cnf-and-sat.md *(planned)* | Tseitin, batsat, native CDCL, DRAT |
-| proof-stack.md *(planned)* | DRAT → LRAT → Alethe |
-| lean-kernel.md *(planned)* | the Rust Lean-grade kernel + reconstruction |
-| [Documentation](documentation.md) | how these docs are built, and why |
+| [Architecture](architecture.md) | workspace boundaries, dataflow, and trust placement |
+| [Term IR](term-ir.md) | typed nodes, arena ownership, and stable handles |
+| [Ground evaluation](evaluator.md) | executable semantics and source-model replay |
+| [Rewriting](rewriting.md) | preservation manifests and model reconstruction |
+| [Bit-blasting](bit-blasting.md) | typed Bool/BV terms to AIG plus lift maps |
+| [CNF and SAT](cnf-and-sat.md) | Tseitin bindings, solving modes, and propositional evidence |
+| [Solver dispatch](solver-dispatch.md) | route admission, fallback, limits, and verdict discipline |
+| [Proof and evidence](proof-stack.md) | model, certificate, Alethe, and Lean assurance routes |
+| [Lean kernel](lean-kernel.md) | checked environment and fail-closed import boundary |
+| [Documentation](documentation.md) | book structure, diagrams, playground, and validation |
 
-Start with [Architecture](architecture.md).
+For a narrative explanation before the implementation detail, start with
+[How Axeyum solves a query](../learn/07-how-axeyum-solves-a-query.md). For exact
+current fragment coverage, use the generated
+[support matrix](../reference/support-matrix.md).

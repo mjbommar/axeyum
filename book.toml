@@ -2,8 +2,9 @@
 # into a searchable static site. The same Markdown also renders directly on
 # GitHub, so this is additive, not a lock-in. See docs/internals/documentation.md.
 #
-#   cargo install mdbook mdbook-mermaid
-#   mdbook-mermaid install .     # writes mermaid assets + wires this file
+#   cargo install --locked mdbook --version 0.5.0
+#   cargo install --locked mdbook-mermaid --version 0.17.0
+#   mdbook-mermaid install .    # writes ignored runtime assets
 #   mdbook serve --open         # live preview   |   mdbook build -> book/
 
 [book]

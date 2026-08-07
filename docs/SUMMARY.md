@@ -39,8 +39,6 @@
   - [Authorization Policy V0](rules-as-code/examples/authorization-policy-v0/README.md)
   - [Tax Benefit Arithmetic V0](rules-as-code/examples/tax-benefit-arithmetic-v0/README.md)
   - [Procurement Scoring V0](rules-as-code/examples/procurement-scoring-v0/README.md)
-  - [Rules/Law Resource Queries](foundational-resources/RULES-LAW-QUERIES.md)
-  - [Rules/Law Pattern Matrix](foundational-resources/RULES-LAW-PATTERN-MATRIX.md)
 
 # Learn
 
@@ -82,6 +80,14 @@
 
 - [Internals](internals/README.md)
   - [Architecture](internals/architecture.md)
+  - [Term IR and arenas](internals/term-ir.md)
+  - [Ground evaluation and model replay](internals/evaluator.md)
+  - [Rewriting and reconstruction](internals/rewriting.md)
+  - [Bit-blasting: terms to AIG](internals/bit-blasting.md)
+  - [CNF, SAT, and propositional evidence](internals/cnf-and-sat.md)
+  - [Solver dispatch and route contracts](internals/solver-dispatch.md)
+  - [Proof and evidence routes](internals/proof-stack.md)
+  - [Lean kernel and import boundary](internals/lean-kernel.md)
   - [How this documentation is built](internals/documentation.md)
 
 # Contributor Guide
@@ -108,4 +114,4 @@
 
 <!-- The deep design record is intentionally NOT inlined into the book; it is
 linked from the guide pages and lives on GitHub:
-research/  ·  plan/  ·  curriculum/  ·  reviews/  ·  PLAN.md  ·  STATUS.md -->
+research/  ·  plan/  ·  curriculum/  ·  reviews/  ·  PLAN.md -->
