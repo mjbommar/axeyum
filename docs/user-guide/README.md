@@ -24,7 +24,7 @@ flowchart LR
 | [Limitations](limitations.md) | what's experimental/incomplete — read before trusting support |
 | [Benchmarks](benchmarks.md) | the measured Z3 head-to-head + how to reproduce |
 | [Versioned corpus manifests](corpus-manifests.md) | pin exact query bytes, expected verdicts, families, and representative/full tiers |
-| wasm.md *(planned)* | the browser build and the [playground](../playground/README.md) |
+| [WebAssembly and the browser playground](wasm.md) | exact build tools, QF_BV boundary, local preview, JSON API, deployment, and troubleshooting |
 
 **Golden rule for users:** read [Limitations](limitations.md) and the
 [capability matrix](../research/08-planning/capability-matrix.md) before relying

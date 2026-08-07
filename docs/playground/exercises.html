@@ -38,14 +38,14 @@
 <body>
 <header>
   <h1>Self-checking exercises <span class="tag">· graded by the real solver, in your browser</span></h1>
-  <div class="tag">No answer key. You make a claim; axeyum checks it against the actual math and shows a proof or a counterexample. From the
+  <div class="tag">No answer key. You make a claim; Axeyum checks the encoded finite problem and returns solver-checked verdict feedback. Model and proof export remain native API features. From the
     <a href="../curriculum/k12/README.md">K-12 curriculum</a>.</div>
   <div id="banner" class="banner"></div>
 </header>
 <main id="exercises"></main>
 <footer>
-  Powered by axeyum compiled to WebAssembly. Each "Check" runs the same solver used natively — your answer is
-  <i>replayed against the real problem</i>, exactly as in the trust-boundary model.
+  Powered by Axeyum compiled to WebAssembly. Each "Check" runs the committed scalar QF_BV backend and preserves
+  <i>sat / unsat / unknown / error</i> instead of guessing a grade.
 </footer>
 
 <script type="module">
@@ -81,7 +81,7 @@ const EXERCISES = [
     prompt: "Is this ALWAYS true (modus ponens):  ((p → q) and p)  →  q ?",
     claim: "(=> (and (=> p q) p) q)",
     truth: "valid",
-    revealOnValid: "No counterexample exists — axeyum found NO way to make it false, and can emit a re-checkable proof. This is the bedrock rule of logic.",
+    revealOnValid: "No counterexample exists in this Boolean problem. The browser shows the verdict; Axeyum's native evidence API is the route for exporting a re-checkable proof.",
   },
   {
     type: "predict", strands: "logic · reasoning",
@@ -94,7 +94,32 @@ const EXERCISES = [
 
 let solveFn = null;
 const $ = s => document.querySelector(s);
-const solve = (q) => JSON.parse(solveFn(q, 5000));
+const solve = (q) => {
+  try {
+    return JSON.parse(solveFn(q, 5000));
+  } catch (error) {
+    return { status: "error", detail: String(error) };
+  }
+};
+
+function escapeHtml(value) {
+  return String(value)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
+function inconclusive(result) {
+  return result.status !== "sat" && result.status !== "unsat";
+}
+
+function showInconclusive(card, result) {
+  const status = escapeHtml(result.status);
+  const detail = result.detail ? ` (${escapeHtml(result.detail)})` : "";
+  feedback(card, "unk", `<b>No grade:</b> Axeyum returned <b>${status}</b>${detail}.`);
+}
 
 function feedback(card, cls, html) {
   const fb = card.querySelector(".fb");
@@ -131,9 +156,12 @@ function render() {
       if (act === "hint") { feedback(card, "unk", `💡 ${ex.hint}`); return; }
 
       if (ex.type === "find-x") {
-        const v = card.querySelector("input").value.trim();
-        if (v === "" || Number(v) < 0 || Number(v) > ex.max) { feedback(card,"unk",`Enter a number 0–${ex.max}.`); return; }
+        const raw = card.querySelector("input").value.trim();
+        const number = Number(raw);
+        if (raw === "" || !Number.isInteger(number) || number < 0 || number > ex.max) { feedback(card,"unk",`Enter a whole number 0–${ex.max}.`); return; }
+        const v = String(number);
         const r = solve(ex.query(v));
+        if (inconclusive(r)) { showInconclusive(card, r); return; }
         if (r.status === "sat") feedback(card, "ok", `<b>Correct!</b><br>${ex.win(v)}`);
         else feedback(card, "no", `<b>Not yet.</b><br>${ex.lose(v)}`);
       }
@@ -141,6 +169,7 @@ function render() {
       else if (ex.type === "valid") {
         // assert the NEGATION: unsat ⇒ valid (always true); sat ⇒ a counterexample exists
         const r = solve(`(set-logic QF_BV)(declare-const p Bool)(declare-const q Bool)(assert (not ${ex.claim}))(check-sat)`);
+        if (inconclusive(r)) { showInconclusive(card, r); return; }
         const actuallyValid = (r.status === "unsat");
         const studentSaysValid = (act === "always");
         const right = (actuallyValid === studentSaysValid);
@@ -149,12 +178,13 @@ function render() {
             `<b>${right?"Right!":"Actually…"}</b> It's <b>always true (valid)</b>. <div class="reveal">${ex.revealOnValid||""}</div>`);
         } else {
           feedback(card, right?"ok":"no",
-            `<b>${right?"Right!":"Actually…"}</b> It <b>can be false</b> — the solver found a counterexample. <div class="reveal">${ex.revealOnInvalid||""}</div>`);
+            `<b>${right?"Right!":"Actually…"}</b> It <b>can be false</b> — a replay-checked satisfying model exists, although this page does not display it. <div class="reveal">${ex.revealOnInvalid||""}</div>`);
         }
       }
 
       else if (ex.type === "predict") {
         const r = solve(ex.query);
+        if (inconclusive(r)) { showInconclusive(card, r); return; }
         const right = (r.status === ex.truth);
         feedback(card, right?"ok":"no",
           `<b>${right?"Correct!":"Not quite —"}</b> the solver says <b>${r.status}</b>. <div class="reveal">${ex.why}</div>`);

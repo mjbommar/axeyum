@@ -60,9 +60,12 @@ not a dump of the whole repo.
 ## Building the playground
 
 The WASM bundle is built from the `axeyum-wasm` binding crate; see
-[`playground/README.md`](../playground/README.md) for the `wasm-pack` build and
-the current status (the binding is scaffolded; the bundle build is gated on the
-`wasm32` toolchain + a green workspace).
+the [WASM user guide](../user-guide/wasm.md) for the pinned `wasm-pack` build,
+HTTP preview, exact QF_BV/JSON boundary, and CI-equivalent Node smoke. The
+[playground README](../playground/README.md) describes the two pages. The
+binding, generated web module, real SAT/UNSAT/unknown/error calls, and page
+import have been clean-environment validated; `pkg/` remains generated and is
+not committed.
 
 ## Quality bar (enforced for every page)
 

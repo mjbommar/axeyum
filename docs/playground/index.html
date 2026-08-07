@@ -61,7 +61,7 @@
 <footer>
   Built from <code>crates/axeyum-wasm</code> via wasm-pack. Not live yet? See the
   <a href="README.md">playground README</a> to build the bundle. The same
-  <code>solve_smtlib</code> runs here as in Rust.
+  replay-checked scalar QF_BV backend used by native consumers runs here.
 </footer>
 
 <script type="module">
@@ -98,8 +98,16 @@ function showResult(status, detail, logic, ms) {
     ms != null ? `${ms.toFixed(1)} ms` : null,
     detail ? detail : null,
   ].filter(Boolean).join("  ·  ");
-  $("result").innerHTML =
-    `<span class="verdict ${cls}">${status}</span>` + (meta ? `<div class="meta">${meta}</div>` : "");
+  const verdict = document.createElement("span");
+  verdict.className = `verdict ${cls}`;
+  verdict.textContent = status;
+  $("result").replaceChildren(verdict);
+  if (meta) {
+    const metadata = document.createElement("div");
+    metadata.className = "meta";
+    metadata.textContent = meta;
+    $("result").appendChild(metadata);
+  }
 }
 
 async function boot() {

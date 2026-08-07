@@ -45,7 +45,7 @@ pub fn solve_smtlib_json(input: &str, timeout_ms: u32) -> String {
         }
         Err(error) => format!(
             "{{\"status\":\"error\",\"logic\":null,\"expected\":null,\"detail\":{}}}",
-            json_str(&format!("{error:?}")),
+            json_str(&error),
         ),
     }
 }
@@ -162,6 +162,9 @@ mod tests {
             1_000,
         );
         assert!(result.contains("\"status\":\"error\""), "{result}");
-        assert!(result.contains("QF_BV"), "{result}");
+        assert_eq!(
+            result,
+            "{\"status\":\"error\",\"logic\":null,\"expected\":null,\"detail\":\"the minimal WebAssembly binding accepts only QF_BV logic\"}"
+        );
     }
 }

@@ -366,9 +366,10 @@ host/NAS mutation, allocation, or a solver fleet. P0 failures preempt the queue.
 documentation audit without modifying A4's owned solver/evidence paths. The
 beginner sequence, installation/build profiles, model-replay guide, curated
 mdBook index, and runnable first SMT-LIB example are now refreshed on the live
-tree. Next, replace the remaining planned WASM page with a clean-environment
-validated browser build/run workflow, then audit contributor task guides,
-reference pages, internals summaries, and crate-level examples in that order.
+tree. The pinned Rust 1.88 browser bundle, SAT/UNSAT/unknown/error calls, static
+HTTP imports, and both playground pages are now clean-environment validated;
+the UI preserves inconclusive outcomes. Next audit contributor task guides,
+then reference pages, internals summaries, and crate-level examples.
 
 ### A1 — Complete arithmetic deadline and resource enforcement (`DONE`, P0)
 
@@ -634,7 +635,7 @@ or remove dirty/unmerged state to meet a free-space target.
 | CAS parity | `BLOCKED` by deliberate pause | Wave-24 code `01d47334` and pause commit `245d8f25` are ancestors of current main. Do not start wave 25 until the user resumes it and retained specialized gate evidence is re-audited. |
 | Consumer apps / verified systems | `WIP`, non-critical path | Existing EVM, verifier, property, reflection, and symbolic-execution slices remain useful; do not preempt A2–A7 without measured demand. |
 | Foundational resources | `WIP`, separate content lane | Keep generated-resource gates green; record only project-level priority changes here. |
-| Public documentation and examples | `WIP`, user-directed lane | Beginner chapters 01–07 and the installation/model-replay path are now substantive and indexed; the first SMT-LIB example compiles and prints the documented model. Next validate and write the WASM workflow, then close contributor/reference/internals and crate-example gaps. |
+| Public documentation and examples | `WIP`, user-directed lane | The beginner and installation/model paths plus the pinned WASM/browser workflow are substantive, indexed, and execution-tested; playground grading now preserves unknown/error and states its model/proof boundary. Next close contributor task guides, then reference/internals and crate-example gaps. |
 | Worktree and build-cache hygiene | `WIP`, recovered | A11; only clean `main` is registered. The cleanup stored all 24 inactive dirty deltas in labelled stashes, retained every branch tip, removed the inactive checkouts and one 1.7 GiB session tree, retired the earlier clean A3 target, and finally removed the merged explanation-partition checkout with its 176 GiB Cargo target. Current free space is about 902 GiB on `/` and 28 GiB on `/tmp`; all topic branches remain preserved. Next automate the deterministic read-only inventory and exact-target cleanup classification. |
 
 ## Resume protocol

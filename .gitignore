@@ -39,7 +39,8 @@ __pycache__/
 /mermaid.min.js
 /mermaid-init.js
 
-# WASM playground bundle (regenerate: `wasm-pack build crates/axeyum-wasm --target web --out-dir docs/playground/pkg`)
+# WASM playground bundle (regenerate from the repository root; the out-dir is
+# relative to the crate: `wasm-pack build crates/axeyum-wasm --target web --out-dir ../../docs/playground/pkg`)
 /docs/playground/pkg/
 .claude/
 bench-results/parity-details/

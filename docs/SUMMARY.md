@@ -63,6 +63,7 @@
   - [Rust embedding](user-guide/rust-embedding.md)
   - [Models and replay](user-guide/models-and-replay.md)
   - [UNSAT evidence](user-guide/unsat-evidence.md)
+  - [WebAssembly and the browser playground](user-guide/wasm.md)
   - [Limitations](user-guide/limitations.md)
   - [Benchmarks](user-guide/benchmarks.md)
   - [Versioned corpus manifests](user-guide/corpus-manifests.md)

@@ -3,8 +3,9 @@
 # The crate is a workspace member so host tests and the real wasm32 build stay
 # under CI. To produce the browser bundle:
 #   1. rustup target add wasm32-unknown-unknown
-#   2. cargo install wasm-pack
-#   3. wasm-pack build crates/axeyum-wasm --target web --out-dir ../../docs/playground/pkg
+#   2. cargo install wasm-pack --version 0.14.0 --locked
+#   3. wasm-pack build crates/axeyum-wasm --target web \
+#        --out-dir ../../docs/playground/pkg --out-name axeyum_wasm --release
 #
 # The default solver build is pure Rust and wasm-compatible (ADR-0017), so this
 # adds no C/C++ dependency.

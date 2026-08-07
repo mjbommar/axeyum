@@ -5,9 +5,10 @@ Last updated: 2026-08-07
 
 The beginner sequence is now complete, and the user guide has live pages for
 installation/build profiles, first SMT-LIB and Rust use, models/replay, UNSAT
-evidence, limitations, benchmarks, and corpus manifests. Remaining front-door
-work is concentrated in the dedicated WASM guide, contributor task guides,
-stable/generated reference pages, and several internals summaries. The live
+evidence, limitations, benchmarks, corpus manifests, and a clean-environment
+validated WASM/browser workflow. Remaining front-door work is concentrated in
+contributor task guides, stable/generated reference pages, and several
+internals summaries. The live
 indexes in [`docs/README.md`](README.md), [`learn/README.md`](learn/README.md),
 and [`user-guide/README.md`](user-guide/README.md) are authoritative for what is
 currently written.

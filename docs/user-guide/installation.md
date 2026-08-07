@@ -113,9 +113,9 @@ cargo build -p axeyum-wasm --target wasm32-unknown-unknown
 ```
 
 The checked-in playground and its trust boundary are described in
-[`docs/playground/`](../playground/README.md). Browser packaging and local site
-preview require additional web tooling; the Rust target build above is the
-smallest supported compile check.
+the [WebAssembly guide](wasm.md). Browser packaging and local site preview
+require the pinned `wasm-pack` workflow documented there; the Rust target build
+above is only the smallest compile check.
 
 ## Next
 

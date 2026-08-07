@@ -91,7 +91,9 @@ searchable static site:
 - **Graphviz/SVG** for precise structural pictures (the term-IR DAG, bit-blast
   circuits) under [`assets/`](assets/).
 - **A WASM solver playground** ([`playground/`](playground/README.md)) — Axeyum
-  compiled to WebAssembly so you can solve a query *in your browser*, no install.
+  compiled to WebAssembly so you can solve scalar QF_BV queries *in your
+  browser*; the [WASM guide](user-guide/wasm.md) gives the exact build and trust
+  boundary.
 
 See [`internals/documentation.md`](internals/documentation.md) for the build and
 the rationale (why mdBook + Mermaid + WASM over Docusaurus/Verso/Jupyter here).

@@ -2,7 +2,7 @@
 
 Run Axeyum **in your browser** — paste an SMT-LIB query, press Solve, get a
 verdict. The solver is compiled to WebAssembly and runs *client-side*: no server,
-no install, nothing leaves the page.
+no solver install, and the query is not sent to a solver service.
 
 This is our answer to "interactive, executable docs" (the Verso / Jupyter
 inspiration). Instead of a notebook kernel, the reader runs the **actual solver**
@@ -16,7 +16,8 @@ code. See the rationale in [internals/documentation.md](../internals/documentati
 - **[`exercises.html`](exercises.html)** — the **self-checking exercise widget**
   for the [K-12 curriculum](../curriculum/k12/README.md): pose → student answers →
   the real solver grades by *replay* ("find x") or *assert-the-negation*
-  ("is it always true?"), with proof/counterexample feedback. No answer key.
+  ("is it always true?"), with solver-checked verdict feedback. The current
+  browser API does not display a model or export a proof artifact.
 
 ## Try it
 
@@ -30,8 +31,10 @@ A starter query is pre-loaded:
 (check-sat)
 ```
 
-Expected: **`sat`** (`x = #xff`). Toggle to the contradictory variant for
-**`unsat`**, and try a wide multiply for an honest **`unknown`**.
+Expected: **`sat`** (the internally replayed witness is `x = #xff`, although
+the current browser JSON surface displays only the verdict). Toggle to the
+contradictory variant for **`unsat`**, and try a wide multiply for an honest
+**`unknown`**.
 
 ## Status
 
@@ -47,16 +50,22 @@ profile for `wasm32-unknown-unknown`.
 ```sh
 # one-time
 rustup target add wasm32-unknown-unknown
-cargo install wasm-pack
+cargo install wasm-pack --version 0.14.0 --locked
 
-wasm-pack build crates/axeyum-wasm --target web --out-dir ../../docs/playground/pkg
+wasm-pack build crates/axeyum-wasm --target web \
+  --out-dir ../../docs/playground/pkg --out-name axeyum_wasm --release
 
 # serve the docs (the page needs to be over http for ES-module imports)
-python3 -m http.server -d docs/playground 8080   # → http://localhost:8080
+python3 -m http.server --bind 127.0.0.1 \
+  --directory docs/playground 8080   # → http://127.0.0.1:8080
 ```
 
 `wasm-pack` emits `docs/playground/pkg/axeyum_wasm.js` + `.wasm`; the page
 imports them automatically. (`pkg/` is generated — git-ignore it.)
+The output directory is relative to the binding crate, which is why the build
+command uses `../../docs/...`. For the tested toolchain, deployment boundary,
+CI-equivalent smoke, and troubleshooting, see the
+[WASM user guide](../user-guide/wasm.md).
 
 ## How it works
 
@@ -76,7 +85,8 @@ The binding parses SMT-LIB but deliberately admits only the scalar QF_BV
 profile, then calls the same replay-checked `SatBvBackend` used by native
 consumers. A `sat` is still verified against the original query before it is
 shown. Broader logics fail closed instead of pulling the full solver surface
-into the browser artifact.
+into the browser artifact. The page does not currently expose the replayed
+model or an UNSAT certificate; use the native evidence APIs for those artifacts.
 
 ## Why this is the right interactivity for Axeyum
 

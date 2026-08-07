@@ -11,8 +11,9 @@ the route; unsupported, incomplete, or resource-bounded cases remain an explicit
 [Project State](docs/PROJECT-STATE.md).
 
 It's written entirely in Rust, has **no C or C++ in the default build**, and
-**runs in the browser via WebAssembly** — no server, no install, same trust
-guarantees client-side as native.
+**runs scalar QF_BV queries in the browser via WebAssembly** — no solver server
+or install, with the same replay-checked SAT boundary as the native QF_BV
+backend.
 
 > **The one idea:** *untrusted fast search, trusted small checking.* Finding the
 > answer is allowed to be big and clever; being *sure* of the answer is done by
@@ -225,8 +226,8 @@ independent queries in parallel. See the
 
 ## Runs in the browser (WebAssembly)
 
-The default library stack builds for `wasm32-unknown-unknown` and WASI
-(ADR-0017): the pure-Rust core has no C/C++ and no native clock dependency (a
+The default library stack builds for `wasm32-unknown-unknown` (ADR-0017): the
+pure-Rust core has no C/C++ and no native clock dependency (a
 `web-time` shim covers wasm targets). `axeyum-cas` and `axeyum-strings` are
 WASM-safe by construction. `axeyum-wasm` exposes a tiny JSON surface over the
 QF_BV backend so a **static page solves a query client-side** — no server, no
@@ -234,8 +235,12 @@ install — and a returned `sat` is already replay-verified: **the trust boundar
 is preserved across the WASM boundary**. Try it in the
 [playground](docs/playground/README.md).
 
+The browser JSON surface returns verdict metadata, not a rendered model or
+portable UNSAT proof. See the [WASM guide](docs/user-guide/wasm.md) for its exact
+QF_BV boundary, pinned build workflow, and native evidence alternatives.
+
 ```sh
-cargo build --target wasm32-unknown-unknown -p axeyum-solver
+cargo build --target wasm32-unknown-unknown -p axeyum-wasm
 ```
 
 ## Workspace
@@ -313,7 +318,7 @@ cargo fmt --all --check
 cargo clippy --workspace --all-targets --all-features -- -D warnings
 cargo test --workspace --all-features
 cargo doc --workspace --all-features --no-deps
-cargo build --target wasm32-unknown-unknown -p axeyum-solver   # WASM target (ADR-0017)
+cargo build --target wasm32-unknown-unknown -p axeyum-wasm     # browser binding (ADR-0017)
 cargo deny check                                               # requires cargo-deny
 
 # Benchmarks
