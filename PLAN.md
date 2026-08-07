@@ -5,7 +5,7 @@ for current project status, ordered work, blockers, and resume guidance. Read it
 first and update it before ending a project-level work session.
 
 - Last consolidated: **2026-08-07**
-- State audited at: A3 topic `db7b426e8f7711990a363c6f1edcae330fe206ba`;
+- State audited at: A3 topic `704318a5f8a7d308af4f938a4d07651074327e9d`;
   integrated `main` and `origin/main` at `2072483f8f1cfd4a8522c9f694abbbc800478b56`
 - Expected integration state: clean A3 topic ahead of clean `main`; local `main`
   equal to `origin/main`
@@ -38,7 +38,7 @@ or a replacement for the Lean system.
 
 The audited integration state is clean local `main` at
 `2072483f8f1cfd4a8522c9f694abbbc800478b56`, equal to `origin/main`. The clean
-A3 topic is fifteen commits ahead of its remote after merging that main; it is not
+A3 topic is seventeen commits ahead of its remote after merging that main; it is not
 yet pushed or integrated. Local `main` and `origin/main` must remain equal at
 handoff under the resume protocol below. The IDL repair branch completed terminal
 `CARGO_BUILD_JOBS=2 just check`; merge `198f2dc1b` passed its immutable-SHA
@@ -75,15 +75,22 @@ probe-model reuse experiment recovered zero of seven SAT targets, kept six
 UNSAT controls non-SAT, and was rejected without retaining its code or
 authorizing a 200-row run. The residuals are now split between five large
 DPLL/core-search targets and two integer-model reconstruction-deadline targets.
-The latest aggregate A3 gate passed every workspace unit and differential-fuzz
-suite through the final word-equation fuzz case, then exposed one load-sensitive
-string/integer fixture: a hidden two-second default deadline could return
-`unknown` before the known `i = 500` witness under aggregate CPU contention.
-Commit `db7b426e8` removes that implicit clock, retains the caller's explicit
-timeout, and uses deterministic 128-candidate / 2,000-node ceilings. Its direct
-budget regression, full 14-test fixture (15.16 s), and all-target solver Clippy
-are green. The authoritative aggregate branch rerun is pending; the failed run
-is not a green branch gate.
+The first aggregate A3 gate exposed one load-sensitive string/integer fixture:
+a hidden two-second default deadline could return `unknown` before the known
+`i = 500` witness under aggregate CPU contention. Commit `db7b426e8` removes
+that implicit clock, retains the caller's explicit timeout, and uses
+deterministic 128-candidate / 2,000-node ceilings. The repaired rerun passed
+format, stable all-target Clippy, every workspace unit/integration/differential
+test and doctest, the 1,078-test solver library, the repaired 14/14 coupling
+fixture in 15.58 s, 9/9 isolated frontier tests, both order-255 CAS moment
+proofs in 1,014.84 s, warning-denied rustdoc, QF_BV/reflection/Glaurung gates,
+foundational resources, rules-as-code, the 165-test resume aggregate, and all
+Lean contract suites. It then exited 1 in the final parity-docs stage because
+the generated complete-parity manifest still hashed `.github/workflows/ci.yml`
+before the pinned-`just` workflow repair. Commit `704318a5f` refreshes that one
+source-identity SHA-256 without changing any outcome or parity claim; complete
+parity-docs, plan authority, and links are green. Because the aggregate command
+itself did not exit 0, one final exact-head aggregate rerun remains pending.
 
 A2 is **DONE** on current main. The old
 `agent/smtcomp/full-preparation-live` head `3e53ca631` is 401 commits behind
@@ -186,7 +193,7 @@ The 2026-08-07 follow-up removed 14 additional clean checkouts, retained their
 13 unmerged branch tips, and reduced the registered worktree count from 39 to
 25; the later A3 worktree brings the current count to 26. Two bounded
 Cargo-artifact passes cleared about 32 GiB from `/` and 5.8 GiB from `/tmp`;
-current free space is 826 GiB on `/` and 27 GiB on the 62 GiB
+current free space is 817 GiB on `/` and 27 GiB on the 62 GiB
 `/tmp` tmpfs. Dirty worktrees, unmerged branch tips, retained A3 census
 evidence, unrelated temporary projects, and legacy build directories that
 failed Cargo's cache-tag safety check were deliberately left untouched.
@@ -232,6 +239,7 @@ the failed aggregate attempts; they contained no retained evidence.
 
 | Date | Commit | Result |
 |---|---|---|
+| 2026-08-07 | `704318a5f` | Refreshed the complete-parity manifest's sole stale source identity after the pinned-`just` CI workflow change; outcomes, populations, gates, and parity credit are unchanged, and full parity-docs/authority/links pass. |
 | 2026-08-07 | `db7b426e8` | Replaced a hidden load-sensitive two-second string/integer coupling deadline with deterministic 128-candidate and 2,000-node ceilings while preserving caller timeouts; the direct budget regression, 14-test fixture, and all-target solver Clippy pass. |
 | 2026-08-07 | `7b35dbcb6` / `8bab16429` / `799c5c8c7` | Kept fallible DPLL oracle fixtures explicit and synchronized evidence plus representative Lean expectations with the checked Boolean-simplification route selected after bounded duplicate short-circuiting. |
 | 2026-08-07 | `9f94e1873` | Provisioned exact, commit-pinned `just` for both hosted docs gates after three remote runs exposed that the integrated readiness fixtures require the registered executable; the 165-test local resume aggregate passed with one expected skip. |
@@ -262,8 +270,8 @@ risk, or invalid gate. Those are P0 and preempt the queue.
 The ordered ten-item programme remains A2 through A11. A1 and A2 are retained
 here as closed evidence boundaries; A3 is now the first active item.
 
-**Immediate action.** Rerun the complete A3 checkpoint gate after
-`db7b426e8`, push the exact topic,
+**Immediate action.** Rerun the complete A3 checkpoint gate at the finished
+topic containing `704318a5f`, push the exact topic,
 integrate it into current main, rerun the combined-main gate, push main, and
 verify remote refs and the repaired hosted docs job. Then use direct trace
 attribution to preregister exactly one of the two residual A3 subclusters before
@@ -324,10 +332,12 @@ reconstruction no longer erases oracle declines or fabricates a default model.
 Probe-model reuse failed its seven-target retention gate and its temporary code
 was removed. Focused SMT-LIB, solver, explanation, DPLL, NIA-linearization,
 route-trace, integration, Clippy, docs, and link gates are green; the aggregate
-branch and combined-main gates remain pending. One aggregate attempt passed the
-entire differential-fuzz population but failed late on a load-sensitive hidden
-deadline in the string/integer coupling fixture; `db7b426e8` repairs that
-determinism defect and is focused-green, but still requires the complete rerun.
+branch and combined-main gates remain pending. One aggregate attempt found the
+load-sensitive coupling deadline; the repaired attempt passed all code, solver,
+frontier, CAS, rustdoc, resource, policy, resume, and Lean suites but found a
+one-field stale generated CI-workflow identity at final parity-docs. Both defects
+are repaired and focused-green; the finished exact head still requires one
+uninterrupted aggregate rerun.
 
 **Next slice.** After checkpoint integration, use direct trace attribution to
 choose and preregister either the five-case large DPLL/core-search subgroup or
@@ -473,7 +483,7 @@ or remove dirty/unmerged state to meet a free-space target.
 
 | Workstream | State | Current boundary / next action |
 |---|---|---|
-| Integration and gates | `WIP`; A3 topic `db7b426e8` | Main and origin/main are equal at `2072483f8`; A3 is clean and fifteen commits ahead of its topic remote. Three hosted docs runs exposed missing `just`; the workflow fix passes the full local 165-test resume aggregate but is not remotely confirmed. The latest full branch attempt found and focused-fixed one load-sensitive hidden deadline, so rerun the complete topic gate before push, then merge, run the full-main gate, and verify refs/CI separately. |
+| Integration and gates | `WIP`; A3 topic `704318a5f` | Main and origin/main are equal at `2072483f8`; A3 is clean and seventeen commits ahead of its topic remote. Three hosted docs runs exposed missing `just`; the workflow fix passes the full local 165-test resume aggregate but is not remotely confirmed. Two full attempts found and repaired a load-sensitive hidden deadline and then a one-field stale generated workflow identity. All component gates are green, but rerun the complete finished-head topic gate before push, then merge, run the full-main gate, and verify refs/CI separately. |
 | Arithmetic deadline reliability | `DONE` | Shared deadline, CAD polls, LRA ceilings, bounded DL probing, exact resume identity, and six fresh retained divisions are complete; see the 2026-08-06 closure note. |
 | Full-library measurement | `WIP`; A2 readiness `DONE` | The R1--R5 readiness stack is integrated by `8ed5ad089` and focused/aggregate/scoped/topic/full-main green; the real registered offline-build smoke passed. No live run, preparation root, or launch authority exists. A later live C0/F2 step requires separate review. |
 | QF_NIA breadth | `WIP` | Current clean result remains 34/200 versus 89/200. The complete 67-case census, giant-`distinct` resource repair, reconstruction-outcome repair, and rejected zero-gain probe-model experiment are retained on the A3 topic. Next choose one of the two residual causal subgroups after integration. |
@@ -486,7 +496,7 @@ or remove dirty/unmerged state to meet a free-space target.
 | CAS parity | `BLOCKED` by deliberate pause | Wave-24 code `01d47334` and pause commit `245d8f25` are ancestors of current main. Do not start wave 25 until the user resumes it and retained specialized gate evidence is re-audited. |
 | Consumer apps / verified systems | `WIP`, non-critical path | Existing EVM, verifier, property, reflection, and symbolic-execution slices remain useful; do not preempt A2–A7 without measured demand. |
 | Foundational resources | `WIP`, separate content lane | Keep generated-resource gates green; record only project-level priority changes here. |
-| Worktree and build-cache hygiene | `TODO`, recovered | A11; 26 registered worktrees remain. Dirty and unmerged state was preserved. Current free space is about 826 GiB on `/` and 27 GiB on `/tmp`; no space-pressure blocker remains. Four empty A3 frontier directories and their pointer were removed. |
+| Worktree and build-cache hygiene | `TODO`, recovered | A11; 26 registered worktrees remain. Dirty and unmerged state was preserved. Current free space is about 817 GiB on `/` and 27 GiB on `/tmp`; no space-pressure blocker remains. Four empty A3 frontier directories and their pointer were removed. |
 
 ## Resume protocol
 
