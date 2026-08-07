@@ -620,7 +620,7 @@ or remove dirty/unmerged state to meet a free-space target.
 
 | Workstream | State | Current boundary / next action |
 |---|---|---|
-| Integration and gates | `DONE`; current checkpoint | Local and remote `main` equal `6be32cb4a`; A3 attribution topic `2269488ef` is pushed and merged. Its exact topic and merge-SHA pre-push gates plus focused post-merge tests are green. Hosted CI remains separate evidence. |
+| Integration and gates | `DONE`; current checkpoint | Local and remote `main` contain audited merge `6be32cb4a` plus its tracker checkpoint; A3 topic `2269488ef` is pushed and merged. Exact topic/merge pre-push gates and focused post-merge tests are green. Hosted CI remains separate evidence. |
 | Arithmetic deadline reliability | `DONE` | Shared deadline, CAD polls, LRA ceilings, bounded DL probing, exact resume identity, and six fresh retained divisions are complete; see the 2026-08-06 closure note. |
 | Full-library measurement | `WIP`; A2 readiness `DONE` | The R1--R5 readiness stack is integrated by `8ed5ad089` and focused/aggregate/scoped/topic/full-main green; the real registered offline-build smoke passed. No live run, preparation root, or launch authority exists. A later live C0/F2 step requires separate review. |
 | QF_NIA breadth | `WIP`, yielded | Current clean result remains 34/200 versus 89/200. Reconstruction, large-core deletion, relevance activation, and bounded clause-estimate attribution are closed negatively without production solver code. The final diagnostic failed its exact pipeline-boundary record gate; no mechanism or 200-row run is authorized and the 64,000,000 ceiling remains. Move to A4 unless independent new NIA evidence appears. |
