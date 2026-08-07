@@ -1,6 +1,6 @@
 # QF_UFLIA A4 provenance recovery and causal census v1 preregistration
 
-Date: 2026-08-07  
+Date: 2026-08-07
 Status: preregistered; capture and solver changes have not started
 
 ## Decision and scope
