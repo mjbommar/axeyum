@@ -151,10 +151,13 @@ policies, and gate separation are retained in
 Disk cleanup removed only reproducible Cargo artifacts and clean, inactive
 worktree checkout directories; dirty worktrees and every branch were preserved.
 The 2026-08-07 follow-up removed 14 additional clean checkouts, retained their
-13 unmerged branch tips, cleared about 2.3 GiB of Cargo caches, and reduced the
-registered worktree count from 39 to 25. Current free space is 931 GiB on `/`
-and 22 GiB on the 62 GiB `/tmp` tmpfs; unrelated temporary projects and the
-dirty Axeyum census scratch tree were deliberately left untouched.
+13 unmerged branch tips, and reduced the registered worktree count from 39 to
+25; the later A3 worktree brings the current count to 26. Two bounded
+Cargo-artifact passes cleared about 32 GiB from `/` and 5.8 GiB from `/tmp`;
+current free space is 935 GiB on `/` and 27 GiB on the 62 GiB
+`/tmp` tmpfs. Dirty worktrees, unmerged branch tips, retained A3 census
+evidence, unrelated temporary projects, and legacy build directories that
+failed Cargo's cache-tag safety check were deliberately left untouched.
 
 ### Current evidence snapshot
 
