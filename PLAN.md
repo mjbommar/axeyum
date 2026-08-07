@@ -6,7 +6,7 @@ first and update it before ending a project-level work session.
 
 - Last consolidated: **2026-08-07**
 - Integrated repository state audited at:
-  `47d8cd9566510a9a7d1224e2ed59a9c8bcea9427`; the latest solver-code gate
+  `a28560f81db34248413f27382b706ab7c5b9b60f`; the latest solver-code gate
   remains `3eb7eac442c64aee4b809ee059bf59d93b6160ee`, including A3 merge
   `0c31baf979d09270497b5512819fa6e8ed927de7`
 - Expected handoff state: clean local `main` equal to `origin/main`
@@ -38,7 +38,7 @@ checker/importer, and several consumers. It is not yet a drop-in Z3 replacement
 or a replacement for the Lean system.
 
 The audited integrated repository state is
-`47d8cd9566510a9a7d1224e2ed59a9c8bcea9427`; its later CI, PLAN, and negative
+`a28560f81db34248413f27382b706ab7c5b9b60f`; its later CI, PLAN, and negative
 A3 diagnostic-result changes do
 not alter the solver-code evidence at `3eb7eac442`. Local `main` is clean and
 exactly equal to `origin/main`. Topic `ee5042dee` is pushed and exactly equals
@@ -59,6 +59,8 @@ account Cargo bin and validates exact version 1.57.0. Merge `bd413357c` contains
 the repair and A3 diagnostic preregistration. Exact-SHA docs run `31192792512`
 and CI run `31192792245` are terminal green, including the formerly failing
 registered full-preparation resume gate.
+The later docs-only main checkpoint `a28560f81` is independently terminal green
+in hosted docs run `31198041045`.
 Local `main` and `origin/main` are equal at handoff. The IDL repair branch completed terminal
 `CARGO_BUILD_JOBS=2 just check`; merge `198f2dc1b` passed its immutable-SHA
 pre-push workspace-library, progress-frontier, and evidence gates. Integrated
@@ -114,6 +116,16 @@ preregistered, sound four-group deletion pass shrank the broad clauses but
 reduced `1051` from 192--202 to 35 lazy rounds and `1280` from 391--397 to 338,
 without deciding either target. It was rejected at the two-target gate; all
 temporary solver code was removed and no 200-row run was authorized.
+The remaining small-core pair then received the cheaper preregistered
+relevance-activated bound ladder. It emitted 470--472 checked implications on
+`p4943` and 484 on `p32598` without extra theory-oracle calls, but all six target
+observations remained `unknown`; the target gate failed and all temporary code
+was removed. This closes the five-row DPLL/core-search partition against both
+measured explanation-quality mechanisms. The 52 budget rows are now exactly
+repartitioned into 37 width-ladder timeouts, 11 all-reference-SAT pre-lowering
+clause-estimate refusals, three reference-UNSAT combined-theory timeouts, and
+one reference-UNSAT replay-detected model overflow. Fresh discrimination shows
+the four-row UNSAT tail is not a valid target for the SAT-only width ladder.
 The first aggregate A3 gate exposed one load-sensitive string/integer fixture:
 a hidden two-second default deadline could return `unknown` before the known
 `i = 500` witness under aggregate CPU contention. Commit `db7b426e8` removes
@@ -334,10 +346,16 @@ here as closed evidence boundaries; A3 is now the first active item.
 integrated and remotely confirmed by terminal-green docs run `31192792512` and
 CI run `31192792245`. Both the reconstruction-deadline cluster and the
 repeated-large-core four-group deletion experiment are rejected without
-retained solver code. Repartition the five residual DPLL/core-search rows using
-the retained v1 causal evidence, and preregister a cheaper mechanism only when
-it avoids additional full theory-oracle calls per conflict. Do not revive
-group deletion, raise a cap, or start a 200-row run from the negative result.
+retained solver code. The cheaper relevance-activated bound-ladder experiment
+also failed all six target observations and was removed, closing the five-row
+DPLL/core-search partition. The 52-row budget population is now repartitioned;
+start the next bounded diagnostic on the two smallest all-SAT pre-lowering
+estimate refusals (`p31818` and `p6984`). Attribute the conservative estimate
+before edits, preserve the 64,000,000 pre-allocation ceiling, and preregister a
+strictly additive fail-closed mechanism before changing the solver. Do not
+revive group deletion or relevance ladders, raise a cap, target the UNSAT
+combined-timeout/model-overflow tail, or start a 200-row run from these negative
+results.
 A2 is integrated and combined-main green, but this
 does not self-authorize C0 or live F2. No host probe, sentinel, NAS mutation, F3
 acceptance, allocation, or solver fleet is permitted. A wrong
@@ -420,13 +438,28 @@ implementation was rejected and fully removed. See the
 and
 [`group-deletion v2 result`](docs/plan/qf-nia-a3-large-core-group-deletion-v2-result-2026-08-07.md).
 
-**Next slice.** Repartition the five residual DPLL/core-search rows from the
-retained causal census and direct cluster evidence. The next candidate must use
-an already-produced checked explanation or cheaper Boolean-side mechanism; it
-must not add repeated full theory-oracle calls merely to improve clause width.
-Preregister exact targets, controls, work bounds, and a removal rule before
-solver edits. Do not revive probe-model reuse or group deletion, reserve
-reconstruction time, raise general caps, or run the 200-row list yet.
+The cheaper
+[`relevance-activated bound-ladder experiment`](docs/plan/qf-nia-a3-relevant-bound-ladders-v1-result-2026-08-07.md)
+then activated hundreds of checked adjacent implications without an additional
+theory-oracle call, but all six target observations remained `unknown`. Its
+target gate failed, controls and aggregate runs were not authorized, and all
+temporary solver code was removed. The resulting
+[`typed-budget partition`](docs/plan/qf-nia-a3-budget-partition-v1-result-2026-08-07.md)
+classifies all 52 deferred rows as 37 mixed width timeouts, 11 all-SAT
+pre-lowering estimate refusals, three UNSAT combined-theory timeouts, and one
+UNSAT replay-detected model overflow. Fresh current-baseline traces show the
+four-row UNSAT tail is downstream of the owning exact-search stop and cannot be
+recovered soundly by the SAT-only width ladder.
+
+**Next slice.** Diagnose the two smallest all-reference-SAT clause-estimate
+refusals, `p31818` (81,482,280) and `p6984` (82,590,729), by attributing the
+conservative estimate by shared term/operator and comparing it with a
+memory-bounded demanded-lowering projection. Preregister exact targets,
+controls, work bounds, replay requirements, and a removal rule before solver
+edits. The mechanism must retain the 64,000,000 pre-allocation safety boundary
+and fail closed when a tighter bound cannot be proved. Do not revive probe-model
+reuse, reconstruction reservation, group deletion, or relevance ladders; do
+not raise general caps or run the 200-row list yet.
 
 **Exit.** One preregistered cluster improves a fresh whole-list result without
 losing any of the 34 decisions; all SAT answers replay on the original terms and
@@ -580,7 +613,7 @@ or remove dirty/unmerged state to meet a free-space target.
 | Integration and gates | `DONE`; current checkpoint | Local `main` and `origin/main` are identical at `bd413357c`. Topic `ee5042dee` equals its remote, and merge `0c31baf97` passed the complete external-frontier `just check` with exit 0. Exact-code docs `31190516093` and CI `31190517748` failed only because setup-just's temporary install lay outside the credited PATH; every non-doc CI job passed. Repair `259797459` installs the pinned regular executable at the registered path, and exact-SHA docs `31192792512` plus CI `31192792245` are terminal green. |
 | Arithmetic deadline reliability | `DONE` | Shared deadline, CAD polls, LRA ceilings, bounded DL probing, exact resume identity, and six fresh retained divisions are complete; see the 2026-08-06 closure note. |
 | Full-library measurement | `WIP`; A2 readiness `DONE` | The R1--R5 readiness stack is integrated by `8ed5ad089` and focused/aggregate/scoped/topic/full-main green; the real registered offline-build smoke passed. No live run, preparation root, or launch authority exists. A later live C0/F2 step requires separate review. |
-| QF_NIA breadth | `WIP` | Current clean result remains 34/200 versus 89/200. The complete 67-case census, giant-`distinct` resource repair, reconstruction-outcome repair, and rejected zero-gain probe-model experiment are integrated. Reconstruction-deadline and repeated-large-core clusters are both closed negatively without retained solver code: size-admission reproduced 3/3 and 2/3, but sound four-group deletion spent too much exact-theory work and decided neither target. Next repartition the five residual DPLL/search rows and preregister only a cheaper checked-explanation or Boolean-side mechanism. |
+| QF_NIA breadth | `WIP` | Current clean result remains 34/200 versus 89/200. Reconstruction, large-core deletion, and cheap relevance activation are closed negatively without retained solver code; the last emitted hundreds of checked implications but gained 0/6 target decisions. The 52 budget rows split into 37 mixed width timeouts, 11 all-SAT estimate refusals, three UNSAT combined timeouts, and one UNSAT replay overflow. Next diagnose the two lowest all-SAT estimates (`p31818`, `p6984`) without raising the 64,000,000 safety ceiling. |
 | QF_UFLIA breadth | `WIP` | 94/180; A4 owns causal residual partition. |
 | LRA/IDL/RDL | `WIP` | Current results are 86/146, 68/124, and 105/155; A5 owns cross-division consolidation. |
 | QF_BV/QF_SLIA/UF/QF_ABV | `WIP`, strong selected cells | Preserve current ledgers; do not prioritize small score gains above A2–A6. |
