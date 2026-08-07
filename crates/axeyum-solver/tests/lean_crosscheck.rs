@@ -115,7 +115,7 @@ const FAMILY_BUILDERS: &[FamilyBuilder] = &[
     qf_lia_arith_dpll_audit_rows_check_in_real_lean,
     qf_uflia_use_name_arith_dpll_rows_check_in_real_lean,
     qf_lia_bool_simplification_audit_row_checks_in_real_lean,
-    qf_uf_issue3970_term_identity_checks_in_real_lean,
+    qf_uf_issue3970_bool_simplification_checks_in_real_lean,
     qf_ufbv_fun1_bool_uf_exhaustive_checks_in_real_lean,
     qf_uf_sets_cardinality_checks_in_real_lean,
     qf_uf_boolean_euf_rows_check_in_real_lean,
@@ -1139,22 +1139,23 @@ fn qf_lia_bool_simplification_audit_row_checks_in_real_lean() {
 }
 
 /// `QF_UFNRA`: cvc5 `issue3970-nl-ext-purify` contains a purified `distinct`
-/// contradiction whose expansion includes a disequality of the same term with
-/// itself, before any nonlinear arithmetic certificate is needed.
-fn qf_uf_issue3970_term_identity_checks_in_real_lean() {
+/// with a repeated Boolean argument. ADR-0378 detects that exact duplicate
+/// before pair expansion, so the assertion simplifies to checked `false`
+/// before any nonlinear arithmetic certificate is needed.
+fn qf_uf_issue3970_bool_simplification_checks_in_real_lean() {
     let mut script = parse_script(include_str!(
         "../../../corpus/public-curated/non-incremental/QF_UF/cvc5-regress-clean-bounded/cli__regress1__issue3970-nl-ext-purify.smt2"
     ))
     .expect("issue3970 row parses");
     let assertions = script.assertions.clone();
     let (fragment, source) = prove_unsat_to_lean_module(&mut script.arena, &assertions)
-        .expect("issue3970 term-identity row reconstructs");
-    assert_eq!(fragment, ProofFragment::TermIdentity);
+        .expect("issue3970 Boolean-simplification row reconstructs");
+    assert_eq!(fragment, ProofFragment::BoolSimplification);
     assert!(
         !source.contains("sorryAx"),
-        "term-identity module must not use sorryAx:\n{source}"
+        "Boolean-simplification module must not use sorryAx:\n{source}"
     );
-    lean_accepts("qf_uf_issue3970_term_identity", &source);
+    lean_accepts("qf_uf_issue3970_bool_simplification", &source);
 }
 
 /// `QF_UFBV`: bitwuzla `fun1` is a tiny Boolean functional-graph
