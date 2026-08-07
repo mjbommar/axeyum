@@ -18,7 +18,9 @@ and its
 [`model-replay cluster preregistration`](qf-nia-a3-model-replay-cluster-preregistration-v1-2026-08-07.md).
 The former retains all 67 complete traces; the latter permits diagnostics first
 and only then a replay-preserving repair over seven SAT targets and six UNSAT
-near-miss controls.
+near-miss controls. The first
+[`model-reconstruction diagnostic result`](qf-nia-a3-model-reconstruction-diagnostic-v1-result-2026-08-07.md)
+removes a lossy non-SAT-to-empty-model fallback without claiming a breadth gain.
 
 ## Layout
 

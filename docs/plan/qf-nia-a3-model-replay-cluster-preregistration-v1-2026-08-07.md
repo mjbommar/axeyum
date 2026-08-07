@@ -98,3 +98,14 @@ raising a general cap. A diagnostic-only improvement may still be retained as
 route observability if it is deterministic, bounded, tested, and does not alter
 verdicts.
 
+## Diagnostic disposition
+
+The diagnostic-first increment completed at `4ff9a82c6`; see the
+[`v1 diagnostic result`](qf-nia-a3-model-reconstruction-diagnostic-v1-result-2026-08-07.md).
+Six rows reproduced an evaluated-false assertion with all symbols bound, and
+each also violated a selected arithmetic literal. The owner was
+`theory_model`, which collapsed reconstruction `Unknown`/`Unsat` to an empty
+model and caused default-value replay to erase the actual decline. The repair
+preserves the typed outcome and changes no verdict. It does not satisfy this
+cluster's breadth exit; concrete probe-model reuse is the next separately
+preregistered experiment.
