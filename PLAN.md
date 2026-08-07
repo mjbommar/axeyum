@@ -5,7 +5,7 @@ for current project status, ordered work, blockers, and resume guidance. Read it
 first and update it before ending a project-level work session.
 
 - Last consolidated: **2026-08-07**
-- State audited at: clean pushed `main`
+- Integrated code state audited at:
   `3eb7eac442c64aee4b809ee059bf59d93b6160ee`, including A3 merge
   `0c31baf979d09270497b5512819fa6e8ed927de7`
 - Expected handoff state: clean local `main` equal to `origin/main`
@@ -36,8 +36,9 @@ evidence routes, broad but uneven theory support, an independent Lean-core
 checker/importer, and several consumers. It is not yet a drop-in Z3 replacement
 or a replacement for the Lean system.
 
-The audited integration state is clean `main` at
-`3eb7eac442c64aee4b809ee059bf59d93b6160ee`, pushed and exactly equal to
+The audited integrated code state is
+`3eb7eac442c64aee4b809ee059bf59d93b6160ee`; its later PLAN-only handoff does
+not alter the code evidence. Local `main` is clean and exactly equal to
 `origin/main`. Topic `ee5042dee` is pushed and exactly equals
 `origin/agent/nia/a3-census`. The merge passed one uninterrupted
 external-frontier `CARGO_BUILD_JOBS=2 just check` with exit 0: format, stable
@@ -294,10 +295,10 @@ The ordered ten-item programme remains A2 through A11. A1 and A2 are retained
 here as closed evidence boundaries; A3 is now the first active item.
 
 **Immediate action.** Monitor exact-SHA docs run `31190516093` and CI run
-`31190517748` to terminal state without conflating them with the green local
-gate. Then use direct trace attribution to preregister exactly one of the two
-residual A3 subclusters before
-another solver-policy edit. A2 is integrated and combined-main green, but this
+`31190517748` to terminal state without
+conflating them with the green local gate. Then use direct trace attribution to
+preregister exactly one of the two residual A3 subclusters before another
+solver-policy edit. A2 is integrated and combined-main green, but this
 does not self-authorize C0 or live F2. No host probe, sentinel, NAS mutation, F3
 acceptance, allocation, or solver fleet is permitted. A wrong
 verdict, crash, data-loss risk, invalid gate, or renewed resource overrun still
@@ -361,7 +362,8 @@ are repaired. Exact topic `3586c41d9` passed one uninterrupted external-frontier
 `CARGO_BUILD_JOBS=2 just check` with exit 0 and a clean tracked tree. Topic push,
 merge `0c31baf97`, and combined-main `just check` are complete and green.
 Exact-SHA docs run `31190516093` and CI run `31190517748` are in progress and
-must not be conflated with those local terminal results.
+must not be conflated with those local terminal results. PLAN-only handoff
+commits may start a later docs run without changing the code gate boundary.
 
 **Next slice.** After checkpoint integration, use direct trace attribution to
 choose and preregister either the five-case large DPLL/core-search subgroup or
@@ -513,7 +515,7 @@ or remove dirty/unmerged state to meet a free-space target.
 
 | Workstream | State | Current boundary / next action |
 |---|---|---|
-| Integration and gates | `WIP`; pushed `3eb7eac44` | Local `main` and `origin/main` are identical. Topic `ee5042dee` equals its remote, and merge `0c31baf97` passed the complete external-frontier `just check` with exit 0. Exact-SHA docs `31190516093` and CI `31190517748` are in progress; terminal remote status remains separate. |
+| Integration and gates | `WIP`; code `3eb7eac44` pushed | Local `main` and `origin/main` are identical. Topic `ee5042dee` equals its remote, and merge `0c31baf97` passed the complete external-frontier `just check` with exit 0. Exact-code docs `31190516093` and CI `31190517748` are in progress; terminal remote status remains separate. Later PLAN-only commits do not change the code gate boundary. |
 | Arithmetic deadline reliability | `DONE` | Shared deadline, CAD polls, LRA ceilings, bounded DL probing, exact resume identity, and six fresh retained divisions are complete; see the 2026-08-06 closure note. |
 | Full-library measurement | `WIP`; A2 readiness `DONE` | The R1--R5 readiness stack is integrated by `8ed5ad089` and focused/aggregate/scoped/topic/full-main green; the real registered offline-build smoke passed. No live run, preparation root, or launch authority exists. A later live C0/F2 step requires separate review. |
 | QF_NIA breadth | `WIP` | Current clean result remains 34/200 versus 89/200. The complete 67-case census, giant-`distinct` resource repair, reconstruction-outcome repair, and rejected zero-gain probe-model experiment are integrated. Next preregister one of the two residual causal subgroups. |
