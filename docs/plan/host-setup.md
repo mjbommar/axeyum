@@ -24,13 +24,17 @@ tree to skip the re-fetches in steps 2–3 — ~43 GB including `references/` +
 ## 1. Toolchain
 
 - **Rust**: nightly is the local default (CLAUDE.md); CI uses stable + **MSRV
-  1.85**, edition 2024, resolver 3. `rustup toolchain install nightly stable`.
+  1.88**, edition 2024, resolver 3. `rustup toolchain install nightly stable`.
   (Reference: this session used `rustc 1.98.0-nightly`.)
 - **just** (optional; `scripts/check.sh` is the no-`just` fallback gate) and
   **cargo-deny** (`cargo install just cargo-deny`).
 - **Z3 4.13.x** — `libz3-dev` (pkg-config `z3`) for the `--features z3` oracle,
   plus the `z3` binary for differential cross-checks. The default build needs no
   C/C++; Z3 is a feature-gated leaf (ADR-0002).
+
+For a source-checkout setup that distinguishes default, full pure-Rust, native
+oracle, MSRV, and browser profiles, see the
+[development setup guide](../contributor-guide/development-setup.md).
 
 ## 2. References (1.6 GB, gitignored) — for reading the reference solvers
 

@@ -51,7 +51,7 @@ cargo deny check                                  # needs cargo-deny installed
 ./scripts/check-links.sh                          # docs relative-link check (CI job)
 ```
 
-Local default toolchain may be nightly; CI runs stable plus an MSRV (1.85)
+Local default toolchain may be nightly; CI runs stable plus an MSRV (1.88)
 check. Edition 2024, resolver 3.
 
 ## Layout

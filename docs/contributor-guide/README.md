@@ -59,13 +59,25 @@ just foundational-resources  # validate foundational atlas/example packs + dashb
 ./scripts/check.sh  # same gate without `just`
 ```
 
-CI also runs MSRV (1.85) and `cargo deny`. Keep the
+CI also runs MSRV (1.88) and `cargo deny`. Keep the
 [capability](../research/08-planning/capability-matrix.md) /
 [support](../research/08-planning/support-matrix.md) matrices in sync with what
 you add.
 
-## Planned how-to pages
+## Task guides
 
-`adding-an-operator` · `adding-a-rewrite` · `adding-a-solver-route` ·
-`proof-and-evidence-obligations` · `testing-and-validation` ·
-`benchmark-artifacts` — see the [documentation plan](../documentation-plan.md).
+Start with [Development setup](development-setup.md), then use the guide that
+matches your change:
+
+| Task | Guide |
+|---|---|
+| Choose focused and pre-merge gates | [Testing and validation](testing-and-validation.md) |
+| Add typed semantics and every downstream layer | [Adding an operator](adding-an-operator.md) |
+| Add a denotational or equisatisfiable transform | [Adding a rewrite](adding-a-rewrite.md) |
+| Add a backend, theory procedure, or bounded fast path | [Adding a solver route](adding-a-solver-route.md) |
+| Classify SAT replay and UNSAT checking | [Proof and evidence obligations](proof-and-evidence-obligations.md) |
+| Produce a reproducible performance/capability record | [Benchmark artifacts](benchmark-artifacts.md) |
+
+For concurrent work, read both the [worktree model](multi-agent-worktrees.md)
+and [multi-agent operating discipline](multi-agent-operations.md) before
+creating or integrating a branch.

@@ -11,7 +11,6 @@ keep one integration owner for `main`.
 Axeyum has a few high-conflict files:
 
 - `PLAN.md`
-- `STATUS.md`
 - `Cargo.toml`
 - solver core files such as `crates/axeyum-solver/src/incremental.rs`
 - broad planning docs under `docs/plan/` and `docs/research/08-planning/`
@@ -114,16 +113,18 @@ Coordinate ownership before touching high-conflict files.
 Good examples:
 
 - "Agent A owns `crates/axeyum-solver/src/incremental.rs` for this slice."
-- "Agent B owns `docs/rules-as-code/` and will not edit `STATUS.md` until merge."
+- "Agent B owns `docs/rules-as-code/` and will leave root planning state to the
+  integration owner."
 - "The integration owner updates `PLAN.md`; topic branches update only their
-  local docs and add a short STATUS entry after merge."
+  local design/handoff docs and provide a short integration summary."
 
-For `STATUS.md`, prefer lane-specific sections. Avoid two agents repeatedly
-editing the same top-of-file paragraph. If a topic branch must update status,
-keep the entry short and easy to rebase.
+Root `STATUS.md` is a compatibility pointer, not mutable session state. Do not
+add lane sections to it. `PLAN.md` is the single mutable project tracker and is
+updated by the integration owner after auditing the merged state.
 
 For `PLAN.md`, prefer stable links and short index updates. Detailed session
-state belongs in `STATUS.md`; detailed design belongs under `docs/`.
+evidence and design belong under `docs/plan/` or another owned documentation
+path, with one deterministic handoff when work pauses.
 
 ## Push Policy
 

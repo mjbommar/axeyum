@@ -13,17 +13,20 @@
 
 ## Checks
 
-All of these must pass before a change lands (CI enforces them):
+Use the focused edit loop and pre-merge sequence in
+[Testing and validation](docs/contributor-guide/testing-and-validation.md).
+The repository-wide gates are:
 
 ```sh
-cargo fmt --all --check
-cargo clippy --workspace --all-targets --all-features -- -D warnings
-cargo test --workspace --all-features
-cargo doc --workspace --all-features --no-deps   # with RUSTDOCFLAGS="-D warnings"
-cargo deny check
+just check       # all repository gates except cargo-deny
+just deny        # dependency/license/advisory policy
 ```
 
-MSRV is **1.85** (edition 2024 floor) and covers the default, pure Rust
+While editing, prefer `cargo test -p <crate>` or `just check-scope origin/main`
+instead of repeatedly running the whole workspace. Solver/dispatch changes also
+need the serialized, nonzero `progress_frontier` gate documented in the guide.
+
+MSRV is **1.88** and covers the default, pure Rust
 build; CI runs `cargo check` on it. Optional native-oracle features (`z3`,
 `z3-static`) track stable Rust instead.
 

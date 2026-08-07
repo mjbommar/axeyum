@@ -368,8 +368,13 @@ beginner sequence, installation/build profiles, model-replay guide, curated
 mdBook index, and runnable first SMT-LIB example are now refreshed on the live
 tree. The pinned Rust 1.88 browser bundle, SAT/UNSAT/unknown/error calls, static
 HTTP imports, and both playground pages are now clean-environment validated;
-the UI preserves inconclusive outcomes. Next audit contributor task guides,
-then reference pages, internals summaries, and crate-level examples.
+the UI preserves inconclusive outcomes. The seven planned contributor task
+guides are now substantive and indexed:
+development setup, testing, operators, rewrites, solver routes, proof/evidence,
+and benchmark artifacts. They are grounded in the live feature/result contracts
+and focused/pre-merge gates; current operational MSRV prose now agrees on 1.88.
+Next audit stable/generated reference pages, then internals summaries and
+crate-level examples.
 
 ### A1 — Complete arithmetic deadline and resource enforcement (`DONE`, P0)
 
@@ -635,7 +640,7 @@ or remove dirty/unmerged state to meet a free-space target.
 | CAS parity | `BLOCKED` by deliberate pause | Wave-24 code `01d47334` and pause commit `245d8f25` are ancestors of current main. Do not start wave 25 until the user resumes it and retained specialized gate evidence is re-audited. |
 | Consumer apps / verified systems | `WIP`, non-critical path | Existing EVM, verifier, property, reflection, and symbolic-execution slices remain useful; do not preempt A2–A7 without measured demand. |
 | Foundational resources | `WIP`, separate content lane | Keep generated-resource gates green; record only project-level priority changes here. |
-| Public documentation and examples | `WIP`, user-directed lane | The beginner and installation/model paths plus the pinned WASM/browser workflow are substantive, indexed, and execution-tested; playground grading now preserves unknown/error and states its model/proof boundary. Next close contributor task guides, then reference/internals and crate-example gaps. |
+| Public documentation and examples | `WIP`, user-directed lane | The beginner and installation/model paths, pinned WASM/browser workflow, and seven contributor task guides are substantive and indexed; playground grading preserves unknown/error and states its model/proof boundary. Next close stable/generated reference pages, then internals summaries and crate-example gaps. |
 | Worktree and build-cache hygiene | `WIP`, recovered | A11; only clean `main` is registered. The cleanup stored all 24 inactive dirty deltas in labelled stashes, retained every branch tip, removed the inactive checkouts and one 1.7 GiB session tree, retired the earlier clean A3 target, and finally removed the merged explanation-partition checkout with its 176 GiB Cargo target. Current free space is about 902 GiB on `/` and 28 GiB on `/tmp`; all topic branches remain preserved. Next automate the deterministic read-only inventory and exact-target cleanup classification. |
 
 ## Resume protocol

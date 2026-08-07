@@ -77,8 +77,16 @@
 # Contributor Guide
 
 - [Contributor Guide](contributor-guide/README.md)
+  - [Development setup](contributor-guide/development-setup.md)
+  - [Testing and validation](contributor-guide/testing-and-validation.md)
+  - [Adding an operator](contributor-guide/adding-an-operator.md)
+  - [Adding a rewrite](contributor-guide/adding-a-rewrite.md)
+  - [Adding a solver route](contributor-guide/adding-a-solver-route.md)
+  - [Proof and evidence obligations](contributor-guide/proof-and-evidence-obligations.md)
+  - [Benchmark artifacts](contributor-guide/benchmark-artifacts.md)
   - [Measured-gap ownership map](contributor-guide/gap-ownership.md)
   - [Multi-agent worktrees](contributor-guide/multi-agent-worktrees.md)
+  - [Multi-agent operations](contributor-guide/multi-agent-operations.md)
 
 # Interactive
 

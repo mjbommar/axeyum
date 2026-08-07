@@ -6,9 +6,11 @@ Last updated: 2026-08-07
 The beginner sequence is now complete, and the user guide has live pages for
 installation/build profiles, first SMT-LIB and Rust use, models/replay, UNSAT
 evidence, limitations, benchmarks, corpus manifests, and a clean-environment
-validated WASM/browser workflow. Remaining front-door work is concentrated in
-contributor task guides, stable/generated reference pages, and several
-internals summaries. The live
+validated WASM/browser workflow. The contributor guide now has executable task
+pages for setup, testing, operators, rewrites, solver routes, proof/evidence,
+and benchmark artifacts. Remaining front-door work is concentrated in stable
+and generated reference pages, several internals summaries, and crate-level
+examples. The live
 indexes in [`docs/README.md`](README.md), [`learn/README.md`](learn/README.md),
 and [`user-guide/README.md`](user-guide/README.md) are authoritative for what is
 currently written.
@@ -95,7 +97,7 @@ List reader paths:
 - Want to use Axeyum? Read `docs/user-guide/`.
 - Want to contribute? Read `docs/contributor-guide/`.
 - Want internals? Read `docs/internals/`.
-- Want roadmap/state? Read `PLAN.md`, `STATUS.md`, and `docs/plan/`.
+- Want roadmap/state? Read `PLAN.md`, `docs/PROJECT-STATE.md`, and `docs/plan/`.
 
 ## Project Layout
 
@@ -220,10 +222,10 @@ support.
 Start with:
 
 1. [PLAN.md](../PLAN.md)
-2. [STATUS.md](../STATUS.md)
-3. `docs/contributor-guide/development-setup.md`
-4. `docs/contributor-guide/testing-and-validation.md`
-5. `docs/contributor-guide/proof-and-evidence-obligations.md`
+2. [Project State](PROJECT-STATE.md)
+3. [`docs/contributor-guide/development-setup.md`](contributor-guide/development-setup.md)
+4. [`docs/contributor-guide/testing-and-validation.md`](contributor-guide/testing-and-validation.md)
+5. [`docs/contributor-guide/proof-and-evidence-obligations.md`](contributor-guide/proof-and-evidence-obligations.md)
 6. [docs/plan/01-dependency-dag.md](plan/01-dependency-dag.md)
 
 Goal: understand the session protocol and the obligations for changing public
