@@ -17,7 +17,8 @@ use sha2::{Digest, Sha256};
 
 const BLAST_WIDTH: u32 = 32;
 const MAX_REACHABLE_NODES: usize = 2_000_000;
-const MAX_DEMAND_REQUESTS: u64 = 8_000_000;
+const MAX_DEMAND_BITS: u64 = 2_000_000;
+const MAX_TRANSFER_EDGES: u64 = 8_000_000;
 
 struct FrozenTarget {
     suffix: &'static str,
@@ -75,7 +76,9 @@ struct Analysis {
     multiplier_class: BTreeMap<String, Aggregate>,
     multiplier_constants: BTreeMap<String, Aggregate>,
     multiplier_terms: Vec<MultiplierTerm>,
-    demand_requests: u64,
+    demand_unique_bits: u64,
+    demand_transfer_edges: u64,
+    demand_barriers_propagated: u64,
     multiplier_bits_total: u64,
     multiplier_bits_demanded: u64,
     multiplier_bits_narrower: u64,
@@ -280,10 +283,48 @@ fn sort_width(sort: Sort) -> Result<u32, String> {
     }
 }
 
-fn push_all_bits(
+fn schedule_bit(
+    term: TermId,
+    bit: u32,
+    masks: &mut [u128],
+    stack: &mut Vec<(TermId, u32)>,
+    analysis: &mut Analysis,
+    count_edge: bool,
+) -> Result<(), String> {
+    if count_edge {
+        analysis.demand_transfer_edges = analysis.demand_transfer_edges.saturating_add(1);
+        if analysis.demand_transfer_edges > MAX_TRANSFER_EDGES {
+            return Err(format!(
+                "structural-demand transfer-edge limit exceeded: {} > {MAX_TRANSFER_EDGES}",
+                analysis.demand_transfer_edges
+            ));
+        }
+    }
+    let bit_mask = 1_u128
+        .checked_shl(bit)
+        .ok_or_else(|| format!("term #{} demand bit {bit} exceeds 127", term.index()))?;
+    if masks[term.index()] & bit_mask != 0 {
+        return Ok(());
+    }
+    masks[term.index()] |= bit_mask;
+    analysis.demand_unique_bits = analysis.demand_unique_bits.saturating_add(1);
+    if analysis.demand_unique_bits > MAX_DEMAND_BITS {
+        return Err(format!(
+            "structural-demand unique-bit limit exceeded: {} > {MAX_DEMAND_BITS}",
+            analysis.demand_unique_bits
+        ));
+    }
+    stack.push((term, bit));
+    Ok(())
+}
+
+fn schedule_all_bits(
     arena: &TermArena,
     term: TermId,
+    masks: &mut [u128],
     stack: &mut Vec<(TermId, u32)>,
+    analysis: &mut Analysis,
+    count_edges: bool,
 ) -> Result<(), String> {
     let width = sort_width(arena.sort_of(term))?;
     if width > 128 {
@@ -292,7 +333,9 @@ fn push_all_bits(
             term.index()
         ));
     }
-    stack.extend((0..width).map(|bit| (term, bit)));
+    for bit in 0..width {
+        schedule_bit(term, bit, masks, stack, analysis, count_edges)?;
+    }
     Ok(())
 }
 
@@ -300,30 +343,42 @@ fn propagate_demand(
     arena: &TermArena,
     term: TermId,
     bit: u32,
+    masks: &mut [u128],
+    barriers_propagated: &mut [bool],
     stack: &mut Vec<(TermId, u32)>,
+    analysis: &mut Analysis,
 ) -> Result<(), String> {
     let TermNode::App { op, args } = arena.node(term) else {
         return Ok(());
     };
     match *op {
-        Op::Extract { lo, .. } => stack.push((args[0], bit + lo)),
+        Op::Extract { lo, .. } => {
+            schedule_bit(args[0], bit + lo, masks, stack, analysis, true)?;
+        }
         Op::Concat => {
             let low_width = sort_width(arena.sort_of(args[1]))?;
             if bit < low_width {
-                stack.push((args[1], bit));
+                schedule_bit(args[1], bit, masks, stack, analysis, true)?;
             } else {
-                stack.push((args[0], bit - low_width));
+                schedule_bit(args[0], bit - low_width, masks, stack, analysis, true)?;
             }
         }
         Op::ZeroExt { .. } => {
             let source_width = sort_width(arena.sort_of(args[0]))?;
             if bit < source_width {
-                stack.push((args[0], bit));
+                schedule_bit(args[0], bit, masks, stack, analysis, true)?;
             }
         }
         Op::SignExt { .. } => {
             let source_width = sort_width(arena.sort_of(args[0]))?;
-            stack.push((args[0], bit.min(source_width - 1)));
+            schedule_bit(
+                args[0],
+                bit.min(source_width - 1),
+                masks,
+                stack,
+                analysis,
+                true,
+            )?;
         }
         Op::BoolNot
         | Op::BoolAnd
@@ -338,25 +393,42 @@ fn propagate_demand(
         | Op::BvNor
         | Op::BvXnor
         | Op::FpFromBits { .. }
-        | Op::RoundingModeFromBits => stack.extend(args.iter().map(|arg| (*arg, bit))),
+        | Op::RoundingModeFromBits => {
+            for &arg in args {
+                schedule_bit(arg, bit, masks, stack, analysis, true)?;
+            }
+        }
         Op::Ite => {
-            stack.push((args[0], 0));
-            stack.push((args[1], bit));
-            stack.push((args[2], bit));
+            schedule_bit(args[0], 0, masks, stack, analysis, true)?;
+            schedule_bit(args[1], bit, masks, stack, analysis, true)?;
+            schedule_bit(args[2], bit, masks, stack, analysis, true)?;
         }
         Op::RotateLeft { by } => {
             let width = sort_width(arena.sort_of(args[0]))?;
             let shift = by % width;
-            stack.push((args[0], (bit + width - shift) % width));
+            schedule_bit(
+                args[0],
+                (bit + width - shift) % width,
+                masks,
+                stack,
+                analysis,
+                true,
+            )?;
         }
         Op::RotateRight { by } => {
             let width = sort_width(arena.sort_of(args[0]))?;
             let shift = by % width;
-            stack.push((args[0], (bit + shift) % width));
+            schedule_bit(args[0], (bit + shift) % width, masks, stack, analysis, true)?;
         }
         _ => {
+            if barriers_propagated[term.index()] {
+                return Ok(());
+            }
+            barriers_propagated[term.index()] = true;
+            analysis.demand_barriers_propagated =
+                analysis.demand_barriers_propagated.saturating_add(1);
             for &arg in args {
-                push_all_bits(arena, arg, stack)?;
+                schedule_all_bits(arena, arg, masks, stack, analysis, true)?;
             }
         }
     }
@@ -369,26 +441,21 @@ fn analyze_demand(
     analysis: &mut Analysis,
 ) -> Result<(), String> {
     let mut masks = vec![0_u128; arena.len()];
+    let mut barriers_propagated = vec![false; arena.len()];
     let mut stack = Vec::new();
     for &root in roots {
-        push_all_bits(arena, root, &mut stack)?;
+        schedule_all_bits(arena, root, &mut masks, &mut stack, analysis, false)?;
     }
     while let Some((term, bit)) = stack.pop() {
-        analysis.demand_requests = analysis.demand_requests.saturating_add(1);
-        if analysis.demand_requests > MAX_DEMAND_REQUESTS {
-            return Err(format!(
-                "structural-demand request limit exceeded: {} > {MAX_DEMAND_REQUESTS}",
-                analysis.demand_requests
-            ));
-        }
-        let bit_mask = 1_u128
-            .checked_shl(bit)
-            .ok_or_else(|| format!("term #{} demand bit {bit} exceeds 127", term.index()))?;
-        if masks[term.index()] & bit_mask != 0 {
-            continue;
-        }
-        masks[term.index()] |= bit_mask;
-        propagate_demand(arena, term, bit, &mut stack)?;
+        propagate_demand(
+            arena,
+            term,
+            bit,
+            &mut masks,
+            &mut barriers_propagated,
+            &mut stack,
+            analysis,
+        )?;
     }
     for multiplier in &analysis.multiplier_terms {
         let demanded = u64::from(masks[multiplier.term.index()].count_ones());
@@ -461,7 +528,7 @@ fn render(
         "no-bounded-candidate"
     };
     json!({
-        "schema": "axeyum-qf-nia-a3-clause-estimate-attribution-v1",
+        "schema": "axeyum-qf-nia-a3-clause-estimate-attribution-v2",
         "source": path.display().to_string(),
         "source_sha256": digest,
         "blast_width": BLAST_WIDTH,
@@ -476,8 +543,11 @@ fn render(
         "multiplier_constant_attribution": aggregate_json(&analysis.multiplier_constants),
         "structural_demand": {
             "complete": true,
-            "request_limit": MAX_DEMAND_REQUESTS,
-            "requests": analysis.demand_requests,
+            "unique_term_bit_limit": MAX_DEMAND_BITS,
+            "unique_term_bits": analysis.demand_unique_bits,
+            "transfer_edge_limit": MAX_TRANSFER_EDGES,
+            "transfer_edges": analysis.demand_transfer_edges,
+            "nonlocal_barriers_propagated": analysis.demand_barriers_propagated,
             "multiplier_bits_total": analysis.multiplier_bits_total,
             "multiplier_bits_demanded": analysis.multiplier_bits_demanded,
             "multiplier_bits_narrower_than_full": analysis.multiplier_bits_narrower,
@@ -638,6 +708,32 @@ mod tests {
         assert_eq!(
             aggregate_json(&first.multiplier_class),
             aggregate_json(&second.multiplier_class)
+        );
+    }
+
+    #[test]
+    fn duplicate_demand_is_idempotent_and_arithmetic_barrier_runs_once() {
+        let mut arena = TermArena::new();
+        let x_symbol = arena.declare("x", Sort::BitVec(8)).unwrap();
+        let y_symbol = arena.declare("y", Sort::BitVec(8)).unwrap();
+        let x = arena.var(x_symbol);
+        let y = arena.var(y_symbol);
+        let product = arena.bv_mul(x, y).unwrap();
+        let bit_three = arena.extract(3, 3, product).unwrap();
+
+        let once = analyze_estimate(&arena, &[bit_three]).unwrap();
+        let repeated = analyze_estimate(&arena, &[bit_three, bit_three]).unwrap();
+
+        // One extract bit + one product bit + all eight bits of both operands.
+        assert_eq!(once.demand_unique_bits, 18);
+        assert_eq!(once.multiplier_bits_demanded, 1);
+        assert_eq!(once.multiplier_bits_narrower, 7);
+        assert_eq!(once.demand_barriers_propagated, 1);
+        assert_eq!(repeated.demand_unique_bits, once.demand_unique_bits);
+        assert_eq!(repeated.demand_transfer_edges, once.demand_transfer_edges);
+        assert_eq!(
+            repeated.demand_barriers_propagated,
+            once.demand_barriers_propagated
         );
     }
 }

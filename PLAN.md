@@ -6,7 +6,7 @@ first and update it before ending a project-level work session.
 
 - Last consolidated: **2026-08-07**
 - Integrated repository state audited at:
-  `d09e6debb0466b24dbd5cd7bed382b80b35bdf1d`; the latest solver-code gate
+  `6d881816c5669d049a97b62d6e495109b53b876b`; the latest solver-code gate
   remains `3eb7eac442c64aee4b809ee059bf59d93b6160ee`, including A3 merge
   `0c31baf979d09270497b5512819fa6e8ed927de7`
 - Expected handoff state: clean local `main` equal to `origin/main`
@@ -39,7 +39,7 @@ checker/importer, and several consumers. It is not yet a drop-in Z3 replacement
 or a replacement for the Lean system.
 
 The audited integrated repository state is
-`d09e6debb0466b24dbd5cd7bed382b80b35bdf1d`; the A3 relevance-ladder and budget
+`6d881816c5669d049a97b62d6e495109b53b876b`; the A3 relevance-ladder and budget
 partition work is documentation-only and does not alter the solver-code
 evidence at `3eb7eac442`. Local `main` is clean and
 exactly equal to `origin/main`. Topic `ee5042dee` is pushed and exactly equals
@@ -132,6 +132,11 @@ repartitioned into 37 width-ladder timeouts, 11 all-reference-SAT pre-lowering
 clause-estimate refusals, three reference-UNSAT combined-theory timeouts, and
 one reference-UNSAT replay-detected model overflow. Fresh discrimination shows
 the four-row UNSAT tail is not a valid target for the SAT-only width ladder.
+The bounded estimate-attribution route also closed without production code.
+V1 exceeded its analysis-work cap; deduplicated v2 stayed bounded but its
+fresh-parse estimates differed from the exactly reproduced live route by 24/39
+clauses. The complete-record gate failed, so no mechanism or 200-row run is
+authorized and the 64,000,000 ceiling is unchanged. A3 yields to A4.
 The first aggregate A3 gate exposed one load-sensitive string/integer fixture:
 a hidden two-second default deadline could return `unknown` before the known
 `i = 500` witness under aggregate CPU contention. Commit `db7b426e8` removes
@@ -349,21 +354,19 @@ Work in this order unless new evidence reveals a wrong verdict, crash, data-loss
 risk, or invalid gate. Those are P0 and preempt the queue.
 
 The ordered ten-item programme remains A2 through A11. A1 and A2 are retained
-here as closed evidence boundaries; A3 is now the first active item.
+here as closed evidence boundaries. A3 remains incomplete, but all currently
+preregistered bounded mechanisms are closed negatively; A4 is now the first
+active item.
 
-**Immediate action.** The registered-`just` path repair at `259797459` is
-integrated and remotely confirmed by terminal-green docs run `31192792512` and
-CI run `31192792245`. Both the reconstruction-deadline cluster and the
-repeated-large-core four-group deletion experiment are rejected without
-retained solver code. The cheaper relevance-activated bound-ladder experiment
-also failed all six target observations and was removed, closing the five-row
-DPLL/core-search partition. The 52-row budget population is now repartitioned;
-start the next bounded diagnostic on the two smallest all-SAT pre-lowering
-estimate refusals (`p31818` and `p6984`). Attribute the conservative estimate
-before edits, preserve the 64,000,000 pre-allocation ceiling, and preregister a
-strictly additive fail-closed mechanism before changing the solver. Do not
-revive group deletion or relevance ladders, raise a cap, target the UNSAT
-combined-timeout/model-overflow tail, or start a 200-row run from these negative
+**Immediate action.** Start A4 by partitioning the exact 86-row QF_UFLIA
+reference-only residual among quantifier discovery, UF model construction,
+arithmetic participation, replay, and budget routing. Freeze the current
+94/200 versus 180/200 zero-disagreement entry, exact population/sidecar hashes,
+trace protocol, work bounds, and complete-record predicate before running a
+census or editing solver code. A3's reconstruction, large-core deletion,
+relevance activation, and clause-estimate attribution routes are all closed
+negative evidence; do not revive them, raise a cap, target the UNSAT
+combined-timeout/model-overflow tail, or run a QF_NIA 200-row sweep from those
 results.
 A2 is integrated and combined-main green, but this
 does not self-authorize C0 or live F2. No host probe, sentinel, NAS mutation, F3
@@ -460,15 +463,15 @@ UNSAT replay-detected model overflow. Fresh current-baseline traces show the
 four-row UNSAT tail is downstream of the owning exact-search stop and cannot be
 recovered soundly by the SAT-only width ladder.
 
-**Next slice.** Diagnose the two smallest all-reference-SAT clause-estimate
-refusals, `p31818` (81,482,280) and `p6984` (82,590,729), by attributing the
-conservative estimate by shared term/operator and comparing it with a
-memory-bounded demanded-lowering projection. Preregister exact targets,
-controls, work bounds, replay requirements, and a removal rule before solver
-edits. The mechanism must retain the 64,000,000 pre-allocation safety boundary
-and fail closed when a tighter bound cannot be proved. Do not revive probe-model
-reuse, reconstruction reservation, group deletion, or relevance ladders; do
-not raise general caps or run the 200-row list yet.
+**Next slice.** None is currently evidence-authorized. The v1/v2
+[`clause-estimate result`](docs/plan/qf-nia-a3-clause-estimate-attribution-v2-result-2026-08-07.md)
+closed the final selected route at its complete-record gate without changing
+production code. Preserve the 34/200 ledger, every negative control, the
+64,000,000 pre-allocation ceiling, and original-term replay, then move to A4.
+Resume A3 only when independent new evidence identifies a bounded mechanism;
+do not revive probe-model reuse, reconstruction reservation, group deletion,
+relevance ladders, or fresh-parse clause attribution, and do not raise general
+caps.
 
 **Exit.** One preregistered cluster improves a fresh whole-list result without
 losing any of the 34 decisions; all SAT answers replay on the original terms and
@@ -620,10 +623,10 @@ or remove dirty/unmerged state to meet a free-space target.
 
 | Workstream | State | Current boundary / next action |
 |---|---|---|
-| Integration and gates | `DONE`; current checkpoint | Local and remote `main` equal merge `d09e6debb`; topic `c92155454` remains remote. Broad stages passed, then the scoreboard rejected five in-run frontier rewrites. Exact restoration plus parity-docs, authority, links, and clean-tree checks passed. Prior docs `31198041045` are green; the new hosted run is unverified until terminal. |
+| Integration and gates | `DONE`; current checkpoint | Local and remote `main` equal `6d881816c`; topic `c92155454` remains remote. Broad stages passed, then the scoreboard rejected five in-run frontier rewrites. Exact restoration plus parity-docs, authority, links, and clean-tree checks passed. Prior docs `31198041045` are green; the latest hosted run remains a separately verified state. |
 | Arithmetic deadline reliability | `DONE` | Shared deadline, CAD polls, LRA ceilings, bounded DL probing, exact resume identity, and six fresh retained divisions are complete; see the 2026-08-06 closure note. |
 | Full-library measurement | `WIP`; A2 readiness `DONE` | The R1--R5 readiness stack is integrated by `8ed5ad089` and focused/aggregate/scoped/topic/full-main green; the real registered offline-build smoke passed. No live run, preparation root, or launch authority exists. A later live C0/F2 step requires separate review. |
-| QF_NIA breadth | `WIP` | Current clean result remains 34/200 versus 89/200. Reconstruction, large-core deletion, and cheap relevance activation are closed negatively without retained solver code; the last emitted hundreds of checked implications but gained 0/6 target decisions. The 52 budget rows split into 37 mixed width timeouts, 11 all-SAT estimate refusals, three UNSAT combined timeouts, and one UNSAT replay overflow. Next diagnose the two lowest all-SAT estimates (`p31818`, `p6984`) without raising the 64,000,000 safety ceiling. |
+| QF_NIA breadth | `WIP`, yielded | Current clean result remains 34/200 versus 89/200. Reconstruction, large-core deletion, relevance activation, and bounded clause-estimate attribution are closed negatively without production solver code. The final diagnostic failed its exact pipeline-boundary record gate; no mechanism or 200-row run is authorized and the 64,000,000 ceiling remains. Move to A4 unless independent new NIA evidence appears. |
 | QF_UFLIA breadth | `WIP` | 94/180; A4 owns causal residual partition. |
 | LRA/IDL/RDL | `WIP` | Current results are 86/146, 68/124, and 105/155; A5 owns cross-division consolidation. |
 | QF_BV/QF_SLIA/UF/QF_ABV | `WIP`, strong selected cells | Preserve current ledgers; do not prioritize small score gains above A2–A6. |
