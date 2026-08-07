@@ -4242,6 +4242,7 @@ mod tests {
         );
     }
 
+    #[allow(clippy::unnecessary_wraps)] // matches the fallible reconstruction-oracle contract
     fn declining_reconstruction_oracle(
         _arena: &TermArena,
         _lits: &[TermId],
@@ -4253,6 +4254,7 @@ mod tests {
         }))
     }
 
+    #[allow(clippy::unnecessary_wraps)] // matches the fallible reconstruction-oracle contract
     fn inconsistent_reconstruction_oracle(
         _arena: &TermArena,
         _lits: &[TermId],
