@@ -358,14 +358,13 @@ here as closed evidence boundaries. A3 remains incomplete, but all currently
 preregistered bounded mechanisms are closed negatively; A4 is now the first
 active item.
 
-**Immediate action.** Recover A4's exact evidence boundary before classifying
-QF_UFLIA. The ledger names `bench-results/parity-details/QF_UFLIA.tsv` and
-records SHA-256 `921299a9…`, but that sidecar was never committed and no repo,
-stash, or NAS copy remains. Do not infer the 86 rows from aggregate prose.
-Preregister a current-main capture over list SHA-256 `f88e6789…` that commits an
-exact-path sidecar plus complete route traces and must reproduce 94/200 versus
-180/200, 86 reference-only, and zero disagreements or stop. Freeze budgets and
-the complete-record predicate before execution or solver edits. A3's negative
+**Immediate action.** Finish A4 evidence recovery under its v2 preregistration.
+V1 correctly stopped: frozen-list rows 1--26 are valid wide-integer inputs that
+terminate at typed SMT-LIB `Unsupported`, so schema-1 dispatch traces cannot
+exist. V2 retains explicit `smtlib-ingest` provenance, keeps ADR-0376's
+zero-yield IR widening selection-ineligible, and still must commit the exact
+sidecar/traces and reproduce 94/200 versus 180/200, 86 reference-only, and zero
+disagreements or stop. No solver edit or cap change is authorized. A3's negative
 routes remain closed. A2's green readiness still does not authorize C0/F2,
 host/NAS mutation, allocation, or a solver fleet. P0 failures preempt the queue.
 
@@ -480,10 +479,10 @@ failures, and do not raise general caps to convert time into apparent breadth.
 **Why now.** QF_UFLIA is 94/180 (52.2%) with zero Axeyum-only decisions and 86
 reference-only cases, making it the clearest combined-theory depth gap.
 
-**Next slice.** Regenerate and retain the missing exact-path sidecar together
-with complete route traces, then partition only a validated 86-row residual
-among quantifier discovery, UF model construction, arithmetic participation,
-replay, and budget routing.
+**Next slice.** Apply the preregistered v2 telemetry-only repair, regenerate the
+missing exact-path sidecar with complete dispatch-or-ingest provenance, and
+partition only a validated 86-row residual. The 26 known wide-integer ingest
+rows remain explicit ADR-0376 controls, not a revived IR-widening target.
 
 **Exit.** One preregistered, replay-checked cluster improves the clean full-list
 result without losing any of the 94 decisions or weakening retained controls.
