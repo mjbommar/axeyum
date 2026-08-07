@@ -27,6 +27,7 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 FROZEN_LIST = ROOT / "bench-results/parity-lists/QF_UFLIA.txt"
 FROZEN_LIST_SHA256 = "f88e67890fae78fb27bb35ecc0f19532dc3bc77fd7f1ac7453fcda343b36fb35"
 FROZEN_ROWS = 200
+EXPECTED_INGEST_ROWS = 26
 REFERENCE_BINARY = pathlib.Path("/nas3/data/axeyum/harness/bin/cvc5")
 REFERENCE_SHA256 = "7562a8b0b835e3eaad5f1a7b4616cd762350cf567b6be03d7e8ee24fa5ced5ee"
 REFERENCE_VERSION = "cvc5 1.3.4 [git f3b21c4 on branch HEAD]"
@@ -77,6 +78,9 @@ ARITHMETIC_ROUTES = {
     "uf-arith-lazy-overbound",
     "uf-arith-lazy-overbound-pre-lia",
 }
+WIDE_INTEGER_DETAIL = re.compile(
+    r"^integer literal `([0-9]+)` exceeds the modeled `Int` range$"
+)
 BUDGET_KINDS = {
     "timeout",
     "resource-limit",
@@ -248,16 +252,53 @@ def validate_trace(trace: object, file: str) -> dict[str, Any]:
 
 
 def validate_axeyum_records(
-    records: Sequence[dict[str, Any]], population: Sequence[str]
+    records: Sequence[dict[str, Any]],
+    population: Sequence[str],
+    *,
+    expected_ingest_rows: int = EXPECTED_INGEST_ROWS,
 ) -> None:
     validate_order(records, population, "Axeyum stream")
-    for record in records:
+    ingest_indexes = []
+    for index, record in enumerate(records):
         file = str(record["file"])
+        if record.get("status") == "ingest-unsupported":
+            expected = {
+                "file",
+                "status",
+                "verdict",
+                "route",
+                "reason",
+                "kind",
+                "detail",
+            }
+            if set(record) != expected:
+                raise CensusError(f"{file}: typed ingest record has unexpected fields")
+            if (
+                record.get("verdict") != "unknown"
+                or record.get("route") != "smtlib-ingest"
+                or record.get("reason") != "unsupported"
+                or record.get("kind") != "wide-integer-literal"
+                or not isinstance(record.get("detail"), str)
+                or WIDE_INTEGER_DETAIL.fullmatch(record["detail"]) is None
+            ):
+                raise CensusError(f"{file}: invalid typed wide-integer ingest record")
+            ingest_indexes.append(index)
+            continue
         if record.get("status") != "decided":
-            raise CensusError(f"{file}: Axeyum status is not decided: {record.get('status')!r}")
+            raise CensusError(
+                f"{file}: Axeyum status is neither decided nor typed ingest: "
+                f"{record.get('status')!r}"
+            )
         if record.get("verdict") not in ALLOWED_VERDICTS:
             raise CensusError(f"{file}: invalid Axeyum verdict {record.get('verdict')!r}")
         validate_trace(record.get("trace"), file)
+    expected_indexes = list(range(expected_ingest_rows))
+    if ingest_indexes != expected_indexes:
+        raise CensusError(
+            "typed wide-integer ingest rows differ: "
+            f"got {[index + 1 for index in ingest_indexes]}, "
+            f"expected rows 1..{expected_ingest_rows}"
+        )
 
 
 def validate_reference_records(
@@ -409,12 +450,21 @@ def build_census(cases: Sequence[dict[str, Any]]) -> dict[str, Any]:
     if unclassified:
         raise CensusError(f"causal census has {unclassified} unclassified rows")
 
-    groups: dict[tuple[str, str, str, str, str, str], list[str]] = defaultdict(list)
+    groups: dict[tuple[str, str, str, str, str, str], list[dict[str, Any]]] = defaultdict(list)
     for case in cases:
-        groups[lossless_key(case) + (case["reference"],)].append(case["file"])
+        groups[lossless_key(case) + (case["reference"],)].append(case)
     group_rows = []
-    for key, files in groups.items():
+    for key, grouped_cases in groups.items():
         bucket, route, reason, kind, detail, reference = key
+        files = [case["file"] for case in grouped_cases]
+        eligible = all(case.get("selection_eligible", True) for case in grouped_cases)
+        ineligible_reasons = sorted(
+            {
+                str(case["selection_ineligible_reason"])
+                for case in grouped_cases
+                if not case.get("selection_eligible", True)
+            }
+        )
         group_rows.append(
             {
                 "bucket": bucket,
@@ -425,6 +475,8 @@ def build_census(cases: Sequence[dict[str, Any]]) -> dict[str, Any]:
                 "reference_verdict": reference,
                 "count": len(files),
                 "files": files,
+                "selection_eligible": eligible,
+                "selection_ineligible_reasons": ineligible_reasons,
             }
         )
     group_rows.sort(
@@ -444,7 +496,9 @@ def build_census(cases: Sequence[dict[str, Any]]) -> dict[str, Any]:
         "rows": len(cases),
         "bucket_counts": dict(sorted(bucket_counts.items())),
         "lossless_groups": group_rows,
-        "selection_candidates": [row for row in group_rows if row["count"] >= 3],
+        "selection_candidates": [
+            row for row in group_rows if row["count"] >= 3 and row["selection_eligible"]
+        ],
         "cases": list(cases),
     }
 
@@ -455,8 +509,11 @@ def validate_and_derive(
     reference_records: Sequence[dict[str, Any]],
     *,
     expected_counts: dict[str, int] = EXPECTED_COUNTS,
+    expected_ingest_rows: int = EXPECTED_INGEST_ROWS,
 ) -> tuple[dict[str, int], str, list[str], dict[str, Any]]:
-    validate_axeyum_records(axeyum_records, population)
+    validate_axeyum_records(
+        axeyum_records, population, expected_ingest_rows=expected_ingest_rows
+    )
     validate_reference_records(reference_records, population)
 
     counts = {
@@ -506,8 +563,24 @@ def validate_and_derive(
             ]
         )
         if not a_solved and r_solved:
-            trace = validate_trace(axeyum["trace"], file)
-            bucket, declines = classify_case(trace, source_has_quantifier)
+            if axeyum["status"] == "ingest-unsupported":
+                boundary = {
+                    "route": "smtlib-ingest",
+                    "outcome": "declined",
+                    "reason": "unsupported",
+                    "kind": "wide-integer-literal",
+                    "detail": axeyum["detail"],
+                }
+                trace = None
+                bucket = "arithmetic-participation"
+                declines = [boundary]
+                selection_eligible = False
+                selection_ineligible_reason = "ADR-0376 measured non-cause"
+            else:
+                trace = validate_trace(axeyum["trace"], file)
+                bucket, declines = classify_case(trace, source_has_quantifier)
+                selection_eligible = True
+                selection_ineligible_reason = None
             terminal = declines[-1]
             causal_cases.append(
                 {
@@ -523,6 +596,8 @@ def validate_and_derive(
                     ),
                     "bucket": bucket,
                     "trace": trace,
+                    "selection_eligible": selection_eligible,
+                    "selection_ineligible_reason": selection_ineligible_reason,
                 }
             )
 
@@ -576,7 +651,46 @@ def metadata_base(
     }
 
 
-def capture_axeyum(binary: pathlib.Path, output: pathlib.Path, metadata_path: pathlib.Path) -> None:
+def write_failure_metadata(
+    path: pathlib.Path,
+    *,
+    schema: str,
+    base: dict[str, Any],
+    started_utc: str,
+    started_monotonic: float,
+    load_start: str,
+    error: BaseException,
+    stdout: bytes,
+    stderr: bytes,
+    exit_code: int | None,
+    emitted_rows: int,
+) -> None:
+    record = {
+        "schema": schema,
+        **base,
+        "started_utc": started_utc,
+        "ended_utc": utc_now(),
+        "elapsed_ms": round((time.monotonic() - started_monotonic) * 1000),
+        "load_start": load_start,
+        "load_end": load_average(),
+        "exit_code": exit_code,
+        "emitted_rows": emitted_rows,
+        "first_validator_error": str(error),
+        "stdout_sha256": sha256_bytes(stdout),
+        "stdout_bytes": len(stdout),
+        "stderr_sha256": sha256_bytes(stderr),
+        "stderr_bytes": len(stderr),
+        "credited": False,
+    }
+    atomic_write_text(path, json_text(record))
+
+
+def capture_axeyum(
+    binary: pathlib.Path,
+    output: pathlib.Path,
+    metadata_path: pathlib.Path,
+    failure_metadata_path: pathlib.Path,
+) -> None:
     population = read_population(FROZEN_LIST)
     if not binary.is_file() or not os.access(binary, os.X_OK):
         raise CensusError(f"Axeyum capture binary is not executable: {binary}")
@@ -598,6 +712,7 @@ def capture_axeyum(binary: pathlib.Path, output: pathlib.Path, metadata_path: pa
         "--json",
     ]
     identity = git_capture_identity()
+    base = metadata_base(command, binary, identity)
     require_capture_host()
     started_utc = utc_now()
     load_start = load_average()
@@ -605,8 +720,9 @@ def capture_axeyum(binary: pathlib.Path, output: pathlib.Path, metadata_path: pa
     with capture_lock(), tempfile.TemporaryDirectory(prefix="axeyum-uflia-a4-") as temporary:
         stdout_path = pathlib.Path(temporary) / "stdout.jsonl"
         stderr_path = pathlib.Path(temporary) / "stderr.bin"
-        with stdout_path.open("wb") as stdout, stderr_path.open("wb") as stderr:
-            try:
+        result: subprocess.CompletedProcess[bytes] | None = None
+        try:
+            with stdout_path.open("wb") as stdout, stderr_path.open("wb") as stderr:
                 result = subprocess.run(
                     command,
                     cwd=ROOT,
@@ -615,23 +731,41 @@ def capture_axeyum(binary: pathlib.Path, output: pathlib.Path, metadata_path: pa
                     timeout=6010,
                     check=False,
                 )
-            except subprocess.TimeoutExpired as error:
-                raise CensusError("Axeyum outer process guard expired") from error
-        if result.returncode != 0:
-            raise CensusError(f"Axeyum capture exited {result.returncode}")
-        records = read_jsonl(stdout_path)
-        validate_axeyum_records(records, population)
-        raw = stdout_path.read_bytes()
-        stderr_raw = stderr_path.read_bytes()
+            if result.returncode != 0:
+                raise CensusError(f"Axeyum capture exited {result.returncode}")
+            records = read_jsonl(stdout_path)
+            validate_axeyum_records(records, population)
+            raw = stdout_path.read_bytes()
+            stderr_raw = stderr_path.read_bytes()
+        except (CensusError, OSError, subprocess.SubprocessError) as error:
+            failure_stdout = stdout_path.read_bytes() if stdout_path.is_file() else b""
+            failure_stderr = stderr_path.read_bytes() if stderr_path.is_file() else b""
+            write_failure_metadata(
+                failure_metadata_path,
+                schema="axeyum-qf-uflia-a4-axeyum-failure-v2",
+                base=base,
+                started_utc=started_utc,
+                started_monotonic=started,
+                load_start=load_start,
+                error=error,
+                stdout=failure_stdout,
+                stderr=failure_stderr,
+                exit_code=None if result is None else result.returncode,
+                emitted_rows=failure_stdout.count(b"\n"),
+            )
+            raise
     metadata = {
-        "schema": "axeyum-qf-uflia-a4-axeyum-capture-v1",
-        **metadata_base(command, binary, identity),
+        "schema": "axeyum-qf-uflia-a4-axeyum-capture-v2",
+        **base,
         "started_utc": started_utc,
         "ended_utc": utc_now(),
         "elapsed_ms": round((time.monotonic() - started) * 1000),
         "load_start": load_start,
         "load_end": load_average(),
         "records": len(records),
+        "ingest_unsupported_records": sum(
+            record["status"] == "ingest-unsupported" for record in records
+        ),
         "stdout_sha256": sha256_bytes(raw),
         "stdout_bytes": len(raw),
         "stderr_sha256": sha256_bytes(stderr_raw),
@@ -639,6 +773,7 @@ def capture_axeyum(binary: pathlib.Path, output: pathlib.Path, metadata_path: pa
     }
     atomic_write_bytes(output, raw)
     atomic_write_text(metadata_path, json_text(metadata))
+    failure_metadata_path.unlink(missing_ok=True)
 
 
 def parse_reference_result(returncode: int, stdout: bytes, stderr: bytes) -> str:
@@ -660,7 +795,10 @@ def parse_reference_result(returncode: int, stdout: bytes, stderr: bytes) -> str
 
 
 def capture_reference(
-    binary: pathlib.Path, output: pathlib.Path, metadata_path: pathlib.Path
+    binary: pathlib.Path,
+    output: pathlib.Path,
+    metadata_path: pathlib.Path,
+    failure_metadata_path: pathlib.Path,
 ) -> None:
     population = read_population(FROZEN_LIST)
     if sha256_file(binary) != REFERENCE_SHA256:
@@ -685,16 +823,20 @@ def capture_reference(
         f"--tlimit={TIMEOUT_MS}",
     ]
     identity = git_capture_identity()
+    command_template = [*base_command, "FILE"]
+    base = metadata_base(command_template, binary, identity)
     require_capture_host()
     started_utc = utc_now()
     load_start = load_average()
     started = time.monotonic()
     records = []
-    with capture_lock():
-        for index, file in enumerate(population, start=1):
-            command = [*base_command, file]
-            row_started = time.monotonic()
-            try:
+    last_stderr = b""
+    last_exit_code: int | None = None
+    try:
+        with capture_lock():
+            for index, file in enumerate(population, start=1):
+                command = [*base_command, file]
+                row_started = time.monotonic()
                 result = subprocess.run(
                     command,
                     cwd=ROOT,
@@ -703,29 +845,50 @@ def capture_reference(
                     timeout=TIMEOUT_MS / 1000 + OUTER_MARGIN_SECONDS + 3,
                     check=False,
                 )
-            except subprocess.TimeoutExpired as error:
-                raise CensusError(f"adapter process guard expired at row {index}: {file}") from error
-            elapsed_ms = round((time.monotonic() - row_started) * 1000)
-            outcome = parse_reference_result(result.returncode, result.stdout, result.stderr)
-            records.append(
-                {
-                    "file": file,
-                    "outcome": outcome,
-                    "elapsed_ms": elapsed_ms,
-                    "exit_code": result.returncode,
-                    "stdout_sha256": sha256_bytes(result.stdout),
-                    "stderr_sha256": sha256_bytes(result.stderr),
-                    "stdout_bytes": len(result.stdout),
-                    "stderr_bytes": len(result.stderr),
-                }
-            )
-            print(f"reference {index}/{len(population)} {outcome} {elapsed_ms}ms", file=sys.stderr)
-    validate_reference_records(records, population)
+                last_stderr = result.stderr
+                last_exit_code = result.returncode
+                elapsed_ms = round((time.monotonic() - row_started) * 1000)
+                outcome = parse_reference_result(result.returncode, result.stdout, result.stderr)
+                records.append(
+                    {
+                        "file": file,
+                        "outcome": outcome,
+                        "elapsed_ms": elapsed_ms,
+                        "exit_code": result.returncode,
+                        "stdout_sha256": sha256_bytes(result.stdout),
+                        "stderr_sha256": sha256_bytes(result.stderr),
+                        "stdout_bytes": len(result.stdout),
+                        "stderr_bytes": len(result.stderr),
+                    }
+                )
+                print(
+                    f"reference {index}/{len(population)} {outcome} {elapsed_ms}ms",
+                    file=sys.stderr,
+                )
+        validate_reference_records(records, population)
+    except (CensusError, OSError, subprocess.SubprocessError) as error:
+        partial = "".join(
+            json.dumps(row, sort_keys=True, separators=(",", ":")) + "\n"
+            for row in records
+        ).encode("utf-8")
+        write_failure_metadata(
+            failure_metadata_path,
+            schema="axeyum-qf-uflia-a4-reference-failure-v2",
+            base=base,
+            started_utc=started_utc,
+            started_monotonic=started,
+            load_start=load_start,
+            error=error,
+            stdout=partial,
+            stderr=last_stderr,
+            exit_code=last_exit_code,
+            emitted_rows=len(records),
+        )
+        raise
     raw = "".join(json.dumps(row, sort_keys=True, separators=(",", ":")) + "\n" for row in records)
-    command_template = [*base_command, "FILE"]
     metadata = {
-        "schema": "axeyum-qf-uflia-a4-reference-capture-v1",
-        **metadata_base(command_template, binary, identity),
+        "schema": "axeyum-qf-uflia-a4-reference-capture-v2",
+        **base,
         "reference_version": version,
         "started_utc": started_utc,
         "ended_utc": utc_now(),
@@ -739,6 +902,7 @@ def capture_reference(
     }
     atomic_write_text(output, raw)
     atomic_write_text(metadata_path, json_text(metadata))
+    failure_metadata_path.unlink(missing_ok=True)
 
 
 def validate_metadata(
@@ -770,11 +934,11 @@ def retain_capture(
     axeyum_records = read_jsonl(axeyum_path)
     reference_records = read_jsonl(reference_path)
     axeyum_metadata = validate_metadata(
-        axeyum_metadata_path, "axeyum-qf-uflia-a4-axeyum-capture-v1", axeyum_path
+        axeyum_metadata_path, "axeyum-qf-uflia-a4-axeyum-capture-v2", axeyum_path
     )
     reference_metadata = validate_metadata(
         reference_metadata_path,
-        "axeyum-qf-uflia-a4-reference-capture-v1",
+        "axeyum-qf-uflia-a4-reference-capture-v2",
         reference_path,
     )
     if axeyum_metadata["git_commit"] != reference_metadata["git_commit"]:
@@ -803,7 +967,7 @@ def retain_capture(
         census_path,
     ]
     manifest = {
-        "schema": "axeyum-qf-uflia-a4-capture-manifest-v1",
+        "schema": "axeyum-qf-uflia-a4-capture-manifest-v2",
         "population": {
             "path": str(FROZEN_LIST.relative_to(ROOT)),
             "sha256": FROZEN_LIST_SHA256,
@@ -829,11 +993,13 @@ def main() -> int:
     axeyum.add_argument("--binary", type=pathlib.Path, required=True)
     axeyum.add_argument("--output", type=pathlib.Path, required=True)
     axeyum.add_argument("--metadata", type=pathlib.Path, required=True)
+    axeyum.add_argument("--failure-metadata", type=pathlib.Path, required=True)
 
     reference = subparsers.add_parser("capture-reference")
     reference.add_argument("--binary", type=pathlib.Path, default=REFERENCE_BINARY)
     reference.add_argument("--output", type=pathlib.Path, required=True)
     reference.add_argument("--metadata", type=pathlib.Path, required=True)
+    reference.add_argument("--failure-metadata", type=pathlib.Path, required=True)
 
     validate = subparsers.add_parser("validate")
     validate.add_argument("--axeyum", type=pathlib.Path, required=True)
@@ -854,9 +1020,13 @@ def main() -> int:
     args = parser.parse_args()
     try:
         if args.command == "capture-axeyum":
-            capture_axeyum(args.binary.resolve(), args.output, args.metadata)
+            capture_axeyum(
+                args.binary.resolve(), args.output, args.metadata, args.failure_metadata
+            )
         elif args.command == "capture-reference":
-            capture_reference(args.binary.resolve(), args.output, args.metadata)
+            capture_reference(
+                args.binary.resolve(), args.output, args.metadata, args.failure_metadata
+            )
         else:
             manifest = retain_capture(
                 args.axeyum,

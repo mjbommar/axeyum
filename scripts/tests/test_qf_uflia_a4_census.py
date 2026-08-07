@@ -123,7 +123,11 @@ def test_validate_and_derive_reproduces_counts_and_replay_bucket(
 ) -> None:
     population, axeyum, reference, expected = fixture(tmp_path)
     counts, sidecar, residual, census = CENSUS.validate_and_derive(
-        population, axeyum, reference, expected_counts=expected
+        population,
+        axeyum,
+        reference,
+        expected_counts=expected,
+        expected_ingest_rows=0,
     )
     assert counts == expected
     assert residual == [str(tmp_path / "residual.smt2")]
@@ -139,7 +143,13 @@ def test_validate_rejects_incomplete_axeyum_record(tmp_path: pathlib.Path) -> No
     population, axeyum, reference, expected = fixture(tmp_path)
     axeyum[1].pop("trace")
     with pytest.raises(CENSUS.CensusError, match="missing schema-1 route trace"):
-        CENSUS.validate_and_derive(population, axeyum, reference, expected_counts=expected)
+        CENSUS.validate_and_derive(
+            population,
+            axeyum,
+            reference,
+            expected_counts=expected,
+            expected_ingest_rows=0,
+        )
 
 
 def test_validate_rejects_operational_reference_outcome(tmp_path: pathlib.Path) -> None:
@@ -147,7 +157,13 @@ def test_validate_rejects_operational_reference_outcome(tmp_path: pathlib.Path) 
     reference[1]["outcome"] = "error"
     reference[1]["exit_code"] = 2
     with pytest.raises(CENSUS.CensusError, match="invalid reference outcome"):
-        CENSUS.validate_and_derive(population, axeyum, reference, expected_counts=expected)
+        CENSUS.validate_and_derive(
+            population,
+            axeyum,
+            reference,
+            expected_counts=expected,
+            expected_ingest_rows=0,
+        )
 
 
 def test_validate_rejects_aggregate_drift(tmp_path: pathlib.Path) -> None:
@@ -155,7 +171,13 @@ def test_validate_rejects_aggregate_drift(tmp_path: pathlib.Path) -> None:
     wrong = dict(expected)
     wrong["reference_only"] = 2
     with pytest.raises(CENSUS.CensusError, match="aggregate mismatch"):
-        CENSUS.validate_and_derive(population, axeyum, reference, expected_counts=wrong)
+        CENSUS.validate_and_derive(
+            population,
+            axeyum,
+            reference,
+            expected_counts=wrong,
+            expected_ingest_rows=0,
+        )
 
 
 def test_bucket_priority_and_detail_normalization() -> None:
@@ -200,3 +222,111 @@ def test_read_jsonl_rejects_blank_rows(tmp_path: pathlib.Path) -> None:
     path.write_text(json.dumps({"file": "a"}) + "\n\n", encoding="utf-8")
     with pytest.raises(CENSUS.CensusError, match="blank JSONL row"):
         CENSUS.read_jsonl(path)
+
+
+def typed_ingest_record(file: pathlib.Path) -> dict[str, object]:
+    return {
+        "file": str(file),
+        "status": "ingest-unsupported",
+        "verdict": "unknown",
+        "route": "smtlib-ingest",
+        "reason": "unsupported",
+        "kind": "wide-integer-literal",
+        "detail": (
+            "integer literal `115792089237316195423570985008687907853269984665640564039457"
+            "584007913129639936` exceeds the modeled `Int` range"
+        ),
+    }
+
+
+def test_typed_ingest_is_retained_but_selection_ineligible(tmp_path: pathlib.Path) -> None:
+    files = [tmp_path / f"case-{index}.smt2" for index in range(4)]
+    for file in files:
+        file.write_text("(set-info :status sat)\n", encoding="utf-8")
+    axeyum = [typed_ingest_record(files[0])]
+    axeyum.extend(
+        axeyum_record(
+            file,
+            "unknown",
+            attempt("uf-arithmetic", "incomplete", "arithmetic shape incomplete", "incomplete"),
+        )
+        for file in files[1:]
+    )
+    reference = [reference_record(file, "sat") for file in files]
+    expected = {
+        "rows": 4,
+        "axeyum_solved": 0,
+        "reference_solved": 4,
+        "both": 0,
+        "axeyum_only": 0,
+        "reference_only": 4,
+        "disagreements": 0,
+    }
+    _, _, residual, census = CENSUS.validate_and_derive(
+        [str(file) for file in files],
+        axeyum,
+        reference,
+        expected_counts=expected,
+        expected_ingest_rows=1,
+    )
+    assert residual == [str(file) for file in files]
+    ingest = census["cases"][0]
+    assert ingest["trace"] is None
+    assert ingest["bucket"] == "arithmetic-participation"
+    assert ingest["selection_eligible"] is False
+    assert ingest["terminal_substantive_decline"]["route"] == "smtlib-ingest"
+    assert all(
+        candidate["terminal_route"] != "smtlib-ingest"
+        for candidate in census["selection_candidates"]
+    )
+    assert census["selection_candidates"][0]["count"] == 3
+
+
+def test_typed_ingest_requires_exact_shape_count_and_prefix(tmp_path: pathlib.Path) -> None:
+    first = tmp_path / "first.smt2"
+    second = tmp_path / "second.smt2"
+    first.write_text("(set-info :status unknown)\n", encoding="utf-8")
+    second.write_text("(set-info :status unknown)\n", encoding="utf-8")
+    valid = typed_ingest_record(first)
+    decided = axeyum_record(
+        second, "unknown", attempt("uf-arithmetic", "budget", "timeout")
+    )
+    CENSUS.validate_axeyum_records(
+        [valid, decided], [str(first), str(second)], expected_ingest_rows=1
+    )
+    invalid_detail = dict(valid)
+    invalid_detail["detail"] = "operator `x` is unsupported"
+    with pytest.raises(CENSUS.CensusError, match="invalid typed wide-integer"):
+        CENSUS.validate_axeyum_records(
+            [invalid_detail, decided], [str(first), str(second)], expected_ingest_rows=1
+        )
+    moved = typed_ingest_record(second)
+    first_decided = axeyum_record(
+        first, "unknown", attempt("uf-arithmetic", "budget", "timeout")
+    )
+    with pytest.raises(CENSUS.CensusError, match="typed wide-integer ingest rows differ"):
+        CENSUS.validate_axeyum_records(
+            [first_decided, moved], [str(first), str(second)], expected_ingest_rows=1
+        )
+
+
+def test_failure_metadata_is_bounded_and_uncredited(tmp_path: pathlib.Path) -> None:
+    path = tmp_path / "failure.json"
+    CENSUS.write_failure_metadata(
+        path,
+        schema="test-failure-v2",
+        base={"git_commit": "a", "git_upstream": "a"},
+        started_utc="2026-08-07T00:00:00Z",
+        started_monotonic=0.0,
+        load_start="1 1 1",
+        error=CENSUS.CensusError("first failure"),
+        stdout=b"one\n",
+        stderr=b"bad",
+        exit_code=2,
+        emitted_rows=1,
+    )
+    record = json.loads(path.read_text(encoding="utf-8"))
+    assert record["credited"] is False
+    assert record["emitted_rows"] == 1
+    assert record["first_validator_error"] == "first failure"
+    assert record["stdout_sha256"] == CENSUS.sha256_bytes(b"one\n")
