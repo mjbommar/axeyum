@@ -111,3 +111,38 @@ def test_analyze_traces_requires_exact_population_order(tmp_path: pathlib.Path) 
     )
     with pytest.raises(CENSUS.CensusError, match="trace identity/order differs"):
         CENSUS.analyze_traces(["first.smt2"], trace_path)
+
+
+def test_analyze_traces_classifies_ingest_resource_limit_without_route_trace(
+    tmp_path: pathlib.Path,
+) -> None:
+    trace_path = tmp_path / "trace.jsonl"
+    trace_path.write_text(
+        '{"file":"first.smt2","status":"ingest-resource-limit",'
+        '"verdict":"unknown","detail":"distinct pair ceiling"}\n',
+        encoding="utf-8",
+    )
+    result = CENSUS.analyze_traces(["first.smt2"], trace_path)
+    assert result["schema"] == "axeyum-qf-nia-a3-causal-census-v2"
+    assert result["buckets"] == [
+        {
+            "route": "smtlib-ingest",
+            "reason": "resource-limit",
+            "kind": "ResourceLimit",
+            "count": 1,
+        }
+    ]
+    assert result["cases"][0]["trace"] is None
+    assert result["cases"][0]["first_causal_decline"]["detail"] == "distinct pair ceiling"
+
+
+def test_analyze_traces_rejects_malformed_resource_record(tmp_path: pathlib.Path) -> None:
+    trace_path = tmp_path / "trace.jsonl"
+    trace_path.write_text(
+        '{"file":"first.smt2","status":"ingest-resource-limit",'
+        '"verdict":"unknown","detail":"distinct pair ceiling",'
+        '"trace":{"schema_version":1,"attempts":[]}}\n',
+        encoding="utf-8",
+    )
+    with pytest.raises(CENSUS.CensusError, match="unexpectedly has a route trace"):
+        CENSUS.analyze_traces(["first.smt2"], trace_path)

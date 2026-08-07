@@ -167,12 +167,32 @@ def analyze_traces(residual: list[str], trace_path: pathlib.Path) -> dict[str, o
     buckets: Counter[tuple[str, str, str]] = Counter()
     cases = []
     for record in records:
-        if record.get("status") != "decided" or not isinstance(record.get("trace"), dict):
+        status = record.get("status")
+        trace: dict[str, object] | None
+        if status == "decided" and isinstance(record.get("trace"), dict):
+            trace = record["trace"]
+            if trace.get("schema_version") != 1:
+                raise CensusError(f"unsupported trace schema for {record['file']}")
+            decline = first_causal_decline(trace)
+        elif status == "ingest-resource-limit":
+            detail = record.get("detail")
+            if record.get("verdict") != "unknown" or not isinstance(detail, str) or not detail:
+                raise CensusError(
+                    f"invalid ingest resource-limit record for {record.get('file')}"
+                )
+            if "trace" in record:
+                raise CensusError(
+                    f"ingest resource-limit unexpectedly has a route trace for {record['file']}"
+                )
+            trace = None
+            decline = {
+                "route": "smtlib-ingest",
+                "reason": "resource-limit",
+                "kind": "ResourceLimit",
+                "detail": detail,
+            }
+        else:
             raise CensusError(f"trace capture is incomplete for {record.get('file')}")
-        trace = record["trace"]
-        if trace.get("schema_version") != 1:
-            raise CensusError(f"unsupported trace schema for {record['file']}")
-        decline = first_causal_decline(trace)
         key = (decline["route"], decline["reason"], decline.get("kind", ""))
         buckets[key] += 1
         cases.append(
@@ -185,12 +205,13 @@ def analyze_traces(residual: list[str], trace_path: pathlib.Path) -> dict[str, o
         )
 
     return {
-        "schema": "axeyum-qf-nia-a3-causal-census-v1",
+        "schema": "axeyum-qf-nia-a3-causal-census-v2",
         "trace_jsonl_path": str(trace_path),
         "trace_jsonl_sha256": sha256_file(trace_path),
         "rows": len(cases),
         "classification_rule": (
-            "first ordered declined attempt after probe whose reason is neither "
+            "ingest-resource-limit maps to smtlib-ingest/resource-limit/ResourceLimit; "
+            "otherwise first ordered declined attempt after probe whose reason is neither "
             "not-applicable nor unsupported"
         ),
         "buckets": [
