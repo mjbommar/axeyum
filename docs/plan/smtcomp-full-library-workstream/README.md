@@ -455,10 +455,13 @@ gate.
    locked/offline build, schema-v3 source/tool/output/binary/run/completion
    replay, 52 focused tests / 82 subtests, the 165-test aggregate, a green
    scoped gate, and a successful real build smoke. The exact pushed topic
-   `1f723bef6` also passed the clean R3-isolated full gate with external
-   frontier artifacts and a clean tracked tree. Integration-owner review,
-   merge preview, and combined-main gates remain. Live preparation is still
-   prohibited.
+   `2925efea5` also passed the clean R3-isolated full gate with external
+   frontier artifacts and a clean tracked tree. Integration-owner review found
+   the exact topic strictly ahead with no divergence, the synthetic merge was
+   conflict-free, and merge `8ed5ad089` integrated the stack. Focused
+   post-merge gates and one uninterrupted combined-main `just check` passed
+   with all five frontier artifacts external and the tracked tree clean. Live
+   preparation is still prohibited.
 
 The same implementation rule continues to apply: prove each new mechanism and
 its destructive/interruption tests on a tiny corpus before spending the full
@@ -601,11 +604,11 @@ NAS (shared, corpus read-only in practice):
    audited current main and must not be merged or executed. The
    [A2 audit](../smtcomp-a2-stale-branch-audit-2026-08-06.md) classifies all 19
    unique commits and records the current-main process-free port. R5 is
-   implemented, mutation-tested, pushed, and full-topic gated on
-   `agent/smtcomp/a2-readiness-port`; follow its
+   implemented, mutation-tested, pushed, full-topic gated, and integrated by
+   merge `8ed5ad089`; follow its
    [implementation result](../smtcomp-credited-full-preparation-f2-live-capture-r5-implementation-2026-08-06.md)
-   through integration-owner review, merge preview, and combined-main gates. Do not
-   probe hosts, run sentinels, mutate the NAS, publish a live preparation root,
+   as the completed process-free A2 boundary. Do not probe hosts, run
+   sentinels, mutate the NAS, publish a live preparation root,
    construct F3 acceptance, allocate resources, or launch a solver from this
    checkpoint. Those actions require the complete corrected stack integrated
    on exact green main and a separate review/authorization. The active solver

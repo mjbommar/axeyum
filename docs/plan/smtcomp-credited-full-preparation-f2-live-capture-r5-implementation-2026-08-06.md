@@ -1,7 +1,7 @@
 # SMT-COMP credited full-preparation R5 implementation
 
-Status: implemented and fully gated on the isolated topic; integration, live
-F2, and every solver action remain prohibited
+Status: implemented, integrated, and combined-main green; live F2 and every
+solver action remain prohibited
 
 Date: 2026-08-06
 
@@ -14,17 +14,17 @@ Preregistered contract:
 
 ## Verdict
 
-R5's source-to-binary authority gap is closed in the isolated
-`agent/smtcomp/a2-readiness-port` topic. Live capture no longer accepts
+R5's source-to-binary authority gap is closed on current main after integration
+of `agent/smtcomp/a2-readiness-port`. Live capture no longer accepts
 `--axeyum-binary` or an Axeyum entry in its solver-source inventory. Before an
 attempt directory can exist, the registered operator now performs one private
 locked/offline two-job release build of the `axeyum-bench` `smtcomp_cli`
 example, rechecks exact integrated main, and carries the output bytes in memory
 until the attempt can be created.
 
-This is an implementation result, not live readiness. The topic has not been
-integrated into main, no F2 root exists, and no host, sentinel, NAS, F3,
-allocation, or solver action was performed.
+This is an integrated implementation result, not live readiness. No F2 root
+exists, and no host, sentinel, NAS, F3, allocation, or solver action was
+performed.
 
 ## Implemented authority chain
 
@@ -102,7 +102,7 @@ registered build smoke, fixture boundary only
 just check-scope origin/main
   52 pytest cases / 82 subtests and the 165-test aggregate passed
 
-exact pushed topic 1f723bef666aaa3b90bf73aab1c94108d023b98d
+exact pushed final topic 2925efea556cab59251e690c9e4e449468865d2c
   AXEYUM_PROGRESS_FRONTIER_ARTIFACT_DIR=<external>
   CARGO_BUILD_JOBS=2 just check
   exit=0; five frontier JSON artifacts external; worktree clean;
@@ -114,18 +114,27 @@ environment but deliberately did not create or publish a preparation. Because
 the implementation worktree was not integrated exact main, it carries no live
 F2 credit.
 
-## Completed topic gate and remaining integration gate
+## Completed topic and integration gates
 
 The topic-side sequence is complete:
 
 1. canonical tracker and workstream handoff updated;
 2. links, plan authority, focused, scoped, and aggregate gates passed;
-3. exact topic `1f723bef6` pushed and remote equality verified; and
+3. exact final topic `2925efea5` pushed and remote equality verified; and
 4. the final R3-isolated `just check` passed exit 0 while the worktree and
    tracked frontier bytes remained clean.
 
-The remaining A2 work is integration-owner conflict preview and review, merge,
-and a combined exact-main gate before main is pushed.
+Integration-owner review found the exact topic strictly ahead with no
+divergence and previewed a conflict-free merge. Merge
+`8ed5ad089bd54590b590f797fe6132b21d2f47e7` integrated it. The focused
+post-merge gates passed, followed by one uninterrupted external-frontier
+`CARGO_BUILD_JOBS=2 just check` on the exact merge with exit 0. The combined
+gate passed all workspace/doctest, 9/9 frontier, both CAS moment proofs in
+939.24 seconds, warning-denied rustdoc, 162-file Glaurung, generated-resource,
+rules-as-code, SMT-COMP resume, Lean/process-free contract, parity-docs,
+plan-authority, and link stages while leaving the tracked tree clean.
+
+A2 has no remaining integration work.
 
 Even after integration, live C0/F2 is a separate reviewed action. Do not probe
 hosts, run sentinels, mutate NAS state, construct F3 acceptance, allocate

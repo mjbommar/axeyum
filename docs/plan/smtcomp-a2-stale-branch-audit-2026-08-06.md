@@ -1,7 +1,7 @@
 # SMT-COMP A2 stale-branch audit and process-free port
 
-Status: process-free R1--R5 topic complete through the exact-topic full gate;
-integration, live preparation, and launch remain prohibited
+Status: process-free R1--R5 stack integrated and combined-main green; live
+preparation and launch remain prohibited
 
 Date: 2026-08-06
 
@@ -83,25 +83,38 @@ registered locked/offline build produced a 14,208,408-byte binary and removed
 its private target. See the
 [`R5 implementation result`](smtcomp-credited-full-preparation-f2-live-capture-r5-implementation-2026-08-06.md).
 
-The exact pushed documentation checkpoint
-`1f723bef666aaa3b90bf73aab1c94108d023b98d` then passed an uninterrupted
+The exact pushed final topic
+`2925efea556cab59251e690c9e4e449468865d2c` then carried the uninterrupted
 R3-isolated `CARGO_BUILD_JOBS=2 just check` with exit 0. The five generated
 frontier JSON artifacts were confined to a unique external directory; the
 worktree and tracked curves remained clean, and the local and remote topic refs
 were equal.
 
-The result is not an integrated-main result, remote CI, a live F2 root, or
-launch authorization.
+Integration-owner review later confirmed that exact topic `2925efea5` was 20
+commits strictly ahead of main with no divergence. A synthetic merge preview
+completed without conflicts, and merge
+`8ed5ad089bd54590b590f797fe6132b21d2f47e7` integrated the reviewed stack.
+Focused post-merge gates passed the 52-test readiness suite, the 165-test
+resume aggregate, resume-contract generation, plan authority, links, and
+`git diff --check`.
+
+That exact merge then passed one uninterrupted
+`AXEYUM_PROGRESS_FRONTIER_ARTIFACT_DIR=<external> CARGO_BUILD_JOBS=2 just check`
+with exit 0. The run passed all workspace tests and doctests, 9/9 frontier
+tests, both order-255 CAS moment proofs in 939.24 seconds, warning-denied
+rustdoc, both 162-file Glaurung policies with zero disagreements, generated
+resources, rules-as-code, SMT-COMP resume, Lean/process-free contracts, parity
+docs, plan authority, and links. All five frontier JSON artifacts stayed in
+the external directory and the tracked tree remained clean.
+
+This is an integrated-main result, but not remote CI, a live F2 root, or launch
+authorization.
 
 ## Exact next slice
 
-Finish A2 through the integration lane:
-
-1. hand the exact branch to the integration owner for conflict preview and
-   review;
-2. merge only the reviewed R1--R5 stack;
-3. pass the combined exact-main gate before pushing main; and
-4. require a later explicit review before C0 or any live F2 action.
+A2 is complete. Preserve this integrated process-free boundary and return to
+the canonical A3 QF_NIA census. A later explicit review is still required
+before C0 or any live F2 action.
 
 Stop before any host probe, sentinel execution, shared-root mutation, F3
 acceptance, allocation, or solver wave. Those require a later, separately
