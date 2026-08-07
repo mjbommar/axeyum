@@ -1,7 +1,7 @@
 # SMT-COMP credited full-population F2 live-capture R5 plan
 
-Status: preregistered; implementation, integration, and live F2 remain
-prohibited
+Status: implemented and fixture-verified on topic `e4bb854bf`; integration and
+live F2 remain prohibited
 
 Date: 2026-07-25
 
@@ -17,6 +17,9 @@ and
 
 Durability authority:
 [accepted ADR-0344](../research/09-decisions/adr-0344-preregister-resumable-distributed-benchmark-execution.md)
+
+Implementation result:
+[R5 implementation, 2026-08-06](smtcomp-credited-full-preparation-f2-live-capture-r5-implementation-2026-08-06.md)
 
 ## Why this correction exists
 

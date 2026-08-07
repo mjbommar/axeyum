@@ -449,9 +449,14 @@ gate.
    [A2 audit](../smtcomp-a2-stale-branch-audit-2026-08-06.md) records exact
    commit disposition. This is not live readiness: the
    [R5 correction](../smtcomp-credited-full-preparation-f2-live-capture-r5-plan-2026-07-25.md)
-   remains unimplemented and blocks live preparation because the operator can
-   still accept a caller-selected Axeyum executable without exact-source build
-   provenance.
+   is now implemented at topic commit `e4bb854bf`. The
+   [implementation result](../smtcomp-credited-full-preparation-f2-live-capture-r5-implementation-2026-08-06.md)
+   records removal of caller-selected Axeyum input, the private exact-source
+   locked/offline build, schema-v3 source/tool/output/binary/run/completion
+   replay, 52 focused tests / 82 subtests, the 165-test aggregate, a green
+   scoped gate, and a successful real build smoke. Final documentation, exact
+   push/ref verification, the clean R3-isolated full topic gate, integration,
+   and combined-main gates remain. Live preparation is still prohibited.
 
 The same implementation rule continues to apply: prove each new mechanism and
 its destructive/interruption tests on a tiny corpus before spending the full
@@ -525,6 +530,8 @@ Repository:
   `docs/plan/smtcomp-credited-full-preparation-f2-live-capture-r4-plan-2026-07-25.md`;
 - credited full-population F2 live-capture R5 exact-source-build correction:
   `docs/plan/smtcomp-credited-full-preparation-f2-live-capture-r5-plan-2026-07-25.md`;
+- credited full-population F2 live-capture R5 implementation result:
+  `docs/plan/smtcomp-credited-full-preparation-f2-live-capture-r5-implementation-2026-08-06.md`;
 - credited full-population F2 live-capture implementation result:
   `docs/plan/smtcomp-credited-full-preparation-f2-live-capture-implementation-2026-07-24.md`;
 - current-main A2 stale-branch audit and process-free port:
@@ -591,10 +598,11 @@ NAS (shared, corpus read-only in practice):
    `agent/smtcomp/full-preparation-live` branch is 401 commits behind the
    audited current main and must not be merged or executed. The
    [A2 audit](../smtcomp-a2-stale-branch-audit-2026-08-06.md) classifies all 19
-   unique commits and records the current-main process-free port. Continue only
-   on `agent/smtcomp/a2-readiness-port`: implement and mutation-test the
-   [R5 exact-source build correction](../smtcomp-credited-full-preparation-f2-live-capture-r5-plan-2026-07-25.md),
-   then run the focused, aggregate, scope, link, and clean full gates. Do not
+   unique commits and records the current-main process-free port. R5 is
+   implemented and mutation-tested on `agent/smtcomp/a2-readiness-port`; follow
+   its [implementation result](../smtcomp-credited-full-preparation-f2-live-capture-r5-implementation-2026-08-06.md)
+   to finish documentation, push/ref verification, the clean R3-isolated full
+   topic gate, integration-owner review, and combined-main gates. Do not
    probe hosts, run sentinels, mutate the NAS, publish a live preparation root,
    construct F3 acceptance, allocate resources, or launch a solver from this
    checkpoint. Those actions require the complete corrected stack integrated

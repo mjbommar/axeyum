@@ -25,6 +25,7 @@ Section references in the code point at that document.
 | E. Competition-wide: Best Overall, Biggest Lead, Largest Contribution | §7.3 | `scoring.py` | **done** |
 | —. End-to-end driver + local shard execution | — | `compete.py`, `run_repro.sh` | **bounded slice** |
 | —. Resumable distributed execution | — | `resume_contract.py`, `resume_fs.py`, `resume_runner.py`, `resource_enforcement.py`, ADR-0344 | **E0-E3 complete** |
+| —. Credited full-preparation source/build authority | — | `full_build.py`, `full_capture.py`, `full_prepare.py`, ADR-0344 | **R1--R5 topic-complete; integration/live blocked** |
 | —. Source-family + exact-content provenance | — | `provenance.py` | **done** |
 
 Legacy scoring/selection tests (43): `tests/test_scoring.py` (30, one per rule),
@@ -139,6 +140,17 @@ three-way counts without a performance or scalar-ranking claim. These are
 fixture-proven mechanisms, not live F2/F3/F4 results. The canonical live
 acceptance manifest intentionally does not exist until a later reviewed F2
 result is integrated.
+
+The R5 build boundary in `full_build.py` removes caller-selected Axeyum bytes
+from live capture. Before any shared attempt exists it resolves and seals the
+repository-selected Cargo/Rust compiler pair, performs one two-job
+locked/offline release build in a unique external target under a constructed
+environment, rechecks exact integrated main, and retains the binary plus exact
+stdout/stderr bytes. Preparation v3 links the sealed build observation through
+the staged binary, run identity, artifact ledger, and completion. The mechanism
+is fixture-verified on a topic branch; it is not integrated and grants no live
+preparation or launch authority. See the
+[`R5 implementation result`](../../docs/plan/smtcomp-credited-full-preparation-f2-live-capture-r5-implementation-2026-08-06.md).
 
 The local kill-tested boundary is in the
 [`E1a result`](../../docs/plan/smtcomp-resumable-filesystem-e1a-2026-07-21.md).

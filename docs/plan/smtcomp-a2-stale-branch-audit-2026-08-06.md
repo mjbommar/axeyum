@@ -1,6 +1,7 @@
 # SMT-COMP A2 stale-branch audit and process-free port
 
-Status: process-free port checkpoint complete; live preparation and launch remain prohibited
+Status: process-free R1--R5 topic complete through focused/scoped gates; final
+full gate, integration, live preparation, and launch remain prohibited
 
 Date: 2026-08-06
 
@@ -75,23 +76,27 @@ change was retained. The clean tail replay passed. This reproduces the exact
 failure mode that R3's external artifact directory closes in the constructed
 readiness gate.
 
+R5 is now implemented at `e4bb854bf`. The focused suite is 52 tests / 82
+subtests, the resume aggregate is 165 tests with one expected live-host skip,
+the scoped gate is green, and a real fixture-boundary invocation of the
+registered locked/offline build produced a 14,208,408-byte binary and removed
+its private target. See the
+[`R5 implementation result`](smtcomp-credited-full-preparation-f2-live-capture-r5-implementation-2026-08-06.md).
+
 The result is not an integrated-main result, remote CI, a live F2 root, or
-launch authorization. R5 remains a hard prerequisite to executing the
-constructed readiness gate as live preparation.
+launch authorization.
 
 ## Exact next slice
 
-Implement the source-first R5 plan in this same isolated lane:
+Finish the corrected topic in this same isolated lane:
 
-1. remove the live `--axeyum-binary` input;
-2. build the release `smtcomp_cli` from exact clean integrated source with a
-   unique external target, locked/offline dependencies, two jobs, and a
-   constructed environment;
-3. retain and replay the build observation, output sidecars, tool identities,
-   source commit, staged binary, run identity, and completion links;
-4. add rejecting mutations for every authority edge; and
-5. rerun focused, aggregate, scope, link, and full clean gates before any
-   integration proposal.
+1. complete documentation, link, and plan-authority checks;
+2. commit and push the exact R1--R5 topic and verify the remote ref;
+3. run one final `just check` with R3's frontier destination in a unique
+   external directory, then prove the worktree and tracked curves stayed clean;
+4. hand the exact branch to the integration owner for conflict preview, review,
+   merge, and a combined exact-main gate; and
+5. require a later explicit review before C0 or any live F2 action.
 
 Stop before any host probe, sentinel execution, shared-root mutation, F3
 acceptance, allocation, or solver wave. Those require a later, separately

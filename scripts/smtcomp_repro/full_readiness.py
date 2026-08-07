@@ -75,6 +75,7 @@ DEFAULT_REQUIRED_PATHS = (
     "docs/plan/smtcomp-credited-full-preparation-f2-live-capture-r2-plan-2026-07-24.md",
     "docs/plan/smtcomp-credited-full-preparation-f2-live-capture-r3-plan-2026-07-25.md",
     "docs/plan/smtcomp-credited-full-preparation-f2-live-capture-r4-plan-2026-07-25.md",
+    "docs/plan/smtcomp-credited-full-preparation-f2-live-capture-r5-implementation-2026-08-06.md",
     "docs/plan/smtcomp-credited-full-preparation-f2-live-capture-r5-plan-2026-07-25.md",
     "docs/plan/smtcomp-credited-full-publication-fixture-2026-07-23.md",
     "docs/plan/smtcomp-credited-full-scheduler-authorization-fixture-2026-07-23.md",
