@@ -6,7 +6,7 @@ first and update it before ending a project-level work session.
 
 - Last consolidated: **2026-08-07**
 - Integrated repository state audited at:
-  `bd413357cd967aed0f2f5a1281ca0a6a8f9a276b`; the latest solver-code gate
+  `47d8cd9566510a9a7d1224e2ed59a9c8bcea9427`; the latest solver-code gate
   remains `3eb7eac442c64aee4b809ee059bf59d93b6160ee`, including A3 merge
   `0c31baf979d09270497b5512819fa6e8ed927de7`
 - Expected handoff state: clean local `main` equal to `origin/main`
@@ -38,7 +38,8 @@ checker/importer, and several consumers. It is not yet a drop-in Z3 replacement
 or a replacement for the Lean system.
 
 The audited integrated repository state is
-`bd413357cd967aed0f2f5a1281ca0a6a8f9a276b`; its later CI and PLAN changes do
+`47d8cd9566510a9a7d1224e2ed59a9c8bcea9427`; its later CI, PLAN, and negative
+A3 diagnostic-result changes do
 not alter the solver-code evidence at `3eb7eac442`. Local `main` is clean and
 exactly equal to `origin/main`. Topic `ee5042dee` is pushed and exactly equals
 `origin/agent/nia/a3-census`. The merge passed one uninterrupted
@@ -89,8 +90,9 @@ an isolated install smoke, complete-parity generation, and both exact-SHA
 hosted runs at `bd413357c` are green. No retained solver or measurement process
 is running.
 
-A3 is **WIP** on `agent/nia/a3-residual-next`; pushed result checkpoint
-`3696e7dd5` equals its remote. The repaired complete 67-row census
+A3 is **WIP**. Pushed result checkpoint `3696e7dd5` is integrated on current
+main by `47d8cd956`; its source branch remains preserved. The repaired complete
+67-row census
 classifies 52 NIA-linearization budget declines, 13 former generic model-replay
 declines, one verifier rejection, and one bounded giant-`distinct` ingest
 decline. The ingest repair replaces a 4.36 GiB expansion abort with a typed
@@ -247,10 +249,12 @@ main worktree. A later user-authorized cleanup salvaged every dirty delta from
 24 remaining inactive worktrees into path-labelled Git stashes, kept every
 branch tip, removed those exact checkout directories, pruned the registrations,
 and removed one inactive 1.7 GiB Axeyum session directory from `/tmp` after
-verifying it had no open file descriptors. Only clean `main` and the active A3
-diagnostic worktree remain registered. Current free space is about 929 GiB on
-`/` and 28 GiB on the 62 GiB `/tmp` tmpfs. Retained A3 census evidence,
-unrelated temporary projects, and the active A3 release target were deliberately
+verifying it had no open file descriptors. After the residual A3 evidence was
+integrated, its clean topic worktree passed exact ancestry and cleanliness
+checks; `cargo clean` removed 40,064 reproducible files / 71.0 GiB and the
+checkout was retired while preserving the branch. Only clean `main` remains
+registered. Current free space is about 926 GiB on `/` and 28 GiB on the 62 GiB
+`/tmp` tmpfs. Retained A3 census evidence and unrelated temporary projects were
 left untouched.
 Four empty A3 frontier directories and their pointer file were removed after
 the failed aggregate attempts; they contained no retained evidence.
@@ -555,8 +559,11 @@ detached, or cache-tag-missing path.
 proved the safety procedure for clean merged worktrees and reproducible Cargo
 targets. The later authorized cleanup preserved all 24 dirty deltas as labelled
 stashes, retained every branch tip, removed the inactive checkout directories,
-and left two registered worktrees. `/` currently has about 929 GiB free and the
-`/tmp` tmpfs about 28 GiB free. Automation and fixture coverage remain open.
+and initially left two registered worktrees. After the A3 result merged, its
+clean 71.0 GiB topic target was removed and the merged checkout retired while
+its branch remained. Only `main` is registered; `/` currently has about 926 GiB
+free and the `/tmp` tmpfs about 28 GiB free. Automation and fixture coverage
+remain open.
 
 **Exit.** The inventory is deterministic and tested against dirty, merged,
 unmerged, detached, missing-target, and malformed-cache fixtures. A dry run
@@ -583,7 +590,7 @@ or remove dirty/unmerged state to meet a free-space target.
 | CAS parity | `BLOCKED` by deliberate pause | Wave-24 code `01d47334` and pause commit `245d8f25` are ancestors of current main. Do not start wave 25 until the user resumes it and retained specialized gate evidence is re-audited. |
 | Consumer apps / verified systems | `WIP`, non-critical path | Existing EVM, verifier, property, reflection, and symbolic-execution slices remain useful; do not preempt A2–A7 without measured demand. |
 | Foundational resources | `WIP`, separate content lane | Keep generated-resource gates green; record only project-level priority changes here. |
-| Worktree and build-cache hygiene | `WIP`, recovered | A11; only clean `main` and the active dirty A3 diagnostic worktree remain registered. The latest cleanup stored all 24 inactive dirty deltas in labelled stashes, retained their branch tips, removed the checkout directories, and deleted one inactive 1.7 GiB Axeyum session tree from `/tmp`. Current free space is about 929 GiB on `/` and 28 GiB on `/tmp`. Next automate the deterministic read-only inventory and exact-target cleanup classification. |
+| Worktree and build-cache hygiene | `WIP`, recovered | A11; only clean `main` is registered. The cleanup stored all 24 inactive dirty deltas in labelled stashes, retained every branch tip, removed the inactive checkouts and one 1.7 GiB session tree, then retired the clean merged A3 topic and its 71.0 GiB Cargo target. Current free space is about 926 GiB on `/` and 28 GiB on `/tmp`. Next automate the deterministic read-only inventory and exact-target cleanup classification. |
 
 ## Resume protocol
 
