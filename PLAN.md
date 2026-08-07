@@ -4,8 +4,8 @@
 for current project status, ordered work, blockers, and resume guidance. Read it
 first and update it before ending a project-level work session.
 
-- Last consolidated: **2026-08-06**
-- State audited at: `8ed5ad089bd54590b590f797fe6132b21d2f47e7`
+- Last consolidated: **2026-08-07**
+- State audited at: `064151ef88ace0194fc4de9bf90d1493292de7e5`
 - Expected integration state: clean `main`, equal to `origin/main`
 - Latest integrated code increment: `e4bb854bf` plus its reviewed R1--R5
   readiness stack, via merge `8ed5ad089bd54590b590f797fe6132b21d2f47e7`
@@ -31,11 +31,10 @@ evidence routes, broad but uneven theory support, an independent Lean-core
 checker/importer, and several consumers. It is not yet a drop-in Z3 replacement
 or a replacement for the Lean system.
 
-The audited code integration state is local `main` at merge
-`8ed5ad089bd54590b590f797fe6132b21d2f47e7`; it is intentionally ahead of
-`origin/main` until this evidence-only tracker update is committed and the
-green stack is pushed. Local `main` and `origin/main` must be equal again at
-handoff under the resume protocol below. The IDL repair branch completed terminal
+The audited integration state is clean local `main` at
+`064151ef88ace0194fc4de9bf90d1493292de7e5`, equal to `origin/main`. Local
+`main` and `origin/main` must remain equal at handoff under the resume protocol
+below. The IDL repair branch completed terminal
 `CARGO_BUILD_JOBS=2 just check`; merge `198f2dc1b` passed its immutable-SHA
 pre-push workspace-library, progress-frontier, and evidence gates. Integrated
 main then passed the focused DL suite 46/46 and the explicit auto-dispatch
@@ -149,10 +148,13 @@ A1 runs were fresh and non-resumed. Full evidence, sidecar hashes, rejected IDL
 policies, and gate separation are retained in
 [`docs/plan/arithmetic-a1-retained-result-2026-08-06.md`](docs/plan/arithmetic-a1-retained-result-2026-08-06.md).
 
-Disk cleanup removed only Cargo artifacts and clean merged worktree checkouts;
-dirty/unmerged worktrees and all branches were preserved. Free space recovered
-from 585 MiB to 885 GiB (882 GiB after measurement), the agent-target cache is
-81 MiB, and registered worktrees fell from 62 to 44.
+Disk cleanup removed only reproducible Cargo artifacts and clean, inactive
+worktree checkout directories; dirty worktrees and every branch were preserved.
+The 2026-08-07 follow-up removed 14 additional clean checkouts, retained their
+13 unmerged branch tips, cleared about 2.3 GiB of Cargo caches, and reduced the
+registered worktree count from 39 to 25. Current free space is 931 GiB on `/`
+and 22 GiB on the 62 GiB `/tmp` tmpfs; unrelated temporary projects and the
+dirty Axeyum census scratch tree were deliberately left untouched.
 
 ### Current evidence snapshot
 
