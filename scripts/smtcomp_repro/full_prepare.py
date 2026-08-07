@@ -27,7 +27,8 @@ from full_population import (
     validate_schedule,
 )
 from full_preflight import validate_full_preflight
-from full_readiness import validate_readiness
+from full_build import validate_axeyum_build_observation
+from full_readiness import require_exact_integrated_main, validate_readiness
 from multi_host import (
     build_host_command,
     build_plan,
@@ -49,7 +50,7 @@ from resume_runner import (
 
 SELECTION_SCHEMA = "axeyum.smtcomp-credited-full-selection-preparation.v1"
 COMPOSITION_SCHEMA = "axeyum.smtcomp-credited-full-cell-composition.v1"
-PREPARATION_SCHEMA = "axeyum.smtcomp-credited-full-preparation.v2"
+PREPARATION_SCHEMA = "axeyum.smtcomp-credited-full-preparation.v3"
 ACCEPTED_COMPLETION_SHA256 = (
     "322adaa78396bf42d4660d12582e6db1cf2166a765bb912fdfb179975a9c9698"
 )
@@ -89,6 +90,7 @@ PREPARATION_FIELDS = {
     "composition_record_sha256",
     "readiness_record_sha256",
     "preflight_record_sha256",
+    "axeyum_build_record_sha256",
     "source_root",
     "source_identity_path",
     "source_identity_record_sha256",
@@ -685,6 +687,45 @@ def _reject_execution_evidence(
                 )
 
 
+def _authorize_full_preparation_completion(
+    *,
+    repository_root: Path,
+    readiness: dict[str, Any],
+    preflight: dict[str, Any],
+    attempt_root: Path,
+    composition: dict[str, Any],
+    solver_binaries: dict[str, Path],
+    fixture_only: bool,
+    prepared_at_ns: int | None,
+) -> int:
+    """Recheck live authority and deadline immediately before completion."""
+
+    if type(fixture_only) is not bool:
+        raise ContractError("full preparation completion fixture flag mismatch")
+    if prepared_at_ns is not None and (
+        type(prepared_at_ns) is not int or prepared_at_ns <= 0
+    ):
+        raise ContractError("invalid full preparation timestamp")
+    if fixture_only:
+        timestamp = time.time_ns() if prepared_at_ns is None else prepared_at_ns
+    else:
+        if prepared_at_ns is not None:
+            raise ContractError("live full preparation timestamp must be sampled internally")
+        require_exact_integrated_main(
+            repository_root,
+            expected_commit=readiness.get("head_commit"),
+        )
+        timestamp = time.time_ns()
+    validate_full_preflight(
+        preflight,
+        attempt_root=attempt_root,
+        composition=composition,
+        solver_binaries=solver_binaries,
+        prepared_at_ns=timestamp,
+    )
+    return timestamp
+
+
 def publish_full_preparation_candidate(
     *,
     repository_root: Path,
@@ -695,6 +736,7 @@ def publish_full_preparation_candidate(
     composition: dict[str, Any],
     readiness: dict[str, Any],
     preflight: dict[str, Any],
+    axeyum_build: dict[str, Any],
     solver_cells: list[FullSolverCell],
     prepared_at_ns: int | None = None,
 ) -> dict[str, Any]:
@@ -703,8 +745,9 @@ def publish_full_preparation_candidate(
     attempt = attempt_root.resolve(strict=True)
     source = source_root.resolve(strict=True)
     source_identity_path = source_identity_manifest.resolve(strict=True)
-    timestamp = time.time_ns() if prepared_at_ns is None else prepared_at_ns
-    if type(timestamp) is not int or timestamp <= 0:
+    if prepared_at_ns is not None and (
+        type(prepared_at_ns) is not int or prepared_at_ns <= 0
+    ):
         raise ContractError("invalid full preparation timestamp")
     if (attempt / "complete.json").exists():
         raise ContractError("full preparation candidate is already complete")
@@ -716,6 +759,8 @@ def publish_full_preparation_candidate(
     )
     validate_readiness(readiness, repository_root=repository_root)
     fixture_only = selection["fixture_only"]
+    if not fixture_only and prepared_at_ns is not None:
+        raise ContractError("live full preparation timestamp must be sampled internally")
     if not isinstance(preflight, dict):
         raise ContractError("full preparation preflight type mismatch")
     if (
@@ -728,6 +773,15 @@ def publish_full_preparation_candidate(
         raise ContractError("full preparation component scope mismatch")
     if [cell.solver_id for cell in solver_cells] != list(SOLVER_IDS):
         raise ContractError("full preparation solver cells are missing or reordered")
+    inputs = attempt / "inputs"
+    retained_axeyum_build = read_canonical_json(inputs / "axeyum-build.json")
+    if retained_axeyum_build != axeyum_build:
+        raise ContractError("full preparation Axeyum-build observation drift")
+    validate_axeyum_build_observation(
+        axeyum_build,
+        attempt_root=attempt,
+        readiness=readiness,
+    )
     source_bundle, source_identity = _validate_staged_source(
         source=source,
         source_identity_path=source_identity_path,
@@ -735,7 +789,6 @@ def publish_full_preparation_candidate(
     )
     if source_identity["record_sha256"] != composition["source_identity_sha256"]:
         raise ContractError("full preparation source identity drift")
-    inputs = attempt / "inputs"
     inputs.mkdir(parents=True, exist_ok=True)
     atomic_install_json(inputs, "full-selection-preparation.json", selection)
     atomic_install_json(inputs, "full-cell-composition.json", composition)
@@ -755,6 +808,15 @@ def publish_full_preparation_candidate(
         observed_sha256 = sha256_file(binary)
         if run["identity"]["solver_binary_sha256"] != observed_sha256:
             raise ContractError("full preparation binary/run identity drift")
+        if cell.solver_id == "axeyum" and (
+            str(binary) != axeyum_build["binary_path"]
+            or binary.stat().st_size != axeyum_build["binary_bytes"]
+            or observed_sha256 != axeyum_build["binary_sha256"]
+            or cell.version
+            != f"integrated-release-{axeyum_build['source_commit']}"
+            or axeyum_build["source_commit"] != readiness["head_commit"]
+        ):
+            raise ContractError("full preparation Axeyum source/binary identity drift")
         expected_oracle = EXPECTED_ORACLE_SHA256.get(cell.solver_id)
         if not fixture_only and expected_oracle is not None and observed_sha256 != expected_oracle:
             raise ContractError("full preparation oracle differs from preregistration")
@@ -768,12 +830,15 @@ def publish_full_preparation_candidate(
             }
         )
     binary_paths = {cell.solver_id: cell.binary for cell in solver_cells}
+    initial_timestamp = (
+        time.time_ns() if prepared_at_ns is None else prepared_at_ns
+    )
     validate_full_preflight(
         preflight,
         attempt_root=attempt,
         composition=composition,
         solver_binaries=binary_paths,
-        prepared_at_ns=timestamp,
+        prepared_at_ns=initial_timestamp,
     )
     atomic_install_json(inputs, "full-preflight.json", preflight)
     _reject_execution_evidence(attempt)
@@ -783,6 +848,16 @@ def publish_full_preparation_candidate(
         for path in sorted(attempt.rglob("*"))
         if path.is_file() and path != completion_path
     ]
+    timestamp = _authorize_full_preparation_completion(
+        repository_root=repository_root,
+        readiness=readiness,
+        preflight=preflight,
+        attempt_root=attempt,
+        composition=composition,
+        solver_binaries=binary_paths,
+        fixture_only=fixture_only,
+        prepared_at_ns=prepared_at_ns,
+    )
     completion = _sealed(
         {
             "schema": PREPARATION_SCHEMA,
@@ -795,6 +870,7 @@ def publish_full_preparation_candidate(
             "composition_record_sha256": composition["record_sha256"],
             "readiness_record_sha256": readiness["record_sha256"],
             "preflight_record_sha256": preflight["record_sha256"],
+            "axeyum_build_record_sha256": axeyum_build["record_sha256"],
             "source_root": str(source),
             "source_identity_path": str(source_identity_path),
             "source_identity_record_sha256": source_identity["record_sha256"],
@@ -850,6 +926,7 @@ def validate_full_preparation(
     composition = read_canonical_json(inputs / "full-cell-composition.json")
     readiness = read_canonical_json(inputs / "full-readiness.json")
     preflight = read_canonical_json(inputs / "full-preflight.json")
+    axeyum_build = read_canonical_json(inputs / "axeyum-build.json")
     if not isinstance(preflight, dict):
         raise ContractError("full preparation preflight type mismatch")
     validate_full_selection(selection)
@@ -861,6 +938,11 @@ def validate_full_preparation(
     )
     validate_readiness(
         readiness, repository_root=repository_root, inspect_current=False
+    )
+    validate_axeyum_build_observation(
+        axeyum_build,
+        attempt_root=attempt,
+        readiness=readiness,
     )
     source = Path(completion.get("source_root", ""))
     source_identity_path = Path(completion.get("source_identity_path", ""))
@@ -883,6 +965,8 @@ def validate_full_preparation(
         or completion["composition_record_sha256"] != composition["record_sha256"]
         or completion["readiness_record_sha256"] != readiness["record_sha256"]
         or completion["preflight_record_sha256"] != preflight.get("record_sha256")
+        or completion["axeyum_build_record_sha256"]
+        != axeyum_build.get("record_sha256")
         or completion["source_identity_record_sha256"]
         != source_identity["record_sha256"]
         or completion["source_bundle_record_sha256"]
@@ -931,6 +1015,15 @@ def validate_full_preparation(
             )
         ):
             raise ContractError("full preparation binary artifact drift")
+        if row["solver_id"] == "axeyum" and (
+            row["path"] != axeyum_build["binary_path"]
+            or row["bytes"] != axeyum_build["binary_bytes"]
+            or row["sha256"] != axeyum_build["binary_sha256"]
+            or row["version"]
+            != f"integrated-release-{axeyum_build['source_commit']}"
+            or axeyum_build["source_commit"] != readiness["head_commit"]
+        ):
+            raise ContractError("full preparation Axeyum source/binary identity drift")
     validate_full_preflight(
         preflight,
         attempt_root=attempt,
