@@ -54,6 +54,12 @@ Strict Clippy, all 1,084 solver-library tests, deep-input 16/16, LRA integration
 The pushed, not-yet-full-gated change requires a row-1 census restart. See the
 [failure/repair record](docs/plan/qf-linear-a5-wide-core-memory-repair-2026-08-08.md).
 
+The restart is **BLOCKED on external host load**. The preregistered capture
+runner requires one-minute load at or below 12; three consecutive resume turns
+observed sustained shared compile/I/O load above 50, most recently 67.90. No
+capture process or partial result was started. Resume unchanged when the load
+gate passes; do not bypass it or mutate unrelated workloads.
+
 Axeyum is a working research-grade automated-reasoning stack with a pure-Rust
 default path, replay-checked SAT models, multiple independently checked UNSAT
 evidence routes, broad but uneven theory support, an independent Lean-core
@@ -320,8 +326,9 @@ here as closed evidence boundaries. A3 remains incomplete, but all currently
 preregistered bounded mechanisms are closed negatively. A4 has now also yielded;
 A5 is the first active item.
 
-**Immediate action.** Rebuild the release census binary from the current clean
-pushed topic (solver repair `61a9ad1a0`), then restart QF_LRA from row 1 under
+**Immediate action (`BLOCKED` on host load).** When one-minute load is at most
+12, rebuild the release census binary from the current clean pushed topic
+(solver repair `61a9ad1a0`), then restart QF_LRA from row 1 under
 the unchanged 24-second/8-GiB capture envelope. The failed 172-row abort stream,
 the complete-but-parse-invalid 200-row stream, the failed 168-row pursuit abort,
 and the failed 58-row QF_IDL abort all remain non-credited. The valid 200-row
