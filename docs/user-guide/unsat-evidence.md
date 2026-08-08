@@ -11,6 +11,12 @@ checking. `manifest.json` binds the input and every output by SHA-256 and record
 that Axeyum independently rechecked the exported text before writing the
 bundle.
 
+This export API is distinct from
+`SolverConfig::with_prove_unsat(true)`. That verdict-only mode requires a
+checked DRAT proof before returning `Unsat`, and fails closed to `Unknown` when
+the proof core exhausts its budget, but it does not return or write the proof
+artifact. Use the exporter below when the certificate itself is required.
+
 ## Export one SMT-LIB query
 
 The command accepts one flat `QF_BV` script with exactly one `check-sat`:
