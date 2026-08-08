@@ -47,6 +47,7 @@ NORTH_STAR_ORIENTATION = (
 FOUNDATIONAL_DAG = (
     ROOT / "docs" / "research" / "08-planning" / "foundational-dag.md"
 )
+FOUNDATION_ROADMAP = ROOT / "docs" / "research" / "08-planning" / "roadmap.md"
 PROVER_README = ROOT / "docs" / "prover-track" / "README.md"
 PROVER_SYNTHESIS = ROOT / "docs" / "prover-track" / "SYNTHESIS.md"
 PROVER_PLAN = ROOT / "docs" / "prover-track" / "plan" / "README.md"
@@ -60,6 +61,13 @@ UF_FUNCTION_ELIM = ROOT / "crates" / "axeyum-rewrite" / "src" / "functions.rs"
 CNF_LIB = ROOT / "crates" / "axeyum-cnf" / "src" / "lib.rs"
 IR_TERM = ROOT / "crates" / "axeyum-ir" / "src" / "term.rs"
 PROOF_SAT = ROOT / "crates" / "axeyum-cnf" / "src" / "proof_sat.rs"
+QUOTIENT_ADR = (
+    ROOT
+    / "docs"
+    / "research"
+    / "09-decisions"
+    / "adr-0365-preregister-lean-quotient-package.md"
+)
 CATEGORICAL_AUDIT = (
     ROOT / "docs" / "plan" / "categorical-engine-depth-audit-2026-07-21.md"
 )
@@ -128,6 +136,7 @@ PUBLIC_CLAIM_DOCS = (
     NORTH_STAR_PLAN,
     NORTH_STAR_ORIENTATION,
     FOUNDATIONAL_DAG,
+    FOUNDATION_ROADMAP,
     ROOT / "docs" / "user-guide" / "benchmarks.md",
     ROOT / "docs" / "user-guide" / "limitations.md",
     SMTCOMP_README,
@@ -180,6 +189,11 @@ FOUNDATIONAL_DAG_STALE_PATTERNS = (
     re.compile(r"Current Foundation:\s*Bool", re.IGNORECASE),
     re.compile(r"remaining Phase 5 gate", re.IGNORECASE),
     re.compile(r"Before Phase 6 implementation starts", re.IGNORECASE),
+)
+
+FOUNDATION_ROADMAP_STALE_PATTERNS = (
+    re.compile(r"next T6\.0\.3/TL2\.15 seed", re.IGNORECASE),
+    re.compile(r"quotient semantic seams remain uncredited", re.IGNORECASE),
 )
 
 PROVER_LIVE_DOCS = (
@@ -540,6 +554,15 @@ def main() -> int:
                 f"phase claim: {match.group(0)!r}"
             )
 
+    foundation_roadmap_text = FOUNDATION_ROADMAP.read_text(encoding="utf-8")
+    for pattern in FOUNDATION_ROADMAP_STALE_PATTERNS:
+        if match := pattern.search(foundation_roadmap_text):
+            line = foundation_roadmap_text.count("\n", 0, match.start()) + 1
+            failures.append(
+                f"{FOUNDATION_ROADMAP.relative_to(ROOT)}:{line}: stale roadmap "
+                f"claim: {match.group(0)!r}"
+            )
+
     kernel_expr_text = LEAN_KERNEL_EXPR.read_text(encoding="utf-8")
     if "pub struct NatLit(BigUint);" not in kernel_expr_text:
         failures.append(
@@ -732,6 +755,30 @@ def main() -> int:
         if marker not in normalized_foundational_dag:
             failures.append(
                 f"{FOUNDATIONAL_DAG.relative_to(ROOT)}: missing foundation marker "
+                f"{marker!r}"
+            )
+
+    quotient_adr_text = QUOTIENT_ADR.read_text(encoding="utf-8")
+    for marker in (
+        "Status: proposed",
+        "M4 differential and final acceptance remain open",
+    ):
+        if marker not in quotient_adr_text:
+            failures.append(
+                f"{QUOTIENT_ADR.relative_to(ROOT)}: missing quotient marker {marker!r}"
+            )
+
+    normalized_foundation_roadmap = " ".join(foundation_roadmap_text.split())
+    for marker in (
+        "first T6.0.3 four-seam seed is retained",
+        "twice-identical 576-row quotient package",
+        "ADR-0365",
+        "final acceptance remain open",
+        "not final TL2.10 acceptance",
+    ):
+        if marker not in normalized_foundation_roadmap:
+            failures.append(
+                f"{FOUNDATION_ROADMAP.relative_to(ROOT)}: missing roadmap marker "
                 f"{marker!r}"
             )
 
@@ -1048,6 +1095,7 @@ def main() -> int:
         "|north_star_binders=first_order_present"
         "|foundation_phases=landed"
         "|foundation_custom_cdcl=proof_producing"
+        "|foundation_quotient=offline_m1_m3"
     )
     print(f"PARITY_DOCS|{line}")
     if failures:
