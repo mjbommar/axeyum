@@ -16,8 +16,9 @@ the same artifacts that teach a concept also test an axeyum theory.
   [truth & counterexamples](k12/modules/truth-and-counterexamples.md)).
 - **The graph:** [`curriculum.toml`](curriculum.toml) is the authoritative
   node/edge list (prerequisites = edges) plus per-node decidability/testability
-  metadata. The `axeyum-scenarios::mathtour` module mirrors it and a test fails
-  if they drift.
+  metadata. The `axeyum-scenarios::mathtour` module mirrors it; tests require
+  the graph to stay acyclic, every prerequisite to exist, and every `covered`
+  node to name a realized self-checking scenario family.
 - **The prose:** one markdown file per node, organized by layer (below). Each
   follows the same template (summary · role · prerequisites/unlocks · *testable
   in axeyum* · Lean-horizon · references).
@@ -29,6 +30,10 @@ the same artifacts that teach a concept also test an axeyum theory.
   — how Spivak and others project onto the LRA / NRA / Lean-horizon split.
 - **What to build next:** [BACKLOG.md](BACKLOG.md) — the prioritized 10–20-item
   build list, by yield × readiness.
+- **Resource maturity:** the generated
+  [curriculum status audit](../foundational-resources/generated/curriculum-status-audit.md)
+  distinguishes a curriculum node's exercise status from the maturity of its
+  supporting resource packs.
 - **Lean-horizon targets:** [reconstruction-targets/](reconstruction-targets/README.md)
   — `∀`-theorems (Peano induction) frozen as proof-track goals, not benchmarks.
 
@@ -106,11 +111,30 @@ propositional-logic ─┬─> predicate-logic ─┐
 
 (Authoritative edges are in `curriculum.toml`; this ASCII is a reading aid.)
 
+## How status stays honest
+
+`covered` is deliberately narrow: it means at least one mapped exercise family
+is realized and self-checking. It does not mean textbook-depth treatment,
+complete automation of the general mathematical subject, or a mature resource
+pack. The [depth contract](DEPTH.md) defines that boundary, while the generated
+[resource audit](../foundational-resources/generated/curriculum-status-audit.md)
+reports the separate content-maturity axis.
+
+After changing `curriculum.toml`, its Rust mirror, or linked resource metadata,
+run:
+
+```sh
+cargo test -p axeyum-scenarios mathtour
+just foundational-resources
+```
+
 ## Why this doubles as testing coverage
 
 The testable fragment of each node maps onto an axeyum arithmetic theory:
-number theory → BV/LIA (decided today), linear algebra → LRA/NRA, calculus →
-NRA. Building the curriculum's self-checking exercises therefore *also* grows the
-comprehensive corpora those theories need — most pointedly NRA, which the
-[example-suites note](../research/08-planning/foundational-example-suites.md) and
-P2.5 record as lacking one.
+number theory → BV/LIA, linear algebra → LRA/NRA, calculus → NRA. Building the
+curriculum's self-checking exercises therefore also grows the scenario and
+corpus coverage those theories need. The
+[example-suites note](../research/08-planning/foundational-example-suites.md)
+explains the design rationale; live support and assurance claims belong in the
+[support matrix](../research/08-planning/support-matrix.md) and
+[capability matrix](../research/08-planning/capability-matrix.md).

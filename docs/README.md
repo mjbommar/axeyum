@@ -77,7 +77,7 @@ a fragment.
 | Live status, ordered work, and resume protocol | [PLAN.md](../PLAN.md) |
 | Detailed phase and result documents | [plan/](plan/README.md) |
 | Design decisions | [ADRs](research/09-decisions/README.md) |
-| External review | [reviews/](reviews/) |
+| Point-in-time review archive | [reviews](reviews/README.md) |
 
 ## How this documentation is built
 

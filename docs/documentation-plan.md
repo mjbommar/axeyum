@@ -13,11 +13,13 @@ evaluation, rewriting, lowering, SAT, dispatch, evidence, and Lean boundaries.
 Every workspace crate now has a README, and the core public crates have
 compile-tested rustdoc examples. The stable reference section routes public
 API/configuration questions and indexes golden-tested/generated logic, support,
-trust, and SMT-LIB protocol authorities without copying their volatile tables. The live
-indexes in [`docs/README.md`](README.md), [`learn/README.md`](learn/README.md),
+trust, and SMT-LIB protocol authorities without copying their volatile tables.
+The live indexes in [`docs/README.md`](README.md),
+[`learn/README.md`](learn/README.md),
 [`user-guide/README.md`](user-guide/README.md), and
-[`reference/README.md`](reference/README.md) are authoritative for what is
-currently written.
+[`reference/README.md`](reference/README.md) are authoritative for the public
+guide. The curriculum, review, plan, and research archives now have explicit
+front doors that separate current authorities from dated records.
 
 This plan describes how to reshape Axeyum's public documentation so it serves
 four audiences without diluting the research and roadmap material already in the
@@ -342,10 +344,10 @@ gradually.
 
 Current sequence:
 
-1. Beginner, user-guide, contributor, reference, internals, and crate front
-   doors are complete and indexed.
-2. Audit the remaining curriculum, review, plan, and research indexes for stale
-   navigation or claims, without rewriting their historical records.
+1. Beginner, user-guide, contributor, reference, internals, crate, curriculum,
+   review, plan, and research front doors are complete and indexed.
+2. Audit deep pages incrementally when a current guide links to them; preserve
+   dated reviews, preregistrations, results, and research notes as snapshots.
 3. Keep generated capability/support/trust authorities and relative-link CI
    green as documentation changes.
 4. Treat a full mdBook-render CI gate as separate future work; the current
