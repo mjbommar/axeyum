@@ -7,9 +7,9 @@ first and update it before ending a project-level work session.
 - Last consolidated: **2026-08-08**
 - Integrated baseline merged into the active topic:
   `8ccae9c43ce393762ce6cc3b38d21c2dbb982507`
-- Active pushed repair: `b07be65aab46790c1473994dfd8fed6f72005817`;
-  a mixed-sort `ite` parser repair exposed by the complete QF_LRA stream is
-  focused-green but not yet committed
+- Active pushed repair: `11deff4eeceb87e5a635c4ccc6b6ed32190ebd8a`;
+  a joint large-arithmetic-skeleton pre-SAT repair exposed by the next QF_LRA
+  restart is focused-green but not yet committed
 - Latest full-gate attempt: `b07be65aab46790c1473994dfd8fed6f72005817`
   passed the fresh uninterrupted frozen `just check` with exit 0, including the
   repaired generated gap-ownership and independent parity-doc checks
@@ -54,9 +54,18 @@ failing generated-doc checks, plan authority, and links were green. The next
 row-1 QF_LRA run completed all 200 rows without stderr or process failure but
 failed atomic validation on `sal/gasburner/gasburner-prop3-12.smt2`: a valid
 Real-valued `ite` with a bare integer-zero branch was rejected as mixed-sort.
-The shared parser-boundary repair now coerces both numeric branches to their
-common Real context; isolated replay returns typed budget `unknown`, and all
-230 SMT-LIB integration tests plus strict Clippy pass. Commit/push this parser
+The shared parser-boundary repair at pushed `11deff4ee` coerces both numeric
+branches to their common Real context; isolated replay returns typed budget
+`unknown`, and all 230 SMT-LIB integration tests plus strict Clippy pass. The
+following row-1 restart reached 168 rows, then exposed a distinct abort on
+`sal/pursuit/pursuit-safety-16.smt2`. Its 1,447-atom/4,733-variable Boolean
+skeleton crossed 8 GiB on the third warm SAT solve with only two blocking
+clauses, before deadline polling. A joint deterministic pre-SAT boundary now
+declines only when atoms exceed 1,024 and CNF variables exceed 4,096. Isolated
+pursuit, gasburner, and original tgc controls all return typed budget unknown in
+6.11 seconds total at about 610 MiB peak RSS; both load-bearing tests and strict
+Clippy, all 1,080 solver-library tests, deep-input 16/16, QF_LRA differential
+5/5, and simplex fallback differential 1/1 are green. Commit/push this distinct
 repair, then restart the complete row-1 census. See the
 [failure/repair record](docs/plan/qf-linear-a5-wide-core-memory-repair-2026-08-08.md).
 
@@ -326,11 +335,12 @@ here as closed evidence boundaries. A3 remains incomplete, but all currently
 preregistered bounded mechanisms are closed negatively. A4 has now also yielded;
 A5 is the first active item.
 
-**Immediate action.** Commit and push the shared mixed-sort `ite` parser repair
-and exact SAL-shaped regression, verify the pushed object, rebuild the release
-census binary, and restart QF_LRA from row 1 under the unchanged
-24-second/8-GiB capture envelope. Both the failed 172-row abort stream and the
-complete-but-parse-invalid 200-row stream remain non-credited. Stop
+**Immediate action.** Commit and push the focused-green joint large-skeleton
+pre-SAT repair with the third exact failure record, verify the pushed object, rebuild
+the release census binary, and restart QF_LRA from row 1 under the unchanged
+24-second/8-GiB capture envelope. The failed 172-row abort stream, the
+complete-but-parse-invalid 200-row stream, and the failed 168-row pursuit abort
+stream all remain non-credited. Stop
 on any historical-decision loss, wrong verdict, stderr, malformed trace, or
 process failure. Only valid atomic QF_LRA success metadata authorizes sequential
 QF_IDL and QF_RDL capture and the preregistered derivation. No score gain is

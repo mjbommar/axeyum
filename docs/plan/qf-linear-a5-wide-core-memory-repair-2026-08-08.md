@@ -117,10 +117,41 @@ wide-core budget (42 rounds, 8,371 retained large-core literals), rather than a
 parse error. Focused parser coverage is 230/230 with strict all-feature Clippy
 green; the complete capture must restart from row 1 after the repair is pushed.
 
+## Third capture attempt: first-solve propositional growth
+
+The parser repair was committed and pushed as `11deff4ee`. Its pre-push gate
+passed the workspace library, full-feature frontier, and parser/front-door
+integration suites. The next row-1 QF_LRA restart still failed closed after 168
+rows: `sal/pursuit/pursuit-safety-16.smt2` aborted at the 8 GiB process ceiling
+before emitting row 169. The non-credited exact record is
+[`QF_LRA-attempt-003.failure.json`](evidence/qf-linear-a5/failures/QF_LRA-attempt-003.failure.json),
+SHA-256 `e8633274661c65d344d28af7888a76a9615d131f41099ef04fbd76cd84ee5643`.
+
+This is distinct from the repeated-wide-core defect. Isolated reproduction
+aborted in 6.39 seconds at 8,377,860 KiB peak RSS. Temporary environment-gated
+instrumentation showed 1,447 arithmetic atoms, 4,733 propositional CNF
+variables, zero initial theory clauses, and only two dynamic blocking clauses:
+rounds 0 and 1 returned, while the third warm `BatSat` solve allocated past the
+ceiling before its deadline callback ran. The instrumentation was removed.
+
+The candidate repair adds a joint deterministic pre-SAT boundary: decline only
+when both arithmetic atoms exceed 1,024 and CNF variables exceed 4,096. Neither
+large flat arithmetic nor a large mostly-Boolean skeleton alone is refused. The
+boundary returns typed `Unknown(ResourceLimit)` before the first SAT round. In
+one 8-GiB process, isolated `pursuit-safety-16`, repaired
+`gasburner-prop3-12`, and the original `tgc_io-safe-20` all returned typed
+budget unknown in 6.11 seconds total at 625,076 KiB peak RSS; their stable
+pre-SAT counts were respectively 1,447/4,733, 396/below-boundary, and
+1,411/6,774. The joint-boundary and wide-core load-bearing tests each execute
+1/1; strict all-feature solver Clippy, all 1,080 solver-library tests,
+deep-input no-abort 16/16, QF_LRA differential fuzz 5/5 with zero
+disagreements, and simplex LRA fallback differential 1/1 in 108.55 seconds are
+green.
+
 ## Required continuation
 
-1. Commit and push the mixed-sort `ite` parser repair and its exact-shape
-   regression; verify `HEAD == upstream`.
+1. Commit and push the focused-green joint pre-SAT repair with the third failure
+   record, then verify `HEAD == upstream`.
 2. Restart QF_LRA from row 1 under the original A5 protocol. Any historical
    decision loss, wrong verdict, stderr, malformed trace, or process failure
    stops the sequence.

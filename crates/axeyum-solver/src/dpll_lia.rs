@@ -50,6 +50,16 @@ const MAX_TWO_EDGE_DIFF_EDGES: usize = 512;
 const MAX_BELLMAN_FORD_DIFF_EDGES: usize = 256;
 const MAX_DYNAMIC_BOUND_CONFLICT_BATCH: usize = 32;
 const MAX_DYNAMIC_AFFINE_BOUND_CONFLICT_BATCH: usize = 1;
+/// Joint pre-SAT admission boundary for very large arithmetic skeletons.
+///
+/// Neither dimension alone is sufficient evidence of risk: Axeyum handles
+/// large flat atom sets and large mostly-Boolean skeletons elsewhere.  The SAL
+/// `pursuit-safety-16.smt2` combination (1,447 arithmetic atoms and 4,733 CNF
+/// variables) made `BatSat` allocate past an 8 GiB process ceiling on its third
+/// solve with only two learned clauses, before its cooperative deadline poll.
+/// Decline only when both stable, pre-solve counts cross the measured boundary.
+const MAX_PRE_SAT_ARITH_ATOMS: usize = 1_024;
+const MAX_PRE_SAT_CNF_VARS: usize = 4_096;
 /// Total literals retained in dynamically learned, unminimized theory cores.
 ///
 /// A wide core is the fail-closed fallback when deterministic minimization is
@@ -793,6 +803,24 @@ impl IncrementalArithDpll {
         let deadline = config.timeout.map(|t| Instant::now() + t);
         self.solve_calls += 1;
         let enable_affine_bound_cores = self.solve_calls > 1;
+
+        if self.ctx.atoms.len() > MAX_PRE_SAT_ARITH_ATOMS
+            && self.prop_solver.next_var > MAX_PRE_SAT_CNF_VARS
+        {
+            return Ok(CheckResult::Unknown(UnknownReason {
+                kind: UnknownKind::ResourceLimit,
+                detail: format!(
+                    "lazy linear arithmetic pre-SAT skeleton exceeds the joint resource boundary \
+                     (atoms={} > {MAX_PRE_SAT_ARITH_ATOMS}, cnf_vars={} > \
+                     {MAX_PRE_SAT_CNF_VARS}, initial_clauses={}, blocking_lemmas={}); declining \
+                     before the first SAT round",
+                    self.ctx.atoms.len(),
+                    self.prop_solver.next_var,
+                    self.initial_clauses.len(),
+                    self.blocking.len(),
+                ),
+            }));
+        }
 
         for round in 0..MAX_DPLL_ROUNDS {
             if self.core_stats.large_literals >= MAX_DYNAMIC_LARGE_CORE_LITERALS {
@@ -4384,6 +4412,38 @@ mod tests {
                 .detail
                 .contains("core_large_literals=8192")
         );
+        assert_eq!(solver.total_rounds, 0, "the SAT loop must not start");
+    }
+
+    #[test]
+    fn joint_large_skeleton_budget_declines_before_the_first_sat_round() {
+        let mut arena = TermArena::new();
+        let assertion = arena.bool_const(true);
+        let mut solver = IncrementalArithDpll::new(&mut arena, &[assertion]).unwrap();
+        let proposition = arena.declare("large_atom_prop", Sort::Bool).unwrap();
+        let real = arena.declare("large_atom_real", Sort::Real).unwrap();
+        let value = arena.var(real);
+        let zero = arena.real_const(axeyum_ir::Rational::integer(0));
+        let atom = arena.real_le(value, zero).unwrap();
+        for _ in 0..=MAX_PRE_SAT_ARITH_ATOMS {
+            solver.ctx.atoms.push(ArithAtom {
+                prop: proposition,
+                term: atom,
+                theory: Theory::Real,
+            });
+        }
+        solver.prop_solver.next_var = MAX_PRE_SAT_CNF_VARS + 1;
+        assert!(solver.ctx.atoms.len() > MAX_PRE_SAT_ARITH_ATOMS);
+        assert!(solver.prop_solver.next_var > MAX_PRE_SAT_CNF_VARS);
+
+        let result = solver
+            .solve(&mut arena, &[assertion], &SolverConfig::default())
+            .unwrap();
+        let CheckResult::Unknown(reason) = result else {
+            panic!("large joint skeleton must decline, got {result:?}");
+        };
+        assert_eq!(reason.kind, UnknownKind::ResourceLimit);
+        assert!(reason.detail.contains("before the first SAT round"));
         assert_eq!(solver.total_rounds, 0, "the SAT loop must not start");
     }
 
