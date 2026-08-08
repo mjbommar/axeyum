@@ -1,0 +1,56 @@
+{
+  "divisions": {
+    "QF_IDL": {
+      "list": "bench-results/parity-lists/QF_IDL.txt",
+      "list_sha256": "d7c9713a0280a9ec0cb03e7072acd2cc01a089613c05349984cc1a4f4c6a431d",
+      "matrix": {
+        "axeyum_only": 0,
+        "axeyum_solved": 68,
+        "both": 68,
+        "disagreements": 0,
+        "reference_only": 56,
+        "reference_solved": 124,
+        "rows": 200
+      },
+      "sidecar": "QF_IDL.tsv",
+      "sidecar_sha256": "2debb3525937eefd6a1b0a62c4aedb406766f80f0a558393ade9df7594a0d862",
+      "solver_commit": "198f2dc1b",
+      "timestamp_utc": "2026-08-06T20:47:11Z"
+    },
+    "QF_LRA": {
+      "list": "bench-results/parity-lists/QF_LRA.txt",
+      "list_sha256": "b636239947db1e65f2665a62fca8f852acdcd459c799a9bb326c718a1d1d8da5",
+      "matrix": {
+        "axeyum_only": 0,
+        "axeyum_solved": 86,
+        "both": 86,
+        "disagreements": 0,
+        "reference_only": 60,
+        "reference_solved": 146,
+        "rows": 200
+      },
+      "sidecar": "QF_LRA.tsv",
+      "sidecar_sha256": "106913be84886cdb2e83894cdde8d327ea7c3cad75504e397d8a6876a88e9add",
+      "solver_commit": "8ea6a7cad",
+      "timestamp_utc": "2026-08-06T12:44:30Z"
+    },
+    "QF_RDL": {
+      "list": "bench-results/parity-lists/QF_RDL.txt",
+      "list_sha256": "9dc32e2c5dfbd2d05f79d67ee80683d6941a6dab5e0bc0cc9936dc3ba8e4f149",
+      "matrix": {
+        "axeyum_only": 0,
+        "axeyum_solved": 105,
+        "both": 105,
+        "disagreements": 0,
+        "reference_only": 50,
+        "reference_solved": 155,
+        "rows": 200
+      },
+      "sidecar": "QF_RDL.tsv",
+      "sidecar_sha256": "be59cfacc18eab60225d5f0990e6614d1b55299a60f809c77992ca56d034aab1",
+      "solver_commit": "b353419e7",
+      "timestamp_utc": "2026-08-06T13:54:23Z"
+    }
+  },
+  "schema": "axeyum-qf-linear-a5-historical-v1"
+}

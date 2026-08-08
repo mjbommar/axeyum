@@ -351,7 +351,12 @@ here as closed evidence boundaries. A3 remains incomplete, but all currently
 preregistered bounded mechanisms are closed negatively. A4 has now also yielded;
 A5 is the first active item.
 
-**Immediate action.** Begin A5's cross-division LRA/IDL/RDL residual census.
+**Immediate action.** Execute A5's preregistered cross-division LRA/IDL/RDL
+residual census. Validate and retain the exact historical sidecars, build and
+push the fail-closed capture/derivation harness, then run fresh current-Axeyum
+traces over all three complete 200-row lists. No solver or budget change is
+authorized before the monotone complete-record census identifies a repeated
+mechanism.
 A4's v3 restart decided 93/200, with one 2/3-SAT wall-clock boundary. Both
 model-reuse variants failed isolated stability and were removed; do not retry
 until 94 happens to pass. A3/A4's negative routes remain closed. A2 still does
@@ -485,7 +490,7 @@ result without losing any of the 94 decisions or weakening retained controls.
 **Stop.** No general cap increase, speculative recursive MBQI, or unchecked SAT
 model credit.
 
-### A5 — Consolidate linear arithmetic after warm simplex and DL (`TODO`, P1)
+### A5 — Consolidate linear arithmetic after warm simplex and DL (`WIP`, P1)
 
 **Why now.** QF_LRA, QF_IDL, and QF_RDL improved sharply but remain strict
 subsets of their references. The newest architecture has not yet received one
@@ -495,7 +500,11 @@ cross-division residual census.
 difference shapes, disequalities, explanation blowups, and ordinary search
 failures across the three current ledgers. Treat the repaired high-memory LRA
 normalization case and the rejected global 12/12 DL split as permanent controls
-before adding new DL syntax.
+before adding new DL syntax. The
+[`v1 cross-division census preregistration`](docs/plan/qf-linear-a5-cross-division-census-v1-preregistration-2026-08-07.md)
+freezes all three populations and historical sidecars, makes all 259 retained
+decisions monotonicity controls, and authorizes only fresh current-Axeyum traces
+plus lossless derivation. No production change is yet authorized.
 
 **Exit.** A/B measurement is monotone across all three divisions, exact
 Farkas/DL evidence checks pass, deep input returns without recursion abort, and

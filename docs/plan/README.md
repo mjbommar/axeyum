@@ -12,6 +12,14 @@ queue, standing-rules, and resume document. Then use this folder for detailed
 phase contracts and retained result evidence. Root [`STATUS.md`](../../STATUS.md)
 is a compatibility pointer only.
 
+The active A5 linear-arithmetic lane is bounded by the
+[`cross-division LRA/RDL/IDL census preregistration`](qf-linear-a5-cross-division-census-v1-preregistration-2026-08-07.md).
+It validates the already-published historical sidecars before retaining them,
+then captures fresh current-Axeyum traces over all three 200-row populations.
+All 259 historical decisions, `sc-39`, and `lpsat-goal-18` are permanent
+controls; no solver or budget change is authorized until a lossless repeated
+mechanism survives the complete-record and monotonicity gates.
+
 The active A4 QF_UFLIA lane began with the
 [`provenance-recovery and causal-census preregistration`](qf-uflia-a4-provenance-census-v1-preregistration-2026-08-07.md).
 Its [v1 result](qf-uflia-a4-provenance-census-v1-result-2026-08-07.md) stopped at
