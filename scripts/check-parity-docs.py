@@ -34,6 +34,7 @@ PROJECT_STATE = ROOT / "docs" / "PROJECT-STATE.md"
 BENCHMARK_GUIDE = ROOT / "docs" / "user-guide" / "benchmarks.md"
 FIRST_SMTLIB_GUIDE = ROOT / "docs" / "user-guide" / "first-smtlib-query.md"
 UNSAT_EVIDENCE_GUIDE = ROOT / "docs" / "user-guide" / "unsat-evidence.md"
+SOLVER_CONFIG_GUIDE = ROOT / "docs" / "reference" / "solver-config.md"
 PARITY_LEDGER = ROOT / "bench-results" / "PARITY.md"
 EXAMPLE_CATALOG = ROOT / "docs" / "reference" / "examples.md"
 DOCUMENTATION_PLAN = ROOT / "docs" / "documentation-plan.md"
@@ -146,6 +147,7 @@ LIVE_DOCS = (
     ROOT / "docs" / "user-guide" / "benchmarks.md",
     FIRST_SMTLIB_GUIDE,
     ROOT / "docs" / "user-guide" / "limitations.md",
+    SOLVER_CONFIG_GUIDE,
     GAP_DOC,
     PARITY_AUDIT,
     LEAN_GATE_AUDIT,
@@ -205,6 +207,7 @@ PUBLIC_STALE_PATTERNS = (
         r"proof-producing core enabled it also emits a DRAT proof",
         re.IGNORECASE,
     ),
+    re.compile(r"Re-derive small BV UNSAT results", re.IGNORECASE),
 )
 
 PROVER_STALE_PATTERNS = (
@@ -765,12 +768,16 @@ def main() -> int:
             )
 
     smtlib_proof_markers = (
-        (SOLVER_BACKEND, "proof-producing SAT core and its DRAT proof is verified"),
+        (SOLVER_BACKEND, "checks its proof inline in the same"),
+        (SOLVER_BACKEND, "Lack of a checked proof"),
         (SAT_BV_BACKEND, "downgrade to `unknown`"),
         (FIRST_SMTLIB_GUIDE, "does not return or write the proof artifact"),
         (FIRST_SMTLIB_GUIDE, "[QF_BV proof exporter](unsat-evidence.md)"),
         (UNSAT_EVIDENCE_GUIDE, "This export API is distinct from"),
         (UNSAT_EVIDENCE_GUIDE, "fails closed to `Unknown`"),
+        (SOLVER_CONFIG_GUIDE, "native core is the primary SAT search"),
+        (SOLVER_CONFIG_GUIDE, "compatibility fallback"),
+        (SOLVER_CONFIG_GUIDE, "does not return or write the proof artifact"),
     )
     for path, marker in smtlib_proof_markers:
         text = " ".join(path.read_text(encoding="utf-8").split())
