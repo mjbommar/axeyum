@@ -65,12 +65,15 @@ the per-layer authority:
   can return a DRAT-checked proof and an end-to-end bit-blast faithfulness
   certificate. Decision coverage is broader than proof coverage; see the
   [measured evidence split](docs/PROJECT-STATE.md#evidence-and-lean).
-- **Arrays** (QF_ABV, eager elimination), **uninterpreted functions** (QF_UF,
-  Ackermann), and their composition **QF_AUFBV**.
-- **Linear arithmetic** — `QF_LRA` (exact-rational simplex, Farkas-certified
-  `unsat`), `QF_LIA` (bit-blast + branch-and-bound simplex), mixed `QF_LIRA`
-  (MILP); Boolean combinations via lazy SMT / DPLL(T) over a shared
-  congruence-closure **e-graph** (`axeyum-egraph`).
+- **Arrays and uninterpreted functions** — `QF_UF` uses online congruence
+  closure over a backtrackable **e-graph**; supported `QF_ABV`/`QF_AUFBV`
+  shapes use the retained online CDCL(T) array/UF path. Eager Ackermann and
+  read-over-write elimination remain conservative fallbacks.
+- **Linear arithmetic** — exact-rational `QF_LRA`, integer `QF_LIA`, and mixed
+  `QF_LIRA`, with route-specific Farkas/Diophantine evidence. Supported
+  Boolean structure uses online CDCL(T); `QF_UFLRA` and `QF_UFLIA` combine
+  EUF with arithmetic by model-based equality sharing, with eager Ackermann
+  fallback after an online `unknown`.
 - **Floating point** (QF_FP) — IEEE 754 arithmetic for **F16/F32/F64/F128** and
   ML formats, differentially validated against native `f32`/`f64` and
   `rustc_apfloat`.
@@ -87,24 +90,30 @@ against public corpora.
 
 ### 2. Proof evidence and the Lean checker
 
-Every `sat` is checkable by evaluation; every supported `unsat`/`valid` aims to
-carry a **machine-checkable proof** a Lean-grade kernel would accept:
+Every `sat` is checkable by evaluation. Supported certificate-bearing
+`unsat`/`valid` routes carry machine-checkable evidence; other definitive
+routes keep their lower assurance explicit:
 
-- `unsat` over the bit-vector-reducible core (QF_BV/ABV/UF/AUFBV/bounded-LIA/
-  datatypes) → an externally re-checkable **DRAT** certificate (in-tree RUP+RAT
-  checker, the `drat-trim` analogue), which also certifies the bit-blasting
-  faithful vs an independent reference — closing the term→CNF gap.
-- `QF_LRA` `unsat` → a **Farkas** refutation (exact-rational, self-verifying).
-- **k-induction** safety proofs emit a DRAT certificate for *each* obligation.
+- selected `unsat` routes over the bit-vector-reducible core
+  (QF_BV/ABV/UF/AUFBV/bounded-LIA/datatypes) → a rechecked **DRAT** certificate
+  for the generated CNF; promoted routes also carry the independent
+  bit-blast-faithfulness check. Broader decision routes and the default BatSat
+  backend may remain explicitly proofless/lower-assurance.
+- covered `QF_LRA` `unsat` paths → a **Farkas** refutation (exact-rational,
+  self-verifying).
+- supported **k-induction** proof routes emit and check a DRAT certificate for
+  each admitted obligation.
 
 `axeyum-lean-kernel` is an in-tree Rust implementation of a useful Lean core:
 lifetime-free interned terms and universes, WHNF, definitional equality, type
 checking, proof irrelevance, inductives, recursors, and iota reduction. Supported
 solver proofs already reconstruct to kernel-checked terms and self-contained
 Lean modules. A separate fail-closed `lean4export` 3.1 reader now independently
-admits exact flat, direct-recursive, recursive-indexed/reflexive, mutual, nested,
-projection, quotient-package, and Nat-literal profiles under explicit population
-and computation gates. It is not a complete Lean kernel or ecosystem: String
+admits the retained direct, recursive-indexed, reflexive-higher-order, mutual,
+nested, and pre-elaborated well-founded Lean 4.30 construct streams under
+explicit population and computation gates. The fixed quotient package is an
+offline TL2.10 M1--M3 result; its final differential/ADR credit remains open.
+This is not a complete Lean kernel or ecosystem: String
 literals, dependency-closed `Init`/`Std`/mathlib imports, native parsing/macros,
 elaboration, tactics, modules/Lake, LSP, and compiler/runtime behavior remain
 open. See

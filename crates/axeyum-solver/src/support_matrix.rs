@@ -327,12 +327,16 @@ pub const SUPPORT_MATRIX: &[SupportRow] = &[
         ir: IrStatus::Modeled,
         solver: SolverStatus::Decides,
         proof: ProofStatus::PartialTrust,
-        note: "eager Ackermann congruence → arithmetic; complete for the conjunctive \
-               fragment's UNSAT, and a satisfiable query now yields a REPLAY-CHECKED \
-               sat model — the arithmetic model is projected back to a full-Value-keyed \
-               function interpretation and replayed against the original assertions \
-               (decline to sound unknown on any replay doubt). Alethe proof covers the \
-               conjunctive UNSAT sub-cases modulo trusted Ackermann. ADR-0013/0015",
+        note: "online-first model-based equality sharing combines the retained EUF and \
+               LIA/LRA states under one CDCL(T) trail for supported Boolean-structured \
+               queries; interface equality/order atoms participate in propagation, 1-UIP \
+               learning, and backtracking. Eager Ackermann elimination remains the \
+               conservative fallback after online `unknown`. Every returned SAT model is \
+               projected back to full `Value`-keyed function interpretations and replayed \
+               against the original assertions; any projection/replay doubt declines. \
+               UNSAT assurance is route-specific: selected conjunctive sub-cases carry \
+               checked Alethe/arithmetic evidence, while broader combined decisions remain \
+               partial-trust. ADR-0013/0014/0015",
     },
     SupportRow {
         fragment: "QF_FP (floating-point)",

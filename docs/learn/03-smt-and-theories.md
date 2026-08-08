@@ -91,6 +91,16 @@ Different fragments use different architectures:
 - combined theories exchange equality and model information;
 - incomplete or bounded procedures may honestly stop at `unknown`.
 
+Axeyum does not expose a universal "plug any two theories together" engine.
+In the `full` profile, the current general equality-sharing combinations are
+`QF_UFLRA` and `QF_UFLIA`: one retained CDCL(T) search coordinates online EUF
+and linear-arithmetic states, including interface equalities. Their older eager
+Ackermann route remains a conservative fallback after an online decline.
+Arrays, UF, and finite scalar values use a separate specialized online
+`QF_ABV`/`QF_AUFBV` path. Admission limits, unsupported atoms, arithmetic
+overflow, or exhausted deadlines still produce `unknown`; support for these
+combinations does not imply arbitrary Nelson–Oppen completeness.
+
 The public contract remains the same even when the route changes: a returned
 `sat` needs a model that satisfies the original assertions, while every `unsat`
 must state its route-specific assurance boundary. Independently checkable UNSAT

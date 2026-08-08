@@ -117,14 +117,16 @@ pub(crate) struct Literal {
 /// [`crate::euf_egraph::EufTheory`] and [`crate::lra_online::LraTheory`] and the two
 /// arrangements over the shared (interface) terms are reconciled by exchanging
 /// `EUF`-entailed equalities and case-splitting the remaining pairs
-/// (`decide_conjunction`). A non-conjunctive (Boolean-structured) query is driven by
-/// an enumerative `DPLL(T)` layer (`check_qf_uflra_boolean`) that Tseitin-encodes the
-/// Boolean structure over the distinct theory atoms and decides each propositional
-/// model's conjunction by that same combination. Either way a consistent arrangement
-/// yields a combined model **replayed against the original assertions** before being
-/// returned — the soundness gate, so a model the combination cannot justify yields
-/// [`CheckResult::Unknown`], never a wrong `sat`. `unsat` is reported only when every
-/// branch / propositional model is infeasible.
+/// (`decide_conjunction`). A non-conjunctive (Boolean-structured) query is driven first
+/// by the retained `crate::cdclt::CdclT` layer over
+/// `crate::combined_theory::CombinedIncremental`. It Tseitin-encodes the Boolean
+/// structure, keeps EUF/LRA/interface atoms on one trail, and uses joint propagation
+/// plus 1-UIP learning. The older enumerative Boolean search remains a conservative
+/// fallback if the incremental combined state cannot be built. Either way a consistent
+/// arrangement yields a combined model **replayed against the original assertions**
+/// before being returned — the soundness gate, so a model the combination cannot
+/// justify yields [`CheckResult::Unknown`], never a wrong `sat`. `unsat` is reported
+/// only after the active search has excluded every Boolean/interface branch.
 ///
 /// Returns [`CheckResult::Unknown`] (a sound decline, never a guess) when an atom is
 /// outside `EUF` / `LRA` (`BV` / `Int` / arrays / quantifiers), when the Boolean

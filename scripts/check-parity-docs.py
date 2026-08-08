@@ -90,6 +90,12 @@ PROOF_SAT = ROOT / "crates" / "axeyum-cnf" / "src" / "proof_sat.rs"
 BV_LOWERING = ROOT / "crates" / "axeyum-bv" / "src" / "lib.rs"
 SAT_BV_BACKEND = ROOT / "crates" / "axeyum-solver" / "src" / "sat_bv_backend.rs"
 SOLVER_LRA = ROOT / "crates" / "axeyum-solver" / "src" / "lra.rs"
+SOLVER_UFLRA_ONLINE = (
+    ROOT / "crates" / "axeyum-solver" / "src" / "uflra_online.rs"
+)
+SOLVER_UFLIA_ONLINE = (
+    ROOT / "crates" / "axeyum-solver" / "src" / "uflia_online.rs"
+)
 SOLVER_BACKEND = ROOT / "crates" / "axeyum-solver" / "src" / "backend.rs"
 SUPPORT_MATRIX_LEDGER = (
     ROOT / "crates" / "axeyum-solver" / "src" / "support_matrix.rs"
@@ -930,6 +936,26 @@ def main() -> int:
                 f"marker {marker!r}"
             )
 
+    combination_markers = (
+        (CAPABILITY_LEDGER, "Combined theory propagation and"),
+        (CAPABILITY_LEDGER, "EAGER FALLBACK"),
+        (SUPPORT_MATRIX_LEDGER, "online-first model-based equality sharing"),
+        (SOLVER_UFLRA_ONLINE, "crate::combined_theory::CombinedIncremental"),
+        (SOLVER_UFLRA_ONLINE, "older enumerative Boolean search remains"),
+        (SOLVER_UFLIA_ONLINE, "crate::combined_theory_lia::CombinedIncrementalLia"),
+        (SOLVER_UFLIA_ONLINE, "older enumerative Boolean search remains"),
+        (LEARN_THEORIES, 'does not expose a universal "plug any two theories together"'),
+        (LEARN_THEORIES, "does not imply arbitrary Nelson–Oppen completeness"),
+        (ROOT / "README.md", "fallback after an online `unknown`"),
+    )
+    for path, marker in combination_markers:
+        text = " ".join(path.read_text(encoding="utf-8").split())
+        if marker not in text:
+            failures.append(
+                f"{path.relative_to(ROOT)}: missing theory-combination boundary "
+                f"marker {marker!r}"
+            )
+
     for path in CURRENT_SOLVER_COMMAND_DOCS:
         for line_number, line in enumerate(
             path.read_text(encoding="utf-8").splitlines(), start=1
@@ -1538,6 +1564,7 @@ def main() -> int:
         "|foundation_quotient=offline_m1_m3"
         "|research_symbolic_shifts=resolved"
         "|research_high_assurance_unsat=resolved"
+        "|theory_combination=online_cdclt_with_guarded_fallback"
         "|strings_status=sound_incomplete"
         "|strings_default_bound=12"
         "|strings_ladder_max=48"
