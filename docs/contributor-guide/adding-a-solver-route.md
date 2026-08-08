@@ -159,7 +159,7 @@ Then run:
 ```sh
 cargo test -p axeyum-solver --features full
 cargo clippy -p axeyum-solver --features full --all-targets -- -D warnings
-cargo test -p axeyum-solver --test progress_frontier \
+cargo test -p axeyum-solver --features full --test progress_frontier \
   --features full -- --test-threads=1
 just check-scope origin/main
 ```

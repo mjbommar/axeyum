@@ -345,5 +345,5 @@ python3 scripts/query-rules-as-code.py rows --pack workflow_reachability_v0 --fa
 Run the solver evidence regression when a checked SMT-LIB fixture changes:
 
 ```sh
-cargo test -p axeyum-solver --test rules_as_code_examples
+cargo test -p axeyum-solver --features full --test rules_as_code_examples
 ```

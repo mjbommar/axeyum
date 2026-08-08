@@ -82,7 +82,7 @@
       "source_citations": ["Example Rule 3(c)"],
       "data": {
         "smt2_artifact": "docs/rules-as-code/examples/tax-benefit-arithmetic-v0/smt2/non-negative-benefit-bool-qf-lia-conflict.smt2",
-        "proof_regression": "cargo test -p axeyum-solver --test rules_as_code_examples tax_benefit_arithmetic_non_negative_benefit_emits_checked_evidence",
+        "proof_regression": "cargo test -p axeyum-solver --features full --test rules_as_code_examples tax_benefit_arithmetic_non_negative_benefit_emits_checked_evidence",
         "certificate": "produce_evidence emits certified evidence checked by Evidence::check"
       }
     },
@@ -94,7 +94,7 @@
       "source_citations": ["Example Rule 3(a)", "Example Rule 3(b)"],
       "data": {
         "smt2_artifact": "docs/rules-as-code/examples/tax-benefit-arithmetic-v0/smt2/cap-respected-bool-qf-lia-conflict.smt2",
-        "proof_regression": "cargo test -p axeyum-solver --test rules_as_code_examples tax_benefit_arithmetic_cap_respected_emits_checked_evidence",
+        "proof_regression": "cargo test -p axeyum-solver --features full --test rules_as_code_examples tax_benefit_arithmetic_cap_respected_emits_checked_evidence",
         "certificate": "produce_evidence emits certified evidence checked by Evidence::check"
       }
     },
@@ -114,7 +114,7 @@
       "source_citations": ["Example Rule 3(a)", "Example Rule 3(c)", "Example Rule 3(d)"],
       "data": {
         "smt2_artifact": "docs/rules-as-code/examples/tax-benefit-arithmetic-v0/smt2/phaseout-monotonicity-bool-qf-lia-conflict.smt2",
-        "proof_regression": "cargo test -p axeyum-solver --test rules_as_code_examples tax_benefit_arithmetic_phaseout_monotonicity_emits_checked_evidence",
+        "proof_regression": "cargo test -p axeyum-solver --features full --test rules_as_code_examples tax_benefit_arithmetic_phaseout_monotonicity_emits_checked_evidence",
         "certificate": "produce_evidence emits certified evidence checked by Evidence::check"
       }
     },
@@ -134,7 +134,7 @@
       "source_citations": ["Example Rule 3(a)", "Example Rule 3(c)", "Example Rule 3(d)", "Example Rule 3(e)"],
       "data": {
         "smt2_artifact": "docs/rules-as-code/examples/tax-benefit-arithmetic-v0/smt2/implementation-equivalence-bool-qf-lia-conflict.smt2",
-        "proof_regression": "cargo test -p axeyum-solver --test rules_as_code_examples tax_benefit_arithmetic_implementation_equivalence_emits_checked_evidence",
+        "proof_regression": "cargo test -p axeyum-solver --features full --test rules_as_code_examples tax_benefit_arithmetic_implementation_equivalence_emits_checked_evidence",
         "certificate": "produce_evidence emits certified evidence checked by Evidence::check"
       },
       "notes": "The SMT-LIB mismatch query encodes the formal rule model and bounded executable interpretation over the active linear phase-out slice; the validator replays the full piecewise formula over the finite sample."

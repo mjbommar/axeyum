@@ -162,13 +162,29 @@ PROOF_COOKBOOK_DOCS = tuple(
     sorted((ROOT / "docs" / "proof-cookbook").rglob("*.md"))
 )
 LEARN_DOCS = tuple(sorted((ROOT / "docs" / "learn").rglob("*.md")))
-LEARN_TEST_SOURCES = {
+CURRENT_SOLVER_COMMAND_DOCS = tuple(
+    sorted(
+        PROOF_COOKBOOK_DOCS
+        + LEARN_DOCS
+        + tuple((ROOT / "docs" / "contributor-guide").rglob("*.md"))
+        + tuple((ROOT / "docs" / "foundational-resources").rglob("*.md"))
+        + tuple((ROOT / "docs" / "rules-as-code").rglob("*.md"))
+        + tuple((ROOT / "docs" / "rules-as-code").rglob("*.json"))
+    )
+)
+DOCUMENTED_TEST_SOURCES = {
     suite: ROOT / "crates" / "axeyum-solver" / "tests" / f"{suite}.rs"
     for suite in (
+        "abv_differential_fuzz",
+        "bv_differential_fuzz",
+        "evidence",
+        "int_inequality_lean_reconstruct",
+        "lean_crosscheck",
         "math_resource_bv_routes",
         "math_resource_lia_routes",
         "math_resource_lra_routes",
         "math_resource_uf_routes",
+        "progress_frontier",
         "rules_as_code_examples",
     )
 }
@@ -914,21 +930,28 @@ def main() -> int:
                 f"marker {marker!r}"
             )
 
-    for path in PROOF_COOKBOOK_DOCS + LEARN_DOCS:
+    for path in CURRENT_SOLVER_COMMAND_DOCS:
         for line_number, line in enumerate(
             path.read_text(encoding="utf-8").splitlines(), start=1
         ):
             if (
                 "cargo test -p axeyum-solver" in line
-                and "--features full" not in line
+                and not any(
+                    profile in line
+                    for profile in (
+                        "--features full",
+                        "--features z3",
+                        "--features z3-static",
+                    )
+                )
             ):
                 failures.append(
                     f"{path.relative_to(ROOT)}:{line_number}: solver documentation test "
                     "command must enable `--features full`"
                 )
 
-    learned_test_names: dict[str, tuple[str, ...]] = {}
-    for suite, source in LEARN_TEST_SOURCES.items():
+    documented_test_names: dict[str, tuple[str, ...]] = {}
+    for suite, source in DOCUMENTED_TEST_SOURCES.items():
         text = source.read_text(encoding="utf-8")
         names = tuple(
             re.findall(
@@ -938,31 +961,31 @@ def main() -> int:
         )
         if not names:
             failures.append(
-                f"{source.relative_to(ROOT)}: no learner-facing tests discovered"
+                f"{source.relative_to(ROOT)}: no documentation-facing tests discovered"
             )
-        learned_test_names[suite] = names
+        documented_test_names[suite] = names
 
-    learn_command = re.compile(
+    documented_command = re.compile(
         r"cargo test -p axeyum-solver\b.*?--test\s+([\w-]+)(?:\s+(\w+))?"
     )
-    for path in LEARN_DOCS:
+    for path in CURRENT_SOLVER_COMMAND_DOCS:
         for line_number, line in enumerate(
             path.read_text(encoding="utf-8").splitlines(), start=1
         ):
-            match = learn_command.search(line)
+            match = documented_command.search(line)
             if match is None:
                 continue
             suite, test_filter = match.groups()
-            if suite not in learned_test_names:
+            if suite not in documented_test_names:
                 failures.append(
-                    f"{path.relative_to(ROOT)}:{line_number}: undocumented learner "
+                    f"{path.relative_to(ROOT)}:{line_number}: documented "
                     f"test suite {suite!r} has no guarded source"
                 )
             elif test_filter is not None and not any(
-                test_filter in name for name in learned_test_names[suite]
+                test_filter in name for name in documented_test_names[suite]
             ):
                 failures.append(
-                    f"{path.relative_to(ROOT)}:{line_number}: learner test filter "
+                    f"{path.relative_to(ROOT)}:{line_number}: documentation test filter "
                     f"{test_filter!r} matches no test in {suite}.rs"
                 )
 

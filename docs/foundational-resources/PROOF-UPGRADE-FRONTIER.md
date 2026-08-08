@@ -531,25 +531,25 @@ Expected artifact:
 Validation:
 
 ```sh
-cargo test -p axeyum-solver --test evidence lra_unsat_evidence_carries_a_recheckable_farkas_certificate
-cargo test -p axeyum-solver --test evidence tampered_farkas_evidence_fails_its_own_check
-cargo test -p axeyum-solver --test math_resource_lra_routes qf_lra_resource_route_rejects_tampered_farkas_certificate
-cargo test -p axeyum-solver --test math_resource_lra_routes coordinate_geometry_bad_midpoint_x_artifact_emits_checked_farkas
-cargo test -p axeyum-solver --test math_resource_lra_routes coordinate_geometry_bad_distance_squared_artifact_emits_checked_farkas
-cargo test -p axeyum-solver --test math_resource_lra_routes linear_algebra_bad_nullspace_component_artifact_emits_checked_farkas
-cargo test -p axeyum-solver --test math_resource_lra_routes incidence_geometry_bad_intersection_x_artifact_emits_checked_farkas
-cargo test -p axeyum-solver --test math_resource_lra_routes rigid_configuration_bad_translation_image_x_artifact_emits_checked_farkas
-cargo test -p axeyum-solver --test math_resource_lra_routes finite_cyclic_geometry_bad_diagonal_intersection_artifact_emits_checked_farkas
-cargo test -p axeyum-solver --test math_resource_lra_routes finite_operator_bad_operator_bound_artifact_emits_checked_farkas
-cargo test -p axeyum-solver --test math_resource_lra_routes finite_root_finding_bad_newton_step_artifact_emits_checked_farkas
-cargo test -p axeyum-solver --test math_resource_lra_routes finite_separation_bad_convex_combination_artifact_emits_checked_farkas
-cargo test -p axeyum-solver --test math_resource_lra_routes finite_separation_bad_separator_artifact_emits_checked_farkas
-cargo test -p axeyum-solver --test math_resource_lra_routes finite_kkt_bad_stationarity_artifact_emits_checked_farkas
-cargo test -p axeyum-solver --test math_resource_lra_routes finite_kkt_bad_complementarity_artifact_emits_checked_farkas
-cargo test -p axeyum-solver --test math_resource_lra_routes finite_gradient_descent_bad_decrease_artifact_emits_checked_farkas
-cargo test -p axeyum-solver --test math_resource_lra_routes complex_algebraic_bad_norm_squared_artifact_emits_checked_farkas
-cargo test -p axeyum-solver --test math_resource_lra_routes affine_geometry_bad_midpoint_image_y_artifact_emits_checked_farkas
-cargo test -p axeyum-solver --test lean_crosscheck certified_lra_interpolant_both_farkas_certs_checked_by_real_lean
+cargo test -p axeyum-solver --features full --test evidence lra_unsat_evidence_carries_a_recheckable_farkas_certificate
+cargo test -p axeyum-solver --features full --test evidence tampered_farkas_evidence_fails_its_own_check
+cargo test -p axeyum-solver --features full --test math_resource_lra_routes qf_lra_resource_route_rejects_tampered_farkas_certificate
+cargo test -p axeyum-solver --features full --test math_resource_lra_routes coordinate_geometry_bad_midpoint_x_artifact_emits_checked_farkas
+cargo test -p axeyum-solver --features full --test math_resource_lra_routes coordinate_geometry_bad_distance_squared_artifact_emits_checked_farkas
+cargo test -p axeyum-solver --features full --test math_resource_lra_routes linear_algebra_bad_nullspace_component_artifact_emits_checked_farkas
+cargo test -p axeyum-solver --features full --test math_resource_lra_routes incidence_geometry_bad_intersection_x_artifact_emits_checked_farkas
+cargo test -p axeyum-solver --features full --test math_resource_lra_routes rigid_configuration_bad_translation_image_x_artifact_emits_checked_farkas
+cargo test -p axeyum-solver --features full --test math_resource_lra_routes finite_cyclic_geometry_bad_diagonal_intersection_artifact_emits_checked_farkas
+cargo test -p axeyum-solver --features full --test math_resource_lra_routes finite_operator_bad_operator_bound_artifact_emits_checked_farkas
+cargo test -p axeyum-solver --features full --test math_resource_lra_routes finite_root_finding_bad_newton_step_artifact_emits_checked_farkas
+cargo test -p axeyum-solver --features full --test math_resource_lra_routes finite_separation_bad_convex_combination_artifact_emits_checked_farkas
+cargo test -p axeyum-solver --features full --test math_resource_lra_routes finite_separation_bad_separator_artifact_emits_checked_farkas
+cargo test -p axeyum-solver --features full --test math_resource_lra_routes finite_kkt_bad_stationarity_artifact_emits_checked_farkas
+cargo test -p axeyum-solver --features full --test math_resource_lra_routes finite_kkt_bad_complementarity_artifact_emits_checked_farkas
+cargo test -p axeyum-solver --features full --test math_resource_lra_routes finite_gradient_descent_bad_decrease_artifact_emits_checked_farkas
+cargo test -p axeyum-solver --features full --test math_resource_lra_routes complex_algebraic_bad_norm_squared_artifact_emits_checked_farkas
+cargo test -p axeyum-solver --features full --test math_resource_lra_routes affine_geometry_bad_midpoint_image_y_artifact_emits_checked_farkas
+cargo test -p axeyum-solver --features full --test lean_crosscheck lean_crosscheck_representative
 ./scripts/check-foundational-resources.sh
 ```
 
@@ -657,19 +657,23 @@ Expected artifact:
 Validation:
 
 ```sh
-cargo test -p axeyum-solver --test math_resource_uf_routes
-cargo test -p axeyum-solver --test math_resource_uf_routes qf_uf_resource_route_rejects_tampered_alethe_certificate
-cargo test -p axeyum-solver --test math_resource_uf_routes equivalence_classes_quotient_map_congruence_emits_checked_alethe
-cargo test -p axeyum-solver --test math_resource_uf_routes finite_quotient_topology_bad_open_emits_checked_alethe
-cargo test -p axeyum-solver --test math_resource_uf_routes finite_specialization_order_bad_t0_antisymmetry_emits_checked_alethe
-cargo test -p axeyum-solver --test math_resource_uf_routes finite_simplicial_cohomology_bad_coboundary_value_emits_checked_alethe
-cargo test -p axeyum-solver --test math_resource_uf_routes finite_universal_coefficient_bad_h1_zero_emits_checked_alethe
-cargo test -p axeyum-solver --test evidence qf_ufbv_unsat_carries_a_zero_trust_alethe_certificate
-cargo test -p axeyum-solver --test evidence qf_uf_declared_sort_equality_unsat_carries_zero_trust_alethe_certificate
-cargo test -p axeyum-solver --test lean_crosscheck qf_uf_declared_sort_equality_checks_in_real_lean
-cargo test -p axeyum-solver --test lean_crosscheck qf_ufbv_refutation_checks_in_real_lean
+cargo test -p axeyum-solver --features full --test math_resource_uf_routes
+cargo test -p axeyum-solver --features full --test math_resource_uf_routes qf_uf_resource_route_rejects_tampered_alethe_certificate
+cargo test -p axeyum-solver --features full --test math_resource_uf_routes equivalence_classes_quotient_map_congruence_emits_checked_alethe
+cargo test -p axeyum-solver --features full --test math_resource_uf_routes finite_quotient_topology_bad_open_emits_checked_alethe
+cargo test -p axeyum-solver --features full --test math_resource_uf_routes finite_specialization_order_bad_t0_antisymmetry_emits_checked_alethe
+cargo test -p axeyum-solver --features full --test math_resource_uf_routes finite_simplicial_cohomology_bad_coboundary_value_emits_checked_alethe
+cargo test -p axeyum-solver --features full --test math_resource_uf_routes finite_universal_coefficient_bad_h1_zero_emits_checked_alethe
+cargo test -p axeyum-solver --features full --test evidence qf_ufbv_unsat_carries_a_zero_trust_alethe_certificate
+cargo test -p axeyum-solver --features full --test evidence qf_uf_declared_sort_equality_unsat_carries_zero_trust_alethe_certificate
+cargo test -p axeyum-solver --features full --test lean_crosscheck lean_crosscheck_representative
 ./scripts/check-foundational-resources.sh
 ```
+
+The named Lean builders are registered cases, not standalone Rust tests. The
+representative harness runs one module from every registered proof family. It
+reports a missing `lean` binary as a visible skip; set `AXEYUM_REQUIRE_LEAN=1`
+in a Lean-capable environment when external kernel checking must fail closed.
 
 Graduation:
 
@@ -757,14 +761,14 @@ Expected artifact:
 Validation:
 
 ```sh
-cargo test -p axeyum-solver diophantine
-cargo test -p axeyum-solver certificate_tamper_is_rejected
-cargo test -p axeyum-solver --test math_resource_lia_routes qf_lia_resource_route_rejects_tampered_diophantine_certificate
-cargo test -p axeyum-solver --test math_resource_lia_routes modular_nonunit_inverse_emits_checked_diophantine_evidence
-cargo test -p axeyum-solver --test math_resource_lia_routes modular_incompatible_crt_emits_checked_diophantine_evidence
-cargo test -p axeyum-solver --test math_resource_lia_routes finite_chain_complex_torsion_bad_generator_emits_checked_diophantine_evidence
-cargo test -p axeyum-solver --test int_inequality_lean_reconstruct
-cargo test -p axeyum-solver --test math_resource_lia_routes
+cargo test -p axeyum-solver --features full diophantine
+cargo test -p axeyum-solver --features full certificate_tamper_is_rejected
+cargo test -p axeyum-solver --features full --test math_resource_lia_routes qf_lia_resource_route_rejects_tampered_diophantine_certificate
+cargo test -p axeyum-solver --features full --test math_resource_lia_routes modular_nonunit_inverse_emits_checked_diophantine_evidence
+cargo test -p axeyum-solver --features full --test math_resource_lia_routes modular_incompatible_crt_emits_checked_diophantine_evidence
+cargo test -p axeyum-solver --features full --test math_resource_lia_routes finite_chain_complex_torsion_bad_generator_emits_checked_diophantine_evidence
+cargo test -p axeyum-solver --features full --test int_inequality_lean_reconstruct
+cargo test -p axeyum-solver --features full --test math_resource_lia_routes
 ./scripts/check-foundational-resources.sh
 ```
 
@@ -832,13 +836,13 @@ Expected artifact:
 Validation:
 
 ```sh
-cargo test -p axeyum-solver --test math_resource_bv_routes
-cargo test -p axeyum-solver --test math_resource_bv_routes qf_bv_resource_route_rejects_tampered_drat_certificate
-cargo test -p axeyum-solver --test math_resource_bv_routes finite_fields_composite_nonfield_emits_checked_drat
-cargo test -p axeyum-solver --test math_resource_bv_routes modular_arithmetic_fermat_units_mod5_emits_checked_bv_drat
-cargo test -p axeyum-solver --test math_resource_bv_routes finite_simplicial_cup_product_bad_value_emits_checked_bv_drat
-cargo test -p axeyum-solver --test evidence unsat_evidence_carries_a_recheckable_drat_certificate
-cargo test -p axeyum-solver --test evidence qf_bv_drat_unsat_reports_bitblast_tseitin_sat_steps
+cargo test -p axeyum-solver --features full --test math_resource_bv_routes
+cargo test -p axeyum-solver --features full --test math_resource_bv_routes qf_bv_resource_route_rejects_tampered_drat_certificate
+cargo test -p axeyum-solver --features full --test math_resource_bv_routes finite_fields_composite_nonfield_emits_checked_drat
+cargo test -p axeyum-solver --features full --test math_resource_bv_routes modular_arithmetic_fermat_units_mod5_emits_checked_bv_drat
+cargo test -p axeyum-solver --features full --test math_resource_bv_routes finite_simplicial_cup_product_bad_value_emits_checked_bv_drat
+cargo test -p axeyum-solver --features full --test evidence unsat_evidence_carries_a_recheckable_drat_certificate
+cargo test -p axeyum-solver --features full --test evidence qf_bv_drat_unsat_reports_bitblast_tseitin_sat_steps
 ./scripts/check-foundational-resources.sh
 ```
 

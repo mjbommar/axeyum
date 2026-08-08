@@ -84,7 +84,7 @@
       "source_citations": ["Example Rule 5(a)"],
       "data": {
         "smt2_artifact": "docs/rules-as-code/examples/grant-allocation-v0/smt2/total-budget-respected-farkas-conflict.smt2",
-        "proof_regression": "cargo test -p axeyum-solver --test rules_as_code_examples grant_allocation_total_budget_respected_emits_checked_evidence",
+        "proof_regression": "cargo test -p axeyum-solver --features full --test rules_as_code_examples grant_allocation_total_budget_respected_emits_checked_evidence",
         "certificate": "produce_evidence emits certified evidence checked by Evidence::check"
       }
     },
@@ -96,7 +96,7 @@
       "source_citations": ["Example Rule 5(b)"],
       "data": {
         "smt2_artifact": "docs/rules-as-code/examples/grant-allocation-v0/smt2/shelter-minimum-respected-farkas-conflict.smt2",
-        "proof_regression": "cargo test -p axeyum-solver --test rules_as_code_examples grant_allocation_shelter_minimum_respected_emits_checked_evidence",
+        "proof_regression": "cargo test -p axeyum-solver --features full --test rules_as_code_examples grant_allocation_shelter_minimum_respected_emits_checked_evidence",
         "certificate": "produce_evidence emits certified evidence checked by Evidence::check"
       }
     },
@@ -108,7 +108,7 @@
       "source_citations": ["Example Rule 5(c)"],
       "data": {
         "smt2_artifact": "docs/rules-as-code/examples/grant-allocation-v0/smt2/clinic-minimum-respected-farkas-conflict.smt2",
-        "proof_regression": "cargo test -p axeyum-solver --test rules_as_code_examples grant_allocation_clinic_minimum_respected_emits_checked_evidence",
+        "proof_regression": "cargo test -p axeyum-solver --features full --test rules_as_code_examples grant_allocation_clinic_minimum_respected_emits_checked_evidence",
         "certificate": "produce_evidence emits certified evidence checked by Evidence::check"
       }
     },
@@ -120,7 +120,7 @@
       "source_citations": ["Example Rule 5(d)"],
       "data": {
         "smt2_artifact": "docs/rules-as-code/examples/grant-allocation-v0/smt2/admin-cap-respected-farkas-conflict.smt2",
-        "proof_regression": "cargo test -p axeyum-solver --test rules_as_code_examples grant_allocation_admin_cap_respected_emits_checked_evidence",
+        "proof_regression": "cargo test -p axeyum-solver --features full --test rules_as_code_examples grant_allocation_admin_cap_respected_emits_checked_evidence",
         "certificate": "produce_evidence emits certified evidence checked by Evidence::check"
       }
     },
@@ -132,7 +132,7 @@
       "source_citations": ["Example Rule 5(a)", "Example Rule 5(b)", "Example Rule 5(c)", "Example Rule 5(d)", "Example Rule 5(e)", "Example Rule 5(f)"],
       "data": {
         "smt2_artifact": "docs/rules-as-code/examples/grant-allocation-v0/smt2/implementation-equivalence-farkas-conflict.smt2",
-        "proof_regression": "cargo test -p axeyum-solver --test rules_as_code_examples grant_allocation_implementation_equivalence_emits_checked_evidence",
+        "proof_regression": "cargo test -p axeyum-solver --features full --test rules_as_code_examples grant_allocation_implementation_equivalence_emits_checked_evidence",
         "certificate": "produce_evidence emits certified evidence checked by Evidence::check"
       },
       "notes": "The SMT-LIB mismatch query compares two identical formalizations of the bounded rational allocation rule; the validator replays the finite rational sample from the JSON rule model."

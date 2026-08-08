@@ -110,7 +110,7 @@
       "source_citations": ["Example Policy 2(a)", "Example Policy 2(d)"],
       "data": {
         "smt2_artifact": "docs/rules-as-code/examples/authorization-policy-v0/smt2/tenant-isolation-bool-qf-lia-conflict.smt2",
-        "proof_regression": "cargo test -p axeyum-solver --test rules_as_code_examples authorization_policy_tenant_isolation_emits_checked_evidence",
+        "proof_regression": "cargo test -p axeyum-solver --features full --test rules_as_code_examples authorization_policy_tenant_isolation_emits_checked_evidence",
         "certificate": "produce_evidence emits certified evidence checked by Evidence::check"
       }
     },
@@ -122,7 +122,7 @@
       "source_citations": ["Example Policy 2(b)", "Example Policy 2(c)", "Example Policy 2(d)"],
       "data": {
         "smt2_artifact": "docs/rules-as-code/examples/authorization-policy-v0/smt2/explicit-deny-precedence-bool-qf-lia-conflict.smt2",
-        "proof_regression": "cargo test -p axeyum-solver --test rules_as_code_examples authorization_policy_explicit_deny_precedence_emits_checked_evidence",
+        "proof_regression": "cargo test -p axeyum-solver --features full --test rules_as_code_examples authorization_policy_explicit_deny_precedence_emits_checked_evidence",
         "certificate": "produce_evidence emits certified evidence checked by Evidence::check"
       }
     },
@@ -134,7 +134,7 @@
       "source_citations": ["Example Policy 2(a)", "Example Policy 2(d)"],
       "data": {
         "smt2_artifact": "docs/rules-as-code/examples/authorization-policy-v0/smt2/admin-tenant-guard-bool-qf-lia-conflict.smt2",
-        "proof_regression": "cargo test -p axeyum-solver --test rules_as_code_examples authorization_policy_admin_tenant_guard_emits_checked_evidence",
+        "proof_regression": "cargo test -p axeyum-solver --features full --test rules_as_code_examples authorization_policy_admin_tenant_guard_emits_checked_evidence",
         "certificate": "produce_evidence emits certified evidence checked by Evidence::check"
       }
     },
@@ -154,7 +154,7 @@
       "source_citations": ["Example Policy 2(a)", "Example Policy 2(b)", "Example Policy 2(c)", "Example Policy 2(d)", "Example Policy 2(e)"],
       "data": {
         "smt2_artifact": "docs/rules-as-code/examples/authorization-policy-v0/smt2/implementation-equivalence-bool-qf-lia-conflict.smt2",
-        "proof_regression": "cargo test -p axeyum-solver --test rules_as_code_examples authorization_policy_implementation_equivalence_emits_checked_evidence",
+        "proof_regression": "cargo test -p axeyum-solver --features full --test rules_as_code_examples authorization_policy_implementation_equivalence_emits_checked_evidence",
         "certificate": "produce_evidence emits certified evidence checked by Evidence::check"
       },
       "notes": "The SMT-LIB mismatch query encodes the policy model and executable interpretation for the bounded role/action slice and asks for disagreement."

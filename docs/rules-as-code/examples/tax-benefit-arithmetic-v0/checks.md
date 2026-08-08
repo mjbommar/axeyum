@@ -16,5 +16,5 @@ Run:
 
 ```sh
 python3 scripts/validate-rules-as-code.py
-cargo test -p axeyum-solver --test rules_as_code_examples
+cargo test -p axeyum-solver --features full --test rules_as_code_examples
 ```

@@ -72,7 +72,7 @@ now has finite transition replay plus source-linked checked Bool/QF_LIA
 artifacts for no-skip, terminal-state, and implementation-equivalence rows.
 Checked fixtures are
 checked by
-`cargo test -p axeyum-solver --test rules_as_code_examples`; benefit threshold
+`cargo test -p axeyum-solver --features full --test rules_as_code_examples`; benefit threshold
 and temporal-transition rows, authorization version-delta rows, tax/benefit
 threshold-cliff and temporal-transition rows, and procurement bonus-threshold
 rows, plus grant allocation edge allocations, category replay witnesses, and
@@ -388,7 +388,7 @@ python3 scripts/query-rules-as-code.py families --text adjacent --require-any
 Rule-pack solver checks:
 
 ```sh
-cargo test -p axeyum-solver --test rules_as_code_examples
+cargo test -p axeyum-solver --features full --test rules_as_code_examples
 ```
 
 The interface stays explicit:

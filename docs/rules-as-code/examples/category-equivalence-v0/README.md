@@ -56,5 +56,5 @@ The bounded model samples three categories and two programs.
 python3 scripts/gen-rules-as-code-dashboard.py
 python3 scripts/validate-rules-as-code.py
 python3 scripts/query-rules-as-code.py packs --pack category_equivalence_v0 --require-any
-cargo test -p axeyum-solver --test rules_as_code_examples category_equivalence
+cargo test -p axeyum-solver --features full --test rules_as_code_examples category_equivalence
 ```

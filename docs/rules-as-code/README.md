@@ -148,5 +148,5 @@ python3 scripts/query-rules-as-code.py coverage --by validation --require-any
 python3 scripts/query-rules-as-code.py coverage --by fragment --format json --require-any
 python3 scripts/query-rules-as-code.py packs --pack category_equivalence_v0 --require-any
 python3 scripts/query-rules-as-code.py packs --pack workflow_reachability_v0 --require-any
-cargo test -p axeyum-solver --test rules_as_code_examples
+cargo test -p axeyum-solver --features full --test rules_as_code_examples
 ```

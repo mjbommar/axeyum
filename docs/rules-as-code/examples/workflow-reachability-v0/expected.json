@@ -82,7 +82,7 @@
       "source_citations": ["Example Rule 7(a)", "Example Rule 7(b)"],
       "data": {
         "smt2_artifact": "docs/rules-as-code/examples/workflow-reachability-v0/smt2/no-skip-to-approved-bool-qf-lia-conflict.smt2",
-        "proof_regression": "cargo test -p axeyum-solver --test rules_as_code_examples workflow_reachability_no_skip_to_approved_emits_checked_evidence",
+        "proof_regression": "cargo test -p axeyum-solver --features full --test rules_as_code_examples workflow_reachability_no_skip_to_approved_emits_checked_evidence",
         "certificate": "produce_evidence emits certified evidence checked by Evidence::check"
       }
     },
@@ -94,7 +94,7 @@
       "source_citations": ["Example Rule 7(d)"],
       "data": {
         "smt2_artifact": "docs/rules-as-code/examples/workflow-reachability-v0/smt2/terminal-states-absorbing-bool-qf-lia-conflict.smt2",
-        "proof_regression": "cargo test -p axeyum-solver --test rules_as_code_examples workflow_reachability_terminal_states_absorbing_emits_checked_evidence",
+        "proof_regression": "cargo test -p axeyum-solver --features full --test rules_as_code_examples workflow_reachability_terminal_states_absorbing_emits_checked_evidence",
         "certificate": "produce_evidence emits certified evidence checked by Evidence::check"
       }
     },
@@ -106,7 +106,7 @@
       "source_citations": ["Example Rule 7(a)", "Example Rule 7(b)", "Example Rule 7(c)", "Example Rule 7(d)", "Example Rule 7(e)"],
       "data": {
         "smt2_artifact": "docs/rules-as-code/examples/workflow-reachability-v0/smt2/implementation-equivalence-bool-qf-lia-conflict.smt2",
-        "proof_regression": "cargo test -p axeyum-solver --test rules_as_code_examples workflow_reachability_implementation_equivalence_emits_checked_evidence",
+        "proof_regression": "cargo test -p axeyum-solver --features full --test rules_as_code_examples workflow_reachability_implementation_equivalence_emits_checked_evidence",
         "certificate": "produce_evidence emits certified evidence checked by Evidence::check"
       },
       "notes": "The SMT-LIB mismatch query compares identical bounded transition predicates; generated two-step rows replay the same transition function by composition."

@@ -462,5 +462,5 @@ Proof-route promotions:
 
 ```sh
 # plus the route-specific regression named by the pack
-cargo test -p axeyum-solver --test <route-test> <test-name>
+cargo test -p axeyum-solver --features full --test <route-test> <test-name>
 ```

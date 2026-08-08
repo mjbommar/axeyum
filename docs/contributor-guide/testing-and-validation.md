@@ -11,7 +11,7 @@ boundary:
 
 | Stage | Purpose | Typical command |
 |---|---|---|
-| Single behavior | Fast regression feedback | `cargo test -p axeyum-solver --test evidence` |
+| Single behavior | Fast regression feedback | `cargo test -p axeyum-solver --features full --test evidence` |
 | Owning crate | Unit and crate integration behavior | `cargo test -p axeyum-solver --features full` |
 | Changed scope | Map all touched paths to focused gates | `just check-scope origin/main` |
 | Solving-path safety | Whole suite under a hard memory cap | `just test-guarded` |
@@ -56,7 +56,7 @@ Solver, decider, admission, or dispatch changes must also run the serialized
 capability frontier:
 
 ```sh
-cargo test -p axeyum-solver --test progress_frontier \
+cargo test -p axeyum-solver --features full --test progress_frontier \
   --features full -- --test-threads=1
 ```
 
