@@ -320,8 +320,8 @@ here as closed evidence boundaries. A3 remains incomplete, but all currently
 preregistered bounded mechanisms are closed negatively. A4 has now also yielded;
 A5 is the first active item.
 
-**Immediate action.** Rebuild the release census binary from clean pushed topic
-`0159a76f2` (solver repair `61a9ad1a0`), then restart QF_LRA from row 1 under
+**Immediate action.** Rebuild the release census binary from the current clean
+pushed topic (solver repair `61a9ad1a0`), then restart QF_LRA from row 1 under
 the unchanged 24-second/8-GiB capture envelope. The failed 172-row abort stream,
 the complete-but-parse-invalid 200-row stream, the failed 168-row pursuit abort,
 and the failed 58-row QF_IDL abort all remain non-credited. The valid 200-row
