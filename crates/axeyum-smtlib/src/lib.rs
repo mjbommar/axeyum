@@ -1,16 +1,35 @@
-//! SMT-LIB 2 reader and writer for the Axeyum `QF_BV` slice.
+//! SMT-LIB 2 reader and sharing-preserving writer for Axeyum.
 //!
-//! Reader: benchmark ingestion (formats note) — `declare-const`/0-ary
-//! `declare-fun`, `define-fun` aliases, `let`, the full Phase 1 operator
-//! set, hex/binary/indexed literals, `:status` ground truth. Incremental
-//! scripting is rejected explicitly.
+//! The reader covers the typed command and term surface admitted by the current
+//! parser, including arrays, arithmetic, floating point, strings, quantifiers,
+//! functions, datatypes, objectives, output requests, and ordered incremental
+//! `push`/`pop`/query commands. Parsing support is not the same as solver-route
+//! support; callers must preserve explicit unsupported/resource outcomes.
 //!
-//! Writer: sharing-preserving export — shared nodes become 0-ary
+//! The writer emits complete scripts and turns shared nodes into 0-ary
 //! `define-fun`s so output is linear in the DAG, never the unfolded tree
 //! (query-cost-control hard rule).
 //!
 //! Both directions are iterative; adversarially deep input cannot overflow
 //! the stack.
+//!
+//! # Example
+//!
+//! ```
+//! use axeyum_smtlib::{parse_script, write_script};
+//!
+//! let script = parse_script(
+//!     "(set-logic QF_BV) (declare-const x (_ BitVec 8)) \
+//!      (assert (= x #x2a)) (check-sat)"
+//! )?;
+//! assert_eq!(script.logic.as_deref(), Some("QF_BV"));
+//! assert_eq!(script.assertions.len(), 1);
+//! assert_eq!(script.check_sats, 1);
+//!
+//! let exported = write_script(&script.arena, &script.assertions);
+//! assert!(exported.contains("(check-sat)"));
+//! # Ok::<(), Box<dyn std::error::Error>>(())
+//! ```
 
 mod bounded_completeness;
 mod parse;
@@ -37,7 +56,7 @@ use axeyum_ir::IrError;
 pub enum SmtError {
     /// Malformed input text.
     Syntax(String),
-    /// Valid SMT-LIB outside the supported `QF_BV` benchmark slice.
+    /// Well-formed SMT-LIB outside the parser's admitted typed surface.
     Unsupported(String),
     /// Sort or width error from term construction.
     Ir(IrError),

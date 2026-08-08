@@ -314,7 +314,7 @@ pub fn canonicalize_terms(
     Canonicalizer::default().canonicalize_terms(arena, roots)
 }
 
-/// Returns the default Phase 3 rewrite manifest.
+/// Returns the default rewrite manifest.
 ///
 /// All rules in this manifest are exact-denotation rules with identity model
 /// projection.

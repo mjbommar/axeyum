@@ -31,18 +31,18 @@ the `prove` front door.
 
 ## The Chapter-1 inequalities
 
-Measured against `crates/axeyum-solver/tests/spivak_inequalities.rs` (active
-tests pass; the frontier cases are `#[ignore]`d so they don't hang the gate):
+Measured against `crates/axeyum-solver/tests/spivak_inequalities.rs` and the
+focused SOS evidence/reconstruction suites:
 
 | Inequality | Statement | Class | axeyum verdict (measured) |
 |---|---|---|---|
 | Order transitivity | `a<b ∧ b<c ⇒ a<c` | LRA | **Proved** (Farkas, re-checked) ✓ active test |
 | Monotonicity (threshold-1) | `x≥1 ∧ y≥1 ⇒ x·y≥1` | NRA | **Proved** by NRA ✓ active test |
-| Triangle inequality | `\|a+b\| ≤ \|a\|+\|b\|` | LRA + abs case-split | the bare `prove`/LRA front door rejects the `ite`; needs DPLL(T)-over-LRA |
-| Square nonnegativity | `a² + b² ≥ 2ab` (`(a−b)²≥0`) | NRA (deg 2) | **NRA frontier** — not proved (and search does not promptly terminate) |
-| AM–GM, n=2 (√-free) | `(a+b)² ≥ 4ab` | NRA (deg 2) | **NRA frontier** (same reason) |
-| Bernoulli, fixed n=2 | `(1+x)² ≥ 1+2x` (`x²≥0`) | NRA (deg 2) | **NRA frontier** (same reason) |
-| Cauchy–Schwarz, n=2 | `(a₁b₁+a₂b₂)² ≤ (a₁²+a₂²)(b₁²+b₂²)` | NRA (deg 4) | **NRA frontier** |
+| Triangle inequality | `\|a+b\| ≤ \|a\|+\|b\|` | LRA + abs case split | not pinned by the focused Spivak regression; do not infer a proof claim from other LRA coverage |
+| Square nonnegativity | `a² + b² ≥ 2ab` (`(a−b)²≥0`) | NRA (degree 2) | **Proved**; active NRA regression, checked SOS/PSD evidence, and kernel-reconstructed supported form |
+| AM–GM, n=2 (sqrt-free) | `(a+b)² ≥ 4ab` | NRA (degree 2) | covered by the degree-2 SOS/PSD route; focused evidence and reconstruction tests include the two-variable sum form |
+| Bernoulli, fixed n=2 | `(1+x)² ≥ 1+2x` (`x²≥0`) | NRA (degree 2) | algebraically in the SOS class, but not a named Spivak regression cell; keep the claim at route level |
+| Cauchy–Schwarz, n=2 | `(a₁b₁+a₂b₂)² ≤ (a₁²+a₂²)(b₁²+b₂²)` | NRA (degree 4) | outside the degree-2 SOS certificate; no Spivak-specific checked-proof claim |
 | Bernoulli, ∀n | `(1+x)ⁿ ≥ 1+nx` | induction | **Lean-horizon** |
 | AM–GM, general n | `(Σaᵢ)/n ≥ (Πaᵢ)^{1/n}` | induction + roots | **Lean-horizon** |
 
@@ -60,24 +60,17 @@ tests pass; the frontier cases are `#[ignore]`d so they don't hang the gate):
    through `branch_and_bound` and the per-box refinement loop, so the engine bails
    to `Unknown` promptly. The frontier test `square_nonnegativity_is_the_nra_frontier`
    is now active (returns `Unknown` in ~5s instead of hanging).
-3. **The SOS frontier itself — OPEN (#16, P2.5).** axeyum's NRA proves
-   *monotonicity*-shaped inequalities but still cannot *prove* the *sum-of-squares*
-   ones — including `a²+b² ≥ 2ab` — because linearization abstracts `a²`, `b²`,
-   `ab` to independent variables, discarding the correlation that makes
-   `(a−b)² ≥ 0` true. **Design sketch for #16:** add a sum-of-squares /
-   positivstellensatz certificate path — given a goal `p ≥ 0`, search for an SOS
-   decomposition `p = Σ qᵢ²` (an SDP feasibility problem; or, for the fixed
-   low-degree Spivak cases, a targeted "is `lhs − rhs` a manifest perfect square
-   of a linear form?" recognizer). Cauchy–Schwarz's Lagrange-identity SOS
-   certificate is the canonical target. This is genuine P2.5 work (L); deferred
-   with this design rather than faked. (The original assumption that NRA proves
-   the degree-2 SOS facts was *wrong* — the probe corrected it; this is exactly
-   what a benchmark is for.)
+3. **The degree-2 SOS frontier moved.** Axeyum now extracts a quadratic form,
+   checks an exact rational LDL-transpose/PSD certificate, and reconstructs
+   selected two- and three-variable AM–GM forms through the Lean-core checker.
+   The remaining frontier is broader: higher-degree Positivstellensatz-style
+   evidence, general CAD proof production, and source-bound reconstruction for
+   polynomial shapes outside the admitted SOS slice.
 
 ## Why this matters for axeyum
 
 Spivak Chapter 1 is, quite literally, a curriculum of ordered-field and
 fixed-degree-polynomial reasoning — i.e. a hand-curated **LRA + NRA benchmark**
 of foundational, human-meaningful theorems. It exercises exactly the arithmetic
-the proof track and P2.5 care about, and it cleanly separates "what we can prove
-with a certificate today" from "the NRA frontier" from "the Lean-horizon."
+the proof track cares about, and it cleanly separates checked LRA/SOS evidence,
+decision-only or incomplete NRA routes, and the Lean horizon.

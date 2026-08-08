@@ -1,26 +1,23 @@
 # axeyum-ir
 
-Typed term IR for the [Axeyum](https://github.com/mjbommar/axeyum) automated
-reasoning stack: sorts, symbols, terms stored as an interned DAG with compact
-`u32` newtype IDs, typed builders, and the ground evaluator that serves as
-the executable semantic reference for every other layer.
+Typed terms and executable ground semantics for
+[Axeyum](https://github.com/mjbommar/axeyum). The crate owns sorts, disjoint
+user/internal symbol namespaces, a hash-consed append-only `TermArena`,
+lifetime-free `Copy` term IDs, exact and wide values, sort-checked builders, and
+the evaluator used for source-model replay.
 
-Pure Rust, no C/C++ dependencies.
+Start with the compile-tested example in the
+[crate documentation](src/lib.rs). The implementation contracts are explained
+in [Term IR and arenas](../../docs/internals/term-ir.md) and
+[Ground evaluation](../../docs/internals/evaluator.md); SMT-LIB edge cases are
+specified in the [BV semantics note](../../docs/research/01-foundations/bv-semantics-and-partial-operations.md).
 
-Design rationale:
+```sh
+cargo test -p axeyum-ir
+```
 
-- [Term IR](../../docs/research/04-data-structures/term-ir.md) — arena,
-  interning, ID design.
-- [BV semantics](../../docs/research/01-foundations/bv-semantics-and-partial-operations.md)
-  — the SMT-LIB edge-case semantics implemented verbatim.
-- [API design](../../docs/research/06-rust-strategy/api-design-concurrency-and-stability.md)
-  — lifetime-free `Copy` handles, append-only arena, determinism rules.
-
-Status: Phase 1 complete — the full scalar QF_BV operator set with SMT-LIB
-edge-case semantics, hash-consed arena, sort-checked builders, ground
-evaluator with exhaustive small-width tests, and an SMT-LIB-style pretty
-printer. Z3-differential tests confirm the evaluator on every input at
-small widths. Representation choices in
-[ADR-0003](../../docs/research/09-decisions/adr-0003-m0-ir-representation.md).
+This crate defines syntax and semantics, not a solver. Current decision-procedure
+coverage belongs in the generated
+[support matrix](../../docs/reference/support-matrix.md).
 
 License: MIT OR Apache-2.0.

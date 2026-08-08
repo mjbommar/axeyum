@@ -46,7 +46,8 @@ false conjecture `x² ≥ x` disproved by a concrete wraparound witness).
 
 Proofs that require genuine creativity (lemma introduction, clever case splits
 beyond a decidable theory) are Lean-horizon; the *checking* of such a proof is
-the P3.6/P3.7 target.
+the kernel/reconstruction target. The checker exists, but general proof search,
+source elaboration, and complete reconstruction do not follow from that fact.
 
 ## References
 

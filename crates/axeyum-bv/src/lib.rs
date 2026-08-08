@@ -1,11 +1,33 @@
 //! Bit-vector lowering from Axeyum terms to AIG wires.
 //!
-//! This first Phase 4 lowering slice is intentionally small: constants,
-//! symbols, Boolean connectives, bit-vector bitwise operators, structural BV
-//! operators, and the first arithmetic/comparison/shift circuits. It records
-//! explicit term-bit and symbol-input maps so later CNF and SAT layers can
-//! lift assignments back to original terms instead of trusting the lowered
-//! form.
+//! The lowering covers the admitted scalar Bool/BV surface and records explicit
+//! term-bit and symbol-input maps so later CNF and SAT layers can lift
+//! assignments back to original terms instead of trusting the lowered form.
+//! One-shot, incremental, deadline-aware, and diagnostic demand variants share
+//! that provenance contract.
+//!
+//! # Example
+//!
+//! ```
+//! use axeyum_bv::lower_terms;
+//! use axeyum_ir::{Assignment, Sort, TermArena, Value};
+//!
+//! let mut arena = TermArena::new();
+//! let x_symbol = arena.declare("x", Sort::BitVec(8))?;
+//! let x = arena.var(x_symbol);
+//! let one = arena.bv_const(8, 1)?;
+//! let sum = arena.bv_add(x, one)?;
+//! let lowered = lower_terms(&arena, &[sum])?;
+//!
+//! let mut assignment = Assignment::new();
+//! assignment.set(x_symbol, Value::Bv { width: 8, value: 41 });
+//! assert_eq!(
+//!     lowered.evaluate_root(0, &assignment)?,
+//!     Value::Bv { width: 8, value: 42 }
+//! );
+//! assert!(!lowered.symbol_inputs().is_empty());
+//! # Ok::<(), Box<dyn std::error::Error>>(())
+//! ```
 
 use std::{
     collections::{BTreeMap, BTreeSet},
@@ -27,8 +49,8 @@ use axeyum_ir::{
 ///
 /// # Errors
 ///
-/// Returns [`BitLowerError`] if a term uses an operator outside the initial
-/// Phase 4 lowering subset, an assignment is missing during replay, or an
+/// Returns [`BitLowerError`] if a term uses an operator outside the admitted
+/// lowering surface, an assignment is missing during replay, or an
 /// internal lowering invariant is violated.
 pub fn lower_terms(arena: &TermArena, roots: &[TermId]) -> Result<BitLowering, BitLowerError> {
     LoweringBuilder::new(arena).lower_roots(roots, false)

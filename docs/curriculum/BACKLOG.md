@@ -1,86 +1,108 @@
-# Curriculum Build Backlog (next 10–20 items)
+# Curriculum scenario and teaching backlog
 
-Prioritized by **yield × readiness**, drawn from the curriculum gaps, the
-foundational-book drawable fragments ([source-tocs.md](foundational-books/source-tocs.md)),
-and the engine findings from the [Spivak benchmark](foundational-books/spivak.md).
-Tags: **✅** decidable/ready · **◐** fixed-instance only · **⚙** engine work ·
-**✦** Lean-horizon scaffolding. Size: S(mall)/M/L.
+This is the narrow backlog for the curriculum graph and
+`axeyum-scenarios` teaching surface. It is not the master queue for Axeyum and
+does not authorize solver work. Current project priority lives in root
+[`PLAN.md`](../../PLAN.md); the larger content and evidence queue lives in the
+[foundational resource build sequence](../foundational-resources/MATH-CURRICULUM-RESOURCE-BUILD-SEQUENCE.md).
 
-## Tier A — high-yield, decidable, ready now
+## Source-driven status
 
-1. **CRT solvability + witness** (`Family::NumberTheory`). `x≡a (mod m) ∧ x≡b
-   (mod n)`, `gcd(m,n)=1` → SAT with the CRT witness. ✅ S · BV/LIA · *Stein Ch.2*.
-2. **Quadratic residue / Legendre symbol** (`Family::NumberTheory`). `∃x. x²≡r
-   (mod p)` at fixed small prime `p`, exhaustive over `x∈[0,p)` → SAT (QR) /
-   UNSAT (non-residue). ✅ S · BV/enumeration · *Stein Ch.4*.
-3. **Sum of two squares** (`Family::NumberTheory`). `n = a²+b²` for a representable
-   `n`, SAT-by-witness (and a UNSAT case for `n≡3 mod 4`). ✅ S · BV · *Stein Ch.5.7*.
-4. **Factor theorem** (`Family::Polynomial`). `(x−r) | p(x) ⇔ p(r)=0` at fixed
-   coefficients; verify a claimed root and that the quotient multiplies back.
-   ✅ S · BV · *Shoup Ch.18*.
-5. **Finite field 𝔽ₚ inverses** (`Family::Algebra`). For prime `p`, *every* nonzero
-   element is invertible (exhaustive over 𝔽ₚ), contrasted with composite `n`
-   (some element has no inverse). Upgrades the ℤ/2ʷ field story to real 𝔽ₚ.
-   ✅ M · BV/enumeration · *Shoup Ch.19*.
-6. **Linear algebra over ℚ** (new `tests/linear_algebra_rational.rs`, solver/LRA).
-   `Ax=b` solvability + the rational solution as witness; matrix inverse via
-   `Ax=b` at fixed size; Farkas-refuted inconsistent system. ✅ M · LRA ·
-   *VMLS Part II, Shoup Ch.15*.
-7. **Proofs node demo** (closes the `proofs` curriculum gap). Pigeonhole
-   `PHP(n+1,n)` → emit a DRAT/LRAT (and Alethe) refutation and **re-check it
-   in-tree** — the "show your work / trusted small checking" lesson, on a
-   proof-complexity landmark. ✅ M · proof track.
-8. **Rationals node** (`tests`, solver/LRA). Exact-ℚ field & order facts
-   (density: `a<b ⇒ a<(a+b)/2<b`; trichotomy) with Farkas certificates → covers
-   the `rationals` node. ✅ S · LRA · *the ordered-field shadow of Spivak Ch.1*.
+The original backlog on this page has largely landed. The current scenario
+catalog includes CRT witnesses, quadratic residue and non-residue cases, sums
+of two squares, RSA round trips, finite-field inverses and composite-modulus
+controls, rational density and trichotomy, exact linear solutions, polynomial
+factorization and division-with-remainder, Fermat's little theorem at fixed
+modulus, pigeonhole/counting exercises, and 3×3 finite-field matrix identities.
 
-## Tier B — gap-filling / fixed-instance
+Do not copy that old list back into a future-work section. Current gaps come
+from two checked sources:
 
-9. **Fermat / Euler at fixed modulus** (`Family::Predicate`). `∀a∈(Z/pZ)*.
-   a^(p−1)=1` as a finite-domain quantified check at small fixed `p`. ◐ M ·
-   finite-domain quantifiers · *Stein Ch.2, Shoup Ch.2*.
-10. **Polynomial division-with-remainder** (`Family::Polynomial`). `p = q·d + r`,
-    `deg r < deg d`, at fixed coefficients over BV. ◐ S · *Shoup Ch.18*.
-11. **RSA round-trip** (`Family::NumberTheory`). `(mᵉ)ᵈ ≡ m (mod n)` at fixed small
-    keys (modular exponentiation by squaring, unrolled). ◐ M · *Stein Ch.3*.
-12. **3×3 matrix identities** (`Family::LinearAlgebra`). `det(AB)=detA·detB`,
-    associativity at 3×3 — over 𝔽₂ where still exhaustive; record where it exceeds
-    the budget. ◐ M.
-13. **SAT/CNF + bit-blasting demo** (example/lesson). "Watch a formula become
-    Tseitin CNF, then DPLL/CDCL decide it" on a tiny instance, with the DIMACS and
-    proof shown — closes the `sat-and-cnf` / `bit-blasting` concept gaps. ◐ M.
+- [`Concept::families`](../../crates/axeyum-scenarios/src/concept.rs) identifies
+  teaching concepts with no mapped scenario family;
+- the generated [curriculum status
+  audit](../foundational-resources/generated/curriculum-status-audit.md)
+  distinguishes scenario status from resource-pack maturity.
 
-## Tier C — engine work surfaced by the benchmarks
+## Priority 1: close explicit concept-family gaps
 
-14. **`prove` LRA→NRA dispatch** (⚙, `produce_evidence`). Route nonlinear real
-    goals to NRA instead of rejecting them as `Unsupported`. Unblocks proving the
-    Spivak NRA inequalities through the front door. ⚙ S/M.
-15. **NRA honors its timeout** (⚙, `check_with_nra` refinement loop). The
-    `am_gm`/`square_nonneg` cases run past the configured deadline; tighten the
-    spatial branch-and-bound to bail to `unknown` promptly. ⚙ M.
-16. **NRA sum-of-squares / positivstellensatz** (⚙, P2.5). Prove the foundational
-    SOS inequalities (`a²+b² ≥ 2ab`, AM–GM₂, Cauchy–Schwarz) that linearization
-    cannot — an SOS or CAD/nlsat path. Promotes the `#[ignore]`d Spivak frontier
-    tests. ⚙ L · *the headline NRA gap*.
+The current concept graph deliberately leaves these teaching rungs without a
+direct scenario family:
 
-## Tier D — Lean-horizon scaffolding (sequence later)
+1. **SAT and CNF.** Show a small Boolean formula, its Tseitin variables and
+   clauses, the SAT/UNSAT result, and the mapping back to the source formula.
+2. **Bit-vectors as values.** Teach width, wraparound, signed interpretation,
+   and total SMT-LIB operations directly rather than only through downstream
+   arithmetic families.
+3. **Bit-blasting.** Trace one source predicate through term bits, AIG nodes,
+   CNF variables, SAT, and model lifting.
+4. **Proofs and independent checking.** Pair an untrusted search result with a
+   small checked DRAT/LRAT, Alethe, Farkas, or kernel-reconstructed artifact and
+   include a tamper rejection.
+5. **Decidable geometry.** Add an exact real-closed-field exercise with a clear
+   boundary between the finite/algebraic claim and general Euclidean theory.
+6. **Limits of automation.** Contrast a decided query, a resource-limited or
+   unsupported `unknown`, and a theorem-horizon claim without presenting
+   `unknown` as a crash or counterexample.
 
-17. **Decidable-geometry (RCF) node**. Coordinate-geometry facts over ℝ
-    (Pythagoras, midpoint, collinearity) — mostly the NRA frontier today; freeze
-    as targets that promote when Tier-C #16 lands. ◐/frontier.
-18. **Peano-induction reconstruction targets** (✦). Freeze a small set of `∀n`
-    theorems (`n+0=n`, commutativity of `+`, Bernoulli ∀n) as `.smt2`/Lean stubs
-    documenting the P3.6/P3.7 goal — *targets, not benchmarks*.
-19. **"Fill the proof step" tutor** (✦, example). An Alethe proof with a hole, the
-    student fills the step, `check_alethe` grades it — interactive proof pedagogy
-    on the now-compiling proof stack.
+Acceptance for each item:
 
-## Sequencing note
+- add or reuse a deterministic self-checking exercise;
+- map the family in `Concept::families` only after the exercise exists;
+- add a focused learner page or link an existing end-to-end lesson;
+- state whether success is witness replay, exhaustive finite checking, sampled
+  regression evidence, or an independently checked certificate;
+- keep the full scenario and foundational-resource gates green.
 
-Tier A items #1–8 are all decidable and independent — build them in any order;
-each flips a curriculum node or deepens a covered one and grows the BV/LIA/LRA
-corpus. **#7 (proofs via pigeonhole) and #6 (LA over ℚ) are the highest-yield
-gap-closers.** Tier C #14 is the cheapest engine win (unblocks the Spivak NRA
-suite); #16 is the deep, high-value one (the SOS frontier). The
-`covered_nodes_have_a_family_realized` invariant test keeps the
-graph/code/docs in sync as each lands.
+## Priority 2: deepen, do not duplicate
+
+The project already has broad example-pack coverage. New work should improve a
+trust or teaching boundary instead of adding another near-identical finite
+example:
+
+1. Promote representative replay-only negative rows when a distinct checker or
+   certificate shape is educationally useful.
+2. Connect scenario exercises to the matching foundational pack and learner
+   page so the same mathematical object is not maintained twice without a
+   cross-check.
+3. Promote selected pack rows into solver regressions or fuzz seeds only when
+   the source pack, expected result, and solver pressure are all explicit.
+4. Add malformed-evidence and wrong-witness controls to lessons that teach a
+   proof route.
+5. Prefer exact rational or finite-domain examples; label numerical
+   approximations and sampled checks at their actual assurance level.
+
+Use the [proof-upgrade queries](../foundational-resources/PROOF-UPGRADE-QUERIES.md),
+[proof-route family selector](../foundational-resources/PROOF-ROUTE-FAMILY-SELECTION.md),
+and [curriculum-node queries](../foundational-resources/CURRICULUM-NODE-QUERIES.md)
+before selecting a new example.
+
+## Priority 3: theorem-horizon bridges
+
+Lean-horizon work should create deterministic interfaces, not imply that a
+general theorem is solved:
+
+- connect finite induction obligations to their corresponding quantified
+  theorem and reconstruction target;
+- connect algebraic calculus shadows to the missing completeness,
+  continuity, compactness, or convergence statement;
+- distinguish a kernel-checked reconstructed slice from full Lean source,
+  elaboration, tactic, workflow, or Mathlib compatibility;
+- retain explicit unsupported/unknown cases as teaching artifacts.
+
+The [reconstruction targets](reconstruction-targets/README.md) are frozen proof
+goals, not benchmark credits.
+
+## Validation
+
+```sh
+cargo test -p axeyum-scenarios
+just foundational-resources
+just parity-docs
+./scripts/check-links.sh
+```
+
+Stop if a new `covered` mapping lacks a realized self-checking family, a pack
+changes without regenerated dashboards, a solver claim disagrees with the live
+support/capability/trust authorities, or a finite shadow is worded as a general
+theorem.

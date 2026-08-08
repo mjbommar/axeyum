@@ -46,8 +46,10 @@ step obligation), and `bad_invariant_step` (the false invariant
 ## Lean-horizon
 
 Tying the obligations into a single `∀n` theorem (applying the induction axiom
-itself) is the proof-assistant step — a P3.6/P3.7 reconstruction target. axeyum
-checks the pieces; Lean assembles them into the universal statement.
+itself) is the proof-assistant step. Axeyum checks the decidable pieces; a
+complete proof must assemble them with a source-bound induction principle and
+pass the kernel and axiom-audit boundary. The current bounded reconstruction
+slice does not make that composition automatic.
 
 ## References
 

@@ -362,12 +362,14 @@ model-reuse variants failed isolated stability and were removed; do not retry
 until 94 happens to pass. A3/A4's negative routes remain closed. A2 still does
 not authorize C0/F2, host/NAS mutation, allocation, or a solver fleet.
 
-**Parallel documentation action.** Continue without modifying A4's solver or
+**Parallel documentation action.** Continue without modifying solver or
 evidence paths. Beginner/user, pinned WASM/browser, contributor, stable
-reference, and internals layers are now substantive and indexed. Internals cover
-the live IR/evaluator, rewrite/reconstruction, AIG/CNF/SAT, dispatch,
-proof/evidence, and Lean import/kernel contracts; generated matrices remain the
-support/trust authorities. Next audit crate READMEs and runnable rustdoc examples.
+reference, internals, all 22 crate front doors, curriculum, reviews, plan, and
+research now have substantive indexes; seven core crates have compile-tested
+rustdoc examples. Generated matrices remain the support/trust authorities.
+Deep-page audits corrected the stale curriculum depth/backlog,
+documentation-build gates, reconstruction-target wording, and textbook/NRA
+maps. Continue only when a live guide exposes a concrete stale claim.
 
 ### A1 — Complete arithmetic deadline and resource enforcement (`DONE`, P0)
 
@@ -636,7 +638,7 @@ or remove dirty/unmerged state to meet a free-space target.
 | CAS parity | `BLOCKED` by deliberate pause | Wave-24 code `01d47334` and pause commit `245d8f25` are ancestors of current main. Do not start wave 25 until the user resumes it and retained specialized gate evidence is re-audited. |
 | Consumer apps / verified systems | `WIP`, non-critical path | Existing EVM, verifier, property, reflection, and symbolic-execution slices remain useful; do not preempt A2–A7 without measured demand. |
 | Foundational resources | `WIP`, separate content lane | Keep generated-resource gates green; record only project-level priority changes here. |
-| Public documentation and examples | `WIP`, user-directed lane | Beginner/user, WASM/browser, contributor, stable reference, and internals layers are substantive and indexed; generated capability/support/trust/SMT-LIB truth remains authoritative. Next close crate README/rustdoc example gaps. |
+| Public documentation and examples | `WIP`, user-directed lane | Beginner/user, WASM/browser, contributor, stable reference, internals, all 22 crate front doors, curriculum, reviews, plan, and research have substantive indexes; seven core crates have compile-tested rustdoc examples. Generated authorities remain canonical. Deep audits corrected curriculum depth/backlog, build gates, reconstruction targets, and textbook/NRA maps; continue only from concrete live-linked drift. |
 | Worktree and build-cache hygiene | `WIP`, recovered | A11; only clean `main` is registered. The cleanup stored all 24 inactive dirty deltas in labelled stashes, retained every branch tip, removed the inactive checkouts and one 1.7 GiB session tree, retired the earlier clean A3 target, and finally removed the merged explanation-partition checkout with its 176 GiB Cargo target. Current free space is about 902 GiB on `/` and 28 GiB on `/tmp`; all topic branches remain preserved. Next automate the deterministic read-only inventory and exact-target cleanup classification. |
 
 ## Resume protocol

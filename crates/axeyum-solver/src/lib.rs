@@ -6,15 +6,36 @@
 //! Native backends are feature-gated adapters implementing this contract;
 //! the default build has no C or C++ dependency (ADR-0002).
 //!
-//! Enable the `z3` feature for the `Z3Backend` oracle (system libz3 via
-//! pkg-config) or `z3-static` for a hermetic prebuilt libz3. The milestone
-//! M0 doctest lives on the `Z3Backend` module. (Rendered as plain code, not an
-//! intra-doc link, so the crate docs build with or without the `z3` feature —
-//! the type only exists when that feature is enabled.)
+//! The default feature profile contains the pure-Rust scalar Bool/BV surface;
+//! `full` enables the multi-theory dispatcher, SMT-LIB front door, and broader
+//! evidence APIs. Enable `z3` only for the system-libz3 oracle or `z3-static`
+//! for its downloaded prebuilt variant.
 //!
 //! Design notes: `docs/research/03-architecture/backend-model.md`,
 //! `incrementality-and-solver-lifecycle.md`, and
 //! `07-verification/evidence-and-checking.md` in the repository.
+//!
+//! # Default-profile example
+//!
+//! ```
+//! use axeyum_ir::{Sort, TermArena, Value};
+//! use axeyum_solver::{CheckResult, SatBvBackend, SolverBackend, SolverConfig};
+//!
+//! let mut arena = TermArena::new();
+//! let x_symbol = arena.declare("x", Sort::BitVec(8))?;
+//! let x = arena.var(x_symbol);
+//! let forty_two = arena.bv_const(8, 42)?;
+//! let assertion = arena.eq(x, forty_two)?;
+//!
+//! let mut backend = SatBvBackend::new();
+//! match backend.check(&arena, &[assertion], &SolverConfig::default())? {
+//!     CheckResult::Sat(model) => {
+//!         assert_eq!(model.get(x_symbol), Some(Value::Bv { width: 8, value: 42 }));
+//!     }
+//!     other => panic!("expected sat, got {other:?}"),
+//! }
+//! # Ok::<(), Box<dyn std::error::Error>>(())
+//! ```
 
 // Model values are part of the solver-facing API: consumers should not need a
 // second direct dependency merely to inspect a returned model.

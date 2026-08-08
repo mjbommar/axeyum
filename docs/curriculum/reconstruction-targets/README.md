@@ -2,10 +2,11 @@
 
 These are **targets, not benchmarks**. They state `∀`-theorems that genuinely
 require **induction** — the kind of obligation axeyum's SMT engines return
-`unknown` on, by design (see [../DEPTH.md](../DEPTH.md)). They are frozen here so
-that when the proof track lands (P3.6 in-tree Lean kernel, P3.7 Alethe→Lean
-reconstruction), there is a fixed, honest set of goals to *check a proof against*
-rather than *decide*. They align with [Software Foundations in
+`unknown` on, by design (see [../DEPTH.md](../DEPTH.md)). They are frozen here as
+a fixed, honest set of goals to *check a proof against* rather than *decide*.
+The in-tree Lean-core checker and bounded reconstruction routes now exist, but
+these recursively defined induction theorems remain outside the reconstructed
+slice. They align with [Software Foundations in
 Lean](../foundational-books/proof-assistants.md).
 
 **Important nuance:** over the *built-in* `+`, facts like `n + 0 = n` and
@@ -25,6 +26,7 @@ properties are *not* SMT-decidable. That is what these stubs encode.
 
 ## Status
 
-`lean-horizon` / not-yet-reachable. Do **not** wire these as passing tests; they
-are documentation of where the proof track is headed. A future P3.7 milestone
-turns each into a kernel-checked proof.
+`lean-horizon` / not reconstructed. Do **not** wire the `sorry`-bearing sketches
+as passing tests. Promotion requires a complete source-bound proof term, in-tree
+kernel acceptance, the applicable external-Lean cross-check, and explicit axiom
+audit; solver acceptance of finite instances is not enough.

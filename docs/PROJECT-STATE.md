@@ -116,8 +116,9 @@ QF_BV three-solver control. Neither is a general solving-power result.
 
 Lean-core compatibility is substantial but partial. The checker/importer has
 selected dependent-core, projection, Nat-literal, recursive-indexed, mutual, and
-nested-inductive coverage. String literals, quotient computation, native source
-elaboration, tactics, Lake, LSP, compiler/runtime, `.olean`, `Init`/`Std`, and
+nested-inductive coverage, plus the canonical quotient package and its checked
+computation rules. String literals, native source elaboration, tactics, Lake,
+LSP, compiler/runtime, `.olean`, `Init`/`Std`, and
 mathlib compatibility remain separate unsatisfied layers. Bounded K0/K1 results
 do not imply complete Lean compatibility.
 
@@ -134,8 +135,11 @@ Recent repairs matter as much as new solving power:
 - remaining NRA interior overruns and a QF_LRA 8-GiB normalization abort are
   open P0 reliability work.
 
-Current `main`/`origin/main` at `803c08439` was clean during the consolidation
-audit. Its GitHub CI and docs workflows completed successfully on 2026-08-05.
+The 2026-08-05 consolidation audit was performed on a clean, remotely
+integrated revision whose GitHub CI and docs workflows completed successfully.
+That is retained historical evidence, not a claim that a moving `main` still
+names the same object. For current integration, compare local `HEAD`,
+`origin/main`, and `git ls-remote`, then inspect hosted runs for that exact SHA.
 
 ## What is not claimed
 

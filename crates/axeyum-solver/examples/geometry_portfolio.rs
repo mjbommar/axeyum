@@ -1,24 +1,25 @@
 //! Parallel-portfolio benchmark on Euclidean-geometry proof goals.
 //!
-//! Euclidean geometry over ℝ is decidable (Tarski), but its facts split by
-//! engine: **linear** facts (midpoints, betweenness, segment addition) are pure
-//! LRA — fast and Farkas-certified today — while **polynomial** facts (Pythagoras,
-//! AM–GM, squares) are NRA, the sound-but-incomplete frontier. That split is the
-//! point: no single engine is best for all of them, so a portfolio that runs the
-//! engines concurrently and takes the first proof gives both *coverage* (the
-//! union) and *latency* (the min) that beat any single engine.
+//! Euclidean geometry over ℝ is decidable (Tarski), but its facts span different
+//! solver fragments: midpoint, betweenness, and segment-addition facts are LRA,
+//! while Pythagorean, AM–GM, and square facts require polynomial reasoning. This
+//! example measures how the specialized LRA and broader, incomplete NRA engines
+//! behave on the same small corpus. A parallel portfolio has the union of their
+//! observed coverage and the minimum proof latency; neither property implies
+//! that it must beat the best single engine on every corpus.
 //!
 //! Fairness: each engine proves `goal` from `hyps` by deciding `hyps ∧ ¬goal`
 //! UNSAT, on the **same** goal, each in its **own** arena (no shared-state
 //! contention), under the same deadline. Per-engine wall time is measured in
 //! isolation; the portfolio latency is `min` over the engines that proved it —
 //! i.e. the wall-clock a real N-core run achieves with each engine on its own
-//! core. (`cargo run -p axeyum-solver --example geometry_portfolio --release`)
+//! core. (`cargo run -p axeyum-solver --features full --example \
+//! geometry_portfolio --release`)
 
 use std::time::{Duration, Instant};
 
 use axeyum_ir::{Rational, TermArena, TermId};
-use axeyum_solver::{CheckResult, SolverConfig, check_with_lra, check_with_nra};
+use axeyum_solver::{CheckResult, SolverConfig, SolverError, check_with_lra_dpll, check_with_nra};
 
 fn cfg() -> SolverConfig {
     SolverConfig::new().with_timeout(Duration::from_secs(10))
@@ -38,6 +39,14 @@ fn query(arena: &mut TermArena, hyps: &[TermId], goal: TermId) -> Vec<TermId> {
     q
 }
 
+/// Equality expressed as two order atoms, so the DPLL(T) LRA front door can
+/// reason about it under arbitrary Boolean structure (including `not(goal)`).
+fn ordered_eq(arena: &mut TermArena, lhs: TermId, rhs: TermId) -> TermId {
+    let lhs_le_rhs = arena.real_le(lhs, rhs).unwrap();
+    let rhs_le_lhs = arena.real_le(rhs, lhs).unwrap();
+    arena.and(lhs_le_rhs, rhs_le_lhs).unwrap()
+}
+
 /// The honest outcome of running one engine on one refutation query. We keep the
 /// three solver answers DISTINCT — collapsing `Unknown` into "no" would read as a
 /// disproof when it is merely an incomplete search (and would hide the cardinal
@@ -52,12 +61,13 @@ enum Verdict {
 }
 
 /// Map a solver result to the honest verdict. `Sat`/`Unknown` never collapse.
-fn verdict(r: &Result<CheckResult, axeyum_solver::SolverError>) -> Verdict {
+fn verdict(r: Result<CheckResult, SolverError>) -> Verdict {
     match r {
         Ok(CheckResult::Unsat) => Verdict::Proved,
         Ok(CheckResult::Sat(_)) => Verdict::Countermodel,
         Ok(CheckResult::Unknown(_)) => Verdict::Unknown,
-        Err(_) => Verdict::NotApplicable,
+        Err(SolverError::Unsupported(_)) => Verdict::NotApplicable,
+        Err(error) => panic!("solver engine failed: {error}"),
     }
 }
 
@@ -67,7 +77,7 @@ fn run_lra(g: &Goal) -> (Verdict, Duration) {
     let (hyps, goal) = (g.build)(&mut arena);
     let q = query(&mut arena, &hyps, goal);
     let t = Instant::now();
-    let v = verdict(&check_with_lra(&arena, &q));
+    let v = verdict(check_with_lra_dpll(&mut arena, &q, &cfg()));
     (v, t.elapsed())
 }
 
@@ -77,7 +87,7 @@ fn run_nra(g: &Goal) -> (Verdict, Duration) {
     let (hyps, goal) = (g.build)(&mut arena);
     let q = query(&mut arena, &hyps, goal);
     let t = Instant::now();
-    let v = verdict(&check_with_nra(&mut arena, &q, &cfg()));
+    let v = verdict(check_with_nra(&mut arena, &q, &cfg()));
     (v, t.elapsed())
 }
 
@@ -112,10 +122,10 @@ fn main() {
                 );
                 let two_m = a.real_add(m, m).unwrap();
                 let a_plus_b = a.real_add(pa, pb).unwrap();
-                let hyp = a.eq(two_m, a_plus_b).unwrap();
+                let hyp = ordered_eq(a, two_m, a_plus_b);
                 let lhs = a.real_sub(m, pa).unwrap();
                 let rhs = a.real_sub(pb, m).unwrap();
-                let goal = a.eq(lhs, rhs).unwrap();
+                let goal = ordered_eq(a, lhs, rhs);
                 (vec![hyp], goal)
             },
         },
@@ -131,7 +141,7 @@ fn main() {
                 );
                 let two_m = a.real_add(m, m).unwrap();
                 let a_plus_b = a.real_add(pa, pb).unwrap();
-                let mid = a.eq(two_m, a_plus_b).unwrap();
+                let mid = ordered_eq(a, two_m, a_plus_b);
                 let a_le_b = a.real_le(pa, pb).unwrap();
                 let a_le_m = a.real_le(pa, m).unwrap();
                 let m_le_b = a.real_le(m, pb).unwrap();
@@ -153,7 +163,7 @@ fn main() {
                 let bc = a.real_sub(pc, pb).unwrap();
                 let ac = a.real_sub(pc, pa).unwrap();
                 let sum = a.real_add(ab, bc).unwrap();
-                let goal = a.eq(ac, sum).unwrap();
+                let goal = ordered_eq(a, ac, sum);
                 (vec![], goal)
             },
         },
@@ -277,10 +287,18 @@ fn main() {
         "  PORTFOLIO      : {port_proved}   (total {port_t:.2} ms — union coverage, min latency)"
     );
     println!();
-    println!(
-        "Portfolio decides the UNION of {n} goals that no single engine covers alone, \
-         at the min per-goal latency (each engine on its own core)."
-    );
+    let best_single = lra_proved.max(nra_proved);
+    if port_proved > best_single {
+        println!(
+            "The portfolio expands observed coverage from {best_single}/{n} to \
+             {port_proved}/{n}; its per-goal proof latency is the faster successful engine."
+        );
+    } else {
+        println!(
+            "On this run the portfolio matches the best single-engine coverage \
+             ({port_proved}/{n}); its per-goal proof latency is the faster successful engine."
+        );
+    }
 
     #[cfg(feature = "z3")]
     run_z3_inproc();

@@ -1,9 +1,28 @@
 //! Query objects for Axeyum.
 //!
 //! A [`Query`] is a cheap, owned value object over terms stored in a
-//! [`axeyum_ir::TermArena`]. It gives Phase 3 a first-class place for
-//! assertions, assumptions, and scopes before slicing or rewriting can change
-//! what a model is required to satisfy.
+//! [`axeyum_ir::TermArena`]. It gives assertions, assumptions, scopes, labels,
+//! structural cache keys, and replay-aware query planning one stable boundary.
+//!
+//! # Example
+//!
+//! ```
+//! use axeyum_ir::TermArena;
+//! use axeyum_query::{Query, ROOT_SCOPE};
+//!
+//! let mut arena = TermArena::new();
+//! let p = arena.bool_var("p")?;
+//! let q = arena.bool_var("q")?;
+//! let mut builder = Query::builder(&arena);
+//! let branch = builder.scope(ROOT_SCOPE, Some("branch".into()))?;
+//! builder.assert_in(branch, p, Some("path-condition".into()))?;
+//! builder.assume(q)?;
+//! let query = builder.build();
+//! assert_eq!(query.assertions().len(), 1);
+//! assert_eq!(query.assumptions().len(), 1);
+//! assert_eq!(query.scopes().len(), 2);
+//! # Ok::<(), Box<dyn std::error::Error>>(())
+//! ```
 
 use axeyum_ir::{Sort, TermArena, TermId};
 
@@ -112,8 +131,9 @@ impl Query {
 
     /// Iterates over Boolean terms that a one-shot backend must enforce.
     ///
-    /// Phase 3 starts assumptions-first, but one-shot backends can soundly
-    /// enforce active assumptions by passing them as ordinary assertions.
+    /// One-shot backends can soundly enforce active assumptions by passing
+    /// them as ordinary assertions; retained backends may use assumption
+    /// literals without changing this query-level contract.
     pub fn solver_terms(&self) -> impl Iterator<Item = TermId> + '_ {
         self.assertions
             .iter()
