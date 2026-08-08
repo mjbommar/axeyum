@@ -4,6 +4,12 @@
 Rationale: [`../design/00-thesis.md`](../design/00-thesis.md).
 Entry ADR: [ADR-0167](../../research/09-decisions/adr-0167-prover-track-entry.md).
 
+> **Current boundary (2026-08-07).** This page defines dependency order; root
+> [PLAN.md](../../../PLAN.md) defines current project priority. P6.0 is partial
+> with major kernel slices landed. P6.1 has no standalone bridge, and P6.2/P6.3
+> have no goal/tactic implementation; the generated Lean registry reports the
+> goals/tactics axis `not_started`.
+
 Each phase has its own file with tasks, sizes, exit criteria, and its TCB
 statement. **Every slice lands alone**; none is justified by a later one.
 
@@ -32,7 +38,7 @@ competing theorem library or an Axeyum-only proof language.
 
 **The TCB is two boxes.** Everything that searches is outside it.
 
-## Build order
+## Dependency order
 
 | # | Phase | Size | Ships |
 |---|---|---|---|
@@ -45,13 +51,28 @@ competing theorem library or an Axeyum-only proof language.
 | **7** | **[P6.4](P6.4-agent-surface.md)** — MCP, ≤6 verbs, WASM | M | The agent surface. *"Fewer tools perform better."* |
 | **8** | **`Simp` / `Induct` / `Instantiate`** ([P6.3](P6.3-certificate-tactics.md)) | L | Where the bet gets tested. |
 | **9** | **[P6.5](P6.5-spec-surface.md)** — specs | L | **Test the reduction to P5.2 first.** May correctly cancel. |
-| **—** | **[P6.6-probe](../process/quantified-uf-probe.md)** — quantified-UF measurement | S | Independent; run when convenient. Fix `!fn_app_0`, Skolemize, re-run, **report depth**. |
+| **—** | **[P6.6-probe](../process/quantified-uf-probe.md)** — historical quantified-UF measurement | S | The original collision and Skolemization blockers were superseded. A fresh rerun needs current preregistration; it is not an automatic next action. |
 
-## First kernel-fuzz increment — landed
+## Kernel prerequisite status
 
-**P6.0, T6.0.3: fuzz the kernel, seam-first — DONE for the current four seams.**
+**P6.0 is partial.** Its first seam-fuzz increment and several later kernel
+prerequisites are complete, but this does not start P6.1--P6.3.
 
-The starting point was **181 hand-written tests and zero fuzz**. The landed
+Landed:
+
+- T6.0.2/TL2.11 explicit strict positivity, retained through recursive-indexed,
+  mutual, and nested inductive admission (TL2.12--TL2.14);
+- T6.0.3's fixed-seed 768-case four-seam `False`-admission population;
+- TL2.6 arbitrary-precision `NatLit(BigUint)` before TL2.7 checked Nat literal
+  typing and reduction;
+- the separate TL2.10 quotient grammar.
+
+Still open includes generated projection/reduction/eta seam fuzzing under
+TL2.15, the accepted prelude classification/discharge boundary, prelude
+namespacing and fallibility, printer round-trip assurance, and a kernel
+performance baseline. The exact task ledger is [P6.0](P6.0-kernel-trustworthiness.md).
+
+The seam-fuzz starting point was **181 hand-written tests and zero fuzz**. The landed
 [768-case seed](../../plan/lean-kernel-seam-fuzz-seed-2026-07-21.md) now covers
 the four representable seams below, reruns its summary deterministically, and
 rejects a `False` admission in every case. This does not erase the measured
@@ -64,19 +85,16 @@ Seams, in priority order:
    for the fixed case; generalise it.
 2. **universes × inductives**
 3. **proof-irrelevance × iota**
-4. **literals × reduction** — note the ordering hazard: `Lit::Nat` is `u128` and
-   truncation is guarded by **nothing**, inert only because `UnsupportedLit`
-   rejects literals first. **Bignum lands before `Lit` typing** (T6.0.4), or ingest
-   raises `LitTooWide`.
+4. **literals × reduction** — the original ordering hazard was fixed-width Nat
+   storage preceding literal typing. TL2.6 closed it with `NatLit(BigUint)`
+   before TL2.7 enabled checked Nat literal semantics; retain that order as a
+   regression contract.
 
-The negative class is now live: **"the kernel accepts `False`."** TL2.2
-represents projections structurally, TL2.3 infers checked dependent field types,
-and TL2.4 reduces/imports the exact official root; generated
-projection/reduction/eta and quotient semantic cases remain explicit TL2.15
-follow-ups. TL2.5 separately adds structure eta with native and pinned-Lean
-positive/rejecting controls. Next kernel implementation work is TL2.6
-arbitrary-precision Nat storage, with each new admitted seam required to join
-the same negative class.
+The negative class is now live: **"the kernel accepts `False`."** TL2.2--TL2.5
+represent, infer, reduce/import, and eta-check projections and structures;
+TL2.6--TL2.7 close arbitrary-precision Nat storage and checked semantics.
+Generated projection/reduction/eta cases remain the explicit TL2.15 residual,
+with every newly admitted seam required to join the same negative class.
 
 ## The five things not to get wrong
 
@@ -125,7 +143,7 @@ Each slice pays alone:
 | Item | Status |
 |---|---|
 | **[ADR-0167](../../research/09-decisions/adr-0167-prover-track-entry.md)** — entry; supersedes the stale "implementing dependent type theory is out of scope" | filed, `accepted` |
-| **[ADR-0166](../../research/09-decisions/adr-0166-alethe-target-reassessment.md)** — `lean-smt` uses **CPC, not Alethe**; cvc5's Alethe has **no bit-vectors** | filed, `proposed` — **urgent, and independent of this track** |
-| The prelude-assumption boundary — **65** runtime/type-digested rows, none yet proved or semantically classified | T6.0.6 / TL0.4 / TL3.2 |
-| The `sat` trust story | P6.1c |
+| **[ADR-0166](../../research/09-decisions/adr-0166-alethe-target-reassessment.md)** — `lean-smt` uses **CPC, not Alethe**; cvc5's Alethe has **no bit-vectors** | filed, `proposed`; resolve before choosing a new Lean proof route, with priority owned by root `PLAN.md` |
+| The prelude-assumption boundary — **65** runtime/type-digested rows; the generated ledger assigns 7 derivable, 41 external, and 17 primitive rows, while accepted TL3.2 classification and discharge remain open | T6.0.6 / TL0.4 / TL3.2 |
+| The prover-side generic `Refute` checker/bridge (distinct from existing solver model replay) | P6.1c |
 | **What the QF_UF 54% actually reflects** — the previous explanation was false ([note 08's correction](../research/08-solver-automation-assets.md)) | unwritten |

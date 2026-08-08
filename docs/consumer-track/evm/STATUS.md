@@ -1,6 +1,10 @@
 # axeyum-evm — STATUS
 
-Live tracker for the EVM symbolic bug-hunter (App A). See [PLAN.md](PLAN.md).
+> **Historical implementation journal (2026-06).** This is retained as dated
+> evidence, not a live tracker. Use the [`axeyum-evm`
+> README](../../../crates/axeyum-evm/README.md) for the current surface, the
+> [scoreboard](SCOREBOARD.md) for measured evidence, and root
+> [PLAN.md](../../../PLAN.md) for current priority.
 
 ## Current focus
 - **2026-06-26 — Phase 2 LANDED.** Symbolic-offset memory/storage (frontend

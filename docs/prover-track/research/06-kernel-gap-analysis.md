@@ -18,6 +18,13 @@ Every claim below is `file:line` against the code, not the doc comments.
 > the exact import boundary and links the superseding interoperability
 > measurements.
 
+> **2026-08-07 status note.** This remains a point-in-time source audit, so the
+> line counts and implementation inventory below are historical. T6.0.2/TL2.11
+> has since landed explicit strict positivity; TL2.6/TL2.7 replaced fixed-width
+> Nat storage and enabled checked literal semantics; TL2.12--TL2.14 landed
+> recursive-indexed, mutual, and nested admission. Use the current
+> [P6.0 ledger](../plan/P6.0-kernel-trustworthiness.md) for task status.
+
 ---
 
 ## 1. Current inventory

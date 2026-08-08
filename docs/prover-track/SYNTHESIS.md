@@ -1,5 +1,15 @@
 # Synthesis — what this track learned
 
+> **Research synthesis with a current-state correction (2026-08-07).** The
+> certificate-first design is accepted, but the native goal/tactic layer is not
+> implemented. Since this synthesis was written, strict positivity, arbitrary-
+> precision Nat literal storage/typing, and recursive/mutual/nested inductive
+> slices landed; the repeated `!fn_app_0` collision was also fixed. Use the
+> [prover-track front door](README.md), generated
+> [Lean parity registry](../plan/generated/lean-complete-parity.md), and root
+> [PLAN.md](../../PLAN.md) for present-tense status. The argument and method
+> record below are retained.
+
 The one file to read. Everything else is evidence for it; sources are indexed in
 [`REFERENCES.md`](REFERENCES.md) (87 papers, 29 repos, 265 URLs, gaps named).
 Recommendation and design: [`design/00-thesis.md`](design/00-thesis.md) (v4).
@@ -24,10 +34,11 @@ Build guide: **[`plan/README.md`](plan/README.md)**.
 
 ## Why the layer must exist — one fact from our own solver
 
-`auto.rs:5244` declines a residual quantifier, and its comment is a **correctness
-statement, not a TODO**: *"Quantifiers left after instantiation … cannot be decided
-by the quantifier-free engines."* Instantiation only **weakens**, so **the solver
-cannot soundly guess an instantiation depth.**
+The current residual-quantifier branch in
+[`auto.rs`](../../crates/axeyum-solver/src/auto.rs) is a **correctness statement,
+not a TODO**: quantifiers left after instantiation cannot be handed to the
+quantifier-free engines. Instantiation only **weakens**, so **the solver cannot
+soundly guess an instantiation depth.**
 
 Someone must choose the depth. Not the solver (unsound). Not the kernel (it does
 not search). **The prover.**
@@ -75,7 +86,10 @@ Lean must *write* `omega`, `bv_decide`, `grind`.
 768-case seam harness over the four currently representable interactions,
 reruns the structured summary for determinism, and rejects `False` admission in
 every case. The historical baseline was 181 hand-written tests and zero fuzz;
-projection/eta and quotient seams remain TL2.15 follow-ups.
+TL2.10 later added a separate quotient grammar, while generated projection/eta
+seams remain a TL2.15 follow-up. T6.0.2/TL2.11 strict positivity and
+TL2.12--TL2.14 recursive, mutual, and nested admission also landed after the
+original synthesis.
 
 ## The bet, stated so it can be lost
 
@@ -104,17 +118,17 @@ independent kernel — because nobody has had one.
 
 I read `PAR-2 = 0.000` / `Unsup=5` as *we never tried*. It isn't:
 
-- `auto.rs:5244-5252` declines on `residual_quantifier`, and the comment is a
+- the residual-quantifier branch in `auto.rs` declines, and the comment is a
   **correctness statement, not a TODO** — instantiation only *weakens*, so a
   residual quantifier licenses no verdict. **Fast is what a correct boundary looks
   like. I read speed as unseriousness.**
-- **`Unsup` is a harness bucket** (`bench/src/main.rs:4626`); the solver returns
+- **`Unsup` is a harness bucket** in `axeyum-bench`; the solver returns
   `Unknown(Incomplete)`. The split the whole finding turned on is a classification
   artifact **nobody traced — including me, while claiming to have traced it.**
 - **The fix inverts**: Skolemizing `pel55_10` **leaves EPR**, the only quantified-UF
   fragment where carrier-bounding is sound for `unsat`. Closing PUZ001+1 then needs
   a second instantiation round over an infinite Herbrand universe
-  (`quantifiers.rs:475` collects ground terms **once**) — **a depth policy, which
+  (the audited instantiation pass collected ground terms **once**) — **a depth policy, which
   is a search heuristic.**
 
 **Which is exactly the open premise** (certificate-first is a *checking* discipline
@@ -280,13 +294,13 @@ Every item below was found by **running something**, not by reading it.
 | Finding | Status |
 |---|---|
 | **The kernel admitted `theorem bad : False`** — unrestricted `Prop` large elimination + proof irrelevance | **Fixed** (ADR-0165, `d26ad887`), exploit inverted into a regression + boundary matrix |
-| **65 unproven prelude assumptions** (real 30 + integer 34 + string `append` 1), runtime-inventoried and type-digested. Carriers, operations, and laws include opaque `Declaration::Axiom` values; Lean accepts axioms **vacuously**; the ledger is an *inventory, not a validation* | **Inventory DONE (TL0.4); classification/discharge OPEN** — T6.0.6/TL3.2 |
-| **Positivity is enforced only *vacuously*** — an accident of `ReflexiveOrNestedNotSupported`. Land the obvious next inductive gap and it **vanishes with no checker behind it** | **Open** — T6.0.2, the P0 pattern pre-loaded |
-| **`Lit::Nat` is `u128`; truncation guarded by nothing** — inert only because `UnsupportedLit` rejects literals first | **Open** — T6.0.4, an ordering hazard |
+| **65 prelude assumptions** (real 30 + integer 34 + string `append` 1), runtime-inventoried and type-digested. Carriers, operations, and laws include opaque `Declaration::Axiom` values; Lean accepts axioms **vacuously**; the ledger is an *inventory, not a validation* | **Inventory DONE (TL0.4); ledger classes 7 derivable, 41 external, 17 primitive; accepted classification/discharge OPEN** — T6.0.6/TL3.2 |
+| **Positivity was enforced only *vacuously*** through a narrower rejection | **Resolved** — T6.0.2/TL2.11 landed a real strict-positivity check before TL2.12--TL2.14 widened recursive admission |
+| **`Lit::Nat` was fixed-width and could have truncated before typing** | **Resolved** — TL2.6 introduced `NatLit(BigUint)` before TL2.7 enabled checked Nat literal semantics |
 | **ℝ and ℤ preludes cannot coexist — it panics.** 28 shared names; the gate *correctly rejected* rather than aliasing `add : R→R→R` onto `add : ℤ→ℤ→ℤ`, but the builder `.expect()`s | **Open** — T6.0.8 |
 | **The initial 181-test kernel had zero fuzz.** By the standing rule, every corner was an avoided corner | **Current four-seam seed DONE** — 768 generated cases, deterministic replay, 768/768 rejected `False` admissions; projection/eta and quotient extensions remain TL2.15 |
 | **Alethe may be aimed wrong** — `lean-smt` uses **CPC**; cvc5's Alethe has **no bit-vectors** | **[ADR-0166](../research/09-decisions/adr-0166-alethe-target-reassessment.md) filed** |
-| **`sat` has no trust story** — the kernel gate covers `unsat` only | **Open** — P6.1c |
+| **The prover's generic `Refute` bridge has no checker yet** | **Open** — P6.1c; supported solver SAT models already replay, so this is not a claim that all solver `sat` results are unchecked |
 | **We are a rare genuinely independent kernel** | **True today** |
 
 ### The pattern, which is worth more than any single item
@@ -297,7 +311,8 @@ Every item below was found by **running something**, not by reading it.
    recursor's *use*, never its *generation*. That is why it could not see the P0.
 2. The preludes **axiomatize** ℝ/ℤ — and Lean accepts axioms vacuously, so the
    same gate cannot catch a false axiom either.
-3. **Positivity** is enforced only as a side effect of an unrelated rejection.
+3. **Positivity** was initially enforced only as a side effect of an unrelated
+   rejection; T6.0.2 later replaced that accident with an explicit checker.
 
 One design habit, not three bugs. Hence the rule this track contributes, which
 generalizes far beyond the kernel:
@@ -371,18 +386,19 @@ reliably than I did.
 
 ---
 
-## What to do first
+## Original execution recommendation
 
-1. **P6.0.** Not contingent on anything here. The kernel admitted `False`, now
-   has its first four-seam generated gate, still enforces positivity vacuously,
-   carries 65 unproven assumptions, and
-   P3.6/P3.7 route all their assurance through it. **And it is the product** — a
-   kernel that admitted `False` cannot be anyone's independent check.
+This ordering explains the design dependency, not the current project queue;
+root [PLAN.md](../../PLAN.md) is authoritative.
+
+1. **P6.0.** Not contingent on the goal layer. The historical `False` admission
+   is fixed; the four-seam seed, explicit positivity checker, arbitrary-precision
+   Nat semantics, and later inductive slices are landed. Prelude discharge,
+   generated projection/eta seams, and other listed P6.0 residuals remain.
 2. **[ADR-0166](../research/09-decisions/adr-0166-alethe-target-reassessment.md).**
    Decide it rather than inherit it.
 3. **P6.6-paper.** One week. It can end the track, and that is the point.
 
-The entry ADR (`north-star.md:53`) is owed before P6.1. This document does not
-pre-empt it — the cost argument belongs there, and CLAUDE.md's "big tasks get
-broken down" is an *execution* stance, not a *selection* criterion. It would
-equally justify building Mathlib, which we refuse.
+The entry decision is now accepted as
+[ADR-0167](../research/09-decisions/adr-0167-prover-track-entry.md). It authorizes
+the rung and its scope; it does not mark P6.1 or the goal/tactic layer complete.

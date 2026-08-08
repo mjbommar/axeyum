@@ -6,6 +6,7 @@ authority rather than a tutorial.
 | Question | Reference |
 |---|---|
 | Which Rust crate/API should I call? | [Public API](public-api.md) |
+| Which checked-in example should I run, and can it write artifacts? | [Runnable examples](examples.md) |
 | What does each solver option control? | [Solver configuration](solver-config.md) |
 | Which logic fragments are implemented? | [Supported logics](supported-logics.md) |
 | Is a feature present at the parser, IR, solver, and evidence layers? | [Support matrix](support-matrix.md) |
@@ -19,4 +20,3 @@ how to read it.
 
 For runnable workflows, use the [User Guide](../user-guide/README.md). For
 change obligations, use the [Contributor Guide](../contributor-guide/README.md).
-

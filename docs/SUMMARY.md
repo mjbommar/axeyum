@@ -66,10 +66,19 @@
   - [Benchmarks](user-guide/benchmarks.md)
   - [Versioned corpus manifests](user-guide/corpus-manifests.md)
 
+# Consumer Applications
+
+- [Consumer applications](consumer-track/README.md)
+  - [Aggregate scoreboard](consumer-track/SCOREBOARD.md)
+  - [Bounded-property scoreboard](consumer-track/property/SCOREBOARD.md)
+  - [EVM bug-hunter scoreboard](consumer-track/evm/SCOREBOARD.md)
+  - [Bounded Rust verifier scoreboard](consumer-track/verify/SCOREBOARD.md)
+
 # Reference
 
 - [Reference](reference/README.md)
   - [Public API](reference/public-api.md)
+  - [Runnable examples](reference/examples.md)
   - [Solver configuration](reference/solver-config.md)
   - [Supported logics](reference/supported-logics.md)
   - [Support matrix](reference/support-matrix.md)
@@ -89,6 +98,13 @@
   - [Proof and evidence routes](internals/proof-stack.md)
   - [Lean kernel and import boundary](internals/lean-kernel.md)
   - [How this documentation is built](internals/documentation.md)
+
+# Prover Design
+
+- [Certificate-first prover track](prover-track/README.md)
+  - [Research synthesis](prover-track/SYNTHESIS.md)
+  - [Architecture](prover-track/design/03-architecture.md)
+  - [Build guide](prover-track/plan/README.md)
 
 # Contributor Guide
 

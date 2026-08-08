@@ -4,8 +4,8 @@
 //!
 //! Beyond the drift guard, this file *probes* the load-bearing solver/proof cells
 //! through the public SMT-LIB front door (`solve_smtlib`) so the claimed statuses
-//! are exercised against the real engine — in particular the first-class
-//! "unsat decided; sat→unknown" status and the proof-supports cells.
+//! are exercised against the real engine, including incomplete routes and the
+//! proof-supports cells.
 #![cfg(feature = "full")]
 
 use axeyum_solver::support_matrix::{
@@ -53,6 +53,20 @@ fn matrix_rows_are_well_formed() {
             r.fragment
         );
     }
+}
+
+#[test]
+fn bounded_strings_are_recorded_as_sound_incomplete() {
+    let row = SUPPORT_MATRIX
+        .iter()
+        .find(|row| row.fragment == "strings (bounded)")
+        .expect("bounded strings row present");
+    assert_eq!(
+        row.solver,
+        SolverStatus::SoundIncomplete,
+        "string SAT and UNSAT each have supported routes and honest unknown cases; \
+         do not collapse the fragment to a one-directional status"
+    );
 }
 
 /// Helper: decide a self-contained SMT-LIB script and return its `CheckResult`.

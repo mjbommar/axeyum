@@ -120,5 +120,6 @@ cargo test -p axeyum-solver --test evidence
 - [atlas JSON](../../../artifacts/ontology/smt-fragments.json)
 - [support matrix](../../research/08-planning/support-matrix.md)
 - [trust ledger](../../research/08-planning/trust-ledger.md)
-- [QF_BV parity path](../../PARITY-STATUS-AND-PATH.md)
+- [current project state](../../PROJECT-STATE.md)
+- [append-only parity ledger](../../../bench-results/PARITY.md)
 - [Natural Arithmetic pack](../../../artifacts/examples/math/natural-arithmetic-v0/)

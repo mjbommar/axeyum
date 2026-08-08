@@ -15,11 +15,10 @@
 //!    fragment's core queries, or degrade to `unknown`?
 //! 4. **proof-supports** — does an `unsat` carry an independently checkable proof?
 //!
-//! The crucial honesty wins are the *non-binary* statuses: "accepted-but-ignored"
-//! is a first-class parser status (the `reset` family, `get-model` and friends),
-//! and "unsat-supported, sat→unknown" is a first-class solver status (the
-//! arithmetic-sorted UF case, where `unsat` is decided but a satisfying model is
-//! not built, so `sat` degrades to a sound `unknown`).
+//! The crucial honesty wins are the *non-binary* statuses:
+//! "accepted-but-ignored" is a first-class parser status (the `reset` family,
+//! `get-model` and friends), while directional and generally incomplete solver
+//! routes retain `unknown` instead of inheriting a stronger fragment-wide claim.
 //!
 //! [`SUPPORT_MATRIX`] is the source of truth; [`support_matrix_markdown`] renders
 //! it, and a golden test (`tests/support_matrix.rs`) fails if the committed
@@ -97,11 +96,12 @@ pub enum SolverStatus {
     /// Returns both `sat` and `unsat` definitively for the core fragment.
     Decides,
     /// `unsat` is decided but a satisfying model is not built, so `sat` degrades
-    /// to a sound `unknown` (the arithmetic-sorted UF case; the string-length
-    /// BV+LIA gap). First-class — never a wrong answer, just an honest `unknown`.
+    /// to a sound `unknown`. First-class — never a wrong answer, just an honest
+    /// `unknown`.
     UnsatSatUnknown,
     /// Sound but incomplete: may return `unknown` in general (nonlinear
-    /// arithmetic, quantifiers outside finite/guarded domains, optimization).
+    /// arithmetic, strings, quantifiers outside finite/guarded domains,
+    /// optimization).
     SoundIncomplete,
     /// The solver does not decide this fragment.
     Unsupported,
@@ -479,12 +479,15 @@ pub const SUPPORT_MATRIX: &[SupportRow] = &[
         fragment: "strings (bounded)",
         parser: ParserStatus::AcceptedBounded,
         ir: IrStatus::Lowered,
-        solver: SolverStatus::UnsatSatUnknown,
+        solver: SolverStatus::SoundIncomplete,
         proof: ProofStatus::NoProof,
-        note: "no String IR sort — declare-const lowered to a bounded packed BV \
-               (len ≤ 16); ops parsed within the bound; sat decided through the BV \
-               path but str.len unsat may be unknown (BV+LIA gap). Model replay only, \
-               no unsat proof. ADR-0025/0029",
+        note: "no String IR sort — declared strings start in a 12-byte packed-BV \
+               window; the front door retries 24/32/48-byte windows, and adaptive \
+               packed terms are capped at 512 bytes. Bounded, word-equation, and length/LIA routes decide \
+               supported sat/unsat shapes, while unsupported or unbounded word/Int \
+               combinations safely remain unknown. Model replay plus selected \
+               non-arena refutation checkers; no general unsat proof. \
+               ADR-0025/0029/0052/0053/0061",
     },
     SupportRow {
         fragment: "optimization (OMT: box/lex/Pareto, MaxSAT, MILP)",
@@ -563,10 +566,9 @@ pub fn support_matrix_markdown() -> String {
         "**solver-decides** (definite `sat`/`unsat` for the core queries?):\n\
          - **decides** — returns both `sat` and `unsat` for the core fragment.\n\
          - **unsat decided; sat→unknown** — `unsat` is decided but a satisfying model is not \
-           built, so `sat` degrades to a sound `unknown` (the `str.len` BV+LIA gap). \
-           First-class — never a wrong answer.\n\
+           built, so `sat` degrades to a sound `unknown`. First-class — never a wrong answer.\n\
          - **sound, incomplete (unknown-safe)** — may return `unknown` in general (nonlinear \
-           arithmetic, quantifiers outside finite/guarded domains, optimization).\n\
+           arithmetic, strings, quantifiers outside finite/guarded domains, optimization).\n\
          - **unsupported** — not decided.\n\n",
     );
     out.push_str(

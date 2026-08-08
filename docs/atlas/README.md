@@ -65,7 +65,11 @@ Each row should link to:
 - [support matrix](../research/08-planning/support-matrix.md);
 - [trust ledger](../research/08-planning/trust-ledger.md);
 - [dominance scoreboard](../../bench-results/DOMINANCE.md);
-- [parity path](../PARITY-STATUS-AND-PATH.md).
+- [current project state](../PROJECT-STATE.md); and
+- [append-only parity ledger](../../bench-results/PARITY.md).
+
+The old [top-down parity path](../PARITY-STATUS-AND-PATH.md) is a labelled
+2026-06-24 snapshot, not a current support authority.
 
 Validate the current atlas with:
 

@@ -1,5 +1,11 @@
 # axeyum-property PLAN.md
 
+> **Historical implementation plan (2026-06).** The milestones below are a
+> design record, not the live project queue. Use the [`axeyum-property`
+> README](../../../crates/axeyum-property/README.md) for the current surface,
+> the [scoreboard](SCOREBOARD.md) for measured evidence, and root
+> [PLAN.md](../../../PLAN.md) for current priority.
+
 Bounded-property SDK plan. This app is the lowest-friction consumer surface:
 users build typed bounded properties directly, then receive
 `Proved | Disproved(counterexample) | Unknown` from the same checked evidence

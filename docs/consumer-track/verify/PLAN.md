@@ -1,5 +1,11 @@
 # axeyum-verify — PLAN
 
+> **Historical implementation plan (2026-06).** The phase text below records
+> the original build design; it is not the live project queue. Use the
+> [`axeyum-verify` README](../../../crates/axeyum-verify/README.md) for the
+> current surface, the [scoreboard](SCOREBOARD.md) for measured evidence, and
+> root [PLAN.md](../../../PLAN.md) for current priority.
+
 > **App C.** A `#[axeyum::verify]` proc-macro that bounded-checks a Rust function
 > for panics / integer overflow / `unwrap` failures / assertion violations and
 > returns a failing input (as a runnable `#[test]`) — or "verified up to bound K"

@@ -1,7 +1,13 @@
 # North Star: Solver Replacement, Then Lean / angr First-Class
 
-Status: draft
-Last updated: 2026-06-13
+Status: maintained long-horizon orientation; current status lives elsewhere
+Last updated: 2026-08-07
+
+> This note defines destinations and architectural pressure. It is not a current
+> status ledger or a schedule. For present implementation, measurements, and
+> priority, use [Project State](../../PROJECT-STATE.md), the generated
+> [capability matrix](../08-planning/capability-matrix.md), and root
+> [PLAN.md](../../../PLAN.md).
 
 ## Purpose
 
@@ -11,7 +17,7 @@ finite-domain) is read as *sequencing*, not identity. The product goal is a
 and software verification**, reached through three destinations in order:
 
 1. **Foundation** — the decidable finite-domain + arithmetic core with checkable
-   evidence (where the project is today).
+   evidence (the original foundation, now joined by partial higher-rung work).
 2. **Complete solver replacement** — a drop-in Z3/cvc5-class SMT solver: full
    theory coverage *and* competitive performance.
 3. **Lean / angr as first-class functionality** — program analysis
@@ -23,22 +29,24 @@ This note maps the technical ladder from the current core to those destinations
 and the 2026 landscape at each rung, so today's IR, solver-trait, and evidence
 decisions do not foreclose tomorrow's rungs.
 
-**Where we are (2026-06-13):** destination 1. Not yet a solver replacement
-(performance on real corpora is the open gate, not theory breadth alone); not
-yet Lean/angr-class (the symbolic-execution consumer is a test-only register
-VM). Destinations 2 then 3 are the work ahead.
+**Current boundary (2026-08-07):** Axeyum spans the foundation and selected
+higher-rung solver, evidence, Lean-kernel, and consumer work. It is still
+neither a drop-in Z3/cvc5 replacement nor a replacement for Lean, angr, or
+Unicorn. Selected competitive cells do not establish broad product parity;
+proof and workflow coverage also remain route-specific.
 
-**Measured update (2026-06-20) — destination 2 is NEAR-PARITY on the first
-public corpus, not an open chasm.** On the public p4dfa QF_BV slice @20s, axeyum
-decides **8/113** and Z3 4.13.3 decides **8/113** — *different* sets, DISAGREE=0:
+**Historical measured correction (2026-06-20) — one small control had equal
+decided counts, not destination-level parity.** On the public p4dfa QF_BV slice
+at 20 seconds, Axeyum and Z3 4.13.3 each decided **8/113** — *different* sets,
+DISAGREE=0:
 both get 6 (compose.p2/.s2, mobiledevice×3, simple), axeyum uniquely decides
 `string1x8.3` (z3 times out @20.5s) + `string1x8.6`, z3 uniquely decides
-`compose.p3`/`compose.s2_nr4`, and the other ~105 defeat **both** (the
-"defeats-even-kissat" reduction-bound bulk). So the destination-2 gate is best
-read as **per-fragment milestones** — on *this* corpus we are at parity with Z3,
-both hard-capped — rather than a monolithic "Z3 sweeps everything" chasm. The
-earlier "Z3 decides essentially all in ~1s" premise was never measured and is
-false at second-scale (corrected; baselines committed under
+`compose.p3`/`compose.s2_nr4`, and the other 103 are not decided by either under
+that control. So the destination-2 gate is best read as **per-fragment
+milestones** — this corpus has an equal decided count, on partially different
+sets, with both hard-capped — rather than as product parity. The earlier "Z3
+decides essentially all in ~1s" premise was never measured and is false at
+second-scale (corrected; baselines committed under
 `bench-results/baselines/qf-bv-p4dfa-*`). Frame progress as *which fragments
 reach parity*, corpus by corpus, not a single global percentage.
 
@@ -98,43 +106,45 @@ what each *actually* requires (so we don't mistake feature-coverage for arrival)
 A drop-in alternative a real consumer would choose. Requires, beyond the
 foundation:
 
-- **Performance, the gate.** A real CDCL(T) loop (theory propagation, conflict
-  learning across theories), encoding/preprocessing engineering, and a
-  competitive SAT core. *This is the binding constraint* — today the pure-Rust
-  path decides only a small slice of real public QF_BV where Z3 decides nearly
-  all. Measured against an angr+Z3-style baseline, not feature checkboxes.
-- **Theory breadth.** Floating point (`QF_FP`), strings/sequences/regex,
-  datatypes, nonlinear arithmetic (NIA/NRA), unbounded `LIA`/`LRA` via a real
-  simplex + branch-and-bound (the bounded bit-blasting today is a stand-in), and
-  production quantifier instantiation (E-matching + MBQI).
+- **Performance and representative breadth, the gates.** Competitive SAT and
+  CDCL(T) machinery, encoding/preprocessing engineering, and broad comparable
+  corpora matter together. Current decide rates range widely by selected slice;
+  neither one strong cell nor one symmetric low-decide control establishes a
+  replacement. Measure against consumer and division-appropriate reference
+  baselines, not feature checkboxes.
+- **Theory depth.** Floating point, strings/sequences/regex, datatypes,
+  nonlinear arithmetic, unbounded `LIA`/`LRA`, and quantifier routes now exist
+  at differing maturity levels. Arrival requires robust integrated depth and
+  conformant semantics, not the presence of one route per theory name.
 - **Surface + robustness.** Full SMT-LIB 2 (incl. `get-value`/`get-unsat-core`/
   `get-proof`, options, optimization), incremental at scale, and validation on
   the SMT-COMP corpora — not a handful of families.
 
 ### Destination 3 — Lean / angr as first-class functionality
 
-- **angr/unicorn class.** A binary/IR frontend (lifting, CFG recovery), a
-  realistic memory model, and symbolic execution + concrete emulation as
-  first-class APIs driving the solver for **constrained program optimization and
-  verification**. Today's `tests/symbolic_execution*.rs` is a hand-built
-  register VM for testing — the *shape* of the consumer, not the product.
-- **Lean class.** Kernel-checkable proofs above the clausal layer (the evidence
-  envelope grown into a proof term + an independent Rust kernel, cf. nanoda),
-  proof-assistant interop (export obligations / import checked rules, cf.
-  lean-smt/Alethe), and eventually dependent-type proving. The evidence thesis
-  already in the foundation is the seam this grows along.
+- **angr/unicorn class.** The current symbolic-execution, reflection, bounded-
+  verification, and EVM consumers are substantive slices, but Axeyum still
+  lacks a general binary/IR lifting, CFG, realistic-memory, and concrete-
+  emulation product comparable to angr/Unicorn.
+- **Lean class.** The independent selected-profile kernel/importer and several
+  reconstruction routes are real. The native goal/hole/unification layer,
+  certificate tactics, full source elaboration, and complete Lean workflow are
+  not; see the [prover-track boundary](../../prover-track/README.md).
 
 ## Design Implications (Backward Pressure On Today)
 
-- The IR's `Binder(later)` placeholder is a real commitment: arena and
-  interning choices must not assume binder-free terms forever. The binder
-  representation question is in the research-questions register.
-- `Sort` must stay open to new theory sorts (Int, Real, datatypes) without
-  breaking interning or evaluator architecture.
+- The IR now represents quantifiers directly as `Op::Forall(SymbolId)` and
+  `Op::Exists(SymbolId)`. Future dependent binders, substitution, and proof
+  terms must generalize this without breaking arena identity or capture safety;
+  the representation question is not closed merely because first-order binders
+  exist.
+- `Sort` now includes Int, Real, datatypes, floating point, sequences, and
+  sort-valued array metadata. It must remain extensible without breaking
+  interning, evaluator architecture, or deterministic serialization.
 - The solver trait's capability model already distinguishes logics; horizon
   rungs extend capabilities rather than fork the trait.
-- Evidence artifacts need a versioned, extensible envelope from the first
-  release, because the certificate hierarchy grows rungs (clausal proof →
+- Evidence artifacts must keep their versioned, extensible envelope as the
+  certificate hierarchy grows rungs (clausal proof →
   theory lemma → quantifier instantiation trace → kernel-checkable proof).
 - The rewrite-rule library with stable IDs and proof obligations is the
   seed of the eventual axiom/lemma library; treat rule IDs as long-lived.

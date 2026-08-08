@@ -1,6 +1,10 @@
 # axeyum-verify — STATUS
 
-Live tracker for the Rust verifier (App C). See [PLAN.md](PLAN.md).
+> **Historical implementation journal (2026-06).** This is retained as dated
+> evidence, not a live tracker. Use the [`axeyum-verify`
+> README](../../../crates/axeyum-verify/README.md) for the current surface, the
+> [scoreboard](SCOREBOARD.md) for measured evidence, and root
+> [PLAN.md](../../../PLAN.md) for current priority.
 
 ## Current focus
 - **2026-06-26 — Phase 2 LANDED.** Macro array support, `usize`/`isize` widths,

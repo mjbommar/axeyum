@@ -26,7 +26,7 @@ If you already use these, here's where Axeyum fits:
 | If you reach for… | …Axeyum is | What's different |
 |---|---|---|
 | **Z3 / cvc5** (SMT solvers) | a pure-Rust SMT solver | supported certified routes return independently checkable evidence; uncovered routes remain explicit in the proof ledger |
-| **Lean / Coq** (proof assistants) | a certificate-first prover with an in-tree Lean-style kernel | fast automated search *emits* proofs a small kernel checks — the search never enters the trusted base |
+| **Lean / Coq** (proof assistants) | an independent selected-profile Lean-core checker plus a designed certificate-first goal layer | supported solver proofs already reconstruct to checked terms; the native interactive goal/tactic layer is not built yet |
 | **Mathematica / SymPy** (computer algebra) | a **proof-carrying CAS** | differentiate / factor / integrate / solve return results *certified* by lowering to the decidable core — out of fragment it declines, never guesses wrong |
 | **a textbook + a lab** | a built-in library of tutorials, rules, axioms, and worked theorems | the same artifacts that *teach* a concept also *test* an Axeyum theory (double-duty) |
 
@@ -44,8 +44,9 @@ system.
 The current measured denominators, important negative results, and precise
 meaning of "parity" are in **[Project State](docs/PROJECT-STATE.md)**. The
 authoritative capability × assurance × evidence inventory is the
-[capability matrix](docs/research/08-planning/capability-matrix.md); [PLAN.md](PLAN.md)
-and [STATUS.md](STATUS.md) are the detailed engineering map and battle log.
+[capability matrix](docs/research/08-planning/capability-matrix.md). [PLAN.md](PLAN.md)
+is the single live engineering tracker; [STATUS.md](STATUS.md) is only a
+compatibility pointer to it.
 
 ---
 
@@ -55,11 +56,15 @@ and [STATUS.md](STATUS.md) are the detailed engineering map and battle log.
 
 A typed term IR → rewriting → query planning → solver backends, with a
 **dependency-free pure-Rust path**: bit-blast to AIG → Tseitin CNF → a custom
-CDCL SAT core. Theories, each wired end to end (IR → evaluator → decision
-procedure → SMT-LIB 2 I/O):
+CDCL SAT core. The major implemented theory surfaces are below. Their parser,
+IR, evaluator, decision, model, and evidence layers do not all have equal
+coverage; the [support matrix](docs/research/08-planning/support-matrix.md) is
+the per-layer authority:
 
-- **QF_BV** — full scalar operator set, widths to 2¹⁶; `unsat` carries a
-  DRAT-checked proof.
+- **QF_BV** — full scalar operator set, widths to 2¹⁶; selected evidence routes
+  can return a DRAT-checked proof and an end-to-end bit-blast faithfulness
+  certificate. Decision coverage is broader than proof coverage; see the
+  [measured evidence split](docs/PROJECT-STATE.md#evidence-and-lean).
 - **Arrays** (QF_ABV, eager elimination), **uninterpreted functions** (QF_UF,
   Ackermann), and their composition **QF_AUFBV**.
 - **Linear arithmetic** — `QF_LRA` (exact-rational simplex, Farkas-certified
@@ -80,7 +85,7 @@ not a runtime dependency. The pure-Rust stack is the product; native backends
 head-to-head benchmarking (ADR-0002). Parity is a *measured* claim, kept honest
 against public corpora.
 
-### 2. Prover & proof assistant (the Lean angle)
+### 2. Proof evidence and the Lean checker
 
 Every `sat` is checkable by evaluation; every supported `unsat`/`valid` aims to
 carry a **machine-checkable proof** a Lean-grade kernel would accept:
@@ -103,7 +108,7 @@ and computation gates. It is not a complete Lean kernel or ecosystem: String
 literals, dependency-closed `Init`/`Std`/mathlib imports, native parsing/macros,
 elaboration, tactics, modules/Lake, LSP, and compiler/runtime behavior remain
 open. See
-[Project State](docs/PROJECT-STATE.md#how-close-is-it-to-lean) and the
+[Project State](docs/PROJECT-STATE.md#evidence-and-lean) and the
 [Lean-system strategy](docs/plan/lean-system-compatibility-roadmap-2026-07-21.md)
 plus its [implementation plan](docs/plan/lean-system-implementation-plan-2026-07-21.md)
 and [complete Lean 4.30 parity contract](docs/plan/lean4-complete-parity-contract-2026-07-22.md).
@@ -118,6 +123,12 @@ attempts remain not-run and all parity counters remain zero.
 The prerequisite [execution-evidence contract](docs/plan/lean-execution-evidence-tl0.7.1-2026-07-22.md)
 now freezes explicit resource lanes, typed terminations, immutable attempts and
 completion-last records, but still records zero real runs or outcomes.
+
+The separate [certificate-first prover track](docs/prover-track/README.md) is an
+accepted design above this checker. Its P6.0 kernel-hardening prerequisites are
+partly implemented, but the planned CIC/IR bridge, native goal/hole/unification
+state, and certificate-tactic layer do not yet exist. Do not infer an interactive
+proof assistant from the reconstruction and kernel features above.
 
 ### 3. Computer algebra (the Mathematica / SymPy angle)
 
@@ -297,6 +308,15 @@ by use (each is accepted in an ADR).
   parser/IR/solver/proof status).
 - [docs/README.md](docs/README.md) — reader-friendly front door (also builds into
   a searchable mdBook site with Mermaid diagrams).
+- [Runnable examples](docs/reference/examples.md) — all checked-in Cargo
+  examples, separated into learning workflows, artifact generators, and
+  maintainer diagnostics with their prerequisites.
+- [Consumer applications](docs/consumer-track/README.md) — the bounded-property
+  SDK, EVM bug-hunter, Rust verifier, their trust boundaries, and the current
+  48-case aggregate scoreboard.
+- [Certificate-first prover track](docs/prover-track/README.md) — the exact
+  boundary between the built Lean checker/reconstruction stack and the planned
+  goal, hole, bridge, and tactic layers.
 - [docs/research/](docs/research/README.md) — the research foundation, and
   [09-decisions/](docs/research/09-decisions/README.md), the ADRs.
 - [PLAN.md](PLAN.md) — the single current status, ordered roadmap, blockers,
@@ -307,6 +327,7 @@ by use (each is accepted in an ADR).
 |---|---|
 | **New to SAT/SMT/proofs** | [docs/learn/](docs/learn/README.md) |
 | **A user** | [docs/user-guide/](docs/user-guide/README.md) — run a query, read a model, [limitations](docs/user-guide/limitations.md) |
+| **Building or evaluating a verifier** | [docs/consumer-track/](docs/consumer-track/README.md) — property, EVM, and Rust application front doors plus measured evidence |
 | **Curious about internals** | [docs/internals/](docs/internals/README.md) — [architecture](docs/internals/architecture.md), trust boundary |
 | **Want to try it now** | [docs/playground/](docs/playground/README.md) — solve a query **in your browser** (WASM) |
 

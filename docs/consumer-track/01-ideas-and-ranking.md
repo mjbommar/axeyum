@@ -1,5 +1,10 @@
 # Iteration 1 — candidate apps + first-pass ranking (2026-06-25)
 
+> **Historical selection record.** The ranking below explains why the consumer
+> applications were chosen; it is not current capability or priority guidance.
+> See the [consumer front door](README.md) for shipped surfaces and root
+> [PLAN.md](../../PLAN.md) for live work.
+
 First pass. Score each on four axes (1–5), grounded in the measured
 [SCOREBOARD](../../bench-results/SCOREBOARD.md) / [DOMINANCE](../../bench-results/DOMINANCE.md)
 and the exposed API (see [README](README.md)):

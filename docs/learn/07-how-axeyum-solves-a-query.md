@@ -10,9 +10,9 @@ may be buggy) and *small checking* (which guards correctness).
 
 ## The pipeline
 
-A quantifier-free bit-vector (`QF_BV`) query flows left to right. Everything in
-the **blue** band is *untrusted* (optimized for speed); everything in the
-**green** band is *trusted* (small, independent, the thing that must be right).
+A quantifier-free bit-vector (`QF_BV`) query flows left to right. The **blue**
+band performs untrusted search. The **green** boxes are possible checking
+endpoints; a result follows only the boxes supported by its selected route.
 
 ```mermaid
 flowchart LR
@@ -32,38 +32,51 @@ flowchart LR
     subgraph check["TRUSTED — small independent checking"]
         direction TB
         model["Lift model to IR values"] --> replay["Replay vs ORIGINAL query<br/>(ground evaluator)"]
-        drat["DRAT proof"] --> lrat["LRAT (hinted)"]
-        lrat --> alethe["Alethe proof"]
-        alethe --> lean["Rust Lean-grade kernel<br/>→ checked False"]
+        prop["DRAT / optional LRAT"] --> pcheck["Clausal proof checker"]
+        theory["Theory certificate"] --> tcheck["Fragment checker"]
+        alethe["Selected Alethe proof"] --> acheck["Alethe checker"]
+        alethe --> lean["Selected Lean reconstruction<br/>→ kernel check"]
     end
 
     sat -->|"SAT: assignment"| model
-    sat -->|"UNSAT: proof trace"| drat
-    sat -->|"budget / too big"| unknown["unknown<br/>(first-class, never a crash)"]
+    sat -->|"selected proof route"| prop
+    sat -->|"selected theory route"| theory
+    sat -->|"selected SMT proof route"| alethe
+    sat -->|"proofless UNSAT route"| lower["unsat + lower assurance<br/>(for example Unchecked)"]
+    sat -->|"budget / incomplete route"| unknown["unknown<br/>(not settled)"]
 
     replay -->|"every assertion true"| satOut(["✅ sat + verified model"])
     replay -->|"mismatch"| alarm(["soundness alarm → error"])
-    lean --> unsatOut(["✅ unsat + checkable proof"])
+    pcheck --> unsatOut(["✅ unsat + checked evidence"])
+    tcheck --> unsatOut
+    acheck --> unsatOut
+    lean --> unsatOut
 
     classDef u fill:#e8eeff,stroke:#3355aa;
     classDef t fill:#e7f6e7,stroke:#2e7d32;
     classDef out fill:#fff7e0,stroke:#b8860b;
     class pre,blast,cnf,sat u;
-    class model,replay,drat,lrat,alethe,lean t;
-    class satOut,unsatOut,unknown,alarm out;
+    class model,replay,prop,pcheck,theory,tcheck,alethe,acheck,lean t;
+    class satOut,unsatOut,lower,unknown,alarm out;
 ```
 
+The UNSAT arrows are alternatives, not one mandatory
+DRAT → LRAT → Alethe → Lean pipeline. A checked clausal proof establishes the
+CNF; a source-level claim additionally needs a checked or explicitly trusted
+source-to-CNF boundary.
+
 **Why the boundary matters.** The SAT core, the bit-blaster, and the
-preprocessor are large and fast — and *allowed to be wrong*. They never get the
-last word:
+preprocessor are large and fast. Their candidate results need the evidence and
+assurance report of the selected route:
 
 - A claimed **`sat`** is only returned after its model is lifted to IR values
   and **evaluated against the original assertions**. A bad model fails the replay
   and becomes a soundness alarm, never a wrong `sat`.
-- A claimed **`unsat`** is only as trusted as the evidence behind it. The proof
-  trace is re-checked by an independent `check_drat`/`check_lrat`, and (for the
-  covered fragments) reconstructed to a `False` accepted by a from-scratch Rust
-  **Lean-grade kernel**.
+- A claimed **`unsat`** is only as trusted as the evidence behind it. Selected
+  routes re-check a DRAT/LRAT proof, a theory certificate, an Alethe proof, or a
+  reconstructed term. The default BatSat-backed clausal route instead records
+  its proof status as `Unchecked`; it must not be described as certificate-
+  checked.
 - When search runs out of budget or the encoding is too large, the answer is
   **`unknown`** — a valid, deliberate outcome, not a failure.
 
@@ -84,9 +97,11 @@ sequenceDiagram
         E->>E: eval every original assertion
         E-->>U: ✅ sat (model verified) — or soundness alarm
     else UNSAT
-        S-->>K: DRAT/LRAT/Alethe proof trace
-        K->>K: re-derive ⟂ independently
-        K-->>U: ✅ unsat (proof checked)
+        S-->>K: verdict + route-specific evidence status
+        opt certificate-bearing route
+            K->>K: validate the available certificate
+        end
+        K-->>U: unsat + explicit assurance report
     else out of budget
         S-->>U: unknown (honest)
     end
@@ -115,8 +130,9 @@ sequenceDiagram
    `bvadd(#xff, #x01) == #x00` in the **trusted** ground evaluator: `255 + 1`
    wraps to `0` in 8 bits ✅. The model is returned only because it replayed.
 
-The contradictory version returns `unsat`, and (with the proof-producing core)
-emits a DRAT proof that `check_drat` re-validates:
+The contradictory version returns `unsat`. The dedicated
+[QF_BV proof exporter](../user-guide/unsat-evidence.md) can solve this shape with
+the proof-producing core and emit a DRAT proof that `check_drat` re-validates:
 
 ```smt2
 (set-logic QF_BV)

@@ -1,5 +1,12 @@
 # P6.6-paper — the attempt, and what it returned
 
+> **Historical probe.** The `!fn_app_0` collision reproduced below was fixed by
+> integrated commit `c223ed8d4`, and quantified Skolem/model routes have since
+> expanded. The measurements and method correction remain useful, but the old
+> “fix, Skolemize, re-run” instruction is not a current task. Any new probe must
+> bind current source, corpus, limits, controls, and acceptance criteria through
+> root [PLAN.md](../../../PLAN.md).
+
 **Status: partially executed, 2026-07-15. It changed the plan.**
 
 The plan said P6.6-paper is a week's work that can kill the track: take one

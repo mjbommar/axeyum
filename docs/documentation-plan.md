@@ -12,14 +12,24 @@ and benchmark artifacts. The internals sequence now documents the live IR,
 evaluation, rewriting, lowering, SAT, dispatch, evidence, and Lean boundaries.
 Every workspace crate now has a README, and the core public crates have
 compile-tested rustdoc examples. The stable reference section routes public
-API/configuration questions and indexes golden-tested/generated logic, support,
-trust, and SMT-LIB protocol authorities without copying their volatile tables.
+API/configuration questions, catalogs all 34 checked-in Cargo examples with
+their feature/tool and mutation boundaries, and indexes golden-tested/generated
+logic, support, trust, and SMT-LIB protocol authorities without copying their
+volatile tables. The short public project-state page now copies the latest weak
+arithmetic rows from the append-only parity ledger, and the parity-doc gate
+checks those rows against the ledger to prevent another stale snapshot.
 The live indexes in [`docs/README.md`](README.md),
 [`learn/README.md`](learn/README.md),
 [`user-guide/README.md`](user-guide/README.md), and
 [`reference/README.md`](reference/README.md) are authoritative for the public
-guide. The curriculum, review, plan, and research archives now have explicit
-front doors that separate current authorities from dated records.
+guide. The consumer-application front door now routes the property SDK, EVM
+bug-hunter, and bounded Rust verifier to their current crate contracts and
+48-case aggregate measurement, while labeling the per-app plans and status
+files as historical journals. The curriculum, review, plan, and research
+archives now have explicit front doors that separate current authorities from
+dated records. The prover-track front door now makes the same distinction:
+substantial Lean-kernel prerequisites are built, while the CIC/IR bridge and
+native goal/hole/tactic layer remain planned rather than shipped.
 
 This plan describes how to reshape Axeyum's public documentation so it serves
 four audiences without diluting the research and roadmap material already in the
@@ -323,9 +333,10 @@ Use these rules to keep the docs maintainable:
 - `docs/plan/`: roadmap and active engineering plan.
 - `docs/reviews/`: audits and external reviews.
 
-## First Documentation PR
+## Initial Implementation Sequence (completed)
 
-The first PR should be small and mostly additive:
+The first bounded documentation slice was deliberately small and mostly
+additive:
 
 1. Rewrite [README.md](../README.md) into the shorter landing page shape.
 2. Add `docs/README.md` as the documentation hub.
@@ -336,20 +347,22 @@ The first PR should be small and mostly additive:
 7. Add `docs/user-guide/benchmarks.md` and move the long benchmark command list
    out of the README.
 
-Avoid reorganizing `docs/research/` and `docs/plan/` in the first PR. Link to
-them instead. Once the new front doors are stable, migrate duplicated content
-gradually.
+It avoided reorganizing `docs/research/` and `docs/plan/`, linked to them, and
+left migration of duplicated content to later evidence-driven increments. This
+list is retained as design rationale, not as the current action queue.
 
-## Follow-Up PRs
+## Current Maintenance Sequence
 
 Current sequence:
 
 1. Beginner, user-guide, contributor, reference, internals, crate, curriculum,
    review, plan, and research front doors are complete and indexed.
 2. Deep-page audits corrected the curriculum depth/backlog, documentation-build
-   instructions, reconstruction-target wording, and textbook/NRA maps. Continue
-   incrementally when a live guide exposes a concrete stale claim; preserve
-   dated reviews, preregistrations, results, and research notes as snapshots.
+   instructions, reconstruction-target wording, textbook/NRA maps, public
+   arithmetic state, example discoverability, and historical-parity routing.
+   Continue incrementally when a live guide exposes a concrete stale claim;
+   preserve dated reviews, preregistrations, results, and research notes as
+   snapshots.
 3. Keep generated capability/support/trust authorities and relative-link CI
    green as documentation changes.
 4. Treat a full mdBook-render CI gate as separate future work; the current

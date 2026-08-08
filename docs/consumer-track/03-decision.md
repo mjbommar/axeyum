@@ -1,5 +1,10 @@
 # Iteration 3 — decision: what we build (2026-06-25)
 
+> **Historical build decision.** The applications selected here have since
+> landed. The coordination plan, build order, and next actions below describe
+> that June 2026 implementation session, not current ownership or priority. See
+> the [consumer front door](README.md) and root [PLAN.md](../../PLAN.md).
+
 Synthesizing iterations 1–2 (three source-grounded opus scoping reports, all
 candidates tractable + unblocked). **Build 3 user-facing apps + 1 shared
 measurement backbone + reused layers** — working backwards from *clean, functional,

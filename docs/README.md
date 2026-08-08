@@ -13,21 +13,24 @@ flowchart TD
     start([Why are you here?])
     start --> learn[New to SAT / SMT / proofs?]
     start --> use[Want to run Axeyum?]
+    start --> apps[Want verification applications?]
     start --> contrib[Want to contribute?]
     start --> deep[Want internals / roadmap?]
 
     learn --> L[learn/]
     use --> U[user-guide/]
+    apps --> A[consumer-track/]
     contrib --> C[contributor-guide/]
     deep --> I[internals/ · plan/ · research/]
 
     L --> Lq["What is automated reasoning?<br/>SAT in 15 min · sat/unsat/unknown<br/>how a query is solved"]
     U --> Uq["install · first SMT-LIB query<br/>first Rust query · model replay<br/>limitations · benchmarks"]
+    A --> Aq["typed properties · EVM bug hunting<br/>bounded Rust verification<br/>replayed witnesses · scoreboards"]
     C --> Cq["add an operator / rewrite / route<br/>proof &amp; evidence obligations<br/>testing &amp; benchmarks"]
     I --> Iq["architecture · term IR · bit-blasting<br/>CNF &amp; SAT · proof stack · Lean kernel"]
 
     classDef path fill:#eef,stroke:#557,stroke-width:1px;
-    class L,U,C,I path;
+    class L,U,A,C,I path;
 ```
 
 ## Reader paths
@@ -37,8 +40,11 @@ flowchart TD
 | **Evaluating what exists today** | [`PROJECT-STATE.md`](PROJECT-STATE.md) — built vs measured vs partial, with exact Z3/Lean scope |
 | **New to automated reasoning** | [`learn/`](learn/README.md) — concepts through tiny examples, no internals |
 | **A user** | [`user-guide/`](user-guide/README.md) — run a query, read a model, know the limits |
+| **Looking for verification applications** | [`consumer-track/`](consumer-track/README.md) — property SDK, EVM bug-hunter, bounded Rust verifier, and measured scoreboards |
+| **Evaluating the proof-assistant design** | [`prover-track/`](prover-track/README.md) — landed kernel prerequisites vs the not-yet-built goal/tactic layer |
 | **A contributor** | [`contributor-guide/`](contributor-guide/README.md) — the obligations for new public surface |
 | **Looking up an API or support boundary** | [`reference/`](reference/README.md) — stable entry points into source and generated truth |
+| **Looking for a runnable example** | [`reference/examples.md`](reference/examples.md) — all Cargo examples, prerequisites, and mutation boundaries |
 | **A maintainer / researcher** | [`internals/`](internals/README.md), [`plan/`](plan/README.md), [`research/`](research/README.md) |
 
 Multi-agent sessions should use the

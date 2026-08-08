@@ -1,5 +1,10 @@
 # Thesis — why this system, and why it is ours to build
 
+> **Accepted design record, not a shipped-feature description.** The independent
+> kernel and several P6.0 hardening prerequisites exist; the P6.1 bridge and
+> P6.2/P6.3 goal/tactic layers do not. See the [current prover-track
+> boundary](../README.md) before reading present-tense design language below.
+
 **What it is and how it is built:** [`03-architecture.md`](03-architecture.md).
 **Sources:** [`../REFERENCES.md`](../REFERENCES.md).
 **Process record** (how this was arrived at, and every constraint's provenance):
@@ -18,8 +23,9 @@ our own solver.
 
 ## 1. Why the layer must exist
 
-`auto.rs:5244` declines a residual quantifier, and the comment is a **correctness
-statement, not a TODO**:
+The residual-quantifier branch in
+[`auto.rs`](../../../crates/axeyum-solver/src/auto.rs) declines, and its comment
+is a **correctness statement, not a TODO**:
 
 > *"Quantifiers left after instantiation (nested, existential, or non-top level)
 > **cannot be decided by the quantifier-free engines**."*
@@ -59,9 +65,9 @@ Independent validation from the person who thought hardest about it: **Metamath
 Zero's producer/consumer split is this design.**
 
 And it is the only shape where **our existing automation is an asset rather than a
-liability**: `decide` is one dispatch to `check_auto`, so every decision procedure
-becomes a tactic for free. Lean has to *write* `omega`, `bv_decide`, `grind`. We
-have them.
+liability**: the planned `decide` tactic can dispatch to `check_auto`, so existing
+decision procedures provide search. The P6.1/P6.2/P6.3 bridge, goal state, and
+step checker that would make this a tactic are still implementation work.
 
 ## 3. What is uniquely ours
 
@@ -89,7 +95,7 @@ on day one.
 
 | Constraint | Source |
 |---|---|
-| **P6.0 first.** The kernel admitted `False`; its former **zero-fuzz** boundary now has a 768-case four-seam seed, while positivity remains enforced only *vacuously*; **65** runtime-ledgered but unproven prelude assumptions; `Lit::Nat` truncation remains unguarded. Foundation **and** product. | ADR-0165; T6.0.3/TL2.15 seed; TL0.4; notes 01/06 |
+| **P6.0 before the goal layer.** The historical `False` admission is fixed; the 768-case seed, explicit strict positivity, arbitrary-precision Nat semantics, and later recursive/mutual/nested slices landed. The **65** runtime-ledgered prelude assumptions, generated projection/eta seams, and other P6.0 residuals remain. Foundation **and** product. | ADR-0165; T6.0.2/TL2.11; T6.0.3/TL2.15; TL2.6--TL2.7; TL0.4; notes 01/06 |
 | **`Refute` ships only after its checker.** A mistranslated goal returning `sat` is a confident wrong answer with nothing checking it — worse than none. | note 08 → P6.1c |
 | **Never invent a surface syntax.** LLMs score **0/33 across 660 attempts** on a low-resource formal language. Goals are **data**; where an agent must write, it writes SMT-LIB or Lean and we compile down. | note 10 |
 | **Binary certificates; checking throughput as a defended gate.** MM0 checks ZFC in **<200 ms**. `bv_decide`'s bottleneck is *kernel reduction*, not solve time — that is the axis to win. | note 11 |

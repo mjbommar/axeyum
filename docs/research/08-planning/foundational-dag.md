@@ -1,7 +1,13 @@
 # Foundational Logic And Math DAG
 
-Status: draft
-Last updated: 2026-06-12
+Status: maintained architectural contract; generated authorities own live coverage
+Last updated: 2026-08-07
+
+> The dependency obligations remain current, but the numbered phase narratives
+> also preserve the order in which the foundation landed. They are not the live
+> execution phase or a complete implementation inventory. Use root
+> [PLAN.md](../../../PLAN.md), [Project State](../../PROJECT-STATE.md), and the
+> generated [capability matrix](capability-matrix.md) for current status.
 
 ## Purpose
 
@@ -14,7 +20,8 @@ layer is allowed to depend on another layer.
 
 In scope:
 
-- Dependency graph from the current Bool/BV core through pure Rust QF_BV.
+- Dependency graph from the Bool/BV foundation through the pure-Rust solver,
+  theory, quantifier, evidence, and text front doors.
 - Entry and exit gates for adding logics, operators, rewrites, encodings, and
   proof evidence.
 - Requirements that prevent the Z3 oracle from becoming part of the trusted
@@ -93,10 +100,16 @@ shape.
 
 ## Phase Gates
 
-### Current Foundation: Bool And Scalar BV
+The following sections are standing entry/exit contracts plus a historical
+landing record. “Phase 2” through “Phase 7” no longer mean that the project is
+currently executing those foundation phases; the [roadmap](roadmap.md) records
+them as landed.
 
-Bool and fixed-width BV are the current trusted mathematical base. Before more
-operators or logics are exposed, the following must remain true:
+### Foundation invariant: Bool And Scalar BV
+
+Bool and fixed-width BV remain the base of the broader implemented stack.
+Whenever operators or logics are exposed or widened, the following must remain
+true:
 
 - The SMT-LIB FixedSizeBitVectors version is recorded in the relevant note or
   ADR.
@@ -106,7 +119,7 @@ operators or logics are exposed, the following must remain true:
 - Operations with surprising totality rules, especially division and remainder
   by zero, have direct tests.
 
-### Phase 2 Exit: Oracle Baseline
+### Phase 2 historical exit contract: Oracle Baseline
 
 Phase 2 is complete only after the public QF_BV baseline records:
 
@@ -118,7 +131,7 @@ Phase 2 is complete only after the public QF_BV baseline records:
 - model replay results for every `sat`;
 - a triage list for unsupported constructs, separated from soundness failures.
 
-### Phase 3 Entry: Rewriting And Query Planning
+### Phase 3 landed entry contract: Rewriting And Query Planning
 
 Before implementing always-on rewrites, each rewrite class needs:
 
@@ -154,7 +167,7 @@ target-support slicing is accepted as a solver fast path only when a sliced
 `unsat` result is safe because the submitted constraints are a subset of the
 original conjunction.
 
-### Phase 4 Entry: Bits, Circuits, And CNF
+### Phase 4 landed entry contract: Bits, Circuits, And CNF
 
 Bit-blasting may start only after the bit-order convention is recorded. For
 each lowered operator:
@@ -195,7 +208,7 @@ division/remainder (`bvudiv`/`bvurem`), and signed division/remainder/modulo
 each verified exhaustively against the evaluator, completing the full scalar
 QF_BV operator set; no arithmetic lowering deferral remains.
 
-### Phase 5 Entry: Pure Rust BV Backend
+### Phase 5 landed entry contract: Pure Rust BV Backend
 
 The pure Rust path can become the default for its supported subset when:
 
@@ -249,16 +262,15 @@ timeout now reaches 2 public `sat` decisions with Z3 agreement and no soundness
 alarms, including the MobileDevice target. A follow-up exact-target relaxed
 run keeps those 2 decisions, reduces submitted public DAG shape, eliminates
 node-budget unknowns in that profile, and leaves all remaining public unknowns
-as `EncodingBudget`. The remaining Phase 5 gate is to reduce the exposed
-CNF/SAT cost or improve encodings until the admitted public slice is
-representative enough to choose the next encoding, budget, or SAT-core
-priority.
+as `EncodingBudget`. This is the retained Phase 5 artifact sequence, not the
+current performance frontier. Use the latest parity ledger, Project State, and
+root PLAN for current measurements and priority.
 
-### Phase 6 Entry: Custom SAT Core
+### Phase 6 landed entry contract: Custom SAT Core
 
-The custom CDCL core is an identity goal, but it should not cut ahead of
-encoding work unless benchmark evidence says SAT time dominates. Before Phase 6
-implementation starts, write or update an ADR covering:
+The custom proof-producing CDCL core and in-tree DRAT checker now exist. Their
+entry contract remains binding for replacements or major extensions: benchmark
+evidence must justify priority, and an ADR must cover:
 
 - chosen SAT trait shape and whether it is IPASIR-compatible or a strict
   superset;
@@ -267,11 +279,12 @@ implementation starts, write or update an ADR covering:
 - adapter baseline to beat or replace;
 - which proof checker discharges UNSAT in high-assurance mode.
 
-### Phase 7 And Horizon Entry
+### Phase 7 and horizon standing entry contract
 
-Arrays, EUF, arithmetic, theory combination, quantifiers, and first-order
-proving are not just more operators. Each one adds new model and proof
-structure. Entering a new rung requires an ADR with:
+Arrays, EUF, arithmetic, theory combination, and selected quantifier routes have
+landed at differing depth; broader quantifiers and first-order proving remain
+open. Each new or widened rung adds model and proof structure and requires an
+ADR with:
 
 - logic fragment and decidability assumptions;
 - representation changes to `Sort`, terms, binders, or values;

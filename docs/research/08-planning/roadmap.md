@@ -2,7 +2,7 @@
 
 Status: **foundation phases (0–7) landed**; active execution is ordered in the
 single root project tracker.
-Last updated: 2026-08-05
+Last updated: 2026-08-07
 
 > **Where the live plan is now.** This file is the *research/foundation* roadmap
 > (Phases 0–7 — the decidable finite-domain + arithmetic foundation, now built).
@@ -93,7 +93,7 @@ Last updated: 2026-08-05
 > population drift checks. The former 64-row helper-call census omitted the
 > directly inserted string `append` axiom. Classification and discharge remain
 > open under TL3.2; inventory is not truth.
-> The next T6.0.3/TL2.15 seed is also live: a
+> The first T6.0.3 four-seam seed is retained, while TL2.15 remains partial: a
 > [fixed-seed 768-case harness](../../../docs/plan/lean-kernel-seam-fuzz-seed-2026-07-21.md)
 > covers `Prop`/elimination, universes/inductives, proof-irrelevance/iota, and
 > fail-closed literals/reduction, with deterministic replay and 768 rejected
@@ -111,7 +111,10 @@ Last updated: 2026-08-05
 > canonical `Nat` bootstrap and adds constructor-offset equality, successor
 > reduction, and one-layer recursor conversion. The exact official Nat root now
 > admits ten declarations with zero axioms and computes to `37`; bootstrap
-> mutations reject and a pinned-Lean 4.30 differential passes. TL1.3 now stages
+> mutations reject and a pinned-Lean 4.30 differential passes. TL2.10's offline
+> M1--M3 result separately adds a twice-identical 576-row quotient package and
+> reduction grammar; ADR-0365, the authorization-gated M4 differential, and
+> final acceptance remain open. TL1.3 now stages
 > each stream in a private kernel and publishes only an owned
 > `CompletedImport` after full success; late parser, kernel, unsupported,
 > resource, and I/O failures return no partial environment. TL1.4 adds 226
@@ -119,7 +122,8 @@ Last updated: 2026-08-05
 > version cases. All 65 record bodies reject truncation; 64 complete-record
 > prefixes are explicitly `published-unsealed` because upstream format 3.1 has
 > no footer, and receive no artifact credit. Generated projection/reduction/eta
-> and quotient semantic seams remain uncredited. TL1.7 now adds ledger-compatible
+> composition remains uncredited; the separate quotient grammar is retained but
+> is not final TL2.10 acceptance. TL1.7 now adds ledger-compatible
 > axiom identities and complete v1 structural content/direct-dependency digests;
 > five focused identity tests bring the importer to 28 cases across three
 > binaries. The remaining recursive-indexed/reflexive/mutual/nested/well-

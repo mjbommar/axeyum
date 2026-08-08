@@ -117,12 +117,15 @@ artifacts/ontology/smt-fragments.schema.json
 Rows should link to local authoritative state before external prose:
 
 - [PLAN.md](../../PLAN.md)
-- [STATUS.md](../../STATUS.md)
 - [capability matrix](../research/08-planning/capability-matrix.md)
 - [support matrix](../research/08-planning/support-matrix.md)
 - [trust ledger](../research/08-planning/trust-ledger.md)
 - [dominance scoreboard](../../bench-results/DOMINANCE.md)
-- [parity path](../PARITY-STATUS-AND-PATH.md)
+- [current project state](../PROJECT-STATE.md)
+- [append-only parity ledger](../../bench-results/PARITY.md)
+
+The old [top-down parity path](../PARITY-STATUS-AND-PATH.md) remains a labelled
+2026-06-24 historical snapshot.
 
 External references should be used for terminology and benchmark context:
 
