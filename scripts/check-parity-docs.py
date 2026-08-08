@@ -79,6 +79,17 @@ GENERATED_CAPABILITY_MATRIX = (
     ROOT / "docs" / "research" / "08-planning" / "capability-matrix.md"
 )
 LIMITATIONS = ROOT / "docs" / "user-guide" / "limitations.md"
+P27_INDEX = ROOT / "docs" / "plan" / "track-2-theories" / "P2.7-strings.md"
+P27_CURRENT = (
+    ROOT
+    / "docs"
+    / "plan"
+    / "track-2-theories"
+    / "P2.7-strings"
+    / "00-current-state.md"
+)
+IR_SORT = ROOT / "crates" / "axeyum-ir" / "src" / "sort.rs"
+WORD_STRINGS = ROOT / "crates" / "axeyum-strings" / "src" / "lib.rs"
 QUOTIENT_ADR = (
     ROOT
     / "docs"
@@ -223,6 +234,16 @@ RESEARCH_QUESTION_STALE_PATTERNS = (
         r"Making it the \*required\* high-assurance mode.*remaining step",
         re.DOTALL,
     ),
+)
+
+P27_STALE_PATTERNS = (
+    re.compile(r"Status:\s*planning", re.IGNORECASE),
+    re.compile(r"SMT-LIB packed front-door cap 24", re.IGNORECASE),
+    re.compile(r"there is no first-class sequence/string sort in the IR", re.IGNORECASE),
+    re.compile(r"UNSAT carries a DRAT proof", re.IGNORECASE),
+    re.compile(r"str\.len\s+unsat can be\s+`?unknown`?.*BV\+LIA", re.IGNORECASE),
+    re.compile(r"DISAGREE=0 over 371 instances", re.IGNORECASE),
+    re.compile(r"We decide the \*\*bounded\*\* SMT-LIB string fragment exactly"),
 )
 
 PROVER_LIVE_DOCS = (
@@ -896,6 +917,50 @@ def main() -> int:
                 f"marker {marker!r}"
             )
 
+    p27_texts = {
+        P27_INDEX: P27_INDEX.read_text(encoding="utf-8"),
+        P27_CURRENT: P27_CURRENT.read_text(encoding="utf-8"),
+    }
+    for path, text in p27_texts.items():
+        for pattern in P27_STALE_PATTERNS:
+            if match := pattern.search(text):
+                line = text.count("\n", 0, match.start()) + 1
+                failures.append(
+                    f"{path.relative_to(ROOT)}:{line}: stale P2.7 string status: "
+                    f"{match.group(0)!r}"
+                )
+
+    for path, marker in (
+        (IR_SORT, "Seq(ArraySortKey)"),
+        (IR_TERM, "SeqLen"),
+        (WORD_STRINGS, "solve_word_equations"),
+        (WORD_STRINGS, "refute_word_equations"),
+    ):
+        if marker not in path.read_text(encoding="utf-8"):
+            failures.append(
+                f"{path.relative_to(ROOT)}: missing P2.7 implementation marker {marker!r}"
+            )
+
+    normalized_p27 = {
+        path: " ".join(text.split()) for path, text in p27_texts.items()
+    }
+    for path, marker in (
+        (P27_INDEX, "Status: implementation in progress"),
+        (P27_INDEX, "The current implementation is a portfolio"),
+        (P27_INDEX, "A — first-class IR + length combination"),
+        (P27_INDEX, "E — models + automata"),
+        (P27_CURRENT, "Status: maintained implementation snapshot"),
+        (P27_CURRENT, "sound, incomplete (unknown-safe)"),
+        (P27_CURRENT, "Default declared SMT-LIB string window | 12 bytes"),
+        (P27_CURRENT, "Front-door retry ladder | 24, 32, then 48 bytes"),
+        (P27_CURRENT, "Packed result/window hard cap | 512 bytes"),
+        (P27_CURRENT, "Selected checked subroutes do not upgrade the entire fragment"),
+    ):
+        if marker not in normalized_p27[path]:
+            failures.append(
+                f"{path.relative_to(ROOT)}: missing P2.7 documentation marker {marker!r}"
+            )
+
     required_gap_markers = (
         f"{snapshot['decided']} / {snapshot['files']}",
         f"{snapshot['compared']} oracle-compared",
@@ -1216,6 +1281,7 @@ def main() -> int:
         "|strings_default_bound=12"
         "|strings_ladder_max=48"
         "|strings_packed_cap=512"
+        "|p27_status=partial_portfolio"
     )
     print(f"PARITY_DOCS|{line}")
     if failures:

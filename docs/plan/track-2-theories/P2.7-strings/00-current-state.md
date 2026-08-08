@@ -1,82 +1,93 @@
-# P2.7 · 00 — Current state: the bounded string encoder
+# P2.7 · 00 — Current state: layered and sound-incomplete
 
-Accurate baseline (grounded in `crates/axeyum-solver/src/strings.rs`, ~1305
-lines). axeyum's strings are **sound and bounded** — the right starting point, but
-fundamentally length-capped.
+Status: maintained implementation snapshot; last reviewed 2026-08-07
 
-## Encoding — a `(len, content)` bit-vector pair
+Axeyum no longer has only one bounded string encoder. The current implementation
+is a portfolio with three distinct layers:
 
-- **Representation:** each string is `(len, content)` where `len` is a
-  `BitVec(len_width)` holding the actual length (constrained `len ≤ max_len`), and
-  `content` is a `BitVec(max_len × 8)` with byte `i` at bits `[8i, 8i+7]`.
-- **Bounds:** the Rust `BoundedString` API keeps `max_len ∈ [1, 16]`. The
-  SMT-LIB packed front door uses 12 bytes for declared strings/literals and up
-  to 24 bytes for temporary concatenation results; `len_width = 32 −
-  leading_zeros(max_len)`.
-- **Well-formedness:** `len ≤ max_len` asserted per declared variable.
-- This is the **HAMPI/Kaluza bounded** approach: everything lowers to a pure
-  bit-vector / Boolean formula, solved by the existing BV→SAT path. Models replay
-  through the ground evaluator; UNSAT carries a DRAT proof.
+1. first-class `Sort::Seq` terms and values in `axeyum-ir`;
+2. a packed-BV SMT-LIB fast path with explicit finite bounds; and
+3. source-level word, membership, lexicographic, and length/LIA routes that can
+   decide selected queries beyond the initial packed window.
 
-## Operators implemented (all within the bound)
+This portfolio is sound-incomplete. It is not a complete unbounded SMT-LIB
+string theory, and the public text front door does not uniformly translate
+`String`/`Seq` syntax into first-class `Sort::Seq` terms.
 
-- **Structural:** `len`, `=`.
-- **Substring/scan:** `prefixof`, `contains`, `suffixof`, `indexof` (constant
-  start), `substr` (constant + symbolic start).
-- **Replace:** `replace` (first occurrence; result sort `BoundedString(2·max_len)`),
-  `replace_all` (non-overlapping L→R; result sort `BoundedString(max_len²)`),
-  `replace_same_len`.
-- **Concat** `str.++` (result bound `max_len_x + max_len_y`; Rust API cap 16,
-  SMT-LIB packed front-door cap 24).
-- **Comparison:** lexicographic `<`, `≤`.
-- **Symbolic:** `take`/`drop` (symbolic byte count).
-- **Regex** `str.in_re`: Thompson NFA simulation.
-- **Numeric:** `to_int`/`from_int` (decimal), `to_code`/`from_code`, digit check.
+## Current representations
 
-## Regex fragment
+### First-class IR sequences
 
-- **Automaton-expressible core:** `Empty, Char, Range, AnyChar, Concat, Union,
-  Star, Plus, Opt, Loop` (bounded `a{n,m}`).
-- **Boolean combinators top-level only:** `Inter, Comp, Diff` — **cannot** nest
-  under `Concat`/`Union`/`Star` (violation ⇒ `IrError::Unsupported`).
-- Thompson NFA compiled once; epsilon-closure precomputed; symbolically simulated
-  position-by-position per input length.
+`axeyum-ir` has `Sort::Seq(ArraySortKey)`, `Sort::string()`, `Value::Seq`, and
+the first sequence operators (`SeqLen`, `SeqEmpty`, `SeqUnit`, and
+`SeqConcat`). The ground evaluator covers those operators. This is the term
+language used by the word-level `axeyum-strings` core.
 
-## What is sound / what it can never decide
+Its existence does not settle the parser representation fork. The established
+SMT-LIB path still lowers supported `String` and finite `Seq` syntax into packed
+bit-vectors, while source-level side channels build first-class sequence
+problems for selected later routes.
 
-**Sound:** every operation lowers to BV/Boolean; replay + DRAT carry through. The
-adversarial `str_differential_fuzz` vs Z3 is **DISAGREE=0 over 371 instances**.
+### Packed-BV fast path
 
-**Cannot decide (⇒ `unknown` or rejected):**
-- Strings longer than `max_len` (rejected at encoding, `IrError::InvalidWidth`).
-- **Unbounded strings** — there is no first-class sequence/string sort in the IR.
-- `replace_all` when `max_len² > 16`.
-- Boolean combinators nested in repetitions; non-Thompson regex (lookahead,
-  backrefs, advanced anchors).
-- The ADR-0052 linear `bv2nat` bridge closes the documented bounded-string
-  `str.len` UNSAT marker. More general content-plus-length shapes can still
-  return `unknown` when the unbounded abstraction cannot prove them.
+A packed string stores a bounded length and byte content with canonical
+padding. The limits belong to different APIs and must not be conflated:
 
-## Capability-vs-gap table
+| Surface | Current bound |
+|---|---:|
+| Rust `BoundedString` API | `max_len` in `1..=16` |
+| Default declared SMT-LIB string window | 12 bytes |
+| Front-door retry ladder | 24, 32, then 48 bytes |
+| Direct string-literal adaptive limit | 256 bytes |
+| Packed result/window hard cap | 512 bytes |
 
-| Area | Decide today | Assurance | Boundary to close |
-|---|---|---|---|
-| Bounded ops | all `str.*` within the API cap 16 / SMT-LIB declared cap 12 and concat cap 24, with exact correlated bounds for generated fixed-position splices | validated (replay + DRAT) | **unbounded length** |
-| Word equality | unbounded Seq equations plus UNSAT-only opaque fixed-splice equality/constant conflicts | checked UNSAT; abstract SAT forbidden | Nielsen arrangements and semantic splice relations |
-| Regex | Thompson NFA; Boolean top-level only | validated | nested Boolean; symbolic-derivative regex; complement under concat |
-| `str.len` + LIA | unbounded replay-checked SAT bridge, including exact integer-indicator recovery (ADR-0052), plus exact PyEx path-bound recovery for bounded-complete UNSAT; broader coupled content/length is incomplete | sound | unbounded word/length reasoning in later P2.7 phases |
-| String⇄int | bounded decimal | validated | unbounded; undecidable in full (Ganesh–Berzish 2016) |
+Variable concatenation sums operand bounds and declines if the packed result
+would exceed the 512-byte cap. A wider-window `sat` is accepted only after model
+replay. A wider-window `unsat` is still a bound artifact unless a separate
+bounded-completeness or source-level checker justifies it.
 
-## The one-sentence gap
+## Current decision routes
 
-We decide the **bounded** SMT-LIB string fragment exactly; the **unbounded,
-length-aware word-equation + regex + extended-function** theory that Z3/cvc5 solve
-is missing — that is what Phases A–E build.
+| Route | What is landed | Assurance boundary |
+|---|---|---|
+| Packed BV | equality, length, concatenation, substring/scan, replacement, code/int conversions, bounded regex, and related supported shapes | returned SAT models replay; clausal UNSAT evidence remains modulo the trusted string lowering |
+| Word equations | normalization, class/normal-form inference, budgeted arrangement search, and selected checked refutations in `axeyum-strings` | SAT assignments replay; UNSAT is returned only for admitted derivations that an independent checker re-derives |
+| Boolean word structure | online CDCL(T)-style handling for admitted Boolean word skeletons | replay/checker guarded; unsupported skeletons decline |
+| Regex membership | bounded Thompson-NFA lowering plus selected source-level membership decisions and certificates | route-specific; no fragment-wide string proof artifact |
+| Lexicographic order | selected source-level lexicographic refutations | checked admitted shapes; broader formulas decline |
+| Length + LIA | bounded `bv2nat` reasoning and a source-level length/LIA bridge, including over-window SAT witnesses | SAT replay and checked admitted UNSAT shapes; general word/length combination remains incomplete |
+| String ↔ integer | bounded lowering plus selected exact source rewrites and word-obligation inversion | partial; unsupported `str.to_int`/`str.from_int` couplings return `unknown` |
 
-## What we reuse (don't rebuild)
+The generated [support matrix](../../../research/08-planning/support-matrix.md)
+therefore classifies strings as **sound, incomplete (unknown-safe)** and assigns
+no general proof support. Selected checked subroutes do not upgrade the entire
+fragment.
 
-- The bounded encoder stays as a **fast pre-check** for provably-small instances.
-- The existing **LIA online solver** is the Nelson-Oppen partner over `len` terms.
-- The **e-graph / EUF** core (P1.4) is the congruence-closure substrate the string
-  theory extends.
-- The **replay + DRAT + differential-fuzz** discipline is already in place.
+## What remains open
+
+- one canonical `String`/`Seq` parser representation and lowering contract;
+- general unbounded word equations combined with arithmetic and regex;
+- symbolic-derivative regex and a general automata/stabilization fallback;
+- complete extended-function reductions and model construction;
+- a fragment-wide UNSAT artifact that closes every trusted lowering layer; and
+- production-depth performance beyond the retained measured slices.
+
+The open boundary is broader than a `str.len` BV+LIA gap: that original marker
+has dedicated routes now. Remaining `unknown` results arise from unsupported
+combinations, incomplete procedures, bounds, or resource limits.
+
+## Authorities
+
+- [`crates/axeyum-ir/src/sort.rs`](../../../../crates/axeyum-ir/src/sort.rs) and
+  [`term.rs`](../../../../crates/axeyum-ir/src/term.rs) define first-class
+  sequence IR.
+- [`crates/axeyum-smtlib/src/parse.rs`](../../../../crates/axeyum-smtlib/src/parse.rs)
+  defines packed-string parsing and hard limits.
+- [`crates/axeyum-strings`](../../../../crates/axeyum-strings/src/lib.rs) defines
+  word-level normalization, search, and checked refutation.
+- [`crates/axeyum-solver/src/smtlib.rs`](../../../../crates/axeyum-solver/src/smtlib.rs)
+  defines front-door route order, retry policy, and replay/checker boundaries.
+- The generated [capability matrix](../../../research/08-planning/capability-matrix.md),
+  [support matrix](../../../research/08-planning/support-matrix.md), and
+  [trust ledger](../../../research/08-planning/trust-ledger.md) are the public
+  status authorities.
