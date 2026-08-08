@@ -28,6 +28,11 @@ the model, the assignment carries that choice. Missing assignments, sort
 mismatches, malformed applications, and exceeded representation limits remain
 explicit failures.
 
+The current concrete `Int` values and rational numerator/denominator components
+are `i128`-based. Arithmetic outside that reference range returns
+`IrError::ArithmeticOverflow`; a solver route must decline the dependent model
+or verdict rather than wrap, panic, or reinterpret the formula.
+
 ## Replay is a pipeline property
 
 A backend rarely returns source-level values directly. The replay path is:

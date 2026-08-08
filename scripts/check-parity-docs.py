@@ -41,8 +41,11 @@ DOCUMENTATION_PLAN = ROOT / "docs" / "documentation-plan.md"
 CONSUMER_README = ROOT / "docs" / "consumer-track" / "README.md"
 CONSUMER_SCOREBOARD = ROOT / "docs" / "consumer-track" / "SCOREBOARD.md"
 LEARN_INTRO = ROOT / "docs" / "learn" / "01-what-is-automated-reasoning.md"
+LEARN_THEORIES = ROOT / "docs" / "learn" / "03-smt-and-theories.md"
 LEARN_OUTCOMES = ROOT / "docs" / "learn" / "05-models-unsat-and-unknown.md"
 LEARN_PIPELINE = ROOT / "docs" / "learn" / "07-how-axeyum-solves-a-query.md"
+TERM_IR_DOC = ROOT / "docs" / "internals" / "term-ir.md"
+EVALUATOR_DOC = ROOT / "docs" / "internals" / "evaluator.md"
 NORTH_STAR_PLAN = ROOT / "docs" / "plan" / "00-north-star.md"
 NORTH_STAR_ORIENTATION = (
     ROOT / "docs" / "research" / "00-orientation" / "north-star.md"
@@ -93,6 +96,8 @@ P27_CURRENT = (
     / "00-current-state.md"
 )
 IR_SORT = ROOT / "crates" / "axeyum-ir" / "src" / "sort.rs"
+IR_VALUE = ROOT / "crates" / "axeyum-ir" / "src" / "value.rs"
+IR_EVAL = ROOT / "crates" / "axeyum-ir" / "src" / "eval.rs"
 WORD_STRINGS = ROOT / "crates" / "axeyum-strings" / "src" / "lib.rs"
 QUOTIENT_ADR = (
     ROOT
@@ -166,8 +171,11 @@ PUBLIC_CLAIM_DOCS = (
     ROOT / "docs" / "README.md",
     PROJECT_STATE,
     LEARN_INTRO,
+    LEARN_THEORIES,
     LEARN_OUTCOMES,
     LEARN_PIPELINE,
+    TERM_IR_DOC,
+    EVALUATOR_DOC,
     NORTH_STAR_PLAN,
     NORTH_STAR_ORIENTATION,
     FOUNDATIONAL_DAG,
@@ -208,6 +216,7 @@ PUBLIC_STALE_PATTERNS = (
         re.IGNORECASE,
     ),
     re.compile(r"Re-derive small BV UNSAT results", re.IGNORECASE),
+    re.compile(r"integer and rational values are exact,", re.IGNORECASE),
 )
 
 PROVER_STALE_PATTERNS = (
@@ -784,6 +793,23 @@ def main() -> int:
         if marker not in text:
             failures.append(
                 f"{path.relative_to(ROOT)}: missing SMT-LIB proof boundary marker "
+                f"{marker!r}"
+            )
+
+    ir_range_markers = (
+        (IR_SORT, "Nested arrays and nested sequences remain deferred"),
+        (IR_VALUE, "exact within the `i128`"),
+        (IR_EVAL, "Integers are exact within the i128 reference range"),
+        (LEARN_THEORIES, "not an arbitrary-precision implementation claim"),
+        (TERM_IR_DOC, "exact within the current `i128` reference range"),
+        (EVALUATOR_DOC, "rational numerator/denominator components are `i128`-based"),
+        (LIMITATIONS, "Concrete integer/rational reference evaluation is range-bounded"),
+    )
+    for path, marker in ir_range_markers:
+        text = " ".join(path.read_text(encoding="utf-8").split())
+        if marker not in text:
+            failures.append(
+                f"{path.relative_to(ROOT)}: missing concrete arithmetic range marker "
                 f"{marker!r}"
             )
 

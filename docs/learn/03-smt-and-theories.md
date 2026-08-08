@@ -24,6 +24,11 @@ mathematical integers and does not wrap. Treating either one as the other would
 change the problem, so Axeyum's typed term builder rejects sort and bit-width
 mismatches rather than guessing a coercion.
 
+The mathematical `Int` sort is a semantic contract, not an arbitrary-precision
+implementation claim. Axeyum's current concrete `Int` values and rational
+reference components use `i128`; out-of-range evaluation reports
+`ArithmeticOverflow`, and a dependent solve fails closed instead of wrapping.
+
 ## A first theory query
 
 This asks whether an 8-bit value can wrap to zero after adding one:

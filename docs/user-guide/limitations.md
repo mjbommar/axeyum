@@ -59,6 +59,11 @@ flowchart LR
   `nlsat` in general.
 - **Quantifiers** are complete over finite domains; otherwise sound refutation by
   instantiation, `unknown` on no progress.
+- **Concrete integer/rational reference evaluation is range-bounded.** `Int` and
+  `Real` retain mathematical, non-wrapping semantics, but current concrete
+  `Int` values and rational numerator/denominator components use `i128`.
+  Out-of-range evaluation reports `ArithmeticOverflow`, and a dependent solve
+  declines instead of wrapping or claiming a model outside the checked range.
 - **Strings** are *bounded* (length-capped, BV-lowered): declared strings start
   at 12 bytes, the front door retries 24/32/48-byte windows, and packed terms
   have a 512-byte cap. Additional checked word-equation and length/LIA routes do
