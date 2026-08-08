@@ -7,9 +7,9 @@ first and update it before ending a project-level work session.
 - Last consolidated: **2026-08-08**
 - Integrated baseline merged into the active topic:
   `8ccae9c43ce393762ce6cc3b38d21c2dbb982507`
-- Active pushed repair: `d599b682ff8567bcee699856d407baa9990d9160`;
-  a deep QF_IDL Boolean-spine/deadline repair exposed by the next sequential
-  capture is focused-green but not yet committed
+- Active pushed repair: `61a9ad1a020bb458cb23a4acbf67818f08863c3e`;
+  the deep QF_IDL Boolean-spine/deadline repair is exact-ref verified and its
+  pre-push gate is green
 - Latest full-gate attempt: `b07be65aab46790c1473994dfd8fed6f72005817`
   passed the fresh uninterrupted frozen `just check` with exit 0, including the
   repaired generated gap-ownership and independent parity-doc checks
@@ -51,7 +51,7 @@ construction to the remaining deadline. The trigger now returns typed budget
 `unknown` in 21.23 seconds at about 83 MiB; `lpsat-goal-18` remains `unsat`.
 Strict Clippy, all 1,084 solver-library tests, deep-input 16/16, LRA integration
 20/20, and both LRA differentials are green with zero disagreement.
-The uncommitted, not-fully-gated change requires a row-1 census restart. See the
+The pushed, not-yet-full-gated change requires a row-1 census restart. See the
 [failure/repair record](docs/plan/qf-linear-a5-wide-core-memory-repair-2026-08-08.md).
 
 Axeyum is a working research-grade automated-reasoning stack with a pure-Rust
@@ -320,9 +320,8 @@ here as closed evidence boundaries. A3 remains incomplete, but all currently
 preregistered bounded mechanisms are closed negatively. A4 has now also yielded;
 A5 is the first active item.
 
-**Immediate action.** Commit and push the focused-green deep Boolean-spine and
-deadline repair with the first exact QF_IDL failure record, verify the pushed
-object, rebuild the release census binary, and restart QF_LRA from row 1 under
+**Immediate action.** Rebuild the release census binary at exact pushed
+`61a9ad1a0`, then restart QF_LRA from row 1 under
 the unchanged 24-second/8-GiB capture envelope. The failed 172-row abort stream,
 the complete-but-parse-invalid 200-row stream, the failed 168-row pursuit abort,
 and the failed 58-row QF_IDL abort all remain non-credited. The valid 200-row

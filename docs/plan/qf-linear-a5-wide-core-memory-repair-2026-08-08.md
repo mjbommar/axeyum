@@ -189,7 +189,7 @@ a second independent recursive spine: more than 15,000
 Boolean abstraction. The partial repair prevented the first abort but still ran
 beyond 84 seconds, so it was not accepted.
 
-The complete candidate repair makes both walkers iterative, preserves
+Pushed repair `61a9ad1a0` makes both walkers iterative, preserves
 left-to-right variable/constraint/atom order, makes the local Boolean `and`/`or`
 flatteners iterative, polls the integer-collector deadline, and threads the
 remaining DPLL budget through Boolean-abstraction construction. Construction
@@ -206,7 +206,7 @@ control remains `unsat`. In one five-row/8-GiB process, the repaired trigger,
 that UNSAT control, gasburner, pursuit, and tgc all returned safely in 49.96
 seconds at 636,080 KiB peak RSS.
 
-Focused candidate evidence is green: the two 100,000-deep load-bearing walkers
+Focused evidence is green: the two 100,000-deep load-bearing walkers
 and both expired-deadline tests; strict all-target/all-feature solver Clippy;
 all 1,084 solver-library tests; deep-input no-abort 16/16; LRA integration
 20/20; QF_LRA differential 5/5 over 1,500 cases with zero disagreement; and
@@ -216,8 +216,8 @@ census.
 
 ## Required continuation
 
-1. Commit and push the focused-green deep-spine/deadline repair with the first
-   QF_IDL failure record, then verify `HEAD == upstream`.
+1. Exact repair `61a9ad1a0` is committed, pushed, and verified equal across
+   `HEAD`, upstream, and the remote ref; its exact-SHA pre-push gate is green.
 2. Because solver behavior changed after the valid `d599b682f` QF_LRA capture,
    restart QF_LRA from row 1 under the original A5 protocol. Any historical
    decision loss, wrong verdict, stderr, malformed trace, or process failure
