@@ -35,8 +35,9 @@ The pigeonhole principle for fixed sizes (no injection from an `n+1`-set into an
 
 The heart of the subject — countability of ℚ, **uncountability of ℝ** (Cantor),
 the Schröder–Bernstein theorem, cardinal arithmetic — is inherently about
-infinite sets and is a proof-reconstruction (P3.6/P3.7) target, not a benchmark.
-This node is the honest face of "what automation cannot decide".
+infinite sets and remains a proof-reconstruction target, not a solver benchmark.
+The in-tree checker does not by itself supply these general proofs. This node is
+the honest face of "what automation cannot decide".
 
 ## References
 

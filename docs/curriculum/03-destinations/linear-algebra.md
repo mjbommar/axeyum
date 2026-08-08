@@ -35,15 +35,17 @@ identity over NRA), and verifying a claimed eigenvector (`Av = λv`).
 
 Example exercise: solve a `3×3` rational system (witness solution); refute an
 inconsistent system with a Farkas certificate; check `det(AB) = det A·det B` for
-`2×2` matrices over NRA. Together these pressure LRA + NRA — the corpora P2.5
-needs.
+`2×2` matrices over NRA. Together these pressure exact LRA, finite-field/BV,
+and nonlinear-real routes.
 
 **Built** (`Family::LinearAlgebra`, first cut over fixed-size `BitVec` matrices,
 exhaustive/witness self-checks): `det_product_2x2` (det(AB)=detA·detB),
 `transpose_product_2x2` ((AB)ᵀ=BᵀAᵀ), `mult_associative_2x2` ((AB)C=A(BC) over
-𝔽₂), and `linear_solve_2x2` (Ax=b with the solution as witness). The ℚ/NRA
-variants (Farkas-certified solving, 3×3 determinant identities) are the next
-increment.
+𝔽₂), `linear_solve_2x2` (Ax=b with the solution as witness), and
+`det_product_3x3_f2`. Separate validated foundational packs cover exact rational
+linear algebra, residuals, factorization, spectral shadows, and checked Farkas
+contradictions; consult the generated resource audit rather than treating this
+scenario list as the entire field surface.
 
 ## Lean-horizon
 

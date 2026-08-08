@@ -58,7 +58,7 @@ the rest is flagged Lean-horizon.
 
 `covered` — has a self-checking exercise family today · `planned` — testable
 fragment identified, family not yet built · `lean-horizon` — primarily a
-proof-reconstruction target (P3.6/P3.7), not a benchmark.
+general-theorem or proof-reconstruction target, not a solver benchmark.
 
 ## The layers
 

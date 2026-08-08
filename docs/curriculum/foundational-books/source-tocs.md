@@ -31,9 +31,10 @@ drawable.
 | 5 | Continued Fractions | Finite/Infinite CF · Quadratic Irrationals · **Sums of Two Squares** | ◐ (finite CF expansion; sum-of-two-squares = SAT witness) |
 | 6 | Elliptic Curves | Group law · ECM factorization · ECC · curves over ℚ | ◐ (point-addition / group-law identities at fixed curve) |
 
-**Next NT benchmark to port (from Ch. 2–4):** CRT solvability+witness, Euler's
-theorem `a^φ(n) ≡ 1` at fixed `n`, Fermat's little theorem at fixed `p`, Legendre
-symbol / Euler's criterion at fixed `p`, RSA encrypt∘decrypt round-trip.
+**Current scenario coverage from Ch. 2–4:** CRT witnesses, Fermat at fixed
+modulus, quadratic residue/non-residue examples, modular inverses, fixed-key RSA
+round trips, and related finite checks are implemented. Add another row only
+when it contributes a distinct proof shape, learner boundary, or solver stress.
 
 ---
 
@@ -78,7 +79,7 @@ text; Parts I–II are the drawable matrix core, Part III is numerical optimizat
 |---|---|---|
 | 1 | Vectors (addition, scalar mult, **inner product**) | ✅ (vector identities over ℚ) |
 | 2 | Linear functions (Taylor approx, regression) | ◐ (linearity at fixed size) |
-| 3 | Norm and distance (norm, distance, std dev, **angle**) | ◐ (squared/Cauchy–Schwarz forms → NRA frontier) |
+| 3 | Norm and distance (norm, distance, std dev, **angle**) | ◐ (fixed exact forms; degree-2 SOS has checked evidence, broader norm theory does not) |
 | 4 | Clustering (k-means) | ✗ (numerical) |
 | 5 | Linear independence (basis, orthonormal, **Gram–Schmidt**) | ◐ (independence/rank at fixed size = ✅) |
 
@@ -100,15 +101,17 @@ axeyum's optimization surface (OMT/MILP, P4.3), not the self-checking corpus —
 
 ---
 
-## Synthesis: what to port next, by yield
+## Synthesis: what to deepen next, by yield
 
-1. **Number theory (highest yield, mostly decidable):** Stein Ch. 2–4 + Shoup
-   Ch. 1–2, 4 → CRT, Euler/Fermat at fixed modulus, Legendre symbol, RSA
-   round-trip. Grows the **BV/LIA** corpus.
-2. **Polynomials / finite fields:** Shoup Ch. 18–19 → polynomial identities and
-   𝔽ₚ/𝔽_q arithmetic at fixed parameters. Grows **Polynomial** + **Algebra**.
-3. **Linear algebra (matrix core):** VMLS Part II + Shoup Ch. 15 → rank/nullity,
-   `Ax=b` solvability, inverse, associativity over ℚ/𝔽ₚ. Grows **LRA / LinearAlgebra**.
-4. **Out of scope for self-check:** VMLS Part III (least squares → P4.3
-   optimization); analytic NT (prime distribution); abstract structure theorems
-   (Lean-horizon).
+1. **Number theory:** connect existing CRT/residue/RSA/field examples to distinct
+   checked evidence and learner pages instead of duplicating fixed instances.
+2. **Polynomials and finite fields:** deepen quotient, factorization, and field
+   examples when they add a proof route or reusable solver regression.
+3. **Linear algebra:** connect exact rational and finite-field matrix packs to
+   residual, rank, factorization, and proof-producing contradiction lessons.
+4. **Theorem horizon:** keep analytic number theory, convergence, general
+   optimization, and abstract structure theorems explicitly proof-oriented.
+
+The executable queue is [the curriculum backlog](../BACKLOG.md); the broader
+resource queue is the [math curriculum build
+sequence](../../foundational-resources/MATH-CURRICULUM-RESOURCE-BUILD-SEQUENCE.md).

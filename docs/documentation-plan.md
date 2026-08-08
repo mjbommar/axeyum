@@ -346,10 +346,10 @@ Current sequence:
 
 1. Beginner, user-guide, contributor, reference, internals, crate, curriculum,
    review, plan, and research front doors are complete and indexed.
-2. The first deep-page audit corrected the curriculum depth/backlog and
-   documentation-build instructions. Continue incrementally when a live guide
-   exposes a concrete stale claim; preserve dated reviews, preregistrations,
-   results, and research notes as snapshots.
+2. Deep-page audits corrected the curriculum depth/backlog, documentation-build
+   instructions, reconstruction-target wording, and textbook/NRA maps. Continue
+   incrementally when a live guide exposes a concrete stale claim; preserve
+   dated reviews, preregistrations, results, and research notes as snapshots.
 3. Keep generated capability/support/trust authorities and relative-link CI
    green as documentation changes.
 4. Treat a full mdBook-render CI gate as separate future work; the current

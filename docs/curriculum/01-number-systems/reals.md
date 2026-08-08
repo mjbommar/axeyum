@@ -49,4 +49,5 @@ second-order and Lean-horizon, as are limits/continuity defined via ε–δ.
 ## References
 
 - Tarski, *A Decision Method for Elementary Algebra and Geometry* (RCF decidability).
-- axeyum: NRA linearization (ADR-0024), `check_with_lra`; P2.5.
+- Axeyum: exact LRA/Farkas, NRA/CAD, and the checked degree-2 SOS/PSD slice;
+  see the live [support matrix](../../research/08-planning/support-matrix.md).

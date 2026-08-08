@@ -13,13 +13,13 @@
 //!     ([`square_nonnegativity_is_proved_by_sos`]) — NRA gained pairwise
 //!     **sum-of-squares lemmas** (`sos_lemmas`) that add `(a±b)² ≥ 0` over the
 //!     abstracted products, restoring the cross-product correlation the independent
-//!     abstraction drops. The higher-degree / multi-variable SOS cases
-//!     (Bernoulliₙ₌₂, general Cauchy–Schwarz) still need the broader
-//!     SOS/positivstellensatz/CAD path (P2.5) and are not yet covered.
+//!     abstraction drops. The checked quadratic route also covers admitted
+//!     three-variable PSD forms; higher-degree cases such as the direct
+//!     Cauchy–Schwarz polynomial remain outside that certificate class.
 //!
-//! Findings pinned down: `prove` routes real goals to `QF_LRA` and *rejects*
-//! nonlinear multiplication (no LRA→NRA dispatch); and axeyum's NRA proves
-//! monotonicity-shaped facts but not the degree-2 SOS inequalities.
+//! Findings pinned down: `prove` reaches nonlinear-real handling without
+//! disproving the true monotonicity goal; the direct NRA path proves both a
+//! monotonicity-shaped fact and the promoted degree-2 SOS regression.
 #![cfg(feature = "full")]
 
 use std::time::Duration;
@@ -123,7 +123,7 @@ fn nra_proves_a_monotonicity_inequality() {
     );
 }
 
-// --- The sum-of-squares frontier (ignored: documents the NRA gap) -------------
+// --- Promoted degree-2 sum-of-squares regression ------------------------------
 
 #[test]
 fn square_nonnegativity_is_proved_by_sos() {
