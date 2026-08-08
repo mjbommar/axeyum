@@ -132,8 +132,8 @@ From the repository root:
 
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/linear-optimization-v0
-cargo test -p axeyum-solver --test math_resource_lra_routes linear_optimization_objective_threshold_artifact_emits_checked_farkas
-cargo test -p axeyum-solver --test math_resource_lra_routes linear_optimization_objective_threshold_rejects_tampered_farkas_certificate
+cargo test -p axeyum-solver --features full --test math_resource_lra_routes linear_optimization_objective_threshold_artifact_emits_checked_farkas
+cargo test -p axeyum-solver --features full --test math_resource_lra_routes linear_optimization_objective_threshold_rejects_tampered_farkas_certificate
 ```
 
 Expected validator output:

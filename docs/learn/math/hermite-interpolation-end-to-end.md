@@ -158,7 +158,7 @@ From the repository root:
 
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-cubic-hermite-interpolation-v0
-cargo test -p axeyum-solver --test math_resource_lra_routes finite_cubic_hermite_interpolation_bad_value_artifact_emits_checked_farkas
+cargo test -p axeyum-solver --features full --test math_resource_lra_routes finite_cubic_hermite_interpolation_bad_value_artifact_emits_checked_farkas
 
 python3 scripts/query-foundational-resources.py checks \
   --pack finite-cubic-hermite-interpolation-v0 \

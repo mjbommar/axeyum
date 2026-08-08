@@ -177,7 +177,7 @@ From the repository root:
 
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/convexity-rational-v0
-cargo test -p axeyum-solver --test math_resource_lra_routes convexity_bad_
+cargo test -p axeyum-solver --features full --test math_resource_lra_routes convexity_bad_
 ```
 
 Expected output:

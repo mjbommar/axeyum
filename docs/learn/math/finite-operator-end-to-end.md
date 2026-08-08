@@ -187,9 +187,9 @@ From the repository root:
 
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-operator-v0
-cargo test -p axeyum-solver --test math_resource_lra_routes finite_operator_bad_l1_sum_norm_artifact_emits_checked_farkas
-cargo test -p axeyum-solver --test math_resource_lra_routes finite_operator_bad_operator_bound_artifact_emits_checked_farkas
-cargo test -p axeyum-solver --test math_resource_lra_routes finite_operator_bad_chebyshev_t3_artifact_emits_checked_farkas
+cargo test -p axeyum-solver --features full --test math_resource_lra_routes finite_operator_bad_l1_sum_norm_artifact_emits_checked_farkas
+cargo test -p axeyum-solver --features full --test math_resource_lra_routes finite_operator_bad_operator_bound_artifact_emits_checked_farkas
+cargo test -p axeyum-solver --features full --test math_resource_lra_routes finite_operator_bad_chebyshev_t3_artifact_emits_checked_farkas
 ```
 
 Expected validator output:

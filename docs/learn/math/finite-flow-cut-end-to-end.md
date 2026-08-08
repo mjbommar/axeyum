@@ -135,7 +135,7 @@ From the repository root:
 
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-flow-cut-v0
-cargo test -p axeyum-solver --test math_resource_lra_routes finite_flow_cut_bad_flow_value_cut_bound_artifact_emits_checked_farkas
+cargo test -p axeyum-solver --features full --test math_resource_lra_routes finite_flow_cut_bad_flow_value_cut_bound_artifact_emits_checked_farkas
 ```
 
 ## Trust Boundary

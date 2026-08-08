@@ -70,7 +70,7 @@ From the repository root:
 
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-walsh-hadamard-transform-v0
-cargo test -p axeyum-solver --test math_resource_lra_routes finite_walsh_hadamard_bad_transform_coefficient_artifact_emits_checked_farkas
+cargo test -p axeyum-solver --features full --test math_resource_lra_routes finite_walsh_hadamard_bad_transform_coefficient_artifact_emits_checked_farkas
 python3 scripts/query-foundational-resources.py checks --pack finite-walsh-hadamard-transform-v0 --route Farkas --proof-status checked --require-any
 ```
 

@@ -186,7 +186,7 @@ From the repository root:
 
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-shortest-path-v0
-cargo test -p axeyum-solver --test math_resource_lra_routes finite_shortest_path_bad_shorter_distance_potential_bound_artifact_emits_checked_farkas
+cargo test -p axeyum-solver --features full --test math_resource_lra_routes finite_shortest_path_bad_shorter_distance_potential_bound_artifact_emits_checked_farkas
 python3 scripts/query-foundational-resources.py horizon-frontier --text shortest --require-any
 python3 scripts/query-foundational-resources.py checks --pack finite-shortest-path-v0 --proof-status lean-horizon --require-any
 python3 scripts/query-foundational-resources.py checks --pack finite-shortest-path-v0 --proof-status checked --require-any

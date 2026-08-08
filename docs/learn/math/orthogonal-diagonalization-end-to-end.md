@@ -82,7 +82,7 @@ From the repository root:
 
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-orthogonal-diagonalization-v0
-cargo test -p axeyum-solver --test math_resource_lra_routes finite_orthogonal_diagonalization_bad_eigenvalue_artifact_emits_checked_farkas
+cargo test -p axeyum-solver --features full --test math_resource_lra_routes finite_orthogonal_diagonalization_bad_eigenvalue_artifact_emits_checked_farkas
 ```
 
 Expected output for the validator:

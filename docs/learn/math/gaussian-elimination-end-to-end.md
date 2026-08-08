@@ -65,7 +65,7 @@ trusted small checking recomputes the exact claim before accepting it.
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-gaussian-elimination-v0
 
-cargo test -p axeyum-solver --test math_resource_lra_routes finite_gaussian_elimination_bad_rhs_artifact_emits_checked_farkas
+cargo test -p axeyum-solver --features full --test math_resource_lra_routes finite_gaussian_elimination_bad_rhs_artifact_emits_checked_farkas
 
 python3 scripts/query-foundational-resources.py checks --pack finite-gaussian-elimination-v0 --route Farkas --proof-status checked --require-any
 ```

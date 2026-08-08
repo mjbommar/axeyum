@@ -132,7 +132,7 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/fi
 Then check the shared equality-certificate route:
 
 ```sh
-cargo test -p axeyum-solver --test math_resource_uf_routes
+cargo test -p axeyum-solver --features full --test math_resource_uf_routes
 ```
 
 ## Graduation Criteria

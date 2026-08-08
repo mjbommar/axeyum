@@ -233,5 +233,5 @@ general proximal-gradient theorem: future Lean reconstruction
 
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-proximal-gradient-v0
-cargo test -p axeyum-solver --test math_resource_lra_routes finite_proximal_gradient_bad_
+cargo test -p axeyum-solver --features full --test math_resource_lra_routes finite_proximal_gradient_bad_
 ```

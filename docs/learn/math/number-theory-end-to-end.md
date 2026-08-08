@@ -163,9 +163,9 @@ From the repository root:
 
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/number-theory-v0
-cargo test -p axeyum-solver --test math_resource_bv_routes number_theory_quadratic_nonresidue_emits_checked_bv_drat
-cargo test -p axeyum-solver --test math_resource_bv_routes number_theory_bad_square_witness_emits_checked_bv_drat
-cargo test -p axeyum-solver --test math_resource_lia_routes number_theory_diophantine_gcd_obstruction_emits_checked_diophantine_evidence
+cargo test -p axeyum-solver --features full --test math_resource_bv_routes number_theory_quadratic_nonresidue_emits_checked_bv_drat
+cargo test -p axeyum-solver --features full --test math_resource_bv_routes number_theory_bad_square_witness_emits_checked_bv_drat
+cargo test -p axeyum-solver --features full --test math_resource_lia_routes number_theory_diophantine_gcd_obstruction_emits_checked_diophantine_evidence
 ```
 
 Expected output:

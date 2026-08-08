@@ -252,8 +252,8 @@ From the repository root:
 
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-martingales-v0
-cargo test -p axeyum-solver --test math_resource_lra_routes finite_martingales_bad_stopped_expectation_artifact_emits_checked_farkas
-cargo test -p axeyum-solver --test math_resource_lra_routes finite_martingales_bad_conditional_expectation_emits_checked_farkas
+cargo test -p axeyum-solver --features full --test math_resource_lra_routes finite_martingales_bad_stopped_expectation_artifact_emits_checked_farkas
+cargo test -p axeyum-solver --features full --test math_resource_lra_routes finite_martingales_bad_conditional_expectation_emits_checked_farkas
 ```
 
 Expected output:

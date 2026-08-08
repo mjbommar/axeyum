@@ -241,7 +241,7 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/fi
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-simplicial-cup-products-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-operator-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-chebyshev-systems-v0
-cargo test -p axeyum-solver --test math_resource_lra_routes
-cargo test -p axeyum-solver --test math_resource_uf_routes
-cargo test -p axeyum-solver --test math_resource_lia_routes
+cargo test -p axeyum-solver --features full --test math_resource_lra_routes
+cargo test -p axeyum-solver --features full --test math_resource_uf_routes
+cargo test -p axeyum-solver --features full --test math_resource_lia_routes
 ```

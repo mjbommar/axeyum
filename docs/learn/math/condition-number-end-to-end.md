@@ -136,5 +136,5 @@ Run the focused checks from the repository root:
 
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-condition-number-v0
-cargo test -p axeyum-solver --test math_resource_lra_routes finite_condition_number_bad_condition_artifact_emits_checked_farkas
+cargo test -p axeyum-solver --features full --test math_resource_lra_routes finite_condition_number_bad_condition_artifact_emits_checked_farkas
 ```

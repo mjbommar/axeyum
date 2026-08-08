@@ -164,8 +164,8 @@ From the repository root:
 
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-rings-v0
-cargo test -p axeyum-solver --test math_resource_bv_routes finite_rings_bad_distributivity_emits_checked_drat
-cargo test -p axeyum-solver --test math_resource_bv_routes finite_rings_bad_multiplicative_identity_emits_checked_drat
+cargo test -p axeyum-solver --features full --test math_resource_bv_routes finite_rings_bad_distributivity_emits_checked_drat
+cargo test -p axeyum-solver --features full --test math_resource_bv_routes finite_rings_bad_multiplicative_identity_emits_checked_drat
 ```
 
 Expected output:

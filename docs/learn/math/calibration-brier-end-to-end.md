@@ -119,7 +119,7 @@ From the repository root:
 
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-calibration-brier-v0
-cargo test -p axeyum-solver --test math_resource_lra_routes finite_calibration_brier_bad_brier_score_artifact_emits_checked_farkas
+cargo test -p axeyum-solver --features full --test math_resource_lra_routes finite_calibration_brier_bad_brier_score_artifact_emits_checked_farkas
 ```
 
 Useful queries:

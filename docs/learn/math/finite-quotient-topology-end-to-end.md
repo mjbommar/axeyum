@@ -140,8 +140,8 @@ From the repository root:
 
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-quotient-topology-v0
-cargo test -p axeyum-solver --test math_resource_uf_routes finite_quotient_topology_bad_fiber_representative_emits_checked_alethe
-cargo test -p axeyum-solver --test math_resource_uf_routes finite_quotient_topology_bad_open_emits_checked_alethe
+cargo test -p axeyum-solver --features full --test math_resource_uf_routes finite_quotient_topology_bad_fiber_representative_emits_checked_alethe
+cargo test -p axeyum-solver --features full --test math_resource_uf_routes finite_quotient_topology_bad_open_emits_checked_alethe
 ```
 
 Expected validator output:

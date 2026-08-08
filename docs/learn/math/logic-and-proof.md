@@ -136,7 +136,7 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/in
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/induction-patterns-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/graph-coloring-v0
 cargo test -p axeyum-cnf --test math_resource_boolean_routes finite_predicate_forall_implies_exists_emits_checked_drat_and_lrat
-cargo test -p axeyum-solver --test math_resource_lia_routes induction_obligations_bounded_step_count_emits_checked_lia_dpll_evidence
+cargo test -p axeyum-solver --features full --test math_resource_lia_routes induction_obligations_bounded_step_count_emits_checked_lia_evidence
 ```
 
 For fuller traces, read:

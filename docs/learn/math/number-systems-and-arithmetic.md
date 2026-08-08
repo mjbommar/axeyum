@@ -176,17 +176,17 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/na
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/integer-lia-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/gcd-bezout-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/modular-arithmetic-v0
-cargo test -p axeyum-solver --test math_resource_lia_routes modular_nonunit_inverse_emits_checked_diophantine_evidence
-cargo test -p axeyum-solver --test math_resource_bv_routes modular_arithmetic_fermat_units_mod5_emits_checked_bv_drat
-cargo test -p axeyum-solver --test math_resource_lia_routes qf_lia_resource_route_rejects_tampered_diophantine_certificate
+cargo test -p axeyum-solver --features full --test math_resource_lia_routes modular_nonunit_inverse_emits_checked_diophantine_evidence
+cargo test -p axeyum-solver --features full --test math_resource_bv_routes modular_arithmetic_fermat_units_mod5_emits_checked_bv_drat
+cargo test -p axeyum-solver --features full --test math_resource_lia_routes qf_lia_resource_route_rejects_tampered_diophantine_certificate
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/number-theory-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/rationals-lra-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-rounding-shadow-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/complex-algebraic-v0
-cargo test -p axeyum-solver --test math_resource_lra_routes complex_algebraic_bad_product_real_part_artifact_emits_checked_farkas
-cargo test -p axeyum-solver --test math_resource_lra_routes complex_algebraic_bad_norm_squared_artifact_emits_checked_farkas
+cargo test -p axeyum-solver --features full --test math_resource_lra_routes complex_algebraic_bad_product_real_part_artifact_emits_checked_farkas
+cargo test -p axeyum-solver --features full --test math_resource_lra_routes complex_algebraic_bad_norm_squared_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/complex-plane-transforms-v0
-cargo test -p axeyum-solver --test math_resource_lra_routes complex_plane_bad_unit_square_real_part_artifact_emits_checked_farkas
+cargo test -p axeyum-solver --features full --test math_resource_lra_routes complex_plane_bad_unit_square_real_part_artifact_emits_checked_farkas
 ```
 
 For fuller traces through bounded natural arithmetic, signed integer LIA,

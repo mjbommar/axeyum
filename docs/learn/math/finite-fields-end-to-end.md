@@ -169,8 +169,8 @@ From the repository root:
 
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-fields-v0
-cargo test -p axeyum-solver --test math_resource_bv_routes finite_fields_composite_nonfield_emits_checked_drat
-cargo test -p axeyum-solver --test math_resource_bv_routes finite_fields_bad_inverse_candidate_emits_checked_drat
+cargo test -p axeyum-solver --features full --test math_resource_bv_routes finite_fields_composite_nonfield_emits_checked_drat
+cargo test -p axeyum-solver --features full --test math_resource_bv_routes finite_fields_bad_inverse_candidate_emits_checked_drat
 ```
 
 Expected output:

@@ -90,8 +90,8 @@ The DRAT certificate proves that the generated CNF is unsatisfiable. The
 promoted resource regression is:
 
 ```sh
-cargo test -p axeyum-solver --test math_resource_bv_routes finite_fields_composite_nonfield_emits_checked_drat
-cargo test -p axeyum-solver --test math_resource_bv_routes finite_fields_bad_inverse_candidate_emits_checked_drat
+cargo test -p axeyum-solver --features full --test math_resource_bv_routes finite_fields_composite_nonfield_emits_checked_drat
+cargo test -p axeyum-solver --features full --test math_resource_bv_routes finite_fields_bad_inverse_candidate_emits_checked_drat
 ```
 
 That test parses the source SMT-LIB artifact, checks the obligation is `unsat`,
@@ -108,7 +108,7 @@ end to end.
 The same source artifact has a tamper regression:
 
 ```sh
-cargo test -p axeyum-solver --test math_resource_bv_routes qf_bv_resource_route_rejects_tampered_drat_certificate
+cargo test -p axeyum-solver --features full --test math_resource_bv_routes qf_bv_resource_route_rejects_tampered_drat_certificate
 ```
 
 It checks the genuine DIMACS/DRAT pair first, then removes the final nonempty
@@ -153,9 +153,9 @@ From the repository root:
 
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-fields-v0
-cargo test -p axeyum-solver --test math_resource_bv_routes finite_fields_composite_nonfield_emits_checked_drat
-cargo test -p axeyum-solver --test math_resource_bv_routes finite_fields_bad_inverse_candidate_emits_checked_drat
-cargo test -p axeyum-solver --test math_resource_bv_routes qf_bv_resource_route_rejects_tampered_drat_certificate
+cargo test -p axeyum-solver --features full --test math_resource_bv_routes finite_fields_composite_nonfield_emits_checked_drat
+cargo test -p axeyum-solver --features full --test math_resource_bv_routes finite_fields_bad_inverse_candidate_emits_checked_drat
+cargo test -p axeyum-solver --features full --test math_resource_bv_routes qf_bv_resource_route_rejects_tampered_drat_certificate
 ```
 
 Expected validator output:

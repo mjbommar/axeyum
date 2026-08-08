@@ -71,7 +71,7 @@ checking recomputes the exact claim being displayed.
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-covariance-matrix-v0
 
-cargo test -p axeyum-solver --test math_resource_lra_routes finite_covariance_matrix_bad_entry_artifact_emits_checked_farkas
+cargo test -p axeyum-solver --features full --test math_resource_lra_routes finite_covariance_matrix_bad_entry_artifact_emits_checked_farkas
 
 python3 scripts/query-foundational-resources.py checks --pack finite-covariance-matrix-v0 --route Farkas --proof-status checked --require-any
 ```

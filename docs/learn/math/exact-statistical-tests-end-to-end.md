@@ -270,10 +270,10 @@ From the repository root:
 
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/exact-statistical-tests-v0
-cargo test -p axeyum-solver --test math_resource_lra_routes exact_stats_bad_fisher_left_tail_artifact_emits_checked_farkas
-cargo test -p axeyum-solver --test math_resource_lra_routes exact_stats_bad_fisher_two_sided_artifact_emits_checked_farkas
-cargo test -p axeyum-solver --test math_resource_lra_routes exact_stats_bad_multinomial_pvalue_artifact_emits_checked_farkas
-cargo test -p axeyum-solver --test math_resource_lia_routes exact_stats_bad_binomial_tail_count_emits_checked_diophantine_evidence
+cargo test -p axeyum-solver --features full --test math_resource_lra_routes exact_stats_bad_fisher_left_tail_artifact_emits_checked_farkas
+cargo test -p axeyum-solver --features full --test math_resource_lra_routes exact_stats_bad_fisher_two_sided_artifact_emits_checked_farkas
+cargo test -p axeyum-solver --features full --test math_resource_lra_routes exact_stats_bad_multinomial_pvalue_artifact_emits_checked_farkas
+cargo test -p axeyum-solver --features full --test math_resource_lia_routes exact_stats_bad_binomial_tail_count_emits_checked_diophantine_evidence
 ```
 
 Expected validator output:

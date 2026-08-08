@@ -161,6 +161,17 @@ MEASUREMENT_PROVENANCE = (
 PROOF_COOKBOOK_DOCS = tuple(
     sorted((ROOT / "docs" / "proof-cookbook").rglob("*.md"))
 )
+LEARN_DOCS = tuple(sorted((ROOT / "docs" / "learn").rglob("*.md")))
+LEARN_TEST_SOURCES = {
+    suite: ROOT / "crates" / "axeyum-solver" / "tests" / f"{suite}.rs"
+    for suite in (
+        "math_resource_bv_routes",
+        "math_resource_lia_routes",
+        "math_resource_lra_routes",
+        "math_resource_uf_routes",
+        "rules_as_code_examples",
+    )
+}
 
 LIVE_DOCS = (
     ROOT / "README.md",
@@ -903,7 +914,7 @@ def main() -> int:
                 f"marker {marker!r}"
             )
 
-    for path in PROOF_COOKBOOK_DOCS:
+    for path in PROOF_COOKBOOK_DOCS + LEARN_DOCS:
         for line_number, line in enumerate(
             path.read_text(encoding="utf-8").splitlines(), start=1
         ):
@@ -912,8 +923,47 @@ def main() -> int:
                 and "--features full" not in line
             ):
                 failures.append(
-                    f"{path.relative_to(ROOT)}:{line_number}: solver cookbook test "
+                    f"{path.relative_to(ROOT)}:{line_number}: solver documentation test "
                     "command must enable `--features full`"
+                )
+
+    learned_test_names: dict[str, tuple[str, ...]] = {}
+    for suite, source in LEARN_TEST_SOURCES.items():
+        text = source.read_text(encoding="utf-8")
+        names = tuple(
+            re.findall(
+                r"(?m)^\s*#\[test\]\n(?:\s*#\[[^\n]+\]\n)*\s*fn\s+(\w+)",
+                text,
+            )
+        )
+        if not names:
+            failures.append(
+                f"{source.relative_to(ROOT)}: no learner-facing tests discovered"
+            )
+        learned_test_names[suite] = names
+
+    learn_command = re.compile(
+        r"cargo test -p axeyum-solver\b.*?--test\s+([\w-]+)(?:\s+(\w+))?"
+    )
+    for path in LEARN_DOCS:
+        for line_number, line in enumerate(
+            path.read_text(encoding="utf-8").splitlines(), start=1
+        ):
+            match = learn_command.search(line)
+            if match is None:
+                continue
+            suite, test_filter = match.groups()
+            if suite not in learned_test_names:
+                failures.append(
+                    f"{path.relative_to(ROOT)}:{line_number}: undocumented learner "
+                    f"test suite {suite!r} has no guarded source"
+                )
+            elif test_filter is not None and not any(
+                test_filter in name for name in learned_test_names[suite]
+            ):
+                failures.append(
+                    f"{path.relative_to(ROOT)}:{line_number}: learner test filter "
+                    f"{test_filter!r} matches no test in {suite}.rs"
                 )
 
     for path in (

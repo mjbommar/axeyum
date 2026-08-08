@@ -226,11 +226,11 @@ From the repository root:
 
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-probability-v0
-cargo test -p axeyum-solver --test math_resource_lra_routes finite_probability_bad_normalization_emits_checked_farkas
-cargo test -p axeyum-solver --test math_resource_lra_routes finite_probability_bad_conditional_probability_artifact_emits_checked_farkas
-cargo test -p axeyum-solver --test math_resource_lra_routes finite_probability_bad_bayes_posterior_emits_checked_farkas
-cargo test -p axeyum-solver --test math_resource_lra_routes finite_probability_bad_independence_artifact_emits_checked_farkas
-cargo test -p axeyum-solver --test math_resource_lra_routes finite_probability_bad_total_variation_artifact_emits_checked_farkas
+cargo test -p axeyum-solver --features full --test math_resource_lra_routes finite_probability_bad_normalization_emits_checked_farkas
+cargo test -p axeyum-solver --features full --test math_resource_lra_routes finite_probability_bad_conditional_probability_artifact_emits_checked_farkas
+cargo test -p axeyum-solver --features full --test math_resource_lra_routes finite_probability_bad_bayes_posterior_emits_checked_farkas
+cargo test -p axeyum-solver --features full --test math_resource_lra_routes finite_probability_bad_independence_artifact_emits_checked_farkas
+cargo test -p axeyum-solver --features full --test math_resource_lra_routes finite_probability_bad_total_variation_artifact_emits_checked_farkas
 ```
 
 Expected validator output:

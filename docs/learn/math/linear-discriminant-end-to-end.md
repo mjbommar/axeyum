@@ -105,7 +105,7 @@ The route regression parses that artifact, emits `UnsatFarkas` evidence, and
 checks it independently:
 
 ```sh
-cargo test -p axeyum-solver --test math_resource_lra_routes finite_linear_discriminant_bad_direction_artifact_emits_checked_farkas
+cargo test -p axeyum-solver --features full --test math_resource_lra_routes finite_linear_discriminant_bad_direction_artifact_emits_checked_farkas
 ```
 
 ## What This Does Not Prove
