@@ -48,6 +48,9 @@ FOUNDATIONAL_DAG = (
     ROOT / "docs" / "research" / "08-planning" / "foundational-dag.md"
 )
 FOUNDATION_ROADMAP = ROOT / "docs" / "research" / "08-planning" / "roadmap.md"
+RESEARCH_QUESTIONS = (
+    ROOT / "docs" / "research" / "08-planning" / "research-questions.md"
+)
 PROVER_README = ROOT / "docs" / "prover-track" / "README.md"
 PROVER_SYNTHESIS = ROOT / "docs" / "prover-track" / "SYNTHESIS.md"
 PROVER_PLAN = ROOT / "docs" / "prover-track" / "plan" / "README.md"
@@ -61,6 +64,8 @@ UF_FUNCTION_ELIM = ROOT / "crates" / "axeyum-rewrite" / "src" / "functions.rs"
 CNF_LIB = ROOT / "crates" / "axeyum-cnf" / "src" / "lib.rs"
 IR_TERM = ROOT / "crates" / "axeyum-ir" / "src" / "term.rs"
 PROOF_SAT = ROOT / "crates" / "axeyum-cnf" / "src" / "proof_sat.rs"
+BV_LOWERING = ROOT / "crates" / "axeyum-bv" / "src" / "lib.rs"
+SAT_BV_BACKEND = ROOT / "crates" / "axeyum-solver" / "src" / "sat_bv_backend.rs"
 QUOTIENT_ADR = (
     ROOT
     / "docs"
@@ -137,6 +142,7 @@ PUBLIC_CLAIM_DOCS = (
     NORTH_STAR_ORIENTATION,
     FOUNDATIONAL_DAG,
     FOUNDATION_ROADMAP,
+    RESEARCH_QUESTIONS,
     ROOT / "docs" / "user-guide" / "benchmarks.md",
     ROOT / "docs" / "user-guide" / "limitations.md",
     SMTCOMP_README,
@@ -194,6 +200,16 @@ FOUNDATIONAL_DAG_STALE_PATTERNS = (
 FOUNDATION_ROADMAP_STALE_PATTERNS = (
     re.compile(r"next T6\.0\.3/TL2\.15 seed", re.IGNORECASE),
     re.compile(r"quotient semantic seams remain uncredited", re.IGNORECASE),
+)
+
+RESEARCH_QUESTION_STALE_PATTERNS = (
+    re.compile(r"Status:\s*draft", re.IGNORECASE),
+    re.compile(r"- \[ \] How are symbolic shifts encoded\?"),
+    re.compile(r"- \[ \] Should unsat proof checking be required", re.IGNORECASE),
+    re.compile(
+        r"Making it the \*required\* high-assurance mode.*remaining step",
+        re.DOTALL,
+    ),
 )
 
 PROVER_LIVE_DOCS = (
@@ -563,6 +579,15 @@ def main() -> int:
                 f"claim: {match.group(0)!r}"
             )
 
+    research_questions_text = RESEARCH_QUESTIONS.read_text(encoding="utf-8")
+    for pattern in RESEARCH_QUESTION_STALE_PATTERNS:
+        if match := pattern.search(research_questions_text):
+            line = research_questions_text.count("\n", 0, match.start()) + 1
+            failures.append(
+                f"{RESEARCH_QUESTIONS.relative_to(ROOT)}:{line}: stale research "
+                f"question status: {match.group(0)!r}"
+            )
+
     kernel_expr_text = LEAN_KERNEL_EXPR.read_text(encoding="utf-8")
     if "pub struct NatLit(BigUint);" not in kernel_expr_text:
         failures.append(
@@ -779,6 +804,43 @@ def main() -> int:
         if marker not in normalized_foundation_roadmap:
             failures.append(
                 f"{FOUNDATION_ROADMAP.relative_to(ROOT)}: missing roadmap marker "
+                f"{marker!r}"
+            )
+
+    bv_lowering_text = BV_LOWERING.read_text(encoding="utf-8")
+    for marker in ("fn lower_shift_op", "fn shift_ops_match_ground_evaluator"):
+        if marker not in bv_lowering_text:
+            failures.append(
+                f"{BV_LOWERING.relative_to(ROOT)}: missing shift marker {marker!r}"
+            )
+
+    sat_bv_backend_text = SAT_BV_BACKEND.read_text(encoding="utf-8")
+    for marker in (
+        "config.native_cdcl || config.prove_unsat",
+        "SatProofStatus::Checked",
+        "downgrade to `Unknown`",
+    ):
+        if marker not in sat_bv_backend_text:
+            failures.append(
+                f"{SAT_BV_BACKEND.relative_to(ROOT)}: missing assurance marker "
+                f"{marker!r}"
+            )
+
+    normalized_research_questions = " ".join(research_questions_text.split())
+    for marker in (
+        "maintained question register",
+        "This register is not an execution queue",
+        "- [x] How are symbolic shifts encoded?",
+        "staged barrel-shift network",
+        "- [x] Should unsat proof checking be required in high-assurance mode?",
+        "records `SatProofStatus::Checked`",
+        "default BatSat adapter remains lower-assurance `Unchecked`",
+        "not an equality-saturation rewrite optimizer",
+        "subset promised by a first release remains an explicit release decision",
+    ):
+        if marker not in normalized_research_questions:
+            failures.append(
+                f"{RESEARCH_QUESTIONS.relative_to(ROOT)}: missing question marker "
                 f"{marker!r}"
             )
 
@@ -1096,6 +1158,8 @@ def main() -> int:
         "|foundation_phases=landed"
         "|foundation_custom_cdcl=proof_producing"
         "|foundation_quotient=offline_m1_m3"
+        "|research_symbolic_shifts=resolved"
+        "|research_high_assurance_unsat=resolved"
     )
     print(f"PARITY_DOCS|{line}")
     if failures:

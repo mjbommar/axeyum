@@ -1,11 +1,14 @@
 # Research Questions
 
-Status: draft
-Last updated: 2026-07-22
+Status: maintained question register; root PLAN owns execution priority
+Last updated: 2026-08-07
 
 ## Purpose
 
 Track the questions that should drive experiments and architecture decisions.
+Checked items record decisions or evidence-backed answers; unchecked items
+remain open even when nearby infrastructure exists. This register is not an
+execution queue. Use root [PLAN.md](../../../PLAN.md) for current priority.
 
 ## Scope
 
@@ -93,8 +96,17 @@ Out of scope:
     and
     [ADR-0094](../09-decisions/adr-0094-retained-warm-nested-array-valued-uf-parameters.md).
 - [ ] How should undefined or partial operations be represented?
+  - Current boundary: public SMT-LIB operators follow their standardized total
+    semantics (including division by zero); this broader question remains open
+    for non-SMT APIs and future mathematical domains rather than licensing
+    implicit partial SMT behavior.
 - [ ] What public support matrix should define the first release boundary
       across IR, evaluator, SMT-LIB, oracle, pure Rust backend, and evidence?
+  - Current boundary: the generated
+    [capability matrix](capability-matrix.md) and public
+    [support matrix](../../reference/support-matrix.md) define what exists now.
+    The subset promised by a first release remains an explicit release decision,
+    so the question is not closed by having a live inventory.
 
 ### Rewriting
 
@@ -109,6 +121,9 @@ Out of scope:
     preservation class, projection obligations, and required test routes; see
     [ADR-0005](../09-decisions/adr-0005-phase3-query-evidence-rewrite-contracts.md).
 - [ ] Should equality saturation be an optional optimizer?
+  - Current boundary: `axeyum-egraph` is an accepted incremental congruence-
+    closure/equality-bus crate, not an equality-saturation rewrite optimizer.
+    Its existence does not answer this policy and extraction-cost question.
 - [x] Are equisatisfiability-only rewrites allowed before model projection is
       implemented, or must the first default rule set be denotation-preserving?
   - Answer: they may be recorded while disabled, but default rewrites must be
@@ -161,7 +176,13 @@ Out of scope:
     bit index `i` with numeric weight `2^i`; constants, models, and lift maps
     all use the same shared conversion routines. See
     [ADR-0006](../09-decisions/adr-0006-phase4-bit-order-and-lowering-entry-contract.md).
-- [ ] How are symbolic shifts encoded?
+- [x] How are symbolic shifts encoded?
+  - Answer: `axeyum-bv` uses a deterministic staged barrel-shift network. Each
+    low shift-amount bit selects a power-of-two shift through AIG muxes; an
+    unsigned `amount < width` guard selects the SMT-LIB overshift result (zero
+    for `bvshl`/`bvlshr`, sign fill for `bvashr`). Exhaustive width-1/4/5 tests
+    compare all three operators with the ground evaluator; see
+    [`lower_shift_op`](../../../crates/axeyum-bv/src/lib.rs).
 - [x] When do multiplication and division enter the supported subset?
   - Answer: all entered in Phase 5 (2026-06-13). Multiplication (`bvmul`,
     truncated shift-and-add), unsigned division/remainder (`bvudiv`/`bvurem`, a
@@ -184,15 +205,15 @@ Out of scope:
   - Answer: `sat` model replay through the ground evaluator, implemented in
     the solver tests and benchmark harness; see
     [ADR-0001](../09-decisions/adr-0001-vertical-slice-first.md).
-- [ ] Should unsat proof checking be required in high-assurance mode?
-  - In progress: an independent in-tree DRAT checker exists (RUP + RAT,
-    `axeyum_cnf::check_drat`,
-    [ADR-0011](../09-decisions/adr-0011-drat-unsat-proof-checking.md)), and a
-    proof-producing SAT core (`solve_with_drat_proof`,
-    [ADR-0012](../09-decisions/adr-0012-proof-producing-sat-core.md)) emits DRAT
-    that the checker verifies — end-to-end checked `unsat` exists for the
-    proof-core path. Making it the *required* high-assurance mode (and wiring it
-    into `SatBvBackend` for QF_BV `unsat`) is the remaining step.
+- [x] Should unsat proof checking be required in high-assurance mode?
+  - Answer: yes for the bounded QF_BV high-assurance route. Setting
+    `SolverConfig::prove_unsat` selects the in-tree proof-producing CDCL core,
+    verifies its DRAT before return, records `SatProofStatus::Checked`, and
+    downgrades a failed proof or resource exhaustion to `Unknown`. The default
+    BatSat adapter remains lower-assurance `Unchecked`, and this answer does not
+    claim every theory has an end-to-end proof. See
+    [ADR-0012](../09-decisions/adr-0012-proof-producing-sat-core.md) and the
+    public [solver configuration](../../reference/solver-config.md).
 - [ ] How are model-lift maps serialized?
 - [x] How should infinite-domain quantified `sat` witnesses be represented so
       the public result satisfies the original-term replay invariant?
