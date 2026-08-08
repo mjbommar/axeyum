@@ -41,6 +41,7 @@ flowchart TD
 | **New to automated reasoning** | [`learn/`](learn/README.md) — concepts through tiny examples, no internals |
 | **A user** | [`user-guide/`](user-guide/README.md) — run a query, read a model, know the limits |
 | **Looking for verification applications** | [`consumer-track/`](consumer-track/README.md) — property SDK, EVM bug-hunter, bounded Rust verifier, and measured scoreboards |
+| **Evaluating the proof-assistant design** | [`prover-track/`](prover-track/README.md) — landed kernel prerequisites vs the not-yet-built goal/tactic layer |
 | **A contributor** | [`contributor-guide/`](contributor-guide/README.md) — the obligations for new public surface |
 | **Looking up an API or support boundary** | [`reference/`](reference/README.md) — stable entry points into source and generated truth |
 | **Looking for a runnable example** | [`reference/examples.md`](reference/examples.md) — all Cargo examples, prerequisites, and mutation boundaries |

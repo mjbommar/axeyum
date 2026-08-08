@@ -99,6 +99,13 @@
   - [Lean kernel and import boundary](internals/lean-kernel.md)
   - [How this documentation is built](internals/documentation.md)
 
+# Prover Design
+
+- [Certificate-first prover track](prover-track/README.md)
+  - [Research synthesis](prover-track/SYNTHESIS.md)
+  - [Architecture](prover-track/design/03-architecture.md)
+  - [Build guide](prover-track/plan/README.md)
+
 # Contributor Guide
 
 - [Contributor Guide](contributor-guide/README.md)

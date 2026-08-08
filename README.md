@@ -26,7 +26,7 @@ If you already use these, here's where Axeyum fits:
 | If you reach for… | …Axeyum is | What's different |
 |---|---|---|
 | **Z3 / cvc5** (SMT solvers) | a pure-Rust SMT solver | supported certified routes return independently checkable evidence; uncovered routes remain explicit in the proof ledger |
-| **Lean / Coq** (proof assistants) | a certificate-first prover with an in-tree Lean-style kernel | fast automated search *emits* proofs a small kernel checks — the search never enters the trusted base |
+| **Lean / Coq** (proof assistants) | an independent selected-profile Lean-core checker plus a designed certificate-first goal layer | supported solver proofs already reconstruct to checked terms; the native interactive goal/tactic layer is not built yet |
 | **Mathematica / SymPy** (computer algebra) | a **proof-carrying CAS** | differentiate / factor / integrate / solve return results *certified* by lowering to the decidable core — out of fragment it declines, never guesses wrong |
 | **a textbook + a lab** | a built-in library of tutorials, rules, axioms, and worked theorems | the same artifacts that *teach* a concept also *test* an Axeyum theory (double-duty) |
 
@@ -85,7 +85,7 @@ not a runtime dependency. The pure-Rust stack is the product; native backends
 head-to-head benchmarking (ADR-0002). Parity is a *measured* claim, kept honest
 against public corpora.
 
-### 2. Prover & proof assistant (the Lean angle)
+### 2. Proof evidence and the Lean checker
 
 Every `sat` is checkable by evaluation; every supported `unsat`/`valid` aims to
 carry a **machine-checkable proof** a Lean-grade kernel would accept:
@@ -123,6 +123,12 @@ attempts remain not-run and all parity counters remain zero.
 The prerequisite [execution-evidence contract](docs/plan/lean-execution-evidence-tl0.7.1-2026-07-22.md)
 now freezes explicit resource lanes, typed terminations, immutable attempts and
 completion-last records, but still records zero real runs or outcomes.
+
+The separate [certificate-first prover track](docs/prover-track/README.md) is an
+accepted design above this checker. Its P6.0 kernel-hardening prerequisites are
+partly implemented, but the planned CIC/IR bridge, native goal/hole/unification
+state, and certificate-tactic layer do not yet exist. Do not infer an interactive
+proof assistant from the reconstruction and kernel features above.
 
 ### 3. Computer algebra (the Mathematica / SymPy angle)
 
@@ -308,6 +314,9 @@ by use (each is accepted in an ADR).
 - [Consumer applications](docs/consumer-track/README.md) — the bounded-property
   SDK, EVM bug-hunter, Rust verifier, their trust boundaries, and the current
   48-case aggregate scoreboard.
+- [Certificate-first prover track](docs/prover-track/README.md) — the exact
+  boundary between the built Lean checker/reconstruction stack and the planned
+  goal, hole, bridge, and tactic layers.
 - [docs/research/](docs/research/README.md) — the research foundation, and
   [09-decisions/](docs/research/09-decisions/README.md), the ADRs.
 - [PLAN.md](PLAN.md) — the single current status, ordered roadmap, blockers,

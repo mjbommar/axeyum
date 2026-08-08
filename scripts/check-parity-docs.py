@@ -6,10 +6,11 @@ owns the claims that have already rotted repeatedly: the generated division
 totals, exact dominance-audit denominators, the paired 20-second p4dfa control,
 the reviewer-facing project-state summary, the checked-in Cargo-example
 inventory, the consumer-application corpus totals, and the source/test-backed
-categorical-engine maturity classification. New guarded numerical claims
-should be added only when they have one canonical, machine-readable artifact;
-the categorical markers guard
-the dated audit and the live roadmap language that points to it.
+categorical-engine maturity classification. It also guards the prover-track
+built/planned boundary against already-resolved kernel and UF findings. New
+guarded numerical claims should be added only when they have one canonical,
+machine-readable artifact; the categorical markers guard the dated audit and
+the live roadmap language that points to it.
 """
 
 from __future__ import annotations
@@ -36,6 +37,16 @@ EXAMPLE_CATALOG = ROOT / "docs" / "reference" / "examples.md"
 DOCUMENTATION_PLAN = ROOT / "docs" / "documentation-plan.md"
 CONSUMER_README = ROOT / "docs" / "consumer-track" / "README.md"
 CONSUMER_SCOREBOARD = ROOT / "docs" / "consumer-track" / "SCOREBOARD.md"
+PROVER_README = ROOT / "docs" / "prover-track" / "README.md"
+PROVER_SYNTHESIS = ROOT / "docs" / "prover-track" / "SYNTHESIS.md"
+PROVER_PLAN = ROOT / "docs" / "prover-track" / "plan" / "README.md"
+PROVER_P60 = (
+    ROOT / "docs" / "prover-track" / "plan" / "P6.0-kernel-trustworthiness.md"
+)
+LEAN_AXIOM_LEDGER = ROOT / "docs" / "plan" / "lean-axiom-ledger-v1.json"
+LEAN_COMPLETE_PARITY = ROOT / "docs" / "plan" / "generated" / "lean-complete-parity.md"
+LEAN_KERNEL_EXPR = ROOT / "crates" / "axeyum-lean-kernel" / "src" / "expr.rs"
+UF_FUNCTION_ELIM = ROOT / "crates" / "axeyum-rewrite" / "src" / "functions.rs"
 CATEGORICAL_AUDIT = (
     ROOT / "docs" / "plan" / "categorical-engine-depth-audit-2026-07-21.md"
 )
@@ -125,6 +136,24 @@ PUBLIC_STALE_PATTERNS = (
     re.compile(r"It is sound \(`unknown`, never a wrong", re.IGNORECASE),
     re.compile(r"axeyum is \*\*never wrong\*\*", re.IGNORECASE),
     re.compile(r"82\s*/\s*228\*\* decided-correct", re.IGNORECASE),
+)
+
+PROVER_STALE_PATTERNS = (
+    re.compile(r"Status:\s*designed,\s*not built", re.IGNORECASE),
+    re.compile(r"positivity (?:is|remains).*vacu", re.IGNORECASE),
+    re.compile(r"`Lit::Nat` is `u128`"),
+    re.compile(r"!fn_app_0.*blocks every", re.IGNORECASE),
+    re.compile(r"entry ADR.*owed before P6\.1", re.IGNORECASE),
+)
+
+PROVER_LIVE_DOCS = (
+    ROOT / "README.md",
+    PROVER_README,
+    PROVER_SYNTHESIS,
+    ROOT / "docs" / "prover-track" / "design" / "00-thesis.md",
+    ROOT / "docs" / "prover-track" / "design" / "03-architecture.md",
+    PROVER_PLAN,
+    PROVER_P60,
 )
 
 
@@ -445,6 +474,124 @@ def main() -> int:
                     f"{path.relative_to(ROOT)}:{line}: stale public claim: {match.group(0)!r}"
                 )
 
+    for path in PROVER_LIVE_DOCS:
+        text = path.read_text(encoding="utf-8")
+        for pattern in PROVER_STALE_PATTERNS:
+            if match := pattern.search(text):
+                line = text.count("\n", 0, match.start()) + 1
+                failures.append(
+                    f"{path.relative_to(ROOT)}:{line}: stale prover claim: "
+                    f"{match.group(0)!r}"
+                )
+
+    kernel_expr_text = LEAN_KERNEL_EXPR.read_text(encoding="utf-8")
+    if "pub struct NatLit(BigUint);" not in kernel_expr_text:
+        failures.append(
+            f"{LEAN_KERNEL_EXPR.relative_to(ROOT)}: expected arbitrary-precision NatLit"
+        )
+
+    function_elim_text = UF_FUNCTION_ELIM.read_text(encoding="utf-8")
+    for marker in (
+        'format!("!fn_app_{}", source.index())',
+        "repeated_elimination_uses_disjoint_fresh_symbols",
+    ):
+        if marker in function_elim_text:
+            continue
+        failures.append(
+            f"{UF_FUNCTION_ELIM.relative_to(ROOT)}: missing UF identity marker {marker!r}"
+        )
+
+    lean_complete_text = LEAN_COMPLETE_PARITY.read_text(encoding="utf-8")
+    if not re.search(
+        r"^\| `A5` \| goals, tactics, automation \| .* \| `not_started` \|",
+        lean_complete_text,
+        re.MULTILINE,
+    ):
+        failures.append(
+            f"{LEAN_COMPLETE_PARITY.relative_to(ROOT)}: A5 must remain explicitly "
+            "not_started until native goal/tactic evidence lands"
+        )
+
+    axiom_ledger = load_json(LEAN_AXIOM_LEDGER)
+    axiom_entries = axiom_ledger["entries"]
+    axiom_total = len(axiom_entries)
+    if axiom_total != int(axiom_ledger["expected_counts"]["total"]):
+        failures.append(
+            f"{LEAN_AXIOM_LEDGER.relative_to(ROOT)}: entry count does not match "
+            "expected total"
+        )
+    axiom_classes = {
+        name: sum(entry["classification"] == name for entry in axiom_entries)
+        for name in (
+            "derivable-theorem",
+            "external-assumption",
+            "primitive-interface",
+        )
+    }
+
+    prover_readme_text = " ".join(PROVER_README.read_text(encoding="utf-8").split())
+    for marker in (
+        "no `axeyum-goal` crate exists",
+        "Full Lean 4.30 parity is also explicitly unestablished",
+        "`NatLit(BigUint)`",
+        "`c223ed8d4`",
+        f"{axiom_total}-row generated ledger",
+        f"{axiom_classes['derivable-theorem']} derivable-theorem, "
+        f"{axiom_classes['external-assumption']} external-assumption, and "
+        f"{axiom_classes['primitive-interface']} primitive-interface",
+    ):
+        if marker not in prover_readme_text:
+            failures.append(
+                f"{PROVER_README.relative_to(ROOT)}: missing prover boundary marker "
+                f"{marker!r}"
+            )
+
+    prover_count_markers = (
+        (
+            PROVER_SYNTHESIS,
+            f"ledger classes {axiom_classes['derivable-theorem']} derivable, "
+            f"{axiom_classes['external-assumption']} external, "
+            f"{axiom_classes['primitive-interface']} primitive",
+        ),
+        (
+            PROVER_PLAN,
+            f"generated ledger assigns {axiom_classes['derivable-theorem']} derivable, "
+            f"{axiom_classes['external-assumption']} external, and "
+            f"{axiom_classes['primitive-interface']} primitive rows",
+        ),
+        (
+            PROVER_P60,
+            f"snapshot assigns {axiom_classes['derivable-theorem']} "
+            "`derivable-theorem`, "
+            f"{axiom_classes['external-assumption']} `external-assumption`, and "
+            f"{axiom_classes['primitive-interface']} `primitive-interface` rows",
+        ),
+    )
+    for path, marker in prover_count_markers:
+        text = " ".join(path.read_text(encoding="utf-8").split())
+        if f"{axiom_total}" not in text or marker not in text:
+            failures.append(
+                f"{path.relative_to(ROOT)}: missing current axiom-ledger marker "
+                f"{marker!r}"
+            )
+
+    prover_p60_text = PROVER_P60.read_text(encoding="utf-8")
+    for task in ("T6.0.2", "T6.0.4"):
+        if not re.search(
+            rf"^\| {re.escape(task)} \| \*\*DONE", prover_p60_text, re.MULTILINE
+        ):
+            failures.append(
+                f"{PROVER_P60.relative_to(ROOT)}: {task} must remain marked DONE"
+            )
+
+    root_readme_text = (ROOT / "README.md").read_text(encoding="utf-8")
+    if "native interactive goal/tactic layer is not built yet" not in root_readme_text:
+        failures.append("README.md: missing native goal/tactic status boundary")
+
+    summary_text = (ROOT / "docs" / "SUMMARY.md").read_text(encoding="utf-8")
+    if "(prover-track/README.md)" not in summary_text:
+        failures.append("docs/SUMMARY.md: prover-track front door is not indexed")
+
     required_gap_markers = (
         f"{snapshot['decided']} / {snapshot['files']}",
         f"{snapshot['compared']} oracle-compared",
@@ -746,6 +893,13 @@ def main() -> int:
         f"|consumer_safe={consumers['safe']}"
         f"|consumer_unknown={consumers['unknown']}"
         f"|consumer_disagree={consumers['disagree']}"
+        "|prover_goal_axis=not_started"
+        "|prover_nat=arbitrary_precision"
+        "|prover_uf_identity=source_term"
+        f"|prover_axioms={axiom_total}"
+        f"|prover_axioms_derivable={axiom_classes['derivable-theorem']}"
+        f"|prover_axioms_external={axiom_classes['external-assumption']}"
+        f"|prover_axioms_primitive={axiom_classes['primitive-interface']}"
     )
     print(f"PARITY_DOCS|{line}")
     if failures:

@@ -27,7 +27,9 @@ bug-hunter, and bounded Rust verifier to their current crate contracts and
 48-case aggregate measurement, while labeling the per-app plans and status
 files as historical journals. The curriculum, review, plan, and research
 archives now have explicit front doors that separate current authorities from
-dated records.
+dated records. The prover-track front door now makes the same distinction:
+substantial Lean-kernel prerequisites are built, while the CIC/IR bridge and
+native goal/hole/tactic layer remain planned rather than shipped.
 
 This plan describes how to reshape Axeyum's public documentation so it serves
 four audiences without diluting the research and roadmap material already in the

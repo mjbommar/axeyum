@@ -1,5 +1,10 @@
 # Architecture — a certificate-first proof assistant
 
+> **Accepted architecture, not current crate inventory.** The `axeyum-goal`,
+> `axeyum-bridge`, and agent-surface boxes below are planned boundaries; they do
+> not exist as crates today. See the [prover-track front door](../README.md) for
+> the built/planned split.
+
 **This is the design document.** What the system is, how it is layered, what the
 data structures are, and what makes it different from Lean and Rocq.
 
@@ -27,11 +32,12 @@ Reconstruction already does exactly this for certificates about **formulas**
 
 **Because a correct fragment boundary creates the need for a layer above it.**
 
-`auto.rs:5244` declines a residual quantifier, and its comment is a correctness
-statement rather than a TODO: *"Quantifiers left after instantiation ... cannot be
-decided by the quantifier-free engines."* Instantiation only **weakens**, so a
-residual quantifier licenses no verdict. **The solver cannot soundly guess an
-instantiation depth.**
+The residual-quantifier branch in
+[`auto.rs`](../../../crates/axeyum-solver/src/auto.rs) declines, and its comment
+is a correctness statement rather than a TODO: quantifiers left after
+instantiation cannot be decided by the quantifier-free engines. Instantiation
+only **weakens**, so a residual quantifier licenses no verdict. **The solver
+cannot soundly guess an instantiation depth.**
 
 Somebody has to choose the depth, the motive, the case split, the witness. That
 choice is:
@@ -95,7 +101,7 @@ hash-map iteration in output) means **two identical goals produce identical byte
 ### 4.2 `Hole` — representing *not yet knowing*
 
 Reconstruction has never needed this: a certificate dictates the proof, so nothing
-ever has a hole (`reconstruct.rs:7921` — it "otherwise builds closed terms"). A
+ever has a hole. A
 goal layer is the opposite, and this is the layer's reason to exist.
 
 ```rust
@@ -266,8 +272,9 @@ solver, the design is wrong.
 ## 10. Build order, and why
 
 1. **[P6.0](../plan/P6.0-kernel-trustworthiness.md)** — the kernel. It once
-   admitted `False`; the first 768-case four-seam fuzz gate is now live, while
-   positivity remains vacuous and **65** prelude assumptions remain unproved.
+   admitted `False`; the first 768-case four-seam fuzz gate, explicit strict
+   positivity, arbitrary-precision Nat semantics, and later inductive slices are
+   now live. The **65** prelude assumptions and other P6.0 residuals remain.
    Everything here stands on it, **and it is the product**: a
    kernel that admitted `False` cannot be anyone's independent check.
 2. **[P6.1a](../plan/P6.1-obligation-bridge.md)** — extract IR→CIC from
