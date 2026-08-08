@@ -18,10 +18,13 @@
 //! mode it is the complete list entry, so a trace can be joined to a committed
 //! benchmark population without basename ambiguity. Every line has `file` and
 //! `status`; `status` is one of `decided`,
-//! `word-first-fallback`, `ingest-resource-limit`, `skipped-scoped`,
-//! `read-error`, `parse-error`, or `error`. `verdict` is present on the two
-//! decided statuses and on `ingest-resource-limit` (always `unknown`), `trace`
-//! only on `decided`, and `detail` on resource/error records.
+//! `word-first-fallback`, `ingest-unsupported`, `ingest-resource-limit`,
+//! `skipped-scoped`, `read-error`, `parse-error`, or `error`. `verdict` is
+//! present on the decided statuses and typed ingest records. `trace` is present
+//! only on `decided`; the narrow ADR-0376 wide-integer `ingest-unsupported`
+//! class instead carries explicit `route`/`reason`/`kind` terminal provenance
+//! because solver dispatch never began. `detail` is present on typed ingest and
+//! error records.
 
 use std::collections::BTreeSet;
 use std::path::{Path, PathBuf};
@@ -115,6 +118,20 @@ fn detail_member(detail: &str) -> String {
     out
 }
 
+/// Recognizes only ADR-0376's valid-but-unrepresentable wide integer literal.
+/// Other unsupported input remains a generic parse error and cannot silently
+/// enter a corpus census as this narrower, understood class.
+fn is_wide_integer_unsupported(detail: &str) -> bool {
+    const PREFIX: &str = "integer literal `";
+    const SUFFIX: &str = "` exceeds the modeled `Int` range";
+    detail
+        .strip_prefix(PREFIX)
+        .and_then(|rest| rest.strip_suffix(SUFFIX))
+        .is_some_and(|digits| {
+            !digits.is_empty() && digits.bytes().all(|byte| byte.is_ascii_digit())
+        })
+}
+
 #[allow(clippy::too_many_lines)] // linear CLI driver: arg parsing + per-file loop + summary
 fn main() {
     let raw: Vec<String> = std::env::args().collect();
@@ -184,6 +201,22 @@ fn main() {
         }
         let mut script = match parse_script(&text) {
             Ok(script) => script,
+            Err(SmtError::Unsupported(detail)) if is_wide_integer_unsupported(&detail) => {
+                if json {
+                    emit_json(
+                        &identity,
+                        "ingest-unsupported",
+                        &format!(
+                            ",\"verdict\":\"unknown\",\"route\":\"smtlib-ingest\",\
+                             \"reason\":\"unsupported\",\"kind\":\"wide-integer-literal\"{}",
+                            detail_member(&detail)
+                        ),
+                    );
+                } else {
+                    println!("{identity}: unknown (unsupported during ingest: {detail})");
+                }
+                continue;
+            }
             Err(SmtError::ResourceLimit(detail)) => {
                 if json {
                     emit_json(
@@ -285,7 +318,7 @@ fn main() {
 
 #[cfg(test)]
 mod tests {
-    use super::read_exact_list;
+    use super::{is_wide_integer_unsupported, read_exact_list};
     use std::path::PathBuf;
     use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -357,5 +390,21 @@ mod tests {
                 .contains("does not name a file")
         );
         std::fs::remove_dir_all(root).expect("remove fixture");
+    }
+
+    #[test]
+    fn wide_integer_unsupported_match_is_exact() {
+        assert!(is_wide_integer_unsupported(
+            "integer literal `170141183460469231731687303715884105728` exceeds the modeled `Int` range"
+        ));
+        assert!(!is_wide_integer_unsupported(
+            "integer literal `` exceeds the modeled `Int` range"
+        ));
+        assert!(!is_wide_integer_unsupported(
+            "integer literal `12x` exceeds the modeled `Int` range"
+        ));
+        assert!(!is_wide_integer_unsupported(
+            "operator `unsupported` is outside the modeled `Int` range"
+        ));
     }
 }

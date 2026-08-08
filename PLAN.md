@@ -348,19 +348,14 @@ risk, or invalid gate. Those are P0 and preempt the queue.
 
 The ordered ten-item programme remains A2 through A11. A1 and A2 are retained
 here as closed evidence boundaries. A3 remains incomplete, but all currently
-preregistered bounded mechanisms are closed negatively; A4 is now the first
-active item.
+preregistered bounded mechanisms are closed negatively. A4 has now also yielded;
+A5 is the first active item.
 
-**Immediate action.** Recover A4's exact evidence boundary before classifying
-QF_UFLIA. The ledger names `bench-results/parity-details/QF_UFLIA.tsv` and
-records SHA-256 `921299a9…`, but that sidecar was never committed and no repo,
-stash, or NAS copy remains. Do not infer the 86 rows from aggregate prose.
-Preregister a current-main capture over list SHA-256 `f88e6789…` that commits an
-exact-path sidecar plus complete route traces and must reproduce 94/200 versus
-180/200, 86 reference-only, and zero disagreements or stop. Freeze budgets and
-the complete-record predicate before execution or solver edits. A3's negative
-routes remain closed. A2's green readiness still does not authorize C0/F2,
-host/NAS mutation, allocation, or a solver fleet. P0 failures preempt the queue.
+**Immediate action.** Begin A5's cross-division LRA/IDL/RDL residual census.
+A4's v3 restart decided 93/200, with one 2/3-SAT wall-clock boundary. Both
+model-reuse variants failed isolated stability and were removed; do not retry
+until 94 happens to pass. A3/A4's negative routes remain closed. A2 still does
+not authorize C0/F2, host/NAS mutation, allocation, or a solver fleet.
 
 **Parallel documentation action.** Continue without modifying A4's solver or
 evidence paths. Beginner/user, pinned WASM/browser, contributor, stable
@@ -475,15 +470,14 @@ the ledger remains disagreement-free.
 **Stop.** Do not optimize on the 12 Axeyum-only cases as if they were reference
 failures, and do not raise general caps to convert time into apparent breadth.
 
-### A4 — Deepen QF_UFLIA combination (`TODO`, P1)
+### A4 — Deepen QF_UFLIA combination (`WIP`, yielded, P1)
 
 **Why now.** QF_UFLIA is 94/180 (52.2%) with zero Axeyum-only decisions and 86
 reference-only cases, making it the clearest combined-theory depth gap.
 
-**Next slice.** Regenerate and retain the missing exact-path sidecar together
-with complete route traces, then partition only a validated 86-row residual
-among quantifier discovery, UF model construction, arithmetic participation,
-replay, and budget routing.
+**Next slice.** None is evidence-authorized. The theory-model reuse result
+stopped negatively; revisit only with deterministic-work evidence for the
+conjunctive LIA probe. The 26 wide-integer rows remain ADR-0376 controls.
 
 **Exit.** One preregistered, replay-checked cluster improves the clean full-list
 result without losing any of the 94 decisions or weakening retained controls.
@@ -624,7 +618,7 @@ or remove dirty/unmerged state to meet a free-space target.
 | Arithmetic deadline reliability | `DONE` | Shared deadline, CAD polls, LRA ceilings, bounded DL probing, exact resume identity, and six fresh retained divisions are complete; see the 2026-08-06 closure note. |
 | Full-library measurement | `WIP`; A2 readiness `DONE` | The R1--R5 readiness stack is integrated by `8ed5ad089` and focused/aggregate/scoped/topic/full-main green; the real registered offline-build smoke passed. No live run, preparation root, or launch authority exists. A later live C0/F2 step requires separate review. |
 | QF_NIA breadth | `WIP`, yielded | Current clean result remains 34/200 versus 89/200. Reconstruction, large-core deletion, relevance activation, and bounded clause-estimate attribution are closed negatively without production solver code. The final diagnostic failed its exact pipeline-boundary record gate; no mechanism or 200-row run is authorized and the 64,000,000 ceiling remains. Move to A4 unless independent new NIA evidence appears. |
-| QF_UFLIA breadth | `WIP` | 94/180; A4 first regenerates the absent exact-path sidecar/trace boundary, then owns causal residual partition. |
+| QF_UFLIA breadth | `WIP`, yielded | Historical 94/180 remains; the exact-commit restart produced 93/200 because one SAT case is wall-clock unstable. No sidecar or new result was credited. |
 | LRA/IDL/RDL | `WIP` | Current results are 86/146, 68/124, and 105/155; A5 owns cross-division consolidation. |
 | QF_BV/QF_SLIA/UF/QF_ABV | `WIP`, strong selected cells | Preserve current ledgers; do not prioritize small score gains above A2–A6. |
 | Evidence and Lean reconstruction | `WIP` | A6 and A9; distinct certificate/check/reconstruction claims. |

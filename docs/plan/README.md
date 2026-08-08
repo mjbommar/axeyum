@@ -12,7 +12,28 @@ queue, standing-rules, and resume document. Then use this folder for detailed
 phase contracts and retained result evidence. Root [`STATUS.md`](../../STATUS.md)
 is a compatibility pointer only.
 
-The active A3 QF_NIA lane is bounded by the
+The active A4 QF_UFLIA lane began with the
+[`provenance-recovery and causal-census preregistration`](qf-uflia-a4-provenance-census-v1-preregistration-2026-08-07.md).
+Its [v1 result](qf-uflia-a4-provenance-census-v1-result-2026-08-07.md) stopped at
+the complete-record gate: 26 valid EVM-wide integer inputs terminate before
+dispatch, so demanding schema-1 dispatch traces for all 200 was impossible.
+The [v2 amendment](qf-uflia-a4-provenance-census-v2-preregistration-2026-08-07.md)
+retains that boundary as typed `smtlib-ingest` provenance and makes the
+ADR-0376 rejected widening lever selection-ineligible. The
+[v3 timeout amendment](qf-uflia-a4-provenance-census-v3-preregistration-2026-08-07.md)
+uses cvc5's clean `--tlimit-per` response after v2 exposed an ambiguous
+`--tlimit` abort; both streams restart at one exact commit. It still requires a
+fresh 94/200 versus 180/200, 86-reference-only, zero-disagreement reproduction
+and authorizes no solver change. The restart exposed one reproducible
+deadline-boundary SAT drift; its
+[theory-model reuse preregistration](qf-uflia-a4-theory-model-reuse-preregistration-2026-08-07.md)
+authorizes only removal of a duplicate conjunctive reconstruction solve while
+retaining original-term replay and every cap. Its
+[negative result](qf-uflia-a4-theory-model-reuse-result-2026-08-07.md) proved
+the first theory probe itself remains wall-clock unstable; all solver changes
+were removed and A4 yielded without publishing a sidecar.
+
+The yielded A3 QF_NIA lane is bounded by the
 [`complete causal-census result`](qf-nia-a3-causal-census-v2-result-2026-08-07.md)
 and its
 [`model-replay cluster preregistration`](qf-nia-a3-model-replay-cluster-preregistration-v1-2026-08-07.md).
