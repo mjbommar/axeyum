@@ -68,8 +68,10 @@ profile instead exposes the typed scalar Bool/BV API without the text parser;
 see [installation and build profiles](installation.md).
 
 > The contradictory variant — assert `x = #x00` *and* `x = #x01` — returns
-> `Unsat`. With the proof-producing core enabled it also emits a DRAT proof you
-> can independently re-check; see [unsat evidence](unsat-evidence.md).
+> `Unsat`. `SolverConfig::with_prove_unsat(true)` requires the solver to produce
+> and verify a DRAT proof before it accepts that verdict, but the verdict API
+> does not return or write the proof artifact. To export independently
+> re-checkable files, use the [QF_BV proof exporter](unsat-evidence.md).
 
 ## 3. A whole corpus (the benchmark harness)
 

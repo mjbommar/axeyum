@@ -32,6 +32,8 @@ PARITY_AUDIT = ROOT / "docs" / "plan" / "parity-target-evidence-audit-2026-07-21
 LEAN_GATE_AUDIT = ROOT / "docs" / "plan" / "official-lean-ci-gate-audit-2026-07-21.md"
 PROJECT_STATE = ROOT / "docs" / "PROJECT-STATE.md"
 BENCHMARK_GUIDE = ROOT / "docs" / "user-guide" / "benchmarks.md"
+FIRST_SMTLIB_GUIDE = ROOT / "docs" / "user-guide" / "first-smtlib-query.md"
+UNSAT_EVIDENCE_GUIDE = ROOT / "docs" / "user-guide" / "unsat-evidence.md"
 PARITY_LEDGER = ROOT / "bench-results" / "PARITY.md"
 EXAMPLE_CATALOG = ROOT / "docs" / "reference" / "examples.md"
 DOCUMENTATION_PLAN = ROOT / "docs" / "documentation-plan.md"
@@ -66,6 +68,7 @@ IR_TERM = ROOT / "crates" / "axeyum-ir" / "src" / "term.rs"
 PROOF_SAT = ROOT / "crates" / "axeyum-cnf" / "src" / "proof_sat.rs"
 BV_LOWERING = ROOT / "crates" / "axeyum-bv" / "src" / "lib.rs"
 SAT_BV_BACKEND = ROOT / "crates" / "axeyum-solver" / "src" / "sat_bv_backend.rs"
+SOLVER_BACKEND = ROOT / "crates" / "axeyum-solver" / "src" / "backend.rs"
 SUPPORT_MATRIX_LEDGER = (
     ROOT / "crates" / "axeyum-solver" / "src" / "support_matrix.rs"
 )
@@ -141,6 +144,7 @@ LIVE_DOCS = (
     PROJECT_STATE,
     ROOT / "docs" / "plan" / "README.md",
     ROOT / "docs" / "user-guide" / "benchmarks.md",
+    FIRST_SMTLIB_GUIDE,
     ROOT / "docs" / "user-guide" / "limitations.md",
     GAP_DOC,
     PARITY_AUDIT,
@@ -197,6 +201,10 @@ PUBLIC_STALE_PATTERNS = (
     re.compile(r"\bnever wrong\b", re.IGNORECASE),
     re.compile(r"never a crash", re.IGNORECASE),
     re.compile(r"wrong search can.?t produce a wrong\s+`unsat`", re.IGNORECASE),
+    re.compile(
+        r"proof-producing core enabled it also emits a DRAT proof",
+        re.IGNORECASE,
+    ),
 )
 
 PROVER_STALE_PATTERNS = (
@@ -753,6 +761,22 @@ def main() -> int:
         if marker not in text:
             failures.append(
                 f"{path.relative_to(ROOT)}: missing beginner assurance marker "
+                f"{marker!r}"
+            )
+
+    smtlib_proof_markers = (
+        (SOLVER_BACKEND, "proof-producing SAT core and its DRAT proof is verified"),
+        (SAT_BV_BACKEND, "downgrade to `unknown`"),
+        (FIRST_SMTLIB_GUIDE, "does not return or write the proof artifact"),
+        (FIRST_SMTLIB_GUIDE, "[QF_BV proof exporter](unsat-evidence.md)"),
+        (UNSAT_EVIDENCE_GUIDE, "This export API is distinct from"),
+        (UNSAT_EVIDENCE_GUIDE, "fails closed to `Unknown`"),
+    )
+    for path, marker in smtlib_proof_markers:
+        text = " ".join(path.read_text(encoding="utf-8").split())
+        if marker not in text:
+            failures.append(
+                f"{path.relative_to(ROOT)}: missing SMT-LIB proof boundary marker "
                 f"{marker!r}"
             )
 
