@@ -78,25 +78,12 @@ cleanup. These are environmental/interrupted attempts, not green full-main
 gates. The completed topic full gate, merge-SHA pre-push gate, and focused
 post-merge tests are reported separately.
 
-Remote CI `31076938255` and docs `31076938134` at `94082977d` are terminal
-green, including stable rustdoc, Clippy, MSRV, format, wasm, MIR, reflection,
-official Lean cross-check, micro corpus, and generated-resource/link gates.
-Docs run `31108211479` at `54b366517` is also terminal green. Docs runs
-`31147545402`, `31147833794`, and `31153166591` are terminal failures: the
-newly integrated readiness tests resolved registered `just check` observations,
-but the hosted docs image did not provide `just`, so 12 fixture tests failed
-before their intended assertions. Integrated commit `9f94e1873` provisions
-exact `just` 1.57.0 through a commit-pinned action in both duplicated docs jobs;
-the complete local 165-test resume aggregate then passed with one expected
-skip. Exact-SHA docs run `31190516093` and CI run `31190517748` both failed at
-the later registered-executable lookup: 10 errors and two assertion failures,
-all caused by `just` being outside the contract's canonical PATH. This confirms
-that provisioning alone was insufficient. Repair `259797459` installs a
-regular copy at `$HOME/.cargo/bin/just` in both duplicated jobs; YAML,
-actionlint (apart from the repository's known future runner-label catalogue),
-an isolated install smoke, complete-parity generation, and both exact-SHA
-hosted runs at `bd413357c` are green. No retained solver or measurement process
-is running.
+The current remote baseline is terminal green: CI `31076938255` and docs
+`31076938134` at `94082977d`, docs `31108211479` at `54b366517`, and the
+post-`just`-repair exact-SHA CI/docs runs `31192792245`/`31192792512` at
+`bd413357c`. The superseded provisioning failures and their two-step repair
+remain in Git and the A2 result records rather than this live tracker. No
+retained solver or measurement process is running.
 
 A3 is **WIP**. Pushed result checkpoint `3696e7dd5` is integrated on current
 main by `47d8cd956`; its source branch remains preserved. The repaired complete
