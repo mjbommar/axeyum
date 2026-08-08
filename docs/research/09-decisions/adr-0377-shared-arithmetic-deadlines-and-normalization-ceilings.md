@@ -40,6 +40,13 @@ term graphs are admitted.
 4. The existing 1,024-atom online CDCL(T) admission cap remains. The new limits
    protect `LraTheory` itself and sibling/direct consumers; they are not grounds
    for raising the measured front-door cap.
+5. The legacy Boolean-structured linear-arithmetic loop may retain at most
+   8,192 literals across dynamically learned, unminimized (`Large`) theory
+   cores. Reaching the ceiling returns `Unknown(ResourceLimit)` before starting
+   another warm propositional-SAT round. Small and deterministically minimized
+   cores do not consume this ceiling. This 2026-08-08 amendment repairs the
+   QF_LRA `sal/tgc/tgc_io-safe-20.smt2` 8 GiB process abort exposed by A5; it
+   does not raise a timeout, memory limit, normalization cap, or route budget.
 
 ## Soundness and determinism
 
@@ -52,6 +59,9 @@ construction is never exposed as a usable theory by production solver routes.
 The normalization counters depend only on the stable term traversal and exact
 coefficient-map sizes. They therefore make admission reproducible across
 machines, unlike a memory watermark or elapsed-time-only policy.
+The large-core counter likewise depends only on the stable conflict-core source
+classification and literal count. It removes a future SAT round but cannot add
+a model, clause, proof, or verdict.
 
 ## Evidence
 
@@ -74,6 +84,16 @@ machines, unlike a memory watermark or elapsed-time-only policy.
   frontier refresh was intentionally not retained by this resource-policy slice.
 - GitHub CI `31066926771` and docs `31066926761` for the preceding code merge,
   plus docs `31067318237` for its canonical-plan descendant, are terminal green.
+- The 2026-08-08 A5 attempt at exact pushed revision `1de737488` failed closed
+  after 172 QF_LRA rows when `sal/tgc/tgc_io-safe-20.smt2` aborted at the 8 GiB
+  process ceiling. The repaired merged release returns a typed schema-1
+  `lira-dpll` budget decline in 6.08 seconds with 8,224 retained large-core
+  literals and 1,777,884 KiB peak RSS. Strict solver Clippy, 1,079 all-feature
+  library tests, 16 deep-input tests, five QF_LRA differential fuzz tests, and
+  the 114.81-second simplex fallback differential are green. Complete-corpus
+  monotonicity and the new exact-commit full gate remain required before
+  integration; see the
+  [A5 repair record](../../plan/qf-linear-a5-wide-core-memory-repair-2026-08-08.md).
 
 The retained six-division arithmetic corpus gate remains an integration exit
 criterion in `PLAN.md`; focused evidence does not substitute for it.
@@ -86,5 +106,9 @@ criterion in `PLAN.md`; focused evidence does not substitute for it.
   abort and is visible through `UnknownKind::ResourceLimit`.
 - A future ceiling change requires corpus A/B evidence and an ADR update. Do not
   raise limits to hide a residual or infer completeness from available RAM.
+- Repeated wide cores are a named allocation boundary: once their literal
+  budget is exhausted, returning `unknown` is preferable to relying on a
+  cooperative clock callback while the SAT allocator approaches a hard process
+  ceiling.
 - The disjunction-split work that depended on honest branch budgets may now be
   remeasured, but is not accepted by this ADR.

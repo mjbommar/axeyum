@@ -4,16 +4,13 @@
 for current project status, ordered work, blockers, and resume guidance. Read it
 first and update it before ending a project-level work session.
 
-- Last consolidated: **2026-08-07**
-- Integrated repository state audited at:
-  `6be32cb4a56e5384004715884f2960507dfa3a22`; the latest solver-code gate
-  remains `3eb7eac442c64aee4b809ee059bf59d93b6160ee`, including A3 merge
-  `0c31baf979d09270497b5512819fa6e8ed927de7`
-- Expected handoff state: clean local `main` equal to `origin/main`
-- Latest integrated increment: A3 attribution topic `2269488ef0318d8e8f88d4c147b2c148860d3e90`
-  via merge `6be32cb4a56e5384004715884f2960507dfa3a22`
-- Latest retained-result increment: `2269488ef` (bounded A3 clause-estimate
-  attribution closed at its exact pipeline-record gate)
+- Last consolidated: **2026-08-08**
+- Integrated baseline merged into the active topic:
+  `8ccae9c43ce393762ce6cc3b38d21c2dbb982507`
+- Active candidate: `cb7b677cc7a7a5af29c07325c8d1b99e69729c79` plus the
+  documentation/evidence update described below; push and full-gate pending
+- Latest comprehensive exact-commit gate: `1de73748877253d6d134d71af3b5d22183c646d4`
+  (`just check` exit 0 before the A5 capture exposed the wide-core abort)
 - Latest integrated A3 code increments: bounded SMT-LIB `distinct` expansion at
   `63c82a6ef`, typed arithmetic-model reconstruction at `4ff9a82c6`, and
   deterministic string/integer coupling at `db7b426e8`
@@ -32,58 +29,35 @@ and `STATUS.md` blob `0f169eddfabb190f45428090ffb057e8289bf355`.
 
 ## Status
 
+**Live A5 checkpoint (2026-08-08).** Exact pushed topic revision `1de737488`
+passed one uninterrupted frozen `just check` with exit 0, including all
+workspace tests/doctests, 1,078 solver-library tests, retained differential
+suites with zero disagreement, 9/9 capability-frontier tests, both order-255
+CAS proofs, warning-denied rustdoc, generated resources, the 165-test SMT-COMP
+resume aggregate, Lean/process-free contracts, plan authority, and links. Its
+first preregistered QF_LRA capture then failed closed after 172/200 rows:
+`sal/tgc/tgc_io-safe-20.smt2` exhausted the external 8 GiB address-space cap and
+aborted with `SIGABRT`. QF_IDL and QF_RDL were not started, and the partial
+stream is not credited. The deterministic wide-core repair at `9d7a70a65`,
+merged with current `origin/main` by `cb7b677cc`, now returns typed
+`Unknown(ResourceLimit)` in 6.08 seconds at about 1.78 GiB peak RSS. Focused
+strict Clippy, 1,079 solver-library tests, deep-input and both LRA differential
+gates are green; the repaired exact commit still requires push, a fresh full
+frozen gate, and a complete row-1 census restart. See the
+[failure/repair record](docs/plan/qf-linear-a5-wide-core-memory-repair-2026-08-08.md).
+
 Axeyum is a working research-grade automated-reasoning stack with a pure-Rust
 default path, replay-checked SAT models, multiple independently checked UNSAT
 evidence routes, broad but uneven theory support, an independent Lean-core
 checker/importer, and several consumers. It is not yet a drop-in Z3 replacement
 or a replacement for the Lean system.
 
-The audited integrated repository state is
-`6be32cb4a56e5384004715884f2960507dfa3a22`; the A3 relevance-ladder and budget
-partition work is documentation-only and does not alter the solver-code
-evidence at `3eb7eac442`. Local `main` is clean and
-exactly equal to `origin/main`. Topic `ee5042dee` is pushed and exactly equals
-`origin/agent/nia/a3-census`. The merge passed one uninterrupted
-external-frontier `CARGO_BUILD_JOBS=2 just check` with exit 0: format, stable
-all-target Clippy, every workspace test and doctest, 1,078 solver-library tests,
-all retained arithmetic/string/UF differentials with zero disagreement, 9/9
-frontier tests in 219.05 s, both order-255 CAS proofs in 938.58 s,
-warning-denied rustdoc, QF_BV/reflection and both 162-file Glaurung policies,
-generated resources, rules-as-code, the 165-test resume aggregate in 46.002 s
-with one expected skip, every Lean/process-free contract, parity docs, plan
-authority, and links. Its five 20 KiB external frontier artifacts were removed
-after evidence capture. Hosted docs run `31190516093` and CI run `31190517748`
-failed only in the duplicated docs/resource job because the pinned `just`
-action installed outside the credited PATH; every non-doc CI job was green.
-Commit `259797459` copies that pinned regular executable into the registered
-account Cargo bin and validates exact version 1.57.0. Merge `bd413357c` contains
-the repair and A3 diagnostic preregistration. Exact-SHA docs run `31192792512`
-and CI run `31192792245` are terminal green, including the formerly failing
-registered full-preparation resume gate.
-The later docs-only main checkpoint `a28560f81` is independently terminal green
-in hosted docs run `31198041045`.
-Follow-up topic `c92155454` is integrated by merge `d09e6debb`. Its broad gate
-passed every substantive code/evidence stage, then exited 1 when the scoreboard
-correctly detected five frontier JSON files regenerated earlier in that same
-command. Exact restoration plus the full parity-docs tail, plan authority,
-links, and clean-tree checks passed; this is not an aggregate exit-0 claim.
-Local `main` and `origin/main` are equal at handoff. The IDL repair branch completed terminal
-`CARGO_BUILD_JOBS=2 just check`; merge `198f2dc1b` passed its immutable-SHA
-pre-push workspace-library, progress-frontier, and evidence gates. Integrated
-main then passed the focused DL suite 46/46 and the explicit auto-dispatch
-fallback regression 1/1. The first broad post-merge command failed while
-linking with only 585 MiB free (`No space left on device`), and a later
-documentation aggregate was deliberately interrupted for the requested disk
-cleanup. These are environmental/interrupted attempts, not green full-main
-gates. The completed topic full gate, merge-SHA pre-push gate, and focused
-post-merge tests are reported separately.
-
-The current remote baseline is terminal green: CI `31076938255` and docs
-`31076938134` at `94082977d`, docs `31108211479` at `54b366517`, and the
-post-`just`-repair exact-SHA CI/docs runs `31192792245`/`31192792512` at
-`bd413357c`. The superseded provisioning failures and their two-step repair
-remain in Git and the A2 result records rather than this live tracker. No
-retained solver or measurement process is running.
+Earlier A3/A4 integration and gate history remains in dated result notes and
+Git. The last clean pre-repair full gate is the `1de737488` checkpoint above;
+focused repair tests do not replace the required new full gate. Hosted CI/docs
+runs `31192792245` and `31192792512` remain terminal green for their recorded
+baseline, not for the current candidate. No retained solver or measurement
+process is running.
 
 A3 is **WIP**. Pushed result checkpoint `3696e7dd5` is integrated on current
 main by `47d8cd956`; its source branch remains preserved. The repaired complete
@@ -338,12 +312,16 @@ here as closed evidence boundaries. A3 remains incomplete, but all currently
 preregistered bounded mechanisms are closed negatively. A4 has now also yielded;
 A5 is the first active item.
 
-**Immediate action.** Execute A5's preregistered cross-division LRA/IDL/RDL
-residual census. Validate and retain the exact historical sidecars, build and
-push the fail-closed capture/derivation harness, then run fresh current-Axeyum
-traces over all three complete 200-row lists. No solver or budget change is
-authorized before the monotone complete-record census identifies a repeated
-mechanism.
+**Immediate action.** Close the P0 wide-core process-survival repair exposed by
+A5: push the exact merged candidate, run one uninterrupted frozen full
+`just check`, then restart QF_LRA from row 1 under the unchanged 24-second/8-GiB
+capture envelope. The failed 172-row partial stream remains non-credited. Stop
+on any historical-decision loss, wrong verdict, stderr, malformed trace, or
+process failure. Only valid atomic QF_LRA success metadata authorizes sequential
+QF_IDL and QF_RDL capture and the preregistered derivation. No score gain is
+claimed by changing a crash into typed `unknown`, and no further solver or
+budget change is authorized before the complete monotone census identifies a
+repeated mechanism.
 A4's v3 restart decided 93/200, with one 2/3-SAT wall-clock boundary. Both
 model-reuse variants failed isolated stability and were removed; do not retry
 until 94 happens to pass. A3/A4's negative routes remain closed. A2 still does
