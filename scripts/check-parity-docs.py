@@ -32,6 +32,7 @@ PARITY_AUDIT = ROOT / "docs" / "plan" / "parity-target-evidence-audit-2026-07-21
 LEAN_GATE_AUDIT = ROOT / "docs" / "plan" / "official-lean-ci-gate-audit-2026-07-21.md"
 PROJECT_STATE = ROOT / "docs" / "PROJECT-STATE.md"
 BENCHMARK_GUIDE = ROOT / "docs" / "user-guide" / "benchmarks.md"
+USER_GUIDE_INDEX = ROOT / "docs" / "user-guide" / "README.md"
 FIRST_SMTLIB_GUIDE = ROOT / "docs" / "user-guide" / "first-smtlib-query.md"
 UNSAT_EVIDENCE_GUIDE = ROOT / "docs" / "user-guide" / "unsat-evidence.md"
 SOLVER_CONFIG_GUIDE = ROOT / "docs" / "reference" / "solver-config.md"
@@ -72,6 +73,9 @@ UF_FUNCTION_ELIM = ROOT / "crates" / "axeyum-rewrite" / "src" / "functions.rs"
 CNF_LIB = ROOT / "crates" / "axeyum-cnf" / "src" / "lib.rs"
 CNF_LRAT = ROOT / "crates" / "axeyum-cnf" / "src" / "lrat.rs"
 CNF_README = ROOT / "crates" / "axeyum-cnf" / "README.md"
+BOOLEAN_CNF_COOKBOOK = (
+    ROOT / "docs" / "proof-cookbook" / "recipes" / "boolean-cnf-lrat.md"
+)
 IR_TERM = ROOT / "crates" / "axeyum-ir" / "src" / "term.rs"
 PROOF_SAT = ROOT / "crates" / "axeyum-cnf" / "src" / "proof_sat.rs"
 BV_LOWERING = ROOT / "crates" / "axeyum-bv" / "src" / "lib.rs"
@@ -152,6 +156,7 @@ LIVE_DOCS = (
     ROOT / "bench-results" / "SCOREBOARD.md",
     ROOT / "docs" / "README.md",
     PROJECT_STATE,
+    USER_GUIDE_INDEX,
     ROOT / "docs" / "plan" / "README.md",
     ROOT / "docs" / "user-guide" / "benchmarks.md",
     FIRST_SMTLIB_GUIDE,
@@ -183,6 +188,7 @@ PUBLIC_CLAIM_DOCS = (
     CNF_INTERNAL_DOC,
     PROOF_STACK_DOC,
     CNF_README,
+    BOOLEAN_CNF_COOKBOOK,
     NORTH_STAR_PLAN,
     NORTH_STAR_ORIENTATION,
     FOUNDATIONAL_DAG,
@@ -226,6 +232,8 @@ PUBLIC_STALE_PATTERNS = (
     re.compile(r"integer and rational values are exact,", re.IGNORECASE),
     re.compile(r"custom CDCL direction", re.IGNORECASE),
     re.compile(r"elaborate DRAT to LRAT and check LRAT", re.IGNORECASE),
+    re.compile(r"unsat\s*[→-]+\s*checkable certificate", re.IGNORECASE),
+    re.compile(r"A Boolean\s+`unsat`\s+claim is accepted only", re.IGNORECASE),
 )
 
 PROVER_STALE_PATTERNS = (
@@ -812,6 +820,10 @@ def main() -> int:
         (CNF_INTERNAL_DOC, "RUP-only"),
         (PROOF_STACK_DOC, "RUP-only"),
         (CNF_README, "RUP-only"),
+        (USER_GUIDE_INDEX, "unsat → route-specific assurance"),
+        (USER_GUIDE_INDEX, "not implied by every `unsat` verdict"),
+        (BOOLEAN_CNF_COOKBOOK, "default proofless BatSat result remains lower assurance"),
+        (BOOLEAN_CNF_COOKBOOK, "DRAT addition that requires RAT is rejected"),
     )
     for path, marker in propositional_proof_markers:
         text = " ".join(path.read_text(encoding="utf-8").split())
