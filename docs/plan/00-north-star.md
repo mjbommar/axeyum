@@ -10,11 +10,12 @@ the operational definitions.
 
 ## The one-sentence identity
 
-**Untrusted fast search, trusted small checking** — a complete framework for
-general reasoning that finds answers fast with whatever heuristics work, and
-backs every definitive answer with a small, independent, machine-checkable
-certificate. Z3 is the performance/feature yardstick; Lean is the
-proof-checking yardstick.
+**Untrusted fast search, trusted small checking** — the target identity is a
+complete framework for general reasoning that finds answers fast with whatever
+heuristics work and moves every supported definitive route toward small,
+independent, machine-checkable evidence. Current routes retain explicit lower-
+assurance gaps rather than pretending the target is already universal. Z3 is
+the performance/feature yardstick; Lean is the proof-checking yardstick.
 
 ## Definition of done — fragment decision parity
 
@@ -173,5 +174,6 @@ Full inventory: [`references/axeyum-current-state.md`](references/axeyum-current
 ## Non-negotiables (these never bend, even for parity)
 
 - No C/C++ in the default build; `unsafe_code` denied; determinism is a public
-  promise; `unknown` is never an error; never a wrong `unsat`; build at `-j4`;
-  no 41GB corpus sweeps. (Full list in [PLAN.md](../../PLAN.md).)
+  promise; `unknown` remains distinct from operational errors; missing evidence
+  is never relabeled as a certified `unsat`. Current resource limits and
+  execution policy live in [PLAN.md](../../PLAN.md).

@@ -40,6 +40,10 @@ CONSUMER_SCOREBOARD = ROOT / "docs" / "consumer-track" / "SCOREBOARD.md"
 LEARN_INTRO = ROOT / "docs" / "learn" / "01-what-is-automated-reasoning.md"
 LEARN_OUTCOMES = ROOT / "docs" / "learn" / "05-models-unsat-and-unknown.md"
 LEARN_PIPELINE = ROOT / "docs" / "learn" / "07-how-axeyum-solves-a-query.md"
+NORTH_STAR_PLAN = ROOT / "docs" / "plan" / "00-north-star.md"
+NORTH_STAR_ORIENTATION = (
+    ROOT / "docs" / "research" / "00-orientation" / "north-star.md"
+)
 PROVER_README = ROOT / "docs" / "prover-track" / "README.md"
 PROVER_SYNTHESIS = ROOT / "docs" / "prover-track" / "SYNTHESIS.md"
 PROVER_PLAN = ROOT / "docs" / "prover-track" / "plan" / "README.md"
@@ -51,6 +55,7 @@ LEAN_COMPLETE_PARITY = ROOT / "docs" / "plan" / "generated" / "lean-complete-par
 LEAN_KERNEL_EXPR = ROOT / "crates" / "axeyum-lean-kernel" / "src" / "expr.rs"
 UF_FUNCTION_ELIM = ROOT / "crates" / "axeyum-rewrite" / "src" / "functions.rs"
 CNF_LIB = ROOT / "crates" / "axeyum-cnf" / "src" / "lib.rs"
+IR_TERM = ROOT / "crates" / "axeyum-ir" / "src" / "term.rs"
 CATEGORICAL_AUDIT = (
     ROOT / "docs" / "plan" / "categorical-engine-depth-audit-2026-07-21.md"
 )
@@ -116,6 +121,8 @@ PUBLIC_CLAIM_DOCS = (
     LEARN_INTRO,
     LEARN_OUTCOMES,
     LEARN_PIPELINE,
+    NORTH_STAR_PLAN,
+    NORTH_STAR_ORIENTATION,
     ROOT / "docs" / "user-guide" / "benchmarks.md",
     ROOT / "docs" / "user-guide" / "limitations.md",
     SMTCOMP_README,
@@ -154,6 +161,13 @@ PROVER_STALE_PATTERNS = (
     re.compile(r"`Lit::Nat` is `u128`"),
     re.compile(r"!fn_app_0.*blocks every", re.IGNORECASE),
     re.compile(r"entry ADR.*owed before P6\.1", re.IGNORECASE),
+)
+
+NORTH_STAR_STALE_PATTERNS = (
+    re.compile(r"destination 2 is NEAR-PARITY", re.IGNORECASE),
+    re.compile(r"Binder\(later\)", re.IGNORECASE),
+    re.compile(r"where Z3 decides nearly all", re.IGNORECASE),
+    re.compile(r"never a wrong `unsat`", re.IGNORECASE),
 )
 
 PROVER_LIVE_DOCS = (
@@ -424,6 +438,7 @@ def measured_snapshot() -> dict[str, int]:
         "uncertified_unsat": uncertified_unsat,
         "lean_reconstruction_gap": lean_reconstruction_gap,
         "proof_production_errors": proof_production_errors,
+        "p4dfa_files_20s": int(axeyum["summary"]["files"]),
         "p4dfa_axeyum_20s": decided(axeyum["summary"]),
         "p4dfa_z3_20s": decided(z3["summary"]),
         "p4dfa_both_decided_20s": p4dfa_overlap["both_decided"],
@@ -491,6 +506,16 @@ def main() -> int:
                 line = text.count("\n", 0, match.start()) + 1
                 failures.append(
                     f"{path.relative_to(ROOT)}:{line}: stale prover claim: "
+                    f"{match.group(0)!r}"
+                )
+
+    for path in (NORTH_STAR_PLAN, NORTH_STAR_ORIENTATION):
+        text = path.read_text(encoding="utf-8")
+        for pattern in NORTH_STAR_STALE_PATTERNS:
+            if match := pattern.search(text):
+                line = text.count("\n", 0, match.start()) + 1
+                failures.append(
+                    f"{path.relative_to(ROOT)}:{line}: stale north-star claim: "
                     f"{match.group(0)!r}"
                 )
 
@@ -628,6 +653,45 @@ def main() -> int:
                 f"{marker!r}"
             )
 
+    ir_term_text = IR_TERM.read_text(encoding="utf-8")
+    for marker in ("Forall(SymbolId)", "Exists(SymbolId)"):
+        if marker not in ir_term_text:
+            failures.append(
+                f"{IR_TERM.relative_to(ROOT)}: missing quantifier marker {marker!r}"
+            )
+
+    p4dfa_neither = (
+        snapshot["p4dfa_files_20s"]
+        - snapshot["p4dfa_both_decided_20s"]
+        - snapshot["p4dfa_axeyum_only_20s"]
+        - snapshot["p4dfa_z3_only_20s"]
+    )
+    north_star_markers = (
+        (NORTH_STAR_ORIENTATION, "status ledger or a schedule"),
+        (
+            NORTH_STAR_ORIENTATION,
+            "Selected competitive cells do not establish broad product parity",
+        ),
+        (NORTH_STAR_ORIENTATION, "`Op::Forall(SymbolId)`"),
+        (
+            NORTH_STAR_ORIENTATION,
+            f"the other {p4dfa_neither} are not decided by either",
+        ),
+        (NORTH_STAR_PLAN, "the target identity"),
+        (NORTH_STAR_PLAN, "assurance gaps rather than pretending"),
+        (
+            NORTH_STAR_PLAN,
+            "missing evidence is never relabeled as a certified `unsat`",
+        ),
+    )
+    for path, marker in north_star_markers:
+        text = " ".join(path.read_text(encoding="utf-8").split())
+        if marker not in text:
+            failures.append(
+                f"{path.relative_to(ROOT)}: missing north-star boundary marker "
+                f"{marker!r}"
+            )
+
     required_gap_markers = (
         f"{snapshot['decided']} / {snapshot['files']}",
         f"{snapshot['compared']} oracle-compared",
@@ -640,8 +704,8 @@ def main() -> int:
         f"{snapshot['independently_checked_unsat']} independently checked outcomes",
         f"{snapshot['audit_reported_checked_unsat'] - snapshot['independently_checked_unsat']} vacuous `bare-unsat` check results",
         f"{snapshot['lean_checked_unsat']} Lean-checked outcomes",
-        f"{snapshot['p4dfa_axeyum_20s']} / 113",
-        f"{snapshot['p4dfa_z3_20s']} / 113",
+        f"{snapshot['p4dfa_axeyum_20s']} / {snapshot['p4dfa_files_20s']}",
+        f"{snapshot['p4dfa_z3_20s']} / {snapshot['p4dfa_files_20s']}",
         f"{snapshot['p4dfa_both_decided_20s']} jointly decided",
         f"{snapshot['p4dfa_axeyum_only_20s']} Axeyum-only",
         f"{snapshot['p4dfa_z3_only_20s']} Z3-only",
@@ -762,7 +826,7 @@ def main() -> int:
         f"{snapshot['uncertified_unsat']} uncertified",
         f"{snapshot['lean_reconstruction_gap']} certified",
         f"{snapshot['proof_production_errors']} proof-production errors",
-        f"{snapshot['p4dfa_axeyum_20s']} / 113",
+        f"{snapshot['p4dfa_axeyum_20s']} / {snapshot['p4dfa_files_20s']}",
         f"{snapshot['qfbv_head_to_head_axeyum']} / {snapshot['qfbv_head_to_head_files']}",
         "zero interactive textual-session rows",
         "cannot be retroactively classified",
@@ -937,6 +1001,8 @@ def main() -> int:
         f"|prover_axioms_external={axiom_classes['external-assumption']}"
         f"|prover_axioms_primitive={axiom_classes['primitive-interface']}"
         "|beginner_unsat_assurance=route_specific"
+        "|north_star_status=aspirational"
+        "|north_star_binders=first_order_present"
     )
     print(f"PARITY_DOCS|{line}")
     if failures:
