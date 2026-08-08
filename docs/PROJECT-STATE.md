@@ -1,6 +1,6 @@
 # Axeyum project state
 
-**As of 2026-08-05:** Axeyum is a working, research-grade automated-reasoning
+**As of 2026-08-07:** Axeyum is a working, research-grade automated-reasoning
 stack with competitive results on selected fragments and substantial checked
 proof coverage. It is not a drop-in Z3 replacement or a replacement for the
 Lean system.
@@ -64,24 +64,23 @@ termination. Because the committed raw artifact lacks the necessary stdout and
 termination evidence, the two no-answer rows **cannot be retroactively classified**.
 This reproduction path is therefore not claimed to be **fully competition-faithful**.
 
-The append-only [`parity ledger`](../bench-results/PARITY.md) now contains
+The append-only [`parity ledger`](../bench-results/PARITY.md) contains
 head-to-head entries for eleven divisions against division-appropriate reference
 binaries on identical committed 200-file lists and a 24-second/8-GiB protocol.
-The current weak edge is arithmetic and combination depth:
+The latest credited weak arithmetic and combination edges are:
 
-| Division | Latest credited Axeyum/reference | Ratio |
-|---|---:|---:|
-| QF_NIA | 21/85 | 24.7% |
-| QF_UFLIA | 94/180 | 52.2% |
-| QF_IDL | 66/123 | 53.7% |
-| QF_LRA | 86/147 | 58.5% |
-| QF_RDL | 105/153 | 68.6% |
+| Division | Axeyum | Reference | Ratio | Disagreements |
+|---|---:|---:|---:|---:|
+| QF_NIA | 34/200 | 89/200 | 38.2% | 0 |
+| QF_UFLIA | 94/200 | 180/200 | 52.2% | 0 |
+| QF_IDL | 68/200 | 124/200 | 54.8% | 0 |
+| QF_LRA | 86/200 | 146/200 | 58.9% | 0 |
+| QF_RDL | 105/200 | 155/200 | 67.7% | 0 |
 
-All five entries record zero disagreements. Later QF_NIA code reports two gains
-but has not yet earned a clean full-list ledger entry. The stronger selected
-cells include QF_SLIA, QF_BV, UF, QF_ABV, and QF_LIA; exact latest values and
-reference configurations must be read from the append-only ledger rather than
-hand-copied here.
+The stronger selected cells include QF_SLIA, QF_BV, UF, QF_ABV, and QF_LIA.
+Read the latest entry per division for exact solver revisions, reference
+configurations, load observations, and overlap; an older entry can have a higher
+score without being the current credited result.
 
 ## Evidence and Lean
 
@@ -130,15 +129,18 @@ Recent repairs matter as much as new solving power:
 - previously inert or silently empty gates now require nonzero test counts;
 - the capability frontier tolerates isolated timing-edge gaps and reports host
   load instead of treating one knife-edge case as the frontier;
-- one lazy-LIA operation that ran 109.6 seconds against a 200 ms request now
-  shares an absolute deadline;
-- remaining NRA interior overruns and a QF_LRA 8-GiB normalization abort are
-  open P0 reliability work.
+- arithmetic timeouts now use one query-global absolute deadline across the
+  sequential exact-real, NRA, relaxation, NIA, bounded-blast, and width-ladder
+  routes, with cancellation checks inside CAD and exact-arithmetic loops;
+- online LRA normalization has deterministic node, coefficient-work, and cache
+  ceilings: the retained high-memory case now declines around 13 MiB instead of
+  reproducing its historical 8-GiB abort; and
+- difference-logic probing reserves fallback time only for its measured bounded
+  gate. A global split that lost controls was rejected rather than shipped.
 
-The 2026-08-05 consolidation audit was performed on a clean, remotely
-integrated revision whose GitHub CI and docs workflows completed successfully.
-That is retained historical evidence, not a claim that a moving `main` still
-names the same object. For current integration, compare local `HEAD`,
+These closures are backed by the retained A1 result and its exact gates; they do
+not imply that every arithmetic query is fast or complete. Integration evidence
+is revision-scoped. For current integration, compare local `HEAD`,
 `origin/main`, and `git ls-remote`, then inspect hosted runs for that exact SHA.
 
 ## What is not claimed
@@ -158,10 +160,12 @@ names the same object. For current integration, compare local `HEAD`,
 ## Where to go next
 
 Read [`PLAN.md`](../PLAN.md). Its **Next Actions** section is the only ordered
-project queue. The immediate priorities are arithmetic deadline/resource
-correctness, current-main full-library readiness, clean QF_NIA remeasurement,
-QF_UFLIA/linear-arithmetic depth, evidence closure, complete route telemetry,
-SMT-LIB session semantics, and bounded official-Lean trust reduction.
+project queue. A1 resource correctness and A2 process-free full-library
+readiness are closed. The bounded A3 QF_NIA and A4 QF_UFLIA mechanisms yielded
+without authorizing speculative cap increases. The next solver slice is the A5
+cross-division LRA/IDL/RDL residual census, followed by proof-gap closure, route
+observability, ordered SMT-LIB session semantics, official-Lean trust reduction,
+the textual product surface, and routine worktree/build-cache retirement.
 
 The pre-consolidation long-form project-state document is preserved at Git
 revision `803c08439` as blob `2323ffc33fcd0f057e44064a7e45488fe91d1fe4`.

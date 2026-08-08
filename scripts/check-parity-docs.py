@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 """Fail when live parity documentation contradicts committed measurements.
 
-This is intentionally a narrow guard, not a natural-language fact checker.  It
+This is intentionally a bounded guard, not a natural-language fact checker. It
 owns the claims that have already rotted repeatedly: the generated division
 totals, exact dominance-audit denominators, the paired 20-second p4dfa control,
-the reviewer-facing project-state summary, and the source/test-backed
-categorical-engine maturity classification. New guarded numerical claims should
-be added only when they have one canonical, machine-readable artifact; the
-categorical markers guard the dated audit and the live roadmap language that
-points to it.
+the reviewer-facing project-state summary, the checked-in Cargo-example
+inventory, and the source/test-backed categorical-engine maturity
+classification. New guarded numerical claims should be added only when they
+have one canonical, machine-readable artifact; the categorical markers guard
+the dated audit and the live roadmap language that points to it.
 """
 
 from __future__ import annotations
@@ -30,6 +30,9 @@ PARITY_AUDIT = ROOT / "docs" / "plan" / "parity-target-evidence-audit-2026-07-21
 LEAN_GATE_AUDIT = ROOT / "docs" / "plan" / "official-lean-ci-gate-audit-2026-07-21.md"
 PROJECT_STATE = ROOT / "docs" / "PROJECT-STATE.md"
 BENCHMARK_GUIDE = ROOT / "docs" / "user-guide" / "benchmarks.md"
+PARITY_LEDGER = ROOT / "bench-results" / "PARITY.md"
+EXAMPLE_CATALOG = ROOT / "docs" / "reference" / "examples.md"
+DOCUMENTATION_PLAN = ROOT / "docs" / "documentation-plan.md"
 CATEGORICAL_AUDIT = (
     ROOT / "docs" / "plan" / "categorical-engine-depth-audit-2026-07-21.md"
 )
@@ -138,6 +141,41 @@ def load_json(path: Path) -> dict:
 
 def decided(summary: dict) -> int:
     return int(summary.get("sat", 0)) + int(summary.get("unsat", 0))
+
+
+def latest_parity_rows() -> dict[str, tuple[str, str, str, str]]:
+    """Return the last append-only parity row for each logic.
+
+    The ledger intentionally retains older and lower results. Public status must
+    therefore copy the last row for a division, not the most flattering row.
+    """
+
+    text = PARITY_LEDGER.read_text(encoding="utf-8")
+    rows: dict[str, tuple[str, str, str, str]] = {}
+    sections = re.finditer(
+        r"^## (?P<logic>[A-Z0-9_]+) — [^\n]+\n(?P<body>.*?)(?=^## |\Z)",
+        text,
+        re.MULTILINE | re.DOTALL,
+    )
+    for section in sections:
+        body = section.group("body")
+
+        def field(pattern: str) -> str:
+            match = re.search(pattern, body, re.MULTILINE)
+            if match is None:
+                raise RuntimeError(
+                    f"{PARITY_LEDGER.relative_to(ROOT)}: malformed "
+                    f"{section.group('logic')} section; missing {pattern!r}"
+                )
+            return match.group("value").strip(" `*")
+
+        rows[section.group("logic")] = (
+            field(r"^\| axeyum solved \| (?P<value>[^|]+) \|$"),
+            field(r"^\| reference solved \| (?P<value>[^|]+) \|$"),
+            field(r"^\| \*\*ratio \(axeyum / reference\)\*\* \| (?P<value>[^|]+) \|$"),
+            field(r"^\| \*\*disagreements\*\* \| (?P<value>[^|]+) \|$"),
+        )
+    return rows
 
 
 def measured_snapshot() -> dict[str, int]:
@@ -325,6 +363,7 @@ def measured_snapshot() -> dict[str, int]:
 
 def main() -> int:
     snapshot = measured_snapshot()
+    parity_rows = latest_parity_rows()
     failures: list[str] = []
 
     for path in LIVE_DOCS:
@@ -490,6 +529,45 @@ def main() -> int:
             failures.append(
                 f"{PROJECT_STATE.relative_to(ROOT)}: missing measured marker {marker!r}"
             )
+
+    for logic in ("QF_NIA", "QF_UFLIA", "QF_IDL", "QF_LRA", "QF_RDL"):
+        if logic not in parity_rows:
+            failures.append(
+                f"{PARITY_LEDGER.relative_to(ROOT)}: missing required {logic} row"
+            )
+            continue
+        axeyum, reference, ratio, disagreements = parity_rows[logic]
+        expected = f"| {logic} | {axeyum} | {reference} | {ratio} | {disagreements} |"
+        actual = re.findall(
+            rf"^\| {re.escape(logic)} \| [^\n]+$", project_state_text, re.MULTILINE
+        )
+        if actual != [expected]:
+            failures.append(
+                f"{PROJECT_STATE.relative_to(ROOT)}: latest {logic} parity row "
+                f"must be {expected!r}, got {actual!r}"
+            )
+
+    example_paths = sorted(ROOT.glob("crates/*/examples/*.rs"))
+    example_catalog_text = EXAMPLE_CATALOG.read_text(encoding="utf-8")
+    for path in example_paths:
+        marker = f"](../../{path.relative_to(ROOT)})"
+        if marker not in example_catalog_text:
+            failures.append(
+                f"{EXAMPLE_CATALOG.relative_to(ROOT)}: missing Cargo example "
+                f"{path.relative_to(ROOT)}"
+            )
+    example_count = len(example_paths)
+    documentation_plan_text = DOCUMENTATION_PLAN.read_text(encoding="utf-8")
+    if f"all {example_count} checked-in Cargo examples" not in documentation_plan_text:
+        failures.append(
+            f"{DOCUMENTATION_PLAN.relative_to(ROOT)}: missing current "
+            f"{example_count}-example inventory marker"
+        )
+    plan_text = (ROOT / "PLAN.md").read_text(encoding="utf-8")
+    if f"all {example_count} Cargo examples" not in plan_text:
+        failures.append(
+            f"PLAN.md: missing current {example_count}-example inventory marker"
+        )
 
     benchmark_text = BENCHMARK_GUIDE.read_text(encoding="utf-8")
     for marker in (

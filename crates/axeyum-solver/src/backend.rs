@@ -195,8 +195,9 @@ pub struct SolverConfig {
     /// variables are eliminated — so the returned `sat` model is unchanged and
     /// still satisfies the original assertions; it normalizes commutative-operand
     /// order (so e.g. `(= (bvmul a b) (bvmul b a))` folds to `true` with no
-    /// bit-blasting) and applies the identity/constant-fold rules. Off by default
-    /// so recorded baselines reflect the un-preprocessed path.
+    /// bit-blasting) and applies the identity/constant-fold rules. On by default:
+    /// the canonicalizer is a measured net win and preserves original-term model
+    /// replay. Recorded artifacts must still retain the complete configuration.
     pub preprocess: bool,
     /// Computes the observational structural bit-demand profile during
     /// SAT-BV lowering.

@@ -44,8 +44,9 @@ system.
 The current measured denominators, important negative results, and precise
 meaning of "parity" are in **[Project State](docs/PROJECT-STATE.md)**. The
 authoritative capability × assurance × evidence inventory is the
-[capability matrix](docs/research/08-planning/capability-matrix.md); [PLAN.md](PLAN.md)
-and [STATUS.md](STATUS.md) are the detailed engineering map and battle log.
+[capability matrix](docs/research/08-planning/capability-matrix.md). [PLAN.md](PLAN.md)
+is the single live engineering tracker; [STATUS.md](STATUS.md) is only a
+compatibility pointer to it.
 
 ---
 
@@ -55,11 +56,15 @@ and [STATUS.md](STATUS.md) are the detailed engineering map and battle log.
 
 A typed term IR → rewriting → query planning → solver backends, with a
 **dependency-free pure-Rust path**: bit-blast to AIG → Tseitin CNF → a custom
-CDCL SAT core. Theories, each wired end to end (IR → evaluator → decision
-procedure → SMT-LIB 2 I/O):
+CDCL SAT core. The major implemented theory surfaces are below. Their parser,
+IR, evaluator, decision, model, and evidence layers do not all have equal
+coverage; the [support matrix](docs/research/08-planning/support-matrix.md) is
+the per-layer authority:
 
-- **QF_BV** — full scalar operator set, widths to 2¹⁶; `unsat` carries a
-  DRAT-checked proof.
+- **QF_BV** — full scalar operator set, widths to 2¹⁶; selected evidence routes
+  can return a DRAT-checked proof and an end-to-end bit-blast faithfulness
+  certificate. Decision coverage is broader than proof coverage; see the
+  [measured evidence split](docs/PROJECT-STATE.md#evidence-and-lean).
 - **Arrays** (QF_ABV, eager elimination), **uninterpreted functions** (QF_UF,
   Ackermann), and their composition **QF_AUFBV**.
 - **Linear arithmetic** — `QF_LRA` (exact-rational simplex, Farkas-certified
@@ -103,7 +108,7 @@ and computation gates. It is not a complete Lean kernel or ecosystem: String
 literals, dependency-closed `Init`/`Std`/mathlib imports, native parsing/macros,
 elaboration, tactics, modules/Lake, LSP, and compiler/runtime behavior remain
 open. See
-[Project State](docs/PROJECT-STATE.md#how-close-is-it-to-lean) and the
+[Project State](docs/PROJECT-STATE.md#evidence-and-lean) and the
 [Lean-system strategy](docs/plan/lean-system-compatibility-roadmap-2026-07-21.md)
 plus its [implementation plan](docs/plan/lean-system-implementation-plan-2026-07-21.md)
 and [complete Lean 4.30 parity contract](docs/plan/lean4-complete-parity-contract-2026-07-22.md).
@@ -297,6 +302,9 @@ by use (each is accepted in an ADR).
   parser/IR/solver/proof status).
 - [docs/README.md](docs/README.md) — reader-friendly front door (also builds into
   a searchable mdBook site with Mermaid diagrams).
+- [Runnable examples](docs/reference/examples.md) — all checked-in Cargo
+  examples, separated into learning workflows, artifact generators, and
+  maintainer diagnostics with their prerequisites.
 - [docs/research/](docs/research/README.md) — the research foundation, and
   [09-decisions/](docs/research/09-decisions/README.md), the ADRs.
 - [PLAN.md](PLAN.md) — the single current status, ordered roadmap, blockers,

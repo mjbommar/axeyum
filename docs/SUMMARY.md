@@ -70,6 +70,7 @@
 
 - [Reference](reference/README.md)
   - [Public API](reference/public-api.md)
+  - [Runnable examples](reference/examples.md)
   - [Solver configuration](reference/solver-config.md)
   - [Supported logics](reference/supported-logics.md)
   - [Support matrix](reference/support-matrix.md)

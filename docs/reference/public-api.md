@@ -25,6 +25,10 @@ RUSTDOCFLAGS="-D warnings" cargo doc --workspace --all-features --no-deps
 cargo doc -p axeyum-solver --features full --no-deps --open
 ```
 
+For complete programs, use the [runnable examples catalog](examples.md). It
+separates learner-facing examples from report generators and narrow maintainer
+diagnostics, and records required Cargo features and external tools.
+
 ## Core result contract
 
 [`SolverBackend`](../../crates/axeyum-solver/src/backend.rs) returns:

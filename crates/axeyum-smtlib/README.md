@@ -10,7 +10,9 @@ For the exact command, event, and helper API contract, use the
 
 ```sh
 cargo test -p axeyum-smtlib
+cargo run -p axeyum-smtlib --example proof_gap_shape_census -- query.smt2
 ```
 
 This crate parses and writes; `axeyum-solver` owns solving and command-faithful
-result helpers.
+result helpers. The census example reports syntax/IR shape only and must not be
+read as a solver verdict.

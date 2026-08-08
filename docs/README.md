@@ -39,6 +39,7 @@ flowchart TD
 | **A user** | [`user-guide/`](user-guide/README.md) — run a query, read a model, know the limits |
 | **A contributor** | [`contributor-guide/`](contributor-guide/README.md) — the obligations for new public surface |
 | **Looking up an API or support boundary** | [`reference/`](reference/README.md) — stable entry points into source and generated truth |
+| **Looking for a runnable example** | [`reference/examples.md`](reference/examples.md) — all Cargo examples, prerequisites, and mutation boundaries |
 | **A maintainer / researcher** | [`internals/`](internals/README.md), [`plan/`](plan/README.md), [`research/`](research/README.md) |
 
 Multi-agent sessions should use the

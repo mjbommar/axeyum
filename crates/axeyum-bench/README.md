@@ -14,4 +14,7 @@ cargo run -p axeyum-bench -- corpus/micro --backend sat-bv \
 
 See [Benchmarks](../../docs/user-guide/benchmarks.md) for result interpretation
 and [Benchmark artifacts](../../docs/contributor-guide/benchmark-artifacts.md)
-for reproducibility requirements.
+for reproducibility requirements. The
+[runnable examples catalog](../../docs/reference/examples.md) indexes every
+research probe, its arguments, external prerequisites, and whether it writes an
+artifact.
