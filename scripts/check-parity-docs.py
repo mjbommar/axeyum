@@ -54,6 +54,9 @@ NORTH_STAR_PLAN = ROOT / "docs" / "plan" / "00-north-star.md"
 NORTH_STAR_ORIENTATION = (
     ROOT / "docs" / "research" / "00-orientation" / "north-star.md"
 )
+MISSION_SCOPE = (
+    ROOT / "docs" / "research" / "00-orientation" / "mission-and-scope.md"
+)
 FOUNDATIONAL_DAG = (
     ROOT / "docs" / "research" / "08-planning" / "foundational-dag.md"
 )
@@ -975,6 +978,26 @@ def main() -> int:
                 f"{marker!r}"
             )
 
+    advanced_theory_markers = (
+        (MISSION_SCOPE, "current status lives elsewhere"),
+        (MISSION_SCOPE, "spans the foundation and selected higher-rung"),
+        (MISSION_SCOPE, "Not claimed by the current product"),
+        (PROJECT_STATE, "route-specific IRs, certificates, and trust"),
+        (LIMITATIONS, "finite Bool/BV domains"),
+        (LIMITATIONS, "This is not general QSAT"),
+        (LIMITATIONS, "General CAD UNSAT currently has no portable proof artifact"),
+        (CAPABILITY_LEDGER, "complete over finite Bool/BV domains"),
+        (ROOT / "README.md", "Some conversions remain constant-only"),
+        (ROOT / "README.md", "parametric declarations are rejected"),
+    )
+    for path, marker in advanced_theory_markers:
+        text = " ".join(path.read_text(encoding="utf-8").split())
+        if marker not in text:
+            failures.append(
+                f"{path.relative_to(ROOT)}: missing advanced-theory boundary marker "
+                f"{marker!r}"
+            )
+
     for path in CURRENT_SOLVER_COMMAND_DOCS:
         for line_number, line in enumerate(
             path.read_text(encoding="utf-8").splitlines(), start=1
@@ -1585,6 +1608,7 @@ def main() -> int:
         "|research_high_assurance_unsat=resolved"
         "|theory_combination=online_cdclt_with_guarded_fallback"
         "|cas_assurance=local_route_specific"
+        "|advanced_theories=route_specific_incomplete"
         "|strings_status=sound_incomplete"
         "|strings_default_bound=12"
         "|strings_ladder_max=48"

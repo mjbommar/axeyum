@@ -920,7 +920,8 @@ pub const CAPABILITIES: &[Capability] = &[
                   from a witness sub-solve to synthesize a SYMBOLIC instantiation point (e.g. a witness \
                   symbolic in another variable, or a non-unit-coefficient witness the ±1 probe misses)",
         assurance: Assurance::SoundIncomplete,
-        evidence: "complete over finite domains; otherwise sound refutation by instantiation \
+        evidence: "complete over finite Bool/BV domains, with separate guarded-finite Int and \
+                   single-variable Real decision slices; otherwise sound refutation by instantiation \
                    (every instance body[x:=t] is entailed by ∀x.body for ANY ground t, so a ground UNSAT \
                    transfers; MBP/the sub-solve only CHOOSE a useful t — a bad choice adds a redundant-but-\
                    true instance, never an unsound one; SAT/no-progress is unknown-safe). E-matching is \

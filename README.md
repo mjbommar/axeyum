@@ -75,12 +75,15 @@ the per-layer authority:
   Boolean structure uses online CDCL(T); `QF_UFLRA` and `QF_UFLIA` combine
   EUF with arithmetic by model-based equality sharing, with eager Ackermann
   fallback after an online `unknown`.
-- **Floating point** (QF_FP) — IEEE 754 arithmetic for **F16/F32/F64/F128** and
-  ML formats, differentially validated against native `f32`/`f64` and
-  `rustc_apfloat`.
-- **Datatypes** (algebraic, recursive), **nonlinear** arithmetic (QF_NRA/NIA,
-  sound-incomplete), **quantifiers** (finite-domain complete + E-matching/MBQI),
-  and **strings / sequences** (`axeyum-strings`, the cvc5 normal-form procedure;
+- **Floating point** (QF_FP) — IEEE 754 circuit builders for
+  **F16/F32/F64/F128** and ML formats, differentially validated against native
+  `f32`/`f64` and `rustc_apfloat`. Some conversions remain constant-only, and
+  an UNSAT proof is modulo the trusted FP-to-circuit reduction.
+- **Datatypes** (non-parametric algebraic and recursive; parametric declarations
+  are rejected), **nonlinear** arithmetic (QF_NRA/NIA, sound-incomplete in
+  general), **quantifiers** (complete finite Bool/BV expansion plus selected
+  guarded Int/Real decisions, otherwise E-matching/MBQI/targeted CEGQI), and
+  **strings / sequences** (`axeyum-strings`, the cvc5 normal-form procedure;
   bounded QF_S is BV-lowered today).
 
 **Where Z3/cvc5 fit:** they are the differential oracle and the parity yardstick,
