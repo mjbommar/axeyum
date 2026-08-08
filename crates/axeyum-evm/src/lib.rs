@@ -2,14 +2,16 @@
 //!
 //! Symbolically execute raw EVM runtime bytecode over symbolic calldata to find
 //! arithmetic-overflow / assertion-violation (`REVERT`/`INVALID`/`Panic(0x11)`)
-//! bugs, emitting a **replayable calldata witness** on a bug and a re-checked
-//! (Lean-checkable, when in fragment) **no-bug certificate** when a function is
-//! proven safe up to a bound.
+//! bugs, emitting a **replayable calldata witness** on a bug or
+//! [`Verdict::SafeUpToBound`] after complete bounded exploration. The safe
+//! verdict's [`EvidenceReport`] is best-effort and optional; this crate does not
+//! reconstruct it to a Lean module.
 //!
 //! The decidable EVM core is `QF_BV`/`QF_ABV` — axeyum's strongest fragments:
-//! 256-bit words = `BV256`, byte memory + word storage, keccak / external `CALL` /
-//! gas are **havoc'd** to a sound `Unknown` (never wrong-pruned, exactly as
-//! halmos/hevm defer). Built on the `SymbolicExecutor` path explorer.
+//! 256-bit words = `BV256`, byte memory + word storage, with selected witnessed
+//! models for keccak, environment values, external calls, and return data.
+//! Unsupported or unresolved shapes remain a sound `Unknown`, never a silently
+//! safe path. Built on the `SymbolicExecutor` path explorer.
 //!
 //! ## Soundness discipline (DISAGREE = 0)
 //!
@@ -167,12 +169,15 @@ pub enum Verdict {
     SafeUpToBound {
         /// A re-checked safety certificate, when the safety query lay in a
         /// fragment `produce_evidence` could certify (boxed: an
-        /// [`EvidenceReport`] is large relative to the other variant).
+        /// [`EvidenceReport`] is large relative to the other variant). This is
+        /// solver evidence, not a Lean module; `None` does not change the
+        /// bounded verdict but records the missing packaged certificate.
         evidence: Option<Box<EvidenceReport>>,
     },
-    /// No bug was found, but some explored path ended in `Unknown` (a havoc'd
-    /// keccak/CALL/gas op, an unresolved symbolic offset, or a solver limit) — so
-    /// the absence of a finding is **not** a soundness claim. Honest `unknown`.
+    /// No bug was found, but some explored path ended in `Unknown` (an
+    /// unsupported operation shape, an unresolved symbolic offset, or a solver
+    /// limit) — so the absence of a finding is **not** a soundness claim. Honest
+    /// `unknown`.
     InconclusiveDueToUnknown,
 }
 

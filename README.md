@@ -226,11 +226,15 @@ counterexample, or an honest `Inconclusive` (never a wrong `Safe`).
 - **`axeyum-verify`** — a `#[axeyum::verify]` proc-macro that symbolically
   bounded-checks a Rust function (over a whitelisted subset) for panics / integer
   overflow / `unwrap` failures / assertion violations, emitting a **runnable
-  failing `#[test]`** or a re-checked bounded-verified certificate. Anything
-  outside the subset is a clean compile error, never silently mis-modeled.
+  failing `#[test]`** for a reproduced counterexample or bounded `Verified`.
+  Certificate and Lean-module presence are explicit fields; the warm loop route
+  currently returns a decision without a packaged certificate. Anything outside
+  the macro's source subset is a clean compile error, never silently mis-modeled.
 - **`axeyum-evm`** — an EVM bytecode symbolic bug-hunter over symbolic calldata:
   a replayable calldata witness on a bug (re-checked by concrete re-execution),
-  or a Lean-checkable no-bug certificate when a function is proven safe to a bound.
+  or `SafeUpToBound` after complete bounded exploration. A supported safety
+  query may attach a re-checked `EvidenceReport`; that field is optional and is
+  not a Lean reconstruction.
 - **`axeyum-property`** — a typed prove-or-counterexample SDK over Axeyum evidence
   and model replay.
 
@@ -298,7 +302,7 @@ by use (each is accepted in an ADR).
 | [`axeyum-lean-import`](crates/axeyum-lean-import) | Fail-closed official `lean4export` 3.1 reader; supported declarations enter only through the independent kernel's checked gates. |
 | [`axeyum-property`](crates/axeyum-property) (+ [`-macros`](crates/axeyum-property-macros)) | Typed prove-or-counterexample SDK over Axeyum evidence and model replay. |
 | [`axeyum-verify`](crates/axeyum-verify) (+ [`-macros`](crates/axeyum-verify-macros)) | `#[axeyum::verify]` bounded Rust verifier — panics/overflow/`unwrap`/assertions → failing test or certificate. |
-| [`axeyum-evm`](crates/axeyum-evm) | EVM bytecode symbolic bug-hunter with replayable calldata witnesses and no-bug certificates. |
+| [`axeyum-evm`](crates/axeyum-evm) | EVM bytecode symbolic bug-hunter with replayable calldata witnesses, bounded-safe verdicts, and optional re-checked evidence. |
 | [`axeyum-wasm`](crates/axeyum-wasm) | WebAssembly binding — the browser playground engine. |
 
 **Tooling & corpora**

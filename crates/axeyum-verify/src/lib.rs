@@ -2,9 +2,11 @@
 //!
 //! A `#[axeyum::verify]` proc-macro that symbolically bounded-checks a Rust
 //! function for panics / integer overflow / `unwrap` failures / assertion
-//! violations, emitting either a runnable failing `#[test]` (a concrete
-//! reproducing input) or a bounded-verified certificate. Built on the
-//! [`axeyum_property`] SDK + [`axeyum_solver`].
+//! violations, emitting a runnable failing `#[test]` for a concrete reproducing
+//! input or a bounded [`verify::Verdict::Verified`] result. The verdict records
+//! certificate and Lean-module availability explicitly; some valid bounded
+//! routes are decision-only. Built on the [`axeyum_property`] SDK +
+//! [`axeyum_solver`].
 //!
 //! ## Pipeline
 //!

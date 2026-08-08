@@ -86,6 +86,10 @@ CNF_LRAT = ROOT / "crates" / "axeyum-cnf" / "src" / "lrat.rs"
 CNF_README = ROOT / "crates" / "axeyum-cnf" / "README.md"
 CAS_README = ROOT / "crates" / "axeyum-cas" / "README.md"
 CAS_LIB = ROOT / "crates" / "axeyum-cas" / "src" / "lib.rs"
+EVM_README = ROOT / "crates" / "axeyum-evm" / "README.md"
+EVM_LIB = ROOT / "crates" / "axeyum-evm" / "src" / "lib.rs"
+VERIFY_README = ROOT / "crates" / "axeyum-verify" / "README.md"
+VERIFY_LIB = ROOT / "crates" / "axeyum-verify" / "src" / "lib.rs"
 BOOLEAN_CNF_COOKBOOK = (
     ROOT / "docs" / "proof-cookbook" / "recipes" / "boolean-cnf-lrat.md"
 )
@@ -998,6 +1002,26 @@ def main() -> int:
                 f"{marker!r}"
             )
 
+    consumer_assurance_markers = (
+        (EVM_LIB, "evidence, not a Lean module"),
+        (EVM_LIB, "Unsupported or unresolved shapes remain a sound `Unknown`"),
+        (EVM_README, "`Option<EvidenceReport>`"),
+        (EVM_README, "does not reconstruct the safety claim to Lean"),
+        (VERIFY_LIB, "certificate and Lean-module availability explicitly"),
+        (VERIFY_README, "can legitimately return `certified = false`"),
+        (VERIFY_README, "direct runtime `Program` callers receive `Unknown`"),
+        (CONSUMER_README, "EVM crate does not currently reconstruct"),
+        (ROOT / "README.md", "that field is optional and is not a Lean reconstruction"),
+        (ROOT / "README.md", "warm loop route currently returns a decision"),
+    )
+    for path, marker in consumer_assurance_markers:
+        text = " ".join(path.read_text(encoding="utf-8").split())
+        if marker not in text:
+            failures.append(
+                f"{path.relative_to(ROOT)}: missing consumer assurance marker "
+                f"{marker!r}"
+            )
+
     for path in CURRENT_SOLVER_COMMAND_DOCS:
         for line_number, line in enumerate(
             path.read_text(encoding="utf-8").splitlines(), start=1
@@ -1609,6 +1633,7 @@ def main() -> int:
         "|theory_combination=online_cdclt_with_guarded_fallback"
         "|cas_assurance=local_route_specific"
         "|advanced_theories=route_specific_incomplete"
+        "|consumer_assurance=explicit_optional_certificates"
         "|strings_status=sound_incomplete"
         "|strings_default_bound=12"
         "|strings_ladder_max=48"
