@@ -6,8 +6,12 @@ aggregates them. **The soundness floor across the whole track is `DISAGREE = 0`.
 
 Regenerate the per-app numbers:
 `cargo run -p axeyum-evm --example measure_evm` ·
-`cargo run -p axeyum-verify --example measure_verify` · (property: the crate's
-generated corpus test).
+`cargo run -p axeyum-verify --example measure_verify` ·
+`cargo run -p axeyum-property --example property_corpus_scoreboard -- markdown
+docs/consumer-track/property/SCOREBOARD.md` (and repeat with `json` plus the
+`corpus.json` path). The EVM and verifier commands rewrite their tracked
+scoreboard and corpus automatically; see the [consumer front door](README.md)
+before running them.
 
 | App | Crate | Cases | Bugs found | Proved safe | Unknown | DISAGREE | Lean-cert | Scoreboard |
 |---|---|---:|---:|---:|---:|---:|---|---|

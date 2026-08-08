@@ -5,9 +5,10 @@ This is intentionally a bounded guard, not a natural-language fact checker. It
 owns the claims that have already rotted repeatedly: the generated division
 totals, exact dominance-audit denominators, the paired 20-second p4dfa control,
 the reviewer-facing project-state summary, the checked-in Cargo-example
-inventory, and the source/test-backed categorical-engine maturity
-classification. New guarded numerical claims should be added only when they
-have one canonical, machine-readable artifact; the categorical markers guard
+inventory, the consumer-application corpus totals, and the source/test-backed
+categorical-engine maturity classification. New guarded numerical claims
+should be added only when they have one canonical, machine-readable artifact;
+the categorical markers guard
 the dated audit and the live roadmap language that points to it.
 """
 
@@ -33,6 +34,8 @@ BENCHMARK_GUIDE = ROOT / "docs" / "user-guide" / "benchmarks.md"
 PARITY_LEDGER = ROOT / "bench-results" / "PARITY.md"
 EXAMPLE_CATALOG = ROOT / "docs" / "reference" / "examples.md"
 DOCUMENTATION_PLAN = ROOT / "docs" / "documentation-plan.md"
+CONSUMER_README = ROOT / "docs" / "consumer-track" / "README.md"
+CONSUMER_SCOREBOARD = ROOT / "docs" / "consumer-track" / "SCOREBOARD.md"
 CATEGORICAL_AUDIT = (
     ROOT / "docs" / "plan" / "categorical-engine-depth-audit-2026-07-21.md"
 )
@@ -176,6 +179,65 @@ def latest_parity_rows() -> dict[str, tuple[str, str, str, str]]:
             field(r"^\| \*\*disagreements\*\* \| (?P<value>[^|]+) \|$"),
         )
     return rows
+
+
+def consumer_snapshot() -> dict[str, dict[str, int] | int]:
+    """Reconcile the public consumer totals from the three committed corpora."""
+
+    property_data = load_json(
+        ROOT / "docs" / "consumer-track" / "property" / "corpus.json"
+    )
+    property_summary = property_data["summary"]
+    evm_data = load_json(ROOT / "docs" / "consumer-track" / "evm" / "corpus.json")
+    verify_data = load_json(
+        ROOT / "docs" / "consumer-track" / "verify" / "corpus.json"
+    )
+    verify_outcomes: dict[str, int] = {}
+    for case in verify_data["cases"]:
+        outcome = case["outcome"]
+        verify_outcomes[outcome] = verify_outcomes.get(outcome, 0) + 1
+
+    apps = {
+        "property": {
+            "cases": int(property_summary["cases"]),
+            "bugs": int(property_summary["disproved"]),
+            "safe": int(property_summary["proved"]),
+            "unknown": int(property_summary["unknown"]),
+            "disagree": int(property_summary["disagree"]),
+        },
+        "evm": {
+            "cases": int(evm_data["total"]),
+            "bugs": int(evm_data["bug_found"]),
+            "safe": int(evm_data["safe_proved"]),
+            "unknown": int(evm_data["unknown"]),
+            "disagree": int(evm_data["disagree"]),
+        },
+        "verify": {
+            "cases": int(verify_data["total"]),
+            "bugs": verify_outcomes.get("bug-found", 0),
+            "safe": verify_outcomes.get("verified", 0),
+            "unknown": verify_outcomes.get("unknown", 0),
+            "disagree": int(verify_data["disagree"]),
+        },
+    }
+    if apps["property"]["cases"] != len(property_data["cases"]):
+        raise RuntimeError("property consumer total does not match its case inventory")
+    if apps["evm"]["cases"] != len(evm_data["cases"]):
+        raise RuntimeError("EVM consumer total does not match its case inventory")
+    if apps["verify"]["cases"] != sum(verify_outcomes.values()):
+        raise RuntimeError("verify consumer total does not match its case inventory")
+    for name, app in apps.items():
+        classified = app["bugs"] + app["safe"] + app["unknown"] + app["disagree"]
+        if app["cases"] != classified:
+            raise RuntimeError(
+                f"{name} consumer outcomes classify {classified} of {app['cases']} cases"
+            )
+
+    totals = {
+        field: sum(app[field] for app in apps.values())
+        for field in ("cases", "bugs", "safe", "unknown", "disagree")
+    }
+    return {**apps, **totals}
 
 
 def measured_snapshot() -> dict[str, int]:
@@ -363,6 +425,7 @@ def measured_snapshot() -> dict[str, int]:
 
 def main() -> int:
     snapshot = measured_snapshot()
+    consumers = consumer_snapshot()
     parity_rows = latest_parity_rows()
     failures: list[str] = []
 
@@ -569,6 +632,43 @@ def main() -> int:
             f"PLAN.md: missing current {example_count}-example inventory marker"
         )
 
+    consumer_text = " ".join(CONSUMER_README.read_text(encoding="utf-8").split())
+    consumer_markers = (
+        f"{consumers['property']['cases']} cases: {consumers['property']['safe']} proved, "
+        f"{consumers['property']['bugs']} disproved, {consumers['property']['unknown']} unknown",
+        f"{consumers['evm']['cases']} cases: {consumers['evm']['bugs']} bugs, "
+        f"{consumers['evm']['safe']} safe, {consumers['evm']['unknown']} unknown",
+        f"{consumers['verify']['cases']} cases: {consumers['verify']['bugs']} bugs, "
+        f"{consumers['verify']['safe']} verified, {consumers['verify']['unknown']} unknown",
+        f"**{consumers['cases']} cases, {consumers['bugs']} bugs/disproofs, "
+        f"{consumers['safe']} safe/proved results, {consumers['unknown']} unknown, "
+        f"and {consumers['disagree']} disagreements**",
+    )
+    for marker in consumer_markers:
+        if marker not in consumer_text:
+            failures.append(
+                f"{CONSUMER_README.relative_to(ROOT)}: missing current consumer marker "
+                f"{marker!r}"
+            )
+
+    consumer_scoreboard_text = CONSUMER_SCOREBOARD.read_text(encoding="utf-8")
+    consumer_total_row = (
+        f"| **Total** | — | **{consumers['cases']}** | **{consumers['bugs']}** | "
+        f"**{consumers['safe']}** | **{consumers['unknown']}** | "
+        f"**{consumers['disagree']}** | — | — |"
+    )
+    if consumer_total_row not in consumer_scoreboard_text:
+        failures.append(
+            f"{CONSUMER_SCOREBOARD.relative_to(ROOT)}: aggregate row must be "
+            f"{consumer_total_row!r}"
+        )
+    for path in (ROOT / "README.md", DOCUMENTATION_PLAN, ROOT / "PLAN.md"):
+        marker = f"{consumers['cases']}-case aggregate"
+        if marker not in path.read_text(encoding="utf-8"):
+            failures.append(
+                f"{path.relative_to(ROOT)}: missing current consumer marker {marker!r}"
+            )
+
     benchmark_text = BENCHMARK_GUIDE.read_text(encoding="utf-8")
     for marker in (
         f"{snapshot['scoreboard_file_occurrences']} file occurrences",
@@ -640,6 +740,13 @@ def main() -> int:
             )
 
     line = "|".join(f"{key}={value}" for key, value in snapshot.items())
+    line += (
+        f"|consumer_cases={consumers['cases']}"
+        f"|consumer_bugs={consumers['bugs']}"
+        f"|consumer_safe={consumers['safe']}"
+        f"|consumer_unknown={consumers['unknown']}"
+        f"|consumer_disagree={consumers['disagree']}"
+    )
     print(f"PARITY_DOCS|{line}")
     if failures:
         for failure in failures:

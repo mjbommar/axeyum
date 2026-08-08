@@ -1,5 +1,10 @@
 # Iteration 2 — research synthesis (2026-06-25)
 
+> **Historical selection research.** This records the API and competitor review
+> used to choose the applications; individual capability and status claims may
+> have been superseded. See the [consumer front door](README.md), current crate
+> READMEs, and root [PLAN.md](../../PLAN.md).
+
 Three opus research agents scoped the top candidates against the real SOTA tools
 and against axeyum's *actual, file-cited* API. **Headline: every candidate is
 tractable and not blocked on a missing solver capability.** The frontends are new

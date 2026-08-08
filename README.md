@@ -305,6 +305,9 @@ by use (each is accepted in an ADR).
 - [Runnable examples](docs/reference/examples.md) — all checked-in Cargo
   examples, separated into learning workflows, artifact generators, and
   maintainer diagnostics with their prerequisites.
+- [Consumer applications](docs/consumer-track/README.md) — the bounded-property
+  SDK, EVM bug-hunter, Rust verifier, their trust boundaries, and the current
+  48-case aggregate scoreboard.
 - [docs/research/](docs/research/README.md) — the research foundation, and
   [09-decisions/](docs/research/09-decisions/README.md), the ADRs.
 - [PLAN.md](PLAN.md) — the single current status, ordered roadmap, blockers,
@@ -315,6 +318,7 @@ by use (each is accepted in an ADR).
 |---|---|
 | **New to SAT/SMT/proofs** | [docs/learn/](docs/learn/README.md) |
 | **A user** | [docs/user-guide/](docs/user-guide/README.md) — run a query, read a model, [limitations](docs/user-guide/limitations.md) |
+| **Building or evaluating a verifier** | [docs/consumer-track/](docs/consumer-track/README.md) — property, EVM, and Rust application front doors plus measured evidence |
 | **Curious about internals** | [docs/internals/](docs/internals/README.md) — [architecture](docs/internals/architecture.md), trust boundary |
 | **Want to try it now** | [docs/playground/](docs/playground/README.md) — solve a query **in your browser** (WASM) |
 

@@ -1,5 +1,11 @@
 # axeyum-evm — PLAN
 
+> **Historical implementation plan (2026-06).** The phase text below records
+> the original build design; it is not the live project queue. Use the
+> [`axeyum-evm` README](../../../crates/axeyum-evm/README.md) for the current
+> surface, the [scoreboard](SCOREBOARD.md) for measured evidence, and root
+> [PLAN.md](../../../PLAN.md) for current priority.
+
 > **App A**, the flagship. A pure-Rust EVM bytecode **symbolic bug-hunter**: take
 > raw runtime bytecode + a tiny harness, symbolically execute it, and find
 > arithmetic-overflow / assertion-violation (REVERT/INVALID/`Panic(0x11)`) bugs

@@ -66,6 +66,14 @@
   - [Benchmarks](user-guide/benchmarks.md)
   - [Versioned corpus manifests](user-guide/corpus-manifests.md)
 
+# Consumer Applications
+
+- [Consumer applications](consumer-track/README.md)
+  - [Aggregate scoreboard](consumer-track/SCOREBOARD.md)
+  - [Bounded-property scoreboard](consumer-track/property/SCOREBOARD.md)
+  - [EVM bug-hunter scoreboard](consumer-track/evm/SCOREBOARD.md)
+  - [Bounded Rust verifier scoreboard](consumer-track/verify/SCOREBOARD.md)
+
 # Reference
 
 - [Reference](reference/README.md)

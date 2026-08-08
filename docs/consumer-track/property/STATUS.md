@@ -1,5 +1,11 @@
 # axeyum-property STATUS.md
 
+> **Historical implementation journal (2026-06).** This file preserves dated
+> validation evidence; it is not a live status authority. Use the
+> [`axeyum-property` README](../../../crates/axeyum-property/README.md) for the
+> current surface, the [scoreboard](SCOREBOARD.md) for measured evidence, and
+> root [PLAN.md](../../../PLAN.md) for current priority.
+
 ## Current focus
 
 - **2026-06-27 — Kani-style assume/assert counterexample comparison landed.**

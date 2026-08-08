@@ -22,8 +22,12 @@ The live indexes in [`docs/README.md`](README.md),
 [`learn/README.md`](learn/README.md),
 [`user-guide/README.md`](user-guide/README.md), and
 [`reference/README.md`](reference/README.md) are authoritative for the public
-guide. The curriculum, review, plan, and research archives now have explicit
-front doors that separate current authorities from dated records.
+guide. The consumer-application front door now routes the property SDK, EVM
+bug-hunter, and bounded Rust verifier to their current crate contracts and
+48-case aggregate measurement, while labeling the per-app plans and status
+files as historical journals. The curriculum, review, plan, and research
+archives now have explicit front doors that separate current authorities from
+dated records.
 
 This plan describes how to reshape Axeyum's public documentation so it serves
 four audiences without diluting the research and roadmap material already in the
