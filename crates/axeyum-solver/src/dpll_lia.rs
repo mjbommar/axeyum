@@ -714,6 +714,14 @@ pub(crate) struct IncrementalArithDpll {
 
 impl IncrementalArithDpll {
     pub(crate) fn new(arena: &mut TermArena, assertions: &[TermId]) -> Result<Self, SolverError> {
+        Self::new_with_deadline(arena, assertions, None)
+    }
+
+    fn new_with_deadline(
+        arena: &mut TermArena,
+        assertions: &[TermId],
+        deadline: Option<Instant>,
+    ) -> Result<Self, SolverError> {
         if contains_smtlib_unspecified_arith(arena, assertions) {
             return Err(SolverError::Unsupported(
                 "lazy arithmetic: integer/real division or modulo with a divisor \
@@ -723,7 +731,10 @@ impl IncrementalArithDpll {
         }
 
         let mut solver = Self {
-            ctx: ArithAbstractor::default(),
+            ctx: ArithAbstractor {
+                deadline,
+                ..ArithAbstractor::default()
+            },
             skeleton: Vec::with_capacity(assertions.len()),
             prop_solver: BoolSkeletonSolver::new(),
             initial_clauses: HashSet::new(),
@@ -736,8 +747,10 @@ impl IncrementalArithDpll {
             solve_calls: 0,
         };
         solver.assert_all(arena, assertions)?;
-        solver.refresh_initial_lemmas(arena)?;
-        solver.initial_lemma_count = solver.lemmas.len();
+        if !solver.ctx.timed_out {
+            solver.refresh_initial_lemmas(arena)?;
+            solver.initial_lemma_count = solver.lemmas.len();
+        }
         Ok(solver)
     }
 
@@ -764,12 +777,18 @@ impl IncrementalArithDpll {
     ) -> Result<(), SolverError> {
         for &assertion in assertions {
             self.assert_one(arena, assertion)?;
+            if self.ctx.timed_out {
+                break;
+            }
         }
         Ok(())
     }
 
     fn assert_one(&mut self, arena: &mut TermArena, assertion: TermId) -> Result<(), SolverError> {
         let skeleton = self.ctx.abstract_term(arena, assertion)?;
+        if self.ctx.timed_out {
+            return Ok(());
+        }
         self.prop_solver.assert(arena, skeleton)?;
         self.skeleton.push(skeleton);
         Ok(())
@@ -1061,8 +1080,27 @@ fn run_arith_dpll(
     assertions: &[TermId],
     config: &SolverConfig,
 ) -> Result<ArithRun, SolverError> {
-    let mut solver = IncrementalArithDpll::new(arena, assertions)?;
-    let result = solver.solve(arena, assertions, config)?;
+    let deadline = config.timeout.and_then(|t| Instant::now().checked_add(t));
+    let mut solver = IncrementalArithDpll::new_with_deadline(arena, assertions, deadline)?;
+    if solver.ctx.timed_out {
+        let reason = UnknownReason {
+            kind: UnknownKind::Timeout,
+            detail: format!(
+                "lazy linear arithmetic exhausted the configured timeout while building the \
+                 Boolean abstraction (atoms={}, cnf_vars={}, initial_clauses={}, \
+                 blocking_lemmas={}, {}, {})",
+                solver.ctx.atoms.len(),
+                solver.prop_solver.next_var,
+                solver.initial_clauses.len(),
+                solver.blocking.len(),
+                solver.core_stats.summary(),
+                solver.support_stats.summary(),
+            ),
+        };
+        return Ok(solver.into_run(CheckResult::Unknown(reason)));
+    }
+    let solve_config = config_with_deadline(config, deadline);
+    let result = solver.solve(arena, assertions, &solve_config)?;
     Ok(solver.into_run(result))
 }
 
@@ -3268,6 +3306,8 @@ struct ArithAbstractor {
     props: HashSet<SymbolId>,
     atoms: Vec<ArithAtom>,
     fresh_counter: usize,
+    deadline: Option<Instant>,
+    timed_out: bool,
 }
 
 impl ArithAbstractor {
@@ -3280,6 +3320,10 @@ impl ArithAbstractor {
         arena: &mut TermArena,
         term: TermId,
     ) -> Result<TermId, SolverError> {
+        if self.deadline.is_some_and(|deadline| Instant::now() >= deadline) {
+            self.timed_out = true;
+            return Ok(arena.bool_const(false));
+        }
         let node = arena.node(term).clone();
         match node {
             TermNode::BoolConst(_) => Ok(term),
@@ -3348,12 +3392,19 @@ impl ArithAbstractor {
         arena: &mut TermArena,
         args: &[TermId],
     ) -> Result<TermId, SolverError> {
-        if int_bound_and_is_contradiction(arena, args) {
+        let mut flat = Vec::new();
+        for &arg in args {
+            flatten_bool_and(arena, arg, &mut flat);
+        }
+        if int_bound_and_is_contradiction(arena, &flat) {
             return Ok(arena.bool_const(false));
         }
-        let mut terms = Vec::with_capacity(args.len());
-        for &arg in args {
+        let mut terms = Vec::with_capacity(flat.len());
+        for arg in flat {
             let term = self.abstract_term(arena, arg)?;
+            if self.timed_out {
+                return Ok(term);
+            }
             if matches!(bool_const_value(arena, term), Some(false)) {
                 return Ok(term);
             }
@@ -3367,12 +3418,19 @@ impl ArithAbstractor {
         arena: &mut TermArena,
         args: &[TermId],
     ) -> Result<TermId, SolverError> {
-        if int_bound_or_is_tautology(arena, args) {
+        let mut flat = Vec::new();
+        for &arg in args {
+            flatten_bool_or(arena, arg, &mut flat);
+        }
+        if int_bound_or_is_tautology(arena, &flat) {
             return Ok(arena.bool_const(true));
         }
-        let mut terms = Vec::with_capacity(args.len());
-        for &arg in args {
+        let mut terms = Vec::with_capacity(flat.len());
+        for arg in flat {
             let term = self.abstract_term(arena, arg)?;
+            if self.timed_out {
+                return Ok(term);
+            }
             if matches!(bool_const_value(arena, term), Some(true)) {
                 return Ok(term);
             }
@@ -3616,30 +3674,36 @@ fn simplify_bool_or(arena: &mut TermArena, terms: Vec<TermId>) -> Result<TermId,
 }
 
 fn flatten_bool_and(arena: &TermArena, term: TermId, out: &mut Vec<TermId>) {
-    if let TermNode::App {
-        op: Op::BoolAnd,
-        args,
-    } = arena.node(term)
-    {
-        for &arg in args {
-            flatten_bool_and(arena, arg, out);
+    let mut work = vec![term];
+    while let Some(current) = work.pop() {
+        if let TermNode::App {
+            op: Op::BoolAnd,
+            args,
+        } = arena.node(current)
+        {
+            for &arg in args.iter().rev() {
+                work.push(arg);
+            }
+        } else {
+            out.push(current);
         }
-    } else {
-        out.push(term);
     }
 }
 
 fn flatten_bool_or(arena: &TermArena, term: TermId, out: &mut Vec<TermId>) {
-    if let TermNode::App {
-        op: Op::BoolOr,
-        args,
-    } = arena.node(term)
-    {
-        for &arg in args {
-            flatten_bool_or(arena, arg, out);
+    let mut work = vec![term];
+    while let Some(current) = work.pop() {
+        if let TermNode::App {
+            op: Op::BoolOr,
+            args,
+        } = arena.node(current)
+        {
+            for &arg in args.iter().rev() {
+                work.push(arg);
+            }
+        } else {
+            out.push(current);
         }
-    } else {
-        out.push(term);
     }
 }
 
@@ -3803,6 +3867,44 @@ fn is_known_nonzero_real(arena: &TermArena, term: TermId) -> bool {
 mod tests {
     use super::*;
     use crate::lra::check_with_lia_simplex;
+
+    #[test]
+    fn abstractor_survives_a_deep_boolean_spine() {
+        const DEPTH: usize = 100_000;
+        let mut arena = TermArena::new();
+        let leaf = arena.bool_const(true);
+        let mut root = leaf;
+        for _ in 0..DEPTH {
+            root = arena.and(root, leaf).expect("Boolean conjunction");
+        }
+
+        let mut ctx = ArithAbstractor::default();
+        let abstracted = ctx
+            .abstract_term(&mut arena, root)
+            .expect("deep Boolean abstraction");
+        assert!(matches!(arena.node(abstracted), TermNode::BoolConst(true)));
+        assert!(!ctx.timed_out);
+        assert!(ctx.atoms.is_empty());
+    }
+
+    #[test]
+    fn abstractor_honors_an_expired_deadline() {
+        let mut arena = TermArena::new();
+        let leaf = arena.bool_const(true);
+        let expired = Instant::now()
+            .checked_sub(Duration::from_secs(1))
+            .expect("representable prior instant");
+        let mut ctx = ArithAbstractor {
+            deadline: Some(expired),
+            ..ArithAbstractor::default()
+        };
+
+        let _ = ctx
+            .abstract_term(&mut arena, leaf)
+            .expect("deadline-aware abstraction");
+        assert!(ctx.timed_out);
+        assert!(ctx.atoms.is_empty());
+    }
 
     #[test]
     fn abstractor_reuses_reversed_order_atoms() {

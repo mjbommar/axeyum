@@ -7,9 +7,9 @@ first and update it before ending a project-level work session.
 - Last consolidated: **2026-08-08**
 - Integrated baseline merged into the active topic:
   `8ccae9c43ce393762ce6cc3b38d21c2dbb982507`
-- Active pushed repair: `11deff4eeceb87e5a635c4ccc6b6ed32190ebd8a`;
-  a joint large-arithmetic-skeleton pre-SAT repair exposed by the next QF_LRA
-  restart is focused-green but not yet committed
+- Active pushed repair: `d599b682ff8567bcee699856d407baa9990d9160`;
+  a deep QF_IDL Boolean-spine/deadline repair exposed by the next sequential
+  capture is focused-green but not yet committed
 - Latest full-gate attempt: `b07be65aab46790c1473994dfd8fed6f72005817`
   passed the fresh uninterrupted frozen `just check` with exit 0, including the
   repaired generated gap-ownership and independent parity-doc checks
@@ -33,40 +33,25 @@ and `STATUS.md` blob `0f169eddfabb190f45428090ffb057e8289bf355`.
 
 ## Status
 
-**Live A5 checkpoint (2026-08-08).** The first preregistered QF_LRA capture
-failed closed after 172/200 rows:
-`sal/tgc/tgc_io-safe-20.smt2` exhausted the external 8 GiB address-space cap and
-aborted with `SIGABRT`. QF_IDL and QF_RDL were not started, and the partial
-stream is not credited. The deterministic wide-core repair at `9d7a70a65`,
-merged with current `origin/main` by `cb7b677cc`, now returns typed
-`Unknown(ResourceLimit)` in 6.08 seconds at about 1.78 GiB peak RSS. Focused
-strict Clippy, 1,079 solver-library tests, deep-input and both LRA differential
-gates are green. Exact pushed commit `57e85608a` then passed all runtime and
-proof stages of a frozen `just check`, including the repaired 1,079-test solver
-library, before a latent mismatch between the gap-ownership manifest and its
-correct non-vacuous generated command failed the final parity-doc check. The
-manifest-source repair at `b07be65aa` then passed one fresh uninterrupted frozen
-`just check` with exit 0: all workspace tests/doctests, the 1,079-test solver
-library, retained differential suites with zero disagreement, 9/9 frontier
-tests, both order-255 CAS proofs, warning-denied rustdoc, Glaurung QF_BV,
-foundational resources, SMT-COMP/Lean process-free contracts, the formerly
-failing generated-doc checks, plan authority, and links were green. The next
-row-1 QF_LRA run completed all 200 rows without stderr or process failure but
-failed atomic validation on `sal/gasburner/gasburner-prop3-12.smt2`: a valid
-Real-valued `ite` with a bare integer-zero branch was rejected as mixed-sort.
-The shared parser-boundary repair at pushed `11deff4ee` coerces both numeric
-branches to their common Real context; isolated replay returns typed budget
-`unknown`, and all 230 SMT-LIB integration tests plus strict Clippy pass. The
-following row-1 restart reached 168 rows, then exposed a distinct abort on
-`sal/pursuit/pursuit-safety-16.smt2`. Its 1,447-atom/4,733-variable Boolean
-skeleton crossed 8 GiB on the third warm SAT solve with only two blocking
-clauses, before deadline polling. A joint deterministic pre-SAT boundary now
-declines only when atoms exceed 1,024 and CNF variables exceed 4,096. Isolated
-pursuit, gasburner, and original tgc controls all return typed budget unknown in
-6.11 seconds total at about 610 MiB peak RSS; both load-bearing tests and strict
-Clippy, all 1,080 solver-library tests, deep-input 16/16, QF_LRA differential
-5/5, and simplex fallback differential 1/1 are green. Commit/push this distinct
-repair, then restart the complete row-1 census. See the
+**Live A5 checkpoint (2026-08-08).** Three fail-closed QF_LRA restarts exposed
+wide-core memory growth, a valid mixed-numeric `ite` parser gap, and a large
+first-solve Boolean skeleton. Their pushed repairs are `9d7a70a65`,
+`11deff4ee`, and `d599b682f`. The next clean capture completed 200/200 rows in
+1,012,663 ms with exit 0, zero stderr, and all former abort rows returning typed
+budget `unknown`. The latest comprehensive gate remains the exact
+`b07be65aa` frozen `just check` exit 0; it predates the two newest code repairs.
+
+QF_IDL then failed closed after 58/200 rows on a 696,997-byte historically
+unsolved BlockedNQueens case; QF_RDL was not started. The retained failure SHA is
+`b723502e4982c082d3c5556e75d3172284ee99f789b74d86441d383a909bdc7f`.
+Backtraces proved two native-recursion defects: 18,036 integer-collector frames,
+then more than 15,000 DPLL abstractor frames with an unhonored deadline. The
+focused candidate makes both Boolean-spine walks iterative and charges DPLL
+construction to the remaining deadline. The trigger now returns typed budget
+`unknown` in 21.23 seconds at about 83 MiB; `lpsat-goal-18` remains `unsat`.
+Strict Clippy, all 1,084 solver-library tests, deep-input 16/16, LRA integration
+20/20, and both LRA differentials are green with zero disagreement.
+The uncommitted, not-fully-gated change requires a row-1 census restart. See the
 [failure/repair record](docs/plan/qf-linear-a5-wide-core-memory-repair-2026-08-08.md).
 
 Axeyum is a working research-grade automated-reasoning stack with a pure-Rust
@@ -77,7 +62,7 @@ or a replacement for the Lean system.
 
 Earlier A3/A4 integration and gate history remains in dated result notes and
 Git. The latest comprehensive gate is the `b07be65aa` checkpoint above;
-focused parser tests do not extend that evidence to the new uncommitted change. Hosted CI/docs
+focused repair gates do not extend that evidence to the new uncommitted change. Hosted CI/docs
 runs `31192792245` and `31192792512` remain terminal green for their recorded
 baseline, not for the current candidate. No retained solver or measurement
 process is running.
@@ -335,12 +320,14 @@ here as closed evidence boundaries. A3 remains incomplete, but all currently
 preregistered bounded mechanisms are closed negatively. A4 has now also yielded;
 A5 is the first active item.
 
-**Immediate action.** Commit and push the focused-green joint large-skeleton
-pre-SAT repair with the third exact failure record, verify the pushed object, rebuild
-the release census binary, and restart QF_LRA from row 1 under the unchanged
-24-second/8-GiB capture envelope. The failed 172-row abort stream, the
-complete-but-parse-invalid 200-row stream, and the failed 168-row pursuit abort
-stream all remain non-credited. Stop
+**Immediate action.** Commit and push the focused-green deep Boolean-spine and
+deadline repair with the first exact QF_IDL failure record, verify the pushed
+object, rebuild the release census binary, and restart QF_LRA from row 1 under
+the unchanged 24-second/8-GiB capture envelope. The failed 172-row abort stream,
+the complete-but-parse-invalid 200-row stream, the failed 168-row pursuit abort,
+and the failed 58-row QF_IDL abort all remain non-credited. The valid 200-row
+QF_LRA capture at `d599b682f` proves the previous repair but predates the new
+solver change and cannot stand in for the final three-division census. Stop
 on any historical-decision loss, wrong verdict, stderr, malformed trace, or
 process failure. Only valid atomic QF_LRA success metadata authorizes sequential
 QF_IDL and QF_RDL capture and the preregistered derivation. No score gain is

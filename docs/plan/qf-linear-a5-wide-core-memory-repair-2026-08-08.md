@@ -1,4 +1,4 @@
-# QF linear A5 wide-core memory repair — 2026-08-08
+# QF linear A5 process-abort repairs — 2026-08-08
 
 ## Verdict
 
@@ -14,6 +14,11 @@ returns `Unknown(ResourceLimit)` before the next warm SAT round. This is a
 process-survival repair, not a newly credited A5 gain: the row was historically
 `unknown`, and the complete three-division census must restart from row 1 only
 after the repaired exact commit is clean, pushed, and comprehensively gated.
+
+The same fail-closed census subsequently exposed two independent abort classes:
+a large first-solve propositional skeleton in QF_LRA and two native-recursion
+walkers over an 18,000-deep QF_IDL Boolean conjunction. This record retains the
+entire causal sequence; none of the failed partial streams is credited.
 
 ## Failure evidence
 
@@ -148,11 +153,73 @@ deep-input no-abort 16/16, QF_LRA differential fuzz 5/5 with zero
 disagreements, and simplex LRA fallback differential 1/1 in 108.55 seconds are
 green.
 
+The repair and third failure record were committed and pushed as `d599b682f`.
+
+## Fourth QF_LRA capture: atomic success
+
+The next row-1 QF_LRA capture at exact clean pushed `d599b682f` completed all
+200 rows in 1,012,663 ms with exit 0 and zero stderr. The capture binary was
+11,729,024 bytes with SHA-256
+`5291957719feff09211c970ae05fc2d2ae14bf0e261c73bcfcf34330e1ad3e1e`.
+The JSONL SHA-256 is
+`540252a4d846a96825c46d50afd6d925b22faa9e858caa79c2b7577754029b7f`;
+the success metadata SHA-256 is
+`c5591ab00b33af105ef76eac390538450423400fea22e00fc1feea233e4bfcef`.
+The formerly dangerous rows are all typed `unknown`: gasburner reaches the
+8,192-wide-core boundary, while pursuit and tgc decline at the joint pre-SAT
+skeleton boundary. This valid capture authorized the sequential QF_IDL start.
+
+## First QF_IDL capture: deep Boolean-spine abort
+
+QF_IDL then failed closed after 58/200 rows and 1,038,031 ms. Row 59,
+`asp/BlockedNQueens/156.48.1960.36.1721259656.dat.smt2`, is a 696,997-byte,
+historically unsolved SAT benchmark. It aborted with `SIGABRT`; QF_RDL was not
+started. The exact non-credited record is
+[`QF_IDL-attempt-001.failure.json`](evidence/qf-linear-a5/failures/QF_IDL-attempt-001.failure.json),
+SHA-256 `b723502e4982c082d3c5556e75d3172284ee99f789b74d86441d383a909bdc7f`.
+
+Isolated reproduction under the unchanged 24-second/8-GiB protocol aborted in
+22.13 seconds at only 67,256 KiB peak RSS with a Rust main-thread stack
+overflow. A native backtrace contained 18,036 consecutive
+`lra::IntCollector::collect` frames before `lia_simplex_capped`. Raising the
+diagnostic stack to 64 MiB merely ran beyond 69.9 seconds without honoring the
+deadline. After making that collector iterative, a live debugger sample exposed
+a second independent recursive spine: more than 15,000
+`dpll_lia::ArithAbstractor::abstract_term` frames while building the fallback
+Boolean abstraction. The partial repair prevented the first abort but still ran
+beyond 84 seconds, so it was not accepted.
+
+The complete candidate repair makes both walkers iterative, preserves
+left-to-right variable/constraint/atom order, makes the local Boolean `and`/`or`
+flatteners iterative, polls the integer-collector deadline, and threads the
+remaining DPLL budget through Boolean-abstraction construction. Construction
+time is charged against the same fallback solve deadline; an expired build
+returns typed `Unknown(Timeout)` with normal support statistics rather than
+entering SAT.
+
+The exact row now exits 0 in 21.23 seconds at 85,056 KiB peak RSS. Its trace is
+typed budget `unknown`: the DL probe exhausts its bounded share, conjunctive LIA
+declines the Boolean shape as unsupported, and the iterative DPLL abstraction
+reaches the existing joint guard at 8,413 arithmetic atoms and 37,522 CNF
+variables before the first SAT round. The retained `lpsat-goal-18` QF_IDL
+control remains `unsat`. In one five-row/8-GiB process, the repaired trigger,
+that UNSAT control, gasburner, pursuit, and tgc all returned safely in 49.96
+seconds at 636,080 KiB peak RSS.
+
+Focused candidate evidence is green: the two 100,000-deep load-bearing walkers
+and both expired-deadline tests; strict all-target/all-feature solver Clippy;
+all 1,084 solver-library tests; deep-input no-abort 16/16; LRA integration
+20/20; QF_LRA differential 5/5 over 1,500 cases with zero disagreement; and
+simplex fallback differential 1/1 over 1,200 cases with zero disagreement.
+This does not replace a fresh exact-commit full gate or a row-1 three-division
+census.
+
 ## Required continuation
 
-1. Commit and push the focused-green joint pre-SAT repair with the third failure
-   record, then verify `HEAD == upstream`.
-2. Restart QF_LRA from row 1 under the original A5 protocol. Any historical
+1. Commit and push the focused-green deep-spine/deadline repair with the first
+   QF_IDL failure record, then verify `HEAD == upstream`.
+2. Because solver behavior changed after the valid `d599b682f` QF_LRA capture,
+   restart QF_LRA from row 1 under the original A5 protocol. Any historical
    decision loss, wrong verdict, stderr, malformed trace, or process failure
    stops the sequence.
 3. Only after QF_LRA publishes valid success metadata may QF_IDL and QF_RDL run
