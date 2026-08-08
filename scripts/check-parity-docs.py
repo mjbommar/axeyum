@@ -86,6 +86,7 @@ CNF_LRAT = ROOT / "crates" / "axeyum-cnf" / "src" / "lrat.rs"
 CNF_README = ROOT / "crates" / "axeyum-cnf" / "README.md"
 CAS_README = ROOT / "crates" / "axeyum-cas" / "README.md"
 CAS_LIB = ROOT / "crates" / "axeyum-cas" / "src" / "lib.rs"
+SMTCOMP_CLI_EXAMPLE = ROOT / "crates" / "axeyum-bench" / "examples" / "smtcomp_cli.rs"
 EVM_README = ROOT / "crates" / "axeyum-evm" / "README.md"
 EVM_LIB = ROOT / "crates" / "axeyum-evm" / "src" / "lib.rs"
 VERIFY_README = ROOT / "crates" / "axeyum-verify" / "README.md"
@@ -132,6 +133,9 @@ IR_SORT = ROOT / "crates" / "axeyum-ir" / "src" / "sort.rs"
 IR_VALUE = ROOT / "crates" / "axeyum-ir" / "src" / "value.rs"
 IR_EVAL = ROOT / "crates" / "axeyum-ir" / "src" / "eval.rs"
 WORD_STRINGS = ROOT / "crates" / "axeyum-strings" / "src" / "lib.rs"
+STRING_REGEX_MEMBERSHIP = (
+    ROOT / "crates" / "axeyum-strings" / "src" / "regex" / "membership.rs"
+)
 QUOTIENT_ADR = (
     ROOT
     / "docs"
@@ -1022,6 +1026,34 @@ def main() -> int:
                 f"{marker!r}"
             )
 
+    source_assurance_markers = (
+        (SMTCOMP_CLI_EXAMPLE, "A bare or uncovered `unsat` remains visibly uncertified"),
+        (SMTLIB_FRONT_DOOR, "checker remains the explicit trust boundary"),
+        (WORD_STRINGS, "does not imply universal string-proof coverage"),
+        (STRING_REGEX_MEMBERSHIP, "remaining trust boundary"),
+        (SOLVER_LRA.parent / "lia_online.rs", "trust boundary for this helper"),
+    )
+    for path, marker in source_assurance_markers:
+        text = " ".join(path.read_text(encoding="utf-8").split())
+        if marker not in text:
+            failures.append(
+                f"{path.relative_to(ROOT)}: missing source assurance marker {marker!r}"
+            )
+
+    forbidden_source_claims = (
+        re.compile(r"every `?unsat`? carries a (?:machine-)?checkable", re.IGNORECASE),
+        re.compile(r"wrong `unsat` is impossible", re.IGNORECASE),
+    )
+    for path in (SMTCOMP_CLI_EXAMPLE, SMTLIB_FRONT_DOOR, WORD_STRINGS):
+        text = path.read_text(encoding="utf-8")
+        for pattern in forbidden_source_claims:
+            if match := pattern.search(text):
+                line = text.count("\n", 0, match.start()) + 1
+                failures.append(
+                    f"{path.relative_to(ROOT)}:{line}: stale source assurance claim: "
+                    f"{match.group(0)!r}"
+                )
+
     for path in CURRENT_SOLVER_COMMAND_DOCS:
         for line_number, line in enumerate(
             path.read_text(encoding="utf-8").splitlines(), start=1
@@ -1634,6 +1666,7 @@ def main() -> int:
         "|cas_assurance=local_route_specific"
         "|advanced_theories=route_specific_incomplete"
         "|consumer_assurance=explicit_optional_certificates"
+        "|source_assurance=route_specific"
         "|strings_status=sound_incomplete"
         "|strings_default_bound=12"
         "|strings_ladder_max=48"

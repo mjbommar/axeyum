@@ -147,7 +147,7 @@ fn bare_quadratic_word_equation_declines() {
     //   x1 ++ "abc" ++ x2 ++ z  =  x2 ++ "bab" ++ x1 ++ t
     // It IS unsat, but only by a Nielsen/length case analysis — NOT a word-level
     // constant clash or congruence/cancellation. The refuter must honestly DECLINE
-    // it to `unknown` (a wrong `unsat` is impossible; an *unknown* is correct here).
+    // it to `unknown`; this unsupported proof shape must not receive UNSAT credit.
     let mut arena = TermArena::new();
     let x1 = seq_var(&mut arena, "x1");
     let x2 = seq_var(&mut arena, "x2");

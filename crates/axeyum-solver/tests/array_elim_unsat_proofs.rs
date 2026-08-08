@@ -1,6 +1,5 @@
-//! **Eager array-elimination UNSAT carries an independently-checked
-//! certificate** — the Lean-parity ("every unsat carries a checkable
-//! certificate") moat extension for the eager `QF_ABV` path
+//! **Eager array-elimination UNSAT carries an independently checked
+//! certificate** for this selected eager `QF_ABV` path
 //! (`check_with_array_elimination`, ADR-0010), mirroring the eager-Ackermann
 //! certificate (`tests/ackermann_unsat_proofs.rs`) and the bounded int-blast
 //! certificate (`tests/bounded_int_blast_proofs.rs`).

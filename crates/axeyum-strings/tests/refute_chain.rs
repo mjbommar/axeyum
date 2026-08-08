@@ -1,8 +1,8 @@
 //! Slice-2 refutation: **inference-dependent** `unsat` behind re-checked
 //! derivations. The concrete tests pin the shapes that now certify; the adversarial
 //! property confirms every cited premise set is genuinely unsatisfiable by
-//! brute-force small-model enumeration (a wrong `unsat` is impossible because each
-//! appended fact is `check_fact`-certified).
+//! brute-force small-model enumeration. Each appended fact must pass `check_fact`;
+//! the checker remains the explicit trust boundary.
 #![allow(clippy::many_single_char_names, clippy::similar_names)]
 
 mod common;

@@ -357,17 +357,21 @@ model-reuse variants failed isolated stability and were removed; do not retry
 until 94 happens to pass. A3/A4's negative routes remain closed. A2 still does
 not authorize C0/F2, host/NAS mutation, allocation, or a solver fleet.
 
-**Parallel documentation action.** Continue without modifying solver or
-evidence paths. Beginner/user, pinned WASM/browser, contributor, stable
-reference, internals, all 22 crate front doors, curriculum, reviews, plan, and
-research now have substantive indexes; seven core crates have compile-tested
-rustdoc examples. Generated matrices remain the support/trust authorities.
-Deep-page audits corrected the stale curriculum depth/backlog,
-documentation-build gates, reconstruction-target wording, and textbook/NRA
-maps. The current public-state table is now aligned with the append-only parity
-ledger and guarded against future row drift; the stable reference also catalogs
-all 34 Cargo examples with their feature, external-tool, and mutation
-boundaries. Continue only when a live guide exposes a concrete stale claim.
+**Parallel documentation action.** The current comprehensive pass is closed;
+continue only when a live guide exposes a concrete stale claim, and do not
+modify solver behavior merely to match prose. Beginner/user, pinned
+WASM/browser, contributor, stable reference, internals, all 22 crate front
+doors, curriculum, reviews, plan, and research have substantive indexes; seven
+core crates have compile-tested rustdoc examples. Generated matrices remain the
+support/trust authorities. The audit corrected curriculum depth/backlog,
+documentation-build gates, reconstruction-target wording, textbook/NRA maps,
+test-command feature/filter drift, theory combination, CAS-vs-solver assurance,
+advanced-theory completeness, and optional consumer evidence boundaries. The
+public-state table is aligned with the append-only parity ledger and guarded
+against future row drift; the stable reference catalogs all 34 Cargo examples
+with their feature, external-tool, and mutation boundaries. Source-comment
+guards now also reject universal UNSAT-proof wording outside route-specific
+evidence.
 
 ### A1 — Complete arithmetic deadline and resource enforcement (`DONE`, P0)
 
@@ -632,7 +636,7 @@ or remove dirty/unmerged state to meet a free-space target.
 | CAS parity | `BLOCKED` by deliberate pause | Wave-24 code `01d47334` and pause commit `245d8f25` are ancestors of current main. Do not start wave 25 until the user resumes it and retained specialized gate evidence is re-audited. |
 | Consumer apps / verified systems | `WIP`, non-critical path | Existing EVM, verifier, property, reflection, and symbolic-execution slices remain useful; do not preempt A2–A7 without measured demand. |
 | Foundational resources | `WIP`, separate content lane | Keep generated-resource gates green; record only project-level priority changes here. |
-| Public documentation and examples | `WIP`, user-directed lane | Public/crate/consumer/prover/curriculum/contributor front doors are indexed; 34 Cargo examples and the consumer 48-case aggregate are guarded. Corrected built/planned, Lean 4.30/offline quotient, strings/P2.7, proof assurance, `i128` LRA/Farkas, native-CDCL/BatSat, RUP-only LRAT, online combination/fallback, CAS-local-vs-solver evidence, route-specific FP/datatype/nonlinear/quantifier boundaries, and optional EVM/verifier certificate fields. Source-backed guards require nonzero full-feature tests across cookbook, learner, contributor, foundational-resource, and rules docs. Generated authorities remain canonical; continue live-linked drift. |
+| Public documentation and examples | `DONE`, current comprehensive pass | Public/crate/consumer/prover/curriculum/contributor front doors are indexed; 34 Cargo examples and the consumer 48-case aggregate are guarded. Corrected built/planned, Lean 4.30/offline quotient, strings/P2.7, proof assurance, `i128` LRA/Farkas, native-CDCL/BatSat, RUP-only LRAT, online combination/fallback, CAS-local-vs-solver evidence, route-specific FP/datatype/nonlinear/quantifier boundaries, optional EVM/verifier certificate fields, and source-comment UNSAT-proof overclaims. Source-backed guards require nonzero full-feature tests across cookbook, learner, contributor, foundational-resource, and rules docs. Generated authorities remain canonical; reopen only for concrete drift. |
 | Worktree and build-cache hygiene | `WIP`, recovered | A11; only clean `main` is registered. The cleanup stored all 24 inactive dirty deltas in labelled stashes, retained every branch tip, removed the inactive checkouts and one 1.7 GiB session tree, retired the earlier clean A3 target, and finally removed the merged explanation-partition checkout with its 176 GiB Cargo target. Current free space is about 902 GiB on `/` and 28 GiB on `/tmp`; all topic branches remain preserved. Next automate the deterministic read-only inventory and exact-target cleanup classification. |
 
 ## Resume protocol

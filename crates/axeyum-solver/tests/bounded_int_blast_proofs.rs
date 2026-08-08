@@ -1,6 +1,5 @@
-//! **Bounded `QF_NIA` UNSAT carries an independently-checked certificate** — the
-//! Lean-parity ("every unsat carries a checkable certificate") moat extension for
-//! the bounded exact int-blast added in `feat(solver): bounded QF_NIA UNSAT via
+//! **Bounded `QF_NIA` UNSAT carries an independently checked certificate** for
+//! the selected bounded exact int-blast added in `feat(solver): bounded QF_NIA UNSAT via
 //! exact int-blast` (`decide_bounded_int_blast`).
 //!
 //! That path decides a bounded `QF_NIA` query `Unsat` by proving a finite integer

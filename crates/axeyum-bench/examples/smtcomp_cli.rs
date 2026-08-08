@@ -29,8 +29,8 @@
 //!
 //! The line starts with `;` (the SMT-LIB comment character) and can never match
 //! `^(sat|unsat)$`, so a harness that greps the verdict is unaffected. This is
-//! what makes "Lean parity" — *every `unsat` carries a machine-checkable proof* —
-//! a per-file MEASUREMENT instead of an essay: `certified=1` means the result
+//! what makes certificate coverage a per-file measurement instead of an essay:
+//! `certified=1` means this result
 //! carries an independently checkable certificate object, and `recheck=ok` means
 //! this process re-validated that certificate **from its serialized text alone**
 //! (`UnsatProof::recheck`: re-parse the DIMACS + DRAT/LRAT and re-derive the
@@ -43,7 +43,8 @@
 //! files are un-*text*-checkable, not uncheckable, and `arena` says so without
 //! letting either claim borrow the other's strength. It is kept a SEPARATE field
 //! for exactly that reason: `recheck` still means what every recorded entry says
-//! it means.
+//! it means. A bare or uncovered `unsat` remains visibly uncertified; evidence
+//! mode measures the gap rather than asserting universal proof coverage.
 //!
 //! Off by default on purpose: producing and re-checking a proof costs real time
 //! on top of deciding, so turning it on silently would invalidate every recorded

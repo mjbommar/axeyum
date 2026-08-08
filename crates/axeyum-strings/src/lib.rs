@@ -89,8 +89,9 @@
 //! sharing no reasoning code with [`infer()`], trusting the record only as a hint,
 //! and declining anything it cannot re-derive from first principles (loops,
 //! parity/length arguments, inference-dependent conflicts). This mirrors how the
-//! pure-Rust SAT path waited for DRAT: a wrong `unsat` is impossible because every
-//! `unsat` carries a re-checkable derivation.
+//! pure-Rust SAT path waited for DRAT: this route publishes `unsat` only with a
+//! derivation accepted by the independent checker. The checker is the route's
+//! remaining trusted boundary; this does not imply universal string-proof coverage.
 
 #![forbid(unsafe_code)]
 #![allow(clippy::missing_errors_doc)] // documented per-item where a `Result` is returned
