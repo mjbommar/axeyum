@@ -240,8 +240,8 @@ Minimum near-term checks:
 
 ```sh
 ./scripts/check-links.sh
-cargo test -p axeyum-solver --test evidence
-cargo test -p axeyum-solver --test lean_crosscheck
+cargo test -p axeyum-solver --features full --test evidence
+cargo test -p axeyum-solver --features full --test lean_crosscheck
 ```
 
 The commands can be narrowed per recipe, but every recipe must name the focused

@@ -53,7 +53,9 @@ Status: checked for covered EUF shapes.
 Relevant real-Lean cross-checks live in
 [crates/axeyum-solver/tests/lean_crosscheck.rs](../../../crates/axeyum-solver/tests/lean_crosscheck.rs),
 including `qf_uf_declared_sort_equality_checks_in_real_lean` and
-`qf_ufbv_refutation_checks_in_real_lean`.
+`qf_ufbv_refutation_checks_in_real_lean`. These are registered family builders,
+not standalone `#[test]` functions; the representative harness below invokes
+them. Filtering Cargo by either builder name would run zero tests.
 
 ## Trust Boundary
 
@@ -106,23 +108,22 @@ Canonical examples:
   open-set check remains finite replay.
 
 The focused resource regression is
-`cargo test -p axeyum-solver --test math_resource_uf_routes`.
+`cargo test -p axeyum-solver --features full --test math_resource_uf_routes`.
 
 ## Commands
 
 Focused:
 
 ```sh
-cargo test -p axeyum-solver --test evidence qf_ufbv_unsat_carries_a_zero_trust_alethe_certificate
-cargo test -p axeyum-solver --test evidence qf_uf_declared_sort_equality_unsat_carries_zero_trust_alethe_certificate
-cargo test -p axeyum-solver --test math_resource_uf_routes qf_uf_resource_route_rejects_tampered_alethe_certificate
+cargo test -p axeyum-solver --features full --test evidence qf_ufbv_unsat_carries_a_zero_trust_alethe_certificate
+cargo test -p axeyum-solver --features full --test evidence qf_uf_declared_sort_equality_unsat_carries_zero_trust_alethe_certificate
+cargo test -p axeyum-solver --features full --test math_resource_uf_routes qf_uf_resource_route_rejects_tampered_alethe_certificate
 ```
 
 Lean cross-checks:
 
 ```sh
-cargo test -p axeyum-solver --test lean_crosscheck qf_uf_declared_sort_equality_checks_in_real_lean
-cargo test -p axeyum-solver --test lean_crosscheck qf_ufbv_refutation_checks_in_real_lean
+cargo test -p axeyum-solver --features full --test lean_crosscheck lean_crosscheck_representative
 ```
 
 ## Links

@@ -84,10 +84,12 @@ CNF_README = ROOT / "crates" / "axeyum-cnf" / "README.md"
 BOOLEAN_CNF_COOKBOOK = (
     ROOT / "docs" / "proof-cookbook" / "recipes" / "boolean-cnf-lrat.md"
 )
+LRA_COOKBOOK = ROOT / "docs" / "proof-cookbook" / "recipes" / "qf-lra-farkas.md"
 IR_TERM = ROOT / "crates" / "axeyum-ir" / "src" / "term.rs"
 PROOF_SAT = ROOT / "crates" / "axeyum-cnf" / "src" / "proof_sat.rs"
 BV_LOWERING = ROOT / "crates" / "axeyum-bv" / "src" / "lib.rs"
 SAT_BV_BACKEND = ROOT / "crates" / "axeyum-solver" / "src" / "sat_bv_backend.rs"
+SOLVER_LRA = ROOT / "crates" / "axeyum-solver" / "src" / "lra.rs"
 SOLVER_BACKEND = ROOT / "crates" / "axeyum-solver" / "src" / "backend.rs"
 SUPPORT_MATRIX_LEDGER = (
     ROOT / "crates" / "axeyum-solver" / "src" / "support_matrix.rs"
@@ -156,6 +158,9 @@ SMTCOMP_PROVENANCE = (
 MEASUREMENT_PROVENANCE = (
     ROOT / "docs" / "plan" / "generated" / "measurement-provenance-matrix.json"
 )
+PROOF_COOKBOOK_DOCS = tuple(
+    sorted((ROOT / "docs" / "proof-cookbook").rglob("*.md"))
+)
 
 LIVE_DOCS = (
     ROOT / "README.md",
@@ -198,6 +203,7 @@ PUBLIC_CLAIM_DOCS = (
     LEAN_INTERNAL_DOC,
     CNF_README,
     BOOLEAN_CNF_COOKBOOK,
+    LRA_COOKBOOK,
     NORTH_STAR_PLAN,
     NORTH_STAR_ORIENTATION,
     FOUNDATIONAL_DAG,
@@ -246,6 +252,10 @@ PUBLIC_STALE_PATTERNS = (
     re.compile(
         r"Nested and mutual inductives, recursors, quotient-related declarations,"
         r" and other features are admitted only",
+        re.IGNORECASE,
+    ),
+    re.compile(
+        r"a supported\s+`unsat`\s+route should carry independently checkable evidence",
         re.IGNORECASE,
     ),
 )
@@ -836,7 +846,10 @@ def main() -> int:
         (CNF_README, "RUP-only"),
         (USER_GUIDE_INDEX, "unsat → route-specific assurance"),
         (USER_GUIDE_INDEX, "not implied by every `unsat` verdict"),
-        (BOOLEAN_CNF_COOKBOOK, "default proofless BatSat result remains lower assurance"),
+        (
+            BOOLEAN_CNF_COOKBOOK,
+            "default proofless BatSat result remains lower assurance",
+        ),
         (BOOLEAN_CNF_COOKBOOK, "DRAT addition that requires RAT is rejected"),
     )
     for path, marker in propositional_proof_markers:
@@ -868,6 +881,50 @@ def main() -> int:
             failures.append(
                 f"{path.relative_to(ROOT)}: missing Lean compatibility boundary "
                 f"marker {marker!r}"
+            )
+
+    lra_range_markers = (
+        (SOLVER_LRA, "current `i128`-backed rational range"),
+        (SOLVER_LRA, "Overflow during collection, elimination"),
+        (LRA_COOKBOOK, "`i128`-backed numerator/denominator range"),
+        (LRA_COOKBOOK, "returns `unknown` rather than wrapping"),
+        (LRA_COOKBOOK, "filtering Cargo by the builder name would run zero tests"),
+        (
+            LEARN_THEORIES,
+            "every `unsat` must state its route-specific assurance boundary",
+        ),
+        (LEARN_THEORIES, "not implied by every definitive verdict"),
+    )
+    for path, marker in lra_range_markers:
+        text = " ".join(path.read_text(encoding="utf-8").split())
+        if marker not in text:
+            failures.append(
+                f"{path.relative_to(ROOT)}: missing LRA range/assurance boundary "
+                f"marker {marker!r}"
+            )
+
+    for path in PROOF_COOKBOOK_DOCS:
+        for line_number, line in enumerate(
+            path.read_text(encoding="utf-8").splitlines(), start=1
+        ):
+            if (
+                "cargo test -p axeyum-solver" in line
+                and "--features full" not in line
+            ):
+                failures.append(
+                    f"{path.relative_to(ROOT)}:{line_number}: solver cookbook test "
+                    "command must enable `--features full`"
+                )
+
+    for path in (
+        LRA_COOKBOOK,
+        ROOT / "docs" / "proof-cookbook" / "recipes" / "qf-uf-congruence-alethe.md",
+    ):
+        text = path.read_text(encoding="utf-8")
+        if "--test lean_crosscheck lean_crosscheck_representative" not in text:
+            failures.append(
+                f"{path.relative_to(ROOT)}: Lean command must invoke the registered "
+                "representative test harness"
             )
 
     ir_range_markers = (

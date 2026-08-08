@@ -92,8 +92,10 @@ Different fragments use different architectures:
 - incomplete or bounded procedures may honestly stop at `unknown`.
 
 The public contract remains the same even when the route changes: a returned
-`sat` needs a model that satisfies the original assertions, and a supported
-`unsat` route should carry independently checkable evidence.
+`sat` needs a model that satisfies the original assertions, while every `unsat`
+must state its route-specific assurance boundary. Independently checkable UNSAT
+evidence exists on selected routes; it is not implied by every definitive
+verdict.
 
 ## Theories define edge cases
 

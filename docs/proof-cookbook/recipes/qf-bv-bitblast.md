@@ -96,22 +96,22 @@ Canonical examples:
   obstruction.
 
 The focused resource regression is
-`cargo test -p axeyum-solver --test math_resource_bv_routes`.
+`cargo test -p axeyum-solver --features full --test math_resource_bv_routes`.
 
 ## Commands
 
 Focused:
 
 ```sh
-cargo test -p axeyum-solver --test evidence unsat_evidence_carries_a_recheckable_drat_certificate
-cargo test -p axeyum-solver --test evidence qf_bv_drat_unsat_reports_bitblast_tseitin_sat_steps
-cargo test -p axeyum-solver --test math_resource_bv_routes qf_bv_resource_route_rejects_tampered_drat_certificate
+cargo test -p axeyum-solver --features full --test evidence unsat_evidence_carries_a_recheckable_drat_certificate
+cargo test -p axeyum-solver --features full --test evidence qf_bv_drat_unsat_reports_bitblast_tseitin_sat_steps
+cargo test -p axeyum-solver --features full --test math_resource_bv_routes qf_bv_resource_route_rejects_tampered_drat_certificate
 ```
 
 Broader:
 
 ```sh
-cargo test -p axeyum-solver --test evidence
+cargo test -p axeyum-solver --features full --test evidence
 ```
 
 ## Links
