@@ -19279,7 +19279,19 @@ fn apply_op(
         }
         "ite" => {
             need(3)?;
-            arena.ite(args[0], args[1], args[2])?
+            // SMT-LIB's Int/Real coercion applies to the two value branches as
+            // one common numeric context, just as it does to `=` and the
+            // arithmetic operators.  Generated LRA benchmarks commonly spell
+            // a Real-valued conditional as `(ite p real_term 0)`; leaving the
+            // numeral as `Int` rejects that valid term before solver dispatch.
+            let branches = if matches!(arena.sort_of(args[1]), Sort::Real)
+                || matches!(arena.sort_of(args[2]), Sort::Real)
+            {
+                numeric_args(arena, &args[1..])?.1
+            } else {
+                args[1..].to_vec()
+            };
+            arena.ite(args[0], branches[0], branches[1])?
         }
         "bvnot" => {
             need(1)?;

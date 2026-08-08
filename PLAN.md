@@ -7,14 +7,14 @@ first and update it before ending a project-level work session.
 - Last consolidated: **2026-08-08**
 - Integrated baseline merged into the active topic:
   `8ccae9c43ce393762ce6cc3b38d21c2dbb982507`
-- Active pushed repair: `57e85608a9cfab0bb82b219b826da8f17efb937e`;
-  gap-ownership manifest non-vacuity repair and a new full gate are pending
-- Latest full-gate attempt: `57e85608a9cfab0bb82b219b826da8f17efb937e`
-  passed every code, corpus, proof, doctest, rustdoc, and aggregate gate, then
-  failed the final parity-doc freshness check on one manifest/generated-command
-  mismatch
+- Active pushed repair: `b07be65aab46790c1473994dfd8fed6f72005817`;
+  a mixed-sort `ite` parser repair exposed by the complete QF_LRA stream is
+  focused-green but not yet committed
+- Latest full-gate attempt: `b07be65aab46790c1473994dfd8fed6f72005817`
+  passed the fresh uninterrupted frozen `just check` with exit 0, including the
+  repaired generated gap-ownership and independent parity-doc checks
 - Latest comprehensive green exact-commit gate:
-  `1de73748877253d6d134d71af3b5d22183c646d4` (`just check` exit 0)
+  `b07be65aab46790c1473994dfd8fed6f72005817` (`just check` exit 0)
 - Latest integrated A3 code increments: bounded SMT-LIB `distinct` expansion at
   `63c82a6ef`, typed arithmetic-model reconstruction at `4ff9a82c6`, and
   deterministic string/integer coupling at `db7b426e8`
@@ -33,13 +33,8 @@ and `STATUS.md` blob `0f169eddfabb190f45428090ffb057e8289bf355`.
 
 ## Status
 
-**Live A5 checkpoint (2026-08-08).** Exact pushed topic revision `1de737488`
-passed one uninterrupted frozen `just check` with exit 0, including all
-workspace tests/doctests, 1,078 solver-library tests, retained differential
-suites with zero disagreement, 9/9 capability-frontier tests, both order-255
-CAS proofs, warning-denied rustdoc, generated resources, the 165-test SMT-COMP
-resume aggregate, Lean/process-free contracts, plan authority, and links. Its
-first preregistered QF_LRA capture then failed closed after 172/200 rows:
+**Live A5 checkpoint (2026-08-08).** The first preregistered QF_LRA capture
+failed closed after 172/200 rows:
 `sal/tgc/tgc_io-safe-20.smt2` exhausted the external 8 GiB address-space cap and
 aborted with `SIGABRT`. QF_IDL and QF_RDL were not started, and the partial
 stream is not credited. The deterministic wide-core repair at `9d7a70a65`,
@@ -49,9 +44,20 @@ strict Clippy, 1,079 solver-library tests, deep-input and both LRA differential
 gates are green. Exact pushed commit `57e85608a` then passed all runtime and
 proof stages of a frozen `just check`, including the repaired 1,079-test solver
 library, before a latent mismatch between the gap-ownership manifest and its
-correct non-vacuous generated command failed the final parity-doc check. Repair
-the manifest source, rerun the failed tail and a fresh full gate, then restart
-the complete row-1 census. See the
+correct non-vacuous generated command failed the final parity-doc check. The
+manifest-source repair at `b07be65aa` then passed one fresh uninterrupted frozen
+`just check` with exit 0: all workspace tests/doctests, the 1,079-test solver
+library, retained differential suites with zero disagreement, 9/9 frontier
+tests, both order-255 CAS proofs, warning-denied rustdoc, Glaurung QF_BV,
+foundational resources, SMT-COMP/Lean process-free contracts, the formerly
+failing generated-doc checks, plan authority, and links were green. The next
+row-1 QF_LRA run completed all 200 rows without stderr or process failure but
+failed atomic validation on `sal/gasburner/gasburner-prop3-12.smt2`: a valid
+Real-valued `ite` with a bare integer-zero branch was rejected as mixed-sort.
+The shared parser-boundary repair now coerces both numeric branches to their
+common Real context; isolated replay returns typed budget `unknown`, and all
+230 SMT-LIB integration tests plus strict Clippy pass. Commit/push this parser
+repair, then restart the complete row-1 census. See the
 [failure/repair record](docs/plan/qf-linear-a5-wide-core-memory-repair-2026-08-08.md).
 
 Axeyum is a working research-grade automated-reasoning stack with a pure-Rust
@@ -61,8 +67,8 @@ checker/importer, and several consumers. It is not yet a drop-in Z3 replacement
 or a replacement for the Lean system.
 
 Earlier A3/A4 integration and gate history remains in dated result notes and
-Git. The last clean pre-repair full gate is the `1de737488` checkpoint above;
-focused repair tests do not replace the required new full gate. Hosted CI/docs
+Git. The latest comprehensive gate is the `b07be65aa` checkpoint above;
+focused parser tests do not extend that evidence to the new uncommitted change. Hosted CI/docs
 runs `31192792245` and `31192792512` remain terminal green for their recorded
 baseline, not for the current candidate. No retained solver or measurement
 process is running.
@@ -320,12 +326,11 @@ here as closed evidence boundaries. A3 remains incomplete, but all currently
 preregistered bounded mechanisms are closed negatively. A4 has now also yielded;
 A5 is the first active item.
 
-**Immediate action.** Add the required `--features full` to the gap-ownership
-manifest exposed by the otherwise-green `57e85608a` full gate, validate the
-generated guide and failed parity-doc tail, commit and push, and run a fresh
-uninterrupted frozen `just check`. Only then
-restart QF_LRA from row 1 under the unchanged 24-second/8-GiB capture envelope.
-The failed 172-row partial stream remains non-credited. Stop
+**Immediate action.** Commit and push the shared mixed-sort `ite` parser repair
+and exact SAL-shaped regression, verify the pushed object, rebuild the release
+census binary, and restart QF_LRA from row 1 under the unchanged
+24-second/8-GiB capture envelope. Both the failed 172-row abort stream and the
+complete-but-parse-invalid 200-row stream remain non-credited. Stop
 on any historical-decision loss, wrong verdict, stderr, malformed trace, or
 process failure. Only valid atomic QF_LRA success metadata authorizes sequential
 QF_IDL and QF_RDL capture and the preregistered derivation. No score gain is

@@ -89,19 +89,42 @@ credited as comprehensive green. The full log SHA-256 is
 
 The repair adds `--features full` to `docs/plan/gap-ownership-v1.json`; the
 already-correct generated guide remains byte-identical. The manifest repair
-must be committed and pushed, its failed tail validated, and a fresh full gate
-completed before capture restarts.
+was committed as `b07be65aa`. A fresh uninterrupted frozen `just check` at that
+exact pushed commit completed with exit 0. Its log SHA-256 is
+`dd82f231c01c0c6febf391650843e754bd10582f47803365adade33af5504cd9`;
+the previously failing `gen-gap-ownership.py --check`, independent
+`check-parity-docs.py`, plan-authority check, and link check all passed.
+
+## Second capture attempt: valid mixed-sort `ite`
+
+The row-1 QF_LRA restart at `b07be65aa` completed the process successfully in
+891,888 ms and emitted all 200 rows without stderr or an abort. Atomic
+validation still failed closed because
+`sal/gasburner/gasburner-prop3-12.smt2` returned `parse-error` instead of its
+historical decided state. The stream is not credited. The exact record is
+[`QF_LRA-attempt-002.failure.json`](evidence/qf-linear-a5/failures/QF_LRA-attempt-002.failure.json),
+SHA-256 `e1af0be595aef8bf035f7e35391158b713db3791d31f6aa19791899d8ccb28b8`.
+
+The parser already applies SMT-LIB Int-to-Real coercion to mixed arithmetic,
+comparisons, equality, and declared Real constant bodies, but the shared `ite`
+operator required exactly equal branch sorts. The benchmark contains the valid
+Real-valued shape `(ite ?v_88 ?v_93 0)`, where `?v_93` is Real and the bare
+numeral was parsed as Int. The candidate parser repair gives the two `ite`
+value branches one common numeric context: integer constants become exact Real
+constants and symbolic Int terms use the existing exact `to_real` embedding.
+An isolated replay now parses and returns typed `unknown` through the existing
+wide-core budget (42 rounds, 8,371 retained large-core literals), rather than a
+parse error. Focused parser coverage is 230/230 with strict all-feature Clippy
+green; the complete capture must restart from row 1 after the repair is pushed.
 
 ## Required continuation
 
-1. Commit and push the gap-ownership manifest repair; verify
-   `HEAD == upstream`.
-2. Validate the previously failed parity-doc tail and run one fresh,
-   uninterrupted frozen full `just check` on the exact repair revision.
-3. Restart QF_LRA from row 1 under the original A5 protocol. Any historical
+1. Commit and push the mixed-sort `ite` parser repair and its exact-shape
+   regression; verify `HEAD == upstream`.
+2. Restart QF_LRA from row 1 under the original A5 protocol. Any historical
    decision loss, wrong verdict, stderr, malformed trace, or process failure
    stops the sequence.
-4. Only after QF_LRA publishes valid success metadata may QF_IDL and QF_RDL run
+3. Only after QF_LRA publishes valid success metadata may QF_IDL and QF_RDL run
    sequentially, followed by the preregistered derivation.
 
 The failed partial stream is permanently non-credited. No timeout, external
