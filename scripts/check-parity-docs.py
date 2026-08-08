@@ -46,6 +46,8 @@ LEARN_OUTCOMES = ROOT / "docs" / "learn" / "05-models-unsat-and-unknown.md"
 LEARN_PIPELINE = ROOT / "docs" / "learn" / "07-how-axeyum-solves-a-query.md"
 TERM_IR_DOC = ROOT / "docs" / "internals" / "term-ir.md"
 EVALUATOR_DOC = ROOT / "docs" / "internals" / "evaluator.md"
+CNF_INTERNAL_DOC = ROOT / "docs" / "internals" / "cnf-and-sat.md"
+PROOF_STACK_DOC = ROOT / "docs" / "internals" / "proof-stack.md"
 NORTH_STAR_PLAN = ROOT / "docs" / "plan" / "00-north-star.md"
 NORTH_STAR_ORIENTATION = (
     ROOT / "docs" / "research" / "00-orientation" / "north-star.md"
@@ -68,6 +70,8 @@ LEAN_COMPLETE_PARITY = ROOT / "docs" / "plan" / "generated" / "lean-complete-par
 LEAN_KERNEL_EXPR = ROOT / "crates" / "axeyum-lean-kernel" / "src" / "expr.rs"
 UF_FUNCTION_ELIM = ROOT / "crates" / "axeyum-rewrite" / "src" / "functions.rs"
 CNF_LIB = ROOT / "crates" / "axeyum-cnf" / "src" / "lib.rs"
+CNF_LRAT = ROOT / "crates" / "axeyum-cnf" / "src" / "lrat.rs"
+CNF_README = ROOT / "crates" / "axeyum-cnf" / "README.md"
 IR_TERM = ROOT / "crates" / "axeyum-ir" / "src" / "term.rs"
 PROOF_SAT = ROOT / "crates" / "axeyum-cnf" / "src" / "proof_sat.rs"
 BV_LOWERING = ROOT / "crates" / "axeyum-bv" / "src" / "lib.rs"
@@ -176,6 +180,9 @@ PUBLIC_CLAIM_DOCS = (
     LEARN_PIPELINE,
     TERM_IR_DOC,
     EVALUATOR_DOC,
+    CNF_INTERNAL_DOC,
+    PROOF_STACK_DOC,
+    CNF_README,
     NORTH_STAR_PLAN,
     NORTH_STAR_ORIENTATION,
     FOUNDATIONAL_DAG,
@@ -217,6 +224,8 @@ PUBLIC_STALE_PATTERNS = (
     ),
     re.compile(r"Re-derive small BV UNSAT results", re.IGNORECASE),
     re.compile(r"integer and rational values are exact,", re.IGNORECASE),
+    re.compile(r"custom CDCL direction", re.IGNORECASE),
+    re.compile(r"elaborate DRAT to LRAT and check LRAT", re.IGNORECASE),
 )
 
 PROVER_STALE_PATTERNS = (
@@ -794,6 +803,22 @@ def main() -> int:
             failures.append(
                 f"{path.relative_to(ROOT)}: missing SMT-LIB proof boundary marker "
                 f"{marker!r}"
+            )
+
+    propositional_proof_markers = (
+        (CNF_LRAT, "This slice supports **RUP-only** proofs"),
+        (CNF_LRAT, "RAT additions"),
+        (CNF_INTERNAL_DOC, "in-tree proof-producing CDCL core"),
+        (CNF_INTERNAL_DOC, "RUP-only"),
+        (PROOF_STACK_DOC, "RUP-only"),
+        (CNF_README, "RUP-only"),
+    )
+    for path, marker in propositional_proof_markers:
+        text = " ".join(path.read_text(encoding="utf-8").split())
+        if marker not in text:
+            failures.append(
+                f"{path.relative_to(ROOT)}: missing propositional proof boundary "
+                f"marker {marker!r}"
             )
 
     ir_range_markers = (
