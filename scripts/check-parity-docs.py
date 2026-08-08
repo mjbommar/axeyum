@@ -66,6 +66,19 @@ IR_TERM = ROOT / "crates" / "axeyum-ir" / "src" / "term.rs"
 PROOF_SAT = ROOT / "crates" / "axeyum-cnf" / "src" / "proof_sat.rs"
 BV_LOWERING = ROOT / "crates" / "axeyum-bv" / "src" / "lib.rs"
 SAT_BV_BACKEND = ROOT / "crates" / "axeyum-solver" / "src" / "sat_bv_backend.rs"
+SUPPORT_MATRIX_LEDGER = (
+    ROOT / "crates" / "axeyum-solver" / "src" / "support_matrix.rs"
+)
+CAPABILITY_LEDGER = ROOT / "crates" / "axeyum-solver" / "src" / "capabilities.rs"
+SMTLIB_FRONT_DOOR = ROOT / "crates" / "axeyum-solver" / "src" / "smtlib.rs"
+SMTLIB_PARSE = ROOT / "crates" / "axeyum-smtlib" / "src" / "parse.rs"
+GENERATED_SUPPORT_MATRIX = (
+    ROOT / "docs" / "research" / "08-planning" / "support-matrix.md"
+)
+GENERATED_CAPABILITY_MATRIX = (
+    ROOT / "docs" / "research" / "08-planning" / "capability-matrix.md"
+)
+LIMITATIONS = ROOT / "docs" / "user-guide" / "limitations.md"
 QUOTIENT_ADR = (
     ROOT
     / "docs"
@@ -844,6 +857,45 @@ def main() -> int:
                 f"{marker!r}"
             )
 
+    string_source_markers = (
+        (SMTLIB_PARSE, "const STRING_MAX_LEN: u32 = 12;"),
+        (SMTLIB_PARSE, "pub(crate) const STRING_BOUND_CAP: u32 = 512;"),
+        (SMTLIB_FRONT_DOOR, "const DEFAULT_STRING_BOUND: u32 = 12;"),
+        (SMTLIB_FRONT_DOOR, "const STRING_BOUND_LADDER: [u32; 3] = [24, 32, 48];"),
+        (SUPPORT_MATRIX_LEDGER, "solver: SolverStatus::SoundIncomplete"),
+        (SUPPORT_MATRIX_LEDGER, "12-byte packed-BV"),
+        (CAPABILITY_LEDGER, "declared strings default to 12 bytes"),
+    )
+    source_texts: dict[Path, str] = {}
+    for path, marker in string_source_markers:
+        text = source_texts.setdefault(path, path.read_text(encoding="utf-8"))
+        if marker not in text:
+            failures.append(
+                f"{path.relative_to(ROOT)}: missing bounded-string source marker "
+                f"{marker!r}"
+            )
+
+    string_doc_markers = (
+        (
+            GENERATED_SUPPORT_MATRIX,
+            "| strings (bounded) | accepted (bounded) | lowered (no IR sort) | "
+            "sound, incomplete (unknown-safe) | none |",
+        ),
+        (GENERATED_SUPPORT_MATRIX, "12-byte packed-BV window"),
+        (GENERATED_CAPABILITY_MATRIX, "24/32/48-byte retries"),
+        (LIMITATIONS, "declared strings start at 12 bytes"),
+        (LIMITATIONS, "some `str.to_int`/`str.from_int`"),
+    )
+    doc_texts: dict[Path, str] = {}
+    for path, marker in string_doc_markers:
+        text = doc_texts.setdefault(path, path.read_text(encoding="utf-8"))
+        normalized = " ".join(text.split())
+        if marker not in normalized:
+            failures.append(
+                f"{path.relative_to(ROOT)}: missing bounded-string documentation "
+                f"marker {marker!r}"
+            )
+
     required_gap_markers = (
         f"{snapshot['decided']} / {snapshot['files']}",
         f"{snapshot['compared']} oracle-compared",
@@ -1160,6 +1212,10 @@ def main() -> int:
         "|foundation_quotient=offline_m1_m3"
         "|research_symbolic_shifts=resolved"
         "|research_high_assurance_unsat=resolved"
+        "|strings_status=sound_incomplete"
+        "|strings_default_bound=12"
+        "|strings_ladder_max=48"
+        "|strings_packed_cap=512"
     )
     print(f"PARITY_DOCS|{line}")
     if failures:

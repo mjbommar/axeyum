@@ -59,8 +59,12 @@ flowchart LR
   `nlsat` in general.
 - **Quantifiers** are complete over finite domains; otherwise sound refutation by
   instantiation, `unknown` on no progress.
-- **Strings** are *bounded* (length-capped, BV-lowered) — not the unbounded
-  string theory; `str.len` UNSAT can be `unknown` (a BV+LIA gap).
+- **Strings** are *bounded* (length-capped, BV-lowered): declared strings start
+  at 12 bytes, the front door retries 24/32/48-byte windows, and packed terms
+  have a 512-byte cap. Additional checked word-equation and length/LIA routes do
+  not make this a complete unbounded string theory. Unsupported or unbounded
+  word/`Int` combinations, including some `str.to_int`/`str.from_int`
+  couplings, return `unknown`.
 - **Lean integration is partial.** Many audited UNSATs reconstruct to a
   kernel-checked `False`, but proof coverage, full kernel compatibility, and the
   tactic/import bridge remain incomplete. Arithmetic reconstruction also uses
