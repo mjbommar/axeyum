@@ -1,62 +1,102 @@
-# Depth & Scope: what this curriculum is (and is not)
+# Depth and scope: what this curriculum is and is not
 
-This file states the honest ceiling of the curriculum so nobody mistakes the
-**map** for the **territory**. Read it before assuming a `covered` node means
-"taught to textbook depth."
+This file states the curriculum's honest ceiling so nobody mistakes the
+**map** for the **territory**. A `covered` node is not a claim of textbook-depth
+treatment or complete automation of the corresponding field.
 
-## Two different things
+## Three different coverage layers
 
-1. **A curriculum map** — the [23-node prerequisite DAG](README.md). This is
-   real and reasonably complete: the backbone is grounded in Lean Mathlib,
-   Metamath, and bridge-course canon.
-2. **A thin slice of decidable, self-checkable exercises** — ~50 small scenarios
-   across ~10 families. `covered` means *"this node has ≥ 1 self-checking
-   exercise,"* **not** *"taught to the depth of a textbook chapter."* Our entire
-   number-theory node is a handful of exercises (Bézout, modular inverse, parity);
-   a real number-theory text (Hardy & Wright; *The Queen of Mathematics*) is
-   hundreds of pages.
+1. **Curriculum map.** The [23-node prerequisite DAG](README.md) gives a stable
+   foundation-to-destination spine. Its authority is
+   [`curriculum.toml`](curriculum.toml).
+2. **Scenario coverage.** `axeyum-scenarios` supplies small, deterministic
+   exercises. A `covered` curriculum node names at least one realized family
+   whose catalog examples pass `Scenario::self_check`.
+3. **Resource depth.** The larger foundational-resource system adds source
+   metadata, learner pages, proof routes, solver-reuse links, and validated
+   example packs. Its generated
+   [curriculum status audit](../foundational-resources/generated/curriculum-status-audit.md)
+   reports this axis separately.
 
-## The decidability ceiling (why depth is bounded *in principle*)
+Those layers must not be collapsed. A node can have a self-checking scenario
+while still needing richer lessons, proof-producing examples, or solver-corpus
+reuse.
 
-axeyum self-checks two ways (ADR-0008): **UNSAT by exhaustive enumeration** over
-a finite domain, or **SAT by evaluating a witness**. Both require a *finite or
-computational* check. The deep content of analysis — Spivak's `∀ε ∃δ`, the
-completeness of ℝ, "every continuous function on `[a,b]` attains its maximum" —
-is **quantified over the reals and undecidable** for this machinery. So:
+## What a self-check establishes
 
-- The `calculus`, `reals`, `sequences-and-limits`, `complex`, and `cardinality`
-  nodes are flagged **`lean-horizon`**: we can self-check their *algebraic
-  shadow* (polynomial / real-closed-field facts), not their ε-δ heart.
-- Reaching textbook analysis depth needs the **proof track** (the planned P3.6
-  in-tree Lean kernel + P3.7 Alethe→Lean reconstruction) — where you *check a
-  proof* rather than *decide an instance*. That is a different machine and does
-  not exist yet.
+Scenario checks have explicit assurance boundaries:
 
-## The honest scorecard (vs. canonical texts)
+- a SAT exercise carries a concrete witness and evaluates every assertion;
+- a small finite UNSAT exercise can exhaust the complete assignment domain;
+- an oversized finite UNSAT exercise may use a deterministic sample, which is
+  useful regression evidence but not a proof of unsatisfiability.
 
-| Area | Canonical text | What axeyum covers |
+The broader resource packs add finite/computable replay and, for selected
+negative rows, independently checked DRAT/LRAT, Alethe, Farkas, or other
+route-specific evidence. Consult the live [capability
+matrix](../research/08-planning/capability-matrix.md), [support
+matrix](../research/08-planning/support-matrix.md), and [trust
+ledger](../research/08-planning/trust-ledger.md) before turning an educational
+example into a solver-assurance claim.
+
+## The decidability and proof ceiling
+
+Finite domains, exact computations, and some logical theories admit complete
+decision procedures. Real-closed-field formulas are decidable, for example,
+but that does not make general real analysis a first-order polynomial problem.
+Completeness of the reals, arbitrary functions and sequences, convergence
+theorems, and most textbook-level analysis require definitions and proof
+structure beyond a bounded algebraic shadow.
+
+The in-tree Lean-core checker and several reconstruction routes now exist; the
+old statement that the proof track was only planned is obsolete. Their presence
+still does not imply full Lean language, elaborator, tactic, workflow, Mathlib,
+or theorem-library compatibility. The [Lean implementation
+plan](../plan/lean-system-implementation-plan-2026-07-21.md) and live
+[Project State](../PROJECT-STATE.md) keep those bounded achievements separate
+from the remaining system-level work.
+
+Accordingly:
+
+- `covered` means a deliberately small decidable or computable exercise slice
+  exists;
+- `lean-horizon` marks content whose general theorem layer needs proof-oriented
+  treatment even when finite or algebraic examples are available;
+- `unknown`, replay-only evidence, and sampled checks remain visible rather
+  than being promoted to proof claims.
+
+## Honest comparison with canonical texts
+
+| Area | Canonical texts | Axeyum's curriculum slice |
 |---|---|---|
-| Calculus / real analysis | **Spivak**, *Calculus*; Rudin, *PMA* | The decidable shadow only: order axioms + transitivity (LRA, certified) and a monotonicity inequality (NRA). Even the degree-2 SOS inequality `a²+b²≥2ab` is the **NRA frontier** today, and the ε-δ chapters are `lean-horizon`. See [foundational-books/spivak.md](foundational-books/spivak.md). |
-| Number theory | Hardy & Wright; *The Queen of Mathematics* | The computational core (gcd/Bézout, modular inverse, parity) — ~1% of the content, but genuinely decided and self-checked. |
-| Abstract algebra | Dummit & Foote | Finite-instance axiom checks (group/ring/field over ℤ/2ʷ), not the structure theory. |
-| Linear algebra | Axler, *LADR* | Fixed-size matrix identities + solving over BV/ℚ, not dimension/spectral theory. |
+| Calculus and real analysis | Spivak, Rudin | Exact finite/algebraic shadows and selected checked inequalities; not the general epsilon-delta, completeness, compactness, or convergence theory. See [the Spivak map](foundational-books/spivak.md). |
+| Number theory | Hardy & Wright, Stein | GCD/Bézout, CRT, residues, modular inverses, fixed-modulus exponentiation, parity, and other finite/computable exercises; not analytic or general algebraic number theory. |
+| Abstract algebra | Dummit & Foote | Finite groups, rings, fields, maps, quotients, modules, and related table/replay slices; not the full structure theory. |
+| Linear algebra | Axler and numerical-linear-algebra texts | Fixed finite matrices, exact rational and finite-field calculations, residuals, and selected checked contradictions; not general dimension, spectral, or numerical-stability theorems. |
 
-## What we genuinely got right
+Think of this curriculum as a navigable table of contents with verified answer
+keys for carefully stated finite, computable, or certificate-backed problems.
+It complements textbooks and proof libraries; it does not replace them.
 
-- The **map** and its prerequisite edges.
-- **Decidability honesty**: every node states exactly how much axeyum can check
-  and flags what it cannot (`decidable` / `computable` / `bounded` /
-  `undecidable`; `covered` / `planned` / `lean-horizon`).
-- A **working answer-key for the decidable exercises**, each oracle-free and
-  re-checkable.
+## Validate the boundary
 
-Think of the curriculum as a well-organized **table of contents with a verified
-answer key for the decidable problems** — not the books themselves.
+```sh
+cargo test -p axeyum-scenarios
+just foundational-resources
+just parity-docs
+```
+
+The first command checks scenario catalogs and graph mappings. The second
+validates concept rows, example packs, negative fixtures, and generated
+dashboards. The third checks the live capability, support, trust, proof-gap,
+SMT-LIB, Lean, and benchmark documentation authorities.
 
 ## See also
 
-- [README.md](README.md) — the map and legends.
-- [foundational-books/](foundational-books/README.md) — how specific texts
-  (Spivak, …) project onto the decidability lens.
-- [../research/08-planning/formal-mathematics-tour.md](../research/08-planning/formal-mathematics-tour.md)
-  — the design rationale.
+- [Curriculum index](README.md) — map and status legends.
+- [Current curriculum backlog](BACKLOG.md) — remaining teaching/scenario work.
+- [Foundational books](foundational-books/README.md) — canonical-text mappings.
+- [Foundational resource build sequence](../foundational-resources/MATH-CURRICULUM-RESOURCE-BUILD-SEQUENCE.md)
+  — broader content and proof-depth priorities.
+- [Formal mathematics tour rationale](../research/08-planning/formal-mathematics-tour.md)
+  — design background.

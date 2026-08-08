@@ -43,7 +43,7 @@ the real solver runs in your browser.
 ## Building the site
 
 ```sh
-# one-time local preview tools (versions exercised by this repository)
+# one-time optional local preview tools
 cargo install --locked mdbook --version 0.5.0
 cargo install --locked mdbook-mermaid --version 0.17.0
 
@@ -64,6 +64,24 @@ freshness and relative-link integrity. It does **not** currently gate a full
 preview capability rather than evidence that a hosted render passed. The
 Mermaid runtime files and `book/` are generated and ignored, so a clean checkout
 must run `mdbook-mermaid install .` before building or serving the book.
+
+The repository-level documentation gates do not require those optional preview
+tools:
+
+```sh
+just foundational-resources
+just parity-docs
+just plan-authority
+just links
+git diff --check
+```
+
+Run the first command when curriculum or generated foundational resources are
+in scope. Run `parity-docs` when a page depends on capability, support, trust,
+Lean, SMT-LIB, proof-gap, or benchmark authorities. `plan-authority` protects
+root `PLAN.md` as the only mutable status tracker, and `links` checks repository
+relative links. A successful set of those gates is still separate from a local
+`mdbook build`; report both states explicitly.
 
 ## Building the playground
 
