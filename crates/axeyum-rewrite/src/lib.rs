@@ -1,10 +1,25 @@
 //! Rewrite contracts and canonicalization for Axeyum.
 //!
 //! Every rule has an ID, precondition, preservation classification, projection
-//! obligation, and test route from the start. The default Phase 3
-//! canonicalizer enables only denotation-preserving rules, so model projection
-//! remains identity until a later equisatisfiability layer explicitly provides
-//! projection and replay.
+//! obligation, and test route. The default canonicalizer enables only
+//! denotation-preserving rules. Separate equisatisfiable transformations expose
+//! explicit model-reconstruction state rather than masquerading as ordinary
+//! canonicalization.
+//!
+//! # Example
+//!
+//! ```
+//! use axeyum_ir::TermArena;
+//! use axeyum_rewrite::canonicalize;
+//!
+//! let mut arena = TermArena::new();
+//! let x = arena.bv_var("x", 8)?;
+//! let reflexive = arena.eq(x, x)?;
+//! let outcome = canonicalize(&mut arena, reflexive)?;
+//! assert!(outcome.changed());
+//! assert_eq!(outcome.term, arena.bool_const(true));
+//! # Ok::<(), Box<dyn std::error::Error>>(())
+//! ```
 
 use std::collections::BTreeSet;
 

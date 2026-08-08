@@ -75,10 +75,10 @@ scaling comparison.
 
 ## Status
 
-The client-side **WASM** delivery surface (the moat vs Python/Haskell +
-external-solver incumbents) is blocked on `axeyum-solver` building for `wasm32`
-(see `UPSTREAM-FEEDBACK.md` U8). The vs-hevm/halmos differential scoreboard is
-install-gated; the `ExternalOracle` seam exists.
+The generic scalar-QF_BV solver and browser playground now build for `wasm32`,
+but this crate does not yet ship an EVM-specific JavaScript binding. The
+vs-hevm/halmos differential scoreboard remains install-gated; the
+`ExternalOracle` seam exists.
 
 [`SymbolicExecutor`]: axeyum_solver::SymbolicExecutor
 [`concrete::run`]: crate::concrete::run

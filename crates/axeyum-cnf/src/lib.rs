@@ -1,9 +1,30 @@
 //! CNF layer for Axeyum.
 //!
-//! This crate owns the first Phase 4 CNF contract: simple Tseitin encoding
-//! from AIG, DIMACS parsing/writing, CNF evaluation, and lift maps from CNF
-//! variables back to AIG literals. It also owns the first pure-Rust SAT adapter
-//! path for CNF formulas.
+//! This crate owns Tseitin encoding from AIG, DIMACS parsing/writing, CNF
+//! evaluation, lift maps, pure-Rust SAT adapters, bounded inprocessing, and the
+//! DRAT/LRAT/selected-Alethe proof core. The `BatSat` adapter's proofless UNSAT is
+//! explicitly lower assurance; proof-producing routes return artifacts that can
+//! be checked independently.
+//!
+//! # Checked UNSAT example
+//!
+//! ```
+//! use axeyum_cnf::{
+//!     CnfClause, CnfFormula, CnfLit, CnfVar, ProofSolveOutcome, check_drat,
+//!     solve_with_drat_proof,
+//! };
+//!
+//! let x = CnfVar::new(0)?;
+//! let mut formula = CnfFormula::new(1);
+//! formula.add_clause(CnfClause::new(vec![CnfLit::positive(x)]))?;
+//! formula.add_clause(CnfClause::new(vec![CnfLit::positive(x).negated()]))?;
+//!
+//! let ProofSolveOutcome::Unsat(proof) = solve_with_drat_proof(&formula) else {
+//!     panic!("the contradictory unit clauses must be unsatisfiable");
+//! };
+//! assert!(check_drat(&formula, &proof)?);
+//! # Ok::<(), Box<dyn std::error::Error>>(())
+//! ```
 
 use axeyum_aig::{Aig, AigLit, AigNode, AigNodeId};
 use std::cell::Cell;

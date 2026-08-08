@@ -10,10 +10,10 @@ validated WASM/browser workflow. The contributor guide now has executable task
 pages for setup, testing, operators, rewrites, solver routes, proof/evidence,
 and benchmark artifacts. The internals sequence now documents the live IR,
 evaluation, rewriting, lowering, SAT, dispatch, evidence, and Lean boundaries.
-Remaining front-door work is concentrated in crate-level examples. The stable
-reference section now routes public API/configuration questions and indexes golden-tested/generated
-logic, support, trust, and SMT-LIB protocol authorities without copying their
-volatile tables. The live
+Every workspace crate now has a README, and the core public crates have
+compile-tested rustdoc examples. The stable reference section routes public
+API/configuration questions and indexes golden-tested/generated logic, support,
+trust, and SMT-LIB protocol authorities without copying their volatile tables. The live
 indexes in [`docs/README.md`](README.md), [`learn/README.md`](learn/README.md),
 [`user-guide/README.md`](user-guide/README.md), and
 [`reference/README.md`](reference/README.md) are authoritative for what is
@@ -342,12 +342,12 @@ gradually.
 
 Current sequence:
 
-1. Beginner, user-guide, contributor, reference, and internals front doors are
-   complete and indexed.
-2. Audit crate READMEs and rustdoc examples for runnable, non-duplicated entry
-   points into those guides.
+1. Beginner, user-guide, contributor, reference, internals, and crate front
+   doors are complete and indexed.
+2. Audit the remaining curriculum, review, plan, and research indexes for stale
+   navigation or claims, without rewriting their historical records.
 3. Keep generated capability/support/trust authorities and relative-link CI
-   green as the crate examples change.
+   green as documentation changes.
 4. Treat a full mdBook-render CI gate as separate future work; the current
    hosted documentation workflow does not run it.
 

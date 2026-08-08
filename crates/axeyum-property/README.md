@@ -2,6 +2,16 @@
 
 Typed prove-or-counterexample SDK over the Axeyum IR and evidence APIs.
 
+For a runnable, measured consumer example:
+
+```sh
+cargo run -p axeyum-property --example property_corpus_scoreboard -- markdown
+```
+
+The API contracts live in the [crate documentation](src/lib.rs). Solver result,
+model replay, and evidence semantics are documented in the
+[user guide](../../docs/user-guide/README.md).
+
 This crate is intentionally thin: it owns no solver logic. It gives frontends a
 typed `Bool` / `Bv<W>` / `Int` builder, records declared scalar symbols in a
 deterministic counterexample-objective order, and delegates proof attempts to

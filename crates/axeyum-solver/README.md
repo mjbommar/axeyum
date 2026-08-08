@@ -1,30 +1,27 @@
 # axeyum-solver
 
-Solver backend interface for the
-[Axeyum](https://github.com/mjbommar/axeyum) automated reasoning stack: the
-backend trait, results (`Sat`/`Unsat`/`Unknown` as first-class outcomes),
-models keyed by Axeyum symbols, capability descriptions, and cooperative
-cancellation.
+Axeyum's solver contract and orchestration hub: `Sat`/`Unsat`/`Unknown`, typed
+models, configuration and deadlines, cold and retained backends, multi-theory
+dispatch, and evidence/checking APIs.
 
-The default build has no C/C++ dependency; native backends are feature-gated
-(`z3` arrives with milestone M0 and follows the demotion path of
-[ADR-0002](../../docs/research/09-decisions/adr-0002-ground-up-identity-oracle-bootstrap.md):
-backend → differential oracle → CI cross-check).
-The default backend implementation is now `SatBvBackend`, which composes
-Axeyum's query terms, AIG lowering, Tseitin CNF, the pure Rust BatSat adapter,
-model reconstruction, and evaluator replay for the supported QF_BV subset.
+The default feature profile is the pure-Rust scalar Bool/BV surface. Feature
+`full` enables multi-theory dispatch, SMT-LIB solving, and the broader
+certificate/reconstruction namespaces. `z3` and `z3-static` are optional oracle
+leaves; they are not default product dependencies.
 
-Design rationale:
+The [crate documentation](src/lib.rs) has a compile-tested default-profile
+example. Complete runnable programs include:
 
-- [Backend model](../../docs/research/03-architecture/backend-model.md) —
-  trait shape and capabilities.
-- [Incrementality and lifecycle](../../docs/research/03-architecture/incrementality-and-solver-lifecycle.md)
-  — assumptions-first incrementality, arena/instance lifetimes.
-- [Evidence and checking](../../docs/research/07-verification/evidence-and-checking.md)
-  — why every `sat` is checked by evaluation.
+```sh
+cargo run -p axeyum-solver --features full --example first_smtlib_query
+cargo run -p axeyum-solver --features full --example geometry_portfolio
+```
 
-Status: Phase 5 first slice — trait, models, Z3 oracle backend, and the
-native-free SAT-backed BV backend with conformance and Z3 differential tests;
-every `sat` in the test harness is replayed through the trusted evaluator.
+Read [Rust embedding](../../docs/user-guide/rust-embedding.md),
+[Solver dispatch](../../docs/internals/solver-dispatch.md), and
+[Proof and evidence routes](../../docs/internals/proof-stack.md). Exact fragment
+and assurance claims remain in the generated
+[support matrix](../../docs/reference/support-matrix.md) and
+[trust ledger](../../docs/reference/trust-ledger.md).
 
 License: MIT OR Apache-2.0.

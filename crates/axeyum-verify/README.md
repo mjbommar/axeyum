@@ -6,6 +6,13 @@ index-out-of-bounds, `assert!`/`assert_eq!` violations, `panic!`/`unreachable!`,
 and `unwrap`-on-`None` — and emits either a runnable failing `#[test]` or a
 re-checked, bounded-verified certificate (Lean-checkable when in fragment).
 
+The compile-tested attribute examples and exact result contract live in the
+[crate documentation](src/lib.rs). Run the measured consumer example with:
+
+```sh
+cargo run -p axeyum-verify --example measure_verify
+```
+
 The macro parses a *restricted Rust surface* (`syn`, not MIR): integer/bool
 params and locals, arithmetic/bitwise/comparison, `if`/`match`-on-int, fixed
 arrays + indexing, compound assignment, and `#[unwind(K)]`-bounded `while`/`for`.

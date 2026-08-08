@@ -1,16 +1,16 @@
 # axeyum-query
 
-First-class query objects for Axeyum: assertions, assumptions, scopes, and
-stable labels over terms owned by `axeyum-ir`.
+First-class query values over `axeyum-ir`: assertions, assumptions, nested
+scopes, stable labels, structural cache keys, support slicing, and replay
+against the complete original query.
 
-Phase 3 starts assumptions-first. One-shot solver backends enforce assumptions
-as ordinary assertions; future incremental backends can map the same query
-object to native assumptions without changing query semantics.
+The [crate documentation](src/lib.rs) contains a compile-tested builder example.
+One-shot backends may submit assumptions as assertions; retained backends can
+use native assumption literals without changing query semantics.
 
-The crate also owns the first query-planning contracts:
+```sh
+cargo test -p axeyum-query
+```
 
-- structural cache keys over term structure, symbol names/sorts, constants, and
-  operators, independent of arena-local `TermId` allocation and labels;
-- target-support slicing that may submit fewer constraints to a solver;
-- identity projection plus replay against every original assertion and
-  assumption before accepting any sliced `sat` model.
+See [Solver dispatch and route contracts](../../docs/internals/solver-dispatch.md)
+and [Models and replay](../../docs/user-guide/models-and-replay.md).

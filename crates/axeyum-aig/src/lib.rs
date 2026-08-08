@@ -1,8 +1,25 @@
 //! And-inverter graph layer for Axeyum.
 //!
-//! This crate is the first Phase 4 circuit layer. It deliberately stops short
-//! of term bit-lowering and CNF: it owns deterministic AIG node construction,
-//! structural hashing, circuit evaluation, and ASCII AIGER debug export.
+//! This crate deliberately stops short of term bit-lowering and CNF: it owns
+//! deterministic AIG node construction, structural hashing, circuit evaluation,
+//! construction statistics, and ASCII AIGER debug export.
+//!
+//! # Example
+//!
+//! ```
+//! use axeyum_aig::{Aig, AigError};
+//!
+//! let mut aig = Aig::new();
+//! let a = aig.input("a");
+//! let b = aig.input("b");
+//! let both = aig.and(a, b);
+//!
+//! // AND construction is canonical and evaluation follows input order.
+//! assert_eq!(aig.and(b, a), both);
+//! assert!(aig.eval(both, &[true, true])?);
+//! assert!(!aig.eval(both, &[true, false])?);
+//! # Ok::<(), AigError>(())
+//! ```
 
 use std::fmt::Write as _;
 

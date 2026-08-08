@@ -98,9 +98,9 @@ checking, proof irrelevance, inductives, recursors, and iota reduction. Supporte
 solver proofs already reconstruct to kernel-checked terms and self-contained
 Lean modules. A separate fail-closed `lean4export` 3.1 reader now independently
 admits exact flat, direct-recursive, recursive-indexed/reflexive, mutual, nested,
-projection, and Nat-literal profiles under explicit population and computation
-gates. It is not a complete Lean kernel or ecosystem: String literals,
-quotients, dependency-closed `Init`/`Std`/mathlib imports, native parsing/macros,
+projection, quotient-package, and Nat-literal profiles under explicit population
+and computation gates. It is not a complete Lean kernel or ecosystem: String
+literals, dependency-closed `Init`/`Std`/mathlib imports, native parsing/macros,
 elaboration, tactics, modules/Lake, LSP, and compiler/runtime behavior remain
 open. See
 [Project State](docs/PROJECT-STATE.md#how-close-is-it-to-lean) and the
@@ -126,7 +126,7 @@ oracle-free. Where a mainstream CAS *computes* a transformed expression and asks
 you to trust it, Axeyum *decides and certifies*. Results are exact; certified
 operations carry a machine-checked backstop (a decidable zero-test, or
 differentiate-and-check), so an out-of-fragment case **declines rather than
-returns a wrong answer**. Current surface (541 tests, clippy-clean):
+returns a wrong answer**. Current surface:
 
 - **Calculus** — `differentiate`/`differentiate_n`, `integrate` (polynomial, full
   rational via Horowitz + Rothstein–Trager, `∫p·eˣ`, `∫p·sin|cos`),
@@ -280,7 +280,7 @@ by use (each is accepted in an ADR).
 | Crate | Purpose |
 |---|---|
 | [`axeyum-scenarios`](crates/axeyum-scenarios) | Self-checking, oracle-free consumer workloads (SAT by execution, UNSAT by bounded-verified identities). |
-| [`axeyum-smtlib`](crates/axeyum-smtlib) | SMT-LIB 2 reader/writer: benchmark ingestion, sharing-preserving export. |
+| [`axeyum-smtlib`](crates/axeyum-smtlib) | SMT-LIB 2 reader/writer: typed command stream, scoped query points, sharing-preserving export. |
 | [`axeyum-bench`](crates/axeyum-bench) | Corpus benchmark harness with PAR-2 scoring, backend selection, JSON artifacts. |
 
 ## Start here
