@@ -81,6 +81,8 @@ UF_FUNCTION_ELIM = ROOT / "crates" / "axeyum-rewrite" / "src" / "functions.rs"
 CNF_LIB = ROOT / "crates" / "axeyum-cnf" / "src" / "lib.rs"
 CNF_LRAT = ROOT / "crates" / "axeyum-cnf" / "src" / "lrat.rs"
 CNF_README = ROOT / "crates" / "axeyum-cnf" / "README.md"
+CAS_README = ROOT / "crates" / "axeyum-cas" / "README.md"
+CAS_LIB = ROOT / "crates" / "axeyum-cas" / "src" / "lib.rs"
 BOOLEAN_CNF_COOKBOOK = (
     ROOT / "docs" / "proof-cookbook" / "recipes" / "boolean-cnf-lrat.md"
 )
@@ -956,6 +958,23 @@ def main() -> int:
                 f"marker {marker!r}"
             )
 
+    cas_assurance_markers = (
+        (CAS_LIB, "pub enum ZeroTest"),
+        (CAS_LIB, "pub struct CertifiedIntegral"),
+        (CAS_README, "This assurance is CAS-local"),
+        (CAS_README, "not `axeyum_solver::Evidence`"),
+        (CAS_README, "current checked `i128` range"),
+        (ROOT / "README.md", "Their IRs, certificate formats, and exact trust boundaries are"),
+        (ROOT / "README.md", "re-validate supported evidence artifacts"),
+    )
+    for path, marker in cas_assurance_markers:
+        text = " ".join(path.read_text(encoding="utf-8").split())
+        if marker not in text:
+            failures.append(
+                f"{path.relative_to(ROOT)}: missing CAS assurance boundary marker "
+                f"{marker!r}"
+            )
+
     for path in CURRENT_SOLVER_COMMAND_DOCS:
         for line_number, line in enumerate(
             path.read_text(encoding="utf-8").splitlines(), start=1
@@ -1565,6 +1584,7 @@ def main() -> int:
         "|research_symbolic_shifts=resolved"
         "|research_high_assurance_unsat=resolved"
         "|theory_combination=online_cdclt_with_guarded_fallback"
+        "|cas_assurance=local_route_specific"
         "|strings_status=sound_incomplete"
         "|strings_default_bound=12"
         "|strings_ladder_max=48"

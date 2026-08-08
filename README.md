@@ -27,11 +27,12 @@ If you already use these, here's where Axeyum fits:
 |---|---|---|
 | **Z3 / cvc5** (SMT solvers) | a pure-Rust SMT solver | supported certified routes return independently checkable evidence; uncovered routes remain explicit in the proof ledger |
 | **Lean / Coq** (proof assistants) | an independent selected-profile Lean-core checker plus a designed certificate-first goal layer | supported solver proofs already reconstruct to checked terms; the native interactive goal/tactic layer is not built yet |
-| **Mathematica / SymPy** (computer algebra) | a **proof-carrying CAS** | differentiate / factor / integrate / solve return results *certified* by lowering to the decidable core — out of fragment it declines, never guesses wrong |
+| **Mathematica / SymPy** (computer algebra) | a **proof-carrying CAS** | supported certificate-bearing operations use route-specific exact checks (normal-form witnesses, re-multiplication, substitution, or differentiate-and-check); compute-only APIs remain distinct |
 | **a textbook + a lab** | a built-in library of tutorials, rules, axioms, and worked theorems | the same artifacts that *teach* a concept also *test* an Axeyum theory (double-duty) |
 
-All four share one typed core, one trust boundary, and one pure-Rust,
-WASM-clean build.
+All four live in one pure-Rust workspace and follow the same fail-closed
+discipline. Their IRs, certificate formats, and exact trust boundaries are
+route-specific; they must not inherit assurance from one another.
 
 ## Honest status
 
@@ -142,11 +143,13 @@ proof assistant from the reconstruction and kernel features above.
 ### 3. Computer algebra (the Mathematica / SymPy angle)
 
 `axeyum-cas` is a **proof-carrying CAS** (ADR-0301): pure Rust, WASM-safe,
-oracle-free. Where a mainstream CAS *computes* a transformed expression and asks
-you to trust it, Axeyum *decides and certifies*. Results are exact; certified
-operations carry a machine-checked backstop (a decidable zero-test, or
-differentiate-and-check), so an out-of-fragment case **declines rather than
-returns a wrong answer**. Current surface:
+oracle-free. Its supported certificate-bearing operations use CAS-local exact
+checks such as a canonical difference witness, re-multiplication, substitution,
+or differentiate-and-check. These are not automatically
+`axeyum_solver::Evidence`, Alethe, or Lean proofs; compute-only APIs and
+certificate envelopes remain distinct. Exact rational work is bounded by the
+current checked `i128` representation, and an uncertifiable or overflowing
+certificate-bearing route declines. Current surface:
 
 - **Calculus** — `differentiate`/`differentiate_n`, `integrate` (polynomial, full
   rational via Horowitz + Rothstein–Trager, `∫p·eˣ`, `∫p·sin|cos`),
@@ -237,7 +240,7 @@ Everything routes through a few entry points in `axeyum-solver`:
 | `produce_evidence` | decide *and* package a self-checking certificate |
 | `export_qf_{bv,abv,uf,aufbv,lia}_unsat_proof`, `export_datatype_unsat_proof` | emit a `drat-trim`-checkable DIMACS+DRAT certificate |
 | `IncrementalBvSolver` | warm push/pop/assume + path-pruning core + all-SAT + symbolic memory |
-| `unsat_core` / `Evidence::check` | minimal core; independently re-validate any result |
+| `unsat_core` / `Evidence::check` | extract a core; independently re-validate supported evidence artifacts |
 
 The incremental solver owns its state, implements `Send`, and uses no shared
 global context — one `TermArena` + `IncrementalBvSolver` per worker scans
@@ -287,7 +290,7 @@ by use (each is accepted in an ADR).
 
 | Crate | Purpose |
 |---|---|
-| [`axeyum-cas`](crates/axeyum-cas) | Proof-carrying computer algebra (differentiate/factor/integrate/solve/linear algebra/number theory), certified by lowering to the decidable core. |
+| [`axeyum-cas`](crates/axeyum-cas) | Computer algebra with CAS-local exact checks and certificate-bearing APIs alongside explicitly compute-only operations. |
 | [`axeyum-lean-kernel`](crates/axeyum-lean-kernel) | In-tree Rust Lean kernel — interned `Name`/`Level`/`Expr` + de Bruijn machinery (the proof-export target). |
 | [`axeyum-lean-import`](crates/axeyum-lean-import) | Fail-closed official `lean4export` 3.1 reader; supported declarations enter only through the independent kernel's checked gates. |
 | [`axeyum-property`](crates/axeyum-property) (+ [`-macros`](crates/axeyum-property-macros)) | Typed prove-or-counterexample SDK over Axeyum evidence and model replay. |
