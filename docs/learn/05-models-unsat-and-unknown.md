@@ -10,8 +10,8 @@ stateDiagram-v2
     Solving --> unsat: proved none exists
     Solving --> unknown: budget exhausted /<br/>undecidable fragment
     sat --> [*]: model, replay-verified
-    unsat --> [*]: certificate, re-checked
-    unknown --> [*]: honest, not a crash
+    unsat --> [*]: route-specific evidence and assurance
+    unknown --> [*]: not settled; distinct from error
 ```
 
 ## `sat` — and why a model is checkable
@@ -41,20 +41,23 @@ flowchart LR
 ## `unsat` — and what makes it trustworthy
 
 `unsat` means **no model exists** — a universal claim ("for *all* assignments,
-the conditions fail"). You can't show that by exhibiting one example, so the
-evidence is a **proof/certificate** that a small, independent checker re-verifies:
+the conditions fail"). You can't show that by exhibiting one example. On a
+certificate-bearing route, a small independent checker instead re-verifies a
+**proof/certificate**:
 
-| Fragment | Evidence | Re-checked by |
+| Selected proof route | Evidence | Re-checked by |
 |---|---|---|
-| QF_BV (clausal) | DRAT / LRAT proof | `check_drat`, `check_lrat` |
-| QF_LRA | Farkas certificate | re-derived coefficients |
-| QF_UF | congruence explanation | independent union-find |
-| covered fragments | Alethe proof | reconstructed to a `False` a Rust **Lean-grade kernel** accepts |
+| QF_BV clausal exporter | DRAT / optional LRAT proof | `check_drat`, `check_lrat` |
+| covered QF_LRA paths | Farkas certificate | exact certificate checker |
+| covered QF_UF paths | congruence explanation | independent union-find |
+| selected reconstructed fragments | Alethe proof | Alethe checker and, where supported, a Rust **Lean-grade kernel** |
 
-This is the project's identity: a wrong search can't produce a wrong `unsat`,
-because the *checker* — not the search — has the last word. The full picture of
-what is independently checked vs still trusted is the
-[trust ledger](../research/08-planning/trust-ledger.md).
+On an independently checked route, a bad search trace cannot produce a checked
+`unsat`: the checker has the last word. This is not yet true of every backend.
+In particular, the default BatSat-backed clausal route reports raw UNSAT
+evidence as `Unchecked`; proof exporters and other certificate-bearing routes
+provide stronger assurance. The full per-route picture is the
+[trust ledger](../reference/trust-ledger.md).
 
 ## `unknown` — a feature, not a failure
 
@@ -66,10 +69,10 @@ what is independently checked vs still trusted is the
 - the fragment is **incomplete** in Axeyum (e.g. nonlinear arithmetic is
   sound-but-incomplete) or **undecidable** in general.
 
-The hard rule: `unknown` is **first-class**. Every path must degrade to a
-deterministic `unknown` under its bound — never a crash, never a hang, and
-*never* a guessed `sat`/`unsat`. A trustworthy "I don't know" beats a confident
-lie.
+The hard rule: `unknown` is **first-class**. Supported resource and
+incompleteness bounds must preserve a deterministic `unknown`, never a guessed
+`sat`/`unsat`. Malformed input and operational failures remain errors rather
+than being mislabeled as logical outcomes.
 
 ## Next
 

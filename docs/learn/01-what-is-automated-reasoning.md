@@ -52,8 +52,8 @@ flowchart TD
     Q --> K["unknown<br/>not proven either way"]
 
     S --> Sn["witness assignment,<br/>re-checked by evaluation"]
-    U --> Un["small certificate,<br/>re-checked independently"]
-    K --> Kn["ran out of time/space, or<br/>the fragment is undecidable<br/>— a valid answer, not a crash"]
+    U --> Un["route-specific evidence;<br/>independently checked<br/>where supported"]
+    K --> Kn["budget or procedure did not settle it;<br/>distinct from malformed-input<br/>or operational errors"]
 
     classDef sat fill:#e7f6e7,stroke:#2e7d32;
     classDef uns fill:#fde8e8,stroke:#c62828;
@@ -66,12 +66,13 @@ flowchart TD
 - **`sat`** — there *is* a solution; the solver returns one (a *model*).
 - **`unsat`** — there is *provably no* solution.
 - **`unknown`** — the solver couldn't settle it within its resources, or the
-  question lies in an undecidable fragment. This is a **first-class, honest**
-  result in Axeyum — never an error or a crash.
+  active procedure is incomplete for the question. This is a **first-class,
+  honest logical result** in Axeyum. Malformed input and operational failures
+  remain separate errors.
 
-That last point is a design principle: a solver that occasionally says "I don't
-know" but is *never wrong* is far more useful than one that always answers but
-sometimes lies.
+That last point is a design principle: a solver that preserves "I don't know"
+and reports the assurance of each definitive route is more useful than one that
+turns missing evidence into an answer.
 
 ## SAT vs SMT
 

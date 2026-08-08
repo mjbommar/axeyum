@@ -37,6 +37,9 @@ EXAMPLE_CATALOG = ROOT / "docs" / "reference" / "examples.md"
 DOCUMENTATION_PLAN = ROOT / "docs" / "documentation-plan.md"
 CONSUMER_README = ROOT / "docs" / "consumer-track" / "README.md"
 CONSUMER_SCOREBOARD = ROOT / "docs" / "consumer-track" / "SCOREBOARD.md"
+LEARN_INTRO = ROOT / "docs" / "learn" / "01-what-is-automated-reasoning.md"
+LEARN_OUTCOMES = ROOT / "docs" / "learn" / "05-models-unsat-and-unknown.md"
+LEARN_PIPELINE = ROOT / "docs" / "learn" / "07-how-axeyum-solves-a-query.md"
 PROVER_README = ROOT / "docs" / "prover-track" / "README.md"
 PROVER_SYNTHESIS = ROOT / "docs" / "prover-track" / "SYNTHESIS.md"
 PROVER_PLAN = ROOT / "docs" / "prover-track" / "plan" / "README.md"
@@ -47,6 +50,7 @@ LEAN_AXIOM_LEDGER = ROOT / "docs" / "plan" / "lean-axiom-ledger-v1.json"
 LEAN_COMPLETE_PARITY = ROOT / "docs" / "plan" / "generated" / "lean-complete-parity.md"
 LEAN_KERNEL_EXPR = ROOT / "crates" / "axeyum-lean-kernel" / "src" / "expr.rs"
 UF_FUNCTION_ELIM = ROOT / "crates" / "axeyum-rewrite" / "src" / "functions.rs"
+CNF_LIB = ROOT / "crates" / "axeyum-cnf" / "src" / "lib.rs"
 CATEGORICAL_AUDIT = (
     ROOT / "docs" / "plan" / "categorical-engine-depth-audit-2026-07-21.md"
 )
@@ -109,6 +113,9 @@ PUBLIC_CLAIM_DOCS = (
     ROOT / "README.md",
     ROOT / "docs" / "README.md",
     PROJECT_STATE,
+    LEARN_INTRO,
+    LEARN_OUTCOMES,
+    LEARN_PIPELINE,
     ROOT / "docs" / "user-guide" / "benchmarks.md",
     ROOT / "docs" / "user-guide" / "limitations.md",
     SMTCOMP_README,
@@ -136,6 +143,9 @@ PUBLIC_STALE_PATTERNS = (
     re.compile(r"It is sound \(`unknown`, never a wrong", re.IGNORECASE),
     re.compile(r"axeyum is \*\*never wrong\*\*", re.IGNORECASE),
     re.compile(r"82\s*/\s*228\*\* decided-correct", re.IGNORECASE),
+    re.compile(r"\bnever wrong\b", re.IGNORECASE),
+    re.compile(r"never a crash", re.IGNORECASE),
+    re.compile(r"wrong search can.?t produce a wrong\s+`unsat`", re.IGNORECASE),
 )
 
 PROVER_STALE_PATTERNS = (
@@ -592,6 +602,32 @@ def main() -> int:
     if "(prover-track/README.md)" not in summary_text:
         failures.append("docs/SUMMARY.md: prover-track front door is not indexed")
 
+    cnf_lib_text = CNF_LIB.read_text(encoding="utf-8")
+    for marker in (
+        "pub enum SatProofStatus",
+        "SatProofStatus::Unchecked",
+    ):
+        if marker not in cnf_lib_text:
+            failures.append(
+                f"{CNF_LIB.relative_to(ROOT)}: missing proof-status marker {marker!r}"
+            )
+
+    beginner_markers = (
+        (LEARN_INTRO, "Malformed input and operational failures remain separate errors"),
+        (LEARN_OUTCOMES, "default BatSat-backed clausal route reports raw UNSAT"),
+        (LEARN_OUTCOMES, "[trust ledger](../reference/trust-ledger.md)"),
+        (LEARN_PIPELINE, "The UNSAT arrows are alternatives"),
+        (LEARN_PIPELINE, "proof status as `Unchecked`"),
+        (LEARN_PIPELINE, "[QF_BV proof exporter](../user-guide/unsat-evidence.md)"),
+    )
+    for path, marker in beginner_markers:
+        text = " ".join(path.read_text(encoding="utf-8").split())
+        if marker not in text:
+            failures.append(
+                f"{path.relative_to(ROOT)}: missing beginner assurance marker "
+                f"{marker!r}"
+            )
+
     required_gap_markers = (
         f"{snapshot['decided']} / {snapshot['files']}",
         f"{snapshot['compared']} oracle-compared",
@@ -900,6 +936,7 @@ def main() -> int:
         f"|prover_axioms_derivable={axiom_classes['derivable-theorem']}"
         f"|prover_axioms_external={axiom_classes['external-assumption']}"
         f"|prover_axioms_primitive={axiom_classes['primitive-interface']}"
+        "|beginner_unsat_assurance=route_specific"
     )
     print(f"PARITY_DOCS|{line}")
     if failures:
