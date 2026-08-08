@@ -50,6 +50,19 @@ const MAX_TWO_EDGE_DIFF_EDGES: usize = 512;
 const MAX_BELLMAN_FORD_DIFF_EDGES: usize = 256;
 const MAX_DYNAMIC_BOUND_CONFLICT_BATCH: usize = 32;
 const MAX_DYNAMIC_AFFINE_BOUND_CONFLICT_BATCH: usize = 1;
+/// Total literals retained in dynamically learned, unminimized theory cores.
+///
+/// A wide core is the fail-closed fallback when deterministic minimization is
+/// itself too expensive.  Repeatedly feeding such clauses back into the warm
+/// propositional solver can make one later SAT round allocate far faster than
+/// its cooperative deadline callback is polled.  The public `QF_LRA`
+/// `sal/tgc/tgc_io-safe-20.smt2` case demonstrated the failure mode: 24 cores of
+/// roughly 430 literals were enough for `BatSat` to grow from 1.8 GiB to the
+/// external 8 GiB ceiling and abort the process before the 24-second timeout.
+/// Bound the retained wide-core work deterministically and return a first-class
+/// resource limit before starting the next SAT round.  Small/minimized cores do
+/// not consume this budget.
+const MAX_DYNAMIC_LARGE_CORE_LITERALS: usize = 8_192;
 
 /// The arithmetic theory an atom belongs to.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -575,6 +588,7 @@ struct ArithCoreStats {
     lp_count: usize,
     minimized_count: usize,
     large_count: usize,
+    large_literals: usize,
 }
 
 impl ArithCoreStats {
@@ -594,7 +608,10 @@ impl ArithCoreStats {
             ArithCoreSource::AffineBound => self.affine_count += 1,
             ArithCoreSource::LpRelaxation => self.lp_count += 1,
             ArithCoreSource::Minimized => self.minimized_count += 1,
-            ArithCoreSource::Large => self.large_count += 1,
+            ArithCoreSource::Large => {
+                self.large_count += 1;
+                self.large_literals = self.large_literals.saturating_add(len);
+            }
         }
     }
 
@@ -606,7 +623,7 @@ impl ArithCoreStats {
         format!(
             "core_len_last={}, core_len_min={}, core_len_max={}, core_len_avg={}.{}, \
              core_src_bound={}, core_src_diff={}, core_src_affine={}, core_src_lp={}, \
-             core_src_minimized={}, core_src_large={}",
+             core_src_minimized={}, core_src_large={}, core_large_literals={}",
             self.last_len,
             self.min_len,
             self.max_len,
@@ -617,7 +634,8 @@ impl ArithCoreStats {
             self.affine_count,
             self.lp_count,
             self.minimized_count,
-            self.large_count
+            self.large_count,
+            self.large_literals
         )
     }
 }
@@ -777,6 +795,25 @@ impl IncrementalArithDpll {
         let enable_affine_bound_cores = self.solve_calls > 1;
 
         for round in 0..MAX_DPLL_ROUNDS {
+            if self.core_stats.large_literals >= MAX_DYNAMIC_LARGE_CORE_LITERALS {
+                return Ok(CheckResult::Unknown(UnknownReason {
+                    kind: UnknownKind::ResourceLimit,
+                    detail: format!(
+                        "lazy linear arithmetic retained {} literals in unminimized theory \
+                         cores (limit {MAX_DYNAMIC_LARGE_CORE_LITERALS}) after {round} rounds \
+                         this solve; declining before the next SAT round (solve_calls={}, \
+                         total_rounds={}, atoms={}, bound_lemmas={}, blocking_lemmas={}, {}, {})",
+                        self.core_stats.large_literals,
+                        self.solve_calls,
+                        self.total_rounds,
+                        self.ctx.atoms.len(),
+                        self.initial_clauses.len(),
+                        self.blocking.len(),
+                        self.core_stats.summary(),
+                        self.support_stats.summary()
+                    ),
+                }));
+            }
             if deadline.is_some_and(|d| Instant::now() >= d) {
                 return Ok(CheckResult::Unknown(UnknownReason {
                     kind: UnknownKind::ResourceLimit,
@@ -4317,6 +4354,37 @@ mod tests {
         assert!(summary.contains("core_src_lp=1"));
         assert!(summary.contains("core_src_minimized=0"));
         assert!(summary.contains("core_src_large=1"));
+        assert!(summary.contains("core_large_literals=20"));
+    }
+
+    #[test]
+    fn wide_theory_core_budget_declines_before_another_sat_round() {
+        let mut arena = TermArena::new();
+        let assertion = arena.bool_const(true);
+        let mut solver = IncrementalArithDpll::new(&mut arena, &[assertion]).unwrap();
+        solver.core_stats.record(
+            ArithCoreSource::Large,
+            MAX_DYNAMIC_LARGE_CORE_LITERALS,
+        );
+
+        let result = solver
+            .solve(&mut arena, &[assertion], &SolverConfig::default())
+            .unwrap();
+        let CheckResult::Unknown(reason) = result else {
+            panic!("wide-core exhaustion must decline, got {result:?}");
+        };
+        assert_eq!(reason.kind, UnknownKind::ResourceLimit);
+        assert!(
+            reason
+                .detail
+                .contains("declining before the next SAT round")
+        );
+        assert!(
+            reason
+                .detail
+                .contains("core_large_literals=8192")
+        );
+        assert_eq!(solver.total_rounds, 0, "the SAT loop must not start");
     }
 
     #[test]
