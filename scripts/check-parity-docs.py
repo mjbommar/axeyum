@@ -49,6 +49,7 @@ TERM_IR_DOC = ROOT / "docs" / "internals" / "term-ir.md"
 EVALUATOR_DOC = ROOT / "docs" / "internals" / "evaluator.md"
 CNF_INTERNAL_DOC = ROOT / "docs" / "internals" / "cnf-and-sat.md"
 PROOF_STACK_DOC = ROOT / "docs" / "internals" / "proof-stack.md"
+LEAN_INTERNAL_DOC = ROOT / "docs" / "internals" / "lean-kernel.md"
 NORTH_STAR_PLAN = ROOT / "docs" / "plan" / "00-north-star.md"
 NORTH_STAR_ORIENTATION = (
     ROOT / "docs" / "research" / "00-orientation" / "north-star.md"
@@ -68,7 +69,14 @@ PROVER_P60 = (
 )
 LEAN_AXIOM_LEDGER = ROOT / "docs" / "plan" / "lean-axiom-ledger-v1.json"
 LEAN_COMPLETE_PARITY = ROOT / "docs" / "plan" / "generated" / "lean-complete-parity.md"
+LEAN_OFFICIAL_MATRIX = (
+    ROOT / "docs" / "plan" / "generated" / "lean-official-construct-matrix.md"
+)
+LEAN_QUOTIENT_RESULT = (
+    ROOT / "docs" / "plan" / "lean-quotient-package-m1-m3-result-2026-07-23.md"
+)
 LEAN_KERNEL_EXPR = ROOT / "crates" / "axeyum-lean-kernel" / "src" / "expr.rs"
+LEAN_IMPORT_LIB = ROOT / "crates" / "axeyum-lean-import" / "src" / "lib.rs"
 UF_FUNCTION_ELIM = ROOT / "crates" / "axeyum-rewrite" / "src" / "functions.rs"
 CNF_LIB = ROOT / "crates" / "axeyum-cnf" / "src" / "lib.rs"
 CNF_LRAT = ROOT / "crates" / "axeyum-cnf" / "src" / "lrat.rs"
@@ -187,6 +195,7 @@ PUBLIC_CLAIM_DOCS = (
     EVALUATOR_DOC,
     CNF_INTERNAL_DOC,
     PROOF_STACK_DOC,
+    LEAN_INTERNAL_DOC,
     CNF_README,
     BOOLEAN_CNF_COOKBOOK,
     NORTH_STAR_PLAN,
@@ -234,6 +243,11 @@ PUBLIC_STALE_PATTERNS = (
     re.compile(r"elaborate DRAT to LRAT and check LRAT", re.IGNORECASE),
     re.compile(r"unsat\s*[→-]+\s*checkable certificate", re.IGNORECASE),
     re.compile(r"A Boolean\s+`unsat`\s+claim is accepted only", re.IGNORECASE),
+    re.compile(
+        r"Nested and mutual inductives, recursors, quotient-related declarations,"
+        r" and other features are admitted only",
+        re.IGNORECASE,
+    ),
 )
 
 PROVER_STALE_PATTERNS = (
@@ -830,6 +844,29 @@ def main() -> int:
         if marker not in text:
             failures.append(
                 f"{path.relative_to(ROOT)}: missing propositional proof boundary "
+                f"marker {marker!r}"
+            )
+
+    lean_boundary_markers = (
+        (LEAN_IMPORT_LIB, 'pub const FORMAT_VERSION: &str = "3.1.0";'),
+        (LEAN_OFFICIAL_MATRIX, "official accepted: 6; official rejected: 1"),
+        (LEAN_OFFICIAL_MATRIX, "dual-admitted-computation-checked`=4"),
+        (
+            LEAN_QUOTIENT_RESULT,
+            "M1--M3 complete; M4 differential and final acceptance remain open",
+        ),
+        (
+            LEAN_INTERNAL_DOC,
+            "recursive-indexed, reflexive-higher-order, mutual, nested-inductive",
+        ),
+        (LEAN_INTERNAL_DOC, "offline TL2.10 M1--M3 slice"),
+        (LEAN_INTERNAL_DOC, "Native syntax/macros, elaboration"),
+    )
+    for path, marker in lean_boundary_markers:
+        text = " ".join(path.read_text(encoding="utf-8").split())
+        if marker not in text:
+            failures.append(
+                f"{path.relative_to(ROOT)}: missing Lean compatibility boundary "
                 f"marker {marker!r}"
             )
 

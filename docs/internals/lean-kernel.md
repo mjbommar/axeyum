@@ -47,11 +47,27 @@ defaults are 16 MiB per NDJSON record and 2,000,000 records per stream.
 
 ## Compatibility boundary
 
-The current profile targets `lean4export` format 3.1.0 and selected Lean
-constructs. It is not a claim to replace the full Lean implementation.
-Nested and mutual inductives, recursors, quotient-related declarations, and
-other features are admitted only as their explicit gates and regression
-matrices mature.
+The current importer admits only `lean4export` wire format 3.1.0. Its selected
+Lean 4.30 construct matrix now independently admits the retained direct,
+recursive-indexed, reflexive-higher-order, mutual, nested-inductive, and
+pre-elaborated well-founded streams. Registered computations are checked for the
+recursive-indexed, reflexive, mutual, and nested rows. That is exact-fixture
+kernel/import evidence, not native Lean source parsing, elaboration, termination
+checking, or broad library compatibility.
+
+The fixed four-member quotient package also has an atomic admission gate,
+registered `Quot.lift`/`Quot.ind` reduction, and one retained official closure.
+That quotient result is the offline TL2.10 M1--M3 slice: the separately
+authorized M4 official differential, ADR acceptance, and final TL2.10 credit
+remain open. Do not generalize it to complete `Init`, `Std`, mathlib, or Lean
+ecosystem support.
+
+The generated [official construct
+matrix](../plan/generated/lean-official-construct-matrix.md) and
+[compatibility matrix](../plan/generated/lean-compatibility.md) carry the exact
+rows. Native syntax/macros, elaboration, pattern/equation compilation,
+well-founded source lowering, tactics, runtime/compiler behavior, packages, and
+editor integration remain separate work.
 
 Current coverage belongs in the generated
 [support matrix](../reference/support-matrix.md) and
