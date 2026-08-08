@@ -44,6 +44,9 @@ NORTH_STAR_PLAN = ROOT / "docs" / "plan" / "00-north-star.md"
 NORTH_STAR_ORIENTATION = (
     ROOT / "docs" / "research" / "00-orientation" / "north-star.md"
 )
+FOUNDATIONAL_DAG = (
+    ROOT / "docs" / "research" / "08-planning" / "foundational-dag.md"
+)
 PROVER_README = ROOT / "docs" / "prover-track" / "README.md"
 PROVER_SYNTHESIS = ROOT / "docs" / "prover-track" / "SYNTHESIS.md"
 PROVER_PLAN = ROOT / "docs" / "prover-track" / "plan" / "README.md"
@@ -56,6 +59,7 @@ LEAN_KERNEL_EXPR = ROOT / "crates" / "axeyum-lean-kernel" / "src" / "expr.rs"
 UF_FUNCTION_ELIM = ROOT / "crates" / "axeyum-rewrite" / "src" / "functions.rs"
 CNF_LIB = ROOT / "crates" / "axeyum-cnf" / "src" / "lib.rs"
 IR_TERM = ROOT / "crates" / "axeyum-ir" / "src" / "term.rs"
+PROOF_SAT = ROOT / "crates" / "axeyum-cnf" / "src" / "proof_sat.rs"
 CATEGORICAL_AUDIT = (
     ROOT / "docs" / "plan" / "categorical-engine-depth-audit-2026-07-21.md"
 )
@@ -123,6 +127,7 @@ PUBLIC_CLAIM_DOCS = (
     LEARN_PIPELINE,
     NORTH_STAR_PLAN,
     NORTH_STAR_ORIENTATION,
+    FOUNDATIONAL_DAG,
     ROOT / "docs" / "user-guide" / "benchmarks.md",
     ROOT / "docs" / "user-guide" / "limitations.md",
     SMTCOMP_README,
@@ -168,6 +173,13 @@ NORTH_STAR_STALE_PATTERNS = (
     re.compile(r"Binder\(later\)", re.IGNORECASE),
     re.compile(r"where Z3 decides nearly all", re.IGNORECASE),
     re.compile(r"never a wrong `unsat`", re.IGNORECASE),
+)
+
+FOUNDATIONAL_DAG_STALE_PATTERNS = (
+    re.compile(r"Status:\s*draft", re.IGNORECASE),
+    re.compile(r"Current Foundation:\s*Bool", re.IGNORECASE),
+    re.compile(r"remaining Phase 5 gate", re.IGNORECASE),
+    re.compile(r"Before Phase 6 implementation starts", re.IGNORECASE),
 )
 
 PROVER_LIVE_DOCS = (
@@ -519,6 +531,15 @@ def main() -> int:
                     f"{match.group(0)!r}"
                 )
 
+    foundational_dag_text = FOUNDATIONAL_DAG.read_text(encoding="utf-8")
+    for pattern in FOUNDATIONAL_DAG_STALE_PATTERNS:
+        if match := pattern.search(foundational_dag_text):
+            line = foundational_dag_text.count("\n", 0, match.start()) + 1
+            failures.append(
+                f"{FOUNDATIONAL_DAG.relative_to(ROOT)}:{line}: stale foundation "
+                f"phase claim: {match.group(0)!r}"
+            )
+
     kernel_expr_text = LEAN_KERNEL_EXPR.read_text(encoding="utf-8")
     if "pub struct NatLit(BigUint);" not in kernel_expr_text:
         failures.append(
@@ -689,6 +710,28 @@ def main() -> int:
         if marker not in text:
             failures.append(
                 f"{path.relative_to(ROOT)}: missing north-star boundary marker "
+                f"{marker!r}"
+            )
+
+    proof_sat_text = PROOF_SAT.read_text(encoding="utf-8")
+    if "pub fn solve_with_drat_proof" not in proof_sat_text:
+        failures.append(
+            f"{PROOF_SAT.relative_to(ROOT)}: proof-producing SAT entry point missing"
+        )
+
+    foundational_dag_markers = (
+        "maintained architectural contract",
+        "execution phase or a complete implementation inventory",
+        "Foundation invariant: Bool And Scalar BV",
+        "Phase 6 landed entry contract: Custom SAT Core",
+        "custom proof-producing CDCL core and in-tree DRAT checker now exist",
+        "selected quantifier routes have landed at differing depth",
+    )
+    normalized_foundational_dag = " ".join(foundational_dag_text.split())
+    for marker in foundational_dag_markers:
+        if marker not in normalized_foundational_dag:
+            failures.append(
+                f"{FOUNDATIONAL_DAG.relative_to(ROOT)}: missing foundation marker "
                 f"{marker!r}"
             )
 
@@ -1003,6 +1046,8 @@ def main() -> int:
         "|beginner_unsat_assurance=route_specific"
         "|north_star_status=aspirational"
         "|north_star_binders=first_order_present"
+        "|foundation_phases=landed"
+        "|foundation_custom_cdcl=proof_producing"
     )
     print(f"PARITY_DOCS|{line}")
     if failures:
