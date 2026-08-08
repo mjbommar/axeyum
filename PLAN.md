@@ -62,7 +62,7 @@ or a replacement for the Lean system.
 
 Earlier A3/A4 integration and gate history remains in dated result notes and
 Git. The latest comprehensive gate is the `b07be65aa` checkpoint above;
-focused repair gates do not extend that evidence to the new uncommitted change. Hosted CI/docs
+focused repair gates do not extend that evidence to the newer pushed repairs. Hosted CI/docs
 runs `31192792245` and `31192792512` remain terminal green for their recorded
 baseline, not for the current candidate. No retained solver or measurement
 process is running.
@@ -320,8 +320,8 @@ here as closed evidence boundaries. A3 remains incomplete, but all currently
 preregistered bounded mechanisms are closed negatively. A4 has now also yielded;
 A5 is the first active item.
 
-**Immediate action.** Rebuild the release census binary at exact pushed
-`61a9ad1a0`, then restart QF_LRA from row 1 under
+**Immediate action.** Rebuild the release census binary from clean pushed topic
+`0159a76f2` (solver repair `61a9ad1a0`), then restart QF_LRA from row 1 under
 the unchanged 24-second/8-GiB capture envelope. The failed 172-row abort stream,
 the complete-but-parse-invalid 200-row stream, the failed 168-row pursuit abort,
 and the failed 58-row QF_IDL abort all remain non-credited. The valid 200-row
