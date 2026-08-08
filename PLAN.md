@@ -7,10 +7,14 @@ first and update it before ending a project-level work session.
 - Last consolidated: **2026-08-08**
 - Integrated baseline merged into the active topic:
   `8ccae9c43ce393762ce6cc3b38d21c2dbb982507`
-- Active candidate: `cb7b677cc7a7a5af29c07325c8d1b99e69729c79` plus the
-  documentation/evidence update described below; push and full-gate pending
-- Latest comprehensive exact-commit gate: `1de73748877253d6d134d71af3b5d22183c646d4`
-  (`just check` exit 0 before the A5 capture exposed the wide-core abort)
+- Active pushed repair: `57e85608a9cfab0bb82b219b826da8f17efb937e`;
+  gap-ownership manifest non-vacuity repair and a new full gate are pending
+- Latest full-gate attempt: `57e85608a9cfab0bb82b219b826da8f17efb937e`
+  passed every code, corpus, proof, doctest, rustdoc, and aggregate gate, then
+  failed the final parity-doc freshness check on one manifest/generated-command
+  mismatch
+- Latest comprehensive green exact-commit gate:
+  `1de73748877253d6d134d71af3b5d22183c646d4` (`just check` exit 0)
 - Latest integrated A3 code increments: bounded SMT-LIB `distinct` expansion at
   `63c82a6ef`, typed arithmetic-model reconstruction at `4ff9a82c6`, and
   deterministic string/integer coupling at `db7b426e8`
@@ -42,8 +46,12 @@ stream is not credited. The deterministic wide-core repair at `9d7a70a65`,
 merged with current `origin/main` by `cb7b677cc`, now returns typed
 `Unknown(ResourceLimit)` in 6.08 seconds at about 1.78 GiB peak RSS. Focused
 strict Clippy, 1,079 solver-library tests, deep-input and both LRA differential
-gates are green; the repaired exact commit still requires push, a fresh full
-frozen gate, and a complete row-1 census restart. See the
+gates are green. Exact pushed commit `57e85608a` then passed all runtime and
+proof stages of a frozen `just check`, including the repaired 1,079-test solver
+library, before a latent mismatch between the gap-ownership manifest and its
+correct non-vacuous generated command failed the final parity-doc check. Repair
+the manifest source, rerun the failed tail and a fresh full gate, then restart
+the complete row-1 census. See the
 [failure/repair record](docs/plan/qf-linear-a5-wide-core-memory-repair-2026-08-08.md).
 
 Axeyum is a working research-grade automated-reasoning stack with a pure-Rust
@@ -312,10 +320,12 @@ here as closed evidence boundaries. A3 remains incomplete, but all currently
 preregistered bounded mechanisms are closed negatively. A4 has now also yielded;
 A5 is the first active item.
 
-**Immediate action.** Close the P0 wide-core process-survival repair exposed by
-A5: push the exact merged candidate, run one uninterrupted frozen full
-`just check`, then restart QF_LRA from row 1 under the unchanged 24-second/8-GiB
-capture envelope. The failed 172-row partial stream remains non-credited. Stop
+**Immediate action.** Add the required `--features full` to the gap-ownership
+manifest exposed by the otherwise-green `57e85608a` full gate, validate the
+generated guide and failed parity-doc tail, commit and push, and run a fresh
+uninterrupted frozen `just check`. Only then
+restart QF_LRA from row 1 under the unchanged 24-second/8-GiB capture envelope.
+The failed 172-row partial stream remains non-credited. Stop
 on any historical-decision loss, wrong verdict, stderr, malformed trace, or
 process failure. Only valid atomic QF_LRA success metadata authorizes sequential
 QF_IDL and QF_RDL capture and the preregistered derivation. No score gain is

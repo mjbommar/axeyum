@@ -138,7 +138,7 @@
         "bench-results/frontier/string_bound.json"
       ],
       "gate_commands": [
-        "CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test progress_frontier"
+        "CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --features full --test progress_frontier"
       ],
       "decision_paths": [
         "docs/research/09-decisions/adr-0259-preregister-cold-cnf-construction-attribution.md",

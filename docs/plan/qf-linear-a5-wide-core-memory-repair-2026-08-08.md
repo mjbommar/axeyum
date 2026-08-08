@@ -74,15 +74,34 @@ After the repair and the merge of current `origin/main` at `8ccae9c43`:
 These focused results establish the root-cause repair but do not establish
 population monotonicity or replace a fresh full `just check`.
 
+## First full-gate attempt
+
+Exact pushed commit `57e85608a9cfab0bb82b219b826da8f17efb937e`
+passed the complete workspace test and doctest population, all 1,079 solver
+library tests, retained differential suites with zero disagreement, 9/9
+capability-frontier tests, both order-255 CAS proofs, warning-denied rustdoc,
+the 162-file Glaurung gate, foundational resources, and the 165-test SMT-COMP
+resume aggregate. It then failed closed in the final parity-doc stage because
+the gap-ownership manifest omitted `--features full` while the generated guide
+retained the required non-vacuous command. The gate exit was 1 and is not
+credited as comprehensive green. The full log SHA-256 is
+`a4683f742fd0594cc968cb10712879aeaf3190e5216416a1f4838d6711a326ed`.
+
+The repair adds `--features full` to `docs/plan/gap-ownership-v1.json`; the
+already-correct generated guide remains byte-identical. The manifest repair
+must be committed and pushed, its failed tail validated, and a fresh full gate
+completed before capture restarts.
+
 ## Required continuation
 
-1. Amend ADR-0377 and the canonical `PLAN.md` with this deterministic ceiling.
-2. Commit and push the exact merged candidate; verify `HEAD == upstream`.
-3. Run one uninterrupted frozen full `just check` on that exact revision.
-4. Restart QF_LRA from row 1 under the original A5 protocol. Any historical
+1. Commit and push the gap-ownership manifest repair; verify
+   `HEAD == upstream`.
+2. Validate the previously failed parity-doc tail and run one fresh,
+   uninterrupted frozen full `just check` on the exact repair revision.
+3. Restart QF_LRA from row 1 under the original A5 protocol. Any historical
    decision loss, wrong verdict, stderr, malformed trace, or process failure
    stops the sequence.
-5. Only after QF_LRA publishes valid success metadata may QF_IDL and QF_RDL run
+4. Only after QF_LRA publishes valid success metadata may QF_IDL and QF_RDL run
    sequentially, followed by the preregistered derivation.
 
 The failed partial stream is permanently non-credited. No timeout, external
