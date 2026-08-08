@@ -70,7 +70,7 @@
       "source_citations": ["Example Rule 6(a)", "Example Rule 6(c)", "Example Rule 6(d)"],
       "data": {
         "smt2_artifact": "docs/rules-as-code/examples/category-equivalence-v0/smt2/equivalent-categories-same-priority-qf-uf-conflict.smt2",
-        "proof_regression": "cargo test -p axeyum-solver --test rules_as_code_examples category_equivalence_same_priority_emits_checked_alethe",
+        "proof_regression": "cargo test -p axeyum-solver --features full --test rules_as_code_examples category_equivalence_same_priority_emits_checked_alethe",
         "certificate": "certified evidence from prove_qf_uf_unsat_alethe checked by Evidence::check"
       }
     },
@@ -82,7 +82,7 @@
       "source_citations": ["Example Rule 6(a)", "Example Rule 6(c)", "Example Rule 6(d)", "Example Rule 6(e)"],
       "data": {
         "smt2_artifact": "docs/rules-as-code/examples/category-equivalence-v0/smt2/implementation-equivalence-qf-uf-conflict.smt2",
-        "proof_regression": "cargo test -p axeyum-solver --test rules_as_code_examples category_equivalence_implementation_equivalence_emits_checked_alethe",
+        "proof_regression": "cargo test -p axeyum-solver --features full --test rules_as_code_examples category_equivalence_implementation_equivalence_emits_checked_alethe",
         "certificate": "certified evidence from prove_qf_uf_unsat_alethe checked by Evidence::check"
       },
       "notes": "The SMT-LIB artifact isolates the equality/congruence shape instead of encoding a full finite table."

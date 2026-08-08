@@ -192,7 +192,7 @@ From the repository root:
 
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-dag-topological-order-v0
-cargo test -p axeyum-solver --test math_resource_lia_routes finite_dag_topological_bad_edge_order_emits_checked_lia_evidence
+cargo test -p axeyum-solver --features full --test math_resource_lia_routes finite_dag_topological_bad_edge_order_emits_checked_lia_evidence
 python3 scripts/query-foundational-resources.py horizon-frontier --text "topological-sort" --require-any
 python3 scripts/query-foundational-resources.py checks --pack finite-dag-topological-order-v0 --proof-status lean-horizon --require-any
 python3 scripts/query-foundational-resources.py checks --pack finite-dag-topological-order-v0 --proof-status checked --require-any

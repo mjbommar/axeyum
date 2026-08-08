@@ -1534,8 +1534,9 @@ fn classify(arena: &TermArena, term: TermId) -> AtomKind {
 
 /// Deletion-minimizes an infeasible literal set: greedily drops literals while the
 /// remaining subset stays `check_with_lia_simplex`-`unsat`. The result is a sound
-/// (minimal-by-deletion) conflict core — a wrong `unsat` is impossible because
-/// every returned subset is re-checked `unsat`. `terms[i]` is the
+/// (minimal-by-deletion) conflict core: every returned subset is re-decided by
+/// `check_with_lia_simplex`, which is the trust boundary for this helper.
+/// `terms[i]` is the
 /// polarity-applied term for `lits[i]` in `arena`.
 fn minimize_core(
     arena: &TermArena,

@@ -118,5 +118,5 @@ Run the focused checks from the repository root:
 
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-interval-arithmetic-shadow-v0
-cargo test -p axeyum-solver --test math_resource_lra_routes finite_interval_arithmetic_bad_product_upper_artifact_emits_checked_farkas
+cargo test -p axeyum-solver --features full --test math_resource_lra_routes finite_interval_arithmetic_bad_product_upper_artifact_emits_checked_farkas
 ```

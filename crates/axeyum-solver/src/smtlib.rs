@@ -96,8 +96,8 @@ fn source_fp_prefix_monotonic_result(script: &Script) -> Option<CheckResult> {
 ///   [`check_conflict`](axeyum_strings::check_conflict) re-checker, which shares no
 ///   reasoning code with the search. Loops, parity/length arguments, and
 ///   inference-dependent conflicts are *not* certified and stay `unknown` — a
-///   wrong `unsat` is impossible because every `unsat` carries a re-checkable
-///   derivation;
+///   branch-level `unsat` is returned only after the checker accepts a complete
+///   derivation; that checker remains the explicit trust boundary;
 /// - it may add `sat` — on a replay-checked [`SearchOutcome::Sat`], soundness-
 ///   anchored by the mandatory ground-evaluator replay inside `axeyum-strings`.
 ///

@@ -491,18 +491,18 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/fi
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-crank-nicolson-method-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-adams-bashforth-method-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-bdf2-method-v0
-cargo test -p axeyum-solver --test math_resource_lra_routes bounded_dynamics_bad_transition_step_artifact_emits_checked_farkas
-cargo test -p axeyum-solver --test math_resource_lra_routes bounded_dynamics_bad_threshold_step_artifact_emits_checked_farkas
-cargo test -p axeyum-solver --test math_resource_lra_routes bounded_dynamics_bad_invariant_bound_artifact_emits_checked_farkas
-cargo test -p axeyum-solver --test math_resource_lra_routes finite_euler_bad_step_emits_checked_farkas
-cargo test -p axeyum-solver --test math_resource_lra_routes finite_euler_bad_max_error_bound_artifact_emits_checked_farkas
-cargo test -p axeyum-solver --test math_resource_lra_routes finite_euler_bad_terminal_error_artifact_emits_checked_farkas
-cargo test -p axeyum-solver --test math_resource_lra_routes finite_runge_kutta_midpoint_bad_step_artifact_emits_checked_farkas
-cargo test -p axeyum-solver --test math_resource_lra_routes finite_heun_bad_step_artifact_emits_checked_farkas
-cargo test -p axeyum-solver --test math_resource_lra_routes finite_backward_euler_bad_step_artifact_emits_checked_farkas
-cargo test -p axeyum-solver --test math_resource_lra_routes finite_crank_nicolson_bad_step_artifact_emits_checked_farkas
-cargo test -p axeyum-solver --test math_resource_lra_routes finite_adams_bashforth_bad_step_artifact_emits_checked_farkas
-cargo test -p axeyum-solver --test math_resource_lra_routes finite_bdf2_bad_step_artifact_emits_checked_farkas
+cargo test -p axeyum-solver --features full --test math_resource_lra_routes bounded_dynamics_bad_transition_step_artifact_emits_checked_farkas
+cargo test -p axeyum-solver --features full --test math_resource_lra_routes bounded_dynamics_bad_threshold_step_artifact_emits_checked_farkas
+cargo test -p axeyum-solver --features full --test math_resource_lra_routes bounded_dynamics_bad_invariant_bound_artifact_emits_checked_farkas
+cargo test -p axeyum-solver --features full --test math_resource_lra_routes finite_euler_bad_step_emits_checked_farkas
+cargo test -p axeyum-solver --features full --test math_resource_lra_routes finite_euler_bad_max_error_bound_artifact_emits_checked_farkas
+cargo test -p axeyum-solver --features full --test math_resource_lra_routes finite_euler_bad_terminal_error_artifact_emits_checked_farkas
+cargo test -p axeyum-solver --features full --test math_resource_lra_routes finite_runge_kutta_midpoint_bad_step_artifact_emits_checked_farkas
+cargo test -p axeyum-solver --features full --test math_resource_lra_routes finite_heun_bad_step_artifact_emits_checked_farkas
+cargo test -p axeyum-solver --features full --test math_resource_lra_routes finite_backward_euler_bad_step_artifact_emits_checked_farkas
+cargo test -p axeyum-solver --features full --test math_resource_lra_routes finite_crank_nicolson_bad_step_artifact_emits_checked_farkas
+cargo test -p axeyum-solver --features full --test math_resource_lra_routes finite_adams_bashforth_bad_step_artifact_emits_checked_farkas
+cargo test -p axeyum-solver --features full --test math_resource_lra_routes finite_bdf2_bad_step_artifact_emits_checked_farkas
 ```
 
 Expected output for each command:

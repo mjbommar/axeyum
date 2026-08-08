@@ -2,8 +2,11 @@
 
 An EVM bytecode symbolic bug-hunter built on Axeyum: find overflow /
 assertion-violation bugs in a contract over symbolic calldata, and emit a
-**replayable calldata witness** for each bug or a re-checked **no-bug
-certificate** when a function is proved safe up to a bound.
+**replayable calldata witness** for each bug or `SafeUpToBound` after every
+modeled path is decided within the configured bound. That safe verdict carries
+`Option<EvidenceReport>`: supported safety queries attach re-checked solver
+evidence, while an uncovered evidence route leaves the field empty. This crate
+does not reconstruct the safety claim to Lean.
 
 The decidable EVM core is `QF_BV`/`QF_ABV` — Axeyum's strongest fragments. 256-bit
 words are `BV256`; the hunter symbolically executes raw runtime bytecode with the
@@ -61,7 +64,8 @@ Bug classes: reachable `REVERT` / `INVALID` / Solidity `Panic(0x11)`, and unsign
 - **Havoc → Unknown**: anything unmodeled (unsupported opcodes, unresolved
   symbolic jumps) ends the path as a sound `Unknown`, not a wrong verdict.
 - `SafeUpToBound` is a *bounded* guarantee (no bug within the step bound), not
-  total correctness; it carries a best-effort re-checked `EvidenceReport`.
+  total correctness; its best-effort re-checked `EvidenceReport` is optional
+  and is not a Lean module.
 - 256-bit `bv_umulo` (MUL overflow) bit-blasts slowly (~2 min) — the MUL example
   is `#[ignore]`d in the default gate.
 

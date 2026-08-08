@@ -676,26 +676,26 @@ Next buildout:
    preimage-membership conflict:
    `artifacts/examples/math/finite-continuous-maps-v0/smt2/bad-preimage-membership-alethe-conflict.smt2`
    is checked by
-   `cargo test -p axeyum-solver --test math_resource_uf_routes finite_continuous_maps_bad_preimage_emits_checked_alethe`.
+   `cargo test -p axeyum-solver --features full --test math_resource_uf_routes finite_continuous_maps_bad_preimage_emits_checked_alethe`.
 17. Landed: add `finite-simplicial-cohomology-v0` and
    `bridge_finite_cohomology_replay` through a source-linked QF_UF/Alethe
    regression for the `qf-uf-bad-coboundary-value` equality conflict:
    `artifacts/examples/math/finite-simplicial-cohomology-v0/smt2/bad-coboundary-value-alethe-conflict.smt2`
    is checked by
-   `cargo test -p axeyum-solver --test math_resource_uf_routes finite_simplicial_cohomology_bad_coboundary_value_emits_checked_alethe`.
+   `cargo test -p axeyum-solver --features full --test math_resource_uf_routes finite_simplicial_cohomology_bad_coboundary_value_emits_checked_alethe`.
 18. Landed: add `finite-simplicial-cup-products-v0` and
    `bridge_finite_cup_product_replay` through a source-linked QF_BV/DRAT
    regression for the `qf-bv-bad-cup-product` one-bit value conflict:
    `artifacts/examples/math/finite-simplicial-cup-products-v0/smt2/bad-cup-product-bitblast-conflict.smt2`
    is checked by
-   `cargo test -p axeyum-solver --test math_resource_bv_routes finite_simplicial_cup_product_bad_value_emits_checked_bv_drat`.
+   `cargo test -p axeyum-solver --features full --test math_resource_bv_routes finite_simplicial_cup_product_bad_value_emits_checked_bv_drat`.
 19. Landed: add `finite-chain-complex-torsion-v0` and
    `bridge_finite_torsion_homology_replay` through a source-linked
    QF_LIA/Diophantine regression for the `qf-lia-bad-torsion-generator`
    integer boundary-membership conflict:
    `artifacts/examples/math/finite-chain-complex-torsion-v0/smt2/bad-torsion-generator-diophantine-conflict.smt2`
    is checked by
-   `cargo test -p axeyum-solver --test math_resource_lia_routes finite_chain_complex_torsion_bad_generator_emits_checked_diophantine_evidence`.
+   `cargo test -p axeyum-solver --features full --test math_resource_lia_routes finite_chain_complex_torsion_bad_generator_emits_checked_diophantine_evidence`.
 20. Promote selected packs into solver regression/fuzz corpora with back-links
    to the resource pack.
    Status: first promotions landed for `logic-basics-v0` via

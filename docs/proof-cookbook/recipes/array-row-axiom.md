@@ -74,13 +74,13 @@ Downgrade behavior:
 Focused:
 
 ```sh
-cargo test -p axeyum-solver --test evidence produce_evidence_certifies_small_array_axiom_unsats
+cargo test -p axeyum-solver --features full --test evidence produce_evidence_certifies_small_array_axiom_unsats
 ```
 
 Broader:
 
 ```sh
-cargo test -p axeyum-solver --test evidence
+cargo test -p axeyum-solver --features full --test evidence
 ```
 
 ## Links

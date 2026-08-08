@@ -194,9 +194,9 @@ From the repository root:
 
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/bounded-dynamics-v0
-cargo test -p axeyum-solver --test math_resource_lra_routes bounded_dynamics_bad_transition_step_artifact_emits_checked_farkas
-cargo test -p axeyum-solver --test math_resource_lra_routes bounded_dynamics_bad_threshold_step_artifact_emits_checked_farkas
-cargo test -p axeyum-solver --test math_resource_lra_routes bounded_dynamics_bad_invariant_bound_artifact_emits_checked_farkas
+cargo test -p axeyum-solver --features full --test math_resource_lra_routes bounded_dynamics_bad_transition_step_artifact_emits_checked_farkas
+cargo test -p axeyum-solver --features full --test math_resource_lra_routes bounded_dynamics_bad_threshold_step_artifact_emits_checked_farkas
+cargo test -p axeyum-solver --features full --test math_resource_lra_routes bounded_dynamics_bad_invariant_bound_artifact_emits_checked_farkas
 ```
 
 Expected validator output:

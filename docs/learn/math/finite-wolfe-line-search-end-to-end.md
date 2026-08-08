@@ -189,7 +189,7 @@ general Wolfe line-search theorem: future Lean reconstruction
 
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-wolfe-line-search-v0
-cargo test -p axeyum-solver --test math_resource_lra_routes finite_wolfe_line_search_bad_minimizer_artifact_emits_checked_farkas
-cargo test -p axeyum-solver --test math_resource_lra_routes finite_wolfe_line_search_bad_sufficient_decrease_artifact_emits_checked_farkas
-cargo test -p axeyum-solver --test math_resource_lra_routes finite_wolfe_line_search_bad_curvature_artifact_emits_checked_farkas
+cargo test -p axeyum-solver --features full --test math_resource_lra_routes finite_wolfe_line_search_bad_minimizer_artifact_emits_checked_farkas
+cargo test -p axeyum-solver --features full --test math_resource_lra_routes finite_wolfe_line_search_bad_sufficient_decrease_artifact_emits_checked_farkas
+cargo test -p axeyum-solver --features full --test math_resource_lra_routes finite_wolfe_line_search_bad_curvature_artifact_emits_checked_farkas
 ```

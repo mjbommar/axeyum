@@ -37,7 +37,7 @@ fixtures and ISO dates in the JSON pack.
   executable model in `scripts/validate-rules-as-code.py`.
 - Checked negative rows use source-linked Bool/QF_LIA SMT-LIB fixtures under
   [`smt2/`](smt2/) and the shared
-  `cargo test -p axeyum-solver --test rules_as_code_examples` regression.
+  `cargo test -p axeyum-solver --features full --test rules_as_code_examples` regression.
 - The pack does not prove anything about real procurements, real bid scoring,
   or natural-language interpretation.
 
@@ -55,5 +55,5 @@ fixtures and ISO dates in the JSON pack.
 ```sh
 python3 scripts/gen-rules-as-code-dashboard.py
 python3 scripts/validate-rules-as-code.py
-cargo test -p axeyum-solver --test rules_as_code_examples procurement_scoring
+cargo test -p axeyum-solver --features full --test rules_as_code_examples procurement_scoring
 ```

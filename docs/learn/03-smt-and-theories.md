@@ -24,6 +24,11 @@ mathematical integers and does not wrap. Treating either one as the other would
 change the problem, so Axeyum's typed term builder rejects sort and bit-width
 mismatches rather than guessing a coercion.
 
+The mathematical `Int` sort is a semantic contract, not an arbitrary-precision
+implementation claim. Axeyum's current concrete `Int` values and rational
+reference components use `i128`; out-of-range evaluation reports
+`ArithmeticOverflow`, and a dependent solve fails closed instead of wrapping.
+
 ## A first theory query
 
 This asks whether an 8-bit value can wrap to zero after adding one:
@@ -86,9 +91,21 @@ Different fragments use different architectures:
 - combined theories exchange equality and model information;
 - incomplete or bounded procedures may honestly stop at `unknown`.
 
+Axeyum does not expose a universal "plug any two theories together" engine.
+In the `full` profile, the current general equality-sharing combinations are
+`QF_UFLRA` and `QF_UFLIA`: one retained CDCL(T) search coordinates online EUF
+and linear-arithmetic states, including interface equalities. Their older eager
+Ackermann route remains a conservative fallback after an online decline.
+Arrays, UF, and finite scalar values use a separate specialized online
+`QF_ABV`/`QF_AUFBV` path. Admission limits, unsupported atoms, arithmetic
+overflow, or exhausted deadlines still produce `unknown`; support for these
+combinations does not imply arbitrary Nelson–Oppen completeness.
+
 The public contract remains the same even when the route changes: a returned
-`sat` needs a model that satisfies the original assertions, and a supported
-`unsat` route should carry independently checkable evidence.
+`sat` needs a model that satisfies the original assertions, while every `unsat`
+must state its route-specific assurance boundary. Independently checkable UNSAT
+evidence exists on selected routes; it is not implied by every definitive
+verdict.
 
 ## Theories define edge cases
 

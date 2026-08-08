@@ -10,7 +10,7 @@ Expected result: `unsat`.
 Current validation: source-linked Bool/QF_LIA fixture
 [consistency-bool-qf-lia-conflict.smt2](smt2/consistency-bool-qf-lia-conflict.smt2)
 checked by
-`cargo test -p axeyum-solver --test rules_as_code_examples`.
+`cargo test -p axeyum-solver --features full --test rules_as_code_examples`.
 
 Proof status: checked. Axeyum must produce certified evidence and re-check it
 against the parsed rule obligation.
@@ -24,7 +24,7 @@ Expected result: `unsat` for `not eligible and not ineligible`.
 Current validation: source-linked Bool/QF_LIA fixture
 [coverage-bool-qf-lia-conflict.smt2](smt2/coverage-bool-qf-lia-conflict.smt2)
 checked by
-`cargo test -p axeyum-solver --test rules_as_code_examples`, plus finite-sample
+`cargo test -p axeyum-solver --features full --test rules_as_code_examples`, plus finite-sample
 replay over the listed sample domain.
 
 Proof status: checked. The fixture keeps the standard rules-as-code coverage
@@ -57,7 +57,7 @@ eligible(income2)
 Current validation: source-linked Bool/QF_LIA fixture
 [monotonicity-bool-qf-lia-conflict.smt2](smt2/monotonicity-bool-qf-lia-conflict.smt2)
 checked by
-`cargo test -p axeyum-solver --test rules_as_code_examples`, plus finite-sample
+`cargo test -p axeyum-solver --features full --test rules_as_code_examples`, plus finite-sample
 replay over the listed sample domain.
 
 Proof status: checked for the fixed no-exception monotonicity obligation.
@@ -84,7 +84,7 @@ Expected result: `unsat` for a mismatch between `model_eligible` and
 Current validation: source-linked Bool/QF_LIA fixture
 [implementation-equivalence-bool-qf-lia-conflict.smt2](smt2/implementation-equivalence-bool-qf-lia-conflict.smt2)
 checked by
-`cargo test -p axeyum-solver --test rules_as_code_examples`, plus executable
+`cargo test -p axeyum-solver --features full --test rules_as_code_examples`, plus executable
 replay for the documented witnesses in [expected.json](expected.json).
 
 Proof status: checked for the active-threshold slice. Broader generated

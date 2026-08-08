@@ -3,8 +3,10 @@
 A bounded Rust verifier built on Axeyum: a `#[axeyum::verify]` proc-macro that
 symbolically checks a function for panics — integer overflow, `÷0`/`%0`,
 index-out-of-bounds, `assert!`/`assert_eq!` violations, `panic!`/`unreachable!`,
-and `unwrap`-on-`None` — and emits either a runnable failing `#[test]` or a
-re-checked, bounded-verified certificate (Lean-checkable when in fragment).
+and `unwrap`-on-`None` — and emits a runnable failing `#[test]` for a reproduced
+counterexample or a bounded `Verified` result. `Verified` records whether a
+certificate re-checked and optionally carries a Lean module; the warm loop and
+vacuous-no-bad-state routes can legitimately return `certified = false`.
 
 The compile-tested attribute examples and exact result contract live in the
 [crate documentation](src/lib.rs). Run the measured consumer example with:
@@ -66,8 +68,9 @@ warm-BMC-vs-unroll depth-scaling sweep.
 ## Honest limits
 
 - The fragment is restricted (no heap/traits/closures/floats — same scoping
-  discipline as Verus/Flux); out-of-fragment constructs are `Unknown`, never a
-  wrong verdict.
+  discipline as Verus/Flux). The attribute macro rejects unsupported Rust
+  syntax at compile time; direct runtime `Program` callers receive `Unknown`
+  for lowering or solving gaps, never a wrong verdict.
 - Loops are **bounded** (`#[unwind(K)]`); `Verified` is a bounded guarantee.
 - Lean-cert coverage is partial (it inherits the upstream reconstructor's
   fragment, `UPSTREAM-FEEDBACK.md` U1/U4); the warm loop route currently returns

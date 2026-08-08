@@ -98,7 +98,7 @@ From the repository root:
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/graph-coloring-v0
 cargo test -p axeyum-cnf --test math_resource_boolean_routes graph_coloring_triangle_not_2_colorable_emits_checked_drat_and_lrat
-cargo test -p axeyum-solver --test math_resource_bv_routes graph_coloring_triangle_not_2_colorable_emits_checked_bv_drat
+cargo test -p axeyum-solver --features full --test math_resource_bv_routes graph_coloring_triangle_not_2_colorable_emits_checked_bv_drat
 ```
 
 Expected output:

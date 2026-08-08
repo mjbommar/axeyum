@@ -143,8 +143,8 @@ general KKT theorem: future Lean reconstruction
 
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-kkt-v0
-cargo test -p axeyum-solver --test math_resource_lra_routes finite_kkt_bad_stationarity_artifact_emits_checked_farkas
-cargo test -p axeyum-solver --test math_resource_lra_routes finite_kkt_bad_complementarity_artifact_emits_checked_farkas
+cargo test -p axeyum-solver --features full --test math_resource_lra_routes finite_kkt_bad_stationarity_artifact_emits_checked_farkas
+cargo test -p axeyum-solver --features full --test math_resource_lra_routes finite_kkt_bad_complementarity_artifact_emits_checked_farkas
 ```
 
 The validator proves the pack data is internally consistent. The cargo test

@@ -325,7 +325,7 @@ Run the check from the repository root:
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/counting-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/generating-functions-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-recurrence-prefix-v0
-cargo test -p axeyum-solver --test math_resource_lra_routes finite_recurrence_prefix_bad_value_artifact_emits_checked_farkas
+cargo test -p axeyum-solver --features full --test math_resource_lra_routes finite_recurrence_prefix_bad_value_artifact_emits_checked_farkas
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-permutation-groups-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-group-actions-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/graph-coloring-v0

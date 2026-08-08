@@ -44,10 +44,12 @@ only a subset, but the shared IR must not force the solver architecture into a
 quantifier-free corner.
 
 Concrete model values are similarly typed. Bit-vector values retain their
-width, integer and rational values are exact, and wide values do not silently
-truncate to machine integers. The canonical bit convention is **least
-significant bit first** when a value is converted to a vector of Boolean bits;
-the bit-blaster and model lifter use the same convention.
+width, integer and rational values are exact within the current `i128` reference
+range, and wide bit-vector values do not silently truncate to machine integers.
+Out-of-range integer or rational evaluation is an explicit
+`ArithmeticOverflow`, never wrapped arithmetic. The canonical bit convention is
+**least significant bit first** when a value is converted to a vector of
+Boolean bits; the bit-blaster and model lifter use the same convention.
 
 ## Construction invariants
 

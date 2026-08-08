@@ -119,9 +119,10 @@ pub const MAX_BV_WIDTH: u32 = 1 << 16;
 /// The sort (type) of a term.
 ///
 /// `Bool` and `BitVec(1)` are deliberately distinct sorts with no implicit
-/// conversion (see the glossary and ADR-0003). `Sort` is a `Copy` enum
-/// rather than an interned ID until recursive sorts (arrays) arrive. Declared
-/// uninterpreted sorts still live behind an arena-local id so many-sorted EUF
+/// conversion (see the glossary and ADR-0003). `Sort` remains a `Copy` enum:
+/// arrays and sequences carry compact [`ArraySortKey`] components instead of
+/// boxed recursive sorts. Nested arrays and nested sequences remain deferred.
+/// Declared uninterpreted sorts live behind an arena-local id so many-sorted EUF
 /// does not need to collapse every carrier to a fixed bit-vector width.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Sort {

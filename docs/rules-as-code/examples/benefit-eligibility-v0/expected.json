@@ -108,7 +108,7 @@
       "source_citations": ["Example Rule 1(a)", "Example Rule 1(b)", "Example Rule 1(c)"],
       "data": {
         "smt2_artifact": "docs/rules-as-code/examples/benefit-eligibility-v0/smt2/consistency-bool-qf-lia-conflict.smt2",
-        "proof_regression": "cargo test -p axeyum-solver --test rules_as_code_examples benefit_eligibility_consistency_emits_checked_evidence",
+        "proof_regression": "cargo test -p axeyum-solver --features full --test rules_as_code_examples benefit_eligibility_consistency_emits_checked_evidence",
         "certificate": "produce_evidence emits certified evidence checked by Evidence::check"
       }
     },
@@ -120,7 +120,7 @@
       "source_citations": ["Example Rule 1(a)", "Example Rule 1(b)", "Example Rule 1(c)"],
       "data": {
         "smt2_artifact": "docs/rules-as-code/examples/benefit-eligibility-v0/smt2/coverage-bool-qf-lia-conflict.smt2",
-        "proof_regression": "cargo test -p axeyum-solver --test rules_as_code_examples benefit_eligibility_coverage_emits_checked_evidence",
+        "proof_regression": "cargo test -p axeyum-solver --features full --test rules_as_code_examples benefit_eligibility_coverage_emits_checked_evidence",
         "certificate": "produce_evidence emits certified evidence checked by Evidence::check"
       }
     },
@@ -139,7 +139,7 @@
       "source_citations": ["Example Rule 1(a)", "Example Rule 1(b)", "Example Rule 1(c)", "Example Rule 1(d)", "Example Rule 1(e)"],
       "data": {
         "smt2_artifact": "docs/rules-as-code/examples/benefit-eligibility-v0/smt2/monotonicity-bool-qf-lia-conflict.smt2",
-        "proof_regression": "cargo test -p axeyum-solver --test rules_as_code_examples benefit_eligibility_monotonicity_emits_checked_evidence",
+        "proof_regression": "cargo test -p axeyum-solver --features full --test rules_as_code_examples benefit_eligibility_monotonicity_emits_checked_evidence",
         "certificate": "produce_evidence emits certified evidence checked by Evidence::check"
       }
     },
@@ -158,7 +158,7 @@
       "source_citations": ["Example Rule 1(a)", "Example Rule 1(b)", "Example Rule 1(c)", "Example Rule 1(d)", "Example Rule 1(e)"],
       "data": {
         "smt2_artifact": "docs/rules-as-code/examples/benefit-eligibility-v0/smt2/implementation-equivalence-bool-qf-lia-conflict.smt2",
-        "proof_regression": "cargo test -p axeyum-solver --test rules_as_code_examples benefit_eligibility_implementation_equivalence_emits_checked_evidence",
+        "proof_regression": "cargo test -p axeyum-solver --features full --test rules_as_code_examples benefit_eligibility_implementation_equivalence_emits_checked_evidence",
         "certificate": "produce_evidence emits certified evidence checked by Evidence::check"
       },
       "notes": "The SMT-LIB mismatch query encodes the rule model and executable interpretation for the active-threshold slice and asks for disagreement."

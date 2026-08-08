@@ -155,8 +155,8 @@ From the repository root:
 
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/complex-algebraic-v0
-cargo test -p axeyum-solver --test math_resource_lra_routes complex_algebraic_bad_product_real_part_artifact_emits_checked_farkas
-cargo test -p axeyum-solver --test math_resource_lra_routes complex_algebraic_bad_norm_squared_artifact_emits_checked_farkas
+cargo test -p axeyum-solver --features full --test math_resource_lra_routes complex_algebraic_bad_product_real_part_artifact_emits_checked_farkas
+cargo test -p axeyum-solver --features full --test math_resource_lra_routes complex_algebraic_bad_norm_squared_artifact_emits_checked_farkas
 ```
 
 Expected output:

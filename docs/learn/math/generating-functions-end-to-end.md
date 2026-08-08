@@ -188,7 +188,7 @@ From the repository root:
 
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/generating-functions-v0
-cargo test -p axeyum-solver --test math_resource_lia_routes generating_functions_bad_cauchy_product_emits_checked_diophantine_evidence
+cargo test -p axeyum-solver --features full --test math_resource_lia_routes generating_functions_bad_cauchy_product_emits_checked_diophantine_evidence
 ```
 
 ## Trust Boundary

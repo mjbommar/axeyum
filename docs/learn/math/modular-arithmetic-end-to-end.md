@@ -184,9 +184,9 @@ From the repository root:
 
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/modular-arithmetic-v0
-cargo test -p axeyum-solver --test math_resource_lia_routes modular_incompatible_crt_emits_checked_diophantine_evidence
-cargo test -p axeyum-solver --test math_resource_bv_routes modular_arithmetic_nonunit_inverse_mod6_emits_checked_bv_drat
-cargo test -p axeyum-solver --test math_resource_bv_routes modular_arithmetic_fermat_units_mod5_emits_checked_bv_drat
+cargo test -p axeyum-solver --features full --test math_resource_lia_routes modular_incompatible_crt_emits_checked_diophantine_evidence
+cargo test -p axeyum-solver --features full --test math_resource_bv_routes modular_arithmetic_nonunit_inverse_mod6_emits_checked_bv_drat
+cargo test -p axeyum-solver --features full --test math_resource_bv_routes modular_arithmetic_fermat_units_mod5_emits_checked_bv_drat
 ```
 
 Expected output:

@@ -194,7 +194,7 @@ This is the contributor routing layer for the current G0-G10 gap program. It nam
 
 **Executable gates:**
 
-- `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test progress_frontier`
+- `CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --features full --test progress_frontier`
 
 **Decision anchors:**
 

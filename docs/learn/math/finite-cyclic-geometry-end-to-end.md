@@ -169,7 +169,7 @@ general cyclic geometry: future Lean reconstruction
 
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-cyclic-geometry-v0
-cargo test -p axeyum-solver --test math_resource_lra_routes finite_cyclic_geometry_bad_diagonal_intersection_artifact_emits_checked_farkas
-cargo test -p axeyum-solver --test math_resource_lra_routes finite_cyclic_geometry_bad_opposite_angle_artifact_emits_checked_farkas
-cargo test -p axeyum-solver --test math_resource_lra_routes finite_cyclic_geometry_bad_ptolemy_artifact_emits_checked_farkas
+cargo test -p axeyum-solver --features full --test math_resource_lra_routes finite_cyclic_geometry_bad_diagonal_intersection_artifact_emits_checked_farkas
+cargo test -p axeyum-solver --features full --test math_resource_lra_routes finite_cyclic_geometry_bad_opposite_angle_artifact_emits_checked_farkas
+cargo test -p axeyum-solver --features full --test math_resource_lra_routes finite_cyclic_geometry_bad_ptolemy_artifact_emits_checked_farkas
 ```

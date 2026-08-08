@@ -182,8 +182,8 @@ From the repository root:
 
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/complex-plane-transforms-v0
-cargo test -p axeyum-solver --test math_resource_lra_routes complex_plane_bad_conjugation_product_imaginary_artifact_emits_checked_farkas
-cargo test -p axeyum-solver --test math_resource_lra_routes complex_plane_bad_unit_square_real_part_artifact_emits_checked_farkas
+cargo test -p axeyum-solver --features full --test math_resource_lra_routes complex_plane_bad_conjugation_product_imaginary_artifact_emits_checked_farkas
+cargo test -p axeyum-solver --features full --test math_resource_lra_routes complex_plane_bad_unit_square_real_part_artifact_emits_checked_farkas
 ```
 
 Expected output:

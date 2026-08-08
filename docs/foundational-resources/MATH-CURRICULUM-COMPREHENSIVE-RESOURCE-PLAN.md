@@ -564,7 +564,7 @@ For proof-route promotions:
 
 ```sh
 # plus the route-specific regression named by the pack metadata
-cargo test -p axeyum-solver --test <route-test> <test-name>
+cargo test -p axeyum-solver --features full --test <route-test> <test-name>
 ```
 
 ## Anti-Patterns

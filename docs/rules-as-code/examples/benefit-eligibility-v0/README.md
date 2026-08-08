@@ -41,5 +41,5 @@ rows now also have source-linked Bool/QF_LIA fixtures under [smt2/](smt2/) and
 checked Axeyum evidence through:
 
 ```sh
-cargo test -p axeyum-solver --test rules_as_code_examples
+cargo test -p axeyum-solver --features full --test rules_as_code_examples
 ```

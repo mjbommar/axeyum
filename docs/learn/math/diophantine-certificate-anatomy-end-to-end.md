@@ -102,7 +102,7 @@ gcd(2, -6) = 2
 The promoted resource regression is:
 
 ```sh
-cargo test -p axeyum-solver --test math_resource_lia_routes modular_nonunit_inverse_emits_checked_diophantine_evidence
+cargo test -p axeyum-solver --features full --test math_resource_lia_routes modular_nonunit_inverse_emits_checked_diophantine_evidence
 ```
 
 That test parses the source SMT-LIB artifact, checks the obligation is `unsat`,
@@ -114,7 +114,7 @@ original assertions.
 The same source artifact has a tamper regression:
 
 ```sh
-cargo test -p axeyum-solver --test math_resource_lia_routes qf_lia_resource_route_rejects_tampered_diophantine_certificate
+cargo test -p axeyum-solver --features full --test math_resource_lia_routes qf_lia_resource_route_rejects_tampered_diophantine_certificate
 ```
 
 It checks the genuine certificate first, then changes the recorded
@@ -161,9 +161,9 @@ From the repository root:
 
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/modular-arithmetic-v0
-cargo test -p axeyum-solver --test math_resource_lia_routes modular_nonunit_inverse_emits_checked_diophantine_evidence
-cargo test -p axeyum-solver --test math_resource_lia_routes modular_incompatible_crt_emits_checked_diophantine_evidence
-cargo test -p axeyum-solver --test math_resource_lia_routes qf_lia_resource_route_rejects_tampered_diophantine_certificate
+cargo test -p axeyum-solver --features full --test math_resource_lia_routes modular_nonunit_inverse_emits_checked_diophantine_evidence
+cargo test -p axeyum-solver --features full --test math_resource_lia_routes modular_incompatible_crt_emits_checked_diophantine_evidence
+cargo test -p axeyum-solver --features full --test math_resource_lia_routes qf_lia_resource_route_rejects_tampered_diophantine_certificate
 ```
 
 Expected validator output:

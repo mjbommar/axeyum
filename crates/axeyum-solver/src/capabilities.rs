@@ -465,7 +465,8 @@ pub const CAPABILITIES: &[Capability] = &[
                    probe offline-CONFIRMED all 2367 fired propagations entailed (0 unsound), and 585 \
                    learned 1-UIP theory-lemma clauses are each ENTAILED (¬clause ∧ level-0 facts \
                    check_with_lra-UNSAT) and shorter than the full core. Unknown/overflow/equality skip. \
-                   lia_online/euf 1-UIP mirrors are follow-up; uflra/uflia BoolSearch unchanged",
+                   The QF_LIA/EUF and combined QF_UFLRA/QF_UFLIA mirrors are now landed; retained \
+                   fallback loops remain conservative.",
         reference: "ADR-0014/0015",
     },
     Capability {
@@ -571,8 +572,8 @@ pub const CAPABILITIES: &[Capability] = &[
     Capability {
         area: "QF_UFLRA",
         feature: "ONLINE Nelson–Oppen combination (check_qf_uflra_online): the online EufTheory + the \
-                  online LraTheory combined by model-based equality sharing (interface-equality \
-                  exchange + DFS interface split) — the warm alternative to eager Ackermann. Now \
+                  online LraTheory combined by model-based equality sharing; the conjunctive fast \
+                  path retains a bounded interface DFS — the warm alternative to eager Ackermann. Now \
                   decides FULL Boolean-structured QF_UFLRA via a real CDCL(T) over the combination: \
                   Dpll<CombinedIncremental> drives one warm EUF+LRA theory with backtrackable \
                   assert/push/pop, joint unit+theory propagation, and 1-UIP conflict learning + \
@@ -606,9 +607,10 @@ pub const CAPABILITIES: &[Capability] = &[
     Capability {
         area: "QF_UFLIA",
         feature: "ONLINE Nelson–Oppen combination (check_qf_uflia_online): online EufTheory + online \
-                  LiaTheory by model-based equality sharing — the integer analogue, handling LIA \
-                  non-convexity via model-based DFS interface splitting (interface candidates include \
-                  UF-argument constants, so integer tightening fires). Now decides FULL \
+                  LiaTheory by model-based equality sharing — the integer analogue. LIA \
+                  non-convexity is handled by registered interface equality/order decision atoms in \
+                  the retained CDCL(T) path; the conjunctive fast path retains bounded model-based DFS \
+                  splitting. Now decides FULL \
                   Boolean-structured QF_UFLIA via a real CDCL(T) over the combination (the integer mirror \
                   of QF_UFLRA): Dpll<CombinedIncrementalLia> drives one warm EUF+LiaTheory with \
                   backtrackable assert/push/pop, joint unit+theory propagation, and 1-UIP learning + \
@@ -623,14 +625,15 @@ pub const CAPABILITIES: &[Capability] = &[
                    fuzz, non-zero sat + unsat coverage), 0 disagreements, every sat model REPLAYED with \
                    integer values; the combined model covers EUF-only symbols and an uncertifiable / \
                    per-model leaf yields Unknown (no wrong unsat). Caps (models/atoms/clauses/split-depth/\
-                   timeout) → graceful Unknown; non-UFLIA → Unknown. 1-UIP learning / theory propagation \
-                   deferred",
+                   timeout) → graceful Unknown; non-UFLIA → Unknown. Combined theory propagation and \
+                   1-UIP learning are landed; focused gates require the combined loop to fire and \
+                   revalidate learned theory clauses against the offline arithmetic/EUF combination.",
         reference: "ADR-0013/0014",
     },
     Capability {
         area: "QF_UFLIA/UFLRA",
-        feature: "uninterpreted functions over Int/Real, by EUF + linear-arithmetic \
-                  combination (eager Ackermann elimination → the arithmetic dispatcher)",
+        feature: "EAGER FALLBACK: uninterpreted functions over Int/Real by Ackermann elimination into \
+                  the arithmetic dispatcher",
         assurance: Assurance::SoundIncomplete,
         evidence: "complete for the conjunctive fragment's UNSAT — eager congruence \
                    constraints + LIA/LRA decide f(a)≠f(b)∧a≤b∧b≤a, f(x+0)≠f(x), and nested \
@@ -917,7 +920,8 @@ pub const CAPABILITIES: &[Capability] = &[
                   from a witness sub-solve to synthesize a SYMBOLIC instantiation point (e.g. a witness \
                   symbolic in another variable, or a non-unit-coefficient witness the ±1 probe misses)",
         assurance: Assurance::SoundIncomplete,
-        evidence: "complete over finite domains; otherwise sound refutation by instantiation \
+        evidence: "complete over finite Bool/BV domains, with separate guarded-finite Int and \
+                   single-variable Real decision slices; otherwise sound refutation by instantiation \
                    (every instance body[x:=t] is entailed by ∀x.body for ANY ground t, so a ground UNSAT \
                    transfers; MBP/the sub-solve only CHOOSE a useful t — a bad choice adds a redundant-but-\
                    true instance, never an unsound one; SAT/no-progress is unknown-safe). E-matching is \

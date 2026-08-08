@@ -2,8 +2,8 @@
 //! `QF_S` (strings), `QF_SET` (finite sets), and `QF_SEQ` (sequences) — all desugar to
 //! `QF_BV` in [`axeyum_smtlib::parse_script`]. This test confirms that their `unsat`
 //! instances therefore inherit the bit-vector path's **machine-checkable UNSAT
-//! certificate**, extending axeyum's *Certifying* moat (the Lean-parity half of the
-//! goal: "every unsat carries a checkable certificate") to these new divisions.
+//! certificate**, extending certificate coverage to these selected cases without
+//! implying that every decision route in the divisions produces proof evidence.
 //!
 //! For each theory a small `unsat` instance is parsed to its desugared-BV
 //! [`axeyum_ir::TermArena`] and run through the proof-producing bit-vector path:

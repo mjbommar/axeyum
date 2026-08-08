@@ -382,8 +382,8 @@ Run the checks from the repository root:
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-sets-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/relations-functions-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/equivalence-classes-v0
-cargo test -p axeyum-solver --test math_resource_uf_routes equivalence_classes_quotient_map_congruence_emits_checked_alethe
-cargo test -p axeyum-solver --test math_resource_uf_routes qf_uf_resource_route_rejects_tampered_alethe_certificate
+cargo test -p axeyum-solver --features full --test math_resource_uf_routes equivalence_classes_quotient_map_congruence_emits_checked_alethe
+cargo test -p axeyum-solver --features full --test math_resource_uf_routes qf_uf_resource_route_rejects_tampered_alethe_certificate
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/function-composition-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-monoids-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-permutation-groups-v0
@@ -391,26 +391,26 @@ python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/fi
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-order-lattices-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-cardinality-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/cardinality-principles-v0
-cargo test -p axeyum-solver --test math_resource_lia_routes cardinality_principles_overlap_additivity_emits_checked_diophantine_evidence
+cargo test -p axeyum-solver --features full --test math_resource_lia_routes cardinality_principles_overlap_additivity_emits_checked_diophantine_evidence
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-topology-v0
 cargo test -p axeyum-cnf --test math_resource_boolean_routes finite_topology_bad_empty_open_emits_checked_drat_and_lrat
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-quotient-topology-v0
-cargo test -p axeyum-solver --test math_resource_uf_routes finite_quotient_topology_bad_open_emits_checked_alethe
+cargo test -p axeyum-solver --features full --test math_resource_uf_routes finite_quotient_topology_bad_open_emits_checked_alethe
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-specialization-order-v0
-cargo test -p axeyum-solver --test math_resource_uf_routes finite_specialization_order_bad_t0_antisymmetry_emits_checked_alethe
+cargo test -p axeyum-solver --features full --test math_resource_uf_routes finite_specialization_order_bad_t0_antisymmetry_emits_checked_alethe
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-compactness-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-connectedness-v0
 cargo test -p axeyum-cnf --test math_resource_boolean_routes finite_connectedness_bad_connected_claim_emits_checked_drat_and_lrat
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-continuous-maps-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-simplicial-homology-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-chain-complex-torsion-v0
-cargo test -p axeyum-solver --test math_resource_lia_routes finite_chain_complex_torsion_bad_generator_emits_checked_diophantine_evidence
+cargo test -p axeyum-solver --features full --test math_resource_lia_routes finite_chain_complex_torsion_bad_generator_emits_checked_diophantine_evidence
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-universal-coefficient-shadow-v0
-cargo test -p axeyum-solver --test math_resource_uf_routes finite_universal_coefficient_bad_h1_zero_emits_checked_alethe
+cargo test -p axeyum-solver --features full --test math_resource_uf_routes finite_universal_coefficient_bad_h1_zero_emits_checked_alethe
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-simplicial-cohomology-v0
-cargo test -p axeyum-solver --test math_resource_uf_routes finite_simplicial_cohomology_bad_coboundary_value_emits_checked_alethe
+cargo test -p axeyum-solver --features full --test math_resource_uf_routes finite_simplicial_cohomology_bad_coboundary_value_emits_checked_alethe
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-simplicial-cup-products-v0
-cargo test -p axeyum-solver --test math_resource_bv_routes finite_simplicial_cup_product_bad_value_emits_checked_bv_drat
+cargo test -p axeyum-solver --features full --test math_resource_bv_routes finite_simplicial_cup_product_bad_value_emits_checked_bv_drat
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-measure-v0
 ```
 

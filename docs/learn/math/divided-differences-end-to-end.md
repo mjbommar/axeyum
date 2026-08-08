@@ -114,7 +114,7 @@ From the repository root:
 
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-divided-differences-v0
-cargo test -p axeyum-solver --test math_resource_lra_routes finite_divided_differences_bad_interpolation_value_artifact_emits_checked_farkas
+cargo test -p axeyum-solver --features full --test math_resource_lra_routes finite_divided_differences_bad_interpolation_value_artifact_emits_checked_farkas
 
 python3 scripts/query-foundational-resources.py checks \
   --pack finite-divided-differences-v0 \

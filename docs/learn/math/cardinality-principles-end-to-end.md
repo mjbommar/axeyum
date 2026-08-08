@@ -197,7 +197,7 @@ From the repository root:
 
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/cardinality-principles-v0
-cargo test -p axeyum-solver --test math_resource_lia_routes cardinality_principles_overlap_additivity_emits_checked_diophantine_evidence
+cargo test -p axeyum-solver --features full --test math_resource_lia_routes cardinality_principles_overlap_additivity_emits_checked_diophantine_evidence
 ```
 
 The validator prints:

@@ -24,8 +24,10 @@ not claimed.
 - A fail-closed `lean4export` format-3.1 importer with transactional publication
   and selected projection, Nat, recursive-indexed, mutual, and nested-inductive
   compatibility.
-- Rust, WASM, symbolic-execution, bounded-verification, EVM, property,
-  reflection, and proof-carrying-CAS consumers over the shared typed core.
+- Rust, WASM, symbolic-execution, bounded-verification, EVM, property, and
+  reflection consumers over the solver's typed core, plus a proof-carrying CAS
+  in the same workspace with route-specific IRs, certificates, and trust
+  boundaries.
 
 These are real implementations, not roadmap placeholders. They are not equally
 complete, certified, fast, or exposed through conformant SMT-LIB text.

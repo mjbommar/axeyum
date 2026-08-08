@@ -66,7 +66,7 @@ From the repository root:
 
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-qr-decomposition-v0
-cargo test -p axeyum-solver --test math_resource_lra_routes finite_qr_decomposition_bad_product_entry_artifact_emits_checked_farkas
+cargo test -p axeyum-solver --features full --test math_resource_lra_routes finite_qr_decomposition_bad_product_entry_artifact_emits_checked_farkas
 python3 scripts/query-foundational-resources.py checks --pack finite-qr-decomposition-v0 --route Farkas --proof-status checked --require-any
 ```
 

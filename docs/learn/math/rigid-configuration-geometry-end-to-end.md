@@ -122,8 +122,8 @@ From the repository root:
 
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/rigid-configuration-geometry-v0
-cargo test -p axeyum-solver --test math_resource_lra_routes rigid_configuration_bad_translation_image_x_artifact_emits_checked_farkas
-cargo test -p axeyum-solver --test math_resource_lra_routes rigid_configuration_bad_distance_table_artifact_emits_checked_farkas
+cargo test -p axeyum-solver --features full --test math_resource_lra_routes rigid_configuration_bad_translation_image_x_artifact_emits_checked_farkas
+cargo test -p axeyum-solver --features full --test math_resource_lra_routes rigid_configuration_bad_distance_table_artifact_emits_checked_farkas
 ```
 
 ## Axeyum Identity

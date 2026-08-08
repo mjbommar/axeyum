@@ -250,8 +250,8 @@ From the repository root:
 
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-stochastic-kernels-v0
-cargo test -p axeyum-solver --test math_resource_lra_routes finite_stochastic_kernel_bad_row_artifact_emits_checked_farkas
-cargo test -p axeyum-solver --test math_resource_lra_routes finite_stochastic_kernel_bad_composition_artifact_emits_checked_farkas
+cargo test -p axeyum-solver --features full --test math_resource_lra_routes finite_stochastic_kernel_bad_row_artifact_emits_checked_farkas
+cargo test -p axeyum-solver --features full --test math_resource_lra_routes finite_stochastic_kernel_bad_composition_artifact_emits_checked_farkas
 ```
 
 Expected output:

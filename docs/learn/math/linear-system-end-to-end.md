@@ -137,10 +137,10 @@ From the repository root:
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/linear-algebra-rational-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/linear-optimization-v0
-cargo test -p axeyum-solver --test math_resource_lra_routes linear_algebra_bad_lu_product_entry_artifact_emits_checked_farkas
-cargo test -p axeyum-solver --test math_resource_lra_routes linear_algebra_bad_nullspace_component_artifact_emits_checked_farkas
-cargo test -p axeyum-solver --test math_resource_lra_routes linear_algebra_singular_system_inconsistent_emits_checked_farkas
-cargo test -p axeyum-solver --test math_resource_lra_routes linear_optimization_objective_threshold_emits_checked_farkas
+cargo test -p axeyum-solver --features full --test math_resource_lra_routes linear_algebra_bad_lu_product_entry_artifact_emits_checked_farkas
+cargo test -p axeyum-solver --features full --test math_resource_lra_routes linear_algebra_bad_nullspace_component_artifact_emits_checked_farkas
+cargo test -p axeyum-solver --features full --test math_resource_lra_routes linear_algebra_singular_system_inconsistent_emits_checked_farkas
+cargo test -p axeyum-solver --features full --test math_resource_lra_routes linear_optimization_objective_threshold_emits_checked_farkas
 ```
 
 Expected output for each command:

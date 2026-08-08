@@ -74,7 +74,7 @@ The search that discovered the contradiction is not the trust anchor.
 The promoted resource regression is:
 
 ```sh
-cargo test -p axeyum-solver --test math_resource_lra_routes linear_optimization_objective_threshold_artifact_emits_checked_farkas
+cargo test -p axeyum-solver --features full --test math_resource_lra_routes linear_optimization_objective_threshold_artifact_emits_checked_farkas
 ```
 
 That test parses the source SMT-LIB artifact, checks the obligation is `unsat`,
@@ -86,7 +86,7 @@ assertions.
 The same source artifact has a tamper regression:
 
 ```sh
-cargo test -p axeyum-solver --test math_resource_lra_routes linear_optimization_objective_threshold_rejects_tampered_farkas_certificate
+cargo test -p axeyum-solver --features full --test math_resource_lra_routes linear_optimization_objective_threshold_rejects_tampered_farkas_certificate
 ```
 
 It checks the genuine certificate first, then changes one multiplier to `0`.
@@ -122,8 +122,8 @@ From the repository root:
 
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/linear-optimization-v0
-cargo test -p axeyum-solver --test math_resource_lra_routes linear_optimization_objective_threshold_artifact_emits_checked_farkas
-cargo test -p axeyum-solver --test math_resource_lra_routes linear_optimization_objective_threshold_rejects_tampered_farkas_certificate
+cargo test -p axeyum-solver --features full --test math_resource_lra_routes linear_optimization_objective_threshold_artifact_emits_checked_farkas
+cargo test -p axeyum-solver --features full --test math_resource_lra_routes linear_optimization_objective_threshold_rejects_tampered_farkas_certificate
 ```
 
 Expected validator output:

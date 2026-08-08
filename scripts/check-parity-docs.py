@@ -32,19 +32,30 @@ PARITY_AUDIT = ROOT / "docs" / "plan" / "parity-target-evidence-audit-2026-07-21
 LEAN_GATE_AUDIT = ROOT / "docs" / "plan" / "official-lean-ci-gate-audit-2026-07-21.md"
 PROJECT_STATE = ROOT / "docs" / "PROJECT-STATE.md"
 BENCHMARK_GUIDE = ROOT / "docs" / "user-guide" / "benchmarks.md"
+USER_GUIDE_INDEX = ROOT / "docs" / "user-guide" / "README.md"
 FIRST_SMTLIB_GUIDE = ROOT / "docs" / "user-guide" / "first-smtlib-query.md"
 UNSAT_EVIDENCE_GUIDE = ROOT / "docs" / "user-guide" / "unsat-evidence.md"
+SOLVER_CONFIG_GUIDE = ROOT / "docs" / "reference" / "solver-config.md"
 PARITY_LEDGER = ROOT / "bench-results" / "PARITY.md"
 EXAMPLE_CATALOG = ROOT / "docs" / "reference" / "examples.md"
 DOCUMENTATION_PLAN = ROOT / "docs" / "documentation-plan.md"
 CONSUMER_README = ROOT / "docs" / "consumer-track" / "README.md"
 CONSUMER_SCOREBOARD = ROOT / "docs" / "consumer-track" / "SCOREBOARD.md"
 LEARN_INTRO = ROOT / "docs" / "learn" / "01-what-is-automated-reasoning.md"
+LEARN_THEORIES = ROOT / "docs" / "learn" / "03-smt-and-theories.md"
 LEARN_OUTCOMES = ROOT / "docs" / "learn" / "05-models-unsat-and-unknown.md"
 LEARN_PIPELINE = ROOT / "docs" / "learn" / "07-how-axeyum-solves-a-query.md"
+TERM_IR_DOC = ROOT / "docs" / "internals" / "term-ir.md"
+EVALUATOR_DOC = ROOT / "docs" / "internals" / "evaluator.md"
+CNF_INTERNAL_DOC = ROOT / "docs" / "internals" / "cnf-and-sat.md"
+PROOF_STACK_DOC = ROOT / "docs" / "internals" / "proof-stack.md"
+LEAN_INTERNAL_DOC = ROOT / "docs" / "internals" / "lean-kernel.md"
 NORTH_STAR_PLAN = ROOT / "docs" / "plan" / "00-north-star.md"
 NORTH_STAR_ORIENTATION = (
     ROOT / "docs" / "research" / "00-orientation" / "north-star.md"
+)
+MISSION_SCOPE = (
+    ROOT / "docs" / "research" / "00-orientation" / "mission-and-scope.md"
 )
 FOUNDATIONAL_DAG = (
     ROOT / "docs" / "research" / "08-planning" / "foundational-dag.md"
@@ -61,13 +72,40 @@ PROVER_P60 = (
 )
 LEAN_AXIOM_LEDGER = ROOT / "docs" / "plan" / "lean-axiom-ledger-v1.json"
 LEAN_COMPLETE_PARITY = ROOT / "docs" / "plan" / "generated" / "lean-complete-parity.md"
+LEAN_OFFICIAL_MATRIX = (
+    ROOT / "docs" / "plan" / "generated" / "lean-official-construct-matrix.md"
+)
+LEAN_QUOTIENT_RESULT = (
+    ROOT / "docs" / "plan" / "lean-quotient-package-m1-m3-result-2026-07-23.md"
+)
 LEAN_KERNEL_EXPR = ROOT / "crates" / "axeyum-lean-kernel" / "src" / "expr.rs"
+LEAN_IMPORT_LIB = ROOT / "crates" / "axeyum-lean-import" / "src" / "lib.rs"
 UF_FUNCTION_ELIM = ROOT / "crates" / "axeyum-rewrite" / "src" / "functions.rs"
 CNF_LIB = ROOT / "crates" / "axeyum-cnf" / "src" / "lib.rs"
+CNF_LRAT = ROOT / "crates" / "axeyum-cnf" / "src" / "lrat.rs"
+CNF_README = ROOT / "crates" / "axeyum-cnf" / "README.md"
+CAS_README = ROOT / "crates" / "axeyum-cas" / "README.md"
+CAS_LIB = ROOT / "crates" / "axeyum-cas" / "src" / "lib.rs"
+SMTCOMP_CLI_EXAMPLE = ROOT / "crates" / "axeyum-bench" / "examples" / "smtcomp_cli.rs"
+EVM_README = ROOT / "crates" / "axeyum-evm" / "README.md"
+EVM_LIB = ROOT / "crates" / "axeyum-evm" / "src" / "lib.rs"
+VERIFY_README = ROOT / "crates" / "axeyum-verify" / "README.md"
+VERIFY_LIB = ROOT / "crates" / "axeyum-verify" / "src" / "lib.rs"
+BOOLEAN_CNF_COOKBOOK = (
+    ROOT / "docs" / "proof-cookbook" / "recipes" / "boolean-cnf-lrat.md"
+)
+LRA_COOKBOOK = ROOT / "docs" / "proof-cookbook" / "recipes" / "qf-lra-farkas.md"
 IR_TERM = ROOT / "crates" / "axeyum-ir" / "src" / "term.rs"
 PROOF_SAT = ROOT / "crates" / "axeyum-cnf" / "src" / "proof_sat.rs"
 BV_LOWERING = ROOT / "crates" / "axeyum-bv" / "src" / "lib.rs"
 SAT_BV_BACKEND = ROOT / "crates" / "axeyum-solver" / "src" / "sat_bv_backend.rs"
+SOLVER_LRA = ROOT / "crates" / "axeyum-solver" / "src" / "lra.rs"
+SOLVER_UFLRA_ONLINE = (
+    ROOT / "crates" / "axeyum-solver" / "src" / "uflra_online.rs"
+)
+SOLVER_UFLIA_ONLINE = (
+    ROOT / "crates" / "axeyum-solver" / "src" / "uflia_online.rs"
+)
 SOLVER_BACKEND = ROOT / "crates" / "axeyum-solver" / "src" / "backend.rs"
 SUPPORT_MATRIX_LEDGER = (
     ROOT / "crates" / "axeyum-solver" / "src" / "support_matrix.rs"
@@ -92,7 +130,12 @@ P27_CURRENT = (
     / "00-current-state.md"
 )
 IR_SORT = ROOT / "crates" / "axeyum-ir" / "src" / "sort.rs"
+IR_VALUE = ROOT / "crates" / "axeyum-ir" / "src" / "value.rs"
+IR_EVAL = ROOT / "crates" / "axeyum-ir" / "src" / "eval.rs"
 WORD_STRINGS = ROOT / "crates" / "axeyum-strings" / "src" / "lib.rs"
+STRING_REGEX_MEMBERSHIP = (
+    ROOT / "crates" / "axeyum-strings" / "src" / "regex" / "membership.rs"
+)
 QUOTIENT_ADR = (
     ROOT
     / "docs"
@@ -134,6 +177,36 @@ SMTCOMP_PROVENANCE = (
 MEASUREMENT_PROVENANCE = (
     ROOT / "docs" / "plan" / "generated" / "measurement-provenance-matrix.json"
 )
+PROOF_COOKBOOK_DOCS = tuple(
+    sorted((ROOT / "docs" / "proof-cookbook").rglob("*.md"))
+)
+LEARN_DOCS = tuple(sorted((ROOT / "docs" / "learn").rglob("*.md")))
+CURRENT_SOLVER_COMMAND_DOCS = tuple(
+    sorted(
+        PROOF_COOKBOOK_DOCS
+        + LEARN_DOCS
+        + tuple((ROOT / "docs" / "contributor-guide").rglob("*.md"))
+        + tuple((ROOT / "docs" / "foundational-resources").rglob("*.md"))
+        + tuple((ROOT / "docs" / "rules-as-code").rglob("*.md"))
+        + tuple((ROOT / "docs" / "rules-as-code").rglob("*.json"))
+    )
+)
+DOCUMENTED_TEST_SOURCES = {
+    suite: ROOT / "crates" / "axeyum-solver" / "tests" / f"{suite}.rs"
+    for suite in (
+        "abv_differential_fuzz",
+        "bv_differential_fuzz",
+        "evidence",
+        "int_inequality_lean_reconstruct",
+        "lean_crosscheck",
+        "math_resource_bv_routes",
+        "math_resource_lia_routes",
+        "math_resource_lra_routes",
+        "math_resource_uf_routes",
+        "progress_frontier",
+        "rules_as_code_examples",
+    )
+}
 
 LIVE_DOCS = (
     ROOT / "README.md",
@@ -142,10 +215,12 @@ LIVE_DOCS = (
     ROOT / "bench-results" / "SCOREBOARD.md",
     ROOT / "docs" / "README.md",
     PROJECT_STATE,
+    USER_GUIDE_INDEX,
     ROOT / "docs" / "plan" / "README.md",
     ROOT / "docs" / "user-guide" / "benchmarks.md",
     FIRST_SMTLIB_GUIDE,
     ROOT / "docs" / "user-guide" / "limitations.md",
+    SOLVER_CONFIG_GUIDE,
     GAP_DOC,
     PARITY_AUDIT,
     LEAN_GATE_AUDIT,
@@ -164,8 +239,17 @@ PUBLIC_CLAIM_DOCS = (
     ROOT / "docs" / "README.md",
     PROJECT_STATE,
     LEARN_INTRO,
+    LEARN_THEORIES,
     LEARN_OUTCOMES,
     LEARN_PIPELINE,
+    TERM_IR_DOC,
+    EVALUATOR_DOC,
+    CNF_INTERNAL_DOC,
+    PROOF_STACK_DOC,
+    LEAN_INTERNAL_DOC,
+    CNF_README,
+    BOOLEAN_CNF_COOKBOOK,
+    LRA_COOKBOOK,
     NORTH_STAR_PLAN,
     NORTH_STAR_ORIENTATION,
     FOUNDATIONAL_DAG,
@@ -203,6 +287,21 @@ PUBLIC_STALE_PATTERNS = (
     re.compile(r"wrong search can.?t produce a wrong\s+`unsat`", re.IGNORECASE),
     re.compile(
         r"proof-producing core enabled it also emits a DRAT proof",
+        re.IGNORECASE,
+    ),
+    re.compile(r"Re-derive small BV UNSAT results", re.IGNORECASE),
+    re.compile(r"integer and rational values are exact,", re.IGNORECASE),
+    re.compile(r"custom CDCL direction", re.IGNORECASE),
+    re.compile(r"elaborate DRAT to LRAT and check LRAT", re.IGNORECASE),
+    re.compile(r"unsat\s*[→-]+\s*checkable certificate", re.IGNORECASE),
+    re.compile(r"A Boolean\s+`unsat`\s+claim is accepted only", re.IGNORECASE),
+    re.compile(
+        r"Nested and mutual inductives, recursors, quotient-related declarations,"
+        r" and other features are admitted only",
+        re.IGNORECASE,
+    ),
+    re.compile(
+        r"a supported\s+`unsat`\s+route should carry independently checkable evidence",
         re.IGNORECASE,
     ),
 )
@@ -765,18 +864,280 @@ def main() -> int:
             )
 
     smtlib_proof_markers = (
-        (SOLVER_BACKEND, "proof-producing SAT core and its DRAT proof is verified"),
+        (SOLVER_BACKEND, "checks its proof inline in the same"),
+        (SOLVER_BACKEND, "Lack of a checked proof"),
         (SAT_BV_BACKEND, "downgrade to `unknown`"),
         (FIRST_SMTLIB_GUIDE, "does not return or write the proof artifact"),
         (FIRST_SMTLIB_GUIDE, "[QF_BV proof exporter](unsat-evidence.md)"),
         (UNSAT_EVIDENCE_GUIDE, "This export API is distinct from"),
         (UNSAT_EVIDENCE_GUIDE, "fails closed to `Unknown`"),
+        (SOLVER_CONFIG_GUIDE, "native core is the primary SAT search"),
+        (SOLVER_CONFIG_GUIDE, "compatibility fallback"),
+        (SOLVER_CONFIG_GUIDE, "does not return or write the proof artifact"),
     )
     for path, marker in smtlib_proof_markers:
         text = " ".join(path.read_text(encoding="utf-8").split())
         if marker not in text:
             failures.append(
                 f"{path.relative_to(ROOT)}: missing SMT-LIB proof boundary marker "
+                f"{marker!r}"
+            )
+
+    propositional_proof_markers = (
+        (CNF_LRAT, "This slice supports **RUP-only** proofs"),
+        (CNF_LRAT, "RAT additions"),
+        (CNF_INTERNAL_DOC, "in-tree proof-producing CDCL core"),
+        (CNF_INTERNAL_DOC, "RUP-only"),
+        (PROOF_STACK_DOC, "RUP-only"),
+        (CNF_README, "RUP-only"),
+        (USER_GUIDE_INDEX, "unsat → route-specific assurance"),
+        (USER_GUIDE_INDEX, "not implied by every `unsat` verdict"),
+        (
+            BOOLEAN_CNF_COOKBOOK,
+            "default proofless BatSat result remains lower assurance",
+        ),
+        (BOOLEAN_CNF_COOKBOOK, "DRAT addition that requires RAT is rejected"),
+    )
+    for path, marker in propositional_proof_markers:
+        text = " ".join(path.read_text(encoding="utf-8").split())
+        if marker not in text:
+            failures.append(
+                f"{path.relative_to(ROOT)}: missing propositional proof boundary "
+                f"marker {marker!r}"
+            )
+
+    lean_boundary_markers = (
+        (LEAN_IMPORT_LIB, 'pub const FORMAT_VERSION: &str = "3.1.0";'),
+        (LEAN_OFFICIAL_MATRIX, "official accepted: 6; official rejected: 1"),
+        (LEAN_OFFICIAL_MATRIX, "dual-admitted-computation-checked`=4"),
+        (
+            LEAN_QUOTIENT_RESULT,
+            "M1--M3 complete; M4 differential and final acceptance remain open",
+        ),
+        (
+            LEAN_INTERNAL_DOC,
+            "recursive-indexed, reflexive-higher-order, mutual, nested-inductive",
+        ),
+        (LEAN_INTERNAL_DOC, "offline TL2.10 M1--M3 slice"),
+        (LEAN_INTERNAL_DOC, "Native syntax/macros, elaboration"),
+    )
+    for path, marker in lean_boundary_markers:
+        text = " ".join(path.read_text(encoding="utf-8").split())
+        if marker not in text:
+            failures.append(
+                f"{path.relative_to(ROOT)}: missing Lean compatibility boundary "
+                f"marker {marker!r}"
+            )
+
+    lra_range_markers = (
+        (SOLVER_LRA, "current `i128`-backed rational range"),
+        (SOLVER_LRA, "Overflow during collection, elimination"),
+        (LRA_COOKBOOK, "`i128`-backed numerator/denominator range"),
+        (LRA_COOKBOOK, "returns `unknown` rather than wrapping"),
+        (LRA_COOKBOOK, "filtering Cargo by the builder name would run zero tests"),
+        (
+            LEARN_THEORIES,
+            "every `unsat` must state its route-specific assurance boundary",
+        ),
+        (LEARN_THEORIES, "not implied by every definitive verdict"),
+    )
+    for path, marker in lra_range_markers:
+        text = " ".join(path.read_text(encoding="utf-8").split())
+        if marker not in text:
+            failures.append(
+                f"{path.relative_to(ROOT)}: missing LRA range/assurance boundary "
+                f"marker {marker!r}"
+            )
+
+    combination_markers = (
+        (CAPABILITY_LEDGER, "Combined theory propagation and"),
+        (CAPABILITY_LEDGER, "EAGER FALLBACK"),
+        (SUPPORT_MATRIX_LEDGER, "online-first model-based equality sharing"),
+        (SOLVER_UFLRA_ONLINE, "crate::combined_theory::CombinedIncremental"),
+        (SOLVER_UFLRA_ONLINE, "older enumerative Boolean search remains"),
+        (SOLVER_UFLIA_ONLINE, "crate::combined_theory_lia::CombinedIncrementalLia"),
+        (SOLVER_UFLIA_ONLINE, "older enumerative Boolean search remains"),
+        (LEARN_THEORIES, 'does not expose a universal "plug any two theories together"'),
+        (LEARN_THEORIES, "does not imply arbitrary Nelson–Oppen completeness"),
+        (ROOT / "README.md", "fallback after an online `unknown`"),
+    )
+    for path, marker in combination_markers:
+        text = " ".join(path.read_text(encoding="utf-8").split())
+        if marker not in text:
+            failures.append(
+                f"{path.relative_to(ROOT)}: missing theory-combination boundary "
+                f"marker {marker!r}"
+            )
+
+    cas_assurance_markers = (
+        (CAS_LIB, "pub enum ZeroTest"),
+        (CAS_LIB, "pub struct CertifiedIntegral"),
+        (CAS_README, "This assurance is CAS-local"),
+        (CAS_README, "not `axeyum_solver::Evidence`"),
+        (CAS_README, "current checked `i128` range"),
+        (ROOT / "README.md", "Their IRs, certificate formats, and exact trust boundaries are"),
+        (ROOT / "README.md", "re-validate supported evidence artifacts"),
+    )
+    for path, marker in cas_assurance_markers:
+        text = " ".join(path.read_text(encoding="utf-8").split())
+        if marker not in text:
+            failures.append(
+                f"{path.relative_to(ROOT)}: missing CAS assurance boundary marker "
+                f"{marker!r}"
+            )
+
+    advanced_theory_markers = (
+        (MISSION_SCOPE, "current status lives elsewhere"),
+        (MISSION_SCOPE, "spans the foundation and selected higher-rung"),
+        (MISSION_SCOPE, "Not claimed by the current product"),
+        (PROJECT_STATE, "route-specific IRs, certificates, and trust"),
+        (LIMITATIONS, "finite Bool/BV domains"),
+        (LIMITATIONS, "This is not general QSAT"),
+        (LIMITATIONS, "General CAD UNSAT currently has no portable proof artifact"),
+        (CAPABILITY_LEDGER, "complete over finite Bool/BV domains"),
+        (ROOT / "README.md", "Some conversions remain constant-only"),
+        (ROOT / "README.md", "parametric declarations are rejected"),
+    )
+    for path, marker in advanced_theory_markers:
+        text = " ".join(path.read_text(encoding="utf-8").split())
+        if marker not in text:
+            failures.append(
+                f"{path.relative_to(ROOT)}: missing advanced-theory boundary marker "
+                f"{marker!r}"
+            )
+
+    consumer_assurance_markers = (
+        (EVM_LIB, "evidence, not a Lean module"),
+        (EVM_LIB, "Unsupported or unresolved shapes remain a sound `Unknown`"),
+        (EVM_README, "`Option<EvidenceReport>`"),
+        (EVM_README, "does not reconstruct the safety claim to Lean"),
+        (VERIFY_LIB, "certificate and Lean-module availability explicitly"),
+        (VERIFY_README, "can legitimately return `certified = false`"),
+        (VERIFY_README, "direct runtime `Program` callers receive `Unknown`"),
+        (CONSUMER_README, "EVM crate does not currently reconstruct"),
+        (ROOT / "README.md", "that field is optional and is not a Lean reconstruction"),
+        (ROOT / "README.md", "warm loop route currently returns a decision"),
+    )
+    for path, marker in consumer_assurance_markers:
+        text = " ".join(path.read_text(encoding="utf-8").split())
+        if marker not in text:
+            failures.append(
+                f"{path.relative_to(ROOT)}: missing consumer assurance marker "
+                f"{marker!r}"
+            )
+
+    source_assurance_markers = (
+        (SMTCOMP_CLI_EXAMPLE, "A bare or uncovered `unsat` remains visibly uncertified"),
+        (SMTLIB_FRONT_DOOR, "checker remains the explicit trust boundary"),
+        (WORD_STRINGS, "does not imply universal string-proof coverage"),
+        (STRING_REGEX_MEMBERSHIP, "remaining trust boundary"),
+        (SOLVER_LRA.parent / "lia_online.rs", "trust boundary for this helper"),
+    )
+    for path, marker in source_assurance_markers:
+        text = " ".join(path.read_text(encoding="utf-8").split())
+        if marker not in text:
+            failures.append(
+                f"{path.relative_to(ROOT)}: missing source assurance marker {marker!r}"
+            )
+
+    forbidden_source_claims = (
+        re.compile(r"every `?unsat`? carries a (?:machine-)?checkable", re.IGNORECASE),
+        re.compile(r"wrong `unsat` is impossible", re.IGNORECASE),
+    )
+    for path in (SMTCOMP_CLI_EXAMPLE, SMTLIB_FRONT_DOOR, WORD_STRINGS):
+        text = path.read_text(encoding="utf-8")
+        for pattern in forbidden_source_claims:
+            if match := pattern.search(text):
+                line = text.count("\n", 0, match.start()) + 1
+                failures.append(
+                    f"{path.relative_to(ROOT)}:{line}: stale source assurance claim: "
+                    f"{match.group(0)!r}"
+                )
+
+    for path in CURRENT_SOLVER_COMMAND_DOCS:
+        for line_number, line in enumerate(
+            path.read_text(encoding="utf-8").splitlines(), start=1
+        ):
+            if (
+                "cargo test -p axeyum-solver" in line
+                and not any(
+                    profile in line
+                    for profile in (
+                        "--features full",
+                        "--features z3",
+                        "--features z3-static",
+                    )
+                )
+            ):
+                failures.append(
+                    f"{path.relative_to(ROOT)}:{line_number}: solver documentation test "
+                    "command must enable `--features full`"
+                )
+
+    documented_test_names: dict[str, tuple[str, ...]] = {}
+    for suite, source in DOCUMENTED_TEST_SOURCES.items():
+        text = source.read_text(encoding="utf-8")
+        names = tuple(
+            re.findall(
+                r"(?m)^\s*#\[test\]\n(?:\s*#\[[^\n]+\]\n)*\s*fn\s+(\w+)",
+                text,
+            )
+        )
+        if not names:
+            failures.append(
+                f"{source.relative_to(ROOT)}: no documentation-facing tests discovered"
+            )
+        documented_test_names[suite] = names
+
+    documented_command = re.compile(
+        r"cargo test -p axeyum-solver\b.*?--test\s+([\w-]+)(?:\s+(\w+))?"
+    )
+    for path in CURRENT_SOLVER_COMMAND_DOCS:
+        for line_number, line in enumerate(
+            path.read_text(encoding="utf-8").splitlines(), start=1
+        ):
+            match = documented_command.search(line)
+            if match is None:
+                continue
+            suite, test_filter = match.groups()
+            if suite not in documented_test_names:
+                failures.append(
+                    f"{path.relative_to(ROOT)}:{line_number}: documented "
+                    f"test suite {suite!r} has no guarded source"
+                )
+            elif test_filter is not None and not any(
+                test_filter in name for name in documented_test_names[suite]
+            ):
+                failures.append(
+                    f"{path.relative_to(ROOT)}:{line_number}: documentation test filter "
+                    f"{test_filter!r} matches no test in {suite}.rs"
+                )
+
+    for path in (
+        LRA_COOKBOOK,
+        ROOT / "docs" / "proof-cookbook" / "recipes" / "qf-uf-congruence-alethe.md",
+    ):
+        text = path.read_text(encoding="utf-8")
+        if "--test lean_crosscheck lean_crosscheck_representative" not in text:
+            failures.append(
+                f"{path.relative_to(ROOT)}: Lean command must invoke the registered "
+                "representative test harness"
+            )
+
+    ir_range_markers = (
+        (IR_SORT, "Nested arrays and nested sequences remain deferred"),
+        (IR_VALUE, "exact within the `i128`"),
+        (IR_EVAL, "Integers are exact within the i128 reference range"),
+        (LEARN_THEORIES, "not an arbitrary-precision implementation claim"),
+        (TERM_IR_DOC, "exact within the current `i128` reference range"),
+        (EVALUATOR_DOC, "rational numerator/denominator components are `i128`-based"),
+        (LIMITATIONS, "Concrete integer/rational reference evaluation is range-bounded"),
+    )
+    for path, marker in ir_range_markers:
+        text = " ".join(path.read_text(encoding="utf-8").split())
+        if marker not in text:
+            failures.append(
+                f"{path.relative_to(ROOT)}: missing concrete arithmetic range marker "
                 f"{marker!r}"
             )
 
@@ -1301,6 +1662,11 @@ def main() -> int:
         "|foundation_quotient=offline_m1_m3"
         "|research_symbolic_shifts=resolved"
         "|research_high_assurance_unsat=resolved"
+        "|theory_combination=online_cdclt_with_guarded_fallback"
+        "|cas_assurance=local_route_specific"
+        "|advanced_theories=route_specific_incomplete"
+        "|consumer_assurance=explicit_optional_certificates"
+        "|source_assurance=route_specific"
         "|strings_status=sound_incomplete"
         "|strings_default_bound=12"
         "|strings_ladder_max=48"

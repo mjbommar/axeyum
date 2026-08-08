@@ -142,7 +142,7 @@ From the repository root:
 
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/induction-obligations-v0
-cargo test -p axeyum-solver --test math_resource_lia_routes induction_obligations_bounded_step_count_emits_checked_lia_evidence
+cargo test -p axeyum-solver --features full --test math_resource_lia_routes induction_obligations_bounded_step_count_emits_checked_lia_evidence
 ```
 
 Expected output:

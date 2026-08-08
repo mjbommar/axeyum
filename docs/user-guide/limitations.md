@@ -19,12 +19,12 @@ incomplete in specific, named ways. See [Project State](../PROJECT-STATE.md).
 
 ```mermaid
 flowchart LR
-    subgraph S["Solid — validated/checked"]
+    subgraph S["Validated/checked on the named routes"]
         s1[QF_BV bit-blast→SAT]
-        s2[QF_LRA Farkas-certified]
-        s3[QF_UF congruence-checked]
-        s4[QF_FP differential-validated]
-        s5[arrays / datatypes / LIA]
+        s2[selected QF_LRA Farkas routes]
+        s3[supported QF_UF congruence routes]
+        s4[QF_FP circuit differential validation]
+        s5[selected arrays / datatypes / LIA routes]
         s6[returned SAT models replayed on supported routes]
     end
     subgraph P["In progress — sound but incomplete"]
@@ -53,12 +53,21 @@ flowchart LR
   warm Z3 on three drivers, behind on one, and behind warm Bitwuzla on all four.
   This supports a characterized regime, not general parity. See
   [Benchmarks](benchmarks.md).
-- **Nonlinear arithmetic (NRA/NIA) is sound but incomplete.** It decides a
-  growing set (squares, AM–GM, single-variable polynomials, polynomial
-  identities) and returns `unknown` elsewhere — it will not match Z3's complete
-  `nlsat` in general.
-- **Quantifiers** are complete over finite domains; otherwise sound refutation by
-  instantiation, `unknown` on no progress.
+- **Nonlinear arithmetic (NRA/NIA) is sound but incomplete in general.** Exact
+  subroutes include single-variable polynomial reasoning, quadratic SOS, and a
+  cylindrical-decomposition decision side; harder or uncovered cases may still
+  return `unknown`. General CAD UNSAT currently has no portable proof artifact,
+  and NIA's bounded bit-blast must not turn its width limit into an UNSAT claim.
+- **Quantifiers** completely expand finite Bool/BV domains. Guarded-finite Int
+  and single-variable Real subroutes decide additional shapes; otherwise
+  E-matching, MBQI, and targeted CEGQI provide sound, incomplete routes with
+  `unknown` on no progress. This is not general QSAT or arbitrary quantified-
+  theory completeness.
+- **Concrete integer/rational reference evaluation is range-bounded.** `Int` and
+  `Real` retain mathematical, non-wrapping semantics, but current concrete
+  `Int` values and rational numerator/denominator components use `i128`.
+  Out-of-range evaluation reports `ArithmeticOverflow`, and a dependent solve
+  declines instead of wrapping or claiming a model outside the checked range.
 - **Strings** are *bounded* (length-capped, BV-lowered): declared strings start
   at 12 bytes, the front door retries 24/32/48-byte windows, and packed terms
   have a 512-byte cap. Additional checked word-equation and length/LIA routes do

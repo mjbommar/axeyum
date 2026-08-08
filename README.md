@@ -27,11 +27,12 @@ If you already use these, here's where Axeyum fits:
 |---|---|---|
 | **Z3 / cvc5** (SMT solvers) | a pure-Rust SMT solver | supported certified routes return independently checkable evidence; uncovered routes remain explicit in the proof ledger |
 | **Lean / Coq** (proof assistants) | an independent selected-profile Lean-core checker plus a designed certificate-first goal layer | supported solver proofs already reconstruct to checked terms; the native interactive goal/tactic layer is not built yet |
-| **Mathematica / SymPy** (computer algebra) | a **proof-carrying CAS** | differentiate / factor / integrate / solve return results *certified* by lowering to the decidable core — out of fragment it declines, never guesses wrong |
+| **Mathematica / SymPy** (computer algebra) | a **proof-carrying CAS** | supported certificate-bearing operations use route-specific exact checks (normal-form witnesses, re-multiplication, substitution, or differentiate-and-check); compute-only APIs remain distinct |
 | **a textbook + a lab** | a built-in library of tutorials, rules, axioms, and worked theorems | the same artifacts that *teach* a concept also *test* an Axeyum theory (double-duty) |
 
-All four share one typed core, one trust boundary, and one pure-Rust,
-WASM-clean build.
+All four live in one pure-Rust workspace and follow the same fail-closed
+discipline. Their IRs, certificate formats, and exact trust boundaries are
+route-specific; they must not inherit assurance from one another.
 
 ## Honest status
 
@@ -65,18 +66,24 @@ the per-layer authority:
   can return a DRAT-checked proof and an end-to-end bit-blast faithfulness
   certificate. Decision coverage is broader than proof coverage; see the
   [measured evidence split](docs/PROJECT-STATE.md#evidence-and-lean).
-- **Arrays** (QF_ABV, eager elimination), **uninterpreted functions** (QF_UF,
-  Ackermann), and their composition **QF_AUFBV**.
-- **Linear arithmetic** — `QF_LRA` (exact-rational simplex, Farkas-certified
-  `unsat`), `QF_LIA` (bit-blast + branch-and-bound simplex), mixed `QF_LIRA`
-  (MILP); Boolean combinations via lazy SMT / DPLL(T) over a shared
-  congruence-closure **e-graph** (`axeyum-egraph`).
-- **Floating point** (QF_FP) — IEEE 754 arithmetic for **F16/F32/F64/F128** and
-  ML formats, differentially validated against native `f32`/`f64` and
-  `rustc_apfloat`.
-- **Datatypes** (algebraic, recursive), **nonlinear** arithmetic (QF_NRA/NIA,
-  sound-incomplete), **quantifiers** (finite-domain complete + E-matching/MBQI),
-  and **strings / sequences** (`axeyum-strings`, the cvc5 normal-form procedure;
+- **Arrays and uninterpreted functions** — `QF_UF` uses online congruence
+  closure over a backtrackable **e-graph**; supported `QF_ABV`/`QF_AUFBV`
+  shapes use the retained online CDCL(T) array/UF path. Eager Ackermann and
+  read-over-write elimination remain conservative fallbacks.
+- **Linear arithmetic** — exact-rational `QF_LRA`, integer `QF_LIA`, and mixed
+  `QF_LIRA`, with route-specific Farkas/Diophantine evidence. Supported
+  Boolean structure uses online CDCL(T); `QF_UFLRA` and `QF_UFLIA` combine
+  EUF with arithmetic by model-based equality sharing, with eager Ackermann
+  fallback after an online `unknown`.
+- **Floating point** (QF_FP) — IEEE 754 circuit builders for
+  **F16/F32/F64/F128** and ML formats, differentially validated against native
+  `f32`/`f64` and `rustc_apfloat`. Some conversions remain constant-only, and
+  an UNSAT proof is modulo the trusted FP-to-circuit reduction.
+- **Datatypes** (non-parametric algebraic and recursive; parametric declarations
+  are rejected), **nonlinear** arithmetic (QF_NRA/NIA, sound-incomplete in
+  general), **quantifiers** (complete finite Bool/BV expansion plus selected
+  guarded Int/Real decisions, otherwise E-matching/MBQI/targeted CEGQI), and
+  **strings / sequences** (`axeyum-strings`, the cvc5 normal-form procedure;
   bounded QF_S is BV-lowered today).
 
 **Where Z3/cvc5 fit:** they are the differential oracle and the parity yardstick,
@@ -87,24 +94,30 @@ against public corpora.
 
 ### 2. Proof evidence and the Lean checker
 
-Every `sat` is checkable by evaluation; every supported `unsat`/`valid` aims to
-carry a **machine-checkable proof** a Lean-grade kernel would accept:
+Every `sat` is checkable by evaluation. Supported certificate-bearing
+`unsat`/`valid` routes carry machine-checkable evidence; other definitive
+routes keep their lower assurance explicit:
 
-- `unsat` over the bit-vector-reducible core (QF_BV/ABV/UF/AUFBV/bounded-LIA/
-  datatypes) → an externally re-checkable **DRAT** certificate (in-tree RUP+RAT
-  checker, the `drat-trim` analogue), which also certifies the bit-blasting
-  faithful vs an independent reference — closing the term→CNF gap.
-- `QF_LRA` `unsat` → a **Farkas** refutation (exact-rational, self-verifying).
-- **k-induction** safety proofs emit a DRAT certificate for *each* obligation.
+- selected `unsat` routes over the bit-vector-reducible core
+  (QF_BV/ABV/UF/AUFBV/bounded-LIA/datatypes) → a rechecked **DRAT** certificate
+  for the generated CNF; promoted routes also carry the independent
+  bit-blast-faithfulness check. Broader decision routes and the default BatSat
+  backend may remain explicitly proofless/lower-assurance.
+- covered `QF_LRA` `unsat` paths → a **Farkas** refutation (exact-rational,
+  self-verifying).
+- supported **k-induction** proof routes emit and check a DRAT certificate for
+  each admitted obligation.
 
 `axeyum-lean-kernel` is an in-tree Rust implementation of a useful Lean core:
 lifetime-free interned terms and universes, WHNF, definitional equality, type
 checking, proof irrelevance, inductives, recursors, and iota reduction. Supported
 solver proofs already reconstruct to kernel-checked terms and self-contained
 Lean modules. A separate fail-closed `lean4export` 3.1 reader now independently
-admits exact flat, direct-recursive, recursive-indexed/reflexive, mutual, nested,
-projection, quotient-package, and Nat-literal profiles under explicit population
-and computation gates. It is not a complete Lean kernel or ecosystem: String
+admits the retained direct, recursive-indexed, reflexive-higher-order, mutual,
+nested, and pre-elaborated well-founded Lean 4.30 construct streams under
+explicit population and computation gates. The fixed quotient package is an
+offline TL2.10 M1--M3 result; its final differential/ADR credit remains open.
+This is not a complete Lean kernel or ecosystem: String
 literals, dependency-closed `Init`/`Std`/mathlib imports, native parsing/macros,
 elaboration, tactics, modules/Lake, LSP, and compiler/runtime behavior remain
 open. See
@@ -133,11 +146,13 @@ proof assistant from the reconstruction and kernel features above.
 ### 3. Computer algebra (the Mathematica / SymPy angle)
 
 `axeyum-cas` is a **proof-carrying CAS** (ADR-0301): pure Rust, WASM-safe,
-oracle-free. Where a mainstream CAS *computes* a transformed expression and asks
-you to trust it, Axeyum *decides and certifies*. Results are exact; certified
-operations carry a machine-checked backstop (a decidable zero-test, or
-differentiate-and-check), so an out-of-fragment case **declines rather than
-returns a wrong answer**. Current surface:
+oracle-free. Its supported certificate-bearing operations use CAS-local exact
+checks such as a canonical difference witness, re-multiplication, substitution,
+or differentiate-and-check. These are not automatically
+`axeyum_solver::Evidence`, Alethe, or Lean proofs; compute-only APIs and
+certificate envelopes remain distinct. Exact rational work is bounded by the
+current checked `i128` representation, and an uncertifiable or overflowing
+certificate-bearing route declines. Current surface:
 
 - **Calculus** — `differentiate`/`differentiate_n`, `integrate` (polynomial, full
   rational via Horowitz + Rothstein–Trager, `∫p·eˣ`, `∫p·sin|cos`),
@@ -211,11 +226,15 @@ counterexample, or an honest `Inconclusive` (never a wrong `Safe`).
 - **`axeyum-verify`** — a `#[axeyum::verify]` proc-macro that symbolically
   bounded-checks a Rust function (over a whitelisted subset) for panics / integer
   overflow / `unwrap` failures / assertion violations, emitting a **runnable
-  failing `#[test]`** or a re-checked bounded-verified certificate. Anything
-  outside the subset is a clean compile error, never silently mis-modeled.
+  failing `#[test]`** for a reproduced counterexample or bounded `Verified`.
+  Certificate and Lean-module presence are explicit fields; the warm loop route
+  currently returns a decision without a packaged certificate. Anything outside
+  the macro's source subset is a clean compile error, never silently mis-modeled.
 - **`axeyum-evm`** — an EVM bytecode symbolic bug-hunter over symbolic calldata:
   a replayable calldata witness on a bug (re-checked by concrete re-execution),
-  or a Lean-checkable no-bug certificate when a function is proven safe to a bound.
+  or `SafeUpToBound` after complete bounded exploration. A supported safety
+  query may attach a re-checked `EvidenceReport`; that field is optional and is
+  not a Lean reconstruction.
 - **`axeyum-property`** — a typed prove-or-counterexample SDK over Axeyum evidence
   and model replay.
 
@@ -228,7 +247,7 @@ Everything routes through a few entry points in `axeyum-solver`:
 | `produce_evidence` | decide *and* package a self-checking certificate |
 | `export_qf_{bv,abv,uf,aufbv,lia}_unsat_proof`, `export_datatype_unsat_proof` | emit a `drat-trim`-checkable DIMACS+DRAT certificate |
 | `IncrementalBvSolver` | warm push/pop/assume + path-pruning core + all-SAT + symbolic memory |
-| `unsat_core` / `Evidence::check` | minimal core; independently re-validate any result |
+| `unsat_core` / `Evidence::check` | extract a core; independently re-validate supported evidence artifacts |
 
 The incremental solver owns its state, implements `Send`, and uses no shared
 global context — one `TermArena` + `IncrementalBvSolver` per worker scans
@@ -278,12 +297,12 @@ by use (each is accepted in an ADR).
 
 | Crate | Purpose |
 |---|---|
-| [`axeyum-cas`](crates/axeyum-cas) | Proof-carrying computer algebra (differentiate/factor/integrate/solve/linear algebra/number theory), certified by lowering to the decidable core. |
+| [`axeyum-cas`](crates/axeyum-cas) | Computer algebra with CAS-local exact checks and certificate-bearing APIs alongside explicitly compute-only operations. |
 | [`axeyum-lean-kernel`](crates/axeyum-lean-kernel) | In-tree Rust Lean kernel — interned `Name`/`Level`/`Expr` + de Bruijn machinery (the proof-export target). |
 | [`axeyum-lean-import`](crates/axeyum-lean-import) | Fail-closed official `lean4export` 3.1 reader; supported declarations enter only through the independent kernel's checked gates. |
 | [`axeyum-property`](crates/axeyum-property) (+ [`-macros`](crates/axeyum-property-macros)) | Typed prove-or-counterexample SDK over Axeyum evidence and model replay. |
 | [`axeyum-verify`](crates/axeyum-verify) (+ [`-macros`](crates/axeyum-verify-macros)) | `#[axeyum::verify]` bounded Rust verifier — panics/overflow/`unwrap`/assertions → failing test or certificate. |
-| [`axeyum-evm`](crates/axeyum-evm) | EVM bytecode symbolic bug-hunter with replayable calldata witnesses and no-bug certificates. |
+| [`axeyum-evm`](crates/axeyum-evm) | EVM bytecode symbolic bug-hunter with replayable calldata witnesses, bounded-safe verdicts, and optional re-checked evidence. |
 | [`axeyum-wasm`](crates/axeyum-wasm) | WebAssembly binding — the browser playground engine. |
 
 **Tooling & corpora**

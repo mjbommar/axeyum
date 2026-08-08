@@ -145,7 +145,7 @@ From the repository root:
 
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-bdf2-method-v0
-cargo test -p axeyum-solver --test math_resource_lra_routes finite_bdf2_bad_step_artifact_emits_checked_farkas
+cargo test -p axeyum-solver --features full --test math_resource_lra_routes finite_bdf2_bad_step_artifact_emits_checked_farkas
 ```
 
 To find the row through the public query surface:

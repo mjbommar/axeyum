@@ -7,7 +7,7 @@ flowchart LR
     I[Install / build] --> Q[Run a query]
     Q --> R[Read the result]
     R --> sat[sat → use &amp; trust the model]
-    R --> unsat[unsat → checkable certificate]
+    R --> unsat[unsat → route-specific assurance]
     R --> unk[unknown → resource/incompleteness]
     Q --> L[Know the limits]
     classDef a fill:#eef,stroke:#557;
@@ -29,4 +29,6 @@ flowchart LR
 **Golden rule for users:** read [Limitations](limitations.md) and the
 [capability matrix](../research/08-planning/capability-matrix.md) before relying
 on any fragment. Axeyum is honest about `unknown`; make sure your integration is
-too.
+too. A checkable UNSAT certificate is available on selected routes, not implied
+by every `unsat` verdict; consult [UNSAT evidence](unsat-evidence.md) and the
+[trust ledger](../reference/trust-ledger.md) for the exact boundary.

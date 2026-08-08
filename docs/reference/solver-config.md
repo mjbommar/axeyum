@@ -23,7 +23,7 @@ specific, so artifacts must record both the value and backend/unit.
 
 | Field | Meaning |
 |---|---|
-| `prove_unsat` | Re-derive small BV UNSAT results with the proof-producing core and check DRAT before return |
+| `prove_unsat` | Require a DRAT-checked BV UNSAT verdict; the current native core checks its proof inline |
 | `preprocess` | Run the full-profile denotation-preserving canonicalizer before dispatch |
 | `cnf_inprocessing` | Enable model-reconstructing CNF subsumption/BVE pipeline |
 | `cnf_vivify` | Add clause vivification when CNF inprocessing is enabled |
@@ -32,9 +32,17 @@ specific, so artifacts must record both the value and backend/unit.
 measured, replay-safe default. The other assurance/inprocessing levers in this
 table default off.
 
-`prove_unsat` is a high-assurance path for bounded instances, not a guarantee
-that every supported theory can produce an end-to-end proof. Check the
-[trust ledger](trust-ledger.md) for the selected fragment and route.
+`prove_unsat` is a high-assurance verdict mode for bounded instances. On the
+current SAT-BV path the proof-producing native core is the primary SAT search
+and checks its emitted DRAT proof inline in the same solve. A compatibility
+fallback that receives an unchecked adapter result re-derives and verifies it;
+inability to obtain a checked proof fails closed to `Unknown`.
+
+This mode does not return or write the proof artifact, and it is not a guarantee
+that every supported theory can produce an end-to-end proof. Use the
+[UNSAT evidence exporter](../user-guide/unsat-evidence.md) when certificate
+files are required, and check the [trust ledger](trust-ledger.md) for the
+selected fragment and route.
 
 ## Lowering and search experiments
 

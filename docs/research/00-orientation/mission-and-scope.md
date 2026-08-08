@@ -1,7 +1,13 @@
 # Mission And Scope
 
-Status: draft
-Last updated: 2026-06-10
+Status: maintained long-horizon orientation; current status lives elsewhere
+Last updated: 2026-08-07
+
+> This note defines product identity and scope, not current implementation
+> coverage or execution priority. For those, use
+> [Project State](../../PROJECT-STATE.md), the generated
+> [capability matrix](../08-planning/capability-matrix.md), and root
+> [PLAN.md](../../../PLAN.md).
 
 ## Purpose
 
@@ -16,10 +22,10 @@ pure-Rust reasoning substrate where automated search and checkable proof are
 two faces of one framework. The trajectory is an explicit sequence of
 destinations:
 
-1. **Foundation (current).** Decidable finite-domain core (SAT, QF_BV, arrays,
-   EUF), bounded `QF_LIA`/`QF_LRA`, first-cut quantifiers, theory combination,
-   and a checkable-evidence envelope (models by replay; `unsat` by DRAT/Farkas;
-   bit-blasting faithfulness by independent-reference miter).
+1. **Foundation.** Decidable finite-domain core (SAT, QF_BV, arrays, EUF),
+   arithmetic, first-cut quantifiers, theory combination, and a
+   checkable-evidence envelope. This original foundation is now joined by
+   partial higher-rung work.
 2. **Complete solver replacement.** A drop-in alternative to mature SMT solvers
    (Z3 / cvc5 class) — full SMT-LIB theory coverage (floating point, strings,
    datatypes/sequences, nonlinear and unbounded arithmetic, mature quantifier
@@ -37,11 +43,12 @@ The decidable core is the first layer, **not** the destination. The expansion
 ladder and its landmarks are in [north-star.md](north-star.md). Phase scoping
 below bounds what is built *now*; nothing below bounds what Axeyum *is*.
 
-**Honest status (2026-06-13):** Axeyum is at destination (1). It is **not yet** a
-solver replacement (the pure-Rust path decides only a small slice of real public
-QF_BV instances; performance is the open gate) and **not yet** a Lean/angr-class
-system (the symbolic-execution consumer is a hand-built register-VM used for
-testing, not a binary frontend). Destinations (2) then (3) are the work ahead.
+**Current boundary (2026-08-07):** Axeyum spans the foundation and selected
+higher-rung solver, evidence, Lean-kernel, CAS, and consumer work. It is
+**not yet** a drop-in Z3/cvc5 replacement or a replacement for Lean, angr, or
+Unicorn. Floating point, nonlinear arithmetic, strings, datatypes,
+quantifiers, reconstruction, and program-analysis routes exist at differing
+maturity and assurance levels; their presence is not destination-level parity.
 
 ## Scope
 
@@ -57,14 +64,14 @@ In scope (the whole trajectory, sequenced — see destinations above):
   layered on top.
 - Evidence production and independent checking, at every rung.
 
-Out of scope **for the current phase** (destination 1) — these are *later
-destinations*, not permanent exclusions:
+Not claimed by the current product — these remain destination requirements,
+not permanent exclusions:
 
 - A complete replacement for mature SMT solvers (destination 2).
 - A fully general / dependent-type proof assistant, and angr-class binary
   frontends (destination 3).
-- Full floating-point, nonlinear arithmetic, or production quantified reasoning
-  as *current* targets.
+- Complete, uniformly certified floating-point, nonlinear, string, datatype,
+  or quantified reasoning across their full standardized surfaces.
 
 ## Core Claims
 
@@ -99,13 +106,14 @@ destinations*, not permanent exclusions:
 
 ## Open Questions
 
-- [ ] Should the public identity be "automated reasoning toolkit" or "solver infrastructure"?
-- [ ] Should the first release expose a SAT solver, a BV solver, or only the IR and backend interface?
-- [ ] What artifact format should be stable first: SMT-LIB, DIMACS, AIGER, DRAT/LRAT, or Axeyum-native JSON/bincode?
+- [ ] See the maintained
+      [research-questions register](../08-planning/research-questions.md). A
+      first stable release boundary and artifact promise remain explicit
+      release decisions; the project identity is the broader automated-
+      reasoning stack stated above.
 
 ## Source Pointers
 
 - Z3 theorem prover: https://github.com/Z3Prover/z3
 - Lean proof assistant: https://lean-lang.org/
 - RustSAT: https://github.com/chrjabs/rustsat
-

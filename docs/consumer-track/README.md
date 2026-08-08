@@ -28,10 +28,14 @@ same claim:
   module is best effort and only present when reconstruction covers the proof.
 - An EVM finding is reported only when its calldata witness reproduces in the
   separate concrete interpreter. `SafeUpToBound` excludes the modeled bug
-  classes only within the configured path/step bounds.
+  classes only within the configured path/step bounds. Its re-checked solver
+  `EvidenceReport` is optional, and the EVM crate does not currently reconstruct
+  that safety claim to Lean.
 - A Rust counterexample is re-run against the original function under
   `catch_unwind`. `Verified` covers the supported language fragment and stated
-  unwind bound; it is not an unbounded proof of arbitrary Rust.
+  unwind bound; it is not an unbounded proof of arbitrary Rust. Certificate and
+  Lean-module availability are explicit, and the warm loop route is currently
+  decision-only.
 - Unsupported constructs, unresolved behavior, or exhausted resources remain
   `Unknown`. They are not silently converted into a safe or proved result.
 

@@ -128,7 +128,7 @@ python3 scripts/query-rules-as-code.py checks --pack grant_allocation_v0 --valid
 python3 scripts/query-rules-as-code.py checks --pack category_equivalence_v0 --proof-status checked --validation qf_uf_alethe_solver_regression --require-any
 python3 scripts/query-rules-as-code.py rows --pack workflow_reachability_v0 --family two_step_reachability_rows --text '"final_state":"approved"' --limit 3 --require-any
 python3 scripts/query-rules-as-code.py families --text adjacent --require-any
-cargo test -p axeyum-solver --test rules_as_code_examples
+cargo test -p axeyum-solver --features full --test rules_as_code_examples
 ```
 
 ## What Would Justify The Next Pack

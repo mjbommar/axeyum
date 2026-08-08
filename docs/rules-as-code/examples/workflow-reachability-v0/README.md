@@ -56,5 +56,5 @@ flag.
 python3 scripts/gen-rules-as-code-dashboard.py
 python3 scripts/validate-rules-as-code.py
 python3 scripts/query-rules-as-code.py packs --pack workflow_reachability_v0 --require-any
-cargo test -p axeyum-solver --test rules_as_code_examples workflow_reachability
+cargo test -p axeyum-solver --features full --test rules_as_code_examples workflow_reachability
 ```

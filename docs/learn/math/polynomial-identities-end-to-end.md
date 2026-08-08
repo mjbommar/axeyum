@@ -113,7 +113,7 @@ From the repository root:
 
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/polynomial-identities-v0
-cargo test -p axeyum-solver --test math_resource_lia_routes polynomial_identities_false_rational_root_emits_checked_diophantine_evidence
+cargo test -p axeyum-solver --features full --test math_resource_lia_routes polynomial_identities_false_rational_root_emits_checked_diophantine_evidence
 ```
 
 Expected output:

@@ -81,7 +81,7 @@ not (q(a) = q(c))
 The promoted resource regression is:
 
 ```sh
-cargo test -p axeyum-solver --test math_resource_uf_routes equivalence_classes_quotient_map_congruence_emits_checked_alethe
+cargo test -p axeyum-solver --features full --test math_resource_uf_routes equivalence_classes_quotient_map_congruence_emits_checked_alethe
 ```
 
 That test parses the source SMT-LIB artifact, checks the obligation is `unsat`,
@@ -95,7 +95,7 @@ step.
 The same source artifact has a tamper regression:
 
 ```sh
-cargo test -p axeyum-solver --test math_resource_uf_routes qf_uf_resource_route_rejects_tampered_alethe_certificate
+cargo test -p axeyum-solver --features full --test math_resource_uf_routes qf_uf_resource_route_rejects_tampered_alethe_certificate
 ```
 
 It checks the genuine Alethe proof first, then removes the closing proof
@@ -143,8 +143,8 @@ From the repository root:
 
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/equivalence-classes-v0
-cargo test -p axeyum-solver --test math_resource_uf_routes equivalence_classes_quotient_map_congruence_emits_checked_alethe
-cargo test -p axeyum-solver --test math_resource_uf_routes qf_uf_resource_route_rejects_tampered_alethe_certificate
+cargo test -p axeyum-solver --features full --test math_resource_uf_routes equivalence_classes_quotient_map_congruence_emits_checked_alethe
+cargo test -p axeyum-solver --features full --test math_resource_uf_routes qf_uf_resource_route_rejects_tampered_alethe_certificate
 ```
 
 Expected validator output:

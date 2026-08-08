@@ -153,11 +153,15 @@ pub struct SolverConfig {
     /// Larger encodings return [`UnknownKind::EncodingBudget`] before SAT
     /// solving starts.
     pub cnf_clause_budget: Option<u64>,
-    /// When set, an `unsat` result is independently re-derived by the
-    /// proof-producing SAT core and its DRAT proof is verified before being
-    /// returned (ADR-0011/0012). A disagreement or failed proof becomes a
-    /// [`SolverError::Backend`] soundness alarm. The proof core is a reference,
-    /// not scalable, so this is for small instances / high-assurance checks.
+    /// On the SAT-BV path, accept `unsat` only when it is backed by a verified
+    /// DRAT proof (ADR-0011/0012). The current primary path selects the
+    /// proof-producing native CDCL core and checks its proof inline in the same
+    /// solve. A compatibility path that arrives with an unchecked adapter result
+    /// independently re-derives and verifies the proof. Lack of a checked proof
+    /// fails closed to [`CheckResult::Unknown`]; a fallback disagreement or
+    /// malformed proof becomes a [`SolverError::Backend`] soundness alarm. The
+    /// proof core is a reference, not scalable, so this is for small instances /
+    /// high-assurance checks.
     pub prove_unsat: bool,
     /// When set, the bit-blasting BV backend runs CNF inprocessing
     /// (subsumption + bounded variable elimination) on the Tseitin formula

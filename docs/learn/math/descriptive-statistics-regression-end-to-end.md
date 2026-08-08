@@ -300,8 +300,8 @@ From the repository root:
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/descriptive-statistics-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-covariance-matrix-v0
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/least-squares-regression-v0
-cargo test -p axeyum-solver --test math_resource_lra_routes least_squares_bad_rss_improvement_artifact_emits_checked_farkas
-cargo test -p axeyum-solver --test math_resource_lra_routes descriptive_stats_bad_variance_artifact_emits_checked_farkas
+cargo test -p axeyum-solver --features full --test math_resource_lra_routes least_squares_bad_rss_improvement_artifact_emits_checked_farkas
+cargo test -p axeyum-solver --features full --test math_resource_lra_routes descriptive_stats_bad_variance_artifact_emits_checked_farkas
 ```
 
 Expected output for each command:

@@ -7,8 +7,16 @@
 //! inequalities); arbitrary Boolean structure (`or`, disequality) is out of
 //! scope for this first slice and reported `Unsupported` (that needs a
 //! `DPLL(T)` layer). The collected constraints are decided by Fourier–Motzkin
-//! variable elimination over exact [`Rational`]s, which is complete for `QF_LRA`
-//! and yields a rational model.
+//! variable elimination over exact [`Rational`]s. The algorithm is complete for
+//! the admitted conjunctive `QF_LRA` shape when its explicit resource guards and
+//! current `i128`-backed rational range are not exceeded, and it yields a
+//! rational model.
+//!
+//! **Representation boundary.** Rational operations are exact within that
+//! range and use checked arithmetic. Overflow during collection, elimination,
+//! comparison, or model replay degrades to [`CheckResult::Unknown`]; overflow
+//! while checking a proposed certificate rejects the certificate. No overflow
+//! wraps into a `sat` or `unsat` verdict.
 //!
 //! **Trust.** Fourier–Motzkin is the untrusted search; every `sat` model is
 //! replayed through the ground evaluator against the original assertions before

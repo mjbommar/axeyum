@@ -237,7 +237,7 @@ validated 1 foundational example pack(s)
 Route regression:
 
 ```sh
-cargo test -p axeyum-solver --test math_resource_lra_routes finite_product_measure_bad_marginal_artifact_emits_checked_farkas
+cargo test -p axeyum-solver --features full --test math_resource_lra_routes finite_product_measure_bad_marginal_artifact_emits_checked_farkas
 ```
 
 ## Trust Boundary

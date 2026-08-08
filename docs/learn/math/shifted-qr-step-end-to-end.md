@@ -138,5 +138,5 @@ trusted small checking -> exact rational replay plus checked Farkas evidence
 
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-shifted-qr-step-v0
-cargo test -p axeyum-solver --test math_resource_lra_routes finite_shifted_qr_step_bad_entry_artifact_emits_checked_farkas
+cargo test -p axeyum-solver --features full --test math_resource_lra_routes finite_shifted_qr_step_bad_entry_artifact_emits_checked_farkas
 ```

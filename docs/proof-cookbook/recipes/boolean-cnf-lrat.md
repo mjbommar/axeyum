@@ -31,18 +31,21 @@ Axeyum's CNF layer owns:
 - stable CNF variables and clauses;
 - DIMACS-style literal rendering;
 - a proof-producing CDCL core for reference proof generation;
-- independent DRAT and LRAT checkers.
+- an independent DRAT checker and a RUP-only positive-hint LRAT checker and
+  elaborator.
 
-The search that finds the contradiction is not trusted. A Boolean `unsat`
-claim is accepted only when the generated proof checks against the original
-CNF.
+The search that finds the contradiction is not trusted. In this promoted
+resource route, a Boolean `unsat` proof claim is accepted only when the
+generated proof checks against the original CNF. This does not upgrade every
+CNF solver verdict: the default proofless BatSat result remains lower assurance.
 
 ## Evidence Artifact
 
 Current checked artifacts:
 
 - DRAT proof steps: clause additions/deletions, including a final empty clause.
-- LRAT proof steps: clause additions with explicit unit-propagation hints.
+- LRAT proof steps: RUP clause additions with explicit positive
+  unit-propagation hints.
 
 For `(x) and (not x)`, the proof is just the empty clause, justified by unit
 propagation from the two input clauses.
@@ -57,7 +60,9 @@ Implementation links:
 
 The DRAT checker verifies each added clause by RUP/RAT reasoning and confirms
 that the empty clause is derived. The LRAT checker follows explicit hint chains
-and does no proof search.
+and does no proof search. The current DRAT-to-LRAT elaborator accepts RUP
+additions only; a DRAT addition that requires RAT is rejected rather than
+presented as LRAT evidence.
 
 Rejection coverage includes:
 
@@ -89,7 +94,8 @@ Trusted or not yet kernel-certified:
 
 Checked:
 
-- the DRAT/LRAT proof against the concrete CNF;
+- the DRAT proof and, for this RUP-only resource route, the LRAT proof against
+  the concrete CNF;
 - rejection of tampered or incomplete proof artifacts.
 
 Downgrade behavior:

@@ -123,7 +123,7 @@ nothing forces you to run more than that while developing.
 **Your iteration loop — pick the narrowest command that covers your change:**
 
 - **Rust, one crate (this is the default):** `cargo test -p <crate>` — e.g. a
-  solver change → `cargo test -p axeyum-solver`; one file → `cargo test -p
+  solver change → `cargo test -p axeyum-solver --features full`; one file → `cargo test -p
   axeyum-solver --test nra_differential_fuzz`. `cargo test -p axeyum-cas --lib`
   is ~21 s (moment proofs are `#[ignore]`d — see below).
 - **Python, one module:** `python3 -m pytest scripts/tests/test_<x>.py`.

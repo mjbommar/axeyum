@@ -930,9 +930,10 @@ fn witness_search(
 ///
 /// This shares only the derivative/nullable/canon substrate with the search that
 /// produced the set (there is no other transition relation to check against); it
-/// verifies the closure invariant on the claimed set from first principles, so a
-/// wrong `unsat` is impossible unless the substrate itself (guarded by the
-/// fundamental-derivative-theorem property test) is wrong.
+/// verifies the closure invariant on the claimed set from first principles. The
+/// derivative/nullable/canonicalization substrate is therefore the explicit
+/// remaining trust boundary, with the fundamental-derivative-theorem property
+/// test as its regression guard.
 #[must_use]
 pub fn recheck_empty(combined: &Regex, states: &[Regex]) -> bool {
     let set: BTreeSet<&Regex> = states.iter().collect();

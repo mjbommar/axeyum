@@ -95,7 +95,7 @@ recomputes the exact finite claim being displayed.
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-k-means-clustering-v0
 
-cargo test -p axeyum-solver --test math_resource_lra_routes finite_k_means_clustering_bad_centroid_artifact_emits_checked_farkas
+cargo test -p axeyum-solver --features full --test math_resource_lra_routes finite_k_means_clustering_bad_centroid_artifact_emits_checked_farkas
 
 python3 scripts/query-foundational-resources.py checks --pack finite-k-means-clustering-v0 --route Farkas --proof-status checked --require-any
 ```

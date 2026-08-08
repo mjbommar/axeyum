@@ -178,7 +178,7 @@ general line-search theorem: future Lean reconstruction
 
 ```sh
 python3 scripts/validate-foundational-example-pack.py artifacts/examples/math/finite-line-search-v0
-cargo test -p axeyum-solver --test math_resource_lra_routes finite_line_search_bad_armijo_artifact_emits_checked_farkas
-cargo test -p axeyum-solver --test math_resource_lra_routes finite_line_search_bad_descent_direction_artifact_emits_checked_farkas
-cargo test -p axeyum-solver --test math_resource_lra_routes finite_line_search_bad_accepted_candidate_artifact_emits_checked_farkas
+cargo test -p axeyum-solver --features full --test math_resource_lra_routes finite_line_search_bad_armijo_artifact_emits_checked_farkas
+cargo test -p axeyum-solver --features full --test math_resource_lra_routes finite_line_search_bad_descent_direction_artifact_emits_checked_farkas
+cargo test -p axeyum-solver --features full --test math_resource_lra_routes finite_line_search_bad_accepted_candidate_artifact_emits_checked_farkas
 ```

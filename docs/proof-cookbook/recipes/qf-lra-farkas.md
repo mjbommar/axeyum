@@ -15,10 +15,12 @@ Expected result: `unsat`.
 
 ## Solver Route
 
-The LRA route reasons over exact rationals/reals and produces a Farkas-style
-linear certificate for an infeasible system. The arithmetic search that finds
-the contradiction is not the trust anchor; the certificate is checked
-independently.
+The LRA route reasons with exact rational operations inside the current
+`i128`-backed numerator/denominator range and produces a Farkas-style linear
+certificate for an infeasible system. Checked arithmetic overflow during
+search, comparison, or replay yields `unknown`; overflow while checking a
+certificate rejects it. The arithmetic search that finds the contradiction is
+not the trust anchor; the certificate is checked independently.
 
 ## Evidence Artifact
 
@@ -52,9 +54,12 @@ checked `UnsatFarkas` evidence and same-artifact multiplier tamper rejection.
 
 Status: checked for covered LRA shapes.
 
-The broader Lean cross-check surface includes
+The broader Lean cross-check surface registers the family builder
 `certified_lra_interpolant_both_farkas_certs_checked_by_real_lean` in
 [crates/axeyum-solver/tests/lean_crosscheck.rs](../../../crates/axeyum-solver/tests/lean_crosscheck.rs).
+The executable test is the representative harness below; filtering Cargo by
+the builder name would run zero tests because the builder itself is not marked
+`#[test]`.
 
 ## Trust Boundary
 
@@ -64,14 +69,16 @@ Trusted:
 
 Checked:
 
-- exact-rational certificate arithmetic;
+- exact-rational certificate arithmetic within the current `i128` range;
 - rejection of tampered multipliers;
 - Lean reconstruction for covered generated modules.
 
 Downgrade behavior:
 
 - if the certificate fails to check, Axeyum must not report the unsat result as
-  proved.
+  proved;
+- if search or model replay exceeds the rational representation range, the LRA
+  route returns `unknown` rather than wrapping.
 
 ## Math Examples Using This Route
 
@@ -161,22 +168,22 @@ Canonical examples:
   double-area replay computes the image area and triangle orientation.
 
 The focused resource regression is
-`cargo test -p axeyum-solver --test math_resource_lra_routes`.
+`cargo test -p axeyum-solver --features full --test math_resource_lra_routes`.
 
 ## Commands
 
 Focused:
 
 ```sh
-cargo test -p axeyum-solver --test evidence lra_unsat_evidence_carries_a_recheckable_farkas_certificate
-cargo test -p axeyum-solver --test evidence tampered_farkas_evidence_fails_its_own_check
-cargo test -p axeyum-solver --test math_resource_lra_routes linear_optimization_objective_threshold_rejects_tampered_farkas_certificate
+cargo test -p axeyum-solver --features full --test evidence lra_unsat_evidence_carries_a_recheckable_farkas_certificate
+cargo test -p axeyum-solver --features full --test evidence tampered_farkas_evidence_fails_its_own_check
+cargo test -p axeyum-solver --features full --test math_resource_lra_routes linear_optimization_objective_threshold_rejects_tampered_farkas_certificate
 ```
 
 Lean cross-check:
 
 ```sh
-cargo test -p axeyum-solver --test lean_crosscheck certified_lra_interpolant_both_farkas_certs_checked_by_real_lean
+cargo test -p axeyum-solver --features full --test lean_crosscheck lean_crosscheck_representative
 ```
 
 ## Links
