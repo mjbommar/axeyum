@@ -6,12 +6,14 @@ first and update it before ending a project-level work session.
 
 - Last consolidated: **2026-08-09**
 - Integrated baseline merged into the active topic:
-  `8ccae9c43ce393762ce6cc3b38d21c2dbb982507`
-- Active repair candidate: the declaration-scale QF_IDL row-64 repair described
-  below; focused gates are green and commit/push/full-gate work is next
-- Latest full-gate attempt: `b07be65aab46790c1473994dfd8fed6f72005817`
-  passed the fresh uninterrupted frozen `just check` with exit 0, including the
-  repaired generated gap-ownership and independent parity-doc checks
+  `c516b5fac20f38886dfad41433656bad988f9f5c`
+- Active repair candidate: pushed declaration-scale QF_IDL repair
+  `550b2c1f1e604f6f91b7310ef7584793d9c63b51`; current-main integration and a
+  fresh exact-merge gate are next
+- Latest full-gate attempt: `550b2c1f1e604f6f91b7310ef7584793d9c63b51`
+  passed every solver, workspace, frontier, CAS, rustdoc, reflection,
+  Glaurung, resource, and rules-as-code stage, then failed the SMT-COMP resume
+  fixture because newer `origin/main` was not yet an ancestor of the topic
 - Latest comprehensive green exact-commit gate:
   `b07be65aab46790c1473994dfd8fed6f72005817` (`just check` exit 0)
 - Latest integrated A3 code increments: bounded SMT-LIB `distinct` expansion at
@@ -73,12 +75,20 @@ evidence routes, broad but uneven theory support, an independent Lean-core
 checker/importer, and several consumers. It is not yet a drop-in Z3 replacement
 or a replacement for the Lean system.
 
-Earlier A3/A4 integration and gate history remains in dated result notes and
-Git. The latest comprehensive gate is the `b07be65aa` checkpoint above;
-focused repair gates do not extend that evidence to the newer pushed repairs. Hosted CI/docs
-runs `31192792245` and `31192792512` remain terminal green for their recorded
-baseline, not for the current candidate. No retained solver or measurement
-process is running.
+The 2026-08-09 README-only pass adds an application map and architecture/vision
+guide; it changes no capability, evidence, measurement, or roadmap claim.
+
+The first full gate at pushed repair `550b2c1f1` passed all substantive code
+and evidence stages through rules-as-code, then failed two fixture-only
+SMT-COMP readiness tests because current `origin/main` (`c516b5fac`) was not an
+ancestor of that topic commit. This is an integration-state contract failure,
+not a green aggregate gate or a solver regression. The current merge brings
+that docs-only revision into the topic; rerun the complete gate at the exact
+pushed merge before capture. Earlier A3/A4 integration and gate history remains
+in dated result notes and Git. The latest comprehensive green gate is still the
+`b07be65aa` checkpoint above. Hosted CI/docs runs `31192792245` and
+`31192792512` remain terminal green for their recorded baseline, not for the
+current candidate. No retained solver or measurement process is running.
 
 A3 is **WIP**. Pushed result checkpoint `3696e7dd5` is integrated on current
 main by `47d8cd956`; its source branch remains preserved. The repaired complete
@@ -333,8 +343,8 @@ here as closed evidence boundaries. A3 remains incomplete, but all currently
 preregistered bounded mechanisms are closed negatively. A4 has now also yielded;
 A5 is the first active item.
 
-**Immediate action (`WIP`).** Commit and push the declaration-scale QF_IDL
-repair and failure record, run a fresh exact-commit `just check`, then—when
+**Immediate action (`WIP`).** Finish and push the current-main integration,
+run a fresh exact-merge `just check`, then—when
 one-minute load is at most 12—rebuild the release census binary and restart
 QF_LRA from row 1 under
 the unchanged 24-second/8-GiB capture envelope. The failed 172-row abort stream,
@@ -354,21 +364,12 @@ model-reuse variants failed isolated stability and were removed; do not retry
 until 94 happens to pass. A3/A4's negative routes remain closed. A2 still does
 not authorize C0/F2, host/NAS mutation, allocation, or a solver fleet.
 
-**Parallel documentation action.** The current comprehensive pass is closed;
-continue only when a live guide exposes a concrete stale claim, and do not
-modify solver behavior merely to match prose. Beginner/user, pinned
-WASM/browser, contributor, stable reference, internals, all 22 crate front
-doors, curriculum, reviews, plan, and research have substantive indexes; seven
-core crates have compile-tested rustdoc examples. Generated matrices remain the
-support/trust authorities. The audit corrected curriculum depth/backlog,
-documentation-build gates, reconstruction-target wording, textbook/NRA maps,
-test-command feature/filter drift, theory combination, CAS-vs-solver assurance,
-advanced-theory completeness, and optional consumer evidence boundaries. The
-public-state table is aligned with the append-only parity ledger and guarded
-against future row drift; the stable reference catalogs all 34 Cargo examples
-with their feature, external-tool, and mutation boundaries. Source-comment
-guards now also reject universal UNSAT-proof wording outside route-specific
-evidence.
+**Parallel documentation action.** The comprehensive pass and 2026-08-09
+README application/vision revision are closed. Continue only for a concrete
+stale claim; keep application maturity and sub-document links aligned, but do
+not duplicate generated capability tables or modify solver behavior to match
+prose. The user/reference/internals/crate surfaces and all 34 Cargo examples are
+indexed, and source guards reject universal proof claims.
 
 ### A1 — Complete arithmetic deadline and resource enforcement (`DONE`, P0)
 

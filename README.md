@@ -19,6 +19,12 @@ backend.
 > answer is allowed to be big and clever; being *sure* of the answer is done by
 > code small enough to audit.
 
+**Choose a path:** [try a query](#start-here) ·
+[see what you can build](#what-you-can-build-with-axeyum) ·
+[understand the architecture](#how-axeyum-fits-together) ·
+[check current support](docs/PROJECT-STATE.md) ·
+[browse all documentation](docs/README.md)
+
 ## Four familiar tools, one proof-carrying stack
 
 If you already use these, here's where Axeyum fits:
@@ -34,13 +40,43 @@ All four live in one pure-Rust workspace and follow the same fail-closed
 discipline. Their IRs, certificate formats, and exact trust boundaries are
 route-specific; they must not inherit assurance from one another.
 
+## What you can build with Axeyum
+
+Axeyum is a reusable reasoning and checking substrate. Some rows below are
+working product surfaces, some are measured integrations, and some are explicit
+destinations that already shape the architecture. The maturity column is part
+of the claim: a shared solver does not make every consumer equally complete or
+equally certified.
+
+| Application family | What Axeyum contributes | Maturity and starting point |
+|---|---|---|
+| **Embedded constraint solving** | Typed Rust and SMT-LIB entry points for bit-vectors, arrays, equality, arithmetic, floating point, datatypes, bounded strings, quantifiers, and selected combinations. Useful as the decision core for configuration, equivalence, bounded planning, synthesis, and finite optimization. | **Built, broad but uneven.** Start with the [Rust embedding guide](docs/user-guide/rust-embedding.md), [supported logics](docs/reference/supported-logics.md), and [limitations](docs/user-guide/limitations.md). |
+| **Software and systems verification** | Incremental symbolic execution, reachable-state enumeration, symbolic memory, bounded model checking, k-induction, and concrete counterexample traces for programs, protocols, and transition systems. | **Built on supported fragments.** See [how the engine works](#what-it-does-today-in-code) and the [bounded Rust verifier](crates/axeyum-verify/README.md). |
+| **Property checking and test generation** | A typed prove-or-counterexample SDK that can minimize models and render deterministic Rust regression tests from replayed counterexamples. | **Built.** See [`axeyum-property`](crates/axeyum-property/README.md) and the [consumer scoreboards](docs/consumer-track/README.md). |
+| **Binary analysis and security** | Typed path obligations, model replay, checked infeasible-path evidence, and deterministic resource behavior underneath a binary frontend and explorer. | **Real measured integration; frontend external.** Glaurung supplies binary semantics today; the boundary is documented in [agentic binary-security positioning](docs/research/02-ecosystems/agentic-binary-security-positioning.md). |
+| **Smart-contract analysis** | Bounded symbolic execution of EVM bytecode with replayed calldata or multi-transaction witnesses and honest `Unknown` for unsupported behavior. | **Built, bounded.** See the [`axeyum-evm` bug hunter](crates/axeyum-evm/README.md). |
+| **Formal proof and evidence infrastructure** | Model replay, DRAT/Farkas/Alethe and specialized checkers, selected solver-proof reconstruction, a small independent Lean-core checker, and fail-closed `lean4export` import. | **Substantial but partial.** See the [proof stack](docs/internals/proof-stack.md), [trust ledger](docs/reference/trust-ledger.md), and [prover-track boundary](docs/prover-track/README.md). |
+| **Proof-carrying mathematics** | Exact symbolic algebra, calculus, linear algebra, number theory, transforms, and ODE operations with route-specific rechecking when a certificate-bearing API is used. | **Built research surface.** See [`axeyum-cas`](crates/axeyum-cas/README.md), the [CAS research notes](docs/research/10-cas/README.md), and [runnable examples](docs/reference/examples.md). |
+| **Rules, policy, and compliance engineering** | Bounded consistency, coverage, monotonicity, threshold, version-equivalence, allocation, authorization, and workflow-reachability checks over human-authored formal models. | **Working verification lab, not automatic legal interpretation.** See the [Rules-as-Code Lab](docs/rules-as-code/README.md). |
+| **Education and browser-native reasoning** | Executable curricula, worked theorems, certificate recipes, and self-checking exercises; scalar QF_BV runs client-side through WebAssembly. | **Built content and bounded browser surface.** See [Learn](docs/learn/README.md), the [formal-mathematics curriculum](docs/curriculum/README.md), and the [playground](docs/playground/README.md). |
+| **Trustworthy LLM and agentic workflows** | Treat an LLM as an untrusted proposer of tests, rules, invariants, encodings, formalizations, or proof steps, then accept only independently checked results. | **Architectural fit and research direction, not a finished agent product.** See [LLM integration points](docs/research/03-architecture/llm-integration-points.md). |
+
+The long-horizon objective is a general reasoning runtime for **constrained
+program optimization and software verification**: first a dependable
+finite-domain and arithmetic foundation, then Z3/cvc5-class solver breadth, and
+eventually Lean- and angr/Unicorn-class functionality as first-class layers.
+That is architectural direction, not a claim that those replacements exist
+today. Read the [mission and scope](docs/research/00-orientation/mission-and-scope.md)
+and [north star](docs/research/00-orientation/north-star.md) for the complete
+ladder.
+
 ## Honest status
 
 Axeyum today is a **broad, evidence-backed research implementation**, not merely
 a design. It is competitive on selected measured solver fragments and has a
 substantial Lean-checkable proof lane. It is not a drop-in Z3 replacement, a
 conformant interactive SMT-LIB 2.7 implementation, or a replacement for the Lean
-system.
+system, angr, or Unicorn.
 
 The current measured denominators, important negative results, and precise
 meaning of "parity" are in **[Project State](docs/PROJECT-STATE.md)**. The
@@ -49,9 +85,35 @@ authoritative capability × assurance × evidence inventory is the
 is the single live engineering tracker; [STATUS.md](STATUS.md) is only a
 compatibility pointer to it.
 
+## How Axeyum fits together
+
+Applications share a reasoning foundation, not one undifferentiated assurance
+claim. A query keeps the maps and provenance needed to check the answer at the
+source boundary; each successful route then states exactly which checker, if
+any, covers it.
+
+```mermaid
+flowchart LR
+    app["Programs, policies, math, proofs,<br/>SMT-LIB, and browser clients"]
+    ir["Typed terms and queries<br/>stable identities + explicit semantics"]
+    search["Rewrite, plan, and search<br/>theory solvers or bit-blast → SAT"]
+    answer["sat / unsat / unknown<br/>model + route metadata + optional evidence"]
+    check["Replay or small checker<br/>original terms, certificates, or Lean core"]
+
+    app --> ir --> search --> answer --> check
+    check -. counterexample / checked result .-> app
+```
+
+The default path is pure Rust and denies `unsafe_code` workspace-wide. Native
+solvers are optional oracle and benchmark leaves, not hidden runtime
+dependencies. Deterministic traversal, explicit seeds and limits, source-model
+replay, and first-class `unknown` are product contracts. For the crate-level
+dataflow and trust boundaries, continue to the [architecture guide](docs/internals/architecture.md)
+and [proof stack](docs/internals/proof-stack.md).
+
 ---
 
-## The four angles in detail
+## Capability layers in detail
 
 ### 1. SMT solver (the Z3 / cvc5 angle)
 
@@ -314,6 +376,20 @@ by use (each is accepted in an ADR).
 | [`axeyum-bench`](crates/axeyum-bench) | Corpus benchmark harness with PAR-2 scoring, backend selection, JSON artifacts. |
 
 ## Start here
+
+Run one dependency-free example from source:
+
+```sh
+cargo run -p axeyum-solver --features full --example first_smtlib_query
+cargo run -p axeyum-cas --example cas_tour
+cargo run -p axeyum-bench --example curriculum_demo
+```
+
+The first command parses and solves a small SMT-LIB query, the second tours the
+CAS, and the third connects the curriculum graph to checked solver evidence.
+For prerequisites, expected output, and examples that intentionally write
+artifacts, use the complete [runnable-example catalog](docs/reference/examples.md).
+To avoid a local build, use the [browser playground](docs/playground/README.md).
 
 - [Project State](docs/PROJECT-STATE.md) — what is built, what has actually been
   measured, what remains partial, and what "Z3/Lean parity" does and does not
