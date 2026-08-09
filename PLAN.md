@@ -7,15 +7,13 @@ first and update it before ending a project-level work session.
 - Last consolidated: **2026-08-09**
 - Integrated baseline merged into the active topic:
   `c516b5fac20f38886dfad41433656bad988f9f5c`
-- Active repair candidate: pushed declaration-scale QF_IDL repair
-  `550b2c1f1e604f6f91b7310ef7584793d9c63b51`; current-main integration and a
-  fresh exact-merge gate are next
-- Latest full-gate attempt: `550b2c1f1e604f6f91b7310ef7584793d9c63b51`
-  passed every solver, workspace, frontier, CAS, rustdoc, reflection,
-  Glaurung, resource, and rules-as-code stage, then failed the SMT-COMP resume
-  fixture because newer `origin/main` was not yet an ancestor of the topic
+- Active repair candidate: declaration-scale QF_IDL repair
+  `550b2c1f1e604f6f91b7310ef7584793d9c63b51`, merged with current main and
+  pushed as `e996afd839c0dd076673cea861ea59dda329f344`
+- Latest full-gate attempt: exact pushed merge `e996afd839c0dd076673cea861ea59dda329f344`
+  passed `just check` with external frontier artifacts and exit 0
 - Latest comprehensive green exact-commit gate:
-  `b07be65aab46790c1473994dfd8fed6f72005817` (`just check` exit 0)
+  `e996afd839c0dd076673cea861ea59dda329f344` (`just check` exit 0)
 - Latest integrated A3 code increments: bounded SMT-LIB `distinct` expansion at
   `63c82a6ef`, typed arithmetic-model reconstruction at `4ff9a82c6`, and
   deterministic string/integer coupling at `db7b426e8`
@@ -78,17 +76,18 @@ or a replacement for the Lean system.
 The 2026-08-09 README-only pass adds an application map and architecture/vision
 guide; it changes no capability, evidence, measurement, or roadmap claim.
 
-The first full gate at pushed repair `550b2c1f1` passed all substantive code
-and evidence stages through rules-as-code, then failed two fixture-only
-SMT-COMP readiness tests because current `origin/main` (`c516b5fac`) was not an
-ancestor of that topic commit. This is an integration-state contract failure,
-not a green aggregate gate or a solver regression. The current merge brings
-that docs-only revision into the topic; rerun the complete gate at the exact
-pushed merge before capture. Earlier A3/A4 integration and gate history remains
-in dated result notes and Git. The latest comprehensive green gate is still the
-`b07be65aa` checkpoint above. Hosted CI/docs runs `31192792245` and
-`31192792512` remain terminal green for their recorded baseline, not for the
-current candidate. No retained solver or measurement process is running.
+The exact pushed merge `e996afd83` then passed the complete externally isolated
+`just check` gate with exit 0, including all workspace/solver tests, slow
+differentials, frontier/CAS proofs, rustdoc, Glaurung, SMT-COMP resume, Lean,
+parity, plan-authority, and link stages. The fresh A5 census retained valid
+atomic QF_LRA and QF_IDL captures: each has
+200/200 rows, zero stderr, exact pushed source/binary identity, and unchanged
+24-second/8-GiB limits; IDL closes the former row-64 abort. QF_RDL attempt 001
+failed closed after 196/200 emitted rows with exit 101, zero stderr, and no
+credited output; metadata is retained at
+[`QF_RDL-attempt-001.failure.json`](docs/plan/evidence/qf-linear-a5/failures/QF_RDL-attempt-001.failure.json).
+The row and 21-row tail pass alone, identifying cumulative process pressure.
+No derivation or score claim is authorized.
 
 A3 is **WIP**. Pushed result checkpoint `3696e7dd5` is integrated on current
 main by `47d8cd956`; its source branch remains preserved. The repaired complete
@@ -343,16 +342,18 @@ here as closed evidence boundaries. A3 remains incomplete, but all currently
 preregistered bounded mechanisms are closed negatively. A4 has now also yielded;
 A5 is the first active item.
 
-**Immediate action (`WIP`).** Finish and push the current-main integration,
-run a fresh exact-merge `just check`, then—when
-one-minute load is at most 12—rebuild the release census binary and restart
-QF_LRA from row 1 under
-the unchanged 24-second/8-GiB capture envelope. The failed 172-row abort stream,
+**Immediate action (`WIP`).** Diagnose QF_RDL attempt 001's cumulative
+exit-101 failure by sampling per-row RSS/virtual memory across the exact list;
+the row and 21-row tail are negative controls. Do not change budgets or credit
+196 partial rows. A repair needs a bounded regression, focused/full gates, and
+a fresh QF_LRA row-1 restart under the unchanged 24-second/8-GiB envelope.
+The failed 172-row abort stream,
 the complete-but-parse-invalid 200-row stream, the failed 168-row pursuit abort,
 the failed 58-row QF_IDL abort, and the failed 63-row declaration-scale QF_IDL
-abort all remain non-credited. The valid 200-row QF_LRA captures at `d599b682f`
-and `bbd079cfa` prove their preceding repairs but predate newer solver changes
-and cannot stand in for the final three-division census. Stop
+abort all remain non-credited, as does the new 196-row QF_RDL stream. The valid
+200-row QF_LRA/QF_IDL captures at `e996afd83` prove the current repairs but
+cannot stand in for the final three-division census after another behavior
+change. Stop
 on any historical-decision loss, wrong verdict, stderr, malformed trace, or
 process failure. Only valid atomic QF_LRA success metadata authorizes sequential
 QF_IDL and QF_RDL capture and the preregistered derivation. No score gain is
