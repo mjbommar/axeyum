@@ -589,49 +589,63 @@ fn collect(
     seen: &mut HashSet<TermId>,
     deadline: Option<Instant>,
 ) -> bool {
-    if past_deadline(deadline) {
-        return false;
-    }
-    if !seen.insert(term) {
-        return true;
-    }
-    if is_numeric_relational(arena, term) {
-        return if matches!(arena.node(term), TermNode::App { op: Op::Eq, .. }) {
-            state.expand_equality(arena, term, deadline)
-        } else {
-            state.atom(arena, term, deadline).is_some()
-        };
-    }
-    // A Boolean equality is pure skeleton: descend both operands first, then
-    // record the gate, so `bool_eq_gates` is in post-order and each gate can be
-    // encoded once its operands already have skeleton variables.
-    if let TermNode::App { op: Op::Eq, args } = arena.node(term)
-        && args.len() == 2
-        && arena.sort_of(args[0]) == Sort::Bool
-    {
-        let (lhs, rhs) = (args[0], args[1]);
-        if !collect(arena, lhs, state, seen, deadline)
-            || !collect(arena, rhs, state, seen, deadline)
+    // `(term, children_ready)` keeps Boolean equality gates in the recursive
+    // walk's post-order while making every other visit an iterative preorder.
+    let mut pending = vec![(term, false)];
+    while let Some((current, children_ready)) = pending.pop() {
+        if past_deadline(deadline) {
+            return false;
+        }
+        if children_ready {
+            let TermNode::App { args, .. } = arena.node(current) else {
+                return false;
+            };
+            state
+                .bool_eq_gates
+                .push((current, args[0], args[1]));
+            continue;
+        }
+        if !seen.insert(current) {
+            continue;
+        }
+        if is_numeric_relational(arena, current) {
+            let accepted = if matches!(arena.node(current), TermNode::App { op: Op::Eq, .. }) {
+                state.expand_equality(arena, current, deadline)
+            } else {
+                state.atom(arena, current, deadline).is_some()
+            };
+            if !accepted {
+                return false;
+            }
+            continue;
+        }
+        // A Boolean equality is pure skeleton: descend both operands first,
+        // then record the gate, so `bool_eq_gates` remains in post-order and
+        // each gate can be encoded once its operands already have variables.
+        if let TermNode::App { op: Op::Eq, args } = arena.node(current)
+            && args.len() == 2
+            && arena.sort_of(args[0]) == Sort::Bool
         {
+            let (lhs, rhs) = (args[0], args[1]);
+            pending.push((current, true));
+            pending.push((rhs, false));
+            pending.push((lhs, false));
+            continue;
+        }
+        let TermNode::App { op, args } = arena.node(current) else {
+            if !matches!(
+                arena.node(current),
+                TermNode::Symbol(_) | TermNode::BoolConst(_)
+            ) || arena.sort_of(current) != Sort::Bool
+            {
+                return false;
+            }
+            continue;
+        };
+        if !is_skeleton_op(*op) || arena.sort_of(current) != Sort::Bool {
             return false;
         }
-        state.bool_eq_gates.push((term, lhs, rhs));
-        return true;
-    }
-    let TermNode::App { op, args } = arena.node(term) else {
-        return matches!(
-            arena.node(term),
-            TermNode::Symbol(_) | TermNode::BoolConst(_)
-        ) && arena.sort_of(term) == Sort::Bool;
-    };
-    if !is_skeleton_op(*op) || arena.sort_of(term) != Sort::Bool {
-        return false;
-    }
-    let args = args.clone();
-    for &arg in &*args {
-        if !collect(arena, arg, state, seen, deadline) {
-            return false;
-        }
+        pending.extend(args.iter().rev().map(|&arg| (arg, false)));
     }
     true
 }

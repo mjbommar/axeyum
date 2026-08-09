@@ -38,6 +38,26 @@ fn zero_budget_expires_before_the_difference_logic_front_end() {
 }
 
 #[test]
+fn difference_logic_scan_survives_a_deep_boolean_spine_in_stable_order() {
+    const DEPTH: usize = 100_000;
+
+    let mut arena = TermArena::new();
+    let x = int(&mut arena, "deep_scan_x");
+    let zero = arena.int_const(0);
+    let one = arena.int_const(1);
+    let lower = arena.int_ge(x, zero).expect("x>=0");
+    let upper = arena.int_le(x, one).expect("x<=1");
+    let mut root = lower;
+    for index in 0..DEPTH {
+        let next = if index % 2 == 0 { upper } else { lower };
+        root = arena.and(root, next).expect("deep Boolean spine");
+    }
+
+    let scan = scan_dl(&mut arena, &[root], None).expect("difference-logic scan");
+    assert_eq!(scan.atom_terms, vec![lower, upper]);
+}
+
+#[test]
 fn equality_fallback_budget_is_narrowly_structural() {
     let maximum = Some(Duration::from_secs(18));
     assert_eq!(

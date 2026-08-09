@@ -2593,23 +2593,38 @@ impl BoolSkeletonSolver {
         if let Some(&lit) = self.term_lit.get(&term) {
             return Ok(lit);
         }
-        let lit = match arena.node(term).clone() {
-            TermNode::BoolConst(value) => BoolCnfLit::Const(value),
-            TermNode::Symbol(symbol) if arena.sort_of(term) == Sort::Bool => {
-                BoolCnfLit::Lit(CnfLit::positive(self.symbol_var(symbol)?))
+        let mut pending = vec![(term, false)];
+        while let Some((current, children_ready)) = pending.pop() {
+            if self.term_lit.contains_key(&current) {
+                continue;
             }
-            TermNode::App { op, args } => self.encode_app(arena, term, op, &args)?,
-            _ => {
-                return Err(SolverError::Unsupported(
-                    "arithmetic skeleton SAT: non-Boolean term in Boolean skeleton".to_owned(),
-                ));
-            }
-        };
-        self.term_lit.insert(term, lit);
-        Ok(lit)
+            let lit = match arena.node(current).clone() {
+                TermNode::BoolConst(value) => BoolCnfLit::Const(value),
+                TermNode::Symbol(symbol) if arena.sort_of(current) == Sort::Bool => {
+                    BoolCnfLit::Lit(CnfLit::positive(self.symbol_var(symbol)?))
+                }
+                TermNode::App { args, .. } if !children_ready => {
+                    pending.push((current, true));
+                    pending.extend(args.iter().rev().map(|&arg| (arg, false)));
+                    continue;
+                }
+                TermNode::App { op, args } => {
+                    self.encode_app_from_cached_children(arena, current, op, &args)?
+                }
+                _ => {
+                    return Err(SolverError::Unsupported(
+                        "arithmetic skeleton SAT: non-Boolean term in Boolean skeleton".to_owned(),
+                    ));
+                }
+            };
+            self.term_lit.insert(current, lit);
+        }
+        self.term_lit.get(&term).copied().ok_or_else(|| {
+            SolverError::Backend("arithmetic skeleton SAT: root was not encoded".to_owned())
+        })
     }
 
-    fn encode_app(
+    fn encode_app_from_cached_children(
         &mut self,
         arena: &TermArena,
         term: TermId,
@@ -2621,55 +2636,37 @@ impl BoolSkeletonSolver {
                 "arithmetic skeleton SAT: non-Boolean application in skeleton".to_owned(),
             ));
         }
+        let lits = args
+            .iter()
+            .map(|arg| {
+                self.term_lit.get(arg).copied().ok_or_else(|| {
+                    SolverError::Backend(
+                        "arithmetic skeleton SAT: child was not encoded before its parent"
+                            .to_owned(),
+                    )
+                })
+            })
+            .collect::<Result<Vec<_>, _>>()?;
         match op {
-            Op::BoolNot => Ok(self.encode(arena, args[0])?.negated()),
-            Op::BoolAnd => self.encode_and(arena, args),
-            Op::BoolOr => self.encode_or(arena, args),
+            Op::BoolNot => Ok(lits[0].negated()),
+            Op::BoolAnd => self.encode_and_lits(&lits),
+            Op::BoolOr => self.encode_or_lits(&lits),
             Op::BoolImplies => {
-                let lhs = self.encode(arena, args[0])?.negated();
-                let rhs = self.encode(arena, args[1])?;
+                let lhs = lits[0].negated();
+                let rhs = lits[1];
                 self.encode_or_lits(&[lhs, rhs])
             }
             Op::BoolXor => {
-                let lhs = self.encode(arena, args[0])?;
-                let rhs = self.encode(arena, args[1])?;
-                self.encode_xor_lits(lhs, rhs)
+                self.encode_xor_lits(lits[0], lits[1])
             }
             Op::Eq if arena.sort_of(args[0]) == Sort::Bool => {
-                let lhs = self.encode(arena, args[0])?;
-                let rhs = self.encode(arena, args[1])?;
-                self.encode_iff_lits(lhs, rhs)
+                self.encode_iff_lits(lits[0], lits[1])
             }
-            Op::Ite => {
-                let condition = self.encode(arena, args[0])?;
-                let then_lit = self.encode(arena, args[1])?;
-                let else_lit = self.encode(arena, args[2])?;
-                self.encode_ite_lits(condition, then_lit, else_lit)
-            }
+            Op::Ite => self.encode_ite_lits(lits[0], lits[1], lits[2]),
             _ => Err(SolverError::Unsupported(format!(
                 "arithmetic skeleton SAT: unsupported Boolean op {op:?}"
             ))),
         }
-    }
-
-    fn encode_and(
-        &mut self,
-        arena: &TermArena,
-        args: &[TermId],
-    ) -> Result<BoolCnfLit, SolverError> {
-        let mut lits = Vec::with_capacity(args.len());
-        for &arg in args {
-            lits.push(self.encode(arena, arg)?);
-        }
-        self.encode_and_lits(&lits)
-    }
-
-    fn encode_or(&mut self, arena: &TermArena, args: &[TermId]) -> Result<BoolCnfLit, SolverError> {
-        let mut lits = Vec::with_capacity(args.len());
-        for &arg in args {
-            lits.push(self.encode(arena, arg)?);
-        }
-        self.encode_or_lits(&lits)
     }
 
     fn encode_and_lits(&mut self, lits: &[BoolCnfLit]) -> Result<BoolCnfLit, SolverError> {
@@ -3239,10 +3236,38 @@ fn int_bound_or_is_tautology(arena: &TermArena, terms: &[TermId]) -> bool {
 }
 
 fn int_bounds_have_conflict(bounds: &[SimpleIntBound]) -> bool {
-    for i in 0..bounds.len() {
-        for j in (i + 1)..bounds.len() {
-            if conflicting_bounds(&bounds[i], &bounds[j]).is_some() {
-                return true;
+    let mut extrema: HashMap<TermId, (Vec<SimpleIntBound>, Vec<SimpleIntBound>)> =
+        HashMap::new();
+    for &bound in bounds {
+        let (lowers, uppers) = extrema.entry(bound.expr).or_default();
+        let candidates = match bound.side {
+            BoundSide::Lower => lowers,
+            BoundSide::Upper => uppers,
+        };
+        if candidates.iter().any(|candidate| {
+            candidate.value == bound.value
+                && candidate.atom_idx == bound.atom_idx
+                && candidate.truth == bound.truth
+        }) {
+            continue;
+        }
+        candidates.push(bound);
+        candidates.sort_by_key(|candidate| (candidate.value, candidate.atom_idx, candidate.truth));
+        if bound.side == BoundSide::Lower {
+            candidates.reverse();
+        }
+        // The most extreme candidate decides the result unless it is the
+        // complementary view of the same source atom. One runner-up is enough:
+        // a source atom contributes at most one bound on a given side.
+        candidates.truncate(2);
+    }
+
+    for (lowers, uppers) in extrema.values() {
+        for lower in lowers {
+            for upper in uppers {
+                if conflicting_bounds(lower, upper).is_some() {
+                    return true;
+                }
             }
         }
     }
@@ -3620,20 +3645,25 @@ fn simplify_bool_and(arena: &mut TermArena, terms: Vec<TermId>) -> Result<TermId
     }
 
     let mut active = Vec::new();
+    let mut active_set = HashSet::new();
+    let mut negated_children = HashSet::new();
     for term in flat {
         match bool_const_value(arena, term) {
             Some(false) => return Ok(arena.bool_const(false)),
             Some(true) => continue,
             None => {}
         }
-        if active.contains(&term) {
+        if active_set.contains(&term) {
             continue;
         }
-        if active
-            .iter()
-            .any(|&existing| bool_terms_are_complements(arena, existing, term))
+        if bool_not_child(arena, term).is_some_and(|inner| active_set.contains(&inner))
+            || negated_children.contains(&term)
         {
             return Ok(arena.bool_const(false));
+        }
+        active_set.insert(term);
+        if let Some(inner) = bool_not_child(arena, term) {
+            negated_children.insert(inner);
         }
         active.push(term);
     }
@@ -3650,20 +3680,25 @@ fn simplify_bool_or(arena: &mut TermArena, terms: Vec<TermId>) -> Result<TermId,
     }
 
     let mut active = Vec::new();
+    let mut active_set = HashSet::new();
+    let mut negated_children = HashSet::new();
     for term in flat {
         match bool_const_value(arena, term) {
             Some(true) => return Ok(arena.bool_const(true)),
             Some(false) => continue,
             None => {}
         }
-        if active.contains(&term) {
+        if active_set.contains(&term) {
             continue;
         }
-        if active
-            .iter()
-            .any(|&existing| bool_terms_are_complements(arena, existing, term))
+        if bool_not_child(arena, term).is_some_and(|inner| active_set.contains(&inner))
+            || negated_children.contains(&term)
         {
             return Ok(arena.bool_const(true));
+        }
+        active_set.insert(term);
+        if let Some(inner) = bool_not_child(arena, term) {
+            negated_children.insert(inner);
         }
         active.push(term);
     }
@@ -3718,22 +3753,23 @@ fn bool_not_child(arena: &TermArena, term: TermId) -> Option<TermId> {
     Some(args[0])
 }
 
-fn bool_terms_are_complements(arena: &TermArena, a: TermId, b: TermId) -> bool {
-    bool_not_child(arena, a) == Some(b) || bool_not_child(arena, b) == Some(a)
-}
-
 fn bool_or_is_tautology(arena: &TermArena, terms: &[TermId]) -> bool {
+    let term_set = terms.iter().copied().collect::<HashSet<_>>();
+    let negated_children = terms
+        .iter()
+        .filter_map(|&term| bool_not_child(arena, term))
+        .collect::<HashSet<_>>();
     for &term in terms {
         if let Some(inner) = bool_not_child(arena, term) {
             let mut and_children = Vec::new();
             flatten_bool_and(arena, inner, &mut and_children);
-            if and_children.len() > 1 && and_children.iter().any(|child| terms.contains(child)) {
+            if and_children.len() > 1 && and_children.iter().any(|child| term_set.contains(child)) {
                 return true;
             }
 
             let mut or_children = Vec::new();
             flatten_bool_or(arena, inner, &mut or_children);
-            if or_children.len() > 1 && or_children.iter().all(|child| terms.contains(child)) {
+            if or_children.len() > 1 && or_children.iter().all(|child| term_set.contains(child)) {
                 return true;
             }
         } else {
@@ -3741,9 +3777,8 @@ fn bool_or_is_tautology(arena: &TermArena, terms: &[TermId]) -> bool {
             flatten_bool_and(arena, term, &mut and_children);
             if and_children.len() > 1
                 && and_children.iter().all(|&child| {
-                    terms
-                        .iter()
-                        .any(|&t| bool_terms_are_complements(arena, t, child))
+                    bool_not_child(arena, child).is_some_and(|inner| term_set.contains(&inner))
+                        || negated_children.contains(&child)
                 })
             {
                 return true;
@@ -3754,17 +3789,22 @@ fn bool_or_is_tautology(arena: &TermArena, terms: &[TermId]) -> bool {
 }
 
 fn bool_and_is_contradiction(arena: &TermArena, terms: &[TermId]) -> bool {
+    let term_set = terms.iter().copied().collect::<HashSet<_>>();
+    let negated_children = terms
+        .iter()
+        .filter_map(|&term| bool_not_child(arena, term))
+        .collect::<HashSet<_>>();
     for &term in terms {
         if let Some(inner) = bool_not_child(arena, term) {
             let mut or_children = Vec::new();
             flatten_bool_or(arena, inner, &mut or_children);
-            if or_children.len() > 1 && or_children.iter().any(|child| terms.contains(child)) {
+            if or_children.len() > 1 && or_children.iter().any(|child| term_set.contains(child)) {
                 return true;
             }
 
             let mut and_children = Vec::new();
             flatten_bool_and(arena, inner, &mut and_children);
-            if and_children.len() > 1 && and_children.iter().all(|child| terms.contains(child)) {
+            if and_children.len() > 1 && and_children.iter().all(|child| term_set.contains(child)) {
                 return true;
             }
         } else {
@@ -3772,9 +3812,8 @@ fn bool_and_is_contradiction(arena: &TermArena, terms: &[TermId]) -> bool {
             flatten_bool_or(arena, term, &mut or_children);
             if or_children.len() > 1
                 && or_children.iter().all(|&child| {
-                    terms
-                        .iter()
-                        .any(|&t| bool_terms_are_complements(arena, t, child))
+                    bool_not_child(arena, child).is_some_and(|inner| term_set.contains(&inner))
+                        || negated_children.contains(&child)
                 })
             {
                 return true;
@@ -3883,6 +3922,34 @@ mod tests {
             .abstract_term(&mut arena, root)
             .expect("deep Boolean abstraction");
         assert!(matches!(arena.node(abstracted), TermNode::BoolConst(true)));
+        assert!(!ctx.timed_out);
+        assert!(ctx.atoms.is_empty());
+    }
+
+    #[test]
+    fn abstractor_scales_linearly_on_a_wide_boolean_disjunction() {
+        const WIDTH: usize = 20_000;
+        let mut arena = TermArena::new();
+        let mut terms = Vec::with_capacity(WIDTH);
+        for index in 0..WIDTH {
+            let symbol = arena
+                .declare(&format!("wide_{index}"), Sort::Bool)
+                .expect("fresh Boolean symbol");
+            terms.push(arena.var(symbol));
+        }
+        let mut root = terms[0];
+        for &term in &terms[1..] {
+            root = arena.or(root, term).expect("Boolean disjunction");
+        }
+
+        let mut ctx = ArithAbstractor::default();
+        let abstracted = ctx
+            .abstract_term(&mut arena, root)
+            .expect("wide Boolean abstraction");
+        let mut flattened = Vec::new();
+        flatten_bool_or(&arena, abstracted, &mut flattened);
+
+        assert_eq!(flattened, terms);
         assert!(!ctx.timed_out);
         assert!(ctx.atoms.is_empty());
     }
@@ -4580,6 +4647,25 @@ mod tests {
                 .unwrap(),
             CheckResult::Unsat
         ));
+    }
+
+    #[test]
+    fn bool_skeleton_encoder_survives_a_deep_boolean_spine() {
+        const DEPTH: usize = 100_000;
+        let mut arena = TermArena::new();
+        let leaf = arena.bool_var("deep_skeleton_leaf").unwrap();
+        let mut root = leaf;
+        for _ in 0..DEPTH {
+            root = arena.not(root).expect("Boolean negation");
+        }
+
+        let mut solver = BoolSkeletonSolver::new();
+        let encoded = solver.encode(&arena, root).expect("deep skeleton encoding");
+
+        assert_eq!(solver.term_lit.len(), DEPTH + 1);
+        assert!(encoded == solver.term_lit[&leaf]);
+        assert_eq!(solver.sat.variable_count(), 1);
+        assert_eq!(solver.sat.clause_count(), 0);
     }
 
     #[test]

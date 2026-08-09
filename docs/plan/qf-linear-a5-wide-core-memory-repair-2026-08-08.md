@@ -228,3 +228,47 @@ census.
 The failed partial stream is permanently non-credited. No timeout, external
 memory ceiling, route order, normalization ceiling, DL allocation, or reference
 result changed.
+
+## Second QF_IDL capture: declaration-scale and residual deep walkers
+
+After the host gate cleared, exact pushed commit `bbd079cfa` reproduced the
+200-row QF_LRA result atomically in 1,006,900 ms: 62 `sat`, 27 `unsat`, and 111
+typed `unknown`, with JSONL SHA-256
+`540252a4d846a96825c46d50afd6d925b22faa9e858caa79c2b7577754029b7f`.
+QF_IDL attempt 002 then failed closed after 63 rows and 1,746,427 ms. Row 64,
+`asp/DisjunctiveScheduling/disjunctiveScheduling.in7.smt2`, is a 49,193,506-byte
+benchmark with 555,251 declarations. The process aborted with `SIGABRT`; QF_RDL
+was not started. The non-credited record is
+[`QF_IDL-attempt-002.failure.json`](evidence/qf-linear-a5/failures/QF_IDL-attempt-002.failure.json),
+SHA-256 `eb9910f9f75f53e4c0daa2e6426d4d2b23a76109d2878e813aa39d8167dd003d`.
+
+Native backtraces and bounded replays exposed seven independent scale defects
+in the exercised path: quadratic parser model-symbol registration; repeatedly
+flattened associative rewrite spines; recursive LIA atom collection; recursive
+difference-logic collection; recursive LRA and LIA online Tseitin encoders; and
+the recursive lazy-arithmetic Boolean-skeleton encoder. The repair uses dense
+declaration registries, bounded iterative associative collection, stable
+left-to-right iterative scans, deterministic post-order encoders, and indexed
+Boolean simplification/bound checks. It does not change the timeout, memory
+limit, route order, solver admission boundaries, or logical semantics.
+
+The exact trigger now exits 0 with a schema-1 typed budget `unknown` in 37.88
+seconds at 2,692,476 KiB peak RSS. DL exhausts its bounded share, simplex
+declines the non-conjunctive shape, and lazy LIA declines before SAT at the
+existing joint boundary (208,418 atoms and 2,885,735 CNF variables). The final
+diagnostic release binary is 11,730,816 bytes with SHA-256
+`f88c9dede3957a8730b5adbe77ad62babf397e56daa712b38f40401632976c6d`.
+
+Focused evidence is green: strict all-target/all-feature solver Clippy; all
+1,090 all-feature solver-library tests; deep-input no-abort 16/16; online LIA
+and LRA integrations 32/32; QF_LRA/Z3 differential 5/5 over 1,500 generated
+cases with zero disagreement; and simplex/Z3 fallback differential 1/1 over
+1,200 generated cases with zero disagreement in 108.83 seconds. New
+load-bearing tests cover 20,000-way Boolean abstraction and 100,000-deep
+collectors, rewrite spines, and each affected encoder.
+
+Because this is another solver behavior change after the valid QF_LRA capture,
+all three divisions must restart from QF_LRA row 1 at an exact clean pushed
+repair commit. The successful pre-repair QF_LRA stream proves monotonicity only
+for `bbd079cfa`; it is not the final A5 census. Attempt 002 and its 63-row
+partial stream remain permanently non-credited.

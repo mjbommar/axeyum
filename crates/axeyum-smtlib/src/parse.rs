@@ -86,9 +86,18 @@ pub struct Script {
     /// declaration order. Quantifier locals and parser-introduced aliases are not
     /// recorded here.
     pub model_symbols: Vec<SymbolId>,
+    /// Dense membership registry parallel to the arena's symbol IDs.
+    ///
+    /// This keeps duplicate suppression amortized O(1) without giving up the
+    /// deterministic declaration order of `model_symbols`. It is intentionally
+    /// private parser bookkeeping rather than model surface.
+    model_symbol_seen: Vec<bool>,
     /// User-declared n-ary uninterpreted functions that should appear in a model,
     /// in declaration order.
     pub model_functions: Vec<FuncId>,
+    /// Dense membership registry parallel to the arena's function IDs; see
+    /// `model_symbol_seen`.
+    model_function_seen: Vec<bool>,
     /// Number of `check-sat` commands seen.
     pub check_sats: u32,
     /// Per-assertion `:named` label (parallel to [`Script::assertions`]; `None`
@@ -6453,14 +6462,80 @@ fn parse_declare_const(
 }
 
 fn record_model_symbol(script: &mut Script, symbol: SymbolId) {
-    if !script.model_symbols.contains(&symbol) {
+    let index = symbol.index();
+    if script.model_symbol_seen.len() <= index {
+        script.model_symbol_seen.resize(index + 1, false);
+    }
+    if !script.model_symbol_seen[index] {
+        script.model_symbol_seen[index] = true;
         script.model_symbols.push(symbol);
     }
 }
 
 fn record_model_function(script: &mut Script, func: FuncId) {
-    if !script.model_functions.contains(&func) {
+    let index = func.index();
+    if script.model_function_seen.len() <= index {
+        script.model_function_seen.resize(index + 1, false);
+    }
+    if !script.model_function_seen[index] {
+        script.model_function_seen[index] = true;
         script.model_functions.push(func);
+    }
+}
+
+#[cfg(test)]
+mod model_registry_tests {
+    use super::*;
+
+    #[test]
+    fn dense_model_registries_preserve_order_and_suppress_duplicates() {
+        const SYMBOLS: usize = 20_000;
+        const FUNCTIONS: usize = 2_000;
+
+        let mut script = Script::default();
+        for index in 0..SYMBOLS {
+            let symbol = script
+                .arena
+                .declare(&format!("x_{index}"), Sort::Bool)
+                .expect("fresh symbol");
+            record_model_symbol(&mut script, symbol);
+            if index % 97 == 0 {
+                record_model_symbol(&mut script, symbol);
+            }
+        }
+        for index in 0..FUNCTIONS {
+            let func = script
+                .arena
+                .declare_fun(&format!("f_{index}"), &[Sort::Bool], Sort::Bool)
+                .expect("fresh function");
+            record_model_function(&mut script, func);
+            if index % 89 == 0 {
+                record_model_function(&mut script, func);
+            }
+        }
+
+        assert_eq!(script.model_symbols.len(), SYMBOLS);
+        assert_eq!(script.model_symbol_seen.len(), SYMBOLS);
+        assert!(script.model_symbol_seen.iter().all(|seen| *seen));
+        assert!(
+            script
+                .model_symbols
+                .iter()
+                .copied()
+                .enumerate()
+                .all(|(index, symbol)| symbol.index() == index)
+        );
+        assert_eq!(script.model_functions.len(), FUNCTIONS);
+        assert_eq!(script.model_function_seen.len(), FUNCTIONS);
+        assert!(script.model_function_seen.iter().all(|seen| *seen));
+        assert!(
+            script
+                .model_functions
+                .iter()
+                .copied()
+                .enumerate()
+                .all(|(index, func)| func.index() == index)
+        );
     }
 }
 

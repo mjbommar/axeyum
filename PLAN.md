@@ -4,12 +4,11 @@
 for current project status, ordered work, blockers, and resume guidance. Read it
 first and update it before ending a project-level work session.
 
-- Last consolidated: **2026-08-08**
+- Last consolidated: **2026-08-09**
 - Integrated baseline merged into the active topic:
   `8ccae9c43ce393762ce6cc3b38d21c2dbb982507`
-- Active pushed repair: `61a9ad1a020bb458cb23a4acbf67818f08863c3e`;
-  the deep QF_IDL Boolean-spine/deadline repair is exact-ref verified and its
-  pre-push gate is green
+- Active repair candidate: the declaration-scale QF_IDL row-64 repair described
+  below; focused gates are green and commit/push/full-gate work is next
 - Latest full-gate attempt: `b07be65aab46790c1473994dfd8fed6f72005817`
   passed the fresh uninterrupted frozen `just check` with exit 0, including the
   repaired generated gap-ownership and independent parity-doc checks
@@ -33,7 +32,7 @@ and `STATUS.md` blob `0f169eddfabb190f45428090ffb057e8289bf355`.
 
 ## Status
 
-**Live A5 checkpoint (2026-08-08).** Three fail-closed QF_LRA restarts exposed
+**Live A5 checkpoint (2026-08-09).** Three fail-closed QF_LRA restarts exposed
 wide-core memory growth, a valid mixed-numeric `ite` parser gap, and a large
 first-solve Boolean skeleton. Their pushed repairs are `9d7a70a65`,
 `11deff4ee`, and `d599b682f`. The next clean capture completed 200/200 rows in
@@ -54,11 +53,19 @@ Strict Clippy, all 1,084 solver-library tests, deep-input 16/16, LRA integration
 The pushed, not-yet-full-gated change requires a row-1 census restart. See the
 [failure/repair record](docs/plan/qf-linear-a5-wide-core-memory-repair-2026-08-08.md).
 
-The restart is **BLOCKED on external host load**. The preregistered capture
-runner requires one-minute load at or below 12; three consecutive resume turns
-observed sustained shared compile/I/O load above 50, most recently 67.90. No
-capture process or partial result was started. Resume unchanged when the load
-gate passes; do not bypass it or mutate unrelated workloads.
+The host gate later cleared. A row-1 restart at exact pushed `bbd079cfa`
+reproduced QF_LRA atomically (200/200, 89 decisions, zero stderr), but QF_IDL
+attempt 002 aborted after 63 rows on a 49.2 MB, 555,251-declaration scheduling
+benchmark; QF_RDL was not started. Backtraces exposed quadratic declaration and
+Boolean simplification plus residual recursive rewrite, collector, and Tseitin
+walkers. The focused repair makes those paths dense/indexed or iterative. The
+exact trigger now exits 0 with typed budget `unknown` in 37.88 seconds at 2.69
+GiB peak RSS. Strict Clippy, all 1,090 solver-library tests, deep-input 16/16,
+online arithmetic integrations, and both Z3 differential suites are green with
+zero disagreement. Because behavior changed again, the complete census must
+restart from QF_LRA row 1 after the candidate is committed, pushed, and fully
+gated. See the updated
+[failure/repair record](docs/plan/qf-linear-a5-wide-core-memory-repair-2026-08-08.md).
 
 Axeyum is a working research-grade automated-reasoning stack with a pure-Rust
 default path, replay-checked SAT models, multiple independently checked UNSAT
@@ -326,14 +333,16 @@ here as closed evidence boundaries. A3 remains incomplete, but all currently
 preregistered bounded mechanisms are closed negatively. A4 has now also yielded;
 A5 is the first active item.
 
-**Immediate action (`BLOCKED` on host load).** When one-minute load is at most
-12, rebuild the release census binary from the current clean pushed topic
-(solver repair `61a9ad1a0`), then restart QF_LRA from row 1 under
+**Immediate action (`WIP`).** Commit and push the declaration-scale QF_IDL
+repair and failure record, run a fresh exact-commit `just check`, then—when
+one-minute load is at most 12—rebuild the release census binary and restart
+QF_LRA from row 1 under
 the unchanged 24-second/8-GiB capture envelope. The failed 172-row abort stream,
 the complete-but-parse-invalid 200-row stream, the failed 168-row pursuit abort,
-and the failed 58-row QF_IDL abort all remain non-credited. The valid 200-row
-QF_LRA capture at `d599b682f` proves the previous repair but predates the new
-solver change and cannot stand in for the final three-division census. Stop
+the failed 58-row QF_IDL abort, and the failed 63-row declaration-scale QF_IDL
+abort all remain non-credited. The valid 200-row QF_LRA captures at `d599b682f`
+and `bbd079cfa` prove their preceding repairs but predate newer solver changes
+and cannot stand in for the final three-division census. Stop
 on any historical-decision loss, wrong verdict, stderr, malformed trace, or
 process failure. Only valid atomic QF_LRA success metadata authorizes sequential
 QF_IDL and QF_RDL capture and the preregistered derivation. No score gain is
