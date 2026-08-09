@@ -38,6 +38,9 @@ evidence routes, broad but uneven theory support, an independent Lean-core
 checker/importer, and several consumers. It is not yet a drop-in Z3 replacement
 or a replacement for the Lean system.
 
+The 2026-08-09 README-only pass adds an application map and architecture/vision
+guide; it changes no capability, evidence, measurement, or roadmap claim.
+
 The audited integrated repository state is
 `6be32cb4a56e5384004715884f2960507dfa3a22`; the A3 relevance-ladder and budget
 partition work is documentation-only and does not alter the solver-code
@@ -357,21 +360,12 @@ model-reuse variants failed isolated stability and were removed; do not retry
 until 94 happens to pass. A3/A4's negative routes remain closed. A2 still does
 not authorize C0/F2, host/NAS mutation, allocation, or a solver fleet.
 
-**Parallel documentation action.** The current comprehensive pass is closed;
-continue only when a live guide exposes a concrete stale claim, and do not
-modify solver behavior merely to match prose. Beginner/user, pinned
-WASM/browser, contributor, stable reference, internals, all 22 crate front
-doors, curriculum, reviews, plan, and research have substantive indexes; seven
-core crates have compile-tested rustdoc examples. Generated matrices remain the
-support/trust authorities. The audit corrected curriculum depth/backlog,
-documentation-build gates, reconstruction-target wording, textbook/NRA maps,
-test-command feature/filter drift, theory combination, CAS-vs-solver assurance,
-advanced-theory completeness, and optional consumer evidence boundaries. The
-public-state table is aligned with the append-only parity ledger and guarded
-against future row drift; the stable reference catalogs all 34 Cargo examples
-with their feature, external-tool, and mutation boundaries. Source-comment
-guards now also reject universal UNSAT-proof wording outside route-specific
-evidence.
+**Parallel documentation action.** The comprehensive pass and 2026-08-09
+README application/vision revision are closed. Continue only for a concrete
+stale claim; keep application maturity and sub-document links aligned, but do
+not duplicate generated capability tables or modify solver behavior to match
+prose. The user/reference/internals/crate surfaces and all 34 Cargo examples are
+indexed, and source guards reject universal proof claims.
 
 ### A1 — Complete arithmetic deadline and resource enforcement (`DONE`, P0)
 
