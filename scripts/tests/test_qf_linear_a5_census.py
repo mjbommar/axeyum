@@ -192,10 +192,12 @@ def test_join_rejects_wrong_new_solve(monkeypatch: pytest.MonkeyPatch) -> None:
     [
         (attempt("lra", "verifier-rejected", "candidate model failed replay"), "model-replay"),
         (attempt("lra", "budget", "normalization coefficient work exhausted", "resource-limit"), "normalization-resource"),
+        (attempt("nra", "budget", "online CDCL(T) LRA atom cap exceeded (1492 > 1024)"), "normalization-resource"),
         (attempt("dl-online", "incomplete", "non-unit coefficient difference shape"), "unsupported-dl-shape"),
         (attempt("dl-online", "incomplete", "numeric disequality skeleton"), "disequality-boolean-structure"),
         (attempt("lra", "incomplete", "explanation core too large"), "explanation-core"),
         (attempt("lra", "budget", "query deadline expired", "timeout"), "search-budget"),
+        (attempt("lra", "budget", "round cap exceeded"), "search-budget"),
         (attempt("lra", "unsupported", "operator outside fragment"), "other-unsupported"),
     ],
 )
@@ -226,7 +228,7 @@ def test_lra_sc39_control_requires_typed_resource_boundary(monkeypatch: pytest.M
     old = [historical(file, "unsolved", "unsolved", "unknown")]
     good = current(
         file, "unknown",
-        attempt("lra-online", "budget", "normalization coefficient work exhausted", "resource-limit"),
+        attempt("nra", "budget", "online CDCL(T) LRA atom cap exceeded (1492 > 1024)"),
     )
     assert CENSUS.join_division(spec, old, [good])["controls"]["sc39"]["bucket"] == "normalization-resource"
     bad = current(file, "unknown", attempt("lra", "budget", "query deadline expired", "timeout"))

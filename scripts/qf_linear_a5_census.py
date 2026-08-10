@@ -393,9 +393,16 @@ def classify(trace: dict[str, Any]) -> tuple[str, list[dict[str, Any]]]:
     ).lower()
     if "verifier-rejected" in text or any(word in text for word in ("replay", "model did not", "verification")):
         return "model-replay", declines
+    # Route-trace schema v1 intentionally serializes every timeout and
+    # deterministic resource kind as `reason: budget`. Preserve the exact
+    # production spelling of the online-LRA normalization admission ceiling so
+    # it does not collapse into a later coarse bucket.
     if any(
         word in text
-        for word in ("normaliz", "resource-limit", "coefficient work", "memo", "node visit")
+        for word in (
+            "normaliz", "resource-limit", "coefficient work", "memo", "node visit",
+            "atom cap exceeded",
+        )
     ):
         return "normalization-resource", declines
     if any(word in text for word in ("difference shape", "difference-logic", "non-unit coefficient", "dl shape")):
