@@ -272,3 +272,25 @@ all three divisions must restart from QF_LRA row 1 at an exact clean pushed
 repair commit. The successful pre-repair QF_LRA stream proves monotonicity only
 for `bbd079cfa`; it is not the final A5 census. Attempt 002 and its 63-row
 partial stream remain permanently non-credited.
+
+## V2 derivation: deterministic monotonicity loss
+
+The later sequential-worker repair at exact pushed `5a53012e1` passed the full
+repository gate and allowed all three V2 streams to complete atomically. The
+strict cross-division derivation then corrected an earlier evidence mistake:
+the byte-identical 89-decision QF_LRA stream is not monotone. Historical UNSAT
+`sal/windowreal/windowreal-no_t_deadlock-17.smt2` is one of three QF_LRA rows
+stopped by the joint pre-SAT boundary, at 1,217 arithmetic atoms and 6,526 CNF
+variables. Three gains masked this one loss in the aggregate count. Every V2
+stream is therefore non-credited; see the retained
+[`V2-census-attempt-001.failure.json`](evidence/qf-linear-a5/failures/V2-census-attempt-001.failure.json).
+
+The bounded follow-up admits only the conjunctive rectangle at or below 1,280
+atoms and 8,192 variables. The lost control returned UNSAT in 3/3 observations
+in 0.10--0.20 seconds at less than 18 MiB peak RSS. Both original QF_LRA abort
+controls remain above the atom side and decline before SAT; the nearest
+low-atom QF_IDL decline remains above the variable side and also declines before
+SAT. All 1,091 solver-library tests and the named deep-input, online arithmetic,
+QF_LRA/Z3, and simplex/Z3 gates are green. The complete evidence and unchanged
+restart obligation are in the
+[v1 result](qf-linear-a5-pre-sat-boundary-monotonicity-v1-result-2026-08-10.md).

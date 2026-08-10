@@ -60,6 +60,17 @@ const MAX_DYNAMIC_AFFINE_BOUND_CONFLICT_BATCH: usize = 1;
 /// Decline only when both stable, pre-solve counts cross the measured boundary.
 const MAX_PRE_SAT_ARITH_ATOMS: usize = 1_024;
 const MAX_PRE_SAT_CNF_VARS: usize = 4_096;
+/// Additional measured-safe rectangle above the joint pre-SAT trigger.
+///
+/// The historical `QF_LRA` monotonicity control
+/// `windowreal-no_t_deadlock-17.smt2` has 1,217 arithmetic atoms and 6,526 CNF
+/// variables and closes UNSAT in 0.10--0.20 seconds below 18 MiB peak RSS. The
+/// original allocation-abort controls have at least 1,411 atoms, while the
+/// nearest low-atom census decline outside this rectangle has 31,944 CNF
+/// variables. Keep the exception conjunctive so neither dimension alone can
+/// admit a previously excluded large skeleton.
+const MAX_MODERATE_PRE_SAT_ARITH_ATOMS: usize = 1_280;
+const MAX_MODERATE_PRE_SAT_CNF_VARS: usize = 8_192;
 /// Total literals retained in dynamically learned, unminimized theory cores.
 ///
 /// A wide core is the fail-closed fallback when deterministic minimization is
@@ -823,16 +834,16 @@ impl IncrementalArithDpll {
         self.solve_calls += 1;
         let enable_affine_bound_cores = self.solve_calls > 1;
 
-        if self.ctx.atoms.len() > MAX_PRE_SAT_ARITH_ATOMS
-            && self.prop_solver.next_var > MAX_PRE_SAT_CNF_VARS
-        {
+        if exceeds_pre_sat_skeleton_boundary(self.ctx.atoms.len(), self.prop_solver.next_var) {
             return Ok(CheckResult::Unknown(UnknownReason {
                 kind: UnknownKind::ResourceLimit,
                 detail: format!(
                     "lazy linear arithmetic pre-SAT skeleton exceeds the joint resource boundary \
-                     (atoms={} > {MAX_PRE_SAT_ARITH_ATOMS}, cnf_vars={} > \
-                     {MAX_PRE_SAT_CNF_VARS}, initial_clauses={}, blocking_lemmas={}); declining \
-                     before the first SAT round",
+                     (atoms={}, cnf_vars={}, base_trigger=>{MAX_PRE_SAT_ARITH_ATOMS}/\
+                     >{MAX_PRE_SAT_CNF_VARS}, moderate_envelope<=\
+                     {MAX_MODERATE_PRE_SAT_ARITH_ATOMS}/<=\
+                     {MAX_MODERATE_PRE_SAT_CNF_VARS}, initial_clauses={}, blocking_lemmas={}); \
+                     declining before the first SAT round",
                     self.ctx.atoms.len(),
                     self.prop_solver.next_var,
                     self.initial_clauses.len(),
@@ -1073,6 +1084,14 @@ impl IncrementalArithDpll {
             initial_lemma_count: self.initial_lemma_count,
         }
     }
+}
+
+fn exceeds_pre_sat_skeleton_boundary(atoms: usize, cnf_vars: usize) -> bool {
+    let crosses_base_trigger =
+        atoms > MAX_PRE_SAT_ARITH_ATOMS && cnf_vars > MAX_PRE_SAT_CNF_VARS;
+    let outside_moderate_envelope = atoms > MAX_MODERATE_PRE_SAT_ARITH_ATOMS
+        || cnf_vars > MAX_MODERATE_PRE_SAT_CNF_VARS;
+    crosses_base_trigger && outside_moderate_envelope
 }
 
 fn run_arith_dpll(
@@ -4594,7 +4613,7 @@ mod tests {
         let value = arena.var(real);
         let zero = arena.real_const(axeyum_ir::Rational::integer(0));
         let atom = arena.real_le(value, zero).unwrap();
-        for _ in 0..=MAX_PRE_SAT_ARITH_ATOMS {
+        for _ in 0..=MAX_MODERATE_PRE_SAT_ARITH_ATOMS {
             solver.ctx.atoms.push(ArithAtom {
                 prop: proposition,
                 term: atom,
@@ -4602,7 +4621,7 @@ mod tests {
             });
         }
         solver.prop_solver.next_var = MAX_PRE_SAT_CNF_VARS + 1;
-        assert!(solver.ctx.atoms.len() > MAX_PRE_SAT_ARITH_ATOMS);
+        assert!(solver.ctx.atoms.len() > MAX_MODERATE_PRE_SAT_ARITH_ATOMS);
         assert!(solver.prop_solver.next_var > MAX_PRE_SAT_CNF_VARS);
 
         let result = solver
@@ -4614,6 +4633,34 @@ mod tests {
         assert_eq!(reason.kind, UnknownKind::ResourceLimit);
         assert!(reason.detail.contains("before the first SAT round"));
         assert_eq!(solver.total_rounds, 0, "the SAT loop must not start");
+    }
+
+    #[test]
+    fn moderate_pre_sat_skeleton_envelope_is_conjunctive_and_bounded() {
+        assert!(!exceeds_pre_sat_skeleton_boundary(
+            MAX_PRE_SAT_ARITH_ATOMS,
+            usize::MAX,
+        ));
+        assert!(!exceeds_pre_sat_skeleton_boundary(
+            usize::MAX,
+            MAX_PRE_SAT_CNF_VARS,
+        ));
+        assert!(!exceeds_pre_sat_skeleton_boundary(
+            MAX_MODERATE_PRE_SAT_ARITH_ATOMS,
+            MAX_MODERATE_PRE_SAT_CNF_VARS,
+        ));
+        assert!(exceeds_pre_sat_skeleton_boundary(
+            MAX_MODERATE_PRE_SAT_ARITH_ATOMS + 1,
+            MAX_PRE_SAT_CNF_VARS + 1,
+        ));
+        assert!(exceeds_pre_sat_skeleton_boundary(
+            MAX_PRE_SAT_ARITH_ATOMS + 1,
+            MAX_MODERATE_PRE_SAT_CNF_VARS + 1,
+        ));
+        assert!(!exceeds_pre_sat_skeleton_boundary(1_217, 6_526));
+        assert!(exceeds_pre_sat_skeleton_boundary(1_447, 4_733));
+        assert!(exceeds_pre_sat_skeleton_boundary(1_411, 6_774));
+        assert!(exceeds_pre_sat_skeleton_boundary(1_084, 31_944));
     }
 
     #[test]

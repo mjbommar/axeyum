@@ -72,3 +72,21 @@ The topology change invalidates combination with V1 captures. The
 retains every frozen population, semantic validator, correctness control,
 timeout, and ceiling, but makes the worker boundary and memory scope explicit.
 After exact commit/push and the complete gate, capture restarts at QF_LRA row 1.
+
+## Exact pushed verification and census disposition
+
+Exact pushed repair `5a53012e1` passed the complete external-frontier
+`just check` gate. Its hardened 11,859,024-byte release binary (SHA-256
+`18ef76d6f94c8619062dc44c69f1fa75f3d477d9ed146eb555202248efbe9af6`)
+first completed a quiet-host 200-row QF_RDL confirmation with zero stderr,
+directly crossing the old row-196 boundary. The subsequent credited-topology V2
+sequence completed QF_RDL atomically in 2,127,949 ms: 63 SAT, 42 UNSAT, and 95
+typed unknown, preserving all 105 historical decisions. Its JSONL SHA-256 is
+`5af6091b75367fdc337dc4026335f0fd95abdd10e3965677b79425d47c5bee76`.
+
+That RDL result proves the process-isolation repair, but the complete V2 census
+is non-credited because cross-division derivation found an independent
+historical QF_LRA UNSAT loss. The retained failure record is
+[`V2-census-attempt-001.failure.json`](evidence/qf-linear-a5/failures/V2-census-attempt-001.failure.json).
+The bounded LRA repair changes behavior again, so all three divisions must
+restart; no RDL row is reused.

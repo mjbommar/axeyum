@@ -4,15 +4,15 @@
 for current project status, ordered work, blockers, and resume guidance. Read it
 first and update it before ending a project-level work session.
 
-- Last consolidated: **2026-08-09**
+- Last consolidated: **2026-08-10**
 - Integrated baseline merged into the active topic:
   `c516b5fac20f38886dfad41433656bad988f9f5c`
-- Active repair candidate: ADR-0379 sequential per-file corpus isolation after
-  the declaration-scale repair merged at `e996afd839c0dd076673cea861ea59dda329f344`
-- Latest full-gate attempt: exact pushed merge `e996afd839c0dd076673cea861ea59dda329f344`
+- Active repair candidate: preregistered moderate pre-SAT skeleton envelope
+  after the V2 derivation exposed one deterministic historical-decision loss
+- Latest full-gate attempt: exact pushed repair `5a53012e13757e4f992e6197d83b9f12a6268471`
   passed `just check` with external frontier artifacts and exit 0
 - Latest comprehensive green exact-commit gate:
-  `e996afd839c0dd076673cea861ea59dda329f344` (`just check` exit 0)
+  `5a53012e13757e4f992e6197d83b9f12a6268471` (`just check` exit 0)
 - Latest integrated A3 code increments: bounded SMT-LIB `distinct` expansion at
   `63c82a6ef`, typed arithmetic-model reconstruction at `4ff9a82c6`, and
   deterministic string/integer coupling at `db7b426e8`
@@ -31,39 +31,13 @@ and `STATUS.md` blob `0f169eddfabb190f45428090ffb057e8289bf355`.
 
 ## Status
 
-**Live A5 checkpoint (2026-08-09).** Three fail-closed QF_LRA restarts exposed
-wide-core memory growth, a valid mixed-numeric `ite` parser gap, and a large
-first-solve Boolean skeleton. Their pushed repairs are `9d7a70a65`,
-`11deff4ee`, and `d599b682f`. The next clean capture completed 200/200 rows in
-1,012,663 ms with exit 0, zero stderr, and all former abort rows returning typed
-budget `unknown`.
-
-QF_IDL then failed closed after 58/200 rows on a 696,997-byte historically
-unsolved BlockedNQueens case; QF_RDL was not started. The retained failure SHA is
-`b723502e4982c082d3c5556e75d3172284ee99f789b74d86441d383a909bdc7f`.
-Backtraces proved two native-recursion defects: 18,036 integer-collector frames,
-then more than 15,000 DPLL abstractor frames with an unhonored deadline. The
-focused candidate makes both Boolean-spine walks iterative and charges DPLL
-construction to the remaining deadline. The trigger now returns typed budget
-`unknown` in 21.23 seconds at about 83 MiB; `lpsat-goal-18` remains `unsat`.
-Strict Clippy, all 1,084 solver-library tests, deep-input 16/16, LRA integration
-20/20, and both LRA differentials are green with zero disagreement.
-The pushed, not-yet-full-gated change requires a row-1 census restart. See the
-[failure/repair record](docs/plan/qf-linear-a5-wide-core-memory-repair-2026-08-08.md).
-
-The host gate later cleared. A row-1 restart at exact pushed `bbd079cfa`
-reproduced QF_LRA atomically (200/200, 89 decisions, zero stderr), but QF_IDL
-attempt 002 aborted after 63 rows on a 49.2 MB, 555,251-declaration scheduling
-benchmark; QF_RDL was not started. Backtraces exposed quadratic declaration and
-Boolean simplification plus residual recursive rewrite, collector, and Tseitin
-walkers. The focused repair makes those paths dense/indexed or iterative. The
-exact trigger now exits 0 with typed budget `unknown` in 37.88 seconds at 2.69
-GiB peak RSS. Strict Clippy, all 1,090 solver-library tests, deep-input 16/16,
-online arithmetic integrations, and both Z3 differential suites are green with
-zero disagreement. Because behavior changed again, the complete census must
-restart from QF_LRA row 1 after the candidate is committed, pushed, and fully
-gated. See the updated
-[failure/repair record](docs/plan/qf-linear-a5-wide-core-memory-repair-2026-08-08.md).
+**A5 repair history.** Fail-closed LRA/IDL restarts exposed wide-core and
+first-solve allocation growth, mixed-numeric parsing, native recursion,
+unhonored construction deadlines, and declaration-scale quadratic work. Their
+pushed bounded/iterative repairs and every non-credited partial stream are
+retained in the
+[failure/repair record](docs/plan/qf-linear-a5-wide-core-memory-repair-2026-08-08.md);
+the current release returns typed `unknown` on each former abort trigger.
 
 Axeyum is a working research-grade automated-reasoning stack with a pure-Rust
 default path, replay-checked SAT models, multiple independently checked UNSAT
@@ -74,21 +48,38 @@ or a replacement for the Lean system.
 The 2026-08-09 README-only pass adds an application map and architecture/vision
 guide; it changes no capability, evidence, measurement, or roadmap claim.
 
-The exact pushed merge `e996afd83` then passed the complete externally isolated
-`just check` gate with exit 0, including all workspace/solver tests, slow
-differentials, frontier/CAS proofs, rustdoc, Glaurung, SMT-COMP resume, Lean,
-parity, plan-authority, and link stages. The fresh A5 census retained valid
-atomic QF_LRA and QF_IDL captures: each has
-200/200 rows, zero stderr, exact pushed source/binary identity, and unchanged
-24-second/8-GiB limits; IDL closes the former row-64 abort. QF_RDL attempt 001
-failed closed after 196/200 emitted rows with exit 101, zero stderr, and no
-credited output; metadata is retained at
-[`QF_RDL-attempt-001.failure.json`](docs/plan/evidence/qf-linear-a5/failures/QF_RDL-attempt-001.failure.json).
-`/proc` sampling proved retained allocator arenas; allocator tuning was rejected.
-ADR-0379's one-at-a-time inherited-limit workers then completed the exact
-200-row trigger (64 SAT, 42 UNSAT, 94 typed unknown, exit 0). This is repair
-evidence, not census credit; see the
+Exact pushed `e996afd83` passed `just check`; its RDL capture then failed closed
+at 196/200 because allocator arenas accumulated across files. ADR-0379 rejects
+allocator tuning and uses one inherited-limit child at a time. The isolated
+200-row trigger passed with zero stderr; the old partial stream remains
+non-credited. See the
 [result](docs/plan/qf-linear-a5-rdl-process-isolation-repair-2026-08-09.md).
+
+Exact pushed repair `5a53012e1` passed the complete external-frontier
+`just check` gate with exit 0. The preregistered V2 sequence then produced three
+structurally valid atomic 200-row captures with zero stderr and the exact
+pushed source/binary identity. QF_LRA decided 89, QF_IDL 68, and QF_RDL 105;
+the RDL stream crossed the former row-196 process boundary and completed in
+2,127,949 ms. The lossless derivation nevertheless stopped correctly:
+historical QF_LRA UNSAT control
+`sal/windowreal/windowreal-no_t_deadlock-17.smt2` returned deterministic pre-SAT
+resource `unknown` at 1,217 arithmetic atoms and 6,526 CNF variables. Gains
+elsewhere hid that loss in the aggregate count. The entire V2 sequence is
+non-credited. A bounded
+[pre-SAT boundary discriminator](docs/plan/qf-linear-a5-pre-sat-boundary-monotonicity-v1-preregistration-2026-08-10.md)
+now owns the P0 path; no residual grouping or census-based breadth change is
+authorized.
+
+The bounded discriminator passes. The lost control returns UNSAT in 3/3
+observations in 0.10--0.20 seconds below 18 MiB peak RSS, while the two original
+allocation-abort controls and the low-atom/31,944-variable IDL control retain
+typed pre-SAT declines. Formatting, strict all-feature solver Clippy, all 1,091
+solver-library tests, deep-input 16/16, online arithmetic/CDCL(T) 41/41, the
+1,500-case QF_LRA differential, and the 1,200-case simplex differential are
+green with zero disagreement. Exact commit/push, pushed-commit discriminator
+replay, and the complete repository gate remain required before the census
+restart; see the
+[result](docs/plan/qf-linear-a5-pre-sat-boundary-monotonicity-v1-result-2026-08-10.md).
 
 A3 is **WIP**. Pushed result checkpoint `3696e7dd5` is integrated on current
 main by `47d8cd956`; its source branch remains preserved. The repaired complete
@@ -343,22 +334,17 @@ here as closed evidence boundaries. A3 remains incomplete, but all currently
 preregistered bounded mechanisms are closed negatively. A4 has now also yielded;
 A5 is the first active item.
 
-**Immediate action (`WIP`).** Finish focused gates, commit and push ADR-0379's
-sequential worker repair, then pass an exact-commit complete gate. Restart the
-V2 census at QF_LRA row 1 under the unchanged 24-second/8-GiB envelope.
-The failed 172-row abort stream,
-the complete-but-parse-invalid 200-row stream, the failed 168-row pursuit abort,
-the failed 58-row QF_IDL abort, and the failed 63-row declaration-scale QF_IDL
-abort all remain non-credited, as does the new 196-row QF_RDL stream. The valid
-200-row QF_LRA/QF_IDL captures at `e996afd83` prove the current repairs but
-cannot stand in for the final three-division census after another behavior
-change. Stop
-on any historical-decision loss, wrong verdict, stderr, malformed trace, or
-process failure. Only valid atomic QF_LRA success metadata authorizes sequential
-QF_IDL and QF_RDL capture and the preregistered derivation. No score gain is
-claimed by changing a crash into typed `unknown`, and no further solver or
-budget change is authorized before the complete monotone census identifies a
-repeated mechanism.
+**Immediate action (`WIP`).** Finish documentation and plan gates for the passed
+moderate pre-SAT envelope, commit and push the bounded repair, rebuild and
+repeat its target/control discriminator at the exact pushed commit, then pass
+one uninterrupted external-frontier `just check`. Only then restart the V2
+census at QF_LRA row 1 under the unchanged 24-second/8-GiB envelope.
+All earlier failed, invalid, pre-change, and partial streams remain
+non-credited. Stop on any historical-decision loss, wrong verdict, stderr,
+malformed trace, or process failure. Only a valid monotone QF_LRA derivation
+authorizes QF_IDL, QF_RDL, and complete cross-division derivation. No score gain
+is claimed by changing a crash into typed `unknown`; no breadth change is
+authorized before the complete monotone census identifies a repeated mechanism.
 A4's v3 restart decided 93/200, with one 2/3-SAT wall-clock boundary. Both
 model-reuse variants failed isolated stability and were removed; do not retry
 until 94 happens to pass. A3/A4's negative routes remain closed. A2 still does
@@ -498,11 +484,13 @@ model credit.
 subsets of their references. The newest architecture has not yet received one
 cross-division residual census.
 
-**Next slice.** Classify normalization failures, unsupported
-difference shapes, disequalities, explanation blowups, and ordinary search
-failures across the three current ledgers. Treat the repaired high-memory LRA
-normalization case and the rejected global 12/12 DL split as permanent controls
-before adding new DL syntax. The
+**Next slice.** Release-gate the accepted bounded pre-SAT monotonicity repair,
+then restart and derive the complete V2 census. Only after a zero-loss
+derivation may normalization failures,
+unsupported difference shapes, disequalities, explanation blowups, and
+ordinary search failures be classified across the three current ledgers. Treat
+the repaired high-memory LRA normalization case and the rejected global 12/12
+DL split as permanent controls before adding new DL syntax. The
 [`v2 cross-division census preregistration`](docs/plan/qf-linear-a5-cross-division-census-v2-preregistration-2026-08-09.md)
 freezes all three populations and historical sidecars, makes all 259 retained
 decisions monotonicity controls, and authorizes only fresh current-Axeyum traces
@@ -630,7 +618,7 @@ or remove dirty/unmerged state to meet a free-space target.
 | Full-library measurement | `WIP`; A2 readiness `DONE` | The R1--R5 readiness stack is integrated by `8ed5ad089` and focused/aggregate/scoped/topic/full-main green; the real registered offline-build smoke passed. No live run, preparation root, or launch authority exists. A later live C0/F2 step requires separate review. |
 | QF_NIA breadth | `WIP`, yielded | Current clean result remains 34/200 versus 89/200. Reconstruction, large-core deletion, relevance activation, and bounded clause-estimate attribution are closed negatively without production solver code. The final diagnostic failed its exact pipeline-boundary record gate; no mechanism or 200-row run is authorized and the 64,000,000 ceiling remains. Move to A4 unless independent new NIA evidence appears. |
 | QF_UFLIA breadth | `WIP`, yielded | Historical 94/180 remains; the exact-commit restart produced 93/200 because one SAT case is wall-clock unstable. No sidecar or new result was credited. |
-| LRA/IDL/RDL | `WIP` | Current results are 86/146, 68/124, and 105/155; A5 owns cross-division consolidation. |
+| LRA/IDL/RDL | `WIP`; V2 non-credited | Three 200-row V2 streams completed, but derivation exposed one deterministic historical QF_LRA UNSAT loss. Its bounded pre-SAT repair passed target, safety-control, and focused solver gates; commit/push/full-gate and a complete three-division restart remain. |
 | QF_BV/QF_SLIA/UF/QF_ABV | `WIP`, strong selected cells | Preserve current ledgers; do not prioritize small score gains above A2–A6. |
 | Evidence and Lean reconstruction | `WIP` | A6 and A9; distinct certificate/check/reconstruction claims. |
 | Route exploration | `BLOCKED` beyond catalogue work | Proposed track; T0.2/T0.6/T0.1/T2.3 precede T3.5. |
