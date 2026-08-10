@@ -53,6 +53,37 @@ The target's three route traces are byte-identical and terminate with
 resource decline before the first SAT round. The candidate therefore changes
 only the one measured pre-SAT decline among all 600 non-credited V2 rows.
 
+## Exact pushed-commit replay
+
+Repair commit `8a6de50ac96c2a8e0056c405f446417563d83a89` is exact across
+local `HEAD`, its upstream-tracking ref, and the remote topic ref. Its normal
+pre-push gate passed compile, format, non-vacuous corpus, workspace/default and
+full-feature solver unit, capability-frontier, always-on integration, and
+evidence suites. The hook's first attempt could not materialize its detached
+checkout on the `/tmp` tmpfs; the identical exact-SHA checkout and unchanged
+gate passed with `TMPDIR` on disk-backed storage. No verification step was
+bypassed.
+
+The release executable rebuilt from the clean exact pushed commit is
+11,859,344 bytes with SHA-256
+`eec4813b557165ec95afc43912ad9fc2b5400ec94db5b7134ecacd50b100867d`.
+Every credited replay observation started at one-minute load 11.83, used one
+fresh process with the inherited 8 GiB address-space limit and 24,000 ms query
+timeout, exited 0, and emitted zero stderr. An earlier same-binary observation
+set started above the registered load boundary and is diagnostic-only.
+
+| Role | Verdict | Observations | Wall time | Peak RSS | JSONL SHA-256 |
+|---|---|---:|---:|---:|---|
+| lost `windowreal` control | UNSAT | 3/3 | 0.10 s | 16,296--16,856 KiB | `842ec285aba3d7997ce452a2bebcf7dd179f78e18fa5634306134781889c8b54` |
+| `pursuit-safety-16` abort control | typed pre-SAT unknown | 1/1 | 0.10 s | 14,864 KiB | `4e8ce39ccaf529b4234026ff6542484845b5f7c7b7159c565940180fa2925a94` |
+| `tgc_io-safe-20` abort control | typed pre-SAT unknown | 1/1 | 0.10 s | 16,448 KiB | `9a60c6076f2c5e5bb94ff8d5641879d6da14ae31a6a5215c80c8737d00828368` |
+| 31,944-variable IDL control | typed pre-SAT unknown | 1/1 | 18.12 s | 49,868 KiB | `8dfd9a3a5db73b1f4d5e3acd656700ca7b482fc413a5f3b36ad0830a870f93b1` |
+
+The exact target output is byte-identical to the preliminary target output,
+and every exact control digest is likewise unchanged. The pushed repair
+therefore passes the preregistered discriminator; this still does not credit
+the invalidated V2 census.
+
 ## Focused gates
 
 - formatting and strict all-target/all-feature solver Clippy pass;
@@ -68,9 +99,6 @@ only the one measured pre-SAT decline among all 600 non-credited V2 rows.
 
 ## Remaining release gate
 
-Amend ADR-0377 and the earlier A5 repair record, validate documentation and
-plan authority, commit and push the bounded repair, then rebuild and repeat the
-target/control discriminator at the exact pushed commit. One uninterrupted
-external-frontier `just check` must exit 0 before the V2 census restarts. The
-existing three captures remain permanently non-credited regardless of this
-candidate's success.
+One uninterrupted external-frontier `just check` must exit 0 before the V2
+census restarts. The existing three captures remain permanently non-credited
+regardless of this repair's success.

@@ -7,8 +7,8 @@ first and update it before ending a project-level work session.
 - Last consolidated: **2026-08-10**
 - Integrated baseline merged into the active topic:
   `c516b5fac20f38886dfad41433656bad988f9f5c`
-- Active repair candidate: preregistered moderate pre-SAT skeleton envelope
-  after the V2 derivation exposed one deterministic historical-decision loss
+- Active A5 release gate: exact pushed moderate pre-SAT skeleton repair
+  `8a6de50ac96c2a8e0056c405f446417563d83a89`; full `just check` remains
 - Latest full-gate attempt: exact pushed repair `5a53012e13757e4f992e6197d83b9f12a6268471`
   passed `just check` with external frontier artifacts and exit 0
 - Latest comprehensive green exact-commit gate:
@@ -70,15 +70,16 @@ non-credited. A bounded
 now owns the P0 path; no residual grouping or census-based breadth change is
 authorized.
 
-The bounded discriminator passes. The lost control returns UNSAT in 3/3
-observations in 0.10--0.20 seconds below 18 MiB peak RSS, while the two original
-allocation-abort controls and the low-atom/31,944-variable IDL control retain
-typed pre-SAT declines. Formatting, strict all-feature solver Clippy, all 1,091
-solver-library tests, deep-input 16/16, online arithmetic/CDCL(T) 41/41, the
-1,500-case QF_LRA differential, and the 1,200-case simplex differential are
-green with zero disagreement. Exact commit/push, pushed-commit discriminator
-replay, and the complete repository gate remain required before the census
-restart; see the
+The bounded repair is exact-pushed at `8a6de50ac`. Its rebuilt 11,859,344-byte
+binary (`eec4813b557165ec95afc43912ad9fc2b5400ec94db5b7134ecacd50b100867d`)
+replayed the lost control as byte-identical UNSAT in 3/3 observations at 0.10
+seconds and below 17 MiB peak RSS; both allocation-abort controls and the
+low-atom/31,944-variable IDL control retained typed pre-SAT declines. All six
+observations started at load 11.83, exited 0, and emitted zero stderr. Formatting,
+strict all-feature solver Clippy, all 1,091 solver-library tests, deep-input
+16/16, online arithmetic/CDCL(T) 41/41, and both differential suites are green
+with zero disagreement. Only the complete repository gate remains before the
+census restart; see the
 [result](docs/plan/qf-linear-a5-pre-sat-boundary-monotonicity-v1-result-2026-08-10.md).
 
 A3 is **WIP**. Pushed result checkpoint `3696e7dd5` is integrated on current
@@ -334,11 +335,10 @@ here as closed evidence boundaries. A3 remains incomplete, but all currently
 preregistered bounded mechanisms are closed negatively. A4 has now also yielded;
 A5 is the first active item.
 
-**Immediate action (`WIP`).** Finish documentation and plan gates for the passed
-moderate pre-SAT envelope, commit and push the bounded repair, rebuild and
-repeat its target/control discriminator at the exact pushed commit, then pass
-one uninterrupted external-frontier `just check`. Only then restart the V2
-census at QF_LRA row 1 under the unchanged 24-second/8-GiB envelope.
+**Immediate action (`WIP`).** Publish the exact pushed-discriminator record for
+`8a6de50ac`, then pass one uninterrupted external-frontier `just check`. Only
+then restart the V2 census at QF_LRA row 1 under the unchanged
+24-second/8-GiB envelope.
 All earlier failed, invalid, pre-change, and partial streams remain
 non-credited. Stop on any historical-decision loss, wrong verdict, stderr,
 malformed trace, or process failure. Only a valid monotone QF_LRA derivation
@@ -484,8 +484,8 @@ model credit.
 subsets of their references. The newest architecture has not yet received one
 cross-division residual census.
 
-**Next slice.** Release-gate the accepted bounded pre-SAT monotonicity repair,
-then restart and derive the complete V2 census. Only after a zero-loss
+**Next slice.** Complete-gate the exact pushed bounded pre-SAT monotonicity
+repair, then restart and derive the complete V2 census. Only after a zero-loss
 derivation may normalization failures,
 unsupported difference shapes, disequalities, explanation blowups, and
 ordinary search failures be classified across the three current ledgers. Treat
@@ -618,7 +618,7 @@ or remove dirty/unmerged state to meet a free-space target.
 | Full-library measurement | `WIP`; A2 readiness `DONE` | The R1--R5 readiness stack is integrated by `8ed5ad089` and focused/aggregate/scoped/topic/full-main green; the real registered offline-build smoke passed. No live run, preparation root, or launch authority exists. A later live C0/F2 step requires separate review. |
 | QF_NIA breadth | `WIP`, yielded | Current clean result remains 34/200 versus 89/200. Reconstruction, large-core deletion, relevance activation, and bounded clause-estimate attribution are closed negatively without production solver code. The final diagnostic failed its exact pipeline-boundary record gate; no mechanism or 200-row run is authorized and the 64,000,000 ceiling remains. Move to A4 unless independent new NIA evidence appears. |
 | QF_UFLIA breadth | `WIP`, yielded | Historical 94/180 remains; the exact-commit restart produced 93/200 because one SAT case is wall-clock unstable. No sidecar or new result was credited. |
-| LRA/IDL/RDL | `WIP`; V2 non-credited | Three 200-row V2 streams completed, but derivation exposed one deterministic historical QF_LRA UNSAT loss. Its bounded pre-SAT repair passed target, safety-control, and focused solver gates; commit/push/full-gate and a complete three-division restart remain. |
+| LRA/IDL/RDL | `WIP`; V2 non-credited | Three 200-row V2 streams completed, but derivation exposed one deterministic historical QF_LRA UNSAT loss. Exact pushed repair `8a6de50ac` passed target, safety-control, pre-push, and focused solver gates; the complete gate and three-division restart remain. |
 | QF_BV/QF_SLIA/UF/QF_ABV | `WIP`, strong selected cells | Preserve current ledgers; do not prioritize small score gains above A2–A6. |
 | Evidence and Lean reconstruction | `WIP` | A6 and A9; distinct certificate/check/reconstruction claims. |
 | Route exploration | `BLOCKED` beyond catalogue work | Proposed track; T0.2/T0.6/T0.1/T2.3 precede T3.5. |
