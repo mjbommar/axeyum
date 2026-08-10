@@ -627,6 +627,10 @@ def capture_axeyum(
         "list": str(spec.list_path.relative_to(ROOT)), "list_sha256": spec.list_sha256,
         "list_rows": FROZEN_ROWS, "timeout_ms": TIMEOUT_MS, "memory_gb": MEMORY_GB,
         "host_cores": os.cpu_count(),
+        "process_topology": "sequential-isolated-per-file-v1",
+        "active_worker_limit": 1,
+        "memory_scope": "inherited-per-process-address-space",
+        "aggregate_memory_enforcement": "not-enforced",
     }
     started_utc = utc_now()
     started = time.monotonic()
@@ -650,7 +654,7 @@ def capture_axeyum(
             stdout_raw = stdout_path.read_bytes() if stdout_path.is_file() else b""
             stderr_raw = stderr_path.read_bytes() if stderr_path.is_file() else b""
             failure = {
-                "schema": "axeyum-qf-linear-a5-capture-failure-v1", **base,
+                "schema": "axeyum-qf-linear-a5-capture-failure-v2", **base,
                 "started_utc": started_utc, "ended_utc": utc_now(),
                 "elapsed_ms": round((time.monotonic() - started) * 1000),
                 "load_start": load_start, "load_end": load_average(),
@@ -663,7 +667,7 @@ def capture_axeyum(
             atomic_write_text(failure_path, json_text(failure))
             raise
     metadata = {
-        "schema": "axeyum-qf-linear-a5-capture-v1", **base,
+        "schema": "axeyum-qf-linear-a5-capture-v2", **base,
         "started_utc": started_utc, "ended_utc": utc_now(),
         "elapsed_ms": round((time.monotonic() - started) * 1000),
         "load_start": load_start, "load_end": load_average(), "exit_code": 0,

@@ -27,12 +27,17 @@
 //! error records.
 
 use std::collections::BTreeSet;
+use std::io::Write;
 use std::path::{Path, PathBuf};
+use std::process::Command;
 use std::time::Duration;
 
 use axeyum_smtlib::{SmtError, parse_script};
 use axeyum_solver::route_trace::push_json_string;
 use axeyum_solver::{CheckResult, SolverConfig, check_auto_explained, solve_smtlib};
+
+const WORKER_IDENTITY_ENV: &str = "AXEYUM_EXPLAIN_CORPUS_IDENTITY";
+const WORKER_FILE_FLAG: &str = "--__worker-file";
 
 fn collect_smt2(dir: &Path, out: &mut Vec<PathBuf>) {
     let Ok(entries) = std::fs::read_dir(dir) else {
@@ -132,6 +137,77 @@ fn is_wide_integer_unsupported(detail: &str) -> bool {
         })
 }
 
+fn validate_worker_output(
+    stdout: &[u8],
+    stderr: &[u8],
+    identity: &str,
+    json: bool,
+) -> Result<(), String> {
+    if !stderr.is_empty() {
+        return Err(format!(
+            "worker for {identity} emitted {} stderr bytes: {}",
+            stderr.len(),
+            String::from_utf8_lossy(stderr).trim()
+        ));
+    }
+    if stdout.is_empty() {
+        return Err(format!("worker for {identity} emitted no output"));
+    }
+    if !json {
+        return Ok(());
+    }
+    let text = std::str::from_utf8(stdout)
+        .map_err(|error| format!("worker for {identity} emitted non-UTF-8 JSON: {error}"))?;
+    let mut lines = text.lines();
+    let line = lines
+        .next()
+        .ok_or_else(|| format!("worker for {identity} emitted no JSON record"))?;
+    if lines.next().is_some() {
+        return Err(format!(
+            "worker for {identity} emitted more than one JSON record"
+        ));
+    }
+    let record: serde_json::Value = serde_json::from_str(line)
+        .map_err(|error| format!("worker for {identity} emitted malformed JSON: {error}"))?;
+    if record.get("file").and_then(serde_json::Value::as_str) != Some(identity) {
+        return Err(format!(
+            "worker for {identity} emitted a different file identity"
+        ));
+    }
+    Ok(())
+}
+
+fn run_isolated_file(
+    path: &Path,
+    identity: &str,
+    timeout_ms: u64,
+    json: bool,
+) -> Result<Vec<u8>, String> {
+    let executable = std::env::current_exe()
+        .map_err(|error| format!("cannot locate explain_corpus executable: {error}"))?;
+    let mut command = Command::new(executable);
+    command
+        .env(WORKER_IDENTITY_ENV, identity)
+        .arg(WORKER_FILE_FLAG)
+        .arg(path)
+        .arg(timeout_ms.to_string());
+    if json {
+        command.arg("--json");
+    }
+    let output = command
+        .output()
+        .map_err(|error| format!("cannot start worker for {identity}: {error}"))?;
+    if !output.status.success() {
+        return Err(format!(
+            "worker for {identity} exited {}: {}",
+            output.status,
+            String::from_utf8_lossy(&output.stderr).trim()
+        ));
+    }
+    validate_worker_output(&output.stdout, &output.stderr, identity, json)?;
+    Ok(output.stdout)
+}
+
 #[allow(clippy::too_many_lines)] // linear CLI driver: arg parsing + per-file loop + summary
 fn main() {
     let raw: Vec<String> = std::env::args().collect();
@@ -141,7 +217,8 @@ fn main() {
     let args: Vec<String> = raw.into_iter().filter(|arg| arg != "--json").collect();
     let usage = "usage: explain_corpus <dir> [timeout_ms] [--json]\n       explain_corpus --list <file> [timeout_ms] [--json]";
     let exact_list = args.get(1).is_some_and(|arg| arg == "--list");
-    let (input, timeout_arg) = if exact_list {
+    let single_file = args.get(1).is_some_and(|arg| arg == WORKER_FILE_FLAG);
+    let (input, timeout_arg) = if exact_list || single_file {
         let Some(path) = args.get(2) else {
             eprintln!("{usage}");
             std::process::exit(2);
@@ -155,12 +232,13 @@ fn main() {
         (PathBuf::from(path), args.get(2))
     };
     let timeout_ms: u64 = timeout_arg.and_then(|s| s.parse().ok()).unwrap_or(10_000);
-    let config = SolverConfig::default().with_timeout(Duration::from_millis(timeout_ms));
     let files = if exact_list {
         read_exact_list(&input).unwrap_or_else(|error| {
             eprintln!("explain_corpus: {error}");
             std::process::exit(2);
         })
+    } else if single_file {
+        vec![input.clone()]
     } else {
         let mut files = Vec::new();
         collect_smt2(&input, &mut files);
@@ -171,15 +249,47 @@ fn main() {
         files
     };
 
+    // A corpus stream is ordered, but its files are semantically independent.
+    // Run exactly one inherited-limit worker at a time so dropping a file also
+    // lets the OS reclaim fragmented allocator arenas. The hidden worker
+    // marker prevents recursive isolation; every worker record is validated
+    // before the parent forwards it.
+    if !single_file {
+        let mut stdout = std::io::stdout().lock();
+        for path in &files {
+            let identity = if exact_list {
+                path.to_string_lossy()
+            } else {
+                path.file_name()
+                    .and_then(|name| name.to_str())
+                    .unwrap_or("<non-utf8>")
+                    .into()
+            };
+            let output =
+                run_isolated_file(path, &identity, timeout_ms, json).unwrap_or_else(|error| {
+                    eprintln!("explain_corpus: {error}");
+                    std::process::exit(1);
+                });
+            stdout.write_all(&output).unwrap_or_else(|error| {
+                eprintln!("explain_corpus: cannot write worker output: {error}");
+                std::process::exit(1);
+            });
+            stdout.flush().unwrap_or_else(|error| {
+                eprintln!("explain_corpus: cannot flush worker output: {error}");
+                std::process::exit(1);
+            });
+        }
+        return;
+    }
+
+    let config = SolverConfig::default().with_timeout(Duration::from_millis(timeout_ms));
+    let identity_override = std::env::var(WORKER_IDENTITY_ENV).unwrap_or_else(|_| {
+        eprintln!("explain_corpus: internal worker identity is missing");
+        std::process::exit(2);
+    });
+
     for path in files {
-        let identity = if exact_list {
-            path.to_string_lossy()
-        } else {
-            path.file_name()
-                .and_then(|name| name.to_str())
-                .unwrap_or("<non-utf8>")
-                .into()
-        };
+        let identity = identity_override.clone();
         let Ok(text) = std::fs::read_to_string(&path) else {
             if json {
                 emit_json(&identity, "read-error", "");
@@ -318,7 +428,7 @@ fn main() {
 
 #[cfg(test)]
 mod tests {
-    use super::{is_wide_integer_unsupported, read_exact_list};
+    use super::{is_wide_integer_unsupported, read_exact_list, validate_worker_output};
     use std::path::PathBuf;
     use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -406,5 +516,40 @@ mod tests {
         assert!(!is_wide_integer_unsupported(
             "operator `unsupported` is outside the modeled `Int` range"
         ));
+    }
+
+    #[test]
+    fn isolated_json_worker_requires_one_matching_record() {
+        let record =
+            br#"{"file":"/tmp/case.smt2","status":"decided","verdict":"unknown","trace":{}}
+"#;
+        validate_worker_output(record, b"", "/tmp/case.smt2", true).expect("valid worker");
+
+        let mismatch = br#"{"file":"/tmp/other.smt2","status":"decided"}
+"#;
+        assert!(
+            validate_worker_output(mismatch, b"", "/tmp/case.smt2", true)
+                .expect_err("identity mismatch")
+                .contains("different file identity")
+        );
+        assert!(
+            validate_worker_output(b"{}\n{}\n", b"", "/tmp/case.smt2", true)
+                .expect_err("two records")
+                .contains("more than one JSON record")
+        );
+    }
+
+    #[test]
+    fn isolated_worker_fails_closed_on_stderr_or_empty_output() {
+        assert!(
+            validate_worker_output(b"record\n", b"panic", "case.smt2", false)
+                .expect_err("stderr")
+                .contains("stderr bytes")
+        );
+        assert!(
+            validate_worker_output(b"", b"", "case.smt2", false)
+                .expect_err("empty")
+                .contains("no output")
+        );
     }
 }

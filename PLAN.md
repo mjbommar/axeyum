@@ -7,9 +7,8 @@ first and update it before ending a project-level work session.
 - Last consolidated: **2026-08-09**
 - Integrated baseline merged into the active topic:
   `c516b5fac20f38886dfad41433656bad988f9f5c`
-- Active repair candidate: declaration-scale QF_IDL repair
-  `550b2c1f1e604f6f91b7310ef7584793d9c63b51`, merged with current main and
-  pushed as `e996afd839c0dd076673cea861ea59dda329f344`
+- Active repair candidate: ADR-0379 sequential per-file corpus isolation after
+  the declaration-scale repair merged at `e996afd839c0dd076673cea861ea59dda329f344`
 - Latest full-gate attempt: exact pushed merge `e996afd839c0dd076673cea861ea59dda329f344`
   passed `just check` with external frontier artifacts and exit 0
 - Latest comprehensive green exact-commit gate:
@@ -37,8 +36,7 @@ wide-core memory growth, a valid mixed-numeric `ite` parser gap, and a large
 first-solve Boolean skeleton. Their pushed repairs are `9d7a70a65`,
 `11deff4ee`, and `d599b682f`. The next clean capture completed 200/200 rows in
 1,012,663 ms with exit 0, zero stderr, and all former abort rows returning typed
-budget `unknown`. The latest comprehensive gate remains the exact
-`b07be65aa` frozen `just check` exit 0; it predates the two newest code repairs.
+budget `unknown`.
 
 QF_IDL then failed closed after 58/200 rows on a 696,997-byte historically
 unsolved BlockedNQueens case; QF_RDL was not started. The retained failure SHA is
@@ -86,8 +84,11 @@ atomic QF_LRA and QF_IDL captures: each has
 failed closed after 196/200 emitted rows with exit 101, zero stderr, and no
 credited output; metadata is retained at
 [`QF_RDL-attempt-001.failure.json`](docs/plan/evidence/qf-linear-a5/failures/QF_RDL-attempt-001.failure.json).
-The row and 21-row tail pass alone, identifying cumulative process pressure.
-No derivation or score claim is authorized.
+`/proc` sampling proved retained allocator arenas; allocator tuning was rejected.
+ADR-0379's one-at-a-time inherited-limit workers then completed the exact
+200-row trigger (64 SAT, 42 UNSAT, 94 typed unknown, exit 0). This is repair
+evidence, not census credit; see the
+[result](docs/plan/qf-linear-a5-rdl-process-isolation-repair-2026-08-09.md).
 
 A3 is **WIP**. Pushed result checkpoint `3696e7dd5` is integrated on current
 main by `47d8cd956`; its source branch remains preserved. The repaired complete
@@ -342,11 +343,9 @@ here as closed evidence boundaries. A3 remains incomplete, but all currently
 preregistered bounded mechanisms are closed negatively. A4 has now also yielded;
 A5 is the first active item.
 
-**Immediate action (`WIP`).** Diagnose QF_RDL attempt 001's cumulative
-exit-101 failure by sampling per-row RSS/virtual memory across the exact list;
-the row and 21-row tail are negative controls. Do not change budgets or credit
-196 partial rows. A repair needs a bounded regression, focused/full gates, and
-a fresh QF_LRA row-1 restart under the unchanged 24-second/8-GiB envelope.
+**Immediate action (`WIP`).** Finish focused gates, commit and push ADR-0379's
+sequential worker repair, then pass an exact-commit complete gate. Restart the
+V2 census at QF_LRA row 1 under the unchanged 24-second/8-GiB envelope.
 The failed 172-row abort stream,
 the complete-but-parse-invalid 200-row stream, the failed 168-row pursuit abort,
 the failed 58-row QF_IDL abort, and the failed 63-row declaration-scale QF_IDL
@@ -504,7 +503,7 @@ difference shapes, disequalities, explanation blowups, and ordinary search
 failures across the three current ledgers. Treat the repaired high-memory LRA
 normalization case and the rejected global 12/12 DL split as permanent controls
 before adding new DL syntax. The
-[`v1 cross-division census preregistration`](docs/plan/qf-linear-a5-cross-division-census-v1-preregistration-2026-08-07.md)
+[`v2 cross-division census preregistration`](docs/plan/qf-linear-a5-cross-division-census-v2-preregistration-2026-08-09.md)
 freezes all three populations and historical sidecars, makes all 259 retained
 decisions monotonicity controls, and authorizes only fresh current-Axeyum traces
 plus lossless derivation. No production change is yet authorized.

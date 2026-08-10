@@ -664,6 +664,15 @@ Out of scope:
 
 ### Measurement And Benchmarking
 
+- [x] How should an ordered exact-list corpus probe bound allocator retention
+      without changing solver semantics or silently weakening its resource
+      envelope?
+  - Answer:
+    [ADR-0379](../09-decisions/adr-0379-sequential-isolated-corpus-workers.md)
+    uses one sequential inherited-limit child per file, with exact order and
+    identity plus fail-closed output validation. The former 196-row QF_RDL
+    failure now completes all 200 rows under the unchanged query timeout and
+    inherited per-process memory cap.
 - [ ] How should heterogeneous benchmark regimes share provenance without
       producing a false global parity score?
   - Proposed answer:

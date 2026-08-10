@@ -433,3 +433,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [0376](adr-0376-integer-literals-wider-than-i128.md) | Integer literals wider than `i128` — measured non-cause, deferred IR widening | deferred |
 | [0377](adr-0377-shared-arithmetic-deadlines-and-normalization-ceilings.md) | Share one arithmetic deadline across fallback routes and bound LRA normalization deterministically | accepted |
 | [0378](adr-0378-bounded-smtlib-distinct-expansion.md) | Bound eager SMT-LIB `distinct` pair expansion, balance admitted conjunctions, and classify the ceiling as `Unknown(ResourceLimit)` | accepted |
+| [0379](adr-0379-sequential-isolated-corpus-workers.md) | Run ordered corpus explanation through one sequential inherited-limit child per file with fail-closed record validation | accepted |
