@@ -14,6 +14,10 @@
     "diagnostic_only": true,
     "gains": 4,
     "historical_solved": 86,
+    "legacy_transition_counts": {
+      "search-budget_to_normalization-resource": 21,
+      "unsupported-dl-shape_to_normalization-resource": 3
+    },
     "losses": 0,
     "reference_only": 56,
     "rows": 200,

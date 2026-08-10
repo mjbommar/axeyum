@@ -54,8 +54,11 @@ The candidate must pass the focused classifier suite and show, on the
 non-credited capture only, 200 rows, 90 current decisions versus 86 historical,
 four agreeing gains, zero losses, zero wrong verdicts, 56 reference-only rows,
 and `sc-39` in `normalization-resource`. Exactly 24 reference-only atom-cap
-traces move from the generic search bucket to the deterministic resource
-bucket; no other trace may change classification.
+traces move to the deterministic resource bucket: 21 from `search-budget` and
+three from `unsupported-dl-shape`. Those three also contain an earlier
+difference-logic decline; the frozen priority intentionally places the later
+deterministic normalization/resource ceiling first. No other trace may change
+classification.
 
 Then formatting, strict script tests, documentation gates, and one
 uninterrupted external-frontier `just check` must pass at an exact pushed
