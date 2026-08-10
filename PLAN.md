@@ -7,9 +7,8 @@ first and update it before ending a project-level work session.
 - Last consolidated: **2026-08-10**
 - Integrated baseline merged into the active topic:
   `c516b5fac20f38886dfad41433656bad988f9f5c`
-- Active A5 measurement base: exact pushed moderate pre-SAT skeleton repair
-  `8a6de50ac96c2a8e0056c405f446417563d83a89`, documented and fully gated at
-  `3267432a71818fb0671df8f2324f15e213debc08`; classifier repair is P0
+- Active A5 classifier repair: exact pushed
+  `d646382e7422ba60faae7bb5795a1174f8ad4a34`; full `just check` remains
 - Latest full-gate attempt: exact pushed checkpoint `3267432a71818fb0671df8f2324f15e213debc08`
   passed `just check` with external frontier artifacts and exit 0
 - Latest comprehensive green exact-commit gate:
@@ -83,12 +82,13 @@ with zero disagreement. Exact pushed checkpoint `3267432a7` then passed one
 uninterrupted external-frontier `just check` in 6,410 seconds with exit 0; see the
 [result](docs/plan/qf-linear-a5-pre-sat-boundary-monotonicity-v1-result-2026-08-10.md).
 
-The authorized QF_LRA restart at `775446932` completed 200 rows with zero
-stderr and no verdict loss, but failed closed because the frozen classifier
-misbucketed its deterministic `sc-39` atom cap as search budget. The stream is
-non-credited and IDL is forbidden pending the
-[classifier repair](docs/plan/qf-linear-a5-atom-cap-classifier-repair-v1-preregistration-2026-08-10.md),
-another full gate, and a row-1 restart.
+The QF_LRA restart at `775446932` completed 200 rows with zero stderr and no
+verdict loss, then failed closed on a latent `sc-39` classifier mismatch. The
+exact-phrase repair is pushed at `d646382e7`; 23/23 focused tests and the frozen
+24-row transition audit pass. User-requested wrap-up interrupted its full gate
+after 294 seconds with no observed test failure, so that gate is non-credited.
+IDL remains forbidden; see the [preregistration](docs/plan/qf-linear-a5-atom-cap-classifier-repair-v1-preregistration-2026-08-10.md)
+and [result](docs/plan/qf-linear-a5-atom-cap-classifier-repair-v1-result-2026-08-10.md).
 
 A3 is **WIP**. Pushed result checkpoint `3696e7dd5` is integrated on current
 main by `47d8cd956`; its source branch remains preserved. The repaired complete
@@ -343,10 +343,9 @@ here as closed evidence boundaries. A3 remains incomplete, but all currently
 preregistered bounded mechanisms are closed negatively. A4 has now also yielded;
 A5 is the first active item.
 
-**Immediate action (`WIP`).** Repair only the production-trace classifier's
-exact atom-cap mapping, gate and push it, then restart V2 at QF_LRA row 1 under
-the unchanged 24-second/8-GiB envelope. Do not start IDL from the invalid
-`775446932` stream.
+**Immediate action (`WIP`).** Run one uninterrupted external-frontier
+`just check` at exact pushed `d646382e7`, then restart V2 at QF_LRA row 1 under
+the unchanged envelope. Do not start IDL from the invalid `775446932` stream.
 All earlier failed, invalid, pre-change, and partial streams remain
 non-credited. Stop on any historical-decision loss, wrong verdict, stderr,
 malformed trace, or process failure. Only a valid monotone QF_LRA derivation
