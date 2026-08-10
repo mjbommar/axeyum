@@ -7,12 +7,13 @@ first and update it before ending a project-level work session.
 - Last consolidated: **2026-08-10**
 - Integrated baseline merged into the active topic:
   `c516b5fac20f38886dfad41433656bad988f9f5c`
-- Active A5 release gate: exact pushed moderate pre-SAT skeleton repair
-  `8a6de50ac96c2a8e0056c405f446417563d83a89`; full `just check` remains
-- Latest full-gate attempt: exact pushed repair `5a53012e13757e4f992e6197d83b9f12a6268471`
+- Active A5 measurement base: exact pushed moderate pre-SAT skeleton repair
+  `8a6de50ac96c2a8e0056c405f446417563d83a89`, documented and fully gated at
+  exact pushed checkpoint `3267432a71818fb0671df8f2324f15e213debc08`
+- Latest full-gate attempt: exact pushed checkpoint `3267432a71818fb0671df8f2324f15e213debc08`
   passed `just check` with external frontier artifacts and exit 0
 - Latest comprehensive green exact-commit gate:
-  `5a53012e13757e4f992e6197d83b9f12a6268471` (`just check` exit 0)
+  `3267432a71818fb0671df8f2324f15e213debc08` (`just check` exit 0)
 - Latest integrated A3 code increments: bounded SMT-LIB `distinct` expansion at
   `63c82a6ef`, typed arithmetic-model reconstruction at `4ff9a82c6`, and
   deterministic string/integer coupling at `db7b426e8`
@@ -78,8 +79,9 @@ low-atom/31,944-variable IDL control retained typed pre-SAT declines. All six
 observations started at load 11.83, exited 0, and emitted zero stderr. Formatting,
 strict all-feature solver Clippy, all 1,091 solver-library tests, deep-input
 16/16, online arithmetic/CDCL(T) 41/41, and both differential suites are green
-with zero disagreement. Only the complete repository gate remains before the
-census restart; see the
+with zero disagreement. Exact pushed checkpoint `3267432a7` then passed one
+uninterrupted external-frontier `just check` in 6,410 seconds with exit 0. The
+full gate is closed and the V2 census may restart from QF_LRA row 1; see the
 [result](docs/plan/qf-linear-a5-pre-sat-boundary-monotonicity-v1-result-2026-08-10.md).
 
 A3 is **WIP**. Pushed result checkpoint `3696e7dd5` is integrated on current
@@ -335,10 +337,11 @@ here as closed evidence boundaries. A3 remains incomplete, but all currently
 preregistered bounded mechanisms are closed negatively. A4 has now also yielded;
 A5 is the first active item.
 
-**Immediate action (`WIP`).** Publish the exact pushed-discriminator record for
-`8a6de50ac`, then pass one uninterrupted external-frontier `just check`. Only
+**Immediate action (`WIP`).** Publish the completed exact-commit gate record,
 then restart the V2 census at QF_LRA row 1 under the unchanged
-24-second/8-GiB envelope.
+24-second/8-GiB envelope. Exact pushed checkpoint `3267432a7` passed the
+uninterrupted external-frontier `just check`; no release gate remains before
+capture.
 All earlier failed, invalid, pre-change, and partial streams remain
 non-credited. Stop on any historical-decision loss, wrong verdict, stderr,
 malformed trace, or process failure. Only a valid monotone QF_LRA derivation

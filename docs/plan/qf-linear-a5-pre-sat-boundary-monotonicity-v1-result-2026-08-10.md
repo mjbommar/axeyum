@@ -97,8 +97,22 @@ the invalidated V2 census.
 - simplex/Z3 fallback differential passes 1/1 over 1,200 jointly decided cases
   with zero unknowns, timeouts, or disagreements in 118.53 seconds.
 
-## Remaining release gate
+## Complete repository gate
 
-One uninterrupted external-frontier `just check` must exit 0 before the V2
-census restarts. The existing three captures remain permanently non-credited
-regardless of this repair's success.
+Exact pushed documentation checkpoint
+`3267432a71818fb0671df8f2324f15e213debc08`, whose code includes repair
+`8a6de50ac96c2a8e0056c405f446417563d83a89`, passed one uninterrupted
+external-frontier `just check`. It ran from `2026-08-10T09:01:57Z` through
+`2026-08-10T10:48:47Z` (6,410 seconds) and exited 0. Local `HEAD`, upstream,
+and the remote topic ref were exact at the gated checkpoint before and after
+the run. The 585,679-byte log has SHA-256
+`dc8e3b37f9d253b9122a1ebf483d8fd4f445fc17a282b4f356b8e94bef9062b1`.
+
+The gate includes strict formatting and linting, all-feature workspace tests
+and doctests, the 9/9 external progress frontier with five retained artifacts,
+both ignored CAS moment-family proofs, warning-denied rustdoc, QF_BV and
+reflection gates, the 162-file Glaurung corpus in raw and canonical modes,
+foundational resources, rules-as-code, SMT-COMP resume/scoring contracts, Lean
+contracts, parity documentation, plan authority, and link validation. The V2
+census is therefore authorized to restart at QF_LRA row 1. The existing three
+captures remain permanently non-credited regardless of this repair's success.
