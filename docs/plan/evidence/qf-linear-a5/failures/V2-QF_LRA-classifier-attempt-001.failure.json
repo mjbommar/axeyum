@@ -1,0 +1,49 @@
+{
+  "authorization": "none; repair the frozen classifier, fully gate, and restart QF_LRA from row 1",
+  "binary_bytes": 11859344,
+  "binary_sha256": "eec4813b557165ec95afc43912ad9fc2b5400ec94db5b7134ecacd50b100867d",
+  "candidate_diagnostic": {
+    "atom_cap_residuals": 24,
+    "bucket_counts": {
+      "explanation-core": 2,
+      "model-replay": 4,
+      "normalization-resource": 24,
+      "search-budget": 26
+    },
+    "current_solved": 90,
+    "diagnostic_only": true,
+    "gains": 4,
+    "historical_solved": 86,
+    "losses": 0,
+    "reference_only": 56,
+    "rows": 200,
+    "wrongs": 0
+  },
+  "capture": {
+    "elapsed_ms": 982772,
+    "ended_utc": "2026-08-10T11:24:54.746873Z",
+    "load_start": "9.20 17.02 14.15",
+    "metadata_sha256": "9f477a27fe829747c3ba1c22c69afd5aa6e62f36169a5fb39d0a680fb695f7b3",
+    "records": 200,
+    "started_utc": "2026-08-10T11:08:31.974692Z",
+    "stderr_bytes": 0,
+    "stdout_bytes": 104343,
+    "stdout_sha256": "b7d9180d13140978e85d021d36ced81f01bab5f6ce57295c721c5863d45f7ce4"
+  },
+  "control": {
+    "bucket_actual": "search-budget",
+    "bucket_required": "normalization-resource",
+    "detail": "online CDCL(T) LRA atom cap exceeded (1492 > 1024)",
+    "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_LRA/sc/sc-39.base.cvc.smt2",
+    "outcome": "declined",
+    "prior_invalid_trace_identical": true,
+    "reason": "budget",
+    "route": "nra",
+    "verdict": "unknown"
+  },
+  "credited": false,
+  "derive_error": "QF_LRA: sc-39 control bucket is 'search-budget'",
+  "git_commit": "775446932508d16c39e9a9a70bf6cb0fbf981e1e",
+  "git_upstream": "775446932508d16c39e9a9a70bf6cb0fbf981e1e",
+  "schema": "axeyum-qf-linear-a5-classifier-failure-v1"
+}

@@ -9,7 +9,7 @@ first and update it before ending a project-level work session.
   `c516b5fac20f38886dfad41433656bad988f9f5c`
 - Active A5 measurement base: exact pushed moderate pre-SAT skeleton repair
   `8a6de50ac96c2a8e0056c405f446417563d83a89`, documented and fully gated at
-  exact pushed checkpoint `3267432a71818fb0671df8f2324f15e213debc08`
+  `3267432a71818fb0671df8f2324f15e213debc08`; classifier repair is P0
 - Latest full-gate attempt: exact pushed checkpoint `3267432a71818fb0671df8f2324f15e213debc08`
   passed `just check` with external frontier artifacts and exit 0
 - Latest comprehensive green exact-commit gate:
@@ -80,9 +80,15 @@ observations started at load 11.83, exited 0, and emitted zero stderr. Formattin
 strict all-feature solver Clippy, all 1,091 solver-library tests, deep-input
 16/16, online arithmetic/CDCL(T) 41/41, and both differential suites are green
 with zero disagreement. Exact pushed checkpoint `3267432a7` then passed one
-uninterrupted external-frontier `just check` in 6,410 seconds with exit 0. The
-full gate is closed and the V2 census may restart from QF_LRA row 1; see the
+uninterrupted external-frontier `just check` in 6,410 seconds with exit 0; see the
 [result](docs/plan/qf-linear-a5-pre-sat-boundary-monotonicity-v1-result-2026-08-10.md).
+
+The authorized QF_LRA restart at `775446932` completed 200 rows with zero
+stderr and no verdict loss, but failed closed because the frozen classifier
+misbucketed its deterministic `sc-39` atom cap as search budget. The stream is
+non-credited and IDL is forbidden pending the
+[classifier repair](docs/plan/qf-linear-a5-atom-cap-classifier-repair-v1-preregistration-2026-08-10.md),
+another full gate, and a row-1 restart.
 
 A3 is **WIP**. Pushed result checkpoint `3696e7dd5` is integrated on current
 main by `47d8cd956`; its source branch remains preserved. The repaired complete
@@ -337,11 +343,10 @@ here as closed evidence boundaries. A3 remains incomplete, but all currently
 preregistered bounded mechanisms are closed negatively. A4 has now also yielded;
 A5 is the first active item.
 
-**Immediate action (`WIP`).** Publish the completed exact-commit gate record,
-then restart the V2 census at QF_LRA row 1 under the unchanged
-24-second/8-GiB envelope. Exact pushed checkpoint `3267432a7` passed the
-uninterrupted external-frontier `just check`; no release gate remains before
-capture.
+**Immediate action (`WIP`).** Repair only the production-trace classifier's
+exact atom-cap mapping, gate and push it, then restart V2 at QF_LRA row 1 under
+the unchanged 24-second/8-GiB envelope. Do not start IDL from the invalid
+`775446932` stream.
 All earlier failed, invalid, pre-change, and partial streams remain
 non-credited. Stop on any historical-decision loss, wrong verdict, stderr,
 malformed trace, or process failure. Only a valid monotone QF_LRA derivation
@@ -487,8 +492,8 @@ model credit.
 subsets of their references. The newest architecture has not yet received one
 cross-division residual census.
 
-**Next slice.** Complete-gate the exact pushed bounded pre-SAT monotonicity
-repair, then restart and derive the complete V2 census. Only after a zero-loss
+**Next slice.** Close the atom-cap classifier mismatch, complete-gate it, then
+restart and derive the complete V2 census. Only after a zero-loss
 derivation may normalization failures,
 unsupported difference shapes, disequalities, explanation blowups, and
 ordinary search failures be classified across the three current ledgers. Treat
