@@ -96,8 +96,8 @@ wrong verdict, classified `sc-39` correctly, and retained the former
 decisions hidden by two gains; QF_RDL is forbidden. The sequence is non-credited.
 Replay made both losses deterministic. B1 failed and was removed. Unchanged-
 binary G1/D2 returned GraphPartitioning SAT and BubbleSort UNSAT through
-`dl-online` in 3/3 each at 32 seconds. The first structural 21/3 predicate missed
-BubbleSort and was reverted. See its [result](docs/plan/qf-linear-a5-idl-extended-dl-slice-v1-result-2026-08-11.md).
+`dl-online` in 3/3 each at 32 seconds. V1 missed and was reverted; retained
+telemetry identifies both as large equality-heavy scans. See the [result](docs/plan/qf-linear-a5-idl-dl-scan-telemetry-v1-result-2026-08-11.md).
 
 A3 is **WIP**. Pushed result checkpoint `3696e7dd5` is integrated on current
 main by `47d8cd956`; its source branch remains preserved. The repaired complete
@@ -352,10 +352,10 @@ here as closed evidence boundaries. A3 remains incomplete, but all currently
 preregistered bounded mechanisms are closed negatively. A4 has now also yielded;
 A5 is the first active item.
 
-**Immediate action (`WIP`).** Implement only the preregistered result-invariant
-DL scan telemetry, then measure the four named cases. The 21/3 candidate failed
-and is reverted; do not infer DL shape from fallback counts or retry a policy.
-Preserve budgets, pre-SAT bounds, replay/checking, and route order. No census or
+**Immediate action (`WIP`).** Run only the corrected, preregistered large-
+equality 21/3 candidate and four-case matrix. If it passes, run all 173 retained
+decisions and allocation controls; otherwise remove it. Preserve the moderate
+12/12 split, pre-SAT bounds, replay/checking, and route order. No census or
 QF_RDL breadth run is authorized; failed streams remain non-credited.
 
 **Parallel documentation action.** The comprehensive pass and 2026-08-09

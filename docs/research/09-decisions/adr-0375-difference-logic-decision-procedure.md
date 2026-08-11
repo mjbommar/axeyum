@@ -123,6 +123,14 @@ the sort/DAG scan, linearization, equality collection, skeleton encoding, clause
 materialization, and CDCL(T). The adaptive split and its end-to-end scope are
 covered by focused regressions and the retained-decision A/B control.
 
+**2026-08-11 timeout observability.** Post-scan DL timeout details append stable
+counts already owned by the route: difference atoms, numeric and Boolean
+equality gates, and—once built—CNF variables and clauses. No extra traversal or
+branch is introduced, and sites reached before a structure exists omit its
+count. A four-case exact-binary comparison preserved every verdict and terminal
+route; normalizing only the appended detail made each JSON record byte-identical
+to the unchanged binary. This telemetry is diagnostic and selects no policy.
+
 ### The evidence export, scoped honestly
 
 `conjunctive_farkas_certificate` returns `Some` only when the query is a

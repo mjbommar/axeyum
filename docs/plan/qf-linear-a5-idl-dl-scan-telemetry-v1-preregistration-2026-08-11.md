@@ -1,5 +1,8 @@
 # QF linear A5 IDL DL scan telemetry v1 preregistration — 2026-08-11
 
+**Passed and retained.** All four cases were result-invariant and exposed stable
+counts; see the [result](qf-linear-a5-idl-dl-scan-telemetry-v1-result-2026-08-11.md).
+
 ## Need
 
 The [extended-slice result](qf-linear-a5-idl-extended-dl-slice-v1-result-2026-08-11.md)
