@@ -1,5 +1,8 @@
 # QF linear A5 IDL monotonicity v1 preregistration — 2026-08-11
 
+Result: both losses reproduced in 3/3 isolated observations while both controls
+passed 3/3; see the [result](qf-linear-a5-idl-monotonicity-v1-result-2026-08-11.md).
+
 ## Stop condition
 
 The fresh V2 QF_IDL capture from exact clean pushed source

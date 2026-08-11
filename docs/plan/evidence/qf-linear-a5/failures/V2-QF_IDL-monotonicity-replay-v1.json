@@ -1,0 +1,44 @@
+{
+  "binary_bytes": 11859344,
+  "binary_sha256": "eec4813b557165ec95afc43912ad9fc2b5400ec94db5b7134ecacd50b100867d",
+  "ended_utc": "2026-08-11T21:31:08Z",
+  "git_commit": "d0e0d6ceac779b5cc3e2c1b5f3096c77780aecf9",
+  "git_upstream": "d0e0d6ceac779b5cc3e2c1b5f3096c77780aecf9",
+  "load_start": "6.45 6.30 6.11",
+  "observations": {
+    "bubble_loss": {
+      "elapsed_seconds": [42.97, 43.00, 42.96],
+      "expected": "unsat",
+      "max_rss_kib": [180452, 180884, 179920],
+      "stdout_sha256": "938b078ea545662a114043e68d88ac57d56621e5bd686bea28d61c79162107e1",
+      "terminal_detail": "lazy linear arithmetic exhausted the configured timeout while building the Boolean abstraction (atoms=4705, cnf_vars=0, initial_clauses=0, blocking_lemmas=0, core_lengths=none, support_attempts=0, support_unavailable=0, support_conflict_batches=0, support_model_attempts=0, support_replay_failures=0, full_fallbacks=0)",
+      "verdicts": ["unknown", "unknown", "unknown"]
+    },
+    "graph_loss": {
+      "elapsed_seconds": [18.05, 18.04, 18.05],
+      "expected": "sat",
+      "max_rss_kib": [27800, 28160, 27868],
+      "stdout_sha256": "d29445a4c068aca5142768cbf34fca9c713ba66bb577c37947f5993edac5ffd8",
+      "terminal_detail": "lazy linear arithmetic pre-SAT skeleton exceeds the joint resource boundary (atoms=2199, cnf_vars=14670, base_trigger=>1024/>4096, moderate_envelope<=1280/<=8192, initial_clauses=0, blocking_lemmas=0); declining before the first SAT round",
+      "verdicts": ["unknown", "unknown", "unknown"]
+    },
+    "lpsat_control": {
+      "elapsed_seconds": [23.04, 23.04, 23.00],
+      "expected": "unsat",
+      "max_rss_kib": [63240, 63700, 63176],
+      "stdout_sha256": "f280636338801f1207762081e2c132f0ec6654716bc569c9be08da6733a229cc",
+      "verdicts": ["unsat", "unsat", "unsat"]
+    },
+    "maze_gain": {
+      "elapsed_seconds": [19.15, 19.15, 19.15],
+      "expected": "unsat",
+      "max_rss_kib": [44712, 44788, 44612],
+      "stdout_sha256": "0c74c4efa3c88544063c8897311da49021d90d3aec01f87b09a017eeae0890c8",
+      "verdicts": ["unsat", "unsat", "unsat"]
+    }
+  },
+  "schema": "axeyum-qf-linear-a5-idl-monotonicity-replay-v1",
+  "started_utc": "2026-08-11T21:25:57Z",
+  "stderr_bytes_each": 0,
+  "worker_exit_codes": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+}

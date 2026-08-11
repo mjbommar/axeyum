@@ -349,8 +349,8 @@ here as closed evidence boundaries. A3 remains incomplete, but all currently
 preregistered bounded mechanisms are closed negatively. A4 has now also yielded;
 A5 is the first active item.
 
-**Immediate action (`WIP`).** Commit the failed IDL evidence and preregistration,
-then run its frozen 12-observation exact-binary replay matrix. Do not start QF_RDL.
+**Immediate action (`WIP`).** Run the preregistered B1 atom-admission candidate
+and unchanged-binary G1 timeout ladder. Keep their gates separate; do not start QF_RDL.
 All earlier failed, invalid, pre-change, and partial streams remain
 non-credited. Stop on any historical-decision loss, wrong verdict, stderr,
 malformed trace, or process failure. Only a valid monotone QF_LRA derivation
