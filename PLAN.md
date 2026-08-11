@@ -352,14 +352,13 @@ here as closed evidence boundaries. A3 remains incomplete, but all currently
 preregistered bounded mechanisms are closed negatively. A4 has now also yielded;
 A5 is the first active item.
 
-**Immediate action (`WIP`).** B1 is closed negatively and its code is removed;
-G1 is a positive diagnostic only. Preregister separate bounded BubbleSort
-front-end and GraphPartitioning DL-slice follow-ups, including the original
-allocation-abort controls and complete retained QF_IDL/QF_RDL decisions. Do not
-implement either, run a census, or start QF_RDL before those gates are frozen.
-All failed, invalid, partial, and pre-change streams remain non-credited. Stop on
-any loss, wrong verdict, stderr, malformed trace, or process failure. A3/A4's
-negative routes remain closed, and A2 still authorizes no live C0/F2 action.
+**Immediate action (`WIP`).** Run only the preregistered unchanged-binary D2
+BubbleSort ladder. B1 is closed and removed; G1 remains diagnostic only. D2 may
+authorize a structural-budget diagnostic, never a production policy. Do not run
+a census or QF_RDL. Any later candidate must retain the equality-heavy split,
+allocation-abort controls, and every QF_IDL/QF_RDL decision. Failed, partial,
+and pre-change streams remain non-credited. Stop on any loss, wrong verdict,
+stderr, malformed trace, or process failure. A3/A4 remain closed negatively.
 
 **Parallel documentation action.** The comprehensive pass and 2026-08-09
 README application/vision revision are closed. Continue only for a concrete
