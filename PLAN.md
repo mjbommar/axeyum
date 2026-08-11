@@ -94,7 +94,10 @@ retained all 86 historical decisions, added four agreeing decisions, made no
 wrong verdict, classified `sc-39` correctly, and retained the former
 `windowreal` loss as UNSAT. QF_IDL then completed 200/200 but lost two historical
 decisions hidden by two gains; QF_RDL is forbidden. The sequence is non-credited.
-See the [IDL stop](docs/plan/qf-linear-a5-idl-monotonicity-v1-preregistration-2026-08-11.md).
+The 12-case replay made both losses deterministic. B1's search-free atom
+validation candidate still returned BubbleSort `unknown` in 3/3 and was removed;
+unchanged-binary G1 returned GraphPartitioning SAT through `dl-online` in 3/3 at
+32 seconds. See the [loss result](docs/plan/qf-linear-a5-idl-loss-mechanism-v1-result-2026-08-11.md).
 
 A3 is **WIP**. Pushed result checkpoint `3696e7dd5` is integrated on current
 main by `47d8cd956`; its source branch remains preserved. The repaired complete
@@ -349,18 +352,14 @@ here as closed evidence boundaries. A3 remains incomplete, but all currently
 preregistered bounded mechanisms are closed negatively. A4 has now also yielded;
 A5 is the first active item.
 
-**Immediate action (`WIP`).** Run the preregistered B1 atom-admission candidate
-and unchanged-binary G1 timeout ladder. Keep their gates separate; do not start QF_RDL.
-All earlier failed, invalid, pre-change, and partial streams remain
-non-credited. Stop on any historical-decision loss, wrong verdict, stderr,
-malformed trace, or process failure. Only a valid monotone QF_LRA derivation
-authorizes QF_IDL, QF_RDL, and complete cross-division derivation. No score gain
-is claimed by changing a crash into typed `unknown`; no breadth change is
-authorized before the complete monotone census identifies a repeated mechanism.
-A4's v3 restart decided 93/200, with one 2/3-SAT wall-clock boundary. Both
-model-reuse variants failed isolated stability and were removed; do not retry
-until 94 happens to pass. A3/A4's negative routes remain closed. A2 still does
-not authorize C0/F2, host/NAS mutation, allocation, or a solver fleet.
+**Immediate action (`WIP`).** B1 is closed negatively and its code is removed;
+G1 is a positive diagnostic only. Preregister separate bounded BubbleSort
+front-end and GraphPartitioning DL-slice follow-ups, including the original
+allocation-abort controls and complete retained QF_IDL/QF_RDL decisions. Do not
+implement either, run a census, or start QF_RDL before those gates are frozen.
+All failed, invalid, partial, and pre-change streams remain non-credited. Stop on
+any loss, wrong verdict, stderr, malformed trace, or process failure. A3/A4's
+negative routes remain closed, and A2 still authorizes no live C0/F2 action.
 
 **Parallel documentation action.** The comprehensive pass and 2026-08-09
 README application/vision revision are closed. Continue only for a concrete
@@ -630,7 +629,7 @@ or remove dirty/unmerged state to meet a free-space target.
 | Full-library measurement | `WIP`; A2 readiness `DONE` | The R1--R5 readiness stack is integrated by `8ed5ad089` and focused/aggregate/scoped/topic/full-main green; the real registered offline-build smoke passed. No live run, preparation root, or launch authority exists. A later live C0/F2 step requires separate review. |
 | QF_NIA breadth | `WIP`, yielded | Current clean result remains 34/200 versus 89/200. Reconstruction, large-core deletion, relevance activation, and bounded clause-estimate attribution are closed negatively without production solver code. The final diagnostic failed its exact pipeline-boundary record gate; no mechanism or 200-row run is authorized and the 64,000,000 ceiling remains. Move to A4 unless independent new NIA evidence appears. |
 | QF_UFLIA breadth | `WIP`, yielded | Historical 94/180 remains; the exact-commit restart produced 93/200 because one SAT case is wall-clock unstable. No sidecar or new result was credited. |
-| LRA/IDL/RDL | `WIP`; V2 failed | QF_LRA passed, but fresh QF_IDL lost two historical decisions hidden by two gains. Preserve the non-credited stream and run only the preregistered replay matrix; QF_RDL is forbidden. |
+| LRA/IDL/RDL | `WIP`; V2 failed | QF_LRA passed; QF_IDL lost two decisions. Replay confirmed both. B1 failed and was removed; G1 found a nearby existing DL boundary. Preregister separate follow-ups; QF_RDL is forbidden. |
 | QF_BV/QF_SLIA/UF/QF_ABV | `WIP`, strong selected cells | Preserve current ledgers; do not prioritize small score gains above A2–A6. |
 | Evidence and Lean reconstruction | `WIP` | A6 and A9; distinct certificate/check/reconstruction claims. |
 | Route exploration | `BLOCKED` beyond catalogue work | Proposed track; T0.2/T0.6/T0.1/T2.3 precede T3.5. |

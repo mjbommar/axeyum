@@ -1,5 +1,9 @@
 # QF linear A5 IDL loss-mechanism v1 preregistration — 2026-08-11
 
+**Closed.** B1 failed its 3/3 target and was removed; G1 found a nearby
+unchanged-route boundary without authorizing production changes. See the
+[result](qf-linear-a5-idl-loss-mechanism-v1-result-2026-08-11.md).
+
 ## Evidence boundary
 
 The [isolated replay result](qf-linear-a5-idl-monotonicity-v1-result-2026-08-11.md)
