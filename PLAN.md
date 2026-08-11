@@ -92,9 +92,9 @@ external-frontier `just check` in 6,335 seconds with exit 0. Fresh pinned
 checkpoint `d0e0d6cea` completed QF_LRA 200/200 with zero stderr. Its join
 retained all 86 historical decisions, added four agreeing decisions, made no
 wrong verdict, classified `sc-39` correctly, and retained the former
-`windowreal` loss as UNSAT. Only that source/binary may proceed to QF_IDL; the
-census remains uncredited. See the [preregistration](docs/plan/qf-linear-a5-atom-cap-classifier-repair-v1-preregistration-2026-08-10.md)
-and [result](docs/plan/qf-linear-a5-atom-cap-classifier-repair-v1-result-2026-08-10.md).
+`windowreal` loss as UNSAT. QF_IDL then completed 200/200 but lost two historical
+decisions hidden by two gains; QF_RDL is forbidden. The sequence is non-credited.
+See the [IDL stop](docs/plan/qf-linear-a5-idl-monotonicity-v1-preregistration-2026-08-11.md).
 
 A3 is **WIP**. Pushed result checkpoint `3696e7dd5` is integrated on current
 main by `47d8cd956`; its source branch remains preserved. The repaired complete
@@ -349,9 +349,8 @@ here as closed evidence boundaries. A3 remains incomplete, but all currently
 preregistered bounded mechanisms are closed negatively. A4 has now also yielded;
 A5 is the first active item.
 
-**Immediate action (`WIP`).** Resume QF_IDL from a clean worktree at pinned
-remote `agent/arith/a5-capture-d0e0d6cea` and the retained exact binary. Start
-only at one-minute load at most 12; strict-join QF_IDL before QF_RDL.
+**Immediate action (`WIP`).** Commit the failed IDL evidence and preregistration,
+then run its frozen 12-observation exact-binary replay matrix. Do not start QF_RDL.
 All earlier failed, invalid, pre-change, and partial streams remain
 non-credited. Stop on any historical-decision loss, wrong verdict, stderr,
 malformed trace, or process failure. Only a valid monotone QF_LRA derivation
@@ -631,7 +630,7 @@ or remove dirty/unmerged state to meet a free-space target.
 | Full-library measurement | `WIP`; A2 readiness `DONE` | The R1--R5 readiness stack is integrated by `8ed5ad089` and focused/aggregate/scoped/topic/full-main green; the real registered offline-build smoke passed. No live run, preparation root, or launch authority exists. A later live C0/F2 step requires separate review. |
 | QF_NIA breadth | `WIP`, yielded | Current clean result remains 34/200 versus 89/200. Reconstruction, large-core deletion, relevance activation, and bounded clause-estimate attribution are closed negatively without production solver code. The final diagnostic failed its exact pipeline-boundary record gate; no mechanism or 200-row run is authorized and the 64,000,000 ceiling remains. Move to A4 unless independent new NIA evidence appears. |
 | QF_UFLIA breadth | `WIP`, yielded | Historical 94/180 remains; the exact-commit restart produced 93/200 because one SAT case is wall-clock unstable. No sidecar or new result was credited. |
-| LRA/IDL/RDL | `WIP`; V2 incomplete | Fresh QF_LRA at pinned `d0e0d6cea` passed its strict zero-loss join. Resume QF_IDL, then QF_RDL, from the same source and binary; only the complete three-division derivation may be credited. |
+| LRA/IDL/RDL | `WIP`; V2 failed | QF_LRA passed, but fresh QF_IDL lost two historical decisions hidden by two gains. Preserve the non-credited stream and run only the preregistered replay matrix; QF_RDL is forbidden. |
 | QF_BV/QF_SLIA/UF/QF_ABV | `WIP`, strong selected cells | Preserve current ledgers; do not prioritize small score gains above A2–A6. |
 | Evidence and Lean reconstruction | `WIP` | A6 and A9; distinct certificate/check/reconstruction claims. |
 | Route exploration | `BLOCKED` beyond catalogue work | Proposed track; T0.2/T0.6/T0.1/T2.3 precede T3.5. |
