@@ -1819,6 +1819,7 @@ fn dl_decided_report(
         arena,
         assertions,
         &crate::auto::dl_probe_budget(config),
+        crate::auto::extended_dl_probe_timeout(config),
     )? {
         CheckResult::Sat(model) => Evidence::Sat(model),
         // Correct, and honestly recorded as uncertified: the Boolean-structured

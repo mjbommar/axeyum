@@ -1855,6 +1855,13 @@ fn timeout_detail(
     detail
 }
 
+fn timeout_result(detail: String) -> CheckResult {
+    CheckResult::Unknown(UnknownReason {
+        kind: UnknownKind::Timeout,
+        detail,
+    })
+}
+
 /// Decides a **pure difference-logic** query (`QF_IDL` / `QF_RDL`) through the
 /// generic CDCL(T) driver with negative-cycle detection as the theory.
 ///
@@ -1869,6 +1876,7 @@ pub(crate) fn try_check_qf_dl(
     arena: &mut TermArena,
     assertions: &[TermId],
     config: &SolverConfig,
+    extended_timeout: Option<Duration>,
 ) -> Option<CheckResult> {
     let probe_started = Instant::now();
     // The probe budget covers the entire route, including the conservative
@@ -1879,17 +1887,19 @@ pub(crate) fn try_check_qf_dl(
         .timeout
         .and_then(|timeout| probe_started.checked_add(timeout));
     let scan = scan_dl(arena, assertions, maximum_deadline)?;
-    let deadline = equality_fallback_probe_timeout(
+    let deadline = structural_probe_timeout(
         config.timeout,
+        extended_timeout,
         scan.atom_terms.len(),
         scan.eq_gates.len(),
     )
     .and_then(|timeout| probe_started.checked_add(timeout));
     if past_deadline(deadline) {
-        return Some(CheckResult::Unknown(UnknownReason {
-            kind: UnknownKind::Timeout,
-            detail: timeout_detail("budget exhausted in the difference-logic front end", &scan, None),
-        }));
+        return Some(timeout_result(timeout_detail(
+            "budget exhausted in the difference-logic front end",
+            &scan,
+            None,
+        )));
     }
 
     let mut enc = Encoder::new(&scan.atom_terms);
@@ -1899,36 +1909,27 @@ pub(crate) fn try_check_qf_dl(
     // follow the registered atoms, leaving atom indices aligned with the
     // theory's numbering.
     if !encode_numeric_equalities(&scan, &mut enc, &mut clauses, deadline) {
-        return Some(CheckResult::Unknown(UnknownReason {
-            kind: UnknownKind::Timeout,
-            detail: timeout_detail(
+        return Some(timeout_result(timeout_detail(
                 "budget exhausted encoding difference-logic equalities",
                 &scan,
                 Some((&enc, &clauses)),
-            ),
-        }));
+            )));
     }
     // Tseitin `g ⟺ (a ⟺ b)` for every Boolean equality, in the post-order the
     // scan recorded, so a nested equality already has its variable.
     if !encode_boolean_equalities(arena, &scan, &mut enc, &mut clauses, deadline)? {
-        return Some(CheckResult::Unknown(UnknownReason {
-            kind: UnknownKind::Timeout,
-            detail: timeout_detail(
+        return Some(timeout_result(timeout_detail(
                 "budget exhausted encoding difference-logic Boolean equalities",
                 &scan,
                 Some((&enc, &clauses)),
-            ),
-        }));
+            )));
     }
     if !encode_assertions(arena, assertions, &mut enc, &mut clauses, deadline)? {
-        return Some(CheckResult::Unknown(UnknownReason {
-            kind: UnknownKind::Timeout,
-            detail: timeout_detail(
+        return Some(timeout_result(timeout_detail(
                 "budget exhausted encoding difference-logic assertions",
                 &scan,
                 Some((&enc, &clauses)),
-            ),
-        }));
+            )));
     }
     let driver_clauses: Vec<Vec<CdcltLit>> = clauses
         .iter()
@@ -1944,28 +1945,22 @@ pub(crate) fn try_check_qf_dl(
         .collect();
 
     if past_deadline(deadline) {
-        return Some(CheckResult::Unknown(UnknownReason {
-            kind: UnknownKind::Timeout,
-            detail: timeout_detail(
+        return Some(timeout_result(timeout_detail(
                 "budget exhausted materializing difference-logic clauses",
                 &scan,
                 Some((&enc, &clauses)),
-            ),
-        }));
+            )));
     }
     let atom_count = scan.atom_terms.len();
     let mut theory = DlTheory::new(&scan, deadline);
     let mut solver = CdclT::new(enc.var_count, atom_count, driver_clauses, deadline);
     match solver.solve(&mut theory) {
         Outcome::Unsat => Some(CheckResult::Unsat),
-        Outcome::Unknown => Some(CheckResult::Unknown(UnknownReason {
-            kind: UnknownKind::Timeout,
-            detail: timeout_detail(
+        Outcome::Unknown => Some(timeout_result(timeout_detail(
                 "budget exhausted in the online difference-logic driver",
                 &scan,
                 Some((&enc, &clauses)),
-            ),
-        })),
+            ))),
         Outcome::Sat => {
             let Some(mut model) = lift_model(&scan, &theory.graph) else {
                 return Some(CheckResult::Unknown(unknown(
@@ -1984,24 +1979,26 @@ pub(crate) fn try_check_qf_dl(
     }
 }
 
-/// Shortens the maximum DL probe only for a moderate equality-expanded query.
+/// Selects the DL probe timeout from stable, already-computed scan structure.
 ///
 /// Numeric equalities become two theory atoms plus a Boolean gate. On the
 /// measured medium shape the generic LIA fallback is competitive and needs a
-/// larger slice; on a large equality skeleton it is not, while compact
-/// gate-free DL searches need the default probe allowance. These thresholds
-/// were preregistered from the 2026-08-06 loss/control census and are guarded by
-/// the complete retained `QF_IDL/QF_RDL` decision set.
-fn equality_fallback_probe_timeout(
-    maximum: Option<Duration>,
+/// larger slice, so it keeps the accepted shortened budget. The measured large
+/// equality-heavy class may use the bounded extension; all low-equality shapes
+/// retain the standard maximum.
+fn structural_probe_timeout(
+    standard: Option<Duration>,
+    extended: Option<Duration>,
     atom_count: usize,
     equality_gate_count: usize,
 ) -> Option<Duration> {
     const MIN_EQUALITY_GATES: usize = 128;
     const MAX_MODERATE_ATOMS: usize = 1024;
-    maximum.map(|timeout| {
+    standard.map(|timeout| {
         if equality_gate_count >= MIN_EQUALITY_GATES && atom_count <= MAX_MODERATE_ATOMS {
             timeout * 2 / 3
+        } else if equality_gate_count >= MIN_EQUALITY_GATES {
+            extended.unwrap_or(timeout)
         } else {
             timeout
         }
