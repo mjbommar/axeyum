@@ -83,10 +83,42 @@ The five external frontier artifacts were retained outside the repository:
 - `string_bound.json`: 2,791 bytes,
   `64ce75f853bc420e60e849b07c7d8429a926f2c019d86e611c7a85c8a4ba3181`.
 
+## Fresh QF_LRA checkpoint
+
+Exact clean pushed checkpoint
+`d0e0d6ceac779b5cc3e2c1b5f3096c77780aecf9` produced a fresh release
+`explain_corpus` binary: 11,859,344 bytes, SHA-256
+`eec4813b557165ec95afc43912ad9fc2b5400ec94db5b7134ecacd50b100867d`.
+The binary is byte-identical to the repair build, but this build binds the
+capture to the exact post-gate source. The source is also pinned at remote
+`agent/arith/a5-capture-d0e0d6cea` so the interrupted operator session does not
+force a provenance-breaking mixed-commit sequence.
+
+QF_LRA ran from `2026-08-11T19:31:10Z` through `19:48:40Z` at start load
+10.76. It completed all 200 sequential isolated workers in 1,049,841 ms under
+the inherited 8 GiB address-space limit and 24,000 ms per-query timeout, exited
+0, and emitted zero stderr. The raw stream is 104,343 bytes with SHA-256
+`b7d9180d13140978e85d021d36ced81f01bab5f6ce57295c721c5863d45f7ce4`;
+its 1,749-byte metadata has SHA-256
+`e9bb85e1240d8440abd294b8f4e5142f53ed84d7f1f247538f0484ab01b4949f`.
+
+The strict join found 90 current decisions versus 86 historical, four agreeing
+gains, zero losses, zero wrong verdicts, and 56 reference-only rows. Their
+buckets are 24 normalization-resource, 26 search-budget, four model-replay, and
+two explanation-core. `sc-39` is the required bounded
+`normalization-resource` control; `windowreal-no_t_deadlock-17` retains UNSAT.
+The [raw stream](evidence/qf-linear-a5/in-progress/d0e0d6cea/QF_LRA.axeyum.jsonl),
+[capture metadata](evidence/qf-linear-a5/in-progress/d0e0d6cea/QF_LRA.capture.json),
+and [join summary](evidence/qf-linear-a5/in-progress/d0e0d6cea/QF_LRA.join.json)
+are retained as an in-progress checkpoint. This authorizes QF_IDL from the same
+exact source and binary; it does not credit the incomplete three-division
+census.
+
 ## Resume boundary
 
-Build and fingerprint one fresh release binary from the next exact pushed
-documentation checkpoint. Restart V2 from QF_LRA row 1 only when one-minute
-load is at most 12 and bind every row to that exact source/binary identity. The
-invalid `775446932` stream authorizes neither reuse nor QF_IDL. Run the strict
-QF_LRA join before permitting QF_IDL.
+Check out a clean branch at `d0e0d6cea` tracking remote
+`agent/arith/a5-capture-d0e0d6cea`, reuse the retained exact binary, and start
+QF_IDL only when one-minute host load is at most 12. Strict-join QF_IDL before
+permitting QF_RDL. Stop on any identity drift, historical loss, wrong verdict,
+stderr, malformed trace, or process failure. Do not combine this checkpoint
+with the invalid `775446932` stream or any prior capture.
