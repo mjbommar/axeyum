@@ -4,15 +4,17 @@
 for current project status, ordered work, blockers, and resume guidance. Read it
 first and update it before ending a project-level work session.
 
-- Last consolidated: **2026-08-10**
+- Last consolidated: **2026-08-11**
 - Integrated baseline merged into the active topic:
   `c516b5fac20f38886dfad41433656bad988f9f5c`
-- Active A5 classifier repair: exact pushed
-  `d646382e7422ba60faae7bb5795a1174f8ad4a34`; full `just check` remains
-- Latest full-gate attempt: exact pushed checkpoint `3267432a71818fb0671df8f2324f15e213debc08`
-  passed `just check` with external frontier artifacts and exit 0
+- Active A5 classifier repair: code at exact pushed
+  `d646382e7422ba60faae7bb5795a1174f8ad4a34`; its documentation descendant
+  `b9938576bce50b80c4525d48cddacdf1ac5cb266` passed the full release gate
+- Latest full-gate attempt: exact pushed checkpoint
+  `b9938576bce50b80c4525d48cddacdf1ac5cb266` passed `just check` with
+  external frontier artifacts and exit 0
 - Latest comprehensive green exact-commit gate:
-  `3267432a71818fb0671df8f2324f15e213debc08` (`just check` exit 0)
+  `b9938576bce50b80c4525d48cddacdf1ac5cb266` (`just check` exit 0)
 - Latest integrated A3 code increments: bounded SMT-LIB `distinct` expansion at
   `63c82a6ef`, typed arithmetic-model reconstruction at `4ff9a82c6`, and
   deterministic string/integer coupling at `db7b426e8`
@@ -84,10 +86,11 @@ uninterrupted external-frontier `just check` in 6,410 seconds with exit 0; see t
 
 The QF_LRA restart at `775446932` completed 200 rows with zero stderr and no
 verdict loss, then failed closed on a latent `sc-39` classifier mismatch. The
-exact-phrase repair is pushed at `d646382e7`; 23/23 focused tests and the frozen
-24-row transition audit pass. User-requested wrap-up interrupted its full gate
-after 294 seconds with no observed test failure, so that gate is non-credited.
-IDL remains forbidden; see the [preregistration](docs/plan/qf-linear-a5-atom-cap-classifier-repair-v1-preregistration-2026-08-10.md)
+exact-phrase repair at `d646382e7` passed its focused audit; exact pushed
+documentation descendant `b9938576b` then passed a fresh uninterrupted
+external-frontier `just check` in 6,335 seconds with exit 0. This authorizes a
+fresh release build, not reuse of the invalid stream. IDL remains forbidden
+until the fresh QF_LRA restart passes its strict join; see the [preregistration](docs/plan/qf-linear-a5-atom-cap-classifier-repair-v1-preregistration-2026-08-10.md)
 and [result](docs/plan/qf-linear-a5-atom-cap-classifier-repair-v1-result-2026-08-10.md).
 
 A3 is **WIP**. Pushed result checkpoint `3696e7dd5` is integrated on current
