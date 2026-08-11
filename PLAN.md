@@ -346,9 +346,10 @@ here as closed evidence boundaries. A3 remains incomplete, but all currently
 preregistered bounded mechanisms are closed negatively. A4 has now also yielded;
 A5 is the first active item.
 
-**Immediate action (`WIP`).** Run one uninterrupted external-frontier
-`just check` at exact pushed `d646382e7`, then restart V2 at QF_LRA row 1 under
-the unchanged envelope. Do not start IDL from the invalid `775446932` stream.
+**Immediate action (`WIP`).** Build and fingerprint one fresh release
+`explain_corpus` binary from the next exact clean pushed checkpoint, then
+restart V2 at QF_LRA row 1 only when one-minute host load is at most 12. Do not
+start IDL from the invalid `775446932` stream.
 All earlier failed, invalid, pre-change, and partial streams remain
 non-credited. Stop on any historical-decision loss, wrong verdict, stderr,
 malformed trace, or process failure. Only a valid monotone QF_LRA derivation
@@ -494,8 +495,8 @@ model credit.
 subsets of their references. The newest architecture has not yet received one
 cross-division residual census.
 
-**Next slice.** Close the atom-cap classifier mismatch, complete-gate it, then
-restart and derive the complete V2 census. Only after a zero-loss
+**Next slice.** Restart and derive the complete V2 census from the fully gated
+classifier repair. Only after a zero-loss
 derivation may normalization failures,
 unsupported difference shapes, disequalities, explanation blowups, and
 ordinary search failures be classified across the three current ledgers. Treat
@@ -628,7 +629,7 @@ or remove dirty/unmerged state to meet a free-space target.
 | Full-library measurement | `WIP`; A2 readiness `DONE` | The R1--R5 readiness stack is integrated by `8ed5ad089` and focused/aggregate/scoped/topic/full-main green; the real registered offline-build smoke passed. No live run, preparation root, or launch authority exists. A later live C0/F2 step requires separate review. |
 | QF_NIA breadth | `WIP`, yielded | Current clean result remains 34/200 versus 89/200. Reconstruction, large-core deletion, relevance activation, and bounded clause-estimate attribution are closed negatively without production solver code. The final diagnostic failed its exact pipeline-boundary record gate; no mechanism or 200-row run is authorized and the 64,000,000 ceiling remains. Move to A4 unless independent new NIA evidence appears. |
 | QF_UFLIA breadth | `WIP`, yielded | Historical 94/180 remains; the exact-commit restart produced 93/200 because one SAT case is wall-clock unstable. No sidecar or new result was credited. |
-| LRA/IDL/RDL | `WIP`; V2 non-credited | Three 200-row V2 streams completed, but derivation exposed one deterministic historical QF_LRA UNSAT loss. Exact pushed repair `8a6de50ac` passed target, safety-control, pre-push, and focused solver gates; the complete gate and three-division restart remain. |
+| LRA/IDL/RDL | `WIP`; V2 non-credited | The pre-SAT and classifier repairs are fully gated. Build one fresh exact-source binary, then restart QF_LRA; only its strict zero-loss join authorizes IDL and RDL. |
 | QF_BV/QF_SLIA/UF/QF_ABV | `WIP`, strong selected cells | Preserve current ledgers; do not prioritize small score gains above A2–A6. |
 | Evidence and Lean reconstruction | `WIP` | A6 and A9; distinct certificate/check/reconstruction claims. |
 | Route exploration | `BLOCKED` beyond catalogue work | Proposed track; T0.2/T0.6/T0.1/T2.3 precede T3.5. |
