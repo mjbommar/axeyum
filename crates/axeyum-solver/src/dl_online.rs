@@ -1826,6 +1826,35 @@ fn encode_assertions(
     Some(true)
 }
 
+/// Formats stable, already-computed scan/encoding counts for a timeout trace.
+///
+/// This runs only while constructing the `Unknown(Timeout)` detail. It performs
+/// no extra traversal and does not participate in timeout selection or solving.
+fn timeout_detail(
+    stage: &str,
+    scan: &DlScan,
+    encoding: Option<(&Encoder, &[Vec<Lit>])>,
+) -> String {
+    let mut detail = format!(
+        "{stage} (atoms={}, equality_gates={}, bool_equality_gates={}",
+        scan.atom_terms.len(),
+        scan.eq_gates.len(),
+        scan.bool_eq_gates.len(),
+    );
+    if let Some((encoder, clauses)) = encoding {
+        use std::fmt::Write as _;
+        write!(
+            detail,
+            ", cnf_vars={}, clauses={}",
+            encoder.var_count,
+            clauses.len()
+        )
+        .expect("writing to a String cannot fail");
+    }
+    detail.push(')');
+    detail
+}
+
 /// Decides a **pure difference-logic** query (`QF_IDL` / `QF_RDL`) through the
 /// generic CDCL(T) driver with negative-cycle detection as the theory.
 ///
@@ -1859,7 +1888,7 @@ pub(crate) fn try_check_qf_dl(
     if past_deadline(deadline) {
         return Some(CheckResult::Unknown(UnknownReason {
             kind: UnknownKind::Timeout,
-            detail: "budget exhausted in the difference-logic front end".to_owned(),
+            detail: timeout_detail("budget exhausted in the difference-logic front end", &scan, None),
         }));
     }
 
@@ -1872,7 +1901,11 @@ pub(crate) fn try_check_qf_dl(
     if !encode_numeric_equalities(&scan, &mut enc, &mut clauses, deadline) {
         return Some(CheckResult::Unknown(UnknownReason {
             kind: UnknownKind::Timeout,
-            detail: "budget exhausted encoding difference-logic equalities".to_owned(),
+            detail: timeout_detail(
+                "budget exhausted encoding difference-logic equalities",
+                &scan,
+                Some((&enc, &clauses)),
+            ),
         }));
     }
     // Tseitin `g ⟺ (a ⟺ b)` for every Boolean equality, in the post-order the
@@ -1880,13 +1913,21 @@ pub(crate) fn try_check_qf_dl(
     if !encode_boolean_equalities(arena, &scan, &mut enc, &mut clauses, deadline)? {
         return Some(CheckResult::Unknown(UnknownReason {
             kind: UnknownKind::Timeout,
-            detail: "budget exhausted encoding difference-logic Boolean equalities".to_owned(),
+            detail: timeout_detail(
+                "budget exhausted encoding difference-logic Boolean equalities",
+                &scan,
+                Some((&enc, &clauses)),
+            ),
         }));
     }
     if !encode_assertions(arena, assertions, &mut enc, &mut clauses, deadline)? {
         return Some(CheckResult::Unknown(UnknownReason {
             kind: UnknownKind::Timeout,
-            detail: "budget exhausted encoding difference-logic assertions".to_owned(),
+            detail: timeout_detail(
+                "budget exhausted encoding difference-logic assertions",
+                &scan,
+                Some((&enc, &clauses)),
+            ),
         }));
     }
     let driver_clauses: Vec<Vec<CdcltLit>> = clauses
@@ -1905,7 +1946,11 @@ pub(crate) fn try_check_qf_dl(
     if past_deadline(deadline) {
         return Some(CheckResult::Unknown(UnknownReason {
             kind: UnknownKind::Timeout,
-            detail: "budget exhausted materializing difference-logic clauses".to_owned(),
+            detail: timeout_detail(
+                "budget exhausted materializing difference-logic clauses",
+                &scan,
+                Some((&enc, &clauses)),
+            ),
         }));
     }
     let atom_count = scan.atom_terms.len();
@@ -1915,7 +1960,11 @@ pub(crate) fn try_check_qf_dl(
         Outcome::Unsat => Some(CheckResult::Unsat),
         Outcome::Unknown => Some(CheckResult::Unknown(UnknownReason {
             kind: UnknownKind::Timeout,
-            detail: "budget exhausted in the online difference-logic driver".to_owned(),
+            detail: timeout_detail(
+                "budget exhausted in the online difference-logic driver",
+                &scan,
+                Some((&enc, &clauses)),
+            ),
         })),
         Outcome::Sat => {
             let Some(mut model) = lift_model(&scan, &theory.graph) else {

@@ -77,6 +77,30 @@ fn equality_fallback_budget_is_narrowly_structural() {
     assert_eq!(equality_fallback_probe_timeout(None, 906, 350), None);
 }
 
+#[test]
+fn timeout_detail_reports_only_available_stable_counts() {
+    let mut arena = TermArena::new();
+    let x = int(&mut arena, "telemetry_x");
+    let zero = arena.int_const(0);
+    let assertion = arena.int_le(x, zero).expect("x <= 0");
+    let scan = scan_dl(&mut arena, &[assertion], None).expect("DL scan");
+
+    assert_eq!(
+        timeout_detail("stopped", &scan, None),
+        "stopped (atoms=1, equality_gates=0, bool_equality_gates=0)"
+    );
+
+    let encoder = Encoder::new(&scan.atom_terms);
+    let clauses = vec![vec![Lit {
+        var: 0,
+        positive: true,
+    }]];
+    assert_eq!(
+        timeout_detail("stopped", &scan, Some((&encoder, &clauses))),
+        "stopped (atoms=1, equality_gates=0, bool_equality_gates=0, cnf_vars=1, clauses=1)"
+    );
+}
+
 // -------------------------------------------------------------------------
 // Positive: the route decides real difference logic
 // -------------------------------------------------------------------------
