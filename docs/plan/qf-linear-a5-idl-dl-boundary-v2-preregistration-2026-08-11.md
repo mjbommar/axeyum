@@ -1,5 +1,8 @@
 # QF linear A5 IDL DL-boundary v2 preregistration — 2026-08-11
 
+**Closed successfully at 32 seconds.** BubbleSort returned UNSAT through the
+unchanged `dl-online` route in 3/3; see the [D2 result](qf-linear-a5-idl-bubble-d2-result-2026-08-11.md).
+
 ## Evidence boundary
 
 The [loss-mechanism result](qf-linear-a5-idl-loss-mechanism-v1-result-2026-08-11.md)
@@ -56,7 +59,8 @@ with the failed V2 census or the prior G1 directory.
 
 ## Later production gate
 
-Any later DL-slice candidate must be based on stable scan structure rather than
+The separately [preregistered candidate](qf-linear-a5-idl-extended-dl-slice-v1-preregistration-2026-08-11.md)
+must be based on stable scan structure rather than
 benchmark identity, preserve the accepted equality-heavy 12/12 split, and run
 the original allocation-abort controls plus every retained QF_IDL/QF_RDL
 decision. It must keep SAT replay, checked DL conflicts, the 8 GiB limit, and a

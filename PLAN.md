@@ -94,10 +94,9 @@ retained all 86 historical decisions, added four agreeing decisions, made no
 wrong verdict, classified `sc-39` correctly, and retained the former
 `windowreal` loss as UNSAT. QF_IDL then completed 200/200 but lost two historical
 decisions hidden by two gains; QF_RDL is forbidden. The sequence is non-credited.
-The 12-case replay made both losses deterministic. B1's search-free atom
-validation candidate still returned BubbleSort `unknown` in 3/3 and was removed;
-unchanged-binary G1 returned GraphPartitioning SAT through `dl-online` in 3/3 at
-32 seconds. See the [loss result](docs/plan/qf-linear-a5-idl-loss-mechanism-v1-result-2026-08-11.md).
+Replay made both losses deterministic. B1 failed and was removed. Unchanged-
+binary G1/D2 returned GraphPartitioning SAT and BubbleSort UNSAT through
+`dl-online` in 3/3 each at 32 seconds. See the [D2 result](docs/plan/qf-linear-a5-idl-bubble-d2-result-2026-08-11.md).
 
 A3 is **WIP**. Pushed result checkpoint `3696e7dd5` is integrated on current
 main by `47d8cd956`; its source branch remains preserved. The repaired complete
@@ -352,13 +351,12 @@ here as closed evidence boundaries. A3 remains incomplete, but all currently
 preregistered bounded mechanisms are closed negatively. A4 has now also yielded;
 A5 is the first active item.
 
-**Immediate action (`WIP`).** Run only the preregistered unchanged-binary D2
-BubbleSort ladder. B1 is closed and removed; G1 remains diagnostic only. D2 may
-authorize a structural-budget diagnostic, never a production policy. Do not run
-a census or QF_RDL. Any later candidate must retain the equality-heavy split,
-allocation-abort controls, and every QF_IDL/QF_RDL decision. Failed, partial,
-and pre-change streams remain non-credited. Stop on any loss, wrong verdict,
-stderr, malformed trace, or process failure. A3/A4 remain closed negatively.
+**Immediate action (`WIP`).** Run the preregistered structural 21/3 DL-slice
+candidate and immediate matrix only. If it passes, run all 173 retained IDL/RDL
+decisions and allocation controls; otherwise remove it. Preserve the 12/12
+equality split, pre-SAT boundary, replay/checking, and route order. No census or
+QF_RDL breadth run is authorized. Failed and pre-change streams stay
+non-credited; stop on any loss, wrong verdict, stderr, or process failure.
 
 **Parallel documentation action.** The comprehensive pass and 2026-08-09
 README application/vision revision are closed. Continue only for a concrete
