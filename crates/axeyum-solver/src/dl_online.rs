@@ -1840,7 +1840,6 @@ pub(crate) fn try_check_qf_dl(
     arena: &mut TermArena,
     assertions: &[TermId],
     config: &SolverConfig,
-    extended_timeout: Option<Duration>,
 ) -> Option<CheckResult> {
     let probe_started = Instant::now();
     // The probe budget covers the entire route, including the conservative
@@ -1851,9 +1850,8 @@ pub(crate) fn try_check_qf_dl(
         .timeout
         .and_then(|timeout| probe_started.checked_add(timeout));
     let scan = scan_dl(arena, assertions, maximum_deadline)?;
-    let deadline = structural_probe_timeout(
+    let deadline = equality_fallback_probe_timeout(
         config.timeout,
-        extended_timeout,
         scan.atom_terms.len(),
         scan.eq_gates.len(),
     )
@@ -1937,30 +1935,24 @@ pub(crate) fn try_check_qf_dl(
     }
 }
 
-/// Selects a DL probe timeout from stable scan structure.
+/// Shortens the maximum DL probe only for a moderate equality-expanded query.
 ///
 /// Numeric equalities become two theory atoms plus a Boolean gate. On the
 /// measured medium shape the generic LIA fallback is competitive and needs a
-/// larger slice, so that shape keeps its accepted shortened budget. Large,
-/// non-equality-heavy DL searches may use the separately bounded extended
-/// allowance; compact and large equality-heavy shapes keep the standard
-/// maximum. These thresholds are guarded by the complete retained
-/// `QF_IDL/QF_RDL` decision set.
-fn structural_probe_timeout(
-    standard: Option<Duration>,
-    extended: Option<Duration>,
+/// larger slice; on a large equality skeleton it is not, while compact
+/// gate-free DL searches need the default probe allowance. These thresholds
+/// were preregistered from the 2026-08-06 loss/control census and are guarded by
+/// the complete retained `QF_IDL/QF_RDL` decision set.
+fn equality_fallback_probe_timeout(
+    maximum: Option<Duration>,
     atom_count: usize,
     equality_gate_count: usize,
 ) -> Option<Duration> {
     const MIN_EQUALITY_GATES: usize = 128;
     const MAX_MODERATE_ATOMS: usize = 1024;
-    standard.map(|timeout| {
+    maximum.map(|timeout| {
         if equality_gate_count >= MIN_EQUALITY_GATES && atom_count <= MAX_MODERATE_ATOMS {
             timeout * 2 / 3
-        } else if atom_count > MAX_MODERATE_ATOMS
-            && equality_gate_count < MIN_EQUALITY_GATES
-        {
-            extended.unwrap_or(timeout)
         } else {
             timeout
         }

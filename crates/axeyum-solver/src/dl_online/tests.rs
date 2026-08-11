@@ -23,8 +23,7 @@ fn config() -> SolverConfig {
 }
 
 fn check(arena: &mut TermArena, assertions: &[TermId]) -> Option<CheckResult> {
-    let config = config();
-    try_check_qf_dl(arena, assertions, &config, config.timeout)
+    try_check_qf_dl(arena, assertions, &config())
 }
 
 #[test]
@@ -35,10 +34,7 @@ fn zero_budget_expires_before_the_difference_logic_front_end() {
     let assertion = arena.int_le(x, zero).expect("x <= 0");
     let config = SolverConfig::new().with_timeout(Duration::ZERO);
 
-    assert_eq!(
-        try_check_qf_dl(&mut arena, &[assertion], &config, config.timeout),
-        None
-    );
+    assert_eq!(try_check_qf_dl(&mut arena, &[assertion], &config), None);
 }
 
 #[test]
@@ -63,33 +59,22 @@ fn difference_logic_scan_survives_a_deep_boolean_spine_in_stable_order() {
 
 #[test]
 fn equality_fallback_budget_is_narrowly_structural() {
-    let standard = Some(Duration::from_secs(18));
-    let extended = Some(Duration::from_secs(21));
+    let maximum = Some(Duration::from_secs(18));
     assert_eq!(
-        structural_probe_timeout(standard, extended, 906, 350),
+        equality_fallback_probe_timeout(maximum, 906, 350),
         Some(Duration::from_secs(12))
     );
     assert_eq!(
-        structural_probe_timeout(standard, extended, 1_011, 0),
-        standard,
+        equality_fallback_probe_timeout(maximum, 1_011, 0),
+        maximum,
         "compact gate-free DL keeps the full probe"
     );
     assert_eq!(
-        structural_probe_timeout(standard, extended, 1_024, 0),
-        standard,
-        "the atom threshold is strict"
-    );
-    assert_eq!(
-        structural_probe_timeout(standard, extended, 1_025, 0),
-        extended,
-        "large gate-free DL receives the extended probe"
-    );
-    assert_eq!(
-        structural_probe_timeout(standard, extended, 7_095, 2_028),
-        standard,
+        equality_fallback_probe_timeout(maximum, 7_095, 2_028),
+        maximum,
         "large equality skeleton keeps the full probe"
     );
-    assert_eq!(structural_probe_timeout(None, None, 906, 350), None);
+    assert_eq!(equality_fallback_probe_timeout(None, 906, 350), None);
 }
 
 // -------------------------------------------------------------------------
