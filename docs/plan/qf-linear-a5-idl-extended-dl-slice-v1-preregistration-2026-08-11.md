@@ -1,5 +1,8 @@
 # QF linear A5 IDL extended DL slice v1 preregistration — 2026-08-11
 
+**Closed negatively.** The first BubbleSort target remained `unknown`; the
+candidate was reverted. See the [result](qf-linear-a5-idl-extended-dl-slice-v1-result-2026-08-11.md).
+
 ## Decision boundary
 
 The [G1 result](qf-linear-a5-idl-loss-mechanism-v1-result-2026-08-11.md) and
