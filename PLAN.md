@@ -96,8 +96,8 @@ wrong verdict, classified `sc-39` correctly, and retained the former
 decisions hidden by two gains; QF_RDL is forbidden. The sequence is non-credited.
 Replay made both losses deterministic. B1 failed and was removed. Unchanged-
 binary G1/D2 returned GraphPartitioning SAT and BubbleSort UNSAT through
-`dl-online` in 3/3 each at 32 seconds. V1 missed and was reverted; retained
-telemetry identifies both as large equality-heavy scans. See the [result](docs/plan/qf-linear-a5-idl-dl-scan-telemetry-v1-result-2026-08-11.md).
+`dl-online` in 3/3 each at 32 seconds. V2 recovers both at 24 seconds and
+preserves all 173 retained decisions; its full gate is pending. See the [result](docs/plan/qf-linear-a5-idl-extended-dl-slice-v2-result-2026-08-11.md).
 
 A3 is **WIP**. Pushed result checkpoint `3696e7dd5` is integrated on current
 main by `47d8cd956`; its source branch remains preserved. The repaired complete
@@ -352,11 +352,11 @@ here as closed evidence boundaries. A3 remains incomplete, but all currently
 preregistered bounded mechanisms are closed negatively. A4 has now also yielded;
 A5 is the first active item.
 
-**Immediate action (`WIP`).** Run only the corrected, preregistered large-
-equality 21/3 candidate and four-case matrix. If it passes, run all 173 retained
-decisions and allocation controls; otherwise remove it. Preserve the moderate
-12/12 split, pre-SAT bounds, replay/checking, and route order. No census or
-QF_RDL breadth run is authorized; failed streams remain non-credited.
+**Immediate action (`WIP`).** Push the exact v2 documentation descendant and run
+one uninterrupted external-frontier `just check`. Do not start QF_LRA until it
+passes. Then restart V2 from row 1 under the existing atomic protocol; QF_IDL
+and QF_RDL remain ordered behind strict monotonicity joins. Failed and old
+streams remain non-credited.
 
 **Parallel documentation action.** The comprehensive pass and 2026-08-09
 README application/vision revision are closed. Continue only for a concrete

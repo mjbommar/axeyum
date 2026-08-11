@@ -1,5 +1,8 @@
 # QF linear A5 IDL extended DL slice v2 preregistration — 2026-08-11
 
+**Target, control, retained-decision, and focused gates passed.** The exact-
+pushed complete repository gate remains pending; see the [result](qf-linear-a5-idl-extended-dl-slice-v2-result-2026-08-11.md).
+
 ## Measured boundary
 
 The [telemetry result](qf-linear-a5-idl-dl-scan-telemetry-v1-result-2026-08-11.md)
