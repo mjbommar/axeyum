@@ -3140,7 +3140,12 @@ fn dispatch_difference_logic(
     config: &SolverConfig,
     rec: &mut Recorder<'_>,
 ) -> Option<CheckResult> {
-    match crate::dl_online::try_check_qf_dl(arena, assertions, &dl_probe_budget(config)) {
+    match crate::dl_online::try_check_qf_dl(
+        arena,
+        assertions,
+        &dl_probe_budget(config),
+        extended_dl_probe_timeout(config),
+    ) {
         Some(result) => {
             with_recorder(rec, |t| t.record_result("dl-online", &result));
             match &result {
@@ -3184,6 +3189,20 @@ pub(crate) fn dl_probe_budget(config: &SolverConfig) -> SolverConfig {
         .timeout
         .map(|t| t.saturating_sub((t / 4).min(DL_FALLBACK_RESERVE)));
     probe
+}
+
+/// Larger DL slice available only after the route's structural scan proves the
+/// query is large and not equality-heavy.
+///
+/// [`dl_probe_budget`] remains the scan and default route limit. The extended
+/// allowance retains at least `min(timeout / 8, 3 s)` before the established
+/// fallbacks; [`crate::dl_online::try_check_qf_dl`] owns the preregistered
+/// structural admission predicate.
+pub(crate) fn extended_dl_probe_timeout(config: &SolverConfig) -> Option<Duration> {
+    const DL_EXTENDED_FALLBACK_RESERVE: Duration = Duration::from_secs(3);
+    config
+        .timeout
+        .map(|t| t.saturating_sub((t / 8).min(DL_EXTENDED_FALLBACK_RESERVE)))
 }
 
 /// The theory dispatcher (coercions already relaxed away by [`check_auto`]).
@@ -7808,6 +7827,22 @@ mod tests {
             assert_eq!(dl_probe_budget(&config).timeout, Some(expected_probe));
         }
         assert_eq!(dl_probe_budget(&SolverConfig::new()).timeout, None);
+    }
+
+    #[test]
+    fn extended_difference_logic_probe_retains_a_nonzero_fallback_slice() {
+        let cases = [
+            (Duration::ZERO, Duration::ZERO),
+            (Duration::from_secs(3), Duration::from_millis(2_625)),
+            (Duration::from_secs(12), Duration::from_millis(10_500)),
+            (Duration::from_secs(24), Duration::from_secs(21)),
+            (Duration::from_secs(60), Duration::from_secs(57)),
+        ];
+        for (timeout, expected_probe) in cases {
+            let config = SolverConfig::new().with_timeout(timeout);
+            assert_eq!(extended_dl_probe_timeout(&config), Some(expected_probe));
+        }
+        assert_eq!(extended_dl_probe_timeout(&SolverConfig::new()), None);
     }
 
     /// A deep `and` spine must not blow the stack in the top-conjunct scan.
