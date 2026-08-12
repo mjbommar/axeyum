@@ -80,6 +80,7 @@ a fragment.
 | Capability × assurance × evidence (golden-tested) | [capability-matrix](research/08-planning/capability-matrix.md) |
 | Parser / IR / solver / proof support per feature | [support-matrix](research/08-planning/support-matrix.md) |
 | What is trusted vs independently checked | [trust-ledger](research/08-planning/trust-ledger.md) |
+| Mathematical claims, their epistemic status, and the evidence checking them | [claim ledger](../artifacts/claims/README.md) |
 | Live status, ordered work, and resume protocol | [PLAN.md](../PLAN.md) |
 | Detailed phase and result documents | [plan/](plan/README.md) |
 | Design decisions | [ADRs](research/09-decisions/README.md) |

@@ -301,12 +301,13 @@ pub mod proofs {
     #[cfg(feature = "full")]
     pub mod evidence {
         pub use crate::evidence::{
-            Evidence, EvidenceReport, LayerVersions, ProofOutcome, Provenance, SEMANTICS_VERSION,
+            Evidence, EvidenceCheck, EvidenceReport, EvidenceWithScript, LayerVersions,
+            NoCheckReason, ProofOutcome, Provenance, SEMANTICS_VERSION,
             produce_diophantine_evidence, produce_evidence, produce_evidence_minimized,
             produce_evidence_minimized_with_objectives, produce_evidence_smtlib,
-            produce_lra_dpll_evidence, produce_lra_evidence, produce_nra_even_power_evidence,
-            produce_nra_evidence, produce_nra_sos_evidence, produce_qf_bv_evidence, prove,
-            prove_minimized, prove_minimized_with_objectives,
+            produce_evidence_smtlib_with_script, produce_lra_dpll_evidence, produce_lra_evidence,
+            produce_nra_even_power_evidence, produce_nra_evidence, produce_nra_sos_evidence,
+            produce_qf_bv_evidence, prove, prove_minimized, prove_minimized_with_objectives,
         };
     }
 
@@ -968,12 +969,13 @@ macro_rules! full_exports {
         };
         #[doc(hidden)]
         pub use evidence::{
-            Evidence, EvidenceReport, LayerVersions, ProofOutcome, Provenance, SEMANTICS_VERSION,
+            Evidence, EvidenceCheck, EvidenceReport, EvidenceWithScript, LayerVersions,
+            NoCheckReason, ProofOutcome, Provenance, SEMANTICS_VERSION,
             produce_diophantine_evidence, produce_evidence, produce_evidence_minimized,
             produce_evidence_minimized_with_objectives, produce_evidence_smtlib,
-            produce_lra_dpll_evidence, produce_lra_evidence, produce_nra_even_power_evidence,
-            produce_nra_evidence, produce_nra_sos_evidence, produce_qf_bv_evidence, prove,
-            prove_minimized, prove_minimized_with_objectives,
+            produce_evidence_smtlib_with_script, produce_lra_dpll_evidence, produce_lra_evidence,
+            produce_nra_even_power_evidence, produce_nra_evidence, produce_nra_sos_evidence,
+            produce_qf_bv_evidence, prove, prove_minimized, prove_minimized_with_objectives,
         };
         #[doc(hidden)]
         pub use faithfulness::{FaithfulnessOutcome, check_qf_bv_faithfulness};

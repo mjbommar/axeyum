@@ -78,11 +78,61 @@ fn is_constant(node: &TermNode) -> bool {
     )
 }
 
+/// Whether evaluating `term` would have to consult an **underspecified** value:
+/// a `div`/`mod`/`/` node whose divisor is not a provably non-zero constant.
+///
+/// The ground evaluator is *total* — it resolves `div a 0`/`mod a 0`/`a / 0` with
+/// the in-tree conventions (`0`, `a`, `0`). Those are legitimate values for a
+/// *witness*, but SMT-LIB fixes no value for them, so they are not facts about
+/// every model, and a rewrite that commits to one produces a WRONG UNSAT.
+/// Measured before this guard existed, through the shipped front door:
+/// `(= x (div 5 0)) ∧ x > 100` and `(= x (mod 0 0)) ∧ x > 775` both returned
+/// `unsat`, while both are `sat` (the free value can be anything). The equivalent
+/// query without the defining equality — `(< 775 (mod 0 0))` — was already
+/// correctly `sat`, because [`crate::eliminate_int_divmod`] models a zero divisor
+/// as a fresh congruent variable; the hole was this pass alone, folding the term
+/// to the convention *before* that pass ever saw it. Same defect class as the P0
+/// regressed by `a946f925` and fixed by `52f3b1d1`.
+///
+/// The test is deliberately conservative: a divisor that does not evaluate to a
+/// definite non-zero constant counts as underspecified. A non-ground divisor makes
+/// the enclosing `eval` fail anyway, so nothing is lost.
+fn depends_on_underspecified_division(arena: &TermArena, term: TermId) -> bool {
+    let mut seen: HashSet<TermId> = HashSet::new();
+    let mut stack = vec![term];
+    while let Some(term) = stack.pop() {
+        if !seen.insert(term) {
+            continue;
+        }
+        let TermNode::App { op, args } = arena.node(term) else {
+            continue;
+        };
+        if matches!(op, Op::IntDiv | Op::IntMod | Op::RealDiv) {
+            let divisor_nonzero = match eval(arena, args[1], &Assignment::new()) {
+                Ok(Value::Int(value)) => value != 0,
+                Ok(Value::Real(value)) => !value.is_zero(),
+                _ => false,
+            };
+            if !divisor_nonzero {
+                return true;
+            }
+        }
+        stack.extend(args.iter().copied());
+    }
+    false
+}
+
 /// Reifies a ground evaluator result while preserving finite-domain wrapper
 /// sorts whose runtime representation is a bit-vector.
+///
+/// Declines any term whose value depends on an underspecified division — see
+/// [`depends_on_underspecified_division`].
 fn ground_constant(arena: &mut TermArena, term: TermId) -> Option<TermId> {
     if is_constant(arena.node(term)) {
         return Some(term);
+    }
+    if depends_on_underspecified_division(arena, term) {
+        return None;
     }
     let sort = arena.sort_of(term);
     let value = eval(arena, term, &Assignment::new()).ok()?;

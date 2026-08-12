@@ -18,7 +18,8 @@
 //! - other larger `QF_BV` `unsat` carries an optional [`UnsatProof`] (DIMACS +
 //!   DRAT); `check` re-parses and re-runs the trusted [`axeyum_cnf::check_drat`]
 //!   kernel. A `None` proof means the result came from the (lower-assurance)
-//!   adapter without a DRAT certificate, and is documented as such.
+//!   adapter without a DRAT certificate, and is documented as such — and it
+//!   **does not pass the check**, see below.
 //! - `QF_LRA` `unsat` carries a [`FarkasCertificate`]; `check` re-runs the
 //!   independent [`FarkasCertificate::verify`] (the exact-arithmetic dual of the
 //!   DRAT route).
@@ -26,13 +27,29 @@
 //!   `check` re-runs [`LraDpllRefutation::verify`].
 //! - Boolean-structured linear-arithmetic `unsat` carries an
 //!   [`ArithDpllRefutation`]; `check` re-runs [`ArithDpllRefutation::verify`].
-//! - `unknown` carries the reason and checks vacuously.
+//! - a **bare `unsat`** ([`Evidence::Unsat(None)`](Evidence::Unsat)) and an
+//!   `unknown` carry **nothing to check**.
+//!
+//! # "Checked" never means "there was nothing to check" (ADR-0382)
+//!
+//! [`Evidence::check_outcome`] is the three-valued re-validation API:
+//! [`EvidenceCheck::Verified`] (a certificate was present and this run
+//! re-derived it), [`EvidenceCheck::NothingToCheck`] (no certificate, or no
+//! faithful subject to check it against — *not* a pass), and
+//! [`EvidenceCheck::Failed`] (a certificate was present and did not hold up).
+//! The boolean [`Evidence::check`] is exactly `check_outcome(..) == Verified`,
+//! so `if evidence.check(..)? { /* trust it */ }` cannot be satisfied by an
+//! uncertified result. Use [`Evidence::is_certified`] to ask the *static*
+//! question ("does this variant carry a certificate at all?") without running
+//! the checker.
 //!
 //! [`produce_qf_bv_evidence`], [`produce_lra_evidence`], and
 //! [`produce_lra_dpll_evidence`] run the per-theory pipelines, and
 //! [`produce_evidence`] is the unified front door that routes any supported query
 //! to the producer with the strongest available certificate (mirroring
-//! [`crate::solve`]).
+//! [`crate::solve`]). [`produce_evidence_smtlib_with_script`] is the text front
+//! door that hands back the parsed [`axeyum_smtlib::Script`] with the report, so
+//! a consumer can re-check its own result without re-parsing.
 
 use std::collections::BTreeSet;
 use std::time::{Duration, Instant};
@@ -75,7 +92,7 @@ use crate::lra::{FarkasCertificate, lra_farkas_certificate};
 use crate::model::Model;
 use crate::nra_even_power::NraEvenPowerRefutationCertificate;
 use crate::nra_real_root::{self, SosCertificate};
-use crate::proof::{UnsatProof, UnsatProofOutcome, export_qf_bv_unsat_proof};
+use crate::proof::{UnsatProof, UnsatProofOutcome, export_qf_bv_unsat_proof_within};
 use crate::quant_affine_growth_cert::IntAffineGrowthRefutationCertificate;
 use crate::quant_bv_alternation_cert::BvAlternationCounterexampleCertificate;
 use crate::quant_bv_conjunctive_cert::BvConjunctiveUniversalInstanceCertificate;
@@ -249,6 +266,89 @@ fn with_fpa2bv_step(existing: &[TrustStep], certified: bool) -> Vec<TrustStep> {
     let mut pairs: Vec<(TrustId, bool)> = existing.iter().map(|s| (s.id, s.certified)).collect();
     pairs.push((TrustId::Fpa2Bv, certified));
     trust_steps(&pairs)
+}
+
+/// Why an [`Evidence`] had **nothing** for [`Evidence::check_outcome`] to
+/// re-validate (ADR-0382). A `NothingToCheck` is never a pass: it is the honest
+/// report that this run verified *nothing*.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum NoCheckReason {
+    /// A bare [`Evidence::Unsat(None)`](Evidence::Unsat): the verdict is the
+    /// deciding engine's, with no transferable certificate attached. Sound if
+    /// the engine is, but nothing here was re-derived.
+    UncertifiedUnsat,
+    /// [`Evidence::Unknown`]: no verdict was claimed, so there is no claim to
+    /// re-validate.
+    Undecided,
+    /// A `sat` model offered against an **empty** assertion list. Replaying a
+    /// model over zero assertions succeeds vacuously, so it is reported as
+    /// nothing-checked rather than as a verification.
+    EmptySubject,
+    /// The `(arena, assertions)` subject is not a faithful view of the query the
+    /// evidence decided — the bounded/empty flat view of a string script (see
+    /// [`produce_evidence_smtlib_with_script`] and ADR-0061). Checking against
+    /// it would be meaningless in exactly the direction that fabricates a pass.
+    UnfaithfulSubject,
+}
+
+impl NoCheckReason {
+    /// Stable short label for artifact metadata and diagnostics.
+    #[must_use]
+    pub const fn label(self) -> &'static str {
+        match self {
+            NoCheckReason::UncertifiedUnsat => "uncertified-unsat",
+            NoCheckReason::Undecided => "undecided",
+            NoCheckReason::EmptySubject => "empty-subject",
+            NoCheckReason::UnfaithfulSubject => "unfaithful-subject",
+        }
+    }
+}
+
+/// The outcome of independently re-validating an [`Evidence`] (ADR-0382).
+///
+/// Three-valued on purpose: a boolean cannot distinguish "I re-derived the
+/// certificate" from "there was no certificate", and conflating them is a green
+/// gate over an empty set.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum EvidenceCheck {
+    /// A certificate was present and **this run independently re-derived it**.
+    /// The only value that licenses trusting the result on the evidence alone.
+    Verified,
+    /// Nothing was re-validated, for the carried reason. Not a pass.
+    NothingToCheck(NoCheckReason),
+    /// A certificate was present and **failed** re-validation. A soundness
+    /// alarm: the producer and the checker disagree.
+    Failed,
+}
+
+impl EvidenceCheck {
+    /// Whether an independent certificate was re-derived this run.
+    #[must_use]
+    pub const fn is_verified(self) -> bool {
+        matches!(self, EvidenceCheck::Verified)
+    }
+
+    /// Whether the checker had nothing to re-validate.
+    #[must_use]
+    pub const fn is_nothing_to_check(self) -> bool {
+        matches!(self, EvidenceCheck::NothingToCheck(_))
+    }
+
+    /// Whether a present certificate failed re-validation (a soundness alarm).
+    #[must_use]
+    pub const fn is_failed(self) -> bool {
+        matches!(self, EvidenceCheck::Failed)
+    }
+
+    /// Stable short label for artifact metadata and diagnostics.
+    #[must_use]
+    pub const fn label(self) -> &'static str {
+        match self {
+            EvidenceCheck::Verified => "verified",
+            EvidenceCheck::NothingToCheck(_) => "nothing-to-check",
+            EvidenceCheck::Failed => "failed",
+        }
+    }
 }
 
 /// A decided (or undecided) result together with its checkable justification.
@@ -686,15 +786,89 @@ impl Evidence {
     }
 
     /// Independently re-validates this evidence against the original
-    /// `assertions`. Returns `true` when the evidence holds up.
+    /// `assertions`. Returns `true` **only** when a certificate was present and
+    /// this run re-derived it.
+    ///
+    /// This is [`Evidence::check_outcome`] collapsed to a boolean:
+    /// `check_outcome(..)? == EvidenceCheck::Verified`. A bare
+    /// [`Evidence::Unsat(None)`](Evidence::Unsat) and an [`Evidence::Unknown`]
+    /// return **`false`** — there was nothing to check, which is not a pass
+    /// (ADR-0382; before that fix they returned `true`, so `if
+    /// evidence.check(..)? { … }` was a green gate over an empty set). Prefer
+    /// `check_outcome` when the caller needs to tell "nothing to check" apart
+    /// from "checked and failed" — for instance to keep an uncertified-but-sound
+    /// `unsat` while still alarming on a bad certificate.
     ///
     /// # Errors
     ///
     /// Returns [`SolverError::Backend`] if a `sat` replay evaluates to a
     /// non-Boolean (an internal invariant violation) or a stored certificate
     /// fails to re-parse.
-    #[allow(clippy::too_many_lines)]
     pub fn check(&self, arena: &TermArena, assertions: &[TermId]) -> Result<bool, SolverError> {
+        Ok(self.check_outcome(arena, assertions)?.is_verified())
+    }
+
+    /// Independently re-validates this evidence against the original
+    /// `assertions`, returning the **three-valued** [`EvidenceCheck`] outcome
+    /// (ADR-0382).
+    ///
+    /// [`EvidenceCheck::Verified`] is the only outcome that means a certificate
+    /// was re-derived this run. Evidence that carries no certificate (a bare
+    /// `unsat`, an `unknown`), and evidence with no faithful subject to check
+    /// against (a `sat` model against an empty assertion list), is
+    /// [`EvidenceCheck::NothingToCheck`] with the reason. A certificate that is
+    /// present and does not hold up is [`EvidenceCheck::Failed`].
+    ///
+    /// The certificates that are *self-contained* — [`Evidence::UnsatWordClash`]
+    /// and [`Evidence::UnsatRegexEmptiness`], which carry their own premises and
+    /// deliberately ignore `(arena, assertions)` (ADR-0061) — are re-derived
+    /// here regardless of the arena view, so they still report `Verified`.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`SolverError::Backend`] if a `sat` replay evaluates to a
+    /// non-Boolean (an internal invariant violation) or a stored certificate
+    /// fails to re-parse.
+    pub fn check_outcome(
+        &self,
+        arena: &TermArena,
+        assertions: &[TermId],
+    ) -> Result<EvidenceCheck, SolverError> {
+        // Cases with nothing to re-validate are answered BEFORE the checker runs:
+        // no checker call can turn them into a `Verified`.
+        match self {
+            Evidence::Unsat(None) => {
+                return Ok(EvidenceCheck::NothingToCheck(
+                    NoCheckReason::UncertifiedUnsat,
+                ));
+            }
+            Evidence::Unknown(_) => {
+                return Ok(EvidenceCheck::NothingToCheck(NoCheckReason::Undecided));
+            }
+            // A model replayed against zero assertions passes vacuously — the
+            // bounded/empty-view hazard ADR-0061 caught for string scripts. It is
+            // reported as nothing-checked, never as a verification.
+            Evidence::Sat(_) if assertions.is_empty() => {
+                return Ok(EvidenceCheck::NothingToCheck(NoCheckReason::EmptySubject));
+            }
+            _ => {}
+        }
+        Ok(if self.recheck_certificate(arena, assertions)? {
+            EvidenceCheck::Verified
+        } else {
+            EvidenceCheck::Failed
+        })
+    }
+
+    /// Re-runs the certificate-specific checker for this variant. Only called by
+    /// [`Evidence::check_outcome`], and only for variants that actually carry a
+    /// certificate; `false` means the certificate did not hold up.
+    #[allow(clippy::too_many_lines)]
+    fn recheck_certificate(
+        &self,
+        arena: &TermArena,
+        assertions: &[TermId],
+    ) -> Result<bool, SolverError> {
         match self {
             Evidence::Sat(model) => crate::check_model(arena, assertions, model),
             Evidence::Unsat(Some(proof)) => {
@@ -887,7 +1061,11 @@ impl Evidence {
             // the empty clause (arena-free; the certificate carries its own premises and
             // element sort key). A tampered proof fails here — never trusted as-is.
             Evidence::UnsatWordClash(certificate) => Ok(certificate.check()),
-            Evidence::Unsat(None) | Evidence::Unknown(_) => Ok(true),
+            // Nothing to re-validate. `check_outcome` answers these before ever
+            // calling here; `false` (never `true`) is the conservative value if
+            // that guard is ever bypassed, so no route can resurrect the
+            // "vacuously checked" behavior ADR-0382 removed.
+            Evidence::Unsat(None) | Evidence::Unknown(_) => Ok(false),
         }
     }
 
@@ -1395,6 +1573,13 @@ pub fn produce_qf_bv_evidence(
     assertions: &[TermId],
     config: &SolverConfig,
 ) -> Result<EvidenceReport, SolverError> {
+    // `config.timeout` is the budget for THIS CALL, not for the decision phase
+    // alone (ADR-0382). Fixing the deadline here means proof production spends
+    // whatever the decision left over and no more; before this, a hard `unsat`
+    // re-ran the entire search uncapped after the timed decision returned.
+    let deadline = config
+        .timeout
+        .and_then(|timeout| Instant::now().checked_add(timeout));
     let mut backend = SatBvBackend::new();
     let provenance = Provenance::for_query(config, backend.capabilities().name, assertions.len());
     if let Some(cert) = crate::set_cardinality::set_cardinality_refutation(arena, assertions) {
@@ -1516,10 +1701,10 @@ pub fn produce_qf_bv_evidence(
                                 ]),
                             )
                         } else {
-                            drat_qf_bv_evidence(arena, assertions)?
+                            drat_qf_bv_evidence(arena, assertions, deadline)?
                         }
                     } else {
-                        drat_qf_bv_evidence(arena, assertions)?
+                        drat_qf_bv_evidence(arena, assertions, deadline)?
                     }
                 }
             }
@@ -1537,6 +1722,15 @@ pub fn produce_qf_bv_evidence(
 /// refutation are DRAT-checked. Used when the instance is too large to enumerate
 /// and the Alethe driver does not cover it (or its re-check fails).
 ///
+/// `deadline` bounds the **proof-producing SAT search** (ADR-0382). Proof
+/// production is a second, independent search over the same formula — on a hard
+/// `unsat` it costs as much as the decision did or more — so an unbounded call
+/// here silently ignores the caller's `SolverConfig::timeout`. When the deadline
+/// is already spent, or expires mid-search, the query is still **decided**: the
+/// result is the honest bare [`Evidence::Unsat(None)`](Evidence::Unsat) with
+/// `SatRefutation` recorded uncertified. It is never an [`Err`] and never an
+/// [`Evidence::Unknown`] — losing a proof must not lose a verdict.
+///
 /// # Errors
 ///
 /// Returns [`SolverError`] from the proof export, including a soundness alarm if
@@ -1544,34 +1738,49 @@ pub fn produce_qf_bv_evidence(
 fn drat_qf_bv_evidence(
     arena: &TermArena,
     assertions: &[TermId],
+    deadline: Option<Instant>,
 ) -> Result<(Evidence, Vec<TrustStep>), SolverError> {
-    Ok(match export_qf_bv_unsat_proof(arena, assertions)? {
-        // Bit-blast is recorded (a miter route exists, but this plain DRAT export
-        // does not run it → certified:false); Tseitin + the SAT refutation are
-        // DRAT-checked here.
-        UnsatProofOutcome::Proved(proof) => (
-            Evidence::Unsat(Some(proof)),
-            trust_steps(&[
-                (TrustId::BitBlast, false),
-                (TrustId::Tseitin, true),
-                (TrustId::SatRefutation, true),
-            ]),
-        ),
-        UnsatProofOutcome::Inconclusive => (
+    // Already out of budget: do not even pay the bit-blast + Tseitin encoding the
+    // exporter would redo before consulting the deadline.
+    if deadline.is_some_and(|deadline| Instant::now() >= deadline) {
+        return Ok((
             Evidence::Unsat(None),
             trust_steps(&[
                 (TrustId::BitBlast, false),
-                (TrustId::Tseitin, true),
+                (TrustId::Tseitin, false),
                 (TrustId::SatRefutation, false),
             ]),
-        ),
-        UnsatProofOutcome::Satisfiable => {
-            return Err(SolverError::Backend(
-                "soundness alarm: backend reported unsat but the proof core found a model"
-                    .to_owned(),
-            ));
-        }
-    })
+        ));
+    }
+    Ok(
+        match export_qf_bv_unsat_proof_within(arena, assertions, deadline)? {
+            // Bit-blast is recorded (a miter route exists, but this plain DRAT export
+            // does not run it → certified:false); Tseitin + the SAT refutation are
+            // DRAT-checked here.
+            UnsatProofOutcome::Proved(proof) => (
+                Evidence::Unsat(Some(proof)),
+                trust_steps(&[
+                    (TrustId::BitBlast, false),
+                    (TrustId::Tseitin, true),
+                    (TrustId::SatRefutation, true),
+                ]),
+            ),
+            UnsatProofOutcome::Inconclusive => (
+                Evidence::Unsat(None),
+                trust_steps(&[
+                    (TrustId::BitBlast, false),
+                    (TrustId::Tseitin, true),
+                    (TrustId::SatRefutation, false),
+                ]),
+            ),
+            UnsatProofOutcome::Satisfiable => {
+                return Err(SolverError::Backend(
+                    "soundness alarm: backend reported unsat but the proof core found a model"
+                        .to_owned(),
+                ));
+            }
+        },
+    )
 }
 
 /// Runs the exact-rational conjunctive `QF_LRA` pipeline on `assertions` and
@@ -2757,6 +2966,16 @@ pub fn produce_evidence(
 /// view, so every existing rich-certificate route (DRAT, Farkas, Diophantine,
 /// Alethe, …) is preserved byte-for-byte.
 ///
+/// # Checking the result
+///
+/// This entry point **drops the arena it parsed**, so a consumer holding only the
+/// report has no subject to re-check it against. Use
+/// [`produce_evidence_smtlib_with_script`] when you intend to re-validate: it
+/// hands back the same report together with the [`axeyum_smtlib::Script`] it was
+/// produced from, and its [`EvidenceWithScript::check_outcome`] knows when that
+/// view is *not* a faithful subject. Re-parsing the text instead makes
+/// correctness depend on two parses agreeing on `SymbolId` assignment (ADR-0382).
+///
 /// # Errors
 ///
 /// [`SolverError::Parse`] for malformed/unsupported text, or any [`SolverError`]
@@ -2765,6 +2984,96 @@ pub fn produce_evidence_smtlib(
     input: &str,
     config: &SolverConfig,
 ) -> Result<EvidenceReport, SolverError> {
+    Ok(produce_evidence_smtlib_with_script(input, config)?.report)
+}
+
+/// A produced [`EvidenceReport`] together with the parsed
+/// [`Script`](axeyum_smtlib::Script) it came from — the checking subject, kept
+/// instead of discarded (ADR-0382).
+///
+/// [`produce_evidence_smtlib`] parses internally and returns only the report, so
+/// a consumer that wants to run [`Evidence::check_outcome`] on its own result has
+/// to re-parse the text and hope the second parse assigns the same
+/// [`SymbolId`](axeyum_ir::SymbolId)s — correctness resting on parse determinism.
+/// This type removes that step: [`EvidenceWithScript::check_outcome`] re-checks
+/// against the *same* arena the evidence was produced against.
+#[derive(Debug)]
+pub struct EvidenceWithScript {
+    /// The evidence and its versioned provenance.
+    pub report: EvidenceReport,
+    /// The parsed script the report was produced from. Its
+    /// [`arena`](axeyum_smtlib::Script::arena) and
+    /// [`assertions`](axeyum_smtlib::Script::assertions) are the flat view the
+    /// arena front door decided (for a non-string script, the evidence's
+    /// checking subject); the string side channels live on the same object.
+    ///
+    /// For a non-string script the arena has been *extended* by evidence
+    /// production (definitions, Ackermann/array-elimination terms); the recorded
+    /// assertion `TermId`s stay valid.
+    pub script: axeyum_smtlib::Script,
+    /// Whether `script.arena` + `script.assertions` is a **faithful** subject for
+    /// this evidence.
+    ///
+    /// `false` for a string script: its decidable content lives in the parser's
+    /// word / membership / length side channels, and the flat view is bounded or
+    /// empty. Re-checking a `sat` model against an empty view passes *vacuously*
+    /// — the exact ADR-0061 P0 — so [`EvidenceWithScript::check_outcome`] reports
+    /// [`NoCheckReason::UnfaithfulSubject`] rather than a verification.
+    pub arena_view_faithful: bool,
+}
+
+impl EvidenceWithScript {
+    /// Independently re-validates the report against the script it was produced
+    /// from, **without re-parsing** (ADR-0382).
+    ///
+    /// Returns [`NoCheckReason::UnfaithfulSubject`] when the flat arena view is
+    /// not a faithful subject (a string script) and the evidence is not one of
+    /// the self-contained, arena-independent certificates
+    /// ([`Evidence::UnsatWordClash`], [`Evidence::UnsatRegexEmptiness`]) — those
+    /// carry their own premises and are re-derived regardless (ADR-0061).
+    ///
+    /// # Errors
+    ///
+    /// Propagates [`Evidence::check_outcome`]'s errors.
+    pub fn check_outcome(&self) -> Result<EvidenceCheck, SolverError> {
+        if !self.arena_view_faithful && !is_subject_independent_evidence(&self.report.evidence) {
+            return Ok(EvidenceCheck::NothingToCheck(
+                NoCheckReason::UnfaithfulSubject,
+            ));
+        }
+        self.report
+            .evidence
+            .check_outcome(&self.script.arena, &self.script.assertions)
+    }
+}
+
+/// Whether this evidence's certificate is **self-contained** — it carries its own
+/// premises and [`Evidence::check_outcome`] re-derives it without consulting
+/// `(arena, assertions)` (ADR-0061). Those variants are checkable even when the
+/// available arena view is the bounded/empty string one.
+fn is_subject_independent_evidence(evidence: &Evidence) -> bool {
+    matches!(
+        evidence,
+        Evidence::UnsatWordClash(_) | Evidence::UnsatRegexEmptiness { .. }
+    )
+}
+
+/// [`produce_evidence_smtlib`] that **keeps the parsed script**: the report plus
+/// the arena and assertion view it was produced against, so a consumer can
+/// re-check its own result without re-parsing the text (ADR-0382).
+///
+/// See [`produce_evidence_smtlib`] for the routing contract (it is this function
+/// with the script dropped) and [`EvidenceWithScript`] for why the subject
+/// matters.
+///
+/// # Errors
+///
+/// [`SolverError::Parse`] for malformed/unsupported text, or any [`SolverError`]
+/// from the chosen engine.
+pub fn produce_evidence_smtlib_with_script(
+    input: &str,
+    config: &SolverConfig,
+) -> Result<EvidenceWithScript, SolverError> {
     let mut script = axeyum_smtlib::parse_script(input)
         .map_err(|error| SolverError::Parse(error.to_string()))?;
     // A string script is one that used the bounded string/sequence encoding, or one
@@ -2790,7 +3099,11 @@ pub fn produce_evidence_smtlib(
                 script.fp_usage.fpa2bv_simple_op_certified(),
             );
         }
-        return Ok(report);
+        return Ok(EvidenceWithScript {
+            report,
+            script,
+            arena_view_faithful: true,
+        });
     }
 
     // String script: delegate the DECISION to the string-capable text front door.
@@ -2818,10 +3131,16 @@ pub fn produce_evidence_smtlib(
         CheckResult::Unsat => string_unsat_evidence(&mut script, config),
         CheckResult::Unknown(reason) => Evidence::Unknown(reason),
     };
-    Ok(EvidenceReport {
-        evidence,
-        provenance,
-        trusted_steps: Vec::new(),
+    Ok(EvidenceWithScript {
+        report: EvidenceReport {
+            evidence,
+            provenance,
+            trusted_steps: Vec::new(),
+        },
+        script,
+        // The flat view is the bounded/empty one the string routes deliberately
+        // do NOT decide against; it is not a checking subject (ADR-0061).
+        arena_view_faithful: false,
     })
 }
 
@@ -3402,7 +3721,11 @@ fn reduction_fragment_flags(arena: &TermArena, assertions: &[TermId]) -> (bool, 
 pub enum ProofOutcome {
     /// The goal follows from the hypotheses. The [`EvidenceReport`] is the
     /// refutation of `hypotheses ∧ ¬goal`; for a certified theory it has already
-    /// been re-checked, so `Proved` means an independently verified proof.
+    /// been re-checked, so `Proved` means an independently verified proof. For a
+    /// fragment whose `unsat` is still bare, `Proved` is the deciding engine's
+    /// verdict with nothing re-derived — ask
+    /// [`EvidenceReport::evidence`]`.`[`is_certified`](Evidence::is_certified)
+    /// or re-run [`Evidence::check_outcome`] to tell the two apart (ADR-0382).
     /// Boxed because the report (model/proof + provenance) is much larger than
     /// the other variants.
     Proved(Box<EvidenceReport>),
@@ -3500,10 +3823,20 @@ pub fn prove(
         | Evidence::UnsatFifoBc04(_)
         | Evidence::UnsatRegexEmptiness { .. }
         | Evidence::UnsatWordClash(_) => {
-            if !report.evidence.check(arena, &query)? {
-                return Err(SolverError::Backend(
-                    "prove: refutation of the negated goal failed its own check".to_owned(),
-                ));
+            // Three-valued so the two very different "not verified" cases stay
+            // apart (ADR-0382): a certificate that FAILS is a soundness alarm,
+            // while a bare `unsat` has nothing to check and keeps the historical
+            // `Proved` (the verdict is the engine's, honestly uncertified — read
+            // `report.evidence.is_certified()` / `report.trusted_steps` to tell
+            // the two apart). Collapsing this to `check(..)? == false` would turn
+            // every uncertified fragment's proof into an error.
+            match report.evidence.check_outcome(arena, &query)? {
+                EvidenceCheck::Failed => {
+                    return Err(SolverError::Backend(
+                        "prove: refutation of the negated goal failed its own check".to_owned(),
+                    ));
+                }
+                EvidenceCheck::Verified | EvidenceCheck::NothingToCheck(_) => {}
             }
             Ok(ProofOutcome::Proved(Box::new(report)))
         }
@@ -3640,5 +3973,291 @@ fn evidence_route(arena: &TermArena, assertions: &[TermId]) -> EvidenceRoute {
         EvidenceRoute::PureReal // only reals and Booleans
     } else {
         EvidenceRoute::Other
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::backend::UnknownKind;
+
+    /// A `QF_BV` query that is unsatisfiable and small enough that the whole
+    /// certificate ladder is available: `a = a + 1` over 8 bits.
+    fn unsat_bv_query() -> (TermArena, Vec<TermId>) {
+        let mut arena = TermArena::new();
+        let symbol = arena.declare("a", Sort::BitVec(8)).expect("declare");
+        let a = arena.var(symbol);
+        let one = arena.bv_const(8, 1).expect("const");
+        let sum = arena.bv_add(a, one).expect("bvadd");
+        let assertion = arena.eq(a, sum).expect("eq");
+        (arena, vec![assertion])
+    }
+
+    /// ADR-0382 (A3): a bare `unsat` carries no certificate, so re-validating it
+    /// must NOT read as "checked". Before the fix `check` returned `Ok(true)`,
+    /// so `if evidence.check(..)? { trust }` passed on an empty set.
+    #[test]
+    fn bare_unsat_is_nothing_to_check_never_verified() {
+        let (arena, assertions) = unsat_bv_query();
+        let evidence = Evidence::Unsat(None);
+
+        assert_eq!(
+            evidence.check_outcome(&arena, &assertions).expect("check"),
+            EvidenceCheck::NothingToCheck(NoCheckReason::UncertifiedUnsat)
+        );
+        assert!(
+            !evidence.check(&arena, &assertions).expect("check"),
+            "a bare unsat must not pass the boolean check"
+        );
+        assert!(!evidence.is_certified());
+    }
+
+    /// ADR-0382 (A3): an `unknown` claims nothing, so there is nothing to
+    /// validate — and that is not a pass either.
+    #[test]
+    fn unknown_is_nothing_to_check_never_verified() {
+        let (arena, assertions) = unsat_bv_query();
+        let evidence = Evidence::Unknown(UnknownReason {
+            kind: UnknownKind::Timeout,
+            detail: "test".to_owned(),
+        });
+
+        assert_eq!(
+            evidence.check_outcome(&arena, &assertions).expect("check"),
+            EvidenceCheck::NothingToCheck(NoCheckReason::Undecided)
+        );
+        assert!(!evidence.check(&arena, &assertions).expect("check"));
+    }
+
+    /// ADR-0382 (A3): the tightening must not weaken a genuine certificate — a
+    /// certified `QF_BV` `unsat` still re-validates as `Verified`/`true`.
+    #[test]
+    fn certified_unsat_still_verifies() {
+        let (arena, assertions) = unsat_bv_query();
+        let report =
+            produce_qf_bv_evidence(&arena, &assertions, &SolverConfig::new()).expect("evidence");
+
+        assert!(
+            report.evidence.is_certified(),
+            "expected a certificate, got {}",
+            report.evidence.kind_label()
+        );
+        assert_eq!(
+            report
+                .evidence
+                .check_outcome(&arena, &assertions)
+                .expect("check"),
+            EvidenceCheck::Verified
+        );
+        assert!(report.evidence.check(&arena, &assertions).expect("check"));
+    }
+
+    /// ADR-0382 (A3): `Failed` (a certificate that does not hold up — a soundness
+    /// alarm) stays distinguishable from `NothingToCheck` (no certificate at
+    /// all). A boolean cannot express that difference, which is why `prove` can
+    /// keep an uncertified verdict while still erroring on a bad certificate.
+    #[test]
+    fn tampered_certificate_fails_rather_than_reading_as_unchecked() {
+        let (arena, assertions) = unsat_bv_query();
+        let proof = match crate::proof::export_qf_bv_unsat_proof(&arena, &assertions) {
+            Ok(UnsatProofOutcome::Proved(proof)) => proof,
+            other => panic!("expected an exported proof, got {other:?}"),
+        };
+        // Drop the refutation's steps: the DIMACS still parses, but the proof no
+        // longer derives the empty clause.
+        let tampered = Evidence::Unsat(Some(UnsatProof {
+            dimacs: proof.dimacs,
+            drat: String::new(),
+            lrat: None,
+        }));
+
+        assert_eq!(
+            tampered.check_outcome(&arena, &assertions).expect("check"),
+            EvidenceCheck::Failed
+        );
+        assert!(!tampered.check(&arena, &assertions).expect("check"));
+        // `is_certified` is the STATIC question and still says yes — only the
+        // checker can tell you the certificate is bad.
+        assert!(tampered.is_certified());
+    }
+
+    /// ADR-0382 (A3): replaying a model against zero assertions succeeds
+    /// vacuously (the ADR-0061 bounded/empty-view P0). It is reported as
+    /// nothing-checked, never as a verification.
+    #[test]
+    fn sat_model_against_an_empty_subject_is_nothing_to_check() {
+        let mut arena = TermArena::new();
+        let symbol = arena.declare("a", Sort::BitVec(4)).expect("declare");
+        let a = arena.var(symbol);
+        let five = arena.bv_const(4, 5).expect("const");
+        let assertion = arena.eq(a, five).expect("eq");
+        let report =
+            produce_qf_bv_evidence(&arena, &[assertion], &SolverConfig::new()).expect("evidence");
+        assert!(matches!(report.evidence, Evidence::Sat(_)));
+
+        assert_eq!(
+            report.evidence.check_outcome(&arena, &[]).expect("check"),
+            EvidenceCheck::NothingToCheck(NoCheckReason::EmptySubject)
+        );
+        assert!(!report.evidence.check(&arena, &[]).expect("check"));
+        // Against the real subject it verifies.
+        assert!(report.evidence.check(&arena, &[assertion]).expect("check"));
+    }
+
+    /// ADR-0382 (A4): proof production honors the caller's deadline. An expired
+    /// deadline yields the DECIDED-but-uncertified outcome — a bare `unsat` with
+    /// `SatRefutation` recorded uncertified — never an `Err` and never an
+    /// `unknown`, and without re-running the search.
+    #[test]
+    fn expired_deadline_yields_a_decided_uncertified_unsat() {
+        let (arena, assertions) = unsat_bv_query();
+        let expired = Instant::now()
+            .checked_sub(Duration::from_secs(1))
+            .expect("instant");
+
+        let started = Instant::now();
+        let (evidence, steps) =
+            drat_qf_bv_evidence(&arena, &assertions, Some(expired)).expect("no error on timeout");
+        let elapsed = started.elapsed();
+
+        assert!(
+            matches!(evidence, Evidence::Unsat(None)),
+            "a spent proof budget must keep the verdict, got {}",
+            evidence.kind_label()
+        );
+        assert!(
+            !matches!(evidence, Evidence::Unknown(_)),
+            "proof-production timeout must not undecide the query"
+        );
+        let sat_refutation = steps
+            .iter()
+            .find(|step| step.id == TrustId::SatRefutation)
+            .expect("SatRefutation trust step recorded");
+        assert!(
+            !sat_refutation.certified,
+            "no proof was produced, so the SAT refutation is not certified"
+        );
+        // And it is reported honestly by the checker: nothing was validated.
+        assert_eq!(
+            evidence.check_outcome(&arena, &assertions).expect("check"),
+            EvidenceCheck::NothingToCheck(NoCheckReason::UncertifiedUnsat)
+        );
+        assert!(
+            elapsed < Duration::from_secs(1),
+            "expired deadline must short-circuit, took {elapsed:?}"
+        );
+    }
+
+    /// ADR-0382 (A4): the deadline is threaded, not merely clamped to zero — with
+    /// budget left, the same query still produces its certificate.
+    #[test]
+    fn ample_deadline_still_produces_the_proof() {
+        let (arena, assertions) = unsat_bv_query();
+        let deadline = Instant::now().checked_add(Duration::from_secs(60));
+
+        let (evidence, steps) =
+            drat_qf_bv_evidence(&arena, &assertions, deadline).expect("evidence");
+
+        assert!(
+            evidence.is_certified(),
+            "expected a certificate under budget"
+        );
+        assert!(evidence.check(&arena, &assertions).expect("check"));
+        assert!(
+            steps
+                .iter()
+                .any(|step| step.id == TrustId::SatRefutation && step.certified)
+        );
+    }
+
+    /// ADR-0382 (A4): a generous `SolverConfig::timeout` must not cost the
+    /// certificate — the whole-call budget is threaded, not spent by the
+    /// decision phase alone.
+    #[test]
+    fn produce_qf_bv_evidence_keeps_its_certificate_under_a_generous_timeout() {
+        let (arena, assertions) = unsat_bv_query();
+        let config = SolverConfig::new().with_timeout(Duration::from_secs(60));
+
+        let report = produce_qf_bv_evidence(&arena, &assertions, &config).expect("evidence");
+
+        assert!(report.evidence.is_certified());
+        assert!(report.evidence.check(&arena, &assertions).expect("check"));
+    }
+
+    /// ADR-0382 (A5): a consumer can re-check the text front door's own result
+    /// against the arena it was produced from — no second parse, so correctness
+    /// no longer rests on two parses agreeing on `SymbolId` assignment.
+    #[test]
+    fn smtlib_evidence_rechecks_without_reparsing() {
+        let text = r"(set-logic QF_BV)
+(declare-const a (_ BitVec 8))
+(assert (= a (bvadd a #x01)))
+(check-sat)";
+
+        let produced = produce_evidence_smtlib_with_script(text, &SolverConfig::new())
+            .expect("produce evidence");
+
+        assert!(produced.arena_view_faithful);
+        assert!(produced.report.evidence.is_certified());
+        assert_eq!(
+            produced.check_outcome().expect("check"),
+            EvidenceCheck::Verified
+        );
+        // The same subject, reached through the public fields.
+        assert!(
+            produced
+                .report
+                .evidence
+                .check(&produced.script.arena, &produced.script.assertions)
+                .expect("check")
+        );
+    }
+
+    /// ADR-0382 (A5): the existing signature keeps working and agrees with the
+    /// script-returning variant.
+    #[test]
+    fn smtlib_front_door_signature_is_unchanged() {
+        let text = r"(set-logic QF_BV)
+(declare-const a (_ BitVec 8))
+(assert (= (bvand a #x0f) #x05))
+(check-sat)";
+
+        let report = produce_evidence_smtlib(text, &SolverConfig::new()).expect("report");
+        let produced =
+            produce_evidence_smtlib_with_script(text, &SolverConfig::new()).expect("with script");
+
+        assert_eq!(
+            report.evidence.kind_label(),
+            produced.report.evidence.kind_label()
+        );
+        assert_eq!(
+            produced.check_outcome().expect("check"),
+            EvidenceCheck::Verified
+        );
+    }
+
+    /// ADR-0382 (A5): handing back the script must not hand back a *vacuous*
+    /// check. A string script's flat view is bounded/empty, so a `sat` model
+    /// replayed against it would pass having validated nothing (ADR-0061) — the
+    /// returned subject reports itself unfaithful instead.
+    #[test]
+    fn string_script_view_is_not_a_checking_subject() {
+        let text = r#"(set-logic QF_S)
+(declare-const x String)
+(assert (= x (str.++ "a" "b")))
+(check-sat)"#;
+
+        let produced = produce_evidence_smtlib_with_script(text, &SolverConfig::new())
+            .expect("produce evidence");
+
+        assert!(
+            !produced.arena_view_faithful,
+            "a string script's flat view is not a checking subject"
+        );
+        let outcome = produced.check_outcome().expect("check");
+        assert!(
+            !outcome.is_verified(),
+            "the bounded/empty view must never fabricate a verification, got {outcome:?}"
+        );
     }
 }

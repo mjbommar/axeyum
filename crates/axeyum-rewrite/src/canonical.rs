@@ -65,6 +65,7 @@ const ITE_CONST_CONDITION: &str = "ite.const_condition.v1";
 const ITE_SAME_BRANCHES: &str = "ite.same_branches.v1";
 const ITE_BOOL_IDENTITY: &str = "ite.bool_identity.v1";
 const BV_CONST_FOLD: &str = "bv.const_fold.v1";
+const INT_CONST_FOLD: &str = "int.const_fold.v1";
 const BV_DOUBLE_NOT: &str = "bv.double_not.v1";
 const BV_DOUBLE_NEG: &str = "bv.double_neg.v1";
 const BV_ADD_ZERO: &str = "bv.add_zero.v1";
@@ -446,6 +447,11 @@ fn default_rules() -> Vec<RewriteRule> {
             "all operands are constants and the result sort is a bit-vector",
         ),
         rule(
+            INT_CONST_FOLD,
+            "Ground integer constant fold",
+            "every operand is an `Int` literal and the operator's SMT-LIB value is uniquely determined by them (so NOT `div`/`mod` by a zero divisor, which SMT-LIB leaves underspecified)",
+        ),
+        rule(
             BV_DOUBLE_NOT,
             "Double bit-vector complement",
             "`bvnot` applied to a `bvnot` term",
@@ -774,6 +780,17 @@ fn rewrite_app(
         if enabled.contains(rule_id) {
             return Ok(applied(folded, rule_id));
         }
+    }
+
+    // Ground integer arithmetic. `all_constant` above deliberately matches only
+    // Bool/BV literals, so `(div 48 4)`, `(+ 11 1)`, `(<= 3 4)` and friends used to
+    // survive canonicalization verbatim and reach the backend as *structure*. See
+    // `fold_ground_int` for why that is expensive and for the div/mod-by-zero
+    // carve-out that keeps the fold sound.
+    if enabled.contains(INT_CONST_FOLD)
+        && let Some(folded) = fold_ground_int(arena, op, args)?
+    {
+        return Ok(applied(folded, INT_CONST_FOLD));
     }
 
     // Commutative-operand canonicalization. Two flavours, both governed by the
@@ -2159,6 +2176,102 @@ fn all_constant(arena: &TermArena, args: &[TermId]) -> bool {
             TermNode::BoolConst(_) | TermNode::BvConst { .. }
         )
     })
+}
+
+/// The `i128` value of an `Int` literal term, or `None` for any other node.
+fn int_const(arena: &TermArena, term: TermId) -> Option<i128> {
+    match arena.node(term) {
+        TermNode::IntConst(value) => Some(*value),
+        _ => None,
+    }
+}
+
+/// Folds an application whose operands are **all `Int` literals** into the literal
+/// it denotes (`Int`-sorted result) or a Boolean constant (comparison / equality).
+/// Returns `Ok(None)` when the application is not of that shape, when the operator
+/// is not one this rule is allowed to fold, or when the ground evaluator declines.
+///
+/// # Why this rule exists
+///
+/// The generic constant fold above matches only `Bool`/`BitVec` literals, so a
+/// ground integer term such as `(div 48 4)` reached the backend as *structure*, not
+/// as `12`. That is expensive far out of proportion to its content: every distinct
+/// spelling of the same integer becomes a distinct argument term, so an
+/// uninterpreted application `(c (+ (div 48 4) 1))` is not syntactically `(c 13)`
+/// and the congruence/Ackermann machinery has to prove the arguments equal, and the
+/// integer encoder has to blast a divider for a term with no variables in it.
+/// Measured on a ground `QF_UFLIA` probe holding everything else fixed and varying
+/// only the spelling of an integer: up to 49× slower, and two otherwise-decided
+/// instances turned into timeouts (ADR-0382).
+///
+/// # Soundness — agreement with the ground evaluator
+///
+/// The folded value is not recomputed here: it is whatever
+/// [`axeyum_ir::eval`] returns for the rebuilt application under the empty
+/// assignment. Agreement with the evaluator is therefore *definitional* rather
+/// than argued — the fold IS an evaluator call — which matters because the
+/// evaluator is the same code that replays every `sat` model against the original
+/// term. When `eval` reports an error (`i128::MIN / -1`, an out-of-range
+/// `int.pow2`, an overflowing sum) the term is left unfolded, so the reference
+/// range is never silently exceeded.
+///
+/// What *is* a judgement call is **which** operators may be folded at all, and the
+/// rule is: only those whose value SMT-LIB determines uniquely from the operands.
+///
+/// * `+`, `-`, `*`, unary `-`, `abs`, `int.pow2`, `<`, `<=`, `>`, `>=`, and `=` are
+///   total and fully specified, so the evaluator's value is the only value any
+///   SMT-LIB model can give them.
+/// * `div`/`mod` are fully specified **only for a non-zero divisor** — the
+///   Euclidean pair `a = b·q + r`, `0 ≤ r < |b|` — which is exactly
+///   `checked_div_euclid`/`rem_euclid`, i.e. exactly what the evaluator computes.
+/// * `div`/`mod` **by zero** are total but *underspecified*: SMT-LIB fixes no
+///   value, so different models may give different ones. The evaluator resolves
+///   them with the in-tree convention `div a 0 = 0`, `mod a 0 = a` — a legitimate
+///   *witness* choice, but not a fact. Folding to it would refute formulas that are
+///   satisfiable under a different choice (`(< 775 (mod 0 0))` is `sat`, and folding
+///   makes it `775 < 0`). That is the P0 wrong-unsat regressed by `a946f925` and
+///   fixed by `52f3b1d1`; this rule therefore **declines** a zero divisor outright
+///   and leaves the term for [`crate::eliminate_int_divmod`], which models it as a
+///   fresh congruent variable. Declining cannot disagree with the evaluator on any
+///   input, because declining computes no value.
+fn fold_ground_int(
+    arena: &mut TermArena,
+    op: Op,
+    args: &[TermId],
+) -> Result<Option<TermId>, IrError> {
+    if args.is_empty() || args.iter().any(|&arg| int_const(arena, arg).is_none()) {
+        return Ok(None);
+    }
+    let foldable = match op {
+        Op::IntNeg
+        | Op::IntAdd
+        | Op::IntSub
+        | Op::IntMul
+        | Op::IntAbs
+        | Op::IntPow2
+        | Op::IntLt
+        | Op::IntLe
+        | Op::IntGt
+        | Op::IntGe
+        | Op::Eq => true,
+        // Underspecified at a zero divisor — see the soundness note above.
+        Op::IntDiv | Op::IntMod => int_const(arena, args[1]) != Some(0),
+        _ => false,
+    };
+    if !foldable {
+        return Ok(None);
+    }
+    let rebuilt = build_app(arena, op, args)?;
+    // The fold is an evaluator call, so it cannot disagree with evaluation. An
+    // evaluator error (out of the `i128` reference range) declines the fold.
+    let Ok(value) = eval(arena, rebuilt, &Assignment::new()) else {
+        return Ok(None);
+    };
+    match value {
+        Value::Int(value) => Ok(Some(arena.int_const(value))),
+        Value::Bool(value) => Ok(Some(arena.bool_const(value))),
+        _ => Ok(None),
+    }
 }
 
 fn value_to_term(arena: &mut TermArena, value: Value) -> Result<TermId, IrError> {
