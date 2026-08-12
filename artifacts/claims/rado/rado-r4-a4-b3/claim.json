@@ -1,0 +1,193 @@
+{
+  "schema_version": 1,
+  "id": "rado-r4-a4-b3",
+  "title": "R_4(4(x-y)=3z) = 313",
+  "statement": "The 4-colour Rado number of the equation 4(x-y) = 3z is exactly 313: every 4-colouring of {1,...,313} contains a monochromatic solution, and some 4-colouring of {1,...,312} avoids one. This value lies outside the published four-colour table, whose coprime coverage extends only to a+b <= 6.",
+  "epistemic_status": "computed",
+  "formal": {
+    "language": "cnf-family",
+    "family": "rado-colouring-a(x-y)=bz",
+    "parameters": {
+      "a": 4,
+      "b": 3,
+      "k": 4,
+      "n": 313
+    },
+    "generator": "scripts/gen-rado-instance.py",
+    "semantics_note": "artifacts/claims/rado/SEMANTICS.md"
+  },
+  "concept_refs": [
+    {
+      "graph": "math-education",
+      "ref": "C:rado-number",
+      "relation": "instance-of",
+      "resolved": false,
+      "note": "authored this session at math-education graph/concepts/rado-number.md (uncommitted); flip to resolved with a fresh graph_pin once that repo commits"
+    },
+    {
+      "graph": "math-education",
+      "ref": "C:ramsey-number",
+      "relation": "exercises",
+      "resolved": true
+    },
+    {
+      "graph": "math-education",
+      "ref": "C:pigeonhole-principle",
+      "relation": "exercises",
+      "resolved": true
+    },
+    {
+      "graph": "math-education",
+      "ref": "TQ:colouring",
+      "relation": "uses-technique",
+      "resolved": true
+    },
+    {
+      "graph": "math-education",
+      "ref": "C:computational-search",
+      "relation": "exercises",
+      "resolved": true
+    }
+  ],
+  "axeyum_refs": {
+    "fragments": [],
+    "curriculum_nodes": [
+      "propositional-logic"
+    ]
+  },
+  "provenance": {
+    "conjectured_by": "enumeration: frontier census of coprime (a,b) entries absent from Chang-De Loera-Wesley Table 10",
+    "searched_by": [
+      "axeyum native proof-producing CDCL (rado_axeyum native) for the SAT side: n=312 in 166.8 s",
+      "axeyum cube-and-conquer over an exhaustive cover (agent_cube, branch integers 2,4,6,8,10, depth 5) for the UNSAT side"
+    ],
+    "checked_by": [
+      "axeyum in-tree backward DRAT checker (check_drat_backward): all 4096 cover cells, 149.4M proof steps, 268.4 s, zero failures",
+      "axeyum in-tree check_drat on 800 of 1024 per-cube refutations",
+      "scripts/check-claim-certificates.py: witness replay by an independent O(n^2) enumerator, cover exhaustiveness, and verbatim at-least-one clauses for every branch integer"
+    ],
+    "date": "2026-08-12",
+    "machine": "linux x86-64; contended throughout, wall times are upper bounds",
+    "toolchain": {
+      "axeyum_commit": "c516b5fac20f38886dfad41433656bad988f9f5c",
+      "rustc_version": "rustc 1.94.1 (e408947bf 2026-03-25)",
+      "target": "x86_64",
+      "dirty": true
+    },
+    "graph_pin": "a29a9e2a649b0fdafcf1032292832d3fb590f9b7",
+    "prior_art": [
+      {
+        "citation": "Y. Chang, J. A. De Loera, W. J. Wesley, 'Rado Numbers and SAT Computations', ISSAC 2022",
+        "url": "https://arxiv.org/abs/2210.03262",
+        "establishes": "R_3(a(x-y)=(a-1)z) = a^3 + (a-1)^2 for a >= 3, and a four-colour table covering only a+b <= 6. This entry is absent from it."
+      }
+    ]
+  },
+  "evidence": [
+    {
+      "id": "lower-witness",
+      "kind": "witness-replay",
+      "supports": "R_4 > 312 (lower bound)",
+      "artifact": "artifacts/claims/rado/rado-r4-a4-b3/witness.txt",
+      "artifact_sha256": "f585ddf4a7d3a727d7003937456454fb3707941b31b4c718ea2b343869d6c6ff",
+      "check_status": "checked",
+      "checker_command": "python3 scripts/check-claim-certificates.py --only rado-r4-a4-b3",
+      "notes": "Verified three independent ways: axeyum's own model self-check (formula.evaluate on the lifted model), a purpose-written brute-force checker sharing no code or gcd reduction with the generator, and the ledger checker. 15,093 solutions enumerated in [312]^2, none monochromatic.",
+      "artifact_format": "colouring-text"
+    },
+    {
+      "id": "upper-cube-cover",
+      "kind": "cube-cover",
+      "supports": "R_4 <= 313 (upper bound)",
+      "artifact": "artifacts/claims/rado/rado-r4-a4-b3/cube-cover.tsv",
+      "artifact_sha256": "eff8f98d6b370c3e6303683a6fc28e708a8d783228809630d6237a22db5c3753",
+      "check_status": "replay-only",
+      "checker_command": "python3 scripts/check-claim-certificates.py --only rado-r4-a4-b3",
+      "parameters": {
+        "branch": [
+          2,
+          4,
+          6,
+          8,
+          10
+        ],
+        "cubes": 1024,
+        "checked_cubes": 800,
+        "deferred_cubes": 224
+      },
+      "notes": "1024/1024 cells refuted by the axeyum proof-producing CDCL core; 800 per-cell DRAT proofs accepted by the in-tree check_drat, 224 deferred past the check cap. Reproduced independently on two hosts with different worker counts, both reporting 80,975,667 derived clauses -- bit-identical, as the determinism contract requires. The residual 'checked refutations of an exhaustive cover imply UNSAT' step is a meta-argument, not a checked DRAT derivation.",
+      "artifact_format": "tsv-ledger"
+    },
+    {
+      "id": "upper-cover-alt-b23456",
+      "kind": "cube-cover",
+      "supports": "R_4 <= 313 (upper bound, independent decomposition)",
+      "artifact": "artifacts/claims/rado/rado-r4-a4-b3/cube-cover-alt-b23456.tsv",
+      "artifact_sha256": "9d9ce66456a79b4a415f02815bd43619f93c97bf86f7eabfa4af052a7cba1301",
+      "check_status": "replay-only",
+      "checker_command": "python3 scripts/check-claim-certificates.py --only rado-r4-a4-b3",
+      "parameters": {
+        "branch": [
+          2,
+          3,
+          4,
+          5,
+          6
+        ],
+        "cubes": 1024,
+        "checked_cubes": 907,
+        "deferred_cubes": 117
+      },
+      "notes": "A structurally DIFFERENT exhaustive decomposition of the same instance (branch integers 2,3,4,5,6 rather than 2,4,6,8,10), reaching the same verdict with a higher checked fraction. Two covers that partition the search space differently and agree is stronger evidence than one cover alone.",
+      "artifact_format": "tsv-ledger"
+    },
+    {
+      "id": "upper-cover-alt-b357911",
+      "kind": "cube-cover",
+      "supports": "R_4 <= 313 (upper bound, third independent decomposition)",
+      "artifact": "artifacts/claims/rado/rado-r4-a4-b3/cube-cover-alt-b357911.tsv",
+      "artifact_sha256": "f54cf18b6075a7dc2f3459ee2253df446fa2fb17c7630bb50d5256e54f8159b3",
+      "check_status": "replay-only",
+      "checker_command": "python3 scripts/check-claim-certificates.py --only rado-r4-a4-b3",
+      "parameters": {
+        "branch": [
+          3,
+          5,
+          7,
+          9,
+          11
+        ],
+        "cubes": 1024,
+        "checked_cubes": 289,
+        "deferred_cubes": 735
+      },
+      "notes": "Third exhaustive decomposition, branching on odd integers only. Fewer proofs checked, but it exercises a disjoint branch set.",
+      "artifact_format": "tsv-ledger"
+    },
+    {
+      "id": "upper-cover-dumped",
+      "kind": "cube-cover",
+      "supports": "R_4 <= 313 (upper bound, complete cover with all proofs retained)",
+      "artifact": "artifacts/claims/rado/rado-r4-a4-b3/cube-cover-complete-dumped.tsv",
+      "artifact_sha256": "b3f74cf442b418f8bf7fe3b778a269f8d5c4530e4e94f709081c8c05a3c99bb6",
+      "check_status": "checked",
+      "checker_command": "BRANCH=2,4,6,8,10,12 certify_cover r_d313.cnf d313.tsv proofs_d313 4 14   # axeyum check_drat_backward",
+      "parameters": {
+        "branch": [
+          2,
+          4,
+          6,
+          8,
+          10,
+          12
+        ],
+        "cubes": 4096,
+        "checked_cubes": 4096,
+        "deferred_cubes": 0
+      },
+      "notes": "Complete exhaustive cover of [1..4]^6, produced and CERTIFIED entirely by axeyum. Search: 4096/4096 cells refuted in 164.5 s on 14 workers with all proofs retained (9.0 GiB). Certification: all 4096 per-cell DRAT proofs verified by axeyum's in-tree backward checker in 268.4 s -- 149,439,877 proof steps, zero failures, zero missing. Each cell's augmented formula is rebuilt from the recorded colour tuple, not taken from the proof. The artifact is the CERTIFICATION ledger emitted by that pass -- one row per cell recording the backward checker's verdict -- not the search ledger. Conflating the two was caught by the validator: the search ran with inline checking disabled, so its own ledger records every cell as deferred.",
+      "artifact_format": "tsv-ledger"
+    }
+  ],
+  "notes": "Second exact value determined in this work. Its excess over a^4 is 57, which refutes all three natural liftings of the proven three-colour law a^3 + (a-1)^2: a^4 + (a-1)^2 = 265, a^4 + (a-1)^3 = 283, and a^4 + (a-1)^4 = 337. No closed form reproducing 57 is known to us. Monolithic CDCL did not finish n = 316, 320 or 325 within 36 minutes each, while cube-and-conquer settled n = 313 in 8.5 minutes. HARDENING: F_313 was refuted by FOUR exhaustive covers across three distinct branch sets and two hosts, with zero check_drat failures anywhere and bit-identical derived-clause counts (80,975,667) between two of them. An independent re-derivation of the formula found zero clauses lacking a problem justification, and small values of the family were reproduced with symmetry breaking disabled entirely. Full per-cube checking of all 224 non-trivial cells is a ~300 core-hour job at the forward checker's current speed -- a throughput limit, not a soundness one. A restarted run that appended to a live status file was caught by the cover checker (1093 rows, 69 duplicates) and quarantined unused."
+}

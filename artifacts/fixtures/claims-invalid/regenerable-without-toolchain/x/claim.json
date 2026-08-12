@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "id": "x",
+  "title": "Regenerable evidence with no pinned toolchain",
+  "statement": "A claim whose certificate is not distributed and whose regeneration recipe names no pinned build, making the recorded hash unfalsifiable.",
+  "epistemic_status": "computed",
+  "formal": {
+    "language": "cnf-family",
+    "family": "rado-colouring-a(x-y)=bz",
+    "parameters": { "a": 2, "b": 3, "k": 4, "n": 226 },
+    "generator": "scripts/gen-rado-instance.py"
+  },
+  "concept_refs": [],
+  "axeyum_refs": { "fragments": [] },
+  "provenance": {
+    "conjectured_by": "human: fixture",
+    "searched_by": ["axeyum native proof-CDCL"],
+    "checked_by": ["axeyum check_drat"],
+    "date": "2026-08-12"
+  },
+  "evidence": [
+    {
+      "id": "upper",
+      "kind": "unsat-certificate",
+      "supports": "R_4 <= 226 (upper bound)",
+      "check_status": "checked",
+      "checker_command": "python3 scripts/check-claim-certificates.py",
+      "regeneration": {
+        "command": "rado_axeyum native-stream F_226.cnf 48 out",
+        "produces_sha256": "d0b26e7832d1b9d550cd107c3a1af468aec44641de1449c4e4128f0d18377663",
+        "bytes": 2394664316
+      }
+    }
+  ]
+}

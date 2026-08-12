@@ -1,0 +1,103 @@
+{
+  "schema_version": 1,
+  "id": "rado-r4-a2-b2",
+  "title": "R_4(2(x-y)=2z) = 45",
+  "statement": "The 4-colour Rado number of the equation 2(x-y) = 2z is exactly 45: every 4-colouring of {1,...,45} contains a monochromatic solution, and some 4-colouring of {1,...,44} avoids one.",
+  "epistemic_status": "computed",
+  "formal": {
+    "language": "cnf-family",
+    "family": "rado-colouring-a(x-y)=bz",
+    "parameters": {
+      "a": 2,
+      "b": 2,
+      "k": 4,
+      "n": 45
+    },
+    "generator": "scripts/gen-rado-instance.py",
+    "semantics_note": "artifacts/claims/rado/SEMANTICS.md"
+  },
+  "concept_refs": [
+    {
+      "graph": "math-education",
+      "ref": "C:rado-number",
+      "relation": "instance-of",
+      "resolved": false,
+      "note": "authored this session at math-education graph/concepts/rado-number.md (uncommitted); flip to resolved with a fresh graph_pin once that repo commits"
+    },
+    {
+      "graph": "math-education",
+      "ref": "C:ramsey-number",
+      "relation": "exercises",
+      "resolved": true,
+      "note": "Rado numbers are the arithmetic-Ramsey analogue: the same threshold/colouring reasoning at a different structure"
+    },
+    {
+      "graph": "math-education",
+      "ref": "C:pigeonhole-principle",
+      "relation": "exercises",
+      "resolved": true
+    },
+    {
+      "graph": "math-education",
+      "ref": "TQ:colouring",
+      "relation": "uses-technique",
+      "resolved": true
+    },
+    {
+      "graph": "math-education",
+      "ref": "C:computational-search",
+      "relation": "exercises",
+      "resolved": true
+    }
+  ],
+  "axeyum_refs": {
+    "fragments": [],
+    "curriculum_nodes": [
+      "propositional-logic"
+    ]
+  },
+  "provenance": {
+    "conjectured_by": "literature: Y. Chang, J. A. De Loera, W. J. Wesley, 'Rado Numbers and SAT Computations', ISSAC 2022 / arXiv:2210.03262",
+    "searched_by": [
+      "kissat 4.0.4 (rel-4.0.4)"
+    ],
+    "checked_by": [
+      "drat-trim (2026 build, references/drat-trim)",
+      "scripts/check-claim-certificates.py witness replay (independent O(n^2) enumerator)"
+    ],
+    "date": "2026-08-12",
+    "machine": "linux x86-64, 4 cores",
+    "prior_art": [
+      {
+        "citation": "Y. Chang, J. A. De Loera, W. J. Wesley, 'Rado Numbers and SAT Computations', ISSAC 2022 / arXiv:2210.03262",
+        "url": "https://arxiv.org/abs/2210.03262",
+        "establishes": "R_4(2(x-y)=2z) = 45 (Tables 1 and 10)"
+      }
+    ],
+    "graph_pin": "a29a9e2a649b0fdafcf1032292832d3fb590f9b7"
+  },
+  "evidence": [
+    {
+      "id": "lower-witness",
+      "kind": "witness-replay",
+      "supports": "R_4 > 44 (lower bound)",
+      "artifact": "artifacts/claims/rado/rado-r4-a2-b2/witness.txt",
+      "artifact_sha256": "dadf20571e85fe7fbec6b3ea86ee32831138e2cfe87c2be088cca937e7d50e30",
+      "check_status": "checked",
+      "checker_command": "python3 scripts/check-claim-certificates.py",
+      "artifact_format": "colouring-text"
+    },
+    {
+      "id": "upper-drat",
+      "kind": "unsat-certificate",
+      "supports": "R_4 <= 45 (upper bound)",
+      "artifact": "artifacts/claims/rado/rado-r4-a2-b2/F_45.drat.gz",
+      "artifact_sha256": "b30353a164c50171eca8aa98d8931bc74ce3f43d358724a64309b729d718af7c",
+      "check_status": "replay-only",
+      "checker_command": "python3 scripts/check-claim-certificates.py --drat-checker references/drat-trim/drat-trim   # gunzips the proof to a temp file before checking",
+      "artifact_format": "drat-binary-gzip",
+      "notes": "FORMAT DOWNGRADE (B8): this certificate is binary DRAT, which axeyum's own parse_drat cannot read, so it was never checked by this system -- only by the external drat-trim. Honest status is replay-only until the proof is regenerated with axeyum's proof core (roadmap R3)."
+    }
+  ],
+  "notes": "Replication of a published value with independent artifacts: the witness is replay-verified by a third enumerator implementation, and the UNSAT side carries a drat-trim-verified certificate for the exact generated instance."
+}

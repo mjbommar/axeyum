@@ -1,0 +1,50 @@
+{
+  "schema_version": 1,
+  "id": "x",
+  "title": "Invalid cube cover: cube-cover-failed-check",
+  "statement": "A cover containing a cube whose proof check failed.",
+  "epistemic_status": "computed",
+  "formal": {
+    "language": "cnf-family",
+    "family": "rado-colouring-a(x-y)=bz",
+    "parameters": {
+      "a": 2,
+      "b": 1,
+      "k": 4,
+      "n": 56
+    },
+    "generator": "scripts/gen-rado-instance.py"
+  },
+  "concept_refs": [],
+  "axeyum_refs": {
+    "fragments": []
+  },
+  "provenance": {
+    "conjectured_by": "human: fixture",
+    "searched_by": [
+      "agent_cube"
+    ],
+    "checked_by": [
+      "scripts/check-claim-certificates.py"
+    ],
+    "date": "2026-08-12"
+  },
+  "evidence": [
+    {
+      "id": "cover",
+      "kind": "cube-cover",
+      "supports": "R_4 <= 56 (upper bound)",
+      "artifact": "artifacts/fixtures/claims-invalid/cube-cover-failed-check/x/cover.tsv",
+      "artifact_sha256": "da3aa2ea570e32b416e71ed06cddf87ad467beec24b140f9eab1cd295eb5777a",
+      "check_status": "checked",
+      "checker_command": "python3 scripts/check-claim-certificates.py",
+      "parameters": {
+        "branch": [
+          2,
+          4
+        ],
+        "cubes": 16
+      }
+    }
+  ]
+}

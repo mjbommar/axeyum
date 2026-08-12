@@ -1,0 +1,50 @@
+{
+  "schema_version": 1,
+  "id": "x",
+  "title": "Invalid cube cover: cube-cover-unlicensed-branch",
+  "statement": "A cover branching on an integer the formula has no case-split clause for.",
+  "epistemic_status": "computed",
+  "formal": {
+    "language": "cnf-family",
+    "family": "rado-colouring-a(x-y)=bz",
+    "parameters": {
+      "a": 2,
+      "b": 1,
+      "k": 4,
+      "n": 56
+    },
+    "generator": "scripts/gen-rado-instance.py"
+  },
+  "concept_refs": [],
+  "axeyum_refs": {
+    "fragments": []
+  },
+  "provenance": {
+    "conjectured_by": "human: fixture",
+    "searched_by": [
+      "agent_cube"
+    ],
+    "checked_by": [
+      "scripts/check-claim-certificates.py"
+    ],
+    "date": "2026-08-12"
+  },
+  "evidence": [
+    {
+      "id": "cover",
+      "kind": "cube-cover",
+      "supports": "R_4 <= 56 (upper bound)",
+      "artifact": "artifacts/fixtures/claims-invalid/cube-cover-unlicensed-branch/x/cover.tsv",
+      "artifact_sha256": "36b44ea3f249162573d1772f385f5d3567a37cfb71ff36a2017c02697c444999",
+      "check_status": "checked",
+      "checker_command": "python3 scripts/check-claim-certificates.py",
+      "parameters": {
+        "branch": [
+          2,
+          999
+        ],
+        "cubes": 16
+      }
+    }
+  ]
+}
