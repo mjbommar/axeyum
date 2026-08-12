@@ -53,8 +53,8 @@ use std::collections::HashSet;
 
 use axeyum_cnf::{CnfFormula, CnfLit, DratStep};
 
-use crate::cover::{verify_branch_clauses, BranchPlan};
 use crate::SearchError;
+use crate::cover::{BranchPlan, verify_branch_clauses};
 
 /// Unions two clauses, dropping duplicates.
 ///
@@ -149,7 +149,7 @@ mod tests {
     use super::*;
     use crate::cover::colour_branch_plan;
     use crate::family::{ColouringFamily, Schur};
-    use axeyum_cnf::{check_drat, solve_with_drat_proof, CnfClause, ProofSolveOutcome};
+    use axeyum_cnf::{CnfClause, ProofSolveOutcome, check_drat, solve_with_drat_proof};
 
     /// Solves every cell of `plan` against `formula` and retains the proofs.
     fn cell_proofs(formula: &CnfFormula, plan: &BranchPlan) -> Vec<Option<Vec<DratStep>>> {
@@ -188,17 +188,32 @@ mod tests {
     }
 
     #[test]
-    fn a_forged_cell_proof_is_rejected() {
-        // SOUNDNESS-NEGATIVE: replace one cell's real refutation with a bare,
-        // unjustified `Add([])`. If the final check accepted this, it would be
-        // accepting the cover rather than checking it.
-        let (formula, plan) = schur_five();
-        let mut proofs = cell_proofs(&formula, &plan);
-        proofs[2] = Some(vec![DratStep::Add(Vec::new())]);
+    fn a_forged_cover_of_a_satisfiable_formula_is_rejected() {
+        // SOUNDNESS-NEGATIVE: fabricate every cell "refutation" as a bare,
+        // unjustified `Add([])` over a formula that is genuinely SATISFIABLE
+        // (S(2) = 5, so [1, 4] has a sum-free 2-colouring). No valid DRAT
+        // refutation of it exists, so if the final check accepted the
+        // composition it would be accepting the cover meta-argument rather
+        // than checking the proof.
+        //
+        // Note the sharper fact this test deliberately does NOT assert: on an
+        // UNSAT formula, forging one cell's proof can still compose into an
+        // artifact `check_drat` accepts, because checking re-derives every
+        // lifted step by RUP and the forged step may be independently
+        // derivable (on `schur_five` with this plan, every cube negation is
+        // one propagation cascade away, so it always is). That acceptance is
+        // correct: the guarantee is that an accepted artifact is a valid
+        // refutation of F, not a claim about the provenance of its steps.
+        let family = Schur::new(2).expect("family");
+        let problem = family.problem(4).expect("problem");
+        let formula = problem.encode().expect("encode");
+        let plan = colour_branch_plan(&problem, &[2, 3]).expect("plan");
+        let proofs: Vec<Option<Vec<DratStep>>> =
+            vec![Some(vec![DratStep::Add(Vec::new())]); plan.cell_count()];
         let composed = compose_cover_proof(&formula, &plan, &proofs).expect("compose");
         assert!(
             check_drat(&formula, &composed).is_err(),
-            "check_drat accepted a composed proof containing an unjustified empty clause"
+            "check_drat accepted a forged refutation of a satisfiable formula"
         );
     }
 

@@ -17,6 +17,7 @@ members = [
     "crates/axeyum-property-macros",
     "crates/axeyum-rewrite",
     "crates/axeyum-scenarios",
+    "crates/axeyum-search",
     "crates/axeyum-smtlib",
     "crates/axeyum-solver",
     "crates/axeyum-strings",
