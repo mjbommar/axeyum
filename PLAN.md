@@ -98,7 +98,10 @@ binary G1/D2 returned GraphPartitioning SAT and BubbleSort UNSAT through
 `dl-online` in 3/3 each at 32 seconds. V2 recovers both at 24 seconds and
 preserves all 173 retained decisions. Exact pushed `d1b570f91c2` passed the
 complete external-frontier `just check` in 6,277 seconds with exit 0; the repair
-is release-qualified. See the [result](docs/plan/qf-linear-a5-idl-extended-dl-slice-v2-result-2026-08-11.md).
+is release-qualified. Exact-pushed `6d4718e13` then completed fresh atomic
+QF_LRA and QF_IDL captures: 90/200 and 70/200, six agreeing gains total, zero
+losses or wrong verdicts, with `sc-39`, LPSAT, BubbleSort, and GraphPartitioning
+controls retained. QF_RDL is now authorized but not started. See the [result](docs/plan/qf-linear-a5-idl-extended-dl-slice-v2-result-2026-08-11.md).
 
 A3 is **WIP**. Pushed result checkpoint `3696e7dd5` is integrated on current
 main by `47d8cd956`; its source branch remains preserved. The repaired complete
@@ -353,10 +356,10 @@ here as closed evidence boundaries. A3 remains incomplete, but all currently
 preregistered bounded mechanisms are closed negatively. A4 has now also yielded;
 A5 is the first active item.
 
-**Immediate action (`WIP`).** Restart V2 QF_LRA from row 1 at the fully gated
-large-equality DL checkpoint under the existing atomic protocol. Validate its
-strict monotonicity join before QF_IDL; QF_RDL remains ordered behind the QF_IDL
-join. Failed and old streams remain non-credited.
+**Immediate action (`WIP`).** Resume with V2 QF_RDL row 1 at exact-pushed
+`6d4718e13` under the existing atomic protocol. Only its strict zero-loss join
+may authorize the frozen three-division derivation. Failed and old streams
+remain non-credited.
 
 **Parallel documentation action.** The comprehensive pass and 2026-08-09
 README application/vision revision are closed. Continue only for a concrete
