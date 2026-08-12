@@ -59,11 +59,13 @@
   "provenance": {
     "conjectured_by": "literature: Y. Chang, J. A. De Loera, W. J. Wesley, 'Rado Numbers and SAT Computations', ISSAC 2022 / arXiv:2210.03262",
     "searched_by": [
-      "kissat 4.0.4 (rel-4.0.4)"
+      "axeyum proof-producing CDCL core (solve_with_drat_proof_streaming, pure Rust, ADR-0381): produced the stored certificate in 0.000 s",
+      "HISTORICAL (superseded, ADR-0002 oracle role only): kissat 4.0.4 (rel-4.0.4) produced the original binary-DRAT certificate for this instance on 2026-08-12"
     ],
     "checked_by": [
-      "drat-trim (2026 build, references/drat-trim)",
-      "scripts/check-claim-certificates.py witness replay (independent O(n^2) enumerator)"
+      "axeyum in-tree backward DRAT checker (check_drat_backward, ADR-0382, pure Rust): re-derived all 25 steps of the stored certificate in 0.000 s",
+      "scripts/check-claim-certificates.py witness replay (independent O(n^2) enumerator)",
+      "HISTORICAL (no longer in the trusted path): drat-trim (2026 build, references/drat-trim) verified the superseded kissat binary-DRAT certificate on 2026-08-12"
     ],
     "date": "2026-08-12",
     "machine": "linux x86-64, 4 cores",
@@ -74,7 +76,13 @@
         "establishes": "R_3(4(x-y)=4z) = 14 (Tables 1 and 10)"
       }
     ],
-    "graph_pin": "a29a9e2a649b0fdafcf1032292832d3fb590f9b7"
+    "graph_pin": "a29a9e2a649b0fdafcf1032292832d3fb590f9b7",
+    "toolchain": {
+      "axeyum_commit": "406be5fa8b28a14d803103a5e95147b3b5ae541d",
+      "rustc_version": "rustc 1.99.0-nightly (be8e82435 2026-07-11)",
+      "target": "x86_64-unknown-linux-gnu",
+      "dirty": false
+    }
   },
   "evidence": [
     {
@@ -92,11 +100,20 @@
       "kind": "unsat-certificate",
       "supports": "R_3 <= 14 (upper bound)",
       "artifact": "artifacts/claims/rado/rado-r3-a4-b4/F_14.drat.gz",
-      "artifact_sha256": "96e589b708fcc1a61cd77cee142aabe037a0f7a421796013e707ad46964cb180",
-      "check_status": "replay-only",
-      "checker_command": "python3 scripts/check-claim-certificates.py --drat-checker references/drat-trim/drat-trim   # gunzips the proof to a temp file before checking",
-      "artifact_format": "drat-binary-gzip",
-      "notes": "FORMAT DOWNGRADE (B8): this certificate is binary DRAT, which axeyum's own parse_drat cannot read, so it was never checked by this system -- only by the external drat-trim. Honest status is replay-only until the proof is regenerated with axeyum's proof core (roadmap R3)."
+      "artifact_sha256": "a363f0a1924d2441f9ef4ed90c3601ea8ce3c1cb4deae160a0b5520f9ae85f34",
+      "check_status": "checked",
+      "checker_command": "cargo run --release -p axeyum-search --example recertify_rado -- 4 4 3 14 artifacts/claims/rado/rado-r3-a4-b4/F_14.cnf /tmp/rado-r3-a4-b4.drat 1.0   # regenerates the CNF (byte-compared against the stored one), re-solves with axeyum's proof-producing core, and re-derives the proof with axeyum's backward DRAT checker; the stored artifact is the gzip of exactly such a run",
+      "artifact_format": "drat-text-gzip",
+      "notes": "RE-CERTIFIED 2026-08-12 inside axeyum's own stack: the proof was produced by the in-tree proof-producing CDCL core streaming TEXT DRAT to disk (0.000 s, 25 steps), read back through axeyum's own parse_drat, and re-derived by axeyum's own backward DRAT checker (0.000 s). No external solver and no external checker took part. SUPERSEDES the original kissat certificate (sha256 96e589b708fcc1a61cd77cee142aabe037a0f7a421796013e707ad46964cb180, 932 bytes), which was BINARY DRAT: drat-trim verified it, but axeyum's own parse_drat reads text DRAT, so the shipped system could not read the certificate it shipped (findings register B8). The deciding CNF beside it regenerates byte-identically from the claim's parameters.",
+      "parameters": {
+        "producer": "axeyum solve_with_drat_proof_streaming + TextProofSink (crates/axeyum-cnf, ADR-0381)",
+        "checker": "axeyum check_drat_backward (crates/axeyum-cnf, ADR-0382)",
+        "proof_steps": 25,
+        "proof_bytes": 263,
+        "proof_sha256": "91cc5f764201e162b5804929676099c4f5ac031b72fde1488b96629945317fa3",
+        "solve_seconds": 0.0,
+        "check_seconds": 0.0
+      }
     }
   ],
   "notes": "Replication of a published value with independent artifacts: the witness is replay-verified by a third enumerator implementation, and the UNSAT side carries a drat-trim-verified certificate for the exact generated instance."

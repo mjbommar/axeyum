@@ -259,6 +259,129 @@ def check_cube_cover(path: Path, ev: dict, a: int, b: int, k: int,
 
 # ------------------------------------------------------------------- driver
 
+def check_unsat_certificate(path: Path, ev: dict, a: int, b: int, k: int,
+                            params: dict, drat_checker: str | None) -> list[str]:
+    """Re-check an unsat-certificate row against the claim's parameters.
+
+    What this checker establishes, mechanically, in THIS file's code only:
+
+      1. the deciding CNF beside the certificate regenerates byte-identically
+         from the claim's (a, b, k, n) — the certificate refutes the intended
+         instance, not merely some file;
+      2. the stored artifact's bytes are what the record says they are: the
+         gzip payload's sha256, byte count, and step count all match the
+         recorded `parameters`, when present;
+      3. for a text-DRAT artifact, every proof line parses under the DRAT
+         text grammar (optional `d`, non-zero integer literals, `0`
+         terminator) and the final clause ADDITION is the empty clause — a
+         certificate that never derives the empty clause refutes nothing.
+
+    NOT established here: the RUP re-derivation of each step. That is
+    axeyum's own `check_drat_backward`, re-run via the in-tree
+    `recertify_rado` example (which also re-solves the instance from
+    scratch); an external checker cross-check runs when `--drat-checker`
+    is given.
+    """
+    import gzip
+    import hashlib
+
+    errors: list[str] = []
+    eid = ev["id"]
+    art = ev.get("artifact")
+    if art is None:
+        return [f"{path}: '{eid}' unsat-certificate has no artifact"]
+    art_path = ROOT / art
+    if not art_path.exists():
+        return [f"{path}: '{eid}' artifact {art} does not exist"]
+    n = int(params["n"])
+
+    # 1. The deciding CNF regenerates byte-identically.
+    cnf_path = art_path.parent / art_path.name.replace(".drat.gz", ".cnf")
+    if not cnf_path.exists():
+        errors.append(f"{path}: '{eid}' deciding CNF {cnf_path.name} is missing")
+    elif cnf_path.read_text() != rado_cnf(a, b, k, n):
+        errors.append(f"{path}: '{eid}' stored CNF differs from the "
+                      f"regenerated instance for a={a} b={b} k={k} n={n}")
+
+    fmt = ev.get("artifact_format", "")
+    data = art_path.read_bytes()
+    if fmt.endswith("-gzip"):
+        try:
+            payload = gzip.decompress(data)
+        except OSError as error:
+            return errors + [f"{path}: '{eid}' gzip payload unreadable: {error}"]
+    else:
+        payload = data
+
+    recorded = ev.get("parameters") or {}
+    if fmt in ("drat-text", "drat-text-gzip"):
+        # 2. Bind the recorded numbers to the bytes.
+        payload_sha = hashlib.sha256(payload).hexdigest()
+        if recorded.get("proof_sha256") not in (None, payload_sha):
+            errors.append(f"{path}: '{eid}' recorded proof_sha256 does not "
+                          f"match the gzip payload")
+        if recorded.get("proof_bytes") not in (None, len(payload)):
+            errors.append(f"{path}: '{eid}' recorded proof_bytes "
+                          f"{recorded.get('proof_bytes')} != {len(payload)}")
+
+        # 3. Every step parses; the last ADD is the empty clause.
+        steps = 0
+        last_add_len = None
+        for line_no, line in enumerate(payload.decode("ascii").splitlines(), 1):
+            tokens = line.split()
+            if not tokens:
+                continue
+            delete = tokens[0] == "d"
+            literals = tokens[1:] if delete else tokens
+            if not literals or literals[-1] != "0":
+                errors.append(f"{path}: '{eid}' proof line {line_no} is not "
+                              f"0-terminated")
+                break
+            body = literals[:-1]
+            if any(not lit.lstrip("-").isdigit() or lit in ("0", "-0")
+                   for lit in body):
+                errors.append(f"{path}: '{eid}' proof line {line_no} has a "
+                              f"non-literal token")
+                break
+            steps += 1
+            if not delete:
+                last_add_len = len(body)
+        else:
+            if recorded.get("proof_steps") not in (None, steps):
+                errors.append(f"{path}: '{eid}' recorded proof_steps "
+                              f"{recorded.get('proof_steps')} != {steps}")
+            if last_add_len != 0:
+                errors.append(f"{path}: '{eid}' final clause addition is not "
+                              f"the empty clause; this proof refutes nothing")
+        if not errors:
+            print(f"  checked unsat certificate {eid}: CNF regenerated "
+                  f"byte-identically, {steps} text-DRAT steps parsed, ends in "
+                  f"the empty clause")
+    elif fmt in ("drat-binary", "drat-binary-gzip"):
+        if ev.get("check_status") == "checked":
+            errors.append(f"{path}: '{eid}' is binary DRAT, which this system "
+                          f"cannot read; it must not claim 'checked' (B8)")
+    else:
+        errors.append(f"{path}: '{eid}' unknown certificate format {fmt!r}")
+
+    # Optional external cross-check, never the trusted path.
+    if drat_checker and not errors and fmt in ("drat-text", "drat-text-gzip",
+                                               "drat-binary", "drat-binary-gzip"):
+        import tempfile
+        with tempfile.NamedTemporaryFile(suffix=".drat") as tmp:
+            tmp.write(payload)
+            tmp.flush()
+            result = subprocess.run(
+                [drat_checker, str(cnf_path), tmp.name],
+                capture_output=True, text=True)
+            if "s VERIFIED" not in result.stdout:
+                errors.append(f"{path}: '{eid}' external checker did not "
+                              f"verify: {result.stdout[-200:]}")
+            else:
+                print(f"  external cross-check {eid}: s VERIFIED")
+    return errors
+
+
 def parse_bound(supports: str) -> tuple[int, str, int] | None:
     m = BOUND_RE.search(supports)
     if not m:
