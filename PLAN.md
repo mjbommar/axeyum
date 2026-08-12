@@ -360,6 +360,23 @@ model-reuse variants failed isolated stability and were removed; do not retry
 until 94 happens to pass. A3/A4's negative routes remain closed. A2 still does
 not authorize C0/F2, host/NAS mutation, allocation, or a solver fleet.
 
+**New lane — axeyum-proved mathematics (2026-08-12).** A full-day frontier
+run produced two previously unknown four-colour Rado numbers,
+`R_4(2(x-y)=3z) = 226` (closing an open entry of Chang-De Loera-Wesley,
+ISSAC 2022) and `R_4(4(x-y)=3z) = 313`, both certified end to end by
+axeyum alone: 8192 cube cells, ~250M DRAT steps, zero failures. Two product
+capabilities landed on the way — streaming DRAT proofs (ADR-0380, closing a
+27.6 GiB OOM) and a backward DRAT checker (ADR-0381, 66x, restoring
+check/solve from 470-670x to 2.0-2.6x) — plus a claim ledger joining results
+to the knowledge graph (ADR-0379). All three ADRs are `proposed` and
+uncommitted. The ordered follow-on work, ten items, is in
+[`rado-session-diary-and-roadmap-2026-08-12.md`](docs/plan/rado-session-diary-and-roadmap-2026-08-12.md);
+the issue-by-issue register is
+[`findings-register-2026-08-12.md`](docs/plan/findings-register-2026-08-12.md).
+Highest-priority item is **not** new mathematics: `Evidence::check` returns
+`Ok(true)` for a bare uncertified UNSAT (`evidence.rs:890`), a green gate
+that checks nothing, in the product's own front door.
+
 **Parallel documentation action.** The comprehensive pass and 2026-08-09
 README application/vision revision are closed. Continue only for a concrete
 stale claim; keep application maturity and sub-document links aligned, but do
