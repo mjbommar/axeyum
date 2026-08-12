@@ -19,8 +19,8 @@
 //! downstream — the encoder, the cover harness, the ledger, the certification
 //! pass, the local search — is family-agnostic and needs no change.
 
-use crate::colouring::{ColouringProblem, Witness};
 use crate::SearchError;
+use crate::colouring::{ColouringProblem, Witness};
 
 /// A parameterised family of colouring instances.
 pub trait ColouringFamily: Sync {
@@ -364,7 +364,9 @@ mod tests {
         for _ in 0..64 {
             let colouring: Vec<usize> = (0..24)
                 .map(|_| {
-                    state = state.wrapping_mul(6_364_136_223_846_793_005).wrapping_add(1);
+                    state = state
+                        .wrapping_mul(6_364_136_223_846_793_005)
+                        .wrapping_add(1);
                     ((state >> 33) % 3) as usize + 1
                 })
                 .collect();

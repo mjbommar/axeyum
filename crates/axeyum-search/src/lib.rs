@@ -93,7 +93,9 @@ pub mod search;
 
 pub use certify::certify_dumped_cover;
 pub use colouring::{ColouringProblem, Witness};
-pub use cover::{BranchGroup, BranchPlan, Cell, CellCheck, CellRecord, CellVerdict, CoverCertificate};
+pub use cover::{
+    BranchGroup, BranchPlan, Cell, CellCheck, CellRecord, CellVerdict, CoverCertificate,
+};
 pub use family::{ColouringFamily, Rado, Schur, parse_family};
 pub use harness::{CheckMode, CoverOptions, CoverOutcome};
 pub use ledger::RunId;
@@ -298,7 +300,10 @@ impl core::fmt::Display for SearchError {
                 write!(f, "cell {index} was not refuted: verdict {verdict}")
             }
             Self::CellNotChecked { index } => {
-                write!(f, "cell {index} was refuted but its proof was never checked")
+                write!(
+                    f,
+                    "cell {index} was refuted but its proof was never checked"
+                )
             }
             Self::CellChoicesMismatch {
                 index,
@@ -332,7 +337,10 @@ impl core::fmt::Display for SearchError {
                  the original formula"
             ),
             Self::ModelNotOneHot { point, colours } => {
-                write!(f, "model gives point {point} {colours} colours, want exactly 1")
+                write!(
+                    f,
+                    "model gives point {point} {colours} colours, want exactly 1"
+                )
             }
             Self::WitnessLength { expected, found } => {
                 write!(f, "witness covers {found} points, problem has {expected}")

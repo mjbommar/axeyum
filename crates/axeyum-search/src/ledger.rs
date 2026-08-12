@@ -33,11 +33,12 @@ use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::time::Duration;
 
-use crate::cover::{CellCheck, CellRecord, CellVerdict};
 use crate::SearchError;
+use crate::cover::{CellCheck, CellRecord, CellVerdict};
 
 /// The header line every ledger this crate writes starts with.
-pub const LEDGER_HEADER: &str = "run\tindex\tchoices\tverdict\tsolve_s\tsteps\tadds\tcheck\tcheck_s";
+pub const LEDGER_HEADER: &str =
+    "run\tindex\tchoices\tverdict\tsolve_s\tsteps\tadds\tcheck\tcheck_s";
 
 /// Identifier stamped on every row a run writes.
 ///
@@ -198,7 +199,12 @@ fn parse_row(number: usize, line: &str) -> Result<CellRecord, SearchError> {
             .ok()
             .filter(|value| value.is_finite() && *value >= 0.0)
             .map(Duration::from_secs_f64)
-            .ok_or_else(|| row(format!("field {index} {:?} is not a duration", fields[index])))
+            .ok_or_else(|| {
+                row(format!(
+                    "field {index} {:?} is not a duration",
+                    fields[index]
+                ))
+            })
     };
     let choices = fields[2]
         .split(',')
@@ -389,10 +395,7 @@ mod tests {
         let runs = ledger_runs(&records);
         assert_eq!(
             runs,
-            vec![
-                RunId::new("a").expect("a"),
-                RunId::new("b").expect("b")
-            ]
+            vec![RunId::new("a").expect("a"), RunId::new("b").expect("b")]
         );
     }
 }

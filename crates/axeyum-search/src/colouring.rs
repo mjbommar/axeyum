@@ -387,7 +387,13 @@ mod tests {
     #[test]
     fn out_of_range_points_are_rejected() {
         let error = ColouringProblem::new(3, 2, vec![vec![1, 4]]).expect_err("point 4 of 3");
-        assert_eq!(error, SearchError::PointOutOfRange { point: 4, points: 3 });
+        assert_eq!(
+            error,
+            SearchError::PointOutOfRange {
+                point: 4,
+                points: 3
+            }
+        );
     }
 
     #[test]
@@ -404,7 +410,9 @@ mod tests {
         values[1] = true;
         values[2] = true;
         values[4] = true;
-        let error = problem.decode_model(&values).expect_err("point 1 is two-hot");
+        let error = problem
+            .decode_model(&values)
+            .expect_err("point 1 is two-hot");
         assert_eq!(
             error,
             SearchError::ModelNotOneHot {

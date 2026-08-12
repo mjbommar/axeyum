@@ -386,11 +386,12 @@ pub fn trim_drat_proof(
     // Never return an unchecked artifact. This costs a second backward pass over
     // a strictly smaller proof; the alternative is emitting a file that claims
     // to be a refutation without anything having verified that it is one.
-    match check_drat_backward(formula, &trimmed)? {
-        true => Ok(Some(trimmed)),
-        false => Err(DratError::StepNotVerified {
+    if check_drat_backward(formula, &trimmed)? {
+        Ok(Some(trimmed))
+    } else {
+        Err(DratError::StepNotVerified {
             step: trimmed.len(),
-        }),
+        })
     }
 }
 
@@ -427,6 +428,9 @@ pub(crate) fn elaborate_backward(
         .map_err(|_| LratError::Parse("formula clause count does not fit in u64".to_owned()))?;
 
     let mut out = Vec::with_capacity(checker.trace_log.len());
+    // `next_id` is not a plain loop counter: its start is the formula clause
+    // count, and `id_of` snapshots it per lemma for later hint resolution.
+    #[allow(clippy::explicit_counter_loop)]
     for entry in checker.trace_log.iter().rev() {
         let chain = match &entry.justification {
             Justification::Rup(chain) => chain,
@@ -908,7 +912,11 @@ impl BackwardChecker {
         let mut index = 0;
         loop {
             let record = {
-                let watches = if core { &self.watches_core } else { &self.watches };
+                let watches = if core {
+                    &self.watches_core
+                } else {
+                    &self.watches
+                };
                 if index >= watches[falsified].len() {
                     return None;
                 }

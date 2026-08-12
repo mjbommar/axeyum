@@ -41,21 +41,21 @@
 use std::fs::OpenOptions;
 use std::io::Write;
 use std::path::{Path, PathBuf};
-use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::sync::Mutex;
+use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::time::{Duration, Instant};
 
 use axeyum_cnf::{
-    check_drat, check_drat_backward, solve_with_drat_proof_with_limits, write_drat, CnfClause,
-    CnfFormula, DratStep, ProofSolveOutcome,
+    CnfClause, CnfFormula, DratStep, ProofSolveOutcome, check_drat, check_drat_backward,
+    solve_with_drat_proof_with_limits, write_drat,
 };
 
+use crate::SearchError;
 use crate::cover::{
-    certify_cover, verify_branch_clauses, verify_cell_set, BranchPlan, Cell, CellCheck, CellRecord,
-    CellVerdict, CoverCertificate,
+    BranchPlan, Cell, CellCheck, CellRecord, CellVerdict, CoverCertificate, certify_cover,
+    verify_branch_clauses, verify_cell_set,
 };
 use crate::ledger::{LedgerWriter, RunId};
-use crate::SearchError;
 
 /// Which DRAT checker verifies each cell's proof.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -286,19 +286,16 @@ pub fn render_model(values: &[bool]) -> String {
 pub fn parse_model(text: &str) -> Result<Vec<bool>, SearchError> {
     let mut values: Vec<Option<bool>> = Vec::new();
     for token in text.split_whitespace() {
-        let literal: i64 = token
-            .parse()
-            .map_err(|_| SearchError::InvalidParameter {
-                what: format!("model token {token:?} is not a literal"),
-            })?;
+        let literal: i64 = token.parse().map_err(|_| SearchError::InvalidParameter {
+            what: format!("model token {token:?} is not a literal"),
+        })?;
         if literal == 0 {
             continue;
         }
-        let index = usize::try_from(literal.abs() - 1).map_err(|_| {
-            SearchError::InvalidParameter {
+        let index =
+            usize::try_from(literal.abs() - 1).map_err(|_| SearchError::InvalidParameter {
                 what: format!("model token {token:?} is out of range"),
-            }
-        })?;
+            })?;
         if values.len() <= index {
             values.resize(index + 1, None);
         }
@@ -356,10 +353,7 @@ pub fn run_cover(
 ) -> Result<CoverOutcome, SearchError> {
     let branch_clauses = verify_branch_clauses(formula, plan)?;
     let cells = plan.cells()?;
-    verify_cell_set(
-        plan,
-        &cells.iter().map(Cell::index).collect::<Vec<_>>(),
-    )?;
+    verify_cell_set(plan, &cells.iter().map(Cell::index).collect::<Vec<_>>())?;
     observer.on_note(&format!(
         "cover: {} cells over {} branch groups; at-least-one clauses located in F at {branch_clauses:?}",
         cells.len(),
@@ -546,7 +540,10 @@ impl CoverRun<'_> {
             if index >= self.cells.len() || self.stop.load(Ordering::SeqCst) {
                 return;
             }
-            if self.deadline.is_some_and(|deadline| Instant::now() >= deadline) {
+            if self
+                .deadline
+                .is_some_and(|deadline| Instant::now() >= deadline)
+            {
                 return;
             }
             self.observer.on_cell_started(index);
@@ -570,19 +567,17 @@ impl CoverRun<'_> {
             (None, total) => total,
         };
         let started = Instant::now();
-        let outcome = solve_with_drat_proof_with_limits(
-            &augmented,
-            deadline,
-            self.options.cell_conflicts,
-        );
+        let outcome =
+            solve_with_drat_proof_with_limits(&augmented, deadline, self.options.cell_conflicts);
         let solve = started.elapsed();
 
         match outcome {
             ProofSolveOutcome::Sat(assignment) => self.handle_sat(cell, assignment.values(), solve),
             ProofSolveOutcome::Unsat(proof) => self.handle_unsat(cell, &augmented, proof, solve),
-            ProofSolveOutcome::ResourceOut => {
-                self.record(cell, CellOutcome::unfinished(CellVerdict::ResourceOut, solve))
-            }
+            ProofSolveOutcome::ResourceOut => self.record(
+                cell,
+                CellOutcome::unfinished(CellVerdict::ResourceOut, solve),
+            ),
             ProofSolveOutcome::Interrupted => {
                 self.record(cell, CellOutcome::unfinished(CellVerdict::Timeout, solve))
             }
