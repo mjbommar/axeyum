@@ -2202,7 +2202,7 @@ fn int_const(arena: &TermArena, term: TermId) -> Option<i128> {
 /// integer encoder has to blast a divider for a term with no variables in it.
 /// Measured on a ground `QF_UFLIA` probe holding everything else fixed and varying
 /// only the spelling of an integer: up to 49× slower, and two otherwise-decided
-/// instances turned into timeouts (ADR-0382).
+/// instances turned into timeouts (ADR-0383).
 ///
 /// # Soundness — agreement with the ground evaluator
 ///

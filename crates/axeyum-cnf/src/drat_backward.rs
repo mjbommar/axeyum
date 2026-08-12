@@ -1,4 +1,4 @@
-//! Backward (core-first) DRAT checking (ADR-0381).
+//! Backward (core-first) DRAT checking (ADR-0382).
 //!
 //! [`crate::check_drat`] is the *reference* checker and stays exactly as it is:
 //! a few dozen lines that walk the proof forward and verify every added clause
@@ -232,7 +232,7 @@ fn variable_count(formula: &CnfFormula, steps: &[DratStep]) -> Result<usize, Dra
 }
 
 /// Verifies `proof` against `formula` by backward (core-first) checking
-/// (ADR-0381).
+/// (ADR-0382).
 ///
 /// Returns `Ok(true)` when the proof establishes UNSAT, `Ok(false)` when it
 /// contains no empty-clause addition (so UNSAT is not established), and `Err`
@@ -1252,7 +1252,7 @@ fn remove_watch(watch: &mut Vec<usize>, record: usize) {
 
 #[cfg(test)]
 mod tests {
-    use super::{BackwardChecker, Plan, check_drat_backward};
+    use super::{BackwardChecker, Options, Plan, check_drat_backward};
     use crate::{
         CnfClause, CnfFormula, CnfLit, CnfVar, DratError, DratStep, ProofSolveOutcome, check_drat,
         solve_with_drat_proof,
@@ -1661,12 +1661,12 @@ mod tests {
             let expected = check_drat(&f, &steps).is_ok();
 
             let plan = Plan::build(&f, &steps).unwrap();
-            let mut checker = BackwardChecker::new(plan);
+            let mut checker = BackwardChecker::new(plan, Options::CHECK);
             for record in 0..checker.records.len() {
                 checker.set_membership(record, 0);
             }
             let record = checker.added_by_step[0];
-            let actual = checker.verify(record);
+            let actual = checker.verify(record, 0);
             assert_eq!(
                 actual, expected,
                 "lemma {clause:?} over {f:?}: engine and reference disagree"
