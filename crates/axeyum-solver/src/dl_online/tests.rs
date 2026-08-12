@@ -23,7 +23,8 @@ fn config() -> SolverConfig {
 }
 
 fn check(arena: &mut TermArena, assertions: &[TermId]) -> Option<CheckResult> {
-    try_check_qf_dl(arena, assertions, &config())
+    let config = config();
+    try_check_qf_dl(arena, assertions, &config, config.timeout)
 }
 
 #[test]
@@ -34,27 +35,95 @@ fn zero_budget_expires_before_the_difference_logic_front_end() {
     let assertion = arena.int_le(x, zero).expect("x <= 0");
     let config = SolverConfig::new().with_timeout(Duration::ZERO);
 
-    assert_eq!(try_check_qf_dl(&mut arena, &[assertion], &config), None);
+    assert_eq!(
+        try_check_qf_dl(&mut arena, &[assertion], &config, config.timeout),
+        None
+    );
+}
+
+#[test]
+fn difference_logic_scan_survives_a_deep_boolean_spine_in_stable_order() {
+    const DEPTH: usize = 100_000;
+
+    let mut arena = TermArena::new();
+    let x = int(&mut arena, "deep_scan_x");
+    let zero = arena.int_const(0);
+    let one = arena.int_const(1);
+    let lower = arena.int_ge(x, zero).expect("x>=0");
+    let upper = arena.int_le(x, one).expect("x<=1");
+    let mut root = lower;
+    for index in 0..DEPTH {
+        let next = if index % 2 == 0 { upper } else { lower };
+        root = arena.and(root, next).expect("deep Boolean spine");
+    }
+
+    let scan = scan_dl(&mut arena, &[root], None).expect("difference-logic scan");
+    assert_eq!(scan.atom_terms, vec![lower, upper]);
 }
 
 #[test]
 fn equality_fallback_budget_is_narrowly_structural() {
-    let maximum = Some(Duration::from_secs(18));
+    let standard = Some(Duration::from_secs(18));
+    let extended = Some(Duration::from_secs(21));
     assert_eq!(
-        equality_fallback_probe_timeout(maximum, 906, 350),
+        structural_probe_timeout(standard, extended, 906, 350),
         Some(Duration::from_secs(12))
     );
     assert_eq!(
-        equality_fallback_probe_timeout(maximum, 1_011, 0),
-        maximum,
+        structural_probe_timeout(standard, extended, 1_024, 128),
+        Some(Duration::from_secs(12)),
+        "the moderate atom boundary retains the protected split"
+    );
+    assert_eq!(
+        structural_probe_timeout(standard, extended, 1_025, 128),
+        extended,
+        "one atom above the boundary receives the extended slice"
+    );
+    assert_eq!(
+        structural_probe_timeout(standard, extended, 2_199, 855),
+        extended,
+        "the measured GraphPartitioning shape receives the extension"
+    );
+    assert_eq!(
+        structural_probe_timeout(standard, extended, 7_095, 2_028),
+        extended,
+        "the measured BubbleSort shape receives the extension"
+    );
+    assert_eq!(
+        structural_probe_timeout(standard, extended, 1_011, 0),
+        standard,
         "compact gate-free DL keeps the full probe"
     );
     assert_eq!(
-        equality_fallback_probe_timeout(maximum, 7_095, 2_028),
-        maximum,
-        "large equality skeleton keeps the full probe"
+        structural_probe_timeout(standard, extended, 7_095, 0),
+        standard,
+        "large low-equality DL keeps the standard probe"
     );
-    assert_eq!(equality_fallback_probe_timeout(None, 906, 350), None);
+    assert_eq!(structural_probe_timeout(None, None, 906, 350), None);
+}
+
+#[test]
+fn timeout_detail_reports_only_available_stable_counts() {
+    let mut arena = TermArena::new();
+    let x = int(&mut arena, "telemetry_x");
+    let zero = arena.int_const(0);
+    let assertion = arena.int_le(x, zero).expect("x <= 0");
+    let scan = scan_dl(&mut arena, &[assertion], None).expect("DL scan");
+
+    assert_eq!(
+        timeout_detail("stopped", &scan, None),
+        "stopped (atoms=1, equality_gates=0, bool_equality_gates=0)"
+    );
+
+    let encoder = Encoder::new(&scan.atom_terms);
+    let clauses = vec![vec![Lit {
+        var: 0,
+        positive: true,
+    }]];
+    assert_eq!(
+        timeout_detail("stopped", &scan, Some((&encoder, &clauses))),
+        "stopped (atoms=1, equality_gates=0, bool_equality_gates=0, cnf_vars=1, clauses=1)"
+    );
 }
 
 // -------------------------------------------------------------------------

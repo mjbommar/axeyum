@@ -123,6 +123,26 @@ the sort/DAG scan, linearization, equality collection, skeleton encoding, clause
 materialization, and CDCL(T). The adaptive split and its end-to-end scope are
 covered by focused regressions and the retained-decision A/B control.
 
+**2026-08-11 timeout observability.** Post-scan DL timeout details append stable
+counts already owned by the route: difference atoms, numeric and Boolean
+equality gates, and—once built—CNF variables and clauses. No extra traversal or
+branch is introduced, and sites reached before a structure exists omit its
+count. A four-case exact-binary comparison preserved every verdict and terminal
+route; normalizing only the appended detail made each JSON record byte-identical
+to the unchanged binary. This telemetry is diagnostic and selects no policy.
+
+**2026-08-11 large-equality extension.** The telemetry separates two lost large
+equality-heavy decisions (7,095/2,028 and 2,199/855 atoms/equality gates) from
+the fallback-critical moderate 906/350 class. After the standard-budget scan,
+the moderate class retains 12 seconds, equality-heavy scans above 1,024 atoms
+may use 21 seconds, and every low-equality shape retains 18 seconds. Thus the
+24-second policy keeps a nonzero three-second slice before fallback only for
+the extended class; it is not a global commitment. The two targets recovered
+in 3/3 each, both fallback controls passed 3/3, three allocation controls stayed
+pre-SAT declines, all 173 retained IDL/RDL verdicts were preserved (with only
+the two intended recoveries), and the focused solver/differential gates passed.
+Exact-pushed full-repository qualification remains required before census use.
+
 ### The evidence export, scoped honestly
 
 `conjunctive_farkas_certificate` returns `Some` only when the query is a

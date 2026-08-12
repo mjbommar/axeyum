@@ -1,0 +1,30 @@
+{
+  "authorization": "QF_IDL is authorized only from the same exact source and binary; the complete census remains uncredited until all three divisions pass",
+  "binary_bytes": 11859344,
+  "binary_sha256": "eec4813b557165ec95afc43912ad9fc2b5400ec94db5b7134ecacd50b100867d",
+  "bucket_counts": {
+    "explanation-core": 2,
+    "model-replay": 4,
+    "normalization-resource": 24,
+    "search-budget": 26
+  },
+  "capture_metadata_sha256": "e9bb85e1240d8440abd294b8f4e5142f53ed84d7f1f247538f0484ab01b4949f",
+  "capture_sha256": "b7d9180d13140978e85d021d36ced81f01bab5f6ce57295c721c5863d45f7ce4",
+  "control": {
+    "bucket": "normalization-resource",
+    "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_LRA/sc/sc-39.base.cvc.smt2",
+    "verdict": "unknown"
+  },
+  "current_solved": 90,
+  "gains": 4,
+  "git_commit": "d0e0d6ceac779b5cc3e2c1b5f3096c77780aecf9",
+  "historical_solved": 86,
+  "logic": "QF_LRA",
+  "losses": 0,
+  "pinned_remote_ref": "refs/heads/agent/arith/a5-capture-d0e0d6cea",
+  "reference_only": 56,
+  "rows": 200,
+  "schema": "axeyum-qf-linear-a5-division-join-v1",
+  "windowreal_no_t_deadlock_17": "unsat",
+  "wrongs": 0
+}
