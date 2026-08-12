@@ -187,6 +187,90 @@ fn main() {
         report(&format!("thm2 k={k}"), &sub(&lhs, &rhs), true, &mut checks, &mut fails);
     }
 
+    // ======================================================================
+    // RIGIDITY THEOREM algebra (added after route A closed the N+1 / uniqueness
+    // proof). These are the identities its argument rests on.
+    // ======================================================================
+
+    // Sigma'_m = 1 + a + ... + a^m, zero for m < 0.
+    let sigma_p = |m: i64| -> MvPoly {
+        let mut acc = MvPoly::zero();
+        for i in 0..=m {
+            if i < 0 {
+                continue;
+            }
+            acc = add(&acc, &powi(&a, i as u32));
+        }
+        acc
+    };
+
+    // ---- Identity 7: the pigeonhole total, 2*sum(L_c) + L_k = N ----------
+    println!("Identity 7  2*(L_2+...+L_(k-1)) + L_k = N   [the pigeonhole total]");
+    for k in 2..=10i64 {
+        let mut lhs = MvPoly::zero();
+        for cc in 2..=(k - 1) {
+            lhs = add(&lhs, &mul(&mul(&c(2), &b), &powi(&a, (cc - 1) as u32)));
+        }
+        lhs = add(&lhs, &mul(&b, &powi(&a, (k - 1) as u32)));
+        let rhs = mul(&b, &add(&powi(&a, (k - 1) as u32), &mul(&c(2), &sigma(&a, k - 2))));
+        report(&format!("pigeonhole k={k}"), &sub(&lhs, &rhs), true, &mut checks, &mut fails);
+    }
+
+    // ---- Identity 8: a | N.  N = a*b*(a^(k-2) + 2*Sigma'_(k-3)) ----------
+    // This is what makes part (1) work: at M = N the obstruction would need a | 1.
+    println!("Identity 8  N = a*b*(a^(k-2) + 2*Sigma'_(k-3))   [so a | N]");
+    for k in 2..=10i64 {
+        let n = mul(&b, &add(&powi(&a, (k - 1) as u32), &mul(&c(2), &sigma(&a, k - 2))));
+        let factored = mul(
+            &mul(&a, &b),
+            &add(&powi(&a, (k - 2).max(0) as u32), &mul(&c(2), &sigma_p(k - 3))),
+        );
+        report(&format!("a|N k={k}"), &sub(&n, &factored), true, &mut checks, &mut fails);
+    }
+
+    // ---- Identity 9: a | L_c for c >= 2.  L_c = a*(a^(c-2)*b) ------------
+    println!("Identity 9  L_c = a*(a^(c-2)*b)   [so a | L_c, c >= 2]");
+    for cc in 2..=10i64 {
+        let l = mul(&b, &powi(&a, (cc - 1) as u32));
+        let f = mul(&a, &mul(&powi(&a, (cc - 2) as u32), &b));
+        report(&format!("a|L_c c={cc}"), &sub(&l, &f), true, &mut checks, &mut fails);
+    }
+
+    // ---- Identity 10: the defect identity  M - N = 2*E_(k-1) + e_K -------
+    // with w_j = L_j + e_j, c_(k-1) = sum w_j, W = L_k + e_K, M = 2c_(k-1) + W.
+    // At M = N+1 this is exactly the contradiction target 2E + e_K = 1.
+    println!("Identity 10  M - N = 2*E_(k-1) + e_K   [the defect identity]");
+    for k in 3..=8i64 {
+        let mut cprev = MvPoly::zero();
+        let mut esum = MvPoly::zero();
+        for j in 2..=(k - 1) {
+            let ej = v(&format!("e{j}"));
+            cprev = add(&cprev, &add(&mul(&b, &powi(&a, (j - 1) as u32)), &ej));
+            esum = add(&esum, &ej);
+        }
+        let ek = v("eK");
+        let w_core = add(&mul(&b, &powi(&a, (k - 1) as u32)), &ek);
+        let m = add(&mul(&c(2), &cprev), &w_core);
+        let n = mul(&b, &add(&powi(&a, (k - 1) as u32), &mul(&c(2), &sigma(&a, k - 2))));
+        let lhs = sub(&m, &n);
+        let rhs = add(&mul(&c(2), &esum), &ek);
+        report(&format!("defect k={k}"), &sub(&lhs, &rhs), true, &mut checks, &mut fails);
+    }
+
+    // ---- Identity 11: c_(c-1) = b*Sigma_(c-2) + E_(c-1) ------------------
+    println!("Identity 11  c_(c-1) = b*Sigma_(c-2) + E_(c-1)   [defect decomposition]");
+    for cc in 3..=9i64 {
+        let mut cprev = MvPoly::zero();
+        let mut esum = MvPoly::zero();
+        for j in 2..=(cc - 1) {
+            let ej = v(&format!("e{j}"));
+            cprev = add(&cprev, &add(&mul(&b, &powi(&a, (j - 1) as u32)), &ej));
+            esum = add(&esum, &ej);
+        }
+        let rhs = add(&mul(&b, &sigma(&a, cc - 2)), &esum);
+        report(&format!("decomp c={cc}"), &sub(&cprev, &rhs), true, &mut checks, &mut fails);
+    }
+
     // ---- NEGATIVE CONTROLS: these must NOT be zero -----------------------
     println!("Negative controls (must NOT reduce to zero)");
     // wrong sigma: (a-1)*Sigma_m vs a^(m+1) - 1
@@ -243,6 +327,48 @@ fn main() {
         report(
             &format!("NEG thm2-sign k={k}"),
             &sub(&lhs, &rhs),
+            false,
+            &mut checks,
+            &mut fails,
+        );
+    }
+
+    // negative controls for the rigidity algebra
+    // pigeonhole with the core counted twice (the classic off-by-one here)
+    for k in 3..=6i64 {
+        let mut lhs = MvPoly::zero();
+        for cc in 2..=(k - 1) {
+            lhs = add(&lhs, &mul(&mul(&c(2), &b), &powi(&a, (cc - 1) as u32)));
+        }
+        lhs = add(&lhs, &mul(&mul(&c(2), &b), &powi(&a, (k - 1) as u32))); // 2*L_k, wrong
+        let rhs = mul(&b, &add(&powi(&a, (k - 1) as u32), &mul(&c(2), &sigma(&a, k - 2))));
+        report(
+            &format!("NEG pigeonhole-core-twice k={k}"),
+            &sub(&lhs, &rhs),
+            false,
+            &mut checks,
+            &mut fails,
+        );
+    }
+    // defect identity with E counted once instead of twice (drops two-sidedness)
+    for k in 3..=6i64 {
+        let mut cprev = MvPoly::zero();
+        let mut esum = MvPoly::zero();
+        for j in 2..=(k - 1) {
+            let ej = v(&format!("e{j}"));
+            cprev = add(&cprev, &add(&mul(&b, &powi(&a, (j - 1) as u32)), &ej));
+            esum = add(&esum, &ej);
+        }
+        let ek = v("eK");
+        let m = add(
+            &mul(&c(2), &cprev),
+            &add(&mul(&b, &powi(&a, (k - 1) as u32)), &ek),
+        );
+        let n = mul(&b, &add(&powi(&a, (k - 1) as u32), &mul(&c(2), &sigma(&a, k - 2))));
+        let rhs_bad = add(&esum, &ek); // should be 2*esum + ek
+        report(
+            &format!("NEG defect-one-sided k={k}"),
+            &sub(&sub(&m, &n), &rhs_bad),
             false,
             &mut checks,
             &mut fails,
