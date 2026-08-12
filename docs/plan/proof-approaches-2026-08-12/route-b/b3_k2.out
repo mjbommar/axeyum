@@ -1,0 +1,59 @@
+2026-08-12T19:21:23-04:00
+=== B3 (k=2): shell construction solution-free, SYMBOLIC in a and b ===
+a, b, t, y and all divisibility/Bezout witnesses are UNBOUNDED Sort::Int
+variables. No colouring table, no n, nothing sampled.
+
+[A] THEOREM ATTEMPT, no b<a hypothesis (stronger). Expect unsat.
+  TRUE  A1 case1 (all colour 1), coprime, no b<a                 unknown(Incomplete)          56.55s  want=unsat      *** MISMATCH ***
+      via | int-blast-ladder: declined (incomplete: bounded integer model overflowed at width 32 (assertion #63 is false over exact semantics); widen the bound)
+  TRUE  A2 case2 (all colour 2), coprime, no b<a                 unknown(Incomplete)          43.99s  want=unsat      *** MISMATCH ***
+      via | int-blast-ladder: declined (incomplete: bounded integer model overflowed at width 32 (assertion #57 is false over exact semantics); widen the bound)
+  TRUE  A2f case2 FAITHFUL disjunction, coprime, no b<a          unknown(Incomplete)          94.12s  want=unsat      *** MISMATCH ***
+      via | int-blast-ladder: declined (incomplete: bounded integer model overflowed at width 32 (assertion #68 is false over exact semantics); widen the bound)
+  TRUE  A3 FULL single query (both colours), coprime, no b<a     unknown(Incomplete)         115.63s  want=unsat      *** MISMATCH ***
+      via | int-blast-ladder: declined (incomplete: bounded integer model overflowed at width 32 (assertion #151 is false over exact semantics); widen the bound)
+
+[B] THEOREM ATTEMPT, with b<a (the brief's regime). Expect unsat.
+  TRUE  B1 case1, coprime, b<a                                   unknown(Timeout)            120.02s  want=unsat      *** MISMATCH ***
+      via | int-blast-ladder: declined (budget: combined-theory timeout after scalar backend)
+  TRUE  B2 case2, coprime, b<a                                   unknown(Timeout)            120.01s  want=unsat      *** MISMATCH ***
+      via | int-blast-ladder: declined (budget: combined-theory timeout after scalar backend)
+  TRUE  B2f case2 FAITHFUL, coprime, b<a                         unknown(Timeout)            120.01s  want=unsat      *** MISMATCH ***
+      via | int-blast-ladder: declined (budget: integer bit-blast width ladder: wall-clock timeout reached)
+  TRUE  B3 FULL single query, coprime, b<a                       unknown(Timeout)            120.03s  want=unsat      *** MISMATCH ***
+      via | int-blast-ladder: declined (budget: integer bit-blast width ladder: wall-clock timeout reached)
+
+[C] FALSE CONTROLS -- drop gcd(a,b)=1. Enumeration says defects exist,
+    so an `unsat` here would mean the gate proves something FALSE.
+  FALSE C1 case1, NO coprimality, b<a                            sat                           0.80s  want=sat        OK
+      via | nia-linearize: decided sat
+      wit | a=6 b=3 t=2 y=6 px=2 py=1
+  FALSE C2 case2, NO coprimality, b<a                            unknown(Timeout)            120.01s  want=sat        *** MISMATCH ***
+      via | int-blast-ladder: declined (budget: combined-theory timeout after scalar backend)
+  FALSE C3 FULL single query, NO coprimality, b<a                sat                          40.25s  want=sat        OK
+      via | int-blast-ladder: decided sat
+      wit | a=4 b=2 t=2 y=4 c1dx=2 c1nx_s=0 c1nx_r=8 c2nx_s=2 c2nx_r=-9 c2dx=-1 c1dy=1 c1ny_s=0 c1ny_r=4 c2ny_s=1 c2ny_r=8 c2dy=1 c1dz=2 c1nz_s=0 c1nz_r=8 c2nz_s=3 c2nz_r=0 c2dz=0
+  FALSE C4 case1, NO coprimality, no b<a                         sat                           0.15s  want=sat        OK
+      via | nia-linearize: decided sat
+      wit | a=2 b=2 t=1 y=2 px=2 py=1
+
+  [B3 k=2] matched=3 mismatched=9
+      MISMATCH: A1 -> unknown(Incomplete)
+      MISMATCH: A2 -> unknown(Incomplete)
+      MISMATCH: A2f -> unknown(Incomplete)
+      MISMATCH: A3 -> unknown(Incomplete)
+      MISMATCH: B1 -> unknown(Timeout)
+      MISMATCH: B2 -> unknown(Timeout)
+      MISMATCH: B2f -> unknown(Timeout)
+      MISMATCH: B3 -> unknown(Timeout)
+      MISMATCH: C2 -> unknown(Timeout)
+
+  NOTE: A1+A2 both unsat  ==>  theorem WITHOUT b<a.
+  B1+B2 both unsat  ==>  theorem WITH b<a (the brief's claim).
+  The two cases are exhaustive because k=2 has exactly two colours.
+
+real	15m51.578s
+user	15m45.611s
+sys	0m1.444s
+
+[exited with code 0]

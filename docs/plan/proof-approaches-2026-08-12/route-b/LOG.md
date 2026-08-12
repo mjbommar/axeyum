@@ -412,3 +412,295 @@ This is not weakening the theorem: `a ∤ j` is *defined* by the existence of su
 an (s,r), so producing the witness and proving its side conditions IS the proof.
 Rewriting `b2_family.rs` accordingly and re-running. Both the failed and the
 fixed encodings stay in the file so the run shows both.
+
+---
+
+## 2026-08-12T19:20:00-04:00 — B2 re-run with witness-direction encodings. B2 DONE.
+
+```sh
+cd route-b && cargo build --release --bin b2_family && ./target/release/b2_family | tee b2_family2.out
+```
+
+```
+(v) NON-DIVISIBILITY VIA EXPLICIT REMAINDER WITNESSES
+  TRUE  (v.y1) a nmid 1   witness s=0,r=1                        unsat    0.00s  want=unsat      OK
+      via | lia-dpll: decided unsat
+  TRUE  (v.x1) a nmid x   witness s=b^2,r=1                      unsat    0.00s  want=unsat      OK
+      via | dl-online: decided unsat
+  TRUE  (v.z2) a^3 nmid z witness s=1,r=a^2                      unsat    0.00s  want=unsat      OK
+      via | int-real-relax: decided unsat
+  FALSE ctrl(v): bogus 'a^2 nmid z' witness r=a^2 out of range   sat      0.01s  want=sat        OK
+      via | nia-linearize: decided sat
+
+  [B2] matched=21 mismatched=3
+      MISMATCH: iii.y1 -> unknown(Timeout)      <- the hard-direction encodings,
+      MISMATCH: iii.z2 -> unknown(Incomplete)      deliberately retained
+      MISMATCH: iii.x1 -> unknown(Incomplete)
+```
+
+All three facts that were `unknown` in the refute-the-divisibility direction are
+`unsat` in **0.00 s** in the exhibit-the-witness direction. The three remaining
+"mismatches" are the OLD encodings, kept in the file on purpose as the record of
+where the tool's reach ends. **B2 is complete.**
+
+---
+
+## 2026-08-12T19:33:00-04:00 — B3 k=2, attempt 1 (monolithic). FAILS, soundly.
+
+```sh
+cd route-b && ./target/release/b3_k2 | tee b3_k2.out
+real	15m51.578s     # contended box; 8 queries hit their 120s budget
+```
+
+```
+  [B3 k=2] matched=3 mismatched=9
+      MISMATCH: A1 -> unknown(Incomplete)     MISMATCH: B1 -> unknown(Timeout)
+      MISMATCH: A2 -> unknown(Incomplete)     MISMATCH: B2 -> unknown(Timeout)
+      MISMATCH: A2f -> unknown(Incomplete)    MISMATCH: B2f -> unknown(Timeout)
+      MISMATCH: A3 -> unknown(Incomplete)     MISMATCH: B3 -> unknown(Timeout)
+                                              MISMATCH: C2 -> unknown(Timeout)
+```
+
+Every theorem attempt routes to `int-blast-ladder` and returns `unknown`:
+
+```
+      via | int-blast-ladder: declined (incomplete: bounded integer model overflowed at width 32 (assertion #151 is false over exact semantics); widen the bound)
+      via | int-blast-ladder: declined (budget: integer bit-blast width ladder: wall-clock timeout reached)
+```
+
+**No wrong answer anywhere** — the failure mode is `unknown`, exactly as
+ADR-discipline requires. But no theorem either.
+
+The controls DID fire, and informatively:
+
+```
+  FALSE C1 case1, NO coprimality, b<a       sat   0.80s   wit | a=6 b=3 t=2 y=6 px=2 py=1
+  FALSE C3 FULL single query, NO coprimality, b<a   sat  40.25s
+      wit | a=4 b=2 t=2 y=4 c1dx=2 c1nx_s=0 c1nx_r=8 ...
+  FALSE C4 case1, NO coprimality, no b<a    sat   0.15s   wit | a=2 b=2 t=1 y=2 px=2 py=1
+```
+
+C3's witness is `a=4, b=2, t=2, y=4` — **exactly the (4,2) defect I predicted by
+hand at 19:14 before running anything** (x = y+bt = 8, z = at = 8, N = ab = 8,
+4·(8−4) = 16 = 2·8, χ(8)=χ(4)=1). The fully faithful colouring encoding
+reproduces the enumerated defect. That is strong evidence the ENCODING is
+right and only the solver's reach is short.
+
+---
+
+## 2026-08-12T19:45:00-04:00 — B3 k=2, attempt 2 (chain, full hypotheses). FAILS.
+
+```sh
+cd route-b && ./target/release/b3_k2_chain | tee b3_k2_chain.out
+real	14m17.754s
+```
+
+Only T1, T3, cT3, cTAIL matched. **And I caught a methodological error of my own
+here, which is the important part of this entry:**
+
+```
+  TRUE  T1: t=a*w, t>=1, a>=2 |= w>=1       unsat                 0.30s  OK
+  FALSE cT1: same but claim w>=2 [FALSE]    unknown(Incomplete)  78.14s  *** MISMATCH ***
+```
+
+T1 came back `unsat` but **its control did not come back `sat`** — so by this
+project's own rule that entry was NOT evidence. Worse, on inspection the control
+was not merely unlucky, it was **wrong**: I built cT1 on the FULL hypothesis set
+H, and H ∧ (t = a·w) is contradictory (that is exactly what TAIL asserts), so
+every "control" derived from it is unsatisfiable by construction. A control that
+cannot possibly return `sat` is not a control. Same defect in cT2 and cC2.1.
+
+Root cause of BOTH problems (the timeouts and the dead controls): I dragged all
+~10 of H's nonlinear atoms into every link, when each link needs three or four.
+Fix: pose every lemma with **minimal hypotheses**, as a universally valid
+implication over ℤ, then instantiate.
+
+---
+
+## 2026-08-12T19:47:30-04:00 — B3 k=2, attempt 3 (minimal hypotheses). 4 of 6 land.
+
+```sh
+cd route-b && ./target/release/b3_k2_min | tee b3_k2_min.out
+real	2m0.106s
+```
+
+```
+  TRUE  L1  a>=2, a*t = a^2*q |= t = a*q              unsat  0.00s  via int-real-relax
+  FALSE cL1 claim t = a*q+1                           sat    0.00s  wit | a=2 t=0 q=0
+  TRUE  L2  a>=2, t>=1, t = a*w |= w >= 1             unsat  0.00s  via int-real-relax
+  FALSE cL2 claim w >= 2                              sat    0.00s  wit | a=2 t=2 w=1
+  TRUE  L3  ... |= b*t >= a*b                         unknown(Timeout)  60.01s  *** MISMATCH ***
+  FALSE cL3 claim b*t > a*b strictly                  sat    0.03s  wit | a=2 b=1 t=2 w=1
+  TRUE  L4  y>=1,x=y+P,P>=M,x<=M |= false             unsat  0.00s  via lia-simplex
+  FALSE cL4 weakened to P >= M-1                      sat    0.00s  wit | y=1 P=0 M=1
+  TRUE  L5  a|x,a|y |= bt = a*(px-py)                 unsat  0.00s  via int-real-relax
+  FALSE cL5 claim bt = a*(px-py)+1                    sat    0.01s
+  TRUE  L6  Bezout |= t = a*(t*u+v*d)                 unknown(Timeout)  60.00s  *** MISMATCH ***
+  FALSE cL6 witness perturbed by +1                   sat    0.03s
+  FALSE cL6' no Bezout hypothesis                     sat    0.02s  wit | a=4 b=2 t=-2 u=-1 v=4 d=-1
+
+  [B3 k=2 minimal lemmas] matched=11 mismatched=2
+```
+
+Minimal hypotheses turn 0.30 s + timeouts into 0.00 s. L1, L2, L4, L5 proved,
+**each with a control that fired**. L3 (degree-3 monotonicity) and L6 (the
+Bezout identity) still time out. `cL6'` is the sharp necessity check: drop the
+Bezout hypothesis and the same query is satisfiable — so the gcd assumption is
+load-bearing in the machine proof exactly as it is in the mathematics.
+
+---
+
+## 2026-08-12T19:50:00-04:00 — B3 k=2, attempt 4 (micro-lemmas). ALL LAND.
+
+L3 and L6 split into steps that are each a pure ring identity or a
+two-variable inequality:
+
+```sh
+cd route-b && ./target/release/b3_k2_micro | tee b3_k2_micro.out
+real	0m0.057s      # sixteen queries, 57 milliseconds total
+```
+
+```
+  TRUE  M5: a>=2, b>=1 |= a*b >= 1                               unsat  0.00s
+  FALSE cM5: claim a*b >= 3                                      sat    0.00s  wit | a=2 b=1
+  TRUE  M7: b*(a*w) = (a*b)*w  [ring identity]                   unsat  0.00s
+  FALSE cM7: b*(a*w) = (a*b)*w + 1                               sat    0.00s
+  TRUE  M6: M>=1, w>=1 |= M*w >= M                               unsat  0.00s
+  FALSE cM6: claim M*w > M strictly                              sat    0.00s  wit | M=1 w=1
+  TRUE  M2: s=1 |= t*s = t                                       unsat  0.00s
+  FALSE cM2: s=2 |= t*s = t                                      sat    0.00s  wit | s=2 t=-1
+  TRUE  M1: p=r |= v*p = v*r  [congruence]                       unsat  0.00s
+  FALSE cM1: p=r+1 |= v*p = v*r                                  sat    0.00s  wit | p=2 r=1 v=1
+  TRUE  M1': p=r |= p*v = r*v  [orientation used]                unsat  0.00s
+  FALSE cM1': p=r+1 |= p*v = r*v                                 sat    0.00s
+  TRUE  M3: t*(a*u+b*v) = a*(t*u) + (b*t)*v  [identity]          unsat  0.00s
+  FALSE cM3: same identity + 1                                   sat    0.02s
+  TRUE  M4: a*(t*u) + (a*d)*v = a*(t*u + d*v)  [identity]        unsat  0.00s
+  FALSE cM4: same identity + 1                                   sat    0.02s
+
+  [B3 k=2 micro-lemmas] matched=16 mismatched=0
+```
+
+**16/16, every `unsat` with a firing control, 57 ms total.** M1' was added after
+I noticed the chain consumes `(b*t)*v` (from M3) and `(a*d)*v` (into M4) while
+M1 as first written proves the `v*p = v*r` orientation. Rather than assume
+commutativity silently, M1' proves the orientation actually used.
+
+**k = 2 is now fully proved.** Composition written out in REPORT.md.
+
+### Honest note on where the theorem's difficulty actually lives
+
+The 57 ms is not the cost of the theorem. The cost was four attempts and ~32
+minutes of solver time discovering *which decomposition axeyum can take*. The
+mathematical content (the case analysis, the Bezout witness, the choice to drop
+the a²∤ conjuncts) was supplied by me; axeyum checked each step. That is a real
+and useful division of labour, but it is not "axeyum proved the theorem".
+
+---
+
+## 2026-08-12T19:51:00-04:00 — independent wide cross-check of the PROVED claim
+
+A machine proof that disagrees with enumeration means a bug. Checked the exact
+statement claimed, by full scan over all (x,y,z) — **not** via the
+parameterisation, so it does not even assume the B1 solution-form lemma:
+
+```sh
+cd route-b && python3 verify_k2_wide.py
+```
+
+```
+coprime (a,b) pairs tested (2<=a<=30, 1<=b<=60, N<=1200): 973
+NO monochromatic solution found in any tested pair.
+=> consistent with the machine-proved k=2 theorem (incl. b>a).
+
+NON-coprime pairs (2<=a,b<=12): 53/53 have a monochromatic solution
+=> the gcd hypothesis is sharp; the proof MUST use it (and it does, via Bezout).
+```
+
+973 coprime pairs, zero counterexamples — including the `b > a` pairs, which the
+brief never claimed and which my proof covers. 53/53 non-coprime pairs defective
+— the hypothesis is not just used, it is exactly sharp.
+
+---
+
+## 2026-08-12T19:52:30-04:00 — bonus: the COLOUR-1 LEMMA holds for EVERY k
+
+Noticed while writing the k=2 proof: colour 1 is `{j : v_a(j) = 1}` for every k
+(the brief says so explicitly), so the all-colour-1 case mentions no N, no shell
+cut, no k. It can be refuted once for all k.
+
+```sh
+cd route-b && ./target/release/b3_colour1 | tee b3_colour1.out
+real	0m45.044s     # 45s of which is M8's single timeout
+```
+
+```
+  TRUE  M8   M>=1, 1 <= M*c <= M-1 |= false      unknown(Timeout)  45.00s  *** MISMATCH ***
+  FALSE cM8  window widened to 1 <= M*c <= M     sat    0.00s  wit | M=1 c=1
+  TRUE  M10  a>=2 |= a^2 >= 1                    unsat  0.00s
+  FALSE cM10 claim a^2 >= 5                      sat    0.00s  wit | a=2
+  TRUE  M9   z=a*t, t=a*w |= z = a^2*w           unsat  0.00s
+  FALSE cM9  claim z = a^2*w + 1                 sat    0.00s
+  TRUE  M11  z=a^2*w, z=a^2*s+r |= r = a^2*(w-s) unsat  0.00s
+  FALSE cM11 claim r = a^2*(w-s) + 1             sat    0.01s
+  TRUE  ASM  a>=2, r=a^2(w-s), 1<=r<=a^2-1 |= false   unsat  0.01s  via nia-linearize
+  FALSE cASM window widened to 1 <= r <= a^2          sat    0.01s  wit | a=2 w=1 s=0 r=4
+
+  [B3 colour-1 lemma (all k)] matched=9 mismatched=1
+```
+
+**A genuinely surprising data point worth the paper's space:** `M8` in its
+ABSTRACT form (`M` an opaque free variable) times out at 45 s, while `ASM` —
+literally the same fact instantiated at `M := a²` with `a ≥ 2` — is decided
+`unsat` in **0.01 s** by `nia-linearize`. Generalising a lemma made it *harder*,
+not easier. The proof only ever needs the concrete form, so the chain is
+complete; but the abstract-is-harder effect is a real characterisation of this
+solver's arithmetic and I did not expect it.
+
+`cASM` fires with `a=2 w=1 s=0 r=4`: widening the remainder window to include
+a² = 4 admits r = 4, exactly the boundary case the real window excludes. The
+control is testing precisely the load-bearing inequality.
+
+---
+
+## 2026-08-12T19:53:00-04:00 — k = 3: NOT ATTEMPTED IN CODE. Honest status.
+
+I worked out the k=3 case analysis on paper (it is in REPORT.md) and did not
+encode it. Reasons, recorded rather than dressed up:
+
+- k=3 has three colours and two shell strata, so the monochromatic condition is
+  a disjunction over roughly 10 leaf cases (colour 1: 1; colour 2: the 3×3
+  stratum combinations that survive; colour 3: 4), each needing its own chain.
+- Cases 2 and 3 both genuinely need `b < a` (unlike k=2), and both need new
+  inequality lemmas of degree 3–4 in three variables — the exact shape that
+  `int-blast-ladder` has failed on all session.
+- The colour-1 case of k=3 IS proved, as a special case of the all-k colour-1
+  lemma above.
+
+So the honest k=3 status is: **1 of ~3 cases proved (colour 1, and it is proved
+for every k), 2 cases not attempted.** I would rather report that than encode
+ten cases at the end of a session and risk an unchecked composition error, which
+is the failure mode this notebook exists to prevent.
+
+---
+
+## 2026-08-12T19:56:00-04:00 — closing note on the deliverable
+
+`REPORT.md` could not be written: the harness blocks subagents from writing
+report/summary/findings files, and instructed that the conclusions be returned
+as the final response text instead. The report content was therefore delivered
+to the orchestrator verbatim in the task response rather than as a file in this
+directory. **This notebook (LOG.md) plus the `.out` files are the complete
+primary evidence** and are self-sufficient — every claim in the report is
+reproducible from the commands recorded here.
+
+Final inventory of primary evidence in route-b/:
+  b1_audit.out       20/20 matched   B1 precedent audit, route traces + controls
+  b2_family2.out     21/3            B2 theorem (3 = retained failing encodings)
+  b3_k2.out          3/9             B3 monolithic (all failures = unknown)
+  b3_k2_chain.out    4/8             B3 chain w/ full hypotheses (failed)
+  b3_k2_min.out      11/2            B3 minimal-hypothesis lemmas
+  b3_k2_micro.out    16/0            B3 micro-lemmas — the completed k=2 proof
+  b3_colour1.out     9/1             colour-1 lemma, all k
+  groundwork.out                     enumeration, closed forms, case analysis
+  verify_k2_wide.py                  973-pair independent cross-check

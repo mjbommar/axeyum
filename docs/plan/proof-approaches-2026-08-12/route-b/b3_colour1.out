@@ -1,0 +1,45 @@
+=== B3 bonus: the COLOUR-1 LEMMA, for every k >= 2 ===
+No N, no range bound, no b<a, no k appears in any query.
+
+[M8] M>=1, 1 <= M*c <= M-1  |=  false
+  TRUE  M8                                                       unknown(Timeout)             45.00s  want=unsat      *** MISMATCH ***
+      via | int-blast-ladder: declined (budget: combined-theory timeout after scalar backend)
+  FALSE cM8: window widened to 1 <= M*c <= M                     sat                           0.00s  want=sat        OK
+      via | nia-linearize: decided sat
+      wit | M=1 c=1
+
+[M10] a>=2 |= a^2 >= 1
+  TRUE  M10                                                      unsat                         0.00s  want=unsat      OK
+      via | int-real-relax: decided unsat
+  FALSE cM10: claim a^2 >= 5                                     sat                           0.00s  want=sat        OK
+      via | nia-linearize: decided sat
+      wit | a=2
+
+[M9] z = a*t, t = a*w |= z = a^2*w
+  TRUE  M9                                                       unsat                         0.00s  want=unsat      OK
+      via | int-real-relax: decided unsat
+  FALSE cM9: claim z = a^2*w + 1                                 sat                           0.00s  want=sat        OK
+      via | nia-linearize: decided sat
+      wit | a=0 t=0 w=0 z=0
+
+[M11] z = a^2*w, z = a^2*s + r |= r = a^2*(w-s)
+  TRUE  M11                                                      unsat                         0.00s  want=unsat      OK
+      via | int-real-relax: decided unsat
+  FALSE cM11: claim r = a^2*(w-s) + 1                            sat                           0.01s  want=sat        OK
+      via | nia-linearize: decided sat
+      wit | a=0 w=0 s=0 r=0 z=0
+
+[ASM] assembled: real hypotheses + injected derived facts |= false
+  TRUE  ASM: a>=2, r=a^2(w-s), 1<=r<=a^2-1 |= false              unsat                         0.01s  want=unsat      OK
+      via | nia-linearize: decided unsat
+  FALSE cASM: window widened to 1 <= r <= a^2                    sat                           0.01s  want=sat        OK
+      via | nia-linearize: decided sat
+      wit | a=2 w=1 s=0 r=4
+
+  [B3 colour-1 lemma (all k)] matched=9 mismatched=1
+      MISMATCH: M8 -> unknown(Timeout)
+
+  COMPOSITION: L5 + L6(M2,M3,M1',M4) + M9 + M11 + M10 + M8 + ASM
+  ==> for EVERY k >= 2, every a >= 2, b >= 1 with gcd(a,b)=1, the shell
+      colouring admits NO monochromatic solution in colour 1.
+      (No N, no shell cuts, no b<a, no k used anywhere.)

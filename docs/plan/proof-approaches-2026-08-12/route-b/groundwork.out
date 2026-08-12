@@ -1,0 +1,174 @@
+==============================================================================
+G1/G2. Solution-freeness sweep. 'FREE' = no monochromatic solution.
+==============================================================================
+  a   b  k  gcd       N   regime  result
+  2   1  2    1       2      b<a  FREE
+  2   2  2    2       4      b=a  DEFECT (4, 3, 1)
+  2   3  2    1       6      b>a  FREE
+  2   4  2    2       8      b>a  DEFECT (3, 1, 1)
+  2   5  2    1      10      b>a  FREE
+  2   6  2    2      12      b>a  DEFECT (4, 1, 1)
+  2   7  2    1      14      b>a  FREE
+  2   8  2    2      16      b>a  DEFECT (5, 1, 1)
+  3   1  2    1       3      b<a  FREE
+  3   2  2    1       6      b<a  FREE
+  3   3  2    3       9      b=a  DEFECT (2, 1, 1)
+  3   4  2    1      12      b>a  FREE
+  3   5  2    1      15      b>a  FREE
+  3   6  2    3      18      b>a  DEFECT (4, 2, 1)
+  3   7  2    1      21      b>a  FREE
+  3   8  2    1      24      b>a  FREE
+  4   1  2    1       4      b<a  FREE
+  4   2  2    2       8      b<a  DEFECT (2, 1, 2)
+  4   3  2    1      12      b<a  FREE
+  4   4  2    4      16      b=a  DEFECT (2, 1, 1)
+  4   5  2    1      20      b>a  FREE
+  4   6  2    2      24      b>a  DEFECT (5, 2, 2)
+  4   7  2    1      28      b>a  FREE
+  4   8  2    4      32      b>a  DEFECT (3, 1, 1)
+  5   1  2    1       5      b<a  FREE
+  5   2  2    1      10      b<a  FREE
+  5   3  2    1      15      b<a  FREE
+  5   4  2    1      20      b<a  FREE
+  5   5  2    5      25      b=a  DEFECT (2, 1, 1)
+  5   6  2    1      30      b>a  FREE
+  5   7  2    1      35      b>a  FREE
+  5   8  2    1      40      b>a  FREE
+  6   1  2    1       6      b<a  FREE
+  6   2  2    2      12      b<a  DEFECT (2, 1, 3)
+  6   3  2    3      18      b<a  DEFECT (2, 1, 2)
+  6   4  2    2      24      b<a  DEFECT (3, 1, 3)
+  6   5  2    1      30      b<a  FREE
+  6   6  2    6      36      b=a  DEFECT (2, 1, 1)
+  6   7  2    1      42      b>a  FREE
+  6   8  2    2      48      b>a  DEFECT (5, 1, 3)
+  7   1  2    1       7      b<a  FREE
+  7   2  2    1      14      b<a  FREE
+  7   3  2    1      21      b<a  FREE
+  7   4  2    1      28      b<a  FREE
+  7   5  2    1      35      b<a  FREE
+  7   6  2    1      42      b<a  FREE
+  7   7  2    7      49      b=a  DEFECT (2, 1, 1)
+  7   8  2    1      56      b>a  FREE
+  8   1  2    1       8      b<a  FREE
+  8   2  2    2      16      b<a  DEFECT (2, 1, 4)
+  8   3  2    1      24      b<a  FREE
+  8   4  2    4      32      b<a  DEFECT (2, 1, 2)
+  8   5  2    1      40      b<a  FREE
+  8   6  2    2      48      b<a  DEFECT (4, 1, 4)
+  8   7  2    1      56      b<a  FREE
+  8   8  2    8      64      b=a  DEFECT (2, 1, 1)
+  2   1  3    1       8      b<a  FREE
+  2   2  3    2      16      b=a  DEFECT (4, 3, 1)
+  2   3  3    1      24      b>a  DEFECT (19, 1, 12)
+  2   4  3    2      32      b>a  DEFECT (3, 1, 1)
+  2   5  3    1      40      b>a  DEFECT (31, 1, 12)
+  2   6  3    2      48      b>a  DEFECT (4, 1, 1)
+  2   7  3    1      56      b>a  DEFECT (43, 1, 12)
+  2   8  3    2      64      b>a  DEFECT (5, 1, 1)
+  3   1  3    1      15      b<a  FREE
+  3   2  3    1      30      b<a  FREE
+  3   3  3    3      45      b=a  DEFECT (2, 1, 1)
+  3   4  3    1      60      b>a  DEFECT (49, 1, 36)
+  3   5  3    1      75      b>a  DEFECT (61, 1, 36)
+  3   6  3    3      90      b>a  DEFECT (4, 2, 1)
+  3   7  3    1     105      b>a  DEFECT (85, 1, 36)
+  3   8  3    1     120      b>a  DEFECT (97, 1, 36)
+  4   1  3    1      24      b<a  FREE
+  4   2  3    2      48      b<a  DEFECT (2, 1, 2)
+  4   3  3    1      72      b<a  FREE
+  4   4  3    4      96      b=a  DEFECT (2, 1, 1)
+  4   5  3    1     120      b>a  DEFECT (101, 1, 80)
+  4   6  3    2     144      b>a  DEFECT (5, 2, 2)
+  4   7  3    1     168      b>a  DEFECT (141, 1, 80)
+  4   8  3    4     192      b>a  DEFECT (3, 1, 1)
+  5   1  3    1      35      b<a  FREE
+  5   2  3    1      70      b<a  FREE
+  5   3  3    1     105      b<a  FREE
+  5   4  3    1     140      b<a  FREE
+  5   5  3    5     175      b=a  DEFECT (2, 1, 1)
+  5   6  3    1     210      b>a  DEFECT (181, 1, 150)
+  5   7  3    1     245      b>a  DEFECT (211, 1, 150)
+  5   8  3    1     280      b>a  DEFECT (241, 1, 150)
+  6   1  3    1      48      b<a  FREE
+  6   2  3    2      96      b<a  DEFECT (2, 1, 3)
+  6   3  3    3     144      b<a  DEFECT (2, 1, 2)
+  6   4  3    2     192      b<a  DEFECT (3, 1, 3)
+  6   5  3    1     240      b<a  FREE
+  6   6  3    6     288      b=a  DEFECT (2, 1, 1)
+  6   7  3    1     336      b>a  DEFECT (295, 1, 252)
+  6   8  3    2     384      b>a  DEFECT (5, 1, 3)
+  7   1  3    1      63      b<a  FREE
+  7   2  3    1     126      b<a  FREE
+  7   3  3    1     189      b<a  FREE
+  7   4  3    1     252      b<a  FREE
+  7   5  3    1     315      b<a  FREE
+  7   6  3    1     378      b<a  FREE
+  7   7  3    7     441      b=a  DEFECT (2, 1, 1)
+  7   8  3    1     504      b>a  DEFECT (449, 1, 392)
+  8   1  3    1      80      b<a  FREE
+  8   2  3    2     160      b<a  DEFECT (2, 1, 4)
+  8   3  3    1     240      b<a  FREE
+  8   4  3    4     320      b<a  DEFECT (2, 1, 2)
+  8   5  3    1     400      b<a  FREE
+  8   6  3    2     480      b<a  DEFECT (4, 1, 4)
+  8   7  3    1     560      b<a  FREE
+  8   8  3    8     640      b=a  DEFECT (2, 1, 1)
+
+==============================================================================
+G2 summary: is gcd(a,b)=1 needed?
+==============================================================================
+  k=2 b<a gcd=1: 21/21 solution-free
+  k=2 b<a gcd>1: 0/7 solution-free   DEFECTS: [(4, 2), (6, 2), (6, 3), (6, 4), (8, 2), (8, 4), (8, 6)]
+  k=3 b<a gcd=1: 21/21 solution-free
+  k=3 b<a gcd>1: 0/7 solution-free   DEFECTS: [(4, 2), (6, 2), (6, 3), (6, 4), (8, 2), (8, 4), (8, 6)]
+
+==============================================================================
+G3. b=a+1, k=3 counterexample family: closed form check
+==============================================================================
+  a   b       N   x=ab^2+1   z=a^2 b  chi(x)  chi(1)  chi(z)   N-ab+1  in range
+  2   3      24         19        12       2       2       2       19      True   eq=True mono=True  x==N-ab+1? True
+  3   4      60         49        36       2       2       2       49      True   eq=True mono=True  x==N-ab+1? True
+  4   5     120        101        80       2       2       2      101      True   eq=True mono=True  x==N-ab+1? True
+  5   6     210        181       150       2       2       2      181      True   eq=True mono=True  x==N-ab+1? True
+  6   7     336        295       252       2       2       2      295      True   eq=True mono=True  x==N-ab+1? True
+  7   8     504        449       392       2       2       2      449      True   eq=True mono=True  x==N-ab+1? True
+  8   9     720        649       576       2       2       2      649      True   eq=True mono=True  x==N-ab+1? True
+  9  10     990        901       810       2       2       2      901      True   eq=True mono=True  x==N-ab+1? True
+ 10  11    1320       1211      1100       2       2       2     1211      True   eq=True mono=True  x==N-ab+1? True
+ 11  12    1716       1585      1452       2       2       2     1585      True   eq=True mono=True  x==N-ab+1? True
+
+  closed forms with b=a+1, k=3:
+    N        = 2ab + a^2 b = a(a+1)(a+2) = a^3+3a^2+2a
+    x        = a b^2 + 1   = a(a+1)^2+1  = a^3+2a^2+a+1
+    N-ab+1   = a^3+3a^2+2a - a^2-a + 1   = a^3+2a^2+a+1   == x   <-- x is
+               EXACTLY the left endpoint of the right-hand shell
+    (asserted for a=2..11: all three closed forms exact)
+
+==============================================================================
+G4. k=2 case analysis -- which conjuncts does the refutation need?
+==============================================================================
+
+  k=2:  L_2 = a*b,  N = a*b,  no shell strata (range 2..k-1 empty).
+        chi(j) = 1  iff  a | j  and  a^2 does not divide j     (v(j)=1)
+        chi(j) = 2  otherwise                     (units, and v(j)>=2)
+
+  A monochromatic solution needs y>=1, t>=1, x=y+bt<=N, z=at<=N.
+  z = a*t <= a*b  and a>0  =>  t <= b.  With b < a:  1 <= t <= b < a.
+
+  CASE 2 (all colour 2). The z-conjunct is  NOT(a|z AND a^2 not| z).
+        a|z holds (z=at), so it forces a^2 | z, i.e. t = a*q for some q.
+        1 <= t = a*q and a >= 2  =>  q >= 1  =>  t = a*q >= a > b >= t.
+        CONTRADICTION using ONLY the z-conjunct.  Purely existential.
+
+  CASE 1 (all colour 1). Needs a|x, a|y (drop the a^2-nondivisibility
+        conjuncts: dropping them WEAKENS the hypothesis, so refuting the
+        weaker version proves more).
+        a|x and a|y => a | (x-y) = b t.  gcd(a,b)=1 (Bezout au+bv=1)
+        => t = t(au+bv) = a(tu) + v(bt) => a | t => t = a*w, and
+        1 <= a*w <= b < a  =>  0 < w < 1.  CONTRADICTION.
+        gcd IS used here, via Bezout, which is EXISTENTIAL -- so it can be
+        added as two extra free variables u,v in the refutation query.
+
+  brute-force cross-check of the k=2 case analysis:
+    k=2, all coprime b<a with 2<=a<=9: NO monochromatic solution. OK

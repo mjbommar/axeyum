@@ -1,0 +1,72 @@
+2026-08-12T19:33:57-04:00
+=== B3 (k=2) BY PROOF CHAIN — symbolic in a and b, unbounded Int ===
+
+[T] SHARED TAIL:  H, t = a*w  |=  false
+  TRUE  T1: t=a*w, t>=1, a>=2 |= w>=1                            unsat                         0.30s  want=unsat      OK
+      via | int-real-relax: decided unsat
+  FALSE cT1: same but claim w>=2 [FALSE]                         unknown(Incomplete)          78.14s  want=sat        *** MISMATCH ***
+      via | int-blast-ladder: declined (incomplete: bounded integer model overflowed at width 32 (assertion #43 is false over exact semantics); widen the bound)
+  TRUE  T2: w>=1, t=a*w |= b*t >= a*b                            unknown(Timeout)             90.01s  want=unsat      *** MISMATCH ***
+      via | int-blast-ladder: declined (budget: integer bit-blast width ladder: wall-clock timeout reached)
+  FALSE cT2: claim b*t > a*b strictly [FALSE]                    unknown(Incomplete)          31.23s  want=sat        *** MISMATCH ***
+      via | int-blast-ladder: declined (incomplete: bounded integer model overflowed at width 32 (assertion #47 is false over exact semantics); widen the bound)
+  TRUE  T3: b*t>=a*b, x=y+b*t, y>=1, x<=a*b |= false             unsat                         0.22s  want=unsat      OK
+      via | int-real-relax: decided unsat
+  FALSE cT3: weakened to b*t >= a*b-1 [satisfiable]              sat                           0.16s  want=sat        OK
+      via | nia-linearize: decided sat
+      wit | a=2 b=1 t=1 y=1
+  TRUE  TAIL: H, t=a*w |= false  (one query)                     unknown(Timeout)             90.01s  want=unsat      *** MISMATCH ***
+      via | int-blast-ladder: declined (budget: combined-theory timeout after scalar backend)
+  FALSE cTAIL: H alone, no t=a*w [solutions exist]               sat                           0.03s  want=sat        OK
+      via | nia-linearize: decided sat
+      wit | a=2 b=1 t=1 y=1
+
+[C2] CASE 2 (all colour 2):  a^2 | z  =>  t = a*q  =>  TAIL
+  TRUE  C2.1: z=a*t, z=a^2*q, a>=2 |= t = a*q                    unknown(Timeout)             90.01s  want=unsat      *** MISMATCH ***
+      via | int-blast-ladder: declined (budget: integer bit-blast width ladder: wall-clock timeout reached)
+  FALSE cC2.1: claim t = a*q+1 [FALSE]                           unknown(Incomplete)          33.58s  want=sat        *** MISMATCH ***
+      via | int-blast-ladder: declined (incomplete: bounded integer model overflowed at width 32 (assertion #47 is false over exact semantics); widen the bound)
+  TRUE  C2: a^2|z + (derived) t=a*q |= false                     unknown(Incomplete)          34.78s  want=unsat      *** MISMATCH ***
+      via | int-blast-ladder: declined (incomplete: bounded integer model overflowed at width 32 (assertion #45 is false over exact semantics); widen the bound)
+  PROBE pC2: a^2|z only, WITHOUT the derived t=a*q               unknown(Incomplete)          49.11s  want=any        OK
+      via | int-blast-ladder: declined (incomplete: bounded integer model overflowed at width 32 (assertion #40 is false over exact semantics); widen the bound)
+
+[C1] CASE 1 (all colour 1):  a|x, a|y, Bezout  =>  t = a*w  =>  TAIL
+  TRUE  C1.1: a|x, a|y |= b*t = a*(px-py)                        unknown(Timeout)             90.00s  want=unsat      *** MISMATCH ***
+      via | int-blast-ladder: declined (budget: integer bit-blast width ladder: wall-clock timeout reached)
+  TRUE  C1.2: Bezout witness w=t*u+v*(px-py) gives t = a*w       unknown(Timeout)             90.00s  want=unsat      *** MISMATCH ***
+      via | int-blast-ladder: declined (budget: integer bit-blast width ladder: wall-clock timeout reached)
+  FALSE cC1.2: witness perturbed by +1 [FALSE]                   unknown(Timeout)             90.00s  want=sat        *** MISMATCH ***
+      via | int-blast-ladder: declined (budget: integer bit-blast width ladder: wall-clock timeout reached)
+  TRUE  C1: a|x, a|y + derived t=a*w |= false                    unknown(Timeout)             90.00s  want=unsat      *** MISMATCH ***
+      via | int-blast-ladder: declined (budget: integer bit-blast width ladder: wall-clock timeout reached)
+  FALSE cC1: a|x, a|y, NO coprimality [defect exists: (4,2)]     sat                           0.15s  want=sat        OK
+      via | nia-linearize: decided sat
+      wit | a=2 b=2 t=1 y=2 px=2 py=1
+
+  [B3 k=2 chain] matched=6 mismatched=11
+      MISMATCH: cT1 -> unknown(Incomplete)
+      MISMATCH: T2 -> unknown(Timeout)
+      MISMATCH: cT2 -> unknown(Incomplete)
+      MISMATCH: TAIL -> unknown(Timeout)
+      MISMATCH: C2.1 -> unknown(Timeout)
+      MISMATCH: cC2.1 -> unknown(Incomplete)
+      MISMATCH: C2 -> unknown(Incomplete)
+      MISMATCH: C1.1 -> unknown(Timeout)
+      MISMATCH: C1.2 -> unknown(Timeout)
+      MISMATCH: cC1.2 -> unknown(Timeout)
+      MISMATCH: C1 -> unknown(Timeout)
+
+  COMPOSITION (modus ponens, stated explicitly):
+    T1,T2,T3  ==> TAIL:  H, t=a*w |= false
+    C2.1 + TAIL           ==> no monochromatic colour-2 solution
+    C1.1 + C1.2 + TAIL    ==> no monochromatic colour-1 solution
+    k=2 has exactly 2 colours, so the two cases are EXHAUSTIVE.
+    Hence: for all a>=2, b>=1 with gcd(a,b)=1, the k=2 shell
+    colouring of [1,ab] has NO monochromatic solution of a(x-y)=bz.
+
+real	14m17.754s
+user	14m15.807s
+sys	0m0.715s
+
+[exited with code 0]
