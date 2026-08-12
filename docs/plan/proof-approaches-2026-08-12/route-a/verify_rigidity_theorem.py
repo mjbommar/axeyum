@@ -18,7 +18,8 @@ Proof being tested (b = a-1, k >= 3, so that a^k <= N):
   M <= N with equality -> every w_c = L_c and W = L_k -> canonical, unique.
   M = N+1: M = 1 (mod a); 1 = -1 (mod a) iff a|2 iff a=2.  So for a >= 3 the
   bounds hold, giving M <= N, contradiction -> infeasible.
-  a = 2 at M = N+1 is NOT reached by this argument and is tested below.
+  a = 2 at M = N+1 is NOT reached by the residue argument; it is closed by the
+  defect induction (see verify_defect_induction.py) and tested below.
 """
 
 import sys
@@ -103,7 +104,7 @@ def main():
             continue
         tested, feas = enumerate_feasible(a, b, k, M)
         tag = "INFEASIBLE (as claimed)" if not feas else f"FEASIBLE {feas[:3]} -- THEOREM FALSE"
-        star = "   <-- a=2, not covered by the residue argument" if a == 2 else ""
+        star = "   <-- a=2: residue argument alone is insufficient; needs defect induction" if a == 2 else ""
         print(f"    {str((a,b,k)):>10} {M:>6} {tested:>9} {len(feas):>9}  {tag}{star}")
 
     print("\n### D. a=2 close-up: which width bounds can fail, and do they?")

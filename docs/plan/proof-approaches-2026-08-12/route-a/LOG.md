@@ -577,3 +577,94 @@ am flagging it as open, not quietly implying Theorem 1 covers it. Note also it
 is a statement about *this shape only*: the brief records a solution-free
 5-colouring of `[1,350]` at `(3,2,5)` where `N_shell = 318`, so shape-optimality
 is not global optimality.
+
+---
+
+## 2026-08-12T20:0x — [E19] Rigidity Theorem: the orchestrator's strategy works, and the gap CLOSES
+
+The orchestrator proposed a pigeonhole on widths and flagged one gap: proving
+`w_c > L_c => monochromatic solution` needs a *unit* pair at distance `L_c`, and
+when `w_c = L_c + 1` there is only one candidate start, which might be a
+multiple of `a`. Verdict: **the strategy is sound and the gap closes.** Both
+halves are now proved for all `a >= 2`, and the theorem is in the paper
+(Section 'Rigidity of the shape', Lemma 'width' + Theorem 'rigid').
+
+**Closing the gap, part 1 — the residue computation.** With `w_c = L_c + 1` there
+are two candidate starts, not one, because the shell is two-sided:
+`y_L = c_{c-1}+1` and `y_R = M - c_c + 1`. Both fail only if `a` divides both.
+Since `c_c = c_{c-1} + L_c + 1` and `a | L_c`, `M - c_c + 1 = M - c_{c-1} (mod a)`,
+and `a | c_{c-1}+1` gives `c_{c-1} = -1`, so the obstruction **forces
+`M = -1 (mod a)`**. Same for the core: `W = L_k+1` and `a | c_{k-1}+1` give
+`M = 2c_{k-1} + W = -2 + L_k + 1 = -1 (mod a)`.
+
+Consequences, immediately:
+- `M = N`: `a | N`, so `M = 0 (mod a)`; the obstruction would need `a | 1`.
+  Impossible. So **no obstruction ever occurs at `M = N`**, every width bound
+  holds, the pigeonhole closes, and equality forces the canonical vector.
+  **Part (1) done, all `a >= 2`.**
+- `M = N+1`: `M = 1 (mod a)`; obstruction needs `1 = -1 (mod a)`, i.e. `a | 2`,
+  i.e. **`a = 2` only**. So part (2) is immediate for `a >= 3`.
+
+**Closing the gap, part 2 — a = 2.** This case is real, not hypothetical: my
+width-lemma audit found the obstruction occurring **117 times, every one of them
+at `a = 2, M = N+1`**, and zero times anywhere else. Neither my earlier
+enumeration nor the orchestrator's table contained a single `a = 2` point
+(`b = a-1 = 1`), so this was an untested corner of the claim on both sides.
+
+Closed by a defect induction. Put `e_c = w_c - L_c`, `e_K = W - L_k`,
+`E_j = e_2 + ... + e_j`, `E_1 = 0`; then `2E_{k-1} + e_K = M - N`. Since
+`c_{c-1} = b*Sigma_{c-2} + E_{c-1}` and `a | b*Sigma_{c-2}`, we get
+`c_{c-1} = E_{c-1} (mod a)`, so the trigger condition becomes purely
+combinatorial: `e_c = 1` only if `E_{c-1} = -1 (mod a)`.
+
+  *Claim: `E_j <= 0` for all j.* Induction. `E_1 = 0`. If `e_j <= 0`, done. If
+  `e_j = 1` then `E_{j-1} = -1 (mod a)`, which for `a >= 2` rules out
+  `E_{j-1} = 0`; with `E_{j-1} <= 0` that gives `E_{j-1} <= -1`, so `E_j <= 0`.
+
+Then at `M = N+1`, `2E_{k-1} + e_K = 1`: if `e_K <= 0` then `E_{k-1} >= 1`,
+contradicting the claim; if `e_K = 1` then `E_{k-1} = 0`, but the trigger
+demands `E_{k-1} = -1 (mod a)`, i.e. `a | 1`. Contradiction either way.
+**Part (2) done, all `a >= 2`** — and uniformly, so the `a >= 3` residue
+shortcut is not even needed for part (2).
+
+**Verification (this is the part I would not skip).**
+
+1. *Constructive content of the width lemma*, `verify_width_lemma.py`: over every
+   cut vector at `M in {N, N+1}` for `2<=a<=7`, `3<=k<=6`, whenever the lemma
+   claims a witness, exhibit it and check it really is a monochromatic solution.
+
+       total witness claims verified: 44611
+       total residue obstructions   : 117  (each must have M = -1 mod a)
+       failures                     : 0
+
+   The 117 obstructions break down exactly as predicted: `(2,1,4)` at `M=21`: 3;
+   `(2,1,5)` at `M=45`: 114; **zero at `M=N` for any `a`, zero at `M=N+1` for
+   `a>=3`.** That distribution is the theory's fingerprint, and it matched.
+2. *The combinatorial core*, `verify_defect_induction.py`: brute-force all
+   admissible defect sequences.
+
+       admissible defect sequences examined            : 114031
+       sequences with some E_j > 0 (lemma says 0)      : 0
+       solutions of 2E + e_K = 1  (M=N+1; says 0)      : 0
+       non-canonical 2E + e_K = 0, all e<=0 (says 0)   : 0
+3. *The conclusion itself*, `verify_rigidity_theorem.py`: full cut-vector
+   enumeration at 8 points, now **including `a=2`, `k=3,4,5`** which nobody had
+   enumerated. All `M=N`: unique = canonical. All `M=N+1`: infeasible.
+4. *Off the line*: at `(4,1,4)`, 64 feasible vectors of which 63 violate a width
+   bound — the core bound is vacuous there because `a^k = 256 > 104 = N`.
+   Theorem is false off the line, exactly as Proposition 'beat' predicts.
+
+**Correction to my own [E18].** There I called this "the natural next result"
+and listed it as open. It is now closed. I also wrote in [E18] that the
+two-sidedness matters because "narrowing a cut exposes a unit pair in the right
+interval" — that is true but is not the sharpest statement. The sharper one,
+used in the proof: two-sidedness gives **two** candidate starts when
+`w_c = L_c+1`, and the obstruction needs *both* to be multiples of `a`, which
+is what forces `M = -1 (mod a)`. With one-sided shells the residue argument
+loses the constraint `a | M - c_c + 1` and part (1) would not go through.
+
+**Scope, stated precisely.** Theorem 'rigid' is about the *shell shape only*:
+valuation strata fixed, cuts free. It does **not** say `R_k = N+1`. At
+`(3,2,5)` the brief records a solution-free 5-colouring of `[1,350]` while
+`N = 318`; that colouring is simply not of this shape. Shape-optimality is not
+global optimality and the paper says so.

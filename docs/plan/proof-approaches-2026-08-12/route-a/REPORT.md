@@ -82,6 +82,35 @@ This covers **all** `b > a`, not just `b = a+1`. At `k = 3` it specialises to
 > `gcd(a,b) = 1` and `a >= 2` force `b != a`. The shell colouring of
 > `[1, N(a,b,k)]` is solution-free **iff `b < a` or `k = 2`**.
 
+### Theorem 3 (Rigidity) — NEW, closes the question left open in §7
+
+> Let `a >= 2`, `b = a-1`, `k >= 3`, `N = N(a,b,k)`. Consider shell-*shape*
+> colourings of `[1,M]`: valuation strata fixed (forced, since `a|z`), cuts
+> `0 = c_1 < c_2 < ... < c_{k-1}` with `2c_{k-1} < M` otherwise free. Then
+> (1) at `M = N` the canonical cut vector is the **unique** solution-free one;
+> (2) at `M = N+1` there is **none**.
+
+Proved for all `a >= 2`. Two ingredients:
+
+- **Width Lemma.** If `w_c >= L_c + 1` (or `W >= L_k + 1`) and the minimal
+  witness fits (`a^c <= M`, resp. `a^k <= M`), there is a monochromatic
+  solution — *unless* `w_c = L_c+1` and `a` divides both candidate starts
+  `c_{c-1}+1` and `M-c_c+1`, an obstruction that **forces `M = -1 (mod a)`**.
+- **Pigeonhole.** `2*sum(w_c) + W = M`, so all width bounds give `M <= N`.
+
+At `M = N`: `a | N` so `M = 0 (mod a)`, the obstruction needs `a | 1` — no
+obstruction can occur, every width bound holds, and equality in the pigeonhole
+forces the canonical vector. At `M = N+1`: `M = 1 (mod a)`, obstruction needs
+`a | 2`, i.e. **`a = 2` only**. That residual case is closed by a **defect
+induction**: with `e_c = w_c - L_c`, `E_j = e_2+...+e_j`, one has
+`c_{c-1} = E_{c-1} (mod a)`, so `e_c = 1` requires `E_{c-1} = -1 (mod a)`;
+induction then gives `E_j <= 0` for all `j`, contradicting `2E_{k-1} + e_K = 1`.
+
+The theorem is **false off the line** `b = a-1`: there `a^k > N`, the core width
+bound has no witness, and the shape deforms freely (64 feasible vectors at
+`(4,1,4)`, 63 violating a width bound). Proposition 'beat' is exactly the
+dividing line.
+
 ### Proposition (when the bound is worth having)
 
 > For `a >= 2`, `1 <= b <= a-1`, `gcd(a,b) = 1`, `k >= 2`:
@@ -133,6 +162,13 @@ the actual output (see `LOG.md` for verbatim transcripts).
 | 33 | `a^k <= N` iff `b=a-1, k>=3` (core constraint active) | same | `a<=59,b<a,k<=14` | 14,105 | 0 failures |
 | 34 | `a^c <= N` for all `2<=c<=k-1` (inner constraints always active) | same | `a<=39,b<a,k<=12` | 26,015 | 0 failures |
 | 35 | `a\|N`, `a\|c_i`, shell endpoints `= 1 mod a` (units) | ad hoc (logged, E18) | `a<=29,b<a,k<=10` | 2,152 points | 0 failures |
+| 36 | **Width Lemma**, constructive: whenever it claims a witness, exhibit it and check | `verify_width_lemma.py` | every cut vector at `M in {N,N+1}`, `2<=a<=7`, `3<=k<=6` | **44,611 witness claims** | 0 failures |
+| 37 | Residue obstruction occurs only with `M = -1 mod a` | same | same | 117 obstructions | all at `a=2, M=N+1`; 0 at `M=N`; 0 at `M=N+1` for `a>=3` |
+| 38 | **Defect induction** `E_j <= 0` | `verify_defect_induction.py` | `2<=a<=6`, up to 5 shells, defects in `[-6,1]` | 114,031 sequences | 0 with `E_j > 0` |
+| 39 | `2E + e_K = 1` unsatisfiable (M=N+1) | same | same | 114,031 | 0 solutions |
+| 40 | `2E + e_K = 0` with all `e<=0` forces canonical (M=N) | same | same | all | 0 non-canonical |
+| 41 | **Theorem 3 conclusion** by full enumeration | `verify_rigidity_theorem.py` | 8 points incl. **`a=2`, `k=3,4,5`** (never enumerated before) | ~7,000 cut vectors | `M=N`: unique=canonical (8/8); `M=N+1`: infeasible (8/8) |
+| 42 | Off-line failure: width bounds violated when `a^k > N` | same | `(3,1,3),(4,1,3),(5,3,3),(4,1,4)` | 4 points | 2/3, 3/4, 14/15, 63/64 feasible vectors violate a width bound |
 
 Checks 15 and 30 deserve emphasis. Check 15 is a **negative control**: if
 Lemma 4 held on both sides of `b = a`, I would have isolated the wrong
@@ -232,11 +268,11 @@ Explicitly **not** claimed:
 4. **The 2.33 billion enumerated triples prove nothing on their own.** They
    check that the written proof concerns the same object the brief measured.
    The theorem's content is that it covers infinitely many `(a,b,k)`.
-5. **Shape-optimality is not proved.** The orchestrator's `feasible @ N+1 = 0`
-   (the shell shape cannot be stretched past `N_shell`) was reproduced at six
-   parameter points but not proved; see §7. It is also shape-local, not global:
-   at `(3,2,5)` a solution-free 5-colouring of `[1,350]` exists while
-   `N_shell = 318`.
+5. **Shape-optimality is now PROVED** (Theorem 3), superseding what this
+   report said in an earlier revision. But it is **shape-local, not global**:
+   Theorem 3 says nothing about colourings outside the shell shape. At
+   `(3,2,5)` a solution-free 5-colouring of `[1,350]` exists while `N = 318`;
+   it is simply not of this shape. Theorem 3 is *not* an upper bound on `R_k`.
 
 ## 6. Relation to the orchestrator's FACT 1 and FACT 2
 
@@ -327,12 +363,13 @@ the bad unit pair in its **left** interval; narrowing a cut exposes one in the
 a non-unit, and produce no monochromatic pair). Both directions are refuted only
 because the shells are two-sided. This is now Remark 'rigid' in the paper.
 
-**Not proved.** The orchestrator's `feasible @ N+1 = 0` — that the shell *shape*
-cannot be stretched past `N_shell` — is an upper-bound-flavoured claim. I
-reproduced it at 6 points but did **not** prove it; it is not in the paper as a
-theorem, and Theorem 1 does not cover it. Flagged as the natural next result.
-It is also shape-local, not global: at `(3,2,5)` the brief records a
-solution-free 5-colouring of `[1,350]` while `N_shell = 318`.
+**Now proved.** What this section previously flagged as open — `feasible @ N+1
+= 0`, and uniqueness at `N` — is Theorem 3 above, proved for all `a >= 2`. The
+orchestrator's pigeonhole strategy was sound; the gap it flagged (needing a
+*unit* pair when only one candidate start exists) closes because the shell is
+two-sided, giving two candidate starts whose simultaneous failure forces
+`M = -1 (mod a)`, plus a defect induction for the residual `a = 2` case. See §1,
+Theorem 3, and rows 36-42.
 
 ## 8. Files
 
@@ -347,4 +384,7 @@ solution-free 5-colouring of `[1,350]` while `N_shell = 318`.
 | `verify_theorem2.py` | defect family; also the refutation of the brief's `k>=4` claim |
 | `compare_bounds.py` | shell vs `a^k`; Proposition 'beat' pivots |
 | `verify_rigidity.py` | cut-vector enumeration; which branch refutes each perturbation |
+| `verify_rigidity_theorem.py` | Theorem 3 by full enumeration, incl. the `a=2` corner |
+| `verify_width_lemma.py` | constructive check of the Width Lemma (44,611 witnesses) |
+| `verify_defect_induction.py` | the combinatorial core that closes `a=2` |
 | `run_all.sh` | runs all of the above; exit 0 |

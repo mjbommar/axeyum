@@ -37,7 +37,11 @@ strictly improves the classical $a^k$ bound whenever $b=a-1$ and $k\ge3$.  We
 show the hypothesis $b<a$ is not an artifact: for every $b>a$ coprime to $a$
 and every $k\ge3$ we exhibit, in closed form, a monochromatic solution.
 Together these give an exact characterisation --- the colouring is
-solution-free if and only if $b<a$ or $k=2$.
+solution-free if and only if $b<a$ or $k=2$.  On the line $b=a-1$, where the
+bound is strongest, we further show the construction is rigid: with the
+valuation strata fixed and the shell cuts free, the canonical cuts give the
+unique solution-free colouring of its shape, and no such colouring exists one
+step longer.
 \end{abstract}
 
 \maketitle
@@ -114,6 +118,12 @@ For $a\ge2$, $b\ge1$ with $\gcd(a,b)=1$ and $k\ge2$, the shell colouring of
 $[1,N(a,b,k)]$ is free of monochromatic solutions of $a(x-y)=bz$ if and only if
 $b<a$ or $k=2$.
 \end{corollary}
+
+Finally, on the line $b=a-1$ --- exactly the line where the bound improves on
+$a^{k}$ (Proposition~\ref{prop:beat}) --- the construction is rigid: among all
+colourings of its shape, with the valuation strata fixed and the shell cuts
+free, it is the unique solution-free one, and its length cannot be increased by
+one.  This is Theorem~\ref{thm:rigid} in Section~\ref{sec:rigid}.
 
 \section{Preliminaries}
 
@@ -593,37 +603,6 @@ at $(a,b,k)=(3,1,3)$ it gives $N_S+1=16<27=a^{k}$.  The best available lower
 bound is of course the maximum of the two, and by Proposition~\ref{prop:beat}
 the shell colouring contributes exactly on the line $b=a-1$, $k\ge3$.
 
-\begin{remark}[Rigidity of the shape]\label{rem:rigid}
-Proposition~\ref{prop:beat} also explains a rigidity phenomenon.  Keep the
-valuation strata fixed --- which is forced, since $a\mid z$ makes
-$\chi(z)=\min(v(z),k)$ independent of the cuts --- and let the cut vector
-$(0,c_2,\dots,c_{k-1})$ range over all choices with
-$0<c_2<\cdots<c_{k-1}<N/2$.  Computation shows that for $b=a-1$ and
-$N=N(a,b,k)$ the canonical vector $c_i=b\Sigma_{i-1}$ is the \emph{unique}
-solution-free choice, whereas for $b\le a-2$ there are many (e.g. $1125$ at
-$(a,b,k)=(5,3,4)$).
-
-The proof of Theorem~\ref{thm:main} accounts for this, and it is branches
-(iii) and $c=k$(iii) --- the \emph{width} branches --- that do the work, not
-Lemma~\ref{lem:gap}.  Each is tight by exactly one: an interval of $L_c+1$
-consecutive integers contains a pair at distance exactly $L_c$, and taking
-$s=1$ in \eqref{eq:mid} makes that pair a genuine monochromatic solution with
-$z=a^{c}$, \emph{provided} $a^{c}\le N$.  Moreover such a pair is automatically
-a pair of \emph{units}: by Lemma~\ref{lem:structure}(5) and (1) we have
-$a\mid N$ and $a\mid c_i$, so the endpoints $c_{i-1}+1$ and $N-c_i+1$ of the
-shell intervals are $\equiv1\pmod a$.  Here the two-sidedness is essential:
-widening a shell exhibits the offending unit pair in its left interval,
-while narrowing a cut exhibits one in the right interval of the next shell.
-
-For $2\le c\le k-1$ the proviso $a^{c}\le N$ is automatic, since
-$N\ge b\,a^{k-1}\ge a^{k-1}\ge a^{c}$.  For $c=k$ it reads $a^{k}\le N$, which
-by Proposition~\ref{prop:beat} holds precisely when $b=a-1$ and $k\ge3$.  Hence
-for $b\le a-2$ the core width is unconstrained and the shape can be deformed,
-while at $b=a-1$ every width is pinned.  Lemma~\ref{lem:gap} plays no part in
-this: it constrains the cross-shell distance rather than the individual widths,
-and by Remark~\ref{rem:gaptight} it is tight only at $c=k-1$.
-\end{remark}
-
 \begin{remark}
 A convenient inductive proof of the baseline is available and is worth
 recording, since it isolates the structural fact the shell colouring must work
@@ -639,6 +618,149 @@ precisely that it declines to spend a fresh colour on the units, reusing colour
 $i$ for the stratum $\{v=i\}$ and a unit shell simultaneously.
 \end{remark}
 
+\section{Rigidity of the shape}\label{sec:rigid}
+
+On the line $b=a-1$ the construction is not merely one solution-free colouring
+among many: it is the \emph{only} one of its shape, and its length cannot be
+increased by one.  We fix the valuation strata --- which is forced, since
+$a\mid z$ makes $\chi(z)=\min(v(z),k)$ independent of the cuts --- and let the
+cuts vary.
+
+\begin{definition}\label{def:shape}
+Let $M\ge1$ and let $0=c_1<c_2<\cdots<c_{k-1}$ with $2c_{k-1}<M$.  The
+\emph{shell-shape colouring} of $[1,M]$ with this cut vector is defined exactly
+as in Definition~\ref{def:shell}, with $N$ replaced by $M$.  Put
+\[
+  w_c:=c_c-c_{c-1}\quad(2\le c\le k-1),\qquad W:=M-2c_{k-1},
+\]
+so that $w_c$ is the common size of the two intervals of $\Sh_c$, $W=|\Core|$,
+and
+\begin{equation}\label{eq:budget}
+  2\sum_{c=2}^{k-1}w_c+W=M .
+\end{equation}
+The cut vector is \emph{canonical} if $c_i=b\Sigma_{i-1}$, equivalently
+$w_c=L_c$ for all $c$ and $W=L_k$.
+\end{definition}
+
+\begin{lemma}[Width]\label{lem:width}
+Let $2\le c\le k-1$ and suppose $w_c\ge L_c+1$ and $a^{c}\le M$.  Then the
+shell-shape colouring of $[1,M]$ has a monochromatic solution, unless
+\begin{equation}\label{eq:obstr}
+  w_c=L_c+1,\qquad a\mid c_{c-1}+1,\qquad a\mid M-c_c+1 ,
+\end{equation}
+and \eqref{eq:obstr} forces $M\equiv-1\pmod a$.  Likewise, if $W\ge L_k+1$ and
+$a^{k}\le M$, the colouring has a monochromatic solution unless $W=L_k+1$ and
+$a\mid c_{k-1}+1$, which again forces $M\equiv-1\pmod a$.
+\end{lemma}
+
+\begin{proof}
+Let $I=[\lambda,\lambda+w_c-1]$ be either interval of $\Sh_c$, so that
+$\lambda=c_{c-1}+1$ or $\lambda=M-c_c+1$.  The pairs $(y,y+L_c)$ with both
+members in $I$ are exactly those with
+$y\in J:=[\lambda,\lambda+w_c-1-L_c]$, a block of $w_c-L_c\ge1$ consecutive
+integers.  Since $c\ge2$ we have $a\mid L_c$, so $y$ and $y+L_c$ lie in the
+same residue class mod $a$; if some $y\in J$ is a unit then both members of the
+pair are units of $\Sh_c$ and therefore both have colour $c$.  Taking
+$t=a^{c-1}$ (that is, $s=1$ in \eqref{eq:mid}) gives $x-y=b\,a^{c-1}=L_c$ and
+$z=at=a^{c}\le M$ with $v(z)=c$, hence $\chi(z)=\min(c,k)=c$.  That is a
+monochromatic solution.
+
+If $w_c-L_c\ge2$ then $J$ contains two consecutive integers, and as $a\ge2$ at
+most one of any two consecutive integers is divisible by $a$; so $J$ contains a
+unit and we are done.  If $w_c-L_c=1$ then $J=\{\lambda\}$ for each of the two
+intervals, and the only way to avoid the conclusion is that both $c_{c-1}+1$
+and $M-c_c+1$ are divisible by $a$, which is \eqref{eq:obstr}.  In that case
+$c_c=c_{c-1}+L_c+1$ and $a\mid L_c$ give $M-c_c+1\equiv M-c_{c-1}\pmod a$,
+while $c_{c-1}\equiv-1\pmod a$; hence $M\equiv-1\pmod a$.
+
+For the core the same argument applies to the single interval
+$[c_{k-1}+1,M-c_{k-1}]$, with $L_k$ in place of $L_c$ and $z=a^{k}$, noting
+$v(a^{k})=k$ so $\chi(z)=k$.  If $W-L_k=1$ the only candidate is $c_{k-1}+1$,
+and if $a\mid c_{k-1}+1$ then, using $a\mid L_k$,
+$M=2c_{k-1}+W\equiv-2+L_k+1\equiv-1\pmod a$.
+\end{proof}
+
+\begin{theorem}[Rigidity]\label{thm:rigid}
+Let $a\ge2$, $b=a-1$, $k\ge3$, and $N=N(a,b,k)$.
+\begin{enumerate}
+\item The canonical cut vector is the unique one whose shell-shape colouring of
+      $[1,N]$ is free of monochromatic solutions of $a(x-y)=bz$.
+\item No cut vector gives a solution-free shell-shape colouring of $[1,N+1]$.
+\end{enumerate}
+\end{theorem}
+
+\begin{proof}
+By Proposition~\ref{prop:beat}, $b=a-1$ and $k\ge3$ give $a^{k}\le N$; and
+$a^{c}\le a^{k-1}\le b\,a^{k-1}\le N$ for $2\le c\le k-1$.  So for
+$M\in\{N,N+1\}$ every hypothesis $a^{c}\le M$, $a^{k}\le M$ of
+Lemma~\ref{lem:width} is met.
+
+(1) Here $M=N$, and $a\mid N$ by Lemma~\ref{lem:structure}(5), so
+$M\equiv0\pmod a$.  An obstruction in Lemma~\ref{lem:width} would force
+$M\equiv-1\pmod a$, i.e. $a\mid1$, which is absurd.  Hence $w_c\le L_c$ for
+every $c$ and $W\le L_k$.  Substituting into \eqref{eq:budget},
+\[
+  M=2\sum_{c=2}^{k-1}w_c+W\;\le\;2\sum_{c=2}^{k-1}L_c+L_k=N=M ,
+\]
+so every one of these inequalities is an equality: $w_c=L_c$ for all $c$ and
+$W=L_k$, which is the canonical vector.  Conversely the canonical colouring is
+solution-free by Theorem~\ref{thm:main}, since $b=a-1<a$.
+
+(2) Now $M=N+1$.  Put $e_c:=w_c-L_c$, $e_K:=W-L_k$, and
+$E_j:=\sum_{c=2}^{j}e_c$ with $E_1:=0$.  Then \eqref{eq:budget} reads
+\begin{equation}\label{eq:defect}
+  2E_{k-1}+e_K=M-N=1 .
+\end{equation}
+Assume the colouring is solution-free.  By Lemma~\ref{lem:width}, $e_c\le1$ for
+every $c$, with $e_c=1$ only if $a\mid c_{c-1}+1$; and $e_K\le1$, with $e_K=1$
+only if $a\mid c_{k-1}+1$.  Now
+\[
+  c_{c-1}=\sum_{i=2}^{c-1}w_i=\sum_{i=2}^{c-1}L_i+E_{c-1}
+         =b\,\Sigma_{c-2}+E_{c-1}\equiv E_{c-1}\pmod a ,
+\]
+because $a$ divides every term of $\Sigma_{c-2}$.  Hence
+\begin{equation}\label{eq:trigger}
+  e_c=1\ \Longrightarrow\ E_{c-1}\equiv-1\!\!\pmod a,
+  \qquad
+  e_K=1\ \Longrightarrow\ E_{k-1}\equiv-1\!\!\pmod a .
+\end{equation}
+
+\emph{Claim: $E_j\le0$ for every $j$.}  Induct on $j$; $E_1=0$.  Suppose
+$E_{j-1}\le0$.  If $e_j\le0$ then $E_j\le E_{j-1}\le0$.  If $e_j=1$ then
+$E_{j-1}\equiv-1\pmod a$ by \eqref{eq:trigger}; since $a\ge2$ this rules out
+$E_{j-1}=0$, so $E_{j-1}\le-1$ and $E_j=E_{j-1}+1\le0$.  This proves the claim.
+
+Finally we contradict \eqref{eq:defect}.  If $e_K\le0$ then
+$2E_{k-1}=1-e_K\ge1$, so $E_{k-1}\ge1$, contradicting the claim.  If $e_K=1$
+then $2E_{k-1}=0$, so $E_{k-1}=0$; but \eqref{eq:trigger} demands
+$E_{k-1}\equiv-1\pmod a$, i.e. $a\mid1$, absurd.  (The case $e_K\ge2$ is
+excluded by Lemma~\ref{lem:width}.)  Hence no solution-free cut vector exists.
+\end{proof}
+
+\begin{remark}\label{rem:rigid}
+The proof rests on the width branches of Theorem~\ref{thm:main} --- branches
+(iii) and $c=k$(iii) --- and \emph{not} on Lemma~\ref{lem:gap}, which
+constrains the cross-shell distance rather than the individual widths.  A width
+bound at colour $c$ bites only when its minimal witness $z=a^{c}$ fits in
+$[1,M]$.  For $2\le c\le k-1$ that is automatic; for $c=k$ it reads
+$a^{k}\le M$, which by Proposition~\ref{prop:beat} is exactly the condition
+$b=a-1$, $k\ge3$.  For $b\le a-2$ the core width is therefore unconstrained and
+the shape deforms freely: at $(a,b,k)=(4,1,4)$, where $N=104$ and $a^{k}=256$,
+there are $64$ solution-free cut vectors, $63$ of which violate a width bound,
+and just as many remain solution-free at $N+1$.  So Theorem~\ref{thm:rigid}
+fails off the line $b=a-1$, and Proposition~\ref{prop:beat} is precisely the
+dividing line.
+
+Two-sidedness is what makes the obstruction \eqref{eq:obstr} so rare: with one
+interval per colour there would be a single candidate start instead of two, and
+the residue argument would lose the constraint $a\mid M-c_c+1$.  The
+obstruction does occur --- necessarily with $M\equiv-1\pmod a$, hence only at
+$M=N+1$ with $a=2$ --- which is why part~(2) needs the defect induction rather
+than the one-line residue argument that suffices for part~(1).
+\end{remark}
+
+
+
 \begin{remark}
 The construction is not tight in general.  Direct computation shows that the
 bound $\Rk\ge N+1$ is attained at $(a,b,k)=(3,2,3)$, $(4,3,3)$, $(3,2,4)$ and
@@ -647,16 +769,23 @@ whereas $N+1=319$.  Any exactness claim must therefore be scoped to small $k$.
 \end{remark}
 
 \begin{remark}[Computational verification]
-All statements above were stress-tested numerically.  Theorem~\ref{thm:main}
-was confirmed by exhaustive search over $84$ parameter points
-($2\le a\le8$, $b<a$ coprime to $a$, $2\le k\le5$), examining $287\,888\,880$
-solution triples with no monochromatic one.  Lemmas~\ref{lem:gap} and
-\ref{lem:size} were checked at $153\,270$ and $25\,545$ parameter points
-respectively ($a\le80$, $k\le14$).  The case analysis in the proof of
+All statements above were stress-tested numerically.  Theorem~\ref{thm:main} was
+confirmed by exhaustive search over $124$ parameter points ($2\le a\le10$,
+$b<a$ coprime to $a$, $2\le k\le5$), examining $2\,329\,779\,230$ solution
+triples with no monochromatic one.  Lemmas~\ref{lem:gap} and \ref{lem:size} were
+checked at $153\,270$ and $25\,545$ parameter points respectively ($a\le80$,
+$k\le14$), and Lemma~\ref{lem:gap} was confirmed to \emph{fail} at $c=2$ in all
+$115\,440$ tested cases with $b>a$, $k\ge3$.  The case analysis in the proof of
 Theorem~\ref{thm:main} was audited by classifying all $1\,466\,700$
-monochromatic pairs arising at $53$ parameter points into the branches above;
-no pair fell outside the case tree.  Theorem~\ref{thm:sharp} was verified at
-$1\,290$ parameter points with $b>a$, $k\ge3$.
+monochromatic pairs arising at $53$ parameter points into the branches above; no
+pair fell outside the case tree.  Theorem~\ref{thm:sharp} was verified at
+$1\,290$ parameter points with $b>a$, $k\ge3$.  For Theorem~\ref{thm:rigid}, the
+constructive content of Lemma~\ref{lem:width} was checked by exhibiting the
+witness in all $44\,611$ instances where the lemma claims one, over every cut
+vector at $M\in\{N,N+1\}$ for $2\le a\le7$, $3\le k\le6$; the residue
+obstruction \eqref{eq:obstr} occurred $117$ times, in every case with $a=2$ and
+$M=N+1$, as the proof predicts.  The conclusion of Theorem~\ref{thm:rigid} was
+verified directly by enumerating all cut vectors at eight parameter points.
 \end{remark}
 
 \end{document}

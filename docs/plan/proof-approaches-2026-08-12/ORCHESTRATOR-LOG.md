@@ -551,6 +551,57 @@ from `AxNat.rec` (real induction), `Eq.rec`, `left_distrib`, `mul_assoc`,
 proof term into my context. Use `cut -c1-200` or `grep -c` on generated proof
 artifacts; they are not human-line-length files.
 
+## Entry 19 — the Rigidity Theorem is PROVED, and my table had a blind spot
+
+Route A closed the Entry 17 gap and proved the theorem for all `a >= 2`.
+
+**How the gap closed.** I had said: at `w_c = L_c + 1` there is only ONE
+candidate start, and one must show it is not a multiple of `a`. Wrong count —
+**the shell is two-sided, so there are TWO candidate starts**,
+`y_L = c_(c-1) + 1` and `y_R = M - c_c + 1`. The obstruction needs *both* to
+be multiples of `a`, which forces `c_(c-1) = -1` and `M = -1 (mod a)`. Hence:
+- at `M = N`, since `a | N`, the obstruction would need `a | 1` — impossible,
+  so **no obstruction can ever occur at `M = N`**, the pigeonhole closes, and
+  equality forces the canonical vector;
+- at `M = N+1`, it needs `a | 2`, i.e. **`a = 2` only**.
+
+**The blind spot.** The `a = 2` case is real: route A's width-lemma audit
+found the obstruction **117 times, every one at `a = 2, M = N+1`**, zero
+elsewhere. My Entry 9 rigidity table contains **no `a = 2` point at all** —
+on the line `b = a-1` that means `(2,1,k)`, which I never enumerated. Route
+A's earlier sweep missed it too. An untested corner on both sides,
+independently.
+
+Closed by a **defect induction** uniform in `a`: with `e_c = w_c - L_c` and
+`E_j = e_2 + ... + e_j`, the trigger `e_c = 1` requires `E_(c-1) = -1 (mod
+a)`, which rules out `E_(c-1) = 0` and forces `E_j <= 0` throughout,
+contradicting `2E_(k-1) + e_K = 1`.
+
+**My verification of the corner** (exhaustive, my own code):
+
+| (a,b,k) | N | canonical | vectors | feas @N | @N+1 |
+|---|---|---|---|---|---|
+| (2,1,3) | 8 | (0,2) | 3 | 1 = canonical | 0 |
+| (2,1,4) | 20 | (0,2,6) | 36 | 1 = canonical | 0 |
+| (2,1,5) | 44 | (0,2,6,14) | 1,330 | 1 = canonical | 0 |
+| (2,1,6) | 92 | (0,2,6,14,30) | 148,995 | 1 = canonical | 0 |
+
+The theorem holds at `a = 2`. The 117 "obstructions" are obstructions to the
+*width lemma's witness construction*, not counterexamples to the theorem —
+the defect induction covers them.
+
+**Route A also corrected itself**, which I want on the record since I asked
+them not to tidy: their earlier claim that two-sidedness matters because
+"narrowing exposes a unit pair on the right" was true but not sharp. The
+load-bearing statement is that two-sidedness supplies **two** candidate
+starts. With one-sided shells the residue argument loses `a | M - c_c + 1`
+and part (1) does not go through at all.
+
+**Scope, unchanged and worth restating:** Theorem 3 is about the shell
+*shape* only. It does not say `R_k = N+1`. At `(3,2,5)` a solution-free
+5-colouring of `[1,350]` exists while `N = 318`; that colouring is simply not
+of this shape. Shape-optimality is not global optimality.
+
 ---
 
 ## Open threads I am carrying
