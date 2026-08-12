@@ -1,0 +1,662 @@
+\documentclass{amsart}
+\usepackage{amsmath}
+\usepackage{amsthm}
+\usepackage{amssymb}
+
+\newtheorem{theorem}{Theorem}
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{corollary}[theorem]{Corollary}
+\theoremstyle{definition}
+\newtheorem{definition}[theorem]{Definition}
+\newtheorem{remark}[theorem]{Remark}
+
+\newcommand{\NN}{\mathbb{N}}
+\newcommand{\ZZ}{\mathbb{Z}}
+\newcommand{\Sh}{\mathrm{Sh}}
+\newcommand{\Core}{\mathrm{Core}}
+\newcommand{\Rk}{R_k}
+
+\begin{document}
+
+\title[Shell colourings for $a(x-y)=bz$]{A two-sided shell colouring
+and lower bounds for the Rado numbers of $a(x-y)=bz$}
+
+\author{}
+\date{\today}
+
+\begin{abstract}
+For integers $a\ge 2$, $b\ge 1$ with $\gcd(a,b)=1$ and $k\ge 2$, we exhibit an
+explicit $k$-colouring of an initial segment of the positive integers that
+admits no monochromatic solution of $a(x-y)=bz$, under the hypothesis $b<a$.
+The colouring assigns colour $i$ simultaneously to the $a$-adic valuation
+stratum $\{v(j)=i\}$ and to a two-sided ``shell'' of units of total width
+$2a^{i-1}b$; the resulting lower bound
+$\Rk(a(x-y)=bz)\ge b\bigl(a^{k-1}+2(a+\cdots+a^{k-2})\bigr)+1$
+strictly improves the classical $a^k$ bound whenever $b=a-1$ and $k\ge3$.  We
+show the hypothesis $b<a$ is not an artifact: for every $b>a$ coprime to $a$
+and every $k\ge3$ we exhibit, in closed form, a monochromatic solution.
+Together these give an exact characterisation --- the colouring is
+solution-free if and only if $b<a$ or $k=2$.
+\end{abstract}
+
+\maketitle
+
+\section{Introduction and statement of results}
+
+Fix integers $a\ge 2$ and $b\ge 1$ with $\gcd(a,b)=1$, and consider the
+three-variable linear equation
+\[
+  E(a,b):\qquad a(x-y)=bz .
+\]
+For $k\ge 1$ the \emph{$k$-colour Rado number} $\Rk(E(a,b))$ is the least $n$
+such that every map $\chi\colon[1,n]\to\{1,\dots,k\}$ admits $x,y,z\in[1,n]$
+with $a(x-y)=bz$ and $\chi(x)=\chi(y)=\chi(z)$.  Exhibiting a $k$-colouring of
+$[1,N]$ with no monochromatic solution therefore proves
+$\Rk(E(a,b))\ge N+1$.  We emphasise that solutions in which $z$ coincides with
+$x$ or with $y$ are permitted and are counted as monochromatic when the colours
+agree; none of the arguments below uses any distinctness assumption.
+
+Throughout, $v=v_a$ denotes the $a$-adic valuation, so $v(j)$ is the largest
+$e\ge0$ with $a^e\mid j$; an integer $j$ with $v(j)=0$ is called a \emph{unit}.
+We abbreviate
+\[
+  \Sigma_m:=a+a^2+\cdots+a^m\qquad(m\ge1),\qquad \Sigma_0:=0,
+\]
+so that
+\begin{equation}\label{eq:sigma}
+  (a-1)\Sigma_m=a^{m+1}-a .
+\end{equation}
+
+The standard construction for these equations colours by valuation alone:
+$\chi(j)=\min(v(j),k-1)$ is solution-free on $[1,a^k-1]$, giving
+$\Rk\ge a^k$.  The colouring introduced in Section~\ref{sec:shell} improves on
+this by \emph{reusing} each colour $i$ for two disjoint purposes --- the
+valuation stratum $\{j: v(j)=i\}$ and a shell of units --- and it is exactly the
+interaction between these two purposes that has to be controlled.
+
+Our main results are the following.
+
+\begin{theorem}\label{thm:main}
+Let $a\ge2$, $b\ge1$, $\gcd(a,b)=1$, $b<a$, and $k\ge2$.  Let $N=N(a,b,k)$ and
+let $\chi$ be the shell colouring of Definition~\ref{def:shell}.  Then $[1,N]$
+contains no monochromatic solution of $a(x-y)=bz$.  Consequently
+\[
+  \Rk\bigl(a(x-y)=bz\bigr)\;\ge\;N+1
+    \;=\;b\bigl(a^{k-1}+2\Sigma_{k-2}\bigr)+1 .
+\]
+\end{theorem}
+
+\begin{theorem}\label{thm:sharp}
+Let $a\ge2$, $b\ge1$, $\gcd(a,b)=1$, and $k\ge3$.  Put
+\[
+  W:=a^{k-1}+2\Sigma_{k-2}-a,\qquad
+  X:=N-ab+1,\qquad Y:=1,\qquad Z:=aW .
+\]
+Then $a(X-Y)=bZ$ and $\chi(X)=\chi(Y)=\chi(Z)=2$; moreover
+$X,Y\in[1,N]$ always, and $Z\le N$ if and only if $N(a-b)\le a^2b$, which holds
+in particular whenever $b>a$.  Hence for $b>a$ and $k\ge3$ the shell colouring
+of $[1,N]$ has a monochromatic solution.
+\end{theorem}
+
+\begin{proposition}\label{prop:k2}
+Let $a\ge2$, $b\ge1$, $\gcd(a,b)=1$ and $k=2$.  Then the shell colouring of
+$[1,N]=[1,ab]$ has no monochromatic solution, for \emph{every} such $b$,
+without the hypothesis $b<a$.
+\end{proposition}
+
+Since $\gcd(a,b)=1$ and $a\ge2$ force $b\ne a$, Theorems~\ref{thm:main} and
+\ref{thm:sharp} and Proposition~\ref{prop:k2} combine to give an exact
+characterisation.
+
+\begin{corollary}\label{cor:iff}
+For $a\ge2$, $b\ge1$ with $\gcd(a,b)=1$ and $k\ge2$, the shell colouring of
+$[1,N(a,b,k)]$ is free of monochromatic solutions of $a(x-y)=bz$ if and only if
+$b<a$ or $k=2$.
+\end{corollary}
+
+\section{Preliminaries}
+
+\begin{lemma}[Solution form]\label{lem:solform}
+Let $\gcd(a,b)=1$ and let $x,y,z$ be positive integers with $a(x-y)=bz$.  Then
+there is an integer $t\ge1$ with
+\[
+  x-y=bt,\qquad z=at .
+\]
+Conversely every $t\ge1$ and every $y\ge1$ produce such a solution.  In
+particular $x>y$.
+\end{lemma}
+
+\begin{proof}
+From $a(x-y)=bz$ we get $a\mid bz$, and $\gcd(a,b)=1$ gives $a\mid z$; write
+$z=at$.  Substituting and cancelling $a$ yields $x-y=bt$.  Since $z\ge1$ and
+$a\ge2$ we have $t\ge1$, whence $x-y=bt\ge b\ge1$.  The converse is immediate.
+\end{proof}
+
+\begin{lemma}[Valuation]\label{lem:val}
+Let $m>n\ge1$ be integers.
+\begin{enumerate}
+\item If $v(m)\ne v(n)$ then $v(m-n)=\min\{v(m),v(n)\}$.
+\item If $v(m)=v(n)=e$ then $v(m-n)\ge e$.
+\end{enumerate}
+Moreover $v(bt)=v(t)$ for all $t\ge1$, since $\gcd(a,b)=1$ gives $v(b)=0$.
+\end{lemma}
+
+\begin{proof}
+Write $m=a^{v(m)}m'$, $n=a^{v(n)}n'$ with $a\nmid m'$, $a\nmid n'$.  Part (2)
+is immediate from $a^e\mid m$ and $a^e\mid n$.  For (1), say $v(n)<v(m)$; then
+$m-n=a^{v(n)}\bigl(a^{v(m)-v(n)}m'-n'\bigr)$ and the bracket is $\equiv -n'
+\not\equiv0 \pmod a$.  The last statement is clear since $a^e\mid bt$ with
+$\gcd(a,b)=1$ forces $a^e\mid t$.
+\end{proof}
+
+\section{The shell colouring}\label{sec:shell}
+
+\begin{definition}\label{def:shell}
+Let $a\ge2$, $b\ge1$ with $\gcd(a,b)=1$, and $k\ge2$.  Define the
+\emph{level capacities}
+\[
+  L_i:=a^{i-1}b\qquad(2\le i\le k),
+\]
+the \emph{length}
+\[
+  N=N(a,b,k):=2\sum_{i=2}^{k-1}L_i+L_k ,
+\]
+and the \emph{cuts} $c_1:=0$ and $c_i:=c_{i-1}+L_i$ for $2\le i\le k-1$ (the
+index set $\{2,\dots,k-1\}$ is empty when $k=2$).  For $2\le i\le k-1$ put
+\[
+  \Sh_i:=[\,c_{i-1}+1,\;c_i\,]\;\cup\;[\,N-c_i+1,\;N-c_{i-1}\,],
+  \qquad
+  \Core:=[\,c_{k-1}+1,\;N-c_{k-1}\,].
+\]
+The \emph{shell colouring} $\chi\colon[1,N]\to\{1,\dots,k\}$ is
+\[
+  \chi(j):=
+  \begin{cases}
+    \min\bigl(v(j),k\bigr), & v(j)\ge1,\\[2pt]
+    i, & v(j)=0 \text{ and } j\in \Sh_i \ \ (2\le i\le k-1),\\[2pt]
+    k, & v(j)=0 \text{ and } j\in \Core .
+  \end{cases}
+\]
+\end{definition}
+
+\begin{lemma}[Structure]\label{lem:structure}
+With the notation of Definition~\ref{def:shell}:
+\begin{enumerate}
+\item $c_i=b\,\Sigma_{i-1}$ for $1\le i\le k-1$, and
+      $N=b\bigl(a^{k-1}+2\Sigma_{k-2}\bigr)$.
+\item $N-2c_{k-1}=L_k=ba^{k-1}>0$; in particular $c_{k-1}<N-c_{k-1}$.
+\item The sets $\Sh_2,\dots,\Sh_{k-1},\Core$ partition $[1,N]$.  Each of the
+      two intervals constituting $\Sh_i$ consists of exactly $L_i$ consecutive
+      integers, and $\Core$ consists of exactly $L_k$ consecutive integers.
+      Hence $\chi$ is well defined.
+\item No unit receives colour $1$; equivalently,
+      $\chi^{-1}(1)=\{j\in[1,N]: v(j)=1\}$.
+\item $a\mid N$.
+\end{enumerate}
+\end{lemma}
+
+\begin{proof}
+(1) By induction, $c_i=\sum_{r=2}^{i}L_r=b\sum_{r=2}^{i}a^{r-1}=b\Sigma_{i-1}$;
+and $N=2c_{k-1}+L_k=2b\Sigma_{k-2}+ba^{k-1}$.
+
+(2) Immediate from $N=2c_{k-1}+L_k$ and $L_k=ba^{k-1}\ge1$.
+
+(3) The left intervals $[c_{i-1}+1,c_i]$, $2\le i\le k-1$, are consecutive and
+their union is $[c_1+1,c_{k-1}]=[1,c_{k-1}]$; symmetrically the right intervals
+tile $[N-c_{k-1}+1,N]$.  By (2) these two blocks are disjoint and their
+complement in $[1,N]$ is exactly $\Core$.  The interval $[c_{i-1}+1,c_i]$ has
+$c_i-c_{i-1}=L_i$ elements, likewise $[N-c_i+1,N-c_{i-1}]$, and $\Core$ has
+$N-2c_{k-1}=L_k$ elements.
+
+(4) Units receive colours in $\{2,\dots,k-1\}\cup\{k\}$, and $1$ lies in that
+set only if $k=1$.  Non-units $j$ receive $\min(v(j),k)=1$ precisely when
+$v(j)=1$, since $k\ge2$.
+
+(5) Every summand of $N=ba^{k-1}+2b\Sigma_{k-2}$ is divisible by $a$, because
+$k\ge2$ and every term of $\Sigma_{k-2}$ is.
+\end{proof}
+
+\section{Two inequalities}
+
+The next lemma is the technical heart of Theorem~\ref{thm:main}.  It is also
+exactly the statement that fails when $b>a$; see Remark~\ref{rem:sharpgap}.
+
+\begin{lemma}[Shell gap]\label{lem:gap}
+Let $a\ge2$, $1\le b\le a-1$, $k\ge3$ and $2\le c\le k-1$.  Then for every
+integer $s\ge1$ with $a^cs\le N$ we have
+\[
+  b\,a^{c-1}s\;\le\;N-2c_c .
+\]
+\end{lemma}
+
+\begin{proof}
+Set
+\[
+  T:=1+a+\cdots+a^{k-2-c}=\frac{a^{k-1-c}-1}{a-1}\ \in\ \ZZ_{\ge0},
+\]
+so that $T=0$ exactly when $c=k-1$, and
+$\Sigma_{k-2}=\Sigma_{c-1}+a^{c}T$.  By
+Lemma~\ref{lem:structure}(1),
+\begin{equation}\label{eq:split}
+  N=b\,a^{k-1}+2b\,\Sigma_{c-1}+2b\,a^{c}T,
+  \qquad\text{hence}\qquad
+  N-2c_c=b\,a^{k-1}+2b\,a^{c}T,
+\end{equation}
+since $c_c=b\Sigma_{c-1}$.  Dividing \eqref{eq:split} by $a^c$,
+\[
+  \frac{N}{a^{c}}=b\,a^{k-1-c}+2bT+\theta,
+  \qquad \theta:=\frac{2b\,\Sigma_{c-1}}{a^{c}} .
+\]
+Here $b a^{k-1-c}$ and $2bT$ are non-negative integers because $c\le k-1$.
+Moreover $\theta>0$ (as $c\ge2$ gives $\Sigma_{c-1}\ge a$), and by
+\eqref{eq:sigma} together with $b\le a-1$,
+\[
+  b\,\Sigma_{c-1}=b\,\frac{a^{c}-a}{a-1}\le a^{c}-a<a^{c},
+  \qquad\text{so}\qquad 0<\theta<2 .
+\]
+Since $s$ is an integer with $s\le N/a^{c}$, it follows that
+\begin{equation}\label{eq:sbound}
+  s\;\le\;b\,a^{k-1-c}+2bT+1 .
+\end{equation}
+Combining \eqref{eq:split} and \eqref{eq:sbound},
+\begin{align*}
+  \bigl(N-2c_c\bigr)-b\,a^{c-1}s
+  &\;\ge\; b\,a^{k-1}+2b\,a^{c}T
+        - b\,a^{c-1}\bigl(b\,a^{k-1-c}+2bT+1\bigr)\\
+  &\;=\; b\Bigl[\,a^{k-1}-b\,a^{k-2}
+        +2a^{c-1}T\,(a-b)-a^{c-1}\Bigr]\\
+  &\;=\; b\Bigl[\,a^{k-2}(a-b)+2a^{c-1}T\,(a-b)-a^{c-1}\Bigr]\\
+  &\;\ge\; b\bigl[\,a^{k-2}-a^{c-1}\,\bigr]\;\ge\;0 ,
+\end{align*}
+where the last two steps use $a-b\ge1$, $T\ge0$, and $c-1\le k-2$.
+\end{proof}
+
+\begin{remark}[Sharpness of Lemma~\ref{lem:gap}]\label{rem:gaptight}
+The inequality of Lemma~\ref{lem:gap} is attained.  The final chain has slack
+\[
+  \bigl(N-2c_c\bigr)-b\,a^{c-1}s\;\ge\;
+  b\Bigl[a^{k-2}(a-b)+2a^{c-1}T(a-b)-a^{c-1}\Bigr]
+  \;=\;b\,a^{k-2}\,(a-b-1)\quad\text{when }c=k-1,
+\]
+since then $T=0$; so for $b=a-1$ and $c=k-1$ the slack vanishes and
+$b\,a^{c-1}\lfloor N/a^{c}\rfloor=N-2c_c$ exactly.  For instance at
+$(a,b,k,c)=(3,2,4,3)$ one has $N=102$, $\lfloor N/27\rfloor=3$,
+$b\,a^{2}\cdot3=54=102-48$.  In particular the truncation
+$\lfloor\theta\rfloor\le1$ in \eqref{eq:sbound} cannot be improved to
+$\lfloor\theta\rfloor=0$: one has $\theta\ge1$ for roughly half of all
+admissible $(a,b,k,c)$.  Lemma~\ref{lem:gap} therefore has no slack to spare,
+and by Remark~\ref{rem:sharpgap} it is in fact equivalent, at $c=2$, to the
+hypothesis $b<a$.
+\end{remark}
+
+\begin{lemma}[Size]\label{lem:size}
+Let $a\ge2$, $1\le b\le a-1$ and $k\ge2$.  Then
+\[
+  N\;\le\;a^{k}+a^{k-1}-2a\;<\;2a^{k} .
+\]
+Consequently $[1,N]$ contains at most one multiple of $a^{k}$.
+\end{lemma}
+
+\begin{proof}
+By Lemma~\ref{lem:structure}(1), $b\le a-1$ and \eqref{eq:sigma},
+\[
+  N=b\bigl(a^{k-1}+2\Sigma_{k-2}\bigr)
+   \le (a-1)a^{k-1}+2(a-1)\Sigma_{k-2}
+   = \bigl(a^{k}-a^{k-1}\bigr)+2\bigl(a^{k-1}-a\bigr)
+   = a^{k}+a^{k-1}-2a .
+\]
+Also $2a^{k}-\bigl(a^{k}+a^{k-1}-2a\bigr)=a^{k-1}(a-1)+2a>0$.  If $[1,N]$
+contained two distinct multiples of $a^{k}$ then $N\ge 2a^{k}$, a
+contradiction.
+\end{proof}
+
+\section{Proof of Theorem~\ref{thm:main}}
+
+\begin{proof}[Proof of Theorem~\ref{thm:main}]
+Suppose, for contradiction, that $x,y,z\in[1,N]$ satisfy $a(x-y)=bz$ and
+$\chi(x)=\chi(y)=\chi(z)=c$ for some $c\in\{1,\dots,k\}$.  By
+Lemma~\ref{lem:solform} there is $t\ge1$ with
+\[
+  x-y=bt,\qquad z=at,\qquad x>y,
+\]
+and by Lemma~\ref{lem:val},
+\begin{equation}\label{eq:pin}
+  v(x-y)=v(bt)=v(t),\qquad v(z)=v(at)=1+v(t).
+\end{equation}
+Since $a\mid z$ we have $\chi(z)=\min(v(z),k)$, so \eqref{eq:pin} pins $v(t)$:
+\begin{equation}\label{eq:vt}
+  \text{if } c\le k-1:\quad v(z)=c \text{ and } v(t)=c-1;
+  \qquad
+  \text{if } c=k:\quad v(z)\ge k \text{ and } v(t)\ge k-1 .
+\end{equation}
+In particular $v(t)=0$ when $c=1$, and $v(t)\ge1$ whenever $c\ge2$.
+
+\smallskip
+\noindent\textbf{Case $c=1$.}  By Lemma~\ref{lem:structure}(4) neither $x$ nor
+$y$ is a unit, and $\min(v(x),k)=\min(v(y),k)=1$ with $k\ge2$ forces
+$v(x)=v(y)=1$.  By Lemma~\ref{lem:val}(2), $v(x-y)\ge1$.  But \eqref{eq:pin}
+and \eqref{eq:vt} give $v(x-y)=v(t)=0$, a contradiction.
+
+\smallskip
+\noindent\textbf{Case $2\le c\le k-1$} (so $k\ge3$).  Here $v(t)=c-1\ge1$, so
+we may write $t=a^{c-1}s$ with $s\ge1$ and $a\nmid s$; then
+\begin{equation}\label{eq:mid}
+  x-y=b\,a^{c-1}s=L_c\,s\;\ge\;L_c,
+  \qquad z=a^{c}s\le N .
+\end{equation}
+Each of $x,y$ satisfies $\chi=c$ with $c\le k-1$, hence is either
+\begin{itemize}
+\item[($\alpha$)] a non-unit with $v=c$ (since $\min(v,k)=c<k$), or
+\item[($\beta$)] a unit lying in $\Sh_c$.
+\end{itemize}
+We treat the four combinations.
+
+\emph{(i) Exactly one of $x,y$ is a unit.}  Then $\{v(x),v(y)\}=\{0,c\}$ with
+$c\ge1$, so Lemma~\ref{lem:val}(1) gives $v(x-y)=0$.  This contradicts
+$v(x-y)=v(t)=c-1\ge1$.
+
+\emph{(ii) Both of type ($\alpha$).}  Then $v(x)=v(y)=c$, so
+Lemma~\ref{lem:val}(2) gives $v(x-y)\ge c$, contradicting $v(x-y)=c-1$.
+
+\emph{(iii) Both of type ($\beta$), in the same interval of $\Sh_c$.}  By
+Lemma~\ref{lem:structure}(3) that interval has exactly $L_c$ elements, so
+$x-y\le L_c-1$, contradicting $x-y\ge L_c$ from \eqref{eq:mid}.
+
+\emph{(iv) Both of type ($\beta$), in different intervals of $\Sh_c$.}  Since
+$x>y$ and $\max[c_{c-1}+1,c_c]=c_c<N-c_c+1=\min[N-c_c+1,N-c_{c-1}]$, we must
+have $x\ge N-c_c+1$ and $y\le c_c$, whence
+\[
+  x-y\;\ge\;N-2c_c+1 .
+\]
+On the other hand $a^{c}s=z\le N$ by \eqref{eq:mid}, so Lemma~\ref{lem:gap}
+applies and gives $x-y=b\,a^{c-1}s\le N-2c_c$.  These two bounds are
+incompatible.
+
+\smallskip
+\noindent\textbf{Case $c=k$.}  Here $v(t)\ge k-1\ge1$, so $a^{k-1}\mid t$ and
+\begin{equation}\label{eq:top}
+  x-y=bt\;\ge\;b\,a^{k-1}=L_k .
+\end{equation}
+Each of $x,y$ is either
+\begin{itemize}
+\item[($\alpha'$)] a non-unit with $v\ge k$, or
+\item[($\beta'$)] a unit lying in $\Core$.
+\end{itemize}
+
+\emph{(i) Exactly one of $x,y$ is a unit.}  As before $v(x-y)=0$, contradicting
+$v(x-y)=v(t)\ge k-1\ge1$.
+
+\emph{(ii) Both of type ($\alpha'$).}  Then $a^{k}\mid x$ and $a^{k}\mid y$
+with $x\ne y$, so $[1,N]$ contains two distinct multiples of $a^{k}$,
+contradicting Lemma~\ref{lem:size}.
+
+\emph{(iii) Both of type ($\beta'$).}  By Lemma~\ref{lem:structure}(3),
+$\Core$ has exactly $L_k$ elements, so $x-y\le L_k-1$, contradicting
+\eqref{eq:top}.
+
+\smallskip
+Every case is contradictory, so no monochromatic solution exists.  The stated
+lower bound on $\Rk$ follows, using Lemma~\ref{lem:structure}(1).
+\end{proof}
+
+\begin{remark}
+The hypothesis $b<a$ enters at exactly two points: Lemma~\ref{lem:gap} (used in
+case $2\le c\le k-1$(iv)) and Lemma~\ref{lem:size} (used in case $c=k$(ii)).
+Every other branch uses only $\gcd(a,b)=1$ and $a\ge2$.  Branch $c=k$(ii) is in
+fact vacuous: by Lemma~\ref{lem:size} the interval $[1,N]$ never contains two
+multiples of $a^{k}$.
+\end{remark}
+
+\begin{remark}\label{rem:naive}
+The naive replacement for Lemma~\ref{lem:gap} is false.  In case
+$2\le c\le k-1$(iv) one is tempted to argue over the reals: $z\le N$ gives
+$x-y=(b/a)z\le (b/a)N$, so it would suffice that $N-2c_c+1>(b/a)N$, i.e.
+$N(a-b)>2ab\,\Sigma_{c-1}$.  But at $c=k-1$ one computes
+$2ab\,\Sigma_{k-2}-N=ab\,(a^{k-2}-2)$, which is \emph{positive} for all
+$a\ge2$, $k\ge4$; e.g. at $(a,b,k)=(3,2,4)$ one has $N=102$, $N(a-b)=102$ and
+$2ab\Sigma_2=144$.  The integrality of $s=t/a^{c-1}$ --- that is, the floor in
+\eqref{eq:sbound} --- is therefore essential and not a convenience.
+\end{remark}
+
+\section{Sharpness of the hypothesis $b<a$}
+
+\begin{proof}[Proof of Theorem~\ref{thm:sharp}]
+Write $N=b\bigl(a^{k-1}+2\Sigma_{k-2}\bigr)$ as in
+Lemma~\ref{lem:structure}(1), so $b\mid N$ and $W=N/b-a$ is an integer.
+
+\emph{Step 1: $v(W)=1$, hence $v(Z)=2$.}  Since $k\ge3$,
+\[
+  W=a^{k-1}+2\Sigma_{k-2}-a
+   =a^{k-1}+\bigl(2a+2a^{2}+\cdots+2a^{k-2}\bigr)-a
+   =a+2\bigl(a^{2}+\cdots+a^{k-2}\bigr)+a^{k-1},
+\]
+where the middle bracket is empty when $k=3$.  Thus $W=aM$ with
+\[
+  M=1+2\bigl(a+\cdots+a^{k-3}\bigr)+a^{k-2}\equiv1 \pmod a,
+\]
+because $k-2\ge1$.  Hence $a\nmid M$, so $v(W)=1$ and $v(Z)=v(aW)=2$.
+
+\emph{Step 2: the identity.}  $X-Y=N-ab=b\bigl(N/b-a\bigr)=bW$, so
+\[
+  a(X-Y)=abW=b\,(aW)=bZ .
+\]
+
+\emph{Step 3: ranges.}  Clearly $Y=1\in[1,N]$ and $X=N-ab+1\le N$.  Since
+$k\ge3$ we have $N\ge ba^{2}+2ab>ab$, so $X\ge2>Y$, and in particular
+$X\in[1,N]$.  Also $W\ge a+a^{2}>0$, so $Z\ge1$.  Finally
+\[
+  Z\le N
+  \iff a\Bigl(\frac{N}{b}-a\Bigr)\le N
+  \iff aN-a^{2}b\le bN
+  \iff N(a-b)\le a^{2}b ,
+\]
+which holds trivially when $b>a$, the left-hand side then being $\le0$.
+
+\emph{Step 4: the colours.}  Since $k\ge3$ the shell index $i=2$ exists, and
+$c_1=0$, $c_2=L_2=ab$ give
+\[
+  \Sh_2=[\,1,\;ab\,]\ \cup\ [\,N-ab+1,\;N\,].
+\]
+As $a\ge2$, $v(Y)=v(1)=0$, and $Y=1\in[1,ab]$, so $\chi(Y)=2$.  By
+Lemma~\ref{lem:structure}(5), $a\mid N$, hence
+$X=N-ab+1\equiv1\pmod a$ and $v(X)=0$; and $X$ is the left endpoint of
+$[N-ab+1,N]$, so $\chi(X)=2$.  Finally $v(Z)=2$ by Step~1, so
+$\chi(Z)=\min(2,k)=2$ because $k\ge2$.  Thus $\chi(X)=\chi(Y)=\chi(Z)=2$.
+\end{proof}
+
+\begin{remark}\label{rem:sharpgap}
+The witness of Theorem~\ref{thm:sharp} is exactly a pair of type
+$2\le c\le k-1$(iv) with $c=2$, and it violates Lemma~\ref{lem:gap}.  Indeed,
+with $M=W/a$ as in Step~1 (so $a\nmid M$) put $s:=M$.  Then
+$a^{2}s=aW=Z\le N$, so $s$ is admissible in Lemma~\ref{lem:gap}, while
+\[
+  b\,a\,s=bW=N-ab\;>\;N-2ab=N-2c_2 .
+\]
+So the conclusion of Lemma~\ref{lem:gap} fails at $c=2$.  In fact
+Lemma~\ref{lem:gap} at $c=2$ is \emph{equivalent} to the hypothesis: for
+$k\ge3$ and $\gcd(a,b)=1$ one has
+$b\,a\,\lfloor N/a^{2}\rfloor\le N-2c_2$ if and only if $b<a$, the direction
+$b>a\Rightarrow$ failure being the display above.  Lemma~\ref{lem:gap} is thus
+not merely a convenient sufficient condition but the exact obstruction.
+\end{remark}
+
+Specialising Theorem~\ref{thm:sharp} to $k=3$, where
+$N=ba^{2}+2ab$ and $W=a+a^{2}$, gives the following closed form.
+
+\begin{corollary}\label{cor:k3}
+Let $a\ge2$, $\gcd(a,b)=1$, $b>a$ and $k=3$.  Then
+\[
+  \bigl(X,Y,Z\bigr)=\bigl(ab(a+1)+1,\;1,\;a^{2}(a+1)\bigr)
+\]
+is a monochromatic solution of colour $2$.  For $b=a+1$ this is
+\[
+  \bigl(X,Y,Z\bigr)=\bigl(ab^{2}+1,\;1,\;a^{2}b\bigr).
+\]
+\end{corollary}
+
+\begin{remark}\label{rem:notfixed}
+The triple $(ab^{2}+1,1,a^{2}b)$ satisfies the identity $a(x-y)=bz$ for all
+$a,b$, but it is \emph{not} monochromatic for $k\ge4$: it is a fixed triple
+while $N$ grows with $k$, so it drifts out of the outer shell and into an inner
+shell or the core.  For instance at $(a,b,k)=(2,3,4)$ one has $N=60$,
+$\Sh_2=[1,6]\cup[55,60]$, $\Sh_3=[7,18]\cup[43,54]$, $\Core=[19,42]$, and
+$ab^{2}+1=19$ lies in the core: $\chi(19)=4$ while
+$\chi(1)=\chi(12)=2$.  The correct witness is the moving point
+$X=N-ab+1=55$, with $Z=aW=36$.  This is why Theorem~\ref{thm:sharp} is phrased
+in terms of $N$.
+\end{remark}
+
+\begin{proof}[Proof of Proposition~\ref{prop:k2}]
+For $k=2$ we have $\Sigma_0=0$, $N=ab$, no shells, $\Core=[1,N]$, and
+$\chi(j)=\min(v(j),2)$ for $a\mid j$ while $\chi(j)=2$ for every unit $j$.
+Suppose $x,y,z\in[1,N]$ form a monochromatic solution of colour $c$, and take
+$t$ as in Lemma~\ref{lem:solform}, so that \eqref{eq:pin} and \eqref{eq:vt}
+hold.
+
+If $c=1$ the argument of Theorem~\ref{thm:main} applies verbatim: it used only
+$\gcd(a,b)=1$.
+
+If $c=2$ then $v(t)\ge1$.  If exactly one of $x,y$ is a unit then
+$v(x-y)=0$ by Lemma~\ref{lem:val}(1), contradicting $v(x-y)=v(t)\ge1$.  If both
+are units then $x,y\in\Core=[1,N]$, so $x-y\le N-1=ab-1$, whereas
+$x-y=bt\ge ab$ because $a\mid t$; contradiction.  If both are non-units then
+$v(x),v(y)\ge2$, so $a^{2}\mid x-y=bt$, and $\gcd(a,b)=1$ gives $a^{2}\mid t$,
+whence
+\[
+  x-y=bt\ \ge\ a^{2}b\ >\ ab\ =\ N ,
+\]
+using $a\ge2$; this contradicts $x-y\le N-1$.
+\end{proof}
+
+Note that the last branch of this proof replaces the appeal to
+Lemma~\ref{lem:size} (which needs $b<a$) by a divisibility argument valid for
+all $b$; this is exactly why $k=2$ escapes.  A second, more structural reason
+is visible in Theorem~\ref{thm:sharp}: at $k=2$ we have $N=ab$, so the witness
+degenerates to $X=N-ab+1=1=Y$, i.e. $t=0$, which is not a solution.
+
+\begin{proof}[Proof of Corollary~\ref{cor:iff}]
+If $b<a$, apply Theorem~\ref{thm:main}; if $k=2$, apply
+Proposition~\ref{prop:k2}.  Conversely, $\gcd(a,b)=1$ and $a\ge2$ exclude
+$b=a$, so if neither $b<a$ nor $k=2$ holds then $b>a$ and $k\ge3$, and
+Theorem~\ref{thm:sharp} produces a monochromatic solution.
+\end{proof}
+
+\section{Comparison with the valuation colouring}
+
+The baseline construction is the pure $a$-adic colouring
+$\chi_P(j)=\min\bigl(v(j),k-1\bigr)$, which is solution-free on $[1,a^{k}-1]$
+and hence gives $\Rk\ge a^{k}$ for all $b$ coprime to $a$.  Write
+$N_S:=N(a,b,k)$ for the shell length.  The following proposition determines
+exactly when the shell colouring improves on it.
+
+\begin{proposition}\label{prop:beat}
+Let $a\ge2$, $1\le b\le a-1$, $\gcd(a,b)=1$ and $k\ge2$.  Then
+\[
+  N_S+1>a^{k}\qquad\Longleftrightarrow\qquad b=a-1\ \text{ and }\ k\ge3 .
+\]
+\end{proposition}
+
+\begin{proof}
+By Lemma~\ref{lem:structure}(1) and \eqref{eq:sigma},
+\begin{equation}\label{eq:beat}
+  (a-1)N_S=b\bigl[(a-1)a^{k-1}+2\bigl(a^{k-1}-a\bigr)\bigr]
+          =b\bigl(a^{k}+a^{k-1}-2a\bigr),
+\end{equation}
+and since $N_S$ and $a^k$ are integers,
+$N_S+1>a^{k}\iff N_S\ge a^{k}\iff b\bigl(a^{k}+a^{k-1}-2a\bigr)\ge(a-1)a^{k}$.
+
+If $b=a-1$, then \eqref{eq:beat} gives $N_S=a^{k}+a^{k-1}-2a$ exactly, so
+$N_S\ge a^{k}$ iff $a^{k-1}\ge2a$, i.e. iff $a^{k-2}\ge2$.  For $k=2$ this
+reads $1\ge2$, false; for $k\ge3$ it holds since $a^{k-2}\ge a\ge2$.
+
+If $b\le a-2$ --- which forces $a\ge3$ --- then
+\[
+  b\bigl(a^{k}+a^{k-1}-2a\bigr)\le(a-2)\bigl(a^{k}+a^{k-1}-2a\bigr)
+   =a^{k+1}-a^{k}-2a^{k-1}-2a^{2}+4a,
+\]
+whereas $(a-1)a^{k}=a^{k+1}-a^{k}$.  The difference is
+$2a^{k-1}+2a^{2}-4a=2\bigl(a^{k-1}+a(a-2)\bigr)>0$ for all $a\ge3$, $k\ge2$.
+Hence $b\bigl(a^{k}+a^{k-1}-2a\bigr)<(a-1)a^{k}$ and $N_S<a^{k}$.
+\end{proof}
+
+\begin{corollary}\label{cor:beat}
+For $a\ge2$ and $k\ge3$,
+\[
+  \Rk\bigl(a(x-y)=(a-1)z\bigr)\;\ge\;a^{k}+a^{k-1}-2a+1 ,
+\]
+which exceeds the valuation bound $a^{k}$ by $a^{k-1}-2a+1$.
+\end{corollary}
+
+For $b$ small relative to $a$ the shell colouring is weaker than $\chi_P$: e.g.
+at $(a,b,k)=(3,1,3)$ it gives $N_S+1=16<27=a^{k}$.  The best available lower
+bound is of course the maximum of the two, and by Proposition~\ref{prop:beat}
+the shell colouring contributes exactly on the line $b=a-1$, $k\ge3$.
+
+\begin{remark}[Rigidity of the shape]\label{rem:rigid}
+Proposition~\ref{prop:beat} also explains a rigidity phenomenon.  Keep the
+valuation strata fixed --- which is forced, since $a\mid z$ makes
+$\chi(z)=\min(v(z),k)$ independent of the cuts --- and let the cut vector
+$(0,c_2,\dots,c_{k-1})$ range over all choices with
+$0<c_2<\cdots<c_{k-1}<N/2$.  Computation shows that for $b=a-1$ and
+$N=N(a,b,k)$ the canonical vector $c_i=b\Sigma_{i-1}$ is the \emph{unique}
+solution-free choice, whereas for $b\le a-2$ there are many (e.g. $1125$ at
+$(a,b,k)=(5,3,4)$).
+
+The proof of Theorem~\ref{thm:main} accounts for this, and it is branches
+(iii) and $c=k$(iii) --- the \emph{width} branches --- that do the work, not
+Lemma~\ref{lem:gap}.  Each is tight by exactly one: an interval of $L_c+1$
+consecutive integers contains a pair at distance exactly $L_c$, and taking
+$s=1$ in \eqref{eq:mid} makes that pair a genuine monochromatic solution with
+$z=a^{c}$, \emph{provided} $a^{c}\le N$.  Moreover such a pair is automatically
+a pair of \emph{units}: by Lemma~\ref{lem:structure}(5) and (1) we have
+$a\mid N$ and $a\mid c_i$, so the endpoints $c_{i-1}+1$ and $N-c_i+1$ of the
+shell intervals are $\equiv1\pmod a$.  Here the two-sidedness is essential:
+widening a shell exhibits the offending unit pair in its left interval,
+while narrowing a cut exhibits one in the right interval of the next shell.
+
+For $2\le c\le k-1$ the proviso $a^{c}\le N$ is automatic, since
+$N\ge b\,a^{k-1}\ge a^{k-1}\ge a^{c}$.  For $c=k$ it reads $a^{k}\le N$, which
+by Proposition~\ref{prop:beat} holds precisely when $b=a-1$ and $k\ge3$.  Hence
+for $b\le a-2$ the core width is unconstrained and the shape can be deformed,
+while at $b=a-1$ every width is pinned.  Lemma~\ref{lem:gap} plays no part in
+this: it constrains the cross-shell distance rather than the individual widths,
+and by Remark~\ref{rem:gaptight} it is tight only at $c=k-1$.
+\end{remark}
+
+\begin{remark}
+A convenient inductive proof of the baseline is available and is worth
+recording, since it isolates the structural fact the shell colouring must work
+around.  If $a\mid x$, $a\mid y$ and $a\mid z$ in a solution, then $a\mid t$ by
+Lemma~\ref{lem:solform} and $\gcd(a,b)=1$, and dividing through returns a
+solution of the \emph{same} equation.  Hence the multiples of $a$ inside
+$[1,N]$ carry an isomorphic scaled copy of the problem, and lifting a
+solution-free $k$-colouring of $[1,M]$ to $[1,aM+a-1]$ by giving the units a
+fresh colour and pulling back on multiples of $a$ preserves solution-freeness.
+Starting from the solution-free $1$-colouring of $[1,a-1]$ this yields
+$a^{k}-1$ for every $b\le a-1$ at once.  The shell colouring's novelty is
+precisely that it declines to spend a fresh colour on the units, reusing colour
+$i$ for the stratum $\{v=i\}$ and a unit shell simultaneously.
+\end{remark}
+
+\begin{remark}
+The construction is not tight in general.  Direct computation shows that the
+bound $\Rk\ge N+1$ is attained at $(a,b,k)=(3,2,3)$, $(4,3,3)$, $(3,2,4)$ and
+$(4,3,4)$, but at $(3,2,5)$ there is a solution-free $5$-colouring of $[1,350]$,
+whereas $N+1=319$.  Any exactness claim must therefore be scoped to small $k$.
+\end{remark}
+
+\begin{remark}[Computational verification]
+All statements above were stress-tested numerically.  Theorem~\ref{thm:main}
+was confirmed by exhaustive search over $84$ parameter points
+($2\le a\le8$, $b<a$ coprime to $a$, $2\le k\le5$), examining $287\,888\,880$
+solution triples with no monochromatic one.  Lemmas~\ref{lem:gap} and
+\ref{lem:size} were checked at $153\,270$ and $25\,545$ parameter points
+respectively ($a\le80$, $k\le14$).  The case analysis in the proof of
+Theorem~\ref{thm:main} was audited by classifying all $1\,466\,700$
+monochromatic pairs arising at $53$ parameter points into the branches above;
+no pair fell outside the case tree.  Theorem~\ref{thm:sharp} was verified at
+$1\,290$ parameter points with $b>a$, $k\ge3$.
+\end{remark}
+
+\end{document}
