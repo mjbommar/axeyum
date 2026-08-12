@@ -7,14 +7,13 @@ first and update it before ending a project-level work session.
 - Last consolidated: **2026-08-11**
 - Integrated baseline merged into the active topic:
   `c516b5fac20f38886dfad41433656bad988f9f5c`
-- Active A5 classifier repair: code at exact pushed
-  `d646382e7422ba60faae7bb5795a1174f8ad4a34`; its documentation descendant
-  `b9938576bce50b80c4525d48cddacdf1ac5cb266` passed the full release gate
-- Latest full-gate attempt: exact pushed checkpoint
-  `b9938576bce50b80c4525d48cddacdf1ac5cb266` passed `just check` with
-  external frontier artifacts and exit 0
+- Active A5 large-equality DL repair: code at exact pushed
+  `46edad8bac7e193303871d601914fef2115bf721`; its documentation descendant
+  `d1b570f91c27f83ef55127ea3d1c8baf700f05a5` passed the full release gate
+- Latest full-gate attempt: exact pushed checkpoint `d1b570f91c27f83ef55127ea3d1c8baf700f05a5`
+  passed `just check` with external frontier artifacts and exit 0
 - Latest comprehensive green exact-commit gate:
-  `b9938576bce50b80c4525d48cddacdf1ac5cb266` (`just check` exit 0)
+  `d1b570f91c27f83ef55127ea3d1c8baf700f05a5` (`just check` exit 0)
 - Latest integrated A3 code increments: bounded SMT-LIB `distinct` expansion at
   `63c82a6ef`, typed arithmetic-model reconstruction at `4ff9a82c6`, and
   deterministic string/integer coupling at `db7b426e8`
@@ -97,7 +96,9 @@ decisions hidden by two gains; QF_RDL is forbidden. The sequence is non-credited
 Replay made both losses deterministic. B1 failed and was removed. Unchanged-
 binary G1/D2 returned GraphPartitioning SAT and BubbleSort UNSAT through
 `dl-online` in 3/3 each at 32 seconds. V2 recovers both at 24 seconds and
-preserves all 173 retained decisions; its full gate is pending. See the [result](docs/plan/qf-linear-a5-idl-extended-dl-slice-v2-result-2026-08-11.md).
+preserves all 173 retained decisions. Exact pushed `d1b570f91c2` passed the
+complete external-frontier `just check` in 6,277 seconds with exit 0; the repair
+is release-qualified. See the [result](docs/plan/qf-linear-a5-idl-extended-dl-slice-v2-result-2026-08-11.md).
 
 A3 is **WIP**. Pushed result checkpoint `3696e7dd5` is integrated on current
 main by `47d8cd956`; its source branch remains preserved. The repaired complete
@@ -352,11 +353,10 @@ here as closed evidence boundaries. A3 remains incomplete, but all currently
 preregistered bounded mechanisms are closed negatively. A4 has now also yielded;
 A5 is the first active item.
 
-**Immediate action (`WIP`).** Push the exact v2 documentation descendant and run
-one uninterrupted external-frontier `just check`. Do not start QF_LRA until it
-passes. Then restart V2 from row 1 under the existing atomic protocol; QF_IDL
-and QF_RDL remain ordered behind strict monotonicity joins. Failed and old
-streams remain non-credited.
+**Immediate action (`WIP`).** Restart V2 QF_LRA from row 1 at the fully gated
+large-equality DL checkpoint under the existing atomic protocol. Validate its
+strict monotonicity join before QF_IDL; QF_RDL remains ordered behind the QF_IDL
+join. Failed and old streams remain non-credited.
 
 **Parallel documentation action.** The comprehensive pass and 2026-08-09
 README application/vision revision are closed. Continue only for a concrete

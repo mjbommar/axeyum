@@ -6,8 +6,9 @@ The [preregistered corrected candidate](qf-linear-a5-idl-extended-dl-slice-v2-pr
 passes its targets, immediate controls, allocation controls, complete retained-
 decision comparison, and focused solver gates. It recovers exactly the two lost
 QF_IDL decisions through the existing checked DL route and preserves every
-other retained verdict. The exact-pushed complete repository gate remains the
-last release condition; no V2 census is yet authorized.
+other retained verdict. Its exact-pushed documentation descendant also passes
+the complete repository gate. The repair is release-qualified, and the frozen
+V2 census may restart at QF_LRA row 1 under its existing atomic protocol.
 
 ## Identity
 
@@ -72,8 +73,26 @@ All four retained runs exited 0 with zero stderr.
 
 ## Release boundary
 
-Commit and push the documentation descendant, verify the remote ref, and run
-one uninterrupted external-frontier `CARGO_BUILD_JOBS=2 just check` on that
-exact clean checkpoint. Until it exits 0, the candidate is not release-qualified
-and QF_LRA row 1 must not start. All measurement files remain outside the
-repository under the corresponding `a5-idl-dl-slice-v2-*` directories.
+Exact local and remote checkpoint
+`d1b570f91c27f83ef55127ea3d1c8baf700f05a5` passed one uninterrupted
+external-frontier `CARGO_BUILD_JOBS=2 just check` from
+`2026-08-11T23:08:32Z` through `2026-08-12T00:53:09Z`: 6,277 seconds, exit 0.
+The 605,612-byte log has SHA-256
+`2b0d456dbe2b8164bc6e5b1d68f2455ec889b334b12432ab71482982e0ae5666`.
+The nine frontier tests passed in 194.09 seconds and wrote five external
+artifacts with SHA-256 values:
+
+- `bv_reduction.json`: `21318348865ff49d68d5de300fa799eac722350b35dd67d9c70ac45c8aa25f69`;
+- `lia_cuts.json`: `06a8c8a788b199294c586364fa63d10a8030decdd2048da0e4bb9b07ce1a66bc`;
+- `nia_unsat.json`: `642cc783904947f42ee6037da0a77fbca5684e0208d88e1880fae8e46733137a`;
+- `nra_degree.json`: `885acd0e79dad5e828435a0b6896523205fda64343842b19ef5d25b309ac840c`;
+  and
+- `string_bound.json`: `13b44485963ea428df199989e80d46808c0808b2d880789e71694a5b9baf7e8d`.
+
+The tracked tree was clean before and after the run, and local HEAD, upstream,
+and the remote branch ref matched exactly. The gate also retained 1,093/1,093
+solver-library tests, zero-disagreement differential suites, checked CAS proof
+families, documentation, foundational resources, Glaurung 162/162 QF_BV
+decisions with zero disagreement, resume/Lean authorities, parity docs, plan
+authority, and links. All measurement files remain outside the repository under
+the corresponding `a5-idl-dl-slice-v2-*` directories.
