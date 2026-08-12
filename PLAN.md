@@ -104,7 +104,8 @@ losses or wrong verdicts, with `sc-39`, LPSAT, BubbleSort, and GraphPartitioning
 controls retained. QF_RDL is now authorized but not started. See the [result](docs/plan/qf-linear-a5-idl-extended-dl-slice-v2-result-2026-08-11.md).
 
 A3 is **WIP**. Pushed result checkpoint `3696e7dd5` is integrated on current
-main by `47d8cd956`; its source branch remains preserved. The repaired complete
+main by `47d8cd956`; its retired source tip is in the 2026-08-12 branch-cleanup
+bundle. The repaired complete
 67-row census
 classifies 52 NIA-linearization budget declines, 13 former generic model-replay
 declines, one verifier rejection, and one bounded giant-`distinct` ingest
@@ -604,14 +605,11 @@ detached, or cache-tag-missing path.
 
 **Completed checkpoint.** The manual bounded cleanup and post-A3 retirement
 proved the safety procedure for clean merged worktrees and reproducible Cargo
-targets. The later authorized cleanup preserved all 24 dirty deltas as labelled
-stashes, retained every branch tip, removed the inactive checkout directories,
-and initially left two registered worktrees. After the A3 result merged, its
-clean 71.0 GiB topic target was removed and the merged checkout retired while
-its branch remained. After merge `d09e6debb`, the final clean topic checkout
-and its 176 GiB target were also retired while preserving the local and remote
-branch. Only `main` is registered; `/` currently has about 902 GiB free and the
-`/tmp` tmpfs about 28 GiB free. Automation and fixture coverage remain open.
+targets. The later authorized cleanup salvaged inactive dirty deltas, removed
+the inactive checkouts, and retired the merged A3 targets. On 2026-08-12 all
+refs were captured in a verified external Git bundle before old local/remote
+branches and salvage stashes were removed. Only clean `main` is registered and
+published. Automation and fixture coverage remain open.
 
 **Exit.** The inventory is deterministic and tested against dirty, merged,
 unmerged, detached, missing-target, and malformed-cache fixtures. A dry run
@@ -639,7 +637,7 @@ or remove dirty/unmerged state to meet a free-space target.
 | Consumer apps / verified systems | `WIP`, non-critical path | Existing EVM, verifier, property, reflection, and symbolic-execution slices remain useful; do not preempt A2–A7 without measured demand. |
 | Foundational resources | `WIP`, separate content lane | Keep generated-resource gates green; record only project-level priority changes here. |
 | Public documentation and examples | `DONE`, current comprehensive pass | Public/crate/consumer/prover/curriculum/contributor front doors are indexed; 34 Cargo examples and the consumer 48-case aggregate are guarded. Corrected built/planned, Lean 4.30/offline quotient, strings/P2.7, proof assurance, `i128` LRA/Farkas, native-CDCL/BatSat, RUP-only LRAT, online combination/fallback, CAS-local-vs-solver evidence, route-specific FP/datatype/nonlinear/quantifier boundaries, optional EVM/verifier certificate fields, and source-comment UNSAT-proof overclaims. Source-backed guards require nonzero full-feature tests across cookbook, learner, contributor, foundational-resource, and rules docs. Generated authorities remain canonical; reopen only for concrete drift. |
-| Worktree and build-cache hygiene | `WIP`, recovered | A11; only clean `main` is registered. The cleanup stored all 24 inactive dirty deltas in labelled stashes, retained every branch tip, removed the inactive checkouts and one 1.7 GiB session tree, retired the earlier clean A3 target, and finally removed the merged explanation-partition checkout with its 176 GiB Cargo target. Current free space is about 902 GiB on `/` and 28 GiB on `/tmp`; all topic branches remain preserved. Next automate the deterministic read-only inventory and exact-target cleanup classification. |
+| Worktree and build-cache hygiene | `WIP`, recovered | A11; only clean `main` is registered and published. A verified 2026-08-12 external Git bundle preserves the retired refs/stashes; all old branches, salvage stashes, inactive checkouts, and their large Cargo targets are removed. Next automate deterministic read-only inventory and exact-target cleanup classification. |
 
 ## Resume protocol
 
