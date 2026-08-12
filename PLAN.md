@@ -4,9 +4,9 @@
 for current project status, ordered work, blockers, and resume guidance. Read it
 first and update it before ending a project-level work session.
 
-- Last consolidated: **2026-08-11**
-- Integrated baseline merged into the active topic:
-  `c516b5fac20f38886dfad41433656bad988f9f5c`
+- Last consolidated: **2026-08-12**
+- Current `main` contains linear A5 through exact commit
+  `4b6b765556c4ff1fb4dc47ffd75568a3ed1f9246` by conflict-free fast-forward
 - Active A5 large-equality DL repair: code at exact pushed
   `46edad8bac7e193303871d601914fef2115bf721`; its documentation descendant
   `d1b570f91c27f83ef55127ea3d1c8baf700f05a5` passed the full release gate
@@ -356,9 +356,10 @@ here as closed evidence boundaries. A3 remains incomplete, but all currently
 preregistered bounded mechanisms are closed negatively. A4 has now also yielded;
 A5 is the first active item.
 
-**Immediate action (`WIP`).** Resume with V2 QF_RDL row 1 at exact-pushed
-`6d4718e13` under the existing atomic protocol. Only its strict zero-loss join
-may authorize the frozen three-division derivation. Failed and old streams
+**Immediate action (`WIP`).** From clean, remote-matching `main`, resume V2
+QF_RDL row 1 under the existing atomic protocol. Only its strict zero-loss join
+may authorize the
+frozen three-division derivation. Failed, old, and incidental gate streams
 remain non-credited.
 
 **Parallel documentation action.** The comprehensive pass and 2026-08-09
@@ -624,7 +625,7 @@ or remove dirty/unmerged state to meet a free-space target.
 
 | Workstream | State | Current boundary / next action |
 |---|---|---|
-| Integration and gates | `DONE`; current checkpoint | Local and remote `main` contain audited merge `6be32cb4a` plus its tracker checkpoint; A3 topic `2269488ef` is pushed and merged. Exact topic/merge pre-push gates and focused post-merge tests are green. Hosted CI remains separate evidence. |
+| Integration and gates | `DONE`; 2026-08-12 | Linear A5 through `4b6b76555` is on `main` by conflict-free fast-forward. Integrated code, frontier, CAS, rustdoc, Glaurung, resource, resume, Lean, and parity gates are green; volatile frontier timings were not credited. Verify the remote ref before resume; hosted CI is separate. |
 | Arithmetic deadline reliability | `DONE` | Shared deadline, CAD polls, LRA ceilings, bounded DL probing, exact resume identity, and six fresh retained divisions are complete; see the 2026-08-06 closure note. |
 | Full-library measurement | `WIP`; A2 readiness `DONE` | The R1--R5 readiness stack is integrated by `8ed5ad089` and focused/aggregate/scoped/topic/full-main green; the real registered offline-build smoke passed. No live run, preparation root, or launch authority exists. A later live C0/F2 step requires separate review. |
 | QF_NIA breadth | `WIP`, yielded | Current clean result remains 34/200 versus 89/200. Reconstruction, large-core deletion, relevance activation, and bounded clause-estimate attribution are closed negatively without production solver code. The final diagnostic failed its exact pipeline-boundary record gate; no mechanism or 200-row run is authorized and the 64,000,000 ceiling remains. Move to A4 unless independent new NIA evidence appears. |
