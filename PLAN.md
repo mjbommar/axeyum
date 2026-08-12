@@ -337,15 +337,9 @@ the failed aggregate attempts; they contained no retained evidence.
 | 2026-08-07 | `9f94e1873` | Provisioned exact, commit-pinned `just` for both hosted docs gates after three remote runs exposed that the integrated readiness fixtures require the registered executable; the 165-test local resume aggregate passed with one expected skip. |
 | 2026-08-07 | `63c82a6ef` / `4ff9a82c6` / `3c5816fdf` | Bounded giant SMT-LIB `distinct` expansion, preserved typed arithmetic reconstruction declines, completed the 67-row A3 census, and rejected zero-gain probe-model reuse without retaining experimental code. |
 | 2026-08-07 | `2072483f8` | Retained the bounded disk cleanup while preserving dirty worktrees and every unmerged branch tip. |
-| 2026-08-06 | `2925efea5` / `8ed5ad089` | Completed A2 topic and integration review, merged the exact-source SMT-COMP readiness stack, and passed focused plus uninterrupted combined-main `just check`; live C0/F2 remains separately prohibited. |
-| 2026-08-06 | `e4bb854bf` | Implemented R5's operator-owned exact-source Axeyum build, schema-v3 source/tool/output/binary/run/completion replay, and rejecting fixture matrix; integration and live action remain prohibited. |
-| 2026-08-06 | `ebbabb34c` | Retained the fresh QF_UFLIA 94/200 versus 180/200 run; its complete normalized status matrix is identical to the accepted baseline and has zero disagreements. |
-| 2026-08-06 | `4477f2bb9` / `198f2dc1b` / `71ca85d9f` | Bounded the complete DL probe front end, preserved fallback time, passed full topic and exact-SHA gates, and retained QF_IDL 68/200 versus 124/200 with zero losses or disagreements. |
-| 2026-08-06 | `5ce07c55e` / `8ea6a7cad` | Made parity resume identity exact-path and fail-closed for duplicate, ambiguous, or drifted populations. |
-| 2026-08-06 | `c5d617c10` / `b353419e7` / `54b366517` | Retained fresh QF_NIA 34/200, QF_LIA 117/200, QF_LRA 86/200, and QF_RDL 105/200 runs, all with zero disagreements. |
-
-Older landed changes remain in Git and their dated result notes; this table is
-deliberately bounded to changes that still determine the immediate queue.
+Older landed changes (including the 2026-08-06 A1/A2 closure commits) remain
+in Git and their dated result notes; this table is deliberately bounded to
+changes that still determine the immediate queue.
 
 ## Next Actions
 
@@ -367,18 +361,22 @@ remain non-credited.
 run produced two previously unknown four-colour Rado numbers,
 `R_4(2(x-y)=3z) = 226` (closing an open entry of Chang-De Loera-Wesley,
 ISSAC 2022) and `R_4(4(x-y)=3z) = 313`, both certified end to end by
-axeyum alone: 8192 cube cells, ~250M DRAT steps, zero failures. Two product
-capabilities landed on the way — streaming DRAT proofs (ADR-0381, closing a
-27.6 GiB OOM) and a backward DRAT checker (ADR-0382, 66x, restoring
-check/solve from 470-670x to 2.0-2.6x) — plus a claim ledger joining results
-to the knowledge graph (ADR-0380). All three ADRs are `proposed` and
-uncommitted. The ordered follow-on work, ten items, is in
+axeyum alone: 8192 cube cells, ~250M DRAT steps, zero failures. Landed on the
+way: streaming DRAT proofs (ADR-0381, closing a 27.6 GiB OOM), a backward
+DRAT checker (ADR-0382, 66x, restoring check/solve from 470-670x to
+2.0-2.6x), and the claim ledger (ADR-0380). After the machine move (s1 → s4,
+2026-08-12) the five interrupted lanes were re-verified and completed:
+`Evidence::check`'s green-gate-over-nothing is closed by the three-valued
+`check_outcome` (ADR-0384) with deadline threading and retained checking
+subjects; ground int div/mod folding is verified against the ground evaluator
+including zero divisors (ADR-0383) and gated by the zero-divisor differential
+fuzz; `axeyum-search` is a workspace member with the min-conflicts SLS,
+offline cover certification, and the in-tree `recertify_rado` driver. The 34
+binary-DRAT ledger rows (B8) are being regenerated with axeyum's own core
+across the s6/s7 fleet. Ordered follow-on work:
 [`rado-session-diary-and-roadmap-2026-08-12.md`](docs/plan/rado-session-diary-and-roadmap-2026-08-12.md);
-the issue-by-issue register is
+issue register:
 [`findings-register-2026-08-12.md`](docs/plan/findings-register-2026-08-12.md).
-Highest-priority item is **not** new mathematics: `Evidence::check` returns
-`Ok(true)` for a bare uncertified UNSAT (`evidence.rs:890`), a green gate
-that checks nothing, in the product's own front door.
 
 **Parallel documentation action.** The comprehensive pass and 2026-08-09
 README application/vision revision are closed. Continue only for a concrete
