@@ -43,6 +43,7 @@ mod alethe;
 mod bve;
 mod compact;
 mod drat;
+mod drat_backward;
 mod gf2;
 mod interpolant;
 mod lrat;
@@ -66,13 +67,21 @@ pub use bve::{
     eliminate_variables_within,
 };
 pub use compact::{CompactMap, compact};
-pub use drat::{DratError, DratStep, check_drat, parse_drat, write_drat};
+pub use drat::{
+    DratError, DratSink, DratStep, DratTextReader, ProofSinkError, TextProofSink, VecProofSink,
+    check_drat, check_drat_streaming, parse_drat, write_drat,
+};
+pub use drat_backward::{check_drat_backward, trim_drat_proof};
 pub use gf2::{Gf2Outcome, Gf2Solution, Gf2System};
 pub use interpolant::{BoolExpr, propositional_interpolant};
-pub use lrat::{LratError, LratStep, check_lrat, elaborate_drat_to_lrat, parse_lrat, write_lrat};
+pub use lrat::{
+    LratError, LratStep, check_lrat, elaborate_drat_to_lrat, elaborate_drat_to_lrat_backward,
+    parse_lrat, write_lrat,
+};
 pub use proof_sat::{
-    DEFAULT_PROOF_SAT_CONFLICT_LIMIT, ProofSolveOutcome, solve_with_drat_proof,
-    solve_with_drat_proof_with_limits, solve_with_drat_proof_within,
+    DEFAULT_PROOF_SAT_CONFLICT_LIMIT, ProofSolveOutcome, StreamingProofOutcome,
+    solve_with_drat_proof, solve_with_drat_proof_streaming, solve_with_drat_proof_with_limits,
+    solve_with_drat_proof_within,
 };
 pub use simplify::{SubsumeStats, simplify, simplify_within};
 pub use vivify::{VivifyOptions, VivifyOutcome, VivifyStats, vivify, vivify_within};

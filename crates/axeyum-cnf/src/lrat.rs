@@ -59,6 +59,29 @@ pub enum LratError {
     },
     /// The proof text could not be parsed.
     Parse(String),
+    /// The DRAT proof handed to [`elaborate_drat_to_lrat_backward`] does not
+    /// itself check: this step is neither RUP nor RAT. There is nothing to
+    /// elaborate.
+    DratStepNotVerified {
+        /// Zero-based index of the failing DRAT step.
+        step: usize,
+    },
+    /// A DRAT step the refutation depends on is RAT rather than RUP, and
+    /// [`LratStep`] has no room for the pivot and negative hint blocks a RAT
+    /// addition needs (ADR-0382). The proof is fine; this elaborator cannot
+    /// express it.
+    RatNotSupported {
+        /// Zero-based index of the RAT step.
+        step: usize,
+    },
+    /// An antecedent chain recovered from the backward checker could not be
+    /// replayed under this module's own semantics, so no hints were emitted for
+    /// it. A guard on an internal invariant, never a statement about the input
+    /// proof.
+    HintChainFailed {
+        /// Zero-based index of the DRAT step whose chain failed.
+        step: usize,
+    },
 }
 
 impl core::fmt::Display for LratError {
@@ -74,6 +97,16 @@ impl core::fmt::Display for LratError {
                 write!(f, "LRAT hint references unknown clause {id}")
             }
             LratError::Parse(what) => write!(f, "LRAT parse error: {what}"),
+            LratError::DratStepNotVerified { step } => {
+                write!(f, "DRAT step {step} is neither RUP nor RAT")
+            }
+            LratError::RatNotSupported { step } => write!(
+                f,
+                "DRAT step {step} is RAT, which an LRAT step cannot express"
+            ),
+            LratError::HintChainFailed { step } => {
+                write!(f, "no LRAT hint chain could be emitted for DRAT step {step}")
+            }
         }
     }
 }
@@ -485,6 +518,47 @@ pub fn elaborate_drat_to_lrat(
         }
     }
     Ok(out)
+}
+
+/// Elaborates the *core* of a DRAT proof into LRAT, using the backward checker
+/// as the engine (ADR-0382).
+///
+/// [`elaborate_drat_to_lrat`] re-derives every addition's hints with the same
+/// rescan-to-fixpoint propagation [`crate::check_drat`] uses, for every line of
+/// the proof. This one runs [`crate::check_drat_backward`] once and reads the
+/// antecedents straight off the walk, so it does the work only for the lemmas
+/// the refutation depends on, with watched-literal propagation. The output is
+/// therefore also *trimmed*: it contains the core lemmas and nothing else.
+///
+/// Two differences from [`elaborate_drat_to_lrat`] a caller has to know about:
+///
+/// - **No deletion steps are emitted.** The active set only grows, which is safe
+///   for a hint-checked proof — a RUP step names its antecedents, so extra
+///   clauses cannot invalidate it — and it keeps the emitted ids independent of
+///   the input's deletion structure. The cost is memory in [`check_lrat`].
+/// - **RAT is refused, not approximated.** [`LratStep`] carries a flat list of
+///   positive hints, which cannot express a RAT addition's pivot and per-
+///   candidate hint blocks. A core lemma that is RAT rather than RUP produces
+///   [`LratError::RatNotSupported`], naming the step. Proofs from this
+///   workspace's own CDCL core are RUP-only, so this is a boundary rather than
+///   a limitation in practice — but it is a hard boundary, because the
+///   alternative is emitting a hint chain that does not justify its clause.
+///
+/// A proof with no empty-clause addition elaborates to the empty LRAT proof, on
+/// which [`check_lrat`] reports `Ok(false)` — the same verdict
+/// [`crate::check_drat_backward`] gives it.
+///
+/// # Errors
+///
+/// Returns [`LratError::DratStepNotVerified`] when the input proof's refutation
+/// does not check, [`LratError::RatNotSupported`] when a core lemma is RAT, and
+/// [`LratError::HintChainFailed`] if an internal invariant on the recovered
+/// chains fails (no output is emitted in that case).
+pub fn elaborate_drat_to_lrat_backward(
+    formula: &CnfFormula,
+    drat: &[DratStep],
+) -> Result<Vec<LratStep>, LratError> {
+    crate::drat_backward::elaborate_backward(formula, drat)
 }
 
 /// Finds the active id whose clause equals `clause` as a set.

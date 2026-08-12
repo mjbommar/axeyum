@@ -20,7 +20,7 @@ use std::time::Instant;
 #[cfg(target_arch = "wasm32")]
 use web_time::Instant;
 
-use crate::drat::DratStep;
+use crate::drat::{DratSink, DratStep, ProofSinkError, VecProofSink};
 use crate::{CnfAssignment, CnfFormula, CnfLit, CnfVar};
 
 /// Default maximum conflicts before the proof-producing core gives up.
@@ -121,6 +121,35 @@ pub enum ProofSolveOutcome {
     Interrupted,
 }
 
+/// Outcome of [`solve_with_drat_proof_streaming`].
+///
+/// Mirrors [`ProofSolveOutcome`] except that `Unsat` carries nothing: the proof
+/// went to the caller's [`DratSink`] as it was derived, so there is no `Vec` to
+/// return. The extra variant is [`StreamingProofOutcome::SinkFailed`] — a sink
+/// that could not accept a step, which is an *undecided* result.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum StreamingProofOutcome {
+    /// Satisfiable, with a model over the formula's variables.
+    Sat(CnfAssignment),
+    /// Unsatisfiable. The DRAT proof — including its deletion steps and the
+    /// final empty clause — was emitted to the sink, in the same order
+    /// [`ProofSolveOutcome::Unsat`] would have returned it, and can be verified
+    /// by [`crate::check_drat`] / [`crate::check_drat_streaming`].
+    Unsat,
+    /// The conflict budget was exhausted before a result was reached.
+    ResourceOut,
+    /// The wall-clock deadline passed before a result was reached (an
+    /// *undecided* verdict; see [`ProofSolveOutcome::Interrupted`]).
+    Interrupted,
+    /// The sink refused a proof step (a full disk, a closed pipe). The search is
+    /// abandoned at that point and **no verdict is reported**: a refutation
+    /// whose proof could not be recorded is not a checked `unsat`, so this is an
+    /// undecided result, never a wrong one. Nothing is panicked and no partial
+    /// verdict leaks — the steps already accepted by the sink are a prefix of
+    /// the proof and are not, on their own, a refutation.
+    SinkFailed(ProofSinkError),
+}
+
 /// Solves `formula` with the proof-producing CDCL core.
 pub fn solve_with_drat_proof(formula: &CnfFormula) -> ProofSolveOutcome {
     solve_with_drat_proof_within(formula, None)
@@ -154,7 +183,49 @@ pub fn solve_with_drat_proof_with_limits(
     deadline: Option<Instant>,
     max_conflicts: usize,
 ) -> ProofSolveOutcome {
-    Cdcl::new(formula).solve(deadline, max_conflicts)
+    let mut sink = VecProofSink::new();
+    match Cdcl::new(formula, &mut sink).solve(deadline, max_conflicts) {
+        StreamingProofOutcome::Sat(model) => ProofSolveOutcome::Sat(model),
+        StreamingProofOutcome::Unsat => ProofSolveOutcome::Unsat(sink.into_steps()),
+        StreamingProofOutcome::ResourceOut => ProofSolveOutcome::ResourceOut,
+        // `VecProofSink` is infallible, so `SinkFailed` is unreachable here. It
+        // maps to the undecided verdict rather than panicking: an impossible
+        // branch must not be able to produce a wrong sat/unsat, and must not be
+        // able to abort a caller either.
+        StreamingProofOutcome::Interrupted | StreamingProofOutcome::SinkFailed(_) => {
+            ProofSolveOutcome::Interrupted
+        }
+    }
+}
+
+/// Solves `formula` with the proof-producing CDCL core, **streaming** the DRAT
+/// proof to `sink` instead of accumulating it (ADR-0380).
+///
+/// The motivating measurement: the in-RAM `Vec<DratStep>` proof of a 35,858-clause
+/// instance grew until the process was OOM-killed at 27.6 GiB RSS after ~2.5 h
+/// (`docs/plan/claim-ledger-and-rado-frontier-2026-08-12.md`, "Product findings",
+/// item 4). With a [`crate::TextProofSink`] over a file, the core's proof
+/// footprint is a fixed buffer, whatever the search costs.
+///
+/// **The search trajectory is identical to
+/// [`solve_with_drat_proof_with_limits`].** Sink calls are pure output: the same
+/// decisions, conflicts, learned clauses, restarts, and reductions happen in the
+/// same order, and the same steps are emitted in the same order — feeding a
+/// [`crate::VecProofSink`] here reproduces the non-streaming proof exactly, and a
+/// [`crate::TextProofSink`] reproduces `write_drat` of it byte for byte.
+/// Determinism is a public API promise of this workspace, and the choice of sink
+/// is not an input to the search.
+///
+/// `deadline` and `max_conflicts` behave exactly as in
+/// [`solve_with_drat_proof_with_limits`] (deterministic conflict cadence for the
+/// clock; never a verdict by timeout).
+pub fn solve_with_drat_proof_streaming(
+    formula: &CnfFormula,
+    deadline: Option<Instant>,
+    max_conflicts: usize,
+    sink: &mut impl DratSink,
+) -> StreamingProofOutcome {
+    Cdcl::new(formula, sink).solve(deadline, max_conflicts)
 }
 
 fn lit_code(lit: CnfLit) -> usize {
@@ -197,7 +268,15 @@ struct ClauseHeader {
     len: usize,
 }
 
-struct Cdcl {
+/// The CDCL core, generic over where its proof goes (ADR-0380).
+///
+/// `S` is monomorphized, so the emission call at every learned clause and every
+/// `reduce_db` deletion is a direct call — no `dyn` dispatch in the search loop.
+/// The sink is *output only*: no field of this struct and no branch of the search
+/// reads it back, which is why the trajectory is identical for every `S`.
+struct Cdcl<'sink, S: DratSink> {
+    /// Where derived clauses and deletions are emitted, in derivation order.
+    sink: &'sink mut S,
     /// Flat, cache-local arena of all clause literals (problem clauses first,
     /// learned clauses appended). A clause occupies the contiguous slice
     /// `arena[h.offset .. h.offset + h.len]` for its [`ClauseHeader`] `h`. The
@@ -218,7 +297,6 @@ struct Cdcl {
     qhead: usize,
     initial_units: Vec<CnfLit>,
     has_empty_clause: bool,
-    proof: Vec<DratStep>,
     conflicts: usize,
     /// VSIDS activity per variable (higher ⇒ branched sooner).
     activity: Vec<f64>,
@@ -301,8 +379,8 @@ struct Cdcl {
 /// the order heap (it has been popped by `pick_branch` and not yet re-inserted).
 const HEAP_ABSENT: usize = usize::MAX;
 
-impl Cdcl {
-    fn new(formula: &CnfFormula) -> Self {
+impl<'sink, S: DratSink> Cdcl<'sink, S> {
+    fn new(formula: &CnfFormula, sink: &'sink mut S) -> Self {
         let n = formula.variable_count();
         // Pack every clause's literals contiguously into one arena, recording a
         // `(offset, len)` header per clause. This mirrors the prior
@@ -342,6 +420,7 @@ impl Cdcl {
         }
         let num_clauses = headers.len();
         let mut cdcl = Self {
+            sink,
             arena,
             headers,
             watches,
@@ -353,7 +432,6 @@ impl Cdcl {
             qhead: 0,
             initial_units,
             has_empty_clause,
-            proof: Vec::new(),
             conflicts: 0,
             activity: vec![0.0; n],
             var_inc: 1.0,
@@ -671,16 +749,31 @@ impl Cdcl {
         self.trail.push(var);
     }
 
-    fn solve(mut self, deadline: Option<Instant>, max_conflicts: usize) -> ProofSolveOutcome {
+    /// Runs the search, mapping a sink failure to
+    /// [`StreamingProofOutcome::SinkFailed`]. Splitting the fallible body out
+    /// keeps every emission site a plain `?` instead of a hand-written early
+    /// return, so no proof step can be silently dropped on the error path.
+    fn solve(self, deadline: Option<Instant>, max_conflicts: usize) -> StreamingProofOutcome {
+        match self.run(deadline, max_conflicts) {
+            Ok(outcome) => outcome,
+            Err(error) => StreamingProofOutcome::SinkFailed(error),
+        }
+    }
+
+    fn run(
+        mut self,
+        deadline: Option<Instant>,
+        max_conflicts: usize,
+    ) -> Result<StreamingProofOutcome, ProofSinkError> {
         if self.has_empty_clause {
-            self.proof.push(DratStep::Add(Vec::new()));
-            return ProofSolveOutcome::Unsat(self.proof);
+            self.sink.add_clause(&[])?;
+            return Ok(StreamingProofOutcome::Unsat);
         }
         for lit in std::mem::take(&mut self.initial_units) {
             match self.value(lit) {
                 Some(false) => {
-                    self.proof.push(DratStep::Add(Vec::new()));
-                    return ProofSolveOutcome::Unsat(self.proof);
+                    self.sink.add_clause(&[])?;
+                    return Ok(StreamingProofOutcome::Unsat);
                 }
                 Some(true) => {}
                 None => self.enqueue(lit, None),
@@ -690,12 +783,12 @@ impl Cdcl {
         loop {
             if let Some(conflict) = self.propagate() {
                 if self.decision_level() == 0 {
-                    self.proof.push(DratStep::Add(Vec::new()));
-                    return ProofSolveOutcome::Unsat(self.proof);
+                    self.sink.add_clause(&[])?;
+                    return Ok(StreamingProofOutcome::Unsat);
                 }
                 self.conflicts += 1;
                 if self.conflicts > max_conflicts {
-                    return ProofSolveOutcome::ResourceOut;
+                    return Ok(StreamingProofOutcome::ResourceOut);
                 }
                 // Deterministic deadline cadence: only read the clock once every
                 // `DEADLINE_CHECK_INTERVAL` conflicts. On expiry, abandon the
@@ -704,7 +797,7 @@ impl Cdcl {
                     && self.conflicts.is_multiple_of(DEADLINE_CHECK_INTERVAL)
                     && Instant::now() >= deadline
                 {
-                    return ProofSolveOutcome::Interrupted;
+                    return Ok(StreamingProofOutcome::Interrupted);
                 }
                 let (learned, backjump, lbd) = self.analyze(conflict);
                 // Update the Glucose EMA restart state from this conflict — the glue
@@ -715,9 +808,9 @@ impl Cdcl {
                 if self.use_ema_restart {
                     self.update_restart_emas(lbd);
                 }
-                self.proof.push(DratStep::Add(learned.clone()));
+                self.sink.add_clause(&learned)?;
                 if learned.is_empty() {
-                    return ProofSolveOutcome::Unsat(self.proof);
+                    return Ok(StreamingProofOutcome::Unsat);
                 }
                 let asserting = learned[0];
                 let clause_id = self.alloc_clause(&learned);
@@ -750,7 +843,7 @@ impl Cdcl {
                 // and before propagation, which is safe (locked-clause check
                 // reads the current trail).
                 if self.learned_live > self.reduce_budget() {
-                    self.reduce_db();
+                    self.reduce_db()?;
                     self.reductions += 1;
                 }
             } else {
@@ -785,7 +878,7 @@ impl Cdcl {
                     self.enqueue(decision, None);
                 } else {
                     let values = self.assign.iter().map(|v| v.unwrap_or(false)).collect();
-                    return ProofSolveOutcome::Sat(CnfAssignment::new(values));
+                    return Ok(StreamingProofOutcome::Sat(CnfAssignment::new(values)));
                 }
             }
         }
@@ -1165,7 +1258,12 @@ impl Cdcl {
     /// formula's models are unchanged by deletion; protecting locked clauses
     /// keeps the implication graph intact; the search can re-derive any deleted
     /// clause, so completeness is preserved.
-    fn reduce_db(&mut self) {
+    ///
+    /// # Errors
+    ///
+    /// Propagates a [`ProofSinkError`] from the deletion steps; the caller
+    /// abandons the search, since a proof missing its deletions would not replay.
+    fn reduce_db(&mut self) -> Result<(), ProofSinkError> {
         // Candidates for deletion: live, learned, non-glue, non-locked clauses.
         let mut candidates: Vec<CRef> = (self.num_original..self.headers.len())
             .filter(|&cid| {
@@ -1176,7 +1274,7 @@ impl Cdcl {
             })
             .collect();
         if candidates.is_empty() {
-            return;
+            return Ok(());
         }
         // Sort worst-first: lower activity is worse. Tie-break by clause id so
         // the order is total and deterministic (no hashmap iteration).
@@ -1193,12 +1291,16 @@ impl Cdcl {
             self.learned_live -= 1;
             // Emit a DRAT deletion so the proof replays consistently. The
             // checker matches clauses as sets, and this clause was added
-            // verbatim, so the stored literals delete it.
-            self.proof.push(DratStep::Delete(self.lits(cid).to_vec()));
+            // verbatim, so the stored literals delete it. (The copy is taken
+            // first because the arena and the sink are both reached through
+            // `self`.)
+            let lits = self.lits(cid).to_vec();
+            self.sink.delete_clause(&lits)?;
         }
         if to_delete > 0 {
             self.rebuild_watches();
         }
+        Ok(())
     }
 
     /// Rebuilds every watch list from scratch over the live (non-deleted)
@@ -1270,11 +1372,13 @@ impl Cdcl {
 #[cfg(test)]
 mod tests {
     use super::{
-        Cdcl, DEFAULT_PROOF_SAT_CONFLICT_LIMIT, Instant, ProofSolveOutcome, Watch, lit_code,
-        solve_with_drat_proof, solve_with_drat_proof_with_limits, solve_with_drat_proof_within,
+        Cdcl, DEFAULT_PROOF_SAT_CONFLICT_LIMIT, Instant, ProofSolveOutcome, StreamingProofOutcome,
+        Watch, lit_code, solve_with_drat_proof, solve_with_drat_proof_streaming,
+        solve_with_drat_proof_with_limits, solve_with_drat_proof_within,
     };
     use crate::{
-        CnfClause, CnfFormula, CnfLit, CnfVar, SatResult, check_drat, solve_with_rustsat_batsat,
+        CnfClause, CnfFormula, CnfLit, CnfVar, DratSink, ProofSinkError, SatResult, TextProofSink,
+        VecProofSink, check_drat, solve_with_rustsat_batsat, write_drat,
     };
 
     fn lit(value: i64) -> CnfLit {
@@ -1503,7 +1607,7 @@ mod tests {
     /// only if *every* literal of its reason is already in the learned clause
     /// (or level 0). This is the pre-recursion behavior; recursive minimization
     /// must remove a (strict) superset of these literals.
-    fn minimize_one_level(cdcl: &Cdcl, learned: &mut Vec<CnfLit>) {
+    fn minimize_one_level<S: DratSink>(cdcl: &Cdcl<'_, S>, learned: &mut Vec<CnfLit>) {
         if learned.len() <= 1 {
             return;
         }
@@ -1545,7 +1649,8 @@ mod tests {
         let neg = |v: usize| CnfLit::positive(CnfVar::new(v).unwrap()).negated();
         // clause 0: reason(v2) = [~v2, v3]; clause 1: reason(v3) = [~v3, v1].
         let f = formula(4, &[&[-3, 4], &[-4, 2]]);
-        let mut cdcl = Cdcl::new(&f);
+        let mut sink = VecProofSink::new();
+        let mut cdcl = Cdcl::new(&f, &mut sink);
         // Hand-build the implication graph at decision level 1 (minimize reads
         // only `level` and `reason`, so leaving `assign` untouched is fine).
         for v in 0..4 {
@@ -1704,15 +1809,17 @@ mod tests {
             }
             let batsat = solve_with_rustsat_batsat(&f).unwrap();
             // Drive the solver with the EMA restart schedule enabled.
-            let mut cdcl = Cdcl::new(&f);
+            let mut sink = VecProofSink::new();
+            let mut cdcl = Cdcl::new(&f, &mut sink);
             cdcl.use_ema_restart = true;
-            match (cdcl.solve(None, DEFAULT_PROOF_SAT_CONFLICT_LIMIT), batsat) {
-                (ProofSolveOutcome::Sat(model), SatResult::Sat(_)) => {
+            let outcome = cdcl.solve(None, DEFAULT_PROOF_SAT_CONFLICT_LIMIT);
+            match (outcome, batsat) {
+                (StreamingProofOutcome::Sat(model), SatResult::Sat(_)) => {
                     assert!(model.satisfies(&f).unwrap(), "EMA sat model must satisfy");
                 }
-                (ProofSolveOutcome::Unsat(proof), SatResult::Unsat(_)) => {
+                (StreamingProofOutcome::Unsat, SatResult::Unsat(_)) => {
                     assert_eq!(
-                        check_drat(&f, &proof),
+                        check_drat(&f, &sink.into_steps()),
                         Ok(true),
                         "EMA unsat must DRAT-check"
                     );
@@ -1801,7 +1908,7 @@ mod tests {
         formula(nvars, &refs)
     }
 
-    impl Cdcl {
+    impl<S: DratSink> Cdcl<'_, S> {
         /// Reference branching rule: the exact O(n) linear scan the order heap
         /// replaces — the unassigned variable of highest activity, ties to the
         /// lowest index. Used only by trajectory-identity tests to confirm the
@@ -1868,7 +1975,9 @@ mod tests {
         let mut clauses: Vec<Vec<i64>> = vec![vec![1]];
         clauses.extend((1..=n_signed).map(|v| vec![v, -v])); // tautologies, harmless
         let refs: Vec<&[i64]> = clauses.iter().map(Vec::as_slice).collect();
-        let mut cdcl = Cdcl::new(&formula(n, &refs));
+        let f = formula(n, &refs);
+        let mut sink = VecProofSink::new();
+        let mut cdcl = Cdcl::new(&f, &mut sink);
         cdcl.assert_heap_invariants();
 
         for _ in 0..20_000 {
@@ -1985,7 +2094,9 @@ mod tests {
         // Decisions assign a=T, b=T, c=T at three distinct levels; the learned
         // clause (¬a ∨ ¬b ∨ ¬c ∨ d) over those gives LBD 4 (> GLUE_LBD) and is
         // the reason for d, so it is both deletable-by-shape and locked.
-        let mut cdcl = Cdcl::new(&formula(4, &[&[1]])); // 4 vars; dummy clause
+        let f = formula(4, &[&[1]]); // 4 vars; dummy clause
+        let mut sink = VecProofSink::new();
+        let mut cdcl = Cdcl::new(&f, &mut sink);
         // Manually drive three decision levels.
         let dlit = |sign: i64| lit(sign);
         cdcl.trail_lim.push(cdcl.trail.len());
@@ -2012,7 +2123,7 @@ mod tests {
         cdcl.enqueue(dlit(4), Some(cid)); // d@3, reason = cid → cid is LOCKED
         assert!(cdcl.is_locked(cid), "setup: the clause must be locked");
         // Force reduce_db to run regardless of budget.
-        cdcl.reduce_db();
+        cdcl.reduce_db().expect("the vec sink cannot fail");
         assert!(
             !cdcl.deleted[cid],
             "reduce_db must never delete a locked reason clause"
@@ -2086,6 +2197,309 @@ mod tests {
                     panic!("DISAGREE: native={native:?} batsat={other:?}");
                 }
             }
+        }
+    }
+
+    // ----------------------------------------------------------------------
+    // Streaming proof emission (ADR-0380)
+    // ----------------------------------------------------------------------
+
+    /// A Rado-style colouring instance: is `[1, n]` `colours`-colourable with no
+    /// monochromatic solution of `a(x − y) = b z`? Variable `(i, c)` (1-based
+    /// DIMACS `(i - 1) * colours + c`) says "integer `i` has colour `c`";
+    /// at-least-one-colour per integer, plus one clause per solution triple per
+    /// colour. `(a, b) = (1, 1)` is the Schur equation `x = y + z`.
+    ///
+    /// This is the shape of the instances in the claim-ledger campaign
+    /// (`docs/plan/claim-ledger-and-rado-frontier-2026-08-12.md`) that motivated
+    /// streaming — a few hundred clauses here, enough to produce a proof with
+    /// many steps and at least one clause-DB reduction on the harder settings.
+    fn rado_colouring(n: i64, colours: i64, a: i64, b: i64) -> CnfFormula {
+        let var = |i: i64, c: i64| (i - 1) * colours + c;
+        let mut clauses: Vec<Vec<i64>> = Vec::new();
+        for i in 1..=n {
+            clauses.push((1..=colours).map(|c| var(i, c)).collect());
+        }
+        for x in 1..=n {
+            for y in 1..=n {
+                for z in 1..=n {
+                    if a * (x - y) != b * z {
+                        continue;
+                    }
+                    for c in 1..=colours {
+                        // De-duplicate: a triple may repeat an integer (e.g.
+                        // x = 2y with y = z), and a clause with a repeated
+                        // literal would be watched twice on the same literal.
+                        let mut lits = vec![-var(x, c), -var(y, c), -var(z, c)];
+                        lits.sort_unstable();
+                        lits.dedup();
+                        clauses.push(lits);
+                    }
+                }
+            }
+        }
+        let refs: Vec<&[i64]> = clauses.iter().map(Vec::as_slice).collect();
+        formula(usize::try_from(n * colours).unwrap(), &refs)
+    }
+
+    /// The streaming entry emits, byte for byte, the proof the `Vec` route
+    /// records — and reaches the same verdict as the non-streaming entry — on a
+    /// spread of formulas (trivial contradictions, pigeonhole, a satisfiable
+    /// instance, and Rado-style colouring instances of a few hundred clauses).
+    ///
+    /// This is the equivalence the design rests on: the sink is pure output, so
+    /// the search trajectory cannot depend on it. If a future change let the sink
+    /// influence the search, the emitted step sequences would diverge here.
+    /// Satisfiable instances are covered too — a `sat` run still learns (and so
+    /// emits) clauses, which the non-streaming entry simply discards.
+    #[test]
+    fn streaming_emission_matches_the_vec_proof_byte_for_byte() {
+        let instances: Vec<(&str, CnfFormula)> = vec![
+            ("unit contradiction", formula(1, &[&[1], &[-1]])),
+            ("empty clause", formula(1, &[&[]])),
+            (
+                "full 2x2",
+                formula(2, &[&[1, 2], &[1, -2], &[-1, 2], &[-1, -2]]),
+            ),
+            ("satisfiable", formula(3, &[&[1, 2], &[-1, 3], &[-2, -3]])),
+            ("php(6)", pigeonhole(6)),
+            // Schur/Rado `x − y = z` with 3 colours: 13 is colourable, 14 is not
+            // (287 clauses over 42 variables).
+            ("rado 1,1 n=13 k=3", rado_colouring(13, 3, 1, 1)),
+            ("rado 1,1 n=14 k=3", rado_colouring(14, 3, 1, 1)),
+            // A second coefficient pair, so the battery is not one equation family.
+            ("rado 2,3 n=12 k=2", rado_colouring(12, 2, 2, 3)),
+        ];
+
+        let mut unsat_with_proof = 0u32;
+        let mut sat_with_steps = 0u32;
+        for (name, f) in instances {
+            let vec_outcome = solve_with_drat_proof(&f);
+
+            // The same search, streamed to text …
+            let mut text: Vec<u8> = Vec::new();
+            let mut text_sink = TextProofSink::new(&mut text);
+            let streamed = solve_with_drat_proof_streaming(
+                &f,
+                None,
+                DEFAULT_PROOF_SAT_CONFLICT_LIMIT,
+                &mut text_sink,
+            );
+            text_sink.finish().expect("the vec writer cannot fail");
+            // … and to a step vector, which `write_drat` then serializes. The two
+            // must agree byte for byte whatever the verdict.
+            let mut vec_sink = VecProofSink::new();
+            let streamed_vec = solve_with_drat_proof_streaming(
+                &f,
+                None,
+                DEFAULT_PROOF_SAT_CONFLICT_LIMIT,
+                &mut vec_sink,
+            );
+            let steps = vec_sink.into_steps();
+            assert_eq!(streamed, streamed_vec, "{name}: sink must not steer search");
+            assert_eq!(
+                String::from_utf8(text).unwrap(),
+                write_drat(&steps),
+                "{name}: streamed text must be byte-identical to write_drat"
+            );
+
+            match (&vec_outcome, &streamed) {
+                (ProofSolveOutcome::Unsat(proof), StreamingProofOutcome::Unsat) => {
+                    assert_eq!(proof, &steps, "{name}: same steps, same order");
+                    assert!(!proof.is_empty(), "{name}: an unsat proof has steps");
+                    assert_eq!(
+                        check_drat(&f, proof),
+                        Ok(true),
+                        "{name}: the proof must DRAT-check"
+                    );
+                    unsat_with_proof += 1;
+                }
+                (ProofSolveOutcome::Sat(model), StreamingProofOutcome::Sat(streamed_model)) => {
+                    assert_eq!(model, streamed_model, "{name}: models must be identical");
+                    assert!(model.satisfies(&f).unwrap(), "{name}: model must satisfy");
+                    if !steps.is_empty() {
+                        sat_with_steps += 1;
+                    }
+                }
+                (a, b) => panic!("{name}: verdict mismatch: vec={a:?} streamed={b:?}"),
+            }
+        }
+        assert!(
+            unsat_with_proof >= 5,
+            "the battery must actually exercise the proof path (got {unsat_with_proof} unsat runs)"
+        );
+        assert!(
+            sat_with_steps >= 1,
+            "the battery must include a sat run that emitted learned clauses"
+        );
+    }
+
+    /// A streamed proof, checked back **without ever materializing it**: the text
+    /// is read line by line by [`crate::DratTextReader`] and verified by
+    /// [`crate::check_drat_streaming`]. This is the end-to-end bounded-memory
+    /// route — produce to a writer, consume from a reader.
+    #[test]
+    fn streamed_text_proof_checks_back_through_the_streaming_checker() {
+        let f = rado_colouring(14, 3, 1, 1);
+        let mut text: Vec<u8> = Vec::new();
+        let mut sink = TextProofSink::new(&mut text);
+        let outcome =
+            solve_with_drat_proof_streaming(&f, None, DEFAULT_PROOF_SAT_CONFLICT_LIMIT, &mut sink);
+        sink.finish().unwrap();
+        assert_eq!(outcome, StreamingProofOutcome::Unsat);
+        assert!(!text.is_empty(), "an unsat run must emit proof text");
+
+        let reader = crate::DratTextReader::new(std::io::BufReader::new(text.as_slice()));
+        assert_eq!(
+            crate::check_drat_streaming(&f, reader),
+            Ok(true),
+            "the streamed proof must verify straight from its text form"
+        );
+    }
+
+    /// Determinism of the streamed route: two runs over the same formula produce
+    /// identical bytes (the search is deterministic and the sink adds nothing).
+    #[test]
+    fn streamed_proof_bytes_are_identical_across_runs() {
+        let f = pigeonhole(8);
+        let run = || {
+            let mut text: Vec<u8> = Vec::new();
+            let mut sink = TextProofSink::new(&mut text);
+            let outcome = solve_with_drat_proof_streaming(
+                &f,
+                None,
+                DEFAULT_PROOF_SAT_CONFLICT_LIMIT,
+                &mut sink,
+            );
+            sink.finish().unwrap();
+            (outcome, text)
+        };
+        let (first_outcome, first) = run();
+        let (second_outcome, second) = run();
+        assert_eq!(first_outcome, StreamingProofOutcome::Unsat);
+        assert_eq!(second_outcome, first_outcome);
+        assert!(!first.is_empty(), "expected a non-trivial proof");
+        assert_eq!(first, second, "streamed runs must be byte-identical");
+    }
+
+    /// A sink that accepts a fixed number of steps and then fails — a disk
+    /// filling up, or a pipe closing, mid-search.
+    struct FailAfter {
+        remaining: usize,
+        calls: usize,
+    }
+
+    impl FailAfter {
+        fn new(remaining: usize) -> Self {
+            Self {
+                remaining,
+                calls: 0,
+            }
+        }
+
+        fn tick(&mut self) -> Result<(), ProofSinkError> {
+            self.calls += 1;
+            if self.remaining == 0 {
+                return Err(ProofSinkError::new(
+                    std::io::ErrorKind::BrokenPipe,
+                    "proof stream closed",
+                ));
+            }
+            self.remaining -= 1;
+            Ok(())
+        }
+    }
+
+    impl DratSink for FailAfter {
+        fn add_clause(&mut self, _lits: &[CnfLit]) -> Result<(), ProofSinkError> {
+            self.tick()
+        }
+
+        fn delete_clause(&mut self, _lits: &[CnfLit]) -> Result<(), ProofSinkError> {
+            self.tick()
+        }
+    }
+
+    /// A sink that fails mid-search surfaces the error as an *undecided* outcome:
+    /// no panic, and — critically — no `unsat` verdict, because a refutation
+    /// whose proof could not be recorded is not a checked refutation.
+    #[test]
+    fn sink_failure_aborts_the_search_without_panicking() {
+        // PHP(8) needs thousands of steps, so failing after 5 lands mid-search.
+        let f = pigeonhole(8);
+        let mut sink = FailAfter::new(5);
+        let outcome =
+            solve_with_drat_proof_streaming(&f, None, DEFAULT_PROOF_SAT_CONFLICT_LIMIT, &mut sink);
+        match outcome {
+            StreamingProofOutcome::SinkFailed(error) => {
+                assert_eq!(error.kind(), std::io::ErrorKind::BrokenPipe);
+                assert_eq!(error.message(), "proof stream closed");
+            }
+            other => panic!("expected SinkFailed, got {other:?}"),
+        }
+        assert_eq!(sink.calls, 6, "the search stops at the first refusal");
+
+        // The same formula, with a sink that never fails, still decides unsat —
+        // i.e. the failure above is the sink's, not the search's.
+        let mut generous = FailAfter::new(usize::MAX);
+        assert_eq!(
+            solve_with_drat_proof_streaming(
+                &f,
+                None,
+                DEFAULT_PROOF_SAT_CONFLICT_LIMIT,
+                &mut generous
+            ),
+            StreamingProofOutcome::Unsat
+        );
+
+        // A sink that fails on its very first step (the trivial-contradiction
+        // path, before the conflict loop) is handled the same way.
+        let mut immediate = FailAfter::new(0);
+        assert!(matches!(
+            solve_with_drat_proof_streaming(
+                &formula(1, &[&[1], &[-1]]),
+                None,
+                DEFAULT_PROOF_SAT_CONFLICT_LIMIT,
+                &mut immediate
+            ),
+            StreamingProofOutcome::SinkFailed(_)
+        ));
+    }
+
+    /// The streaming entry honours the resource limits exactly as the
+    /// non-streaming one does — the budget is a search property, not a sink one.
+    #[test]
+    fn streaming_entry_honours_the_conflict_budget() {
+        let f = formula(2, &[&[1, 2], &[1, -2], &[-1, 2], &[-1, -2]]);
+        let mut sink = VecProofSink::new();
+        assert_eq!(
+            solve_with_drat_proof_streaming(&f, None, 0, &mut sink),
+            StreamingProofOutcome::ResourceOut
+        );
+        assert_eq!(
+            solve_with_drat_proof_with_limits(&f, None, 0),
+            ProofSolveOutcome::ResourceOut
+        );
+    }
+
+    /// The `Vec` sink reproduces the non-streaming proof exactly (same steps,
+    /// same order), which is what lets the existing entry points delegate through
+    /// it without any behavioral change.
+    #[test]
+    fn vec_sink_reproduces_the_non_streaming_proof() {
+        for f in [pigeonhole(7), rado_colouring(14, 3, 1, 1)] {
+            let ProofSolveOutcome::Unsat(expected) = solve_with_drat_proof(&f) else {
+                panic!("fixture must be unsat");
+            };
+            let mut sink = VecProofSink::new();
+            let outcome = solve_with_drat_proof_streaming(
+                &f,
+                None,
+                DEFAULT_PROOF_SAT_CONFLICT_LIMIT,
+                &mut sink,
+            );
+            assert_eq!(outcome, StreamingProofOutcome::Unsat);
+            assert_eq!(sink.into_steps(), expected, "step sequences must match");
         }
     }
 }
