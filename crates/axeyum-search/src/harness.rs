@@ -3,7 +3,7 @@
 //! [`run_cover`] splits a formula over a [`BranchPlan`], asserts each cell's
 //! literals as unit clauses, and refutes the augmented formula with axeyum's
 //! proof-producing CDCL core. Each cell's DRAT proof is checked immediately
-//! (default: [`CheckMode::Backward`], ADR-0381), optionally written to disk for
+//! (default: [`CheckMode::Backward`], ADR-0382), optionally written to disk for
 //! offline certification, and optionally retained for route A composition.
 //!
 //! # Finding B1: a satisfiable cell must land on disk before anything else
@@ -61,7 +61,7 @@ use crate::SearchError;
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum CheckMode {
     /// [`check_drat_backward`] — core-first, the one to use at scale
-    /// (ADR-0381).
+    /// (ADR-0382).
     #[default]
     Backward,
     /// [`check_drat`] — the small auditable reference checker (ADR-0011).

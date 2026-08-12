@@ -1,4 +1,4 @@
-# ADR-0380: Streaming DRAT proof emission and checking
+# ADR-0381: Streaming DRAT proof emission and checking
 
 - Status: proposed
 - Date: 2026-08-12

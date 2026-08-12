@@ -1,4 +1,4 @@
-# ADR-0379: A claim ledger joining the knowledge graph to machine-checked evidence
+# ADR-0380: A claim ledger joining the knowledge graph to machine-checked evidence
 
 - Status: proposed
 - Date: 2026-08-12

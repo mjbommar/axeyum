@@ -49,7 +49,7 @@ entire DRAT proof in memory; reference solvers stream to disk.
 
 Fixed the same day: a `DratSink` trait threaded through the core, a
 `TextProofSink` proven byte-identical to `write_drat`, and a bounded-memory
-streaming checker (**ADR-0380**, 18 tests). Measured on the same instance:
+streaming checker (**ADR-0381**, 18 tests). Measured on the same instance:
 **1.9 GiB resident streaming vs 22.3 GiB in-memory**.
 
 ### 4. The finding that became the paper's thesis — and was wrong
@@ -118,7 +118,7 @@ checking disabled, proofs dumped to disk — a cover that had been 42% done
 after 5.5 hours completed in **152.9 seconds**. About 460×.
 
 **Second, the checker itself.** A backward (core-first) DRAT checker
-(**ADR-0381**, 18 tests, differential fuzz against the forward one) measures
+(**ADR-0382**, 18 tests, differential fuzz against the forward one) measures
 **66×** on a 200k-step proof and checks a 1.32M-step proof in 2.9 minutes —
 the size class the forward checker could not finish in thirty. Check/solve
 went from 470–670× to **2.0–2.6×**.
@@ -201,11 +201,11 @@ today.
 ### R7 — Backward-checker follow-ons (A8–A10)
 
 Core-first propagation, LRAT emission from backward marking, proof trimming.
-All recorded in ADR-0381 with their known obstacles.
+All recorded in ADR-0382 with their known obstacles.
 
 ### R8 — Wire `just claims` into CI (F2)
 
-Once ADR-0379 is accepted. The ledger's three gates already pass locally.
+Once ADR-0380 is accepted. The ledger's three gates already pass locally.
 
 ### R9 — Connect the two knowledge graphs (F4)
 

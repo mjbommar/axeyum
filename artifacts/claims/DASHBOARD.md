@@ -2,7 +2,7 @@
 
 > **Auto-generated. Do not edit by hand.** Regenerate with `python3 scripts/gen-claims-dashboard.py`.
 
-One row per claim under `artifacts/claims/<family>/<id>/claim.json`: what is asserted, how firmly it is believed, and which evidence rows carry it. Every value is read straight from a committed claim file — nothing here is recomputed. The ledger's vocabulary and gates are described in [`README.md`](README.md) ([ADR-0379](../../docs/research/09-decisions/adr-0379-claim-ledger.md)).
+One row per claim under `artifacts/claims/<family>/<id>/claim.json`: what is asserted, how firmly it is believed, and which evidence rows carry it. Every value is read straight from a committed claim file — nothing here is recomputed. The ledger's vocabulary and gates are described in [`README.md`](README.md) ([ADR-0380](../../docs/research/09-decisions/adr-0380-claim-ledger.md)).
 
 `check_status` is per evidence row, not per claim: `checked` means `scripts/check-claim-certificates.py` re-derives it independently, `replay-only` means the artifact replays but no certificate exists, and `not-checked` marks an honest citation or unverified support.
 

@@ -30,7 +30,7 @@
 //! all four mechanically:
 //!
 //! 1. **Every cell is refuted**, with a DRAT proof of `F + cell units` checked
-//!    by [`check_drat_backward`](axeyum_cnf::check_drat_backward) (ADR-0381) or
+//!    by [`check_drat_backward`](axeyum_cnf::check_drat_backward) (ADR-0382) or
 //!    the reference [`check_drat`](axeyum_cnf::check_drat).
 //! 2. **Every branch group's at-least-one clause is present verbatim in `F`**,
 //!    located by set-equality search — [`cover::verify_branch_clauses`].
@@ -53,7 +53,7 @@
 //! in 0.0–1.3 s and its proof used to take 46–317 s to *check*, because the
 //! reference `check_drat` rescans the live clause database on every propagation
 //! round. That is why [`CheckMode::Backward`] is the default here: the
-//! backward checker (ADR-0381) verifies only the core and turned the same run
+//! backward checker (ADR-0382) verifies only the core and turned the same run
 //! from ~1460 s of checking into a fraction of it. The second lever is
 //! [`CoverOptions::check_step_cap`]: proofs longer than the cap are produced and
 //! dumped but not blocked on, to be certified offline by
@@ -91,11 +91,13 @@ pub mod harness;
 pub mod ledger;
 pub mod search;
 
+pub use certify::certify_dumped_cover;
 pub use colouring::{ColouringProblem, Witness};
 pub use cover::{BranchGroup, BranchPlan, Cell, CellCheck, CellRecord, CellVerdict, CoverCertificate};
 pub use family::{ColouringFamily, Rado, Schur, parse_family};
 pub use harness::{CheckMode, CoverOptions, CoverOutcome};
 pub use ledger::RunId;
+pub use search::{MinConflictsOptions, min_conflicts};
 
 use axeyum_cnf::{CnfError, DratError};
 

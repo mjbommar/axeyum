@@ -433,3 +433,8 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [0376](adr-0376-integer-literals-wider-than-i128.md) | Integer literals wider than `i128` — measured non-cause, deferred IR widening | deferred |
 | [0377](adr-0377-shared-arithmetic-deadlines-and-normalization-ceilings.md) | Share one arithmetic deadline across fallback routes and bound LRA normalization deterministically | accepted |
 | [0378](adr-0378-bounded-smtlib-distinct-expansion.md) | Bound eager SMT-LIB `distinct` pair expansion, balance admitted conjunctions, and classify the ceiling as `Unknown(ResourceLimit)` | accepted |
+| [0380](adr-0380-claim-ledger.md) | A claim ledger joining the knowledge graph to machine-checked evidence | proposed |
+| [0381](adr-0381-streaming-drat-proofs.md) | Streaming DRAT proof emission and checking | proposed |
+| [0382](adr-0382-backward-drat-checking.md) | Backward (core-first) DRAT checking | proposed |
+| [0383](adr-0383-ground-integer-constant-folding.md) | Ground integer constant folding, declining underspecified division | proposed |
+| [0384](adr-0384-honest-evidence-front-door.md) | Three-valued evidence checking, bounded proof production, retained checking subjects | proposed |

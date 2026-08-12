@@ -14,14 +14,14 @@ tree with tests and gates green.
 
 | # | Finding | Impact | Status |
 |---|---|---|---|
-| A1 | Proof-producing CDCL retained the entire DRAT proof in RAM | OOM-killed at **27.6 GiB** after 2.5 h with no verdict | **FIXED** — `DratSink` + streaming entry, ADR-0380, 18 tests |
-| A2 | `check_drat` is forward-checking and superlinear | 470–670× slower than solving; blocked all certification | **FIXED** — `check_drat_backward`, **66×**, ADR-0381, 18 tests |
+| A1 | Proof-producing CDCL retained the entire DRAT proof in RAM | OOM-killed at **27.6 GiB** after 2.5 h with no verdict | **FIXED** — `DratSink` + streaming entry, ADR-0381, 18 tests |
+| A2 | `check_drat` is forward-checking and superlinear | 470–670× slower than solving; blocked all certification | **FIXED** — `check_drat_backward`, **66×**, ADR-0382, 18 tests |
 | A3 | `Evidence::check` returns `Ok(true)` for `Evidence::Unsat(None)` and `Unknown(_)` | A bare uncertified UNSAT "passes the check" with zero checking — a green gate over nothing | **OPEN** — `evidence.rs:890` |
 | A4 | `produce_qf_bv_evidence` ignores the caller's deadline for proof production | Calls the uncapped `export_qf_bv_unsat_proof` though `..._within` exists; timeout bounds only the decision phase | **OPEN** |
 | A5 | `produce_evidence_smtlib` drops the arena | Consumer cannot run `Evidence::check` on its own result without re-parsing; correctness depends on parse determinism | **OPEN** |
 | A6 | Ground `IntDiv`/`IntMod` not constant-folded before dispatch | Up to **49×** measured on semantically identical queries; converts two solved instances into timeouts (>168×) | **OPEN** — direct cause of A7's symptom |
 | A7 | `expand_guarded_int_universals` does not iterate to a fixed point | `∀x. G(x) ⇒ ∀y. H(x,y) ⇒ …` refused though each layer is individually supported | **OPEN** |
-| A8 | Backward checker lacks core-first propagation | Shrinks the core, not per-check cost; needs clause migration between watch structures | **OPEN** — recorded in ADR-0381 |
+| A8 | Backward checker lacks core-first propagation | Shrinks the core, not per-check cost; needs clause migration between watch structures | **OPEN** — recorded in ADR-0382 |
 | A9 | LRAT does not fall out of backward checking | Ordered forward hint chains + RAT lemmas aren't expressible in today's `LratStep` | **OPEN** |
 | A10 | Proof trimming not implemented | Dropping deletions enlarges the DB and can break a RAT step | **OPEN** |
 
@@ -84,7 +84,7 @@ tree with tests and gates green.
 | # | Opportunity |
 |---|---|
 | F1 | **Promote the scratch tooling into the workspace** — the cube harness, the SLS, the certification driver did the heavy lifting and live outside the repo. This is the gap between "we did this once" and "the system does this" |
-| F2 | Wire `just claims` into CI once ADR-0379 is accepted |
+| F2 | Wire `just claims` into CI once ADR-0380 is accepted |
 | F3 | Flip the `C:rado-number` refs to resolved once math-education commits |
 | F4 | **Connect the two graphs**: math-education has 1,565 concepts; axeyum's curriculum has 23 nodes with decidability classes. The join is 68× larger than the routing table feeding it |
 | F5 | The 148-misconception corpus is an untapped evaluation set for plausible-but-wrong machine reasoning |
