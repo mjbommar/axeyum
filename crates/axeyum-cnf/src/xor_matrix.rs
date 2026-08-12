@@ -645,17 +645,13 @@ impl IncrementalXorMatrix {
     /// `conflict_rows`) from the current rows (used once after the build-time
     /// reduce, where the matrix is in RREF with an empty assignment).
     fn rebuild_index(&mut self) {
-        for slot in &mut self.pivot_of {
-            *slot = usize::MAX;
-        }
+        self.pivot_of.fill(usize::MAX);
         for w in &mut self.watches {
             w.clear();
         }
         self.unit_rows.clear();
         self.conflict_rows.clear();
-        for slot in &mut self.unit_var {
-            *slot = usize::MAX;
-        }
+        self.unit_var.fill(usize::MAX);
         for r in 0..self.rows.len() {
             self.rows[r].watched.clear();
             let pivot = self.row_lowest_free(r);
