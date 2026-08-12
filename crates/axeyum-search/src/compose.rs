@@ -110,9 +110,9 @@ pub fn compose_cover_proof(
     }
 
     let mut composed: Vec<DratStep> = Vec::new();
-    for index in 0..plan.cell_count() {
+    for (index, slot) in proofs.iter().enumerate() {
         let cell = plan.cell(index)?;
-        let proof = proofs[index]
+        let proof = slot
             .as_ref()
             .ok_or(SearchError::ComposeMissingProof { index })?;
         let negation = cell.negation();

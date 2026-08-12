@@ -21,9 +21,16 @@
 //! Driven over the whole ledger by `scripts/recertify-claims.py`; the results
 //! are installed by `scripts/apply-recertified-claims.py`.
 //!
-//! usage: recertify_rado <a> <b> <k> <n> <stored-cnf> <out.drat> <hours>
+//! usage: `recertify_rado <a> <b> <k> <n> <stored-cnf> <out.drat> <hours>`
 //! exit:  0 verified unsat; 3 check/compare failed; 4 resource; 5 deadline;
 //!        10 SAT (would refute the claim!); 2 usage
+
+// `a`, `b`, `k`, `n` are the claim ledger's own parameter names for this
+// family (R_k of a(x-y)=bz on [1, n]); renaming them here would decouple the
+// tool from the records it certifies. The usize->i64 literal casts cannot
+// wrap: the largest variable id is n*k, and the generator's byte-compare
+// against the stored CNF would fail closed long before 2^63 variables.
+#![allow(clippy::many_single_char_names, clippy::cast_possible_wrap)]
 
 use std::env;
 use std::fs;
@@ -58,7 +65,7 @@ fn rado_cnf(a: usize, b: usize, k: usize, n: usize) -> String {
     };
     let (ap, bp) = (a / g, b / g);
     let mut t = 1usize;
-    while ap * t <= n && bp * t + 1 <= n {
+    while ap * t <= n && bp * t < n {
         let (z, dx) = (ap * t, bp * t);
         for y in 1..=(n - dx) {
             let mut trip = vec![y + dx, y, z];
@@ -80,7 +87,7 @@ fn rado_cnf(a: usize, b: usize, k: usize, n: usize) -> String {
     cl.push(vec![var(1, 1) as i64]);
     for j in 2..=n {
         for i in 2..=k {
-            if j <= i - 1 {
+            if j < i {
                 cl.push(vec![-(var(j, i) as i64)]);
             } else {
                 let mut c = vec![-(var(j, i) as i64)];

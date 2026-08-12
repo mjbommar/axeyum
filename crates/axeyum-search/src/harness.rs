@@ -454,11 +454,16 @@ impl CoverRun<'_> {
         let mut records = self
             .records
             .lock()
-            .unwrap_or_else(|e| e.into_inner())
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
             .clone();
         records.sort_by_key(|record| record.index);
 
-        if let Some(finding) = self.sat.lock().unwrap_or_else(|e| e.into_inner()).take() {
+        if let Some(finding) = self
+            .sat
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
+            .take()
+        {
             return Ok(CoverOutcome::Satisfiable {
                 cell: finding.cell,
                 model: finding.model,
@@ -504,7 +509,10 @@ impl CoverRun<'_> {
         if !self.retaining.load(Ordering::SeqCst) {
             return Ok(None);
         }
-        let proofs = self.proofs.lock().unwrap_or_else(|e| e.into_inner());
+        let proofs = self
+            .proofs
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
         if proofs.iter().any(Option::is_none) {
             return Ok(None);
         }
@@ -515,7 +523,7 @@ impl CoverRun<'_> {
     fn take_first_error(&self) -> Option<SearchError> {
         self.errors
             .lock()
-            .unwrap_or_else(|e| e.into_inner())
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
             .first()
             .cloned()
     }
@@ -525,7 +533,7 @@ impl CoverRun<'_> {
         self.observer.on_note(&format!("FATAL {error}"));
         self.errors
             .lock()
-            .unwrap_or_else(|e| e.into_inner())
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
             .push(error);
         self.stop.store(true, Ordering::SeqCst);
     }
@@ -594,7 +602,10 @@ impl CoverRun<'_> {
             write_durable(path, render_model(model).as_bytes())?;
             self.observer.on_model_persisted(cell.index(), path, model);
         }
-        *self.sat.lock().unwrap_or_else(|e| e.into_inner()) = Some(SatFinding {
+        *self
+            .sat
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner) = Some(SatFinding {
             cell: cell.index(),
             model: model.to_vec(),
             path,
@@ -671,7 +682,10 @@ impl CoverRun<'_> {
             return;
         }
         let running = self.retained_adds.fetch_add(adds, Ordering::SeqCst) + adds;
-        let mut proofs = self.proofs.lock().unwrap_or_else(|e| e.into_inner());
+        let mut proofs = self
+            .proofs
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
         if running <= self.options.compose_step_cap {
             proofs[index] = Some(proof);
             return;
@@ -703,7 +717,7 @@ impl CoverRun<'_> {
         if let Some(writer) = self
             .ledger
             .lock()
-            .unwrap_or_else(|e| e.into_inner())
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
             .as_mut()
         {
             writer.append(&record)?;
@@ -711,7 +725,7 @@ impl CoverRun<'_> {
         self.observer.on_cell_finished(&record);
         self.records
             .lock()
-            .unwrap_or_else(|e| e.into_inner())
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
             .push(record);
         Ok(())
     }

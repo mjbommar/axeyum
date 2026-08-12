@@ -71,6 +71,33 @@ impl Default for MinConflictsOptions {
     }
 }
 
+/// The walk's initial colouring: the caller's warm start (validated against
+/// the problem's shape), or the deterministic round-robin colouring.
+/// `colouring[j - 1]` is the colour of point `j`, in `1..=colours`.
+fn start_colouring(
+    problem: &ColouringProblem,
+    start: Option<&Witness>,
+) -> Result<Vec<usize>, SearchError> {
+    let points = problem.points();
+    let colours = problem.colours();
+    match start {
+        Some(witness) => {
+            if witness.points() != points || witness.colours() != colours {
+                return Err(SearchError::InvalidParameter {
+                    what: format!(
+                        "start witness colours {} points with {} colours; the problem has {points} \
+                         points and {colours} colours",
+                        witness.points(),
+                        witness.colours()
+                    ),
+                });
+            }
+            Ok(witness.colouring().to_vec())
+        }
+        None => Ok((0..points).map(|index| (index % colours) + 1).collect()),
+    }
+}
+
 /// Min-conflicts search for a colouring of `problem` with no monochromatic
 /// forbidden set.
 ///
@@ -97,24 +124,7 @@ pub fn min_conflicts(
     let points = problem.points();
     let colours = problem.colours();
     let forbidden = problem.forbidden();
-
-    // `colouring[j - 1]` is the colour of point `j`, in `1..=colours`.
-    let mut colouring: Vec<usize> = match start {
-        Some(witness) => {
-            if witness.points() != points || witness.colours() != colours {
-                return Err(SearchError::InvalidParameter {
-                    what: format!(
-                        "start witness colours {} points with {} colours; the problem has {points} \
-                         points and {colours} colours",
-                        witness.points(),
-                        witness.colours()
-                    ),
-                });
-            }
-            witness.colouring().to_vec()
-        }
-        None => (0..points).map(|index| (index % colours) + 1).collect(),
-    };
+    let mut colouring = start_colouring(problem, start)?;
 
     // Incidence: which forbidden sets each point participates in.
     let mut incidence: Vec<Vec<usize>> = vec![Vec::new(); points];
@@ -184,7 +194,9 @@ pub fn min_conflicts(
                     violated.push(other);
                 }
                 (Some(slot), false) => {
-                    let last = violated.pop().expect("slot implies non-empty");
+                    let Some(last) = violated.pop() else {
+                        continue;
+                    };
                     if slot < violated.len() {
                         violated[slot] = last;
                         position[last] = Some(slot);

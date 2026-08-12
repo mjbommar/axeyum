@@ -101,10 +101,10 @@ pub fn certify_dumped_cover(
             Err(error) => CellCheck::Failed(error.to_string()),
         };
         upgraded.push(CellRecord {
-            check,
-            check_time,
             steps,
             adds,
+            check,
+            check_time,
             ..record.clone()
         });
     }
