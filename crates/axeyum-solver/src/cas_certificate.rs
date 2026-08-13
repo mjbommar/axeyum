@@ -114,6 +114,14 @@ fn expand_inner(
                 Some(acc)
             }
             Op::IntSub | Op::RealSub => {
+                // SMT-LIB's `-` is unary negation at arity 1 and subtraction at
+                // arity >= 2. The arena only ever builds `IntSub`/`RealSub`
+                // binary (unary `-` becomes `IntNeg`/`RealNeg`), but reading a
+                // one-argument node as "the first operand" would silently drop
+                // the negation, so the arity is required rather than assumed.
+                if args.len() < 2 {
+                    return None;
+                }
                 let mut iter = args.iter();
                 let &first = iter.next()?;
                 let mut acc = expand_inner(arena, first, atoms, steps, depth + 1)?;

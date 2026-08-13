@@ -201,6 +201,14 @@ fn to_poly(
                 acc
             }
             Op::IntSub | Op::RealSub => {
+                // SMT-LIB's `-` is unary negation at arity 1 and subtraction at
+                // arity >= 2. The arena only ever builds `IntSub`/`RealSub`
+                // binary (unary `-` becomes `IntNeg`/`RealNeg`), but reading a
+                // one-argument node as "the first operand" would silently drop
+                // the negation, so the arity is required rather than assumed.
+                if args.len() < 2 {
+                    return None;
+                }
                 let mut iter = args.iter();
                 let mut acc = to_poly(arena, *iter.next()?, table, steps, depth + 1)?;
                 for &arg in iter {
