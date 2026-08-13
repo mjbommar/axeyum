@@ -1,12 +1,37 @@
-//! Render kernel terms to Lean 4 source syntax — a readable, externally-checkable
+//! Render kernel terms to Lean 4 source syntax — a readable, *human-inspectable*
 //! projection of the in-tree kernel's `Expr`/`Name`/`Level`.
 //!
-//! This is the first slice of a full Lean export: it renders proof *terms* (the
-//! trusted-checking witnesses produced by `axeyum-solver`'s reconstruction) into
-//! the surface syntax a real Lean 4 kernel reads, so a refutation the in-tree
-//! [`Kernel`](crate::Kernel) accepts can also be inspected, diffed, and (with the
-//! declaration prelude, a later slice) re-checked by an independent Lean toolchain.
-//! It is pure pretty-printing — it never affects type checking.
+//! It renders proof *terms* (the trusted-checking witnesses produced by
+//! `axeyum-solver`'s reconstruction) so that a refutation the in-tree
+//! [`Kernel`](crate::Kernel) accepts can be read and diffed. It is pure
+//! pretty-printing — it never affects type checking.
+//!
+//! # This output is NOT an external re-checking route
+//!
+//! Do not read the rendered module as evidence that an independent kernel would
+//! accept the term. Measured on 2026-08-13 against the pinned toolchain
+//! (`lean-toolchain`, Lean 4.30.0): the Rado shell-bound module rendered by this
+//! writer is **rejected by `lean` in 0.175 s with 22 errors**. Three causes,
+//! only one of which is cosmetic:
+//!
+//! * recursor-based `def`s fail codegen and would need `noncomputable`;
+//! * the self-reference in an inductive's own constructor is emitted with
+//!   explicit universe arguments (`Eq.{u}` inside `Eq`), which Lean rejects,
+//!   and the cascade accounts for 19 of the 22 errors;
+//! * inductives are declared with every argument as an *index* while the
+//!   emitted `Eq.rec` applications assume *parameters*. The in-tree kernel
+//!   generates a recursor consistent with its own declaration form and so
+//!   accepts the module; Lean generates a different recursor and does not.
+//!
+//! Even with all three repaired, `lean file.lean` runs the **elaborator**, not
+//! the kernel — it re-infers implicit arguments and universes and reaches for
+//! coercions, none of which bear on whether the proof term is well-typed.
+//!
+//! The external re-checking route is the official `lean4export` format, which
+//! `axeyum-lean-import` already consumes fail-closed at version 3.1.0; emitting
+//! it makes the round-trip through our own importer a differential test and
+//! lets `leanchecker` (shipped in the pinned toolchain) check the terms. Until
+//! that writer exists, this module's output is for people, not for kernels.
 
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use std::fmt::Write as _;
@@ -1483,7 +1508,7 @@ mod tests {
         assert!(k.level_intern.is_empty());
         assert!(k.expr_intern.is_empty());
         assert!(k.infer_closed_cache.is_empty());
-        assert!(k.whnf_cache.is_empty());
+        assert!(k.whnf_cache.1.is_empty());
         assert_eq!(
             compact,
             k.render_lean_module_compact("closed_pair", goal, proof)
