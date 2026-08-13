@@ -596,10 +596,7 @@ impl SolutionFamily for Rado {
         let (step_z, step_x) = (self.a / divisor, self.b / divisor);
         let mut sets = Vec::new();
         let mut t = 1usize;
-        loop {
-            let (Some(z), Some(dx)) = (step_z.checked_mul(t), step_x.checked_mul(t)) else {
-                break;
-            };
+        while let (Some(z), Some(dx)) = (step_z.checked_mul(t), step_x.checked_mul(t)) {
             if z > points || dx + 1 > points {
                 break;
             }
