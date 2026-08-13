@@ -510,8 +510,14 @@ def check_claim(path: Path, drat_checker: str | None) -> list[str]:
         # ledger exists to prevent. Report it as NOT re-checked, name the
         # recipe, and carry it into the summary -- never pass it silently.
         art = ev.get("artifact")
-        if (ev.get("distribution") == "regenerable" and art is not None
-                and not artifact_path(art).exists()):
+        # A row may legitimately have no artifact HERE: a bundle omits bulky
+        # ones by policy (`distribution: regenerable`), and the ledger itself
+        # declines to store a proof too large to keep, recording a
+        # `regeneration` recipe instead. Either way it cannot be re-checked in
+        # this tree, and saying so is the only honest outcome.
+        absent = art is None or not artifact_path(art).exists()
+        if absent and (ev.get("distribution") == "regenerable"
+                       or ev.get("regeneration") is not None):
             recipe = (ev.get("regeneration") or {}).get("command")
             if recipe is None and kind == "instance-pin":
                 # An instance is defined by its four parameters; the recipe is
@@ -519,10 +525,14 @@ def check_claim(path: Path, drat_checker: str | None) -> list[str]:
                 recipe = (f"gen-rado-instance.py {a} {b} {k} {params['n']}"
                           f"  # -> sha256 {ev.get('artifact_sha256','?')}")
             recipe = recipe or "no recipe recorded"
-            NOT_RECHECKED.append(f"{path.parent.name}/{eid}: {art} not "
-                                 f"distributed; regenerate with: {recipe}")
-            print(f"  NOT re-checked {eid}: artifact not distributed "
-                  f"(regenerable; sha256 {ev.get('artifact_sha256','?')[:16]}...)")
+            what = art or "(no artifact stored)"
+            sha = (ev.get("artifact_sha256")
+                   or (ev.get("regeneration") or {}).get("produces_sha256")
+                   or "?")
+            NOT_RECHECKED.append(f"{path.parent.name}/{eid}: {what} not in this "
+                                 f"tree; regenerate with: {recipe}")
+            print(f"  NOT re-checked {eid}: not in this tree "
+                  f"(regenerable; sha256 {sha[:16]}...)")
             continue
 
         if kind in {"witness-replay", "published-value-replication"}:
