@@ -87,14 +87,14 @@ rewritten to consume the prelude: 92 lines added, 651 removed, and its proof
 scripts are byte-identical. It proves the same theorems and passes the same 9
 tests. Crate `--lib` count moved 199 → 206.
 
-**`Nat.le` ships narrowly and is documented as such.** It is a
-*bound-stating* fragment, not an order library: no `lt`, no antisymmetry, no
-totality, no decidability, and no `le_of_succ_le_succ` (inversion), which
-needs a `pred`-style motive. Its constructor shape is exactly Lean's, so it
-carries no redesign risk, but callers must not mistake it for more.
+**`Nat.le` ships narrowly and is documented as such.** ADR-0390 has since added
+reducible `lt` and checked `le_of_succ_le_succ` through a predecessor-style
+motive. Antisymmetry, totality, `min`, and decidability remain absent. Its
+constructor shape is exactly Lean's, so these additions carry no redesign
+risk, but callers must not mistake the fragment for a complete order library.
 
-**What remains missing** is library work, not expressiveness: inversion of
-`≤`, subtraction, and the larger divisibility/valuation layer. ADR-0389 has
+**What remains missing** is library work, not expressiveness: complete order,
+subtraction, and the larger divisibility/valuation layer. ADR-0389 has
 since promoted the proved `Nat.dvd` / `dvd_mul` / `dvd_add` foundation from the
 Rado capability probe; cancellation, congruence, Euclidean division, gcd, and
 valuation remain open.

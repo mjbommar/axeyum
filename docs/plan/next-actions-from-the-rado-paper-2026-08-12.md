@@ -239,8 +239,9 @@ algebraic laws, `Nat.le`, and the `Eq` combinators, all proved because `Nat`
 is a real inductive with a real recursor. ADR-0389 has since added the proved
 `Nat.dvd`, `dvd_mul`, and `dvd_add` foundation without changing that boundary.
 
-`Nat.le` ships narrowly and is documented as such: no `lt`, antisymmetry,
-totality, decidability, or `le_of_succ_le_succ` inversion.
+`Nat.le` ships narrowly and is documented as such. ADR-0390 adds reducible
+`Nat.lt` and checked `le_of_succ_le_succ` inversion; antisymmetry, totality,
+`min`, and decidability remain absent.
 
 **The remaining divisibility and valuation library is the gating item** for formalizing anything
 genuinely number-theoretic — which is to say, for formalizing this paper's

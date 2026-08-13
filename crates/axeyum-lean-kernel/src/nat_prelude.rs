@@ -16,9 +16,9 @@
 //!
 //! ## What is declared (all under the `Nat` namespace)
 //!
-//! **Definitions** — each by `Nat.rec` on its **second** argument, so the
-//! defining equations hold *definitionally* (β/δ/ι) and need no equation
-//! lemmas:
+//! **Recursive arithmetic definitions** — each by `Nat.rec` on its **second**
+//! argument, so the defining equations hold *definitionally* (β/δ/ι) and need
+//! no equation lemmas:
 //!
 //! | name      | zero case            | successor case                       |
 //! |-----------|----------------------|--------------------------------------|
@@ -40,7 +40,8 @@
 //! same shape as Lean's own `Nat.le` — `Nat.le.refl : Le n n` and
 //! `Nat.le.step : Le n m → Le n (succ m)` — admitted through the same trusted
 //! inductive gate, so its recursor `Nat.le.rec` (induction on the *derivation*)
-//! is kernel-generated. Theorems: `zero_le`, `le_succ_succ`, `le_trans`,
+//! is kernel-generated. `Nat.lt n m := Nat.le (Nat.succ n) m`. Theorems:
+//! `zero_le`, `le_succ_succ`, `le_of_succ_le_succ`, `le_trans`, and
 //! `le_add_right`.
 //!
 //! **Divisibility**: `Nat.dvd a n := Exists (fun q => n = a * q)`, together
@@ -49,8 +50,8 @@
 //!
 //! ## What is **not** here
 //!
-//! No subtraction/predecessor, no `lt`, no antisymmetry, totality, or
-//! decidability of `le`, no quotient/remainder division, no
+//! No subtraction/predecessor, no antisymmetry, totality, `min`, or
+//! decidability of order, no quotient/remainder division, no
 //! `n ≠ succ n`-style discrimination.
 //! Adding those is ordinary work on top of this prelude, not a kernel question:
 //! the order fragment is deliberately minimal (see [`NatPrelude::le`]).
@@ -164,13 +165,14 @@ pub struct NatPrelude {
     /// second an *index*).
     ///
     /// This fragment is deliberately minimal: it carries reflexivity/step
-    /// (the constructors), `zero_le`, `le_succ_succ`, `le_trans` and
-    /// `le_add_right` — enough to *state and derive* bounds, but **not** an
-    /// order library. There is no antisymmetry, no totality, no `lt`, and no
-    /// decidability; `le_of_succ_le_succ` (inversion) is not here either. The
-    /// constructor shape matches Lean's, so those are extensions rather than
-    /// redesigns.
+    /// (the constructors), `zero_le`, successor monotonicity/inversion,
+    /// transitivity, and `le_add_right` — enough to *state and derive* bounds,
+    /// but **not** a complete order library. There is no antisymmetry,
+    /// totality, `min`, or decidability. The constructor shape matches Lean's,
+    /// so those are extensions rather than redesigns.
     pub le: NameId,
+    /// `Nat.lt n m := Nat.le (Nat.succ n) m`.
+    pub lt: NameId,
     /// `Nat.le.refl : ∀ (n : Nat), Le n n`.
     pub le_refl: NameId,
     /// `Nat.le.step : ∀ (n m : Nat), Le n m → Le n (succ m)`.
@@ -181,6 +183,8 @@ pub struct NatPrelude {
     pub zero_le: NameId,
     /// `le_succ_succ : ∀ (n m : Nat), Le n m → Le (succ n) (succ m)`.
     pub le_succ_succ: NameId,
+    /// `le_of_succ_le_succ : ∀ (n m : Nat), Le (succ n) (succ m) → Le n m`.
+    pub le_of_succ_le_succ: NameId,
     /// `le_trans : ∀ (a b c : Nat), Le a b → Le b c → Le a c`.
     pub le_trans: NameId,
     /// `le_add_right : ∀ (n k : Nat), Le n (add n k)`.
@@ -254,11 +258,13 @@ pub fn build_nat_prelude(kernel: &mut Kernel) -> Result<NatPrelude, KernelError>
             one_mul: kernel.name_str(nat, "one_mul"),
             mul_one: kernel.name_str(nat, "mul_one"),
             le,
+            lt: kernel.name_str(nat, "lt"),
             le_refl: kernel.name_str(le, "refl"),
             le_step: kernel.name_str(le, "step"),
             le_rec: kernel.name_str(le, "rec"),
             zero_le: kernel.name_str(nat, "zero_le"),
             le_succ_succ: kernel.name_str(nat, "le_succ_succ"),
+            le_of_succ_le_succ: kernel.name_str(nat, "le_of_succ_le_succ"),
             le_trans: kernel.name_str(nat, "le_trans"),
             le_add_right: kernel.name_str(nat, "le_add_right"),
             dvd: kernel.name_str(nat, "dvd"),
@@ -713,7 +719,7 @@ fn declare_multiplicative_theorems(d: &mut NatDev<'_>, p: &NatPrelude) -> Result
     Ok(())
 }
 
-/// `Nat.le` (the indexed `Prop` inductive) and its four theorems.
+/// `Nat.le`, reducible strict order, and the checked order theorems.
 fn declare_order(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> {
     let p = *p;
     let nat = d.nat_ty();
@@ -753,6 +759,31 @@ fn declare_order(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> 
         le_ty,
         &[(p.le_refl, refl_ty), (p.le_step, step_ty)],
     )?;
+
+    // lt n m := Le (succ n) m
+    {
+        let n_fv = d.fresh_fvar();
+        let n = d.kernel().fvar(n_fv);
+        let m_fv = d.fresh_fvar();
+        let m = d.kernel().fvar(m_fv);
+        let sn = d.succ(n);
+        let body = d.le(sn, m);
+        let value = {
+            let inner = d.lam_fv(m_fv, nat, body);
+            d.lam_fv(n_fv, nat, inner)
+        };
+        let ty = {
+            let inner = d.kernel().pi(anon, nat, prop, BinderInfo::Default);
+            d.kernel().pi(anon, nat, inner, BinderInfo::Default)
+        };
+        d.kernel().add_declaration(Declaration::Definition {
+            name: p.lt,
+            uparams: vec![],
+            ty,
+            value,
+            hint: ReducibilityHint::Regular(1),
+        })?;
+    }
 
     // zero_le : ∀ n, Le zero n   (induction on n, using only the constructors)
     {
@@ -895,6 +926,79 @@ fn declare_order(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> 
             d.lam_fv(a_fv, nat, v)
         };
         d.declare_theorem(p.le_trans, ty, value)?;
+    }
+
+    // le_of_succ_le_succ : ∀ n m, Le (succ n) (succ m) → Le n m
+    //
+    // Eliminate the derivation with the predecessor-style family
+    //   P 0        = False
+    //   P (succ x) = Le n x.
+    // The step case can ignore its induction hypothesis: from
+    // `Le (succ n) x`, transitivity with `Le n (succ n)` gives `Le n x`.
+    {
+        let n_fv = d.fresh_fvar();
+        let n = d.kernel().fvar(n_fv);
+        let m_fv = d.fresh_fvar();
+        let m = d.kernel().fvar(m_fv);
+        let sn = d.succ(n);
+        let sm = d.succ(m);
+        let h_fv = d.fresh_fvar();
+        let h = d.kernel().fvar(h_fv);
+        let hyp = d.le(sn, sm);
+        let concl = d.le(n, m);
+
+        let predecessor_family = |d: &mut NatDev<'_>, x: ExprId| {
+            let type_motive = d.kernel().lam(anon, nat, prop, BinderInfo::Default);
+            let false_ty = d.kernel().const_(p.logic.false_, vec![]);
+            let step = {
+                let j_fv = d.fresh_fvar();
+                let j = d.kernel().fvar(j_fv);
+                let ignored_fv = d.fresh_fvar();
+                let body = d.le(n, j);
+                let inner = d.lam_fv(ignored_fv, prop, body);
+                d.lam_fv(j_fv, nat, inner)
+            };
+            let one = d.level_one();
+            let rec = d.kernel().const_(p.rec, vec![one]);
+            d.apply(rec, &[type_motive, false_ty, step, x])
+        };
+
+        let motive = {
+            let x_fv = d.fresh_fvar();
+            let x = d.kernel().fvar(x_fv);
+            let dom = d.le(sn, x);
+            let body = predecessor_family(d, x);
+            let inner = d.kernel().lam(anon, dom, body, BinderInfo::Default);
+            d.lam_fv(x_fv, nat, inner)
+        };
+        let minor_refl = d.const_app(p.le_refl, &[n]);
+        let minor_step = {
+            let x_fv = d.fresh_fvar();
+            let x = d.kernel().fvar(x_fv);
+            let hx_fv = d.fresh_fvar();
+            let hx_ty = d.le(sn, x);
+            let hx = d.kernel().fvar(hx_fv);
+            let ih_fv = d.fresh_fvar();
+            let ih_ty = predecessor_family(d, x);
+            let n_refl = d.const_app(p.le_refl, &[n]);
+            let n_le_sn = d.const_app(p.le_step, &[n, n, n_refl]);
+            let body = d.lemma(p.le_trans, &[n, sn, x, n_le_sn, hx]);
+            let with_ih = d.lam_fv(ih_fv, ih_ty, body);
+            let with_hx = d.lam_fv(hx_fv, hx_ty, with_ih);
+            d.lam_fv(x_fv, nat, with_hx)
+        };
+        let proof = d.const_app(p.le_rec, &[sn, motive, minor_refl, minor_step, sm, h]);
+        let ty = {
+            let arrow = d.kernel().pi(anon, hyp, concl, BinderInfo::Default);
+            let over_m = d.pi_fv(m_fv, nat, arrow);
+            d.pi_fv(n_fv, nat, over_m)
+        };
+        let value = {
+            let with_h = d.lam_fv(h_fv, hyp, proof);
+            let with_m = d.lam_fv(m_fv, nat, with_h);
+            d.lam_fv(n_fv, nat, with_m)
+        };
+        d.declare_theorem(p.le_of_succ_le_succ, ty, value)?;
     }
 
     // le_add_right : ∀ n k, Le n (add n k)   (induction on k; both cases are
@@ -1244,6 +1348,12 @@ pub trait NatOps {
     /// `Nat.le x y` (the `Prop` `x ≤ y`).
     fn le(&mut self, x: ExprId, y: ExprId) -> ExprId {
         let f = self.prelude().le;
+        self.const_app(f, &[x, y])
+    }
+
+    /// `Nat.lt x y` (definitionally `Nat.le (Nat.succ x) y`).
+    fn lt(&mut self, x: ExprId, y: ExprId) -> ExprId {
+        let f = self.prelude().lt;
         self.const_app(f, &[x, y])
     }
 

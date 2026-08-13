@@ -340,9 +340,8 @@ here as closed evidence boundaries. A3 remains incomplete, but all currently
 preregistered bounded mechanisms are closed negatively. A4 has now also yielded;
 A5 is the first active item.
 
-**Immediate action (`WIP`, Lean lane).** Gate ADR-0389's divisibility, then
-continue `thm:sharp`'s order/range and finite-sum dependencies. No theorem
-credit.
+**Immediate action (`WIP`, Lean lane).** Gate ADR-0390's strict order/inversion,
+then continue `thm:sharp`'s finite-sum/range dependencies. No theorem credit.
 Keep the 14-theorem export labelled unchecked by real Lean. The prior A5 V2 QF_RDL row-1
 action remains pending, neither credited nor cancelled.
 

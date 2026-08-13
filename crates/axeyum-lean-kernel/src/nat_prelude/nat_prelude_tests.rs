@@ -60,7 +60,7 @@ impl Fixture {
 /// have. `Nat`/`Nat.zero`/`Nat.succ`/`Nat.rec`/`Nat.le`/… are inductive
 /// machinery, so they are checked separately by `environment().contains`.
 fn definition_names(p: &NatPrelude) -> Vec<NameId> {
-    vec![p.add, p.mul, p.pow, p.dvd]
+    vec![p.add, p.mul, p.pow, p.lt, p.dvd]
 }
 
 fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
@@ -85,6 +85,7 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.mul_one,
         p.zero_le,
         p.le_succ_succ,
+        p.le_of_succ_le_succ,
         p.le_trans,
         p.le_add_right,
         p.dvd_mul,
@@ -235,7 +236,8 @@ fn a_downstream_development_proves_a_new_theorem() {
 
 /// The order fragment is usable on concrete bounds: `le_add_right 1 2` has type
 /// `Le 1 (add 1 2)`, and `add 1 2 ≡ 3`, so the kernel accepts it as a proof of
-/// `Le 1 3`. `le_trans` then chains it to `Le 1 4`.
+/// `Le 1 3`. `le_trans` then chains it to `Le 1 4`; strict order reduces to
+/// successor `le`, and successor monotonicity can be inverted again.
 #[test]
 fn the_order_fragment_bounds_concrete_numerals() {
     let mut f = Fixture::new();
@@ -265,6 +267,19 @@ fn the_order_fragment_bounds_concrete_numerals() {
     f.declare_theorem(name2, stmt2, proof2)
         .unwrap_or_else(|e| panic!("one_le_four should admit: {}", f.explain(&e)));
     println!("one_le_four : {}", f.k.render_lean(stmt2));
+
+    let two_lt_four = f.lt(two, four);
+    let three_le_four_ty = f.le(three, four);
+    assert!(
+        f.k.def_eq(two_lt_four, three_le_four_ty),
+        "2 < 4 must reduce to 3 ≤ 4"
+    );
+
+    let lifted = f.lemma(p.le_succ_succ, &[one, three, one_le_three]);
+    let inverted = f.lemma(p.le_of_succ_le_succ, &[one, three, lifted]);
+    let inversion_name = f.name("one_le_three_by_inversion");
+    f.declare_theorem(inversion_name, stmt, inverted)
+        .unwrap_or_else(|e| panic!("successor inversion should admit: {}", f.explain(&e)));
 }
 
 /// Divisibility is a real prelude definition, not a test-only proposition:
@@ -529,7 +544,30 @@ fn kernel_rejects_broken_proof_terms() {
         rejections += 1;
     }
 
-    assert_eq!(rejections, 9, "every negative control must be rejected");
+    // NC10 — successor inversion recovers exactly the predecessor bound. A
+    // proof of `1 ≤ 3` obtained by lifting and inversion cannot prove `4 ≤ 2`.
+    {
+        let name = f.name("nc10_inversion_wrong_target");
+        let one = f.num(1);
+        let two = f.num(2);
+        let three = f.num(3);
+        let four = f.num(4);
+        let h13 = f.lemma(p.le_add_right, &[one, two]);
+        let lifted = f.lemma(p.le_succ_succ, &[one, three, h13]);
+        let proof = f.lemma(p.le_of_succ_le_succ, &[one, three, lifted]);
+        let bad = f.le(four, two);
+        let err = f
+            .declare_theorem(name, bad, proof)
+            .expect_err("NC10: inversion must not change the predecessor target");
+        println!(
+            "NC10 (wrong inversion target) rejected:\n  {}",
+            f.explain(&err)
+        );
+        assert!(!f.k.environment().contains(name));
+        rejections += 1;
+    }
+
+    assert_eq!(rejections, 10, "every negative control must be rejected");
 }
 
 /// The build is deterministic: two independent kernels render every promised
@@ -552,7 +590,7 @@ fn the_build_is_deterministic() {
     assert_eq!(first, second, "the prelude build must be deterministic");
     assert_eq!(
         first.len(),
-        4 + 24,
+        5 + 25,
         "every promised definition and theorem must be rendered"
     );
 }
