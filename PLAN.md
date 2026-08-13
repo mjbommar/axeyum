@@ -377,10 +377,61 @@ checks, 11 negative controls). Everything, including three retracted errors
 of my own, is in
 [`proof-approaches-2026-08-12/`](docs/plan/proof-approaches-2026-08-12/README.md).
 Not claimed: no upper bounds; the construction is **not** tight at `k = 5`
-(318 against a verified 350-witness, with 644,956 cut vectors exhaustively
-enumerated to show 318 is the whole shape's ceiling); and the Lean export has
+(318 against a verified 350-witness); and the Lean export has
 **not** been checked by real Lean — `lean`/`lake`/`elan` are absent here, and
 running it elsewhere is the highest-value next measurement.
+
+> **Correction (2026-08-13).** An earlier version of this paragraph said
+> 644,956 cut vectors were "exhaustively enumerated to show 318 is the whole
+> shape's ceiling". Two things were wrong. The script carried
+> `BUDGET = 60000` and printed `(3, 2, 5) 318 644956 (skipped: over budget)`
+> — it *counted* the vectors and never enumerated them. And 644,956 is the
+> `M = N` **uniqueness** count; the ceiling claim is infeasibility at
+> `M = N+1`, a different computation. The budget has since been raised and
+> the enumeration now genuinely runs, but the paper does not rest on it: it
+> attributes the ceiling to the **rigidity theorem**, which covers `(3,2,5)`
+> (`b = a-1`, `k >= 3`) and is stronger than any enumeration.
+
+**Lane extension — publishable result, replication, and evidence pinning
+(2026-08-13).** Three sibling repositories (`axeyum`,
+`../axeyum-rado-paper`, `../axeyum-rado-artifacts`) were brought to a
+submittable state. What changed here:
+
+- **The 313 upper bound had no identified subject.** `F_313.cnf` was
+  untracked and `claim.json` recorded no instance hash, so five cover ledgers
+  held verdicts about a formula nothing named. Added an `instance-pin`
+  evidence kind, checked by **regeneration** (an independently written
+  encoder re-derives the CNF from `(a,b,k,n)` and requires byte-identity),
+  and pinned both headline instances. Two negative controls fire, including
+  a *self-consistent forgery* — corrupt CNF plus matching hash — which any
+  hash-only gate would pass.
+- The 226 `upper-drat` row was **not evidence of its stated bound** (kind
+  `unsat-certificate`, artifact the formula, checker external kissat, note
+  claiming a run "in progress" that was not). Restated as an instance pin.
+- The 313 claim's **default artifact was the wrong cover**: `cube-cover.tsv`
+  was the 1024-cell, 224-deferred one while the prose described the complete
+  4096-cell cover, which sat under a name the prose never used. Swapped.
+- **Both re-check commands the shipped arXiv bundle documents had never
+  worked** (missing schema; `FileNotFoundError` on the first witness). Fixed;
+  the checkers now also report rows they could *not* re-check rather than
+  passing them silently.
+- New claim `rado-r4-a6-b5-frontier`: `R_4(6(x-y)=5z) > 1500`, the second
+  open cell of the `k = 4` row, **free from the main theorem** — written down
+  from the construction, not searched for, and checked three independent
+  ways.
+- **Replication on five hosts from clean clones**, roles `gate`, `cover226`,
+  `cover313`, `ladder`, `ledger`, across three `cargo` toolchains
+  (1.96/1.97/1.99-nightly). `ledger` and `ladder` each passed **7/0 on two
+  different hosts and two different toolchains**. Measured and recorded:
+  `recertify_rado` needs **~28 GiB** and was OOM-killed at exit 137 on a
+  27 GiB box — a resource failure that reads exactly like a refuted claim, so
+  `replicate.sh` now warns before and annotates after.
+- Three review passes (codex CLI plus independent agents) found **no error in
+  any of the three theorems**, including the `a = 2` rigidity corner, and
+  confirmed them by exhaustive enumeration. They did find one false step in a
+  written proof (`a \nmid m'n'`, false for composite `a`), two malformed
+  statements, and four overclaims — all corrected. Details in the paper
+  repository's history.
 
 **Parallel documentation action.** The comprehensive pass and 2026-08-09
 README application/vision revision are closed. Continue only for a concrete
