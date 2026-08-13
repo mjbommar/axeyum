@@ -34,6 +34,11 @@ EXPECTED = {
         "sha256 mismatch",
     "regenerable-without-toolchain":
         "no provenance.toolchain is pinned",
+    # A recorded command that cannot be run is not a re-check recipe. This is
+    # the `certify_cover` defect: green for months on the two rows carrying
+    # the headline upper bounds.
+    "checker-command-not-runnable":
+        "neither a known interpreter nor a path",
 }
 
 # fixtures whose defect is semantic, caught by the certificate checker

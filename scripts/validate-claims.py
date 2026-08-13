@@ -272,6 +272,58 @@ def check_artifact_format(errors: list[str], path: Path, ev: dict,
                          f"does not derive a contradiction")
 
 
+# Interpreters a checker_command may legitimately start with. Anything else in
+# leading position must be a path that exists in this repository.
+KNOWN_LAUNCHERS = {"python3", "python", "cargo", "bash", "sh", "make", "just", "uv"}
+
+
+def checker_command_defects(cmd: str) -> list[str]:
+    """A recorded checker_command must name something that can actually run.
+
+    Both rows carrying this project's headline upper bounds recorded
+
+        BRANCH=2,4,6,8,10,12 certify_cover ...
+
+    and `certify_cover` existed nowhere -- an ephemeral CLI from a /tmp
+    scratchpad, never committed. The rows were green for months: nothing
+    checked that a recorded command was runnable, so the evidence carrying the
+    two published values could not be re-run as recorded. That is a
+    reproducibility defect of the first order, and it is cheap to catch.
+
+    Checked here: the leading word (after `VAR=value` prefixes) is either a
+    known interpreter or a path present in the repository, and when it is an
+    interpreter its script argument exists too. Deliberately shallow -- this
+    is a spelling check on the entry point, not an execution.
+    """
+    defects: list[str] = []
+    body = cmd.split("#", 1)[0].strip()          # drop trailing explanation
+    if not body:
+        return ["checker_command is only a comment"]
+    toks = [t for t in body.split() if "=" not in t.split("/")[0] or t.startswith(("./", "/"))]
+    if not toks:
+        return ["checker_command has no command after its variable assignments"]
+    head = toks[0]
+
+    if head not in KNOWN_LAUNCHERS:
+        if "/" not in head:
+            defects.append(f"checker_command starts with '{head}', which is neither a "
+                           f"known interpreter nor a path in this repository; a "
+                           f"command nobody can run is not a re-check recipe")
+        elif not (ROOT / head).exists():
+            defects.append(f"checker_command names '{head}', which does not exist "
+                           f"in this repository")
+        return defects
+
+    # An interpreter: its script argument must exist. `cargo` takes subcommands
+    # rather than a script path, so it is exempt.
+    if head in {"python3", "python", "bash", "sh"}:
+        script = next((t for t in toks[1:] if not t.startswith("-")), None)
+        if script and "/" in script and not (ROOT / script).exists():
+            defects.append(f"checker_command runs '{script}', which does not exist "
+                           f"in this repository")
+    return defects
+
+
 def schema_drift() -> list[str]:
     """Require claim.schema.json to agree with the vocabulary enforced here.
 
@@ -471,6 +523,9 @@ def validate_claim(path: Path, fragment_ids: set[str], curriculum_ids: set[str],
             has_checked = True
             if ev.get("checker_command", "none") == "none":
                 fail(errors, f"{path}: checked evidence '{eid}' has no checker_command")
+            else:
+                for msg in checker_command_defects(ev["checker_command"]):
+                    fail(errors, f"{path}: evidence '{eid}' {msg}")
         regen = ev.get("regeneration")
         if regen is not None:
             for k in {"command", "produces_sha256"} - set(regen):
