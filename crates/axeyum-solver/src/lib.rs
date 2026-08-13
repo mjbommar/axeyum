@@ -82,6 +82,8 @@ macro_rules! full_modules {
         mod bv_uf_local;
         pub mod capabilities;
         mod cardinality;
+        mod cas_certificate;
+        mod cas_poly;
         mod cdclt;
         mod certify;
         mod combined;
@@ -904,6 +906,16 @@ macro_rules! full_exports {
         };
         #[doc(hidden)]
         pub use cardinality::{at_least, at_most, at_most_one, between, exactly, exactly_one};
+        #[doc(hidden)]
+        pub use cas_certificate::{
+            AtomMonomial, AtomPoly, check_cas_identity_certificate,
+            check_cas_int_units_certificate, expand as cas_expand,
+        };
+        #[doc(hidden)]
+        pub use cas_poly::{
+            CasIdentityCertificate, CasIntBound, CasIntUnitsCertificate, CasIntUnitsKind,
+            CasOutcome, cas_identity_refutation, cas_int_units_refutation,
+        };
         #[doc(hidden)]
         pub use certify::{
             CertifyOutcome, certify_finite_bv_by_enumeration, certify_qf_bv_by_enumeration,

@@ -14,6 +14,10 @@ publish = false
 [dependencies]
 axeyum-aig.workspace = true
 axeyum-bv.workspace = true
+# Exact multivariate polynomial normalization for the `cas-*` refutation routes
+# (ADR-0386). Pure Rust and WASM-safe, so it does not touch the
+# no-C-dependency promise; `full`-only because the routes live in `auto.rs`.
+axeyum-cas = { workspace = true, optional = true }
 axeyum-cnf.workspace = true
 axeyum-egraph = { workspace = true, optional = true }
 axeyum-fp = { workspace = true, optional = true }
@@ -40,6 +44,7 @@ default = ["qfbv"]
 qfbv = []
 # Full multi-theory/product surface.
 full = [
+    "dep:axeyum-cas",
     "dep:axeyum-egraph",
     "dep:axeyum-fp",
     "dep:axeyum-lean-kernel",

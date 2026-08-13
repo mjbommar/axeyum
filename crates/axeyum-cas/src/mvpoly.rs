@@ -89,6 +89,12 @@ impl Monomial {
         self.powers.get(var).copied().unwrap_or(0)
     }
 
+    /// The `(variable, exponent)` pairs in ascending variable order; every
+    /// exponent is `> 0`. The constant monomial yields an empty iterator.
+    pub fn powers(&self) -> impl Iterator<Item = (&str, u32)> {
+        self.powers.iter().map(|(name, exp)| (name.as_str(), *exp))
+    }
+
     /// The product of two monomials (add exponents), or `None` on `u32` exponent
     /// overflow.
     fn mul(&self, other: &Monomial) -> Option<Monomial> {
@@ -205,6 +211,28 @@ impl MvPoly {
     #[must_use]
     pub fn is_zero(&self) -> bool {
         self.terms.is_empty()
+    }
+
+    /// The number of stored `(monomial, coefficient)` terms.
+    ///
+    /// Deliberately **not** named `len`: `is_zero` is already the emptiness
+    /// predicate, and the count exists so callers can impose a size ceiling on
+    /// an expansion (a product of two dense polynomials squares the term count),
+    /// not to make `MvPoly` look like a collection.
+    #[must_use]
+    pub fn term_count(&self) -> usize {
+        self.terms.len()
+    }
+
+    /// The stored `(monomial, coefficient)` terms in ascending [`Monomial`]
+    /// order.
+    ///
+    /// The order is the `BTreeMap` key order, so it is canonical and
+    /// deterministic: equal polynomials yield identical sequences. Coefficients
+    /// are always nonzero. This is the accessor a certificate emitter uses to
+    /// serialize the polynomial normal form.
+    pub fn terms(&self) -> impl Iterator<Item = (&Monomial, &Rational)> {
+        self.terms.iter()
     }
 
     /// The set of variables occurring in this polynomial.

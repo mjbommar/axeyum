@@ -204,6 +204,7 @@ version = "0.1.0"
 dependencies = [
  "axeyum-aig",
  "axeyum-bv",
+ "axeyum-cas",
  "axeyum-cnf",
  "axeyum-egraph",
  "axeyum-fp",

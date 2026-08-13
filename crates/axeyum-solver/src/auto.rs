@@ -32,6 +32,7 @@ use axeyum_rewrite::{
 };
 
 use crate::backend::{CheckResult, SolverConfig, SolverError, UnknownKind, UnknownReason};
+use crate::cas_poly::CasOutcome;
 use crate::combined::check_with_all_theories;
 use crate::dpll_lia::{check_with_arith_dpll, check_with_lia_dpll};
 use crate::lia::DEFAULT_INT_WIDTH;
@@ -198,9 +199,7 @@ fn quantified_timeout(stage: &str) -> CheckResult {
 /// quantified fallbacks cannot replace it with an operational shape error.
 /// A genuinely unsupported finite front door remains an error unless a later
 /// route decides the query.
-fn retained_finite_unknown(
-    result: Result<CheckResult, SolverError>,
-) -> Option<CheckResult> {
+fn retained_finite_unknown(result: Result<CheckResult, SolverError>) -> Option<CheckResult> {
     match result {
         Ok(result @ CheckResult::Unknown(_)) => Some(result),
         Err(SolverError::Unsupported(_)) => None,
@@ -268,8 +267,7 @@ fn finish_quantified_solve(
         return Ok(quantified_timeout("forall-exists witness search"));
     };
     match check_with_quantifiers(arena, assertions, &finite_config) {
-        finite_result
-        @ (Ok(CheckResult::Unknown(_)) | Err(SolverError::Unsupported(_))) => {
+        finite_result @ (Ok(CheckResult::Unknown(_)) | Err(SolverError::Unsupported(_))) => {
             let finite_unknown = retained_finite_unknown(finite_result);
             qtrace("finite-expansion", t0, "declined");
             // Pure-UF finite model finding, probed BEFORE the refutation
@@ -1398,6 +1396,9 @@ fn check_auto_with_recorder(
             t.record_decided("term-identity-refuter", Verdict::Unsat);
         });
         return Ok(CheckResult::Unsat);
+    }
+    if let Some(result) = dispatch_cas_refuters(arena, assertions, &features, rec) {
+        return Ok(result);
     }
     if features.has_array
         && let Some(model) = crate::array_fifo::fifo_ia04_sat_model(arena, assertions)
@@ -3300,9 +3301,7 @@ fn check_auto_dispatch(
         // for everything else (linear UF, over the eager admission bound, or an
         // out-of-fragment elimination).
         let real_config = config_with_remaining_deadline(config, dispatch_deadline);
-        if let Some(result) =
-            dispatch_uf_nra(arena, assertions, &real_config, &features, rec)?
-        {
+        if let Some(result) = dispatch_uf_nra(arena, assertions, &real_config, &features, rec)? {
             return Ok(result);
         }
         // Conjunction of single-variable nonlinear-real polynomial constraints
@@ -3478,13 +3477,7 @@ fn check_auto_dispatch(
     }
 
     if features.has_int {
-        return dispatch_nonlinear_int_tail(
-            arena,
-            assertions,
-            config,
-            dispatch_deadline,
-            rec,
-        );
+        return dispatch_nonlinear_int_tail(arena, assertions, config, dispatch_deadline, rec);
     }
 
     let mut backend = SatBvBackend::new();
@@ -3598,6 +3591,100 @@ fn dispatch_uf_pigeonhole(
         t.record_decided("uf-finite-domain-pigeonhole", Verdict::Unsat);
     });
     Some(CheckResult::Unsat)
+}
+
+/// The two CAS refutation routes (ADR-0386), tried immediately after
+/// `term-identity-refuter` and before any theory engine runs.
+///
+/// Both are exact, deterministic, and bounded by node/monomial ceilings rather
+/// than a clock, and both hand their certificate to the independent checker in
+/// [`crate::cas_certificate`] before returning — so they are cheap enough to sit
+/// on the fast path and cannot return an unchecked `unsat`.
+///
+/// Declines are recorded, not silent, but **only when the route actually had a
+/// candidate shape to work on** ([`CasOutcome::NoCandidate`] records nothing).
+/// That keeps the trail diagnosable exactly where diagnosis is wanted — the past
+/// bug this discipline comes from is the one documented on
+/// [`record_nia_decline`], where an undecided `QF_NIA` query's trace showed only
+/// `int-blast-ladder` — without appending two entries to the trace of every
+/// unrelated query.
+fn dispatch_cas_refuters(
+    arena: &TermArena,
+    assertions: &[TermId],
+    features: &Features,
+    rec: &mut Recorder<'_>,
+) -> Option<CheckResult> {
+    // Polynomial normalization only has purchase on integer/real arithmetic; a
+    // pure Bool/BV/string query never enters, so the fast path pays one check.
+    if !(features.has_int || features.has_real) {
+        return None;
+    }
+    match crate::cas_poly::cas_identity_refutation(arena, assertions) {
+        CasOutcome::Refuted(_) => {
+            with_recorder(rec, |t| {
+                t.record_decided("cas-identity-refuter", Verdict::Unsat);
+            });
+            return Some(CheckResult::Unsat);
+        }
+        CasOutcome::NoCandidate => {}
+        CasOutcome::NotRefuted(why) => {
+            record_cas_decline(
+                rec,
+                "cas-identity-refuter",
+                DeclineReason::Incomplete(incomplete_reason(why)),
+            );
+        }
+        CasOutcome::VerifierRejected => {
+            record_cas_decline(
+                rec,
+                "cas-identity-refuter",
+                DeclineReason::VerifierRejected(
+                    "polynomial normal form disagreed with the independent expansion".to_owned(),
+                ),
+            );
+        }
+    }
+    match crate::cas_poly::cas_int_units_refutation(arena, assertions) {
+        CasOutcome::Refuted(_) => {
+            with_recorder(rec, |t| {
+                t.record_decided("cas-int-units", Verdict::Unsat);
+            });
+            Some(CheckResult::Unsat)
+        }
+        CasOutcome::NoCandidate => None,
+        CasOutcome::NotRefuted(why) => {
+            record_cas_decline(
+                rec,
+                "cas-int-units",
+                DeclineReason::Incomplete(incomplete_reason(why)),
+            );
+            None
+        }
+        CasOutcome::VerifierRejected => {
+            record_cas_decline(
+                rec,
+                "cas-int-units",
+                DeclineReason::VerifierRejected(
+                    "divisibility certificate failed its independent re-check".to_owned(),
+                ),
+            );
+            None
+        }
+    }
+}
+
+/// An [`UnknownReason`] carrying a CAS route's decline text.
+fn incomplete_reason(detail: &str) -> UnknownReason {
+    UnknownReason {
+        kind: UnknownKind::Incomplete,
+        detail: detail.to_owned(),
+    }
+}
+
+/// Records a CAS route decline. Telemetry only — `rec` never participates in a
+/// branch, so the verdict is independent of it.
+fn record_cas_decline(rec: &mut Recorder<'_>, route: &'static str, reason: DeclineReason) {
+    with_recorder(rec, |t| t.record_declined(route, reason));
 }
 
 /// Records that a `QF_NIA` route declined, with the reason the route reported.
