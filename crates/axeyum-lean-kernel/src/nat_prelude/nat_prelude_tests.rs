@@ -60,7 +60,7 @@ impl Fixture {
 /// have. `Nat`/`Nat.zero`/`Nat.succ`/`Nat.rec`/`Nat.le`/… are inductive
 /// machinery, so they are checked separately by `environment().contains`.
 fn definition_names(p: &NatPrelude) -> Vec<NameId> {
-    vec![p.add, p.mul, p.pow]
+    vec![p.add, p.mul, p.pow, p.dvd]
 }
 
 fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
@@ -87,6 +87,8 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.le_succ_succ,
         p.le_trans,
         p.le_add_right,
+        p.dvd_mul,
+        p.dvd_add,
     ]
 }
 
@@ -263,6 +265,35 @@ fn the_order_fragment_bounds_concrete_numerals() {
     f.declare_theorem(name2, stmt2, proof2)
         .unwrap_or_else(|e| panic!("one_le_four should admit: {}", f.explain(&e)));
     println!("one_le_four : {}", f.k.render_lean(stmt2));
+}
+
+/// Divisibility is a real prelude definition, not a test-only proposition:
+/// witness introduction proves `2 ∣ 6`, and `dvd_add` composes proofs of
+/// `2 ∣ 4` and `2 ∣ 6` into a checked proof of `2 ∣ 10`.
+#[test]
+fn divisibility_introduction_and_addition_are_checked() {
+    let mut f = Fixture::new();
+    let p = f.p;
+    let two = f.num(2);
+    let three = f.num(3);
+    let four = f.num(4);
+    let six = f.num(6);
+    let ten = f.num(10);
+
+    let two_dvd_six = f.dvd(two, six);
+    let proof = f.lemma(p.dvd_mul, &[two, three]);
+    let six_name = f.name("two_dvd_six");
+    f.declare_theorem(six_name, two_dvd_six, proof)
+        .unwrap_or_else(|e| panic!("2 ∣ 6 should admit: {}", f.explain(&e)));
+
+    let two_again = f.num(2);
+    let h4 = f.lemma(p.dvd_mul, &[two, two_again]);
+    let h6 = f.const_app(six_name, &[]);
+    let two_dvd_ten = f.dvd(two, ten);
+    let proof_add = f.lemma(p.dvd_add, &[two, four, six, h4, h6]);
+    let ten_name = f.name("two_dvd_ten");
+    f.declare_theorem(ten_name, two_dvd_ten, proof_add)
+        .unwrap_or_else(|e| panic!("2 ∣ 10 should admit: {}", f.explain(&e)));
 }
 
 /// NEGATIVE CONTROLS. Each feeds the kernel a deliberately broken proof and
@@ -471,7 +502,34 @@ fn kernel_rejects_broken_proof_terms() {
         rejections += 1;
     }
 
-    assert_eq!(rejections, 8, "every negative control must be rejected");
+    // NC9 — `dvd_add` proves closure under addition, not multiplication. Feed
+    // its proof of `2 ∣ 4 + 6` to the false goal `2 ∣ 4 * 6 + 1`.
+    {
+        let name = f.name("nc9_dvd_add_wrong_target");
+        let two = f.num(2);
+        let two_again = f.num(2);
+        let three = f.num(3);
+        let four = f.num(4);
+        let six = f.num(6);
+        let h4 = f.lemma(p.dvd_mul, &[two, two_again]);
+        let h6 = f.lemma(p.dvd_mul, &[two, three]);
+        let proof = f.lemma(p.dvd_add, &[two, four, six, h4, h6]);
+        let product = f.mul(four, six);
+        let one = f.num(1);
+        let bad_target = f.add(product, one);
+        let bad = f.dvd(two, bad_target);
+        let err = f
+            .declare_theorem(name, bad, proof)
+            .expect_err("NC9: dvd_add must not prove divisibility of a wrong target");
+        println!(
+            "NC9 (wrong divisibility target) rejected:\n  {}",
+            f.explain(&err)
+        );
+        assert!(!f.k.environment().contains(name));
+        rejections += 1;
+    }
+
+    assert_eq!(rejections, 9, "every negative control must be rejected");
 }
 
 /// The build is deterministic: two independent kernels render every promised
@@ -494,7 +552,7 @@ fn the_build_is_deterministic() {
     assert_eq!(first, second, "the prelude build must be deterministic");
     assert_eq!(
         first.len(),
-        3 + 22,
+        4 + 24,
         "every promised definition and theorem must be rendered"
     );
 }

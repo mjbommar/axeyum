@@ -43,10 +43,15 @@
 //! is kernel-generated. Theorems: `zero_le`, `le_succ_succ`, `le_trans`,
 //! `le_add_right`.
 //!
+//! **Divisibility**: `Nat.dvd a n := Exists (fun q => n = a * q)`, together
+//! with checked theorems `dvd_mul` (witness introduction) and `dvd_add`
+//! (closure under addition by two `Exists.rec` eliminations).
+//!
 //! ## What is **not** here
 //!
 //! No subtraction/predecessor, no `lt`, no antisymmetry, totality, or
-//! decidability of `le`, no division, no `n ≠ succ n`-style discrimination.
+//! decidability of `le`, no quotient/remainder division, no
+//! `n ≠ succ n`-style discrimination.
 //! Adding those is ordinary work on top of this prelude, not a kernel question:
 //! the order fragment is deliberately minimal (see [`NatPrelude::le`]).
 //!
@@ -180,6 +185,14 @@ pub struct NatPrelude {
     pub le_trans: NameId,
     /// `le_add_right : ∀ (n k : Nat), Le n (add n k)`.
     pub le_add_right: NameId,
+
+    // --- divisibility -------------------------------------------------------
+    /// `Nat.dvd : Nat → Nat → Prop`, where `dvd a n := ∃ q, n = a * q`.
+    pub dvd: NameId,
+    /// `Nat.dvd_mul : ∀ a q, dvd a (a * q)`.
+    pub dvd_mul: NameId,
+    /// `Nat.dvd_add : ∀ a m n, dvd a m → dvd a n → dvd a (m + n)`.
+    pub dvd_add: NameId,
 }
 
 /// Declare the natural-number prelude into `kernel`'s environment, returning the
@@ -248,6 +261,9 @@ pub fn build_nat_prelude(kernel: &mut Kernel) -> Result<NatPrelude, KernelError>
             le_succ_succ: kernel.name_str(nat, "le_succ_succ"),
             le_trans: kernel.name_str(nat, "le_trans"),
             le_add_right: kernel.name_str(nat, "le_add_right"),
+            dvd: kernel.name_str(nat, "dvd"),
+            dvd_mul: kernel.name_str(nat, "dvd_mul"),
+            dvd_add: kernel.name_str(nat, "dvd_add"),
         };
 
         let mut d = NatDev::new(kernel, p);
@@ -256,6 +272,7 @@ pub fn build_nat_prelude(kernel: &mut Kernel) -> Result<NatPrelude, KernelError>
         declare_additive_theorems(&mut d, &p)?;
         declare_multiplicative_theorems(&mut d, &p)?;
         declare_order(&mut d, &p)?;
+        declare_divisibility(&mut d, &p)?;
         Ok(p)
     })();
     match built {
@@ -914,6 +931,148 @@ fn declare_order(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> 
     Ok(())
 }
 
+/// `Nat.dvd`, `dvd_mul`, and `dvd_add`, all constructed from the logic
+/// prelude's checked `Exists` eliminator and the proved Nat multiplication
+/// laws. No proposition is admitted as an axiom.
+fn declare_divisibility(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> {
+    let p = *p;
+    let nat = d.nat_ty();
+    let anon = d.anon_name();
+    let prop = d.kernel().sort_zero();
+    let one = d.level_one();
+
+    // dvd a n := Exists Nat (fun q => Eq Nat n (a * q))
+    {
+        let a_fv = d.fresh_fvar();
+        let a = d.kernel().fvar(a_fv);
+        let n_fv = d.fresh_fvar();
+        let n = d.kernel().fvar(n_fv);
+        let pred = d.dvd_predicate(a, n);
+        let exists = d.kernel().const_(p.logic.exists_, vec![one]);
+        let body = d.apply(exists, &[nat, pred]);
+        let value = {
+            let inner = d.lam_fv(n_fv, nat, body);
+            d.lam_fv(a_fv, nat, inner)
+        };
+        let ty = {
+            let inner = d.kernel().pi(anon, nat, prop, BinderInfo::Default);
+            d.kernel().pi(anon, nat, inner, BinderInfo::Default)
+        };
+        d.kernel().add_declaration(Declaration::Definition {
+            name: p.dvd,
+            uparams: vec![],
+            ty,
+            value,
+            hint: ReducibilityHint::Regular(4),
+        })?;
+    }
+
+    // dvd_mul : ∀ a q, dvd a (a * q)
+    d.theorem(p.dvd_mul, 2, &|d, v| {
+        let (a, q) = (v[0], v[1]);
+        let aq = d.mul(a, q);
+        let stmt = d.dvd(a, aq);
+        let pred = d.dvd_predicate(a, aq);
+        let witness_proof = d.refl(aq);
+        let one = d.level_one();
+        let intro_name = d.prelude().logic.exists_intro;
+        let intro = d.kernel().const_(intro_name, vec![one]);
+        let nat = d.nat_ty();
+        let proof = d.apply(intro, &[nat, pred, q, witness_proof]);
+        (stmt, proof)
+    })?;
+
+    // dvd_add : ∀ a m n, dvd a m → dvd a n → dvd a (m + n)
+    {
+        let a_fv = d.fresh_fvar();
+        let a = d.kernel().fvar(a_fv);
+        let m_fv = d.fresh_fvar();
+        let m = d.kernel().fvar(m_fv);
+        let n_fv = d.fresh_fvar();
+        let n = d.kernel().fvar(n_fv);
+        let h1_fv = d.fresh_fvar();
+        let h1 = d.kernel().fvar(h1_fv);
+        let h2_fv = d.fresh_fvar();
+        let h2 = d.kernel().fvar(h2_fv);
+        let h1_ty = d.dvd(a, m);
+        let h2_ty = d.dvd(a, n);
+        let mn = d.add(m, n);
+        let goal = d.dvd(a, mn);
+        let p1 = d.dvd_predicate(a, m);
+        let p2 = d.dvd_predicate(a, n);
+        let one = d.level_one();
+
+        let motive_for = |d: &mut NatDev<'_>, pred: ExprId| {
+            let exists_name = d.prelude().logic.exists_;
+            let exists = d.kernel().const_(exists_name, vec![one]);
+            let nat = d.nat_ty();
+            let dom = d.apply(exists, &[nat, pred]);
+            let anon = d.anon_name();
+            d.kernel().lam(anon, dom, goal, BinderInfo::Default)
+        };
+
+        let minor1 = {
+            let q1_fv = d.fresh_fvar();
+            let q1 = d.kernel().fvar(q1_fv);
+            let aq1 = d.mul(a, q1);
+            let e1_fv = d.fresh_fvar();
+            let e1_ty = d.eq(m, aq1);
+            let e1 = d.kernel().fvar(e1_fv);
+            let minor2 = {
+                let q2_fv = d.fresh_fvar();
+                let q2 = d.kernel().fvar(q2_fv);
+                let aq2 = d.mul(a, q2);
+                let e2_fv = d.fresh_fvar();
+                let e2_ty = d.eq(n, aq2);
+                let e2 = d.kernel().fvar(e2_fv);
+
+                // m+n = a*q1+n = a*q1+a*q2 = a*(q1+q2)
+                let s1 = d.add(aq1, n);
+                let c1 = d.congr(m, aq1, e1, &|d, t| d.add(t, n));
+                let s2 = d.add(aq1, aq2);
+                let c2 = d.congr(n, aq2, e2, &|d, t| d.add(aq1, t));
+                let q12 = d.add(q1, q2);
+                let aq12 = d.mul(a, q12);
+                let h_distrib = d.lemma(p.left_distrib, &[a, q1, q2]);
+                let c3 = d.symm(aq12, s2, h_distrib);
+                let (_, witness_proof) = d.chain(mn, &[(s1, c1), (s2, c2), (aq12, c3)]);
+                let pred = d.dvd_predicate(a, mn);
+                let intro = d.kernel().const_(p.logic.exists_intro, vec![one]);
+                let nat = d.nat_ty();
+                let body = d.apply(intro, &[nat, pred, q12, witness_proof]);
+                let with_e2 = d.lam_fv(e2_fv, e2_ty, body);
+                d.lam_fv(q2_fv, nat, with_e2)
+            };
+            let motive2 = motive_for(d, p2);
+            let rec = d.kernel().const_(p.logic.exists_rec, vec![one]);
+            let nat = d.nat_ty();
+            let inner = d.apply(rec, &[nat, p2, motive2, minor2, h2]);
+            let with_e1 = d.lam_fv(e1_fv, e1_ty, inner);
+            d.lam_fv(q1_fv, nat, with_e1)
+        };
+        let motive1 = motive_for(d, p1);
+        let rec = d.kernel().const_(p.logic.exists_rec, vec![one]);
+        let proof = d.apply(rec, &[nat, p1, motive1, minor1, h1]);
+
+        let ty = {
+            let t = d.kernel().pi(anon, h2_ty, goal, BinderInfo::Default);
+            let t = d.pi_fv(h1_fv, h1_ty, t);
+            let t = d.pi_fv(n_fv, nat, t);
+            let t = d.pi_fv(m_fv, nat, t);
+            d.pi_fv(a_fv, nat, t)
+        };
+        let value = {
+            let v = d.lam_fv(h2_fv, h2_ty, proof);
+            let v = d.lam_fv(h1_fv, h1_ty, v);
+            let v = d.lam_fv(n_fv, nat, v);
+            let v = d.lam_fv(m_fv, nat, v);
+            d.lam_fv(a_fv, nat, v)
+        };
+        d.declare_theorem(p.dvd_add, ty, value)?;
+    }
+    Ok(())
+}
+
 /// The non-kernel state a [`NatOps`] development carries: the interned prelude
 /// names, the cached `Nat` type expression, the anonymous name root, and a
 /// monotone free-variable counter.
@@ -1086,6 +1245,23 @@ pub trait NatOps {
     fn le(&mut self, x: ExprId, y: ExprId) -> ExprId {
         let f = self.prelude().le;
         self.const_app(f, &[x, y])
+    }
+
+    /// `Nat.dvd a n` (the proposition `a ∣ n`).
+    fn dvd(&mut self, a: ExprId, n: ExprId) -> ExprId {
+        let f = self.prelude().dvd;
+        self.const_app(f, &[a, n])
+    }
+
+    /// `fun q : Nat => Eq Nat n (a * q)`, the witness predicate defining
+    /// [`NatPrelude::dvd`].
+    fn dvd_predicate(&mut self, a: ExprId, n: ExprId) -> ExprId {
+        let q_fv = self.fresh_fvar();
+        let q = self.kernel().fvar(q_fv);
+        let aq = self.mul(a, q);
+        let body = self.eq(n, aq);
+        let nat = self.nat_ty();
+        self.lam_fv(q_fv, nat, body)
     }
 
     // --- binders ------------------------------------------------------------

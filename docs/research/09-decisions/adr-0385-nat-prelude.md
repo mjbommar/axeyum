@@ -94,10 +94,10 @@ needs a `pred`-style motive. Its constructor shape is exactly Lean's, so it
 carries no redesign risk, but callers must not mistake it for more.
 
 **What remains missing** is library work, not expressiveness: inversion of
-`≤`, subtraction, and divisibility/valuations. The last of these is the
-gating item for formalizing genuinely number-theoretic statements; the
-capability probes in the Rado development show the kernel supports the term
-shapes such a library would need.
+`≤`, subtraction, and the larger divisibility/valuation layer. ADR-0389 has
+since promoted the proved `Nat.dvd` / `dvd_mul` / `dvd_add` foundation from the
+Rado capability probe; cancellation, congruence, Euclidean division, gcd, and
+valuation remain open.
 
 **Relationship to the north star.** ADR-0036's aim is that every
 `unsat`/`valid` carry a proof a Lean-grade kernel accepts. `arith_prelude`

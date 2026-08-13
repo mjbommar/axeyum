@@ -444,3 +444,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [0386](adr-0386-cas-refutation-routes.md) | Two CAS-backed refutation routes in the auto dispatch, certified by an independent expander | proposed |
 | [0387](adr-0387-fallible-composable-lean-preludes.md) | Fallible, transactional, namespaced Lean preludes for mixed mathematical environments | accepted |
 | [0388](adr-0388-retain-axiomatized-int-and-use-nat-deficits-for-rado.md) | Retain the axiomatized Int reconstruction profile and use Nat prefix deficits for credited Rado rigidity | accepted |
+| [0389](adr-0389-proved-nat-divisibility-foundation.md) | Proved Nat divisibility as the first Rado library extension | accepted |

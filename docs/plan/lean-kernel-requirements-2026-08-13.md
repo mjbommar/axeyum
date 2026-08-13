@@ -94,8 +94,9 @@ real-Lean differential ran. See **R0.1**.
 
 ### 2.2 Crate sizes
 
-**MEASURED.** `axeyum-lean-kernel/src` 15,238 lines across 12 files;
-`axeyum-lean-import/src` 2,466 lines (`lib.rs` 1,778 + `identity.rs` 688).
+**MEASURED.** `axeyum-lean-kernel/src` has 15,560 lines across 15 top-level
+Rust files (23,407 across all 23 Rust files including nested test modules);
+`axeyum-lean-import/src` has 2,466 lines.
 
 ### 2.3 The preludes, and what is axiom versus theorem
 
@@ -105,7 +106,7 @@ This is the single most important distinction in the crate.
 
 | Prelude | Lines | Axiom decls | ADR |
 |---|---:|---:|---|
-| `nat_prelude.rs` | 1,429 | **0** | ADR-0385 |
+| `nat_prelude.rs` | 1,614 | **0** | ADR-0385 / ADR-0389 |
 | `int_prelude.rs` | 839 | 3 statements declaring 34 names | ADR-0042 |
 
 `nat_prelude` is a genuinely *proved* development: `Nat` is a real inductive with
@@ -122,11 +123,12 @@ lt_of_lt_of_le, lt_trans, mul, mul_assoc, mul_comm, mul_le_mul_of_nonneg_left,
 mul_nonneg, mul_one, mul_zero, neg, no_int_between, one, zero, zero_lt_one
 ```
 
-**MEASURED** — `nat_prelude` provides 3 definitions (`Nat.add`, `Nat.mul`,
-`Nat.pow`, each by `Nat.rec` on the second argument so defining equations hold
-*definitionally*), one indexed `Prop` inductive `Nat.le` with a kernel-generated
-recursor, and **22 checked theorems**: 6 defining equations, 5 additive, 7
-multiplicative, 4 order (`zero_le`, `le_succ_succ`, `le_trans`, `le_add_right`).
+**MEASURED** — `nat_prelude` provides 4 definitions (`Nat.add`, `Nat.mul`,
+`Nat.pow`, and `Nat.dvd`); one indexed `Prop` inductive `Nat.le` with a
+kernel-generated recursor; and **24 checked theorems**: 6 defining equations,
+5 additive, 7 multiplicative, 4 order, and 2 divisibility (`dvd_mul`,
+`dvd_add`). Arithmetic definitions recurse on the second argument, and `dvd`
+reduces to an `Exists` witness proposition.
 
 > **Correction.** An earlier pass of this document claimed `≤`-inversion and
 > subtraction were present. They are **not**. That grep matched the doc comment
@@ -135,8 +137,8 @@ multiplicative, 4 order (`zero_le`, `le_succ_succ`, `le_trans`, `le_add_right`).
 > Verified by exact-name search: `Nat.sub`, `Nat.pred`, `Nat.lt`,
 > `Nat.le_of_succ_le_succ`, `Nat.le_antisymm`, `Nat.le_total` — **all 0 hits**.
 >
-> `nat_prelude.rs:46-51` verbatim: *"No subtraction/predecessor, no `lt`, no
-> antisymmetry, totality, or decidability of `le`, no division, no
+> The current module contract says: *"No subtraction/predecessor, no `lt`, no
+> antisymmetry, totality, or decidability of `le`, no quotient/remainder division, no
 > `n ≠ succ n`-style discrimination."*
 >
 > This was the fourth grep-driven error in this workstream. See **R6.3**.
@@ -211,11 +213,11 @@ generated type is itself `infer`-checked; parameters + indices; **mutual**
 |---|---|---|
 | **`Quot.sound` absent** | 0 hits, positive control passes; `PACKAGE_LEN = 4` (`quotient.rs:17`) — `Quot`, `Quot.mk`, `Quot.lift`, `Quot.ind` | Quotients **compute** but carry no propositional content. `r a b → Quot.mk r a = Quot.mk r b` is not available, so **ℤ cannot be constructed as a quotient of ℕ×ℕ today.** See **R2.1** |
 | **All Nat literal arithmetic is inert** | `grep` for `Nat.add`/`mul`/`sub`/`div`/`decEq`/`gcd` fast paths in `tc.rs` → **0 hits**; `nat_literal_semantics.rs:190` asserts `Nat.add` stays inert | `Lit::Nat` is `BigUint` (ADR-0346), but only `succ`, one recursor literal layer, and offset def-eq reduce. All concrete arithmetic is **unary ι-reduction** |
-| **Unary numerals** | `NatOps::num(n)` builds `succ^n zero` (`nat_prelude.rs:1043-1049`) | 312 is the largest value *used* in `rado_shell_arithmetic.rs` — **not a ceiling**; measured directly in §2.6 Probe 3 |
+| **Unary numerals** | `NatOps::num(n)` builds `succ^n zero` (`nat_prelude.rs:1218`) | 312 is the largest value *used* in `rado_shell_arithmetic.rs` — **not a ceiling**; measured directly in §2.6 Probe 3 |
 | **String literals unsupported** | `Lit::Str` → `UnsupportedLit` (`tc.rs:1690`); ADR-0366 preregisters only | not on this document's path |
 | **No `Decidable`, `Classical`, `propext`, `funext`** | 0 hits each | acceptable — all three Rado theorems are constructive (§3.4) |
 | **No `Finset`, `Multiset`, intervals, `List`** | 0 hits each | required by `lem:structure(3)`; see **R4.5** |
-| **`Dvd` typeclass absent; `dvd` exists only test-locally** | 28 `dvd` hits, **all** in `rado_shell_arithmetic.rs:1073-1310` | the capability is proved; the *library* is missing. See **R4.3** |
+| **No `Dvd` typeclass; constructive `Nat.dvd` foundation present** | `Nat.dvd := Exists (fun q => n = a*q)`, plus checked `dvd_mul` and `dvd_add` under ADR-0389 | transitivity/cancellation and congruence remain missing. See **R4.3--R4.4** |
 | **`Acc` / `WellFounded` absent as declarations** | `Acc` 2 hits, both doc prose | the reflexive-field *shape* admits (Probe 2); nothing declares it |
 
 **Export** (`lean_pp.rs`, 1,690 lines) emits **Lean 4 source text**, not the
@@ -1019,7 +1021,7 @@ Ordered by dependency.
 |---|---|---|---|
 | **R4.1** | Complete the order fragment: `lt`, antisymmetry, totality, `le_of_succ_le_succ` (inversion, needs a `pred`-style motive), `min`. | all three theorems | absent |
 | **R4.2** | Truncated subtraction and cancellation. Called out in `route-c/REPORT.md` as *"the first real cost; it is what makes valuations usable."* | all three | absent |
-| **R4.3** | Divisibility as a **prelude-level** definition with its lemma set. The capability is proved (`dvd_mul`, `dvd_add` via `Exists`) but lives only inside a test. | all three | test-local only |
+| **R4.3** | Divisibility as a **prelude-level** definition with its lemma set. | all three | **WIP:** `Nat.dvd`, `dvd_mul`, and `dvd_add` are zero-axiom prelude declarations under [ADR-0389](../research/09-decisions/adr-0389-proved-nat-divisibility-foundation.md); transitivity/cancellation remain |
 | **R4.4** | Congruence mod `a`. | central to `thm:rigid` | absent |
 | **R4.5** | Intervals, membership, and the partition/covering lemma behind `lem:structure(3)`. Cardinality is needed only as a diameter bound and can be discharged as order arithmetic on endpoints. | all three | absent |
 | **R4.6** | Finite sums `Σ` beyond the existing `geo`/`geo1`, including empty-range corners (`k = 3` in `thm:sharp`). | all three | partial |

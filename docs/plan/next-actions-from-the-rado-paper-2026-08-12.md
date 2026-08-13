@@ -236,12 +236,13 @@ Remaining, in order:
 
 `nat_prelude` landed with **zero axioms** (ADR-0385) — `add`/`mul`/`pow`, the
 algebraic laws, `Nat.le`, and the `Eq` combinators, all proved because `Nat`
-is a real inductive with a real recursor.
+is a real inductive with a real recursor. ADR-0389 has since added the proved
+`Nat.dvd`, `dvd_mul`, and `dvd_add` foundation without changing that boundary.
 
 `Nat.le` ships narrowly and is documented as such: no `lt`, antisymmetry,
 totality, decidability, or `le_of_succ_le_succ` inversion.
 
-**Divisibility and valuations are the gating item** for formalizing anything
+**The remaining divisibility and valuation library is the gating item** for formalizing anything
 genuinely number-theoretic — which is to say, for formalizing this paper's
 actual theorems rather than its arithmetic identities. Route: inversion of
 `<=`, subtraction, then gcd by well-founded recursion (`Acc`-shaped recursion
