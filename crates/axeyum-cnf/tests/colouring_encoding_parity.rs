@@ -229,8 +229,14 @@ fn stored_ledger_cnf_artifacts_regenerate_byte_identically() {
 /// Instances the claim ledger cites, as `(a, b, k, n)` where `n = R_k`.
 ///
 /// Kept as data rather than read from `claim.json` so this crate needs no JSON
-/// dependency; layer 1 walks the artifacts on disk and would fail if the ledger
-/// grew a formula this list does not mention.
+/// dependency.
+///
+/// CORRECTION 2026-08-13: this comment used to claim layer 1 "would fail if the
+/// ledger grew a formula this list does not mention". It would not. Layer 1
+/// walks the artifacts on disk and never consults this list, so the two can
+/// drift apart silently; today they happen to coincide at 36. The stated
+/// safety property did not exist, and it guarded exactly the drift the paper's
+/// macro note warns about.
 const LEDGER_INSTANCES: &[(usize, usize, usize, usize)] = &[
     (1, 1, 3, 14),
     (1, 2, 3, 43),
