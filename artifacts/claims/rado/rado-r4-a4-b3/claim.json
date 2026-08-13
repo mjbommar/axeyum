@@ -107,10 +107,34 @@
       "artifact_format": "colouring-text"
     },
     {
+      "id": "upper-cover-dumped",
+      "kind": "cube-cover",
+      "supports": "R_4 <= 313 (upper bound, complete cover with all proofs retained)",
+      "artifact": "artifacts/claims/rado/rado-r4-a4-b3/cube-cover.tsv",
+      "artifact_sha256": "b3f74cf442b418f8bf7fe3b778a269f8d5c4530e4e94f709081c8c05a3c99bb6",
+      "check_status": "checked",
+      "checker_command": "BRANCH=2,4,6,8,10,12 certify_cover r_d313.cnf d313.tsv proofs_d313 4 14   # axeyum check_drat_backward",
+      "parameters": {
+        "branch": [
+          2,
+          4,
+          6,
+          8,
+          10,
+          12
+        ],
+        "cubes": 4096,
+        "checked_cubes": 4096,
+        "deferred_cubes": 0
+      },
+      "notes": "RENAMED 2026-08-13 to cube-cover.tsv: this is the primary evidence for the upper bound -- 4096 cells, exhaustive over [1..4]^6, zero deferred, every cell unsat and every per-cell proof checked at production time. Complete exhaustive cover of [1..4]^6, produced and CERTIFIED entirely by axeyum. Search: 4096/4096 cells refuted in 164.5 s on 14 workers with all proofs retained (9.0 GiB). Certification: all 4096 per-cell DRAT proofs verified by axeyum's in-tree backward checker in 268.4 s -- 149,439,877 proof steps, zero failures, zero missing. Each cell's augmented formula is rebuilt from the recorded colour tuple, not taken from the proof. The artifact is the CERTIFICATION ledger emitted by that pass -- one row per cell recording the backward checker's verdict -- not the search ledger. Conflating the two was caught by the validator: the search ran with inline checking disabled, so its own ledger records every cell as deferred.",
+      "artifact_format": "tsv-ledger"
+    },
+    {
       "id": "upper-cube-cover",
       "kind": "cube-cover",
       "supports": "R_4 <= 313 (upper bound)",
-      "artifact": "artifacts/claims/rado/rado-r4-a4-b3/cube-cover.tsv",
+      "artifact": "artifacts/claims/rado/rado-r4-a4-b3/cube-cover-depth5-partial.tsv",
       "artifact_sha256": "eff8f98d6b370c3e6303683a6fc28e708a8d783228809630d6237a22db5c3753",
       "check_status": "replay-only",
       "checker_command": "python3 scripts/check-claim-certificates.py --only rado-r4-a4-b3",
@@ -126,7 +150,7 @@
         "checked_cubes": 800,
         "deferred_cubes": 224
       },
-      "notes": "1024/1024 cells refuted by the axeyum proof-producing CDCL core; 800 per-cell DRAT proofs accepted by the in-tree check_drat, 224 deferred past the check cap. Reproduced independently on two hosts with different worker counts, both reporting 80,975,667 derived clauses -- bit-identical, as the determinism contract requires. The residual 'checked refutations of an exhaustive cover imply UNSAT' step is a meta-argument, not a checked DRAT derivation.",
+      "notes": "RENAMED 2026-08-13 from cube-cover.tsv. This is a depth-5, 1024-cell cover with 224 cells DEFERRED (unchecked), which is why it is replay-only. It previously held the default filename, so a referee opening the obvious artifact for this claim found the partial cover while the prose described the complete one. The 4096-cell exhaustive cover with zero deferred cells now carries that name. 1024/1024 cells refuted by the axeyum proof-producing CDCL core; 800 per-cell DRAT proofs accepted by the in-tree check_drat, 224 deferred past the check cap. Reproduced independently on two hosts with different worker counts, both reporting 80,975,667 derived clauses -- bit-identical, as the determinism contract requires. The residual 'checked refutations of an exhaustive cover imply UNSAT' step is a meta-argument, not a checked DRAT derivation.",
       "artifact_format": "tsv-ledger"
     },
     {
@@ -173,30 +197,6 @@
         "deferred_cubes": 735
       },
       "notes": "Third exhaustive decomposition, branching on odd integers only. Fewer proofs checked, but it exercises a disjoint branch set.",
-      "artifact_format": "tsv-ledger"
-    },
-    {
-      "id": "upper-cover-dumped",
-      "kind": "cube-cover",
-      "supports": "R_4 <= 313 (upper bound, complete cover with all proofs retained)",
-      "artifact": "artifacts/claims/rado/rado-r4-a4-b3/cube-cover-complete-dumped.tsv",
-      "artifact_sha256": "b3f74cf442b418f8bf7fe3b778a269f8d5c4530e4e94f709081c8c05a3c99bb6",
-      "check_status": "checked",
-      "checker_command": "BRANCH=2,4,6,8,10,12 certify_cover r_d313.cnf d313.tsv proofs_d313 4 14   # axeyum check_drat_backward",
-      "parameters": {
-        "branch": [
-          2,
-          4,
-          6,
-          8,
-          10,
-          12
-        ],
-        "cubes": 4096,
-        "checked_cubes": 4096,
-        "deferred_cubes": 0
-      },
-      "notes": "Complete exhaustive cover of [1..4]^6, produced and CERTIFIED entirely by axeyum. Search: 4096/4096 cells refuted in 164.5 s on 14 workers with all proofs retained (9.0 GiB). Certification: all 4096 per-cell DRAT proofs verified by axeyum's in-tree backward checker in 268.4 s -- 149,439,877 proof steps, zero failures, zero missing. Each cell's augmented formula is rebuilt from the recorded colour tuple, not taken from the proof. The artifact is the CERTIFICATION ledger emitted by that pass -- one row per cell recording the backward checker's verdict -- not the search ledger. Conflating the two was caught by the validator: the search ran with inline checking disabled, so its own ledger records every cell as deferred.",
       "artifact_format": "tsv-ledger"
     }
   ],
