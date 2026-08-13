@@ -8,8 +8,8 @@ use axeyum_cnf::AletheCommand;
 use axeyum_ir::{ArraySortKey, Sort, TermArena};
 use axeyum_smtlib::parse_script;
 use axeyum_solver::{
-    ArrayAxiomKind, Evidence, EvidenceReport, SolverConfig, TrustId, produce_evidence,
-    produce_lra_dpll_evidence, produce_lra_evidence, produce_qf_bv_evidence,
+    ArrayAxiomKind, Evidence, EvidenceCheck, EvidenceReport, NoCheckReason, SolverConfig, TrustId,
+    produce_evidence, produce_lra_dpll_evidence, produce_lra_evidence, produce_qf_bv_evidence,
 };
 
 /// The trust-step ids a report depends on (P3.0).
@@ -1613,7 +1613,9 @@ fn timed_produce_evidence_can_skip_optional_array_reduction_export() {
     // With an explicit wall-clock evidence budget, the unified front door remains
     // timely after solve has already decided `unsat`: if no stronger certificate
     // applies, it may skip the optional reduced-CNF DRAT export and return a bare
-    // checked unsat instead of overrunning the audit budget.
+    // uncertified unsat instead of overrunning the audit budget. Skipping keeps
+    // the verdict and loses only the certificate — and the check API says so
+    // (ADR-0384) instead of vacuously passing as it did before.
     let mut arena = TermArena::new();
     let mem = arena
         .declare(
@@ -1640,7 +1642,17 @@ fn timed_produce_evidence_can_skip_optional_array_reduction_export() {
     let report = produce_evidence(&mut arena, &[i_eq_j, load_ne_v], &config()).unwrap();
     assert!(matches!(report.evidence, Evidence::Unsat(None)));
     assert!(!report.evidence.is_certified());
-    assert!(report.evidence.check(&arena, &[i_eq_j, load_ne_v]).unwrap());
+    // A bare uncertified unsat is NOT a verification: boolean `check` is false
+    // and the three-valued outcome names the reason (ADR-0384). Before that
+    // change this returned `Ok(true)` — a green gate over nothing.
+    assert!(!report.evidence.check(&arena, &[i_eq_j, load_ne_v]).unwrap());
+    assert!(matches!(
+        report
+            .evidence
+            .check_outcome(&arena, &[i_eq_j, load_ne_v])
+            .unwrap(),
+        EvidenceCheck::NothingToCheck(NoCheckReason::UncertifiedUnsat)
+    ));
 }
 
 #[test]
