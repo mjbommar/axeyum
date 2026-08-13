@@ -26,9 +26,7 @@ benchmark ledgers remain under [`docs/plan/`](docs/plan/README.md),
 [`bench-results/`](bench-results/README.md). They provide evidence and task
 detail; they do not override the order or current state in this file.
 
-The pre-consolidation journals remain available immutably in Git at revision
-`803c08439`: `PLAN.md` blob `fe75343c2f9dc8c845fe03246dfde7552690c77c`
-and `STATUS.md` blob `0f169eddfabb190f45428090ffb057e8289bf355`.
+Pre-consolidation journals are immutable in Git at revision `803c08439`.
 
 ## Status
 
@@ -45,9 +43,6 @@ default path, replay-checked SAT models, multiple independently checked UNSAT
 evidence routes, broad but uneven theory support, an independent Lean-core
 checker/importer, and several consumers. It is not yet a drop-in Z3 replacement
 or a replacement for the Lean system.
-
-The 2026-08-09 README-only pass adds an application map and architecture/vision
-guide; it changes no capability, evidence, measurement, or roadmap claim.
 
 Exact pushed `e996afd83` passed `just check`; its RDL capture then failed closed
 at 196/200 because allocator arenas accumulated across files. ADR-0379 rejects
@@ -75,33 +70,20 @@ The bounded repair is exact-pushed at `8a6de50ac`. Its rebuilt 11,859,344-byte
 binary (`eec4813b557165ec95afc43912ad9fc2b5400ec94db5b7134ecacd50b100867d`)
 replayed the lost control as byte-identical UNSAT in 3/3 observations at 0.10
 seconds and below 17 MiB peak RSS; both allocation-abort controls and the
-low-atom/31,944-variable IDL control retained typed pre-SAT declines. All six
-observations started at load 11.83, exited 0, and emitted zero stderr. Formatting,
+low-atom/31,944-variable IDL control retained typed pre-SAT declines. Formatting,
 strict all-feature solver Clippy, all 1,091 solver-library tests, deep-input
 16/16, online arithmetic/CDCL(T) 41/41, and both differential suites are green
 with zero disagreement. Exact pushed checkpoint `3267432a7` then passed one
 uninterrupted external-frontier `just check` in 6,410 seconds with exit 0; see the
 [result](docs/plan/qf-linear-a5-pre-sat-boundary-monotonicity-v1-result-2026-08-10.md).
 
-The QF_LRA restart at `775446932` completed 200 rows with zero stderr and no
-verdict loss, then failed closed on a latent `sc-39` classifier mismatch. The
-exact-phrase repair at `d646382e7` passed its focused audit; exact pushed
-documentation descendant `b9938576b` then passed a fresh uninterrupted
-external-frontier `just check` in 6,335 seconds with exit 0. Fresh pinned
-checkpoint `d0e0d6cea` completed QF_LRA 200/200 with zero stderr. Its join
-retained all 86 historical decisions, added four agreeing decisions, made no
-wrong verdict, classified `sc-39` correctly, and retained the former
-`windowreal` loss as UNSAT. QF_IDL then completed 200/200 but lost two historical
-decisions hidden by two gains; QF_RDL is forbidden. The sequence is non-credited.
-Replay made both losses deterministic. B1 failed and was removed. Unchanged-
-binary G1/D2 returned GraphPartitioning SAT and BubbleSort UNSAT through
-`dl-online` in 3/3 each at 32 seconds. V2 recovers both at 24 seconds and
-preserves all 173 retained decisions. Exact pushed `d1b570f91c2` passed the
-complete external-frontier `just check` in 6,277 seconds with exit 0; the repair
-is release-qualified. Exact-pushed `6d4718e13` then completed fresh atomic
-QF_LRA and QF_IDL captures: 90/200 and 70/200, six agreeing gains total, zero
-losses or wrong verdicts, with `sc-39`, LPSAT, BubbleSort, and GraphPartitioning
-controls retained. QF_RDL is now authorized but not started. See the [result](docs/plan/qf-linear-a5-idl-extended-dl-slice-v2-result-2026-08-11.md).
+The `sc-39` classifier repair (`d646382e7`, gated at `b9938576b`) and the V2
+DL repair (`d1b570f91c2`, full external-frontier `just check` exit 0) are
+release-qualified. Exact-pushed `6d4718e13` completed fresh atomic QF_LRA and
+QF_IDL captures — 90/200 and 70/200, six agreeing gains, zero losses or wrong
+verdicts, all controls retained. QF_RDL is authorized but not started. Full
+detail, including the rejected non-credited streams, is in the
+[result](docs/plan/qf-linear-a5-idl-extended-dl-slice-v2-result-2026-08-11.md).
 
 A3 is **WIP**. Pushed result checkpoint `3696e7dd5` is integrated on current
 main by `47d8cd956`; its retired source tip is in the 2026-08-12 branch-cleanup
@@ -361,19 +343,18 @@ remain non-credited.
 run produced two previously unknown four-colour Rado numbers,
 `R_4(2(x-y)=3z) = 226` (closing an open entry of Chang-De Loera-Wesley,
 ISSAC 2022) and `R_4(4(x-y)=3z) = 313`, both certified end to end by
-axeyum alone: 8192 cube cells, ~250M DRAT steps, zero failures. Landed on the
-way: streaming DRAT proofs (ADR-0381, closing a 27.6 GiB OOM), a backward
-DRAT checker (ADR-0382, 66x, restoring check/solve from 470-670x to
-2.0-2.6x), and the claim ledger (ADR-0380). After the machine move (s1 → s4,
-2026-08-12) the five interrupted lanes were re-verified and completed:
-`Evidence::check`'s green-gate-over-nothing is closed by the three-valued
-`check_outcome` (ADR-0384) with deadline threading and retained checking
-subjects; ground int div/mod folding is verified against the ground evaluator
-including zero divisors (ADR-0383) and gated by the zero-divisor differential
-fuzz; `axeyum-search` is a workspace member with the min-conflicts SLS,
-offline cover certification, and the in-tree `recertify_rado` driver. The 34
-binary-DRAT ledger rows (B8) are being regenerated with axeyum's own core
-across the s6/s7 fleet. Ordered follow-on work:
+axeyum alone: 8192 cube cells, ~250M DRAT steps, zero failures. Landed on
+the way: streaming DRAT proofs (ADR-0381), the backward DRAT checker
+(ADR-0382, 66x), and the claim ledger (ADR-0380). After the s1 → s4 machine
+move all five interrupted lanes were re-verified and completed — the
+three-valued evidence check (ADR-0384), zero-divisor-safe ground int
+folding (ADR-0383), and the `axeyum-search` crate (SLS, offline cover
+certification, `recertify_rado`) — and all 34 binary-DRAT ledger rows were
+regenerated by axeyum's own core: the trusted path is axeyum-only, 38
+claims / 0 errors, landed on main at `b5cc9e73d` with the complete 79-gate
+`check.sh` aggregate green (s5, 2026-08-12). A new claim records
+`R_4(5(x-y)=4z) > 740`, witness verified, the 741 refutation scoped in its
+frontier block. Ordered follow-on work:
 [`rado-session-diary-and-roadmap-2026-08-12.md`](docs/plan/rado-session-diary-and-roadmap-2026-08-12.md);
 issue register:
 [`findings-register-2026-08-12.md`](docs/plan/findings-register-2026-08-12.md).
