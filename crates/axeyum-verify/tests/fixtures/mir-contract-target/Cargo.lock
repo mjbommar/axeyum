@@ -28,6 +28,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "axeyum-cas"
+version = "0.1.0"
+dependencies = [
+ "axeyum-ir",
+ "num-bigint",
+ "num-rational",
+ "num-traits",
+]
+
+[[package]]
 name = "axeyum-cnf"
 version = "0.1.0"
 dependencies = [
@@ -121,6 +131,7 @@ version = "0.1.0"
 dependencies = [
  "axeyum-aig",
  "axeyum-bv",
+ "axeyum-cas",
  "axeyum-cnf",
  "axeyum-egraph",
  "axeyum-fp",
