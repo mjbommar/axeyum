@@ -100,8 +100,9 @@ pub struct StringPrelude {
 ///
 /// # Errors
 ///
-/// Returns a logic-package mismatch, trusted-gate rejection, or exact-package
-/// conflict. A failed string build leaves the pre-call environment unchanged.
+/// Returns a logic-package mismatch, alphabet-key overflow, trusted-gate
+/// rejection, or exact-package conflict. A failed string build leaves the
+/// pre-call environment unchanged.
 pub fn build_string_prelude(
     kernel: &mut Kernel,
     logic: LogicPrelude,
@@ -112,7 +113,7 @@ pub fn build_string_prelude(
         _ => return Err(KernelError::PreludePackageConflict { name: logic.true_ }),
     }
     let alphabet_size = u64::try_from(num_chars)
-        .map_err(|_| KernelError::PreludePackageConflict { name: logic.true_ })?;
+        .map_err(|_| KernelError::StringAlphabetSizeOverflow { num_chars })?;
     let key = PreludeKey::String(alphabet_size);
     if let Some(PreludeValue::String(prelude)) = kernel.cached_prelude(key)? {
         return Ok(prelude);

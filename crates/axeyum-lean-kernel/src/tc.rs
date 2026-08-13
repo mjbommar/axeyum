@@ -198,6 +198,12 @@ pub enum KernelError {
         /// First missing or changed declaration in the package.
         name: crate::name::NameId,
     },
+    /// A requested finite string alphabet cannot be represented by the stable
+    /// `u64` namespace key used by the string prelude package registry.
+    StringAlphabetSizeOverflow {
+        /// Host-sized alphabet cardinality that did not fit the wire key.
+        num_chars: usize,
+    },
     /// A privileged quotient declaration was sent through the ordinary
     /// single-declaration gate rather than the atomic package gate.
     QuotientPackageRequired {
@@ -609,11 +615,15 @@ impl Kernel {
     /// further arguments is already weak-head-normal here.
     fn whnf_no_unfolding(&mut self, e: ExprId) -> ExprId {
         let revision = self.env.len();
-        if let Some(&normalized) = self.whnf_cache.get(&(e, revision)) {
+        if self.whnf_cache.0 != revision {
+            self.whnf_cache.0 = revision;
+            self.whnf_cache.1.clear();
+        }
+        if let Some(&normalized) = self.whnf_cache.1.get(&e) {
             return normalized;
         }
         let normalized = self.whnf_no_unfolding_uncached(e);
-        self.whnf_cache.insert((e, revision), normalized);
+        self.whnf_cache.1.insert(e, normalized);
         normalized
     }
 

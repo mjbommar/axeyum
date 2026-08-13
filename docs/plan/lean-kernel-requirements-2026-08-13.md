@@ -993,6 +993,12 @@ rollback control, regenerated 65-row ledger, and focused gates. This removes
 the mixed-environment infrastructure blocker for `thm:rigid`; it does not
 formalize either half of that theorem or choose its signed-defect encoding.
 
+The follow-up [transaction/cache hardening](lean-kernel-transaction-cache-hardening-result-2026-08-13.md)
+places unchecked environment removal behind one cache-clearing kernel rollback,
+retains only one reachable WHNF revision, makes duplicate registration a
+release-safe pre-insertion assertion, and gives string alphabet overflow its
+real typed cause. Exact snapshot compaction remains measurement-gated.
+
 ### R2 — Foundations of ℤ
 
 | ID | Requirement | Exit |

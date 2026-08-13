@@ -9,6 +9,25 @@
 
 use crate::{BinderInfo, Kernel, Lit};
 
+#[test]
+fn duplicate_prelude_registration_panics_without_replacing_snapshot() {
+    let mut k = Kernel::new();
+    let logic = crate::build_logic_prelude(&mut k).expect("logic prelude builds");
+    let checkpoint = k.prelude_checkpoint();
+    let duplicate = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        k.register_prelude(
+            crate::PreludeKey::Logic,
+            crate::PreludeValue::Logic(logic),
+            checkpoint,
+        );
+    }));
+    assert!(duplicate.is_err());
+    assert_eq!(
+        k.cached_prelude(crate::PreludeKey::Logic),
+        Ok(Some(crate::PreludeValue::Logic(logic)))
+    );
+}
+
 // ---------------------------------------------------------------------------
 // Interning + determinism
 // ---------------------------------------------------------------------------

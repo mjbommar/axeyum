@@ -295,9 +295,7 @@ impl Kernel {
         match action(self) {
             Ok(value) => Ok(value),
             Err(error) => {
-                self.env.rollback_unchecked(checkpoint);
-                self.infer_closed_cache.clear();
-                self.whnf_cache.clear();
+                self.rollback(checkpoint);
                 Err(error)
             }
         }
@@ -397,9 +395,7 @@ impl Kernel {
             temporary_recursors.push(declaration);
         }
 
-        self.env.rollback_unchecked(temporary_checkpoint);
-        self.infer_closed_cache.clear();
-        self.whnf_cache.clear();
+        self.rollback(temporary_checkpoint);
 
         let temporary_names = self.nested_temporary_names(expansion);
         let source_constructor_types = source_families

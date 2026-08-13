@@ -147,6 +147,66 @@ fn beta_reduces_to_argument() {
     assert_eq!(k.whnf(app), a);
 }
 
+/// WHNF entries from prior declaration revisions are unreachable and are
+/// discarded before the first lookup in the new revision.
+#[test]
+fn whnf_cache_retains_only_the_current_environment_revision() {
+    let mut k = Kernel::new();
+    let anon = k.anon();
+    let ty = k.sort_zero();
+    let body = k.bvar(0);
+    let first_lam = k.lam(anon, ty, body, BinderInfo::Default);
+    let first_arg = k.fvar(41);
+    let first = k.app(first_lam, first_arg);
+    assert_eq!(k.whnf(first), first_arg);
+    assert!(k.whnf_cache.1.contains_key(&first));
+
+    let axiom = k.name_str(anon, "cacheRevisionAxiom");
+    k.add_declaration(Declaration::Axiom {
+        name: axiom,
+        uparams: vec![],
+        ty,
+    })
+    .expect("axiom admits");
+
+    let second_lam = k.lam(anon, ty, body, BinderInfo::Default);
+    let second_arg = k.fvar(42);
+    let second = k.app(second_lam, second_arg);
+    assert_eq!(k.whnf(second), second_arg);
+    assert_eq!(k.whnf_cache.0, k.env.len());
+    assert!(k.whnf_cache.1.contains_key(&second));
+    assert!(!k.whnf_cache.1.contains_key(&first));
+}
+
+/// The sole kernel rollback boundary removes the environment suffix and
+/// invalidates both environment-sensitive caches together.
+#[test]
+fn rollback_clears_environment_sensitive_caches() {
+    let mut k = Kernel::new();
+    let checkpoint = k.env.checkpoint();
+    let anon = k.anon();
+    let name = k.name_str(anon, "temporaryCacheAxiom");
+    let ty = k.sort_zero();
+    k.add_declaration(Declaration::Axiom {
+        name,
+        uparams: vec![],
+        ty,
+    })
+    .expect("axiom admits");
+
+    let c = k.const_(name, vec![]);
+    assert_eq!(k.infer(c).expect("constant infers"), ty);
+    assert_eq!(k.whnf(c), c);
+    assert!(!k.infer_closed_cache.is_empty());
+    assert!(!k.whnf_cache.1.is_empty());
+
+    k.rollback(checkpoint);
+    assert!(!k.env.contains(name));
+    assert!(k.infer_closed_cache.is_empty());
+    assert!(k.whnf_cache.1.is_empty());
+    assert_eq!(k.whnf_cache.0, k.env.len());
+}
+
 /// A `Let` whnfs to its instantiated body (zeta).
 #[test]
 fn let_zeta_reduces_to_body() {

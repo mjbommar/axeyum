@@ -160,9 +160,7 @@ impl Kernel {
         match action(self) {
             Ok(value) => Ok(value),
             Err(error) => {
-                self.env.rollback_unchecked(checkpoint);
-                self.infer_closed_cache.clear();
-                self.whnf_cache.clear();
+                self.rollback(checkpoint);
                 Err(error)
             }
         }

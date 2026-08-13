@@ -498,12 +498,22 @@ impl Environment {
     }
 
     /// Remove every declaration first inserted after `checkpoint`.
-    pub(crate) fn rollback_unchecked(&mut self, checkpoint: usize) {
+    fn rollback_unchecked(&mut self, checkpoint: usize) {
         let inserted: Vec<_> = self.insertion_log.drain(checkpoint..).collect();
         for name in inserted.into_iter().rev() {
             self.inductive_groups.remove(&name);
             self.declars.remove(&name);
         }
+    }
+}
+
+impl crate::Kernel {
+    /// Roll back declarations and invalidate every environment-sensitive cache.
+    pub(crate) fn rollback(&mut self, checkpoint: usize) {
+        self.env.rollback_unchecked(checkpoint);
+        self.infer_closed_cache.clear();
+        self.whnf_cache.0 = self.env.len();
+        self.whnf_cache.1.clear();
     }
 }
 

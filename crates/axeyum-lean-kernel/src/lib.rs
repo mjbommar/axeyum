@@ -257,10 +257,9 @@ pub struct Kernel {
     /// independent of the local context, so sharing this cache across recursive
     /// checks avoids exponential re-walks of hash-consed proof DAGs.
     infer_closed_cache: HashMap<ExprId, ExprId>,
-    /// Weak-head normal forms keyed by the declaration-environment size. The
-    /// revision key prevents a result cached before a definition/recursor is
-    /// admitted from suppressing a later valid reduction.
-    whnf_cache: HashMap<(ExprId, usize), ExprId>,
+    /// Weak-head normal forms for exactly one declaration-environment revision.
+    /// A revision change clears unreachable prior entries before lookup.
+    whnf_cache: (usize, HashMap<ExprId, ExprId>),
     /// One-way guard set after transient tables are released for serialization.
     export_only: bool,
 
@@ -311,21 +310,22 @@ impl Kernel {
         value: PreludeValue,
         checkpoint: usize,
     ) {
+        assert!(
+            !self.prelude_packages.contains_key(&key),
+            "prelude package registered twice for one key"
+        );
         let declarations = self.env.declarations_since(checkpoint);
-        let old = self.prelude_packages.insert(
+        self.prelude_packages.insert(
             key,
             PreludePackage {
                 value,
                 declarations,
             },
         );
-        debug_assert!(old.is_none());
     }
 
     pub(crate) fn rollback_prelude(&mut self, checkpoint: usize) {
-        self.env.rollback_unchecked(checkpoint);
-        self.infer_closed_cache.clear();
-        self.whnf_cache.clear();
+        self.rollback(checkpoint);
     }
 
     /// Release hash-consing and typechecking lookup tables before a final,
@@ -345,7 +345,7 @@ impl Kernel {
         self.level_intern = HashMap::new();
         self.expr_intern = ExprInterner::default();
         self.infer_closed_cache = HashMap::new();
-        self.whnf_cache = HashMap::new();
+        self.whnf_cache = (self.env.len(), HashMap::new());
         self.export_only = true;
     }
 
