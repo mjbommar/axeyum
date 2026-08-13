@@ -1,0 +1,108 @@
+{
+  "schema_version": 1,
+  "id": "rado-r4-a6-b5-frontier",
+  "title": "R_4(6(x-y)=5z) > 1500: the shell construction at the next point of the k=4 row",
+  "statement": "The 4-colour Rado number of 6(x-y) = 5z exceeds 1500. The lower bound is a direct instance of the main theorem of this work at (a,b,k) = (6,5,4), which satisfies its hypotheses (a >= 2, gcd(a,b) = 1, b < a, k >= 2), so it costs no search: N = b(a^(k-1) + 2*Sigma_(k-2)) = 5*(216 + 84) = 1500. The construction predicts the exact value 1501 = 6^4 + 6^3 - 2*6 + 1, and tightness is attained at every point where a value is known on the line b = a-1 with a >= 3 and k in {3,4}. The upper bound is OPEN: no refutation of F_1501 has been attempted here. This entry is outside the published tables of Chang-De Loera-Wesley, whose four-colour Table 10 has no (a,b) = (6,5) cell.",
+  "epistemic_status": "open",
+  "formal": {
+    "language": "cnf-family",
+    "family": "rado-colouring-a(x-y)=bz",
+    "parameters": {
+      "a": 6,
+      "b": 5,
+      "k": 4
+    },
+    "generator": "scripts/gen-rado-instance.py",
+    "semantics_note": "artifacts/claims/rado/SEMANTICS.md"
+  },
+  "concept_refs": [
+    {
+      "graph": "math-education",
+      "ref": "C:rado-number",
+      "relation": "frontier-of",
+      "resolved": false,
+      "note": "authored 2026-08-12 at math-education graph/concepts/rado-number.md (uncommitted)"
+    },
+    {
+      "graph": "math-education",
+      "ref": "C:ramsey-number",
+      "relation": "frontier-of",
+      "resolved": true
+    },
+    {
+      "graph": "math-education",
+      "ref": "C:open-problem",
+      "relation": "instance-of",
+      "resolved": true
+    },
+    {
+      "graph": "math-education",
+      "ref": "TQ:colouring",
+      "relation": "uses-technique",
+      "resolved": true
+    },
+    {
+      "graph": "math-education",
+      "ref": "C:computational-search",
+      "relation": "exercises",
+      "resolved": true
+    }
+  ],
+  "axeyum_refs": {
+    "fragments": [],
+    "curriculum_nodes": [
+      "propositional-logic"
+    ]
+  },
+  "provenance": {
+    "conjectured_by": "theorem: the main theorem of this work applies at (a,b,k) = (6,5,4) and yields N = 1500 with no computation; the exact value 1501 is predicted by the tightness pattern on the line b = a-1, not proved",
+    "searched_by": [
+      "none: the colouring is written down from Definition 3.1 of the paper, not searched for"
+    ],
+    "checked_by": [
+      "shell.py, an independent reimplementation of Definition 3.1 written from the paper text and sharing no code with the ledger's generators: built the [1500] colouring and enumerated all 218,125 solution triples of 6(x-y)=5z in [1500] by direct search over (x,y) with no gcd reduction; none monochromatic",
+      "scripts/check-claim-certificates.py witness replay (a third, independent O(n^2) enumerator)"
+    ],
+    "date": "2026-08-13",
+    "machine": "linux x86-64, witness constructed and enumerated locally",
+    "toolchain": {
+      "axeyum_commit": "298aee512e90422db9dfb0c553e09eba614b55a3",
+      "rustc_version": "rustc 1.99.0-nightly (be8e82435 2026-07-11)",
+      "target": "x86_64-unknown-linux-gnu",
+      "dirty": true
+    },
+    "graph_pin": "a29a9e2a649b0fdafcf1032292832d3fb590f9b7",
+    "prior_art": [
+      {
+        "citation": "Y. Chang, J. A. De Loera, W. J. Wesley, 'Rado Numbers and SAT Computations', ISSAC 2022",
+        "url": "https://arxiv.org/abs/2210.03262",
+        "establishes": "R_3 and partial R_4 tables for this family; no (a,b) = (5,4) entry at k = 4. Their Lemma 4.2 is the k=3 shadow of the shell construction used here."
+      }
+    ]
+  },
+  "evidence": [
+    {
+      "id": "witness-1500",
+      "kind": "witness-replay",
+      "supports": "R_4 > 1500 (lower bound)",
+      "artifact": "artifacts/claims/rado/rado-r4-a6-b5-frontier/witness-1500.txt",
+      "artifact_sha256": "19a819165486d3cfff888e19937b71dcb0f4da6922713f760d65409e032c6a05",
+      "check_status": "checked",
+      "checker_command": "python3 scripts/check-claim-certificates.py --only rado-r4-a6-b5-frontier",
+      "notes": "The shell colouring of [1500] at (a,b,k) = (6,5,4), written down from the construction rather than searched for. Class sizes and the two-ended shell structure follow Definition 3.1 exactly. 218,125 solutions enumerated in [1500], none monochromatic. This fills the second of the two open cells in the k=4 row of the paper's Table 1; the first, (5,4), is rado-r4-a5-b4-frontier.",
+      "artifact_format": "colouring-text"
+    }
+  ],
+  "frontier": {
+    "known": [
+      "R_4(6(x-y)=5z) > 1500, witnessed and verified (evidence row witness-1500)",
+      "The lower bound follows from this work's main theorem with no search, the hypotheses b < a and gcd(a,b) = 1 both holding at (6,5)",
+      "The shell construction predicts 1501 exactly; tightness holds at every known point on the line b = a-1 with a >= 3 and k in {3,4}, and FAILS at k = 5 (see rado-r5-a3-b2-frontier), so the prediction is a pattern and not a theorem"
+    ],
+    "would_settle": [
+      "A refutation of F_1501 (the CNF for n = 1501, k = 4) would give R_4(6(x-y)=5z) = 1501 exactly and complete the k=4 row of the paper's Table 1. Not attempted here: F_313 already required ~28 GiB and a 4096-cell cube cover, and n = 1501 is substantially larger."
+    ],
+    "attack_notes": "The satisfiable side is closed (the construction hands over the witness free). For the refutation, reuse the 313 recipe at greater depth: branch on more points (depth 8-10), cap per-cell conflicts, defer checking, and certify offline with certify_dumped_cover; distribute cells across s5-s7. The probe suggests concentrating splits inside the staircase-compatible subtree rather than uniformly."
+  },
+  "notes": "Recorded as the natural next exact-value target (roadmap R10/E1): the construction predicts 741, the k<=4 pattern supports it, SLS cannot refute it, and both certification artifact kinds plus their checkers are now promoted into the axeyum-search crate."
+}
