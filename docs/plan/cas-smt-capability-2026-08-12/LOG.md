@@ -401,3 +401,97 @@ case for it. The variable-divisor shape (`A9`, `A12`), the opaque window lemma
 
 Not touched at any point in this session: `bench-results/frontier/*.json`.
 `progress_frontier` was never run.
+
+---
+
+## 2026-08-12T22:24-04:00 — HEAD had moved 9 commits; re-measured there too
+
+After committing, `git log` showed the tree had moved past the commit I
+measured, and one of the intervening commits was
+`8cda98eca fix(cas): require arity >= 2 before reading a '-' node as
+subtraction` — a follow-up fix to the very bridge I had just measured. A result
+pinned to a commit that has already been patched is worth less, so I archived
+current HEAD (`620ceec898229ee98e089e9c6b65f6fb57a83149`) and ran the whole
+corpus a third time.
+
+```sh
+$ cargo build --release     # harness-head, CARGO_BUILD_JOBS=2
+    Finished `release` profile [optimized] target(s) in 3m 10s
+$ ./harness-head/target/release/cas-capability-corpus --selftest   # both alarms fire
+$ ./harness-head/target/release/cas-capability-corpus --json head-620ceec.json
+real	5m28.092s
+    79 DECIDED-OK   11 UNDECIDED-GAP   11 UNDECIDED-EXPECTED   2 OPEN
+```
+
+```
+DIFFERENCES 175372bdc -> 620ceec (HEAD):
+  total: NONE — byte-identical verdicts and routes
+```
+
+All 103 queries identical. So whatever `8cda98eca` fixed, my corpus did not
+exercise it. **That is a coverage hole, and I chased it rather than filing it as
+a pass.**
+
+Reading the fix's own commit message:
+
+> SMT-LIB's `-` is unary negation at arity 1 and subtraction at arity >= 2. Both
+> CAS expanders read `args[0]` and folded the rest ... That is a wrong-unsat
+> shape in the identity route: `not (= (- x) x)` would refute.
+> The arena cannot currently build such a node (`int_sub`/`real_sub` go through
+> `int_bin`/`real_bin`, and unary `-` becomes `IntNeg`/`RealNeg`), so this is
+> not a live defect.
+
+So the one-argument `IntSub` node is unreachable through the term builder my
+harness uses — the corpus *could not* have caught it. But the corpus also never
+built an `IntNeg` node at all, and `IntNeg` IS reachable. That is a real gap.
+
+## 2026-08-12T22:34-04:00 — axis N, and running the fix's own shape at all three commits
+
+Added axis N (8 queries, ground truth extended first: `109 claims, 0 failed`).
+`N5` is the exact wrong-unsat shape the fix's message names, posed positively:
+`NOT(-x = x)`, which is satisfiable for every `x != 0`. Run on all three
+binaries:
+
+```
+                        baseline 9f0f4ed   after 175372bdc (PRE-FIX)   HEAD 620ceec
+  N1 -(x+y) = -x-y      unsat dl-online    unsat cas-identity-refuter  unsat cas-identity-refuter
+  N3 -(x*y) = (-x)*y    unsat int-real-relax unsat cas-identity-refuter unsat cas-identity-refuter
+  N5 NOT(-x = x)  [sat] sat   lia-dpll     sat   lia-dpll              sat   lia-dpll
+  N7 a>=2, (-a)*p = 1   unknown(Timeout)   unsat cas-int-units         unsat cas-int-units
+  ALARMS                0                  0                          0
+```
+
+**`N5` returns `sat` even at the PRE-FIX commit.** That independently
+corroborates the fix's claim that the defect was latent, not live — I did not
+take the commit message's word for it, I posed the shape and measured. Note
+`cas-identity-refuter` decided `N1` and `N3` (genuine negation identities) and
+**declined** `N5` (the satisfiable one). `N7` is the fifth new decision.
+
+## 2026-08-12T22:36-04:00 — FINAL, 111 queries across three commits
+
+```
+                    baseline 9f0f4ed   after 175372bdc   HEAD 620ceec
+  DECIDED-OK              82                87    (+5)        87
+  UNDECIDED-GAP           16                11    (-5)        11
+  UNDECIDED-EXPECTED      11                11                11
+  OPEN-STAYS-UNKNOWN       2                 2                 2
+  ALARMS / REGRESSIONS / BAD REPLAYS  0/0/0   0/0/0          0/0/0
+
+NEWLY DECIDED (all unsat, all via cas-int-units, all 10.00s unknown -> 0.00s):
+  A1-unit-direct  A3-unit-neg  U7-unit-minus-one  U9-three-factors-eq-1  N7-neg-unit
+LOST: NONE     VERDICT FLIPS: NONE     after vs HEAD: NONE
+
+sat-expected queries: 54; flipped to unsat: 0
+cas-* fired on a sat-expected query: NONE
+```
+
+Final judgement unchanged and now on a broader base: **genuine, correctly
+implemented, narrow.** Five of 111, all one shape (`a·p = ±1`, the shape route
+B's report named as the sharpest boundary). `cas-identity-refuter` still adds
+zero new decisions — axis D was saturated at the baseline and axis N's two
+identities were already decided too. Eleven structural gaps remain untouched:
+variable-divisor divisibility, the opaque window lemma, and the whole
+monolithic-versus-decomposed axis.
+
+`bench-results/frontier/*.json` untouched all session; `progress_frontier` never
+run. Verified: `git diff --stat HEAD -- bench-results/frontier/` is empty.

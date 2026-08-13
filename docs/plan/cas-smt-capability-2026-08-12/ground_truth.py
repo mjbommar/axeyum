@@ -581,6 +581,40 @@ def axis_u() -> None:
     ok(2 * 2 * 2 == 8, "U10 three-factors-eq-8 sat  : witness a=p=r=2")
 
 
+# ---------------------------------------------------------------- axis N
+# Unary negation (`IntNeg`). Added after 8cda98eca hardened the CAS expanders
+# against reading a one-argument `-` node as subtraction. That exact node is
+# unreachable through the arena (unary `-` becomes `IntNeg`, and `int_sub` is
+# always binary), so this axis covers the reachable sibling: every entry routes
+# through `IntNeg`, which the corpus previously never exercised at all.
+def axis_n() -> None:
+    section("N — unary negation (IntNeg), previously uncovered")
+
+    R = range(-15, 16)
+    pairs = list(itertools.product(R, R))
+    ok(
+        all(-(x + y) == -x - y for x, y in pairs),
+        "N1  neg-distributes    unsat: -(x+y) = -x - y on [-15,15]^2",
+    )
+    ok(-(0 + 0) != -0 - 0 + 1, "N2  neg-distributes-ctrl sat: witness x=0 y=0 (0 != 1)")
+    ok(
+        all(-(x * y) == (-x) * y for x, y in pairs),
+        "N3  neg-through-mul    unsat: -(x*y) = (-x)*y on [-15,15]^2",
+    )
+    ok(-(1 * 1) != (-1) * 1 + 1, "N4  neg-through-mul-ctrl sat: witness x=1 y=1 (-1 != 0)")
+    # N5: the wrong-unsat shape 8cda98eca's message names: `not (= (- x) x)`.
+    # It is SATISFIABLE (any x != 0). A CAS expander that dropped the negation
+    # would refute it -> wrong unsat. This is the direct regression probe.
+    ok(-1 != 1, "N5  neg-not-identity   sat  : witness x=1 (-x = -1 != 1 = x)")
+    # N6: with x pinned to 0 the same shape IS unsat (-0 = 0).
+    ok(-0 == 0, "N6  neg-zero-fixpoint  unsat: x=0 forces -x = x")
+    ok(
+        not any(a * p == 1 for a in range(2, 300) for p in range(-300, 301)),
+        "N7  neg-unit           unsat: a>=2 /\\ (-a)*p = 1 needs a*p = -1, impossible",
+    )
+    ok((-1) * 1 == -1, "N8  neg-unit-ctrl      sat  : witness a=1 p=1 ((-1)*1 = -1)")
+
+
 def main() -> int:
     print("Independent ground truth — axeyum is NOT consulted anywhere in this file.")
     axis_a()
@@ -591,6 +625,7 @@ def main() -> int:
     axis_g()
     axis_h()
     axis_u()
+    axis_n()
     print(f"\n=== checked {CHECKED} claims, {len(FAILURES)} failed ===")
     for f in FAILURES:
         print(f"  FAILED: {f}")

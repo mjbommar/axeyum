@@ -1,0 +1,37 @@
+CAS/SMT arithmetic capability corpus — 8 queries
+Ground truth: ../ground_truth.py (independent of axeyum). Route provenance: check_auto_explained.
+MACHINE IS CONTENDED — every wall time below is an UPPER BOUND, not a timing.
+
+
+=== axis N — unary negation (IntNeg) — previously uncovered ===
+  N1-neg-distributes     core   want=unsat  got=unsat                     0.00s  DECIDED-OK                   cas-identity-refuter
+  N2-neg-distributes-ctrl core   want=sat    got=sat                       0.00s  DECIDED-OK                   dl-online
+      wit | x=0 y=0   (model replays against the goal: yes)
+  N3-neg-through-mul     core   want=unsat  got=unsat                     0.00s  DECIDED-OK                   cas-identity-refuter
+  N4-neg-through-mul-ctrl core   want=sat    got=sat                       0.00s  DECIDED-OK                   nia-linearize
+      wit | x=0 y=0   (model replays against the goal: yes)
+  N5-neg-not-identity    core   want=sat    got=sat                       0.00s  DECIDED-OK                   lia-dpll
+      wit | x=1   (model replays against the goal: yes)
+  N6-neg-zero-fixpoint   core   want=unsat  got=unsat                     0.00s  DECIDED-OK                   int-box-eval
+  N7-neg-unit            core   want=unsat  got=unsat                     0.00s  DECIDED-OK                   cas-int-units
+  N8-neg-unit-ctrl       core   want=sat    got=sat                       0.00s  DECIDED-OK                   nia-linearize
+      wit | a=1 p=1   (model replays against the goal: yes)
+
+
+===================== SUMMARY =====================
+     8  DECIDED-OK
+
+  --- decided vs undecided, by axis ---
+  axis N: decided   8   unknown   0
+
+  --- deciding routes (count of queries each route decided) ---
+     2  cas-identity-refuter
+     1  cas-int-units
+     1  dl-online
+     1  int-box-eval
+     1  lia-dpll
+     2  nia-linearize
+
+  ALARMS: 0   ANCHOR REGRESSIONS: 0   BAD MODEL REPLAYS: 0
+
+  wrote axisN-head-620ceec.json

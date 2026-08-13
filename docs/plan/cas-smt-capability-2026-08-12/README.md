@@ -71,7 +71,8 @@ Flags: `--only <A|B|C|D|F|G|H>` one axis; `--ids a,b,c` named entries;
 | G | 15 | tripwires — huge witnesses, deep theorems, and two **open** problems |
 | H | 5 | anchors that must not regress |
 | U | 10 | boundary of the `cas-int-units` route: queries that *look* like `a·p = 1` but are `sat` |
-| | **103** | |
+| N | 8 | unary negation (`IntNeg`), incl. the wrong-unsat shape `8cda98eca` guards against |
+| | **111** | |
 
 Axis U was added after the CAS bridge landed, specifically to try to make the
 new route answer wrongly, and was then run against **both** commits so it has a

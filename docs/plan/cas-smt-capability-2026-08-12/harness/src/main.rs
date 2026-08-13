@@ -61,6 +61,9 @@ impl Q {
     fn mul(&mut self, a: TermId, b: TermId) -> TermId {
         self.ar.int_mul(a, b).unwrap()
     }
+    fn neg(&mut self, a: TermId) -> TermId {
+        self.ar.int_neg(a).unwrap()
+    }
     fn imod(&mut self, a: TermId, b: TermId) -> TermId {
         self.ar.int_mod(a, b).unwrap()
     }
@@ -144,6 +147,9 @@ enum Axis {
     /// Boundary probe for the `cas-int-units` route added in `175372bdc`:
     /// queries that structurally resemble `a*p = 1` but are satisfiable.
     U,
+    /// Unary negation (`IntNeg`) — a reachable node the corpus previously never
+    /// built, adjacent to the arity bug hardened in `8cda98eca`.
+    N,
 }
 
 impl Axis {
@@ -157,6 +163,7 @@ impl Axis {
             Axis::G => "G",
             Axis::H => "H",
             Axis::U => "U",
+            Axis::N => "N",
         }
     }
     fn name(self) -> &'static str {
@@ -169,6 +176,7 @@ impl Axis {
             Axis::G => "tripwires: huge witnesses / deep theorems / OPEN",
             Axis::H => "anchors that must not regress",
             Axis::U => "unit-shape boundary: sat queries that LOOK like a*p = 1",
+            Axis::N => "unary negation (IntNeg) — previously uncovered",
         }
     }
 }
@@ -1692,6 +1700,89 @@ fn corpus() -> Vec<Case> {
                 q.assert_ge_k(a, 2); q.assert_ge_k(p, 2); q.assert_ge_k(r, 2);
                 let ap = q.mul(a, p); let apr = q.mul(ap, r);
                 let eight = q.k(8); let e = q.eq(apr, eight); q.assert(e); q },
+        },
+
+        // ================================================== axis N: unary negation
+        //
+        // Added after 8cda98eca ("require arity >= 2 before reading a `-` node as
+        // subtraction"). That commit's own message notes the one-argument
+        // `IntSub` node is UNREACHABLE through the arena, so the corpus could not
+        // have caught it — but the corpus also never built an `IntNeg` node at
+        // all, which IS reachable and is what unary `-` actually becomes. `N5` is
+        // the exact wrong-unsat shape that message names, posed positively.
+        Case {
+            id: "N1-neg-distributes", axis: Axis::N, tier: Tier::Core, expect: "unsat",
+            formula: "NOT(-(x+y) = -x - y)", why: "ring identity through IntNeg",
+            build: || { let mut q = Q::new();
+                let x = q.var("x"); let y = q.var("y");
+                let s = q.add(x, y); let lhs = q.neg(s);
+                let nx = q.neg(x); let rhs = q.sub(nx, y);
+                let n = q.ne(lhs, rhs); q.assert(n); q },
+        },
+        Case {
+            id: "N2-neg-distributes-ctrl", axis: Axis::N, tier: Tier::Core, expect: "sat",
+            formula: "NOT(-(x+y) = -x - y + 1)", why: "witness x=0 y=0 (0 != 1)",
+            build: || { let mut q = Q::new();
+                let x = q.var("x"); let y = q.var("y");
+                let s = q.add(x, y); let lhs = q.neg(s);
+                let nx = q.neg(x); let r0 = q.sub(nx, y);
+                let one = q.k(1); let rhs = q.add(r0, one);
+                let n = q.ne(lhs, rhs); q.assert(n); q },
+        },
+        Case {
+            id: "N3-neg-through-mul", axis: Axis::N, tier: Tier::Core, expect: "unsat",
+            formula: "NOT(-(x*y) = (-x)*y)", why: "ring identity through IntNeg",
+            build: || { let mut q = Q::new();
+                let x = q.var("x"); let y = q.var("y");
+                let p = q.mul(x, y); let lhs = q.neg(p);
+                let nx = q.neg(x); let rhs = q.mul(nx, y);
+                let n = q.ne(lhs, rhs); q.assert(n); q },
+        },
+        Case {
+            id: "N4-neg-through-mul-ctrl", axis: Axis::N, tier: Tier::Core, expect: "sat",
+            formula: "NOT(-(x*y) = (-x)*y + 1)", why: "witness x=1 y=1 (-1 != 0)",
+            build: || { let mut q = Q::new();
+                let x = q.var("x"); let y = q.var("y");
+                let p = q.mul(x, y); let lhs = q.neg(p);
+                let nx = q.neg(x); let r0 = q.mul(nx, y);
+                let one = q.k(1); let rhs = q.add(r0, one);
+                let n = q.ne(lhs, rhs); q.assert(n); q },
+        },
+        Case {
+            id: "N5-neg-not-identity", axis: Axis::N, tier: Tier::Core, expect: "sat",
+            formula: "NOT(-x = x)",
+            why: "REGRESSION PROBE. Satisfiable for every x != 0. An expander that \
+                  silently dropped the negation would refute this — the exact wrong-unsat \
+                  shape 8cda98eca guards against.",
+            build: || { let mut q = Q::new();
+                let x = q.var("x"); let nx = q.neg(x);
+                let n = q.ne(nx, x); q.assert(n); q },
+        },
+        Case {
+            id: "N6-neg-zero-fixpoint", axis: Axis::N, tier: Tier::Core, expect: "unsat",
+            formula: "x = 0 /\\ NOT(-x = x)", why: "-0 = 0, so the negation is unsatisfiable",
+            build: || { let mut q = Q::new();
+                let x = q.var("x"); let zero = q.k(0);
+                let e = q.eq(x, zero); q.assert(e);
+                let nx = q.neg(x); let n = q.ne(nx, x); q.assert(n); q },
+        },
+        Case {
+            id: "N7-neg-unit", axis: Axis::N, tier: Tier::Core, expect: "unsat",
+            formula: "a >= 2 /\\ (-a)*p = 1", why: "needs a*p = -1, impossible for a >= 2",
+            build: || { let mut q = Q::new();
+                let a = q.var("a"); let p = q.var("p");
+                q.assert_ge_k(a, 2);
+                let na = q.neg(a); let prod = q.mul(na, p);
+                let one = q.k(1); let e = q.eq(prod, one); q.assert(e); q },
+        },
+        Case {
+            id: "N8-neg-unit-ctrl", axis: Axis::N, tier: Tier::Core, expect: "sat",
+            formula: "a >= 1 /\\ (-a)*p = -1", why: "witness a=1 p=1",
+            build: || { let mut q = Q::new();
+                let a = q.var("a"); let p = q.var("p");
+                q.assert_ge_k(a, 1);
+                let na = q.neg(a); let prod = q.mul(na, p);
+                let m1 = q.k(-1); let e = q.eq(prod, m1); q.assert(e); q },
         },
     ]
 }

@@ -121,4 +121,14 @@ Independent ground truth — axeyum is NOT consulted anywhere in this file.
   OK    U9  three-factors-eq-1 unsat: a | 1 impossible for a >= 2 (proof)
   OK    U10 three-factors-eq-8 sat  : witness a=p=r=2
 
-=== checked 101 claims, 0 failed ===
+=== N — unary negation (IntNeg), previously uncovered ===
+  OK    N1  neg-distributes    unsat: -(x+y) = -x - y on [-15,15]^2
+  OK    N2  neg-distributes-ctrl sat: witness x=0 y=0 (0 != 1)
+  OK    N3  neg-through-mul    unsat: -(x*y) = (-x)*y on [-15,15]^2
+  OK    N4  neg-through-mul-ctrl sat: witness x=1 y=1 (-1 != 0)
+  OK    N5  neg-not-identity   sat  : witness x=1 (-x = -1 != 1 = x)
+  OK    N6  neg-zero-fixpoint  unsat: x=0 forces -x = x
+  OK    N7  neg-unit           unsat: a>=2 /\ (-a)*p = 1 needs a*p = -1, impossible
+  OK    N8  neg-unit-ctrl      sat  : witness a=1 p=1 ((-1)*1 = -1)
+
+=== checked 109 claims, 0 failed ===
