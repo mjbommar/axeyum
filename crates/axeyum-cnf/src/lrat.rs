@@ -105,7 +105,10 @@ impl core::fmt::Display for LratError {
                 "DRAT step {step} is RAT, which an LRAT step cannot express"
             ),
             LratError::HintChainFailed { step } => {
-                write!(f, "no LRAT hint chain could be emitted for DRAT step {step}")
+                write!(
+                    f,
+                    "no LRAT hint chain could be emitted for DRAT step {step}"
+                )
             }
         }
     }

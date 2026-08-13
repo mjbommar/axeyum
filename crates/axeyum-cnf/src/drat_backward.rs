@@ -386,11 +386,12 @@ pub fn trim_drat_proof(
     // Never return an unchecked artifact. This costs a second backward pass over
     // a strictly smaller proof; the alternative is emitting a file that claims
     // to be a refutation without anything having verified that it is one.
-    match check_drat_backward(formula, &trimmed)? {
-        true => Ok(Some(trimmed)),
-        false => Err(DratError::StepNotVerified {
+    if check_drat_backward(formula, &trimmed)? {
+        Ok(Some(trimmed))
+    } else {
+        Err(DratError::StepNotVerified {
             step: trimmed.len(),
-        }),
+        })
     }
 }
 
@@ -908,7 +909,11 @@ impl BackwardChecker {
         let mut index = 0;
         loop {
             let record = {
-                let watches = if core { &self.watches_core } else { &self.watches };
+                let watches = if core {
+                    &self.watches_core
+                } else {
+                    &self.watches
+                };
                 if index >= watches[falsified].len() {
                     return None;
                 }
@@ -1252,7 +1257,7 @@ fn remove_watch(watch: &mut Vec<usize>, record: usize) {
 
 #[cfg(test)]
 mod tests {
-    use super::{BackwardChecker, Plan, check_drat_backward};
+    use super::{BackwardChecker, Options, Plan, check_drat_backward};
     use crate::{
         CnfClause, CnfFormula, CnfLit, CnfVar, DratError, DratStep, ProofSolveOutcome, check_drat,
         solve_with_drat_proof,
@@ -1661,12 +1666,12 @@ mod tests {
             let expected = check_drat(&f, &steps).is_ok();
 
             let plan = Plan::build(&f, &steps).unwrap();
-            let mut checker = BackwardChecker::new(plan);
+            let mut checker = BackwardChecker::new(plan, Options::CHECK);
             for record in 0..checker.records.len() {
                 checker.set_membership(record, 0);
             }
             let record = checker.added_by_step[0];
-            let actual = checker.verify(record);
+            let actual = checker.verify(record, 0);
             assert_eq!(
                 actual, expected,
                 "lemma {clause:?} over {f:?}: engine and reference disagree"
