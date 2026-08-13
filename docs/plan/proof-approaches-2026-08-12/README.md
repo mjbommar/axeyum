@@ -30,6 +30,43 @@ witness for every `b > a`, `k >= 3` proving the hypothesis is not an artifact.
 | **B** — axeyum `forall`-refutation | Can axeyum discharge a *universally quantified* statement, as it once did for the solution-form lemma? | see `route-b/` |
 | **C** — axeyum Lean kernel | Can the in-tree Lean kernel check a real mathematical theorem? | **Yes, with zero axioms.** 9 `forall`-theorems over `N`, real induction. `route-c/` |
 
+## Where the mathematics lives — NOT here
+
+**The Rado-specific material was moved to the paper repo**
+(`../axeyum-rado-paper/proofs/`) under the rule that *generic, reusable
+patterns belong in the axeyum crates; anything specific to `a(x-y) = bz`
+belongs with the paper*. Moved: `proof.tex`, `preliminaries.tex`, the seven
+stress-test scripts, the `forall`-refutation transcripts, the exported Lean
+module, and the CAS identity checks.
+
+**What remains here is the process record** — the lab notebooks and reports —
+because they document how *axeyum* behaved, which is this repository's
+concern. `PROOF-BRIEF.md` is retained for the same reason: it records what
+the agents were told, i.e. method rather than mathematics.
+
+Two genuinely generic gaps this session exposed, both queued as axeyum work:
+
+1. **The Lean kernel has no `Nat` arithmetic and no `Eq` combinators.**
+   Route C had to build `zero_add`, `succ_add`, `add_comm`, `add_assoc`,
+   `add_right_comm`, `zero_mul`, `succ_mul`, `mul_comm`, `mul_assoc`,
+   `one_mul`, `mul_one`, `zero_le` from scratch, plus `Eq.symm`/`trans`/
+   `congr`/`transport`/`chain` and an induction helper. Nothing about those
+   is Rado; every future formalization needs them.
+2. **No colouring-CNF encoder.** The generator of record is a Python script
+   (`scripts/gen-rado-instance.py`) whose only independent check is another
+   Python script, and the same three functions (solution enumeration, a-adic
+   valuation, shell colouring) have been re-implemented at least five times
+   across this project in a language measured **111x slower** than Rust on
+   the identical sweep (727M vs 6.6M solution triples/sec). The reusable
+   object is an encoder parameterized by the solution predicate — covering
+   Schur, van der Waerden and Ramsey as well as Rado — not a `rado` module.
+
+`crates/axeyum-lean-kernel/tests/rado_shell_arithmetic.rs` currently sits on
+the wrong side of that line: it is Rado-specific content inside an axeyum
+crate. It is retained until item 1 splits it, because it is a working,
+passing, zero-axiom demonstration and splitting it needs care rather than a
+blind deletion.
+
 ## Layout
 
 - `ORCHESTRATOR-LOG.md` — my own append-only notebook (18 entries), including
