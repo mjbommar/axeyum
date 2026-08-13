@@ -33,6 +33,23 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 CLAIMS = ROOT / "artifacts" / "claims"
+
+# Second base for resolving in-claim paths, set only in bundle mode. Paths are
+# written relative to whatever tree the claim lives in: repo-root-relative
+# here and in the negative fixtures, bundle-relative in a shipped snapshot.
+# Try both -- replacing the repo root outright breaks the fixtures.
+ALT_ROOT: "Path | None" = None
+
+
+def resolve(rel: str) -> Path:
+    """Resolve an in-claim path against the repo root, then the bundle root."""
+    primary = ROOT / rel
+    if primary.exists() or ALT_ROOT is None:
+        return primary
+    alt = ALT_ROOT / rel
+    return alt if alt.exists() else primary
+
+
 SCHEMA = ROOT / "artifacts" / "ontology" / "claim.schema.json"
 FRAGMENTS = ROOT / "artifacts" / "ontology" / "smt-fragments.json"
 CURRICULUM = ROOT / "docs" / "curriculum" / "curriculum.toml"
@@ -56,7 +73,10 @@ CLAIM_REQUIRED = {"schema_version", "id", "title", "statement", "epistemic_statu
 CLAIM_OPTIONAL = {"frontier", "supersedes", "notes"}
 EVIDENCE_REQUIRED = {"id", "kind", "supports", "check_status", "checker_command"}
 EVIDENCE_OPTIONAL = {"artifact", "artifact_sha256", "artifact_format", "notes",
-                     "parameters", "regeneration"}
+                     "parameters", "regeneration", "distribution"}
+# Set by the bundle builder on rows whose artifact is intentionally not
+# shipped. Only meaningful in a snapshot; the ledger itself never sets it.
+DISTRIBUTION = {"regenerable"}
 TOOLCHAIN_REQUIRED = {"axeyum_commit", "rustc_version"}
 TOOLCHAIN_OPTIONAL = {"target", "dirty"}
 
@@ -248,12 +268,24 @@ def check_artifact_format(errors: list[str], path: Path, ev: dict,
                          f"does not derive a contradiction")
 
 
-def load_fragment_ids() -> set[str]:
+def load_fragment_ids() -> set[str] | None:
+    """Fragment id census, or None when the ontology is not in this tree.
+
+    The shipped arXiv bundle carries claims and checkers but not axeyum's
+    ontology or curriculum. Returning None lets the cross-reference checks
+    stand down and SAY SO, rather than the whole validator dying on a missing
+    file -- which is what it used to do, making the bundle's own documented
+    re-check command fail on line one.
+    """
+    if not FRAGMENTS.exists():
+        return None
     data = json.loads(FRAGMENTS.read_text())
     return {row["id"] for row in data["rows"]}
 
 
-def load_curriculum_ids() -> set[str]:
+def load_curriculum_ids() -> set[str] | None:
+    if not CURRICULUM.exists():
+        return None
     ids = set()
     for line in CURRICULUM.read_text().splitlines():
         m = re.match(r'^id = "([a-z0-9-]+)"$', line.strip())
@@ -319,10 +351,10 @@ def validate_claim(path: Path, fragment_ids: set[str], curriculum_ids: set[str],
     if fm.get("language") not in LANGUAGES:
         fail(errors, f"{path}: bad formal.language")
     gen = fm.get("generator")
-    if gen and not (ROOT / gen).exists():
+    if gen and not resolve(gen).exists():
         fail(errors, f"{path}: formal.generator '{gen}' does not exist")
     sem = fm.get("semantics_note")
-    if sem and not (ROOT / sem).exists():
+    if sem and not resolve(sem).exists():
         fail(errors, f"{path}: formal.semantics_note '{sem}' does not exist")
 
     prov = c["provenance"]
@@ -366,12 +398,14 @@ def validate_claim(path: Path, fragment_ids: set[str], curriculum_ids: set[str],
             pendings.append(r)
 
     ax = c["axeyum_refs"]
-    for frag in ax.get("fragments", []):
-        if frag not in fragment_ids:
-            fail(errors, f"{path}: unknown fragment '{frag}'")
-    for node in ax.get("curriculum_nodes", []):
-        if node not in curriculum_ids:
-            fail(errors, f"{path}: unknown curriculum node '{node}'")
+    if fragment_ids is not None:
+        for frag in ax.get("fragments", []):
+            if frag not in fragment_ids:
+                fail(errors, f"{path}: unknown fragment '{frag}'")
+    if curriculum_ids is not None:
+        for node in ax.get("curriculum_nodes", []):
+            if node not in curriculum_ids:
+                fail(errors, f"{path}: unknown curriculum node '{node}'")
 
     # evidence rows and epistemic discipline
     seen_ids: set[str] = set()
@@ -416,10 +450,21 @@ def validate_claim(path: Path, fragment_ids: set[str], curriculum_ids: set[str],
         if art is None and regen is None and ev.get("check_status") == "checked":
             fail(errors, f"{path}: evidence '{eid}' is 'checked' but names "
                          f"neither an artifact nor a regeneration recipe")
-        check_artifact_format(errors, path, ev, (ROOT / art) if art else None)
+        check_artifact_format(errors, path, ev, resolve(art) if art else None)
         if art is not None:
-            p = ROOT / art
-            if not p.exists():
+            p = resolve(art)
+            # A shipped snapshot deliberately omits bulky artifacts (large
+            # DRAT proofs, all CNF instances) because they regenerate far more
+            # cheaply than they transfer. Such a row must SAY it is regenerable
+            # and must still carry the hash -- an absent artifact with no
+            # declaration and no hash is indistinguishable from a lost one.
+            if ev.get("distribution") == "regenerable" and not p.exists():
+                if "artifact_sha256" not in ev:
+                    fail(errors, f"{path}: evidence '{eid}' is marked "
+                                 f"regenerable and is not distributed, but "
+                                 f"carries no artifact_sha256; then nothing "
+                                 f"identifies what regeneration must produce")
+            elif not p.exists():
                 fail(errors, f"{path}: evidence artifact '{art}' does not exist")
             elif "artifact_sha256" in ev:
                 if not SHA_RE.match(ev["artifact_sha256"]):
@@ -454,23 +499,38 @@ def validate_claim(path: Path, fragment_ids: set[str], curriculum_ids: set[str],
 
 
 def main() -> int:
-    global CLAIMS
+    global CLAIMS, ALT_ROOT, SCHEMA
     quiet = "--quiet" in sys.argv
     args = sys.argv[1:]
     if "--root" in args:
         CLAIMS = Path(args[args.index("--root") + 1])
+        # Bundle mode: a shipped snapshot's paths are relative to the bundle
+        # root, the claims directory's parent. Offered as a FALLBACK base --
+        # the negative fixtures also arrive through --root and use
+        # repo-relative paths, and replacing the root outright breaks them.
+        ALT_ROOT = CLAIMS.resolve().parent
     if not CLAIMS.is_dir():
         print("no artifacts/claims/ directory; nothing to validate")
         return 0
     if not SCHEMA.exists():
-        print("missing claim.schema.json", file=sys.stderr)
-        return 1
+        # The bundle ships the schema beside the checkers rather than under
+        # artifacts/ontology/. Look there before giving up.
+        beside = Path(__file__).resolve().parent / "claim.schema.json"
+        if beside.exists():
+            SCHEMA = beside
+        else:
+            print("missing claim.schema.json", file=sys.stderr)
+            return 1
     fragment_ids = load_fragment_ids()
     curriculum_ids = load_curriculum_ids()
     math_ed_ids = load_math_ed_ids()
-    if math_ed_ids is None and not quiet:
-        print("note: ../math-education not present; resolved refs checked "
-              "structurally only")
+    if not quiet:
+        if math_ed_ids is None:
+            print("note: ../math-education not present; resolved refs checked "
+                  "structurally only")
+        if fragment_ids is None or curriculum_ids is None:
+            print("note: axeyum ontology/curriculum not in this tree; "
+                  "fragment and curriculum cross-references NOT checked")
 
     claim_files = sorted(CLAIMS.glob("**/claim.json"))
     if not claim_files:

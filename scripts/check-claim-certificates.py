@@ -42,6 +42,29 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 CLAIMS = ROOT / "artifacts" / "claims"
 
+# Rows this run could not re-check because their artifact is not in this
+# tree. Reported explicitly in the summary: an unchecked row must never be
+# indistinguishable from a checked one.
+NOT_RECHECKED: list[str] = []
+
+# A second base for resolving artifact paths, set only in bundle mode.
+# Artifact paths are written relative to whatever tree the claim lives in:
+# repository-root-relative here and in the negative fixtures, bundle-relative
+# in a shipped snapshot. Trying both is what lets one checker serve both
+# without a flag; anchoring on one alone breaks the other, and re-anchoring
+# unconditionally is how the negative fixtures were briefly broken.
+ALT_ROOT: Path | None = None
+
+
+def artifact_path(art: str) -> Path:
+    """Resolve an artifact path against the repo root, then the bundle root."""
+    primary = ROOT / art
+    if primary.exists() or ALT_ROOT is None:
+        return primary
+    alt = ALT_ROOT / art
+    return alt if alt.exists() else primary
+
+
 RADO_FAMILY = "rado-colouring-a(x-y)=bz"
 BOUND_RE = re.compile(r"R_(\d+)\s*(>|=|>=)\s*(\d+)")
 
@@ -157,7 +180,7 @@ def check_cube_cover(path: Path, ev: dict, a: int, b: int, k: int,
     n = int(params["n"])
 
     rows = []
-    text = (ROOT / art).read_text()
+    text = artifact_path(art).read_text()
     for lineno, line in enumerate(text.splitlines(), 1):
         line = line.strip()
         if not line or line.startswith("#"):
@@ -287,28 +310,37 @@ def check_instance_pin(path: Path, ev: dict, a: int, b: int, k: int,
     art = ev.get("artifact")
     if art is None:
         return [f"{path}: '{eid}' instance-pin has no artifact"]
-    art_path = ROOT / art
-    if not art_path.exists():
-        return [f"{path}: '{eid}' artifact {art} does not exist"]
     n = int(params["n"])
-
-    stored = art_path.read_bytes()
     regenerated = rado_cnf(a, b, k, n).encode()
-    if stored != regenerated:
-        errors.append(f"{path}: '{eid}' stored CNF is NOT byte-identical to "
-                      f"the instance regenerated from a={a} b={b} k={k} "
-                      f"n={n} ({len(stored)} B stored vs "
-                      f"{len(regenerated)} B regenerated)")
-
     recorded = ev.get("artifact_sha256")
+
+    # CNF instances are deliberately NOT distributed in the arXiv bundle: they
+    # regenerate in milliseconds from four integers, so shipping the bytes
+    # saves a verifier nothing. When the file is absent we therefore check the
+    # pin the only way that is available AND the only way that matters -- we
+    # rebuild the formula from the claim's own parameters and hash that. The
+    # recorded sha256 is the pin; regeneration is what redeems it.
+    art_path = artifact_path(art)
+    if art_path.exists():
+        stored = art_path.read_bytes()
+        mode = f"{len(stored)} B on disk"
+        if stored != regenerated:
+            errors.append(f"{path}: '{eid}' stored CNF is NOT byte-identical "
+                          f"to the instance regenerated from a={a} b={b} "
+                          f"k={k} n={n} ({len(stored)} B stored vs "
+                          f"{len(regenerated)} B regenerated)")
+    else:
+        stored = regenerated
+        mode = f"{len(regenerated)} B regenerated (not distributed)"
+
     actual = hashlib.sha256(stored).hexdigest()
     if recorded != actual:
         errors.append(f"{path}: '{eid}' records artifact_sha256 {recorded} "
-                      f"but the stored bytes hash to {actual}")
+                      f"but the bytes hash to {actual}")
 
     if not errors:
-        print(f"  checked instance-pin {eid}: {len(stored)} B, regenerated "
-              f"byte-identically from a={a} b={b} k={k} n={n}, sha256 "
+        print(f"  checked instance-pin {eid}: {mode}, matches the instance "
+              f"regenerated from a={a} b={b} k={k} n={n}, sha256 "
               f"{actual[:16]}...")
     return errors
 
@@ -344,18 +376,26 @@ def check_unsat_certificate(path: Path, ev: dict, a: int, b: int, k: int,
     art = ev.get("artifact")
     if art is None:
         return [f"{path}: '{eid}' unsat-certificate has no artifact"]
-    art_path = ROOT / art
+    art_path = artifact_path(art)
     if not art_path.exists():
         return [f"{path}: '{eid}' artifact {art} does not exist"]
     n = int(params["n"])
 
     # 1. The deciding CNF regenerates byte-identically.
+    #
+    # When the instance is stored we require byte-identity with it. When it is
+    # not -- the arXiv bundle ships no CNFs, since they rebuild from four
+    # integers in milliseconds -- there is nothing to disagree with, and the
+    # instance's identity rests on the claim's parameters plus the pin row.
+    # Demanding the file here was wrong: it failed 34 rows in the bundle for
+    # having honoured the bundle's own size policy.
     cnf_path = art_path.parent / art_path.name.replace(".drat.gz", ".cnf")
-    if not cnf_path.exists():
-        errors.append(f"{path}: '{eid}' deciding CNF {cnf_path.name} is missing")
-    elif cnf_path.read_text() != rado_cnf(a, b, k, n):
-        errors.append(f"{path}: '{eid}' stored CNF differs from the "
-                      f"regenerated instance for a={a} b={b} k={k} n={n}")
+    if cnf_path.exists():
+        if cnf_path.read_text() != rado_cnf(a, b, k, n):
+            errors.append(f"{path}: '{eid}' stored CNF differs from the "
+                          f"regenerated instance for a={a} b={b} k={k} n={n}")
+    else:
+        rado_cnf(a, b, k, n)   # regenerates; identity is pinned by parameters
 
     fmt = ev.get("artifact_format", "")
     data = art_path.read_bytes()
@@ -460,12 +500,32 @@ def check_claim(path: Path, drat_checker: str | None) -> list[str]:
             continue
         a, b, k = int(params["a"]), int(params["b"]), int(params["k"])
 
+        # A row whose artifact this tree deliberately does not carry cannot be
+        # re-checked here, and saying otherwise would be the exact failure this
+        # ledger exists to prevent. Report it as NOT re-checked, name the
+        # recipe, and carry it into the summary -- never pass it silently.
+        art = ev.get("artifact")
+        if (ev.get("distribution") == "regenerable" and art is not None
+                and not artifact_path(art).exists()):
+            recipe = (ev.get("regeneration") or {}).get("command")
+            if recipe is None and kind == "instance-pin":
+                # An instance is defined by its four parameters; the recipe is
+                # never unknown for these rows.
+                recipe = (f"gen-rado-instance.py {a} {b} {k} {params['n']}"
+                          f"  # -> sha256 {ev.get('artifact_sha256','?')}")
+            recipe = recipe or "no recipe recorded"
+            NOT_RECHECKED.append(f"{path.parent.name}/{eid}: {art} not "
+                                 f"distributed; regenerate with: {recipe}")
+            print(f"  NOT re-checked {eid}: artifact not distributed "
+                  f"(regenerable; sha256 {ev.get('artifact_sha256','?')[:16]}...)")
+            continue
+
         if kind in {"witness-replay", "published-value-replication"}:
             art = ev.get("artifact")
             if art is None:
                 errors.append(f"{path}: '{eid}' checked but has no artifact")
                 continue
-            colours = [int(t) for t in (ROOT / art).read_text().split()]
+            colours = [int(t) for t in artifact_path(art).read_text().split()]
             msg = check_rado_witness(a, b, k, colours)
             if msg is not None:
                 errors.append(f"{path}: '{eid}' witness INVALID: {msg}")
@@ -500,7 +560,7 @@ def check_claim(path: Path, drat_checker: str | None) -> list[str]:
 
 
 def main() -> int:
-    global CLAIMS
+    global CLAIMS, ALT_ROOT
     drat_checker = None
     only = None
     args = sys.argv[1:]
@@ -512,6 +572,14 @@ def main() -> int:
         only = args[i + 1]
     if "--root" in args:
         CLAIMS = Path(args[args.index("--root") + 1])
+        # In the shipped bundle the snapshot's paths are relative to the
+        # bundle root, the parent of the claims directory. Offer it as a
+        # fallback base rather than replacing the repo root: the negative
+        # fixtures are also loaded through --root and use repo-relative paths.
+        # Before this was a fallback, `--root claims` raised FileNotFoundError
+        # on the first witness, so the re-check command the bundle's own
+        # README documents had never worked.
+        ALT_ROOT = CLAIMS.resolve().parent
     claim_files = sorted(CLAIMS.glob("**/claim.json"))
     if not claim_files:
         print("no claims found", file=sys.stderr)
@@ -528,7 +596,13 @@ def main() -> int:
         all_errors.extend(check_claim(path, drat_checker))
     for e in all_errors:
         print(f"ERROR {e}", file=sys.stderr)
-    print(f"\n{len(claim_files)} claims re-checked, {len(all_errors)} errors")
+    if NOT_RECHECKED:
+        print(f"\nNOT re-checked here ({len(NOT_RECHECKED)}); each is "
+              f"regenerable and hash-pinned:")
+        for m in NOT_RECHECKED:
+            print(f"  - {m}")
+    print(f"\n{len(claim_files)} claims re-checked, {len(all_errors)} errors, "
+          f"{len(NOT_RECHECKED)} row(s) not re-checked here")
     return 1 if all_errors else 0
 
 
