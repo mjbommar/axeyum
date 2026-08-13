@@ -18785,11 +18785,11 @@ fn balanced_and(arena: &mut TermArena, mut layer: Vec<TermId>) -> Result<TermId,
     debug_assert!(!layer.is_empty());
     while layer.len() > 1 {
         let mut next = Vec::with_capacity(layer.len().div_ceil(2));
-        let mut pairs = layer.chunks_exact(2);
-        for pair in &mut pairs {
+        let (pairs, remainder) = layer.as_chunks::<2>();
+        for pair in pairs {
             next.push(arena.and(pair[0], pair[1])?);
         }
-        if let Some(&last) = pairs.remainder().first() {
+        if let Some(&last) = remainder.first() {
             next.push(last);
         }
         layer = next;

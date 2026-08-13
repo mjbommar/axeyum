@@ -126,7 +126,7 @@ impl AlgebraicReal {
         let mut upper = self.upper.numerator() as f64 / self.upper.denominator() as f64;
         let lower_positive = eval(lower) > 0.0;
         for _ in 0..200 {
-            let mid = 0.5 * (lower + upper);
+            let mid = f64::midpoint(lower, upper);
             if mid <= lower || mid >= upper {
                 break; // converged to the f64 ulp
             }
@@ -136,7 +136,7 @@ impl AlgebraicReal {
                 upper = mid;
             }
         }
-        0.5 * (lower + upper)
+        f64::midpoint(lower, upper)
     }
 }
 
