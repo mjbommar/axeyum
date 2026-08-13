@@ -124,6 +124,19 @@ case "$ROLE" in
     else A=4; B=3; N=313; CLAIM=rado-r4-a4-b3; fi
     STORED="artifacts/claims/rado/$CLAIM/F_$N.cnf"
 
+    # Measured 2026-08-13 on s5 (27 GiB): recertify_rado was OOM-killed at
+    # 27,742,576 kB anon-rss after 1331 s, exiting 137. That is a resource
+    # failure, NOT a failed recertification, and the bare 137 reads exactly
+    # like a real one in the report. Say so up front instead.
+    MEM_GIB="$(free -g | awk '/^Mem:/{print $2}')"
+    if [ "${MEM_GIB:-0}" -lt 48 ]; then
+      echo "  WARNING: ${MEM_GIB} GiB RAM. recertify_rado peaked at ~27 GiB on"
+      echo "           n=313 and was OOM-killed on a 27 GiB host. Expect exit"
+      echo "           137 here; that is memory, not a refuted claim. Re-run"
+      echo "           this role on a host with >= 48 GiB before concluding"
+      echo "           anything about the bound."
+    fi
+
     # 1. regenerate the instance and require BYTE-IDENTITY with the committed
     #    artifact. This is the load-bearing check of the regeneration model:
     #    if the formula does not reproduce, nothing downstream means anything.
@@ -145,6 +158,11 @@ case "$ROLE" in
     RC=$(printf '%s\n' "${RESULTS[@]}" | grep '^recertify-cover|' | cut -d'|' -f2)
     if [ "$RC" = "10" ]; then
       echo "  *** ALARM: recertify returned SAT (10). This REFUTES the claim R_4 = $N. ***"
+    elif [ "$RC" = "137" ]; then
+      echo "  NOTE: exit 137 is SIGKILL, almost always the OOM killer on this"
+      echo "        workload. Confirm with: dmesg -T | grep -i 'killed process'."
+      echo "        An OOM kill says nothing about the claim -- do not record"
+      echo "        it as a failed recertification."
     fi
     ;;
 
