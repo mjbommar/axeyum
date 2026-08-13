@@ -26,6 +26,10 @@
 //! | `Nat.mul` | `mul x zero ≡ zero`  | `mul x (succ j) ≡ add (mul x j) x`   |
 //! | `Nat.pow` | `pow x zero ≡ 1`     | `pow x (succ j) ≡ mul (pow x j) x`   |
 //!
+//! **Finite ranges**: `Nat.sumRange f n` recursively sums `f 0` through
+//! `f (n-1)`. Its empty and successor equations are checked theorems backed by
+//! definitional reduction.
+//!
 //! **Defining-equation theorems** (`add_zero`, `add_succ`, `mul_zero`,
 //! `mul_succ`, `pow_zero`, `pow_succ`) — each proved by `Eq.refl`; they exist so
 //! callers can rewrite by name without knowing the recursion scheme.
@@ -116,6 +120,8 @@ pub struct NatPrelude {
     pub mul: NameId,
     /// `Nat.pow : Nat → Nat → Nat`, by recursion on the exponent.
     pub pow: NameId,
+    /// `Nat.sumRange : (Nat → Nat) → Nat → Nat`.
+    pub sum_range: NameId,
 
     // --- defining equations (each proved by `Eq.refl`) -----------------------
     /// `add_zero : ∀ (n : Nat), Eq Nat (add n zero) n`.
@@ -130,6 +136,10 @@ pub struct NatPrelude {
     pub pow_zero: NameId,
     /// `pow_succ : ∀ (n m : Nat), Eq Nat (pow n (succ m)) (mul (pow n m) n)`.
     pub pow_succ: NameId,
+    /// `sumRange_zero : ∀ f, sumRange f zero = zero`.
+    pub sum_range_zero: NameId,
+    /// `sumRange_succ : ∀ f n, sumRange f (succ n) = sumRange f n + f n`.
+    pub sum_range_succ: NameId,
 
     // --- additive theorems ---------------------------------------------------
     /// `zero_add : ∀ (n : Nat), Eq Nat (add zero n) n`.
@@ -239,12 +249,15 @@ pub fn build_nat_prelude(kernel: &mut Kernel) -> Result<NatPrelude, KernelError>
             add: kernel.name_str(nat, "add"),
             mul: kernel.name_str(nat, "mul"),
             pow: kernel.name_str(nat, "pow"),
+            sum_range: kernel.name_str(nat, "sumRange"),
             add_zero: kernel.name_str(nat, "add_zero"),
             add_succ: kernel.name_str(nat, "add_succ"),
             mul_zero: kernel.name_str(nat, "mul_zero"),
             mul_succ: kernel.name_str(nat, "mul_succ"),
             pow_zero: kernel.name_str(nat, "pow_zero"),
             pow_succ: kernel.name_str(nat, "pow_succ"),
+            sum_range_zero: kernel.name_str(nat, "sumRange_zero"),
+            sum_range_succ: kernel.name_str(nat, "sumRange_succ"),
             zero_add: kernel.name_str(nat, "zero_add"),
             succ_add: kernel.name_str(nat, "succ_add"),
             add_comm: kernel.name_str(nat, "add_comm"),
@@ -274,6 +287,7 @@ pub fn build_nat_prelude(kernel: &mut Kernel) -> Result<NatPrelude, KernelError>
 
         let mut d = NatDev::new(kernel, p);
         declare_arithmetic(&mut d, &p)?;
+        declare_finite_ranges(&mut d, &p)?;
         declare_defining_equations(&mut d, &p)?;
         declare_additive_theorems(&mut d, &p)?;
         declare_multiplicative_theorems(&mut d, &p)?;
@@ -302,6 +316,49 @@ fn declare_arithmetic(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelEr
     d.define_binary(p.mul, 2, &|d, _x| d.zero(), &|d, x, _j, ih| d.add(ih, x))?;
     // pow x zero ≡ 1 ; pow x (succ j) ≡ mul (pow x j) x
     d.define_binary(p.pow, 3, &|d, _x| d.num(1), &|d, x, _j, ih| d.mul(ih, x))?;
+    Ok(())
+}
+
+/// `sumRange f n = f 0 + ... + f (n-1)`, by structural recursion on `n`.
+fn declare_finite_ranges(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> {
+    let p = *p;
+    let nat = d.nat_ty();
+    let anon = d.anon_name();
+    let fn_ty = d.arrow(nat, nat);
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+    let motive = d.kernel().lam(anon, nat, nat, BinderInfo::Default);
+    let base = d.zero();
+    let step = {
+        let j_fv = d.fresh_fvar();
+        let j = d.kernel().fvar(j_fv);
+        let ih_fv = d.fresh_fvar();
+        let ih = d.kernel().fvar(ih_fv);
+        let fj = d.apply(f, &[j]);
+        let body = d.add(ih, fj);
+        let with_ih = d.lam_fv(ih_fv, nat, body);
+        d.lam_fv(j_fv, nat, with_ih)
+    };
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+    let one = d.level_one();
+    let rec = d.kernel().const_(p.rec, vec![one]);
+    let body = d.apply(rec, &[motive, base, step, n]);
+    let value = {
+        let with_n = d.lam_fv(n_fv, nat, body);
+        d.lam_fv(f_fv, fn_ty, with_n)
+    };
+    let ty = {
+        let over_n = d.arrow(nat, nat);
+        d.arrow(fn_ty, over_n)
+    };
+    d.kernel().add_declaration(Declaration::Definition {
+        name: p.sum_range,
+        uparams: vec![],
+        ty,
+        value,
+        hint: ReducibilityHint::Regular(2),
+    })?;
     Ok(())
 }
 
@@ -364,6 +421,43 @@ fn declare_defining_equations(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), 
         let proof = d.refl(rhs);
         (stmt, proof)
     })?;
+    {
+        let nat = d.nat_ty();
+        let fn_ty = d.arrow(nat, nat);
+        let f_fv = d.fresh_fvar();
+        let f = d.kernel().fvar(f_fv);
+        let zero = d.zero();
+        let lhs = d.sum_range(f, zero);
+        let stmt = d.eq(lhs, zero);
+        let proof = d.refl(zero);
+        let ty = d.pi_fv(f_fv, fn_ty, stmt);
+        let value = d.lam_fv(f_fv, fn_ty, proof);
+        d.declare_theorem(p.sum_range_zero, ty, value)?;
+    }
+    {
+        let nat = d.nat_ty();
+        let fn_ty = d.arrow(nat, nat);
+        let f_fv = d.fresh_fvar();
+        let f = d.kernel().fvar(f_fv);
+        let n_fv = d.fresh_fvar();
+        let n = d.kernel().fvar(n_fv);
+        let sn = d.succ(n);
+        let lhs = d.sum_range(f, sn);
+        let prior = d.sum_range(f, n);
+        let fj = d.apply(f, &[n]);
+        let rhs = d.add(prior, fj);
+        let stmt = d.eq(lhs, rhs);
+        let proof = d.refl(rhs);
+        let ty = {
+            let with_n = d.pi_fv(n_fv, nat, stmt);
+            d.pi_fv(f_fv, fn_ty, with_n)
+        };
+        let value = {
+            let with_n = d.lam_fv(n_fv, nat, proof);
+            d.lam_fv(f_fv, fn_ty, with_n)
+        };
+        d.declare_theorem(p.sum_range_succ, ty, value)?;
+    }
     Ok(())
 }
 
@@ -1343,6 +1437,12 @@ pub trait NatOps {
     fn pow(&mut self, x: ExprId, y: ExprId) -> ExprId {
         let f = self.prelude().pow;
         self.const_app(f, &[x, y])
+    }
+
+    /// `Nat.sumRange f n`.
+    fn sum_range(&mut self, f: ExprId, n: ExprId) -> ExprId {
+        let name = self.prelude().sum_range;
+        self.const_app(name, &[f, n])
     }
 
     /// `Nat.le x y` (the `Prop` `x ≤ y`).

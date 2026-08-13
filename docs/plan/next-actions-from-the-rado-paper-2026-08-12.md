@@ -243,6 +243,10 @@ is a real inductive with a real recursor. ADR-0389 has since added the proved
 `Nat.lt` and checked `le_of_succ_le_succ` inversion; antisymmetry, totality,
 `min`, and decidability remain absent.
 
+ADR-0391 adds generic `Nat.sumRange` with checked empty and successor
+equations. The paper's geometric reindexing and broader sum algebra remain
+open; the specialized test-local `geo`/`geo1` definitions are not substitutes.
+
 **The remaining divisibility and valuation library is the gating item** for formalizing anything
 genuinely number-theoretic — which is to say, for formalizing this paper's
 actual theorems rather than its arithmetic identities. Route: inversion of

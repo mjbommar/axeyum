@@ -60,7 +60,7 @@ impl Fixture {
 /// have. `Nat`/`Nat.zero`/`Nat.succ`/`Nat.rec`/`Nat.le`/… are inductive
 /// machinery, so they are checked separately by `environment().contains`.
 fn definition_names(p: &NatPrelude) -> Vec<NameId> {
-    vec![p.add, p.mul, p.pow, p.lt, p.dvd]
+    vec![p.add, p.mul, p.pow, p.sum_range, p.lt, p.dvd]
 }
 
 fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
@@ -71,6 +71,8 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.mul_succ,
         p.pow_zero,
         p.pow_succ,
+        p.sum_range_zero,
+        p.sum_range_succ,
         p.zero_add,
         p.succ_add,
         p.add_comm,
@@ -190,13 +192,33 @@ fn arithmetic_reduces_on_numerals() {
     let twenty_seven = f.num(27);
     assert!(f.k.def_eq(cube, twenty_seven), "pow 3 3 must reduce to 27");
 
-    // NEGATIVE reduction controls.
     let six = f.num(6);
+    let i_fv = f.fresh_fvar();
+    let i = f.k.fvar(i_fv);
+    let nat = f.nat_ty();
+    let identity = f.lam_fv(i_fv, nat, i);
+    let zero = f.zero();
+    let empty = f.sum_range(identity, zero);
+    assert!(
+        f.k.def_eq(empty, zero),
+        "the empty range sum must reduce to 0"
+    );
+    let first_four = f.sum_range(identity, four);
+    assert!(
+        f.k.def_eq(first_four, six),
+        "sumRange identity 4 must reduce to 0+1+2+3 = 6"
+    );
+
+    // NEGATIVE reduction controls.
     assert!(!f.k.def_eq(sum, six), "add 2 3 must NOT be def-eq to 6");
     let twenty_six = f.num(26);
     assert!(
         !f.k.def_eq(cube, twenty_six),
         "pow 3 3 must NOT be def-eq to 26"
+    );
+    assert!(
+        !f.k.def_eq(first_four, five),
+        "sumRange identity 4 must NOT be def-eq to 5"
     );
 }
 
@@ -567,7 +589,32 @@ fn kernel_rejects_broken_proof_terms() {
         rejections += 1;
     }
 
-    assert_eq!(rejections, 10, "every negative control must be rejected");
+    // NC11 — the successor equation identifies the newly appended summand; it
+    // cannot prove the unrelated claim that the same sum equals zero.
+    {
+        let name = f.name("nc11_sum_range_wrong_target");
+        let i_fv = f.fresh_fvar();
+        let i = f.k.fvar(i_fv);
+        let nat = f.nat_ty();
+        let identity = f.lam_fv(i_fv, nat, i);
+        let two = f.num(2);
+        let proof = f.lemma(p.sum_range_succ, &[identity, two]);
+        let three = f.num(3);
+        let sum_three = f.sum_range(identity, three);
+        let zero = f.zero();
+        let bad = f.eq(sum_three, zero);
+        let err = f
+            .declare_theorem(name, bad, proof)
+            .expect_err("NC11: the sum successor equation must retain its target");
+        println!(
+            "NC11 (wrong finite-sum target) rejected:\n  {}",
+            f.explain(&err)
+        );
+        assert!(!f.k.environment().contains(name));
+        rejections += 1;
+    }
+
+    assert_eq!(rejections, 11, "every negative control must be rejected");
 }
 
 /// The build is deterministic: two independent kernels render every promised
@@ -590,7 +637,7 @@ fn the_build_is_deterministic() {
     assert_eq!(first, second, "the prelude build must be deterministic");
     assert_eq!(
         first.len(),
-        5 + 25,
+        6 + 27,
         "every promised definition and theorem must be rendered"
     );
 }
