@@ -1,0 +1,112 @@
+Independent ground truth — axeyum is NOT consulted anywhere in this file.
+
+=== A — units (a*p = 1) and variable-divisor divisibility ===
+  OK    A1  unit-direct        unsat: no a in [2,400), p in [-400,400] with a*p=1 (proof: |a*p|>=2)
+  OK    A2  unit-control-a1    sat  : witness a=1 p=1
+  OK    A3  unit-neg           unsat: no a<=-2, |p|<=400 with a*p=1 (proof: |a*p|>=2)
+  OK    A4  unit-control-neg   sat  : witness a=-1 p=-1
+  OK    A5  unit-signed        unsat: a>=2,p>=1 => a*p>=2 (proof)
+  OK    A6  divides-1          unsat: identical to A1, restated via divides(a,1)
+  OK    A7  notdiv-1-witness   unsat: side conditions hold for every a in [2,5000)
+  OK    A8  notdiv-1-wit-ctrl  sat  : r=0 violates 1<=r, so the negation holds
+  OK    A9  div-var-x          unsat: scan a<60,b<60,p<4000 empty (proof: a|1)
+  OK    A10 nondiv-x-witness   unsat: s=b^2,r=1 side conditions hold for all a>=2
+  OK    A11 div-var-x-control  sat  : witness a=3 b=4 x=48 p=16
+  OK    A12 cube-nondiv        unsat: scan a<200,p in[-50,200) empty (proof: a*(p-1)=1)
+  OK    A13 cube-nondiv-ctrl   sat  : witness a=2 z=24 p=3
+  OK    A14 mod-phrasing       unsat: 1 mod a = 1 for every a in [2,5000)
+  OK    A15 mod-phrasing-ctrl  sat  : witness a=1, 1 mod 1 = 0 != 1
+
+=== B — opaque symbol vs instantiated form ===
+  OK    B1  opaque-window      unsat: scan M<300,|c|<300 empty (proof above)
+  OK    B2  opaque-window-ctrl sat  : witness M=1 c=1
+  OK    B3  instantiated-window unsat: scan a<60,|w|,|s|<60 empty (M:=a^2 case of B1)
+  OK    B4  inst-window-ctrl   sat  : witness a=2 w=1 s=0 r=4
+  OK    B5  opaque-window-M>=4 unsat: scan M in [4,300), |c|<300 empty
+  OK    B6  opaque-mono        unsat: M,w>=1 => M*w>=M (proof)
+  OK    B7  instantiated-mono  unsat: M:=a*b case of B6
+  OK    B8  opaque-mono-ctrl   sat  : witness M=1 w=1
+  OK    B9  uf-opaque-identity unsat: ring identity, holds for every value of the opaque atom
+  OK    B10 uf-opaque-ident-ctrl sat: witness f(x)=0 y=0
+
+=== C — monolithic vs decomposed hypothesis sets (k=2 colour-1 chain) ===
+  OK    C1  mono-k2-colour1    unsat: scan a,b,t,py<26 coprime empty (proof above)
+  OK    C2  mono-k2-no-gcd     sat  : witness a=4 b=2 t=2 y=4 x=8 N=8 (x=8, N=8)
+  OK    C3  L1-cancel          unsat: 1112 hypothesis-satisfying triples, all give t=a*q
+  OK    C4  L1-cancel-ctrl     sat  : witness a=2 t=0 q=0
+  OK    C5  L2-positivity      unsat: 3422 hypothesis-satisfying pairs, all give w>=1
+  OK    C6  L2-positivity-ctrl sat  : witness a=2 t=2 w=1
+  OK    C7  L3-mono            unsat: b*t = (a*b)*w >= a*b for w>=1 (proof)
+  OK    C8  L3-mono-ctrl       sat  : witness a=2 b=1 w=1 t=2 (equality)
+  OK    C9  L4-endpoint        unsat: x=y+P<=M and P>=M give y<=0, contra y>=1 (proof)
+  OK    C10 L4-endpoint-ctrl   sat  : witness y=1 P=0 M=1
+  OK    C11 L5-distribute      unsat: ring identity a*px - a*py = a*(px-py)
+  OK    C12 L5-distribute-ctrl sat  : witness a=2 px=3 py=1 (4 != 5)
+  OK    C13 L6-bezout          unsat: 2012 hypothesis-satisfying tuples, all give t=a*(t*u+v*d)
+  OK    C14 L6-bezout-ctrl     sat  : witness a=4 b=2 t=-2 d=-1 u=-1 v=4 (-2 != -8)
+
+=== D — polynomial identities degree 2-4 in 2-3 variables ===
+  OK    D1  id2-square          unsat: identity verified on [-12,12]^2
+  OK    D2  id2-square-ctrl    sat  : witness x=0 y=0 (0 != 1)
+  OK    D3  id3-cube            unsat: identity verified on [-12,12]^2
+  OK    D4  id3-cube-ctrl      sat  : witness x=0 y=0
+  OK    D5  id3-sumcubes        unsat: identity verified on [-12,12]^2
+  OK    D6  id3-sumcubes-ctrl  sat  : witness x=0 y=0
+  OK    D7  id4-binom           unsat: identity verified on [-12,12]^2
+  OK    D8  id4-binom-ctrl     sat  : witness x=0 y=0
+  OK    D9  id2-three-var       unsat: identity verified on [-7,7]^3
+  OK    D10 id2-three-var-ctrl sat  : witness x=y=z=0
+  OK    D11 id3-cyclic          unsat: identity verified on [-7,7]^3
+  OK    D12 id3-cyclic-ctrl    sat  : witness x=y=z=0 (LHS 0 != RHS+1 = 1)
+  OK    D13 id4-sophie-germain  unsat: identity verified on [-12,12]^2
+  OK    D14 id4-sophie-ctrl    sat  : witness x=1 y=0 (LHS 1 != RHS+1 = 2)
+  OK    D15 id4-difference      unsat: identity verified on [-12,12]^2
+  OK    D16 id4-difference-ctrl sat : witness x=2 y=1 (15 != 16)
+  OK    D17 id-congruence      unsat: every pair on [-12,12]^2 with x=y has x^3=y^3
+  OK    D18 id-congruence-ctrl sat  : witness x=2 y=1 (x=y+1, 8 != 1)
+  OK    D19 id4-brahmagupta     unsat: identity verified on [-7,7]^3
+  OK    D20 id4-brahmagupta-ctrl sat: witness x=1 y=0 z=0 (1 != 2)
+
+=== F — nonzero-polynomial-but-UNSAT traps + their sat controls ===
+  OK    F1  square-eq-2        unsat: no x with |x|<1e5 has x^2=2 (proof: 1^2<2<2^2)
+  OK    F2  square-eq-4        sat  : witness x=2
+  OK    F3  sum2sq-3           unsat: theorem (n = 3 mod 4 is not a sum of two squares)
+  OK    F4  sum2sq-5           sat  : witness x=1 y=2
+  OK    F5  sum3sq-7           unsat: Legendre three-square theorem (7 = 8*0+7)
+  OK    F6  sum3sq-6           sat  : witness x=1 y=1 z=2
+  OK    F7  pythag-3-5         unsat: 34 is not a perfect square (5^2=25 < 34 < 36=6^2)
+  OK    F8  pythag-3-4         sat  : witness z=5
+  OK    F9  linear-gcd-3       unsat: 4x+6y is even, 3 is odd (proof)
+  OK    F10 linear-gcd-2       sat  : witness x=-1 y=1
+  OK    F11 sqrt2-descent      unsat: theorem (sqrt 2 irrational); scan x<900,y<640 empty
+  OK    F12 sqrt2-descent-ctrl sat  : witness x=2 y=1
+  OK    F13 square-eq-cube     sat  : witness x=8 y=4 (64=64)
+  OK    F14 mordell-7          unsat: Mordell y^3 = x^2 - 7 has no integer point (classical)
+
+=== G — tripwires: huge witnesses, hard theorems, and OPEN problems ===
+  OK    G1  pell-61            sat  : witness x=1766319049 y=226153980 (verified exactly)
+  OK    G2  pell-109           sat  : witness x=158070671986249 y=15140424455100 (verified exactly)
+  OK    G3  pell-61-neg        sat  : witness x=29718 y=3805 (verified exactly)
+  OK    G4  pell-square-d      unsat: (x-2y)(x+2y)=2 impossible by parity (proof)
+  OK    G5  flt-4              unsat: Fermat n=4 (elementary descent); scan <60 empty
+  OK    G6  flt-4-nearmiss     sat  : witness x=y=z=1
+  OK    G7  flt-3              unsat: Euler n=3; scan <90 empty
+  OK    G8  taxicab-1729       sat  : witness x=9 y=10
+  OK    G9  three-cubes-4      unsat: cubes are {0,1,8} mod 9; no triple sums to 4 mod 9 (proof)
+  OK    G10 three-cubes-5      unsat: no triple of {0,1,8} sums to 5 mod 9 (proof)
+  OK    G11 three-cubes-3      sat  : witness (1,1,1)
+  OK    G12 three-cubes-33     sat  : the 2019 witness verifies exactly (|x| ~ 8.9e15)
+  OPEN  G13 three-cubes-114  expected=UNKNOWN: unresolved as of 2026 —
+        a `sat` must be checked against Python before it is believed;
+        an `unsat` would be a research-level theorem, not a feature.
+  OPEN  G14 three-cubes-390  expected=UNKNOWN: same status.
+  OK    G15 brocard-5          sat  : witness m=11 (5!+1 = 121)
+
+=== H — anchors that must not regress ===
+  OK    H1  linear-sat         sat  : witness x=2 y=1
+  OK    H2  linear-unsat       unsat: x+y cannot equal both 3 and 4 (proof)
+  OK    H3  mul-lower-bound    unsat: a>=2,b>=1 => a*b>=2>=1 (proof)
+  OK    H4  dl-negative-cycle  unsat: cycle weight 3+2-6 = -1 < 0 (proof)
+  OK    H5  dl-zero-cycle      sat  : witness x=5 y=2 z=0 (3,2,-5 all tight)
+
+=== checked 91 claims, 0 failed ===

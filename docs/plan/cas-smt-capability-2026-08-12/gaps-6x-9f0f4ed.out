@@ -1,0 +1,44 @@
+CAS/SMT arithmetic capability corpus — 13 queries
+Ground truth: ../ground_truth.py (independent of axeyum). Route provenance: check_auto_explained.
+MACHINE IS CONTENDED — every wall time below is an UPPER BOUND, not a timing.
+
+
+=== axis A — units / variable-divisor divisibility ===
+  A1-unit-direct         core   want=unsat  got=unknown(Timeout)         60.00s  UNDECIDED-GAP                (none; last decline: int-blast-ladder)
+  A3-unit-neg            core   want=unsat  got=unknown(Timeout)         60.00s  UNDECIDED-GAP                (none; last decline: int-blast-ladder)
+  A9-div-var-x           core   want=unsat  got=unknown(Timeout)         60.00s  UNDECIDED-GAP                (none; last decline: int-blast-ladder)
+  A12-cube-nondiv        core   want=unsat  got=unknown(Incomplete)      27.52s  UNDECIDED-GAP                (none; last decline: int-blast-ladder)
+  A14-mod-phrasing       core   want=unsat  got=unknown(Incomplete)       0.19s  UNDECIDED-GAP                (none; last decline: int-blast-ladder)
+
+=== axis B — opaque symbol vs instantiated ===
+  B1-opaque-window       core   want=unsat  got=unknown(Timeout)         60.00s  UNDECIDED-GAP                (none; last decline: int-blast-ladder)
+  B5-opaque-window-M4    core   want=unsat  got=unknown(Timeout)         60.00s  UNDECIDED-GAP                (none; last decline: int-blast-ladder)
+
+=== axis C — monolithic vs decomposed hypotheses ===
+  C1-mono-k2-colour1     core   want=unsat  got=unknown(Incomplete)      57.77s  UNDECIDED-GAP                (none; last decline: int-blast-ladder)
+  C7-L3-mono             core   want=unsat  got=unknown(Timeout)         60.00s  UNDECIDED-GAP                (none; last decline: int-blast-ladder)
+  C11-L5-distribute      core   want=unsat  got=unknown(Timeout)         60.00s  UNDECIDED-GAP                (none; last decline: int-blast-ladder)
+  C13-L6-bezout          core   want=unsat  got=unknown(Timeout)         60.00s  UNDECIDED-GAP                (none; last decline: int-blast-ladder)
+
+=== axis F — nonzero-polynomial-but-unsat traps ===
+  F3-sum2sq-3            core   want=unsat  got=unknown(Incomplete)       0.07s  UNDECIDED-GAP                (none; last decline: int-blast-ladder)
+
+=== axis G — tripwires: huge witnesses / deep theorems / OPEN ===
+  G4-pell-square-d       core   want=unsat  got=unknown(Incomplete)       0.07s  UNDECIDED-GAP                (none; last decline: int-blast-ladder)
+
+
+===================== SUMMARY =====================
+    13  UNDECIDED-GAP
+
+  --- decided vs undecided, by axis ---
+  axis A: decided   0   unknown   5
+  axis B: decided   0   unknown   2
+  axis C: decided   0   unknown   4
+  axis F: decided   0   unknown   1
+  axis G: decided   0   unknown   1
+
+  --- deciding routes (count of queries each route decided) ---
+
+  ALARMS: 0   ANCHOR REGRESSIONS: 0   BAD MODEL REPLAYS: 0
+
+  wrote gaps-6x-9f0f4ed.json
