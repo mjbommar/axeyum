@@ -124,17 +124,24 @@ case "$ROLE" in
     else A=4; B=3; N=313; CLAIM=rado-r4-a4-b3; fi
     STORED="artifacts/claims/rado/$CLAIM/F_$N.cnf"
 
-    # Measured 2026-08-13 on s5 (27 GiB): recertify_rado was OOM-killed at
-    # 27,742,576 kB anon-rss after 1331 s, exiting 137. That is a resource
-    # failure, NOT a failed recertification, and the bare 137 reads exactly
-    # like a real one in the report. Say so up front instead.
+    # Measured 2026-08-13, both roles OOM-killed on small-memory hosts:
+    #   s5, 27 GiB, n=313: killed at 27,742,576 kB anon-rss after 1331 s
+    #   s6, 26 GiB, n=226: killed at 26,345,012 kB anon-rss after 6217 s
+    # Both exited 137, which in the report reads exactly like a refuted claim.
+    # On a 123 GiB host n=313 completed and verified. Say so up front.
+    #
+    # NOTE TO WHOEVER EDITS THIS: the hosts run their own copy of this script,
+    # scp'd there. This guard was committed and then NOT redeployed, so s4 and
+    # s6 ran the old copy and the s6 OOM printed no warning at all. Committing
+    # a harness fix is not deploying it.
     MEM_GIB="$(free -g | awk '/^Mem:/{print $2}')"
     if [ "${MEM_GIB:-0}" -lt 48 ]; then
-      echo "  WARNING: ${MEM_GIB} GiB RAM. recertify_rado peaked at ~27 GiB on"
-      echo "           n=313 and was OOM-killed on a 27 GiB host. Expect exit"
-      echo "           137 here; that is memory, not a refuted claim. Re-run"
-      echo "           this role on a host with >= 48 GiB before concluding"
-      echo "           anything about the bound."
+      echo "  WARNING: ${MEM_GIB} GiB RAM. recertify_rado needs more than 27 GiB"
+      echo "           at n=313 and more than 26 GiB at n=226; both were"
+      echo "           OOM-killed on hosts this size. Expect exit 137 here;"
+      echo "           that is memory, not a refuted claim. Re-run this role on"
+      echo "           a host with >= 48 GiB before concluding anything about"
+      echo "           the bound."
     fi
 
     # 1. regenerate the instance and require BYTE-IDENTITY with the committed
