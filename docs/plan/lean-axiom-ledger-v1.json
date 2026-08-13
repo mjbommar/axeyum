@@ -4,6 +4,11 @@
   "as_of": "2026-08-13",
   "source_command": "cargo run --quiet -p axeyum-lean-kernel --example prelude_axiom_inventory",
   "type_identity": "sha256 of Kernel::render_lean(declaration.ty) UTF-8 bytes",
+  "trust_policy": {
+    "adr": "docs/research/09-decisions/adr-0388-retain-axiomatized-int-and-use-nat-deficits-for-rado.md",
+    "integer_assumptions": 34,
+    "publication_rule": "Any checked dependency closure using the integer prelude must disclose 34 assumptions; credited Rado rigidity uses the zero-axiom Nat prefix-deficit encoding instead."
+  },
   "expected_counts": {
     "real": 30,
     "integer": 34,

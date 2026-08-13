@@ -177,6 +177,20 @@ def validate_manifest(
         failures.append("source_command drift")
     if data.get("expected_counts") != {**EXPECTED_COUNTS, "total": 65}:
         failures.append("expected_counts must remain real=30 integer=34 string=1 total=65")
+    trust_policy = data.get("trust_policy")
+    expected_trust_policy = {
+        "adr": "docs/research/09-decisions/adr-0388-retain-axiomatized-int-and-use-nat-deficits-for-rado.md",
+        "integer_assumptions": 34,
+        "publication_rule": (
+            "Any checked dependency closure using the integer prelude must disclose "
+            "34 assumptions; credited Rado rigidity uses the zero-axiom Nat "
+            "prefix-deficit encoding instead."
+        ),
+    }
+    if trust_policy != expected_trust_policy:
+        failures.append("trust_policy must retain the accepted ADR-0388 boundary")
+    elif not (ROOT / trust_policy["adr"]).is_file():
+        failures.append("trust_policy ADR path does not exist")
     if set(data.get("classification_definitions", {})) != CLASSIFICATIONS:
         failures.append("classification definitions do not match the allowed states")
     if set(data.get("discharge_definitions", {})) != DISCHARGE_STATES:
@@ -287,6 +301,11 @@ def render(data: dict[str, Any]) -> str:
         f"- {len(shared)} names are shared by the isolated real and integer "
         "preludes; ADR-0387's `Int.*` / `Real.*` namespaces make the packages "
         "composable.",
+        "- Integer trust policy: [ADR-0388](../../research/09-decisions/"
+        "adr-0388-retain-axiomatized-int-and-use-nat-deficits-for-rado.md) "
+        "retains all 34 assumptions for reconstruction, requires that count in "
+        "any dependent publication claim, and keeps credited Rado rigidity on "
+        "the zero-axiom Nat prefix-deficit route.",
         "- Classification: "
         + ", ".join(f"{key} {classifications[key]}" for key in sorted(classifications))
         + ".",

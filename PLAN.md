@@ -46,10 +46,10 @@ or a replacement for the Lean system.
 
 The Rado/Ramsey-driven
 [`Lean requirements`](docs/plan/lean-kernel-requirements-2026-08-13.md) are
-**WIP**. R1/TL3.3 is green: preludes compose, repeat, and roll back. The
-[R1 result](docs/plan/lean-prelude-composition-r1-result-2026-08-13.md) records
-the accepted ADR, evidence, and Rado boundary. R0/R6 at `b8642b98f` have green
-hosted CI/docs; docs at `9946cf1d6` are also green.
+**WIP**. R1/TL3.3 is pushed at `f2ccc4322`; CI is pending
+([result](docs/plan/lean-prelude-composition-r1-result-2026-08-13.md)). R2 is
+decided: Int retains 34 assumptions; Rado rigidity uses Nat prefixes
+([result](docs/plan/lean-integer-foundation-r2-result-2026-08-13.md)).
 
 Exact pushed `e996afd83` passed `just check`; its RDL capture then failed closed
 at 196/200 because allocator arenas accumulated across files. ADR-0379 rejects
@@ -340,8 +340,9 @@ here as closed evidence boundaries. A3 remains incomplete, but all currently
 preregistered bounded mechanisms are closed negatively. A4 has now also yielded;
 A5 is the first active item.
 
-**Immediate action (`WIP`, user-directed Lean lane).** Publish/gate R1, then
-execute R2's integer-foundation choice before `thm:rigid` receives credit.
+**Immediate action (`WIP`, Lean lane).** After R1 CI, implement
+R7.1's zero-axiom Nat slice; then Nat-prefix `M = N+1` rigidity. R2 adds no
+theorem credit.
 Keep the 14-theorem export labelled unchecked by real Lean. The prior A5 V2 QF_RDL row-1
 action remains pending, neither credited nor cancelled.
 

@@ -993,9 +993,15 @@ formalize either half of that theorem or choose its signed-defect encoding.
 
 | ID | Requirement | Exit |
 |---|---|---|
-| **R2.1** | If ℤ is to be *constructed* rather than axiomatized, `Quot.sound` must exist. Today `PACKAGE_LEN = 4` and the soundness axiom is absent (§2.5), so quotients compute but carry no propositional content. | A 5-member quotient package, or an accepted ADR recording why ℤ stays axiomatized. ADR-0365 is still **proposed**, not accepted. |
-| **R2.2** | The choice between constructed ℤ (zero axioms, large cost) and axiomatized ℤ (34 axioms, available now) must be an **explicit, recorded decision**, not a default inherited from whichever prelude a caller happens to build. | An ADR stating the choice and its trust consequence, referenced from the axiom ledger. |
+| **R2.1** | If ℤ is to be *constructed* rather than axiomatized, `Quot.sound` must exist. Today `PACKAGE_LEN = 4` and the soundness axiom is absent (§2.5), so quotients compute but carry no propositional content. The pinned official package is four members; `Quot.sound` would be a separate ordinary axiom, not a fifth privileged member. | **Met by decision:** accepted ADR-0388 keeps the current ℤ profile axiomatized. ADR-0365 remains separately proposed; any future construction must retain the canonical four-member package and ledger `Quot.sound` explicitly. |
+| **R2.2** | The choice between constructed ℤ (zero **Int-specific** axioms but at least the framework `Quot.sound` axiom, plus large library cost) and axiomatized ℤ (34 axioms, available now) must be an **explicit, recorded decision**, not a default inherited from whichever prelude a caller happens to build. | **Met:** ADR-0388 retains the 34-assumption profile for reconstruction and selects a Nat prefix-deficit encoding for credited Rado rigidity; the generated axiom ledger references the decision. |
 | **R2.3** | Any publication resting on `int_prelude` must state the axiom count in the claim itself. "Zero sorry, zero axiom" is true of `nat_prelude` and **false** of anything touching ℤ today. | Publication text names 34 axioms, or does not use ℤ. |
+
+R2 is **DONE as a foundation decision**, with no theorem credit added. The
+[`R2 result`](lean-integer-foundation-r2-result-2026-08-13.md) and
+[accepted ADR-0388](../research/09-decisions/adr-0388-retain-axiomatized-int-and-use-nat-deficits-for-rado.md)
+record the reconstruction/publication split, the corrected four-member
+quotient boundary, and the subtraction-free Rado prefix invariant.
 
 ### R3 — Computation
 
@@ -1104,6 +1110,6 @@ Recorded so that scope does not drift the way the phrase "end to end" did.
 | Q6 | Does axeyum inherit nanoda's second soundness bug (the `imax` leq bug, commit `12838995c`)? Probe 5 shows the level layer is exactly where shared lineage shows. | R8.3 | build the upstream reproducer as a test |
 | Q7 | Should `leq_core` be restricted to Lean's incomplete normalization, or should the divergence be documented and kept? Restricting costs completeness axeyum currently has; keeping it means axeyum-checked ⇏ Lean-checkable. | R8.2, R8.4 | ADR |
 | Q2 | Does a WF-recursion route work end to end? **The shape question is already settled: yes.** `strict_positivity.rs` classifies the `Acc` shape as `Production::PositivePi` at `context_depth > 0`, whose declines went 144 → 0, and indexed profiles likewise 42 → 0. What is unsettled is whether a declared `Acc` generates a usable recursor and whether `gcd` by `Acc.rec` type-checks. | R4.8, hence `thm:main` | declare `Acc`, build one `gcd` by `Acc.rec`, check it — a build task, not a probe |
-| Q3 | Is `thm:rigid` cheaper over axiomatized ℤ or over a ℕ deficit encoding? | R7.2 | formalize `lem:width` both ways; compare |
+| Q3 | **Resolved for the credited Rado lane by ADR-0388:** use the ℕ prefix invariant `A_j ≤ C_j`; an axiomatized-ℤ version may be measured later but cannot improve the zero-axiom result. | R7.2 | [ADR-0388](../research/09-decisions/adr-0388-retain-axiomatized-int-and-use-nat-deficits-for-rado.md) |
 | Q4 | What does reflection over a SAT-scale search actually cost in this kernel? | any `decide`-style route | measure; do **not** extrapolate from Probe 3 |
-| Q5 | Should ADR-0365 (quotient package) be accepted, and should it become 5 members with `Quot.sound`? | R2.1, hence constructed ℤ | ADR review |
+| Q5 | **R2 resolved by ADR-0388:** do not accept ADR-0365 or add `Quot.sound` to construct ℤ for the Rado lane. The official privileged package remains four members; `Quot.sound` is a separate axiom. ADR-0365's M4 conformance question remains open on its own evidence. | R2.1 closed; Lean conformance remains | [ADR-0388](../research/09-decisions/adr-0388-retain-axiomatized-int-and-use-nat-deficits-for-rado.md) |

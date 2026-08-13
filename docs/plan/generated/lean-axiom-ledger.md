@@ -9,6 +9,7 @@ This ledger inventories declarations actually admitted as axioms after construct
 - **65 total assumptions:** real 30, integer 34, string 1.
 - The earlier 64-row call-site census missed `axeyum.string.append`, which is inserted directly as `Declaration::Axiom` rather than through `declare_axiom(...)`.
 - 0 names are shared by the isolated real and integer preludes; ADR-0387's `Int.*` / `Real.*` namespaces make the packages composable.
+- Integer trust policy: [ADR-0388](../../research/09-decisions/adr-0388-retain-axiomatized-int-and-use-nat-deficits-for-rado.md) retains all 34 assumptions for reconstruction, requires that count in any dependent publication claim, and keeps credited Rado rigidity on the zero-axiom Nat prefix-deficit route.
 - Classification: derivable-theorem 7, external-assumption 41, primitive-interface 17.
 - Discharge: planned 7, retained 58.
 

@@ -42,6 +42,25 @@ class LeanAxiomLedgerContractTests(unittest.TestCase):
         self.assertEqual(first, second)
         self.assertIn("**65 total assumptions:** real 30, integer 34, string 1", first)
         self.assertIn("`axeyum.string.append`", first)
+        self.assertIn("ADR-0388", first)
+
+    def test_integer_publication_policy_is_exact_and_count_bound(self) -> None:
+        self.data["trust_policy"]["integer_assumptions"] = 33
+        self.assertTrue(
+            any(
+                "trust_policy must retain the accepted ADR-0388 boundary" in failure
+                for failure in self.failures()
+            )
+        )
+
+        self.data = GEN.load_manifest()
+        self.data["trust_policy"]["publication_rule"] = "axiom-free"
+        self.assertTrue(
+            any(
+                "trust_policy must retain the accepted ADR-0388 boundary" in failure
+                for failure in self.failures()
+            )
+        )
 
     def test_missing_and_extra_runtime_entries_fail(self) -> None:
         removed = self.data["entries"].pop()

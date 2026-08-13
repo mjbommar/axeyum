@@ -1578,6 +1578,17 @@ Full plan: [axeyum-glaurung-pareto-strategy.md](./axeyum-glaurung-pareto-strateg
     cold-total, family, variance, and RSS timing. This cannot soften IR errors
     or become a performance-lead claim.
 
+- [x] Which integer foundation and signed-defect encoding may carry credited
+  Rado rigidity results?
+  - [ADR-0388](../09-decisions/adr-0388-retain-axiomatized-int-and-use-nat-deficits-for-rado.md)
+    retains the existing 34-assumption `Int` profile for solver
+    reconstruction, prohibits axiom-free claims for its dependency closure,
+    and selects the subtraction-free Nat prefix invariant `A_j <= C_j` for the
+    credited `M = N+1` rigidity lane. It also corrects the quotient boundary:
+    Lean's privileged package has four members, while `Quot.sound` is a
+    separate axiom. ADR-0365 remains independently gated on its M4 conformance
+    evidence.
+
 ## Source Pointers
 
 - Axeyum research index: ../README.md
