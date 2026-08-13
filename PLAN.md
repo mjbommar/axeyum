@@ -359,79 +359,25 @@ frontier block. Ordered follow-on work:
 issue register:
 [`findings-register-2026-08-12.md`](docs/plan/findings-register-2026-08-12.md).
 
-**Lane extension — from verification to proof (2026-08-12, later).** The
-general-`k` shell lower bound behind those values was, until this session,
-*verified at 11 computational points and asserted in a Python script*. It is
-now a **theorem with a written, reviewed proof**: for `a >= 2`,
-`gcd(a,b) = 1`, `b < a`, `k >= 2` the shell colouring of `[1,N]` is
-solution-free, so `R_k >= N+1`; together with a closed-form monochromatic
-witness for every `b > a`, `k >= 3` this gives the exact characterisation
-**solution-free iff `b < a` or `k = 2`**, upgrading the previous 19-point
-empirical soundness guard to a proved infinite family. Three routes were run
-concurrently; the one that matters for the north star is that **axeyum's
-in-tree Lean kernel now checks 9 `forall`-quantified theorems over `N` with
-ZERO axioms** — `Nat` is already a real inductive with a real recursor in the
-logic prelude, so induction needed no axiomatisation — and the proof's
-algebra is verified symbolically by **axeyum's own CAS** (`MvPoly`, 118 exact
-checks, 11 negative controls). Everything, including three retracted errors
-of my own, is in
+**Lane extension — from verification to proof (2026-08-12).** The general-`k`
+shell lower bound became a **theorem with a written, reviewed proof** (for
+`a >= 2`, `gcd(a,b) = 1`, `b < a`, `k >= 2`), which with a closed-form
+monochromatic witness for every `b > a`, `k >= 3` gives the characterisation
+**solution-free iff `b < a` or `k = 2`**. axeyum's in-tree Lean kernel checks
+9 `forall`-quantified theorems over `N` with **zero axioms**, and the algebra
+is verified by axeyum's own CAS. Not claimed: no upper bounds; not tight at
+`k = 5`; the Lean export has **not** been checked by real Lean. Record, with
+three retracted errors:
 [`proof-approaches-2026-08-12/`](docs/plan/proof-approaches-2026-08-12/README.md).
-Not claimed: no upper bounds; the construction is **not** tight at `k = 5`
-(318 against a verified 350-witness); and the Lean export has
-**not** been checked by real Lean — `lean`/`lake`/`elan` are absent here, and
-running it elsewhere is the highest-value next measurement.
-
-> **Correction (2026-08-13).** An earlier version of this paragraph said
-> 644,956 cut vectors were "exhaustively enumerated to show 318 is the whole
-> shape's ceiling". Two things were wrong. The script carried
-> `BUDGET = 60000` and printed `(3, 2, 5) 318 644956 (skipped: over budget)`
-> — it *counted* the vectors and never enumerated them. And 644,956 is the
-> `M = N` **uniqueness** count; the ceiling claim is infeasibility at
-> `M = N+1`, a different computation. The budget has since been raised and
-> the enumeration now genuinely runs, but the paper does not rest on it: it
-> attributes the ceiling to the **rigidity theorem**, which covers `(3,2,5)`
-> (`b = a-1`, `k >= 3`) and is stronger than any enumeration.
 
 **Lane extension — publishable result, replication, and evidence pinning
-(2026-08-13).** Three sibling repositories (`axeyum`,
-`../axeyum-rado-paper`, `../axeyum-rado-artifacts`) were brought to a
-submittable state. What changed here:
-
-- **The 313 upper bound had no identified subject.** `F_313.cnf` was
-  untracked and `claim.json` recorded no instance hash, so five cover ledgers
-  held verdicts about a formula nothing named. Added an `instance-pin`
-  evidence kind, checked by **regeneration** (an independently written
-  encoder re-derives the CNF from `(a,b,k,n)` and requires byte-identity),
-  and pinned both headline instances. Two negative controls fire, including
-  a *self-consistent forgery* — corrupt CNF plus matching hash — which any
-  hash-only gate would pass.
-- The 226 `upper-drat` row was **not evidence of its stated bound** (kind
-  `unsat-certificate`, artifact the formula, checker external kissat, note
-  claiming a run "in progress" that was not). Restated as an instance pin.
-- The 313 claim's **default artifact was the wrong cover**: `cube-cover.tsv`
-  was the 1024-cell, 224-deferred one while the prose described the complete
-  4096-cell cover, which sat under a name the prose never used. Swapped.
-- **Both re-check commands the shipped arXiv bundle documents had never
-  worked** (missing schema; `FileNotFoundError` on the first witness). Fixed;
-  the checkers now also report rows they could *not* re-check rather than
-  passing them silently.
-- New claim `rado-r4-a6-b5-frontier`: `R_4(6(x-y)=5z) > 1500`, the second
-  open cell of the `k = 4` row, **free from the main theorem** — written down
-  from the construction, not searched for, and checked three independent
-  ways.
-- **Replication on five hosts from clean clones**, roles `gate`, `cover226`,
-  `cover313`, `ladder`, `ledger`, across three `cargo` toolchains
-  (1.96/1.97/1.99-nightly). `ledger` and `ladder` each passed **7/0 on two
-  different hosts and two different toolchains**. Measured and recorded:
-  `recertify_rado` needs **~28 GiB** and was OOM-killed at exit 137 on a
-  27 GiB box — a resource failure that reads exactly like a refuted claim, so
-  `replicate.sh` now warns before and annotates after.
-- Three review passes (codex CLI plus independent agents) found **no error in
-  any of the three theorems**, including the `a = 2` rigidity corner, and
-  confirmed them by exhaustive enumeration. They did find one false step in a
-  written proof (`a \nmid m'n'`, false for composite `a`), two malformed
-  statements, and four overclaims — all corrected. Details in the paper
-  repository's history.
+(2026-08-13).** Three sibling repositories brought to a submittable state:
+both headline instances pinned by regeneration, the shipped arXiv bundle
+made re-checkable, five-host clean-clone replication across three
+toolchains, four review passes, and a monolithic refutation of F_313 that
+removes the cover composition meta-argument for that value. Full record,
+including three mistakes that cost real work:
+[`rado-publishable-result-2026-08-13.md`](docs/plan/rado-publishable-result-2026-08-13.md).
 
 **Parallel documentation action.** The comprehensive pass and 2026-08-09
 README application/vision revision are closed. Continue only for a concrete
