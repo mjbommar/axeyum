@@ -19,8 +19,8 @@
 //! downstream — the encoder, the cover harness, the ledger, the certification
 //! pass, the local search — is family-agnostic and needs no change.
 
-use crate::colouring::{ColouringProblem, Witness};
 use crate::SearchError;
+use crate::colouring::{ColouringProblem, Witness};
 
 /// A parameterised family of colouring instances.
 pub trait ColouringFamily: Sync {
@@ -167,10 +167,7 @@ impl ColouringFamily for Rado {
         let (step_z, step_x) = (self.a / divisor, self.b / divisor);
         let mut sets = Vec::new();
         let mut t = 1usize;
-        loop {
-            let (Some(z), Some(dx)) = (step_z.checked_mul(t), step_x.checked_mul(t)) else {
-                break;
-            };
+        while let (Some(z), Some(dx)) = (step_z.checked_mul(t), step_x.checked_mul(t)) {
             if z > points || dx + 1 > points {
                 break;
             }
@@ -188,7 +185,7 @@ impl ColouringFamily for Rado {
         for x in 1..=points {
             for y in 1..x {
                 let numerator = self.a * (x - y);
-                if numerator % self.b != 0 {
+                if !numerator.is_multiple_of(self.b) {
                     continue;
                 }
                 let z = numerator / self.b;
@@ -364,7 +361,9 @@ mod tests {
         for _ in 0..64 {
             let colouring: Vec<usize> = (0..24)
                 .map(|_| {
-                    state = state.wrapping_mul(6_364_136_223_846_793_005).wrapping_add(1);
+                    state = state
+                        .wrapping_mul(6_364_136_223_846_793_005)
+                        .wrapping_add(1);
                     ((state >> 33) % 3) as usize + 1
                 })
                 .collect();

@@ -4,16 +4,16 @@
 for current project status, ordered work, blockers, and resume guidance. Read it
 first and update it before ending a project-level work session.
 
-- Last consolidated: **2026-08-07**
-- Integrated repository state audited at:
-  `6be32cb4a56e5384004715884f2960507dfa3a22`; the latest solver-code gate
-  remains `3eb7eac442c64aee4b809ee059bf59d93b6160ee`, including A3 merge
-  `0c31baf979d09270497b5512819fa6e8ed927de7`
-- Expected handoff state: clean local `main` equal to `origin/main`
-- Latest integrated increment: A3 attribution topic `2269488ef0318d8e8f88d4c147b2c148860d3e90`
-  via merge `6be32cb4a56e5384004715884f2960507dfa3a22`
-- Latest retained-result increment: `2269488ef` (bounded A3 clause-estimate
-  attribution closed at its exact pipeline-record gate)
+- Last consolidated: **2026-08-12**
+- Current `main` contains linear A5 through exact commit
+  `4b6b765556c4ff1fb4dc47ffd75568a3ed1f9246` by conflict-free fast-forward
+- Active A5 large-equality DL repair: code at exact pushed
+  `46edad8bac7e193303871d601914fef2115bf721`; its documentation descendant
+  `d1b570f91c27f83ef55127ea3d1c8baf700f05a5` passed the full release gate
+- Latest full-gate attempt: exact pushed checkpoint `d1b570f91c27f83ef55127ea3d1c8baf700f05a5`
+  passed `just check` with external frontier artifacts and exit 0
+- Latest comprehensive green exact-commit gate:
+  `d1b570f91c27f83ef55127ea3d1c8baf700f05a5` (`just check` exit 0)
 - Latest integrated A3 code increments: bounded SMT-LIB `distinct` expansion at
   `63c82a6ef`, typed arithmetic-model reconstruction at `4ff9a82c6`, and
   deterministic string/integer coupling at `db7b426e8`
@@ -32,6 +32,14 @@ and `STATUS.md` blob `0f169eddfabb190f45428090ffb057e8289bf355`.
 
 ## Status
 
+**A5 repair history.** Fail-closed LRA/IDL restarts exposed wide-core and
+first-solve allocation growth, mixed-numeric parsing, native recursion,
+unhonored construction deadlines, and declaration-scale quadratic work. Their
+pushed bounded/iterative repairs and every non-credited partial stream are
+retained in the
+[failure/repair record](docs/plan/qf-linear-a5-wide-core-memory-repair-2026-08-08.md);
+the current release returns typed `unknown` on each former abort trigger.
+
 Axeyum is a working research-grade automated-reasoning stack with a pure-Rust
 default path, replay-checked SAT models, multiple independently checked UNSAT
 evidence routes, broad but uneven theory support, an independent Lean-core
@@ -41,68 +49,63 @@ or a replacement for the Lean system.
 The 2026-08-09 README-only pass adds an application map and architecture/vision
 guide; it changes no capability, evidence, measurement, or roadmap claim.
 
-The audited integrated repository state is
-`6be32cb4a56e5384004715884f2960507dfa3a22`; the A3 relevance-ladder and budget
-partition work is documentation-only and does not alter the solver-code
-evidence at `3eb7eac442`. Local `main` is clean and
-exactly equal to `origin/main`. Topic `ee5042dee` is pushed and exactly equals
-`origin/agent/nia/a3-census`. The merge passed one uninterrupted
-external-frontier `CARGO_BUILD_JOBS=2 just check` with exit 0: format, stable
-all-target Clippy, every workspace test and doctest, 1,078 solver-library tests,
-all retained arithmetic/string/UF differentials with zero disagreement, 9/9
-frontier tests in 219.05 s, both order-255 CAS proofs in 938.58 s,
-warning-denied rustdoc, QF_BV/reflection and both 162-file Glaurung policies,
-generated resources, rules-as-code, the 165-test resume aggregate in 46.002 s
-with one expected skip, every Lean/process-free contract, parity docs, plan
-authority, and links. Its five 20 KiB external frontier artifacts were removed
-after evidence capture. Hosted docs run `31190516093` and CI run `31190517748`
-failed only in the duplicated docs/resource job because the pinned `just`
-action installed outside the credited PATH; every non-doc CI job was green.
-Commit `259797459` copies that pinned regular executable into the registered
-account Cargo bin and validates exact version 1.57.0. Merge `bd413357c` contains
-the repair and A3 diagnostic preregistration. Exact-SHA docs run `31192792512`
-and CI run `31192792245` are terminal green, including the formerly failing
-registered full-preparation resume gate.
-The later docs-only main checkpoint `a28560f81` is independently terminal green
-in hosted docs run `31198041045`.
-Follow-up topic `c92155454` is integrated by merge `d09e6debb`. Its broad gate
-passed every substantive code/evidence stage, then exited 1 when the scoreboard
-correctly detected five frontier JSON files regenerated earlier in that same
-command. Exact restoration plus the full parity-docs tail, plan authority,
-links, and clean-tree checks passed; this is not an aggregate exit-0 claim.
-Local `main` and `origin/main` are equal at handoff. The IDL repair branch completed terminal
-`CARGO_BUILD_JOBS=2 just check`; merge `198f2dc1b` passed its immutable-SHA
-pre-push workspace-library, progress-frontier, and evidence gates. Integrated
-main then passed the focused DL suite 46/46 and the explicit auto-dispatch
-fallback regression 1/1. The first broad post-merge command failed while
-linking with only 585 MiB free (`No space left on device`), and a later
-documentation aggregate was deliberately interrupted for the requested disk
-cleanup. These are environmental/interrupted attempts, not green full-main
-gates. The completed topic full gate, merge-SHA pre-push gate, and focused
-post-merge tests are reported separately.
+Exact pushed `e996afd83` passed `just check`; its RDL capture then failed closed
+at 196/200 because allocator arenas accumulated across files. ADR-0379 rejects
+allocator tuning and uses one inherited-limit child at a time. The isolated
+200-row trigger passed with zero stderr; the old partial stream remains
+non-credited. See the
+[result](docs/plan/qf-linear-a5-rdl-process-isolation-repair-2026-08-09.md).
 
-Remote CI `31076938255` and docs `31076938134` at `94082977d` are terminal
-green, including stable rustdoc, Clippy, MSRV, format, wasm, MIR, reflection,
-official Lean cross-check, micro corpus, and generated-resource/link gates.
-Docs run `31108211479` at `54b366517` is also terminal green. Docs runs
-`31147545402`, `31147833794`, and `31153166591` are terminal failures: the
-newly integrated readiness tests resolved registered `just check` observations,
-but the hosted docs image did not provide `just`, so 12 fixture tests failed
-before their intended assertions. Integrated commit `9f94e1873` provisions
-exact `just` 1.57.0 through a commit-pinned action in both duplicated docs jobs;
-the complete local 165-test resume aggregate then passed with one expected
-skip. Exact-SHA docs run `31190516093` and CI run `31190517748` both failed at
-the later registered-executable lookup: 10 errors and two assertion failures,
-all caused by `just` being outside the contract's canonical PATH. This confirms
-that provisioning alone was insufficient. Repair `259797459` installs a
-regular copy at `$HOME/.cargo/bin/just` in both duplicated jobs; YAML,
-actionlint (apart from the repository's known future runner-label catalogue),
-an isolated install smoke, complete-parity generation, and both exact-SHA
-hosted runs at `bd413357c` are green. No retained solver or measurement process
-is running.
+Exact pushed repair `5a53012e1` passed the complete external-frontier
+`just check` gate with exit 0. The preregistered V2 sequence then produced three
+structurally valid atomic 200-row captures with zero stderr and the exact
+pushed source/binary identity. QF_LRA decided 89, QF_IDL 68, and QF_RDL 105;
+the RDL stream crossed the former row-196 process boundary and completed in
+2,127,949 ms. The lossless derivation nevertheless stopped correctly:
+historical QF_LRA UNSAT control
+`sal/windowreal/windowreal-no_t_deadlock-17.smt2` returned deterministic pre-SAT
+resource `unknown` at 1,217 arithmetic atoms and 6,526 CNF variables. Gains
+elsewhere hid that loss in the aggregate count. The entire V2 sequence is
+non-credited. A bounded
+[pre-SAT boundary discriminator](docs/plan/qf-linear-a5-pre-sat-boundary-monotonicity-v1-preregistration-2026-08-10.md)
+now owns the P0 path; no residual grouping or census-based breadth change is
+authorized.
+
+The bounded repair is exact-pushed at `8a6de50ac`. Its rebuilt 11,859,344-byte
+binary (`eec4813b557165ec95afc43912ad9fc2b5400ec94db5b7134ecacd50b100867d`)
+replayed the lost control as byte-identical UNSAT in 3/3 observations at 0.10
+seconds and below 17 MiB peak RSS; both allocation-abort controls and the
+low-atom/31,944-variable IDL control retained typed pre-SAT declines. All six
+observations started at load 11.83, exited 0, and emitted zero stderr. Formatting,
+strict all-feature solver Clippy, all 1,091 solver-library tests, deep-input
+16/16, online arithmetic/CDCL(T) 41/41, and both differential suites are green
+with zero disagreement. Exact pushed checkpoint `3267432a7` then passed one
+uninterrupted external-frontier `just check` in 6,410 seconds with exit 0; see the
+[result](docs/plan/qf-linear-a5-pre-sat-boundary-monotonicity-v1-result-2026-08-10.md).
+
+The QF_LRA restart at `775446932` completed 200 rows with zero stderr and no
+verdict loss, then failed closed on a latent `sc-39` classifier mismatch. The
+exact-phrase repair at `d646382e7` passed its focused audit; exact pushed
+documentation descendant `b9938576b` then passed a fresh uninterrupted
+external-frontier `just check` in 6,335 seconds with exit 0. Fresh pinned
+checkpoint `d0e0d6cea` completed QF_LRA 200/200 with zero stderr. Its join
+retained all 86 historical decisions, added four agreeing decisions, made no
+wrong verdict, classified `sc-39` correctly, and retained the former
+`windowreal` loss as UNSAT. QF_IDL then completed 200/200 but lost two historical
+decisions hidden by two gains; QF_RDL is forbidden. The sequence is non-credited.
+Replay made both losses deterministic. B1 failed and was removed. Unchanged-
+binary G1/D2 returned GraphPartitioning SAT and BubbleSort UNSAT through
+`dl-online` in 3/3 each at 32 seconds. V2 recovers both at 24 seconds and
+preserves all 173 retained decisions. Exact pushed `d1b570f91c2` passed the
+complete external-frontier `just check` in 6,277 seconds with exit 0; the repair
+is release-qualified. Exact-pushed `6d4718e13` then completed fresh atomic
+QF_LRA and QF_IDL captures: 90/200 and 70/200, six agreeing gains total, zero
+losses or wrong verdicts, with `sc-39`, LPSAT, BubbleSort, and GraphPartitioning
+controls retained. QF_RDL is now authorized but not started. See the [result](docs/plan/qf-linear-a5-idl-extended-dl-slice-v2-result-2026-08-11.md).
 
 A3 is **WIP**. Pushed result checkpoint `3696e7dd5` is integrated on current
-main by `47d8cd956`; its source branch remains preserved. The repaired complete
+main by `47d8cd956`; its retired source tip is in the 2026-08-12 branch-cleanup
+bundle. The repaired complete
 67-row census
 classifies 52 NIA-linearization budget declines, 13 former generic model-replay
 declines, one verifier rejection, and one bounded giant-`distinct` ingest
@@ -334,15 +337,9 @@ the failed aggregate attempts; they contained no retained evidence.
 | 2026-08-07 | `9f94e1873` | Provisioned exact, commit-pinned `just` for both hosted docs gates after three remote runs exposed that the integrated readiness fixtures require the registered executable; the 165-test local resume aggregate passed with one expected skip. |
 | 2026-08-07 | `63c82a6ef` / `4ff9a82c6` / `3c5816fdf` | Bounded giant SMT-LIB `distinct` expansion, preserved typed arithmetic reconstruction declines, completed the 67-row A3 census, and rejected zero-gain probe-model reuse without retaining experimental code. |
 | 2026-08-07 | `2072483f8` | Retained the bounded disk cleanup while preserving dirty worktrees and every unmerged branch tip. |
-| 2026-08-06 | `2925efea5` / `8ed5ad089` | Completed A2 topic and integration review, merged the exact-source SMT-COMP readiness stack, and passed focused plus uninterrupted combined-main `just check`; live C0/F2 remains separately prohibited. |
-| 2026-08-06 | `e4bb854bf` | Implemented R5's operator-owned exact-source Axeyum build, schema-v3 source/tool/output/binary/run/completion replay, and rejecting fixture matrix; integration and live action remain prohibited. |
-| 2026-08-06 | `ebbabb34c` | Retained the fresh QF_UFLIA 94/200 versus 180/200 run; its complete normalized status matrix is identical to the accepted baseline and has zero disagreements. |
-| 2026-08-06 | `4477f2bb9` / `198f2dc1b` / `71ca85d9f` | Bounded the complete DL probe front end, preserved fallback time, passed full topic and exact-SHA gates, and retained QF_IDL 68/200 versus 124/200 with zero losses or disagreements. |
-| 2026-08-06 | `5ce07c55e` / `8ea6a7cad` | Made parity resume identity exact-path and fail-closed for duplicate, ambiguous, or drifted populations. |
-| 2026-08-06 | `c5d617c10` / `b353419e7` / `54b366517` | Retained fresh QF_NIA 34/200, QF_LIA 117/200, QF_LRA 86/200, and QF_RDL 105/200 runs, all with zero disagreements. |
-
-Older landed changes remain in Git and their dated result notes; this table is
-deliberately bounded to changes that still determine the immediate queue.
+Older landed changes (including the 2026-08-06 A1/A2 closure commits) remain
+in Git and their dated result notes; this table is deliberately bounded to
+changes that still determine the immediate queue.
 
 ## Next Actions
 
@@ -354,28 +351,32 @@ here as closed evidence boundaries. A3 remains incomplete, but all currently
 preregistered bounded mechanisms are closed negatively. A4 has now also yielded;
 A5 is the first active item.
 
-**Immediate action.** Begin A5's cross-division LRA/IDL/RDL residual census.
-A4's v3 restart decided 93/200, with one 2/3-SAT wall-clock boundary. Both
-model-reuse variants failed isolated stability and were removed; do not retry
-until 94 happens to pass. A3/A4's negative routes remain closed. A2 still does
-not authorize C0/F2, host/NAS mutation, allocation, or a solver fleet.
+**Immediate action (`WIP`).** From clean, remote-matching `main`, resume V2
+QF_RDL row 1 under the existing atomic protocol. Only its strict zero-loss join
+may authorize the
+frozen three-division derivation. Failed, old, and incidental gate streams
+remain non-credited.
 
 **New lane — axeyum-proved mathematics (2026-08-12).** A full-day frontier
 run produced two previously unknown four-colour Rado numbers,
 `R_4(2(x-y)=3z) = 226` (closing an open entry of Chang-De Loera-Wesley,
 ISSAC 2022) and `R_4(4(x-y)=3z) = 313`, both certified end to end by
-axeyum alone: 8192 cube cells, ~250M DRAT steps, zero failures. Two product
-capabilities landed on the way — streaming DRAT proofs (ADR-0380, closing a
-27.6 GiB OOM) and a backward DRAT checker (ADR-0381, 66x, restoring
-check/solve from 470-670x to 2.0-2.6x) — plus a claim ledger joining results
-to the knowledge graph (ADR-0379). All three ADRs are `proposed` and
-uncommitted. The ordered follow-on work, ten items, is in
+axeyum alone: 8192 cube cells, ~250M DRAT steps, zero failures. Landed on the
+way: streaming DRAT proofs (ADR-0381, closing a 27.6 GiB OOM), a backward
+DRAT checker (ADR-0382, 66x, restoring check/solve from 470-670x to
+2.0-2.6x), and the claim ledger (ADR-0380). After the machine move (s1 → s4,
+2026-08-12) the five interrupted lanes were re-verified and completed:
+`Evidence::check`'s green-gate-over-nothing is closed by the three-valued
+`check_outcome` (ADR-0384) with deadline threading and retained checking
+subjects; ground int div/mod folding is verified against the ground evaluator
+including zero divisors (ADR-0383) and gated by the zero-divisor differential
+fuzz; `axeyum-search` is a workspace member with the min-conflicts SLS,
+offline cover certification, and the in-tree `recertify_rado` driver. The 34
+binary-DRAT ledger rows (B8) are being regenerated with axeyum's own core
+across the s6/s7 fleet. Ordered follow-on work:
 [`rado-session-diary-and-roadmap-2026-08-12.md`](docs/plan/rado-session-diary-and-roadmap-2026-08-12.md);
-the issue-by-issue register is
+issue register:
 [`findings-register-2026-08-12.md`](docs/plan/findings-register-2026-08-12.md).
-Highest-priority item is **not** new mathematics: `Evidence::check` returns
-`Ok(true)` for a bare uncertified UNSAT (`evidence.rs:890`), a green gate
-that checks nothing, in the product's own front door.
 
 **Lane extension — from verification to proof (2026-08-12, later).** The
 general-`k` shell lower bound behind those values was, until this session,
@@ -528,17 +529,23 @@ result without losing any of the 94 decisions or weakening retained controls.
 **Stop.** No general cap increase, speculative recursive MBQI, or unchecked SAT
 model credit.
 
-### A5 — Consolidate linear arithmetic after warm simplex and DL (`TODO`, P1)
+### A5 — Consolidate linear arithmetic after warm simplex and DL (`WIP`, P1)
 
 **Why now.** QF_LRA, QF_IDL, and QF_RDL improved sharply but remain strict
 subsets of their references. The newest architecture has not yet received one
 cross-division residual census.
 
-**Next slice.** Classify normalization failures, unsupported
-difference shapes, disequalities, explanation blowups, and ordinary search
-failures across the three current ledgers. Treat the repaired high-memory LRA
-normalization case and the rejected global 12/12 DL split as permanent controls
-before adding new DL syntax.
+**Next slice.** Restart and derive the complete V2 census from the fully gated
+classifier repair. Only after a zero-loss
+derivation may normalization failures,
+unsupported difference shapes, disequalities, explanation blowups, and
+ordinary search failures be classified across the three current ledgers. Treat
+the repaired high-memory LRA normalization case and the rejected global 12/12
+DL split as permanent controls before adding new DL syntax. The
+[`v2 cross-division census preregistration`](docs/plan/qf-linear-a5-cross-division-census-v2-preregistration-2026-08-09.md)
+freezes all three populations and historical sidecars, makes all 259 retained
+decisions monotonicity controls, and authorizes only fresh current-Axeyum traces
+plus lossless derivation. No production change is yet authorized.
 
 **Exit.** A/B measurement is monotone across all three divisions, exact
 Farkas/DL evidence checks pass, deep input returns without recursion abort, and
@@ -636,14 +643,11 @@ detached, or cache-tag-missing path.
 
 **Completed checkpoint.** The manual bounded cleanup and post-A3 retirement
 proved the safety procedure for clean merged worktrees and reproducible Cargo
-targets. The later authorized cleanup preserved all 24 dirty deltas as labelled
-stashes, retained every branch tip, removed the inactive checkout directories,
-and initially left two registered worktrees. After the A3 result merged, its
-clean 71.0 GiB topic target was removed and the merged checkout retired while
-its branch remained. After merge `d09e6debb`, the final clean topic checkout
-and its 176 GiB target were also retired while preserving the local and remote
-branch. Only `main` is registered; `/` currently has about 902 GiB free and the
-`/tmp` tmpfs about 28 GiB free. Automation and fixture coverage remain open.
+targets. The later authorized cleanup salvaged inactive dirty deltas, removed
+the inactive checkouts, and retired the merged A3 targets. On 2026-08-12 all
+refs were captured in a verified external Git bundle before old local/remote
+branches and salvage stashes were removed. Only clean `main` is registered and
+published. Automation and fixture coverage remain open.
 
 **Exit.** The inventory is deterministic and tested against dirty, merged,
 unmerged, detached, missing-target, and malformed-cache fixtures. A dry run
@@ -657,12 +661,12 @@ or remove dirty/unmerged state to meet a free-space target.
 
 | Workstream | State | Current boundary / next action |
 |---|---|---|
-| Integration and gates | `DONE`; current checkpoint | Local and remote `main` contain audited merge `6be32cb4a` plus its tracker checkpoint; A3 topic `2269488ef` is pushed and merged. Exact topic/merge pre-push gates and focused post-merge tests are green. Hosted CI remains separate evidence. |
+| Integration and gates | `DONE`; 2026-08-12 | Linear A5 through `4b6b76555` is on `main` by conflict-free fast-forward. Integrated code, frontier, CAS, rustdoc, Glaurung, resource, resume, Lean, and parity gates are green; volatile frontier timings were not credited. Verify the remote ref before resume; hosted CI is separate. |
 | Arithmetic deadline reliability | `DONE` | Shared deadline, CAD polls, LRA ceilings, bounded DL probing, exact resume identity, and six fresh retained divisions are complete; see the 2026-08-06 closure note. |
 | Full-library measurement | `WIP`; A2 readiness `DONE` | The R1--R5 readiness stack is integrated by `8ed5ad089` and focused/aggregate/scoped/topic/full-main green; the real registered offline-build smoke passed. No live run, preparation root, or launch authority exists. A later live C0/F2 step requires separate review. |
 | QF_NIA breadth | `WIP`, yielded | Current clean result remains 34/200 versus 89/200. Reconstruction, large-core deletion, relevance activation, and bounded clause-estimate attribution are closed negatively without production solver code. The final diagnostic failed its exact pipeline-boundary record gate; no mechanism or 200-row run is authorized and the 64,000,000 ceiling remains. Move to A4 unless independent new NIA evidence appears. |
 | QF_UFLIA breadth | `WIP`, yielded | Historical 94/180 remains; the exact-commit restart produced 93/200 because one SAT case is wall-clock unstable. No sidecar or new result was credited. |
-| LRA/IDL/RDL | `WIP` | Current results are 86/146, 68/124, and 105/155; A5 owns cross-division consolidation. |
+| LRA/IDL/RDL | `WIP`; V2 failed | QF_LRA passed; QF_IDL lost two decisions. Replay confirmed both. B1 failed and was removed; G1 found a nearby existing DL boundary. Preregister separate follow-ups; QF_RDL is forbidden. |
 | QF_BV/QF_SLIA/UF/QF_ABV | `WIP`, strong selected cells | Preserve current ledgers; do not prioritize small score gains above A2–A6. |
 | Evidence and Lean reconstruction | `WIP` | A6 and A9; distinct certificate/check/reconstruction claims. |
 | Route exploration | `BLOCKED` beyond catalogue work | Proposed track; T0.2/T0.6/T0.1/T2.3 precede T3.5. |
@@ -671,7 +675,7 @@ or remove dirty/unmerged state to meet a free-space target.
 | Consumer apps / verified systems | `WIP`, non-critical path | Existing EVM, verifier, property, reflection, and symbolic-execution slices remain useful; do not preempt A2–A7 without measured demand. |
 | Foundational resources | `WIP`, separate content lane | Keep generated-resource gates green; record only project-level priority changes here. |
 | Public documentation and examples | `DONE`, current comprehensive pass | Public/crate/consumer/prover/curriculum/contributor front doors are indexed; 34 Cargo examples and the consumer 48-case aggregate are guarded. Corrected built/planned, Lean 4.30/offline quotient, strings/P2.7, proof assurance, `i128` LRA/Farkas, native-CDCL/BatSat, RUP-only LRAT, online combination/fallback, CAS-local-vs-solver evidence, route-specific FP/datatype/nonlinear/quantifier boundaries, optional EVM/verifier certificate fields, and source-comment UNSAT-proof overclaims. Source-backed guards require nonzero full-feature tests across cookbook, learner, contributor, foundational-resource, and rules docs. Generated authorities remain canonical; reopen only for concrete drift. |
-| Worktree and build-cache hygiene | `WIP`, recovered | A11; only clean `main` is registered. The cleanup stored all 24 inactive dirty deltas in labelled stashes, retained every branch tip, removed the inactive checkouts and one 1.7 GiB session tree, retired the earlier clean A3 target, and finally removed the merged explanation-partition checkout with its 176 GiB Cargo target. Current free space is about 902 GiB on `/` and 28 GiB on `/tmp`; all topic branches remain preserved. Next automate the deterministic read-only inventory and exact-target cleanup classification. |
+| Worktree and build-cache hygiene | `WIP`, recovered | A11; only clean `main` is registered and published. A verified 2026-08-12 external Git bundle preserves the retired refs/stashes; all old branches, salvage stashes, inactive checkouts, and their large Cargo targets are removed. Next automate deterministic read-only inventory and exact-target cleanup classification. |
 
 ## Resume protocol
 

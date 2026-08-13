@@ -1,4 +1,4 @@
-# ADR-0381: Backward (core-first) DRAT checking
+# ADR-0382: Backward (core-first) DRAT checking
 
 - Status: proposed
 - Date: 2026-08-12
@@ -32,7 +32,7 @@ trusted small checking" — and it is the binding constraint on which
 mathematical results can be published with full certification: a result the
 solver produces in minutes cannot be certified at all.
 
-ADR-0380 fixed the *memory* half of this problem (streaming emission and
+ADR-0381 fixed the *memory* half of this problem (streaming emission and
 streaming consumption, bounded by the live clause database rather than by
 the proof length) and explicitly left the time half open:
 
@@ -226,7 +226,7 @@ on at all.
 - **Backward checking is inherently non-streaming.** It walks the proof in
   reverse, so the prefix up to the empty clause must be resident, in an
   arena plus one record per clause. That is a real regression against
-  ADR-0380's `check_drat_streaming` on the memory axis, and the two now sit
+  ADR-0381's `check_drat_streaming` on the memory axis, and the two now sit
   at opposite ends of a trade: streaming for proofs too large to hold,
   backward for proofs too long to check forward. A proof that is both is a
   case neither handles, and decomposition remains the answer there.

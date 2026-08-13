@@ -29,9 +29,9 @@ use std::time::Duration;
 
 use axeyum_cnf::{CnfFormula, CnfLit};
 
+use crate::SearchError;
 use crate::colouring::ColouringProblem;
 use crate::ledger::RunId;
-use crate::SearchError;
 
 /// One coordinate of a branch plan: a set of literals, exactly one of which
 /// must hold.
@@ -105,11 +105,11 @@ impl BranchPlan {
         let mut running = 1usize;
         for slot in (0..groups.len()).rev() {
             strides[slot] = running;
-            running = running
-                .checked_mul(groups[slot].arity())
-                .ok_or_else(|| SearchError::InvalidParameter {
+            running = running.checked_mul(groups[slot].arity()).ok_or_else(|| {
+                SearchError::InvalidParameter {
                     what: "branch plan product overflows".to_string(),
-                })?;
+                }
+            })?;
         }
         Ok(Self {
             groups,
@@ -673,7 +673,10 @@ mod tests {
             CellVerdict::ResourceOut,
             CellVerdict::Timeout,
         ] {
-            assert_eq!(CellVerdict::parse(verdict.as_str()).expect("verdict"), verdict);
+            assert_eq!(
+                CellVerdict::parse(verdict.as_str()).expect("verdict"),
+                verdict
+            );
         }
         for check in [
             CellCheck::Passed,

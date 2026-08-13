@@ -1,4 +1,4 @@
-//! Backward (core-first) DRAT checking (ADR-0381).
+//! Backward (core-first) DRAT checking (ADR-0382).
 //!
 //! [`crate::check_drat`] is the *reference* checker and stays exactly as it is:
 //! a few dozen lines that walk the proof forward and verify every added clause
@@ -232,7 +232,7 @@ fn variable_count(formula: &CnfFormula, steps: &[DratStep]) -> Result<usize, Dra
 }
 
 /// Verifies `proof` against `formula` by backward (core-first) checking
-/// (ADR-0381).
+/// (ADR-0382).
 ///
 /// Returns `Ok(true)` when the proof establishes UNSAT, `Ok(false)` when it
 /// contains no empty-clause addition (so UNSAT is not established), and `Err`
@@ -428,6 +428,9 @@ pub(crate) fn elaborate_backward(
         .map_err(|_| LratError::Parse("formula clause count does not fit in u64".to_owned()))?;
 
     let mut out = Vec::with_capacity(checker.trace_log.len());
+    // `next_id` is not a plain loop counter: its start is the formula clause
+    // count, and `id_of` snapshots it per lemma for later hint resolution.
+    #[allow(clippy::explicit_counter_loop)]
     for entry in checker.trace_log.iter().rev() {
         let chain = match &entry.justification {
             Justification::Rup(chain) => chain,

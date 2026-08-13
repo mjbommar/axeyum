@@ -59,7 +59,7 @@ def build_markdown(claims: list[tuple[str, str, dict]]) -> str:
         "carry it. Every value is read straight from a committed claim file — "
         "nothing here is recomputed. The ledger's vocabulary and gates are "
         "described in [`README.md`](README.md) "
-        "([ADR-0379](../../docs/research/09-decisions/adr-0379-claim-ledger.md))."
+        "([ADR-0380](../../docs/research/09-decisions/adr-0380-claim-ledger.md))."
     )
     lines.append("")
     lines.append(

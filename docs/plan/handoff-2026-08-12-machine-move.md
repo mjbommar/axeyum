@@ -32,9 +32,9 @@ failures.
 
 | Change | Where | Status |
 |---|---|---|
-| Streaming DRAT proofs (`DratSink`, `TextProofSink`, streaming solve + check) | `axeyum-cnf` | complete, ADR-0380, tests green |
-| Backward DRAT checker (`check_drat_backward`) — **66×**, restores check/solve from 470–670× to 2.0–2.6× | `axeyum-cnf/src/drat_backward.rs` | complete, ADR-0381, 343 lib tests |
-| Claim ledger: schema, 3 validators, 7 negative fixtures, dashboard generator | `artifacts/`, `scripts/` | complete, ADR-0379 |
+| Streaming DRAT proofs (`DratSink`, `TextProofSink`, streaming solve + check) | `axeyum-cnf` | complete, ADR-0381, tests green |
+| Backward DRAT checker (`check_drat_backward`) — **66×**, restores check/solve from 470–670× to 2.0–2.6× | `axeyum-cnf/src/drat_backward.rs` | complete, ADR-0382, 343 lib tests |
+| Claim ledger: schema, 3 validators, 7 negative fixtures, dashboard generator | `artifacts/`, `scripts/` | complete, ADR-0380 |
 | Artifact-format contract (B8 gate) | `scripts/validate-claims.py` | **gate complete, data migrated** — see §4 |
 
 ## 3. The five interrupted agents — exact state

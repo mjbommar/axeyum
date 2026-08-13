@@ -199,7 +199,7 @@ pub fn solve_with_drat_proof_with_limits(
 }
 
 /// Solves `formula` with the proof-producing CDCL core, **streaming** the DRAT
-/// proof to `sink` instead of accumulating it (ADR-0380).
+/// proof to `sink` instead of accumulating it (ADR-0381).
 ///
 /// The motivating measurement: the in-RAM `Vec<DratStep>` proof of a 35,858-clause
 /// instance grew until the process was OOM-killed at 27.6 GiB RSS after ~2.5 h
@@ -268,7 +268,7 @@ struct ClauseHeader {
     len: usize,
 }
 
-/// The CDCL core, generic over where its proof goes (ADR-0380).
+/// The CDCL core, generic over where its proof goes (ADR-0381).
 ///
 /// `S` is monomorphized, so the emission call at every learned clause and every
 /// `reduce_db` deletion is a direct call — no `dyn` dispatch in the search loop.
@@ -2201,7 +2201,7 @@ mod tests {
     }
 
     // ----------------------------------------------------------------------
-    // Streaming proof emission (ADR-0380)
+    // Streaming proof emission (ADR-0381)
     // ----------------------------------------------------------------------
 
     /// A Rado-style colouring instance: is `[1, n]` `colours`-colourable with no

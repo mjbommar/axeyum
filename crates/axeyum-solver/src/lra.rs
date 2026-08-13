@@ -1217,6 +1217,14 @@ fn lia_bnb_undecided(cause: &'static str, node_cap: u64) -> CheckResult {
     })
 }
 
+fn lia_collection_timeout() -> CheckResult {
+    CheckResult::Unknown(UnknownReason {
+        kind: UnknownKind::Timeout,
+        detail: "lia simplex: wall-clock deadline passed while collecting integer constraints"
+            .to_owned(),
+    })
+}
+
 /// The branch-and-bound node budget for a caller with (or without) a wall clock.
 fn lia_bnb_node_cap(deadline: Option<Instant>) -> u64 {
     if deadline.is_some() {
@@ -1336,7 +1344,9 @@ fn lia_simplex_capped(
     let mut ctx = IntCollector::new(allow_opaque_apps);
     for (index, &assertion) in assertions.iter().enumerate() {
         ctx.current_origin = index;
-        ctx.collect(arena, assertion, false)?;
+        if !ctx.collect_within(arena, assertion, false, deadline)? {
+            return Ok(lia_collection_timeout());
+        }
     }
     // An `i128` overflow while linearizing poisons the collection; degrade to a
     // graceful `unknown` before any constraint is interpreted (never a wrong
@@ -2236,65 +2246,90 @@ impl IntCollector {
         term: TermId,
         negated: bool,
     ) -> Result<(), SolverError> {
-        match arena.node(term) {
-            TermNode::BoolConst(value) => {
-                if *value == negated {
-                    self.trivially_unsat = true;
+        let completed = self.collect_within(arena, term, negated, None)?;
+        debug_assert!(completed, "a deadline-free collection cannot time out");
+        Ok(())
+    }
+
+    /// Collects one assertion with an explicit worklist and optional deadline.
+    ///
+    /// Boolean spine depth is controlled directly by SMT-LIB input. The former
+    /// recursive walk aborted on an 18,000-deep `BlockedNQueens` conjunction,
+    /// preventing the deadline-aware caller from returning `unknown`. Pushing
+    /// the right operand first preserves the recursive walk's left-to-right
+    /// variable and constraint order.
+    fn collect_within(
+        &mut self,
+        arena: &TermArena,
+        term: TermId,
+        negated: bool,
+        deadline: Option<Instant>,
+    ) -> Result<bool, SolverError> {
+        let mut work = vec![(term, negated)];
+        while let Some((current, current_negated)) = work.pop() {
+            if past_deadline(deadline) {
+                return Ok(false);
+            }
+            match arena.node(current) {
+                TermNode::BoolConst(value) => {
+                    if *value == current_negated {
+                        self.trivially_unsat = true;
+                    }
                 }
-                Ok(())
-            }
-            TermNode::App {
-                op: Op::BoolNot,
-                args,
-            } => self.collect(arena, args[0], !negated),
-            TermNode::App {
-                op: Op::BoolAnd,
-                args,
-            } if !negated => {
-                self.collect(arena, args[0], false)?;
-                self.collect(arena, args[1], false)
-            }
-            TermNode::App {
-                op: Op::BoolOr,
-                args,
-            } if negated => {
-                self.collect(arena, args[0], true)?;
-                self.collect(arena, args[1], true)
-            }
-            TermNode::App { op, args }
-                if matches!(op, Op::IntLt | Op::IntLe | Op::IntGt | Op::IntGe) =>
-            {
-                let left = self.linearize(arena, args[0])?;
-                let right = self.linearize(arena, args[1])?;
-                self.push_comparison(*op, &left, &right, negated);
-                Ok(())
-            }
-            TermNode::App { op: Op::Eq, args } if is_int(arena, args[0]) => {
-                if negated {
-                    return Err(unsupported_lia("integer disequality (needs DPLL(T))"));
+                TermNode::App {
+                    op: Op::BoolNot,
+                    args,
+                } => work.push((args[0], !current_negated)),
+                TermNode::App {
+                    op: Op::BoolAnd,
+                    args,
+                } if !current_negated => {
+                    work.push((args[1], false));
+                    work.push((args[0], false));
                 }
-                let left = self.linearize(arena, args[0])?;
-                let right = self.linearize(arena, args[1])?;
-                let diff = self.guard(left.sub(&right));
-                let diff_neg = self.guard(diff.neg());
-                self.constraints.push(Constraint {
-                    expr: diff,
-                    strict: false,
-                    mult: Vec::new(),
-                    origin: self.current_origin,
-                });
-                self.constraints.push(Constraint {
-                    expr: diff_neg,
-                    strict: false,
-                    mult: Vec::new(),
-                    origin: self.current_origin,
-                });
-                Ok(())
+                TermNode::App {
+                    op: Op::BoolOr,
+                    args,
+                } if current_negated => {
+                    work.push((args[1], true));
+                    work.push((args[0], true));
+                }
+                TermNode::App { op, args }
+                    if matches!(op, Op::IntLt | Op::IntLe | Op::IntGt | Op::IntGe) =>
+                {
+                    let left = self.linearize(arena, args[0])?;
+                    let right = self.linearize(arena, args[1])?;
+                    self.push_comparison(*op, &left, &right, current_negated);
+                }
+                TermNode::App { op: Op::Eq, args } if is_int(arena, args[0]) => {
+                    if current_negated {
+                        return Err(unsupported_lia("integer disequality (needs DPLL(T))"));
+                    }
+                    let left = self.linearize(arena, args[0])?;
+                    let right = self.linearize(arena, args[1])?;
+                    let diff = self.guard(left.sub(&right));
+                    let diff_neg = self.guard(diff.neg());
+                    self.constraints.push(Constraint {
+                        expr: diff,
+                        strict: false,
+                        mult: Vec::new(),
+                        origin: self.current_origin,
+                    });
+                    self.constraints.push(Constraint {
+                        expr: diff_neg,
+                        strict: false,
+                        mult: Vec::new(),
+                        origin: self.current_origin,
+                    });
+                }
+                _ => {
+                    return Err(unsupported_lia(
+                        "assertion is not a conjunctive linear integer constraint",
+                    ));
+                }
             }
-            _ => Err(unsupported_lia(
-                "assertion is not a conjunctive linear integer constraint",
-            )),
         }
+        Ok(true)
     }
 
     fn push_comparison(&mut self, op: Op, left: &LinExpr, right: &LinExpr, negated: bool) {
@@ -2829,6 +2864,42 @@ fn extract_model(
 #[cfg(test)]
 mod gomory_internal_tests {
     use super::*;
+
+    #[test]
+    fn int_collector_survives_a_deep_boolean_spine() {
+        const DEPTH: usize = 100_000;
+        let mut arena = TermArena::new();
+        let leaf = arena.bool_const(true);
+        let mut root = leaf;
+        for _ in 0..DEPTH {
+            root = arena.and(root, leaf).expect("Boolean conjunction");
+        }
+
+        let mut collector = IntCollector::new(false);
+        collector
+            .collect(&arena, root, false)
+            .expect("deep conjunction collection");
+        assert!(!collector.trivially_unsat);
+        assert!(collector.constraints.is_empty());
+    }
+
+    #[test]
+    fn int_collector_honors_an_expired_deadline() {
+        let mut arena = TermArena::new();
+        let leaf = arena.bool_const(true);
+        let root = arena.and(leaf, leaf).expect("Boolean conjunction");
+        let expired = Instant::now()
+            .checked_sub(std::time::Duration::from_secs(1))
+            .expect("representable prior instant");
+
+        let mut collector = IntCollector::new(false);
+        assert!(
+            !collector
+                .collect_within(&arena, root, false, Some(expired))
+                .expect("deadline-aware collection")
+        );
+        assert!(collector.constraints.is_empty());
+    }
 
     /// Builds the constraint set for `2x + 2y <= 1 ∧ 2x + 2y >= 1`
     /// (i.e. `x + y = 1/2`), which is LP-feasible but has NO integer point.

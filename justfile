@@ -265,7 +265,7 @@ deny:
 links:
     ./scripts/check-links.sh
 
-# The ADR-0379 claim-ledger gates: structural/referential/epistemic validation of
+# The ADR-0380 claim-ledger gates: structural/referential/epistemic validation of
 # every artifacts/claims/**/claim.json, the negative fixtures that prove the
 # validator actually rejects bad claims, and the independent semantic re-check of
 # every `checked` evidence row (witness replay by a third enumerator; stored CNF

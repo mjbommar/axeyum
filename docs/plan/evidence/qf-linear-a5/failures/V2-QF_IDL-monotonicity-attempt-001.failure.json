@@ -1,0 +1,67 @@
+{
+  "authorization": "none; preserve the stream, stop before QF_RDL, and run only the preregistered four-case replay matrix",
+  "binary_bytes": 11859344,
+  "binary_sha256": "eec4813b557165ec95afc43912ad9fc2b5400ec94db5b7134ecacd50b100867d",
+  "capture": {
+    "elapsed_ms": 3452527,
+    "ended_utc": "2026-08-11T21:18:36.588875Z",
+    "load_start": "4.37 8.18 13.71",
+    "metadata_sha256": "078ddd2ab816425939e05454d9799a89ffa51ecf971f10b606a5e26964ce7043",
+    "records": 200,
+    "started_utc": "2026-08-11T20:21:04.061696Z",
+    "stderr_bytes": 0,
+    "stdout_bytes": 128426,
+    "stdout_sha256": "f489f3ce05b8317a8532347661a91464e3e729c416a3f55ea299b59cbf8a3794"
+  },
+  "credited": false,
+  "current_counts": {
+    "sat": 28,
+    "unknown": 132,
+    "unsat": 40
+  },
+  "current_solved": 68,
+  "derive_error": "QF_IDL: 2 historical solved losses; first={'file': '/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/Averest/buble_sort/BubbleSort_safe_blmc016.smt2', 'historical': 'unsat', 'current': 'unknown'}",
+  "gains": [
+    {
+      "current": "unsat",
+      "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/asp/MazeGeneration/maze-generation-width=16-height=16-density=0.01-run=1.smt2",
+      "reference": "unsat"
+    },
+    {
+      "current": "unsat",
+      "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/mathsat/fischer/FISCHER14-9-ninc.smt2",
+      "reference": "unsat"
+    }
+  ],
+  "git_commit": "d0e0d6ceac779b5cc3e2c1b5f3096c77780aecf9",
+  "git_upstream": "d0e0d6ceac779b5cc3e2c1b5f3096c77780aecf9",
+  "historical_solved": 68,
+  "losses": [
+    {
+      "bucket": "model-replay",
+      "current": "unknown",
+      "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/Averest/buble_sort/BubbleSort_safe_blmc016.smt2",
+      "historical": "unsat",
+      "reference": "unsat",
+      "terminal_detail": "lazy linear arithmetic exhausted the configured timeout while building the Boolean abstraction (atoms=1812, cnf_vars=0, initial_clauses=0, blocking_lemmas=0, core_lengths=none, support_attempts=0, support_unavailable=0, support_conflict_batches=0, support_model_attempts=0, support_replay_failures=0, full_fallbacks=0)",
+      "terminal_reason": "budget",
+      "terminal_route": "lia-dpll"
+    },
+    {
+      "bucket": "unsupported-dl-shape",
+      "current": "unknown",
+      "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/asp/GraphPartitioning/rand_15_75_1235849326_0_k=3_v=7_e=30_sat.gph.smt2",
+      "historical": "sat",
+      "reference": "sat",
+      "terminal_detail": "lazy linear arithmetic pre-SAT skeleton exceeds the joint resource boundary (atoms=2199, cnf_vars=14670, base_trigger=>1024/>4096, moderate_envelope<=1280/<=8192, initial_clauses=0, blocking_lemmas=0); declining before the first SAT round",
+      "terminal_reason": "budget",
+      "terminal_route": "lia-dpll"
+    }
+  ],
+  "named_control": {
+    "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_IDL/sal/lpsat/lpsat-goal-18.smt2",
+    "verdict": "unsat"
+  },
+  "schema": "axeyum-qf-linear-a5-idl-monotonicity-failure-v1",
+  "wrongs": 0
+}

@@ -181,6 +181,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "axeyum-search"
+version = "0.1.0"
+dependencies = [
+ "axeyum-cnf",
+]
+
+[[package]]
 name = "axeyum-smtlib"
 version = "0.1.0"
 dependencies = [

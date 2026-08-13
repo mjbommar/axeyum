@@ -2,6 +2,7 @@
 
 Status: accepted
 Date: 2026-08-05
+Amended: 2026-08-08, 2026-08-10
 
 ## Context
 
@@ -40,6 +41,20 @@ term graphs are admitted.
 4. The existing 1,024-atom online CDCL(T) admission cap remains. The new limits
    protect `LraTheory` itself and sibling/direct consumers; they are not grounds
    for raising the measured front-door cap.
+5. The legacy Boolean-structured linear-arithmetic loop may retain at most
+   8,192 literals across dynamically learned, unminimized (`Large`) theory
+   cores. Reaching the ceiling returns `Unknown(ResourceLimit)` before starting
+   another warm propositional-SAT round. Small and deterministically minimized
+   cores do not consume this ceiling. This 2026-08-08 amendment repairs the
+   QF_LRA `sal/tgc/tgc_io-safe-20.smt2` 8 GiB process abort exposed by A5; it
+   does not raise a timeout, memory limit, normalization cap, or route budget.
+6. The joint 1,024-arithmetic-atom/4,096-CNF-variable pre-SAT trigger admits one
+   additional conjunctive moderate envelope: at most 1,280 arithmetic atoms and
+   at most 8,192 CNF variables. Outside that rectangle, the existing trigger
+   still declines before the first SAT round. This 2026-08-10 amendment restores
+   the historical QF_LRA UNSAT control `windowreal-no_t_deadlock-17.smt2`
+   without admitting either known allocation-abort control or the nearest
+   low-atom/very-wide IDL control.
 
 ## Soundness and determinism
 
@@ -52,6 +67,14 @@ construction is never exposed as a usable theory by production solver routes.
 The normalization counters depend only on the stable term traversal and exact
 coefficient-map sizes. They therefore make admission reproducible across
 machines, unlike a memory watermark or elapsed-time-only policy.
+The large-core counter likewise depends only on the stable conflict-core source
+classification and literal count. It removes a future SAT round but cannot add
+a model, clause, proof, or verdict.
+The moderate envelope is likewise a pure predicate over stable pre-solve
+counts. It permits existing exact search only inside both bounds; SAT still
+requires original-term model replay, and UNSAT still comes from the existing
+refutation route. A query outside either moderate bound receives the same typed
+pre-SAT decline as before.
 
 ## Evidence
 
@@ -74,6 +97,27 @@ machines, unlike a memory watermark or elapsed-time-only policy.
   frontier refresh was intentionally not retained by this resource-policy slice.
 - GitHub CI `31066926771` and docs `31066926761` for the preceding code merge,
   plus docs `31067318237` for its canonical-plan descendant, are terminal green.
+- The 2026-08-08 A5 attempt at exact pushed revision `1de737488` failed closed
+  after 172 QF_LRA rows when `sal/tgc/tgc_io-safe-20.smt2` aborted at the 8 GiB
+  process ceiling. The repaired merged release returns a typed schema-1
+  `lira-dpll` budget decline in 6.08 seconds with 8,224 retained large-core
+  literals and 1,777,884 KiB peak RSS. Strict solver Clippy, 1,079 all-feature
+  library tests, 16 deep-input tests, five QF_LRA differential fuzz tests, and
+  the 114.81-second simplex fallback differential are green. Complete-corpus
+  monotonicity and the new exact-commit full gate remain required before
+  integration; see the
+  [A5 repair record](../../plan/qf-linear-a5-wide-core-memory-repair-2026-08-08.md).
+- The complete V2 derivation at exact pushed `5a53012e1` stopped on one
+  historical-decision loss: `windowreal-no_t_deadlock-17` changed from UNSAT to
+  the 1,024/4,096 pre-SAT decline at 1,217 atoms and 6,526 CNF variables. Under
+  the bounded moderate-envelope candidate it returned UNSAT in 3/3 observations
+  in 0.10--0.20 seconds at 16,920--17,468 KiB peak RSS. The 1,447/4,733
+  `pursuit`, 1,411/6,774 `tgc`, and 1,084/31,944 IDL controls all retained typed
+  declines before the first SAT round. Strict Clippy, all 1,091 solver-library
+  tests, 16 deep-input tests, 41 online arithmetic/CDCL(T) integrations, the
+  1,500-case QF_LRA differential, and the 1,200-case simplex differential are
+  green with zero disagreement. See the
+  [bounded repair result](../../plan/qf-linear-a5-pre-sat-boundary-monotonicity-v1-result-2026-08-10.md).
 
 The retained six-division arithmetic corpus gate remains an integration exit
 criterion in `PLAN.md`; focused evidence does not substitute for it.
@@ -86,5 +130,12 @@ criterion in `PLAN.md`; focused evidence does not substitute for it.
   abort and is visible through `UnknownKind::ResourceLimit`.
 - A future ceiling change requires corpus A/B evidence and an ADR update. Do not
   raise limits to hide a residual or infer completeness from available RAM.
+- Repeated wide cores are a named allocation boundary: once their literal
+  budget is exhausted, returning `unknown` is preferable to relying on a
+  cooperative clock callback while the SAT allocator approaches a hard process
+  ceiling.
+- The moderate pre-SAT envelope is conjunctive. Raising either bound, removing
+  the other dimension, or adding another envelope requires fresh target/control
+  evidence and another ADR amendment; available host RAM is not evidence.
 - The disjunction-split work that depended on honest branch budgets may now be
   remeasured, but is not accepted by this ADR.

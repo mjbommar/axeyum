@@ -1,4 +1,4 @@
-# ADR-0382: A proved `Nat` prelude for the Lean kernel
+# ADR-0385: A proved `Nat` prelude for the Lean kernel
 
 - Status: proposed
 - Date: 2026-08-12

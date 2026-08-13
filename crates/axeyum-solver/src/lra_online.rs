@@ -2804,39 +2804,45 @@ impl Encoder {
         if let Some(&v) = self.term_var.get(&t) {
             return Some(v);
         }
-        let v = match arena.node(t) {
-            TermNode::Symbol(_) if arena.sort_of(t) == Sort::Bool => self.fresh(),
-            TermNode::BoolConst(b) => {
-                let value = *b;
-                let g = self.fresh();
-                clauses.push(vec![Lit {
-                    var: g,
-                    positive: value,
-                }]);
-                g
+        let mut pending = vec![(t, false)];
+        while let Some((current, children_ready)) = pending.pop() {
+            if self.term_var.contains_key(&current) {
+                continue;
             }
-            TermNode::App { op, args } => {
-                let op = *op;
-                let args = args.clone();
-                self.encode_app(arena, op, &args, clauses)?
-            }
-            _ => return None,
-        };
-        self.term_var.insert(t, v);
-        Some(v)
+            let v = match arena.node(current) {
+                TermNode::Symbol(_) if arena.sort_of(current) == Sort::Bool => self.fresh(),
+                TermNode::BoolConst(b) => {
+                    let value = *b;
+                    let g = self.fresh();
+                    clauses.push(vec![Lit {
+                        var: g,
+                        positive: value,
+                    }]);
+                    g
+                }
+                TermNode::App { args, .. } if !children_ready => {
+                    pending.push((current, true));
+                    pending.extend(args.iter().rev().map(|&arg| (arg, false)));
+                    continue;
+                }
+                TermNode::App { op, args } => self.encode_app(*op, args, clauses)?,
+                _ => return None,
+            };
+            self.term_var.insert(current, v);
+        }
+        self.term_var.get(&t).copied()
     }
 
     fn encode_app(
         &mut self,
-        arena: &TermArena,
         op: Op,
         args: &[TermId],
         clauses: &mut Vec<Vec<Lit>>,
     ) -> Option<usize> {
         let lits: Vec<Lit> = args
             .iter()
-            .map(|&a| {
-                self.encode(arena, a, clauses).map(|var| Lit {
+            .map(|a| {
+                self.term_var.get(a).copied().map(|var| Lit {
                     var,
                     positive: true,
                 })
@@ -3164,6 +3170,29 @@ mod tests {
     fn rvar(arena: &mut TermArena, name: &str) -> TermId {
         let s = arena.declare(name, Sort::Real).expect("declare real");
         arena.var(s)
+    }
+
+    #[test]
+    fn tseitin_encoder_survives_a_deep_boolean_spine() {
+        const DEPTH: usize = 100_000;
+
+        let mut arena = TermArena::new();
+        let x = rvar(&mut arena, "deep_encode_x");
+        let zero = rconst(&mut arena, 0);
+        let atom = arena.real_ge(x, zero).expect("x>=0");
+        let mut root = atom;
+        for _ in 0..DEPTH {
+            root = arena.not(root).expect("deep Boolean spine");
+        }
+
+        let mut encoder = Encoder::new(&[atom]);
+        let mut clauses = Vec::new();
+        let top = encoder
+            .encode(&arena, root, &mut clauses)
+            .expect("encodable Boolean spine");
+        assert_eq!(top, DEPTH);
+        assert_eq!(encoder.var_count, DEPTH + 1);
+        assert_eq!(clauses.len(), DEPTH * 2);
     }
 
     #[test]

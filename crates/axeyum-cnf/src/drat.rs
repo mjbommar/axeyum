@@ -7,7 +7,7 @@
 //! derived. It depends on nothing but the formula and proof — a small, total,
 //! auditable checker, independent of whatever solver produced the proof.
 //!
-//! # Streaming (ADR-0380)
+//! # Streaming (ADR-0381)
 //!
 //! A proof does not have to exist as a `Vec<DratStep>` at any point. [`DratSink`]
 //! is the *emission* side — a producer hands it one step at a time, and
@@ -76,7 +76,7 @@ pub fn check_drat(formula: &CnfFormula, proof: &[DratStep]) -> Result<bool, Drat
 }
 
 /// Verifies a proof presented as a *stream* of steps against `formula`
-/// (ADR-0380).
+/// (ADR-0381).
 ///
 /// Same verdict discipline as [`check_drat`] — `Ok(true)` when every step
 /// verifies and the empty clause is derived (UNSAT confirmed), `Ok(false)` when
@@ -236,7 +236,7 @@ impl core::fmt::Display for ProofSinkError {
 
 impl core::error::Error for ProofSinkError {}
 
-/// The emission side of a DRAT proof (ADR-0380): a proof producer reports each
+/// The emission side of a DRAT proof (ADR-0381): a proof producer reports each
 /// derived clause here instead of appending it to a growing `Vec`.
 ///
 /// Implementations are pure *output*. A producer's search trajectory must not
@@ -311,7 +311,7 @@ impl DratSink for VecProofSink {
 const TEXT_SINK_BUFFER_BYTES: usize = 64 * 1024;
 
 /// A [`DratSink`] that writes the standard textual DRAT format straight to a
-/// writer (ADR-0380) — the streaming counterpart of [`write_drat`].
+/// writer (ADR-0381) — the streaming counterpart of [`write_drat`].
 ///
 /// The caller owns and chooses the writer (a file, a pipe, a `Vec<u8>`); this
 /// sink adds its own buffering, so passing an unbuffered [`std::fs::File`] does
@@ -433,7 +433,7 @@ fn parse_drat_line(line: &str) -> Result<Option<DratStep>, DratError> {
 }
 
 /// Streams the steps of a textual DRAT proof out of any [`std::io::BufRead`]
-/// (ADR-0380), one line at a time.
+/// (ADR-0381), one line at a time.
 ///
 /// The counterpart of [`parse_drat`] for proofs too large to hold: feed it to
 /// [`check_drat_streaming`] and neither the proof text nor the step vector is
@@ -716,7 +716,7 @@ mod tests {
     }
 
     // ----------------------------------------------------------------------
-    // Streaming emission and checking (ADR-0380)
+    // Streaming emission and checking (ADR-0381)
     // ----------------------------------------------------------------------
 
     use super::{

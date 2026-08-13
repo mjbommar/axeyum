@@ -1,0 +1,107 @@
+{
+  "schema_version": 1,
+  "id": "rado-r4-a5-b4-frontier",
+  "title": "R_4(5(x-y)=4z) > 740: the shell construction's largest four-colour prediction",
+  "statement": "The 4-colour Rado number of 5(x-y) = 4z exceeds 740. The nested-shell construction of this work predicts the exact value 741 = 5^4 + 5^3 - 2*5 + 1; tightness is attained at every k<=4 point tested so far ((3,3), (4,3), (3,4), (4,4)) and is open here. This entry is outside the published tables of Chang-De Loera-Wesley, whose R_4 table has no (a,b) = (5,4) value.",
+  "epistemic_status": "open",
+  "formal": {
+    "language": "cnf-family",
+    "family": "rado-colouring-a(x-y)=bz",
+    "parameters": {
+      "a": 5,
+      "b": 4,
+      "k": 4
+    },
+    "generator": "scripts/gen-rado-instance.py",
+    "semantics_note": "artifacts/claims/rado/SEMANTICS.md"
+  },
+  "concept_refs": [
+    {
+      "graph": "math-education",
+      "ref": "C:rado-number",
+      "relation": "frontier-of",
+      "resolved": false,
+      "note": "authored 2026-08-12 at math-education graph/concepts/rado-number.md (uncommitted)"
+    },
+    {
+      "graph": "math-education",
+      "ref": "C:ramsey-number",
+      "relation": "frontier-of",
+      "resolved": true
+    },
+    {
+      "graph": "math-education",
+      "ref": "C:open-problem",
+      "relation": "instance-of",
+      "resolved": true
+    },
+    {
+      "graph": "math-education",
+      "ref": "TQ:colouring",
+      "relation": "uses-technique",
+      "resolved": true
+    },
+    {
+      "graph": "math-education",
+      "ref": "C:computational-search",
+      "relation": "exercises",
+      "resolved": true
+    }
+  ],
+  "axeyum_refs": {
+    "fragments": [],
+    "curriculum_nodes": [
+      "propositional-logic"
+    ]
+  },
+  "provenance": {
+    "conjectured_by": "construction: the nested two-ended shell colouring of this work gives N = a^(k-1)b + sum_{i=2}^{k-1} 2 a^(i-1) b = 740 at (a,b,k) = (5,4,4), predicting R_4 = 741 exactly if the k<=4 tightness pattern continues",
+    "searched_by": [
+      "shell construction (verify_shell.py, an independent reimplementation of the construction from its specification): built the [740] colouring directly, no search required"
+    ],
+    "checked_by": [
+      "verify_shell.py raw enumerator (no gcd reduction, shares no code with the builder): 65,416 solution triples in [740]^2 enumerated, none monochromatic",
+      "scripts/check-claim-certificates.py witness replay (independent O(n^2) enumerator)"
+    ],
+    "date": "2026-08-12",
+    "machine": "linux x86-64 (s4), witness constructed and enumerated locally",
+    "toolchain": {
+      "axeyum_commit": "298aee512e90422db9dfb0c553e09eba614b55a3",
+      "rustc_version": "rustc 1.99.0-nightly (be8e82435 2026-07-11)",
+      "target": "x86_64-unknown-linux-gnu",
+      "dirty": true
+    },
+    "graph_pin": "a29a9e2a649b0fdafcf1032292832d3fb590f9b7",
+    "prior_art": [
+      {
+        "citation": "Y. Chang, J. A. De Loera, W. J. Wesley, 'Rado Numbers and SAT Computations', ISSAC 2022",
+        "url": "https://arxiv.org/abs/2210.03262",
+        "establishes": "R_3 and partial R_4 tables for this family; no (a,b) = (5,4) entry at k = 4. Their Lemma 4.2 is the k=3 shadow of the shell construction used here."
+      }
+    ]
+  },
+  "evidence": [
+    {
+      "id": "witness-740",
+      "kind": "witness-replay",
+      "supports": "R_4 > 740 (lower bound)",
+      "artifact": "artifacts/claims/rado/rado-r4-a5-b4-frontier/witness-740.txt",
+      "artifact_sha256": "a1406f0cd79570bfaecc4ab4cf6307b212561b133d8e2214246a7e3e925797c1",
+      "check_status": "checked",
+      "checker_command": "python3 scripts/check-claim-certificates.py --only rado-r4-a5-b4-frontier",
+      "notes": "The nested-shell 4-colouring of [740]: multiples of 5 coloured min(v_5(j), 4), non-multiples by two-ended shell bands with cuts at 20 and 120 from each end, default colour 4. Verified solution-free over all 65,416 solution triples by an enumerator sharing no code with the builder. The construction extended to 741 has the monochromatic solution (621, 121, 625), so this witness is extremal for the construction.",
+      "artifact_format": "colouring-text"
+    }
+  ],
+  "frontier": {
+    "known": [
+      "R_4(5(x-y)=4z) > 740, witnessed and verified (evidence row witness-740)",
+      "The shell construction predicts 741 exactly; tightness holds at all four k<=4 points previously tested ((3,3) [31], (4,3) [73], (3,4) [103], (4,4) [313]) and fails at k=5 (see rado-r5-a3-b2-frontier)",
+      "Min-conflicts SLS from a warm start at the [740] witness found NO 4-colouring of [741] in 4 independent seeded runs of 30M moves each (s7, 2026-08-12) - consistent with 741 being exact, and in contrast to the k=5 case where SLS found the refuting witness in seconds",
+      "A depth-6 cube-cover probe of F_741 (4096 cells over branch points 2,4,6,8,10,12; 200k conflicts/cell, 8 workers, 900 s wall on s7, 2026-08-12) finished 746 cells unsat (mostly instant unit-propagation refutations), 1132 resource-out at the conflict cap (~4-9 s each), 8 timeout, 2210 unstarted: the refutation is search-hard, as the roadmap predicted, and needs deeper adaptive splitting of the hard subtree plus fleet time"
+    ],
+    "would_settle": "An exhaustive cube cover refuting [741], every cell's DRAT proof checked by axeyum's own backward checker - exactly the artifact pair that certified 226 and 313. The witness half is already done.",
+    "attack_notes": "The satisfiable side is closed (the construction hands over the witness free). For the refutation, reuse the 313 recipe at greater depth: branch on more points (depth 8-10), cap per-cell conflicts, defer checking, and certify offline with certify_dumped_cover; distribute cells across s5-s7. The probe suggests concentrating splits inside the staircase-compatible subtree rather than uniformly."
+  },
+  "notes": "Recorded as the natural next exact-value target (roadmap R10/E1): the construction predicts 741, the k<=4 pattern supports it, SLS cannot refute it, and both certification artifact kinds plus their checkers are now promoted into the axeyum-search crate."
+}

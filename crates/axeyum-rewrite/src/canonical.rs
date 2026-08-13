@@ -815,14 +815,7 @@ fn rewrite_app(
     let normalized_args;
     let add_chain_enabled = op == Op::BvAdd && enabled.contains(BV_ADD_CONSTANT_CHAIN);
     let args = if is_ac(op) && (enabled.contains(COMMUTATIVE_ORDER) || add_chain_enabled) {
-        let mut flat = flatten_ac(arena, op, args);
-        if flat.len() > AC_REBUILD_MAX_OPERANDS {
-            // Wide chain: keep the caller's association verbatim (see
-            // `AC_REBUILD_MAX_OPERANDS`). Falling through with the original
-            // `args` re-runs every op-specific rule below exactly as before —
-            // only the flatten/sort/rebuild is skipped.
-            args
-        } else {
+        if let Some(mut flat) = flatten_ac_bounded(arena, op, args, AC_REBUILD_MAX_OPERANDS) {
             if add_chain_enabled {
                 let (normalized, folded) = fold_bv_add_constant_chain(arena, flat)?;
                 flat = normalized;
@@ -845,6 +838,12 @@ fn rewrite_app(
                 reordered = true;
                 normalized_args.as_slice()
             }
+        } else {
+            // Wide chain: keep the caller's association verbatim (see
+            // `AC_REBUILD_MAX_OPERANDS`). Falling through with the original
+            // `args` re-runs every op-specific rule below exactly as before —
+            // only the flatten/sort/rebuild is skipped.
+            args
         }
     } else if is_commutative(op) && args.len() == 2 && args[0] > args[1] {
         normalized_args = vec![args[1], args[0]];
@@ -1028,12 +1027,37 @@ fn is_ac(op: Op) -> bool {
 ///
 /// `op` must be an [`is_ac`] operator (so every same-op node is binary).
 fn flatten_ac(arena: &TermArena, op: Op, args: &[TermId]) -> Vec<TermId> {
+    flatten_ac_bounded(arena, op, args, usize::MAX)
+        .expect("an unbounded AC collection cannot exhaust its operand limit")
+}
+
+/// Flattens at most `limit` leaves of one AC tree, returning `None` as soon as
+/// another leaf proves the tree too wide. The explicit stack visits rightmost
+/// operands first, so either a left- or right-associated wide spine reaches the
+/// limit without traversing every older prefix. Complete results are sorted, so
+/// this discovery order cannot affect the canonical operand multiset.
+fn flatten_ac_bounded(
+    arena: &TermArena,
+    op: Op,
+    args: &[TermId],
+    limit: usize,
+) -> Option<Vec<TermId>> {
     let mut operands = Vec::new();
-    for &arg in args {
-        collect_ac_operands(arena, op, arg, &mut operands);
+    let mut pending = args.to_vec();
+    while let Some(term) = pending.pop() {
+        if let TermNode::App { op: inner, args } = arena.node(term)
+            && *inner == op
+        {
+            pending.extend(args.iter().copied());
+        } else {
+            operands.push(term);
+            if operands.len() > limit {
+                return None;
+            }
+        }
     }
     operands.sort_unstable();
-    operands
+    Some(operands)
 }
 
 /// Combines the constant leaves of one flattened `bvadd` tree modulo its
@@ -1101,22 +1125,6 @@ fn fold_bv_add_constant_chain(
     }
     args.sort_unstable();
     Ok((args, true))
-}
-
-/// Appends the flattened operands of `term` for AC operator `op` into `out`: if
-/// `term` is itself an application of `op`, recurse into its children; otherwise
-/// `term` is a leaf operand.
-fn collect_ac_operands(arena: &TermArena, op: Op, term: TermId, out: &mut Vec<TermId>) {
-    if let TermNode::App { op: inner, args } = arena.node(term)
-        && *inner == op
-    {
-        let args = args.clone();
-        for &arg in &args {
-            collect_ac_operands(arena, op, arg, out);
-        }
-    } else {
-        out.push(term);
-    }
 }
 
 /// Rebuilds a deterministic balanced tree over `args` (length `>= 2`) using the
@@ -2202,7 +2210,7 @@ fn int_const(arena: &TermArena, term: TermId) -> Option<i128> {
 /// integer encoder has to blast a divider for a term with no variables in it.
 /// Measured on a ground `QF_UFLIA` probe holding everything else fixed and varying
 /// only the spelling of an integer: up to 49× slower, and two otherwise-decided
-/// instances turned into timeouts (ADR-0382).
+/// instances turned into timeouts (ADR-0383).
 ///
 /// # Soundness — agreement with the ground evaluator
 ///
@@ -2950,6 +2958,28 @@ mod commutative_tests {
                 "wide-chain canonicalization changed a value"
             );
         }
+    }
+
+    /// Discovering that an AC chain exceeds the rebuild cap must neither walk
+    /// recursively nor rescan every prefix in full. This corpus-shaped depth is
+    /// intentionally far beyond the native stack and pins the bounded collector.
+    #[test]
+    fn deep_wide_ac_chain_declines_rebuild_without_stack_growth() {
+        const DEPTH: usize = 100_000;
+
+        let mut arena = TermArena::new();
+        let leaf = arena.bv_var("deep_ac_leaf", 8).unwrap();
+        let mut root = leaf;
+        for _ in 0..DEPTH {
+            root = arena.bv_add(root, leaf).unwrap();
+        }
+
+        let canonical = canonicalize(&mut arena, root).unwrap().term;
+        assert_eq!(arena.sort_of(canonical), Sort::BitVec(8));
+        assert!(matches!(
+            arena.node(canonical),
+            TermNode::App { op: Op::BvAdd, .. }
+        ));
     }
 
     /// AC-flattening must preserve denotation: original and canonical agree under

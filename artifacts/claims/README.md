@@ -5,7 +5,7 @@ sibling [`math-education`](../../docs/sibling-projects.md) concept graph and
 this repository's [curriculum](../../docs/curriculum/README.md)) to
 machine-checked evidence (the *pile*: witnesses, certificates, checkers).
 Design rationale and commitments:
-[ADR-0379](../../docs/research/09-decisions/adr-0379-claim-ledger.md).
+[ADR-0380](../../docs/research/09-decisions/adr-0380-claim-ledger.md).
 
 One claim = one directory = `claim.json` (schema:
 [`../ontology/claim.schema.json`](../ontology/claim.schema.json)) plus its

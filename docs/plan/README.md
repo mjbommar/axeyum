@@ -61,7 +61,8 @@ root `PLAN.md` controls whether the track may run.
 Top-level dated files are intentionally append-only research records. Common
 families include:
 
-- arithmetic frontier work (`arithmetic-*`, `qf-nia-*`, `qf-uflia-*`);
+- arithmetic frontier work (`arithmetic-*`, `qf-nia-*`, `qf-uflia-*`,
+  `qf-linear-*`);
 - SMT-COMP selection, readiness, execution, and replay (`smtcomp-*`);
 - Lean import, kernel, official-suite, and parity work (`lean-*`, `lean4-*`);
 - floating-point and string measurements (`fp-*`, `strings-*`);

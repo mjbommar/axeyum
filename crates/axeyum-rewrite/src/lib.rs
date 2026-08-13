@@ -307,7 +307,7 @@ impl core::error::Error for ManifestError {}
 mod tests {
     use std::collections::BTreeSet;
 
-    use axeyum_ir::{Assignment, Sort, TermArena, TermId, Value, eval};
+    use axeyum_ir::{Assignment, Sort, TermArena, TermId, TermNode, Value, eval};
 
     use super::{
         ManifestError, ModelProjection, Preservation, RewriteManifest, RewriteRule, RewriteRuleId,
@@ -720,6 +720,12 @@ mod tests {
             let x = a.bv_var("x", 4).unwrap();
             (a.rotate_left(0, x).unwrap(), x)
         });
+        assert_rule_fires(&mut covered, "int.const_fold.v1", |a| {
+            let n48 = a.int_const(48);
+            let n4 = a.int_const(4);
+            let twelve = a.int_const(12);
+            (a.int_div(n48, n4).unwrap(), twelve)
+        });
         assert_rule_fires(&mut covered, "commutative.operand_order.v1", |a| {
             // Declare `y` first so `y` has the smaller `TermId`; `(bvmul x y)`
             // then reorders to `(bvmul y x)`.
@@ -733,6 +739,116 @@ mod tests {
             .map(|rule| rule.id.as_str().to_owned())
             .collect::<BTreeSet<_>>();
         assert_eq!(covered, enabled);
+    }
+
+    /// `int.const_fold.v1` must agree with the ground evaluator on every fully
+    /// specified ground application, and must DECLINE `div`/`mod` by a zero
+    /// divisor — SMT-LIB leaves those underspecified, so folding to the
+    /// evaluator's total convention is the `a946f925` wrong-`unsat` class.
+    #[test]
+    fn int_const_fold_agrees_with_ground_evaluator_including_zero_divisors() {
+        for a_val in -6i128..=6 {
+            for b_val in -6i128..=6 {
+                for op in 0..10u8 {
+                    let mut arena = TermArena::new();
+                    let lhs = arena.int_const(a_val);
+                    let rhs = arena.int_const(b_val);
+                    let term = match op {
+                        0 => arena.int_add(lhs, rhs),
+                        1 => arena.int_sub(lhs, rhs),
+                        2 => arena.int_mul(lhs, rhs),
+                        3 => arena.int_div(lhs, rhs),
+                        4 => arena.int_mod(lhs, rhs),
+                        5 => arena.int_lt(lhs, rhs),
+                        6 => arena.int_le(lhs, rhs),
+                        7 => arena.int_gt(lhs, rhs),
+                        8 => arena.int_ge(lhs, rhs),
+                        _ => arena.eq(lhs, rhs),
+                    }
+                    .unwrap();
+                    let outcome = canonicalize(&mut arena, term).unwrap();
+                    if matches!(op, 3 | 4) && b_val == 0 {
+                        assert!(
+                            matches!(arena.node(outcome.term), TermNode::App { .. }),
+                            "(op#{op} {a_val} 0) must stay structural, not fold"
+                        );
+                        assert!(
+                            outcome
+                                .report
+                                .applications()
+                                .iter()
+                                .all(|ap| ap.rule_id.as_str() != "int.const_fold.v1"),
+                            "int.const_fold.v1 fired on a zero divisor"
+                        );
+                    } else {
+                        let expected = eval(&arena, term, &Assignment::new()).unwrap();
+                        let expected_term = match expected {
+                            Value::Int(v) => arena.int_const(v),
+                            Value::Bool(v) => arena.bool_const(v),
+                            other => panic!("unexpected ground value {other:?}"),
+                        };
+                        assert_eq!(
+                            outcome.term, expected_term,
+                            "(op#{op} {a_val} {b_val}) folded to the wrong constant"
+                        );
+                    }
+                }
+            }
+        }
+    }
+
+    /// The fold's unary coverage and its decline paths: an evaluator error (out
+    /// of the `i128` reference range) leaves the term unfolded rather than
+    /// producing a wrapped value, and a zero divisor stays structural even when
+    /// nested under a foldable operator.
+    #[test]
+    fn int_const_fold_unary_ops_and_decline_paths() {
+        let mut arena = TermArena::new();
+
+        // Unary folds, including `int.pow2` of a negative (DEFINED as 0 by the
+        // cvc5 total semantics the evaluator implements).
+        let three = arena.int_const(3);
+        let neg_one = arena.int_const(-1);
+        let pow = arena.int_pow2(three).unwrap();
+        let out = canonicalize(&mut arena, pow).unwrap();
+        assert_eq!(out.term, arena.int_const(8));
+        let pow_neg = arena.int_pow2(neg_one).unwrap();
+        let out = canonicalize(&mut arena, pow_neg).unwrap();
+        assert_eq!(out.term, arena.int_const(0));
+        let abs = arena.int_abs(neg_one).unwrap();
+        let out = canonicalize(&mut arena, abs).unwrap();
+        assert_eq!(out.term, arena.int_const(1));
+        let neg = arena.int_neg(three).unwrap();
+        let out = canonicalize(&mut arena, neg).unwrap();
+        assert_eq!(out.term, arena.int_const(-3));
+
+        // Evaluator errors decline the fold: `abs(i128::MIN)`, `i128::MIN / -1`,
+        // and `2^127` all exceed the i128 reference range.
+        let min = arena.int_const(i128::MIN);
+        let abs_min = arena.int_abs(min).unwrap();
+        let div_min = arena.int_div(min, neg_one).unwrap();
+        let big = arena.int_const(127);
+        let pow_big = arena.int_pow2(big).unwrap();
+        for t in [abs_min, div_min, pow_big] {
+            let out = canonicalize(&mut arena, t).unwrap();
+            assert!(
+                matches!(arena.node(out.term), TermNode::App { .. }),
+                "out-of-range fold must decline, term #{t:?}"
+            );
+        }
+
+        // A zero divisor nested under a foldable operator: the inner term stays
+        // structural, so the outer `+` has a non-literal operand and stays too.
+        let five = arena.int_const(5);
+        let zero = arena.int_const(0);
+        let dz = arena.int_div(five, zero).unwrap();
+        let one = arena.int_const(1);
+        let sum = arena.int_add(dz, one).unwrap();
+        let out = canonicalize(&mut arena, sum).unwrap();
+        assert!(matches!(arena.node(out.term), TermNode::App { .. }));
+        let mz = arena.int_mod(zero, zero).unwrap();
+        let out = canonicalize(&mut arena, mz).unwrap();
+        assert!(matches!(arena.node(out.term), TermNode::App { .. }));
     }
 
     #[test]

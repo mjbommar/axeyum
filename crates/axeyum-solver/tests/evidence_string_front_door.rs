@@ -23,7 +23,8 @@ use std::time::Duration;
 
 use axeyum_ir::TermArena;
 use axeyum_solver::{
-    CheckResult, Evidence, SolverConfig, produce_evidence, produce_evidence_smtlib, solve_smtlib,
+    CheckResult, Evidence, EvidenceCheck, SolverConfig, produce_evidence, produce_evidence_smtlib,
+    solve_smtlib,
 };
 
 fn cfg() -> SolverConfig {
@@ -142,14 +143,20 @@ fn string_front_door_no_spurious_checked_sat_on_unsat_word_problem() {
     );
     assert_eq!(evidence_verdict(&report.evidence), "unsat");
 
-    // Whatever the evidence, re-validating it must not report a *satisfying model*
-    // that does not exist: for the bare `unsat` verdict `check` returns true
-    // (the verdict is trusted, no model claimed) but the evidence is NOT a `Sat`.
-    let checked = report
+    // Whatever the evidence, re-validating it must not report a *satisfying
+    // model* that does not exist. Under ADR-0384 the three-valued outcome makes
+    // the acceptable states explicit: a certified unsat re-derives (`Verified`),
+    // an uncertified one honestly reports nothing to check — and a present
+    // certificate that does not hold up (`Failed`) is the soundness alarm this
+    // test exists to catch.
+    let outcome = report
         .evidence
-        .check(&TermArena::new(), &[])
+        .check_outcome(&TermArena::new(), &[])
         .expect("check");
-    assert!(checked, "unsat verdict must re-validate");
+    assert!(
+        !matches!(outcome, EvidenceCheck::Failed),
+        "unsat evidence carried a certificate that did not re-validate: {outcome:?}"
+    );
 }
 
 /// No-regression: a NON-string script routes through the ordinary arena

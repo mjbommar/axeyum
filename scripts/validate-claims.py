@@ -85,7 +85,7 @@ ARTIFACT_FORMATS = {
 }
 
 # The formats axeyum's own in-tree checker can consume (`parse_drat` ->
-# `check_drat_backward`, ADR-0381). A `checked` unsat-certificate row MUST
+# `check_drat_backward`, ADR-0382). A `checked` unsat-certificate row MUST
 # store one of these: anything else is a certificate no shipped checker can
 # read, which is exactly the B8 defect.
 CHECKER_READABLE_FORMATS = {"drat-text", "drat-text-gzip"}

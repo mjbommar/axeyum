@@ -3,7 +3,7 @@
 //! [`run_cover`] splits a formula over a [`BranchPlan`], asserts each cell's
 //! literals as unit clauses, and refutes the augmented formula with axeyum's
 //! proof-producing CDCL core. Each cell's DRAT proof is checked immediately
-//! (default: [`CheckMode::Backward`], ADR-0381), optionally written to disk for
+//! (default: [`CheckMode::Backward`], ADR-0382), optionally written to disk for
 //! offline certification, and optionally retained for route A composition.
 //!
 //! # Finding B1: a satisfiable cell must land on disk before anything else
@@ -41,27 +41,27 @@
 use std::fs::OpenOptions;
 use std::io::Write;
 use std::path::{Path, PathBuf};
-use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::sync::Mutex;
+use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::time::{Duration, Instant};
 
 use axeyum_cnf::{
-    check_drat, check_drat_backward, solve_with_drat_proof_with_limits, write_drat, CnfClause,
-    CnfFormula, DratStep, ProofSolveOutcome,
+    CnfClause, CnfFormula, DratStep, ProofSolveOutcome, check_drat, check_drat_backward,
+    solve_with_drat_proof_with_limits, write_drat,
 };
 
+use crate::SearchError;
 use crate::cover::{
-    certify_cover, verify_branch_clauses, verify_cell_set, BranchPlan, Cell, CellCheck, CellRecord,
-    CellVerdict, CoverCertificate,
+    BranchPlan, Cell, CellCheck, CellRecord, CellVerdict, CoverCertificate, certify_cover,
+    verify_branch_clauses, verify_cell_set,
 };
 use crate::ledger::{LedgerWriter, RunId};
-use crate::SearchError;
 
 /// Which DRAT checker verifies each cell's proof.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum CheckMode {
     /// [`check_drat_backward`] — core-first, the one to use at scale
-    /// (ADR-0381).
+    /// (ADR-0382).
     #[default]
     Backward,
     /// [`check_drat`] — the small auditable reference checker (ADR-0011).
@@ -286,19 +286,16 @@ pub fn render_model(values: &[bool]) -> String {
 pub fn parse_model(text: &str) -> Result<Vec<bool>, SearchError> {
     let mut values: Vec<Option<bool>> = Vec::new();
     for token in text.split_whitespace() {
-        let literal: i64 = token
-            .parse()
-            .map_err(|_| SearchError::InvalidParameter {
-                what: format!("model token {token:?} is not a literal"),
-            })?;
+        let literal: i64 = token.parse().map_err(|_| SearchError::InvalidParameter {
+            what: format!("model token {token:?} is not a literal"),
+        })?;
         if literal == 0 {
             continue;
         }
-        let index = usize::try_from(literal.abs() - 1).map_err(|_| {
-            SearchError::InvalidParameter {
+        let index =
+            usize::try_from(literal.abs() - 1).map_err(|_| SearchError::InvalidParameter {
                 what: format!("model token {token:?} is out of range"),
-            }
-        })?;
+            })?;
         if values.len() <= index {
             values.resize(index + 1, None);
         }
@@ -356,10 +353,7 @@ pub fn run_cover(
 ) -> Result<CoverOutcome, SearchError> {
     let branch_clauses = verify_branch_clauses(formula, plan)?;
     let cells = plan.cells()?;
-    verify_cell_set(
-        plan,
-        &cells.iter().map(Cell::index).collect::<Vec<_>>(),
-    )?;
+    verify_cell_set(plan, &cells.iter().map(Cell::index).collect::<Vec<_>>())?;
     observer.on_note(&format!(
         "cover: {} cells over {} branch groups; at-least-one clauses located in F at {branch_clauses:?}",
         cells.len(),
@@ -460,11 +454,16 @@ impl CoverRun<'_> {
         let mut records = self
             .records
             .lock()
-            .unwrap_or_else(|e| e.into_inner())
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
             .clone();
         records.sort_by_key(|record| record.index);
 
-        if let Some(finding) = self.sat.lock().unwrap_or_else(|e| e.into_inner()).take() {
+        if let Some(finding) = self
+            .sat
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
+            .take()
+        {
             return Ok(CoverOutcome::Satisfiable {
                 cell: finding.cell,
                 model: finding.model,
@@ -510,7 +509,10 @@ impl CoverRun<'_> {
         if !self.retaining.load(Ordering::SeqCst) {
             return Ok(None);
         }
-        let proofs = self.proofs.lock().unwrap_or_else(|e| e.into_inner());
+        let proofs = self
+            .proofs
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
         if proofs.iter().any(Option::is_none) {
             return Ok(None);
         }
@@ -521,7 +523,7 @@ impl CoverRun<'_> {
     fn take_first_error(&self) -> Option<SearchError> {
         self.errors
             .lock()
-            .unwrap_or_else(|e| e.into_inner())
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
             .first()
             .cloned()
     }
@@ -531,7 +533,7 @@ impl CoverRun<'_> {
         self.observer.on_note(&format!("FATAL {error}"));
         self.errors
             .lock()
-            .unwrap_or_else(|e| e.into_inner())
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
             .push(error);
         self.stop.store(true, Ordering::SeqCst);
     }
@@ -546,7 +548,10 @@ impl CoverRun<'_> {
             if index >= self.cells.len() || self.stop.load(Ordering::SeqCst) {
                 return;
             }
-            if self.deadline.is_some_and(|deadline| Instant::now() >= deadline) {
+            if self
+                .deadline
+                .is_some_and(|deadline| Instant::now() >= deadline)
+            {
                 return;
             }
             self.observer.on_cell_started(index);
@@ -570,19 +575,17 @@ impl CoverRun<'_> {
             (None, total) => total,
         };
         let started = Instant::now();
-        let outcome = solve_with_drat_proof_with_limits(
-            &augmented,
-            deadline,
-            self.options.cell_conflicts,
-        );
+        let outcome =
+            solve_with_drat_proof_with_limits(&augmented, deadline, self.options.cell_conflicts);
         let solve = started.elapsed();
 
         match outcome {
             ProofSolveOutcome::Sat(assignment) => self.handle_sat(cell, assignment.values(), solve),
             ProofSolveOutcome::Unsat(proof) => self.handle_unsat(cell, &augmented, proof, solve),
-            ProofSolveOutcome::ResourceOut => {
-                self.record(cell, CellOutcome::unfinished(CellVerdict::ResourceOut, solve))
-            }
+            ProofSolveOutcome::ResourceOut => self.record(
+                cell,
+                CellOutcome::unfinished(CellVerdict::ResourceOut, solve),
+            ),
             ProofSolveOutcome::Interrupted => {
                 self.record(cell, CellOutcome::unfinished(CellVerdict::Timeout, solve))
             }
@@ -599,7 +602,10 @@ impl CoverRun<'_> {
             write_durable(path, render_model(model).as_bytes())?;
             self.observer.on_model_persisted(cell.index(), path, model);
         }
-        *self.sat.lock().unwrap_or_else(|e| e.into_inner()) = Some(SatFinding {
+        *self
+            .sat
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner) = Some(SatFinding {
             cell: cell.index(),
             model: model.to_vec(),
             path,
@@ -676,7 +682,10 @@ impl CoverRun<'_> {
             return;
         }
         let running = self.retained_adds.fetch_add(adds, Ordering::SeqCst) + adds;
-        let mut proofs = self.proofs.lock().unwrap_or_else(|e| e.into_inner());
+        let mut proofs = self
+            .proofs
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
         if running <= self.options.compose_step_cap {
             proofs[index] = Some(proof);
             return;
@@ -708,7 +717,7 @@ impl CoverRun<'_> {
         if let Some(writer) = self
             .ledger
             .lock()
-            .unwrap_or_else(|e| e.into_inner())
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
             .as_mut()
         {
             writer.append(&record)?;
@@ -716,7 +725,7 @@ impl CoverRun<'_> {
         self.observer.on_cell_finished(&record);
         self.records
             .lock()
-            .unwrap_or_else(|e| e.into_inner())
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
             .push(record);
         Ok(())
     }

@@ -589,49 +589,63 @@ fn collect(
     seen: &mut HashSet<TermId>,
     deadline: Option<Instant>,
 ) -> bool {
-    if past_deadline(deadline) {
-        return false;
-    }
-    if !seen.insert(term) {
-        return true;
-    }
-    if is_numeric_relational(arena, term) {
-        return if matches!(arena.node(term), TermNode::App { op: Op::Eq, .. }) {
-            state.expand_equality(arena, term, deadline)
-        } else {
-            state.atom(arena, term, deadline).is_some()
-        };
-    }
-    // A Boolean equality is pure skeleton: descend both operands first, then
-    // record the gate, so `bool_eq_gates` is in post-order and each gate can be
-    // encoded once its operands already have skeleton variables.
-    if let TermNode::App { op: Op::Eq, args } = arena.node(term)
-        && args.len() == 2
-        && arena.sort_of(args[0]) == Sort::Bool
-    {
-        let (lhs, rhs) = (args[0], args[1]);
-        if !collect(arena, lhs, state, seen, deadline)
-            || !collect(arena, rhs, state, seen, deadline)
+    // `(term, children_ready)` keeps Boolean equality gates in the recursive
+    // walk's post-order while making every other visit an iterative preorder.
+    let mut pending = vec![(term, false)];
+    while let Some((current, children_ready)) = pending.pop() {
+        if past_deadline(deadline) {
+            return false;
+        }
+        if children_ready {
+            let TermNode::App { args, .. } = arena.node(current) else {
+                return false;
+            };
+            state
+                .bool_eq_gates
+                .push((current, args[0], args[1]));
+            continue;
+        }
+        if !seen.insert(current) {
+            continue;
+        }
+        if is_numeric_relational(arena, current) {
+            let accepted = if matches!(arena.node(current), TermNode::App { op: Op::Eq, .. }) {
+                state.expand_equality(arena, current, deadline)
+            } else {
+                state.atom(arena, current, deadline).is_some()
+            };
+            if !accepted {
+                return false;
+            }
+            continue;
+        }
+        // A Boolean equality is pure skeleton: descend both operands first,
+        // then record the gate, so `bool_eq_gates` remains in post-order and
+        // each gate can be encoded once its operands already have variables.
+        if let TermNode::App { op: Op::Eq, args } = arena.node(current)
+            && args.len() == 2
+            && arena.sort_of(args[0]) == Sort::Bool
         {
+            let (lhs, rhs) = (args[0], args[1]);
+            pending.push((current, true));
+            pending.push((rhs, false));
+            pending.push((lhs, false));
+            continue;
+        }
+        let TermNode::App { op, args } = arena.node(current) else {
+            if !matches!(
+                arena.node(current),
+                TermNode::Symbol(_) | TermNode::BoolConst(_)
+            ) || arena.sort_of(current) != Sort::Bool
+            {
+                return false;
+            }
+            continue;
+        };
+        if !is_skeleton_op(*op) || arena.sort_of(current) != Sort::Bool {
             return false;
         }
-        state.bool_eq_gates.push((term, lhs, rhs));
-        return true;
-    }
-    let TermNode::App { op, args } = arena.node(term) else {
-        return matches!(
-            arena.node(term),
-            TermNode::Symbol(_) | TermNode::BoolConst(_)
-        ) && arena.sort_of(term) == Sort::Bool;
-    };
-    if !is_skeleton_op(*op) || arena.sort_of(term) != Sort::Bool {
-        return false;
-    }
-    let args = args.clone();
-    for &arg in &*args {
-        if !collect(arena, arg, state, seen, deadline) {
-            return false;
-        }
+        pending.extend(args.iter().rev().map(|&arg| (arg, false)));
     }
     true
 }
@@ -1812,6 +1826,42 @@ fn encode_assertions(
     Some(true)
 }
 
+/// Formats stable, already-computed scan/encoding counts for a timeout trace.
+///
+/// This runs only while constructing the `Unknown(Timeout)` detail. It performs
+/// no extra traversal and does not participate in timeout selection or solving.
+fn timeout_detail(
+    stage: &str,
+    scan: &DlScan,
+    encoding: Option<(&Encoder, &[Vec<Lit>])>,
+) -> String {
+    let mut detail = format!(
+        "{stage} (atoms={}, equality_gates={}, bool_equality_gates={}",
+        scan.atom_terms.len(),
+        scan.eq_gates.len(),
+        scan.bool_eq_gates.len(),
+    );
+    if let Some((encoder, clauses)) = encoding {
+        use std::fmt::Write as _;
+        write!(
+            detail,
+            ", cnf_vars={}, clauses={}",
+            encoder.var_count,
+            clauses.len()
+        )
+        .expect("writing to a String cannot fail");
+    }
+    detail.push(')');
+    detail
+}
+
+fn timeout_result(detail: String) -> CheckResult {
+    CheckResult::Unknown(UnknownReason {
+        kind: UnknownKind::Timeout,
+        detail,
+    })
+}
+
 /// Decides a **pure difference-logic** query (`QF_IDL` / `QF_RDL`) through the
 /// generic CDCL(T) driver with negative-cycle detection as the theory.
 ///
@@ -1826,6 +1876,7 @@ pub(crate) fn try_check_qf_dl(
     arena: &mut TermArena,
     assertions: &[TermId],
     config: &SolverConfig,
+    extended_timeout: Option<Duration>,
 ) -> Option<CheckResult> {
     let probe_started = Instant::now();
     // The probe budget covers the entire route, including the conservative
@@ -1836,17 +1887,19 @@ pub(crate) fn try_check_qf_dl(
         .timeout
         .and_then(|timeout| probe_started.checked_add(timeout));
     let scan = scan_dl(arena, assertions, maximum_deadline)?;
-    let deadline = equality_fallback_probe_timeout(
+    let deadline = structural_probe_timeout(
         config.timeout,
+        extended_timeout,
         scan.atom_terms.len(),
         scan.eq_gates.len(),
     )
     .and_then(|timeout| probe_started.checked_add(timeout));
     if past_deadline(deadline) {
-        return Some(CheckResult::Unknown(UnknownReason {
-            kind: UnknownKind::Timeout,
-            detail: "budget exhausted in the difference-logic front end".to_owned(),
-        }));
+        return Some(timeout_result(timeout_detail(
+            "budget exhausted in the difference-logic front end",
+            &scan,
+            None,
+        )));
     }
 
     let mut enc = Encoder::new(&scan.atom_terms);
@@ -1856,24 +1909,27 @@ pub(crate) fn try_check_qf_dl(
     // follow the registered atoms, leaving atom indices aligned with the
     // theory's numbering.
     if !encode_numeric_equalities(&scan, &mut enc, &mut clauses, deadline) {
-        return Some(CheckResult::Unknown(UnknownReason {
-            kind: UnknownKind::Timeout,
-            detail: "budget exhausted encoding difference-logic equalities".to_owned(),
-        }));
+        return Some(timeout_result(timeout_detail(
+                "budget exhausted encoding difference-logic equalities",
+                &scan,
+                Some((&enc, &clauses)),
+            )));
     }
     // Tseitin `g ⟺ (a ⟺ b)` for every Boolean equality, in the post-order the
     // scan recorded, so a nested equality already has its variable.
     if !encode_boolean_equalities(arena, &scan, &mut enc, &mut clauses, deadline)? {
-        return Some(CheckResult::Unknown(UnknownReason {
-            kind: UnknownKind::Timeout,
-            detail: "budget exhausted encoding difference-logic Boolean equalities".to_owned(),
-        }));
+        return Some(timeout_result(timeout_detail(
+                "budget exhausted encoding difference-logic Boolean equalities",
+                &scan,
+                Some((&enc, &clauses)),
+            )));
     }
     if !encode_assertions(arena, assertions, &mut enc, &mut clauses, deadline)? {
-        return Some(CheckResult::Unknown(UnknownReason {
-            kind: UnknownKind::Timeout,
-            detail: "budget exhausted encoding difference-logic assertions".to_owned(),
-        }));
+        return Some(timeout_result(timeout_detail(
+                "budget exhausted encoding difference-logic assertions",
+                &scan,
+                Some((&enc, &clauses)),
+            )));
     }
     let driver_clauses: Vec<Vec<CdcltLit>> = clauses
         .iter()
@@ -1889,20 +1945,22 @@ pub(crate) fn try_check_qf_dl(
         .collect();
 
     if past_deadline(deadline) {
-        return Some(CheckResult::Unknown(UnknownReason {
-            kind: UnknownKind::Timeout,
-            detail: "budget exhausted materializing difference-logic clauses".to_owned(),
-        }));
+        return Some(timeout_result(timeout_detail(
+                "budget exhausted materializing difference-logic clauses",
+                &scan,
+                Some((&enc, &clauses)),
+            )));
     }
     let atom_count = scan.atom_terms.len();
     let mut theory = DlTheory::new(&scan, deadline);
     let mut solver = CdclT::new(enc.var_count, atom_count, driver_clauses, deadline);
     match solver.solve(&mut theory) {
         Outcome::Unsat => Some(CheckResult::Unsat),
-        Outcome::Unknown => Some(CheckResult::Unknown(UnknownReason {
-            kind: UnknownKind::Timeout,
-            detail: "budget exhausted in the online difference-logic driver".to_owned(),
-        })),
+        Outcome::Unknown => Some(timeout_result(timeout_detail(
+                "budget exhausted in the online difference-logic driver",
+                &scan,
+                Some((&enc, &clauses)),
+            ))),
         Outcome::Sat => {
             let Some(mut model) = lift_model(&scan, &theory.graph) else {
                 return Some(CheckResult::Unknown(unknown(
@@ -1921,24 +1979,26 @@ pub(crate) fn try_check_qf_dl(
     }
 }
 
-/// Shortens the maximum DL probe only for a moderate equality-expanded query.
+/// Selects the DL probe timeout from stable, already-computed scan structure.
 ///
 /// Numeric equalities become two theory atoms plus a Boolean gate. On the
 /// measured medium shape the generic LIA fallback is competitive and needs a
-/// larger slice; on a large equality skeleton it is not, while compact
-/// gate-free DL searches need the default probe allowance. These thresholds
-/// were preregistered from the 2026-08-06 loss/control census and are guarded by
-/// the complete retained `QF_IDL/QF_RDL` decision set.
-fn equality_fallback_probe_timeout(
-    maximum: Option<Duration>,
+/// larger slice, so it keeps the accepted shortened budget. The measured large
+/// equality-heavy class may use the bounded extension; all low-equality shapes
+/// retain the standard maximum.
+fn structural_probe_timeout(
+    standard: Option<Duration>,
+    extended: Option<Duration>,
     atom_count: usize,
     equality_gate_count: usize,
 ) -> Option<Duration> {
     const MIN_EQUALITY_GATES: usize = 128;
     const MAX_MODERATE_ATOMS: usize = 1024;
-    maximum.map(|timeout| {
+    standard.map(|timeout| {
         if equality_gate_count >= MIN_EQUALITY_GATES && atom_count <= MAX_MODERATE_ATOMS {
             timeout * 2 / 3
+        } else if equality_gate_count >= MIN_EQUALITY_GATES {
+            extended.unwrap_or(timeout)
         } else {
             timeout
         }

@@ -434,7 +434,10 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [0376](adr-0376-integer-literals-wider-than-i128.md) | Integer literals wider than `i128` — measured non-cause, deferred IR widening | deferred |
 | [0377](adr-0377-shared-arithmetic-deadlines-and-normalization-ceilings.md) | Share one arithmetic deadline across fallback routes and bound LRA normalization deterministically | accepted |
 | [0378](adr-0378-bounded-smtlib-distinct-expansion.md) | Bound eager SMT-LIB `distinct` pair expansion, balance admitted conjunctions, and classify the ceiling as `Unknown(ResourceLimit)` | accepted |
-| [0379](adr-0379-claim-ledger.md) | A claim ledger joining the knowledge graph to machine-checked evidence | proposed |
-| [0380](adr-0380-streaming-drat-proofs.md) | Streaming DRAT proof emission and checking | proposed |
-| [0381](adr-0381-backward-drat-checking.md) | Backward (core-first) DRAT checking | proposed |
-| [0382](adr-0382-nat-prelude.md) | A proved `Nat` prelude for the Lean kernel — `add`/`mul`/`pow`, the algebraic laws, `Nat.le`, and the `Eq` combinators, with **zero axioms** | proposed |
+| [0379](adr-0379-sequential-isolated-corpus-workers.md) | Run ordered corpus explanation through one sequential inherited-limit child per file with fail-closed record validation | accepted |
+| [0380](adr-0380-claim-ledger.md) | A claim ledger joining the knowledge graph to machine-checked evidence | proposed |
+| [0381](adr-0381-streaming-drat-proofs.md) | Streaming DRAT proof emission and checking | proposed |
+| [0382](adr-0382-backward-drat-checking.md) | Backward (core-first) DRAT checking | proposed |
+| [0383](adr-0383-ground-integer-constant-folding.md) | Ground integer constant folding, declining underspecified division | proposed |
+| [0384](adr-0384-honest-evidence-front-door.md) | Three-valued evidence checking, bounded proof production, retained checking subjects | proposed |
+| [0385](adr-0385-nat-prelude.md) | A proved `Nat` prelude for the Lean kernel — `add`/`mul`/`pow`, the algebraic laws, `Nat.le`, and the `Eq` combinators, with **zero axioms** | proposed |

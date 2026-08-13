@@ -1,0 +1,42 @@
+{
+  "binary_bytes": 11859024,
+  "binary_sha256": "18ef76d6f94c8619062dc44c69f1fa75f3d477d9ed146eb555202248efbe9af6",
+  "captures": {
+    "QF_IDL": {
+      "capture_metadata_sha256": "570dc5951f2d14f5f32225489888b577f1d41c6f03c7393442e203635685e8bb",
+      "elapsed_ms": 3477403,
+      "records": 200,
+      "stdout_bytes": 123426,
+      "stdout_sha256": "49292710e3b4e494d3ffaf22111d321c59bb8456d1509bf16c7fe6132f5cc9dc"
+    },
+    "QF_LRA": {
+      "capture_metadata_sha256": "653b707eb3cf479a88360fe937cc8cfb19dffb9fe504603db59dd3f98c217680",
+      "elapsed_ms": 1001720,
+      "records": 200,
+      "stdout_bytes": 104463,
+      "stdout_sha256": "540252a4d846a96825c46d50afd6d925b22faa9e858caa79c2b7577754029b7f"
+    },
+    "QF_RDL": {
+      "capture_metadata_sha256": "60c33b12c9e2215bd9e941300067543f19b15c5dcbbb5c4fd17ab3a4b17448ae",
+      "elapsed_ms": 2127949,
+      "records": 200,
+      "stdout_bytes": 88265,
+      "stdout_sha256": "5af6091b75367fdc337dc4026335f0fd95abdd10e3965677b79425d47c5bee76"
+    }
+  },
+  "credited": false,
+  "derive_error": "QF_LRA: 1 historical solved losses; first={'file': '/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_LRA/sal/windowreal/windowreal-no_t_deadlock-17.smt2', 'historical': 'unsat', 'current': 'unknown'}",
+  "git_commit": "5a53012e13757e4f992e6197d83b9f12a6268471",
+  "git_upstream": "5a53012e13757e4f992e6197d83b9f12a6268471",
+  "loss": {
+    "current": "unknown",
+    "declared": "unsat",
+    "file": "/nas3/data/axeyum/corpus/smtlib-2024/non-incremental/non-incremental/QF_LRA/sal/windowreal/windowreal-no_t_deadlock-17.smt2",
+    "historical": "unsat",
+    "reference": "unsat",
+    "terminal_detail": "lazy linear arithmetic pre-SAT skeleton exceeds the joint resource boundary (atoms=1217 > 1024, cnf_vars=6526 > 4096, initial_clauses=0, blocking_lemmas=0); declining before the first SAT round",
+    "terminal_reason": "budget",
+    "terminal_route": "lira-dpll"
+  },
+  "schema": "axeyum-qf-linear-a5-census-failure-v1"
+}

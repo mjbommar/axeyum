@@ -279,6 +279,65 @@ mod tests {
         }
     }
 
+    /// The `(= x (div 5 0))` / `(= x (mod 0 0))` shapes from
+    /// [`depends_on_underspecified_division`]'s doc: pinning `x` to the
+    /// evaluator's div-by-zero convention refutes satisfiable formulas (wrong
+    /// `unsat`, the `a946f925` class). The pass must decline the definition and
+    /// leave both assertions for `eliminate_int_divmod` to model soundly.
+    #[test]
+    fn declines_definitions_pinned_to_underspecified_division() {
+        for make in [
+            |arena: &mut TermArena| {
+                let five = arena.int_const(5);
+                let zero = arena.int_const(0);
+                arena.int_div(five, zero).unwrap()
+            },
+            |arena: &mut TermArena| {
+                let zero = arena.int_const(0);
+                arena.int_mod(zero, zero).unwrap()
+            },
+        ] {
+            let mut arena = TermArena::new();
+            let x = arena.declare("x", Sort::Int).unwrap();
+            let xv = arena.var(x);
+            let division = make(&mut arena);
+            let def = arena.eq(xv, division).unwrap();
+            let hundred = arena.int_const(100);
+            let bound = arena.int_gt(xv, hundred).unwrap();
+            let originals = [def, bound];
+
+            let out = propagate_values(&mut arena, &originals).unwrap();
+            assert_eq!(
+                out.eliminated(),
+                0,
+                "x must not be pinned to a div/mod-by-zero convention value"
+            );
+            assert_eq!(out.assertions().len(), 2, "both assertions must survive");
+        }
+    }
+
+    /// Positive control for the guard: a fully specified ground division is
+    /// still propagated.
+    #[test]
+    fn propagates_a_specified_ground_division() {
+        let mut arena = TermArena::new();
+        let x = arena.declare("x", Sort::Int).unwrap();
+        let xv = arena.var(x);
+        let n48 = arena.int_const(48);
+        let n4 = arena.int_const(4);
+        let quotient = arena.int_div(n48, n4).unwrap();
+        let def = arena.eq(xv, quotient).unwrap();
+        let ten = arena.int_const(10);
+        let bound = arena.int_gt(xv, ten).unwrap();
+        let originals = [def, bound];
+
+        let out = propagate_values(&mut arena, &originals).unwrap();
+        assert_eq!(out.eliminated(), 1, "x is pinned to the definite value 12");
+        let full = out.trail().reconstruct(&arena, &Assignment::new()).unwrap();
+        assert_eq!(full.get(x), Some(Value::Int(12)));
+        assert_satisfies(&arena, &originals, &full);
+    }
+
     #[test]
     fn eliminates_a_variable_equal_to_a_constant() {
         let mut arena = TermArena::new();

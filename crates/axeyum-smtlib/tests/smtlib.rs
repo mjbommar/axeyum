@@ -979,6 +979,52 @@ fn coerces_non_constant_int_to_real_in_mixed_arithmetic() {
 }
 
 #[test]
+fn coerces_integer_branches_in_real_ite_context() {
+    // SAL's gasburner QF_LRA family uses this exact shape: the then branch is
+    // Real through mixed addition while the else branch is the bare numeral 0.
+    // SMT-LIB gives both branches one common Real sort.
+    let text = r"
+        (set-logic QF_LRA)
+        (declare-fun p () Bool)
+        (declare-fun x () Real)
+        (assert (= x (ite p (+ 0 x) 0)))
+        (check-sat)
+    ";
+    let script = parse_script(text).unwrap();
+    assert_eq!(script.assertions.len(), 1);
+
+    let p = script.arena.find_symbol("p").unwrap();
+    let x = script.arena.find_symbol("x").unwrap();
+    let mut assignment = Assignment::new();
+    assignment.set(p, Value::Bool(false));
+    assignment.set(x, Value::Real(axeyum_ir::Rational::integer(0)));
+    assert_eq!(
+        eval(&script.arena, script.assertions[0], &assignment).unwrap(),
+        Value::Bool(true),
+    );
+
+    let rendered = write_script(&script.arena, &script.assertions);
+    assert!(rendered.contains("(ite p (+ 0.0 x) 0.0)"), "{rendered}");
+    assert_eq!(parse_script(&rendered).unwrap().assertions.len(), 1);
+}
+
+#[test]
+fn coerces_symbolic_int_branch_in_real_ite_context() {
+    let text = r"
+        (set-logic QF_LIRA)
+        (declare-fun p () Bool)
+        (declare-fun n () Int)
+        (declare-fun x () Real)
+        (assert (= x (ite p n 0.5)))
+        (check-sat)
+    ";
+    let script = parse_script(text).unwrap();
+    let rendered = write_script(&script.arena, &script.assertions);
+    assert!(rendered.contains("(ite p (to_real n)"), "{rendered}");
+    assert_eq!(parse_script(&rendered).unwrap().assertions.len(), 1);
+}
+
+#[test]
 fn coerces_non_constant_int_in_mixed_comparison() {
     // Int variable `n` on the Real side of `<`: (< n y) with n := 3, y := 4.5
     // is true (to_real(3) = 3 < 4.5); with y := 2.5 it is false.

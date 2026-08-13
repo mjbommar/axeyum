@@ -1,7 +1,7 @@
 # Claim ledger and the R_4(2(x−y)=3z) frontier campaign — 2026-08-12
 
 Session result note. Design rationale:
-[ADR-0379](../research/09-decisions/adr-0379-claim-ledger.md). Artifacts:
+[ADR-0380](../research/09-decisions/adr-0380-claim-ledger.md). Artifacts:
 [`artifacts/claims/`](../../artifacts/claims/README.md).
 
 ## What landed
@@ -174,7 +174,7 @@ and cube proof sizes are highly variable at fixed depth, so deeper
 decomposition does not uniformly shrink them — depth 6 beat depth 7 in
 total wall clock despite four times fewer cells.
 
-## Capability increment landed: streaming DRAT proofs (ADR-0380, proposed)
+## Capability increment landed: streaming DRAT proofs (ADR-0381, proposed)
 
 Finding 4 was closed the same day: `axeyum-cnf` now has a `DratSink`
 trait threaded through the proof-producing core (monomorphized;
@@ -299,7 +299,7 @@ to a fixed point. A 32×32 multiplier-equivalence miter got no verdict in
 - Flip the `upper-drat` evidence row to `checked` when drat-trim
   reports VERIFIED; store the trimmed proof (gzipped) beside the claim.
 - Wire `just claims` into CI once the ledger design survives review
-  (ADR-0379 is `proposed`).
+  (ADR-0380 is `proposed`).
 - Flip `C:rado-number` refs to resolved after math-education commits.
 - Candidate next claims: the agent-conjectured closed forms
   (`R_2(1,b) = u²+u−1`, `R_3(1,b) = u³+2u²−2`, u = b+1) as
