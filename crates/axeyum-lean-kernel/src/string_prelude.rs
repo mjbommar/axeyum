@@ -47,7 +47,7 @@ use crate::expr::ExprId;
 use crate::level::LevelId;
 use crate::name::NameId;
 use crate::prelude::{LogicPrelude, RecField};
-use crate::{BinderInfo, Kernel};
+use crate::{BinderInfo, Kernel, KernelError, PreludeKey, PreludeValue};
 
 /// The interned names produced by [`build_string_prelude`]: the `Char` alphabet
 /// enum, the recursive `Str = List Char` inductive, and the opaque `append`
@@ -56,7 +56,7 @@ use crate::{BinderInfo, Kernel};
 ///
 /// Handles belong to the kernel they were built in; do not mix them across
 /// kernels. All fields are public so callers can build `Const` terms.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct StringPrelude {
     /// The logical prelude (`Eq`, `Bool`, `False`, …) these declarations ride on.
     pub logic: LogicPrelude,
@@ -94,95 +94,107 @@ pub struct StringPrelude {
 /// it may be `0` for a pure equality/disequality reconstruction that never needs a
 /// concrete character.
 ///
-/// # Panics
+/// Each alphabet size uses a deterministic `axeyum.string.<size>` namespace.
+/// Repeated construction validates and returns the exact registered package;
+/// any failure is returned as [`KernelError`] and rolls back this invocation.
 ///
-/// Panics if any declaration fails to type-check, which would indicate a kernel
-/// regression rather than a caller error — the declarations are fixed and valid.
-#[must_use]
+/// # Errors
+///
+/// Returns a logic-package mismatch, trusted-gate rejection, or exact-package
+/// conflict. A failed string build leaves the pre-call environment unchanged.
 pub fn build_string_prelude(
     kernel: &mut Kernel,
     logic: LogicPrelude,
     num_chars: usize,
-) -> StringPrelude {
-    let anon = kernel.anon();
-    let one = {
-        let z = kernel.level_zero();
-        kernel.level_succ(z)
-    };
-
-    // --- Char : Type, Char.c0 | Char.c1 | … (all nullary) ----------------
-    let char_ind = kernel.fresh_string_name("Char");
-    let char_ctors: Vec<NameId> = (0..num_chars)
-        .map(|i| kernel.name_str(char_ind, format!("c{i}")))
-        .collect();
-    {
-        let char_ty = kernel.sort(one);
-        let char_const = kernel.const_(char_ind, vec![]);
-        // Each nullary constructor has type `Char` (the bare inductive).
-        let ctor_decls: Vec<(NameId, ExprId)> =
-            char_ctors.iter().map(|&c| (c, char_const)).collect();
-        kernel
-            .add_inductive(char_ind, &[], 0, char_ty, &ctor_decls)
-            .expect("Char alphabet enum should admit");
+) -> Result<StringPrelude, KernelError> {
+    match kernel.cached_prelude(PreludeKey::Logic)? {
+        Some(PreludeValue::Logic(expected)) if expected == logic => {}
+        _ => return Err(KernelError::PreludePackageConflict { name: logic.true_ }),
     }
-    let char_rec = kernel.name_str(char_ind, "rec");
+    let alphabet_size = u64::try_from(num_chars)
+        .map_err(|_| KernelError::PreludePackageConflict { name: logic.true_ })?;
+    let key = PreludeKey::String(alphabet_size);
+    if let Some(PreludeValue::String(prelude)) = kernel.cached_prelude(key)? {
+        return Ok(prelude);
+    }
+    let checkpoint = kernel.prelude_checkpoint();
+    let built = (|| -> Result<StringPrelude, KernelError> {
+        let anon = kernel.anon();
+        let one = {
+            let z = kernel.level_zero();
+            kernel.level_succ(z)
+        };
 
-    // --- Str : Type, Str.nil | Str.cons (Char) (Str) ---------------------
-    // The recursive `List Char`: `cons` has a carrier field (`head : Char`) and a
-    // direct recursive field (`tail : Str`), exactly the slice-5 shape the
-    // recursive-datatype gate admits with an induction hypothesis per tail.
-    let str_ind = kernel.fresh_string_name("Str");
-    let char_carrier = kernel.const_(char_ind, vec![]);
-    let str_nil = kernel.name_str(str_ind, "nil");
-    let str_cons = kernel.name_str(str_ind, "cons");
-    let family = {
-        let ctors = [
-            (str_nil, vec![]),
-            (str_cons, vec![RecField::Carrier, RecField::Recursive]),
-        ];
-        kernel
-            .add_recursive_datatype_family(str_ind, char_carrier, one, &ctors)
-            .expect("Str = List Char recursive inductive should admit")
-    };
-    let str_rec = family.rec;
+        // --- Char : Type, Char.c0 | Char.c1 | … (all nullary) ----------------
+        let axeyum = kernel.name_str(anon, "axeyum");
+        let string = kernel.name_str(axeyum, "string");
+        let namespace = kernel.name_num(string, alphabet_size);
+        let char_ind = kernel.name_str(namespace, "Char");
+        let char_ctors: Vec<NameId> = (0..num_chars)
+            .map(|i| kernel.name_str(char_ind, format!("c{i}")))
+            .collect();
+        {
+            let char_ty = kernel.sort(one);
+            let char_const = kernel.const_(char_ind, vec![]);
+            // Each nullary constructor has type `Char` (the bare inductive).
+            let ctor_decls: Vec<(NameId, ExprId)> =
+                char_ctors.iter().map(|&c| (c, char_const)).collect();
+            kernel.add_inductive(char_ind, &[], 0, char_ty, &ctor_decls)?;
+        }
+        let char_rec = kernel.name_str(char_ind, "rec");
 
-    // --- append : Str → Str → Str (opaque) -------------------------------
-    let append = kernel.fresh_string_name("append");
-    {
-        let str_const = kernel.const_(str_ind, vec![]);
-        let inner = kernel.pi(anon, str_const, str_const, BinderInfo::Default);
-        let append_ty = kernel.pi(anon, str_const, inner, BinderInfo::Default);
-        kernel
-            .add_declaration(Declaration::Axiom {
+        // --- Str : Type, Str.nil | Str.cons (Char) (Str) ---------------------
+        // The recursive `List Char`: `cons` has a carrier field (`head : Char`) and a
+        // direct recursive field (`tail : Str`), exactly the slice-5 shape the
+        // recursive-datatype gate admits with an induction hypothesis per tail.
+        let str_ind = kernel.name_str(namespace, "Str");
+        let char_carrier = kernel.const_(char_ind, vec![]);
+        let str_nil = kernel.name_str(str_ind, "nil");
+        let str_cons = kernel.name_str(str_ind, "cons");
+        let family = {
+            let ctors = [
+                (str_nil, vec![]),
+                (str_cons, vec![RecField::Carrier, RecField::Recursive]),
+            ];
+            kernel.add_recursive_datatype_family(str_ind, char_carrier, one, &ctors)?
+        };
+        let str_rec = family.rec;
+
+        // --- append : Str → Str → Str (opaque) -------------------------------
+        let append = kernel.name_str(namespace, "append");
+        {
+            let str_const = kernel.const_(str_ind, vec![]);
+            let inner = kernel.pi(anon, str_const, str_const, BinderInfo::Default);
+            let append_ty = kernel.pi(anon, str_const, inner, BinderInfo::Default);
+            kernel.add_declaration(Declaration::Axiom {
                 name: append,
                 uparams: vec![],
                 ty: append_ty,
-            })
-            .expect("append : Str → Str → Str axiom should admit");
-    }
+            })?;
+        }
 
-    StringPrelude {
-        logic,
-        char_ind,
-        char_ctors,
-        char_rec,
-        str_ind,
-        str_nil,
-        str_cons,
-        str_rec,
-        append,
-        one,
-    }
-}
-
-impl Kernel {
-    /// A fresh name under the reserved `axeyum.string` namespace for a string
-    /// prelude declaration, so its inductives/recursors never clash with the
-    /// logical prelude's fixed names across repeated reconstructions.
-    fn fresh_string_name(&mut self, base: &str) -> NameId {
-        let anon = self.anon();
-        let ns = self.name_str(anon, "axeyum.string");
-        self.name_str(ns, base)
+        Ok(StringPrelude {
+            logic,
+            char_ind,
+            char_ctors,
+            char_rec,
+            str_ind,
+            str_nil,
+            str_cons,
+            str_rec,
+            append,
+            one,
+        })
+    })();
+    match built {
+        Ok(prelude) => {
+            kernel.register_prelude(key, PreludeValue::String(prelude.clone()), checkpoint);
+            Ok(prelude)
+        }
+        Err(error) => {
+            kernel.rollback_prelude(checkpoint);
+            Err(error)
+        }
     }
 }
 

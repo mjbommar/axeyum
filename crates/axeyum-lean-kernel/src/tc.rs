@@ -193,6 +193,11 @@ pub enum KernelError {
         /// The name that was already declared.
         name: crate::name::NameId,
     },
+    /// A previously built prelude no longer matches its exact package snapshot.
+    PreludePackageConflict {
+        /// First missing or changed declaration in the package.
+        name: crate::name::NameId,
+    },
     /// A privileged quotient declaration was sent through the ordinary
     /// single-declaration gate rather than the atomic package gate.
     QuotientPackageRequired {

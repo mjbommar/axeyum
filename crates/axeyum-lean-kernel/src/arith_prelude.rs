@@ -17,15 +17,15 @@
 //!
 //! The carrier lives in `Type = Sort 1`; the relations land in `Prop = Sort 0`:
 //!
-//! - **Carrier** `R : Type` (an opaque [`Declaration::Axiom`] of type
+//! - **Carrier** `Real : Type` (an opaque [`Declaration::Axiom`] of type
 //!   `Sort 1`).
-//! - **Operations** (each an `axiom`): `add : R → R → R`, `mul : R → R → R`,
-//!   `neg : R → R`, `zero : R`, `one : R`.
-//! - **Relations** (each an `axiom`): `le : R → R → Prop`, `lt : R → R → Prop`.
+//! - **Operations** (each an `axiom`): `add : Real → Real → Real`, `mul : Real → Real → Real`,
+//!   `neg : Real → Real`, `zero : Real`, `one : Real`.
+//! - **Relations** (each an `axiom`): `le : Real → Real → Prop`, `lt : Real → Real → Prop`.
 //! - **Order axioms**: `le_refl`, `le_trans`, `lt_irrefl` (via `Not`),
 //!   `lt_trans`, `lt_of_lt_of_le`, `lt_of_le_of_lt`, `le_of_lt`.
 //! - **Additive axioms**: `add_le_add`, `add_comm`, `add_assoc`, `add_zero`
-//!   (via `Eq` at the `R` level), `add_neg` (via `Eq`).
+//!   (via `Eq` at the `Real` level), `add_neg` (via `Eq`).
 //! - **Scaling axiom**: `mul_le_mul_of_nonneg_left`.
 //! - **Constant axiom**: `zero_lt_one : lt zero one`.
 //!
@@ -38,7 +38,9 @@
 use crate::env::Declaration;
 use crate::expr::ExprId;
 use crate::name::NameId;
-use crate::{BinderInfo, Kernel, LogicPrelude, build_logic_prelude};
+use crate::{
+    BinderInfo, Kernel, KernelError, LogicPrelude, PreludeKey, PreludeValue, build_logic_prelude,
+};
 
 /// The interned names produced by [`build_arith_prelude`]: the carrier, the
 /// field/order operations, and every axiom of the linear ordered field, plus the
@@ -53,54 +55,54 @@ pub struct ArithPrelude {
     pub logic: LogicPrelude,
 
     // --- carrier + operations ------------------------------------------------
-    /// `R : Type` (i.e. `R : Sort 1`) — the ordered field's carrier.
+    /// `Real : Type` (i.e. `Real : Sort 1`) — the ordered field's carrier.
     pub r: NameId,
-    /// `add : R → R → R`.
+    /// `add : Real → Real → Real`.
     pub add: NameId,
-    /// `mul : R → R → R`.
+    /// `mul : Real → Real → Real`.
     pub mul: NameId,
-    /// `neg : R → R`.
+    /// `neg : Real → Real`.
     pub neg: NameId,
-    /// `zero : R`.
+    /// `zero : Real`.
     pub zero: NameId,
-    /// `one : R`.
+    /// `one : Real`.
     pub one: NameId,
-    /// `le : R → R → Prop`.
+    /// `le : Real → Real → Prop`.
     pub le: NameId,
-    /// `lt : R → R → Prop`.
+    /// `lt : Real → Real → Prop`.
     pub lt: NameId,
 
     // --- order axioms --------------------------------------------------------
-    /// `le_refl : ∀ (a : R), le a a`.
+    /// `le_refl : ∀ (a : Real), le a a`.
     pub le_refl: NameId,
-    /// `le_trans : ∀ (a b c : R), le a b → le b c → le a c`.
+    /// `le_trans : ∀ (a b c : Real), le a b → le b c → le a c`.
     pub le_trans: NameId,
-    /// `lt_irrefl : ∀ (a : R), Not (lt a a)`.
+    /// `lt_irrefl : ∀ (a : Real), Not (lt a a)`.
     pub lt_irrefl: NameId,
-    /// `lt_trans : ∀ (a b c : R), lt a b → lt b c → lt a c`.
+    /// `lt_trans : ∀ (a b c : Real), lt a b → lt b c → lt a c`.
     pub lt_trans: NameId,
-    /// `lt_of_lt_of_le : ∀ (a b c : R), lt a b → le b c → lt a c`.
+    /// `lt_of_lt_of_le : ∀ (a b c : Real), lt a b → le b c → lt a c`.
     pub lt_of_lt_of_le: NameId,
-    /// `lt_of_le_of_lt : ∀ (a b c : R), le a b → lt b c → lt a c`.
+    /// `lt_of_le_of_lt : ∀ (a b c : Real), le a b → lt b c → lt a c`.
     pub lt_of_le_of_lt: NameId,
-    /// `le_of_lt : ∀ (a b : R), lt a b → le a b`.
+    /// `le_of_lt : ∀ (a b : Real), lt a b → le a b`.
     pub le_of_lt: NameId,
 
     // --- additive axioms -----------------------------------------------------
-    /// `add_le_add : ∀ (a b c d : R), le a b → le c d → le (add a c) (add b d)`.
+    /// `add_le_add : ∀ (a b c d : Real), le a b → le c d → le (add a c) (add b d)`.
     pub add_le_add: NameId,
-    /// `add_comm : ∀ (a b : R), Eq R (add a b) (add b a)`.
+    /// `add_comm : ∀ (a b : Real), Eq Real (add a b) (add b a)`.
     pub add_comm: NameId,
-    /// `add_assoc : ∀ (a b c : R), Eq R (add (add a b) c) (add a (add b c))`.
+    /// `add_assoc : ∀ (a b c : Real), Eq Real (add (add a b) c) (add a (add b c))`.
     pub add_assoc: NameId,
-    /// `add_zero : ∀ (a : R), Eq R (add a zero) a`.
+    /// `add_zero : ∀ (a : Real), Eq Real (add a zero) a`.
     pub add_zero: NameId,
-    /// `add_neg : ∀ (a : R), Eq R (add a (neg a)) zero`.
+    /// `add_neg : ∀ (a : Real), Eq Real (add a (neg a)) zero`.
     pub add_neg: NameId,
 
     // --- scaling axiom -------------------------------------------------------
     /// `mul_le_mul_of_nonneg_left :
-    /// ∀ (c a b : R), le zero c → le a b → le (mul c a) (mul c b)`.
+    /// ∀ (c a b : Real), le zero c → le a b → le (mul c a) (mul c b)`.
     pub mul_le_mul_of_nonneg_left: NameId,
 
     // --- constant axiom ------------------------------------------------------
@@ -109,7 +111,7 @@ pub struct ArithPrelude {
 
     // --- mixed strict/non-strict additive axiom (Task #16) -------------------
     /// `add_lt_add_of_le_of_lt :
-    /// ∀ (a b c d : R), le a b → lt c d → lt (add a c) (add b d)`.
+    /// ∀ (a b c d : Real), le a b → lt c d → lt (add a c) (add b d)`.
     ///
     /// Summing a non-strict inequality with a strict one yields a strict result.
     /// This is the single combinator the mixed-Farkas reconstruction needs; the
@@ -122,21 +124,21 @@ pub struct ArithPrelude {
     // completes the multiplicative fragment the degree-2 SOS ring normalizer and
     // square-nonnegativity proof need. Each axiom's type is type-checked at
     // admission.
-    /// `mul_comm : ∀ (a b : R), Eq R (mul a b) (mul b a)`.
+    /// `mul_comm : ∀ (a b : Real), Eq Real (mul a b) (mul b a)`.
     pub mul_comm: NameId,
-    /// `mul_assoc : ∀ (a b c : R), Eq R (mul (mul a b) c) (mul a (mul b c))`.
+    /// `mul_assoc : ∀ (a b c : Real), Eq Real (mul (mul a b) c) (mul a (mul b c))`.
     pub mul_assoc: NameId,
-    /// `mul_one : ∀ (a : R), Eq R (mul a one) a`.
+    /// `mul_one : ∀ (a : Real), Eq Real (mul a one) a`.
     pub mul_one: NameId,
-    /// `mul_zero : ∀ (a : R), Eq R (mul a zero) zero`.
+    /// `mul_zero : ∀ (a : Real), Eq Real (mul a zero) zero`.
     pub mul_zero: NameId,
     /// `left_distrib :
-    /// ∀ (a b c : R), Eq R (mul a (add b c)) (add (mul a b) (mul a c))`.
+    /// ∀ (a b c : Real), Eq Real (mul a (add b c)) (add (mul a b) (mul a c))`.
     pub left_distrib: NameId,
-    /// `mul_nonneg : ∀ (a b : R), le zero a → le zero b → le zero (mul a b)`.
+    /// `mul_nonneg : ∀ (a b : Real), le zero a → le zero b → le zero (mul a b)`.
     /// The product of nonnegatives is nonnegative.
     pub mul_nonneg: NameId,
-    /// `sq_nonneg : ∀ (a : R), le zero (mul a a)`. Unconditional
+    /// `sq_nonneg : ∀ (a : Real), le zero (mul a a)`. Unconditional
     /// square-nonnegativity (every real square is `≥ 0`, sign-independent) — the
     /// nonnegativity primitive each SOS square `ℓₖ²` rests on.
     pub sq_nonneg: NameId,
@@ -144,474 +146,488 @@ pub struct ArithPrelude {
 
 /// Declare the axiomatized **linear ordered field** into `kernel`'s environment,
 /// returning the [`ArithPrelude`] of interned names. The logical prelude is built
-/// first (if not already present, `build_logic_prelude` is idempotent only on a
-/// fresh kernel, so this expects a kernel without those names — see Panics).
+/// or exact-validated first. Every declaration in this package is namespaced
+/// under `Real`.
 ///
 /// Every axiom is admitted through the **trusted**
 /// [`Kernel::add_declaration`](crate::Kernel::add_declaration) gate, which
 /// type-checks the axiom's type (it must itself be a `Sort`); a malformed axiom
-/// type would be rejected (and panic here, since a well-formed prelude is a
-/// precondition). A green build of this function therefore *is* a proof that the
-/// axiom set is well-formed.
+/// type is returned as [`KernelError`]. A green build of this function therefore
+/// *is* a proof that the axiom set is well-formed.
 ///
-/// # Panics
+/// Repeated construction validates and returns the exact registered package.
+/// Any failure rolls back all Real declarations admitted by this invocation.
 ///
-/// Panics if any declaration fails to type-check or if a name collides with an
-/// already-present declaration — both indicate the prelude was built into a
-/// non-fresh kernel or a kernel regression, not a recoverable caller error.
-#[must_use]
+/// # Errors
+///
+/// Returns the trusted gate's rejection or an exact-package conflict. A failed
+/// Real build leaves the pre-call environment unchanged.
 #[allow(clippy::too_many_lines)]
-pub fn build_arith_prelude(kernel: &mut Kernel) -> ArithPrelude {
-    let logic = build_logic_prelude(kernel);
-    let anon = kernel.anon();
+pub fn build_arith_prelude(kernel: &mut Kernel) -> Result<ArithPrelude, KernelError> {
+    let logic = build_logic_prelude(kernel)?;
+    if let Some(PreludeValue::Real(prelude)) = kernel.cached_prelude(PreludeKey::Real)? {
+        return Ok(prelude);
+    }
+    let checkpoint = kernel.prelude_checkpoint();
+    let built = (|| -> Result<ArithPrelude, KernelError> {
+        let anon = kernel.anon();
 
-    // --- carrier R : Type (= Sort 1) -----------------------------------------
-    let r = kernel.name_str(anon, "R");
-    {
+        // --- carrier Real : Type (= Sort 1) -----------------------------------------
+        let r = kernel.name_str(anon, "Real");
+        {
+            let one_lvl = {
+                let z = kernel.level_zero();
+                kernel.level_succ(z)
+            };
+            let type1 = kernel.sort(one_lvl);
+            kernel.add_declaration(Declaration::Axiom {
+                name: r,
+                uparams: vec![],
+                ty: type1,
+            })?;
+        }
+
+        // `Real` as a type expression, and `Prop`.
+        let r_ty = kernel.const_(r, vec![]);
+        // Helper: the arrow `dom → cod` (a non-dependent Pi).
+        let arrow = |kernel: &mut Kernel, dom: ExprId, cod: ExprId| -> ExprId {
+            let anon = kernel.anon();
+            kernel.pi(anon, dom, cod, BinderInfo::Default)
+        };
+
+        // --- operations ----------------------------------------------------------
+        // add, mul : Real → Real → Real.
+        let bin_op_ty = {
+            let inner = arrow(kernel, r_ty, r_ty);
+            arrow(kernel, r_ty, inner)
+        };
+        let add = declare_axiom(kernel, r, "add", bin_op_ty)?;
+        let mul = declare_axiom(kernel, r, "mul", bin_op_ty)?;
+        // neg : Real → Real.
+        let neg = {
+            let ty = arrow(kernel, r_ty, r_ty);
+            declare_axiom(kernel, r, "neg", ty)?
+        };
+        // zero, one : Real.
+        let zero = declare_axiom(kernel, r, "zero", r_ty)?;
+        let one = declare_axiom(kernel, r, "one", r_ty)?;
+        // le, lt : Real → Real → Prop.
+        let rel_ty = {
+            let prop = kernel.sort_zero();
+            let inner = arrow(kernel, r_ty, prop);
+            arrow(kernel, r_ty, inner)
+        };
+        let le = declare_axiom(kernel, r, "le", rel_ty)?;
+        let lt = declare_axiom(kernel, r, "lt", rel_ty)?;
+
+        // ----- small term builders over the now-declared symbols -----------------
+        // We build axiom *types* as Pi-telescopes over `Real`. Inside a telescope of
+        // `n` binders, the binder introduced `k`-th from the outside is at de Bruijn
+        // index `n - 1 - k` when referenced at the *innermost* point. We always
+        // reference variables at the innermost (result) position of each axiom, so
+        // the helpers below take explicit `BVar` ids the caller computes.
+
+        // `le x y` and `lt x y` (relation applications) as Prop terms.
+        let app2 = |kernel: &mut Kernel, f: NameId, x: ExprId, y: ExprId| -> ExprId {
+            let fc = kernel.const_(f, vec![]);
+            let e = kernel.app(fc, x);
+            kernel.app(e, y)
+        };
+
+        // The Pi `∀ (a : Real), body` etc. are built directly with `kernel.pi`.
+
+        // --- le_refl : ∀ (a : Real), le a a -----------------------------------------
+        let le_refl = {
+            let a0 = kernel.bvar(0);
+            let a0b = kernel.bvar(0);
+            let body = app2(kernel, le, a0, a0b);
+            let ty = kernel.pi(anon, r_ty, body, BinderInfo::Default);
+            declare_axiom(kernel, r, "le_refl", ty)?
+        };
+
+        // --- le_trans : ∀ (a b c : Real), le a b → le b c → le a c ------------------
+        // Telescope a,b,c then two hyp arrows. At the result (under a,b,c,h1,h2):
+        //   a = BVar 4, b = BVar 3, c = BVar 2. (Indices computed per binder depth.)
+        let le_trans = {
+            // Build innermost-out. Names: a,b,c are params; h1: le a b; h2: le b c;
+            // result: le a c.
+            // Depths from the result position (under a,b,c,h1,h2): a=4,b=3,c=2.
+            let a4 = kernel.bvar(4);
+            let c2 = kernel.bvar(2);
+            let result = app2(kernel, le, a4, c2);
+            // h2 : le b c  — under a,b,c,h1 → b=2, c=1.
+            let b2 = kernel.bvar(2);
+            let c1 = kernel.bvar(1);
+            let h2_dom = app2(kernel, le, b2, c1);
+            let after_h2 = kernel.pi(anon, h2_dom, result, BinderInfo::Default);
+            // h1 : le a b — under a,b,c → a=2, b=1.
+            let a2 = kernel.bvar(2);
+            let b1 = kernel.bvar(1);
+            let h1_dom = app2(kernel, le, a2, b1);
+            let after_h1 = kernel.pi(anon, h1_dom, after_h2, BinderInfo::Default);
+            // ∀ a b c.
+            let ty = telescope_r(kernel, anon, r_ty, 3, after_h1);
+            declare_axiom(kernel, r, "le_trans", ty)?
+        };
+
+        // --- lt_irrefl : ∀ (a : Real), Not (lt a a) ---------------------------------
+        let lt_irrefl = {
+            let a0 = kernel.bvar(0);
+            let a0b = kernel.bvar(0);
+            let lt_aa = app2(kernel, lt, a0, a0b);
+            let not_c = kernel.const_(logic.not, vec![]);
+            let not_lt = kernel.app(not_c, lt_aa);
+            let ty = kernel.pi(anon, r_ty, not_lt, BinderInfo::Default);
+            declare_axiom(kernel, r, "lt_irrefl", ty)?
+        };
+
+        // --- lt_trans : ∀ (a b c : Real), lt a b → lt b c → lt a c ------------------
+        let lt_trans = {
+            let ty = trans_axiom_ty(kernel, anon, r_ty, lt, lt, lt);
+            declare_axiom(kernel, r, "lt_trans", ty)?
+        };
+
+        // --- lt_of_lt_of_le : ∀ (a b c : Real), lt a b → le b c → lt a c ------------
+        let lt_of_lt_of_le = {
+            let ty = trans_axiom_ty(kernel, anon, r_ty, lt, le, lt);
+            declare_axiom(kernel, r, "lt_of_lt_of_le", ty)?
+        };
+
+        // --- lt_of_le_of_lt : ∀ (a b c : Real), le a b → lt b c → lt a c ------------
+        let lt_of_le_of_lt = {
+            let ty = trans_axiom_ty(kernel, anon, r_ty, le, lt, lt);
+            declare_axiom(kernel, r, "lt_of_le_of_lt", ty)?
+        };
+
+        // --- le_of_lt : ∀ (a b : Real), lt a b → le a b -----------------------------
+        let le_of_lt = {
+            // Under a,b,h: a=2,b=1 (result le a b); h: lt a b under a,b → a=1,b=0.
+            let a2 = kernel.bvar(2);
+            let b1 = kernel.bvar(1);
+            let result = app2(kernel, le, a2, b1);
+            let a1 = kernel.bvar(1);
+            let b0 = kernel.bvar(0);
+            let h_dom = app2(kernel, lt, a1, b0);
+            let after_h = kernel.pi(anon, h_dom, result, BinderInfo::Default);
+            let ty = telescope_r(kernel, anon, r_ty, 2, after_h);
+            declare_axiom(kernel, r, "le_of_lt", ty)?
+        };
+
+        // --- add_le_add : ∀ (a b c d : Real), le a b → le c d → le (add a c)(add b d) -
+        let add_le_add = {
+            // Under a,b,c,d,h1,h2 the result references: a=5,b=4,c=3,d=2.
+            let a5 = kernel.bvar(5);
+            let b4 = kernel.bvar(4);
+            let c3 = kernel.bvar(3);
+            let d2 = kernel.bvar(2);
+            let add_ac = app2(kernel, add, a5, c3);
+            let add_bd = app2(kernel, add, b4, d2);
+            let result = app2(kernel, le, add_ac, add_bd);
+            // h2 : le c d — under a,b,c,d,h1 → c=2,d=1.
+            let c2 = kernel.bvar(2);
+            let d1 = kernel.bvar(1);
+            let h2_dom = app2(kernel, le, c2, d1);
+            let after_h2 = kernel.pi(anon, h2_dom, result, BinderInfo::Default);
+            // h1 : le a b — under a,b,c,d → a=3,b=2.
+            let a3 = kernel.bvar(3);
+            let b2 = kernel.bvar(2);
+            let h1_dom = app2(kernel, le, a3, b2);
+            let after_h1 = kernel.pi(anon, h1_dom, after_h2, BinderInfo::Default);
+            let ty = telescope_r(kernel, anon, r_ty, 4, after_h1);
+            declare_axiom(kernel, r, "add_le_add", ty)?
+        };
+
+        // Equality builder `Eq.{1} Real x y` (carrier is Sort 1 ⇒ u := 1).
         let one_lvl = {
             let z = kernel.level_zero();
             kernel.level_succ(z)
         };
-        let type1 = kernel.sort(one_lvl);
-        kernel
-            .add_declaration(Declaration::Axiom {
-                name: r,
-                uparams: vec![],
-                ty: type1,
-            })
-            .expect("R : Type should admit");
-    }
+        let eq_r = |kernel: &mut Kernel, x: ExprId, y: ExprId| -> ExprId {
+            let eqc = kernel.const_(logic.eq, vec![one_lvl]);
+            let r_ty = kernel.const_(r, vec![]);
+            let e = kernel.app(eqc, r_ty);
+            let e = kernel.app(e, x);
+            kernel.app(e, y)
+        };
 
-    // `R` as a type expression, and `Prop`.
-    let r_ty = kernel.const_(r, vec![]);
-    // Helper: the arrow `dom → cod` (a non-dependent Pi).
-    let arrow = |kernel: &mut Kernel, dom: ExprId, cod: ExprId| -> ExprId {
-        let anon = kernel.anon();
-        kernel.pi(anon, dom, cod, BinderInfo::Default)
-    };
+        // --- add_comm : ∀ (a b : Real), Eq Real (add a b) (add b a) --------------------
+        let add_comm = {
+            // Under a,b: a=1,b=0.
+            let a1 = kernel.bvar(1);
+            let b0 = kernel.bvar(0);
+            let add_ab = app2(kernel, add, a1, b0);
+            let a1b = kernel.bvar(1);
+            let b0b = kernel.bvar(0);
+            let add_ba = app2(kernel, add, b0b, a1b);
+            let body = eq_r(kernel, add_ab, add_ba);
+            let ty = telescope_r(kernel, anon, r_ty, 2, body);
+            declare_axiom(kernel, r, "add_comm", ty)?
+        };
 
-    // --- operations ----------------------------------------------------------
-    // add, mul : R → R → R.
-    let bin_op_ty = {
-        let inner = arrow(kernel, r_ty, r_ty);
-        arrow(kernel, r_ty, inner)
-    };
-    let add = declare_axiom(kernel, anon, "add", bin_op_ty);
-    let mul = declare_axiom(kernel, anon, "mul", bin_op_ty);
-    // neg : R → R.
-    let neg = {
-        let ty = arrow(kernel, r_ty, r_ty);
-        declare_axiom(kernel, anon, "neg", ty)
-    };
-    // zero, one : R.
-    let zero = declare_axiom(kernel, anon, "zero", r_ty);
-    let one = declare_axiom(kernel, anon, "one", r_ty);
-    // le, lt : R → R → Prop.
-    let rel_ty = {
-        let prop = kernel.sort_zero();
-        let inner = arrow(kernel, r_ty, prop);
-        arrow(kernel, r_ty, inner)
-    };
-    let le = declare_axiom(kernel, anon, "le", rel_ty);
-    let lt = declare_axiom(kernel, anon, "lt", rel_ty);
+        // --- add_assoc : ∀ (a b c : Real), Eq Real (add (add a b) c) (add a (add b c)) -
+        let add_assoc = {
+            // Under a,b,c: a=2,b=1,c=0.
+            let a2 = kernel.bvar(2);
+            let b1 = kernel.bvar(1);
+            let c0 = kernel.bvar(0);
+            let add_ab = app2(kernel, add, a2, b1);
+            let lhs = app2(kernel, add, add_ab, c0);
+            let a2b = kernel.bvar(2);
+            let b1b = kernel.bvar(1);
+            let c0b = kernel.bvar(0);
+            let add_bc = app2(kernel, add, b1b, c0b);
+            let rhs = app2(kernel, add, a2b, add_bc);
+            let body = eq_r(kernel, lhs, rhs);
+            let ty = telescope_r(kernel, anon, r_ty, 3, body);
+            declare_axiom(kernel, r, "add_assoc", ty)?
+        };
 
-    // ----- small term builders over the now-declared symbols -----------------
-    // We build axiom *types* as Pi-telescopes over `R`. Inside a telescope of
-    // `n` binders, the binder introduced `k`-th from the outside is at de Bruijn
-    // index `n - 1 - k` when referenced at the *innermost* point. We always
-    // reference variables at the innermost (result) position of each axiom, so
-    // the helpers below take explicit `BVar` ids the caller computes.
+        // --- add_zero : ∀ (a : Real), Eq Real (add a zero) a ---------------------------
+        let add_zero = {
+            let a0 = kernel.bvar(0);
+            let zero_c = kernel.const_(zero, vec![]);
+            let add_az = app2(kernel, add, a0, zero_c);
+            let a0b = kernel.bvar(0);
+            let body = eq_r(kernel, add_az, a0b);
+            let ty = kernel.pi(anon, r_ty, body, BinderInfo::Default);
+            declare_axiom(kernel, r, "add_zero", ty)?
+        };
 
-    // `le x y` and `lt x y` (relation applications) as Prop terms.
-    let app2 = |kernel: &mut Kernel, f: NameId, x: ExprId, y: ExprId| -> ExprId {
-        let fc = kernel.const_(f, vec![]);
-        let e = kernel.app(fc, x);
-        kernel.app(e, y)
-    };
+        // --- add_neg : ∀ (a : Real), Eq Real (add a (neg a)) zero ----------------------
+        let add_neg = {
+            let a0 = kernel.bvar(0);
+            let neg_c = kernel.const_(neg, vec![]);
+            let a0b = kernel.bvar(0);
+            let neg_a = kernel.app(neg_c, a0b);
+            let add_an = app2(kernel, add, a0, neg_a);
+            let zero_c = kernel.const_(zero, vec![]);
+            let body = eq_r(kernel, add_an, zero_c);
+            let ty = kernel.pi(anon, r_ty, body, BinderInfo::Default);
+            declare_axiom(kernel, r, "add_neg", ty)?
+        };
 
-    // The Pi `∀ (a : R), body` etc. are built directly with `kernel.pi`.
+        // --- mul_le_mul_of_nonneg_left :
+        //       ∀ (c a b : Real), le zero c → le a b → le (mul c a) (mul c b) --------
+        let mul_le_mul_of_nonneg_left = {
+            // Binder order c,a,b then h1: le zero c, h2: le a b. Result under
+            // c,a,b,h1,h2: c=4,a=3,b=2.
+            let c4 = kernel.bvar(4);
+            let a3 = kernel.bvar(3);
+            let b2 = kernel.bvar(2);
+            let c4b = kernel.bvar(4);
+            let mul_ca = app2(kernel, mul, c4, a3);
+            let mul_cb = app2(kernel, mul, c4b, b2);
+            let result = app2(kernel, le, mul_ca, mul_cb);
+            // h2 : le a b — under c,a,b,h1 → a=2,b=1.
+            let a2 = kernel.bvar(2);
+            let b1 = kernel.bvar(1);
+            let h2_dom = app2(kernel, le, a2, b1);
+            let after_h2 = kernel.pi(anon, h2_dom, result, BinderInfo::Default);
+            // h1 : le zero c — under c,a,b → c=2.
+            let zero_c = kernel.const_(zero, vec![]);
+            let c2 = kernel.bvar(2);
+            let h1_dom = app2(kernel, le, zero_c, c2);
+            let after_h1 = kernel.pi(anon, h1_dom, after_h2, BinderInfo::Default);
+            let ty = telescope_r(kernel, anon, r_ty, 3, after_h1);
+            declare_axiom(kernel, r, "mul_le_mul_of_nonneg_left", ty)?
+        };
 
-    // --- le_refl : ∀ (a : R), le a a -----------------------------------------
-    let le_refl = {
-        let a0 = kernel.bvar(0);
-        let a0b = kernel.bvar(0);
-        let body = app2(kernel, le, a0, a0b);
-        let ty = kernel.pi(anon, r_ty, body, BinderInfo::Default);
-        declare_axiom(kernel, anon, "le_refl", ty)
-    };
+        // --- zero_lt_one : lt zero one -------------------------------------------
+        let zero_lt_one = {
+            let zero_c = kernel.const_(zero, vec![]);
+            let one_c = kernel.const_(one, vec![]);
+            let ty = app2(kernel, lt, zero_c, one_c);
+            declare_axiom(kernel, r, "zero_lt_one", ty)?
+        };
 
-    // --- le_trans : ∀ (a b c : R), le a b → le b c → le a c ------------------
-    // Telescope a,b,c then two hyp arrows. At the result (under a,b,c,h1,h2):
-    //   a = BVar 4, b = BVar 3, c = BVar 2. (Indices computed per binder depth.)
-    let le_trans = {
-        // Build innermost-out. Names: a,b,c are params; h1: le a b; h2: le b c;
-        // result: le a c.
-        // Depths from the result position (under a,b,c,h1,h2): a=4,b=3,c=2.
-        let a4 = kernel.bvar(4);
-        let c2 = kernel.bvar(2);
-        let result = app2(kernel, le, a4, c2);
-        // h2 : le b c  — under a,b,c,h1 → b=2, c=1.
-        let b2 = kernel.bvar(2);
-        let c1 = kernel.bvar(1);
-        let h2_dom = app2(kernel, le, b2, c1);
-        let after_h2 = kernel.pi(anon, h2_dom, result, BinderInfo::Default);
-        // h1 : le a b — under a,b,c → a=2, b=1.
-        let a2 = kernel.bvar(2);
-        let b1 = kernel.bvar(1);
-        let h1_dom = app2(kernel, le, a2, b1);
-        let after_h1 = kernel.pi(anon, h1_dom, after_h2, BinderInfo::Default);
-        // ∀ a b c.
-        let ty = telescope_r(kernel, anon, r_ty, 3, after_h1);
-        declare_axiom(kernel, anon, "le_trans", ty)
-    };
+        // --- add_lt_add_of_le_of_lt (Task #16) -----------------------------------
+        //   ∀ (a b c d : Real), le a b → lt c d → lt (add a c)(add b d).
+        // Same telescope/de-Bruijn shape as `add_le_add`, but the second hypothesis
+        // and the conclusion are `lt`.
+        let add_lt_add_of_le_of_lt = {
+            // Under a,b,c,d,h1,h2 the result references: a=5,b=4,c=3,d=2.
+            let a5 = kernel.bvar(5);
+            let b4 = kernel.bvar(4);
+            let c3 = kernel.bvar(3);
+            let d2 = kernel.bvar(2);
+            let add_ac = app2(kernel, add, a5, c3);
+            let add_bd = app2(kernel, add, b4, d2);
+            let result = app2(kernel, lt, add_ac, add_bd);
+            // h2 : lt c d — under a,b,c,d,h1 → c=2,d=1.
+            let c2 = kernel.bvar(2);
+            let d1 = kernel.bvar(1);
+            let h2_dom = app2(kernel, lt, c2, d1);
+            let after_h2 = kernel.pi(anon, h2_dom, result, BinderInfo::Default);
+            // h1 : le a b — under a,b,c,d → a=3,b=2.
+            let a3 = kernel.bvar(3);
+            let b2 = kernel.bvar(2);
+            let h1_dom = app2(kernel, le, a3, b2);
+            let after_h1 = kernel.pi(anon, h1_dom, after_h2, BinderInfo::Default);
+            let ty = telescope_r(kernel, anon, r_ty, 4, after_h1);
+            declare_axiom(kernel, r, "add_lt_add_of_le_of_lt", ty)?
+        };
 
-    // --- lt_irrefl : ∀ (a : R), Not (lt a a) ---------------------------------
-    let lt_irrefl = {
-        let a0 = kernel.bvar(0);
-        let a0b = kernel.bvar(0);
-        let lt_aa = app2(kernel, lt, a0, a0b);
-        let not_c = kernel.const_(logic.not, vec![]);
-        let not_lt = kernel.app(not_c, lt_aa);
-        let ty = kernel.pi(anon, r_ty, not_lt, BinderInfo::Default);
-        declare_axiom(kernel, anon, "lt_irrefl", ty)
-    };
+        // --- mul_comm : ∀ (a b : Real), Eq Real (mul a b) (mul b a) --------------------
+        // (Same shape as `add_comm`, with `mul` for `add`.) Under a,b: a=1,b=0.
+        let mul_comm = {
+            let a1 = kernel.bvar(1);
+            let b0 = kernel.bvar(0);
+            let mul_ab = app2(kernel, mul, a1, b0);
+            let a1b = kernel.bvar(1);
+            let b0b = kernel.bvar(0);
+            let mul_ba = app2(kernel, mul, b0b, a1b);
+            let body = eq_r(kernel, mul_ab, mul_ba);
+            let ty = telescope_r(kernel, anon, r_ty, 2, body);
+            declare_axiom(kernel, r, "mul_comm", ty)?
+        };
 
-    // --- lt_trans : ∀ (a b c : R), lt a b → lt b c → lt a c ------------------
-    let lt_trans = {
-        let ty = trans_axiom_ty(kernel, anon, r_ty, lt, lt, lt);
-        declare_axiom(kernel, anon, "lt_trans", ty)
-    };
+        // --- mul_assoc : ∀ (a b c : Real), Eq Real (mul (mul a b) c)(mul a (mul b c)) --
+        // (Same shape as `add_assoc`.) Under a,b,c: a=2,b=1,c=0.
+        let mul_assoc = {
+            let a2 = kernel.bvar(2);
+            let b1 = kernel.bvar(1);
+            let c0 = kernel.bvar(0);
+            let mul_ab = app2(kernel, mul, a2, b1);
+            let lhs = app2(kernel, mul, mul_ab, c0);
+            let a2b = kernel.bvar(2);
+            let b1b = kernel.bvar(1);
+            let c0b = kernel.bvar(0);
+            let mul_bc = app2(kernel, mul, b1b, c0b);
+            let rhs = app2(kernel, mul, a2b, mul_bc);
+            let body = eq_r(kernel, lhs, rhs);
+            let ty = telescope_r(kernel, anon, r_ty, 3, body);
+            declare_axiom(kernel, r, "mul_assoc", ty)?
+        };
 
-    // --- lt_of_lt_of_le : ∀ (a b c : R), lt a b → le b c → lt a c ------------
-    let lt_of_lt_of_le = {
-        let ty = trans_axiom_ty(kernel, anon, r_ty, lt, le, lt);
-        declare_axiom(kernel, anon, "lt_of_lt_of_le", ty)
-    };
+        // --- mul_one : ∀ (a : Real), Eq Real (mul a one) a -----------------------------
+        // (Same shape as `add_zero`, with `mul`/`one` for `add`/`zero`.)
+        let mul_one = {
+            let a0 = kernel.bvar(0);
+            let one_c = kernel.const_(one, vec![]);
+            let mul_ao = app2(kernel, mul, a0, one_c);
+            let a0b = kernel.bvar(0);
+            let body = eq_r(kernel, mul_ao, a0b);
+            let ty = kernel.pi(anon, r_ty, body, BinderInfo::Default);
+            declare_axiom(kernel, r, "mul_one", ty)?
+        };
 
-    // --- lt_of_le_of_lt : ∀ (a b c : R), le a b → lt b c → lt a c ------------
-    let lt_of_le_of_lt = {
-        let ty = trans_axiom_ty(kernel, anon, r_ty, le, lt, lt);
-        declare_axiom(kernel, anon, "lt_of_le_of_lt", ty)
-    };
+        // --- mul_zero : ∀ (a : Real), Eq Real (mul a zero) zero ------------------------
+        let mul_zero = {
+            let a0 = kernel.bvar(0);
+            let zero_c = kernel.const_(zero, vec![]);
+            let mul_az = app2(kernel, mul, a0, zero_c);
+            let zero_cb = kernel.const_(zero, vec![]);
+            let body = eq_r(kernel, mul_az, zero_cb);
+            let ty = kernel.pi(anon, r_ty, body, BinderInfo::Default);
+            declare_axiom(kernel, r, "mul_zero", ty)?
+        };
 
-    // --- le_of_lt : ∀ (a b : R), lt a b → le a b -----------------------------
-    let le_of_lt = {
-        // Under a,b,h: a=2,b=1 (result le a b); h: lt a b under a,b → a=1,b=0.
-        let a2 = kernel.bvar(2);
-        let b1 = kernel.bvar(1);
-        let result = app2(kernel, le, a2, b1);
-        let a1 = kernel.bvar(1);
-        let b0 = kernel.bvar(0);
-        let h_dom = app2(kernel, lt, a1, b0);
-        let after_h = kernel.pi(anon, h_dom, result, BinderInfo::Default);
-        let ty = telescope_r(kernel, anon, r_ty, 2, after_h);
-        declare_axiom(kernel, anon, "le_of_lt", ty)
-    };
-
-    // --- add_le_add : ∀ (a b c d : R), le a b → le c d → le (add a c)(add b d) -
-    let add_le_add = {
-        // Under a,b,c,d,h1,h2 the result references: a=5,b=4,c=3,d=2.
-        let a5 = kernel.bvar(5);
-        let b4 = kernel.bvar(4);
-        let c3 = kernel.bvar(3);
-        let d2 = kernel.bvar(2);
-        let add_ac = app2(kernel, add, a5, c3);
-        let add_bd = app2(kernel, add, b4, d2);
-        let result = app2(kernel, le, add_ac, add_bd);
-        // h2 : le c d — under a,b,c,d,h1 → c=2,d=1.
-        let c2 = kernel.bvar(2);
-        let d1 = kernel.bvar(1);
-        let h2_dom = app2(kernel, le, c2, d1);
-        let after_h2 = kernel.pi(anon, h2_dom, result, BinderInfo::Default);
-        // h1 : le a b — under a,b,c,d → a=3,b=2.
-        let a3 = kernel.bvar(3);
-        let b2 = kernel.bvar(2);
-        let h1_dom = app2(kernel, le, a3, b2);
-        let after_h1 = kernel.pi(anon, h1_dom, after_h2, BinderInfo::Default);
-        let ty = telescope_r(kernel, anon, r_ty, 4, after_h1);
-        declare_axiom(kernel, anon, "add_le_add", ty)
-    };
-
-    // Equality builder `Eq.{1} R x y` (carrier is Sort 1 ⇒ u := 1).
-    let one_lvl = {
-        let z = kernel.level_zero();
-        kernel.level_succ(z)
-    };
-    let eq_r = |kernel: &mut Kernel, x: ExprId, y: ExprId| -> ExprId {
-        let eqc = kernel.const_(logic.eq, vec![one_lvl]);
-        let r_ty = kernel.const_(r, vec![]);
-        let e = kernel.app(eqc, r_ty);
-        let e = kernel.app(e, x);
-        kernel.app(e, y)
-    };
-
-    // --- add_comm : ∀ (a b : R), Eq R (add a b) (add b a) --------------------
-    let add_comm = {
-        // Under a,b: a=1,b=0.
-        let a1 = kernel.bvar(1);
-        let b0 = kernel.bvar(0);
-        let add_ab = app2(kernel, add, a1, b0);
-        let a1b = kernel.bvar(1);
-        let b0b = kernel.bvar(0);
-        let add_ba = app2(kernel, add, b0b, a1b);
-        let body = eq_r(kernel, add_ab, add_ba);
-        let ty = telescope_r(kernel, anon, r_ty, 2, body);
-        declare_axiom(kernel, anon, "add_comm", ty)
-    };
-
-    // --- add_assoc : ∀ (a b c : R), Eq R (add (add a b) c) (add a (add b c)) -
-    let add_assoc = {
+        // --- left_distrib :
+        //       ∀ (a b c : Real), Eq Real (mul a (add b c)) (add (mul a b)(mul a c)) ----
         // Under a,b,c: a=2,b=1,c=0.
-        let a2 = kernel.bvar(2);
-        let b1 = kernel.bvar(1);
-        let c0 = kernel.bvar(0);
-        let add_ab = app2(kernel, add, a2, b1);
-        let lhs = app2(kernel, add, add_ab, c0);
-        let a2b = kernel.bvar(2);
-        let b1b = kernel.bvar(1);
-        let c0b = kernel.bvar(0);
-        let add_bc = app2(kernel, add, b1b, c0b);
-        let rhs = app2(kernel, add, a2b, add_bc);
-        let body = eq_r(kernel, lhs, rhs);
-        let ty = telescope_r(kernel, anon, r_ty, 3, body);
-        declare_axiom(kernel, anon, "add_assoc", ty)
-    };
+        let left_distrib = {
+            let a2 = kernel.bvar(2);
+            let b1 = kernel.bvar(1);
+            let c0 = kernel.bvar(0);
+            let add_bc = app2(kernel, add, b1, c0);
+            let lhs = app2(kernel, mul, a2, add_bc);
+            let a2b = kernel.bvar(2);
+            let b1b = kernel.bvar(1);
+            let mul_ab = app2(kernel, mul, a2b, b1b);
+            let a2c = kernel.bvar(2);
+            let c0b = kernel.bvar(0);
+            let mul_ac = app2(kernel, mul, a2c, c0b);
+            let rhs = app2(kernel, add, mul_ab, mul_ac);
+            let body = eq_r(kernel, lhs, rhs);
+            let ty = telescope_r(kernel, anon, r_ty, 3, body);
+            declare_axiom(kernel, r, "left_distrib", ty)?
+        };
 
-    // --- add_zero : ∀ (a : R), Eq R (add a zero) a ---------------------------
-    let add_zero = {
-        let a0 = kernel.bvar(0);
-        let zero_c = kernel.const_(zero, vec![]);
-        let add_az = app2(kernel, add, a0, zero_c);
-        let a0b = kernel.bvar(0);
-        let body = eq_r(kernel, add_az, a0b);
-        let ty = kernel.pi(anon, r_ty, body, BinderInfo::Default);
-        declare_axiom(kernel, anon, "add_zero", ty)
-    };
+        // --- mul_nonneg : ∀ (a b : Real), le zero a → le zero b → le zero (mul a b) -
+        // (Hyp shape mirrors `mul_le_mul_of_nonneg_left`'s `le zero c`.) Telescope
+        // a,b then h1,h2. Result under a,b,h1,h2: a=3,b=2; h2 under a,b,h1: b=1; h1
+        // under a,b: a=1.
+        let mul_nonneg = {
+            let zero_res = kernel.const_(zero, vec![]);
+            let a3 = kernel.bvar(3);
+            let b2 = kernel.bvar(2);
+            let mul_ab = app2(kernel, mul, a3, b2);
+            let result = app2(kernel, le, zero_res, mul_ab);
+            // h2 : le zero b — under a,b,h1 → b=1.
+            let zero_h2 = kernel.const_(zero, vec![]);
+            let b1 = kernel.bvar(1);
+            let h2_dom = app2(kernel, le, zero_h2, b1);
+            let after_h2 = kernel.pi(anon, h2_dom, result, BinderInfo::Default);
+            // h1 : le zero a — under a,b → a=1.
+            let zero_h1 = kernel.const_(zero, vec![]);
+            let a1 = kernel.bvar(1);
+            let h1_dom = app2(kernel, le, zero_h1, a1);
+            let after_h1 = kernel.pi(anon, h1_dom, after_h2, BinderInfo::Default);
+            let ty = telescope_r(kernel, anon, r_ty, 2, after_h1);
+            declare_axiom(kernel, r, "mul_nonneg", ty)?
+        };
 
-    // --- add_neg : ∀ (a : R), Eq R (add a (neg a)) zero ----------------------
-    let add_neg = {
-        let a0 = kernel.bvar(0);
-        let neg_c = kernel.const_(neg, vec![]);
-        let a0b = kernel.bvar(0);
-        let neg_a = kernel.app(neg_c, a0b);
-        let add_an = app2(kernel, add, a0, neg_a);
-        let zero_c = kernel.const_(zero, vec![]);
-        let body = eq_r(kernel, add_an, zero_c);
-        let ty = kernel.pi(anon, r_ty, body, BinderInfo::Default);
-        declare_axiom(kernel, anon, "add_neg", ty)
-    };
+        // --- sq_nonneg : ∀ (a : Real), le zero (mul a a) ----------------------------
+        // UNCONDITIONAL square-nonnegativity (true for every real, including negative
+        // a — `mul_nonneg` only covers `0 ≤ a`). This is the actual nonnegativity
+        // primitive each SOS square `ℓₖ²` needs. Under a: a=0.
+        let sq_nonneg = {
+            let zero_c = kernel.const_(zero, vec![]);
+            let a0 = kernel.bvar(0);
+            let a0b = kernel.bvar(0);
+            let mul_aa = app2(kernel, mul, a0, a0b);
+            let body = app2(kernel, le, zero_c, mul_aa);
+            let ty = kernel.pi(anon, r_ty, body, BinderInfo::Default);
+            declare_axiom(kernel, r, "sq_nonneg", ty)?
+        };
 
-    // --- mul_le_mul_of_nonneg_left :
-    //       ∀ (c a b : R), le zero c → le a b → le (mul c a) (mul c b) --------
-    let mul_le_mul_of_nonneg_left = {
-        // Binder order c,a,b then h1: le zero c, h2: le a b. Result under
-        // c,a,b,h1,h2: c=4,a=3,b=2.
-        let c4 = kernel.bvar(4);
-        let a3 = kernel.bvar(3);
-        let b2 = kernel.bvar(2);
-        let c4b = kernel.bvar(4);
-        let mul_ca = app2(kernel, mul, c4, a3);
-        let mul_cb = app2(kernel, mul, c4b, b2);
-        let result = app2(kernel, le, mul_ca, mul_cb);
-        // h2 : le a b — under c,a,b,h1 → a=2,b=1.
-        let a2 = kernel.bvar(2);
-        let b1 = kernel.bvar(1);
-        let h2_dom = app2(kernel, le, a2, b1);
-        let after_h2 = kernel.pi(anon, h2_dom, result, BinderInfo::Default);
-        // h1 : le zero c — under c,a,b → c=2.
-        let zero_c = kernel.const_(zero, vec![]);
-        let c2 = kernel.bvar(2);
-        let h1_dom = app2(kernel, le, zero_c, c2);
-        let after_h1 = kernel.pi(anon, h1_dom, after_h2, BinderInfo::Default);
-        let ty = telescope_r(kernel, anon, r_ty, 3, after_h1);
-        declare_axiom(kernel, anon, "mul_le_mul_of_nonneg_left", ty)
-    };
-
-    // --- zero_lt_one : lt zero one -------------------------------------------
-    let zero_lt_one = {
-        let zero_c = kernel.const_(zero, vec![]);
-        let one_c = kernel.const_(one, vec![]);
-        let ty = app2(kernel, lt, zero_c, one_c);
-        declare_axiom(kernel, anon, "zero_lt_one", ty)
-    };
-
-    // --- add_lt_add_of_le_of_lt (Task #16) -----------------------------------
-    //   ∀ (a b c d : R), le a b → lt c d → lt (add a c)(add b d).
-    // Same telescope/de-Bruijn shape as `add_le_add`, but the second hypothesis
-    // and the conclusion are `lt`.
-    let add_lt_add_of_le_of_lt = {
-        // Under a,b,c,d,h1,h2 the result references: a=5,b=4,c=3,d=2.
-        let a5 = kernel.bvar(5);
-        let b4 = kernel.bvar(4);
-        let c3 = kernel.bvar(3);
-        let d2 = kernel.bvar(2);
-        let add_ac = app2(kernel, add, a5, c3);
-        let add_bd = app2(kernel, add, b4, d2);
-        let result = app2(kernel, lt, add_ac, add_bd);
-        // h2 : lt c d — under a,b,c,d,h1 → c=2,d=1.
-        let c2 = kernel.bvar(2);
-        let d1 = kernel.bvar(1);
-        let h2_dom = app2(kernel, lt, c2, d1);
-        let after_h2 = kernel.pi(anon, h2_dom, result, BinderInfo::Default);
-        // h1 : le a b — under a,b,c,d → a=3,b=2.
-        let a3 = kernel.bvar(3);
-        let b2 = kernel.bvar(2);
-        let h1_dom = app2(kernel, le, a3, b2);
-        let after_h1 = kernel.pi(anon, h1_dom, after_h2, BinderInfo::Default);
-        let ty = telescope_r(kernel, anon, r_ty, 4, after_h1);
-        declare_axiom(kernel, anon, "add_lt_add_of_le_of_lt", ty)
-    };
-
-    // --- mul_comm : ∀ (a b : R), Eq R (mul a b) (mul b a) --------------------
-    // (Same shape as `add_comm`, with `mul` for `add`.) Under a,b: a=1,b=0.
-    let mul_comm = {
-        let a1 = kernel.bvar(1);
-        let b0 = kernel.bvar(0);
-        let mul_ab = app2(kernel, mul, a1, b0);
-        let a1b = kernel.bvar(1);
-        let b0b = kernel.bvar(0);
-        let mul_ba = app2(kernel, mul, b0b, a1b);
-        let body = eq_r(kernel, mul_ab, mul_ba);
-        let ty = telescope_r(kernel, anon, r_ty, 2, body);
-        declare_axiom(kernel, anon, "mul_comm", ty)
-    };
-
-    // --- mul_assoc : ∀ (a b c : R), Eq R (mul (mul a b) c)(mul a (mul b c)) --
-    // (Same shape as `add_assoc`.) Under a,b,c: a=2,b=1,c=0.
-    let mul_assoc = {
-        let a2 = kernel.bvar(2);
-        let b1 = kernel.bvar(1);
-        let c0 = kernel.bvar(0);
-        let mul_ab = app2(kernel, mul, a2, b1);
-        let lhs = app2(kernel, mul, mul_ab, c0);
-        let a2b = kernel.bvar(2);
-        let b1b = kernel.bvar(1);
-        let c0b = kernel.bvar(0);
-        let mul_bc = app2(kernel, mul, b1b, c0b);
-        let rhs = app2(kernel, mul, a2b, mul_bc);
-        let body = eq_r(kernel, lhs, rhs);
-        let ty = telescope_r(kernel, anon, r_ty, 3, body);
-        declare_axiom(kernel, anon, "mul_assoc", ty)
-    };
-
-    // --- mul_one : ∀ (a : R), Eq R (mul a one) a -----------------------------
-    // (Same shape as `add_zero`, with `mul`/`one` for `add`/`zero`.)
-    let mul_one = {
-        let a0 = kernel.bvar(0);
-        let one_c = kernel.const_(one, vec![]);
-        let mul_ao = app2(kernel, mul, a0, one_c);
-        let a0b = kernel.bvar(0);
-        let body = eq_r(kernel, mul_ao, a0b);
-        let ty = kernel.pi(anon, r_ty, body, BinderInfo::Default);
-        declare_axiom(kernel, anon, "mul_one", ty)
-    };
-
-    // --- mul_zero : ∀ (a : R), Eq R (mul a zero) zero ------------------------
-    let mul_zero = {
-        let a0 = kernel.bvar(0);
-        let zero_c = kernel.const_(zero, vec![]);
-        let mul_az = app2(kernel, mul, a0, zero_c);
-        let zero_cb = kernel.const_(zero, vec![]);
-        let body = eq_r(kernel, mul_az, zero_cb);
-        let ty = kernel.pi(anon, r_ty, body, BinderInfo::Default);
-        declare_axiom(kernel, anon, "mul_zero", ty)
-    };
-
-    // --- left_distrib :
-    //       ∀ (a b c : R), Eq R (mul a (add b c)) (add (mul a b)(mul a c)) ----
-    // Under a,b,c: a=2,b=1,c=0.
-    let left_distrib = {
-        let a2 = kernel.bvar(2);
-        let b1 = kernel.bvar(1);
-        let c0 = kernel.bvar(0);
-        let add_bc = app2(kernel, add, b1, c0);
-        let lhs = app2(kernel, mul, a2, add_bc);
-        let a2b = kernel.bvar(2);
-        let b1b = kernel.bvar(1);
-        let mul_ab = app2(kernel, mul, a2b, b1b);
-        let a2c = kernel.bvar(2);
-        let c0b = kernel.bvar(0);
-        let mul_ac = app2(kernel, mul, a2c, c0b);
-        let rhs = app2(kernel, add, mul_ab, mul_ac);
-        let body = eq_r(kernel, lhs, rhs);
-        let ty = telescope_r(kernel, anon, r_ty, 3, body);
-        declare_axiom(kernel, anon, "left_distrib", ty)
-    };
-
-    // --- mul_nonneg : ∀ (a b : R), le zero a → le zero b → le zero (mul a b) -
-    // (Hyp shape mirrors `mul_le_mul_of_nonneg_left`'s `le zero c`.) Telescope
-    // a,b then h1,h2. Result under a,b,h1,h2: a=3,b=2; h2 under a,b,h1: b=1; h1
-    // under a,b: a=1.
-    let mul_nonneg = {
-        let zero_res = kernel.const_(zero, vec![]);
-        let a3 = kernel.bvar(3);
-        let b2 = kernel.bvar(2);
-        let mul_ab = app2(kernel, mul, a3, b2);
-        let result = app2(kernel, le, zero_res, mul_ab);
-        // h2 : le zero b — under a,b,h1 → b=1.
-        let zero_h2 = kernel.const_(zero, vec![]);
-        let b1 = kernel.bvar(1);
-        let h2_dom = app2(kernel, le, zero_h2, b1);
-        let after_h2 = kernel.pi(anon, h2_dom, result, BinderInfo::Default);
-        // h1 : le zero a — under a,b → a=1.
-        let zero_h1 = kernel.const_(zero, vec![]);
-        let a1 = kernel.bvar(1);
-        let h1_dom = app2(kernel, le, zero_h1, a1);
-        let after_h1 = kernel.pi(anon, h1_dom, after_h2, BinderInfo::Default);
-        let ty = telescope_r(kernel, anon, r_ty, 2, after_h1);
-        declare_axiom(kernel, anon, "mul_nonneg", ty)
-    };
-
-    // --- sq_nonneg : ∀ (a : R), le zero (mul a a) ----------------------------
-    // UNCONDITIONAL square-nonnegativity (true for every real, including negative
-    // a — `mul_nonneg` only covers `0 ≤ a`). This is the actual nonnegativity
-    // primitive each SOS square `ℓₖ²` needs. Under a: a=0.
-    let sq_nonneg = {
-        let zero_c = kernel.const_(zero, vec![]);
-        let a0 = kernel.bvar(0);
-        let a0b = kernel.bvar(0);
-        let mul_aa = app2(kernel, mul, a0, a0b);
-        let body = app2(kernel, le, zero_c, mul_aa);
-        let ty = kernel.pi(anon, r_ty, body, BinderInfo::Default);
-        declare_axiom(kernel, anon, "sq_nonneg", ty)
-    };
-
-    ArithPrelude {
-        logic,
-        r,
-        add,
-        mul,
-        neg,
-        zero,
-        one,
-        le,
-        lt,
-        le_refl,
-        le_trans,
-        lt_irrefl,
-        lt_trans,
-        lt_of_lt_of_le,
-        lt_of_le_of_lt,
-        le_of_lt,
-        add_le_add,
-        add_comm,
-        add_assoc,
-        add_zero,
-        add_neg,
-        mul_le_mul_of_nonneg_left,
-        zero_lt_one,
-        add_lt_add_of_le_of_lt,
-        mul_comm,
-        mul_assoc,
-        mul_one,
-        mul_zero,
-        left_distrib,
-        mul_nonneg,
-        sq_nonneg,
+        Ok(ArithPrelude {
+            logic,
+            r,
+            add,
+            mul,
+            neg,
+            zero,
+            one,
+            le,
+            lt,
+            le_refl,
+            le_trans,
+            lt_irrefl,
+            lt_trans,
+            lt_of_lt_of_le,
+            lt_of_le_of_lt,
+            le_of_lt,
+            add_le_add,
+            add_comm,
+            add_assoc,
+            add_zero,
+            add_neg,
+            mul_le_mul_of_nonneg_left,
+            zero_lt_one,
+            add_lt_add_of_le_of_lt,
+            mul_comm,
+            mul_assoc,
+            mul_one,
+            mul_zero,
+            left_distrib,
+            mul_nonneg,
+            sq_nonneg,
+        })
+    })();
+    match built {
+        Ok(prelude) => {
+            kernel.register_prelude(PreludeKey::Real, PreludeValue::Real(prelude), checkpoint);
+            Ok(prelude)
+        }
+        Err(error) => {
+            kernel.rollback_prelude(checkpoint);
+            Err(error)
+        }
     }
 }
 
-/// Wrap `body` in `n` `∀ (_ : R)` binders, returning `Π (R)^n, body`.
+/// Wrap `body` in `n` `∀ (_ : Real)` binders, returning `Π (Real)^n, body`.
 fn telescope_r(
     kernel: &mut Kernel,
     anon: NameId,
@@ -626,7 +642,7 @@ fn telescope_r(
 }
 
 /// Build the shared 3-place "transitivity" axiom type
-/// `∀ (a b c : R), rel1 a b → rel2 b c → rel3 a c` for relation symbols
+/// `∀ (a b c : Real), rel1 a b → rel2 b c → rel3 a c` for relation symbols
 /// `rel1`/`rel2`/`rel3`.
 fn trans_axiom_ty(
     kernel: &mut Kernel,
@@ -659,16 +675,19 @@ fn trans_axiom_ty(
 }
 
 /// Declare an axiom `name : ty` through the trusted gate and return its name.
-fn declare_axiom(kernel: &mut Kernel, anon: NameId, name: &str, ty: ExprId) -> NameId {
-    let nm = kernel.name_str(anon, name);
-    kernel
-        .add_declaration(Declaration::Axiom {
-            name: nm,
-            uparams: vec![],
-            ty,
-        })
-        .unwrap_or_else(|e| panic!("arith axiom `{name}` should admit: {e:?}"));
-    nm
+fn declare_axiom(
+    kernel: &mut Kernel,
+    parent: NameId,
+    name: &str,
+    ty: ExprId,
+) -> Result<NameId, KernelError> {
+    let nm = kernel.name_str(parent, name);
+    kernel.add_declaration(Declaration::Axiom {
+        name: nm,
+        uparams: vec![],
+        ty,
+    })?;
+    Ok(nm)
 }
 
 #[cfg(test)]

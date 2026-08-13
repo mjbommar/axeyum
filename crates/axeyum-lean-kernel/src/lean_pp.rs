@@ -1370,7 +1370,7 @@ mod tests {
         use crate::{Declaration, build_logic_prelude};
 
         let mut k = Kernel::new();
-        let prelude = build_logic_prelude(&mut k);
+        let prelude = build_logic_prelude(&mut k).expect("logic prelude must build");
         let anon = k.anon();
         // axiom h : False, then `theorem g : False := h`.
         let false_const = k.const_(prelude.false_, vec![]);
@@ -1409,7 +1409,7 @@ mod tests {
         use crate::{Declaration, build_logic_prelude};
 
         let mut k = Kernel::new();
-        let logic = build_logic_prelude(&mut k);
+        let logic = build_logic_prelude(&mut k).expect("logic prelude must build");
         let anon = k.anon();
         let prop = k.sort_zero();
         let p_name = k.name_str(anon, "P");
@@ -1527,7 +1527,7 @@ mod tests {
         use crate::{Declaration, build_logic_prelude};
 
         let mut k = Kernel::new();
-        let logic = build_logic_prelude(&mut k);
+        let logic = build_logic_prelude(&mut k).expect("logic prelude must build");
         let anon = k.anon();
         let prop = k.sort_zero();
         let p_name = k.name_str(anon, "P");
@@ -1570,7 +1570,7 @@ mod tests {
         use crate::{BinderInfo, Declaration, build_logic_prelude};
 
         let mut k = Kernel::new();
-        let logic = build_logic_prelude(&mut k);
+        let logic = build_logic_prelude(&mut k).expect("logic prelude must build");
         let anon = k.anon();
         let prop = k.sort_zero();
         let function_ty = k.pi(anon, prop, prop, BinderInfo::Default);

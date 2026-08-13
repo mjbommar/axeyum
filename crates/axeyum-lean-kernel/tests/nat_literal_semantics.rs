@@ -35,7 +35,7 @@ fn nat_literals_infer_only_against_the_checked_canonical_bootstrap() {
         Err(KernelError::NatLiteralBootstrapMismatch { .. })
     ));
 
-    let prelude = build_logic_prelude(&mut kernel);
+    let prelude = build_logic_prelude(&mut kernel).expect("logic prelude must build");
     let nat = kernel.const_(prelude.nat, vec![]);
     assert_eq!(
         kernel.infer(raw).expect("canonical Nat enables literals"),
@@ -93,7 +93,7 @@ fn missing_renamed_reordered_and_wrong_sort_bootstraps_reject() {
 #[test]
 fn literal_and_unary_constructor_forms_are_definitionally_equal() {
     let mut kernel = Kernel::new();
-    let prelude = build_logic_prelude(&mut kernel);
+    let prelude = build_logic_prelude(&mut kernel).expect("logic prelude must build");
     let zero = kernel.const_(prelude.nat_zero, vec![]);
     let literal_zero = kernel.lit(Lit::nat(0_u8));
     assert!(kernel.def_eq(literal_zero, zero));
@@ -122,7 +122,7 @@ fn literal_and_unary_constructor_forms_are_definitionally_equal() {
 #[test]
 fn delta_wrappers_reach_offset_equality_without_changing_literal_values() {
     let mut kernel = Kernel::new();
-    let prelude = build_logic_prelude(&mut kernel);
+    let prelude = build_logic_prelude(&mut kernel).expect("logic prelude must build");
     let anon = kernel.anon();
     let nat = kernel.const_(prelude.nat, vec![]);
     let value = kernel.lit(Lit::nat(7_u8));
@@ -145,7 +145,7 @@ fn delta_wrappers_reach_offset_equality_without_changing_literal_values() {
 #[test]
 fn successor_and_recursor_convert_literals_but_general_nat_ops_stay_inert() {
     let mut kernel = Kernel::new();
-    let prelude = build_logic_prelude(&mut kernel);
+    let prelude = build_logic_prelude(&mut kernel).expect("logic prelude must build");
     let anon = kernel.anon();
     let level_zero = kernel.level_zero();
     let level_one = kernel.level_succ(level_zero);

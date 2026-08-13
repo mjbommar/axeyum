@@ -77,7 +77,9 @@ use crate::env::{Declaration, ReducibilityHint};
 use crate::expr::ExprId;
 use crate::level::LevelId;
 use crate::name::NameId;
-use crate::{BinderInfo, Kernel, KernelError, LogicPrelude, build_logic_prelude};
+use crate::{
+    BinderInfo, Kernel, KernelError, LogicPrelude, PreludeKey, PreludeValue, build_logic_prelude,
+};
 
 /// The interned names produced by [`build_nat_prelude`]: the inductive `Nat`
 /// and its constructors/recursor (re-exported from the [`LogicPrelude`] for
@@ -183,90 +185,106 @@ pub struct NatPrelude {
 /// Declare the natural-number prelude into `kernel`'s environment, returning the
 /// [`NatPrelude`] of interned names.
 ///
-/// The logical prelude is built first (as [`build_int_prelude`](crate::build_int_prelude)
-/// does), so this expects a kernel that does not already carry those names.
+/// The shared logical prelude is built or exact-validated first (as
+/// [`build_int_prelude`](crate::build_int_prelude) does).
 /// Every definition and theorem is admitted through the **trusted**
 /// [`Kernel::add_declaration`](crate::Kernel::add_declaration) gate and `Nat.le`
 /// through [`Kernel::add_inductive`](crate::Kernel::add_inductive) — the kernel
 /// re-checks each proof term against its stated proposition, so a green build of
 /// this function *is* a machine-checked proof of every theorem it declares.
 ///
-/// # Panics
+/// Repeated construction validates and returns the exact registered package.
+/// Any trusted-gate rejection is returned as [`KernelError`] and rolls back all
+/// Nat declarations admitted by this invocation.
 ///
-/// Panics if any declaration fails to type-check or collides with an
-/// already-present name — both indicate the prelude was built into a non-fresh
-/// kernel or a kernel regression, not a recoverable caller error.
-#[must_use]
-pub fn build_nat_prelude(kernel: &mut Kernel) -> NatPrelude {
-    let logic = build_logic_prelude(kernel);
-    let nat = logic.nat;
+/// # Errors
+///
+/// Returns the trusted gate's rejection or an exact-package conflict. A failed
+/// Nat build leaves the pre-call environment unchanged.
+pub fn build_nat_prelude(kernel: &mut Kernel) -> Result<NatPrelude, KernelError> {
+    let logic = build_logic_prelude(kernel)?;
+    if let Some(PreludeValue::Nat(prelude)) = kernel.cached_prelude(PreludeKey::Nat)? {
+        return Ok(prelude);
+    }
+    let checkpoint = kernel.prelude_checkpoint();
+    let built = (|| -> Result<NatPrelude, KernelError> {
+        let nat = logic.nat;
 
-    // Intern every name up front so the `NatPrelude` (which the proof scripts
-    // below consult for lemma handles) exists before anything is declared.
-    let le = kernel.name_str(nat, "le");
-    let p = NatPrelude {
-        logic,
-        nat,
-        zero: logic.nat_zero,
-        succ: logic.nat_succ,
-        rec: logic.nat_rec,
-        add: kernel.name_str(nat, "add"),
-        mul: kernel.name_str(nat, "mul"),
-        pow: kernel.name_str(nat, "pow"),
-        add_zero: kernel.name_str(nat, "add_zero"),
-        add_succ: kernel.name_str(nat, "add_succ"),
-        mul_zero: kernel.name_str(nat, "mul_zero"),
-        mul_succ: kernel.name_str(nat, "mul_succ"),
-        pow_zero: kernel.name_str(nat, "pow_zero"),
-        pow_succ: kernel.name_str(nat, "pow_succ"),
-        zero_add: kernel.name_str(nat, "zero_add"),
-        succ_add: kernel.name_str(nat, "succ_add"),
-        add_comm: kernel.name_str(nat, "add_comm"),
-        add_assoc: kernel.name_str(nat, "add_assoc"),
-        add_right_comm: kernel.name_str(nat, "add_right_comm"),
-        zero_mul: kernel.name_str(nat, "zero_mul"),
-        succ_mul: kernel.name_str(nat, "succ_mul"),
-        mul_comm: kernel.name_str(nat, "mul_comm"),
-        left_distrib: kernel.name_str(nat, "left_distrib"),
-        mul_assoc: kernel.name_str(nat, "mul_assoc"),
-        one_mul: kernel.name_str(nat, "one_mul"),
-        mul_one: kernel.name_str(nat, "mul_one"),
-        le,
-        le_refl: kernel.name_str(le, "refl"),
-        le_step: kernel.name_str(le, "step"),
-        le_rec: kernel.name_str(le, "rec"),
-        zero_le: kernel.name_str(nat, "zero_le"),
-        le_succ_succ: kernel.name_str(nat, "le_succ_succ"),
-        le_trans: kernel.name_str(nat, "le_trans"),
-        le_add_right: kernel.name_str(nat, "le_add_right"),
-    };
+        // Intern every name up front so the `NatPrelude` (which the proof scripts
+        // below consult for lemma handles) exists before anything is declared.
+        let le = kernel.name_str(nat, "le");
+        let p = NatPrelude {
+            logic,
+            nat,
+            zero: logic.nat_zero,
+            succ: logic.nat_succ,
+            rec: logic.nat_rec,
+            add: kernel.name_str(nat, "add"),
+            mul: kernel.name_str(nat, "mul"),
+            pow: kernel.name_str(nat, "pow"),
+            add_zero: kernel.name_str(nat, "add_zero"),
+            add_succ: kernel.name_str(nat, "add_succ"),
+            mul_zero: kernel.name_str(nat, "mul_zero"),
+            mul_succ: kernel.name_str(nat, "mul_succ"),
+            pow_zero: kernel.name_str(nat, "pow_zero"),
+            pow_succ: kernel.name_str(nat, "pow_succ"),
+            zero_add: kernel.name_str(nat, "zero_add"),
+            succ_add: kernel.name_str(nat, "succ_add"),
+            add_comm: kernel.name_str(nat, "add_comm"),
+            add_assoc: kernel.name_str(nat, "add_assoc"),
+            add_right_comm: kernel.name_str(nat, "add_right_comm"),
+            zero_mul: kernel.name_str(nat, "zero_mul"),
+            succ_mul: kernel.name_str(nat, "succ_mul"),
+            mul_comm: kernel.name_str(nat, "mul_comm"),
+            left_distrib: kernel.name_str(nat, "left_distrib"),
+            mul_assoc: kernel.name_str(nat, "mul_assoc"),
+            one_mul: kernel.name_str(nat, "one_mul"),
+            mul_one: kernel.name_str(nat, "mul_one"),
+            le,
+            le_refl: kernel.name_str(le, "refl"),
+            le_step: kernel.name_str(le, "step"),
+            le_rec: kernel.name_str(le, "rec"),
+            zero_le: kernel.name_str(nat, "zero_le"),
+            le_succ_succ: kernel.name_str(nat, "le_succ_succ"),
+            le_trans: kernel.name_str(nat, "le_trans"),
+            le_add_right: kernel.name_str(nat, "le_add_right"),
+        };
 
-    let mut d = NatDev::new(kernel, p);
-    declare_arithmetic(&mut d, &p);
-    declare_defining_equations(&mut d, &p);
-    declare_additive_theorems(&mut d, &p);
-    declare_multiplicative_theorems(&mut d, &p);
-    declare_order(&mut d, &p);
-    p
+        let mut d = NatDev::new(kernel, p);
+        declare_arithmetic(&mut d, &p)?;
+        declare_defining_equations(&mut d, &p)?;
+        declare_additive_theorems(&mut d, &p)?;
+        declare_multiplicative_theorems(&mut d, &p)?;
+        declare_order(&mut d, &p)?;
+        Ok(p)
+    })();
+    match built {
+        Ok(prelude) => {
+            kernel.register_prelude(PreludeKey::Nat, PreludeValue::Nat(prelude), checkpoint);
+            Ok(prelude)
+        }
+        Err(error) => {
+            kernel.rollback_prelude(checkpoint);
+            Err(error)
+        }
+    }
 }
 
 /// `add`, `mul`, `pow` — structural recursion on the second argument.
-fn declare_arithmetic(d: &mut NatDev<'_>, p: &NatPrelude) {
+fn declare_arithmetic(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> {
     let p = *p;
     // add x zero ≡ x ; add x (succ j) ≡ succ (add x j)
-    d.define_binary(p.add, 1, &|_d, x| x, &|d, _x, _j, ih| d.succ(ih))
-        .expect("Nat.add should admit");
+    d.define_binary(p.add, 1, &|_d, x| x, &|d, _x, _j, ih| d.succ(ih))?;
     // mul x zero ≡ zero ; mul x (succ j) ≡ add (mul x j) x
-    d.define_binary(p.mul, 2, &|d, _x| d.zero(), &|d, x, _j, ih| d.add(ih, x))
-        .expect("Nat.mul should admit");
+    d.define_binary(p.mul, 2, &|d, _x| d.zero(), &|d, x, _j, ih| d.add(ih, x))?;
     // pow x zero ≡ 1 ; pow x (succ j) ≡ mul (pow x j) x
-    d.define_binary(p.pow, 3, &|d, _x| d.num(1), &|d, x, _j, ih| d.mul(ih, x))
-        .expect("Nat.pow should admit");
+    d.define_binary(p.pow, 3, &|d, _x| d.num(1), &|d, x, _j, ih| d.mul(ih, x))?;
+    Ok(())
 }
 
 /// The defining equations, each a one-line `Eq.refl` proof: they hold by β/δ/ι,
 /// so the kernel accepts `refl` against the stated equation.
-fn declare_defining_equations(d: &mut NatDev<'_>, p: &NatPrelude) {
+fn declare_defining_equations(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> {
     let p = *p;
     d.theorem(p.add_zero, 1, &|d, v| {
         let n = v[0];
@@ -275,7 +293,7 @@ fn declare_defining_equations(d: &mut NatDev<'_>, p: &NatPrelude) {
         let stmt = d.eq(lhs, n);
         let proof = d.refl(n);
         (stmt, proof)
-    });
+    })?;
     d.theorem(p.add_succ, 2, &|d, v| {
         let (n, m) = (v[0], v[1]);
         let sm = d.succ(m);
@@ -285,7 +303,7 @@ fn declare_defining_equations(d: &mut NatDev<'_>, p: &NatPrelude) {
         let stmt = d.eq(lhs, rhs);
         let proof = d.refl(rhs);
         (stmt, proof)
-    });
+    })?;
     d.theorem(p.mul_zero, 1, &|d, v| {
         let n = v[0];
         let z = d.zero();
@@ -293,7 +311,7 @@ fn declare_defining_equations(d: &mut NatDev<'_>, p: &NatPrelude) {
         let stmt = d.eq(lhs, z);
         let proof = d.refl(z);
         (stmt, proof)
-    });
+    })?;
     d.theorem(p.mul_succ, 2, &|d, v| {
         let (n, m) = (v[0], v[1]);
         let sm = d.succ(m);
@@ -303,7 +321,7 @@ fn declare_defining_equations(d: &mut NatDev<'_>, p: &NatPrelude) {
         let stmt = d.eq(lhs, rhs);
         let proof = d.refl(rhs);
         (stmt, proof)
-    });
+    })?;
     d.theorem(p.pow_zero, 1, &|d, v| {
         let n = v[0];
         let z = d.zero();
@@ -312,7 +330,7 @@ fn declare_defining_equations(d: &mut NatDev<'_>, p: &NatPrelude) {
         let stmt = d.eq(lhs, one);
         let proof = d.refl(one);
         (stmt, proof)
-    });
+    })?;
     d.theorem(p.pow_succ, 2, &|d, v| {
         let (n, m) = (v[0], v[1]);
         let sm = d.succ(m);
@@ -322,11 +340,12 @@ fn declare_defining_equations(d: &mut NatDev<'_>, p: &NatPrelude) {
         let stmt = d.eq(lhs, rhs);
         let proof = d.refl(rhs);
         (stmt, proof)
-    });
+    })?;
+    Ok(())
 }
 
 /// `zero_add`, `succ_add`, `add_comm`, `add_assoc`, `add_right_comm`.
-fn declare_additive_theorems(d: &mut NatDev<'_>, p: &NatPrelude) {
+fn declare_additive_theorems(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> {
     let p = *p;
     // zero_add : ∀ n, add zero n = n   (induction on n)
     d.theorem(p.zero_add, 1, &|d, v| {
@@ -351,7 +370,7 @@ fn declare_additive_theorems(d: &mut NatDev<'_>, p: &NatPrelude) {
             n,
         );
         (stmt, proof)
-    });
+    })?;
 
     // succ_add : ∀ n m, add (succ n) m = succ (add n m)   (induction on m)
     d.theorem(p.succ_add, 2, &|d, v| {
@@ -380,7 +399,7 @@ fn declare_additive_theorems(d: &mut NatDev<'_>, p: &NatPrelude) {
             m,
         );
         (stmt, proof)
-    });
+    })?;
 
     // add_comm : ∀ n m, add n m = add m n   (induction on m)
     d.theorem(p.add_comm, 2, &|d, v| {
@@ -414,7 +433,7 @@ fn declare_additive_theorems(d: &mut NatDev<'_>, p: &NatPrelude) {
             m,
         );
         (stmt, proof)
-    });
+    })?;
 
     // add_assoc : ∀ a b c, add (add a b) c = add a (add b c)   (induction on c)
     d.theorem(p.add_assoc, 3, &|d, v| {
@@ -443,7 +462,7 @@ fn declare_additive_theorems(d: &mut NatDev<'_>, p: &NatPrelude) {
             c,
         );
         (stmt, proof)
-    });
+    })?;
 
     // add_right_comm : ∀ x y z, add (add x y) z = add (add x z) y   (no induction)
     d.theorem(p.add_right_comm, 3, &|d, v| {
@@ -464,12 +483,13 @@ fn declare_additive_theorems(d: &mut NatDev<'_>, p: &NatPrelude) {
         let (end, proof) = d.chain(start, &[(s1, h1), (s2, h2), (s3, h3)]);
         let stmt = d.eq(start, end);
         (stmt, proof)
-    });
+    })?;
+    Ok(())
 }
 
 /// `zero_mul`, `succ_mul`, `mul_comm`, `mul_one`, `one_mul`, `left_distrib`,
 /// `mul_assoc`.
-fn declare_multiplicative_theorems(d: &mut NatDev<'_>, p: &NatPrelude) {
+fn declare_multiplicative_theorems(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> {
     let p = *p;
     // zero_mul : ∀ n, mul zero n = zero   (induction on n)
     d.theorem(p.zero_mul, 1, &|d, v| {
@@ -492,7 +512,7 @@ fn declare_multiplicative_theorems(d: &mut NatDev<'_>, p: &NatPrelude) {
             n,
         );
         (stmt, proof)
-    });
+    })?;
 
     // succ_mul : ∀ n m, mul (succ n) m = add (mul n m) m   (induction on m)
     d.theorem(p.succ_mul, 2, &|d, v| {
@@ -529,7 +549,7 @@ fn declare_multiplicative_theorems(d: &mut NatDev<'_>, p: &NatPrelude) {
             m,
         );
         (stmt, proof)
-    });
+    })?;
 
     // mul_comm : ∀ n m, mul n m = mul m n   (induction on m)
     d.theorem(p.mul_comm, 2, &|d, v| {
@@ -565,7 +585,7 @@ fn declare_multiplicative_theorems(d: &mut NatDev<'_>, p: &NatPrelude) {
             m,
         );
         (stmt, proof)
-    });
+    })?;
 
     // mul_one : ∀ a, mul a 1 = a
     // mul a (succ zero) ≡ add (mul a zero) a ≡ add zero a, so `zero_add a`
@@ -577,7 +597,7 @@ fn declare_multiplicative_theorems(d: &mut NatDev<'_>, p: &NatPrelude) {
         let stmt = d.eq(lhs, a);
         let proof = d.lemma(p.zero_add, &[a]);
         (stmt, proof)
-    });
+    })?;
 
     // one_mul : ∀ a, mul 1 a = a
     d.theorem(p.one_mul, 1, &|d, v| {
@@ -595,7 +615,7 @@ fn declare_multiplicative_theorems(d: &mut NatDev<'_>, p: &NatPrelude) {
         let (end, proof) = d.chain(start, &[(s1, h1), (s2, h2), (a, h3)]);
         let stmt = d.eq(start, end);
         (stmt, proof)
-    });
+    })?;
 
     // left_distrib : ∀ a b c, mul a (add b c) = add (mul a b) (mul a c)  (ind. on c)
     d.theorem(p.left_distrib, 3, &|d, v| {
@@ -634,7 +654,7 @@ fn declare_multiplicative_theorems(d: &mut NatDev<'_>, p: &NatPrelude) {
             c,
         );
         (stmt, proof)
-    });
+    })?;
 
     // mul_assoc : ∀ a b c, mul (mul a b) c = mul a (mul b c)   (induction on c)
     d.theorem(p.mul_assoc, 3, &|d, v| {
@@ -672,11 +692,12 @@ fn declare_multiplicative_theorems(d: &mut NatDev<'_>, p: &NatPrelude) {
             c,
         );
         (stmt, proof)
-    });
+    })?;
+    Ok(())
 }
 
 /// `Nat.le` (the indexed `Prop` inductive) and its four theorems.
-fn declare_order(d: &mut NatDev<'_>, p: &NatPrelude) {
+fn declare_order(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> {
     let p = *p;
     let nat = d.nat_ty();
     let anon = d.anon_name();
@@ -708,15 +729,13 @@ fn declare_order(d: &mut NatDev<'_>, p: &NatPrelude) {
         let over_m = d.pi_fv(m_fv, nat, arrow);
         d.pi_fv(n_fv, nat, over_m)
     };
-    d.kernel()
-        .add_inductive(
-            p.le,
-            &[],
-            1,
-            le_ty,
-            &[(p.le_refl, refl_ty), (p.le_step, step_ty)],
-        )
-        .expect("Nat.le should admit");
+    d.kernel().add_inductive(
+        p.le,
+        &[],
+        1,
+        le_ty,
+        &[(p.le_refl, refl_ty), (p.le_step, step_ty)],
+    )?;
 
     // zero_le : ∀ n, Le zero n   (induction on n, using only the constructors)
     {
@@ -741,8 +760,7 @@ fn declare_order(d: &mut NatDev<'_>, p: &NatPrelude) {
         );
         let ty = d.pi_fv(n_fv, nat, stmt);
         let value = d.lam_fv(n_fv, nat, proof);
-        d.declare_theorem(p.zero_le, ty, value)
-            .unwrap_or_else(|e| panic!("Nat.zero_le should admit: {}", d.explain(&e)));
+        d.declare_theorem(p.zero_le, ty, value)?;
     }
 
     // le_succ_succ : ∀ n m, Le n m → Le (succ n) (succ m)
@@ -798,8 +816,7 @@ fn declare_order(d: &mut NatDev<'_>, p: &NatPrelude) {
             let l_m = d.lam_fv(m_fv, nat, l_h);
             d.lam_fv(n_fv, nat, l_m)
         };
-        d.declare_theorem(p.le_succ_succ, ty, value)
-            .unwrap_or_else(|e| panic!("Nat.le_succ_succ should admit: {}", d.explain(&e)));
+        d.declare_theorem(p.le_succ_succ, ty, value)?;
     }
 
     // le_trans : ∀ a b c, Le a b → Le b c → Le a c
@@ -860,8 +877,7 @@ fn declare_order(d: &mut NatDev<'_>, p: &NatPrelude) {
             let v = d.lam_fv(b_fv, nat, v);
             d.lam_fv(a_fv, nat, v)
         };
-        d.declare_theorem(p.le_trans, ty, value)
-            .unwrap_or_else(|e| panic!("Nat.le_trans should admit: {}", d.explain(&e)));
+        d.declare_theorem(p.le_trans, ty, value)?;
     }
 
     // le_add_right : ∀ n k, Le n (add n k)   (induction on k; both cases are
@@ -893,9 +909,9 @@ fn declare_order(d: &mut NatDev<'_>, p: &NatPrelude) {
             let v = d.lam_fv(k_fv, nat, proof);
             d.lam_fv(n_fv, nat, v)
         };
-        d.declare_theorem(p.le_add_right, ty, value)
-            .unwrap_or_else(|e| panic!("Nat.le_add_right should admit: {}", d.explain(&e)));
+        d.declare_theorem(p.le_add_right, ty, value)?;
     }
+    Ok(())
 }
 
 /// The non-kernel state a [`NatOps`] development carries: the interned prelude
@@ -1353,29 +1369,22 @@ pub trait NatOps {
         Ok(ty)
     }
 
-    /// [`try_theorem`](Self::try_theorem), panicking with a rendered explanation
-    /// on rejection. Returns the declared statement.
+    /// [`try_theorem`](Self::try_theorem), returning the declared statement or
+    /// the trusted gate's typed rejection.
     ///
-    /// # Panics
+    /// # Errors
     ///
-    /// Panics if the kernel rejects the proof term.
+    /// Returns the trusted kernel gate's typed rejection.
     fn theorem(
         &mut self,
         name: NameId,
         arity: usize,
         build: &dyn Fn(&mut Self, &[ExprId]) -> (ExprId, ExprId),
-    ) -> ExprId
+    ) -> Result<ExprId, KernelError>
     where
         Self: Sized,
     {
-        match self.try_theorem(name, arity, build) {
-            Ok(ty) => ty,
-            Err(e) => {
-                let display = self.kernel().display_name(name).to_string();
-                let explained = self.explain(&e);
-                panic!("theorem {display} was rejected by the kernel: {explained}");
-            }
-        }
+        self.try_theorem(name, arity, build)
     }
 
     /// A readable rendering of a kernel rejection (the payloads are [`ExprId`]s,

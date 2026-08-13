@@ -51,7 +51,10 @@ fn two_x_eq_one_reconstructs_to_false() {
         .fold(0xcbf2_9ce4_8422_2325, |hash, byte| {
             (hash ^ u64::from(*byte)).wrapping_mul(0x0000_0100_0000_01b3)
         });
-    assert_eq!((source.len(), source_fnv), (868_243, 0xd2f7_6675_b126_31ea));
+    assert_eq!(
+        (source.len(), source_fnv),
+        (1_080_361, 0x8be5_de1d_1d41_cec2)
+    );
     assert_eq!(
         scan_proof_fragment(&arena, &[e1, e2]),
         ProofFragment::Diophantine

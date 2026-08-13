@@ -454,7 +454,7 @@ fn dependent_let_telescope_infers() {
 #[test]
 fn let_local_value_participates_in_definitional_equality() {
     let mut k = Kernel::new();
-    let prelude = build_logic_prelude(&mut k);
+    let prelude = build_logic_prelude(&mut k).expect("logic prelude must build");
     let anon = k.anon();
     let zero = k.level_zero();
     let one = k.level_succ(zero);

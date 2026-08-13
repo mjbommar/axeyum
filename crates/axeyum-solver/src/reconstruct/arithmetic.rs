@@ -164,10 +164,16 @@ impl Default for LraReconstructCtx {
 impl LraReconstructCtx {
     /// Build a fresh LRA reconstruction context: a kernel with the arithmetic
     /// prelude declared and an empty variable map.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the fixed real prelude is rejected in a fresh kernel. Input
+    /// terms are not consulted during this invariant-only initialization.
     #[must_use]
     pub fn new() -> Self {
         let mut kernel = Kernel::new();
-        let arith = build_arith_prelude(&mut kernel);
+        let arith = build_arith_prelude(&mut kernel)
+            .expect("real prelude should build in a fresh reconstruction kernel");
         Self {
             kernel,
             arith,

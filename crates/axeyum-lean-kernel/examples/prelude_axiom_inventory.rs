@@ -40,18 +40,18 @@ fn inventory(prelude: &str, kernel: &Kernel) -> Vec<(String, String, String)> {
 
 fn main() {
     let mut real = Kernel::new();
-    let _ = build_arith_prelude(&mut real);
+    let _ = build_arith_prelude(&mut real).expect("Real prelude must build");
     let real_rows = inventory("real", &real);
     assert_eq!(real_rows.len(), 30);
 
     let mut integer = Kernel::new();
-    let _ = build_int_prelude(&mut integer);
+    let _ = build_int_prelude(&mut integer).expect("Int prelude must build");
     let integer_rows = inventory("integer", &integer);
     assert_eq!(integer_rows.len(), 34);
 
     let mut string = Kernel::new();
-    let logic = build_logic_prelude(&mut string);
-    let _ = build_string_prelude(&mut string, logic, 2);
+    let logic = build_logic_prelude(&mut string).expect("logic prelude must build");
+    let _ = build_string_prelude(&mut string, logic, 2).expect("string prelude must build");
     let string_rows = inventory("string", &string);
     assert_eq!(string_rows.len(), 1);
 

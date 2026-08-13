@@ -22,7 +22,7 @@ struct Fixture {
 
 fn fixture() -> Fixture {
     let mut k = Kernel::new();
-    let p = build_int_prelude(&mut k);
+    let p = build_int_prelude(&mut k).expect("Int prelude must build");
     let anon = k.anon();
     // x : Z.
     let x = k.name_str(anon, "x");
@@ -88,7 +88,7 @@ impl Fixture {
 #[test]
 fn int_prelude_admits_all_declarations() {
     let mut k = Kernel::new();
-    let p = build_int_prelude(&mut k);
+    let p = build_int_prelude(&mut k).expect("Int prelude must build");
 
     for name in [
         p.z,
@@ -154,7 +154,7 @@ fn int_prelude_admits_all_declarations() {
 fn every_axiom_type_infers_to_a_sort() {
     use crate::expr::ExprNode;
     let mut k = Kernel::new();
-    let p = build_int_prelude(&mut k);
+    let p = build_int_prelude(&mut k).expect("Int prelude must build");
     for name in [
         p.le_refl,
         p.le_trans,
@@ -379,8 +379,8 @@ fn integer_equality_decidability_applied_checks_exact_type() {
 #[test]
 fn build_is_deterministic() {
     let mut k1 = Kernel::new();
-    let p1 = build_int_prelude(&mut k1);
+    let p1 = build_int_prelude(&mut k1).expect("Int prelude must build");
     let mut k2 = Kernel::new();
-    let p2 = build_int_prelude(&mut k2);
+    let p2 = build_int_prelude(&mut k2).expect("Int prelude must build");
     assert_eq!(p1, p2, "IntPrelude ids are deterministic");
 }

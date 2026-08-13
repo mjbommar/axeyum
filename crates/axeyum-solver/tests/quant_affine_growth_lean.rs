@@ -28,7 +28,7 @@ fn repair_const_nterm_reconstructs_and_routes() {
         .fold(0xcbf2_9ce4_8422_2325_u64, |hash, byte| {
             (hash ^ u64::from(byte)).wrapping_mul(0x0000_0100_0000_01b3)
         });
-    assert_eq!((source.len(), fnv1a), (43_108, 0xdd4d_24cd_f016_8fb9));
+    assert_eq!((source.len(), fnv1a), (57_046, 0xe702_592b_8c99_10ba));
     assert!(source.contains("theorem axeyum_refutation : False"));
     assert!(source.contains("euclidean_decomposition"));
     assert!(!source.contains("sorryAx"));

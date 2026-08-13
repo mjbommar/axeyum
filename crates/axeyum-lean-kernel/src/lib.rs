@@ -65,7 +65,7 @@ mod quotient;
 mod string_prelude;
 mod tc;
 
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 use std::fmt;
 use std::hash::{DefaultHasher, Hash, Hasher};
 use std::ops::Index;
@@ -89,6 +89,30 @@ use expr::ExprMeta;
 
 const EXPR_INTERN_SHARDS: usize = 64;
 const EXPR_ARENA_CHUNK_CAPACITY: usize = 1 << 18;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub(crate) enum PreludeKey {
+    Logic,
+    Nat,
+    Int,
+    Real,
+    String(u64),
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) enum PreludeValue {
+    Logic(LogicPrelude),
+    Nat(NatPrelude),
+    Int(IntPrelude),
+    Real(ArithPrelude),
+    String(StringPrelude),
+}
+
+#[derive(Debug, Clone)]
+struct PreludePackage {
+    value: PreludeValue,
+    declarations: Vec<Declaration>,
+}
 
 /// Dense, index-addressable storage that grows without relocating old entries.
 ///
@@ -243,6 +267,10 @@ pub struct Kernel {
     /// The global declaration environment (ADR-0036, slice 3). Declarations are
     /// admitted only through the type-checked [`Kernel::add_declaration`] gate.
     env: Environment,
+    /// Successfully built reconstruction preludes and their exact admitted
+    /// declaration snapshots (ADR-0387). The snapshots make repeat builds
+    /// exact-idempotent rather than presence-based.
+    prelude_packages: BTreeMap<PreludeKey, PreludePackage>,
 }
 
 // ---------------------------------------------------------------------------
@@ -254,6 +282,50 @@ impl Kernel {
     #[must_use]
     pub fn new() -> Self {
         Self::default()
+    }
+
+    pub(crate) fn cached_prelude(
+        &self,
+        key: PreludeKey,
+    ) -> Result<Option<PreludeValue>, KernelError> {
+        let Some(package) = self.prelude_packages.get(&key) else {
+            return Ok(None);
+        };
+        for expected in &package.declarations {
+            if self.env.get(expected.name()) != Some(expected) {
+                return Err(KernelError::PreludePackageConflict {
+                    name: expected.name(),
+                });
+            }
+        }
+        Ok(Some(package.value.clone()))
+    }
+
+    pub(crate) fn prelude_checkpoint(&self) -> usize {
+        self.env.checkpoint()
+    }
+
+    pub(crate) fn register_prelude(
+        &mut self,
+        key: PreludeKey,
+        value: PreludeValue,
+        checkpoint: usize,
+    ) {
+        let declarations = self.env.declarations_since(checkpoint);
+        let old = self.prelude_packages.insert(
+            key,
+            PreludePackage {
+                value,
+                declarations,
+            },
+        );
+        debug_assert!(old.is_none());
+    }
+
+    pub(crate) fn rollback_prelude(&mut self, checkpoint: usize) {
+        self.env.rollback_unchecked(checkpoint);
+        self.infer_closed_cache.clear();
+        self.whnf_cache.clear();
     }
 
     /// Release hash-consing and typechecking lookup tables before a final,

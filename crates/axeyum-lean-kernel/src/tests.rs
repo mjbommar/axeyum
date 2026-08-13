@@ -577,7 +577,7 @@ fn substitute_expr_levels_visits_shared_dag_once() {
 #[test]
 fn infer_open_shared_expression_dag_once_per_local_context() {
     let mut k = Kernel::new();
-    let prelude = crate::build_logic_prelude(&mut k);
+    let prelude = crate::build_logic_prelude(&mut k).expect("logic prelude must build");
     let prop = k.sort_zero();
     let fvar_id = 23u64;
     let mut shared = k.fvar(fvar_id);

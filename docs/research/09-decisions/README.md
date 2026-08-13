@@ -442,4 +442,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [0384](adr-0384-honest-evidence-front-door.md) | Three-valued evidence checking, bounded proof production, retained checking subjects | proposed |
 | [0385](adr-0385-nat-prelude.md) | A proved `Nat` prelude for the Lean kernel — `add`/`mul`/`pow`, the algebraic laws, `Nat.le`, and the `Eq` combinators, with **zero axioms** | proposed |
 | [0386](adr-0386-cas-refutation-routes.md) | Two CAS-backed refutation routes in the auto dispatch, certified by an independent expander | proposed |
-| [0387](adr-0387-fallible-composable-lean-preludes.md) | Fallible, transactional, namespaced Lean preludes for mixed mathematical environments | proposed |
+| [0387](adr-0387-fallible-composable-lean-preludes.md) | Fallible, transactional, namespaced Lean preludes for mixed mathematical environments | accepted |

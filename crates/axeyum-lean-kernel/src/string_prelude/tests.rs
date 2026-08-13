@@ -10,8 +10,8 @@ use crate::{BinderInfo, Kernel};
 /// A kernel with the logical + string prelude over a `num_chars` alphabet.
 fn setup(num_chars: usize) -> (Kernel, crate::StringPrelude) {
     let mut k = Kernel::new();
-    let logic = build_logic_prelude(&mut k);
-    let sp = build_string_prelude(&mut k, logic, num_chars);
+    let logic = build_logic_prelude(&mut k).expect("logic prelude must build");
+    let sp = build_string_prelude(&mut k, logic, num_chars).expect("string prelude must build");
     (k, sp)
 }
 

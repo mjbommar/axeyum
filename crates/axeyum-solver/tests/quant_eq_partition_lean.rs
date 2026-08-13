@@ -46,7 +46,7 @@ fn sdlx_reconstructs_genuine_nested_quantifiers_and_routes() {
         .fold(0xcbf2_9ce4_8422_2325_u64, |hash, byte| {
             (hash ^ u64::from(byte)).wrapping_mul(0x0000_0100_0000_01b3)
         });
-    assert_eq!((source.len(), fnv1a), (30_644, 0x84fe_8e45_7b9b_6b27));
+    assert_eq!((source.len(), fnv1a), (37_746, 0xc9c0_4ef7_afd2_8b66));
     assert!(source.contains("theorem axeyum_refutation : False"));
     assert!(source.contains("eq_em"));
     assert!(!source.contains("sorryAx"));

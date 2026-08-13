@@ -229,8 +229,10 @@ impl RegexCtx {
     /// A fresh context over an `n`-state / `m`-letter automaton.
     fn new(n: usize, m: usize) -> Self {
         let mut kernel = Kernel::new();
-        let logic = build_logic_prelude(&mut kernel);
-        let sp = build_string_prelude(&mut kernel, logic, m);
+        let logic = build_logic_prelude(&mut kernel)
+            .expect("logic prelude should build in a fresh regex kernel");
+        let sp = build_string_prelude(&mut kernel, logic, m)
+            .expect("string prelude should build in a fresh regex kernel");
         let one = {
             let z = kernel.level_zero();
             kernel.level_succ(z)

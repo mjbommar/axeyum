@@ -371,7 +371,8 @@ impl ReconstructCtx {
     #[must_use]
     pub fn new() -> Self {
         let mut kernel = Kernel::new();
-        let prelude = build_logic_prelude(&mut kernel);
+        let prelude = build_logic_prelude(&mut kernel)
+            .expect("logic prelude should build in a fresh reconstruction kernel");
         let anon = kernel.anon();
 
         // α : Sort 1 (= Type). Declared as an axiom so it is a genuine `Const`.

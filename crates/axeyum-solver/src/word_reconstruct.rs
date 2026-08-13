@@ -271,8 +271,10 @@ impl WordCtx {
     /// point in `codepoints` (deterministic, ascending order).
     fn new(codepoints: &BTreeSet<u128>) -> Self {
         let mut kernel = Kernel::new();
-        let logic = build_logic_prelude(&mut kernel);
-        let sp = build_string_prelude(&mut kernel, logic, codepoints.len());
+        let logic = build_logic_prelude(&mut kernel)
+            .expect("logic prelude should build in a fresh word kernel");
+        let sp = build_string_prelude(&mut kernel, logic, codepoints.len())
+            .expect("string prelude should build in a fresh word kernel");
         let char_index = codepoints
             .iter()
             .enumerate()

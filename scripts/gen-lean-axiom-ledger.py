@@ -285,7 +285,8 @@ def render(data: dict[str, Any]) -> str:
         "`axeyum.string.append`, which is inserted directly as "
         "`Declaration::Axiom` rather than through `declare_axiom(...)`.",
         f"- {len(shared)} names are shared by the isolated real and integer "
-        "preludes; they cannot coexist safely until TL3.3 namespaces them.",
+        "preludes; ADR-0387's `Int.*` / `Real.*` namespaces make the packages "
+        "composable.",
         "- Classification: "
         + ", ".join(f"{key} {classifications[key]}" for key in sorted(classifications))
         + ".",
@@ -321,12 +322,12 @@ def render(data: dict[str, Any]) -> str:
     lines.extend(
         [
             "",
-            "## Shared real/integer names",
+        "## Shared real/integer names",
             "",
-            "These are separate declarations only because the preludes are built in "
-            "separate kernels today. Their collision is an explicit TL3.3 blocker:",
+        "ADR-0387 requires this set to remain empty so integer and real packages "
+        "can coexist without declaration aliasing:",
             "",
-            ", ".join(f"`{name}`" for name in shared) + ".",
+        (", ".join(f"`{name}`" for name in shared) if shared else "None") + ".",
             "",
             "## Next classification gate",
             "",

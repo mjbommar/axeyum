@@ -158,10 +158,16 @@ impl Default for IntReconstructCtx {
 
 impl IntReconstructCtx {
     /// A fresh context: a kernel with the integer prelude declared.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the fixed integer prelude is rejected in a fresh kernel. Input
+    /// terms are not consulted during this invariant-only initialization.
     #[must_use]
     pub fn new() -> Self {
         let mut kernel = Kernel::new();
-        let int = build_int_prelude(&mut kernel);
+        let int = build_int_prelude(&mut kernel)
+            .expect("integer prelude should build in a fresh reconstruction kernel");
         Self {
             kernel,
             int,

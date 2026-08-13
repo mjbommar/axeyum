@@ -484,6 +484,19 @@ impl Environment {
         self.insertion_log.len()
     }
 
+    /// Clone declarations admitted since `checkpoint` in insertion order.
+    pub(crate) fn declarations_since(&self, checkpoint: usize) -> Vec<Declaration> {
+        self.insertion_log[checkpoint..]
+            .iter()
+            .map(|name| {
+                self.declars
+                    .get(name)
+                    .expect("insertion log names are present")
+                    .clone()
+            })
+            .collect()
+    }
+
     /// Remove every declaration first inserted after `checkpoint`.
     pub(crate) fn rollback_unchecked(&mut self, checkpoint: usize) {
         let inserted: Vec<_> = self.insertion_log.drain(checkpoint..).collect();

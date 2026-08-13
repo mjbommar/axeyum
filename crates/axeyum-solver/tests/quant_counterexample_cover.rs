@@ -105,8 +105,8 @@ fn small_cover_generated_module_is_byte_stable() {
         .fold(0xcbf2_9ce4_8422_2325_u64, |hash, byte| {
             (hash ^ u64::from(byte)).wrapping_mul(0x0000_0100_0000_01b3)
         });
-    assert_eq!(module.len(), 7_197);
-    assert_eq!(fnv1a, 0xe592_f178_7653_a4bf);
+    assert_eq!(module.len(), 7_885);
+    assert_eq!(fnv1a, 0xfb3f_ea08_2a5b_a93f);
 }
 
 #[test]

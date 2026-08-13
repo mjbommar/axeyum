@@ -42,7 +42,7 @@ impl NatOps for Fixture {
 impl Fixture {
     fn new() -> Self {
         let mut k = Kernel::new();
-        let p = build_nat_prelude(&mut k);
+        let p = build_nat_prelude(&mut k).expect("Nat prelude must build");
         let st = NatState::new(&mut k, p);
         let anon = k.anon();
         let root = k.name_str(anon, "consumer");
@@ -95,7 +95,7 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
 #[test]
 fn the_nat_prelude_declares_no_axioms() {
     let mut k = Kernel::new();
-    let _p = build_nat_prelude(&mut k);
+    let _p = build_nat_prelude(&mut k).expect("Nat prelude must build");
     let axioms: Vec<String> = k
         .environment()
         .iter()
@@ -204,24 +204,26 @@ fn a_downstream_development_proves_a_new_theorem() {
     let mut f = Fixture::new();
     let p = f.p;
     let name = f.name("two_mul");
-    let ty = f.theorem(name, 1, &|d, v| {
-        let n = v[0];
-        let two = d.num(2);
-        let one = d.num(1);
-        let start = d.mul(two, n);
-        // mul (succ 1) n = add (mul 1 n) n
-        let one_n = d.mul(one, n);
-        let s1 = d.add(one_n, n);
-        let h1 = d.lemma(p.succ_mul, &[one, n]);
-        // ... = add n n
-        let s2 = d.add(n, n);
-        let h_om = d.lemma(p.one_mul, &[n]);
-        let h2 = d.congr(one_n, n, h_om, &|d, t| d.add(t, n));
-        let (end, proof) = d.chain(start, &[(s1, h1), (s2, h2)]);
-        assert_eq!(end, s2, "the chain must land on `add n n`");
-        let stmt = d.eq(start, end);
-        (stmt, proof)
-    });
+    let ty = f
+        .theorem(name, 1, &|d, v| {
+            let n = v[0];
+            let two = d.num(2);
+            let one = d.num(1);
+            let start = d.mul(two, n);
+            // mul (succ 1) n = add (mul 1 n) n
+            let one_n = d.mul(one, n);
+            let s1 = d.add(one_n, n);
+            let h1 = d.lemma(p.succ_mul, &[one, n]);
+            // ... = add n n
+            let s2 = d.add(n, n);
+            let h_om = d.lemma(p.one_mul, &[n]);
+            let h2 = d.congr(one_n, n, h_om, &|d, t| d.add(t, n));
+            let (end, proof) = d.chain(start, &[(s1, h1), (s2, h2)]);
+            assert_eq!(end, s2, "the chain must land on `add n n`");
+            let stmt = d.eq(start, end);
+            (stmt, proof)
+        })
+        .expect("derived Nat theorem must check");
     println!("two_mul : {}", f.k.render_lean(ty));
     assert!(matches!(
         f.k.environment().get(name),
@@ -478,7 +480,7 @@ fn kernel_rejects_broken_proof_terms() {
 fn the_build_is_deterministic() {
     let render_all = || {
         let mut k = Kernel::new();
-        let p = build_nat_prelude(&mut k);
+        let p = build_nat_prelude(&mut k).expect("Nat prelude must build");
         let mut out: Vec<String> = Vec::new();
         for name in definition_names(&p).into_iter().chain(theorem_names(&p)) {
             let display = k.display_name(name).to_string();

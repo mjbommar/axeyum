@@ -252,7 +252,7 @@ fn fuzz_prop_elimination_and_proof_iota(summary: &mut FuzzSummary) {
         let case_name = format!("prop_{case_index}_{case_seed:016x}");
 
         let mut k = Kernel::new();
-        let logic = build_logic_prelude(&mut k);
+        let logic = build_logic_prelude(&mut k).expect("logic prelude must build");
         let anon = k.anon();
         let namespace = k.name_str(anon, format!("SeamProp{case_index}"));
         let (family_name, ctor_names) =
@@ -473,7 +473,7 @@ fn fuzz_universes_and_inductives(summary: &mut FuzzSummary) {
         let case_name = format!("universe_{case_index}_{seed:016x}");
 
         let mut k = Kernel::new();
-        let logic = build_logic_prelude(&mut k);
+        let logic = build_logic_prelude(&mut k).expect("logic prelude must build");
         let anon = k.anon();
         let namespace = k.name_str(anon, format!("SeamUniverse{case_index}"));
         let family_name = k.name_str(namespace, "Generated");
@@ -658,7 +658,7 @@ fn fuzz_literals_and_reduction(summary: &mut FuzzSummary) {
         let case_name = format!("literal_{case_index}_{case_seed:016x}");
 
         let mut k = Kernel::new();
-        let logic = build_logic_prelude(&mut k);
+        let logic = build_logic_prelude(&mut k).expect("logic prelude must build");
         let literal_value = corner.value(&mut rng);
         let kind_index = usize::from(matches!(&literal_value, Lit::Str(_)));
         let literal = k.lit(literal_value.clone());

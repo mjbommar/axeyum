@@ -26,7 +26,7 @@ fn lean_bin() -> Option<PathBuf> {
 
 fn restricted_prop_iota_module() -> String {
     let mut kernel = Kernel::new();
-    let logic = build_logic_prelude(&mut kernel);
+    let logic = build_logic_prelude(&mut kernel).expect("logic prelude must build");
     let anon = kernel.anon();
 
     // Two : Prop | a : Two | b : Two. Its recursor must have a Prop-valued

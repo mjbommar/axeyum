@@ -35,7 +35,7 @@ struct Fixture {
 
 fn fixture() -> Fixture {
     let mut k = Kernel::new();
-    let p = build_logic_prelude(&mut k);
+    let p = build_logic_prelude(&mut k).expect("logic prelude must build");
     let anon = k.anon();
 
     // A, B, C : Prop.
@@ -117,7 +117,7 @@ impl Fixture {
 #[allow(clippy::too_many_lines)]
 fn prelude_admits_all_declarations() {
     let mut k = Kernel::new();
-    let p = build_logic_prelude(&mut k);
+    let p = build_logic_prelude(&mut k).expect("logic prelude must build");
 
     for name in [
         p.true_,
@@ -240,7 +240,7 @@ fn prelude_admits_all_declarations() {
 #[test]
 fn false_rec_exists_and_self_checks() {
     let mut k = Kernel::new();
-    let p = build_logic_prelude(&mut k);
+    let p = build_logic_prelude(&mut k).expect("logic prelude must build");
     assert!(k.environment().contains(p.false_rec));
     let rec_ty = k.environment().get(p.false_rec).unwrap().ty();
     let inferred = k.infer(rec_ty).unwrap();
@@ -493,7 +493,7 @@ fn or_case_analysis_checks() {
 #[test]
 fn eq_refl_checks() {
     let mut k = Kernel::new();
-    let p = build_logic_prelude(&mut k);
+    let p = build_logic_prelude(&mut k).expect("logic prelude must build");
     let anon = k.anon();
 
     // A : Sort 1, x : A.
@@ -544,7 +544,7 @@ fn eq_refl_checks() {
 #[test]
 fn eq_symm_checks_and_computes_on_refl() {
     let mut k = Kernel::new();
-    let p = build_logic_prelude(&mut k);
+    let p = build_logic_prelude(&mut k).expect("logic prelude must build");
     let anon = k.anon();
 
     // A : Sort 1, x : A.
@@ -687,7 +687,7 @@ fn ex_falso_checks() {
 #[test]
 fn true_intro_checks() {
     let mut k = Kernel::new();
-    let p = build_logic_prelude(&mut k);
+    let p = build_logic_prelude(&mut k).expect("logic prelude must build");
     let intro = k.const_(p.true_intro, vec![]);
     let inferred = k.infer(intro).unwrap();
     let true_const = k.const_(p.true_, vec![]);
@@ -892,7 +892,7 @@ fn iff_intro_checks() {
 #[test]
 fn exists_intro_checks() {
     let mut k = Kernel::new();
-    let p = build_logic_prelude(&mut k);
+    let p = build_logic_prelude(&mut k).expect("logic prelude must build");
     let anon = k.anon();
     let one = {
         let z = k.level_zero();
@@ -968,7 +968,7 @@ fn exists_intro_checks() {
 #[test]
 fn exists_elim_checks() {
     let mut k = Kernel::new();
-    let p = build_logic_prelude(&mut k);
+    let p = build_logic_prelude(&mut k).expect("logic prelude must build");
     let anon = k.anon();
     let one = {
         let z = k.level_zero();
@@ -1075,7 +1075,7 @@ fn exists_elim_checks() {
 #[test]
 fn datatype_selector_iota_reduces_to_field() {
     let mut k = Kernel::new();
-    let p = build_logic_prelude(&mut k);
+    let p = build_logic_prelude(&mut k).expect("logic prelude must build");
     let anon = k.anon();
 
     // α : Sort 1 (= Type) as an axiom carrier.
@@ -1177,7 +1177,7 @@ fn declare_carrier(k: &mut Kernel, name: &str, sort: crate::LevelId) -> crate::E
 #[test]
 fn computational_bool_has_two_distinct_values() {
     let mut k = Kernel::new();
-    let p = build_logic_prelude(&mut k);
+    let p = build_logic_prelude(&mut k).expect("logic prelude must build");
     let bool_const = k.const_(p.bool_, vec![]);
     let t = k.const_(p.bool_true, vec![]);
     let f = k.const_(p.bool_false, vec![]);
@@ -1200,7 +1200,7 @@ fn computational_bool_has_two_distinct_values() {
 #[test]
 fn datatype_tester_iota_reduces_to_bool() {
     let mut k = Kernel::new();
-    let p = build_logic_prelude(&mut k);
+    let p = build_logic_prelude(&mut k).expect("logic prelude must build");
     let anon = k.anon();
     let z = k.level_zero();
     let one = k.level_succ(z);
@@ -1280,7 +1280,7 @@ fn datatype_tester_iota_reduces_to_bool() {
 #[test]
 fn datatype_family_selector_iota_reduces_to_field() {
     let mut k = Kernel::new();
-    let p = build_logic_prelude(&mut k);
+    let p = build_logic_prelude(&mut k).expect("logic prelude must build");
     let anon = k.anon();
     let z = k.level_zero();
     let one = k.level_succ(z);
@@ -1353,7 +1353,7 @@ fn datatype_family_selector_iota_reduces_to_field() {
 #[test]
 fn prelude_nat_recursor_computes() {
     let mut k = Kernel::new();
-    let p = build_logic_prelude(&mut k);
+    let p = build_logic_prelude(&mut k).expect("logic prelude must build");
     let anon = k.anon();
     let z = k.level_zero();
     let one = k.level_succ(z);
@@ -1462,7 +1462,7 @@ fn int_list_family(
 #[test]
 fn recursive_family_size_iota_reduces() {
     let mut k = Kernel::new();
-    let p = build_logic_prelude(&mut k);
+    let p = build_logic_prelude(&mut k).expect("logic prelude must build");
     let z = k.level_zero();
     let one = k.level_succ(z);
     let alpha = declare_carrier(&mut k, "α", one);

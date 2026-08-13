@@ -981,9 +981,13 @@ positive execution of the newly enforced commands remains a hosted-CI gate.
 | **R1.2** | A regression test must pin mixed-theory environments. | A test builds all preludes in one kernel and checks a mixed ℕ/ℤ statement. |
 | **R1.3** | No library-level code may `.expect()` on a kernel rejection. | Grep for `.expect(` in `prelude.rs`/`*_prelude.rs` returns only genuinely infallible sites. |
 
-This is **TL3.3**, currently TODO. §2.6 Probe 4 shows it is broader than the
-2026-07-15 record: *no two preludes compose at all.* It blocks `thm:rigid`
-(needs ℕ + ℤ), and it blocks any mixed LRA/LIA reconstruction route.
+R1 / **TL3.3 is DONE**. The
+[`R1 result`](lean-prelude-composition-r1-result-2026-08-13.md) records the
+fallible whole-package transactions, exact repeat validation, `Int.*` /
+`Real.*` / parameterized-string namespaces, mixed ℕ/ℤ proof, late-conflict
+rollback control, regenerated 65-row ledger, and focused gates. This removes
+the mixed-environment infrastructure blocker for `thm:rigid`; it does not
+formalize either half of that theorem or choose its signed-defect encoding.
 
 ### R2 — Foundations of ℤ
 

@@ -87,7 +87,7 @@ impl NatOps for Dev {
 impl Dev {
     fn new() -> Self {
         let mut k = Kernel::new();
-        let p = build_nat_prelude(&mut k);
+        let p = build_nat_prelude(&mut k).expect("Nat prelude must build");
         let st = NatState::new(&mut k, p);
         let anon = k.anon();
         let root = k.name_str(anon, "rado");

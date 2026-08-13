@@ -82,6 +82,7 @@ artifact, start from a clean tree and review the complete diff.
 | [`property_corpus_scoreboard`](../../crates/axeyum-property/examples/property_corpus_scoreboard.rs) | `<json\|markdown> [out]` | Regenerates or prints the property consumer scoreboard. Omit `out` for a non-mutating preview. |
 | [`measure_evm`](../../crates/axeyum-evm/examples/measure_evm.rs) | no arguments | Regenerates the committed EVM consumer scoreboard and corpus. It is not a read-only tour. |
 | [`measure_verify`](../../crates/axeyum-verify/examples/measure_verify.rs) | no arguments | Regenerates the committed Rust-verification scoreboard and corpus. It is not a read-only tour. |
+| [`recertify_rado`](../../crates/axeyum-search/examples/recertify_rado.rs) | `<claim-id> [artifact-root]` | Rechecks one committed Rado claim from its hash-bound witness or refutation artifact; it does not discover or strengthen claims. |
 
 The generic release-mode form is:
 

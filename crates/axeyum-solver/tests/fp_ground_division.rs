@@ -3,7 +3,9 @@
 
 use std::time::Duration;
 
+#[cfg(feature = "z3")]
 use axeyum_fp::{FloatFormat, RoundingMode, div};
+#[cfg(feature = "z3")]
 use axeyum_ir::{Assignment, TermArena, Value, eval};
 use axeyum_solver::{CheckResult, SolverConfig, solve_smtlib};
 
@@ -38,6 +40,7 @@ fn refutes_negation_of_public_custom_format_division() {
     assert_eq!(outcome.result, CheckResult::Unsat);
 }
 
+#[cfg(feature = "z3")]
 fn fp_literal(bits: u128) -> String {
     let sign = bits >> 15;
     let exponent = (bits >> 11) & 0xf;
@@ -45,6 +48,7 @@ fn fp_literal(bits: u128) -> String {
     format!("(fp #b{sign} #x{exponent:x} #b{trailing:011b})")
 }
 
+#[cfg(feature = "z3")]
 fn ground_quotient(a_bits: u128, b_bits: u128, mode: RoundingMode) -> u128 {
     let mut arena = TermArena::new();
     let a = arena.bv_const(16, a_bits).unwrap();

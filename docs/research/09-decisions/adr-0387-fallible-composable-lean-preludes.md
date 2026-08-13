@@ -1,6 +1,6 @@
 # ADR-0387: Fallible, transactional, namespaced Lean preludes
 
-Status: proposed
+Status: accepted
 
 Date: 2026-08-13
 
