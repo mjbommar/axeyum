@@ -517,6 +517,26 @@ def validate_claim(path: Path, fragment_ids: set[str], curriculum_ids: set[str],
                                      f"declared {ev['artifact_sha256'][:12]}…, "
                                      f"actual {actual[:12]}…")
 
+    # Every file beside a claim must be named by one of its evidence rows.
+    # An unreferenced file still ships in the arXiv bundle, where it reads as
+    # evidence while nothing says what it is. `cube-cover-315.tsv` sat in the
+    # 313 claim that way -- a partial cover of a DIFFERENT instance, named by
+    # no row, mentioned in no note.
+    named = {Path(ev["artifact"]).name for ev in c["evidence"] if ev.get("artifact")}
+    # The deciding CNF for the claim's OWN n is self-explanatory even without a
+    # row: check-claim-certificates looks for it beside a stored proof. A CNF
+    # for any other n is not.
+    n_param = c.get("formal", {}).get("parameters", {}).get("n")
+    if n_param is not None:
+        named.add(f"F_{n_param}.cnf")
+    for item in sorted(path.parent.iterdir()):
+        if item.is_dir() or item.name == "claim.json" or item.name in named:
+            continue
+        fail(errors, f"{path}: '{item.name}' sits in this claim's directory but "
+                     f"no evidence row names it and it is not this claim's "
+                     f"deciding instance; it would ship as unexplained "
+                     f"evidence. Add a row or remove the file.")
+
     status = c["epistemic_status"]
     if status == "computed" and not has_checked:
         fail(errors, f"{path}: epistemic_status 'computed' requires at least one "
