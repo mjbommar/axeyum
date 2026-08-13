@@ -59,6 +59,7 @@ mod int_prelude;
 mod lean_pp;
 mod level;
 mod name;
+mod nat_prelude;
 mod prelude;
 mod quotient;
 mod string_prelude;
@@ -76,6 +77,7 @@ pub use inductive::InductiveFamilySpec;
 pub use int_prelude::{IntPrelude, build_int_prelude};
 pub use level::{LevelId, LevelNode};
 pub use name::{NameId, NameNode};
+pub use nat_prelude::{NatDev, NatOps, NatPrelude, NatState, build_nat_prelude};
 pub use prelude::{
     DatatypeFamily, DatatypeInductive, LogicPrelude, RecField, RecursiveDatatypeFamily,
     build_logic_prelude,

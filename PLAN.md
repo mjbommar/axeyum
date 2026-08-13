@@ -380,6 +380,29 @@ follow-on work:
 issue register:
 [`findings-register-2026-08-12.md`](docs/plan/findings-register-2026-08-12.md).
 
+**Lane extension — from verification to proof (2026-08-12, later).** The
+general-`k` shell lower bound behind those values was, until this session,
+*verified at 11 computational points and asserted in a Python script*. It is
+now a **theorem with a written, reviewed proof**: for `a >= 2`,
+`gcd(a,b) = 1`, `b < a`, `k >= 2` the shell colouring of `[1,N]` is
+solution-free, so `R_k >= N+1`; together with a closed-form monochromatic
+witness for every `b > a`, `k >= 3` this gives the exact characterisation
+**solution-free iff `b < a` or `k = 2`**, upgrading the previous 19-point
+empirical soundness guard to a proved infinite family. Three routes were run
+concurrently; the one that matters for the north star is that **axeyum's
+in-tree Lean kernel now checks 9 `forall`-quantified theorems over `N` with
+ZERO axioms** — `Nat` is already a real inductive with a real recursor in the
+logic prelude, so induction needed no axiomatisation — and the proof's
+algebra is verified symbolically by **axeyum's own CAS** (`MvPoly`, 118 exact
+checks, 11 negative controls). Everything, including three retracted errors
+of my own, is in
+[`proof-approaches-2026-08-12/`](docs/plan/proof-approaches-2026-08-12/README.md).
+Not claimed: no upper bounds; the construction is **not** tight at `k = 5`
+(318 against a verified 350-witness, with 644,956 cut vectors exhaustively
+enumerated to show 318 is the whole shape's ceiling); and the Lean export has
+**not** been checked by real Lean — `lean`/`lake`/`elan` are absent here, and
+running it elsewhere is the highest-value next measurement.
+
 **Parallel documentation action.** The comprehensive pass and 2026-08-09
 README application/vision revision are closed. Continue only for a concrete
 stale claim; keep application maturity and sub-document links aligned, but do

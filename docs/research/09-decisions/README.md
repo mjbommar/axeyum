@@ -356,6 +356,7 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [0298](adr-0298-preregister-relational-scalar-call-results.md) | Straight-line relational scalar call results as explicit internal havoc symbols plus separate replayable constraints | accepted |
 | [0299](adr-0299-preregister-checked-mir-relational-calls.md) | Accept typed MIR relational scalar calls with separate MIR-body panic and postcondition verification | accepted |
 | [0300](adr-0300-preregister-dense-bit-lowering-memo.md) | Reject dense `TermId` memo indexing at the fixed variance gate and restore BTree despite favorable point estimates | accepted |
+| [0301](adr-0301-cas-layer-reduce-to-decide.md) | A proof-carrying CAS as a separate `axeyum-cas` layer that lowers to the decidable core to certify | proposed |
 | [0302](adr-0302-preregister-symbolic-cve-reproducibility.md) | Preregister exact run/cross-machine authority stability plus backend-invariant finding identity on the admitted symbolic-CVE recall corpus | proposed |
 | [0303](adr-0303-preregister-engine-constraint-cache-factorial.md) | Preregister and freeze the bounded fixed-stream cold/warm x cache-off/exact/implication factorial for engine-cache additivity | accepted |
 | [0304](adr-0304-correct-canonical-cache-identity-and-rerun.md) | Reject the first factorial on textual-query versus canonical-set classification drift; freeze a fresh otherwise-identical rerun against corrected opportunity v2 | accepted |
@@ -439,3 +440,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [0382](adr-0382-backward-drat-checking.md) | Backward (core-first) DRAT checking | proposed |
 | [0383](adr-0383-ground-integer-constant-folding.md) | Ground integer constant folding, declining underspecified division | proposed |
 | [0384](adr-0384-honest-evidence-front-door.md) | Three-valued evidence checking, bounded proof production, retained checking subjects | proposed |
+| [0385](adr-0385-nat-prelude.md) | A proved `Nat` prelude for the Lean kernel — `add`/`mul`/`pow`, the algebraic laws, `Nat.le`, and the `Eq` combinators, with **zero axioms** | proposed |

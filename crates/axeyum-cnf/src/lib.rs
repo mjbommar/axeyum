@@ -41,6 +41,7 @@ use web_time::Instant;
 
 mod alethe;
 mod bve;
+pub mod colouring;
 mod compact;
 mod drat;
 mod drat_backward;
@@ -260,11 +261,29 @@ impl CnfFormula {
     }
 
     /// Renders this formula as DIMACS CNF.
+    ///
+    /// The output is byte-for-byte stable: header, then one clause per line,
+    /// each literal followed by a space and the line closed by `0\n`. Consumers
+    /// compare this text against externally produced instances
+    /// (`tests/colouring_encoding_parity.rs`), so the layout is a contract, not
+    /// a formatting preference.
     pub fn to_dimacs(&self) -> String {
-        let mut out = format!("p cnf {} {}\n", self.variable_count, self.clauses.len());
+        // One pass to size the buffer, then no reallocation: rendering a
+        // ledger-scale instance is millions of literals, and growing a `String`
+        // under them costs more than counting them.
+        let literals: usize = self.clauses.iter().map(|clause| clause.lits.len()).sum();
+        let mut out = String::with_capacity(32 + literals * 7 + self.clauses.len() * 2);
+        out.push_str("p cnf ");
+        push_decimal(&mut out, self.variable_count as u64);
+        out.push(' ');
+        push_decimal(&mut out, self.clauses.len() as u64);
+        out.push('\n');
         for clause in &self.clauses {
             for lit in clause.lits() {
-                out.push_str(&lit.dimacs().to_string());
+                if lit.is_negated() {
+                    out.push('-');
+                }
+                push_decimal(&mut out, u64::from(lit.var().dimacs()));
                 out.push(' ');
             }
             out.push_str("0\n");
@@ -282,6 +301,24 @@ impl CnfFormula {
             })
         }
     }
+}
+
+/// Appends `value` in decimal, without allocating a temporary `String`.
+///
+/// `to_string()` per literal is one heap allocation per literal; a
+/// ledger-scale DIMACS render does hundreds of thousands of them.
+fn push_decimal(out: &mut String, mut value: u64) {
+    let mut digits = [0u8; 20];
+    let mut index = digits.len();
+    loop {
+        index -= 1;
+        digits[index] = b'0' + (value % 10) as u8;
+        value /= 10;
+        if value == 0 {
+            break;
+        }
+    }
+    out.push_str(core::str::from_utf8(&digits[index..]).expect("decimal digits are ASCII"));
 }
 
 /// A full Boolean assignment for a CNF formula.
