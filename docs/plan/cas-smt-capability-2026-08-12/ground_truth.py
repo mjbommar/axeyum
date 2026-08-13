@@ -548,6 +548,39 @@ def axis_h() -> None:
     ok(3 + 2 - 5 == 0, "H5  dl-zero-cycle      sat  : witness x=5 y=2 z=0 (3,2,-5 all tight)")
 
 
+# ---------------------------------------------------------------- axis U
+# Boundary probe for the `cas-int-units` route added in 175372bdc. Every entry
+# has the SYNTACTIC shape that route fires on; most are satisfiable. A route
+# that matches the shape instead of doing the arithmetic answers wrong `unsat`.
+def axis_u() -> None:
+    section("U — unit-shape boundary: sat queries that LOOK like a*p = 1")
+
+    ok(
+        not any(a * p == 1 for a in range(2, 300) for p in range(-300, 0)),
+        "U1  unit-neg-p         unsat: a>=2, p<=-1 => a*p <= -2 (proof)",
+    )
+    ok(2 * 1 == 2, "U2  product-eq-a       sat  : witness a=2 p=1 (RHS is a, not 1)")
+    ok(2 * 0 == 0, "U3  product-eq-0       sat  : witness a=2 p=0")
+    ok(1 * 1 == 1 and (-1) * (-1) == 1, "U4  unit-unbounded     sat  : witness a=1 p=1")
+    ok(
+        not any(a * b == 1 for a in range(2, 300) for b in range(2, 300)),
+        "U5  two-factors-eq-1   unsat: a,b>=2 => a*b>=4 (proof)",
+    )
+    ok(2 * 2 == 4, "U6  two-factors-eq-4   sat  : witness a=2 b=2")
+    ok(
+        not any(a * p == -1 for a in range(2, 300) for p in range(-300, 301)),
+        "U7  unit-minus-one     unsat: |a*p| is 0 or >= 2, never 1 (proof)",
+    )
+    ok(2 * 1 == 2, "U8  product-eq-2       sat  : witness a=2 p=1")
+    ok(
+        not any(
+            a * p * r == 1 for a in range(2, 60) for p in range(-60, 61) for r in range(-60, 61)
+        ),
+        "U9  three-factors-eq-1 unsat: a | 1 impossible for a >= 2 (proof)",
+    )
+    ok(2 * 2 * 2 == 8, "U10 three-factors-eq-8 sat  : witness a=p=r=2")
+
+
 def main() -> int:
     print("Independent ground truth — axeyum is NOT consulted anywhere in this file.")
     axis_a()
@@ -557,6 +590,7 @@ def main() -> int:
     axis_f()
     axis_g()
     axis_h()
+    axis_u()
     print(f"\n=== checked {CHECKED} claims, {len(FAILURES)} failed ===")
     for f in FAILURES:
         print(f"  FAILED: {f}")

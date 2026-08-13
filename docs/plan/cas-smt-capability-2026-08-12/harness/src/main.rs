@@ -141,6 +141,9 @@ enum Axis {
     G,
     /// Anchors that must not regress.
     H,
+    /// Boundary probe for the `cas-int-units` route added in `175372bdc`:
+    /// queries that structurally resemble `a*p = 1` but are satisfiable.
+    U,
 }
 
 impl Axis {
@@ -153,6 +156,7 @@ impl Axis {
             Axis::F => "F",
             Axis::G => "G",
             Axis::H => "H",
+            Axis::U => "U",
         }
     }
     fn name(self) -> &'static str {
@@ -164,6 +168,7 @@ impl Axis {
             Axis::F => "nonzero-polynomial-but-unsat traps",
             Axis::G => "tripwires: huge witnesses / deep theorems / OPEN",
             Axis::H => "anchors that must not regress",
+            Axis::U => "unit-shape boundary: sat queries that LOOK like a*p = 1",
         }
     }
 }
@@ -1597,6 +1602,96 @@ fn corpus() -> Vec<Case> {
                 let d = q.sub(x, y); let k = q.k(3); let e = q.le(d, k); q.assert(e);
                 let d = q.sub(y, z); let k = q.k(2); let e = q.le(d, k); q.assert(e);
                 let d = q.sub(z, x); let k = q.k(-5); let e = q.le(d, k); q.assert(e); q },
+        },
+
+        // ================================================== axis U: unit-shape boundary
+        //
+        // Added AFTER the baseline, to probe the boundary of the `cas-int-units`
+        // route introduced in 175372bdc. Each entry has the syntactic shape the
+        // route fires on (`<product of variables> = <small constant>` under a
+        // lower bound) but most of them are SATISFIABLE. A route that pattern-
+        // matches the shape rather than checking the arithmetic answers a wrong
+        // `unsat` here. Run against BOTH the baseline and the after binary.
+        Case {
+            id: "U1-unit-neg-p", axis: Axis::U, tier: Tier::Core, expect: "unsat",
+            formula: "a >= 2 /\\ p <= -1 /\\ a*p = 1", why: "a*p <= -2 < 1",
+            build: || { let mut q = Q::new();
+                let a = q.var("a"); let p = q.var("p");
+                q.assert_ge_k(a, 2); q.assert_le_k(p, -1);
+                let ap = q.mul(a, p); let one = q.k(1); let e = q.eq(ap, one); q.assert(e); q },
+        },
+        Case {
+            id: "U2-product-eq-a", axis: Axis::U, tier: Tier::Core, expect: "sat",
+            formula: "a >= 2 /\\ a*p = a", why: "witness a=2 p=1 — RHS is `a`, not 1",
+            build: || { let mut q = Q::new();
+                let a = q.var("a"); let p = q.var("p");
+                q.assert_ge_k(a, 2);
+                let ap = q.mul(a, p); let e = q.eq(ap, a); q.assert(e); q },
+        },
+        Case {
+            id: "U3-product-eq-0", axis: Axis::U, tier: Tier::Core, expect: "sat",
+            formula: "a >= 2 /\\ a*p = 0", why: "witness a=2 p=0",
+            build: || { let mut q = Q::new();
+                let a = q.var("a"); let p = q.var("p");
+                q.assert_ge_k(a, 2);
+                let ap = q.mul(a, p); let zero = q.k(0); let e = q.eq(ap, zero); q.assert(e); q },
+        },
+        Case {
+            id: "U4-unit-unbounded", axis: Axis::U, tier: Tier::Core, expect: "sat",
+            formula: "a*p = 1  [no bound on a at all]", why: "witness a=1 p=1 (also a=p=-1)",
+            build: || { let mut q = Q::new();
+                let a = q.var("a"); let p = q.var("p");
+                let ap = q.mul(a, p); let one = q.k(1); let e = q.eq(ap, one); q.assert(e); q },
+        },
+        Case {
+            id: "U5-two-factors-eq-1", axis: Axis::U, tier: Tier::Core, expect: "unsat",
+            formula: "a >= 2 /\\ b >= 2 /\\ a*b = 1", why: "a*b >= 4 > 1",
+            build: || { let mut q = Q::new();
+                let a = q.var("a"); let b = q.var("b");
+                q.assert_ge_k(a, 2); q.assert_ge_k(b, 2);
+                let ab = q.mul(a, b); let one = q.k(1); let e = q.eq(ab, one); q.assert(e); q },
+        },
+        Case {
+            id: "U6-two-factors-eq-4", axis: Axis::U, tier: Tier::Core, expect: "sat",
+            formula: "a >= 2 /\\ b >= 2 /\\ a*b = 4", why: "witness a=2 b=2",
+            build: || { let mut q = Q::new();
+                let a = q.var("a"); let b = q.var("b");
+                q.assert_ge_k(a, 2); q.assert_ge_k(b, 2);
+                let ab = q.mul(a, b); let four = q.k(4); let e = q.eq(ab, four); q.assert(e); q },
+        },
+        Case {
+            id: "U7-unit-minus-one", axis: Axis::U, tier: Tier::Core, expect: "unsat",
+            formula: "a >= 2 /\\ a*p = -1", why: "|a*p| is 0 or >= 2, never 1",
+            build: || { let mut q = Q::new();
+                let a = q.var("a"); let p = q.var("p");
+                q.assert_ge_k(a, 2);
+                let ap = q.mul(a, p); let m1 = q.k(-1); let e = q.eq(ap, m1); q.assert(e); q },
+        },
+        Case {
+            id: "U8-product-eq-2", axis: Axis::U, tier: Tier::Core, expect: "sat",
+            formula: "a >= 2 /\\ a*p = 2", why: "witness a=2 p=1",
+            build: || { let mut q = Q::new();
+                let a = q.var("a"); let p = q.var("p");
+                q.assert_ge_k(a, 2);
+                let ap = q.mul(a, p); let two = q.k(2); let e = q.eq(ap, two); q.assert(e); q },
+        },
+        Case {
+            id: "U9-three-factors-eq-1", axis: Axis::U, tier: Tier::Core, expect: "unsat",
+            formula: "a >= 2 /\\ a*p*r = 1", why: "a | 1 is impossible for a >= 2",
+            build: || { let mut q = Q::new();
+                let a = q.var("a"); let p = q.var("p"); let r = q.var("r");
+                q.assert_ge_k(a, 2);
+                let ap = q.mul(a, p); let apr = q.mul(ap, r);
+                let one = q.k(1); let e = q.eq(apr, one); q.assert(e); q },
+        },
+        Case {
+            id: "U10-three-factors-eq-8", axis: Axis::U, tier: Tier::Core, expect: "sat",
+            formula: "a >= 2 /\\ p >= 2 /\\ r >= 2 /\\ a*p*r = 8", why: "witness a=p=r=2",
+            build: || { let mut q = Q::new();
+                let a = q.var("a"); let p = q.var("p"); let r = q.var("r");
+                q.assert_ge_k(a, 2); q.assert_ge_k(p, 2); q.assert_ge_k(r, 2);
+                let ap = q.mul(a, p); let apr = q.mul(ap, r);
+                let eight = q.k(8); let e = q.eq(apr, eight); q.assert(e); q },
         },
     ]
 }

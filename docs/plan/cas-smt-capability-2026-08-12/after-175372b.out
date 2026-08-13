@@ -1,0 +1,184 @@
+CAS/SMT arithmetic capability corpus — 93 queries
+Ground truth: ../ground_truth.py (independent of axeyum). Route provenance: check_auto_explained.
+MACHINE IS CONTENDED — every wall time below is an UPPER BOUND, not a timing.
+
+
+=== axis A — units / variable-divisor divisibility ===
+  A1-unit-direct         core   want=unsat  got=unsat                     0.00s  DECIDED-OK                   cas-int-units
+  A2-unit-ctrl-a1        core   want=sat    got=sat                       0.00s  DECIDED-OK                   nia-linearize
+      wit | a=1 p=1   (model replays against the goal: yes)
+  A3-unit-neg            core   want=unsat  got=unsat                     0.00s  DECIDED-OK                   cas-int-units
+  A4-unit-ctrl-neg       core   want=sat    got=sat                       0.00s  DECIDED-OK                   nia-linearize
+      wit | a=-1 p=-1   (model replays against the goal: yes)
+  A5-unit-signed         core   want=unsat  got=unsat                     0.00s  DECIDED-OK                   cas-int-units
+  A6-unit-product        core   want=unsat  got=unsat                     0.00s  DECIDED-OK                   cas-int-units
+  A7-notdiv1-witness     core   want=unsat  got=unsat                     0.00s  DECIDED-OK                   lia-dpll
+  A8-notdiv1-wit-ctrl    core   want=sat    got=sat                       0.00s  DECIDED-OK                   dl-online
+      wit | a=2   (model replays against the goal: yes)
+  A9-div-var-x           core   want=unsat  got=unknown(Timeout)         10.00s  UNDECIDED-GAP                (none; last decline: int-blast-ladder)
+  A10-nondiv-x-witness   core   want=unsat  got=unsat                     0.01s  DECIDED-OK                   int-real-relax
+  A11-div-var-x-ctrl     core   want=sat    got=sat                       0.01s  DECIDED-OK                   nia-linearize
+      wit | a=2 b=1 x=2 p=1   (model replays against the goal: yes)
+  A12-cube-nondiv        core   want=unsat  got=unknown(Incomplete)       5.30s  UNDECIDED-GAP                (none; last decline: int-blast-ladder)
+  A13-cube-nondiv-ctrl   core   want=sat    got=sat                       1.72s  DECIDED-OK                   nia-linearize
+      wit | a=2 z=24 p=3   (model replays against the goal: yes)
+  A14-mod-phrasing       core   want=unsat  got=unknown(Incomplete)       0.19s  UNDECIDED-GAP                (none; last decline: int-blast-ladder)
+  A15-mod-phrasing-ctrl  core   want=sat    got=sat                       0.00s  DECIDED-OK                   nia-linearize
+      wit | a=1   (model replays against the goal: yes)
+
+=== axis B — opaque symbol vs instantiated ===
+  B1-opaque-window       core   want=unsat  got=unknown(Timeout)         10.00s  UNDECIDED-GAP                (none; last decline: int-blast-ladder)
+  B2-opaque-window-ctrl  core   want=sat    got=sat                       0.00s  DECIDED-OK                   nia-linearize
+      wit | M=1 c=1   (model replays against the goal: yes)
+  B3-inst-window         core   want=unsat  got=unsat                     0.01s  DECIDED-OK                   nia-linearize
+  B4-inst-window-ctrl    core   want=sat    got=sat                       0.01s  DECIDED-OK                   nia-linearize
+      wit | a=2 w=1 s=0 r=4   (model replays against the goal: yes)
+  B5-opaque-window-M4    core   want=unsat  got=unknown(Timeout)         10.00s  UNDECIDED-GAP                (none; last decline: int-blast-ladder)
+  B6-opaque-mono         core   want=unsat  got=unsat                     0.00s  DECIDED-OK                   int-real-relax
+  B7-inst-mono           core   want=unsat  got=unsat                     0.00s  DECIDED-OK                   int-real-relax
+  B8-opaque-mono-ctrl    core   want=sat    got=sat                       0.00s  DECIDED-OK                   nia-linearize
+      wit | M=1 w=1   (model replays against the goal: yes)
+  B9-uf-opaque-identity  core   want=unsat  got=unsat                     0.00s  DECIDED-OK                   cas-identity-refuter
+  B10-uf-opaque-ctrl     core   want=sat    got=sat                       0.00s  DECIDED-OK                   uf-arithmetic
+      wit | x=0 y=0   (model replays against the goal: yes)
+
+=== axis C — monolithic vs decomposed hypotheses ===
+  C1-mono-k2-colour1     core   want=unsat  got=unknown(Timeout)         10.01s  UNDECIDED-GAP                (none; last decline: int-blast-ladder)
+  C2-mono-k2-no-gcd      core   want=sat    got=sat                       0.67s  DECIDED-OK                   nia-linearize
+      wit | a=2 b=2 t=1 N=4 z=2 x=4 y=2 px=2 py=1   (model replays against the goal: yes)
+  C3-L1-cancel           core   want=unsat  got=unsat                     0.00s  DECIDED-OK                   int-real-relax
+  C4-L1-cancel-ctrl      core   want=sat    got=sat                       0.00s  DECIDED-OK                   nia-linearize
+      wit | a=2 t=0 q=0   (model replays against the goal: yes)
+  C5-L2-positivity       core   want=unsat  got=unsat                     0.00s  DECIDED-OK                   nia-linearize
+  C6-L2-positivity-ctrl  core   want=sat    got=sat                       0.00s  DECIDED-OK                   nia-linearize
+      wit | a=2 t=2 w=1   (model replays against the goal: yes)
+  C7-L3-mono             core   want=unsat  got=unknown(Timeout)         10.00s  UNDECIDED-GAP                (none; last decline: int-blast-ladder)
+  C8-L3-mono-ctrl        core   want=sat    got=sat                       0.03s  DECIDED-OK                   nia-linearize
+      wit | a=2 b=1 w=1 t=2   (model replays against the goal: yes)
+  C9-L4-endpoint         core   want=unsat  got=unsat                     0.00s  DECIDED-OK                   lia-simplex
+  C10-L4-endpoint-ctrl   core   want=sat    got=sat                       0.00s  DECIDED-OK                   lia-simplex
+      wit | y=1 x=1 P=0 M=1   (model replays against the goal: yes)
+  C11-L5-distribute      core   want=unsat  got=unknown(Timeout)         10.00s  UNDECIDED-GAP                (none; last decline: int-blast-ladder)
+  C12-L5-distribute-ctrl core   want=sat    got=sat                       0.02s  DECIDED-OK                   nia-linearize
+      wit | a=0 b=0 t=0 x=0 y=0 px=0 py=0   (model replays against the goal: yes)
+  C13-L6-bezout          core   want=unsat  got=unknown(Timeout)         10.00s  UNDECIDED-GAP                (none; last decline: int-blast-ladder)
+  C14-L6-bezout-ctrl     core   want=sat    got=sat                       0.03s  DECIDED-OK                   nia-linearize
+      wit | a=1 b=1 t=1 d=1 u=1 v=1   (model replays against the goal: yes)
+
+=== axis D — polynomial identities deg 2-4, 2-3 vars ===
+  D1-id2-square          core   want=unsat  got=unsat                     0.00s  DECIDED-OK                   cas-identity-refuter
+  D2-id2-square-ctrl     core   want=sat    got=sat                       0.00s  DECIDED-OK                   nia-linearize
+      wit | x=0 y=0   (model replays against the goal: yes)
+  D3-id3-cube            core   want=unsat  got=unsat                     0.00s  DECIDED-OK                   cas-identity-refuter
+  D4-id3-cube-ctrl       core   want=sat    got=sat                       0.01s  DECIDED-OK                   nia-linearize
+      wit | x=0 y=0   (model replays against the goal: yes)
+  D5-id3-sumcubes        core   want=unsat  got=unsat                     0.00s  DECIDED-OK                   cas-identity-refuter
+  D6-id3-sumcubes-ctrl   core   want=sat    got=sat                       0.01s  DECIDED-OK                   nia-linearize
+      wit | x=0 y=0   (model replays against the goal: yes)
+  D7-id4-binom           core   want=unsat  got=unsat                     0.00s  DECIDED-OK                   cas-identity-refuter
+  D8-id4-binom-ctrl      core   want=sat    got=sat                       0.02s  DECIDED-OK                   nia-linearize
+      wit | x=0 y=0   (model replays against the goal: yes)
+  D9-id2-three-var       core   want=unsat  got=unsat                     0.00s  DECIDED-OK                   cas-identity-refuter
+  D10-id2-three-var-ctrl core   want=sat    got=sat                       0.01s  DECIDED-OK                   nia-linearize
+      wit | x=0 y=0 z=0   (model replays against the goal: yes)
+  D11-id3-cyclic         core   want=unsat  got=unsat                     0.00s  DECIDED-OK                   cas-identity-refuter
+  D12-id3-cyclic-ctrl    core   want=sat    got=sat                       0.04s  DECIDED-OK                   nia-linearize
+      wit | x=0 y=0 z=0   (model replays against the goal: yes)
+  D13-id4-sophie-germain core   want=unsat  got=unsat                     0.00s  DECIDED-OK                   cas-identity-refuter
+  D14-id4-sophie-ctrl    core   want=sat    got=sat                       0.01s  DECIDED-OK                   nia-linearize
+      wit | x=0 y=0   (model replays against the goal: yes)
+  D15-id4-difference     core   want=unsat  got=unsat                     0.00s  DECIDED-OK                   cas-identity-refuter
+  D16-id4-difference-ctrl core   want=sat    got=sat                       0.02s  DECIDED-OK                   nia-linearize
+      wit | x=0 y=0   (model replays against the goal: yes)
+  D17-id-congruence      core   want=unsat  got=unsat                     0.00s  DECIDED-OK                   int-real-relax
+  D18-id-congruence-ctrl core   want=sat    got=sat                       0.00s  DECIDED-OK                   nia-linearize
+      wit | x=2 y=1   (model replays against the goal: yes)
+  D19-id4-brahmagupta    core   want=unsat  got=unsat                     0.00s  DECIDED-OK                   cas-identity-refuter
+  D20-id4-brahmagupta-ctrl core   want=sat    got=sat                       0.03s  DECIDED-OK                   nia-linearize
+      wit | x=0 y=0 z=0   (model replays against the goal: yes)
+
+=== axis F — nonzero-polynomial-but-unsat traps ===
+  F1-square-eq-2         core   want=unsat  got=unsat                     0.00s  DECIDED-OK                   nia-square
+  F2-square-eq-4         core   want=sat    got=sat                       0.00s  DECIDED-OK                   nia-square
+      wit | x=2   (model replays against the goal: yes)
+  F3-sum2sq-3            core   want=unsat  got=unknown(Incomplete)       0.07s  UNDECIDED-GAP                (none; last decline: int-blast-ladder)
+  F4-sum2sq-5            core   want=sat    got=sat                       0.00s  DECIDED-OK                   int-blast-ladder
+      wit | x=-2 y=-1   (model replays against the goal: yes)
+  F5-sum3sq-7            hard   want=unsat  got=unknown(Timeout)         20.00s  UNDECIDED-EXPECTED           (none; last decline: int-blast-ladder)
+  F6-sum3sq-6            core   want=sat    got=sat                       0.00s  DECIDED-OK                   int-blast-ladder
+      wit | x=-2 y=-1 z=-1   (model replays against the goal: yes)
+  F7-pythag-3-5          core   want=unsat  got=unsat                     1.51s  DECIDED-OK                   nia-linearize
+  F8-pythag-3-4          core   want=sat    got=sat                       0.16s  DECIDED-OK                   nia-linearize
+      wit | x=3 y=4 z=5   (model replays against the goal: yes)
+  F9-linear-gcd-3        anchor want=unsat  got=unsat                     0.00s  DECIDED-OK                   lia-diophantine
+  F10-linear-gcd-2       anchor want=sat    got=sat                       0.00s  DECIDED-OK                   lia-simplex
+      wit | x=-1 y=1   (model replays against the goal: yes)
+  F11-sqrt2-descent      hard   want=unsat  got=unknown(Incomplete)       6.74s  UNDECIDED-EXPECTED           (none; last decline: int-blast-ladder)
+  F12-sqrt2-descent-ctrl core   want=sat    got=sat                       0.00s  DECIDED-OK                   nia-linearize
+      wit | x=2 y=1   (model replays against the goal: yes)
+  F13-square-eq-cube     core   want=sat    got=sat                       3.34s  DECIDED-OK                   int-blast-ladder
+      wit | x=8 y=4   (model replays against the goal: yes)
+  F14-mordell-7          hard   want=unsat  got=unknown(Timeout)         20.01s  UNDECIDED-EXPECTED           (none; last decline: int-blast-ladder)
+
+=== axis G — tripwires: huge witnesses / deep theorems / OPEN ===
+  G1-pell-61             tripwire want=sat    got=unknown(Timeout)         20.01s  UNDECIDED-EXPECTED           (none; last decline: int-blast-ladder)
+  G2-pell-109            tripwire want=sat    got=unknown(Timeout)         20.00s  UNDECIDED-EXPECTED           (none; last decline: int-blast-ladder)
+  G3-pell-61-neg         tripwire want=sat    got=unknown(Timeout)         20.00s  UNDECIDED-EXPECTED           (none; last decline: int-blast-ladder)
+  G4-pell-square-d       core   want=unsat  got=unknown(Incomplete)       0.08s  UNDECIDED-GAP                (none; last decline: int-blast-ladder)
+  G5-flt-4               hard   want=unsat  got=unknown(Incomplete)      13.56s  UNDECIDED-EXPECTED           (none; last decline: int-blast-ladder)
+  G6-flt-4-nearmiss      core   want=sat    got=sat                       0.00s  DECIDED-OK                   nia-linearize
+      wit | x=1 y=1 z=1   (model replays against the goal: yes)
+  G7-flt-3               hard   want=unsat  got=unknown(Timeout)         20.01s  UNDECIDED-EXPECTED           (none; last decline: int-blast-ladder)
+  G8-taxicab-1729        core   want=sat    got=sat                       3.35s  DECIDED-OK                   int-blast-ladder
+      wit | x=1 y=12   (model replays against the goal: yes)
+  G9-three-cubes-4       hard   want=unsat  got=unknown(Timeout)         20.00s  UNDECIDED-EXPECTED           (none; last decline: int-blast-ladder)
+  G10-three-cubes-5      hard   want=unsat  got=unknown(Timeout)         20.00s  UNDECIDED-EXPECTED           (none; last decline: int-blast-ladder)
+  G11-three-cubes-3      core   want=sat    got=sat                       0.01s  DECIDED-OK                   int-blast-ladder
+      wit | x=1 y=1 z=1   (model replays against the goal: yes)
+  G12-three-cubes-33     tripwire want=sat    got=unknown(Timeout)         20.00s  UNDECIDED-EXPECTED           (none; last decline: int-blast-ladder)
+  G13-three-cubes-114-OPEN open   want=open   got=unknown(Timeout)         20.00s  OPEN-STAYS-UNKNOWN           (none; last decline: int-blast-ladder)
+  G14-three-cubes-390-OPEN open   want=open   got=unknown(Timeout)         20.00s  OPEN-STAYS-UNKNOWN           (none; last decline: int-blast-ladder)
+  G15-brocard-5          core   want=sat    got=sat                       1.09s  DECIDED-OK                   nia-linearize
+      wit | m=11   (model replays against the goal: yes)
+
+=== axis H — anchors that must not regress ===
+  H1-linear-sat          anchor want=sat    got=sat                       0.00s  DECIDED-OK                   lia-simplex
+      wit | x=2 y=1   (model replays against the goal: yes)
+  H2-linear-unsat        anchor want=unsat  got=unsat                     0.00s  DECIDED-OK                   lia-simplex
+  H3-mul-lower-bound     anchor want=unsat  got=unsat                     0.00s  DECIDED-OK                   int-real-relax
+  H4-dl-negative-cycle   anchor want=unsat  got=unsat                     0.00s  DECIDED-OK                   dl-online
+  H5-dl-zero-cycle       anchor want=sat    got=sat                       0.00s  DECIDED-OK                   dl-online
+      wit | x=0 y=-3 z=-5   (model replays against the goal: yes)
+
+
+===================== SUMMARY =====================
+    69  DECIDED-OK
+     2  OPEN-STAYS-UNKNOWN
+    11  UNDECIDED-EXPECTED
+    11  UNDECIDED-GAP
+
+  --- decided vs undecided, by axis ---
+  axis A: decided  12   unknown   3
+  axis B: decided   8   unknown   2
+  axis C: decided  10   unknown   4
+  axis D: decided  20   unknown   0
+  axis F: decided  10   unknown   4
+  axis G: decided   4   unknown  11
+  axis H: decided   5   unknown   0
+
+  --- deciding routes (count of queries each route decided) ---
+    10  cas-identity-refuter
+     4  cas-int-units
+     3  dl-online
+     5  int-blast-ladder
+     6  int-real-relax
+     1  lia-diophantine
+     1  lia-dpll
+     5  lia-simplex
+    31  nia-linearize
+     2  nia-square
+     1  uf-arithmetic
+
+  ALARMS: 0   ANCHOR REGRESSIONS: 0   BAD MODEL REPLAYS: 0
+
+  wrote after-175372b.json

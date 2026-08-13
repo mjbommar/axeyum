@@ -33,6 +33,9 @@ printing a wrong verdict).
 | [`ground_truth.out`](ground_truth.out) | its output (`91 claims, 0 failed`) |
 | [`harness/`](harness/) | the measurement harness (standalone crate, **not** a workspace member) |
 | [`baseline-9f0f4ed.md`](baseline-9f0f4ed.md) | the baseline result at commit `9f0f4ed`, before the CAS wiring landed |
+| [`after-175372b.md`](after-175372b.md) | **the before/after verdict**: `9f0f4ed` → `175372bdc` (the CAS bridge), per query |
+| [`after-175372b.out`](after-175372b.out) / [`.json`](after-175372b.json) | verbatim harness output at `175372bdc` |
+| [`axisU-baseline-9f0f4ed.out`](axisU-baseline-9f0f4ed.out) / [`axisU-after-175372b.out`](axisU-after-175372b.out) | axis U on both binaries |
 | [`baseline-9f0f4ed.out`](baseline-9f0f4ed.out) | verbatim harness output for that run |
 | [`baseline-9f0f4ed.json`](baseline-9f0f4ed.json) | the same, machine-readable, with full route traces |
 | [`gaps-6x-9f0f4ed.out`](gaps-6x-9f0f4ed.out) | the 13 gaps re-run at 6× budget (still 13 gaps) |
@@ -67,7 +70,13 @@ Flags: `--only <A|B|C|D|F|G|H>` one axis; `--ids a,b,c` named entries;
 | F | 14 | **nonzero-polynomial-but-unsat traps**: integrality beats zero-testing |
 | G | 15 | tripwires — huge witnesses, deep theorems, and two **open** problems |
 | H | 5 | anchors that must not regress |
-| | **93** | |
+| U | 10 | boundary of the `cas-int-units` route: queries that *look* like `a·p = 1` but are `sat` |
+| | **103** | |
+
+Axis U was added after the CAS bridge landed, specifically to try to make the
+new route answer wrongly, and was then run against **both** commits so it has a
+baseline too. Six of its ten entries are satisfiable while carrying the exact
+syntactic shape the route refutes.
 
 Axis F is the sharpest trap for a CAS-backed route. `x·x = 2` is `unsat` over ℤ
 while `x² − 2` is emphatically *not* the zero polynomial. Any route that reasons

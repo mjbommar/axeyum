@@ -1,0 +1,37 @@
+CAS/SMT arithmetic capability corpus — 10 queries
+Ground truth: ../ground_truth.py (independent of axeyum). Route provenance: check_auto_explained.
+MACHINE IS CONTENDED — every wall time below is an UPPER BOUND, not a timing.
+
+
+=== axis U — unit-shape boundary: sat queries that LOOK like a*p = 1 ===
+  U1-unit-neg-p          core   want=unsat  got=unsat                     0.00s  DECIDED-OK                   cas-int-units
+  U2-product-eq-a        core   want=sat    got=sat                       0.00s  DECIDED-OK                   nia-linearize
+      wit | a=2 p=1   (model replays against the goal: yes)
+  U3-product-eq-0        core   want=sat    got=sat                       0.00s  DECIDED-OK                   nia-linearize
+      wit | a=2 p=0   (model replays against the goal: yes)
+  U4-unit-unbounded      core   want=sat    got=sat                       0.00s  DECIDED-OK                   nia-linearize
+      wit | a=1 p=1   (model replays against the goal: yes)
+  U5-two-factors-eq-1    core   want=unsat  got=unsat                     0.00s  DECIDED-OK                   cas-int-units
+  U6-two-factors-eq-4    core   want=sat    got=sat                       0.00s  DECIDED-OK                   nia-linearize
+      wit | a=2 b=2   (model replays against the goal: yes)
+  U7-unit-minus-one      core   want=unsat  got=unsat                     0.00s  DECIDED-OK                   cas-int-units
+  U8-product-eq-2        core   want=sat    got=sat                       0.00s  DECIDED-OK                   nia-linearize
+      wit | a=2 p=1   (model replays against the goal: yes)
+  U9-three-factors-eq-1  core   want=unsat  got=unsat                     0.00s  DECIDED-OK                   cas-int-units
+  U10-three-factors-eq-8 core   want=sat    got=sat                       0.00s  DECIDED-OK                   nia-linearize
+      wit | a=2 p=2 r=2   (model replays against the goal: yes)
+
+
+===================== SUMMARY =====================
+    10  DECIDED-OK
+
+  --- decided vs undecided, by axis ---
+  axis U: decided  10   unknown   0
+
+  --- deciding routes (count of queries each route decided) ---
+     4  cas-int-units
+     6  nia-linearize
+
+  ALARMS: 0   ANCHOR REGRESSIONS: 0   BAD MODEL REPLAYS: 0
+
+  wrote axisU-after-175372b.json

@@ -6,7 +6,7 @@ Independent ground truth — axeyum is NOT consulted anywhere in this file.
   OK    A3  unit-neg           unsat: no a<=-2, |p|<=400 with a*p=1 (proof: |a*p|>=2)
   OK    A4  unit-control-neg   sat  : witness a=-1 p=-1
   OK    A5  unit-signed        unsat: a>=2,p>=1 => a*p>=2 (proof)
-  OK    A6  divides-1          unsat: identical to A1, restated via divides(a,1)
+  OK    A6  unit-product       unsat: a*b >= 2 so (a*b)*p != 1 (proof); scan empty
   OK    A7  notdiv-1-witness   unsat: side conditions hold for every a in [2,5000)
   OK    A8  notdiv-1-wit-ctrl  sat  : r=0 violates 1<=r, so the negation holds
   OK    A9  div-var-x          unsat: scan a<60,b<60,p<4000 empty (proof: a|1)
@@ -109,4 +109,16 @@ Independent ground truth — axeyum is NOT consulted anywhere in this file.
   OK    H4  dl-negative-cycle  unsat: cycle weight 3+2-6 = -1 < 0 (proof)
   OK    H5  dl-zero-cycle      sat  : witness x=5 y=2 z=0 (3,2,-5 all tight)
 
-=== checked 91 claims, 0 failed ===
+=== U — unit-shape boundary: sat queries that LOOK like a*p = 1 ===
+  OK    U1  unit-neg-p         unsat: a>=2, p<=-1 => a*p <= -2 (proof)
+  OK    U2  product-eq-a       sat  : witness a=2 p=1 (RHS is a, not 1)
+  OK    U3  product-eq-0       sat  : witness a=2 p=0
+  OK    U4  unit-unbounded     sat  : witness a=1 p=1
+  OK    U5  two-factors-eq-1   unsat: a,b>=2 => a*b>=4 (proof)
+  OK    U6  two-factors-eq-4   sat  : witness a=2 b=2
+  OK    U7  unit-minus-one     unsat: |a*p| is 0 or >= 2, never 1 (proof)
+  OK    U8  product-eq-2       sat  : witness a=2 p=1
+  OK    U9  three-factors-eq-1 unsat: a | 1 impossible for a >= 2 (proof)
+  OK    U10 three-factors-eq-8 sat  : witness a=p=r=2
+
+=== checked 101 claims, 0 failed ===
