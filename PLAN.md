@@ -47,7 +47,8 @@ or a replacement for the Lean system.
 The Rado/Ramsey-driven
 [`Lean requirements`](docs/plan/lean-kernel-requirements-2026-08-13.md) are
 **WIP**. R1/TL3.3 is the first code blocker; [ADR-0387](docs/research/09-decisions/adr-0387-fallible-composable-lean-preludes.md)
-specifies the migration. R0.1 and R6.1/R6.2 are implemented locally.
+specifies the migration. R0.1 and R6.1/R6.2 are pushed at `b8642b98f`;
+hosted CI is running.
 
 Exact pushed `e996afd83` passed `just check`; its RDL capture then failed closed
 at 196/200 because allocator arenas accumulated across files. ADR-0379 rejects
