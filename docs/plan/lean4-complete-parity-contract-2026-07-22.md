@@ -94,7 +94,10 @@ The current negative evidence is equally binding:
 - String literals and the dependency-closed complete K1 population remain
   open; the selected 5/5 fixture total is not complete K1 authority;
 - no K2-K6 row is satisfied;
-- all 65 reconstruction-prelude assumptions remain semantically unclassified;
+- all 65 reconstruction-prelude assumptions are classified by the generated
+  [`lean-axiom-ledger-v1.json`](lean-axiom-ledger-v1.json); their classifications
+  do not discharge the retained assumptions, and the seven derivable-theorem
+  rows remain planned rather than proved;
   and
 - the first post-repair remote Lean job did not reach the representative
   solver-proof sweep. It failed in the strict-positivity cross-check because
@@ -895,7 +898,10 @@ Before another broad implementation claim:
     [proposed ADR-0365](../research/09-decisions/adr-0365-preregister-lean-quotient-package.md)
     and its [P0-M4 plan](lean-quotient-package-tl2.10-plan-2026-07-23.md), but
     the authorization-gated M4 differential and final acceptance remain open;
-11. classify all 65 prelude assumptions before reporting broader proof parity;
+11. use the generated [`lean-axiom-ledger-v1.json`](lean-axiom-ledger-v1.json)
+    as the semantic-classification authority for all 65 prelude assumptions,
+    and discharge its derivable-theorem rows before reporting broader proof
+    parity;
 12. turn the pinned mathlib tree inventory into module/declaration/dependency/
     tactic/test manifests before assigning any coverage percentage; and
 13. keep the landed documentation claim guard enforced and expand its live

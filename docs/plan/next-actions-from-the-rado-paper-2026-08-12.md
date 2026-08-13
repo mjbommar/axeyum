@@ -245,7 +245,10 @@ totality, decidability, or `le_of_succ_le_succ` inversion.
 genuinely number-theoretic — which is to say, for formalizing this paper's
 actual theorems rather than its arithmetic identities. Route: inversion of
 `<=`, subtraction, then gcd by well-founded recursion (`Acc`-shaped recursion
-is the one capability not yet probed).
+is no longer an unprobed kernel shape: reflexive and recursive-indexed fields
+now admit. The remaining work is to declare `Acc`/`WellFounded`, verify the
+generated `Acc.rec` is usable, and check one end-to-end gcd definition; native
+well-founded source elaboration remains a separate frontend capability).
 
 ### B8. Regenerate the 34 binary-DRAT proofs
 

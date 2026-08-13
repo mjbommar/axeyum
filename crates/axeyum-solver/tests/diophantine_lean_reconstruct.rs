@@ -152,7 +152,11 @@ fn x_eq_one_and_x_eq_two_zero_eq_const_reconstructs_to_false() {
     assert!(source.contains("axeyum_refutation"));
 }
 
-/// Locate a `lean` binary (env override or `PATH`/elan); `None` ⇒ skip.
+fn lean_required() -> bool {
+    std::env::var("AXEYUM_REQUIRE_LEAN").as_deref() == Ok("1")
+}
+
+/// Locate a `lean` binary (env override or `PATH`/elan); `None` ⇒ optional skip.
 fn lean_bin() -> Option<PathBuf> {
     if let Ok(p) = std::env::var("AXEYUM_LEAN_BIN") {
         let pb = PathBuf::from(p);
@@ -204,6 +208,10 @@ fn diophantine_module_checks_in_real_lean() {
     assert_eq!(frag, ProofFragment::Diophantine);
 
     let Some(bin) = lean_bin() else {
+        assert!(
+            !lean_required(),
+            "AXEYUM_REQUIRE_LEAN=1 but no Lean binary was found (1 module NOT checked)"
+        );
         eprintln!("[skip] diophantine: lean binary not found; set AXEYUM_LEAN_BIN to enable");
         return;
     };

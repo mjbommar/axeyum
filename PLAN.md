@@ -4,7 +4,7 @@
 for current project status, ordered work, blockers, and resume guidance. Read it
 first and update it before ending a project-level work session.
 
-- Last consolidated: **2026-08-12**
+- Last consolidated: **2026-08-13**
 - Current `main` contains linear A5 through exact commit
   `4b6b765556c4ff1fb4dc47ffd75568a3ed1f9246` by conflict-free fast-forward
 - Active A5 large-equality DL repair: code at exact pushed
@@ -43,6 +43,11 @@ default path, replay-checked SAT models, multiple independently checked UNSAT
 evidence routes, broad but uneven theory support, an independent Lean-core
 checker/importer, and several consumers. It is not yet a drop-in Z3 replacement
 or a replacement for the Lean system.
+
+The Rado/Ramsey-driven
+[`Lean requirements`](docs/plan/lean-kernel-requirements-2026-08-13.md) are
+**WIP**. R1/TL3.3 is the first code blocker; [ADR-0387](docs/research/09-decisions/adr-0387-fallible-composable-lean-preludes.md)
+specifies the migration. R0.1 and R6.1/R6.2 are implemented locally.
 
 Exact pushed `e996afd83` passed `just check`; its RDL capture then failed closed
 at 196/200 because allocator arenas accumulated across files. ADR-0379 rejects
@@ -333,11 +338,10 @@ here as closed evidence boundaries. A3 remains incomplete, but all currently
 preregistered bounded mechanisms are closed negatively. A4 has now also yielded;
 A5 is the first active item.
 
-**Immediate action (`WIP`).** From clean, remote-matching `main`, resume V2
-QF_RDL row 1 under the existing atomic protocol. Only its strict zero-loss join
-may authorize the
-frozen three-division derivation. Failed, old, and incidental gate streams
-remain non-credited.
+**Immediate action (`WIP`, user-directed Lean lane).** Execute R1 under proposed
+ADR-0387 with mixed Nat/Int/Real and mutation controls. Preserve the paper's disclosure that
+its 14-theorem Lean-syntax export is unchecked by real Lean. The prior A5 V2
+QF_RDL row-1 action remains pending, neither credited nor cancelled.
 
 **New lane — axeyum-proved mathematics (2026-08-12).** A full-day frontier
 run produced two previously unknown four-colour Rado numbers,

@@ -192,6 +192,10 @@ jobs:
       - run: cargo test -p axeyum-lean-kernel --test real_lean_inductive_crosscheck -- --nocapture
       - run: cargo test -p axeyum-lean-kernel --test real_lean_nat_literal_crosscheck -- --nocapture
       - run: cargo test -p axeyum-lean-kernel --test real_lean_strict_positivity_crosscheck -- --nocapture
+      - run: cargo test -p axeyum-lean-kernel --test real_lean_structure_eta_crosscheck -- --nocapture
+      - run: cargo test -p axeyum-solver --features full --test diophantine_lean_reconstruct diophantine_module_checks_in_real_lean -- --exact --nocapture
+      - run: cargo test -p axeyum-solver --features full --test int_inequality_lean_reconstruct int_inequality_module_checks_in_real_lean -- --exact --nocapture
+      - run: cargo test -p axeyum-solver --features full --test regex_emptiness_lean_reconstruct regex_emptiness_module_checks_in_real_lean -- --exact --nocapture
       # One module from every registered solver-proof family. The exhaustive
       # every-module sweep remains an explicit release/scheduled stress gate.
       # Resolve the installed binary explicitly so absence cannot become the

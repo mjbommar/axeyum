@@ -267,6 +267,10 @@ fn diff_mult_module_checks_in_real_lean() {
     assert_eq!(frag, ProofFragment::IntInequality);
 
     let Some(bin) = lean_bin() else {
+        assert!(
+            !lean_required(),
+            "AXEYUM_REQUIRE_LEAN=1 but no Lean binary was found (1 module NOT checked)"
+        );
         eprintln!("[skip] diff_mult: lean binary not found; set AXEYUM_LEAN_BIN to enable");
         return;
     };
@@ -396,6 +400,10 @@ fn eq_bound_module_checks_in_real_lean() {
     assert_eq!(frag, ProofFragment::IntInequality);
 
     let Some(bin) = lean_bin() else {
+        assert!(
+            !lean_required(),
+            "AXEYUM_REQUIRE_LEAN=1 but no Lean binary was found (1 module NOT checked)"
+        );
         eprintln!("[skip] eq_bound: lean binary not found; set AXEYUM_LEAN_BIN to enable");
         return;
     };
@@ -421,7 +429,11 @@ fn eq_bound_module_checks_in_real_lean() {
     eprintln!("[lean ok] eq_bound: {}", stdout.trim().replace('\n', " | "));
 }
 
-/// Locate a `lean` binary (env override or `PATH`/elan); `None` ⇒ skip.
+fn lean_required() -> bool {
+    std::env::var("AXEYUM_REQUIRE_LEAN").as_deref() == Ok("1")
+}
+
+/// Locate a `lean` binary (env override or `PATH`/elan); `None` ⇒ optional skip.
 fn lean_bin() -> Option<PathBuf> {
     if let Ok(p) = std::env::var("AXEYUM_LEAN_BIN") {
         let pb = PathBuf::from(p);
@@ -472,6 +484,10 @@ fn int_inequality_module_checks_in_real_lean() {
     assert_eq!(frag, ProofFragment::IntInequality);
 
     let Some(bin) = lean_bin() else {
+        assert!(
+            !lean_required(),
+            "AXEYUM_REQUIRE_LEAN=1 but no Lean binary was found (1 module NOT checked)"
+        );
         eprintln!("[skip] int_inequality: lean binary not found; set AXEYUM_LEAN_BIN to enable");
         return;
     };
