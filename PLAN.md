@@ -46,9 +46,6 @@ evidence routes, broad but uneven theory support, an independent Lean-core
 checker/importer, and several consumers. It is not yet a drop-in Z3 replacement
 or a replacement for the Lean system.
 
-The 2026-08-09 README-only pass adds an application map and architecture/vision
-guide; it changes no capability, evidence, measurement, or roadmap claim.
-
 Exact pushed `e996afd83` passed `just check`; its RDL capture then failed closed
 at 196/200 because allocator arenas accumulated across files. ADR-0379 rejects
 allocator tuning and uses one inherited-limit child at a time. The isolated
@@ -373,7 +370,12 @@ including zero divisors (ADR-0383) and gated by the zero-divisor differential
 fuzz; `axeyum-search` is a workspace member with the min-conflicts SLS,
 offline cover certification, and the in-tree `recertify_rado` driver. The 34
 binary-DRAT ledger rows (B8) are being regenerated with axeyum's own core
-across the s6/s7 fleet. Ordered follow-on work:
+across the fleet: all 34 verified, the trusted path is axeyum-only
+(38 claims, 0 errors), and the session landed on main at `b5cc9e73d`,
+passing the complete 79-gate `check.sh` aggregate with zero failures
+(s5, 2026-08-12). A new claim records `R_4(5(x-y)=4z) > 740`, witness
+verified, the 741 refutation scoped in its frontier block. Ordered
+follow-on work:
 [`rado-session-diary-and-roadmap-2026-08-12.md`](docs/plan/rado-session-diary-and-roadmap-2026-08-12.md);
 issue register:
 [`findings-register-2026-08-12.md`](docs/plan/findings-register-2026-08-12.md).
