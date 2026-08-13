@@ -100,6 +100,21 @@ step "build-release" 3600 cargo build --release --workspace --features full
 case "$ROLE" in
 
   gate)
+    # scripts/check.sh is documented as the fresh-machine fallback that needs
+    # no `just`. That is not true transitively: the smtcomp readiness contract
+    # registers ("just", "check") as its gate command and errors with
+    # "registered full-preparation gate executable is unavailable" when it is
+    # absent -- which reads like a contract violation and is a missing tool.
+    # Measured on s7 (2026-08-13): 52 of those tests pass locally where `just`
+    # exists, and fail there where it does not. Say so before spending 90
+    # minutes to find out.
+    for tool in just python3 cargo; do
+      command -v "$tool" >/dev/null || {
+        echo "  WARNING: '$tool' is not on PATH. The aggregate gate needs it;"
+        echo "           expect a failure that looks like a contract violation"
+        echo "           and is a missing prerequisite."
+      }
+    done
     step "aggregate-gate" 21600 bash scripts/check.sh
     ;;
 
