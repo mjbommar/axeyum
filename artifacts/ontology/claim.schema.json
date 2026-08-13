@@ -18,29 +18,51 @@
     "evidence"
   ],
   "properties": {
-    "schema_version": { "type": "integer", "minimum": 1 },
+    "schema_version": {
+      "type": "integer",
+      "minimum": 1
+    },
     "id": {
       "type": "string",
       "pattern": "^[a-z0-9][a-z0-9-]*$",
       "description": "Stable kebab-case identity; equals the containing directory name."
     },
-    "title": { "type": "string", "minLength": 3 },
+    "title": {
+      "type": "string",
+      "minLength": 3
+    },
     "statement": {
       "type": "string",
       "minLength": 10,
       "description": "The claim in one or two precise human sentences, including quantifier ranges. This is what the evidence is evidence FOR."
     },
     "epistemic_status": {
-      "enum": ["axiom", "proved", "computed", "empirical", "conjectured", "open"],
+      "enum": [
+        "axiom",
+        "proved",
+        "computed",
+        "empirical",
+        "conjectured",
+        "open"
+      ],
       "description": "math-education graph/vocab semantics, verbatim: axiom=assumed; proved=general-case proof; computed=established by calculation or exhaustive check over a stated range; empirical=observed; conjectured=believed, unproved; open=nobody knows."
     },
     "formal": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["language", "family", "parameters"],
+      "required": [
+        "language",
+        "family",
+        "parameters"
+      ],
       "properties": {
         "language": {
-          "enum": ["cnf-family", "smtlib2", "axeyum-term", "prose-only"],
+          "enum": [
+            "cnf-family",
+            "smtlib2",
+            "axeyum-term",
+            "prose-only"
+          ],
           "description": "How the claim is mechanized. cnf-family: a parameterized generator emits the deciding CNF. prose-only claims cannot carry checked evidence."
         },
         "family": {
@@ -67,44 +89,70 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["graph", "ref", "relation", "resolved"],
+        "required": [
+          "graph",
+          "ref",
+          "relation",
+          "resolved"
+        ],
         "properties": {
-          "graph": { "enum": ["math-education"] },
+          "graph": {
+            "enum": [
+              "math-education"
+            ]
+          },
           "ref": {
             "type": "string",
             "pattern": "^(C|M|TQ|TH|TM)|^(C:[a-z0-9][a-z0-9./-]*@[a-z]+)$",
             "description": "A concept (C:slug), encounter (C:slug@level), misconception (M:slug), technique (TQ:slug), thread or theme id."
           },
           "relation": {
-            "enum": ["instance-of", "exercises", "refutes", "frontier-of", "uses-technique"],
+            "enum": [
+              "instance-of",
+              "exercises",
+              "refutes",
+              "frontier-of",
+              "uses-technique"
+            ],
             "description": "instance-of: the claim instantiates the concept. exercises: deciding it exercises the concept at that encounter depth. refutes: machine evidence against a misconception. frontier-of: the claim sits on the open frontier of the concept. uses-technique: the proof/search uses the technique."
           },
           "resolved": {
             "type": "boolean",
             "description": "True only if the target id exists in the pinned graph snapshot named by provenance.graph_pin."
           },
-          "note": { "type": "string" }
+          "note": {
+            "type": "string"
+          }
         }
       }
     },
     "axeyum_refs": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["fragments"],
+      "required": [
+        "fragments"
+      ],
       "properties": {
         "fragments": {
           "type": "array",
-          "items": { "type": "string", "pattern": "^[a-z0-9_]+$" },
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z0-9_]+$"
+          },
           "description": "smt-fragments.json row ids exercised by the deciding route, e.g. [\"qf_bv\"]; empty if decided outside axeyum."
         },
         "curriculum_nodes": {
           "type": "array",
-          "items": { "type": "string" },
+          "items": {
+            "type": "string"
+          },
           "description": "docs/curriculum/curriculum.toml node ids."
         },
         "concept_ids": {
           "type": "array",
-          "items": { "type": "string" },
+          "items": {
+            "type": "string"
+          },
           "description": "artifacts/ontology/foundational-concepts.json row ids."
         },
         "scenario_family": {
@@ -116,7 +164,12 @@
     "provenance": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["conjectured_by", "searched_by", "checked_by", "date"],
+      "required": [
+        "conjectured_by",
+        "searched_by",
+        "checked_by",
+        "date"
+      ],
       "properties": {
         "conjectured_by": {
           "type": "string",
@@ -124,29 +177,46 @@
         },
         "searched_by": {
           "type": "array",
-          "items": { "type": "string" },
+          "items": {
+            "type": "string"
+          },
           "description": "UNTRUSTED search tools with versions, e.g. 'kissat 4.0.4', 'lsearch (min-conflicts, seed 12345)'. Nothing here is in the trust base."
         },
         "checked_by": {
           "type": "array",
-          "items": { "type": "string" },
+          "items": {
+            "type": "string"
+          },
           "description": "TRUSTED disposers with versions: independent verifiers, certificate checkers. Every definitive evidence row names at least one."
         },
-        "date": { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}$" },
-        "machine": { "type": "string" },
+        "date": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+        },
+        "machine": {
+          "type": "string"
+        },
         "toolchain": {
           "type": "object",
           "additionalProperties": false,
           "description": "Pinned identity of the software that produced regenerable evidence. REQUIRED whenever any evidence row carries a `regeneration` block: a recipe without a pinned toolchain is not reproducible, because a different build produces a different artifact and the recorded hash becomes unfalsifiable.",
-          "required": ["axeyum_commit", "rustc_version"],
+          "required": [
+            "axeyum_commit",
+            "rustc_version"
+          ],
           "properties": {
             "axeyum_commit": {
               "type": "string",
               "pattern": "^[0-9a-f]{40}$",
               "description": "40-hex commit of this repository at build time."
             },
-            "rustc_version": { "type": "string" },
-            "target": { "type": "string", "description": "Target triple or arch." },
+            "rustc_version": {
+              "type": "string"
+            },
+            "target": {
+              "type": "string",
+              "description": "Target triple or arch."
+            },
             "dirty": {
               "type": "boolean",
               "description": "True if the working tree had uncommitted changes at build time. A dirty build cannot be reproduced from the commit alone, so a regenerable evidence row built dirty is recorded honestly rather than silently."
@@ -163,11 +233,21 @@
           "items": {
             "type": "object",
             "additionalProperties": false,
-            "required": ["citation", "establishes"],
+            "required": [
+              "citation",
+              "establishes"
+            ],
             "properties": {
-              "citation": { "type": "string" },
-              "url": { "type": "string" },
-              "establishes": { "type": "string", "description": "Exactly what the cited work establishes, so our delta is auditable." }
+              "citation": {
+                "type": "string"
+              },
+              "url": {
+                "type": "string"
+              },
+              "establishes": {
+                "type": "string",
+                "description": "Exactly what the cited work establishes, so our delta is auditable."
+              }
             }
           }
         }
@@ -179,11 +259,28 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["id", "kind", "supports", "check_status", "checker_command"],
+        "required": [
+          "id",
+          "kind",
+          "supports",
+          "check_status",
+          "checker_command"
+        ],
         "properties": {
-          "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" },
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9-]*$"
+          },
           "kind": {
-            "enum": ["witness-replay", "unsat-certificate", "cube-cover", "exhaustive-enumeration", "published-value-replication", "bound-citation"],
+            "enum": [
+              "witness-replay",
+              "unsat-certificate",
+              "cube-cover",
+              "exhaustive-enumeration",
+              "published-value-replication",
+              "bound-citation",
+              "instance-pin"
+            ],
             "description": "witness-replay: a concrete object re-validated against the definition. unsat-certificate: DRAT/LRAT/Farkas artifact re-checked by an independent checker. cube-cover: a decomposed refutation — every cube of an exhaustive case split independently refuted and its proof checked; the artifact is the per-cube ledger and the checker re-verifies exhaustiveness against the formula's own case-split clauses. exhaustive-enumeration: full finite sweep. published-value-replication: our pipeline reproduces a cited value. bound-citation: a bound taken from literature, NOT machine-checked here."
           },
           "parameters": {
@@ -199,32 +296,75 @@
             "type": "string",
             "description": "Repo-relative path of the evidence artifact (colouring, DRAT file, log)."
           },
-          "artifact_sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+          "artifact_sha256": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          },
           "regeneration": {
             "type": "object",
             "additionalProperties": false,
             "description": "For evidence too large to distribute: the exact command that reproduces the artifact and the SHA-256 of what it produces. Because checking a proof costs orders of magnitude more than regenerating it, a recipe plus a hash imposes almost no extra cost on a verifier while removing gigabytes from the record. Requires provenance.toolchain.",
-            "required": ["command", "produces_sha256"],
+            "required": [
+              "command",
+              "produces_sha256"
+            ],
             "properties": {
               "command": {
                 "type": "string",
                 "description": "Exact, runnable command producing the artifact."
               },
-              "produces_sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
-              "bytes": { "type": "integer", "minimum": 0 },
-              "approx_wall_seconds": { "type": "number", "minimum": 0 },
-              "note": { "type": "string" }
+              "produces_sha256": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{64}$"
+              },
+              "bytes": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "approx_wall_seconds": {
+                "type": "number",
+                "minimum": 0
+              },
+              "note": {
+                "type": "string"
+              }
             }
           },
           "check_status": {
-            "enum": ["checked", "replay-only", "not-checked"],
+            "enum": [
+              "checked",
+              "replay-only",
+              "not-checked"
+            ],
             "description": "checked: an independent checker validated the artifact and the run is recorded. replay-only: re-derived but not by an independent tool. not-checked: recorded, no machine validation (mandatory for bound-citation)."
           },
           "checker_command": {
             "type": "string",
             "description": "Exact reproduction command, or 'none' for bound-citation rows."
           },
-          "notes": { "type": "string" }
+          "notes": {
+            "type": "string"
+          },
+          "artifact_format": {
+            "type": "string",
+            "enum": [
+              "drat-text",
+              "drat-text-gzip",
+              "drat-binary",
+              "drat-binary-gzip",
+              "dimacs-cnf",
+              "colouring-text",
+              "tsv-ledger"
+            ],
+            "description": "Dialect of the stored artifact, read from its BYTES by the validator and never taken from this record's say-so (findings register B8)."
+          },
+          "distribution": {
+            "type": "string",
+            "enum": [
+              "regenerable"
+            ],
+            "description": "Set by a bundle builder on rows whose artifact that bundle deliberately does not carry. The row must still record artifact_sha256, so what regeneration has to produce stays pinned. Never set in the ledger itself."
+          }
         }
       }
     },
@@ -232,24 +372,33 @@
       "type": "object",
       "additionalProperties": false,
       "description": "Present iff epistemic_status is 'conjectured' or 'open': what is known and what would settle it. This is the field that makes open problems first-class instead of unrepresentable.",
-      "required": ["known", "would_settle"],
+      "required": [
+        "known",
+        "would_settle"
+      ],
       "properties": {
         "known": {
           "type": "array",
-          "items": { "type": "string" },
+          "items": {
+            "type": "string"
+          },
           "description": "Current best bounds/partial results with their evidence ids or citations."
         },
         "would_settle": {
           "type": "string",
           "description": "The concrete artifact that would settle the claim, e.g. 'an UNSAT certificate for F_n at any n, plus a verified colouring at n-1'."
         },
-        "attack_notes": { "type": "string" }
+        "attack_notes": {
+          "type": "string"
+        }
       }
     },
     "supersedes": {
       "type": "string",
       "description": "Claim id this record supersedes (e.g. a strictly better bound)."
     },
-    "notes": { "type": "string" }
+    "notes": {
+      "type": "string"
+    }
   }
 }

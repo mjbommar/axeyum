@@ -34,20 +34,24 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 CLAIMS = ROOT / "artifacts" / "claims"
 
-# Second base for resolving in-claim paths, set only in bundle mode. Paths are
-# written relative to whatever tree the claim lives in: repo-root-relative
-# here and in the negative fixtures, bundle-relative in a shipped snapshot.
-# Try both -- replacing the repo root outright breaks the fixtures.
+# The tree named by --root, when one is given. It is tried FIRST when
+# resolving in-claim paths; the repo root is only a fallback. See resolve().
 ALT_ROOT: "Path | None" = None
 
 
 def resolve(rel: str) -> Path:
-    """Resolve an in-claim path against the repo root, then the bundle root."""
-    primary = ROOT / rel
-    if primary.exists() or ALT_ROOT is None:
-        return primary
-    alt = ALT_ROOT / rel
-    return alt if alt.exists() else primary
+    """Resolve an in-claim path against --root first, then this repo."""
+    # The tree named by --root WINS. Resolving against this script's own repo
+    # first was a real trap: a snapshot that kept repo-relative paths would be
+    # "checked" against the ORIGINAL repo's files instead of the snapshot's,
+    # silently, and report success. Fall back to the repo root only when the
+    # named tree does not have the file -- which is what the negative fixtures
+    # need, since they pass repo-relative paths through --root.
+    if ALT_ROOT is not None:
+        alt = ALT_ROOT / rel
+        if alt.exists():
+            return alt
+    return ROOT / rel
 
 
 SCHEMA = ROOT / "artifacts" / "ontology" / "claim.schema.json"
@@ -266,6 +270,43 @@ def check_artifact_format(errors: list[str], path: Path, ev: dict,
             fail(errors, f"{path}: evidence '{eid}' is a 'checked' certificate "
                          f"whose proof does not end in the empty clause, so it "
                          f"does not derive a contradiction")
+
+
+def schema_drift() -> list[str]:
+    """Require claim.schema.json to agree with the vocabulary enforced here.
+
+    The schema was previously checked only for EXISTENCE -- nothing ever read
+    it -- while this file's own sets did the real validating. Predictably the
+    two drifted: the schema declared `additionalProperties: false` and knew
+    nothing of `artifact_format` or `distribution`, both of which the ledger
+    uses and this validator accepts. A schema no code reads is decoration, and
+    a decorative schema that contradicts the checker is worse than none.
+
+    This does not make the schema authoritative; it makes the disagreement an
+    error, which is what stops the drift.
+    """
+    errors: list[str] = []
+    try:
+        s = json.loads(SCHEMA.read_text())
+        item = s["properties"]["evidence"]["items"]
+    except (OSError, KeyError, json.JSONDecodeError) as e:
+        return [f"{SCHEMA}: unreadable or unexpected shape ({e})"]
+
+    declared = set(item.get("properties", {}))
+    enforced = EVIDENCE_REQUIRED | EVIDENCE_OPTIONAL
+    for name in sorted(enforced - declared):
+        errors.append(f"{SCHEMA}: evidence field '{name}' is accepted by this "
+                      f"validator but absent from the schema, which sets "
+                      f"additionalProperties=false")
+    for name in sorted(declared - enforced):
+        errors.append(f"{SCHEMA}: evidence field '{name}' is in the schema but "
+                      f"this validator neither requires nor allows it")
+
+    schema_kinds = set(item.get("properties", {}).get("kind", {}).get("enum", []))
+    if schema_kinds and schema_kinds != EVIDENCE_KINDS:
+        errors.append(f"{SCHEMA}: evidence.kind enum {sorted(schema_kinds)} "
+                      f"disagrees with {sorted(EVIDENCE_KINDS)}")
+    return errors
 
 
 def load_fragment_ids() -> set[str] | None:
@@ -521,6 +562,10 @@ def main() -> int:
         else:
             print("missing claim.schema.json", file=sys.stderr)
             return 1
+    if (drift := schema_drift()):
+        for d in drift:
+            print(f"ERROR {d}", file=sys.stderr)
+        return 1
     fragment_ids = load_fragment_ids()
     curriculum_ids = load_curriculum_ids()
     math_ed_ids = load_math_ed_ids()

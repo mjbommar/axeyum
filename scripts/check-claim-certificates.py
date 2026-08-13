@@ -47,22 +47,27 @@ CLAIMS = ROOT / "artifacts" / "claims"
 # indistinguishable from a checked one.
 NOT_RECHECKED: list[str] = []
 
-# A second base for resolving artifact paths, set only in bundle mode.
-# Artifact paths are written relative to whatever tree the claim lives in:
-# repository-root-relative here and in the negative fixtures, bundle-relative
-# in a shipped snapshot. Trying both is what lets one checker serve both
-# without a flag; anchoring on one alone breaks the other, and re-anchoring
-# unconditionally is how the negative fixtures were briefly broken.
+# The tree named by --root, when one is given. Artifact paths are written
+# relative to whatever tree the claim lives in: bundle-relative in a shipped
+# snapshot, repository-root-relative here and in the negative fixtures. The
+# named tree is tried FIRST and the repo root only as a fallback -- see
+# artifact_path for why that order is the safe one.
 ALT_ROOT: Path | None = None
 
 
 def artifact_path(art: str) -> Path:
-    """Resolve an artifact path against the repo root, then the bundle root."""
-    primary = ROOT / art
-    if primary.exists() or ALT_ROOT is None:
-        return primary
-    alt = ALT_ROOT / art
-    return alt if alt.exists() else primary
+    """Resolve an artifact path against --root first, then this repo."""
+    # The tree named by --root WINS. Resolving against this script's own repo
+    # first was a real trap: a snapshot that kept repo-relative paths would be
+    # "checked" against the ORIGINAL repo's files instead of the snapshot's,
+    # silently, and report success. Fall back to the repo root only when the
+    # named tree does not have the file -- which is what the negative fixtures
+    # need, since they pass repo-relative paths through --root.
+    if ALT_ROOT is not None:
+        alt = ALT_ROOT / art
+        if alt.exists():
+            return alt
+    return ROOT / art
 
 
 RADO_FAMILY = "rado-colouring-a(x-y)=bz"
