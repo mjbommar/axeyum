@@ -43,7 +43,7 @@ LANGUAGES = {"cnf-family", "smtlib2", "axeyum-term", "prose-only"}
 RELATIONS = {"instance-of", "exercises", "refutes", "frontier-of", "uses-technique"}
 EVIDENCE_KINDS = {"witness-replay", "unsat-certificate", "cube-cover",
                   "exhaustive-enumeration", "published-value-replication",
-                  "bound-citation"}
+                  "bound-citation", "instance-pin"}
 CHECK_STATUS = {"checked", "replay-only", "not-checked"}
 ID_RE = re.compile(r"^[a-z0-9][a-z0-9-]*$")
 SHA_RE = re.compile(r"^[0-9a-f]{64}$")
@@ -178,7 +178,7 @@ def check_artifact_format(errors: list[str], path: Path, ev: dict,
                           artifact: Path | None) -> None:
     """Enforce the format contract for one evidence row (findings register B8).
 
-    Three rules, in order of what they catch:
+    Four rules, in order of what they catch:
       1. a declared format must be one we know and must MATCH the bytes;
       2. an unsat-certificate row that stores an artifact must declare one --
          silence is how a binary proof passed for a text one;
@@ -186,6 +186,11 @@ def check_artifact_format(errors: list[str], path: Path, ev: dict,
          checker can read, and its proof must end in the empty clause. A
          certificate our checker cannot parse is not checked evidence, whoever
          else verified it.
+      4. an instance-pin row must store the deciding CNF itself, under a
+         hash. Its whole purpose is to answer "which formula?", so a pin with
+         no artifact, no hash, or a non-DIMACS body pins nothing. The 313
+         upper bound shipped with five cover ledgers and no such row: the
+         verdicts were recorded and their subject was not.
     """
     eid = ev.get("id", "")
     kind = ev.get("kind")
@@ -198,6 +203,21 @@ def check_artifact_format(errors: list[str], path: Path, ev: dict,
         fail(errors, f"{path}: evidence '{eid}' has unknown artifact_format "
                      f"'{declared}'")
         return
+    if kind == "instance-pin":
+        if artifact is None:
+            fail(errors, f"{path}: evidence '{eid}' is an instance-pin but "
+                         f"names no artifact; a pin with no formula pins "
+                         f"nothing")
+            return
+        if ev.get("artifact_sha256") is None:
+            fail(errors, f"{path}: evidence '{eid}' is an instance-pin but "
+                         f"records no artifact_sha256; the hash IS the pin")
+            return
+        if declared != "dimacs-cnf":
+            fail(errors, f"{path}: evidence '{eid}' is an instance-pin but "
+                         f"declares artifact_format '{declared}'; a pin must "
+                         f"store the deciding instance as 'dimacs-cnf'")
+            return
     if artifact is None or not artifact.exists():
         return
     if kind == "unsat-certificate" and declared is None:

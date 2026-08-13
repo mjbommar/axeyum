@@ -259,6 +259,60 @@ def check_cube_cover(path: Path, ev: dict, a: int, b: int, k: int,
 
 # ------------------------------------------------------------------- driver
 
+def check_instance_pin(path: Path, ev: dict, a: int, b: int, k: int,
+                       params: dict) -> list[str]:
+    """Re-check an instance-pin row: WHICH formula do the verdicts speak about?
+
+    A cover ledger records `unsat` for a list of cubes. That is a verdict
+    about a formula, and it is worth exactly nothing unless the formula is
+    identified. The 313 upper bound shipped with five such ledgers and no
+    pinned instance -- five records of a verdict whose subject nothing named.
+
+    This establishes two things, both from bytes:
+
+      1. the stored CNF regenerates byte-identically from the claim's own
+         (a, b, k, n) using THIS file's independently written encoder -- not
+         the generator of record, so a bug shared by one implementation does
+         not authenticate itself;
+      2. the recorded sha256 is the sha256 of those bytes.
+
+    Byte-identity is the strong half. A hash says "these bytes are what I
+    stored"; regeneration says "these bytes are the formula the claim's
+    parameters denote". Only the second survives a corrupted store.
+    """
+    import hashlib
+
+    errors: list[str] = []
+    eid = ev["id"]
+    art = ev.get("artifact")
+    if art is None:
+        return [f"{path}: '{eid}' instance-pin has no artifact"]
+    art_path = ROOT / art
+    if not art_path.exists():
+        return [f"{path}: '{eid}' artifact {art} does not exist"]
+    n = int(params["n"])
+
+    stored = art_path.read_bytes()
+    regenerated = rado_cnf(a, b, k, n).encode()
+    if stored != regenerated:
+        errors.append(f"{path}: '{eid}' stored CNF is NOT byte-identical to "
+                      f"the instance regenerated from a={a} b={b} k={k} "
+                      f"n={n} ({len(stored)} B stored vs "
+                      f"{len(regenerated)} B regenerated)")
+
+    recorded = ev.get("artifact_sha256")
+    actual = hashlib.sha256(stored).hexdigest()
+    if recorded != actual:
+        errors.append(f"{path}: '{eid}' records artifact_sha256 {recorded} "
+                      f"but the stored bytes hash to {actual}")
+
+    if not errors:
+        print(f"  checked instance-pin {eid}: {len(stored)} B, regenerated "
+              f"byte-identically from a={a} b={b} k={k} n={n}, sha256 "
+              f"{actual[:16]}...")
+    return errors
+
+
 def check_unsat_certificate(path: Path, ev: dict, a: int, b: int, k: int,
                             params: dict, drat_checker: str | None) -> list[str]:
     """Re-check an unsat-certificate row against the claim's parameters.
@@ -433,6 +487,9 @@ def check_claim(path: Path, drat_checker: str | None) -> list[str]:
 
         elif kind == "cube-cover":
             errors.extend(check_cube_cover(path, ev, a, b, k, params))
+
+        elif kind == "instance-pin":
+            errors.extend(check_instance_pin(path, ev, a, b, k, params))
 
         elif kind == "exhaustive-enumeration":
             errors.append(f"{path}: '{eid}' exhaustive-enumeration re-check "

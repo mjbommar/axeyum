@@ -85,6 +85,17 @@
   },
   "evidence": [
     {
+      "id": "deciding-instance",
+      "kind": "instance-pin",
+      "supports": "identifies F_313, the formula every verdict below is about",
+      "artifact": "artifacts/claims/rado/rado-r4-a4-b3/F_313.cnf",
+      "artifact_sha256": "5ce2ad94c712faace512652e0d940664e77c4511c950f6afa2667d9548a77aab",
+      "check_status": "checked",
+      "checker_command": "python3 scripts/check-claim-certificates.py --only rado-r4-a4-b3",
+      "notes": "1252 variables, 63812 clauses, 1644446 bytes. Until 2026-08-13 this row did not exist: five cover ledgers recorded 'unsat' verdicts and NOTHING in the claim identified which formula they were verdicts about. The pin is checked by regeneration, not by hash alone -- check-claim-certificates.py re-derives the CNF from (a,b,k,n)=(4,3,4,313) with an encoder written independently of scripts/gen-rado-instance.py and requires byte-identity, so a bug shared by one implementation cannot authenticate itself. Both encoders agree on this sha256.",
+      "artifact_format": "dimacs-cnf"
+    },
+    {
       "id": "lower-witness",
       "kind": "witness-replay",
       "supports": "R_4 > 312 (lower bound)",

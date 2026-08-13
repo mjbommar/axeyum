@@ -87,6 +87,17 @@
   },
   "evidence": [
     {
+      "id": "deciding-instance",
+      "kind": "instance-pin",
+      "supports": "identifies F_226, the formula every verdict below is about",
+      "artifact": "artifacts/claims/rado/rado-r4-a2-b3/F_226.cnf",
+      "artifact_sha256": "d8aefe75e5426e0c71bfb48193ed1ef90052389f19926f2c419758c1fa392cd1",
+      "check_status": "checked",
+      "checker_command": "python3 scripts/check-claim-certificates.py --only rado-r4-a2-b3",
+      "notes": "RESTATED 2026-08-13. This row was previously id 'upper-drat', kind 'unsat-certificate', and it was NOT evidence of the upper bound: its artifact is the formula, not a proof, and its checker_command invoked external kissat, which per ADR-0002 never carries product evidence. Its note also said a native run 'is in progress', which it was not. The upper bound is carried by 'upper-cube-cover' (4096/4096 cells refuted on axeyum's own core); this row does the one job the bytes support, which is to pin WHICH formula. Checked by regeneration from (a,b,k,n)=(2,3,4,226) with an encoder written independently of the generator of record, not by hash alone. Historical note retained: an external kissat run corroborated UNSAT and emitted a 2.4 GB DRAT (sha256 d0b26e78...) which exists nowhere reachable and nothing depends on.",
+      "artifact_format": "dimacs-cnf"
+    },
+    {
       "id": "lower-witness",
       "kind": "witness-replay",
       "supports": "R_4 > 225 (lower bound: a verified 4-colouring of [225])",
@@ -107,17 +118,6 @@
       "checker_command": "python3 scripts/check-claim-certificates.py --only rado-r4-a2-b3",
       "notes": "Produced END-TO-END by axeyum's product path: SMT-LIB text -> produce_evidence_smtlib -> SatBvBackend (rustsat-batsat, pure Rust) -> Sat(model) in 351.79 s -> Evidence::check model replay against all 35,548 original assertions (0.16 s). The SMT-LIB encoding was proven clause-for-clause identical to the canonical DIMACS generator. Also re-verified by the independent script enumerator. Notably faster than the kissat oracle on the same side (352 s vs ~100 min).",
       "artifact_format": "colouring-text"
-    },
-    {
-      "id": "upper-drat",
-      "kind": "unsat-certificate",
-      "supports": "R_4 <= 226 (upper bound: F_226 unsatisfiable)",
-      "artifact": "artifacts/claims/rado/rado-r4-a2-b3/F_226.cnf",
-      "artifact_sha256": "d8aefe75e5426e0c71bfb48193ed1ef90052389f19926f2c419758c1fa392cd1",
-      "check_status": "replay-only",
-      "checker_command": "references/kissat/build/kissat -q artifacts/claims/rado/rado-r4-a2-b3/F_226.cnf  # exit 20 = UNSAT; deterministic",
-      "notes": "DOCTRINE CORRECTION 2026-08-12: the kissat run and its 2.4 GB DRAT (sha256 d0b26e78..., outside the repo) are ORACLE CORROBORATION only, per ADR-0002 - external solvers never carry product evidence. The row stays replay-only until axeyum's own proof-producing CDCL core decides F_226 and its in-tree check_drat/check_lrat verify the resulting certificate; that native run (24 h deadline) is in progress. The artifact recorded here is the exact CNF instance, byte-identical under regeneration from the claim parameters.",
-      "artifact_format": "dimacs-cnf"
     },
     {
       "id": "upper-cube-cover",
