@@ -7,10 +7,15 @@
 //! - [`Kernel::add_inductive`] via [`build_logic_prelude`] supplies `Nat`
 //!   (`Nat.zero | Nat.succ`) with its generated, ι-computing `Nat.rec`, and the
 //!   indexed `Eq` with `Eq.rec`;
-//! - [`Kernel::add_declaration`] admits `Definition`s (`add`/`mul`/`pow`/`geo`/
-//!   the shell recurrence) and `Theorem`s, each of which is admitted **only if
-//!   the kernel itself type-checks the proof term against the stated
-//!   proposition**.
+//! - [`build_nat_prelude`] supplies the **generic** layer this file used to
+//!   build for itself: `add`/`mul`/`pow` as structural-recursion definitions,
+//!   the algebraic lemmas about them (`zero_add` … `mul_assoc`, all proved), and
+//!   — through [`NatOps`] — the `Eq` combinators, the `Nat.rec` induction
+//!   helper, and the declaration plumbing;
+//! - [`Kernel::add_declaration`] admits this development's own `Definition`s
+//!   (`geo`/`geo1`/the shell recurrence) and `Theorem`s, each of which is
+//!   admitted **only if the kernel itself type-checks the proof term against
+//!   the stated proposition**.
 //!
 //! **No axioms are declared.** The `arith_prelude` route (an axiomatized linear
 //! ordered field, 30 axioms) is deliberately *not* used: over the prelude's
@@ -44,8 +49,8 @@
 )]
 
 use axeyum_lean_kernel::{
-    BinderInfo, Declaration, ExprId, Kernel, KernelError, LogicPrelude, NameId, ReducibilityHint,
-    build_logic_prelude,
+    BinderInfo, Declaration, ExprId, Kernel, KernelError, LogicPrelude, NameId, NatOps, NatPrelude,
+    NatState, ReducibilityHint, build_nat_prelude,
 };
 
 // ---------------------------------------------------------------------------
@@ -53,31 +58,48 @@ use axeyum_lean_kernel::{
 // ---------------------------------------------------------------------------
 
 /// A kernel plus the interned names of this development.
+///
+/// The **generic** half — `Nat` arithmetic (`add`/`mul`/`pow`), the algebraic
+/// lemmas, the `Eq` combinators, `induct`, and the declaration plumbing — lives
+/// in the crate's [`build_nat_prelude`] / [`NatOps`]; implementing the trait's
+/// two required methods is all this development does to inherit it. What is left
+/// here is Rado-specific: `geo`/`geo1`/`shellT`/`nshell` and the theorems.
 struct Dev {
     k: Kernel,
+    p: NatPrelude,
     logic: LogicPrelude,
+    st: NatState,
     anon: NameId,
     root: NameId,
     nat_ty: ExprId,
-    next_fvar: u64,
+}
+
+impl NatOps for Dev {
+    fn kernel(&mut self) -> &mut Kernel {
+        &mut self.k
+    }
+
+    fn nat_state(&mut self) -> &mut NatState {
+        &mut self.st
+    }
 }
 
 impl Dev {
     fn new() -> Self {
         let mut k = Kernel::new();
-        let logic = build_logic_prelude(&mut k);
+        let p = build_nat_prelude(&mut k);
+        let st = NatState::new(&mut k, p);
         let anon = k.anon();
         let root = k.name_str(anon, "rado");
-        let nat_ty = k.const_(logic.nat, vec![]);
+        let nat_ty = k.const_(p.nat, vec![]);
         Self {
             k,
-            logic,
+            p,
+            logic: p.logic,
+            st,
             anon,
             root,
             nat_ty,
-            // Start well above anything the kernel's own inference allocates
-            // for the closed terms we hand it.
-            next_fvar: 1_000,
         }
     }
 
@@ -87,60 +109,16 @@ impl Dev {
     }
 
     fn fresh(&mut self) -> u64 {
-        self.next_fvar += 1;
-        self.next_fvar
+        self.fresh_fvar()
     }
 
-    fn level_one(&mut self) -> axeyum_lean_kernel::LevelId {
-        let z = self.k.level_zero();
-        self.k.level_succ(z)
-    }
-
-    // --- Nat terms ---------------------------------------------------------
-
-    fn zero(&mut self) -> ExprId {
-        self.k.const_(self.logic.nat_zero, vec![])
-    }
-
-    fn succ(&mut self, x: ExprId) -> ExprId {
-        let s = self.k.const_(self.logic.nat_succ, vec![]);
-        self.k.app(s, x)
-    }
-
-    /// The unary numeral `succ^n zero`.
-    fn num(&mut self, n: u32) -> ExprId {
-        let mut e = self.zero();
-        for _ in 0..n {
-            e = self.succ(e);
-        }
-        e
-    }
-
-    fn apply(&mut self, head: ExprId, args: &[ExprId]) -> ExprId {
-        let mut e = head;
-        for &a in args {
-            e = self.k.app(e, a);
-        }
-        e
-    }
+    // --- Rado-specific terms ------------------------------------------------
 
     /// `f x y` for a declared binary constant of this development.
     fn bin(&mut self, f: &str, x: ExprId, y: ExprId) -> ExprId {
         let n = self.name(f);
         let c = self.k.const_(n, vec![]);
         self.apply(c, &[x, y])
-    }
-
-    fn add(&mut self, x: ExprId, y: ExprId) -> ExprId {
-        self.bin("add", x, y)
-    }
-
-    fn mul(&mut self, x: ExprId, y: ExprId) -> ExprId {
-        self.bin("mul", x, y)
-    }
-
-    fn pow(&mut self, x: ExprId, y: ExprId) -> ExprId {
-        self.bin("pow", x, y)
     }
 
     fn geo(&mut self, x: ExprId, y: ExprId) -> ExprId {
@@ -161,149 +139,10 @@ impl Dev {
         self.apply(c, &[a, b, m])
     }
 
-    // --- binders -----------------------------------------------------------
-
-    fn lam_fv(&mut self, fv: u64, ty: ExprId, body: ExprId) -> ExprId {
-        let b = self.k.abstract_fvars(body, &[fv]);
-        let anon = self.anon;
-        self.k.lam(anon, ty, b, BinderInfo::Default)
-    }
-
-    fn pi_fv(&mut self, fv: u64, ty: ExprId, body: ExprId) -> ExprId {
-        let b = self.k.abstract_fvars(body, &[fv]);
-        let anon = self.anon;
-        self.k.pi(anon, ty, b, BinderInfo::Default)
-    }
-
-    // --- Eq terms ----------------------------------------------------------
-
-    /// `Eq.{1} Nat x y`.
-    fn eq(&mut self, x: ExprId, y: ExprId) -> ExprId {
-        let one = self.level_one();
-        let eq = self.k.const_(self.logic.eq, vec![one]);
-        let nat = self.nat_ty;
-        self.apply(eq, &[nat, x, y])
-    }
-
-    /// `Eq.refl.{1} Nat a : Eq Nat a a`.
-    fn refl(&mut self, a: ExprId) -> ExprId {
-        let one = self.level_one();
-        let refl = self.k.const_(self.logic.eq_refl, vec![one]);
-        let nat = self.nat_ty;
-        self.apply(refl, &[nat, a])
-    }
-
-    /// `Eq.rec.{0,1} Nat p motive refl_case q h : motive q h`.
-    fn transport(
-        &mut self,
-        p: ExprId,
-        motive: ExprId,
-        refl_case: ExprId,
-        q: ExprId,
-        h: ExprId,
-    ) -> ExprId {
-        let z = self.k.level_zero();
-        let one = self.level_one();
-        let rec = self.k.const_(self.logic.eq_rec, vec![z, one]);
-        let nat = self.nat_ty;
-        self.apply(rec, &[nat, p, motive, refl_case, q, h])
-    }
-
-    /// Build the `Eq.rec` motive `fun (x : Nat) (_ : Eq Nat a x) => body(x)`.
-    fn eq_motive(&mut self, a: ExprId, body: &dyn Fn(&mut Dev, ExprId) -> ExprId) -> ExprId {
-        let x_fv = self.fresh();
-        let x = self.k.fvar(x_fv);
-        let concl = body(self, x);
-        let hyp = self.eq(a, x);
-        let anon = self.anon;
-        let inner = self.k.lam(anon, hyp, concl, BinderInfo::Default);
-        let nat = self.nat_ty;
-        self.lam_fv(x_fv, nat, inner)
-    }
-
-    /// `h : Eq Nat a b  ⊢  Eq Nat b a`.
-    fn symm(&mut self, a: ExprId, b: ExprId, h: ExprId) -> ExprId {
-        let motive = self.eq_motive(a, &|d, x| d.eq(x, a));
-        let refl_case = self.refl(a);
-        self.transport(a, motive, refl_case, b, h)
-    }
-
-    /// `h1 : Eq Nat a b`, `h2 : Eq Nat b c  ⊢  Eq Nat a c`.
-    fn trans(&mut self, a: ExprId, b: ExprId, c: ExprId, h1: ExprId, h2: ExprId) -> ExprId {
-        let motive = self.eq_motive(b, &|d, x| d.eq(a, x));
-        self.transport(b, motive, h1, c, h2)
-    }
-
-    /// Chain `a = x1 = x2 = … = z` from `(rhs, proof)` steps.
-    fn chain(&mut self, start: ExprId, steps: &[(ExprId, ExprId)]) -> (ExprId, ExprId) {
-        let mut current = start;
-        let mut proof = self.refl(start);
-        for &(next, step) in steps {
-            proof = self.trans(start, current, next, proof, step);
-            current = next;
-        }
-        (current, proof)
-    }
-
-    /// Congruence in an arbitrary one-hole context: `h : Eq Nat a b` gives
-    /// `Eq Nat (f a) (f b)`.
-    fn congr(
-        &mut self,
-        a: ExprId,
-        b: ExprId,
-        h: ExprId,
-        f: &dyn Fn(&mut Dev, ExprId) -> ExprId,
-    ) -> ExprId {
-        let fa = f(self, a);
-        let motive = self.eq_motive(a, &|d, x| {
-            let fx = f(d, x);
-            d.eq(fa, fx)
-        });
-        let refl_case = self.refl(fa);
-        self.transport(a, motive, refl_case, b, h)
-    }
-
-    // --- induction ---------------------------------------------------------
-
-    /// `Nat.rec.{0} (fun x => p x) base (fun j ih => step j ih) target`, a proof
-    /// of `p target` for a `Prop`-valued motive.
-    fn induct(
-        &mut self,
-        p: &dyn Fn(&mut Dev, ExprId) -> ExprId,
-        base: &dyn Fn(&mut Dev) -> ExprId,
-        step: &dyn Fn(&mut Dev, ExprId, ExprId) -> ExprId,
-        target: ExprId,
-    ) -> ExprId {
-        let nat = self.nat_ty;
-        let motive = {
-            let x_fv = self.fresh();
-            let x = self.k.fvar(x_fv);
-            let body = p(self, x);
-            self.lam_fv(x_fv, nat, body)
-        };
-        let base_term = base(self);
-        let step_term = {
-            let j_fv = self.fresh();
-            let j = self.k.fvar(j_fv);
-            let ih_fv = self.fresh();
-            let ih = self.k.fvar(ih_fv);
-            let hyp_ty = p(self, j);
-            let body = step(self, j, ih);
-            let inner = self.lam_fv(ih_fv, hyp_ty, body);
-            self.lam_fv(j_fv, nat, inner)
-        };
-        let z = self.k.level_zero();
-        let rec = self.k.const_(self.logic.nat_rec, vec![z]);
-        self.apply(rec, &[motive, base_term, step_term, target])
-    }
-
     // --- declarations ------------------------------------------------------
 
-    /// `def name : Nat → Nat → Nat := fun x y => Nat.rec (fun _ => Nat) (base x) (fun j ih => step x j ih) y`
-    ///
-    /// i.e. structural recursion on the **second** argument, so
-    /// `name x zero ≡ base x` and `name x (succ j) ≡ step x j (name x j)` hold
-    /// definitionally (β/δ/ι), with no equation lemmas needed.
+    /// [`NatOps::define_binary`] under this development's namespace, panicking
+    /// if the kernel refuses the definition.
     fn define_binary(
         &mut self,
         name: &str,
@@ -311,48 +150,13 @@ impl Dev {
         base: &dyn Fn(&mut Dev, ExprId) -> ExprId,
         step: &dyn Fn(&mut Dev, ExprId, ExprId, ExprId) -> ExprId,
     ) -> NameId {
-        let nat = self.nat_ty;
-        let anon = self.anon;
-        let x_fv = self.fresh();
-        let x = self.k.fvar(x_fv);
-        let motive = self.k.lam(anon, nat, nat, BinderInfo::Default);
-        let minor_zero = base(self, x);
-        let minor_succ = {
-            let j_fv = self.fresh();
-            let j = self.k.fvar(j_fv);
-            let ih_fv = self.fresh();
-            let ih = self.k.fvar(ih_fv);
-            let body = step(self, x, j, ih);
-            let inner = self.lam_fv(ih_fv, nat, body);
-            self.lam_fv(j_fv, nat, inner)
-        };
-        let y_fv = self.fresh();
-        let y = self.k.fvar(y_fv);
-        let one = self.level_one();
-        let rec = self.k.const_(self.logic.nat_rec, vec![one]);
-        let body = self.apply(rec, &[motive, minor_zero, minor_succ, y]);
-        let value = {
-            let inner = self.lam_fv(y_fv, nat, body);
-            self.lam_fv(x_fv, nat, inner)
-        };
-        let ty = {
-            let inner = self.k.pi(anon, nat, nat, BinderInfo::Default);
-            self.k.pi(anon, nat, inner, BinderInfo::Default)
-        };
         let nm = self.name(name);
-        self.k
-            .add_declaration(Declaration::Definition {
-                name: nm,
-                uparams: vec![],
-                ty,
-                value,
-                hint: ReducibilityHint::Regular(height),
-            })
-            .unwrap_or_else(|e| panic!("definition {name} should admit: {e:?}"));
-        nm
+        NatOps::define_binary(self, nm, height, base, step)
+            .unwrap_or_else(|e| panic!("definition {name} should admit: {e:?}"))
     }
 
-    /// Declare `theorem name : ∀ (x_0 … x_{arity-1} : Nat), stmt := fun … => proof`.
+    /// Declare `theorem name : ∀ (x_0 … x_{arity-1} : Nat), stmt := fun … => proof`
+    /// under this development's namespace.
     ///
     /// The kernel re-checks `proof` against `stmt` inside
     /// [`Kernel::add_declaration`]; an `Err` here means the kernel **rejected**
@@ -363,24 +167,8 @@ impl Dev {
         arity: usize,
         build: &dyn Fn(&mut Dev, &[ExprId]) -> (ExprId, ExprId),
     ) -> Result<ExprId, KernelError> {
-        let nat = self.nat_ty;
-        let fvs: Vec<u64> = (0..arity).map(|_| self.fresh()).collect();
-        let vars: Vec<ExprId> = fvs.iter().map(|&f| self.k.fvar(f)).collect();
-        let (stmt, proof) = build(self, &vars);
-        let mut ty = stmt;
-        let mut value = proof;
-        for &fv in fvs.iter().rev() {
-            ty = self.pi_fv(fv, nat, ty);
-            value = self.lam_fv(fv, nat, value);
-        }
         let nm = self.name(name);
-        self.k.add_declaration(Declaration::Theorem {
-            name: nm,
-            uparams: vec![],
-            ty,
-            value,
-        })?;
-        Ok(ty)
+        NatOps::try_theorem(self, nm, arity, build)
     }
 
     fn theorem(
@@ -389,37 +177,44 @@ impl Dev {
         arity: usize,
         build: &dyn Fn(&mut Dev, &[ExprId]) -> (ExprId, ExprId),
     ) -> ExprId {
-        match self.try_theorem(name, arity, build) {
+        let outcome = self.try_theorem(name, arity, build);
+        match outcome {
             Ok(ty) => ty,
-            Err(e) => panic!(
-                "theorem {name} was rejected by the kernel: {}",
-                self.explain(&e)
-            ),
+            Err(e) => {
+                let explained = self.explain(&e);
+                panic!("theorem {name} was rejected by the kernel: {explained}")
+            }
         }
     }
 
-    /// A readable rendering of a kernel rejection (the payloads are `ExprId`s).
-    fn explain(&self, e: &KernelError) -> String {
-        match e {
-            KernelError::DeclarationValueMismatch { declared, inferred } => format!(
-                "DeclarationValueMismatch\n    declared : {}\n    inferred : {}",
-                self.k.render_lean(*declared),
-                self.k.render_lean(*inferred)
-            ),
-            KernelError::TypeMismatch { expected, got } => format!(
-                "TypeMismatch\n    expected : {}\n    got      : {}",
-                self.k.render_lean(*expected),
-                self.k.render_lean(*got)
-            ),
-            other => format!("{other:?}"),
-        }
-    }
-
-    /// Apply a previously proved lemma of this development to arguments.
+    /// Apply a lemma to arguments: the crate's `nat_prelude` lemmas by their
+    /// well-known names, anything else from this development's namespace.
     fn lem(&mut self, name: &str, args: &[ExprId]) -> ExprId {
-        let n = self.name(name);
-        let c = self.k.const_(n, vec![]);
-        self.apply(c, args)
+        let n = self.lemma_name(name);
+        self.lemma(n, args)
+    }
+
+    /// Resolve a lemma name against the crate prelude first. This keeps every
+    /// proof script below byte-identical to the version that defined its own
+    /// arithmetic — which is the point: it is the extraction's faithfulness
+    /// check.
+    fn lemma_name(&mut self, name: &str) -> NameId {
+        let p = self.p;
+        match name {
+            "zero_add" => p.zero_add,
+            "succ_add" => p.succ_add,
+            "add_comm" => p.add_comm,
+            "add_assoc" => p.add_assoc,
+            "add_right_comm" => p.add_right_comm,
+            "zero_mul" => p.zero_mul,
+            "succ_mul" => p.succ_mul,
+            "mul_comm" => p.mul_comm,
+            "left_distrib" => p.left_distrib,
+            "mul_assoc" => p.mul_assoc,
+            "one_mul" => p.one_mul,
+            "mul_one" => p.mul_one,
+            own => self.name(own),
+        }
     }
 }
 
@@ -427,15 +222,12 @@ impl Dev {
 // The development itself
 // ---------------------------------------------------------------------------
 
-/// Declare `add`, `mul`, `pow`, `geo` (the geometric sum), `shellT` (the shell's
-/// level-capacity recurrence) and `nshell = b * shellT`.
+/// Declare the Rado-specific definitions: `geo` (the geometric sum), `geo1`,
+/// `shellT` (the shell's level-capacity recurrence) and `nshell = b * shellT`.
+///
+/// `add`, `mul` and `pow` are **not** declared here any more: they come from the
+/// crate's [`build_nat_prelude`], together with the algebraic lemmas about them.
 fn definitions(d: &mut Dev) {
-    // add x y : recursion on y.  add x zero ≡ x ; add x (succ j) ≡ succ (add x j)
-    d.define_binary("add", 1, &|_d, x| x, &|d, _x, _j, ih| d.succ(ih));
-    // mul x y : recursion on y.  mul x zero ≡ zero ; mul x (succ j) ≡ add (mul x j) x
-    d.define_binary("mul", 2, &|d, _x| d.zero(), &|d, x, _j, ih| d.add(ih, x));
-    // pow x y : recursion on y.  pow x zero ≡ 1 ; pow x (succ j) ≡ mul (pow x j) x
-    d.define_binary("pow", 3, &|d, _x| d.num(1), &|d, x, _j, ih| d.mul(ih, x));
     // geo x y = Σ_{i<y} x^i.  geo x zero ≡ zero ; geo x (succ j) ≡ add (geo x j) (pow x j)
     d.define_binary("geo", 4, &|d, _x| d.zero(), &|d, x, j, ih| {
         let p = d.pow(x, j);
@@ -489,352 +281,6 @@ fn definitions(d: &mut Dev) {
         })
         .expect("nshell should admit");
     }
-}
-
-/// The additive and multiplicative lemmas, each proved by `Nat.rec` induction
-/// (or by chaining earlier lemmas). Every one goes through `add_declaration`,
-/// so every one is kernel-checked.
-fn lemmas(d: &mut Dev) {
-    // zero_add : ∀ n, add zero n = n   (induction on n)
-    d.theorem("zero_add", 1, &|d, v| {
-        let n = v[0];
-        let p = |d: &mut Dev, x: ExprId| {
-            let z = d.zero();
-            let lhs = d.add(z, x);
-            d.eq(lhs, x)
-        };
-        let stmt = p(d, n);
-        let proof = d.induct(
-            &p,
-            &|d| {
-                let z = d.zero();
-                d.refl(z)
-            },
-            &|d, j, ih| {
-                let z = d.zero();
-                let lhs = d.add(z, j);
-                d.congr(lhs, j, ih, &|d, x| d.succ(x))
-            },
-            n,
-        );
-        (stmt, proof)
-    });
-
-    // succ_add : ∀ n m, add (succ n) m = succ (add n m)   (induction on m)
-    d.theorem("succ_add", 2, &|d, v| {
-        let (n, m) = (v[0], v[1]);
-        let p = |d: &mut Dev, x: ExprId| {
-            let sn = d.succ(n);
-            let lhs = d.add(sn, x);
-            let inner = d.add(n, x);
-            let rhs = d.succ(inner);
-            d.eq(lhs, rhs)
-        };
-        let stmt = p(d, m);
-        let proof = d.induct(
-            &p,
-            &|d| {
-                let sn = d.succ(n);
-                d.refl(sn)
-            },
-            &|d, j, ih| {
-                let sn = d.succ(n);
-                let lhs = d.add(sn, j);
-                let inner = d.add(n, j);
-                let rhs = d.succ(inner);
-                d.congr(lhs, rhs, ih, &|d, x| d.succ(x))
-            },
-            m,
-        );
-        (stmt, proof)
-    });
-
-    // add_comm : ∀ n m, add n m = add m n   (induction on m)
-    d.theorem("add_comm", 2, &|d, v| {
-        let (n, m) = (v[0], v[1]);
-        let p = |d: &mut Dev, x: ExprId| {
-            let lhs = d.add(n, x);
-            let rhs = d.add(x, n);
-            d.eq(lhs, rhs)
-        };
-        let stmt = p(d, m);
-        let proof = d.induct(
-            &p,
-            &|d| {
-                let z = d.zero();
-                let za = d.add(z, n);
-                let h = d.lem("zero_add", &[n]);
-                d.symm(za, n, h)
-            },
-            &|d, j, ih| {
-                let lhs = d.add(n, j);
-                let rhs = d.add(j, n);
-                let h1 = d.congr(lhs, rhs, ih, &|d, x| d.succ(x));
-                let s_lhs = d.succ(lhs);
-                let s_rhs = d.succ(rhs);
-                let sj = d.succ(j);
-                let sj_n = d.add(sj, n);
-                let h_sa = d.lem("succ_add", &[j, n]);
-                let h2 = d.symm(sj_n, s_rhs, h_sa);
-                d.trans(s_lhs, s_rhs, sj_n, h1, h2)
-            },
-            m,
-        );
-        (stmt, proof)
-    });
-
-    // add_assoc : ∀ a b c, add (add a b) c = add a (add b c)   (induction on c)
-    d.theorem("add_assoc", 3, &|d, v| {
-        let (a, b, c) = (v[0], v[1], v[2]);
-        let p = |d: &mut Dev, x: ExprId| {
-            let ab = d.add(a, b);
-            let lhs = d.add(ab, x);
-            let bx = d.add(b, x);
-            let rhs = d.add(a, bx);
-            d.eq(lhs, rhs)
-        };
-        let stmt = p(d, c);
-        let proof = d.induct(
-            &p,
-            &|d| {
-                let ab = d.add(a, b);
-                d.refl(ab)
-            },
-            &|d, j, ih| {
-                let ab = d.add(a, b);
-                let lhs = d.add(ab, j);
-                let bj = d.add(b, j);
-                let rhs = d.add(a, bj);
-                d.congr(lhs, rhs, ih, &|d, x| d.succ(x))
-            },
-            c,
-        );
-        (stmt, proof)
-    });
-
-    // add_right_comm : ∀ x y z, add (add x y) z = add (add x z) y   (no induction)
-    d.theorem("add_right_comm", 3, &|d, v| {
-        let (x, y, z) = (v[0], v[1], v[2]);
-        let xy = d.add(x, y);
-        let start = d.add(xy, z);
-        let yz = d.add(y, z);
-        let s1 = d.add(x, yz);
-        let h1 = d.lem("add_assoc", &[x, y, z]);
-        let zy = d.add(z, y);
-        let s2 = d.add(x, zy);
-        let h_comm = d.lem("add_comm", &[y, z]);
-        let h2 = d.congr(yz, zy, h_comm, &|d, t| d.add(x, t));
-        let xz = d.add(x, z);
-        let s3 = d.add(xz, y);
-        let h_assoc2 = d.lem("add_assoc", &[x, z, y]);
-        let h3 = d.symm(s3, s2, h_assoc2);
-        let (end, proof) = d.chain(start, &[(s1, h1), (s2, h2), (s3, h3)]);
-        let stmt = d.eq(start, end);
-        (stmt, proof)
-    });
-
-    // zero_mul : ∀ n, mul zero n = zero   (induction on n)
-    d.theorem("zero_mul", 1, &|d, v| {
-        let n = v[0];
-        let p = |d: &mut Dev, x: ExprId| {
-            let z = d.zero();
-            let lhs = d.mul(z, x);
-            d.eq(lhs, z)
-        };
-        let stmt = p(d, n);
-        let proof = d.induct(
-            &p,
-            &|d| {
-                let z = d.zero();
-                d.refl(z)
-            },
-            // mul zero (succ j) ≡ add (mul zero j) zero ≡ mul zero j, so the
-            // induction hypothesis *is* the step, up to definitional equality.
-            &|_d, _j, ih| ih,
-            n,
-        );
-        (stmt, proof)
-    });
-
-    // succ_mul : ∀ n m, mul (succ n) m = add (mul n m) m   (induction on m)
-    d.theorem("succ_mul", 2, &|d, v| {
-        let (n, m) = (v[0], v[1]);
-        let p = |d: &mut Dev, x: ExprId| {
-            let sn = d.succ(n);
-            let lhs = d.mul(sn, x);
-            let nm = d.mul(n, x);
-            let rhs = d.add(nm, x);
-            d.eq(lhs, rhs)
-        };
-        let stmt = p(d, m);
-        let proof = d.induct(
-            &p,
-            &|d| {
-                let z = d.zero();
-                d.refl(z)
-            },
-            &|d, j, ih| {
-                // goal ≡ succ (add (mul (succ n) j) n) = succ (add (add (mul n j) n) j)
-                let sn = d.succ(n);
-                let snj = d.mul(sn, j);
-                let start = d.add(snj, n);
-                let nj = d.mul(n, j);
-                let nj_j = d.add(nj, j);
-                let s1 = d.add(nj_j, n);
-                let h1 = d.congr(snj, nj_j, ih, &|d, t| d.add(t, n));
-                let nj_n = d.add(nj, n);
-                let s2 = d.add(nj_n, j);
-                let h2 = d.lem("add_right_comm", &[nj, j, n]);
-                let (end, inner) = d.chain(start, &[(s1, h1), (s2, h2)]);
-                d.congr(start, end, inner, &|d, t| d.succ(t))
-            },
-            m,
-        );
-        (stmt, proof)
-    });
-
-    // mul_comm : ∀ n m, mul n m = mul m n   (induction on m)
-    d.theorem("mul_comm", 2, &|d, v| {
-        let (n, m) = (v[0], v[1]);
-        let p = |d: &mut Dev, x: ExprId| {
-            let lhs = d.mul(n, x);
-            let rhs = d.mul(x, n);
-            d.eq(lhs, rhs)
-        };
-        let stmt = p(d, m);
-        let proof = d.induct(
-            &p,
-            &|d| {
-                let z = d.zero();
-                let zn = d.mul(z, n);
-                let h = d.lem("zero_mul", &[n]);
-                d.symm(zn, z, h)
-            },
-            &|d, j, ih| {
-                // goal ≡ add (mul n j) n = mul (succ j) n
-                let nj = d.mul(n, j);
-                let start = d.add(nj, n);
-                let jn = d.mul(j, n);
-                let s1 = d.add(jn, n);
-                let h1 = d.congr(nj, jn, ih, &|d, t| d.add(t, n));
-                let sj = d.succ(j);
-                let s2 = d.mul(sj, n);
-                let h_sm = d.lem("succ_mul", &[j, n]);
-                let h2 = d.symm(s2, s1, h_sm);
-                let (_end, proof) = d.chain(start, &[(s1, h1), (s2, h2)]);
-                proof
-            },
-            m,
-        );
-        (stmt, proof)
-    });
-
-    // mul_one : ∀ a, mul a 1 = a
-    // mul a (succ zero) ≡ add (mul a zero) a ≡ add zero a, so `zero_add a`
-    // already has this type up to definitional equality.
-    d.theorem("mul_one", 1, &|d, v| {
-        let a = v[0];
-        let one = d.num(1);
-        let lhs = d.mul(a, one);
-        let stmt = d.eq(lhs, a);
-        let proof = d.lem("zero_add", &[a]);
-        (stmt, proof)
-    });
-
-    // one_mul : ∀ a, mul 1 a = a
-    d.theorem("one_mul", 1, &|d, v| {
-        let a = v[0];
-        let one = d.num(1);
-        let z = d.zero();
-        let start = d.mul(one, a);
-        let za = d.mul(z, a);
-        let s1 = d.add(za, a);
-        let h1 = d.lem("succ_mul", &[z, a]);
-        let s2 = d.add(z, a);
-        let h_zm = d.lem("zero_mul", &[a]);
-        let h2 = d.congr(za, z, h_zm, &|d, t| d.add(t, a));
-        let h3 = d.lem("zero_add", &[a]);
-        let (end, proof) = d.chain(start, &[(s1, h1), (s2, h2), (a, h3)]);
-        let stmt = d.eq(start, end);
-        (stmt, proof)
-    });
-
-    // left_distrib : ∀ a b c, mul a (add b c) = add (mul a b) (mul a c)  (ind. on c)
-    d.theorem("left_distrib", 3, &|d, v| {
-        let (a, b, c) = (v[0], v[1], v[2]);
-        let p = |d: &mut Dev, x: ExprId| {
-            let bx = d.add(b, x);
-            let lhs = d.mul(a, bx);
-            let ab = d.mul(a, b);
-            let ax = d.mul(a, x);
-            let rhs = d.add(ab, ax);
-            d.eq(lhs, rhs)
-        };
-        let stmt = p(d, c);
-        let proof = d.induct(
-            &p,
-            &|d| {
-                let ab = d.mul(a, b);
-                d.refl(ab)
-            },
-            &|d, j, ih| {
-                // goal ≡ add (mul a (add b j)) a = add (mul a b) (add (mul a j) a)
-                let bj = d.add(b, j);
-                let a_bj = d.mul(a, bj);
-                let start = d.add(a_bj, a);
-                let ab = d.mul(a, b);
-                let aj = d.mul(a, j);
-                let ab_aj = d.add(ab, aj);
-                let s1 = d.add(ab_aj, a);
-                let h1 = d.congr(a_bj, ab_aj, ih, &|d, t| d.add(t, a));
-                let aj_a = d.add(aj, a);
-                let s2 = d.add(ab, aj_a);
-                let h2 = d.lem("add_assoc", &[ab, aj, a]);
-                let (_end, proof) = d.chain(start, &[(s1, h1), (s2, h2)]);
-                proof
-            },
-            c,
-        );
-        (stmt, proof)
-    });
-
-    // mul_assoc : ∀ a b c, mul (mul a b) c = mul a (mul b c)   (induction on c)
-    d.theorem("mul_assoc", 3, &|d, v| {
-        let (a, b, c) = (v[0], v[1], v[2]);
-        let p = |d: &mut Dev, x: ExprId| {
-            let ab = d.mul(a, b);
-            let lhs = d.mul(ab, x);
-            let bx = d.mul(b, x);
-            let rhs = d.mul(a, bx);
-            d.eq(lhs, rhs)
-        };
-        let stmt = p(d, c);
-        let proof = d.induct(
-            &p,
-            &|d| {
-                let z = d.zero();
-                d.refl(z)
-            },
-            &|d, j, ih| {
-                // goal ≡ add (mul (mul a b) j) (mul a b) = mul a (add (mul b j) b)
-                let ab = d.mul(a, b);
-                let abj = d.mul(ab, j);
-                let start = d.add(abj, ab);
-                let bj = d.mul(b, j);
-                let a_bj = d.mul(a, bj);
-                let s1 = d.add(a_bj, ab);
-                let h1 = d.congr(abj, a_bj, ih, &|d, t| d.add(t, ab));
-                let bj_b = d.add(bj, b);
-                let s2 = d.mul(a, bj_b);
-                let h_ld = d.lem("left_distrib", &[a, bj, b]);
-                let h2 = d.symm(s2, s1, h_ld);
-                let (_end, proof) = d.chain(start, &[(s1, h1), (s2, h2)]);
-                proof
-            },
-            c,
-        );
-        (stmt, proof)
-    });
 }
 
 /// `geo_shift : ∀ a m, a * G(a,m) = Σ_{i=1..m} a^i` — the bridge between the
@@ -1240,7 +686,6 @@ fn theorem_nshell_closed_form(d: &mut Dev) -> ExprId {
 fn full_development() -> Dev {
     let mut d = Dev::new();
     definitions(&mut d);
-    lemmas(&mut d);
     theorem_solution_family(&mut d);
     theorem_defect_identity(&mut d);
     theorem_geo_closed_form(&mut d);
@@ -1358,7 +803,6 @@ fn definitions_compute_the_measured_shell_values() {
 fn kernel_checks_the_defect_family_identity() {
     let mut d = Dev::new();
     definitions(&mut d);
-    lemmas(&mut d);
     let ty = theorem_defect_identity(&mut d);
     println!("defect_identity : {}", d.k.render_lean(ty));
     let name = d.name("defect_identity");
@@ -1370,7 +814,6 @@ fn kernel_checks_the_defect_family_identity() {
 fn kernel_checks_the_geometric_sum_closed_form() {
     let mut d = Dev::new();
     definitions(&mut d);
-    lemmas(&mut d);
     let ty = theorem_geo_closed_form(&mut d);
     println!("geo_closed_form : {}", d.k.render_lean(ty));
     let name = d.name("geo_closed_form");
@@ -1425,16 +868,18 @@ fn the_development_declares_no_axioms() {
 /// CAPABILITY PROBE — the infrastructure a full correctness proof would need.
 ///
 /// The shell construction's *solution-freeness* argument needs an order (`≤`),
-/// divisibility, and `a`-adic valuations. None of that exists in this kernel's
-/// preludes. The question this probe answers is whether that is a **kernel**
-/// limit or a **library** limit: can a user declare an indexed `Prop`-valued
-/// inductive relation through the trusted gate and eliminate with its generated
-/// recursor?
+/// divisibility, and `a`-adic valuations. The question this probe answers is
+/// whether the missing pieces are a **kernel** limit or a **library** limit:
+/// can a user declare an indexed `Prop`-valued inductive relation through the
+/// trusted gate and eliminate with its generated recursor?
 ///
-/// It declares `Le : Nat → Nat → Prop` (one parameter, one index, two
-/// constructors), proves `∀ n, Le zero n` by `Nat.rec` induction, and proves
-/// `∀ n m, Le n m → Le (succ n) (succ m)` by induction on the **derivation**
-/// with the generated `Le.rec`.
+/// It declares a development-local `Le : Nat → Nat → Prop` (one parameter, one
+/// index, two constructors), proves `∀ n, Le zero n` by `Nat.rec` induction, and
+/// proves `∀ n m, Le n m → Le (succ n) (succ m)` by induction on the
+/// **derivation** with the generated `Le.rec`. It is kept standalone
+/// deliberately: the answer is "library limit", and the crate now ships that
+/// answer as [`NatPrelude::le`] (same shape, plus `le_trans`/`le_add_right`).
+/// Divisibility is probed the same way below with `Exists`.
 #[test]
 fn capability_probe_indexed_prop_relation_and_its_recursor() {
     let mut d = Dev::new();
@@ -1633,7 +1078,6 @@ fn capability_probe_indexed_prop_relation_and_its_recursor() {
 fn capability_probe_existential_divisibility() {
     let mut d = Dev::new();
     definitions(&mut d);
-    lemmas(&mut d);
     let nat = d.nat_ty;
     let anon = d.anon;
     let prop = d.k.sort_zero();
@@ -1884,7 +1328,6 @@ fn kernel_rejects_broken_proof_terms() {
     {
         let mut d = Dev::new();
         definitions(&mut d);
-        lemmas(&mut d);
         let err = d
             .try_theorem("nc1_wrong_statement", 2, &|d, v| {
                 let (a, b) = (v[0], v[1]);
@@ -1949,7 +1392,6 @@ fn kernel_rejects_broken_proof_terms() {
     {
         let mut d = Dev::new();
         definitions(&mut d);
-        lemmas(&mut d);
         let err = d
             .try_theorem("nc2_swapped_lemma_arguments", 2, &|d, v| {
                 let (a, b) = (v[0], v[1]);
@@ -2031,7 +1473,6 @@ fn kernel_rejects_broken_proof_terms() {
     {
         let mut d = Dev::new();
         definitions(&mut d);
-        lemmas(&mut d);
         theorem_geo_closed_form(&mut d);
         let err = d
             .try_theorem("nc5_transposed_conclusion", 2, &|d, v| {
