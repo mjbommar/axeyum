@@ -341,6 +341,8 @@ pub struct NatPrelude {
     /// `Nat.mod_eq_iff_div_mod_remainder_eq :
     ///   divMod d a qa ra → divMod d b qb rb → (modEq d a b ↔ ra = rb)`.
     pub mod_eq_iff_div_mod_remainder_eq: NameId,
+    /// `Nat.mod_eq_zero_of_dvd : dvd d n → modEq d n zero`.
+    pub mod_eq_zero_of_dvd: NameId,
     /// `Nat.valuationAt a n e := dvd (a^e) n ∧ Not (dvd (a^(e+1)) n)`.
     pub valuation_at: NameId,
     /// `Nat.dvd_mul : ∀ a q, dvd a (a * q)`.
@@ -490,6 +492,7 @@ pub fn build_nat_prelude(kernel: &mut Kernel) -> Result<NatPrelude, KernelError>
             div_mod_remainder_eq_of_mod_eq: kernel.name_str(nat, "div_mod_remainder_eq_of_mod_eq"),
             mod_eq_iff_div_mod_remainder_eq: kernel
                 .name_str(nat, "mod_eq_iff_div_mod_remainder_eq"),
+            mod_eq_zero_of_dvd: kernel.name_str(nat, "mod_eq_zero_of_dvd"),
             valuation_at: kernel.name_str(nat, "valuationAt"),
             dvd_mul: kernel.name_str(nat, "dvd_mul"),
             dvd_add: kernel.name_str(nat, "dvd_add"),
@@ -745,6 +748,7 @@ fn declare_modular_congruence(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), 
     declare_div_mod_same_remainder_mod_eq(d, &p, nat, anon, one)?;
     declare_div_mod_remainder_eq_of_mod_eq(d, &p, nat, anon, one)?;
     declare_mod_eq_iff_div_mod_remainder_eq(d, &p)?;
+    declare_mod_eq_zero_of_dvd(d, &p, nat, anon, one)?;
     Ok(())
 }
 
@@ -1134,6 +1138,76 @@ fn declare_mod_eq_iff_div_mod_remainder_eq(
         let stmt = d.arrow(left_relation_ty, right_to_target);
         let with_right = d.lam_fv(right_relation_fv, right_relation_ty, body);
         let proof = d.lam_fv(left_relation_fv, left_relation_ty, with_right);
+        (stmt, proof)
+    })?;
+    Ok(())
+}
+
+fn declare_mod_eq_zero_of_dvd(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+    nat: ExprId,
+    anon: NameId,
+    one: LevelId,
+) -> Result<(), KernelError> {
+    let p = *p;
+
+    // mod_eq_zero_of_dvd : dvd d n → modEq d n zero
+    // A divisibility witness q becomes balanced congruence witnesses 0 and q.
+    d.theorem(p.mod_eq_zero_of_dvd, 2, &|d, values| {
+        let (modulus, value) = (values[0], values[1]);
+        let zero = d.zero();
+        let source = d.dvd(modulus, value);
+        let target = d.mod_eq(modulus, value, zero);
+        let source_fv = d.fresh_fvar();
+        let source_proof = d.kernel().fvar(source_fv);
+        let predicate = d.dvd_predicate(modulus, value);
+        let motive = d.kernel().lam(anon, source, target, BinderInfo::Default);
+        let minor = {
+            let quotient_fv = d.fresh_fvar();
+            let quotient = d.kernel().fvar(quotient_fv);
+            let product = d.mul(modulus, quotient);
+            let equation_ty = d.eq(value, product);
+            let equation_fv = d.fresh_fvar();
+            let equation = d.kernel().fvar(equation_fv);
+
+            let zero_product = d.mul(modulus, zero);
+            let start = d.add(value, zero_product);
+            let value_plus_zero = d.add(value, zero);
+            let zero_plus_product = d.add(zero, product);
+            let remove_zero_product = d.lemma(p.mul_zero, &[modulus]);
+            let step1 = d.congr(zero_product, zero, remove_zero_product, &|d, x| {
+                d.add(value, x)
+            });
+            let step2 = d.lemma(p.add_zero, &[value]);
+            let step3 = equation;
+            let zero_add_product = d.lemma(p.zero_add, &[product]);
+            let step4 = d.symm(zero_plus_product, product, zero_add_product);
+            let (_, balanced_equation) = d.chain(
+                start,
+                &[
+                    (value_plus_zero, step1),
+                    (value, step2),
+                    (product, step3),
+                    (zero_plus_product, step4),
+                ],
+            );
+
+            let target_outer = d.mod_eq_outer_predicate(modulus, value, zero);
+            let target_inner = d.mod_eq_inner_predicate(modulus, value, zero, zero);
+            let exists_intro = d.kernel().const_(p.logic.exists_intro, vec![one]);
+            let inner = d.apply(
+                exists_intro,
+                &[nat, target_inner, quotient, balanced_equation],
+            );
+            let body = d.apply(exists_intro, &[nat, target_outer, zero, inner]);
+            let with_equation = d.lam_fv(equation_fv, equation_ty, body);
+            d.lam_fv(quotient_fv, nat, with_equation)
+        };
+        let exists_rec = d.kernel().const_(p.logic.exists_rec, vec![one]);
+        let body = d.apply(exists_rec, &[nat, predicate, motive, minor, source_proof]);
+        let stmt = d.arrow(source, target);
+        let proof = d.lam_fv(source_fv, source, body);
         (stmt, proof)
     })?;
     Ok(())
