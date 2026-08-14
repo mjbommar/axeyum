@@ -1,0 +1,148 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://axeyum.dev/ontology/fact.schema.json",
+  "title": "Fact",
+  "description": "A mathematical statement as a first-class object, independent of its status.\n\nWHY THIS EXISTS. Every other resource in this repository holds either a formal statement or a status, never both. A `claim` carries prose in `statement` and a CNF *generator recipe* in `formal`, so nothing downstream can reason with what it asserts. A kernel declaration is formal but exists only once proved, and links to no concept, ledger or evidence row. A curriculum node is a topic. A math-education concept is prose with a label. So there was no object that could hold `forall a b : Nat, a + b = b + a` AND say open / conjectured / computed / proved / refuted, with its dependencies and its evidence.\n\nWHAT IT UNLOCKS. A fact is the object the self-extension loop operates on: pick an `open` fact whose `depends_on` are all established, dispatch its `formal.statement` to the solver, reconstruct the result into the kernel, attach evidence, flip the status, record the axiom footprint. Each of those stages exists today and keeps its own incompatible record; this is the shared one.\n\nSELF-CONTAINMENT IS A REQUIREMENT. A fact must stand alone on `formal.statement` plus `status` plus `evidence`. `concept_refs` are provenance and gloss, never substance -- so a public repository works while a source corpus stays private, and nothing needs vendoring or republishing.\n\nRELATION TO `claim`. A claim is an *evidence row about an instance*: it says a specific value was computed and how to re-derive it. A fact is the *proposition*. Claims reference facts through `evidence[].supports`; they are not superseded by them.",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "id",
+    "title",
+    "statement",
+    "formal",
+    "epistemic_status",
+    "depends_on",
+    "evidence",
+    "provenance"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "type": "integer", "const": 1 },
+
+    "id": {
+      "type": "string",
+      "pattern": "^F:[a-z0-9]+(-[a-z0-9]+)*$",
+      "description": "Stable identifier, `F:` prefixed, e.g. `F:nat-add-comm`. Mirrors the `C:`/`TQ:` convention of the concept graph so the two can be cited side by side."
+    },
+
+    "title": { "type": "string", "minLength": 1 },
+
+    "statement": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The proposition in prose, for a human. Never the machine-readable form -- that is `formal.statement`. Kept because a formal statement alone is not reviewable."
+    },
+
+    "formal": {
+      "type": "object",
+      "required": ["language", "statement", "fragment"],
+      "additionalProperties": false,
+      "description": "What is asserted, machine-readably. This is the field that distinguishes a fact from a claim: a claim's `formal` is a generator recipe, this is the proposition itself.",
+      "properties": {
+        "language": {
+          "enum": ["smtlib2", "lean4", "axeyum-ir"],
+          "description": "`smtlib2` is dispatchable to the solver; `lean4` is checkable by the kernel; `axeyum-ir` is the internal term form."
+        },
+        "statement": {
+          "type": "string",
+          "minLength": 1,
+          "description": "The proposition in the named language. For `smtlib2`, an assertion whose NEGATION being unsat establishes the fact."
+        },
+        "fragment": {
+          "type": "string",
+          "description": "The theory that decides it, e.g. `QF_LIA`, `Nat`, `QF_NRA`, or `none` when no fragment we have decides it. Drives reachability queries."
+        },
+        "free_symbols": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Symbols the statement quantifies over or leaves free, so a consumer need not re-parse to know its shape."
+        }
+      }
+    },
+
+    "epistemic_status": {
+      "enum": ["axiom", "proved", "computed", "empirical", "conjectured", "open", "refuted"],
+      "description": "Deliberately the SAME vocabulary as `claim.schema.json` and the math-education concept graph, plus `refuted`. A fact can be refuted; a claim, being a record of something established, cannot."
+    },
+
+    "depends_on": {
+      "type": "array",
+      "items": { "type": "string", "pattern": "^F:[a-z0-9]+(-[a-z0-9]+)*$" },
+      "description": "Other facts this one rests on. This is the DAG the build order comes from -- over STATEMENTS, not topics. May be empty for a foundational fact."
+    },
+
+    "axiom_footprint": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "The axioms the establishing evidence rests on, e.g. [] for axiom-free or [\"propext\", \"Classical.choice\", \"Quot.sound\"]. REQUIRED when `epistemic_status` is `proved`: an empty array means axiom-free and is a strictly stronger claim than an absent field. This is the metric the project publishes."
+    },
+
+    "evidence": {
+      "type": "array",
+      "description": "Zero or more artifacts establishing the status. Deliberately the same shape as `claim.schema.json`'s evidence rows so one checker can walk both. A fact with `epistemic_status: open` carries an empty array -- and that is a statement, not an omission.",
+      "items": {
+        "type": "object",
+        "required": ["id", "kind", "supports", "check_status"],
+        "additionalProperties": true,
+        "properties": {
+          "id": { "type": "string", "minLength": 1 },
+          "kind": {
+            "enum": [
+              "kernel-term",
+              "witness-replay",
+              "unsat-certificate",
+              "cube-cover",
+              "cube-tree-cover",
+              "exhaustive-enumeration",
+              "published-value-replication",
+              "bound-citation",
+              "instance-pin",
+              "claim-ref"
+            ],
+            "description": "`kernel-term` is a proof term an independent kernel type-checks -- the strongest. `claim-ref` points at an existing `artifacts/claims/` entry, which is how a computed value becomes evidence for a proposition."
+          },
+          "supports": { "type": "string", "minLength": 1 },
+          "check_status": { "enum": ["checked", "replay-only", "not-checked"] },
+          "checker_command": { "type": "string" },
+          "artifact": { "type": "string" },
+          "notes": { "type": "string" }
+        }
+      }
+    },
+
+    "concept_refs": {
+      "type": "array",
+      "description": "Gloss and provenance only, NEVER substance. A fact must be intelligible without resolving these, so that a public repository works while a source corpus stays private.",
+      "items": {
+        "type": "object",
+        "required": ["graph", "ref"],
+        "additionalProperties": true,
+        "properties": {
+          "graph": { "type": "string" },
+          "ref": { "type": "string" },
+          "relation": { "type": "string" },
+          "resolved": { "type": "boolean" }
+        }
+      }
+    },
+
+    "provenance": {
+      "type": "object",
+      "required": ["date"],
+      "additionalProperties": true,
+      "properties": {
+        "date": { "type": "string" },
+        "established_by": { "type": "string", "description": "What settled it: a lane, a solver route, an import, or a person." },
+        "source": { "type": "string", "description": "Where the statement came from, if extracted rather than authored." },
+        "prior_art": { "type": "array", "items": { "type": "object", "additionalProperties": true } }
+      }
+    },
+
+    "notes": { "type": "string" },
+
+    "supersedes": {
+      "type": "array",
+      "items": { "type": "string", "pattern": "^F:[a-z0-9]+(-[a-z0-9]+)*$" }
+    }
+  }
+}

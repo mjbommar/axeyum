@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "id": "F:rado-r4-a5-b3",
+  "title": "The four-colour Rado number of 5(x-y) = 3z is 625",
+  "statement": "Conjecturally R_4(5(x-y)=3z) = 625. The lower bound is free from Chang-De Loera-Wesley's Lemma 4.1 (R_k >= a^k); the refutation at n = 625 is not established.",
+  "formal": {
+    "language": "smtlib2",
+    "statement": "(assert (forall-colourings 625 4 (exists-mono-solution (= (* 5 (- x y)) (* 3 z)))))",
+    "fragment": "QF_BV",
+    "free_symbols": ["x", "y", "z"]
+  },
+  "epistemic_status": "open",
+  "depends_on": [],
+  "evidence": [],
+  "concept_refs": [
+    { "graph": "math-education", "ref": "C:rado-number", "relation": "instance-of", "resolved": true }
+  ],
+  "provenance": {
+    "date": "2026-08-14",
+    "established_by": "not established",
+    "source": "blank cell of Chang-De Loera-Wesley Table 10; inside the a >= b+2, gcd(a,b)=1 hypotheses",
+    "prior_art": [
+      { "citation": "campaign lane agent-c, 2026-08-14", "establishes": "solve killed mid-run at 3h11m with 15.51 GB of proof, because the check needed ~102 GiB against a 123 GiB maximum. At the 1.5x checking ratio landed later the same day it needs ~23 GiB and is reachable." }
+    ]
+  },
+  "notes": "The `open` case, and the point of the type: an empty evidence array is a STATEMENT, not an omission. This is the last blank cell of the a >= b+2 row and it is now reachable."
+}

@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "id": "F:nat-succ-add",
+  "title": "Nat succ_add",
+  "statement": "succ a + b = succ (a + b) for all a b ",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem rado.succ_add :  Nat:Eq AxNat (rado.add (AxNat.succ x0) x1) (AxNat.succ (rado.add x0 x1))",
+    "fragment": "Nat",
+    "free_symbols": ["x0", "x1"]
+  },
+  "epistemic_status": "proved",
+  "depends_on": [],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-succ_add",
+      "kind": "kernel-term",
+      "supports": "succ a + b = succ (a + b) for all a b ",
+      "check_status": "checked",
+      "checker_command": "cargo test -p axeyum-lean-kernel --lib nat_prelude",
+      "notes": "Admitted by axeyum's own Lean kernel via nat_prelude's theorem(\"succ_add\")."
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-14",
+    "established_by": "axeyum-lean-kernel nat_prelude (lean-kernel lane)"
+  },
+  "notes": "A foundational fact add_comm rests on; written because the validator's dangling-edge rule fired on its own author's seed data."
+}

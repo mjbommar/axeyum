@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "id": "F:nat-add-comm",
+  "title": "Addition on the naturals is commutative",
+  "statement": "For all natural numbers a and b, a + b = b + a.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem rado.add_comm : (x0 : AxNat) -> (x1 : AxNat) -> Eq AxNat (rado.add x0 x1) (rado.add x1 x0)",
+    "fragment": "Nat",
+    "free_symbols": ["x0", "x1"]
+  },
+  "epistemic_status": "proved",
+  "depends_on": ["F:nat-zero-add", "F:nat-succ-add"],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-add-comm",
+      "kind": "kernel-term",
+      "supports": "a + b = b + a for all a b : Nat",
+      "check_status": "checked",
+      "checker_command": "cargo test -p axeyum-lean-kernel --lib nat_prelude",
+      "notes": "Admitted by axeyum's own Lean kernel via nat_prelude's theorem(\"add_comm\"). The prelude reports zero axioms, so the empty axiom_footprint is measured rather than assumed."
+    }
+  ],
+  "concept_refs": [
+    { "graph": "math-education", "ref": "C:commutativity", "relation": "instance-of", "resolved": false }
+  ],
+  "provenance": {
+    "date": "2026-08-14",
+    "established_by": "axeyum-lean-kernel nat_prelude (lean-kernel lane)",
+    "source": "hand-built foundational library"
+  },
+  "notes": "One of three seed facts written to exercise fact.schema.json: this is the `proved` case, carrying a kernel term and an empty axiom footprint."
+}

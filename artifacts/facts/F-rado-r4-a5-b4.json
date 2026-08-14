@@ -1,0 +1,36 @@
+{
+  "schema_version": 1,
+  "id": "F:rado-r4-a5-b4",
+  "title": "The four-colour Rado number of 5(x-y) = 4z is 741",
+  "statement": "Every 4-colouring of {1,...,741} contains a monochromatic solution of 5(x-y) = 4z, and some 4-colouring of {1,...,740} avoids one. So R_4(5(x-y)=4z) = 741.",
+  "formal": {
+    "language": "smtlib2",
+    "statement": "(assert (and (forall-colourings 741 4 (exists-mono-solution (= (* 5 (- x y)) (* 4 z)))) (exists-colouring 740 4 (no-mono-solution (= (* 5 (- x y)) (* 4 z))))))",
+    "fragment": "QF_BV",
+    "free_symbols": ["x", "y", "z"]
+  },
+  "epistemic_status": "computed",
+  "depends_on": [],
+  "evidence": [
+    {
+      "id": "claim-741",
+      "kind": "claim-ref",
+      "supports": "R_4(5(x-y)=4z) = 741, both sides",
+      "check_status": "checked",
+      "checker_command": "python3 scripts/check-claim-certificates.py",
+      "artifact": "artifacts/claims/rado/rado-r4-a5-b4-frontier/claim.json",
+      "notes": "A complete adaptive cube cover of F_741: 6241 cubes, every one refuted, every DRAT proof re-derived by axeyum's own backward checker; covered measure exactly 4294967296/4294967296. Lower side is a replayed 4-colouring of [740]."
+    }
+  ],
+  "concept_refs": [
+    { "graph": "math-education", "ref": "C:rado-number", "relation": "instance-of", "resolved": true }
+  ],
+  "provenance": {
+    "date": "2026-08-14",
+    "established_by": "axeyum cube-and-conquer, campaign lane agent-b",
+    "prior_art": [
+      { "citation": "Chang, De Loera, Wesley, ISSAC 2022", "establishes": "Table 10 leaves the (a,b) = (5,4) cell blank" }
+    ]
+  },
+  "notes": "The `computed` case: the proposition is the fact, and the existing claim ledger entry is its evidence rather than a competing record."
+}

@@ -32,6 +32,7 @@ step fmt    cargo fmt --all --check
 # The step below enumerates from the filesystem instead. Keep both: they fail
 # for different reasons, and a disagreement between them is itself a finding.
 step fmt-all scripts/check-fmt-complete.sh
+step facts  python3 scripts/validate-facts.py
 step clippy cargo clippy --workspace --all-targets --all-features -- -D warnings
 # `frontier_*` runs in its own serialized step below: those ratchets are
 # wall-clock-budget based, so contention from the rest of the suite shrinks the
