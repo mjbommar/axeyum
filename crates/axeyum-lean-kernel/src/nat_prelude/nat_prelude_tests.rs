@@ -60,7 +60,17 @@ impl Fixture {
 /// have. `Nat`/`Nat.zero`/`Nat.succ`/`Nat.rec`/`Nat.le`/… are inductive
 /// machinery, so they are checked separately by `environment().contains`.
 fn definition_names(p: &NatPrelude) -> Vec<NameId> {
-    vec![p.add, p.mul, p.pow, p.sum_range, p.pred, p.sub, p.lt, p.dvd]
+    vec![
+        p.add,
+        p.mul,
+        p.pow,
+        p.sum_range,
+        p.pred,
+        p.sub,
+        p.lt,
+        p.dvd,
+        p.valuation_at,
+    ]
 }
 
 fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
@@ -124,6 +134,7 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.dvd_add_right_cancel_of_pos,
         p.not_dvd_one_of_two_le,
         p.not_dvd_one_add_mul_of_two_le,
+        p.valuation_at_two_mul_sq,
     ]
 }
 
@@ -735,6 +746,18 @@ fn divisibility_introduction_and_addition_are_checked() {
     let not_dvd_one_plus_six = f.lemma(p.not_dvd_one_add_mul_of_two_le, &[two, three, two_le_two]);
     f.k.infer(not_dvd_one_plus_six)
         .unwrap_or_else(|e| panic!("2 ∤ 1+2*3 should infer: {}", f.explain(&e)));
+    let two_times_three = f.mul(two, three);
+    let u = f.add(one, two_times_three);
+    let exact_two = f.lemma(
+        p.valuation_at_two_mul_sq,
+        &[two, u, two_le_two, not_dvd_one_plus_six],
+    );
+    f.k.infer(exact_two).unwrap_or_else(|e| {
+        panic!(
+            "the square multiple should have valuation two: {}",
+            f.explain(&e)
+        )
+    });
 }
 
 /// NEGATIVE CONTROLS. Each feeds the kernel a deliberately broken proof and
@@ -1502,7 +1525,32 @@ fn kernel_rejects_broken_proof_terms() {
         rejections += 1;
     }
 
-    assert_eq!(rejections, 31, "every negative control must be rejected");
+    // NC32 — the exact-valuation theorem retains exponent two.
+    {
+        let name = f.name("nc32_valuation_wrong_exponent");
+        let one = f.num(1);
+        let two = f.num(2);
+        let three = f.num(3);
+        let bound = f.lemma(p.le_refl, &[two]);
+        let not_dvd = f.lemma(p.not_dvd_one_add_mul_of_two_le, &[two, three, bound]);
+        let multiple = f.mul(two, three);
+        let u = f.add(one, multiple);
+        let proof = f.lemma(p.valuation_at_two_mul_sq, &[two, u, bound, not_dvd]);
+        let square = f.mul(two, two);
+        let z = f.mul(square, u);
+        let bad = f.valuation_at(two, z, one);
+        let err = f
+            .declare_theorem(name, bad, proof)
+            .expect_err("NC32: exact valuation must retain exponent two");
+        println!(
+            "NC32 (wrong valuation exponent) rejected:\n  {}",
+            f.explain(&err)
+        );
+        assert!(!f.k.environment().contains(name));
+        rejections += 1;
+    }
+
+    assert_eq!(rejections, 32, "every negative control must be rejected");
 }
 
 /// The build is deterministic: two independent kernels render every promised
@@ -1525,7 +1573,7 @@ fn the_build_is_deterministic() {
     assert_eq!(first, second, "the prelude build must be deterministic");
     assert_eq!(
         first.len(),
-        8 + 59,
+        9 + 60,
         "every promised definition and theorem must be rendered"
     );
 }

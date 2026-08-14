@@ -273,6 +273,8 @@ pub struct NatPrelude {
     // --- divisibility -------------------------------------------------------
     /// `Nat.dvd : Nat → Nat → Prop`, where `dvd a n := ∃ q, n = a * q`.
     pub dvd: NameId,
+    /// `Nat.valuationAt a n e := dvd (a^e) n ∧ Not (dvd (a^(e+1)) n)`.
+    pub valuation_at: NameId,
     /// `Nat.dvd_mul : ∀ a q, dvd a (a * q)`.
     pub dvd_mul: NameId,
     /// `Nat.dvd_add : ∀ a m n, dvd a m → dvd a n → dvd a (m + n)`.
@@ -283,6 +285,8 @@ pub struct NatPrelude {
     pub not_dvd_one_of_two_le: NameId,
     /// `Nat.not_dvd_one_add_mul_of_two_le : ∀ a t, Le two a → Not (dvd a (one+a*t))`.
     pub not_dvd_one_add_mul_of_two_le: NameId,
+    /// `Nat.valuation_at_two_mul_sq : ∀ a u, Le two a → Not (dvd a u) → valuationAt a ((a*a)*u) two`.
+    pub valuation_at_two_mul_sq: NameId,
 }
 
 /// Declare the natural-number prelude into `kernel`'s environment, returning the
@@ -388,11 +392,13 @@ pub fn build_nat_prelude(kernel: &mut Kernel) -> Result<NatPrelude, KernelError>
             sub_le_iff_le_add: kernel.name_str(nat, "sub_le_iff_le_add"),
             mul_sub_left_distrib: kernel.name_str(nat, "mul_sub_left_distrib"),
             dvd: kernel.name_str(nat, "dvd"),
+            valuation_at: kernel.name_str(nat, "valuationAt"),
             dvd_mul: kernel.name_str(nat, "dvd_mul"),
             dvd_add: kernel.name_str(nat, "dvd_add"),
             dvd_add_right_cancel_of_pos: kernel.name_str(nat, "dvd_add_right_cancel_of_pos"),
             not_dvd_one_of_two_le: kernel.name_str(nat, "not_dvd_one_of_two_le"),
             not_dvd_one_add_mul_of_two_le: kernel.name_str(nat, "not_dvd_one_add_mul_of_two_le"),
+            valuation_at_two_mul_sq: kernel.name_str(nat, "valuation_at_two_mul_sq"),
         };
 
         let mut d = NatDev::new(kernel, p);
@@ -2735,6 +2741,40 @@ fn declare_divisibility(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), Kernel
         })?;
     }
 
+    // valuationAt a n e := dvd (a^e) n ∧ Not (dvd (a^(succ e)) n)
+    {
+        let a_fv = d.fresh_fvar();
+        let a = d.kernel().fvar(a_fv);
+        let n_fv = d.fresh_fvar();
+        let n = d.kernel().fvar(n_fv);
+        let e_fv = d.fresh_fvar();
+        let e = d.kernel().fvar(e_fv);
+        let power = d.pow(a, e);
+        let se = d.succ(e);
+        let next_power = d.pow(a, se);
+        let divides = d.dvd(power, n);
+        let next_divides = d.dvd(next_power, n);
+        let not_next = d.const_app(p.logic.not, &[next_divides]);
+        let body = d.const_app(p.logic.and, &[divides, not_next]);
+        let value = {
+            let with_e = d.lam_fv(e_fv, nat, body);
+            let with_n = d.lam_fv(n_fv, nat, with_e);
+            d.lam_fv(a_fv, nat, with_n)
+        };
+        let ty = {
+            let with_e = d.kernel().pi(anon, nat, prop, BinderInfo::Default);
+            let with_n = d.kernel().pi(anon, nat, with_e, BinderInfo::Default);
+            d.kernel().pi(anon, nat, with_n, BinderInfo::Default)
+        };
+        d.kernel().add_declaration(Declaration::Definition {
+            name: p.valuation_at,
+            uparams: vec![],
+            ty,
+            value,
+            hint: ReducibilityHint::Regular(6),
+        })?;
+    }
+
     // dvd_mul : ∀ a q, dvd a (a * q)
     d.theorem(p.dvd_mul, 2, &|d, v| {
         let (a, q) = (v[0], v[1]);
@@ -3077,6 +3117,132 @@ fn declare_divisibility(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), Kernel
         let stmt = d.arrow(bound_ty, not_divides);
         (stmt, proof)
     })?;
+
+    // valuation_at_two_mul_sq :
+    //   ∀ a u, Le two a → Not (dvd a u) → valuationAt a ((a*a)*u) two
+    d.theorem(p.valuation_at_two_mul_sq, 2, &|d, v| {
+        let (a, u) = (v[0], v[1]);
+        let unit = d.num(1);
+        let two = d.num(2);
+        let bound_ty = d.le(two, a);
+        let bound_fv = d.fresh_fvar();
+        let bound = d.kernel().fvar(bound_fv);
+        let a_dvd_u = d.dvd(a, u);
+        let not_dvd_u_ty = d.const_app(p.logic.not, &[a_dvd_u]);
+        let not_dvd_u_fv = d.fresh_fvar();
+        let not_dvd_u = d.kernel().fvar(not_dvd_u_fv);
+
+        let zero = d.zero();
+        let one_exp = d.succ(zero);
+        let two_exp = d.succ(one_exp);
+        let three_exp = d.succ(two_exp);
+        let pow0 = d.pow(a, zero);
+        let pow1 = d.pow(a, one_exp);
+        let pow2 = d.pow(a, two_exp);
+        let pow3 = d.pow(a, three_exp);
+        let aa = d.mul(a, a);
+        let z = d.mul(aa, u);
+
+        let pow1_step = d.mul(pow0, a);
+        let one_a = d.mul(unit, a);
+        let h_pow1_step = d.lemma(p.pow_succ, &[a, zero]);
+        let h_pow0 = d.lemma(p.pow_zero, &[a]);
+        let h_pow0_under_mul = d.congr(pow0, unit, h_pow0, &|d, x| d.mul(x, a));
+        let h_one_mul = d.lemma(p.one_mul, &[a]);
+        let (_, pow1_eq_a) = d.chain(
+            pow1,
+            &[
+                (pow1_step, h_pow1_step),
+                (one_a, h_pow0_under_mul),
+                (a, h_one_mul),
+            ],
+        );
+        let pow1_a = d.mul(pow1, a);
+        let h_pow2_step = d.lemma(p.pow_succ, &[a, one_exp]);
+        let h_pow1_under_mul = d.congr(pow1, a, pow1_eq_a, &|d, x| d.mul(x, a));
+        let (_, pow2_eq_aa) = d.chain(pow2, &[(pow1_a, h_pow2_step), (aa, h_pow1_under_mul)]);
+
+        let divides_aa = d.lemma(p.dvd_mul, &[aa, u]);
+        let aa_eq_pow2 = d.symm(pow2, aa, pow2_eq_aa);
+        let divides_pow2 = {
+            let motive = d.eq_motive(aa, &|d, divisor| d.dvd(divisor, z));
+            d.transport(aa, motive, divides_aa, pow2, aa_eq_pow2)
+        };
+
+        let pow2_a = d.mul(pow2, a);
+        let cube = d.mul(aa, a);
+        let h_pow3_step = d.lemma(p.pow_succ, &[a, two_exp]);
+        let h_pow2_under_mul = d.congr(pow2, aa, pow2_eq_aa, &|d, x| d.mul(x, a));
+        let (_, pow3_eq_cube) = d.chain(pow3, &[(pow2_a, h_pow3_step), (cube, h_pow2_under_mul)]);
+        let pow3_dvd_z = d.dvd(pow3, z);
+        let not_pow3_dvd_z = {
+            let divides_fv = d.fresh_fvar();
+            let divides = d.kernel().fvar(divides_fv);
+            let cube_divides_ty = d.dvd(cube, z);
+            let cube_divides = {
+                let motive = d.eq_motive(pow3, &|d, divisor| d.dvd(divisor, z));
+                d.transport(pow3, motive, divides, cube, pow3_eq_cube)
+            };
+            let pred = d.dvd_predicate(cube, z);
+            let false_ty = d.kernel().const_(p.logic.false_, vec![]);
+            let motive = d
+                .kernel()
+                .lam(anon, cube_divides_ty, false_ty, BinderInfo::Default);
+            let minor = {
+                let q_fv = d.fresh_fvar();
+                let q = d.kernel().fvar(q_fv);
+                let cube_q = d.mul(cube, q);
+                let e_fv = d.fresh_fvar();
+                let e_ty = d.eq(z, cube_q);
+                let e = d.kernel().fvar(e_fv);
+                let aq = d.mul(a, q);
+                let aa_aq = d.mul(aa, aq);
+                let h_assoc = d.lemma(p.mul_assoc, &[aa, a, q]);
+                let (_, common_product) = d.chain(z, &[(cube_q, e), (aa_aq, h_assoc)]);
+
+                let one_le_two = d.lemma(p.le_add_right, &[unit, unit]);
+                let one_le_a = d.lemma(p.le_trans, &[unit, two, a, one_le_two, bound]);
+                let a_one = d.mul(a, unit);
+                let a_one_le_aa = d.lemma(p.mul_le_mul_left, &[a, unit, a, one_le_a]);
+                let a_one_eq_a = d.lemma(p.mul_one, &[a]);
+                let a_le_aa = {
+                    let lower_motive = d.eq_motive(a_one, &|d, lower| d.le(lower, aa));
+                    d.transport(a_one, lower_motive, a_one_le_aa, a, a_one_eq_a)
+                };
+                let one_le_aa = d.lemma(p.le_trans, &[unit, a, aa, one_le_a, a_le_aa]);
+                let u_eq_aq = d.lemma(
+                    p.mul_left_cancel_of_pos,
+                    &[aa, u, aq, one_le_aa, common_product],
+                );
+                let pred_u = d.dvd_predicate(a, u);
+                let intro = d.kernel().const_(p.logic.exists_intro, vec![one]);
+                let a_dvd_u_proof = d.apply(intro, &[nat, pred_u, q, u_eq_aq]);
+                let body = d.apply(not_dvd_u, &[a_dvd_u_proof]);
+                let with_e = d.lam_fv(e_fv, e_ty, body);
+                d.lam_fv(q_fv, nat, with_e)
+            };
+            let rec = d.kernel().const_(p.logic.exists_rec, vec![one]);
+            let body = d.apply(rec, &[nat, pred, motive, minor, cube_divides]);
+            d.lam_fv(divides_fv, pow3_dvd_z, body)
+        };
+
+        let divides_pow2_ty = d.dvd(pow2, z);
+        let next_not = d.const_app(p.logic.not, &[pow3_dvd_z]);
+        let proof_pair = d.const_app(
+            p.logic.and_intro,
+            &[divides_pow2_ty, next_not, divides_pow2, not_pow3_dvd_z],
+        );
+        let conclusion = d.valuation_at(a, z, two);
+        let proof = {
+            let with_not_dvd = d.lam_fv(not_dvd_u_fv, not_dvd_u_ty, proof_pair);
+            d.lam_fv(bound_fv, bound_ty, with_not_dvd)
+        };
+        let stmt = {
+            let with_not_dvd = d.arrow(not_dvd_u_ty, conclusion);
+            d.arrow(bound_ty, with_not_dvd)
+        };
+        (stmt, proof)
+    })?;
     Ok(())
 }
 
@@ -3282,6 +3448,12 @@ pub trait NatOps {
     fn dvd(&mut self, a: ExprId, n: ExprId) -> ExprId {
         let f = self.prelude().dvd;
         self.const_app(f, &[a, n])
+    }
+
+    /// `Nat.valuationAt a n e`, exact divisibility by `a^e`.
+    fn valuation_at(&mut self, a: ExprId, n: ExprId, e: ExprId) -> ExprId {
+        let f = self.prelude().valuation_at;
+        self.const_app(f, &[a, n, e])
     }
 
     /// `fun q : Nat => Eq Nat n (a * q)`, the witness predicate defining
