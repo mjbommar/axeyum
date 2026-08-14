@@ -247,6 +247,7 @@ test, so they are unproved rather than unchecked.
 |---|---|---|---|
 | `rhombus-diagonals-perpendicular` | 8 | none | 4.6–8.9 s, correctly reports a nonzero remainder |
 | `rhombus-diagonals-perpendicular` | 8 | `abd-not-collinear` | **declined after 247–365 s** |
+| `rhombus-diagonals-perpendicular` | 8 | `abd-not-collinear`, **untracked** | no verdict in > 12 min |
 | `euler-line` | 10 | none | no verdict within 600 s |
 
 For contrast, everything in the committed corpus decides in **under 250 ms**, and
@@ -277,10 +278,19 @@ untracked comparison for that case had not finished when this was written. So:
 - **Established:** the plain-ideal question is already seconds-expensive at 8
   coordinates and 3 quadratic generators, and cofactor tracking is not what makes
   it so.
-- **Not established:** whether the saturated rhombus decline is a budget ceiling
-  or an `i128` coefficient overflow in `MvPoly`. Reporting it as the latter would
-  be a guess, and the sibling lane's precedent is that this exact guess is worth
-  measuring properly.
+- **Established after the first draft of this note:** the *untracked* saturated
+  rhombus, running under `groebner.rs`'s own far more generous fixed caps
+  (`1e6` reduction steps, `5e6` pairs, `1e5` basis elements), produced **no
+  verdict in over twelve minutes** — three times longer than the tracked run
+  spent before its ceiling tripped. So the basis computation itself is the
+  expense, and the tracked decline at 247 s is a budget ceiling reached while
+  doing genuinely enormous work, not an early arithmetic failure.
+- **Still not established:** whether an `i128` coefficient overflow in `MvPoly`
+  *also* occurs somewhere in that computation. `CofactorOutcome::Declined` is one
+  value for a tripped ceiling and for an overflow alike, so the question cannot be
+  answered from the outside. Reporting it either way would be a guess, and the
+  sibling lane's precedent is that this exact guess is worth measuring properly —
+  which is why splitting `Declined` into two reasons is ranked second below.
 
 The structural suspect is the **monomial order**. This crate uses pure
 lexicographic order everywhere (`groebner.rs`, module docs), which is the order
