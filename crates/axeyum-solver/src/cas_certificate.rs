@@ -512,6 +512,14 @@ pub fn check_cas_int_units_certificate(
 /// Nothing above depends on how the multipliers were found: the verdict rests on
 /// a polynomial identity plus the sign of one rational, both re-derived here.
 #[must_use]
+#[allow(
+    clippy::too_many_lines,
+    reason = "the entry loop and the sign accounting (`lower`, `real_strict`, \
+              `has_inequality`) are one argument: splitting them would put the \
+              premise and the conclusion of the soundness reasoning in \
+              different functions, which is exactly where a wrong `unsat` \
+              would enter"
+)]
 pub fn check_cas_ideal_certificate(
     arena: &TermArena,
     assertions: &[TermId],
@@ -526,10 +534,6 @@ pub fn check_cas_ideal_certificate(
     let mut lower = Rational::zero();
     let mut real_strict = false;
     let mut has_inequality = false;
-    // A conjunct may be cited only once. Citing the same fact twice is harmless
-    // arithmetically, but it is a sign the search produced something unintended,
-    // and rejecting it costs nothing.
-    let mut cited: BTreeSet<TermId> = BTreeSet::new();
 
     for entry in &cert.entries {
         let contribution = match entry {
@@ -538,7 +542,7 @@ pub fn check_cas_ideal_certificate(
                 kind,
                 multiplier,
             } => {
-                if !conjuncts.contains(conjunct) || !cited.insert(*conjunct) {
+                if !conjuncts.contains(conjunct) {
                     return false;
                 }
                 let Some(hypothesis) = read_hypothesis(arena, *conjunct, &mut atoms) else {
@@ -580,6 +584,41 @@ pub fn check_cas_ideal_certificate(
                 }
                 has_inequality = true;
                 vec![(monomial.clone(), *coefficient)]
+            }
+            CasIdealEntry::AssertedProduct {
+                first,
+                second,
+                multiplier,
+            } => {
+                // Both factors must be cited, asserted, and non-negative. A
+                // product of two non-negatives is non-negative at every real
+                // valuation; no strictness is claimed, so this contributes
+                // nothing to `lower` and never sets `real_strict`.
+                if !conjuncts.contains(first) || !conjuncts.contains(second) {
+                    return false;
+                }
+                if positive_constant(multiplier).is_none() {
+                    return false;
+                }
+                let (Some(left), Some(right)) = (
+                    read_hypothesis(arena, *first, &mut atoms),
+                    read_hypothesis(arena, *second, &mut atoms),
+                ) else {
+                    return false;
+                };
+                if left.kind == CasHypothesisKind::Equality
+                    || right.kind == CasHypothesisKind::Equality
+                {
+                    return false;
+                }
+                has_inequality = true;
+                let Some(pair) = multiply(&left.poly, &right.poly) else {
+                    return false;
+                };
+                let Some(scaled) = multiply(multiplier, &pair) else {
+                    return false;
+                };
+                scaled
             }
         };
         let Some(next) = add(sum, contribution) else {

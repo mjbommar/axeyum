@@ -167,6 +167,82 @@ pub fn unit_ideal_cofactors(generators: &[MvPoly], limits: Limits) -> CofactorOu
     reduce_with_cofactors(generators, &MvPoly::constant(Rational::integer(1)), limits)
 }
 
+/// Reduce **several** targets modulo one Gröbner basis of `generators`, sharing
+/// the basis computation across all of them.
+///
+/// Semantically identical to calling [`reduce_with_cofactors`] once per target;
+/// the difference is that `Buchberger`'s algorithm runs once rather than `n`
+/// times, which is what makes a search over many candidate polynomials
+/// affordable. The step budget is shared across the whole call, so the work is
+/// still bounded by one deterministic ceiling.
+///
+/// Returns one outcome per target, positionally aligned. A single
+/// [`CofactorOutcome::Declined`] does not poison the others — only the target
+/// whose reduction exhausted the shared budget declines, and every target after
+/// it declines too, deterministically.
+#[must_use]
+pub fn reduce_many_with_cofactors(
+    generators: &[MvPoly],
+    targets: &[MvPoly],
+    limits: Limits,
+) -> Vec<CofactorOutcome> {
+    if generators.len() > limits.basis_size {
+        return vec![CofactorOutcome::Declined; targets.len()];
+    }
+    let mut budget = Budget {
+        reduction_steps: limits.reduction_steps,
+        limits,
+    };
+    let Some(basis) = tracked_groebner_basis(generators, &mut budget) else {
+        return vec![CofactorOutcome::Declined; targets.len()];
+    };
+    targets
+        .iter()
+        .map(|target| {
+            let start = Tracked {
+                poly: target.clone(),
+                rep: zero_rep(generators.len()),
+            };
+            match reduce_tracked(&start, &basis, &mut budget).and_then(|(remainder, quotients)| {
+                let cofactors = combine(&quotients, &basis, generators.len(), &mut budget)?;
+                Some((cofactors, remainder.poly))
+            }) {
+                Some((cofactors, remainder)) => CofactorOutcome::Reduced {
+                    cofactors,
+                    remainder,
+                },
+                None => CofactorOutcome::Declined,
+            }
+        })
+        .collect()
+}
+
+/// `Σ_j quotients[j] · basis[j].rep[i]` for each generator `i` — the cofactor of
+/// each original generator implied by a set of per-basis quotients.
+fn combine(
+    quotients: &[MvPoly],
+    basis: &[Tracked],
+    generators: usize,
+    budget: &mut Budget,
+) -> Option<Vec<MvPoly>> {
+    let mut cofactors = zero_rep(generators);
+    for (quotient, element) in quotients.iter().zip(basis.iter()) {
+        if quotient.is_zero() {
+            continue;
+        }
+        for (slot, share) in cofactors.iter_mut().zip(element.rep.iter()) {
+            if share.is_zero() {
+                continue;
+            }
+            let product = quotient.mul(share)?;
+            budget.capped(&product)?;
+            *slot = slot.add(&product)?;
+            budget.capped(slot)?;
+        }
+    }
+    Some(cofactors)
+}
+
 fn reduce_with_cofactors_inner(
     generators: &[MvPoly],
     target: &MvPoly,
@@ -187,21 +263,7 @@ fn reduce_with_cofactors_inner(
     let (remainder, quotients) = reduce_tracked(&start, &basis, &mut budget)?;
     // `target = remainder + Σ quotients[j]·basis[j]` and `basis[j] = Σ rep[i]·gen[i]`,
     // so the cofactor of generator `i` is `Σ_j quotients[j]·basis[j].rep[i]`.
-    let mut cofactors = zero_rep(generators.len());
-    for (quotient, element) in quotients.iter().zip(basis.iter()) {
-        if quotient.is_zero() {
-            continue;
-        }
-        for (slot, share) in cofactors.iter_mut().zip(element.rep.iter()) {
-            if share.is_zero() {
-                continue;
-            }
-            let product = quotient.mul(share)?;
-            budget.capped(&product)?;
-            *slot = slot.add(&product)?;
-            budget.capped(slot)?;
-        }
-    }
+    let cofactors = combine(&quotients, &basis, generators.len(), &mut budget)?;
     Some((cofactors, remainder.poly))
 }
 

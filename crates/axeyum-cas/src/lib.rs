@@ -90,7 +90,8 @@ pub use geometry::{Circle, Line, Point};
 pub use gosper::{geometric_power, gosper_sum};
 pub use groebner::{groebner_basis, ideal_contains, reduce};
 pub use groebner_cert::{
-    CofactorOutcome, Limits as CofactorLimits, reduce_with_cofactors, unit_ideal_cofactors,
+    CofactorOutcome, Limits as CofactorLimits, reduce_many_with_cofactors, reduce_with_cofactors,
+    unit_ideal_cofactors,
 };
 pub use matrix::Matrix;
 pub use mvpoly::MvPoly;

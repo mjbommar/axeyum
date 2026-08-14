@@ -33,7 +33,8 @@
 use std::collections::BTreeMap;
 
 use axeyum_cas::{
-    CofactorLimits, CofactorOutcome, MvPoly, reduce_with_cofactors, unit_ideal_cofactors,
+    CofactorLimits, CofactorOutcome, MvPoly, reduce_many_with_cofactors, reduce_with_cofactors,
+    unit_ideal_cofactors,
 };
 use axeyum_ir::{Op, Rational, Sort, TermArena, TermId, TermNode};
 
@@ -156,6 +157,25 @@ pub enum CasIdealEntry {
         monomial: AtomMonomial,
         /// A strictly positive rational coefficient.
         coefficient: Rational,
+    },
+    /// The **product** of two cited non-negativities, scaled by a strictly
+    /// positive rational constant. `p ≥ 0` and `q ≥ 0` give `p·q ≥ 0` at every
+    /// real valuation, so this contributes non-negatively without either factor
+    /// being a constant.
+    ///
+    /// This is the entry that reaches a degree-2 argument no rational multiplier
+    /// can express. `M ≥ 1 ∧ w ≥ 1 ⊢ M·w ≥ M` is the smallest instance and is
+    /// exactly the Rado campaign's micro-lemma `M6`: the refutation is
+    /// `(M − M·w) + (M−1)(w−1) + (w−1) = 0`, and the middle term is the product
+    /// of the two asserted bounds. No strictness is ever claimed for a product,
+    /// even when both factors are strict.
+    AssertedProduct {
+        /// The first cited conjunct; must assert a non-negativity or positivity.
+        first: TermId,
+        /// The second cited conjunct; may be the same as `first` (a square).
+        second: TermId,
+        /// A strictly positive rational constant, as an [`AtomPoly`].
+        multiplier: AtomPoly,
     },
 }
 
@@ -623,7 +643,12 @@ pub fn cas_ideal_refutation(
     // The route earns its place only on systems the linear engines cannot handle.
     // A purely linear system is `lia-simplex`/`lra`'s job and is decided far
     // faster there, so declining here keeps the fast path free.
-    if equalities.is_empty() || !nonlinear {
+    //
+    // An *equation-free* system is still a candidate: the positivity search below
+    // needs no ideal at all (`M ≥ 1 ∧ w ≥ 1 ∧ M·w < M` has no equations and is
+    // refuted by the product of the two bounds). It does need two hypotheses to
+    // combine.
+    if !nonlinear || equalities.len() + inequalities.len() < 2 {
         return CasOutcome::NoCandidate;
     }
     if equalities.len() > MAX_IDEAL_GENERATORS
@@ -665,6 +690,13 @@ pub fn cas_ideal_refutation(
     // 3. An asserted inequality whose normal form modulo the ideal is a constant.
     if let Some(cert) =
         try_inequality_combination(&table, &equalities, &inequalities, &generators, limits)
+    {
+        return finish(arena, assertions, cert);
+    }
+    // 4. A non-negative combination of hypotheses, their pairwise products and
+    //    atom squares that collapses to a constant below its own floor.
+    if let Some(cert) =
+        try_positivity_combination(&table, &equalities, &inequalities, &generators, limits)
     {
         return finish(arena, assertions, cert);
     }
@@ -750,6 +782,240 @@ fn try_inequality_combination(
         }
     }
     None
+}
+
+/// Ceiling on non-negative candidate terms in the positivity search. The subset
+/// enumeration below is cubic in this, so it is the number that bounds the cost.
+const MAX_POSITIVITY_CANDIDATES: usize = 24;
+/// Largest combination the positivity search considers. Three is what the Rado
+/// campaign's `M6` needs (a strict hypothesis, a product of two bounds, and one
+/// bound alone) and it keeps the enumeration at a few thousand vector sums.
+const MAX_POSITIVITY_SUBSET: usize = 3;
+
+/// Where one non-negative candidate term of the positivity search came from.
+#[derive(Debug, Clone, Copy)]
+enum CandidateSource {
+    /// An asserted inequality, used with multiplier `1`.
+    Single(usize),
+    /// The product of two asserted inequalities (possibly the same one twice).
+    Product(usize, usize),
+    /// The square of one opaque atom.
+    Square(TermId),
+}
+
+/// A term known to be non-negative in every model, reduced modulo the ideal.
+struct Candidate {
+    source: CandidateSource,
+    /// The normal form of the term modulo the asserted equations.
+    residue: MvPoly,
+    /// The equality cofactors that witness that reduction.
+    cofactors: Vec<MvPoly>,
+    /// What this term provably contributes at minimum: `1` for an
+    /// integer-sorted strict inequality (`p > 0` over ℤ is `p ≥ 1`), else `0`.
+    floor: Rational,
+    /// True for a real-sorted strict inequality, whose contribution is strictly
+    /// positive but has no rational floor.
+    real_strict: bool,
+}
+
+/// Searches for a non-negative combination — of asserted inequalities, their
+/// pairwise products, and atom squares — that is congruent modulo the ideal to a
+/// constant strictly below the floor the combination provably exceeds.
+///
+/// This is the shape that needs a *product*, and no rational multiplier can
+/// express it. `M ≥ 1 ∧ w ≥ 1 ∧ M·w < M` — the Rado campaign's micro-lemma `M6`,
+/// which its `L3` was hand-split to reach — is refuted by
+///
+/// ```text
+/// (M − M·w)  +  (M−1)(w−1)  +  (w−1)  =  0
+/// ```
+///
+/// where the first term is `≥ 1` (an integer strictly above zero), the second is
+/// a product of two asserted non-negativities, and the third is one of them
+/// alone. The sum is identically `0`, which is below the floor `1`.
+///
+/// The search reduces every candidate modulo one shared Gröbner basis, then
+/// enumerates unit-coefficient subsets up to [`MAX_POSITIVITY_SUBSET`]. It is
+/// deliberately *incomplete*: general non-negative multipliers are a linear
+/// program over the residues, which is not wired. A refutation needing `2x² + 3y²`
+/// is missed.
+fn try_positivity_combination(
+    table: &AtomTable,
+    equalities: &[Hypothesis],
+    inequalities: &[Hypothesis],
+    generators: &[MvPoly],
+    limits: CofactorLimits,
+) -> Option<CasIdealCertificate> {
+    let candidates = build_candidates(table, inequalities, generators, limits)?;
+    let count = candidates.len();
+    // Deterministic ascending index order at every level.
+    for first in 0..count {
+        for second in first..count {
+            for third in second..count {
+                let mut chosen = vec![first];
+                if second != first {
+                    chosen.push(second);
+                }
+                if third != second {
+                    chosen.push(third);
+                }
+                if chosen.len() > MAX_POSITIVITY_SUBSET {
+                    continue;
+                }
+                if let Some(cert) =
+                    try_subset(table, equalities, inequalities, &candidates, &chosen)
+                {
+                    return Some(cert);
+                }
+            }
+        }
+    }
+    None
+}
+
+/// Builds the non-negative candidate terms and reduces them modulo one shared
+/// Gröbner basis. `None` when a reduction declines, which makes the whole search
+/// decline rather than run on a partial candidate set.
+fn build_candidates(
+    table: &AtomTable,
+    inequalities: &[Hypothesis],
+    generators: &[MvPoly],
+    limits: CofactorLimits,
+) -> Option<Vec<Candidate>> {
+    let mut sources: Vec<(CandidateSource, MvPoly, Rational, bool)> = Vec::new();
+    for (index, hypothesis) in inequalities.iter().enumerate() {
+        let strict = hypothesis.kind == CasHypothesisKind::Positive;
+        let floor = if strict && hypothesis.integer_valued {
+            Rational::integer(1)
+        } else {
+            Rational::zero()
+        };
+        sources.push((
+            CandidateSource::Single(index),
+            hypothesis.poly.clone(),
+            floor,
+            strict && !hypothesis.integer_valued,
+        ));
+    }
+    for left in 0..inequalities.len() {
+        for right in left..inequalities.len() {
+            // A product of two non-negatives is non-negative; no strictness is
+            // claimed for it even when both factors are strict.
+            let product = inequalities[left].poly.mul(&inequalities[right].poly)?;
+            sources.push((
+                CandidateSource::Product(left, right),
+                product,
+                Rational::zero(),
+                false,
+            ));
+        }
+    }
+    for &atom in table.atoms() {
+        let index = table.index_of(atom)?;
+        let square = MvPoly::var(&AtomTable::name(index)).pow(2)?;
+        sources.push((
+            CandidateSource::Square(atom),
+            square,
+            Rational::zero(),
+            false,
+        ));
+    }
+    sources.truncate(MAX_POSITIVITY_CANDIDATES);
+
+    let targets: Vec<MvPoly> = sources.iter().map(|(_, poly, _, _)| poly.clone()).collect();
+    let reduced = reduce_many_with_cofactors(generators, &targets, limits);
+    let mut candidates = Vec::with_capacity(sources.len());
+    for ((source, _, floor, real_strict), outcome) in sources.into_iter().zip(reduced) {
+        let CofactorOutcome::Reduced {
+            cofactors,
+            remainder,
+        } = outcome
+        else {
+            return None;
+        };
+        candidates.push(Candidate {
+            source,
+            residue: remainder,
+            cofactors,
+            floor,
+            real_strict,
+        });
+    }
+    Some(candidates)
+}
+
+/// Tests one unit-coefficient subset: the residues must sum to a constant below
+/// the subset's own provable floor.
+fn try_subset(
+    table: &AtomTable,
+    equalities: &[Hypothesis],
+    inequalities: &[Hypothesis],
+    candidates: &[Candidate],
+    chosen: &[usize],
+) -> Option<CasIdealCertificate> {
+    let mut residue = MvPoly::zero();
+    let mut floor = Rational::zero();
+    let mut real_strict = false;
+    for &index in chosen {
+        let candidate = &candidates[index];
+        residue = residue.add(&candidate.residue)?;
+        floor = floor.checked_add(candidate.floor)?;
+        real_strict |= candidate.real_strict;
+    }
+    let constant = constant_value(&residue)?;
+    let order = constant.checked_cmp(&floor)?;
+    let refutes = match order {
+        core::cmp::Ordering::Less => true,
+        core::cmp::Ordering::Equal => real_strict,
+        core::cmp::Ordering::Greater => false,
+    };
+    if !refutes {
+        return None;
+    }
+    // `Σ candidates = Σ cofactors·G + Σ residues`, so subtracting the summed
+    // cofactor combination from the candidates leaves exactly the constant.
+    let mut cofactors = vec![MvPoly::zero(); equalities.len()];
+    for &index in chosen {
+        for (slot, share) in cofactors.iter_mut().zip(candidates[index].cofactors.iter()) {
+            *slot = slot.add(share)?;
+        }
+    }
+    let mut entries = Vec::with_capacity(chosen.len() + equalities.len());
+    for &index in chosen {
+        entries.push(candidate_entry(&candidates[index], inequalities));
+    }
+    for (equality, cofactor) in equalities.iter().zip(cofactors.iter()) {
+        if cofactor.is_zero() {
+            continue;
+        }
+        entries.push(CasIdealEntry::Asserted {
+            conjunct: equality.conjunct,
+            kind: CasHypothesisKind::Equality,
+            multiplier: normal_form(&cofactor.neg()?, table)?,
+        });
+    }
+    Some(CasIdealCertificate { entries, constant })
+}
+
+/// The certificate entry for one candidate, always with multiplier `1`.
+fn candidate_entry(candidate: &Candidate, inequalities: &[Hypothesis]) -> CasIdealEntry {
+    let one: AtomPoly = vec![(Vec::new(), Rational::integer(1))];
+    match candidate.source {
+        CandidateSource::Single(index) => CasIdealEntry::Asserted {
+            conjunct: inequalities[index].conjunct,
+            kind: inequalities[index].kind,
+            multiplier: one,
+        },
+        CandidateSource::Product(left, right) => CasIdealEntry::AssertedProduct {
+            first: inequalities[left].conjunct,
+            second: inequalities[right].conjunct,
+            multiplier: one,
+        },
+        CandidateSource::Square(atom) => CasIdealEntry::EvenMonomial {
+            monomial: vec![(atom, 2)],
+            coefficient: Rational::integer(1),
+        },
+    }
 }
 
 /// Hands a candidate to the independent checker; a candidate that fails is

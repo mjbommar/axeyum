@@ -617,3 +617,352 @@ fn an_inequality_over_division_atoms_is_refuted_end_to_end() {
 ",
     );
 }
+
+// ---------------------------------------------------------------------------
+// The positivity combination: products of asserted non-negativities
+// ---------------------------------------------------------------------------
+
+/// **The Rado shape.** `M ≥ 1 ∧ w ≥ 1 ⊢ M·w ≥ M` is the campaign's micro-lemma
+/// `M6`, which its degree-3 lemma `L3` was hand-split into after `L3` timed out
+/// at 60 s. Its refutation is
+///
+/// ```text
+/// (M − M·w)  +  (M−1)(w−1)  +  (w−1)  =  0
+/// ```
+///
+/// and the middle term is the **product of two asserted bounds** — a degree-2
+/// certificate that no rational multiplier can express.
+///
+/// Stated over `div` atoms with three quantities, so `int-real-relax` (which
+/// aborts on `div`) and `nia-linearize` both decline. Measured before this
+/// search: `unknown` after a **20 s timeout** via `int-blast-ladder`.
+#[test]
+fn the_product_of_two_bounds_refutes_the_rado_monotonicity_shape() {
+    assert_unsat_via_ideal(
+        r"
+(set-logic QF_NIA)
+(declare-fun p () Int)
+(declare-fun q () Int)
+(declare-fun r () Int)
+(assert (>= (div p q) 1))
+(assert (>= (div r q) (div q r)))
+(assert (< (* (div p q) (div r q)) (* (div q r) (div p q))))
+(check-sat)
+",
+    );
+}
+
+/// The same argument over real division atoms. `nra-real-root` declines on the
+/// non-polynomial operator; the linear-abstraction relaxation decided it before,
+/// in 60.6 ms, and this closes it exactly in 1.2 ms.
+#[test]
+fn the_product_argument_works_over_real_division_atoms() {
+    assert_route_refutes(
+        r"
+(set-logic QF_NRA)
+(declare-fun p () Real)
+(declare-fun q () Real)
+(assert (>= (/ p q) 1.0))
+(assert (>= (/ q p) 1.0))
+(assert (< (* (/ p q) (/ q p)) (/ p q)))
+(check-sat)
+",
+    );
+}
+
+/// NEGATIVE CONTROL for the product shape. `M ≥ 1 ∧ w ≥ 2 ∧ M·w < 3M` is
+/// satisfiable (`M = 1, w = 2`), and no product of the asserted bounds closes it.
+#[test]
+fn control_a_satisfiable_product_shape_is_not_refuted() {
+    assert_sat_and_ideal_route_declined(
+        r"
+(set-logic QF_NIA)
+(declare-fun m () Int)
+(declare-fun w () Int)
+(assert (>= m 1))
+(assert (>= w 2))
+(assert (< (* m w) (* 3 m)))
+(check-sat)
+",
+    );
+}
+
+/// NEGATIVE CONTROL: drop one bound and the argument collapses. Without `b ≥ 1`
+/// the product `(b−1)(t−a)` is no longer available and the query is genuinely
+/// satisfiable (`b = −1, a = 0, t = 1`).
+#[test]
+fn control_dropping_a_bound_makes_the_product_argument_unavailable() {
+    assert_sat_and_ideal_route_declined(
+        r"
+(set-logic QF_NIA)
+(declare-fun m () Int)
+(declare-fun w () Int)
+(assert (>= w 1))
+(assert (< (* m w) m))
+(check-sat)
+",
+    );
+}
+
+/// Pins that the product search really emits an [`CasIdealEntry::AssertedProduct`],
+/// rather than a combination that happens to close without one. Without this the
+/// product shape could silently regress to the earlier search and nothing would
+/// notice, because the end-to-end verdict would be unchanged.
+#[test]
+fn the_product_search_emits_a_product_entry() {
+    let text = r"
+(set-logic QF_NIA)
+(declare-fun p () Int)
+(declare-fun q () Int)
+(declare-fun r () Int)
+(assert (>= (div p q) 1))
+(assert (>= (div r q) (div q r)))
+(assert (< (* (div p q) (div r q)) (* (div q r) (div p q))))
+(check-sat)
+";
+    let script = parse_script(text).expect("parse");
+    let assertions = script.assertions.clone();
+    let CasOutcome::Refuted(cert) = cas_ideal_refutation(&script.arena, &assertions) else {
+        panic!("the product case must be refuted");
+    };
+    assert!(
+        cert.entries
+            .iter()
+            .any(|entry| matches!(entry, CasIdealEntry::AssertedProduct { .. })),
+        "the certificate must actually use a product: {cert:?}"
+    );
+    assert!(check_cas_ideal_certificate(
+        &script.arena,
+        &assertions,
+        &cert
+    ));
+}
+
+// ---------------------------------------------------------------------------
+// GUARD-ISOLATING FORGERIES
+//
+// The tamper tests above mutate a real certificate. Measured by targeted
+// mutation, most of them reject through the *identity* check — change any
+// number and the combination stops being a constant — which means they do not
+// actually exercise the guard they are named after. Deleting the guard leaves
+// them green.
+//
+// The tests below are different in kind: each is a **hand-built certificate for
+// a satisfiable query** whose combination really is a constant of the refuting
+// sign, and which exactly one guard stands between and a wrong `unsat`. Each was
+// verified to fail when its guard is deleted.
+// ---------------------------------------------------------------------------
+
+/// The constant-`1` multiplier every forgery below uses.
+fn one() -> axeyum_solver::AtomPoly {
+    vec![(Vec::new(), Rational::integer(1))]
+}
+
+/// **Parity.** `x³ = −1` is satisfiable (`x = −1`). This forgery presents `x³` as
+/// a non-negative term and cancels it against the equation, giving the constant
+/// `−1`, which refutes. Only the even-exponent check stands between it and a
+/// wrong `unsat` — `x³` is negative exactly where the model is.
+#[test]
+fn forgery_an_odd_power_presented_as_non_negative_is_rejected() {
+    let mut arena = TermArena::new();
+    let x = arena.int_var("x").unwrap();
+    let square = arena.int_mul(x, x).unwrap();
+    let cube = arena.int_mul(x, square).unwrap();
+    let minus_one = arena.int_const(-1);
+    let equation = arena.eq(cube, minus_one).unwrap();
+    let assertions = vec![equation];
+
+    // x³ + (−1)·(x³ + 1) = −1
+    let negative_one = vec![(Vec::new(), Rational::integer(-1))];
+    let cert = CasIdealCertificate {
+        entries: vec![
+            CasIdealEntry::EvenMonomial {
+                monomial: vec![(x, 3)],
+                coefficient: Rational::integer(1),
+            },
+            CasIdealEntry::Asserted {
+                conjunct: equation,
+                kind: CasHypothesisKind::Equality,
+                multiplier: negative_one,
+            },
+        ],
+        constant: Rational::integer(-1),
+    };
+    assert!(
+        !check_cas_ideal_certificate(&arena, &assertions, &cert),
+        "an odd power was accepted as a non-negative term"
+    );
+}
+
+/// **Square coefficient sign.** `x² = 1` is satisfiable (`x = 1`). Presenting
+/// `−x²` as a non-negative term and cancelling against the equation gives `−1`.
+#[test]
+fn forgery_a_negative_square_coefficient_is_rejected() {
+    let mut arena = TermArena::new();
+    let x = arena.int_var("x").unwrap();
+    let square = arena.int_mul(x, x).unwrap();
+    let one_const = arena.int_const(1);
+    let equation = arena.eq(square, one_const).unwrap();
+    let assertions = vec![equation];
+
+    // (−1)·x² + 1·(x² − 1) = −1
+    let cert = CasIdealCertificate {
+        entries: vec![
+            CasIdealEntry::EvenMonomial {
+                monomial: vec![(x, 2)],
+                coefficient: Rational::integer(-1),
+            },
+            CasIdealEntry::Asserted {
+                conjunct: equation,
+                kind: CasHypothesisKind::Equality,
+                multiplier: one(),
+            },
+        ],
+        constant: Rational::integer(-1),
+    };
+    assert!(!check_cas_ideal_certificate(&arena, &assertions, &cert));
+}
+
+/// **The kind label.** `x > 0` over `Real` is satisfiable. Labelling that strict
+/// inequality as an *equality* unlocks an arbitrary — here negative — multiplier,
+/// and `(−1)·x + 1·x = 0` then reads as `0 = 0` with a strict entry present,
+/// which the checker treats as a contradiction. The label must never be trusted:
+/// the fact is re-read off the comparison head.
+#[test]
+fn forgery_a_strict_inequality_relabelled_as_an_equality_is_rejected() {
+    let mut arena = TermArena::new();
+    let x = arena.real_var("x").unwrap();
+    let zero = arena.real_const(Rational::zero());
+    let positive = arena.real_gt(x, zero).unwrap();
+    let assertions = vec![positive];
+
+    let negative_one = vec![(Vec::new(), Rational::integer(-1))];
+    let cert = CasIdealCertificate {
+        entries: vec![
+            CasIdealEntry::Asserted {
+                conjunct: positive,
+                kind: CasHypothesisKind::Equality,
+                multiplier: negative_one,
+            },
+            CasIdealEntry::Asserted {
+                conjunct: positive,
+                kind: CasHypothesisKind::Positive,
+                multiplier: one(),
+            },
+        ],
+        constant: Rational::zero(),
+    };
+    assert!(
+        !check_cas_ideal_certificate(&arena, &assertions, &cert),
+        "a strict inequality was accepted under an equality label"
+    );
+}
+
+/// **Citation.** `x > 0` over `Real` is satisfiable. The forgery cites a
+/// perfectly well-formed `x ≤ 0` that is **built but never asserted**; the two
+/// cancel to `0`, which with a strict entry present reads as a contradiction.
+#[test]
+fn forgery_an_uncited_conjunct_is_rejected() {
+    let mut arena = TermArena::new();
+    let x = arena.real_var("x").unwrap();
+    let zero = arena.real_const(Rational::zero());
+    let positive = arena.real_gt(x, zero).unwrap();
+    let unasserted = arena.real_le(x, zero).unwrap();
+    let assertions = vec![positive];
+
+    let cert = CasIdealCertificate {
+        entries: vec![
+            CasIdealEntry::Asserted {
+                conjunct: positive,
+                kind: CasHypothesisKind::Positive,
+                multiplier: one(),
+            },
+            CasIdealEntry::Asserted {
+                conjunct: unasserted,
+                kind: CasHypothesisKind::NonNegative,
+                multiplier: one(),
+            },
+        ],
+        constant: Rational::zero(),
+    };
+    assert!(
+        !check_cas_ideal_certificate(&arena, &assertions, &cert),
+        "a conjunct that was never asserted was accepted as a hypothesis"
+    );
+}
+
+/// Builds `x ≥ 2 ∧ x ≥ 0 ∧ x² = 2x + 1` over `Real`, which is satisfiable at
+/// `x = 1 + √2 ≈ 2.414`. Both product forgeries below are built on it.
+fn product_forgery_setup() -> (TermArena, Vec<axeyum_ir::TermId>) {
+    let mut arena = TermArena::new();
+    let x = arena.real_var("x").unwrap();
+    let two = arena.real_const(Rational::integer(2));
+    let zero = arena.real_const(Rational::zero());
+    let one_const = arena.real_const(Rational::integer(1));
+    let at_least_two = arena.real_ge(x, two).unwrap();
+    let non_negative = arena.real_ge(x, zero).unwrap();
+    let square = arena.real_mul(x, x).unwrap();
+    let doubled = arena.real_mul(two, x).unwrap();
+    let rhs = arena.real_add(doubled, one_const).unwrap();
+    let equation = arena.eq(square, rhs).unwrap();
+    (arena, vec![at_least_two, non_negative, equation])
+}
+
+/// **Product multiplier sign.** `−(x−2)·x + (x² − 2x − 1) = −1` is a genuine
+/// constant of the refuting sign, and the query is satisfiable. Only the
+/// requirement that a product multiplier be strictly positive stops it.
+#[test]
+fn forgery_a_negative_product_multiplier_is_rejected() {
+    let (arena, assertions) = product_forgery_setup();
+    let negative_one = vec![(Vec::new(), Rational::integer(-1))];
+    let cert = CasIdealCertificate {
+        entries: vec![
+            CasIdealEntry::AssertedProduct {
+                first: assertions[0],
+                second: assertions[1],
+                multiplier: negative_one,
+            },
+            CasIdealEntry::Asserted {
+                conjunct: assertions[2],
+                kind: CasHypothesisKind::Equality,
+                multiplier: one(),
+            },
+        ],
+        constant: Rational::integer(-1),
+    };
+    assert!(
+        !check_cas_ideal_certificate(&arena, &assertions, &cert),
+        "a negative product multiplier was accepted"
+    );
+}
+
+/// **Product citation.** The same combination, this time with a positive
+/// multiplier but one factor an unasserted `x ≤ 0`, whose polynomial `−x` makes
+/// the product `−(x−2)·x` non-negative-looking. `x ≤ 0` is false in every model
+/// of the query, which is exactly why it must not be citable.
+#[test]
+fn forgery_an_uncited_product_factor_is_rejected() {
+    let (mut arena, assertions) = product_forgery_setup();
+    let x = arena.real_var("x").unwrap();
+    let zero = arena.real_const(Rational::zero());
+    let unasserted = arena.real_le(x, zero).unwrap();
+    let cert = CasIdealCertificate {
+        entries: vec![
+            CasIdealEntry::AssertedProduct {
+                first: assertions[0],
+                second: unasserted,
+                multiplier: one(),
+            },
+            CasIdealEntry::Asserted {
+                conjunct: assertions[2],
+                kind: CasHypothesisKind::Equality,
+                multiplier: one(),
+            },
+        ],
+        constant: Rational::integer(-1),
+    };
+    assert!(
+        !check_cas_ideal_certificate(&arena, &assertions, &cert),
+        "an unasserted product factor was accepted"
+    );
+}
