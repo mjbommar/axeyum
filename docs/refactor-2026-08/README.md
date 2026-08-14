@@ -1,5 +1,10 @@
 # Refactor and cleanup plan — August 2026
 
+> **This is the engineering strand.** Its companion is
+> [`docs/mathematics-2026-08/`](../mathematics-2026-08/README.md), which asks what
+> mathematics the system can do rather than where the code is untidy. Read that
+> one if you want the ceiling; this one is the floor.
+
 A plan grounded in measurement, written after a twelve-hour multi-agent campaign
 that pointed the whole stack at open mathematics and recorded where it bent.
 Nothing here is an impression: every number was measured on 2026-08-14 and the
