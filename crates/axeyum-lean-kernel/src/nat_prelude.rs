@@ -287,6 +287,8 @@ pub struct NatPrelude {
     pub div_mod: NameId,
     /// `Nat.div_mod_exists : ∀ d n, Le one d → ∃ q r, divMod d n q r`.
     pub div_mod_exists: NameId,
+    /// `Nat.div_mod_unique : divMod d n q₁ r₁ → divMod d n q₂ r₂ → q₁=q₂ ∧ r₁=r₂`.
+    pub div_mod_unique: NameId,
 
     // --- divisibility -------------------------------------------------------
     /// `Nat.dvd : Nat → Nat → Prop`, where `dvd a n := ∃ q, n = a * q`.
@@ -417,6 +419,7 @@ pub fn build_nat_prelude(kernel: &mut Kernel) -> Result<NatPrelude, KernelError>
             mul_sub_left_distrib: kernel.name_str(nat, "mul_sub_left_distrib"),
             div_mod: kernel.name_str(nat, "divMod"),
             div_mod_exists: kernel.name_str(nat, "div_mod_exists"),
+            div_mod_unique: kernel.name_str(nat, "div_mod_unique"),
             dvd: kernel.name_str(nat, "dvd"),
             valuation_at: kernel.name_str(nat, "valuationAt"),
             dvd_mul: kernel.name_str(nat, "dvd_mul"),
@@ -3180,6 +3183,266 @@ fn declare_euclidean_division(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), 
         let conclusion = exists_at(d, dividend);
         let stmt = d.arrow(positive_ty, conclusion);
         let proof = d.lam_fv(positive_fv, positive_ty, body);
+        (stmt, proof)
+    })?;
+
+    // div_mod_unique :
+    //   ∀ d n q₁ r₁ q₂ r₂,
+    //     divMod d n q₁ r₁ → divMod d n q₂ r₂ → q₁ = q₂ ∧ r₁ = r₂
+    // Compare the quotients by totality. A strict gap places one reconstructed
+    // dividend strictly below the other because its remainder is below the
+    // divisor, contradicting their common value. Equal quotients leave equal
+    // remainders by cancellation of the common product.
+    d.theorem(p.div_mod_unique, 6, &|d, v| {
+        let (divisor, dividend, q1, r1, q2, r2) = (v[0], v[1], v[2], v[3], v[4], v[5]);
+        let relation1_ty = d.div_mod(divisor, dividend, q1, r1);
+        let relation2_ty = d.div_mod(divisor, dividend, q2, r2);
+        let quotient_eq_ty = d.eq(q1, q2);
+        let remainder_eq_ty = d.eq(r1, r2);
+        let target = d.const_app(p.logic.and, &[quotient_eq_ty, remainder_eq_ty]);
+
+        let relation1_fv = d.fresh_fvar();
+        let relation1 = d.kernel().fvar(relation1_fv);
+        let relation2_fv = d.fresh_fvar();
+        let relation2 = d.kernel().fvar(relation2_fv);
+
+        let product1 = d.mul(divisor, q1);
+        let product2 = d.mul(divisor, q2);
+        let sum1 = d.add(product1, r1);
+        let sum2 = d.add(product2, r2);
+        let equation1_ty = d.eq(dividend, sum1);
+        let equation2_ty = d.eq(dividend, sum2);
+        let bound1_ty = d.lt(r1, divisor);
+        let bound2_ty = d.lt(r2, divisor);
+
+        let relation2_to_target = d.arrow(relation2_ty, target);
+        let relation1_motive =
+            d.kernel()
+                .lam(anon, relation1_ty, relation2_to_target, BinderInfo::Default);
+        let relation1_minor = {
+            let equation1_fv = d.fresh_fvar();
+            let equation1 = d.kernel().fvar(equation1_fv);
+            let bound1_fv = d.fresh_fvar();
+            let bound1 = d.kernel().fvar(bound1_fv);
+
+            let relation2_motive = d
+                .kernel()
+                .lam(anon, relation2_ty, target, BinderInfo::Default);
+            let relation2_minor = {
+                let equation2_fv = d.fresh_fvar();
+                let equation2 = d.kernel().fvar(equation2_fv);
+                let bound2_fv = d.fresh_fvar();
+                let bound2 = d.kernel().fvar(bound2_fv);
+
+                let equation1_rev = d.symm(dividend, sum1, equation1);
+                let (_, sums_equal) =
+                    d.chain(sum1, &[(dividend, equation1_rev), (sum2, equation2)]);
+                let order12_ty = d.le(q1, q2);
+                let order21_ty = d.le(q2, q1);
+                let order_split_ty = d.const_app(p.logic.or, &[order12_ty, order21_ty]);
+                let order_split = d.lemma(p.le_total, &[q1, q2]);
+                let order_motive =
+                    d.kernel()
+                        .lam(anon, order_split_ty, quotient_eq_ty, BinderInfo::Default);
+
+                let q1_le_q2_minor = {
+                    let order_fv = d.fresh_fvar();
+                    let order = d.kernel().fvar(order_fv);
+                    let strict_ty = d.lt(q1, q2);
+                    let equal_ty = d.eq(q1, q2);
+                    let split_ty = d.const_app(p.logic.or, &[strict_ty, equal_ty]);
+                    let split = d.lemma(p.lt_or_eq_of_le, &[q1, q2, order]);
+                    let split_motive =
+                        d.kernel()
+                            .lam(anon, split_ty, quotient_eq_ty, BinderInfo::Default);
+                    let strict_minor = {
+                        let strict_fv = d.fresh_fvar();
+                        let strict = d.kernel().fvar(strict_fv);
+                        let product1_plus_divisor = d.add(product1, divisor);
+                        let sum1_lt_next =
+                            d.lemma(p.add_lt_add_left, &[product1, r1, divisor, bound1]);
+                        let sq1 = d.succ(q1);
+                        let next_le_product2 =
+                            d.lemma(p.mul_le_mul_left, &[divisor, sq1, q2, strict]);
+                        let sum1_lt_product2 = d.lemma(
+                            p.lt_of_lt_of_le,
+                            &[
+                                sum1,
+                                product1_plus_divisor,
+                                product2,
+                                sum1_lt_next,
+                                next_le_product2,
+                            ],
+                        );
+                        let product2_le_sum2 = d.lemma(p.le_add_right, &[product2, r2]);
+                        let sum1_lt_sum2 = d.lemma(
+                            p.lt_of_lt_of_le,
+                            &[sum1, product2, sum2, sum1_lt_product2, product2_le_sum2],
+                        );
+                        let sums_equal_rev = d.symm(sum1, sum2, sums_equal);
+                        let loop_motive = d.eq_motive(sum2, &|d, x| d.lt(sum1, x));
+                        let impossible_strict =
+                            d.transport(sum2, loop_motive, sum1_lt_sum2, sum1, sums_equal_rev);
+                        let no_loop = d.lemma(p.lt_irrefl, &[sum1]);
+                        let impossible = d.apply(no_loop, &[impossible_strict]);
+                        let false_ty = d.kernel().const_(p.logic.false_, vec![]);
+                        let false_motive =
+                            d.kernel()
+                                .lam(anon, false_ty, quotient_eq_ty, BinderInfo::Default);
+                        let level_zero = d.kernel().level_zero();
+                        let false_rec = d.kernel().const_(p.logic.false_rec, vec![level_zero]);
+                        let body = d.apply(false_rec, &[false_motive, impossible]);
+                        d.lam_fv(strict_fv, strict_ty, body)
+                    };
+                    let equal_minor = {
+                        let equal_fv = d.fresh_fvar();
+                        let equal = d.kernel().fvar(equal_fv);
+                        d.lam_fv(equal_fv, equal_ty, equal)
+                    };
+                    let or_rec = d.kernel().const_(p.logic.or_rec, vec![]);
+                    let body = d.apply(
+                        or_rec,
+                        &[
+                            strict_ty,
+                            equal_ty,
+                            split_motive,
+                            strict_minor,
+                            equal_minor,
+                            split,
+                        ],
+                    );
+                    d.lam_fv(order_fv, order12_ty, body)
+                };
+
+                let q2_le_q1_minor = {
+                    let order_fv = d.fresh_fvar();
+                    let order = d.kernel().fvar(order_fv);
+                    let strict_ty = d.lt(q2, q1);
+                    let equal_ty = d.eq(q2, q1);
+                    let split_ty = d.const_app(p.logic.or, &[strict_ty, equal_ty]);
+                    let split = d.lemma(p.lt_or_eq_of_le, &[q2, q1, order]);
+                    let split_motive =
+                        d.kernel()
+                            .lam(anon, split_ty, quotient_eq_ty, BinderInfo::Default);
+                    let strict_minor = {
+                        let strict_fv = d.fresh_fvar();
+                        let strict = d.kernel().fvar(strict_fv);
+                        let product2_plus_divisor = d.add(product2, divisor);
+                        let sum2_lt_next =
+                            d.lemma(p.add_lt_add_left, &[product2, r2, divisor, bound2]);
+                        let sq2 = d.succ(q2);
+                        let next_le_product1 =
+                            d.lemma(p.mul_le_mul_left, &[divisor, sq2, q1, strict]);
+                        let sum2_lt_product1 = d.lemma(
+                            p.lt_of_lt_of_le,
+                            &[
+                                sum2,
+                                product2_plus_divisor,
+                                product1,
+                                sum2_lt_next,
+                                next_le_product1,
+                            ],
+                        );
+                        let product1_le_sum1 = d.lemma(p.le_add_right, &[product1, r1]);
+                        let sum2_lt_sum1 = d.lemma(
+                            p.lt_of_lt_of_le,
+                            &[sum2, product1, sum1, sum2_lt_product1, product1_le_sum1],
+                        );
+                        let loop_motive = d.eq_motive(sum1, &|d, x| d.lt(sum2, x));
+                        let impossible_strict =
+                            d.transport(sum1, loop_motive, sum2_lt_sum1, sum2, sums_equal);
+                        let no_loop = d.lemma(p.lt_irrefl, &[sum2]);
+                        let impossible = d.apply(no_loop, &[impossible_strict]);
+                        let false_ty = d.kernel().const_(p.logic.false_, vec![]);
+                        let false_motive =
+                            d.kernel()
+                                .lam(anon, false_ty, quotient_eq_ty, BinderInfo::Default);
+                        let level_zero = d.kernel().level_zero();
+                        let false_rec = d.kernel().const_(p.logic.false_rec, vec![level_zero]);
+                        let body = d.apply(false_rec, &[false_motive, impossible]);
+                        d.lam_fv(strict_fv, strict_ty, body)
+                    };
+                    let equal_minor = {
+                        let equal_fv = d.fresh_fvar();
+                        let equal = d.kernel().fvar(equal_fv);
+                        let body = d.symm(q2, q1, equal);
+                        d.lam_fv(equal_fv, equal_ty, body)
+                    };
+                    let or_rec = d.kernel().const_(p.logic.or_rec, vec![]);
+                    let body = d.apply(
+                        or_rec,
+                        &[
+                            strict_ty,
+                            equal_ty,
+                            split_motive,
+                            strict_minor,
+                            equal_minor,
+                            split,
+                        ],
+                    );
+                    d.lam_fv(order_fv, order21_ty, body)
+                };
+
+                let or_rec = d.kernel().const_(p.logic.or_rec, vec![]);
+                let quotient_eq = d.apply(
+                    or_rec,
+                    &[
+                        order12_ty,
+                        order21_ty,
+                        order_motive,
+                        q1_le_q2_minor,
+                        q2_le_q1_minor,
+                        order_split,
+                    ],
+                );
+                let products_equal = d.congr(q1, q2, quotient_eq, &|d, q| d.mul(divisor, q));
+                let product1_sum2 = d.add(product1, r2);
+                let replace_product =
+                    d.congr(product1, product2, products_equal, &|d, x| d.add(x, r2));
+                let replace_product_rev = d.symm(product1_sum2, sum2, replace_product);
+                let (_, common_sums) = d.chain(
+                    sum1,
+                    &[(sum2, sums_equal), (product1_sum2, replace_product_rev)],
+                );
+                let remainder_eq = d.lemma(p.add_left_cancel, &[product1, r1, r2, common_sums]);
+                let body = d.const_app(
+                    p.logic.and_intro,
+                    &[quotient_eq_ty, remainder_eq_ty, quotient_eq, remainder_eq],
+                );
+                let with_bound2 = d.lam_fv(bound2_fv, bound2_ty, body);
+                d.lam_fv(equation2_fv, equation2_ty, with_bound2)
+            };
+            let level_zero = d.kernel().level_zero();
+            let and_rec = d.kernel().const_(p.logic.and_rec, vec![level_zero]);
+            let body = d.apply(
+                and_rec,
+                &[
+                    equation2_ty,
+                    bound2_ty,
+                    relation2_motive,
+                    relation2_minor,
+                    relation2,
+                ],
+            );
+            let with_relation2 = d.lam_fv(relation2_fv, relation2_ty, body);
+            let with_bound1 = d.lam_fv(bound1_fv, bound1_ty, with_relation2);
+            d.lam_fv(equation1_fv, equation1_ty, with_bound1)
+        };
+        let level_zero = d.kernel().level_zero();
+        let and_rec = d.kernel().const_(p.logic.and_rec, vec![level_zero]);
+        let body = d.apply(
+            and_rec,
+            &[
+                equation1_ty,
+                bound1_ty,
+                relation1_motive,
+                relation1_minor,
+                relation1,
+            ],
+        );
+        let relation2_to_target = d.arrow(relation2_ty, target);
+        let stmt = d.arrow(relation1_ty, relation2_to_target);
+        let proof = d.lam_fv(relation1_fv, relation1_ty, body);
         (stmt, proof)
     })?;
     Ok(())

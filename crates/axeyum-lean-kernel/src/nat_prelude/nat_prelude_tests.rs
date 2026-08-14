@@ -137,6 +137,7 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.sub_le_iff_le_add,
         p.mul_sub_left_distrib,
         p.div_mod_exists,
+        p.div_mod_unique,
         p.dvd_mul,
         p.dvd_add,
         p.dvd_add_right_cancel_of_pos,
@@ -673,6 +674,17 @@ fn euclidean_division_exists_constructively() {
     let name = f.name("five_div_two");
     f.declare_theorem(name, relation, proof)
         .unwrap_or_else(|e| panic!("concrete divMod witness should admit: {}", f.explain(&e)));
+
+    let unique = f.lemma(
+        p.div_mod_unique,
+        &[two, five, two, one, two, one, proof, proof],
+    );
+    f.k.infer(unique).unwrap_or_else(|e| {
+        panic!(
+            "Euclidean decomposition uniqueness should infer: {}",
+            f.explain(&e)
+        )
+    });
 }
 
 #[test]
@@ -1789,7 +1801,55 @@ fn kernel_rejects_broken_proof_terms() {
         rejections += 1;
     }
 
-    assert_eq!(rejections, 39, "every negative control must be rejected");
+    // NC40 — division uniqueness retains the proved remainder.
+    {
+        let name = f.name("nc40_div_mod_unique_wrong_remainder");
+        let zero = f.num(0);
+        let one = f.num(1);
+        let two = f.num(2);
+        let five = f.num(5);
+        let relation = f.div_mod(two, five, two, one);
+        let product = f.mul(two, two);
+        let reconstructed = f.add(product, one);
+        let equation_ty = f.eq(five, reconstructed);
+        let bound_ty = f.lt(one, two);
+        let equation = f.refl(five);
+        let bound = f.lemma(p.le_refl, &[two]);
+        let relation_proof =
+            f.const_app(p.logic.and_intro, &[equation_ty, bound_ty, equation, bound]);
+        let inferred_relation = f
+            .k
+            .infer(relation_proof)
+            .unwrap_or_else(|e| panic!("NC40 relation witness should infer: {}", f.explain(&e)));
+        assert!(f.k.def_eq(relation, inferred_relation));
+        let proof = f.lemma(
+            p.div_mod_unique,
+            &[
+                two,
+                five,
+                two,
+                one,
+                two,
+                one,
+                relation_proof,
+                relation_proof,
+            ],
+        );
+        let quotient_eq = f.eq(two, two);
+        let wrong_remainder_eq = f.eq(one, zero);
+        let bad = f.const_app(p.logic.and, &[quotient_eq, wrong_remainder_eq]);
+        let err = f
+            .declare_theorem(name, bad, proof)
+            .expect_err("NC40: division uniqueness must retain the proved remainder");
+        println!(
+            "NC40 (wrong unique remainder) rejected:\n  {}",
+            f.explain(&err)
+        );
+        assert!(!f.k.environment().contains(name));
+        rejections += 1;
+    }
+
+    assert_eq!(rejections, 40, "every negative control must be rejected");
 }
 
 /// The build is deterministic: two independent kernels render every promised
@@ -1812,7 +1872,7 @@ fn the_build_is_deterministic() {
     assert_eq!(first, second, "the prelude build must be deterministic");
     assert_eq!(
         first.len(),
-        11 + 66,
+        11 + 67,
         "every promised definition and theorem must be rendered"
     );
 }
