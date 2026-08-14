@@ -307,8 +307,10 @@ evidence and unrelated temporary projects were untouched.
 | 2026-08-14 | `19f4c769b` | Automatic hypothesis minimisation (`hypothesis_min`): two route-B Rado lemmas that stay `unknown` at 1800 s close in ~2 s with the same subsets a human found in ~32 min; the boundary is measured to be `nra.rs:107` `MAX_CROSS_PRODUCTS = 2`, not hypothesis count, and the guards are mutation-tested one deletion at a time (agent-k). |
 | 2026-08-14 | `telescoping` | Creative telescoping (Zeilberger) with an independent certificate checker; 5 classical binomial identities landed as `cas-certificate` facts; 10 tamper controls reject perturbed certificates | `crates/axeyum-cas/src/telescoping.rs`, `crates/axeyum-cas/src/telescoping_check.rs`, `crates/axeyum-cas/tests/telescoping_identities.rs`, `artifacts/facts/F-*binomial*.json`, `artifacts/facts/F-chu-vandermonde-convolution-recurrence.json` |
 | 2026-08-14 | `telescoping-scale` | Gosper–Petkovšek derived denominator and degree bound replace the `Q` ladder and the degree sweep (Chu–Vandermonde 18.5 s -> 46.7 ms); order-2 recurrences reachable (Franel); symbolic base cases close Chu–Vandermonde's closed form; certificates serialised to `artifacts/cas-certificates/` and re-checked from file; 3 new facts | `crates/axeyum-cas/src/telescoping.rs`, `crates/axeyum-cas/src/telescoping_check.rs`, `crates/axeyum-cas/src/telescoping_json.rs`, `crates/axeyum-cas/tests/telescoping_identities.rs`, `crates/axeyum-cas/tests/telescoping_certificate_artifacts.rs`, `artifacts/cas-certificates/*.json`, `artifacts/facts/F-chu-vandermonde-convolution.json`, `artifacts/facts/F-cross-binomial-row-sum.json`, `artifacts/facts/F-franel-numbers-recurrence.json` |
+| 2026-08-14 | `geometry` | new domain on the `cas-certificate` route: coordinatisation front end + Rabinowitsch saturation + independent checker; 6 classical theorems certified with committed degenerate counterexamples for every side condition used; measured that 4 of 6 need NO non-degeneracy condition; 2 frontier theorems recorded with timings; 6 new facts | `crates/axeyum-cas/src/geometry_certify.rs`, `crates/axeyum-cas/src/geometry_check.rs`, `crates/axeyum-cas/src/geometry_json.rs`, `crates/axeyum-cas/src/geometry_corpus.rs`, `crates/axeyum-cas/tests/geometry_certificate_artifacts.rs`, `crates/axeyum-cas/tests/geometry_encoding_agreement.rs`, `crates/axeyum-cas/examples/emit_geometry_certificates.rs`, `crates/axeyum-cas/examples/geometry_probe.rs`, `artifacts/geometry-certificates/*.json`, `artifacts/facts/F-geometry-*.json` |
 | 2026-08-14 | `229cceb1e` | ℤ constructed over the proved ℕ development: `Int` inductive + operations as checked definitions, 20 laws derived with empty axiom footprints — including ADR-0106's decidable integer equality. `integer: axiom=34 → 6`. |
 | 2026-08-14 | `22f3db735` | `F:quantifier-negation-duality` proved: quantifier-negation duality and alpha-equivalence in the canonicalizer, and in the certificate checker independently (import backlog 10 to 9). |
+| 2026-08-14 | `pending` | FP kernel-equivalence enters the fact ledger: seven facts (4 proved, 2 refuted with pinned witnesses, 1 open as a measured parity target), each settled one by two routes sharing no code, plus `kernel_equivalence`, an exhaustive LLVM-APFloat enumerator. Measured: neither z3 4.13.3 nor bitwuzla 0.9.1 can decide any fp8 E5M2 addition query. |
 | 2026-08-14 | `a8fac8e57` | Certified infeasibility for operations research: three committed OR instances with measured-irreducible cores (4.9% / 15.6% / 8.3%), leave-one-out re-solves with evaluator model replay, z3 cross-check, and a kernel-checked Farkas refutation of the schedule's critical chain. Four facts. |
 | 2026-08-14 | `fb1066709` | The workspace test gate's zero-test list capped and phrased as information (parser validated at 1191 tests / 34 binaries). |
 | 2026-08-14 | `23bd018be` | `check.sh` stops claiming to mirror a recipe it does not; the claim was false for the life of the file. |
@@ -491,6 +493,89 @@ parameter-free `Γ` factors.
 Full write-up:
 [`docs/mathematics-2026-08/diary-telescoping-scale.md`](docs/mathematics-2026-08/diary-telescoping-scale.md).
 
+**New domain, opened 2026-08-14.** The certifier already existed —
+`groebner_cert.rs` emits `target = Σ cofactorᵢ·generatorᵢ + remainder`, which is a
+Nullstellensatz certificate — so this lane built the two missing halves: a
+**coordinatisation front end** (points as symbolic coordinate pairs; collinear,
+parallel, perpendicular, equidistant, midpoint, centroid as polynomials) and a
+**corpus**. Six theorems certified and filed as facts, two on a measured
+frontier, `validate-facts.py` at 0 errors.
+
+**The headline finding is not the expected one.** The brief warned, correctly,
+that a mechanised geometry proof silently assuming non-degeneracy is wrong in the
+direction that manufactures theorems — so the certifier tries the **empty**
+condition set first and records what it consumed, making the question measured
+rather than assumed. **Four of six theorems need no side condition at all.**
+Concurrency of the altitudes, the theorem whose textbook statement always begins
+"in a triangle", is in the universally quantified incidence form the bare identity
+`(P−C)·(B−A) + (P−A)·(C−B) + (P−B)·(A−C) = 0`, with constant cofactors `(−1,−1)`,
+valid for any four points. Same for the medians. Thales is the single identity
+`(A−C)·(B−C) = |C−O|² − |A−O|²` and is true *on* the degeneracy locus, not merely
+off it.
+
+The rule the corpus exhibits is sharper than "geometry needs non-degeneracy":
+**a side condition is needed exactly when the theorem locates a point the
+hypotheses are supposed to pin down; incidence is free, location is not.**
+`medians-concurrent` and `centroid-divides-medians` sit adjacent in the corpus and
+share their two hypotheses character for character (one shared helper builds
+both); only the conclusion differs, and only the second needs a condition.
+
+**Non-degeneracy is explicit, saturated, and broken by a committed
+counterexample.** A condition `d ≠ 0` is admitted only via Rabinowitsch — a fresh
+variable and the generator `d·z − 1` — so it is visible in the artifact, and
+`ideal(h, d·z−1) ∩ ℚ[coords]` is exactly the saturation `(h) : d^∞`, the ideal of
+the configurations actually claimed. Both conditions used carry exact rational
+counterexamples: `A=(0,0), B=(1,0), C=(2,0), P=(7,0)` satisfies both median
+hypotheses (`B` is the midpoint of `CA`, so one becomes vacuous) while `3P.x = 21`
+against `A.x+B.x+C.x = 3`; and `A=(0,0), B=(1,0), C=(2,0), D=(5,0)` satisfies both
+parallelism hypotheses while the diagonal midpoints are `(1,0)` and `(3,0)`. Two
+controls keep these load-bearing: **deleting** a counterexample rejects, and
+**replacing** it with a configuration that violates the condition but fails to
+break the theorem also rejects.
+
+**Everything is in fully generic coordinates** — every point two free
+indeterminates, no WLOG frame anywhere. Frame normalisation would have brought
+Euler's line into range and was deliberately not used: it buys the reduction with
+an invariance assumption about exactly the degenerate case, which is the wrong
+trade in the one domain whose characteristic failure is a hidden hypothesis.
+
+**Evidence.** `artifacts/geometry-certificates/*.json` (six files, 26 kB,
+readable), written by a checker-gated emitter and re-checked **from the file** by
+a suite that never calls the certifier. `geometry_check.rs` shares no code with
+Buchberger and runs five passes: rebuild the saturation generators and compare
+them with the ones the cofactors are taken against; expand the identity
+symbolically; re-evaluate it at 24 integer points through a different code path;
+require every declared condition to carry a nonzero cofactor; replay every
+degenerate and generic configuration. The **coordinatisation** — the one
+assumption exact arithmetic cannot verify — is attacked from outside by
+`tests/geometry_encoding_agreement.rs`, which makes the older concrete
+`geometry.rs` decide the same six predicates over 244 integer configurations,
+opening with the degenerate shapes; the equidistance row goes through exact surds
+in `CasExpr`, a completely different route.
+
+**The frontier, measured.** `rhombus-diagonals-perpendicular` (one extra
+quadratic hypothesis beyond the parallelogram) declines after 247–365 s;
+`euler-line` returns no verdict in 600 s. Everything in the corpus decides under
+250 ms. Instrumenting the probe to ask the same question **without** cofactor
+tracking gives the same 4.6 s on the rhombus's empty-condition attempt, so the
+expense is the Gröbner basis itself, not the representation carried alongside —
+this is **not** the `MvPoly::gcd` wall the `telescoping-scale` lane hit. Stated
+honestly: whether the saturated rhombus decline is a tripped ceiling or an `i128`
+overflow is **not** established, because `CofactorOutcome::Declined` is one value
+for both. The structural suspect is the **pure lexicographic monomial order** this
+crate uses everywhere — the worst order for computing a basis, the best for
+elimination, and ideal membership needs no elimination.
+
+**Next, ranked.** (1) A degree-reverse-lexicographic order in `groebner.rs` — the
+single change most likely to move the frontier, and it helps every consumer of
+Gröbner bases in the crate. (2) Split `Declined` into ceiling-vs-overflow, the
+same distinction `telescoping-scale` needed for `MvPoly::gcd`. (3) Re-attempt
+Euler's line, then Simson's line (16 coordinates), then Pappus (18). (4) A surface
+syntax emitting a `GeometryProblem`.
+
+Full write-up:
+[`docs/mathematics-2026-08/diary-geometry.md`](docs/mathematics-2026-08/diary-geometry.md).
+
 **Immediate action (`PAUSED`, Lean lane).** ADR-0452 focused-green; full gate hit
 concurrent scoreboard drift. Await refactor. No Gauss credit.
 Keep the 14-theorem export labelled rejected by Lean and independently unchecked.
@@ -583,6 +668,60 @@ is verified by axeyum's own CAS. Not claimed: no upper bounds; not tight at
 three retracted errors:
 [`proof-approaches-2026-08-12/`](docs/plan/proof-approaches-2026-08-12/README.md).
 
+**A new fact-ledger domain: FP kernel equivalence, settled exhaustively where
+the width permits (`WIP`, fp-kernels, 2026-08-14).** Landed seven facts — four
+`proved`, two `refuted` with pinned witnesses, one deliberately `open` —
+answering the question compilers, GPU kernels and quantized ML pipelines
+currently answer by sampling: *does the rewrite agree with its reference on ALL
+inputs?* `F:fp16-doubling-add-equals-mul-two`,
+`F:fp32-doubling-add-equals-mul-two`, `F:fp16-fp32-roundtrip-identity` (proved),
+`F:fp8-add-monotone-rne` (proved, exhaustively and symbolically), `F:fp8-add-not-associative`
+and `F:fp16-bf16-roundtrip-not-identity` (refuted), and
+`F:fp16-add-monotone-rne` (`open`, see below). Every settled one carries two
+evidence routes that share no code: axeyum's SMT front door (`fp.*` → fpa2bv →
+CNF → re-checked DRAT) and `crates/axeyum-fp/examples/kernel_equivalence.rs`,
+an exhaustive enumeration against `rustc_apfloat` (LLVM's APFloat, ADR-0028).
+These are the ledger's first `smt-clausal` facts.
+
+`F:fp16-add-monotone-rne` is `open` with `external_status: proved` and an
+**empty evidence array**, on purpose: z3 4.13.3 proves it in 30.6s and bitwuzla
+0.9.1 in 8.3s, and 2^48 triples rules out brute force, so binary16 has only the
+symbolic route. For calibration, axeyum DOES settle the fp8 analogue — which
+neither oracle can read — in 25m46s. This is a measured parity gap written down
+as a target rather than dressed as a result;
+`artifacts/facts/smt2/neg-fp16-add-monotone-rne.smt2` is the reproducible file.
+
+Three measurements worth carrying forward. **(1)** At exactly the width where a
+claim can be brute-forced, both industrial oracles decline: z3 4.13.3 returns
+`unknown` on every fp8 E5M2 *addition* query (`ebits > sbits not supported` —
+E5M2 is `(_ FloatingPoint 5 3)`), and bitwuzla 0.9.1 rejects the format as
+experimental, its own suggested `--fpexp` escape being a build option the binary
+refuses as a runtime flag. axeyum decides both, because ADR-0023 made the FP
+builders generic over `(exp_bits, sig_bits)`. The gap runs the other way for
+E4M3, which axeyum correctly refuses as non-IEEE and z3 accepts. **(2)** Arity,
+not width, decides whether exhaustive settlement is available: all 2^32 binary32
+values enumerate in 51s, while the ternary fp8 claims are exhaustive at 2^24 and
+would be 2^48 at binary16. **(3)** On the symbolic route this stack is 2000x off
+the specialised FP solvers — binary32 doubling: axeyum 202s, z3 0.1s, bitwuzla
+0.1s on the identical file.
+
+Also found, and general rather than FP-specific: the ledger's existing
+`checker_command` convention is a bare `smtcomp_cli --evidence <file>`, which
+exits **0 on any decided verdict**, so `scripts/check-fact-evidence-replay.sh`
+was gating on "the binary ran", not on the recorded verdict. This lane's eleven
+checkers wrap the verdict in a `test "$(… | tail -1)" = unsat`, with both
+wrong-verdict controls measured non-zero. Pre-existing facts are other lanes' to
+repair; the hole is worth knowing about.
+
+Next, in priority order: (1) close `F:fp16-add-monotone-rne` — it is the
+best-specified task here, nothing about the mathematics is in question and the
+whole gap is throughput on a multi-operand FP comparison miter; (2) a Kahan
+compensated-summation step versus naive addition at fp8 — the claim that would
+actually certify a reduction kernel, and the ternary fp8 domain is already known
+to enumerate in seconds; (3) fp8 **E4M3**, the format most fp8 inference
+actually uses, which needs `axeyum-fp` to model non-IEEE `NonfiniteBehavior`
+(APFloat already does) and where no external oracle can check us at all.
+
 **Irreducibility is now measured, not asserted — three OR instances, three
 irreducible cores, one of them kernel-checked (`WIP`, infeasibility,
 2026-08-14).** The chain (deletion-minimized `get-unsat-core` -> Farkas
@@ -634,7 +773,7 @@ including three mistakes that cost real work:
 README application/vision revision are closed. Continue only for a concrete
 stale claim; keep application maturity and sub-document links aligned, but do
 not duplicate generated capability tables or modify solver behavior to match
-prose. The user/reference/internals/crate surfaces and all 49 Cargo examples are
+prose. The user/reference/internals/crate surfaces and all 58 Cargo examples are
 indexed, and source guards reject universal proof claims.
 
 **Gate scope and the wall-clock reference frame (`WIP`, gates, 2026-08-14).**
@@ -925,7 +1064,7 @@ or remove dirty/unmerged state to meet a free-space target.
 | CAS parity | `BLOCKED` by deliberate pause | Wave-24 code `01d47334` and pause commit `245d8f25` are ancestors of current main. Do not start wave 25 until the user resumes it and retained specialized gate evidence is re-audited. |
 | Consumer apps / verified systems | `WIP`, non-critical path | Existing EVM, verifier, property, reflection, and symbolic-execution slices remain useful; do not preempt A2–A7 without measured demand. |
 | Foundational resources | `WIP`, separate content lane | Keep generated-resource gates green; record only project-level priority changes here. |
-| Public documentation and examples | `DONE`, current comprehensive pass | Public/crate/consumer/prover/curriculum/contributor front doors are indexed; 49 Cargo examples and the consumer 48-case aggregate are guarded. Corrected built/planned, Lean 4.30/offline quotient, strings/P2.7, proof assurance, `i128` LRA/Farkas, native-CDCL/BatSat, RUP-only LRAT, online combination/fallback, CAS-local-vs-solver evidence, route-specific FP/datatype/nonlinear/quantifier boundaries, optional EVM/verifier certificate fields, and source-comment UNSAT-proof overclaims. Source-backed guards require nonzero full-feature tests across cookbook, learner, contributor, foundational-resource, and rules docs. Generated authorities remain canonical; reopen only for concrete drift. |
+| Public documentation and examples | `DONE`, current comprehensive pass | Public/crate/consumer/prover/curriculum/contributor front doors are indexed; 58 Cargo examples and the consumer 48-case aggregate are guarded. Corrected built/planned, Lean 4.30/offline quotient, strings/P2.7, proof assurance, `i128` LRA/Farkas, native-CDCL/BatSat, RUP-only LRAT, online combination/fallback, CAS-local-vs-solver evidence, route-specific FP/datatype/nonlinear/quantifier boundaries, optional EVM/verifier certificate fields, and source-comment UNSAT-proof overclaims. Source-backed guards require nonzero full-feature tests across cookbook, learner, contributor, foundational-resource, and rules docs. Generated authorities remain canonical; reopen only for concrete drift. |
 | Worktree and build-cache hygiene | `WIP`, recovered | A11; only clean `main` is registered and published. A verified 2026-08-12 external Git bundle preserves the retired refs/stashes; all old branches, salvage stashes, inactive checkouts, and their large Cargo targets are removed. Next automate deterministic read-only inventory and exact-target cleanup classification. |
 
 ## Resume protocol
