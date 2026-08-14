@@ -114,13 +114,17 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.le_of_succ_le_succ,
         p.le_trans,
         p.lt_or_eq_of_le,
+        p.lt_of_lt_of_le,
+        p.lt_of_le_of_lt,
         p.le_total,
         p.not_succ_le_zero,
+        p.lt_irrefl,
         p.le_antisymm,
         p.le_intro,
         p.le_dest,
         p.le_add_right,
         p.add_le_add_left,
+        p.add_lt_add_left,
         p.add_le_add_right,
         p.le_of_add_le_add_left,
         p.le_of_add_le_add_right,
@@ -626,6 +630,23 @@ fn order_is_total() {
             f.explain(&e)
         )
     });
+
+    let four = f.num(4);
+    let two_lt_three = f.lemma(p.le_refl, &[three]);
+    let three_lt_five = f.lemma(p.le_add_right, &[four, one]);
+    for proof in [
+        f.lemma(p.lt_of_lt_of_le, &[two, three, five, two_lt_three, upper]),
+        f.lemma(p.lt_of_le_of_lt, &[two, three, five, lower, three_lt_five]),
+        f.lemma(p.add_lt_add_left, &[one, two, three, two_lt_three]),
+        f.lemma(p.lt_irrefl, &[three]),
+    ] {
+        f.k.infer(proof).unwrap_or_else(|e| {
+            panic!(
+                "strict-order library application should infer: {}",
+                f.explain(&e)
+            )
+        });
+    }
 }
 
 #[test]
@@ -1681,7 +1702,94 @@ fn kernel_rejects_broken_proof_terms() {
         rejections += 1;
     }
 
-    assert_eq!(rejections, 35, "every negative control must be rejected");
+    // NC36 — strict/weak transitivity retains its upper endpoint.
+    {
+        let name = f.name("nc36_lt_of_lt_of_le_wrong_upper_endpoint");
+        let two = f.num(2);
+        let three = f.num(3);
+        let four = f.num(4);
+        let five = f.num(5);
+        let strict = f.lemma(p.le_refl, &[three]);
+        let two_more = f.num(2);
+        let bound = f.lemma(p.le_add_right, &[three, two_more]);
+        let proof = f.lemma(p.lt_of_lt_of_le, &[two, three, five, strict, bound]);
+        let bad = f.lt(two, four);
+        let err = f
+            .declare_theorem(name, bad, proof)
+            .expect_err("NC36: strict/weak transitivity must retain its upper endpoint");
+        println!(
+            "NC36 (wrong strict upper endpoint) rejected:\n  {}",
+            f.explain(&err)
+        );
+        assert!(!f.k.environment().contains(name));
+        rejections += 1;
+    }
+
+    // NC37 — weak/strict transitivity retains its lower endpoint.
+    {
+        let name = f.name("nc37_lt_of_le_of_lt_wrong_lower_endpoint");
+        let one = f.num(1);
+        let two = f.num(2);
+        let three = f.num(3);
+        let four = f.num(4);
+        let five = f.num(5);
+        let weak = f.lemma(p.le_add_right, &[two, one]);
+        let strict = f.lemma(p.le_add_right, &[four, one]);
+        let proof = f.lemma(p.lt_of_le_of_lt, &[two, three, five, weak, strict]);
+        let bad = f.lt(one, five);
+        let err = f
+            .declare_theorem(name, bad, proof)
+            .expect_err("NC37: weak/strict transitivity must retain its lower endpoint");
+        println!(
+            "NC37 (wrong strict lower endpoint) rejected:\n  {}",
+            f.explain(&err)
+        );
+        assert!(!f.k.environment().contains(name));
+        rejections += 1;
+    }
+
+    // NC38 — irreflexivity retains the compared endpoint.
+    {
+        let name = f.name("nc38_lt_irrefl_wrong_endpoint");
+        let two = f.num(2);
+        let three = f.num(3);
+        let proof = f.lemma(p.lt_irrefl, &[two]);
+        let wrong_lt = f.lt(three, three);
+        let bad = f.const_app(p.logic.not, &[wrong_lt]);
+        let err = f
+            .declare_theorem(name, bad, proof)
+            .expect_err("NC38: irreflexivity must retain its endpoint");
+        println!(
+            "NC38 (wrong irreflexive endpoint) rejected:\n  {}",
+            f.explain(&err)
+        );
+        assert!(!f.k.environment().contains(name));
+        rejections += 1;
+    }
+
+    // NC39 — strict addition monotonicity retains the added term.
+    {
+        let name = f.name("nc39_add_lt_add_left_wrong_shift");
+        let one = f.num(1);
+        let two = f.num(2);
+        let three = f.num(3);
+        let strict = f.lemma(p.le_refl, &[three]);
+        let proof = f.lemma(p.add_lt_add_left, &[one, two, three, strict]);
+        let wrong_left = f.add(two, two);
+        let wrong_right = f.add(two, three);
+        let bad = f.lt(wrong_left, wrong_right);
+        let err = f
+            .declare_theorem(name, bad, proof)
+            .expect_err("NC39: strict addition monotonicity must retain the shift");
+        println!(
+            "NC39 (wrong strict addition shift) rejected:\n  {}",
+            f.explain(&err)
+        );
+        assert!(!f.k.environment().contains(name));
+        rejections += 1;
+    }
+
+    assert_eq!(rejections, 39, "every negative control must be rejected");
 }
 
 /// The build is deterministic: two independent kernels render every promised
@@ -1704,7 +1812,7 @@ fn the_build_is_deterministic() {
     assert_eq!(first, second, "the prelude build must be deterministic");
     assert_eq!(
         first.len(),
-        11 + 62,
+        11 + 66,
         "every promised definition and theorem must be rendered"
     );
 }

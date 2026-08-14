@@ -237,6 +237,12 @@ pub struct NatPrelude {
     pub le_trans: NameId,
     /// `lt_or_eq_of_le : ∀ a b, Le a b → Or (Lt a b) (Eq Nat a b)`.
     pub lt_or_eq_of_le: NameId,
+    /// `lt_of_lt_of_le : ∀ a b c, Lt a b → Le b c → Lt a c`.
+    pub lt_of_lt_of_le: NameId,
+    /// `lt_of_le_of_lt : ∀ a b c, Le a b → Lt b c → Lt a c`.
+    pub lt_of_le_of_lt: NameId,
+    /// `lt_irrefl : ∀ a, Not (Lt a a)`.
+    pub lt_irrefl: NameId,
     /// `le_total : ∀ a b, Or (Le a b) (Le b a)`.
     pub le_total: NameId,
     /// `not_succ_le_zero : ∀ n, Not (Le (succ n) zero)`.
@@ -251,6 +257,8 @@ pub struct NatPrelude {
     pub le_add_right: NameId,
     /// `add_le_add_left : ∀ c a b, Le a b → Le (c+a) (c+b)`.
     pub add_le_add_left: NameId,
+    /// `add_lt_add_left : ∀ c a b, Lt a b → Lt (c+a) (c+b)`.
+    pub add_lt_add_left: NameId,
     /// `add_le_add_right : ∀ c a b, Le a b → Le (a+c) (b+c)`.
     pub add_le_add_right: NameId,
     /// `le_of_add_le_add_left : ∀ c a b, Le (c+a) (c+b) → Le a b`.
@@ -321,7 +329,7 @@ pub struct NatPrelude {
 pub fn build_nat_prelude(kernel: &mut Kernel) -> Result<NatPrelude, KernelError> {
     let logic = build_logic_prelude(kernel)?;
     if let Some(PreludeValue::Nat(prelude)) = kernel.cached_prelude(PreludeKey::Nat)? {
-        return Ok(prelude);
+        return Ok(*prelude);
     }
     let checkpoint = kernel.prelude_checkpoint();
     let built = (|| -> Result<NatPrelude, KernelError> {
@@ -385,6 +393,9 @@ pub fn build_nat_prelude(kernel: &mut Kernel) -> Result<NatPrelude, KernelError>
             le_of_succ_le_succ: kernel.name_str(nat, "le_of_succ_le_succ"),
             le_trans: kernel.name_str(nat, "le_trans"),
             lt_or_eq_of_le: kernel.name_str(nat, "lt_or_eq_of_le"),
+            lt_of_lt_of_le: kernel.name_str(nat, "lt_of_lt_of_le"),
+            lt_of_le_of_lt: kernel.name_str(nat, "lt_of_le_of_lt"),
+            lt_irrefl: kernel.name_str(nat, "lt_irrefl"),
             le_total: kernel.name_str(nat, "le_total"),
             not_succ_le_zero: kernel.name_str(nat, "not_succ_le_zero"),
             le_antisymm: kernel.name_str(nat, "le_antisymm"),
@@ -392,6 +403,7 @@ pub fn build_nat_prelude(kernel: &mut Kernel) -> Result<NatPrelude, KernelError>
             le_dest: kernel.name_str(nat, "le_dest"),
             le_add_right: kernel.name_str(nat, "le_add_right"),
             add_le_add_left: kernel.name_str(nat, "add_le_add_left"),
+            add_lt_add_left: kernel.name_str(nat, "add_lt_add_left"),
             add_le_add_right: kernel.name_str(nat, "add_le_add_right"),
             le_of_add_le_add_left: kernel.name_str(nat, "le_of_add_le_add_left"),
             le_of_add_le_add_right: kernel.name_str(nat, "le_of_add_le_add_right"),
@@ -431,7 +443,11 @@ pub fn build_nat_prelude(kernel: &mut Kernel) -> Result<NatPrelude, KernelError>
     })();
     match built {
         Ok(prelude) => {
-            kernel.register_prelude(PreludeKey::Nat, PreludeValue::Nat(prelude), checkpoint);
+            kernel.register_prelude(
+                PreludeKey::Nat,
+                PreludeValue::Nat(Box::new(prelude)),
+                checkpoint,
+            );
             Ok(prelude)
         }
         Err(error) => {
@@ -1743,6 +1759,54 @@ fn declare_order(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> 
         (stmt, proof)
     })?;
 
+    // lt_of_lt_of_le : ∀ a b c, Lt a b → Le b c → Lt a c
+    d.theorem(p.lt_of_lt_of_le, 3, &|d, v| {
+        let (a, b, c) = (v[0], v[1], v[2]);
+        let strict_ty = d.lt(a, b);
+        let strict_fv = d.fresh_fvar();
+        let strict = d.kernel().fvar(strict_fv);
+        let bound_ty = d.le(b, c);
+        let bound_fv = d.fresh_fvar();
+        let bound = d.kernel().fvar(bound_fv);
+        let sa = d.succ(a);
+        let body = d.lemma(p.le_trans, &[sa, b, c, strict, bound]);
+        let conclusion = d.lt(a, c);
+        let stmt = {
+            let with_bound = d.arrow(bound_ty, conclusion);
+            d.arrow(strict_ty, with_bound)
+        };
+        let proof = {
+            let with_bound = d.lam_fv(bound_fv, bound_ty, body);
+            d.lam_fv(strict_fv, strict_ty, with_bound)
+        };
+        (stmt, proof)
+    })?;
+
+    // lt_of_le_of_lt : ∀ a b c, Le a b → Lt b c → Lt a c
+    d.theorem(p.lt_of_le_of_lt, 3, &|d, v| {
+        let (a, b, c) = (v[0], v[1], v[2]);
+        let bound_ty = d.le(a, b);
+        let bound_fv = d.fresh_fvar();
+        let bound = d.kernel().fvar(bound_fv);
+        let strict_ty = d.lt(b, c);
+        let strict_fv = d.fresh_fvar();
+        let strict = d.kernel().fvar(strict_fv);
+        let sa = d.succ(a);
+        let sb = d.succ(b);
+        let lifted = d.lemma(p.le_succ_succ, &[a, b, bound]);
+        let body = d.lemma(p.le_trans, &[sa, sb, c, lifted, strict]);
+        let conclusion = d.lt(a, c);
+        let stmt = {
+            let with_strict = d.arrow(strict_ty, conclusion);
+            d.arrow(bound_ty, with_strict)
+        };
+        let proof = {
+            let with_strict = d.lam_fv(strict_fv, strict_ty, body);
+            d.lam_fv(bound_fv, bound_ty, with_strict)
+        };
+        (stmt, proof)
+    })?;
+
     // le_total : ∀ a b, Or (Le a b) (Le b a)
     // Structural induction on both naturals; the successor/successor branch
     // maps the smaller comparison through `le_succ_succ`.
@@ -1871,6 +1935,35 @@ fn declare_order(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> 
         let stmt = d.arrow(hyp_ty, false_ty);
         let proof = d.lam_fv(h_fv, hyp_ty, body);
         (stmt, proof)
+    })?;
+
+    // lt_irrefl : ∀ n, Not (Lt n n)
+    d.theorem(p.lt_irrefl, 1, &|d, v| {
+        let n = v[0];
+        let false_ty = d.kernel().const_(p.logic.false_, vec![]);
+        let motive = |d: &mut NatDev<'_>, x: ExprId| {
+            let strict = d.lt(x, x);
+            d.arrow(strict, false_ty)
+        };
+        let base = |d: &mut NatDev<'_>| {
+            let zero = d.zero();
+            let strict = d.lt(zero, zero);
+            let h_fv = d.fresh_fvar();
+            let h = d.kernel().fvar(h_fv);
+            let body = d.lemma(p.not_succ_le_zero, &[zero, h]);
+            d.lam_fv(h_fv, strict, body)
+        };
+        let step = |d: &mut NatDev<'_>, x: ExprId, ih: ExprId| {
+            let sx = d.succ(x);
+            let strict = d.lt(sx, sx);
+            let h_fv = d.fresh_fvar();
+            let h = d.kernel().fvar(h_fv);
+            let reduced = d.lemma(p.le_of_succ_le_succ, &[sx, x, h]);
+            let body = d.apply(ih, &[reduced]);
+            d.lam_fv(h_fv, strict, body)
+        };
+        let body = d.induct(&motive, &base, &step, n);
+        (motive(d, n), body)
     })?;
 
     // le_antisymm : ∀ a b, Le a b → Le b a → Eq a b
@@ -2128,6 +2221,22 @@ fn declare_order(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> 
         let body = d.const_app(p.le_rec, &[a, motive, minor_refl, minor_step, b, h]);
         let stmt = d.arrow(hyp_ty, conclusion);
         let proof = d.lam_fv(h_fv, hyp_ty, body);
+        (stmt, proof)
+    })?;
+
+    // add_lt_add_left : ∀ c a b, Lt a b → Lt (c+a) (c+b)
+    d.theorem(p.add_lt_add_left, 3, &|d, v| {
+        let (c, a, b) = (v[0], v[1], v[2]);
+        let strict_ty = d.lt(a, b);
+        let strict_fv = d.fresh_fvar();
+        let strict = d.kernel().fvar(strict_fv);
+        let sa = d.succ(a);
+        let body = d.lemma(p.add_le_add_left, &[c, sa, b, strict]);
+        let ca = d.add(c, a);
+        let cb = d.add(c, b);
+        let conclusion = d.lt(ca, cb);
+        let stmt = d.arrow(strict_ty, conclusion);
+        let proof = d.lam_fv(strict_fv, strict_ty, body);
         (stmt, proof)
     })?;
 

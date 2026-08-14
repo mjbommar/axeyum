@@ -340,7 +340,7 @@ here as closed evidence boundaries. A3 remains incomplete, but all currently
 preregistered bounded mechanisms are closed negatively. A4 has now also yielded;
 A5 is the first active item.
 
-**Immediate action (`WIP`, Lean lane).** Gate ADR-0419; next prove relational
+**Immediate action (`WIP`, Lean lane).** Gate ADR-0420; next prove relational
 Nat quotient/remainder uniqueness. No credit.
 Keep the 14-theorem export labelled rejected by Lean and independently unchecked.
 A5 V2 QF_RDL row 1 remains pending and uncredited.
