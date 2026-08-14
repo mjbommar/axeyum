@@ -112,6 +112,7 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.le_of_add_le_add_right,
         p.mul_le_mul_left,
         p.le_of_mul_le_mul_left_succ,
+        p.le_of_mul_le_mul_left,
         p.sub_add_cancel,
         p.sub_eq_zero_of_le,
         p.sub_le_iff_le_add,
@@ -648,6 +649,16 @@ fn positive_successor_multiplication_reflects_order() {
     let three_times_five = f.mul(three, five);
     assert!(f.k.def_eq(six, three_times_two));
     assert!(f.k.def_eq(fifteen, three_times_five));
+
+    let one = f.num(1);
+    let positive = f.lemma(p.le_add_right, &[one, two]);
+    let reflected_from_bound = f.lemma(
+        p.le_of_mul_le_mul_left,
+        &[three, two, five, positive, scaled],
+    );
+    let bounded_name = f.name("cancel_positive_bounded_factor");
+    f.declare_theorem(bounded_name, stmt, reflected_from_bound)
+        .unwrap_or_else(|e| panic!("bounded positive factor should reflect: {}", f.explain(&e)));
 }
 
 /// Divisibility is a real prelude definition, not a test-only proposition:
@@ -1300,7 +1311,34 @@ fn kernel_rejects_broken_proof_terms() {
         rejections += 1;
     }
 
-    assert_eq!(rejections, 25, "every negative control must be rejected");
+    // NC26 — proof-directed positive cancellation retains both endpoints.
+    {
+        let name = f.name("nc26_bounded_mul_reflection_wrong_lower_endpoint");
+        let one = f.num(1);
+        let two = f.num(2);
+        let three = f.num(3);
+        let five = f.num(5);
+        let six = f.num(6);
+        let nine = f.num(9);
+        let positive = f.lemma(p.le_add_right, &[one, two]);
+        let scaled = f.lemma(p.le_add_right, &[six, nine]);
+        let proof = f.lemma(
+            p.le_of_mul_le_mul_left,
+            &[three, two, five, positive, scaled],
+        );
+        let bad = f.le(three, five);
+        let err = f
+            .declare_theorem(name, bad, proof)
+            .expect_err("NC26: bounded multiplication reflection must retain both endpoints");
+        println!(
+            "NC26 (wrong proof-directed multiplied endpoint) rejected:\n  {}",
+            f.explain(&err)
+        );
+        assert!(!f.k.environment().contains(name));
+        rejections += 1;
+    }
+
+    assert_eq!(rejections, 26, "every negative control must be rejected");
 }
 
 /// The build is deterministic: two independent kernels render every promised
@@ -1323,7 +1361,7 @@ fn the_build_is_deterministic() {
     assert_eq!(first, second, "the prelude build must be deterministic");
     assert_eq!(
         first.len(),
-        8 + 53,
+        8 + 54,
         "every promised definition and theorem must be rendered"
     );
 }

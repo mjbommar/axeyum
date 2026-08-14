@@ -255,6 +255,8 @@ pub struct NatPrelude {
     pub mul_le_mul_left: NameId,
     /// `le_of_mul_le_mul_left_succ : ∀ c a b, Le ((succ c)*a) ((succ c)*b) → Le a b`.
     pub le_of_mul_le_mul_left_succ: NameId,
+    /// `le_of_mul_le_mul_left : ∀ c a b, Le one c → Le (c*a) (c*b) → Le a b`.
+    pub le_of_mul_le_mul_left: NameId,
     /// `sub_add_cancel : ∀ m n, Le m n → add (sub n m) m = n`.
     pub sub_add_cancel: NameId,
     /// `sub_eq_zero_of_le : ∀ a b, Le a b → sub a b = zero`.
@@ -368,6 +370,7 @@ pub fn build_nat_prelude(kernel: &mut Kernel) -> Result<NatPrelude, KernelError>
             le_of_add_le_add_right: kernel.name_str(nat, "le_of_add_le_add_right"),
             mul_le_mul_left: kernel.name_str(nat, "mul_le_mul_left"),
             le_of_mul_le_mul_left_succ: kernel.name_str(nat, "le_of_mul_le_mul_left_succ"),
+            le_of_mul_le_mul_left: kernel.name_str(nat, "le_of_mul_le_mul_left"),
             sub_add_cancel: kernel.name_str(nat, "sub_add_cancel"),
             sub_eq_zero_of_le: kernel.name_str(nat, "sub_eq_zero_of_le"),
             sub_le_iff_le_add: kernel.name_str(nat, "sub_le_iff_le_add"),
@@ -2124,6 +2127,98 @@ fn declare_order(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> 
         let hyp = d.le(fa, fb);
         let conclusion = d.le(a, b);
         (d.arrow(hyp, conclusion), proof)
+    })?;
+
+    // le_of_mul_le_mul_left :
+    //   ∀ c a b, Le one c → Le (c*a) (c*b) → Le a b
+    // Expose c as one plus a witness, normalize that sum to a successor, and
+    // reuse the structural successor-factor cancellation theorem above.
+    d.theorem(p.le_of_mul_le_mul_left, 3, &|d, v| {
+        let (c, a, b) = (v[0], v[1], v[2]);
+        let one = d.num(1);
+        let positive_ty = d.le(one, c);
+        let positive_fv = d.fresh_fvar();
+        let positive = d.kernel().fvar(positive_fv);
+        let ca = d.mul(c, a);
+        let cb = d.mul(c, b);
+        let scaled_ty = d.le(ca, cb);
+        let scaled_fv = d.fresh_fvar();
+        let scaled = d.kernel().fvar(scaled_fv);
+        let conclusion = d.le(a, b);
+
+        let represented = d.lemma(p.le_dest, &[one, c, positive]);
+        let representation_pred = {
+            let k_fv = d.fresh_fvar();
+            let k = d.kernel().fvar(k_fv);
+            let sum = d.add(one, k);
+            let body = d.eq(sum, c);
+            d.lam_fv(k_fv, nat, body)
+        };
+        let level_one = d.level_one();
+        let exists = d.kernel().const_(p.logic.exists_, vec![level_one]);
+        let represented_ty = d.apply(exists, &[nat, representation_pred]);
+        let motive = d
+            .kernel()
+            .lam(anon, represented_ty, conclusion, BinderInfo::Default);
+        let minor = {
+            let k_fv = d.fresh_fvar();
+            let k = d.kernel().fvar(k_fv);
+            let sum = d.add(one, k);
+            let e_fv = d.fresh_fvar();
+            let e_ty = d.eq(sum, c);
+            let e = d.kernel().fvar(e_fv);
+            let successor = d.succ(k);
+
+            let zero = d.zero();
+            let successor_zero = d.succ(zero);
+            let zero_sum = d.add(zero, k);
+            let successor_sum = d.add(successor_zero, k);
+            let successor_zero_sum = d.succ(zero_sum);
+            let successor_k = d.succ(k);
+            let h_succ_add = d.lemma(p.succ_add, &[zero, k]);
+            let h_zero_add = d.lemma(p.zero_add, &[k]);
+            let h_succ_zero_add = d.congr(zero_sum, k, h_zero_add, &|d, x| d.succ(x));
+            let (_, sum_eq_successor) = d.chain(
+                successor_sum,
+                &[
+                    (successor_zero_sum, h_succ_add),
+                    (successor_k, h_succ_zero_add),
+                ],
+            );
+            let successor_eq_sum = d.symm(sum, successor, sum_eq_successor);
+            let (_, successor_eq_c) = d.chain(successor, &[(sum, successor_eq_sum), (c, e)]);
+            let c_eq_successor = d.symm(successor, c, successor_eq_c);
+
+            let successor_a = d.mul(successor, a);
+            let successor_b = d.mul(successor, b);
+            let ca_eq_successor_a = d.congr(c, successor, c_eq_successor, &|d, x| d.mul(x, a));
+            let cb_eq_successor_b = d.congr(c, successor, c_eq_successor, &|d, x| d.mul(x, b));
+            let lower_motive = d.eq_motive(ca, &|d, lower| d.le(lower, cb));
+            let successor_lower =
+                d.transport(ca, lower_motive, scaled, successor_a, ca_eq_successor_a);
+            let upper_motive = d.eq_motive(cb, &|d, upper| d.le(successor_a, upper));
+            let successor_scaled = d.transport(
+                cb,
+                upper_motive,
+                successor_lower,
+                successor_b,
+                cb_eq_successor_b,
+            );
+            let body = d.lemma(p.le_of_mul_le_mul_left_succ, &[k, a, b, successor_scaled]);
+            let with_e = d.lam_fv(e_fv, e_ty, body);
+            d.lam_fv(k_fv, nat, with_e)
+        };
+        let rec = d.kernel().const_(p.logic.exists_rec, vec![level_one]);
+        let body = d.apply(rec, &[nat, representation_pred, motive, minor, represented]);
+        let proof = {
+            let with_scaled = d.lam_fv(scaled_fv, scaled_ty, body);
+            d.lam_fv(positive_fv, positive_ty, with_scaled)
+        };
+        let stmt = {
+            let with_scaled = d.arrow(scaled_ty, conclusion);
+            d.arrow(positive_ty, with_scaled)
+        };
+        (stmt, proof)
     })?;
 
     // sub_add_cancel : ∀ m n, Le m n → add (sub n m) m = n

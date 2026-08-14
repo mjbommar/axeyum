@@ -462,3 +462,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [0404](adr-0404-order-witnesses-and-additive-reflection.md) | Order witnesses and additive reflection | accepted |
 | [0405](adr-0405-positive-multiplication-order-reflection.md) | Positive multiplication reflects Nat order | accepted |
 | [0406](adr-0406-truncated-subtraction-order-adjunction.md) | Truncated subtraction order adjunction | accepted |
+| [0407](adr-0407-proof-directed-positive-multiplication-reflection.md) | Proof-directed positive multiplication reflection | accepted |
