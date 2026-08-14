@@ -32,6 +32,10 @@
 //!   non-indexed inductive). Its generated recursor `Exists.rec` is the
 //!   eliminator `(∃ x, p x) → (∀ w, p w → C) → C` for any motive `C` — the
 //!   foundation for certifying **existential skolemization** (P3.7).
+//! - **`Acc.{u} {α : Sort u} (r : α → α → Prop) (a : α) : Prop`** — the
+//!   accessibility predicate with its higher-order recursive constructor and
+//!   generated `Acc.rec`; **`WellFounded r := ∀ a, Acc r a`** packages global
+//!   accessibility for well-founded algorithms.
 //! - **`Not (a : Prop) : Prop := a → False`** — a [`Declaration::Definition`],
 //!   not an inductive.
 //!
@@ -108,6 +112,19 @@ pub struct LogicPrelude {
     pub exists_rec: NameId,
     /// The universe parameter `u` shared by `Exists`/`Exists.intro`/`Exists.rec`.
     pub exists_uparam: NameId,
+
+    /// `Acc.{u} : {α : Sort u} → (α → α → Prop) → α → Prop`.
+    pub acc: NameId,
+    /// `Acc.intro.{u} : ∀ {α} r x, (∀ y, r y x → Acc r y) → Acc r x`.
+    pub acc_intro: NameId,
+    /// `Acc.rec` — accessibility induction, including the recursive hypotheses
+    /// generated from `Acc.intro`'s higher-order field.
+    pub acc_rec: NameId,
+    /// The universe parameter shared by `Acc`, `Acc.intro`, `Acc.rec`, and
+    /// `WellFounded`.
+    pub acc_uparam: NameId,
+    /// `WellFounded.{u} {α : Sort u} (r : α → α → Prop) := ∀ a, Acc r a`.
+    pub well_founded: NameId,
 
     /// `Not : Prop → Prop` (the definition `fun a => a → False`).
     pub not: NameId,
@@ -419,6 +436,120 @@ pub fn build_logic_prelude(kernel: &mut Kernel) -> Result<LogicPrelude, KernelEr
         }
         let exists_rec = kernel.name_str(exists_, "rec");
 
+        // --- Acc.{u} {α} (r : α → α → Prop) : α → Prop ---------------------
+        // Two parameters (`α`, `r`), one index, and one constructor whose
+        // higher-order recursive field exercises ADR-0353's general rule.
+        let acc_uparam = kernel.name_str(anon, "u");
+        let acc = kernel.name_str(anon, "Acc");
+        let acc_intro = kernel.name_str(acc, "intro");
+        {
+            let u_lvl = kernel.level_param(acc_uparam);
+            let sort_u = kernel.sort(u_lvl);
+            let prop = kernel.prop();
+            let acc_const = kernel.const_(acc, vec![u_lvl]);
+
+            // Under `α`, the relation type is `α → α → Prop`.
+            let relation_ty = {
+                let alpha0 = kernel.bvar(0);
+                let alpha1 = kernel.bvar(1);
+                let inner = kernel.pi(anon, alpha1, prop, BinderInfo::Default);
+                kernel.pi(anon, alpha0, inner, BinderInfo::Default)
+            };
+            let acc_ty = {
+                // Under `α, r`, the index has type `α` = BVar 1.
+                let alpha1 = kernel.bvar(1);
+                let indexed = kernel.pi(anon, alpha1, prop, BinderInfo::Default);
+                let with_relation = kernel.pi(anon, relation_ty, indexed, BinderInfo::Default);
+                kernel.pi(anon, sort_u, with_relation, BinderInfo::Implicit)
+            };
+
+            // intro : ∀ {α} r x, (∀ y, r y x → Acc r y) → Acc r x.
+            let intro_ty = {
+                // Field `h`, under `α, r, x`.
+                let recursive_field = {
+                    let alpha2 = kernel.bvar(2);
+                    // Under `α, r, x, y`: r=BVar 2, x=BVar 1, y=BVar 0.
+                    let relation2 = kernel.bvar(2);
+                    let y0 = kernel.bvar(0);
+                    let x1 = kernel.bvar(1);
+                    let ry = kernel.app(relation2, y0);
+                    let ryx = kernel.app(ry, x1);
+                    // Under the relation proof: α=BVar 4, r=BVar 3, y=BVar 1.
+                    let alpha4 = kernel.bvar(4);
+                    let relation3 = kernel.bvar(3);
+                    let y1 = kernel.bvar(1);
+                    let recursive_result = {
+                        let expression = kernel.app(acc_const, alpha4);
+                        let expression = kernel.app(expression, relation3);
+                        kernel.app(expression, y1)
+                    };
+                    let with_relation_proof =
+                        kernel.pi(anon, ryx, recursive_result, BinderInfo::Default);
+                    kernel.pi(anon, alpha2, with_relation_proof, BinderInfo::Default)
+                };
+                // Result under `α, r, x, h`: Acc α r x.
+                let result = {
+                    let alpha3 = kernel.bvar(3);
+                    let relation2 = kernel.bvar(2);
+                    let x1 = kernel.bvar(1);
+                    let expression = kernel.app(acc_const, alpha3);
+                    let expression = kernel.app(expression, relation2);
+                    kernel.app(expression, x1)
+                };
+                let with_recursive = kernel.pi(anon, recursive_field, result, BinderInfo::Default);
+                // Under `α, r`, x : α = BVar 1.
+                let alpha1 = kernel.bvar(1);
+                let with_index = kernel.pi(anon, alpha1, with_recursive, BinderInfo::Default);
+                let with_relation = kernel.pi(anon, relation_ty, with_index, BinderInfo::Default);
+                kernel.pi(anon, sort_u, with_relation, BinderInfo::Implicit)
+            };
+            kernel.add_inductive(acc, &[acc_uparam], 2, acc_ty, &[(acc_intro, intro_ty)])?;
+        }
+        let acc_rec = kernel.name_str(acc, "rec");
+
+        // WellFounded.{u} {α} r := ∀ a, Acc r a.
+        let well_founded = kernel.name_str(anon, "WellFounded");
+        {
+            let u_lvl = kernel.level_param(acc_uparam);
+            let sort_u = kernel.sort(u_lvl);
+            let prop = kernel.prop();
+            let acc_const = kernel.const_(acc, vec![u_lvl]);
+            let relation_ty = {
+                let alpha0 = kernel.bvar(0);
+                let alpha1 = kernel.bvar(1);
+                let inner = kernel.pi(anon, alpha1, prop, BinderInfo::Default);
+                kernel.pi(anon, alpha0, inner, BinderInfo::Default)
+            };
+            let well_founded_ty = {
+                let with_relation = kernel.pi(anon, relation_ty, prop, BinderInfo::Default);
+                kernel.pi(anon, sort_u, with_relation, BinderInfo::Implicit)
+            };
+            let well_founded_value = {
+                // Under `α, r, a`: Acc α r a.
+                let alpha2 = kernel.bvar(2);
+                let relation1 = kernel.bvar(1);
+                let a0 = kernel.bvar(0);
+                let body = {
+                    let expression = kernel.app(acc_const, alpha2);
+                    let expression = kernel.app(expression, relation1);
+                    kernel.app(expression, a0)
+                };
+                // Under `α, r`, a : α = BVar 1.
+                let alpha1 = kernel.bvar(1);
+                let all_accessible = kernel.pi(anon, alpha1, body, BinderInfo::Default);
+                let value_with_relation =
+                    kernel.lam(anon, relation_ty, all_accessible, BinderInfo::Default);
+                kernel.lam(anon, sort_u, value_with_relation, BinderInfo::Implicit)
+            };
+            kernel.add_declaration(Declaration::Definition {
+                name: well_founded,
+                uparams: vec![acc_uparam],
+                ty: well_founded_ty,
+                value: well_founded_value,
+                hint: ReducibilityHint::Regular(3),
+            })?;
+        }
+
         // --- Not (a : Prop) : Prop := fun a => a → False ---------------------
         // --- Bool : Type, Bool.true | Bool.false -----------------------------
         // The computational two-element enum at `Sort 1` (= Type). Its two nullary
@@ -520,6 +651,11 @@ pub fn build_logic_prelude(kernel: &mut Kernel) -> Result<LogicPrelude, KernelEr
             exists_intro,
             exists_rec,
             exists_uparam,
+            acc,
+            acc_intro,
+            acc_rec,
+            acc_uparam,
+            well_founded,
             not,
             bool_,
             bool_true,

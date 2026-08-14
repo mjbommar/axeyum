@@ -21,6 +21,29 @@ use crate::expr::ExprNode;
 use crate::prelude::{RecField, RecursiveDatatypeFamily};
 use crate::{BinderInfo, Kernel, LogicPrelude, build_logic_prelude};
 
+fn apply_all(
+    k: &mut Kernel,
+    mut function: crate::ExprId,
+    arguments: &[crate::ExprId],
+) -> crate::ExprId {
+    for &argument in arguments {
+        function = k.app(function, argument);
+    }
+    function
+}
+
+fn lam_fvar(k: &mut Kernel, fvar: u64, ty: crate::ExprId, body: crate::ExprId) -> crate::ExprId {
+    let body = k.abstract_fvars(body, &[fvar]);
+    let anon = k.anon();
+    k.lam(anon, ty, body, BinderInfo::Default)
+}
+
+fn pi_fvar(k: &mut Kernel, fvar: u64, ty: crate::ExprId, body: crate::ExprId) -> crate::ExprId {
+    let body = k.abstract_fvars(body, &[fvar]);
+    let anon = k.anon();
+    k.pi(anon, ty, body, BinderInfo::Default)
+}
+
 /// A test fixture: a kernel with the prelude plus abstract `A, B, C : Prop` and
 /// `ha : A`, `hb : B` axioms.
 struct Fixture {
@@ -138,6 +161,10 @@ fn prelude_admits_all_declarations() {
         p.eq,
         p.eq_refl,
         p.eq_rec,
+        p.acc,
+        p.acc_intro,
+        p.acc_rec,
+        p.well_founded,
         p.not,
     ] {
         assert!(
@@ -218,6 +245,23 @@ fn prelude_admits_all_declarations() {
         }
         _ => panic!("Exists.rec should be a recursor"),
     }
+    // Acc has two parameters, one index, one minor, and retains large
+    // elimination because its sole constructor fields are proofs.
+    match k.environment().get(p.acc_rec).unwrap() {
+        Declaration::Recursor {
+            num_params,
+            num_indices,
+            num_minors,
+            uparams,
+            ..
+        } => {
+            assert_eq!(*num_params, 2);
+            assert_eq!(*num_indices, 1);
+            assert_eq!(*num_minors, 1);
+            assert_eq!(uparams.len(), 2, "Acc retains large elimination");
+        }
+        _ => panic!("Acc.rec should be a recursor"),
+    }
 
     for (name, expected_uparams) in [
         (p.true_rec, 1),
@@ -232,6 +276,175 @@ fn prelude_admits_all_declarations() {
             _ => panic!("expected recursor"),
         }
     }
+}
+
+/// The actual prelude `Acc.rec`, not merely a lookalike construct-matrix row,
+/// computes through an empty predecessor relation. The same proof also checks
+/// that `WellFounded` unfolds to pointwise accessibility and that an index
+/// mutation cannot reuse the accepted accessibility proof.
+#[test]
+#[allow(clippy::too_many_lines)]
+fn accessibility_recursion_computes_and_retains_its_index() {
+    let mut k = Kernel::new();
+    let p = build_logic_prelude(&mut k).expect("logic prelude must build");
+    let anon = k.anon();
+    let zero_level = k.level_zero();
+    let one_level = k.level_succ(zero_level);
+    let prop = k.sort_zero();
+    let nat = k.const_(p.nat, vec![]);
+    let zero = k.const_(p.nat_zero, vec![]);
+    let false_prop = k.const_(p.false_, vec![]);
+    let true_prop = k.const_(p.true_, vec![]);
+
+    // emptyRelation := fun _ _ : Nat => False.
+    let relation = {
+        let inner = k.lam(anon, nat, false_prop, BinderInfo::Default);
+        k.lam(anon, nat, inner, BinderInfo::Default)
+    };
+    let acc_const = k.const_(p.acc, vec![one_level]);
+    let acc_at = |k: &mut Kernel, value| apply_all(k, acc_const, &[nat, relation, value]);
+
+    // h : ∀ y, emptyRelation y zero → Acc emptyRelation y, by False.rec.
+    let predecessor_fvar = 10_000;
+    let impossible_fvar = 10_001;
+    let predecessor = k.fvar(predecessor_fvar);
+    let impossible = k.fvar(impossible_fvar);
+    let relation_proof_ty = apply_all(&mut k, relation, &[predecessor, zero]);
+    let accessible_predecessor = acc_at(&mut k, predecessor);
+    let false_motive_fvar = 10_002;
+    let false_motive = lam_fvar(
+        &mut k,
+        false_motive_fvar,
+        false_prop,
+        accessible_predecessor,
+    );
+    let false_rec = k.const_(p.false_rec, vec![zero_level]);
+    let absurd = apply_all(&mut k, false_rec, &[false_motive, impossible]);
+    let with_impossible = lam_fvar(&mut k, impossible_fvar, relation_proof_ty, absurd);
+    let no_predecessors = lam_fvar(&mut k, predecessor_fvar, nat, with_impossible);
+
+    let acc_intro = k.const_(p.acc_intro, vec![one_level]);
+    let accessible_zero = apply_all(&mut k, acc_intro, &[nat, relation, zero, no_predecessors]);
+    let accessible_zero_ty = acc_at(&mut k, zero);
+    let inferred_accessible = k
+        .infer(accessible_zero)
+        .expect("the empty relation should make zero accessible");
+    assert!(k.def_eq(inferred_accessible, accessible_zero_ty));
+
+    // motive := fun _ _ => Prop; minor := fun _ _ _ => True.
+    let motive_index_fvar = 10_010;
+    let motive_proof_fvar = 10_011;
+    let motive_index = k.fvar(motive_index_fvar);
+    let motive_proof_ty = acc_at(&mut k, motive_index);
+    let motive_with_proof = lam_fvar(&mut k, motive_proof_fvar, motive_proof_ty, prop);
+    let motive = lam_fvar(&mut k, motive_index_fvar, nat, motive_with_proof);
+
+    let minor_index_fvar = 10_020;
+    let minor_field_fvar = 10_021;
+    let minor_ih_fvar = 10_022;
+    let minor_index = k.fvar(minor_index_fvar);
+    let field_predecessor_fvar = 10_023;
+    let field_relation_fvar = 10_024;
+    let field_predecessor = k.fvar(field_predecessor_fvar);
+    let field_relation_ty = apply_all(&mut k, relation, &[field_predecessor, minor_index]);
+    let field_result = acc_at(&mut k, field_predecessor);
+    let field_with_relation = pi_fvar(&mut k, field_relation_fvar, field_relation_ty, field_result);
+    let recursive_field_ty = pi_fvar(&mut k, field_predecessor_fvar, nat, field_with_relation);
+
+    let ih_predecessor_fvar = 10_025;
+    let ih_relation_fvar = 10_026;
+    let ih_predecessor = k.fvar(ih_predecessor_fvar);
+    let ih_relation_ty = apply_all(&mut k, relation, &[ih_predecessor, minor_index]);
+    let ih_with_relation = pi_fvar(&mut k, ih_relation_fvar, ih_relation_ty, prop);
+    let recursive_hypothesis_ty = pi_fvar(&mut k, ih_predecessor_fvar, nat, ih_with_relation);
+    let minor_with_ih = lam_fvar(&mut k, minor_ih_fvar, recursive_hypothesis_ty, true_prop);
+    let minor_with_field = lam_fvar(&mut k, minor_field_fvar, recursive_field_ty, minor_with_ih);
+    let minor = lam_fvar(&mut k, minor_index_fvar, nat, minor_with_field);
+
+    let acc_rec = k.const_(p.acc_rec, vec![one_level, one_level]);
+    let computed = apply_all(
+        &mut k,
+        acc_rec,
+        &[nat, relation, motive, minor, zero, accessible_zero],
+    );
+    let inferred = k.infer(computed).expect("Acc.rec application should infer");
+    assert!(k.def_eq(inferred, prop), "Acc.rec should return a Prop");
+    assert!(
+        k.def_eq(computed, true_prop),
+        "Acc.rec should iota-reduce through Acc.intro"
+    );
+
+    let well_founded = k.const_(p.well_founded, vec![one_level]);
+    let well_founded_empty = apply_all(&mut k, well_founded, &[nat, relation]);
+    let arbitrary_fvar = 10_030;
+    let arbitrary = k.fvar(arbitrary_fvar);
+    let expected_body = acc_at(&mut k, arbitrary);
+    let expected_well_founded = pi_fvar(&mut k, arbitrary_fvar, nat, expected_body);
+    assert!(
+        k.def_eq(well_founded_empty, expected_well_founded),
+        "WellFounded should unfold to pointwise Acc"
+    );
+
+    let successor = k.const_(p.nat_succ, vec![]);
+    let one = k.app(successor, zero);
+    let wrong_index_ty = acc_at(&mut k, one);
+    let wrong_name = k.name_str(anon, "acc_wrong_index");
+    let error = k
+        .add_declaration(Declaration::Theorem {
+            name: wrong_name,
+            uparams: vec![],
+            ty: wrong_index_ty,
+            value: accessible_zero,
+        })
+        .expect_err("an accessibility proof cannot change indices");
+    assert!(!k.environment().contains(wrong_name));
+    assert!(
+        matches!(error, crate::KernelError::DeclarationValueMismatch { .. }),
+        "unexpected rejection: {error:?}"
+    );
+}
+
+#[test]
+fn logic_prelude_with_accessibility_declares_no_axioms() {
+    let mut k = Kernel::new();
+    build_logic_prelude(&mut k).expect("logic prelude must build");
+    let axioms: Vec<_> = k
+        .environment()
+        .iter()
+        .filter_map(|(_, declaration)| match declaration {
+            Declaration::Axiom { name, .. } => Some(k.display_name(*name).to_string()),
+            _ => None,
+        })
+        .collect();
+    assert!(axioms.is_empty(), "logic prelude axioms: {axioms:?}");
+}
+
+#[test]
+fn accessibility_prelude_build_is_deterministic() {
+    let render = |kernel: &mut Kernel| {
+        let prelude = build_logic_prelude(kernel).expect("logic prelude must build");
+        [
+            prelude.acc,
+            prelude.acc_intro,
+            prelude.acc_rec,
+            prelude.well_founded,
+        ]
+        .into_iter()
+        .map(|name| {
+            let declaration = kernel
+                .environment()
+                .get(name)
+                .expect("promised accessibility declaration");
+            kernel.render_lean_decl(declaration)
+        })
+        .collect::<Vec<_>>()
+    };
+    let first = render(&mut Kernel::new());
+    let second = render(&mut Kernel::new());
+    assert_eq!(
+        first, second,
+        "accessibility declarations must repeat exactly"
+    );
 }
 
 /// `False.rec` (zero-constructor recursor) exists and its generated type
