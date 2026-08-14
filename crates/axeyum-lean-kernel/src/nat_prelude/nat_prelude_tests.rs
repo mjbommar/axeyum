@@ -172,6 +172,8 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.mod_eq_add_right,
         p.mod_eq_add,
         p.mod_eq_mul_left,
+        p.mod_eq_mul_right,
+        p.mod_eq_mul,
         p.dvd_mul,
         p.dvd_add,
         p.dvd_add_right_cancel_of_pos,
@@ -852,6 +854,33 @@ fn modular_congruence_is_a_checked_equivalence_relation() {
     let scaled_name = f.name("four_times_two_mod_five_four_times_seven");
     f.declare_theorem(scaled_name, scaled_ty, scaled)
         .unwrap_or_else(|e| panic!("left-scaled congruence should admit: {}", f.explain(&e)));
+
+    let scaled_right_proof = f.lemma(
+        p.mod_eq_mul_right,
+        &[five, two, seven, factor, two_to_seven],
+    );
+    let right_scaled_left = f.mul(two, factor);
+    let right_scaled_right = f.mul(seven, factor);
+    let right_scaled_ty = f.mod_eq(five, right_scaled_left, right_scaled_right);
+    let right_scaled_name = f.name("two_times_four_mod_five_seven_times_four");
+    f.declare_theorem(right_scaled_name, right_scaled_ty, scaled_right_proof)
+        .unwrap_or_else(|e| panic!("right-scaled congruence should admit: {}", f.explain(&e)));
+
+    let pairwise_product = f.lemma(
+        p.mod_eq_mul,
+        &[five, two, seven, three, eight, two_to_seven, three_to_eight],
+    );
+    let product_left = f.mul(two, three);
+    let product_right = f.mul(seven, eight);
+    let product_ty = f.mod_eq(five, product_left, product_right);
+    let product_name = f.name("two_times_three_mod_five_seven_times_eight");
+    f.declare_theorem(product_name, product_ty, pairwise_product)
+        .unwrap_or_else(|e| {
+            panic!(
+                "pairwise multiplicative congruence should admit: {}",
+                f.explain(&e)
+            )
+        });
 }
 
 #[test]
@@ -2354,7 +2383,64 @@ fn kernel_rejects_broken_proof_terms() {
         rejections += 1;
     }
 
-    assert_eq!(rejections, 52, "every negative control must be rejected");
+    // NC53 — right-factor compatibility retains its common factor.
+    {
+        let name = f.name("nc53_mod_eq_mul_right_wrong_factor");
+        let zero = f.num(0);
+        let one = f.num(1);
+        let two = f.num(2);
+        let three = f.num(3);
+        let four = f.num(4);
+        let five = f.num(5);
+        let seven = f.num(7);
+        let relation = f.concrete_mod_eq(five, two, seven, one, zero);
+        let proof = f.lemma(p.mod_eq_mul_right, &[five, two, seven, three, relation]);
+        let scaled_left = f.mul(two, three);
+        let wrong_right = f.mul(seven, four);
+        let bad = f.mod_eq(five, scaled_left, wrong_right);
+        let err = f
+            .declare_theorem(name, bad, proof)
+            .expect_err("NC53: right multiplicative congruence must retain its factor");
+        println!(
+            "NC53 (wrong right multiplication factor) rejected:\n  {}",
+            f.explain(&err)
+        );
+        assert!(!f.k.environment().contains(name));
+        rejections += 1;
+    }
+
+    // NC54 — pairwise multiplicative congruence retains every endpoint.
+    {
+        let name = f.name("nc54_mod_eq_mul_wrong_endpoint");
+        let zero = f.num(0);
+        let one = f.num(1);
+        let two = f.num(2);
+        let three = f.num(3);
+        let five = f.num(5);
+        let seven = f.num(7);
+        let eight = f.num(8);
+        let nine = f.num(9);
+        let first = f.concrete_mod_eq(five, two, seven, one, zero);
+        let second = f.concrete_mod_eq(five, three, eight, one, zero);
+        let proof = f.lemma(
+            p.mod_eq_mul,
+            &[five, two, seven, three, eight, first, second],
+        );
+        let left_product = f.mul(two, three);
+        let wrong_right_product = f.mul(seven, nine);
+        let bad = f.mod_eq(five, left_product, wrong_right_product);
+        let err = f
+            .declare_theorem(name, bad, proof)
+            .expect_err("NC54: pairwise multiplicative congruence must retain every endpoint");
+        println!(
+            "NC54 (wrong pairwise multiplication endpoint) rejected:\n  {}",
+            f.explain(&err)
+        );
+        assert!(!f.k.environment().contains(name));
+        rejections += 1;
+    }
+
+    assert_eq!(rejections, 54, "every negative control must be rejected");
 }
 
 /// The build is deterministic: two independent kernels render every promised
@@ -2377,7 +2463,7 @@ fn the_build_is_deterministic() {
     assert_eq!(first, second, "the prelude build must be deterministic");
     assert_eq!(
         first.len(),
-        12 + 79,
+        12 + 81,
         "every promised definition and theorem must be rendered"
     );
 }

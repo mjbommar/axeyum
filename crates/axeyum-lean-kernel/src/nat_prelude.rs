@@ -62,8 +62,8 @@
 //! **Relational division and congruence**: `Nat.divMod` carries quotient and
 //! remainder witnesses and proves existence, uniqueness, and floor-order laws.
 //! `Nat.modEq d a b := ∃ u v, a + d*u = b + d*v` avoids signed subtraction;
-//! reflexivity, symmetry, transitivity, additive closure, and common-factor
-//! multiplication compatibility are checked theorems.
+//! reflexivity, symmetry, transitivity, and pairwise additive and multiplicative
+//! closure are checked theorems.
 //!
 //! ## What is **not** here
 //!
@@ -325,6 +325,10 @@ pub struct NatPrelude {
     pub mod_eq_add: NameId,
     /// `Nat.mod_eq_mul_left : ∀ d a b c, modEq d a b → modEq d (c*a) (c*b)`.
     pub mod_eq_mul_left: NameId,
+    /// `Nat.mod_eq_mul_right : ∀ d a b c, modEq d a b → modEq d (a*c) (b*c)`.
+    pub mod_eq_mul_right: NameId,
+    /// `Nat.mod_eq_mul : modEq d a b → modEq d c e → modEq d (a*c) (b*e)`.
+    pub mod_eq_mul: NameId,
     /// `Nat.valuationAt a n e := dvd (a^e) n ∧ Not (dvd (a^(e+1)) n)`.
     pub valuation_at: NameId,
     /// `Nat.dvd_mul : ∀ a q, dvd a (a * q)`.
@@ -467,6 +471,8 @@ pub fn build_nat_prelude(kernel: &mut Kernel) -> Result<NatPrelude, KernelError>
             mod_eq_add_right: kernel.name_str(nat, "mod_eq_add_right"),
             mod_eq_add: kernel.name_str(nat, "mod_eq_add"),
             mod_eq_mul_left: kernel.name_str(nat, "mod_eq_mul_left"),
+            mod_eq_mul_right: kernel.name_str(nat, "mod_eq_mul_right"),
+            mod_eq_mul: kernel.name_str(nat, "mod_eq_mul"),
             valuation_at: kernel.name_str(nat, "valuationAt"),
             dvd_mul: kernel.name_str(nat, "dvd_mul"),
             dvd_add: kernel.name_str(nat, "dvd_add"),
@@ -718,6 +724,7 @@ fn declare_modular_congruence(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), 
     declare_mod_eq_add_left(d, &p, nat, anon, one)?;
     declare_mod_eq_additive_compatibility(d, &p)?;
     declare_mod_eq_mul_left(d, &p, nat, anon, one)?;
+    declare_mod_eq_multiplicative_compatibility(d, &p)?;
     Ok(())
 }
 
@@ -1119,6 +1126,78 @@ fn mod_eq_scaled_multiple(
         ],
     );
     proof
+}
+
+fn declare_mod_eq_multiplicative_compatibility(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+) -> Result<(), KernelError> {
+    let p = *p;
+
+    // mod_eq_mul_right : modEq d a b → modEq d (a*c) (b*c)
+    d.theorem(p.mod_eq_mul_right, 4, &|d, values| {
+        let (modulus, left, right, factor) = (values[0], values[1], values[2], values[3]);
+        let source = d.mod_eq(modulus, left, right);
+        let source_fv = d.fresh_fvar();
+        let source_proof = d.kernel().fvar(source_fv);
+        let factor_left = d.mul(factor, left);
+        let left_factor = d.mul(left, factor);
+        let factor_right = d.mul(factor, right);
+        let right_factor = d.mul(right, factor);
+        let scaled = d.lemma(
+            p.mod_eq_mul_left,
+            &[modulus, left, right, factor, source_proof],
+        );
+        let commute_left = d.lemma(p.mul_comm, &[factor, left]);
+        let left_motive = d.eq_motive(factor_left, &|d, value| {
+            d.mod_eq(modulus, value, factor_right)
+        });
+        let left_transport =
+            d.transport(factor_left, left_motive, scaled, left_factor, commute_left);
+        let commute_right = d.lemma(p.mul_comm, &[factor, right]);
+        let right_motive = d.eq_motive(factor_right, &|d, value| {
+            d.mod_eq(modulus, left_factor, value)
+        });
+        let body = d.transport(
+            factor_right,
+            right_motive,
+            left_transport,
+            right_factor,
+            commute_right,
+        );
+        let target = d.mod_eq(modulus, left_factor, right_factor);
+        let stmt = d.arrow(source, target);
+        let proof = d.lam_fv(source_fv, source, body);
+        (stmt, proof)
+    })?;
+
+    // mod_eq_mul : modEq d a b → modEq d c e → modEq d (a*c) (b*e)
+    d.theorem(p.mod_eq_mul, 5, &|d, values| {
+        let (modulus, a, b, c, e) = (values[0], values[1], values[2], values[3], values[4]);
+        let first_ty = d.mod_eq(modulus, a, b);
+        let second_ty = d.mod_eq(modulus, c, e);
+        let first_fv = d.fresh_fvar();
+        let first = d.kernel().fvar(first_fv);
+        let second_fv = d.fresh_fvar();
+        let second = d.kernel().fvar(second_fv);
+        let ac = d.mul(a, c);
+        let bc = d.mul(b, c);
+        let be = d.mul(b, e);
+        let first_scaled = d.lemma(p.mod_eq_mul_right, &[modulus, a, b, c, first]);
+        let second_scaled = d.lemma(p.mod_eq_mul_left, &[modulus, c, e, b, second]);
+        let body = d.lemma(
+            p.mod_eq_trans,
+            &[modulus, ac, bc, be, first_scaled, second_scaled],
+        );
+        let target = d.mod_eq(modulus, ac, be);
+        let second_to_target = d.arrow(second_ty, target);
+        let stmt = d.arrow(first_ty, second_to_target);
+        let with_second = d.lam_fv(second_fv, second_ty, body);
+        let proof = d.lam_fv(first_fv, first_ty, with_second);
+        (stmt, proof)
+    })?;
+
+    Ok(())
 }
 
 #[allow(clippy::too_many_arguments)]

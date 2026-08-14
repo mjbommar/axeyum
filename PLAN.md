@@ -324,47 +324,23 @@ preregistered bounded mechanisms are closed negatively. A4 has now also yielded;
 A5 is the first active item.
 
 **Clausal reconstruction lane (`DONE`, agent-h, 2026-08-13).** `DP_POOL_BUDGET`
-is not the reconstruction ceiling: LRAT hint chains take
-`reconstruct_ordered_rup_step`, and the Davis-Putnam fallback it guards was never
-entered across 22 Rado refutations (85 to 4.57M hints). The bound is the kernel
-expression arena at ~90-100 B/node and ~190-460 nodes/hint.
-`reconstruct_resolution_proof_compact` (`1b2b13c70`) is 5.6x smaller and 55x
-faster at n=141 with the ratios still rising, and it reconstructs two 4-colour
-instances the inlined route cannot: `R_4(3(x-y)=z)=81` (2,163,930 hints, 11.6 GB,
-16.2 min) and `R_4(x-y=z)=45` (4,572,930 hints, 346M kernel expression nodes,
-24.6 GB, 32.4 min) — cost linear in hint count to within 6%, while the inlined
-route was killed on the latter at 60 minutes with no result. Its differential
-found **no** statement mismatch (0 alien hypothesis axioms on either route,
-compact footprint a strict subset at every size). 19 refutations now carry certificates official
-Lean v4.30.0 checks, to `R_3(x-y=5z)=286` and `R_4(2(x-y)=z)=56`, with
-`#print axioms` listing only input clauses and atoms — no `propext`,
-`Classical.choice`, `Quot.sound`, or `em`. **Next: kernel arena checkpointing**
-(spool admitted `Declaration::Theorem`s and truncate behind them) — that is the
-change that makes proof size disk-bounded rather than RAM-bounded.
+is not the ceiling; LRAT hint chains bypass that fallback. Compact reconstruction
+(`1b2b13c70`) is smaller/faster, scales linearly with hint count, reconstructs
+two four-colour cases the inlined route cannot, and introduces no statement or
+axiom-footprint mismatch. Nineteen refutations check in Lean 4.30. **Next:**
+kernel arena checkpointing, spooling admitted theorems before truncation so
+proof size becomes disk-bounded rather than RAM-bounded.
 
 **CAS bridge lane (`DONE`, agent-i, 2026-08-13).** `cas-ideal-refuter`
-(ADR-0429, `119858e2c` + `04249ded3`) is the first solver route that reasons
-about the *ideal* asserted equations generate. New in `axeyum-cas`:
-`groebner_cert.rs`, cofactor-tracking Buchberger, so ideal membership emits the
-identity `target = Σ cᵢ·gᵢ + r` that a checker with no CAS dependency re-derives
-— `ideal_contains` returned a bare `bool`, which under ADR-0386's own standard
-is not evidence. Four refutation shapes; the useful ones supply facts nobody
-asserted (a sum of squares, a product of two asserted bounds). Six query classes
-moved from `unknown` to `unsat`, all of them systems whose **atoms leave the
-polynomial fragment** (`div`, `mod`, `ite`, UF) — including the Rado `L3` shape
-over three `div` atoms, 20 s timeout → 207 ms. Two counter-measurements worth
-keeping: the obvious bridge (Sturm) is a *duplication* of the stronger
-`nra_real_root.rs`, not a gap; and the first placement, beside the ADR-0386 fast
-path, was a **regression** (0.96 ms → 3.96 ms), so the route sits behind
-`nra-real-root` and `nia-bounded-blast`. **The finding to propagate:** six of
-seven checker guards could be deleted with every tamper test still green — they
-all reject through the identity check. Replaced with six *forgeries* (valid
-certificates for satisfiable queries) that map 1:1 onto their guards. **Next:
-an exact-rational LP over the candidate residues** to replace the
+(ADR-0429, `119858e2c` + `04249ded3`) emits cofactor-tracked ideal identities
+that a CAS-free checker re-derives. Six non-polynomial-atom query classes moved
+from `unknown` to certified `unsat`; route ordering avoids the measured fast-path
+regression. Guard-isolating satisfiable-query forgeries replaced ineffective
+tamper cases. **Next:** exact-rational LP over candidate residues instead of
 unit-coefficient subset search; see `agent-i-cas-bridge/FEEDBACK.md` F8.
 
-**Immediate action (`WIP`, Lean lane).** Gate ADR-0432; next prove right-factor
-and pairwise multiplication closure for relational Nat congruence. No credit.
+**Immediate action (`WIP`, Lean lane).** Gate ADR-0433; next relate `modEq` to
+divisibility and relational Euclidean remainders. No credit.
 Keep the 14-theorem export labelled rejected by Lean and independently unchecked.
 A5 V2 QF_RDL row 1 remains pending and uncredited.
 
