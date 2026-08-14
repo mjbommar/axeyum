@@ -121,6 +121,9 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.mul_sub_left_distrib,
         p.dvd_mul,
         p.dvd_add,
+        p.dvd_add_right_cancel_of_pos,
+        p.not_dvd_one_of_two_le,
+        p.not_dvd_one_add_mul_of_two_le,
     ]
 }
 
@@ -710,6 +713,28 @@ fn divisibility_introduction_and_addition_are_checked() {
     let ten_name = f.name("two_dvd_ten");
     f.declare_theorem(ten_name, two_dvd_ten, proof_add)
         .unwrap_or_else(|e| panic!("2 ∣ 10 should admit: {}", f.explain(&e)));
+
+    let one = f.num(1);
+    let positive = f.lemma(p.le_add_right, &[one, one]);
+    let h10 = f.const_app(ten_name, &[]);
+    let cancelled = f.lemma(
+        p.dvd_add_right_cancel_of_pos,
+        &[two, four, six, positive, h4, h10],
+    );
+    f.k.infer(cancelled).unwrap_or_else(|e| {
+        panic!(
+            "positive divisibility cancellation should infer: {}",
+            f.explain(&e)
+        )
+    });
+
+    let two_le_two = f.lemma(p.le_refl, &[two]);
+    let not_dvd_one = f.lemma(p.not_dvd_one_of_two_le, &[two, two_le_two]);
+    f.k.infer(not_dvd_one)
+        .unwrap_or_else(|e| panic!("2 ∤ 1 should infer: {}", f.explain(&e)));
+    let not_dvd_one_plus_six = f.lemma(p.not_dvd_one_add_mul_of_two_le, &[two, three, two_le_two]);
+    f.k.infer(not_dvd_one_plus_six)
+        .unwrap_or_else(|e| panic!("2 ∤ 1+2*3 should infer: {}", f.explain(&e)));
 }
 
 /// NEGATIVE CONTROLS. Each feeds the kernel a deliberately broken proof and
@@ -1404,7 +1429,80 @@ fn kernel_rejects_broken_proof_terms() {
         rejections += 1;
     }
 
-    assert_eq!(rejections, 28, "every negative control must be rejected");
+    // NC29 — divisibility cancellation retains the uncancelled summand.
+    {
+        let name = f.name("nc29_dvd_add_cancel_wrong_summand");
+        let one = f.num(1);
+        let two = f.num(2);
+        let four = f.num(4);
+        let five = f.num(5);
+        let six = f.num(6);
+        let positive = f.lemma(p.le_add_right, &[one, one]);
+        let h4 = f.lemma(p.dvd_mul, &[two, two]);
+        let three = f.num(3);
+        let h6 = f.lemma(p.dvd_mul, &[two, three]);
+        let h10 = f.lemma(p.dvd_add, &[two, four, six, h4, h6]);
+        let proof = f.lemma(
+            p.dvd_add_right_cancel_of_pos,
+            &[two, four, six, positive, h4, h10],
+        );
+        let bad = f.dvd(two, five);
+        let err = f
+            .declare_theorem(name, bad, proof)
+            .expect_err("NC29: divisibility cancellation must retain the second summand");
+        println!(
+            "NC29 (wrong cancelled divisibility summand) rejected:\n  {}",
+            f.explain(&err)
+        );
+        assert!(!f.k.environment().contains(name));
+        rejections += 1;
+    }
+
+    // NC30 — primitive nondivisibility retains the divisor.
+    {
+        let name = f.name("nc30_not_dvd_one_wrong_divisor");
+        let one = f.num(1);
+        let two = f.num(2);
+        let three = f.num(3);
+        let bound = f.lemma(p.le_refl, &[two]);
+        let proof = f.lemma(p.not_dvd_one_of_two_le, &[two, bound]);
+        let three_dvd_one = f.dvd(three, one);
+        let bad = f.const_app(p.logic.not, &[three_dvd_one]);
+        let err = f
+            .declare_theorem(name, bad, proof)
+            .expect_err("NC30: nondivisibility of one must retain the divisor");
+        println!(
+            "NC30 (wrong primitive nondivisor) rejected:\n  {}",
+            f.explain(&err)
+        );
+        assert!(!f.k.environment().contains(name));
+        rejections += 1;
+    }
+
+    // NC31 — the one-plus-multiple theorem retains its exact multiplier.
+    {
+        let name = f.name("nc31_not_dvd_one_plus_mul_wrong_multiplier");
+        let one = f.num(1);
+        let two = f.num(2);
+        let three = f.num(3);
+        let bound = f.lemma(p.le_refl, &[two]);
+        let proof = f.lemma(p.not_dvd_one_add_mul_of_two_le, &[two, three, bound]);
+        let two_times_two = f.mul(two, two);
+        let wrong_sum = f.add(one, two_times_two);
+        let wrong_dvd = f.dvd(two, wrong_sum);
+        let bad = f.const_app(p.logic.not, &[wrong_dvd]);
+        let err = f
+            .declare_theorem(name, bad, proof)
+            .expect_err("NC31: one-plus-multiple nondivisibility must retain the multiplier");
+        println!(
+            "NC31 (wrong one-plus-multiple endpoint) rejected:\n  {}",
+            f.explain(&err)
+        );
+        assert!(!f.k.environment().contains(name));
+        rejections += 1;
+    }
+
+    assert_eq!(rejections, 31, "every negative control must be rejected");
 }
 
 /// The build is deterministic: two independent kernels render every promised
@@ -1427,7 +1525,7 @@ fn the_build_is_deterministic() {
     assert_eq!(first, second, "the prelude build must be deterministic");
     assert_eq!(
         first.len(),
-        8 + 56,
+        8 + 59,
         "every promised definition and theorem must be rendered"
     );
 }

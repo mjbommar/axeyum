@@ -277,6 +277,12 @@ pub struct NatPrelude {
     pub dvd_mul: NameId,
     /// `Nat.dvd_add : ∀ a m n, dvd a m → dvd a n → dvd a (m + n)`.
     pub dvd_add: NameId,
+    /// `Nat.dvd_add_right_cancel_of_pos : ∀ a m n, Le one a → dvd a m → dvd a (m+n) → dvd a n`.
+    pub dvd_add_right_cancel_of_pos: NameId,
+    /// `Nat.not_dvd_one_of_two_le : ∀ a, Le two a → Not (dvd a one)`.
+    pub not_dvd_one_of_two_le: NameId,
+    /// `Nat.not_dvd_one_add_mul_of_two_le : ∀ a t, Le two a → Not (dvd a (one+a*t))`.
+    pub not_dvd_one_add_mul_of_two_le: NameId,
 }
 
 /// Declare the natural-number prelude into `kernel`'s environment, returning the
@@ -384,6 +390,9 @@ pub fn build_nat_prelude(kernel: &mut Kernel) -> Result<NatPrelude, KernelError>
             dvd: kernel.name_str(nat, "dvd"),
             dvd_mul: kernel.name_str(nat, "dvd_mul"),
             dvd_add: kernel.name_str(nat, "dvd_add"),
+            dvd_add_right_cancel_of_pos: kernel.name_str(nat, "dvd_add_right_cancel_of_pos"),
+            not_dvd_one_of_two_le: kernel.name_str(nat, "not_dvd_one_of_two_le"),
+            not_dvd_one_add_mul_of_two_le: kernel.name_str(nat, "not_dvd_one_add_mul_of_two_le"),
         };
 
         let mut d = NatDev::new(kernel, p);
@@ -2829,6 +2838,245 @@ fn declare_divisibility(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), Kernel
         };
         d.declare_theorem(p.dvd_add, ty, value)?;
     }
+
+    // dvd_add_right_cancel_of_pos :
+    //   ∀ a m n, Le one a → dvd a m → dvd a (m+n) → dvd a n
+    // Expose both divisibility witnesses. Order reflection proves the first
+    // quotient is bounded by the second; their difference is then a witness
+    // for `n`, after checked subtraction restoration and additive cancellation.
+    d.theorem(p.dvd_add_right_cancel_of_pos, 3, &|d, v| {
+        let (a, m, n) = (v[0], v[1], v[2]);
+        let unit = d.num(1);
+        let positive_ty = d.le(unit, a);
+        let positive_fv = d.fresh_fvar();
+        let positive = d.kernel().fvar(positive_fv);
+        let divides_m_ty = d.dvd(a, m);
+        let divides_m_fv = d.fresh_fvar();
+        let divides_m = d.kernel().fvar(divides_m_fv);
+        let mn = d.add(m, n);
+        let divides_sum_ty = d.dvd(a, mn);
+        let divides_sum_fv = d.fresh_fvar();
+        let divides_sum = d.kernel().fvar(divides_sum_fv);
+        let goal = d.dvd(a, n);
+        let pred_m = d.dvd_predicate(a, m);
+        let pred_sum = d.dvd_predicate(a, mn);
+
+        let motive_for = |d: &mut NatDev<'_>, domain: ExprId| {
+            d.kernel().lam(anon, domain, goal, BinderInfo::Default)
+        };
+        let minor_m = {
+            let q1_fv = d.fresh_fvar();
+            let q1 = d.kernel().fvar(q1_fv);
+            let aq1 = d.mul(a, q1);
+            let e1_fv = d.fresh_fvar();
+            let e1_ty = d.eq(m, aq1);
+            let e1 = d.kernel().fvar(e1_fv);
+            let minor_sum = {
+                let q2_fv = d.fresh_fvar();
+                let q2 = d.kernel().fvar(q2_fv);
+                let aq2 = d.mul(a, q2);
+                let e2_fv = d.fresh_fvar();
+                let e2_ty = d.eq(mn, aq2);
+                let e2 = d.kernel().fvar(e2_fv);
+
+                let m_le_sum = d.lemma(p.le_add_right, &[m, n]);
+                let aq1_le_sum = {
+                    let motive = d.eq_motive(m, &|d, lower| d.le(lower, mn));
+                    d.transport(m, motive, m_le_sum, aq1, e1)
+                };
+                let aq1_le_aq2 = {
+                    let motive = d.eq_motive(mn, &|d, upper| d.le(aq1, upper));
+                    d.transport(mn, motive, aq1_le_sum, aq2, e2)
+                };
+                let q1_le_q2 = d.lemma(p.le_of_mul_le_mul_left, &[a, q1, q2, positive, aq1_le_aq2]);
+
+                let difference = d.sub(q2, q1);
+                let a_difference = d.mul(a, difference);
+                let scaled_difference = d.sub(aq2, aq1);
+                let h_scaled_difference = d.lemma(p.mul_sub_left_distrib, &[a, q2, q1, q1_le_q2]);
+                let restored = d.add(scaled_difference, aq1);
+                let h_restored = d.lemma(p.sub_add_cancel, &[aq1, aq2, aq1_le_aq2]);
+
+                let start = d.add(a_difference, m);
+                let with_scaled_difference = d.add(scaled_difference, m);
+                let h1 = d.congr(
+                    a_difference,
+                    scaled_difference,
+                    h_scaled_difference,
+                    &|d, x| d.add(x, m),
+                );
+                let h2 = d.congr(m, aq1, e1, &|d, x| d.add(scaled_difference, x));
+                let aq2_eq_sum = d.symm(mn, aq2, e2);
+                let n_plus_m = d.add(n, m);
+                let h_sum_comm = d.lemma(p.add_comm, &[n, m]);
+                let sum_eq_n_plus_m = d.symm(n_plus_m, mn, h_sum_comm);
+                let (_, common_sum) = d.chain(
+                    start,
+                    &[
+                        (with_scaled_difference, h1),
+                        (restored, h2),
+                        (aq2, h_restored),
+                        (mn, aq2_eq_sum),
+                        (n_plus_m, sum_eq_n_plus_m),
+                    ],
+                );
+                let a_difference_eq_n =
+                    d.lemma(p.add_right_cancel, &[a_difference, n, m, common_sum]);
+                let witness_proof = d.symm(a_difference, n, a_difference_eq_n);
+                let pred = d.dvd_predicate(a, n);
+                let intro = d.kernel().const_(p.logic.exists_intro, vec![one]);
+                let body = d.apply(intro, &[nat, pred, difference, witness_proof]);
+                let with_e2 = d.lam_fv(e2_fv, e2_ty, body);
+                d.lam_fv(q2_fv, nat, with_e2)
+            };
+            let motive_sum = motive_for(d, divides_sum_ty);
+            let rec = d.kernel().const_(p.logic.exists_rec, vec![one]);
+            let inner = d.apply(rec, &[nat, pred_sum, motive_sum, minor_sum, divides_sum]);
+            let with_e1 = d.lam_fv(e1_fv, e1_ty, inner);
+            d.lam_fv(q1_fv, nat, with_e1)
+        };
+        let motive_m = motive_for(d, divides_m_ty);
+        let rec = d.kernel().const_(p.logic.exists_rec, vec![one]);
+        let body = d.apply(rec, &[nat, pred_m, motive_m, minor_m, divides_m]);
+        let proof = {
+            let with_sum = d.lam_fv(divides_sum_fv, divides_sum_ty, body);
+            let with_m = d.lam_fv(divides_m_fv, divides_m_ty, with_sum);
+            d.lam_fv(positive_fv, positive_ty, with_m)
+        };
+        let stmt = {
+            let with_sum = d.arrow(divides_sum_ty, goal);
+            let with_m = d.arrow(divides_m_ty, with_sum);
+            d.arrow(positive_ty, with_m)
+        };
+        (stmt, proof)
+    })?;
+
+    // not_dvd_one_of_two_le : ∀ a, Le two a → Not (dvd a one)
+    // Eliminate a hypothetical witness `one=a*q`, then inspect `q`. At zero
+    // the equality makes one bounded by zero. At a successor, monotonicity
+    // gives `a<=a*q=one`, contradicting `two<=a` after successor inversion.
+    d.theorem(p.not_dvd_one_of_two_le, 1, &|d, v| {
+        let a = v[0];
+        let unit = d.num(1);
+        let two = d.num(2);
+        let bound_ty = d.le(two, a);
+        let bound_fv = d.fresh_fvar();
+        let bound = d.kernel().fvar(bound_fv);
+        let divides_ty = d.dvd(a, unit);
+        let divides_fv = d.fresh_fvar();
+        let divides = d.kernel().fvar(divides_fv);
+        let false_ty = d.kernel().const_(p.logic.false_, vec![]);
+        let pred = d.dvd_predicate(a, unit);
+        let motive = d
+            .kernel()
+            .lam(anon, divides_ty, false_ty, BinderInfo::Default);
+        let minor = {
+            let q_fv = d.fresh_fvar();
+            let q = d.kernel().fvar(q_fv);
+            let aq = d.mul(a, q);
+            let e_fv = d.fresh_fvar();
+            let e_ty = d.eq(unit, aq);
+            let e = d.kernel().fvar(e_fv);
+            let impossible_at = |d: &mut NatDev<'_>, x: ExprId| {
+                let ax = d.mul(a, x);
+                let equality = d.eq(unit, ax);
+                d.arrow(equality, false_ty)
+            };
+            let at_zero = |d: &mut NatDev<'_>| {
+                let zero = d.zero();
+                let e0_ty = d.eq(unit, zero);
+                let e0_fv = d.fresh_fvar();
+                let e0 = d.kernel().fvar(e0_fv);
+                let reflexive = d.lemma(p.le_refl, &[unit]);
+                let upper_motive = d.eq_motive(unit, &|d, upper| d.le(unit, upper));
+                let one_le_zero = d.transport(unit, upper_motive, reflexive, zero, e0);
+                let body = d.lemma(p.not_succ_le_zero, &[zero, one_le_zero]);
+                d.lam_fv(e0_fv, e0_ty, body)
+            };
+            let at_succ = |d: &mut NatDev<'_>, j: ExprId, _ih: ExprId| {
+                let sj = d.succ(j);
+                let asj = d.mul(a, sj);
+                let es_ty = d.eq(unit, asj);
+                let es_fv = d.fresh_fvar();
+                let es = d.kernel().fvar(es_fv);
+                let zero = d.zero();
+                let one_le_sj = {
+                    let zero_le_j = d.lemma(p.zero_le, &[j]);
+                    d.lemma(p.le_succ_succ, &[zero, j, zero_le_j])
+                };
+                let a_one = d.mul(a, unit);
+                let a_one_le_asj = d.lemma(p.mul_le_mul_left, &[a, unit, sj, one_le_sj]);
+                let a_one_eq_a = d.lemma(p.mul_one, &[a]);
+                let a_le_asj = {
+                    let lower_motive = d.eq_motive(a_one, &|d, lower| d.le(lower, asj));
+                    d.transport(a_one, lower_motive, a_one_le_asj, a, a_one_eq_a)
+                };
+                let asj_eq_one = d.symm(unit, asj, es);
+                let a_le_one = {
+                    let upper_motive = d.eq_motive(asj, &|d, upper| d.le(a, upper));
+                    d.transport(asj, upper_motive, a_le_asj, unit, asj_eq_one)
+                };
+                let two_le_one = d.lemma(p.le_trans, &[two, a, unit, bound, a_le_one]);
+                let one_le_zero = d.lemma(p.le_of_succ_le_succ, &[unit, zero, two_le_one]);
+                let body = d.lemma(p.not_succ_le_zero, &[zero, one_le_zero]);
+                d.lam_fv(es_fv, es_ty, body)
+            };
+            let body = d.induct(&impossible_at, &at_zero, &at_succ, q);
+            let applied = d.apply(body, &[e]);
+            let with_e = d.lam_fv(e_fv, e_ty, applied);
+            d.lam_fv(q_fv, nat, with_e)
+        };
+        let rec = d.kernel().const_(p.logic.exists_rec, vec![one]);
+        let body = d.apply(rec, &[nat, pred, motive, minor, divides]);
+        let proof = {
+            let with_divides = d.lam_fv(divides_fv, divides_ty, body);
+            d.lam_fv(bound_fv, bound_ty, with_divides)
+        };
+        let not_divides = d.const_app(p.logic.not, &[divides_ty]);
+        let stmt = d.arrow(bound_ty, not_divides);
+        (stmt, proof)
+    })?;
+
+    // not_dvd_one_add_mul_of_two_le :
+    //   ∀ a t, Le two a → Not (dvd a (one+a*t))
+    // A divisor of the whole sum also divides the multiple `a*t`; cancel it
+    // with the preceding theorem and contradict nondivisibility of one.
+    d.theorem(p.not_dvd_one_add_mul_of_two_le, 2, &|d, v| {
+        let (a, t) = (v[0], v[1]);
+        let unit = d.num(1);
+        let two = d.num(2);
+        let bound_ty = d.le(two, a);
+        let bound_fv = d.fresh_fvar();
+        let bound = d.kernel().fvar(bound_fv);
+        let at = d.mul(a, t);
+        let sum = d.add(unit, at);
+        let divides_sum_ty = d.dvd(a, sum);
+        let divides_sum_fv = d.fresh_fvar();
+        let divides_sum = d.kernel().fvar(divides_sum_fv);
+
+        let at_plus_one = d.add(at, unit);
+        let sum_eq_reordered = d.lemma(p.add_comm, &[unit, at]);
+        let reordered_divides = {
+            let motive = d.eq_motive(sum, &|d, value| d.dvd(a, value));
+            d.transport(sum, motive, divides_sum, at_plus_one, sum_eq_reordered)
+        };
+        let one_le_two = d.lemma(p.le_add_right, &[unit, unit]);
+        let positive = d.lemma(p.le_trans, &[unit, two, a, one_le_two, bound]);
+        let divides_at = d.lemma(p.dvd_mul, &[a, t]);
+        let divides_one = d.lemma(
+            p.dvd_add_right_cancel_of_pos,
+            &[a, at, unit, positive, divides_at, reordered_divides],
+        );
+        let one_not_divides = d.lemma(p.not_dvd_one_of_two_le, &[a, bound]);
+        let body = d.apply(one_not_divides, &[divides_one]);
+        let proof = {
+            let with_divides = d.lam_fv(divides_sum_fv, divides_sum_ty, body);
+            d.lam_fv(bound_fv, bound_ty, with_divides)
+        };
+        let not_divides = d.const_app(p.logic.not, &[divides_sum_ty]);
+        let stmt = d.arrow(bound_ty, not_divides);
+        (stmt, proof)
+    })?;
     Ok(())
 }
 
