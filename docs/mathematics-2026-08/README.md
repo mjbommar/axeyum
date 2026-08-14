@@ -72,6 +72,10 @@ tell them.
    is why, and what closes it.
 4. [`04-reachability.md`](04-reachability.md) — what this stack cannot yet
    *state*, using the curriculum's own decidability classes as the map.
+5. [`05-the-mathematics-dag.md`](05-the-mathematics-dag.md) — the 1,567-concept
+   prerequisite DAG that already exists next door, the prior art on formal
+   dependency graphs, and six lines of research that are fully parallelisable
+   against the lane holding the library.
 
 ## The honest summary
 
