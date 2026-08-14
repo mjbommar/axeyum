@@ -1,0 +1,62 @@
+{
+  "schema_version": 1,
+  "id": "F:nat-gcd-succ",
+  "title": "The Euclidean algorithm's descent step is correct",
+  "statement": "For all natural numbers k and n, gcd(k+1, n) = gcd(n mod (k+1), k+1). Iterating this step is the Euclidean algorithm, and it terminates because the remainder is strictly smaller than the divisor.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Nat.gcd_succ : ((x0 : AxNat) -> ((x1 : AxNat) -> Eq.{1} AxNat (AxNat.gcd (AxNat.succ x0) x1) (AxNat.gcd (AxNat.mod x1 (AxNat.succ x0)) (AxNat.succ x0))))",
+    "fragment": "Nat",
+    "free_symbols": [
+      "x0",
+      "x1"
+    ]
+  },
+  "epistemic_status": "proved",
+  "depends_on": [],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-Nat.gcd_succ",
+      "kind": "kernel-term",
+      "supports": "For all natural numbers k and n, gcd(k+1, n) = gcd(n mod (k+1), k+1). Iterating this step is the Euclidean algorithm, and it terminates because the remainder is strictly smaller than the divisor.",
+      "check_status": "checked",
+      "checker_command": "cargo test -p axeyum-lean-kernel --lib nat_prelude",
+      "notes": "`build_nat_prelude` admits this theorem through the trusted `Kernel::add_declaration` gate, which re-checks the proof term against the stated type, so a green run of the command is a machine-checked proof. Measured 2026-08-14: 28 tests pass (a nonzero count -- the filter is not inert)."
+    },
+    {
+      "id": "footprint-Nat.gcd_succ",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] -- the Nat prelude's trusted surface is empty",
+      "check_status": "checked",
+      "checker_command": "cargo run -q -p axeyum-lean-kernel --example nat_axiom_inventory",
+      "notes": "`nat_axiom_inventory` enumerates the built Nat environment and reports `nat: axiom=0 opaque=0 quotient=0 total_trusted=0` (re-run 2026-08-14 by this lane). That is the whole environment, not this theorem, and that is what makes it sound as a footprint: a theorem cannot depend on a trusted declaration the environment does not contain, so an empty trusted surface bounds every individual footprint by []. Counting `Declaration::Axiom` alone would NOT have sufficed -- `Opaque` has no proof body and `Quotient` admits `Quot.sound`, one of Lean's own axioms -- so the enumeration covers all three."
+    }
+  ],
+  "concept_refs": [
+    {
+      "graph": "math-education",
+      "ref": "C:euclidean-algorithm",
+      "relation": "instance-of",
+      "resolved": false
+    },
+    {
+      "graph": "math-education",
+      "ref": "C:greatest-common-divisor",
+      "relation": "about",
+      "resolved": false
+    },
+    {
+      "graph": "math-education",
+      "ref": "C:remainder",
+      "relation": "about",
+      "resolved": false
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-14",
+    "established_by": "axeyum-lean-kernel build_nat_prelude, re-measured by lane facts-number",
+    "source": "proposition extracted from the S:number / S:arithmetic-structure strands of the math-education concept graph; statement authored here, nothing copied"
+  },
+  "notes": "The divisor is written `succ k` so the statement carries its own positivity side condition; `gcd zero n = n` is the separate base case. The recursion is admitted through checked well-founded recursion, so the termination argument is part of what the kernel accepted. formal.statement is the type the kernel admitted, taken verbatim from Kernel::render_lean over the environment build_nat_prelude produces; it was not transcribed by hand. The sort renders as `AxNat` (the prelude's own inductive) while declarations are rooted at `Nat`."
+}

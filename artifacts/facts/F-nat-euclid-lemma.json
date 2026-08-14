@@ -1,0 +1,48 @@
+{
+  "schema_version": 1,
+  "id": "F:nat-euclid-lemma",
+  "title": "Euclid's lemma: a prime dividing a product divides a factor",
+  "statement": "If p is prime and p divides a*b, then p divides a or p divides b. Here `p is prime` means 2 <= p and every divisor of p is 1 or p.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Nat.euclid_lemma : ((p : AxNat) -> ((a : AxNat) -> ((b : AxNat) -> ((hp : (And (AxNat.le (AxNat.succ (AxNat.succ AxNat.zero)) p) ((d : AxNat) -> ((hd : AxNat.dvd d p) -> Or (Eq.{1} AxNat d (AxNat.succ AxNat.zero)) (Eq.{1} AxNat d p))))) -> ((h : AxNat.dvd p (AxNat.mul a b)) -> Or (AxNat.dvd p a) (AxNat.dvd p b))))))",
+    "fragment": "Nat",
+    "free_symbols": [
+      "p",
+      "a",
+      "b"
+    ]
+  },
+  "epistemic_status": "open",
+  "depends_on": [
+    "F:nat-gcd-bezout",
+    "F:nat-dvd-gcd-iff"
+  ],
+  "evidence": [],
+  "concept_refs": [
+    {
+      "graph": "math-education",
+      "ref": "C:fundamental-theorem-of-arithmetic",
+      "relation": "key-lemma-of",
+      "resolved": false
+    },
+    {
+      "graph": "math-education",
+      "ref": "C:prime-number",
+      "relation": "about",
+      "resolved": false
+    },
+    {
+      "graph": "math-education",
+      "ref": "C:divisibility",
+      "relation": "about",
+      "resolved": false
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-14",
+    "established_by": "not established in this ledger",
+    "source": "proposition extracted from the S:number strand of the math-education concept graph; statement authored here, nothing copied"
+  },
+  "notes": "Stated INSTEAD of unique factorisation itself, which is the concept it came from: the kernel has no list, multiset or finite-product vocabulary, so `n is a product of primes, unique up to order` cannot be written in its language at all today. Euclid's lemma is the mathematical content of the uniqueness half and IS expressible. Reachable from the stated dependencies: gcd(p, a) divides p, so it is 1 or p, and the Bezout certificate turns the first case into p | b. formal.statement is written in the SAME core rendering the kernel emits for its own theorems, and uses ONLY symbols `build_nat_prelude` actually declares (checked against the 119-theorem inventory dumped on 2026-08-14), so it can be dispatched without inventing vocabulary. Primality is spelled out inline because the prelude has no `Prime` predicate. Binders carry readable names rather than the kernel's `x0, x1, ...`; that is a pretty-printing difference only, and any admitted proof would render with positional names."
+}

@@ -1,0 +1,46 @@
+{
+  "schema_version": 1,
+  "id": "F:nat-exists-prime-gt",
+  "title": "There is no largest prime",
+  "statement": "For every natural number n there is a prime p with n < p. Equivalently, there are infinitely many primes.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Nat.exists_prime_gt : ((n : AxNat) -> Exists.{1} AxNat (fun (p : AxNat) => And (AxNat.lt n p) (And (AxNat.le (AxNat.succ (AxNat.succ AxNat.zero)) p) ((d : AxNat) -> ((hd : AxNat.dvd d p) -> Or (Eq.{1} AxNat d (AxNat.succ AxNat.zero)) (Eq.{1} AxNat d p))))))",
+    "fragment": "Nat",
+    "free_symbols": [
+      "n",
+      "p"
+    ]
+  },
+  "epistemic_status": "open",
+  "depends_on": [
+    "F:nat-dvd-add"
+  ],
+  "evidence": [],
+  "concept_refs": [
+    {
+      "graph": "math-education",
+      "ref": "C:infinitude-of-primes",
+      "relation": "instance-of",
+      "resolved": false
+    },
+    {
+      "graph": "math-education",
+      "ref": "C:prime-number",
+      "relation": "about",
+      "resolved": false
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-14",
+    "established_by": "not established in this ledger",
+    "source": "proposition extracted from the S:number strand of the math-education concept graph; statement authored here, nothing copied",
+    "prior_art": [
+      {
+        "citation": "Euclid, Elements IX.20",
+        "establishes": "the statement, by considering a divisor of 1 + (the product of any finite list of primes)"
+      }
+    ]
+  },
+  "notes": "`open` here means NOT ESTABLISHED IN THIS LEDGER; it is not mathematically open, Euclid settled it. It is recorded because it is a live target rather than a curiosity: the prelude already carries `Nat.not_dvd_one_add_mul_of_two_le`, which is exactly the step `no a >= 2 divides 1 + a*t` -- the contradiction at the end of Euclid's argument. What is missing is a least-divisor construction, and `Nat.lt_well_founded` is present to support one. formal.statement is written in the SAME core rendering the kernel emits for its own theorems, and uses ONLY symbols `build_nat_prelude` actually declares (checked against the 119-theorem inventory dumped on 2026-08-14), so it can be dispatched without inventing vocabulary. Primality is spelled out inline because the prelude has no `Prime` predicate. Binders carry readable names rather than the kernel's `x0, x1, ...`; that is a pretty-printing difference only, and any admitted proof would render with positional names."
+}

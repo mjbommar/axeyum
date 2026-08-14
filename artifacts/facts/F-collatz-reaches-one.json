@@ -1,0 +1,50 @@
+{
+  "schema_version": 1,
+  "id": "F:collatz-reaches-one",
+  "title": "Collatz conjecture",
+  "statement": "Iterating the map that halves an even number and sends an odd number m to 3m+1 reaches 1 from every positive starting value.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Collatz.reaches_one : forall (n : Nat), 0 < n -> exists k : Nat, (fun m => if m % 2 = 0 then m / 2 else 3 * m + 1)^[k] n = 1",
+    "fragment": "none",
+    "free_symbols": [
+      "n",
+      "k"
+    ]
+  },
+  "epistemic_status": "conjectured",
+  "depends_on": [],
+  "evidence": [],
+  "concept_refs": [
+    {
+      "graph": "math-education",
+      "ref": "C:collatz-conjecture",
+      "relation": "instance-of",
+      "resolved": false
+    },
+    {
+      "graph": "math-education",
+      "ref": "C:collatz-sequence",
+      "relation": "about",
+      "resolved": false
+    },
+    {
+      "graph": "math-education",
+      "ref": "C:parity",
+      "relation": "about",
+      "resolved": false
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-14",
+    "established_by": "not established in this ledger",
+    "source": "proposition extracted from the S:number strand of the math-education concept graph; statement authored here, nothing copied",
+    "prior_art": [
+      {
+        "citation": "Collatz, circa 1937",
+        "establishes": "the conjecture; still open"
+      }
+    ]
+  },
+  "notes": "The ONLY fact in this batch whose formal statement is Lean 4 surface syntax rather than the kernel's own rendering, and that is the finding: expressing it needs function iteration, and `build_nat_prelude` exposes no iteration combinator, no `Function.iterate`, and no list type -- only `AxNat.rec` and `WellFounded.fix`. So this statement is not currently writable in axeyum's kernel vocabulary at all, and `formal.fragment` is `none` rather than `Nat` for that reason. Kept because a ledger that contains only what its own stack can express is a biased sample."
+}

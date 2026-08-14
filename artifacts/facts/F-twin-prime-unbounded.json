@@ -1,0 +1,50 @@
+{
+  "schema_version": 1,
+  "id": "F:twin-prime-unbounded",
+  "title": "Twin prime conjecture",
+  "statement": "For every natural number n there is a prime p with n < p such that p + 2 is also prime; equivalently, there are infinitely many twin primes.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem TwinPrime.unbounded : ((n : AxNat) -> Exists.{1} AxNat (fun (p : AxNat) => And (AxNat.lt n p) (And (And (AxNat.le (AxNat.succ (AxNat.succ AxNat.zero)) p) ((d : AxNat) -> ((hd : AxNat.dvd d p) -> Or (Eq.{1} AxNat d (AxNat.succ AxNat.zero)) (Eq.{1} AxNat d p)))) (And (AxNat.le (AxNat.succ (AxNat.succ AxNat.zero)) (AxNat.add p (AxNat.succ (AxNat.succ AxNat.zero)))) ((d : AxNat) -> ((hd : AxNat.dvd d (AxNat.add p (AxNat.succ (AxNat.succ AxNat.zero)))) -> Or (Eq.{1} AxNat d (AxNat.succ AxNat.zero)) (Eq.{1} AxNat d (AxNat.add p (AxNat.succ (AxNat.succ AxNat.zero))))))))))",
+    "fragment": "Nat",
+    "free_symbols": [
+      "n",
+      "p"
+    ]
+  },
+  "epistemic_status": "conjectured",
+  "depends_on": [],
+  "evidence": [],
+  "concept_refs": [
+    {
+      "graph": "math-education",
+      "ref": "C:twin-prime-conjecture",
+      "relation": "instance-of",
+      "resolved": false
+    },
+    {
+      "graph": "math-education",
+      "ref": "C:prime-number",
+      "relation": "about",
+      "resolved": false
+    },
+    {
+      "graph": "math-education",
+      "ref": "C:prime-gap",
+      "relation": "about",
+      "resolved": false
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-14",
+    "established_by": "not established in this ledger",
+    "source": "proposition extracted from the S:number strand of the math-education concept graph; statement authored here, nothing copied",
+    "prior_art": [
+      {
+        "citation": "Zhang 2014; Maynard and Tao 2014",
+        "establishes": "bounded gaps -- some gap of size at most 246 recurs infinitely often -- which does NOT settle the gap-2 case"
+      }
+    ]
+  },
+  "notes": "Phrased as `unbounded` rather than `infinitely many` so the statement needs no cardinality vocabulary: over the naturals the two are equivalent, and only the first is expressible in the fragment the kernel has. formal.statement is written in the SAME core rendering the kernel emits for its own theorems, and uses ONLY symbols `build_nat_prelude` actually declares (checked against the 119-theorem inventory dumped on 2026-08-14), so it can be dispatched without inventing vocabulary. Primality is spelled out inline because the prelude has no `Prime` predicate. Binders carry readable names rather than the kernel's `x0, x1, ...`; that is a pretty-printing difference only, and any admitted proof would render with positional names."
+}

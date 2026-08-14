@@ -1,0 +1,45 @@
+{
+  "schema_version": 1,
+  "id": "F:goldbach-strong",
+  "title": "Strong Goldbach conjecture",
+  "statement": "Every even natural number that is at least 4 is the sum of two primes.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Goldbach.strong : ((n : AxNat) -> ((h4 : AxNat.le (AxNat.succ (AxNat.succ (AxNat.succ (AxNat.succ AxNat.zero)))) n) -> ((heven : AxNat.dvd (AxNat.succ (AxNat.succ AxNat.zero)) n) -> Exists.{1} AxNat (fun (p : AxNat) => Exists.{1} AxNat (fun (q : AxNat) => And (And (AxNat.le (AxNat.succ (AxNat.succ AxNat.zero)) p) ((d : AxNat) -> ((hd : AxNat.dvd d p) -> Or (Eq.{1} AxNat d (AxNat.succ AxNat.zero)) (Eq.{1} AxNat d p)))) (And (And (AxNat.le (AxNat.succ (AxNat.succ AxNat.zero)) q) ((d : AxNat) -> ((hd : AxNat.dvd d q) -> Or (Eq.{1} AxNat d (AxNat.succ AxNat.zero)) (Eq.{1} AxNat d q)))) (Eq.{1} AxNat (AxNat.add p q) n)))))))",
+    "fragment": "Nat",
+    "free_symbols": [
+      "n",
+      "p",
+      "q"
+    ]
+  },
+  "epistemic_status": "conjectured",
+  "depends_on": [],
+  "evidence": [],
+  "concept_refs": [
+    {
+      "graph": "math-education",
+      "ref": "C:goldbach-conjecture",
+      "relation": "instance-of",
+      "resolved": false
+    },
+    {
+      "graph": "math-education",
+      "ref": "C:prime-number",
+      "relation": "about",
+      "resolved": false
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-14",
+    "established_by": "not established in this ledger",
+    "source": "proposition extracted from the S:number strand of the math-education concept graph; statement authored here, nothing copied",
+    "prior_art": [
+      {
+        "citation": "Goldbach to Euler, 1742",
+        "establishes": "the conjecture; still open"
+      }
+    ]
+  },
+  "notes": "Genuinely open mathematics, so the empty evidence array is the honest record. Worth being precise about what a solver can and cannot contribute: each bounded instance `n = 2k` is a finite check the arithmetic route decides, but no finite family of decided instances is evidence for the quantified statement, and the schema offers no way to record `verified for all n below 4e18` other than as a separate, weaker fact. formal.statement is written in the SAME core rendering the kernel emits for its own theorems, and uses ONLY symbols `build_nat_prelude` actually declares (checked against the 119-theorem inventory dumped on 2026-08-14), so it can be dispatched without inventing vocabulary. Primality is spelled out inline because the prelude has no `Prime` predicate. Binders carry readable names rather than the kernel's `x0, x1, ...`; that is a pretty-printing difference only, and any admitted proof would render with positional names."
+}

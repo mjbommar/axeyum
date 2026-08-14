@@ -1,0 +1,62 @@
+{
+  "schema_version": 1,
+  "id": "F:nat-div-mod-unique",
+  "title": "The quotient and remainder of a division are unique",
+  "statement": "If n = d*q1 + r1 with r1 < d and n = d*q2 + r2 with r2 < d, then q1 = q2 and r1 = r2.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Nat.div_mod_unique : ((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat) -> ((x3 : AxNat) -> ((x4 : AxNat) -> ((x5 : AxNat) -> ((x6 : AxNat.divMod x0 x1 x2 x3) -> ((x7 : AxNat.divMod x0 x1 x4 x5) -> And (Eq.{1} AxNat x2 x4) (Eq.{1} AxNat x3 x5)))))))))",
+    "fragment": "Nat",
+    "free_symbols": [
+      "x0",
+      "x1",
+      "x2",
+      "x3",
+      "x4",
+      "x5"
+    ]
+  },
+  "epistemic_status": "proved",
+  "depends_on": [
+    "F:nat-div-mod-exists"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-Nat.div_mod_unique",
+      "kind": "kernel-term",
+      "supports": "If n = d*q1 + r1 with r1 < d and n = d*q2 + r2 with r2 < d, then q1 = q2 and r1 = r2.",
+      "check_status": "checked",
+      "checker_command": "cargo test -p axeyum-lean-kernel --lib nat_prelude",
+      "notes": "`build_nat_prelude` admits this theorem through the trusted `Kernel::add_declaration` gate, which re-checks the proof term against the stated type, so a green run of the command is a machine-checked proof. Measured 2026-08-14: 28 tests pass (a nonzero count -- the filter is not inert)."
+    },
+    {
+      "id": "footprint-Nat.div_mod_unique",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] -- the Nat prelude's trusted surface is empty",
+      "check_status": "checked",
+      "checker_command": "cargo run -q -p axeyum-lean-kernel --example nat_axiom_inventory",
+      "notes": "`nat_axiom_inventory` enumerates the built Nat environment and reports `nat: axiom=0 opaque=0 quotient=0 total_trusted=0` (re-run 2026-08-14 by this lane). That is the whole environment, not this theorem, and that is what makes it sound as a footprint: a theorem cannot depend on a trusted declaration the environment does not contain, so an empty trusted surface bounds every individual footprint by []. Counting `Declaration::Axiom` alone would NOT have sufficed -- `Opaque` has no proof body and `Quotient` admits `Quot.sound`, one of Lean's own axioms -- so the enumeration covers all three."
+    }
+  ],
+  "concept_refs": [
+    {
+      "graph": "math-education",
+      "ref": "C:division-algorithm",
+      "relation": "instance-of",
+      "resolved": false
+    },
+    {
+      "graph": "math-education",
+      "ref": "C:remainder",
+      "relation": "about",
+      "resolved": false
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-14",
+    "established_by": "axeyum-lean-kernel build_nat_prelude, re-measured by lane facts-number",
+    "source": "proposition extracted from the S:number / S:arithmetic-structure strands of the math-education concept graph; statement authored here, nothing copied"
+  },
+  "notes": "Uniqueness is the other half of the division algorithm, and it is what makes `Nat.div` and `Nat.mod` well defined rather than merely one choice among several. depends_on records the mathematical prerequisite, not a measured proof-term footprint. formal.statement is the type the kernel admitted, taken verbatim from Kernel::render_lean over the environment build_nat_prelude produces; it was not transcribed by hand. The sort renders as `AxNat` (the prelude's own inductive) while declarations are rooted at `Nat`."
+}

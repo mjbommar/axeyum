@@ -1,0 +1,48 @@
+{
+  "schema_version": 1,
+  "id": "F:nat-pow-add",
+  "title": "The first index law: powers add over a product",
+  "statement": "For all natural numbers a, m and n, a^(m+n) = a^m * a^n.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Nat.pow_add : ((a : AxNat) -> ((m : AxNat) -> ((n : AxNat) -> Eq.{1} AxNat (AxNat.pow a (AxNat.add m n)) (AxNat.mul (AxNat.pow a m) (AxNat.pow a n)))))",
+    "fragment": "Nat",
+    "free_symbols": [
+      "a",
+      "m",
+      "n"
+    ]
+  },
+  "epistemic_status": "open",
+  "depends_on": [
+    "F:nat-mul-assoc",
+    "F:nat-mul-comm"
+  ],
+  "evidence": [],
+  "concept_refs": [
+    {
+      "graph": "math-education",
+      "ref": "C:index-laws",
+      "relation": "instance-of",
+      "resolved": false
+    },
+    {
+      "graph": "math-education",
+      "ref": "C:exponent",
+      "relation": "about",
+      "resolved": false
+    },
+    {
+      "graph": "math-education",
+      "ref": "C:power",
+      "relation": "about",
+      "resolved": false
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-14",
+    "established_by": "not established in this ledger",
+    "source": "proposition extracted from the S:number strand of the math-education concept graph; statement authored here, nothing copied"
+  },
+  "notes": "Chosen deliberately as a NEAR target for the self-extension loop: `AxNat.pow`, `Nat.pow_zero` and `Nat.pow_succ` are already declared and both dependencies are proved, so this should fall to induction on n with no new definitions. Measured 2026-08-14: the prelude declares 119 theorems and no index law is among them. formal.statement is written in the SAME core rendering the kernel emits for its own theorems, and uses ONLY symbols `build_nat_prelude` actually declares (checked against the 119-theorem inventory dumped on 2026-08-14), so it can be dispatched without inventing vocabulary. Primality is spelled out inline because the prelude has no `Prime` predicate. Binders carry readable names rather than the kernel's `x0, x1, ...`; that is a pretty-printing difference only, and any admitted proof would render with positional names."
+}
