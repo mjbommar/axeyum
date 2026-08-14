@@ -259,10 +259,10 @@ struct Solved {
 /// hitting a capability wall — the only kind of miss worth retrying.
 ///
 /// See [`ATTEMPTS`] for the measurements that motivate this.
-fn is_timing_edge(solved: &Solved) -> bool {
+fn is_timing_edge(solved: &Solved, budget_ms: f64) -> bool {
     !solved.decided_correct
         && matches!(solved.status, "unknown" | "timeout")
-        && solved.solve_ms >= BUDGET.as_secs_f64() * 1000.0 * TIMING_EDGE_FRACTION
+        && solved.solve_ms >= budget_ms * TIMING_EDGE_FRACTION
 }
 
 /// The 1-minute load average, when the platform exposes it.
@@ -280,6 +280,303 @@ fn load_note() -> String {
     match load_average() {
         Some(load) => format!("{load:.2}"),
         None => "unavailable".to_owned(),
+    }
+}
+
+// ===========================================================================
+// The reference frame: which machine, how busy, and the budget that follows.
+// ===========================================================================
+//
+// THE PROBLEM, measured on ONE gate on ONE machine on 2026-08-13/14:
+//
+//     frontier_bv_reduction = 35   written 23:33 during a 7-agent campaign
+//                                  (load 34 on 24 cores)
+//                           = 38   the committed artifact
+//                           = 39   this lane, load 5.4
+//                           = 40   re-run at load 1.17 (= MAX_N, the ceiling)
+//
+// A 14 % spread from machine load alone, on the same commit. Both directions
+// are wrong to commit: the 35 ratchets the roadmap floor down on a contaminated
+// reading, and the 40 sets a floor no smaller box can meet. An earlier instance
+// is already in the register — `frontier_bv_reduction` failing on a 4-core box
+// at 26 against a baseline of 30, with the lost instances returning `unknown` at
+// ~4009 ms against a 4000 ms budget, i.e. at the measurement's own resolution
+// limit.
+//
+// WHY NOT "declare a reference machine and refuse to compare elsewhere". It was
+// the other option, and it is not enough, because "the machine" is not one
+// speed. This box is a 12900K: 8 performance cores + 8 efficiency cores. The
+// same binary on the same machine runs at two different speeds depending on
+// which core the scheduler picks (measured with `taskset`, see
+// `docs/research/08-planning/frontier-ratchet-reference-frame.md`). A hostname
+// match would certify a comparison that the hardware does not support, and it
+// would turn every other machine's run into no signal at all rather than a
+// weaker one.
+//
+// WHAT WE DO INSTEAD. Measure the machine's *current* throughput with a frozen
+// synthetic kernel immediately before each family's sweep, scale the per-instance
+// budget by (measured / reference), and record the machine, the load, the
+// calibration and the scale in the JSON artifact next to the frontier. A busy
+// box gets a proportionally larger budget, so the frontier it reports stays
+// comparable with the reference machine's — which is the only thing that makes
+// the committed baselines mean anything.
+//
+// AND WE SAY WHEN WE CANNOT. Outside [1/`SCALE_LIMIT`, `SCALE_LIMIT`], or when
+// the calibration drifts by more than [`DRIFT_LIMIT`] between the start and the
+// end of the sweep, the run is declared NOT COMPARABLE: the number is still
+// printed and written, but the ratchet does not fail the build on it. Above
+// [`RATCHETABLE_SCALE_MAX`] a frontier ABOVE the baseline is advisory only —
+// it must not be used to raise a baseline. Those two rules are the 35 and the
+// 40 respectively, and each would have been refused.
+
+/// Words in the calibration buffer (4 MiB): well past this box's L2, so the
+/// kernel feels memory pressure the way a bit-blasting solver does rather than
+/// spinning in registers. A power of two so [`CALIBRATION_STRIDE`] visits every
+/// slot exactly once per pass.
+const CALIBRATION_WORDS: usize = 1 << 19;
+
+/// Odd stride, coprime with [`CALIBRATION_WORDS`], chosen so the walk is a
+/// permutation the hardware prefetcher cannot follow.
+const CALIBRATION_STRIDE: usize = 4099;
+
+/// Passes over the buffer, chosen so one call takes ~130 ms in the unoptimized
+/// test profile: long enough to average over scheduling noise, short enough that
+/// two calls per family are free next to a 4 s per-instance budget.
+const CALIBRATION_PASSES: usize = 12;
+
+/// The kernel's output. FROZEN: the reference below describes a specific amount
+/// of work, so if the kernel changes the reference is meaningless. Changing the
+/// kernel must therefore break this assertion, and re-measuring
+/// [`CALIBRATION_REFERENCE_MS`] is part of that change.
+const CALIBRATION_CHECKSUM: u64 = 0x7700_419d_87d3_5267;
+
+/// Repeats per calibration; the MEDIAN is used, so one descheduled sample cannot
+/// move the budget. Nine rather than five because the spread of a single sample
+/// on a busy box is large: pinned to this machine's P-cores at 1-minute load
+/// 12.4, three consecutive medians-of-five were 219 / 114 / 352 ms. Nine samples
+/// (~1.2 s) buy a median that survives one lane's build starting mid-window.
+const CALIBRATION_REPEATS: usize = 9;
+
+/// Median [`calibration_kernel`] time on the reference machine: the MINIMUM of 8
+/// medians-of-9 taken with `taskset -c 0-7` (performance cores) on 2026-08-14,
+/// which ranged 118.9-126.4 ms at 1-minute load 7.6.
+///
+/// The minimum, not the mean, because it is the closest available estimate of
+/// the machine's UNCONTENDED speed, and because the failure it protects against
+/// is asymmetric: a reference that is too slow shrinks every budget and
+/// manufactures REGRESSIONs. The box was shared while this was taken, so the
+/// true idle value is probably a few percent lower; `calibration_frames_the_
+/// measurement` prints the live median on every run, so if a quieter machine
+/// ever measures below this, LOWER it here.
+const CALIBRATION_REFERENCE_MS: f64 = 118.0;
+
+/// The machine the reference above was taken on. Recorded, not enforced — see
+/// the section header for why a hostname match would be a false certificate.
+const CALIBRATION_REFERENCE_MACHINE: &str =
+    "12th Gen Intel Core i9-12900K (8P+8E, 24 threads), Linux, dev/test profile, load ~1.2";
+
+/// Beyond this factor in either direction, this run and the reference are not
+/// measuring the same thing and the ratchet stops being an assertion.
+const SCALE_LIMIT: f64 = 3.0;
+
+/// The band a run's budget must sit in for its frontier to be used to RAISE a
+/// baseline. Outside it the number is reported but not ratchetable: above the
+/// maximum a slow or busy box has been handed a bigger budget (that is the 35 in
+/// the header, run under load 34), and below the minimum a fast or idle box is
+/// doing more work per second than the machine the baselines were set on (that
+/// is the 40). Both would commit a floor that the reference machine cannot meet.
+const RATCHETABLE_SCALE_MAX: f64 = 1.25;
+const RATCHETABLE_SCALE_MIN: f64 = 0.9;
+
+/// Relative change in calibration between the start and the end of one family's
+/// sweep above which the environment moved under the measurement.
+const DRIFT_LIMIT: f64 = 0.25;
+
+/// A fixed amount of ALU + memory work whose wall time measures what the machine
+/// can currently do.
+///
+/// It must NOT use the solver. An earlier draft calibrated with a small
+/// `check_auto` instance, which is self-defeating: improving the very lever the
+/// frontier measures would speed the calibration up, shrink the budget, and
+/// cancel out the improvement. This kernel is deliberately unrelated to anything
+/// this repository optimizes, and frozen by [`CALIBRATION_CHECKSUM`].
+fn calibration_kernel() -> u64 {
+    let mut buffer: Vec<u64> = (0..CALIBRATION_WORDS as u64)
+        .map(|i| i.wrapping_mul(0x9E37_79B9_7F4A_7C15))
+        .collect();
+    let mask = CALIBRATION_WORDS - 1;
+    let mut acc: u64 = 0x0123_4567_89AB_CDEF;
+    let mut index = 0usize;
+    for _ in 0..CALIBRATION_PASSES {
+        for _ in 0..CALIBRATION_WORDS {
+            acc = acc.rotate_left(7) ^ buffer[index];
+            buffer[index] = acc
+                .wrapping_mul(0x2545_F491_4F6C_DD1D)
+                .wrapping_add(index as u64);
+            index = (index + CALIBRATION_STRIDE) & mask;
+        }
+    }
+    std::hint::black_box(acc)
+}
+
+/// Median of [`CALIBRATION_REPEATS`] kernel runs, in milliseconds.
+fn calibration_ms() -> f64 {
+    let mut samples = Vec::with_capacity(CALIBRATION_REPEATS);
+    for _ in 0..CALIBRATION_REPEATS {
+        let start = Instant::now();
+        let checksum = calibration_kernel();
+        samples.push(start.elapsed().as_secs_f64() * 1000.0);
+        assert_eq!(
+            checksum, CALIBRATION_CHECKSUM,
+            "the calibration kernel changed, so CALIBRATION_REFERENCE_MS no longer \
+             describes the work it timed. Re-measure the reference (idle box, \
+             performance cores) and update both constants together."
+        );
+    }
+    samples.sort_by(f64::total_cmp);
+    samples[samples.len() / 2]
+}
+
+/// Which machine this is, recorded with every measurement.
+struct Machine {
+    host: String,
+    cpus: usize,
+    model: String,
+}
+
+fn machine() -> Machine {
+    let host = std::fs::read_to_string("/proc/sys/kernel/hostname")
+        .map(|text| text.trim().to_owned())
+        .ok()
+        .or_else(|| std::env::var("HOSTNAME").ok())
+        .unwrap_or_else(|| "unknown".to_owned());
+    let cpus = std::thread::available_parallelism()
+        .map(|n| n.get())
+        .unwrap_or(0);
+    let model = std::fs::read_to_string("/proc/cpuinfo")
+        .ok()
+        .and_then(|text| {
+            text.lines()
+                .find(|line| line.starts_with("model name"))
+                .and_then(|line| line.split(':').nth(1))
+                .map(|value| value.trim().to_owned())
+        })
+        .unwrap_or_else(|| "unknown".to_owned());
+    Machine { host, cpus, model }
+}
+
+/// One family's measurement environment: the machine, the calibration taken
+/// immediately before the sweep, the budget that follows from it, and (after
+/// [`Measurement::finish`]) how far the environment moved during the sweep.
+struct Measurement {
+    machine: Machine,
+    calibration_start_ms: f64,
+    calibration_end_ms: Option<f64>,
+    raw_scale: f64,
+    scale: f64,
+    load_start: Option<f64>,
+    load_end: Option<f64>,
+}
+
+impl Measurement {
+    /// Calibrate. Call this immediately before the sweep it will budget.
+    fn start() -> Self {
+        let calibration_start_ms = calibration_ms();
+        let raw_scale = calibration_start_ms / CALIBRATION_REFERENCE_MS;
+        Measurement {
+            machine: machine(),
+            calibration_start_ms,
+            calibration_end_ms: None,
+            raw_scale,
+            scale: raw_scale.clamp(1.0 / SCALE_LIMIT, SCALE_LIMIT),
+            load_start: load_average(),
+            load_end: None,
+        }
+    }
+
+    /// The per-instance budget on THIS machine at THIS load: the nominal
+    /// [`BUDGET`] scaled so a busy or slower box gets proportionally more clock
+    /// for the same instance.
+    fn budget(&self) -> Duration {
+        Duration::from_secs_f64(BUDGET.as_secs_f64() * self.scale)
+    }
+
+    fn budget_ms(&self) -> f64 {
+        self.budget().as_secs_f64() * 1000.0
+    }
+
+    /// Re-calibrate after the sweep, so a box that got busy *during* the
+    /// measurement is visible rather than silently folded into the number.
+    fn finish(&mut self) {
+        self.calibration_end_ms = Some(calibration_ms());
+        self.load_end = load_average();
+    }
+
+    /// Relative change in machine throughput across the sweep.
+    fn drift(&self) -> Option<f64> {
+        self.calibration_end_ms
+            .map(|end| ((end - self.calibration_start_ms) / self.calibration_start_ms).abs())
+    }
+
+    /// Whether this run can be compared with the committed baselines at all.
+    fn comparable(&self) -> bool {
+        let in_range = self.raw_scale >= 1.0 / SCALE_LIMIT && self.raw_scale <= SCALE_LIMIT;
+        let steady = self.drift().is_none_or(|drift| drift <= DRIFT_LIMIT);
+        in_range && steady
+    }
+
+    /// Whether a frontier ABOVE the baseline measured here may be used to raise
+    /// that baseline. A bigger-than-reference budget can manufacture progress,
+    /// so it may not.
+    fn ratchetable(&self) -> bool {
+        self.comparable()
+            && self.scale <= RATCHETABLE_SCALE_MAX
+            && self.scale >= RATCHETABLE_SCALE_MIN
+    }
+
+    fn why_not_comparable(&self) -> String {
+        let mut reasons = Vec::new();
+        if self.raw_scale > SCALE_LIMIT {
+            reasons.push(format!(
+                "this machine/load is {:.2}x slower than the reference (limit {SCALE_LIMIT:.1}x)",
+                self.raw_scale
+            ));
+        }
+        if self.raw_scale < 1.0 / SCALE_LIMIT {
+            reasons.push(format!(
+                "this machine is {:.2}x faster than the reference (limit {SCALE_LIMIT:.1}x)",
+                1.0 / self.raw_scale
+            ));
+        }
+        if let Some(drift) = self.drift()
+            && drift > DRIFT_LIMIT
+        {
+            reasons.push(format!(
+                "throughput moved {:.0} % during the sweep ({:.1} ms -> {:.1} ms)",
+                drift * 100.0,
+                self.calibration_start_ms,
+                self.calibration_end_ms.unwrap_or(f64::NAN),
+            ));
+        }
+        reasons.join("; ")
+    }
+
+    /// The one line that has to appear next to every frontier number.
+    fn describe(&self) -> String {
+        format!(
+            "machine {} ({} cpus, {}), load {} -> {}, calibration {:.1} ms vs reference \
+             {CALIBRATION_REFERENCE_MS:.1} ms => scale {:.2}x, budget {:.0} ms",
+            self.machine.host,
+            self.machine.cpus,
+            self.machine.model,
+            self.load_start
+                .map_or_else(|| "unavailable".to_owned(), |l| format!("{l:.2}")),
+            self.load_end
+                .map_or_else(|| "-".to_owned(), |l| format!("{l:.2}")),
+            self.calibration_start_ms,
+            self.scale,
+            self.budget_ms(),
+        )
     }
 }
 
@@ -305,7 +602,7 @@ fn check_verdict(family: &str, n: u32, solved: &Solved, expect_sat: bool) {
 /// A generous stack mirrors `corpus_regression.rs` — deep bit-blasting can
 /// recurse — and the wall-clock cap means a hard instance degrades to a sound
 /// timeout (`unknown`), never a hang/OOM.
-fn solve_capped(mut instance: Instance, config: SolverConfig) -> Solved {
+fn solve_capped(mut instance: Instance, config: SolverConfig, budget: Duration) -> Solved {
     let expect_sat = instance.expect_sat;
     let (tx, rx) = mpsc::channel();
     let t0 = Instant::now();
@@ -319,7 +616,7 @@ fn solve_capped(mut instance: Instance, config: SolverConfig) -> Solved {
 
     // Give the thread the budget plus a small margin to deliver its own
     // timeout-driven `unknown` before we declare a hard overrun.
-    let outcome = rx.recv_timeout(BUDGET + Duration::from_secs(1));
+    let outcome = rx.recv_timeout(budget + Duration::from_secs(1));
     let solve_ms = t0.elapsed().as_secs_f64() * 1000.0;
 
     classify(&outcome, expect_sat, solve_ms)
@@ -380,6 +677,7 @@ fn classify(
 fn sweep(
     family: &str,
     config: &SolverConfig,
+    measurement: &Measurement,
     mut build: impl FnMut(u32) -> Option<Instance>,
 ) -> (u32, Vec<CurvePoint>) {
     let mut curve = Vec::new();
@@ -391,18 +689,18 @@ fn sweep(
             break;
         };
         let expect_sat = instance.expect_sat;
-        let mut solved = solve_capped(instance, config.clone());
+        let mut solved = solve_capped(instance, config.clone(), measurement.budget());
         check_verdict(family, n, &solved, expect_sat);
 
         // RETRY THE CLOCK, NOT THE WALL. A miss that burned most of its budget
         // may just be the box being busy (see [`ATTEMPTS`]); a fast decline is a
         // real capability wall and is believed immediately.
         let mut attempts = 1;
-        while attempts < ATTEMPTS && is_timing_edge(&solved) {
+        while attempts < ATTEMPTS && is_timing_edge(&solved, measurement.budget_ms()) {
             let Some(retry) = build(n) else {
                 break;
             };
-            let again = solve_capped(retry, config.clone());
+            let again = solve_capped(retry, config.clone(), measurement.budget());
             attempts += 1;
             check_verdict(family, n, &again, expect_sat);
             let improved = again.decided_correct || again.solve_ms < solved.solve_ms;
@@ -452,7 +750,16 @@ fn sweep(
 
 /// Print the curve and the headline `FRONTIER` line, write the JSON artifact,
 /// and assert the regression floor.
-fn report_and_assert(family: &str, baseline: u32, frontier: u32, curve: &[CurvePoint]) {
+fn report_and_assert(
+    family: &str,
+    baseline: u32,
+    frontier: u32,
+    curve: &[CurvePoint],
+    measurement: &mut Measurement,
+) {
+    // Second calibration: a box that got busy DURING the sweep is a fact about
+    // the number, not a footnote.
+    measurement.finish();
     eprintln!("--- frontier curve: {family} ---");
     eprintln!(
         "{:>4}  {:>9}  {:>9}  {:>10}",
@@ -475,21 +782,38 @@ fn report_and_assert(family: &str, baseline: u32, frontier: u32, curve: &[CurveP
     // curve is still printed and the JSON still written for inspection.
     let ci = std::env::var("CI").is_ok();
     let progress = if frontier > baseline {
-        format!(", PROGRESS (+{} over baseline)", frontier - baseline)
+        let over = frontier - baseline;
+        if measurement.ratchetable() {
+            format!(", PROGRESS (+{over} over baseline, ratchetable)")
+        } else {
+            // The budget was scaled up for this machine/load, so a number above
+            // the baseline may be the budget, not the lever. This is the 40 from
+            // the header: a quiet-box reading that must not become the floor.
+            format!(
+                ", PROGRESS (+{over} over baseline) — ADVISORY ONLY, do not raise the \
+                 baseline from this run: budget was scaled {:.2}x",
+                measurement.scale
+            )
+        }
     } else {
         String::new()
     };
-    eprintln!(
-        "FRONTIER {family} = {frontier} (baseline {baseline}){progress} [load {}]",
-        load_note()
-    );
+    eprintln!("FRONTIER {family} = {frontier} (baseline {baseline}){progress}");
+    eprintln!("  reference frame [{family}]: {}", measurement.describe());
+    if !measurement.comparable() {
+        eprintln!(
+            "  NOT COMPARABLE [{family}]: {} — the number above is recorded but the \
+             ratchet below is not enforced on it. Re-run on an idle box.",
+            measurement.why_not_comparable()
+        );
+    }
 
-    write_curve_json(family, baseline, frontier, curve);
+    write_curve_json(family, baseline, frontier, curve, measurement);
 
     // Knife-edge instances: decided, but within 20 % of the budget. These are the
     // points that flip on box load, and they are exactly what a reader needs to
     // see before believing (or disbelieving) a REGRESSION below.
-    let edge_ms = BUDGET.as_secs_f64() * 1000.0 * 0.8;
+    let edge_ms = measurement.budget_ms() * 0.8;
     let edges: Vec<String> = curve
         .iter()
         .filter(|p| p.decided_correct && p.solve_ms >= edge_ms)
@@ -499,7 +823,7 @@ fn report_and_assert(family: &str, baseline: u32, frontier: u32, curve: &[CurveP
         eprintln!(
             "  near-budget [{family}] (>= {:.0} ms of a {:.0} ms budget): {}",
             edge_ms,
-            BUDGET.as_secs_f64() * 1000.0,
+            measurement.budget_ms(),
             edges.join(", ")
         );
     }
@@ -511,26 +835,44 @@ fn report_and_assert(family: &str, baseline: u32, frontier: u32, curve: &[CurveP
         );
         return;
     }
+    // Refusing to compare is the whole point of the calibration: a REGRESSION
+    // measured outside the comparable band is a statement about the box.
+    if frontier < baseline && !measurement.comparable() {
+        eprintln!(
+            "NOT ENFORCED [{family}]: frontier {frontier} < baseline {baseline}, but this \
+             run is not comparable with the reference machine ({}). The measurement is \
+             recorded in the JSON artifact; re-run it on an idle box before believing it.",
+            measurement.why_not_comparable()
+        );
+        return;
+    }
     assert!(
         frontier >= baseline,
         "REGRESSION [{family}]: frontier {frontier} < committed baseline {baseline} — a \
          roadmap lever lost ground. (Lowering the baseline is only correct if the loss is \
          understood and accepted.)\n\
-         Before believing this: 1-minute load average was {}, and this ratchet is a \
-         WALL-CLOCK measurement. Each undecided point was already retried up to {ATTEMPTS} \
-         times, so a single wobble should not have produced this — but a sustained busy box \
-         still can. Re-run on an otherwise idle machine (no parallel `cargo test`, no other \
-         solver sweep) before concluding a lever regressed, and compare the `near-budget` \
-         line above: if the lost instances sit within 20 % of the {:.0} ms budget, the \
-         measurement is at its resolution limit, not the solver.",
-        load_note(),
-        BUDGET.as_secs_f64() * 1000.0,
+         Before believing this: {}. This ratchet is a WALL-CLOCK measurement, and the \
+         budget above was already scaled to this machine's measured throughput, so the \
+         box has been compensated for — but only within {SCALE_LIMIT:.1}x. Each undecided \
+         point was also retried up to {ATTEMPTS} times. Re-run on an otherwise idle \
+         machine (no parallel `cargo test`, no other solver sweep) before concluding a \
+         lever regressed, and compare the `near-budget` line above: if the lost instances \
+         sit within 20 % of the {:.0} ms budget, the measurement is at its resolution \
+         limit, not the solver.",
+        measurement.describe(),
+        measurement.budget_ms(),
     );
 }
 
 /// `bench-results/frontier/<family>.json`. Hand-rolled (no `serde_json` dep in
 /// the solver test crate) — the schema is tiny and stable.
-fn write_curve_json(family: &str, baseline: u32, frontier: u32, curve: &[CurvePoint]) {
+fn write_curve_json(
+    family: &str,
+    baseline: u32,
+    frontier: u32,
+    curve: &[CurvePoint],
+    measurement: &Measurement,
+) {
     let dir = artifact_dir();
     if let Err(error) = std::fs::create_dir_all(&dir) {
         eprintln!("warn: could not create {}: {error}", dir.display());
@@ -541,7 +883,52 @@ fn write_curve_json(family: &str, baseline: u32, frontier: u32, curve: &[CurvePo
     let _ = writeln!(json, "  \"family\": \"{family}\",");
     let _ = writeln!(json, "  \"baseline\": {baseline},");
     let _ = writeln!(json, "  \"frontier\": {frontier},");
-    let _ = writeln!(json, "  \"budget_ms\": {},", BUDGET.as_millis());
+    let _ = writeln!(json, "  \"budget_ms\": {:.0},", measurement.budget_ms());
+    let _ = writeln!(json, "  \"budget_ms_nominal\": {},", BUDGET.as_millis());
+    // The measurement's reference frame, recorded WITH the number. A frontier
+    // without the machine it was taken on is not a measurement, and the 35/38/40
+    // spread in the header is what that costs.
+    let _ = writeln!(json, "  \"machine\": {{");
+    let _ = writeln!(
+        json,
+        "    \"host\": \"{}\", \"cpus\": {}, \"model\": \"{}\",",
+        measurement.machine.host, measurement.machine.cpus, measurement.machine.model
+    );
+    let _ = writeln!(
+        json,
+        "    \"load_start\": {}, \"load_end\": {},",
+        measurement
+            .load_start
+            .map_or_else(|| "null".to_owned(), |l| format!("{l:.2}")),
+        measurement
+            .load_end
+            .map_or_else(|| "null".to_owned(), |l| format!("{l:.2}")),
+    );
+    let _ = writeln!(
+        json,
+        "    \"calibration_ms\": {:.1}, \"calibration_end_ms\": {},",
+        measurement.calibration_start_ms,
+        measurement
+            .calibration_end_ms
+            .map_or_else(|| "null".to_owned(), |ms| format!("{ms:.1}")),
+    );
+    let _ = writeln!(
+        json,
+        "    \"calibration_reference_ms\": {CALIBRATION_REFERENCE_MS:.1},"
+    );
+    let _ = writeln!(
+        json,
+        "    \"calibration_reference_machine\": \"{CALIBRATION_REFERENCE_MACHINE}\","
+    );
+    let _ = writeln!(
+        json,
+        "    \"scale\": {:.3}, \"raw_scale\": {:.3}, \"comparable\": {}, \"ratchetable\": {}",
+        measurement.scale,
+        measurement.raw_scale,
+        measurement.comparable(),
+        measurement.ratchetable(),
+    );
+    let _ = writeln!(json, "  }},");
     json.push_str("  \"curve\": [\n");
     for (i, p) in curve.iter().enumerate() {
         let comma = if i + 1 < curve.len() { "," } else { "" };
@@ -830,7 +1217,7 @@ fn string_bound_smtlib(n: u32) -> String {
 
 /// Solve one `string_bound` instance end-to-end (it bypasses the generic
 /// [`sweep`] because its solve path is `solve_smtlib`, not `check_auto`).
-fn string_bound_point(n: u32, config: &SolverConfig) -> CurvePoint {
+fn string_bound_point(n: u32, config: &SolverConfig, budget: Duration) -> CurvePoint {
     let witness = string_bound_witness(n);
     assert!(
         string_bound_self_check(&witness, n),
@@ -848,7 +1235,7 @@ fn string_bound_point(n: u32, config: &SolverConfig) -> CurvePoint {
             let _ = tx.send(res);
         })
         .expect("spawn string solver thread");
-    let outcome = rx.recv_timeout(BUDGET + Duration::from_secs(1));
+    let outcome = rx.recv_timeout(budget + Duration::from_secs(1));
     let solve_ms = t0.elapsed().as_secs_f64() * 1000.0;
 
     // Ground truth is SAT (a witness provably exists). A wrong `unsat` is a hard
@@ -1009,7 +1396,7 @@ fn ipow_i128(base: i128, exp: u32) -> i128 {
 /// Solve one `nra_degree` instance end-to-end via `solve_smtlib` (the SMT-LIB
 /// text front door, like `string_bound`). Ground truth is UNSAT; a decided `sat`
 /// is a hard soundness failure, `unknown` past the cliff is the benign fall-off.
-fn nra_degree_point(n: u32, config: &SolverConfig) -> CurvePoint {
+fn nra_degree_point(n: u32, config: &SolverConfig, budget: Duration) -> CurvePoint {
     assert!(
         nra_degree_self_check(n),
         "nra_degree N={n}: the constructed instance (degree {}) failed its own \
@@ -1017,7 +1404,7 @@ fn nra_degree_point(n: u32, config: &SolverConfig) -> CurvePoint {
         2 * n,
     );
     let text = nra_degree_smtlib(n);
-    solve_smtlib_unsat_point("nra_degree", n, &text, config)
+    solve_smtlib_unsat_point("nra_degree", n, &text, config, budget)
 }
 
 // ===========================================================================
@@ -1131,14 +1518,14 @@ fn nia_unsat_self_check_with_case(n: u32, r: i64, m: i64) -> bool {
 /// Solve one `nia_unsat` instance end-to-end via `solve_smtlib`. Ground truth is
 /// UNSAT; a decided `sat` is a hard soundness failure, `unknown` (the measured
 /// status today) is the benign blind-spot fall-off.
-fn nia_unsat_point(n: u32, config: &SolverConfig) -> CurvePoint {
+fn nia_unsat_point(n: u32, config: &SolverConfig, budget: Duration) -> CurvePoint {
     assert!(
         nia_unsat_self_check(n),
         "nia_unsat N={n}: the constructed instance failed its own independent \
          UNSAT self-check (residue table + exhaustive bounded enumeration)",
     );
     let text = nia_unsat_smtlib(n);
-    solve_smtlib_unsat_point("nia_unsat", n, &text, config)
+    solve_smtlib_unsat_point("nia_unsat", n, &text, config, budget)
 }
 
 // ---------------------------------------------------------------------------
@@ -1151,7 +1538,13 @@ fn nia_unsat_point(n: u32, config: &SolverConfig) -> CurvePoint {
 /// Ground truth is UNSAT (already established by the caller's independent
 /// self-check), so a decided `sat` is a **hard soundness failure** (panic);
 /// `unknown`/`timeout`/`error` are the benign fall-off past the decider's reach.
-fn solve_smtlib_unsat_point(family: &str, n: u32, text: &str, config: &SolverConfig) -> CurvePoint {
+fn solve_smtlib_unsat_point(
+    family: &str,
+    n: u32,
+    text: &str,
+    config: &SolverConfig,
+    budget: Duration,
+) -> CurvePoint {
     let text = text.to_string();
     let cfg = config.clone();
     let (tx, rx) = mpsc::channel();
@@ -1163,7 +1556,7 @@ fn solve_smtlib_unsat_point(family: &str, n: u32, text: &str, config: &SolverCon
             let _ = tx.send(res);
         })
         .expect("spawn smtlib solver thread");
-    let outcome = rx.recv_timeout(BUDGET + Duration::from_secs(1));
+    let outcome = rx.recv_timeout(budget + Duration::from_secs(1));
     let solve_ms = t0.elapsed().as_secs_f64() * 1000.0;
 
     let (decided_correct, status) = match outcome {
@@ -1258,21 +1651,36 @@ fn artifact_directory_override_is_explicit_and_absolute() {
 
 #[test]
 fn frontier_bv_reduction() {
-    let config = SolverConfig::new().with_timeout(BUDGET);
-    let (frontier, curve) = sweep("bv_reduction", &config, bv_reduction_instance);
-    report_and_assert("bv_reduction", BASELINE_BV_REDUCTION, frontier, &curve);
+    let mut measurement = Measurement::start();
+    let config = SolverConfig::new().with_timeout(measurement.budget());
+    let (frontier, curve) = sweep("bv_reduction", &config, &measurement, bv_reduction_instance);
+    report_and_assert(
+        "bv_reduction",
+        BASELINE_BV_REDUCTION,
+        frontier,
+        &curve,
+        &mut measurement,
+    );
 }
 
 #[test]
 fn frontier_lia_cuts() {
-    let config = SolverConfig::new().with_timeout(BUDGET);
-    let (frontier, curve) = sweep("lia_cuts", &config, lia_cuts_instance);
-    report_and_assert("lia_cuts", BASELINE_LIA_CUTS, frontier, &curve);
+    let mut measurement = Measurement::start();
+    let config = SolverConfig::new().with_timeout(measurement.budget());
+    let (frontier, curve) = sweep("lia_cuts", &config, &measurement, lia_cuts_instance);
+    report_and_assert(
+        "lia_cuts",
+        BASELINE_LIA_CUTS,
+        frontier,
+        &curve,
+        &mut measurement,
+    );
 }
 
 #[test]
 fn frontier_string_bound() {
-    let config = SolverConfig::new().with_timeout(BUDGET);
+    let mut measurement = Measurement::start();
+    let config = SolverConfig::new().with_timeout(measurement.budget());
     let mut curve = Vec::new();
     let mut frontier = 0u32;
     let mut consecutive_undecided = 0u32;
@@ -1280,7 +1688,7 @@ fn frontier_string_bound() {
     // Strings start at length 2 (the needle is "ab"); the frontier is reported in
     // the same units as N (so a length-`L` string is point N=L).
     for n in 2..=MAX_N {
-        let point = string_bound_point(n, &config);
+        let point = string_bound_point(n, &config, measurement.budget());
         if point.decided_correct {
             if consecutive_undecided == 0 {
                 frontier = n;
@@ -1294,21 +1702,134 @@ fn frontier_string_bound() {
         }
     }
 
-    report_and_assert("string_bound", BASELINE_STRING_BOUND, frontier, &curve);
+    report_and_assert(
+        "string_bound",
+        BASELINE_STRING_BOUND,
+        frontier,
+        &curve,
+        &mut measurement,
+    );
 }
 
 #[test]
 fn frontier_nra_degree() {
-    let config = SolverConfig::new().with_timeout(BUDGET);
-    let (frontier, curve) = smtlib_unsat_sweep(1, |n| nra_degree_point(n, &config));
-    report_and_assert("nra_degree", BASELINE_NRA_DEGREE, frontier, &curve);
+    let mut measurement = Measurement::start();
+    let config = SolverConfig::new().with_timeout(measurement.budget());
+    let budget = measurement.budget();
+    let (frontier, curve) = smtlib_unsat_sweep(1, |n| nra_degree_point(n, &config, budget));
+    report_and_assert(
+        "nra_degree",
+        BASELINE_NRA_DEGREE,
+        frontier,
+        &curve,
+        &mut measurement,
+    );
 }
 
 #[test]
 fn frontier_nia_unsat() {
-    let config = SolverConfig::new().with_timeout(BUDGET);
-    let (frontier, curve) = smtlib_unsat_sweep(1, |n| nia_unsat_point(n, &config));
-    report_and_assert("nia_unsat", BASELINE_NIA_UNSAT, frontier, &curve);
+    let mut measurement = Measurement::start();
+    let config = SolverConfig::new().with_timeout(measurement.budget());
+    let budget = measurement.budget();
+    let (frontier, curve) = smtlib_unsat_sweep(1, |n| nia_unsat_point(n, &config, budget));
+    report_and_assert(
+        "nia_unsat",
+        BASELINE_NIA_UNSAT,
+        frontier,
+        &curve,
+        &mut measurement,
+    );
+}
+
+/// The reference frame itself, tested: the calibration kernel is frozen, and the
+/// comparability rules refuse exactly the two readings that motivated them.
+///
+/// The 35 (taken at load 34 on 24 cores) and the 40 (taken idle, at the sweep
+/// ceiling) are the two numbers this suite must not silently accept, so they are
+/// asserted here as scale bands rather than left in a comment.
+#[test]
+fn calibration_frames_the_measurement() {
+    // Frozen: the reference constant times a specific amount of work.
+    assert_eq!(calibration_kernel(), CALIBRATION_CHECKSUM);
+    assert_eq!(
+        calibration_kernel(),
+        CALIBRATION_CHECKSUM,
+        "and it is stable"
+    );
+
+    let live = calibration_ms();
+    assert!(
+        live > 0.0 && live.is_finite(),
+        "calibration produced {live} ms"
+    );
+    // Printed so `--nocapture` on this one test is enough to re-measure the
+    // reference (and to see what a loaded box is doing) without a separate tool.
+    let here = machine();
+    eprintln!(
+        "CALIBRATION median {live:.1} ms (reference {CALIBRATION_REFERENCE_MS:.1} ms, \
+         scale {:.2}x) on {} / {} cpus / {}, load {}",
+        live / CALIBRATION_REFERENCE_MS,
+        here.host,
+        here.cpus,
+        here.model,
+        load_note(),
+    );
+
+    let frame = |raw_scale: f64, end_ms: Option<f64>| Measurement {
+        machine: machine(),
+        calibration_start_ms: CALIBRATION_REFERENCE_MS * raw_scale,
+        calibration_end_ms: end_ms,
+        raw_scale,
+        scale: raw_scale.clamp(1.0 / SCALE_LIMIT, SCALE_LIMIT),
+        load_start: None,
+        load_end: None,
+    };
+
+    // A quiet reference-speed box: comparable, and may raise a baseline.
+    let quiet = frame(1.0, Some(CALIBRATION_REFERENCE_MS));
+    assert!(RATCHETABLE_SCALE_MIN < 1.0 && 1.0 < RATCHETABLE_SCALE_MAX);
+    assert!(quiet.comparable() && quiet.ratchetable());
+    assert_eq!(quiet.budget().as_millis(), BUDGET.as_millis());
+
+    // A busy box (the 35): the budget stretches to compensate, and the run may
+    // NOT be used to move a baseline in either direction.
+    let busy = frame(1.8, Some(CALIBRATION_REFERENCE_MS * 1.8));
+    assert!(busy.comparable(), "1.8x is inside the {SCALE_LIMIT}x band");
+    assert!(
+        !busy.ratchetable(),
+        "a stretched budget cannot certify progress"
+    );
+    assert!(busy.budget() > BUDGET);
+
+    // A machine (or a load) beyond the band: not comparable at all.
+    let overloaded = frame(SCALE_LIMIT * 1.5, None);
+    assert!(!overloaded.comparable());
+    assert!(overloaded.why_not_comparable().contains("slower"));
+    // ... and the budget is clamped, so the sweep cannot run away.
+    assert_eq!(
+        overloaded.budget().as_secs_f64(),
+        BUDGET.as_secs_f64() * SCALE_LIMIT
+    );
+
+    // A much faster machine is equally uncomparable — the symmetric failure,
+    // and the one that produces a floor smaller boxes cannot meet.
+    let faster = frame(1.0 / (SCALE_LIMIT * 1.5), None);
+    assert!(!faster.comparable());
+    assert!(faster.why_not_comparable().contains("faster"));
+
+    // A moderately faster/idler box (the 40) is comparable — its number is real —
+    // but must not raise a baseline either.
+    let idle = frame(0.8, Some(CALIBRATION_REFERENCE_MS * 0.8));
+    assert!(idle.comparable());
+    assert!(!idle.ratchetable());
+    assert!(idle.budget() < BUDGET);
+
+    // The environment moving DURING the sweep invalidates the run even when both
+    // endpoints are inside the band.
+    let drifted = frame(1.0, Some(CALIBRATION_REFERENCE_MS * 1.6));
+    assert!(drifted.drift().is_some_and(|d| d > DRIFT_LIMIT));
+    assert!(!drifted.comparable());
+    assert!(drifted.why_not_comparable().contains("during the sweep"));
 }
 
 /// Soundness: the curves are built from self-checking instances. This test
@@ -1400,7 +1921,7 @@ fn bv_reduction_falloff_is_the_lever() {
     off.cnf_variable_budget = Some(20_000);
     off.node_budget = Some(20_000);
 
-    let solved_on = solve_capped(bv_reduction_instance(n).unwrap(), on);
+    let solved_on = solve_capped(bv_reduction_instance(n).unwrap(), on, BUDGET);
     assert_eq!(
         solved_on.status,
         "unsat",
@@ -1409,7 +1930,7 @@ fn bv_reduction_falloff_is_the_lever() {
         solved_on.status,
     );
 
-    let solved_off = solve_capped(bv_reduction_instance(n).unwrap(), off);
+    let solved_off = solve_capped(bv_reduction_instance(n).unwrap(), off, BUDGET);
     assert_ne!(
         solved_off.status, "unsat",
         "reduction-OFF (budget-capped) was expected to fall short at N={n}, but it \

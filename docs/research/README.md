@@ -38,9 +38,10 @@ the authorities above.
 1. [Foundational dependency DAG](08-planning/foundational-dag.md)
 2. [Roadmap](08-planning/roadmap.md)
 3. [Benchmarking methodology](08-planning/benchmarking-and-performance-methodology.md)
-4. [Research questions](08-planning/research-questions.md)
-5. [Decision records](09-decisions/README.md)
-6. [Detailed engineering record](../plan/README.md)
+4. [Frontier ratchet reference frame](08-planning/frontier-ratchet-reference-frame.md)
+5. [Research questions](08-planning/research-questions.md)
+6. [Decision records](09-decisions/README.md)
+7. [Detailed engineering record](../plan/README.md)
 
 ### Ecosystem context
 
