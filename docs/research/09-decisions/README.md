@@ -456,3 +456,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [0398](adr-0398-order-conditioned-subtraction-restoration.md) | Order-conditioned subtraction restoration | accepted |
 | [0399](adr-0399-quotient-free-rado-sharpness-witness.md) | Quotient-free Rado sharpness witness | accepted |
 | [0400](adr-0400-closed-form-rado-sharpness-witness.md) | Closed-form Rado sharpness witness | accepted |
+| [0401](adr-0401-checked-rado-witness-basic-ranges.md) | Checked basic ranges for the Rado sharpness witness | accepted |

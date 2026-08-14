@@ -332,6 +332,229 @@ fn admit_closed_form_sharp_witness_identity(d: &mut Dev, witness_identity: NameI
     name
 }
 
+#[derive(Clone, Copy)]
+struct RangeTheorems {
+    x_lower: NameId,
+    y_upper: NameId,
+    x_upper: NameId,
+    z_lower: NameId,
+}
+
+fn transport_le_upper(
+    d: &mut Dev,
+    lower: ExprId,
+    from: ExprId,
+    to: ExprId,
+    bound: ExprId,
+    equality: ExprId,
+) -> ExprId {
+    let motive = d.eq_motive(from, &|d, x| d.le(lower, x));
+    d.transport(from, motive, bound, to, equality)
+}
+
+fn transport_le_lower(
+    d: &mut Dev,
+    from: ExprId,
+    to: ExprId,
+    upper: ExprId,
+    bound: ExprId,
+    equality: ExprId,
+) -> ExprId {
+    let motive = d.eq_motive(from, &|d, x| d.le(x, upper));
+    d.transport(from, motive, bound, to, equality)
+}
+
+/// Admit the unconditional range facts for the closed-form witness. The upper
+/// bound `Z <= N` is deliberately not manufactured here: it is the paper's
+/// signed side condition and remains an explicit hypothesis for membership.
+fn admit_closed_form_range_theorems(d: &mut Dev) -> RangeTheorems {
+    let p = d.p;
+
+    let x_lower = d.name("closed_form_x_lower");
+    d.theorem(x_lower, 3, &|d, v| {
+        let (a, b, n) = (v[0], v[1], v[2]);
+        let one = d.num(1);
+        let two = d.num(2);
+        let shifted = power_range(d, a, 1);
+        let sum = d.sum_range(shifted, n);
+        let sn = d.succ(n);
+        let power = d.pow(a, sn);
+        let twice_sum = d.mul(two, sum);
+        let tail = d.add(twice_sum, power);
+        let inner = d.add(one, tail);
+        let u = d.mul(a, inner);
+        let q = d.add(a, u);
+        let capital_n = d.mul(b, q);
+        let ab = d.mul(a, b);
+        let difference = d.sub(capital_n, ab);
+        let x = d.add(difference, one);
+        let zero = d.zero();
+        let zero_le_difference = d.lemma(p.zero_le, &[difference]);
+        let proof = d.lemma(p.le_succ_succ, &[zero, difference, zero_le_difference]);
+        (d.le(one, x), proof)
+    })
+    .expect("closed-form X lower bound checks");
+
+    let y_upper = d.name("closed_form_y_upper");
+    d.theorem(y_upper, 3, &|d, v| {
+        let (a, b, n) = (v[0], v[1], v[2]);
+        let one = d.num(1);
+        let ha_ty = d.le(one, a);
+        let ha_fv = d.fresh_fvar();
+        let ha = d.k.fvar(ha_fv);
+        let hb_ty = d.le(one, b);
+        let hb_fv = d.fresh_fvar();
+        let hb = d.k.fvar(hb_fv);
+        let two = d.num(2);
+        let shifted = power_range(d, a, 1);
+        let sum = d.sum_range(shifted, n);
+        let sn = d.succ(n);
+        let power = d.pow(a, sn);
+        let twice_sum = d.mul(two, sum);
+        let tail = d.add(twice_sum, power);
+        let inner = d.add(one, tail);
+        let u = d.mul(a, inner);
+        let q = d.add(a, u);
+        let capital_n = d.mul(b, q);
+        let a_le_q = d.lemma(p.le_add_right, &[a, u]);
+        let one_le_q = d.lemma(p.le_trans, &[one, a, q, ha, a_le_q]);
+        let b_times_one = d.mul(b, one);
+        let b_times_one_le_n = d.lemma(p.mul_le_mul_left, &[b, one, q, one_le_q]);
+        let b_times_one_eq_b = d.lemma(p.mul_one, &[b]);
+        let b_le_n = transport_le_lower(
+            d,
+            b_times_one,
+            b,
+            capital_n,
+            b_times_one_le_n,
+            b_times_one_eq_b,
+        );
+        let body = d.lemma(p.le_trans, &[one, b, capital_n, hb, b_le_n]);
+        let conclusion = d.le(one, capital_n);
+        let proof = {
+            let with_hb = d.lam_fv(hb_fv, hb_ty, body);
+            d.lam_fv(ha_fv, ha_ty, with_hb)
+        };
+        let stmt = {
+            let with_hb = d.arrow(hb_ty, conclusion);
+            d.arrow(ha_ty, with_hb)
+        };
+        (stmt, proof)
+    })
+    .expect("closed-form Y upper bound checks");
+
+    let x_upper = d.name("closed_form_x_upper");
+    d.theorem(x_upper, 3, &|d, v| {
+        let (a, b, n) = (v[0], v[1], v[2]);
+        let one = d.num(1);
+        let ha_ty = d.le(one, a);
+        let ha_fv = d.fresh_fvar();
+        let ha = d.k.fvar(ha_fv);
+        let hb_ty = d.le(one, b);
+        let hb_fv = d.fresh_fvar();
+        let hb = d.k.fvar(hb_fv);
+        let two = d.num(2);
+        let shifted = power_range(d, a, 1);
+        let sum = d.sum_range(shifted, n);
+        let sn = d.succ(n);
+        let power = d.pow(a, sn);
+        let twice_sum = d.mul(two, sum);
+        let tail = d.add(twice_sum, power);
+        let inner = d.add(one, tail);
+        let u = d.mul(a, inner);
+        let q = d.add(a, u);
+        let capital_n = d.mul(b, q);
+        let ab = d.mul(a, b);
+        let ba = d.mul(b, a);
+
+        let a_le_q = d.lemma(p.le_add_right, &[a, u]);
+        let ba_le_n = d.lemma(p.mul_le_mul_left, &[b, a, q, a_le_q]);
+        let ab_eq_ba = d.lemma(p.mul_comm, &[a, b]);
+        let ba_eq_ab = d.symm(ab, ba, ab_eq_ba);
+        let ab_le_n = transport_le_lower(d, ba, ab, capital_n, ba_le_n, ba_eq_ab);
+        let difference = d.sub(capital_n, ab);
+        let restored = d.add(difference, ab);
+        let restored_eq_n = d.lemma(p.sub_add_cancel, &[ab, capital_n, ab_le_n]);
+
+        let a_times_one = d.mul(a, one);
+        let a_times_one_le_ab = d.lemma(p.mul_le_mul_left, &[a, one, b, hb]);
+        let a_times_one_eq_a = d.lemma(p.mul_one, &[a]);
+        let a_le_ab =
+            transport_le_lower(d, a_times_one, a, ab, a_times_one_le_ab, a_times_one_eq_a);
+        let one_le_ab = d.lemma(p.le_trans, &[one, a, ab, ha, a_le_ab]);
+        let x = d.add(difference, one);
+        let x_le_restored = d.lemma(p.add_le_add_left, &[difference, one, ab, one_le_ab]);
+        let body = transport_le_upper(d, x, restored, capital_n, x_le_restored, restored_eq_n);
+        let conclusion = d.le(x, capital_n);
+        let proof = {
+            let with_hb = d.lam_fv(hb_fv, hb_ty, body);
+            d.lam_fv(ha_fv, ha_ty, with_hb)
+        };
+        let stmt = {
+            let with_hb = d.arrow(hb_ty, conclusion);
+            d.arrow(ha_ty, with_hb)
+        };
+        (stmt, proof)
+    })
+    .expect("closed-form X upper bound checks");
+
+    let z_lower = d.name("closed_form_z_lower");
+    d.theorem(z_lower, 3, &|d, v| {
+        let (a, _b, n) = (v[0], v[1], v[2]);
+        let one = d.num(1);
+        let ha_ty = d.le(one, a);
+        let ha_fv = d.fresh_fvar();
+        let ha = d.k.fvar(ha_fv);
+        let two = d.num(2);
+        let shifted = power_range(d, a, 1);
+        let sum = d.sum_range(shifted, n);
+        let sn = d.succ(n);
+        let power = d.pow(a, sn);
+        let twice_sum = d.mul(two, sum);
+        let tail = d.add(twice_sum, power);
+        let inner = d.add(one, tail);
+        let u = d.mul(a, inner);
+        let q = d.add(a, u);
+        let one_le_inner = d.lemma(p.le_add_right, &[one, tail]);
+        let a_times_one = d.mul(a, one);
+        let a_times_one_eq_a = d.lemma(p.mul_one, &[a]);
+        let a_times_one_le_u = d.lemma(p.mul_le_mul_left, &[a, one, inner, one_le_inner]);
+        let a_le_u = transport_le_lower(d, a_times_one, a, u, a_times_one_le_u, a_times_one_eq_a);
+        let one_le_u = d.lemma(p.le_trans, &[one, a, u, ha, a_le_u]);
+        let au = d.mul(a, u);
+        let a_times_one_le_au = d.lemma(p.mul_le_mul_left, &[a, one, u, one_le_u]);
+        let a_le_au =
+            transport_le_lower(d, a_times_one, a, au, a_times_one_le_au, a_times_one_eq_a);
+        let one_le_au = d.lemma(p.le_trans, &[one, a, au, ha, a_le_au]);
+
+        let q_sub_a = d.sub(q, a);
+        let restored = d.add(q_sub_a, a);
+        let a_le_q = d.lemma(p.le_add_right, &[a, u]);
+        let restored_eq_q = d.lemma(p.sub_add_cancel, &[a, q, a_le_q]);
+        let u_plus_a = d.add(u, a);
+        let q_eq_u_plus_a = d.lemma(p.add_comm, &[a, u]);
+        let (_end, common_sum) =
+            d.chain(restored, &[(q, restored_eq_q), (u_plus_a, q_eq_u_plus_a)]);
+        let sub_eq_u = d.lemma(p.add_right_cancel, &[q_sub_a, u, a, common_sum]);
+        let z = d.mul(a, q_sub_a);
+        let z_eq_au = d.congr(q_sub_a, u, sub_eq_u, &|d, x| d.mul(a, x));
+        let au_eq_z = d.symm(z, au, z_eq_au);
+        let body = transport_le_upper(d, one, au, z, one_le_au, au_eq_z);
+        let conclusion = d.le(one, z);
+        let stmt = d.arrow(ha_ty, conclusion);
+        let proof = d.lam_fv(ha_fv, ha_ty, body);
+        (stmt, proof)
+    })
+    .expect("closed-form Z lower bound checks");
+
+    RangeTheorems {
+        x_lower,
+        y_upper,
+        x_upper,
+        z_lower,
+    }
+}
+
 #[test]
 fn kernel_checks_the_exact_sharpness_factorization() {
     let mut d = Dev::new();
@@ -558,5 +781,74 @@ fn kernel_rejects_a_broken_closed_form_shell_length() {
         })
         .expect_err("a broken closed-form shell length must be rejected");
     println!("broken closed-form shell length rejected: {error:?}");
+    assert!(!d.k.environment().contains(bad_name));
+}
+
+#[test]
+fn kernel_checks_the_closed_form_witness_ranges() {
+    let mut d = Dev::new();
+    let ranges = admit_closed_form_range_theorems(&mut d);
+    let a = d.num(2);
+    let b = d.num(3);
+    let zero = d.zero();
+    let one = d.num(1);
+    let two = d.num(2);
+    let ha = d.lemma(d.p.le_add_right, &[one, one]);
+    let hb = d.lemma(d.p.le_add_right, &[one, two]);
+
+    for proof in [
+        d.lemma(ranges.x_lower, &[a, b, zero]),
+        d.lemma(ranges.y_upper, &[a, b, zero, ha, hb]),
+        d.lemma(ranges.x_upper, &[a, b, zero, ha, hb]),
+        d.lemma(ranges.z_lower, &[a, b, zero, ha]),
+    ] {
+        d.k.infer(proof).expect("closed-form range proof infers");
+    }
+
+    // Concrete anti-vacuity: X=19 and Z=12 both lie in [1,24]. The upper
+    // bound for Z is supplied explicitly, matching the paper theorem's guard.
+    let nineteen = d.num(19);
+    let twenty_four = d.num(24);
+    let twelve = d.num(12);
+    let five = d.num(5);
+    let twelve_more = d.num(12);
+    let x_upper = d.lemma(d.p.le_add_right, &[nineteen, five]);
+    let z_upper = d.lemma(d.p.le_add_right, &[twelve, twelve_more]);
+    let inferred_x_upper = d.k.infer(x_upper).expect("X upper infers");
+    let expected_x_upper = d.le(nineteen, twenty_four);
+    assert!(d.k.def_eq(inferred_x_upper, expected_x_upper));
+    let inferred_z_upper = d.k.infer(z_upper).expect("Z upper infers");
+    let expected_z_upper = d.le(twelve, twenty_four);
+    assert!(d.k.def_eq(inferred_z_upper, expected_z_upper));
+}
+
+#[test]
+fn kernel_rejects_a_broken_closed_form_x_upper_bound() {
+    let mut d = Dev::new();
+    let ranges = admit_closed_form_range_theorems(&mut d);
+    let a = d.num(2);
+    let b = d.num(3);
+    let zero = d.zero();
+    let one = d.num(1);
+    let two = d.num(2);
+    let ha = d.lemma(d.p.le_add_right, &[one, one]);
+    let hb = d.lemma(d.p.le_add_right, &[one, two]);
+    let proof = d.lemma(ranges.x_upper, &[a, b, zero, ha, hb]);
+
+    // The checked target is X=19 <= N=24. Replacing N by 18 is false and
+    // must not inherit the valid range proof.
+    let nineteen = d.num(19);
+    let eighteen = d.num(18);
+    let false_goal = d.le(nineteen, eighteen);
+    let bad_name = d.name("broken_closed_form_x_upper");
+    let error =
+        d.k.add_declaration(Declaration::Theorem {
+            name: bad_name,
+            uparams: vec![],
+            ty: false_goal,
+            value: proof,
+        })
+        .expect_err("a false closed-form X upper bound must be rejected");
+    println!("broken closed-form X upper bound rejected: {error:?}");
     assert!(!d.k.environment().contains(bad_name));
 }

@@ -102,6 +102,8 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.le_of_succ_le_succ,
         p.le_trans,
         p.le_add_right,
+        p.add_le_add_left,
+        p.mul_le_mul_left,
         p.sub_add_cancel,
         p.mul_sub_left_distrib,
         p.dvd_mul,
@@ -520,6 +522,39 @@ fn the_order_fragment_bounds_concrete_numerals() {
     let inversion_name = f.name("one_le_three_by_inversion");
     f.declare_theorem(inversion_name, stmt, inverted)
         .unwrap_or_else(|e| panic!("successor inversion should admit: {}", f.explain(&e)));
+}
+
+/// Addition and multiplication preserve checked order evidence under a fixed
+/// left operand, providing reusable range arithmetic for later developments.
+#[test]
+fn order_is_monotone_under_left_addition_and_multiplication() {
+    let mut f = Fixture::new();
+    let p = f.p;
+    let two = f.num(2);
+    let three = f.num(3);
+    let four = f.num(4);
+    let five = f.num(5);
+    let h = f.lemma(p.le_add_right, &[two, three]);
+
+    let add_proof = f.lemma(p.add_le_add_left, &[four, two, five, h]);
+    let six = f.num(6);
+    let nine = f.num(9);
+    let add_stmt = f.le(six, nine);
+    let add_name = f.name("four_plus_two_le_four_plus_five");
+    f.declare_theorem(add_name, add_stmt, add_proof)
+        .unwrap_or_else(|e| panic!("addition monotonicity should admit: {}", f.explain(&e)));
+
+    let mul_proof = f.lemma(p.mul_le_mul_left, &[three, two, five, h]);
+    let fifteen = f.num(15);
+    let mul_stmt = f.le(six, fifteen);
+    let mul_name = f.name("three_times_two_le_three_times_five");
+    f.declare_theorem(mul_name, mul_stmt, mul_proof)
+        .unwrap_or_else(|e| {
+            panic!(
+                "multiplication monotonicity should admit: {}",
+                f.explain(&e)
+            )
+        });
 }
 
 /// Divisibility is a real prelude definition, not a test-only proposition:
@@ -996,7 +1031,53 @@ fn kernel_rejects_broken_proof_terms() {
         rejections += 1;
     }
 
-    assert_eq!(rejections, 17, "every negative control must be rejected");
+    // NC18 — addition monotonicity retains its common left operand.
+    {
+        let name = f.name("nc18_add_monotonicity_wrong_left_operand");
+        let two = f.num(2);
+        let three = f.num(3);
+        let four = f.num(4);
+        let five = f.num(5);
+        let h = f.lemma(p.le_add_right, &[two, three]);
+        let proof = f.lemma(p.add_le_add_left, &[four, two, five, h]);
+        let wrong_lhs = f.add(three, two);
+        let rhs = f.add(four, five);
+        let bad = f.le(wrong_lhs, rhs);
+        let err = f
+            .declare_theorem(name, bad, proof)
+            .expect_err("NC18: addition monotonicity must retain the common operand");
+        println!(
+            "NC18 (wrong addition operand) rejected:\n  {}",
+            f.explain(&err)
+        );
+        assert!(!f.k.environment().contains(name));
+        rejections += 1;
+    }
+
+    // NC19 — multiplication monotonicity retains its common left factor.
+    {
+        let name = f.name("nc19_mul_monotonicity_wrong_left_factor");
+        let two = f.num(2);
+        let three = f.num(3);
+        let four = f.num(4);
+        let five = f.num(5);
+        let h = f.lemma(p.le_add_right, &[two, three]);
+        let proof = f.lemma(p.mul_le_mul_left, &[three, two, five, h]);
+        let wrong_lhs = f.mul(four, two);
+        let rhs = f.mul(three, five);
+        let bad = f.le(wrong_lhs, rhs);
+        let err = f
+            .declare_theorem(name, bad, proof)
+            .expect_err("NC19: multiplication monotonicity must retain the factor");
+        println!(
+            "NC19 (wrong multiplication factor) rejected:\n  {}",
+            f.explain(&err)
+        );
+        assert!(!f.k.environment().contains(name));
+        rejections += 1;
+    }
+
+    assert_eq!(rejections, 19, "every negative control must be rejected");
 }
 
 /// The build is deterministic: two independent kernels render every promised
@@ -1019,7 +1100,7 @@ fn the_build_is_deterministic() {
     assert_eq!(first, second, "the prelude build must be deterministic");
     assert_eq!(
         first.len(),
-        8 + 41,
+        8 + 43,
         "every promised definition and theorem must be rendered"
     );
 }

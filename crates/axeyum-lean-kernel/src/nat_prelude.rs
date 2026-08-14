@@ -52,8 +52,8 @@
 //! inductive gate, so its recursor `Nat.le.rec` (induction on the *derivation*)
 //! is kernel-generated. `Nat.lt n m := Nat.le (Nat.succ n) m`. Theorems:
 //! `zero_le`, `le_succ_succ`, `le_of_succ_le_succ`, `le_trans`, and
-//! `le_add_right`, order-conditioned `sub_add_cancel`, and bounded
-//! `mul_sub_left_distrib`.
+//! `le_add_right`, addition/multiplication monotonicity, order-conditioned
+//! `sub_add_cancel`, and bounded `mul_sub_left_distrib`.
 //!
 //! **Divisibility**: `Nat.dvd a n := Exists (fun q => n = a * q)`, together
 //! with checked theorems `dvd_mul` (witness introduction) and `dvd_add`
@@ -235,6 +235,10 @@ pub struct NatPrelude {
     pub le_trans: NameId,
     /// `le_add_right : ∀ (n k : Nat), Le n (add n k)`.
     pub le_add_right: NameId,
+    /// `add_le_add_left : ∀ c a b, Le a b → Le (c+a) (c+b)`.
+    pub add_le_add_left: NameId,
+    /// `mul_le_mul_left : ∀ c a b, Le a b → Le (c*a) (c*b)`.
+    pub mul_le_mul_left: NameId,
     /// `sub_add_cancel : ∀ m n, Le m n → add (sub n m) m = n`.
     pub sub_add_cancel: NameId,
     /// `mul_sub_left_distrib : ∀ b q a, Le a q → b*(q-a) = b*q-b*a`.
@@ -334,6 +338,8 @@ pub fn build_nat_prelude(kernel: &mut Kernel) -> Result<NatPrelude, KernelError>
             le_of_succ_le_succ: kernel.name_str(nat, "le_of_succ_le_succ"),
             le_trans: kernel.name_str(nat, "le_trans"),
             le_add_right: kernel.name_str(nat, "le_add_right"),
+            add_le_add_left: kernel.name_str(nat, "add_le_add_left"),
+            mul_le_mul_left: kernel.name_str(nat, "mul_le_mul_left"),
             sub_add_cancel: kernel.name_str(nat, "sub_add_cancel"),
             mul_sub_left_distrib: kernel.name_str(nat, "mul_sub_left_distrib"),
             dvd: kernel.name_str(nat, "dvd"),
@@ -1585,6 +1591,89 @@ fn declare_order(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> 
         };
         d.declare_theorem(p.le_add_right, ty, value)?;
     }
+
+    // add_le_add_left : ∀ c a b, Le a b → Le (add c a) (add c b)
+    // Eliminate the bound derivation; `add` recurses on exactly its index.
+    d.theorem(p.add_le_add_left, 3, &|d, v| {
+        let (c, a, b) = (v[0], v[1], v[2]);
+        let hyp_ty = d.le(a, b);
+        let h_fv = d.fresh_fvar();
+        let h = d.kernel().fvar(h_fv);
+        let ca = d.add(c, a);
+        let cb = d.add(c, b);
+        let conclusion = d.le(ca, cb);
+        let motive = {
+            let x_fv = d.fresh_fvar();
+            let x = d.kernel().fvar(x_fv);
+            let dom = d.le(a, x);
+            let cx = d.add(c, x);
+            let body = d.le(ca, cx);
+            let inner = d.kernel().lam(anon, dom, body, BinderInfo::Default);
+            d.lam_fv(x_fv, nat, inner)
+        };
+        let minor_refl = d.const_app(p.le_refl, &[ca]);
+        let minor_step = {
+            let x_fv = d.fresh_fvar();
+            let x = d.kernel().fvar(x_fv);
+            let hx_fv = d.fresh_fvar();
+            let hx_ty = d.le(a, x);
+            let ih_fv = d.fresh_fvar();
+            let ih = d.kernel().fvar(ih_fv);
+            let cx = d.add(c, x);
+            let ih_ty = d.le(ca, cx);
+            let body = d.const_app(p.le_step, &[ca, cx, ih]);
+            let with_ih = d.lam_fv(ih_fv, ih_ty, body);
+            let with_hx = d.lam_fv(hx_fv, hx_ty, with_ih);
+            d.lam_fv(x_fv, nat, with_hx)
+        };
+        let body = d.const_app(p.le_rec, &[a, motive, minor_refl, minor_step, b, h]);
+        let stmt = d.arrow(hyp_ty, conclusion);
+        let proof = d.lam_fv(h_fv, hyp_ty, body);
+        (stmt, proof)
+    })?;
+
+    // mul_le_mul_left : ∀ c a b, Le a b → Le (mul c a) (mul c b)
+    // Each derivation step appends one `c`; transitivity with `le_add_right`
+    // preserves the fixed lower endpoint.
+    d.theorem(p.mul_le_mul_left, 3, &|d, v| {
+        let (c, a, b) = (v[0], v[1], v[2]);
+        let hyp_ty = d.le(a, b);
+        let h_fv = d.fresh_fvar();
+        let h = d.kernel().fvar(h_fv);
+        let ca = d.mul(c, a);
+        let cb = d.mul(c, b);
+        let conclusion = d.le(ca, cb);
+        let motive = {
+            let x_fv = d.fresh_fvar();
+            let x = d.kernel().fvar(x_fv);
+            let dom = d.le(a, x);
+            let cx = d.mul(c, x);
+            let body = d.le(ca, cx);
+            let inner = d.kernel().lam(anon, dom, body, BinderInfo::Default);
+            d.lam_fv(x_fv, nat, inner)
+        };
+        let minor_refl = d.const_app(p.le_refl, &[ca]);
+        let minor_step = {
+            let x_fv = d.fresh_fvar();
+            let x = d.kernel().fvar(x_fv);
+            let hx_fv = d.fresh_fvar();
+            let hx_ty = d.le(a, x);
+            let ih_fv = d.fresh_fvar();
+            let ih = d.kernel().fvar(ih_fv);
+            let cx = d.mul(c, x);
+            let ih_ty = d.le(ca, cx);
+            let cx_le_next = d.lemma(p.le_add_right, &[cx, c]);
+            let next = d.add(cx, c);
+            let body = d.lemma(p.le_trans, &[ca, cx, next, ih, cx_le_next]);
+            let with_ih = d.lam_fv(ih_fv, ih_ty, body);
+            let with_hx = d.lam_fv(hx_fv, hx_ty, with_ih);
+            d.lam_fv(x_fv, nat, with_hx)
+        };
+        let body = d.const_app(p.le_rec, &[a, motive, minor_refl, minor_step, b, h]);
+        let stmt = d.arrow(hyp_ty, conclusion);
+        let proof = d.lam_fv(h_fv, hyp_ty, body);
+        (stmt, proof)
+    })?;
 
     // sub_add_cancel : ∀ m n, Le m n → add (sub n m) m = n
     // Induct on the subtrahend. In the successor case, eliminate the bound
