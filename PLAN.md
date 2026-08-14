@@ -340,8 +340,23 @@ here as closed evidence boundaries. A3 remains incomplete, but all currently
 preregistered bounded mechanisms are closed negatively. A4 has now also yielded;
 A5 is the first active item.
 
-**Immediate action (`WIP`, Lean lane).** Gate ADR-0427; next define relational
-Nat congruence modulo a divisor. No credit.
+**Clausal reconstruction lane (`DONE`, agent-h, 2026-08-13).** `DP_POOL_BUDGET`
+is not the reconstruction ceiling: LRAT hint chains take
+`reconstruct_ordered_rup_step`, and the Davis-Putnam fallback it guards was never
+entered across 22 Rado refutations (85 to 4.57M hints). The bound is the kernel
+expression arena at ~90-100 B/node and ~190-460 nodes/hint.
+`reconstruct_resolution_proof_compact` (`1b2b13c70`) is 5.6x smaller and 55x
+faster at n=141 with the ratios still rising; its differential found **no**
+statement mismatch (0 alien hypothesis axioms on either route, compact footprint
+a strict subset at every size). 19 refutations now carry certificates official
+Lean v4.30.0 checks, to `R_3(x-y=5z)=286` and `R_4(2(x-y)=z)=56`, with
+`#print axioms` listing only input clauses and atoms — no `propext`,
+`Classical.choice`, `Quot.sound`, or `em`. **Next: kernel arena checkpointing**
+(spool admitted `Declaration::Theorem`s and truncate behind them) — that is the
+change that makes proof size disk-bounded rather than RAM-bounded.
+
+**Immediate action (`WIP`, Lean lane).** Gate ADR-0428; next add relational Nat
+congruence compatibility with addition. No credit.
 Keep the 14-theorem export labelled rejected by Lean and independently unchecked.
 A5 V2 QF_RDL row 1 remains pending and uncredited.
 
