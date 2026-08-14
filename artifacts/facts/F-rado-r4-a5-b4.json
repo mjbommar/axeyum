@@ -7,7 +7,11 @@
     "language": "smtlib2",
     "statement": "(assert (and (forall-colourings 741 4 (exists-mono-solution (= (* 5 (- x y)) (* 4 z)))) (exists-colouring 740 4 (no-mono-solution (= (* 5 (- x y)) (* 4 z))))))",
     "fragment": "QF_BV",
-    "free_symbols": ["x", "y", "z"]
+    "free_symbols": [
+      "x",
+      "y",
+      "z"
+    ]
   },
   "epistemic_status": "computed",
   "depends_on": [],
@@ -23,14 +27,23 @@
     }
   ],
   "concept_refs": [
-    { "graph": "math-education", "ref": "C:rado-number", "relation": "instance-of", "resolved": true }
+    {
+      "graph": "math-education",
+      "ref": "C:rado-number",
+      "relation": "instance-of",
+      "resolved": true
+    }
   ],
   "provenance": {
     "date": "2026-08-14",
     "established_by": "axeyum cube-and-conquer, campaign lane agent-b",
     "prior_art": [
-      { "citation": "Chang, De Loera, Wesley, ISSAC 2022", "establishes": "Table 10 leaves the (a,b) = (5,4) cell blank" }
+      {
+        "citation": "Chang, De Loera, Wesley, ISSAC 2022",
+        "establishes": "Table 10 leaves the (a,b) = (5,4) cell blank"
+      }
     ]
   },
-  "notes": "The `computed` case: the proposition is the fact, and the existing claim ledger entry is its evidence rather than a competing record."
+  "notes": "The `computed` case: the proposition is the fact, and the existing claim ledger entry is its evidence rather than a competing record.\n\nexternal_status `open`: no published value for this Rado number existed when we computed it -- the backing claim carries novelty: \"new\". Paired with our `computed`, that is what the validator reports as NOVEL, and it is the only status pair that says so.",
+  "external_status": "open"
 }

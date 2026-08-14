@@ -62,7 +62,12 @@
 
     "epistemic_status": {
       "enum": ["axiom", "proved", "computed", "empirical", "conjectured", "open", "refuted"],
-      "description": "Deliberately the SAME vocabulary as `claim.schema.json` and the math-education concept graph, plus `refuted`. A fact can be refuted; a claim, being a record of something established, cannot."
+      "description": "**What THIS system has established.** Deliberately the SAME vocabulary as `claim.schema.json` and the math-education concept graph, plus `refuted`. A fact can be refuted; a claim, being a record of something established, cannot.\n\nThis is a statement about our ledger, NOT about mathematics. `open` here means we have not established it, whoever else may have. See `external_status`."
+    },
+
+    "external_status": {
+      "enum": ["proved", "refuted", "conjectured", "open", "unknown"],
+      "description": "**What is known to mathematics, independent of us.** Optional; omit when nobody has looked, which is different from `unknown` (nobody has looked *and we checked*).\n\nWHY THIS EXISTS. Without it, `epistemic_status: open` does double duty for two unrelated situations: `Goldbach` (nobody has proved it) and `Fermat's Last Theorem` (proved in 1995; we simply have not imported it). Both are `open` to us and only one is open. That has two concrete costs: the self-extension loop consumes `open` facts, so it would burn its queue retrying settled theorems; and the headline open-count -- a number this project reports -- becomes meaningless.\n\nThe first extraction lane hit this immediately and REFUSED to extract Fermat's Last Theorem, correctly, on the grounds that every available status would have been a lie.\n\nTHE INTERESTING COMBINATION. `epistemic_status: proved`/`computed` together with `external_status: open`/`conjectured` is not a contradiction -- it is a **new result**, this project's whole point (e.g. R_4(5(x-y)=2z) = 625). The validator surfaces these rather than rejecting them."
     },
 
     "depends_on": {

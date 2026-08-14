@@ -19,6 +19,16 @@ evidence array; only these rules say the two must agree:
     edges is not a build order.
   * `claim-ref` evidence must point at a claim file that exists, since that is how
     a computed value becomes evidence for a proposition.
+  * `external_status` of `proved` or `refuted` requires a `provenance.prior_art`
+    citation. Asserting that mathematics has settled something, without saying who
+    settled it, is an unverifiable claim about the literature -- and this project
+    has already published one round of Zenodo self-deposits as though they were
+    refereed results.
+
+It also REPORTS, without failing, any fact we have established that the wider
+literature has not. That combination is not an error; it is the output this
+project exists to produce, and a gate that stays silent about it is measuring
+the wrong thing.
 
 Like the claims checker, this prints what it examined and names what it could not
 check rather than passing it silently.
@@ -40,6 +50,12 @@ ID_RE = re.compile(r"^F:[a-z0-9]+(-[a-z0-9]+)*$")
 REQUIRED = {"schema_version", "id", "title", "statement", "formal",
             "epistemic_status", "depends_on", "evidence", "provenance"}
 STATUSES = {"axiom", "proved", "computed", "empirical", "conjectured", "open", "refuted"}
+EXTERNAL_STATUSES = {"proved", "refuted", "conjectured", "open", "unknown"}
+# What the wider literature has settled. Asserting one of these means asserting
+# something about the world, so it has to name a source.
+EXTERNAL_SETTLED = {"proved", "refuted"}
+# What WE established. Paired with an unsettled external status, this is novelty.
+OURS_SETTLED = {"proved", "computed", "refuted"}
 LANGUAGES = {"smtlib2", "lean4", "axeyum-ir"}
 EVIDENCE_KINDS = {"kernel-term", "witness-replay", "unsat-certificate", "cube-cover",
                   "cube-tree-cover", "exhaustive-enumeration", "published-value-replication",
@@ -121,6 +137,24 @@ def validate_one(path: Path, fact: dict, known_ids: set[str]) -> list[str]:
         fail(errors, f"{fid}: status `open` must carry an empty evidence array -- an open fact "
                      f"with evidence is a contradiction, and the empty array is a statement.")
 
+    external = fact.get("external_status")
+    if external is not None:
+        if external not in EXTERNAL_STATUSES:
+            fail(errors, f"{fid}: external_status {external!r} is not one of "
+                         f"{sorted(EXTERNAL_STATUSES)}")
+        elif (
+            external in EXTERNAL_SETTLED
+            and status not in OURS_SETTLED
+            and not fact["provenance"].get("prior_art")
+        ):
+            fail(errors, f"{fid}: this fact is {status!r} to us but external_status "
+                         f"{external!r}, so the LITERATURE is the only thing holding it up "
+                         f"-- provenance.prior_art must name who settled it. (When we have "
+                         f"established a fact ourselves, external_status is corroborative "
+                         f"and needs no citation; the risk is relying on an unverified "
+                         f"claim about the literature, which is how this project came to "
+                         f"cite Zenodo self-deposits as refereed results.)")
+
     return errors
 
 
@@ -163,8 +197,30 @@ def main() -> int:
             print(f"  ERROR {e}", file=sys.stderr)
         return 1
 
+    # Established here, not settled in the literature -- i.e. new. Reported, never
+    # failed: this is the output the project exists to produce, and a gate silent
+    # about it is measuring the wrong thing.
+    novel = sorted(
+        f["id"]
+        for f in facts.values()
+        if f.get("epistemic_status") in OURS_SETTLED
+        and f.get("external_status") in {"open", "conjectured"}
+    )
+    # Known to mathematics, not to us -- the import backlog. Distinct from `open`,
+    # and the self-extension loop must not treat these as problems to solve.
+    backlog = sum(
+        1
+        for f in facts.values()
+        if f.get("epistemic_status") == "open" and f.get("external_status") == "proved"
+    )
+    unclassified = sum(1 for f in facts.values() if "external_status" not in f)
+
     spread = " ".join(f"{k}={v}" for k, v in sorted(by_status.items()))
     print(f"{len(facts)} facts checked, 0 errors  ({spread})")
+    print(f"  external: {backlog} settled elsewhere but not here (import backlog), "
+          f"{unclassified} unclassified")
+    if novel:
+        print(f"  NOVEL -- established here, not settled in the literature: {', '.join(novel)}")
     return 0
 
 
