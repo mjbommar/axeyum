@@ -715,7 +715,15 @@ impl Evidence {
     pub const fn kind_label(&self) -> &'static str {
         match self {
             Evidence::Sat(_) => "sat-model",
-            Evidence::Unsat(_) => "unsat-drat",
+            // `Unsat(None)` carries NO proof, so it must not be labelled by one.
+            // Collapsing both arms onto "unsat-drat" advertised a DRAT refutation
+            // that does not exist -- and this label is what artifact metadata and
+            // UI summaries print, so the fabrication propagated outward. Found by
+            // a fact-extraction lane whose result line read
+            // `kind=unsat-drat certified=0`: self-contradictory, since a DRAT
+            // proof is by definition a certificate.
+            Evidence::Unsat(Some(_)) => "unsat-drat",
+            Evidence::Unsat(None) => "unsat-uncertified",
             Evidence::UnsatAletheProof(_) => "unsat-alethe",
             Evidence::UnsatArithAletheProof(_) => "unsat-arith-alethe",
             Evidence::UnsatGuardedQuantAletheProof { .. } => "unsat-guarded-quant-alethe",

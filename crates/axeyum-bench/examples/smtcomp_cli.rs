@@ -54,7 +54,9 @@
 use std::process::ExitCode;
 use std::time::{Duration, Instant};
 
-use axeyum_solver::{CheckResult, Evidence, SolverConfig, produce_evidence_smtlib, solve_smtlib};
+use axeyum_solver::{
+    CheckResult, Evidence, EvidenceCheck, SolverConfig, produce_evidence_smtlib, solve_smtlib,
+};
 
 /// Extra wall clock the watchdog allows past the configured timeout, so the
 /// solver's own soft stop always wins the race when it can see the deadline.
@@ -93,7 +95,17 @@ const WORKER_STACK_BYTES: usize = 512 * 1024 * 1024;
 /// claims; neither is allowed to borrow the other's strength.
 ///
 /// * `ok`   — the certificate re-validated against a fresh parse of the file.
-/// * `FAIL` — it did not. A soundness alarm, reported and never swallowed.
+/// * `FAIL` — a certificate was present and did NOT re-validate. A soundness
+///   alarm, reported and never swallowed. This value means the producer and the
+///   checker disagree, and nothing else.
+/// * `none:<reason>` — there was nothing to re-validate, with the reason named
+///   (`none:uncertified-unsat`, `none:undecided`, `none:empty-subject`,
+///   `none:unfaithful-subject`). Not a pass and NOT a failure. This field used to
+///   print `FAIL` here, because it read [`Evidence::check`], whose `Ok(false)`
+///   means both "examined and failed" and "nothing to examine". A bare
+///   `Evidence::Unsat(None)` therefore rendered as a soundness alarm on a run
+///   where the solver was correct and merely uncertified — and an evidence
+///   dashboard built on this string counted absence as failure.
 /// * `na`   — the file did not re-parse, or the checker errored (an unbounded
 ///   re-enumeration, a certificate that will not re-read). Never a success.
 fn evidence_report_line(
@@ -129,16 +141,29 @@ fn evidence_report_line(
     // Arena-backed re-validation against a FRESH PARSE of the original file. The
     // producing solve's arena is deliberately not reused — re-reading the file is
     // what makes this independent of anything that run kept in memory.
+    //
+    // Read through `check_outcome`, NOT `check`. The boolean form collapses "a
+    // certificate was examined and FAILED" and "there was no certificate to
+    // examine" onto the same `Ok(false)`, and this line rendered both as `FAIL`
+    // — so a bare `Evidence::Unsat(None)` printed `arena=FAIL`, which reads as a
+    // soundness alarm when the truth is an absence. `EvidenceCheck` already draws
+    // that distinction correctly; only this caller threw it away.
     let arena = match evidence {
-        Evidence::Unknown(_) => "na",
+        Evidence::Unknown(_) => "na".to_owned(),
         _ => match axeyum_smtlib::parse_script(input) {
-            Ok(script) => match evidence.check(&script.arena, &script.assertions) {
-                Ok(true) => "ok",
-                Ok(false) => "FAIL",
+            Ok(script) => match evidence.check_outcome(&script.arena, &script.assertions) {
+                Ok(EvidenceCheck::Verified) => "ok".to_owned(),
+                // The only value that is a soundness alarm: producer and checker
+                // disagree about a certificate that was actually present.
+                Ok(EvidenceCheck::Failed) => "FAIL".to_owned(),
+                // Nothing was re-derived, and the reason is carried rather than
+                // flattened — `none:uncertified-unsat` and `none:unfaithful-subject`
+                // are different findings and neither is a failure.
+                Ok(EvidenceCheck::NothingToCheck(reason)) => format!("none:{}", reason.label()),
                 // A checker that ERRORS has not validated anything; `na`, never `ok`.
-                Err(_) => "na",
+                Err(_) => "na".to_owned(),
             },
-            Err(_) => "na",
+            Err(_) => "na".to_owned(),
         },
     };
     let certified = u8::from(evidence.is_certified() && verdict != "unknown");
