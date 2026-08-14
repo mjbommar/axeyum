@@ -138,6 +138,7 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.mul_sub_left_distrib,
         p.div_mod_exists,
         p.div_mod_unique,
+        p.div_mod_bounds,
         p.dvd_mul,
         p.dvd_add,
         p.dvd_add_right_cancel_of_pos,
@@ -685,6 +686,10 @@ fn euclidean_division_exists_constructively() {
             f.explain(&e)
         )
     });
+
+    let bounds = f.lemma(p.div_mod_bounds, &[two, five, two, one, proof]);
+    f.k.infer(bounds)
+        .unwrap_or_else(|e| panic!("Euclidean floor bounds should infer: {}", f.explain(&e)));
 }
 
 #[test]
@@ -1849,7 +1854,36 @@ fn kernel_rejects_broken_proof_terms() {
         rejections += 1;
     }
 
-    assert_eq!(rejections, 40, "every negative control must be rejected");
+    // NC41 — division bounds retain their strict upper endpoint.
+    {
+        let name = f.name("nc41_div_mod_bounds_wrong_upper_endpoint");
+        let one = f.num(1);
+        let two = f.num(2);
+        let five = f.num(5);
+        let product = f.mul(two, two);
+        let reconstructed = f.add(product, one);
+        let equation_ty = f.eq(five, reconstructed);
+        let bound_ty = f.lt(one, two);
+        let equation = f.refl(five);
+        let bound = f.lemma(p.le_refl, &[two]);
+        let relation_proof =
+            f.const_app(p.logic.and_intro, &[equation_ty, bound_ty, equation, bound]);
+        let proof = f.lemma(p.div_mod_bounds, &[two, five, two, one, relation_proof]);
+        let lower = f.le(product, five);
+        let wrong_upper = f.lt(five, five);
+        let bad = f.const_app(p.logic.and, &[lower, wrong_upper]);
+        let err = f
+            .declare_theorem(name, bad, proof)
+            .expect_err("NC41: division bounds must retain the strict upper endpoint");
+        println!(
+            "NC41 (wrong division upper endpoint) rejected:\n  {}",
+            f.explain(&err)
+        );
+        assert!(!f.k.environment().contains(name));
+        rejections += 1;
+    }
+
+    assert_eq!(rejections, 41, "every negative control must be rejected");
 }
 
 /// The build is deterministic: two independent kernels render every promised
@@ -1872,7 +1906,7 @@ fn the_build_is_deterministic() {
     assert_eq!(first, second, "the prelude build must be deterministic");
     assert_eq!(
         first.len(),
-        11 + 67,
+        11 + 68,
         "every promised definition and theorem must be rendered"
     );
 }

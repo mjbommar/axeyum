@@ -477,3 +477,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [0419](adr-0419-constructive-relational-nat-euclidean-division.md) | Constructive relational Nat Euclidean division | accepted |
 | [0420](adr-0420-constructive-strict-nat-order-spine.md) | Constructive strict Nat order spine | accepted |
 | [0421](adr-0421-relational-nat-euclidean-division-uniqueness.md) | Relational Nat Euclidean division uniqueness | accepted |
+| [0422](adr-0422-relational-nat-euclidean-floor-bounds.md) | Relational Nat Euclidean floor bounds | accepted |

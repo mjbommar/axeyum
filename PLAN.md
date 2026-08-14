@@ -340,8 +340,8 @@ here as closed evidence boundaries. A3 remains incomplete, but all currently
 preregistered bounded mechanisms are closed negatively. A4 has now also yielded;
 A5 is the first active item.
 
-**Immediate action (`WIP`, Lean lane).** Gate ADR-0421; next derive Euclidean
-rounding/order lemmas. No credit.
+**Immediate action (`WIP`, Lean lane).** Gate ADR-0422; next prove the Euclidean
+quotient/multiplication order equivalence. No credit.
 Keep the 14-theorem export labelled rejected by Lean and independently unchecked.
 A5 V2 QF_RDL row 1 remains pending and uncredited.
 

@@ -289,6 +289,8 @@ pub struct NatPrelude {
     pub div_mod_exists: NameId,
     /// `Nat.div_mod_unique : divMod d n q₁ r₁ → divMod d n q₂ r₂ → q₁=q₂ ∧ r₁=r₂`.
     pub div_mod_unique: NameId,
+    /// `Nat.div_mod_bounds : divMod d n q r → d*q ≤ n ∧ n < d*(succ q)`.
+    pub div_mod_bounds: NameId,
 
     // --- divisibility -------------------------------------------------------
     /// `Nat.dvd : Nat → Nat → Prop`, where `dvd a n := ∃ q, n = a * q`.
@@ -420,6 +422,7 @@ pub fn build_nat_prelude(kernel: &mut Kernel) -> Result<NatPrelude, KernelError>
             div_mod: kernel.name_str(nat, "divMod"),
             div_mod_exists: kernel.name_str(nat, "div_mod_exists"),
             div_mod_unique: kernel.name_str(nat, "div_mod_unique"),
+            div_mod_bounds: kernel.name_str(nat, "div_mod_bounds"),
             dvd: kernel.name_str(nat, "dvd"),
             valuation_at: kernel.name_str(nat, "valuationAt"),
             dvd_mul: kernel.name_str(nat, "dvd_mul"),
@@ -3443,6 +3446,77 @@ fn declare_euclidean_division(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), 
         let relation2_to_target = d.arrow(relation2_ty, target);
         let stmt = d.arrow(relation1_ty, relation2_to_target);
         let proof = d.lam_fv(relation1_fv, relation1_ty, body);
+        (stmt, proof)
+    })?;
+
+    // div_mod_bounds :
+    //   ∀ d n q r, divMod d n q r → d*q ≤ n ∧ n < d*(succ q)
+    // The relation equation supplies the lower bound by inclusion of the
+    // remainder. Its strict remainder bound supplies the upper endpoint,
+    // since `d*q+d` reduces to `d*(succ q)`.
+    d.theorem(p.div_mod_bounds, 4, &|d, v| {
+        let (divisor, dividend, quotient, remainder) = (v[0], v[1], v[2], v[3]);
+        let relation_ty = d.div_mod(divisor, dividend, quotient, remainder);
+        let product = d.mul(divisor, quotient);
+        let reconstructed = d.add(product, remainder);
+        let next_quotient = d.succ(quotient);
+        let next_product = d.mul(divisor, next_quotient);
+        let lower_ty = d.le(product, dividend);
+        let upper_ty = d.lt(dividend, next_product);
+        let target = d.const_app(p.logic.and, &[lower_ty, upper_ty]);
+
+        let relation_fv = d.fresh_fvar();
+        let relation = d.kernel().fvar(relation_fv);
+        let equation_ty = d.eq(dividend, reconstructed);
+        let bound_ty = d.lt(remainder, divisor);
+        let relation_motive = d
+            .kernel()
+            .lam(anon, relation_ty, target, BinderInfo::Default);
+        let relation_minor = {
+            let equation_fv = d.fresh_fvar();
+            let equation = d.kernel().fvar(equation_fv);
+            let bound_fv = d.fresh_fvar();
+            let bound = d.kernel().fvar(bound_fv);
+            let reconstructed_eq_dividend = d.symm(dividend, reconstructed, equation);
+
+            let product_le_reconstructed = d.lemma(p.le_add_right, &[product, remainder]);
+            let lower_motive = d.eq_motive(reconstructed, &|d, upper| d.le(product, upper));
+            let lower = d.transport(
+                reconstructed,
+                lower_motive,
+                product_le_reconstructed,
+                dividend,
+                reconstructed_eq_dividend,
+            );
+
+            let reconstructed_lt_next =
+                d.lemma(p.add_lt_add_left, &[product, remainder, divisor, bound]);
+            let upper_motive = d.eq_motive(reconstructed, &|d, lower| d.lt(lower, next_product));
+            let upper = d.transport(
+                reconstructed,
+                upper_motive,
+                reconstructed_lt_next,
+                dividend,
+                reconstructed_eq_dividend,
+            );
+            let body = d.const_app(p.logic.and_intro, &[lower_ty, upper_ty, lower, upper]);
+            let with_bound = d.lam_fv(bound_fv, bound_ty, body);
+            d.lam_fv(equation_fv, equation_ty, with_bound)
+        };
+        let level_zero = d.kernel().level_zero();
+        let and_rec = d.kernel().const_(p.logic.and_rec, vec![level_zero]);
+        let body = d.apply(
+            and_rec,
+            &[
+                equation_ty,
+                bound_ty,
+                relation_motive,
+                relation_minor,
+                relation,
+            ],
+        );
+        let stmt = d.arrow(relation_ty, target);
+        let proof = d.lam_fv(relation_fv, relation_ty, body);
         (stmt, proof)
     })?;
     Ok(())
