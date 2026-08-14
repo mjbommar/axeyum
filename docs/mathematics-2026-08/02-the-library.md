@@ -1,5 +1,17 @@
 # 02 — The library: ℕ → ℤ → ℚ → ℝ
 
+> **This rung is owned by another lane.** `crates/axeyum-lean-kernel/` is being
+> worked continuously by a second session — 69 commits in 24 hours, 49 of them
+> touching `nat_prelude.rs`. Everything below is therefore a *description of
+> where the library stands and what it unlocks*, not a work queue for this
+> strand. The two hazards in the last section are real and are **not ours to
+> fix**. See
+> [`refactor-2026-08/00-parallel-work.md`](../refactor-2026-08/00-parallel-work.md).
+>
+> What *is* ours is the receiver: an UNSAT evidence route for `Int`/`Real`
+> (engineering `01` K2), so that results about ℤ can carry a negative control
+> the moment ℤ exists. Today `axeyum-scenarios` `unreachable!()`s on both sorts.
+
 **The state.** One number system is proved. The rest are assumed or absent.
 
 ```

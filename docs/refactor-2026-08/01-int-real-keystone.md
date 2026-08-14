@@ -48,6 +48,14 @@ disease: four crates each solving their local instance, none composing.
 
 ### K1 — Construct `Int` from proved `Nat`, discharge its assumptions
 
+> **Owned by another lane.** `int_prelude.rs` cannot be built without
+> `nat_prelude.rs`, which a second session rewrites every few minutes — 49
+> touches in 24 hours. That lane is already building toward ℤ (extended
+> Euclidean, Bézout certificates, gcd's universal property), so contesting the
+> file would slow the keystone rather than advance it. See
+> [`00-parallel-work.md`](00-parallel-work.md). **K2–K5 are free and are what
+> ℤ will need the moment it lands.**
+
 The precondition landed while this was being written. In 60 commits the Lean
 lane took `nat_prelude` from 3,856 to 9,969 lines and from 57 to **106 proved
 theorems with zero axioms**, and — decisively — moved past arithmetic into the

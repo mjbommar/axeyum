@@ -4,6 +4,10 @@
 > [`docs/mathematics-2026-08/`](../mathematics-2026-08/README.md), which asks what
 > mathematics the system can do rather than where the code is untidy. Read that
 > one if you want the ceiling; this one is the floor.
+>
+> **Before taking any item, read [`00-parallel-work.md`](00-parallel-work.md).**
+> A second lane owns `crates/axeyum-lean-kernel/` and two shared append points,
+> and it re-orders both strands.
 
 A plan grounded in measurement, written after a twelve-hour multi-agent campaign
 that pointed the whole stack at open mathematics and recorded where it bent.
@@ -69,15 +73,20 @@ because it *bounds what can be proved at all*, not because it is slow.
 
 ## Order
 
-The items are not equally urgent and they are not independent.
+The items are not equally urgent and they are not independent. **This is the
+single-owner ordering; it is superseded while a second lane is live —
+see [`00-parallel-work.md`](00-parallel-work.md), which is the operative
+sequencing today.**
 
 1. **`01` — ℤ/ℝ.** The keystone. Everything above it is currently assumed, and
    the layers cannot compose across a sort the evidence system cannot express.
+   *Its first item, constructing ℤ from proved ℕ, is currently owned by another
+   lane; the rest of `01` is free.*
 2. **`02` — composition.** Directly blocks `01`: the CAS certificate is over ℝ
    while the mathematics is over ℤ, and the kernel rebuild tax rises with every
-   theorem `01` adds.
+   theorem `01` adds. *W1 (kernel reuse) is contested; W2/W3 are free.*
 3. **`04` — gates and truth.** Cheap, and it protects everything else. A
-   refactor guarded by gates that do not see the files is not guarded.
+   refactor guarded by gates that do not see the files is not guarded. *Free.*
 4. **`03` — decomposition.** The largest and the least urgent. Do it after the
    boundaries above are real, or it will freeze today's seams into crate
-   boundaries.
+   boundaries. *Do not start while another lane is in `axeyum-solver`.*
