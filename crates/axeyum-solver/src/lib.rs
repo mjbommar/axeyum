@@ -105,6 +105,7 @@ macro_rules! full_modules {
         mod evidence;
         mod faithfulness;
         mod horn;
+        mod hypothesis_min;
         mod imc;
         mod imc_lia;
         mod imc_lra;
@@ -996,6 +997,10 @@ macro_rules! full_exports {
         pub use fp::FloatFormat;
         #[doc(hidden)]
         pub use horn::{HornClause, HornModel, HornOutcome, HornSystem, solve_horn};
+        pub use hypothesis_min::{
+            Consistency, DEFAULT_MAX_PROBES, DEFAULT_MAX_SUBSET_SIZE, DEFAULT_PROBE_BUDGET,
+            MinimizeConfig, MinimizeOutcome, minimize_hypotheses, split_goal_and_minimize,
+        };
         #[doc(hidden)]
         pub use imc::{ImcOutcome, prove_safety_imc};
         #[doc(hidden)]
