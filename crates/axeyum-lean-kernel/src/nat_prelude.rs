@@ -245,14 +245,22 @@ pub struct NatPrelude {
     pub le_add_right: NameId,
     /// `add_le_add_left : ∀ c a b, Le a b → Le (c+a) (c+b)`.
     pub add_le_add_left: NameId,
+    /// `add_le_add_right : ∀ c a b, Le a b → Le (a+c) (b+c)`.
+    pub add_le_add_right: NameId,
     /// `le_of_add_le_add_left : ∀ c a b, Le (c+a) (c+b) → Le a b`.
     pub le_of_add_le_add_left: NameId,
+    /// `le_of_add_le_add_right : ∀ c a b, Le (a+c) (b+c) → Le a b`.
+    pub le_of_add_le_add_right: NameId,
     /// `mul_le_mul_left : ∀ c a b, Le a b → Le (c*a) (c*b)`.
     pub mul_le_mul_left: NameId,
     /// `le_of_mul_le_mul_left_succ : ∀ c a b, Le ((succ c)*a) ((succ c)*b) → Le a b`.
     pub le_of_mul_le_mul_left_succ: NameId,
     /// `sub_add_cancel : ∀ m n, Le m n → add (sub n m) m = n`.
     pub sub_add_cancel: NameId,
+    /// `sub_eq_zero_of_le : ∀ a b, Le a b → sub a b = zero`.
+    pub sub_eq_zero_of_le: NameId,
+    /// `sub_le_iff_le_add : ∀ x y z, Iff (Le (sub x y) z) (Le x (add z y))`.
+    pub sub_le_iff_le_add: NameId,
     /// `mul_sub_left_distrib : ∀ b q a, Le a q → b*(q-a) = b*q-b*a`.
     pub mul_sub_left_distrib: NameId,
 
@@ -355,10 +363,14 @@ pub fn build_nat_prelude(kernel: &mut Kernel) -> Result<NatPrelude, KernelError>
             le_dest: kernel.name_str(nat, "le_dest"),
             le_add_right: kernel.name_str(nat, "le_add_right"),
             add_le_add_left: kernel.name_str(nat, "add_le_add_left"),
+            add_le_add_right: kernel.name_str(nat, "add_le_add_right"),
             le_of_add_le_add_left: kernel.name_str(nat, "le_of_add_le_add_left"),
+            le_of_add_le_add_right: kernel.name_str(nat, "le_of_add_le_add_right"),
             mul_le_mul_left: kernel.name_str(nat, "mul_le_mul_left"),
             le_of_mul_le_mul_left_succ: kernel.name_str(nat, "le_of_mul_le_mul_left_succ"),
             sub_add_cancel: kernel.name_str(nat, "sub_add_cancel"),
+            sub_eq_zero_of_le: kernel.name_str(nat, "sub_eq_zero_of_le"),
+            sub_le_iff_le_add: kernel.name_str(nat, "sub_le_iff_le_add"),
             mul_sub_left_distrib: kernel.name_str(nat, "mul_sub_left_distrib"),
             dvd: kernel.name_str(nat, "dvd"),
             dvd_mul: kernel.name_str(nat, "dvd_mul"),
@@ -1885,6 +1897,29 @@ fn declare_order(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> 
         (stmt, proof)
     })?;
 
+    // add_le_add_right : ∀ c a b, Le a b → Le (a+c) (b+c)
+    d.theorem(p.add_le_add_right, 3, &|d, v| {
+        let (c, a, b) = (v[0], v[1], v[2]);
+        let hyp_ty = d.le(a, b);
+        let h_fv = d.fresh_fvar();
+        let h = d.kernel().fvar(h_fv);
+        let ca = d.add(c, a);
+        let cb = d.add(c, b);
+        let ac = d.add(a, c);
+        let bc = d.add(b, c);
+        let shifted = d.lemma(p.add_le_add_left, &[c, a, b, h]);
+        let ca_eq_ac = d.lemma(p.add_comm, &[c, a]);
+        let cb_eq_bc = d.lemma(p.add_comm, &[c, b]);
+        let lower_motive = d.eq_motive(ca, &|d, lower| d.le(lower, cb));
+        let lower_shifted = d.transport(ca, lower_motive, shifted, ac, ca_eq_ac);
+        let upper_motive = d.eq_motive(cb, &|d, upper| d.le(ac, upper));
+        let body = d.transport(cb, upper_motive, lower_shifted, bc, cb_eq_bc);
+        let conclusion = d.le(ac, bc);
+        let stmt = d.arrow(hyp_ty, conclusion);
+        let proof = d.lam_fv(h_fv, hyp_ty, body);
+        (stmt, proof)
+    })?;
+
     // le_of_add_le_add_left : ∀ c a b, Le (c+a) (c+b) → Le a b
     d.theorem(p.le_of_add_le_add_left, 3, &|d, v| {
         let (c, a, b) = (v[0], v[1], v[2]);
@@ -1930,6 +1965,29 @@ fn declare_order(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> 
         let one = d.level_one();
         let rec = d.kernel().const_(p.logic.exists_rec, vec![one]);
         let body = d.apply(rec, &[nat, pred, motive, minor, represented]);
+        let stmt = d.arrow(hyp_ty, conclusion);
+        let proof = d.lam_fv(h_fv, hyp_ty, body);
+        (stmt, proof)
+    })?;
+
+    // le_of_add_le_add_right : ∀ c a b, Le (a+c) (b+c) → Le a b
+    d.theorem(p.le_of_add_le_add_right, 3, &|d, v| {
+        let (c, a, b) = (v[0], v[1], v[2]);
+        let ac = d.add(a, c);
+        let bc = d.add(b, c);
+        let hyp_ty = d.le(ac, bc);
+        let h_fv = d.fresh_fvar();
+        let h = d.kernel().fvar(h_fv);
+        let ca = d.add(c, a);
+        let cb = d.add(c, b);
+        let ac_eq_ca = d.lemma(p.add_comm, &[a, c]);
+        let bc_eq_cb = d.lemma(p.add_comm, &[b, c]);
+        let lower_motive = d.eq_motive(ac, &|d, lower| d.le(lower, bc));
+        let common_lower = d.transport(ac, lower_motive, h, ca, ac_eq_ca);
+        let upper_motive = d.eq_motive(bc, &|d, upper| d.le(ca, upper));
+        let common = d.transport(bc, upper_motive, common_lower, cb, bc_eq_cb);
+        let body = d.lemma(p.le_of_add_le_add_left, &[c, a, b, common]);
+        let conclusion = d.le(a, b);
         let stmt = d.arrow(hyp_ty, conclusion);
         let proof = d.lam_fv(h_fv, hyp_ty, body);
         (stmt, proof)
@@ -2174,6 +2232,152 @@ fn declare_order(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> 
         let value = d.lam_fv(m_fv, nat, proof);
         d.declare_theorem(p.sub_add_cancel, ty, value)?;
     }
+
+    // sub_eq_zero_of_le : ∀ a b, Le a b → sub a b = zero
+    d.theorem(p.sub_eq_zero_of_le, 2, &|d, v| {
+        let (a, b) = (v[0], v[1]);
+        let zero = d.zero();
+        let hyp_ty = d.le(a, b);
+        let h_fv = d.fresh_fvar();
+        let h = d.kernel().fvar(h_fv);
+        let motive = {
+            let x_fv = d.fresh_fvar();
+            let x = d.kernel().fvar(x_fv);
+            let dom = d.le(a, x);
+            let difference = d.sub(a, x);
+            let body = d.eq(difference, zero);
+            let inner = d.kernel().lam(anon, dom, body, BinderInfo::Default);
+            d.lam_fv(x_fv, nat, inner)
+        };
+        let minor_refl = d.lemma(p.sub_self, &[a]);
+        let minor_step = {
+            let x_fv = d.fresh_fvar();
+            let x = d.kernel().fvar(x_fv);
+            let hx_fv = d.fresh_fvar();
+            let hx_ty = d.le(a, x);
+            let ih_fv = d.fresh_fvar();
+            let difference = d.sub(a, x);
+            let ih_ty = d.eq(difference, zero);
+            let ih = d.kernel().fvar(ih_fv);
+            let body = d.congr(difference, zero, ih, &|d, value| d.pred(value));
+            let with_ih = d.lam_fv(ih_fv, ih_ty, body);
+            let with_hx = d.lam_fv(hx_fv, hx_ty, with_ih);
+            d.lam_fv(x_fv, nat, with_hx)
+        };
+        let body = d.const_app(p.le_rec, &[a, motive, minor_refl, minor_step, b, h]);
+        let difference = d.sub(a, b);
+        let conclusion = d.eq(difference, zero);
+        let stmt = d.arrow(hyp_ty, conclusion);
+        let proof = d.lam_fv(h_fv, hyp_ty, body);
+        (stmt, proof)
+    })?;
+
+    // sub_le_iff_le_add : ∀ x y z, Iff (Le (sub x y) z) (Le x (add z y))
+    d.theorem(p.sub_le_iff_le_add, 3, &|d, v| {
+        let (x, y, z) = (v[0], v[1], v[2]);
+        let difference = d.sub(x, y);
+        let sum = d.add(z, y);
+        let lhs = d.le(difference, z);
+        let rhs = d.le(x, sum);
+        let total = d.lemma(p.le_total, &[y, x]);
+        let y_le_x = d.le(y, x);
+        let x_le_y = d.le(x, y);
+        let total_ty = d.const_app(p.logic.or, &[y_le_x, x_le_y]);
+
+        let mp = {
+            let h_fv = d.fresh_fvar();
+            let h = d.kernel().fvar(h_fv);
+            let motive = d.kernel().lam(anon, total_ty, rhs, BinderInfo::Default);
+            let bounded_minor = {
+                let hyx_fv = d.fresh_fvar();
+                let hyx = d.kernel().fvar(hyx_fv);
+                let restored = d.add(difference, y);
+                let restored_eq_x = d.lemma(p.sub_add_cancel, &[y, x, hyx]);
+                let shifted = d.lemma(p.add_le_add_right, &[y, difference, z, h]);
+                let lower_motive = d.eq_motive(restored, &|d, lower| d.le(lower, sum));
+                let body = d.transport(restored, lower_motive, shifted, x, restored_eq_x);
+                d.lam_fv(hyx_fv, y_le_x, body)
+            };
+            let truncated_minor = {
+                let hxy_fv = d.fresh_fvar();
+                let hxy = d.kernel().fvar(hxy_fv);
+                let y_plus_z = d.add(y, z);
+                let y_le_y_plus_z = d.lemma(p.le_add_right, &[y, z]);
+                let y_plus_z_eq_sum = d.lemma(p.add_comm, &[y, z]);
+                let upper_motive = d.eq_motive(y_plus_z, &|d, upper| d.le(y, upper));
+                let y_le_sum =
+                    d.transport(y_plus_z, upper_motive, y_le_y_plus_z, sum, y_plus_z_eq_sum);
+                let body = d.lemma(p.le_trans, &[x, y, sum, hxy, y_le_sum]);
+                d.lam_fv(hxy_fv, x_le_y, body)
+            };
+            let rec = d.kernel().const_(p.logic.or_rec, vec![]);
+            let body = d.apply(
+                rec,
+                &[
+                    y_le_x,
+                    x_le_y,
+                    motive,
+                    bounded_minor,
+                    truncated_minor,
+                    total,
+                ],
+            );
+            d.lam_fv(h_fv, lhs, body)
+        };
+
+        let mpr = {
+            let h_fv = d.fresh_fvar();
+            let h = d.kernel().fvar(h_fv);
+            let motive = d.kernel().lam(anon, total_ty, lhs, BinderInfo::Default);
+            let bounded_minor = {
+                let hyx_fv = d.fresh_fvar();
+                let hyx = d.kernel().fvar(hyx_fv);
+                let restored = d.add(difference, y);
+                let restored_eq_x = d.lemma(p.sub_add_cancel, &[y, x, hyx]);
+                let x_eq_restored = d.symm(restored, x, restored_eq_x);
+                let lower_motive = d.eq_motive(x, &|d, lower| d.le(lower, sum));
+                let restored_le_sum = d.transport(x, lower_motive, h, restored, x_eq_restored);
+                let body = d.lemma(
+                    p.le_of_add_le_add_right,
+                    &[y, difference, z, restored_le_sum],
+                );
+                d.lam_fv(hyx_fv, y_le_x, body)
+            };
+            let truncated_minor = {
+                let hxy_fv = d.fresh_fvar();
+                let hxy = d.kernel().fvar(hxy_fv);
+                let zero = d.zero();
+                let zero_le_z = d.lemma(p.zero_le, &[z]);
+                let difference_eq_zero = d.lemma(p.sub_eq_zero_of_le, &[x, y, hxy]);
+                let zero_eq_difference = d.symm(difference, zero, difference_eq_zero);
+                let lower_motive = d.eq_motive(zero, &|d, lower| d.le(lower, z));
+                let body = d.transport(
+                    zero,
+                    lower_motive,
+                    zero_le_z,
+                    difference,
+                    zero_eq_difference,
+                );
+                d.lam_fv(hxy_fv, x_le_y, body)
+            };
+            let rec = d.kernel().const_(p.logic.or_rec, vec![]);
+            let body = d.apply(
+                rec,
+                &[
+                    y_le_x,
+                    x_le_y,
+                    motive,
+                    bounded_minor,
+                    truncated_minor,
+                    total,
+                ],
+            );
+            d.lam_fv(h_fv, rhs, body)
+        };
+        let stmt = d.const_app(p.logic.iff, &[lhs, rhs]);
+        let proof = d.const_app(p.logic.iff_intro, &[lhs, rhs, mp, mpr]);
+        (stmt, proof)
+    })?;
 
     // mul_sub_left_distrib : ∀ b q a, Le a q → b*(q-a) = b*q-b*a
     // Rather than postulating monotonicity, construct the scaled difference,

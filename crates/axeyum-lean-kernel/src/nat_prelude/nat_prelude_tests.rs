@@ -107,10 +107,14 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.le_dest,
         p.le_add_right,
         p.add_le_add_left,
+        p.add_le_add_right,
         p.le_of_add_le_add_left,
+        p.le_of_add_le_add_right,
         p.mul_le_mul_left,
         p.le_of_mul_le_mul_left_succ,
         p.sub_add_cancel,
+        p.sub_eq_zero_of_le,
+        p.sub_le_iff_le_add,
         p.mul_sub_left_distrib,
         p.dvd_mul,
         p.dvd_add,
@@ -603,6 +607,22 @@ fn order_bounds_round_trip_through_additive_witnesses() {
     let four_plus_five = f.add(four, five);
     assert!(f.k.def_eq(six, four_plus_two));
     assert!(f.k.def_eq(nine, four_plus_five));
+
+    let shifted_right = f.lemma(p.add_le_add_right, &[four, two, five, rebuilt]);
+    let reflected_right = f.lemma(p.le_of_add_le_add_right, &[four, two, five, shifted_right]);
+    f.k.infer(reflected_right)
+        .unwrap_or_else(|e| panic!("right-additive reflection should infer: {}", f.explain(&e)));
+
+    let sub_zero = f.lemma(p.sub_eq_zero_of_le, &[two, five, rebuilt]);
+    f.k.infer(sub_zero).unwrap_or_else(|e| {
+        panic!(
+            "bounded reverse subtraction should infer: {}",
+            f.explain(&e)
+        )
+    });
+    let adjunction = f.lemma(p.sub_le_iff_le_add, &[five, two, four]);
+    f.k.infer(adjunction)
+        .unwrap_or_else(|e| panic!("subtraction adjunction should infer: {}", f.explain(&e)));
 }
 
 #[test]
@@ -1236,7 +1256,51 @@ fn kernel_rejects_broken_proof_terms() {
         rejections += 1;
     }
 
-    assert_eq!(rejections, 23, "every negative control must be rejected");
+    // NC24 — bounded reverse subtraction retains minuend and subtrahend.
+    {
+        let name = f.name("nc24_sub_zero_wrong_orientation");
+        let two = f.num(2);
+        let three = f.num(3);
+        let five = f.num(5);
+        let zero = f.zero();
+        let h = f.lemma(p.le_add_right, &[two, three]);
+        let proof = f.lemma(p.sub_eq_zero_of_le, &[two, five, h]);
+        let wrong_difference = f.sub(five, two);
+        let bad = f.eq(wrong_difference, zero);
+        let err = f
+            .declare_theorem(name, bad, proof)
+            .expect_err("NC24: subtraction-to-zero must retain operand orientation");
+        println!(
+            "NC24 (wrong subtraction orientation) rejected:\n  {}",
+            f.explain(&err)
+        );
+        assert!(!f.k.environment().contains(name));
+        rejections += 1;
+    }
+
+    // NC25 — the subtraction adjunction retains its exact additive upper bound.
+    {
+        let name = f.name("nc25_sub_adjunction_wrong_upper_bound");
+        let two = f.num(2);
+        let four = f.num(4);
+        let five = f.num(5);
+        let proof = f.lemma(p.sub_le_iff_le_add, &[five, two, four]);
+        let difference = f.sub(five, two);
+        let lhs = f.le(difference, four);
+        let wrong_rhs = f.le(five, five);
+        let bad = f.const_app(p.logic.iff, &[lhs, wrong_rhs]);
+        let err = f
+            .declare_theorem(name, bad, proof)
+            .expect_err("NC25: subtraction adjunction must retain the exact upper bound");
+        println!(
+            "NC25 (wrong adjunction bound) rejected:\n  {}",
+            f.explain(&err)
+        );
+        assert!(!f.k.environment().contains(name));
+        rejections += 1;
+    }
+
+    assert_eq!(rejections, 25, "every negative control must be rejected");
 }
 
 /// The build is deterministic: two independent kernels render every promised
@@ -1259,7 +1323,7 @@ fn the_build_is_deterministic() {
     assert_eq!(first, second, "the prelude build must be deterministic");
     assert_eq!(
         first.len(),
-        8 + 49,
+        8 + 53,
         "every promised definition and theorem must be rendered"
     );
 }
