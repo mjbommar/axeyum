@@ -45,6 +45,7 @@ pub mod colouring;
 mod compact;
 mod drat;
 mod drat_backward;
+mod drat_resource;
 mod gf2;
 mod interpolant;
 mod lrat;
@@ -72,7 +73,15 @@ pub use drat::{
     DratError, DratSink, DratStep, DratTextReader, ProofSinkError, TextProofSink, VecProofSink,
     check_drat, check_drat_streaming, parse_drat, write_drat,
 };
-pub use drat_backward::{check_drat_backward, trim_drat_proof};
+pub use drat_backward::{
+    check_drat_backward, check_drat_backward_reader, check_drat_backward_reader_within,
+    check_drat_backward_within, trim_drat_proof,
+};
+pub use drat_resource::{
+    BackwardCheckOutcome, BudgetSource, DratCheckRoute, DratMemoryEstimate, DratMemoryModel,
+    DratMemoryReport, DratProofShape, DratResourceDecline, DratShapeSource, FormulaShape,
+    MemoryBudget,
+};
 pub use gf2::{Gf2Outcome, Gf2Solution, Gf2System};
 pub use interpolant::{BoolExpr, propositional_interpolant};
 pub use lrat::{

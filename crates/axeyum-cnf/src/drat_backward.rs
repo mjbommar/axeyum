@@ -55,10 +55,14 @@
 //! Both reuse the walk above; neither re-derives anything.
 
 use std::collections::HashMap;
+use std::hash::{BuildHasherDefault, Hasher};
+use std::io::BufRead;
 
-use crate::drat::sorted;
+use crate::drat_resource::{
+    BackwardCheckOutcome, DratMemoryEstimate, DratMemoryReport, DratProofShape, MemoryBudget,
+};
 use crate::lrat::{LratError, LratStep};
-use crate::{CnfFormula, CnfLit, DratError, DratStep};
+use crate::{CnfFormula, CnfLit, DratError, DratStep, DratTextReader};
 
 /// A literal packed as `2 * variable index + is_negated`, so `code ^ 1` is the
 /// complement and both the watch lists and the assignment are flat vectors
@@ -110,6 +114,12 @@ struct ClauseRecord {
     /// Justifies part of the current root-level trail (a reason, or the
     /// conflicting clause). Removing such a clause invalidates the trail.
     forced: bool,
+    /// Hash of the clause's literal *set*, which is the key a deletion is
+    /// matched on. Kept per record so [`PlanBuilder`] needs no owned copy of
+    /// every clause's key: 8 bytes here replaces a `Vec<(usize, bool)>` of 16
+    /// bytes per literal plus its allocation, which measured as the single
+    /// largest term in plan construction (ADR-0426).
+    key_hash: u64,
 }
 
 /// The proof compiled into clause records with lifetimes: the whole of phase 1.
@@ -139,53 +149,299 @@ impl Plan {
     /// Only the prefix up to and including the empty-clause addition is ever
     /// passed here: nothing after it can be part of the refutation.
     fn build(formula: &CnfFormula, steps: &[DratStep]) -> Result<Self, DratError> {
-        let variable_count = variable_count(formula, steps)?;
-        let mut plan = Self {
-            arena: Vec::new(),
-            records: Vec::new(),
-            added_by_step: vec![NO_CLAUSE; steps.len()],
-            deleted_by_step: vec![NO_CLAUSE; steps.len()],
-            variable_count,
-            formula_len: formula.clauses().len(),
-        };
-        // Live clauses by literal *set*, which is how the reference matches a
-        // deletion. Never iterated — only looked up — so no output of this
-        // module depends on hash order.
-        let mut live: HashMap<Vec<(usize, bool)>, Vec<usize>> = HashMap::new();
-        for clause in formula.clauses() {
-            let record = plan.push_clause(clause.lits(), 0);
-            live.entry(sorted(clause.lits())).or_default().push(record);
-        }
+        let mut builder = PlanBuilder::new(formula);
         for (index, step) in steps.iter().enumerate() {
-            match step {
-                DratStep::Add(lits) => {
-                    let record = plan.push_clause(lits, index + 1);
-                    plan.added_by_step[index] = record;
-                    live.entry(sorted(lits)).or_default().push(record);
+            builder.push_step(index, step);
+        }
+        builder.finish()
+    }
+
+    /// Bytes of heap the plan's own structures hold, summed from their
+    /// allocation capacities.
+    ///
+    /// Not an estimate: this is what was allocated. It is what
+    /// [`DratMemoryReport::observed_structure_bytes`] reports, and it is how the
+    /// cost constants in [`crate::DratMemoryModel`] stay measured rather than
+    /// remembered.
+    fn heap_bytes(&self) -> u64 {
+        let arena = self.arena.capacity() * size_of::<Code>();
+        let records = self.records.capacity() * size_of::<ClauseRecord>();
+        let maps =
+            (self.added_by_step.capacity() + self.deleted_by_step.capacity()) * size_of::<usize>();
+        (arena + records + maps) as u64
+    }
+}
+
+/// One or more live clause records sharing a deletion key.
+///
+/// Almost every key names exactly one live clause, so the common case is stored
+/// inline: a `Vec` per key would be one heap allocation per clause in the proof.
+enum RecordSlot {
+    /// No live clause carries this key (the entry is retained rather than
+    /// removed, so a re-added clause reuses it).
+    Empty,
+    /// Exactly one.
+    One(usize),
+    /// Several, in insertion order.
+    Many(Vec<usize>),
+}
+
+impl RecordSlot {
+    fn push(&mut self, record: usize) {
+        match self {
+            RecordSlot::Empty => *self = RecordSlot::One(record),
+            RecordSlot::One(first) => *self = RecordSlot::Many(vec![*first, record]),
+            RecordSlot::Many(records) => records.push(record),
+        }
+    }
+
+    /// Removes and returns the most recently added record whose literal *set*
+    /// equals `key`, or [`NO_CLAUSE`].
+    ///
+    /// The exact comparison — not the hash — is what decides a match, so a
+    /// 64-bit collision between two different literal sets costs a comparison,
+    /// never a wrong deletion. `scratch` holds the candidate's own sorted key
+    /// and is reused across calls.
+    fn pop_matching(
+        &mut self,
+        arena: &[Code],
+        records: &[ClauseRecord],
+        key: &[Code],
+        scratch: &mut Vec<Code>,
+    ) -> usize {
+        match self {
+            RecordSlot::Empty => NO_CLAUSE,
+            RecordSlot::One(record) => {
+                let record = *record;
+                if record_key_equals(arena, &records[record], key, scratch) {
+                    *self = RecordSlot::Empty;
+                    record
+                } else {
+                    NO_CLAUSE
                 }
-                DratStep::Delete(lits) => {
-                    // Which of several identical live clauses is removed is
-                    // immaterial — they have the same literal set, and a
-                    // clause's stored literal order affects nothing but its own
-                    // RAT pivot, which a database clause never supplies.
-                    if let Some(records) = live.get_mut(&sorted(lits))
-                        && let Some(record) = records.pop()
-                    {
-                        plan.records[record].died = index;
-                        plan.deleted_by_step[index] = record;
-                    }
+            }
+            RecordSlot::Many(candidates) => {
+                let found = candidates
+                    .iter()
+                    .rposition(|&record| record_key_equals(arena, &records[record], key, scratch));
+                match found {
+                    Some(position) => candidates.remove(position),
+                    None => NO_CLAUSE,
                 }
             }
         }
-        Ok(plan)
+    }
+
+    fn heap_bytes(&self) -> usize {
+        match self {
+            RecordSlot::Many(records) => records.capacity() * size_of::<usize>(),
+            _ => 0,
+        }
+    }
+}
+
+/// Does `record`'s literal set equal `key` (which is sorted and deduplicated)?
+fn record_key_equals(
+    arena: &[Code],
+    record: &ClauseRecord,
+    key: &[Code],
+    scratch: &mut Vec<Code>,
+) -> bool {
+    scratch.clear();
+    scratch.extend_from_slice(&arena[record.start..record.start + record.len]);
+    scratch.sort_unstable();
+    scratch.dedup();
+    scratch.as_slice() == key
+}
+
+/// The deletion key of a clause is already a mixed 64-bit value, so the table
+/// keeps it rather than hashing it again.
+#[derive(Default)]
+struct KeyHasher(u64);
+
+impl Hasher for KeyHasher {
+    fn finish(&self) -> u64 {
+        self.0
+    }
+
+    fn write(&mut self, bytes: &[u8]) {
+        // Unreachable for a `u64` key (which uses `write_u64`), but a `Hasher`
+        // must be total.
+        const FNV_OFFSET: u64 = 0xcbf2_9ce4_8422_2325;
+        const FNV_PRIME: u64 = 0x0000_0100_0000_01b3;
+        let mut hash = FNV_OFFSET;
+        for &byte in bytes {
+            hash ^= u64::from(byte);
+            hash = hash.wrapping_mul(FNV_PRIME);
+        }
+        self.0 = hash;
+    }
+
+    fn write_u64(&mut self, value: u64) {
+        self.0 = value;
+    }
+}
+
+/// Hash of a sorted, deduplicated literal-code set.
+///
+/// Order-independent by construction (the input is sorted first) and mixed hard
+/// enough that the table is not the bottleneck; correctness never rests on it,
+/// because [`RecordSlot::pop_matching`] compares the sets themselves.
+fn hash_key(key: &[Code]) -> u64 {
+    const FNV_OFFSET: u64 = 0xcbf2_9ce4_8422_2325;
+    const FNV_PRIME: u64 = 0x0000_0100_0000_01b3;
+    let mut hash = FNV_OFFSET;
+    for &code in key {
+        hash ^= code as u64;
+        hash = hash.wrapping_mul(FNV_PRIME);
+    }
+    // Final avalanche (splitmix64's finaliser), because the table uses the low
+    // bits of the value directly.
+    hash ^= hash >> 30;
+    hash = hash.wrapping_mul(0xbf58_476d_1ce4_e5b9);
+    hash ^= hash >> 27;
+    hash = hash.wrapping_mul(0x94d0_49bb_1331_11eb);
+    hash ^ (hash >> 31)
+}
+
+/// Builds a [`Plan`] one step at a time, so the proof never has to exist as a
+/// `Vec<DratStep>` (ADR-0426).
+///
+/// This is the consumer half of the streaming story ADR-0381 started: the
+/// producer already writes a proof it never holds, and this lets the checker
+/// read one it never holds either.
+struct PlanBuilder {
+    plan: Plan,
+    /// Live clauses by the hash of their literal set. Only ever looked up, never
+    /// iterated, so no output of this module depends on hash order.
+    live: HashMap<u64, RecordSlot, BuildHasherDefault<KeyHasher>>,
+    /// Scratch for the key being looked up.
+    key: Vec<Code>,
+    /// Scratch for a candidate's key during exact comparison.
+    candidate: Vec<Code>,
+    /// Set once the empty clause has been added: nothing after it can be part of
+    /// the refutation, so the walk stops there.
+    root: Option<usize>,
+    /// Counts of what has been consumed, for the memory report.
+    shape_steps: u64,
+    shape_added_clauses: u64,
+    shape_added_literals: u64,
+    shape_total_literals: u64,
+}
+
+impl PlanBuilder {
+    fn new(formula: &CnfFormula) -> Self {
+        let mut builder = Self {
+            plan: Plan {
+                arena: Vec::new(),
+                records: Vec::new(),
+                added_by_step: Vec::new(),
+                deleted_by_step: Vec::new(),
+                variable_count: formula.variable_count(),
+                formula_len: formula.clauses().len(),
+            },
+            live: HashMap::default(),
+            key: Vec::new(),
+            candidate: Vec::new(),
+            root: None,
+            shape_steps: 0,
+            shape_added_clauses: 0,
+            shape_added_literals: 0,
+            shape_total_literals: 0,
+        };
+        for clause in formula.clauses() {
+            let record = builder.push_clause(clause.lits(), 0);
+            let hash = builder.plan.records[record].key_hash;
+            builder
+                .live
+                .entry(hash)
+                .or_insert(RecordSlot::Empty)
+                .push(record);
+        }
+        builder
+    }
+
+    /// Consumes one proof step at position `index`.
+    ///
+    /// Steps must arrive in proof order and stop at the first empty-clause
+    /// addition; [`PlanBuilder::reached_root`] reports when that has happened.
+    fn push_step(&mut self, index: usize, step: &DratStep) {
+        debug_assert!(
+            self.plan.added_by_step.len() == index,
+            "plan steps must arrive in proof order"
+        );
+        self.plan.added_by_step.push(NO_CLAUSE);
+        self.plan.deleted_by_step.push(NO_CLAUSE);
+        self.shape_steps += 1;
+        match step {
+            DratStep::Add(lits) => {
+                self.shape_added_clauses += 1;
+                self.shape_added_literals += lits.len() as u64;
+                self.shape_total_literals += lits.len() as u64;
+                let record = self.push_clause(lits, index + 1);
+                self.plan.added_by_step[index] = record;
+                let hash = self.plan.records[record].key_hash;
+                self.live
+                    .entry(hash)
+                    .or_insert(RecordSlot::Empty)
+                    .push(record);
+                if lits.is_empty() && self.root.is_none() {
+                    self.root = Some(index);
+                }
+            }
+            DratStep::Delete(lits) => {
+                self.shape_total_literals += lits.len() as u64;
+                // Which of several identical live clauses is removed is
+                // immaterial — they have the same literal set, and a clause's
+                // stored literal order affects nothing but its own RAT pivot,
+                // which a database clause never supplies.
+                self.key.clear();
+                self.key.extend(lits.iter().copied().map(code_of));
+                self.key.sort_unstable();
+                self.key.dedup();
+                let hash = hash_key(&self.key);
+                // Disjoint field borrows: the slot is mutated while the arena
+                // and records it is compared against are read.
+                let Self {
+                    plan,
+                    live,
+                    key,
+                    candidate,
+                    ..
+                } = self;
+                let record = match live.get_mut(&hash) {
+                    Some(slot) => slot.pop_matching(&plan.arena, &plan.records, key, candidate),
+                    None => NO_CLAUSE,
+                };
+                if record != NO_CLAUSE {
+                    plan.records[record].died = index;
+                    plan.deleted_by_step[index] = record;
+                }
+            }
+        }
+    }
+
+    /// Proof-step index of the first empty-clause addition, once one has been
+    /// consumed.
+    fn reached_root(&self) -> Option<usize> {
+        self.root
     }
 
     /// Appends a clause to the arena and returns its record id.
     fn push_clause(&mut self, lits: &[CnfLit], born: usize) -> usize {
-        let start = self.arena.len();
-        self.arena.extend(lits.iter().copied().map(code_of));
-        let record = self.records.len();
-        self.records.push(ClauseRecord {
+        let start = self.plan.arena.len();
+        self.plan.arena.extend(lits.iter().copied().map(code_of));
+        for lit in lits {
+            self.plan.variable_count = self.plan.variable_count.max(lit.var().index() + 1);
+        }
+        self.key.clear();
+        self.key
+            .extend_from_slice(&self.plan.arena[start..start + lits.len()]);
+        self.key.sort_unstable();
+        self.key.dedup();
+        let key_hash = hash_key(&self.key);
+        let record = self.plan.records.len();
+        self.plan.records.push(ClauseRecord {
             start,
             len: lits.len(),
             born,
@@ -194,41 +450,47 @@ impl Plan {
             core: false,
             live: false,
             forced: false,
+            key_hash,
         });
         record
     }
-}
 
-/// Number of variables the checker must size its vectors for.
-///
-/// # Errors
-///
-/// Returns [`DratError::Parse`] when twice the variable count does not fit in
-/// `usize` — the literal encoding would overflow. Only reachable on a 32-bit
-/// target with an absurd variable count.
-fn variable_count(formula: &CnfFormula, steps: &[DratStep]) -> Result<usize, DratError> {
-    let mut count = formula.variable_count();
-    let mut widen = |lits: &[CnfLit]| {
-        for lit in lits {
-            count = count.max(lit.var().index() + 1);
+    /// The counts consumed so far, as a shape for the memory report.
+    fn shape(&self, proof_bytes: u64) -> DratProofShape {
+        DratProofShape::exact(
+            proof_bytes,
+            self.shape_steps,
+            self.shape_added_clauses,
+            self.shape_added_literals,
+            self.shape_total_literals,
+        )
+    }
+
+    /// Bytes of heap the builder holds at this moment, summed from allocation
+    /// capacities. Measured at the end of construction, which is its peak.
+    fn heap_bytes(&self) -> u64 {
+        let table = self.live.capacity() * (size_of::<u64>() + size_of::<RecordSlot>() + 1);
+        let slots: usize = self.live.values().map(RecordSlot::heap_bytes).sum();
+        let scratch = (self.key.capacity() + self.candidate.capacity()) * size_of::<Code>();
+        self.plan.heap_bytes() + (table + slots + scratch) as u64
+    }
+
+    /// Finishes construction, checking the literal encoding cannot overflow.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`DratError::Parse`] when twice the variable count does not fit
+    /// in `usize` — the literal encoding would overflow. Only reachable on a
+    /// 32-bit target with an absurd variable count.
+    fn finish(self) -> Result<Plan, DratError> {
+        if self.plan.variable_count.checked_mul(2).is_none() {
+            return Err(DratError::Parse(format!(
+                "proof mentions {} variables, which overflows the literal encoding",
+                self.plan.variable_count
+            )));
         }
-    };
-    for clause in formula.clauses() {
-        widen(clause.lits());
+        Ok(self.plan)
     }
-    for step in steps {
-        // Deletion literals never reach the arena or the assignment: a deletion
-        // is resolved by literal set alone.
-        if let DratStep::Add(lits) = step {
-            widen(lits);
-        }
-    }
-    if count.checked_mul(2).is_none() {
-        return Err(DratError::Parse(format!(
-            "proof mentions {count} variables, which overflows the literal encoding"
-        )));
-    }
-    Ok(count)
 }
 
 /// Verifies `proof` against `formula` by backward (core-first) checking
@@ -274,6 +536,206 @@ fn variable_count(formula: &CnfFormula, steps: &[DratStep]) -> Result<usize, Dra
 /// overflows the internal literal encoding.
 pub fn check_drat_backward(formula: &CnfFormula, proof: &[DratStep]) -> Result<bool, DratError> {
     Ok(run_backward(formula, proof, Options::CHECK)?.is_some())
+}
+
+/// Verifies a proof read from `reader` against `formula`, without ever holding
+/// it as a `Vec<DratStep>` (ADR-0426).
+///
+/// The consumer counterpart of ADR-0381's streaming producer, and the same
+/// algorithm as [`check_drat_backward`]: the two build the *same* clause plan
+/// from the same bytes, differing only in whether a step vector exists on the
+/// way there. They therefore return the same verdict on every input, which
+/// `tests/drat_backward_file_differential.rs` asserts on every committed
+/// certificate and on randomly generated proofs, valid and broken alike.
+///
+/// Backward checking still needs the proof *prefix up to the empty clause* to be
+/// resident as a clause plan — it is walked in reverse, so it cannot be a pure
+/// stream the way [`crate::check_drat_streaming`] is. What it does not need is
+/// the parsed step vector, which measured as roughly half the footprint:
+/// 8.0x the proof's size on disk before, 2.0x after, on
+/// `artifacts/claims/rado/rado-r4-a4-b1/F_256.drat`.
+///
+/// The reader is consumed only up to and including the first empty-clause
+/// addition; a proof with dead weight after its refutation costs nothing to
+/// skip.
+///
+/// # Errors
+///
+/// Returns [`DratError::StepNotVerified`] for a core clause addition that is
+/// neither RUP nor RAT, or [`DratError::Parse`] for a malformed proof, a read
+/// failure, or a variable count that overflows the internal literal encoding.
+pub fn check_drat_backward_reader<R: BufRead>(
+    formula: &CnfFormula,
+    reader: R,
+) -> Result<bool, DratError> {
+    let steps = DratTextReader::new(reader);
+    Ok(run_backward_streaming(formula, steps, Options::CHECK)?
+        .0
+        .is_some())
+}
+
+/// Verifies a proof read from `reader`, but only if it is predicted to fit
+/// (ADR-0426).
+///
+/// `estimate` is the caller's prediction — from [`DratProofShape::from_proof_bytes`]
+/// when only the file's length is known, or from [`DratProofShape::sample`] when
+/// its head can be read. When the prediction exceeds `budget`, nothing is read
+/// and the result is [`BackwardCheckOutcome::Declined`]: a typed refusal that is
+/// **not** a verdict on the proof and cannot be mistaken for one.
+///
+/// That distinction is the point. Before this existed, the way a host learned a
+/// check did not fit was `SIGKILL` — exit 137, no output, indistinguishable from
+/// a checker that rejected the proof. This project has lost real work to that
+/// confusion.
+///
+/// The two outcomes that do run carry a [`DratMemoryReport`] with the prediction
+/// beside the footprint actually held, so a caller that logs it re-measures the
+/// cost model on live data.
+///
+/// # Errors
+///
+/// As [`check_drat_backward_reader`]. A resource decline is an *outcome*, not an
+/// error.
+pub fn check_drat_backward_reader_within<R: BufRead>(
+    formula: &CnfFormula,
+    reader: R,
+    estimate: DratMemoryEstimate,
+    budget: MemoryBudget,
+) -> Result<BackwardCheckOutcome, DratError> {
+    let estimate = match budget.admits(estimate) {
+        Ok(estimate) => estimate,
+        Err(decline) => return Ok(BackwardCheckOutcome::Declined(decline)),
+    };
+    let proof_bytes = estimate.shape().proof_bytes();
+    let steps = DratTextReader::new(reader);
+    let (checker, observed) = run_backward_streaming(formula, steps, Options::CHECK)?;
+    let report = DratMemoryReport::new(
+        estimate,
+        observed.heap_bytes,
+        observed.shape_with_proof_bytes(proof_bytes),
+    );
+    Ok(if checker.is_some() {
+        BackwardCheckOutcome::Refuted(report)
+    } else {
+        BackwardCheckOutcome::NoRefutation(report)
+    })
+}
+
+/// Verifies an already-parsed proof, but only if it is predicted to fit
+/// (ADR-0426).
+///
+/// The in-memory counterpart of [`check_drat_backward_reader_within`]. The step
+/// vector is already resident by the time this is called, so the budget guards
+/// the *plan* — which is the other half of the footprint, and the half that
+/// grows during the run. Prefer the reader form: it is the one whose budget can
+/// still say no in time.
+///
+/// # Errors
+///
+/// As [`check_drat_backward`].
+pub fn check_drat_backward_within(
+    formula: &CnfFormula,
+    proof: &[DratStep],
+    budget: MemoryBudget,
+) -> Result<BackwardCheckOutcome, DratError> {
+    let shape = DratProofShape::of_steps(proof);
+    let estimate = crate::DratMemoryModel::new(crate::DratCheckRoute::InMemoryBackward)
+        .estimate(shape, crate::FormulaShape::of(formula));
+    let estimate = match budget.admits(estimate) {
+        Ok(estimate) => estimate,
+        Err(decline) => return Ok(BackwardCheckOutcome::Declined(decline)),
+    };
+    let (checker, observed) = run_backward_measured(formula, proof, Options::CHECK)?;
+    let report = DratMemoryReport::new(estimate, observed.heap_bytes, shape);
+    Ok(if checker.is_some() {
+        BackwardCheckOutcome::Refuted(report)
+    } else {
+        BackwardCheckOutcome::NoRefutation(report)
+    })
+}
+
+/// What a run actually cost and consumed, measured rather than predicted.
+struct Observed {
+    /// Peak heap held by the plan and its construction index, summed from
+    /// allocation capacities.
+    heap_bytes: u64,
+    /// The proof prefix as counted while it was consumed.
+    shape: DratProofShape,
+}
+
+impl Observed {
+    /// The observed shape with the proof's on-disk length filled in, which only
+    /// the caller knows.
+    fn shape_with_proof_bytes(&self, proof_bytes: u64) -> DratProofShape {
+        DratProofShape::exact(
+            proof_bytes,
+            self.shape.steps(),
+            self.shape.added_clauses(),
+            self.shape.added_literals(),
+            self.shape.total_literals(),
+        )
+    }
+}
+
+/// Runs the backward check over a *stream* of steps.
+///
+/// Identical to [`run_backward`] but for where the steps come from: the plan is
+/// built as they arrive and construction stops at the first empty-clause
+/// addition, so nothing beyond the refutation is read or stored.
+fn run_backward_streaming(
+    formula: &CnfFormula,
+    steps: impl Iterator<Item = Result<DratStep, DratError>>,
+    options: Options,
+) -> Result<(Option<BackwardChecker>, Observed), DratError> {
+    let mut builder = PlanBuilder::new(formula);
+    for (index, step) in steps.enumerate() {
+        builder.push_step(index, &step?);
+        if builder.reached_root().is_some() {
+            break;
+        }
+    }
+    let heap_bytes = builder.heap_bytes();
+    let shape = builder.shape(0);
+    let observed = Observed { heap_bytes, shape };
+    let Some(root) = builder.reached_root() else {
+        return Ok((None, observed));
+    };
+    let plan = builder.finish()?;
+    let mut checker = BackwardChecker::new(plan, options);
+    checker.run(root)?;
+    Ok((Some(checker), observed))
+}
+
+/// [`run_backward`] with the plan's footprint measured on the way through.
+fn run_backward_measured(
+    formula: &CnfFormula,
+    proof: &[DratStep],
+    options: Options,
+) -> Result<(Option<BackwardChecker>, Observed), DratError> {
+    let Some(root) = proof
+        .iter()
+        .position(|step| matches!(step, DratStep::Add(lits) if lits.is_empty()))
+    else {
+        return Ok((
+            None,
+            Observed {
+                heap_bytes: 0,
+                shape: DratProofShape::of_steps(proof),
+            },
+        ));
+    };
+    let mut builder = PlanBuilder::new(formula);
+    for (index, step) in proof[..=root].iter().enumerate() {
+        builder.push_step(index, step);
+    }
+    let observed = Observed {
+        heap_bytes: builder.heap_bytes(),
+        shape: builder.shape(0),
+    };
+    let plan = builder.finish()?;
+    let mut checker = BackwardChecker::new(plan, options);
+    checker.run(root)?;
+    Ok((Some(checker), observed))
 }
 
 /// Engine knobs.
