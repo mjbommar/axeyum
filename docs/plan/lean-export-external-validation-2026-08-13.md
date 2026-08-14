@@ -162,3 +162,65 @@ should be symmetric.
 
 Until L1 lands, the paper should say the module is emitted and inspected, and
 should not imply that an independent kernel has accepted it.
+
+## Resolved the same day — and my architectural conclusion was wrong
+
+Everything above stands as a record of the defect. **The conclusion I drew from
+it does not.**
+
+I wrote that repairing the three known defects "still fails, because the
+elaborator reaches for `CoeFun`", and inferred that surface syntax is
+structurally hostage to elaboration — that `lean file.lean` could not be a
+route because implicit-argument inference, universe unification and coercion
+insertion stand between the artifact and the kernel. That inference was too
+strong, and it was drawn from a single unexplained error message.
+
+**There was a fourth printer defect, not an architectural limit.** Lean inserts
+a constant's pending implicit arguments as soon as a *parenthesized*
+application is complete, so `(@Eq.refl α) a` fails where the flat
+`@Eq.refl α a` checks. The writer emitted nested spines `((f a) b)`. Both
+engines now print flat spines. With that repaired:
+
+```
+$ lean shell_closed_form.lean
+EXIT=0, 0.138 s
+'shell_closed_form' does not depend on any axioms
+```
+
+`#print axioms` has now executed for the first time. Non-vacuity is measured,
+not assumed: mutating the theorem *statement* gives `EXIT=1`, "Type mismatch".
+
+**And independent kernel acceptance was two API calls away, not a research
+project.** `import Lean` works from a bare `lean --run` on the pinned
+toolchain; `mkEmptyEnvironment` + `Environment.addDeclCore` are the entire
+requirement. `scripts/lean/replay-lean4export.lean` feeds our NDJSON to Lean's
+own kernel — no elaboration, no codegen, no `lean4export` install, no
+third-party checker, starting from an **empty** environment so nothing is
+satisfied by Lean's `Init` and the `Quot` double-add trap cannot arise. All 17
+official v4.30 fixtures are accepted, and so is the axeyum Rado development
+(3,854 records, 74 declarations, 97 constants). The negative control is a gate:
+given another theorem's closed well-typed proof, Lean's kernel restates *our*
+theorem and refuses it. Verified independently by the coordinator:
+`cargo test -p axeyum-lean-kernel --test real_lean_kernel_replay` → 1 passed.
+
+### The correction that matters more than the fix
+
+Three times in one day I turned a real measurement into a claim about a
+capability, and was wrong each time:
+
+| I wrote | actually |
+|---|---|
+| "the toolchain is absent (verified)" (inherited, repeated) | installed and pinned; `which` measured `PATH` |
+| "axeyum → Lean does not exist / is broken" | 163 modules across 70 families already cross-checked |
+| "surface syntax is hostage to the elaborator" | a fourth printer bug; flat spines fixed it |
+
+The evidence was sound every time; the generalisation was not. The pattern is
+specific enough to guard against: **an unexplained failure is evidence about
+one artifact, and becomes evidence about a capability only when its mechanism
+is understood.** `CoeFun` was a symptom I could not explain, and I promoted it
+to a law.
+
+What survives unchanged: `lean file.lean` *is* elaboration and codegen rather
+than a kernel check, so the NDJSON route remains the right one for
+trust — but that is an argument about what the artifact proves, not about
+what is achievable.
