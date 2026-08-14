@@ -44,7 +44,7 @@
     },
     {
       "path": "docs/plan/lean-axiom-ledger-v1.json",
-      "sha256": "0c2acede073be25dd89d01c4d9f4a4536cc6cb86570eccf92284325397a199f8"
+      "sha256": "6bf005441f0ec511b8bf1ee05e77ff458128a6184913426a854dd3eeb9126d12"
     },
     {
       "path": "docs/plan/lean-compatibility-v1.json",
@@ -88,7 +88,7 @@
     },
     {
       "path": "docs/plan/lean-system-implementation-plan-2026-07-21.md",
-      "sha256": "b28b2383913268fa5fccc468b2ed08fdf11c5759396e416977fdc32b1d7c5833"
+      "sha256": "74834d2fdb5a511eafc2570c4dae6a734545bbe0d03d7719ca00390e1ed97b5e"
     },
     {
       "path": "docs/plan/lean-u2-matched-execution-tl0.6.5-axis-coverage-r5-plan-2026-07-23.md",
@@ -1569,9 +1569,9 @@
     "implementation_tasks": {
       "rows": 139,
       "status_counts": {
-        "DONE": 27,
+        "DONE": 28,
         "PARTIAL": 8,
-        "TODO": 104,
+        "TODO": 103,
         "BLOCKED": 0
       }
     }

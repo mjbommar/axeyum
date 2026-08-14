@@ -336,8 +336,8 @@ regression. Guard-isolating satisfiable-query forgeries replaced ineffective
 tamper cases. **Next:** exact-rational LP over candidate residues instead of
 unit-coefficient subset search; see `agent-i-cas-bridge/FEEDBACK.md` F8.
 
-**Immediate action (`WIP`, Lean lane).** Gate ADR-0446; next build one shared
-executable quotient/remainder state. No credit.
+**Immediate action (`WIP`, Lean lane).** Gate ADR-0447; next connect computed
+quotient/remainder to `Nat.divMod`. No credit.
 Keep the 14-theorem export labelled rejected by Lean and independently unchecked.
 A5 V2 QF_RDL row 1 remains pending and uncredited.
 

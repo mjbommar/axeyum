@@ -66,17 +66,18 @@
 //! with checked theorems `dvd_mul` (witness introduction) and `dvd_add`
 //! (closure under addition by two `Exists.rec` eliminations).
 //!
-//! **Relational division and congruence**: `Nat.divMod` carries quotient and
-//! remainder witnesses and proves existence, uniqueness, and floor-order laws.
+//! **Division and congruence**: `Nat.divMod` carries quotient and remainder
+//! witnesses and proves existence, uniqueness, and floor-order laws. One shared
+//! structurally recursive state computes total `Nat.div` and `Nat.mod`; its
+//! projections use Lean's dividend-first argument order and zero-divisor values.
 //! `Nat.modEq d a b := ∃ u v, a + d*u = b + d*v` avoids signed subtraction;
 //! reflexivity, symmetry, transitivity, and pairwise additive and multiplicative
 //! closure are checked theorems.
 //!
 //! ## What is **not** here
 //!
-//! No `min` or decidability of order, no executable quotient/remainder
-//! functions, no multiplicative divisibility cancellation, and no
-//! `n ≠ succ n`-style discrimination.
+//! No `min` or decidability of order, no multiplicative divisibility
+//! cancellation, and no `n ≠ succ n`-style discrimination.
 //! Adding those is ordinary work on top of this prelude, not a kernel question:
 //! the order fragment is deliberately minimal (see [`NatPrelude::le`]).
 //!
@@ -150,6 +151,13 @@ pub struct NatPrelude {
     pub beq_eq_true_of_eq: NameId,
     /// `Nat.beq_eq_true_iff : ∀ a b, Nat.beq a b = true ↔ a = b`.
     pub beq_eq_true_iff: NameId,
+    /// Shared executable division state `divModState d n : Bool → Nat`;
+    /// `true` selects the quotient and `false` the remainder.
+    pub div_mod_state: NameId,
+    /// Total executable quotient `Nat.div dividend divisor`.
+    pub div: NameId,
+    /// Total executable remainder `Nat.mod dividend divisor`.
+    pub mod_: NameId,
     /// `Nat.sumRange : (Nat → Nat) → Nat → Nat`.
     pub sum_range: NameId,
     /// `Nat.pred : Nat → Nat`, with `pred zero = zero`.
@@ -157,6 +165,20 @@ pub struct NatPrelude {
     /// `Nat.sub : Nat → Nat → Nat`, truncated at zero and recursive in the
     /// second argument.
     pub sub: NameId,
+
+    // --- executable division equations -------------------------------------
+    /// `div_zero : ∀ n, div n zero = zero`.
+    pub div_zero: NameId,
+    /// `mod_zero : ∀ n, mod n zero = n`.
+    pub mod_zero: NameId,
+    /// `zero_div : ∀ d, div zero d = zero`.
+    pub zero_div: NameId,
+    /// `zero_mod : ∀ d, mod zero d = zero`.
+    pub zero_mod: NameId,
+    /// Successor equation for executable quotient.
+    pub div_succ: NameId,
+    /// Successor equation for executable remainder.
+    pub mod_succ: NameId,
 
     // --- defining equations (each proved by `Eq.refl`) -----------------------
     /// `add_zero : ∀ (n : Nat), Eq Nat (add n zero) n`.
@@ -428,9 +450,18 @@ pub fn build_nat_prelude(kernel: &mut Kernel) -> Result<NatPrelude, KernelError>
             eq_of_beq_eq_true: kernel.name_str(nat, "eq_of_beq_eq_true"),
             beq_eq_true_of_eq: kernel.name_str(nat, "beq_eq_true_of_eq"),
             beq_eq_true_iff: kernel.name_str(nat, "beq_eq_true_iff"),
+            div_mod_state: kernel.name_str(nat, "divModState"),
+            div: kernel.name_str(nat, "div"),
+            mod_: kernel.name_str(nat, "mod"),
             sum_range: kernel.name_str(nat, "sumRange"),
             pred: kernel.name_str(nat, "pred"),
             sub: kernel.name_str(nat, "sub"),
+            div_zero: kernel.name_str(nat, "div_zero"),
+            mod_zero: kernel.name_str(nat, "mod_zero"),
+            zero_div: kernel.name_str(nat, "zero_div"),
+            zero_mod: kernel.name_str(nat, "zero_mod"),
+            div_succ: kernel.name_str(nat, "div_succ"),
+            mod_succ: kernel.name_str(nat, "mod_succ"),
             add_zero: kernel.name_str(nat, "add_zero"),
             add_succ: kernel.name_str(nat, "add_succ"),
             mul_zero: kernel.name_str(nat, "mul_zero"),
@@ -537,6 +568,7 @@ pub fn build_nat_prelude(kernel: &mut Kernel) -> Result<NatPrelude, KernelError>
         let mut d = NatDev::new(kernel, p);
         declare_arithmetic(&mut d, &p)?;
         declare_boolean_equality(&mut d, &p)?;
+        declare_executable_division(&mut d, &p)?;
         declare_subtraction(&mut d, &p)?;
         declare_finite_ranges(&mut d, &p)?;
         declare_defining_equations(&mut d, &p)?;
@@ -824,6 +856,223 @@ fn beq_sound_succ_row(d: &mut NatDev<'_>, predecessor: ExprId, ih: ExprId) -> Ex
     );
     let nat = d.nat_ty();
     d.lam_fv(right_fv, nat, proof_for_right)
+}
+
+/// One structurally recursive state computes executable quotient and remainder.
+///
+/// The state is encoded as `Bool → Nat`: `true` projects the quotient and
+/// `false` the remainder. This avoids both a new Nat-specific pair type and two
+/// independently recursive functions that could drift semantically.
+fn declare_executable_division(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> {
+    let p = *p;
+    let nat = d.nat_ty();
+    let bool_ty = d.bool_ty();
+    let anon = d.anon_name();
+    let one = d.level_one();
+    let state_ty = d.arrow(bool_ty, nat);
+    let dividend_to_state = d.arrow(nat, state_ty);
+
+    // Divisor zero follows Lean's totality: quotient zero, remainder dividend.
+    let zero_divisor_minor = {
+        let dividend_fv = d.fresh_fvar();
+        let selector_fv = d.fresh_fvar();
+        let dividend = d.kernel().fvar(dividend_fv);
+        let selector = d.kernel().fvar(selector_fv);
+        let zero = d.zero();
+        let selected = d.bool_select_nat(selector, zero, dividend);
+        let with_selector = d.lam_fv(selector_fv, bool_ty, selected);
+        d.lam_fv(dividend_fv, nat, with_selector)
+    };
+
+    // For divisor `succ k`, count remainders `0 .. k`; rolling over from `k`
+    // increments the quotient and resets the remainder.
+    let successor_divisor_minor = {
+        let predecessor_fv = d.fresh_fvar();
+        let unused_divisor_ih_fv = d.fresh_fvar();
+        let dividend_fv = d.fresh_fvar();
+        let predecessor = d.kernel().fvar(predecessor_fv);
+        let dividend = d.kernel().fvar(dividend_fv);
+        let initial_state = {
+            let selector_fv = d.fresh_fvar();
+            let zero = d.zero();
+            d.lam_fv(selector_fv, bool_ty, zero)
+        };
+        let dividend_step = {
+            let prior_fv = d.fresh_fvar();
+            let prior_state_fv = d.fresh_fvar();
+            let selector_fv = d.fresh_fvar();
+            let prior_state = d.kernel().fvar(prior_state_fv);
+            let selector = d.kernel().fvar(selector_fv);
+            let true_ = d.bool_true();
+            let false_ = d.bool_false();
+            let quotient = d.apply(prior_state, &[true_]);
+            let remainder = d.apply(prior_state, &[false_]);
+            let rollover = d.beq(remainder, predecessor);
+            let successor_quotient = d.succ(quotient);
+            let next_quotient = d.bool_select_nat(rollover, successor_quotient, quotient);
+            let zero = d.zero();
+            let successor_remainder = d.succ(remainder);
+            let next_remainder = d.bool_select_nat(rollover, zero, successor_remainder);
+            let next_state = d.bool_select_nat(selector, next_quotient, next_remainder);
+            let with_selector = d.lam_fv(selector_fv, bool_ty, next_state);
+            let with_state = d.lam_fv(prior_state_fv, state_ty, with_selector);
+            d.lam_fv(prior_fv, nat, with_state)
+        };
+        let state_motive = d.kernel().lam(anon, nat, state_ty, BinderInfo::Default);
+        let rec = d.kernel().const_(p.rec, vec![one]);
+        let body = d.apply(rec, &[state_motive, initial_state, dividend_step, dividend]);
+        let with_dividend = d.lam_fv(dividend_fv, nat, body);
+        let with_unused_ih = d.lam_fv(unused_divisor_ih_fv, dividend_to_state, with_dividend);
+        d.lam_fv(predecessor_fv, nat, with_unused_ih)
+    };
+
+    let divisor_motive = d
+        .kernel()
+        .lam(anon, nat, dividend_to_state, BinderInfo::Default);
+    let divisor_fv = d.fresh_fvar();
+    let dividend_fv = d.fresh_fvar();
+    let selector_fv = d.fresh_fvar();
+    let divisor = d.kernel().fvar(divisor_fv);
+    let dividend = d.kernel().fvar(dividend_fv);
+    let selector = d.kernel().fvar(selector_fv);
+    let rec = d.kernel().const_(p.rec, vec![one]);
+    let row = d.apply(
+        rec,
+        &[
+            divisor_motive,
+            zero_divisor_minor,
+            successor_divisor_minor,
+            divisor,
+        ],
+    );
+    let state = d.apply(row, &[dividend, selector]);
+    let value = {
+        let with_selector = d.lam_fv(selector_fv, bool_ty, state);
+        let with_dividend = d.lam_fv(dividend_fv, nat, with_selector);
+        d.lam_fv(divisor_fv, nat, with_dividend)
+    };
+    let ty = d.arrow(nat, dividend_to_state);
+    d.kernel().add_declaration(Declaration::Definition {
+        name: p.div_mod_state,
+        uparams: vec![],
+        ty,
+        value,
+        hint: ReducibilityHint::Regular(2),
+    })?;
+
+    // Public projections use Lean-compatible `(dividend, divisor)` order.
+    for (name, selector) in [(p.div, d.bool_true()), (p.mod_, d.bool_false())] {
+        let dividend_fv = d.fresh_fvar();
+        let divisor_fv = d.fresh_fvar();
+        let dividend = d.kernel().fvar(dividend_fv);
+        let divisor = d.kernel().fvar(divisor_fv);
+        let body = d.div_mod_state(divisor, dividend, selector);
+        let value = {
+            let with_divisor = d.lam_fv(divisor_fv, nat, body);
+            d.lam_fv(dividend_fv, nat, with_divisor)
+        };
+        let over_divisor = d.arrow(nat, nat);
+        let ty = d.arrow(nat, over_divisor);
+        d.kernel().add_declaration(Declaration::Definition {
+            name,
+            uparams: vec![],
+            ty,
+            value,
+            hint: ReducibilityHint::Regular(3),
+        })?;
+    }
+
+    // Totality and structural step equations all reduce from the definition.
+    d.theorem(p.div_zero, 1, &|d, values| {
+        let value = values[0];
+        let zero = d.zero();
+        let lhs = d.div(value, zero);
+        (d.eq(lhs, zero), d.refl(lhs))
+    })?;
+    d.theorem(p.mod_zero, 1, &|d, values| {
+        let value = values[0];
+        let zero = d.zero();
+        let lhs = d.modulo(value, zero);
+        (d.eq(lhs, value), d.refl(lhs))
+    })?;
+    d.theorem(p.zero_div, 1, &|d, values| {
+        let divisor = values[0];
+        let zero = d.zero();
+        let lhs = d.div(zero, divisor);
+        let stmt = d.eq(lhs, zero);
+        let proof = d.induct(
+            &|d, candidate| {
+                let zero = d.zero();
+                let lhs = d.div(zero, candidate);
+                d.eq(lhs, zero)
+            },
+            &|d| {
+                let zero = d.zero();
+                let lhs = d.div(zero, zero);
+                d.refl(lhs)
+            },
+            &|d, predecessor, _ih| {
+                let zero = d.zero();
+                let divisor = d.succ(predecessor);
+                let lhs = d.div(zero, divisor);
+                d.refl(lhs)
+            },
+            divisor,
+        );
+        (stmt, proof)
+    })?;
+    d.theorem(p.zero_mod, 1, &|d, values| {
+        let divisor = values[0];
+        let zero = d.zero();
+        let lhs = d.modulo(zero, divisor);
+        let stmt = d.eq(lhs, zero);
+        let proof = d.induct(
+            &|d, candidate| {
+                let zero = d.zero();
+                let lhs = d.modulo(zero, candidate);
+                d.eq(lhs, zero)
+            },
+            &|d| {
+                let zero = d.zero();
+                let lhs = d.modulo(zero, zero);
+                d.refl(lhs)
+            },
+            &|d, predecessor, _ih| {
+                let zero = d.zero();
+                let divisor = d.succ(predecessor);
+                let lhs = d.modulo(zero, divisor);
+                d.refl(lhs)
+            },
+            divisor,
+        );
+        (stmt, proof)
+    })?;
+    d.theorem(p.div_succ, 2, &|d, values| {
+        let (dividend, divisor_predecessor) = (values[0], values[1]);
+        let divisor = d.succ(divisor_predecessor);
+        let successor_dividend = d.succ(dividend);
+        let quotient = d.div(dividend, divisor);
+        let remainder = d.modulo(dividend, divisor);
+        let rollover = d.beq(remainder, divisor_predecessor);
+        let successor_quotient = d.succ(quotient);
+        let rhs = d.bool_select_nat(rollover, successor_quotient, quotient);
+        let lhs = d.div(successor_dividend, divisor);
+        (d.eq(lhs, rhs), d.refl(lhs))
+    })?;
+    d.theorem(p.mod_succ, 2, &|d, values| {
+        let (dividend, divisor_predecessor) = (values[0], values[1]);
+        let divisor = d.succ(divisor_predecessor);
+        let successor_dividend = d.succ(dividend);
+        let remainder = d.modulo(dividend, divisor);
+        let rollover = d.beq(remainder, divisor_predecessor);
+        let zero = d.zero();
+        let successor_remainder = d.succ(remainder);
+        let rhs = d.bool_select_nat(rollover, zero, successor_remainder);
+        let lhs = d.modulo(successor_dividend, divisor);
+        (d.eq(lhs, rhs), d.refl(lhs))
+    })?;
+
+    Ok(())
 }
 
 /// `pred` and truncated `sub`, both by structural recursion. Subtraction
@@ -6748,6 +6997,18 @@ pub trait NatOps {
         self.kernel().const_(name, vec![])
     }
 
+    /// Computational `if condition then on_true else on_false` at `Nat`.
+    fn bool_select_nat(&mut self, condition: ExprId, on_true: ExprId, on_false: ExprId) -> ExprId {
+        let bool_ty = self.bool_ty();
+        let nat = self.nat_ty();
+        let anon = self.anon_name();
+        let motive = self.kernel().lam(anon, bool_ty, nat, BinderInfo::Default);
+        let one = self.level_one();
+        let bool_rec = self.prelude().logic.bool_rec;
+        let rec = self.kernel().const_(bool_rec, vec![one]);
+        self.apply(rec, &[motive, on_true, on_false, condition])
+    }
+
     /// `Nat.zero`.
     fn zero(&mut self) -> ExprId {
         let n = self.prelude().zero;
@@ -6792,6 +7053,25 @@ pub trait NatOps {
     fn beq(&mut self, x: ExprId, y: ExprId) -> ExprId {
         let f = self.prelude().beq;
         self.const_app(f, &[x, y])
+    }
+
+    /// Shared executable division state; `selector = true` gives the quotient
+    /// and `selector = false` the remainder.
+    fn div_mod_state(&mut self, divisor: ExprId, dividend: ExprId, selector: ExprId) -> ExprId {
+        let f = self.prelude().div_mod_state;
+        self.const_app(f, &[divisor, dividend, selector])
+    }
+
+    /// Total executable quotient `Nat.div dividend divisor`.
+    fn div(&mut self, dividend: ExprId, divisor: ExprId) -> ExprId {
+        let f = self.prelude().div;
+        self.const_app(f, &[dividend, divisor])
+    }
+
+    /// Total executable remainder `Nat.mod dividend divisor`.
+    fn modulo(&mut self, dividend: ExprId, divisor: ExprId) -> ExprId {
+        let f = self.prelude().mod_;
+        self.const_app(f, &[dividend, divisor])
     }
 
     /// `Nat.pred x`.

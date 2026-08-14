@@ -86,6 +86,9 @@ fn definition_names(p: &NatPrelude) -> Vec<NameId> {
         p.mul,
         p.pow,
         p.beq,
+        p.div_mod_state,
+        p.div,
+        p.mod_,
         p.sum_range,
         p.pred,
         p.sub,
@@ -122,6 +125,12 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.eq_of_beq_eq_true,
         p.beq_eq_true_of_eq,
         p.beq_eq_true_iff,
+        p.div_zero,
+        p.mod_zero,
+        p.zero_div,
+        p.zero_mod,
+        p.div_succ,
+        p.mod_succ,
         p.zero_add,
         p.succ_add,
         p.add_comm,
@@ -743,6 +752,93 @@ fn boolean_equality_computes_and_reflects_propositional_equality() {
         matches!(error, KernelError::DeclarationValueMismatch { .. }),
         "unexpected rejection: {error:?}"
     );
+}
+
+#[test]
+fn executable_division_computes_both_shared_state_projections() {
+    let mut f = Fixture::new();
+    let p = f.p;
+    let zero = f.zero();
+    let one = f.num(1);
+    let two = f.num(2);
+    let three = f.num(3);
+    let five = f.num(5);
+    let six = f.num(6);
+    let eleven = f.num(11);
+
+    for (dividend, divisor, quotient, remainder) in [
+        (zero, zero, zero, zero),
+        (five, zero, zero, five),
+        (zero, three, zero, zero),
+        (two, five, zero, two),
+        (five, two, two, one),
+        (six, two, three, zero),
+        (eleven, two, five, one),
+    ] {
+        let computed_quotient = f.div(dividend, divisor);
+        let computed_remainder = f.modulo(dividend, divisor);
+        let true_selector = f.bool_true();
+        let false_selector = f.bool_false();
+        let state_quotient = f.div_mod_state(divisor, dividend, true_selector);
+        let state_remainder = f.div_mod_state(divisor, dividend, false_selector);
+        assert!(
+            f.k.def_eq(computed_quotient, quotient),
+            "quotient projection must compute"
+        );
+        assert!(
+            f.k.def_eq(computed_remainder, remainder),
+            "remainder projection must compute"
+        );
+        assert!(
+            f.k.def_eq(state_quotient, quotient),
+            "shared state true projection"
+        );
+        assert!(
+            f.k.def_eq(state_remainder, remainder),
+            "shared state false projection"
+        );
+    }
+
+    let div_succ_proof = f.lemma(p.div_succ, &[five, one]);
+    let mod_succ_proof = f.lemma(p.mod_succ, &[five, one]);
+    for proof in [
+        f.lemma(p.div_zero, &[five]),
+        f.lemma(p.mod_zero, &[five]),
+        f.lemma(p.zero_div, &[three]),
+        f.lemma(p.zero_mod, &[three]),
+        div_succ_proof,
+        mod_succ_proof,
+    ] {
+        f.k.infer(proof).expect("division equation should infer");
+    }
+
+    let computed_quotient = f.div(five, two);
+    let wrong_quotient_ty = f.eq(computed_quotient, three);
+    let wrong_quotient_proof = f.refl(computed_quotient);
+    let wrong_quotient_name = f.name("five_div_two_is_three");
+    let quotient_error = f
+        .declare_theorem(wrong_quotient_name, wrong_quotient_ty, wrong_quotient_proof)
+        .expect_err("a wrong quotient must be rejected");
+    assert!(matches!(
+        quotient_error,
+        KernelError::DeclarationValueMismatch { .. }
+    ));
+
+    let computed_remainder = f.modulo(five, two);
+    let wrong_remainder_ty = f.eq(computed_remainder, zero);
+    let wrong_remainder_proof = f.refl(computed_remainder);
+    let wrong_remainder_name = f.name("five_mod_two_is_zero");
+    let remainder_error = f
+        .declare_theorem(
+            wrong_remainder_name,
+            wrong_remainder_ty,
+            wrong_remainder_proof,
+        )
+        .expect_err("a wrong remainder must be rejected");
+    assert!(matches!(
+        remainder_error,
+        KernelError::DeclarationValueMismatch { .. }
+    ));
 }
 
 /// The Nat accessibility proof is deliberately reducible: a closed function
@@ -3048,7 +3144,7 @@ fn the_build_is_deterministic() {
     assert_eq!(first, second, "the prelude build must be deterministic");
     assert_eq!(
         first.len(),
-        14 + 92,
+        17 + 98,
         "every promised definition and theorem must be rendered"
     );
 }
