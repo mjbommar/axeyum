@@ -457,3 +457,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [0399](adr-0399-quotient-free-rado-sharpness-witness.md) | Quotient-free Rado sharpness witness | accepted |
 | [0400](adr-0400-closed-form-rado-sharpness-witness.md) | Closed-form Rado sharpness witness | accepted |
 | [0401](adr-0401-checked-rado-witness-basic-ranges.md) | Checked basic ranges for the Rado sharpness witness | accepted |
+| [0402](adr-0402-checked-rado-witness-sufficient-range.md) | Checked sufficient upper range for the Rado witness | accepted |

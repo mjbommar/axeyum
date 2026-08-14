@@ -338,6 +338,7 @@ struct RangeTheorems {
     y_upper: NameId,
     x_upper: NameId,
     z_lower: NameId,
+    z_upper_if_a_le_b: NameId,
 }
 
 fn transport_le_upper(
@@ -547,11 +548,67 @@ fn admit_closed_form_range_theorems(d: &mut Dev) -> RangeTheorems {
     })
     .expect("closed-form Z lower bound checks");
 
+    let z_upper_if_a_le_b = d.name("closed_form_z_upper_if_a_le_b");
+    d.theorem(z_upper_if_a_le_b, 3, &|d, v| {
+        let (a, b, n) = (v[0], v[1], v[2]);
+        let hab_ty = d.le(a, b);
+        let hab_fv = d.fresh_fvar();
+        let hab = d.k.fvar(hab_fv);
+        let one = d.num(1);
+        let two = d.num(2);
+        let shifted = power_range(d, a, 1);
+        let sum = d.sum_range(shifted, n);
+        let sn = d.succ(n);
+        let power = d.pow(a, sn);
+        let twice_sum = d.mul(two, sum);
+        let tail = d.add(twice_sum, power);
+        let inner = d.add(one, tail);
+        let u = d.mul(a, inner);
+        let q = d.add(a, u);
+        let capital_n = d.mul(b, q);
+
+        let u_plus_a = d.add(u, a);
+        let u_le_u_plus_a = d.lemma(p.le_add_right, &[u, a]);
+        let q_eq_u_plus_a = d.lemma(p.add_comm, &[a, u]);
+        let u_plus_a_eq_q = d.symm(q, u_plus_a, q_eq_u_plus_a);
+        let u_le_q = transport_le_upper(d, u, u_plus_a, q, u_le_u_plus_a, u_plus_a_eq_q);
+        let au = d.mul(a, u);
+        let aq = d.mul(a, q);
+        let au_le_aq = d.lemma(p.mul_le_mul_left, &[a, u, q, u_le_q]);
+
+        let qa = d.mul(q, a);
+        let qb = d.mul(q, b);
+        let qa_le_qb = d.lemma(p.mul_le_mul_left, &[q, a, b, hab]);
+        let qa_eq_aq = d.lemma(p.mul_comm, &[q, a]);
+        let aq_le_qb = transport_le_lower(d, qa, aq, qb, qa_le_qb, qa_eq_aq);
+        let qb_eq_n = d.lemma(p.mul_comm, &[q, b]);
+        let aq_le_n = transport_le_upper(d, aq, qb, capital_n, aq_le_qb, qb_eq_n);
+        let au_le_n = d.lemma(p.le_trans, &[au, aq, capital_n, au_le_aq, aq_le_n]);
+
+        let q_sub_a = d.sub(q, a);
+        let restored = d.add(q_sub_a, a);
+        let a_le_q = d.lemma(p.le_add_right, &[a, u]);
+        let restored_eq_q = d.lemma(p.sub_add_cancel, &[a, q, a_le_q]);
+        let (_end, common_sum) =
+            d.chain(restored, &[(q, restored_eq_q), (u_plus_a, q_eq_u_plus_a)]);
+        let sub_eq_u = d.lemma(p.add_right_cancel, &[q_sub_a, u, a, common_sum]);
+        let z = d.mul(a, q_sub_a);
+        let z_eq_au = d.congr(q_sub_a, u, sub_eq_u, &|d, x| d.mul(a, x));
+        let au_eq_z = d.symm(z, au, z_eq_au);
+        let body = transport_le_lower(d, au, z, capital_n, au_le_n, au_eq_z);
+        let conclusion = d.le(z, capital_n);
+        let stmt = d.arrow(hab_ty, conclusion);
+        let proof = d.lam_fv(hab_fv, hab_ty, body);
+        (stmt, proof)
+    })
+    .expect("closed-form Z upper bound checks when a <= b");
+
     RangeTheorems {
         x_lower,
         y_upper,
         x_upper,
         z_lower,
+        z_upper_if_a_le_b,
     }
 }
 
@@ -795,12 +852,14 @@ fn kernel_checks_the_closed_form_witness_ranges() {
     let two = d.num(2);
     let ha = d.lemma(d.p.le_add_right, &[one, one]);
     let hb = d.lemma(d.p.le_add_right, &[one, two]);
+    let hab = d.lemma(d.p.le_add_right, &[a, one]);
 
     for proof in [
         d.lemma(ranges.x_lower, &[a, b, zero]),
         d.lemma(ranges.y_upper, &[a, b, zero, ha, hb]),
         d.lemma(ranges.x_upper, &[a, b, zero, ha, hb]),
         d.lemma(ranges.z_lower, &[a, b, zero, ha]),
+        d.lemma(ranges.z_upper_if_a_le_b, &[a, b, zero, hab]),
     ] {
         d.k.infer(proof).expect("closed-form range proof infers");
     }
@@ -850,5 +909,34 @@ fn kernel_rejects_a_broken_closed_form_x_upper_bound() {
         })
         .expect_err("a false closed-form X upper bound must be rejected");
     println!("broken closed-form X upper bound rejected: {error:?}");
+    assert!(!d.k.environment().contains(bad_name));
+}
+
+#[test]
+fn kernel_rejects_a_broken_closed_form_z_upper_bound() {
+    let mut d = Dev::new();
+    let ranges = admit_closed_form_range_theorems(&mut d);
+    let a = d.num(2);
+    let b = d.num(3);
+    let zero = d.zero();
+    let one = d.num(1);
+    let hab = d.lemma(d.p.le_add_right, &[a, one]);
+    let proof = d.lemma(ranges.z_upper_if_a_le_b, &[a, b, zero, hab]);
+
+    // The checked target is Z=12 <= N=24. Replacing N by 11 is false and
+    // must not inherit the sufficient-branch range proof.
+    let twelve = d.num(12);
+    let eleven = d.num(11);
+    let false_goal = d.le(twelve, eleven);
+    let bad_name = d.name("broken_closed_form_z_upper");
+    let error =
+        d.k.add_declaration(Declaration::Theorem {
+            name: bad_name,
+            uparams: vec![],
+            ty: false_goal,
+            value: proof,
+        })
+        .expect_err("a false closed-form Z upper bound must be rejected");
+    println!("broken closed-form Z upper bound rejected: {error:?}");
     assert!(!d.k.environment().contains(bad_name));
 }
