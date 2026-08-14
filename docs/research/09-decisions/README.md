@@ -507,3 +507,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [0449](adr-0449-checked-well-founded-euclidean-gcd-computation.md) | Checked well-founded Euclidean gcd computation | accepted |
 | [0450](adr-0450-all-nat-divisibility-and-executable-remainder-bridge.md) | All-Nat divisibility and executable remainder bridge | accepted |
 | [0451](adr-0451-checked-nat-gcd-common-divisor-characterization.md) | Checked Nat gcd common-divisor characterization | accepted |
+| [0452](adr-0452-balanced-nat-bezout-certificates.md) | Balanced Nat Bézout certificates | accepted |

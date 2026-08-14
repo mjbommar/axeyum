@@ -97,6 +97,7 @@ fn definition_names(p: &NatPrelude) -> Vec<NameId> {
         p.in_closed_interval,
         p.div_mod,
         p.dvd,
+        p.bezout,
         p.mod_eq,
         p.valuation_at,
         p.lt_well_founded,
@@ -145,6 +146,7 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.succ_mul,
         p.mul_comm,
         p.left_distrib,
+        p.right_distrib,
         p.mul_assoc,
         p.one_mul,
         p.mul_one,
@@ -193,6 +195,7 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.gcd_dvd_right,
         p.dvd_gcd,
         p.dvd_gcd_iff,
+        p.gcd_bezout,
         p.mod_eq_refl,
         p.mod_eq_symm,
         p.mod_eq_trans,
@@ -1006,6 +1009,52 @@ fn executable_gcd_has_the_checked_common_divisor_characterization() {
     let error = f
         .declare_theorem(changed_name, changed_pair_ty, gcd_dvd)
         .expect_err("gcd divisibility must reject a changed input");
+    assert!(matches!(
+        error,
+        KernelError::DeclarationValueMismatch { .. }
+    ));
+}
+
+#[test]
+fn executable_gcd_has_a_checked_balanced_bezout_certificate() {
+    let mut f = Fixture::new();
+    let p = f.p;
+    let zero = f.zero();
+    let one = f.num(1);
+    let two = f.num(2);
+    let five = f.num(5);
+    let ten = f.num(10);
+    let fourteen = f.num(14);
+    let fifteen = f.num(15);
+
+    let common = f.gcd(ten, fifteen);
+    let target = f.bezout(ten, fifteen, common);
+    let general = f.lemma(p.gcd_bezout, &[ten, fifteen]);
+    let inferred =
+        f.k.infer(general)
+            .expect("the general Euclidean construction should yield a certificate");
+    assert!(f.k.def_eq(inferred, target));
+
+    // 5 + 10*0 + 15*1 = 10*2 + 15*0 is a concrete balanced encoding of
+    // 5 = 2*10 - 1*15, independent of the recursive theorem's chosen witness.
+    let twenty = f.num(20);
+    let equation = f.refl(twenty);
+    let explicit = f.bezout_intro(ten, fifteen, five, two, zero, zero, one, equation);
+    let explicit_ty =
+        f.k.infer(explicit)
+            .expect("an explicit nontrivial balanced certificate should check");
+    let expected_explicit_ty = f.bezout(ten, fifteen, five);
+    assert!(f.k.def_eq(explicit_ty, expected_explicit_ty));
+
+    let all_zero = f.lemma(p.gcd_bezout, &[zero, zero]);
+    f.k.infer(all_zero)
+        .expect("the constructive theorem should include gcd 0 0");
+
+    let changed_target = f.bezout(ten, fourteen, common);
+    let changed_name = f.name("gcd_bezout_with_changed_right_input");
+    let error = f
+        .declare_theorem(changed_name, changed_target, general)
+        .expect_err("a Bézout certificate must reject a changed generator");
     assert!(matches!(
         error,
         KernelError::DeclarationValueMismatch { .. }
@@ -3376,7 +3425,7 @@ fn the_build_is_deterministic() {
     assert_eq!(first, second, "the prelude build must be deterministic");
     assert_eq!(
         first.len(),
-        18 + 115,
+        19 + 117,
         "every promised definition and theorem must be rendered"
     );
 }
