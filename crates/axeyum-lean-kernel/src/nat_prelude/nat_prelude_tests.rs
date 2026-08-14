@@ -85,6 +85,7 @@ fn definition_names(p: &NatPrelude) -> Vec<NameId> {
         p.add,
         p.mul,
         p.pow,
+        p.beq,
         p.sum_range,
         p.pred,
         p.sub,
@@ -117,6 +118,10 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.sum_range_congr,
         p.mul_sum_range,
         p.mul_sum_range_pow,
+        p.beq_refl,
+        p.eq_of_beq_eq_true,
+        p.beq_eq_true_of_eq,
+        p.beq_eq_true_iff,
         p.zero_add,
         p.succ_add,
         p.add_comm,
@@ -692,6 +697,52 @@ fn order_is_total() {
             )
         });
     }
+}
+
+#[test]
+fn boolean_equality_computes_and_reflects_propositional_equality() {
+    let mut f = Fixture::new();
+    let p = f.p;
+    let zero = f.zero();
+    let two = f.num(2);
+    let three = f.num(3);
+    let true_ = f.bool_true();
+    let false_ = f.bool_false();
+
+    for (left, right, expected) in [
+        (zero, zero, true_),
+        (two, two, true_),
+        (two, three, false_),
+        (three, two, false_),
+    ] {
+        let result = f.beq(left, right);
+        assert!(
+            f.k.def_eq(result, expected),
+            "Nat.beq must compute on closed inputs"
+        );
+    }
+
+    let two_is_two = f.lemma(p.beq_refl, &[two]);
+    let reflected = f.lemma(p.eq_of_beq_eq_true, &[two, two, two_is_two]);
+    let reflected_ty = f.eq(two, two);
+    let inferred = f.k.infer(reflected).expect("reflection should infer");
+    assert!(f.k.def_eq(inferred, reflected_ty));
+
+    let iff = f.lemma(p.beq_eq_true_iff, &[two, three]);
+    f.k.infer(iff)
+        .expect("the exact equality specification should infer");
+
+    let false_result = f.beq(two, three);
+    let wrong_ty = f.bool_eq(false_result, true_);
+    let wrong_proof = f.bool_refl(false_result);
+    let wrong_name = f.name("beq_two_three_is_true");
+    let error = f
+        .declare_theorem(wrong_name, wrong_ty, wrong_proof)
+        .expect_err("the kernel must reject a false equality-test result");
+    assert!(
+        matches!(error, KernelError::DeclarationValueMismatch { .. }),
+        "unexpected rejection: {error:?}"
+    );
 }
 
 /// The Nat accessibility proof is deliberately reducible: a closed function
@@ -2997,7 +3048,7 @@ fn the_build_is_deterministic() {
     assert_eq!(first, second, "the prelude build must be deterministic");
     assert_eq!(
         first.len(),
-        13 + 88,
+        14 + 92,
         "every promised definition and theorem must be rendered"
     );
 }

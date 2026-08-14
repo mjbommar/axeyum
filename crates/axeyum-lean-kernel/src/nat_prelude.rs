@@ -40,6 +40,11 @@
 //! `sub_succ`) — each proved by `Eq.refl`; they exist so callers can rewrite by
 //! name without knowing the recursion scheme.
 //!
+//! **Computational equality**: `Nat.beq` structurally compares two naturals and
+//! ι-reduces to `Bool.true` exactly when they are equal. Its soundness,
+//! completeness, and `Iff` specification are checked theorems, giving later
+//! algorithms a constructive branch condition without classical choice.
+//!
 //! **Additive theorems**: `zero_add`, `succ_add`, `add_comm`, `add_assoc`,
 //! `add_right_comm`, successor injectivity, and left/right cancellation.
 //!
@@ -135,6 +140,16 @@ pub struct NatPrelude {
     pub mul: NameId,
     /// `Nat.pow : Nat → Nat → Nat`, by recursion on the exponent.
     pub pow: NameId,
+    /// Computational equality `Nat.beq : Nat → Nat → Bool`.
+    pub beq: NameId,
+    /// `Nat.beq_refl : ∀ n, Nat.beq n n = Bool.true`.
+    pub beq_refl: NameId,
+    /// `Nat.eq_of_beq_eq_true : ∀ a b, Nat.beq a b = true → a = b`.
+    pub eq_of_beq_eq_true: NameId,
+    /// `Nat.beq_eq_true_of_eq : ∀ a b, a = b → Nat.beq a b = true`.
+    pub beq_eq_true_of_eq: NameId,
+    /// `Nat.beq_eq_true_iff : ∀ a b, Nat.beq a b = true ↔ a = b`.
+    pub beq_eq_true_iff: NameId,
     /// `Nat.sumRange : (Nat → Nat) → Nat → Nat`.
     pub sum_range: NameId,
     /// `Nat.pred : Nat → Nat`, with `pred zero = zero`.
@@ -408,6 +423,11 @@ pub fn build_nat_prelude(kernel: &mut Kernel) -> Result<NatPrelude, KernelError>
             add: kernel.name_str(nat, "add"),
             mul: kernel.name_str(nat, "mul"),
             pow: kernel.name_str(nat, "pow"),
+            beq: kernel.name_str(nat, "beq"),
+            beq_refl: kernel.name_str(nat, "beq_refl"),
+            eq_of_beq_eq_true: kernel.name_str(nat, "eq_of_beq_eq_true"),
+            beq_eq_true_of_eq: kernel.name_str(nat, "beq_eq_true_of_eq"),
+            beq_eq_true_iff: kernel.name_str(nat, "beq_eq_true_iff"),
             sum_range: kernel.name_str(nat, "sumRange"),
             pred: kernel.name_str(nat, "pred"),
             sub: kernel.name_str(nat, "sub"),
@@ -516,6 +536,7 @@ pub fn build_nat_prelude(kernel: &mut Kernel) -> Result<NatPrelude, KernelError>
 
         let mut d = NatDev::new(kernel, p);
         declare_arithmetic(&mut d, &p)?;
+        declare_boolean_equality(&mut d, &p)?;
         declare_subtraction(&mut d, &p)?;
         declare_finite_ranges(&mut d, &p)?;
         declare_defining_equations(&mut d, &p)?;
@@ -555,6 +576,254 @@ fn declare_arithmetic(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelEr
     // pow x zero ≡ 1 ; pow x (succ j) ≡ mul (pow x j) x
     d.define_binary(p.pow, 3, &|d, _x| d.num(1), &|d, x, _j, ih| d.mul(ih, x))?;
     Ok(())
+}
+
+/// Computational equality and its exact propositional specification.
+fn declare_boolean_equality(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> {
+    let p = *p;
+    let nat = d.nat_ty();
+    let bool_ty = d.bool_ty();
+    let anon = d.anon_name();
+    let one = d.level_one();
+    let nat_to_bool = d.arrow(nat, bool_ty);
+    let bool_motive = d.kernel().lam(anon, nat, bool_ty, BinderInfo::Default);
+
+    // beq zero y: true only at zero.
+    let zero_minor = {
+        let y_fv = d.fresh_fvar();
+        let y = d.kernel().fvar(y_fv);
+        let step = {
+            let predecessor_fv = d.fresh_fvar();
+            let ih_fv = d.fresh_fvar();
+            let false_ = d.bool_false();
+            let with_ih = d.lam_fv(ih_fv, bool_ty, false_);
+            d.lam_fv(predecessor_fv, nat, with_ih)
+        };
+        let true_ = d.bool_true();
+        let rec = d.kernel().const_(p.rec, vec![one]);
+        let body = d.apply(rec, &[bool_motive, true_, step, y]);
+        d.lam_fv(y_fv, nat, body)
+    };
+
+    // beq (succ x) y: false at zero; at succ y, compare x with y.
+    let succ_minor = {
+        let x_fv = d.fresh_fvar();
+        let ih_fv = d.fresh_fvar();
+        let y_fv = d.fresh_fvar();
+        let ih = d.kernel().fvar(ih_fv);
+        let y = d.kernel().fvar(y_fv);
+        let step = {
+            let predecessor_fv = d.fresh_fvar();
+            let predecessor = d.kernel().fvar(predecessor_fv);
+            let unused_ih_fv = d.fresh_fvar();
+            let body = d.apply(ih, &[predecessor]);
+            let with_ih = d.lam_fv(unused_ih_fv, bool_ty, body);
+            d.lam_fv(predecessor_fv, nat, with_ih)
+        };
+        let false_ = d.bool_false();
+        let rec = d.kernel().const_(p.rec, vec![one]);
+        let body = d.apply(rec, &[bool_motive, false_, step, y]);
+        let with_y = d.lam_fv(y_fv, nat, body);
+        let with_ih = d.lam_fv(ih_fv, nat_to_bool, with_y);
+        d.lam_fv(x_fv, nat, with_ih)
+    };
+
+    let outer_motive = d.kernel().lam(anon, nat, nat_to_bool, BinderInfo::Default);
+    let x_fv = d.fresh_fvar();
+    let y_fv = d.fresh_fvar();
+    let x = d.kernel().fvar(x_fv);
+    let y = d.kernel().fvar(y_fv);
+    let rec = d.kernel().const_(p.rec, vec![one]);
+    let row = d.apply(rec, &[outer_motive, zero_minor, succ_minor, x]);
+    let body = d.apply(row, &[y]);
+    let value = {
+        let with_y = d.lam_fv(y_fv, nat, body);
+        d.lam_fv(x_fv, nat, with_y)
+    };
+    let over_right = d.arrow(nat, bool_ty);
+    let ty = d.arrow(nat, over_right);
+    d.kernel().add_declaration(Declaration::Definition {
+        name: p.beq,
+        uparams: vec![],
+        ty,
+        value,
+        hint: ReducibilityHint::Regular(1),
+    })?;
+
+    // beq_refl : ∀ n, beq n n = true
+    d.theorem(p.beq_refl, 1, &|d, values| {
+        let value = values[0];
+        let lhs = d.beq(value, value);
+        let true_ = d.bool_true();
+        let stmt = d.bool_eq(lhs, true_);
+        let proof = d.induct(
+            &|d, n| {
+                let lhs = d.beq(n, n);
+                let true_ = d.bool_true();
+                d.bool_eq(lhs, true_)
+            },
+            &|d| {
+                let true_ = d.bool_true();
+                d.bool_refl(true_)
+            },
+            &|_d, _n, ih| ih,
+            value,
+        );
+        (stmt, proof)
+    })?;
+
+    // eq_of_beq_eq_true : ∀ a b, beq a b = true → a = b
+    d.theorem(p.eq_of_beq_eq_true, 2, &|d, values| {
+        let (left, right) = (values[0], values[1]);
+        let all_right = d.induct(
+            &|d, a| beq_sound_row_type(d, a),
+            &|d| beq_sound_zero_row(d),
+            &|d, predecessor, ih| beq_sound_succ_row(d, predecessor, ih),
+            left,
+        );
+        let proof = d.apply(all_right, &[right]);
+        let lhs = d.beq(left, right);
+        let true_ = d.bool_true();
+        let source = d.bool_eq(lhs, true_);
+        let target = d.eq(left, right);
+        (d.arrow(source, target), proof)
+    })?;
+
+    // beq_eq_true_of_eq : ∀ a b, a = b → beq a b = true
+    d.theorem(p.beq_eq_true_of_eq, 2, &|d, values| {
+        let (left, right) = (values[0], values[1]);
+        let source = d.eq(left, right);
+        let lhs = d.beq(left, right);
+        let true_ = d.bool_true();
+        let target = d.bool_eq(lhs, true_);
+        let equality_fv = d.fresh_fvar();
+        let equality = d.kernel().fvar(equality_fv);
+        let motive = d.eq_motive(left, &|d, candidate| {
+            let lhs = d.beq(left, candidate);
+            let true_ = d.bool_true();
+            d.bool_eq(lhs, true_)
+        });
+        let refl_case = d.lemma(p.beq_refl, &[left]);
+        let body = d.transport(left, motive, refl_case, right, equality);
+        let proof = d.lam_fv(equality_fv, source, body);
+        (d.arrow(source, target), proof)
+    })?;
+
+    // beq_eq_true_iff : ∀ a b, beq a b = true ↔ a = b
+    d.theorem(p.beq_eq_true_iff, 2, &|d, values| {
+        let (left, right) = (values[0], values[1]);
+        let lhs = d.beq(left, right);
+        let true_ = d.bool_true();
+        let boolean = d.bool_eq(lhs, true_);
+        let equality = d.eq(left, right);
+        let forward = d.lemma(p.eq_of_beq_eq_true, &[left, right]);
+        let reverse = d.lemma(p.beq_eq_true_of_eq, &[left, right]);
+        let iff_intro = d.kernel().const_(p.logic.iff_intro, vec![]);
+        let proof = d.apply(iff_intro, &[boolean, equality, forward, reverse]);
+        let stmt = d.const_app(p.logic.iff, &[boolean, equality]);
+        (stmt, proof)
+    })?;
+
+    Ok(())
+}
+
+/// `∀ b, beq a b = true → a = b`.
+fn beq_sound_row_type(d: &mut NatDev<'_>, left: ExprId) -> ExprId {
+    let right_fv = d.fresh_fvar();
+    let right = d.kernel().fvar(right_fv);
+    let lhs = d.beq(left, right);
+    let true_ = d.bool_true();
+    let premise = d.bool_eq(lhs, true_);
+    let conclusion = d.eq(left, right);
+    let implication = d.arrow(premise, conclusion);
+    let nat = d.nat_ty();
+    d.pi_fv(right_fv, nat, implication)
+}
+
+fn beq_sound_zero_row(d: &mut NatDev<'_>) -> ExprId {
+    let right_fv = d.fresh_fvar();
+    let right = d.kernel().fvar(right_fv);
+    let proof_for_right = d.induct(
+        &|d, candidate| {
+            let zero = d.zero();
+            let lhs = d.beq(zero, candidate);
+            let true_ = d.bool_true();
+            let premise = d.bool_eq(lhs, true_);
+            let conclusion = d.eq(zero, candidate);
+            d.arrow(premise, conclusion)
+        },
+        &|d| {
+            let premise_fv = d.fresh_fvar();
+            let zero = d.zero();
+            let lhs = d.beq(zero, zero);
+            let true_ = d.bool_true();
+            let premise = d.bool_eq(lhs, true_);
+            let body = d.refl(zero);
+            d.lam_fv(premise_fv, premise, body)
+        },
+        &|d, predecessor, _ih| {
+            let premise_fv = d.fresh_fvar();
+            let premise_value = d.kernel().fvar(premise_fv);
+            let zero = d.zero();
+            let successor = d.succ(predecessor);
+            let lhs = d.beq(zero, successor);
+            let true_ = d.bool_true();
+            let premise = d.bool_eq(lhs, true_);
+            let conclusion = d.eq(zero, successor);
+            let body = d.false_true_elim(conclusion, premise_value);
+            d.lam_fv(premise_fv, premise, body)
+        },
+        right,
+    );
+    let nat = d.nat_ty();
+    d.lam_fv(right_fv, nat, proof_for_right)
+}
+
+fn beq_sound_succ_row(d: &mut NatDev<'_>, predecessor: ExprId, ih: ExprId) -> ExprId {
+    let right_fv = d.fresh_fvar();
+    let right = d.kernel().fvar(right_fv);
+    let proof_for_right = d.induct(
+        &|d, candidate| {
+            let left = d.succ(predecessor);
+            let lhs = d.beq(left, candidate);
+            let true_ = d.bool_true();
+            let premise = d.bool_eq(lhs, true_);
+            let conclusion = d.eq(left, candidate);
+            d.arrow(premise, conclusion)
+        },
+        &|d| {
+            let premise_fv = d.fresh_fvar();
+            let premise_value = d.kernel().fvar(premise_fv);
+            let left = d.succ(predecessor);
+            let zero = d.zero();
+            let lhs = d.beq(left, zero);
+            let true_ = d.bool_true();
+            let premise = d.bool_eq(lhs, true_);
+            let conclusion = d.eq(left, zero);
+            let body = d.false_true_elim(conclusion, premise_value);
+            d.lam_fv(premise_fv, premise, body)
+        },
+        &|d, right_predecessor, _right_ih| {
+            let premise_fv = d.fresh_fvar();
+            let premise_value = d.kernel().fvar(premise_fv);
+            let left = d.succ(predecessor);
+            let right = d.succ(right_predecessor);
+            let lhs = d.beq(left, right);
+            let true_ = d.bool_true();
+            let premise = d.bool_eq(lhs, true_);
+            let predecessor_eq = d.apply(ih, &[right_predecessor, premise_value]);
+            let body = d.congr(
+                predecessor,
+                right_predecessor,
+                predecessor_eq,
+                &|d, value| d.succ(value),
+            );
+            d.lam_fv(premise_fv, premise, body)
+        },
+        right,
+    );
+    let nat = d.nat_ty();
+    d.lam_fv(right_fv, nat, proof_for_right)
 }
 
 /// `pred` and truncated `sub`, both by structural recursion. Subtraction
@@ -6461,6 +6730,24 @@ pub trait NatOps {
         self.const_app(name, args)
     }
 
+    /// The computational `Bool` carrier.
+    fn bool_ty(&mut self) -> ExprId {
+        let name = self.prelude().logic.bool_;
+        self.kernel().const_(name, vec![])
+    }
+
+    /// `Bool.true`.
+    fn bool_true(&mut self) -> ExprId {
+        let name = self.prelude().logic.bool_true;
+        self.kernel().const_(name, vec![])
+    }
+
+    /// `Bool.false`.
+    fn bool_false(&mut self) -> ExprId {
+        let name = self.prelude().logic.bool_false;
+        self.kernel().const_(name, vec![])
+    }
+
     /// `Nat.zero`.
     fn zero(&mut self) -> ExprId {
         let n = self.prelude().zero;
@@ -6498,6 +6785,12 @@ pub trait NatOps {
     /// `Nat.pow x y`.
     fn pow(&mut self, x: ExprId, y: ExprId) -> ExprId {
         let f = self.prelude().pow;
+        self.const_app(f, &[x, y])
+    }
+
+    /// Computational natural-number equality `Nat.beq x y`.
+    fn beq(&mut self, x: ExprId, y: ExprId) -> ExprId {
+        let f = self.prelude().beq;
         self.const_app(f, &[x, y])
     }
 
@@ -6664,6 +6957,74 @@ pub trait NatOps {
         let refl = self.kernel().const_(name, vec![one]);
         let nat = self.nat_ty();
         self.apply(refl, &[nat, a])
+    }
+
+    /// `Eq.{1} Bool x y`.
+    fn bool_eq(&mut self, x: ExprId, y: ExprId) -> ExprId {
+        let one = self.level_one();
+        let name = self.prelude().logic.eq;
+        let eq = self.kernel().const_(name, vec![one]);
+        let bool_ty = self.bool_ty();
+        self.apply(eq, &[bool_ty, x, y])
+    }
+
+    /// `Eq.refl.{1} Bool value`.
+    fn bool_refl(&mut self, value: ExprId) -> ExprId {
+        let one = self.level_one();
+        let name = self.prelude().logic.eq_refl;
+        let refl = self.kernel().const_(name, vec![one]);
+        let bool_ty = self.bool_ty();
+        self.apply(refl, &[bool_ty, value])
+    }
+
+    /// Eliminate an impossible equality `Bool.false = Bool.true` into `target`.
+    fn false_true_elim(&mut self, target: ExprId, equality: ExprId) -> ExprId {
+        let logic = self.prelude().logic;
+        let bool_ty = self.bool_ty();
+        let false_value = self.bool_false();
+        let true_value = self.bool_true();
+        let prop = self.kernel().sort_zero();
+        let anon = self.anon_name();
+        let zero = self.kernel().level_zero();
+        let one = self.level_one();
+        let discriminator = {
+            let motive = self.kernel().lam(anon, bool_ty, prop, BinderInfo::Default);
+            // Selecting a proposition eliminates into `Sort 1`: the selected
+            // proposition itself has type `Prop : Sort 1`.
+            let rec = self.kernel().const_(logic.bool_rec, vec![one]);
+            let false_prop = self.kernel().const_(logic.false_, vec![]);
+            let true_prop = self.kernel().const_(logic.true_, vec![]);
+            self.apply(rec, &[motive, false_prop, true_prop])
+        };
+        let motive = {
+            let value_fv = self.fresh_fvar();
+            let value = self.kernel().fvar(value_fv);
+            let equality_ty = self.bool_eq(false_value, value);
+            let body = self.apply(discriminator, &[value]);
+            let inner = self
+                .kernel()
+                .lam(anon, equality_ty, body, BinderInfo::Default);
+            self.lam_fv(value_fv, bool_ty, inner)
+        };
+        let true_intro = self.kernel().const_(logic.true_intro, vec![]);
+        let eq_rec = self.kernel().const_(logic.eq_rec, vec![zero, one]);
+        let impossible = self.apply(
+            eq_rec,
+            &[
+                bool_ty,
+                false_value,
+                motive,
+                true_intro,
+                true_value,
+                equality,
+            ],
+        );
+        let false_rec = self.kernel().const_(logic.false_rec, vec![zero]);
+        let false_ty = self.kernel().const_(logic.false_, vec![]);
+        let false_motive = self
+            .kernel()
+            .lam(anon, false_ty, target, BinderInfo::Default);
+        self.apply(false_rec, &[false_motive, impossible])
     }
 
     /// `Eq.rec.{0,1} Nat p motive refl_case q h : motive q h`.
