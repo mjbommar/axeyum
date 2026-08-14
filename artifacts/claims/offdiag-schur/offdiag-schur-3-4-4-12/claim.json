@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
-  "id": "offdiag-schur-3-4-5-9",
-  "title": "S(3;4,5,9) = 125",
-  "statement": "The generalized off-diagonal Schur number S(3;4,5,9) is exactly 125: every 3-colouring of {1,...,125} contains x_1+...+x_{3}=x_4 monochromatic in colour 1, or x_1+...+x_{4}=x_5 monochromatic in colour 2, or x_1+...+x_{8}=x_9 monochromatic in colour 3; and some 3-colouring of {1,...,124} avoids all three.",
+  "id": "offdiag-schur-3-4-4-12",
+  "title": "S(3;4,4,12) = 131",
+  "statement": "The generalized off-diagonal Schur number S(3;4,4,12) is exactly 131: every 3-colouring of {1,...,131} contains x_1+...+x_{3}=x_4 monochromatic in colour 1, or x_1+...+x_{3}=x_4 monochromatic in colour 2, or x_1+...+x_{11}=x_12 monochromatic in colour 3; and some 3-colouring of {1,...,130} avoids all three.",
   "epistemic_status": "computed",
   "formal": {
     "language": "cnf-family",
@@ -10,11 +10,11 @@
     "parameters": {
       "k": [
         4,
-        5,
-        9
+        4,
+        12
       ],
       "r": 3,
-      "n": 125
+      "n": 131
     },
     "generator": "crates/axeyum-search/src/offdiag.rs (OffDiagonalSchur::minimal_problem)",
     "semantics_note": "artifacts/claims/offdiag-schur/SEMANTICS.md"
@@ -54,7 +54,7 @@
     ]
   },
   "provenance": {
-    "conjectured_by": "literature: T. Ahmed, D. Schaal, 'On generalized Schur numbers' (2015-2016), Conjecture: S(3;s,t,u) = s*t*u - t*u - u - 1 for 4 <= s <= t <= u. Still open as of arXiv:2604.11030 (Song and Mao, April 2026), which proves the companion conjecture but not this one. This value, 125, AGREES with the formula.",
+    "conjectured_by": "literature: T. Ahmed, D. Schaal, 'On generalized Schur numbers' (2015-2016), Conjecture: S(3;s,t,u) = s*t*u - t*u - u - 1 for 4 <= s <= t <= u. Still open as of arXiv:2604.11030 (Song and Mao, April 2026), which proves the companion conjecture but not this one. This value, 131, AGREES with the formula.",
     "searched_by": [
       "axeyum proof-producing CDCL core (solve_with_drat_proof_streaming, pure Rust, ADR-0381), both sides"
     ],
@@ -69,7 +69,7 @@
       {
         "citation": "T. Ahmed, D. Schaal, generalized Schur numbers (2015-2016); L. Song, J. Mao, arXiv:2604.11030 (2026)",
         "url": "https://arxiv.org/abs/2604.11030",
-        "establishes": "lower bound S(3;4,5,9) >= 125 (Ahmed-Schaal Thm 2.11, restated as Theorem 3 of arXiv:2604.11030)"
+        "establishes": "lower bound S(3;4,4,12) >= 131 (Ahmed-Schaal Thm 2.11, restated as Theorem 3 of arXiv:2604.11030)"
       }
     ],
     "toolchain": {
@@ -83,32 +83,32 @@
     {
       "id": "lower-witness",
       "kind": "witness-replay",
-      "supports": "S > 124 (lower bound)",
-      "artifact": "artifacts/claims/offdiag-schur/offdiag-schur-3-4-5-9/witness_124.txt",
-      "artifact_sha256": "00d877f2bf8273be4373815bb14cfd1a983c32ca5da54f68941782d9ed943f71",
+      "supports": "S > 130 (lower bound)",
+      "artifact": "artifacts/claims/offdiag-schur/offdiag-schur-3-4-4-12/witness_130.txt",
+      "artifact_sha256": "ee4afd559e1640b78afe72b30099580dc5fbfe6e49c50fd74c82c01a88693220",
       "check_status": "checked",
-      "checker_command": "python3 scripts/check-claim-certificates.py --only offdiag-schur-3-4-5-9",
+      "checker_command": "python3 scripts/check-claim-certificates.py --only offdiag-schur-3-4-4-12",
       "artifact_format": "colouring-text",
       "notes": "Found by the CDCL core, then replayed by OffDiagonalSchur::first_violation (independent of the encoder) and cross-checked a second time against the FULL, unreduced solution-set list before being written."
     },
     {
       "id": "upper-drat",
       "kind": "unsat-certificate",
-      "supports": "S <= 125 (upper bound)",
-      "artifact": "artifacts/claims/offdiag-schur/offdiag-schur-3-4-5-9/F_125.drat.gz",
-      "artifact_sha256": "e45ef5cb382b8835a73c36465864a96f1f1974dce9e6ae6e4af5b142448b4f3f",
+      "supports": "S <= 131 (upper bound)",
+      "artifact": "artifacts/claims/offdiag-schur/offdiag-schur-3-4-4-12/F_131.drat.gz",
+      "artifact_sha256": "5b898335728599a94b795e1aeccef9af6eb3a2729e271fc8ddc87c8deeb57fc9",
       "check_status": "checked",
-      "checker_command": "python3 scripts/check-claim-certificates.py --only offdiag-schur-3-4-5-9",
+      "checker_command": "python3 scripts/check-claim-certificates.py --only offdiag-schur-3-4-4-12",
       "artifact_format": "drat-text-gzip",
       "notes": "Produced by axeyum's own proof-producing CDCL core (solve_with_drat_proof_streaming, ADR-0381) streaming TEXT DRAT to disk and re-derived in the same process by axeyum's own backward DRAT checker (check_drat_backward, ADR-0382). No external solver and no external checker took part. The deciding CNF is the SUBSUMPTION-MINIMAL encoding: for solution sets S subset of S', clause(S) implies clause(S'), so only the minimal antichain is emitted -- a SUBSET of the full clause list, so refuting it refutes the full instance. check-claim-certificates.py validates the stored CNF clause by clause rather than by byte-identity, which is the check the bound actually needs.",
       "parameters": {
         "producer": "axeyum solve_with_drat_proof_streaming + TextProofSink (crates/axeyum-cnf, ADR-0381)",
         "checker": "axeyum check_drat_backward (crates/axeyum-cnf, ADR-0382)",
-        "proof_steps": 474,
-        "proof_bytes": 10919,
-        "proof_sha256": "61c445e813c49a6190914555b75326468c465fc5a1f81ba9744326be7df83cc3",
-        "deciding_cnf": "artifacts/claims/offdiag-schur/offdiag-schur-3-4-5-9/F_125.cnf.gz",
-        "deciding_cnf_sha256": "f7639892a4cf9373ab285359c6cefcdc5e4ff433fb36f019fe9776281f86f810"
+        "proof_steps": 285,
+        "proof_bytes": 5964,
+        "proof_sha256": "c6704b2029b20534bb9a33de2f764672aa6447becffe921d1ecb2dc3f9d0f8fc",
+        "deciding_cnf": "artifacts/claims/offdiag-schur/offdiag-schur-3-4-4-12/F_131.cnf.gz",
+        "deciding_cnf_sha256": "ca0c0ff3f3014cc8495490853c9d1b039ba4daeedaf353e176ecbc9d2102174a"
       }
     }
   ],
