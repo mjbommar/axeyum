@@ -1,0 +1,89 @@
+{
+  "schema_version": 1,
+  "id": "F:fp8-add-not-associative",
+  "title": "fp8 E5M2 addition under roundNearestTiesToEven is associative",
+  "statement": "Let F be the IEEE-754-conformant 8-bit format OCP fp8 E5M2, SMT-LIB `(_ FloatingPoint 5 3)`, and let RNE denote roundNearestTiesToEven. For all values a, b, c of F: fp.add(RNE, fp.add(RNE, a, b), c) equals fp.add(RNE, a, fp.add(RNE, b, c)), where equality is SMT-LIB `=` on the FloatingPoint sort. THIS PROPOSITION IS FALSE. The fact is recorded with status `refuted` and carries a concrete counterexample triple, together with the exact number of triples at which it fails.",
+  "formal": {
+    "language": "smtlib2",
+    "statement": "(assert (= (fp.add RNE (fp.add RNE a b) c) (fp.add RNE a (fp.add RNE b c))))",
+    "fragment": "QF_FP",
+    "free_symbols": [
+      "a",
+      "b",
+      "c"
+    ]
+  },
+  "epistemic_status": "refuted",
+  "proof_route": "search-certificate",
+  "external_status": "refuted",
+  "depends_on": [],
+  "axiom_footprint": [
+    "ieee754-2019-arithmetic-semantics-for-the-OCP-fp8-E5M2-layout",
+    "rounding-mode-roundNearestTiesToEven-for-the-headline-witness",
+    "smtlib2-floatingpoint-sort-equality-one-nan-value-signed-zeros-distinct",
+    "the-witness-replay-semantics-of-axeyum-Evidence::check-and-of-rustc_apfloat"
+  ],
+  "evidence": [
+    {
+      "id": "fp8-assoc-counterexample-model",
+      "kind": "witness-replay",
+      "supports": "The negation of formal.statement is satisfiable over fp8 E5M2, so the proposition does not hold for all triples.",
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo run --release -q -p axeyum-bench --example smtcomp_cli -- --evidence artifacts/facts/smt2/fp8-add-not-associative.smt2 | tail -1)\" = sat",
+      "artifact": "artifacts/facts/smt2/fp8-add-not-associative.smt2",
+      "notes": "Ran 2026-08-14: `; evidence kind=sat-model certified=1 recheck=na arena=ok ms=27`, verdict `sat`. `arena=ok` is `Evidence::check` evaluating the produced model against a FRESH PARSE of the original assertions, so the witness is checked against the source formula, not the lowered form. NOT cross-checked by either external oracle, and that is the finding recorded in this fact's notes: neither z3 4.13.3 nor bitwuzla 0.9.1 can decide any fp8 E5M2 addition query at all.",
+      "checkers": [
+        "axeyum-smtcomp-cli-producing-solve",
+        "axeyum-Evidence::check-fresh-parse-model-replay"
+      ]
+    },
+    {
+      "id": "fp8-assoc-ground-witness",
+      "kind": "instance-pin",
+      "supports": "The specific triple a = b = 0x01 (the E5M2 subnormal 2^-16), c = 0x08 (the normal 2^-13), pinned as a GROUND formula: (a+b)+c = 0x09 while a+(b+c) = 0x08.",
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo run --release -q -p axeyum-bench --example smtcomp_cli -- --evidence artifacts/facts/smt2/fp8-add-not-associative-witness.smt2 | tail -1)\" = sat",
+      "artifact": "artifacts/facts/smt2/fp8-add-not-associative-witness.smt2",
+      "notes": "Ran 2026-08-14: `sat`, 2ms. The file has NO free symbols -- it asserts the disequality AND both concrete results -- so a `sat` verdict is direct evaluation of fp8 E5M2 arithmetic rather than a search, and it pins the witness so the fact cannot drift from the solver. Cross-checked: `z3 -smt2` also reports `sat` on this file. That z3 can settle the GROUND instance while returning `unknown` on the quantifier-free SEARCH is not a contradiction: z3's refusal is in its symbolic fpa2bv tactic, and a closed term is constant-folded before that tactic is reached. bitwuzla 0.9.1 refuses the file outright (unsupported format).\n\nArithmetic, for a reader: a+b = 2^-15 exactly; (a+b)+c = 2^-13 * 1.25 = 0x09 exactly; but b+c = 2^-13 * 1.125 is a tie between 0x08 and 0x09 that RNE breaks toward the even significand, giving 0x08, and a + 0x08 ties again to 0x08. Two ties in one direction is what separates the two bracketings.",
+      "checkers": [
+        "axeyum-smtcomp-cli-ground-evaluation",
+        "axeyum-Evidence::check-fresh-parse",
+        "z3-4.13.3-ground-instance"
+      ]
+    },
+    {
+      "id": "fp8-assoc-exhaustive-apfloat",
+      "kind": "exhaustive-enumeration",
+      "supports": "All 2^24 = 16777216 fp8 E5M2 triples enumerated by LLVM's APFloat: the two bracketings disagree at 427036 of them under RNE (2.55%).",
+      "check_status": "checked",
+      "checker_command": "cargo run --release -q -p axeyum-fp --example kernel_equivalence -- assoc",
+      "artifact": "crates/axeyum-fp/examples/kernel_equivalence.rs",
+      "notes": "Ran 2026-08-14, 2.2s. Independent of axeyum's bit-blaster, CNF encoder and SAT core: `rustc_apfloat` 0.2.3 (LLVM APFloat), comparing SMT-LIB value classes. The failure count is mode-dependent and was measured for all five SMT-LIB rounding modes: RNE 427036, RNA 419652, RTP 4825040, RTN 4825040, RTZ 5375600 -- of 16777216 triples each. The directed modes fail an order of magnitude more often, and RTP/RTN fail equally often, which is the sign symmetry of the format. The first witness in enumeration order is the same triple under every mode. The binary exits non-zero if the claim ever stops failing.",
+      "checkers": [
+        "rustc_apfloat-0.2.3-llvm-apfloat-exhaustive-enumeration"
+      ]
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-14",
+    "established_by": "fp-kernels lane; axeyum SMT front door (sat model, replayed) plus an independent exhaustive LLVM-APFloat enumeration of all 2^24 triples",
+    "source": "authored here. Non-associativity of floating-point addition is folklore; what is established here is the E5M2 instance with a named witness and a measured failure density, which folklore does not supply.",
+    "prior_art": [
+      {
+        "who": "David Goldberg",
+        "what": "That floating-point addition is not associative, with binary64 examples.",
+        "where": "What Every Computer Scientist Should Know About Floating-Point Arithmetic, ACM Computing Surveys 23(1)",
+        "year": 1991,
+        "attribution": "standard textbook attribution; this lane did not consult the primary source, and records the citation as the received one."
+      },
+      {
+        "who": "Micikevicius et al. (OCP / NVIDIA, Arm, Intel)",
+        "what": "The E5M2 and E4M3 8-bit floating-point formats used here; E5M2 is the IEEE-754-conformant one.",
+        "where": "FP8 Formats for Deep Learning, arXiv:2209.05433",
+        "year": 2022,
+        "attribution": "cited for the FORMAT DEFINITION only; the arithmetic claims in this fact are established here and depend on nothing in that paper."
+      }
+    ]
+  },
+  "notes": "WHY A REFUTATION IS THE VALUABLE RESULT HERE. Every reduction kernel, every tensor-parallel all-reduce and every reordering optimizer relies on being allowed to re-bracket a sum. This fact says precisely how often that is wrong at fp8 E5M2: 427036 of 16777216 triples under RNE, and 5375600 -- nearly a third -- under round-toward-zero. That is a measured density with a named witness, not an aphorism.\n\nTHE FINDING ABOUT THE ORACLES. This claim could not be cross-checked against either industrial FP solver, for two DIFFERENT reasons, and both were measured on 2026-08-14 rather than assumed:\n  * z3 4.13.3 returns `unknown` with `(:reason-unknown \"addition/subtract with ebits > sbits not supported\")`. E5M2 has 5 exponent bits and 3 significand bits, so every fp8 addition query is outside its fpa2bv tactic.\n  * bitwuzla 0.9.1 errors out: \"Unsupported experimental floating-point format (non-experimental: Float16, Float32, Float64, Float128)\". The `--fpexp` escape named in that message is a BUILD option, not a runtime flag -- passing it to the binary is rejected as an invalid option, so this build cannot be talked into it.\nSo at exactly the width where a claim can be settled by brute force, the two solvers a practitioner would reach for decline. axeyum decides it, and the LLVM-APFloat enumeration is what independently confirms the answer. Note the complementary gap in the other direction: axeyum REFUSES fp8 E4M3, correctly, because E4M3 has no infinities and an all-ones NaN and is therefore not an IEEE format -- `arithmetic_format_supported` gates it out, while z3 accepts (_ FloatingPoint 4 4) happily.\n\nROUTE. `search-certificate`: the settlement is a replayable witness, matching the precedent of F:affirming-the-consequent. Refuting a universally quantified claim costs one triple; establishing one costs the whole space -- and here we paid both, because the enumeration also gives the density."
+}

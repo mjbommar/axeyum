@@ -1,0 +1,71 @@
+{
+  "schema_version": 1,
+  "id": "F:fp32-doubling-add-equals-mul-two",
+  "title": "In binary32 under roundNearestTiesToEven, x+x and 2*x are the same value",
+  "statement": "Let F be the IEEE-754 binary32 interchange format, SMT-LIB `(_ FloatingPoint 8 24)`, and let RNE denote roundNearestTiesToEven. For every value x of F, the correctly-rounded sum fp.add(RNE, x, x) and the correctly-rounded product fp.mul(RNE, 2, x) are the SAME value of F -- equality here is SMT-LIB `=` on the FloatingPoint sort, under which there is exactly one NaN and +0 and -0 are distinct, NOT `fp.eq`.",
+  "formal": {
+    "language": "smtlib2",
+    "statement": "(assert (= (fp.add RNE x x) (fp.mul RNE (fp #b0 #b10000000 #b00000000000000000000000) x)))",
+    "fragment": "QF_FP",
+    "free_symbols": [
+      "x"
+    ]
+  },
+  "epistemic_status": "proved",
+  "proof_route": "smt-clausal",
+  "external_status": "proved",
+  "depends_on": [],
+  "axiom_footprint": [
+    "ieee754-2019-binary32-arithmetic-semantics-as-encoded-by-axeyum-fp-fpa2bv-lowering",
+    "axeyum-fp.add-and-axeyum-fp.mul-are-differentially-VALIDATED-not-proven-bit-blasters",
+    "rounding-mode-roundNearestTiesToEven-only",
+    "smtlib2-floatingpoint-sort-equality-one-nan-value-signed-zeros-distinct",
+    "tseitin-cnf-encoding-preserves-satisfiability",
+    "drat-refutation-semantics-as-implemented-by-axeyum-cnf-check-drat",
+    "format-binary32-only-this-fact-is-not-format-generic"
+  ],
+  "evidence": [
+    {
+      "id": "fp32-doubling-exhaustive-apfloat",
+      "kind": "exhaustive-enumeration",
+      "supports": "All 4294967296 binary32 encodings evaluated by LLVM's APFloat: zero disagreements between x+x and 2*x under RNE.",
+      "check_status": "checked",
+      "checker_command": "cargo run --release -q -p axeyum-fp --example kernel_equivalence -- doubling-fp32",
+      "artifact": "crates/axeyum-fp/examples/kernel_equivalence.rs",
+      "notes": "Ran 2026-08-14: examined=4294967296 failures=0, 51.4s wall at 8 threads on a machine at load 16 (6m01s of CPU). This is the most expensive checker in the fact ledger and it is deliberately opt-in -- `doubling-fp32` is not part of the example's `all` set, because every other claim there is seconds. Sharded across `std::thread::available_parallelism()` threads by default. `rustc_apfloat` 0.2.3 (LLVM APFloat) shares no code with axeyum's bit-blaster, CNF encoder or SAT core; comparison is by SMT-LIB value class, all NaN encodings collapsed to one value and the two zeros kept distinct. The binary exits non-zero on any disagreement.",
+      "checkers": [
+        "rustc_apfloat-0.2.3-llvm-apfloat-exhaustive-enumeration"
+      ]
+    },
+    {
+      "id": "fp32-doubling-unsat-drat",
+      "kind": "unsat-certificate",
+      "supports": "The negation of formal.statement is unsatisfiable, decided symbolically -- without enumerating the 2^32 inputs.",
+      "check_status": "checked",
+      "artifact": "artifacts/facts/smt2/neg-fp32-doubling-add-equals-mul-two.smt2",
+      "notes": "Ran 2026-08-14: `; evidence kind=unsat-drat certified=1 recheck=ok arena=ok ms=116653`, verdict `unsat`, 3m22.7s wall in a release build. `recheck=ok` is axeyum's own `check_drat` (RUP+RAT, ADR-0011) re-checking the emitted refutation; `arena=ok` is `Evidence::check` against a fresh parse. Cross-checked independently: `bitwuzla 0.9.1` reports `unsat` in 0.1s and `z3 4.13.3` reports `unsat` in 0.1s on the same file -- a 2000x gap in favour of the specialised FP solvers, recorded because it is a measurement this project should not flatter.\n\nTHIS ROW CARRIES NO `checker_command` ON PURPOSE. At 3m22s it would exceed the default 120s per-checker budget of scripts/check-fact-evidence-replay.sh and turn a passing gate into a timeout. The fact stays covered by the exhaustive row above, which re-runs in ~51s. To re-derive this row by hand:\n  cargo run --release -q -p axeyum-bench --example smtcomp_cli -- --evidence artifacts/facts/smt2/neg-fp32-doubling-add-equals-mul-two.smt2",
+      "checkers": [
+        "axeyum-smtcomp-cli-producing-solve",
+        "axeyum-check_drat-independent-proof-check",
+        "axeyum-Evidence::check-fresh-parse",
+        "z3-4.13.3",
+        "bitwuzla-0.9.1"
+      ]
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-14",
+    "established_by": "fp-kernels lane; an exhaustive LLVM-APFloat enumeration of all 2^32 binary32 values, corroborated by a symbolic CNF/DRAT refutation from axeyum and by two external FP solvers",
+    "source": "authored here as the binary32 sibling of F:fp16-doubling-add-equals-mul-two, to make the exhaustive-versus-symbolic distinction concrete rather than rhetorical.",
+    "prior_art": [
+      {
+        "who": "David Goldberg",
+        "what": "Scaling a binary floating-point value by a power of two is exact whenever the result is representable, so the two roundings coincide.",
+        "where": "What Every Computer Scientist Should Know About Floating-Point Arithmetic, ACM Computing Surveys 23(1)",
+        "year": 1991,
+        "attribution": "standard textbook attribution; this lane did not consult the primary source, and records the citation as the received one. Nothing in the evidence above depends on it."
+      }
+    ]
+  },
+  "notes": "WHAT THIS FACT EXISTS TO SHOW. Its statement is the binary32 instance of its binary16 sibling, and it is settled TWICE by routes of different character: symbolically, by bit-blasting a miter of the two circuits to CNF and refuting it (which says nothing about any particular input and everything about all of them at once), and by brute force, enumerating every one of the 4294967296 encodings. The second is possible here only because the claim is UNARY. The ternary claims in this batch -- F:fp8-add-not-associative and F:fp8-add-monotone-rne -- are exhaustive at fp8 E5M2 (2^24 triples) and would need 2^48 triples at binary16 and 2^96 at binary32, so for those the honest scope really is \"exhaustive at 8 bits, symbolic above\". Arity, not width, is what decides whether brute force is available.\n\nCOST, MEASURED. Symbolic: axeyum 202s, z3 0.1s, bitwuzla 0.1s. Exhaustive: 51s wall / 361s CPU. The symbolic route is the one that would still work at binary64; the exhaustive one would not.\n\nEVIDENCE ORDER IS DELIBERATE. The exhaustive row is first because it is the row that carries the runnable checker and rests on the least: it does not go through axeyum's fpa2bv lowering, whose `add` and `mul` are documented as validated rather than proven, and which the second row's footprint has to assume."
+}

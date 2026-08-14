@@ -1,0 +1,42 @@
+{
+  "schema_version": 1,
+  "id": "F:fp16-add-monotone-rne",
+  "title": "binary16 addition under roundNearestTiesToEven is monotone in its first argument",
+  "statement": "Let F be the IEEE-754 binary16 interchange format, SMT-LIB `(_ FloatingPoint 5 11)`, and let RNE denote roundNearestTiesToEven. For all values a, b, c of F: if fp.leq(a, b) holds and neither fp.add(RNE, a, c) nor fp.add(RNE, b, c) is NaN, then fp.leq(fp.add(RNE, a, c), fp.add(RNE, b, c)). This is the binary16 instance of F:fp8-add-monotone-rne, and it is recorded `open` because AXEYUM HAS NOT SETTLED IT -- not because it is doubted.",
+  "formal": {
+    "language": "smtlib2",
+    "statement": "(assert (=> (and (fp.leq a b) (not (fp.isNaN (fp.add RNE a c))) (not (fp.isNaN (fp.add RNE b c)))) (fp.leq (fp.add RNE a c) (fp.add RNE b c))))",
+    "fragment": "QF_FP",
+    "free_symbols": [
+      "a",
+      "b",
+      "c"
+    ]
+  },
+  "epistemic_status": "open",
+  "external_status": "proved",
+  "depends_on": [],
+  "evidence": [],
+  "provenance": {
+    "date": "2026-08-14",
+    "established_by": "not established here. Recorded by the fp-kernels lane as a reachable target with a measured baseline.",
+    "source": "authored here as the binary16 instance of F:fp8-add-monotone-rne, which IS settled, by exhaustive enumeration at 8 bits.",
+    "prior_art": [
+      {
+        "who": "IEEE 754-2019, clause 4.3 (rounding-direction attributes)",
+        "what": "That each rounding-direction attribute defines a monotone map from the extended reals to the format, so a correctly-rounded operation inherits the monotonicity of the exact operation it rounds -- which gives the statement for every format, this one included.",
+        "where": "IEEE Standard for Floating-Point Arithmetic",
+        "year": 2019,
+        "attribution": "standard textbook attribution; this lane did not consult the primary source, and records the citation as the received one."
+      },
+      {
+        "who": "z3 4.13.3 and bitwuzla 0.9.1",
+        "what": "Both report `unsat` on the negation, i.e. both prove the statement, in 30.6s and 8.3s respectively on artifacts/facts/smt2/neg-fp16-add-monotone-rne.smt2 (measured 2026-08-14, same machine, release builds).",
+        "where": "run locally by the fp-kernels lane; the file is in this repository",
+        "year": 2026,
+        "attribution": "measured by this lane, not cited. Recorded under prior_art because these are OTHER systems establishing the fact -- deliberately NOT recorded as `evidence`, since evidence rows here would make the ledger say axeyum established something it did not."
+      }
+    ]
+  },
+  "notes": "WHY THIS FACT IS `open` AND ITS 8-BIT SIBLING IS `proved`. F:fp8-add-monotone-rne is settled by enumerating all 2^24 fp8 E5M2 triples in about three seconds. The identical proposition at binary16 is 2^48 triples, so brute force is gone, and the symbolic route is where axeyum currently cannot follow: the fp8 version of this query -- three free symbols and four fp.add circuits -- ran 50 minutes in a release build without deciding, and binary16 is strictly larger. bitwuzla settles the binary16 file in 8.3 seconds.\n\nSO THIS IS A MEASURED PARITY GAP, WRITTEN DOWN AS A TARGET. `epistemic_status` is a statement about THIS ledger, and the honest value is `open`: we have not established it. `external_status` is `proved` because two independent solvers have. The evidence array is empty on purpose -- a filled one would read as axeyum having done the work.\n\nWHAT WOULD CLOSE IT. Nothing about the mathematics; the statement follows from monotonicity of correct rounding. The gap is entirely in the FP-to-bit-vector route's throughput on a multi-operand comparison miter. `artifacts/facts/smt2/neg-fp16-add-monotone-rne.smt2` is the reproducible target, byte-identical to the file the two oracles were timed on.\n\nARITY IS THE WALL, NOT WIDTH. F:fp32-doubling-add-equals-mul-two is a UNARY claim at binary32 and was enumerated over all 2^32 inputs in 51 seconds. Ternary claims lose brute force at 8 bits already. That is why this fact and its 8-bit sibling exist as a pair."
+}

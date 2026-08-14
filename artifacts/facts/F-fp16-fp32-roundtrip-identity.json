@@ -1,0 +1,71 @@
+{
+  "schema_version": 1,
+  "id": "F:fp16-fp32-roundtrip-identity",
+  "title": "Widening binary16 to binary32 and narrowing back is the identity",
+  "statement": "Let RNE denote roundNearestTiesToEven. For every value x of IEEE-754 binary16, SMT-LIB `(_ FloatingPoint 5 11)`, converting x to binary32 and converting the result back to binary16 -- both conversions under RNE -- yields x again: `((_ to_fp 5 11) RNE ((_ to_fp 8 24) RNE x)) = x`, where `=` is SMT-LIB equality on the FloatingPoint sort (one NaN value, +0 and -0 distinct). This is the property that makes a binary16 tensor safe to stage through a binary32 accumulator and read back.",
+  "formal": {
+    "language": "smtlib2",
+    "statement": "(assert (= ((_ to_fp 5 11) RNE ((_ to_fp 8 24) RNE x)) x))",
+    "fragment": "QF_FP",
+    "free_symbols": [
+      "x"
+    ]
+  },
+  "epistemic_status": "proved",
+  "proof_route": "smt-clausal",
+  "external_status": "proved",
+  "depends_on": [],
+  "axiom_footprint": [
+    "ieee754-2019-conversion-semantics-as-encoded-by-axeyum-fp-to_fp-lowering",
+    "rounding-mode-roundNearestTiesToEven-on-both-legs",
+    "smtlib2-floatingpoint-sort-equality-one-nan-value-signed-zeros-distinct",
+    "tseitin-cnf-encoding-preserves-satisfiability",
+    "drat-refutation-semantics-as-implemented-by-axeyum-cnf-check-drat",
+    "formats-binary16-and-binary32-only-this-fact-is-not-format-generic"
+  ],
+  "evidence": [
+    {
+      "id": "fp16-fp32-roundtrip-unsat-drat",
+      "kind": "unsat-certificate",
+      "supports": "The negation of formal.statement is unsatisfiable, so the round trip is the identity on every binary16 value.",
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo run --release -q -p axeyum-bench --example smtcomp_cli -- --evidence artifacts/facts/smt2/neg-fp16-fp32-roundtrip-identity.smt2 | tail -1)\" = unsat",
+      "artifact": "artifacts/facts/smt2/neg-fp16-fp32-roundtrip-identity.smt2",
+      "notes": "Ran 2026-08-14: `; evidence kind=unsat-drat certified=1 recheck=ok arena=ok ms=6409`, verdict `unsat`, 9.6s wall in a release build. `recheck=ok` is axeyum's own `check_drat` (RUP+RAT) re-checking the emitted refutation; `arena=ok` is `Evidence::check` against a fresh parse. Cross-checked independently: `z3 -smt2` reports `unsat` (0.1s) and `bitwuzla 0.9.1` reports `unsat` (0.1s).",
+      "checkers": [
+        "axeyum-smtcomp-cli-producing-solve",
+        "axeyum-check_drat-independent-proof-check",
+        "axeyum-Evidence::check-fresh-parse",
+        "z3-4.13.3",
+        "bitwuzla-0.9.1"
+      ]
+    },
+    {
+      "id": "fp16-fp32-roundtrip-exhaustive-apfloat",
+      "kind": "exhaustive-enumeration",
+      "supports": "All 65536 binary16 encodings round-tripped through binary32 by LLVM's APFloat: zero values changed.",
+      "check_status": "checked",
+      "checker_command": "cargo run --release -q -p axeyum-fp --example kernel_equivalence -- roundtrip-fp32",
+      "artifact": "crates/axeyum-fp/examples/kernel_equivalence.rs",
+      "notes": "Ran 2026-08-14, under a second. examined=65536 failures=0, sharing no code with axeyum's lowering. The same run also settles bfloat16 -> binary32 -> bfloat16 (2^16, zero failures) and fp8 E5M2 -> binary32 -> fp8 E5M2 (2^8, zero failures); those are neighbouring propositions, not this one. NaN is handled as SMT-LIB requires -- all NaN encodings are one value, so a NaN that returns with a different payload still counts as returning the same value; APFloat bit equality alone would have reported a spurious failure here.",
+      "checkers": [
+        "rustc_apfloat-0.2.3-llvm-apfloat-exhaustive-enumeration"
+      ]
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-14",
+    "established_by": "fp-kernels lane; axeyum SMT front door (QF_FP -> fpa2bv -> CNF -> DRAT) plus an independent exhaustive LLVM-APFloat enumeration",
+    "source": "authored here; the mixed-precision-training question stated as a proposition rather than tested by sampling.",
+    "prior_art": [
+      {
+        "who": "IEEE 754-2019, clause 5.4.2 (conversion operations)",
+        "what": "That conversion to a format with both greater precision and greater exponent range is exact, hence invertible.",
+        "where": "IEEE Standard for Floating-Point Arithmetic",
+        "year": 2019,
+        "attribution": "standard textbook attribution; this lane did not consult the primary source, and records the citation as the received one. Nothing in the evidence above depends on it -- binary32 having strictly more of both is checked here by enumeration, not assumed."
+      }
+    ]
+  },
+  "notes": "THE INTERESTING NEIGHBOUR IS THE ONE THAT FAILS. This fact holds because binary32 dominates binary16 on BOTH axes: 24 significand bits against 11, and an exponent range that strictly contains binary16's. Drop either domination and the property dies -- see F:fp16-bf16-roundtrip-not-identity, where bfloat16 has the wider range but only 8 significand bits, and 83.6% of binary16 values do not survive the trip. The pair is the point: \"cast to a 16-bit format and back\" is not one operation with one answer, and which 16-bit format is chosen decides it.\n\nROUTE. `smt-clausal`, not `smt-term-level`: axeyum returned a DRAT refutation through CNF and re-checked it. The input domain is only 16 bits, but the fpa2bv lowering of a widen-then-narrow miter is far past the 20-bit `TERM_LEVEL_CERT_BITS` budget, so axeyum's own exhaustive-evaluation certificate is not available. The exhaustive route in the second evidence row is LLVM's APFloat, deliberately not axeyum's IR evaluator.\n\nSCOPE. Exhaustive at binary16: every one of the 2^16 inputs was enumerated, and the solver route settles the same 2^16 symbolically. No claim is made for any other pair of formats."
+}

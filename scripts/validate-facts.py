@@ -141,6 +141,18 @@ def validate_one(path: Path, fact: dict, known_ids: set[str]) -> list[str]:
         for c in ev.get("checkers", []):
             if not isinstance(c, str) or not c.strip():
                 fail(errors, f"{fid}: evidence.checkers entries must be non-empty names")
+        # A checker is only worth its exit status. `smtcomp_cli --evidence` exits
+        # 0 on ANY decided verdict -- sat and unsat alike -- so a bare invocation
+        # proves the binary ran, not that the recorded verdict still holds. The
+        # replay gate ran 16 such commands and reported them as re-derived; a
+        # solver flipping `unsat` to `sat` would have passed silently, which is
+        # the exact regression the gate exists to catch.
+        cmd = ev.get("checker_command") or ""
+        if "smtcomp_cli" in cmd and not re.search(r"\btest\b|\bgrep\b|\[\[?", cmd):
+            fail(errors, f"{fid}: checker_command invokes smtcomp_cli without asserting a "
+                         f"verdict. It exits 0 on sat AND unsat, so as written it checks "
+                         f"that the binary ran. Wrap it, e.g. "
+                         f'test "$(... | tail -1)" = unsat')
         if ev.get("kind") == "claim-ref":
             art = ev.get("artifact")
             if not art:

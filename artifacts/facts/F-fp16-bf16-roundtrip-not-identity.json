@@ -1,0 +1,83 @@
+{
+  "schema_version": 1,
+  "id": "F:fp16-bf16-roundtrip-not-identity",
+  "title": "Narrowing binary16 to bfloat16 and back is the identity",
+  "statement": "Let RNE denote roundNearestTiesToEven. For every value x of IEEE-754 binary16, SMT-LIB `(_ FloatingPoint 5 11)`, converting x to bfloat16, SMT-LIB `(_ FloatingPoint 8 8)`, and converting the result back to binary16 -- both conversions under RNE -- yields x again: `((_ to_fp 5 11) RNE ((_ to_fp 8 8) RNE x)) = x`, where `=` is SMT-LIB equality on the FloatingPoint sort. THIS PROPOSITION IS FALSE. The fact is recorded with status `refuted` and carries a concrete counterexample together with the exact number of binary16 values the round trip does not return.",
+  "formal": {
+    "language": "smtlib2",
+    "statement": "(assert (= ((_ to_fp 5 11) RNE ((_ to_fp 8 8) RNE x)) x))",
+    "fragment": "QF_FP",
+    "free_symbols": [
+      "x"
+    ]
+  },
+  "epistemic_status": "refuted",
+  "proof_route": "search-certificate",
+  "external_status": "refuted",
+  "depends_on": [],
+  "axiom_footprint": [
+    "ieee754-2019-conversion-semantics-for-binary16-and-for-the-bfloat16-layout",
+    "rounding-mode-roundNearestTiesToEven-on-both-legs",
+    "smtlib2-floatingpoint-sort-equality-one-nan-value-signed-zeros-distinct",
+    "the-witness-replay-semantics-of-axeyum-Evidence::check-and-of-rustc_apfloat"
+  ],
+  "evidence": [
+    {
+      "id": "fp16-bf16-roundtrip-counterexample-model",
+      "kind": "witness-replay",
+      "supports": "The negation of formal.statement is satisfiable, so the round trip is not the identity.",
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo run --release -q -p axeyum-bench --example smtcomp_cli -- --evidence artifacts/facts/smt2/fp16-bf16-roundtrip-not-identity.smt2 | tail -1)\" = sat",
+      "artifact": "artifacts/facts/smt2/fp16-bf16-roundtrip-not-identity.smt2",
+      "notes": "Ran 2026-08-14: `; evidence kind=sat-model certified=1 recheck=na arena=ok ms=7`, verdict `sat`. `arena=ok` is `Evidence::check` evaluating the model against a FRESH PARSE of the original assertions. Cross-checked independently: `z3 -smt2` reports `sat` and `bitwuzla 0.9.1` reports `sat` on the same file. Unlike the fp8 facts in this batch, both external oracles could reach this one -- bfloat16 is (8,8), so neither z3's `ebits > sbits` restriction nor bitwuzla's experimental-format refusal applies.",
+      "checkers": [
+        "axeyum-smtcomp-cli-producing-solve",
+        "axeyum-Evidence::check-fresh-parse-model-replay",
+        "z3-4.13.3",
+        "bitwuzla-0.9.1"
+      ]
+    },
+    {
+      "id": "fp16-bf16-roundtrip-ground-witness",
+      "kind": "instance-pin",
+      "supports": "The specific value x = 0x0101, the binary16 subnormal 257 * 2^-24, pinned as a GROUND formula: the round trip returns 0x0100 = 256 * 2^-24.",
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo run --release -q -p axeyum-bench --example smtcomp_cli -- --evidence artifacts/facts/smt2/fp16-bf16-roundtrip-not-identity-witness.smt2 | tail -1)\" = sat",
+      "artifact": "artifacts/facts/smt2/fp16-bf16-roundtrip-not-identity-witness.smt2",
+      "notes": "Ran 2026-08-14: `sat`, 1ms. No free symbols -- the file asserts both the disequality and the concrete returned value -- so `sat` here is direct evaluation, and the witness cannot drift from the fact. Cross-checked: `z3 -smt2` and `bitwuzla 0.9.1` both report `sat`. Why this value: 257 needs 9 significand bits, bfloat16 keeps 8, so the narrowing leg rounds it to 256 and the widening leg cannot recover the discarded bit. It is the SMALLEST failing binary16 encoding in enumeration order.",
+      "checkers": [
+        "axeyum-smtcomp-cli-ground-evaluation",
+        "axeyum-Evidence::check-fresh-parse",
+        "z3-4.13.3-ground-instance",
+        "bitwuzla-0.9.1-ground-instance"
+      ]
+    },
+    {
+      "id": "fp16-bf16-roundtrip-exhaustive-apfloat",
+      "kind": "exhaustive-enumeration",
+      "supports": "All 65536 binary16 encodings round-tripped through bfloat16 by LLVM's APFloat: 54784 of them -- 83.59% -- do not come back.",
+      "check_status": "checked",
+      "checker_command": "cargo run --release -q -p axeyum-fp --example kernel_equivalence -- roundtrip-bf16",
+      "artifact": "crates/axeyum-fp/examples/kernel_equivalence.rs",
+      "notes": "Ran 2026-08-14, under a second. examined=65536 failures=54784, first witness 0x0101 -> 0x0100. Independent of axeyum's lowering: `rustc_apfloat` 0.2.3 (LLVM APFloat), comparing SMT-LIB value classes so that a NaN returning with a different payload is NOT counted as a failure. The binary exits non-zero if the claim ever stops failing.",
+      "checkers": [
+        "rustc_apfloat-0.2.3-llvm-apfloat-exhaustive-enumeration"
+      ]
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-14",
+    "established_by": "fp-kernels lane; axeyum SMT front door (sat model, replayed) plus an independent exhaustive LLVM-APFloat enumeration of all 2^16 binary16 values",
+    "source": "authored here. The proposition is the one implicitly assumed whenever a pipeline stages binary16 activations through a bfloat16 buffer; what is established is the instance, the witness and the failure density.",
+    "prior_art": [
+      {
+        "who": "Kalamkar et al. (Intel)",
+        "what": "The bfloat16 format: binary32's 8-bit exponent with the significand truncated to 8 bits, chosen for range over precision.",
+        "where": "A Study of BFLOAT16 for Deep Learning Training, arXiv:1905.12322",
+        "year": 2019,
+        "attribution": "cited for the FORMAT DEFINITION and its design intent only; the arithmetic claims in this fact are established here and depend on nothing in that paper."
+      }
+    ]
+  },
+  "notes": "THE DENSITY IS THE RESULT. That SOME binary16 value is lost by a trip through bfloat16 is obvious from the significand widths alone. What is established here is that 54784 of 65536 -- 83.59% -- are lost, so the round trip is not a rare-corner failure but the common case, and any pipeline that treats the two 16-bit formats as interchangeable buffers is wrong about five values in six.\n\nCONTRAST WITH ITS SIBLING. F:fp16-fp32-roundtrip-identity is the SAME shape of claim with binary32 in the middle, and it is `proved` with zero failures out of the same 65536. The two facts differ only in which 16-bit-or-wider format the value is staged through. bfloat16 has the WIDER exponent range of the two candidates -- it is not that it is a worse format, it is that range is not what a round trip needs.\n\nWHY THE FAILURE IS NOT ABOUT RANGE. bfloat16's exponent field is binary32's, so it contains binary16's range entirely: nothing here overflows to infinity or flushes to zero. Every one of the 54784 failures is pure precision loss in the significand, 11 bits down to 8. The reverse pairing would fail for the opposite reason.\n\nROUTE. `search-certificate`: settled by a replayable witness, matching the precedent of F:affirming-the-consequent, with the exhaustive enumeration supplying the density rather than the refutation."
+}

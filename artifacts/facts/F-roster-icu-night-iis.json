@@ -1,0 +1,61 @@
+{
+  "schema_version": 1,
+  "id": "F:roster-icu-night-iis",
+  "title": "Five rows of a 102-row ICU night roster are an irreducible infeasible subsystem",
+  "statement": "The weekly ICU night roster in artifacts/instances/infeasibility/roster-icu-night.smt2 -- 6 nurses, 7 nights, 102 constraint rows -- admits no feasible assignment, and the five rows cov_night4, rest_bob_n3n4, leave_alice_night4, training_cara_night4 and handover_bob_night3 are an IRREDUCIBLE infeasible subsystem of it: those five are jointly unsatisfiable, and dropping any single one of them leaves a satisfiable set. The other 97 rows are jointly satisfiable, so the whole of the infeasibility is those five: Thursday night needs one ICU-certified nurse, Alice is on leave, Cara is in recertification, and Bob's mandated Wednesday handover puts him out of reach of Thursday under the consecutive-night rest rule.",
+  "formal": {
+    "language": "smtlib2",
+    "statement": "(assert (and (not (exists ((x_alice_4 Int) (x_bob_3 Int) (x_bob_4 Int) (x_cara_4 Int)) (and (>= (+ x_alice_4 x_bob_4 x_cara_4) 1) (<= (+ x_bob_3 x_bob_4) 1) (= x_alice_4 0) (= x_cara_4 0) (= x_bob_3 1)))) (exists ((x_alice_4 Int) (x_bob_3 Int) (x_bob_4 Int) (x_cara_4 Int)) (and (<= (+ x_bob_3 x_bob_4) 1) (= x_alice_4 0) (= x_cara_4 0) (= x_bob_3 1))) (exists ((x_alice_4 Int) (x_bob_3 Int) (x_bob_4 Int) (x_cara_4 Int)) (and (>= (+ x_alice_4 x_bob_4 x_cara_4) 1) (= x_alice_4 0) (= x_cara_4 0) (= x_bob_3 1))) (exists ((x_alice_4 Int) (x_bob_3 Int) (x_bob_4 Int) (x_cara_4 Int)) (and (>= (+ x_alice_4 x_bob_4 x_cara_4) 1) (<= (+ x_bob_3 x_bob_4) 1) (= x_cara_4 0) (= x_bob_3 1))) (exists ((x_alice_4 Int) (x_bob_3 Int) (x_bob_4 Int) (x_cara_4 Int)) (and (>= (+ x_alice_4 x_bob_4 x_cara_4) 1) (<= (+ x_bob_3 x_bob_4) 1) (= x_alice_4 0) (= x_bob_3 1))) (exists ((x_alice_4 Int) (x_bob_3 Int) (x_bob_4 Int) (x_cara_4 Int)) (and (>= (+ x_alice_4 x_bob_4 x_cara_4) 1) (<= (+ x_bob_3 x_bob_4) 1) (= x_alice_4 0) (= x_cara_4 0)))))",
+    "fragment": "LIA",
+    "free_symbols": [
+      "x_alice_4",
+      "x_bob_3",
+      "x_bob_4",
+      "x_cara_4"
+    ]
+  },
+  "epistemic_status": "proved",
+  "proof_route": "search-certificate",
+  "axiom_footprint": [
+    "smtlib2-linear-arithmetic-semantics",
+    "axeyum-smtlib.parser-faithfulness-of-the-committed-instance",
+    "axeyum-ir.ground-evaluator-model-replay-semantics",
+    "axeyum-solver.alethe-lia-generic-refutation-checker"
+  ],
+  "depends_on": [],
+  "evidence": [
+    {
+      "id": "roster-core-refutation",
+      "kind": "unsat-certificate",
+      "supports": "The five named rows are jointly unsatisfiable.",
+      "check_status": "checked",
+      "checker_command": "cargo run --release -q -p axeyum-solver --features full --example infeasibility_iis -- artifacts/instances/infeasibility/roster-icu-night.smt2 --expect-rows 102 --expect-core 5",
+      "artifact": "artifacts/instances/infeasibility/roster-icu-night.smt2",
+      "checkers": [
+        "axeyum-deletion-minimizer-producing-solve",
+        "axeyum-alethe-lia-generic-checker-fresh-re-derivation",
+        "z3-4.13.3-independent-core-extraction"
+      ],
+      "notes": "Ran 2026-08-14 in 0.21s. The front door's `(get-unsat-core)` returned exactly these five names; `axeyum_solver::produce_evidence` on the five reports `Evidence::UnsatArithAletheProof` with `check_outcome` = `verified` and trust step `farkas` marked CERTIFIED THIS RUN, i.e. the Alethe `lia_generic` refutation was re-derived by `check_alethe_lra`, not trusted from the emitter. z3 4.13.3's own `(get-unsat-core)` on the same file returns the same five names (scripts/check-infeasibility-iis-z3.py). The example ALSO pins the numbers: passing `--expect-core 4` exits 1, so this command is a ratchet and not a printout."
+    },
+    {
+      "id": "roster-leave-one-out-witnesses",
+      "kind": "witness-replay",
+      "supports": "Dropping any single one of the five leaves a satisfiable set -- the core is irreducible.",
+      "check_status": "checked",
+      "checker_command": "cargo run --release -q -p axeyum-solver --features full --example infeasibility_iis -- artifacts/instances/infeasibility/roster-icu-night.smt2 --expect-rows 102 --expect-core 5",
+      "artifact": "artifacts/instances/infeasibility/roster-icu-night.smt2",
+      "checkers": [
+        "axeyum-ir-ground-evaluator-model-replay-per-subset",
+        "z3-4.13.3-independent-leave-one-out-sweep"
+      ],
+      "notes": "This is the half that turns a subset into an EXPLANATION, and it is measured, never asserted. `axeyum_solver::unsat_core` is deletion-based, which yields an irreducible core ONLY IF every trial decided definitively -- it conservatively KEEPS a row whose removal leaves the remainder `unknown`, so minimality is a hope until re-solved. All five leave-one-out subsets were re-solved and every one came back `sat`; each returned model was then replayed against the very terms it claims to satisfy by `axeyum_solver::check_model` (the IR ground evaluator), which shares no code with the decision procedure. An `unknown` here is treated as a FAILURE by the example, not a pass. The instance minus the core is also `sat` with a replayed model, so the contradiction is confined to the five rows and the 4.9% ratio is a real compression rather than an artifact of a small model."
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-14",
+    "established_by": "axeyum lane `infeasibility`, 2026-08-14: crates/axeyum-solver/examples/infeasibility_iis.rs over the committed instance",
+    "source": "instance authored by this lane (scripts/gen-infeasibility-instances.py); not extracted from any corpus"
+  },
+  "notes": "WHY THE RATIO IS THE RESULT. 5 of 102 rows, 4.9%. A core that is the whole constraint set is the input restated; the product a commercial MILP solver's IIS sells is the compression, and it is only worth anything if irreducibility is real. Both numbers here are measured -- see the two evidence rows. WHAT THIS IS NOT: it is not a claim that this is the SMALLEST core, or the only one. Deletion-based minimization returns ONE irreducible core; a different deletion order can return a different one, and 'irreducible' means no proper subset of THIS core is infeasible, not that no smaller core exists elsewhere in the model. z3, minimizing independently, happened to return the same five rows. WHY `search-certificate` AND NOT `smt-clausal`. The proposition is a conjunction of two halves with different trust bases: the core's `unsat` carries a re-checked Alethe `lia_generic` certificate (clausal-grade), while irreducibility rests on five models replayed by the IR evaluator (witness-grade). `search-certificate` is the enum's name for a search whose result carries a replayable witness or cover, which is exactly this composite; labelling it `smt-clausal` would advertise a certificate for the half that has witnesses instead. See docs/mathematics-2026-08/diary-infeasibility.md."
+}

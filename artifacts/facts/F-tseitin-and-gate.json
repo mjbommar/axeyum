@@ -27,7 +27,7 @@
       "kind": "exhaustive-enumeration",
       "supports": "For all propositions a, b, t: the conjunction of the three clauses ((not t) or a), ((not t) or b) and (t or (not a) or (not b)) is equivalent to t if and only if (a and b).",
       "check_status": "checked",
-      "checker_command": "cargo run -q -p axeyum-bench --example smtcomp_cli -- --evidence artifacts/facts/smt2/neg-tseitin-and-gate.smt2",
+      "checker_command": "test \"$(cargo run -q -p axeyum-bench --example smtcomp_cli -- --evidence artifacts/facts/smt2/neg-tseitin-and-gate.smt2 2>/dev/null | tail -1)\" = unsat",
       "artifact": "artifacts/facts/smt2/neg-tseitin-and-gate.smt2",
       "notes": "Ran 2026-08-14: the file asserts the NEGATION of formal.statement and the solver reported `unsat` with `kind=unsat-term-level certified=1 arena=ok`. `unsat-term-level` is exhaustive evaluation of the 8 Boolean assignments by the axeyum-ir evaluator alone -- it trusts neither the bit-blaster, the CNF encoder, nor the SAT solver. `arena=ok` means Evidence::check re-ran that enumeration against a FRESH PARSE of the file, independent of anything the producing solve held in memory. Independently cross-checked: `z3 -smt2` on the same file also reports `unsat`.",
       "checkers": [

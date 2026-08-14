@@ -1,0 +1,63 @@
+{
+  "schema_version": 1,
+  "id": "F:schedule-deadline-iis",
+  "title": "Five rows of a 60-row project schedule are an irreducible infeasible subsystem",
+  "statement": "The project schedule in artifacts/instances/infeasibility/schedule-deadline.smt2 -- 20 tasks, continuous start times, 60 constraint rows -- admits no feasible schedule, and the five rows material_t03, prec_t03_t06, prec_t06_t09, prec_t09_t12 and deadline_delivery are an IRREDUCIBLE infeasible subsystem: jointly unsatisfiable, and dropping any single one leaves a satisfiable set. The other 55 rows are jointly satisfiable. The explanation is a critical chain -- the long-lead material for t03 lands day 6, and 14 days of chained work plus a 4-day final task cannot fit inside a 20-day delivery promise.",
+  "formal": {
+    "language": "smtlib2",
+    "statement": "(assert (and (not (exists ((s_t03 Real) (s_t06 Real) (s_t09 Real) (s_t12 Real)) (and (>= s_t03 6.0) (>= s_t06 (+ s_t03 5.0)) (>= s_t09 (+ s_t06 6.0)) (>= s_t12 (+ s_t09 3.0)) (<= (+ s_t12 4.0) 20.0)))) (exists ((s_t03 Real) (s_t06 Real) (s_t09 Real) (s_t12 Real)) (and (>= s_t06 (+ s_t03 5.0)) (>= s_t09 (+ s_t06 6.0)) (>= s_t12 (+ s_t09 3.0)) (<= (+ s_t12 4.0) 20.0))) (exists ((s_t03 Real) (s_t06 Real) (s_t09 Real) (s_t12 Real)) (and (>= s_t03 6.0) (>= s_t09 (+ s_t06 6.0)) (>= s_t12 (+ s_t09 3.0)) (<= (+ s_t12 4.0) 20.0))) (exists ((s_t03 Real) (s_t06 Real) (s_t09 Real) (s_t12 Real)) (and (>= s_t03 6.0) (>= s_t06 (+ s_t03 5.0)) (>= s_t12 (+ s_t09 3.0)) (<= (+ s_t12 4.0) 20.0))) (exists ((s_t03 Real) (s_t06 Real) (s_t09 Real) (s_t12 Real)) (and (>= s_t03 6.0) (>= s_t06 (+ s_t03 5.0)) (>= s_t09 (+ s_t06 6.0)) (<= (+ s_t12 4.0) 20.0))) (exists ((s_t03 Real) (s_t06 Real) (s_t09 Real) (s_t12 Real)) (and (>= s_t03 6.0) (>= s_t06 (+ s_t03 5.0)) (>= s_t09 (+ s_t06 6.0)) (>= s_t12 (+ s_t09 3.0))))))",
+    "fragment": "LRA",
+    "free_symbols": [
+      "s_t03",
+      "s_t06",
+      "s_t09",
+      "s_t12"
+    ]
+  },
+  "epistemic_status": "proved",
+  "proof_route": "search-certificate",
+  "axiom_footprint": [
+    "smtlib2-linear-arithmetic-semantics",
+    "axeyum-smtlib.parser-faithfulness-of-the-committed-instance",
+    "axeyum-ir.ground-evaluator-model-replay-semantics",
+    "axeyum-solver.farkas-certificate-checker"
+  ],
+  "depends_on": [
+    "F:schedule-critical-chain-infeasible"
+  ],
+  "evidence": [
+    {
+      "id": "schedule-core-refutation",
+      "kind": "unsat-certificate",
+      "supports": "The five named rows are jointly unsatisfiable.",
+      "check_status": "checked",
+      "checker_command": "cargo run --release -q -p axeyum-solver --features full --example infeasibility_iis -- artifacts/instances/infeasibility/schedule-deadline.smt2 --expect-rows 60 --expect-core 5",
+      "artifact": "artifacts/instances/infeasibility/schedule-deadline.smt2",
+      "checkers": [
+        "axeyum-deletion-minimizer-producing-solve",
+        "axeyum-farkas-certificate-verify-from-scratch",
+        "z3-4.13.3-independent-core-extraction"
+      ],
+      "notes": "Ran 2026-08-14 in 0.11s. `produce_evidence` on the five reports `Evidence::UnsatFarkas` with `check_outcome` = `verified` and trust step `farkas` CERTIFIED THIS RUN. z3 4.13.3 returns the same five names. This half is strictly stronger than the two integer facts' and is recorded separately as F:schedule-critical-chain-infeasible, which carries the kernel-checked Lean proof term on proof_route `kernel-lean`."
+    },
+    {
+      "id": "schedule-leave-one-out-witnesses",
+      "kind": "witness-replay",
+      "supports": "Dropping any single one of the five leaves a satisfiable set -- the core is irreducible.",
+      "check_status": "checked",
+      "checker_command": "cargo run --release -q -p axeyum-solver --features full --example infeasibility_iis -- artifacts/instances/infeasibility/schedule-deadline.smt2 --expect-rows 60 --expect-core 5",
+      "artifact": "artifacts/instances/infeasibility/schedule-deadline.smt2",
+      "checkers": [
+        "axeyum-ir-ground-evaluator-model-replay-per-subset",
+        "z3-4.13.3-independent-leave-one-out-sweep"
+      ],
+      "notes": "All five leave-one-out subsets re-solved to `sat` with each model replayed against its own subset by the IR ground evaluator; the instance minus the core is `sat` with a replayed model. z3 agrees on all five. Note that the core does NOT include start_t01 or prec_t01_t03: the chain from the project start would also overrun (0+4+5+6+3+4 = 22 > 20), so a six-row core exists, but the material release at day 6 dominates the day-4 earliest start and the minimizer correctly returns the shorter, more informative explanation. Two different irreducible cores, and the one you get is the one you can act on."
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-14",
+    "established_by": "axeyum lane `infeasibility`, 2026-08-14: crates/axeyum-solver/examples/infeasibility_iis.rs over the committed instance",
+    "source": "instance authored by this lane (scripts/gen-infeasibility-instances.py); not extracted from any corpus"
+  },
+  "notes": "5 of 60 rows, 8.3%. This is the instance where the whole chain closes: minimized core, measured irreducibility, a Farkas certificate with all multipliers 1, and a Lean kernel term (F:schedule-critical-chain-infeasible). The route here is still `search-certificate` and NOT `kernel-lean`, because the fact asserts IRREDUCIBILITY as well as infeasibility, and the irreducibility half rests on five evaluator-replayed models with no kernel proof anywhere near it. Promoting the whole fact to `kernel-lean` on the strength of its unsat half would be exactly the route conflation the proof_route field exists to prevent."
+}

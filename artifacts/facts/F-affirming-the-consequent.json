@@ -22,7 +22,7 @@
       "kind": "witness-replay",
       "supports": "p := false, q := true satisfies the negation of the proposition, so the proposition is not a tautology",
       "check_status": "checked",
-      "checker_command": "cargo run -q -p axeyum-bench --example smtcomp_cli -- --evidence artifacts/facts/smt2/affirming-the-consequent.smt2",
+      "checker_command": "test \"$(cargo run -q -p axeyum-bench --example smtcomp_cli -- --evidence artifacts/facts/smt2/affirming-the-consequent.smt2 2>/dev/null | tail -1)\" = sat",
       "artifact": "artifacts/facts/smt2/affirming-the-consequent.smt2",
       "notes": "Ran 2026-08-14: the file asserts the NEGATION of formal.statement and the solver reported `sat` with `kind=sat-model certified=1 arena=ok`. `arena=ok` is Evidence::check replaying the model against a fresh parse of the file -- the model is evaluated against the original assertions, not against the lowered form. The witness is p := false, q := true: then (p implies q) is true and q is true while p is false. Independently cross-checked: `z3 -smt2` on the same file also reports `sat`.",
       "checkers": [

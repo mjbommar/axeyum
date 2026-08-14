@@ -1,0 +1,72 @@
+{
+  "schema_version": 1,
+  "id": "F:loadplan-hazmat-iis",
+  "title": "Fourteen rows of a 90-row outbound load plan are an irreducible infeasible subsystem",
+  "statement": "The outbound load plan in artifacts/instances/infeasibility/loadplan-hazmat.smt2 -- 12 pallets, 5 trucks, 90 constraint rows -- admits no feasible assignment, and the fourteen rows assign_p2, assign_p5, assign_p8, the nine ADR certification exclusions adr_p{2,5,8}_not_t{2,4,5}, and segregation_t1, segregation_t3 are an IRREDUCIBLE infeasible subsystem: they are jointly unsatisfiable and dropping any single one leaves a satisfiable set. The other 76 rows are jointly satisfiable. The explanation is a pigeonhole -- three class-3 dangerous-goods pallets, two ADR-certified trucks, and a segregation rule capping each truck at one class-3 pallet -- and no single row in the model states it.",
+  "formal": {
+    "language": "smtlib2",
+    "statement": "(assert (and (not (exists ((y_p2_t1 Int) (y_p2_t2 Int) (y_p2_t3 Int) (y_p2_t4 Int) (y_p2_t5 Int) (y_p5_t1 Int) (y_p5_t2 Int) (y_p5_t3 Int) (y_p5_t4 Int) (y_p5_t5 Int) (y_p8_t1 Int) (y_p8_t2 Int) (y_p8_t3 Int) (y_p8_t4 Int) (y_p8_t5 Int)) (and (= (+ y_p2_t1 y_p2_t2 y_p2_t3 y_p2_t4 y_p2_t5) 1) (= (+ y_p5_t1 y_p5_t2 y_p5_t3 y_p5_t4 y_p5_t5) 1) (= (+ y_p8_t1 y_p8_t2 y_p8_t3 y_p8_t4 y_p8_t5) 1) (= y_p2_t2 0) (= y_p2_t4 0) (= y_p2_t5 0) (= y_p5_t2 0) (= y_p5_t4 0) (= y_p5_t5 0) (= y_p8_t2 0) (= y_p8_t4 0) (= y_p8_t5 0) (<= (+ y_p2_t1 y_p5_t1 y_p8_t1) 1) (<= (+ y_p2_t3 y_p5_t3 y_p8_t3) 1)))) (exists ((y_p2_t1 Int) (y_p2_t2 Int) (y_p2_t3 Int) (y_p2_t4 Int) (y_p2_t5 Int) (y_p5_t1 Int) (y_p5_t2 Int) (y_p5_t3 Int) (y_p5_t4 Int) (y_p5_t5 Int) (y_p8_t1 Int) (y_p8_t2 Int) (y_p8_t3 Int) (y_p8_t4 Int) (y_p8_t5 Int)) (and (= (+ y_p5_t1 y_p5_t2 y_p5_t3 y_p5_t4 y_p5_t5) 1) (= (+ y_p8_t1 y_p8_t2 y_p8_t3 y_p8_t4 y_p8_t5) 1) (= y_p2_t2 0) (= y_p2_t4 0) (= y_p2_t5 0) (= y_p5_t2 0) (= y_p5_t4 0) (= y_p5_t5 0) (= y_p8_t2 0) (= y_p8_t4 0) (= y_p8_t5 0) (<= (+ y_p2_t1 y_p5_t1 y_p8_t1) 1) (<= (+ y_p2_t3 y_p5_t3 y_p8_t3) 1))) (exists ((y_p2_t1 Int) (y_p2_t2 Int) (y_p2_t3 Int) (y_p2_t4 Int) (y_p2_t5 Int) (y_p5_t1 Int) (y_p5_t2 Int) (y_p5_t3 Int) (y_p5_t4 Int) (y_p5_t5 Int) (y_p8_t1 Int) (y_p8_t2 Int) (y_p8_t3 Int) (y_p8_t4 Int) (y_p8_t5 Int)) (and (= (+ y_p2_t1 y_p2_t2 y_p2_t3 y_p2_t4 y_p2_t5) 1) (= (+ y_p8_t1 y_p8_t2 y_p8_t3 y_p8_t4 y_p8_t5) 1) (= y_p2_t2 0) (= y_p2_t4 0) (= y_p2_t5 0) (= y_p5_t2 0) (= y_p5_t4 0) (= y_p5_t5 0) (= y_p8_t2 0) (= y_p8_t4 0) (= y_p8_t5 0) (<= (+ y_p2_t1 y_p5_t1 y_p8_t1) 1) (<= (+ y_p2_t3 y_p5_t3 y_p8_t3) 1))) (exists ((y_p2_t1 Int) (y_p2_t2 Int) (y_p2_t3 Int) (y_p2_t4 Int) (y_p2_t5 Int) (y_p5_t1 Int) (y_p5_t2 Int) (y_p5_t3 Int) (y_p5_t4 Int) (y_p5_t5 Int) (y_p8_t1 Int) (y_p8_t2 Int) (y_p8_t3 Int) (y_p8_t4 Int) (y_p8_t5 Int)) (and (= (+ y_p2_t1 y_p2_t2 y_p2_t3 y_p2_t4 y_p2_t5) 1) (= (+ y_p5_t1 y_p5_t2 y_p5_t3 y_p5_t4 y_p5_t5) 1) (= y_p2_t2 0) (= y_p2_t4 0) (= y_p2_t5 0) (= y_p5_t2 0) (= y_p5_t4 0) (= y_p5_t5 0) (= y_p8_t2 0) (= y_p8_t4 0) (= y_p8_t5 0) (<= (+ y_p2_t1 y_p5_t1 y_p8_t1) 1) (<= (+ y_p2_t3 y_p5_t3 y_p8_t3) 1))) (exists ((y_p2_t1 Int) (y_p2_t2 Int) (y_p2_t3 Int) (y_p2_t4 Int) (y_p2_t5 Int) (y_p5_t1 Int) (y_p5_t2 Int) (y_p5_t3 Int) (y_p5_t4 Int) (y_p5_t5 Int) (y_p8_t1 Int) (y_p8_t2 Int) (y_p8_t3 Int) (y_p8_t4 Int) (y_p8_t5 Int)) (and (= (+ y_p2_t1 y_p2_t2 y_p2_t3 y_p2_t4 y_p2_t5) 1) (= (+ y_p5_t1 y_p5_t2 y_p5_t3 y_p5_t4 y_p5_t5) 1) (= (+ y_p8_t1 y_p8_t2 y_p8_t3 y_p8_t4 y_p8_t5) 1) (= y_p2_t4 0) (= y_p2_t5 0) (= y_p5_t2 0) (= y_p5_t4 0) (= y_p5_t5 0) (= y_p8_t2 0) (= y_p8_t4 0) (= y_p8_t5 0) (<= (+ y_p2_t1 y_p5_t1 y_p8_t1) 1) (<= (+ y_p2_t3 y_p5_t3 y_p8_t3) 1))) (exists ((y_p2_t1 Int) (y_p2_t2 Int) (y_p2_t3 Int) (y_p2_t4 Int) (y_p2_t5 Int) (y_p5_t1 Int) (y_p5_t2 Int) (y_p5_t3 Int) (y_p5_t4 Int) (y_p5_t5 Int) (y_p8_t1 Int) (y_p8_t2 Int) (y_p8_t3 Int) (y_p8_t4 Int) (y_p8_t5 Int)) (and (= (+ y_p2_t1 y_p2_t2 y_p2_t3 y_p2_t4 y_p2_t5) 1) (= (+ y_p5_t1 y_p5_t2 y_p5_t3 y_p5_t4 y_p5_t5) 1) (= (+ y_p8_t1 y_p8_t2 y_p8_t3 y_p8_t4 y_p8_t5) 1) (= y_p2_t2 0) (= y_p2_t5 0) (= y_p5_t2 0) (= y_p5_t4 0) (= y_p5_t5 0) (= y_p8_t2 0) (= y_p8_t4 0) (= y_p8_t5 0) (<= (+ y_p2_t1 y_p5_t1 y_p8_t1) 1) (<= (+ y_p2_t3 y_p5_t3 y_p8_t3) 1))) (exists ((y_p2_t1 Int) (y_p2_t2 Int) (y_p2_t3 Int) (y_p2_t4 Int) (y_p2_t5 Int) (y_p5_t1 Int) (y_p5_t2 Int) (y_p5_t3 Int) (y_p5_t4 Int) (y_p5_t5 Int) (y_p8_t1 Int) (y_p8_t2 Int) (y_p8_t3 Int) (y_p8_t4 Int) (y_p8_t5 Int)) (and (= (+ y_p2_t1 y_p2_t2 y_p2_t3 y_p2_t4 y_p2_t5) 1) (= (+ y_p5_t1 y_p5_t2 y_p5_t3 y_p5_t4 y_p5_t5) 1) (= (+ y_p8_t1 y_p8_t2 y_p8_t3 y_p8_t4 y_p8_t5) 1) (= y_p2_t2 0) (= y_p2_t4 0) (= y_p5_t2 0) (= y_p5_t4 0) (= y_p5_t5 0) (= y_p8_t2 0) (= y_p8_t4 0) (= y_p8_t5 0) (<= (+ y_p2_t1 y_p5_t1 y_p8_t1) 1) (<= (+ y_p2_t3 y_p5_t3 y_p8_t3) 1))) (exists ((y_p2_t1 Int) (y_p2_t2 Int) (y_p2_t3 Int) (y_p2_t4 Int) (y_p2_t5 Int) (y_p5_t1 Int) (y_p5_t2 Int) (y_p5_t3 Int) (y_p5_t4 Int) (y_p5_t5 Int) (y_p8_t1 Int) (y_p8_t2 Int) (y_p8_t3 Int) (y_p8_t4 Int) (y_p8_t5 Int)) (and (= (+ y_p2_t1 y_p2_t2 y_p2_t3 y_p2_t4 y_p2_t5) 1) (= (+ y_p5_t1 y_p5_t2 y_p5_t3 y_p5_t4 y_p5_t5) 1) (= (+ y_p8_t1 y_p8_t2 y_p8_t3 y_p8_t4 y_p8_t5) 1) (= y_p2_t2 0) (= y_p2_t4 0) (= y_p2_t5 0) (= y_p5_t4 0) (= y_p5_t5 0) (= y_p8_t2 0) (= y_p8_t4 0) (= y_p8_t5 0) (<= (+ y_p2_t1 y_p5_t1 y_p8_t1) 1) (<= (+ y_p2_t3 y_p5_t3 y_p8_t3) 1))) (exists ((y_p2_t1 Int) (y_p2_t2 Int) (y_p2_t3 Int) (y_p2_t4 Int) (y_p2_t5 Int) (y_p5_t1 Int) (y_p5_t2 Int) (y_p5_t3 Int) (y_p5_t4 Int) (y_p5_t5 Int) (y_p8_t1 Int) (y_p8_t2 Int) (y_p8_t3 Int) (y_p8_t4 Int) (y_p8_t5 Int)) (and (= (+ y_p2_t1 y_p2_t2 y_p2_t3 y_p2_t4 y_p2_t5) 1) (= (+ y_p5_t1 y_p5_t2 y_p5_t3 y_p5_t4 y_p5_t5) 1) (= (+ y_p8_t1 y_p8_t2 y_p8_t3 y_p8_t4 y_p8_t5) 1) (= y_p2_t2 0) (= y_p2_t4 0) (= y_p2_t5 0) (= y_p5_t2 0) (= y_p5_t5 0) (= y_p8_t2 0) (= y_p8_t4 0) (= y_p8_t5 0) (<= (+ y_p2_t1 y_p5_t1 y_p8_t1) 1) (<= (+ y_p2_t3 y_p5_t3 y_p8_t3) 1))) (exists ((y_p2_t1 Int) (y_p2_t2 Int) (y_p2_t3 Int) (y_p2_t4 Int) (y_p2_t5 Int) (y_p5_t1 Int) (y_p5_t2 Int) (y_p5_t3 Int) (y_p5_t4 Int) (y_p5_t5 Int) (y_p8_t1 Int) (y_p8_t2 Int) (y_p8_t3 Int) (y_p8_t4 Int) (y_p8_t5 Int)) (and (= (+ y_p2_t1 y_p2_t2 y_p2_t3 y_p2_t4 y_p2_t5) 1) (= (+ y_p5_t1 y_p5_t2 y_p5_t3 y_p5_t4 y_p5_t5) 1) (= (+ y_p8_t1 y_p8_t2 y_p8_t3 y_p8_t4 y_p8_t5) 1) (= y_p2_t2 0) (= y_p2_t4 0) (= y_p2_t5 0) (= y_p5_t2 0) (= y_p5_t4 0) (= y_p8_t2 0) (= y_p8_t4 0) (= y_p8_t5 0) (<= (+ y_p2_t1 y_p5_t1 y_p8_t1) 1) (<= (+ y_p2_t3 y_p5_t3 y_p8_t3) 1))) (exists ((y_p2_t1 Int) (y_p2_t2 Int) (y_p2_t3 Int) (y_p2_t4 Int) (y_p2_t5 Int) (y_p5_t1 Int) (y_p5_t2 Int) (y_p5_t3 Int) (y_p5_t4 Int) (y_p5_t5 Int) (y_p8_t1 Int) (y_p8_t2 Int) (y_p8_t3 Int) (y_p8_t4 Int) (y_p8_t5 Int)) (and (= (+ y_p2_t1 y_p2_t2 y_p2_t3 y_p2_t4 y_p2_t5) 1) (= (+ y_p5_t1 y_p5_t2 y_p5_t3 y_p5_t4 y_p5_t5) 1) (= (+ y_p8_t1 y_p8_t2 y_p8_t3 y_p8_t4 y_p8_t5) 1) (= y_p2_t2 0) (= y_p2_t4 0) (= y_p2_t5 0) (= y_p5_t2 0) (= y_p5_t4 0) (= y_p5_t5 0) (= y_p8_t4 0) (= y_p8_t5 0) (<= (+ y_p2_t1 y_p5_t1 y_p8_t1) 1) (<= (+ y_p2_t3 y_p5_t3 y_p8_t3) 1))) (exists ((y_p2_t1 Int) (y_p2_t2 Int) (y_p2_t3 Int) (y_p2_t4 Int) (y_p2_t5 Int) (y_p5_t1 Int) (y_p5_t2 Int) (y_p5_t3 Int) (y_p5_t4 Int) (y_p5_t5 Int) (y_p8_t1 Int) (y_p8_t2 Int) (y_p8_t3 Int) (y_p8_t4 Int) (y_p8_t5 Int)) (and (= (+ y_p2_t1 y_p2_t2 y_p2_t3 y_p2_t4 y_p2_t5) 1) (= (+ y_p5_t1 y_p5_t2 y_p5_t3 y_p5_t4 y_p5_t5) 1) (= (+ y_p8_t1 y_p8_t2 y_p8_t3 y_p8_t4 y_p8_t5) 1) (= y_p2_t2 0) (= y_p2_t4 0) (= y_p2_t5 0) (= y_p5_t2 0) (= y_p5_t4 0) (= y_p5_t5 0) (= y_p8_t2 0) (= y_p8_t5 0) (<= (+ y_p2_t1 y_p5_t1 y_p8_t1) 1) (<= (+ y_p2_t3 y_p5_t3 y_p8_t3) 1))) (exists ((y_p2_t1 Int) (y_p2_t2 Int) (y_p2_t3 Int) (y_p2_t4 Int) (y_p2_t5 Int) (y_p5_t1 Int) (y_p5_t2 Int) (y_p5_t3 Int) (y_p5_t4 Int) (y_p5_t5 Int) (y_p8_t1 Int) (y_p8_t2 Int) (y_p8_t3 Int) (y_p8_t4 Int) (y_p8_t5 Int)) (and (= (+ y_p2_t1 y_p2_t2 y_p2_t3 y_p2_t4 y_p2_t5) 1) (= (+ y_p5_t1 y_p5_t2 y_p5_t3 y_p5_t4 y_p5_t5) 1) (= (+ y_p8_t1 y_p8_t2 y_p8_t3 y_p8_t4 y_p8_t5) 1) (= y_p2_t2 0) (= y_p2_t4 0) (= y_p2_t5 0) (= y_p5_t2 0) (= y_p5_t4 0) (= y_p5_t5 0) (= y_p8_t2 0) (= y_p8_t4 0) (<= (+ y_p2_t1 y_p5_t1 y_p8_t1) 1) (<= (+ y_p2_t3 y_p5_t3 y_p8_t3) 1))) (exists ((y_p2_t1 Int) (y_p2_t2 Int) (y_p2_t3 Int) (y_p2_t4 Int) (y_p2_t5 Int) (y_p5_t1 Int) (y_p5_t2 Int) (y_p5_t3 Int) (y_p5_t4 Int) (y_p5_t5 Int) (y_p8_t1 Int) (y_p8_t2 Int) (y_p8_t3 Int) (y_p8_t4 Int) (y_p8_t5 Int)) (and (= (+ y_p2_t1 y_p2_t2 y_p2_t3 y_p2_t4 y_p2_t5) 1) (= (+ y_p5_t1 y_p5_t2 y_p5_t3 y_p5_t4 y_p5_t5) 1) (= (+ y_p8_t1 y_p8_t2 y_p8_t3 y_p8_t4 y_p8_t5) 1) (= y_p2_t2 0) (= y_p2_t4 0) (= y_p2_t5 0) (= y_p5_t2 0) (= y_p5_t4 0) (= y_p5_t5 0) (= y_p8_t2 0) (= y_p8_t4 0) (= y_p8_t5 0) (<= (+ y_p2_t3 y_p5_t3 y_p8_t3) 1))) (exists ((y_p2_t1 Int) (y_p2_t2 Int) (y_p2_t3 Int) (y_p2_t4 Int) (y_p2_t5 Int) (y_p5_t1 Int) (y_p5_t2 Int) (y_p5_t3 Int) (y_p5_t4 Int) (y_p5_t5 Int) (y_p8_t1 Int) (y_p8_t2 Int) (y_p8_t3 Int) (y_p8_t4 Int) (y_p8_t5 Int)) (and (= (+ y_p2_t1 y_p2_t2 y_p2_t3 y_p2_t4 y_p2_t5) 1) (= (+ y_p5_t1 y_p5_t2 y_p5_t3 y_p5_t4 y_p5_t5) 1) (= (+ y_p8_t1 y_p8_t2 y_p8_t3 y_p8_t4 y_p8_t5) 1) (= y_p2_t2 0) (= y_p2_t4 0) (= y_p2_t5 0) (= y_p5_t2 0) (= y_p5_t4 0) (= y_p5_t5 0) (= y_p8_t2 0) (= y_p8_t4 0) (= y_p8_t5 0) (<= (+ y_p2_t1 y_p5_t1 y_p8_t1) 1)))))",
+    "fragment": "LIA",
+    "free_symbols": [
+      "y_p2_t1",
+      "y_p2_t2",
+      "y_p2_t3",
+      "y_p2_t4",
+      "y_p2_t5",
+      "y_p5_t1",
+      "y_p5_t2",
+      "y_p5_t3",
+      "y_p5_t4",
+      "y_p5_t5",
+      "y_p8_t1",
+      "y_p8_t2",
+      "y_p8_t3",
+      "y_p8_t4",
+      "y_p8_t5"
+    ]
+  },
+  "epistemic_status": "proved",
+  "proof_route": "search-certificate",
+  "axiom_footprint": [
+    "smtlib2-linear-arithmetic-semantics",
+    "axeyum-smtlib.parser-faithfulness-of-the-committed-instance",
+    "axeyum-ir.ground-evaluator-model-replay-semantics",
+    "axeyum-solver.alethe-lia-generic-refutation-checker"
+  ],
+  "depends_on": [],
+  "evidence": [
+    {
+      "id": "loadplan-core-refutation",
+      "kind": "unsat-certificate",
+      "supports": "The fourteen named rows are jointly unsatisfiable.",
+      "check_status": "checked",
+      "checker_command": "cargo run --release -q -p axeyum-solver --features full --example infeasibility_iis -- artifacts/instances/infeasibility/loadplan-hazmat.smt2 --expect-rows 90 --expect-core 14",
+      "artifact": "artifacts/instances/infeasibility/loadplan-hazmat.smt2",
+      "checkers": [
+        "axeyum-deletion-minimizer-producing-solve",
+        "axeyum-alethe-lia-generic-checker-fresh-re-derivation",
+        "z3-4.13.3-independent-core-extraction"
+      ],
+      "notes": "Ran 2026-08-14 in 0.94s. `produce_evidence` on the fourteen reports `Evidence::UnsatArithAletheProof`, `check_outcome` = `verified`, trust step `farkas` CERTIFIED THIS RUN. z3 4.13.3 independently returns the same fourteen names. The five weight-capacity rows appear in NO core: total payload is 3500 kg against 6000 kg of capacity, so the model is not short of anything -- which is the point of including them."
+    },
+    {
+      "id": "loadplan-leave-one-out-witnesses",
+      "kind": "witness-replay",
+      "supports": "Dropping any single one of the fourteen leaves a satisfiable set -- the core is irreducible.",
+      "check_status": "checked",
+      "checker_command": "cargo run --release -q -p axeyum-solver --features full --example infeasibility_iis -- artifacts/instances/infeasibility/loadplan-hazmat.smt2 --expect-rows 90 --expect-core 14",
+      "artifact": "artifacts/instances/infeasibility/loadplan-hazmat.smt2",
+      "checkers": [
+        "axeyum-ir-ground-evaluator-model-replay-per-subset",
+        "z3-4.13.3-independent-leave-one-out-sweep"
+      ],
+      "notes": "All fourteen leave-one-out subsets re-solved to `sat`, each model replayed against its own subset by the IR ground evaluator; the instance minus the core is likewise `sat` with a replayed model. z3 agrees on all fourteen. A pigeonhole core is IRREDUCIBLE BUT NOT SMALL: 14 of 90 rows is 15.6%, three times the roster's ratio, and that is a property of the contradiction rather than of the minimizer. Every one of the fourteen is load-bearing -- drop one exclusion and the offending pallet escapes to an uncertified truck; drop one segregation row and two class-3 pallets share a truck. This is the honest shape of a counting argument: an IIS explains WHICH rows collide, not WHY, and 'three into two' is the reader's inference, not the certificate's content."
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-14",
+    "established_by": "axeyum lane `infeasibility`, 2026-08-14: crates/axeyum-solver/examples/infeasibility_iis.rs over the committed instance",
+    "source": "instance authored by this lane (scripts/gen-infeasibility-instances.py); not extracted from any corpus"
+  },
+  "notes": "14 of 90 rows, 15.6%. Kept in the ledger precisely BECAUSE the ratio is worse than the roster's: a lane that reported only its best instance would be selecting on the outcome. The two shapes are the two things an IIS can be -- a local collision of a handful of independent rows (roster, 4.9%) and a global counting argument whose every participant is necessary (here, 15.6%) -- and a consumer choosing between an IIS and a commercial one should know both exist. WHY `search-certificate`: see F:roster-icu-night-iis, same reasoning."
+}
