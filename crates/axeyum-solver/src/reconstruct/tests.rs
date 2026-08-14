@@ -9,11 +9,11 @@
 use axeyum_cnf::{AletheLit, AletheTerm};
 use axeyum_lean_kernel::ExprNode;
 
+use super::direct::reconstruct_checked_structural_certificate_to_lean_module;
 use super::{
     ProofFragment, ReconstructCtx, ReconstructError, fresh_axiom, prove_unsat_to_lean_module,
     reconstruct_eq_step, render_ctx_module, require_infers_false, scan_proof_fragment,
 };
-use super::direct::reconstruct_checked_structural_certificate_to_lean_module;
 
 fn legacy_checked_structural_certificate_module(
     prop_stem: &str,
@@ -76,10 +76,7 @@ fn checked_structural_emitter_is_byte_identical_for_every_registered_role() {
         ),
         ("binary_search16_assertion", "binary_search16"),
         ("fifo_bc04_assertion", "fifo_bc04"),
-        (
-            "bool_array_read_collapse_1_2_3",
-            "bool_array_read_collapse",
-        ),
+        ("bool_array_read_collapse_1_2_3", "bool_array_read_collapse"),
     ];
 
     for (prop_stem, refuter_role) in roles {
@@ -499,10 +496,75 @@ fn end_to_end_congruence_refutation_to_false() {
     assert_infers_false(&mut ctx, term);
 }
 
-fn stable_source_hash(source: &str) -> u64 {
-    source.as_bytes().iter().fold(0xcbf2_9ce4_8422_2325, |hash, byte| {
-        (hash ^ u64::from(*byte)).wrapping_mul(0x0000_0100_0000_01b3)
-    })
+/// The directory holding one committed Lean module per generated-source gate.
+fn lean_module_fixture_dir() -> std::path::PathBuf {
+    std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/lean-modules")
+}
+
+/// Assert that a reconstructed family still generates its committed Lean module.
+///
+/// This replaces a `(length, fnv1a)` pin over the same source. Two integers
+/// cannot distinguish "the printer improved" from "the printer broke": when the
+/// pin moved, the failure named a length and a hash and left a human to decide
+/// with nothing to decide from — which is how a *blessed* number can quietly
+/// record a defect (see the `RoundingMode` note this gate used to carry). The
+/// fixture is the module itself, so the same failure is a text diff, and
+/// `tests/lean_module_fixtures.rs` puts every committed fixture through the real
+/// Lean binary, which is what makes the bytes *correct* rather than merely
+/// *stable*. Each module also declares its own `axiom`s inline, so the fixture
+/// doubles as the reviewable ledger of what the refutation assumes.
+///
+/// Regenerate deliberately, then read the diff:
+///
+/// ```text
+/// AXEYUM_BLESS_LEAN_FIXTURES=1 cargo test -p axeyum-solver --lib --features full \
+///     reconstruct::tests::  # then `git diff` the fixtures
+/// ```
+fn assert_lean_module_fixture(case: &str, source: &str) {
+    let path = lean_module_fixture_dir().join(format!("{case}.lean"));
+    if std::env::var("AXEYUM_BLESS_LEAN_FIXTURES").as_deref() == Ok("1") {
+        std::fs::create_dir_all(lean_module_fixture_dir()).expect("create fixture directory");
+        std::fs::write(&path, source).expect("write blessed fixture");
+        return;
+    }
+    let expected = std::fs::read_to_string(&path).unwrap_or_else(|error| {
+        panic!(
+            "missing generated-module fixture {}: {error}\n\
+             regenerate with AXEYUM_BLESS_LEAN_FIXTURES=1 and review the diff",
+            path.display()
+        )
+    });
+    if expected == source {
+        return;
+    }
+    let difference = expected
+        .lines()
+        .zip(source.lines())
+        .enumerate()
+        .find(|(_, (expected, actual))| expected != actual)
+        .map_or_else(
+            || {
+                format!(
+                    "line counts differ: fixture {} lines, generated {} lines",
+                    expected.lines().count(),
+                    source.lines().count()
+                )
+            },
+            |(index, (expected, actual))| {
+                format!(
+                    "first difference at line {}:\n  fixture:   {expected}\n  generated: {actual}",
+                    index + 1
+                )
+            },
+        );
+    panic!(
+        "generated Lean module differs from {}\n{difference}\n\n\
+         If the printer changed on purpose: regenerate with \
+         AXEYUM_BLESS_LEAN_FIXTURES=1, then justify the diff — \
+         `cargo test -p axeyum-solver --test lean_module_fixtures` (with \
+         AXEYUM_LEAN_BIN set) re-checks every fixture against real Lean.",
+        path.display()
+    );
 }
 
 /// R3 extraction gate: representative transitivity and congruence proofs must
@@ -510,8 +572,6 @@ fn stable_source_hash(source: &str) -> u64 {
 /// equality-owned submodule.
 #[test]
 fn equality_family_generated_source_is_byte_stable() {
-    let mut fixtures = Vec::new();
-
     let mut arena = TermArena::new();
     let a = bv_var(&mut arena, "a");
     let b = bv_var(&mut arena, "b");
@@ -525,7 +585,7 @@ fn equality_family_generated_source_is_byte_stable() {
     let term = reconstruct_qf_uf_proof(&mut ctx, &proof).expect("reconstructs");
     assert_infers_false(&mut ctx, term);
     let source = render_ctx_module(&mut ctx, term);
-    fixtures.push((source.len(), stable_source_hash(&source)));
+    assert_lean_module_fixture("equality-transitivity", &source);
 
     let mut arena = TermArena::new();
     let a = bv_var(&mut arena, "a");
@@ -544,23 +604,13 @@ fn equality_family_generated_source_is_byte_stable() {
     let term = reconstruct_qf_uf_proof(&mut ctx, &proof).expect("reconstructs");
     assert_infers_false(&mut ctx, term);
     let source = render_ctx_module(&mut ctx, term);
-    fixtures.push((source.len(), stable_source_hash(&source)));
-
-    assert_eq!(
-        fixtures,
-        [
-            (1_480, 16_524_372_807_544_528_002),
-            (1_558, 9_142_307_883_420_495_535),
-        ]
-    );
+    assert_lean_module_fixture("equality-congruence", &source);
 }
 
 /// R3 datatype extraction gate: each specialized axiom-free route must keep
 /// emitting byte-identical Lean when its proof family moves behind one module.
 #[test]
 fn datatype_family_generated_source_is_byte_stable() {
-    let mut fixtures = Vec::new();
-
     let mut arena = TermArena::new();
     let color = arena.declare_datatype("Color");
     let red = arena.add_constructor(color, "Red", &[("v".into(), Sort::BitVec(2))]);
@@ -574,7 +624,7 @@ fn datatype_family_generated_source_is_byte_stable() {
     let source = super::reconstruct_qf_dt_tester_to_lean_module(&arena, &[tester])
         .expect("tester route recognizes fixture")
         .expect("tester route reconstructs");
-    fixtures.push((source.len(), stable_source_hash(&source)));
+    assert_lean_module_fixture("datatype-tester", &source);
 
     let mut arena = TermArena::new();
     let color = arena.declare_datatype("Color");
@@ -594,7 +644,7 @@ fn datatype_family_generated_source_is_byte_stable() {
     let source = super::reconstruct_qf_dt_distinct_to_lean_module(&arena, &[distinct])
         .expect("distinctness route recognizes fixture")
         .expect("distinctness route reconstructs");
-    fixtures.push((source.len(), stable_source_hash(&source)));
+    assert_lean_module_fixture("datatype-distinct-constructors", &source);
 
     let mut arena = TermArena::new();
     let pair = arena.declare_datatype("Pair");
@@ -619,11 +669,10 @@ fn datatype_family_generated_source_is_byte_stable() {
     let pair_eq = arena.eq(lhs, rhs).unwrap();
     let field_eq = arena.eq(a, c).unwrap();
     let field_ne = arena.not(field_eq).unwrap();
-    let source =
-        super::reconstruct_qf_dt_injective_to_lean_module(&arena, &[pair_eq, field_ne])
-            .expect("injectivity route recognizes fixture")
-            .expect("injectivity route reconstructs");
-    fixtures.push((source.len(), stable_source_hash(&source)));
+    let source = super::reconstruct_qf_dt_injective_to_lean_module(&arena, &[pair_eq, field_ne])
+        .expect("injectivity route recognizes fixture")
+        .expect("injectivity route reconstructs");
+    assert_lean_module_fixture("datatype-injectivity", &source);
 
     let mut arena = TermArena::new();
     let list = arena.declare_datatype("IntList");
@@ -649,28 +698,13 @@ fn datatype_family_generated_source_is_byte_stable() {
     let source = super::reconstruct_qf_dt_acyclic_to_lean_module(&arena, &[cycle])
         .expect("acyclicity route recognizes fixture")
         .expect("acyclicity route reconstructs");
-    fixtures.push((source.len(), stable_source_hash(&source)));
-
-    assert_eq!(
-        fixtures,
-        [
-            (2_057, 12_042_421_301_549_597_275),
-            (3_069, 15_726_968_749_404_357_215),
-            (2_640, 1_434_913_494_449_130_936),
-            // The first-class RoundingMode IR extension requires a new
-            // byte-stable snapshot; length and independent kernel checking are
-            // unchanged, and repeated generation produced this exact hash.
-            (3_940, 972_985_670_248_459_210),
-        ]
-    );
+    assert_lean_module_fixture("datatype-acyclicity", &source);
 }
 
 /// R3 quantifier extraction gate: universal instantiation and existential
 /// elimination must keep emitting byte-identical Lean modules.
 #[test]
 fn quantifier_family_generated_source_is_byte_stable() {
-    let mut fixtures = Vec::new();
-
     let mut arena = TermArena::new();
     let alpha = Sort::BitVec(8);
     let x = arena.declare("x", alpha).unwrap();
@@ -691,7 +725,7 @@ fn quantifier_family_generated_source_is_byte_stable() {
     let term = reconstruct_quant_unsat_proof(&mut ctx, &proof).unwrap();
     assert_infers_false(&mut ctx, term);
     let source = render_ctx_module(&mut ctx, term);
-    fixtures.push((source.len(), stable_source_hash(&source)));
+    assert_lean_module_fixture("quantifier-forall-instantiation", &source);
 
     let mut arena = TermArena::new();
     let x = arena.declare("x", alpha).unwrap();
@@ -716,15 +750,7 @@ fn quantifier_family_generated_source_is_byte_stable() {
     let term = reconstruct_skolem_unsat_proof(&mut ctx, &cert).unwrap();
     assert_infers_false(&mut ctx, term);
     let source = render_ctx_module(&mut ctx, term);
-    fixtures.push((source.len(), stable_source_hash(&source)));
-
-    assert_eq!(
-        fixtures,
-        [
-            (921, 17_229_612_914_579_886_985),
-            (2_685, 12_920_678_261_632_022_537),
-        ]
-    );
+    assert_lean_module_fixture("quantifier-skolem-elimination", &source);
 }
 
 /// **`QF_UFBV` Ackermann certificate end-to-end (ADR-0013 task #19)**: take a REAL
@@ -1429,10 +1455,7 @@ fn resolution_family_generated_source_is_byte_stable() {
     assert_infers_false(&mut ctx, term);
     let source = render_ctx_module(&mut ctx, term);
 
-    assert_eq!(
-        (source.len(), stable_source_hash(&source)),
-        (1_651, 3_433_224_910_840_366_031)
-    );
+    assert_lean_module_fixture("resolution-three-clause-refutation", &source);
 }
 
 /// The native LRAT emitter orders RUP hints by forward unit propagation. A
@@ -1511,7 +1534,10 @@ fn ordered_rup_wide_growing_clause_reconstructs() {
         args: Vec::new(),
     });
     for index in 0..WIDTH {
-        commands.push(assume(&format!("not_a{index}"), vec![n_lit(&format!("a{index}"))]));
+        commands.push(assume(
+            &format!("not_a{index}"),
+            vec![n_lit(&format!("a{index}"))],
+        ));
     }
     let mut close = (0..WIDTH)
         .map(|index| format!("not_a{index}"))
@@ -2102,7 +2128,6 @@ fn cnf_family_generated_source_is_byte_stable() {
             vec![pos(xor_t("a", "b")), pos(atom("a")), neg(atom("b"))],
         ),
     ];
-    let mut snapshots = Vec::new();
     for (rule, conclusion) in fixtures {
         let mut ctx = ReconstructCtx::new();
         let proof = reconstruct_cnf_intro_rule(&mut ctx, rule, &conclusion)
@@ -2113,16 +2138,8 @@ fn cnf_family_generated_source_is_byte_stable() {
         let source = ctx
             .kernel()
             .render_lean_module("cnf_intro_fixture", proposition, proof);
-        snapshots.push((source.len(), stable_source_hash(&source)));
+        assert_lean_module_fixture(&format!("cnf-{rule}"), &source);
     }
-
-    assert_eq!(
-        snapshots,
-        [
-            (3_358, 14_531_428_178_443_531_371),
-            (4_504, 11_358_181_693_276_788_078),
-        ]
-    );
 }
 
 /// **COMPOSITE**: combine two reconstructed CNF-intro clauses with the slice-3
@@ -2753,8 +2770,6 @@ fn end_to_end_bitwise_bvand_refutation_to_false() {
 /// arithmetic ripple-carry operator must keep emitting byte-identical modules.
 #[test]
 fn bitblast_family_generated_source_is_byte_stable() {
-    let mut snapshots = Vec::new();
-
     let mut arena = TermArena::new();
     let a = {
         let symbol = arena.declare("a", Sort::BitVec(1)).unwrap();
@@ -2772,7 +2787,7 @@ fn bitblast_family_generated_source_is_byte_stable() {
     let term = reconstruct_qf_bv_proof(&mut ctx, &proof).expect("reconstructs");
     assert_infers_false(&mut ctx, term);
     let source = render_ctx_module(&mut ctx, term);
-    snapshots.push((source.len(), stable_source_hash(&source)));
+    assert_lean_module_fixture("bitblast-pointwise-bvand", &source);
 
     let mut arena = TermArena::new();
     let mk = |arena: &mut TermArena, name: &str| {
@@ -2790,15 +2805,7 @@ fn bitblast_family_generated_source_is_byte_stable() {
     let term = reconstruct_qf_bv_proof(&mut ctx, &proof).expect("reconstructs");
     assert_infers_false(&mut ctx, term);
     let source = render_ctx_module(&mut ctx, term);
-    snapshots.push((source.len(), stable_source_hash(&source)));
-
-    assert_eq!(
-        snapshots,
-        [
-            (6_171, 6_475_695_101_939_760_022),
-            (19_619, 1_281_267_001_421_498_970),
-        ]
-    );
+    assert_lean_module_fixture("bitblast-ripple-carry-bvadd", &source);
 }
 
 /// The same, width 2, with a direct `(= a b) ∧ (not (= a b))` (all-leaf predicate
@@ -3568,8 +3575,6 @@ fn end_to_end_comp_reconstructs() {
 fn arithmetic_family_generated_source_is_byte_stable() {
     use axeyum_ir::{Rational, TermArena};
 
-    let mut snapshots = Vec::new();
-
     let mut arena = TermArena::new();
     let x = arena.real_var("x").unwrap();
     let zero = arena.real_const(Rational::integer(0));
@@ -3579,9 +3584,9 @@ fn arithmetic_family_generated_source_is_byte_stable() {
     let mut ctx = super::LraReconstructCtx::new();
     let proof = super::reconstruct_lra_proof(&mut ctx, &arena, &[upper, lower])
         .expect("linear fixture reconstructs");
-    let source = super::gate_and_render_lra_module(&mut ctx, proof, "LRA")
-        .expect("linear fixture renders");
-    snapshots.push((source.len(), stable_source_hash(&source)));
+    let source =
+        super::gate_and_render_lra_module(&mut ctx, proof, "LRA").expect("linear fixture renders");
+    assert_lean_module_fixture("arithmetic-farkas-linear", &source);
 
     let mut arena = TermArena::new();
     let x = arena.real_var("x").unwrap();
@@ -3590,15 +3595,7 @@ fn arithmetic_family_generated_source_is_byte_stable() {
     let negative_square = arena.real_lt(square, zero).unwrap();
     let source = super::reconstruct_sos_to_lean_module(&arena, &[negative_square])
         .expect("SOS fixture reconstructs and renders");
-    snapshots.push((source.len(), stable_source_hash(&source)));
-
-    assert_eq!(
-        snapshots,
-        [
-            (10_079, 12_287_498_903_940_716_333),
-            (1_253, 16_553_442_713_189_535_916),
-        ]
-    );
+    assert_lean_module_fixture("arithmetic-sum-of-squares", &source);
 }
 
 /// **The bar**: a real `x ≤ 0 ∧ 1 ≤ x` LRA `unsat` instance reconstructs, via its
