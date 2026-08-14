@@ -69,6 +69,74 @@ hostage to implicit-argument inference, universe unification, coercion insertion
 and code generation, four systems that have nothing to do with whether the proof
 term is well-typed.
 
+## The guard that was supposed to prevent this was never implemented
+
+Found after the above, and it is the more important defect.
+
+`lean_pp.rs:214-216` documents a **defensive guard**:
+
+> Only **non-parametric, non-indexed** inductives (enums / flat datatype
+> families) are emitted as real `inductive`s; a listed inductive that is
+> parametric or indexed falls back to the axiom rendering (a defensive guard —
+> the is-tester families are always flat).
+
+`Eq` is parametric *and* indexed. Under that guard it would have been rendered
+as an `axiom`, and this failure could not have occurred.
+
+`render_real_inductive` (`lean_pp.rs:409-441`) opens with a matching comment —
+"Only flat (no params, no indices) inductives" — and then performs **no
+flatness test at all**. It fetches the `Declaration::Inductive`, writes
+`inductive {name}{uparams} : {render_lean(ty)} where`, appends the
+constructors, and returns. Its only two `None` paths are "not an `Inductive`"
+and "a listed constructor name is not a `Constructor`"; neither concerns
+parameters or indices.
+
+The guard is not bypassed and its test is not wrong. **It was never written.**
+It exists only in prose, in two places, describing behaviour the code does not
+have — the failure mode CLAUDE.md's "Gotchas" section is entirely about.
+
+### The corpus is structurally incapable of reaching the defect
+
+The real-Lean cross-check fixtures build their inductives as
+`add_inductive(two, &[], 0, prop, ...)`: zero parameters, zero indices, a flat
+two-constructor enum — precisely the shape a *working* guard would admit. No
+amount of running the existing suites could have found this.
+
+**And it was predicted in writing.** `docs/prover-track/research/06-kernel-gap-analysis.md`,
+item 7 of "what must be true before a goal layer can sit on this kernel",
+states that widening the corpus requires `lean_pp` to stop falling back to
+axiom rendering for parametric/indexed families, "otherwise widening the corpus
+silently widens the *vacuous* region." That is now a realised prediction rather
+than a hypothetical.
+
+It is also the strongest argument for the `lean4export` route over patching the
+source printer: **the wire format carries `numParams` natively and structurally
+cannot flatten the telescope**, whereas a source printer can always regress into
+doing so — and, as this shows, can do it while carrying a comment saying it does
+not.
+
+Confirmed from the kernel side: `prelude.rs:321-322` declares `Eq` correctly and
+says so verbatim ("`Eq.{u} {α : Sort u} (a : α) : α → Prop` ... 2 params (α, a),
+1 index, one ctor"). The kernel holds the right shape; the printer discards it.
+
+## Stating the Lean position without overstating either direction
+
+Both halves of the obvious summary are wrong, in opposite directions.
+
+- **Not** "Lean → axeyum works." It is five pinned single-root fixtures,
+  dual-admitted against official v4.30. L3 is 0/12, the String closure's first
+  blocker is unmeasured, and the parity contract itself says the 5/5 fixture
+  total "is not complete K1 authority." Accurate: *translates and independently
+  admits a measured five-root fixture profile; the dependency-closed
+  Init/Std/mathlib population is unstarted.*
+- **Not** "axeyum → Lean does not exist." `lean_pp.rs` is 1,690 lines and four
+  suites feed rendered modules to a real Lean binary. Accurate, sharper, and
+  less flattering: **an export path exists, and the only non-trivial artifact
+  ever put through official Lean is rejected.**
+
+"Does not exist" invites "so build it". "Exists and is rejected" is the true
+state, and it is the one that should reach the paper.
+
 ## What this does and does not say
 
 - It does **not** say the shell-bound mathematics is wrong. Three review passes
