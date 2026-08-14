@@ -5,26 +5,36 @@
   "statement": "0 + a = a for all a ",
   "formal": {
     "language": "lean4",
-    "statement": "theorem rado.zero_add :  Nat:Eq AxNat (rado.add AxNat.zero x0) x0",
+    "statement": "theorem Nat.zero_add : ((x0 : AxNat) -> Eq.{1} AxNat (AxNat.add AxNat.zero x0) x0)",
     "fragment": "Nat",
-    "free_symbols": ["x0", "x1"]
+    "free_symbols": [
+      "x0"
+    ]
   },
   "epistemic_status": "proved",
   "depends_on": [],
   "axiom_footprint": [],
   "evidence": [
     {
-      "id": "kernel-zero_add",
+      "id": "kernel-zero-add",
       "kind": "kernel-term",
       "supports": "0 + a = a for all a ",
       "check_status": "checked",
-      "checker_command": "cargo test -p axeyum-lean-kernel --lib nat_prelude",
-      "notes": "Admitted by axeyum's own Lean kernel via nat_prelude's theorem(\"zero_add\")."
+      "checker_command": "cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- zero_add",
+      "notes": "`build_nat_prelude` admits this theorem only through the trusted kernel gate, so a successful build IS the type-check; the command both performs it and prints the admitted type, which is copied verbatim into formal.statement. Nothing here is transcribed."
+    },
+    {
+      "id": "footprint-zero-add",
+      "kind": "instance-pin",
+      "supports": "axiom_footprint: [] -- the Nat environment admits no trusted declaration",
+      "check_status": "checked",
+      "checker_command": "cargo run -q -p axeyum-lean-kernel --example nat_axiom_inventory",
+      "notes": "Reports `nat: axiom=0 opaque=0 quotient=0 total_trusted=0`, over the FULL trusted surface rather than Declaration::Axiom alone. The enumeration is per-environment, not per-theorem; it bounds this theorem's footprint because a proof cannot depend on a trusted declaration the environment does not contain. A per-theorem footprint (Lean's `#print axioms`) does not exist here yet."
     }
   ],
   "provenance": {
     "date": "2026-08-14",
     "established_by": "axeyum-lean-kernel nat_prelude (lean-kernel lane)"
   },
-  "notes": "A foundational fact add_comm rests on; written because the validator's dangling-edge rule fired on its own author's seed data."
+  "notes": "Seed fact for fact.schema.json (the `proved` case). Statement and type are dumped from the kernel by nat_theorem_inventory, not hand-written: the first version of this file was transcribed from doc comments and named `rado.add_comm`, a shell declared in tests/rado_shell_arithmetic.rs, while citing `--lib nat_prelude` -- a filter that never compiles that integration test. Two of the three seeds were additionally unparseable."
 }
