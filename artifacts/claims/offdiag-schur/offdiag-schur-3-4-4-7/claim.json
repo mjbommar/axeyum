@@ -1,0 +1,117 @@
+{
+  "schema_version": 1,
+  "id": "offdiag-schur-3-4-4-7",
+  "title": "S(3;4,4,7) = 76",
+  "statement": "The generalized off-diagonal Schur number S(3;4,4,7) is exactly 76: every 3-colouring of {1,...,76} contains x_1+...+x_{3}=x_4 monochromatic in colour 1, or x_1+...+x_{3}=x_4 monochromatic in colour 2, or x_1+...+x_{6}=x_7 monochromatic in colour 3; and some 3-colouring of {1,...,75} avoids all three.",
+  "epistemic_status": "computed",
+  "novelty": "reproduction",
+  "formal": {
+    "language": "cnf-family",
+    "family": "offdiag-schur-colouring-L(k)",
+    "parameters": {
+      "k": [
+        4,
+        4,
+        7
+      ],
+      "r": 3,
+      "n": 76
+    },
+    "generator": "crates/axeyum-search/src/offdiag.rs (OffDiagonalSchur::minimal_problem)",
+    "semantics_note": "artifacts/claims/offdiag-schur/SEMANTICS.md"
+  },
+  "concept_refs": [
+    {
+      "graph": "math-education",
+      "ref": "C:schur-number",
+      "relation": "instance-of",
+      "resolved": false,
+      "note": "generalized off-diagonal Schur number; no graph node authored yet"
+    },
+    {
+      "graph": "math-education",
+      "ref": "C:ramsey-number",
+      "relation": "exercises",
+      "resolved": true,
+      "note": "the additive-Ramsey case; off-diagonal is the analogue of asymmetric Ramsey numbers"
+    },
+    {
+      "graph": "math-education",
+      "ref": "TQ:colouring",
+      "relation": "uses-technique",
+      "resolved": true
+    },
+    {
+      "graph": "math-education",
+      "ref": "C:computational-search",
+      "relation": "exercises",
+      "resolved": true
+    }
+  ],
+  "axeyum_refs": {
+    "fragments": [],
+    "curriculum_nodes": [
+      "propositional-logic"
+    ]
+  },
+  "provenance": {
+    "conjectured_by": "Ahmed-Schaal Conjecture 2 predicts S(3;s,t,u) = s*t*u - t*u - u - 1 for 4 <= s <= t <= u. This value, 76, AGREES with it. The conjecture is open; arXiv:2604.11030 (Song and Mao, April 2026) proves the companion Conjecture 1 but not this one.",
+    "searched_by": [
+      "axeyum proof-producing CDCL core (solve_with_drat_proof_streaming, pure Rust, ADR-0381), both sides"
+    ],
+    "checked_by": [
+      "axeyum in-tree backward DRAT checker (check_drat_backward, ADR-0382, pure Rust)",
+      "OffDiagonalSchur::first_violation -- a layered reachability search over the defining equation that shares no code with the encoder -- replayed the witness",
+      "scripts/check-claim-certificates.py: a third derivation of the semantics, in Python, independent of both the Rust encoder and the Rust verifier"
+    ],
+    "date": "2026-08-13",
+    "machine": "linux x86-64, 16 cores",
+    "prior_art": [
+      {
+        "citation": "T. Ahmed, D. Schaal, 'On generalized Schur numbers', Experimental Mathematics / Congressus Numerantium (2015-2016), Table 2",
+        "url": "https://arxiv.org/abs/2604.11030",
+        "establishes": "S(3;4,4,7) = 76 (one of the eleven known exact values)"
+      }
+    ],
+    "toolchain": {
+      "axeyum_commit": "e58e8e86b8fcfc4592524683d0a9efef5a5ae751",
+      "rustc_version": "rustc 1.97.0-nightly (f53b654a8 2026-04-30)",
+      "target": "x86_64-unknown-linux-gnu",
+      "dirty": false
+    }
+  },
+  "evidence": [
+    {
+      "id": "lower-witness",
+      "kind": "witness-replay",
+      "supports": "S > 75 (lower bound)",
+      "artifact": "artifacts/claims/offdiag-schur/offdiag-schur-3-4-4-7/witness_75.txt",
+      "artifact_sha256": "1fc25a27cc5ff177ddc1363df85f58b89f6a2531c23ce4fb52064d87e2d62ab5",
+      "check_status": "checked",
+      "checker_command": "python3 scripts/check-claim-certificates.py --only offdiag-schur-3-4-4-7",
+      "artifact_format": "colouring-text",
+      "notes": "Found by the CDCL core, then replayed by OffDiagonalSchur::first_violation (independent of the encoder) and cross-checked a second time against the FULL, unreduced solution-set list before being written."
+    },
+    {
+      "id": "upper-drat",
+      "kind": "unsat-certificate",
+      "supports": "S <= 76 (upper bound)",
+      "artifact": "artifacts/claims/offdiag-schur/offdiag-schur-3-4-4-7/F_76.drat.gz",
+      "artifact_sha256": "c593a26cd8a864a1b6e924799f44563057fa5d6adcfb65245cb2ac98d45727db",
+      "check_status": "checked",
+      "checker_command": "python3 scripts/check-claim-certificates.py --only offdiag-schur-3-4-4-7",
+      "artifact_format": "drat-text-gzip",
+      "notes": "Produced by axeyum's own proof-producing CDCL core (solve_with_drat_proof_streaming, ADR-0381) streaming TEXT DRAT to disk and re-derived in the same process by axeyum's own backward DRAT checker (check_drat_backward, ADR-0382). No external solver and no external checker took part. The deciding CNF is the SUBSUMPTION-MINIMAL encoding: for solution sets S subset of S', clause(S) implies clause(S'), so only the minimal antichain is emitted -- a SUBSET of the full clause list, so refuting it refutes the full instance. check-claim-certificates.py validates the stored CNF clause by clause rather than by byte-identity, which is the check the bound actually needs.",
+      "parameters": {
+        "producer": "axeyum solve_with_drat_proof_streaming + TextProofSink (crates/axeyum-cnf, ADR-0381)",
+        "checker": "axeyum check_drat_backward (crates/axeyum-cnf, ADR-0382)",
+        "proof_steps": 157,
+        "proof_bytes": 2978,
+        "proof_sha256": "3c7d1437d578cfc10d366f74d7f9d06296e69f62edb79dd1583a972ca8a1a21e",
+        "deciding_cnf": "artifacts/claims/offdiag-schur/offdiag-schur-3-4-4-7/F_76.cnf.gz",
+        "deciding_cnf_sha256": "0e29f6098f6f941722f10e147c995785b1fbc1fd80f3e4534a5938edb4a922d4"
+      }
+    }
+  ],
+  "notes": "REPRODUCES a published computed value. REPRODUCTION. This value is already published (T. Ahmed); ours agrees exactly and additionally carries a machine-checked refutation, which the published computations do not. Both sides are discharged -- n = N-1 satisfiable with an independently replayed colouring, n = N refuted with a DRAT proof re-derived by axeyum's own checker. SOUNDNESS NOTE: colours here are NOT interchangeable (each forbids a different equation), so the usual whole-palette symmetry breaking is UNSOUND and would produce a wrong unsat. The encoding orders colour classes only within blocks of colours carrying the SAME equation, and crates/axeyum-search/tests/offdiag_schur.rs carries a negative control showing the unblocked version turning satisfiable S(3;3,4,5) at n=41 into unsat."
+}

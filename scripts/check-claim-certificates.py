@@ -1009,11 +1009,49 @@ def check_offdiag_evidence(path: Path, ev: dict, params: dict) -> list[str]:
     return errors
 
 
+def check_novelty(path: Path, c: dict) -> list[str]:
+    """Novelty must be a field, not prose, and must be consistent with prior_art.
+
+    Five claims once shipped labelled NEW in their free-text `notes` for values
+    that had been published four months earlier. The values agreed, so nothing
+    unsound went out -- but "NEW VALUE" sat inside a machine-checked ledger entry
+    and no part of the check touched it. This is the smallest check that makes
+    the label mean something: it cannot verify the literature, but it can stop a
+    claim from being silent about it, and it can stop `reproduction` from being
+    asserted with nothing to reproduce.
+
+    Claims that predate the field are not failed for lacking it; a claim that
+    HAS it must have it right.
+    """
+    novelty = c.get("novelty")
+    if novelty is None:
+        return []
+    if novelty not in {"new", "reproduction", "replication"}:
+        return [f"{path}: novelty {novelty!r} is not one of new/reproduction/replication"]
+    prior = (c.get("provenance") or {}).get("prior_art") or []
+    if novelty in {"reproduction", "replication"} and not prior:
+        return [f"{path}: novelty {novelty!r} but provenance.prior_art is empty; "
+                f"a reproduction must name what it reproduces"]
+    title = c.get("title", "")
+    if novelty in {"reproduction", "replication"}:
+        # The cited prior art has to establish THIS claim, not merely be adjacent
+        # to it: at least one row must state the same value the title states.
+        value = title.split("=")[-1].strip() if "=" in title else None
+        if value and not any(f"= {value}" in (row.get("establishes") or "")
+                             for row in prior):
+            return [f"{path}: novelty {novelty!r} but no prior_art row establishes "
+                    f"the claimed value ({value}); the citations are adjacent, not "
+                    f"supporting"]
+    print(f"  novelty: {novelty}" + (f" ({len(prior)} prior-art row(s))" if prior else ""))
+    return []
+
+
 def check_claim(path: Path, drat_checker: str | None) -> list[str]:
     errors: list[str] = []
     c = json.loads(path.read_text())
     fam = c["formal"]["family"]
     params = c["formal"]["parameters"]
+    errors.extend(check_novelty(path, c))
 
     for ev in c["evidence"]:
         if ev["check_status"] != "checked":
