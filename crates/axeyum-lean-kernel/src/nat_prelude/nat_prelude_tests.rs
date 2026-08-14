@@ -68,6 +68,7 @@ fn definition_names(p: &NatPrelude) -> Vec<NameId> {
         p.pred,
         p.sub,
         p.lt,
+        p.in_closed_interval,
         p.dvd,
         p.valuation_at,
     ]
@@ -601,6 +602,18 @@ fn order_is_total() {
     let equality = f.lemma(p.le_antisymm, &[two_plus_three, five, forward, reverse]);
     f.k.infer(equality)
         .unwrap_or_else(|e| panic!("antisymmetry application should infer: {}", f.explain(&e)));
+
+    let one = f.num(1);
+    let lower = f.lemma(p.le_add_right, &[two, one]);
+    let two_more = f.num(2);
+    let upper = f.lemma(p.le_add_right, &[three, two_more]);
+    let interval = f.in_closed_interval(two, five, three);
+    let lower_ty = f.le(two, three);
+    let upper_ty = f.le(three, five);
+    let interval_proof = f.const_app(p.logic.and_intro, &[lower_ty, upper_ty, lower, upper]);
+    let interval_name = f.name("three_mem_two_five");
+    f.declare_theorem(interval_name, interval, interval_proof)
+        .unwrap_or_else(|e| panic!("closed interval membership should admit: {}", f.explain(&e)));
 }
 
 #[test]
@@ -1550,7 +1563,33 @@ fn kernel_rejects_broken_proof_terms() {
         rejections += 1;
     }
 
-    assert_eq!(rejections, 32, "every negative control must be rejected");
+    // NC33 — closed-interval membership retains both endpoints.
+    {
+        let name = f.name("nc33_closed_interval_wrong_upper_endpoint");
+        let one = f.num(1);
+        let two = f.num(2);
+        let three = f.num(3);
+        let four = f.num(4);
+        let five = f.num(5);
+        let lower = f.lemma(p.le_add_right, &[two, one]);
+        let two_more = f.num(2);
+        let upper = f.lemma(p.le_add_right, &[three, two_more]);
+        let lower_ty = f.le(two, three);
+        let upper_ty = f.le(three, five);
+        let proof = f.const_app(p.logic.and_intro, &[lower_ty, upper_ty, lower, upper]);
+        let bad = f.in_closed_interval(two, four, three);
+        let err = f
+            .declare_theorem(name, bad, proof)
+            .expect_err("NC33: interval membership must retain both endpoints");
+        println!(
+            "NC33 (wrong closed-interval endpoint) rejected:\n  {}",
+            f.explain(&err)
+        );
+        assert!(!f.k.environment().contains(name));
+        rejections += 1;
+    }
+
+    assert_eq!(rejections, 33, "every negative control must be rejected");
 }
 
 /// The build is deterministic: two independent kernels render every promised
@@ -1573,7 +1612,7 @@ fn the_build_is_deterministic() {
     assert_eq!(first, second, "the prelude build must be deterministic");
     assert_eq!(
         first.len(),
-        9 + 60,
+        10 + 60,
         "every promised definition and theorem must be rendered"
     );
 }

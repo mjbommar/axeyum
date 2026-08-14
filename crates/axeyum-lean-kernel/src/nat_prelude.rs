@@ -219,6 +219,8 @@ pub struct NatPrelude {
     pub le: NameId,
     /// `Nat.lt n m := Nat.le (Nat.succ n) m`.
     pub lt: NameId,
+    /// `Nat.inClosedInterval lower upper value := Le lower value ∧ Le value upper`.
+    pub in_closed_interval: NameId,
     /// `Nat.le.refl : ∀ (n : Nat), Le n n`.
     pub le_refl: NameId,
     /// `Nat.le.step : ∀ (n m : Nat), Le n m → Le n (succ m)`.
@@ -366,6 +368,7 @@ pub fn build_nat_prelude(kernel: &mut Kernel) -> Result<NatPrelude, KernelError>
             mul_one: kernel.name_str(nat, "mul_one"),
             le,
             lt: kernel.name_str(nat, "lt"),
+            in_closed_interval: kernel.name_str(nat, "inClosedInterval"),
             le_refl: kernel.name_str(le, "refl"),
             le_step: kernel.name_str(le, "step"),
             le_rec: kernel.name_str(le, "rec"),
@@ -1395,6 +1398,36 @@ fn declare_order(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> 
             ty,
             value,
             hint: ReducibilityHint::Regular(1),
+        })?;
+    }
+
+    // inClosedInterval lower upper value := Le lower value ∧ Le value upper
+    {
+        let lower_fv = d.fresh_fvar();
+        let lower = d.kernel().fvar(lower_fv);
+        let upper_fv = d.fresh_fvar();
+        let upper = d.kernel().fvar(upper_fv);
+        let value_fv = d.fresh_fvar();
+        let value = d.kernel().fvar(value_fv);
+        let lower_bound = d.le(lower, value);
+        let upper_bound = d.le(value, upper);
+        let body = d.const_app(p.logic.and, &[lower_bound, upper_bound]);
+        let definition = {
+            let with_value = d.lam_fv(value_fv, nat, body);
+            let with_upper = d.lam_fv(upper_fv, nat, with_value);
+            d.lam_fv(lower_fv, nat, with_upper)
+        };
+        let ty = {
+            let with_value = d.kernel().pi(anon, nat, prop, BinderInfo::Default);
+            let with_upper = d.kernel().pi(anon, nat, with_value, BinderInfo::Default);
+            d.kernel().pi(anon, nat, with_upper, BinderInfo::Default)
+        };
+        d.kernel().add_declaration(Declaration::Definition {
+            name: p.in_closed_interval,
+            uparams: vec![],
+            ty,
+            value: definition,
+            hint: ReducibilityHint::Regular(4),
         })?;
     }
 
@@ -3442,6 +3475,12 @@ pub trait NatOps {
     fn lt(&mut self, x: ExprId, y: ExprId) -> ExprId {
         let f = self.prelude().lt;
         self.const_app(f, &[x, y])
+    }
+
+    /// `Nat.inClosedInterval lower upper value`.
+    fn in_closed_interval(&mut self, lower: ExprId, upper: ExprId, value: ExprId) -> ExprId {
+        let f = self.prelude().in_closed_interval;
+        self.const_app(f, &[lower, upper, value])
     }
 
     /// `Nat.dvd a n` (the proposition `a ∣ n`).
