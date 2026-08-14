@@ -22,6 +22,7 @@
 use crate::SearchError;
 use crate::colouring::{ColouringProblem, Witness};
 use crate::offdiag::OffDiagonalSchur;
+use crate::vdw::VanDerWaerden;
 
 /// A parameterised family of colouring instances.
 pub trait ColouringFamily: Sync {
@@ -325,8 +326,9 @@ impl ColouringFamily for Schur {
     }
 }
 
-/// Parses a family specification such as `rado:a=3,b=2,k=4`, `schur:k=3`, or
-/// `offdiag-schur:s=4,t=4,u=8`.
+/// Parses a family specification such as `rado:a=3,b=2,k=4`, `schur:k=3`,
+/// `offdiag-schur:s=4,t=4,u=8`, `vdw:c=4,k=3` (diagonal `W(4,3)`) or
+/// `vdw:k1=3,k2=20` (off-diagonal `w(2;3,20)`).
 ///
 /// # Errors
 ///
@@ -359,9 +361,10 @@ pub fn parse_family(spec: &str) -> Result<Box<dyn ColouringFamily>, SearchError>
         "rado" => &["a", "b", "k"],
         "schur" => &["k"],
         "offdiag-schur" => &["s", "t", "u"],
+        "vdw" => &["c", "k", "k1", "k2", "k3", "k4"],
         _ => {
             return Err(SearchError::InvalidParameter {
-                what: format!("unknown family {name:?}; known: rado, schur, offdiag-schur"),
+                what: format!("unknown family {name:?}; known: rado, schur, offdiag-schur, vdw"),
             });
         }
     };
@@ -381,6 +384,41 @@ pub fn parse_family(spec: &str) -> Result<Box<dyn ColouringFamily>, SearchError>
             require("t")?,
             require("u")?,
         )?)),
+        // `k1..` is the off-diagonal spelling, one progression length per
+        // colour; `c` + `k` is the diagonal one. Mixing them is rejected rather
+        // than silently resolved, because the two differ in whether the
+        // whole-palette symmetry break is sound.
+        "vdw" => {
+            let lengths: Vec<usize> = ["k1", "k2", "k3", "k4"]
+                .iter()
+                .filter_map(|key| get(key))
+                .collect();
+            if lengths.is_empty() {
+                return Ok(Box::new(VanDerWaerden::diagonal(
+                    require("c")?,
+                    require("k")?,
+                )?));
+            }
+            if get("c").is_some() || get("k").is_some() {
+                return Err(SearchError::InvalidParameter {
+                    what: "family \"vdw\" takes either c=<colours>,k=<length> or k1=..,k2=.., \
+                           not both"
+                        .to_string(),
+                });
+            }
+            // A gap — `k1` and `k3` without `k2` — would silently build a
+            // different family from the one the caller wrote.
+            let contiguous = ["k1", "k2", "k3", "k4"]
+                .iter()
+                .take(lengths.len())
+                .all(|key| get(key).is_some());
+            if !contiguous {
+                return Err(SearchError::InvalidParameter {
+                    what: "family \"vdw\" needs k1, k2, ... with no gaps".to_string(),
+                });
+            }
+            Ok(Box::new(VanDerWaerden::new(lengths)?))
+        }
         _ => Ok(Box::new(Schur::new(require("k")?)?)),
     }
 }
@@ -488,8 +526,38 @@ mod tests {
     }
 
     #[test]
+    fn vdw_specs_round_trip_in_both_spellings() {
+        let diagonal = parse_family("vdw:c=4,k=3").expect("diagonal spec");
+        assert_eq!(diagonal.label(), "W(4,3)");
+        assert_eq!(diagonal.colours(), 4);
+        // Diagonal colours are interchangeable, so the uniform path with the
+        // whole-palette symmetry break is the right one and is what it takes.
+        assert!(!diagonal.colour_dependent());
+        assert_eq!(diagonal.symmetry_blocks(), vec![vec![1, 2, 3, 4]]);
+
+        let off = parse_family("vdw:k1=3,k2=20").expect("off-diagonal spec");
+        assert_eq!(off.label(), "w(2;3,20)");
+        assert_eq!(off.colours(), 2);
+        assert!(off.colour_dependent());
+        assert_eq!(off.symmetry_blocks(), vec![vec![1], vec![2]]);
+
+        // `w(2;3,3)` is the diagonal `W(2,3)` and must report itself as such.
+        let degenerate = parse_family("vdw:k1=3,k2=3").expect("spec");
+        assert_eq!(degenerate.label(), "W(2,3)");
+        assert!(!degenerate.colour_dependent());
+
+        // The two spellings are not mixable, gaps are refused, and k < 3 is
+        // refused.
+        assert!(parse_family("vdw:c=2,k1=3").is_err());
+        assert!(parse_family("vdw:k1=3,k3=5").is_err());
+        assert!(parse_family("vdw:k1=2,k2=5").is_err());
+        assert!(parse_family("vdw:k=3").is_err());
+    }
+
+    #[test]
     fn family_specs_reject_unknown_families_and_keys() {
-        assert!(parse_family("vdw:k=2").is_err());
+        assert!(parse_family("hales-jewett:k=2").is_err());
+        assert!(parse_family("vdw:c=2,k=3,x=1").is_err());
         assert!(parse_family("rado:a=3,b=2,k=4,c=1").is_err());
         assert!(parse_family("rado:a=3,b=2").is_err());
         assert!(parse_family("rado:a=x,b=2,k=4").is_err());

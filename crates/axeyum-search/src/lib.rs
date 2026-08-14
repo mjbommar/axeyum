@@ -91,6 +91,7 @@ pub mod harness;
 pub mod ledger;
 pub mod offdiag;
 pub mod search;
+pub mod vdw;
 
 pub use certify::certify_dumped_cover;
 pub use colouring::{ColouringProblem, Witness};
@@ -102,6 +103,7 @@ pub use harness::{CheckMode, CoverOptions, CoverOutcome};
 pub use ledger::RunId;
 pub use offdiag::OffDiagonalSchur;
 pub use search::{MinConflictsOptions, min_conflicts};
+pub use vdw::VanDerWaerden;
 
 use axeyum_cnf::{CnfError, DratError};
 
