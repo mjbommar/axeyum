@@ -109,6 +109,18 @@ ARTIFACT_FORMATS = {
     "drat-binary",        # binary DRAT (kissat's default) -- NOT readable here
     "drat-binary-gzip",
     "dimacs-cnf",         # the deciding instance itself, not a proof
+    "dimacs-cnf-gzip",    # ... under a gzip envelope. Added 2026-08-13 for the
+                          #     off-diagonal Schur family, whose deciding
+                          #     instances run to 155 MB uncompressed against
+                          #     23.7 MB gzipped. `detect_artifact_format`
+                          #     ALREADY returned this string (`fmt + envelope`),
+                          #     so the sniffer could classify a file the
+                          #     vocabulary then rejected as `unknown`; the entry
+                          #     removes that inconsistency rather than relaxing
+                          #     anything. Note it is deliberately NOT in
+                          #     CHECKER_READABLE_FORMATS below: a deciding
+                          #     instance is not a proof, and the two contracts
+                          #     must not be conflated.
     "colouring-text",     # a witness colouring, one colour per integer
     "tsv-ledger",         # a per-cube certification ledger
 }
@@ -246,10 +258,11 @@ def check_artifact_format(errors: list[str], path: Path, ev: dict,
             fail(errors, f"{path}: evidence '{eid}' is an instance-pin but "
                          f"records no artifact_sha256; the hash IS the pin")
             return
-        if declared != "dimacs-cnf":
+        if declared not in {"dimacs-cnf", "dimacs-cnf-gzip"}:
             fail(errors, f"{path}: evidence '{eid}' is an instance-pin but "
                          f"declares artifact_format '{declared}'; a pin must "
-                         f"store the deciding instance as 'dimacs-cnf'")
+                         f"store the deciding instance as 'dimacs-cnf' or "
+                         f"'dimacs-cnf-gzip'")
             return
     if artifact is None or not artifact.exists():
         return

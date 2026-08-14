@@ -17,7 +17,7 @@
       "r": 3,
       "n": 152
     },
-    "generator": "crates/axeyum-search/src/offdiag.rs (OffDiagonalSchur::minimal_problem)",
+    "generator": "crates/axeyum-search/src/offdiag.rs",
     "semantics_note": "artifacts/claims/offdiag-schur/SEMANTICS.md"
   },
   "concept_refs": [
@@ -26,7 +26,7 @@
       "ref": "C:schur-number",
       "relation": "instance-of",
       "resolved": false,
-      "note": "generalized off-diagonal Schur number; no graph node authored yet"
+      "note": "UNRESOLVED and recorded as such: graph/concepts/schur-number.md does not exist at graph_pin 819a591f682d (census of 1784 ids; the other four refs on this claim do resolve). A node has been drafted for the math-education maintainers; until it is committed this ref resolves against nothing and asserting otherwise would pin a concept to a commit that lacks it."
     },
     {
       "graph": "math-education",
@@ -66,6 +66,7 @@
     ],
     "date": "2026-08-13",
     "machine": "linux x86-64, 16 cores",
+    "graph_pin": "819a591f682dc38f2b49d61047e75e65beccf8b7",
     "prior_art": [
       {
         "citation": "T. Ahmed, D. Schaal, generalized Schur numbers (2015-2016); L. Song, J. Mao, arXiv:2604.11030 (2026)",
@@ -74,7 +75,7 @@
       }
     ],
     "toolchain": {
-      "axeyum_commit": "e4f8c65b68661e68b9b634428af50f45d75220d6",
+      "axeyum_commit": "a6951142f2413de1dcd08dbd743e91db2000b64a",
       "rustc_version": "rustc 1.97.0-nightly (f53b654a8 2026-04-30)",
       "target": "x86_64-unknown-linux-gnu",
       "dirty": false
@@ -101,20 +102,15 @@
       "check_status": "checked",
       "checker_command": "python3 scripts/check-claim-certificates.py --only offdiag-schur-3-4-6-9",
       "artifact_format": "drat-text-gzip",
-      "notes": "Produced by axeyum's own proof-producing CDCL core (solve_with_drat_proof_streaming, ADR-0381) streaming TEXT DRAT to disk and re-derived in the same process by axeyum's own backward DRAT checker (check_drat_backward, ADR-0382). No external solver and no external checker took part. The deciding CNF is the SUBSUMPTION-MINIMAL encoding: for solution sets S subset of S', clause(S) implies clause(S'), so only the minimal antichain is emitted -- a SUBSET of the full clause list, so refuting it refutes the full instance. check-claim-certificates.py validates the stored CNF clause by clause rather than by byte-identity, which is the check the bound actually needs. The deciding CNF is not stored here (12558503 bytes gzipped); the row is reported as NOT re-checked by the ledger checker, which is the honest outcome.",
+      "notes": "Produced by axeyum's own proof-producing CDCL core (solve_with_drat_proof_streaming, ADR-0381) streaming TEXT DRAT to disk and re-derived in the same process by axeyum's own backward DRAT checker (check_drat_backward, ADR-0382). No external solver and no external checker took part. The deciding CNF is the SUBSUMPTION-MINIMAL encoding: for solution sets S subset of S', clause(S) implies clause(S'), so only the minimal antichain is emitted -- a SUBSET of the full clause list, so refuting it refutes the full instance. check-claim-certificates.py validates the stored CNF clause by clause rather than by byte-identity, which is the check the bound actually needs. The deciding CNF is NOT stored beside this claim (12558503 bytes gzipped); there is therefore no instance-pin row, and check-claim-certificates.py reports this row as NOT re-checked here rather than passing it. Regenerate with: cargo run --release -p axeyum-search --example offdiag_frontier -- bundle 4 6 9 152 <dir>",
       "parameters": {
         "producer": "axeyum solve_with_drat_proof_streaming + TextProofSink (crates/axeyum-cnf, ADR-0381)",
         "checker": "axeyum check_drat_backward (crates/axeyum-cnf, ADR-0382)",
         "proof_steps": 760,
         "proof_bytes": 18093,
         "proof_sha256": "1230887c7090c1d91429303396597c1ab8e9d26ded0cbc37bc6046d99055b530"
-      },
-      "distribution": "regenerable",
-      "regeneration": {
-        "command": "cargo run --release -p axeyum-search --example offdiag_frontier -- bundle 4 6 9 152 <dir>   # emits F_152.cnf, gzip -9 it",
-        "produces_sha256": "3519e4d26027405ffa2440126d136c31178d12be594a23f6810211452b013beb"
       }
     }
   ],
-  "notes": "NEW VALUE. NEW VALUE: not among Ahmed-Schaal's eleven exact values and not in Song-Mao arXiv:2604.11030 Table 3. The lower bound was a theorem; the upper bound is established here. Both sides are discharged -- n = N-1 satisfiable with an independently replayed colouring, n = N refuted with a DRAT proof re-derived by axeyum's own checker. SOUNDNESS NOTE: colours here are NOT interchangeable (each forbids a different equation), so the usual whole-palette symmetry breaking is UNSOUND and would produce a wrong unsat. The encoding orders colour classes only within blocks of colours carrying the SAME equation, and crates/axeyum-search/tests/offdiag_schur.rs carries a negative control showing the unblocked version turning satisfiable S(3;3,4,5) at n=41 into unsat."
+  "notes": "NEW VALUE. NEW VALUE: not among Ahmed-Schaal's eleven exact values and not in Song-Mao arXiv:2604.11030 Table 3. The lower bound was a theorem; the upper bound is established here. Generated by crates/axeyum-search/src/offdiag.rs entry point OffDiagonalSchur::minimal_problem. Both sides are discharged -- n = N-1 satisfiable with an independently replayed colouring, n = N refuted with a DRAT proof re-derived by axeyum's own checker. SOUNDNESS NOTE: colours here are NOT interchangeable (each forbids a different equation), so the usual whole-palette symmetry breaking is UNSOUND and would produce a wrong unsat. The encoding orders colour classes only within blocks of colours carrying the SAME equation, and crates/axeyum-search/tests/offdiag_schur.rs carries a negative control showing the unblocked version turning satisfiable S(3;3,4,5) at n=41 into unsat."
 }

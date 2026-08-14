@@ -648,16 +648,17 @@ def check_vdw_evidence(path: Path, ev: dict, params: dict) -> list[str]:
     if not cnf_path.exists() and (art_path.parent / (cnf_name + ".gz")).exists():
         cnf_path = art_path.parent / (cnf_name + ".gz")
     if not cnf_path.exists():
-        if ev.get("distribution") == "regenerable" or ev.get("regeneration"):
-            recipe = ((ev.get("regeneration") or {}).get("command")
-                      or "no recipe recorded")
-            NOT_RECHECKED.append(f"{path.parent.name}/{eid}: deciding CNF "
-                                 f"{cnf_name} not in this tree; regenerate "
-                                 f"with: {recipe}")
-            print(f"  NOT re-checked {eid}: deciding CNF absent (regenerable)")
-            return []
-        return [f"{path}: '{eid}' has no deciding CNF beside it; the proof "
-                f"cannot be tied to the claimed instance"]
+        # No CNF beside the proof: the refutation cannot be tied to the claimed
+        # instance HERE. That is reported, never passed. The recipe lives in the
+        # row's notes because `regeneration` describes THIS row's artifact (the
+        # proof), which is present.
+        recipe = ((ev.get("regeneration") or {}).get("command")
+                  or "see this row's notes for the bundle command")
+        NOT_RECHECKED.append(f"{path.parent.name}/{eid}: deciding CNF "
+                             f"{cnf_name} not in this tree; regenerate "
+                             f"with: {recipe}")
+        print(f"  NOT re-checked {eid}: deciding CNF absent from this tree")
+        return []
     cnf_bytes = cnf_path.read_bytes()
     cnf_text = (gzip.decompress(cnf_bytes) if cnf_path.suffix == ".gz"
                 else cnf_bytes).decode()
@@ -1287,6 +1288,28 @@ def check_offdiag_evidence(path: Path, ev: dict, params: dict) -> list[str]:
               f"monochromatic solution of L{tuple(k)} in its own colour")
         return errors
 
+    if kind == "instance-pin":
+        # The pin's whole job is to answer "which formula?", so re-check the
+        # stored bytes ARE that formula rather than trusting the hash: every
+        # negative clause must forbid a genuine monochromatic solution of the
+        # equation its colour carries, and the structural clauses must be
+        # exactly the sound at-least-one / at-most-one / BLOCKED symmetry set.
+        raw = art_path.read_bytes()
+        text = (gzip.decompress(raw) if raw[:2] == b"\x1f\x8b" else raw).decode()
+        cnf_errors = check_offdiag_cnf(k, n, text)
+        if cnf_errors:
+            return [f"{path}: '{eid}' pinned instance: {m}" for m in cnf_errors]
+        if ev.get("artifact_sha256"):
+            got = hashlib.sha256(raw).hexdigest()
+            if got != ev["artifact_sha256"]:
+                return [f"{path}: '{eid}' artifact sha256 {got} != recorded "
+                        f"{ev['artifact_sha256']}"]
+        clauses = len([l for l in text.splitlines()
+                       if l.strip() and not l.startswith(("c", "p"))])
+        print(f"  checked instance-pin {eid}: {clauses} clauses, every one "
+              f"implied by S(3;{','.join(map(str, k))}) at n={n}")
+        return []
+
     if kind != "unsat-certificate":
         return [f"{path}: '{eid}' kind '{kind}' cannot be 'checked' for "
                 f"family {OFFDIAG_FAMILY}"]
@@ -1301,16 +1324,17 @@ def check_offdiag_evidence(path: Path, ev: dict, params: dict) -> list[str]:
         # regeneration recipe instead. Without the CNF the proof cannot be tied
         # to the claimed instance, so the row is reported as NOT re-checked --
         # never passed silently, and never confused with a checked one.
-        if ev.get("distribution") == "regenerable" or ev.get("regeneration"):
-            recipe = ((ev.get("regeneration") or {}).get("command")
-                      or "no recipe recorded")
-            NOT_RECHECKED.append(f"{path.parent.name}/{eid}: deciding CNF "
-                                 f"{cnf_name} not in this tree; regenerate "
-                                 f"with: {recipe}")
-            print(f"  NOT re-checked {eid}: deciding CNF absent (regenerable)")
-            return []
-        return [f"{path}: '{eid}' has no deciding CNF beside it; the proof "
-                f"cannot be tied to the claimed instance"]
+        # No CNF beside the proof: the refutation cannot be tied to the claimed
+        # instance HERE. That is reported, never passed. The recipe lives in the
+        # row's notes because `regeneration` describes THIS row's artifact (the
+        # proof), which is present.
+        recipe = ((ev.get("regeneration") or {}).get("command")
+                  or "see this row's notes for the bundle command")
+        NOT_RECHECKED.append(f"{path.parent.name}/{eid}: deciding CNF "
+                             f"{cnf_name} not in this tree; regenerate "
+                             f"with: {recipe}")
+        print(f"  NOT re-checked {eid}: deciding CNF absent from this tree")
+        return []
     cnf_bytes = cnf_path.read_bytes()
     cnf_text = (gzip.decompress(cnf_bytes) if cnf_path.suffix == ".gz"
                 else cnf_bytes).decode()
