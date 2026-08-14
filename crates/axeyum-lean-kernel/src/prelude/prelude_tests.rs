@@ -261,6 +261,7 @@ fn prelude_admits_all_declarations() {
         p.acc,
         p.acc_intro,
         p.acc_rec,
+        p.acc_inv,
         p.well_founded,
         p.well_founded_fix,
         p.well_founded_fix_eq,
@@ -503,6 +504,71 @@ fn accessibility_recursion_computes_and_retains_its_index() {
     );
 }
 
+/// `Acc.inv` extracts the predecessor index selected by the relation proof.
+/// Test-only abstract accessibility isolates that theorem contract; the
+/// prelude's separate axiom audit still requires the declaration itself to be
+/// a checked theorem.
+#[test]
+fn accessibility_inverse_selects_the_related_predecessor() {
+    let mut k = Kernel::new();
+    let p = build_logic_prelude(&mut k).expect("logic prelude must build");
+    let anon = k.anon();
+    let zero_level = k.level_zero();
+    let one_level = k.level_succ(zero_level);
+    let bool_ty = k.const_(p.bool_, vec![]);
+    let source = k.const_(p.bool_true, vec![]);
+    let predecessor = k.const_(p.bool_false, vec![]);
+    let true_prop = k.const_(p.true_, vec![]);
+    let related = k.const_(p.true_intro, vec![]);
+    let relation = {
+        let inner = k.lam(anon, bool_ty, true_prop, BinderInfo::Default);
+        k.lam(anon, bool_ty, inner, BinderInfo::Default)
+    };
+    let acc = k.const_(p.acc, vec![one_level]);
+    let accessible_source_ty = apply_all(&mut k, acc, &[bool_ty, relation, source]);
+    let accessible_source = k.name_str(anon, "abstract_accessible_source");
+    k.add_declaration(Declaration::Axiom {
+        name: accessible_source,
+        uparams: vec![],
+        ty: accessible_source_ty,
+    })
+    .expect("test fixture accessibility should admit");
+
+    let inverse = k.const_(p.acc_inv, vec![one_level]);
+    let accessible_source = k.const_(accessible_source, vec![]);
+    let proof = apply_all(
+        &mut k,
+        inverse,
+        &[
+            bool_ty,
+            relation,
+            source,
+            predecessor,
+            accessible_source,
+            related,
+        ],
+    );
+    let expected = apply_all(&mut k, acc, &[bool_ty, relation, predecessor]);
+    let inferred = k.infer(proof).expect("Acc.inv should infer");
+    assert!(k.def_eq(inferred, expected));
+
+    let wrong = apply_all(&mut k, acc, &[bool_ty, relation, source]);
+    let wrong_name = k.name_str(anon, "acc_inv_wrong_predecessor");
+    let error = k
+        .add_declaration(Declaration::Theorem {
+            name: wrong_name,
+            uparams: vec![],
+            ty: wrong,
+            value: proof,
+        })
+        .expect_err("Acc.inv cannot change the selected predecessor index");
+    assert!(
+        matches!(error, crate::KernelError::DeclarationValueMismatch { .. }),
+        "unexpected rejection: {error:?}"
+    );
+    assert!(!k.environment().contains(wrong_name));
+}
+
 #[test]
 fn logic_prelude_with_accessibility_declares_no_axioms() {
     let mut k = Kernel::new();
@@ -526,6 +592,7 @@ fn accessibility_prelude_build_is_deterministic() {
             prelude.acc,
             prelude.acc_intro,
             prelude.acc_rec,
+            prelude.acc_inv,
             prelude.well_founded,
             prelude.well_founded_fix,
             prelude.well_founded_fix_eq,
