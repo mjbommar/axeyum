@@ -1,0 +1,126 @@
+{
+  "schema_version": 1,
+  "id": "rado-r4-a5-b2",
+  "title": "R_4(5(x-y)=2z) = 625",
+  "statement": "The 4-colour Rado number of 5(x-y) = 2z is exactly 625 = 5^4: every 4-colouring of {1,...,625} contains a monochromatic solution, and some 4-colouring of {1,...,624} avoids one. The cell (a,b) = (5,2) is BLANK in Table 10 of Chang-De Loera-Wesley (ISSAC 2022), the only published four-colour table for this family, so this is a new exact four-colour Rado number. It confirms the a^k pattern at a point where a >= b+2 and gcd(a,b) = 1 hold and nothing was known.",
+  "epistemic_status": "computed",
+  "formal": {
+    "language": "cnf-family",
+    "family": "rado-colouring-a(x-y)=bz",
+    "parameters": {
+      "a": 5,
+      "b": 2,
+      "k": 4,
+      "n": 625
+    },
+    "generator": "scripts/gen-rado-instance.py",
+    "semantics_note": "artifacts/claims/rado/SEMANTICS.md"
+  },
+  "concept_refs": [
+    {
+      "graph": "math-education",
+      "ref": "C:ramsey-number",
+      "relation": "exercises",
+      "resolved": false,
+      "note": "pending: no graph_pin evaluated for this claim"
+    },
+    {
+      "graph": "math-education",
+      "ref": "TQ:colouring",
+      "relation": "uses-technique",
+      "resolved": false,
+      "note": "pending: no graph_pin evaluated for this claim"
+    },
+    {
+      "graph": "math-education",
+      "ref": "C:computational-search",
+      "relation": "exercises",
+      "resolved": false,
+      "note": "pending: no graph_pin evaluated for this claim"
+    }
+  ],
+  "axeyum_refs": {
+    "fragments": [],
+    "curriculum_nodes": [
+      "propositional-logic"
+    ]
+  },
+  "provenance": {
+    "conjectured_by": "construction + literature: Chang-De Loera-Wesley Lemma 4.1 gives R_k >= a^k for gcd(a,b)=1 by the a-adic valuation colouring, and their Theorem 1.2(3) gives equality at k=3 for a >= b+2; the k=4 value was predicted by extending that pattern",
+    "searched_by": [
+      "axeyum proof-producing CDCL (axeyum_cnf::solve_with_drat_proof_streaming + TextProofSink, pure Rust, ADR-0381) on s1: refuted F_625 in 6576 s wall, streaming 8,819,268,223 bytes / 103,409,097 text-DRAT steps to local disk",
+      "NO external solver was used anywhere in this claim (ADR-0002)"
+    ],
+    "checked_by": [
+      "axeyum in-tree backward DRAT checker (axeyum_cnf::check_drat_backward, ADR-0382, pure Rust) on s4, via the new `akb2_frontier check` mode: parse 60.546 s, check 8703.254 s, 103,409,097 steps re-derived. The check ran on a DIFFERENT HOST from the solve: parsing plus backward checking needed ~56 GiB resident for the 8.82 GB certificate (a 6.6x blow-up measured twice this session), which did not fit the 61 GiB solving host. The formula was regenerated on the checking host from (a,b,k,n)=(5,2,4,625) by the same encoder, so nothing about the instance's identity travelled with the file.",
+      "axeyum_search::ColouringFamily::first_violation on the lower-bound witness (the crate's brute-force enumerator, sharing no code with the encoder)",
+      "axeyum_cnf::CnfFormula::evaluate on the one-hot assignment decoded from the witness",
+      "scripts/check-claim-certificates.py (independent in-file O(n^2) enumerator and an independently written encoder that must regenerate the stored CNF byte-identically)"
+    ],
+    "date": "2026-08-13",
+    "machine": "solved on linux x86-64, 4 cores, 61 GiB (s1); proof moved and checked on linux x86-64, 16 cores, 123 GiB (s4)",
+    "toolchain": {
+      "axeyum_commit": "fc2020dd967fc51edca561701f63f2acaa50aaea",
+      "rustc_version": "rustc 1.94.1 (e408947bf 2026-03-25)",
+      "target": "x86_64-unknown-linux-gnu",
+      "dirty": true
+    },
+    "prior_art": [
+      {
+        "citation": "Y. Chang, J. A. De Loera, W. J. Wesley, 'Rado Numbers and SAT Computations', ISSAC 2022 / arXiv:2210.03262",
+        "url": "https://arxiv.org/abs/2210.03262",
+        "establishes": "NEW. Table 10 of arXiv:2210.03262 is the only published four-colour table for this family: 20 cells, 13 populated (12 exact plus the bare '> 225' at (2,3)), 7 blank. (5,2) is one of the blanks. Census read from the rendered v1 PDF cell by cell and cross-checked against this repository's ledger over all 25 k=3 cells and all 12 exact k=4 cells with zero disagreements, so the blank is a real blank and not a transcription slip. OEIS full-text search for 'Rado number' returns 7 sequences, none for this family at k >= 3 colours."
+      }
+    ]
+  },
+  "evidence": [
+    {
+      "id": "deciding-instance",
+      "kind": "instance-pin",
+      "supports": "identifies F_625, the formula the refutation is about",
+      "artifact": "artifacts/claims/rado/rado-r4-a5-b2/F_625.cnf",
+      "artifact_sha256": "975b10ef4cd84e9a57b943c6e40476d82b93ea7121653202411630576d6c7004",
+      "check_status": "checked",
+      "checker_command": "python3 scripts/check-claim-certificates.py --only rado-r4-a5-b2",
+      "notes": "2500 variables, 255748 clauses. Re-checked by regeneration from (a,b,k,n)=(5,2,4,625) with the encoder written independently of the generator of record, not by hash alone.",
+      "artifact_format": "dimacs-cnf"
+    },
+    {
+      "id": "lower-witness",
+      "kind": "witness-replay",
+      "supports": "R_4 > 624 (lower bound: a verified 4-colouring of [624])",
+      "artifact": "artifacts/claims/rado/rado-r4-a5-b2/witness.txt",
+      "artifact_sha256": "eaf9ab5ca456b91ed8304fe241990c01ae34674c709b322290c8458d3f06990f",
+      "check_status": "checked",
+      "checker_command": "python3 scripts/check-claim-certificates.py --only rado-r4-a5-b2",
+      "notes": "NOT SEARCHED FOR. This is Chang-De Loera-Wesley's Lemma 4.1 colouring written down from the construction: point j takes colour v_5(j) + 1, the 5-adic valuation, which on [624] takes exactly the 4 values 0..3. Emitted and checked in under 0.02 s by `cargo run --release -p axeyum-search --example akb2_frontier -- valuation 5 2 4 624 witness.txt`. Verified four independent ways: the encoder's own first_monochromatic, the family's brute-force first_violation, CnfFormula::evaluate on the one-hot assignment, and this ledger's own Python enumerator. NOTE: this colouring is byte-identical to the one in rado-r4-a5-b1 (same sha256). That is correct, not a copy-paste error: the valuation colouring c(j) = v_5(j)+1 does not depend on b, so the same object witnesses the lower bound for every b coprime to 5.",
+      "artifact_format": "colouring-text"
+    },
+    {
+      "id": "upper-drat",
+      "kind": "unsat-certificate",
+      "supports": "R_4 <= 625 (upper bound: F_625 is unsatisfiable)",
+      "parameters": {
+        "producer": "axeyum solve_with_drat_proof_streaming + TextProofSink (crates/axeyum-cnf, ADR-0381)",
+        "checker": "axeyum check_drat_backward (crates/axeyum-cnf, ADR-0382)",
+        "proof_steps": 103409097,
+        "proof_bytes": 8819268223,
+        "proof_sha256": "b3e63bd66cd36f6c7e311e3f8e2ec1d5f559191082573c07ada23d57c601ca10",
+        "solve_seconds": 6576.0,
+        "check_seconds": 8703.254
+      },
+      "regeneration": {
+        "command": "cargo run --release -p axeyum-search --example akb2_frontier -- solve 5 2 4 625 F_625.drat witness-625.txt 10",
+        "produces_sha256": "b3e63bd66cd36f6c7e311e3f8e2ec1d5f559191082573c07ada23d57c601ca10",
+        "bytes": 8819268223,
+        "approx_wall_seconds": 6576.0,
+        "note": "The certificate is 8,819,268,223 bytes of text DRAT and is NOT distributed. Producing it took 6576 s; checking it took 8763.8 s and ~56 GiB resident, so a verifier should budget roughly 7x the file size in RAM and more wall clock than the solve. This instance is the measurement behind that rule: it is why `akb2_frontier check` exists, since the proof had to move from the host that produced it to one that could afford to check it."
+      },
+      "check_status": "checked",
+      "checker_command": "cargo run --release -p axeyum-search --example akb2_frontier -- solve 5 2 4 625 F_625.drat witness-625.txt 10",
+      "notes": "Produced on s1 and checked on s4, deliberately. The proof was streamed to disk by TextProofSink; the producing process was then killed before its in-process check could be OOM-killed at 55.7 GiB of 61, the complete certificate rsynced to a 123 GiB host, and re-derived there by check_drat_backward after axeyum's own parse_drat read it back. The certificate was never at risk: the sink flushes before the driver reads the file, and the stored bytes end in the empty clause. 103,409,097 steps, parse 60.546 s, check 8703.254 s.",
+      "distribution": "regenerable"
+    }
+  ],
+  "notes": "Both sides of the threshold, each by a different mechanism: the lower bound is a construction written down and checked, the upper bound is a machine proof re-derived by an independent checker. Neither side used an external solver."
+}
