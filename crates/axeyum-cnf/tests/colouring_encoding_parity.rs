@@ -113,8 +113,31 @@ fn describe_difference(instance: Instance, expected: &str, actual: &str) -> Stri
 fn parse_claim_id(id: &str) -> Option<(usize, usize, usize)> {
     let rest = id.strip_prefix("rado-r")?;
     let (k, rest) = rest.split_once("-a")?;
-    let (a, b) = rest.split_once("-b")?;
+    let (a, rest) = rest.split_once("-b")?;
+    // A claim id may carry a trailing qualifier — `rado-r5-a3-b1-frontier` is a
+    // real ledger id — so `b` is the leading digit run and whatever follows must
+    // be a `-`-separated word. Anything else is not an id of this shape and is
+    // reported rather than skipped, which is the whole point of the caller.
+    let digits = rest
+        .find(|character: char| !character.is_ascii_digit())
+        .unwrap_or(rest.len());
+    let (b, qualifier) = rest.split_at(digits);
+    if !qualifier.is_empty() && !qualifier.starts_with('-') {
+        return None;
+    }
     Some((k.parse().ok()?, a.parse().ok()?, b.parse().ok()?))
+}
+
+#[test]
+fn claim_ids_parse_with_and_without_a_trailing_qualifier() {
+    assert_eq!(parse_claim_id("rado-r3-a1-b1"), Some((3, 1, 1)));
+    assert_eq!(parse_claim_id("rado-r4-a5-b4-frontier"), Some((4, 5, 4)));
+    assert_eq!(parse_claim_id("rado-r5-a3-b1-frontier"), Some((5, 3, 1)));
+    // Still fails closed on ids that are not of this shape at all: the caller
+    // reports these rather than passing their artifacts unchecked.
+    assert_eq!(parse_claim_id("rado-r4-a5-b"), None);
+    assert_eq!(parse_claim_id("offdiag-schur-3-4-4-8"), None);
+    assert_eq!(parse_claim_id("rado-r4-a5-b4x"), None);
 }
 
 /// Parses `F_{n}.cnf` into `n`.
