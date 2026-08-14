@@ -140,6 +140,7 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.div_mod_unique,
         p.div_mod_bounds,
         p.div_mod_mul_le_iff,
+        p.div_mod_lt_mul_iff,
         p.dvd_mul,
         p.dvd_add,
         p.dvd_add_right_cancel_of_pos,
@@ -696,6 +697,15 @@ fn euclidean_division_exists_constructively() {
     f.k.infer(floor_order).unwrap_or_else(|e| {
         panic!(
             "Euclidean quotient/multiplication order equivalence should infer: {}",
+            f.explain(&e)
+        )
+    });
+
+    let three = f.num(3);
+    let ceiling_order = f.lemma(p.div_mod_lt_mul_iff, &[two, five, two, one, three, proof]);
+    f.k.infer(ceiling_order).unwrap_or_else(|e| {
+        panic!(
+            "Euclidean quotient/strict-multiplication equivalence should infer: {}",
             f.explain(&e)
         )
     });
@@ -1926,7 +1936,41 @@ fn kernel_rejects_broken_proof_terms() {
         rejections += 1;
     }
 
-    assert_eq!(rejections, 42, "every negative control must be rejected");
+    // NC43 — the strict dual retains the quotient lower endpoint.
+    {
+        let name = f.name("nc43_div_mod_strict_iff_wrong_quotient");
+        let one = f.num(1);
+        let two = f.num(2);
+        let three = f.num(3);
+        let five = f.num(5);
+        let product = f.mul(two, two);
+        let reconstructed = f.add(product, one);
+        let equation_ty = f.eq(five, reconstructed);
+        let bound_ty = f.lt(one, two);
+        let equation = f.refl(five);
+        let bound = f.lemma(p.le_refl, &[two]);
+        let relation_proof =
+            f.const_app(p.logic.and_intro, &[equation_ty, bound_ty, equation, bound]);
+        let proof = f.lemma(
+            p.div_mod_lt_mul_iff,
+            &[two, five, two, one, three, relation_proof],
+        );
+        let candidate_product = f.mul(two, three);
+        let product_bound = f.lt(five, candidate_product);
+        let wrong_quotient_bound = f.lt(one, three);
+        let bad = f.const_app(p.logic.iff, &[product_bound, wrong_quotient_bound]);
+        let err = f
+            .declare_theorem(name, bad, proof)
+            .expect_err("NC43: strict division equivalence must retain the quotient");
+        println!(
+            "NC43 (wrong strict quotient endpoint) rejected:\n  {}",
+            f.explain(&err)
+        );
+        assert!(!f.k.environment().contains(name));
+        rejections += 1;
+    }
+
+    assert_eq!(rejections, 43, "every negative control must be rejected");
 }
 
 /// The build is deterministic: two independent kernels render every promised
@@ -1949,7 +1993,7 @@ fn the_build_is_deterministic() {
     assert_eq!(first, second, "the prelude build must be deterministic");
     assert_eq!(
         first.len(),
-        11 + 69,
+        11 + 70,
         "every promised definition and theorem must be rendered"
     );
 }

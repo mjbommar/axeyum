@@ -479,3 +479,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [0421](adr-0421-relational-nat-euclidean-division-uniqueness.md) | Relational Nat Euclidean division uniqueness | accepted |
 | [0422](adr-0422-relational-nat-euclidean-floor-bounds.md) | Relational Nat Euclidean floor bounds | accepted |
 | [0423](adr-0423-relational-nat-euclidean-floor-adjunction.md) | Relational Nat Euclidean floor adjunction | accepted |
+| [0424](adr-0424-relational-nat-euclidean-strict-adjunction.md) | Relational Nat Euclidean strict adjunction | accepted |

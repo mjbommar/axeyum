@@ -293,6 +293,8 @@ pub struct NatPrelude {
     pub div_mod_bounds: NameId,
     /// `Nat.div_mod_mul_le_iff : divMod d n q r → (d*s ≤ n ↔ s ≤ q)`.
     pub div_mod_mul_le_iff: NameId,
+    /// `Nat.div_mod_lt_mul_iff : divMod d n q r → (n < d*s ↔ q < s)`.
+    pub div_mod_lt_mul_iff: NameId,
 
     // --- divisibility -------------------------------------------------------
     /// `Nat.dvd : Nat → Nat → Prop`, where `dvd a n := ∃ q, n = a * q`.
@@ -426,6 +428,7 @@ pub fn build_nat_prelude(kernel: &mut Kernel) -> Result<NatPrelude, KernelError>
             div_mod_unique: kernel.name_str(nat, "div_mod_unique"),
             div_mod_bounds: kernel.name_str(nat, "div_mod_bounds"),
             div_mod_mul_le_iff: kernel.name_str(nat, "div_mod_mul_le_iff"),
+            div_mod_lt_mul_iff: kernel.name_str(nat, "div_mod_lt_mul_iff"),
             dvd: kernel.name_str(nat, "dvd"),
             valuation_at: kernel.name_str(nat, "valuationAt"),
             dvd_mul: kernel.name_str(nat, "dvd_mul"),
@@ -3678,6 +3681,190 @@ fn declare_euclidean_division(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), 
                         dividend,
                         products_ordered,
                         lower,
+                    ],
+                );
+                d.lam_fv(quotient_bound_fv, quotient_bound_ty, body)
+            };
+
+            let body = d.const_app(
+                p.logic.iff_intro,
+                &[product_bound_ty, quotient_bound_ty, forward, reverse],
+            );
+            let with_upper = d.lam_fv(upper_fv, upper_ty, body);
+            d.lam_fv(lower_fv, lower_ty, with_upper)
+        };
+        let level_zero = d.kernel().level_zero();
+        let and_rec = d.kernel().const_(p.logic.and_rec, vec![level_zero]);
+        let body = d.apply(
+            and_rec,
+            &[lower_ty, upper_ty, bounds_motive, bounds_minor, bounds],
+        );
+        let stmt = d.arrow(relation_ty, target);
+        let proof = d.lam_fv(relation_fv, relation_ty, body);
+        (stmt, proof)
+    })?;
+
+    // div_mod_lt_mul_iff :
+    //   ∀ d n q r s, divMod d n q r → (n < d*s ↔ q < s)
+    // This is the strict dual of the floor adjunction. A candidate at or below
+    // q has product at or below n; a candidate above q is at least succ q, so
+    // the strict floor upper bound places n below its product.
+    d.theorem(p.div_mod_lt_mul_iff, 5, &|d, v| {
+        let (divisor, dividend, quotient, remainder, candidate) = (v[0], v[1], v[2], v[3], v[4]);
+        let relation_ty = d.div_mod(divisor, dividend, quotient, remainder);
+        let quotient_product = d.mul(divisor, quotient);
+        let candidate_product = d.mul(divisor, candidate);
+        let product_bound_ty = d.lt(dividend, candidate_product);
+        let quotient_bound_ty = d.lt(quotient, candidate);
+        let target = d.const_app(p.logic.iff, &[product_bound_ty, quotient_bound_ty]);
+
+        let relation_fv = d.fresh_fvar();
+        let relation = d.kernel().fvar(relation_fv);
+        let bounds = d.lemma(
+            p.div_mod_bounds,
+            &[divisor, dividend, quotient, remainder, relation],
+        );
+        let next_quotient = d.succ(quotient);
+        let next_product = d.mul(divisor, next_quotient);
+        let lower_ty = d.le(quotient_product, dividend);
+        let upper_ty = d.lt(dividend, next_product);
+        let bounds_ty = d.const_app(p.logic.and, &[lower_ty, upper_ty]);
+        let bounds_motive = d.kernel().lam(anon, bounds_ty, target, BinderInfo::Default);
+        let bounds_minor = {
+            let lower_fv = d.fresh_fvar();
+            let lower = d.kernel().fvar(lower_fv);
+            let upper_fv = d.fresh_fvar();
+            let upper = d.kernel().fvar(upper_fv);
+
+            let forward = {
+                let product_bound_fv = d.fresh_fvar();
+                let product_bound = d.kernel().fvar(product_bound_fv);
+                let candidate_le_quotient_ty = d.le(candidate, quotient);
+                let quotient_le_candidate_ty = d.le(quotient, candidate);
+                let order_split_ty = d.const_app(
+                    p.logic.or,
+                    &[candidate_le_quotient_ty, quotient_le_candidate_ty],
+                );
+                let order_split = d.lemma(p.le_total, &[candidate, quotient]);
+                let order_motive =
+                    d.kernel()
+                        .lam(anon, order_split_ty, quotient_bound_ty, BinderInfo::Default);
+                let eliminate_candidate_le = |d: &mut NatDev<'_>, candidate_le_quotient: ExprId| {
+                    let products_ordered = d.lemma(
+                        p.mul_le_mul_left,
+                        &[divisor, candidate, quotient, candidate_le_quotient],
+                    );
+                    let candidate_product_le_dividend = d.lemma(
+                        p.le_trans,
+                        &[
+                            candidate_product,
+                            quotient_product,
+                            dividend,
+                            products_ordered,
+                            lower,
+                        ],
+                    );
+                    let impossible_loop = d.lemma(
+                        p.lt_of_lt_of_le,
+                        &[
+                            dividend,
+                            candidate_product,
+                            dividend,
+                            product_bound,
+                            candidate_product_le_dividend,
+                        ],
+                    );
+                    let no_loop = d.lemma(p.lt_irrefl, &[dividend]);
+                    let impossible = d.apply(no_loop, &[impossible_loop]);
+                    let false_ty = d.kernel().const_(p.logic.false_, vec![]);
+                    let false_motive =
+                        d.kernel()
+                            .lam(anon, false_ty, quotient_bound_ty, BinderInfo::Default);
+                    let level_zero = d.kernel().level_zero();
+                    let false_rec = d.kernel().const_(p.logic.false_rec, vec![level_zero]);
+                    d.apply(false_rec, &[false_motive, impossible])
+                };
+                let candidate_le_minor = {
+                    let ordered_fv = d.fresh_fvar();
+                    let ordered = d.kernel().fvar(ordered_fv);
+                    let body = eliminate_candidate_le(d, ordered);
+                    d.lam_fv(ordered_fv, candidate_le_quotient_ty, body)
+                };
+                let quotient_le_minor = {
+                    let ordered_fv = d.fresh_fvar();
+                    let ordered = d.kernel().fvar(ordered_fv);
+                    let equal_ty = d.eq(quotient, candidate);
+                    let split_ty = d.const_app(p.logic.or, &[quotient_bound_ty, equal_ty]);
+                    let split = d.lemma(p.lt_or_eq_of_le, &[quotient, candidate, ordered]);
+                    let split_motive =
+                        d.kernel()
+                            .lam(anon, split_ty, quotient_bound_ty, BinderInfo::Default);
+                    let strict_minor = {
+                        let strict_fv = d.fresh_fvar();
+                        let strict = d.kernel().fvar(strict_fv);
+                        d.lam_fv(strict_fv, quotient_bound_ty, strict)
+                    };
+                    let equal_minor = {
+                        let equal_fv = d.fresh_fvar();
+                        let equal = d.kernel().fvar(equal_fv);
+                        let candidate_eq_quotient = d.symm(quotient, candidate, equal);
+                        let candidate_refl = d.lemma(p.le_refl, &[candidate]);
+                        let equality_motive =
+                            d.eq_motive(candidate, &|d, upper| d.le(candidate, upper));
+                        let candidate_le_quotient = d.transport(
+                            candidate,
+                            equality_motive,
+                            candidate_refl,
+                            quotient,
+                            candidate_eq_quotient,
+                        );
+                        let body = eliminate_candidate_le(d, candidate_le_quotient);
+                        d.lam_fv(equal_fv, equal_ty, body)
+                    };
+                    let or_rec = d.kernel().const_(p.logic.or_rec, vec![]);
+                    let body = d.apply(
+                        or_rec,
+                        &[
+                            quotient_bound_ty,
+                            equal_ty,
+                            split_motive,
+                            strict_minor,
+                            equal_minor,
+                            split,
+                        ],
+                    );
+                    d.lam_fv(ordered_fv, quotient_le_candidate_ty, body)
+                };
+                let or_rec = d.kernel().const_(p.logic.or_rec, vec![]);
+                let body = d.apply(
+                    or_rec,
+                    &[
+                        candidate_le_quotient_ty,
+                        quotient_le_candidate_ty,
+                        order_motive,
+                        candidate_le_minor,
+                        quotient_le_minor,
+                        order_split,
+                    ],
+                );
+                d.lam_fv(product_bound_fv, product_bound_ty, body)
+            };
+
+            let reverse = {
+                let quotient_bound_fv = d.fresh_fvar();
+                let quotient_bound = d.kernel().fvar(quotient_bound_fv);
+                let next_le_candidate = d.lemma(
+                    p.mul_le_mul_left,
+                    &[divisor, next_quotient, candidate, quotient_bound],
+                );
+                let body = d.lemma(
+                    p.lt_of_lt_of_le,
+                    &[
+                        dividend,
+                        next_product,
+                        candidate_product,
+                        upper,
+                        next_le_candidate,
                     ],
                 );
                 d.lam_fv(quotient_bound_fv, quotient_bound_ty, body)
