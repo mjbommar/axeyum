@@ -301,6 +301,7 @@ evidence and unrelated temporary projects were untouched.
 
 | Date | Commit | Result |
 |---|---|---|
+| 2026-08-14 | `19f4c769b` | Automatic hypothesis minimisation (`hypothesis_min`): two route-B Rado lemmas that stay `unknown` at 1800 s close in ~2 s with the same subsets a human found in ~32 min; the boundary is measured to be `nra.rs:107` `MAX_CROSS_PRODUCTS = 2`, not hypothesis count, and the guards are mutation-tested one deletion at a time (agent-k). |
 | 2026-08-07 | `3576e6739` / `c92155454` / `d09e6debb` | Rejected relevance-activated bound ladders after 0/6 target decisions, exactly repartitioned all 52 A3 budget rows, refreshed the generated CI identity, and integrated the clean pushed evidence branch. |
 | 2026-08-07 | `3696e7dd5` | Confirmed repeated size-admission large cores on the selected QF_NIA pair, then rejected bounded four-group deletion after it shrank clauses but decided neither target; temporary solver code was removed. |
 | 2026-08-07 | `704318a5f` | Refreshed the complete-parity manifest's sole stale source identity after the pinned-`just` CI workflow change; outcomes, populations, gates, and parity credit are unchanged, and full parity-docs/authority/links pass. |
@@ -339,9 +340,9 @@ regression. Guard-isolating satisfiable-query forgeries replaced ineffective
 tamper cases. **Next:** exact-rational LP over candidate residues instead of
 unit-coefficient subset search; see `agent-i-cas-bridge/FEEDBACK.md` F8.
 
-**Immediate action (`WIP`, Lean lane).** Gate ADR-0438, divisibility implies
-congruence to zero for every modulus; next prove the positive-modulus converse,
-then close the modulus-zero case and package the `Iff`. No credit.
+**Immediate action (`WIP`, Lean lane).** Gate ADR-0439, positive-modulus
+congruence to zero implies divisibility; next close modulus zero and package the
+all-Nat `Iff`. No credit.
 Keep the 14-theorem export labelled rejected by Lean and independently unchecked.
 A5 V2 QF_RDL row 1 remains pending and uncredited.
 
