@@ -448,3 +448,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [0390](adr-0390-proved-nat-strict-order-and-successor-inversion.md) | Proved Nat strict order and successor inversion for Rado ranges | accepted |
 | [0391](adr-0391-generic-nat-finite-range-sums.md) | Generic zero-axiom Nat finite-range sums | accepted |
 | [0392](adr-0392-revision-scoped-whnf-cache-and-kernel-owned-rollback.md) | Revision-scoped WHNF cache and kernel-owned rollback | accepted |
+| [0393](adr-0393-checked-geometric-sum-reindexing.md) | Checked geometric-sum reindexing | accepted |

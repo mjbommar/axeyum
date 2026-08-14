@@ -73,6 +73,7 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.pow_succ,
         p.sum_range_zero,
         p.sum_range_succ,
+        p.mul_sum_range_pow,
         p.zero_add,
         p.succ_add,
         p.add_comm,
@@ -220,6 +221,50 @@ fn arithmetic_reduces_on_numerals() {
         !f.k.def_eq(first_four, five),
         "sumRange identity 4 must NOT be def-eq to 5"
     );
+}
+
+/// The generic checked reindexing theorem covers both the empty `k = 3`
+/// corner and a nonempty geometric sum used by the Rado sharpness proof.
+#[test]
+fn geometric_sum_reindexing_is_checked() {
+    let mut f = Fixture::new();
+    let p = f.p;
+    let three = f.num(3);
+    let zero = f.zero();
+    let empty_proof = f.lemma(p.mul_sum_range_pow, &[three, zero]);
+    let empty_name = f.name("empty_geometric_reindex");
+    let empty_ty = {
+        let i_fv = f.fresh_fvar();
+        let i = f.k.fvar(i_fv);
+        let power = f.pow(three, i);
+        let nat = f.nat_ty();
+        let powers = f.lam_fv(i_fv, nat, power);
+        let sum = f.sum_range(powers, zero);
+        let lhs = f.mul(three, sum);
+        f.eq(lhs, zero)
+    };
+    f.declare_theorem(empty_name, empty_ty, empty_proof)
+        .unwrap_or_else(|e| panic!("empty reindexing should admit: {}", f.explain(&e)));
+
+    let four = f.num(4);
+    let proof = f.lemma(p.mul_sum_range_pow, &[three, four]);
+    let name = f.name("three_power_reindex_four");
+    let declared =
+        f.k.environment()
+            .get(p.mul_sum_range_pow)
+            .expect("reindexing theorem is present")
+            .ty();
+    println!("Nat.mul_sumRange_pow : {}", f.k.render_lean(declared));
+    let applied_ty = f.k.infer(proof).expect("applied reindexing proof infers");
+    let theorem = f.k.const_(p.mul_sum_range_pow, vec![]);
+    let expected = {
+        let at_a = f.k.app(theorem, three);
+        f.k.app(at_a, four)
+    };
+    let expected_ty = f.k.infer(expected).expect("application infers");
+    assert!(f.k.def_eq(applied_ty, expected_ty));
+    f.declare_theorem(name, applied_ty, proof)
+        .unwrap_or_else(|e| panic!("nonempty reindexing should admit: {}", f.explain(&e)));
 }
 
 /// A downstream development proves something new out of the prelude's lemmas:
@@ -614,7 +659,29 @@ fn kernel_rejects_broken_proof_terms() {
         rejections += 1;
     }
 
-    assert_eq!(rejections, 11, "every negative control must be rejected");
+    // NC12 — the checked power-sum shift preserves the exact range length; it
+    // cannot establish the corresponding statement with one extra summand.
+    {
+        let name = f.name("nc12_power_sum_shift_wrong_range");
+        let two = f.num(2);
+        let three = f.num(3);
+        let proof = f.lemma(p.mul_sum_range_pow, &[two, two]);
+        let theorem = f.k.const_(p.mul_sum_range_pow, vec![]);
+        let at_a = f.k.app(theorem, two);
+        let wrong = f.k.app(at_a, three);
+        let bad = f.k.infer(wrong).expect("wrong-range target still infers");
+        let err = f
+            .declare_theorem(name, bad, proof)
+            .expect_err("NC12: reindexing must retain the exact range length");
+        println!(
+            "NC12 (wrong reindexing range) rejected:\n  {}",
+            f.explain(&err)
+        );
+        assert!(!f.k.environment().contains(name));
+        rejections += 1;
+    }
+
+    assert_eq!(rejections, 12, "every negative control must be rejected");
 }
 
 /// The build is deterministic: two independent kernels render every promised
@@ -637,7 +704,7 @@ fn the_build_is_deterministic() {
     assert_eq!(first, second, "the prelude build must be deterministic");
     assert_eq!(
         first.len(),
-        6 + 27,
+        6 + 28,
         "every promised definition and theorem must be rendered"
     );
 }

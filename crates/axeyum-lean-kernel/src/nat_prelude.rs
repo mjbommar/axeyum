@@ -140,6 +140,8 @@ pub struct NatPrelude {
     pub sum_range_zero: NameId,
     /// `sumRange_succ : ∀ f n, sumRange f (succ n) = sumRange f n + f n`.
     pub sum_range_succ: NameId,
+    /// `mul_sumRange_pow : ∀ a n, a * sumRange (a^·) n = sumRange (a^(·+1)) n`.
+    pub mul_sum_range_pow: NameId,
 
     // --- additive theorems ---------------------------------------------------
     /// `zero_add : ∀ (n : Nat), Eq Nat (add zero n) n`.
@@ -258,6 +260,7 @@ pub fn build_nat_prelude(kernel: &mut Kernel) -> Result<NatPrelude, KernelError>
             pow_succ: kernel.name_str(nat, "pow_succ"),
             sum_range_zero: kernel.name_str(nat, "sumRange_zero"),
             sum_range_succ: kernel.name_str(nat, "sumRange_succ"),
+            mul_sum_range_pow: kernel.name_str(nat, "mul_sumRange_pow"),
             zero_add: kernel.name_str(nat, "zero_add"),
             succ_add: kernel.name_str(nat, "succ_add"),
             add_comm: kernel.name_str(nat, "add_comm"),
@@ -291,6 +294,7 @@ pub fn build_nat_prelude(kernel: &mut Kernel) -> Result<NatPrelude, KernelError>
         declare_defining_equations(&mut d, &p)?;
         declare_additive_theorems(&mut d, &p)?;
         declare_multiplicative_theorems(&mut d, &p)?;
+        declare_finite_sum_theorems(&mut d, &p)?;
         declare_order(&mut d, &p)?;
         declare_divisibility(&mut d, &p)?;
         Ok(p)
@@ -807,6 +811,79 @@ fn declare_multiplicative_theorems(d: &mut NatDev<'_>, p: &NatPrelude) -> Result
                 proof
             },
             c,
+        );
+        (stmt, proof)
+    })?;
+    Ok(())
+}
+
+/// The first reusable finite-sum algebra needed by the Rado sharpness proof.
+/// This is a checked theorem over [`NatPrelude::sum_range`], not a specialized
+/// test-only recurrence.
+fn declare_finite_sum_theorems(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> {
+    let p = *p;
+    d.theorem(p.mul_sum_range_pow, 2, &|d, v| {
+        let (a, n) = (v[0], v[1]);
+        let power_fn = |d: &mut NatDev<'_>, shifted: bool| {
+            let i_fv = d.fresh_fvar();
+            let i = d.kernel().fvar(i_fv);
+            let exponent = if shifted { d.succ(i) } else { i };
+            let body = d.pow(a, exponent);
+            let nat = d.nat_ty();
+            d.lam_fv(i_fv, nat, body)
+        };
+        let motive = |d: &mut NatDev<'_>, x: ExprId| {
+            let unshifted = power_fn(d, false);
+            let shifted = power_fn(d, true);
+            let sum = d.sum_range(unshifted, x);
+            let lhs = d.mul(a, sum);
+            let rhs = d.sum_range(shifted, x);
+            d.eq(lhs, rhs)
+        };
+        let stmt = motive(d, n);
+        let proof = d.induct(
+            &motive,
+            &|d| {
+                let zero = d.zero();
+                d.refl(zero)
+            },
+            &|d, j, ih| {
+                let unshifted = power_fn(d, false);
+                let shifted = power_fn(d, true);
+                let sum = d.sum_range(unshifted, j);
+                let shifted_sum = d.sum_range(shifted, j);
+                let power = d.pow(a, j);
+                let start = {
+                    let extended = d.add(sum, power);
+                    d.mul(a, extended)
+                };
+                let a_sum = d.mul(a, sum);
+                let a_power = d.mul(a, power);
+                let distributed = d.add(a_sum, a_power);
+                let h1 = d.lemma(p.left_distrib, &[a, sum, power]);
+                let with_ih = d.add(shifted_sum, a_power);
+                let h2 = d.congr(a_sum, shifted_sum, ih, &|d, t| d.add(t, a_power));
+                let power_a = d.mul(power, a);
+                let commuted = d.add(shifted_sum, power_a);
+                let h_comm = d.lemma(p.mul_comm, &[a, power]);
+                let h3 = d.congr(a_power, power_a, h_comm, &|d, t| d.add(shifted_sum, t));
+                let successor_power = {
+                    let sj = d.succ(j);
+                    d.pow(a, sj)
+                };
+                let end = d.add(shifted_sum, successor_power);
+                let h_pow = d.lemma(p.pow_succ, &[a, j]);
+                let h_pow_rev = d.symm(successor_power, power_a, h_pow);
+                let h4 = d.congr(power_a, successor_power, h_pow_rev, &|d, t| {
+                    d.add(shifted_sum, t)
+                });
+                let (_, proof) = d.chain(
+                    start,
+                    &[(distributed, h1), (with_ih, h2), (commuted, h3), (end, h4)],
+                );
+                proof
+            },
+            n,
         );
         (stmt, proof)
     })?;
