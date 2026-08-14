@@ -489,3 +489,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [0431](adr-0431-additive-closure-of-nat-congruence.md) | Additive closure of Nat congruence | accepted |
 | [0432](adr-0432-left-multiplication-preserves-nat-congruence.md) | Left multiplication preserves Nat congruence | accepted |
 | [0433](adr-0433-multiplicative-closure-of-nat-congruence.md) | Multiplicative closure of Nat congruence | accepted |
+| [0434](adr-0434-same-euclidean-remainder-implies-nat-congruence.md) | Equal Euclidean remainders imply Nat congruence | accepted |

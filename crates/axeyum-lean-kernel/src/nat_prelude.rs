@@ -329,6 +329,9 @@ pub struct NatPrelude {
     pub mod_eq_mul_right: NameId,
     /// `Nat.mod_eq_mul : modEq d a b → modEq d c e → modEq d (a*c) (b*e)`.
     pub mod_eq_mul: NameId,
+    /// `Nat.div_mod_same_remainder_mod_eq :
+    ///   divMod d a qa r → divMod d b qb r → modEq d a b`.
+    pub div_mod_same_remainder_mod_eq: NameId,
     /// `Nat.valuationAt a n e := dvd (a^e) n ∧ Not (dvd (a^(e+1)) n)`.
     pub valuation_at: NameId,
     /// `Nat.dvd_mul : ∀ a q, dvd a (a * q)`.
@@ -473,6 +476,7 @@ pub fn build_nat_prelude(kernel: &mut Kernel) -> Result<NatPrelude, KernelError>
             mod_eq_mul_left: kernel.name_str(nat, "mod_eq_mul_left"),
             mod_eq_mul_right: kernel.name_str(nat, "mod_eq_mul_right"),
             mod_eq_mul: kernel.name_str(nat, "mod_eq_mul"),
+            div_mod_same_remainder_mod_eq: kernel.name_str(nat, "div_mod_same_remainder_mod_eq"),
             valuation_at: kernel.name_str(nat, "valuationAt"),
             dvd_mul: kernel.name_str(nat, "dvd_mul"),
             dvd_add: kernel.name_str(nat, "dvd_add"),
@@ -725,6 +729,143 @@ fn declare_modular_congruence(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), 
     declare_mod_eq_additive_compatibility(d, &p)?;
     declare_mod_eq_mul_left(d, &p, nat, anon, one)?;
     declare_mod_eq_multiplicative_compatibility(d, &p)?;
+    declare_div_mod_same_remainder_mod_eq(d, &p, nat, anon, one)?;
+    Ok(())
+}
+
+fn declare_div_mod_same_remainder_mod_eq(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+    nat: ExprId,
+    anon: NameId,
+    one: LevelId,
+) -> Result<(), KernelError> {
+    let p = *p;
+
+    // div_mod_same_remainder_mod_eq :
+    //   divMod d a qa r → divMod d b qb r → modEq d a b
+    // The balanced congruence witnesses are the opposite quotients:
+    // a + d*qb = (d*qa+r)+d*qb = (d*qb+r)+d*qa = b + d*qa.
+    d.theorem(p.div_mod_same_remainder_mod_eq, 6, &|d, values| {
+        let (modulus, left, right, left_quotient, right_quotient, remainder) = (
+            values[0], values[1], values[2], values[3], values[4], values[5],
+        );
+        let left_relation_ty = d.div_mod(modulus, left, left_quotient, remainder);
+        let right_relation_ty = d.div_mod(modulus, right, right_quotient, remainder);
+        let target = d.mod_eq(modulus, left, right);
+        let left_relation_fv = d.fresh_fvar();
+        let left_relation = d.kernel().fvar(left_relation_fv);
+        let right_relation_fv = d.fresh_fvar();
+        let right_relation = d.kernel().fvar(right_relation_fv);
+
+        let left_product = d.mul(modulus, left_quotient);
+        let right_product = d.mul(modulus, right_quotient);
+        let left_reconstructed = d.add(left_product, remainder);
+        let right_reconstructed = d.add(right_product, remainder);
+        let left_equation_ty = d.eq(left, left_reconstructed);
+        let right_equation_ty = d.eq(right, right_reconstructed);
+        let bound_ty = d.lt(remainder, modulus);
+
+        let right_to_target = d.arrow(right_relation_ty, target);
+        let left_motive =
+            d.kernel()
+                .lam(anon, left_relation_ty, right_to_target, BinderInfo::Default);
+        let left_minor = {
+            let left_equation_fv = d.fresh_fvar();
+            let left_equation = d.kernel().fvar(left_equation_fv);
+            let left_bound_fv = d.fresh_fvar();
+
+            let right_motive = d
+                .kernel()
+                .lam(anon, right_relation_ty, target, BinderInfo::Default);
+            let right_minor = {
+                let right_equation_fv = d.fresh_fvar();
+                let right_equation = d.kernel().fvar(right_equation_fv);
+                let right_bound_fv = d.fresh_fvar();
+
+                let start = d.add(left, right_product);
+                let left_expanded = d.add(left_reconstructed, right_product);
+                let left_then_right = d.add(left_product, right_product);
+                let products_left_first = d.add(left_then_right, remainder);
+                let right_then_left = d.add(right_product, left_product);
+                let products_right_first = d.add(right_then_left, remainder);
+                let right_expanded = d.add(right_reconstructed, left_product);
+                let finish = d.add(right, left_product);
+
+                let expand_left = d.congr(left, left_reconstructed, left_equation, &|d, value| {
+                    d.add(value, right_product)
+                });
+                let regroup_left =
+                    d.lemma(p.add_right_comm, &[left_product, remainder, right_product]);
+                let commute_products = d.lemma(p.add_comm, &[left_product, right_product]);
+                let commute_under_remainder = d.congr(
+                    left_then_right,
+                    right_then_left,
+                    commute_products,
+                    &|d, value| d.add(value, remainder),
+                );
+                let regroup_right_forward =
+                    d.lemma(p.add_right_comm, &[right_product, remainder, left_product]);
+                let regroup_right =
+                    d.symm(right_expanded, products_right_first, regroup_right_forward);
+                let right_equation_rev = d.symm(right, right_reconstructed, right_equation);
+                let collapse_right = d.congr(
+                    right_reconstructed,
+                    right,
+                    right_equation_rev,
+                    &|d, value| d.add(value, left_product),
+                );
+                let (_, equation) = d.chain(
+                    start,
+                    &[
+                        (left_expanded, expand_left),
+                        (products_left_first, regroup_left),
+                        (products_right_first, commute_under_remainder),
+                        (right_expanded, regroup_right),
+                        (finish, collapse_right),
+                    ],
+                );
+
+                let target_outer = d.mod_eq_outer_predicate(modulus, left, right);
+                let target_inner = d.mod_eq_inner_predicate(modulus, left, right, right_quotient);
+                let exists_intro = d.kernel().const_(p.logic.exists_intro, vec![one]);
+                let inner = d.apply(exists_intro, &[nat, target_inner, left_quotient, equation]);
+                let body = d.apply(exists_intro, &[nat, target_outer, right_quotient, inner]);
+                let with_bound = d.lam_fv(right_bound_fv, bound_ty, body);
+                d.lam_fv(right_equation_fv, right_equation_ty, with_bound)
+            };
+            let level_zero = d.kernel().level_zero();
+            let and_rec = d.kernel().const_(p.logic.and_rec, vec![level_zero]);
+            let body = d.apply(
+                and_rec,
+                &[
+                    right_equation_ty,
+                    bound_ty,
+                    right_motive,
+                    right_minor,
+                    right_relation,
+                ],
+            );
+            let with_right_relation = d.lam_fv(right_relation_fv, right_relation_ty, body);
+            let with_bound = d.lam_fv(left_bound_fv, bound_ty, with_right_relation);
+            d.lam_fv(left_equation_fv, left_equation_ty, with_bound)
+        };
+        let level_zero = d.kernel().level_zero();
+        let and_rec = d.kernel().const_(p.logic.and_rec, vec![level_zero]);
+        let body = d.apply(
+            and_rec,
+            &[
+                left_equation_ty,
+                bound_ty,
+                left_motive,
+                left_minor,
+                left_relation,
+            ],
+        );
+        let stmt = d.arrow(left_relation_ty, right_to_target);
+        let proof = d.lam_fv(left_relation_fv, left_relation_ty, body);
+        (stmt, proof)
+    })?;
     Ok(())
 }
 

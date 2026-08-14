@@ -174,6 +174,7 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.mod_eq_mul_left,
         p.mod_eq_mul_right,
         p.mod_eq_mul,
+        p.div_mod_same_remainder_mod_eq,
         p.dvd_mul,
         p.dvd_add,
         p.dvd_add_right_cancel_of_pos,
@@ -878,6 +879,51 @@ fn modular_congruence_is_a_checked_equivalence_relation() {
         .unwrap_or_else(|e| {
             panic!(
                 "pairwise multiplicative congruence should admit: {}",
+                f.explain(&e)
+            )
+        });
+
+    // Equal relational Euclidean remainders imply congruence, independently
+    // of any executable quotient/remainder operation: 7 = 5*1+2 and
+    // 12 = 5*2+2, hence 7 ≡ 12 (mod 5).
+    let three = f.num(3);
+    let left_product = f.mul(five, one);
+    let left_reconstructed = f.add(left_product, two);
+    let left_equation_ty = f.eq(seven, left_reconstructed);
+    let bound_ty = f.lt(two, five);
+    let left_equation = f.refl(seven);
+    let bound = f.lemma(p.le_add_right, &[three, two]);
+    let left_relation = f.const_app(
+        p.logic.and_intro,
+        &[left_equation_ty, bound_ty, left_equation, bound],
+    );
+    let right_product = f.mul(five, two);
+    let right_reconstructed = f.add(right_product, two);
+    let right_equation_ty = f.eq(twelve, right_reconstructed);
+    let right_equation = f.refl(twelve);
+    let right_relation = f.const_app(
+        p.logic.and_intro,
+        &[right_equation_ty, bound_ty, right_equation, bound],
+    );
+    let same_remainder = f.lemma(
+        p.div_mod_same_remainder_mod_eq,
+        &[
+            five,
+            seven,
+            twelve,
+            one,
+            two,
+            two,
+            left_relation,
+            right_relation,
+        ],
+    );
+    let same_remainder_ty = f.mod_eq(five, seven, twelve);
+    let same_remainder_name = f.name("seven_mod_five_twelve_from_remainders");
+    f.declare_theorem(same_remainder_name, same_remainder_ty, same_remainder)
+        .unwrap_or_else(|e| {
+            panic!(
+                "same Euclidean remainder should imply congruence: {}",
                 f.explain(&e)
             )
         });
@@ -2440,7 +2486,62 @@ fn kernel_rejects_broken_proof_terms() {
         rejections += 1;
     }
 
-    assert_eq!(rejections, 54, "every negative control must be rejected");
+    // NC55 — the shared-remainder bridge retains both dividends.
+    {
+        let name = f.name("nc55_div_mod_same_remainder_wrong_dividend");
+        let one = f.num(1);
+        let two = f.num(2);
+        let three = f.num(3);
+        let five = f.num(5);
+        let seven = f.num(7);
+        let twelve = f.num(12);
+        let thirteen = f.num(13);
+        let bound_ty = f.lt(two, five);
+        let bound = f.lemma(p.le_add_right, &[three, two]);
+
+        let left_product = f.mul(five, one);
+        let left_reconstructed = f.add(left_product, two);
+        let left_equation_ty = f.eq(seven, left_reconstructed);
+        let left_equation = f.refl(seven);
+        let left_relation = f.const_app(
+            p.logic.and_intro,
+            &[left_equation_ty, bound_ty, left_equation, bound],
+        );
+
+        let right_product = f.mul(five, two);
+        let right_reconstructed = f.add(right_product, two);
+        let right_equation_ty = f.eq(twelve, right_reconstructed);
+        let right_equation = f.refl(twelve);
+        let right_relation = f.const_app(
+            p.logic.and_intro,
+            &[right_equation_ty, bound_ty, right_equation, bound],
+        );
+        let proof = f.lemma(
+            p.div_mod_same_remainder_mod_eq,
+            &[
+                five,
+                seven,
+                twelve,
+                one,
+                two,
+                two,
+                left_relation,
+                right_relation,
+            ],
+        );
+        let bad = f.mod_eq(five, seven, thirteen);
+        let err = f
+            .declare_theorem(name, bad, proof)
+            .expect_err("NC55: shared-remainder congruence must retain both dividends");
+        println!(
+            "NC55 (wrong shared-remainder dividend) rejected:\n  {}",
+            f.explain(&err)
+        );
+        assert!(!f.k.environment().contains(name));
+        rejections += 1;
+    }
+
+    assert_eq!(rejections, 55, "every negative control must be rejected");
 }
 
 /// The build is deterministic: two independent kernels render every promised
@@ -2463,7 +2564,7 @@ fn the_build_is_deterministic() {
     assert_eq!(first, second, "the prelude build must be deterministic");
     assert_eq!(
         first.len(),
-        12 + 81,
+        12 + 82,
         "every promised definition and theorem must be rendered"
     );
 }
