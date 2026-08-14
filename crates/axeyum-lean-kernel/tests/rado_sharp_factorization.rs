@@ -292,6 +292,46 @@ fn admit_sharp_witness_identity(d: &mut Dev) -> NameId {
     name
 }
 
+/// Close the witness equation over the factorized geometric expression. With
+/// `n=k-3`, define `u=a*u'`, `q=a+u`, and `N=b*q`; ADR-0396 identifies this
+/// `u` with the paper's expanded finite-sum expression.
+fn admit_closed_form_sharp_witness_identity(d: &mut Dev, witness_identity: NameId) -> NameId {
+    let p = d.p;
+    let name = d.name("closed_form_witness_identity");
+    d.theorem(name, 3, &|d, v| {
+        let (a, b, n) = (v[0], v[1], v[2]);
+        let one = d.num(1);
+        let two = d.num(2);
+        let shifted = power_range(d, a, 1);
+        let sum1 = d.sum_range(shifted, n);
+        let sn = d.succ(n);
+        let power1 = d.pow(a, sn);
+        let twice_sum = d.mul(two, sum1);
+        let tail = d.add(twice_sum, power1);
+        let inner = d.add(one, tail);
+        let u = d.mul(a, inner);
+        let q = d.add(a, u);
+        let capital_n = d.mul(b, q);
+
+        let factor = d.refl(capital_n);
+        let bound = d.lemma(p.le_add_right, &[a, u]);
+        let proof = d.lemma(witness_identity, &[a, b, capital_n, q, factor, bound]);
+
+        let ab = d.mul(a, b);
+        let n_sub_ab = d.sub(capital_n, ab);
+        let x = d.add(n_sub_ab, one);
+        let x_sub_y = d.sub(x, one);
+        let lhs = d.mul(a, x_sub_y);
+        let q_sub_a = d.sub(q, a);
+        let z = d.mul(a, q_sub_a);
+        let rhs = d.mul(b, z);
+        let stmt = d.eq(lhs, rhs);
+        (stmt, proof)
+    })
+    .expect("closed-form sharp witness identity checks");
+    name
+}
+
 #[test]
 fn kernel_checks_the_exact_sharpness_factorization() {
     let mut d = Dev::new();
@@ -433,5 +473,90 @@ fn kernel_rejects_a_broken_sharpness_witness_endpoint() {
         })
         .expect_err("a dropped witness endpoint term must be rejected");
     println!("broken sharp witness endpoint rejected: {error:?}");
+    assert!(!d.k.environment().contains(bad_name));
+}
+
+#[test]
+fn kernel_checks_the_closed_form_sharpness_witness_identity() {
+    let mut d = Dev::new();
+    let factorization = admit_sharp_factorization(&mut d);
+    let witness = admit_sharp_witness_identity(&mut d);
+    let closed = admit_closed_form_sharp_witness_identity(&mut d, witness);
+
+    // The empty n=0 corner is k=3. At a=2,b=3: u=6, q=8, N=24,
+    // X=19, Y=1, Z=12, and both equation sides reduce to 36.
+    let a = d.num(2);
+    let b = d.num(3);
+    let zero = d.zero();
+    let proof = d.lemma(closed, &[a, b, zero]);
+    d.k.infer(proof)
+        .expect("closed-form empty-corner witness infers");
+    let factor_proof = d.lemma(factorization, &[a, zero]);
+    d.k.infer(factor_proof)
+        .expect("matching empty-corner factorization infers");
+
+    let one = d.num(1);
+    let a_pow_one = d.pow(a, one);
+    let inner = d.add(one, a_pow_one);
+    let u = d.mul(a, inner);
+    let q = d.add(a, u);
+    let capital_n = d.mul(b, q);
+    let ab = d.mul(a, b);
+    let n_sub_ab = d.sub(capital_n, ab);
+    let x = d.add(n_sub_ab, one);
+    let x_sub_one = d.sub(x, one);
+    let lhs = d.mul(a, x_sub_one);
+    let q_sub_a = d.sub(q, a);
+    let z = d.mul(a, q_sub_a);
+    let rhs = d.mul(b, z);
+    let thirty_six = d.num(36);
+    assert!(d.k.def_eq(lhs, thirty_six));
+    assert!(d.k.def_eq(rhs, thirty_six));
+
+    let axioms: Vec<_> =
+        d.k.environment()
+            .iter()
+            .filter(|(_, decl)| matches!(decl, Declaration::Axiom { .. }))
+            .collect();
+    assert!(axioms.is_empty(), "closed-form witness must add no axioms");
+}
+
+#[test]
+fn kernel_rejects_a_broken_closed_form_shell_length() {
+    let mut d = Dev::new();
+    let witness = admit_sharp_witness_identity(&mut d);
+    let closed = admit_closed_form_sharp_witness_identity(&mut d, witness);
+    let a = d.num(2);
+    let b = d.num(3);
+    let zero = d.zero();
+    let proof = d.lemma(closed, &[a, b, zero]);
+
+    // Keep q=8 but replace the checked N=24 by N=21. Then the left side is
+    // 30 while bZ remains 36, so the closed-form proof must be rejected.
+    let one = d.num(1);
+    let a_pow_one = d.pow(a, one);
+    let inner = d.add(one, a_pow_one);
+    let u = d.mul(a, inner);
+    let q = d.add(a, u);
+    let broken_n = d.num(21);
+    let ab = d.mul(a, b);
+    let n_sub_ab = d.sub(broken_n, ab);
+    let x = d.add(n_sub_ab, one);
+    let x_sub_one = d.sub(x, one);
+    let lhs = d.mul(a, x_sub_one);
+    let q_sub_a = d.sub(q, a);
+    let z = d.mul(a, q_sub_a);
+    let rhs = d.mul(b, z);
+    let false_goal = d.eq(lhs, rhs);
+    let bad_name = d.name("broken_closed_form_shell_length");
+    let error =
+        d.k.add_declaration(Declaration::Theorem {
+            name: bad_name,
+            uparams: vec![],
+            ty: false_goal,
+            value: proof,
+        })
+        .expect_err("a broken closed-form shell length must be rejected");
+    println!("broken closed-form shell length rejected: {error:?}");
     assert!(!d.k.environment().contains(bad_name));
 }

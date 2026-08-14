@@ -1064,9 +1064,9 @@ Ordered by dependency.
 
 R7.1 remains **WIP**. Its exact subtraction-free finite-sum factorization,
 including the `k=3` empty corner, is checked under ADR-0396. Truncated
-subtraction computation, additive cancellation, conditional restoration, and
-the quotient-free witness equation are checked under ADR-0397--0399. The
-closed-form quotient construction and range proof are now the first missing
+subtraction computation, additive cancellation, conditional restoration, the
+quotient-free witness equation, and its factorized closed-form construction
+are checked under ADR-0397--0400. Witness ranges are now the first missing
 theorem dependencies.
 
 ### R8 — Lean conformance
