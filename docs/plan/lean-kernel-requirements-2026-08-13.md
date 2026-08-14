@@ -1032,7 +1032,7 @@ Ordered by dependency.
 | **R4.3** | Divisibility as a **prelude-level** definition with its lemma set. | all three | **WIP:** `Nat.dvd`, `dvd_mul`, and `dvd_add` are zero-axiom prelude declarations under [ADR-0389](../research/09-decisions/adr-0389-proved-nat-divisibility-foundation.md); transitivity/cancellation remain |
 | **R4.4** | Congruence mod `a`. | central to `thm:rigid` | absent |
 | **R4.5** | Intervals, membership, and the partition/covering lemma behind `lem:structure(3)`. Cardinality is needed only as a diameter bound and can be discharged as order arithmetic on endpoints. | all three | absent |
-| **R4.6** | Finite sums `Σ` beyond the existing `geo`/`geo1`, including empty-range corners (`k = 3` in `thm:sharp`). | all three | **WIP:** generic `Nat.sumRange`, empty/successor equations, power reindexing, scalar distribution, and pointwise congruence landed under ADR-0391 / ADR-0393--0395; range splitting remains |
+| **R4.6** | Finite sums `Σ` beyond the existing `geo`/`geo1`, including empty-range corners (`k = 3` in `thm:sharp`). | all three | **WIP:** generic `Nat.sumRange`, empty/successor equations, power reindexing, scalar distribution, pointwise congruence, and the exact `thm:sharp` factorization landed under ADR-0391 / ADR-0393--0396; range splitting remains |
 | **R4.7** | Euclidean division / division-with-remainder, for `lem:gap`'s integrality step. | `thm:main` | absent |
 | **R4.8** | `gcd`, Bézout, Gauss's lemma — for `lem:solform`'s necessity direction. **Requires `Acc` declared first.** Explicitly rejected as an axiom in `route-c/REPORT.md:143-148` ("would have been a fraud, since it is essentially the content of the statement"). | `thm:main` | absent |
 | **R4.9** | `a`-adic valuation, stated **relationally** (`v(j) = e :⟺ a^e ∣ j ∧ a^{e+1} ∤ j` plus existence/uniqueness for `j ≥ 1`) so no division is required. | `thm:main` | absent |
@@ -1061,6 +1061,10 @@ Ordered by dependency.
 | **R7.2** | Decide `thm:rigid`'s encoding **before** starting it: axiomatized ℤ (available now, 34 axioms, needs R1.1) versus a ℕ-valued deficit `D_j := −E_j` with the trigger rewritten (keeps zero axioms, needs R4.1–R4.2). | §3.3 |
 | **R7.3** | Treat the **`M = N+1` half of `thm:rigid` as a separate, smaller target.** It is the novel half and it does **not** depend on `thm:main` — only the `M = N` half cites it. | §3.2 |
 | **R7.4** | Do not begin `thm:main` before R4.7–R4.9 exist. Its two hardest steps (`lem:gap`'s integrality argument, `lem:solform`'s necessity) are precisely the ones with no current foundation. | §3.2 |
+
+R7.1 remains **WIP**. Its exact subtraction-free finite-sum factorization,
+including the `k=3` empty corner, is checked under ADR-0396. Truncated
+subtraction/cancellation is now the first missing witness dependency.
 
 ### R8 — Lean conformance
 
