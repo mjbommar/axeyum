@@ -133,18 +133,27 @@ pub fn min_conflicts(
             incidence[point - 1].push(constraint);
         }
     }
-    let monochromatic = |colouring: &[usize], set: &[usize]| {
-        let first = colouring[set[0] - 1];
-        set.iter().all(|&point| colouring[point - 1] == first)
-    };
+    // Violation is asked of the problem, not recomputed here.
+    //
+    // This crate has the "is this set monochromatic" predicate in three places,
+    // and only two of them are meant to be independent. `first_violation` is
+    // deliberately a second derivation from the defining relation and must
+    // NEVER be folded into the encoder's view — that separation is the whole
+    // reason a witness is believable. This closure was the third copy, and it
+    // was accidental: it re-derived "all members share a colour" and so
+    // silently ignored an off-diagonal problem's per-colour scope, reporting
+    // colour-1 monochromatic sets as violations of a colour-2 constraint. It
+    // now calls the encoder's own predicate, which is what it always meant.
+    let monochromatic =
+        |colouring: &[usize], constraint: usize| problem.constraint_violated(colouring, constraint);
 
     // The violated set, as a vector with O(1) membership and swap-removal so
     // "pick a random violated constraint" stays cheap and deterministic.
     let mut violated: Vec<usize> = Vec::new();
     let mut position: Vec<Option<usize>> = vec![None; forbidden.len()];
-    for (constraint, set) in forbidden.iter().enumerate() {
-        if monochromatic(&colouring, set) {
-            position[constraint] = Some(violated.len());
+    for (constraint, slot) in position.iter_mut().enumerate() {
+        if monochromatic(&colouring, constraint) {
+            *slot = Some(violated.len());
             violated.push(constraint);
         }
     }
@@ -173,7 +182,7 @@ pub fn min_conflicts(
                 colouring[point - 1] = candidate;
                 let count = incidence[point - 1]
                     .iter()
-                    .filter(|&&other| monochromatic(&colouring, &forbidden[other]))
+                    .filter(|&&other| monochromatic(&colouring, other))
                     .count();
                 colouring[point - 1] = current;
                 let tie = count == best_count && u64::from(options.tie_percent) > rng.next() % 100;
@@ -187,7 +196,7 @@ pub fn min_conflicts(
 
         colouring[point - 1] = chosen;
         for &other in &incidence[point - 1] {
-            let now_violated = monochromatic(&colouring, &forbidden[other]);
+            let now_violated = monochromatic(&colouring, other);
             match (position[other], now_violated) {
                 (None, true) => {
                     position[other] = Some(violated.len());

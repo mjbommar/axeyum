@@ -21,6 +21,7 @@
 
 use crate::SearchError;
 use crate::colouring::{ColouringProblem, Witness};
+use crate::offdiag::OffDiagonalSchur;
 
 /// A parameterised family of colouring instances.
 pub trait ColouringFamily: Sync {
@@ -37,7 +38,50 @@ pub trait ColouringFamily: Sync {
     ///
     /// This is the enumeration the CNF encoder consumes, so its order is part
     /// of the encoding contract.
+    ///
+    /// For an off-diagonal family (one where
+    /// [`ColouringFamily::colour_dependent`] is `true`) this must return only
+    /// the sets forbidden in **every** colour — a relaxation, never an
+    /// over-approximation — because a caller that ignores the per-colour split
+    /// must still get a sound answer on the `unsat` side.
     fn constraints(&self, points: usize) -> Vec<Vec<usize>>;
+
+    /// The forbidden sets for a single colour, in encoding order.
+    ///
+    /// Uniform families forbid the same sets in every colour and inherit the
+    /// default. **Off-diagonal** families — where colour `c` forbids the
+    /// solutions of its own relation — override this *and*
+    /// [`ColouringFamily::colour_dependent`] *and*
+    /// [`ColouringFamily::symmetry_blocks`].
+    fn constraints_for_colour(&self, colour: usize, points: usize) -> Vec<Vec<usize>> {
+        let _ = colour;
+        self.constraints(points)
+    }
+
+    /// Whether [`ColouringFamily::constraints_for_colour`] can differ between
+    /// colours.
+    ///
+    /// The default `problem()` uses this to decide between the uniform encoding
+    /// and [`ColouringProblem::per_colour`]. A family that overrides
+    /// `constraints_for_colour` and forgets this returns the colour-1 sets for
+    /// every colour, which is a wrong answer, not a slow one — so the two go
+    /// together.
+    fn colour_dependent(&self) -> bool {
+        false
+    }
+
+    /// Groups of colours that are genuinely interchangeable, each ascending and
+    /// pairwise disjoint.
+    ///
+    /// Symmetry breaking orders colour classes by least element, and that is
+    /// sound only between colours that forbid the same sets. The default — one
+    /// block holding every colour — is correct for every uniform family.
+    /// **An off-diagonal family that inherits it ships a wrong `unsat`:** the
+    /// encoding would rule out colourings that differ only in which
+    /// non-interchangeable colour came first.
+    fn symmetry_blocks(&self) -> Vec<Vec<usize>> {
+        vec![(1..=self.colours()).collect()]
+    }
 
     /// The first violation of the family's defining relation in `colouring`,
     /// found by brute force over the relation itself.
@@ -61,7 +105,14 @@ pub trait ColouringFamily: Sync {
     ///
     /// Returns whatever [`ColouringProblem::new`] rejects.
     fn problem(&self, points: usize) -> Result<ColouringProblem, SearchError> {
-        ColouringProblem::new(points, self.colours(), self.constraints(points))
+        if self.colour_dependent() {
+            let per_colour = (1..=self.colours())
+                .map(|colour| self.constraints_for_colour(colour, points))
+                .collect();
+            ColouringProblem::per_colour(points, self.colours(), per_colour, self.symmetry_blocks())
+        } else {
+            ColouringProblem::new(points, self.colours(), self.constraints(points))
+        }
     }
 
     /// Checks a witness against the family's own relation.
@@ -274,7 +325,8 @@ impl ColouringFamily for Schur {
     }
 }
 
-/// Parses a family specification such as `rado:a=3,b=2,k=4` or `schur:k=3`.
+/// Parses a family specification such as `rado:a=3,b=2,k=4`, `schur:k=3`, or
+/// `offdiag-schur:s=4,t=4,u=8`.
 ///
 /// # Errors
 ///
@@ -306,9 +358,10 @@ pub fn parse_family(spec: &str) -> Result<Box<dyn ColouringFamily>, SearchError>
     let known: &[&str] = match name {
         "rado" => &["a", "b", "k"],
         "schur" => &["k"],
+        "offdiag-schur" => &["s", "t", "u"],
         _ => {
             return Err(SearchError::InvalidParameter {
-                what: format!("unknown family {name:?}; known: rado, schur"),
+                what: format!("unknown family {name:?}; known: rado, schur, offdiag-schur"),
             });
         }
     };
@@ -322,6 +375,11 @@ pub fn parse_family(spec: &str) -> Result<Box<dyn ColouringFamily>, SearchError>
             require("a")?,
             require("b")?,
             require("k")?,
+        )?)),
+        "offdiag-schur" => Ok(Box::new(OffDiagonalSchur::triple(
+            require("s")?,
+            require("t")?,
+            require("u")?,
         )?)),
         _ => Ok(Box::new(Schur::new(require("k")?)?)),
     }
@@ -404,6 +462,29 @@ mod tests {
         assert_eq!(rado.label(), "R_4(3(x-y)=2z)");
         let schur = parse_family("schur:k=3").expect("schur spec");
         assert_eq!(schur.label(), "R_3(x+y=z)");
+        let offdiag = parse_family("offdiag-schur:s=4,t=4,u=8").expect("offdiag spec");
+        assert_eq!(offdiag.label(), "S(3;4,4,8)");
+        assert_eq!(offdiag.colours(), 3);
+        assert!(offdiag.colour_dependent());
+        assert_eq!(offdiag.symmetry_blocks(), vec![vec![1, 2], vec![3]]);
+    }
+
+    #[test]
+    fn uniform_families_keep_the_colour_agnostic_defaults() {
+        let rado = Rado::new(3, 2, 4).expect("family");
+        assert!(!rado.colour_dependent());
+        assert_eq!(rado.symmetry_blocks(), vec![vec![1, 2, 3, 4]]);
+        for colour in 1..=4 {
+            assert_eq!(
+                rado.constraints_for_colour(colour, 12),
+                rado.constraints(12)
+            );
+        }
+        let schur = Schur::new(3).expect("family");
+        assert!(!schur.colour_dependent());
+        assert_eq!(schur.constraints_for_colour(2, 9), schur.constraints(9));
+        // ... and the uniform path still builds the uniform problem.
+        assert!(!schur.problem(9).expect("problem").is_off_diagonal());
     }
 
     #[test]

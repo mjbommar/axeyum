@@ -89,6 +89,7 @@ pub mod cover;
 pub mod family;
 pub mod harness;
 pub mod ledger;
+pub mod offdiag;
 pub mod search;
 
 pub use certify::certify_dumped_cover;
@@ -99,6 +100,7 @@ pub use cover::{
 pub use family::{ColouringFamily, Rado, Schur, parse_family};
 pub use harness::{CheckMode, CoverOptions, CoverOutcome};
 pub use ledger::RunId;
+pub use offdiag::OffDiagonalSchur;
 pub use search::{MinConflictsOptions, min_conflicts};
 
 use axeyum_cnf::{CnfError, DratError};

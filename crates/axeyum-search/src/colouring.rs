@@ -27,6 +27,19 @@
 //!    `i > 1` only if some `j' < j` takes colour `i - 1`. Colour classes are
 //!    thereby ordered by least element, which is sound because colour names are
 //!    interchangeable.
+//!
+//! # Off-diagonal instances
+//!
+//! Group 2 above replays every forbidden set for every colour, and group 4 is
+//! justified *only* by colour names being interchangeable. Neither holds for an
+//! **off-diagonal** instance, where each colour forbids a different relation —
+//! `S(3; s,t,u)` forbids `L(s)` in colour 1, `L(t)` in colour 2 and `L(u)` in
+//! colour 3. [`ColouringProblem::per_colour`] builds such an instance: every
+//! forbidden set carries the single colour it applies to, and symmetry breaking
+//! is restricted to caller-supplied **blocks** of colours that really are
+//! interchangeable (for `S(3;4,4,8)` that is `{1,2}` and `{3}`). The uniform
+//! constructor [`ColouringProblem::new`] is unchanged and still emits the
+//! byte-identical generator-of-record encoding.
 
 use axeyum_cnf::{CnfClause, CnfFormula, CnfLit, CnfVar};
 
@@ -38,6 +51,18 @@ pub struct ColouringProblem {
     points: usize,
     colours: usize,
     forbidden: Vec<Vec<usize>>,
+    /// `scopes[i]` is the single colour forbidden set `i` applies to.
+    ///
+    /// `None` is the uniform case: every set applies to every colour. The
+    /// distinction is not cosmetic — it decides both what
+    /// [`ColouringProblem::encode`] emits and what counts as a violation.
+    scopes: Option<Vec<usize>>,
+    /// Blocks of mutually interchangeable colours, each ascending and disjoint.
+    ///
+    /// `None` means the legacy whole-palette breaking, which is what every
+    /// uniform family wants and what the stored Rado certificates were produced
+    /// with.
+    symmetry_blocks: Option<Vec<Vec<usize>>>,
 }
 
 impl ColouringProblem {
@@ -89,7 +114,79 @@ impl ColouringProblem {
             points,
             colours,
             forbidden,
+            scopes: None,
+            symmetry_blocks: None,
         })
+    }
+
+    /// Builds an **off-diagonal** problem: `per_colour[c - 1]` is the list of
+    /// sets that must not be monochromatic *in colour `c` only*.
+    ///
+    /// The sets are flattened colour-major — every set of colour 1, then every
+    /// set of colour 2, and so on — and that order is the encoding order.
+    ///
+    /// `symmetry_blocks` names the groups of colours that are genuinely
+    /// interchangeable, so that the least-element ordering is only imposed
+    /// inside a group. Passing one block per colour disables symmetry breaking
+    /// entirely; passing a single block containing every colour is only correct
+    /// when every colour forbids the same sets. **Getting this wrong produces a
+    /// wrong `unsat`,** so the argument for the blocks belongs with the family
+    /// that supplies them.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`SearchError::InvalidParameter`] when `per_colour` does not
+    /// have one entry per colour, when a set is empty or not strictly
+    /// ascending, or when the blocks are not disjoint ascending subsets of
+    /// `1..=colours`; [`SearchError::PointOutOfRange`] for a set naming a point
+    /// outside `1..=points`; and [`SearchError::ColourOutOfRange`] for a block
+    /// naming a colour outside `1..=colours`.
+    pub fn per_colour(
+        points: usize,
+        colours: usize,
+        per_colour: Vec<Vec<Vec<usize>>>,
+        symmetry_blocks: Vec<Vec<usize>>,
+    ) -> Result<Self, SearchError> {
+        if per_colour.len() != colours {
+            return Err(SearchError::InvalidParameter {
+                what: format!(
+                    "per-colour problem has {} constraint lists for {colours} colours",
+                    per_colour.len()
+                ),
+            });
+        }
+        let mut flattened = Vec::new();
+        let mut scopes = Vec::new();
+        for (index, sets) in per_colour.into_iter().enumerate() {
+            for set in sets {
+                flattened.push(set);
+                scopes.push(index + 1);
+            }
+        }
+        let mut seen = vec![false; colours];
+        for block in &symmetry_blocks {
+            if block.windows(2).any(|w| w[0] >= w[1]) {
+                return Err(SearchError::InvalidParameter {
+                    what: format!("symmetry block {block:?} is not strictly ascending"),
+                });
+            }
+            for &colour in block {
+                if colour == 0 || colour > colours {
+                    return Err(SearchError::ColourOutOfRange { colour, colours });
+                }
+                if seen[colour - 1] {
+                    return Err(SearchError::InvalidParameter {
+                        what: format!("colour {colour} appears in two symmetry blocks"),
+                    });
+                }
+                seen[colour - 1] = true;
+            }
+        }
+        // Validation of points/sets is shared with the uniform constructor.
+        let mut problem = Self::new(points, colours, flattened)?;
+        problem.scopes = Some(scopes);
+        problem.symmetry_blocks = Some(symmetry_blocks);
+        Ok(problem)
     }
 
     /// Number of points, i.e. the `n` of the instance.
@@ -105,6 +202,52 @@ impl ColouringProblem {
     /// The forbidden sets, in encoding order.
     pub fn forbidden(&self) -> &[Vec<usize>] {
         &self.forbidden
+    }
+
+    /// The colour forbidden set `index` applies to, or `None` when it applies
+    /// to every colour.
+    ///
+    /// Callers that decide whether a colouring violates a constraint must
+    /// consult this — a set scoped to colour 2 is *not* violated by being
+    /// monochromatic in colour 1. Use [`ColouringProblem::constraint_violated`]
+    /// rather than re-deriving the rule.
+    pub fn scope(&self, index: usize) -> Option<usize> {
+        self.scopes
+            .as_ref()
+            .and_then(|scopes| scopes.get(index))
+            .copied()
+    }
+
+    /// Whether this problem scopes any constraint to a single colour.
+    pub fn is_off_diagonal(&self) -> bool {
+        self.scopes.is_some()
+    }
+
+    /// The blocks of interchangeable colours symmetry breaking is imposed
+    /// inside, or `None` for the whole palette.
+    pub fn symmetry_blocks(&self) -> Option<&[Vec<usize>]> {
+        self.symmetry_blocks.as_deref()
+    }
+
+    /// Whether `colouring` violates forbidden set `index`: every member shares
+    /// a colour, and that colour is one the set applies to.
+    ///
+    /// Returns `false` for an out-of-range index or a colouring that does not
+    /// cover every member.
+    pub fn constraint_violated(&self, colouring: &[usize], index: usize) -> bool {
+        let Some(set) = self.forbidden.get(index) else {
+            return false;
+        };
+        let Some(&first) = colouring.get(set[0] - 1) else {
+            return false;
+        };
+        if let Some(scope) = self.scope(index)
+            && scope != first
+        {
+            return false;
+        }
+        set.iter()
+            .all(|&point| colouring.get(point - 1) == Some(&first))
     }
 
     /// Number of CNF variables, `points * colours`.
@@ -169,13 +312,22 @@ impl ColouringProblem {
         for point in 1..=self.points {
             formula.add_clause(CnfClause::new(self.at_least_one(point)?))?;
         }
-        for set in &self.forbidden {
-            for colour in 1..=self.colours {
+        for (index, set) in self.forbidden.iter().enumerate() {
+            let mut emit = |colour: usize| -> Result<(), SearchError> {
                 let lits = set
                     .iter()
                     .map(|&point| Ok(self.literal(point, colour)?.negated()))
                     .collect::<Result<Vec<_>, SearchError>>()?;
                 formula.add_clause(CnfClause::new(lits))?;
+                Ok(())
+            };
+            match self.scope(index) {
+                Some(colour) => emit(colour)?,
+                None => {
+                    for colour in 1..=self.colours {
+                        emit(colour)?;
+                    }
+                }
             }
         }
         for point in 1..=self.points {
@@ -188,8 +340,46 @@ impl ColouringProblem {
                 }
             }
         }
-        self.encode_symmetry_breaking(&mut formula)?;
+        match self.symmetry_blocks.clone() {
+            None => self.encode_symmetry_breaking(&mut formula)?,
+            Some(blocks) => self.encode_block_symmetry_breaking(&blocks, &mut formula)?,
+        }
         Ok(formula)
+    }
+
+    /// Clause group 4, restricted to blocks of interchangeable colours.
+    ///
+    /// For a block `[c_0 < c_1 < … < c_{m-1}]` this orders the block's colour
+    /// classes by least element: point `j` may take `c_idx` (`idx >= 1`) only
+    /// if some `j' < j` takes `c_{idx-1}`. Colours outside every block are left
+    /// unconstrained. A one-colour block emits nothing, so `blocks` of
+    /// singletons is "no symmetry breaking at all".
+    ///
+    /// This differs from [`ColouringProblem::encode_symmetry_breaking`] in
+    /// exactly one way when the block is the whole palette: point 1 is pinned
+    /// to colour 1 by the `colours - 1` unit clauses `-v(1, i)` plus
+    /// at-least-one, rather than by the single unit `v(1,1)`. Same models,
+    /// different bytes — which is why the uniform path is kept verbatim.
+    fn encode_block_symmetry_breaking(
+        &self,
+        blocks: &[Vec<usize>],
+        formula: &mut CnfFormula,
+    ) -> Result<(), SearchError> {
+        for block in blocks {
+            for (idx, &colour) in block.iter().enumerate().skip(1) {
+                let previous = block[idx - 1];
+                for point in 1..=self.points {
+                    let mut lits = vec![self.literal(point, colour)?.negated()];
+                    if point > idx {
+                        for earlier in 1..point {
+                            lits.push(self.literal(earlier, previous)?);
+                        }
+                    }
+                    formula.add_clause(CnfClause::new(lits))?;
+                }
+            }
+        }
+        Ok(())
     }
 
     /// Clause group 4: colour classes ordered by least element.
@@ -251,12 +441,13 @@ impl ColouringProblem {
     /// family's independent enumerator — see
     /// [`ColouringFamily::verify_witness`](crate::ColouringFamily::verify_witness).
     pub fn first_monochromatic(&self, colouring: &[usize]) -> Option<(Vec<usize>, usize)> {
-        self.forbidden.iter().find_map(|set| {
-            let first = *colouring.get(set[0] - 1)?;
-            set.iter()
-                .all(|&point| colouring.get(point - 1) == Some(&first))
-                .then(|| (set.clone(), first))
-        })
+        (0..self.forbidden.len())
+            .find(|&index| self.constraint_violated(colouring, index))
+            .map(|index| {
+                let set = self.forbidden[index].clone();
+                let colour = colouring[set[0] - 1];
+                (set, colour)
+            })
     }
 }
 
