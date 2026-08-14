@@ -38,13 +38,19 @@ And the frontier itself, measured directly — this is the decisive one:
 
 | gate | pinning | frontier | what it reported |
 |---|---|---|---|
-| stock (fixed 4000 ms budget) | `taskset -c 16-23` (E-cores) | **29**, four runs out of four | **REGRESSION** below the committed baseline of 30 |
+| stock (fixed 4000 ms budget) | `taskset -c 16-23` (E-cores) | **29, 29, 29, 29, 30** | four of five runs **REGRESSION** below the committed baseline of 30 |
 | calibrated, first (memory-bound) kernel | same | 35, 30, 30 | scale only 1.11-1.42x — under-compensated, see below |
-| calibrated, shipped kernel | same, load 6.7 | **40** | scale 2.34x, budget 9370 ms; `PROGRESS (+10) — ADVISORY ONLY`; `NOT COMPARABLE` (27 % drift mid-sweep) |
+| calibrated, shipped kernel | same, load 4.0-6.7 | **40, 40** | scale 2.34x / 2.33x, budget ~9370 ms; `PROGRESS (+10) — ADVISORY ONLY`; `NOT COMPARABLE` on the first (27 % drift mid-sweep) |
 
 Unpinned on the same box the same day: 39-40. So the calibrated gate recovers the
 number the machine is actually capable of (29 to 40) while the stock gate reports
-a regression that never happened, deterministically, four times out of four.
+a regression that never happened, in four runs out of five.
+
+The reference case, for completeness: the full suite pinned to the P-cores
+(`taskset -c 0-7`) reports `bv_reduction = 38` at scale 1.02 — the committed
+artifact's number — and marks it **ratchetable**. All five families were
+comparable and ratchetable in that run; the re-recorded artifacts are in
+`bench-results/frontier/`.
 
 The stock gate reports a *regression that never happened* purely because the
 work landed on efficiency cores. A hostname match would have certified that
