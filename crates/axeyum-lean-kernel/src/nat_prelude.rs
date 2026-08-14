@@ -235,10 +235,16 @@ pub struct NatPrelude {
     pub le_trans: NameId,
     /// `le_total : ∀ a b, Or (Le a b) (Le b a)`.
     pub le_total: NameId,
+    /// `le_intro : ∀ a b k, a+k=b → Le a b`.
+    pub le_intro: NameId,
+    /// `le_dest : ∀ a b, Le a b → Exists (fun k => a+k=b)`.
+    pub le_dest: NameId,
     /// `le_add_right : ∀ (n k : Nat), Le n (add n k)`.
     pub le_add_right: NameId,
     /// `add_le_add_left : ∀ c a b, Le a b → Le (c+a) (c+b)`.
     pub add_le_add_left: NameId,
+    /// `le_of_add_le_add_left : ∀ c a b, Le (c+a) (c+b) → Le a b`.
+    pub le_of_add_le_add_left: NameId,
     /// `mul_le_mul_left : ∀ c a b, Le a b → Le (c*a) (c*b)`.
     pub mul_le_mul_left: NameId,
     /// `sub_add_cancel : ∀ m n, Le m n → add (sub n m) m = n`.
@@ -340,8 +346,11 @@ pub fn build_nat_prelude(kernel: &mut Kernel) -> Result<NatPrelude, KernelError>
             le_of_succ_le_succ: kernel.name_str(nat, "le_of_succ_le_succ"),
             le_trans: kernel.name_str(nat, "le_trans"),
             le_total: kernel.name_str(nat, "le_total"),
+            le_intro: kernel.name_str(nat, "le_intro"),
+            le_dest: kernel.name_str(nat, "le_dest"),
             le_add_right: kernel.name_str(nat, "le_add_right"),
             add_le_add_left: kernel.name_str(nat, "add_le_add_left"),
+            le_of_add_le_add_left: kernel.name_str(nat, "le_of_add_le_add_left"),
             mul_le_mul_left: kernel.name_str(nat, "mul_le_mul_left"),
             sub_add_cancel: kernel.name_str(nat, "sub_add_cancel"),
             mul_sub_left_distrib: kernel.name_str(nat, "mul_sub_left_distrib"),
@@ -1673,6 +1682,111 @@ fn declare_order(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> 
         (total(d, a, b), proof)
     })?;
 
+    // le_intro : ∀ a b k, a+k=b → Le a b
+    d.theorem(p.le_intro, 3, &|d, v| {
+        let (a, b, k) = (v[0], v[1], v[2]);
+        let sum = d.add(a, k);
+        let hyp_ty = d.eq(sum, b);
+        let h_fv = d.fresh_fvar();
+        let h = d.kernel().fvar(h_fv);
+        let bound = d.lemma(p.le_add_right, &[a, k]);
+        let motive = d.eq_motive(sum, &|d, x| d.le(a, x));
+        let body = d.transport(sum, motive, bound, b, h);
+        let conclusion = d.le(a, b);
+        let stmt = d.arrow(hyp_ty, conclusion);
+        let proof = d.lam_fv(h_fv, hyp_ty, body);
+        (stmt, proof)
+    })?;
+
+    // le_dest : ∀ a b, Le a b → Exists (fun k => a+k=b)
+    d.theorem(p.le_dest, 2, &|d, v| {
+        let (a, b) = (v[0], v[1]);
+        let one = d.level_one();
+        let exists_at = |d: &mut NatDev<'_>, x: ExprId| {
+            let k_fv = d.fresh_fvar();
+            let k = d.kernel().fvar(k_fv);
+            let sum = d.add(a, k);
+            let body = d.eq(sum, x);
+            let pred = d.lam_fv(k_fv, nat, body);
+            let exists = d.kernel().const_(p.logic.exists_, vec![one]);
+            d.apply(exists, &[nat, pred])
+        };
+        let hyp_ty = d.le(a, b);
+        let h_fv = d.fresh_fvar();
+        let h = d.kernel().fvar(h_fv);
+        let motive = {
+            let x_fv = d.fresh_fvar();
+            let x = d.kernel().fvar(x_fv);
+            let dom = d.le(a, x);
+            let body = exists_at(d, x);
+            let inner = d.kernel().lam(anon, dom, body, BinderInfo::Default);
+            d.lam_fv(x_fv, nat, inner)
+        };
+        let minor_refl = {
+            let zero = d.zero();
+            let pred = {
+                let k_fv = d.fresh_fvar();
+                let k = d.kernel().fvar(k_fv);
+                let sum = d.add(a, k);
+                let body = d.eq(sum, a);
+                d.lam_fv(k_fv, nat, body)
+            };
+            let witness = d.refl(a);
+            let intro = d.kernel().const_(p.logic.exists_intro, vec![one]);
+            d.apply(intro, &[nat, pred, zero, witness])
+        };
+        let minor_step = {
+            let x_fv = d.fresh_fvar();
+            let x = d.kernel().fvar(x_fv);
+            let hx_fv = d.fresh_fvar();
+            let hx_ty = d.le(a, x);
+            let ih_fv = d.fresh_fvar();
+            let ih_ty = exists_at(d, x);
+            let ih = d.kernel().fvar(ih_fv);
+            let sx = d.succ(x);
+            let target = exists_at(d, sx);
+            let target_motive = d.kernel().lam(anon, ih_ty, target, BinderInfo::Default);
+            let source_pred = {
+                let k_fv = d.fresh_fvar();
+                let k = d.kernel().fvar(k_fv);
+                let sum = d.add(a, k);
+                let body = d.eq(sum, x);
+                d.lam_fv(k_fv, nat, body)
+            };
+            let witness_minor = {
+                let k_fv = d.fresh_fvar();
+                let k = d.kernel().fvar(k_fv);
+                let sum = d.add(a, k);
+                let e_fv = d.fresh_fvar();
+                let e_ty = d.eq(sum, x);
+                let e = d.kernel().fvar(e_fv);
+                let sk = d.succ(k);
+                let lifted = d.congr(sum, x, e, &|d, value| d.succ(value));
+                let target_pred = {
+                    let j_fv = d.fresh_fvar();
+                    let j = d.kernel().fvar(j_fv);
+                    let target_sum = d.add(a, j);
+                    let body = d.eq(target_sum, sx);
+                    d.lam_fv(j_fv, nat, body)
+                };
+                let intro = d.kernel().const_(p.logic.exists_intro, vec![one]);
+                let body = d.apply(intro, &[nat, target_pred, sk, lifted]);
+                let with_e = d.lam_fv(e_fv, e_ty, body);
+                d.lam_fv(k_fv, nat, with_e)
+            };
+            let rec = d.kernel().const_(p.logic.exists_rec, vec![one]);
+            let body = d.apply(rec, &[nat, source_pred, target_motive, witness_minor, ih]);
+            let with_ih = d.lam_fv(ih_fv, ih_ty, body);
+            let with_hx = d.lam_fv(hx_fv, hx_ty, with_ih);
+            d.lam_fv(x_fv, nat, with_hx)
+        };
+        let body = d.const_app(p.le_rec, &[a, motive, minor_refl, minor_step, b, h]);
+        let conclusion = exists_at(d, b);
+        let stmt = d.arrow(hyp_ty, conclusion);
+        let proof = d.lam_fv(h_fv, hyp_ty, body);
+        (stmt, proof)
+    })?;
+
     // add_le_add_left : ∀ c a b, Le a b → Le (add c a) (add c b)
     // Eliminate the bound derivation; `add` recurses on exactly its index.
     d.theorem(p.add_le_add_left, 3, &|d, v| {
@@ -1708,6 +1822,56 @@ fn declare_order(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> 
             d.lam_fv(x_fv, nat, with_hx)
         };
         let body = d.const_app(p.le_rec, &[a, motive, minor_refl, minor_step, b, h]);
+        let stmt = d.arrow(hyp_ty, conclusion);
+        let proof = d.lam_fv(h_fv, hyp_ty, body);
+        (stmt, proof)
+    })?;
+
+    // le_of_add_le_add_left : ∀ c a b, Le (c+a) (c+b) → Le a b
+    d.theorem(p.le_of_add_le_add_left, 3, &|d, v| {
+        let (c, a, b) = (v[0], v[1], v[2]);
+        let ca = d.add(c, a);
+        let cb = d.add(c, b);
+        let hyp_ty = d.le(ca, cb);
+        let h_fv = d.fresh_fvar();
+        let h = d.kernel().fvar(h_fv);
+        let represented = d.lemma(p.le_dest, &[ca, cb, h]);
+        let pred = {
+            let k_fv = d.fresh_fvar();
+            let k = d.kernel().fvar(k_fv);
+            let cak = d.add(ca, k);
+            let body = d.eq(cak, cb);
+            d.lam_fv(k_fv, nat, body)
+        };
+        let conclusion = d.le(a, b);
+        let represented_ty = {
+            let one = d.level_one();
+            let exists = d.kernel().const_(p.logic.exists_, vec![one]);
+            d.apply(exists, &[nat, pred])
+        };
+        let motive = d
+            .kernel()
+            .lam(anon, represented_ty, conclusion, BinderInfo::Default);
+        let minor = {
+            let k_fv = d.fresh_fvar();
+            let k = d.kernel().fvar(k_fv);
+            let cak = d.add(ca, k);
+            let e_fv = d.fresh_fvar();
+            let e_ty = d.eq(cak, cb);
+            let e = d.kernel().fvar(e_fv);
+            let ak = d.add(a, k);
+            let c_ak = d.add(c, ak);
+            let assoc = d.lemma(p.add_assoc, &[c, a, k]);
+            let assoc_rev = d.symm(cak, c_ak, assoc);
+            let (_end, common_sum) = d.chain(c_ak, &[(cak, assoc_rev), (cb, e)]);
+            let ak_eq_b = d.lemma(p.add_left_cancel, &[c, ak, b, common_sum]);
+            let body = d.lemma(p.le_intro, &[a, b, k, ak_eq_b]);
+            let with_e = d.lam_fv(e_fv, e_ty, body);
+            d.lam_fv(k_fv, nat, with_e)
+        };
+        let one = d.level_one();
+        let rec = d.kernel().const_(p.logic.exists_rec, vec![one]);
+        let body = d.apply(rec, &[nat, pred, motive, minor, represented]);
         let stmt = d.arrow(hyp_ty, conclusion);
         let proof = d.lam_fv(h_fv, hyp_ty, body);
         (stmt, proof)
