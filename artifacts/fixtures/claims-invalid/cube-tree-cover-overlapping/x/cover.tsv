@@ -1,0 +1,9 @@
+run	index	choices	verdict	solve_s	steps	adds	check	check_s
+f	1	1	unsat	0.001	1	1	passed	0.000
+f	2	2	unsat	0.001	1	1	passed	0.000
+f	3	3	unsat	0.001	1	1	passed	0.000
+f	4	4	unsat	0.001	1	1	passed	0.000
+f	17	4,1	unsat	0.001	1	1	passed	0.000
+f	18	4,2	unsat	0.001	1	1	passed	0.000
+f	19	4,3	unsat	0.001	1	1	passed	0.000
+f	20	4,4	unsat	0.001	1	1	passed	0.000

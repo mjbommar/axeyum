@@ -285,6 +285,190 @@ def check_cube_cover(path: Path, ev: dict, a: int, b: int, k: int,
     return errors
 
 
+def check_cube_tree_cover(path: Path, ev: dict, a: int, b: int, k: int,
+                          params: dict) -> list[str]:
+    """Re-verify an ADAPTIVE cube cover: a tree, not a flat product.
+
+    `check_cube_cover` above requires every cube to fix all `d` branch
+    integers, so the cover is `k ** d` cells. An adaptive cover splits only
+    where the solver ran out of budget, so its cubes sit at mixed depths --
+    one cube may fix three colours where its sibling's subtree needed
+    fourteen. That is the only way instances like `F_741` finish at all, and
+    it needs its own completeness obligation.
+
+    A tree cover is valid when its cubes are exactly the LEAF SET of a
+    complete branch trie: walking down from the root, every node is either a
+    recorded cube or has all `k` children present, recursively. Then every
+    assignment lies in exactly one cube, which is what makes refuting them all
+    a refutation of the formula. What this checker establishes:
+
+      1. every recorded cube has verdict `unsat` and a passed proof check;
+      2. the cubes are exactly that leaf set -- no hole (some assignment in no
+         cube) and no overlap (a cube strictly inside another, which would
+         mean a region covered twice and, more to the point, a completeness
+         argument that had stopped being a partition);
+      3. each row's cube code is the code its own colour tuple denotes, so a
+         row cannot claim to be a cube it is not;
+      4. for each branch integer `j` the formula contains the at-least-one
+         clause `{v(j,1) .. v(j,k)}` verbatim, so splitting on it is licensed.
+
+    The walk here is written from the definition and shares no code with
+    `axeyum_search::cover::verify_cube_cover`, which is the point: the Rust
+    checked the cover as it was produced, and this checks it again from the
+    stored bytes.
+
+    Ledger format is the one `axeyum-search` writes:
+    `run  index  choices  verdict  solve_s  steps  adds  check  check_s`.
+    """
+    errors: list[str] = []
+    eid = ev["id"]
+    art = ev.get("artifact")
+    if art is None:
+        errors.append(f"{path}: '{eid}' cube-tree-cover has no artifact")
+        return errors
+    ev_params = ev.get("parameters") or {}
+    branch = ev_params.get("branch")
+    if not isinstance(branch, list) or not branch:
+        errors.append(f"{path}: '{eid}' cube-tree-cover needs parameters.branch "
+                      f"(the list of branch integers)")
+        return errors
+    n = int(params["n"])
+    depth = len(branch)
+
+    # A cube's code, as `BranchPlan::prefix_code` defines it: levels are laid
+    # out consecutively, shortest first, and within a level the tuple is read
+    # mixed-radix. Re-derived here rather than trusted from the row.
+    def code_of(cube: tuple[int, ...]) -> int:
+        offset = sum(k ** level for level in range(len(cube)))
+        local = 0
+        for choice in cube:
+            local = local * k + (choice - 1)
+        return offset + local
+
+    leaves: dict[tuple[int, ...], int] = {}
+    passed = 0
+    deferred = 0
+    rows = 0
+    for lineno, line in enumerate(artifact_path(art).read_text().splitlines(), 1):
+        line = line.rstrip("\n")
+        if not line.strip() or line.startswith("#"):
+            continue
+        fields = line.split("\t")
+        if fields[0] == "run":                      # header
+            continue
+        if len(fields) != 9:
+            errors.append(f"{path}: '{eid}' malformed row at line {lineno}: "
+                          f"{len(fields)} fields, want 9")
+            return errors
+        rows += 1
+        try:
+            index = int(fields[1])
+            cube = tuple(int(c) for c in fields[2].split(","))
+        except ValueError:
+            errors.append(f"{path}: '{eid}' unparseable row at line {lineno}")
+            return errors
+        if not 1 <= len(cube) <= depth:
+            errors.append(f"{path}: '{eid}' cube {index} fixes {len(cube)} "
+                          f"integers, outside 1..{depth}")
+            return errors
+        if any(not 1 <= c <= k for c in cube):
+            errors.append(f"{path}: '{eid}' cube {index} has a colour outside "
+                          f"1..{k}")
+            return errors
+        if code_of(cube) != index:
+            errors.append(f"{path}: '{eid}' row claims cube {index} but its "
+                          f"colours {cube} are cube {code_of(cube)}")
+            return errors
+        if fields[3] != "unsat":
+            errors.append(f"{path}: '{eid}' cube {index} verdict is "
+                          f"'{fields[3]}', not 'unsat'")
+            return errors
+        if fields[7].startswith("FAILED"):
+            errors.append(f"{path}: '{eid}' cube {index} proof check FAILED")
+            return errors
+        if fields[7] == "passed":
+            passed += 1
+        else:
+            deferred += 1
+        if cube in leaves:
+            errors.append(f"{path}: '{eid}' cube {cube} recorded twice")
+            return errors
+        leaves[cube] = index
+
+    # Completeness: the recorded cubes are exactly the leaf set of a complete
+    # trie. `interior` is every proper prefix of every cube; a node that is
+    # neither a cube nor interior has no cube below it at all, so its whole
+    # subtree is uncovered and it is reported whole.
+    interior = {cube[:d] for cube in leaves for d in range(len(cube))}
+    reached: set[tuple[int, ...]] = set()
+    stack: list[tuple[int, ...]] = [()]
+    while stack:
+        node = stack.pop()
+        if node in leaves:
+            if node in interior:
+                errors.append(f"{path}: '{eid}' cube {node} is recorded AND has "
+                              f"recorded descendants: the cover overlaps itself")
+                return errors
+            reached.add(node)
+            continue
+        if node not in interior:
+            errors.append(f"{path}: '{eid}' cover is NOT complete: no cube "
+                          f"covers {node or '(the root)'} or anything below it")
+            return errors
+        if len(node) >= depth:
+            errors.append(f"{path}: '{eid}' cover is NOT complete: cell {node} "
+                          f"is at full depth and is not a cube")
+            return errors
+        for choice in range(1, k + 1):
+            stack.append(node + (choice,))
+    if len(reached) != len(leaves):
+        buried = sorted(set(leaves) - reached)[0]
+        errors.append(f"{path}: '{eid}' cube {buried} lies strictly inside "
+                      f"another cube, so its region is covered twice")
+        return errors
+
+    # The case split is licensed by the formula's own at-least-one clauses.
+    formula_lines = rado_cnf(a, b, k, n).splitlines()
+    clause_sets = {frozenset(int(t) for t in ln.split()[:-1])
+                   for ln in formula_lines[1:]}
+    for j in branch:
+        if not 1 <= j <= n:
+            errors.append(f"{path}: '{eid}' branch integer {j} is outside "
+                          f"1..{n}, so the formula has no case-split clause "
+                          f"for it and the case split is not licensed")
+            continue
+        alo = frozenset((j - 1) * k + i for i in range(1, k + 1))
+        if alo not in clause_sets:
+            errors.append(f"{path}: '{eid}' formula has no at-least-one clause "
+                          f"for branch integer {j}; the case split is not "
+                          f"licensed and the cover proves nothing")
+
+    declared = ev_params.get("cubes")
+    if declared is not None and declared != len(leaves):
+        errors.append(f"{path}: '{eid}' declares cubes={declared} but the "
+                      f"ledger records {len(leaves)}")
+    declared_checked = ev_params.get("checked_cubes")
+    if declared_checked is not None and declared_checked != passed:
+        errors.append(f"{path}: '{eid}' declares checked_cubes="
+                      f"{declared_checked} but the cover records {passed} passed")
+    if deferred and ev["check_status"] == "checked":
+        errors.append(f"{path}: '{eid}' is labelled 'checked' but {deferred} of "
+                      f"{len(leaves)} cubes were deferred past the check cap "
+                      f"and rest on the solver's verdict alone; use "
+                      f"'replay-only' and declare parameters.checked_cubes")
+    if deferred and declared_checked is None:
+        errors.append(f"{path}: '{eid}' has {deferred} deferred cubes but does "
+                      f"not declare parameters.checked_cubes")
+
+    if not errors:
+        depths = sorted({len(cube) for cube in leaves})
+        print(f"  {ev['check_status']} cube-tree-cover {eid}: {len(leaves)} "
+              f"cubes at depths {depths[0]}-{depths[-1]}, all unsat, "
+              f"{passed} proofs checked, complete and non-overlapping over "
+              f"branch {branch} (at-least-one clauses confirmed in the formula)")
+    return errors
+
+
 # ------------------------------------------------------------------- driver
 
 def check_instance_pin(path: Path, ev: dict, a: int, b: int, k: int,
@@ -562,6 +746,9 @@ def check_claim(path: Path, drat_checker: str | None) -> list[str]:
 
         elif kind == "cube-cover":
             errors.extend(check_cube_cover(path, ev, a, b, k, params))
+
+        elif kind == "cube-tree-cover":
+            errors.extend(check_cube_tree_cover(path, ev, a, b, k, params))
 
         elif kind == "instance-pin":
             errors.extend(check_instance_pin(path, ev, a, b, k, params))

@@ -46,6 +46,14 @@ EXPECTED_CERT = {
     "cube-cover-not-exhaustive": "cover is NOT exhaustive",
     "cube-cover-failed-check": "proof check FAILED",
     "cube-cover-unlicensed-branch": "the case split is not",
+    # An ADAPTIVE cover is a tree, so its completeness obligation is "the
+    # cubes are exactly the leaf set of a complete branch trie" rather than
+    # "the cubes are exactly the product". Both ways of breaking that -- a
+    # subtree nothing covers, and a cube recorded alongside its own children --
+    # get a fixture, because a tree cover that is not a partition proves
+    # nothing while looking exactly like one that does.
+    "cube-tree-cover-incomplete": "cover is NOT complete",
+    "cube-tree-cover-overlapping": "overlaps itself",
 }
 
 

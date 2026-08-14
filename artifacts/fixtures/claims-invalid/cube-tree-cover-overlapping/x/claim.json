@@ -1,0 +1,49 @@
+{
+ "schema_version": 1,
+ "id": "x",
+ "title": "INVALID FIXTURE: an overlap: the cube c(2)=4 is recorded alongside all four of its children",
+ "statement": "Deliberately invalid. an overlap: the cube c(2)=4 is recorded alongside all four of its children. The certificate checker must reject it.",
+ "epistemic_status": "computed",
+ "formal": {
+  "language": "cnf-family",
+  "family": "rado-colouring-a(x-y)=bz",
+  "parameters": {
+   "a": 2,
+   "b": 1,
+   "k": 4,
+   "n": 56
+  },
+  "generator": "scripts/gen-rado-instance.py",
+  "semantics_note": "artifacts/claims/rado/SEMANTICS.md"
+ },
+ "provenance": {
+  "conjectured_by": "fixture",
+  "searched_by": [
+   "hand-written fixture"
+  ],
+  "checked_by": [
+   "scripts/check-claim-negative-fixtures.py: this fixture MUST be rejected"
+  ],
+  "date": "2026-08-13"
+ },
+ "evidence": [
+  {
+   "id": "cover",
+   "kind": "cube-tree-cover",
+   "supports": "R_4 <= 56 (upper bound)",
+   "artifact": "artifacts/fixtures/claims-invalid/cube-tree-cover-overlapping/x/cover.tsv",
+   "artifact_sha256": "adc6c0001c592355353a25f9864165fa08c613abe18e22f19526a44617bc1ef9",
+   "check_status": "checked",
+   "checker_command": "python3 scripts/check-claim-certificates.py",
+   "artifact_format": "tsv-ledger",
+   "parameters": {
+    "branch": [
+     2,
+     4,
+     6
+    ],
+    "cubes": 8
+   }
+  }
+ ]
+}

@@ -1,0 +1,49 @@
+{
+ "schema_version": 1,
+ "id": "x",
+ "title": "INVALID FIXTURE: a hole: the c(2)=4,c(4)=3 subtree is covered by nothing",
+ "statement": "Deliberately invalid. a hole: the c(2)=4,c(4)=3 subtree is covered by nothing. The certificate checker must reject it.",
+ "epistemic_status": "computed",
+ "formal": {
+  "language": "cnf-family",
+  "family": "rado-colouring-a(x-y)=bz",
+  "parameters": {
+   "a": 2,
+   "b": 1,
+   "k": 4,
+   "n": 56
+  },
+  "generator": "scripts/gen-rado-instance.py",
+  "semantics_note": "artifacts/claims/rado/SEMANTICS.md"
+ },
+ "provenance": {
+  "conjectured_by": "fixture",
+  "searched_by": [
+   "hand-written fixture"
+  ],
+  "checked_by": [
+   "scripts/check-claim-negative-fixtures.py: this fixture MUST be rejected"
+  ],
+  "date": "2026-08-13"
+ },
+ "evidence": [
+  {
+   "id": "cover",
+   "kind": "cube-tree-cover",
+   "supports": "R_4 <= 56 (upper bound)",
+   "artifact": "artifacts/fixtures/claims-invalid/cube-tree-cover-incomplete/x/cover.tsv",
+   "artifact_sha256": "e148a429891d9a61d0937a7905537fa147f8c61d9c88be7d9c909b3ba2dc2491",
+   "check_status": "checked",
+   "checker_command": "python3 scripts/check-claim-certificates.py",
+   "artifact_format": "tsv-ledger",
+   "parameters": {
+    "branch": [
+     2,
+     4,
+     6
+    ],
+    "cubes": 6
+   }
+  }
+ ]
+}
