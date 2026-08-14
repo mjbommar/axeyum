@@ -21,7 +21,7 @@
       "graph": "math-education",
       "ref": "C:rado-number",
       "relation": "instance-of",
-      "resolved": false,
+      "resolved": true,
       "note": "authored this session at math-education graph/concepts/rado-number.md (uncommitted); flip to resolved with a fresh graph_pin once that repo commits"
     },
     {
@@ -71,7 +71,7 @@
     ],
     "date": "2026-08-12",
     "machine": "linux x86-64, 4 cores, 61 GiB",
-    "graph_pin": "a29a9e2a649b0fdafcf1032292832d3fb590f9b7",
+    "graph_pin": "ce3e2a52e7c95075d69262b4d8f0ee8fe748f22c",
     "prior_art": [
       {
         "citation": "Y. Chang, J. A. De Loera, W. J. Wesley, 'Rado Numbers and SAT Computations', ISSAC 2022",

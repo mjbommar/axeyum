@@ -21,7 +21,7 @@
       "graph": "math-education",
       "ref": "C:rado-number",
       "relation": "instance-of",
-      "resolved": false,
+      "resolved": true,
       "note": "authored this session at math-education graph/concepts/rado-number.md (uncommitted); flip to resolved with a fresh graph_pin once that repo commits"
     },
     {
@@ -76,7 +76,7 @@
         "establishes": "R_3(2(x-y)=1z) = 14 (Tables 1 and 10)"
       }
     ],
-    "graph_pin": "a29a9e2a649b0fdafcf1032292832d3fb590f9b7",
+    "graph_pin": "ce3e2a52e7c95075d69262b4d8f0ee8fe748f22c",
     "toolchain": {
       "axeyum_commit": "406be5fa8b28a14d803103a5e95147b3b5ae541d",
       "rustc_version": "rustc 1.99.0-nightly (be8e82435 2026-07-11)",

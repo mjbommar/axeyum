@@ -21,21 +21,21 @@
       "graph": "math-education",
       "ref": "C:ramsey-number",
       "relation": "frontier-of",
-      "resolved": false,
+      "resolved": true,
       "note": "pending: no graph_pin evaluated for this claim, so no ref is asserted resolved"
     },
     {
       "graph": "math-education",
       "ref": "C:open-problem",
       "relation": "instance-of",
-      "resolved": false,
+      "resolved": true,
       "note": "pending: no graph_pin evaluated for this claim"
     },
     {
       "graph": "math-education",
       "ref": "TQ:colouring",
       "relation": "uses-technique",
-      "resolved": false,
+      "resolved": true,
       "note": "pending: no graph_pin evaluated for this claim"
     }
   ],
@@ -77,7 +77,8 @@
         "url": "https://papers.ssrn.com/sol3/papers.cfm?abstract_id=6814341",
         "establishes": "REPORTEDLY: R_5(3) > 296 > 243 with an explicit 5-colouring, and the conjecture R_k(b) = b^k iff k <= 2(b-1). NOT VERIFIED HERE: SSRN returns HTTP 403 to every fetch attempted, so these are search-engine summaries of the abstract page, not directly read text. The family identification IS verified: x + by = bz rearranges to x = b(z-y), a permutation of coordinates, so it induces the same 3-uniform hypergraph on [n] as b(x-y) = 1z; checked as sets-of-sets for b = 1..7 and n in {1,2,5,13,40,97,200}, 49/49 identical. If the report is accurate then our 243 result is a WEAKER independent reproduction of it and is not new; what is ours is that it is certified end to end with no external solver or checker."
       }
-    ]
+    ],
+    "graph_pin": "ce3e2a52e7c95075d69262b4d8f0ee8fe748f22c"
   },
   "evidence": [
     {
