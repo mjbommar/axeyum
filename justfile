@@ -6,7 +6,7 @@ default:
 # Run every check CI runs (except cargo-deny, which needs the tool installed).
 # This is the THOROUGH pre-merge/CI gate (whole workspace, ~tens of minutes).
 # While iterating, use `just check-scope` instead — it gates only what changed.
-check: fmt fmt-all facts clippy gate-controls test frontier gate-liveness moment-proofs doc qfbv-profile reflection-semantics-gate benchmark-repetition-tests glaurung-qfbv-regular foundational-resources rules-as-code smtcomp-resume parity-docs generated-trackers plan-authority links
+check: fmt fmt-all facts clippy gate-controls aggregate-scope test frontier gate-liveness moment-proofs doc qfbv-profile reflection-semantics-gate benchmark-repetition-tests glaurung-qfbv-regular foundational-resources rules-as-code smtcomp-resume parity-docs generated-trackers plan-authority links
 
 fmt:
     cargo fmt --all --check
@@ -44,6 +44,12 @@ facts:
 # `git archive | tar -x` stamps every file with the commit time.
 clippy:
     scripts/check-clippy-complete.sh --toolchain stable
+
+# Are this repository's two aggregate gates the same gate? `just check` and
+# `./scripts/check.sh` ran 112 and 61 steps on 2026-08-14 while CLAUDE.md called
+# them the same thing. This pins the divergence so it cannot grow in silence.
+aggregate-scope:
+    scripts/check-aggregate-scope.sh
 
 # The negative controls for the two gate-scope fixes above: each shows the old
 # gate green on a broken tree, the new gate red, and the new gate green again

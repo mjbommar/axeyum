@@ -1,0 +1,72 @@
+# Accepted divergence between ./scripts/check.sh and `just check`.
+# Regenerate with: scripts/check-aggregate-scope.sh --update
+# A step listed here runs on ONE side only. Removing an entry (making the
+# two agree) is always fine; ADDING one is a new blind spot in whichever
+# gate a contributor happens to run, so the gate fails until it is recorded
+# here deliberately.
+check.sh-only: cargo doc --workspace --all-features --no-deps
+check.sh-only: python3 scripts/query-rules-as-code.py coverage --by domain --require-any
+check.sh-only: python3 scripts/query-rules-as-code.py coverage --by fragment --format json --require-any
+check.sh-only: python3 scripts/query-rules-as-code.py coverage --by validation --require-any
+check.sh-only: scripts/check-clippy-complete.sh
+just-only:     cargo test -p axeyum-cas --lib -- --ignored
+just-only:     python3 -m unittest scripts.tests.test_analyze_bit_lowering_memo_profile
+just-only:     python3 -m unittest scripts.tests.test_analyze_bit_lowering_memo_timing
+just-only:     python3 -m unittest scripts.tests.test_analyze_glaurung_paired_traces
+just-only:     python3 -m unittest scripts.tests.test_analyze_glaurung_profiled_trace
+just-only:     python3 -m unittest scripts.tests.test_analyze_glaurung_regime_features
+just-only:     python3 -m unittest scripts.tests.test_analyze_qfbv_faithfulness
+just-only:     python3 -m unittest scripts.tests.test_compare_glaurung_native_replay
+just-only:     python3 -m unittest scripts.tests.test_compare_glaurung_repetitions
+just-only:     python3 -m unittest scripts.tests.test_compare_glaurung_rewrite_ablation
+just-only:     python3 -m unittest scripts.tests.test_compare_glaurung_shard_repetitions
+just-only:     python3 -m unittest scripts.tests.test_glaurung_benchmark_recipes
+just-only:     python3 -m unittest scripts.tests.test_glaurung_regular_gate
+just-only:     python3 -m unittest scripts.tests.test_lean_compatibility
+just-only:     python3 -m unittest scripts.tests.test_lean_execution_acceptance
+just-only:     python3 -m unittest scripts.tests.test_lean_u2_normalization_contracts
+just-only:     python3 -m unittest scripts.tests.test_lean_u2_official_execution_m2_r2
+just-only:     python3 -m unittest scripts.tests.test_lean_u2_official_execution_m2_r4
+just-only:     python3 -m unittest scripts.tests.test_lean_u2_official_execution_m2_r5
+just-only:     python3 -m unittest scripts.tests.test_lean_u2_official_execution_m2_r5_diagnostic
+just-only:     python3 -m unittest scripts.tests.test_lean_u2_official_execution_m2_r6
+just-only:     python3 -m unittest scripts.tests.test_lean_u2_official_execution_m2_r6_result
+just-only:     python3 -m unittest scripts.tests.test_measure_glaurung_authoritative_findings
+just-only:     python3 -m unittest scripts.tests.test_parity_evidence
+just-only:     python3 -m unittest scripts.tests.test_parity_resume
+just-only:     python3 -m unittest scripts.tests.test_prototype_lean4export_reader
+just-only:     python3 -m unittest scripts.tests.test_summarize_glaurung_native_profile
+just-only:     python3 -m unittest scripts.tests.test_summarize_glaurung_repetitions
+just-only:     python3 -m unittest scripts.tests.test_summarize_glaurung_shard_repetitions
+just-only:     python3 -m unittest scripts.tests.test_summarize_glaurung_shards
+just-only:     python3 -m unittest scripts.tests.test_summarize_glaurung_warm_profile
+just-only:     python3 scripts/check-parity-docs.py
+just-only:     python3 scripts/check-reflection-semantics-gate.py --run
+just-only:     python3 scripts/gen-gap-ownership.py --check
+just-only:     python3 scripts/gen-lean-compatibility.py --check
+just-only:     python3 scripts/gen-measurement-provenance.py --check
+just-only:     python3 scripts/gen-proof-gap-matrix.py --check
+just-only:     python3 scripts/gen-proof-gap-shape-census.py --check
+just-only:     python3 scripts/gen-scoreboard.py --check
+just-only:     python3 scripts/gen-smtcomp-resume-contract.py --check
+just-only:     python3 scripts/gen-smtlib-api-conformance.py --check
+just-only:     python3 scripts/gen-smtlib-session-contract.py --check
+just-only:     python3 scripts/lean_execution_acceptance.py result --check
+just-only:     python3 scripts/lean_u2_normalization_contracts.py --check
+just-only:     python3 scripts/lean_u2_official_execution_m2_r4.py offline-check
+just-only:     python3 scripts/lean_u2_official_execution_m2_r5.py offline-check
+just-only:     python3 scripts/lean_u2_official_execution_m2_r5_diagnostic.py offline-check
+just-only:     python3 scripts/lean_u2_official_execution_m2_r6.py offline-check
+just-only:     python3 scripts/lean_u2_official_execution_m2_r6_result.py result --check
+just-only:     python3 scripts/query-rules-as-code.py checks --pack category_equivalence_v0 --validation qf_uf_alethe_solver_regression --proof-status checked --require-any
+just-only:     python3 scripts/query-rules-as-code.py checks --pack workflow_reachability_v0 --validation bool_qf_lia_solver_regression --proof-status checked --require-any
+just-only:     python3 scripts/query-rules-as-code.py families --pack category_equivalence_v0 --text equivalence --require-any
+just-only:     python3 scripts/query-rules-as-code.py families --pack workflow_reachability_v0 --text reachability --require-any
+just-only:     python3 scripts/query-rules-as-code.py packs --pack category_equivalence_v0 --require-any
+just-only:     python3 scripts/query-rules-as-code.py packs --pack workflow_reachability_v0 --require-any
+just-only:     python3 scripts/query-rules-as-code.py rows --pack category_equivalence_v0 --family equivalence_pair_rows --text emergency_housing --limit 3 --require-any
+just-only:     python3 scripts/query-rules-as-code.py rows --pack workflow_reachability_v0 --family two_step_reachability_rows --text '"final_state":"approved"' --limit 3 --require-any
+just-only:     scripts/check-clippy-complete.sh --toolchain stable
+just-only:     scripts/check-glaurung-qfbv-regular.sh
+just-only:     scripts/check-qfbv-profile.sh
+just-only:     warnings" cargo doc --workspace --all-features --no-deps

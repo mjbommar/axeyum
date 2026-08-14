@@ -127,6 +127,13 @@ step lean-nested-inductive-m0-tests python3 -m unittest scripts.tests.test_lean_
 step lean-nested-inductive-m0 python3 scripts/check-lean-nested-inductive-elimination.py --check
 step lean-construct-matrix-stage-b python3 scripts/freeze-lean-official-construct-matrix-stage-b.py --check
 step lean-construct-matrix-product-freeze python3 scripts/freeze-lean-official-construct-matrix-product.py --check
+# The axiom ledger: the SHA-256 binding of all 65 prelude axiom types.
+# Axiom-freedom is this project's headline metric, and this step ran ONLY in
+# `just check` until 2026-08-14 -- so the documented fresh-machine gate did not
+# bind it. Found by `scripts/check-aggregate-scope.sh`, which now pins the
+# remaining divergence between the two aggregate gates.
+step lean-axiom-ledger-tests python3 -m unittest scripts.tests.test_lean_axiom_ledger
+step lean-axiom-ledger python3 scripts/gen-lean-axiom-ledger.py --check
 step foundational-resources ./scripts/check-foundational-resources.sh
 step rules-as-code-generate python3 scripts/gen-rules-as-code-dashboard.py
 step rules-as-code-validate python3 scripts/validate-rules-as-code.py
@@ -155,6 +162,10 @@ step gen-plan-tests python3 -m unittest scripts.tests.test_gen_plan
 step gen-plan       python3 scripts/gen-plan.py --check
 step adr-index-tests python3 -m unittest scripts.tests.test_gen_adr_index
 step adr-index      python3 scripts/gen-adr-index.py --check
+# Do this script and `just check` still run the same gates? They ran 61 and 112
+# steps on 2026-08-14 while both documents claimed they were the same gate. This
+# does not sync them; it pins the divergence so it cannot GROW unnoticed.
+step aggregate-scope ./scripts/check-aggregate-scope.sh
 step plan-authority python3 scripts/check-plan-authority.py
 step links         ./scripts/check-links.sh
 
