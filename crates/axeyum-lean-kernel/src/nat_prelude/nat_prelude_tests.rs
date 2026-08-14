@@ -69,6 +69,7 @@ fn definition_names(p: &NatPrelude) -> Vec<NameId> {
         p.sub,
         p.lt,
         p.in_closed_interval,
+        p.div_mod,
         p.dvd,
         p.valuation_at,
     ]
@@ -131,6 +132,7 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.sub_eq_zero_of_le,
         p.sub_le_iff_le_add,
         p.mul_sub_left_distrib,
+        p.div_mod_exists,
         p.dvd_mul,
         p.dvd_add,
         p.dvd_add_right_cancel_of_pos,
@@ -624,6 +626,32 @@ fn order_is_total() {
             f.explain(&e)
         )
     });
+}
+
+#[test]
+fn euclidean_division_exists_constructively() {
+    let mut f = Fixture::new();
+    let p = f.p;
+    let one = f.num(1);
+    let two = f.num(2);
+    let five = f.num(5);
+    let positive = f.lemma(p.le_add_right, &[one, one]);
+    let exists = f.lemma(p.div_mod_exists, &[two, five, positive]);
+    f.k.infer(exists)
+        .unwrap_or_else(|e| panic!("Euclidean decomposition should infer: {}", f.explain(&e)));
+
+    // Concrete anti-vacuity: 5 = 2*2+1 and 1<2.
+    let relation = f.div_mod(two, five, two, one);
+    let product = f.mul(two, two);
+    let reconstructed = f.add(product, one);
+    let equation_ty = f.eq(five, reconstructed);
+    let bound_ty = f.lt(one, two);
+    let equation = f.refl(five);
+    let bound = f.lemma(p.le_refl, &[two]);
+    let proof = f.const_app(p.logic.and_intro, &[equation_ty, bound_ty, equation, bound]);
+    let name = f.name("five_div_two");
+    f.declare_theorem(name, relation, proof)
+        .unwrap_or_else(|e| panic!("concrete divMod witness should admit: {}", f.explain(&e)));
 }
 
 #[test]
@@ -1621,7 +1649,39 @@ fn kernel_rejects_broken_proof_terms() {
         rejections += 1;
     }
 
-    assert_eq!(rejections, 34, "every negative control must be rejected");
+    // NC35 — Euclidean existence retains the dividend.
+    {
+        let name = f.name("nc35_div_mod_exists_wrong_dividend");
+        let two = f.num(2);
+        let four = f.num(4);
+        let five = f.num(5);
+        let one = f.num(1);
+        let positive = f.lemma(p.le_add_right, &[one, one]);
+        let proof = f.lemma(p.div_mod_exists, &[two, five, positive]);
+        let nat = f.nat_ty();
+        let one_level = f.level_one();
+        let quotient_fv = f.fresh_fvar();
+        let quotient = f.k.fvar(quotient_fv);
+        let remainder_fv = f.fresh_fvar();
+        let remainder = f.k.fvar(remainder_fv);
+        let relation = f.div_mod(two, four, quotient, remainder);
+        let remainder_predicate = f.lam_fv(remainder_fv, nat, relation);
+        let exists_const = f.k.const_(p.logic.exists_, vec![one_level]);
+        let remainder_exists = f.apply(exists_const, &[nat, remainder_predicate]);
+        let quotient_predicate = f.lam_fv(quotient_fv, nat, remainder_exists);
+        let bad = f.apply(exists_const, &[nat, quotient_predicate]);
+        let err = f
+            .declare_theorem(name, bad, proof)
+            .expect_err("NC35: Euclidean existence must retain the dividend");
+        println!(
+            "NC35 (wrong Euclidean dividend) rejected:\n  {}",
+            f.explain(&err)
+        );
+        assert!(!f.k.environment().contains(name));
+        rejections += 1;
+    }
+
+    assert_eq!(rejections, 35, "every negative control must be rejected");
 }
 
 /// The build is deterministic: two independent kernels render every promised
@@ -1644,7 +1704,7 @@ fn the_build_is_deterministic() {
     assert_eq!(first, second, "the prelude build must be deterministic");
     assert_eq!(
         first.len(),
-        10 + 61,
+        11 + 62,
         "every promised definition and theorem must be rendered"
     );
 }

@@ -274,6 +274,12 @@ pub struct NatPrelude {
     /// `mul_sub_left_distrib : ∀ b q a, Le a q → b*(q-a) = b*q-b*a`.
     pub mul_sub_left_distrib: NameId,
 
+    // --- Euclidean division -------------------------------------------------
+    /// `Nat.divMod d n q r := n = d*q+r ∧ r<d`.
+    pub div_mod: NameId,
+    /// `Nat.div_mod_exists : ∀ d n, Le one d → ∃ q r, divMod d n q r`.
+    pub div_mod_exists: NameId,
+
     // --- divisibility -------------------------------------------------------
     /// `Nat.dvd : Nat → Nat → Prop`, where `dvd a n := ∃ q, n = a * q`.
     pub dvd: NameId,
@@ -397,6 +403,8 @@ pub fn build_nat_prelude(kernel: &mut Kernel) -> Result<NatPrelude, KernelError>
             sub_eq_zero_of_le: kernel.name_str(nat, "sub_eq_zero_of_le"),
             sub_le_iff_le_add: kernel.name_str(nat, "sub_le_iff_le_add"),
             mul_sub_left_distrib: kernel.name_str(nat, "mul_sub_left_distrib"),
+            div_mod: kernel.name_str(nat, "divMod"),
+            div_mod_exists: kernel.name_str(nat, "div_mod_exists"),
             dvd: kernel.name_str(nat, "dvd"),
             valuation_at: kernel.name_str(nat, "valuationAt"),
             dvd_mul: kernel.name_str(nat, "dvd_mul"),
@@ -417,6 +425,7 @@ pub fn build_nat_prelude(kernel: &mut Kernel) -> Result<NatPrelude, KernelError>
         declare_multiplicative_theorems(&mut d, &p)?;
         declare_finite_sum_theorems(&mut d, &p)?;
         declare_order(&mut d, &p)?;
+        declare_euclidean_division(&mut d, &p)?;
         declare_divisibility(&mut d, &p)?;
         Ok(p)
     })();
@@ -2793,6 +2802,280 @@ fn declare_order(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> 
     Ok(())
 }
 
+/// Relational Euclidean division with constructive existence for every
+/// positive divisor. The quotient and remainder are proof witnesses rather
+/// than trusted computations.
+fn declare_euclidean_division(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> {
+    let p = *p;
+    let nat = d.nat_ty();
+    let anon = d.anon_name();
+    let prop = d.kernel().sort_zero();
+    let level_one = d.level_one();
+
+    // divMod d n q r := n = d*q+r ∧ r<d
+    {
+        let divisor_fv = d.fresh_fvar();
+        let divisor = d.kernel().fvar(divisor_fv);
+        let dividend_fv = d.fresh_fvar();
+        let dividend = d.kernel().fvar(dividend_fv);
+        let quotient_fv = d.fresh_fvar();
+        let quotient = d.kernel().fvar(quotient_fv);
+        let remainder_fv = d.fresh_fvar();
+        let remainder = d.kernel().fvar(remainder_fv);
+        let product = d.mul(divisor, quotient);
+        let reconstructed = d.add(product, remainder);
+        let equation = d.eq(dividend, reconstructed);
+        let bound = d.lt(remainder, divisor);
+        let body = d.const_app(p.logic.and, &[equation, bound]);
+        let value = {
+            let with_remainder = d.lam_fv(remainder_fv, nat, body);
+            let with_quotient = d.lam_fv(quotient_fv, nat, with_remainder);
+            let with_dividend = d.lam_fv(dividend_fv, nat, with_quotient);
+            d.lam_fv(divisor_fv, nat, with_dividend)
+        };
+        let ty = {
+            let with_remainder = d.kernel().pi(anon, nat, prop, BinderInfo::Default);
+            let with_quotient = d
+                .kernel()
+                .pi(anon, nat, with_remainder, BinderInfo::Default);
+            let with_dividend = d.kernel().pi(anon, nat, with_quotient, BinderInfo::Default);
+            d.kernel().pi(anon, nat, with_dividend, BinderInfo::Default)
+        };
+        d.kernel().add_declaration(Declaration::Definition {
+            name: p.div_mod,
+            uparams: vec![],
+            ty,
+            value,
+            hint: ReducibilityHint::Regular(7),
+        })?;
+    }
+
+    // div_mod_exists : ∀ d n, Le one d → ∃ q r, divMod d n q r
+    d.theorem(p.div_mod_exists, 2, &|d, v| {
+        let (divisor, dividend) = (v[0], v[1]);
+        let zero = d.zero();
+        let one = d.num(1);
+        let positive_ty = d.le(one, divisor);
+        let positive_fv = d.fresh_fvar();
+        let positive = d.kernel().fvar(positive_fv);
+
+        let exists_at = |d: &mut NatDev<'_>, n: ExprId| {
+            let quotient_fv = d.fresh_fvar();
+            let quotient = d.kernel().fvar(quotient_fv);
+            let remainder_fv = d.fresh_fvar();
+            let remainder = d.kernel().fvar(remainder_fv);
+            let relation = d.div_mod(divisor, n, quotient, remainder);
+            let remainder_predicate = d.lam_fv(remainder_fv, nat, relation);
+            let exists = d.kernel().const_(p.logic.exists_, vec![level_one]);
+            let remainder_exists = d.apply(exists, &[nat, remainder_predicate]);
+            let quotient_predicate = d.lam_fv(quotient_fv, nat, remainder_exists);
+            d.apply(exists, &[nat, quotient_predicate])
+        };
+        let introduce = |d: &mut NatDev<'_>,
+                         n: ExprId,
+                         quotient: ExprId,
+                         remainder: ExprId,
+                         relation_proof: ExprId| {
+            let remainder_fv = d.fresh_fvar();
+            let remainder_var = d.kernel().fvar(remainder_fv);
+            let relation = d.div_mod(divisor, n, quotient, remainder_var);
+            let remainder_predicate = d.lam_fv(remainder_fv, nat, relation);
+            let intro = d.kernel().const_(p.logic.exists_intro, vec![level_one]);
+            let remainder_exists = d.apply(
+                intro,
+                &[nat, remainder_predicate, remainder, relation_proof],
+            );
+
+            let quotient_fv = d.fresh_fvar();
+            let quotient_var = d.kernel().fvar(quotient_fv);
+            let inner_remainder_fv = d.fresh_fvar();
+            let inner_remainder = d.kernel().fvar(inner_remainder_fv);
+            let inner_relation = d.div_mod(divisor, n, quotient_var, inner_remainder);
+            let inner_predicate = d.lam_fv(inner_remainder_fv, nat, inner_relation);
+            let exists = d.kernel().const_(p.logic.exists_, vec![level_one]);
+            let inner_exists = d.apply(exists, &[nat, inner_predicate]);
+            let quotient_predicate = d.lam_fv(quotient_fv, nat, inner_exists);
+            d.apply(
+                intro,
+                &[nat, quotient_predicate, quotient, remainder_exists],
+            )
+        };
+
+        let motive = |d: &mut NatDev<'_>, n: ExprId| exists_at(d, n);
+        let base = |d: &mut NatDev<'_>| {
+            let product = d.mul(divisor, zero);
+            let reconstructed = d.add(product, zero);
+            let equation_ty = d.eq(zero, reconstructed);
+            let bound_ty = d.lt(zero, divisor);
+            let equation = d.refl(zero);
+            let relation_proof = d.const_app(
+                p.logic.and_intro,
+                &[equation_ty, bound_ty, equation, positive],
+            );
+            introduce(d, zero, zero, zero, relation_proof)
+        };
+        let step = |d: &mut NatDev<'_>, n: ExprId, ih: ExprId| {
+            let sn = d.succ(n);
+            let target = exists_at(d, sn);
+            let source = exists_at(d, n);
+            let outer_motive = d.kernel().lam(anon, source, target, BinderInfo::Default);
+
+            let outer_minor = {
+                let quotient_fv = d.fresh_fvar();
+                let quotient = d.kernel().fvar(quotient_fv);
+                let remainder_fv = d.fresh_fvar();
+                let remainder = d.kernel().fvar(remainder_fv);
+                let source_relation = d.div_mod(divisor, n, quotient, remainder);
+                let remainder_predicate = d.lam_fv(remainder_fv, nat, source_relation);
+                let exists = d.kernel().const_(p.logic.exists_, vec![level_one]);
+                let remainder_exists_ty = d.apply(exists, &[nat, remainder_predicate]);
+                let remainder_exists_fv = d.fresh_fvar();
+                let remainder_exists = d.kernel().fvar(remainder_exists_fv);
+
+                let inner_motive =
+                    d.kernel()
+                        .lam(anon, remainder_exists_ty, target, BinderInfo::Default);
+                let inner_minor = {
+                    let r_fv = d.fresh_fvar();
+                    let r = d.kernel().fvar(r_fv);
+                    let relation_ty = d.div_mod(divisor, n, quotient, r);
+                    let relation_fv = d.fresh_fvar();
+                    let relation = d.kernel().fvar(relation_fv);
+                    let product = d.mul(divisor, quotient);
+                    let reconstructed = d.add(product, r);
+                    let equation_ty = d.eq(n, reconstructed);
+                    let bound_ty = d.lt(r, divisor);
+                    let relation_motive =
+                        d.kernel()
+                            .lam(anon, relation_ty, target, BinderInfo::Default);
+                    let relation_minor = {
+                        let equation_fv = d.fresh_fvar();
+                        let equation = d.kernel().fvar(equation_fv);
+                        let bound_fv = d.fresh_fvar();
+                        let bound = d.kernel().fvar(bound_fv);
+                        let sr = d.succ(r);
+                        let strict_ty = d.lt(sr, divisor);
+                        let equal_ty = d.eq(sr, divisor);
+                        let split_ty = d.const_app(p.logic.or, &[strict_ty, equal_ty]);
+                        let split = d.lemma(p.lt_or_eq_of_le, &[sr, divisor, bound]);
+                        let split_motive =
+                            d.kernel().lam(anon, split_ty, target, BinderInfo::Default);
+
+                        let strict_minor = {
+                            let strict_fv = d.fresh_fvar();
+                            let strict = d.kernel().fvar(strict_fv);
+                            let next_reconstructed = d.add(product, sr);
+                            let next_equation_ty = d.eq(sn, next_reconstructed);
+                            let next_equation =
+                                d.congr(n, reconstructed, equation, &|d, x| d.succ(x));
+                            let next_relation = d.const_app(
+                                p.logic.and_intro,
+                                &[next_equation_ty, strict_ty, next_equation, strict],
+                            );
+                            let body = introduce(d, sn, quotient, sr, next_relation);
+                            d.lam_fv(strict_fv, strict_ty, body)
+                        };
+                        let equal_minor = {
+                            let equal_fv = d.fresh_fvar();
+                            let equal = d.kernel().fvar(equal_fv);
+                            let sq = d.succ(quotient);
+                            let next_product = d.mul(divisor, sq);
+                            let next_reconstructed = d.add(next_product, zero);
+                            let next_equation_ty = d.eq(sn, next_reconstructed);
+                            let successor_reconstructed = d.succ(reconstructed);
+                            let lifted = d.congr(n, reconstructed, equation, &|d, x| d.succ(x));
+                            let product_plus_sr = d.add(product, sr);
+                            let successor_eq_product_plus_sr = d.refl(successor_reconstructed);
+                            let product_plus_divisor = d.add(product, divisor);
+                            let replace_remainder =
+                                d.congr(sr, divisor, equal, &|d, x| d.add(product, x));
+                            let product_plus_divisor_eq_next = d.refl(product_plus_divisor);
+                            let (_, next_equation) = d.chain(
+                                sn,
+                                &[
+                                    (successor_reconstructed, lifted),
+                                    (product_plus_sr, successor_eq_product_plus_sr),
+                                    (product_plus_divisor, replace_remainder),
+                                    (next_reconstructed, product_plus_divisor_eq_next),
+                                ],
+                            );
+                            let zero_bound_ty = d.lt(zero, divisor);
+                            let next_relation = d.const_app(
+                                p.logic.and_intro,
+                                &[next_equation_ty, zero_bound_ty, next_equation, positive],
+                            );
+                            let body = introduce(d, sn, sq, zero, next_relation);
+                            d.lam_fv(equal_fv, equal_ty, body)
+                        };
+                        let or_rec = d.kernel().const_(p.logic.or_rec, vec![]);
+                        let body = d.apply(
+                            or_rec,
+                            &[
+                                strict_ty,
+                                equal_ty,
+                                split_motive,
+                                strict_minor,
+                                equal_minor,
+                                split,
+                            ],
+                        );
+                        let with_bound = d.lam_fv(bound_fv, bound_ty, body);
+                        d.lam_fv(equation_fv, equation_ty, with_bound)
+                    };
+                    let level_zero = d.kernel().level_zero();
+                    let and_rec = d.kernel().const_(p.logic.and_rec, vec![level_zero]);
+                    let body = d.apply(
+                        and_rec,
+                        &[
+                            equation_ty,
+                            bound_ty,
+                            relation_motive,
+                            relation_minor,
+                            relation,
+                        ],
+                    );
+                    let with_relation = d.lam_fv(relation_fv, relation_ty, body);
+                    d.lam_fv(r_fv, nat, with_relation)
+                };
+                let exists_rec = d.kernel().const_(p.logic.exists_rec, vec![level_one]);
+                let inner = d.apply(
+                    exists_rec,
+                    &[
+                        nat,
+                        remainder_predicate,
+                        inner_motive,
+                        inner_minor,
+                        remainder_exists,
+                    ],
+                );
+                let with_remainder_exists =
+                    d.lam_fv(remainder_exists_fv, remainder_exists_ty, inner);
+                d.lam_fv(quotient_fv, nat, with_remainder_exists)
+            };
+            let quotient_fv = d.fresh_fvar();
+            let quotient = d.kernel().fvar(quotient_fv);
+            let remainder_fv = d.fresh_fvar();
+            let remainder = d.kernel().fvar(remainder_fv);
+            let relation = d.div_mod(divisor, n, quotient, remainder);
+            let remainder_predicate = d.lam_fv(remainder_fv, nat, relation);
+            let exists = d.kernel().const_(p.logic.exists_, vec![level_one]);
+            let remainder_exists = d.apply(exists, &[nat, remainder_predicate]);
+            let quotient_predicate = d.lam_fv(quotient_fv, nat, remainder_exists);
+            let exists_rec = d.kernel().const_(p.logic.exists_rec, vec![level_one]);
+            d.apply(
+                exists_rec,
+                &[nat, quotient_predicate, outer_motive, outer_minor, ih],
+            )
+        };
+        let body = d.induct(&motive, &base, &step, dividend);
+        let conclusion = exists_at(d, dividend);
+        let stmt = d.arrow(positive_ty, conclusion);
+        let proof = d.lam_fv(positive_fv, positive_ty, body);
+        (stmt, proof)
+    })?;
+    Ok(())
+}
+
 /// `Nat.dvd`, `dvd_mul`, and `dvd_add`, all constructed from the logic
 /// prelude's checked `Exists` eliminator and the proved Nat multiplication
 /// laws. No proposition is admitted as an axiom.
@@ -3536,6 +3819,18 @@ pub trait NatOps {
     fn in_closed_interval(&mut self, lower: ExprId, upper: ExprId, value: ExprId) -> ExprId {
         let f = self.prelude().in_closed_interval;
         self.const_app(f, &[lower, upper, value])
+    }
+
+    /// `Nat.divMod divisor dividend quotient remainder`.
+    fn div_mod(
+        &mut self,
+        divisor: ExprId,
+        dividend: ExprId,
+        quotient: ExprId,
+        remainder: ExprId,
+    ) -> ExprId {
+        let f = self.prelude().div_mod;
+        self.const_app(f, &[divisor, dividend, quotient, remainder])
     }
 
     /// `Nat.dvd a n` (the proposition `a ∣ n`).
