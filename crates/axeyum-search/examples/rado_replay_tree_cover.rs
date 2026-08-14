@@ -58,10 +58,19 @@ fn main() -> ExitCode {
         args.get(key)
             .map_or(fallback, |value| value.parse().expect("number"))
     };
-    let Some(ledger) = args.get("ledger") else {
-        eprintln!("usage: rado_replay_tree_cover a=5 b=4 k=4 n=741 points=5,10,… ledger=<tsv>");
+    let mut ledgers: Vec<&String> = args
+        .iter()
+        .filter(|(key, _)| key.starts_with("ledger"))
+        .map(|(_, value)| value)
+        .collect();
+    ledgers.sort();
+    if ledgers.is_empty() {
+        eprintln!(
+            "usage: rado_replay_tree_cover a=5 b=4 k=4 n=741 points=5,10,… \
+             ledger=<tsv> [ledger2=<tsv> …]"
+        );
         return ExitCode::from(2);
-    };
+    }
     let (a, b, k, n) = (
         number("a", 5),
         number("b", 4),
@@ -83,13 +92,35 @@ fn main() -> ExitCode {
     };
     let plan = colour_branch_plan(&problem, &points).expect("plan");
 
-    let recorded = match parse_ledger(&fs::read_to_string(ledger).expect("read ledger")) {
-        Ok(rows) => rows,
-        Err(error) => {
-            println!("{{\"status\":\"bad-ledger\",\"error\":\"{error}\"}}");
-            return ExitCode::from(3);
+    // A cover spread over several runs -- a resume, or a tree partitioned
+    // across hosts -- is one cover, and its union is what has to be replayed.
+    // The union is also where a duplicate row can reappear after each file
+    // individually passed, so check for one over the union rather than per
+    // file (this is finding B2's failure mode, one level up).
+    let mut recorded: Vec<CellRecord> = Vec::new();
+    for path in &ledgers {
+        match parse_ledger(&fs::read_to_string(path).expect("read ledger")) {
+            Ok(rows) => {
+                println!("ledger {path}: {} rows", rows.len());
+                recorded.extend(rows);
+            }
+            Err(error) => {
+                println!("{{\"status\":\"bad-ledger\",\"path\":{path:?},\"error\":\"{error}\"}}");
+                return ExitCode::from(3);
+            }
         }
-    };
+    }
+    let mut codes: Vec<usize> = recorded.iter().map(|record| record.index).collect();
+    codes.sort_unstable();
+    let rows = codes.len();
+    codes.dedup();
+    if codes.len() != rows {
+        println!(
+            "{{\"status\":\"duplicate-rows\",\"rows\":{rows},\"distinct\":{}}}",
+            codes.len()
+        );
+        return ExitCode::from(3);
+    }
     println!(
         "replaying {} cubes of R_{k}({a}(x-y)={b}z) n={n} ({} vars, {} clauses) on {workers} workers",
         recorded.len(),
