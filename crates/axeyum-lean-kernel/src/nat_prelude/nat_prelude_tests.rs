@@ -139,6 +139,7 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.div_mod_exists,
         p.div_mod_unique,
         p.div_mod_bounds,
+        p.div_mod_mul_le_iff,
         p.dvd_mul,
         p.dvd_add,
         p.dvd_add_right_cancel_of_pos,
@@ -690,6 +691,14 @@ fn euclidean_division_exists_constructively() {
     let bounds = f.lemma(p.div_mod_bounds, &[two, five, two, one, proof]);
     f.k.infer(bounds)
         .unwrap_or_else(|e| panic!("Euclidean floor bounds should infer: {}", f.explain(&e)));
+
+    let floor_order = f.lemma(p.div_mod_mul_le_iff, &[two, five, two, one, two, proof]);
+    f.k.infer(floor_order).unwrap_or_else(|e| {
+        panic!(
+            "Euclidean quotient/multiplication order equivalence should infer: {}",
+            f.explain(&e)
+        )
+    });
 }
 
 #[test]
@@ -734,6 +743,7 @@ fn order_bounds_round_trip_through_additive_witnesses() {
             f.explain(&e)
         )
     });
+
     let adjunction = f.lemma(p.sub_le_iff_le_add, &[five, two, four]);
     f.k.infer(adjunction)
         .unwrap_or_else(|e| panic!("subtraction adjunction should infer: {}", f.explain(&e)));
@@ -1883,7 +1893,40 @@ fn kernel_rejects_broken_proof_terms() {
         rejections += 1;
     }
 
-    assert_eq!(rejections, 41, "every negative control must be rejected");
+    // NC42 — the floor equivalence retains the quotient endpoint.
+    {
+        let name = f.name("nc42_div_mod_floor_iff_wrong_quotient");
+        let one = f.num(1);
+        let two = f.num(2);
+        let three = f.num(3);
+        let five = f.num(5);
+        let product = f.mul(two, two);
+        let reconstructed = f.add(product, one);
+        let equation_ty = f.eq(five, reconstructed);
+        let bound_ty = f.lt(one, two);
+        let equation = f.refl(five);
+        let bound = f.lemma(p.le_refl, &[two]);
+        let relation_proof =
+            f.const_app(p.logic.and_intro, &[equation_ty, bound_ty, equation, bound]);
+        let proof = f.lemma(
+            p.div_mod_mul_le_iff,
+            &[two, five, two, one, two, relation_proof],
+        );
+        let product_bound = f.le(product, five);
+        let wrong_quotient_bound = f.le(three, two);
+        let bad = f.const_app(p.logic.iff, &[product_bound, wrong_quotient_bound]);
+        let err = f
+            .declare_theorem(name, bad, proof)
+            .expect_err("NC42: floor equivalence must retain the quotient endpoint");
+        println!(
+            "NC42 (wrong floor quotient endpoint) rejected:\n  {}",
+            f.explain(&err)
+        );
+        assert!(!f.k.environment().contains(name));
+        rejections += 1;
+    }
+
+    assert_eq!(rejections, 42, "every negative control must be rejected");
 }
 
 /// The build is deterministic: two independent kernels render every promised
@@ -1906,7 +1949,7 @@ fn the_build_is_deterministic() {
     assert_eq!(first, second, "the prelude build must be deterministic");
     assert_eq!(
         first.len(),
-        11 + 68,
+        11 + 69,
         "every promised definition and theorem must be rendered"
     );
 }
