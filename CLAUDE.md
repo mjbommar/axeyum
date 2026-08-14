@@ -85,14 +85,38 @@ PLAN.md and pick the next task.
 ## Commands
 
 ```sh
-just check          # fmt + clippy + test + doc + foundational resources + docs link check (preferred)
+just check          # the fullest aggregate gate (preferred)
 just foundational-resources  # validates foundational atlas/example packs + generated dashboards
-./scripts/check.sh  # same aggregate gate without `just` (fresh-machine fallback)
+# NOT the same gate as `just check`, despite both files claiming to mirror each
+# other. Measured 2026-08-14: `just check` ran 112 script steps, check.sh ran 61,
+# and EACH was missing something the other had -- check.sh skipped the Lean axiom
+# ledger (the SHA-256 binding of every prelude axiom type; axiom-freedom is the
+# headline metric), while `just check` skipped check-gate-liveness.sh, the ratchet
+# that detects gates which run zero tests. Both are narrower now but still differ.
+# Treat `just check` as the gate and check.sh as the no-`just` fallback that may
+# lag it; when a claim depends on a specific gate, run that gate by name.
+# Full measurement: docs/refactor-2026-08/gate-divergence-2026-08-14.md
+./scripts/check.sh  # fresh-machine fallback, NOT equivalent -- see above
+python3 scripts/validate-facts.py  # the fact ledger: formal statement + status + evidence
 just bench-micro    # committed SMT-LIB micro corpus through axeyum-bench
 just bench-public-qfbv-sat-bv-compare  # Phase 5 public sat-bv vs Z3 slice
 just bench-public-qfbv-sat-bv-guarded  # Phase 5 node/CNF guarded run
 just bench-public-qfbv-sat-bv-replay-refine  # replay-checked query refinement
+scripts/check-aggregate-scope.sh  # how far apart those two gates are, pinned
 cargo fmt --all --check
+# BOTH LINES BELOW CAN PASS OVER CODE THEY NEVER COMPILED. Cargo decides
+# freshness by MTIME, so a source file OLDER than the cached artifact is
+# invisible -- and `git archive HEAD | tar -x` (the snapshot build every lane is
+# told to use) stamps every file with the COMMIT time. Measured 2026-08-14:
+#   touch -d 2020-01-01 examples/warny.rs  -> clippy -D warnings exits 0
+#   touch -d 2020-01-01 src/lib.rs         -> `cargo test` prints "1 passed" for
+#                                             a test that MUST fail
+# Use the wrappers instead; they touch changed content first and then report how
+# many targets/tests they actually examined:
+#   scripts/check-clippy-complete.sh    scripts/check-workspace-tests.sh
+# If you must run the bare form from a `git archive` snapshot, run
+# `scripts/check-source-freshness.sh --gate <name> --touch` first, or extract
+# with `tar --touch`. Controls: scripts/tests/test-gate-scope-controls.sh.
 cargo clippy --workspace --all-targets --all-features -- -D warnings
 cargo test --workspace --all-features
 # PRE-MERGE GATE for any string-route change: the oracle-free :status corpus
@@ -203,6 +227,24 @@ let-chains are used workspace-wide) check. Edition 2024, resolver 3.
 - `crates/axeyum-scenarios` — self-checking, oracle-free consumer workloads
   (SAT by concrete execution, UNSAT by bounded-verified identities) for testing
   and optimization (ADR-0008).
+- `artifacts/facts/` — **the fact ledger**: one JSON file per mathematical
+  proposition, schema in `artifacts/ontology/fact.schema.json`, gated by
+  `scripts/validate-facts.py`. A fact is the only resource here that holds a
+  formal statement **and** a status: a `claim`'s `statement` is prose and its
+  `formal` is a CNF generator recipe, a kernel declaration exists only once
+  proved, a curriculum node is a topic. So it is what the self-extension loop
+  consumes — pick an `open` fact whose `depends_on` are established, dispatch
+  `formal.statement`, reconstruct, attach evidence, flip the status, record the
+  axiom footprint. Two status axes, deliberately: `epistemic_status` is what
+  **we** established, `external_status` what mathematics knows. Their
+  disagreement in our favour is a new result and the validator prints it.
+  Semantic rules are enforced, not just structure (a `proved` fact with nothing
+  `checked`, or an `open` one carrying evidence, fails).
+- `docs/refactor-2026-08/`, `docs/mathematics-2026-08/`,
+  `docs/formalized-math-2026-08/` — the three parallel roadmap strands
+  (engineering architecture / mathematical capability / collecting and
+  integrating formalized mathematics). Read the strand that matches your work
+  before starting; they carry the reasoning PLAN.md's queue only summarizes.
 - `docs/research/` — research notes; the design rationale for everything.
   Folder map in [docs/research/README.md](docs/research/README.md).
 - `references/` — gitignored shallow clones of reference solvers/checkers;
@@ -303,6 +345,28 @@ let-chains are used workspace-wide) check. Edition 2024, resolver 3.
   comment claiming a witness binds "every declared String variable" when it
   binds the source problem's private symbol ids. Prefer a measurement over a
   message, an exit status, or a comment — including the ones you just wrote.
+- **An empty result from a tool that was never pointed at your subject is
+  indistinguishable from a strong negative result.** Distinct from the inert-gate
+  trap above: the tool runs, exits 0, and prints a correct empty answer to a
+  question you did not ask. `prelude_axiom_inventory` builds the `real`,
+  `integer` and `string` preludes and never `nat` or `logic`, so grepping its
+  output for Nat rows returns nothing — which the coordinator read as "the Nat
+  prelude is axiom-free" and put into two agent briefs before checking. The
+  conclusion happened to be true; the evidence for it did not exist. Before
+  believing a zero, confirm the tool's COVERAGE includes your subject, not just
+  that it ran. (`nat_axiom_inventory` now covers `nat`/`logic` and the full
+  trusted surface — `Axiom` alone is not it, since `Opaque` has no proof body and
+  `Quotient` admits `Quot.sound`.)
+- **You cannot read the kernel's theorem inventory from source text.**
+  Declarations go through a `.theorem(name, …)` helper taking an interned
+  `NameId` field, so grepping `.theorem("…")` returns **zero** matches and
+  `Declaration::Theorem` returns 1 against 119 real theorems. Three separate
+  counts of this repository's theorems were wrong before anyone built the
+  environment to look, and one lane built an out-of-tree probe crate to get types
+  it could have read directly. Use the examples:
+  `nat_theorem_inventory` (names + canonical types, the paste-into-a-fact form),
+  `theorem_axiom_footprint` (per-declaration `Kernel::axiom_footprint`, this
+  kernel's `#print axioms`), `nat_axiom_inventory` (trusted surface).
 - The `z3` crate ≥ 0.20 removed the old `'ctx` lifetime API; `Solver::new()`
   takes no arguments and contexts are managed internally
   (`with_z3_context`/`with_z3_config`). Don't copy pre-0.20 examples.
