@@ -27,15 +27,28 @@ axeyum, and what do we build ourselves instead?**
 Network analysis of Mathlib alone extracts **308,129 declarations and 8.4 M
 edges across 7,563 modules** (arXiv:2604.24797).
 
-Against that, axeyum's own library is **106 proved theorems**. The ratio to
-Mathlib's theorem count is roughly **1 : 2,200**.
+These are the corpora we can check ourselves against, and the map of what has
+already been formalized. Their size is a *stock* built at human bandwidth over
+years; ours is a **rate**, and it is measured below.
 
 ## The thesis of this strand
 
-**We should not race Mathlib. We should become the independent checker of it.**
+**Build the foundations ourselves, axiom-free, in parallel — and use the world's
+libraries to check ourselves against, not to substitute for building.**
 
-That is not a consolation prize — it is the position axeyum is uniquely built
-for, and almost nobody else occupies:
+Measured on 2026-08-14: one lane produced **73 proved theorems in 11 h 43 min**
+— ~149/day/lane — every one reporting **no axioms**, while also writing an ADR
+each and updating tests. Ten lanes is ~1,500/day. The construction plan and the
+arithmetic are in [`05-throughput.md`](05-throughput.md); the binding constraint
+turns out to be a **single-file lock**, not compute or capability.
+
+What makes this ours rather than a re-derivation is the loop the integration
+allows: the library gives the solver facts, the solver decides goals the library
+needs, reconstruction turns those decisions into kernel-checked terms, and the
+DAG says what to prove next. **That cycle was closed end to end once on
+2026-08-14.** It has never been automatic. Making it automatic is the strand.
+
+Import stays, in a supporting role we are uniquely placed to fill:
 
 - We have an **independent Lean kernel** (`axeyum-lean-kernel`, 37,987 lines)
   that is not Lean, written in a different language, by different people.
@@ -44,14 +57,12 @@ for, and almost nobody else occupies:
 - On 2026-08-14 the **reverse** direction closed too: Lean's own kernel accepted
   an axeyum development from an empty environment, with a tamper control.
 
-A library of 232,000 theorems checked by exactly one kernel is a single point of
-trust. A second, independent kernel that admits the same declarations is the
-strongest assurance artifact available in this field, and it is a *measurement*
-rather than a claim.
-
-The research community already calls this the pluralistic-library problem —
-"QED Reloaded: Towards a Pluralistic Formal Library of Mathematical Knowledge"
-(Rabe et al.) — and the interchange work below is its infrastructure.
+A library checked by exactly one kernel is a single point of trust. A second,
+independent kernel that admits the same declarations is a measurement almost
+nobody can produce — and it tells us where our own construction diverges from
+the world's. That is worth having *in addition to* building, and it is the
+research community's pluralistic-library problem ("QED Reloaded", Rabe et al.),
+whose interchange infrastructure we should consume rather than rebuild.
 
 ## Where we actually stand
 
@@ -84,15 +95,17 @@ reader to ingest a dependency-closed slice."*
 4. [`04-implement.md`](04-implement.md) — the boundary decision: what we import
    versus what we prove ourselves, and why `nat_prelude` is being built by hand
    while 232,000 theorems sit next door.
+5. [`05-throughput.md`](05-throughput.md) — **the construction plan**: the
+   measured production rate, the single-file lock that caps it, and the
+   self-extension loop only this architecture can run.
 
-## The honest risk
+## The measure of success
 
-Every phase here is a way to spend unbounded effort on other people's
-mathematics while our own ladder
-([mathematics strand](../mathematics-2026-08/README.md)) stays at rung two.
-Import is only worth it if imported content **carries evidence through our
-stack** — otherwise we have a large read-only museum.
+Not how much we ingest, and not theorem count. **Theorems the system proved
+without a human writing the proof**, on a zero-axiom base, in the order the DAG
+asked for — plus, from the import side, how much foreign mathematics axeyum can
+now *use* in a proof, a certificate or a negative control that it could not use
+before.
 
-The test for this strand is therefore not "how much did we ingest". It is:
-**how much imported mathematics can axeyum now use in a proof, a certificate, or
-a negative control that it could not use before.**
+The first number is currently zero. [`05`](05-throughput.md) C2 makes it
+positive.
