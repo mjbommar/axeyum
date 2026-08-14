@@ -117,6 +117,7 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.sub_succ,
         p.succ_sub_succ,
         p.sub_self,
+        p.add_sub_cancel_left,
         p.sum_range_zero,
         p.sum_range_succ,
         p.sum_range_congr,
@@ -174,6 +175,7 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.sub_eq_zero_of_le,
         p.sub_le_iff_le_add,
         p.mul_sub_left_distrib,
+        p.mul_sub_left_distrib_total,
         p.div_mod_exists,
         p.div_mod_unique,
         p.div_mod_bounds,
@@ -202,6 +204,12 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.dvd_of_mod_eq_zero_of_pos,
         p.mod_eq_zero_iff_dvd,
         p.dvd_mul,
+        p.dvd_refl,
+        p.dvd_zero,
+        p.dvd_trans,
+        p.dvd_mul_right_of_dvd,
+        p.dvd_add_iff_right,
+        p.dvd_mod_iff,
         p.dvd_add,
         p.dvd_add_right_cancel_of_pos,
         p.not_dvd_one_of_two_le,
@@ -1556,6 +1564,67 @@ fn divisibility_introduction_and_addition_are_checked() {
             f.explain(&e)
         )
     });
+}
+
+#[test]
+fn all_nat_divisibility_algebra_reaches_executable_remainders() {
+    let mut f = Fixture::new();
+    let p = f.p;
+    let zero = f.zero();
+    let one = f.num(1);
+    let two = f.num(2);
+    let three = f.num(3);
+    let four = f.num(4);
+    let five = f.num(5);
+    let six = f.num(6);
+    let eighteen = f.num(18);
+
+    let total_distrib = f.lemma(p.mul_sub_left_distrib_total, &[three, two, five]);
+    f.k.infer(total_distrib)
+        .expect("reverse-order truncated distribution should infer");
+
+    let two_divides_six = f.lemma(p.dvd_mul, &[two, three]);
+    let six_divides_eighteen = f.lemma(p.dvd_mul, &[six, three]);
+    let two_divides_eighteen = f.lemma(
+        p.dvd_trans,
+        &[two, six, eighteen, two_divides_six, six_divides_eighteen],
+    );
+    f.k.infer(two_divides_eighteen)
+        .expect("divisibility witnesses should compose");
+
+    let zero_divides_zero = f.lemma(p.dvd_zero, &[zero]);
+    let zero_add_iff = f.lemma(p.dvd_add_iff_right, &[zero, zero, zero, zero_divides_zero]);
+    f.k.infer(zero_add_iff)
+        .expect("additive cancellation should cover divisor zero");
+
+    let two_divides_four = f.lemma(p.dvd_mul, &[two, two]);
+    let remainder_iff = f.lemma(p.dvd_mod_iff, &[two, three, six, two_divides_four]);
+    let remainder = f.modulo(six, four);
+    let correct_ty = {
+        let left = f.dvd(two, remainder);
+        let right = f.dvd(two, six);
+        f.const_app(p.logic.iff, &[left, right])
+    };
+    let inferred =
+        f.k.infer(remainder_iff)
+            .expect("dvd_mod_iff should reach executable remainder");
+    assert!(f.k.def_eq(inferred, correct_ty));
+
+    let quotient = f.div(six, four);
+    assert!(f.k.def_eq(quotient, one));
+    let changed_ty = {
+        let left = f.dvd(two, quotient);
+        let right = f.dvd(two, six);
+        f.const_app(p.logic.iff, &[left, right])
+    };
+    let changed_name = f.name("dvd_mod_iff_with_quotient_instead_of_remainder");
+    let error = f
+        .declare_theorem(changed_name, changed_ty, remainder_iff)
+        .expect_err("the remainder bridge must reject a quotient substitution");
+    assert!(matches!(
+        error,
+        KernelError::DeclarationValueMismatch { .. }
+    ));
 }
 
 /// NEGATIVE CONTROLS. Each feeds the kernel a deliberately broken proof and
@@ -3249,7 +3318,7 @@ fn the_build_is_deterministic() {
     assert_eq!(first, second, "the prelude build must be deterministic");
     assert_eq!(
         first.len(),
-        18 + 102,
+        18 + 110,
         "every promised definition and theorem must be rendered"
     );
 }

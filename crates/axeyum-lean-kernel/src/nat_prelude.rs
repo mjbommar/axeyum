@@ -63,8 +63,10 @@
 //! strong recursion over this order.
 //!
 //! **Divisibility**: `Nat.dvd a n := Exists (fun q => n = a * q)`, together
-//! with checked theorems `dvd_mul` (witness introduction) and `dvd_add`
-//! (closure under addition by two `Exists.rec` eliminations).
+//! with checked reflexivity, zero, transitivity, multiplication, addition, and
+//! all-Nat additive-cancellation laws. `dvd_mod_iff` connects those laws to the
+//! executable remainder for every positive divisor without requiring the
+//! common divisor itself to be positive.
 //!
 //! **Division and congruence**: `Nat.divMod` carries quotient and remainder
 //! witnesses and proves existence, uniqueness, and floor-order laws. One shared
@@ -216,6 +218,8 @@ pub struct NatPrelude {
     pub succ_sub_succ: NameId,
     /// `sub_self : ∀ n, sub n n = zero`.
     pub sub_self: NameId,
+    /// `add_sub_cancel_left : ∀ m n, sub (add m n) m = n`.
+    pub add_sub_cancel_left: NameId,
     /// `sumRange_zero : ∀ f, sumRange f zero = zero`.
     pub sum_range_zero: NameId,
     /// `sumRange_succ : ∀ f n, sumRange f (succ n) = sumRange f n + f n`.
@@ -339,6 +343,8 @@ pub struct NatPrelude {
     pub sub_le_iff_le_add: NameId,
     /// `mul_sub_left_distrib : ∀ b q a, Le a q → b*(q-a) = b*q-b*a`.
     pub mul_sub_left_distrib: NameId,
+    /// Unconditional truncated distributivity `b*(q-a) = b*q-b*a`.
+    pub mul_sub_left_distrib_total: NameId,
 
     // --- Euclidean division -------------------------------------------------
     /// `Nat.divMod d n q r := n = d*q+r ∧ r<d`.
@@ -412,6 +418,18 @@ pub struct NatPrelude {
     pub valuation_at: NameId,
     /// `Nat.dvd_mul : ∀ a q, dvd a (a * q)`.
     pub dvd_mul: NameId,
+    /// `Nat.dvd_refl : ∀ a, dvd a a`.
+    pub dvd_refl: NameId,
+    /// `Nat.dvd_zero : ∀ a, dvd a zero`.
+    pub dvd_zero: NameId,
+    /// `Nat.dvd_trans : ∀ a b c, dvd a b → dvd b c → dvd a c`.
+    pub dvd_trans: NameId,
+    /// `Nat.dvd_mul_right_of_dvd : dvd a b → dvd a (b*c)`.
+    pub dvd_mul_right_of_dvd: NameId,
+    /// `Nat.dvd_add_iff_right : dvd k m → (dvd k n ↔ dvd k (m+n))`.
+    pub dvd_add_iff_right: NameId,
+    /// Positive-divisor executable remainder preserves divisibility.
+    pub dvd_mod_iff: NameId,
     /// `Nat.dvd_add : ∀ a m n, dvd a m → dvd a n → dvd a (m + n)`.
     pub dvd_add: NameId,
     /// `Nat.dvd_add_right_cancel_of_pos : ∀ a m n, Le one a → dvd a m → dvd a (m+n) → dvd a n`.
@@ -494,6 +512,7 @@ pub fn build_nat_prelude(kernel: &mut Kernel) -> Result<NatPrelude, KernelError>
             sub_succ: kernel.name_str(nat, "sub_succ"),
             succ_sub_succ: kernel.name_str(nat, "succ_sub_succ"),
             sub_self: kernel.name_str(nat, "sub_self"),
+            add_sub_cancel_left: kernel.name_str(nat, "add_sub_cancel_left"),
             sum_range_zero: kernel.name_str(nat, "sumRange_zero"),
             sum_range_succ: kernel.name_str(nat, "sumRange_succ"),
             sum_range_congr: kernel.name_str(nat, "sumRange_congr"),
@@ -548,6 +567,7 @@ pub fn build_nat_prelude(kernel: &mut Kernel) -> Result<NatPrelude, KernelError>
             sub_eq_zero_of_le: kernel.name_str(nat, "sub_eq_zero_of_le"),
             sub_le_iff_le_add: kernel.name_str(nat, "sub_le_iff_le_add"),
             mul_sub_left_distrib: kernel.name_str(nat, "mul_sub_left_distrib"),
+            mul_sub_left_distrib_total: kernel.name_str(nat, "mul_sub_left_distrib_total"),
             div_mod: kernel.name_str(nat, "divMod"),
             div_mod_exists: kernel.name_str(nat, "div_mod_exists"),
             div_mod_unique: kernel.name_str(nat, "div_mod_unique"),
@@ -582,6 +602,12 @@ pub fn build_nat_prelude(kernel: &mut Kernel) -> Result<NatPrelude, KernelError>
             mod_eq_zero_iff_dvd: kernel.name_str(nat, "mod_eq_zero_iff_dvd"),
             valuation_at: kernel.name_str(nat, "valuationAt"),
             dvd_mul: kernel.name_str(nat, "dvd_mul"),
+            dvd_refl: kernel.name_str(nat, "dvd_refl"),
+            dvd_zero: kernel.name_str(nat, "dvd_zero"),
+            dvd_trans: kernel.name_str(nat, "dvd_trans"),
+            dvd_mul_right_of_dvd: kernel.name_str(nat, "dvd_mul_right_of_dvd"),
+            dvd_add_iff_right: kernel.name_str(nat, "dvd_add_iff_right"),
+            dvd_mod_iff: kernel.name_str(nat, "dvd_mod_iff"),
             dvd_add: kernel.name_str(nat, "dvd_add"),
             dvd_add_right_cancel_of_pos: kernel.name_str(nat, "dvd_add_right_cancel_of_pos"),
             not_dvd_one_of_two_le: kernel.name_str(nat, "not_dvd_one_of_two_le"),
@@ -5058,6 +5084,75 @@ fn declare_order(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> 
         let proof = d.lam_fv(h_fv, hyp_ty, body);
         (stmt, proof)
     })?;
+
+    // The total Nat identity follows by totality. The bounded branch is the
+    // theorem above; in the reverse-order branch both truncated differences
+    // are zero, with multiplication monotonicity supplying the scaled bound.
+    d.theorem(p.mul_sub_left_distrib_total, 3, &|d, v| {
+        let (b, q, a) = (v[0], v[1], v[2]);
+        let difference = d.sub(q, a);
+        let lhs = d.mul(b, difference);
+        let bq = d.mul(b, q);
+        let ba = d.mul(b, a);
+        let rhs = d.sub(bq, ba);
+        let target = d.eq(lhs, rhs);
+        let q_le_a = d.le(q, a);
+        let a_le_q = d.le(a, q);
+        let total_ty = d.const_app(p.logic.or, &[q_le_a, a_le_q]);
+        let total = d.lemma(p.le_total, &[q, a]);
+        let anon = d.anon_name();
+        let motive = d.kernel().lam(anon, total_ty, target, BinderInfo::Default);
+        let truncated_minor = {
+            let h_fv = d.fresh_fvar();
+            let h = d.kernel().fvar(h_fv);
+            let zero = d.zero();
+            let difference_zero = d.lemma(p.sub_eq_zero_of_le, &[q, a, h]);
+            let lhs_to_bzero = d.congr(difference, zero, difference_zero, &|d, x| d.mul(b, x));
+            let bzero = d.mul(b, zero);
+            let bzero_zero = d.lemma(p.mul_zero, &[b]);
+            let lhs_zero = d.trans(lhs, bzero, zero, lhs_to_bzero, bzero_zero);
+            let scaled = d.lemma(p.mul_le_mul_left, &[b, q, a, h]);
+            let rhs_zero = d.lemma(p.sub_eq_zero_of_le, &[bq, ba, scaled]);
+            let zero_rhs = d.symm(rhs, zero, rhs_zero);
+            let body = d.trans(lhs, zero, rhs, lhs_zero, zero_rhs);
+            d.lam_fv(h_fv, q_le_a, body)
+        };
+        let bounded_minor = {
+            let h_fv = d.fresh_fvar();
+            let h = d.kernel().fvar(h_fv);
+            let body = d.lemma(p.mul_sub_left_distrib, &[b, q, a, h]);
+            d.lam_fv(h_fv, a_le_q, body)
+        };
+        let or_rec = d.kernel().const_(p.logic.or_rec, vec![]);
+        let proof = d.apply(
+            or_rec,
+            &[
+                q_le_a,
+                a_le_q,
+                motive,
+                truncated_minor,
+                bounded_minor,
+                total,
+            ],
+        );
+        (target, proof)
+    })?;
+
+    // add_sub_cancel_left : ∀ m n, (m+n)-m = n. Restore the subtrahend,
+    // commute the original sum, then cancel the common right summand.
+    d.theorem(p.add_sub_cancel_left, 2, &|d, v| {
+        let (m, n) = (v[0], v[1]);
+        let sum = d.add(m, n);
+        let difference = d.sub(sum, m);
+        let restored = d.add(difference, m);
+        let m_le_sum = d.lemma(p.le_add_right, &[m, n]);
+        let restore = d.lemma(p.sub_add_cancel, &[m, sum, m_le_sum]);
+        let reordered = d.add(n, m);
+        let commute = d.lemma(p.add_comm, &[m, n]);
+        let (_, common_sum) = d.chain(restored, &[(sum, restore), (reordered, commute)]);
+        let proof = d.lemma(p.add_right_cancel, &[difference, n, m, common_sum]);
+        (d.eq(difference, n), proof)
+    })?;
     Ok(())
 }
 
@@ -6763,6 +6858,108 @@ fn declare_divisibility(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), Kernel
         (stmt, proof)
     })?;
 
+    d.theorem(p.dvd_refl, 1, &|d, v| {
+        let a = v[0];
+        let unit = d.num(1);
+        let product = d.mul(a, unit);
+        let product_eq = d.lemma(p.mul_one, &[a]);
+        let witness_eq = d.symm(product, a, product_eq);
+        let predicate = d.dvd_predicate(a, a);
+        let intro = d.kernel().const_(p.logic.exists_intro, vec![one]);
+        let proof = d.apply(intro, &[nat, predicate, unit, witness_eq]);
+        (d.dvd(a, a), proof)
+    })?;
+
+    d.theorem(p.dvd_zero, 1, &|d, v| {
+        let a = v[0];
+        let zero = d.zero();
+        let product = d.mul(a, zero);
+        let product_eq = d.lemma(p.mul_zero, &[a]);
+        let witness_eq = d.symm(product, zero, product_eq);
+        let predicate = d.dvd_predicate(a, zero);
+        let intro = d.kernel().const_(p.logic.exists_intro, vec![one]);
+        let proof = d.apply(intro, &[nat, predicate, zero, witness_eq]);
+        (d.dvd(a, zero), proof)
+    })?;
+
+    // Divisibility transitivity composes the two existential factors and uses
+    // associativity to expose their product as the new witness.
+    d.theorem(p.dvd_trans, 3, &|d, v| {
+        let (a, b, c) = (v[0], v[1], v[2]);
+        let hab_ty = d.dvd(a, b);
+        let hbc_ty = d.dvd(b, c);
+        let target = d.dvd(a, c);
+        let hab_fv = d.fresh_fvar();
+        let hab = d.kernel().fvar(hab_fv);
+        let hbc_fv = d.fresh_fvar();
+        let hbc = d.kernel().fvar(hbc_fv);
+        let pred_ab = d.dvd_predicate(a, b);
+        let pred_bc = d.dvd_predicate(b, c);
+        let motive_ab = d.kernel().lam(anon, hab_ty, target, BinderInfo::Default);
+        let minor_ab = {
+            let q_fv = d.fresh_fvar();
+            let q = d.kernel().fvar(q_fv);
+            let aq = d.mul(a, q);
+            let eq_ab_fv = d.fresh_fvar();
+            let eq_ab_ty = d.eq(b, aq);
+            let eq_ab = d.kernel().fvar(eq_ab_fv);
+            let motive_bc = d.kernel().lam(anon, hbc_ty, target, BinderInfo::Default);
+            let minor_bc = {
+                let r_fv = d.fresh_fvar();
+                let r = d.kernel().fvar(r_fv);
+                let br = d.mul(b, r);
+                let eq_bc_fv = d.fresh_fvar();
+                let eq_bc_ty = d.eq(c, br);
+                let eq_bc = d.kernel().fvar(eq_bc_fv);
+                let aqr = d.mul(aq, r);
+                let qr = d.mul(q, r);
+                let target_product = d.mul(a, qr);
+                let replace_b = d.congr(b, aq, eq_ab, &|d, x| d.mul(x, r));
+                let associate = d.lemma(p.mul_assoc, &[a, q, r]);
+                let (_, witness_eq) = d.chain(
+                    c,
+                    &[(br, eq_bc), (aqr, replace_b), (target_product, associate)],
+                );
+                let predicate = d.dvd_predicate(a, c);
+                let intro = d.kernel().const_(p.logic.exists_intro, vec![one]);
+                let body = d.apply(intro, &[nat, predicate, qr, witness_eq]);
+                let with_eq = d.lam_fv(eq_bc_fv, eq_bc_ty, body);
+                d.lam_fv(r_fv, nat, with_eq)
+            };
+            let exists_rec = d.kernel().const_(p.logic.exists_rec, vec![one]);
+            let body = d.apply(exists_rec, &[nat, pred_bc, motive_bc, minor_bc, hbc]);
+            let with_eq = d.lam_fv(eq_ab_fv, eq_ab_ty, body);
+            d.lam_fv(q_fv, nat, with_eq)
+        };
+        let exists_rec = d.kernel().const_(p.logic.exists_rec, vec![one]);
+        let body = d.apply(exists_rec, &[nat, pred_ab, motive_ab, minor_ab, hab]);
+        let proof = {
+            let with_hbc = d.lam_fv(hbc_fv, hbc_ty, body);
+            d.lam_fv(hab_fv, hab_ty, with_hbc)
+        };
+        let hbc_to_target = d.arrow(hbc_ty, target);
+        let stmt = d.arrow(hab_ty, hbc_to_target);
+        (stmt, proof)
+    })?;
+
+    // Multiplication on the right preserves divisibility by transitivity with
+    // the canonical factor witness.
+    d.theorem(p.dvd_mul_right_of_dvd, 3, &|d, v| {
+        let (a, b, c) = (v[0], v[1], v[2]);
+        let source = d.dvd(a, b);
+        let target_product = d.mul(b, c);
+        let target = d.dvd(a, target_product);
+        let source_fv = d.fresh_fvar();
+        let source_proof = d.kernel().fvar(source_fv);
+        let b_divides_product = d.lemma(p.dvd_mul, &[b, c]);
+        let body = d.lemma(
+            p.dvd_trans,
+            &[a, b, target_product, source_proof, b_divides_product],
+        );
+        let proof = d.lam_fv(source_fv, source, body);
+        (d.arrow(source, target), proof)
+    })?;
+
     // dvd_add : ∀ a m n, dvd a m → dvd a n → dvd a (m + n)
     {
         let a_fv = d.fresh_fvar();
@@ -6851,6 +7048,187 @@ fn declare_divisibility(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), Kernel
         };
         d.declare_theorem(p.dvd_add, ty, value)?;
     }
+
+    // dvd_add_iff_right : dvd k m -> (dvd k n <-> dvd k (m+n)). The reverse
+    // direction is all-Nat: subtract the factor for m from the factor for the
+    // sum, using total truncated distributivity rather than a positivity case.
+    d.theorem(p.dvd_add_iff_right, 3, &|d, v| {
+        let (k, m, n) = (v[0], v[1], v[2]);
+        let sum = d.add(m, n);
+        let divides_m_ty = d.dvd(k, m);
+        let divides_n_ty = d.dvd(k, n);
+        let divides_sum_ty = d.dvd(k, sum);
+        let iff_ty = d.const_app(p.logic.iff, &[divides_n_ty, divides_sum_ty]);
+        let divides_m_fv = d.fresh_fvar();
+        let divides_m = d.kernel().fvar(divides_m_fv);
+
+        let forward = {
+            let divides_n_fv = d.fresh_fvar();
+            let divides_n = d.kernel().fvar(divides_n_fv);
+            let body = d.lemma(p.dvd_add, &[k, m, n, divides_m, divides_n]);
+            d.lam_fv(divides_n_fv, divides_n_ty, body)
+        };
+
+        let reverse = {
+            let divides_sum_fv = d.fresh_fvar();
+            let divides_sum = d.kernel().fvar(divides_sum_fv);
+            let pred_m = d.dvd_predicate(k, m);
+            let pred_sum = d.dvd_predicate(k, sum);
+            let motive_m = d
+                .kernel()
+                .lam(anon, divides_m_ty, divides_n_ty, BinderInfo::Default);
+            let minor_m = {
+                let left_factor_fv = d.fresh_fvar();
+                let left_factor = d.kernel().fvar(left_factor_fv);
+                let k_left = d.mul(k, left_factor);
+                let left_eq_fv = d.fresh_fvar();
+                let left_eq_ty = d.eq(m, k_left);
+                let left_eq = d.kernel().fvar(left_eq_fv);
+                let motive_sum =
+                    d.kernel()
+                        .lam(anon, divides_sum_ty, divides_n_ty, BinderInfo::Default);
+                let minor_sum = {
+                    let sum_factor_fv = d.fresh_fvar();
+                    let sum_factor = d.kernel().fvar(sum_factor_fv);
+                    let k_sum = d.mul(k, sum_factor);
+                    let sum_eq_fv = d.fresh_fvar();
+                    let sum_eq_ty = d.eq(sum, k_sum);
+                    let sum_eq = d.kernel().fvar(sum_eq_fv);
+                    let factor_difference = d.sub(sum_factor, left_factor);
+                    let k_difference = d.mul(k, factor_difference);
+                    let sum_minus_m = d.sub(sum, m);
+                    let ksum_minus_m = d.sub(k_sum, m);
+                    let ksum_minus_kleft = d.sub(k_sum, k_left);
+                    let cancel = d.lemma(p.add_sub_cancel_left, &[m, n]);
+                    let n_to_difference = d.symm(sum_minus_m, n, cancel);
+                    let replace_sum = d.congr(sum, k_sum, sum_eq, &|d, x| d.sub(x, m));
+                    let replace_m = d.congr(m, k_left, left_eq, &|d, x| d.sub(k_sum, x));
+                    let distribute =
+                        d.lemma(p.mul_sub_left_distrib_total, &[k, sum_factor, left_factor]);
+                    let undistribute = d.symm(k_difference, ksum_minus_kleft, distribute);
+                    let (_, witness_eq) = d.chain(
+                        n,
+                        &[
+                            (sum_minus_m, n_to_difference),
+                            (ksum_minus_m, replace_sum),
+                            (ksum_minus_kleft, replace_m),
+                            (k_difference, undistribute),
+                        ],
+                    );
+                    let predicate = d.dvd_predicate(k, n);
+                    let intro = d.kernel().const_(p.logic.exists_intro, vec![one]);
+                    let body = d.apply(intro, &[nat, predicate, factor_difference, witness_eq]);
+                    let with_eq = d.lam_fv(sum_eq_fv, sum_eq_ty, body);
+                    d.lam_fv(sum_factor_fv, nat, with_eq)
+                };
+                let exists_rec = d.kernel().const_(p.logic.exists_rec, vec![one]);
+                let body = d.apply(
+                    exists_rec,
+                    &[nat, pred_sum, motive_sum, minor_sum, divides_sum],
+                );
+                let with_eq = d.lam_fv(left_eq_fv, left_eq_ty, body);
+                d.lam_fv(left_factor_fv, nat, with_eq)
+            };
+            let exists_rec = d.kernel().const_(p.logic.exists_rec, vec![one]);
+            let body = d.apply(exists_rec, &[nat, pred_m, motive_m, minor_m, divides_m]);
+            d.lam_fv(divides_sum_fv, divides_sum_ty, body)
+        };
+
+        let iff_proof = d.const_app(
+            p.logic.iff_intro,
+            &[divides_n_ty, divides_sum_ty, forward, reverse],
+        );
+        let proof = d.lam_fv(divides_m_fv, divides_m_ty, iff_proof);
+        (d.arrow(divides_m_ty, iff_ty), proof)
+    })?;
+
+    // dvd_mod_iff : dvd k (succ d) ->
+    //   (dvd k (mod n (succ d)) <-> dvd k n).
+    // The executable division equation writes n as divisor*quotient+remainder;
+    // `dvd_add_iff_right` removes that known divisible multiple in either
+    // direction, including the k=0 corner.
+    d.theorem(p.dvd_mod_iff, 3, &|d, v| {
+        let (k, divisor_predecessor, dividend) = (v[0], v[1], v[2]);
+        let divisor = d.succ(divisor_predecessor);
+        let quotient = d.div(dividend, divisor);
+        let remainder = d.modulo(dividend, divisor);
+        let multiple = d.mul(divisor, quotient);
+        let reconstructed = d.add(multiple, remainder);
+        let divides_divisor_ty = d.dvd(k, divisor);
+        let divides_remainder_ty = d.dvd(k, remainder);
+        let divides_dividend_ty = d.dvd(k, dividend);
+        let target = d.const_app(p.logic.iff, &[divides_remainder_ty, divides_dividend_ty]);
+        let divides_divisor_fv = d.fresh_fvar();
+        let divides_divisor = d.kernel().fvar(divides_divisor_fv);
+        let divides_multiple = d.lemma(
+            p.dvd_mul_right_of_dvd,
+            &[k, divisor, quotient, divides_divisor],
+        );
+        let add_iff = d.lemma(
+            p.dvd_add_iff_right,
+            &[k, multiple, remainder, divides_multiple],
+        );
+        let divides_reconstructed_ty = d.dvd(k, reconstructed);
+        let add_forward = iff_forward(d, divides_remainder_ty, divides_reconstructed_ty, add_iff);
+        let add_reverse = iff_reverse(d, divides_remainder_ty, divides_reconstructed_ty, add_iff);
+
+        let equation_ty = d.eq(dividend, reconstructed);
+        let bound_ty = d.lt(remainder, divisor);
+        let relation_ty = d.const_app(p.logic.and, &[equation_ty, bound_ty]);
+        let relation = d.lemma(p.div_mod_exec, &[divisor_predecessor, dividend]);
+        let relation_motive = d
+            .kernel()
+            .lam(anon, relation_ty, equation_ty, BinderInfo::Default);
+        let relation_minor = {
+            let equation_fv = d.fresh_fvar();
+            let equation = d.kernel().fvar(equation_fv);
+            let bound_fv = d.fresh_fvar();
+            let with_bound = d.lam_fv(bound_fv, bound_ty, equation);
+            d.lam_fv(equation_fv, equation_ty, with_bound)
+        };
+        let zero_level = d.kernel().level_zero();
+        let and_rec = d.kernel().const_(p.logic.and_rec, vec![zero_level]);
+        let equation = d.apply(
+            and_rec,
+            &[
+                equation_ty,
+                bound_ty,
+                relation_motive,
+                relation_minor,
+                relation,
+            ],
+        );
+
+        let forward = {
+            let proof_fv = d.fresh_fvar();
+            let proof = d.kernel().fvar(proof_fv);
+            let reconstructed_proof = d.apply(add_forward, &[proof]);
+            let equation_rev = d.symm(dividend, reconstructed, equation);
+            let motive = d.eq_motive(reconstructed, &|d, value| d.dvd(k, value));
+            let body = d.transport(
+                reconstructed,
+                motive,
+                reconstructed_proof,
+                dividend,
+                equation_rev,
+            );
+            d.lam_fv(proof_fv, divides_remainder_ty, body)
+        };
+        let reverse = {
+            let proof_fv = d.fresh_fvar();
+            let proof = d.kernel().fvar(proof_fv);
+            let motive = d.eq_motive(dividend, &|d, value| d.dvd(k, value));
+            let reconstructed_proof = d.transport(dividend, motive, proof, reconstructed, equation);
+            let body = d.apply(add_reverse, &[reconstructed_proof]);
+            d.lam_fv(proof_fv, divides_dividend_ty, body)
+        };
+        let iff_proof = d.const_app(
+            p.logic.iff_intro,
+            &[divides_remainder_ty, divides_dividend_ty, forward, reverse],
+        );
+        let proof = d.lam_fv(divides_divisor_fv, divides_divisor_ty, iff_proof);
+        (d.arrow(divides_divisor_ty, target), proof)
+    })?;
 
     // dvd_add_right_cancel_of_pos :
     //   ∀ a m n, Le one a → dvd a m → dvd a (m+n) → dvd a n
@@ -7428,6 +7806,50 @@ fn apply_nat_function_equality(
     let one = d.level_one();
     let rec = d.kernel().const_(logic.eq_rec, vec![zero, one]);
     d.apply(rec, &[carrier, left, motive, base, right, equality])
+}
+
+/// Project the forward implication from a checked `Iff` proof.
+fn iff_forward(d: &mut NatDev<'_>, left: ExprId, right: ExprId, proof: ExprId) -> ExprId {
+    let logic = d.prelude().logic;
+    let iff_ty = d.const_app(logic.iff, &[left, right]);
+    let target = d.arrow(left, right);
+    let motive = {
+        let proof_fv = d.fresh_fvar();
+        d.lam_fv(proof_fv, iff_ty, target)
+    };
+    let minor = {
+        let forward_fv = d.fresh_fvar();
+        let forward = d.kernel().fvar(forward_fv);
+        let reverse_ty = d.arrow(right, left);
+        let reverse_fv = d.fresh_fvar();
+        let with_reverse = d.lam_fv(reverse_fv, reverse_ty, forward);
+        d.lam_fv(forward_fv, target, with_reverse)
+    };
+    let zero = d.kernel().level_zero();
+    let rec = d.kernel().const_(logic.iff_rec, vec![zero]);
+    d.apply(rec, &[left, right, motive, minor, proof])
+}
+
+/// Project the reverse implication from a checked `Iff` proof.
+fn iff_reverse(d: &mut NatDev<'_>, left: ExprId, right: ExprId, proof: ExprId) -> ExprId {
+    let logic = d.prelude().logic;
+    let iff_ty = d.const_app(logic.iff, &[left, right]);
+    let target = d.arrow(right, left);
+    let motive = {
+        let proof_fv = d.fresh_fvar();
+        d.lam_fv(proof_fv, iff_ty, target)
+    };
+    let minor = {
+        let forward_ty = d.arrow(left, right);
+        let forward_fv = d.fresh_fvar();
+        let reverse_fv = d.fresh_fvar();
+        let reverse = d.kernel().fvar(reverse_fv);
+        let with_reverse = d.lam_fv(reverse_fv, target, reverse);
+        d.lam_fv(forward_fv, forward_ty, with_reverse)
+    };
+    let zero = d.kernel().level_zero();
+    let rec = d.kernel().const_(logic.iff_rec, vec![zero]);
+    d.apply(rec, &[left, right, motive, minor, proof])
 }
 
 /// The non-kernel state a [`NatOps`] development carries: the interned prelude

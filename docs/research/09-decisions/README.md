@@ -505,3 +505,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [0447](adr-0447-shared-executable-nat-division-state.md) | Shared executable Nat division state | accepted |
 | [0448](adr-0448-checked-executable-nat-division-specification.md) | Checked executable Nat division specification | accepted |
 | [0449](adr-0449-checked-well-founded-euclidean-gcd-computation.md) | Checked well-founded Euclidean gcd computation | accepted |
+| [0450](adr-0450-all-nat-divisibility-and-executable-remainder-bridge.md) | All-Nat divisibility and executable remainder bridge | accepted |
