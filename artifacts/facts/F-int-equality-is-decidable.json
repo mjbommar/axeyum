@@ -1,0 +1,62 @@
+{
+  "schema_version": 1,
+  "id": "F:int-equality-is-decidable",
+  "title": "Equality of integers is decidable",
+  "statement": "For all integers a and b, either a = b or a is not equal to b.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Int.eq_em : ((x0 : Int) -> ((x1 : Int) -> Or (Eq.{1} Int x0 x1) (Not (Eq.{1} Int x0 x1))))",
+    "fragment": "Int",
+    "free_symbols": [
+      "x0",
+      "x1"
+    ]
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-Int.eq_em",
+      "kind": "kernel-term",
+      "supports": "For all integers a and b, either a = b or a is not equal to b.",
+      "check_status": "checked",
+      "checker_command": "cargo test -p axeyum-lean-kernel --lib int_prelude",
+      "notes": "`build_int_prelude` admits this theorem through the trusted `Kernel::add_declaration` gate, which re-checks the proof term against the stated type, so a green run of the command is a machine-checked proof. Measured 2026-08-14: 12 tests pass (a nonzero count -- the filter is not inert)."
+    },
+    {
+      "id": "footprint-Int.eq_em",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] -- decidability here costs no classical assumption",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "checker_command": "cargo run -q -p axeyum-lean-kernel --example int_theorem_inventory -- eq_em",
+      "notes": "The empty footprint is the whole content of this fact. `Or P (Not P)` for an arbitrary `P` is NOT available on this route -- the logic prelude is intuitionistic and carries zero axioms of any trusted kind, so unrestricted excluded middle would have to be added as one. This instance is decidable instead of assumed, and the two are not interchangeable. `Kernel::axiom_footprint` walks the declaration's transitive dependencies and prints an empty column; `nat_axiom_inventory` independently reports `nat: axiom=0 opaque=0 quotient=0` for the development it rests on."
+    }
+  ],
+  "concept_refs": [
+    {
+      "graph": "math-education",
+      "ref": "C:decidability",
+      "relation": "instance-of",
+      "resolved": false
+    },
+    {
+      "graph": "math-education",
+      "ref": "C:integers",
+      "relation": "about",
+      "resolved": false
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-14",
+    "established_by": "axeyum-lean-kernel build_int_prelude, lane int-keystone",
+    "source": "one of the 34 propositions build_int_prelude previously ASSERTED (ADR-0106); this lane constructed ZZ over the proved Nat development and derived it"
+  },
+  "notes": "ADR-0106 introduced this as an axiom precisely because it is the integer-specific decision the equality-partition reconstruction route needs, and unrestricted excluded middle would have been far too strong. It is now derived from two things a constructor presentation gives and an opaque carrier cannot: injectivity (project the constructor's Nat field with `Int.rec` and rewrite the integer equation into a Nat one) and discrimination (a `Prop`-valued `Int.rec` returning `True` on one constructor and `False` on the other turns `ofNat m = negSucc n` into `False` by transporting `True.intro` across it). The Nat half is decided by `Nat.beq`, whose soundness (`Nat.eq_of_beq_eq_true`) and completeness (`Nat.beq_eq_true_of_eq`) the Nat prelude proves. formal.statement is `Kernel::render_lean` of the admitted type, verbatim from `int_theorem_inventory`.",
+  "external_status": "proved"
+}

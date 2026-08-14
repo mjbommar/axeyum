@@ -125,12 +125,12 @@ fn late_reserved_name_conflict_rolls_back_the_entire_attempt() {
     // here first is what makes "the entire attempt" mean the `Int` package.
     build_nat_prelude(&mut kernel).expect("Nat prelude must build");
 
-    // `Int.eq_em` is the final member admitted by the integer builder. A wrong
-    // pre-existing declaration therefore exercises rollback after the rest of
-    // the package has passed the trusted gate.
+    // `Int.euclidean_decomposition` is the final member admitted by the integer
+    // builder. A wrong pre-existing declaration therefore exercises rollback
+    // after the rest of the package has passed the trusted gate.
     let anon = kernel.anon();
     let int_name = kernel.name_str(anon, "Int");
-    let conflict_name = kernel.name_str(int_name, "eq_em");
+    let conflict_name = kernel.name_str(int_name, "euclidean_decomposition");
     let prop = kernel.sort_zero();
     kernel
         .add_declaration(Declaration::Axiom {

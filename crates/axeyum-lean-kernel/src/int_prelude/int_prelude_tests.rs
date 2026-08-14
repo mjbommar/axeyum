@@ -169,7 +169,7 @@ fn int_prelude_admits_all_declarations() {
 
 /// The integer laws this development **derives** from the axiom-free `Nat`
 /// prelude. Each must be a `Theorem` with an empty axiom footprint.
-fn derived_laws(p: &IntPrelude) -> [crate::NameId; 18] {
+fn derived_laws(p: &IntPrelude) -> [crate::NameId; 20] {
     [
         p.le_refl,
         p.le_trans,
@@ -189,20 +189,20 @@ fn derived_laws(p: &IntPrelude) -> [crate::NameId; 18] {
         p.mul_one,
         p.mul_comm,
         p.mul_nonneg,
+        p.mul_le_mul_of_nonneg_left,
+        p.eq_em,
     ]
 }
 
 /// The integer laws still **asserted**. This list is the lane's standing debt;
 /// it is expected to shrink and must never grow.
-fn asserted_laws(p: &IntPrelude) -> [crate::NameId; 8] {
+fn asserted_laws(p: &IntPrelude) -> [crate::NameId; 6] {
     [
         p.add_assoc,
         p.mul_assoc,
         p.left_distrib,
         p.add_le_add,
         p.add_lt_add_of_le_of_lt,
-        p.mul_le_mul_of_nonneg_left,
-        p.eq_em,
         p.euclidean_decomposition,
     ]
 }

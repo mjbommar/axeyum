@@ -261,3 +261,176 @@ fn with_hypotheses(
     }
     term
 }
+
+/// `Int.le (negOfNat x) (ofNat y)` for every pair of naturals — a non-positive
+/// integer never exceeds a non-negative one.
+///
+/// `Int.negOfNat x` is *stuck* on a variable `x`, so the goal does not reduce
+/// until `x` is split: at `0` it is `Nat.le 0 y` and at `succ k` it is `True`.
+fn neg_of_nat_le_of_nat(d: &mut IntDev<'_>, x: ExprId, y: ExprId) -> ExprId {
+    let motive = |d: &mut IntDev<'_>, t: ExprId| {
+        let negative = d.neg_of_nat(t);
+        let positive = d.of_nat(y);
+        d.ile(negative, positive)
+    };
+    d.induct(
+        &motive,
+        &|d| {
+            let name = d.int().nat.zero_le;
+            d.const_app(name, &[y])
+        },
+        &|d, _j, _ih| d.true_intro(),
+        x,
+    )
+}
+
+/// `h : Nat.le y x  ⊢  Int.le (negOfNat x) (negOfNat y)` — negation reverses
+/// the order.
+///
+/// Both `negOfNat` applications are stuck, so this splits `x` and then `y`,
+/// carrying the hypothesis inside each motive. Three of the four branches close
+/// on the spot; the fourth is `Nat.le_of_succ_le_succ`.
+fn neg_of_nat_antitone(d: &mut IntDev<'_>, x: ExprId, y: ExprId, h: ExprId) -> ExprId {
+    let outer = |d: &mut IntDev<'_>, t: ExprId| {
+        let hypothesis = NatOps::le(d, y, t);
+        let left = d.neg_of_nat(t);
+        let right = d.neg_of_nat(y);
+        let conclusion = d.ile(left, right);
+        d.arrow(hypothesis, conclusion)
+    };
+    let implication = d.induct(
+        &outer,
+        // x = 0: the bound forces y = 0 too.
+        &|d| {
+            let inner = |d: &mut IntDev<'_>, u: ExprId| {
+                let zero = d.zero();
+                let hypothesis = NatOps::le(d, u, zero);
+                let left = d.neg_of_nat(zero);
+                let right = d.neg_of_nat(u);
+                let conclusion = d.ile(left, right);
+                d.arrow(hypothesis, conclusion)
+            };
+            d.induct(
+                &inner,
+                &|d| {
+                    let zero = d.zero();
+                    let hypothesis = NatOps::le(d, zero, zero);
+                    with_hypotheses(d, &[hypothesis], &|d, _| {
+                        let zero = d.zero();
+                        let name = d.int().nat.le_refl;
+                        d.const_app(name, &[zero])
+                    })
+                },
+                &|d, j, _ih| {
+                    let successor = d.succ(j);
+                    let zero = d.zero();
+                    let hypothesis = NatOps::le(d, successor, zero);
+                    let left = d.neg_of_nat(zero);
+                    let right = d.neg_of_nat(successor);
+                    let goal = d.ile(left, right);
+                    with_hypotheses(d, &[hypothesis], &|d, hs| {
+                        let name = d.int().nat.not_succ_le_zero;
+                        let refuted = d.const_app(name, &[j, hs[0]]);
+                        d.absurd(goal, refuted)
+                    })
+                },
+                y,
+            )
+        },
+        // x = succ i: `negOfNat (succ i)` is `negSucc i`.
+        &|d, i, _ih| {
+            let inner = |d: &mut IntDev<'_>, u: ExprId| {
+                let successor = d.succ(i);
+                let hypothesis = NatOps::le(d, u, successor);
+                let left = d.neg_of_nat(successor);
+                let right = d.neg_of_nat(u);
+                let conclusion = d.ile(left, right);
+                d.arrow(hypothesis, conclusion)
+            };
+            d.induct(
+                &inner,
+                &|d| {
+                    let successor = d.succ(i);
+                    let zero = d.zero();
+                    let hypothesis = NatOps::le(d, zero, successor);
+                    with_hypotheses(d, &[hypothesis], &|d, _| d.true_intro())
+                },
+                &|d, j, _ih| {
+                    let bound = d.succ(i);
+                    let successor = d.succ(j);
+                    let hypothesis = NatOps::le(d, successor, bound);
+                    with_hypotheses(d, &[hypothesis], &|d, hs| {
+                        let name = d.int().nat.le_of_succ_le_succ;
+                        d.const_app(name, &[j, i, hs[0]])
+                    })
+                },
+                y,
+            )
+        },
+        x,
+    );
+    d.apply(implication, &[h])
+}
+
+/// Declare `Int.mul_le_mul_of_nonneg_left`.
+pub(super) fn declare_ordered_multiplication(d: &mut IntDev<'_>) -> Result<(), KernelError> {
+    let p = d.int();
+    // mul_le_mul_of_nonneg_left : ∀ a b c, 0 ≤ a → b ≤ c → a*b ≤ a*c.
+    //
+    // `0 ≤ a` reduces to `False` when `a` is negative, so only the four
+    // branches with `a = ofNat m` survive — and of those, one is refuted by the
+    // second hypothesis and the other three are `Nat.mul_le_mul_left` pushed
+    // through whichever constructor the products land in.
+    d.int_theorem(p.mul_le_mul_of_nonneg_left, 3, &|d, v| {
+        let stmt = statements::mul_le_mul_of_nonneg_left(d, v);
+        let proof = case_split(d, v, &statements::mul_le_mul_of_nonneg_left, &|d, b| {
+            let scale = d.branch_term(b[0]);
+            let lower = d.branch_term(b[1]);
+            let upper = d.branch_term(b[2]);
+            let zero = d.izero();
+            let nonnegative = d.ile(zero, scale);
+            let bound = d.ile(lower, upper);
+            let left = d.imul(scale, lower);
+            let right = d.imul(scale, upper);
+            let goal = d.ile(left, right);
+            let (m, x, y) = (b[0].1, b[1].1, b[2].1);
+            with_hypotheses(d, &[nonnegative, bound], &|d, h| {
+                match (b[0].0, b[1].0, b[2].0) {
+                    // A negative scale refutes `0 ≤ a` outright.
+                    (Shape::NegSucc, _, _) => d.absurd(goal, h[0]),
+                    (Shape::OfNat, Shape::OfNat, Shape::OfNat) => {
+                        let name = d.int().nat.mul_le_mul_left;
+                        d.const_app(name, &[m, x, y, h[1]])
+                    }
+                    // `ofNat x ≤ negSucc y` is `False`.
+                    (Shape::OfNat, Shape::OfNat, Shape::NegSucc) => d.absurd(goal, h[1]),
+                    (Shape::OfNat, Shape::NegSucc, Shape::OfNat) => {
+                        let successor = d.succ(x);
+                        let magnitude = NatOps::mul(d, m, successor);
+                        let product = NatOps::mul(d, m, y);
+                        neg_of_nat_le_of_nat(d, magnitude, product)
+                    }
+                    (Shape::OfNat, Shape::NegSucc, Shape::NegSucc) => {
+                        // `negSucc x ≤ negSucc y` is `y ≤ x`, so scaling gives
+                        // `m*(y+1) ≤ m*(x+1)` and negation reverses it back.
+                        let lower_successor = d.succ(x);
+                        let upper_successor = d.succ(y);
+                        let lifted = {
+                            let name = d.int().nat.le_succ_succ;
+                            d.const_app(name, &[y, x, h[1]])
+                        };
+                        let scaled = {
+                            let name = d.int().nat.mul_le_mul_left;
+                            d.const_app(name, &[m, upper_successor, lower_successor, lifted])
+                        };
+                        let bigger = NatOps::mul(d, m, lower_successor);
+                        let smaller = NatOps::mul(d, m, upper_successor);
+                        neg_of_nat_antitone(d, bigger, smaller, scaled)
+                    }
+                }
+            })
+        });
+        (stmt, proof)
+    })?;
+    Ok(())
+}

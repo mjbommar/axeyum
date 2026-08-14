@@ -26,27 +26,26 @@ not justify, which was the correct call and also the reason this lane exists.
 ## Result
 
 ```
-integer: axiom=8  opaque=0 quotient=0 total_trusted=8
+integer: axiom=6  opaque=0 quotient=0 total_trusted=6
 ```
 
-34 → 8. The 26 that went away split into two kinds, and the distinction matters
+34 → 6. The 28 that went away split into two kinds, and the distinction matters
 when reading the number:
 
 - **8 were the carrier and the operations** (`Int`, `add`, `mul`, `neg`, `zero`,
   `one`, `le`, `lt`). These became an inductive type and checked definitions.
   Removing them is not "proving" anything; it is *constructing* the object the
   laws are about, which is the prerequisite for proving any of them.
-- **18 were laws**, and each is now a `Declaration::Theorem` whose
+- **20 were laws**, and each is now a `Declaration::Theorem` whose
   `Kernel::axiom_footprint` is **empty**:
 
   `le_refl`, `le_trans`, `lt_irrefl`, `lt_trans`, `lt_of_lt_of_le`,
   `lt_of_le_of_lt`, `le_of_lt`, `le_total`, `lt_of_le_of_ne`, `zero_lt_one`,
   `no_int_between`, `add_zero`, `add_comm`, `add_neg`, `mul_zero`, `mul_one`,
-  `mul_comm`, `mul_nonneg`.
+  `mul_comm`, `mul_nonneg`, `mul_le_mul_of_nonneg_left`, `eq_em`.
 
-Still asserted (8): `add_assoc`, `mul_assoc`, `left_distrib`, `add_le_add`,
-`add_lt_add_of_le_of_lt`, `mul_le_mul_of_nonneg_left`, `eq_em`,
-`euclidean_decomposition`.
+Still asserted (6): `add_assoc`, `mul_assoc`, `left_distrib`, `add_le_add`,
+`add_lt_add_of_le_of_lt`, `euclidean_decomposition`.
 
 The headline theorem is `Int.no_int_between` — discreteness, the fact the ordered
 field ℝ does not have and the one an integer-cut refutation actually invokes. It
@@ -117,26 +116,54 @@ single rewrite by `Nat.sub_self` collapses the whole thing to `Int.ofNat 0`. It
 also needed a second split — `Int.neg (ofNat n)` is `Int.negOfNat n`, which is
 *stuck* on a variable `n`, so the non-negative branch has to case on `n` as well.
 
-## Why the remaining eight are the remaining eight
+## Two more that turned out to be reachable, and why
 
-They are not a random tail. Seven of the eight require reasoning about
+Having stopped at 18, I re-read the remaining eight and found that two of them do
+*not* need the `subNatNat` borrow. Both are now derived.
+
+**`eq_em`** — decidable integer equality (ADR-0106). This is the one place where
+the constructor presentation pays a debt the opaque carrier could never pay. It
+needs exactly the two things an inductive gives:
+
+- *injectivity*, via `Int.rec (fun _ => Nat) (fun n => n) (fun n => n)`, which
+  projects the constructor's field and rewrites `Eq Int (ofNat m) (ofNat n)` into
+  `Eq Nat m n`;
+- *discrimination*, via `Int.rec (fun _ => Prop) (fun _ => True) (fun _ => False)`,
+  which turns `Eq Int (ofNat m) (negSucc n)` into `False` by transporting
+  `True.intro` across it.
+
+The `Nat` half is decided by `Nat.beq`, whose soundness and completeness the `Nat`
+prelude proves, so the whole thing stays axiom-free. **This is worth stating
+plainly: `Or P (Not P)` for arbitrary `P` is not available on this route at all** —
+the logic prelude is intuitionistic and carries no axioms, so excluded middle would
+have to be *added*. ADR-0106 was right to introduce the restricted form; it just
+did not have to be an assumption.
+
+**`mul_le_mul_of_nonneg_left`** — `0 ≤ a → b ≤ c → a*b ≤ a*c`. Twelve of the
+sixteen branches vanish before any work: `0 ≤ a` reduces to `False` whenever `a`
+is `negSucc`. Of the four that remain, one is refuted by the second hypothesis and
+the rest are `Nat.mul_le_mul_left` pushed through whichever constructor the
+products land in. The only real content is that `Int.negOfNat x` is *stuck* on a
+variable, so two small lemmas split it: `negOfNat x ≤ ofNat y` always, and
+`negOfNat` is antitone. Both are `Nat.rec` case analyses with the hypothesis
+carried in the motive, and three of the four branches of the second close on the
+spot.
+
+## Why the remaining six are the remaining six
+
+They are not a random tail. Five of the six require reasoning about
 `Int.subNatNat`'s **borrow** — which constructor the answer lands in — across a
 case split the definitions do not resolve:
 
-- `add_assoc`, `left_distrib`, `add_le_add`, `add_lt_add_of_le_of_lt`,
-  `mul_le_mul_of_nonneg_left` all mix `Int.add` (whose mixed branches are
-  `subNatNat`, stuck on variables) with a second operation or relation. Eight to
-  sixteen branches each, and the interesting ones need lemmas like
-  `subNatNat m n = subNatNat (m+k) (n+k)` and a characterization of when
-  `subNatNat` returns `ofNat`. That is a real sub-development, not a longer proof
-  of the same shape as the ones above, and I stopped rather than half-build it.
+- `add_assoc`, `left_distrib`, `add_le_add` and `add_lt_add_of_le_of_lt` all mix
+  `Int.add` (whose mixed branches are `subNatNat`, stuck on variables) with a
+  second operation or relation. Eight to sixteen branches each, and the
+  interesting ones need lemmas like `subNatNat m n = subNatNat (m+k) (n+k)` and a
+  characterization of when `subNatNat` returns `ofNat`. That is a real
+  sub-development, not a longer proof of the same shape as the ones above, and I
+  stopped rather than half-build it.
 - `mul_assoc` needs `negOfNat (m * n)` to commute with the sign bookkeeping in
   all eight branches.
-- `eq_em` needs two things this development does not have: constructor
-  discrimination (`ofNat m ≠ negSucc n`, via a `Prop`-valued discriminator built
-  with `Int.rec`) and decidable `Nat` equality lifted from `Nat.beq`. Both are
-  reachable — `Nat.beq_eq_true_iff` and `NatOps::false_true_elim` exist — and this
-  is the cheapest of the eight to attack next.
 - `euclidean_decomposition` needs integer division and is the hardest.
 
 ## Two consequences I did not hide
@@ -176,7 +203,7 @@ downstream proof term needed touching. If the statement were written twice, a la
 could silently *weaken* on its way from assumption to consequence and the axiom
 count would still look like progress.
 
-**Assert the footprint, not just the count.** Eight integer laws are still
+**Assert the footprint, not just the count.** Six integer laws are still
 asserted. A "derived" law that quietly applied one of them would type-check and
 would shrink no count. `derived_laws_have_no_axiom_footprint` asserts `[]` per
 theorem; that is the check that makes the number mean what it says.
@@ -202,11 +229,18 @@ which says nothing on its own. Resolving it meant dumping the environment.
   suite. `cargo test -p axeyum-solver --lib --features full`: 1140 passed.
 - The Diophantine and integer-inequality Lean reconstruction suites pass with
   `--features full`.
+- One near-miss worth recording, because it is the failure mode this repository
+  keeps writing about: updating the golden module hash, I *typed* a hex constant
+  instead of converting the decimal the test printed. It was wrong, and only the
+  re-run caught it. Prefer a measurement over a value you produced yourself,
+  including one you produced thirty seconds ago.
 - **Not done: no independent Lean binary checked the exported module.** No `lean`
   is installed on this machine and `AXEYUM_LEAN_BIN` is unset, so
   `diophantine_module_checks_in_real_lean` and its siblings took the skip path and
   still reported `ok`. The exported module grew from 1,004,665 to 1,041,898 bytes
-  because `Int` is now an inductive with a recursor rather than an axiom, and
+  because `Int` is now an inductive with a recursor rather than an axiom (and
+  again to 1,047,668 once `eq_em` and `mul_le_mul_of_nonneg_left` carried proof
+  terms), and
   **nothing outside this repository has read those bytes.** The module opens with
   `prelude` (no `import Init`), so the re-declared `Int` should not collide with
   Lean's own — but "should" is the operative word. Anyone with Lean available

@@ -69,6 +69,7 @@ use crate::nat_prelude::{NatPrelude, build_nat_prelude};
 use crate::{Kernel, KernelError, LogicPrelude, PreludeKey, PreludeValue};
 
 mod algebra;
+mod decide;
 mod defs;
 mod ops;
 mod order;
@@ -251,7 +252,7 @@ type AssertedLaw = (NameId, usize, fn(&mut IntDev<'_>, &[ExprId]) -> ExprId);
 /// construction below *could* prove, and does not yet.
 fn declare_remaining_axioms(d: &mut IntDev<'_>) -> Result<(), KernelError> {
     let p = d.int();
-    let laws: [AssertedLaw; 8] = [
+    let laws: [AssertedLaw; 6] = [
         (p.add_assoc, 3, statements::add_assoc),
         (p.mul_assoc, 3, statements::mul_assoc),
         (p.left_distrib, 3, statements::left_distrib),
@@ -261,19 +262,13 @@ fn declare_remaining_axioms(d: &mut IntDev<'_>) -> Result<(), KernelError> {
             4,
             statements::add_lt_add_of_le_of_lt,
         ),
-        (
-            p.mul_le_mul_of_nonneg_left,
-            3,
-            statements::mul_le_mul_of_nonneg_left,
-        ),
+        // Kept last: `prelude_composition`'s rollback test conflicts on this
+        // name precisely because it is the final member admitted.
         (
             p.euclidean_decomposition,
             2,
             statements::euclidean_decomposition,
         ),
-        // Kept last: `prelude_composition`'s rollback test conflicts on this
-        // name precisely because it is the final member admitted.
-        (p.eq_em, 2, statements::eq_em),
     ];
     for (name, arity, statement) in laws {
         d.int_axiom(name, arity, &statement)?;
@@ -307,6 +302,8 @@ pub fn build_int_prelude(kernel: &mut Kernel) -> Result<IntPrelude, KernelError>
         defs::declare_order_definitions(&mut d)?;
         order::declare_order_theorems(&mut d)?;
         algebra::declare_algebra_theorems(&mut d)?;
+        decide::declare_decidable_equality(&mut d)?;
+        algebra::declare_ordered_multiplication(&mut d)?;
         declare_remaining_axioms(&mut d)?;
         Ok(prelude)
     })();

@@ -199,6 +199,24 @@ impl<'k> IntDev<'k> {
         self.itransport(a, motive, refl_case, b, h)
     }
 
+    /// From `h : Eq Int p q` and a proof of `motive p`, derive `motive q`.
+    ///
+    /// Both directions of constructor reasoning go through this: injectivity
+    /// (`motive y := Eq Nat (magnitude p) (magnitude y)`) and discrimination
+    /// (`motive y := <a Prop that is True on one constructor and False on the
+    /// other>`).
+    pub(super) fn int_eq_rewrite(
+        &mut self,
+        p: ExprId,
+        q: ExprId,
+        h: ExprId,
+        proof: ExprId,
+        motive: &dyn Fn(&mut Self, ExprId) -> ExprId,
+    ) -> ExprId {
+        let built = self.ieq_motive(p, motive);
+        self.itransport(p, built, proof, q, h)
+    }
+
     // --- cross-carrier transport --------------------------------------------
 
     /// From `h : Eq Nat a b`, derive `Eq Int (f a) (f b)` for any `Int`-valued

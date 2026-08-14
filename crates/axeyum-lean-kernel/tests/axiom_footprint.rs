@@ -150,8 +150,8 @@ fn int_footprints_name_only_what_a_declaration_actually_uses() {
         .filter(|(_, d)| matches!(d, Declaration::Axiom { .. }))
         .count();
     assert_eq!(
-        trusted, 8,
-        "Int prelude axiom population changed -- 26 of the original 34 are now \
+        trusted, 6,
+        "Int prelude axiom population changed -- 28 of the original 34 are now \
          constructed or derived; a change here is a real result either way"
     );
 
@@ -183,7 +183,12 @@ fn int_footprints_name_only_what_a_declaration_actually_uses() {
     );
 
     // ...and no declaration may drag in the whole environment.
-    for name in ["combined", "Int.add_assoc", "Int.mul_one", "Int.eq_em"] {
+    for name in [
+        "combined",
+        "Int.add_assoc",
+        "Int.mul_one",
+        "Int.euclidean_decomposition",
+    ] {
         let size = footprint_names(&kernel, name).len();
         assert!(
             size < trusted,

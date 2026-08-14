@@ -53,7 +53,7 @@ fn two_x_eq_one_reconstructs_to_false() {
         });
     assert_eq!(
         (source.len(), source_fnv),
-        (1_041_898, 0xc3b1_0a69_20bd_f6c1)
+        (1_047_668, 0x42cf_dd78_18cb_662c)
     );
     assert_eq!(
         scan_proof_fragment(&arena, &[e1, e2]),
