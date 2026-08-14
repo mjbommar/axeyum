@@ -305,6 +305,12 @@ evidence and unrelated temporary projects were untouched.
 | Date | Commit | Result |
 |---|---|---|
 | 2026-08-14 | `19f4c769b` | Automatic hypothesis minimisation (`hypothesis_min`): two route-B Rado lemmas that stay `unknown` at 1800 s close in ~2 s with the same subsets a human found in ~32 min; the boundary is measured to be `nra.rs:107` `MAX_CROSS_PRODUCTS = 2`, not hypothesis count, and the guards are mutation-tested one deletion at a time (agent-k). |
+| 2026-08-14 | `fc1090126` | Frontier curves re-recorded with the machine, load, calibration and comparability that produced them. |
+| 2026-08-14 | `4be94e45c` | Controls for the aggregate gate's own scope (18 checks). |
+| 2026-08-14 | `952a3ae2b` | Calibration kernel corrected to track the workload (it under-reported the core-class slowdown by 60 %). |
+| 2026-08-14 | `1bc24b326` | `progress_frontier` gains a measured reference frame: per-family calibration, scaled budget, `NOT COMPARABLE` / `ADVISORY ONLY`. |
+| 2026-08-14 | `ec72fdf66` | `just check` vs `check.sh` divergence measured and pinned; the Lean axiom ledger now runs in both. |
+| 2026-08-14 | `fa4676e33` | Clippy and the workspace test sweep prove what they examined; content-addressed source freshness; 14 negative controls. |
 | 2026-08-07 | `3576e6739` / `c92155454` / `d09e6debb` | Rejected relevance-activated bound ladders after 0/6 target decisions, exactly repartitioned all 52 A3 budget rows, refreshed the generated CI identity, and integrated the clean pushed evidence branch. |
 | 2026-08-07 | `3696e7dd5` | Confirmed repeated size-admission large cores on the selected QF_NIA pair, then rejected bounded four-group deletion after it shrank clauses but decided neither target; temporary solver code was removed. |
 | 2026-08-07 | `704318a5f` | Refreshed the complete-parity manifest's sole stale source identity after the pinned-`just` CI workflow change; outcomes, populations, gates, and parity credit are unchanged, and full parity-docs/authority/links pass. |
@@ -394,6 +400,28 @@ stale claim; keep application maturity and sub-document links aligned, but do
 not duplicate generated capability tables or modify solver behavior to match
 prose. The user/reference/internals/crate surfaces and all 49 Cargo examples are
 indexed, and source guards reject universal proof claims.
+
+**Gate scope and the wall-clock reference frame (`WIP`, gates, 2026-08-14).**
+Landed: cargo's mtime-based freshness could let `cargo clippy` **and**
+`cargo test` pass over source they never compiled (measured: `cargo test` printed
+"1 passed" for a test that must fail), so both now run through wrappers that
+touch content whose hash changed and then report how many targets/tests they
+actually examined; the divergence between `just check` (145 steps) and
+`./scripts/check.sh` (89) is pinned in
+`scripts/check-aggregate-scope.expected` and fails when it grows; and the
+`progress_frontier` ratchets now calibrate the machine before and after each
+sweep, scale the budget, and refuse to enforce (`NOT COMPARABLE`) or to raise a
+baseline (`ADVISORY ONLY`) outside their bands — the stock fixed-budget gate
+reported `bv_reduction = 29` against a baseline of 30 on this box's efficiency
+cores, four runs out of five, a REGRESSION that never happened.
+
+Next, in priority order: (1) `MAX_N = 40` has turned `nra_degree`, `nia_unsat`
+and now `string_bound` into constants — three of five ratchets can no longer show
+progress; (2) apply `scripts/check-source-freshness.sh` to the remaining cargo
+entry points (`scripts/check-scope.sh`, the `bench-*` recipes) and to the
+snapshot instruction lanes are given; (3) one authoritative step manifest for the
+aggregate gate, with a wrapper column, so the 66 recorded differences can shrink
+instead of only being prevented from growing.
 
 ### A1 — Complete arithmetic deadline and resource enforcement (`DONE`, P0)
 
