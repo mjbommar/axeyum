@@ -70,10 +70,18 @@ print("check-workspace-tests: not checked here — `frontier_*` (wall-clock ratc
       "pre-merge gate), and any `#[ignore]`d test")
 
 if empty:
-    print(f"check-workspace-tests: {len(empty)} binaries ran NO tests — an emptied suite "
-          f"exits 0 and looks identical to a passing one:")
-    for name in sorted(set(empty)):
+    names = sorted(set(empty))
+    # A `src/bin` target with no unit tests legitimately runs zero, so this is
+    # information rather than a failure — but an emptied test suite looks exactly
+    # the same from the outside (the 15-day inert corpus sweep), so the list is
+    # printed instead of being swallowed.
+    print(f"check-workspace-tests: {len(names)} binaries ran NO tests (a bin or lib "
+          f"without unit tests does this legitimately; a suite emptied by a `cfg` "
+          f"looks identical):")
+    for name in names[:10]:
         print(f"    {name}")
+    if len(names) > 10:
+        print(f"    ... and {len(names) - 10} more")
 
 if suites == 0 or passed + failed == 0:
     print("check-workspace-tests: the sweep ran ZERO tests. That is the "
