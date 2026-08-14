@@ -1,0 +1,68 @@
+{
+  "schema_version": 1,
+  "id": "F:affirming-the-consequent",
+  "title": "Affirming the consequent is a valid inference",
+  "statement": "For all propositions p and q: if (p implies q) holds and q holds, then p holds. THIS PROPOSITION IS FALSE; the fact is recorded with status `refuted` and carries the countermodel.",
+  "formal": {
+    "language": "smtlib2",
+    "statement": "(assert (=> (and (=> p q) q) p))",
+    "fragment": "QF_UF",
+    "free_symbols": [
+      "p",
+      "q"
+    ]
+  },
+  "epistemic_status": "refuted",
+  "external_status": "refuted",
+  "depends_on": [],
+  "evidence": [
+    {
+      "id": "affirming-the-consequent-countermodel",
+      "kind": "witness-replay",
+      "supports": "p := false, q := true satisfies the negation of the proposition, so the proposition is not a tautology",
+      "check_status": "checked",
+      "checker_command": "cargo run -q -p axeyum-bench --example smtcomp_cli -- --evidence artifacts/facts/smt2/affirming-the-consequent.smt2",
+      "artifact": "artifacts/facts/smt2/affirming-the-consequent.smt2",
+      "notes": "Ran 2026-08-14: the file asserts the NEGATION of formal.statement and the solver reported `sat` with `kind=sat-model certified=1 arena=ok`. `arena=ok` is Evidence::check replaying the model against a fresh parse of the file -- the model is evaluated against the original assertions, not against the lowered form. The witness is p := false, q := true: then (p implies q) is true and q is true while p is false. Independently cross-checked: `z3 -smt2` on the same file also reports `sat`."
+    }
+  ],
+  "concept_refs": [
+    {
+      "graph": "math-education",
+      "ref": "C:fallacy",
+      "relation": "instance-of",
+      "resolved": true
+    },
+    {
+      "graph": "math-education",
+      "ref": "C:converse",
+      "relation": "related-to",
+      "resolved": true
+    },
+    {
+      "graph": "math-education",
+      "ref": "C:countermodel",
+      "relation": "uses",
+      "resolved": true
+    },
+    {
+      "graph": "math-education",
+      "ref": "C:contrapositive",
+      "relation": "contrasts-with",
+      "resolved": true
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-14",
+    "established_by": "facts-logic lane, axeyum SAT/SMT front door",
+    "source": "authored from the S:logic-and-proof strand of the math-education concept graph; statement written here, not copied",
+    "prior_art": [
+      {
+        "citation": "Aristotle, Sophistical Refutations; catalogued as a formal fallacy ever since",
+        "establishes": "that the inference is invalid, i.e. that the proposition recorded by this fact is false",
+        "attribution": "standard textbook attribution; this lane did not consult the primary source, and records the citation as the received one"
+      }
+    ]
+  },
+  "notes": "The only `refuted` fact in this batch, and the reason the status exists. It is the converse of F:modus-ponens-valid and the negation-free shadow of F:contraposition, and one two-line countermodel separates it from both. Note the asymmetry in cost that this fact makes visible: refuting a universally quantified propositional claim needs one assignment, while establishing one needs the whole truth table -- which is why `sat` evidence is a replayable witness and `unsat` evidence is a certificate."
+}

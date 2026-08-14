@@ -1,0 +1,68 @@
+{
+  "schema_version": 1,
+  "id": "F:excluded-middle-not-intuitionistic",
+  "title": "Excluded middle is not derivable in intuitionistic propositional logic",
+  "statement": "There is no derivation of (p or not p), for a propositional variable p, in intuitionistic propositional natural deduction.",
+  "formal": {
+    "language": "smtlib2",
+    "statement": "; NOT EXPRESSIBLE. The proposition asserts the NON-EXISTENCE of a derivation in a named proof system. axeyum has no term denoting a derivation, a proof system, or a logic other than the classical two-valued one its Bool sort fixes, so there is no assertion whose unsatisfiability would establish it. The standard proof goes through a Kripke or Heyting-algebra countermodel, and we have no object for a non-Boolean algebra of truth values either.",
+    "fragment": "none",
+    "free_symbols": []
+  },
+  "epistemic_status": "open",
+  "external_status": "proved",
+  "depends_on": [
+    "F:excluded-middle"
+  ],
+  "evidence": [],
+  "concept_refs": [
+    {
+      "graph": "math-education",
+      "ref": "C:intuitionism",
+      "relation": "states",
+      "resolved": true
+    },
+    {
+      "graph": "math-education",
+      "ref": "C:excluded-middle",
+      "relation": "about",
+      "resolved": true
+    },
+    {
+      "graph": "math-education",
+      "ref": "C:non-constructive-proof",
+      "relation": "related-to",
+      "resolved": true
+    },
+    {
+      "graph": "math-education",
+      "ref": "C:independence-of-axioms",
+      "relation": "instance-of",
+      "resolved": true
+    },
+    {
+      "graph": "math-education",
+      "ref": "C:constructive-proof",
+      "relation": "related-to",
+      "resolved": true
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-14",
+    "established_by": "not established in this ledger",
+    "source": "authored from the S:logic-and-proof strand of the math-education concept graph; statement written here, not copied",
+    "prior_art": [
+      {
+        "citation": "Godel 1932; Heyting; Kripke 1965",
+        "establishes": "the theorem, long settled, by three-valued and Kripke countermodels"
+      },
+      {
+        "measurement": "cargo run -q -p axeyum-lean-kernel --example nat_axiom_inventory",
+        "date": "2026-08-14",
+        "result": "logic: axiom=0 opaque=0 quotient=0 total_trusted=0",
+        "establishes": "axeyum's Lean logic prelude assumes nothing classical -- it declares only True, False, And, Or, Iff, Eq, Exists and Not (as `a -> False`). This measures the ABSENCE of a classical axiom in our kernel; it does not by itself prove the non-derivability, which is the cited theorem."
+      }
+    ]
+  },
+  "notes": "The most important entry this lane produced, and the one that most sharply exposes the shape of the frontier. axeyum has TWO reasoning routes with DIFFERENT logics and no object that can compare them. The SMT route fixes a two-valued Bool sort and so proves F:excluded-middle, F:double-negation-elimination and F:peirce-law in microseconds. The Lean kernel route has an intuitionistic logic prelude with zero trusted declarations, in which none of those three has a proof term and none can get one without adding an axiom. Today nothing in the stack records that a fact proved on one route is unavailable on the other, and the fact schema has no field for it: `axiom_footprint` describes the route that DID establish the fact and is silent about routes that cannot. Concretely: if a future reconstruction lane pipes an `unsat` from the SMT route into the kernel, every classical tautology in this batch is a reconstruction failure waiting to happen, and the failure will surface as a kernel error rather than as a recognised logic mismatch. That is the roadmap item. The status is `open` in the same misused sense as F:godel-first-incompleteness -- the mathematics is settled; what is open is our ability to say it."
+}

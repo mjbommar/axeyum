@@ -1,0 +1,72 @@
+{
+  "schema_version": 1,
+  "id": "F:godel-first-incompleteness",
+  "title": "Godel's first incompleteness theorem",
+  "statement": "Every consistent, effectively axiomatised formal system that interprets enough elementary arithmetic contains an arithmetical sentence that the system neither proves nor refutes.",
+  "formal": {
+    "language": "smtlib2",
+    "statement": "; NOT EXPRESSIBLE. The proposition quantifies over formal systems and over derivations within them. Nothing in the axeyum term language denotes a formula, a proof, or a provability predicate, so there is no assertion whose negation being unsat would establish it. Recorded verbatim rather than approximated, because an approximation would be checkable and would not be this statement.",
+    "fragment": "none",
+    "free_symbols": []
+  },
+  "epistemic_status": "open",
+  "external_status": "proved",
+  "depends_on": [],
+  "evidence": [],
+  "concept_refs": [
+    {
+      "graph": "math-education",
+      "ref": "C:godel-incompleteness",
+      "relation": "states",
+      "resolved": true
+    },
+    {
+      "graph": "math-education",
+      "ref": "C:incompleteness-theorem",
+      "relation": "states",
+      "resolved": true
+    },
+    {
+      "graph": "math-education",
+      "ref": "C:completeness-logical",
+      "relation": "bounds",
+      "resolved": true
+    },
+    {
+      "graph": "math-education",
+      "ref": "C:consistency",
+      "relation": "uses",
+      "resolved": true
+    },
+    {
+      "graph": "math-education",
+      "ref": "C:formal-system",
+      "relation": "uses",
+      "resolved": true
+    },
+    {
+      "graph": "math-education",
+      "ref": "C:self-reference",
+      "relation": "uses",
+      "resolved": true
+    },
+    {
+      "graph": "math-education",
+      "ref": "C:mathematical-certainty-limits",
+      "relation": "related-to",
+      "resolved": true
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-14",
+    "established_by": "not established in this ledger",
+    "source": "authored from the S:logic-and-proof strand of the math-education concept graph; statement written here, not copied",
+    "prior_art": [
+      {
+        "citation": "Godel 1931",
+        "establishes": "the theorem, long settled; also formalised and machine-checked in several proof assistants (Shankar in Nqthm 1986, Paulson in Isabelle/HOL 2014)"
+      }
+    ]
+  },
+  "notes": "The status is `open` and that is the WRONG WORD, used because the schema's enum offers nothing better. This proposition is a settled theorem; what is open is not the mathematics but whether this repository can say it. The vocabulary conflates the epistemic status OF A PROPOSITION with the evidence status IN THIS LEDGER, and those come apart exactly here -- see the lane diary for the proposed `established-elsewhere` value. What the gap actually is: our IR has terms for values and functions over sorts, and no term for a syntactic object. Godel numbering is not the obstacle -- arithmetic on codes we could do -- the obstacle is that `provable-in-T` would have to be a predicate over our own formulas, and formulas are not in the domain of discourse. Every fact in this batch that says 'this is a metatheorem we cannot state' (F:resolution-rule-sound on completeness, F:exportation on the deduction theorem, F:tseitin-and-gate on general equisatisfiability) is blocked by that same single missing thing: reflection."
+}

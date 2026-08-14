@@ -1,0 +1,67 @@
+{
+  "schema_version": 1,
+  "id": "F:barber-no-such-barber",
+  "title": "No barber shaves exactly those who do not shave themselves",
+  "statement": "For any binary relation `shaves` on any domain, there is no element b such that for every x, b shaves x if and only if x does not shave x.",
+  "formal": {
+    "language": "smtlib2",
+    "statement": "(assert (not (exists ((b Person)) (forall ((x Person)) (= (shaves b x) (not (shaves x x)))))))",
+    "fragment": "UF",
+    "free_symbols": [
+      "Person",
+      "shaves",
+      "b",
+      "x"
+    ]
+  },
+  "epistemic_status": "open",
+  "external_status": "proved",
+  "depends_on": [],
+  "evidence": [],
+  "concept_refs": [
+    {
+      "graph": "math-education",
+      "ref": "C:barber-paradox",
+      "relation": "states",
+      "resolved": true
+    },
+    {
+      "graph": "math-education",
+      "ref": "C:russells-paradox",
+      "relation": "generalises",
+      "resolved": true
+    },
+    {
+      "graph": "math-education",
+      "ref": "C:self-reference",
+      "relation": "uses",
+      "resolved": true
+    },
+    {
+      "graph": "math-education",
+      "ref": "C:predicate-logic",
+      "relation": "uses",
+      "resolved": true
+    },
+    {
+      "graph": "math-education",
+      "ref": "C:proof-by-contradiction",
+      "relation": "uses",
+      "resolved": true
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-14",
+    "established_by": "not established in this ledger",
+    "source": "authored from the S:logic-and-proof strand of the math-education concept graph; statement written here, not copied",
+    "prior_art": [
+      {
+        "oracle": "z3 -smt2 artifacts/facts/smt2/neg-barber-no-such-barber.smt2",
+        "result": "unsat",
+        "date": "2026-08-14",
+        "establishes": "the proposition is valid"
+      }
+    ]
+  },
+  "notes": "OPEN IN THIS LEDGER, NOT IN MATHEMATICS. axeyum gets the right VERDICT and no usable evidence, which is a more interesting failure than returning `unknown`. Measured 2026-08-14 with `cargo run -q -p axeyum-bench --example smtcomp_cli -- --evidence artifacts/facts/smt2/neg-barber-no-such-barber.smt2`: it printed `; evidence kind=unsat-drat certified=0 recheck=na arena=FAIL ms=171` and then `unsat`. Read that line carefully, because two of its fields are misreported by the harness rather than by the solver. The evidence object is a BARE `Evidence::Unsat(None)` -- no certificate at all -- but `Evidence::kind_label` maps every `Unsat` variant to the string `unsat-drat`, so the line names a DRAT proof that does not exist; and `Evidence::check` returns `Ok(false)` for a bare unsat, which the CLI renders as `arena=FAIL`, i.e. as though a certificate had been examined and found wanting. `Evidence::check_outcome` on the same input correctly answers `NothingToCheck(UncertifiedUnsat)`. The verdict is right, the certificate is absent, and the status here stays `open` because an uncertified unsat is not evidence under this schema. The proposition is one universal instantiation (x := b) away from the already-proved F:no-self-negating-proposition -- but that instantiation step is one no component of ours performed or recorded."
+}

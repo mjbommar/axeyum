@@ -1,0 +1,60 @@
+{
+  "schema_version": 1,
+  "id": "F:continuum-hypothesis-independent",
+  "title": "The continuum hypothesis is independent of ZFC",
+  "statement": "If ZFC is consistent, then ZFC neither proves nor refutes the statement that every infinite set of real numbers is in bijection either with the natural numbers or with the reals.",
+  "formal": {
+    "language": "smtlib2",
+    "statement": "; NOT EXPRESSIBLE, on two independent counts. The statement quantifies over subsets of the reals, which is second order and outside any SMT-LIB logic; and the independence claim is about derivability in ZFC, which needs the same reflection machinery F:godel-first-incompleteness names. axeyum's Real sort is a first-order ordered field with no set-of-reals sort and no cardinality apparatus.",
+    "fragment": "none",
+    "free_symbols": []
+  },
+  "epistemic_status": "open",
+  "external_status": "proved",
+  "depends_on": [],
+  "evidence": [],
+  "concept_refs": [
+    {
+      "graph": "math-education",
+      "ref": "C:continuum-hypothesis",
+      "relation": "states",
+      "resolved": true
+    },
+    {
+      "graph": "math-education",
+      "ref": "C:independence-of-axioms",
+      "relation": "instance-of",
+      "resolved": true
+    },
+    {
+      "graph": "math-education",
+      "ref": "C:zfc-intuition",
+      "relation": "uses",
+      "resolved": true
+    },
+    {
+      "graph": "math-education",
+      "ref": "C:axiomatic-system",
+      "relation": "about",
+      "resolved": true
+    },
+    {
+      "graph": "math-education",
+      "ref": "C:undecidable-statement",
+      "relation": "instance-of",
+      "resolved": true
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-14",
+    "established_by": "not established in this ledger",
+    "source": "authored from the S:logic-and-proof strand of the math-education concept graph; statement written here, not copied",
+    "prior_art": [
+      {
+        "citation": "Godel 1940 (consistency of CH); Cohen 1963 (consistency of not-CH)",
+        "establishes": "the independence, long settled"
+      }
+    ]
+  },
+  "notes": "Third and last of the deliberately-unstatable entries, chosen because it fails for a DIFFERENT reason than the other two and so maps a different edge of the frontier. F:godel-first-incompleteness and F:fol-validity-undecidable are blocked by the absence of reflection alone; this one is blocked by reflection AND by order -- there is no second-order quantification and no cardinality anywhere in the stack, and a 'complete framework for general reasoning' that intends to reach ordinary mathematics eventually has to answer for that. Recorded also as a warning label for the self-extension loop: an `open` fact with `formal.fragment: none` must never be dispatched to a solver, and a consumer that filters only on status will do exactly that."
+}

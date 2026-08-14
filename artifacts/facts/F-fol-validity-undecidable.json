@@ -1,0 +1,66 @@
+{
+  "schema_version": 1,
+  "id": "F:fol-validity-undecidable",
+  "title": "Validity in first-order logic is undecidable",
+  "statement": "There is no algorithm that, given an arbitrary sentence of first-order logic with at least one binary relation symbol, decides whether it is valid in every model.",
+  "formal": {
+    "language": "smtlib2",
+    "statement": "; NOT EXPRESSIBLE. The proposition quantifies over algorithms and over the set of all first-order sentences. axeyum has no term for either, and the statement is about the non-existence of a decision procedure rather than about the truth of any sentence, so no assertion of ours has it as a consequence of unsatisfiability.",
+    "fragment": "none",
+    "free_symbols": []
+  },
+  "epistemic_status": "open",
+  "external_status": "proved",
+  "depends_on": [],
+  "evidence": [],
+  "concept_refs": [
+    {
+      "graph": "math-education",
+      "ref": "C:halting-problem-logic",
+      "relation": "uses",
+      "resolved": true
+    },
+    {
+      "graph": "math-education",
+      "ref": "C:undecidable-statement",
+      "relation": "related-to",
+      "resolved": true
+    },
+    {
+      "graph": "math-education",
+      "ref": "C:computable-function",
+      "relation": "uses",
+      "resolved": true
+    },
+    {
+      "graph": "math-education",
+      "ref": "C:turing-machine",
+      "relation": "uses",
+      "resolved": true
+    },
+    {
+      "graph": "math-education",
+      "ref": "C:church-turing-thesis",
+      "relation": "presupposes",
+      "resolved": true
+    },
+    {
+      "graph": "math-education",
+      "ref": "C:predicate-logic",
+      "relation": "about",
+      "resolved": true
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-14",
+    "established_by": "not established in this ledger",
+    "source": "authored from the S:logic-and-proof strand of the math-education concept graph; statement written here, not copied",
+    "prior_art": [
+      {
+        "citation": "Church 1936; Turing 1936",
+        "establishes": "the theorem, long settled"
+      }
+    ]
+  },
+  "notes": "Same misuse of `open` as F:godel-first-incompleteness, for the same reason. Recorded because it is the proposition that makes `unknown` a first-class result rather than a failure: this theorem is the reason axeyum's solver trait must be allowed to decline, and it is the boundary the whole 'ladder past quantifier-free' programme is climbing toward rather than through. Note the exact shape of the limit -- it forbids a decision procedure, not a semi-decision procedure. Validity in FOL is recursively enumerable, so a complete PROVER is possible and only a complete DECIDER is not, and that distinction is what separates a reachable goal from an impossible one for this repository. Formalising the statement would need the same reflection machinery F:godel-first-incompleteness names, plus a model of computation."
+}

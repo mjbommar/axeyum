@@ -1,0 +1,78 @@
+{
+  "schema_version": 1,
+  "id": "F:exportation",
+  "title": "Exportation: the propositional form of the deduction theorem",
+  "statement": "For all propositions p, q, r: ((p and q) implies r) is equivalent to (p implies (q implies r)).",
+  "formal": {
+    "language": "smtlib2",
+    "statement": "(assert (= (=> (and p q) r) (=> p (=> q r))))",
+    "fragment": "QF_UF",
+    "free_symbols": [
+      "p",
+      "q",
+      "r"
+    ]
+  },
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "depends_on": [],
+  "axiom_footprint": [
+    "axeyum-ir.bool-evaluator",
+    "classical-two-valued-bool-semantics"
+  ],
+  "evidence": [
+    {
+      "id": "exportation-term-level",
+      "kind": "exhaustive-enumeration",
+      "supports": "For all propositions p, q, r: ((p and q) implies r) is equivalent to (p implies (q implies r)).",
+      "check_status": "checked",
+      "checker_command": "cargo run -q -p axeyum-bench --example smtcomp_cli -- --evidence artifacts/facts/smt2/neg-exportation.smt2",
+      "artifact": "artifacts/facts/smt2/neg-exportation.smt2",
+      "notes": "Ran 2026-08-14: the file asserts the NEGATION of formal.statement and the solver reported `unsat` with `kind=unsat-term-level certified=1 arena=ok`. `unsat-term-level` is exhaustive evaluation of the 8 Boolean assignments by the axeyum-ir evaluator alone -- it trusts neither the bit-blaster, the CNF encoder, nor the SAT solver. `arena=ok` means Evidence::check re-ran that enumeration against a FRESH PARSE of the file, independent of anything the producing solve held in memory. Independently cross-checked: `z3 -smt2` on the same file also reports `unsat`."
+    }
+  ],
+  "concept_refs": [
+    {
+      "graph": "math-education",
+      "ref": "C:deduction",
+      "relation": "related-to",
+      "resolved": true
+    },
+    {
+      "graph": "math-education",
+      "ref": "C:implication",
+      "relation": "uses",
+      "resolved": true
+    },
+    {
+      "graph": "math-education",
+      "ref": "C:assumption",
+      "relation": "uses",
+      "resolved": true
+    },
+    {
+      "graph": "math-education",
+      "ref": "C:premise",
+      "relation": "uses",
+      "resolved": true
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-14",
+    "established_by": "facts-logic lane, axeyum SAT/SMT front door",
+    "source": "authored from the S:logic-and-proof strand of the math-education concept graph; statement written here, not copied",
+    "prior_art": [
+      {
+        "citation": "standard classical propositional equivalence; see e.g. Mendelson, Introduction to Mathematical Logic",
+        "establishes": "the equivalence itself",
+        "attribution": "standard textbook attribution; this lane did not consult the primary source, and records the citation as the received one"
+      },
+      {
+        "citation": "J. Herbrand (1930); A. Tarski (1930)",
+        "establishes": "the DEDUCTION THEOREM, of which this fact is only the object-level shadow -- the metatheorem is not stated here because it cannot be",
+        "attribution": "standard textbook attribution; this lane did not consult the primary source, and records the citation as the received one"
+      }
+    ]
+  },
+  "notes": "The deduction theorem proper says: Gamma together with p proves q if and only if Gamma proves (p implies q). That is a metatheorem -- it quantifies over derivations in a proof system, and this repository has no object for a derivation, so it cannot be stated. What CAN be stated is its semantic shadow at the object level, which is exportation, and that is what is recorded here. The gap between the two is exactly the gap between a solver and a proof assistant, and it is deliberate that this fact does not pretend to close it.\n\nOn the axiom footprint: it names the trust base of the SMT ROUTE that established this fact -- the axeyum-ir Boolean evaluator, and the two-valued semantics of the SMT-LIB Bool sort that makes exhaustive truth-table enumeration a proof. It is deliberately NOT empty and deliberately NOT a Lean axiom list. Nothing here went through axeyum's Lean kernel. Measured 2026-08-14 with `cargo run -q -p axeyum-lean-kernel --example nat_axiom_inventory`: the `logic` prelude reports axiom=0 opaque=0 quotient=0, and its declarations are exactly True, False, And, Or, Iff, Not (as `a -> False`), Eq and Exists -- an intuitionistic core with no `Classical.em`, no `propext` and no `Quot.sound`. Zero trusted declarations there means the kernel assumes nothing, not that it can prove everything."
+}
