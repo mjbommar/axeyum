@@ -37,6 +37,18 @@ for path in sorted(glob.glob("artifacts/facts/*.json")):
         facts.append(d)
 
 ran = failed = skipped = 0
+timeouts = []
+
+
+def run_checker(cmd, timeout):
+    """Run one checker. Returns (exit code, last output line, timed_out)."""
+    try:
+        p = subprocess.run(cmd, shell=True, capture_output=True, text=True,
+                           timeout=timeout)
+        tail = (p.stdout or p.stderr or "").strip().splitlines()
+        return p.returncode, (tail[-1][:90] if tail else f"exit {p.returncode}"), False
+    except subprocess.TimeoutExpired:
+        return 124, f"TIMED OUT after {timeout}s (twice)", True
 by_route_ok, by_route_total = Counter(), Counter()
 failures = []
 started = time.time()
@@ -56,16 +68,19 @@ for fact in facts:
     ok = True
     for row in rows:
         cmd = row["checker_command"]
-        try:
-            p = subprocess.run(cmd, shell=True, capture_output=True, text=True,
-                               timeout=timeout)
-            rc = p.returncode
-            tail = (p.stdout or p.stderr or "").strip().splitlines()
-            note = tail[-1][:90] if tail else f"exit {rc}"
-        except subprocess.TimeoutExpired:
-            rc, note = 124, f"TIMED OUT after {timeout}s"
+        # A timeout is NOT evidence that a fact rotted, and reporting it as a
+        # failure makes the gate's false alarms indistinguishable from its true
+        # ones. Measured: the same clean ledger gives 251.8s/0 failed idle and
+        # 747.7s/1 "failed" under contention, where the one failure was cargo's
+        # build lock. So: retry once, then classify separately.
+        rc, note, timed_out = run_checker(cmd, timeout)
+        if timed_out:
+            rc, note, timed_out = run_checker(cmd, timeout)
         ran += 1
-        if rc != 0:
+        if timed_out:
+            ok = False
+            timeouts.append((fact["id"], cmd, note))
+        elif rc != 0:
             ok = False
             failures.append((fact["id"], cmd, note))
 
@@ -75,14 +90,21 @@ for fact in facts:
         print(f"  ok         {fact['id']:<40} route={route} ({len(rows)} checker(s))")
     else:
         failed += 1
-        print(f"  FAIL       {fact['id']:<40} route={route}")
+        label = "TIMEOUT" if any(t[0] == fact["id"] for t in timeouts) else "FAIL"
+        print(f"  {label:<10} {fact['id']:<40} route={route}")
 
 elapsed = time.time() - started
 print()
 for route in sorted(by_route_total):
     print(f"  route {route:<20} {by_route_ok[route]}/{by_route_total[route]} re-derived")
 print(f"\nfact-evidence-replay: {len(facts)} settled fact(s), {ran} checker run(s), "
-      f"{failed} failed, {skipped} uncovered, {elapsed:.1f}s")
+      f"{failed} failed, {len(timeouts)} timed out, {skipped} uncovered, {elapsed:.1f}s")
+if timeouts:
+    print("  NOTE: a timeout is not evidence a fact rotted. Under load these are "
+          "usually cargo's build lock; re-run on an idle box before believing them.",
+          file=sys.stderr)
+    for fid, cmd, note in timeouts:
+        print(f"  TIMEOUT {fid}\n    $ {cmd}", file=sys.stderr)
 
 if failures:
     print("\nfailures:", file=sys.stderr)
