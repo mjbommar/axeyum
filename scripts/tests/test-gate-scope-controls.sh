@@ -215,6 +215,29 @@ else
   fail=$((fail + 1))
 fi
 
+echo "=== control 6: the step floor fails a gate that lost steps ==="
+# Take check.sh, delete every step, add two trivial ones, and set the floor above
+# them: a run with nothing failing must still exit non-zero.
+mkdir -p "$work/floor/scripts"
+sed '/^step /d' "$repo/scripts/check.sh" > "$work/floor/scripts/check.sh"
+python3 - "$work/floor/scripts/check.sh" <<'PY'
+import sys
+path = sys.argv[1]
+text = open(path).read()
+text = text.replace("STEP_FLOOR=80", "STEP_FLOOR=5")
+text = text.replace(
+    'if [ "$list_only" = "1" ]; then\n  echo "check: $ran steps" >&2',
+    'step ok-one true\nstep ok-two true\n\nif [ "$list_only" = "1" ]; then\n  echo "check: $ran steps" >&2',
+)
+open(path, "w").write(text)
+PY
+out="$(bash "$work/floor/scripts/check.sh" 2>&1)"
+check "two steps against a floor of five fails despite nothing failing" 1 $?
+case "$out" in
+  *"below the committed floor"*) echo "  ok   the floor says why"; pass=$((pass + 1)) ;;
+  *) echo "  FAIL the floor failed without explaining itself" >&2; fail=$((fail + 1)) ;;
+esac
+
 echo "=== control 5: new just-vs-check.sh divergence is rejected ==="
 if command -v just >/dev/null 2>&1; then
   # Drop one accepted difference: the gate must then report it as unrecorded.

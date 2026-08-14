@@ -176,9 +176,10 @@ fi
 
 # The step FLOOR. A gate that silently loses steps is the aggregate version of
 # the "running 0 tests ... ok" trap: the exit status is identical whether it ran
-# 61 steps or 2. Measured 2026-08-14: 82 steps here. The floor sits a little
-# below that so ordinary churn does not trip it. Raising it as steps are added is
-# expected; LOWERING it needs a reason in the commit message.
+# 61 steps or 2. Measured 2026-08-14: 89 steps here. The floor sits below that so
+# ordinary churn does not trip it. Raising it as steps are added is expected;
+# LOWERING it needs a reason in the commit message. Controls 4 and 6 in
+# `scripts/tests/test-gate-scope-controls.sh` cover the listing and this floor.
 STEP_FLOOR=80
 echo "check: ran $ran steps (floor $STEP_FLOOR), ${#failed_steps[@]} failed"
 if [ "$ran" -lt "$STEP_FLOOR" ]; then
