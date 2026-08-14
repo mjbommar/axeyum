@@ -92,6 +92,17 @@
       "artifact_format": "dimacs-cnf"
     },
     {
+      "id": "witness-251",
+      "kind": "witness-replay",
+      "supports": "R_5 > 251 (lower bound, retained best)",
+      "artifact": "artifacts/claims/rado/rado-r5-a3-b1-frontier/witness-251.txt",
+      "artifact_sha256": "fc3dce53c1892a7ffc7df88be3115a194586aae8ea7e94e76d6f1c3cc5453dbf",
+      "check_status": "checked",
+      "checker_command": "python3 scripts/check-claim-certificates.py --only rado-r5-a3-b1-frontier",
+      "notes": "A 5-colouring of [251] using all five colours, no monochromatic solution among the 17,347 solutions of 3(x-y)=z in [251]^3. Reached by incremental climbing from the verified 243 witness, one integer at a time with warm restarts (axeyum_search::min_conflicts, 3,000,000 moves per step, three seeds per step). The climb stalled at 252 across four independent seed families, so 251 is the search's limit and not a threshold. The mathematically important row is witness-243, not this one: 243 = 3^5 is the number the refuted prediction names.",
+      "artifact_format": "colouring-text"
+    },
+    {
       "id": "witness-243",
       "kind": "witness-replay",
       "supports": "R_5 > 243 (lower bound; 243 = 3^5, so this refutes R_5 = a^k)",
@@ -109,7 +120,7 @@
       "R_3(3(x-y)=1z) = 27 = 3^3 (ledger claim rado-r3-a3-b1) and R_4(3(x-y)=1z) = 81 = 3^4 (ledger claim rado-r4-a3-b1, CDLW Table 10), so the law holds at k=3 and k=4 and fails at k=5.",
       "Lemma 4.1's lower bound R_k >= a^k remains SOUND at k=5 -- a lower bound cannot be refuted by exhibiting a larger colouring. What fails is its tightness.",
       "Corroborating but UNVERIFIED: Li (SSRN 6814341) reportedly gives R_5(3) > 296 and conjectures the law holds exactly for k <= 2(a-1), which for a=3 means k <= 4. Our data (27, 81, and >243 at k=5) is consistent with that threshold at every point we have.",
-      "Incremental climbing from the 243 witness reached a verified 5-colouring of [251] and stalled at 252 across four seeds; that is a search limit, not a threshold, and the intermediate witnesses are not shipped."
+      "Incremental climbing from the 243 witness reached a verified 5-colouring of [251] (evidence row witness-251) and stalled at 252 across four seed families; that is a search limit, not a threshold."
     ],
     "would_settle": "A verified 5-colouring of [n-1] together with an exhaustive checked refutation of F_n, for the same n. Both artifact kinds and their checkers exist in this family. The obstruction is the refutation side at five colours, which has never been done at any n for any member of this family.",
     "attack_notes": "The satisfiable side is not free here: the a-adic construction that settles every n <= a^k - 1 in milliseconds provably cannot reach a^k, and min-conflicts warm-started from it failed three times. What worked was cube-and-conquer, which starts from no construction at all (35.8 s). Monolithic proof-producing CDCL is the wrong tool on the satisfiable side of this instance: it emitted 2.6 GB of DRAT in 8 minutes without deciding, and its resident set tracked the proof size almost exactly, so on a 26 GiB host it would have OOM-killed before answering."
