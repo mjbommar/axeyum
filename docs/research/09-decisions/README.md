@@ -484,3 +484,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [0427](adr-0427-relational-nat-exact-decomposition-existence.md) | Relational Nat exact decomposition existence | accepted |
 | [0428](adr-0428-balanced-witness-nat-congruence.md) | Balanced-witness Nat congruence | accepted |
 | [0429](adr-0429-cas-ideal-refutation-certificate.md) | Multivariate ideal refutation certified by a polynomial identity | proposed |
+| [0430](adr-0430-left-addition-preserves-nat-congruence.md) | Left addition preserves Nat congruence | accepted |

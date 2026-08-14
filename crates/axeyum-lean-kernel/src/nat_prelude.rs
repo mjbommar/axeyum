@@ -316,6 +316,8 @@ pub struct NatPrelude {
     pub mod_eq_symm: NameId,
     /// `Nat.mod_eq_trans : ∀ d a b c, modEq d a b → modEq d b c → modEq d a c`.
     pub mod_eq_trans: NameId,
+    /// `Nat.mod_eq_add_left : ∀ d a b c, modEq d a b → modEq d (c+a) (c+b)`.
+    pub mod_eq_add_left: NameId,
     /// `Nat.valuationAt a n e := dvd (a^e) n ∧ Not (dvd (a^(e+1)) n)`.
     pub valuation_at: NameId,
     /// `Nat.dvd_mul : ∀ a q, dvd a (a * q)`.
@@ -454,6 +456,7 @@ pub fn build_nat_prelude(kernel: &mut Kernel) -> Result<NatPrelude, KernelError>
             mod_eq_refl: kernel.name_str(nat, "mod_eq_refl"),
             mod_eq_symm: kernel.name_str(nat, "mod_eq_symm"),
             mod_eq_trans: kernel.name_str(nat, "mod_eq_trans"),
+            mod_eq_add_left: kernel.name_str(nat, "mod_eq_add_left"),
             valuation_at: kernel.name_str(nat, "valuationAt"),
             dvd_mul: kernel.name_str(nat, "dvd_mul"),
             dvd_add: kernel.name_str(nat, "dvd_add"),
@@ -702,6 +705,7 @@ fn declare_modular_congruence(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), 
     })?;
 
     declare_mod_eq_trans(d, &p, nat, anon, one)?;
+    declare_mod_eq_add_left(d, &p, nat, anon, one)?;
     Ok(())
 }
 
@@ -775,6 +779,102 @@ fn declare_mod_eq_trans(
         let stmt = d.arrow(first_ty, second_to_target);
         let with_second = d.lam_fv(second_fv, second_ty, body);
         let proof = d.lam_fv(first_fv, first_ty, with_second);
+        (stmt, proof)
+    })?;
+    Ok(())
+}
+
+fn declare_mod_eq_add_left(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+    nat: ExprId,
+    anon: NameId,
+    one: LevelId,
+) -> Result<(), KernelError> {
+    let p = *p;
+    d.theorem(p.mod_eq_add_left, 4, &|d, values| {
+        let (modulus, left, right, shift) = (values[0], values[1], values[2], values[3]);
+        let source = d.mod_eq(modulus, left, right);
+        let shifted_left = d.add(shift, left);
+        let shifted_right = d.add(shift, right);
+        let target = d.mod_eq(modulus, shifted_left, shifted_right);
+        let source_fv = d.fresh_fvar();
+        let source_proof = d.kernel().fvar(source_fv);
+        let outer_predicate = d.mod_eq_outer_predicate(modulus, left, right);
+        let outer_motive = d.kernel().lam(anon, source, target, BinderInfo::Default);
+        let outer_minor = {
+            let u_fv = d.fresh_fvar();
+            let u = d.kernel().fvar(u_fv);
+            let inner_source = d.mod_eq_inner_exists(modulus, left, right, u);
+            let inner_source_fv = d.fresh_fvar();
+            let inner_source_proof = d.kernel().fvar(inner_source_fv);
+            let inner_predicate = d.mod_eq_inner_predicate(modulus, left, right, u);
+            let inner_motive = d
+                .kernel()
+                .lam(anon, inner_source, target, BinderInfo::Default);
+            let inner_minor = {
+                let v_fv = d.fresh_fvar();
+                let v = d.kernel().fvar(v_fv);
+                let du = d.mul(modulus, u);
+                let dv = d.mul(modulus, v);
+                let left_sum = d.add(left, du);
+                let right_sum = d.add(right, dv);
+                let equation_ty = d.eq(left_sum, right_sum);
+                let equation_fv = d.fresh_fvar();
+                let equation = d.kernel().fvar(equation_fv);
+                let target_left = d.mod_eq_sum(modulus, shifted_left, u);
+                let target_right = d.mod_eq_sum(modulus, shifted_right, v);
+                let nested_left = d.add(shift, left_sum);
+                let nested_right = d.add(shift, right_sum);
+                let assoc_left = d.lemma(p.add_assoc, &[shift, left, du]);
+                let step1 = assoc_left;
+                let step2 = d.congr(left_sum, right_sum, equation, &|d, z| d.add(shift, z));
+                let assoc_right = d.lemma(p.add_assoc, &[shift, right, dv]);
+                let step3 = d.symm(target_right, nested_right, assoc_right);
+                let (_, shifted_equation) = d.chain(
+                    target_left,
+                    &[
+                        (nested_left, step1),
+                        (nested_right, step2),
+                        (target_right, step3),
+                    ],
+                );
+                let target_outer = d.mod_eq_outer_predicate(modulus, shifted_left, shifted_right);
+                let target_inner =
+                    d.mod_eq_inner_predicate(modulus, shifted_left, shifted_right, u);
+                let intro = d.kernel().const_(p.logic.exists_intro, vec![one]);
+                let inner_proof = d.apply(intro, &[nat, target_inner, v, shifted_equation]);
+                let body = d.apply(intro, &[nat, target_outer, u, inner_proof]);
+                let with_equation = d.lam_fv(equation_fv, equation_ty, body);
+                d.lam_fv(v_fv, nat, with_equation)
+            };
+            let rec = d.kernel().const_(p.logic.exists_rec, vec![one]);
+            let body = d.apply(
+                rec,
+                &[
+                    nat,
+                    inner_predicate,
+                    inner_motive,
+                    inner_minor,
+                    inner_source_proof,
+                ],
+            );
+            let with_inner = d.lam_fv(inner_source_fv, inner_source, body);
+            d.lam_fv(u_fv, nat, with_inner)
+        };
+        let rec = d.kernel().const_(p.logic.exists_rec, vec![one]);
+        let body = d.apply(
+            rec,
+            &[
+                nat,
+                outer_predicate,
+                outer_motive,
+                outer_minor,
+                source_proof,
+            ],
+        );
+        let stmt = d.arrow(source, target);
+        let proof = d.lam_fv(source_fv, source, body);
         (stmt, proof)
     })?;
     Ok(())

@@ -168,6 +168,7 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.mod_eq_refl,
         p.mod_eq_symm,
         p.mod_eq_trans,
+        p.mod_eq_add_left,
         p.dvd_mul,
         p.dvd_add,
         p.dvd_add_right_cancel_of_pos,
@@ -804,6 +805,15 @@ fn modular_congruence_is_a_checked_equivalence_relation() {
     let transitive_name = f.name("two_mod_five_twelve");
     f.declare_theorem(transitive_name, transitive_ty, transitive)
         .unwrap_or_else(|e| panic!("modular transitivity should admit: {}", f.explain(&e)));
+
+    let three = f.num(3);
+    let shifted = f.lemma(p.mod_eq_add_left, &[five, two, seven, three, two_to_seven]);
+    let five_value = f.add(three, two);
+    let ten = f.add(three, seven);
+    let shifted_ty = f.mod_eq(five, five_value, ten);
+    let shifted_name = f.name("five_mod_five_ten");
+    f.declare_theorem(shifted_name, shifted_ty, shifted)
+        .unwrap_or_else(|e| panic!("left-shifted congruence should admit: {}", f.explain(&e)));
 }
 
 #[test]
@@ -2197,7 +2207,33 @@ fn kernel_rejects_broken_proof_terms() {
         rejections += 1;
     }
 
-    assert_eq!(rejections, 48, "every negative control must be rejected");
+    // NC49 — additive congruence retains the common left shift.
+    {
+        let name = f.name("nc49_mod_eq_add_left_wrong_shift");
+        let zero = f.num(0);
+        let one = f.num(1);
+        let two = f.num(2);
+        let three = f.num(3);
+        let four = f.num(4);
+        let five = f.num(5);
+        let seven = f.num(7);
+        let relation = f.concrete_mod_eq(five, two, seven, one, zero);
+        let proof = f.lemma(p.mod_eq_add_left, &[five, two, seven, three, relation]);
+        let wrong_left = f.add(four, two);
+        let shifted_right = f.add(three, seven);
+        let bad = f.mod_eq(five, wrong_left, shifted_right);
+        let err = f
+            .declare_theorem(name, bad, proof)
+            .expect_err("NC49: additive congruence must retain its common shift");
+        println!(
+            "NC49 (wrong modular addition shift) rejected:\n  {}",
+            f.explain(&err)
+        );
+        assert!(!f.k.environment().contains(name));
+        rejections += 1;
+    }
+
+    assert_eq!(rejections, 49, "every negative control must be rejected");
 }
 
 /// The build is deterministic: two independent kernels render every promised
@@ -2220,7 +2256,7 @@ fn the_build_is_deterministic() {
     assert_eq!(first, second, "the prelude build must be deterministic");
     assert_eq!(
         first.len(),
-        12 + 75,
+        12 + 76,
         "every promised definition and theorem must be rendered"
     );
 }
