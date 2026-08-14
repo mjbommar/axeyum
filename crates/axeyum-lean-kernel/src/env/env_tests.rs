@@ -559,3 +559,68 @@ fn determinism_env() {
     }
     assert_eq!(build(), build());
 }
+
+/// The environment revision must be **monotone**, not a size.
+///
+/// A length cannot see an in-place replacement and repeats across a rollback,
+/// so a cache keyed by one can revive a stale entry against a different
+/// environment. This pins the property the `whnf_cache` key depends on: every
+/// mutation moves the counter forward, and a rollback never returns it to a
+/// value a prior environment already used.
+#[test]
+fn env_revision_is_monotone_across_admission_and_rollback() {
+    let mut k = Kernel::new();
+    let start = k.env.revision();
+
+    let checkpoint = k.env.checkpoint();
+    let (_id, _u) = declare_id(&mut k);
+    let after_admit = k.env.revision();
+    assert!(
+        after_admit > start,
+        "admission must advance the revision: {start} -> {after_admit}"
+    );
+
+    let len_before_rollback = k.env.len();
+    k.rollback(checkpoint);
+    let after_rollback = k.env.revision();
+
+    // The environment is back to its original *size* ...
+    assert_eq!(k.env.len(), 0, "rollback restores the declaration count");
+    assert!(len_before_rollback > 0, "the fixture admitted something");
+    // ... but the revision has moved strictly forward, so no cache entry
+    // recorded at `start` can be mistaken for current.
+    assert!(
+        after_rollback > after_admit,
+        "rollback must advance the revision: {after_admit} -> {after_rollback}"
+    );
+}
+
+/// A rolled-back prelude package must be evicted, not left dangling.
+///
+/// `PreludePackage` records an insertion-log *range* rather than cloned
+/// declarations. If a rollback removed the range's declarations without
+/// evicting the package, the retained bounds would index a truncated log.
+#[test]
+fn rollback_evicts_prelude_packages_whose_declarations_it_removes() {
+    let mut k = Kernel::new();
+    let checkpoint = k.env.checkpoint();
+    crate::build_logic_prelude(&mut k).expect("logic prelude builds on a fresh kernel");
+    assert!(
+        k.cached_prelude(crate::PreludeKey::Logic)
+            .expect("a freshly built package validates")
+            .is_some(),
+        "the package is cached after a successful build"
+    );
+
+    k.rollback(checkpoint);
+
+    // Evicted rather than dangling: no panic indexing the truncated log, and
+    // the next build reconstructs instead of handing back stale handles.
+    assert!(
+        k.cached_prelude(crate::PreludeKey::Logic)
+            .expect("an evicted package is absent, not an error")
+            .is_none(),
+        "rollback must evict a package whose declarations it removed"
+    );
+    crate::build_logic_prelude(&mut k).expect("the prelude rebuilds after eviction");
+}

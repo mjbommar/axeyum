@@ -400,6 +400,14 @@ pub struct Environment {
     declars: BTreeMap<NameId, Declaration>,
     insertion_log: Vec<NameId>,
     inductive_groups: BTreeMap<NameId, Vec<NameId>>,
+    /// Monotone mutation counter, bumped by **every** change to `declars`.
+    ///
+    /// Cache keys must use this rather than [`Environment::len`]. A length is a
+    /// *count*: it cannot see an in-place replacement (which leaves the size
+    /// unchanged), and it repeats values across a rollback, so a stale entry
+    /// keyed by a length can be revived by a later environment that happens to
+    /// reach the same size. A monotone counter has neither property.
+    revision: u64,
 }
 
 impl Environment {
@@ -425,6 +433,15 @@ impl Environment {
     #[must_use]
     pub fn len(&self) -> usize {
         self.declars.len()
+    }
+
+    /// The monotone mutation counter (see [`Environment::revision`] field docs).
+    ///
+    /// Every environment-sensitive cache must key on this, never on
+    /// [`Environment::len`].
+    #[must_use]
+    pub(crate) fn revision(&self) -> u64 {
+        self.revision
     }
 
     /// Whether the environment holds no declarations.
@@ -453,8 +470,15 @@ impl Environment {
     /// This is the low-level, untrusted insert; callers must have already
     /// validated the declaration. Use [`super::Kernel::add_declaration`] for
     /// the trusted, type-checked admission path.
+    /// The revision is bumped **unconditionally**, including on the replacement
+    /// path that leaves `declars.len()` unchanged. That path is unreachable
+    /// through the trusted gates, which reject a duplicate name with
+    /// [`KernelError::DeclarationExists`](crate::KernelError::DeclarationExists)
+    /// before reaching here — but a cache must not depend on that argument
+    /// holding for every future caller of an explicitly untrusted insert.
     pub(crate) fn insert_unchecked(&mut self, decl: Declaration) {
         let name = decl.name();
+        self.revision += 1;
         if self.declars.insert(name, decl).is_none() {
             self.insertion_log.push(name);
         }
@@ -484,22 +508,27 @@ impl Environment {
         self.insertion_log.len()
     }
 
-    /// Clone declarations admitted since `checkpoint` in insertion order.
-    pub(crate) fn declarations_since(&self, checkpoint: usize) -> Vec<Declaration> {
-        self.insertion_log[checkpoint..]
-            .iter()
-            .map(|name| {
-                self.declars
-                    .get(name)
-                    .expect("insertion log names are present")
-                    .clone()
-            })
-            .collect()
+    /// Names admitted in `[start, end)` of the insertion log, in insertion order.
+    ///
+    /// Borrowed, not cloned: a prelude package records the *range* it admitted
+    /// and re-reads it, rather than retaining a copy of every [`Declaration`].
+    ///
+    /// # Panics
+    ///
+    /// If the range is not within the current log. Callers hold ranges only for
+    /// packages that [`crate::Kernel::rollback`] has not evicted, and eviction
+    /// removes exactly those whose `end` exceeds the rollback checkpoint, so a
+    /// retained range is always in bounds.
+    pub(crate) fn logged_names(&self, start: usize, end: usize) -> &[NameId] {
+        &self.insertion_log[start..end]
     }
 
     /// Remove every declaration first inserted after `checkpoint`.
     fn rollback_unchecked(&mut self, checkpoint: usize) {
         let inserted: Vec<_> = self.insertion_log.drain(checkpoint..).collect();
+        if !inserted.is_empty() {
+            self.revision += 1;
+        }
         for name in inserted.into_iter().rev() {
             self.inductive_groups.remove(&name);
             self.declars.remove(&name);
@@ -509,10 +538,16 @@ impl Environment {
 
 impl crate::Kernel {
     /// Roll back declarations and invalidate every environment-sensitive cache.
+    ///
+    /// Also evicts prelude packages whose declarations this removes. Their
+    /// recorded log ranges would otherwise dangle, and a package whose
+    /// declarations are gone must not stay cached: the next build has to
+    /// reconstruct it rather than hand back stale handles.
     pub(crate) fn rollback(&mut self, checkpoint: usize) {
         self.env.rollback_unchecked(checkpoint);
+        self.prelude_packages.retain(|_, pkg| pkg.end <= checkpoint);
         self.infer_closed_cache.clear();
-        self.whnf_cache.0 = self.env.len();
+        self.whnf_cache.0 = self.env.revision();
         self.whnf_cache.1.clear();
     }
 }

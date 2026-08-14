@@ -173,7 +173,7 @@ fn whnf_cache_retains_only_the_current_environment_revision() {
     let second_arg = k.fvar(42);
     let second = k.app(second_lam, second_arg);
     assert_eq!(k.whnf(second), second_arg);
-    assert_eq!(k.whnf_cache.0, k.env.len());
+    assert_eq!(k.whnf_cache.0, k.env.revision());
     assert!(k.whnf_cache.1.contains_key(&second));
     assert!(!k.whnf_cache.1.contains_key(&first));
 }
@@ -204,7 +204,7 @@ fn rollback_clears_environment_sensitive_caches() {
     assert!(!k.env.contains(name));
     assert!(k.infer_closed_cache.is_empty());
     assert!(k.whnf_cache.1.is_empty());
-    assert_eq!(k.whnf_cache.0, k.env.len());
+    assert_eq!(k.whnf_cache.0, k.env.revision());
 }
 
 /// A `Let` whnfs to its instantiated body (zeta).

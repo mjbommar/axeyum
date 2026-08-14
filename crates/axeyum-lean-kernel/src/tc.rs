@@ -614,7 +614,7 @@ impl Kernel {
     /// `whnf_no_unfolding`. A head `Const`/`FVar`/`Sort`/`Pi` or `Lam` with no
     /// further arguments is already weak-head-normal here.
     fn whnf_no_unfolding(&mut self, e: ExprId) -> ExprId {
-        let revision = self.env.len();
+        let revision = self.env.revision();
         if self.whnf_cache.0 != revision {
             self.whnf_cache.0 = revision;
             self.whnf_cache.1.clear();

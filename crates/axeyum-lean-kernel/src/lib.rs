@@ -113,7 +113,16 @@ pub(crate) enum PreludeValue {
 #[derive(Debug, Clone)]
 struct PreludePackage {
     value: PreludeValue,
-    declarations: Vec<Declaration>,
+    /// Half-open insertion-log range this package admitted.
+    ///
+    /// A range, not a `Vec<Declaration>`: retaining full clones cost memory
+    /// proportional to the package on every build, and every reconstruction
+    /// route builds a fresh [`Kernel`] per query, so the copy was never read.
+    /// Declarations are immutable once admitted — the trusted gates reject a
+    /// duplicate name outright — so the only way a package can stop being valid
+    /// is [`Kernel::rollback`] removing it, and that evicts the package.
+    start: usize,
+    end: usize,
 }
 
 /// Dense, index-addressable storage that grows without relocating old entries.
@@ -261,7 +270,7 @@ pub struct Kernel {
     infer_closed_cache: HashMap<ExprId, ExprId>,
     /// Weak-head normal forms for exactly one declaration-environment revision.
     /// A revision change clears unreachable prior entries before lookup.
-    whnf_cache: (usize, HashMap<ExprId, ExprId>),
+    whnf_cache: (u64, HashMap<ExprId, ExprId>),
     /// One-way guard set after transient tables are released for serialization.
     export_only: bool,
 
@@ -292,11 +301,9 @@ impl Kernel {
         let Some(package) = self.prelude_packages.get(&key) else {
             return Ok(None);
         };
-        for expected in &package.declarations {
-            if self.env.get(expected.name()) != Some(expected) {
-                return Err(KernelError::PreludePackageConflict {
-                    name: expected.name(),
-                });
+        for &name in self.env.logged_names(package.start, package.end) {
+            if !self.env.contains(name) {
+                return Err(KernelError::PreludePackageConflict { name });
             }
         }
         Ok(Some(package.value.clone()))
@@ -316,12 +323,13 @@ impl Kernel {
             !self.prelude_packages.contains_key(&key),
             "prelude package registered twice for one key"
         );
-        let declarations = self.env.declarations_since(checkpoint);
+        let end = self.env.checkpoint();
         self.prelude_packages.insert(
             key,
             PreludePackage {
                 value,
-                declarations,
+                start: checkpoint,
+                end,
             },
         );
     }
@@ -347,7 +355,7 @@ impl Kernel {
         self.level_intern = HashMap::new();
         self.expr_intern = ExprInterner::default();
         self.infer_closed_cache = HashMap::new();
-        self.whnf_cache = (self.env.len(), HashMap::new());
+        self.whnf_cache = (self.env.revision(), HashMap::new());
         self.export_only = true;
     }
 
