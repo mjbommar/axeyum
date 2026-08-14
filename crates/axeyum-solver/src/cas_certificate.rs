@@ -493,7 +493,7 @@ pub fn check_cas_int_units_certificate(
 /// makes this a Nullstellensatz certificate rather than a Farkas one.
 ///
 /// The checker then re-expands `S := Σ multiplierᵢ · pᵢ` with its own
-/// [`expand`], [`multiply`] and [`add`], and requires `S` to be a **constant**
+/// [`expand`], `multiply` and `add`, and requires `S` to be a **constant**
 /// `k`. In every model `S ≥ lower`, where `lower` sums the multipliers of the
 /// integer-strict entries (each contributing at least `μ·1`) and every other
 /// inequality entry contributes at least `0`; the inequality is *strict* if any

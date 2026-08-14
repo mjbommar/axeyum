@@ -514,7 +514,7 @@ pub fn reconstruct_resolution_proof(
 /// proof per pivot of every RUP chain, and re-`infer`s the growing term at every
 /// step. On a real SAT refutation that is the binding constraint long before
 /// `DP_POOL_BUDGET` is reached (the Davis–Putnam fallback is not even on this
-/// route: LRAT hint chains take [`reconstruct_ordered_rup_step`]).
+/// route: LRAT hint chains take `reconstruct_ordered_rup_step`).
 ///
 /// This route changes three things and nothing else:
 ///
@@ -523,7 +523,7 @@ pub fn reconstruct_resolution_proof(
 ///    nothing to the `False` term, so dropping it cannot weaken the theorem — and
 ///    it removes the assumption axioms of unused input clauses from the footprint,
 ///    which makes it *stronger*. Same slicing rule as
-///    [`super::bitblast::reconstruct_bitwise_cps_tail`].
+///    `super::bitblast::reconstruct_bitwise_cps_tail`.
 /// 2. **CPS clause encoding.** Learned clauses are kept as
 ///    `forall (P : Prop), (l₁ → P) → … → (lₙ → P) → P` and a RUP chain is built
 ///    once, directly from its validated unit-propagation trace
