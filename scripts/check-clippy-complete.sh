@@ -20,9 +20,11 @@
 #     touch -d '2020-01-01' examples/warny.rs   # file carries `needless_return`
 #     cargo clippy --all-targets -- -D warnings -> exit 0, "Finished in 0.00s"
 #
-# and `git archive HEAD | tar -x` — the snapshot build every lane is told to use
-# — stamps every file with the COMMIT time, which is exactly how a source file
-# ends up older than the artifact built from its predecessor.
+# `git archive HEAD | tar -x` — the snapshot build every lane is told to use —
+# stamps every file with the COMMIT time, so any re-extraction of an EARLIER
+# commit into a warm target dir (an A/B, a bisect) puts the content's clock
+# behind the cache. See `check-source-freshness.sh` for when that bites and when
+# it does not.
 #
 # WHAT THIS SCRIPT ADDS over the bare cargo invocation:
 #

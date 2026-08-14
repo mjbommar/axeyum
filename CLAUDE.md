@@ -107,7 +107,9 @@ cargo fmt --all --check
 # BOTH LINES BELOW CAN PASS OVER CODE THEY NEVER COMPILED. Cargo decides
 # freshness by MTIME, so a source file OLDER than the cached artifact is
 # invisible -- and `git archive HEAD | tar -x` (the snapshot build every lane is
-# told to use) stamps every file with the COMMIT time. Measured 2026-08-14:
+# told to use) stamps every file with the COMMIT time, so re-extracting an
+# EARLIER commit into a warm target dir (an A/B, a bisect) puts the content's
+# clock behind the cache. Measured 2026-08-14:
 #   touch -d 2020-01-01 examples/warny.rs  -> clippy -D warnings exits 0
 #   touch -d 2020-01-01 src/lib.rs         -> `cargo test` prints "1 passed" for
 #                                             a test that MUST fail

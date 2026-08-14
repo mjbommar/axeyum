@@ -20,10 +20,15 @@
 #
 # This is not a hypothetical mtime. `git archive HEAD | tar -x` stamps EVERY
 # extracted file with the COMMIT timestamp (verified: a snapshot taken at 10:26
-# had every file stamped 10:23:41, the commit time), and building from such a
-# snapshot in a reused target directory is the workflow every lane in this
-# campaign is told to use. Bisecting, `git checkout` of an older commit, restored
-# backups, and rsync without `--times` land in the same place.
+# had every file stamped 10:23:41, the commit time), and the campaign tells every
+# lane to build from such a snapshot in a reused target directory.
+#
+# Be precise about when that bites, because the common case is safe: extracting a
+# NEWER commit gives mtimes newer than the cached artifacts, so cargo rebuilds.
+# The hole opens whenever the content's stamp goes BACKWARDS relative to the
+# cache — re-extracting an EARLIER commit for an A/B or a bisect, restoring a
+# backup, `rsync` without `--times`, or any tool that preserves timestamps. The
+# manifest below does not care which of those it is: it compares CONTENT.
 #
 # THE FIX. Keep a manifest of the content hash of every build input that the
 # named gate last examined. On the next run, `touch` exactly the files whose
