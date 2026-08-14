@@ -51,7 +51,13 @@ cargo run --release -p axeyum-bench --example scenario_scaling
 | Example | Invocation after `--example <name> --` | Output and boundary |
 |---|---|---|
 | [`lean4export_import`](../../crates/axeyum-lean-import/examples/lean4export_import.rs) | `<export.ndjson\|->` | Imports one format-3.1 stream and prints an assurance-separated inventory. Admission does not authenticate the producer or imply complete Lean compatibility. |
-| [`prelude_axiom_inventory`](../../crates/axeyum-lean-kernel/examples/prelude_axiom_inventory.rs) | no arguments | Prints the deterministic reconstruction-prelude axiom inventory as tab-separated, hex-delimited data. |
+| [`prelude_axiom_inventory`](../../crates/axeyum-lean-kernel/examples/prelude_axiom_inventory.rs) | no arguments | Prints the deterministic reconstruction-prelude axiom inventory as tab-separated, hex-delimited data. Covers the `real`, `integer` and `string` preludes **only** — it never builds `nat` or `logic`, so zero rows for those means "not enumerated", not "axiom-free". |
+| [`nat_axiom_inventory`](../../crates/axeyum-lean-kernel/examples/nat_axiom_inventory.rs) | no arguments | The same inventory for `nat` and `logic`, and over the FULL trusted surface (`Axiom`, `Opaque`, `Quotient`) rather than `Axiom` alone. Per-prelude counts go to stderr because an empty stdout is the expected result for an axiom-free prelude. |
+| [`nat_theorem_inventory`](../../crates/axeyum-lean-kernel/examples/nat_theorem_inventory.rs) | `[name-substring]` | Every theorem the Nat prelude admits, with its canonical `render_lean` type — the paste-into-a-fact form. Declarations go through a helper taking an interned `NameId`, so this is the only way to read the inventory without building the environment. |
+| [`theorem_axiom_footprint`](../../crates/axeyum-lean-kernel/examples/theorem_axiom_footprint.rs) | `[name-substring]` | Per-declaration axiom footprints (`Kernel::axiom_footprint`) for the `nat`, `integer` and `real` preludes — this kernel's `#print axioms`. Reports axioms alongside theorems, because `integer` and `real` declare no substantive theorems. |
+| [`reconstruct_lean_certificate`](../../crates/axeyum-solver/examples/reconstruct_lean_certificate.rs) | `<file.cnf>` | DIMACS → DRAT → LRAT → Alethe → compact resolution reconstruction, emitting an externally checkable Lean certificate of a refutation. |
+| [`reconstruct_ceiling_probe`](../../crates/axeyum-solver/examples/reconstruct_ceiling_probe.rs) | `<file.cnf>` | Characterises the ceiling of inlined resolution reconstruction on one instance. A measurement of where the route stops, not a verdict. |
+| [`reconstruct_differential_probe`](../../crates/axeyum-solver/examples/reconstruct_differential_probe.rs) | `<file.cnf>` | Runs one instance through both inlined and compact clausal reconstruction and reports the difference. |
 | [`proof_gap_shape_census`](../../crates/axeyum-smtlib/examples/proof_gap_shape_census.rs) | `<file.smt2>...` | Emits source-syntax and reachable parsed-IR censuses. This is diagnostic data, not a solver verdict. |
 | [`probe_selected_evidence_lean`](../../crates/axeyum-bench/examples/probe_selected_evidence_lean.rs) | `<file.smt2>...` | Tests whether already-selected evidence reconstructs through an existing Lean route, avoiding query-only proof re-derivation. |
 
@@ -115,6 +121,24 @@ be presented as general solver CLIs.
 | [`uf_unknown_probe`](../../crates/axeyum-bench/examples/uf_unknown_probe.rs) | `<file.smt2> [timeout_ms]` | What full typed `UnknownReason` is hidden by the competition wrapper's one-word output? |
 | [`uflia_online_probe`](../../crates/axeyum-bench/examples/uflia_online_probe.rs) | `<file.smt2> [timeout_ms]` | How does the online EUF+LIA combination route classify one query? |
 | [`xor_cdcl_probe`](../../crates/axeyum-bench/examples/xor_cdcl_probe.rs) | `<file.cnf>` | Does the in-tree CDCL(XOR) core move a small-CNF SAT-search case? |
+| [`drat_memory_probe`](../../crates/axeyum-cnf/examples/drat_memory_probe.rs) | `<cnf> <proof>` | What is the peak resident size of each DRAT checking route on a real certificate (ADR-0426)? |
+
+### Rado-family campaign drivers
+
+These seven encode a specific research campaign — `R_k(a(x-y) = bz)` — and carry
+frozen instance parameters, output paths, and budget assumptions from it. They
+are the most experiment-specific examples in the tree; read the file's own header
+before running one, and do not treat any of them as a general search CLI.
+
+| Example | Arguments | Question answered |
+|---|---|---|
+| [`akb2_frontier`](../../crates/axeyum-search/examples/akb2_frontier.rs) | see file header | Frontier driver for `R_k(a(x-y) = bz)` at `k >= 4` — the `a^k` line of Chang, De Loera and Wesley (ISSAC 2022, arXiv:2210.03262). |
+| [`rado_adaptive_cover`](../../crates/axeyum-search/examples/rado_adaptive_cover.rs) | see file header | Adaptive cube-cover driver, built for `F_741`, for instances where a flat cover stops paying. |
+| [`rado_certify_tree_cover`](../../crates/axeyum-search/examples/rado_certify_tree_cover.rs) | see file header | Offline certification of a dumped tree cover: reads every proof the search run deferred. |
+| [`rado_cover_gaps`](../../crates/axeyum-search/examples/rado_cover_gaps.rs) | see file header | What a partial tree cover has NOT covered, written as a resumable pending file. |
+| [`rado_dump_cnf`](../../crates/axeyum-search/examples/rado_dump_cnf.rs) | see file header | Writes the deciding CNF from the encoder the cover actually used, so a ledger's `unsat` can be re-derived rather than believed. |
+| [`rado_replay_tree_cover`](../../crates/axeyum-search/examples/rado_replay_tree_cover.rs) | see file header | Independent re-validation of a tree cover from its ledger alone, for runs that checked inline and kept no DRAT bytes. |
+| [`rado_sat_probe`](../../crates/axeyum-search/examples/rado_sat_probe.rs) | see file header | Bounded satisfiable-side probe. At `n = 741, k = 4` the expected outcome is that nothing is found. |
 
 ## Inventory and validation
 
