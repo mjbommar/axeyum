@@ -57,6 +57,12 @@ fn vm_rss() -> u64 {
     0
 }
 
+// One `main` with one arm per mode reads better here than five near-identical
+// functions; the modes share the formula, the byte count and the timing.
+#[allow(
+    clippy::too_many_lines,
+    reason = "a flat dispatch over the measurement modes is the clearer shape"
+)]
 fn main() {
     let args: Vec<String> = std::env::args().collect();
     let cnf_path = &args[1];
