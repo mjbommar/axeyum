@@ -267,8 +267,7 @@ fn symbolic_identity_holds(certificate: &TelescopingCertificate) -> Result<bool,
 
 /// `(p/q) + (r/s)`, reduced.
 fn add_fractions(left: &(MvPoly, MvPoly), right: &(MvPoly, MvPoly)) -> Option<(MvPoly, MvPoly)> {
-    let numerator = left.0.mul(&right.1)?.add(&right.0.mul(&left.1)?)?;
-    reduce(numerator, left.1.mul(&right.1)?)
+    combine(left, right, false)
 }
 
 /// `(p/q) − (r/s)`, reduced.
@@ -276,8 +275,47 @@ fn subtract_fractions(
     left: &(MvPoly, MvPoly),
     right: &(MvPoly, MvPoly),
 ) -> Option<(MvPoly, MvPoly)> {
-    let numerator = left.0.mul(&right.1)?.sub(&right.0.mul(&left.1)?)?;
-    reduce(numerator, left.1.mul(&right.1)?)
+    combine(left, right, true)
+}
+
+/// `(p/q) ± (r/s)`, reduced.
+///
+/// The cross-multiplied form `(ps ± rq)/(qs)` is correct but squares the
+/// denominator's size at every step, and a `Σ_j` over a third-order recurrence
+/// reaches the point where the reducing GCD overflows `i128`. So when one
+/// denominator already divides the other — which is exactly what happens for the
+/// shift ratios of a hypergeometric term, whose denominators form a chain — the
+/// smaller side is scaled up instead. Same value, same route, no lcm machinery:
+/// only the sizes change.
+fn combine(
+    left: &(MvPoly, MvPoly),
+    right: &(MvPoly, MvPoly),
+    subtract: bool,
+) -> Option<(MvPoly, MvPoly)> {
+    let signed = |first: &MvPoly, second: &MvPoly| -> Option<MvPoly> {
+        if subtract {
+            first.sub(second)
+        } else {
+            first.add(second)
+        }
+    };
+    if left.1 == right.1 {
+        return Some(reduce(signed(&left.0, &right.0)?, left.1.clone()));
+    }
+    if let Some(quotient) = right.1.exact_div(&left.1) {
+        return Some(reduce(
+            signed(&left.0.mul(&quotient)?, &right.0)?,
+            right.1.clone(),
+        ));
+    }
+    if let Some(quotient) = left.1.exact_div(&right.1) {
+        return Some(reduce(
+            signed(&left.0, &right.0.mul(&quotient)?)?,
+            left.1.clone(),
+        ));
+    }
+    let numerator = signed(&left.0.mul(&right.1)?, &right.0.mul(&left.1)?)?;
+    Some(reduce(numerator, left.1.mul(&right.1)?))
 }
 
 /// `(p/q)·(r/s)`, reduced.
@@ -285,22 +323,29 @@ fn multiply_fractions(
     left: &(MvPoly, MvPoly),
     right: &(MvPoly, MvPoly),
 ) -> Option<(MvPoly, MvPoly)> {
-    reduce(left.0.mul(&right.0)?, left.1.mul(&right.1)?)
+    Some(reduce(left.0.mul(&right.0)?, left.1.mul(&right.1)?))
 }
 
 /// Divide out a common polynomial factor; value-preserving.
-fn reduce(numerator: MvPoly, denominator: MvPoly) -> Option<(MvPoly, MvPoly)> {
+///
+/// Reduction is an optimization, not a check: an overflowing GCD leaves the pair
+/// unreduced rather than failing, because the verdict is decided by an exact
+/// cross-multiplication either way. A larger unreduced pair can still overflow
+/// *that*, which rejects — it never accepts.
+fn reduce(numerator: MvPoly, denominator: MvPoly) -> (MvPoly, MvPoly) {
     if numerator.is_zero() {
-        return Some((MvPoly::zero(), MvPoly::constant(Rational::integer(1))));
+        return (MvPoly::zero(), MvPoly::constant(Rational::integer(1)));
     }
-    let common = numerator.gcd(&denominator)?;
+    let Some(common) = numerator.gcd(&denominator) else {
+        return (numerator, denominator);
+    };
     if common.total_degree() == 0 {
-        return Some((numerator, denominator));
+        return (numerator, denominator);
     }
-    Some((
-        numerator.exact_div(&common)?,
-        denominator.exact_div(&common)?,
-    ))
+    match (numerator.exact_div(&common), denominator.exact_div(&common)) {
+        (Some(top), Some(bottom)) => (top, bottom),
+        _ => (numerator, denominator),
+    }
 }
 
 /// This module's own derivation of `term(var → var + delta) / term`, as
@@ -364,7 +409,7 @@ fn ratio_of(term: &HyperTerm, var: &str, delta: i64) -> Option<(MvPoly, MvPoly)>
                 acc.mul(&part)
             })
     };
-    reduce(fold(up)?, fold(down)?)
+    Some(reduce(fold(up)?, fold(down)?))
 }
 
 /// `poly(var → var + delta)`, by expanding each monomial's `var` power.
@@ -802,6 +847,326 @@ fn factorial_big(n: i64) -> BigInt {
 }
 
 // ---------------------------------------------------------------------------
+// Symbolic evaluation: integers for some variables, symbols for the rest.
+// ---------------------------------------------------------------------------
+
+/// The exact value of a hypergeometric term at a point where only *some*
+/// variables are integers.
+///
+/// It is a rational coefficient times a product of `Γ` powers whose arguments
+/// still mention symbolic parameters. The interesting case is the one where
+/// `gammas` is **empty**: every symbolic `Γ` has cancelled and the value is an
+/// honest rational, valid for every value of the parameters. That is what makes
+/// a base case at symbolic `m` and `n` decidable rather than sampled.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SymbolicValue {
+    coefficient: BigRational,
+    gammas: BTreeMap<LinearForm, i32>,
+}
+
+impl SymbolicValue {
+    /// The zero value.
+    #[must_use]
+    pub fn zero() -> SymbolicValue {
+        SymbolicValue {
+            coefficient: BigRational::zero(),
+            gammas: BTreeMap::new(),
+        }
+    }
+
+    /// Whether this value is exactly zero.
+    #[must_use]
+    pub fn is_zero(&self) -> bool {
+        self.coefficient.is_zero()
+    }
+
+    /// The rational coefficient, meaningful on its own only when
+    /// [`SymbolicValue::is_rational`] holds.
+    #[must_use]
+    pub fn coefficient(&self) -> &BigRational {
+        &self.coefficient
+    }
+
+    /// Whether every symbolic `Γ` power cancelled, so this value is a plain
+    /// rational number for **all** values of the remaining parameters.
+    #[must_use]
+    pub fn is_rational(&self) -> bool {
+        self.gammas.is_empty()
+    }
+
+    /// The number of uncancelled symbolic `Γ` powers.
+    #[must_use]
+    pub fn gamma_count(&self) -> usize {
+        self.gammas.len()
+    }
+
+    /// `self + other`, when the two share the same uncancelled `Γ` part (a zero
+    /// value shares every part). `None` otherwise: two different `Γ` monomials
+    /// have no common rational form here.
+    #[must_use]
+    pub fn checked_add(&self, other: &SymbolicValue) -> Option<SymbolicValue> {
+        if self.is_zero() {
+            return Some(other.clone());
+        }
+        if other.is_zero() {
+            return Some(self.clone());
+        }
+        if self.gammas != other.gammas {
+            return None;
+        }
+        Some(SymbolicValue {
+            coefficient: self.coefficient.clone() + other.coefficient.clone(),
+            gammas: self.gammas.clone(),
+        })
+    }
+}
+
+/// The exact value of `term` at a point assigning integers to *some* variables.
+///
+/// Every `Γ` whose argument becomes a concrete integer is expanded to a real
+/// factorial (or recognised as a zero/pole exactly as
+/// [`evaluate_term`] does); every `Γ` whose argument still mentions a parameter
+/// is accumulated by argument, so that `Γ(m+1)·Γ(m+1)⁻¹` cancels *symbolically*.
+///
+/// Returns `None` when the value cannot be decided: a `Γ` at a numerator pole, a
+/// symbolic exponent on a `Power` factor, or a `Poly` factor that is still
+/// symbolic.
+///
+/// # The assumption this makes, named
+///
+/// An uncancelled symbolic `Γ` power (see [`SymbolicValue::gamma_count`]) is
+/// treated as a nonzero finite value. For a parameter ranging over the integers
+/// that is only true away from the poles, so a nonzero count carries the standing
+/// side condition that the symbolic arguments avoid the non-positive integers.
+/// When the count is zero —
+/// the only case the closed-form check accepts — the powers have cancelled
+/// pairwise and the value is unconditional except for that same non-pole
+/// proviso, which is exactly the axiom
+/// `cas.symbolic-gamma-arguments-avoid-poles`.
+#[must_use]
+pub fn evaluate_term_symbolic(
+    term: &HyperTerm,
+    point: &BTreeMap<String, i64>,
+) -> Option<SymbolicValue> {
+    let mut coefficient = BigRational::one();
+    let mut gammas: BTreeMap<LinearForm, i32> = BTreeMap::new();
+    let mut zeros = 0u32;
+    let mut poles = 0u32;
+    for factor in term.factors() {
+        match factor {
+            Factor::Gamma { form, exponent } => {
+                if *exponent == 0 {
+                    continue;
+                }
+                let reduced = form.substitute(point)?;
+                if !reduced.is_constant() {
+                    let slot = gammas.entry(reduced).or_insert(0);
+                    *slot = slot.checked_add(*exponent)?;
+                    continue;
+                }
+                let argument = reduced.constant();
+                if argument <= 0 {
+                    if *exponent < 0 {
+                        zeros += 1;
+                    } else {
+                        poles += 1;
+                    }
+                    continue;
+                }
+                if argument > MAX_CONCRETE_GAMMA {
+                    return None;
+                }
+                let factorial = factorial_big(argument - 1);
+                coefficient *= integer_power(&BigRational::from_integer(factorial), *exponent)?;
+            }
+            Factor::Power { base, form } => {
+                let reduced = form.substitute(point)?;
+                if !reduced.is_constant() {
+                    return None;
+                }
+                let exponent = reduced.constant();
+                if exponent.abs() > MAX_CONCRETE_POWER {
+                    return None;
+                }
+                let base = BigRational::new(
+                    BigInt::from(base.numerator()),
+                    BigInt::from(base.denominator()),
+                );
+                if base.is_zero() {
+                    if exponent > 0 {
+                        zeros += 1;
+                    } else if exponent < 0 {
+                        poles += 1;
+                    }
+                    continue;
+                }
+                coefficient *= big_power(&base, exponent)?;
+            }
+            Factor::Poly { poly, exponent } => {
+                if *exponent == 0 {
+                    continue;
+                }
+                let reduced = substitute_integers(poly, point)?;
+                if !reduced.variables().is_empty() {
+                    return None;
+                }
+                let value = evaluate_poly(&reduced, &BTreeMap::new())?;
+                if value.is_zero() {
+                    if *exponent > 0 {
+                        zeros += 1;
+                    } else {
+                        poles += 1;
+                    }
+                    continue;
+                }
+                coefficient *= integer_power(&value, *exponent)?;
+            }
+        }
+    }
+    gammas.retain(|_, exponent| *exponent != 0);
+    if poles > 0 {
+        return None;
+    }
+    if zeros > 0 {
+        return Some(SymbolicValue::zero());
+    }
+    Some(SymbolicValue {
+        coefficient,
+        gammas,
+    })
+}
+
+/// `poly` with the assigned variables replaced by their integer values, leaving
+/// the rest symbolic.
+fn substitute_integers(poly: &MvPoly, point: &BTreeMap<String, i64>) -> Option<MvPoly> {
+    let mut total = MvPoly::zero();
+    for (mono, coefficient) in poly.terms() {
+        let mut product = MvPoly::constant(*coefficient);
+        for (name, power) in mono.powers() {
+            let piece = match point.get(name) {
+                Some(value) => {
+                    MvPoly::constant(Rational::integer(i128::from(*value))).pow(power)?
+                }
+                None => MvPoly::var(name).pow(power)?,
+            };
+            product = product.mul(&piece)?;
+        }
+        total = total.add(&product)?;
+    }
+    Some(total)
+}
+
+/// The `k` interval outside which `term` is **forced** to vanish at `point`, read
+/// off the `Γ` factors whose argument became parameter-free.
+///
+/// A `Γ` in the denominator at a non-positive integer makes the term zero, so
+/// each such factor `c·k + d` contributes the constraint `c·k + d ≥ 1`. When the
+/// constraints bound `k` from both sides the support is a finite explicit set and
+/// the sum over all integers is a finite sum — which is exactly the situation a
+/// base case needs.
+fn forced_support(
+    term: &HyperTerm,
+    point: &BTreeMap<String, i64>,
+    sum_var: &str,
+) -> Option<(i64, i64)> {
+    let mut low: Option<i64> = None;
+    let mut high: Option<i64> = None;
+    for factor in term.factors() {
+        let Factor::Gamma { form, exponent } = factor else {
+            continue;
+        };
+        if *exponent >= 0 {
+            continue;
+        }
+        let reduced = form.substitute(point)?;
+        let slope = reduced.coefficient(sum_var);
+        if slope == 0 || reduced.variables().len() != 1 {
+            continue;
+        }
+        // c·k + d ≥ 1.
+        let offset = reduced.constant();
+        if slope > 0 {
+            let bound =
+                (1 - offset).div_euclid(slope) + i64::from((1 - offset).rem_euclid(slope) != 0);
+            low = Some(low.map_or(bound, |current: i64| current.max(bound)));
+        } else {
+            let bound = (offset - 1).div_euclid(-slope);
+            high = Some(high.map_or(bound, |current: i64| current.min(bound)));
+        }
+    }
+    match (low, high) {
+        (Some(low), Some(high)) if low <= high => Some((low, high)),
+        _ => None,
+    }
+}
+
+/// The exact symbolic value of `∑_k term(point, k)`, over a window that must
+/// strictly contain the forced support.
+///
+/// Every window point outside the forced support is *checked* to be zero rather
+/// than assumed, which is the symbolic counterpart of the concrete checker's
+/// boundary layer. Returns the value together with the number of points
+/// confirmed zero.
+///
+/// # Errors
+///
+/// When the support is not forced finite, when the window does not strictly
+/// contain it, when a summand is not symbolically evaluable, when a point outside
+/// the support fails to vanish, or when two summands carry different uncancelled
+/// `Γ` parts and therefore cannot be added.
+pub fn symbolic_window_sum(
+    term: &HyperTerm,
+    point: &BTreeMap<String, i64>,
+    sum_var: &str,
+    window: (i64, i64),
+) -> Result<(SymbolicValue, usize), String> {
+    let (low, high) = window;
+    if low >= high {
+        return Err("the summation window is empty".to_owned());
+    }
+    let Some((support_low, support_high)) = forced_support(term, point, sum_var) else {
+        return Err(format!(
+            "the summand's support at {} is not forced finite by parameter-free Γ factors",
+            render_point(point)
+        ));
+    };
+    if support_low <= low || support_high >= high {
+        return Err(format!(
+            "the window [{low}, {high}] does not strictly contain the forced support [{support_low}, {support_high}]"
+        ));
+    }
+    let mut total = SymbolicValue::zero();
+    let mut confirmed_zero = 0usize;
+    for index in low..=high {
+        let mut here = point.clone();
+        here.insert(sum_var.to_owned(), index);
+        let Some(value) = evaluate_term_symbolic(term, &here) else {
+            return Err(format!(
+                "the summand is not symbolically evaluable at {}",
+                render_point(&here)
+            ));
+        };
+        if index < support_low || index > support_high {
+            if !value.is_zero() {
+                return Err(format!(
+                    "the summand does not vanish outside its forced support at {}",
+                    render_point(&here)
+                ));
+            }
+            confirmed_zero += 1;
+            continue;
+        }
+        total = total.checked_add(&value).ok_or_else(|| {
+            format!(
+                "summands at {} carry different uncancelled Γ parts",
+                render_point(&here)
+            )
+        })?;
+    }
+    Ok((total, confirmed_zero))
+}
+
+// ---------------------------------------------------------------------------
 // Turning a recurrence into a closed form.
 // ---------------------------------------------------------------------------
 
@@ -899,6 +1264,139 @@ pub fn check_closed_form(
         Ok(ClosedFormReport {
             base,
             base_cases,
+            leading_zeros,
+        })
+    } else {
+        Err(reasons)
+    }
+}
+
+/// The evidence that a verified recurrence pins `S(n)` to a claimed closed form
+/// **at symbolic parameters**.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SymbolicClosedFormReport {
+    /// The base index from which the identity is claimed.
+    pub base: i64,
+    /// Base cases established at symbolic parameters by exact finite summation
+    /// over a forced-finite support.
+    pub base_cases: usize,
+    /// The `k` interval outside which the summand at the first base index is
+    /// forced to vanish.
+    pub forced_support: (i64, i64),
+    /// Window points confirmed — not assumed — to vanish outside that support.
+    pub confirmed_zero_points: usize,
+    /// The integers `≥ base` at which the leading recurrence coefficient
+    /// vanishes. A nonempty list breaks the induction and rejects the claim.
+    pub leading_zeros: Vec<i64>,
+}
+
+/// Check a claimed closed form against a verified certificate **without
+/// specializing the remaining parameters**.
+///
+/// [`check_closed_form`] settles the base cases by exact summation at concrete
+/// integers, which is why an identity with a symbolic parameter — Chu–Vandermonde
+/// is the standard example — could only ever be filed as its recurrence. This
+/// closes that gap. The base case is evaluated with only the *shift* variable
+/// bound: the summation collapses to the finitely many `k` where a parameter-free
+/// `Γ` in the denominator has not already forced the summand to zero, and each
+/// surviving term is evaluated by cancelling symbolic `Γ` powers against each
+/// other. Nothing is sampled.
+///
+/// Three things are established, exactly as in the concrete case: the recurrence
+/// annihilates the closed form; the `J` initial values agree; and the leading
+/// coefficient has no integer zero at or above `base`.
+///
+/// # Errors
+///
+/// Returns every reason the claim was not established, including the ones
+/// specific to the symbolic route: a support that is not forced finite, a window
+/// that does not strictly contain it, a summand or closed form that does not
+/// evaluate symbolically, and a base value that is not a plain rational (some
+/// symbolic `Γ` power failed to cancel, so the two sides are not comparable).
+pub fn check_closed_form_symbolic(
+    certificate: &TelescopingCertificate,
+    closed_form: &HyperTerm,
+    base: i64,
+    options: &CheckOptions,
+) -> Result<SymbolicClosedFormReport, Vec<String>> {
+    let mut reasons: Vec<String> = Vec::new();
+    match annihilates(certificate, closed_form) {
+        Ok(true) => {}
+        Ok(false) => {
+            reasons.push("the recurrence does not annihilate the claimed closed form".to_owned());
+        }
+        Err(reason) => reasons.push(reason),
+    }
+
+    let order = certificate.order();
+    let mut base_cases = 0usize;
+    let mut support = (0i64, 0i64);
+    let mut confirmed_zero_points = 0usize;
+    for offset in 0..order.max(1) {
+        let index = base + i64::try_from(offset).unwrap_or(i64::MAX);
+        let mut point: BTreeMap<String, i64> = BTreeMap::new();
+        point.insert(certificate.shift_var.clone(), index);
+        if let Some(found) = forced_support(&certificate.term, &point, &certificate.sum_var)
+            && offset == 0
+        {
+            support = found;
+        }
+        let summed = symbolic_window_sum(
+            &certificate.term,
+            &point,
+            &certificate.sum_var,
+            options.window,
+        );
+        let (total, zeros) = match summed {
+            Ok(value) => value,
+            Err(reason) => {
+                reasons.push(reason);
+                continue;
+            }
+        };
+        confirmed_zero_points += zeros;
+        let Some(claimed) = evaluate_term_symbolic(closed_form, &point) else {
+            reasons.push(format!(
+                "the closed form is not symbolically evaluable at {index}"
+            ));
+            continue;
+        };
+        if !total.is_rational() || !claimed.is_rational() {
+            reasons.push(format!(
+                "base case {index} leaves {} uncancelled Γ power(s) on the sum and {} on the closed form, so the two are not comparable as rationals",
+                total.gamma_count(),
+                claimed.gamma_count()
+            ));
+            continue;
+        }
+        if total != claimed {
+            reasons.push(format!(
+                "base case {index} disagrees with the closed form at symbolic parameters"
+            ));
+            continue;
+        }
+        base_cases += 1;
+    }
+
+    let leading_zeros = match leading_integer_zeros(certificate, base) {
+        Ok(zeros) => zeros,
+        Err(reason) => {
+            reasons.push(reason);
+            Vec::new()
+        }
+    };
+    if !leading_zeros.is_empty() {
+        reasons.push(format!(
+            "the leading recurrence coefficient vanishes at {leading_zeros:?}, so the recurrence does not run forward"
+        ));
+    }
+
+    if reasons.is_empty() {
+        Ok(SymbolicClosedFormReport {
+            base,
+            base_cases,
+            forced_support: support,
+            confirmed_zero_points,
             leading_zeros,
         })
     } else {

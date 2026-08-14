@@ -2,7 +2,7 @@
   "schema_version": 1,
   "id": "F:chu-vandermonde-convolution-recurrence",
   "title": "The Chu-Vandermonde convolution satisfies a first-order recurrence in p",
-  "statement": "For symbolic m and n and every integer p, the convolution S(p) = sum over all integers k of C(m,k)*C(n,p-k) satisfies (p+1)*S(p+1) = (m+n-p)*S(p). This is the recurrence C(m+n,p) also satisfies; together with S(0) = 1 it yields Chu-Vandermonde, sum_k C(m,k)*C(n,p-k) = C(m+n,p). Only the RECURRENCE is established here -- the base case at symbolic m and n is outside what this lane's checker can verify.",
+  "statement": "For symbolic m and n and every integer p, the convolution S(p) = sum over all integers k of C(m,k)*C(n,p-k) satisfies (p+1)*S(p+1) = (m+n-p)*S(p). This is the recurrence C(m+n,p) also satisfies; together with S(0) = 1 it yields Chu-Vandermonde, sum_k C(m,k)*C(n,p-k) = C(m+n,p). Only the RECURRENCE is claimed by this fact; the closed form is F:chu-vandermonde-convolution, which adds the symbolic base case.",
   "formal": {
     "language": "cas-term",
     "statement": "(define-hyperterm F (* (gamma (+ m 1)) (/ 1 (gamma (+ k 1))) (/ 1 (gamma (+ (- m k) 1)))\n                       (gamma (+ n 1)) (/ 1 (gamma (+ (- p k) 1))) (/ 1 (gamma (+ (- n (- p k)) 1)))))\n(define-fn S (lambda (p) (sum ((k Int)) F)))\n(assert (forall ((m Int) (n Int) (p Int)) (= (* (+ p 1) (S (+ p 1))) (* (- (+ m n) p) (S p)))))",
@@ -37,7 +37,21 @@
       ],
       "checker_command": "cargo test -p axeyum-cas --test telescoping_identities",
       "artifact": "crates/axeyum-cas/tests/telescoping_identities.rs",
-      "notes": "Certificate: order 1, recurrence coefficients a_0 = m + n - p, a_1 = -(p + 1), R(p,k) = k*(k + n - p) / (p - k + 1). The certificate identity is symbolic in ALL of m, n, p, k -- four variables -- so the recurrence is established for symbolic m and n, not merely at sample values. What is NOT established here is the closed form: turning the recurrence into C(m+n,p) needs the base case S(0) = 1 at symbolic m and n, and this lane's base-case checker only evaluates at concrete integers. The leading coefficient -(p+1) also mentions only p, but the closed-form route was not run."
+      "notes": "Certificate: order 1, recurrence coefficients a_0 = m + n - p, a_1 = -(p + 1), R(p,k) = k*(k + n - p) / (p - k + 1). The certificate identity is symbolic in ALL of m, n, p, k -- four variables -- so the recurrence is established for symbolic m and n, not merely at sample values. The closed form is not claimed by this fact; turning the recurrence into C(m+n,p) needs the base case S(0) = 1 at symbolic m and n, which lane `telescoping-scale` later established -- see F:chu-vandermonde-convolution."
+    },
+    {
+      "id": "cas-certificate-artifact-chu-vandermonde-convolution",
+      "kind": "witness-replay",
+      "supports": "the serialised certificate itself, re-checked from the committed file with no search run",
+      "check_status": "checked",
+      "checkers": [
+        "telescoping_json::from_json (exact [numerator, denominator] rationals; decimals, a foreign format tag and a truncated file are all refused)",
+        "telescoping_check::check_certificate over the parsed certificate",
+        "telescoping_check::check_closed_form / check_closed_form_symbolic over the parsed closed form, where one is claimed"
+      ],
+      "checker_command": "cargo test -p axeyum-cas --test telescoping_certificate_artifacts",
+      "artifact": "artifacts/cas-certificates/chu-vandermonde-convolution.json",
+      "notes": "This row exists so the fact rests on an ARTIFACT rather than on re-running the producer. The sweep reads every committed certificate, parses it, and hands it to the independent checker; nothing in that path calls the search. Tamper controls in the same file: a certificate numerator edited by one, a recurrence coefficient edited by one, and a certificate re-pointed at a neighbouring file's summand are each rejected, and a truncated / foreign-format / decimal-bearing file is refused by the reader before the checker sees it."
     }
   ],
   "provenance": {

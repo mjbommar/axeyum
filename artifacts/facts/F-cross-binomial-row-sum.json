@@ -1,0 +1,73 @@
+{
+  "schema_version": 1,
+  "id": "F:cross-binomial-row-sum",
+  "title": "The cross binomial row sum equals a central binomial coefficient",
+  "statement": "For symbolic m and every integer n >= 0, sum over all integers k of C(m,k)*C(n,k) = C(m+n,n). This is the Vandermonde form with both binomials sharing the summation index; m stays symbolic throughout, recurrence and base case alike.",
+  "formal": {
+    "language": "cas-term",
+    "statement": "(define-hyperterm F (* (gamma (+ m 1)) (/ 1 (gamma (+ k 1))) (/ 1 (gamma (+ (- m k) 1)))\n                       (gamma (+ n 1)) (/ 1 (gamma (+ k 1))) (/ 1 (gamma (+ (- n k) 1)))))\n(define-hyperterm T (* (gamma (+ (+ m n) 1)) (/ 1 (gamma (+ n 1))) (/ 1 (gamma (+ m 1)))))\n(define-fn S (lambda (n) (sum ((k Int)) F)))\n(assert (forall ((m Int) (n Int)) (=> (>= n 0) (= (S n) T))))",
+    "fragment": "hypergeometric-summation",
+    "free_symbols": [
+      "m",
+      "n",
+      "k"
+    ]
+  },
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "depends_on": [],
+  "proof_route": "cas-certificate",
+  "axiom_footprint": [
+    "cas.exact-rational-polynomial-normal-form",
+    "cas.gamma-functional-equation",
+    "cas.hyperterm-specification-denotes-the-summand",
+    "cas.telescoped-term-natural-boundary",
+    "cas.symbolic-gamma-arguments-avoid-poles"
+  ],
+  "evidence": [
+    {
+      "id": "wz-cross-binomial-row-sum",
+      "kind": "witness-replay",
+      "supports": "the creative-telescoping certificate plus the symbolic base case, both replayed by a checker that shares no code with the search that produced them",
+      "check_status": "checked",
+      "checkers": [
+        "telescoping_check::symbolic_identity_holds (own shift-ratio derivation, polynomial cross-multiplication)",
+        "telescoping_check::confirm_ratios (shift ratios against exact bignum factorials)",
+        "telescoping_check::confirm_telescoping (pointwise identity and summed recurrence, exact bignum)",
+        "telescoping_check::check_closed_form_symbolic (annihilation, forced-support base case at symbolic parameters, rational-root leading-coefficient test)"
+      ],
+      "checker_command": "cargo test -p axeyum-cas --test telescoping_identities cross_binomial_sum_is_a_central_binomial",
+      "artifact": "crates/axeyum-cas/tests/telescoping_identities.rs",
+      "notes": "Order-1 certificate in n with m symbolic. The base case at n = 0 collapses to the single point k = 0 by the parameter-free factors Gamma(k+1)^-2 (k >= 0) and Gamma(n-k+1)^-1 at n = 0 (k <= 0); the remaining Gamma powers cancel to the rational 1, matching C(m+0,0) = 1. Every other window point is checked to vanish."
+    },
+    {
+      "id": "cas-certificate-artifact-cross-binomial-row-sum",
+      "kind": "witness-replay",
+      "supports": "the serialised certificate itself, re-checked from the committed file with no search run",
+      "check_status": "checked",
+      "checkers": [
+        "telescoping_json::from_json (exact [numerator, denominator] rationals; decimals, a foreign format tag and a truncated file are all refused)",
+        "telescoping_check::check_certificate over the parsed certificate",
+        "telescoping_check::check_closed_form / check_closed_form_symbolic over the parsed closed form, where one is claimed"
+      ],
+      "checker_command": "cargo test -p axeyum-cas --test telescoping_certificate_artifacts",
+      "artifact": "artifacts/cas-certificates/cross-binomial-row-sum.json",
+      "notes": "This row exists so the fact rests on an ARTIFACT rather than on re-running the producer. The sweep reads every committed certificate, parses it, and hands it to the independent checker; nothing in that path calls the search. Tamper controls in the same file: a certificate numerator edited by one, a recurrence coefficient edited by one, and a certificate re-pointed at a neighbouring file's summand are each rejected, and a truncated / foreign-format / decimal-bearing file is refused by the reader before the checker sees it."
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-14",
+    "established_by": "lane telescoping-scale: axeyum_cas::telescoping::zeilberger (untrusted Gosper-Petkovsek search) + axeyum_cas::telescoping_check (independent checker)",
+    "source": "classical binomial identity, stated by this lane as a HyperTerm specification",
+    "prior_art": [
+      {
+        "who": "Vandermonde",
+        "what": "the convolution identity in its equal-index form",
+        "year": 1772,
+        "where": "classical; see Graham-Knuth-Patashnik, Concrete Mathematics (1994), sec. 5.1, and Petkovsek-Wilf-Zeilberger, A=B (1996)",
+        "attribution": "standard textbook attribution; this lane did not consult the primary source"
+      }
+    ]
+  },
+  "notes": "Second identity in the Vandermonde family established at symbolic parameters, and the point of stating it alongside F:chu-vandermonde-convolution is that the symbolic base case is a general mechanism, not a special case tuned to one summand."
+}

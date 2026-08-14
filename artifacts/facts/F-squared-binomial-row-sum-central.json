@@ -36,6 +36,20 @@
       "checker_command": "cargo test -p axeyum-cas --test telescoping_identities",
       "artifact": "crates/axeyum-cas/tests/telescoping_identities.rs",
       "notes": "Certificate: order 1, recurrence coefficients a_0 = 4n + 2, a_1 = -(n + 1) (i.e. (n+1)*S(n+1) = (4n+2)*S(n)), R(n,k) = k^2*(3n + 3 - 2k) / (n - k + 1)^2. Closed form C(2n,n) verified to satisfy the same recurrence; base case S(0) = 1 = C(0,0) checked by exact summation; leading coefficient -(n+1) has its only integer zero at n = -1, below the base, so the recurrence runs forward from n = 0."
+    },
+    {
+      "id": "cas-certificate-artifact-squared-binomial-row-sum-central",
+      "kind": "witness-replay",
+      "supports": "the serialised certificate itself, re-checked from the committed file with no search run",
+      "check_status": "checked",
+      "checkers": [
+        "telescoping_json::from_json (exact [numerator, denominator] rationals; decimals, a foreign format tag and a truncated file are all refused)",
+        "telescoping_check::check_certificate over the parsed certificate",
+        "telescoping_check::check_closed_form / check_closed_form_symbolic over the parsed closed form, where one is claimed"
+      ],
+      "checker_command": "cargo test -p axeyum-cas --test telescoping_certificate_artifacts",
+      "artifact": "artifacts/cas-certificates/squared-binomial-row-sum-central.json",
+      "notes": "This row exists so the fact rests on an ARTIFACT rather than on re-running the producer. The sweep reads every committed certificate, parses it, and hands it to the independent checker; nothing in that path calls the search. Tamper controls in the same file: a certificate numerator edited by one, a recurrence coefficient edited by one, and a certificate re-pointed at a neighbouring file's summand are each rejected, and a truncated / foreign-format / decimal-bearing file is refused by the reader before the checker sees it."
     }
   ],
   "provenance": {

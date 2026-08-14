@@ -1,0 +1,70 @@
+{
+  "schema_version": 1,
+  "id": "F:franel-numbers-recurrence",
+  "title": "The Franel numbers satisfy a second-order recurrence",
+  "statement": "For every integer n, the Franel numbers S(n) = sum over all integers k of C(n,k)^3 satisfy (n+2)^2 * S(n+2) = (7n^2 + 21n + 16) * S(n+1) + 8(n+1)^2 * S(n). Only the RECURRENCE is claimed: the Franel numbers have no hypergeometric closed form, so there is nothing further to establish here.",
+  "formal": {
+    "language": "cas-term",
+    "statement": "(define-hyperterm F (* (gamma (+ n 1)) (/ 1 (gamma (+ k 1))) (/ 1 (gamma (+ (- n k) 1)))))\n(define-fn S (lambda (n) (sum ((k Int)) (^ F 3))))\n(assert (forall ((n Int)) (= (* (^ (+ n 2) 2) (S (+ n 2)))\n                             (+ (* (+ (* 7 (^ n 2)) (* 21 n) 16) (S (+ n 1)))\n                                (* 8 (^ (+ n 1) 2) (S n))))))",
+    "fragment": "hypergeometric-summation",
+    "free_symbols": [
+      "n",
+      "k"
+    ]
+  },
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "depends_on": [],
+  "proof_route": "cas-certificate",
+  "axiom_footprint": [
+    "cas.exact-rational-polynomial-normal-form",
+    "cas.gamma-functional-equation",
+    "cas.hyperterm-specification-denotes-the-summand",
+    "cas.telescoped-term-natural-boundary"
+  ],
+  "evidence": [
+    {
+      "id": "wz-franel-order-two",
+      "kind": "witness-replay",
+      "supports": "an order-TWO creative-telescoping certificate, replayed by a checker that shares no code with the search that produced it",
+      "check_status": "checked",
+      "checkers": [
+        "telescoping_check::symbolic_identity_holds (own shift-ratio derivation, polynomial cross-multiplication)",
+        "telescoping_check::confirm_ratios (shift ratios against exact bignum factorials)",
+        "telescoping_check::confirm_telescoping (pointwise identity and summed recurrence, exact bignum)"
+      ],
+      "checker_command": "cargo test -p axeyum-cas --test telescoping_identities franel_numbers_get_an_order_two_recurrence",
+      "artifact": "crates/axeyum-cas/tests/telescoping_identities.rs",
+      "notes": "The first order-2 (J >= 2) certificate on this route. The sweep-based search that established the earlier binomial facts DECLINED on this summand after 9.8 s of release-build search, because the certificate numerator has degree 3 in k with coefficients of degree 5 in n and the old ansatz swept total degree over all variables. Deriving the denominator and the k-degree from the Gosper-Petkovsek normal form reduces the whole search to three linear systems and finds it in 86 ms. The test also replays the recurrence against the Franel numbers 1, 2, 10, 56, 346, 2252, 15184 in i128 arithmetic, which is a separate check from the certificate."
+    },
+    {
+      "id": "cas-certificate-artifact-franel-numbers-recurrence",
+      "kind": "witness-replay",
+      "supports": "the serialised certificate itself, re-checked from the committed file with no search run",
+      "check_status": "checked",
+      "checkers": [
+        "telescoping_json::from_json (exact [numerator, denominator] rationals; decimals, a foreign format tag and a truncated file are all refused)",
+        "telescoping_check::check_certificate over the parsed certificate",
+        "telescoping_check::check_closed_form / check_closed_form_symbolic over the parsed closed form, where one is claimed"
+      ],
+      "checker_command": "cargo test -p axeyum-cas --test telescoping_certificate_artifacts",
+      "artifact": "artifacts/cas-certificates/franel-numbers-recurrence.json",
+      "notes": "This row exists so the fact rests on an ARTIFACT rather than on re-running the producer. The sweep reads every committed certificate, parses it, and hands it to the independent checker; nothing in that path calls the search. Tamper controls in the same file: a certificate numerator edited by one, a recurrence coefficient edited by one, and a certificate re-pointed at a neighbouring file's summand are each rejected, and a truncated / foreign-format / decimal-bearing file is refused by the reader before the checker sees it."
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-14",
+    "established_by": "lane telescoping-scale: axeyum_cas::telescoping::zeilberger (untrusted Gosper-Petkovsek search) + axeyum_cas::telescoping_check (independent checker)",
+    "source": "classical; the summand stated by this lane as a HyperTerm specification",
+    "prior_art": [
+      {
+        "who": "J. Franel",
+        "what": "the recurrence for sum_k C(n,k)^3",
+        "year": 1894,
+        "where": "L'Intermediaire des Mathematiciens 1 (1894), 45-47; see also OEIS A000172 and Petkovsek-Wilf-Zeilberger, A=B (1996)",
+        "attribution": "standard textbook attribution; this lane did not consult the primary source"
+      }
+    ]
+  },
+  "notes": "Established on the `cas-certificate` route. Franel is the standard demonstration that a definite hypergeometric sum can be P-recursive without being hypergeometric: there is a recurrence, there is no closed form, and this fact claims exactly the former. `cas.symbolic-gamma-arguments-avoid-poles` is NOT in the footprint because no symbolic base case is involved -- the recurrence alone is the statement."
+}

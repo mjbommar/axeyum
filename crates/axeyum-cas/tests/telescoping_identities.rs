@@ -22,7 +22,10 @@ use axeyum_cas::telescoping::{
     Factor, HyperTerm, Limits, LinearForm, TelescopingCertificate, TelescopingOutcome,
     binomial_factors, zeilberger,
 };
-use axeyum_cas::telescoping_check::{CheckOptions, check_certificate, check_closed_form};
+use axeyum_cas::telescoping_check::{
+    CheckOptions, check_certificate, check_closed_form, check_closed_form_symbolic,
+    evaluate_term_symbolic, symbolic_window_sum,
+};
 use axeyum_ir::Rational;
 
 fn form(terms: &[(&str, i64)], constant: i64) -> LinearForm {
@@ -228,15 +231,11 @@ fn chu_vandermonde_convolution() {
     let options = CheckOptions::over("p", &[0, 1, 2, 3, 4], (-2, 12))
         .with("m", &[3, 5])
         .with("n", &[4, 6]);
-    // Four variables make the ansatz expensive; the certificate is small, so a
-    // tight budget is enough and keeps the search out of the wide degree sweeps.
-    let budget = Limits {
-        max_order: 1,
-        max_recurrence_degree: 1,
-        max_certificate_degree: 3,
-        ..Limits::classical()
-    };
-    let certificate = proved_within(&term, "p", "k", &options, &budget);
+    // Default limits. Four variables used to make the ansatz sweep unaffordable
+    // (~18 s in release, ~250 s in debug); with the certificate denominator and
+    // degree derived from the Gosper–Petkovšek normal form there is nothing left
+    // to sweep, so no hand-tightened budget is needed.
+    let certificate = proved(&term, "p", "k", &options);
     // (m+n−p)·S(p) − (p+1)·S(p+1) = 0, valid for symbolic m and n. Combined with
     // S(0) = 1 this is Chu–Vandermonde; only the recurrence is certified here.
     assert_recurrence(
@@ -246,6 +245,241 @@ fn chu_vandermonde_convolution() {
             linear_poly(&[("p", -1)], -1),
         ],
     );
+
+    // The closed form, at symbolic m and n. The base case S(0) = 1 is decided,
+    // not sampled: at p = 0 the parameter-free Γ factors Γ(k+1)⁻¹ and Γ(−k+1)⁻¹
+    // force the support to {0}, and the surviving term's Γ powers cancel.
+    let closed = HyperTerm::new(binomial_factors(
+        &form(&[("m", 1), ("n", 1)], 0),
+        &form(&[("p", 1)], 0),
+        1,
+    ));
+    let report = check_closed_form_symbolic(&certificate, &closed, 0, &options)
+        .expect("C(m+n,p) must be forced by the recurrence and the symbolic base case");
+    assert_eq!(report.base_cases, 1);
+    assert_eq!(report.forced_support, (0, 0));
+    assert!(report.leading_zeros.is_empty());
+    assert!(report.confirmed_zero_points >= 12);
+}
+
+/// `∑_k C(m,k)·C(n,k) = C(m+n,n)`, with the recurrence in `n` and `m` symbolic
+/// throughout — closed form and all.
+#[test]
+fn cross_binomial_sum_is_a_central_binomial() {
+    let mut factors = binomial_factors(&form(&[("m", 1)], 0), &form(&[("k", 1)], 0), 1);
+    factors.extend(binomial_factors(
+        &form(&[("n", 1)], 0),
+        &form(&[("k", 1)], 0),
+        1,
+    ));
+    let term = HyperTerm::new(factors);
+    let options = CheckOptions::over("n", &[0, 1, 2, 3, 4], (-2, 12)).with("m", &[3, 5, 7]);
+    let certificate = proved(&term, "n", "k", &options);
+    assert_eq!(certificate.order(), 1);
+
+    let closed = HyperTerm::new(binomial_factors(
+        &form(&[("m", 1), ("n", 1)], 0),
+        &form(&[("n", 1)], 0),
+        1,
+    ));
+    let report = check_closed_form_symbolic(&certificate, &closed, 0, &options)
+        .expect("C(m+n,n) must be forced by the certified recurrence and the symbolic base case");
+    assert_eq!(report.base_cases, 1);
+    assert!(report.leading_zeros.is_empty());
+    // The base case is a genuine collapse: at n = 0 the parameter-free Γ factors
+    // pin k to a single point, and every other window point is *checked* zero.
+    assert_eq!(report.forced_support, (0, 0));
+    assert!(report.confirmed_zero_points >= 12);
+}
+
+/// The Franel numbers `∑_k C(n,k)³`: a **second-order** recurrence, which is the
+/// class the sweep-based search could not afford at all.
+///
+/// There is no hypergeometric closed form, so none is claimed. The recurrence is
+/// the result, and it is the classical one.
+#[test]
+fn franel_numbers_get_an_order_two_recurrence() {
+    let term = HyperTerm::new(binomial_n_k(3));
+    let options = CheckOptions::over("n", &[0, 1, 2, 3, 4, 5, 6], (-2, 14));
+    let certificate = proved(&term, "n", "k", &options);
+    assert_eq!(certificate.order(), 2);
+    // 8(n+1)²·S(n) + (7n²+21n+16)·S(n+1) − (n+2)²·S(n+2) = 0.
+    let square = |terms: &[(&str, i128)], constant: i128, scale: i128| {
+        linear_poly(terms, constant)
+            .pow(2)
+            .unwrap()
+            .mul(&MvPoly::constant(Rational::integer(scale)))
+            .unwrap()
+    };
+    let middle = MvPoly::var("n")
+        .pow(2)
+        .unwrap()
+        .mul(&MvPoly::constant(Rational::integer(7)))
+        .unwrap()
+        .add(&linear_poly(&[("n", 21)], 16))
+        .unwrap();
+    assert_recurrence(
+        &certificate,
+        &[
+            square(&[("n", 1)], 1, 8),
+            middle,
+            square(&[("n", 1)], 2, -1),
+        ],
+    );
+
+    // Independent sanity: the Franel numbers themselves satisfy it.
+    let franel = [1i64, 2, 10, 56, 346, 2252, 15184];
+    for index in 0..franel.len() - 2 {
+        let n = i128::try_from(index).unwrap();
+        assert_eq!(
+            8 * (n + 1) * (n + 1) * i128::from(franel[index])
+                + (7 * n * n + 21 * n + 16) * i128::from(franel[index + 1]),
+            (n + 2) * (n + 2) * i128::from(franel[index + 2]),
+            "the certified recurrence must hold on the Franel numbers"
+        );
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Tamper control: the symbolic base-case route must reject too.
+// ---------------------------------------------------------------------------
+
+/// Build the Chu–Vandermonde certificate once, for the symbolic tamper tests.
+fn chu_vandermonde() -> (TelescopingCertificate, CheckOptions) {
+    let mut factors = binomial_factors(&form(&[("m", 1)], 0), &form(&[("k", 1)], 0), 1);
+    factors.extend(binomial_factors(
+        &form(&[("n", 1)], 0),
+        &form(&[("p", 1), ("k", -1)], 0),
+        1,
+    ));
+    let options = CheckOptions::over("p", &[0, 1, 2, 3, 4], (-2, 12))
+        .with("m", &[3, 5])
+        .with("n", &[4, 6]);
+    let certificate = proved(&HyperTerm::new(factors), "p", "k", &options);
+    (certificate, options)
+}
+
+#[test]
+fn a_symbolic_closed_form_with_the_wrong_base_is_rejected() {
+    let (certificate, options) = chu_vandermonde();
+    // 2·C(m+n,p) satisfies the same recurrence — the recurrence is homogeneous —
+    // and fails only at the base case, which is now checked at symbolic m and n.
+    let mut doubled = vec![Factor::Poly {
+        poly: MvPoly::constant(Rational::integer(2)),
+        exponent: 1,
+    }];
+    doubled.extend(binomial_factors(
+        &form(&[("m", 1), ("n", 1)], 0),
+        &form(&[("p", 1)], 0),
+        1,
+    ));
+    let reasons = check_closed_form_symbolic(&certificate, &HyperTerm::new(doubled), 0, &options)
+        .expect_err("2·C(m+n,p) must fail the symbolic base case");
+    assert!(
+        reasons.iter().any(|reason| reason.contains("base case")),
+        "the rejection must name the base case: {reasons:?}"
+    );
+}
+
+#[test]
+fn a_symbolic_closed_form_with_the_wrong_ratio_is_rejected() {
+    let (certificate, options) = chu_vandermonde();
+    // C(m+n,p+1) has base value 1 at p = 0 too, so only the annihilation check
+    // can catch it.
+    let wrong = HyperTerm::new(binomial_factors(
+        &form(&[("m", 1), ("n", 1)], 0),
+        &form(&[("p", 1)], 1),
+        1,
+    ));
+    let reasons = check_closed_form_symbolic(&certificate, &wrong, 0, &options)
+        .expect_err("C(m+n,p+1) must fail the annihilation check");
+    assert!(
+        reasons.iter().any(|reason| reason.contains("annihilate")),
+        "the rejection must name the annihilation check: {reasons:?}"
+    );
+}
+
+#[test]
+fn a_symbolic_closed_form_with_an_uncancelled_gamma_is_rejected() {
+    let (certificate, options) = chu_vandermonde();
+    // C(m+n,p)·Γ(m+1) has the right ratio in p, and its base value is Γ(m+1) —
+    // not a rational. The checker must say so rather than compare coefficients.
+    let mut dressed = binomial_factors(&form(&[("m", 1), ("n", 1)], 0), &form(&[("p", 1)], 0), 1);
+    dressed.push(Factor::Gamma {
+        form: form(&[("m", 1)], 1),
+        exponent: 1,
+    });
+    let reasons = check_closed_form_symbolic(&certificate, &HyperTerm::new(dressed), 0, &options)
+        .expect_err("an uncancelled Γ must not be compared as a rational");
+    assert!(
+        reasons
+            .iter()
+            .any(|reason| reason.contains("uncancelled Γ power")),
+        "the rejection must name the uncancelled Γ: {reasons:?}"
+    );
+}
+
+#[test]
+fn a_symbolic_window_that_clips_the_forced_support_is_rejected() {
+    let (certificate, _) = chu_vandermonde();
+    let closed = HyperTerm::new(binomial_factors(
+        &form(&[("m", 1), ("n", 1)], 0),
+        &form(&[("p", 1)], 0),
+        1,
+    ));
+    // The forced support at p = 0 is {0}; a window starting at 0 does not
+    // strictly contain it, so the vanishing outside is not established.
+    let clipped = CheckOptions::over("p", &[0, 1, 2], (0, 6))
+        .with("m", &[3])
+        .with("n", &[4]);
+    let reasons = check_closed_form_symbolic(&certificate, &closed, 0, &clipped)
+        .expect_err("a window that does not strictly contain the forced support must be rejected");
+    assert!(
+        reasons
+            .iter()
+            .any(|reason| reason.contains("does not strictly contain")),
+        "the rejection must name the window: {reasons:?}"
+    );
+}
+
+/// A summand whose support is not pinned by parameter-free `Γ` factors must make
+/// the symbolic route **decline**, not guess a truncation.
+#[test]
+fn an_unbounded_symbolic_support_declines() {
+    // 1/k! is nonzero for every k ≥ 0: bounded below, unbounded above.
+    let term = HyperTerm::new(vec![Factor::Gamma {
+        form: form(&[("k", 1)], 1),
+        exponent: -1,
+    }]);
+    let reason = symbolic_window_sum(&term, &BTreeMap::new(), "k", (-4, 12))
+        .expect_err("an unbounded support must not be summed");
+    assert!(
+        reason.contains("not forced finite"),
+        "the refusal must name the support: {reason}"
+    );
+}
+
+/// The symbolic evaluator must agree with the concrete one wherever both apply —
+/// the two are separate code paths and this is what keeps them honest.
+#[test]
+fn symbolic_and_concrete_evaluation_agree_on_bound_points() {
+    let term = HyperTerm::new(binomial_n_k(2));
+    let mut point: BTreeMap<String, i64> = BTreeMap::new();
+    let mut compared = 0usize;
+    for n in 0..=6i64 {
+        for k in -2..=8i64 {
+            point.insert("n".to_owned(), n);
+            point.insert("k".to_owned(), k);
+            let concrete = axeyum_cas::telescoping_check::evaluate_term(&term, &point)
+                .expect("C(n,k)² is exactly evaluable");
+            let symbolic = evaluate_term_symbolic(&term, &point)
+                .expect("with every variable bound the symbolic route is total");
+            assert!(symbolic.is_rational());
+            assert_eq!(symbolic.coefficient(), &concrete, "at n={n}, k={k}");
+            compared += 1;
+        }
+    }
+    assert_eq!(compared, 7 * 11);
 }
 
 // ---------------------------------------------------------------------------

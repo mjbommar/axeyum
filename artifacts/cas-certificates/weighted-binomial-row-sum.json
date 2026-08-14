@@ -1,0 +1,14 @@
+{
+  "format": "axeyum-telescoping-certificate",
+  "version": 1,
+  "id": "weighted-binomial-row-sum",
+  "title": "sum_k k*C(n,k) = n*2^(n-1) for n >= 1",
+  "shift_var": "n",
+  "sum_var": "k",
+  "term": {"factors": [{"kind": "poly", "poly": {"terms": [{"monomial": [["k", 1]], "coefficient": [1, 1]}]}, "exponent": 1}, {"kind": "gamma", "form": {"vars": [["n", 1]], "constant": 1}, "exponent": 1}, {"kind": "gamma", "form": {"vars": [["k", 1]], "constant": 1}, "exponent": -1}, {"kind": "gamma", "form": {"vars": [["k", -1], ["n", 1]], "constant": 1}, "exponent": -1}]},
+  "recurrence": [{"terms": [{"monomial": [], "coefficient": [2, 1]}, {"monomial": [["n", 1]], "coefficient": [2, 1]}]}, {"terms": [{"monomial": [["n", 1]], "coefficient": [-1, 1]}]}],
+  "certificate_numerator": {"terms": [{"monomial": [], "coefficient": [-1, 1]}, {"monomial": [["k", 1]], "coefficient": [1, 1]}, {"monomial": [["k", 1], ["n", 1]], "coefficient": [1, 1]}, {"monomial": [["n", 1]], "coefficient": [-1, 1]}]},
+  "certificate_denominator": {"terms": [{"monomial": [], "coefficient": [1, 1]}, {"monomial": [["k", 1]], "coefficient": [-1, 1]}, {"monomial": [["n", 1]], "coefficient": [1, 1]}]},
+  "check": {"samples": {"n": [1, 2, 3, 4, 5, 6, 7]}, "window": [-2, 14], "min_ratio_samples": 8},
+  "closed_form": {"base": 1, "symbolic": false, "term": {"factors": [{"kind": "poly", "poly": {"terms": [{"monomial": [["n", 1]], "coefficient": [1, 1]}]}, "exponent": 1}, {"kind": "power", "base": [1, 2], "form": {"vars": [], "constant": 1}}, {"kind": "power", "base": [2, 1], "form": {"vars": [["n", 1]], "constant": 0}}]}}
+}
