@@ -50,7 +50,8 @@ use std::collections::BTreeSet;
 use axeyum_ir::{Op, Rational, Sort, TermArena, TermId, TermNode};
 
 use crate::cas_poly::{
-    CasIdentityCertificate, CasIntBound, CasIntUnitsCertificate, CasIntUnitsKind,
+    CasHypothesisKind, CasIdealCertificate, CasIdealEntry, CasIdentityCertificate, CasIntBound,
+    CasIntUnitsCertificate, CasIntUnitsKind,
 };
 
 /// Ceiling on distinct opaque atoms in one expansion.
@@ -460,6 +461,245 @@ pub fn check_cas_int_units_certificate(
                 })
             })
         }
+    }
+}
+
+// --- the ideal / positivity combination check --------------------------------
+
+/// Re-verifies a [`CasIdealCertificate`]: an explicit linear combination of
+/// asserted arithmetic facts that collapses to a constant contradicting its own
+/// sign.
+///
+/// # The argument, in full
+///
+/// Each entry contributes a polynomial in the opaque atoms together with a fact
+/// about its value in every model. For an [`CasIdealEntry::Asserted`] entry the
+/// cited conjunct is re-read off the assertion list and the fact re-derived from
+/// its comparison head:
+///
+/// * [`CasHypothesisKind::Equality`] (from `=`): `p = 0`,
+/// * [`CasHypothesisKind::NonNegative`] (from `≥`, `≤`): `p ≥ 0`,
+/// * [`CasHypothesisKind::Positive`] (from `>`, `<`): `p > 0`, strengthened to
+///   `p ≥ 1` when the comparison is integer-sorted and `p` has integer
+///   coefficients (an integer strictly above zero is at least one).
+///
+/// An [`CasIdealEntry::EvenMonomial`] entry contributes `c·∏ aᵢ^{2kᵢ}` with
+/// `c > 0`, which is `≥ 0` at every real valuation — no citation needed, and the
+/// checker confirms every exponent really is even.
+///
+/// Multipliers on the two inequality kinds must be **strictly positive rational
+/// constants**; a polynomial multiplier could take a negative value and flip the
+/// inequality. Equality multipliers are arbitrary polynomials, which is what
+/// makes this a Nullstellensatz certificate rather than a Farkas one.
+///
+/// The checker then re-expands `S := Σ multiplierᵢ · pᵢ` with its own
+/// [`expand`], [`multiply`] and [`add`], and requires `S` to be a **constant**
+/// `k`. In every model `S ≥ lower`, where `lower` sums the multipliers of the
+/// integer-strict entries (each contributing at least `μ·1`) and every other
+/// inequality entry contributes at least `0`; the inequality is *strict* if any
+/// real-sorted strict entry is present.
+///
+/// The three ways that is a contradiction:
+///
+/// 1. **no inequality entries at all** — then `S = 0` exactly, so any `k ≠ 0`
+///    refutes. This is the weak Nullstellensatz: `Σ μᵢ·pᵢ = k ≠ 0` while every
+///    `pᵢ = 0`;
+/// 2. **`k < lower`** — the combination is provably at least `lower` yet
+///    identically smaller;
+/// 3. **`k = lower` with a real-sorted strict entry** — provably *strictly* above
+///    `lower` yet identically equal to it.
+///
+/// Nothing above depends on how the multipliers were found: the verdict rests on
+/// a polynomial identity plus the sign of one rational, both re-derived here.
+#[must_use]
+pub fn check_cas_ideal_certificate(
+    arena: &TermArena,
+    assertions: &[TermId],
+    cert: &CasIdealCertificate,
+) -> bool {
+    if cert.entries.is_empty() {
+        return false;
+    }
+    let conjuncts = top_conjuncts(arena, assertions);
+    let mut atoms = BTreeSet::new();
+    let mut sum: AtomPoly = Vec::new();
+    let mut lower = Rational::zero();
+    let mut real_strict = false;
+    let mut has_inequality = false;
+    // A conjunct may be cited only once. Citing the same fact twice is harmless
+    // arithmetically, but it is a sign the search produced something unintended,
+    // and rejecting it costs nothing.
+    let mut cited: BTreeSet<TermId> = BTreeSet::new();
+
+    for entry in &cert.entries {
+        let contribution = match entry {
+            CasIdealEntry::Asserted {
+                conjunct,
+                kind,
+                multiplier,
+            } => {
+                if !conjuncts.contains(conjunct) || !cited.insert(*conjunct) {
+                    return false;
+                }
+                let Some(hypothesis) = read_hypothesis(arena, *conjunct, &mut atoms) else {
+                    return false;
+                };
+                if hypothesis.kind != *kind {
+                    return false;
+                }
+                if *kind != CasHypothesisKind::Equality {
+                    let Some(scalar) = positive_constant(multiplier) else {
+                        return false;
+                    };
+                    has_inequality = true;
+                    if *kind == CasHypothesisKind::Positive {
+                        if hypothesis.integer_valued {
+                            // `p > 0` over ℤ is `p ≥ 1`, so this entry
+                            // contributes at least `μ`, not merely something
+                            // positive.
+                            let Some(next) = lower.checked_add(scalar) else {
+                                return false;
+                            };
+                            lower = next;
+                        } else {
+                            real_strict = true;
+                        }
+                    }
+                }
+                let Some(product) = multiply(multiplier, &hypothesis.poly) else {
+                    return false;
+                };
+                product
+            }
+            CasIdealEntry::EvenMonomial {
+                monomial,
+                coefficient,
+            } => {
+                if !even_nonnegative_monomial(arena, monomial, *coefficient) {
+                    return false;
+                }
+                has_inequality = true;
+                vec![(monomial.clone(), *coefficient)]
+            }
+        };
+        let Some(next) = add(sum, contribution) else {
+            return false;
+        };
+        sum = next;
+    }
+
+    let Some(constant_value) = as_constant(&sum) else {
+        return false;
+    };
+    // The stored constant is compared so a printed certificate is auditable; the
+    // verdict below uses only the re-derived value.
+    if cert.constant != constant_value {
+        return false;
+    }
+    if !has_inequality {
+        return !constant_value.is_zero();
+    }
+    let Some(order) = constant_value.checked_cmp(&lower) else {
+        return false;
+    };
+    match order {
+        core::cmp::Ordering::Less => true,
+        core::cmp::Ordering::Equal => real_strict,
+        core::cmp::Ordering::Greater => false,
+    }
+}
+
+/// What an asserted conjunct contributes to the combination.
+struct Hypothesis {
+    poly: AtomPoly,
+    kind: CasHypothesisKind,
+    /// True when the comparison is integer-sorted **and** the polynomial has
+    /// integer coefficients, so a strict `> 0` strengthens to `≥ 1`.
+    integer_valued: bool,
+}
+
+/// Re-derives the arithmetic fact a top-level conjunct asserts.
+///
+/// Only the six comparison heads are read, always with the polynomial oriented so
+/// the asserted fact is `poly ⋈ 0`. Anything else — a `not`, an `or`, a Bool
+/// atom, a non-arithmetic sort — yields `None`, so an unrelated conjunct can
+/// never be cited as a hypothesis.
+fn read_hypothesis(
+    arena: &TermArena,
+    conjunct: TermId,
+    atoms: &mut BTreeSet<TermId>,
+) -> Option<Hypothesis> {
+    let TermNode::App { op, args } = arena.node(conjunct) else {
+        return None;
+    };
+    let [left, right] = &**args else { return None };
+    let sort = arena.sort_of(*left);
+    if sort != arena.sort_of(*right) || !matches!(sort, Sort::Int | Sort::Real) {
+        return None;
+    }
+    // `flip` orients the difference so the asserted fact reads `poly ⋈ 0`.
+    let (kind, flip) = match op {
+        Op::Eq => (CasHypothesisKind::Equality, false),
+        Op::IntGe | Op::RealGe => (CasHypothesisKind::NonNegative, false),
+        Op::IntLe | Op::RealLe => (CasHypothesisKind::NonNegative, true),
+        Op::IntGt | Op::RealGt => (CasHypothesisKind::Positive, false),
+        Op::IntLt | Op::RealLt => (CasHypothesisKind::Positive, true),
+        _ => return None,
+    };
+    let (high, low) = if flip {
+        (*right, *left)
+    } else {
+        (*left, *right)
+    };
+    let poly = add(
+        expand(arena, high, atoms)?,
+        negate(expand(arena, low, atoms)?)?,
+    )?;
+    let integer_valued = sort == Sort::Int && poly.iter().all(|(_, coeff)| coeff.is_integer());
+    Some(Hypothesis {
+        poly,
+        kind,
+        integer_valued,
+    })
+}
+
+/// True when `coefficient · monomial` is non-negative at every real valuation:
+/// a strictly positive coefficient, a non-empty monomial with every exponent
+/// even, and every atom of arithmetic sort (a `Bool`/`BitVec` term is not a real
+/// number and squaring it means nothing here).
+fn even_nonnegative_monomial(
+    arena: &TermArena,
+    monomial: &AtomMonomial,
+    coefficient: Rational,
+) -> bool {
+    !monomial.is_empty()
+        && coefficient.numerator() > 0
+        && monomial.iter().all(|(atom, exponent)| {
+            exponent % 2 == 0
+                && *exponent > 0
+                && matches!(arena.sort_of(*atom), Sort::Int | Sort::Real)
+        })
+}
+
+/// The value of a strictly positive constant multiplier, or `None` when the
+/// multiplier is not a positive rational constant.
+fn positive_constant(multiplier: &AtomPoly) -> Option<Rational> {
+    let [(monomial, coefficient)] = multiplier.as_slice() else {
+        return None;
+    };
+    if !monomial.is_empty() || coefficient.numerator() <= 0 {
+        return None;
+    }
+    Some(*coefficient)
+}
+
+/// The value of a constant polynomial (the canonical empty form is zero), or
+/// `None` when any non-constant monomial survives.
+fn as_constant(poly: &AtomPoly) -> Option<Rational> {
+    match poly.as_slice() {
+        [] => Some(Rational::zero()),
+        [(monomial, coefficient)] if monomial.is_empty() => Some(*coefficient),
+        _ => None,
     }
 }
 

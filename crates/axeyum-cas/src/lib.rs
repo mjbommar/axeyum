@@ -63,6 +63,7 @@ pub mod geometry;
 pub mod gfp;
 mod gosper;
 pub mod groebner;
+pub mod groebner_cert;
 pub mod hyperbolic;
 pub mod interval_arith;
 mod matrix;
@@ -88,6 +89,9 @@ pub use factor_int::{factor_expr, factor_univariate_over_q};
 pub use geometry::{Circle, Line, Point};
 pub use gosper::{geometric_power, gosper_sum};
 pub use groebner::{groebner_basis, ideal_contains, reduce};
+pub use groebner_cert::{
+    CofactorOutcome, Limits as CofactorLimits, reduce_with_cofactors, unit_ideal_cofactors,
+};
 pub use matrix::Matrix;
 pub use mvpoly::MvPoly;
 pub use normalforms::{hermite_normal_form, smith_normal_form};

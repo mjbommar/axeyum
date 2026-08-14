@@ -63,7 +63,7 @@ use crate::mvpoly::{Monomial, MvPoly};
 /// The empty map is the constant monomial `1`. This local representation exists
 /// because [`Monomial`] exposes no way to enumerate the variables it mentions,
 /// which the leading-term selection and monomial `lcm` both need.
-type Exponents = BTreeMap<String, u32>;
+pub(crate) type Exponents = BTreeMap<String, u32>;
 
 /// Defensive cap on reduction steps for a single normal-form computation.
 ///
@@ -91,7 +91,7 @@ fn unit_map() -> BTreeMap<Exponents, Rational> {
 
 /// Compare two monomials under the pure lexicographic order (alphabetically-first
 /// variable most significant), matching [`MvPoly`](crate::mvpoly::MvPoly)'s order.
-fn lex_cmp(left: &Exponents, right: &Exponents) -> Ordering {
+pub(crate) fn lex_cmp(left: &Exponents, right: &Exponents) -> Ordering {
     let mut vars: BTreeSet<&str> = BTreeSet::new();
     vars.extend(left.keys().map(String::as_str));
     vars.extend(right.keys().map(String::as_str));
@@ -108,7 +108,7 @@ fn lex_cmp(left: &Exponents, right: &Exponents) -> Ordering {
 
 /// The least common multiple of two monomials (per variable, the larger
 /// exponent).
-fn monomial_lcm(left: &Exponents, right: &Exponents) -> Exponents {
+pub(crate) fn monomial_lcm(left: &Exponents, right: &Exponents) -> Exponents {
     let mut result = left.clone();
     for (var, exp) in right {
         let slot = result.entry(var.clone()).or_insert(0);
@@ -119,7 +119,7 @@ fn monomial_lcm(left: &Exponents, right: &Exponents) -> Exponents {
 
 /// Returns `true` iff `divisor` divides `target` (every divisor exponent is `≤`
 /// the corresponding target exponent).
-fn monomial_divides(divisor: &Exponents, target: &Exponents) -> bool {
+pub(crate) fn monomial_divides(divisor: &Exponents, target: &Exponents) -> bool {
     divisor
         .iter()
         .all(|(var, exp)| target.get(var).copied().unwrap_or(0) >= *exp)
@@ -127,7 +127,7 @@ fn monomial_divides(divisor: &Exponents, target: &Exponents) -> bool {
 
 /// The quotient monomial `target / divisor`, assuming `divisor` divides `target`
 /// (guaranteed at every call site). Saturating subtraction keeps it panic-free.
-fn monomial_quotient(target: &Exponents, divisor: &Exponents) -> Exponents {
+pub(crate) fn monomial_quotient(target: &Exponents, divisor: &Exponents) -> Exponents {
     let mut result = Exponents::new();
     for (var, exp) in target {
         let reduced = exp.saturating_sub(divisor.get(var).copied().unwrap_or(0));
@@ -252,7 +252,7 @@ fn mul_maps(
 
 /// The `lex`-leading `(monomial, coefficient)` of `poly`, or `None` if `poly` is
 /// the zero polynomial (or on overflow while recovering its terms).
-fn leading_term(poly: &MvPoly) -> Option<(Exponents, Rational)> {
+pub(crate) fn leading_term(poly: &MvPoly) -> Option<(Exponents, Rational)> {
     let terms = expand(&poly.to_cas_expr())?;
     terms
         .into_iter()
@@ -261,7 +261,7 @@ fn leading_term(poly: &MvPoly) -> Option<(Exponents, Rational)> {
 
 /// Build the single-term polynomial `coeff · monomial` as an
 /// [`MvPoly`](crate::mvpoly::MvPoly). `None` on overflow.
-fn single_term(exponents: &Exponents, coeff: Rational) -> Option<MvPoly> {
+pub(crate) fn single_term(exponents: &Exponents, coeff: Rational) -> Option<MvPoly> {
     let factors: Vec<(&str, u32)> = exponents
         .iter()
         .map(|(var, exp)| (var.as_str(), *exp))

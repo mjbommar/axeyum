@@ -32,13 +32,15 @@
 
 use std::collections::BTreeMap;
 
-use axeyum_cas::MvPoly;
+use axeyum_cas::{
+    CofactorLimits, CofactorOutcome, MvPoly, reduce_with_cofactors, unit_ideal_cofactors,
+};
 use axeyum_ir::{Op, Rational, Sort, TermArena, TermId, TermNode};
 
 use crate::cas_certificate::{
     AtomMonomial, AtomPoly, MAX_ATOMS, MAX_DEPTH, MAX_MONOMIALS, MAX_STEPS,
-    check_cas_identity_certificate, check_cas_int_units_certificate, derive_bound,
-    match_disequality, match_equality, top_conjuncts,
+    check_cas_ideal_certificate, check_cas_identity_certificate, check_cas_int_units_certificate,
+    derive_bound, match_disequality, match_equality, top_conjuncts,
 };
 
 /// A self-checking refutation of an asserted arithmetic disequality whose two
@@ -106,6 +108,73 @@ pub struct CasIntUnitsCertificate {
     pub bounds: Vec<CasIntBound>,
 }
 
+// --- route 3: ideal / positivity combination ---------------------------------
+
+/// The arithmetic fact a cited top-level conjunct contributes to a
+/// [`CasIdealCertificate`], always oriented as `poly ⋈ 0`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CasHypothesisKind {
+    /// From an `=`: the polynomial is zero in every model.
+    Equality,
+    /// From a `≥` or `≤`: the polynomial is non-negative in every model.
+    NonNegative,
+    /// From a `>` or `<`: the polynomial is strictly positive in every model.
+    Positive,
+}
+
+/// One term of the linear combination a [`CasIdealCertificate`] exhibits.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum CasIdealEntry {
+    /// A cited top-level conjunct, the fact it asserts, and the multiplier
+    /// applied to that fact.
+    ///
+    /// For [`CasHypothesisKind::Equality`] the multiplier is an arbitrary
+    /// polynomial — that is what makes the certificate a Nullstellensatz one. For
+    /// the two inequality kinds it must be a **strictly positive rational
+    /// constant**: a polynomial multiplier can take a negative value and would
+    /// flip the inequality.
+    Asserted {
+        /// The top-level conjunct this entry reads its fact off.
+        conjunct: TermId,
+        /// Which fact that conjunct asserts.
+        kind: CasHypothesisKind,
+        /// The polynomial (equalities) or positive rational constant
+        /// (inequalities) the fact is multiplied by.
+        multiplier: AtomPoly,
+    },
+    /// A tautological non-negative term `coefficient · monomial` whose every
+    /// exponent is even. No citation is needed: an even power of a real number is
+    /// non-negative, so `coefficient > 0` makes the whole term non-negative at
+    /// every valuation of the atoms.
+    ///
+    /// This is what lets the route close systems whose refutation needs a fact
+    /// nobody wrote down — `x + y = 3 ∧ x·y = 5` is unsatisfiable over ℝ because
+    /// `x² + y²` is congruent to `−1` modulo the ideal, and no assertion mentions
+    /// `x² + y²`.
+    EvenMonomial {
+        /// The monomial, every exponent even and every atom `Int`/`Real`-sorted.
+        monomial: AtomMonomial,
+        /// A strictly positive rational coefficient.
+        coefficient: Rational,
+    },
+}
+
+/// A self-checking refutation exhibiting an explicit linear combination of
+/// asserted arithmetic facts (and tautological squares) that collapses to a
+/// constant contradicting its own sign.
+///
+/// This generalizes [`CasIdentityCertificate`], which is the one-entry case with
+/// multiplier `1`. Its verification is described in full on
+/// [`check_cas_ideal_certificate`].
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CasIdealCertificate {
+    /// The terms of the combination, in a deterministic order.
+    pub entries: Vec<CasIdealEntry>,
+    /// The constant the combination is claimed to equal. Re-derived by the
+    /// checker; stored so a printed certificate is auditable.
+    pub constant: Rational,
+}
+
 /// What a CAS route concluded. Every variant other than [`CasOutcome::Refuted`]
 /// is a **decline**, and each carries enough detail to explain the decline in a
 /// route trace — silent declines are the diagnosability bug this dispatch has
@@ -167,6 +236,20 @@ impl AtomTable {
     fn term_of(&self, name: &str) -> Option<TermId> {
         let index: usize = name.strip_prefix('v')?.parse().ok()?;
         self.order.get(index).copied()
+    }
+
+    /// The interned atoms in interning order — deterministic, since interning
+    /// follows the deterministic term walk.
+    fn atoms(&self) -> &[TermId] {
+        &self.order
+    }
+
+    fn len(&self) -> usize {
+        self.order.len()
+    }
+
+    fn index_of(&self, term: TermId) -> Option<usize> {
+        self.index.get(&term).copied()
     }
 }
 
@@ -430,6 +513,398 @@ pub fn cas_int_units_refutation(
     } else {
         CasOutcome::NoCandidate
     }
+}
+
+// --- route 3: multivariate ideal / positivity refutation ---------------------
+
+/// Ceiling on asserted equations used as ideal generators.
+const MAX_IDEAL_GENERATORS: usize = 8;
+/// Ceiling on asserted inequalities considered as combination terms.
+const MAX_IDEAL_INEQUALITIES: usize = 8;
+/// Ceiling on distinct opaque atoms across the whole system. `Buchberger` under
+/// `lex` is doubly exponential in the variable count in the worst case, so this
+/// is the ceiling that actually bounds the search; the step budget below is the
+/// backstop.
+const MAX_IDEAL_ATOMS: usize = 8;
+
+/// Step ceilings for the cofactor-tracked Gröbner search. Step *counts*, never a
+/// clock — determinism is a public API promise.
+fn ideal_limits() -> CofactorLimits {
+    CofactorLimits {
+        reduction_steps: 6_000,
+        pair_iterations: 1_500,
+        basis_size: 32,
+        poly_terms: 256,
+    }
+}
+
+/// One asserted hypothesis, normalized to `poly ⋈ 0` over the shared atoms.
+struct Hypothesis {
+    conjunct: TermId,
+    kind: CasHypothesisKind,
+    poly: MvPoly,
+    /// `p > 0` strengthens to `p ≥ 1` when the comparison is integer-sorted and
+    /// the polynomial has integer coefficients.
+    integer_valued: bool,
+}
+
+/// Refutes a **system** of asserted polynomial (in)equalities by exhibiting an
+/// explicit combination of them that collapses to a constant of the wrong sign.
+///
+/// This is the multivariate generalization of [`cas_identity_refutation`], and it
+/// is the route that reaches shapes no other engine in the dispatch does. The
+/// existing nonlinear engines are structurally narrower:
+/// `nra_real_root` decides one shared real variable exactly and a two-variable
+/// component by resultants; `nra` admits at most two cross-products before
+/// declining ("this needs a nlsat/CAD engine"); `nia-bounded-blast` needs a
+/// provable finite box on every variable; `int-blast-ladder` answers a symbolic
+/// system with "no model within the bounded integer width 32", which is
+/// `unknown`. None of them reasons about the *ideal* the equations generate.
+///
+/// Three refutation shapes are tried, in this order:
+///
+/// 1. **Unit ideal.** `1 = Σ cᵢ·gᵢ` for the asserted equations `gᵢ = 0` — the
+///    weak Nullstellensatz. The system then has no common zero over any field
+///    containing ℚ, so none over ℝ and none over ℤ.
+/// 2. **Squares modulo the ideal.** A sum of squares of atoms that is congruent
+///    to a *negative* constant modulo the ideal. `x + y = 3 ∧ x·y = 5` is the
+///    smallest instance: `x² + y² ≡ 9 − 10 = −1`, and a sum of squares cannot be
+///    negative. Note that nothing in the query mentions `x² + y²` — the square
+///    terms are tautologies the certificate supplies.
+/// 3. **An asserted inequality modulo the ideal.** An asserted `p ⋈ 0` whose
+///    normal form modulo the equations is a constant that contradicts `⋈`.
+///
+/// Every candidate is handed to [`check_cas_ideal_certificate`], which re-derives
+/// the whole combination without any `axeyum-cas` code in the loop. A candidate
+/// that fails is reported as [`CasOutcome::VerifierRejected`], never returned.
+#[must_use]
+pub fn cas_ideal_refutation(
+    arena: &TermArena,
+    assertions: &[TermId],
+) -> CasOutcome<CasIdealCertificate> {
+    let conjuncts = top_conjuncts(arena, assertions);
+    let mut table = AtomTable::default();
+    let mut steps = MAX_STEPS;
+    let mut equalities: Vec<Hypothesis> = Vec::new();
+    let mut inequalities: Vec<Hypothesis> = Vec::new();
+    let mut nonlinear = false;
+
+    for &conjunct in &conjuncts {
+        let Some((kind, high, low, sort)) = comparison_shape(arena, conjunct) else {
+            continue;
+        };
+        let (Some(left), Some(right)) = (
+            to_poly(arena, high, &mut table, &mut steps, 0),
+            to_poly(arena, low, &mut table, &mut steps, 0),
+        ) else {
+            continue;
+        };
+        let Some(poly) = left.sub(&right) else {
+            continue;
+        };
+        if poly.total_degree() >= 2 {
+            nonlinear = true;
+        }
+        let integer_valued = sort == Sort::Int && poly.terms().all(|(_, coeff)| coeff.is_integer());
+        let hypothesis = Hypothesis {
+            conjunct,
+            kind,
+            poly,
+            integer_valued,
+        };
+        match kind {
+            CasHypothesisKind::Equality => equalities.push(hypothesis),
+            CasHypothesisKind::NonNegative | CasHypothesisKind::Positive => {
+                inequalities.push(hypothesis);
+            }
+        }
+    }
+
+    // The route earns its place only on systems the linear engines cannot handle.
+    // A purely linear system is `lia-simplex`/`lra`'s job and is decided far
+    // faster there, so declining here keeps the fast path free.
+    if equalities.is_empty() || !nonlinear {
+        return CasOutcome::NoCandidate;
+    }
+    if equalities.len() > MAX_IDEAL_GENERATORS
+        || table.len() > MAX_IDEAL_ATOMS
+        || inequalities.len() > MAX_IDEAL_INEQUALITIES
+    {
+        return CasOutcome::NotRefuted(
+            "nonlinear system exceeds the deterministic generator/atom/inequality ceilings",
+        );
+    }
+    inequalities.truncate(MAX_IDEAL_INEQUALITIES);
+
+    let generators: Vec<MvPoly> = equalities.iter().map(|eq| eq.poly.clone()).collect();
+    let limits = ideal_limits();
+
+    // 1. The unit ideal: `Σ cᵢ·gᵢ = 1` with every `gᵢ = 0`.
+    match unit_ideal_cofactors(&generators, limits) {
+        CofactorOutcome::Reduced {
+            cofactors,
+            remainder,
+        } if remainder.is_zero() => {
+            if let Some(cert) =
+                build_certificate(&table, &equalities, &cofactors, None, Rational::integer(1))
+            {
+                return finish(arena, assertions, cert);
+            }
+        }
+        CofactorOutcome::Declined => {
+            return CasOutcome::NotRefuted(
+                "cofactor-tracked Gröbner reduction hit a deterministic step ceiling",
+            );
+        }
+        CofactorOutcome::Reduced { .. } => {}
+    }
+    // 2. Sums of atom squares congruent to a negative constant modulo the ideal.
+    if let Some(cert) = try_square_combination(&table, &equalities, &generators, limits) {
+        return finish(arena, assertions, cert);
+    }
+    // 3. An asserted inequality whose normal form modulo the ideal is a constant.
+    if let Some(cert) =
+        try_inequality_combination(&table, &equalities, &inequalities, &generators, limits)
+    {
+        return finish(arena, assertions, cert);
+    }
+    CasOutcome::NotRefuted(
+        "no combination of the asserted equations collapsed to a constant of the refuting sign",
+    )
+}
+
+/// Searches for a sum of atom squares whose normal form modulo the ideal is a
+/// *negative* constant. A sum of squares is non-negative at every real
+/// valuation, so a negative congruence class refutes the equations outright.
+fn try_square_combination(
+    table: &AtomTable,
+    equalities: &[Hypothesis],
+    generators: &[MvPoly],
+    limits: CofactorLimits,
+) -> Option<CasIdealCertificate> {
+    for squares in square_candidates(table) {
+        let target = sum_of_squares(table, &squares)?;
+        let CofactorOutcome::Reduced {
+            cofactors,
+            remainder,
+        } = reduce_with_cofactors(generators, &target, limits)
+        else {
+            continue;
+        };
+        let Some(constant) = constant_value(&remainder) else {
+            continue;
+        };
+        if constant.numerator() >= 0 {
+            continue;
+        }
+        let Some(negated) = negate_all(&cofactors) else {
+            continue;
+        };
+        if let Some(cert) = build_certificate(
+            table,
+            equalities,
+            &negated,
+            Some(&Contribution::Squares(&squares)),
+            constant,
+        ) {
+            return Some(cert);
+        }
+    }
+    None
+}
+
+/// Searches for an asserted inequality whose normal form modulo the ideal is a
+/// constant its own comparison forbids.
+fn try_inequality_combination(
+    table: &AtomTable,
+    equalities: &[Hypothesis],
+    inequalities: &[Hypothesis],
+    generators: &[MvPoly],
+    limits: CofactorLimits,
+) -> Option<CasIdealCertificate> {
+    for inequality in inequalities {
+        let CofactorOutcome::Reduced {
+            cofactors,
+            remainder,
+        } = reduce_with_cofactors(generators, &inequality.poly, limits)
+        else {
+            continue;
+        };
+        let Some(constant) = constant_value(&remainder) else {
+            continue;
+        };
+        if !contradicts(inequality, constant) {
+            continue;
+        }
+        let Some(negated) = negate_all(&cofactors) else {
+            continue;
+        };
+        if let Some(cert) = build_certificate(
+            table,
+            equalities,
+            &negated,
+            Some(&Contribution::Inequality(inequality)),
+            constant,
+        ) {
+            return Some(cert);
+        }
+    }
+    None
+}
+
+/// Hands a candidate to the independent checker; a candidate that fails is
+/// discarded, never returned as a verdict.
+fn finish(
+    arena: &TermArena,
+    assertions: &[TermId],
+    cert: CasIdealCertificate,
+) -> CasOutcome<CasIdealCertificate> {
+    if check_cas_ideal_certificate(arena, assertions, &cert) {
+        CasOutcome::Refuted(cert)
+    } else {
+        CasOutcome::VerifierRejected
+    }
+}
+
+/// The non-equality term a certificate carries alongside the equation cofactors.
+enum Contribution<'a> {
+    /// Tautological atom squares, each with coefficient `1`.
+    Squares(&'a [TermId]),
+    /// One asserted inequality, with multiplier `1`.
+    Inequality(&'a Hypothesis),
+}
+
+/// Reads a top-level conjunct as `high ⋈ low` with the polynomial oriented so
+/// the asserted fact is `high − low ⋈ 0`.
+fn comparison_shape(
+    arena: &TermArena,
+    conjunct: TermId,
+) -> Option<(CasHypothesisKind, TermId, TermId, Sort)> {
+    let TermNode::App { op, args } = arena.node(conjunct) else {
+        return None;
+    };
+    let [left, right] = &**args else { return None };
+    let sort = arena.sort_of(*left);
+    if sort != arena.sort_of(*right) || !matches!(sort, Sort::Int | Sort::Real) {
+        return None;
+    }
+    let (kind, flip) = match op {
+        Op::Eq => (CasHypothesisKind::Equality, false),
+        Op::IntGe | Op::RealGe => (CasHypothesisKind::NonNegative, false),
+        Op::IntLe | Op::RealLe => (CasHypothesisKind::NonNegative, true),
+        Op::IntGt | Op::RealGt => (CasHypothesisKind::Positive, false),
+        Op::IntLt | Op::RealLt => (CasHypothesisKind::Positive, true),
+        _ => return None,
+    };
+    let (high, low) = if flip {
+        (*right, *left)
+    } else {
+        (*left, *right)
+    };
+    Some((kind, high, low, sort))
+}
+
+/// The candidate square sets, in a deterministic order: every atom alone first
+/// (the cheapest certificate wins), then all atoms together.
+fn square_candidates(table: &AtomTable) -> Vec<Vec<TermId>> {
+    let atoms = table.atoms();
+    let mut candidates: Vec<Vec<TermId>> = atoms.iter().map(|&atom| vec![atom]).collect();
+    if atoms.len() > 1 {
+        candidates.push(atoms.to_vec());
+    }
+    candidates
+}
+
+/// `Σ aᵢ²` over the given atoms, as an [`MvPoly`] in the atom variable names.
+fn sum_of_squares(table: &AtomTable, atoms: &[TermId]) -> Option<MvPoly> {
+    let mut acc = MvPoly::zero();
+    for atom in atoms {
+        let index = table.index_of(*atom)?;
+        acc = acc.add(&MvPoly::var(&AtomTable::name(index)).pow(2)?)?;
+    }
+    Some(acc)
+}
+
+/// Negates every cofactor, or `None` on an exact-range overflow.
+fn negate_all(cofactors: &[MvPoly]) -> Option<Vec<MvPoly>> {
+    cofactors.iter().map(MvPoly::neg).collect()
+}
+
+/// The value of a constant [`MvPoly`], or `None` when a non-constant monomial
+/// survives.
+fn constant_value(poly: &MvPoly) -> Option<Rational> {
+    if poly.is_zero() {
+        return Some(Rational::zero());
+    }
+    let mut terms = poly.terms();
+    let (monomial, coefficient) = terms.next()?;
+    if terms.next().is_some() || monomial.total_degree() != 0 {
+        return None;
+    }
+    Some(*coefficient)
+}
+
+/// Whether an asserted inequality congruent to `constant` modulo the ideal is
+/// contradicted by that value.
+fn contradicts(inequality: &Hypothesis, constant: Rational) -> bool {
+    let numerator = constant.numerator();
+    match inequality.kind {
+        // `p ≥ 0` yet `p ≡ c < 0`.
+        CasHypothesisKind::NonNegative => numerator < 0,
+        // `p > 0` yet `p ≡ c ≤ 0`; over ℤ the strict form is `p ≥ 1`, so `c < 1`
+        // suffices — but for an integer-valued `p` that is the same condition.
+        CasHypothesisKind::Positive => {
+            if inequality.integer_valued {
+                constant
+                    .checked_cmp(&Rational::integer(1))
+                    .is_some_and(core::cmp::Ordering::is_lt)
+            } else {
+                numerator <= 0
+            }
+        }
+        CasHypothesisKind::Equality => false,
+    }
+}
+
+/// Assembles the certificate: one [`CasIdealEntry::Asserted`] equality entry per
+/// generator with a nonzero cofactor, plus the non-equality contribution.
+fn build_certificate(
+    table: &AtomTable,
+    equalities: &[Hypothesis],
+    cofactors: &[MvPoly],
+    contribution: Option<&Contribution<'_>>,
+    constant: Rational,
+) -> Option<CasIdealCertificate> {
+    let mut entries = Vec::new();
+    match contribution {
+        Some(Contribution::Squares(atoms)) => {
+            for &atom in *atoms {
+                entries.push(CasIdealEntry::EvenMonomial {
+                    monomial: vec![(atom, 2)],
+                    coefficient: Rational::integer(1),
+                });
+            }
+        }
+        Some(Contribution::Inequality(inequality)) => {
+            entries.push(CasIdealEntry::Asserted {
+                conjunct: inequality.conjunct,
+                kind: inequality.kind,
+                multiplier: vec![(Vec::new(), Rational::integer(1))],
+            });
+        }
+        None => {}
+    }
+    for (equality, cofactor) in equalities.iter().zip(cofactors.iter()) {
+        if cofactor.is_zero() {
+            continue;
+        }
+        entries.push(CasIdealEntry::Asserted {
+            conjunct: equality.conjunct,
+            kind: CasHypothesisKind::Equality,
+            multiplier: normal_form(cofactor, table)?,
+        });
+    }
+    Some(CasIdealCertificate { entries, constant })
 }
 
 /// Reads `k·m = c` off the normal form of `lhs − rhs`: exactly one non-constant

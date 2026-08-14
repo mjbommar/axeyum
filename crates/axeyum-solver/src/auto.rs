@@ -3328,12 +3328,31 @@ fn check_auto_dispatch(
                 dispatch_deadline,
             )?
         {
+            // A `Some(Unknown)` from the exact real-root decider ends this branch
+            // — `nra` below is never reached. That is deliberate (the decider has
+            // already spent the work), but it also means an `unknown` it reports
+            // is terminal for the real branch, so the ideal combination gets its
+            // turn here rather than never. Strictly additive: only an `unknown`
+            // is ever replaced, and only by a certificate-checked `unsat`.
+            if matches!(result, CheckResult::Unknown(_))
+                && let Some(decided) = dispatch_cas_ideal(arena, assertions, rec)
+            {
+                return Ok(decided);
+            }
             with_recorder(rec, |t| t.record_result("nra-real-root", &result));
             return Ok(result);
         }
         with_recorder(rec, |t| {
             t.record_declined("nra-real-root", DeclineReason::NotApplicable);
         });
+        // The exact real-root decider handles one shared variable exactly and a
+        // two-variable component by resultants; a system of coupled multivariate
+        // equations is past it. Try the ideal combination before handing the
+        // query to the linear-abstraction relaxation, whose own decline text says
+        // "this needs a nlsat/CAD engine".
+        if let Some(result) = dispatch_cas_ideal(arena, assertions, rec) {
+            return Ok(result);
+        }
         // Reals plus (optionally) the bit-blasted theories: the lazy-SMT loop
         // abstracts the real atoms and lets the bit-blasting backend decide the
         // rest. Reals share no sort with those theories, so the only coupling is
@@ -3673,6 +3692,55 @@ fn dispatch_cas_refuters(
     }
 }
 
+/// The multivariate ideal / positivity refuter (ADR-0387).
+///
+/// Unlike the two ADR-0386 routes this one does **not** sit on the fast
+/// pre-theory path. It computes a Gröbner basis, which costs milliseconds where
+/// those routes cost microseconds, and it was measured taking over queries that
+/// `nra-real-root` and `int-real-relax` already decide **faster** — `x + y = 3
+/// ∧ x·y = 5` over `Real` was 0.96 ms via `nra-real-root` and 3.96 ms through
+/// this route. So it is placed where those engines have already declined: after
+/// `nra-real-root` on the real branch, and after `nia-bounded-blast` on the
+/// nonlinear-integer tail, immediately before the width ladder whose answer on
+/// these shapes is "no model within the bounded integer width", i.e. `unknown`.
+///
+/// The placement is the whole of the performance story: a query the existing
+/// engines decide never reaches this route, and a query that reaches it was
+/// going to be `unknown`.
+fn dispatch_cas_ideal(
+    arena: &TermArena,
+    assertions: &[TermId],
+    rec: &mut Recorder<'_>,
+) -> Option<CheckResult> {
+    match crate::cas_poly::cas_ideal_refutation(arena, assertions) {
+        CasOutcome::Refuted(_) => {
+            with_recorder(rec, |t| {
+                t.record_decided("cas-ideal-refuter", Verdict::Unsat);
+            });
+            Some(CheckResult::Unsat)
+        }
+        CasOutcome::NoCandidate => None,
+        CasOutcome::NotRefuted(why) => {
+            record_cas_decline(
+                rec,
+                "cas-ideal-refuter",
+                DeclineReason::Incomplete(incomplete_reason(why)),
+            );
+            None
+        }
+        CasOutcome::VerifierRejected => {
+            record_cas_decline(
+                rec,
+                "cas-ideal-refuter",
+                DeclineReason::VerifierRejected(
+                    "ideal combination failed its independent re-check".to_owned(),
+                ),
+            );
+            None
+        }
+    }
+}
+
 /// An [`UnknownReason`] carrying a CAS route's decline text.
 fn incomplete_reason(detail: &str) -> UnknownReason {
     UnknownReason {
@@ -3840,6 +3908,12 @@ fn dispatch_nonlinear_int_tail(
             return Ok(result);
         }
         record_nia_decline(rec, "nia-bounded-blast", why);
+        // Last exact route before the width ladder, whose answer on an unbounded
+        // nonlinear system is "no model within the bounded integer width 32",
+        // i.e. `unknown`. The ideal combination needs no box at all.
+        if let Some(result) = dispatch_cas_ideal(arena, assertions, rec) {
+            return Ok(result);
+        }
         if past_deadline(deadline) {
             return Ok(CheckResult::Unknown(timeout_reason(
                 "auto-dispatch timeout after exact bounded integer blast",
