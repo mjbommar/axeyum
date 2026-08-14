@@ -294,6 +294,18 @@ let-chains are used workspace-wide) check. Edition 2024, resolver 3.
   `git diff <file>` and confirm every hunk is yours. If it is not, you are
   sharing a file, which is the actual problem — say so and coordinate rather
   than committing around it.
+- **A pathspec NARROWER than your change silently drops your own hunks —
+  the opposite failure, and equally unguarded.** On 2026-08-14 a lane doing a
+  staged refactor ran `clippy -D warnings` immediately before each commit and
+  still shipped `ae589be97`, which **does not compile**: the gate ran against the
+  *worktree* while the commit used a hand-written pathspec that omitted a
+  one-line import fix in an already-committed file. Green gate, broken commit.
+  Derive the pathspec from `git status`, never by hand, and if you must hand-write
+  it, verify with `git stash -u && cargo check` — or simply accept that
+  `git show --stat` tells you what you committed, not what you needed to commit.
+  (That commit is still in history, repaired by the next one rather than rewritten:
+  **a bisect crossing `ae589be97` will report a build failure unrelated to what it
+  is bisecting.**)
 - **Lane identity lives in the environment, not in git config.**
   `export AXEYUM_AGENT=<lane>`; the `hooks/commit-msg` hook stamps an
   `Agent:` trailer and refuses an unidentified commit. Do **not** use
