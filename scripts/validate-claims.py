@@ -75,7 +75,11 @@ GRAPH_REF_RE = re.compile(r"^(C|M|TQ|TH|TM):[a-z0-9][a-z0-9./-]*(@[a-z]+)?$")
 
 CLAIM_REQUIRED = {"schema_version", "id", "title", "statement", "epistemic_status",
                   "formal", "concept_refs", "axeyum_refs", "provenance", "evidence"}
-CLAIM_OPTIONAL = {"frontier", "supersedes", "notes"}
+# `novelty` records whether the claimed value is new to the literature or a
+# reproduction of a published one. It is optional because claims predating the
+# field must keep validating; scripts/check-claim-certificates.py enforces its
+# consistency with provenance.prior_art when it is present.
+CLAIM_OPTIONAL = {"frontier", "supersedes", "notes", "novelty"}
 EVIDENCE_REQUIRED = {"id", "kind", "supports", "check_status", "checker_command"}
 EVIDENCE_OPTIONAL = {"artifact", "artifact_sha256", "artifact_format", "notes",
                      "parameters", "regeneration", "distribution"}
@@ -182,7 +186,11 @@ def classify_payload(payload: bytes) -> tuple[str, bool]:
     sample = body[:500] + body[-2:]
     if all(DRAT_LINE_RE.match(ln) for ln in sample):
         return "drat-text", ends_empty
-    tokens = text.split()
+    # `body` already dropped the `c ...` comment lines; the tokens have to come
+    # from it and not from `text`, or a colouring that carries the provenance
+    # header every producer in this tree writes sniffs as 'unknown' and every
+    # witness row fails its own format contract. (61 of them did.)
+    tokens = " ".join(body).split()
     if tokens and all(t.isdigit() and t != "0" for t in tokens):
         return "colouring-text", False
     return "unknown", False

@@ -47,6 +47,14 @@
       ],
       "description": "math-education graph/vocab semantics, verbatim: axiom=assumed; proved=general-case proof; computed=established by calculation or exhaustive check over a stated range; empirical=observed; conjectured=believed, unproved; open=nobody knows."
     },
+    "novelty": {
+      "enum": [
+        "new",
+        "reproduction",
+        "replication"
+      ],
+      "description": "Whether the claimed value is new to the literature, a reproduction of a published one, or a replication of an unpublished computation. A machine-readable field because five claims once shipped labelled NEW in free-text notes for values published four months earlier: scripts/check-claim-certificates.py requires that a reproduction name prior art establishing the same value."
+    },
     "formal": {
       "type": "object",
       "additionalProperties": false,

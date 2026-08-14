@@ -1,0 +1,119 @@
+{
+  "schema_version": 1,
+  "id": "vdw-2-3-5",
+  "title": "w(2;3,5) = 22",
+  "statement": "The van der Waerden number w(2;3,5) is exactly 22: every 2-colouring of {1,...,22} contains an arithmetic progression of length 3 monochromatic in colour 1; or an arithmetic progression of length 5 monochromatic in colour 2; and some 2-colouring of {1,...,21} contains none of them.",
+  "epistemic_status": "computed",
+  "novelty": "reproduction",
+  "formal": {
+    "language": "cnf-family",
+    "family": "vdw-colouring-AP(k)",
+    "parameters": {
+      "k": [
+        3,
+        5
+      ],
+      "r": 2,
+      "n": 22
+    },
+    "generator": "crates/axeyum-search/src/vdw.rs",
+    "generator_entry_point": "VanDerWaerden::problem",
+    "semantics_note": "artifacts/claims/vdw/SEMANTICS.md"
+  },
+  "concept_refs": [
+    {
+      "graph": "math-education",
+      "ref": "C:ramsey-number",
+      "relation": "exercises",
+      "resolved": false,
+      "note": "van der Waerden numbers are the arithmetic-progression case of the Ramsey-type colouring problems"
+    },
+    {
+      "graph": "math-education",
+      "ref": "TQ:colouring",
+      "relation": "uses-technique",
+      "resolved": false
+    },
+    {
+      "graph": "math-education",
+      "ref": "C:computational-search",
+      "relation": "exercises",
+      "resolved": false
+    }
+  ],
+  "axeyum_refs": {
+    "fragments": [],
+    "curriculum_nodes": [
+      "propositional-logic"
+    ]
+  },
+  "provenance": {
+    "conjectured_by": "Not a conjecture: every value here is a published exact number, reproduced from both sides as a gate on the encoder. The contribution is the machine-checked refutation, not the number.",
+    "searched_by": [
+      "axeyum proof-producing CDCL core (solve_with_drat_proof / solve_with_drat_proof_streaming, pure Rust, ADR-0381), both sides"
+    ],
+    "checked_by": [
+      "axeyum in-tree backward DRAT checker (check_drat_backward, ADR-0382, pure Rust)",
+      "VanDerWaerden::first_violation -- a dynamic program over pairs of members of the colour class, computing the longest progression, which shares no code with the encoder's (first term, common difference) enumeration -- replayed the witness",
+      "scripts/check-claim-certificates.py: a third derivation of the semantics, in Python, independent of both the Rust encoder and the Rust verifier"
+    ],
+    "date": "2026-08-13",
+    "machine": "linux x86-64, 16 cores",
+    "prior_art": [
+      {
+        "citation": "T. Ahmed, O. Kullmann and H. Snevily, On the van der Waerden numbers w(2;3,t), arXiv:1102.5433 (Discrete Applied Mathematics 174 (2014) 27-51), Table 1",
+        "establishes": "w(2;3,5) = 22"
+      }
+    ],
+    "toolchain": {
+      "axeyum_commit": "f19282dc442b479bfbf8d8e8305626f6314234ae",
+      "rustc_version": "rustc 1.97.0-nightly (f53b654a8 2026-04-30)",
+      "target": "x86_64-unknown-linux-gnu",
+      "dirty": false
+    }
+  },
+  "evidence": [
+    {
+      "id": "instance-pin",
+      "kind": "instance-pin",
+      "supports": "the formula both other rows are about is w(2;3,5) at n=22",
+      "artifact": "artifacts/claims/vdw/vdw-2-3-5/F_22.cnf",
+      "artifact_sha256": "650f52b9597de508106911c4b4eac3967bf1292d28c34b8f84e829fd45f47735",
+      "artifact_format": "dimacs-cnf",
+      "check_status": "checked",
+      "checker_command": "python3 scripts/check-claim-certificates.py --only vdw-2-3-5",
+      "notes": "The deciding instance itself. check-claim-certificates.py validates it clause by clause against an independent Python derivation of the semantics -- every negative clause a genuine progression of the length its colour carries, the structural clauses exactly the sound at-least-one / at-most-one / symmetry set for this instance's block structure, and the per-colour clause counts equal to the progression counts -- so the refutation beside it provably refutes this instance and not some other file."
+    },
+    {
+      "id": "lower-witness",
+      "kind": "witness-replay",
+      "supports": "w > 21 (lower bound)",
+      "artifact": "artifacts/claims/vdw/vdw-2-3-5/witness_21.txt",
+      "artifact_sha256": "2eea166438fe5a91b816add8c43feb04149a6c5dd283eb465fc37662ce505763",
+      "check_status": "checked",
+      "checker_command": "python3 scripts/check-claim-certificates.py --only vdw-2-3-5",
+      "artifact_format": "colouring-text",
+      "notes": "Found by the CDCL core, then replayed by VanDerWaerden::first_violation (independent of the encoder) before being written, and replayed a third time in Python by check-claim-certificates.py, which grows progressions forward from every pair of same-coloured points."
+    },
+    {
+      "id": "upper-drat",
+      "kind": "unsat-certificate",
+      "supports": "w <= 22 (upper bound)",
+      "artifact": "artifacts/claims/vdw/vdw-2-3-5/F_22.drat.gz",
+      "artifact_format": "drat-text-gzip",
+      "check_status": "checked",
+      "checker_command": "python3 scripts/check-claim-certificates.py --only vdw-2-3-5",
+      "notes": "Produced by axeyum's own proof-producing CDCL core (solve_with_drat_proof_streaming, ADR-0381) streaming TEXT DRAT to disk, and re-derived in the same process by axeyum's own backward DRAT checker (check_drat_backward, ADR-0382). No external solver and no external checker took part. The deciding CNF beside it is validated clause by clause by check-claim-certificates.py against an independent Python derivation of the semantics, including the clause COUNT per colour: this family has no subsumption reduction (every length-k progression has exactly k points, so no two nest), so the encoding must carry every progression.",
+      "parameters": {
+        "producer": "axeyum solve_with_drat_proof_streaming + TextProofSink (crates/axeyum-cnf, ADR-0381)",
+        "checker": "axeyum check_drat_backward (crates/axeyum-cnf, ADR-0382)",
+        "proof_bytes": 1962,
+        "proof_sha256": "9a28709066c0ed13c556b1e780955bbbd6f45b4f1e1083802d44f815c7e38f73",
+        "deciding_cnf": "artifacts/claims/vdw/vdw-2-3-5/F_22.cnf",
+        "deciding_cnf_sha256": "650f52b9597de508106911c4b4eac3967bf1292d28c34b8f84e829fd45f47735"
+      },
+      "artifact_sha256": "004ab711c5d7903fe093bc2bfeed39863178071f487e1ecc972c39c0647a4457"
+    }
+  ],
+  "notes": "REPRODUCES a published value; the contribution is the certification, not the number. As far as an audit of the literature reached (Ahmed-Kullmann-Snevily arXiv:1102.5433, OEIS A007783 and A005346, and a GitHub survey), no classical van der Waerden number carries a machine-checked UNSAT proof in the peer-reviewed record: AKS say explicitly that compressing their resolution proofs into a checkable object 'would be highly desirable', and Marijn Heule's vdWaerden repository holds only lower-bound colourings. Both sides are discharged here -- n = N-1 satisfiable with an independently replayed colouring, n = N refuted with a DRAT proof re-derived by axeyum's own checker, no external solver or checker anywhere (ADR-0002). SOUNDNESS NOTE on symmetry: colour classes may be ordered by least element only between colours forbidding the SAME progression length. Diagonal instances take the uniform whole-palette break, which is sound because their colours are interchangeable; off-diagonal instances get per-length blocks, which for w(2;3,t) with t != 3 means NO colour symmetry at all. crates/axeyum-search/tests/vdw.rs carries the negative control showing the whole-palette break turning satisfiable w(2;3,4) at n=17 into unsat."
+}

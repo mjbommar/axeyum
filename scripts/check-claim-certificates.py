@@ -20,6 +20,17 @@ Currently understood families:
     at-most-one / BLOCKED symmetry set, where symmetry may only order colours
     that forbid the SAME equation. That last condition is the one that would
     otherwise let a wrong `unsat` through.
+  * vdw-colouring-AP(k) — van der Waerden numbers w(r; k_1..k_r), where
+    colour c forbids monochromatic arithmetic progressions of length k_c.
+    Witness rows are replayed by growing progressions forward from each pair
+    of same-coloured points, which shares no code with the encoder's
+    (first term, common difference) enumeration. unsat-certificate rows
+    validate the deciding CNF clause by clause: every negative clause must be
+    a genuine progression of the length its colour actually carries, and the
+    structural clauses must be the sound at-least-one / at-most-one /
+    symmetry set — WHOLE-PALETTE symmetry only when every k_c is equal, and
+    per-block symmetry otherwise. That last condition is what stops a wrong
+    `unsat` from an over-strong symmetry break.
   * rado-colouring-a(x-y)=bz  — witness-replay rows: the artifact is a
     whitespace-separated list of colours for 1..n; we recompute every
     solution of a(x-y)=bz inside [n]^3 by direct search and confirm none is
@@ -353,6 +364,347 @@ def check_offdiag_cnf(k: list[int], n: int, text: str) -> list[str]:
     if negative == 0:
         errors.append("the CNF carries no solution-set clauses at all; an "
                       "unconstrained formula refutes nothing")
+    return errors
+
+
+VDW_FAMILY = "vdw-colouring-AP(k)"
+VDW_BOUND_RE = re.compile(r"w\s*(>|=|>=|<=)\s*(\d+)")
+
+
+def vdw_longest_progression(klass: list[int]) -> tuple[int, list[int]]:
+    """The longest arithmetic progression inside `klass`, and its members.
+
+    Grown forward from every ordered pair of members: the pair fixes the
+    common difference, and the progression is extended while the next term is
+    still in the class. Deliberately a different derivation from the Rust
+    family's (a dynamic program over pairs) and from the encoder's (generate
+    every (first term, difference) inside [1,n] and emit the set) -- this one
+    never enumerates differences and never looks outside the class.
+    """
+    members = set(klass)
+    best: list[int] = klass[:1]
+    for i, first in enumerate(klass):
+        for second in klass[i + 1:]:
+            step = second - first
+            run = [first, second]
+            nxt = second + step
+            while nxt in members:
+                run.append(nxt)
+                nxt += step
+            if len(run) > len(best):
+                best = run
+    return len(best), best
+
+
+def check_vdw_witness(k: list[int], colours: list[int]) -> str | None:
+    """None if no colour class contains a progression of ITS OWN length."""
+    n = len(colours)
+    r = len(k)
+    for j, colour in enumerate(colours, start=1):
+        if not (1 <= colour <= r):
+            return f"integer {j} has colour {colour} outside 1..{r}"
+    for index, length in enumerate(k):
+        colour = index + 1
+        klass = sorted(j for j in range(1, n + 1) if colours[j - 1] == colour)
+        if len(klass) < length:
+            continue
+        longest, run = vdw_longest_progression(klass)
+        if longest >= length:
+            return (f"colour {colour} has a monochromatic progression of "
+                    f"length {longest} >= {length}: {run[:length]}")
+    return None
+
+
+def vdw_is_progression(length: int, members: list[int]) -> bool:
+    """Is `members` (ascending, distinct) an arithmetic progression of `length`?"""
+    if len(members) != length or length < 3:
+        return False
+    step = members[1] - members[0]
+    if step < 1:
+        return False
+    return all(b - a == step for a, b in zip(members, members[1:]))
+
+
+def vdw_structural_clauses(k: list[int], n: int) -> tuple[list, list, list]:
+    """The at-least-one, at-most-one and symmetry clauses the encoding must use.
+
+    The symmetry clauses order colour classes by least element, which is sound
+    ONLY between colours forbidding the same progression length. Two forms are
+    reconstructed, matching the two encoder paths:
+
+    * every k_c equal -- the colours are interchangeable, so the uniform
+      encoder's WHOLE-PALETTE break applies: the unit clause v(1,1) plus, for
+      each point j >= 2 and colour i >= 2, "j takes i only if some earlier
+      point takes i-1";
+    * otherwise -- the per-block break, imposed only inside blocks of colours
+      sharing a length. For w(2;3,t) with t != 3 the blocks are {1} and {2},
+      so this set is EMPTY and a stored CNF carrying any symmetry clause fails
+      here. That is the check that catches the wrong `unsat`.
+    """
+    r = len(k)
+
+    def var(j: int, i: int) -> int:
+        return (j - 1) * r + i
+
+    alo = [[var(j, i) for i in range(1, r + 1)] for j in range(1, n + 1)]
+    amo = [[-var(j, i1), -var(j, i2)]
+           for j in range(1, n + 1)
+           for i1 in range(1, r + 1)
+           for i2 in range(i1 + 1, r + 1)]
+    symmetry: list[list[int]] = []
+    if all(length == k[0] for length in k):
+        symmetry.append([var(1, 1)])
+        for j in range(2, n + 1):
+            for i in range(2, r + 1):
+                clause = [-var(j, i)]
+                if j > i - 1:
+                    clause += [var(jp, i - 1) for jp in range(1, j)]
+                symmetry.append(clause)
+        return alo, amo, symmetry
+    blocks: list[list[int]] = []
+    for index, length in enumerate(k):
+        for block in blocks:
+            if k[block[0] - 1] == length:
+                block.append(index + 1)
+                break
+        else:
+            blocks.append([index + 1])
+    for block in blocks:
+        for idx in range(1, len(block)):
+            colour, previous = block[idx], block[idx - 1]
+            for j in range(1, n + 1):
+                clause = [-var(j, colour)]
+                if j > idx:
+                    clause += [var(jp, previous) for jp in range(1, j)]
+                symmetry.append(clause)
+    return alo, amo, symmetry
+
+
+def check_vdw_cnf(k: list[int], n: int, text: str) -> list[str]:
+    """Validate a deciding CNF clause by clause against the definition.
+
+    Establishes: every negative clause forbids a genuine monochromatic
+    arithmetic progression of the length its colour actually carries, and the
+    structural clauses are exactly the sound at-least-one / at-most-one /
+    symmetry set for this instance's block structure. An unsatisfiable CNF
+    then proves the instance is not colourable.
+
+    Unlike the off-diagonal Schur family there is no subsumption reduction to
+    tolerate here: every length-k progression has exactly k points, so no two
+    nest and the encoder emits all of them. The clause COUNT is therefore also
+    checked, which byte-identity would give but clause-wise validity alone
+    would not.
+    """
+    errors: list[str] = []
+    r = len(k)
+    clauses = []
+    header = None
+    for line in text.splitlines():
+        line = line.strip()
+        if not line or line.startswith("c"):
+            continue
+        if line.startswith("p "):
+            header = line.split()
+            continue
+        lits = [int(t) for t in line.split()]
+        if not lits or lits[-1] != 0:
+            return [f"clause line {line!r} does not end in 0"]
+        clauses.append(lits[:-1])
+    if header is None or len(header) != 4 or header[1] != "cnf":
+        return ["missing or malformed DIMACS header"]
+    if int(header[2]) != n * r or int(header[3]) != len(clauses):
+        return [f"header says {header[2]} vars / {header[3]} clauses, "
+                f"found {n * r} / {len(clauses)}"]
+
+    def point_colour(lit: int) -> tuple[int, int]:
+        v = abs(lit) - 1
+        return v // r + 1, v % r + 1
+
+    alo, amo, symmetry = vdw_structural_clauses(k, n)
+    structural = {tuple(c) for c in alo} | {tuple(c) for c in amo} \
+        | {tuple(c) for c in symmetry}
+    seen_structural: set[tuple] = set()
+    per_colour = [0] * (r + 1)
+    for clause in clauses:
+        key = tuple(clause)
+        if key in structural:
+            seen_structural.add(key)
+            continue
+        if any(lit > 0 for lit in clause):
+            errors.append(f"clause {clause} is neither a progression clause "
+                          f"nor one of the sound structural clauses")
+            continue
+        colours = {point_colour(lit)[1] for lit in clause}
+        if len(colours) != 1:
+            errors.append(f"clause {clause} spans colours {sorted(colours)}; "
+                          f"a progression clause is scoped to one")
+            continue
+        colour = colours.pop()
+        members = sorted({point_colour(lit)[0] for lit in clause})
+        if len(members) != len(clause):
+            errors.append(f"clause {clause} repeats a point")
+            continue
+        if members[-1] > n:
+            errors.append(f"clause {clause} names a point above n={n}")
+            continue
+        if not vdw_is_progression(k[colour - 1], members):
+            errors.append(f"clause over {members} in colour {colour} is NOT a "
+                          f"progression of length {k[colour - 1]} -- the "
+                          f"refuted formula is not implied by the instance")
+            continue
+        per_colour[colour] += 1
+    missing = structural - seen_structural
+    if missing:
+        errors.append(f"{len(missing)} sound structural clause(s) absent from "
+                      f"the CNF, e.g. {sorted(missing)[0]}")
+    # Every progression must be forbidden, in every colour that forbids that
+    # length: a MISSING progression clause weakens the formula, and a weakened
+    # formula that is unsatisfiable still bounds the number -- but it would
+    # also mean the stored CNF is not the instance the claim names, so it is an
+    # error here rather than a silent pass.
+    for colour in range(1, r + 1):
+        length = k[colour - 1]
+        expected = sum(max(0, n - (length - 1) * d)
+                       for d in range(1, (n - 1) // (length - 1) + 1))
+        if per_colour[colour] != expected:
+            errors.append(f"colour {colour} carries {per_colour[colour]} "
+                          f"progression clauses, not the {expected} length-"
+                          f"{length} progressions inside [1,{n}]")
+    if sum(per_colour) == 0:
+        errors.append("the CNF carries no progression clauses at all; an "
+                      "unconstrained formula refutes nothing")
+    return errors
+
+
+def check_vdw_evidence(path: Path, ev: dict, params: dict) -> list[str]:
+    """Re-check one evidence row of the van der Waerden family.
+
+    `witness-replay`: the artifact is a whitespace-separated colouring of
+    1..n; we recompute, from the definition of an arithmetic progression and
+    nothing else, whether any colour class contains one of its own length.
+
+    `unsat-certificate`: the deciding CNF beside the proof is validated clause
+    by clause against the claim's parameters, the stored bytes are checked
+    against the recorded sha256 / step count, and the proof is checked to
+    parse and to end in the empty clause. The RUP re-derivation itself is
+    axeyum's own `check_drat_backward`, which produced the row.
+    """
+    import gzip
+    import hashlib
+
+    errors: list[str] = []
+    eid = ev["id"]
+    kind = ev["kind"]
+    k = [int(x) for x in params["k"]]
+    n = int(params["n"])
+    art = ev.get("artifact")
+    if art is None:
+        return [f"{path}: '{eid}' is 'checked' but has no artifact"]
+    art_path = artifact_path(art)
+    if not art_path.exists():
+        return [f"{path}: '{eid}' artifact {art} does not exist"]
+
+    if kind == "witness-replay":
+        body = " ".join(line for line in art_path.read_text().splitlines()
+                        if not line.startswith("c"))
+        colours = [int(t) for t in body.split()]
+        if not colours:
+            return [f"{path}: '{eid}' witness is empty"]
+        msg = check_vdw_witness(k, colours)
+        if msg is not None:
+            return [f"{path}: '{eid}' witness INVALID: {msg}"]
+        m = VDW_BOUND_RE.search(ev["supports"])
+        if m is not None:
+            rel, bound = m.group(1), int(m.group(2))
+            if rel == ">" and len(colours) < bound:
+                errors.append(f"{path}: '{eid}' claims w > {bound} but the "
+                              f"witness colours only {len(colours)} integers")
+        print(f"  checked witness {eid}: {len(colours)} integers, no "
+              f"monochromatic progression of length {tuple(k)} in its own colour")
+        return errors
+
+    if kind == "instance-pin":
+        import hashlib as _hashlib
+        data = art_path.read_bytes()
+        cnf_errors = check_vdw_cnf(k, n, data.decode())
+        if cnf_errors:
+            return [f"{path}: '{eid}' pinned CNF: {m}" for m in cnf_errors]
+        if ev.get("artifact_sha256"):
+            got = _hashlib.sha256(data).hexdigest()
+            if got != ev["artifact_sha256"]:
+                errors.append(f"{path}: '{eid}' artifact sha256 {got} != "
+                              f"recorded {ev['artifact_sha256']}")
+        print(f"  checked instance pin {eid}: the stored DIMACS is exactly "
+              f"the progression encoding of w({len(k)};"
+              f"{','.join(map(str, k))}) at n={n}")
+        return errors
+
+    if kind != "unsat-certificate":
+        return [f"{path}: '{eid}' kind '{kind}' cannot be 'checked' for "
+                f"family {VDW_FAMILY}"]
+
+    cnf_name = art_path.name.replace(".drat.gz", ".cnf").replace(".drat", ".cnf")
+    cnf_path = art_path.parent / cnf_name
+    if not cnf_path.exists() and (art_path.parent / (cnf_name + ".gz")).exists():
+        cnf_path = art_path.parent / (cnf_name + ".gz")
+    if not cnf_path.exists():
+        if ev.get("distribution") == "regenerable" or ev.get("regeneration"):
+            recipe = ((ev.get("regeneration") or {}).get("command")
+                      or "no recipe recorded")
+            NOT_RECHECKED.append(f"{path.parent.name}/{eid}: deciding CNF "
+                                 f"{cnf_name} not in this tree; regenerate "
+                                 f"with: {recipe}")
+            print(f"  NOT re-checked {eid}: deciding CNF absent (regenerable)")
+            return []
+        return [f"{path}: '{eid}' has no deciding CNF beside it; the proof "
+                f"cannot be tied to the claimed instance"]
+    cnf_bytes = cnf_path.read_bytes()
+    cnf_text = (gzip.decompress(cnf_bytes) if cnf_path.suffix == ".gz"
+                else cnf_bytes).decode()
+    cnf_errors = check_vdw_cnf(k, n, cnf_text)
+    if cnf_errors:
+        return [f"{path}: '{eid}' deciding CNF: {m}" for m in cnf_errors]
+
+    data = art_path.read_bytes()
+    payload = (gzip.decompress(data) if ev.get("artifact_format", "").endswith("-gzip")
+               else data)
+    recorded = ev.get("parameters") or {}
+    text = payload.decode()
+    steps = [line for line in text.splitlines() if line.strip()]
+    if not steps:
+        return [f"{path}: '{eid}' proof has no steps; a zero-step proof is "
+                f"not a refutation"]
+    additions = [line for line in steps if not line.strip().startswith("d ")]
+    if not additions or additions[-1].strip() != "0":
+        return [f"{path}: '{eid}' proof does not end in the empty clause; it "
+                f"refutes nothing"]
+    for line in steps:
+        body = line.strip()
+        if body.startswith("d "):
+            body = body[2:]
+        toks = body.split()
+        if not toks or toks[-1] != "0" or any(t == "0" for t in toks[:-1]):
+            return [f"{path}: '{eid}' proof line {line!r} is not DRAT text"]
+        try:
+            [int(t) for t in toks]
+        except ValueError:
+            return [f"{path}: '{eid}' proof line {line!r} has a non-integer"]
+    if "proof_steps" in recorded and int(recorded["proof_steps"]) != len(steps):
+        errors.append(f"{path}: '{eid}' records {recorded['proof_steps']} steps "
+                      f"but the artifact has {len(steps)}")
+    if "proof_sha256" in recorded:
+        got = hashlib.sha256(payload).hexdigest()
+        if got != recorded["proof_sha256"]:
+            errors.append(f"{path}: '{eid}' proof sha256 {got} != recorded "
+                          f"{recorded['proof_sha256']}")
+    if ev.get("artifact_sha256"):
+        got = hashlib.sha256(data).hexdigest()
+        if got != ev["artifact_sha256"]:
+            errors.append(f"{path}: '{eid}' artifact sha256 {got} != recorded "
+                          f"{ev['artifact_sha256']}")
+    print(f"  checked certificate {eid}: deciding CNF is exactly the "
+          f"progression encoding of w({len(k)};{','.join(map(str, k))}) at "
+          f"n={n}; {len(steps)} DRAT steps ending in the empty clause")
     return errors
 
 
@@ -1055,11 +1407,25 @@ def check_claim(path: Path, drat_checker: str | None) -> list[str]:
 
     for ev in c["evidence"]:
         if ev["check_status"] != "checked":
+            # A row that declares itself unchecked is not an error -- but it
+            # was previously skipped in silence, so a claim carrying one read
+            # exactly like a claim whose every row had been re-derived. Say it
+            # out loud and carry it into the summary.
+            NOT_RECHECKED.append(
+                f"{path.parent.name}/{ev['id']}: declared "
+                f"check_status={ev['check_status']!r}"
+                + (f"; regenerate with: {(ev.get('regeneration') or {}).get('command')}"
+                   if ev.get("regeneration") else ""))
+            print(f"  NOT re-checked {ev['id']}: declared "
+                  f"check_status={ev['check_status']!r}")
             continue
         eid = ev["id"]
         kind = ev["kind"]
         if fam == OFFDIAG_FAMILY:
             errors.extend(check_offdiag_evidence(path, ev, params))
+            continue
+        if fam == VDW_FAMILY:
+            errors.extend(check_vdw_evidence(path, ev, params))
             continue
         if fam != RADO_FAMILY:
             errors.append(f"{path}: evidence '{eid}' is 'checked' but family "

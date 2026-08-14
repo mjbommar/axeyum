@@ -1,0 +1,3 @@
+c w(2;3,4) n=17 lower-bound colouring; w(2;3,4) > 17
+c verified-by=first_violation
+2 2 2 1 2 1 1 2 2 2 1 2 1 1 2 2 2
