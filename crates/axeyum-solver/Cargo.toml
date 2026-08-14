@@ -72,6 +72,14 @@ name = "first_smtlib_query"
 required-features = ["full"]
 
 [[example]]
+name = "infeasibility_iis"
+required-features = ["full"]
+
+[[example]]
+name = "infeasibility_farkas_lean"
+required-features = ["full"]
+
+[[example]]
 name = "reconstruct_ceiling_probe"
 required-features = ["full"]
 
