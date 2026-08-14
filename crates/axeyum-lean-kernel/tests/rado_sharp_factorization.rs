@@ -1,5 +1,6 @@
-//! The exact subtraction-free finite-sum factorization used in the proof of
-//! `thm:sharp` in `../axeyum-rado-paper`.
+//! The exact subtraction-free finite-sum factorization and quotient-free
+//! witness identity used in the proof of `thm:sharp` in
+//! `../axeyum-rado-paper`.
 //!
 //! The generic algebra lives in [`build_nat_prelude`]. This file contributes
 //! only the paper-shaped theorem and executable controls. No axiom is added.
@@ -207,6 +208,90 @@ fn admit_sharp_factorization(d: &mut Dev) -> NameId {
     name
 }
 
+/// Admit the quotient-free algebraic identity for the paper witness. The
+/// explicit factor `N = b*q` replaces `q = N/b`, and `a <= q` is exactly the
+/// side condition needed for `u = q-a` in truncated natural arithmetic.
+///
+/// With `X = N-a*b+1`, `Y = 1`, `u = q-a`, and `Z = a*u`, prove
+/// `a*(X-Y) = b*Z`.
+fn admit_sharp_witness_identity(d: &mut Dev) -> NameId {
+    let p = d.p;
+    let name = d.name("witness_identity");
+    d.theorem(name, 4, &|d, v| {
+        let (a, b, n, q) = (v[0], v[1], v[2], v[3]);
+        let bq = d.mul(b, q);
+        let factor_ty = d.eq(n, bq);
+        let factor_fv = d.fresh_fvar();
+        let factor = d.k.fvar(factor_fv);
+        let bound_ty = d.le(a, q);
+        let bound_fv = d.fresh_fvar();
+        let bound = d.k.fvar(bound_fv);
+
+        let u = d.sub(q, a);
+        let ab = d.mul(a, b);
+        let ba = d.mul(b, a);
+        let n_sub_ab = d.sub(n, ab);
+        let one = d.num(1);
+        let x = d.add(n_sub_ab, one);
+        let y = one;
+        let z = d.mul(a, u);
+        let x_sub_y = d.sub(x, y);
+        let lhs = d.mul(a, x_sub_y);
+        let rhs = d.mul(b, z);
+        let conclusion = d.eq(lhs, rhs);
+
+        // N-a*b = b*(q-a): rewrite the explicit factor and commute a*b,
+        // then use the generic bounded multiplication/subtraction theorem.
+        let bq_sub_ab = d.sub(bq, ab);
+        let h_factor_sub = d.congr(n, bq, factor, &|d, t| d.sub(t, ab));
+        let bq_sub_ba = d.sub(bq, ba);
+        let h_ab_ba = d.lemma(p.mul_comm, &[a, b]);
+        let h_comm_sub = d.congr(ab, ba, h_ab_ba, &|d, t| d.sub(bq, t));
+        let bu = d.mul(b, u);
+        let h_mul_sub = d.lemma(p.mul_sub_left_distrib, &[b, q, a, bound]);
+        let h_mul_sub_rev = d.symm(bu, bq_sub_ba, h_mul_sub);
+        let (_end, difference_eq_bu) = d.chain(
+            n_sub_ab,
+            &[
+                (bq_sub_ab, h_factor_sub),
+                (bq_sub_ba, h_comm_sub),
+                (bu, h_mul_sub_rev),
+            ],
+        );
+
+        // Scale that equality by `a`, then reassociate and commute the two
+        // scalar factors to reach `b*(a*u)`.
+        let a_bu = d.mul(a, bu);
+        let h_scaled = d.congr(n_sub_ab, bu, difference_eq_bu, &|d, t| d.mul(a, t));
+        let ab_u = d.mul(ab, u);
+        let h_assoc_a = d.lemma(p.mul_assoc, &[a, b, u]);
+        let h_assoc_a_rev = d.symm(ab_u, a_bu, h_assoc_a);
+        let ba_u = d.mul(ba, u);
+        let h_comm_scaled = d.congr(ab, ba, h_ab_ba, &|d, t| d.mul(t, u));
+        let h_assoc_b = d.lemma(p.mul_assoc, &[b, a, u]);
+        let (_end, body) = d.chain(
+            lhs,
+            &[
+                (a_bu, h_scaled),
+                (ab_u, h_assoc_a_rev),
+                (ba_u, h_comm_scaled),
+                (rhs, h_assoc_b),
+            ],
+        );
+        let proof = {
+            let with_bound = d.lam_fv(bound_fv, bound_ty, body);
+            d.lam_fv(factor_fv, factor_ty, with_bound)
+        };
+        let stmt = {
+            let with_bound = d.arrow(bound_ty, conclusion);
+            d.arrow(factor_ty, with_bound)
+        };
+        (stmt, proof)
+    })
+    .expect("sharp witness identity checks");
+    name
+}
+
 #[test]
 fn kernel_checks_the_exact_sharpness_factorization() {
     let mut d = Dev::new();
@@ -281,5 +366,72 @@ fn kernel_rejects_a_broken_sharpness_factorization() {
         })
         .expect_err("a dropped factorization term must be rejected");
     println!("broken sharp factorization rejected: {error:?}");
+    assert!(!d.k.environment().contains(bad_name));
+}
+
+#[test]
+fn kernel_checks_the_quotient_free_sharpness_witness_identity() {
+    let mut d = Dev::new();
+    let theorem = admit_sharp_witness_identity(&mut d);
+    let a = d.num(2);
+    let b = d.num(3);
+    let n = d.num(15);
+    let q = d.num(5);
+    let factor = d.refl(n);
+    let three = d.num(3);
+    let bound = d.lemma(d.p.le_add_right, &[a, three]);
+    let proof = d.lemma(theorem, &[a, b, n, q, factor, bound]);
+    d.k.infer(proof)
+        .expect("quotient-free witness application infers");
+
+    // X=10, Y=1, u=3, Z=6, hence 2*(10-1)=3*6=18.
+    let ab = d.mul(a, b);
+    let difference = d.sub(n, ab);
+    let one = d.num(1);
+    let x = d.add(difference, one);
+    let x_sub_y = d.sub(x, one);
+    let lhs = d.mul(a, x_sub_y);
+    let u = d.sub(q, a);
+    let z = d.mul(a, u);
+    let rhs = d.mul(b, z);
+    let eighteen = d.num(18);
+    assert!(d.k.def_eq(lhs, eighteen));
+    assert!(d.k.def_eq(rhs, eighteen));
+}
+
+#[test]
+fn kernel_rejects_a_broken_sharpness_witness_endpoint() {
+    let mut d = Dev::new();
+    let theorem = admit_sharp_witness_identity(&mut d);
+    let a = d.num(2);
+    let b = d.num(3);
+    let n = d.num(15);
+    let q = d.num(5);
+    let factor = d.refl(n);
+    let three = d.num(3);
+    let bound = d.lemma(d.p.le_add_right, &[a, three]);
+    let proof = d.lemma(theorem, &[a, b, n, q, factor, bound]);
+
+    // Dropping the `+1` from X changes X-Y from 9 to 8, so the left side is
+    // 16 while bZ remains 18. The valid witness proof must not transfer.
+    let ab = d.mul(a, b);
+    let broken_x = d.sub(n, ab);
+    let one = d.num(1);
+    let broken_difference = d.sub(broken_x, one);
+    let lhs = d.mul(a, broken_difference);
+    let u = d.sub(q, a);
+    let z = d.mul(a, u);
+    let rhs = d.mul(b, z);
+    let false_goal = d.eq(lhs, rhs);
+    let bad_name = d.name("broken_witness_endpoint");
+    let error =
+        d.k.add_declaration(Declaration::Theorem {
+            name: bad_name,
+            uparams: vec![],
+            ty: false_goal,
+            value: proof,
+        })
+        .expect_err("a dropped witness endpoint term must be rejected");
+    println!("broken sharp witness endpoint rejected: {error:?}");
     assert!(!d.k.environment().contains(bad_name));
 }

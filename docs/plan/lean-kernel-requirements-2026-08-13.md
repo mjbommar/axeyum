@@ -1028,7 +1028,7 @@ Ordered by dependency.
 | ID | Requirement | Needed by | Status |
 |---|---|---|---|
 | **R4.1** | Complete the order fragment: `lt`, antisymmetry, totality, `le_of_succ_le_succ` (inversion, needs a `pred`-style motive), `min`. | all three theorems | **WIP:** `Nat.lt` and checked successor inversion landed under [ADR-0390](../research/09-decisions/adr-0390-proved-nat-strict-order-and-successor-inversion.md); antisymmetry, totality, and `min` remain |
-| **R4.2** | Truncated subtraction and cancellation. Called out in `route-c/REPORT.md` as *"the first real cost; it is what makes valuations usable."* | all three | **WIP:** checked `Nat.pred`, truncated `Nat.sub`, successor injectivity, additive cancellation, and order-conditioned `sub_add_cancel` landed under [ADR-0397](../research/09-decisions/adr-0397-checked-truncated-subtraction-and-additive-cancellation.md) / [ADR-0398](../research/09-decisions/adr-0398-order-conditioned-subtraction-restoration.md); multiplicative cancellation and the broader subtraction/order library remain |
+| **R4.2** | Truncated subtraction and cancellation. Called out in `route-c/REPORT.md` as *"the first real cost; it is what makes valuations usable."* | all three | **WIP:** checked `Nat.pred`, truncated `Nat.sub`, successor injectivity, additive cancellation, order-conditioned `sub_add_cancel`, and bounded `mul_sub_left_distrib` landed under [ADR-0397](../research/09-decisions/adr-0397-checked-truncated-subtraction-and-additive-cancellation.md)--[ADR-0399](../research/09-decisions/adr-0399-quotient-free-rado-sharpness-witness.md); multiplicative cancellation and the broader subtraction/order library remain |
 | **R4.3** | Divisibility as a **prelude-level** definition with its lemma set. | all three | **WIP:** `Nat.dvd`, `dvd_mul`, and `dvd_add` are zero-axiom prelude declarations under [ADR-0389](../research/09-decisions/adr-0389-proved-nat-divisibility-foundation.md); transitivity/cancellation remain |
 | **R4.4** | Congruence mod `a`. | central to `thm:rigid` | absent |
 | **R4.5** | Intervals, membership, and the partition/covering lemma behind `lem:structure(3)`. Cardinality is needed only as a diameter bound and can be discharged as order arithmetic on endpoints. | all three | absent |
@@ -1064,9 +1064,10 @@ Ordered by dependency.
 
 R7.1 remains **WIP**. Its exact subtraction-free finite-sum factorization,
 including the `k=3` empty corner, is checked under ADR-0396. Truncated
-subtraction computation, additive cancellation, and conditional restoration
-are checked under ADR-0397--0398. The explicit quotient/witness connection and
-range proof are now the first missing theorem dependencies.
+subtraction computation, additive cancellation, conditional restoration, and
+the quotient-free witness equation are checked under ADR-0397--0399. The
+closed-form quotient construction and range proof are now the first missing
+theorem dependencies.
 
 ### R8 — Lean conformance
 

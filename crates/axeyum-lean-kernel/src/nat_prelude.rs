@@ -52,7 +52,8 @@
 //! inductive gate, so its recursor `Nat.le.rec` (induction on the *derivation*)
 //! is kernel-generated. `Nat.lt n m := Nat.le (Nat.succ n) m`. Theorems:
 //! `zero_le`, `le_succ_succ`, `le_of_succ_le_succ`, `le_trans`, and
-//! `le_add_right`, and order-conditioned `sub_add_cancel`.
+//! `le_add_right`, order-conditioned `sub_add_cancel`, and bounded
+//! `mul_sub_left_distrib`.
 //!
 //! **Divisibility**: `Nat.dvd a n := Exists (fun q => n = a * q)`, together
 //! with checked theorems `dvd_mul` (witness introduction) and `dvd_add`
@@ -236,6 +237,8 @@ pub struct NatPrelude {
     pub le_add_right: NameId,
     /// `sub_add_cancel : ∀ m n, Le m n → add (sub n m) m = n`.
     pub sub_add_cancel: NameId,
+    /// `mul_sub_left_distrib : ∀ b q a, Le a q → b*(q-a) = b*q-b*a`.
+    pub mul_sub_left_distrib: NameId,
 
     // --- divisibility -------------------------------------------------------
     /// `Nat.dvd : Nat → Nat → Prop`, where `dvd a n := ∃ q, n = a * q`.
@@ -332,6 +335,7 @@ pub fn build_nat_prelude(kernel: &mut Kernel) -> Result<NatPrelude, KernelError>
             le_trans: kernel.name_str(nat, "le_trans"),
             le_add_right: kernel.name_str(nat, "le_add_right"),
             sub_add_cancel: kernel.name_str(nat, "sub_add_cancel"),
+            mul_sub_left_distrib: kernel.name_str(nat, "mul_sub_left_distrib"),
             dvd: kernel.name_str(nat, "dvd"),
             dvd_mul: kernel.name_str(nat, "dvd_mul"),
             dvd_add: kernel.name_str(nat, "dvd_add"),
@@ -1688,6 +1692,63 @@ fn declare_order(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> 
         let value = d.lam_fv(m_fv, nat, proof);
         d.declare_theorem(p.sub_add_cancel, ty, value)?;
     }
+
+    // mul_sub_left_distrib : ∀ b q a, Le a q → b*(q-a) = b*q-b*a
+    // Rather than postulating monotonicity, construct the scaled difference,
+    // prove it restores `b*q`, transport the corresponding bound, and cancel
+    // the common right summand.
+    d.theorem(p.mul_sub_left_distrib, 3, &|d, v| {
+        let (b, q, a) = (v[0], v[1], v[2]);
+        let hyp_ty = d.le(a, q);
+        let h_fv = d.fresh_fvar();
+        let h = d.kernel().fvar(h_fv);
+
+        let difference = d.sub(q, a);
+        let restored = d.add(difference, a);
+        let h_restore = d.lemma(p.sub_add_cancel, &[a, q, h]);
+        let b_difference = d.mul(b, difference);
+        let ba = d.mul(b, a);
+        let bq = d.mul(b, q);
+        let scaled_sum = d.mul(b, restored);
+        let sum = d.add(b_difference, ba);
+        let h_distribute = d.lemma(p.left_distrib, &[b, difference, a]);
+        let h_distribute_rev = d.symm(scaled_sum, sum, h_distribute);
+        let h_scaled_restore = d.congr(restored, q, h_restore, &|d, x| d.mul(b, x));
+        let (_end, sum_eq_bq) = d.chain(
+            sum,
+            &[(scaled_sum, h_distribute_rev), (bq, h_scaled_restore)],
+        );
+
+        let reordered_sum = d.add(ba, b_difference);
+        let ba_le_reordered = d.lemma(p.le_add_right, &[ba, b_difference]);
+        let h_comm = d.lemma(p.add_comm, &[ba, b_difference]);
+        let (_end, reordered_eq_bq) = d.chain(reordered_sum, &[(sum, h_comm), (bq, sum_eq_bq)]);
+        let le_motive = d.eq_motive(reordered_sum, &|d, x| d.le(ba, x));
+        let ba_le_bq = d.transport(
+            reordered_sum,
+            le_motive,
+            ba_le_reordered,
+            bq,
+            reordered_eq_bq,
+        );
+
+        let scaled_difference = d.sub(bq, ba);
+        let scaled_restored = d.add(scaled_difference, ba);
+        let h_sub_restore = d.lemma(p.sub_add_cancel, &[ba, bq, ba_le_bq]);
+        let h_sub_restore_rev = d.symm(scaled_restored, bq, h_sub_restore);
+        let (_end, common_sum) = d.chain(
+            sum,
+            &[(bq, sum_eq_bq), (scaled_restored, h_sub_restore_rev)],
+        );
+        let body = d.lemma(
+            p.add_right_cancel,
+            &[b_difference, scaled_difference, ba, common_sum],
+        );
+        let conclusion = d.eq(b_difference, scaled_difference);
+        let stmt = d.arrow(hyp_ty, conclusion);
+        let proof = d.lam_fv(h_fv, hyp_ty, body);
+        (stmt, proof)
+    })?;
     Ok(())
 }
 

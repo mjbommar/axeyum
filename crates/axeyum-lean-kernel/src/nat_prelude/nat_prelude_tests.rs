@@ -103,6 +103,7 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.le_trans,
         p.le_add_right,
         p.sub_add_cancel,
+        p.mul_sub_left_distrib,
         p.dvd_mul,
         p.dvd_add,
     ]
@@ -316,6 +317,32 @@ fn conditional_subtraction_restores_bounded_minuends() {
     let self_name = f.name("three_sub_three_add_three");
     f.declare_theorem(self_name, self_stmt, self_restored)
         .unwrap_or_else(|e| panic!("equal-bound subtraction should restore: {}", f.explain(&e)));
+}
+
+/// Scaling a bounded truncated difference agrees with subtracting the scaled
+/// endpoints; this is the generic algebra needed by the paper witness.
+#[test]
+fn bounded_subtraction_distributes_under_left_multiplication() {
+    let mut f = Fixture::new();
+    let p = f.p;
+    let two = f.num(2);
+    let three = f.num(3);
+    let five = f.num(5);
+    let seven = f.num(7);
+    let bound = f.lemma(p.le_add_right, &[two, five]);
+    let proof = f.lemma(p.mul_sub_left_distrib, &[three, seven, two, bound]);
+    let difference = f.sub(seven, two);
+    let lhs = f.mul(three, difference);
+    let scaled_q = f.mul(three, seven);
+    let scaled_a = f.mul(three, two);
+    let rhs = f.sub(scaled_q, scaled_a);
+    let stmt = f.eq(lhs, rhs);
+    let name = f.name("three_times_seven_sub_two");
+    f.declare_theorem(name, stmt, proof)
+        .unwrap_or_else(|e| panic!("scaled bounded subtraction should admit: {}", f.explain(&e)));
+    let fifteen = f.num(15);
+    assert!(f.k.def_eq(lhs, fifteen));
+    assert!(f.k.def_eq(rhs, fifteen));
 }
 
 /// The generic checked reindexing theorem covers both the empty `k = 3`
@@ -942,7 +969,34 @@ fn kernel_rejects_broken_proof_terms() {
         rejections += 1;
     }
 
-    assert_eq!(rejections, 16, "every negative control must be rejected");
+    // NC17 — scaled subtraction retains the exact subtrahend. Replacing
+    // `3*2` by `3*3` changes the concrete result from 15 to 12.
+    {
+        let name = f.name("nc17_mul_sub_wrong_scaled_subtrahend");
+        let two = f.num(2);
+        let three = f.num(3);
+        let five = f.num(5);
+        let seven = f.num(7);
+        let bound = f.lemma(p.le_add_right, &[two, five]);
+        let proof = f.lemma(p.mul_sub_left_distrib, &[three, seven, two, bound]);
+        let difference = f.sub(seven, two);
+        let lhs = f.mul(three, difference);
+        let scaled_q = f.mul(three, seven);
+        let wrong_scaled_a = f.mul(three, three);
+        let wrong_rhs = f.sub(scaled_q, wrong_scaled_a);
+        let bad = f.eq(lhs, wrong_rhs);
+        let err = f
+            .declare_theorem(name, bad, proof)
+            .expect_err("NC17: scaled subtraction must retain the exact subtrahend");
+        println!(
+            "NC17 (wrong scaled subtrahend) rejected:\n  {}",
+            f.explain(&err)
+        );
+        assert!(!f.k.environment().contains(name));
+        rejections += 1;
+    }
+
+    assert_eq!(rejections, 17, "every negative control must be rejected");
 }
 
 /// The build is deterministic: two independent kernels render every promised
@@ -965,7 +1019,7 @@ fn the_build_is_deterministic() {
     assert_eq!(first, second, "the prelude build must be deterministic");
     assert_eq!(
         first.len(),
-        8 + 40,
+        8 + 41,
         "every promised definition and theorem must be rendered"
     );
 }
