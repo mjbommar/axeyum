@@ -189,6 +189,45 @@ check "THE HOLE: cargo test PASSES a test that must fail" 0 $?
 ./scripts/check-workspace-tests.sh >/dev/null 2>&1
 check "FIXED: check-workspace-tests fails on the same tree" 101 $?
 
+# ---------------------------------------------------------------------------
+# Controls 4 and 5 run against the REPOSITORY, not the fixture: they are about
+# the aggregate gate's own scope, which only exists there. Both are read-only.
+# ---------------------------------------------------------------------------
+echo "=== control 4: the aggregate gate cannot silently lose steps ==="
+listed="$(AXEYUM_CHECK_LIST=1 "$repo/scripts/check.sh" 2>/dev/null | wc -l)"
+floor="$(grep -E '^STEP_FLOOR=[0-9]+$' "$repo/scripts/check.sh" | cut -d= -f2)"
+if [ -n "$floor" ] && [ "$listed" -ge "$floor" ] && [ "$listed" -gt 0 ]; then
+  echo "  ok   check.sh lists $listed steps against its floor of $floor"
+  pass=$((pass + 1))
+else
+  echo "  FAIL check.sh lists $listed steps, floor '$floor'" >&2
+  fail=$((fail + 1))
+fi
+# The mutation: delete one step and require the floor to notice. Done on a COPY
+# so the repository is untouched.
+sed '0,/^step /{/^step /d}' "$repo/scripts/check.sh" > "$work/check-one-step-less.sh"
+mutated="$(AXEYUM_CHECK_LIST=1 bash "$work/check-one-step-less.sh" 2>/dev/null | wc -l)"
+if [ "$mutated" -eq $((listed - 1)) ]; then
+  echo "  ok   the mutation removed exactly one step ($mutated vs $listed)"
+  pass=$((pass + 1))
+else
+  echo "  FAIL the mutation changed the step count from $listed to $mutated" >&2
+  fail=$((fail + 1))
+fi
+
+echo "=== control 5: new just-vs-check.sh divergence is rejected ==="
+if command -v just >/dev/null 2>&1; then
+  # Drop one accepted difference: the gate must then report it as unrecorded.
+  grep -v '^#' "$repo/scripts/check-aggregate-scope.expected" | grep -v '^[[:space:]]*$' \
+    | tail -n +2 > "$work/expected-minus-one"
+  "$repo/scripts/check-aggregate-scope.sh" --expected "$work/expected-minus-one" >/dev/null 2>&1
+  check "a difference missing from the expectation file fails the gate" 1 $?
+  "$repo/scripts/check-aggregate-scope.sh" >/dev/null 2>&1
+  check "the committed expectation file passes" 0 $?
+else
+  echo "  skip \`just\` is not installed — the divergence gate cannot be controlled here"
+fi
+
 echo
 echo "gate-scope controls: $pass passed, $fail failed"
 [ "$fail" -eq 0 ] || exit 1
