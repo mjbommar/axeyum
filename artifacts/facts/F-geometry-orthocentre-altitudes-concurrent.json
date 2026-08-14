@@ -1,0 +1,73 @@
+{
+  "schema_version": 1,
+  "id": "F:geometry-orthocentre-altitudes-concurrent",
+  "title": "the altitudes of a triangle are concurrent",
+  "statement": "Let A, B, C, P be points of the Euclidean plane. If AP is perpendicular to BC and BP is perpendicular to CA, then CP is perpendicular to AB. NO non-degeneracy condition is required: in coordinates the statement is the polynomial identity (P-C).(B-A) + (P-A).(C-B) + (P-B).(A-C) = 0, which holds for all four points. The triangle must be non-degenerate for such a P to EXIST and be unique -- that is the standard side condition on the orthocentre -- but existence is a different claim and this fact does not make it.",
+  "formal": {
+    "language": "smtlib2",
+    "statement": "(assert (forall ((ax Real) (ay Real) (bx Real) (by Real) (cx Real) (cy Real) (px Real) (py Real))\n  (=> (and (= (+ (* (- px ax) (- cx bx)) (* (- py ay) (- cy by))) 0.0)\n           (= (+ (* (- px bx) (- ax cx)) (* (- py by) (- ay cy))) 0.0))\n      (= (+ (* (- px cx) (- bx ax)) (* (- py cy) (- by ay))) 0.0))))",
+    "fragment": "NRA",
+    "free_symbols": [
+      "ax",
+      "ay",
+      "bx",
+      "by",
+      "cx",
+      "cy",
+      "px",
+      "py"
+    ]
+  },
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "depends_on": [],
+  "proof_route": "cas-certificate",
+  "axiom_footprint": [
+    "cas.exact-rational-polynomial-normal-form",
+    "geometry.cartesian-coordinatisation-of-the-euclidean-plane",
+    "geometry.characteristic-zero-specialisation"
+  ],
+  "evidence": [
+    {
+      "id": "geometry-certificate-orthocentre-altitudes-concurrent",
+      "kind": "witness-replay",
+      "supports": "the cofactor certificate, re-checked from the committed artifact by a checker that shares no code with the search that produced it",
+      "check_status": "checked",
+      "checkers": [
+        "geometry_check::check_certificate shape pass (the generator list must be exactly the stated hypotheses, with no undeclared saturation)",
+        "geometry_check::check_certificate symbolic pass (the identity target = sum of cofactor times generator expanded with MvPoly add/mul alone -- no Groebner machinery, no monomial order, no S-polynomials)",
+        "geometry_check::check_certificate numeric pass (the same identity re-evaluated at 24 deterministic integer points through MvPoly::evaluate, a different code path from the symbolic expansion)",
+        "geometry_check::check_certificate configuration pass (A = (0,0), B = (4,0), C = (1,3) with orthocentre P = (1,1) replayed at exact rational coordinates)"
+      ],
+      "checker_command": "cargo test -p axeyum-cas --test geometry_certificate_artifacts",
+      "artifact": "artifacts/geometry-certificates/orthocentre-altitudes-concurrent.json",
+      "notes": "Both cofactors are the constant -1. That is the sharpest single result in this corpus: the concurrency of the altitudes -- the theorem whose textbook statement always carries `for a triangle` -- is, in the universally quantified incidence form, an unconditional linear identity between the three perpendicularity polynomials."
+    },
+    {
+      "id": "geometry-coordinatisation-control-orthocentre",
+      "kind": "witness-replay",
+      "supports": "that the polynomials in the certificate mean the geometric predicates they are named after",
+      "check_status": "checked",
+      "checkers": [
+        "axeyum_cas::geometry::Line::is_perpendicular (an older module deciding perpendicularity from `ax + by + c = 0` normals rather than from an inner product) agreed with the perpendicularity polynomial on every integer configuration of the sweep where it can build both lines, and the polynomial vanishes on every degenerate segment where it cannot"
+      ],
+      "checker_command": "cargo test -p axeyum-cas --test geometry_encoding_agreement",
+      "artifact": "crates/axeyum-cas/tests/geometry_encoding_agreement.rs",
+      "notes": "The sweep asserts a POSITIVE count of perpendicular configurations, so the agreement is not vacuous on the side that matters."
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-14",
+    "established_by": "lane geometry: axeyum_cas::geometry_certify (untrusted cofactor-tracked Buchberger search) + axeyum_cas::geometry_check (independent re-derivation)",
+    "source": "classical; coordinatised by this lane",
+    "prior_art": [
+      {
+        "who": "classical; the vector proof is usually credited to the 19th-century synthetic tradition and the concurrency itself was known to Archimedes' commentators",
+        "what": "the three altitudes of a triangle meet in a point (the orthocentre)",
+        "where": "standard; see e.g. Coxeter and Greitzer, Geometry Revisited (1967), section 1.4",
+        "attribution": "standard textbook attribution; this lane did not consult the primary source"
+      }
+    ]
+  },
+  "notes": "Established on the `cas-certificate` route, in the geometry family. Read this fact together with the one it is easiest to confuse it with: `the altitudes are concurrent` in the incidence form proved here is UNCONDITIONAL, whereas `the point where they meet is such-and-such' would not be. The same split is exhibited concretely by F:geometry-medians-concurrent (unconditional) versus F:geometry-centroid-divides-medians (needs a non-degeneracy condition, with a committed counterexample)."
+}

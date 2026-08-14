@@ -1,0 +1,74 @@
+{
+  "schema_version": 1,
+  "id": "F:geometry-medians-concurrent",
+  "title": "the medians of a triangle are concurrent",
+  "statement": "Let A, B, C, P be points of the Euclidean plane and let Ma, Mb, Mc be the midpoints of BC, CA, AB. If P is collinear with A and Ma, and collinear with B and Mb, then P is collinear with C and Mc. NO non-degeneracy condition is required for this incidence form: the conclusion lies in the plain hypothesis ideal with constant cofactors (-1, -1). What DOES require one is locating the meeting point, which is F:geometry-centroid-divides-medians.",
+  "formal": {
+    "language": "smtlib2",
+    "statement": "(assert (forall ((ax Real) (ay Real) (bx Real) (by Real) (cx Real) (cy Real) (px Real) (py Real))\n  (let ((max (/ (+ bx cx) 2.0)) (may (/ (+ by cy) 2.0))\n        (mbx (/ (+ cx ax) 2.0)) (mby (/ (+ cy ay) 2.0))\n        (mcx (/ (+ ax bx) 2.0)) (mcy (/ (+ ay by) 2.0)))\n    (=> (and (= (- (* (- max ax) (- py ay)) (* (- may ay) (- px ax))) 0.0)\n             (= (- (* (- mbx bx) (- py by)) (* (- mby by) (- px bx))) 0.0))\n        (= (- (* (- mcx cx) (- py cy)) (* (- mcy cy) (- px cx))) 0.0)))))",
+    "fragment": "NRA",
+    "free_symbols": [
+      "ax",
+      "ay",
+      "bx",
+      "by",
+      "cx",
+      "cy",
+      "px",
+      "py"
+    ]
+  },
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "depends_on": [],
+  "proof_route": "cas-certificate",
+  "axiom_footprint": [
+    "cas.exact-rational-polynomial-normal-form",
+    "geometry.cartesian-coordinatisation-of-the-euclidean-plane",
+    "geometry.characteristic-zero-specialisation"
+  ],
+  "evidence": [
+    {
+      "id": "geometry-certificate-medians-concurrent",
+      "kind": "witness-replay",
+      "supports": "the cofactor certificate, re-checked from the committed artifact by a checker that shares no code with the search that produced it",
+      "check_status": "checked",
+      "checkers": [
+        "geometry_check::check_certificate shape pass (the generator list must be exactly the stated hypotheses, with no undeclared saturation)",
+        "geometry_check::check_certificate symbolic pass (the identity target = sum of cofactor times generator expanded with MvPoly add/mul alone -- no Groebner machinery, no monomial order, no S-polynomials)",
+        "geometry_check::check_certificate numeric pass (the same identity re-evaluated at 24 deterministic integer points through MvPoly::evaluate, a different code path from the symbolic expansion)",
+        "geometry_check::check_certificate configuration pass (A = (0,0), B = (6,0), C = (0,6) with centroid P = (2,2) replayed at exact rational coordinates)"
+      ],
+      "checker_command": "cargo test -p axeyum-cas --test geometry_certificate_artifacts",
+      "artifact": "artifacts/geometry-certificates/medians-concurrent.json",
+      "notes": "Both cofactors are the constant -1, exactly as for the altitudes: the three median-incidence polynomials sum to zero identically. The certifier tries the empty condition set first, so the absence of `geometry.nondegeneracy.*` from this fact's footprint is the search's answer rather than the author's assumption; the same certifier run on F:geometry-centroid-divides-medians, which shares these two hypotheses verbatim, reports that a condition IS consumed."
+    },
+    {
+      "id": "geometry-coordinatisation-control-medians",
+      "kind": "witness-replay",
+      "supports": "that the polynomials in the certificate mean the geometric predicates they are named after",
+      "check_status": "checked",
+      "checkers": [
+        "axeyum_cas::geometry::Point::collinear (an older module deciding collinearity from a cross-product helper rather than from MvPoly) agreed with the collinearity polynomial on 244 integer configurations, of which more than three were collinear",
+        "axeyum_cas::geometry::Point::midpoint agreed with the constructed midpoint on the same sweep"
+      ],
+      "checker_command": "cargo test -p axeyum-cas --test geometry_encoding_agreement",
+      "artifact": "crates/axeyum-cas/tests/geometry_encoding_agreement.rs",
+      "notes": "The sweep opens with hand-picked degenerate shapes -- two coincident points, four collinear points, four collinear vertical points, all four coincident -- because that is where two encodings of the same predicate are most likely to part company."
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-14",
+    "established_by": "lane geometry: axeyum_cas::geometry_certify (untrusted cofactor-tracked Buchberger search) + axeyum_cas::geometry_check (independent re-derivation)",
+    "source": "classical; coordinatised by this lane",
+    "prior_art": [
+      {
+        "who": "classical Greek geometry; the centroid construction is in Archimedes' On the Equilibrium of Planes",
+        "what": "the three medians of a triangle meet in a point",
+        "where": "standard; see e.g. Coxeter and Greitzer, Geometry Revisited (1967), section 1.4",
+        "attribution": "standard textbook attribution; this lane did not consult the primary source"
+      }
+    ]
+  },
+  "notes": "Established on the `cas-certificate` route, in the geometry family. This fact and F:geometry-centroid-divides-medians are deliberately adjacent and share their hypotheses character for character; the only difference is what is concluded, and that difference is exactly what makes a non-degeneracy condition necessary in one and not the other. That is the shape of the trap this corpus is built to expose."
+}

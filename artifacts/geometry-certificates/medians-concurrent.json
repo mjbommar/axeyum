@@ -1,0 +1,27 @@
+{
+  "format": "axeyum-geometry-certificate",
+  "version": 1,
+  "id": "medians-concurrent",
+  "title": "the medians of a triangle are concurrent",
+  "statement": "Let Ma, Mb, Mc be the midpoints of BC, CA, AB. If P is collinear with A and Ma, and collinear with B and Mb, then P is collinear with C and Mc. NO non-degeneracy condition is required for this incidence form. Compare `centroid-divides-medians`, which locates P and DOES require one.",
+  "coordinate_gloss": [["ax", "A.x"], ["ay", "A.y"], ["bx", "B.x"], ["by", "B.y"], ["cx", "C.x"], ["cy", "C.y"], ["px", "P.x"], ["py", "P.y"]],
+  "coordinates": ["ax", "ay", "bx", "by", "cx", "cy", "px", "py"],
+  "hypotheses": [
+    {"id": "p-on-median-from-a", "description": "P is collinear with A and the midpoint of BC", "poly": {"terms": [{"monomial": [["ax", 1], ["by", 1]], "coefficient": [1, 2]}, {"monomial": [["ax", 1], ["cy", 1]], "coefficient": [1, 2]}, {"monomial": [["ax", 1], ["py", 1]], "coefficient": [-1, 1]}, {"monomial": [["ay", 1], ["bx", 1]], "coefficient": [-1, 2]}, {"monomial": [["ay", 1], ["cx", 1]], "coefficient": [-1, 2]}, {"monomial": [["ay", 1], ["px", 1]], "coefficient": [1, 1]}, {"monomial": [["bx", 1], ["py", 1]], "coefficient": [1, 2]}, {"monomial": [["by", 1], ["px", 1]], "coefficient": [-1, 2]}, {"monomial": [["cx", 1], ["py", 1]], "coefficient": [1, 2]}, {"monomial": [["cy", 1], ["px", 1]], "coefficient": [-1, 2]}]}},
+    {"id": "p-on-median-from-b", "description": "P is collinear with B and the midpoint of CA", "poly": {"terms": [{"monomial": [["ax", 1], ["by", 1]], "coefficient": [-1, 2]}, {"monomial": [["ax", 1], ["py", 1]], "coefficient": [1, 2]}, {"monomial": [["ay", 1], ["bx", 1]], "coefficient": [1, 2]}, {"monomial": [["ay", 1], ["px", 1]], "coefficient": [-1, 2]}, {"monomial": [["bx", 1], ["cy", 1]], "coefficient": [1, 2]}, {"monomial": [["bx", 1], ["py", 1]], "coefficient": [-1, 1]}, {"monomial": [["by", 1], ["cx", 1]], "coefficient": [-1, 2]}, {"monomial": [["by", 1], ["px", 1]], "coefficient": [1, 1]}, {"monomial": [["cx", 1], ["py", 1]], "coefficient": [1, 2]}, {"monomial": [["cy", 1], ["px", 1]], "coefficient": [-1, 2]}]}}
+  ],
+  "saturations": [
+  ],
+  "generators": [
+    {"terms": [{"monomial": [["ax", 1], ["by", 1]], "coefficient": [1, 2]}, {"monomial": [["ax", 1], ["cy", 1]], "coefficient": [1, 2]}, {"monomial": [["ax", 1], ["py", 1]], "coefficient": [-1, 1]}, {"monomial": [["ay", 1], ["bx", 1]], "coefficient": [-1, 2]}, {"monomial": [["ay", 1], ["cx", 1]], "coefficient": [-1, 2]}, {"monomial": [["ay", 1], ["px", 1]], "coefficient": [1, 1]}, {"monomial": [["bx", 1], ["py", 1]], "coefficient": [1, 2]}, {"monomial": [["by", 1], ["px", 1]], "coefficient": [-1, 2]}, {"monomial": [["cx", 1], ["py", 1]], "coefficient": [1, 2]}, {"monomial": [["cy", 1], ["px", 1]], "coefficient": [-1, 2]}]},
+    {"terms": [{"monomial": [["ax", 1], ["by", 1]], "coefficient": [-1, 2]}, {"monomial": [["ax", 1], ["py", 1]], "coefficient": [1, 2]}, {"monomial": [["ay", 1], ["bx", 1]], "coefficient": [1, 2]}, {"monomial": [["ay", 1], ["px", 1]], "coefficient": [-1, 2]}, {"monomial": [["bx", 1], ["cy", 1]], "coefficient": [1, 2]}, {"monomial": [["bx", 1], ["py", 1]], "coefficient": [-1, 1]}, {"monomial": [["by", 1], ["cx", 1]], "coefficient": [-1, 2]}, {"monomial": [["by", 1], ["px", 1]], "coefficient": [1, 1]}, {"monomial": [["cx", 1], ["py", 1]], "coefficient": [1, 2]}, {"monomial": [["cy", 1], ["px", 1]], "coefficient": [-1, 2]}]}
+  ],
+  "conclusions": [
+    {"id": "p-on-median-from-c", "description": "P is collinear with C and the midpoint of AB", "poly": {"terms": [{"monomial": [["ax", 1], ["cy", 1]], "coefficient": [-1, 2]}, {"monomial": [["ax", 1], ["py", 1]], "coefficient": [1, 2]}, {"monomial": [["ay", 1], ["cx", 1]], "coefficient": [1, 2]}, {"monomial": [["ay", 1], ["px", 1]], "coefficient": [-1, 2]}, {"monomial": [["bx", 1], ["cy", 1]], "coefficient": [-1, 2]}, {"monomial": [["bx", 1], ["py", 1]], "coefficient": [1, 2]}, {"monomial": [["by", 1], ["cx", 1]], "coefficient": [1, 2]}, {"monomial": [["by", 1], ["px", 1]], "coefficient": [-1, 2]}, {"monomial": [["cx", 1], ["py", 1]], "coefficient": [-1, 1]}, {"monomial": [["cy", 1], ["px", 1]], "coefficient": [1, 1]}]}, "cofactors": [{"terms": [{"monomial": [], "coefficient": [-1, 1]}]}, {"terms": [{"monomial": [], "coefficient": [-1, 1]}]}]}
+  ],
+  "degenerate_witnesses": [
+  ],
+  "generic_witnesses": [
+    {"description": "A = (0,0), B = (6,0), C = (0,6), centroid P = (2,2)", "assignment": [["ax", [0, 1]], ["ay", [0, 1]], ["bx", [6, 1]], ["by", [0, 1]], ["cx", [0, 1]], ["cy", [6, 1]], ["px", [2, 1]], ["py", [2, 1]]]}
+  ]
+}

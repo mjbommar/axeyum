@@ -1,0 +1,78 @@
+{
+  "schema_version": 1,
+  "id": "F:geometry-centroid-divides-medians",
+  "title": "the medians of a non-degenerate triangle meet at (A+B+C)/3",
+  "statement": "Let A, B, C, P be points of the Euclidean plane and let Ma, Mb be the midpoints of BC and CA. If A, B, C are NOT collinear, and P is collinear with A and Ma and collinear with B and Mb, then 3P = A + B + C. The non-degeneracy condition is essential and its failure is exhibited, not asserted: A = (0,0), B = (1,0), C = (2,0), P = (7,0) satisfies both hypotheses -- B coincides with the midpoint of CA, so the second one becomes vacuous -- while 3P.x = 21 and A.x + B.x + C.x = 3.",
+  "formal": {
+    "language": "smtlib2",
+    "statement": "(assert (forall ((ax Real) (ay Real) (bx Real) (by Real) (cx Real) (cy Real) (px Real) (py Real))\n  (let ((max (/ (+ bx cx) 2.0)) (may (/ (+ by cy) 2.0))\n        (mbx (/ (+ cx ax) 2.0)) (mby (/ (+ cy ay) 2.0)))\n    (=> (and (= (- (* (- max ax) (- py ay)) (* (- may ay) (- px ax))) 0.0)\n             (= (- (* (- mbx bx) (- py by)) (* (- mby by) (- px bx))) 0.0)\n             (not (= (- (* (- bx ax) (- cy ay)) (* (- by ay) (- cx ax))) 0.0)))\n        (and (= (* 3.0 px) (+ ax bx cx))\n             (= (* 3.0 py) (+ ay by cy)))))))",
+    "fragment": "NRA",
+    "free_symbols": [
+      "ax",
+      "ay",
+      "bx",
+      "by",
+      "cx",
+      "cy",
+      "px",
+      "py"
+    ]
+  },
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "depends_on": [],
+  "proof_route": "cas-certificate",
+  "axiom_footprint": [
+    "cas.exact-rational-polynomial-normal-form",
+    "geometry.cartesian-coordinatisation-of-the-euclidean-plane",
+    "geometry.characteristic-zero-specialisation",
+    "geometry.rabinowitsch-inverse-specialisation",
+    "geometry.nondegeneracy.abc-not-collinear"
+  ],
+  "evidence": [
+    {
+      "id": "geometry-certificate-centroid-divides-medians",
+      "kind": "witness-replay",
+      "supports": "the saturated cofactor certificate, re-checked from the committed artifact by a checker that shares no code with the search that produced it",
+      "check_status": "checked",
+      "checkers": [
+        "geometry_check::check_certificate shape pass (the saturation generator is REBUILT here as `collinear(A,B,C) * Zinv0 - 1` from the condition polynomial the file declares, and compared with the generator the cofactors are taken against -- so a certificate cannot advertise one side condition and use another)",
+        "geometry_check::check_certificate symbolic pass (the identity target = sum of cofactor times generator expanded with MvPoly add/mul alone -- no Groebner machinery, no monomial order, no S-polynomials)",
+        "geometry_check::check_certificate numeric pass (the same identity re-evaluated at 24 deterministic integer points through MvPoly::evaluate, a different code path from the symbolic expansion)",
+        "geometry_check::check_certificate usage pass (the saturation generator must carry a NONZERO cofactor, or the certificate would be advertising a weaker theorem than it proved)",
+        "geometry_check::check_certificate degenerate-witness pass (A = (0,0), B = (1,0), C = (2,0), P = (7,0) replayed: every hypothesis vanishes, the condition polynomial vanishes, and the conclusion does NOT)",
+        "geometry_check::check_certificate configuration pass (A = (0,0), B = (6,0), C = (0,6), P = (2,2) replayed: hypotheses vanish, the condition does not, the conclusions do)"
+      ],
+      "checker_command": "cargo test -p axeyum-cas --test geometry_certificate_artifacts",
+      "artifact": "artifacts/geometry-certificates/centroid-divides-medians.json",
+      "notes": "The certificate uses the Rabinowitsch trick: a fresh variable Zinv0 and the generator `collinear(A,B,C) * Zinv0 - 1`. Specialising Zinv0 := 1/collinear(A,B,C) is legitimate exactly when the triangle is non-degenerate, and that is the ONLY place the side condition enters. The cofactor of the saturation generator is -(3 P.x - A.x - B.x - C.x), i.e. minus the conclusion itself, which is the signature shape of a Rabinowitsch witness. Tamper controls in the same suite that bear directly on this fact: DELETING the degenerate counterexample is rejected, and REPLACING it with a non-degenerate configuration (which therefore fails to break the theorem) is rejected."
+    },
+    {
+      "id": "geometry-coordinatisation-control-centroid",
+      "kind": "witness-replay",
+      "supports": "that the polynomials in the certificate mean the geometric predicates they are named after -- including the non-degeneracy condition, whose meaning is what makes or breaks this fact",
+      "check_status": "checked",
+      "checkers": [
+        "axeyum_cas::geometry::Point::collinear (an older module deciding collinearity from a cross-product helper rather than from MvPoly) agreed with the collinearity polynomial on 244 integer configurations, of which more than three were collinear",
+        "axeyum_cas::geometry::Point::midpoint agreed with the constructed midpoint on the same sweep"
+      ],
+      "checker_command": "cargo test -p axeyum-cas --test geometry_encoding_agreement",
+      "artifact": "crates/axeyum-cas/tests/geometry_encoding_agreement.rs",
+      "notes": "This control matters more here than for the unconditional facts: the side condition is `this polynomial does not vanish`, so an encoding that got collinearity wrong would relabel the degeneracy locus and the theorem would be about a different set of configurations than its statement claims."
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-14",
+    "established_by": "lane geometry: axeyum_cas::geometry_certify (untrusted cofactor-tracked Buchberger search, minimal condition subset) + axeyum_cas::geometry_check (independent re-derivation)",
+    "source": "classical; coordinatised by this lane, with the non-degeneracy condition DERIVED by the certifier rather than supplied",
+    "prior_art": [
+      {
+        "who": "classical Greek geometry; the centroid construction is in Archimedes' On the Equilibrium of Planes",
+        "what": "the medians of a triangle meet at the centroid, which divides each in the ratio 2:1",
+        "where": "standard; see e.g. Coxeter and Greitzer, Geometry Revisited (1967), section 1.4",
+        "attribution": "standard textbook attribution; this lane did not consult the primary source"
+      }
+    ]
+  },
+  "notes": "Established on the `cas-certificate` route, in the geometry family. The condition set is MINIMAL by cardinality among the subsets the search budget decided: the certifier tries the empty set first (61.9 ms, nonzero remainder -- so the theorem is genuinely not unconditional) and then the one-element set (220.2 ms, remainder zero). `geometry.nondegeneracy.abc-not-collinear` is listed in the footprint even though it also appears as a hypothesis of `formal.statement`, deliberately: on this route the footprint is the field a reader scans to see what a proof rests on, and a side condition invisible there is precisely how a mechanised geometry proof comes to be quoted as unconditional. `geometry.rabinowitsch-inverse-specialisation` names the step that turns the polynomial identity into the theorem -- substituting the inverse variable, valid exactly off the degeneracy locus."
+}

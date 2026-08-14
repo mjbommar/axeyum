@@ -1,0 +1,24 @@
+{
+  "format": "axeyum-geometry-certificate",
+  "version": 1,
+  "id": "varignon-midpoint-parallelogram",
+  "title": "Varignon's theorem: the midpoint quadrilateral is a parallelogram",
+  "statement": "For any four points A, B, C, D of the plane, let P, Q, R, S be the midpoints of AB, BC, CD, DA. Then the vector from P to Q equals the vector from S to R, so PQRS is a parallelogram. NO non-degeneracy condition is required: the conclusion holds for every configuration, including collinear and coincident ones.",
+  "coordinate_gloss": [["ax", "A.x"], ["ay", "A.y"], ["bx", "B.x"], ["by", "B.y"], ["cx", "C.x"], ["cy", "C.y"], ["dx", "D.x"], ["dy", "D.y"]],
+  "coordinates": [],
+  "hypotheses": [
+  ],
+  "saturations": [
+  ],
+  "generators": [
+  ],
+  "conclusions": [
+    {"id": "midlines-equal-x", "description": "the abscissa of Q-P equals that of R-S", "poly": {"terms": []}, "cofactors": []},
+    {"id": "midlines-equal-y", "description": "the ordinate of Q-P equals that of R-S", "poly": {"terms": []}, "cofactors": []}
+  ],
+  "degenerate_witnesses": [
+  ],
+  "generic_witnesses": [
+    {"description": "a convex quadrilateral (0,0), (4,0), (5,3), (1,2)", "assignment": [["ax", [0, 1]], ["ay", [0, 1]], ["bx", [4, 1]], ["by", [0, 1]], ["cx", [5, 1]], ["cy", [3, 1]], ["dx", [1, 1]], ["dy", [2, 1]]]}
+  ]
+}

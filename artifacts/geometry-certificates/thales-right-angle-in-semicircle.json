@@ -1,0 +1,25 @@
+{
+  "format": "axeyum-geometry-certificate",
+  "version": 1,
+  "id": "thales-right-angle-in-semicircle",
+  "title": "Thales' theorem: an angle in a semicircle is right",
+  "statement": "Let O be the midpoint of AB and let C satisfy |OC| = |OA|, i.e. C lies on the circle with diameter AB. Then CA is perpendicular to CB. NO non-degeneracy condition is required: when A = B the circle degenerates to a point, C coincides with it, and the conclusion holds because the zero vector is orthogonal to everything -- the theorem is true ON the degeneracy locus, not merely off it.",
+  "coordinate_gloss": [["ax", "A.x"], ["ay", "A.y"], ["bx", "B.x"], ["by", "B.y"], ["cx", "C.x"], ["cy", "C.y"]],
+  "coordinates": ["ax", "ay", "bx", "by", "cx", "cy"],
+  "hypotheses": [
+    {"id": "c-on-circle", "description": "|OC| = |OA| with O the midpoint of AB", "poly": {"terms": [{"monomial": [["ax", 1], ["bx", 1]], "coefficient": [1, 1]}, {"monomial": [["ax", 1], ["cx", 1]], "coefficient": [-1, 1]}, {"monomial": [["ay", 1], ["by", 1]], "coefficient": [1, 1]}, {"monomial": [["ay", 1], ["cy", 1]], "coefficient": [-1, 1]}, {"monomial": [["bx", 1], ["cx", 1]], "coefficient": [-1, 1]}, {"monomial": [["by", 1], ["cy", 1]], "coefficient": [-1, 1]}, {"monomial": [["cx", 2]], "coefficient": [1, 1]}, {"monomial": [["cy", 2]], "coefficient": [1, 1]}]}}
+  ],
+  "saturations": [
+  ],
+  "generators": [
+    {"terms": [{"monomial": [["ax", 1], ["bx", 1]], "coefficient": [1, 1]}, {"monomial": [["ax", 1], ["cx", 1]], "coefficient": [-1, 1]}, {"monomial": [["ay", 1], ["by", 1]], "coefficient": [1, 1]}, {"monomial": [["ay", 1], ["cy", 1]], "coefficient": [-1, 1]}, {"monomial": [["bx", 1], ["cx", 1]], "coefficient": [-1, 1]}, {"monomial": [["by", 1], ["cy", 1]], "coefficient": [-1, 1]}, {"monomial": [["cx", 2]], "coefficient": [1, 1]}, {"monomial": [["cy", 2]], "coefficient": [1, 1]}]}
+  ],
+  "conclusions": [
+    {"id": "angle-acb-right", "description": "CA is perpendicular to CB", "poly": {"terms": [{"monomial": [["ax", 1], ["bx", 1]], "coefficient": [1, 1]}, {"monomial": [["ax", 1], ["cx", 1]], "coefficient": [-1, 1]}, {"monomial": [["ay", 1], ["by", 1]], "coefficient": [1, 1]}, {"monomial": [["ay", 1], ["cy", 1]], "coefficient": [-1, 1]}, {"monomial": [["bx", 1], ["cx", 1]], "coefficient": [-1, 1]}, {"monomial": [["by", 1], ["cy", 1]], "coefficient": [-1, 1]}, {"monomial": [["cx", 2]], "coefficient": [1, 1]}, {"monomial": [["cy", 2]], "coefficient": [1, 1]}]}, "cofactors": [{"terms": [{"monomial": [], "coefficient": [1, 1]}]}]}
+  ],
+  "degenerate_witnesses": [
+  ],
+  "generic_witnesses": [
+    {"description": "the unit semicircle: A = (-1,0), B = (1,0), C = (0,1)", "assignment": [["ax", [-1, 1]], ["ay", [0, 1]], ["bx", [1, 1]], ["by", [0, 1]], ["cx", [0, 1]], ["cy", [1, 1]]]}
+  ]
+}

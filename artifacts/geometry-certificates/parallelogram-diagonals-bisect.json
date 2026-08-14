@@ -1,0 +1,31 @@
+{
+  "format": "axeyum-geometry-certificate",
+  "version": 1,
+  "id": "parallelogram-diagonals-bisect",
+  "title": "the diagonals of a parallelogram bisect each other",
+  "statement": "If AB is parallel to DC, BC is parallel to AD, and A, B, D are NOT collinear, then the midpoint of AC equals the midpoint of BD. The non-degeneracy condition is essential: four collinear points satisfy both parallelism hypotheses vacuously and their diagonals generally do not bisect each other.",
+  "coordinate_gloss": [["ax", "A.x"], ["ay", "A.y"], ["bx", "B.x"], ["by", "B.y"], ["cx", "C.x"], ["cy", "C.y"], ["dx", "D.x"], ["dy", "D.y"]],
+  "coordinates": ["ax", "ay", "bx", "by", "cx", "cy", "dx", "dy"],
+  "hypotheses": [
+    {"id": "ab-parallel-dc", "description": "AB is parallel to DC", "poly": {"terms": [{"monomial": [["ax", 1], ["cy", 1]], "coefficient": [-1, 1]}, {"monomial": [["ax", 1], ["dy", 1]], "coefficient": [1, 1]}, {"monomial": [["ay", 1], ["cx", 1]], "coefficient": [1, 1]}, {"monomial": [["ay", 1], ["dx", 1]], "coefficient": [-1, 1]}, {"monomial": [["bx", 1], ["cy", 1]], "coefficient": [1, 1]}, {"monomial": [["bx", 1], ["dy", 1]], "coefficient": [-1, 1]}, {"monomial": [["by", 1], ["cx", 1]], "coefficient": [-1, 1]}, {"monomial": [["by", 1], ["dx", 1]], "coefficient": [1, 1]}]}},
+    {"id": "bc-parallel-ad", "description": "BC is parallel to AD", "poly": {"terms": [{"monomial": [["ax", 1], ["by", 1]], "coefficient": [-1, 1]}, {"monomial": [["ax", 1], ["cy", 1]], "coefficient": [1, 1]}, {"monomial": [["ay", 1], ["bx", 1]], "coefficient": [1, 1]}, {"monomial": [["ay", 1], ["cx", 1]], "coefficient": [-1, 1]}, {"monomial": [["bx", 1], ["dy", 1]], "coefficient": [-1, 1]}, {"monomial": [["by", 1], ["dx", 1]], "coefficient": [1, 1]}, {"monomial": [["cx", 1], ["dy", 1]], "coefficient": [1, 1]}, {"monomial": [["cy", 1], ["dx", 1]], "coefficient": [-1, 1]}]}}
+  ],
+  "saturations": [
+    {"condition_id": "abd-not-collinear", "description": "A, B, D are not collinear (the parallelogram is not flat)", "var": "Zinv0", "condition": {"terms": [{"monomial": [["ax", 1], ["by", 1]], "coefficient": [1, 1]}, {"monomial": [["ax", 1], ["dy", 1]], "coefficient": [-1, 1]}, {"monomial": [["ay", 1], ["bx", 1]], "coefficient": [-1, 1]}, {"monomial": [["ay", 1], ["dx", 1]], "coefficient": [1, 1]}, {"monomial": [["bx", 1], ["dy", 1]], "coefficient": [1, 1]}, {"monomial": [["by", 1], ["dx", 1]], "coefficient": [-1, 1]}]}}
+  ],
+  "generators": [
+    {"terms": [{"monomial": [["ax", 1], ["cy", 1]], "coefficient": [-1, 1]}, {"monomial": [["ax", 1], ["dy", 1]], "coefficient": [1, 1]}, {"monomial": [["ay", 1], ["cx", 1]], "coefficient": [1, 1]}, {"monomial": [["ay", 1], ["dx", 1]], "coefficient": [-1, 1]}, {"monomial": [["bx", 1], ["cy", 1]], "coefficient": [1, 1]}, {"monomial": [["bx", 1], ["dy", 1]], "coefficient": [-1, 1]}, {"monomial": [["by", 1], ["cx", 1]], "coefficient": [-1, 1]}, {"monomial": [["by", 1], ["dx", 1]], "coefficient": [1, 1]}]},
+    {"terms": [{"monomial": [["ax", 1], ["by", 1]], "coefficient": [-1, 1]}, {"monomial": [["ax", 1], ["cy", 1]], "coefficient": [1, 1]}, {"monomial": [["ay", 1], ["bx", 1]], "coefficient": [1, 1]}, {"monomial": [["ay", 1], ["cx", 1]], "coefficient": [-1, 1]}, {"monomial": [["bx", 1], ["dy", 1]], "coefficient": [-1, 1]}, {"monomial": [["by", 1], ["dx", 1]], "coefficient": [1, 1]}, {"monomial": [["cx", 1], ["dy", 1]], "coefficient": [1, 1]}, {"monomial": [["cy", 1], ["dx", 1]], "coefficient": [-1, 1]}]},
+    {"terms": [{"monomial": [], "coefficient": [-1, 1]}, {"monomial": [["Zinv0", 1], ["ax", 1], ["by", 1]], "coefficient": [1, 1]}, {"monomial": [["Zinv0", 1], ["ax", 1], ["dy", 1]], "coefficient": [-1, 1]}, {"monomial": [["Zinv0", 1], ["ay", 1], ["bx", 1]], "coefficient": [-1, 1]}, {"monomial": [["Zinv0", 1], ["ay", 1], ["dx", 1]], "coefficient": [1, 1]}, {"monomial": [["Zinv0", 1], ["bx", 1], ["dy", 1]], "coefficient": [1, 1]}, {"monomial": [["Zinv0", 1], ["by", 1], ["dx", 1]], "coefficient": [-1, 1]}]}
+  ],
+  "conclusions": [
+    {"id": "diagonal-midpoints-agree-x", "description": "the midpoints of AC and BD share an abscissa", "poly": {"terms": [{"monomial": [["ax", 1]], "coefficient": [1, 2]}, {"monomial": [["bx", 1]], "coefficient": [-1, 2]}, {"monomial": [["cx", 1]], "coefficient": [1, 2]}, {"monomial": [["dx", 1]], "coefficient": [-1, 2]}]}, "cofactors": [{"terms": [{"monomial": [["Zinv0", 1], ["ax", 1]], "coefficient": [-1, 2]}, {"monomial": [["Zinv0", 1], ["dx", 1]], "coefficient": [1, 2]}]}, {"terms": [{"monomial": [["Zinv0", 1], ["ax", 1]], "coefficient": [-1, 2]}, {"monomial": [["Zinv0", 1], ["bx", 1]], "coefficient": [1, 2]}]}, {"terms": [{"monomial": [["ax", 1]], "coefficient": [-1, 2]}, {"monomial": [["bx", 1]], "coefficient": [1, 2]}, {"monomial": [["cx", 1]], "coefficient": [-1, 2]}, {"monomial": [["dx", 1]], "coefficient": [1, 2]}]}]},
+    {"id": "diagonal-midpoints-agree-y", "description": "the midpoints of AC and BD share an ordinate", "poly": {"terms": [{"monomial": [["ay", 1]], "coefficient": [1, 2]}, {"monomial": [["by", 1]], "coefficient": [-1, 2]}, {"monomial": [["cy", 1]], "coefficient": [1, 2]}, {"monomial": [["dy", 1]], "coefficient": [-1, 2]}]}, "cofactors": [{"terms": [{"monomial": [["Zinv0", 1], ["ay", 1]], "coefficient": [-1, 2]}, {"monomial": [["Zinv0", 1], ["dy", 1]], "coefficient": [1, 2]}]}, {"terms": [{"monomial": [["Zinv0", 1], ["ay", 1]], "coefficient": [-1, 2]}, {"monomial": [["Zinv0", 1], ["by", 1]], "coefficient": [1, 2]}]}, {"terms": [{"monomial": [["ay", 1]], "coefficient": [-1, 2]}, {"monomial": [["by", 1]], "coefficient": [1, 2]}, {"monomial": [["cy", 1]], "coefficient": [-1, 2]}, {"monomial": [["dy", 1]], "coefficient": [1, 2]}]}]}
+  ],
+  "degenerate_witnesses": [
+    {"condition_id": "abd-not-collinear", "description": "A = (0,0), B = (1,0), C = (2,0), D = (5,0): every direction is parallel to every other, so both hypotheses hold, but the midpoint of AC is (1,0) and the midpoint of BD is (3,0)", "assignment": [["ax", [0, 1]], ["ay", [0, 1]], ["bx", [1, 1]], ["by", [0, 1]], ["cx", [2, 1]], ["cy", [0, 1]], ["dx", [5, 1]], ["dy", [0, 1]]]}
+  ],
+  "generic_witnesses": [
+    {"description": "the unit square (0,0), (1,0), (1,1), (0,1)", "assignment": [["ax", [0, 1]], ["ay", [0, 1]], ["bx", [1, 1]], ["by", [0, 1]], ["cx", [1, 1]], ["cy", [1, 1]], ["dx", [0, 1]], ["dy", [1, 1]]]}
+  ]
+}

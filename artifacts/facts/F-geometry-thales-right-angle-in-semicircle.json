@@ -1,0 +1,73 @@
+{
+  "schema_version": 1,
+  "id": "F:geometry-thales-right-angle-in-semicircle",
+  "title": "Thales' theorem: an angle inscribed in a semicircle is right",
+  "statement": "Let A, B, C be points of the Euclidean plane, let O be the midpoint of AB, and suppose |OC| = |OA|, i.e. C lies on the circle with diameter AB. Then CA is perpendicular to CB. NO non-degeneracy condition is required, and this is not an oversight: when A = B the circle degenerates to the single point O = A = B, the hypothesis forces C = A = B, and the conclusion holds because the zero vector is orthogonal to everything. The theorem is true on the degeneracy locus, not merely off it.",
+  "formal": {
+    "language": "smtlib2",
+    "statement": "(assert (forall ((ax Real) (ay Real) (bx Real) (by Real) (cx Real) (cy Real))\n  (let ((ox (/ (+ ax bx) 2.0)) (oy (/ (+ ay by) 2.0)))\n    (=> (= (+ (* (- cx ox) (- cx ox)) (* (- cy oy) (- cy oy)))\n           (+ (* (- ax ox) (- ax ox)) (* (- ay oy) (- ay oy))))\n        (= (+ (* (- ax cx) (- bx cx)) (* (- ay cy) (- by cy))) 0.0)))))",
+    "fragment": "NRA",
+    "free_symbols": [
+      "ax",
+      "ay",
+      "bx",
+      "by",
+      "cx",
+      "cy"
+    ]
+  },
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "depends_on": [],
+  "proof_route": "cas-certificate",
+  "axiom_footprint": [
+    "cas.exact-rational-polynomial-normal-form",
+    "geometry.cartesian-coordinatisation-of-the-euclidean-plane",
+    "geometry.characteristic-zero-specialisation"
+  ],
+  "evidence": [
+    {
+      "id": "geometry-certificate-thales-right-angle-in-semicircle",
+      "kind": "witness-replay",
+      "supports": "the cofactor certificate, re-checked from the committed artifact by a checker that shares no code with the search that produced it",
+      "check_status": "checked",
+      "checkers": [
+        "geometry_check::check_certificate shape pass (the generator list must be exactly the stated hypotheses, with no undeclared saturation)",
+        "geometry_check::check_certificate symbolic pass (the identity target = sum of cofactor times generator expanded with MvPoly add/mul alone -- no Groebner machinery, no monomial order, no S-polynomials)",
+        "geometry_check::check_certificate numeric pass (the same identity re-evaluated at 24 deterministic integer points through MvPoly::evaluate, a different code path from the symbolic expansion)",
+        "geometry_check::check_certificate configuration pass (the semicircle A = (-1,0), B = (1,0), C = (0,1) replayed at exact rational coordinates)"
+      ],
+      "checker_command": "cargo test -p axeyum-cas --test geometry_certificate_artifacts",
+      "artifact": "artifacts/geometry-certificates/thales-right-angle-in-semicircle.json",
+      "notes": "The certificate has a SINGLE cofactor, the constant +1: Thales' theorem in coordinates is the bare identity (A-C).(B-C) = |C-O|^2 - |A-O|^2 with O the midpoint of AB. That is the whole proof, and the constancy of the cofactor is why no side condition can arise -- nothing in the identity is divided by anything."
+    },
+    {
+      "id": "geometry-coordinatisation-control-thales",
+      "kind": "witness-replay",
+      "supports": "that the polynomials in the certificate mean the geometric predicates they are named after",
+      "check_status": "checked",
+      "checkers": [
+        "axeyum_cas::geometry::Line::is_perpendicular (an older module deciding perpendicularity from `ax + by + c = 0` normals rather than from an inner product) agreed with the perpendicularity polynomial on every integer configuration of the sweep where it can build both lines, and the polynomial vanishes on every degenerate segment where it cannot",
+        "axeyum_cas::geometry::Point::distance (exact surds through simplify_radicals over CasExpr, a completely different route from the squared-distance polynomial) agreed with the equidistance polynomial on 244 configurations",
+        "axeyum_cas::geometry::Point::midpoint agreed with the constructed midpoint on the same sweep"
+      ],
+      "checker_command": "cargo test -p axeyum-cas --test geometry_encoding_agreement",
+      "artifact": "crates/axeyum-cas/tests/geometry_encoding_agreement.rs",
+      "notes": "The equidistance row is the strongest of the three: the concrete module computes an exact radical and compares CasExpr values, so agreement is not a restatement of the same squared-distance arithmetic."
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-14",
+    "established_by": "lane geometry: axeyum_cas::geometry_certify (untrusted cofactor-tracked Buchberger search) + axeyum_cas::geometry_check (independent re-derivation)",
+    "source": "classical; coordinatised by this lane",
+    "prior_art": [
+      {
+        "who": "Thales of Miletus",
+        "what": "an angle inscribed in a semicircle is right",
+        "where": "attributed by Diogenes Laertius; Euclid, Elements III.31",
+        "attribution": "standard textbook attribution; this lane did not consult the primary source"
+      }
+    ]
+  },
+  "notes": "Established on the `cas-certificate` route, in the geometry family. Filed as one of the corpus's NO-CONDITION theorems: the certifier tries the empty non-degeneracy set first and reports which conditions it consumed, so `axiom_footprint` carrying no `geometry.nondegeneracy.*` entry is a measurement, not an omission. Compare F:geometry-centroid-divides-medians, whose certificate does consume one and whose degenerate counterexample is committed alongside it."
+}

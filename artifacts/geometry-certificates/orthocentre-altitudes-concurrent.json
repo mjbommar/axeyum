@@ -1,0 +1,27 @@
+{
+  "format": "axeyum-geometry-certificate",
+  "version": 1,
+  "id": "orthocentre-altitudes-concurrent",
+  "title": "the altitudes of a triangle are concurrent",
+  "statement": "If AP is perpendicular to BC and BP is perpendicular to CA, then CP is perpendicular to AB. NO non-degeneracy condition is required: the certificate has CONSTANT cofactors (-1, -1), so the statement is the polynomial identity (P-C).(B-A) + (P-A).(C-B) + (P-B).(A-C) = 0, valid for all four points. The triangle must be non-degenerate for such a P to EXIST and be unique, but that is an existence claim and this theorem does not make it.",
+  "coordinate_gloss": [["ax", "A.x"], ["ay", "A.y"], ["bx", "B.x"], ["by", "B.y"], ["cx", "C.x"], ["cy", "C.y"], ["px", "P.x"], ["py", "P.y"]],
+  "coordinates": ["ax", "ay", "bx", "by", "cx", "cy", "px", "py"],
+  "hypotheses": [
+    {"id": "ap-perp-bc", "description": "AP is perpendicular to BC", "poly": {"terms": [{"monomial": [["ax", 1], ["bx", 1]], "coefficient": [1, 1]}, {"monomial": [["ax", 1], ["cx", 1]], "coefficient": [-1, 1]}, {"monomial": [["ay", 1], ["by", 1]], "coefficient": [1, 1]}, {"monomial": [["ay", 1], ["cy", 1]], "coefficient": [-1, 1]}, {"monomial": [["bx", 1], ["px", 1]], "coefficient": [-1, 1]}, {"monomial": [["by", 1], ["py", 1]], "coefficient": [-1, 1]}, {"monomial": [["cx", 1], ["px", 1]], "coefficient": [1, 1]}, {"monomial": [["cy", 1], ["py", 1]], "coefficient": [1, 1]}]}},
+    {"id": "bp-perp-ca", "description": "BP is perpendicular to CA", "poly": {"terms": [{"monomial": [["ax", 1], ["bx", 1]], "coefficient": [-1, 1]}, {"monomial": [["ax", 1], ["px", 1]], "coefficient": [1, 1]}, {"monomial": [["ay", 1], ["by", 1]], "coefficient": [-1, 1]}, {"monomial": [["ay", 1], ["py", 1]], "coefficient": [1, 1]}, {"monomial": [["bx", 1], ["cx", 1]], "coefficient": [1, 1]}, {"monomial": [["by", 1], ["cy", 1]], "coefficient": [1, 1]}, {"monomial": [["cx", 1], ["px", 1]], "coefficient": [-1, 1]}, {"monomial": [["cy", 1], ["py", 1]], "coefficient": [-1, 1]}]}}
+  ],
+  "saturations": [
+  ],
+  "generators": [
+    {"terms": [{"monomial": [["ax", 1], ["bx", 1]], "coefficient": [1, 1]}, {"monomial": [["ax", 1], ["cx", 1]], "coefficient": [-1, 1]}, {"monomial": [["ay", 1], ["by", 1]], "coefficient": [1, 1]}, {"monomial": [["ay", 1], ["cy", 1]], "coefficient": [-1, 1]}, {"monomial": [["bx", 1], ["px", 1]], "coefficient": [-1, 1]}, {"monomial": [["by", 1], ["py", 1]], "coefficient": [-1, 1]}, {"monomial": [["cx", 1], ["px", 1]], "coefficient": [1, 1]}, {"monomial": [["cy", 1], ["py", 1]], "coefficient": [1, 1]}]},
+    {"terms": [{"monomial": [["ax", 1], ["bx", 1]], "coefficient": [-1, 1]}, {"monomial": [["ax", 1], ["px", 1]], "coefficient": [1, 1]}, {"monomial": [["ay", 1], ["by", 1]], "coefficient": [-1, 1]}, {"monomial": [["ay", 1], ["py", 1]], "coefficient": [1, 1]}, {"monomial": [["bx", 1], ["cx", 1]], "coefficient": [1, 1]}, {"monomial": [["by", 1], ["cy", 1]], "coefficient": [1, 1]}, {"monomial": [["cx", 1], ["px", 1]], "coefficient": [-1, 1]}, {"monomial": [["cy", 1], ["py", 1]], "coefficient": [-1, 1]}]}
+  ],
+  "conclusions": [
+    {"id": "cp-perp-ab", "description": "CP is perpendicular to AB", "poly": {"terms": [{"monomial": [["ax", 1], ["cx", 1]], "coefficient": [1, 1]}, {"monomial": [["ax", 1], ["px", 1]], "coefficient": [-1, 1]}, {"monomial": [["ay", 1], ["cy", 1]], "coefficient": [1, 1]}, {"monomial": [["ay", 1], ["py", 1]], "coefficient": [-1, 1]}, {"monomial": [["bx", 1], ["cx", 1]], "coefficient": [-1, 1]}, {"monomial": [["bx", 1], ["px", 1]], "coefficient": [1, 1]}, {"monomial": [["by", 1], ["cy", 1]], "coefficient": [-1, 1]}, {"monomial": [["by", 1], ["py", 1]], "coefficient": [1, 1]}]}, "cofactors": [{"terms": [{"monomial": [], "coefficient": [-1, 1]}]}, {"terms": [{"monomial": [], "coefficient": [-1, 1]}]}]}
+  ],
+  "degenerate_witnesses": [
+  ],
+  "generic_witnesses": [
+    {"description": "A = (0,0), B = (4,0), C = (1,3), orthocentre P = (1,1)", "assignment": [["ax", [0, 1]], ["ay", [0, 1]], ["bx", [4, 1]], ["by", [0, 1]], ["cx", [1, 1]], ["cy", [3, 1]], ["px", [1, 1]], ["py", [1, 1]]]}
+  ]
+}
