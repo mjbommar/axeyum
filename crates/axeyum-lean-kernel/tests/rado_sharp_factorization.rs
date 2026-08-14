@@ -1460,6 +1460,131 @@ fn admit_closed_form_witness_colour_two(
     name
 }
 
+/// Package the exact checked content of `thm:sharp` that the current library
+/// can state without pretending a global colouring or Ramsey predicate exists.
+fn admit_closed_form_sharp_certificate(
+    d: &mut Dev,
+    defs: ColourTwoDefinitions,
+    witness_identity: NameId,
+    ranges: RangeTheorems,
+    exact_range: NameId,
+    witness_colour_two: NameId,
+) -> NameId {
+    let p = d.p;
+    let name = d.name("closed_form_sharp_certificate");
+    d.theorem(name, 3, &|d, v| {
+        let (a, b, n) = (v[0], v[1], v[2]);
+        let one = d.num(1);
+        let two = d.num(2);
+        let ha_two_ty = d.le(two, a);
+        let ha_two_fv = d.fresh_fvar();
+        let ha_two = d.k.fvar(ha_two_fv);
+        let hb_ty = d.le(one, b);
+        let hb_fv = d.fresh_fvar();
+        let hb = d.k.fvar(hb_fv);
+
+        let shifted = power_range(d, a, 1);
+        let sum = d.sum_range(shifted, n);
+        let sn = d.succ(n);
+        let power = d.pow(a, sn);
+        let twice_sum = d.mul(two, sum);
+        let tail = d.add(twice_sum, power);
+        let inner = d.add(one, tail);
+        let u = d.mul(a, inner);
+        let q = d.add(a, u);
+        let capital_n = d.mul(b, q);
+        let ab = d.mul(a, b);
+        let difference = d.sub(capital_n, ab);
+        let x = d.add(difference, one);
+        let y = one;
+        let x_sub_y = d.sub(x, y);
+        let lhs = d.mul(a, x_sub_y);
+        let q_sub_a = d.sub(q, a);
+        let z = d.mul(a, q_sub_a);
+        let rhs = d.mul(b, z);
+        let identity_ty = d.eq(lhs, rhs);
+
+        let one_le_two = d.lemma(p.le_add_right, &[one, one]);
+        let ha = d.lemma(p.le_trans, &[one, two, a, one_le_two, ha_two]);
+        let identity = d.lemma(witness_identity, &[a, b, n]);
+
+        let x_domain_ty = d.in_closed_interval(one, capital_n, x);
+        let x_lower = d.lemma(ranges.x_lower, &[a, b, n]);
+        let x_upper = d.lemma(ranges.x_upper, &[a, b, n, ha, hb]);
+        let one_le_x_ty = d.le(one, x);
+        let x_le_n_ty = d.le(x, capital_n);
+        let x_domain = d.const_app(
+            p.logic.and_intro,
+            &[one_le_x_ty, x_le_n_ty, x_lower, x_upper],
+        );
+
+        let y_domain_ty = d.in_closed_interval(one, capital_n, y);
+        let one_le_y_ty = d.le(one, y);
+        let y_le_n_ty = d.le(y, capital_n);
+        let y_lower = d.lemma(p.le_refl, &[one]);
+        let y_upper = d.lemma(ranges.y_upper, &[a, b, n, ha, hb]);
+        let y_domain = d.const_app(
+            p.logic.and_intro,
+            &[one_le_y_ty, y_le_n_ty, y_lower, y_upper],
+        );
+
+        let z_range_ty = d.le(z, capital_n);
+        let a_sub_b = d.sub(a, b);
+        let criterion_lhs = d.mul(capital_n, a_sub_b);
+        let aa = d.mul(a, a);
+        let criterion_rhs = d.mul(aa, b);
+        let criterion_ty = d.le(criterion_lhs, criterion_rhs);
+        let exact_range_ty = d.const_app(p.logic.iff, &[z_range_ty, criterion_ty]);
+        let exact_range_proof = d.lemma(exact_range, &[a, b, n, hb]);
+
+        let x_colour_ty = colour_two_at(d, defs, a, capital_n, ab, x);
+        let y_colour_ty = colour_two_at(d, defs, a, capital_n, ab, y);
+        let z_colour_ty = colour_two_at(d, defs, a, capital_n, ab, z);
+        let yz_colour_ty = d.const_app(p.logic.and, &[y_colour_ty, z_colour_ty]);
+        let colours_ty = d.const_app(p.logic.and, &[x_colour_ty, yz_colour_ty]);
+        let colour_when_in_range_ty = d.arrow(z_range_ty, colours_ty);
+        let colour_when_in_range = d.lemma(witness_colour_two, &[a, b, n, ha_two, hb]);
+
+        let range_and_colour_ty =
+            d.const_app(p.logic.and, &[exact_range_ty, colour_when_in_range_ty]);
+        let range_and_colour = d.const_app(
+            p.logic.and_intro,
+            &[
+                exact_range_ty,
+                colour_when_in_range_ty,
+                exact_range_proof,
+                colour_when_in_range,
+            ],
+        );
+        let y_and_rest_ty = d.const_app(p.logic.and, &[y_domain_ty, range_and_colour_ty]);
+        let y_and_rest = d.const_app(
+            p.logic.and_intro,
+            &[y_domain_ty, range_and_colour_ty, y_domain, range_and_colour],
+        );
+        let x_and_rest_ty = d.const_app(p.logic.and, &[x_domain_ty, y_and_rest_ty]);
+        let x_and_rest = d.const_app(
+            p.logic.and_intro,
+            &[x_domain_ty, y_and_rest_ty, x_domain, y_and_rest],
+        );
+        let conclusion = d.const_app(p.logic.and, &[identity_ty, x_and_rest_ty]);
+        let body = d.const_app(
+            p.logic.and_intro,
+            &[identity_ty, x_and_rest_ty, identity, x_and_rest],
+        );
+        let proof = {
+            let with_hb = d.lam_fv(hb_fv, hb_ty, body);
+            d.lam_fv(ha_two_fv, ha_two_ty, with_hb)
+        };
+        let stmt = {
+            let with_hb = d.arrow(hb_ty, conclusion);
+            d.arrow(ha_two_ty, with_hb)
+        };
+        (stmt, proof)
+    })
+    .expect("closed-form sharpness certificate checks");
+    name
+}
+
 #[test]
 fn kernel_checks_the_exact_sharpness_factorization() {
     let mut d = Dev::new();
@@ -1773,6 +1898,62 @@ fn kernel_rejects_a_broken_closed_form_witness_colour_two_shell() {
         .expect_err("a changed shell width must be rejected");
     println!("broken closed-form colour-two shell rejected: {error:?}");
     assert!(!d.k.environment().contains(bad_name));
+}
+
+fn build_closed_form_sharp_certificate(d: &mut Dev) -> NameId {
+    let defs = define_colour_two_relations(d);
+    let witness = admit_sharp_witness_identity(d);
+    let closed_witness = admit_closed_form_sharp_witness_identity(d, witness);
+    let ranges = admit_closed_form_range_theorems(d);
+    let exact = admit_exact_range_criterion(d);
+    let closed_exact = admit_closed_form_exact_range_criterion(d, exact);
+    let valuation = admit_closed_form_witness_valuation(d);
+    let colours = admit_closed_form_witness_colour_two(d, defs, ranges, valuation);
+    admit_closed_form_sharp_certificate(d, defs, closed_witness, ranges, closed_exact, colours)
+}
+
+#[test]
+fn kernel_checks_the_closed_form_sharp_certificate() {
+    let mut d = Dev::new();
+    let certificate = build_closed_form_sharp_certificate(&mut d);
+    let a = d.num(2);
+    let b = d.num(3);
+    let zero = d.zero();
+    let one = d.num(1);
+    let two = d.num(2);
+    let ha = d.lemma(d.p.le_refl, &[a]);
+    let hb = d.lemma(d.p.le_add_right, &[one, two]);
+    let proof = d.lemma(certificate, &[a, b, zero, ha, hb]);
+    d.k.infer(proof)
+        .expect("closed-form sharpness certificate application infers");
+
+    let axioms: Vec<_> =
+        d.k.environment()
+            .iter()
+            .filter(|(_, decl)| matches!(decl, Declaration::Axiom { .. }))
+            .collect();
+    assert!(
+        axioms.is_empty(),
+        "sharpness certificate must add no axioms"
+    );
+}
+
+#[test]
+fn kernel_rejects_a_sharp_certificate_with_the_wrong_b_bound() {
+    let mut d = Dev::new();
+    let certificate = build_closed_form_sharp_certificate(&mut d);
+    let a = d.num(2);
+    let b = d.num(3);
+    let zero = d.zero();
+    let ha = d.lemma(d.p.le_refl, &[a]);
+
+    // The final premise is 1<=b. Reusing the unrelated 2<=a proof must fail
+    // before any purported certificate can be checked.
+    let broken = d.lemma(certificate, &[a, b, zero, ha, ha]);
+    let error =
+        d.k.infer(broken)
+            .expect_err("the certificate must retain the positive-b premise");
+    println!("wrong sharpness-certificate b bound rejected: {error:?}");
 }
 
 #[test]

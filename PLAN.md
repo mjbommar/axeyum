@@ -340,8 +340,8 @@ here as closed evidence boundaries. A3 remains incomplete, but all currently
 preregistered bounded mechanisms are closed negatively. A4 has now also yielded;
 A5 is the first active item.
 
-**Immediate action (`WIP`, Lean lane).** Gate ADR-0416; package exact
-`thm:sharp` without claiming the missing global colouring. No credit.
+**Immediate action (`WIP`, Lean lane).** Gate ADR-0417; then begin reusable
+R4.7 Euclidean-division foundations. No credit.
 Keep the 14-theorem export labelled rejected by Lean and independently unchecked.
 A5 V2 QF_RDL row 1 remains pending and uncredited.
 
