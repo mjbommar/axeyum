@@ -55,6 +55,7 @@ mod logic;
 mod machine;
 mod mathtour;
 mod memory;
+mod misconception;
 mod mixing;
 mod number_system;
 mod number_theory;
@@ -108,6 +109,10 @@ pub use mathtour::{
     topological_order as math_topological_order,
 };
 pub use memory::{memory_catalog, memory_trace};
+pub use misconception::{
+    CONTROLS as MISCONCEPTION_CONTROLS, ControlShape, MIN_REFUTATIONS, NegativeControl,
+    misconception_catalog,
+};
 pub use mixing::mixing_inversion;
 pub use number_system::{
     number_system_catalog, order_transitivity, signed_trichotomy, successor_injective,
@@ -228,6 +233,10 @@ pub enum Family {
     /// Real numbers: algebraic (real-closed-field) facts with exact rational
     /// witnesses — quadratic roots, an AM–GM instance, and nested intervals.
     RealAlgebra,
+    /// Negative controls: documented mathematical *misconceptions*, formalised
+    /// so that the expected verdict is `unsat`. The stack passes by refusing the
+    /// claim (see [`misconception_catalog`]).
+    Misconception,
 }
 
 impl Family {
@@ -257,6 +266,7 @@ impl Family {
             Family::Relation => "relation",
             Family::Rational => "rational",
             Family::RealAlgebra => "real_algebra",
+            Family::Misconception => "misconception",
         }
     }
 }
@@ -524,6 +534,11 @@ pub fn catalog() -> Vec<Scenario> {
     for width in [3u32, 4] {
         scenarios.push(distributivity_identity(width));
     }
+    // Negative controls last: unlike everything above, these are expected to be
+    // *refuted*. Folding them into the main catalog is deliberate — the
+    // solver-side differential tests iterate `catalog()`, so every misconception
+    // goes through the real lower-to-AIG-to-CNF-to-SAT path.
+    scenarios.extend(misconception_catalog());
     scenarios
 }
 
