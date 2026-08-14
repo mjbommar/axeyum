@@ -89,6 +89,7 @@ fn definition_names(p: &NatPrelude) -> Vec<NameId> {
         p.div_mod_state,
         p.div,
         p.mod_,
+        p.gcd,
         p.sum_range,
         p.pred,
         p.sub,
@@ -182,6 +183,9 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.div_mod_remainder_eq_zero_iff_dvd,
         p.div_mod_exact_exists,
         p.div_mod_exec,
+        p.mod_lt,
+        p.gcd_zero_left,
+        p.gcd_succ,
         p.mod_eq_refl,
         p.mod_eq_symm,
         p.mod_eq_trans,
@@ -891,6 +895,55 @@ fn executable_division_is_checked_against_the_relational_specification() {
     let zero_spec = f.lemma(p.div_mod_exec, &[zero, five]);
     f.k.infer(zero_spec)
         .expect("the successor-divisor theorem must include divisor one");
+}
+
+#[test]
+fn executable_gcd_uses_checked_remainder_descent_and_computes() {
+    let mut f = Fixture::new();
+    let p = f.p;
+    let zero = f.zero();
+    let three = f.num(3);
+    let four = f.num(4);
+    let five = f.num(5);
+    let six = f.num(6);
+    let seven = f.num(7);
+    let ten = f.num(10);
+    let fifteen = f.num(15);
+
+    let remainder_bound = f.lemma(p.mod_lt, &[three, six]);
+    let remainder = f.modulo(six, four);
+    let bound_ty = f.lt(remainder, four);
+    let inferred =
+        f.k.infer(remainder_bound)
+            .expect("mod_lt should expose the checked Euclidean decrease");
+    assert!(f.k.def_eq(inferred, bound_ty));
+
+    let gcd_zero_five = f.gcd(zero, five);
+    assert!(f.k.def_eq(gcd_zero_five, five), "gcd 0 5 must reduce to 5");
+    let gcd_ten_fifteen = f.gcd(ten, fifteen);
+    assert!(
+        f.k.def_eq(gcd_ten_fifteen, five),
+        "gcd 10 15 must reduce to 5"
+    );
+    let gcd_seven_zero = f.gcd(seven, zero);
+    assert!(
+        f.k.def_eq(gcd_seven_zero, seven),
+        "gcd 7 0 must reduce to 7"
+    );
+
+    let equation = f.lemma(p.gcd_succ, &[three, six]);
+    let left = f.gcd(four, six);
+    let quotient = f.div(six, four);
+    let changed_right = f.gcd(quotient, four);
+    let changed_ty = f.eq(left, changed_right);
+    let changed_name = f.name("gcd_succ_with_quotient_instead_of_remainder");
+    let error = f
+        .declare_theorem(changed_name, changed_ty, equation)
+        .expect_err("the gcd equation must reject quotient/remainder mutation");
+    assert!(matches!(
+        error,
+        KernelError::DeclarationValueMismatch { .. }
+    ));
 }
 
 /// The Nat accessibility proof is deliberately reducible: a closed function
@@ -3196,7 +3249,7 @@ fn the_build_is_deterministic() {
     assert_eq!(first, second, "the prelude build must be deterministic");
     assert_eq!(
         first.len(),
-        17 + 99,
+        18 + 102,
         "every promised definition and theorem must be rendered"
     );
 }

@@ -73,14 +73,19 @@
 //! `div_mod_exec` proves those projections satisfy the relational specification
 //! for every positive divisor, so its uniqueness, floor, congruence, and
 //! divisibility laws apply to computation.
+//! `Nat.gcd` then follows Lean's first-argument Euclidean recursion through the
+//! generic checked `WellFounded.fix`; its recursive remainder is justified by
+//! the checked `mod_lt` theorem, and `gcd_zero_left` / `gcd_succ` expose its
+//! unfolding equations.
 //! `Nat.modEq d a b := ∃ u v, a + d*u = b + d*v` avoids signed subtraction;
 //! reflexivity, symmetry, transitivity, and pairwise additive and multiplicative
 //! closure are checked theorems.
 //!
 //! ## What is **not** here
 //!
-//! No `min` or decidability of order, no multiplicative divisibility
-//! cancellation, and no `n ≠ succ n`-style discrimination.
+//! No `min` or decidability of order, no semantic greatest-common-divisor
+//! characterization, no multiplicative divisibility cancellation, and no
+//! `n ≠ succ n`-style discrimination.
 //! Adding those is ordinary work on top of this prelude, not a kernel question:
 //! the order fragment is deliberately minimal (see [`NatPrelude::le`]).
 //!
@@ -161,6 +166,9 @@ pub struct NatPrelude {
     pub div: NameId,
     /// Total executable remainder `Nat.mod dividend divisor`.
     pub mod_: NameId,
+    /// Executable Euclidean greatest-common-divisor algorithm, recursing on its
+    /// first argument through checked well-founded recursion.
+    pub gcd: NameId,
     /// `Nat.sumRange : (Nat → Nat) → Nat → Nat`.
     pub sum_range: NameId,
     /// `Nat.pred : Nat → Nat`, with `pred zero = zero`.
@@ -358,6 +366,12 @@ pub struct NatPrelude {
     pub div_mod_exact_exists: NameId,
     /// Executable quotient and remainder satisfy `divMod` at every successor divisor.
     pub div_mod_exec: NameId,
+    /// `Nat.mod_lt : ∀ k n, mod n (succ k) < succ k`.
+    pub mod_lt: NameId,
+    /// `Nat.gcd_zero_left : ∀ n, gcd zero n = n`.
+    pub gcd_zero_left: NameId,
+    /// `Nat.gcd_succ : ∀ k n, gcd (succ k) n = gcd (mod n (succ k)) (succ k)`.
+    pub gcd_succ: NameId,
     /// `Nat.modEq d a b := ∃ u v, a + d*u = b + d*v`.
     pub mod_eq: NameId,
     /// `Nat.mod_eq_refl : ∀ d a, modEq d a a`.
@@ -458,6 +472,7 @@ pub fn build_nat_prelude(kernel: &mut Kernel) -> Result<NatPrelude, KernelError>
             div_mod_state: kernel.name_str(nat, "divModState"),
             div: kernel.name_str(nat, "div"),
             mod_: kernel.name_str(nat, "mod"),
+            gcd: kernel.name_str(nat, "gcd"),
             sum_range: kernel.name_str(nat, "sumRange"),
             pred: kernel.name_str(nat, "pred"),
             sub: kernel.name_str(nat, "sub"),
@@ -545,6 +560,9 @@ pub fn build_nat_prelude(kernel: &mut Kernel) -> Result<NatPrelude, KernelError>
                 .name_str(nat, "div_mod_remainder_eq_zero_iff_dvd"),
             div_mod_exact_exists: kernel.name_str(nat, "div_mod_exact_exists"),
             div_mod_exec: kernel.name_str(nat, "div_mod_exec"),
+            mod_lt: kernel.name_str(nat, "mod_lt"),
+            gcd_zero_left: kernel.name_str(nat, "gcd_zero_left"),
+            gcd_succ: kernel.name_str(nat, "gcd_succ"),
             mod_eq: kernel.name_str(nat, "modEq"),
             mod_eq_refl: kernel.name_str(nat, "mod_eq_refl"),
             mod_eq_symm: kernel.name_str(nat, "mod_eq_symm"),
@@ -585,6 +603,7 @@ pub fn build_nat_prelude(kernel: &mut Kernel) -> Result<NatPrelude, KernelError>
         declare_order(&mut d, &p)?;
         declare_euclidean_division(&mut d, &p)?;
         declare_divisibility(&mut d, &p)?;
+        declare_executable_gcd(&mut d, &p)?;
         declare_modular_congruence(&mut d, &p)?;
         Ok(p)
     })();
@@ -7200,6 +7219,217 @@ fn declare_divisibility(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), Kernel
     Ok(())
 }
 
+/// Bound executable remainder by its positive divisor, then use that checked
+/// decrease to define Euclid's algorithm through the logic prelude's generic
+/// well-founded fixpoint. This establishes computation and unfolding only;
+/// the greatest-common-divisor characterization is intentionally separate.
+fn declare_executable_gcd(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> {
+    let p = *p;
+    let nat = d.nat_ty();
+
+    // mod_lt : ∀ k n, mod n (succ k) < succ k
+    d.theorem(p.mod_lt, 2, &|d, values| {
+        let (divisor_predecessor, dividend) = (values[0], values[1]);
+        let divisor = d.succ(divisor_predecessor);
+        let quotient = d.div(dividend, divisor);
+        let remainder = d.modulo(dividend, divisor);
+        let equation_ty = {
+            let product = d.mul(divisor, quotient);
+            let reconstructed = d.add(product, remainder);
+            d.eq(dividend, reconstructed)
+        };
+        let bound_ty = d.lt(remainder, divisor);
+        let relation_ty = d.const_app(p.logic.and, &[equation_ty, bound_ty]);
+        let relation = d.lemma(p.div_mod_exec, &[divisor_predecessor, dividend]);
+        let motive = {
+            let relation_fv = d.fresh_fvar();
+            d.lam_fv(relation_fv, relation_ty, bound_ty)
+        };
+        let minor = {
+            let equation_fv = d.fresh_fvar();
+            let bound_fv = d.fresh_fvar();
+            let bound = d.kernel().fvar(bound_fv);
+            let with_bound = d.lam_fv(bound_fv, bound_ty, bound);
+            d.lam_fv(equation_fv, equation_ty, with_bound)
+        };
+        let zero = d.kernel().level_zero();
+        let and_rec = d.kernel().const_(p.logic.and_rec, vec![zero]);
+        let proof = d.apply(and_rec, &[equation_ty, bound_ty, motive, minor, relation]);
+        (bound_ty, proof)
+    })?;
+
+    // gcd m n := WellFounded.fix lt_well_founded step m n, where the
+    // successor branch recursively calls gcd (n % succ k) (succ k).
+    let (relation, family, well_founded, step) = gcd_fix_parts(d, &p);
+    let one = d.level_one();
+    let fix = d.kernel().const_(p.logic.well_founded_fix, vec![one, one]);
+    let value = d.apply(fix, &[nat, relation, family, well_founded, step]);
+    let nat_to_nat = d.arrow(nat, nat);
+    let ty = d.arrow(nat, nat_to_nat);
+    d.kernel().add_declaration(Declaration::Definition {
+        name: p.gcd,
+        uparams: vec![],
+        ty,
+        value,
+        hint: ReducibilityHint::Regular(10),
+    })?;
+
+    // Both public equations are pointwise consequences of the checked generic
+    // fixpoint equation. The RHSs reduce through Nat.rec at zero/successor.
+    d.theorem(p.gcd_zero_left, 1, &|d, values| {
+        let value = values[0];
+        let zero = d.zero();
+        let gcd_zero = d.gcd(zero, value);
+        let equation = gcd_fix_equation(d, &p, zero);
+        let left_function = d.const_app(p.gcd, &[zero]);
+        let identity = {
+            let argument_fv = d.fresh_fvar();
+            let argument = d.kernel().fvar(argument_fv);
+            d.lam_fv(argument_fv, nat, argument)
+        };
+        let proof = apply_nat_function_equality(d, left_function, identity, equation, value);
+        (d.eq(gcd_zero, value), proof)
+    })?;
+
+    d.theorem(p.gcd_succ, 2, &|d, values| {
+        let (predecessor, value) = (values[0], values[1]);
+        let divisor = d.succ(predecessor);
+        let left = d.gcd(divisor, value);
+        let remainder = d.modulo(value, divisor);
+        let right = d.gcd(remainder, divisor);
+        let equation = gcd_fix_equation(d, &p, divisor);
+        let left_function = d.const_app(p.gcd, &[divisor]);
+        let right_function = {
+            let argument_fv = d.fresh_fvar();
+            let argument = d.kernel().fvar(argument_fv);
+            let recursive_remainder = d.modulo(argument, divisor);
+            let body = d.gcd(recursive_remainder, divisor);
+            d.lam_fv(argument_fv, nat, body)
+        };
+        let proof = apply_nat_function_equality(d, left_function, right_function, equation, value);
+        (d.eq(left, right), proof)
+    })?;
+
+    Ok(())
+}
+
+/// The relation, motive, well-foundedness witness, and Euclidean step shared by
+/// `Nat.gcd` and its checked unfolding equations.
+fn gcd_fix_parts(d: &mut NatDev<'_>, p: &NatPrelude) -> (ExprId, ExprId, ExprId, ExprId) {
+    let nat = d.nat_ty();
+    let one = d.level_one();
+    let relation = d.kernel().const_(p.lt, vec![]);
+    let nat_to_nat = d.arrow(nat, nat);
+    let family = {
+        let value_fv = d.fresh_fvar();
+        d.lam_fv(value_fv, nat, nat_to_nat)
+    };
+    let recursive_ty = |d: &mut NatDev<'_>, upper: ExprId| {
+        let predecessor_fv = d.fresh_fvar();
+        let predecessor = d.kernel().fvar(predecessor_fv);
+        let related_fv = d.fresh_fvar();
+        let related_ty = d.lt(predecessor, upper);
+        let at_relation = d.pi_fv(related_fv, related_ty, nat_to_nat);
+        d.pi_fv(predecessor_fv, nat, at_relation)
+    };
+    let motive = {
+        let upper_fv = d.fresh_fvar();
+        let upper = d.kernel().fvar(upper_fv);
+        let recursive = recursive_ty(d, upper);
+        let result = d.arrow(recursive, nat_to_nat);
+        d.lam_fv(upper_fv, nat, result)
+    };
+    let zero_minor = {
+        let recursive_fv = d.fresh_fvar();
+        let zero = d.zero();
+        let recursive = recursive_ty(d, zero);
+        let value_fv = d.fresh_fvar();
+        let value = d.kernel().fvar(value_fv);
+        let identity = d.lam_fv(value_fv, nat, value);
+        d.lam_fv(recursive_fv, recursive, identity)
+    };
+    let succ_minor = {
+        let predecessor_fv = d.fresh_fvar();
+        let predecessor = d.kernel().fvar(predecessor_fv);
+        let divisor = d.succ(predecessor);
+        let ih_fv = d.fresh_fvar();
+        let ih_ty = {
+            let recursive = recursive_ty(d, predecessor);
+            d.arrow(recursive, nat_to_nat)
+        };
+        let recursive_fv = d.fresh_fvar();
+        let recursive = d.kernel().fvar(recursive_fv);
+        let recursive_at_divisor = recursive_ty(d, divisor);
+        let value_fv = d.fresh_fvar();
+        let value = d.kernel().fvar(value_fv);
+        let remainder = d.modulo(value, divisor);
+        let decrease = d.lemma(p.mod_lt, &[predecessor, value]);
+        let recursive_gcd = d.apply(recursive, &[remainder, decrease]);
+        let body = d.apply(recursive_gcd, &[divisor]);
+        let with_value = d.lam_fv(value_fv, nat, body);
+        let with_recursive = d.lam_fv(recursive_fv, recursive_at_divisor, with_value);
+        let with_ih = d.lam_fv(ih_fv, ih_ty, with_recursive);
+        d.lam_fv(predecessor_fv, nat, with_ih)
+    };
+    let step = {
+        let upper_fv = d.fresh_fvar();
+        let upper = d.kernel().fvar(upper_fv);
+        let recursive_fv = d.fresh_fvar();
+        let recursive = d.kernel().fvar(recursive_fv);
+        let recursive_type = recursive_ty(d, upper);
+        let rec = d.kernel().const_(p.rec, vec![one]);
+        let selected = d.apply(rec, &[motive, zero_minor, succ_minor, upper]);
+        let body = d.apply(selected, &[recursive]);
+        let with_recursive = d.lam_fv(recursive_fv, recursive_type, body);
+        d.lam_fv(upper_fv, nat, with_recursive)
+    };
+    let well_founded = d.kernel().const_(p.lt_well_founded, vec![]);
+    (relation, family, well_founded, step)
+}
+
+fn gcd_fix_equation(d: &mut NatDev<'_>, p: &NatPrelude, value: ExprId) -> ExprId {
+    let nat = d.nat_ty();
+    let one = d.level_one();
+    let (relation, family, well_founded, step) = gcd_fix_parts(d, p);
+    let fix_eq = d
+        .kernel()
+        .const_(p.logic.well_founded_fix_eq, vec![one, one]);
+    d.apply(fix_eq, &[nat, relation, family, well_founded, step, value])
+}
+
+/// Apply an equality between `Nat -> Nat` functions to one argument.
+fn apply_nat_function_equality(
+    d: &mut NatDev<'_>,
+    left: ExprId,
+    right: ExprId,
+    equality: ExprId,
+    argument: ExprId,
+) -> ExprId {
+    let nat = d.nat_ty();
+    let carrier = d.arrow(nat, nat);
+    let left_value = d.apply(left, &[argument]);
+    let logic = d.prelude().logic;
+    let motive = {
+        let candidate_fv = d.fresh_fvar();
+        let candidate = d.kernel().fvar(candidate_fv);
+        let candidate_value = d.apply(candidate, &[argument]);
+        let conclusion = d.eq(left_value, candidate_value);
+        let candidate_equality = {
+            let one = d.level_one();
+            let eq = d.kernel().const_(logic.eq, vec![one]);
+            d.apply(eq, &[carrier, left, candidate])
+        };
+        let proof_fv = d.fresh_fvar();
+        let with_proof = d.lam_fv(proof_fv, candidate_equality, conclusion);
+        d.lam_fv(candidate_fv, carrier, with_proof)
+    };
+    let base = d.refl(left_value);
+    let zero = d.kernel().level_zero();
+    let one = d.level_one();
+    let rec = d.kernel().const_(logic.eq_rec, vec![zero, one]);
+    d.apply(rec, &[carrier, left, motive, base, right, equality])
+}
+
 /// The non-kernel state a [`NatOps`] development carries: the interned prelude
 /// names, the cached `Nat` type expression, the anonymous name root, and a
 /// monotone free-variable counter.
@@ -7421,6 +7651,13 @@ pub trait NatOps {
     fn modulo(&mut self, dividend: ExprId, divisor: ExprId) -> ExprId {
         let f = self.prelude().mod_;
         self.const_app(f, &[dividend, divisor])
+    }
+
+    /// Executable Euclidean `Nat.gcd left right`, with Lean's first-argument
+    /// recursion orientation.
+    fn gcd(&mut self, left: ExprId, right: ExprId) -> ExprId {
+        let f = self.prelude().gcd;
+        self.const_app(f, &[left, right])
     }
 
     /// `Nat.pred x`.
