@@ -480,3 +480,5 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [0422](adr-0422-relational-nat-euclidean-floor-bounds.md) | Relational Nat Euclidean floor bounds | accepted |
 | [0423](adr-0423-relational-nat-euclidean-floor-adjunction.md) | Relational Nat Euclidean floor adjunction | accepted |
 | [0424](adr-0424-relational-nat-euclidean-strict-adjunction.md) | Relational Nat Euclidean strict adjunction | accepted |
+| [0425](adr-0425-relational-nat-zero-remainder-divisibility.md) | Relational Nat zero remainder characterizes divisibility | accepted |
+| [0426](adr-0426-file-backed-backward-drat-checking.md) | File-backed backward DRAT checking, and a typed resource decline | accepted |

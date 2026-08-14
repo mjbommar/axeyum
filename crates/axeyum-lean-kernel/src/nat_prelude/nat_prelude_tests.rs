@@ -141,6 +141,7 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.div_mod_bounds,
         p.div_mod_mul_le_iff,
         p.div_mod_lt_mul_iff,
+        p.div_mod_remainder_eq_zero_iff_dvd,
         p.dvd_mul,
         p.dvd_add,
         p.dvd_add_right_cancel_of_pos,
@@ -706,6 +707,30 @@ fn euclidean_division_exists_constructively() {
     f.k.infer(ceiling_order).unwrap_or_else(|e| {
         panic!(
             "Euclidean quotient/strict-multiplication equivalence should infer: {}",
+            f.explain(&e)
+        )
+    });
+
+    // Exact division connects zero remainder to the existing existential
+    // divisibility relation: 6 = 2*3+0 iff 2 divides 6.
+    let zero = f.num(0);
+    let six = f.num(6);
+    let exact_product = f.mul(two, three);
+    let exact_reconstructed = f.add(exact_product, zero);
+    let exact_equation_ty = f.eq(six, exact_reconstructed);
+    let exact_bound_ty = f.lt(zero, two);
+    let exact_equation = f.refl(six);
+    let exact_relation = f.const_app(
+        p.logic.and_intro,
+        &[exact_equation_ty, exact_bound_ty, exact_equation, positive],
+    );
+    let exact_division = f.lemma(
+        p.div_mod_remainder_eq_zero_iff_dvd,
+        &[two, six, three, zero, exact_relation],
+    );
+    f.k.infer(exact_division).unwrap_or_else(|e| {
+        panic!(
+            "zero remainder/exact divisibility equivalence should infer: {}",
             f.explain(&e)
         )
     });
@@ -1970,7 +1995,41 @@ fn kernel_rejects_broken_proof_terms() {
         rejections += 1;
     }
 
-    assert_eq!(rejections, 43, "every negative control must be rejected");
+    // NC44 — exact division retains the divisor in the divisibility result.
+    {
+        let name = f.name("nc44_zero_remainder_iff_wrong_divisor");
+        let zero = f.num(0);
+        let one = f.num(1);
+        let two = f.num(2);
+        let three = f.num(3);
+        let six = f.num(6);
+        let product = f.mul(two, three);
+        let reconstructed = f.add(product, zero);
+        let equation_ty = f.eq(six, reconstructed);
+        let bound_ty = f.lt(zero, two);
+        let equation = f.refl(six);
+        let bound = f.lemma(p.le_add_right, &[one, one]);
+        let relation_proof =
+            f.const_app(p.logic.and_intro, &[equation_ty, bound_ty, equation, bound]);
+        let proof = f.lemma(
+            p.div_mod_remainder_eq_zero_iff_dvd,
+            &[two, six, three, zero, relation_proof],
+        );
+        let zero_remainder = f.eq(zero, zero);
+        let wrong_divides = f.dvd(three, six);
+        let bad = f.const_app(p.logic.iff, &[zero_remainder, wrong_divides]);
+        let err = f
+            .declare_theorem(name, bad, proof)
+            .expect_err("NC44: exact division must retain the divisor");
+        println!(
+            "NC44 (wrong exact-division divisor) rejected:\n  {}",
+            f.explain(&err)
+        );
+        assert!(!f.k.environment().contains(name));
+        rejections += 1;
+    }
+
+    assert_eq!(rejections, 44, "every negative control must be rejected");
 }
 
 /// The build is deterministic: two independent kernels render every promised
@@ -1993,7 +2052,7 @@ fn the_build_is_deterministic() {
     assert_eq!(first, second, "the prelude build must be deterministic");
     assert_eq!(
         first.len(),
-        11 + 70,
+        11 + 71,
         "every promised definition and theorem must be rendered"
     );
 }

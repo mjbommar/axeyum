@@ -299,6 +299,8 @@ pub struct NatPrelude {
     // --- divisibility -------------------------------------------------------
     /// `Nat.dvd : Nat → Nat → Prop`, where `dvd a n := ∃ q, n = a * q`.
     pub dvd: NameId,
+    /// `Nat.div_mod_remainder_eq_zero_iff_dvd : divMod d n q r → (r=0 ↔ dvd d n)`.
+    pub div_mod_remainder_eq_zero_iff_dvd: NameId,
     /// `Nat.valuationAt a n e := dvd (a^e) n ∧ Not (dvd (a^(e+1)) n)`.
     pub valuation_at: NameId,
     /// `Nat.dvd_mul : ∀ a q, dvd a (a * q)`.
@@ -430,6 +432,8 @@ pub fn build_nat_prelude(kernel: &mut Kernel) -> Result<NatPrelude, KernelError>
             div_mod_mul_le_iff: kernel.name_str(nat, "div_mod_mul_le_iff"),
             div_mod_lt_mul_iff: kernel.name_str(nat, "div_mod_lt_mul_iff"),
             dvd: kernel.name_str(nat, "dvd"),
+            div_mod_remainder_eq_zero_iff_dvd: kernel
+                .name_str(nat, "div_mod_remainder_eq_zero_iff_dvd"),
             valuation_at: kernel.name_str(nat, "valuationAt"),
             dvd_mul: kernel.name_str(nat, "dvd_mul"),
             dvd_add: kernel.name_str(nat, "dvd_add"),
@@ -3959,6 +3963,164 @@ fn declare_divisibility(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), Kernel
             hint: ReducibilityHint::Regular(6),
         })?;
     }
+
+    // div_mod_remainder_eq_zero_iff_dvd :
+    //   ∀ d n q r, divMod d n q r → (r=0 ↔ dvd d n)
+    // A zero remainder exposes q as a divisibility witness. Conversely, any
+    // divisibility witness gives a zero-remainder decomposition; uniqueness
+    // against the supplied decomposition forces its remainder to be zero.
+    d.theorem(p.div_mod_remainder_eq_zero_iff_dvd, 4, &|d, v| {
+        let (divisor, dividend, quotient, remainder) = (v[0], v[1], v[2], v[3]);
+        let zero = d.zero();
+        let product = d.mul(divisor, quotient);
+        let reconstructed = d.add(product, remainder);
+        let relation_ty = d.div_mod(divisor, dividend, quotient, remainder);
+        let equation_ty = d.eq(dividend, reconstructed);
+        let bound_ty = d.lt(remainder, divisor);
+        let zero_remainder_ty = d.eq(remainder, zero);
+        let divides_ty = d.dvd(divisor, dividend);
+        let target = d.const_app(p.logic.iff, &[zero_remainder_ty, divides_ty]);
+
+        let relation_fv = d.fresh_fvar();
+        let relation = d.kernel().fvar(relation_fv);
+        let relation_motive = d
+            .kernel()
+            .lam(anon, relation_ty, target, BinderInfo::Default);
+        let relation_minor = {
+            let equation_fv = d.fresh_fvar();
+            let equation = d.kernel().fvar(equation_fv);
+            let bound_fv = d.fresh_fvar();
+            let bound = d.kernel().fvar(bound_fv);
+
+            let forward = {
+                let zero_remainder_fv = d.fresh_fvar();
+                let zero_remainder = d.kernel().fvar(zero_remainder_fv);
+                let product_plus_zero = d.add(product, zero);
+                let replace_remainder =
+                    d.congr(remainder, zero, zero_remainder, &|d, x| d.add(product, x));
+                let remove_zero = d.lemma(p.add_zero, &[product]);
+                let (_, witness_equation) = d.chain(
+                    dividend,
+                    &[
+                        (reconstructed, equation),
+                        (product_plus_zero, replace_remainder),
+                        (product, remove_zero),
+                    ],
+                );
+                let predicate = d.dvd_predicate(divisor, dividend);
+                let exists_intro = d.kernel().const_(p.logic.exists_intro, vec![one]);
+                let body = d.apply(exists_intro, &[nat, predicate, quotient, witness_equation]);
+                d.lam_fv(zero_remainder_fv, zero_remainder_ty, body)
+            };
+
+            let reverse = {
+                let divides_fv = d.fresh_fvar();
+                let divides = d.kernel().fvar(divides_fv);
+                let zero_le_remainder = d.lemma(p.zero_le, &[remainder]);
+                let positive = d.lemma(
+                    p.lt_of_le_of_lt,
+                    &[zero, remainder, divisor, zero_le_remainder, bound],
+                );
+                let predicate = d.dvd_predicate(divisor, dividend);
+                let exists_motive =
+                    d.kernel()
+                        .lam(anon, divides_ty, zero_remainder_ty, BinderInfo::Default);
+                let exists_minor = {
+                    let candidate_fv = d.fresh_fvar();
+                    let candidate = d.kernel().fvar(candidate_fv);
+                    let candidate_product = d.mul(divisor, candidate);
+                    let witness_equation_fv = d.fresh_fvar();
+                    let witness_equation_ty = d.eq(dividend, candidate_product);
+                    let witness_equation = d.kernel().fvar(witness_equation_fv);
+                    let candidate_plus_zero = d.add(candidate_product, zero);
+                    let candidate_add_zero = d.lemma(p.add_zero, &[candidate_product]);
+                    let candidate_add_zero_rev =
+                        d.symm(candidate_plus_zero, candidate_product, candidate_add_zero);
+                    let (_, zero_equation) = d.chain(
+                        dividend,
+                        &[
+                            (candidate_product, witness_equation),
+                            (candidate_plus_zero, candidate_add_zero_rev),
+                        ],
+                    );
+                    let zero_equation_ty = d.eq(dividend, candidate_plus_zero);
+                    let zero_bound_ty = d.lt(zero, divisor);
+                    let zero_relation = d.const_app(
+                        p.logic.and_intro,
+                        &[zero_equation_ty, zero_bound_ty, zero_equation, positive],
+                    );
+                    let unique = d.lemma(
+                        p.div_mod_unique,
+                        &[
+                            divisor,
+                            dividend,
+                            quotient,
+                            remainder,
+                            candidate,
+                            zero,
+                            relation,
+                            zero_relation,
+                        ],
+                    );
+                    let quotient_eq_ty = d.eq(quotient, candidate);
+                    let unique_ty = d.const_app(p.logic.and, &[quotient_eq_ty, zero_remainder_ty]);
+                    let unique_motive =
+                        d.kernel()
+                            .lam(anon, unique_ty, zero_remainder_ty, BinderInfo::Default);
+                    let unique_minor = {
+                        let quotient_eq_fv = d.fresh_fvar();
+                        let remainder_eq_fv = d.fresh_fvar();
+                        let remainder_eq = d.kernel().fvar(remainder_eq_fv);
+                        let with_remainder =
+                            d.lam_fv(remainder_eq_fv, zero_remainder_ty, remainder_eq);
+                        d.lam_fv(quotient_eq_fv, quotient_eq_ty, with_remainder)
+                    };
+                    let level_zero = d.kernel().level_zero();
+                    let and_rec = d.kernel().const_(p.logic.and_rec, vec![level_zero]);
+                    let body = d.apply(
+                        and_rec,
+                        &[
+                            quotient_eq_ty,
+                            zero_remainder_ty,
+                            unique_motive,
+                            unique_minor,
+                            unique,
+                        ],
+                    );
+                    let with_equation = d.lam_fv(witness_equation_fv, witness_equation_ty, body);
+                    d.lam_fv(candidate_fv, nat, with_equation)
+                };
+                let exists_rec = d.kernel().const_(p.logic.exists_rec, vec![one]);
+                let body = d.apply(
+                    exists_rec,
+                    &[nat, predicate, exists_motive, exists_minor, divides],
+                );
+                d.lam_fv(divides_fv, divides_ty, body)
+            };
+
+            let body = d.const_app(
+                p.logic.iff_intro,
+                &[zero_remainder_ty, divides_ty, forward, reverse],
+            );
+            let with_bound = d.lam_fv(bound_fv, bound_ty, body);
+            d.lam_fv(equation_fv, equation_ty, with_bound)
+        };
+        let level_zero = d.kernel().level_zero();
+        let and_rec = d.kernel().const_(p.logic.and_rec, vec![level_zero]);
+        let body = d.apply(
+            and_rec,
+            &[
+                equation_ty,
+                bound_ty,
+                relation_motive,
+                relation_minor,
+                relation,
+            ],
+        );
+        let stmt = d.arrow(relation_ty, target);
+        let proof = d.lam_fv(relation_fv, relation_ty, body);
+        (stmt, proof)
+    })?;
 
     // dvd_mul : ∀ a q, dvd a (a * q)
     d.theorem(p.dvd_mul, 2, &|d, v| {
