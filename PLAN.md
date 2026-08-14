@@ -306,6 +306,7 @@ evidence and unrelated temporary projects were untouched.
 |---|---|---|
 | 2026-08-14 | `19f4c769b` | Automatic hypothesis minimisation (`hypothesis_min`): two route-B Rado lemmas that stay `unknown` at 1800 s close in ~2 s with the same subsets a human found in ~32 min; the boundary is measured to be `nra.rs:107` `MAX_CROSS_PRODUCTS = 2`, not hypothesis count, and the guards are mutation-tested one deletion at a time (agent-k). |
 | 2026-08-14 | `telescoping` | Creative telescoping (Zeilberger) with an independent certificate checker; 5 classical binomial identities landed as `cas-certificate` facts; 10 tamper controls reject perturbed certificates | `crates/axeyum-cas/src/telescoping.rs`, `crates/axeyum-cas/src/telescoping_check.rs`, `crates/axeyum-cas/tests/telescoping_identities.rs`, `artifacts/facts/F-*binomial*.json`, `artifacts/facts/F-chu-vandermonde-convolution-recurrence.json` |
+| 2026-08-14 | `22f3db735` | `F:quantifier-negation-duality` proved: quantifier-negation duality and alpha-equivalence in the canonicalizer, and in the certificate checker independently (import backlog 10 to 9). |
 | 2026-08-14 | `fb1066709` | The workspace test gate's zero-test list capped and phrased as information (parser validated at 1191 tests / 34 binaries). |
 | 2026-08-14 | `23bd018be` | `check.sh` stops claiming to mirror a recipe it does not; the claim was false for the life of the file. |
 | 2026-08-14 | `585d4ac23` | Control 6: the step floor itself is exercised (20 controls). |
@@ -432,6 +433,28 @@ frontier block. Ordered follow-on work:
 [`rado-session-diary-and-roadmap-2026-08-12.md`](docs/plan/rado-session-diary-and-roadmap-2026-08-12.md);
 issue register:
 [`findings-register-2026-08-12.md`](docs/plan/findings-register-2026-08-12.md).
+
+**Alpha-equivalence exists now, and the canonicalizer is no longer
+quantifier-blind (`WIP`, quant-duality, 2026-08-14).** Landed:
+`F:quantifier-negation-duality` closed end to end, `open` to `proved` with a
+certified `unsat-bool-simplification` certificate (`arena=ok`, z3 4.13.3
+agreeing), which took the import backlog from 10 to 9. The handoff's one-rule
+diagnosis was half right: `not (forall x. b) -> exists x. not b`
+(`quant.negation_duality.v1`) is necessary but cannot close the file, because the
+SMT-LIB front end mints a fresh arena symbol per binder occurrence, so the two
+sides of the identity end up alpha-variant and hash-consed apart. The missing
+capability was alpha-equivalence itself (`crates/axeyum-rewrite/src/alpha.rs`),
+which did not exist anywhere in the tree; it also decides the negation duality
+directly, by carrying a negation parity, so the `bool_simplify` certificate
+checker re-derives the fact without rewriting anything.
+
+Next, in priority order: (1) `F:barber-no-such-barber` already decides `unsat`
+and agrees with z3 but reports `certified=0` — a decided fact waiting on a
+certificate, not on a capability; (2) feed `alpha_equivalent` to the e-matching
+and instantiation layers, where two alpha-variant triggers are still treated as
+unrelated (gap #4 of the quantifier survey); (3) the canonicalizer still has no
+vacuous-binder elimination and no miniscoping, and the duality push is the
+standard first NNF step those would build on.
 
 **Lane extension — from verification to proof (2026-08-12).** The general-`k`
 shell lower bound became a **theorem with a written, reviewed proof** (for
