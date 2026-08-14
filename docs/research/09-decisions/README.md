@@ -453,3 +453,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [0395](adr-0395-pointwise-congruence-for-finite-sums.md) | Pointwise congruence for finite sums | accepted |
 | [0396](adr-0396-rado-sharpness-factorization.md) | Rado sharpness factorization | accepted |
 | [0397](adr-0397-checked-truncated-subtraction-and-additive-cancellation.md) | Checked truncated subtraction and additive cancellation | accepted |
+| [0398](adr-0398-order-conditioned-subtraction-restoration.md) | Order-conditioned subtraction restoration | accepted |

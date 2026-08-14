@@ -75,6 +75,8 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.pred_succ,
         p.sub_zero,
         p.sub_succ,
+        p.succ_sub_succ,
+        p.sub_self,
         p.sum_range_zero,
         p.sum_range_succ,
         p.sum_range_congr,
@@ -100,6 +102,7 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.le_of_succ_le_succ,
         p.le_trans,
         p.le_add_right,
+        p.sub_add_cancel,
         p.dvd_mul,
         p.dvd_add,
     ]
@@ -284,6 +287,35 @@ fn additive_cancellation_is_checked_and_reusable() {
     let left_name = f.name("cancel_left_three");
     f.declare_theorem(left_name, zero_plus_two_eq_two, left)
         .unwrap_or_else(|e| panic!("left cancellation should admit: {}", f.explain(&e)));
+}
+
+/// Order evidence discharges the side condition under which truncated
+/// subtraction restores the original minuend.
+#[test]
+fn conditional_subtraction_restores_bounded_minuends() {
+    let mut f = Fixture::new();
+    let p = f.p;
+    let three = f.num(3);
+    let four = f.num(4);
+    let seven = f.num(7);
+
+    let three_le_seven = f.lemma(p.le_add_right, &[three, four]);
+    let restored = f.lemma(p.sub_add_cancel, &[three, seven, three_le_seven]);
+    let difference = f.sub(seven, three);
+    let lhs = f.add(difference, three);
+    let stmt = f.eq(lhs, seven);
+    let name = f.name("seven_sub_three_add_three");
+    f.declare_theorem(name, stmt, restored)
+        .unwrap_or_else(|e| panic!("bounded subtraction should restore: {}", f.explain(&e)));
+
+    let self_le = f.const_app(p.le_refl, &[three]);
+    let self_restored = f.lemma(p.sub_add_cancel, &[three, three, self_le]);
+    let self_difference = f.sub(three, three);
+    let self_lhs = f.add(self_difference, three);
+    let self_stmt = f.eq(self_lhs, three);
+    let self_name = f.name("three_sub_three_add_three");
+    f.declare_theorem(self_name, self_stmt, self_restored)
+        .unwrap_or_else(|e| panic!("equal-bound subtraction should restore: {}", f.explain(&e)));
 }
 
 /// The generic checked reindexing theorem covers both the empty `k = 3`
@@ -886,7 +918,31 @@ fn kernel_rejects_broken_proof_terms() {
         rejections += 1;
     }
 
-    assert_eq!(rejections, 15, "every negative control must be rejected");
+    // NC16 — the order-conditioned restoration proof retains its exact
+    // minuend. A valid proof restoring seven cannot establish a target of six.
+    {
+        let name = f.name("nc16_sub_add_cancel_wrong_minuend");
+        let three = f.num(3);
+        let four = f.num(4);
+        let six = f.num(6);
+        let seven = f.num(7);
+        let bound = f.lemma(p.le_add_right, &[three, four]);
+        let proof = f.lemma(p.sub_add_cancel, &[three, seven, bound]);
+        let difference = f.sub(seven, three);
+        let lhs = f.add(difference, three);
+        let bad = f.eq(lhs, six);
+        let err = f
+            .declare_theorem(name, bad, proof)
+            .expect_err("NC16: subtraction restoration must retain the exact minuend");
+        println!(
+            "NC16 (wrong restored minuend) rejected:\n  {}",
+            f.explain(&err)
+        );
+        assert!(!f.k.environment().contains(name));
+        rejections += 1;
+    }
+
+    assert_eq!(rejections, 16, "every negative control must be rejected");
 }
 
 /// The build is deterministic: two independent kernels render every promised
@@ -909,7 +965,7 @@ fn the_build_is_deterministic() {
     assert_eq!(first, second, "the prelude build must be deterministic");
     assert_eq!(
         first.len(),
-        8 + 37,
+        8 + 40,
         "every promised definition and theorem must be rendered"
     );
 }

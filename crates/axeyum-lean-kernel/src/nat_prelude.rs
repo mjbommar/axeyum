@@ -26,16 +26,22 @@
 //! | `Nat.mul` | `mul x zero ≡ zero`  | `mul x (succ j) ≡ add (mul x j) x`   |
 //! | `Nat.pow` | `pow x zero ≡ 1`     | `pow x (succ j) ≡ mul (pow x j) x`   |
 //!
+//! **Truncated subtraction**: `Nat.pred` computes predecessor with
+//! `pred zero ≡ zero`; `Nat.sub` recurses on its second argument. Checked
+//! theorems include successor cancellation, self-subtraction, and restoration
+//! under explicit order evidence.
+//!
 //! **Finite ranges**: `Nat.sumRange f n` recursively sums `f 0` through
 //! `f (n-1)`. Its empty and successor equations are checked theorems backed by
 //! definitional reduction.
 //!
 //! **Defining-equation theorems** (`add_zero`, `add_succ`, `mul_zero`,
-//! `mul_succ`, `pow_zero`, `pow_succ`) — each proved by `Eq.refl`; they exist so
-//! callers can rewrite by name without knowing the recursion scheme.
+//! `mul_succ`, `pow_zero`, `pow_succ`, `pred_zero`, `pred_succ`, `sub_zero`,
+//! `sub_succ`) — each proved by `Eq.refl`; they exist so callers can rewrite by
+//! name without knowing the recursion scheme.
 //!
 //! **Additive theorems**: `zero_add`, `succ_add`, `add_comm`, `add_assoc`,
-//! `add_right_comm`.
+//! `add_right_comm`, successor injectivity, and left/right cancellation.
 //!
 //! **Multiplicative theorems**: `zero_mul`, `succ_mul`, `mul_comm`,
 //! `left_distrib`, `mul_assoc`, `one_mul`, `mul_one`.
@@ -46,7 +52,7 @@
 //! inductive gate, so its recursor `Nat.le.rec` (induction on the *derivation*)
 //! is kernel-generated. `Nat.lt n m := Nat.le (Nat.succ n) m`. Theorems:
 //! `zero_le`, `le_succ_succ`, `le_of_succ_le_succ`, `le_trans`, and
-//! `le_add_right`.
+//! `le_add_right`, and order-conditioned `sub_add_cancel`.
 //!
 //! **Divisibility**: `Nat.dvd a n := Exists (fun q => n = a * q)`, together
 //! with checked theorems `dvd_mul` (witness introduction) and `dvd_add`
@@ -54,8 +60,8 @@
 //!
 //! ## What is **not** here
 //!
-//! No subtraction/predecessor, no antisymmetry, totality, `min`, or
-//! decidability of order, no quotient/remainder division, no
+//! No antisymmetry, totality, `min`, or decidability of order, no
+//! quotient/remainder division, no multiplicative cancellation, and no
 //! `n ≠ succ n`-style discrimination.
 //! Adding those is ordinary work on top of this prelude, not a kernel question:
 //! the order fragment is deliberately minimal (see [`NatPrelude::le`]).
@@ -149,6 +155,10 @@ pub struct NatPrelude {
     pub sub_zero: NameId,
     /// `sub_succ : ∀ n m, sub n (succ m) = pred (sub n m)`.
     pub sub_succ: NameId,
+    /// `succ_sub_succ : ∀ n m, sub (succ n) (succ m) = sub n m`.
+    pub succ_sub_succ: NameId,
+    /// `sub_self : ∀ n, sub n n = zero`.
+    pub sub_self: NameId,
     /// `sumRange_zero : ∀ f, sumRange f zero = zero`.
     pub sum_range_zero: NameId,
     /// `sumRange_succ : ∀ f n, sumRange f (succ n) = sumRange f n + f n`.
@@ -224,6 +234,8 @@ pub struct NatPrelude {
     pub le_trans: NameId,
     /// `le_add_right : ∀ (n k : Nat), Le n (add n k)`.
     pub le_add_right: NameId,
+    /// `sub_add_cancel : ∀ m n, Le m n → add (sub n m) m = n`.
+    pub sub_add_cancel: NameId,
 
     // --- divisibility -------------------------------------------------------
     /// `Nat.dvd : Nat → Nat → Prop`, where `dvd a n := ∃ q, n = a * q`.
@@ -287,6 +299,8 @@ pub fn build_nat_prelude(kernel: &mut Kernel) -> Result<NatPrelude, KernelError>
             pred_succ: kernel.name_str(nat, "pred_succ"),
             sub_zero: kernel.name_str(nat, "sub_zero"),
             sub_succ: kernel.name_str(nat, "sub_succ"),
+            succ_sub_succ: kernel.name_str(nat, "succ_sub_succ"),
+            sub_self: kernel.name_str(nat, "sub_self"),
             sum_range_zero: kernel.name_str(nat, "sumRange_zero"),
             sum_range_succ: kernel.name_str(nat, "sumRange_succ"),
             sum_range_congr: kernel.name_str(nat, "sumRange_congr"),
@@ -317,6 +331,7 @@ pub fn build_nat_prelude(kernel: &mut Kernel) -> Result<NatPrelude, KernelError>
             le_of_succ_le_succ: kernel.name_str(nat, "le_of_succ_le_succ"),
             le_trans: kernel.name_str(nat, "le_trans"),
             le_add_right: kernel.name_str(nat, "le_add_right"),
+            sub_add_cancel: kernel.name_str(nat, "sub_add_cancel"),
             dvd: kernel.name_str(nat, "dvd"),
             dvd_mul: kernel.name_str(nat, "dvd_mul"),
             dvd_add: kernel.name_str(nat, "dvd_add"),
@@ -327,6 +342,7 @@ pub fn build_nat_prelude(kernel: &mut Kernel) -> Result<NatPrelude, KernelError>
         declare_subtraction(&mut d, &p)?;
         declare_finite_ranges(&mut d, &p)?;
         declare_defining_equations(&mut d, &p)?;
+        declare_subtraction_theorems(&mut d, &p)?;
         declare_additive_theorems(&mut d, &p)?;
         declare_multiplicative_theorems(&mut d, &p)?;
         declare_finite_sum_theorems(&mut d, &p)?;
@@ -558,6 +574,68 @@ fn declare_defining_equations(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), 
         };
         d.declare_theorem(p.sum_range_succ, ty, value)?;
     }
+    Ok(())
+}
+
+/// Structural subtraction laws needed before subtraction can interact with
+/// order. Both are kernel-checked consequences of the recursive definitions.
+fn declare_subtraction_theorems(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> {
+    let p = *p;
+
+    // succ_sub_succ : ∀ n m, sub (succ n) (succ m) = sub n m
+    d.theorem(p.succ_sub_succ, 2, &|d, v| {
+        let (n, m) = (v[0], v[1]);
+        let motive = |d: &mut NatDev<'_>, x: ExprId| {
+            let sn = d.succ(n);
+            let sx = d.succ(x);
+            let lhs = d.sub(sn, sx);
+            let rhs = d.sub(n, x);
+            d.eq(lhs, rhs)
+        };
+        let stmt = motive(d, m);
+        let proof = d.induct(
+            &motive,
+            &|d| d.refl(n),
+            &|d, j, ih| {
+                let sn = d.succ(n);
+                let sj = d.succ(j);
+                let lhs = d.sub(sn, sj);
+                let rhs = d.sub(n, j);
+                d.congr(lhs, rhs, ih, &|d, x| d.pred(x))
+            },
+            m,
+        );
+        (stmt, proof)
+    })?;
+
+    // sub_self : ∀ n, sub n n = zero
+    d.theorem(p.sub_self, 1, &|d, v| {
+        let n = v[0];
+        let motive = |d: &mut NatDev<'_>, x: ExprId| {
+            let lhs = d.sub(x, x);
+            let zero = d.zero();
+            d.eq(lhs, zero)
+        };
+        let stmt = motive(d, n);
+        let proof = d.induct(
+            &motive,
+            &|d| {
+                let zero = d.zero();
+                d.refl(zero)
+            },
+            &|d, j, ih| {
+                let sj = d.succ(j);
+                let start = d.sub(sj, sj);
+                let middle = d.sub(j, j);
+                let h1 = d.lemma(p.succ_sub_succ, &[j, j]);
+                let zero = d.zero();
+                let (_end, proof) = d.chain(start, &[(middle, h1), (zero, ih)]);
+                proof
+            },
+            n,
+        );
+        (stmt, proof)
+    })?;
     Ok(())
 }
 
@@ -1502,6 +1580,113 @@ fn declare_order(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> 
             d.lam_fv(n_fv, nat, v)
         };
         d.declare_theorem(p.le_add_right, ty, value)?;
+    }
+
+    // sub_add_cancel : ∀ m n, Le m n → add (sub n m) m = n
+    // Induct on the subtrahend. In the successor case, eliminate the bound
+    // derivation so both `Le` and `sub` expose matching successor structure.
+    {
+        let m_fv = d.fresh_fvar();
+        let m = d.kernel().fvar(m_fv);
+        let cancellation_at = |d: &mut NatDev<'_>, subtrahend: ExprId| {
+            let n_fv = d.fresh_fvar();
+            let n = d.kernel().fvar(n_fv);
+            let hyp = d.le(subtrahend, n);
+            let difference = d.sub(n, subtrahend);
+            let restored = d.add(difference, subtrahend);
+            let conclusion = d.eq(restored, n);
+            let implication = d.arrow(hyp, conclusion);
+            let nat = d.nat_ty();
+            d.pi_fv(n_fv, nat, implication)
+        };
+        let stmt = cancellation_at(d, m);
+        let proof = d.induct(
+            &cancellation_at,
+            &|d| {
+                let n_fv = d.fresh_fvar();
+                let n = d.kernel().fvar(n_fv);
+                let zero = d.zero();
+                let hyp_ty = d.le(zero, n);
+                let h_fv = d.fresh_fvar();
+                let body = d.refl(n);
+                let with_h = d.lam_fv(h_fv, hyp_ty, body);
+                let nat = d.nat_ty();
+                d.lam_fv(n_fv, nat, with_h)
+            },
+            &|d, j, ih| {
+                let sj = d.succ(j);
+                let n_fv = d.fresh_fvar();
+                let n = d.kernel().fvar(n_fv);
+                let hyp_ty = d.le(sj, n);
+                let h_fv = d.fresh_fvar();
+                let h = d.kernel().fvar(h_fv);
+
+                let le_motive = {
+                    let x_fv = d.fresh_fvar();
+                    let x = d.kernel().fvar(x_fv);
+                    let dom = d.le(sj, x);
+                    let difference = d.sub(x, sj);
+                    let restored = d.add(difference, sj);
+                    let body = d.eq(restored, x);
+                    let inner = d.kernel().lam(anon, dom, body, BinderInfo::Default);
+                    d.lam_fv(x_fv, nat, inner)
+                };
+
+                let minor_refl = {
+                    let difference = d.sub(sj, sj);
+                    let start = d.add(difference, sj);
+                    let zero = d.zero();
+                    let middle = d.add(zero, sj);
+                    let h_sub = d.lemma(p.sub_self, &[sj]);
+                    let h1 = d.congr(difference, zero, h_sub, &|d, x| d.add(x, sj));
+                    let h2 = d.lemma(p.zero_add, &[sj]);
+                    let (_end, proof) = d.chain(start, &[(middle, h1), (sj, h2)]);
+                    proof
+                };
+
+                let minor_step = {
+                    let x_fv = d.fresh_fvar();
+                    let x = d.kernel().fvar(x_fv);
+                    let hx_fv = d.fresh_fvar();
+                    let hx_ty = d.le(sj, x);
+                    let hx = d.kernel().fvar(hx_fv);
+                    let rec_ih_fv = d.fresh_fvar();
+                    let difference = d.sub(x, sj);
+                    let rec_restored = d.add(difference, sj);
+                    let rec_ih_ty = d.eq(rec_restored, x);
+
+                    let sx = d.succ(x);
+                    let successor_difference = d.sub(sx, sj);
+                    let start = d.add(successor_difference, sj);
+                    let prior_difference = d.sub(x, j);
+                    let middle = d.add(prior_difference, sj);
+                    let h_sub = d.lemma(p.succ_sub_succ, &[x, j]);
+                    let h1 = d.congr(successor_difference, prior_difference, h_sub, &|d, t| {
+                        d.add(t, sj)
+                    });
+
+                    let j_refl = d.const_app(p.le_refl, &[j]);
+                    let j_le_sj = d.const_app(p.le_step, &[j, j, j_refl]);
+                    let j_le_x = d.lemma(p.le_trans, &[j, sj, x, j_le_sj, hx]);
+                    let prior_restored = d.add(prior_difference, j);
+                    let restored = d.apply(ih, &[x, j_le_x]);
+                    let h2 = d.congr(prior_restored, x, restored, &|d, t| d.succ(t));
+                    let (_end, body) = d.chain(start, &[(middle, h1), (sx, h2)]);
+
+                    let with_rec_ih = d.lam_fv(rec_ih_fv, rec_ih_ty, body);
+                    let with_hx = d.lam_fv(hx_fv, hx_ty, with_rec_ih);
+                    d.lam_fv(x_fv, nat, with_hx)
+                };
+
+                let body = d.const_app(p.le_rec, &[sj, le_motive, minor_refl, minor_step, n, h]);
+                let with_h = d.lam_fv(h_fv, hyp_ty, body);
+                d.lam_fv(n_fv, nat, with_h)
+            },
+            m,
+        );
+        let ty = d.pi_fv(m_fv, nat, stmt);
+        let value = d.lam_fv(m_fv, nat, proof);
+        d.declare_theorem(p.sub_add_cancel, ty, value)?;
     }
     Ok(())
 }
