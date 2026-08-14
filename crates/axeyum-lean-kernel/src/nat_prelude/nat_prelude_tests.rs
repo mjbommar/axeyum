@@ -103,6 +103,7 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.le_trans,
         p.le_total,
         p.not_succ_le_zero,
+        p.le_antisymm,
         p.le_intro,
         p.le_dest,
         p.le_add_right,
@@ -577,6 +578,14 @@ fn order_is_total() {
     let proof = f.lemma(p.le_total, &[five, two]);
     f.k.infer(proof)
         .unwrap_or_else(|e| panic!("totality application should infer: {}", f.explain(&e)));
+
+    let three = f.num(3);
+    let two_plus_three = f.add(two, three);
+    let forward = f.lemma(p.le_refl, &[two_plus_three]);
+    let reverse = f.lemma(p.le_refl, &[five]);
+    let equality = f.lemma(p.le_antisymm, &[two_plus_three, five, forward, reverse]);
+    f.k.infer(equality)
+        .unwrap_or_else(|e| panic!("antisymmetry application should infer: {}", f.explain(&e)));
 }
 
 #[test]
@@ -1338,7 +1347,26 @@ fn kernel_rejects_broken_proof_terms() {
         rejections += 1;
     }
 
-    assert_eq!(rejections, 26, "every negative control must be rejected");
+    // NC27 — antisymmetry retains the equality endpoints.
+    {
+        let name = f.name("nc27_antisymmetry_wrong_endpoint");
+        let two = f.num(2);
+        let three = f.num(3);
+        let bound = f.lemma(p.le_refl, &[two]);
+        let proof = f.lemma(p.le_antisymm, &[two, two, bound, bound]);
+        let bad = f.eq(two, three);
+        let err = f
+            .declare_theorem(name, bad, proof)
+            .expect_err("NC27: antisymmetry must retain both endpoints");
+        println!(
+            "NC27 (wrong antisymmetry endpoint) rejected:\n  {}",
+            f.explain(&err)
+        );
+        assert!(!f.k.environment().contains(name));
+        rejections += 1;
+    }
+
+    assert_eq!(rejections, 27, "every negative control must be rejected");
 }
 
 /// The build is deterministic: two independent kernels render every promised
@@ -1361,7 +1389,7 @@ fn the_build_is_deterministic() {
     assert_eq!(first, second, "the prelude build must be deterministic");
     assert_eq!(
         first.len(),
-        8 + 54,
+        8 + 55,
         "every promised definition and theorem must be rendered"
     );
 }

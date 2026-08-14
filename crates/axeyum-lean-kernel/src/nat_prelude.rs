@@ -237,6 +237,8 @@ pub struct NatPrelude {
     pub le_total: NameId,
     /// `not_succ_le_zero : ∀ n, Not (Le (succ n) zero)`.
     pub not_succ_le_zero: NameId,
+    /// `le_antisymm : ∀ a b, Le a b → Le b a → Eq a b`.
+    pub le_antisymm: NameId,
     /// `le_intro : ∀ a b k, a+k=b → Le a b`.
     pub le_intro: NameId,
     /// `le_dest : ∀ a b, Le a b → Exists (fun k => a+k=b)`.
@@ -361,6 +363,7 @@ pub fn build_nat_prelude(kernel: &mut Kernel) -> Result<NatPrelude, KernelError>
             le_trans: kernel.name_str(nat, "le_trans"),
             le_total: kernel.name_str(nat, "le_total"),
             not_succ_le_zero: kernel.name_str(nat, "not_succ_le_zero"),
+            le_antisymm: kernel.name_str(nat, "le_antisymm"),
             le_intro: kernel.name_str(nat, "le_intro"),
             le_dest: kernel.name_str(nat, "le_dest"),
             le_add_right: kernel.name_str(nat, "le_add_right"),
@@ -1752,6 +1755,119 @@ fn declare_order(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> 
         let body = d.const_app(p.le_rec, &[sn, motive, minor_refl, minor_step, zero, h]);
         let stmt = d.arrow(hyp_ty, false_ty);
         let proof = d.lam_fv(h_fv, hyp_ty, body);
+        (stmt, proof)
+    })?;
+
+    // le_antisymm : ∀ a b, Le a b → Le b a → Eq a b
+    // Induct over both endpoints. Mixed zero/successor branches eliminate the
+    // impossible bound; the successor/successor branch inverts both bounds
+    // and lifts the induction hypothesis through `succ`.
+    d.theorem(p.le_antisymm, 2, &|d, v| {
+        let (a, b) = (v[0], v[1]);
+        let antisymm_at = |d: &mut NatDev<'_>, x: ExprId| {
+            let y_fv = d.fresh_fvar();
+            let y = d.kernel().fvar(y_fv);
+            let xy = d.le(x, y);
+            let yx = d.le(y, x);
+            let equality = d.eq(x, y);
+            let reverse = d.arrow(yx, equality);
+            let body = d.arrow(xy, reverse);
+            d.pi_fv(y_fv, nat, body)
+        };
+        let at_zero = |d: &mut NatDev<'_>| {
+            let motive_y = |d: &mut NatDev<'_>, y: ExprId| {
+                let zero = d.zero();
+                let zy = d.le(zero, y);
+                let yz = d.le(y, zero);
+                let equality = d.eq(zero, y);
+                let reverse = d.arrow(yz, equality);
+                d.arrow(zy, reverse)
+            };
+            let y_zero = |d: &mut NatDev<'_>| {
+                let zero = d.zero();
+                let zz = d.le(zero, zero);
+                let h1_fv = d.fresh_fvar();
+                let h2_fv = d.fresh_fvar();
+                let body = d.refl(zero);
+                let with_h2 = d.lam_fv(h2_fv, zz, body);
+                d.lam_fv(h1_fv, zz, with_h2)
+            };
+            let y_step = |d: &mut NatDev<'_>, y: ExprId, _ih: ExprId| {
+                let zero = d.zero();
+                let sy = d.succ(y);
+                let zsy = d.le(zero, sy);
+                let syz = d.le(sy, zero);
+                let target = d.eq(zero, sy);
+                let h1_fv = d.fresh_fvar();
+                let h2_fv = d.fresh_fvar();
+                let h2 = d.kernel().fvar(h2_fv);
+                let impossible = d.lemma(p.not_succ_le_zero, &[y, h2]);
+                let false_ty = d.kernel().const_(p.logic.false_, vec![]);
+                let motive = d.kernel().lam(anon, false_ty, target, BinderInfo::Default);
+                let level_zero = d.kernel().level_zero();
+                let rec = d.kernel().const_(p.logic.false_rec, vec![level_zero]);
+                let body = d.apply(rec, &[motive, impossible]);
+                let with_h2 = d.lam_fv(h2_fv, syz, body);
+                d.lam_fv(h1_fv, zsy, with_h2)
+            };
+            let y_fv = d.fresh_fvar();
+            let y = d.kernel().fvar(y_fv);
+            let body = d.induct(&motive_y, &y_zero, &y_step, y);
+            d.lam_fv(y_fv, nat, body)
+        };
+        let step_a = |d: &mut NatDev<'_>, x: ExprId, ih: ExprId| {
+            let sx = d.succ(x);
+            let motive_y = |d: &mut NatDev<'_>, y: ExprId| {
+                let sxy = d.le(sx, y);
+                let ysx = d.le(y, sx);
+                let equality = d.eq(sx, y);
+                let reverse = d.arrow(ysx, equality);
+                d.arrow(sxy, reverse)
+            };
+            let y_zero = |d: &mut NatDev<'_>| {
+                let zero = d.zero();
+                let sxz = d.le(sx, zero);
+                let zsx = d.le(zero, sx);
+                let target = d.eq(sx, zero);
+                let h1_fv = d.fresh_fvar();
+                let h1 = d.kernel().fvar(h1_fv);
+                let h2_fv = d.fresh_fvar();
+                let impossible = d.lemma(p.not_succ_le_zero, &[x, h1]);
+                let false_ty = d.kernel().const_(p.logic.false_, vec![]);
+                let motive = d.kernel().lam(anon, false_ty, target, BinderInfo::Default);
+                let level_zero = d.kernel().level_zero();
+                let rec = d.kernel().const_(p.logic.false_rec, vec![level_zero]);
+                let body = d.apply(rec, &[motive, impossible]);
+                let with_h2 = d.lam_fv(h2_fv, zsx, body);
+                d.lam_fv(h1_fv, sxz, with_h2)
+            };
+            let y_step = |d: &mut NatDev<'_>, y: ExprId, _inner_ih: ExprId| {
+                let sy = d.succ(y);
+                let sxsy = d.le(sx, sy);
+                let sysx = d.le(sy, sx);
+                let h1_fv = d.fresh_fvar();
+                let h1 = d.kernel().fvar(h1_fv);
+                let h2_fv = d.fresh_fvar();
+                let h2 = d.kernel().fvar(h2_fv);
+                let xy = d.lemma(p.le_of_succ_le_succ, &[x, y, h1]);
+                let yx = d.lemma(p.le_of_succ_le_succ, &[y, x, h2]);
+                let smaller = d.apply(ih, &[y, xy, yx]);
+                let body = d.congr(x, y, smaller, &|d, value| d.succ(value));
+                let with_h2 = d.lam_fv(h2_fv, sysx, body);
+                d.lam_fv(h1_fv, sxsy, with_h2)
+            };
+            let y_fv = d.fresh_fvar();
+            let y = d.kernel().fvar(y_fv);
+            let body = d.induct(&motive_y, &y_zero, &y_step, y);
+            d.lam_fv(y_fv, nat, body)
+        };
+        let all_b = d.induct(&antisymm_at, &at_zero, &step_a, a);
+        let proof = d.apply(all_b, &[b]);
+        let ab = d.le(a, b);
+        let ba = d.le(b, a);
+        let conclusion = d.eq(a, b);
+        let reverse = d.arrow(ba, conclusion);
+        let stmt = d.arrow(ab, reverse);
         (stmt, proof)
     })?;
 
