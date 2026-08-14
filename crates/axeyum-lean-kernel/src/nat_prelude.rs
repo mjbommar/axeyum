@@ -53,7 +53,9 @@
 //! is kernel-generated. `Nat.lt n m := Nat.le (Nat.succ n) m`. Theorems:
 //! `zero_le`, `le_succ_succ`, `le_of_succ_le_succ`, `le_trans`, `le_total`, and
 //! `le_add_right`, addition/multiplication monotonicity, order-conditioned
-//! `sub_add_cancel`, and bounded `mul_sub_left_distrib`.
+//! `sub_add_cancel`, and bounded `mul_sub_left_distrib`. The reducible checked
+//! definition `lt_well_founded` lets generic `WellFounded.fix` programs perform
+//! strong recursion over this order.
 //!
 //! **Divisibility**: `Nat.dvd a n := Exists (fun q => n = a * q)`, together
 //! with checked theorems `dvd_mul` (witness introduction) and `dvd_add`
@@ -249,6 +251,8 @@ pub struct NatPrelude {
     pub lt_of_le_of_lt: NameId,
     /// `lt_irrefl : ∀ a, Not (Lt a a)`.
     pub lt_irrefl: NameId,
+    /// Reducible `lt_well_founded : WellFounded Nat.lt`.
+    pub lt_well_founded: NameId,
     /// `le_total : ∀ a b, Or (Le a b) (Le b a)`.
     pub le_total: NameId,
     /// `not_succ_le_zero : ∀ n, Not (Le (succ n) zero)`.
@@ -453,6 +457,7 @@ pub fn build_nat_prelude(kernel: &mut Kernel) -> Result<NatPrelude, KernelError>
             lt_of_lt_of_le: kernel.name_str(nat, "lt_of_lt_of_le"),
             lt_of_le_of_lt: kernel.name_str(nat, "lt_of_le_of_lt"),
             lt_irrefl: kernel.name_str(nat, "lt_irrefl"),
+            lt_well_founded: kernel.name_str(nat, "lt_well_founded"),
             le_total: kernel.name_str(nat, "le_total"),
             not_succ_le_zero: kernel.name_str(nat, "not_succ_le_zero"),
             le_antisymm: kernel.name_str(nat, "le_antisymm"),
@@ -3583,6 +3588,102 @@ fn declare_order(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> 
         let reverse = d.arrow(ba, conclusion);
         let stmt = d.arrow(ab, reverse);
         (stmt, proof)
+    })?;
+
+    // lt_well_founded : WellFounded Nat.lt
+    // Ordinary Nat induction builds accessibility. At `succ n`, every
+    // predecessor `m` satisfies `m ≤ n`; strict predecessors descend through
+    // `Acc.inv`, while equality transports the induction hypothesis to `m`.
+    let (lt_well_founded_ty, lt_well_founded_value) = {
+        let one = d.level_one();
+        let relation = d.kernel().const_(p.lt, vec![]);
+        let acc_at = |d: &mut NatDev<'_>, value: ExprId| {
+            let acc = d.kernel().const_(p.logic.acc, vec![one]);
+            d.apply(acc, &[nat, relation, value])
+        };
+        let motive = |d: &mut NatDev<'_>, value: ExprId| acc_at(d, value);
+        let base = |d: &mut NatDev<'_>| {
+            let zero = d.zero();
+            let predecessor_fv = d.fresh_fvar();
+            let related_fv = d.fresh_fvar();
+            let predecessor = d.kernel().fvar(predecessor_fv);
+            let related = d.kernel().fvar(related_fv);
+            let relation_ty = d.lt(predecessor, zero);
+            let impossible = d.lemma(p.not_succ_le_zero, &[predecessor, related]);
+            let target = acc_at(d, predecessor);
+            let false_ty = d.kernel().const_(p.logic.false_, vec![]);
+            let false_motive = d.kernel().lam(anon, false_ty, target, BinderInfo::Default);
+            let zero_level = d.kernel().level_zero();
+            let false_rec = d.kernel().const_(p.logic.false_rec, vec![zero_level]);
+            let body = d.apply(false_rec, &[false_motive, impossible]);
+            let with_related = d.lam_fv(related_fv, relation_ty, body);
+            let field = d.lam_fv(predecessor_fv, nat, with_related);
+            let intro = d.kernel().const_(p.logic.acc_intro, vec![one]);
+            d.apply(intro, &[nat, relation, zero, field])
+        };
+        let step = |d: &mut NatDev<'_>, n: ExprId, accessible_n: ExprId| {
+            let sn = d.succ(n);
+            let predecessor_fv = d.fresh_fvar();
+            let related_fv = d.fresh_fvar();
+            let predecessor = d.kernel().fvar(predecessor_fv);
+            let related = d.kernel().fvar(related_fv);
+            let relation_ty = d.lt(predecessor, sn);
+            let predecessor_le_n = d.lemma(p.le_of_succ_le_succ, &[predecessor, n, related]);
+            let split = d.lemma(p.lt_or_eq_of_le, &[predecessor, n, predecessor_le_n]);
+            let strict_ty = d.lt(predecessor, n);
+            let equal_ty = d.eq(predecessor, n);
+            let target = acc_at(d, predecessor);
+            let split_ty = d.const_app(p.logic.or, &[strict_ty, equal_ty]);
+            let split_motive = d.kernel().lam(anon, split_ty, target, BinderInfo::Default);
+            let strict_minor = {
+                let strict_fv = d.fresh_fvar();
+                let strict = d.kernel().fvar(strict_fv);
+                let inverse = d.kernel().const_(p.logic.acc_inv, vec![one]);
+                let body = d.apply(
+                    inverse,
+                    &[nat, relation, n, predecessor, accessible_n, strict],
+                );
+                d.lam_fv(strict_fv, strict_ty, body)
+            };
+            let equal_minor = {
+                let equal_fv = d.fresh_fvar();
+                let equal = d.kernel().fvar(equal_fv);
+                let reverse = d.symm(predecessor, n, equal);
+                let transport_motive = d.eq_motive(n, &|d, value| acc_at(d, value));
+                let body = d.transport(n, transport_motive, accessible_n, predecessor, reverse);
+                d.lam_fv(equal_fv, equal_ty, body)
+            };
+            let or_rec = d.kernel().const_(p.logic.or_rec, vec![]);
+            let selected = d.apply(
+                or_rec,
+                &[
+                    strict_ty,
+                    equal_ty,
+                    split_motive,
+                    strict_minor,
+                    equal_minor,
+                    split,
+                ],
+            );
+            let with_related = d.lam_fv(related_fv, relation_ty, selected);
+            let field = d.lam_fv(predecessor_fv, nat, with_related);
+            let intro = d.kernel().const_(p.logic.acc_intro, vec![one]);
+            d.apply(intro, &[nat, relation, sn, field])
+        };
+        let value_fv = d.fresh_fvar();
+        let value = d.kernel().fvar(value_fv);
+        let accessible = d.induct(&motive, &base, &step, value);
+        let proof = d.lam_fv(value_fv, nat, accessible);
+        let well_founded = d.kernel().const_(p.logic.well_founded, vec![one]);
+        let stmt = d.apply(well_founded, &[nat, relation]);
+        (stmt, proof)
+    };
+    d.kernel().add_declaration(Declaration::Definition {
+        name: p.lt_well_founded,
+        uparams: vec![],
+        ty: lt_well_founded_ty,
+        value: lt_well_founded_value,
+        hint: ReducibilityHint::Regular(6),
     })?;
 
     // le_intro : ∀ a b k, a+k=b → Le a b

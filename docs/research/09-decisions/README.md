@@ -500,3 +500,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [0442](adr-0442-generic-checked-well-founded-fixpoint.md) | Generic checked well-founded fixpoint | accepted |
 | [0443](adr-0443-checked-well-founded-fixpoint-equation.md) | Checked well-founded fixpoint equation | accepted |
 | [0444](adr-0444-generic-accessibility-predecessor-elimination.md) | Generic accessibility predecessor elimination | accepted |
+| [0445](adr-0445-reducible-nat-strict-order-well-foundedness.md) | Reducible Nat strict-order well-foundedness | accepted |

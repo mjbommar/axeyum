@@ -94,6 +94,7 @@ fn definition_names(p: &NatPrelude) -> Vec<NameId> {
         p.dvd,
         p.mod_eq,
         p.valuation_at,
+        p.lt_well_founded,
     ]
 }
 
@@ -691,6 +692,93 @@ fn order_is_total() {
             )
         });
     }
+}
+
+/// The Nat accessibility proof is deliberately reducible: a closed function
+/// built with the generic `WellFounded.fix` must compute through it. This
+/// countdown identity uses the recursive value at the immediate predecessor,
+/// so it exercises more than a step function that ignores strong recursion.
+#[test]
+fn nat_strict_well_foundedness_drives_generic_strong_recursion() {
+    let mut f = Fixture::new();
+    let p = f.p;
+    let nat = f.nat_ty();
+    let one_level = f.level_one();
+    let relation = f.k.const_(p.lt, vec![]);
+    let recursive_ty = |f: &mut Fixture, upper: ExprId| {
+        let predecessor_fv = f.fresh_fvar();
+        let related_fv = f.fresh_fvar();
+        let predecessor = f.k.fvar(predecessor_fv);
+        let related_ty = f.lt(predecessor, upper);
+        let at_relation = f.pi_fv(related_fv, related_ty, nat);
+        f.pi_fv(predecessor_fv, nat, at_relation)
+    };
+
+    let motive_fv = f.fresh_fvar();
+    let family = f.lam_fv(motive_fv, nat, nat);
+    let step_motive = {
+        let upper_fv = f.fresh_fvar();
+        let upper = f.k.fvar(upper_fv);
+        let recursive = recursive_ty(&mut f, upper);
+        let result = f.arrow(recursive, nat);
+        f.lam_fv(upper_fv, nat, result)
+    };
+    let step_zero = {
+        let recursive_fv = f.fresh_fvar();
+        let zero = f.zero();
+        let recursive = recursive_ty(&mut f, zero);
+        f.lam_fv(recursive_fv, recursive, zero)
+    };
+    let step_succ = {
+        let prior_fv = f.fresh_fvar();
+        let ih_fv = f.fresh_fvar();
+        let recursive_fv = f.fresh_fvar();
+        let prior = f.k.fvar(prior_fv);
+        let sprior = f.succ(prior);
+        let prior_case = recursive_ty(&mut f, prior);
+        let ih_ty = f.arrow(prior_case, nat);
+        let recursive = f.k.fvar(recursive_fv);
+        let recursive_succ_ty = recursive_ty(&mut f, sprior);
+        let related = f.lemma(p.le_refl, &[sprior]);
+        let prior_value = f.apply(recursive, &[prior, related]);
+        let body = f.succ(prior_value);
+        let with_recursive = f.lam_fv(recursive_fv, recursive_succ_ty, body);
+        let with_ih = f.lam_fv(ih_fv, ih_ty, with_recursive);
+        f.lam_fv(prior_fv, nat, with_ih)
+    };
+    let step = {
+        let upper_fv = f.fresh_fvar();
+        let recursive_fv = f.fresh_fvar();
+        let upper = f.k.fvar(upper_fv);
+        let recursive = f.k.fvar(recursive_fv);
+        let recursive_type = recursive_ty(&mut f, upper);
+        let rec = f.k.const_(p.rec, vec![one_level]);
+        let selected = f.apply(rec, &[step_motive, step_zero, step_succ, upper]);
+        let body = f.apply(selected, &[recursive]);
+        let with_recursive = f.lam_fv(recursive_fv, recursive_type, body);
+        f.lam_fv(upper_fv, nat, with_recursive)
+    };
+
+    let well_founded = f.k.const_(p.lt_well_founded, vec![]);
+    let fix =
+        f.k.const_(p.logic.well_founded_fix, vec![one_level, one_level]);
+    let two = f.num(2);
+    let computed = f.apply(fix, &[nat, relation, family, well_founded, step, two]);
+    let inferred = f.k.infer(computed).expect("strong recursion should infer");
+    assert!(f.k.def_eq(inferred, nat));
+    assert!(f.k.def_eq(computed, two), "countdown identity at two");
+
+    let one = f.num(1);
+    let wrong_ty = f.eq(computed, one);
+    let proof = f.refl(computed);
+    let wrong_name = f.name("lt_well_founded_wrong_result");
+    let error = f
+        .declare_theorem(wrong_name, wrong_ty, proof)
+        .expect_err("strong recursion must not compute to the wrong numeral");
+    assert!(
+        matches!(error, KernelError::DeclarationValueMismatch { .. }),
+        "unexpected rejection: {error:?}"
+    );
 }
 
 #[test]
@@ -2909,7 +2997,7 @@ fn the_build_is_deterministic() {
     assert_eq!(first, second, "the prelude build must be deterministic");
     assert_eq!(
         first.len(),
-        12 + 88,
+        13 + 88,
         "every promised definition and theorem must be rendered"
     );
 }
