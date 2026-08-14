@@ -139,7 +139,40 @@ or declaration order changed. That claim is checked, not asserted:
 | `RUSTDOCFLAGS="-D warnings" cargo doc` (added) | clean, after the link repair above |
 
 Every one of the ten commits was gated on `cargo clippy --lib -- -D warnings`
-before it was made, so each step in the history compiles and lints on its own.
+before it was made — but see the next section: nine of the ten actually compile
+on their own, and the gate could not have told me which.
+
+## The gate that passed over a commit that does not build
+
+Worth writing down, because it is the same shape as the gate failures `04` is
+about.
+
+The replay ran, for each stage: regenerate the tree, `cargo clippy -- -D
+warnings`, then `git add`/`git commit` with an explicit pathspec of *the parent
+and the one new module*. That pathspec is the bug. When `bezout.rs` was
+extracted at stage 10, the generator also had to rewrite one line in the
+already-committed `ops.rs` (`use super::{bezout_tail_exists, …}` became
+`use super::bezout::{…}`, because those functions were no longer in the parent).
+The pathspec did not list `ops.rs`, so that line stayed in the worktree and out
+of the commit. `ae589be97` does not build.
+
+The lint gate passed because **it ran against the worktree, which had the fix**.
+An exit-0 gate immediately before `git commit` says nothing about what the commit
+contains when the pathspec is narrower than the change. The repo's hygiene rule
+warns that a pathspec is *not sufficient* because `git add <file>` sweeps in
+another lane's hunks; this is the opposite failure and it is not covered by that
+warning — a pathspec that is too narrow silently drops your own hunks.
+
+I found it from `git status` afterwards, not from any gate. It is repaired in a
+follow-up commit rather than by amending, because rewriting history in a shared
+checkout is not allowed. I then checked every commit statically — for each, does
+every `use super::NAME` resolve to an item actually present in the parent at that
+commit — and `ae589be97` is the only one affected.
+
+The transferable rule: when a refactor moves a symbol, the commit must include
+*every* file whose import path changed, not just the source and destination. If
+you script staged commits, derive the pathspec from `git status` at that stage
+rather than writing it out by hand.
 
 ## Honest feedback
 
