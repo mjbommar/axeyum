@@ -21,7 +21,9 @@
 //! # Ok::<(), Box<dyn std::error::Error>>(())
 //! ```
 
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
+
+use axeyum_ir::Op;
 
 mod arrays;
 mod canonical;
@@ -41,8 +43,9 @@ pub use arrays::{
 };
 pub use canonical::{
     CanonicalizeOutcome, CanonicalizeTermsOutcome, Canonicalizer, DEFAULT_LOCAL_REWRITE_FUEL,
-    RewriteError, RewriteReport, RuleApplication, build_app, canonicalize, canonicalize_terms,
-    default_manifest, replace_subterms,
+    DENOTATION_GUARD_SAMPLES, PreconditionAudit, PreconditionFailure, PreconditionPolicy,
+    PreconditionViolation, RewriteError, RewriteReport, RuleApplication, build_app, canonicalize,
+    canonicalize_terms, default_manifest, replace_subterms,
 };
 pub use datatypes::simplify_datatypes;
 pub use elim_unconstrained::{UnconstrainedElimination, elim_unconstrained};
@@ -134,6 +137,55 @@ pub enum RewriteTestRoute {
     ProofObligation,
 }
 
+/// The machine-checked half of a rewrite rule's precondition.
+///
+/// [`RewriteRule::precondition`] is prose for a human reader; this is the
+/// companion the *code* consults before a rewrite is committed. A precondition
+/// that lives only in a doc string is a wrong-`unsat` waiting for the first
+/// input that violates it, so every rule declares the operator shapes it is
+/// allowed to fire on and the canonicalizer refuses any application outside
+/// them.
+///
+/// Only the operator *variant* is constrained, never its parameters: a rule
+/// scoped to `Op::Extract { hi: 0, lo: 0 }` admits every `extract`, whatever
+/// its indices. Index-level and operand-level conditions are checked
+/// semantically instead (see [`Preservation::Denotation`] and the
+/// denotation guard in the canonicalizer), because restating them structurally
+/// would only duplicate the matcher that already decided to fire.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum PreconditionGuard {
+    /// The rule may fire on an application of any operator.
+    ///
+    /// Reserved for rules whose real gate is on the *operands* rather than the
+    /// operator — constant folding is gated on every operand being a literal,
+    /// which is independent of which operator consumes them. Rules using this
+    /// variant get no structural protection and rely entirely on the semantic
+    /// check, so it is deliberately hard to justify: prefer
+    /// [`PreconditionGuard::RootOperators`] whenever the operator set is
+    /// enumerable.
+    AnyOperator,
+    /// The rule may fire only on an application of one of these operators.
+    ///
+    /// Must be non-empty; [`RewriteManifest::new`] rejects an empty list, since
+    /// a rule that admits no operator can never legally fire.
+    RootOperators(Vec<Op>),
+}
+
+impl PreconditionGuard {
+    /// Returns `true` if a rewrite rooted at `op` is inside this rule's scope.
+    ///
+    /// Comparison is by operator *variant*, so parameterized operators match
+    /// regardless of their parameters.
+    pub fn admits(&self, op: Op) -> bool {
+        match self {
+            PreconditionGuard::AnyOperator => true,
+            PreconditionGuard::RootOperators(ops) => ops
+                .iter()
+                .any(|&allowed| core::mem::discriminant(&allowed) == core::mem::discriminant(&op)),
+        }
+    }
+}
+
 /// Metadata for one rewrite rule.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct RewriteRule {
@@ -141,8 +193,14 @@ pub struct RewriteRule {
     pub id: RewriteRuleId,
     /// Human-readable rule name.
     pub name: String,
-    /// Sort/width/operator precondition.
+    /// Sort/width/operator precondition, for a human reader.
+    ///
+    /// This is documentation. The half the code enforces is [`Self::guard`];
+    /// the two are kept side by side deliberately, because the prose says
+    /// *why* and the guard says *what is checked*.
     pub precondition: String,
+    /// Machine-checked companion to [`Self::precondition`].
+    pub guard: PreconditionGuard,
     /// Preservation class.
     pub preservation: Preservation,
     /// Model projection requirement.
@@ -177,6 +235,18 @@ impl RewriteManifest {
         &self.rules
     }
 
+    /// Indexes the enabled rules' machine-checked guards by rule ID.
+    ///
+    /// The canonicalizer builds this once per pass and consults it before
+    /// committing each rewrite, so a rule can only fire inside the operator
+    /// scope it declared. Ordered, so any diagnostic derived from it is
+    /// deterministic.
+    pub fn enabled_guards(&self) -> BTreeMap<&str, &PreconditionGuard> {
+        self.enabled_rules()
+            .map(|rule| (rule.id.as_str(), &rule.guard))
+            .collect()
+    }
+
     /// Iterates over rules enabled in the default canonicalizer.
     pub fn enabled_rules(&self) -> impl Iterator<Item = &RewriteRule> {
         self.rules.iter().filter(|rule| rule.enabled_by_default)
@@ -203,6 +273,9 @@ fn validate_rules(rules: &[RewriteRule]) -> Result<(), ManifestError> {
             return Err(ManifestError::MissingPrecondition(
                 rule.id.as_str().to_owned(),
             ));
+        }
+        if matches!(&rule.guard, PreconditionGuard::RootOperators(ops) if ops.is_empty()) {
+            return Err(ManifestError::EmptyGuard(rule.id.as_str().to_owned()));
         }
         if rule.tests.is_empty() {
             return Err(ManifestError::MissingTestRoute(rule.id.as_str().to_owned()));
@@ -257,6 +330,8 @@ pub enum ManifestError {
     DuplicateRuleId(String),
     /// A rule omitted its sort/width/operator precondition.
     MissingPrecondition(String),
+    /// A rule declared an empty operator scope, so it could never legally fire.
+    EmptyGuard(String),
     /// A rule omitted its validation route.
     MissingTestRoute(String),
     /// A denotation-preserving rule declared a non-identity projection.
@@ -276,6 +351,9 @@ impl core::fmt::Display for ManifestError {
             ManifestError::DuplicateRuleId(id) => write!(f, "duplicate rewrite rule ID `{id}`"),
             ManifestError::MissingPrecondition(id) => {
                 write!(f, "rewrite rule `{id}` has no precondition")
+            }
+            ManifestError::EmptyGuard(id) => {
+                write!(f, "rewrite rule `{id}` has an empty operator scope")
             }
             ManifestError::MissingTestRoute(id) => {
                 write!(f, "rewrite rule `{id}` has no test route")
@@ -310,8 +388,8 @@ mod tests {
     use axeyum_ir::{Assignment, Sort, TermArena, TermId, TermNode, Value, eval};
 
     use super::{
-        ManifestError, ModelProjection, Preservation, RewriteManifest, RewriteRule, RewriteRuleId,
-        RewriteTestRoute, canonicalize, default_manifest,
+        ManifestError, ModelProjection, Op, PreconditionGuard, Preservation, RewriteManifest,
+        RewriteRule, RewriteRuleId, RewriteTestRoute, canonicalize, default_manifest,
     };
 
     fn denotation_rule(id: &str) -> RewriteRule {
@@ -319,6 +397,7 @@ mod tests {
             id: RewriteRuleId::new(id).unwrap(),
             name: "x + 0 -> x".to_owned(),
             precondition: "operand sort is BV(w)".to_owned(),
+            guard: PreconditionGuard::RootOperators(vec![Op::BvAdd]),
             preservation: Preservation::Denotation,
             projection: ModelProjection::Identity,
             tests: vec![RewriteTestRoute::ExhaustiveSmallWidth],

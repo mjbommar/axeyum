@@ -4,14 +4,16 @@
 //! rule preserves term denotation under every assignment, so no model
 //! projection is needed.
 
-use std::collections::{BTreeSet, HashMap};
+use std::collections::{BTreeMap, BTreeSet, HashMap};
 
 use axeyum_ir::{
     ArraySortKey, Assignment, IrError, Op, Sort, TermArena, TermId, TermNode, Value, eval,
+    eval_with_memo,
 };
 
 use crate::{
-    ModelProjection, Preservation, RewriteManifest, RewriteRule, RewriteRuleId, RewriteTestRoute,
+    ModelProjection, PreconditionGuard, Preservation, RewriteManifest, RewriteRule, RewriteRuleId,
+    RewriteTestRoute,
 };
 
 /// Widest AC operand multiset that is flattened, sorted, and rebuilt as a
@@ -111,17 +113,36 @@ pub const DEFAULT_LOCAL_REWRITE_FUEL: usize = 8;
 #[derive(Debug, Clone)]
 pub struct Canonicalizer {
     manifest: RewriteManifest,
+    policy: PreconditionPolicy,
 }
 
 impl Canonicalizer {
-    /// Creates a canonicalizer from a checked manifest.
+    /// Creates a canonicalizer from a checked manifest, with the default
+    /// [`PreconditionPolicy`].
     pub fn new(manifest: RewriteManifest) -> Self {
-        Self { manifest }
+        Self {
+            manifest,
+            policy: PreconditionPolicy::default(),
+        }
+    }
+
+    /// Creates a canonicalizer with an explicit precondition policy.
+    ///
+    /// Lowering to [`PreconditionPolicy::Structural`] keeps the operator-scope
+    /// and sort guards — those are never optional — and drops only the
+    /// denotation guard.
+    pub fn with_precondition_policy(manifest: RewriteManifest, policy: PreconditionPolicy) -> Self {
+        Self { manifest, policy }
     }
 
     /// Returns the manifest governing this canonicalizer.
     pub fn manifest(&self) -> &RewriteManifest {
         &self.manifest
+    }
+
+    /// Returns the precondition policy this canonicalizer enforces.
+    pub fn precondition_policy(&self) -> PreconditionPolicy {
+        self.policy
     }
 
     /// Canonicalizes one root term in place, appending any rewritten terms to
@@ -157,15 +178,18 @@ impl Canonicalizer {
         roots: &[TermId],
     ) -> Result<CanonicalizeTermsOutcome, RewriteError> {
         let enabled = self.enabled_rule_set();
+        let mut check = PreconditionCheck::new(&self.manifest, self.policy, arena);
         let mut memo = HashMap::new();
         let mut report = RewriteReport::default();
         let mut terms = Vec::with_capacity(roots.len());
 
         for &root in roots {
-            let term = canonicalize_root(arena, root, &enabled, &mut memo, &mut report)?;
+            let term =
+                canonicalize_root(arena, root, &enabled, &mut check, &mut memo, &mut report)?;
             terms.push(term);
         }
 
+        report.audit = check.audit;
         Ok(CanonicalizeTermsOutcome { terms, report })
     }
 
@@ -220,6 +244,7 @@ impl CanonicalizeTermsOutcome {
 pub struct RewriteReport {
     applications: Vec<RuleApplication>,
     local_fuel_exhaustions: u64,
+    audit: PreconditionAudit,
 }
 
 impl RewriteReport {
@@ -240,6 +265,15 @@ impl RewriteReport {
     /// term remains exactly denotation-preserving.
     pub fn local_fuel_exhaustions(&self) -> u64 {
         self.local_fuel_exhaustions
+    }
+
+    /// Returns how much precondition checking the pass actually performed.
+    ///
+    /// Every application in [`Self::applications`] passed the structural tier;
+    /// the audit says how many additionally passed the semantic one, and how
+    /// many the semantic tier could not reach.
+    pub fn precondition_audit(&self) -> PreconditionAudit {
+        self.audit
     }
 
     fn record(&mut self, rule_id: &'static str, before: TermId, after: TermId) {
@@ -266,12 +300,185 @@ pub struct RuleApplication {
     pub after: TermId,
 }
 
+/// Number of deterministic sample assignments the denotation guard uses.
+///
+/// Sample 0 binds every symbol to the zero/false element, sample 1 to the
+/// all-ones/true element, and samples 2 and 3 are seeded pseudorandom. The
+/// extremes are not decoration: identity, annihilator, and saturation rules are
+/// exactly the ones whose masking bugs hide at the corners, and a purely random
+/// sample hits an all-ones bit-vector with probability `2^-w`.
+pub const DENOTATION_GUARD_SAMPLES: usize = 4;
+
+/// Largest bit-vector width the denotation guard samples.
+///
+/// Above this, [`Value::Bv`] gives way to the wide-limb representation and the
+/// symbol is left unbound, which the audit counts as unchecked rather than as
+/// checked-and-passed.
+const DENOTATION_GUARD_MAX_BV_WIDTH: u32 = 128;
+
+/// How hard the canonicalizer checks that a rule stayed inside its precondition.
+///
+/// The structural tier is not optional and is not represented here: every
+/// committed rewrite is always checked against its rule's
+/// [`PreconditionGuard`] and for sort agreement, in every build. This policy
+/// selects only whether the *semantic* tier also runs.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum PreconditionPolicy {
+    /// Structural guards only: declared operator scope and sort agreement.
+    ///
+    /// Both are `O(1)` per application, so this tier is always on.
+    Structural,
+    /// Structural guards plus the denotation guard.
+    ///
+    /// Every default manifest rule declares [`Preservation::Denotation`] with
+    /// [`ModelProjection::Identity`]. That declaration *is* the semantic
+    /// precondition, and this tier holds it to it: each committed rewrite is
+    /// evaluated on both sides under [`DENOTATION_GUARD_SAMPLES`] fixed
+    /// assignments by the `axeyum-ir` ground evaluator — an independent code
+    /// path from the matcher that decided to fire — and any disagreement is a
+    /// refusal, not a rewrite.
+    ///
+    /// Cost is linear in the pass, not quadratic: the sample assignments are
+    /// fixed for the whole pass and one evaluator memo per sample is carried
+    /// across every application, so each arena node is evaluated at most
+    /// [`DENOTATION_GUARD_SAMPLES`] times in total.
+    #[default]
+    Denotational,
+}
+
+/// Why a committed rewrite was refused.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum PreconditionViolation {
+    /// The rule fired on an operator outside its declared scope.
+    OperatorOutOfScope {
+        /// The operator the rule actually fired on.
+        op: Op,
+    },
+    /// The rewrite changed the term's sort, which no rewrite may do.
+    SortChanged {
+        /// Sort of the term before the rewrite.
+        before: Sort,
+        /// Sort of the replacement term.
+        after: Sort,
+    },
+    /// A [`Preservation::Denotation`] rule changed the term's value.
+    DenotationChanged {
+        /// Index of the sample assignment that disagreed.
+        sample: usize,
+        /// Value of the original term under that assignment.
+        before: Value,
+        /// Value of the replacement term under that assignment.
+        after: Value,
+    },
+    /// The committed rule ID is not an enabled rule of the governing manifest,
+    /// so it has no precondition to check against.
+    UnknownRule,
+}
+
+impl core::fmt::Display for PreconditionViolation {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        match self {
+            PreconditionViolation::OperatorOutOfScope { op } => {
+                write!(f, "fired on operator {op:?}, which is outside its scope")
+            }
+            PreconditionViolation::SortChanged { before, after } => {
+                write!(f, "changed sort from {before:?} to {after:?}")
+            }
+            PreconditionViolation::DenotationChanged {
+                sample,
+                before,
+                after,
+            } => write!(
+                f,
+                "changed denotation under sample assignment #{sample}: {before:?} became {after:?}"
+            ),
+            PreconditionViolation::UnknownRule => {
+                write!(f, "is not an enabled rule of the governing manifest")
+            }
+        }
+    }
+}
+
+/// How much precondition checking actually happened during a pass.
+///
+/// A guard that silently declines to check is the defect it was built to
+/// prevent, so coverage is reported rather than assumed: compare
+/// [`Self::applications`] against [`Self::denotation_checked`] to see how much
+/// of a pass the semantic tier really covered.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct PreconditionAudit {
+    applications: u64,
+    scope_checked: u64,
+    scope_unconstrained: u64,
+    denotation_checked: u64,
+    denotation_unavailable: u64,
+}
+
+impl PreconditionAudit {
+    /// Rewrites committed during the pass. Every one passed the structural tier.
+    pub fn applications(&self) -> u64 {
+        self.applications
+    }
+
+    /// Applications whose root operator was checked against a declared operator
+    /// scope.
+    pub fn scope_checked(&self) -> u64 {
+        self.scope_checked
+    }
+
+    /// Applications by a rule declaring [`PreconditionGuard::AnyOperator`], for
+    /// which no operator scope could be checked.
+    pub fn scope_unconstrained(&self) -> u64 {
+        self.scope_unconstrained
+    }
+
+    /// Applications on which at least one sample assignment produced a defined
+    /// value on both sides and the two agreed.
+    pub fn denotation_checked(&self) -> u64 {
+        self.denotation_checked
+    }
+
+    /// Applications the denotation guard was asked to check but could not, on
+    /// any sample — an unbound symbol of an unsampled sort (array, real,
+    /// datatype, uninterpreted, wide bit-vector), an uninterpreted function
+    /// application, or a partial operator that the evaluator refused.
+    ///
+    /// This is a coverage hole, not a pass. It is reported so it can be
+    /// measured instead of assumed away.
+    pub fn denotation_unavailable(&self) -> u64 {
+        self.denotation_unavailable
+    }
+}
+
+/// A rewrite rule caught firing outside its declared precondition.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PreconditionFailure {
+    /// The rule that fired.
+    pub rule: RewriteRuleId,
+    /// The term the rule was applied to.
+    pub before: TermId,
+    /// The replacement the rule produced.
+    pub after: TermId,
+    /// What the rule violated.
+    pub violation: PreconditionViolation,
+}
+
 /// Errors from canonicalization.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum RewriteError {
     /// Term construction or evaluation failed while rebuilding a well-typed
     /// term.
     Ir(IrError),
+    /// A rewrite rule fired outside its declared precondition.
+    ///
+    /// The rewrite is refused, not applied: the canonicalizer returns this
+    /// error instead of silently emitting a term it cannot justify.
+    ///
+    /// Boxed because [`PreconditionViolation::DenotationChanged`] carries two
+    /// [`Value`]s, and this error rides on the return type of the default
+    /// canonicalization path — a large `Err` variant would cost every
+    /// successful rewrite.
+    PreconditionViolated(Box<PreconditionFailure>),
 }
 
 impl From<IrError> for RewriteError {
@@ -284,6 +491,12 @@ impl core::fmt::Display for RewriteError {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
             RewriteError::Ir(error) => write!(f, "IR error during rewrite: {error}"),
+            RewriteError::PreconditionViolated(failure) => write!(
+                f,
+                "rewrite rule `{}` violated its precondition: it {}",
+                failure.rule.as_str(),
+                failure.violation
+            ),
         }
     }
 }
@@ -624,6 +837,7 @@ fn rule(id: &str, name: &str, precondition: &str) -> RewriteRule {
         id: RewriteRuleId::new(id).expect("static rewrite rule ID is valid"),
         name: name.to_owned(),
         precondition: precondition.to_owned(),
+        guard: default_guard(id),
         preservation: Preservation::Denotation,
         projection: ModelProjection::Identity,
         tests: vec![
@@ -634,14 +848,297 @@ fn rule(id: &str, name: &str, precondition: &str) -> RewriteRule {
     }
 }
 
+fn ops(list: &[Op]) -> PreconditionGuard {
+    PreconditionGuard::RootOperators(list.to_vec())
+}
+
+/// The machine-checked operator scope of each default rule.
+///
+/// These are read off the **dispatch**, not off the precondition prose. The
+/// prose is what a human is told; this is what the canonicalizer enforces, and
+/// deriving one from the other would make the check a restatement of the thing
+/// it is supposed to catch. Where the two disagree, the disagreement is the
+/// finding — see `guard_table_matches_the_rules_that_actually_fire`, which
+/// drives every default rule and asserts the operator it fired on was inside
+/// the scope declared here.
+///
+/// # Panics
+///
+/// Panics if a rule is added to [`default_rules`] without a scope here. That is
+/// deliberate: a rule with no declared scope has no enforceable precondition,
+/// and the panic surfaces at [`default_manifest`], which every manifest test
+/// calls.
+#[allow(clippy::too_many_lines)]
+fn default_guard(id: &str) -> PreconditionGuard {
+    const COMPARISONS: &[Op] = &[
+        Op::BvUlt,
+        Op::BvUle,
+        Op::BvUgt,
+        Op::BvUge,
+        Op::BvSlt,
+        Op::BvSle,
+        Op::BvSgt,
+        Op::BvSge,
+    ];
+    const EXTRACT: &[Op] = &[Op::Extract { hi: 0, lo: 0 }];
+
+    match id {
+        // The two generic constant folds are gated on the *operands* being
+        // literals (`all_constant`), which is independent of the operator, so
+        // there is no honest operator scope to declare. Their precondition is
+        // enforced semantically instead.
+        BOOL_CONST_FOLD | BV_CONST_FOLD => PreconditionGuard::AnyOperator,
+        // ...unlike the integer fold, whose dispatch (`fold_ground_int`) does
+        // enumerate its operators, so it gets a real structural scope.
+        INT_CONST_FOLD => ops(&[
+            Op::IntNeg,
+            Op::IntAdd,
+            Op::IntSub,
+            Op::IntMul,
+            Op::IntAbs,
+            Op::IntPow2,
+            Op::IntLt,
+            Op::IntLe,
+            Op::IntGt,
+            Op::IntGe,
+            Op::IntDiv,
+            Op::IntMod,
+            Op::Eq,
+        ]),
+        BOOL_DOUBLE_NOT => ops(&[Op::BoolNot]),
+        BOOL_AND_IDENTITY | BOOL_AND_ANNIHILATOR | BOOL_AND_IDEMPOTENT => ops(&[Op::BoolAnd]),
+        BOOL_OR_IDENTITY | BOOL_OR_ANNIHILATOR | BOOL_OR_IDEMPOTENT => ops(&[Op::BoolOr]),
+        BOOL_XOR_IDENTITY | BOOL_XOR_SELF => ops(&[Op::BoolXor]),
+        BOOL_IMPLIES_CONST | BOOL_IMPLIES_REFLEXIVE => ops(&[Op::BoolImplies]),
+        EQ_REFLEXIVE | EQ_BOOL_CONST | BV_EQ_ADD_CONSTANT_CANCEL => ops(&[Op::Eq]),
+        SELECT_STORE_SAME | SELECT_CONST_ARRAY => ops(&[Op::Select]),
+        BV_COMPARE_REFLEXIVE => ops(COMPARISONS),
+        // Saturation is unsigned-only: `rewrite_bv_compare` matches just the
+        // four unsigned comparisons for this rule, and the prose agrees.
+        BV_COMPARE_SATURATE => ops(&[Op::BvUlt, Op::BvUle, Op::BvUgt, Op::BvUge]),
+        ITE_CONST_CONDITION | ITE_SAME_BRANCHES | ITE_BOOL_IDENTITY => ops(&[Op::Ite]),
+        BV_DOUBLE_NOT => ops(&[Op::BvNot]),
+        BV_DOUBLE_NEG => ops(&[Op::BvNeg]),
+        BV_ADD_ZERO | BV_ADD_CONSTANT_CHAIN => ops(&[Op::BvAdd]),
+        BV_SUB_ZERO | BV_SUB_SELF => ops(&[Op::BvSub]),
+        BV_MUL_ONE | BV_MUL_ZERO | BV_MUL_POW2 => ops(&[Op::BvMul]),
+        BV_UDIV_POW2 => ops(&[Op::BvUdiv]),
+        BV_UREM_POW2 => ops(&[Op::BvUrem]),
+        BV_AND_IDENTITY | BV_AND_ZERO | BV_AND_IDEMPOTENT => ops(&[Op::BvAnd]),
+        BV_OR_IDENTITY | BV_OR_ONES | BV_OR_IDEMPOTENT => ops(&[Op::BvOr]),
+        BV_XOR_IDENTITY | BV_XOR_SELF => ops(&[Op::BvXor]),
+        BV_SHIFT_ZERO => ops(&[Op::BvShl, Op::BvLshr, Op::BvAshr]),
+        BV_EXTRACT_WHOLE
+        | BV_EXTRACT_NESTED
+        | BV_EXTRACT_CONCAT
+        | BV_EXTRACT_CONCAT_STRADDLE
+        | BV_EXTRACT_EXTEND
+        | BV_EXTRACT_EXTEND_HIGH
+        | BV_EXTRACT_EXTEND_STRADDLE
+        | BV_EXTRACT_BITWISE
+        | BV_EXTRACT_ITE => ops(EXTRACT),
+        BV_CONCAT_EXTRACT => ops(&[Op::Concat]),
+        BV_EXTEND_ZERO => ops(&[Op::ZeroExt { by: 0 }, Op::SignExt { by: 0 }]),
+        BV_ROTATE_ZERO => ops(&[Op::RotateLeft { by: 0 }, Op::RotateRight { by: 0 }]),
+        // The union of `is_ac` and `is_commutative`.
+        COMMUTATIVE_ORDER => ops(&[
+            Op::BoolAnd,
+            Op::BoolOr,
+            Op::BoolXor,
+            Op::BvAdd,
+            Op::BvMul,
+            Op::BvAnd,
+            Op::BvOr,
+            Op::BvXor,
+            Op::BvXnor,
+            Op::Eq,
+            Op::BvNand,
+            Op::BvNor,
+        ]),
+        other => panic!("default rewrite rule `{other}` declares no precondition guard"),
+    }
+}
+
 fn rewrite_id(id: &str) -> RewriteRuleId {
     RewriteRuleId::new(id).expect("static rewrite rule ID is valid")
+}
+
+/// The precondition guard, evaluated at the point a rewrite is committed.
+///
+/// This is the whole point of the manifest carrying a machine-checked companion
+/// to its prose: a rule that fires outside its precondition is refused here,
+/// rather than producing a term that every downstream stage — the bit-blaster,
+/// the SAT core, the DRAT checker — would certify perfectly well, because they
+/// would all be certifying the wrong formula.
+struct PreconditionCheck<'m> {
+    guards: BTreeMap<&'m str, &'m PreconditionGuard>,
+    policy: PreconditionPolicy,
+    /// One fixed assignment per sample, chosen once for the whole pass, paired
+    /// with the evaluator memo carried across every application. Fixing the
+    /// assignments is what makes the guard linear rather than quadratic.
+    samples: Vec<(Assignment, HashMap<TermId, Value>)>,
+    audit: PreconditionAudit,
+}
+
+impl<'m> PreconditionCheck<'m> {
+    fn new(manifest: &'m RewriteManifest, policy: PreconditionPolicy, arena: &TermArena) -> Self {
+        let samples = match policy {
+            PreconditionPolicy::Structural => Vec::new(),
+            PreconditionPolicy::Denotational => (0..DENOTATION_GUARD_SAMPLES)
+                .map(|index| (sample_assignment(arena, index), HashMap::new()))
+                .collect(),
+        };
+        Self {
+            guards: manifest.enabled_guards(),
+            policy,
+            samples,
+            audit: PreconditionAudit::default(),
+        }
+    }
+
+    /// Returns `true` if the caller must materialize the exact local pre-image
+    /// of the rewrite. Only the semantic tier evaluates it.
+    fn needs_pre_image(&self) -> bool {
+        self.policy == PreconditionPolicy::Denotational
+    }
+
+    /// Checks one committed rewrite, returning `Err` if the rule fired outside
+    /// its precondition.
+    fn check(
+        &mut self,
+        arena: &TermArena,
+        rule_id: &str,
+        op: Op,
+        before: TermId,
+        after: TermId,
+    ) -> Result<(), RewriteError> {
+        let refuse = |violation| {
+            Err(RewriteError::PreconditionViolated(Box::new(
+                PreconditionFailure {
+                    rule: rewrite_id(rule_id),
+                    before,
+                    after,
+                    violation,
+                },
+            )))
+        };
+
+        let Some(guard) = self.guards.get(rule_id) else {
+            return refuse(PreconditionViolation::UnknownRule);
+        };
+        self.audit.applications += 1;
+
+        // Tier A, always on.
+        match guard {
+            PreconditionGuard::AnyOperator => self.audit.scope_unconstrained += 1,
+            PreconditionGuard::RootOperators(_) => {
+                if !guard.admits(op) {
+                    return refuse(PreconditionViolation::OperatorOutOfScope { op });
+                }
+                self.audit.scope_checked += 1;
+            }
+        }
+        let before_sort = arena.sort_of(before);
+        let after_sort = arena.sort_of(after);
+        if before_sort != after_sort {
+            return refuse(PreconditionViolation::SortChanged {
+                before: before_sort,
+                after: after_sort,
+            });
+        }
+
+        // Tier B, policy-gated.
+        if self.policy == PreconditionPolicy::Structural {
+            return Ok(());
+        }
+        let mut compared = false;
+        for (sample, (assignment, memo)) in self.samples.iter_mut().enumerate() {
+            // An evaluator error is a *coverage hole*, not a pass: partial
+            // operators and unsampled sorts simply have no value to compare
+            // here. It is counted, never swallowed.
+            let Ok(before_value) = eval_with_memo(arena, before, assignment, memo) else {
+                continue;
+            };
+            let Ok(after_value) = eval_with_memo(arena, after, assignment, memo) else {
+                continue;
+            };
+            if before_value != after_value {
+                return refuse(PreconditionViolation::DenotationChanged {
+                    sample,
+                    before: before_value,
+                    after: after_value,
+                });
+            }
+            compared = true;
+        }
+        if compared {
+            self.audit.denotation_checked += 1;
+        } else {
+            self.audit.denotation_unavailable += 1;
+        }
+        Ok(())
+    }
+}
+
+/// Builds sample assignment `index` over every symbol currently in `arena`.
+///
+/// Samples 0 and 1 are the zero and all-ones corners; the rest are seeded
+/// pseudorandom. Symbols of sorts with no cheap sampling (arrays, reals,
+/// datatypes, uninterpreted carriers, bit-vectors wider than
+/// [`DENOTATION_GUARD_MAX_BV_WIDTH`]) are left unbound, which makes the
+/// evaluator decline and the audit record a coverage hole.
+fn sample_assignment(arena: &TermArena, index: usize) -> Assignment {
+    let mut assignment = Assignment::new();
+    for (symbol, _name, sort) in arena.symbols() {
+        let seed = splitmix(
+            (symbol.index() as u64)
+                .wrapping_mul(0x9e37_79b9_7f4a_7c15)
+                .wrapping_add(index as u64 + 1),
+        );
+        if let Some(value) = sample_value(sort, index, seed) {
+            assignment.set(symbol, value);
+        }
+    }
+    assignment
+}
+
+fn sample_value(sort: Sort, index: usize, seed: u64) -> Option<Value> {
+    match sort {
+        Sort::Bool => Some(Value::Bool(match index {
+            0 => false,
+            1 => true,
+            _ => seed & 1 == 1,
+        })),
+        Sort::BitVec(width) if width <= DENOTATION_GUARD_MAX_BV_WIDTH => {
+            let all_ones = mask(width);
+            let value = match index {
+                0 => 0,
+                1 => all_ones,
+                _ => (u128::from(seed) | (u128::from(splitmix(seed)) << 64)) & all_ones,
+            };
+            Some(Value::Bv { width, value })
+        }
+        Sort::Int => Some(Value::Int(match index {
+            0 => 0,
+            1 => 1,
+            _ => i128::from(seed % 64) - 32,
+        })),
+        _ => None,
+    }
+}
+
+fn splitmix(seed: u64) -> u64 {
+    let mut x = seed.wrapping_add(0x9e37_79b9_7f4a_7c15);
+    x = (x ^ (x >> 30)).wrapping_mul(0xbf58_476d_1ce4_e5b9);
+    x = (x ^ (x >> 27)).wrapping_mul(0x94d0_49bb_1331_11eb);
+    x ^ (x >> 31)
 }
 
 fn canonicalize_root(
     arena: &mut TermArena,
     root: TermId,
     enabled: &BTreeSet<&str>,
+    check: &mut PreconditionCheck<'_>,
     memo: &mut HashMap<TermId, TermId>,
     report: &mut RewriteReport,
 ) -> Result<TermId, RewriteError> {
@@ -649,16 +1146,19 @@ fn canonicalize_root(
         arena,
         root,
         enabled,
+        check,
         memo,
         report,
         DEFAULT_LOCAL_REWRITE_FUEL,
     )
 }
 
+#[allow(clippy::too_many_arguments)]
 fn canonicalize_root_bounded(
     arena: &mut TermArena,
     root: TermId,
     enabled: &BTreeSet<&str>,
+    check: &mut PreconditionCheck<'_>,
     memo: &mut HashMap<TermId, TermId>,
     report: &mut RewriteReport,
     local_fuel: usize,
@@ -687,6 +1187,26 @@ fn canonicalize_root_bounded(
                 let mut rewritten = application.term;
                 let mut local_applications = 0;
                 if let Some(rule_id) = application.rule_id {
+                    // Check the *local* step, not `term -> rewritten`: `term`
+                    // still has its pre-canonicalization children, so a
+                    // violation found against it could belong to any child
+                    // rewrite. `App { op, rewritten_args }` is the exact
+                    // pre-image of the rule that just fired, so a refusal here
+                    // names the rule that is actually at fault. The rebuild is
+                    // hash-consed, so it is usually already interned.
+                    //
+                    // The structural tier does not need it: its operator check
+                    // reads `op` directly, and `term` has the same sort as the
+                    // pre-image (child rewrites preserve sort, which this very
+                    // guard enforces). So under a lowered policy the pre-image
+                    // is not built at all, and no term is interned for a check
+                    // that will not run.
+                    let pre_image = if check.needs_pre_image() {
+                        build_app(arena, op, &rewritten_args)?
+                    } else {
+                        term
+                    };
+                    check.check(arena, rule_id, op, pre_image, rewritten)?;
                     report.record(rule_id, term, rewritten);
                     local_applications = 1;
                 }
@@ -706,6 +1226,7 @@ fn canonicalize_root_bounded(
                     if next.term == rewritten {
                         break;
                     }
+                    check.check(arena, rule_id, op, rewritten, next.term)?;
                     report.record(rule_id, rewritten, next.term);
                     rewritten = next.term;
                     local_applications += 1;
@@ -742,6 +1263,59 @@ struct LocalRewrite {
     rule_id: Option<&'static str>,
 }
 
+/// Rule ID of the deliberately WRONG rewrite used as the negative control.
+///
+/// `default_rules()` never contains it, so it cannot be enabled by any
+/// production path; only a test that builds a manifest naming it explicitly can
+/// make it fire. See [`CONTROL_WRONG_REWRITE`] for why it exists.
+#[cfg(test)]
+const CONTROL_WRONG_REWRITE: &str = "control.denotation_violation.v1";
+
+/// A rewrite that is **wrong on purpose**: `bvadd(x, 0) -> bvnot(x)`.
+///
+/// Every guard needs a test that fails without it, and a guard against
+/// denotation-changing rewrites can only be demonstrated by a rewrite that
+/// changes denotation. A hand-built `before`/`after` pair fed straight to the
+/// checker would test the checker but not the *wiring* — whether the
+/// canonicalizer actually consults it before committing. This arm goes through
+/// the identical commit path a real rule takes, so the control proves the
+/// enforcement point, not just the predicate.
+///
+/// It is `#[cfg(test)]`, is keyed on a rule ID absent from the default
+/// manifest, and is the shape of the defect this whole slice exists to catch:
+/// a term the bit-blaster, the SAT core, and the DRAT checker would all
+/// certify perfectly, because they would be certifying the wrong formula.
+#[cfg(test)]
+fn control_rewrite(
+    arena: &mut TermArena,
+    op: Op,
+    args: &[TermId],
+    enabled: &BTreeSet<&str>,
+) -> Result<Option<LocalRewrite>, IrError> {
+    if !enabled.contains(CONTROL_WRONG_REWRITE) || op != Op::BvAdd || args.len() != 2 {
+        return Ok(None);
+    }
+    if !is_bv_zero(arena, args[1]) {
+        return Ok(None);
+    }
+    let wrong = arena.bv_not(args[0])?;
+    Ok(Some(applied(wrong, CONTROL_WRONG_REWRITE)))
+}
+
+#[cfg(not(test))]
+#[allow(
+    clippy::unnecessary_wraps,
+    reason = "signature must match the `cfg(test)` arm, which can fail"
+)]
+fn control_rewrite(
+    _arena: &mut TermArena,
+    _op: Op,
+    _args: &[TermId],
+    _enabled: &BTreeSet<&str>,
+) -> Result<Option<LocalRewrite>, IrError> {
+    Ok(None)
+}
+
 #[allow(clippy::too_many_lines)]
 fn rewrite_app(
     arena: &mut TermArena,
@@ -749,6 +1323,10 @@ fn rewrite_app(
     args: &[TermId],
     enabled: &BTreeSet<&str>,
 ) -> Result<LocalRewrite, IrError> {
+    if let Some(control) = control_rewrite(arena, op, args, enabled)? {
+        return Ok(control);
+    }
+
     if all_constant(arena, args) {
         let rebuilt = build_app(arena, op, args)?;
         let result_sort = arena.sort_of(rebuilt);
@@ -2396,8 +2974,8 @@ mod commutative_tests {
     use super::{
         AC_REBUILD_MAX_OPERANDS, BV_ADD_CONSTANT_CHAIN, BV_CONCAT_EXTRACT,
         BV_EQ_ADD_CONSTANT_CANCEL, BV_EXTRACT_BITWISE, BV_EXTRACT_ITE, BV_EXTRACT_NESTED,
-        Canonicalizer, RewriteReport, canonicalize, canonicalize_root_bounded,
-        is_extract_distributive_bitwise, mask,
+        Canonicalizer, PreconditionCheck, PreconditionPolicy, RewriteReport, canonicalize,
+        canonicalize_root_bounded, default_manifest, is_extract_distributive_bitwise, mask,
     };
 
     #[test]
@@ -4246,10 +4824,19 @@ mod commutative_tests {
         let enabled = canonicalizer.enabled_rule_set();
         let mut memo = HashMap::new();
         let mut report = RewriteReport::default();
+        let manifest = default_manifest();
+        let mut check = PreconditionCheck::new(&manifest, PreconditionPolicy::Denotational, &arena);
 
-        let partial =
-            canonicalize_root_bounded(&mut arena, original, &enabled, &mut memo, &mut report, 1)
-                .unwrap();
+        let partial = canonicalize_root_bounded(
+            &mut arena,
+            original,
+            &enabled,
+            &mut check,
+            &mut memo,
+            &mut report,
+            1,
+        )
+        .unwrap();
         let expected_partial = arena.extract(5, 0, x).unwrap();
         assert_eq!(partial, expected_partial);
         assert_eq!(report.applications().len(), 1);
@@ -4296,5 +4883,308 @@ mod commutative_tests {
                 "concat-of-adjacent-extracts changed denotation at x={xv}",
             );
         }
+    }
+}
+
+/// Negative controls for the precondition guard.
+///
+/// Every test here must FAIL if the guard is removed, and each one shows the
+/// failure rather than asserting it: the unguarded outcome is computed
+/// side-by-side with the guarded one, so the test states what the code would
+/// have done instead of trusting that it would have done something bad.
+#[cfg(test)]
+mod precondition_control_tests {
+    use axeyum_ir::{Assignment, Op, Sort, TermArena, Value, eval};
+
+    use super::{
+        BV_ADD_ZERO, CONTROL_WRONG_REWRITE, Canonicalizer, PreconditionPolicy,
+        PreconditionViolation, RewriteError, default_manifest, default_rules,
+    };
+    use crate::{
+        ManifestError, PreconditionGuard, RewriteManifest, RewriteRule, RewriteRuleId,
+        RewriteTestRoute,
+    };
+
+    /// Builds the default manifest with the deliberately wrong control rule
+    /// appended. Nothing in production can produce this manifest.
+    fn manifest_with_wrong_rule() -> RewriteManifest {
+        let mut rules = default_rules();
+        rules.push(RewriteRule {
+            id: RewriteRuleId::new(CONTROL_WRONG_REWRITE).unwrap(),
+            name: "NEGATIVE CONTROL: bvadd(x, 0) -> bvnot(x)".to_owned(),
+            precondition: "`bvadd` with a zero right operand".to_owned(),
+            // The guard ADMITS `BvAdd`, so the structural tier has no
+            // objection. That is the point: this control isolates the semantic
+            // tier by giving the structural tier nothing to catch.
+            guard: PreconditionGuard::RootOperators(vec![Op::BvAdd]),
+            preservation: super::Preservation::Denotation,
+            projection: super::ModelProjection::Identity,
+            tests: vec![RewriteTestRoute::ExhaustiveSmallWidth],
+            enabled_by_default: true,
+        });
+        RewriteManifest::new(rules).unwrap()
+    }
+
+    /// The headline control: a rewrite that changes denotation is REFUSED on
+    /// the real commit path, and the same rewrite sails through when the
+    /// semantic tier is switched off.
+    ///
+    /// The `Structural` half is not decoration — it is the "fails without it"
+    /// demonstration. It computes and prints the wrong term the canonicalizer
+    /// produces without the denotation guard, which is a term every downstream
+    /// stage would certify: `bvnot(x)` is a perfectly well-formed bit-vector.
+    #[test]
+    fn denotation_changing_rewrite_is_refused_and_would_otherwise_ship() {
+        let manifest = manifest_with_wrong_rule();
+
+        // --- Without the guard (Structural policy): the wrong term ships. ---
+        let mut arena = TermArena::new();
+        let x_sym = arena.declare("control_x", Sort::BitVec(4)).unwrap();
+        let x = arena.var(x_sym);
+        let zero = arena.bv_const(4, 0).unwrap();
+        let sum = arena.bv_add(x, zero).unwrap();
+        let unguarded = Canonicalizer::with_precondition_policy(
+            manifest.clone(),
+            PreconditionPolicy::Structural,
+        )
+        .canonicalize(&mut arena, sum)
+        .expect("structural tier has no objection to this rewrite");
+
+        // Show the failure instead of asserting it: the unguarded result really
+        // does denote something else. `bvadd(x, 0) = x`, but we got `bvnot(x)`.
+        let mut disagreements = 0;
+        for value in 0..16u128 {
+            let mut assignment = Assignment::new();
+            assignment.set(x_sym, Value::Bv { width: 4, value });
+            let original = eval(&arena, sum, &assignment).unwrap();
+            let rewritten = eval(&arena, unguarded.term, &assignment).unwrap();
+            if original != rewritten {
+                disagreements += 1;
+            }
+        }
+        assert_eq!(
+            disagreements, 16,
+            "the control rewrite must be wrong on EVERY input, or it is not a \
+             control — a rewrite that happens to agree on the sampled points \
+             would let a broken guard pass"
+        );
+
+        // --- With the guard (default policy): refused. ---
+        let guarded = Canonicalizer::new(manifest).canonicalize(&mut arena, sum);
+        let Err(RewriteError::PreconditionViolated(failure)) = guarded else {
+            panic!("denotation guard did not refuse the wrong rewrite: {guarded:?}");
+        };
+        assert_eq!(failure.rule.as_str(), CONTROL_WRONG_REWRITE);
+        assert!(
+            matches!(
+                failure.violation,
+                PreconditionViolation::DenotationChanged { .. }
+            ),
+            "expected a denotation violation, got {:?}",
+            failure.violation
+        );
+    }
+
+    /// A rule that fires on an operator outside its declared scope is refused
+    /// by the structural tier, in every build.
+    ///
+    /// This control mislabels a REAL rule rather than inventing one: it narrows
+    /// `bv.add_zero.v1`'s scope to `bvsub`, then feeds it a `bvadd` it genuinely
+    /// rewrites. Without the scope check the rewrite is committed and the
+    /// manifest's claim about where the rule applies is simply untrue.
+    #[test]
+    fn rule_firing_outside_its_declared_operator_scope_is_refused() {
+        let mut rules = default_rules();
+        let target = rules
+            .iter_mut()
+            .find(|rule| rule.id.as_str() == BV_ADD_ZERO)
+            .expect("bv.add_zero.v1 is in the default manifest");
+        target.guard = PreconditionGuard::RootOperators(vec![Op::BvSub]);
+        let manifest = RewriteManifest::new(rules).unwrap();
+
+        let mut arena = TermArena::new();
+        let x = arena.bv_var("scope_x", 4).unwrap();
+        let zero = arena.bv_const(4, 0).unwrap();
+        let sum = arena.bv_add(x, zero).unwrap();
+
+        // The unmodified manifest rewrites this happily — so the input really
+        // does reach the rule, and the control is not vacuous.
+        let baseline = Canonicalizer::new(default_manifest())
+            .canonicalize(&mut arena, sum)
+            .unwrap();
+        assert_eq!(
+            baseline.term, x,
+            "control input must actually trigger the rule"
+        );
+
+        let result = Canonicalizer::new(manifest).canonicalize(&mut arena, sum);
+        let Err(RewriteError::PreconditionViolated(failure)) = result else {
+            panic!("scope guard did not refuse the out-of-scope rewrite: {result:?}");
+        };
+        assert_eq!(failure.rule.as_str(), BV_ADD_ZERO);
+        assert_eq!(
+            failure.violation,
+            PreconditionViolation::OperatorOutOfScope { op: Op::BvAdd }
+        );
+    }
+
+    /// The scope guard is checked in EVERY build, not only where the semantic
+    /// tier runs. Lowering the policy must not lower this.
+    #[test]
+    fn structural_policy_still_enforces_operator_scope() {
+        let mut rules = default_rules();
+        let target = rules
+            .iter_mut()
+            .find(|rule| rule.id.as_str() == BV_ADD_ZERO)
+            .unwrap();
+        target.guard = PreconditionGuard::RootOperators(vec![Op::BvSub]);
+        let manifest = RewriteManifest::new(rules).unwrap();
+
+        let mut arena = TermArena::new();
+        let x = arena.bv_var("structural_x", 4).unwrap();
+        let zero = arena.bv_const(4, 0).unwrap();
+        let sum = arena.bv_add(x, zero).unwrap();
+
+        let result =
+            Canonicalizer::with_precondition_policy(manifest, PreconditionPolicy::Structural)
+                .canonicalize(&mut arena, sum);
+        let Err(RewriteError::PreconditionViolated(failure)) = result else {
+            panic!("structural policy failed to enforce operator scope: {result:?}");
+        };
+        assert!(matches!(
+            failure.violation,
+            PreconditionViolation::OperatorOutOfScope { .. }
+        ));
+    }
+
+    /// A rule that admits no operator could never legally fire, so the manifest
+    /// refuses to be built.
+    #[test]
+    fn manifest_rejects_an_empty_operator_scope() {
+        let mut rules = default_rules();
+        rules[0].guard = PreconditionGuard::RootOperators(Vec::new());
+
+        assert!(matches!(
+            RewriteManifest::new(rules),
+            Err(ManifestError::EmptyGuard(_))
+        ));
+    }
+
+    /// The `AnyOperator` escape hatch is pinned to the two rules that have a
+    /// documented reason for it.
+    ///
+    /// `AnyOperator` means "no structural protection at all", so it must not
+    /// spread quietly. If a third rule needs it, this test fails and the author
+    /// has to say why in the same commit.
+    #[test]
+    fn only_the_two_generic_constant_folds_waive_operator_scope() {
+        let unconstrained = default_manifest()
+            .rules()
+            .iter()
+            .filter(|rule| rule.guard == PreconditionGuard::AnyOperator)
+            .map(|rule| rule.id.as_str().to_owned())
+            .collect::<Vec<_>>();
+
+        assert_eq!(
+            unconstrained,
+            vec![
+                "bool.const_fold.v1".to_owned(),
+                "bv.const_fold.v1".to_owned()
+            ],
+            "a rule waived its operator scope; justify it or give it one"
+        );
+    }
+
+    /// Guards that decline to check are the defect they exist to prevent, so
+    /// the coverage the semantic tier ACHIEVES is measured, not assumed.
+    ///
+    /// This is the test that would catch the guard going inert — the failure
+    /// mode where every gate passes because nothing ran.
+    #[test]
+    fn denotation_guard_actually_covers_the_applications_it_reports() {
+        let mut arena = TermArena::new();
+        let x = arena.bv_var("cov_x", 8).unwrap();
+        let y = arena.bv_var("cov_y", 8).unwrap();
+        let p = arena.bool_var("cov_p").unwrap();
+        let zero = arena.bv_const(8, 0).unwrap();
+        let ones = arena.bv_const(8, 255).unwrap();
+        let one = arena.bv_const(8, 1).unwrap();
+
+        let sum = arena.bv_add(x, y).unwrap();
+        let nx = arena.bv_not(x).unwrap();
+        let roots = vec![
+            arena.bv_add(x, zero).unwrap(),
+            arena.bv_mul(y, one).unwrap(),
+            arena.bv_and(x, ones).unwrap(),
+            arena.bv_xor(x, x).unwrap(),
+            arena.bv_or(y, zero).unwrap(),
+            arena.bv_sub(x, x).unwrap(),
+            arena.eq(sum, sum).unwrap(),
+            arena.ite(p, x, x).unwrap(),
+            arena.bv_not(nx).unwrap(),
+            arena.extract(7, 0, x).unwrap(),
+        ];
+
+        let outcome = Canonicalizer::new(default_manifest())
+            .canonicalize_terms(&mut arena, &roots)
+            .unwrap();
+        let audit = outcome.report.precondition_audit();
+
+        assert!(
+            audit.applications() >= 10,
+            "control must exercise many applications, got {}",
+            audit.applications()
+        );
+        assert_eq!(
+            audit.applications(),
+            audit.scope_checked() + audit.scope_unconstrained(),
+            "every application must be accounted for by the structural tier"
+        );
+        assert_eq!(
+            audit.denotation_unavailable(),
+            0,
+            "every application in this pure Bool/BV control is samplable, so a \
+             nonzero coverage hole means the guard silently stopped checking"
+        );
+        assert_eq!(
+            audit.denotation_checked(),
+            audit.applications(),
+            "the semantic tier must have covered every application"
+        );
+    }
+
+    /// The audit reports a coverage HOLE rather than a pass when the evaluator
+    /// cannot reach a term. An unsampled sort must not read as "checked".
+    #[test]
+    fn unsamplable_sorts_are_reported_as_holes_not_as_passes() {
+        let mut arena = TermArena::new();
+        let array = arena.array_var("hole_arr", 4, 8).unwrap();
+        let index = arena.bv_var("hole_i", 4).unwrap();
+        let value = arena.bv_var("hole_v", 8).unwrap();
+        let stored = arena.store(array, index, value).unwrap();
+        let read = arena.select(stored, index).unwrap();
+
+        let outcome = Canonicalizer::new(default_manifest())
+            .canonicalize(&mut arena, read)
+            .unwrap();
+        let audit = outcome.report.precondition_audit();
+
+        assert_eq!(audit.applications(), 1, "select-over-store must fire");
+        assert_eq!(audit.scope_checked(), 1);
+        assert_eq!(
+            (audit.denotation_checked(), audit.denotation_unavailable()),
+            (0, 1),
+            "an array-sorted term has no sampled assignment, and that must be \
+             reported as unchecked rather than counted as a pass"
+        );
+    }
+
+    /// Every default rule has a guard. `default_guard` panics on a rule it does
+    /// not know, so building the manifest at all proves the table is complete.
+    #[test]
+    fn every_default_rule_declares_a_guard() {
+        let manifest = default_manifest();
+        assert_eq!(manifest.len(), 57);
+        assert_eq!(manifest.enabled_guards().len(), 57);
     }
 }
