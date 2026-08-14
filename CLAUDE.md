@@ -227,6 +227,23 @@ let-chains are used workspace-wide) check. Edition 2024, resolver 3.
   `git commit -m … -- <files>`. A bare `git commit` sweeps OTHER agents'
   staged files from the shared index (it has happened; recovery cost real
   work). Verify every commit with `git show --stat`.
+- **Pathspec is necessary, NOT sufficient — it does not protect a file two
+  lanes are both editing.** `git add <file>` stages that file's entire
+  *worktree* content, including another lane's uncommitted hunks in it. On
+  2026-08-14 a correctly-pathspec'd commit swept another lane's in-progress
+  `justfile` edit into itself: the fifth clobbering incident, and the first
+  where the committer followed this rule exactly. Consequences were real —
+  a step was attributed to the wrong lane, and `main` referenced a script
+  three minutes before that script existed. So: before `git add`, run
+  `git diff <file>` and confirm every hunk is yours. If it is not, you are
+  sharing a file, which is the actual problem — say so and coordinate rather
+  than committing around it.
+- **Lane identity lives in the environment, not in git config.**
+  `export AXEYUM_AGENT=<lane>`; the `hooks/commit-msg` hook stamps an
+  `Agent:` trailer and refuses an unidentified commit. Do **not** use
+  `git config axeyum.agent` in a shared checkout: it is repo-local, so the
+  last writer silently renames every other lane's commits (this happened
+  within five minutes of the hook landing).
 - **Never** `git stash`, `git checkout`/`restore` on files you did not
   modify, or any history rewrite — another lane's uncommitted WIP lives in
   this tree. Treat dirty files you don't own as off-limits.
