@@ -1,0 +1,56 @@
+{
+  "schema_version": 1,
+  "id": "F:squared-binomial-row-sum-central",
+  "title": "The sum of squared binomial coefficients is the central binomial coefficient",
+  "statement": "For every natural n, the sum over all integers k of C(n,k)^2 equals C(2n,n). The summand vanishes outside 0 <= k <= n.",
+  "formal": {
+    "language": "cas-term",
+    "statement": "(define-hyperterm F (* (^ (gamma (+ n 1)) 2) (/ 1 (^ (gamma (+ k 1)) 2)) (/ 1 (^ (gamma (+ (- n k) 1)) 2))))\n(define-hyperterm T (* (gamma (+ (* 2 n) 1)) (/ 1 (gamma (+ n 1))) (/ 1 (gamma (+ n 1)))))\n(assert (forall ((n Int)) (=> (>= n 0) (= (sum ((k Int)) F) T))))",
+    "fragment": "hypergeometric-summation",
+    "free_symbols": [
+      "n",
+      "k"
+    ]
+  },
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "depends_on": [],
+  "proof_route": "cas-certificate",
+  "axiom_footprint": [
+    "cas.exact-rational-polynomial-normal-form",
+    "cas.gamma-functional-equation",
+    "cas.hyperterm-specification-denotes-the-summand",
+    "cas.telescoped-term-natural-boundary"
+  ],
+  "evidence": [
+    {
+      "id": "wz-squared-binomial-row-sum",
+      "kind": "witness-replay",
+      "supports": "the creative-telescoping certificate, replayed by a checker that shares no code with the search that produced it",
+      "check_status": "checked",
+      "checkers": [
+        "telescoping_check::symbolic_identity_holds (own shift-ratio derivation, polynomial cross-multiplication)",
+        "telescoping_check::confirm_ratios (shift ratios against exact bignum factorials)",
+        "telescoping_check::confirm_telescoping (pointwise identity and summed recurrence, exact bignum)"
+      ],
+      "checker_command": "cargo test -p axeyum-cas --test telescoping_identities",
+      "artifact": "crates/axeyum-cas/tests/telescoping_identities.rs",
+      "notes": "Certificate: order 1, recurrence coefficients a_0 = 4n + 2, a_1 = -(n + 1) (i.e. (n+1)*S(n+1) = (4n+2)*S(n)), R(n,k) = k^2*(3n + 3 - 2k) / (n - k + 1)^2. Closed form C(2n,n) verified to satisfy the same recurrence; base case S(0) = 1 = C(0,0) checked by exact summation; leading coefficient -(n+1) has its only integer zero at n = -1, below the base, so the recurrence runs forward from n = 0."
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-14",
+    "established_by": "lane telescoping: axeyum_cas::telescoping::zeilberger (untrusted search) + axeyum_cas::telescoping_check (independent checker)",
+    "source": "classical binomial identity, stated by this lane as a HyperTerm specification",
+    "prior_art": [
+      {
+        "who": "Attributed to standard combinatorial identity (Vandermonde specialisation)",
+        "what": "the squared-binomial row-sum identity",
+        "year": 1991,
+        "where": "classical; see Petkovsek-Wilf-Zeilberger, A=B (1996), ch. 4-7",
+        "attribution": "standard textbook attribution; this lane did not consult the primary source"
+      }
+    ]
+  },
+  "notes": "Established on the `cas-certificate` route: an untrusted linear-algebra search (axeyum_cas::telescoping::zeilberger) produced the certificate, and axeyum_cas::telescoping_check verified it with its own shift-ratio derivation, its own fraction arithmetic, and a cross-check of both against exact bignum factorial evaluation of the summand. The checker rejects perturbed certificates -- see the tamper controls in the same test file (P+1, 2P, Q+k, a wrong recurrence constant, a degree bump in a_j, a zeroed recurrence, a certificate re-pointed at a different summand, a clipped summation window, and two wrong closed forms are all rejected)."
+}

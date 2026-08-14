@@ -72,8 +72,14 @@ EVIDENCE_KINDS = {"kernel-term", "witness-replay", "unsat-certificate", "cube-co
                   "cube-tree-cover", "exhaustive-enumeration", "published-value-replication",
                   "bound-citation", "instance-pin", "claim-ref"}
 CHECK_STATUSES = {"checked", "replay-only", "not-checked"}
-LANGUAGES_ALL = {"smtlib2", "lean4", "lean4-surface", "axeyum-ir"}
-ROUTES = {"kernel-lean", "smt-term-level", "smt-clausal", "search-certificate", "none"}
+LANGUAGES_ALL = {"smtlib2", "lean4", "lean4-surface", "axeyum-ir", "cas-term"}
+# `cas-certificate` is the computer-algebra route: an identity in Q(vars) re-derived
+# by exact polynomial arithmetic that shares no code with the search that found it.
+# It is deliberately NOT `search-certificate`: a replayed witness settles one finite
+# instance, while a polynomial identity settles every instance at once, and their
+# footprints differ in kind rather than in size.
+ROUTES = {"kernel-lean", "smt-term-level", "smt-clausal", "search-certificate",
+          "cas-certificate", "none"}
 # Only this route can deliver axiom-freedom, because only there does an empty
 # footprint correspond to a measurable fact about a kernel environment.
 AXIOM_FREE_CAPABLE = {"kernel-lean"}

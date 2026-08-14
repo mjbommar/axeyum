@@ -80,6 +80,8 @@ pub mod sets;
 pub mod special;
 pub mod stats;
 pub mod sturm;
+pub mod telescoping;
+pub mod telescoping_check;
 
 pub use algebraic::AlgebraicReal;
 pub use approx::{lagrange_interpolation, newton_divided_differences, pade, pade_fraction};

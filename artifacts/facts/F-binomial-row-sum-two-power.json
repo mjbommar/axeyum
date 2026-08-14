@@ -1,0 +1,56 @@
+{
+  "schema_version": 1,
+  "id": "F:binomial-row-sum-two-power",
+  "title": "The binomial row sum is a power of two",
+  "statement": "For every natural n, the sum of the n-th row of Pascal's triangle is 2^n: sum over all integers k of C(n,k) equals 2^n. The summand vanishes outside 0 <= k <= n, so the sum is finite.",
+  "formal": {
+    "language": "cas-term",
+    "statement": "(define-hyperterm F (* (gamma (+ n 1)) (/ 1 (gamma (+ k 1))) (/ 1 (gamma (+ (- n k) 1)))))\n(define-hyperterm T (^ 2 n))\n(assert (forall ((n Int)) (=> (>= n 0) (= (sum ((k Int)) F) T))))",
+    "fragment": "hypergeometric-summation",
+    "free_symbols": [
+      "n",
+      "k"
+    ]
+  },
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "depends_on": [],
+  "proof_route": "cas-certificate",
+  "axiom_footprint": [
+    "cas.exact-rational-polynomial-normal-form",
+    "cas.gamma-functional-equation",
+    "cas.hyperterm-specification-denotes-the-summand",
+    "cas.telescoped-term-natural-boundary"
+  ],
+  "evidence": [
+    {
+      "id": "wz-binomial-row-sum",
+      "kind": "witness-replay",
+      "supports": "the creative-telescoping certificate, replayed by a checker that shares no code with the search that produced it",
+      "check_status": "checked",
+      "checkers": [
+        "telescoping_check::symbolic_identity_holds (own shift-ratio derivation, polynomial cross-multiplication)",
+        "telescoping_check::confirm_ratios (shift ratios against exact bignum factorials)",
+        "telescoping_check::confirm_telescoping (pointwise identity and summed recurrence, exact bignum)"
+      ],
+      "checker_command": "cargo test -p axeyum-cas --test telescoping_identities",
+      "artifact": "crates/axeyum-cas/tests/telescoping_identities.rs",
+      "notes": "Certificate: order 1, recurrence coefficients a_0 = 2, a_1 = -1 (i.e. S(n+1) = 2*S(n)), R(n,k) = k / (n - k + 1). Closed form 2^n verified to satisfy the same recurrence (a rational-function identity in its own shift ratio); base case S(0) = 1 = 2^0 checked by exact summation; leading coefficient a_1 = -1 has no integer zero, so the recurrence runs forward from n = 0."
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-14",
+    "established_by": "lane telescoping: axeyum_cas::telescoping::zeilberger (untrusted search) + axeyum_cas::telescoping_check (independent checker)",
+    "source": "classical binomial identity, stated by this lane as a HyperTerm specification",
+    "prior_art": [
+      {
+        "who": "Attributed to standard binomial-theorem folklore; the WZ-style proof is Zeilberger's",
+        "what": "the row-sum identity and its creative-telescoping proof",
+        "year": 1991,
+        "where": "classical; see Petkovsek-Wilf-Zeilberger, A=B (1996), ch. 4-7",
+        "attribution": "standard textbook attribution; this lane did not consult the primary source"
+      }
+    ]
+  },
+  "notes": "Established on the `cas-certificate` route: an untrusted linear-algebra search (axeyum_cas::telescoping::zeilberger) produced the certificate, and axeyum_cas::telescoping_check verified it with its own shift-ratio derivation, its own fraction arithmetic, and a cross-check of both against exact bignum factorial evaluation of the summand. The checker rejects perturbed certificates -- see the tamper controls in the same test file (P+1, 2P, Q+k, a wrong recurrence constant, a degree bump in a_j, a zeroed recurrence, a certificate re-pointed at a different summand, a clipped summation window, and two wrong closed forms are all rejected)."
+}

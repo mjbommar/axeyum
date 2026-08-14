@@ -1,0 +1,58 @@
+{
+  "schema_version": 1,
+  "id": "F:chu-vandermonde-convolution-recurrence",
+  "title": "The Chu-Vandermonde convolution satisfies a first-order recurrence in p",
+  "statement": "For symbolic m and n and every integer p, the convolution S(p) = sum over all integers k of C(m,k)*C(n,p-k) satisfies (p+1)*S(p+1) = (m+n-p)*S(p). This is the recurrence C(m+n,p) also satisfies; together with S(0) = 1 it yields Chu-Vandermonde, sum_k C(m,k)*C(n,p-k) = C(m+n,p). Only the RECURRENCE is established here -- the base case at symbolic m and n is outside what this lane's checker can verify.",
+  "formal": {
+    "language": "cas-term",
+    "statement": "(define-hyperterm F (* (gamma (+ m 1)) (/ 1 (gamma (+ k 1))) (/ 1 (gamma (+ (- m k) 1)))\n                       (gamma (+ n 1)) (/ 1 (gamma (+ (- p k) 1))) (/ 1 (gamma (+ (- n (- p k)) 1)))))\n(define-fn S (lambda (p) (sum ((k Int)) F)))\n(assert (forall ((m Int) (n Int) (p Int)) (= (* (+ p 1) (S (+ p 1))) (* (- (+ m n) p) (S p)))))",
+    "fragment": "hypergeometric-summation",
+    "free_symbols": [
+      "m",
+      "n",
+      "p",
+      "k"
+    ]
+  },
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "depends_on": [],
+  "proof_route": "cas-certificate",
+  "axiom_footprint": [
+    "cas.exact-rational-polynomial-normal-form",
+    "cas.gamma-functional-equation",
+    "cas.hyperterm-specification-denotes-the-summand",
+    "cas.telescoped-term-natural-boundary"
+  ],
+  "evidence": [
+    {
+      "id": "wz-chu-vandermonde-recurrence",
+      "kind": "witness-replay",
+      "supports": "the creative-telescoping certificate, replayed by a checker that shares no code with the search that produced it",
+      "check_status": "checked",
+      "checkers": [
+        "telescoping_check::symbolic_identity_holds (own shift-ratio derivation, polynomial cross-multiplication)",
+        "telescoping_check::confirm_ratios (shift ratios against exact bignum factorials)",
+        "telescoping_check::confirm_telescoping (pointwise identity and summed recurrence, exact bignum)"
+      ],
+      "checker_command": "cargo test -p axeyum-cas --test telescoping_identities",
+      "artifact": "crates/axeyum-cas/tests/telescoping_identities.rs",
+      "notes": "Certificate: order 1, recurrence coefficients a_0 = m + n - p, a_1 = -(p + 1), R(p,k) = k*(k + n - p) / (p - k + 1). The certificate identity is symbolic in ALL of m, n, p, k -- four variables -- so the recurrence is established for symbolic m and n, not merely at sample values. What is NOT established here is the closed form: turning the recurrence into C(m+n,p) needs the base case S(0) = 1 at symbolic m and n, and this lane's base-case checker only evaluates at concrete integers. The leading coefficient -(p+1) also mentions only p, but the closed-form route was not run."
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-14",
+    "established_by": "lane telescoping: axeyum_cas::telescoping::zeilberger (untrusted search) + axeyum_cas::telescoping_check (independent checker)",
+    "source": "classical binomial identity, stated by this lane as a HyperTerm specification",
+    "prior_art": [
+      {
+        "who": "Chu Shih-Chieh; Vandermonde",
+        "what": "the convolution identity",
+        "year": 1772,
+        "where": "classical; see Petkovsek-Wilf-Zeilberger, A=B (1996), ch. 4-7",
+        "attribution": "standard textbook attribution; this lane did not consult the primary source"
+      }
+    ]
+  },
+  "notes": "Established on the `cas-certificate` route: an untrusted linear-algebra search (axeyum_cas::telescoping::zeilberger) produced the certificate, and axeyum_cas::telescoping_check verified it with its own shift-ratio derivation, its own fraction arithmetic, and a cross-check of both against exact bignum factorial evaluation of the summand. The checker rejects perturbed certificates -- see the tamper controls in the same test file (P+1, 2P, Q+k, a wrong recurrence constant, a degree bump in a_j, a zeroed recurrence, a certificate re-pointed at a different summand, a clipped summation window, and two wrong closed forms are all rejected)."
+}
