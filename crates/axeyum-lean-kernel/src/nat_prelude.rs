@@ -235,6 +235,8 @@ pub struct NatPrelude {
     pub le_of_succ_le_succ: NameId,
     /// `le_trans : ∀ (a b c : Nat), Le a b → Le b c → Le a c`.
     pub le_trans: NameId,
+    /// `lt_or_eq_of_le : ∀ a b, Le a b → Or (Lt a b) (Eq Nat a b)`.
+    pub lt_or_eq_of_le: NameId,
     /// `le_total : ∀ a b, Or (Le a b) (Le b a)`.
     pub le_total: NameId,
     /// `not_succ_le_zero : ∀ n, Not (Le (succ n) zero)`.
@@ -376,6 +378,7 @@ pub fn build_nat_prelude(kernel: &mut Kernel) -> Result<NatPrelude, KernelError>
             le_succ_succ: kernel.name_str(nat, "le_succ_succ"),
             le_of_succ_le_succ: kernel.name_str(nat, "le_of_succ_le_succ"),
             le_trans: kernel.name_str(nat, "le_trans"),
+            lt_or_eq_of_le: kernel.name_str(nat, "lt_or_eq_of_le"),
             le_total: kernel.name_str(nat, "le_total"),
             not_succ_le_zero: kernel.name_str(nat, "not_succ_le_zero"),
             le_antisymm: kernel.name_str(nat, "le_antisymm"),
@@ -1678,6 +1681,58 @@ fn declare_order(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> 
         };
         d.declare_theorem(p.le_add_right, ty, value)?;
     }
+
+    // lt_or_eq_of_le : ∀ a b, Le a b → Or (Lt a b) (Eq Nat a b)
+    // Elimination on the order derivation: reflexivity gives equality, while
+    // every step lifts the prior bound to a strict successor bound.
+    d.theorem(p.lt_or_eq_of_le, 2, &|d, v| {
+        let (a, b) = (v[0], v[1]);
+        let hyp_ty = d.le(a, b);
+        let hyp_fv = d.fresh_fvar();
+        let hyp = d.kernel().fvar(hyp_fv);
+        let result = |d: &mut NatDev<'_>, x: ExprId| {
+            let strict = d.lt(a, x);
+            let equal = d.eq(a, x);
+            d.const_app(p.logic.or, &[strict, equal])
+        };
+        let motive = {
+            let x_fv = d.fresh_fvar();
+            let x = d.kernel().fvar(x_fv);
+            let hx_fv = d.fresh_fvar();
+            let hx_ty = d.le(a, x);
+            let body = result(d, x);
+            let with_hx = d.lam_fv(hx_fv, hx_ty, body);
+            d.lam_fv(x_fv, nat, with_hx)
+        };
+        let minor_refl = {
+            let strict = d.lt(a, a);
+            let equal = d.eq(a, a);
+            let refl = d.refl(a);
+            d.const_app(p.logic.or_inr, &[strict, equal, refl])
+        };
+        let minor_step = {
+            let x_fv = d.fresh_fvar();
+            let x = d.kernel().fvar(x_fv);
+            let hx_fv = d.fresh_fvar();
+            let hx = d.kernel().fvar(hx_fv);
+            let hx_ty = d.le(a, x);
+            let ih_fv = d.fresh_fvar();
+            let ih_ty = result(d, x);
+            let sx = d.succ(x);
+            let strict = d.lt(a, sx);
+            let equal = d.eq(a, sx);
+            let lifted = d.lemma(p.le_succ_succ, &[a, x, hx]);
+            let body = d.const_app(p.logic.or_inl, &[strict, equal, lifted]);
+            let with_ih = d.lam_fv(ih_fv, ih_ty, body);
+            let with_hx = d.lam_fv(hx_fv, hx_ty, with_ih);
+            d.lam_fv(x_fv, nat, with_hx)
+        };
+        let body = d.const_app(p.le_rec, &[a, motive, minor_refl, minor_step, b, hyp]);
+        let conclusion = result(d, b);
+        let stmt = d.arrow(hyp_ty, conclusion);
+        let proof = d.lam_fv(hyp_fv, hyp_ty, body);
+        (stmt, proof)
+    })?;
 
     // le_total : ∀ a b, Or (Le a b) (Le b a)
     // Structural induction on both naturals; the successor/successor branch

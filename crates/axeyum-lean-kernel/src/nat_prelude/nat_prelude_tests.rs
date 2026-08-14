@@ -112,6 +112,7 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.le_succ_succ,
         p.le_of_succ_le_succ,
         p.le_trans,
+        p.lt_or_eq_of_le,
         p.le_total,
         p.not_succ_le_zero,
         p.le_antisymm,
@@ -614,6 +615,15 @@ fn order_is_total() {
     let interval_name = f.name("three_mem_two_five");
     f.declare_theorem(interval_name, interval, interval_proof)
         .unwrap_or_else(|e| panic!("closed interval membership should admit: {}", f.explain(&e)));
+
+    let two_le_five = f.lemma(p.le_add_right, &[two, three]);
+    let split = f.lemma(p.lt_or_eq_of_le, &[two, five, two_le_five]);
+    f.k.infer(split).unwrap_or_else(|e| {
+        panic!(
+            "strict-or-equal decomposition should infer: {}",
+            f.explain(&e)
+        )
+    });
 }
 
 #[test]
@@ -1589,7 +1599,29 @@ fn kernel_rejects_broken_proof_terms() {
         rejections += 1;
     }
 
-    assert_eq!(rejections, 33, "every negative control must be rejected");
+    // NC34 — order decomposition retains its lower endpoint.
+    {
+        let name = f.name("nc34_lt_or_eq_wrong_lower_endpoint");
+        let two = f.num(2);
+        let three = f.num(3);
+        let five = f.num(5);
+        let bound = f.lemma(p.le_add_right, &[two, three]);
+        let proof = f.lemma(p.lt_or_eq_of_le, &[two, five, bound]);
+        let wrong_lt = f.lt(three, five);
+        let wrong_eq = f.eq(three, five);
+        let bad = f.const_app(p.logic.or, &[wrong_lt, wrong_eq]);
+        let err = f
+            .declare_theorem(name, bad, proof)
+            .expect_err("NC34: order decomposition must retain both endpoints");
+        println!(
+            "NC34 (wrong strict-or-equal endpoint) rejected:\n  {}",
+            f.explain(&err)
+        );
+        assert!(!f.k.environment().contains(name));
+        rejections += 1;
+    }
+
+    assert_eq!(rejections, 34, "every negative control must be rejected");
 }
 
 /// The build is deterministic: two independent kernels render every promised
@@ -1612,7 +1644,7 @@ fn the_build_is_deterministic() {
     assert_eq!(first, second, "the prelude build must be deterministic");
     assert_eq!(
         first.len(),
-        10 + 60,
+        10 + 61,
         "every promised definition and theorem must be rendered"
     );
 }

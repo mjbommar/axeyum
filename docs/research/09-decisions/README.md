@@ -473,3 +473,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [0415](adr-0415-relational-closed-nat-intervals.md) | Relational closed Nat intervals | accepted |
 | [0416](adr-0416-closed-form-rado-witness-colour-two.md) | Closed-form Rado witness colour two | accepted |
 | [0417](adr-0417-checked-rado-sharpness-certificate.md) | Checked Rado sharpness certificate | accepted |
+| [0418](adr-0418-constructive-strict-or-equal-order-decomposition.md) | Constructive strict-or-equal order decomposition | accepted |
