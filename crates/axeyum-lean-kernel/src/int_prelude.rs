@@ -1,67 +1,85 @@
 //! The **integer prelude** (ADR-0042, the integer-arithmetic / Diophantine
-//! reconstruction foundation): an axiomatized **discretely-ordered commutative
-//! ring**, declared into a [`Kernel`]'s environment through the trusted
-//! [`Kernel::add_declaration`](crate::Kernel::add_declaration) gate.
+//! reconstruction foundation): `ℤ` **constructed** over the proved `ℕ`
+//! development, declared into a [`Kernel`]'s environment through the trusted
+//! [`Kernel::add_declaration`](crate::Kernel::add_declaration) and
+//! [`Kernel::add_inductive`](crate::Kernel::add_inductive) gates.
 //!
 //! This is the trusted base for reconstructing **integer-cut / Diophantine
 //! `QF_LIA`** refutations into kernel-checked Lean terms. An integer-infeasibility
 //! proof is, at bottom, a chain of order/ring steps over `ℤ` that — unlike the
 //! ordered field `R` — can invoke **discreteness** (`no_int_between`: there is no
 //! integer strictly between `0` and `1`) to refute a residue `g·m = r` with
-//! `0 < r < g`. The axioms here are exactly the (sound, ℤ-faithful) rules such a
-//! chain invokes. The kernel type-checks every axiom's **type** at admission (a
-//! malformed axiom set is rejected by [`Kernel::add_declaration`]), and the
-//! accompanying tests then build real proof **terms** on top of the axioms and
-//! `infer`-check them — so the kernel genuinely verifies the reasoning.
+//! `0 < r < g`.
+//!
+//! ## Constructed, not asserted
+//!
+//! `Int` is a real inductive over `Nat` — `Int.ofNat n` for `n ≥ 0`,
+//! `Int.negSucc n` for `-(n+1)` — and every operation is a checked definition
+//! by structural recursion (see [`defs`]). The laws are then **theorems** the
+//! kernel type-checks at admission, proved from the axiom-free `Nat` prelude;
+//! what remains asserted is listed in [`build_int_prelude`] and is exactly the
+//! part this development has not yet derived.
+//!
+//! The normalized-constructor representation is deliberate. A setoid quotient
+//! of `ℕ × ℕ` is the other textbook route, and in *this* kernel it is strictly
+//! worse: `Quot`/`Quot.sound` are admitted as `Declaration::Quotient`, i.e. as
+//! trusted declarations, so every integer theorem's
+//! [`axiom_footprint`](crate::Kernel::axiom_footprint) would name `Quot.sound`
+//! forever. With `ofNat`/`negSucc` each integer has exactly one representative,
+//! `Eq Int` is ordinary propositional equality, and a derived law's footprint
+//! is genuinely empty.
 //!
 //! ## What is declared
 //!
 //! The carrier lives in `Type = Sort 1`; the relations land in `Prop = Sort 0`:
 //!
-//! - **Carrier** `Int : Type` (an opaque [`Declaration::Axiom`] of type
-//!   `Sort 1`).
-//! - **Operations** (each an `axiom`): `add : Int → Int → Int`, `mul : Int → Int → Int`,
-//!   `neg : Int → Int`, `zero : Int`, `one : Int`.
-//! - **Relations** (each an `axiom`): `le : Int → Int → Prop`, `lt : Int → Int → Prop`.
-//! - **Order axioms**: `le_refl`, `le_trans`, `lt_irrefl` (via `Not`),
-//!   `lt_trans`, `lt_of_lt_of_le`, `lt_of_le_of_lt`, `le_of_lt`.
-//! - **Additive axioms**: `add_le_add`, `add_comm`, `add_assoc`, `add_zero`
-//!   (via `Eq` at the `Int` level), `add_neg` (via `Eq`),
-//!   `add_lt_add_of_le_of_lt`.
-//! - **Multiplicative/ring axioms**: `mul_comm`, `mul_assoc`, `mul_one`,
-//!   `mul_zero`, `left_distrib`, `mul_le_mul_of_nonneg_left`, `mul_nonneg`.
-//! - **Constant axiom**: `zero_lt_one : lt zero one`.
-//! - **Discreteness axiom** (the integer-specific fact the field `R` lacks):
-//!   `no_int_between : ∀ (x : Int), Not (And (lt zero x) (lt x one))`.
-//! - **Linear-order / antisymmetry axioms** (genuine ℤ theorems):
-//!   `le_total : ∀ (a b : Int), Or (le a b) (le b a)` and
-//!   `lt_of_le_of_ne : ∀ (a b : Int), le a b → Not (Eq Int a b) → lt a b`.
-//! - **Euclidean decomposition** (ADR-0104):
-//!   `euclidean_decomposition : ∀ t k, 0 < k → ∃ q r,
-//!   t = k*q+r ∧ 0≤r ∧ r<k`. This states the integer theorem needed by
-//!   quotient/remainder proofs without adding division or modulo operations.
-//! - **Decidable integer equality** (ADR-0106):
-//!   `eq_em : ∀ a b, Or (Eq Int a b) (Not (Eq Int a b))`. This is the
-//!   integer-specific decision theorem needed by equality partitions, not
-//!   unrestricted propositional excluded middle.
+//! - **Carrier** `Int : Type`, an inductive with constructors
+//!   `Int.ofNat : Nat → Int` and `Int.negSucc : Nat → Int` and a
+//!   kernel-generated recursor `Int.rec`.
+//! - **Normalizers** `Int.negOfNat : Nat → Int` and
+//!   `Int.subNatNat : Nat → Nat → Int` (definitions).
+//! - **Operations** (definitions): `add`, `mul`, `neg`, `zero`, `one`.
+//! - **Relations** (definitions): `le`, `lt`, each by cases into `Nat.le` /
+//!   `Nat.lt`.
+//! - **Laws**: the order, additive, multiplicative and discreteness facts named
+//!   on the [`IntPrelude`] fields below — theorems where derived, axioms
+//!   otherwise.
 //!
-//! Each axiom's exact type is documented on the corresponding [`IntPrelude`]
-//! field. The propositional connectives (`Not`, `And`, `Eq`, `False`) come from
-//! [`build_logic_prelude`](crate::build_logic_prelude); `Eq` is used at universe
-//! `u := 1` because the carrier is `Sort 1`.
-#![allow(clippy::similar_names, clippy::many_single_char_names)]
+//! The propositional connectives (`Not`, `And`, `Or`, `Eq`, `Exists`, `False`)
+//! come from [`build_logic_prelude`](crate::build_logic_prelude); `Eq` is used
+//! at universe `u := 1` because the carrier is `Sort 1`.
+// Proof scripts are long, straight-line term constructions with short
+// mathematical names; splitting them would obscure the derivation they mirror.
+// `type_complexity` / `too_many_arguments`: the declaration and case-analysis
+// helpers take `&dyn Fn(&mut IntDev<'_>, …) -> …` builders, which no type alias
+// can shorten without hiding the signature — the same trade-off `nat_prelude`
+// documents.
+#![allow(
+    clippy::many_single_char_names,
+    clippy::similar_names,
+    clippy::too_many_arguments,
+    clippy::too_many_lines,
+    clippy::type_complexity,
+    clippy::large_types_passed_by_value
+)]
 
-use crate::env::Declaration;
 use crate::expr::ExprId;
 use crate::name::NameId;
-use crate::{
-    BinderInfo, Kernel, KernelError, LogicPrelude, PreludeKey, PreludeValue, build_logic_prelude,
-};
+use crate::nat_prelude::{NatPrelude, build_nat_prelude};
+use crate::{Kernel, KernelError, LogicPrelude, PreludeKey, PreludeValue};
 
-/// The interned names produced by [`build_int_prelude`]: the carrier, the
-/// ring/order operations, and every axiom of the discretely-ordered commutative
-/// ring, plus the embedded [`LogicPrelude`] (so callers can build
-/// `False`/`Not`/`And`/`Eq` terms).
+mod algebra;
+mod defs;
+mod ops;
+mod order;
+mod statements;
+
+use ops::IntDev;
+
+/// The interned names produced by [`build_int_prelude`]: the carrier, its
+/// constructors and recursor, the ring/order operations, and every law of the
+/// discretely-ordered commutative ring, plus the embedded [`NatPrelude`] the
+/// construction rests on.
 ///
 /// Handles belong to the kernel they were built in; do not mix them across
 /// kernels. All fields are public so tests and callers can build `Const` terms
@@ -70,10 +88,26 @@ use crate::{
 pub struct IntPrelude {
     /// The embedded logical prelude (`False`, `Not`, `And`, `Eq`, …).
     pub logic: LogicPrelude,
+    /// The natural-number development `Int` is constructed over. Its own axiom
+    /// footprint is empty, which is what makes a derived integer law's
+    /// footprint empty too.
+    pub nat: NatPrelude,
 
-    // --- carrier + operations ------------------------------------------------
-    /// `Int : Type` (i.e. `Int : Sort 1`) — the discretely-ordered ring's carrier.
+    // --- carrier + constructors ---------------------------------------------
+    /// `Int : Type` (i.e. `Int : Sort 1`) — the inductive carrier.
     pub z: NameId,
+    /// `Int.ofNat : Nat → Int` — the non-negative constructor.
+    pub of_nat: NameId,
+    /// `Int.negSucc : Nat → Int` — the constructor for `-(n+1)`.
+    pub neg_succ: NameId,
+    /// `Int.rec` — the kernel-generated recursor.
+    pub rec: NameId,
+    /// `Int.negOfNat : Nat → Int` — the integer `-n` for a natural `n`.
+    pub neg_of_nat: NameId,
+    /// `Int.subNatNat : Nat → Nat → Int` — the normalized difference `m - n`.
+    pub sub_nat_nat: NameId,
+
+    // --- operations ----------------------------------------------------------
     /// `add : Int → Int → Int`.
     pub add: NameId,
     /// `mul : Int → Int → Int`.
@@ -89,7 +123,7 @@ pub struct IntPrelude {
     /// `lt : Int → Int → Prop`.
     pub lt: NameId,
 
-    // --- order axioms --------------------------------------------------------
+    // --- order laws ----------------------------------------------------------
     /// `le_refl : ∀ (a : Int), le a a`.
     pub le_refl: NameId,
     /// `le_trans : ∀ (a b c : Int), le a b → le b c → le a c`.
@@ -105,7 +139,7 @@ pub struct IntPrelude {
     /// `le_of_lt : ∀ (a b : Int), lt a b → le a b`.
     pub le_of_lt: NameId,
 
-    // --- additive axioms -----------------------------------------------------
+    // --- additive laws -------------------------------------------------------
     /// `add_le_add : ∀ (a b c d : Int), le a b → le c d → le (add a c) (add b d)`.
     pub add_le_add: NameId,
     /// `add_comm : ∀ (a b : Int), Eq Int (add a b) (add b a)`.
@@ -118,23 +152,14 @@ pub struct IntPrelude {
     pub add_neg: NameId,
     /// `add_lt_add_of_le_of_lt :
     /// ∀ (a b c d : Int), le a b → lt c d → lt (add a c) (add b d)`.
-    ///
-    /// Summing a non-strict inequality with a strict one yields a strict result.
     pub add_lt_add_of_le_of_lt: NameId,
 
-    // --- scaling axiom -------------------------------------------------------
+    // --- multiplicative / ring laws -----------------------------------------
     /// `mul_le_mul_of_nonneg_left :
-    /// ∀ (c a b : Int), le zero c → le a b → le (mul c a) (mul c b)`.
+    /// ∀ (a b c : Int), le zero a → le b c → le (mul a b) (mul a c)`.
     pub mul_le_mul_of_nonneg_left: NameId,
-
-    // --- constant axiom ------------------------------------------------------
     /// `zero_lt_one : lt zero one`.
     pub zero_lt_one: NameId,
-
-    // --- multiplicative commutative ring axioms ------------------------------
-    // Each is a standard theorem of a commutative ordered ring (true in ℤ), and
-    // completes the multiplicative fragment. Each axiom's type is type-checked at
-    // admission.
     /// `mul_comm : ∀ (a b : Int), Eq Int (mul a b) (mul b a)`.
     pub mul_comm: NameId,
     /// `mul_assoc : ∀ (a b c : Int), Eq Int (mul (mul a b) c) (mul a (mul b c))`.
@@ -147,640 +172,151 @@ pub struct IntPrelude {
     /// ∀ (a b c : Int), Eq Int (mul a (add b c)) (add (mul a b) (mul a c))`.
     pub left_distrib: NameId,
     /// `mul_nonneg : ∀ (a b : Int), le zero a → le zero b → le zero (mul a b)`.
-    /// The product of nonnegatives is nonnegative.
     pub mul_nonneg: NameId,
 
-    // --- discreteness axiom (ADR-0042, the integer-specific fact) ------------
-    /// `no_int_between : ∀ (x : Int), Not (And (lt zero x) (lt x one))` — there is
-    /// no integer strictly between `0` and `1`. This is the single axiom the
-    /// field `R` lacks, and the crux of every integer-infeasibility proof.
+    // --- discreteness and decision laws --------------------------------------
+    /// `no_int_between : ∀ (x : Int), Not (And (lt zero x) (lt x one))`.
     pub no_int_between: NameId,
-
-    // --- linear-order / antisymmetry axioms (genuine ℤ theorems) -------------
-    /// `le_total : ∀ (a b : Int), Or (le a b) (le b a)` — `ℤ` is a **total**
-    /// (linear) order: any two integers are comparable. A standard theorem of
-    /// `ℤ`; used to case-split `m' ≤ 1` vs `1 ≤ m'` in the discreteness close.
+    /// `le_total : ∀ (a b : Int), Or (le a b) (le b a)`.
     pub le_total: NameId,
-    /// `lt_of_le_of_ne : ∀ (a b : Int), le a b → Not (Eq Int a b) → lt a b` — a
-    /// non-strict inequality that is **not** an equality is strict. A standard
-    /// theorem of any partial order (`le` antisymmetric); used to strengthen
-    /// `m' ≤ 1` to `m' < 1` (and `0 ≤ m'` to `0 < m'`) once equality is excluded.
+    /// `lt_of_le_of_ne :
+    /// ∀ (a b : Int), le a b → Not (Eq Int a b) → lt a b`.
     pub lt_of_le_of_ne: NameId,
-
-    // --- Euclidean decomposition (ADR-0104) ---------------------------------
-    /// `euclidean_decomposition : ∀ (t k : Int), lt zero k →
-    /// Exists Int (fun q => Exists Int (fun r =>
-    /// And (Eq Int t (add (mul k q) r)) (And (le zero r) (lt r k))))`.
-    ///
-    /// This is the standard Euclidean division theorem for positive integer
-    /// moduli. It deliberately exposes only quotient/remainder existence and
-    /// bounds, not `div` or `mod` operations or their zero-divisor semantics.
+    /// `euclidean_decomposition : ∀ t k, 0 < k → ∃ q r, t = k*q+r ∧ 0 ≤ r ∧ r < k`.
     pub euclidean_decomposition: NameId,
-
-    // --- decidable equality (ADR-0106) --------------------------------------
     /// `eq_em : ∀ (a b : Int), Or (Eq Int a b) (Not (Eq Int a b))`.
-    ///
-    /// Integer equality is decidable. Keeping this theorem on `Int` avoids adding
-    /// unrestricted classical excluded middle to the logic prelude.
     pub eq_em: NameId,
 }
 
-/// Declare the axiomatized **discretely-ordered commutative ring** into
-/// `kernel`'s environment, returning the [`IntPrelude`] of interned names. The
-/// shared logical prelude is built or exact-validated first. Every declaration
-/// in this package is namespaced under `Int`.
+/// Intern every name the integer development uses. Interning is not
+/// declaration: this runs before anything is admitted, so the proof scripts can
+/// name a law they have not yet reached.
+fn intern_names(kernel: &mut Kernel, nat: NatPrelude) -> IntPrelude {
+    let anon = kernel.anon();
+    let z = kernel.name_str(anon, "Int");
+    let child = |kernel: &mut Kernel, name: &str| kernel.name_str(z, name);
+    IntPrelude {
+        logic: nat.logic,
+        nat,
+        z,
+        of_nat: child(kernel, "ofNat"),
+        neg_succ: child(kernel, "negSucc"),
+        rec: child(kernel, "rec"),
+        neg_of_nat: child(kernel, "negOfNat"),
+        sub_nat_nat: child(kernel, "subNatNat"),
+        add: child(kernel, "add"),
+        mul: child(kernel, "mul"),
+        neg: child(kernel, "neg"),
+        zero: child(kernel, "zero"),
+        one: child(kernel, "one"),
+        le: child(kernel, "le"),
+        lt: child(kernel, "lt"),
+        le_refl: child(kernel, "le_refl"),
+        le_trans: child(kernel, "le_trans"),
+        lt_irrefl: child(kernel, "lt_irrefl"),
+        lt_trans: child(kernel, "lt_trans"),
+        lt_of_lt_of_le: child(kernel, "lt_of_lt_of_le"),
+        lt_of_le_of_lt: child(kernel, "lt_of_le_of_lt"),
+        le_of_lt: child(kernel, "le_of_lt"),
+        add_le_add: child(kernel, "add_le_add"),
+        add_comm: child(kernel, "add_comm"),
+        add_assoc: child(kernel, "add_assoc"),
+        add_zero: child(kernel, "add_zero"),
+        add_neg: child(kernel, "add_neg"),
+        add_lt_add_of_le_of_lt: child(kernel, "add_lt_add_of_le_of_lt"),
+        mul_le_mul_of_nonneg_left: child(kernel, "mul_le_mul_of_nonneg_left"),
+        zero_lt_one: child(kernel, "zero_lt_one"),
+        mul_comm: child(kernel, "mul_comm"),
+        mul_assoc: child(kernel, "mul_assoc"),
+        mul_one: child(kernel, "mul_one"),
+        mul_zero: child(kernel, "mul_zero"),
+        left_distrib: child(kernel, "left_distrib"),
+        mul_nonneg: child(kernel, "mul_nonneg"),
+        no_int_between: child(kernel, "no_int_between"),
+        le_total: child(kernel, "le_total"),
+        lt_of_le_of_ne: child(kernel, "lt_of_le_of_ne"),
+        euclidean_decomposition: child(kernel, "euclidean_decomposition"),
+        eq_em: child(kernel, "eq_em"),
+    }
+}
+
+/// One asserted law: its name, the arity of its `Int` telescope, and its
+/// statement builder. Kept as data so the undischarged remainder is a *list*
+/// that shrinks visibly as laws move to [`order`] and [`algebra`].
+type AssertedLaw = (NameId, usize, fn(&mut IntDev<'_>, &[ExprId]) -> ExprId);
+
+/// Assert the laws this development has not derived.
 ///
-/// Every axiom is admitted through the **trusted**
-/// [`Kernel::add_declaration`](crate::Kernel::add_declaration) gate, which
-/// type-checks the axiom's type (it must itself be a `Sort`); a malformed axiom
-/// type is returned as [`KernelError`]. A green build of this function therefore
-/// *is* a proof that the axiom set is well-formed.
+/// Each entry here is a standing debt: it is a true fact about `ℤ` that the
+/// construction below *could* prove, and does not yet.
+fn declare_remaining_axioms(d: &mut IntDev<'_>) -> Result<(), KernelError> {
+    let p = d.int();
+    let laws: [AssertedLaw; 8] = [
+        (p.add_assoc, 3, statements::add_assoc),
+        (p.mul_assoc, 3, statements::mul_assoc),
+        (p.left_distrib, 3, statements::left_distrib),
+        (p.add_le_add, 4, statements::add_le_add),
+        (
+            p.add_lt_add_of_le_of_lt,
+            4,
+            statements::add_lt_add_of_le_of_lt,
+        ),
+        (
+            p.mul_le_mul_of_nonneg_left,
+            3,
+            statements::mul_le_mul_of_nonneg_left,
+        ),
+        (
+            p.euclidean_decomposition,
+            2,
+            statements::euclidean_decomposition,
+        ),
+        // Kept last: `prelude_composition`'s rollback test conflicts on this
+        // name precisely because it is the final member admitted.
+        (p.eq_em, 2, statements::eq_em),
+    ];
+    for (name, arity, statement) in laws {
+        d.int_axiom(name, arity, &statement)?;
+    }
+    Ok(())
+}
+
+/// Build the integer prelude: `ℤ` constructed over the proved `ℕ` development,
+/// plus the laws not yet derived.
 ///
-/// Repeated construction validates and returns the exact registered package.
-/// Any failure rolls back all Int declarations admitted by this invocation.
+/// The build is **atomic and cached**: a second call on the same kernel returns
+/// the same handles without re-declaring, and any failure rolls back every
+/// `Int` declaration this invocation admitted.
 ///
 /// # Errors
 ///
 /// Returns the trusted gate's rejection or an exact-package conflict. A failed
 /// Int build leaves the pre-call environment unchanged.
-#[allow(clippy::too_many_lines)]
 pub fn build_int_prelude(kernel: &mut Kernel) -> Result<IntPrelude, KernelError> {
-    let logic = build_logic_prelude(kernel)?;
+    let nat = build_nat_prelude(kernel)?;
     if let Some(PreludeValue::Int(prelude)) = kernel.cached_prelude(PreludeKey::Int)? {
-        return Ok(prelude);
+        return Ok(*prelude);
     }
     let checkpoint = kernel.prelude_checkpoint();
     let built = (|| -> Result<IntPrelude, KernelError> {
-        let anon = kernel.anon();
-
-        // --- carrier Int : Type (= Sort 1) -----------------------------------------
-        let z = kernel.name_str(anon, "Int");
-        {
-            let one_lvl = {
-                let zl = kernel.level_zero();
-                kernel.level_succ(zl)
-            };
-            let type1 = kernel.sort(one_lvl);
-            kernel.add_declaration(Declaration::Axiom {
-                name: z,
-                uparams: vec![],
-                ty: type1,
-            })?;
-        }
-
-        // `Int` as a type expression.
-        let z_ty = kernel.const_(z, vec![]);
-        // Helper: the arrow `dom → cod` (a non-dependent Pi).
-        let arrow = |kernel: &mut Kernel, dom: ExprId, cod: ExprId| -> ExprId {
-            let anon = kernel.anon();
-            kernel.pi(anon, dom, cod, BinderInfo::Default)
-        };
-
-        // --- operations ----------------------------------------------------------
-        // add, mul : Int → Int → Int.
-        let bin_op_ty = {
-            let inner = arrow(kernel, z_ty, z_ty);
-            arrow(kernel, z_ty, inner)
-        };
-        let add = declare_axiom(kernel, z, "add", bin_op_ty)?;
-        let mul = declare_axiom(kernel, z, "mul", bin_op_ty)?;
-        // neg : Int → Int.
-        let neg = {
-            let ty = arrow(kernel, z_ty, z_ty);
-            declare_axiom(kernel, z, "neg", ty)?
-        };
-        // zero, one : Int.
-        let zero = declare_axiom(kernel, z, "zero", z_ty)?;
-        let one = declare_axiom(kernel, z, "one", z_ty)?;
-        // le, lt : Int → Int → Prop.
-        let rel_ty = {
-            let prop = kernel.sort_zero();
-            let inner = arrow(kernel, z_ty, prop);
-            arrow(kernel, z_ty, inner)
-        };
-        let le = declare_axiom(kernel, z, "le", rel_ty)?;
-        let lt = declare_axiom(kernel, z, "lt", rel_ty)?;
-
-        // ----- small term builders over the now-declared symbols -----------------
-        // We build axiom *types* as Pi-telescopes over `Int`. Inside a telescope of
-        // `n` binders, the binder introduced `k`-th from the outside is at de Bruijn
-        // index `n - 1 - k` when referenced at the *innermost* point. We always
-        // reference variables at the innermost (result) position of each axiom, so
-        // the helpers below take explicit `BVar` ids the caller computes.
-
-        // `le x y` and `lt x y` (relation applications) as Prop terms.
-        let app2 = |kernel: &mut Kernel, f: NameId, x: ExprId, y: ExprId| -> ExprId {
-            let fc = kernel.const_(f, vec![]);
-            let e = kernel.app(fc, x);
-            kernel.app(e, y)
-        };
-
-        // --- le_refl : ∀ (a : Int), le a a -----------------------------------------
-        let le_refl = {
-            let a0 = kernel.bvar(0);
-            let a0b = kernel.bvar(0);
-            let body = app2(kernel, le, a0, a0b);
-            let ty = kernel.pi(anon, z_ty, body, BinderInfo::Default);
-            declare_axiom(kernel, z, "le_refl", ty)?
-        };
-
-        // --- le_trans : ∀ (a b c : Int), le a b → le b c → le a c ------------------
-        let le_trans = {
-            // Depths from the result position (under a,b,c,h1,h2): a=4,b=3,c=2.
-            let a4 = kernel.bvar(4);
-            let c2 = kernel.bvar(2);
-            let result = app2(kernel, le, a4, c2);
-            // h2 : le b c  — under a,b,c,h1 → b=2, c=1.
-            let b2 = kernel.bvar(2);
-            let c1 = kernel.bvar(1);
-            let h2_dom = app2(kernel, le, b2, c1);
-            let after_h2 = kernel.pi(anon, h2_dom, result, BinderInfo::Default);
-            // h1 : le a b — under a,b,c → a=2, b=1.
-            let a2 = kernel.bvar(2);
-            let b1 = kernel.bvar(1);
-            let h1_dom = app2(kernel, le, a2, b1);
-            let after_h1 = kernel.pi(anon, h1_dom, after_h2, BinderInfo::Default);
-            // ∀ a b c.
-            let ty = telescope_z(kernel, anon, z_ty, 3, after_h1);
-            declare_axiom(kernel, z, "le_trans", ty)?
-        };
-
-        // --- lt_irrefl : ∀ (a : Int), Not (lt a a) ---------------------------------
-        let lt_irrefl = {
-            let a0 = kernel.bvar(0);
-            let a0b = kernel.bvar(0);
-            let lt_aa = app2(kernel, lt, a0, a0b);
-            let not_c = kernel.const_(logic.not, vec![]);
-            let not_lt = kernel.app(not_c, lt_aa);
-            let ty = kernel.pi(anon, z_ty, not_lt, BinderInfo::Default);
-            declare_axiom(kernel, z, "lt_irrefl", ty)?
-        };
-
-        // --- lt_trans : ∀ (a b c : Int), lt a b → lt b c → lt a c ------------------
-        let lt_trans = {
-            let ty = trans_axiom_ty(kernel, anon, z_ty, lt, lt, lt);
-            declare_axiom(kernel, z, "lt_trans", ty)?
-        };
-
-        // --- lt_of_lt_of_le : ∀ (a b c : Int), lt a b → le b c → lt a c ------------
-        let lt_of_lt_of_le = {
-            let ty = trans_axiom_ty(kernel, anon, z_ty, lt, le, lt);
-            declare_axiom(kernel, z, "lt_of_lt_of_le", ty)?
-        };
-
-        // --- lt_of_le_of_lt : ∀ (a b c : Int), le a b → lt b c → lt a c ------------
-        let lt_of_le_of_lt = {
-            let ty = trans_axiom_ty(kernel, anon, z_ty, le, lt, lt);
-            declare_axiom(kernel, z, "lt_of_le_of_lt", ty)?
-        };
-
-        // --- le_of_lt : ∀ (a b : Int), lt a b → le a b -----------------------------
-        let le_of_lt = {
-            // Under a,b,h: a=2,b=1 (result le a b); h: lt a b under a,b → a=1,b=0.
-            let a2 = kernel.bvar(2);
-            let b1 = kernel.bvar(1);
-            let result = app2(kernel, le, a2, b1);
-            let a1 = kernel.bvar(1);
-            let b0 = kernel.bvar(0);
-            let h_dom = app2(kernel, lt, a1, b0);
-            let after_h = kernel.pi(anon, h_dom, result, BinderInfo::Default);
-            let ty = telescope_z(kernel, anon, z_ty, 2, after_h);
-            declare_axiom(kernel, z, "le_of_lt", ty)?
-        };
-
-        // --- add_le_add : ∀ (a b c d : Int), le a b → le c d → le (add a c)(add b d) -
-        let add_le_add = {
-            // Under a,b,c,d,h1,h2 the result references: a=5,b=4,c=3,d=2.
-            let a5 = kernel.bvar(5);
-            let b4 = kernel.bvar(4);
-            let c3 = kernel.bvar(3);
-            let d2 = kernel.bvar(2);
-            let add_ac = app2(kernel, add, a5, c3);
-            let add_bd = app2(kernel, add, b4, d2);
-            let result = app2(kernel, le, add_ac, add_bd);
-            // h2 : le c d — under a,b,c,d,h1 → c=2,d=1.
-            let c2 = kernel.bvar(2);
-            let d1 = kernel.bvar(1);
-            let h2_dom = app2(kernel, le, c2, d1);
-            let after_h2 = kernel.pi(anon, h2_dom, result, BinderInfo::Default);
-            // h1 : le a b — under a,b,c,d → a=3,b=2.
-            let a3 = kernel.bvar(3);
-            let b2 = kernel.bvar(2);
-            let h1_dom = app2(kernel, le, a3, b2);
-            let after_h1 = kernel.pi(anon, h1_dom, after_h2, BinderInfo::Default);
-            let ty = telescope_z(kernel, anon, z_ty, 4, after_h1);
-            declare_axiom(kernel, z, "add_le_add", ty)?
-        };
-
-        // Equality builder `Eq.{1} Int x y` (carrier is Sort 1 ⇒ u := 1).
-        let one_lvl = {
-            let zl = kernel.level_zero();
-            kernel.level_succ(zl)
-        };
-        let eq_z = |kernel: &mut Kernel, x: ExprId, y: ExprId| -> ExprId {
-            let eqc = kernel.const_(logic.eq, vec![one_lvl]);
-            let z_ty = kernel.const_(z, vec![]);
-            let e = kernel.app(eqc, z_ty);
-            let e = kernel.app(e, x);
-            kernel.app(e, y)
-        };
-
-        // --- add_comm : ∀ (a b : Int), Eq Int (add a b) (add b a) --------------------
-        let add_comm = {
-            // Under a,b: a=1,b=0.
-            let a1 = kernel.bvar(1);
-            let b0 = kernel.bvar(0);
-            let add_ab = app2(kernel, add, a1, b0);
-            let a1b = kernel.bvar(1);
-            let b0b = kernel.bvar(0);
-            let add_ba = app2(kernel, add, b0b, a1b);
-            let body = eq_z(kernel, add_ab, add_ba);
-            let ty = telescope_z(kernel, anon, z_ty, 2, body);
-            declare_axiom(kernel, z, "add_comm", ty)?
-        };
-
-        // --- add_assoc : ∀ (a b c : Int), Eq Int (add (add a b) c) (add a (add b c)) -
-        let add_assoc = {
-            // Under a,b,c: a=2,b=1,c=0.
-            let a2 = kernel.bvar(2);
-            let b1 = kernel.bvar(1);
-            let c0 = kernel.bvar(0);
-            let add_ab = app2(kernel, add, a2, b1);
-            let lhs = app2(kernel, add, add_ab, c0);
-            let a2b = kernel.bvar(2);
-            let b1b = kernel.bvar(1);
-            let c0b = kernel.bvar(0);
-            let add_bc = app2(kernel, add, b1b, c0b);
-            let rhs = app2(kernel, add, a2b, add_bc);
-            let body = eq_z(kernel, lhs, rhs);
-            let ty = telescope_z(kernel, anon, z_ty, 3, body);
-            declare_axiom(kernel, z, "add_assoc", ty)?
-        };
-
-        // --- add_zero : ∀ (a : Int), Eq Int (add a zero) a ---------------------------
-        let add_zero = {
-            let a0 = kernel.bvar(0);
-            let zero_c = kernel.const_(zero, vec![]);
-            let add_az = app2(kernel, add, a0, zero_c);
-            let a0b = kernel.bvar(0);
-            let body = eq_z(kernel, add_az, a0b);
-            let ty = kernel.pi(anon, z_ty, body, BinderInfo::Default);
-            declare_axiom(kernel, z, "add_zero", ty)?
-        };
-
-        // --- add_neg : ∀ (a : Int), Eq Int (add a (neg a)) zero ----------------------
-        let add_neg = {
-            let a0 = kernel.bvar(0);
-            let neg_c = kernel.const_(neg, vec![]);
-            let a0b = kernel.bvar(0);
-            let neg_a = kernel.app(neg_c, a0b);
-            let add_an = app2(kernel, add, a0, neg_a);
-            let zero_c = kernel.const_(zero, vec![]);
-            let body = eq_z(kernel, add_an, zero_c);
-            let ty = kernel.pi(anon, z_ty, body, BinderInfo::Default);
-            declare_axiom(kernel, z, "add_neg", ty)?
-        };
-
-        // --- add_lt_add_of_le_of_lt :
-        //   ∀ (a b c d : Int), le a b → lt c d → lt (add a c)(add b d).
-        // Same telescope/de-Bruijn shape as `add_le_add`, but the second hypothesis
-        // and the conclusion are `lt`.
-        let add_lt_add_of_le_of_lt = {
-            // Under a,b,c,d,h1,h2 the result references: a=5,b=4,c=3,d=2.
-            let a5 = kernel.bvar(5);
-            let b4 = kernel.bvar(4);
-            let c3 = kernel.bvar(3);
-            let d2 = kernel.bvar(2);
-            let add_ac = app2(kernel, add, a5, c3);
-            let add_bd = app2(kernel, add, b4, d2);
-            let result = app2(kernel, lt, add_ac, add_bd);
-            // h2 : lt c d — under a,b,c,d,h1 → c=2,d=1.
-            let c2 = kernel.bvar(2);
-            let d1 = kernel.bvar(1);
-            let h2_dom = app2(kernel, lt, c2, d1);
-            let after_h2 = kernel.pi(anon, h2_dom, result, BinderInfo::Default);
-            // h1 : le a b — under a,b,c,d → a=3,b=2.
-            let a3 = kernel.bvar(3);
-            let b2 = kernel.bvar(2);
-            let h1_dom = app2(kernel, le, a3, b2);
-            let after_h1 = kernel.pi(anon, h1_dom, after_h2, BinderInfo::Default);
-            let ty = telescope_z(kernel, anon, z_ty, 4, after_h1);
-            declare_axiom(kernel, z, "add_lt_add_of_le_of_lt", ty)?
-        };
-
-        // --- mul_le_mul_of_nonneg_left :
-        //       ∀ (c a b : Int), le zero c → le a b → le (mul c a) (mul c b) --------
-        let mul_le_mul_of_nonneg_left = {
-            // Binder order c,a,b then h1: le zero c, h2: le a b. Result under
-            // c,a,b,h1,h2: c=4,a=3,b=2.
-            let c4 = kernel.bvar(4);
-            let a3 = kernel.bvar(3);
-            let b2 = kernel.bvar(2);
-            let c4b = kernel.bvar(4);
-            let mul_ca = app2(kernel, mul, c4, a3);
-            let mul_cb = app2(kernel, mul, c4b, b2);
-            let result = app2(kernel, le, mul_ca, mul_cb);
-            // h2 : le a b — under c,a,b,h1 → a=2,b=1.
-            let a2 = kernel.bvar(2);
-            let b1 = kernel.bvar(1);
-            let h2_dom = app2(kernel, le, a2, b1);
-            let after_h2 = kernel.pi(anon, h2_dom, result, BinderInfo::Default);
-            // h1 : le zero c — under c,a,b → c=2.
-            let zero_c = kernel.const_(zero, vec![]);
-            let c2 = kernel.bvar(2);
-            let h1_dom = app2(kernel, le, zero_c, c2);
-            let after_h1 = kernel.pi(anon, h1_dom, after_h2, BinderInfo::Default);
-            let ty = telescope_z(kernel, anon, z_ty, 3, after_h1);
-            declare_axiom(kernel, z, "mul_le_mul_of_nonneg_left", ty)?
-        };
-
-        // --- zero_lt_one : lt zero one -------------------------------------------
-        let zero_lt_one = {
-            let zero_c = kernel.const_(zero, vec![]);
-            let one_c = kernel.const_(one, vec![]);
-            let ty = app2(kernel, lt, zero_c, one_c);
-            declare_axiom(kernel, z, "zero_lt_one", ty)?
-        };
-
-        // --- mul_comm : ∀ (a b : Int), Eq Int (mul a b) (mul b a) --------------------
-        // (Same shape as `add_comm`, with `mul` for `add`.) Under a,b: a=1,b=0.
-        let mul_comm = {
-            let a1 = kernel.bvar(1);
-            let b0 = kernel.bvar(0);
-            let mul_ab = app2(kernel, mul, a1, b0);
-            let a1b = kernel.bvar(1);
-            let b0b = kernel.bvar(0);
-            let mul_ba = app2(kernel, mul, b0b, a1b);
-            let body = eq_z(kernel, mul_ab, mul_ba);
-            let ty = telescope_z(kernel, anon, z_ty, 2, body);
-            declare_axiom(kernel, z, "mul_comm", ty)?
-        };
-
-        // --- mul_assoc : ∀ (a b c : Int), Eq Int (mul (mul a b) c)(mul a (mul b c)) --
-        // (Same shape as `add_assoc`.) Under a,b,c: a=2,b=1,c=0.
-        let mul_assoc = {
-            let a2 = kernel.bvar(2);
-            let b1 = kernel.bvar(1);
-            let c0 = kernel.bvar(0);
-            let mul_ab = app2(kernel, mul, a2, b1);
-            let lhs = app2(kernel, mul, mul_ab, c0);
-            let a2b = kernel.bvar(2);
-            let b1b = kernel.bvar(1);
-            let c0b = kernel.bvar(0);
-            let mul_bc = app2(kernel, mul, b1b, c0b);
-            let rhs = app2(kernel, mul, a2b, mul_bc);
-            let body = eq_z(kernel, lhs, rhs);
-            let ty = telescope_z(kernel, anon, z_ty, 3, body);
-            declare_axiom(kernel, z, "mul_assoc", ty)?
-        };
-
-        // --- mul_one : ∀ (a : Int), Eq Int (mul a one) a -----------------------------
-        // (Same shape as `add_zero`, with `mul`/`one` for `add`/`zero`.)
-        let mul_one = {
-            let a0 = kernel.bvar(0);
-            let one_c = kernel.const_(one, vec![]);
-            let mul_ao = app2(kernel, mul, a0, one_c);
-            let a0b = kernel.bvar(0);
-            let body = eq_z(kernel, mul_ao, a0b);
-            let ty = kernel.pi(anon, z_ty, body, BinderInfo::Default);
-            declare_axiom(kernel, z, "mul_one", ty)?
-        };
-
-        // --- mul_zero : ∀ (a : Int), Eq Int (mul a zero) zero ------------------------
-        let mul_zero = {
-            let a0 = kernel.bvar(0);
-            let zero_c = kernel.const_(zero, vec![]);
-            let mul_az = app2(kernel, mul, a0, zero_c);
-            let zero_cb = kernel.const_(zero, vec![]);
-            let body = eq_z(kernel, mul_az, zero_cb);
-            let ty = kernel.pi(anon, z_ty, body, BinderInfo::Default);
-            declare_axiom(kernel, z, "mul_zero", ty)?
-        };
-
-        // --- left_distrib :
-        //       ∀ (a b c : Int), Eq Int (mul a (add b c)) (add (mul a b)(mul a c)) ----
-        // Under a,b,c: a=2,b=1,c=0.
-        let left_distrib = {
-            let a2 = kernel.bvar(2);
-            let b1 = kernel.bvar(1);
-            let c0 = kernel.bvar(0);
-            let add_bc = app2(kernel, add, b1, c0);
-            let lhs = app2(kernel, mul, a2, add_bc);
-            let a2b = kernel.bvar(2);
-            let b1b = kernel.bvar(1);
-            let mul_ab = app2(kernel, mul, a2b, b1b);
-            let a2c = kernel.bvar(2);
-            let c0b = kernel.bvar(0);
-            let mul_ac = app2(kernel, mul, a2c, c0b);
-            let rhs = app2(kernel, add, mul_ab, mul_ac);
-            let body = eq_z(kernel, lhs, rhs);
-            let ty = telescope_z(kernel, anon, z_ty, 3, body);
-            declare_axiom(kernel, z, "left_distrib", ty)?
-        };
-
-        // --- mul_nonneg : ∀ (a b : Int), le zero a → le zero b → le zero (mul a b) -
-        // Telescope a,b then h1,h2. Result under a,b,h1,h2: a=3,b=2; h2 under
-        // a,b,h1: b=1; h1 under a,b: a=1.
-        let mul_nonneg = {
-            let zero_res = kernel.const_(zero, vec![]);
-            let a3 = kernel.bvar(3);
-            let b2 = kernel.bvar(2);
-            let mul_ab = app2(kernel, mul, a3, b2);
-            let result = app2(kernel, le, zero_res, mul_ab);
-            // h2 : le zero b — under a,b,h1 → b=1.
-            let zero_h2 = kernel.const_(zero, vec![]);
-            let b1 = kernel.bvar(1);
-            let h2_dom = app2(kernel, le, zero_h2, b1);
-            let after_h2 = kernel.pi(anon, h2_dom, result, BinderInfo::Default);
-            // h1 : le zero a — under a,b → a=1.
-            let zero_h1 = kernel.const_(zero, vec![]);
-            let a1 = kernel.bvar(1);
-            let h1_dom = app2(kernel, le, zero_h1, a1);
-            let after_h1 = kernel.pi(anon, h1_dom, after_h2, BinderInfo::Default);
-            let ty = telescope_z(kernel, anon, z_ty, 2, after_h1);
-            declare_axiom(kernel, z, "mul_nonneg", ty)?
-        };
-
-        // --- no_int_between : ∀ (x : Int), Not (And (lt zero x) (lt x one)) --------
-        // The discreteness axiom (ADR-0042): there is no integer strictly between
-        // `0` and `1`. Under the single binder `x` (de Bruijn 0):
-        //   lt zero x = app2(lt, zero, x);  lt x one = app2(lt, x, one);
-        //   And P Q   = (And P) Q  (the logic prelude's `And`, two explicit Props);
-        //   Not R     = (Not) R    (the logic prelude's `Not`, one explicit Prop).
-        let no_int_between = {
-            let zero_c = kernel.const_(zero, vec![]);
-            let x0 = kernel.bvar(0);
-            let lt_0x = app2(kernel, lt, zero_c, x0);
-            let x0b = kernel.bvar(0);
-            let one_c = kernel.const_(one, vec![]);
-            let lt_x1 = app2(kernel, lt, x0b, one_c);
-            // And (lt zero x) (lt x one) = (And (lt zero x)) (lt x one).
-            let and_c = kernel.const_(logic.and, vec![]);
-            let and_p = kernel.app(and_c, lt_0x);
-            let and_pq = kernel.app(and_p, lt_x1);
-            // Not (And …) = Not applied to the conjunction.
-            let not_c = kernel.const_(logic.not, vec![]);
-            let not_and = kernel.app(not_c, and_pq);
-            let ty = kernel.pi(anon, z_ty, not_and, BinderInfo::Default);
-            declare_axiom(kernel, z, "no_int_between", ty)?
-        };
-
-        // --- le_total : ∀ (a b : Int), Or (le a b) (le b a) ------------------------
-        // `ℤ` is a total order. Under binders a,b (de Bruijn a=1, b=0):
-        //   Or (le a b) (le b a) = (Or (le a b)) (le b a)  (the logic prelude's `Or`,
-        //   two explicit Props).
-        let le_total = {
-            let a1 = kernel.bvar(1);
-            let b0 = kernel.bvar(0);
-            let le_ab = app2(kernel, le, a1, b0);
-            let a1b = kernel.bvar(1);
-            let b0b = kernel.bvar(0);
-            let le_ba = app2(kernel, le, b0b, a1b);
-            let or_c = kernel.const_(logic.or, vec![]);
-            let or_p = kernel.app(or_c, le_ab);
-            let or_pq = kernel.app(or_p, le_ba);
-            let ty = telescope_z(kernel, anon, z_ty, 2, or_pq);
-            declare_axiom(kernel, z, "le_total", ty)?
-        };
-
-        // --- lt_of_le_of_ne : ∀ (a b : Int), le a b → Not (Eq Int a b) → lt a b ------
-        // A non-strict inequality that is not an equality is strict.
-        // Binder order a,b then h1 : le a b, h2 : Not (Eq Int a b). Result under
-        // a,b,h1,h2: a=3,b=2; h2 (Not(Eq a b)) under a,b,h1: a=2,b=1; h1 (le a b)
-        // under a,b: a=1,b=0.
-        let lt_of_le_of_ne = {
-            let a3 = kernel.bvar(3);
-            let b2 = kernel.bvar(2);
-            let result = app2(kernel, lt, a3, b2);
-            // h2 : Not (Eq Int a b) — under a,b,h1 → a=2,b=1.
-            let a2 = kernel.bvar(2);
-            let b1 = kernel.bvar(1);
-            let eq_ab = eq_z(kernel, a2, b1);
-            let not_c = kernel.const_(logic.not, vec![]);
-            let not_eq = kernel.app(not_c, eq_ab);
-            let after_h2 = kernel.pi(anon, not_eq, result, BinderInfo::Default);
-            // h1 : le a b — under a,b → a=1,b=0.
-            let a1 = kernel.bvar(1);
-            let b0 = kernel.bvar(0);
-            let h1_dom = app2(kernel, le, a1, b0);
-            let after_h1 = kernel.pi(anon, h1_dom, after_h2, BinderInfo::Default);
-            let ty = telescope_z(kernel, anon, z_ty, 2, after_h1);
-            declare_axiom(kernel, z, "lt_of_le_of_ne", ty)?
-        };
-
-        // --- euclidean_decomposition :
-        //       ∀ t k, lt zero k → ∃ q r, t = k*q+r ∧ 0≤r ∧ r<k ------------
-        // Free variables keep this dependent type readable; `abstract_fvars`
-        // performs the required de-Bruijn shifting under each predicate/telescope.
-        let euclidean_decomposition = {
-            let t_id = 10_000;
-            let k_id = 10_001;
-            let q_id = 10_002;
-            let r_id = 10_003;
-            let t = kernel.fvar(t_id);
-            let k = kernel.fvar(k_id);
-            let q = kernel.fvar(q_id);
-            let r = kernel.fvar(r_id);
-            let kq = app2(kernel, mul, k, q);
-            let kq_r = app2(kernel, add, kq, r);
-            let recomposition = eq_z(kernel, t, kq_r);
-            let zero_c = kernel.const_(zero, vec![]);
-            let nonnegative = app2(kernel, le, zero_c, r);
-            let below_modulus = app2(kernel, lt, r, k);
-            let and_c = kernel.const_(logic.and, vec![]);
-            let bounds = {
-                let e = kernel.app(and_c, nonnegative);
-                kernel.app(e, below_modulus)
-            };
-            let facts = {
-                let and_c = kernel.const_(logic.and, vec![]);
-                let e = kernel.app(and_c, recomposition);
-                kernel.app(e, bounds)
-            };
-
-            let r_body = kernel.abstract_fvars(facts, &[r_id]);
-            let r_pred = kernel.lam(anon, z_ty, r_body, BinderInfo::Default);
-            let one_lvl = {
-                let zero_lvl = kernel.level_zero();
-                kernel.level_succ(zero_lvl)
-            };
-            let exists_c = kernel.const_(logic.exists_, vec![one_lvl]);
-            let exists_r = {
-                let e = kernel.app(exists_c, z_ty);
-                kernel.app(e, r_pred)
-            };
-            let q_body = kernel.abstract_fvars(exists_r, &[q_id]);
-            let q_pred = kernel.lam(anon, z_ty, q_body, BinderInfo::Default);
-            let exists_q = {
-                let exists_c = kernel.const_(logic.exists_, vec![one_lvl]);
-                let e = kernel.app(exists_c, z_ty);
-                kernel.app(e, q_pred)
-            };
-            let zero_c = kernel.const_(zero, vec![]);
-            let positive = app2(kernel, lt, zero_c, k);
-            let after_positive = kernel.pi(anon, positive, exists_q, BinderInfo::Default);
-            let k_body = kernel.abstract_fvars(after_positive, &[k_id]);
-            let after_k = kernel.pi(anon, z_ty, k_body, BinderInfo::Default);
-            let t_body = kernel.abstract_fvars(after_k, &[t_id]);
-            let ty = kernel.pi(anon, z_ty, t_body, BinderInfo::Default);
-            declare_axiom(kernel, z, "euclidean_decomposition", ty)?
-        };
-
-        // --- eq_em : ∀ a b, Or (Eq Int a b) (Not (Eq Int a b)) ---------------------
-        let eq_em = {
-            let a1 = kernel.bvar(1);
-            let b0 = kernel.bvar(0);
-            let equality = eq_z(kernel, a1, b0);
-            let not_c = kernel.const_(logic.not, vec![]);
-            let not_equality = kernel.app(not_c, equality);
-            let or_c = kernel.const_(logic.or, vec![]);
-            let disjunction = kernel.app(or_c, equality);
-            let disjunction = kernel.app(disjunction, not_equality);
-            let ty = telescope_z(kernel, anon, z_ty, 2, disjunction);
-            declare_axiom(kernel, z, "eq_em", ty)?
-        };
-
-        Ok(IntPrelude {
-            logic,
-            z,
-            add,
-            mul,
-            neg,
-            zero,
-            one,
-            le,
-            lt,
-            le_refl,
-            le_trans,
-            lt_irrefl,
-            lt_trans,
-            lt_of_lt_of_le,
-            lt_of_le_of_lt,
-            le_of_lt,
-            add_le_add,
-            add_comm,
-            add_assoc,
-            add_zero,
-            add_neg,
-            add_lt_add_of_le_of_lt,
-            mul_le_mul_of_nonneg_left,
-            zero_lt_one,
-            mul_comm,
-            mul_assoc,
-            mul_one,
-            mul_zero,
-            left_distrib,
-            mul_nonneg,
-            no_int_between,
-            le_total,
-            lt_of_le_of_ne,
-            euclidean_decomposition,
-            eq_em,
-        })
+        let prelude = intern_names(kernel, nat);
+        let mut d = IntDev::new(kernel, prelude);
+        defs::declare_carrier(&mut d)?;
+        defs::declare_normalizers(&mut d)?;
+        defs::declare_operations(&mut d)?;
+        defs::declare_order_definitions(&mut d)?;
+        order::declare_order_theorems(&mut d)?;
+        algebra::declare_algebra_theorems(&mut d)?;
+        declare_remaining_axioms(&mut d)?;
+        Ok(prelude)
     })();
     match built {
         Ok(prelude) => {
-            kernel.register_prelude(PreludeKey::Int, PreludeValue::Int(prelude), checkpoint);
+            kernel.register_prelude(
+                PreludeKey::Int,
+                PreludeValue::Int(Box::new(prelude)),
+                checkpoint,
+            );
             Ok(prelude)
         }
         Err(error) => {
@@ -788,69 +324,6 @@ pub fn build_int_prelude(kernel: &mut Kernel) -> Result<IntPrelude, KernelError>
             Err(error)
         }
     }
-}
-
-/// Wrap `body` in `n` `∀ (_ : Int)` binders, returning `Π (Int)^n, body`.
-fn telescope_z(
-    kernel: &mut Kernel,
-    anon: NameId,
-    z_ty: ExprId,
-    n: usize,
-    mut body: ExprId,
-) -> ExprId {
-    for _ in 0..n {
-        body = kernel.pi(anon, z_ty, body, BinderInfo::Default);
-    }
-    body
-}
-
-/// Build the shared 3-place "transitivity" axiom type
-/// `∀ (a b c : Int), rel1 a b → rel2 b c → rel3 a c` for relation symbols
-/// `rel1`/`rel2`/`rel3`.
-fn trans_axiom_ty(
-    kernel: &mut Kernel,
-    anon: NameId,
-    z_ty: ExprId,
-    rel1: NameId,
-    rel2: NameId,
-    rel3: NameId,
-) -> ExprId {
-    let app2 = |kernel: &mut Kernel, f: NameId, x: ExprId, y: ExprId| -> ExprId {
-        let fc = kernel.const_(f, vec![]);
-        let e = kernel.app(fc, x);
-        kernel.app(e, y)
-    };
-    // Result under a,b,c,h1,h2: a=4,c=2.
-    let a4 = kernel.bvar(4);
-    let c2 = kernel.bvar(2);
-    let result = app2(kernel, rel3, a4, c2);
-    // h2 : rel2 b c — under a,b,c,h1 → b=2,c=1.
-    let b2 = kernel.bvar(2);
-    let c1 = kernel.bvar(1);
-    let h2_dom = app2(kernel, rel2, b2, c1);
-    let after_h2 = kernel.pi(anon, h2_dom, result, BinderInfo::Default);
-    // h1 : rel1 a b — under a,b,c → a=2,b=1.
-    let a2 = kernel.bvar(2);
-    let b1 = kernel.bvar(1);
-    let h1_dom = app2(kernel, rel1, a2, b1);
-    let after_h1 = kernel.pi(anon, h1_dom, after_h2, BinderInfo::Default);
-    telescope_z(kernel, anon, z_ty, 3, after_h1)
-}
-
-/// Declare an axiom `name : ty` through the trusted gate and return its name.
-fn declare_axiom(
-    kernel: &mut Kernel,
-    parent: NameId,
-    name: &str,
-    ty: ExprId,
-) -> Result<NameId, KernelError> {
-    let nm = kernel.name_str(parent, name);
-    kernel.add_declaration(Declaration::Axiom {
-        name: nm,
-        uparams: vec![],
-        ty,
-    })?;
-    Ok(nm)
 }
 
 #[cfg(test)]

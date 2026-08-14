@@ -1,12 +1,25 @@
 //! Proof-term tests for the integer prelude (ADR-0042, the integer-arithmetic /
 //! Diophantine reconstruction foundation).
 //!
-//! These tests build proof terms over the axiomatized discretely-ordered
-//! commutative ring and `infer`-check them. A test passes only if the trusted
-//! type-checker genuinely accepts the proof. The headline test exercises the
-//! integer-specific **discreteness** axiom: given `0 < x` and `x < 1`,
-//! `no_int_between x (And.intro _ _ h0 h1) : False`. We also assert every axiom
-//! admits, every axiom type infers to a `Sort`, and the build is deterministic.
+//! These tests build proof terms over the discretely-ordered commutative ring
+//! `ℤ` — now *constructed* over the axiom-free `Nat` development — and
+//! `infer`-check them. A test passes only if the trusted type-checker genuinely
+//! accepts the proof. The headline test exercises the integer-specific
+//! **discreteness** law: given `0 < x` and `x < 1`,
+//! `no_int_between x (And.intro _ _ h0 h1) : False`.
+//!
+//! Three assertions carry the construction's weight, and each rules out a
+//! different way it could be hollow:
+//!
+//! - [`the_operations_compute_their_normal_forms`] — the operations are the
+//!   right ones. Type-checking `add_comm` does not pin `Int.add` down; a wrong
+//!   `add` would satisfy a wrong-but-provable commutativity.
+//! - [`derived_laws_have_no_axiom_footprint`] — the derived laws did not
+//!   quietly reach for one of the laws still asserted. Only the footprint
+//!   catches that; the proof would type-check either way.
+//! - [`the_only_trusted_declarations_are_the_asserted_laws`] — nothing was
+//!   admitted without a checked body behind the construction's back, including
+//!   no `Quotient` primitive.
 #![allow(clippy::similar_names, clippy::many_single_char_names)]
 
 use crate::env::Declaration;
@@ -90,8 +103,24 @@ fn int_prelude_admits_all_declarations() {
     let mut k = Kernel::new();
     let p = build_int_prelude(&mut k).expect("Int prelude must build");
 
+    // The carrier is an inductive with two constructors and a recursor; the
+    // operations are checked definitions. None of these is asserted.
+    for name in [p.z, p.of_nat, p.neg_succ, p.rec] {
+        assert!(
+            k.environment().contains(name),
+            "int prelude should declare {}",
+            k.display_name(name)
+        );
+        assert!(
+            !matches!(
+                k.environment().get(name).unwrap(),
+                Declaration::Axiom { .. }
+            ),
+            "{} must not be an Axiom — the carrier is constructed",
+            k.display_name(name)
+        );
+    }
     for name in [
-        p.z,
         p.add,
         p.mul,
         p.neg,
@@ -99,44 +128,35 @@ fn int_prelude_admits_all_declarations() {
         p.one,
         p.le,
         p.lt,
-        p.le_refl,
-        p.le_trans,
-        p.lt_irrefl,
-        p.lt_trans,
-        p.lt_of_lt_of_le,
-        p.lt_of_le_of_lt,
-        p.le_of_lt,
-        p.add_le_add,
-        p.add_comm,
-        p.add_assoc,
-        p.add_zero,
-        p.add_neg,
-        p.add_lt_add_of_le_of_lt,
-        p.mul_le_mul_of_nonneg_left,
-        p.zero_lt_one,
-        p.mul_comm,
-        p.mul_assoc,
-        p.mul_one,
-        p.mul_zero,
-        p.left_distrib,
-        p.mul_nonneg,
-        p.no_int_between,
-        p.le_total,
-        p.lt_of_le_of_ne,
-        p.euclidean_decomposition,
-        p.eq_em,
+        p.neg_of_nat,
+        p.sub_nat_nat,
     ] {
         assert!(
-            k.environment().contains(name),
-            "int prelude should declare {}",
+            matches!(
+                k.environment().get(name).unwrap(),
+                Declaration::Definition { .. }
+            ),
+            "{} should be a checked Definition",
             k.display_name(name)
         );
+    }
+    for name in derived_laws(&p) {
+        assert!(
+            matches!(
+                k.environment().get(name).unwrap(),
+                Declaration::Theorem { .. }
+            ),
+            "{} should be a checked Theorem",
+            k.display_name(name)
+        );
+    }
+    for name in asserted_laws(&p) {
         assert!(
             matches!(
                 k.environment().get(name).unwrap(),
                 Declaration::Axiom { .. }
             ),
-            "{} should be an Axiom",
+            "{} is not derived yet, so it should still be an Axiom",
             k.display_name(name)
         );
     }
@@ -145,6 +165,104 @@ fn int_prelude_admits_all_declarations() {
     assert!(k.environment().contains(p.logic.not));
     assert!(k.environment().contains(p.logic.and));
     assert!(k.environment().contains(p.logic.and_intro));
+}
+
+/// The integer laws this development **derives** from the axiom-free `Nat`
+/// prelude. Each must be a `Theorem` with an empty axiom footprint.
+fn derived_laws(p: &IntPrelude) -> [crate::NameId; 18] {
+    [
+        p.le_refl,
+        p.le_trans,
+        p.lt_irrefl,
+        p.lt_trans,
+        p.lt_of_lt_of_le,
+        p.lt_of_le_of_lt,
+        p.le_of_lt,
+        p.le_total,
+        p.zero_lt_one,
+        p.no_int_between,
+        p.lt_of_le_of_ne,
+        p.add_zero,
+        p.add_comm,
+        p.add_neg,
+        p.mul_zero,
+        p.mul_one,
+        p.mul_comm,
+        p.mul_nonneg,
+    ]
+}
+
+/// The integer laws still **asserted**. This list is the lane's standing debt;
+/// it is expected to shrink and must never grow.
+fn asserted_laws(p: &IntPrelude) -> [crate::NameId; 8] {
+    [
+        p.add_assoc,
+        p.mul_assoc,
+        p.left_distrib,
+        p.add_le_add,
+        p.add_lt_add_of_le_of_lt,
+        p.mul_le_mul_of_nonneg_left,
+        p.eq_em,
+        p.euclidean_decomposition,
+    ]
+}
+
+/// Every derived law's trusted closure is **empty** — not merely "smaller".
+/// A theorem that silently reached for one of the remaining assumptions would
+/// still type-check; only the footprint catches it.
+#[test]
+fn derived_laws_have_no_axiom_footprint() {
+    let mut k = Kernel::new();
+    let p = build_int_prelude(&mut k).expect("Int prelude must build");
+    for name in derived_laws(&p) {
+        let footprint = k.axiom_footprint(name);
+        assert!(
+            footprint.is_empty(),
+            "{} should rest on no axiom, but rests on {:?}",
+            k.display_name(name),
+            footprint
+                .iter()
+                .map(|a| k.display_name(*a).to_string())
+                .collect::<Vec<_>>()
+        );
+    }
+}
+
+/// The environment carries exactly the asserted laws and nothing else that was
+/// admitted without a proof: no axioms crept in, and no `Quotient` primitive
+/// was admitted (the reason `Int` is a normalized inductive rather than a
+/// setoid quotient of `ℕ × ℕ`).
+#[test]
+fn the_only_trusted_declarations_are_the_asserted_laws() {
+    use std::collections::BTreeSet;
+    let mut k = Kernel::new();
+    let p = build_int_prelude(&mut k).expect("Int prelude must build");
+    let expected: BTreeSet<_> = asserted_laws(&p).into_iter().collect();
+    let mut found = BTreeSet::new();
+    for (_, declaration) in k.environment().iter() {
+        match declaration {
+            Declaration::Axiom { name, .. } => {
+                found.insert(*name);
+            }
+            Declaration::Opaque { name, .. } | Declaration::Quotient { name, .. } => {
+                panic!(
+                    "{} was admitted without a checked proof body",
+                    k.display_name(*name)
+                );
+            }
+            _ => {}
+        }
+    }
+    let unexpected: Vec<_> = found
+        .difference(&expected)
+        .map(|n| k.display_name(*n).to_string())
+        .collect();
+    assert!(unexpected.is_empty(), "unexpected axioms: {unexpected:?}");
+    let missing: Vec<_> = expected
+        .difference(&found)
+        .map(|n| k.display_name(*n).to_string())
+        .collect();
+    assert!(missing.is_empty(), "asserted law not declared: {missing:?}");
 }
 
 /// Every axiom's *type* itself infers to a `Sort` — i.e. the whole axiom set is
@@ -383,4 +501,142 @@ fn build_is_deterministic() {
     let mut k2 = Kernel::new();
     let p2 = build_int_prelude(&mut k2).expect("Int prelude must build");
     assert_eq!(p1, p2, "IntPrelude ids are deterministic");
+}
+
+/// `Int.ofNat n` for `n ≥ 0` and `Int.negSucc (-n-1)` for `n < 0` — the unique
+/// normal form of the integer `n`.
+fn numeral(k: &mut Kernel, p: &IntPrelude, n: i32) -> crate::ExprId {
+    let magnitude = if n >= 0 {
+        u32::try_from(n).expect("non-negative")
+    } else {
+        u32::try_from(-n - 1).expect("negative")
+    };
+    let mut nat = k.const_(p.nat.zero, vec![]);
+    for _ in 0..magnitude {
+        let succ = k.const_(p.nat.succ, vec![]);
+        nat = k.app(succ, nat);
+    }
+    let ctor = if n >= 0 { p.of_nat } else { p.neg_succ };
+    let c = k.const_(ctor, vec![]);
+    k.app(c, nat)
+}
+
+/// The construction **computes**. Type-checking the ring laws does not pin the
+/// operations down — a wrong `Int.add` would still satisfy a wrong-but-provable
+/// `add_comm` — so every case of every operation is evaluated against its
+/// normal form here, including the borrow cases where `subNatNat` has to decide
+/// which constructor the answer lands in.
+#[test]
+fn the_operations_compute_their_normal_forms() {
+    let mut k = Kernel::new();
+    let p = build_int_prelude(&mut k).expect("Int prelude must build");
+
+    let binary = [
+        (p.add, 2, 3, 5),
+        (p.add, 2, -1, 1),
+        (p.add, 1, -3, -2),
+        (p.add, -1, 2, 1),
+        (p.add, -2, -3, -5),
+        (p.add, 3, -3, 0),
+        (p.add, -3, 3, 0),
+        (p.add, 0, 0, 0),
+        (p.add, 0, -4, -4),
+        (p.mul, 2, 3, 6),
+        (p.mul, 2, -3, -6),
+        (p.mul, -2, 3, -6),
+        (p.mul, -2, -3, 6),
+        (p.mul, 0, -3, 0),
+        (p.mul, -3, 0, 0),
+        (p.mul, 1, -4, -4),
+    ];
+    for (operation, left, right, expected) in binary {
+        let a = numeral(&mut k, &p, left);
+        let b = numeral(&mut k, &p, right);
+        let f = k.const_(operation, vec![]);
+        let applied = k.app(f, a);
+        let applied = k.app(applied, b);
+        let want = numeral(&mut k, &p, expected);
+        assert!(
+            k.def_eq(applied, want),
+            "{} {left} {right} should be {expected}",
+            k.display_name(operation)
+        );
+    }
+
+    for (input, expected) in [(0, 0), (3, -3), (-3, 3), (1, -1), (-1, 1)] {
+        let a = numeral(&mut k, &p, input);
+        let f = k.const_(p.neg, vec![]);
+        let applied = k.app(f, a);
+        let want = numeral(&mut k, &p, expected);
+        assert!(k.def_eq(applied, want), "neg {input} should be {expected}");
+    }
+
+    // The two constants are the normal forms they claim to be.
+    let zero = k.const_(p.zero, vec![]);
+    let want = numeral(&mut k, &p, 0);
+    assert!(k.def_eq(zero, want), "Int.zero is Int.ofNat 0");
+    let one = k.const_(p.one, vec![]);
+    let want = numeral(&mut k, &p, 1);
+    assert!(k.def_eq(one, want), "Int.one is Int.ofNat 1");
+}
+
+/// The order relations decide the mixed-sign cases outright: a negative integer
+/// is below every non-negative one, and never the reverse. (The same-sign cases
+/// delegate to `Nat.le`/`Nat.lt`, which the `Nat` prelude's own suite covers.)
+#[test]
+fn the_order_relations_decide_mixed_signs() {
+    let mut k = Kernel::new();
+    let p = build_int_prelude(&mut k).expect("Int prelude must build");
+    let true_ = k.const_(p.logic.true_, vec![]);
+    let false_ = k.const_(p.logic.false_, vec![]);
+
+    for relation in [p.le, p.lt] {
+        for (left, right) in [(-1, 0), (-4, 2), (-1, 7)] {
+            let a = numeral(&mut k, &p, left);
+            let b = numeral(&mut k, &p, right);
+            let f = k.const_(relation, vec![]);
+            let applied = k.app(f, a);
+            let applied = k.app(applied, b);
+            assert!(
+                k.def_eq(applied, true_),
+                "{} {left} {right} should hold outright",
+                k.display_name(relation)
+            );
+            // …and the reverse orientation is refuted outright.
+            let a = numeral(&mut k, &p, right);
+            let b = numeral(&mut k, &p, left);
+            let f = k.const_(relation, vec![]);
+            let applied = k.app(f, a);
+            let applied = k.app(applied, b);
+            assert!(
+                k.def_eq(applied, false_),
+                "{} {right} {left} should be refuted outright",
+                k.display_name(relation)
+            );
+        }
+    }
+}
+
+/// The `Nat` development the construction rests on is itself axiom-free, and
+/// building `Int` on top of it introduces no trusted declaration of its own
+/// beyond the still-asserted laws. This is the property that makes a derived
+/// integer fact's empty footprint mean something.
+#[test]
+fn the_nat_foundation_stays_axiom_free() {
+    let mut k = Kernel::new();
+    let p = build_int_prelude(&mut k).expect("Int prelude must build");
+    for name in [
+        p.nat.add_comm,
+        p.nat.mul_comm,
+        p.nat.le_trans,
+        p.nat.sub_self,
+        p.nat.mul_one,
+        p.nat.le_total,
+    ] {
+        assert!(
+            k.axiom_footprint(name).is_empty(),
+            "{} must stay axiom-free",
+            k.display_name(name)
+        );
+    }
 }

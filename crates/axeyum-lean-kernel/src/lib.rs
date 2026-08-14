@@ -105,7 +105,7 @@ pub(crate) enum PreludeKey {
 pub(crate) enum PreludeValue {
     Logic(LogicPrelude),
     Nat(Box<NatPrelude>),
-    Int(IntPrelude),
+    Int(Box<IntPrelude>),
     Real(ArithPrelude),
     String(StringPrelude),
 }

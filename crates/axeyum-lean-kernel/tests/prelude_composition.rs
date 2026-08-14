@@ -119,7 +119,11 @@ fn all_preludes_compose_repeat_exactly_and_check_a_mixed_nat_int_proof() {
 #[test]
 fn late_reserved_name_conflict_rolls_back_the_entire_attempt() {
     let mut kernel = Kernel::new();
-    build_logic_prelude(&mut kernel).expect("logic prelude must build");
+    // The integer builder's *prerequisites* — the logic prelude and the `Nat`
+    // development `ℤ` is constructed over — are admitted before it takes its
+    // own checkpoint, exactly as the logic prelude always was. Building them
+    // here first is what makes "the entire attempt" mean the `Int` package.
+    build_nat_prelude(&mut kernel).expect("Nat prelude must build");
 
     // `Int.eq_em` is the final member admitted by the integer builder. A wrong
     // pre-existing declaration therefore exercises rollback after the rest of

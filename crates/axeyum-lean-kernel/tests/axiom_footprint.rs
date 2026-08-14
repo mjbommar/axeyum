@@ -22,7 +22,9 @@ fn named(kernel: &Kernel, want: &str) -> axeyum_lean_kernel::NameId {
                 Declaration::Axiom { name, .. }
                 | Declaration::Definition { name, .. }
                 | Declaration::Theorem { name, .. }
-                | Declaration::Opaque { name, .. } => *name,
+                | Declaration::Opaque { name, .. }
+                | Declaration::Inductive { name, .. }
+                | Declaration::Constructor { name, .. } => *name,
                 _ => return None,
             };
             (kernel.display_name(name).to_string() == want).then_some(name)
@@ -75,6 +77,68 @@ fn every_nat_theorem_is_axiom_free() {
     }
 }
 
+/// Build `theorem combined : And (0+1)+1 = 0+(1+1) ∧ (0*1)*1 = 0*(1*1)` from
+/// the two associativity assumptions, so the environment contains one
+/// declaration whose footprint is genuinely *composite*.
+///
+/// Every remaining `Int` assumption now has a one-element footprint (itself) —
+/// the operations became definitions — so without a composite witness this
+/// suite could no longer tell an exact closure from "return the root and stop".
+fn declare_composite_witness(kernel: &mut Kernel) {
+    let int_ty = {
+        let name = named(kernel, "Int");
+        kernel.const_(name, vec![])
+    };
+    let apply = |kernel: &mut Kernel, head: &str, args: &[axeyum_lean_kernel::ExprId]| {
+        let name = named(kernel, head);
+        let mut term = kernel.const_(name, vec![]);
+        for &argument in args {
+            term = kernel.app(term, argument);
+        }
+        term
+    };
+    let zero = apply(kernel, "Int.zero", &[]);
+    let one = apply(kernel, "Int.one", &[]);
+    let equation = |kernel: &mut Kernel, operation: &str| {
+        let inner_left = apply(kernel, operation, &[zero, one]);
+        let left = apply(kernel, operation, &[inner_left, one]);
+        let inner_right = apply(kernel, operation, &[one, one]);
+        let right = apply(kernel, operation, &[zero, inner_right]);
+        let level_zero = kernel.level_zero();
+        let level_one = kernel.level_succ(level_zero);
+        let name = named(kernel, "Eq");
+        let eq = kernel.const_(name, vec![level_one]);
+        let term = kernel.app(eq, int_ty);
+        let term = kernel.app(term, left);
+        kernel.app(term, right)
+    };
+    let additive = equation(kernel, "Int.add");
+    let multiplicative = equation(kernel, "Int.mul");
+    let ty = apply(kernel, "And", &[additive, multiplicative]);
+    let additive_proof = apply(kernel, "Int.add_assoc", &[zero, one, one]);
+    let multiplicative_proof = apply(kernel, "Int.mul_assoc", &[zero, one, one]);
+    let value = apply(
+        kernel,
+        "And.intro",
+        &[
+            additive,
+            multiplicative,
+            additive_proof,
+            multiplicative_proof,
+        ],
+    );
+    let anon = kernel.anon();
+    let name = kernel.name_str(anon, "combined");
+    kernel
+        .add_declaration(Declaration::Theorem {
+            name,
+            uparams: vec![],
+            ty,
+            value,
+        })
+        .expect("the composite witness must type-check");
+}
+
 #[test]
 fn int_footprints_name_only_what_a_declaration_actually_uses() {
     let mut kernel = Kernel::new();
@@ -85,28 +149,41 @@ fn int_footprints_name_only_what_a_declaration_actually_uses() {
         .iter()
         .filter(|(_, d)| matches!(d, Declaration::Axiom { .. }))
         .count();
-    assert_eq!(trusted, 34, "Int prelude axiom population changed");
+    assert_eq!(
+        trusted, 8,
+        "Int prelude axiom population changed -- 26 of the original 34 are now \
+         constructed or derived; a change here is a real result either way"
+    );
+
+    declare_composite_witness(&mut kernel);
 
     // Exact, not a subset check: an over-approximation that happened to contain
     // these would pass a subset assertion while being worthless.
     assert_eq!(
-        footprint_names(&kernel, "Int.add_neg"),
-        vec!["Int", "Int.add", "Int.add_neg", "Int.neg", "Int.zero"],
+        footprint_names(&kernel, "combined"),
+        vec!["Int.add_assoc", "Int.mul_assoc"],
     );
     assert_eq!(
-        footprint_names(&kernel, "Int.add_comm"),
-        vec!["Int", "Int.add", "Int.add_comm"],
+        footprint_names(&kernel, "Int.add_assoc"),
+        vec!["Int.add_assoc"],
     );
+    // Derived from the axiom-free `Nat` development: nothing at all.
+    assert!(footprint_names(&kernel, "Int.add_comm").is_empty());
+    assert!(footprint_names(&kernel, "Int.add_neg").is_empty());
 
-    // The discrimination property, stated directly: two declarations in one
+    // The discrimination property, stated directly: declarations in one
     // environment must be able to have different footprints.
     assert_ne!(
-        footprint_names(&kernel, "Int.add_neg"),
-        footprint_names(&kernel, "Int.add_comm"),
+        footprint_names(&kernel, "combined"),
+        footprint_names(&kernel, "Int.add_assoc"),
+    );
+    assert_ne!(
+        footprint_names(&kernel, "Int.add_assoc"),
+        footprint_names(&kernel, "Int.mul_assoc"),
     );
 
     // ...and no declaration may drag in the whole environment.
-    for name in ["Int.add_neg", "Int.add_comm", "Int.mul_one"] {
+    for name in ["combined", "Int.add_assoc", "Int.mul_one", "Int.eq_em"] {
         let size = footprint_names(&kernel, name).len();
         assert!(
             size < trusted,
@@ -123,5 +200,5 @@ fn an_axiom_rests_on_itself() {
 
     // Matches Lean's `#print axioms` on an axiom. Omitting the root would let a
     // fact cite an axiom as its own axiom-free evidence.
-    assert!(footprint_names(&kernel, "Int.add_comm").contains(&"Int.add_comm".to_owned()));
+    assert!(footprint_names(&kernel, "Int.add_assoc").contains(&"Int.add_assoc".to_owned()));
 }
