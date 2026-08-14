@@ -675,6 +675,64 @@ impl Kernel {
         }
     }
 
+    /// Every declaration `name` rests on that was admitted **without** a checked
+    /// proof — this kernel's answer to Lean's `#print axioms`.
+    ///
+    /// Walks the transitive constant closure from `name` (through each reachable
+    /// declaration's type, and its value for definitions/theorems/opaques) and
+    /// keeps those admitted on trust: [`Declaration::Axiom`],
+    /// [`Declaration::Opaque`] (no proof body to check) and
+    /// [`Declaration::Quotient`] (the quotient primitives — `Quot.sound` is one
+    /// of the three axioms Lean itself reports). An empty result means axiom-free,
+    /// which is the strongest claim this project makes about a theorem.
+    ///
+    /// # Why this is per-theorem and not per-environment
+    ///
+    /// The only footprint available before this was "enumerate the trusted
+    /// declarations in the whole environment" (the `nat_axiom_inventory` example).
+    /// That bounds a theorem's footprint — a proof cannot depend on a declaration
+    /// the environment does not contain — but only bounds it, and the bound is
+    /// useless exactly where it matters: in the `Int` and `Real` preludes, where
+    /// the environment-wide answer is "all 34" or "all 30" for every theorem
+    /// alike. A fact ledger cannot record an honest `axiom_footprint` for a
+    /// non-`Nat` proposition from a bound like that, so an extraction lane
+    /// declined to record ANY integer or real fact rather than guess. This closes
+    /// that: the answer is now specific to the theorem asked about.
+    ///
+    /// Names are returned sorted by rendered name, so the result is stable across
+    /// runs and interning orders and can be committed to an artifact.
+    ///
+    /// A `name` absent from the environment has no dependencies and yields an
+    /// empty footprint; callers wanting to distinguish "axiom-free" from "not
+    /// declared" should check the environment first.
+    pub fn axiom_footprint(&self, name: NameId) -> Vec<NameId> {
+        let mut seen: BTreeSet<NameId> = BTreeSet::new();
+        let mut work = vec![name];
+        seen.insert(name);
+        while let Some(n) = work.pop() {
+            for d in self.decl_deps(n) {
+                if seen.insert(d) {
+                    work.push(d);
+                }
+            }
+        }
+        let mut trusted: Vec<NameId> = seen
+            .into_iter()
+            .filter(|&n| {
+                matches!(
+                    self.environment().get(n),
+                    Some(
+                        Declaration::Axiom { .. }
+                            | Declaration::Opaque { .. }
+                            | Declaration::Quotient { .. }
+                    )
+                )
+            })
+            .collect();
+        trusted.sort_by_key(|&n| self.display_name(n).to_string());
+        trusted
+    }
+
     /// The environment declarations reachable from `roots` (transitively through
     /// each declaration's type and — for definitions/theorems/opaques — value),
     /// in dependency order (a declaration appears after every declaration it
