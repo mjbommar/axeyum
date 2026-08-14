@@ -114,6 +114,7 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.mul_le_mul_left,
         p.le_of_mul_le_mul_left_succ,
         p.le_of_mul_le_mul_left,
+        p.mul_left_cancel_of_pos,
         p.sub_add_cancel,
         p.sub_eq_zero_of_le,
         p.sub_le_iff_le_add,
@@ -668,6 +669,18 @@ fn positive_successor_multiplication_reflects_order() {
     let bounded_name = f.name("cancel_positive_bounded_factor");
     f.declare_theorem(bounded_name, stmt, reflected_from_bound)
         .unwrap_or_else(|e| panic!("bounded positive factor should reflect: {}", f.explain(&e)));
+
+    let product_equality = f.refl(six);
+    let cancelled_equality = f.lemma(
+        p.mul_left_cancel_of_pos,
+        &[three, two, two, positive, product_equality],
+    );
+    f.k.infer(cancelled_equality).unwrap_or_else(|e| {
+        panic!(
+            "positive multiplication equality should cancel: {}",
+            f.explain(&e)
+        )
+    });
 }
 
 /// Divisibility is a real prelude definition, not a test-only proposition:
@@ -1366,7 +1379,32 @@ fn kernel_rejects_broken_proof_terms() {
         rejections += 1;
     }
 
-    assert_eq!(rejections, 27, "every negative control must be rejected");
+    // NC28 — positive multiplication equality cancellation retains endpoints.
+    {
+        let name = f.name("nc28_mul_equality_cancel_wrong_endpoint");
+        let one = f.num(1);
+        let two = f.num(2);
+        let three = f.num(3);
+        let six = f.num(6);
+        let positive = f.lemma(p.le_add_right, &[one, two]);
+        let equality = f.refl(six);
+        let proof = f.lemma(
+            p.mul_left_cancel_of_pos,
+            &[three, two, two, positive, equality],
+        );
+        let bad = f.eq(two, three);
+        let err = f
+            .declare_theorem(name, bad, proof)
+            .expect_err("NC28: multiplication equality cancellation must retain endpoints");
+        println!(
+            "NC28 (wrong cancelled equality endpoint) rejected:\n  {}",
+            f.explain(&err)
+        );
+        assert!(!f.k.environment().contains(name));
+        rejections += 1;
+    }
+
+    assert_eq!(rejections, 28, "every negative control must be rejected");
 }
 
 /// The build is deterministic: two independent kernels render every promised
@@ -1389,7 +1427,7 @@ fn the_build_is_deterministic() {
     assert_eq!(first, second, "the prelude build must be deterministic");
     assert_eq!(
         first.len(),
-        8 + 55,
+        8 + 56,
         "every promised definition and theorem must be rendered"
     );
 }

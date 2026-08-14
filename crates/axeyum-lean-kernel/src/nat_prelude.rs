@@ -259,6 +259,8 @@ pub struct NatPrelude {
     pub le_of_mul_le_mul_left_succ: NameId,
     /// `le_of_mul_le_mul_left : ∀ c a b, Le one c → Le (c*a) (c*b) → Le a b`.
     pub le_of_mul_le_mul_left: NameId,
+    /// `mul_left_cancel_of_pos : ∀ c a b, Le one c → Eq (c*a) (c*b) → Eq a b`.
+    pub mul_left_cancel_of_pos: NameId,
     /// `sub_add_cancel : ∀ m n, Le m n → add (sub n m) m = n`.
     pub sub_add_cancel: NameId,
     /// `sub_eq_zero_of_le : ∀ a b, Le a b → sub a b = zero`.
@@ -374,6 +376,7 @@ pub fn build_nat_prelude(kernel: &mut Kernel) -> Result<NatPrelude, KernelError>
             mul_le_mul_left: kernel.name_str(nat, "mul_le_mul_left"),
             le_of_mul_le_mul_left_succ: kernel.name_str(nat, "le_of_mul_le_mul_left_succ"),
             le_of_mul_le_mul_left: kernel.name_str(nat, "le_of_mul_le_mul_left"),
+            mul_left_cancel_of_pos: kernel.name_str(nat, "mul_left_cancel_of_pos"),
             sub_add_cancel: kernel.name_str(nat, "sub_add_cancel"),
             sub_eq_zero_of_le: kernel.name_str(nat, "sub_eq_zero_of_le"),
             sub_le_iff_le_add: kernel.name_str(nat, "sub_le_iff_le_add"),
@@ -2333,6 +2336,44 @@ fn declare_order(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> 
         let stmt = {
             let with_scaled = d.arrow(scaled_ty, conclusion);
             d.arrow(positive_ty, with_scaled)
+        };
+        (stmt, proof)
+    })?;
+
+    // mul_left_cancel_of_pos :
+    //   ∀ c a b, Le one c → Eq (c*a) (c*b) → Eq a b
+    // Convert equality to bounds in both directions, reflect each through the
+    // proof-positive factor, then apply order antisymmetry.
+    d.theorem(p.mul_left_cancel_of_pos, 3, &|d, v| {
+        let (c, a, b) = (v[0], v[1], v[2]);
+        let one = d.num(1);
+        let positive_ty = d.le(one, c);
+        let positive_fv = d.fresh_fvar();
+        let positive = d.kernel().fvar(positive_fv);
+        let ca = d.mul(c, a);
+        let cb = d.mul(c, b);
+        let equality_ty = d.eq(ca, cb);
+        let equality_fv = d.fresh_fvar();
+        let equality = d.kernel().fvar(equality_fv);
+
+        let ca_le_ca = d.lemma(p.le_refl, &[ca]);
+        let upper_motive = d.eq_motive(ca, &|d, upper| d.le(ca, upper));
+        let ca_le_cb = d.transport(ca, upper_motive, ca_le_ca, cb, equality);
+        let cb_eq_ca = d.symm(ca, cb, equality);
+        let cb_le_cb = d.lemma(p.le_refl, &[cb]);
+        let reverse_motive = d.eq_motive(cb, &|d, upper| d.le(cb, upper));
+        let cb_le_ca = d.transport(cb, reverse_motive, cb_le_cb, ca, cb_eq_ca);
+        let a_le_b = d.lemma(p.le_of_mul_le_mul_left, &[c, a, b, positive, ca_le_cb]);
+        let b_le_a = d.lemma(p.le_of_mul_le_mul_left, &[c, b, a, positive, cb_le_ca]);
+        let body = d.lemma(p.le_antisymm, &[a, b, a_le_b, b_le_a]);
+        let conclusion = d.eq(a, b);
+        let proof = {
+            let with_equality = d.lam_fv(equality_fv, equality_ty, body);
+            d.lam_fv(positive_fv, positive_ty, with_equality)
+        };
+        let stmt = {
+            let with_equality = d.arrow(equality_ty, conclusion);
+            d.arrow(positive_ty, with_equality)
         };
         (stmt, proof)
     })?;

@@ -466,3 +466,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [0408](adr-0408-executable-rewrite-preconditions.md) | Rewrite preconditions are enforced where rewrites are applied | accepted |
 | [0409](adr-0409-exact-rado-witness-range-criterion.md) | Exact Rado witness range criterion | accepted |
 | [0410](adr-0410-proved-nat-order-antisymmetry.md) | Proved Nat order antisymmetry | accepted |
+| [0411](adr-0411-positive-multiplication-equality-cancellation.md) | Positive multiplication equality cancellation | accepted |
