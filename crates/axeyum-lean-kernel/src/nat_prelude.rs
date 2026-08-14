@@ -335,6 +335,9 @@ pub struct NatPrelude {
     /// `Nat.div_mod_same_remainder_mod_eq :
     ///   divMod d a qa r → divMod d b qb r → modEq d a b`.
     pub div_mod_same_remainder_mod_eq: NameId,
+    /// `Nat.div_mod_remainder_eq_of_mod_eq :
+    ///   modEq d a b → divMod d a qa ra → divMod d b qb rb → ra = rb`.
+    pub div_mod_remainder_eq_of_mod_eq: NameId,
     /// `Nat.valuationAt a n e := dvd (a^e) n ∧ Not (dvd (a^(e+1)) n)`.
     pub valuation_at: NameId,
     /// `Nat.dvd_mul : ∀ a q, dvd a (a * q)`.
@@ -481,6 +484,7 @@ pub fn build_nat_prelude(kernel: &mut Kernel) -> Result<NatPrelude, KernelError>
             mod_eq_mul_right: kernel.name_str(nat, "mod_eq_mul_right"),
             mod_eq_mul: kernel.name_str(nat, "mod_eq_mul"),
             div_mod_same_remainder_mod_eq: kernel.name_str(nat, "div_mod_same_remainder_mod_eq"),
+            div_mod_remainder_eq_of_mod_eq: kernel.name_str(nat, "div_mod_remainder_eq_of_mod_eq"),
             valuation_at: kernel.name_str(nat, "valuationAt"),
             dvd_mul: kernel.name_str(nat, "dvd_mul"),
             dvd_add: kernel.name_str(nat, "dvd_add"),
@@ -734,6 +738,7 @@ fn declare_modular_congruence(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), 
     declare_mod_eq_mul_left(d, &p, nat, anon, one)?;
     declare_mod_eq_multiplicative_compatibility(d, &p)?;
     declare_div_mod_same_remainder_mod_eq(d, &p, nat, anon, one)?;
+    declare_div_mod_remainder_eq_of_mod_eq(d, &p, nat, anon, one)?;
     Ok(())
 }
 
@@ -868,6 +873,176 @@ fn declare_div_mod_same_remainder_mod_eq(
         );
         let stmt = d.arrow(left_relation_ty, right_to_target);
         let proof = d.lam_fv(left_relation_fv, left_relation_ty, body);
+        (stmt, proof)
+    })?;
+    Ok(())
+}
+
+fn declare_div_mod_remainder_eq_of_mod_eq(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+    nat: ExprId,
+    anon: NameId,
+    one: LevelId,
+) -> Result<(), KernelError> {
+    let p = *p;
+
+    // div_mod_remainder_eq_of_mod_eq :
+    //   modEq d a b → divMod d a qa ra → divMod d b qb rb → ra = rb
+    // A balanced witness shifts both divisions to the same dividend; relational
+    // uniqueness then compares their remainders.
+    d.theorem(p.div_mod_remainder_eq_of_mod_eq, 7, &|d, values| {
+        let (modulus, left, right, left_quotient, left_remainder, right_quotient, right_remainder) = (
+            values[0], values[1], values[2], values[3], values[4], values[5], values[6],
+        );
+        let congruence_ty = d.mod_eq(modulus, left, right);
+        let left_relation_ty =
+            d.div_mod(modulus, left, left_quotient, left_remainder);
+        let right_relation_ty =
+            d.div_mod(modulus, right, right_quotient, right_remainder);
+        let target = d.eq(left_remainder, right_remainder);
+        let congruence_fv = d.fresh_fvar();
+        let congruence = d.kernel().fvar(congruence_fv);
+        let left_relation_fv = d.fresh_fvar();
+        let left_relation = d.kernel().fvar(left_relation_fv);
+        let right_relation_fv = d.fresh_fvar();
+        let right_relation = d.kernel().fvar(right_relation_fv);
+
+        let outer_predicate = d.mod_eq_outer_predicate(modulus, left, right);
+        let outer_motive = d
+            .kernel()
+            .lam(anon, congruence_ty, target, BinderInfo::Default);
+        let outer_minor = {
+            let left_shift_fv = d.fresh_fvar();
+            let left_shift = d.kernel().fvar(left_shift_fv);
+            let inner_exists =
+                d.mod_eq_inner_exists(modulus, left, right, left_shift);
+            let inner_exists_fv = d.fresh_fvar();
+            let inner_exists_proof = d.kernel().fvar(inner_exists_fv);
+            let inner_predicate =
+                d.mod_eq_inner_predicate(modulus, left, right, left_shift);
+            let inner_motive = d
+                .kernel()
+                .lam(anon, inner_exists, target, BinderInfo::Default);
+            let inner_minor = {
+                let right_shift_fv = d.fresh_fvar();
+                let right_shift = d.kernel().fvar(right_shift_fv);
+                let shifted_left = d.mod_eq_sum(modulus, left, left_shift);
+                let shifted_right = d.mod_eq_sum(modulus, right, right_shift);
+                let witness_equation_ty = d.eq(shifted_left, shifted_right);
+                let witness_equation_fv = d.fresh_fvar();
+                let witness_equation = d.kernel().fvar(witness_equation_fv);
+
+                let shifted_left_quotient = d.add(left_quotient, left_shift);
+                let shifted_right_quotient = d.add(right_quotient, right_shift);
+                let left_division = d.lemma(
+                    p.div_mod_add_multiple,
+                    &[
+                        modulus,
+                        left,
+                        left_quotient,
+                        left_remainder,
+                        left_shift,
+                        left_relation,
+                    ],
+                );
+                let right_division = d.lemma(
+                    p.div_mod_add_multiple,
+                    &[
+                        modulus,
+                        right,
+                        right_quotient,
+                        right_remainder,
+                        right_shift,
+                        right_relation,
+                    ],
+                );
+                let witness_equation_rev =
+                    d.symm(shifted_left, shifted_right, witness_equation);
+                let right_motive_at_shifted_right =
+                    d.eq_motive(shifted_right, &|d, dividend| {
+                        d.div_mod(
+                            modulus,
+                            dividend,
+                            shifted_right_quotient,
+                            right_remainder,
+                        )
+                    });
+                let right_division_at_left = d.transport(
+                    shifted_right,
+                    right_motive_at_shifted_right,
+                    right_division,
+                    shifted_left,
+                    witness_equation_rev,
+                );
+                let unique = d.lemma(
+                    p.div_mod_unique,
+                    &[
+                        modulus,
+                        shifted_left,
+                        shifted_left_quotient,
+                        left_remainder,
+                        shifted_right_quotient,
+                        right_remainder,
+                        left_division,
+                        right_division_at_left,
+                    ],
+                );
+                let quotient_eq_ty =
+                    d.eq(shifted_left_quotient, shifted_right_quotient);
+                let unique_ty = d.const_app(p.logic.and, &[quotient_eq_ty, target]);
+                let unique_motive = d
+                    .kernel()
+                    .lam(anon, unique_ty, target, BinderInfo::Default);
+                let unique_minor = {
+                    let quotient_eq_fv = d.fresh_fvar();
+                    let remainder_eq_fv = d.fresh_fvar();
+                    let remainder_eq = d.kernel().fvar(remainder_eq_fv);
+                    let with_remainder =
+                        d.lam_fv(remainder_eq_fv, target, remainder_eq);
+                    d.lam_fv(quotient_eq_fv, quotient_eq_ty, with_remainder)
+                };
+                let level_zero = d.kernel().level_zero();
+                let and_rec = d.kernel().const_(p.logic.and_rec, vec![level_zero]);
+                let body = d.apply(
+                    and_rec,
+                    &[quotient_eq_ty, target, unique_motive, unique_minor, unique],
+                );
+                let with_equation =
+                    d.lam_fv(witness_equation_fv, witness_equation_ty, body);
+                d.lam_fv(right_shift_fv, nat, with_equation)
+            };
+            let exists_rec = d.kernel().const_(p.logic.exists_rec, vec![one]);
+            let body = d.apply(
+                exists_rec,
+                &[
+                    nat,
+                    inner_predicate,
+                    inner_motive,
+                    inner_minor,
+                    inner_exists_proof,
+                ],
+            );
+            let with_inner = d.lam_fv(inner_exists_fv, inner_exists, body);
+            d.lam_fv(left_shift_fv, nat, with_inner)
+        };
+        let exists_rec = d.kernel().const_(p.logic.exists_rec, vec![one]);
+        let body = d.apply(
+            exists_rec,
+            &[
+                nat,
+                outer_predicate,
+                outer_motive,
+                outer_minor,
+                congruence,
+            ],
+        );
+        let right_to_target = d.arrow(right_relation_ty, target);
+        let left_to_target = d.arrow(left_relation_ty, right_to_target);
+        let stmt = d.arrow(congruence_ty, left_to_target);
+        let with_right = d.lam_fv(right_relation_fv, right_relation_ty, body);
+        let with_left = d.lam_fv(left_relation_fv, left_relation_ty, with_right);
+        let proof = d.lam_fv(congruence_fv, congruence_ty, with_left);
         (stmt, proof)
     })?;
     Ok(())

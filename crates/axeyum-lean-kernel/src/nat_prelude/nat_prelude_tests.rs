@@ -176,6 +176,7 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.mod_eq_mul_right,
         p.mod_eq_mul,
         p.div_mod_same_remainder_mod_eq,
+        p.div_mod_remainder_eq_of_mod_eq,
         p.dvd_mul,
         p.dvd_add,
         p.dvd_add_right_cancel_of_pos,
@@ -940,6 +941,32 @@ fn modular_congruence_is_a_checked_equivalence_relation() {
         .unwrap_or_else(|e| {
             panic!(
                 "same Euclidean remainder should imply congruence: {}",
+                f.explain(&e)
+            )
+        });
+
+    let seven_to_twelve_again = f.concrete_mod_eq(five, seven, twelve, one, zero);
+    let remainder_eq = f.lemma(
+        p.div_mod_remainder_eq_of_mod_eq,
+        &[
+            five,
+            seven,
+            twelve,
+            one,
+            two,
+            two,
+            two,
+            seven_to_twelve_again,
+            left_relation,
+            right_relation,
+        ],
+    );
+    let remainder_eq_ty = f.eq(two, two);
+    let remainder_eq_name = f.name("congruent_dividends_have_equal_remainders");
+    f.declare_theorem(remainder_eq_name, remainder_eq_ty, remainder_eq)
+        .unwrap_or_else(|e| {
+            panic!(
+                "congruent relational divisions should have equal remainders: {}",
                 f.explain(&e)
             )
         });
@@ -2589,7 +2616,63 @@ fn kernel_rejects_broken_proof_terms() {
         rejections += 1;
     }
 
-    assert_eq!(rejections, 56, "every negative control must be rejected");
+    // NC57 — the converse bridge retains both relational remainders.
+    {
+        let name = f.name("nc57_mod_eq_div_mod_wrong_remainder");
+        let zero = f.num(0);
+        let one = f.num(1);
+        let two = f.num(2);
+        let three = f.num(3);
+        let five = f.num(5);
+        let seven = f.num(7);
+        let twelve = f.num(12);
+        let congruence = f.concrete_mod_eq(five, seven, twelve, one, zero);
+        let bound_ty = f.lt(two, five);
+        let bound = f.lemma(p.le_add_right, &[three, two]);
+        let left_product = f.mul(five, one);
+        let left_reconstructed = f.add(left_product, two);
+        let left_equation_ty = f.eq(seven, left_reconstructed);
+        let left_equation = f.refl(seven);
+        let left_relation = f.const_app(
+            p.logic.and_intro,
+            &[left_equation_ty, bound_ty, left_equation, bound],
+        );
+        let right_product = f.mul(five, two);
+        let right_reconstructed = f.add(right_product, two);
+        let right_equation_ty = f.eq(twelve, right_reconstructed);
+        let right_equation = f.refl(twelve);
+        let right_relation = f.const_app(
+            p.logic.and_intro,
+            &[right_equation_ty, bound_ty, right_equation, bound],
+        );
+        let proof = f.lemma(
+            p.div_mod_remainder_eq_of_mod_eq,
+            &[
+                five,
+                seven,
+                twelve,
+                one,
+                two,
+                two,
+                two,
+                congruence,
+                left_relation,
+                right_relation,
+            ],
+        );
+        let bad = f.eq(two, one);
+        let err = f
+            .declare_theorem(name, bad, proof)
+            .expect_err("NC57: converse bridge must retain both remainders");
+        println!(
+            "NC57 (wrong modular remainder equality) rejected:\n  {}",
+            f.explain(&err)
+        );
+        assert!(!f.k.environment().contains(name));
+        rejections += 1;
+    }
+
+    assert_eq!(rejections, 57, "every negative control must be rejected");
 }
 
 /// The build is deterministic: two independent kernels render every promised
@@ -2612,7 +2695,7 @@ fn the_build_is_deterministic() {
     assert_eq!(first, second, "the prelude build must be deterministic");
     assert_eq!(
         first.len(),
-        12 + 83,
+        12 + 84,
         "every promised definition and theorem must be rendered"
     );
 }
