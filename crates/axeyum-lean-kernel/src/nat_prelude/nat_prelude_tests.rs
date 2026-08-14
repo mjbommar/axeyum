@@ -180,6 +180,7 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.mod_eq_iff_div_mod_remainder_eq,
         p.mod_eq_zero_of_dvd,
         p.dvd_of_mod_eq_zero_of_pos,
+        p.mod_eq_zero_iff_dvd,
         p.dvd_mul,
         p.dvd_add,
         p.dvd_add_right_cancel_of_pos,
@@ -1148,6 +1149,39 @@ fn divisibility_introduction_and_addition_are_checked() {
     f.k.infer(recovered_divisibility).unwrap_or_else(|e| {
         panic!(
             "positive congruence to zero should imply divisibility: {}",
+            f.explain(&e)
+        )
+    });
+    let complete_characterization = f.lemma(p.mod_eq_zero_iff_dvd, &[two, ten]);
+    let congruence_ty = f.mod_eq(two, ten, zero);
+    let divisibility_ty = f.dvd(two, ten);
+    let characterization_ty = f.const_app(p.logic.iff, &[congruence_ty, divisibility_ty]);
+    let characterization_name = f.name("ten_mod_two_zero_iff_two_divides_ten");
+    f.declare_theorem(
+        characterization_name,
+        characterization_ty,
+        complete_characterization,
+    )
+    .unwrap_or_else(|e| {
+        panic!(
+            "congruence to zero should characterize divisibility: {}",
+            f.explain(&e)
+        )
+    });
+    let zero_characterization = f.lemma(p.mod_eq_zero_iff_dvd, &[zero, zero]);
+    let zero_congruence_ty = f.mod_eq(zero, zero, zero);
+    let zero_divisibility_ty = f.dvd(zero, zero);
+    let zero_characterization_ty =
+        f.const_app(p.logic.iff, &[zero_congruence_ty, zero_divisibility_ty]);
+    let zero_characterization_name = f.name("zero_mod_zero_zero_iff_zero_divides_zero");
+    f.declare_theorem(
+        zero_characterization_name,
+        zero_characterization_ty,
+        zero_characterization,
+    )
+    .unwrap_or_else(|e| {
+        panic!(
+            "the all-Nat characterization should include modulus zero: {}",
             f.explain(&e)
         )
     });
@@ -2830,7 +2864,29 @@ fn kernel_rejects_broken_proof_terms() {
         rejections += 1;
     }
 
-    assert_eq!(rejections, 60, "every negative control must be rejected");
+    // NC61 — the all-Nat characterization retains the same dividend on both sides.
+    {
+        let name = f.name("nc61_mod_eq_zero_iff_dvd_wrong_value");
+        let zero = f.num(0);
+        let five = f.num(5);
+        let ten = f.num(10);
+        let eleven = f.num(11);
+        let proof = f.lemma(p.mod_eq_zero_iff_dvd, &[five, ten]);
+        let congruence_ty = f.mod_eq(five, ten, zero);
+        let wrong_divides_ty = f.dvd(five, eleven);
+        let bad = f.const_app(p.logic.iff, &[congruence_ty, wrong_divides_ty]);
+        let err = f
+            .declare_theorem(name, bad, proof)
+            .expect_err("NC61: the all-Nat characterization must retain its dividend");
+        println!(
+            "NC61 (wrong all-Nat characterization value) rejected:\n  {}",
+            f.explain(&err)
+        );
+        assert!(!f.k.environment().contains(name));
+        rejections += 1;
+    }
+
+    assert_eq!(rejections, 61, "every negative control must be rejected");
 }
 
 /// The build is deterministic: two independent kernels render every promised
@@ -2853,7 +2909,7 @@ fn the_build_is_deterministic() {
     assert_eq!(first, second, "the prelude build must be deterministic");
     assert_eq!(
         first.len(),
-        12 + 87,
+        12 + 88,
         "every promised definition and theorem must be rendered"
     );
 }

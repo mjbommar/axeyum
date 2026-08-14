@@ -495,3 +495,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [0437](adr-0437-relational-euclidean-remainder-characterizes-nat-congruence.md) | Relational Euclidean remainders characterize Nat congruence | accepted |
 | [0438](adr-0438-divisibility-implies-nat-congruence-to-zero.md) | Divisibility implies Nat congruence to zero | accepted |
 | [0439](adr-0439-positive-nat-congruence-to-zero-implies-divisibility.md) | Positive Nat congruence to zero implies divisibility | accepted |
+| [0440](adr-0440-nat-congruence-to-zero-characterizes-divisibility.md) | Nat congruence to zero characterizes divisibility | accepted |

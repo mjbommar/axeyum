@@ -346,6 +346,8 @@ pub struct NatPrelude {
     /// `Nat.dvd_of_mod_eq_zero_of_pos :
     ///   Le one d → modEq d n zero → dvd d n`.
     pub dvd_of_mod_eq_zero_of_pos: NameId,
+    /// `Nat.mod_eq_zero_iff_dvd : modEq d n zero ↔ dvd d n`.
+    pub mod_eq_zero_iff_dvd: NameId,
     /// `Nat.valuationAt a n e := dvd (a^e) n ∧ Not (dvd (a^(e+1)) n)`.
     pub valuation_at: NameId,
     /// `Nat.dvd_mul : ∀ a q, dvd a (a * q)`.
@@ -497,6 +499,7 @@ pub fn build_nat_prelude(kernel: &mut Kernel) -> Result<NatPrelude, KernelError>
                 .name_str(nat, "mod_eq_iff_div_mod_remainder_eq"),
             mod_eq_zero_of_dvd: kernel.name_str(nat, "mod_eq_zero_of_dvd"),
             dvd_of_mod_eq_zero_of_pos: kernel.name_str(nat, "dvd_of_mod_eq_zero_of_pos"),
+            mod_eq_zero_iff_dvd: kernel.name_str(nat, "mod_eq_zero_iff_dvd"),
             valuation_at: kernel.name_str(nat, "valuationAt"),
             dvd_mul: kernel.name_str(nat, "dvd_mul"),
             dvd_add: kernel.name_str(nat, "dvd_add"),
@@ -754,6 +757,7 @@ fn declare_modular_congruence(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), 
     declare_mod_eq_iff_div_mod_remainder_eq(d, &p)?;
     declare_mod_eq_zero_of_dvd(d, &p, nat, anon, one)?;
     declare_dvd_of_mod_eq_zero_of_pos(d, &p, nat, anon, one)?;
+    declare_mod_eq_zero_iff_dvd(d, &p, nat, anon, one)?;
     Ok(())
 }
 
@@ -1330,6 +1334,142 @@ fn declare_dvd_of_mod_eq_zero_of_pos(
         let with_congruence = d.lam_fv(congruence_fv, congruence_ty, body);
         let proof = d.lam_fv(positive_fv, positive_ty, with_congruence);
         (stmt, proof)
+    })?;
+    Ok(())
+}
+
+fn declare_mod_eq_zero_iff_dvd(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+    nat: ExprId,
+    anon: NameId,
+    one: LevelId,
+) -> Result<(), KernelError> {
+    let p = *p;
+
+    // mod_eq_zero_iff_dvd : modEq d n zero ↔ dvd d n
+    // Induction on d keeps the degenerate zero modulus explicit. At zero the
+    // balanced equation itself supplies a zero-factor witness; at a successor
+    // the positive cancellation theorem applies.
+    d.theorem(p.mod_eq_zero_iff_dvd, 2, &|d, values| {
+        let (modulus, value) = (values[0], values[1]);
+        let zero = d.zero();
+        let congruence_ty = d.mod_eq(modulus, value, zero);
+        let divides_ty = d.dvd(modulus, value);
+
+        let forward_motive = |d: &mut NatDev<'_>, candidate: ExprId| {
+            let congruence = d.mod_eq(candidate, value, zero);
+            let divides = d.dvd(candidate, value);
+            d.arrow(congruence, divides)
+        };
+        let forward = d.induct(
+            &forward_motive,
+            &|d| {
+                let congruence_ty = d.mod_eq(zero, value, zero);
+                let target = d.dvd(zero, value);
+                let congruence_fv = d.fresh_fvar();
+                let congruence = d.kernel().fvar(congruence_fv);
+                let outer_predicate = d.mod_eq_outer_predicate(zero, value, zero);
+                let outer_motive = d
+                    .kernel()
+                    .lam(anon, congruence_ty, target, BinderInfo::Default);
+                let outer_minor = {
+                    let left_witness_fv = d.fresh_fvar();
+                    let left_witness = d.kernel().fvar(left_witness_fv);
+                    let inner_exists = d.mod_eq_inner_exists(zero, value, zero, left_witness);
+                    let inner_exists_fv = d.fresh_fvar();
+                    let inner_exists_proof = d.kernel().fvar(inner_exists_fv);
+                    let inner_predicate = d.mod_eq_inner_predicate(zero, value, zero, left_witness);
+                    let inner_motive =
+                        d.kernel()
+                            .lam(anon, inner_exists, target, BinderInfo::Default);
+                    let inner_minor = {
+                        let right_witness_fv = d.fresh_fvar();
+                        let right_witness = d.kernel().fvar(right_witness_fv);
+                        let left_multiple = d.mul(zero, left_witness);
+                        let right_multiple = d.mul(zero, right_witness);
+                        let left_sum = d.add(value, left_multiple);
+                        let right_sum = d.add(zero, right_multiple);
+                        let equation_ty = d.eq(left_sum, right_sum);
+                        let equation_fv = d.fresh_fvar();
+                        let equation = d.kernel().fvar(equation_fv);
+
+                        let value_plus_zero = d.add(value, zero);
+                        let add_zero = d.lemma(p.add_zero, &[value]);
+                        let add_zero_rev = d.symm(value_plus_zero, value, add_zero);
+                        let zero_mul_left = d.lemma(p.zero_mul, &[left_witness]);
+                        let zero_to_left_multiple = d.symm(left_multiple, zero, zero_mul_left);
+                        let expose_left_multiple =
+                            d.congr(zero, left_multiple, zero_to_left_multiple, &|d, x| {
+                                d.add(value, x)
+                            });
+                        let remove_right_zero = d.lemma(p.zero_add, &[right_multiple]);
+                        let (_, witness_equation) = d.chain(
+                            value,
+                            &[
+                                (value_plus_zero, add_zero_rev),
+                                (left_sum, expose_left_multiple),
+                                (right_sum, equation),
+                                (right_multiple, remove_right_zero),
+                            ],
+                        );
+                        let predicate = d.dvd_predicate(zero, value);
+                        let exists_intro = d.kernel().const_(p.logic.exists_intro, vec![one]);
+                        let body = d.apply(
+                            exists_intro,
+                            &[nat, predicate, right_witness, witness_equation],
+                        );
+                        let with_equation = d.lam_fv(equation_fv, equation_ty, body);
+                        d.lam_fv(right_witness_fv, nat, with_equation)
+                    };
+                    let exists_rec = d.kernel().const_(p.logic.exists_rec, vec![one]);
+                    let body = d.apply(
+                        exists_rec,
+                        &[
+                            nat,
+                            inner_predicate,
+                            inner_motive,
+                            inner_minor,
+                            inner_exists_proof,
+                        ],
+                    );
+                    let with_inner = d.lam_fv(inner_exists_fv, inner_exists, body);
+                    d.lam_fv(left_witness_fv, nat, with_inner)
+                };
+                let exists_rec = d.kernel().const_(p.logic.exists_rec, vec![one]);
+                let body = d.apply(
+                    exists_rec,
+                    &[nat, outer_predicate, outer_motive, outer_minor, congruence],
+                );
+                d.lam_fv(congruence_fv, congruence_ty, body)
+            },
+            &|d, predecessor, _ih| {
+                let successor = d.succ(predecessor);
+                let congruence_ty = d.mod_eq(successor, value, zero);
+                let congruence_fv = d.fresh_fvar();
+                let congruence = d.kernel().fvar(congruence_fv);
+                let zero_le_predecessor = d.lemma(p.zero_le, &[predecessor]);
+                let positive = d.lemma(p.le_succ_succ, &[zero, predecessor, zero_le_predecessor]);
+                let body = d.lemma(
+                    p.dvd_of_mod_eq_zero_of_pos,
+                    &[successor, value, positive, congruence],
+                );
+                d.lam_fv(congruence_fv, congruence_ty, body)
+            },
+            modulus,
+        );
+        let reverse = {
+            let divides_fv = d.fresh_fvar();
+            let divides = d.kernel().fvar(divides_fv);
+            let body = d.lemma(p.mod_eq_zero_of_dvd, &[modulus, value, divides]);
+            d.lam_fv(divides_fv, divides_ty, body)
+        };
+        let target = d.const_app(p.logic.iff, &[congruence_ty, divides_ty]);
+        let proof = d.const_app(
+            p.logic.iff_intro,
+            &[congruence_ty, divides_ty, forward, reverse],
+        );
+        (target, proof)
     })?;
     Ok(())
 }
