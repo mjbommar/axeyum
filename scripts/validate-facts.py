@@ -24,6 +24,17 @@ evidence array; only these rules say the two must agree:
     settled it, is an unverifiable claim about the literature -- and this project
     has already published one round of Zenodo self-deposits as though they were
     refereed results.
+  * A settled fact must name its `proof_route`, and `axiom_footprint: []` is
+    rejected on any route that cannot deliver axiom-freedom. Two incompatible
+    footprint vocabularies were already coexisting -- 17 facts with `[]` from the
+    kernel and 14 with `["axeyum-ir.bool-evaluator", ...]` from the SMT route,
+    strings a lane invented because the schema offered none. Read side by side
+    the first group looks like it rests on less. It does not; the two are
+    different trust bases, and the routes are not even equally strong (the logic
+    prelude is intuitionistic, so excluded middle is provable on the SMT route
+    and unreachable in the kernel without a new axiom). Reporting one total
+    across routes would restate exactly that error, so axiom-freedom is counted
+    only where it is measurable.
 
 It also REPORTS, without failing, any fact we have established that the wider
 literature has not. That combination is not an error; it is the output this
@@ -61,6 +72,11 @@ EVIDENCE_KINDS = {"kernel-term", "witness-replay", "unsat-certificate", "cube-co
                   "cube-tree-cover", "exhaustive-enumeration", "published-value-replication",
                   "bound-citation", "instance-pin", "claim-ref"}
 CHECK_STATUSES = {"checked", "replay-only", "not-checked"}
+LANGUAGES_ALL = {"smtlib2", "lean4", "lean4-surface", "axeyum-ir"}
+ROUTES = {"kernel-lean", "smt-term-level", "smt-clausal", "search-certificate", "none"}
+# Only this route can deliver axiom-freedom, because only there does an empty
+# footprint correspond to a measurable fact about a kernel environment.
+AXIOM_FREE_CAPABLE = {"kernel-lean"}
 
 # A status that asserts the statement was settled must be backed by something.
 ESTABLISHED = {"proved", "computed", "refuted"}
@@ -94,8 +110,9 @@ def validate_one(path: Path, fact: dict, known_ids: set[str]) -> list[str]:
     for key in ("language", "statement", "fragment"):
         if not formal.get(key):
             fail(errors, f"{fid}: formal.{key} is required and must be non-empty")
-    if formal.get("language") not in LANGUAGES:
-        fail(errors, f"{fid}: formal.language {formal.get('language')!r} not in {sorted(LANGUAGES)}")
+    if formal.get("language") not in LANGUAGES_ALL:
+        fail(errors, f"{fid}: formal.language {formal.get('language')!r} not in "
+                     f"{sorted(LANGUAGES_ALL)}")
 
     for dep in fact["depends_on"]:
         if not ID_RE.match(dep):
@@ -115,6 +132,9 @@ def validate_one(path: Path, fact: dict, known_ids: set[str]) -> list[str]:
             fail(errors, f"{fid}: evidence check_status {ev.get('check_status')!r} is unknown")
         if ev.get("check_status") == "checked":
             checked += 1
+        for c in ev.get("checkers", []):
+            if not isinstance(c, str) or not c.strip():
+                fail(errors, f"{fid}: evidence.checkers entries must be non-empty names")
         if ev.get("kind") == "claim-ref":
             art = ev.get("artifact")
             if not art:
@@ -136,6 +156,30 @@ def validate_one(path: Path, fact: dict, known_ids: set[str]) -> list[str]:
     if status == "open" and fact["evidence"]:
         fail(errors, f"{fid}: status `open` must carry an empty evidence array -- an open fact "
                      f"with evidence is a contradiction, and the empty array is a statement.")
+
+    route = fact.get("proof_route")
+    if route is not None and route not in ROUTES:
+        fail(errors, f"{fid}: proof_route {route!r} is not one of {sorted(ROUTES)}")
+    if status in ESTABLISHED and route is None:
+        fail(errors, f"{fid}: status {status!r} requires a proof_route. axiom_footprint is "
+                     f"only comparable WITHIN a route, so a settled fact that does not say "
+                     f"which machine settled it makes its own footprint unreadable.")
+    # The rule this whole field exists for.
+    # Scoped to KNOWN routes: an unrecognised route is already reported above, and
+    # we cannot say what a route we do not know cannot deliver. Without this guard
+    # one bad value produced two errors, which makes a control ambiguous about
+    # which rule it exercised.
+    if (
+        route in ROUTES
+        and route not in AXIOM_FREE_CAPABLE
+        and fact.get("axiom_footprint") == []
+    ):
+        fail(errors, f"{fid}: axiom_footprint [] on proof_route {route!r}. An empty footprint "
+                     f"asserts axiom-freedom, which only {sorted(AXIOM_FREE_CAPABLE)} can "
+                     f"deliver -- there it means a kernel environment admits no Axiom, Opaque "
+                     f"or Quotient. On any other route it names semantic assumptions that are "
+                     f"real and cannot be empty, so [] would read as the strongest claim the "
+                     f"project makes on evidence that cannot support it.")
 
     external = fact.get("external_status")
     if external is not None:
@@ -215,8 +259,33 @@ def main() -> int:
     )
     unclassified = sum(1 for f in facts.values() if "external_status" not in f)
 
+    # Route spread, and axiom-freedom reported ONLY where it means something.
+    # A single "N axiom-free" number across routes is the exact conflation
+    # proof_route exists to prevent, so it is scoped rather than totalled.
+    routes: dict[str, int] = {}
+    axiom_free = 0
+    for f in facts.values():
+        r = f.get("proof_route")
+        if r:
+            routes[r] = routes.get(r, 0) + 1
+        if r in AXIOM_FREE_CAPABLE and f.get("axiom_footprint") == []:
+            axiom_free += 1
+    # Independent re-derivations. Cross-oracle agreement is the strongest signal
+    # here, and it was invisible while every row said `checked` and nothing else.
+    multi = sum(
+        1
+        for f in facts.values()
+        for e in f.get("evidence", [])
+        if len(e.get("checkers", [])) >= 2
+    )
+
     spread = " ".join(f"{k}={v}" for k, v in sorted(by_status.items()))
     print(f"{len(facts)} facts checked, 0 errors  ({spread})")
+    if routes:
+        print("  routes: " + " ".join(f"{k}={v}" for k, v in sorted(routes.items()))
+              + f"; {axiom_free} axiom-free on {sorted(AXIOM_FREE_CAPABLE)[0]}"
+              + " (not comparable across routes)")
+    print(f"  {multi} evidence row(s) re-derived by 2+ independent checkers")
     print(f"  external: {backlog} settled elsewhere but not here (import backlog), "
           f"{unclassified} unclassified")
     if novel:

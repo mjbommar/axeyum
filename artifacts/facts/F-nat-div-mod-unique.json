@@ -17,6 +17,7 @@
     ]
   },
   "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
   "depends_on": [
     "F:nat-div-mod-exists"
   ],

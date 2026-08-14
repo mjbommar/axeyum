@@ -13,6 +13,7 @@
     ]
   },
   "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
   "depends_on": [
     "F:nat-zero-add",
     "F:nat-succ-add"

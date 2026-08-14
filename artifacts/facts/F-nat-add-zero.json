@@ -12,6 +12,7 @@
     ]
   },
   "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
   "depends_on": [],
   "axiom_footprint": [],
   "evidence": [
