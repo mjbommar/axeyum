@@ -35,6 +35,15 @@ not repeated:
 | — (not found at all) | **`Quot.sound` does not exist** — quotients compute but are not quotients | grep with positive control |
 | — (not found at all) | **universe equality diverges from Lean 4** — axeyum decides an equality Lean rejects | executed a probe |
 | — (not found at all) | the nanoda `Prop`-projection soundness bug was **not** inherited | executed a probe |
+| **"`lean`, `lake`, `elan` are all absent on this host" — labelled MEASURED, in §2.1** | **false.** Lean 4.30.0 is installed at the pinned commit; only `elan` is missing and `lean` is off `PATH`. `command -v` measures `PATH`, not the machine | **a peer session**, after this document was published |
+| "the export has never been checked by real Lean" | it has now, and it is **rejected** — 22 diagnostics, one root cause (§3.6) | ran the pinned `lean` |
+| "K1 is 5/5" (§6.2, unqualified) | five *pinned fixtures*, not complete K1 authority — my own R5.3 already said so | a peer asked whether the framing overclaimed |
+| — (not found at all) | **a documented guard in `lean_pp` was never implemented** — two comments assert a parametric/indexed check the code does not perform | peer read the implementation; I confirmed |
+
+The first of those is the worst entry in this table: it was labelled **MEASURED**,
+it was wrong, it sat in the section whose whole purpose is to insist on
+measurement, and it reached a published artifact. Every other error here was
+caught before or during drafting. That one was caught by someone else, afterwards.
 
 Seven of these were errors of *reading* rather than of judgement, and five came
 from greps that matched prose. **Every one of the four load-bearing findings —
@@ -67,9 +76,28 @@ is exactly how a stale number enters a document.
 
 ## 2. Measured baseline
 
-### 2.1 Toolchain — all real-Lean evidence is locally inert
+### 2.1 Toolchain — present, and the suites skip anyway
 
-**MEASURED.** `lean`, `lake`, `elan` are all absent on this host.
+> **CORRECTION (2026-08-13, after publication).** This section previously read:
+> *"**MEASURED.** `lean`, `lake`, `elan` are all absent on this host."*
+> **That was false.** A peer session caught it.
+>
+> **MEASURED (re-run):** `~/.elan/toolchains/leanprover--lean4---v4.30.0/bin/lean`
+> exists and reports `Lean (version 4.30.0, x86_64-unknown-linux-gnu, commit
+> d024af099ca4bf2c86f649261ebf59565dc8c622, Release)` — **exactly the pin recorded
+> in §2.8 of this document.** Only `elan` is genuinely absent, and `lean` is off
+> `PATH`.
+>
+> The original claim came from `command -v lean` returning nothing. That measures
+> **`PATH`**, not the machine, and it was written down as a fact about the machine.
+> This is the same substitute-a-proxy-for-the-thing failure the rest of this
+> document catalogues, committed inside the section whose purpose is to insist on
+> measurement. It is the eighth entry for §0 and the only one that reached a
+> published artifact.
+>
+> **Consequences.** The eight suites below were never unrunnable — only unrun.
+> `AXEYUM_LEAN_BIN` would have worked on this host all along. **R0.1** is
+> therefore not a hypothetical: it has a live instance.
 
 CI installs elan (`.github/workflows/ci.yml:182–190`) and gates the cross-checks
 on `AXEYUM_LEAN_BIN`. Eight suites consult that variable and **skip** — they do
@@ -557,12 +585,101 @@ Probe 2 corroborates: the expressiveness probes (an indexed `Prop` inductive
 elimination) succeeded. The kernel can *express* this mathematics. What is
 missing is a **library**, plus the prelude-composition defect in Probe 1.
 
-### 3.6 What the paper currently claims, and its one gap
+### 3.6 The export: four printer defects, found and repaired
 
-**CITED**, `07_discussion.tex:21-27` and `proofs/README.md:75-77`: the
-Lean-syntax export (14 theorems, no `sorry`, no axiom) **has never been checked
-by real Lean**, because `lean`/`lake`/`elan` were absent on the producing
-machine — still true here (§2.1). The paper states this. See **R0.2**.
+**Current state (2026-08-13, end of day) — MEASURED at the committed path:**
+
+```
+sha256 8f38a083b5c703c2…   (matches the pin in scripts/check_lean_export.py)
+lean proofs/shell_closed_form.lean  →  EXIT=0
+'shell_closed_form' does not depend on any axioms
+```
+
+So the `0 sorry / 0 axiom` property is now established **by Lean's kernel**, not
+by inspection of source text. `#print axioms` had never executed before today.
+
+The rest of this section records how it got there, because the failure modes are
+the reusable part.
+
+> **This section has been corrected twice.** It first said the export *"has never
+> been checked by real Lean, because `lean`/`lake`/`elan` were absent"* — both
+> halves wrong (§2.1). It then said the export *"is rejected"* — true of the
+> shipped bytes that morning, false by evening. The lesson is in **R0.5**: a
+> claim about an artifact has a shelf life, and the artifact and the claim have
+> to be pinned together or they drift apart.
+
+#### What was wrong, and how it was found
+
+**MEASURED at the time**, `lean proofs/shell_closed_form.lean` on the pre-fix
+export against the pinned v4.30.0:
+**22 diagnostics in 0.175 s**, classified:
+
+| Class | n |
+|---|---:|
+| `invalid use of explicit universe parameters` (`Eq` is a local variable) | 15 |
+| codegen / `noncomputable` | 5 |
+| unknown identifier / constant | 2 |
+
+The 5 codegen diagnostics are **not** type-checking failures — Lean emitting
+executable code from recursor-built definitions. They vanish under
+`noncomputable`. The remaining 17 trace to **one** root cause.
+
+`prelude.rs:321-322` declares `Eq` correctly, and says so verbatim: *"2 params
+(α, a), 1 index, one ctor."* The export emits everything past the colon:
+
+```lean
+inductive Eq.{u} : ((x0 : Sort (u)) -> ((x1 : x0) -> ((x2 : x0) -> Prop))) where
+  | refl : ((x0 : Sort (u)) -> ((x1 : x0) -> ((Eq.{u} x0) x1) x1))
+```
+
+Two defects: the parameter telescope is flattened past the colon, and the
+self-reference carries an explicit `.{u}` which Lean rejects because the
+inductive under elaboration is a local. `Eq` never enters the environment and
+every later `Eq.{1}` cascades.
+
+**This is a printer defect, not a kernel defect.** The kernel held the right
+shape; `lean_pp` wrote it down wrong. That is a **Pollack-consistency failure
+(R8.8)** — now demonstrated rather than hypothesised.
+
+**Why no gate caught it.** `lean_pp.rs:214-216` and `:404-408` both state that
+parametric or indexed inductives fall back to axiom rendering. **That guard was
+never written.** `render_real_inductive` destructures with `..`, discarding the
+parameter and index metadata (`uparams` is *universe* parameters), and its only
+`None` paths are "not an `Inductive`" and "ctor is not a `Constructor`". A check
+asserted in prose twice, absent in code. Separately, the four real-Lean
+cross-check fixtures use `add_inductive(two, &[], 0, prop, …)` — flat enums —
+so the corpus is structurally incapable of reaching the defect.
+
+Both were **predicted**: `06-kernel-gap-analysis.md`, item 7 of "what must be
+true before a goal layer can sit on this kernel", warns that widening the corpus
+without fixing parametric/indexed rendering *"silently widens the vacuous
+region."* Written 2026-07-15; realised today. This is the strongest available
+argument for the NDJSON route (**R8.1**) over patching the source printer: the
+wire format carries `numParams` natively and structurally cannot flatten a
+telescope, whereas a source printer can — and did, while carrying a comment
+saying it does not.
+
+#### The fourth defect, and the resolution
+
+Repairing the three above was not sufficient. A fourth remained: **Lean inserts a
+constant's pending implicit arguments as soon as a parenthesized application
+closes**, so `(@Eq.refl a) b` fails where the flat spine `@Eq.refl a b` checks.
+With flat spines the module reaches `EXIT=0`.
+
+This one is worth recording because it was initially mistaken for something much
+larger — an unexplained `CoeFun` failure read as evidence that surface syntax is
+structurally hostage to elaboration, which would have condemned the whole
+source-printing route. It was a printer bug, not an architectural limit.
+
+The repair also produced the artifacts this document asked for:
+`real_lean_parametric_inductive_crosscheck.rs` (the corpus gap above),
+`scripts/lean/replay-lean4export.lean` (**R8.1**), a shipped
+`proofs/shell_closed_form.ndjson` beside the paper's `.lean`, and
+`scripts/check_lean_export.py`, which pins the export's sha256, runs a real Lean
+binary **against the committed path**, and requires the `#print axioms` line in
+the output — because a silent success would mean the command never ran.
+
+See **R0.2**, now met, and **R0.5**.
 
 ## 4. Lean 4 conformance
 
@@ -932,9 +1049,22 @@ called *"roughly one chapter of a `Nat` library."*
 Use the existing `axeyum-lean-import` reader to ingest a dependency-closed slice
 of `Init`/`Std`/Mathlib and let the kernel re-check it.
 
-- The infrastructure **already exists and is mutation-tested**: lean4export
-  NDJSON 3.1.0, fail-closed, ADR-0348 owned publication, ADR-0350 identity
-  manifests. K1 is 5/5.
+- The infrastructure exists and is mutation-tested: lean4export NDJSON 3.1.0,
+  fail-closed, ADR-0348 owned publication, ADR-0350 identity manifests.
+  **Qualified:** K1 is 5/5 on **five pinned single-root fixtures**, dual-admitted
+  against official v4.30 — *not* complete K1 authority. The parity contract says
+  so directly, and **R5.3** records that the String closure's first blocker is
+  still unmeasured. The accurate statement of the import direction is
+  *"translates and independently admits a measured five-root fixture profile; the
+  dependency-closed `Init`/`Std`/mathlib population is unstarted."*
+  *(An earlier revision read "already exists and is mutation-tested … K1 is 5/5"
+  unqualified, which reads as capability. That is the sentence a referee would
+  quote, and it was the weakest-supported one in this document.)*
+
+  The export direction states the asymmetry: **an export path exists, and the
+  only non-trivial artifact ever put through official Lean is rejected** (§3.6).
+  Not "does not exist" — that invites "so build it" when the true state is
+  built-and-failing.
 - Mathlib supplies ℤ, `Dvd`, `Int.emod`, `ZMod`, `multiplicity`, `Finset.sum`
   and intervals directly — the entire §3.4 table below the fold.
 - **The kernel re-checks whatever it reads**, so this is not a trust downgrade
@@ -970,8 +1100,10 @@ blocks. Ordered by dependency, not by priority.
 | ID | Requirement | Exit |
 |---|---|---|
 | **R0.1** | No Lean-related gate may pass by being inert. The eight `AXEYUM_LEAN_BIN` suites (§2.1) must fail loudly in at least one enforced lane, and that lane's non-vacuity must be asserted by a **nonzero test count**, not an exit status. | A lane exists that fails when `lean` is absent; its assertion is a count, not `ok`. CI already has `AXEYUM_REQUIRE_LEAN=1` — verify it is actually reached. |
-| **R0.2** | The export shipped with any publication must be checked by **real Lean** before the claim is made, or the claim must say it was not. | Either a green run, or the publication states the gap. *(The paper currently states the gap — met by disclosure.)* **Cheaper route: R8.1** — emitting NDJSON lets the official kernel replay it via `Environment.replay` with no toolchain install and no elaboration. |
+| **R0.2** | The export shipped with any publication must be checked by **real Lean** before the claim is made, or the claim must say it was not. | **MET (§3.6).** The export was repaired, regenerated, and verified at the committed path: `EXIT=0`, no axioms, hash-pinned by `scripts/check_lean_export.py`. Superseded detail: The export was checked on 2026-08-13 and is **rejected** — 22 diagnostics, one root cause. "Unchecked" was neutral; "checked and failing" is not, and the publication text must say so. **Cheaper durable route: R8.1** — NDJSON lets the official kernel replay via `Environment.replay` with no elaboration. |
 | **R0.3** | Every capability claim about the kernel must cite a command and its output. Doc comments and planning prose are not evidence. | This document's §1 labelling discipline applied to all downstream claims. |
+| **R0.4** | A comment asserting a check is not a check. `lean_pp.rs:214-216` and `:404-408` document a parametric/indexed guard that **was never implemented** (§3.6). Every guard claimed in prose needs either a test that fails when the guard is removed, or deletion of the prose. | An audit of guard-claiming comments in `axeyum-lean-kernel`; each either gains a failing-on-removal test or loses the claim. |
+| **R0.5** | **A claim about an artifact must be pinned to that artifact's bytes.** Prose stating a measurement drifts from the file it describes the moment either changes independently. Every published measurement needs the hash, the command, and a check that runs the command against the *committed* path and fails when they disagree. `scripts/check_lean_export.py` is the reference implementation; the claim ledger's `instance-pin` is the same discipline by regeneration. | A publication-facing measurement has no unpinned prose form. Negative control exercised, not asserted: mutate one byte → the check fails. |
 
 R0.1 implementation and local non-vacuity evidence are recorded in the
 [`measurement-integrity result`](lean-r0-measurement-integrity-result-2026-08-13.md);
