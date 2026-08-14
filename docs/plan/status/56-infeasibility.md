@@ -42,4 +42,4 @@ Full reasoning, including what a commercial IIS gives that this does not:
 
 <!-- plan-section: landed-changes -->
 
-| 2026-08-14 | `PENDING` | Certified infeasibility for operations research: three committed OR instances with measured-irreducible cores (4.9% / 15.6% / 8.3%), leave-one-out re-solves with evaluator model replay, z3 cross-check, and a kernel-checked Farkas refutation of the schedule's critical chain. Four facts. |
+| 2026-08-14 | `a8fac8e57` | Certified infeasibility for operations research: three committed OR instances with measured-irreducible cores (4.9% / 15.6% / 8.3%), leave-one-out re-solves with evaluator model replay, z3 cross-check, and a kernel-checked Farkas refutation of the schedule's critical chain. Four facts. |
