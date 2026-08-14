@@ -256,28 +256,11 @@ A1 runs were fresh and non-resumed. Full evidence, sidecar hashes, rejected IDL
 policies, and gate separation are retained in
 [`docs/plan/arithmetic-a1-retained-result-2026-08-06.md`](docs/plan/arithmetic-a1-retained-result-2026-08-06.md).
 
-Disk cleanup first removed only reproducible Cargo artifacts and clean,
-inactive worktree checkout directories; dirty worktrees and every branch were
-preserved.
-The 2026-08-07 follow-up removed 14 additional clean checkouts, retained their
-13 unmerged branch tips, and reduced the registered worktree count from 39 to
-25. After A3 was pushed, merged, and fully gated, its clean 127 GiB worktree was
-retired and pruned; `cargo clean` then removed 70,833 files / 122.6 GiB from the
-main worktree. A later user-authorized cleanup salvaged every dirty delta from
-24 remaining inactive worktrees into path-labelled Git stashes, kept every
-branch tip, removed those exact checkout directories, pruned the registrations,
-and removed one inactive 1.7 GiB Axeyum session directory from `/tmp` after
-verifying it had no open file descriptors. After the residual A3 evidence was
-integrated, its clean topic worktree passed exact ancestry and cleanliness
-checks; `cargo clean` removed 40,064 reproducible files / 71.0 GiB and the
-checkout was retired while preserving the branch. The final merged A3
-explanation-partition checkout was also retired with its branch preserved,
-reclaiming about 176 GiB from its Cargo target. Only clean `main` remains
-registered. Current free space is about 902 GiB on `/` and 28 GiB on the 62 GiB
-`/tmp` tmpfs. Retained A3 census evidence and unrelated temporary projects were
-left untouched.
-Four empty A3 frontier directories and their pointer file were removed after
-the failed aggregate attempts; they contained no retained evidence.
+Disk cleanup preserved every branch and salvaged dirty inactive-worktree deltas
+to labelled Git stashes before retiring their checkouts. Reproducible Cargo
+artifacts and empty failed-run directories were removed only after ancestry,
+cleanliness, and open-file checks. Only clean `main` remains registered; retained
+evidence and unrelated temporary projects were untouched.
 
 ### Current evidence snapshot
 

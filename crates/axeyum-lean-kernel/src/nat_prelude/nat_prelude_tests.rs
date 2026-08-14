@@ -54,6 +54,27 @@ impl Fixture {
         let root = self.root;
         self.k.name_str(root, s)
     }
+
+    /// Build a concrete balanced-witness congruence proof when both sides
+    /// reduce to the same unary numeral.
+    fn concrete_mod_eq(
+        &mut self,
+        modulus: ExprId,
+        left: ExprId,
+        right: ExprId,
+        left_witness: ExprId,
+        right_witness: ExprId,
+    ) -> ExprId {
+        let one = self.level_one();
+        let nat = self.nat_ty();
+        let outer = self.mod_eq_outer_predicate(modulus, left, right);
+        let inner = self.mod_eq_inner_predicate(modulus, left, right, left_witness);
+        let lhs = self.mod_eq_sum(modulus, left, left_witness);
+        let equation = self.refl(lhs);
+        let intro = self.k.const_(self.p.logic.exists_intro, vec![one]);
+        let inner_proof = self.apply(intro, &[nat, inner, right_witness, equation]);
+        self.apply(intro, &[nat, outer, left_witness, inner_proof])
+    }
 }
 
 /// Every name [`build_nat_prelude`] promises, with the declaration kind it must
@@ -71,6 +92,7 @@ fn definition_names(p: &NatPrelude) -> Vec<NameId> {
         p.in_closed_interval,
         p.div_mod,
         p.dvd,
+        p.mod_eq,
         p.valuation_at,
     ]
 }
@@ -143,6 +165,9 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.div_mod_lt_mul_iff,
         p.div_mod_remainder_eq_zero_iff_dvd,
         p.div_mod_exact_exists,
+        p.mod_eq_refl,
+        p.mod_eq_symm,
+        p.mod_eq_trans,
         p.dvd_mul,
         p.dvd_add,
         p.dvd_add_right_cancel_of_pos,
@@ -744,6 +769,41 @@ fn euclidean_division_exists_constructively() {
             f.explain(&e)
         )
     });
+}
+
+#[test]
+fn modular_congruence_is_a_checked_equivalence_relation() {
+    let mut f = Fixture::new();
+    let p = f.p;
+    let zero = f.num(0);
+    let one = f.num(1);
+    let two = f.num(2);
+    let five = f.num(5);
+    let seven = f.num(7);
+    let twelve = f.num(12);
+
+    let two_to_seven = f.concrete_mod_eq(five, two, seven, one, zero);
+    let relation = f.mod_eq(five, two, seven);
+    let name = f.name("two_mod_five_seven");
+    f.declare_theorem(name, relation, two_to_seven)
+        .unwrap_or_else(|e| panic!("2 ≡ 7 (mod 5) should admit: {}", f.explain(&e)));
+
+    let reflexive = f.lemma(p.mod_eq_refl, &[five, two]);
+    f.k.infer(reflexive)
+        .unwrap_or_else(|e| panic!("modular reflexivity should infer: {}", f.explain(&e)));
+    let symmetric = f.lemma(p.mod_eq_symm, &[five, two, seven, two_to_seven]);
+    f.k.infer(symmetric)
+        .unwrap_or_else(|e| panic!("modular symmetry should infer: {}", f.explain(&e)));
+
+    let seven_to_twelve = f.concrete_mod_eq(five, seven, twelve, one, zero);
+    let transitive = f.lemma(
+        p.mod_eq_trans,
+        &[five, two, seven, twelve, two_to_seven, seven_to_twelve],
+    );
+    let transitive_ty = f.mod_eq(five, two, twelve);
+    let transitive_name = f.name("two_mod_five_twelve");
+    f.declare_theorem(transitive_name, transitive_ty, transitive)
+        .unwrap_or_else(|e| panic!("modular transitivity should admit: {}", f.explain(&e)));
 }
 
 #[test]
@@ -2070,7 +2130,74 @@ fn kernel_rejects_broken_proof_terms() {
         rejections += 1;
     }
 
-    assert_eq!(rejections, 45, "every negative control must be rejected");
+    // NC46 — modular reflexivity retains its endpoint.
+    {
+        let name = f.name("nc46_mod_eq_refl_wrong_endpoint");
+        let two = f.num(2);
+        let three = f.num(3);
+        let five = f.num(5);
+        let proof = f.lemma(p.mod_eq_refl, &[five, two]);
+        let bad = f.mod_eq(five, two, three);
+        let err = f
+            .declare_theorem(name, bad, proof)
+            .expect_err("NC46: modular reflexivity must retain its endpoint");
+        println!(
+            "NC46 (wrong modular reflexive endpoint) rejected:\n  {}",
+            f.explain(&err)
+        );
+        assert!(!f.k.environment().contains(name));
+        rejections += 1;
+    }
+
+    // NC47 — modular symmetry retains the reversed right endpoint.
+    {
+        let name = f.name("nc47_mod_eq_symm_wrong_endpoint");
+        let zero = f.num(0);
+        let one = f.num(1);
+        let two = f.num(2);
+        let three = f.num(3);
+        let five = f.num(5);
+        let seven = f.num(7);
+        let relation = f.concrete_mod_eq(five, two, seven, one, zero);
+        let proof = f.lemma(p.mod_eq_symm, &[five, two, seven, relation]);
+        let bad = f.mod_eq(five, seven, three);
+        let err = f
+            .declare_theorem(name, bad, proof)
+            .expect_err("NC47: modular symmetry must retain both endpoints");
+        println!(
+            "NC47 (wrong modular symmetric endpoint) rejected:\n  {}",
+            f.explain(&err)
+        );
+        assert!(!f.k.environment().contains(name));
+        rejections += 1;
+    }
+
+    // NC48 — modular transitivity retains its final endpoint.
+    {
+        let name = f.name("nc48_mod_eq_trans_wrong_endpoint");
+        let zero = f.num(0);
+        let one = f.num(1);
+        let two = f.num(2);
+        let five = f.num(5);
+        let seven = f.num(7);
+        let eleven = f.num(11);
+        let twelve = f.num(12);
+        let first = f.concrete_mod_eq(five, two, seven, one, zero);
+        let second = f.concrete_mod_eq(five, seven, twelve, one, zero);
+        let proof = f.lemma(p.mod_eq_trans, &[five, two, seven, twelve, first, second]);
+        let bad = f.mod_eq(five, two, eleven);
+        let err = f
+            .declare_theorem(name, bad, proof)
+            .expect_err("NC48: modular transitivity must retain its final endpoint");
+        println!(
+            "NC48 (wrong modular transitive endpoint) rejected:\n  {}",
+            f.explain(&err)
+        );
+        assert!(!f.k.environment().contains(name));
+        rejections += 1;
+    }
+
+    assert_eq!(rejections, 48, "every negative control must be rejected");
 }
 
 /// The build is deterministic: two independent kernels render every promised
@@ -2093,7 +2220,7 @@ fn the_build_is_deterministic() {
     assert_eq!(first, second, "the prelude build must be deterministic");
     assert_eq!(
         first.len(),
-        11 + 72,
+        12 + 75,
         "every promised definition and theorem must be rendered"
     );
 }

@@ -482,3 +482,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [0424](adr-0424-relational-nat-euclidean-strict-adjunction.md) | Relational Nat Euclidean strict adjunction | accepted |
 | [0425](adr-0425-relational-nat-zero-remainder-divisibility.md) | Relational Nat zero remainder characterizes divisibility | accepted |
 | [0427](adr-0427-relational-nat-exact-decomposition-existence.md) | Relational Nat exact decomposition existence | accepted |
+| [0428](adr-0428-balanced-witness-nat-congruence.md) | Balanced-witness Nat congruence | accepted |

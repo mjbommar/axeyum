@@ -59,10 +59,15 @@
 //! with checked theorems `dvd_mul` (witness introduction) and `dvd_add`
 //! (closure under addition by two `Exists.rec` eliminations).
 //!
+//! **Relational division and congruence**: `Nat.divMod` carries quotient and
+//! remainder witnesses and proves existence, uniqueness, and floor-order laws.
+//! `Nat.modEq d a b := ∃ u v, a + d*u = b + d*v` avoids signed subtraction;
+//! reflexivity, symmetry, and transitivity are checked theorems.
+//!
 //! ## What is **not** here
 //!
-//! No antisymmetry, totality, `min`, or decidability of order, no
-//! quotient/remainder division, no multiplicative cancellation, and no
+//! No `min` or decidability of order, no executable quotient/remainder
+//! functions, no multiplicative divisibility cancellation, and no
 //! `n ≠ succ n`-style discrimination.
 //! Adding those is ordinary work on top of this prelude, not a kernel question:
 //! the order fragment is deliberately minimal (see [`NatPrelude::le`]).
@@ -303,6 +308,14 @@ pub struct NatPrelude {
     pub div_mod_remainder_eq_zero_iff_dvd: NameId,
     /// `Nat.div_mod_exact_exists : Le one d → dvd d n → ∃ q, divMod d n q zero`.
     pub div_mod_exact_exists: NameId,
+    /// `Nat.modEq d a b := ∃ u v, a + d*u = b + d*v`.
+    pub mod_eq: NameId,
+    /// `Nat.mod_eq_refl : ∀ d a, modEq d a a`.
+    pub mod_eq_refl: NameId,
+    /// `Nat.mod_eq_symm : ∀ d a b, modEq d a b → modEq d b a`.
+    pub mod_eq_symm: NameId,
+    /// `Nat.mod_eq_trans : ∀ d a b c, modEq d a b → modEq d b c → modEq d a c`.
+    pub mod_eq_trans: NameId,
     /// `Nat.valuationAt a n e := dvd (a^e) n ∧ Not (dvd (a^(e+1)) n)`.
     pub valuation_at: NameId,
     /// `Nat.dvd_mul : ∀ a q, dvd a (a * q)`.
@@ -437,6 +450,10 @@ pub fn build_nat_prelude(kernel: &mut Kernel) -> Result<NatPrelude, KernelError>
             div_mod_remainder_eq_zero_iff_dvd: kernel
                 .name_str(nat, "div_mod_remainder_eq_zero_iff_dvd"),
             div_mod_exact_exists: kernel.name_str(nat, "div_mod_exact_exists"),
+            mod_eq: kernel.name_str(nat, "modEq"),
+            mod_eq_refl: kernel.name_str(nat, "mod_eq_refl"),
+            mod_eq_symm: kernel.name_str(nat, "mod_eq_symm"),
+            mod_eq_trans: kernel.name_str(nat, "mod_eq_trans"),
             valuation_at: kernel.name_str(nat, "valuationAt"),
             dvd_mul: kernel.name_str(nat, "dvd_mul"),
             dvd_add: kernel.name_str(nat, "dvd_add"),
@@ -458,6 +475,7 @@ pub fn build_nat_prelude(kernel: &mut Kernel) -> Result<NatPrelude, KernelError>
         declare_order(&mut d, &p)?;
         declare_euclidean_division(&mut d, &p)?;
         declare_divisibility(&mut d, &p)?;
+        declare_modular_congruence(&mut d, &p)?;
         Ok(p)
     })();
     match built {
@@ -565,6 +583,309 @@ fn declare_finite_ranges(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), Kerne
         hint: ReducibilityHint::Regular(2),
     })?;
     Ok(())
+}
+
+/// Balanced-witness congruence over naturals. This representation needs
+/// neither signed subtraction nor an executable remainder function.
+fn declare_modular_congruence(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> {
+    let p = *p;
+    let nat = d.nat_ty();
+    let anon = d.anon_name();
+    let prop = d.kernel().sort_zero();
+    let one = d.level_one();
+
+    // modEq d a b := ∃ u v, a + d*u = b + d*v
+    {
+        let modulus_fv = d.fresh_fvar();
+        let modulus = d.kernel().fvar(modulus_fv);
+        let left_fv = d.fresh_fvar();
+        let left = d.kernel().fvar(left_fv);
+        let right_fv = d.fresh_fvar();
+        let right = d.kernel().fvar(right_fv);
+        let body = d.mod_eq_witnesses(modulus, left, right);
+        let value = {
+            let with_right = d.lam_fv(right_fv, nat, body);
+            let with_left = d.lam_fv(left_fv, nat, with_right);
+            d.lam_fv(modulus_fv, nat, with_left)
+        };
+        let ty = {
+            let with_right = d.kernel().pi(anon, nat, prop, BinderInfo::Default);
+            let with_left = d.kernel().pi(anon, nat, with_right, BinderInfo::Default);
+            d.kernel().pi(anon, nat, with_left, BinderInfo::Default)
+        };
+        d.kernel().add_declaration(Declaration::Definition {
+            name: p.mod_eq,
+            uparams: vec![],
+            ty,
+            value,
+            hint: ReducibilityHint::Regular(6),
+        })?;
+    }
+
+    // mod_eq_refl : ∀ d a, modEq d a a
+    d.theorem(p.mod_eq_refl, 2, &|d, v| {
+        let (modulus, value) = (v[0], v[1]);
+        let zero = d.zero();
+        let outer_predicate = d.mod_eq_outer_predicate(modulus, value, value);
+        let inner_predicate = d.mod_eq_inner_predicate(modulus, value, value, zero);
+        let equation = d.refl(value);
+        let intro = d.kernel().const_(p.logic.exists_intro, vec![one]);
+        let inner = d.apply(intro, &[nat, inner_predicate, zero, equation]);
+        let proof = d.apply(intro, &[nat, outer_predicate, zero, inner]);
+        (d.mod_eq(modulus, value, value), proof)
+    })?;
+
+    // mod_eq_symm : ∀ d a b, modEq d a b → modEq d b a
+    d.theorem(p.mod_eq_symm, 3, &|d, v| {
+        let (modulus, left, right) = (v[0], v[1], v[2]);
+        let source = d.mod_eq(modulus, left, right);
+        let target = d.mod_eq(modulus, right, left);
+        let source_fv = d.fresh_fvar();
+        let source_proof = d.kernel().fvar(source_fv);
+        let outer_predicate = d.mod_eq_outer_predicate(modulus, left, right);
+        let outer_motive = d.kernel().lam(anon, source, target, BinderInfo::Default);
+        let outer_minor = {
+            let u_fv = d.fresh_fvar();
+            let u = d.kernel().fvar(u_fv);
+            let inner_source = d.mod_eq_inner_exists(modulus, left, right, u);
+            let inner_source_fv = d.fresh_fvar();
+            let inner_source_proof = d.kernel().fvar(inner_source_fv);
+            let inner_predicate = d.mod_eq_inner_predicate(modulus, left, right, u);
+            let inner_motive = d
+                .kernel()
+                .lam(anon, inner_source, target, BinderInfo::Default);
+            let inner_minor = {
+                let w_fv = d.fresh_fvar();
+                let w = d.kernel().fvar(w_fv);
+                let left_sum = d.mod_eq_sum(modulus, left, u);
+                let right_sum = d.mod_eq_sum(modulus, right, w);
+                let equation_ty = d.eq(left_sum, right_sum);
+                let equation_fv = d.fresh_fvar();
+                let equation = d.kernel().fvar(equation_fv);
+                let reversed = d.symm(left_sum, right_sum, equation);
+                let target_outer = d.mod_eq_outer_predicate(modulus, right, left);
+                let target_inner = d.mod_eq_inner_predicate(modulus, right, left, w);
+                let intro = d.kernel().const_(p.logic.exists_intro, vec![one]);
+                let inner_proof = d.apply(intro, &[nat, target_inner, u, reversed]);
+                let body = d.apply(intro, &[nat, target_outer, w, inner_proof]);
+                let with_equation = d.lam_fv(equation_fv, equation_ty, body);
+                d.lam_fv(w_fv, nat, with_equation)
+            };
+            let rec = d.kernel().const_(p.logic.exists_rec, vec![one]);
+            let body = d.apply(
+                rec,
+                &[
+                    nat,
+                    inner_predicate,
+                    inner_motive,
+                    inner_minor,
+                    inner_source_proof,
+                ],
+            );
+            let with_inner = d.lam_fv(inner_source_fv, inner_source, body);
+            d.lam_fv(u_fv, nat, with_inner)
+        };
+        let rec = d.kernel().const_(p.logic.exists_rec, vec![one]);
+        let body = d.apply(
+            rec,
+            &[
+                nat,
+                outer_predicate,
+                outer_motive,
+                outer_minor,
+                source_proof,
+            ],
+        );
+        let stmt = d.arrow(source, target);
+        let proof = d.lam_fv(source_fv, source, body);
+        (stmt, proof)
+    })?;
+
+    declare_mod_eq_trans(d, &p, nat, anon, one)?;
+    Ok(())
+}
+
+fn declare_mod_eq_trans(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+    nat: ExprId,
+    anon: NameId,
+    one: LevelId,
+) -> Result<(), KernelError> {
+    let p = *p;
+    d.theorem(p.mod_eq_trans, 4, &|d, v| {
+        let (modulus, left, middle, right) = (v[0], v[1], v[2], v[3]);
+        let first_ty = d.mod_eq(modulus, left, middle);
+        let second_ty = d.mod_eq(modulus, middle, right);
+        let target = d.mod_eq(modulus, left, right);
+        let first_fv = d.fresh_fvar();
+        let first = d.kernel().fvar(first_fv);
+        let second_fv = d.fresh_fvar();
+        let second = d.kernel().fvar(second_fv);
+        let first_outer = d.mod_eq_outer_predicate(modulus, left, middle);
+        let first_motive = d.kernel().lam(anon, first_ty, target, BinderInfo::Default);
+        let first_minor = {
+            let u_fv = d.fresh_fvar();
+            let u = d.kernel().fvar(u_fv);
+            let first_inner_ty = d.mod_eq_inner_exists(modulus, left, middle, u);
+            let first_inner_fv = d.fresh_fvar();
+            let first_inner = d.kernel().fvar(first_inner_fv);
+            let first_inner_pred = d.mod_eq_inner_predicate(modulus, left, middle, u);
+            let first_inner_motive =
+                d.kernel()
+                    .lam(anon, first_inner_ty, target, BinderInfo::Default);
+            let first_inner_minor = {
+                let v_fv = d.fresh_fvar();
+                let vw = d.kernel().fvar(v_fv);
+                let first_lhs = d.mod_eq_sum(modulus, left, u);
+                let first_rhs = d.mod_eq_sum(modulus, middle, vw);
+                let first_eq_ty = d.eq(first_lhs, first_rhs);
+                let first_eq_fv = d.fresh_fvar();
+                let first_eq = d.kernel().fvar(first_eq_fv);
+                let second_outer = d.mod_eq_outer_predicate(modulus, middle, right);
+                let second_motive = d.kernel().lam(anon, second_ty, target, BinderInfo::Default);
+                let second_minor = build_mod_eq_trans_second_minor(
+                    d, &p, nat, anon, one, modulus, left, middle, right, u, vw, first_eq,
+                );
+                let rec = d.kernel().const_(p.logic.exists_rec, vec![one]);
+                let body = d.apply(
+                    rec,
+                    &[nat, second_outer, second_motive, second_minor, second],
+                );
+                let with_eq = d.lam_fv(first_eq_fv, first_eq_ty, body);
+                d.lam_fv(v_fv, nat, with_eq)
+            };
+            let rec = d.kernel().const_(p.logic.exists_rec, vec![one]);
+            let body = d.apply(
+                rec,
+                &[
+                    nat,
+                    first_inner_pred,
+                    first_inner_motive,
+                    first_inner_minor,
+                    first_inner,
+                ],
+            );
+            let with_inner = d.lam_fv(first_inner_fv, first_inner_ty, body);
+            d.lam_fv(u_fv, nat, with_inner)
+        };
+        let rec = d.kernel().const_(p.logic.exists_rec, vec![one]);
+        let body = d.apply(rec, &[nat, first_outer, first_motive, first_minor, first]);
+        let second_to_target = d.arrow(second_ty, target);
+        let stmt = d.arrow(first_ty, second_to_target);
+        let with_second = d.lam_fv(second_fv, second_ty, body);
+        let proof = d.lam_fv(first_fv, first_ty, with_second);
+        (stmt, proof)
+    })?;
+    Ok(())
+}
+
+#[allow(clippy::too_many_arguments)]
+fn build_mod_eq_trans_second_minor(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+    nat: ExprId,
+    anon: NameId,
+    one: LevelId,
+    modulus: ExprId,
+    left: ExprId,
+    middle: ExprId,
+    right: ExprId,
+    u: ExprId,
+    v: ExprId,
+    first_eq: ExprId,
+) -> ExprId {
+    let p = *p;
+    let target = d.mod_eq(modulus, left, right);
+    let x_fv = d.fresh_fvar();
+    let x = d.kernel().fvar(x_fv);
+    let inner_ty = d.mod_eq_inner_exists(modulus, middle, right, x);
+    let inner_fv = d.fresh_fvar();
+    let inner = d.kernel().fvar(inner_fv);
+    let inner_predicate = d.mod_eq_inner_predicate(modulus, middle, right, x);
+    let inner_motive = d.kernel().lam(anon, inner_ty, target, BinderInfo::Default);
+    let inner_minor = {
+        let y_fv = d.fresh_fvar();
+        let y = d.kernel().fvar(y_fv);
+        let middle_x = d.mod_eq_sum(modulus, middle, x);
+        let right_y = d.mod_eq_sum(modulus, right, y);
+        let second_eq_ty = d.eq(middle_x, right_y);
+        let second_eq_fv = d.fresh_fvar();
+        let second_eq = d.kernel().fvar(second_eq_fv);
+
+        let ux = d.add(u, x);
+        let yv = d.add(y, v);
+        let target_left = d.mod_eq_sum(modulus, left, ux);
+        let target_right = d.mod_eq_sum(modulus, right, yv);
+        let du = d.mul(modulus, u);
+        let dx = d.mul(modulus, x);
+        let dv = d.mul(modulus, v);
+        let dy = d.mul(modulus, y);
+        let left_du = d.add(left, du);
+        let middle_dv = d.add(middle, dv);
+        let middle_dx = d.add(middle, dx);
+        let right_dy = d.add(right, dy);
+        let du_dx = d.add(du, dx);
+        let dx_dv = d.add(dx, dv);
+        let dv_dx = d.add(dv, dx);
+        let dy_dv = d.add(dy, dv);
+        let modulus_ux = d.mul(modulus, ux);
+        let modulus_yv = d.mul(modulus, yv);
+        let left_nested = d.add(left, du_dx);
+        let left_grouped = d.add(left_du, dx);
+        let middle_grouped_vx = d.add(middle_dv, dx);
+        let middle_nested_vx = d.add(middle, dv_dx);
+        let middle_nested_xv = d.add(middle, dx_dv);
+        let middle_grouped_xv = d.add(middle_dx, dv);
+        let right_grouped = d.add(right_dy, dv);
+        let right_nested = d.add(right, dy_dv);
+
+        let distributed_left = d.lemma(p.left_distrib, &[modulus, u, x]);
+        let step1 = d.congr(modulus_ux, du_dx, distributed_left, &|d, z| d.add(left, z));
+        let associated_left = d.lemma(p.add_assoc, &[left, du, dx]);
+        let step2 = d.symm(left_grouped, left_nested, associated_left);
+        let step3 = d.congr(left_du, middle_dv, first_eq, &|d, z| d.add(z, dx));
+        let step4 = d.lemma(p.add_assoc, &[middle, dv, dx]);
+        let commuted = d.lemma(p.add_comm, &[dv, dx]);
+        let step5 = d.congr(dv_dx, dx_dv, commuted, &|d, z| d.add(middle, z));
+        let associated_middle = d.lemma(p.add_assoc, &[middle, dx, dv]);
+        let step6 = d.symm(middle_grouped_xv, middle_nested_xv, associated_middle);
+        let step7 = d.congr(middle_dx, right_dy, second_eq, &|d, z| d.add(z, dv));
+        let step8 = d.lemma(p.add_assoc, &[right, dy, dv]);
+        let distributed_right = d.lemma(p.left_distrib, &[modulus, y, v]);
+        let undistributed_right = d.symm(modulus_yv, dy_dv, distributed_right);
+        let step9 = d.congr(dy_dv, modulus_yv, undistributed_right, &|d, z| {
+            d.add(right, z)
+        });
+        let (_, equation) = d.chain(
+            target_left,
+            &[
+                (left_nested, step1),
+                (left_grouped, step2),
+                (middle_grouped_vx, step3),
+                (middle_nested_vx, step4),
+                (middle_nested_xv, step5),
+                (middle_grouped_xv, step6),
+                (right_grouped, step7),
+                (right_nested, step8),
+                (target_right, step9),
+            ],
+        );
+        let target_outer = d.mod_eq_outer_predicate(modulus, left, right);
+        let target_inner = d.mod_eq_inner_predicate(modulus, left, right, ux);
+        let intro = d.kernel().const_(p.logic.exists_intro, vec![one]);
+        let inner_proof = d.apply(intro, &[nat, target_inner, yv, equation]);
+        let body = d.apply(intro, &[nat, target_outer, ux, inner_proof]);
+        let with_eq = d.lam_fv(second_eq_fv, second_eq_ty, body);
+        d.lam_fv(y_fv, nat, with_eq)
+    };
+    let rec = d.kernel().const_(p.logic.exists_rec, vec![one]);
+    let body = d.apply(
+        rec,
+        &[nat, inner_predicate, inner_motive, inner_minor, inner],
+    );
+    let with_inner = d.lam_fv(inner_fv, inner_ty, body);
+    d.lam_fv(x_fv, nat, with_inner)
 }
 
 /// The defining equations, each a one-line `Eq.refl` proof: they hold by β/δ/ι,
@@ -4884,6 +5205,58 @@ pub trait NatOps {
     fn dvd(&mut self, a: ExprId, n: ExprId) -> ExprId {
         let f = self.prelude().dvd;
         self.const_app(f, &[a, n])
+    }
+
+    /// `Nat.modEq d a b` (balanced witnesses: `∃ u v, a+d*u=b+d*v`).
+    fn mod_eq(&mut self, d: ExprId, a: ExprId, b: ExprId) -> ExprId {
+        let f = self.prelude().mod_eq;
+        self.const_app(f, &[d, a, b])
+    }
+
+    /// One side of a balanced congruence witness, `a + d*u`.
+    fn mod_eq_sum(&mut self, d: ExprId, a: ExprId, u: ExprId) -> ExprId {
+        let multiple = self.mul(d, u);
+        self.add(a, multiple)
+    }
+
+    /// `fun v : Nat => a+d*u=b+d*v`.
+    fn mod_eq_inner_predicate(&mut self, d: ExprId, a: ExprId, b: ExprId, u: ExprId) -> ExprId {
+        let v_fv = self.fresh_fvar();
+        let v = self.kernel().fvar(v_fv);
+        let lhs = self.mod_eq_sum(d, a, u);
+        let rhs = self.mod_eq_sum(d, b, v);
+        let body = self.eq(lhs, rhs);
+        let nat = self.nat_ty();
+        self.lam_fv(v_fv, nat, body)
+    }
+
+    /// `∃ v, a+d*u=b+d*v`.
+    fn mod_eq_inner_exists(&mut self, d: ExprId, a: ExprId, b: ExprId, u: ExprId) -> ExprId {
+        let predicate = self.mod_eq_inner_predicate(d, a, b, u);
+        let one = self.level_one();
+        let exists_name = self.prelude().logic.exists_;
+        let exists = self.kernel().const_(exists_name, vec![one]);
+        let nat = self.nat_ty();
+        self.apply(exists, &[nat, predicate])
+    }
+
+    /// `fun u : Nat => ∃ v, a+d*u=b+d*v`.
+    fn mod_eq_outer_predicate(&mut self, d: ExprId, a: ExprId, b: ExprId) -> ExprId {
+        let u_fv = self.fresh_fvar();
+        let u = self.kernel().fvar(u_fv);
+        let body = self.mod_eq_inner_exists(d, a, b, u);
+        let nat = self.nat_ty();
+        self.lam_fv(u_fv, nat, body)
+    }
+
+    /// `∃ u v, a+d*u=b+d*v`.
+    fn mod_eq_witnesses(&mut self, d: ExprId, a: ExprId, b: ExprId) -> ExprId {
+        let predicate = self.mod_eq_outer_predicate(d, a, b);
+        let one = self.level_one();
+        let exists_name = self.prelude().logic.exists_;
+        let exists = self.kernel().const_(exists_name, vec![one]);
+        let nat = self.nat_ty();
+        self.apply(exists, &[nat, predicate])
     }
 
     /// `Nat.valuationAt a n e`, exact divisibility by `a^e`.
