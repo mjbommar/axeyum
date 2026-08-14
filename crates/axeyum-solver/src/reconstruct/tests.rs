@@ -1867,6 +1867,186 @@ fn wrong_resolvent_rejected_by_kernel() {
 }
 
 // ---------------------------------------------------------------------------
+// Compact (backward-sliced + CPS + theorem-aliased) clausal reconstruction.
+//
+// The inlined route is bounded by the kernel expression arena long before
+// `DP_POOL_BUDGET` is reached; the compact route trades inlining for one closed
+// `Declaration::Theorem` per live clause. These are the soundness-negative and
+// differential gates for that route. Aliasing means the per-step check moved
+// from `check_against` to `add_declaration`, so every negative case below must
+// still be REJECTED, not merely slower.
+// ---------------------------------------------------------------------------
+
+use super::reconstruct_resolution_proof_compact;
+use super::resolution::declared_assumption_clauses;
+
+/// The smallest refutation reconstructs through the compact route as well.
+#[test]
+fn compact_smallest_refutation_reconstructs() {
+    let commands = vec![
+        assume("h1", vec![p_lit("a")]),
+        assume("h2", vec![n_lit("a")]),
+        res_step("empty", vec![], &["h1", "h2"]),
+    ];
+    let mut ctx = ReconstructCtx::new();
+    let term = reconstruct_resolution_proof_compact(&mut ctx, &commands)
+        .expect("a and not-a refutes to a kernel-checked False");
+    assert_infers_false(&mut ctx, term);
+}
+
+/// A multi-step refutation reconstructs through the compact route, and its
+/// hypothesis-axiom footprint is exactly the clauses the refutation consumes.
+#[test]
+fn compact_three_clause_refutation_reconstructs() {
+    let commands = vec![
+        assume("c1", vec![p_lit("a"), p_lit("b")]),
+        assume("c2", vec![n_lit("a")]),
+        assume("c3", vec![n_lit("b")]),
+        res_step("s1", vec![p_lit("b")], &["c1", "c2"]),
+        res_step("s2", vec![], &["s1", "c3"]),
+    ];
+    let mut ctx = ReconstructCtx::new();
+    let term = reconstruct_resolution_proof_compact(&mut ctx, &commands)
+        .expect("the 3-clause refutation reconstructs compactly");
+    assert_infers_false(&mut ctx, term);
+    assert_eq!(
+        declared_assumption_clauses(&ctx),
+        vec!["+a,+b".to_owned(), "-a".to_owned(), "-b".to_owned()],
+        "the footprint must decode back to exactly the three input clauses"
+    );
+}
+
+/// **NEGATIVE**: a resolution with no pivot must be rejected by the compact
+/// route too. Aliasing must not turn an unsound step into an admitted theorem.
+#[test]
+fn compact_bogus_resolution_no_pivot_rejected() {
+    let commands = vec![
+        assume("h1", vec![p_lit("a")]),
+        assume("h2", vec![p_lit("b")]),
+        res_step("empty", vec![], &["h1", "h2"]),
+    ];
+    let mut ctx = ReconstructCtx::new();
+    let err = reconstruct_resolution_proof_compact(&mut ctx, &commands)
+        .expect_err("a pivot-free resolution to `(cl)` must be rejected");
+    assert!(
+        matches!(
+            err,
+            ReconstructError::UnsupportedResolution { .. }
+                | ReconstructError::KernelRejected { .. }
+        ),
+        "got {err:?}"
+    );
+}
+
+/// **NEGATIVE**: a wrong resolvent must be rejected. Under the compact route the
+/// gate that fires is `add_declaration` on the clause alias, not `check_against`.
+#[test]
+fn compact_wrong_resolvent_rejected() {
+    let commands = vec![
+        assume("c1", vec![p_lit("a"), p_lit("b")]),
+        assume("c2", vec![n_lit("a")]),
+        // True resolvent is (b); we lie and claim (c).
+        res_step("s1", vec![p_lit("c")], &["c1", "c2"]),
+        assume("c3", vec![n_lit("c")]),
+        res_step("s2", vec![], &["s1", "c3"]),
+    ];
+    let mut ctx = ReconstructCtx::new();
+    let err = reconstruct_resolution_proof_compact(&mut ctx, &commands)
+        .expect_err("a wrong resolvent must be rejected");
+    assert!(
+        matches!(
+            err,
+            ReconstructError::KernelRejected { .. }
+                | ReconstructError::UnsupportedResolution { .. }
+        ),
+        "got {err:?}"
+    );
+}
+
+/// **NEGATIVE**: a trace that never derives `(cl)` has an empty live slice and
+/// must decline, not return some other clause's proof as a refutation.
+#[test]
+fn compact_without_empty_clause_declines() {
+    let commands = vec![
+        assume("c1", vec![p_lit("a"), p_lit("b")]),
+        assume("c2", vec![n_lit("a")]),
+        res_step("s1", vec![p_lit("b")], &["c1", "c2"]),
+    ];
+    let mut ctx = ReconstructCtx::new();
+    let err = reconstruct_resolution_proof_compact(&mut ctx, &commands)
+        .expect_err("a trace with no empty clause must decline");
+    assert!(
+        matches!(err, ReconstructError::NoEmptyClause),
+        "got {err:?}"
+    );
+}
+
+/// **DIFFERENTIAL**: on a proof carrying a clause the refutation never consumes,
+/// both routes must reach `False`, and the compact footprint must be a strict
+/// subset — slicing may DROP an unused input clause but must never INVENT one.
+#[test]
+fn compact_footprint_is_a_subset_of_inlined() {
+    let commands = vec![
+        assume("c1", vec![p_lit("a"), p_lit("b")]),
+        assume("c2", vec![n_lit("a")]),
+        assume("c3", vec![n_lit("b")]),
+        // `dead` is never resolved into the refutation.
+        assume("dead", vec![p_lit("z"), n_lit("q")]),
+        res_step("s1", vec![p_lit("b")], &["c1", "c2"]),
+        res_step("s2", vec![], &["s1", "c3"]),
+    ];
+
+    let mut inlined_ctx = ReconstructCtx::new();
+    let inlined =
+        reconstruct_resolution_proof(&mut inlined_ctx, &commands).expect("inlined route refutes");
+    assert_infers_false(&mut inlined_ctx, inlined);
+    let inlined_footprint = declared_assumption_clauses(&inlined_ctx);
+
+    let mut compact_ctx = ReconstructCtx::new();
+    let compact = reconstruct_resolution_proof_compact(&mut compact_ctx, &commands)
+        .expect("compact route refutes");
+    assert_infers_false(&mut compact_ctx, compact);
+    let compact_footprint = declared_assumption_clauses(&compact_ctx);
+
+    assert!(
+        compact_footprint
+            .iter()
+            .all(|c| inlined_footprint.contains(c)),
+        "compact footprint {compact_footprint:?} escaped inlined {inlined_footprint:?}"
+    );
+    assert!(
+        !compact_footprint.is_empty(),
+        "a `False` from an empty hypothesis set is a bug, not a stronger theorem"
+    );
+    assert!(
+        inlined_footprint.contains(&"+z,-q".to_owned()),
+        "the inlined route assumes the dead clause: {inlined_footprint:?}"
+    );
+    assert!(
+        !compact_footprint.contains(&"+z,-q".to_owned()),
+        "the compact route must slice the dead clause away: {compact_footprint:?}"
+    );
+}
+
+/// The footprint decoder must not silently swallow an axiom it cannot read: a
+/// hypothesis whose type is not a clause encoding is reported, not dropped.
+#[test]
+fn undecodable_assumption_axiom_is_reported() {
+    let mut ctx = ReconstructCtx::new();
+    // A hypothesis of a non-clause Prop (`True`), declared under the `assume`
+    // role exactly as a clause hypothesis would be.
+    let true_ = {
+        let name = ctx.prelude().true_;
+        ctx.kernel_mut().const_(name, vec![])
+    };
+    super::fresh_axiom(&mut ctx, true_, "assume").expect("axiom admits");
+    assert_eq!(
+        declared_assumption_clauses(&ctx),
+        vec!["<undecodable>".to_owned()]
+    );
+}
+
+// ---------------------------------------------------------------------------
 // Tseitin CNF-introduction rules (P3.7 slice 4) — the Boolean-gate layer.
 //
 // Each test BUILDS a CNF-intro rule's conclusion clause over fresh atom Props,

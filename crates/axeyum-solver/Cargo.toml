@@ -70,3 +70,15 @@ required-features = ["full"]
 [[example]]
 name = "first_smtlib_query"
 required-features = ["full"]
+
+[[example]]
+name = "reconstruct_ceiling_probe"
+required-features = ["full"]
+
+[[example]]
+name = "reconstruct_differential_probe"
+required-features = ["full"]
+
+[[example]]
+name = "reconstruct_lean_certificate"
+required-features = ["full"]

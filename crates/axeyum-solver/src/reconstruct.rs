@@ -73,7 +73,9 @@ pub use quant_bv_instance_set_lean::{
     reconstruct_bv_vacuous_exists_universal_counterexample_to_lean_module,
     reconstruct_negated_existential_witness_to_lean_module,
 };
-pub use resolution::reconstruct_resolution_proof;
+pub use resolution::{
+    declared_assumption_clauses, reconstruct_resolution_proof, reconstruct_resolution_proof_compact,
+};
 
 use std::collections::{BTreeMap, BTreeSet};
 

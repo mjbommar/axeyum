@@ -159,6 +159,114 @@ impl ReconstructCtx {
     }
 }
 
+// ===========================================================================
+// Assumption-footprint audit (agent-h H2 differential).
+//
+// A reconstruction that proves `False` from FEWER hypotheses than the input
+// formula has is *stronger*, and the kernel cannot tell you that happened. The
+// dangerous failure is the opposite direction — a `False` whose hypothesis
+// axioms are not the input clauses at all. Both are invisible to `infer`, which
+// only checks the term against `False`.
+//
+// So: decode every declared `assume`-role hypothesis axiom back out of its
+// `Prop` encoding into a clause of `±atom` keys. A caller can then require that
+// each decoded clause is an actual clause of the source formula, and compare the
+// footprints of two reconstruction routes.
+// ===========================================================================
+
+/// Decode a clause `Prop` (`l₁ ∨ (l₂ ∨ … ∨ lₙ)`, a bare literal for a unit, or
+/// `False` for `(cl)`) back into sorted `±atom-name` keys.
+///
+/// Returns `None` for any expression that is not a clause encoding over declared
+/// propositional atoms — an audit must treat that as a failure, not as an empty
+/// clause.
+fn decode_clause_prop(
+    ctx: &ReconstructCtx,
+    atom_names: &BTreeMap<NameId, String>,
+    prop: ExprId,
+) -> Option<Vec<String>> {
+    use axeyum_lean_kernel::ExprNode;
+
+    // `False` is the empty clause.
+    if let ExprNode::Const(name, _) = ctx.kernel.expr_node(prop)
+        && *name == ctx.prelude.false_
+    {
+        return Some(Vec::new());
+    }
+    // `Or a b` ⇒ decode `a` as a literal and `b` as the tail.
+    if let ExprNode::App(head, tail) = *ctx.kernel.expr_node(prop)
+        && let ExprNode::App(or, lhs) = *ctx.kernel.expr_node(head)
+        && let ExprNode::Const(or_name, _) = ctx.kernel.expr_node(or)
+        && *or_name == ctx.prelude.or
+    {
+        let mut out = decode_literal_prop(ctx, atom_names, lhs).map(|l| vec![l])?;
+        out.extend(decode_clause_prop(ctx, atom_names, tail)?);
+        return Some(out);
+    }
+    decode_literal_prop(ctx, atom_names, prop).map(|l| vec![l])
+}
+
+/// Decode a literal `Prop`: `Not p` ⇒ `-p`, a bare atom constant ⇒ `+p`.
+fn decode_literal_prop(
+    ctx: &ReconstructCtx,
+    atom_names: &BTreeMap<NameId, String>,
+    prop: ExprId,
+) -> Option<String> {
+    use axeyum_lean_kernel::ExprNode;
+
+    if let ExprNode::App(head, arg) = *ctx.kernel.expr_node(prop)
+        && let ExprNode::Const(not_name, _) = ctx.kernel.expr_node(head)
+        && *not_name == ctx.prelude.not
+    {
+        return decode_literal_prop(ctx, atom_names, arg).map(|inner| {
+            if let Some(rest) = inner.strip_prefix('-') {
+                format!("+{rest}")
+            } else {
+                format!("-{}", &inner[1..])
+            }
+        });
+    }
+    if let ExprNode::Const(name, _) = ctx.kernel.expr_node(prop) {
+        return atom_names.get(name).map(|atom| format!("+{atom}"));
+    }
+    None
+}
+
+/// The clauses the declared `assume`-role hypothesis axioms stand for, decoded
+/// from their `Prop` encodings into sorted `±atom` keys and returned sorted.
+///
+/// An axiom whose type is not a decodable clause encoding is reported as the
+/// literal string `"<undecodable>"` rather than silently dropped: a footprint
+/// audit that quietly ignores what it cannot read is not an audit.
+#[must_use]
+pub fn declared_assumption_clauses(ctx: &ReconstructCtx) -> Vec<String> {
+    let atom_names: BTreeMap<NameId, String> = ctx
+        .prop_atoms
+        .iter()
+        .map(|(name, &id)| (id, name.clone()))
+        .collect();
+    let mut out = Vec::new();
+    for (&name, role) in &ctx.axiom_roles {
+        if role != "assume" {
+            continue;
+        }
+        let Some(declaration) = ctx.kernel.environment().get(name) else {
+            out.push("<missing>".to_owned());
+            continue;
+        };
+        match decode_clause_prop(ctx, &atom_names, declaration.ty()) {
+            Some(mut lits) => {
+                lits.sort();
+                lits.dedup();
+                out.push(lits.join(","));
+            }
+            None => out.push("<undecodable>".to_owned()),
+        }
+    }
+    out.sort();
+    out
+}
+
 /// A clausal premise during the resolution walk: its literals (for computing the
 /// pivot and resolvent structurally) and a kernel proof term of the clause's
 /// `Prop` encoding.
@@ -222,9 +330,7 @@ fn build_cps_clause_proof(
         let handler_ty = ctx
             .kernel
             .pi(anon, literal_prop, target, BinderInfo::Default);
-        proof = ctx
-            .kernel
-            .lam(anon, handler_ty, proof, BinderInfo::Default);
+        proof = ctx.kernel.lam(anon, handler_ty, proof, BinderInfo::Default);
     }
     proof = ctx.kernel.abstract_fvars(proof, &[target_id]);
     let prop = ctx.kernel.sort_zero();
@@ -399,12 +505,224 @@ pub fn reconstruct_resolution_proof(
     Err(ReconstructError::NoEmptyClause)
 }
 
+/// The **compact** clausal reconstruction: same input, same theorem, bounded
+/// materialisation.
+///
+/// [`reconstruct_resolution_proof`] inlines. It reconstructs *every* command in
+/// the trace — including learned clauses the refutation never consumes — into the
+/// right-nested `Or` encoding, materialising one intermediate resolvent clause
+/// proof per pivot of every RUP chain, and re-`infer`s the growing term at every
+/// step. On a real SAT refutation that is the binding constraint long before
+/// `DP_POOL_BUDGET` is reached (the Davis–Putnam fallback is not even on this
+/// route: LRAT hint chains take [`reconstruct_ordered_rup_step`]).
+///
+/// This route changes three things and nothing else:
+///
+/// 1. **Backward slice.** Only commands reachable from the step deriving `(cl)`
+///    are reconstructed. A clause the refutation does not consume contributes
+///    nothing to the `False` term, so dropping it cannot weaken the theorem — and
+///    it removes the assumption axioms of unused input clauses from the footprint,
+///    which makes it *stronger*. Same slicing rule as
+///    [`super::bitblast::reconstruct_bitwise_cps_tail`].
+/// 2. **CPS clause encoding.** Learned clauses are kept as
+///    `forall (P : Prop), (l₁ → P) → … → (lₙ → P) → P` and a RUP chain is built
+///    once, directly from its validated unit-propagation trace
+///    (`construct_cps_rup_from_trace`), instead of folding `k` binary resolvents
+///    through `Or.rec`/`Or.inl`/`Or.inr` injection paths.
+/// 3. **Global theorem aliases.** Each live clause is admitted as a closed
+///    `Declaration::Theorem`, so downstream steps reference a single `Const` node.
+///    Admission type-checks the declaration, so **each step is still checked** —
+///    the deferred `check_against` is replaced by a stronger gate, not removed.
+///
+/// The closing term is checked against `False` with deferral off, exactly as the
+/// inlined route does.
+///
+/// # Errors
+///
+/// The same [`ReconstructError`]s as [`reconstruct_resolution_proof`], plus
+/// [`ReconstructError::KernelRejected`] when a per-clause theorem alias fails to
+/// admit (which is the per-step soundness gate firing).
+pub fn reconstruct_resolution_proof_compact(
+    ctx: &mut ReconstructCtx,
+    commands: &[AletheCommand],
+) -> Result<ExprId, ReconstructError> {
+    let saved_defer = ctx.defer_open_step_checks;
+    let saved_alias = ctx.closed_aliases.cps_clauses;
+    ctx.defer_open_step_checks = true;
+    ctx.closed_aliases.cps_clauses = true;
+    let result = reconstruct_resolution_proof_compact_inner(ctx, commands);
+    ctx.defer_open_step_checks = saved_defer;
+    ctx.closed_aliases.cps_clauses = saved_alias;
+    result
+}
+
+/// The ids of the commands the step deriving the empty clause transitively
+/// depends on. `assume`s are reachable through the `premises` of the steps that
+/// consume them, so this is the whole live set.
+fn live_command_ids(commands: &[AletheCommand]) -> BTreeSet<String> {
+    let mut dependencies = BTreeMap::<&str, &[String]>::new();
+    let mut empty_step: Option<&str> = None;
+    for command in commands {
+        if let AletheCommand::Step {
+            id,
+            clause,
+            premises,
+            ..
+        } = command
+        {
+            dependencies.insert(id.as_str(), premises.as_slice());
+            if clause.is_empty() {
+                empty_step = Some(id.as_str());
+            }
+        }
+    }
+    let mut live = BTreeSet::new();
+    let mut stack: Vec<&str> = empty_step.into_iter().collect();
+    while let Some(id) = stack.pop() {
+        if !live.insert(id.to_owned()) {
+            continue;
+        }
+        if let Some(premises) = dependencies.get(id) {
+            stack.extend(premises.iter().map(String::as_str));
+        }
+    }
+    live
+}
+
+/// Admit `clause` as a closed top-level `Declaration::Theorem` of its CPS
+/// proposition and replace its proof with the declaration's `Const`.
+///
+/// The admission is the per-step kernel gate: `add_declaration` type-checks the
+/// value against the stated CPS clause proposition, so a wrong resolvent is
+/// rejected here rather than propagating into the closing term.
+fn alias_cps_clause(
+    ctx: &mut ReconstructCtx,
+    clause: &mut CpsClause,
+) -> Result<(), ReconstructError> {
+    let ty = cps_clause_prop(ctx, &clause.lits);
+    if ctx.kernel.has_fvars(ty)
+        || ctx.kernel.num_loose_bvars(ty) != 0
+        || ctx.kernel.has_fvars(clause.proof)
+        || ctx.kernel.num_loose_bvars(clause.proof) != 0
+    {
+        return Err(ReconstructError::KernelRejected {
+            rule: "clausal_cps_clause_alias".to_owned(),
+            detail: "closed CPS declaration contains a local variable".to_owned(),
+        });
+    }
+    let name = ctx.fresh_name("cps_clause");
+    ctx.kernel
+        .add_declaration(Declaration::Theorem {
+            name,
+            uparams: vec![],
+            ty,
+            value: clause.proof,
+        })
+        .map_err(|error| ReconstructError::KernelRejected {
+            rule: "clausal_cps_clause_alias".to_owned(),
+            detail: format!("theorem admission failed: {error:?}"),
+        })?;
+    clause.proof = ctx.kernel.const_(name, vec![]);
+    Ok(())
+}
+
+fn reconstruct_resolution_proof_compact_inner(
+    ctx: &mut ReconstructCtx,
+    commands: &[AletheCommand],
+) -> Result<ExprId, ReconstructError> {
+    let _ = ctx.em_axiom();
+
+    let live = live_command_ids(commands);
+    if live.is_empty() {
+        return Err(ReconstructError::NoEmptyClause);
+    }
+
+    let mut or_env: BTreeMap<String, Clause> = BTreeMap::new();
+    let mut cps_env: BTreeMap<String, CpsClause> = BTreeMap::new();
+
+    for cmd in commands {
+        let (id, mut recovered) = match cmd {
+            AletheCommand::Assume { id, clause } => {
+                if !live.contains(id) {
+                    continue;
+                }
+                let prop = ctx.clause_to_prop(clause);
+                let proof = fresh_axiom(ctx, prop, "assume")?;
+                let or_clause = Clause {
+                    lits: clause.clone(),
+                    proof,
+                };
+                let recovered = clause_to_cps(ctx, &or_clause)?;
+                or_env.insert(id.clone(), or_clause);
+                (id, recovered)
+            }
+            AletheCommand::Step {
+                id,
+                clause,
+                rule,
+                premises,
+                ..
+            } => {
+                if !live.contains(id) {
+                    continue;
+                }
+                match rule.as_str() {
+                    // `or` unpacks an assumed disjunction into clause form; the
+                    // `Prop` encodings coincide, so the proof passes through and is
+                    // re-checked when the CPS alias is admitted.
+                    "or" => {
+                        let [p] = premises.as_slice() else {
+                            return Err(ReconstructError::UnsupportedResolution {
+                                detail: format!(
+                                    "`or` step expects exactly one premise, found {}",
+                                    premises.len()
+                                ),
+                            });
+                        };
+                        let premise = lookup(&or_env, p)?;
+                        let expected = ctx.clause_to_prop(clause);
+                        let proof = check_against(ctx, "or", premise.proof, expected)?;
+                        let or_clause = Clause {
+                            lits: clause.clone(),
+                            proof,
+                        };
+                        let recovered = clause_to_cps(ctx, &or_clause)?;
+                        or_env.insert(id.clone(), or_clause);
+                        (id, recovered)
+                    }
+                    "resolution" | "th_resolution" => {
+                        let recovered =
+                            reconstruct_ordered_rup_cps_step(ctx, clause, premises, &cps_env)?;
+                        (id, recovered)
+                    }
+                    other => {
+                        return Err(ReconstructError::UnsupportedRule {
+                            rule: other.to_owned(),
+                        });
+                    }
+                }
+            }
+        };
+
+        recovered = normalize_cps_clause(ctx, &recovered)?;
+        if recovered.lits.is_empty() {
+            let false_ = ctx.kernel.const_(ctx.prelude.false_, vec![]);
+            let proof = apply_cps_clause(ctx, &recovered, false_, []);
+            // The closing gate is the authoritative one: run it with per-step
+            // deferral OFF so `check_false_prop` really infers.
+            ctx.defer_open_step_checks = false;
+            return check_false_prop(ctx, proof);
+        }
+        alias_cps_clause(ctx, &mut recovered)?;
+        cps_env.insert(id.clone(), recovered);
+    }
+
+    Err(ReconstructError::NoEmptyClause)
+}
+
 /// Look up a premise clause by id, erroring with [`ReconstructError::UnknownPremise`]
 /// when it was never defined.
-fn lookup<'a>(
-    env: &'a BTreeMap<String, Clause>,
-    id: &str,
-) -> Result<&'a Clause, ReconstructError> {
+fn lookup<'a>(env: &'a BTreeMap<String, Clause>, id: &str) -> Result<&'a Clause, ReconstructError> {
     env.get(id)
         .ok_or_else(|| ReconstructError::UnknownPremise { id: id.to_owned() })
 }
@@ -688,19 +1006,12 @@ fn binary_resolve_cps_on(
             let body = ctx.kernel.abstract_fvars(body, &[positive_id]);
             let positive_prop = ctx.lit_to_prop(literal);
             let anon = ctx.kernel.anon();
-            positive_handlers.push(ctx.kernel.lam(
-                anon,
-                positive_prop,
-                body,
-                BinderInfo::Default,
-            ));
+            positive_handlers.push(
+                ctx.kernel
+                    .lam(anon, positive_prop, body, BinderInfo::Default),
+            );
         }
-        Ok(apply_cps_clause(
-            ctx,
-            positive,
-            target,
-            positive_handlers,
-        ))
+        Ok(apply_cps_clause(ctx, positive, target, positive_handlers))
     })?;
     let expected = cps_clause_prop(ctx, &resolvent);
     let proof = check_against(ctx, "resolution_cps", proof, expected)?;
@@ -774,12 +1085,7 @@ pub(super) fn normalize_cps_clause(
             let body = ctx.kernel.abstract_fvars(body, &[source_id]);
             let source_prop = ctx.lit_to_prop(source);
             let anon = ctx.kernel.anon();
-            source_handlers.push(ctx.kernel.lam(
-                anon,
-                source_prop,
-                body,
-                BinderInfo::Default,
-            ));
+            source_handlers.push(ctx.kernel.lam(anon, source_prop, body, BinderInfo::Default));
         }
         Ok(apply_cps_clause(ctx, clause, target, source_handlers))
     })?;
@@ -861,12 +1167,9 @@ fn construct_cps_rup_from_trace(
             let body = ctx.kernel.abstract_fvars(body, &[complement_id]);
             let complement_prop = ctx.lit_to_prop(&complement);
             let anon = ctx.kernel.anon();
-            let handler = ctx.kernel.lam(
-                anon,
-                complement_prop,
-                body,
-                BinderInfo::Default,
-            );
+            let handler = ctx
+                .kernel
+                .lam(anon, complement_prop, body, BinderInfo::Default);
             let handler_ty = ctx
                 .kernel
                 .pi(anon, complement_prop, target, BinderInfo::Default);
@@ -897,10 +1200,7 @@ fn construct_cps_rup_from_trace(
             })
             .collect::<Result<Vec<_>, _>>()?;
         let mut body = apply_cps_clause(ctx, conflict, target, conflict_handlers);
-        let fvars = lets
-            .iter()
-            .map(|(fvar, _, _, _)| *fvar)
-            .collect::<Vec<_>>();
+        let fvars = lets.iter().map(|(fvar, _, _, _)| *fvar).collect::<Vec<_>>();
         body = ctx.kernel.abstract_fvars(body, &fvars);
         for (index, (_, name, ty, value)) in lets.into_iter().enumerate().rev() {
             let ty = ctx.kernel.abstract_fvars(ty, &fvars[..index]);
@@ -1070,13 +1370,7 @@ pub(super) fn reconstruct_ordered_rup_cps_step(
     }
 
     let propagations = pivots.into_iter().enumerate().collect::<Vec<_>>();
-    construct_cps_rup_from_trace(
-        ctx,
-        conclusion,
-        &pool,
-        &propagations,
-        pool.len() - 1,
-    )
+    construct_cps_rup_from_trace(ctx, conclusion, &pool, &propagations, pool.len() - 1)
 }
 
 /// Reconstruct RUP after Alethe polarity normalization, allowing the premise
@@ -1558,13 +1852,7 @@ fn binary_resolve_on(
                     let false_app = ctx.kernel.app(lit_proof, hp);
                     Ok(ex_falso(ctx, r_prop, false_app))
                 } else {
-                    inject_lit_with_suffixes(
-                        ctx,
-                        lit,
-                        lit_proof,
-                        resolvent,
-                        &resolvent_suffixes,
-                    )
+                    inject_lit_with_suffixes(ctx, lit, lit_proof, resolvent, &resolvent_suffixes)
                 }
             },
         )
@@ -1581,13 +1869,7 @@ fn binary_resolve_on(
             if lit.atom.key() == pivot_key && !lit.negated {
                 neg_to_r(ctx, lit_proof)
             } else {
-                inject_lit_with_suffixes(
-                    ctx,
-                    lit,
-                    lit_proof,
-                    resolvent,
-                    &resolvent_suffixes,
-                )
+                inject_lit_with_suffixes(ctx, lit, lit_proof, resolvent, &resolvent_suffixes)
             }
         },
     )?;
@@ -1654,34 +1936,33 @@ fn binary_resolve_wide_on(
     let reordered = move_clause_pivot_to_front(ctx, wide, pivot_key)?;
     let target_suffixes = clause_suffix_props(ctx, &resolvent);
     let target_prop = target_suffixes[0];
-    let prove_from_pivot = |ctx: &mut ReconstructCtx,
-                            pivot_proof: ExprId|
-     -> Result<ExprId, ReconstructError> {
-        clause_elim(
-            ctx,
-            reason,
-            target_prop,
-            &resolvent,
-            &|ctx, literal, literal_proof, resolvent| {
-                if literal.atom.key() == pivot_key {
-                    let contradiction = if wide_pivot.negated {
-                        ctx.kernel.app(pivot_proof, literal_proof)
+    let prove_from_pivot =
+        |ctx: &mut ReconstructCtx, pivot_proof: ExprId| -> Result<ExprId, ReconstructError> {
+            clause_elim(
+                ctx,
+                reason,
+                target_prop,
+                &resolvent,
+                &|ctx, literal, literal_proof, resolvent| {
+                    if literal.atom.key() == pivot_key {
+                        let contradiction = if wide_pivot.negated {
+                            ctx.kernel.app(pivot_proof, literal_proof)
+                        } else {
+                            ctx.kernel.app(literal_proof, pivot_proof)
+                        };
+                        Ok(ex_falso(ctx, target_prop, contradiction))
                     } else {
-                        ctx.kernel.app(literal_proof, pivot_proof)
-                    };
-                    Ok(ex_falso(ctx, target_prop, contradiction))
-                } else {
-                    inject_lit_with_suffixes(
-                        ctx,
-                        literal,
-                        literal_proof,
-                        resolvent,
-                        &target_suffixes,
-                    )
-                }
-            },
-        )
-    };
+                        inject_lit_with_suffixes(
+                            ctx,
+                            literal,
+                            literal_proof,
+                            resolvent,
+                            &target_suffixes,
+                        )
+                    }
+                },
+            )
+        };
 
     let proof = if wide_survivors.is_empty() {
         prove_from_pivot(ctx, reordered)?
@@ -1693,9 +1974,9 @@ fn binary_resolve_wide_on(
         let pivot_body = prove_from_pivot(ctx, pivot_proof)?;
         let pivot_body = ctx.kernel.abstract_fvars(pivot_body, &[pivot_id]);
         let anon = ctx.kernel.anon();
-        let minor_pivot =
-            ctx.kernel
-                .lam(anon, pivot_prop, pivot_body, BinderInfo::Default);
+        let minor_pivot = ctx
+            .kernel
+            .lam(anon, pivot_prop, pivot_body, BinderInfo::Default);
 
         let survivors_id = fresh_fvar_id(ctx);
         let survivors_proof = ctx.kernel.fvar(survivors_id);
@@ -1706,15 +1987,10 @@ fn binary_resolve_wide_on(
             &resolvent,
             &target_suffixes,
         )?;
-        let survivors_body = ctx
-            .kernel
-            .abstract_fvars(survivors_body, &[survivors_id]);
-        let minor_survivors = ctx.kernel.lam(
-            anon,
-            survivors_prop,
-            survivors_body,
-            BinderInfo::Default,
-        );
+        let survivors_body = ctx.kernel.abstract_fvars(survivors_body, &[survivors_id]);
+        let minor_survivors =
+            ctx.kernel
+                .lam(anon, survivors_prop, survivors_body, BinderInfo::Default);
 
         let source_prop = ctx.mk_or(pivot_prop, survivors_prop);
         let motive = ctx
@@ -1912,13 +2188,8 @@ fn append_clause_suffix(
 
     let rest_id = fresh_fvar_id(ctx);
     let rest_proof = ctx.kernel.fvar(rest_id);
-    let rest_body = append_clause_suffix(
-        ctx,
-        rest,
-        rest_proof,
-        &target[1..],
-        &target_suffixes[1..],
-    )?;
+    let rest_body =
+        append_clause_suffix(ctx, rest, rest_proof, &target[1..], &target_suffixes[1..])?;
     let rest_body = or_inr(ctx, head_prop, target_suffixes[1], rest_body);
     let rest_body = ctx.kernel.abstract_fvars(rest_body, &[rest_id]);
     let minor_rest = ctx
