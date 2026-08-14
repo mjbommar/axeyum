@@ -329,9 +329,13 @@ is not the reconstruction ceiling: LRAT hint chains take
 entered across 22 Rado refutations (85 to 4.57M hints). The bound is the kernel
 expression arena at ~90-100 B/node and ~190-460 nodes/hint.
 `reconstruct_resolution_proof_compact` (`1b2b13c70`) is 5.6x smaller and 55x
-faster at n=141 with the ratios still rising; its differential found **no**
-statement mismatch (0 alien hypothesis axioms on either route, compact footprint
-a strict subset at every size). 19 refutations now carry certificates official
+faster at n=141 with the ratios still rising, and it reconstructs two 4-colour
+instances the inlined route cannot: `R_4(3(x-y)=z)=81` (2,163,930 hints, 11.6 GB,
+16.2 min) and `R_4(x-y=z)=45` (4,572,930 hints, 346M kernel expression nodes,
+24.6 GB, 32.4 min) — cost linear in hint count to within 6%, while the inlined
+route was killed on the latter at 60 minutes with no result. Its differential
+found **no** statement mismatch (0 alien hypothesis axioms on either route,
+compact footprint a strict subset at every size). 19 refutations now carry certificates official
 Lean v4.30.0 checks, to `R_3(x-y=5z)=286` and `R_4(2(x-y)=z)=56`, with
 `#print axioms` listing only input clauses and atoms — no `propext`,
 `Classical.choice`, `Quot.sound`, or `em`. **Next: kernel arena checkpointing**
