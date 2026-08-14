@@ -307,11 +307,13 @@ fn load_note() -> String {
 // the other option, and it is not enough, because "the machine" is not one
 // speed. This box is a 12900K: 8 performance cores + 8 efficiency cores. The
 // same binary on the same machine runs at two different speeds depending on
-// which core the scheduler picks (measured with `taskset`, see
-// `docs/research/08-planning/frontier-ratchet-reference-frame.md`). A hostname
-// match would certify a comparison that the hardware does not support, and it
-// would turn every other machine's run into no signal at all rather than a
-// weaker one.
+// which core the scheduler picks: this very sweep is **1.84x slower** pinned to
+// the efficiency cores, and the stock fixed-budget gate reported
+// `FRONTIER bv_reduction = 29` against a baseline of 30 there — a REGRESSION
+// that never happened, reproduced three times out of three. A hostname match
+// would have certified that comparison as valid, and it would turn every other
+// machine's run into no signal at all rather than a weaker one. Measurements in
+// `docs/research/08-planning/frontier-ratchet-reference-frame.md`.
 //
 // WHAT WE DO INSTEAD. Measure the machine's *current* throughput with a frozen
 // synthetic kernel immediately before each family's sweep, scale the per-instance
@@ -329,26 +331,47 @@ fn load_note() -> String {
 // it must not be used to raise a baseline. Those two rules are the 35 and the
 // 40 respectively, and each would have been refused.
 
-/// Words in the calibration buffer (4 MiB): well past this box's L2, so the
-/// kernel feels memory pressure the way a bit-blasting solver does rather than
-/// spinning in registers. A power of two so [`CALIBRATION_STRIDE`] visits every
-/// slot exactly once per pass.
-const CALIBRATION_WORDS: usize = 1 << 19;
+/// Words in the calibration buffer: 32768 x 8 B = 256 KiB, which is L2-resident
+/// on this class of machine. The size is not cosmetic — it is what makes the
+/// kernel a usable proxy, and it was chosen by MEASUREMENT, not by taste.
+///
+/// The first version walked 4 MiB, i.e. main memory, and was therefore
+/// latency-bound on a resource the two core types share. On this 12900K it
+/// reported efficiency cores as only 1.2x slower than performance cores, while
+/// the `bv_reduction` sweep itself is **1.84x** slower there (median over the
+/// instances above 200 ms, same commit, same load). A calibration that
+/// under-reports the slowdown under-compensates the budget, which is exactly the
+/// failure it exists to prevent: the E-core run recovered only 29 -> 30.
+///
+/// Candidates measured under the test profile's flags (`opt-level=0`,
+/// `debug-assertions`, `overflow-checks`), `taskset` on each core class:
+///
+/// | kernel                  | P-core | E-core | ratio | vs solver's 1.84 |
+/// |-------------------------|--------|--------|-------|------------------|
+/// | 4 MiB stride walk       | 142.5  | 203.4  | 1.43  | far under, and noisy (P ranged 114.9-143.7) |
+/// | 32 KiB dependent chain  |  64.7  | 109.0  | 1.68  | under |
+/// | 256 KiB dependent chain |  70.4  | 137.8  | 1.96  | closest, stable to ~2 % |
+///
+/// If this kernel is ever changed, re-run that comparison: a proxy whose ratio
+/// does not track the workload's is a budget that compensates for the wrong
+/// thing.
+const CALIBRATION_WORDS: usize = 1 << 15;
 
-/// Odd stride, coprime with [`CALIBRATION_WORDS`], chosen so the walk is a
-/// permutation the hardware prefetcher cannot follow.
+/// Odd stride mixed into the data-dependent index, so consecutive accesses are
+/// unpredictable to the prefetcher.
 const CALIBRATION_STRIDE: usize = 4099;
 
-/// Passes over the buffer, chosen so one call takes ~130 ms in the unoptimized
-/// test profile: long enough to average over scheduling noise, short enough that
-/// two calls per family are free next to a 4 s per-instance budget.
-const CALIBRATION_PASSES: usize = 12;
+/// Iterations of the dependent chain, chosen so one call takes ~120 ms in the
+/// unoptimized test profile on an uncontended performance core: long enough to
+/// average over scheduling noise, short enough that two calls per family are
+/// free next to a 4 s per-instance budget.
+const CALIBRATION_ITERATIONS: usize = 10_000_000;
 
 /// The kernel's output. FROZEN: the reference below describes a specific amount
 /// of work, so if the kernel changes the reference is meaningless. Changing the
 /// kernel must therefore break this assertion, and re-measuring
 /// [`CALIBRATION_REFERENCE_MS`] is part of that change.
-const CALIBRATION_CHECKSUM: u64 = 0x7700_419d_87d3_5267;
+const CALIBRATION_CHECKSUM: u64 = 0xa10b_afd9_e492_376a;
 
 /// Repeats per calibration; the MEDIAN is used, so one descheduled sample cannot
 /// move the budget. Nine rather than five because the spread of a single sample
@@ -357,23 +380,24 @@ const CALIBRATION_CHECKSUM: u64 = 0x7700_419d_87d3_5267;
 /// (~1.2 s) buy a median that survives one lane's build starting mid-window.
 const CALIBRATION_REPEATS: usize = 9;
 
-/// Median [`calibration_kernel`] time on the reference machine: the MINIMUM of 8
-/// medians-of-9 taken with `taskset -c 0-7` (performance cores) on 2026-08-14,
-/// which ranged 118.9-126.4 ms at 1-minute load 7.6.
+/// Median [`calibration_kernel`] time on the reference machine: five
+/// medians-of-nine with `taskset -c 0-7` (performance cores) on 2026-08-14 at
+/// 1-minute load 4.0 gave 127.1, 127.3, 127.3, 127.5, 128.1 ms — a 0.8 % spread,
+/// so the minimum and the mean agree to within noise. The same binary on the
+/// efficiency cores gave 221.5-246.7 ms (scale 1.74x), which is the number the
+/// budget has to compensate for.
 ///
-/// The minimum, not the mean, because it is the closest available estimate of
-/// the machine's UNCONTENDED speed, and because the failure it protects against
-/// is asymmetric: a reference that is too slow shrinks every budget and
-/// manufactures REGRESSIONs. The box was shared while this was taken, so the
-/// true idle value is probably a few percent lower; `calibration_frames_the_
-/// measurement` prints the live median on every run, so if a quieter machine
-/// ever measures below this, LOWER it here.
-const CALIBRATION_REFERENCE_MS: f64 = 118.0;
+/// The minimum rather than the mean because the error is asymmetric: a reference
+/// that is too slow shrinks every budget and manufactures REGRESSIONs. The box
+/// was shared while this was taken, so the true idle value may be slightly
+/// lower; `calibration_frames_the_measurement` prints the live median on every
+/// run, so if a quieter machine ever measures below this, LOWER it here.
+const CALIBRATION_REFERENCE_MS: f64 = 127.0;
 
 /// The machine the reference above was taken on. Recorded, not enforced — see
 /// the section header for why a hostname match would be a false certificate.
 const CALIBRATION_REFERENCE_MACHINE: &str =
-    "12th Gen Intel Core i9-12900K (8P+8E, 24 threads), Linux, dev/test profile, load ~1.2";
+    "12th Gen Intel Core i9-12900K, performance cores (taskset -c 0-7), Linux, test profile";
 
 /// Beyond this factor in either direction, this run and the reference are not
 /// measuring the same thing and the ratchet stops being an assertion.
@@ -407,14 +431,24 @@ fn calibration_kernel() -> u64 {
     let mask = CALIBRATION_WORDS - 1;
     let mut acc: u64 = 0x0123_4567_89AB_CDEF;
     let mut index = 0usize;
-    for _ in 0..CALIBRATION_PASSES {
-        for _ in 0..CALIBRATION_WORDS {
-            acc = acc.rotate_left(7) ^ buffer[index];
-            buffer[index] = acc
-                .wrapping_mul(0x2545_F491_4F6C_DD1D)
-                .wrapping_add(index as u64);
-            index = (index + CALIBRATION_STRIDE) & mask;
+    for _ in 0..CALIBRATION_ITERATIONS {
+        acc = acc.rotate_left(7) ^ buffer[index];
+        // A data-dependent, statistically unpredictable branch: branch
+        // misprediction is a large part of why this workload separates the two
+        // core types, and it is what a SAT search does all day.
+        if acc & 1 == 0 {
+            acc = acc.wrapping_mul(0x2545_F491_4F6C_DD1D);
+        } else {
+            acc = (acc ^ (acc >> 13)).wrapping_add(0x9E37_79B9_7F4A_7C15);
         }
+        buffer[index] = acc;
+        // The next index depends on the value just computed, so the loop is a
+        // serial dependency chain rather than something the machine can run
+        // wide — again, closer to propagation than to a streaming benchmark.
+        // `as usize` would be a truncating cast on a 32-bit target; the value is
+        // only ever used modulo `mask`, so take the low half explicitly.
+        let mixed = (acc & 0xFFFF_FFFF) as u32 as usize;
+        index = (mixed ^ (index.wrapping_add(CALIBRATION_STRIDE))) & mask;
     }
     std::hint::black_box(acc)
 }
@@ -450,9 +484,7 @@ fn machine() -> Machine {
         .ok()
         .or_else(|| std::env::var("HOSTNAME").ok())
         .unwrap_or_else(|| "unknown".to_owned());
-    let cpus = std::thread::available_parallelism()
-        .map(|n| n.get())
-        .unwrap_or(0);
+    let cpus = std::thread::available_parallelism().map_or(0, std::num::NonZero::get);
     let model = std::fs::read_to_string("/proc/cpuinfo")
         .ok()
         .and_then(|text| {
@@ -1787,7 +1819,6 @@ fn calibration_frames_the_measurement() {
 
     // A quiet reference-speed box: comparable, and may raise a baseline.
     let quiet = frame(1.0, Some(CALIBRATION_REFERENCE_MS));
-    assert!(RATCHETABLE_SCALE_MIN < 1.0 && 1.0 < RATCHETABLE_SCALE_MAX);
     assert!(quiet.comparable() && quiet.ratchetable());
     assert_eq!(quiet.budget().as_millis(), BUDGET.as_millis());
 
@@ -1806,9 +1837,11 @@ fn calibration_frames_the_measurement() {
     assert!(!overloaded.comparable());
     assert!(overloaded.why_not_comparable().contains("slower"));
     // ... and the budget is clamped, so the sweep cannot run away.
-    assert_eq!(
-        overloaded.budget().as_secs_f64(),
-        BUDGET.as_secs_f64() * SCALE_LIMIT
+    let clamped_ms = overloaded.budget().as_secs_f64() * 1000.0;
+    let expected_ms = BUDGET.as_secs_f64() * 1000.0 * SCALE_LIMIT;
+    assert!(
+        (clamped_ms - expected_ms).abs() < 1.0,
+        "clamped budget {clamped_ms:.1} ms should be the {SCALE_LIMIT}x cap {expected_ms:.1} ms"
     );
 
     // A much faster machine is equally uncomparable — the symmetric failure,

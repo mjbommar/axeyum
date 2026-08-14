@@ -173,7 +173,19 @@ cargo test -p axeyum-solver --features z3 --test qf_uflra_differential_fuzz
 # "running 0 tests ... ok" and exited 0. `tests/progress_frontier.rs:75` is
 # `#![cfg(feature = "full")]`. `scripts/check.sh` and the `justfile` always had
 # the flag; only the copy agents are pointed at did not, and a NIA probe lane
-# ran the inert form as its "gate passed" evidence. Confirm a NONZERO count (9).
+# ran the inert form as its "gate passed" evidence. Confirm a NONZERO count (10).
+#
+# `--test-threads=1` serializes the suite against ITSELF and does nothing about
+# the other lanes on the box, which is the contention that actually moves these
+# numbers: same commit, same machine, 35 (load 34) / 39 (load 5.4) / 40 (idle).
+# Each family now calibrates the machine before and after its sweep and scales
+# the per-instance budget, prints `reference frame [family]: ...`, and marks a
+# run NOT COMPARABLE (ratchet not enforced) or ADVISORY ONLY (do not raise a
+# baseline from it). Read those two lines before believing a REGRESSION or
+# committing a PROGRESS. Pinning to one core class helps a lot on a hybrid CPU
+# (`taskset -c 0-7` here); unpinned, this sweep is 1.84x slower on the E-cores
+# and the old fixed-budget gate reported a REGRESSION that never happened.
+# docs/research/08-planning/frontier-ratchet-reference-frame.md
 cargo test -p axeyum-solver --test progress_frontier --features full -- --test-threads=1
 cargo doc --workspace --all-features --no-deps    # RUSTDOCFLAGS="-D warnings" in CI
 cargo deny check                                  # needs cargo-deny installed
