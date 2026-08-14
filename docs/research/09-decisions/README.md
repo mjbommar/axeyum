@@ -450,3 +450,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [0392](adr-0392-revision-scoped-whnf-cache-and-kernel-owned-rollback.md) | Revision-scoped WHNF cache and kernel-owned rollback | accepted |
 | [0393](adr-0393-checked-geometric-sum-reindexing.md) | Checked geometric-sum reindexing | accepted |
 | [0394](adr-0394-checked-scalar-distribution-over-finite-sums.md) | Checked scalar distribution over finite sums | accepted |
+| [0395](adr-0395-pointwise-congruence-for-finite-sums.md) | Pointwise congruence for finite sums | accepted |

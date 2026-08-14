@@ -73,6 +73,7 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.pow_succ,
         p.sum_range_zero,
         p.sum_range_succ,
+        p.sum_range_congr,
         p.mul_sum_range,
         p.mul_sum_range_pow,
         p.zero_add,
@@ -290,6 +291,33 @@ fn scalar_multiplication_distributes_over_finite_ranges() {
     let lhs = f.mul(three, sum);
     let eighteen = f.num(18);
     assert!(f.k.def_eq(lhs, eighteen), "3 * (0+1+2+3) must reduce to 18");
+}
+
+/// Pointwise equality lifts through a finite range without assuming function
+/// extensionality.
+#[test]
+fn pointwise_equality_lifts_through_finite_ranges() {
+    let mut f = Fixture::new();
+    let p = f.p;
+    let zero = f.zero();
+    let i_fv = f.fresh_fvar();
+    let i = f.k.fvar(i_fv);
+    let nat = f.nat_ty();
+    let zero_plus_i = f.add(zero, i);
+    let lhs_fn = f.lam_fv(i_fv, nat, zero_plus_i);
+    let j_fv = f.fresh_fvar();
+    let j = f.k.fvar(j_fv);
+    let rhs_fn = f.lam_fv(j_fv, nat, j);
+    let h_fv = f.fresh_fvar();
+    let h_i = f.k.fvar(h_fv);
+    let h_body = f.lemma(p.zero_add, &[h_i]);
+    let pointwise = f.lam_fv(h_fv, nat, h_body);
+    let four = f.num(4);
+    let proof = f.lemma(p.sum_range_congr, &[lhs_fn, rhs_fn, four, pointwise]);
+    let ty = f.k.infer(proof).expect("sum congruence proof infers");
+    let name = f.name("sum_zero_add_congr");
+    f.declare_theorem(name, ty, proof)
+        .unwrap_or_else(|e| panic!("sum congruence should admit: {}", f.explain(&e)));
 }
 
 /// A downstream development proves something new out of the prelude's lemmas:
@@ -733,7 +761,44 @@ fn kernel_rejects_broken_proof_terms() {
         rejections += 1;
     }
 
-    assert_eq!(rejections, 13, "every negative control must be rejected");
+    // NC14 — sum congruence retains the exact range. A proof over two terms
+    // cannot be assigned the inferred proposition over three terms.
+    {
+        let name = f.name("nc14_sum_congruence_wrong_range");
+        let zero = f.zero();
+        let i_fv = f.fresh_fvar();
+        let i = f.k.fvar(i_fv);
+        let nat = f.nat_ty();
+        let zero_plus_i = f.add(zero, i);
+        let lhs_fn = f.lam_fv(i_fv, nat, zero_plus_i);
+        let j_fv = f.fresh_fvar();
+        let j = f.k.fvar(j_fv);
+        let rhs_fn = f.lam_fv(j_fv, nat, j);
+        let h_fv = f.fresh_fvar();
+        let h_i = f.k.fvar(h_fv);
+        let h_body = f.lemma(p.zero_add, &[h_i]);
+        let pointwise = f.lam_fv(h_fv, nat, h_body);
+        let two = f.num(2);
+        let three = f.num(3);
+        let proof = f.lemma(p.sum_range_congr, &[lhs_fn, rhs_fn, two, pointwise]);
+        let theorem = f.k.const_(p.sum_range_congr, vec![]);
+        let at_lhs = f.k.app(theorem, lhs_fn);
+        let at_rhs = f.k.app(at_lhs, rhs_fn);
+        let at_range = f.k.app(at_rhs, three);
+        let wrong = f.k.app(at_range, pointwise);
+        let bad = f.k.infer(wrong).expect("wrong-range target infers");
+        let err = f
+            .declare_theorem(name, bad, proof)
+            .expect_err("NC14: sum congruence must retain the exact range");
+        println!(
+            "NC14 (wrong congruence range) rejected:\n  {}",
+            f.explain(&err)
+        );
+        assert!(!f.k.environment().contains(name));
+        rejections += 1;
+    }
+
+    assert_eq!(rejections, 14, "every negative control must be rejected");
 }
 
 /// The build is deterministic: two independent kernels render every promised
@@ -756,7 +821,7 @@ fn the_build_is_deterministic() {
     assert_eq!(first, second, "the prelude build must be deterministic");
     assert_eq!(
         first.len(),
-        6 + 29,
+        6 + 30,
         "every promised definition and theorem must be rendered"
     );
 }

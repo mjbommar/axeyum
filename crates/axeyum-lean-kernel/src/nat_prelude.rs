@@ -140,6 +140,8 @@ pub struct NatPrelude {
     pub sum_range_zero: NameId,
     /// `sumRange_succ : ∀ f n, sumRange f (succ n) = sumRange f n + f n`.
     pub sum_range_succ: NameId,
+    /// `sumRange_congr : (∀ i, f i = g i) → sumRange f n = sumRange g n`.
+    pub sum_range_congr: NameId,
     /// `mul_sumRange : ∀ a f n, a * sumRange f n = sumRange (fun i => a * f i) n`.
     pub mul_sum_range: NameId,
     /// `mul_sumRange_pow : ∀ a n, a * sumRange (a^·) n = sumRange (a^(·+1)) n`.
@@ -262,6 +264,7 @@ pub fn build_nat_prelude(kernel: &mut Kernel) -> Result<NatPrelude, KernelError>
             pow_succ: kernel.name_str(nat, "pow_succ"),
             sum_range_zero: kernel.name_str(nat, "sumRange_zero"),
             sum_range_succ: kernel.name_str(nat, "sumRange_succ"),
+            sum_range_congr: kernel.name_str(nat, "sumRange_congr"),
             mul_sum_range: kernel.name_str(nat, "mul_sumRange"),
             mul_sum_range_pow: kernel.name_str(nat, "mul_sumRange_pow"),
             zero_add: kernel.name_str(nat, "zero_add"),
@@ -825,6 +828,70 @@ fn declare_multiplicative_theorems(d: &mut NatDev<'_>, p: &NatPrelude) -> Result
 /// test-only recurrence.
 fn declare_finite_sum_theorems(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> {
     let p = *p;
+
+    // sumRange_congr : ∀ f g n,
+    //   (∀ i, f i = g i) → sumRange f n = sumRange g n
+    {
+        let nat = d.nat_ty();
+        let fn_ty = d.arrow(nat, nat);
+        let f_fv = d.fresh_fvar();
+        let f = d.kernel().fvar(f_fv);
+        let g_fv = d.fresh_fvar();
+        let g = d.kernel().fvar(g_fv);
+        let n_fv = d.fresh_fvar();
+        let n = d.kernel().fvar(n_fv);
+        let pointwise = {
+            let i_fv = d.fresh_fvar();
+            let i = d.kernel().fvar(i_fv);
+            let fi = d.apply(f, &[i]);
+            let gi = d.apply(g, &[i]);
+            let eq = d.eq(fi, gi);
+            d.pi_fv(i_fv, nat, eq)
+        };
+        let h_fv = d.fresh_fvar();
+        let h = d.kernel().fvar(h_fv);
+        let motive = |d: &mut NatDev<'_>, x: ExprId| {
+            let lhs = d.sum_range(f, x);
+            let rhs = d.sum_range(g, x);
+            d.eq(lhs, rhs)
+        };
+        let stmt = motive(d, n);
+        let proof = d.induct(
+            &motive,
+            &|d| {
+                let zero = d.zero();
+                d.refl(zero)
+            },
+            &|d, j, ih| {
+                let f_prior = d.sum_range(f, j);
+                let g_prior = d.sum_range(g, j);
+                let fj = d.apply(f, &[j]);
+                let gj = d.apply(g, &[j]);
+                let start = d.add(f_prior, fj);
+                let mid = d.add(g_prior, fj);
+                let h1 = d.congr(f_prior, g_prior, ih, &|d, t| d.add(t, fj));
+                let end = d.add(g_prior, gj);
+                let pointwise_j = d.apply(h, &[j]);
+                let h2 = d.congr(fj, gj, pointwise_j, &|d, t| d.add(g_prior, t));
+                let (_, proof) = d.chain(start, &[(mid, h1), (end, h2)]);
+                proof
+            },
+            n,
+        );
+        let ty = {
+            let with_h = d.pi_fv(h_fv, pointwise, stmt);
+            let over_n = d.pi_fv(n_fv, nat, with_h);
+            let over_g = d.pi_fv(g_fv, fn_ty, over_n);
+            d.pi_fv(f_fv, fn_ty, over_g)
+        };
+        let value = {
+            let with_h = d.lam_fv(h_fv, pointwise, proof);
+            let over_n = d.lam_fv(n_fv, nat, with_h);
+            let over_g = d.lam_fv(g_fv, fn_ty, over_n);
+            d.lam_fv(f_fv, fn_ty, over_g)
+        };
+        d.declare_theorem(p.sum_range_congr, ty, value)?;
+    }
 
     // mul_sumRange : ∀ a f n,
     //   a * sumRange f n = sumRange (fun i => a * f i) n
